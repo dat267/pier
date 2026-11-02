@@ -1,0 +1,10447 @@
+[
+ {
+  "old": "​c​' b0?😀😀\"　",
+  "new": "​c​' b0?😀😀!​:\"　",
+  "changes": [
+   {
+    "value": "​c​' b0?😀😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!​:",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"　",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " .?中中́­/́'_­\taé0c?😀\nZ.中\ta﻿ ​,.`中-é\t\"",
+  "new": "é:;!!_  b ́ `\t-",
+  "changes": [
+   {
+    "value": " .?中中",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "é:;!!_  b ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́ ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­/́'_­\taé0c?😀\nZ.中\ta﻿ ​,.",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "`\t",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é\t\"",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "bZb ­​c😀:!;`中-​\n0​ ﻿?😀`/́./;Z  é ,_-😀,0",
+  "new": "bZb ­　1​c😀:!;`中-​\n0​ ﻿?😀`/́./;Z  é ,_-😀,0",
+  "changes": [
+   {
+    "value": "bZb ­　",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "1",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​c😀:!;`中-​\n0​ ﻿?😀`/́./;Z  é ,_-😀,0",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " ​ ",
+  "new": "Z`./",
+  "changes": [
+   {
+    "value": " ​ ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Z`./",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "/\n?-\t::😀﻿?a",
+  "new": "/\n?éZ​!11-\t::😀﻿?a",
+  "changes": [
+   {
+    "value": "/\n?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "éZ​!11",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-\t::😀﻿?a",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "ca,,\"_\n.0??!中b́,10﻿;a,​\n​\t:­;b ",
+  "new": "'﻿!0\t­😀1 Z/ 1\t:­ 中/\n!éé_  1??　",
+  "changes": [
+   {
+    "value": "ca,,\"_\n.0??",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中b́,10",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "﻿;a,​\n​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "0\t­😀1 Z/ 1",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\t:­",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ";b ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " 中/\n!éé_  1??　",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "  /\nZ中 éc b ­:\n!bZ!﻿\tZa`😀​​! \"😀Z,`",
+  "new": "  /\nZ中 é­​　 c b ­:\n!bZ!﻿\tZa`😀​​! \"😀Z,`",
+  "changes": [
+   {
+    "value": "  /\nZ中 ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "éc",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "é­​　 c",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": " b ­:\n!bZ!﻿\tZa`😀​​! \"😀Z,`",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "a`11:1中😀:　b\"😀,-:-­Z ,﻿\"!ba0é._?﻿`b0é😀:­",
+  "new": "﻿　?`\"​`\t​/ :-c \t;　́?中Z",
+  "changes": [
+   {
+    "value": "a",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "﻿　?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "11:1中😀:　b",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "😀,-",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​`\t​/ ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­Z ,﻿\"!ba0",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "c",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é._",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " \t;　́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "﻿`b0é😀:­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "中Z",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "　-\t`́b\n﻿,.0😀\t\ta\"!Z '?c\ta`😀/\n;a!­",
+  "new": "' ​cZ_ -\ud83d　-\t`́b\n﻿,.0😀\t\ta\"!Z '?c\ta`😀/\n;a!­",
+  "changes": [
+   {
+    "value": "' ​cZ_ ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\ud83d　-\t",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`́b\n﻿,.0😀\t\ta\"!Z '?c\ta`😀/\n;a!­",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "!!c0:!.中😀　`Z0b``_́​\"Z,1 Z c\",😀0,",
+  "new": "﻿`. _​",
+  "changes": [
+   {
+    "value": "!!c0:!.中😀　",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "﻿`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "Z0b``",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ". ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "_",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"Z,1 Z c\",😀0,",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "中",
+  "new": "中 ?　­:/-",
+  "changes": [
+   {
+    "value": "中 ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?　­:/-",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "'",
+  "new": "c!",
+  "changes": [
+   {
+    "value": "'",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "c!",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "😀a﻿1a\tb1,Z \t　́_中",
+  "new": "😀a﻿1a\tb1,Z\"?_ \t　́_中",
+  "changes": [
+   {
+    "value": "😀a﻿1a\tb1,Z",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"?_",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": " \t　́_中",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "/\t0.'_é",
+  "new": "01 bZ'Zaé中́a\nb`Z!😀ćé?-",
+  "changes": [
+   {
+    "value": "/\t0.",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "01 bZ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Zaé中́a\nb`Z!😀ćé?-",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\n",
+  "new": "​­?? ́b\n",
+  "changes": [
+   {
+    "value": "\n",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​­?? ́b\n",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "'b ​­ć﻿a?́.c'a`/ 　﻿!﻿1..a中\t﻿,​́",
+  "new": "c\n﻿:\" \n 0;.c_ éc﻿`:﻿` \n 😀-/",
+  "changes": [
+   {
+    "value": "'b ​­ć﻿a?́.",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "c",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'a",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\n﻿:\" \n 0;.c_ éc﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ":﻿` \n 😀-",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " 　﻿!﻿1..a中\t﻿,​́",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "?.é :,.\"😀.-中_'\"1­?  ;/​\"﻿​cZ,\tZ　　",
+  "new": "?.é :,.\"中 :` 😀.-中_'\"1­?  ;/​\"﻿​cZ,\tZ　　",
+  "changes": [
+   {
+    "value": "?.é :,.\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中 :` ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀.-中_'\"1­?  ;/​\"﻿​cZ,\tZ　　",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " ́ b\"Z/　c",
+  "new": "Z­\n '00 :­­ : á",
+  "changes": [
+   {
+    "value": "Z­\n '00 :­­ : a",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " b\"Z/　c",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "';　;1­\n!c\t. á,1　﻿　'Z?\na",
+  "new": "';　;1­\n﻿!!?­­😀!c\t. á,1　﻿　'Z?\na",
+  "changes": [
+   {
+    "value": "';　;1­\n﻿!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!?­­😀!",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "c\t. á,1　﻿　'Z?\na",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "a1",
+  "new": "　­\"﻿ 😀: cb-ba​0\"​'Z😀­中b/­ ﻿0/",
+  "changes": [
+   {
+    "value": "a1",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "　­\"﻿ 😀: cb-ba​0\"​'Z😀­中b/­ ﻿0/",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "Z'b­　!😀\t ",
+  "new": "Z'b­\t11　!😀\t ",
+  "changes": [
+   {
+    "value": "Z'b­\t",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "11　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!😀\t ",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "﻿​​é!a::b ?中-\"` _ ​.😀c,?'\t",
+  "new": "́'́a:c. \n​﻿ 　: _​',",
+  "changes": [
+   {
+    "value": "﻿​​é!",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́'́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "a:",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c. \n​﻿ 　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ": ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "b ?中-\"` ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".😀c,?",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\n \t!\né😀😀a😀`\t_\n\nZ:😀, Z,-中/`!　 /-",
+  "new": "\n \t!`\t中\n/\né😀😀a😀`\t_\n\nZ:😀, Z,-中/`!　 /-",
+  "changes": [
+   {
+    "value": "\n \t!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "`\t中\n/\n",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "é😀😀a😀`\t_\n\nZ:😀, Z,-中/`!　 /-",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ".b c中　\"'\tZ​!';-,​\t`́é　",
+  "new": "́c-\"中中中 ;0\"\t﻿0Z1😀 ﻿é/中﻿ ;cZ`a \ncé­​a-é?",
+  "changes": [
+   {
+    "value": ".b ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "c",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "-\"",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中中 ;0",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'\tZ​!'",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\t﻿0Z1😀 ﻿é/中﻿ ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "-,​\t",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "cZ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "a \ncé­​a-",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "é",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ";.c\tcZ1_cc b?́;\"a ­Z c",
+  "new": ";.c\t​cZ1_cc b?́;\"a ­Z c",
+  "changes": [
+   {
+    "value": ";.c\t",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "cZ1_cc b?́;\"a ­Z c",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ": ;_😀😀́​; ­　b \t ?😀_ \n\"\n­",
+  "new": "?😀中",
+  "changes": [
+   {
+    "value": ": ;_😀😀́​; ­　b \t ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "?😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_ \n\"\n­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "中",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "', ?:​a\n-a 中​­_c 1​0",
+  "new": "', ?'\n Z`a /,﻿:​a\n-a 中​­_c 1​0",
+  "changes": [
+   {
+    "value": "', ?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'\n Z`a /,﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":​a\n-a 中​­_c 1​0",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "'1a'　!中  é\n .,",
+  "new": "\t '_?​//́中!a?­:é/\",!",
+  "changes": [
+   {
+    "value": "\t '",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "1a'　!",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_?​//́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!a?­:",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "é",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\n .",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "/\"",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "0﻿éé:­,, b?,1　`;\n\" ",
+  "new": "0﻿éé:­,, b?,1　 !b\"́­`;\n\" ",
+  "changes": [
+   {
+    "value": "0﻿éé:­,, b?,1　 ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!b\"́­",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`;\n\" ",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " Z-,­\n😀-0a😀 ­.﻿­/bá́　😀😀 ?",
+  "new": "! //-`​́\"中 a\"1",
+  "changes": [
+   {
+    "value": " Z-,­\n😀-0a😀 ­.﻿­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "! ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "ba",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "/-`​",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́　😀😀 ?",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\"中 a\"1",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "Z,!aZ\"Z😀?1　́;_;﻿,11!':　b `!­",
+  "new": "Z,!aZ\"Z😀?1　́;_;﻿,11!':　b `!­",
+  "changes": [
+   {
+    "value": "Z,!aZ\"Z😀?1　́;_;﻿,11!':　b `!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "­",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "́😀😀!😀́,\" ;0 b-中é　`..;b",
+  "new": " 　/é­é?;1?b;Z:\n　　­c中\n\n/ ",
+  "changes": [
+   {
+    "value": "́😀😀!😀́,\" ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " 　/é­é?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "0 ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "1?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "b",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "-中é　`..",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "b",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Z:\n　　­c中\n\n/ ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "­b  -é0é\n.`é😀\n",
+  "new": "­b  -é0é\n.`é😀\n '1 \t\"/",
+  "changes": [
+   {
+    "value": "­b  -é0é\n.`é😀\n ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'1 \t\"/",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "`, ​ éé'​　-`\t́ac­é\n　b\n 　  中c0",
+  "new": "1`Z;​中 ?!é`b \":`!Z0\n/　\n '`c ",
+  "changes": [
+   {
+    "value": "1",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ", ​ éé",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Z",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ";",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "　-",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "中 ?!é",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\t́ac­é\n　",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "b",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\n 　  中c0",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " \":`!Z0\n/　\n '`c ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "1​1;a\tZ a;0c",
+  "new": "1​1;a\tZ'_ a;0c",
+  "changes": [
+   {
+    "value": "1​1;a\tZ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'_ ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "a;0c",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "/﻿​\n",
+  "new": "­\nb\"",
+  "changes": [
+   {
+    "value": "/﻿​\n",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "­\nb\"",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " _­c/ ",
+  "new": " _­cc. 0`bé./ ",
+  "changes": [
+   {
+    "value": " _­c",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c. 0`bé.",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/ ",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "﻿\n`!-\tZ 1_\tc0​b!😀 '/c\n-/.-cZ​` '`;Z``😀ć",
+  "new": ": ?:́　é\néc:01­😀?",
+  "changes": [
+   {
+    "value": "﻿\n`!-\tZ 1_\tc0​b!😀 '/c\n-/.-cZ​` '`;Z``😀c",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ": ?:",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́　",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é\néc:01­😀?",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "́́​_\n​_ ?`:'​﻿_bZ-,!",
+  "new": "́́​_\n​ \t　é_;?_ ?`:'​﻿_bZ-,!",
+  "changes": [
+   {
+    "value": "́́​_\n​ \t　",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é_;?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "_ ?`:'​﻿_bZ-,!",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "?😀́\n﻿\n­1!1́b!_?\t́\t:?c'! a",
+  "new": "­\"1,中`😀́﻿__.:c/　\"0 😀\n\té!\n`­­ ",
+  "changes": [
+   {
+    "value": "?",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "­\"1,中`",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\n﻿\n­1!1́b!_?\t́\t",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "﻿__.",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "c",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/　\"0 ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "😀\n\té",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!\n",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " a",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "`­­ ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "c '　c: \tZ;.﻿😀 1\n:b``.;_﻿́\n­:!?﻿1",
+  "new": "c '　c:  /\tZ;.﻿😀 1\n:b``.;_﻿́\n­:!?﻿1",
+  "changes": [
+   {
+    "value": "c '　c:  ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/\t",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "Z;.﻿😀 1\n:b``.;_﻿́\n­:!?﻿1",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "`中/",
+  "new": "​\t'-́́;1",
+  "changes": [
+   {
+    "value": "`中",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​\t'-́́;1",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "​c_­,:",
+  "new": "​c_­_,:",
+  "changes": [
+   {
+    "value": "​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c_­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "c_­_",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",:",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "?中 .​/..1.é_c` .\t'.`!,!\t c. 中1",
+  "new": "_é:,//b​­",
+  "changes": [
+   {
+    "value": "?中 .​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_é:,",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "..1",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "/b​­",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".é_c` .\t'.`!,!\t c. 中1",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "中\":' ﻿!　;:,\t'é\t?﻿;0́Z_,中 ́éc..'Z?",
+  "new": "中\":' ﻿!　;:,\t'​:-_﻿é\t?﻿;0́Z_,中 ́éc..'Z?",
+  "changes": [
+   {
+    "value": "中\":' ﻿!　;:,\t'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​:-_﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "é\t?﻿;0́Z_,中 ́éc..'Z?",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "中é`?\"­́😀0́'.­:,._-́`b1中\n ",
+  "new": "​中_`':Z\".😀é😀!́ .\"/?😀﻿  éc😀é'a;`'- 中",
+  "changes": [
+   {
+    "value": "​",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?\"­́😀0́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Z\"",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_-",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "😀é😀!",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́ ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".\"/?😀﻿  éc😀é'a;",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "b1",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'- ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " -\" c​?'\t ́😀　b,/`😀!/ .--'́Z​.​́'",
+  "new": " -\" c​?'\t ́😀　b,/\nZ\"  `😀!/ .--'́Z​.​́'",
+  "changes": [
+   {
+    "value": " -\" c​?'\t ́😀　b,/\n",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "Z\"  ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`😀!/ .--'́Z​.​́'",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " 　﻿c-0­﻿a",
+  "new": "éZ!​ 😀\n''!­!﻿\"­\"Z",
+  "changes": [
+   {
+    "value": " 　﻿c-0­﻿a",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "éZ!​ 😀\n''!­!﻿\"­\"Z",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\"' \t.c_ ,﻿́\"a",
+  "new": "\"' \t1­;aac.c_ ,﻿́\"a",
+  "changes": [
+   {
+    "value": "\"' \t",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "1­;aac",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".c_ ,﻿́\"a",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "﻿:?.　,;\t_:'­b́:Z ​\ta﻿Z/",
+  "new": "é  ́",
+  "changes": [
+   {
+    "value": "﻿:?.　,;\t_:'­b",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "é  ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ":Z ​\ta﻿Z/",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "` ﻿_ -Z­a::中c! b .-0'é' 0\n_!\"a,a;01́?` ",
+  "new": "` ﻿_ -Z­a:_é ﻿́:中c! b .-0'é' 0\n_!\"a,a;01́?` ",
+  "changes": [
+   {
+    "value": "` ﻿_ -Z­a:",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_é ﻿́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":中c! b .-0'é' 0\n_!\"a,a;01́?` ",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " é;0\n,:́中!　,",
+  "new": " ;b中 　bZ?\t­  /　,1\n: Z._.c. ?::​",
+  "changes": [
+   {
+    "value": " é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " ;",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "0\n,:́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "b",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " 　bZ?\t­  /",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "　,",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "1\n: Z._.c. ?::​",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " ? ?`　­b' /́﻿_;­!  中1,c\"Z",
+  "new": " ? ?`　­b' /́﻿_;­!  中1,c\" \"\"Z",
+  "changes": [
+   {
+    "value": " ? ?`　­b' /́﻿_;­!  中1,c",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\" \"",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"Z",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\t/﻿中?0c中́ é?: b:﻿;b- 0.﻿0.😀`:'1a :Z",
+  "new": "﻿​　\n﻿😀,\"😀­;中,Z　中!\n:1﻿,中::​́`0",
+  "changes": [
+   {
+    "value": "\t/﻿",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "﻿​　\n﻿😀,\"😀­;",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?0c",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ",Z　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́ é?",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "!\n",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " b",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "1﻿,中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "﻿;b- 0.﻿0.😀`",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'1a :Z",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​́`0",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "0́​,__;!é?/﻿?中­ :\"0é﻿　? a\té;́a'1\n­",
+  "new": "0́​,__;!é-:中?/﻿?中­ :\"0é﻿　? a\té;́a'1\n­",
+  "changes": [
+   {
+    "value": "0́​,__;!é",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "-:中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?/﻿?中­ :\"0é﻿　? a\té;́a'1\n­",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " 　\" `?Z:1 _!\né中 c­'",
+  "new": "_  ;; \t.́Z\t'\t`./.\":1:``\t ",
+  "changes": [
+   {
+    "value": " 　\" `?",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_  ;; \t.́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "Z\t",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'\t`./.\"",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":1",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " _!\né中 c­'",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":``\t ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "　中﻿\n-😀中:b?.\n 　b:é.\"`\". ",
+  "new": "　中﻿\n\t?-😀中:b?.\n 　b:é.\"`\". ",
+  "changes": [
+   {
+    "value": "　中﻿\n\t",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-😀中:b?.\n 　b:é.\"`\". ",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "é­\t　　ZZ?中́　\t `;/\"\n　'. ",
+  "new": ";😀́::_​_\"`😀\"-b﻿.;: \"​　' ! 😀 \t _ éc",
+  "changes": [
+   {
+    "value": "é­\t　　ZZ?中",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ";😀",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "::_​_",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "😀\"-b﻿.",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ": ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ". ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " ! 😀 \t _ éc",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "?\"😀­b中:,Z0b­中 _a'　﻿­;́中'﻿a\"\"_\tb0!.!?﻿-",
+  "new": "?\"😀­b中:,Z0b­中 _a'　﻿中­;́中'﻿a\"\"_\tb0!.!?﻿-",
+  "changes": [
+   {
+    "value": "?\"😀­b中:,Z0b­中 _a'　﻿",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "­;́中'﻿a\"\"_\tb0!.!?﻿-",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\n\t.​ 1\n😀`",
+  "new": "-/,  1-!?`c.a0/!`\n?'?'?;﻿:_﻿́　cb-",
+  "changes": [
+   {
+    "value": "\n\t.​ ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "-/,  ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "1",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\n😀",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "-!?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c.a0/!`\n?'?'?;﻿:_﻿́　cb-",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "Z,﻿\n中é﻿,:.\"﻿0c/,a?é",
+  "new": "Z,﻿\n中é﻿,:.\"﻿0c/,a?é_;0",
+  "changes": [
+   {
+    "value": "Z,﻿\n中é﻿,:.\"﻿0c/,a?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "é_;0",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ":_;.b `/:b,ZZ　1😀 \"­_😀b́:Z中😀_b``﻿​_1/",
+  "new": "é;\"é?'​a­? ﻿​Z\" ",
+  "changes": [
+   {
+    "value": ":_",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "é",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".b `/:b,ZZ　1😀 ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­_😀b́:Z中😀_b``﻿",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "é?'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_1/",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "a­? ﻿​Z\" ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "é́­0b\n;",
+  "new": "é́­0b\n/﻿c.`?,;",
+  "changes": [
+   {
+    "value": "é́­0b\n",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/﻿c.`?,",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "　Z,é​0?​b \"0",
+  "new": "_\"cé ' ,:é a.　 \"-/ééZ!é-a",
+  "changes": [
+   {
+    "value": "　Z",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_\"cé ' ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "é",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​0?​b ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " a.　 ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "0",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "-/ééZ!é-a",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "😀_'​​Z é,​\t　\n??😀c'­c.中0,\t\" ­0é..\"中`﻿　-",
+  "new": "😀_'​​Z é,​\t　\n??😀c'­0 \nc.中0,\t\" ­0é..\"中`﻿　-",
+  "changes": [
+   {
+    "value": "😀_'​​Z é,​\t　\n??😀c'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­c",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "­0 \nc",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".中0,\t\" ­0é..\"中`﻿　-",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " !,,';\n",
+  "new": "​\"😀;😀\t",
+  "changes": [
+   {
+    "value": " !,,'",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​\"😀",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "😀\t",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "c﻿,\n\"c.c c😀;c0 ​_　­\" ?_\t-c `­_?? -­​",
+  "new": "c﻿,\n\"c.c c😀;c0 ​_　­\" ?_\t-c `é:　😀­ac­_?? -­​",
+  "changes": [
+   {
+    "value": "c﻿,\n\"c.c c😀;c0 ​_　­\" ?_\t-c `",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­_",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "é:　😀­ac­_",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?? -­​",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "0/﻿Zé\t..́b ​\".-﻿:\n-/'?1\na`_Z­-b­:!, ",
+  "new": "﻿!́ \" \"Z  é",
+  "changes": [
+   {
+    "value": "0/﻿Zé\t..",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "﻿!",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́ ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "b ​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".-﻿:\n-/'?1\na`_Z­-b­:!, ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " \"Z  é",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "　0 ­ ` 😀\t- 中!　​\n​c\t\"'!\"`😀:1_",
+  "new": "　0 ­ ` 😀`­\t- 中!　​\n​c\t\"'!\"`😀:1_",
+  "changes": [
+   {
+    "value": "　0 ­ ` 😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "`­\t",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "- 中!　​\n​c\t\"'!\"`😀:1_",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " ;é　é:'﻿ 0!/́",
+  "new": " ​-　\"﻿0 ́'​é­!\" `c'\n,",
+  "changes": [
+   {
+    "value": " ;é　é:'﻿ ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " ​-　\"﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "0 ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!/",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'​é­!\" `c'\n,",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "/　\t́?ba\n\"'́'\"c　.`!中",
+  "new": "/　\t́?ba\n\"'́'\"c　.\"b_ `!中",
+  "changes": [
+   {
+    "value": "/　\t́?ba\n\"'́'\"c　.",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"b_ ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`!中",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " .?中`\" ",
+  "new": " ́1　/;\tc/?;0　'`​ \n c '\n:😀,,;",
+  "changes": [
+   {
+    "value": " .",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " ́1　/;\tc/",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ";0　'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\" ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​ \n c '\n:😀,,;",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "/\n\"",
+  "new": "/\n\"😀,  ! \"﻿",
+  "changes": [
+   {
+    "value": "/\n\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "😀,  ! \"﻿",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ":'中  !a.!?\"﻿́:\nŹ中.:,",
+  "new": "​  :a,  ZZ​中­c,/é",
+  "changes": [
+   {
+    "value": "​  ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'中  !",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "a",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".!?\"﻿́:\nŹ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ",  ZZ​",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".:",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "­c",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/é",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "0 ,?\"éc中-",
+  "new": "0 ,?\"_;!.1 : \ud83déc中-",
+  "changes": [
+   {
+    "value": "0 ,?\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_;!.1 : \ud83d",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "éc中-",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "_​﻿​a?/`0\n",
+  "new": "\ta中\t,c",
+  "changes": [
+   {
+    "value": "_​﻿​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\ta",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?/`0\n",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "中\t,c",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\t::﻿",
+  "new": "\t:: c/\"­﻿:,\n﻿",
+  "changes": [
+   {
+    "value": "\t:: ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c/\"­﻿:,\n﻿",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\" b0é﻿'é😀​.:-́;​?;'1-_é​　\t;0,!'́? ",
+  "new": "­a﻿",
+  "changes": [
+   {
+    "value": "\" b0é﻿'é😀​.:-́;​?;'1-_é​　\t;0,!'́? ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "­a﻿",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "­!/ :b:中/,-_ 😀­`\n\nb-",
+  "new": "­!/ :b:中/,😀-_ 😀­`\n\nb-",
+  "changes": [
+   {
+    "value": "­!/ :b:中/,",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "😀",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-_ 😀­`\n\nb-",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "_́b\t😀.😀a;,́b",
+  "new": "Z!😀́aa_c ﻿0c/?:​😀\t..  \t!​?​,\n/Z　-",
+  "changes": [
+   {
+    "value": "_",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Z!😀",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "b\t",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "aa_c ﻿0c/?:​",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀\t.",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "😀a;",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ".  \t!​?​",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́b",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\n/Z　-",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ";\t'  \"😀;c!__Za b;éc1: .!中. \"中0;1-",
+  "new": "'/;\t'  \"😀;c!__Za b;éc1: .!中. \"中0;1-",
+  "changes": [
+   {
+    "value": "'/",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";\t'  \"😀;c!__Za b;éc1: .!中. \"中0;1-",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " `?­0 ,,😀­: 😀 '﻿00\t_中",
+  "new": "​a­b",
+  "changes": [
+   {
+    "value": " `?­0 ,,😀­: 😀 '﻿00\t_中",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​a­b",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\t!`,1­ a._😀 ?,　 ?. \"　?,` :-b́ ",
+  "new": "\t!`,1­ a._😀 ?,　 ?. \"　?,` :-b́ !_",
+  "changes": [
+   {
+    "value": "\t!`,1­ a._😀 ?,　 ?. \"　?,` :-b́ ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!_",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " 　:0:",
+  "new": "é　-\t'́ 'ab­​c`- 中1́　😀中_ \t_:_//bZ`́Z,",
+  "changes": [
+   {
+    "value": "é　-\t'́ 'ab­​c`- 中1́　😀中_ \t_",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "0:",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_//bZ`́Z,",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " b-a. ­",
+  "new": " b ﻿!-a. ­",
+  "changes": [
+   {
+    "value": " b ﻿",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-a. ­",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "́:中/Z;\"!\n\n1\n' b﻿中-.!",
+  "new": "'!",
+  "changes": [
+   {
+    "value": "́:中/Z;\"!\n\n1\n",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " b﻿中-.",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "​😀😀;\"\n?,",
+  "new": "​😀\ud83d \ude00;\"\n?,",
+  "changes": [
+   {
+    "value": "​😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "😀",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\ud83d \ude00",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";\"\n?,",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "0é​.!中éc:é!b-.",
+  "new": "'　a!Z`_!​0\t1\t\t?­!é\n",
+  "changes": [
+   {
+    "value": "0é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'　a!Z`_!",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "0\t1\t\t?­",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中éc:",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "é\n",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!b-.",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "'/\n﻿1``　\"`\nb/,é\t'b",
+  "new": "'/\n﻿1``　\"`\nb/,é\t'éb",
+  "changes": [
+   {
+    "value": "'/\n﻿1``　\"`\nb/,é\t'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "b",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "éb",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "́-.Z  '0 ​ !\nZa\n/b,!0中!",
+  "new": "é'　\t中",
+  "changes": [
+   {
+    "value": "́-.Z  ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "é",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'　\t",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "0 ​ !\nZa\n/b,!0",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "﻿;\t　/`中c _`?﻿0中　!aZ 0́　.-'﻿😀bc😀/'.́0",
+  "new": "﻿;\t　/`中c _`?﻿0中;　!aZ 0́　.-'﻿😀bc😀/'.́0",
+  "changes": [
+   {
+    "value": "﻿;\t　/`中c _`?﻿0中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ";　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!aZ 0́　.-'﻿😀bc😀/'.́0",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\t0c1 Z-　'😀.b\n:_.a​_1aa😀!`/\tc",
+  "new": "中 ;b😀\n \t ​éb1́Z.\"_!,\":b中_'.1﻿' ",
+  "changes": [
+   {
+    "value": "\t0c1 Z-　'",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "中 ;b",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\n \t ​éb1́Z",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "b\n",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\"_!,\"",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "b中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "_",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "a​_1aa😀!`/\tc",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "1﻿' ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "/\t- ​😀/​1́\t/?\n😀-c­\t! ",
+  "new": "/\té'­­c- ​😀/​1́\t/?\n😀-c­\t! ",
+  "changes": [
+   {
+    "value": "/\t",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é'­­c",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "- ​😀/​1́\t/?\n😀-c­\t! ",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "`﻿_a😀/﻿ ­?a!",
+  "new": "1/0_ ﻿\n中Z`​,0 \".`́aa　-bbc­́/__\t",
+  "changes": [
+   {
+    "value": "`﻿_a😀",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "1",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "0_ ﻿\n中Z`​,0 \".`́aa　-b",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?a!",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "bc­́/__\t",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ",\"́Z-\"?10😀;​ 　́/",
+  "new": ",\"́Z-\"?10😀;​ ​﻿﻿　́/",
+  "changes": [
+   {
+    "value": ",\"́Z-\"?10😀;​ ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​﻿﻿　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́/",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "​1ac!​😀\" ",
+  "new": "/ \n`  ?a.﻿_﻿:` - /　​\t\"́`' ",
+  "changes": [
+   {
+    "value": "/ \n`  ?a.﻿_﻿:` - /　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​\t",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "1ac!​😀",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́`' ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "  .\"._'﻿\"_中' Ź﻿c-\"Z/;　😀 😀­\"",
+  "new": "  .\"._'﻿\"_中中':中0b' Ź﻿c-\"Z/;　😀 😀­\"",
+  "changes": [
+   {
+    "value": "  .\"._'﻿\"_中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ":中0b' ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "Ź﻿c-\"Z/;　😀 😀­\"",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "́  ,﻿;.:﻿-!,",
+  "new": ".?中` 中中,,; c﻿ -\t-\t`\"́`\"",
+  "changes": [
+   {
+    "value": "́  ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ".?中` 中中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".:﻿",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " c﻿ ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!,",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\t-\t`\"́`\"",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "?\"-/﻿,Zc﻿﻿​é!_'Z`0 :. .😀　.1 Z;​-Z`b-! 　",
+  "new": "?\"-/﻿,Zc﻿﻿​é!_'Z`0 :. .😀　.1 Z;​-Z`?/\"b-! 　",
+  "changes": [
+   {
+    "value": "?\"-/﻿,Zc﻿﻿​é!_'Z`0 :. .😀　.1 Z;​-Z`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?/\"",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "b-! 　",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "1c\n'\t-` \"/`中­1中;b'́.　0\t;﻿b",
+  "new": "﻿`_0 ​ ?\n0́\"Zb01c1\n　b_'./.' ",
+  "changes": [
+   {
+    "value": "1c\n'\t-",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "﻿`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_0 ​ ?\n0́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/`中­1中;b",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Zb01c1\n　b_",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ".",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "　0\t;﻿b",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "/.' ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "_　b﻿a!b\t;中\n.!-­",
+  "new": "_　b﻿a_a　-!b\t;中\n.!-­",
+  "changes": [
+   {
+    "value": "_　b﻿",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "a",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "a_a　-",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!b\t;中\n.!-­",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "..? Z​😀b?!Z,/​\": c_\n,:/cb😀́\t;/a.́, a﻿b",
+  "new": "\"10,­﻿:\",　_/́'­`?中\n  \n-.`!中a\"́?:b?\"　",
+  "changes": [
+   {
+    "value": "..? Z​😀b?!Z,/​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ": c_\n",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "10",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\",　_",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "cb😀",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\t;/a",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'­`?中\n  \n-",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́, ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "`!中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "a",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"́?:",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "b",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?\"　",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " aca😀́,\n'`\".,\t.0  ",
+  "new": " aca😀́,\n'`\".0　b/c\n,\t.0  ",
+  "changes": [
+   {
+    "value": " aca😀́,\n'`\".",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "0　b/c\n",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",\t.0  ",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "b:\t/_中,­0:1-.0a😀😀-_,\"/　`, bc-́ ",
+  "new": "﻿",
+  "changes": [
+   {
+    "value": "b:\t/_中,­0:1-.0a😀😀-_,\"/　`, bc-́ ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "﻿",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ":﻿\t​0`\" ;　😀",
+  "new": ":﻿\t​0`中\t́́😀-\" ;　😀",
+  "changes": [
+   {
+    "value": ":﻿\t​0`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中\t́́😀-",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\" ;　😀",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\n?　́0.​\"　😀''-́a?\n0é!\"_́' /-1_'-",
+  "new": "́a\"",
+  "changes": [
+   {
+    "value": "\n?　",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "0.​\"　😀''-́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "a",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?\n0é!",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_́' /-1_'-",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": ".c0 \"😀\"cb!!﻿-!/́c\"­_!́/  -`-1­",
+  "new": ".c0 \"😀\"cb!!﻿-!/́c\"­_!́/Ź.;c'!   -`-1­",
+  "changes": [
+   {
+    "value": ".c0 \"😀\"cb!!﻿-!/́c\"­_!́/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "Ź.;c'!   ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-`-1­",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "­\n-1­ -aé​`​.,",
+  "new": "\t﻿` .,c\t!中中­­b-中\t",
+  "changes": [
+   {
+    "value": "­\n-1­ -aé​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\t﻿` ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ".,",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c\t!中中­­b-中\t",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "`　\"./​Z.-,\";­　​\"",
+  "new": "`　\"./​Z\t;\t;.-,\";­　​\"",
+  "changes": [
+   {
+    "value": "`　\"./​Z",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\t;\t;",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".-,\";­　​\"",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "Z",
+  "new": "Z`0;0\".　Z0b?́é!-　`b 　;_é́",
+  "changes": [
+   {
+    "value": "Z",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "`0;0\".　Z0b?́é!-　`b 　;_é́",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "`éb　 Z01' c-,a_éb\t!​é­\nbb`　 ­a　́a",
+  "new": "`éb　 Z01' c-,a_éb\t!​é­\nbb`　 0Z\t﻿!,­a　́a",
+  "changes": [
+   {
+    "value": "`éb　 Z01' c-,a_éb\t!​é­\nbb`　 ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "0Z\t﻿!,",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "­a　́a",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "﻿中 :\t:./Z-,　? Z/ 0'　!Z",
+  "new": ",?: c\n'﻿\t,.\n_:./　​​bZ-😀",
+  "changes": [
+   {
+    "value": "﻿中 ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ",?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ": ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c\n'﻿\t,.\n_",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":./",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "Z",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "　​​bZ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",　? Z/ 0'　!Z",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "😀",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\"Z 中,中­_ _\"😀'1😀c",
+  "new": "\"Z 中,中­_ _b\"😀'1😀c",
+  "changes": [
+   {
+    "value": "\"Z 中,中­_ ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_b",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"😀'1😀c",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " ",
+  "new": "\n",
+  "changes": [
+   {
+    "value": "\n",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "; a 0 , \":a`​﻿​;\nc';-",
+  "new": "; a 0 \"00​?, \":a`​﻿​;\nc';-",
+  "changes": [
+   {
+    "value": "; a 0 ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"00​?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ", \":a`​﻿​;\nc';-",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ":,",
+  "new": "?0­­Z,Za0a0😀-Ź,éé​\n_?` b​0　/.​​​Ź\t",
+  "changes": [
+   {
+    "value": ":",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "?0­­Z",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "Za0a0😀-Ź,éé​\n_?` b​0　/.​​​Ź\t",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " `\"0\"!?﻿中.: ?! ",
+  "new": " `\"0\"!?﻿中.:b\"'́ ?! ",
+  "changes": [
+   {
+    "value": " `\"0\"!?﻿中.:",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "b\"'́ ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?! ",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "­Z  0é?­Zc",
+  "new": "!:中-   1\"ZZ1中,_-,';1中-­/",
+  "changes": [
+   {
+    "value": "!:中-   1\"ZZ1中,_-,'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­Z  0é?­Zc",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ";1中-­/",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "  .\"!",
+  "new": "é/  .\"!",
+  "changes": [
+   {
+    "value": "é/  ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".\"!",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\"b\n`\" `,中é­' 1́\"b\"?1_-0 中",
+  "new": "0́中é,,`;/​\t0😀?b\n!😀\n,中﻿　\"Z\t ?",
+  "changes": [
+   {
+    "value": "\"b\n`\"",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "0́中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é,,",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ";/​\t0😀?b\n!😀\n",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",中﻿　",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é­' 1́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "b\"",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Z\t ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "1_-0 中",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "﻿ '́/-/ ?-́中;Z !.,́0,0́",
+  "new": "﻿ '́/-/ ?-́中;­\t;-' :\"cZ !.,́0,0́",
+  "changes": [
+   {
+    "value": "﻿ '́/-/ ?-́中;",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "Z",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "­\t;-' :\"cZ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": " !.,́0,0́",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "c😀­__c😀　a\"`中​　ZZ,　b!.?00/\t:😀",
+  "new": "\té_10\"́中́",
+  "changes": [
+   {
+    "value": "c😀­__c😀　a",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\té_10",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​　ZZ,　b!.?00/\t:😀",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "中: \" ; 中",
+  "new": "中: \" ; : 0' _?:'b中",
+  "changes": [
+   {
+    "value": "中: \" ; ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ": 0' _?:'b",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "́?1bc;/",
+  "new": "!b.\n\n﻿/\n　,­_ 1中:1b😀😀:,;/1",
+  "changes": [
+   {
+    "value": "́?1bc",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "!b.\n\n﻿/\n　,­_ 1中:1b😀😀:,",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "1",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "!?\n​\":　_a­'1​　.c",
+  "new": "!?\n​\":　_a­Z0;bé中1'1​　.c",
+  "changes": [
+   {
+    "value": "!?\n​\":　",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_a­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_a­Z0;bé中1",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'1​　.c",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "é `?/.é 　​\"--a._0.中, 0?10_́中",
+  "new": "中:é﻿!_/0Z\t`,中­",
+  "changes": [
+   {
+    "value": "中:",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "é",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " `?",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "﻿!_",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".é 　​\"--a._0.中",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "0Z\t`",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " 0?10_́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "​?:-,",
+  "new": "​?:c;a?:-́-,",
+  "changes": [
+   {
+    "value": "​?:",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c;a?:",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́-",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "​a'́́0­1　​中́?\t­1 c ",
+  "new": "!  '_1c!éb\n - \"中?\n1​﻿0:中　,\";é　\t/　 ",
+  "changes": [
+   {
+    "value": "​a",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "!  ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́́0­1　​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_1c!éb\n - \"",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\t­1 c ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\n1​﻿0:中　,\";é　\t/　 ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "-!_-.`1'0\nc,́1　ca😀/\t\t,'0/aé0ca'Z中\t;'​ć",
+  "new": "-!_-.`1'0\nc,́1　ca😀/\t\t,'0/aé0ca'Z中\t;'​c­éc . ?́",
+  "changes": [
+   {
+    "value": "-!_-.`1'0\nc,́1　ca😀/\t\t,'0/aé0ca'Z中\t;'​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "c­éc . ?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "1😀;;\t́,._­_;-:ééa\n　 Z0,﻿,é​﻿　",
+  "new": "́'​­",
+  "changes": [
+   {
+    "value": "1😀;;\t",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",._­_;-:ééa\n　 Z0,﻿,é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "!́`😀/c­",
+  "new": "!́`😀/. é中:1c­",
+  "changes": [
+   {
+    "value": "!́`😀/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ". é中:1c­",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ":é",
+  "new": "1;`ca/　:​_  \n?",
+  "changes": [
+   {
+    "value": "1;`ca/　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​_  \n?",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ": 0  ́;​\n​\n ",
+  "new": ": 0  ́;́/­​\n​\n ",
+  "changes": [
+   {
+    "value": ": 0  ́;",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́/­",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​\n​\n ",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\tc 1​\"中_;﻿﻿​ ́ ",
+  "new": "😀'Z\t/c\t_0😀.Z,0﻿\"　/Za😀 中é.' \n\"",
+  "changes": [
+   {
+    "value": "😀'Z\t/",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "c",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " 1​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\t_0😀.Z,0﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"　",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/Za😀 ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_;﻿﻿​ ́ ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "é.' \n\"",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\":!,",
+  "new": "\":./!!,",
+  "changes": [
+   {
+    "value": "\":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "./",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "­\n:``;﻿ a1.`.\t c\t?b?- 中-　😀",
+  "new": "?b.'.­Z_'\"\n_﻿😀​​😀😀 😀中中a  -_﻿,-:?\"😀a\t​",
+  "changes": [
+   {
+    "value": "­\n:``;﻿ a1.`.\t c\t",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "?b",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?- ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ".'.­Z_'\"\n_﻿😀​​😀😀 😀",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中a  ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_﻿,-:?\"",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "a\t​",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "é́'",
+  "new": "é́.'",
+  "changes": [
+   {
+    "value": "é́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "中,?é-　é.́'　:﻿Z1- .c.b　0　́Z中😀\n😀​/Z",
+  "new": " ﻿\n­　\t　\t1​-Zb?\t'",
+  "changes": [
+   {
+    "value": "中,?é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " ﻿\n­　\t　\t1​",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "　é.́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Zb?\t",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "　:﻿Z1- .c.b　0　́Z中😀\n😀​/Z",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": ";́",
+  "new": ";́!/　中:",
+  "changes": [
+   {
+    "value": ";́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!/　中:",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "-Z0é﻿:\nb 0a　",
+  "new": "'́b;_中­1\"Z",
+  "changes": [
+   {
+    "value": "-Z0é﻿:\n",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "b",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " 0a　",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ";_中­1\"Z",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "/ 😀Z:-́,́`?ác­\t ;1中a-'!中 .a,中/­",
+  "new": "/ 😀Z:-́,中́`?ác­\t ;1中a-'!中 .a,中/­",
+  "changes": [
+   {
+    "value": "/ 😀Z:-́,",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́`?ác­\t ;1中a-'!中 .a,中/­",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "/\"0­?-, !😀\n​,-!:́:\n a\n!, `;Z-.\n",
+  "new": "0Z 　;!éc;,\t Z/　aZ​'​_Z\"-c ` \"",
+  "changes": [
+   {
+    "value": "/\"0­?-, ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "0Z 　;",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "😀\n​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "éc;",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "-!:́:\n ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\t Z/　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "a",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\n!, `;",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "Z",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​'​_Z\"",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".\n",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "c ` \"",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " 中 b1,:1­_😀́\ta",
+  "new": " 中 b1,:1­_😀_中/́\ta",
+  "changes": [
+   {
+    "value": " 中 b1,:1­_😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_中/",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́\ta",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ":!\t",
+  "new": "`中😀　;\"　-",
+  "changes": [
+   {
+    "value": ":!\t",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "`中😀　;\"　-",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "﻿Zcé-0́​­  ​\n中c😀ac  _",
+  "new": "﻿Zcé-0́​­  ​\n中c😀ac  _aZ­﻿­c　",
+  "changes": [
+   {
+    "value": "﻿Zcé-0́​­  ​\n中c😀ac  ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_aZ­﻿­c　",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "c..-/';​1-?b😀:c_, ́:?/　` 1",
+  "new": ";-中́1é中/1ab:/　é\t　b::-­;́/00;-b",
+  "changes": [
+   {
+    "value": "c..-/'",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​1",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "中́1é中/1ab:/　é\t　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "b",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "😀",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c_, ́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "-­;́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "　` 1",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "00;-b",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\t/'́-",
+  "new": "\t/',bc中_ _­́'́-",
+  "changes": [
+   {
+    "value": "\t/'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",bc中_ _­",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\t中\t ​Z!\n﻿😀😀1 ._?;;.Z:é",
+  "new": "a _a\"",
+  "changes": [
+   {
+    "value": "\t中\t ​Z!\n﻿😀😀1 ._?;;.Z:é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "a _a\"",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "' é_﻿?_.'中\tZ/.é1_;́\t c\t? :-​0",
+  "new": "' é_﻿?_.'中\tZ/.é1_;́\tb?bZ c c\t? :-​0",
+  "changes": [
+   {
+    "value": "' é_﻿?_.'中\tZ/.é1_;́\t",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "b?bZ ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "c",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " c\t",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "? :-​0",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "`_\t.;c_ 😀c/b/1;",
+  "new": " 😀 　' 　\"Z-　;_1`😀:, 中\":ab; é中\t?",
+  "changes": [
+   {
+    "value": "`_\t.",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " 😀 　' 　\"Z-　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c_ ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_1`",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c/b/1",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":, 中\":ab",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "; ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é中\t?",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "﻿  /1é,éZ1b﻿b­/'00/?c`",
+  "new": "﻿  /1é,中­́,​\"éZ1b﻿b­/'00/?c`",
+  "changes": [
+   {
+    "value": "﻿  /1é,",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中­́,​\"",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "éZ1b﻿b­/'00/?c`",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " \t😀?Zc;\t﻿/`;'/-́Z _﻿\na\" é\t­1:\"/bc b_:",
+  "new": "0﻿\nc0\t\t中😀:.\n­.\".中中b! .\"",
+  "changes": [
+   {
+    "value": "0﻿\nc0\t\t中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?Zc;\t﻿/`;'/-́Z _﻿\na\" é\t­1",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".\n­.",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/bc b_:",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ".中中b! .\"",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "​1",
+  "new": "　\né' 😀​1",
+  "changes": [
+   {
+    "value": "　\né' 😀",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​1",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "0­́-a-\"- ;😀:.a!a:中0\n/;?   c",
+  "new": "\n",
+  "changes": [
+   {
+    "value": "0­́-a-\"- ;😀:.a!a:中0\n/;?   c",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\n",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "',0é.\"1!,0Z'​.?　_",
+  "new": ":​ca'`/­ /',0é.\"1!,0Z'​.?　_",
+  "changes": [
+   {
+    "value": ":​ca",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "`/­ /'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",0é.\"1!,0Z'​.?　_",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "`:﻿`?\t Z﻿",
+  "new": "-;!\"­a`?﻿!_!́中b :\n ­Z!,b`/\n﻿́😀😀?",
+  "changes": [
+   {
+    "value": "-;!\"­a",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?﻿!_!́中b ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":\n",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " ­Z!,b",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/\n﻿́😀😀",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\t Z﻿",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "`́é/﻿😀,\t/ 中́é0\" 1/\t 1./﻿\n 　\"\"a😀",
+  "new": "`́é/　.\"!　﻿😀,\t/ 中́é0\" 1/\t 1./﻿\n 　\"\"a😀",
+  "changes": [
+   {
+    "value": "`́é/　",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".\"!　﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀,\t/ 中́é0\" 1/\t 1./﻿\n 　\"\"a😀",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "b﻿ 0́\"b0 :😀😀​0́:'.　!中\t;​;.",
+  "new": ";\ta? é!ccé😀中b_中\n?",
+  "changes": [
+   {
+    "value": "b﻿ 0́\"b0 :😀😀​0́:'.　",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ";\ta? é",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "ccé😀",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\t;​;.",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "b_中\n?",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "-,中.Z0? \" 中　a1;.,é\"'\"  ?.0.\t",
+  "new": "-,中.Z0? \" 中　a1;.,é\"'\"  ??:c' \t.0.\t",
+  "changes": [
+   {
+    "value": "-,中.Z0? \" 中　a1;.,é\"'\"  ?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?:c' \t",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".0.\t",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ";中😀.'/é­\n,\" -́Z_,  0`?\tZ- :éé:1\n,; \t,",
+  "new": "`_﻿:Z;,ć:　'­́-ébé　😀:　; \n­﻿.é-b0",
+  "changes": [
+   {
+    "value": "`_﻿:Z",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中😀.'/é­\n",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\" -",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "c",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "Z_,  0`?\tZ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":　'­́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "ébé　😀",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":　",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "éé:1\n,",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " \t,",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " \n­﻿.é-b0",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "　",
+  "new": ",, \t　",
+  "changes": [
+   {
+    "value": "　",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ",, \t　",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ", ?'b﻿1`é  `?\"/­-a ­\t́a\" ;'- \" 　\t1`",
+  "new": "\nb　́́﻿; .​/ac\"-cé:-\"",
+  "changes": [
+   {
+    "value": ", ?'",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\nb　",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "﻿1`é  `?\"/­-a ­\t",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "a\" ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " .​/ac\"",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "cé:-",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " 　\t1`",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "-aé/Z ﻿中​!1  　­ZZZ!Za­ \t:a😀c_\":,",
+  "new": "-aé/Z ﻿中​!1  　­ZZZ!Za1­ _,/­ \t:a😀c_\":,",
+  "changes": [
+   {
+    "value": "-aé/Z ﻿中​!1  　­ZZZ!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "Za­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Za1­ _,/­",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": " \t:a😀c_\":,",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "?中é.b  \"\" b\n :😀./` -. _\t",
+  "new": "b;­\n,0-😀;1　:a--­,0﻿0Z1-c﻿1 ",
+  "changes": [
+   {
+    "value": "?中é.",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "b",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "  \"\" b\n",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ";­\n,0-",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " :",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "./` ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ";1　:a",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ". _\t",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "-­,0﻿0Z1-c﻿1 ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "é",
+  "new": "é,﻿-; -",
+  "changes": [
+   {
+    "value": "é",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",﻿-; -",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "-­ b.\"­a'/­­\té中b\n\"﻿/­ !-!;1/😀Z",
+  "new": "0😀!- ;é\"??́1--_!́",
+  "changes": [
+   {
+    "value": "0😀!",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­ b.\"­a'/­­\t",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " ;",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "é",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中b\n",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "﻿/­ !",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "??́1",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "-_",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ";1/😀Z",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "0!.-\"́é﻿c-\t/_` / ._\ń`  ",
+  "new": "0cc_ !!.-\"́é﻿c-\t/_` / ._\ń`  ",
+  "changes": [
+   {
+    "value": "0",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "0cc_ ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".-\"́é﻿c-\t/_` / ._\ń`  ",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " '``­ 中́\"c­a­-　\t中́!😀­﻿ !\"é!?b　.,é",
+  "new": "`­ 'b﻿ /　?:-;\n\"﻿é'😀`;­?/​\tb_'﻿1?!",
+  "changes": [
+   {
+    "value": " '",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "­ ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中́\"c­a­-",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'b﻿ /",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "　",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\t中́!😀­﻿ !",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "?:-;\n",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"﻿é",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'😀`;­",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "b　.,é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "/​\tb_'﻿1?!",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ":;\t\t﻿  ",
+  "new": ":;\t😀­​é​\t﻿  ",
+  "changes": [
+   {
+    "value": ":;\t",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "😀­​é​\t﻿  ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "　 ?\"é　",
+  "new": "Zb\":_　0 b​　`",
+  "changes": [
+   {
+    "value": "　 ?",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Zb",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é　",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":_　0 b​　`",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " é中0​Z`",
+  "new": " é中0'c​­​Z`",
+  "changes": [
+   {
+    "value": " é中0",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'c",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­​",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "Z`",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "/_﻿　: ,!\"­b́,1",
+  "new": "é._1?;­ ;﻿',​\n\t;'Z-c`a?/😀c?'/",
+  "changes": [
+   {
+    "value": "/_﻿　: ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "é._1?;­ ;﻿'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!\"­b́,1",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​\n\t;'Z-c`a?/😀c?'/",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "10​­﻿ /,/\" .́1.;\"b:c'　?\nac`",
+  "new": "10​­﻿ /,/\" .́1.;\"b:c'　?:' c;\nac`",
+  "changes": [
+   {
+    "value": "10​­﻿ /,/\" .́1.;\"b:c'　?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ":' c;\n",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "ac`",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "中é",
+  "new": "\t　b​?b \":\n　_1_?b,!0",
+  "changes": [
+   {
+    "value": "中é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\t　b​?b \":\n　_1_?b,!0",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "c\t­b́;́",
+  "new": "c\t­b́?;́",
+  "changes": [
+   {
+    "value": "c\t­b́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";́",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ".­\n?😀_.?a\n\tb_Z',Z﻿;­c﻿?\nb_1",
+  "new": "­​-0-́cZ\tb　́\"_\tb0\t😀\t\té😀!\t ",
+  "changes": [
+   {
+    "value": ".",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "­",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\n?😀",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​-0-́cZ\tb　́\"",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "_",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".?a",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\tb0\t😀\t\té😀!\t",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": " ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\n\tb_Z',Z﻿;­c﻿?\nb_1",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "\nZZ 0!c\"`10-\"Z́'Z",
+  "new": "\nZZ 0!c\"`10-\"é;,\"­ ﻿\"Z́'Z",
+  "changes": [
+   {
+    "value": "\nZZ 0!c\"`10-\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é;,\"­ ﻿\"",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "Z́'Z",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "　 /a_/",
+  "new": "中 b,　0Z/Z­c;﻿é😀ZZ-_Z_́!_?`é😀﻿;, ",
+  "changes": [
+   {
+    "value": "中 b,　0Z",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "a_/",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Z­c;﻿é😀ZZ-_Z_́!_?`é😀﻿;, ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ",bé0 a'\"? ́中c!?,`\n  !áa\"﻿ \t\t !??",
+  "new": ",béc!.0 a'\"? ́中c!?,`\n  !áa\"﻿ \t\t !??",
+  "changes": [
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "bé0",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "béc!.0",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": " a'\"? ́中c!?,`\n  !áa\"﻿ \t\t !??",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\n;\"a;\"­中  \"c﻿?`﻿😀",
+  "new": "😀;: ́/😀\t:?;😀​ \"​ _:\" -­ \"a?Z​!: ;,​",
+  "changes": [
+   {
+    "value": "😀",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"a",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ": ́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/😀\t:?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "😀​ ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​ _:\" -",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "­ ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中  ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c﻿",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "a",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "`﻿😀",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Z​!: ;,​",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "0é­`?Z中,/a1?b　  ﻿﻿",
+  "new": "0é­`\"/ 😀éa­-?Z中,/a1?b　  ﻿﻿",
+  "changes": [
+   {
+    "value": "0é­`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"/ 😀éa­-",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?Z中,/a1?b　  ﻿﻿",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "`.　cZ.-  `é-\"\"_;Z0中;　\n\t́😀\"`",
+  "new": "'`0'!中!c!c-.c.😀b ..­cZ中/.'-中/",
+  "changes": [
+   {
+    "value": "",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "0'!中!c!c-",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "　cZ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "c",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "-  `é-",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "😀b ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"\"_;Z0",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "..­cZ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ";　\n\t́😀\"`",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "/.'-中/",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "﻿/_\t",
+  "new": "﻿/_　:`\t",
+  "changes": [
+   {
+    "value": "﻿/_　",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ":`\t",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "  ​.,bé/-/,\n-/Z",
+  "new": "-?\"😀́cb\t'.`Z ­éa\t _c1　:b101_;",
+  "changes": [
+   {
+    "value": "  ​.,bé/",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/,\n-/",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "?\"😀́cb\t'.`",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "Z",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " ­éa\t _c1　:b101_;",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "​​　\"-:,?​b中a",
+  "new": "​​　\"-:\"0\n　!́/﻿,?​b中a",
+  "changes": [
+   {
+    "value": "​​　\"-:",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"0\n　!́/﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",?​b中a",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "😀​?;?中0﻿a`-!́",
+  "new": "\"éc'​😀́​ \n.\",\n. \n",
+  "changes": [
+   {
+    "value": "😀",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\"éc'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?;?中0﻿a`-!",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "😀",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​ \n.\",\n. \n",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "1-\t?b`",
+  "new": "1-\t0`.?b`",
+  "changes": [
+   {
+    "value": "1-\t",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "0`.",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?b`",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "中::c:'bc;\t;😀, `a:-/:,: \t,﻿​,😀-/;!/­ 1",
+  "new": "́­­?😀0​",
+  "changes": [
+   {
+    "value": "中::",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́­",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c:'bc;\t;",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "­?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ", `a:-/:,: \t,﻿",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "0",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",😀-/;!/­ 1",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "c0😀-?c:?",
+  "new": "c0\ud83d\"\ude00-?c:?",
+  "changes": [
+   {
+    "value": "c0",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "😀",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\ud83d\"\ude00",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-?c:?",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\"\"-中:`́\n­",
+  "new": " :1_　!.﻿;éé​:\n.`_́é __,:;\"`-​. \t? /a?中",
+  "changes": [
+   {
+    "value": "\"\"-中",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " :",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "1_　!.﻿;éé​:\n.",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é __,:;\"`-​. \t? /",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "a?中",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "b0\"_　:,﻿.́　?c,.­​😀­'0c, 1,­  中​`﻿bZ:",
+  "new": "b0\"_　:,﻿.́　?c,.-　­​😀­'0c, 1,­  中​`﻿bZ:",
+  "changes": [
+   {
+    "value": "b0\"_　:,﻿.́　?c,.",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "-　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "­​😀­'0c, 1,­  中​`﻿bZ:",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "́​中1😀/0a﻿00-aZ\";­-.中;;`",
+  "new": ".Z!_;c﻿中﻿ -中`é\"\t1 !:　é __,`'a!_́Z`",
+  "changes": [
+   {
+    "value": "́​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ".Z!_;c﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中﻿ ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "1😀/0a﻿00",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "aZ\";­-.",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ";;",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é\"\t1 !:　é __,`'a!_́Z`",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "!;́_b_0中0Z﻿b\t,﻿0\n`\".中 -́﻿",
+  "new": "!;́_b_0中0Z﻿b\t,﻿0\n`\".-中 -́﻿",
+  "changes": [
+   {
+    "value": "!;́_b_0中0Z﻿b\t,﻿0\n`\".",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中 -́﻿",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "-Z​.1­a​c​.ac?!Z\"1/?!.́\n",
+  "new": "b\"中\t1_😀1.😀/a😀 中 ­­_ ! \"c\n/😀😀\n_",
+  "changes": [
+   {
+    "value": "-Z​.1­a​c​.ac?!Z",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "b",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中\t1_😀",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "1",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ".😀",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "a😀 中 ­­_ ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".́\n",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " \"c\n/😀😀\n_",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "/a1\"　­_?-a­`a!!' 中\"c　:;﻿﻿Z-́b1 ́  `Z?",
+  "new": "/a1a\"　­_?-a­`a!!' 中\"c　:;﻿﻿Z-́b1 ́  `Z?",
+  "changes": [
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "a1",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "a1a",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"　­_?-a­`a!!' 中\"c　:;﻿﻿Z-́b1 ́  `Z?",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " 😀.é﻿b́ _-c c,?/-­​​!­,\tZ😀`\t\"",
+  "new": "  😀-\t.` 1;﻿;_;　﻿",
+  "changes": [
+   {
+    "value": "  😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".é﻿b́ _",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c c,?/-­​​!­,\tZ😀",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\t.",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\t\"",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " 1;﻿;_;　﻿",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "­,﻿'11Z",
+  "new": "­,c;﻿'11Z",
+  "changes": [
+   {
+    "value": "­,",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c;﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'11Z",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "-1​ 　﻿,😀",
+  "new": ",:_/.0中 ,'!_1́😀/:😀Zé.​ \"\"_c 0/﻿\tééc ",
+  "changes": [
+   {
+    "value": "-1​ 　﻿",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ":_/.0中 ,'!_1́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/:😀Zé.​ \"\"_c 0/﻿\tééc ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "Z  ​,\t'😀\n",
+  "new": "- a'Z:Z  ​,\t'😀\n",
+  "changes": [
+   {
+    "value": "- a'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "Z",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ":Z  ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​,\t'😀\n",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "﻿,́中,!",
+  "new": "; : !.\t ­b! 1中\ń\" \t?b­'Zá`",
+  "changes": [
+   {
+    "value": "﻿,́中,",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "; : ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".\t ­b! 1中\ń\" \t?b­'Zá`",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ".c",
+  "new": ".c ",
+  "changes": [
+   {
+    "value": ".c ",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "_1́__​b　1 ,Z' b,'_?1a':­! ?﻿",
+  "new": "　Z1éb:0﻿0!a­. :\nZ0.,- 0 　`?  ",
+  "changes": [
+   {
+    "value": "_1́__​b　1",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "　Z1",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " ,Z' b,'_?1a'",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "éb",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "0﻿0",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "a­. :\nZ0.,- 0 　`",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?  ",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "­\tb?_́​'.　c​Z.-1\t;Za​\t 中　\n, 0 \t\"﻿b1b́　?",
+  "new": "­\tb?_́​'.　c​Z.-1\t;Za​\t 中​ ́`a\ud83d　\n, 0 \t\"﻿b1b́　?",
+  "changes": [
+   {
+    "value": "­\tb?_́​'.　c​Z.-1\t;Za​\t 中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​ ́`a\ud83d　\n",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ", 0 \t\"﻿b1b́　?",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " b!.é?é-01é \nbc0﻿?\n0?0.中 ",
+  "new": "\"́c😀b !1 Z😀Z​Z;?",
+  "changes": [
+   {
+    "value": "\"́c😀",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "b !",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "1 Z😀Z​Z;",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é-01é \nbc0﻿?\n0?0.中 ",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": " .'_/-",
+  "new": " .'_/`a0'-",
+  "changes": [
+   {
+    "value": " .'_/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "`a0'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " \na­1.\n😀 c \né c",
+  "new": "`\n0_\"😀'1; ?Z,́,.;/`́é😀'c\"😀1_\n`﻿:' ..",
+  "changes": [
+   {
+    "value": " \na­1",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "`\n0_\"😀'1; ?Z,́,",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ";/`́é",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "c",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " \né c",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\"😀1_\n`﻿:' ..",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\n ;\" 1é\té　 ?,  .　​0,­​　\t ",
+  "new": "\n ;\" 1é\té　 ? 中,,  .　​0,­​　\t ",
+  "changes": [
+   {
+    "value": "\n ;\" 1é\té　 ? ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",  ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".　​0,­​　\t ",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "`​中\"b\t　 :中0",
+  "new": "`b/.\t!!1\"?\t1 :_﻿,b1`　1　",
+  "changes": [
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​中\"",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "b",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/.\t!!1\"?\t1 ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中0",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_﻿,b1`　1　",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "-:,-中́,/",
+  "new": "-:/?.,-中́,/",
+  "changes": [
+   {
+    "value": "-:",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/?.",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",-中́,/",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "́b\"﻿﻿,`0­!́bbc: ?', 　­ 　 \t`_0'",
+  "new": "😀1é,:﻿aé﻿﻿😀中/中?,'　b\n!😀中　1",
+  "changes": [
+   {
+    "value": "́b\"",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "😀",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "1é",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "`0­!́bbc",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":﻿",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "aé﻿﻿😀中/中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " 　­ 　 \t`_0",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'　",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "b\n!😀中　1",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\"é:1",
+  "new": "\"\tb\t1\"/\t`é:1",
+  "changes": [
+   {
+    "value": "\"\t",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "b\t1\"/\t`",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "é:1",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "c'!́_!﻿\t.\n!`ac!?​​  Z-,​_!ć!0Z_",
+  "new": "_-中­a'_­\t?'/́:. ",
+  "changes": [
+   {
+    "value": "c'!́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!﻿\t.\n!`ac!?​​  Z",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "中­a'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "_",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!c",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "­\t?'/",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!0Z_",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":. ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "!\nb",
+  "new": "!\nb́😀-'﻿\n",
+  "changes": [
+   {
+    "value": "!\nb",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́😀-'﻿\n",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "中​1中\";­ b_ Za​😀!中　\t/­1éZZ!-é -'b",
+  "new": ";\"  -:\té: ' b😀-:`.  ​? bé\t,-中 0!😀",
+  "changes": [
+   {
+    "value": "中​1中\"",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­ b_ Za​😀!中　\t/­1éZZ!",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\"  ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ":\t",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "é",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " -",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ": ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "' b",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "😀-:`.  ​? bé\t,-中 0!😀",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " _!;_\té😀;- __\"béé!1\n;​0　?:c　?_!",
+  "new": " _!;_\té😀;- __\"béé!1\n;​0　?:c　?_Z　.!",
+  "changes": [
+   {
+    "value": " _!;_\té😀;- __\"béé!1\n;​0　?:c　?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_Z　.",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ":! ?　́-",
+  "new": "0 ́;",
+  "changes": [
+   {
+    "value": ":! ?　",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "0 ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ";",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "`﻿-\n😀0́Z​﻿­́/\t!　_a﻿",
+  "new": "`﻿-\n😀0́Z​﻿_é́b­́/\t!　_a﻿",
+  "changes": [
+   {
+    "value": "`﻿-\n😀0́Z​﻿",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_é",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "b­́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/\t!　_a﻿",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "b́😀\ná/0_1_!-é​​ bZ_:",
+  "new": "é _/-\n\t­c\t/`a?/éc﻿:::'\"😀\"\"",
+  "changes": [
+   {
+    "value": "b́😀\ná",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "é _",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "0_1_!",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é​​ bZ_",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\n\t­c\t/`a?/éc﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "::'\"😀\"\"",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " 1,中\t​0,`, Ź́?\t",
+  "new": " 1,中\t​0,`, , Ź́?\t",
+  "changes": [
+   {
+    "value": " 1,中\t​0,`, ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ", ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "Ź́?\t",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "é`\t́\n`; ­é' ,ZZ/`!",
+  "new": ":́　\t \"﻿­­;­",
+  "changes": [
+   {
+    "value": "é`\t",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\n`",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "　\t \"﻿­­",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " ­é' ,ZZ/`!",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "­",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\"",
+  "new": "cŹ !中​. b\"",
+  "changes": [
+   {
+    "value": "cŹ !中​. b",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "!0b­\n­",
+  "new": "'/01:Z　\t中Z  b/́\t Z\n _﻿ á,́ bc😀 `́;﻿é",
+  "changes": [
+   {
+    "value": "!0b­\n­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'/01:Z　\t中Z  b/́\t Z\n _﻿ á,́ bc😀 `́;﻿é",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "́Z, '_ /b:?':`?.😀-'' \t1 　​`a\n　`﻿/\"é",
+  "new": "́Z, '_ /b:é-:b​­!中Z0?':`?.😀-'' \t1 　​`a\n　`﻿/\"é",
+  "changes": [
+   {
+    "value": "́Z, '_ /b:",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é-:b​­!中Z0",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?':`?.😀-'' \t1 　​`a\n　`﻿/\"é",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "中`'　",
+  "new": "﻿\"ba:`;中﻿​　😀­中;​,中/!:': ?-",
+  "changes": [
+   {
+    "value": "中",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "﻿\"ba:",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ";中﻿​　😀­中;​,中/!:",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ": ?-",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "Z;?_'  中: 0ć﻿1__\t`́Z\" ??_:­ /\"😀0 /­.中",
+  "new": "Z;?_'  中: 0ć﻿1__\t`́Z\" ??_:­ /\"😀0 /\t-'_'​中_­.中",
+  "changes": [
+   {
+    "value": "Z;?_'  中: 0ć﻿1__\t`́Z\" ??_:­ /\"😀0 /",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\t-'_'​中_­",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".中",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\"ca_\"\t é1a中é,,0;\n00 Z",
+  "new": "中 Za\n😀ć\"\" Zé-_/\"!b. 0/1 ﻿b,ZZc​`",
+  "changes": [
+   {
+    "value": "中 Za\n😀ć",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "ca_",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\" Zé-_/",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\t é1a中é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "!b. 0/1 ﻿b",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "ZZc​`",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",0;\n00 Z",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "é1-!?!­\"'.bc;́\"\t1　́ ﻿; , 中/_\n1'﻿a­!\n;é́",
+  "new": "é1-!?!  ­\"'.bc;́\"\t1　́ ﻿; , 中/_\n1'﻿a­!\n;é́",
+  "changes": [
+   {
+    "value": "é1-!?!  ­\"'.bc;́\"\t1　́ ﻿; , 中/_\n1'﻿a­!\n;é́",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "中é ​cZb ﻿? 0':_-é中",
+  "new": "　Z!😀Zaac:.́\t́?`ac`? -é;́​­\t;0,\t'.­中1a",
+  "changes": [
+   {
+    "value": "中",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "　Z!😀Zaac:.́\t́?`ac`? -",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "é",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ";́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "cZb ﻿? ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "­\t;",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "0",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",\t",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ":_-é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ".­",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "1a",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "Z \n-b\n? `́`:,a 1\t?0- Z",
+  "new": " \ta!!ac中cZ \n-b\n? `́`:,a 1\t?0- Z",
+  "changes": [
+   {
+    "value": "Z",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " \ta!!ac中cZ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": " \n-b\n? `́`:,a 1\t?0- Z",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "中!.-1`:-?\n1\n :﻿,/0;​ `éc😀",
+  "new": ":`? a .?:\"c­1!\n\"'`😀﻿.",
+  "changes": [
+   {
+    "value": "中!.-1`",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "`",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\n1\n ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " a .?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "﻿,/0;​ ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\"c­1!\n\"'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "éc",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "😀﻿",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ": ?­​';!b😀\n!.bé_中",
+  "new": ": ?­​';!​́\té c​b😀\n!.bé_中",
+  "changes": [
+   {
+    "value": ": ?­​';!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​́\té c​",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "b😀\n!.bé_中",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "­​?　",
+  "new": ":\t';?'?éc中b中",
+  "changes": [
+   {
+    "value": "­​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":\t';",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'?éc中b中",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "-é;­Z;\tZ.é1\"😀 \"1_­'\"`__b\t中\"`1\tcZ!:",
+  "new": "-é;­Z;\tZ.é1\"😀 \"1_­'\"`__b\t中\"`1Z﻿''?.-,\tcZ!:",
+  "changes": [
+   {
+    "value": "-é;­Z;\tZ.é1\"😀 \"1_­'\"`__b\t中\"`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "1",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "1Z﻿''?.-,",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\tcZ!:",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "?: 1Z­'b﻿`Zb_é😀 　́",
+  "new": "._. /!​; :á\t,\"a00/😀",
+  "changes": [
+   {
+    "value": "?: 1Z­'b﻿`Zb_é😀 ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "._.",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": " ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/!​; :a",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́\t",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",\"a00/😀",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\"﻿,b' Z'cé0 a1c　Z:`😀: é!中​:?\";\t\t",
+  "new": "\"﻿,.b' Z'cé0 a1c　Z:`😀: é!中​:?\";\t\t",
+  "changes": [
+   {
+    "value": "\"﻿,",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "b' Z'cé0 a1c　Z:`😀: é!中​:?\";\t\t",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " !b!; ;​﻿a­,\n:中　0éac,.a​.Zb1:'\" á ",
+  "new": "Z-1é_ba_.aaa'😀中 b:中b  1﻿a/`a-\n\" ­\n /`.",
+  "changes": [
+   {
+    "value": " !",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Z-1é_ba_.aaa'😀中 ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "b",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!; ;​﻿a­,\n",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "　0éac,.a​.Zb",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "b ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": " 1﻿",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ":'\" ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "a",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́ ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "/`a-\n\" ­\n /`.",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "é,0 😀Z! ​😀\t,​",
+  "new": "  ?'é,0 😀Z! ​😀\t,​",
+  "changes": [
+   {
+    "value": "  ?'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "é,0 😀Z! ​😀\t,​",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "!'/ ca!a .0́\t .a. Z​é!\t :ć",
+  "new": "中​Z",
+  "changes": [
+   {
+    "value": "!'/ ca!a .0́\t .a. Z",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é!\t :ć",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Z",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\n中,­:c ​",
+  "new": "\n中\"`0​,­:c ​",
+  "changes": [
+   {
+    "value": "\n中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"`0​",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",­:c ​",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "_: 1a­😀.é_ `a😀​1: !c:\"1-😀 😀a",
+  "new": "　-:",
+  "changes": [
+   {
+    "value": "_",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "　-",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " 1a­😀.é_ `a😀​1: !c:\"1-😀 😀a",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "﻿​0:-​﻿?﻿:­ b,!\t\n `._Z　aa-;   　",
+  "new": "﻿​0:-​﻿?﻿:­ b,!?`\t\n `._Z　aa-;   　",
+  "changes": [
+   {
+    "value": "﻿​0:-​﻿?﻿:­ b,!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`\t\n ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "._Z　aa-;   　",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "ac​c­中0?﻿\"",
+  "new": "　",
+  "changes": [
+   {
+    "value": "ac​c­中0?﻿\"",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "　",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "'`\"!​中\n\t😀_﻿_Z0`中 Z`　﻿﻿_'\t,﻿ ',　😀;.b﻿ -",
+  "new": "'`\"!​中\n\t😀_﻿_Z0`中 Z`　﻿﻿_'\t,﻿ ',aa　😀;.b﻿ -",
+  "changes": [
+   {
+    "value": "'`\"!​中\n\t😀_﻿_Z0`中 Z`　﻿﻿_'\t,﻿ ',",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "aa　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀;.b﻿ -",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "!😀 :́;😀́00 ́​﻿ \nc\"';́　 \nZ 😀. .中́",
+  "new": ". _Ź0é: ?0😀😀 　-中\t:😀​!Z中b?' 中! 　́😀﻿　ZZb",
+  "changes": [
+   {
+    "value": "!",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ". _Ź0é: ?0",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "😀 　-中\t",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́;",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́00 ́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "﻿ \nc\"';́　 \n",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "!",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "Z",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " 😀. .",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "b?' 中! 　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "😀﻿　ZZb",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\n​'/'c­. `­b\t:1_́　​0中b 1é ́ _­\t0\"",
+  "new": "\n​' /0,;\t,-Ź/'c­. `­b\t:1_́　​0中b 1é ́ _­\t0\"",
+  "changes": [
+   {
+    "value": "\n​' /",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "0,;\t,-Ź/",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'c­. `­b\t:1_́　​0中b 1é ́ _­\t0\"",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ",!//­ ",
+  "new": "':'_!b!\né1?中Z　　c.éb​中\"_.\n:.中ć ​\t:b.",
+  "changes": [
+   {
+    "value": ",",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "':'_",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "//­ ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "b!\né1?中Z　　c.éb​中\"_.\n:.中ć ​\t:b.",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "​中😀﻿.',!\n",
+  "new": "​中😀﻿:中.',!\n",
+  "changes": [
+   {
+    "value": "​中😀﻿",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ":中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".',!\n",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " \t`́é﻿a `­　😀 ​ .",
+  "new": "́?\" 中😀_!;,b? !_中 \n`a中0:;­\t﻿",
+  "changes": [
+   {
+    "value": " \t`",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é﻿a ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "?\" 中😀_!;,b? !_中 \n",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "a中0:;",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "­\t﻿",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "　😀 ​ .",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "　\n'?1\"́ 0\t._`;:aZ1",
+  "new": "　\n'?1\"́ 0\t._`;:a\"​ ́a0cé;/Z1",
+  "changes": [
+   {
+    "value": "　\n'?1\"́ 0\t._`;:",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "aZ1",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "a\"​ ́a0cé;/Z1",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "_1/­0😀1:!́, Z",
+  "new": " 1😀­ `0 　0​`c 0-//.!​中­a - ,​　?,b​ ",
+  "changes": [
+   {
+    "value": "_1/­0😀",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " 1",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "😀­ `0 　0​`c 0-//.",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​中­a - ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " Z",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​　?,b​ ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "　Z­`:-:,c;é­ \" 0　.​b­1中?­",
+  "new": "　Z­`:-:,c;é 😀  :??!­ \" 0　.​b­1中?­",
+  "changes": [
+   {
+    "value": "　Z­`:-:,c;",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "é 😀  :??!­",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": " \" 0　.​b­1中?­",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " 😀ac?́　é1 　;_中-\"­!́",
+  "new": "'﻿0 !  ﻿_/😀\t​",
+  "changes": [
+   {
+    "value": " 😀ac?́　é1 　;_中-\"­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'﻿0 ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "  ﻿_/😀\t​",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "a,_​b a﻿,'!,0: ,:中😀?/ `﻿`中中",
+  "new": "a,é́_​b a﻿,'!,0: ,:中😀?/ `﻿`中中",
+  "changes": [
+   {
+    "value": "a,",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "_​b a﻿,'!,0: ,:中😀?/ `﻿`中中",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ",/\n?`\n ,\"Z_中\"'c/:Z😀,\té😀　\"é1 é",
+  "new": " 1`😀　  é\t\n \n中/_ca😀-1　?,\t-1?,中;😀1a-?",
+  "changes": [
+   {
+    "value": ",/\n?",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " 1",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\n ,\"Z_",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "😀　  é\t\n \n",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"'c",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ":Z",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_ca",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "-1　?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",\t",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "-1?,中;",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "　\"é1 é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "1a-?",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " ;\t,/中éc? é0?'",
+  "new": "?;́ ;\t,/中éc? é0?'",
+  "changes": [
+   {
+    "value": "?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́ ;\t",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",/中éc? é0?'",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " ",
+  "new": "!﻿",
+  "changes": [
+   {
+    "value": " ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "!﻿",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "/c\t'!",
+  "new": "/c\t'!　 a　 中 !­ ",
+  "changes": [
+   {
+    "value": "/c\t'!　 ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "a　 中 !­ ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "́0\";,",
+  "new": "﻿0a1​0;1?/.céc1c_!﻿c,c.é bb,  '`",
+  "changes": [
+   {
+    "value": "́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "﻿0a1​",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "0",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "1?/.céc1c_!﻿c",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c.é bb,  '`",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "!😀­?​́b!a­-😀　a;1-😀1'é​　?中:a'",
+  "new": "!😀­?​́b!a­-😀　a;1-😀1'é​　?/:́_​﻿́中:a'",
+  "changes": [
+   {
+    "value": "!😀­?​́b!a­-😀　a;1-😀1'é​　?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/:́_​﻿́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中:a'",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "`,­﻿Z:😀':;; , ,ac1;cc'1﻿\t:\" ­,a;:́' ",
+  "new": ";　 　\n-,?　..??,:.­",
+  "changes": [
+   {
+    "value": "`,­﻿Z:😀':",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "; ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "　 　\n-",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?　..??",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "ac1;cc'1﻿\t",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\" ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ".",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "­",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",a;:́' ",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "'﻿​ ​😀/　",
+  "new": "'﻿​--?, ​😀/　",
+  "changes": [
+   {
+    "value": "'﻿​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "--?, ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​😀/　",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\n \t;中.́ Z:\nb!/`.;\t.Z`﻿中\"c  é/`/\t😀0,　",
+  "new": ",",
+  "changes": [
+   {
+    "value": "\n \t;中.́ Z:\nb!/`.;\t.Z`﻿中\"c  é/`/\t😀0",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "c `　　﻿b­:!​  c﻿0\", é?;\"́́中1\"'b",
+  "new": "c ﻿\t`1éé1\tZ中`　　﻿b­:!​  c﻿0\", é?;\"́́中1\"'b",
+  "changes": [
+   {
+    "value": "c ﻿\t",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "`1éé1\tZ中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`　　﻿b­:!​  c﻿0\", é?;\"́́中1\"'b",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\"b \n,!!-c` /\t /',é😀/ ﻿",
+  "new": "́!­́ _\"?';;😀  ​.\t/😀c​﻿",
+  "changes": [
+   {
+    "value": "\"b \n,",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "!-c` /\t /",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "­́ _\"?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ";;",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀  ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​.\t",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " ﻿",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "😀c​﻿",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\nZ",
+  "new": "\n_ bb­ZéZ",
+  "changes": [
+   {
+    "value": "\nZ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "\n_ bb­ZéZ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "?_﻿_ ­\t中.,aé́'-'​/\t:",
+  "new": "!'\t😀\t​\"0\t\n中­?　　中­́​\"'!　/.é",
+  "changes": [
+   {
+    "value": "?_﻿_ ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "!'\t😀\t​\"0\t\n中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "­",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?　　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".,aé",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "­",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'-'",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"'!　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\t:",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ".é",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "​ !1é-0 0!Z1Z,﻿中0 ­c\"　__:",
+  "new": "​ !1é-0 0!Z1Z,﻿中0 ​1́;/\"​­c\"　__:",
+  "changes": [
+   {
+    "value": "​ !1é-0 0!Z1Z,﻿中0 ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​1́;/\"​",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "­c\"　__:",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "'bZa­Z­Zb-a​Z/c'",
+  "new": "́/01́﻿0b,😀​­_\tb;­a, 'Z 0 ",
+  "changes": [
+   {
+    "value": "'bZa­Z­Zb-a​Z",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "01́﻿0b,😀​­_\tb;­a, ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "Z 0 ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "́\tbc\t,-Zcé﻿\n　\n 1\t/😀;.\",:",
+  "new": "́\tbc\t,-Zcé﻿\n　\n0;/ 1\t/😀;.\",:",
+  "changes": [
+   {
+    "value": "́\tbc\t,-Zcé﻿\n　\n",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "0;/ ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "1\t/😀;.\",:",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "0😀﻿😀c,-1😀1' é😀c ́?:­:,­_\téZ.\" 😀",
+  "new": "'　`­c-\nZc\na!,中_ ́cbcab\n﻿\"",
+  "changes": [
+   {
+    "value": "0😀﻿😀c,-1😀1",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " é😀c ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "　`­c-\nZc\n",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́?:­:",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "a!",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­_\téZ.",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "中_ ́cbcab\n﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " 😀",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "-,:　.",
+  "new": "-,:́\t\n/é\t😀　.",
+  "changes": [
+   {
+    "value": "-,:",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "́\t\n/é\t😀　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\"1 b​/​:Z-\n​?1_ \n 1!\"\"́",
+  "new": "c\";?​;cZ0\"",
+  "changes": [
+   {
+    "value": "c",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "1 b​/​:Z-\n​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "1_ \n 1!",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​;cZ0",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"́",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "--11\t0 ﻿?  ,­?1\" c_;1/b😀Zé😀,;\n­",
+  "new": "--11\t0 ﻿?  ,­?1\" c_;1/b😀Z' _aé😀,;\n­",
+  "changes": [
+   {
+    "value": "--11\t0 ﻿?  ,­?1\" c_;1/b😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "Zé",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Z' _aé",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀,;\n­",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\tc,c\"\n:b́­ca?0é:​.é:\t ﻿\"!",
+  "new": "'﻿\n­﻿­/́`!:c_.'​\t  b ;\tZ﻿­-_­­\t中é0😀é ",
+  "changes": [
+   {
+    "value": "\tc,c\"\n:b",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'﻿\n­﻿­/",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­ca?0é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "`!",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "c_",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'​\t  b ;\tZ﻿­-_­­\t中é0😀",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "é ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ":\t ﻿\"!",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "0c;　﻿,​  Z中",
+  "new": "0c;　﻿,​  中;1\nZé Z中",
+  "changes": [
+   {
+    "value": "0c;　﻿,​  ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "中;1\nZé ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "Z中",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "Z0céc \t­中;?_é😀́中  ;­: `​`a`'. 中;\n.",
+  "new": "!:/ 　\n",
+  "changes": [
+   {
+    "value": "Z0céc \t­中;?_é😀́中  ;­",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "!",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " `​`a`'. 中;\n.",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "/ 　\n",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "/\"0😀 \"\t\n?;.\n_!/\tZ­0éZ;,. 中­,a 1aZa",
+  "new": "/\"0😀 \"\t\nc\n?.?;.\n_!/\tZ­0éZ;,. 中­,a 1aZa",
+  "changes": [
+   {
+    "value": "/\"0😀 \"\t\n",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c\n",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".?",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";.\n_!/\tZ­0éZ;,. 中­,a 1aZa",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "­,́`1/​_\",\n?'0,Z😀\n.1!''​`;1 :­Z​​'0,!",
+  "new": "!1! ﻿/_,.﻿­`_!,1-",
+  "changes": [
+   {
+    "value": "­,́`",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "!",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "1",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "! ﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\n?'0,Z😀\n",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ".",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "1!''​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "﻿­",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ";1 :­Z​​'0,",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "_",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",1-",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "😀​ .-.中 Zcb-:c .\":",
+  "new": "😀​ .-.中 Zcb-:c  \t.\":",
+  "changes": [
+   {
+    "value": "😀​ .-.中 Zcb-:c  \t.\":",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "0﻿é';😀`;1é_1/　0​\t",
+  "new": "b'­: _ b;中0​Ź😀a'c!é\"_ 　",
+  "changes": [
+   {
+    "value": "0﻿é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "b",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­: _ b",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "😀`;1é_1/　",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "0",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "Ź😀a'c!é\"_ 　",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "'​c_`﻿1",
+  "new": "'​c_`a.́;中é/﻿1",
+  "changes": [
+   {
+    "value": "'​c_`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "a.́;中é/﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "1",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "!/​?́,,",
+  "new": "0﻿!中1!:　?Z\t0cac  .́a ",
+  "changes": [
+   {
+    "value": "0﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/​",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "中1!:　",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "?",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "Z\t0cac  .",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",,",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "a ",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "a﻿0\n;­﻿　",
+  "new": "a﻿0.\"Źb​﻿\n;­﻿　",
+  "changes": [
+   {
+    "value": "a﻿0",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ".\"Źb​﻿\n",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ";­﻿　",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "0\"\t`中 \n.　a\"",
+  "new": "; ,/0😀\t1​Z`中:﻿b　 0\"",
+  "changes": [
+   {
+    "value": "; ,/",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "0",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"\t",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "😀\t1​Z",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": " \n.　a",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":﻿b　 0",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "b😀 ,b!😀­😀́1­/中",
+  "new": "b😀 ,b-­;﻿-`/.\t!😀­😀́1­/中",
+  "changes": [
+   {
+    "value": "b😀 ,b",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "-­;﻿-`/.\t",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "!😀­😀́1­/中",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\"é/Zé/:中,\n`\",0c 　,0_?.中 é?cZ1/  `﻿Z ;`/",
+  "new": "c中cé`́😀́1­Z \n'　\n­ ﻿é​1b中!`́\n​​　́,",
+  "changes": [
+   {
+    "value": "\"é/Zé/:",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "c",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "中",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ",\n",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "cé",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\",0c 　,0_?.中 ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́😀́1­Z \n'　\n­ ﻿",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "é",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "?cZ1/  ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "​1b中!",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "﻿Z ;`/",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "́\n​​　́,",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ";　\"́!,:中",
+  "new": ";　\"Z0\n 中aa\"\t\ud83d́!,:中",
+  "changes": [
+   {
+    "value": ";　\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "Z0\n 中aa\"\t\ud83d",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "́!,:中",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "b'0 /\"　­😀\t́b́, ﻿ ?́​`﻿',:'😀Z'",
+  "new": "中​`Z,\"\"-::　:;_é-b1­c0﻿1/,\n­bc:﻿1 😀c",
+  "changes": [
+   {
+    "value": "b'0 /\"　­😀\t́b́, ﻿ ?́",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​`",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "﻿'",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Z",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ",",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"\"-",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ":",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": ":　:;_é-b1­c0﻿1/,\n­bc:﻿1 ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "Z'",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "c",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " ​Z😀c😀\n ;\" ́　́a",
+  "new": " ​Z😀c😀\n ;\" ́　́​Z中​:\"\"'a",
+  "changes": [
+   {
+    "value": " ​Z😀c😀\n ;\" ́　́",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "​Z中​:\"\"'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "a",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "　­_",
+  "new": "!;Z!\"😀'aZ,😀́　中​́0!́﻿Z?é'b中 ­b/😀\t",
+  "changes": [
+   {
+    "value": "　­_",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "!;Z!\"😀'aZ,😀́　中​́0!́﻿Z?é'b中 ­b/😀\t",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "c\n0,ba-/́́中;😀_`",
+  "new": "c\n0,ba-/́́中;😀 \n ­!_`",
+  "changes": [
+   {
+    "value": "c\n0,ba-/́́中;😀 \n ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­!",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "_`",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "😀é'/0?-0\"c",
+  "new": "'`é_\"Z'中`.😀\"\tb!😀\n?.​_c­/́ ́中'​中!`Z._!!\n",
+  "changes": [
+   {
+    "value": "😀é",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "/0?-0",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "`é_",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "\"",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "c",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Z'中`.😀\"\tb!😀\n?.​_c­/́ ́中'​中!`Z._!!\n",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "_/　Z中c1  !. \t0",
+  "new": "_/　'?﻿  .Z中c1  !. \t0",
+  "changes": [
+   {
+    "value": "_/　",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "'?﻿  .",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "Z中c1  !. \t0",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "\n​!Z-Zc1-' \n  ; `;  ! 0\t0/",
+  "new": "a　, aZZ中中,  \"́-é ///\"`",
+  "changes": [
+   {
+    "value": "\n​!Z",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "a　, aZZ中中,  \"́",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "Zc1-' \n  ; `;  ! 0\t0",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "é ",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "/",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "//\"`",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "́;﻿/Z!é_中;.😀!​😀b:é;é\té'b_",
+  "new": "́;﻿/Z!é_中;.😀!​😀b:é;é\té'_'b_",
+  "changes": [
+   {
+    "value": "́;﻿/Z!é_中;.😀!​😀b:é;é\té'",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "_'",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "b_",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ":\"Zé.­_­`é! .: ",
+  "new": " ,/. a​' é_c;; ​Zcé.!!0c﻿",
+  "changes": [
+   {
+    "value": ":\"Zé",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " ,/",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "­_­`é! ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": " a​' é_c;; ​Zcé",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": ".",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ": ",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "!!0c﻿",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": ";﻿",
+  "new": ";\"1́​ 　 `﻿",
+  "changes": [
+   {
+    "value": ";",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\"1́​ 　 `﻿",
+    "added": true,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": "​\t　;' é ­中b?­!,b́😀b_1",
+  "new": "中​: `\n-; ",
+  "changes": [
+   {
+    "value": "中",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "​",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": ": `\n-",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "; ",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "' é ­中b?­!,b́😀b_1",
+    "added": false,
+    "removed": true
+   }
+  ]
+ },
+ {
+  "old": "b\n­中;0é;_😀?-Z😀é 1-:😀:　Z­中1 1Z　 `",
+  "new": "b\n­中;0é;_😀?-Zac😀é 1-:😀:　Z­中1 1Z　 `",
+  "changes": [
+   {
+    "value": "b\n­中;0é;_😀?-",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "Z",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "Zac",
+    "added": true,
+    "removed": false
+   },
+   {
+    "value": "😀é 1-:😀:　Z­中1 1Z　 `",
+    "added": false,
+    "removed": false
+   }
+  ]
+ },
+ {
+  "old": " 001́?!\t00_/﻿　:́-0😀!­.?中,_b`;_\" Z:/",
+  "new": "!",
+  "changes": [
+   {
+    "value": " 001́?",
+    "added": false,
+    "removed": true
+   },
+   {
+    "value": "!",
+    "added": false,
+    "removed": false
+   },
+   {
+    "value": "\t00_/﻿　:́-0😀!­.?中,_b`;_\" Z:/",
+    "added": false,
+    "removed": true
+   }
+  ]
+ }
+]
