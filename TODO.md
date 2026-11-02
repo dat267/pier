@@ -1,5 +1,3 @@
 # Reproduced audit findings
 
-- M89 (medium): session search concatenates id, name, message text and cwd and fuzzy-matches the whole string, so a token can match across field boundaries and scattered matches in message text or UUIDs produce noise. Pinned pi v1.5.0 matches fields separately with tiers (name hits beat text hits beat scattered name/cwd matches; ids and messages are exact only) (8c03fef4d, #11220). Evidence: regenerated `coding/interactive/testdata/auth_golden.txt` from the v1.5.0 pin.
-- M90 (low): TUI hyperlinks close with BEL (`\x07`) and print the URL as given, while pinned pi v1.5.0 closes with ST (`\x1b\\`) and prints the URL through `new URL().href` normalization (`https://x` renders as `https://x/`). Evidence: `a login` golden lines regenerated from v1.5.0.
-- M91 (low): the device-code login dialog's last line is a border in pier, while pinned pi v1.5.0 shows the keybinding hint `enter to open browser and copy code`. Evidence: `a login device-code@50` golden regenerated from v1.5.0.
+No open findings.
