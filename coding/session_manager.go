@@ -75,6 +75,11 @@ type SessionManager struct {
 	// projection is the cached session projection for the branch above; see
 	// session_projection.go.
 	projection projectionCache
+	// projected caches the compaction window and its token estimate for the same
+	// version, so status reads stop re-walking the transcript (M139).
+	projected projectedWindowCache
+	// latestCompactionEntry caches the newest compaction for the same version.
+	latestCompactionEntry latestCompactionCache
 	// messages memoizes each entry's decoded messages and role, so a projection
 	// after an append only decodes the appended entries; see
 	// session_messagecache.go.
@@ -206,6 +211,8 @@ func (m *SessionManager) NewSession(options *NewSessionOptions) string {
 	m.branchCacheValid = false
 	m.branchCacheHasValues = false
 	m.projection = projectionCache{}
+	m.projected = projectedWindowCache{}
+	m.latestCompactionEntry = latestCompactionCache{}
 	m.messages.reset()
 	m.cacheScan.reset()
 	m.cacheSeedGen++
@@ -425,6 +432,8 @@ func (m *SessionManager) buildIndex() {
 	m.branchCacheValid = false
 	m.branchCacheHasValues = false
 	m.projection = projectionCache{}
+	m.projected = projectedWindowCache{}
+	m.latestCompactionEntry = latestCompactionCache{}
 	// Re-seed the cache-miss scan state over the loaded entries, in file order.
 	m.cacheScan.reset()
 	for i := range m.fileEntries {

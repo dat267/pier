@@ -4218,6 +4218,29 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestChatResetStopsBothSweeps`,
 `TestWiringChatResetDropsPendingSweeps`.
 
+### D347
+
+**Session status reads reuse a projection cache.**
+
+Reference: pi v1.4.0 `core/agent-session.ts` `getContextUsage` and
+`core/session-manager.ts` `getBranch`/`getLatestCompactionEntry` recompute from
+the parsed entries on every call, and the interactive footer invalidates on
+every session event (each streaming update included). The Go port's
+`GetContextUsage` re-projected the whole compaction window and re-estimated its
+tokens, and `ProjectedEntries` re-walked it; measured at 40,000 entries:
+9.6 ms per `GetContextUsage` and 4.6 ms per `ProjectedEntries`, paid per paint
+while streaming. `SessionManager` now caches the resolved window and its token
+estimate, plus the newest branch compaction, under the same `(leaf, entry count)`
+key as `Projection`; entries are immutable after they are appended and the
+slices are handed out with no spare capacity, so the cache cannot be written
+through. Measured after: 416 ns per `GetContextUsage` and 30 ns per
+`ProjectedEntries`. The cached values are the same the reference computes, which
+the existing projection, estimate and compaction tests pin; the caches
+themselves are covered by `TestProjectedWindowIsCachedPerVersion` and
+`TestLatestCompactionIsCachedPerVersion`, and
+`BenchmarkGetContextUsage`/`BenchmarkProjectedEntries`/`BenchmarkLatestCompaction`
+keep the cost visible.
+
 ### D344
 
 **Goal prompt wrappers neutralize closing tags in the text they wrap.**

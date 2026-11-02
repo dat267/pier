@@ -93,7 +93,41 @@ func (m *SessionManager) CurrentSystemMessage() *ai.SystemMessage {
 
 // LatestCompaction returns the newest compaction entry on the current branch.
 func (m *SessionManager) LatestCompaction() *SessionEntry {
-	return GetLatestCompactionEntry(m.GetBranch(""))
+	// The footer reads this on every session event; the branch copy GetBranch
+	// would make dominates the cost, so scan the entry pointers and cache the
+	// answer by branch version (M139).
+	m.mu.Lock()
+	version := m.projectionVersionLocked()
+	if m.latestCompactionEntry.valid && m.latestCompactionEntry.version == version {
+		entry := m.latestCompactionEntry.entry
+		m.mu.Unlock()
+		return entry
+	}
+	branch := m.branchPointersLocked("")
+	m.mu.Unlock()
+
+	var entry *SessionEntry
+	for index := len(branch) - 1; index >= 0; index-- {
+		if branch[index].Type == "compaction" {
+			entry = branch[index]
+			break
+		}
+	}
+
+	m.mu.Lock()
+	if m.projectionVersionLocked() == version {
+		m.latestCompactionEntry = latestCompactionCache{valid: true, version: version, entry: entry}
+	}
+	m.mu.Unlock()
+	return entry
+}
+
+// latestCompactionCache caches the newest compaction on the branch for one
+// projection version.
+type latestCompactionCache struct {
+	valid   bool
+	version projectionVersion
+	entry   *SessionEntry
 }
 
 // ProjectedEntry pairs an appended entry with the model-visible messages it
@@ -177,20 +211,58 @@ func (m *SessionManager) MessageEntryID(message ai.Message) string {
 // buildSessionProjection().entries): what each kept entry adds to the context
 // after context edits.
 func (m *SessionManager) ProjectedEntries() []ProjectedEntry {
+	window, _ := m.projectedWindow()
+	return window.Entries
+}
+
+// projectedWindowCache holds the resolved compaction window and its token
+// estimate for one projection version. Both depend only on the branch, so the
+// footer's per-event status reads reuse them instead of re-walking the
+// transcript (M139).
+type projectedWindowCache struct {
+	valid    bool
+	version  projectionVersion
+	window   projectedWindow
+	estimate CompactionContextUsageEstimate
+}
+
+// projectedWindow resolves the compaction window and its estimate for the
+// current branch, reusing the cache until the branch changes. The slices are
+// handed out with no spare capacity so a caller's append cannot write into the
+// cache.
+func (m *SessionManager) projectedWindow() (projectedWindow, CompactionContextUsageEstimate) {
 	m.mu.Lock()
+	version := m.projectionVersionLocked()
+	if m.projected.valid && m.projected.version == version {
+		window, estimate := m.projected.window, m.projected.estimate
+		m.mu.Unlock()
+		return window, estimate
+	}
 	path := m.branchPointersLocked("")
 	m.mu.Unlock()
-	return projectWindow(path, &m.messages).Entries
+
+	// Project outside the lock, like Projection: decoding a large session must
+	// not park other readers.
+	window := projectWindow(path, &m.messages)
+	estimate := EstimateProjectedContextTokens(window)
+	window.Entries = window.Entries[:len(window.Entries):len(window.Entries)]
+	window.Messages = window.Messages[:len(window.Messages):len(window.Messages)]
+	window.Branch = window.Branch[:len(window.Branch):len(window.Branch)]
+
+	m.mu.Lock()
+	if m.projectionVersionLocked() == version {
+		m.projected = projectedWindowCache{valid: true, version: version, window: window, estimate: estimate}
+	}
+	m.mu.Unlock()
+	return window, estimate
 }
 
 // ProjectedContextEstimate estimates the tokens the current projection carries
 // (port of estimateProjectedContextTokens). Callers use it instead of raw
 // message sizes when a context edit may have changed what the model sees.
 func (m *SessionManager) ProjectedContextEstimate() CompactionContextUsageEstimate {
-	m.mu.Lock()
-	path := m.branchPointersLocked("")
-	m.mu.Unlock()
-	return EstimateProjectedContextTokens(projectWindow(path, &m.messages))
+	_, estimate := m.projectedWindow()
+	return estimate
 }
 
 // HasContextEdits reports whether the current projection carries a context edit

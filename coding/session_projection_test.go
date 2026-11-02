@@ -325,3 +325,60 @@ func TestProjectionDoesNotReplayRetainedOldCompaction(t *testing.T) {
 		t.Fatal("older compaction must remain in provenance")
 	}
 }
+
+// The footer asks for the context usage on every session event, so the window
+// and its estimate are cached by branch version: repeated reads must not
+// re-walk (M139).
+func TestProjectedWindowIsCachedPerVersion(t *testing.T) {
+	manager := newProjectionTestSession(t)
+	entries := manager.ProjectedEntries()
+	if len(entries) == 0 {
+		t.Fatal("no projected entries")
+	}
+	if again := manager.ProjectedEntries(); len(again) != len(entries) || &again[0] != &entries[0] {
+		t.Fatal("repeated read re-projected instead of reusing the cache")
+	}
+	estimate := manager.ProjectedContextEstimate()
+	if again := manager.ProjectedContextEstimate(); again != estimate {
+		t.Fatalf("estimate = %+v then %+v", estimate, again)
+	}
+	if allocs := testing.AllocsPerRun(10, func() { _ = manager.ProjectedEntries() }); allocs != 0 {
+		t.Fatalf("cached read allocated %v objects", allocs)
+	}
+	if allocs := testing.AllocsPerRun(10, func() { _ = manager.ProjectedContextEstimate() }); allocs > 2 {
+		t.Fatalf("cached estimate allocated %v objects", allocs)
+	}
+
+	// An append changes the version: the next read sees the new entry and its
+	// tokens.
+	before := estimate.Tokens
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "a new question with more words"}})
+	if grown := manager.ProjectedEntries(); len(grown) != len(entries)+1 {
+		t.Fatalf("entries after append = %d, want %d", len(grown), len(entries)+1)
+	}
+	if after := manager.ProjectedContextEstimate().Tokens; after <= before {
+		t.Fatalf("estimate after append = %d, want more than %d", after, before)
+	}
+}
+
+// The newest compaction is read on every session event; it is cached by branch
+// version and replaced when a new compaction lands (M139).
+func TestLatestCompactionIsCachedPerVersion(t *testing.T) {
+	manager := newProjectionTestSession(t)
+	if got := manager.LatestCompaction(); got != nil {
+		t.Fatalf("compaction = %+v with none appended", got)
+	}
+	rootID := manager.GetEntries()[0].ID
+	manager.AppendCompaction("summary one", rootID, 100, nil, false, nil)
+	first := manager.LatestCompaction()
+	if first == nil || first.Type != "compaction" {
+		t.Fatalf("compaction = %+v", first)
+	}
+	if allocs := testing.AllocsPerRun(10, func() { _ = manager.LatestCompaction() }); allocs != 0 {
+		t.Fatalf("cached compaction lookup allocated %v objects", allocs)
+	}
+	manager.AppendCompaction("summary two", rootID, 200, nil, false, nil)
+	if next := manager.LatestCompaction(); next == first || next.Summary != "summary two" {
+		t.Fatalf("new compaction not picked up: %+v", next)
+	}
+}

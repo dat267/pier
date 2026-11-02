@@ -25,7 +25,7 @@ func testTool(name string) agent.AgentTool {
 	}
 }
 
-func newControlSession(t *testing.T, model *ai.Model, settings *SettingsManager) *AgentSession {
+func newControlSession(t testing.TB, model *ai.Model, settings *SettingsManager) *AgentSession {
 	t.Helper()
 	session, err := NewAgentSession(&SessionConfig{
 		Cwd:           t.TempDir(),

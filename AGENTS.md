@@ -19,6 +19,10 @@ unresolved findings.
   measured stall, a per-keystroke or per-frame cost, or worse UX, keep the port
   fast and pleasant, and record the difference as a D-row instead of copying it.
   A cache or fast path needs a measured baseline, not a guess.
+- When the port is measurably slower than the pinned reference for the same
+  input (a benchmark, a profile, or a supplied workload), optimize the Go code
+  while keeping the reference behavior byte-identical: pin that behavior with a
+  test, and record the measurement and the approach in a D-row.
 - Every behavior change needs a test citing the upstream source. Cite the
   upstream file/commit in the commit message, using `type(scope): summary`;
   document intentional differences with a reproducing D-row comment and an
