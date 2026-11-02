@@ -622,7 +622,7 @@ func consumeMistralChatStream(
 	var buffer bytes.Buffer
 	searchFrom := 0
 	chunk := make([]byte, 8192)
-	state := &mistralStreamState{toolBlocks: map[string]int{}, partialArgs: map[int]string{}}
+	state := &mistralStreamState{toolBlocks: map[string]int{}, partialArgs: map[int]*streamingArguments{}}
 
 	handle := func(raw string) (done bool, err error) {
 		event, isDone, err := parseMistralEvent(raw)
@@ -765,7 +765,7 @@ type mistralStreamState struct {
 	contentOpen bool
 	// partialArgs holds the raw accumulated argument text per block index
 	// (upstream's streaming scratch buffer, which is never persisted).
-	partialArgs    map[int]string
+	partialArgs    map[int]*streamingArguments
 	contentBuffers map[int]*strings.Builder
 }
 
@@ -895,9 +895,12 @@ func appendMistralToolCall(output *AssistantMessage, stream *AssistantMessageEve
 			argsDelta = string(arguments)
 		}
 	}
-	partial := state.partialArgs[blockIndex] + argsDelta
-	state.partialArgs[blockIndex] = partial
-	block.Arguments = parseStreamingArgs(json.RawMessage(partial))
+	args := state.partialArgs[blockIndex]
+	if args == nil {
+		args = &streamingArguments{}
+		state.partialArgs[blockIndex] = args
+	}
+	block.Arguments = args.Append(argsDelta)
 	output.Content[blockIndex] = block
 	stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: blockIndex, Delta: argsDelta, Partial: output})
 }
@@ -910,8 +913,8 @@ func finishMistralToolCalls(output *AssistantMessage, stream *AssistantMessageEv
 		if !ok {
 			continue
 		}
-		if partial, ok := state.partialArgs[index]; ok {
-			block.Arguments, block.ArgumentsError = ParseToolCallArguments(partial)
+		if args, ok := state.partialArgs[index]; ok {
+			block.Arguments, block.ArgumentsError = ParseToolCallArguments(args.String())
 			output.Content[index] = block
 		}
 		stream.Push(AssistantMessageEvent{Type: EventToolcallEnd, ContentIndex: index, ToolCall: &block, Partial: output})

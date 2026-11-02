@@ -4254,8 +4254,10 @@ rules for malformed partial strings (raw control characters and invalid escapes
 stay dropped until the text completes, where the reference shows them while it
 streams); no final tool-call value differs.
 
-Tests: `TestStreamingArgumentsPreviewIsThrottled` pins the schedule and exact
-finish; `BenchmarkStreamingArgumentsLarge` keeps the cost visible.
+The OpenAI completions, Responses, Anthropic, Bedrock, Mistral, and
+pi-messages adapters all use the shared preview. Tests:
+`TestStreamingArgumentsPreviewIsThrottled` pins the schedule and exact finish;
+`BenchmarkStreamingArgumentsLarge` keeps the cost visible.
 
 ### D352
 
