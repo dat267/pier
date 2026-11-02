@@ -1138,10 +1138,7 @@ func treeShortenPath(path string) string {
 	if home == "" {
 		home = os.Getenv("USERPROFILE")
 	}
-	if home != "" && strings.HasPrefix(path, home) {
-		return "~" + path[len(home):]
-	}
-	return path
+	return coding.ShortenHomePath(path, home)
 }
 
 func (t *TreeList) formatToolCall(name string, args map[string]any) string {

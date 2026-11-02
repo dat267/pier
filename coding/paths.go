@@ -499,3 +499,52 @@ func ResolveCLIPaths(cwd string, paths []string) []string {
 	}
 	return out
 }
+
+// PathComparisonKey is the path used for comparison: the resolved absolute path,
+// case-folded on Windows because Windows paths are case-insensitive. It does not
+// touch the filesystem, so callers canonicalize first when symlinks must
+// compare equal (pi v1.5.0 paths.ts getPathComparisonKey).
+func PathComparisonKey(path string) string {
+	resolved := ResolvePath(path, "", PathInputOptions{})
+	if runtime.GOOS == "windows" {
+		return strings.ToLower(resolved)
+	}
+	return resolved
+}
+
+// PathsEqual reports whether both paths name the same location.
+func PathsEqual(left, right string) bool {
+	return PathComparisonKey(left) == PathComparisonKey(right)
+}
+
+// IsPathWithin reports whether child is parent or inside it.
+func IsPathWithin(parent, child string) bool {
+	parentKey := PathComparisonKey(parent)
+	childKey := PathComparisonKey(child)
+	if childKey == parentKey {
+		return true
+	}
+	// Filesystem roots already end with a separator.
+	separator := string(filepath.Separator)
+	if !strings.HasSuffix(parentKey, separator) {
+		parentKey += separator
+	}
+	return strings.HasPrefix(childKey, parentKey)
+}
+
+// ShortenHomePath replaces a leading home directory with "~" for display.
+// Relative paths and paths outside home are returned unchanged (pi v1.5.0
+// paths.ts shortenHomePath).
+func ShortenHomePath(path, homeDir string) string {
+	if homeDir == "" || !filepath.IsAbs(path) || !IsPathWithin(homeDir, path) {
+		return path
+	}
+	relative, err := filepath.Rel(homeDir, path)
+	if err != nil {
+		return path
+	}
+	if relative == "." {
+		return "~"
+	}
+	return "~" + string(filepath.Separator) + relative
+}

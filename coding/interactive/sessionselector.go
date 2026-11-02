@@ -92,14 +92,11 @@ func formatTrashErrorHint(err error, stderr string) string {
 }
 
 func shortenSessionPath(path string) string {
-	homeDir, _ := os.UserHomeDir()
 	if path == "" {
 		return path
 	}
-	if homeDir != "" && strings.HasPrefix(path, homeDir) {
-		return "~" + path[len(homeDir):]
-	}
-	return path
+	homeDir, _ := os.UserHomeDir()
+	return coding.ShortenHomePath(path, homeDir)
 }
 
 func formatSessionDate(date time.Time, now time.Time) string {

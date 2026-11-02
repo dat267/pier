@@ -302,3 +302,40 @@ func TestNormalizePathTildeKeepsTrailingSeparator(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.5.0 paths.ts shortenHomePath: only a path inside home is shortened, the
+// remainder is relative, and a sibling that shares the prefix stays intact.
+func TestShortenHomePath(t *testing.T) {
+	root := t.TempDir()
+	home := filepath.Join(root, "home")
+	sibling := filepath.Join(root, "home2", "x")
+	cases := map[string]string{
+		home:                            "~",
+		filepath.Join(home, "sub", "x"): "~" + string(filepath.Separator) + filepath.Join("sub", "x"),
+		sibling:                         sibling,
+		filepath.Join(root, "other"):    filepath.Join(root, "other"),
+		"relative/path":                 "relative/path",
+	}
+	for input, want := range cases {
+		if got := ShortenHomePath(input, home); got != want {
+			t.Fatalf("ShortenHomePath(%q) = %q, want %q", input, got, want)
+		}
+	}
+	if got := ShortenHomePath(filepath.Join(home, "x"), ""); got != filepath.Join(home, "x") {
+		t.Fatalf("empty home shortened to %q", got)
+	}
+}
+
+func TestIsPathWithin(t *testing.T) {
+	root := t.TempDir()
+	parent := filepath.Join(root, "proj")
+	if !IsPathWithin(parent, parent) || !IsPathWithin(parent, filepath.Join(parent, "a", "b")) {
+		t.Fatal("inside path not recognized")
+	}
+	if IsPathWithin(parent, filepath.Join(root, "proj2", "a")) {
+		t.Fatal("sibling prefix reported inside")
+	}
+	if !PathsEqual(parent, filepath.Join(parent, "..", "proj")) {
+		t.Fatal("equal paths not recognized")
+	}
+}
