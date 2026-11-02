@@ -51,10 +51,11 @@ func (a *App) importFromJSONL(_ context.Context, inputPath string, cwdOverride s
 	}
 
 	sessionDir := a.sessionMgr.GetSessionDir()
-	if sessionDir == "" {
-		// An in-memory session (--no-session) has no directory of its own yet;
-		// an import has to land in the default one, the same place a persisted
-		// manager would have resolved at creation.
+	if sessionDir == "" || !a.sessionMgr.SessionDirManaged() {
+		// An in-memory session (--no-session) has no directory of its own yet,
+		// and a session opened by path only inherits its file's directory:
+		// an import lands in the default store, never in a directory pier does
+		// not own (M73).
 		sessionDir = coding.DefaultSessionDir(a.sessionMgr.GetCwd(), "")
 	}
 	if err := coding.EnsurePrivateSessionDir(sessionDir); err != nil {
@@ -111,9 +112,10 @@ func (a *App) sessionNew(ctx context.Context) (*SessionSwitchResult, error) {
 	sessionDir := a.sessionMgr.GetSessionDir()
 	persist := a.sessionMgr.IsPersisted()
 	sessionManager := coding.NewSessionManager(a.sessionMgr.GetCwd(), &coding.SessionManagerOptions{
-		SessionDir: sessionDir,
-		Persist:    &persist,
-		WriteQueue: a.sessionMgr.GetWriteQueue(),
+		SessionDir:        sessionDir,
+		SessionDirDerived: !a.sessionMgr.SessionDirManaged(),
+		Persist:           &persist,
+		WriteQueue:        a.sessionMgr.GetWriteQueue(),
 	})
 	return a.applySessionReplacement(sessionManager)
 }
@@ -285,7 +287,11 @@ func (a *App) forkAtEntry(_ context.Context, entryID string, atPosition bool) (*
 
 	var result *SessionSwitchResult
 	if a.sessionMgr.IsPersisted() {
-		forked, err := coding.ForkSessionAtEntry(a.sessionMgr, targetLeafID, a.sessionMgr.GetCwd(), a.sessionMgr.GetSessionDir(), nil)
+		fork := coding.ForkSessionAtEntryDerived
+		if a.sessionMgr.SessionDirManaged() {
+			fork = coding.ForkSessionAtEntry
+		}
+		forked, err := fork(a.sessionMgr, targetLeafID, a.sessionMgr.GetCwd(), a.sessionMgr.GetSessionDir(), nil)
 		if err != nil {
 			return nil, err
 		}

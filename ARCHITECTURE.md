@@ -3316,7 +3316,11 @@ and `packages/coding-agent/src/core/session-export.ts` use Node's default
 preserves imported source modes with `copyFileSync`. Pier creates and rewrites session JSONL files with mode 0600,
 uses mode 0700 for session directories, hardens existing session files and known
 session directories when opened, and does not copy source permissions to imported
-sessions. Newly created export parent directories use 0700; explicitly selected
+sessions. A directory inherited from a session file opened by explicit path is
+not a pier session store: sessions derived from that manager (new, clone, fork,
+import) keep using it for placement but leave its mode alone, so cloning a
+session from a shared or user-owned directory cannot chmod it (M73).
+Newly created export parent directories use 0700; explicitly selected
 existing export directories retain their permissions. On Windows these POSIX
 mode bits do not replace inherited ACLs; this hardening addresses the reproduced
 permissive-umask exposure on POSIX.
@@ -3325,7 +3329,10 @@ Tests: `TestSessionManagerPersistsFilesWithPrivateMode`,
 `TestOpeningExistingSessionMakesFilePrivate`, `TestForkedSessionUsesPrivateModes`,
 `TestSessionManagerUsesPrivateDirectoryMode`, `TestSessionDirectoryUsesPrivateMode`,
 `TestSessionExportUsesPrivateDirectoryMode`, `TestSessionExportUsesPrivateFileMode`,
-and `TestImportedSessionUsesPrivateMode`.
+`TestImportedSessionUsesPrivateMode`, `TestPathOpenedSessionReportsDerivedDirectory`,
+`TestManagedSessionReportsItsDirectory`,
+`TestDerivedSessionDirKeepsParentDirectoryMode`,
+and `TestDerivedForkKeepsParentDirectoryMode`.
 
 ### D290
 

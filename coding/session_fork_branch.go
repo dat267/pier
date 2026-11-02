@@ -26,6 +26,18 @@ import (
 // forks an empty session (the "before the first message" case). The source may
 // be an in-memory session: only its entries are read.
 func ForkSessionAtEntry(source *SessionManager, targetLeafID string, targetCwd string, sessionDir string, options *NewSessionOptions) (*SessionManager, error) {
+	return forkSessionAtEntry(source, targetLeafID, targetCwd, sessionDir, true, options)
+}
+
+// ForkSessionAtEntryDerived is ForkSessionAtEntry for a directory inherited from
+// the source file rather than chosen as a session store: the directory places
+// the fork but keeps the user's permissions instead of being hardened to 0700
+// (M73). Callers pass source.SessionDirManaged() to pick between the two.
+func ForkSessionAtEntryDerived(source *SessionManager, targetLeafID string, targetCwd string, sessionDir string, options *NewSessionOptions) (*SessionManager, error) {
+	return forkSessionAtEntry(source, targetLeafID, targetCwd, sessionDir, false, options)
+}
+
+func forkSessionAtEntry(source *SessionManager, targetLeafID string, targetCwd string, sessionDir string, manageDir bool, options *NewSessionOptions) (*SessionManager, error) {
 	var entries []SessionEntry
 	if targetLeafID != "" {
 		entries = source.GetBranch(targetLeafID)
@@ -38,21 +50,24 @@ func ForkSessionAtEntry(source *SessionManager, targetLeafID string, targetCwd s
 	if parentSession != "" {
 		parent = &parentSession
 	}
-	return writeForkedSession(targetCwd, sessionDir, parent, entries, options)
+	return writeForkedSession(targetCwd, sessionDir, manageDir, parent, entries, options)
 }
 
 // writeForkedSession writes a new session file (header, then the entries in
 // order) and opens it.
-func writeForkedSession(targetCwd string, sessionDir string, parentSession *string, entries []SessionEntry, options *NewSessionOptions) (*SessionManager, error) {
+func writeForkedSession(targetCwd string, sessionDir string, manageDir bool, parentSession *string, entries []SessionEntry, options *NewSessionOptions) (*SessionManager, error) {
 	resolvedTargetCwd := ResolvePath(targetCwd, "", PathInputOptions{})
 	dir := sessionDir
 	if dir != "" {
 		dir = NormalizePath(dir, PathInputOptions{})
 	} else {
 		dir = DefaultSessionDir(resolvedTargetCwd, "")
+		manageDir = true
 	}
-	if err := EnsurePrivateSessionDir(dir); err != nil {
-		return nil, err
+	if manageDir {
+		if err := EnsurePrivateSessionDir(dir); err != nil {
+			return nil, err
+		}
 	}
 
 	idSet := options != nil && (options.IDSet || options.ID != "")

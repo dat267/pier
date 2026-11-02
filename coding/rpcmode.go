@@ -379,7 +379,8 @@ func (r *rpcRuntime) newSessionManager() *SessionManager {
 	current := r.session.Sessions
 	persist := current.IsPersisted()
 	return NewSessionManager(current.GetCwd(), &SessionManagerOptions{
-		SessionDir: current.GetSessionDir(), Persist: &persist, WriteQueue: current.GetWriteQueue(),
+		SessionDir: current.GetSessionDir(), SessionDirDerived: !current.SessionDirManaged(),
+		Persist: &persist, WriteQueue: current.GetWriteQueue(),
 	})
 }
 
@@ -432,7 +433,8 @@ func (r *rpcRuntime) forkManager(entryID string, atPosition bool) (*SessionManag
 		persist := true
 		parent := currentFile
 		manager := NewSessionManager(current.GetCwd(), &SessionManagerOptions{
-			SessionDir: current.GetSessionDir(), Persist: &persist, WriteQueue: current.GetWriteQueue(),
+			SessionDir: current.GetSessionDir(), SessionDirDerived: !current.SessionDirManaged(),
+			Persist: &persist, WriteQueue: current.GetWriteQueue(),
 		})
 		manager.NewSession(&NewSessionOptions{ParentSession: &parent})
 		return manager, selectedText, nil
@@ -440,7 +442,7 @@ func (r *rpcRuntime) forkManager(entryID string, atPosition bool) (*SessionManag
 	if _, err := os.Stat(currentFile); err != nil {
 		return nil, nil, fmt.Errorf("This session has not been saved yet. Send a message before cloning or forking it.")
 	}
-	manager, err := OpenSession(currentFile, current.GetSessionDir(), "")
+	manager, err := OpenSession(currentFile, sessionDirForReplacement(current), "")
 	if err != nil {
 		return nil, nil, err
 	}

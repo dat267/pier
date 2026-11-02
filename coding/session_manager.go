@@ -92,12 +92,22 @@ type SessionManager struct {
 	branchCacheValues    []SessionEntry
 	branchCacheHasValues bool
 	branchCacheValid     bool
+
+	// sessionDirManaged records that sessionDir is pier's own session store
+	// (chosen explicitly or the default), so new/derived sessions harden it.
+	// A directory inherited from a file opened by path is the user's (M73).
+	sessionDirManaged bool
 }
 
 // SessionManagerOptions are the constructor inputs.
 type SessionManagerOptions struct {
 	// SessionDir is the directory for session files.
 	SessionDir string
+	// SessionDirDerived marks SessionDir as inherited from an opened session
+	// file rather than chosen by the user: it is used for placement but not
+	// hardened to 0700 (M73). Explicit directories and the default agent
+	// session store stay private (D289).
+	SessionDirDerived bool
 	// Persist enables file persistence. Default true.
 	Persist *bool
 	// WriteQueue, when non-nil, moves session file writes off the calling
@@ -140,7 +150,8 @@ func NewSessionManager(cwd string, options *SessionManagerOptions) *SessionManag
 		m.sessionDir = DefaultSessionDir(cwd, "")
 	}
 	var directoryErr error
-	if persist && m.sessionDir != "" {
+	m.sessionDirManaged = m.sessionDir != "" && !(options != nil && options.SessionDirDerived)
+	if persist && m.sessionDirManaged {
 		directoryErr = EnsurePrivateSessionDir(m.sessionDir)
 	}
 	m.NewSession(nil)
@@ -260,10 +271,13 @@ func OpenSession(path string, sessionDir string, cwdOverride string) (*SessionMa
 	m.cwd = ResolvePath(cwd, "", PathInputOptions{})
 	if sessionDir != "" {
 		m.sessionDir = NormalizePath(sessionDir, PathInputOptions{})
+		m.sessionDirManaged = true
 		if err := EnsurePrivateSessionDir(m.sessionDir); err != nil {
 			return nil, err
 		}
 	} else {
+		// Inherited from the file for placement only; it is the user's
+		// directory, so it keeps its mode (M73).
 		m.sessionDir = filepath.Dir(resolvedPath)
 	}
 
@@ -464,6 +478,12 @@ func (m *SessionManager) GetCwd() string { return m.cwd }
 
 // GetSessionDir returns the session directory.
 func (m *SessionManager) GetSessionDir() string { return m.sessionDir }
+
+// SessionDirManaged reports whether sessionDir is pier's own session store
+// rather than a directory inherited from a session file opened by path.
+// Sessions derived from this manager (new, clone, fork, import) keep the
+// inherited directory's permissions; only managed stores are hardened (M73).
+func (m *SessionManager) SessionDirManaged() bool { return m.sessionDirManaged }
 
 // GetSessionID returns the session id.
 func (m *SessionManager) GetSessionID() string { return m.sessionID }
@@ -1846,4 +1866,16 @@ func scanListingBlock(data []byte) (string, bool, int, bool) {
 		return "", false, i, true
 	}
 	return "", false, 0, false
+}
+
+// sessionDirForReplacement returns the directory a session derived from m
+// belongs in, for OpenSession. A managed store keeps its directory (and its
+// private mode); a directory inherited from a file opened by path yields "",
+// so OpenSession derives it again for placement without hardening the user's
+// directory (M73).
+func sessionDirForReplacement(m *SessionManager) string {
+	if m.SessionDirManaged() {
+		return m.GetSessionDir()
+	}
+	return ""
 }

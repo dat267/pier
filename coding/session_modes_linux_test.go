@@ -129,7 +129,7 @@ func TestForkedSessionUsesPrivateModes(t *testing.T) {
 
 	root := t.TempDir()
 	forkDir := filepath.Join(root, "forked")
-	manager, err := writeForkedSession(filepath.Join(root, "project"), forkDir, nil, nil, nil)
+	manager, err := writeForkedSession(filepath.Join(root, "project"), forkDir, true, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -226,5 +226,117 @@ func TestSessionDirectoryUsesPrivateMode(t *testing.T) {
 	}
 	if got := dirInfo.Mode().Perm(); got != 0o700 {
 		t.Fatalf("session directory mode = %#o; want private %#o", got, 0o700)
+	}
+}
+
+// A session opened by explicit path only inherits its file's directory for
+// placement; sessions derived from it (new, clone, fork, import) must not chmod
+// a directory the user chose for the file (M73). D289 hardens pier's own session
+// directories, not theirs.
+func TestPathOpenedSessionReportsDerivedDirectory(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "shared")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "session.jsonl")
+	content := `{"type":"session","version":3,"id":"s1","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/tmp"}` + "\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	opened, err := OpenSession(path, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opened.SessionDirManaged() {
+		t.Fatal("a directory inherited from the opened file reported as managed")
+	}
+	if got := opened.GetSessionDir(); got != dir {
+		t.Fatalf("derived session dir = %q, want %q", got, dir)
+	}
+	if got := sessionDirForReplacement(opened); got != "" {
+		t.Fatalf("replacement dir = %q, want the file's directory to speak for itself", got)
+	}
+}
+
+func TestManagedSessionReportsItsDirectory(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "store")
+	managed := NewSessionManager(t.TempDir(), &SessionManagerOptions{SessionDir: dir})
+	if !managed.SessionDirManaged() {
+		t.Fatal("an explicit session store reported as derived")
+	}
+	if got := sessionDirForReplacement(managed); got != dir {
+		t.Fatalf("replacement dir = %q, want %q", got, dir)
+	}
+}
+
+func TestDerivedSessionDirKeepsParentDirectoryMode(t *testing.T) {
+	oldMask := syscall.Umask(0)
+	defer syscall.Umask(oldMask)
+
+	dir := filepath.Join(t.TempDir(), "shared")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "session.jsonl")
+	content := `{"type":"session","version":3,"id":"s1","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/tmp"}` + "\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	opened, err := OpenSession(path, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The /new shape: keep the directory for placement, skip hardening.
+	fresh := NewSessionManager(opened.GetCwd(), &SessionManagerOptions{
+		SessionDir:        opened.GetSessionDir(),
+		SessionDirDerived: !opened.SessionDirManaged(),
+	})
+	if got := fresh.GetSessionDir(); got != dir {
+		t.Fatalf("derived session dir = %q, want %q", got, dir)
+	}
+	if fresh.GetSessionFile() != "" && filepath.Dir(fresh.GetSessionFile()) != dir {
+		t.Fatalf("derived session file = %q, want under %q", fresh.GetSessionFile(), dir)
+	}
+	info, err := os.Stat(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0o755 {
+		t.Fatalf("derived session directory mode = %#o; want the user's %#o", got, 0o755)
+	}
+}
+
+func TestDerivedForkKeepsParentDirectoryMode(t *testing.T) {
+	oldMask := syscall.Umask(0)
+	defer syscall.Umask(oldMask)
+
+	dir := filepath.Join(t.TempDir(), "shared")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "session.jsonl")
+	content := `{"type":"session","version":3,"id":"s1","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/tmp"}` + "\n" +
+		`{"type":"message","id":"m1","parentId":null,"timestamp":"t","message":{"role":"user","content":"hi"}}` + "\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	opened, err := OpenSession(path, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaf := opened.GetLeafID()
+	if leaf == nil {
+		t.Fatal("fixture has no leaf")
+	}
+	if _, err := ForkSessionAtEntryDerived(opened, *leaf, opened.GetCwd(), opened.GetSessionDir(), nil); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0o755 {
+		t.Fatalf("fork directory mode = %#o; want the user's %#o", got, 0o755)
 	}
 }

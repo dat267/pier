@@ -36,5 +36,5 @@ func ForkSession(sourcePath string, targetCwd string, sessionDir string, options
 			entries = append(entries, *fileEntry.Entry)
 		}
 	}
-	return writeForkedSession(targetCwd, sessionDir, &resolvedSourcePath, entries, options)
+	return writeForkedSession(targetCwd, sessionDir, true, &resolvedSourcePath, entries, options)
 }
