@@ -36,3 +36,28 @@ func TestParseOAuthTokensCoercesExpiresInLikeNumber(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.5.0 types.ts safeUrl accepts only http(s): every metadata URL is a
+// candidate for the platform URL handler, which would also launch file: and
+// custom protocols.
+func TestParseAuthorizationServerMetadataTrustsOnlyHTTPURLs(t *testing.T) {
+	metadata := func(endpoint string) map[string]any {
+		return map[string]any{
+			"response_types_supported": []any{"code"},
+			"issuer":                   "https://auth.example",
+			"authorization_endpoint":   endpoint,
+			"token_endpoint":           "https://auth.example/token",
+		}
+	}
+	for _, endpoint := range []string{"file:///etc/passwd", "ftp://auth.example/authorize", "urn:example:authorize"} {
+		if _, err := ParseAuthorizationServerMetadata(metadata(endpoint)); err == nil ||
+			err.Error() != "Invalid authorization endpoint" {
+			t.Fatalf("%q err = %v", endpoint, err)
+		}
+	}
+	for _, endpoint := range []string{"https://auth.example/authorize", "http://localhost:8080/authorize"} {
+		if _, err := ParseAuthorizationServerMetadata(metadata(endpoint)); err != nil {
+			t.Fatalf("%q err = %v", endpoint, err)
+		}
+	}
+}

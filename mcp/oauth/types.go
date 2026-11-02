@@ -175,23 +175,25 @@ func optionalStrings(input map[string]any, key, name string) ([]string, error) {
 	return out, nil
 }
 
-// safeUrl validates a URL member: parseable and not a scripting scheme; URL
-// parse failures are `TypeError` upstream, which discovery reserves for
-// network failures.
+// safeUrl validates a URL member: parseable and http(s). The authorization
+// endpoint is opened with the platform URL handler, which would also launch a
+// file: URL or a custom protocol (pi v1.5.0 types.ts isHttpUrl). URL parse
+// failures are `TypeError` upstream, which discovery reserves for network
+// failures.
 func safeUrl(input map[string]any, key, name string) (string, error) {
 	text, err := requiredString(input, key, name)
 	if err != nil {
 		return "", err
 	}
 	parsed, err := parseWHATWGURL(text)
-	if err != nil || parsed.Scheme == "" {
+	if err != nil {
 		return "", fmt.Errorf("Invalid %s", name)
 	}
 	switch strings.ToLower(parsed.Scheme) {
-	case "javascript", "data", "vbscript":
-		return "", fmt.Errorf("Invalid %s", name)
+	case "http", "https":
+		return text, nil
 	}
-	return text, nil
+	return "", fmt.Errorf("Invalid %s", name)
 }
 
 func optionalUrl(input map[string]any, key, name string) (*string, error) {
