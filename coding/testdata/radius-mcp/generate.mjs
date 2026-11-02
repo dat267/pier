@@ -1,6 +1,6 @@
 // Regenerate from the repository root (read-only upstream):
 // node --experimental-strip-types coding/testdata/radius-mcp/generate.mjs ./pi > coding/testdata/radius-mcp/golden.json
-// pi v1.4.0 (4a080252), interactive-mode.ts offerRadiusMcpServer and
+// pi v1.5.0 (f9a26365), interactive-mode.ts offerRadiusMcpServer and
 // extensions/mcp/config.ts addMcpServerConfig. Execute the actual method with
 // a minimal host instead of importing the interactive app and native helpers.
 import { execFileSync } from "node:child_process";
@@ -11,8 +11,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync
 import { tmpdir } from "node:os";
 
 const root = path.resolve(process.argv[2] ?? "./pi");
-if (!execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).startsWith("4a080252")) {
-  throw new Error("requires pinned pi v1.4.0 (4a080252)");
+if (!execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).startsWith("f9a26365")) {
+  throw new Error("requires pinned pi v1.5.0 (f9a26365)");
 }
 const { loadMcpConfig, addMcpServerConfig } = await import(pathToFileURL(path.join(root, "packages/coding-agent/src/extensions/mcp/config.ts")));
 const { DEFAULT_RADIUS_GATEWAY, normalizeRadiusGatewayUrl } = await import(pathToFileURL(path.join(root, "packages/ai/src/providers/radius-config.ts")));
