@@ -1472,8 +1472,15 @@ Each append captures an immutable prefix of the append-only entry slice so
 recovery cannot duplicate later queued entries. New sessions/branches replace
 write state, preventing old worker generations from publishing into replacements.
 
-The UI selects on wakeups and reports chat errors. Teardown drains saves then
-routes unresolved diagnostics through D200's output grace, never direct stdout.
+The UI selects on wakeups and reports chat errors. v1.5.0's `_appendEntry`
+rolls the in-memory entry, leaf and id map back when its synchronous persist
+throws; pier cannot apply that after an off-loop failure because later entries
+may already reference the failed one. It keeps the accepted prefix in memory
+and the next save rewrites that prefix (the failed append marked the state
+uninitialized), so the file never gains a child with a missing parent; a failure
+with no later append leaves memory ahead until the reported error is handled.
+Teardown drains saves then routes unresolved diagnostics through D200's output
+grace, never direct stdout.
 Print mode flushes on ordinary and signal returns; persistence failures report
 on stderr and cause exit 1 on ordinary returns, while signal returns retain
 129/143. This preserves JSON stdout. Formats remain unchanged. Tests cover sync/queued
