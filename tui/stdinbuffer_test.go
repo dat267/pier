@@ -573,6 +573,14 @@ func TestResolveEscapeTimeoutMs(t *testing.T) {
 }
 
 func TestNormalizeNativeShiftEnterInput(t *testing.T) {
+	// Some Apple Terminal setups send ESC+CR for Shift+Enter (pi v1.5.0
+	// terminal.ts #11559).
+	if got := NormalizeNativeShiftEnterInput("\x1b\r", true, true); got != nativeShiftEnterSequence {
+		t.Fatalf("esc+cr = %q, want %q", got, nativeShiftEnterSequence)
+	}
+	if got := NormalizeNativeShiftEnterInput("\x1b\r", true, false); got != "\x1b\r" {
+		t.Fatalf("esc+cr without shift = %q", got)
+	}
 	if got := NormalizeNativeShiftEnterInput("\r", true, true); got != nativeShiftEnterSequence {
 		t.Fatalf("got %q", got)
 	}

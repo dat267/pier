@@ -101,10 +101,17 @@ func IsAppleTerminalSession() bool {
 // isNativeModifierPressed; the Go port takes the shift state from the
 // caller (divergence D52).
 func NormalizeNativeShiftEnterInput(data string, shouldDetectNativeShiftEnter bool, isShiftPressed bool) string {
-	if shouldDetectNativeShiftEnter && data == "\r" && isShiftPressed {
+	if shouldDetectNativeShiftEnter && isNativeShiftEnterCandidate(data) && isShiftPressed {
 		return nativeShiftEnterSequence
 	}
 	return data
+}
+
+// isNativeShiftEnterCandidate reports the inputs a terminal may send for
+// Shift+Enter when it relies on modifier detection: a bare CR, or ESC+CR on
+// some Apple Terminal setups (pi v1.5.0 terminal.ts #11559).
+func isNativeShiftEnterCandidate(data string) bool {
+	return data == "\r" || data == "\x1b\r"
 }
 
 // ResolveEscapeTimeoutMs resolves how long to wait for the rest of an escape
@@ -621,7 +628,7 @@ func deliverInput(handler func(string), sequence string) {
 	if handler == nil || sequence == "" {
 		return
 	}
-	shouldDetectNativeShiftEnter := sequence == "\r" && (IsAppleTerminalSession() || isWindows())
+	shouldDetectNativeShiftEnter := isNativeShiftEnterCandidate(sequence) && (IsAppleTerminalSession() || isWindows())
 	input := NormalizeNativeShiftEnterInput(sequence, shouldDetectNativeShiftEnter,
 		shouldDetectNativeShiftEnter && nativeShiftPressed())
 	handler(input)
