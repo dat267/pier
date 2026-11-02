@@ -518,10 +518,30 @@ func (s *AgentSession) registerGoalTools() {
 // SetActiveToolsByName enables named registry tools allowed by this session's
 // allowlist and exclusions, then rebuilds the system prompt.
 func (s *AgentSession) SetActiveToolsByName(names []string) {
-	s.control.stateMu.Lock()
-	tools := make([]agent.AgentTool, 0, len(names))
-	validNames := make([]string, 0, len(names))
+	// The active tools are a set: tools that stay active keep their current
+	// order and newly active ones append, so reordering the same names does not
+	// change the declared tool order or the prompt (pi v1.5.0 b9e3eef6c).
+	requested := make(map[string]struct{}, len(names))
 	for _, name := range names {
+		requested[name] = struct{}{}
+	}
+	ordered := make([]string, 0, len(names))
+	for _, name := range s.GetActiveToolNames() {
+		if _, ok := requested[name]; ok {
+			ordered = append(ordered, name)
+			delete(requested, name)
+		}
+	}
+	for _, name := range names {
+		if _, ok := requested[name]; ok {
+			ordered = append(ordered, name)
+			delete(requested, name)
+		}
+	}
+	s.control.stateMu.Lock()
+	tools := make([]agent.AgentTool, 0, len(ordered))
+	validNames := make([]string, 0, len(ordered))
+	for _, name := range ordered {
 		if (s.allowedToolNames != nil && !matchesAnyToolPattern(s.allowedToolNames, name)) ||
 			matchesAnyToolPattern(s.excludedToolNames, name) {
 			continue

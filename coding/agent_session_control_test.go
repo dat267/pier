@@ -92,6 +92,31 @@ func TestSessionToolManagement(t *testing.T) {
 	}
 }
 
+// pi v1.5.0 b9e3eef6c (#11495): the active tools are a set. Tools that stay
+// active keep their order and newly active ones append, so reordering the same
+// names cannot change the declared tool order or the prompt.
+func TestSetActiveToolsKeepsOrderForTheSameSet(t *testing.T) {
+	session := newControlSession(t, &ai.Model{
+		ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 1000, MaxTokens: 100,
+	}, nil)
+	session.SetActiveToolsByName([]string{"read", "bash", "edit"})
+	if names := session.GetActiveToolNames(); strings.Join(names, ",") != "read,bash,edit" {
+		t.Fatalf("active = %v", names)
+	}
+	session.SetActiveToolsByName([]string{"edit", "read", "bash"})
+	if names := session.GetActiveToolNames(); strings.Join(names, ",") != "read,bash,edit" {
+		t.Fatalf("same set reordered: active = %v", names)
+	}
+	if session.SystemPromptOptions == nil || strings.Join(session.SystemPromptOptions.SelectedTools, ",") != "read,bash,edit" {
+		t.Fatalf("prompt tools = %+v", session.SystemPromptOptions)
+	}
+	// Kept tools keep their order; newly active ones append in request order.
+	session.SetActiveToolsByName([]string{"write", "read"})
+	if names := session.GetActiveToolNames(); strings.Join(names, ",") != "read,write" {
+		t.Fatalf("active = %v", names)
+	}
+}
+
 func TestSessionQueueModes(t *testing.T) {
 	dir := t.TempDir()
 	settingsPath := filepath.Join(dir, "settings.json")
