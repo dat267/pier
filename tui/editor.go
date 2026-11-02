@@ -536,6 +536,10 @@ func (e *Editor) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult {
 }
 
 // HandleInput processes a key/input chunk.
+// CapturesViewportInput reports that an open autocomplete menu owns page keys
+// (pi v1.5.0 editor.ts).
+func (e *Editor) CapturesViewportInput() bool { return e.autocompleteState != "" }
+
 func (e *Editor) HandleInput(data string) {
 	e.handleInputLocked(data)
 	pending := e.pendingSubmit
@@ -611,7 +615,9 @@ func (e *Editor) handleInputLocked(data string) {
 			e.cancelAutocompleteLocked()
 			return
 		}
-		if kb.Matches(data, "tui.select.up") || kb.Matches(data, "tui.select.down") {
+		// The open menu also receives page keys (pi v1.5.0 editor.ts).
+		if kb.Matches(data, "tui.select.up") || kb.Matches(data, "tui.select.down") ||
+			isSelectPageKey(kb, data) {
 			e.autocompleteList.HandleInput(data)
 			return
 		}

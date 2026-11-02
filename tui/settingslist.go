@@ -264,6 +264,10 @@ func (s *SettingsList) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult 
 }
 
 // HandleInput processes navigation, activation, and search input.
+// CapturesViewportInput reports that an open list owns page keys
+// (pi v1.5.0 settings-list.ts).
+func (s *SettingsList) CapturesViewportInput() bool { return true }
+
 func (s *SettingsList) HandleInput(data string) {
 	if s.submenuComponent != nil {
 		if handler, ok := s.submenuComponent.(InputHandler); ok {
@@ -293,6 +297,17 @@ func (s *SettingsList) HandleInput(data string) {
 		} else {
 			s.selectedIndex++
 		}
+	case isSelectPageKey(kb, data):
+		// Page keys move by one visible page, clamped to the list bounds
+		// (pi v1.5.0 settings-list.ts).
+		if len(displayItems) == 0 {
+			return
+		}
+		pageIndex, _ := SelectPageIndex(kb, data, s.selectedIndex, len(displayItems), s.maxVisible)
+		if pageIndex == s.selectedIndex {
+			return
+		}
+		s.selectedIndex = pageIndex
 	case kb.Matches(data, "tui.select.confirm") ||
 		(data == " " && (!s.searchEnabled || s.searchInput == nil || len(s.searchInput.Value()) == 0)):
 		s.activateItem()

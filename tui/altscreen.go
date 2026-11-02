@@ -966,6 +966,14 @@ func (s *AltScreen) refreshSearchLocked(layout LayoutFrame) bool {
 }
 
 func (s *AltScreen) shouldDeferViewportInputToOverlayLocked() bool {
+	// A focused component that captures viewport input (an open list, an editor
+	// with an open autocomplete menu) receives the keys instead of the
+	// transcript (pi v1.5.0 tui-alt-screen.ts).
+	if focused := s.GetFocusedComponent(); focused != nil {
+		if capturer, ok := focused.(ViewportInputCapturer); ok && capturer.CapturesViewportInput() {
+			return true
+		}
+	}
 	if !s.IsOverlayFocused() {
 		return false
 	}

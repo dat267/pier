@@ -231,6 +231,10 @@ func (s *SelectList) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult {
 	return &TuiMouseDispatchResult{Handled: true}
 }
 
+// CapturesViewportInput reports that an open list owns page keys
+// (pi v1.5.0 select-list.ts).
+func (s *SelectList) CapturesViewportInput() bool { return true }
+
 // HandleInput processes navigation keys.
 func (s *SelectList) HandleInput(keyData string) {
 	kb := GetKeybindings()
@@ -248,6 +252,18 @@ func (s *SelectList) HandleInput(keyData string) {
 		} else {
 			s.selectedIndex++
 		}
+		s.notifySelectionChange()
+	case isSelectPageKey(kb, keyData):
+		// Page keys move by one visible page, clamped to the list bounds
+		// (pi v1.5.0 select-list.ts).
+		if len(s.filteredItems) == 0 {
+			return
+		}
+		pageIndex, _ := SelectPageIndex(kb, keyData, s.selectedIndex, len(s.filteredItems), s.maxVisible)
+		if pageIndex == s.selectedIndex {
+			return
+		}
+		s.selectedIndex = pageIndex
 		s.notifySelectionChange()
 	case kb.Matches(keyData, "tui.select.confirm"):
 		if s.selectedIndex >= 0 && s.selectedIndex < len(s.filteredItems) && s.OnSelect != nil {

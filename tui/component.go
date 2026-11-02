@@ -776,3 +776,13 @@ var (
 	_ Component    = (*Container)(nil)
 	_ MouseHandler = (*Container)(nil)
 )
+
+// ViewportInputCapturer is implemented by components that consume fullscreen
+// viewport keys (PageUp/PageDown, half-page, top/bottom) while focused, e.g. an
+// open select list or an editor with an open autocomplete menu. The alt screen
+// then leaves those keys to the component instead of scrolling the transcript
+// (pi v1.5.0 tui.ts capturesViewportInput).
+type ViewportInputCapturer interface {
+	Component
+	CapturesViewportInput() bool
+}
