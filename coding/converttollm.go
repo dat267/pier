@@ -132,7 +132,11 @@ func ConvertToLlm(messages []ai.Message) []ai.Message {
 		case *ai.SystemMessage, *ai.UserMessage:
 			out = append(out, m)
 		case *ai.AssistantMessage:
-			pendingToolCalls = map[string]bool{}
+			if pendingToolCalls == nil {
+				pendingToolCalls = map[string]bool{}
+			} else {
+				clear(pendingToolCalls)
+			}
 			for _, block := range msg.Content {
 				if call, ok := block.(ai.ToolCall); ok {
 					pendingToolCalls[call.ID] = true
