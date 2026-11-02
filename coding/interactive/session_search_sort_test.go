@@ -31,7 +31,9 @@ func TestSessionSearchRelevanceSortPreservesTiesAndInput(t *testing.T) {
 	before := ids(rows)
 	for _, mode := range []SortMode{SortRelevance, SortThreaded} {
 		got := ids(FilterAndSortSessions(rows, `"needle"`, mode, NameFilterAll))
-		if want := []string{"cc", "dd", "bb", "aa", "ee"}; !reflect.DeepEqual(got, want) {
+		// pi v1.5.0 8c03fef4d: matches score by tier with no position penalty, so
+		// every session here ties on the text tier and recency decides.
+		if want := []string{"aa", "ee", "cc", "dd", "bb"}; !reflect.DeepEqual(got, want) {
 			t.Fatalf("%s order = %q, want %q", mode, got, want)
 		}
 	}

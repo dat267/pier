@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"net/url"
 	"runtime"
 
 	"github.com/dat267/pier/ai"
@@ -165,6 +166,41 @@ func (c *LoginDialogComponent) ShowAuth(url string, instructions string) {
 	})
 }
 
+// loginWebURL normalizes an http(s) URL the way upstream's webUrl does
+// (`new URL(value).href`): the empty path becomes "/", so the displayed and
+// linked forms match (pi v1.5.0 login-dialog.ts).
+func loginWebURL(value string) (string, bool) {
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") {
+		return "", false
+	}
+	normalized := *parsed
+	normalized.Opaque = ""
+	if normalized.Path == "" {
+		normalized.Path = "/"
+	}
+	return normalized.String(), true
+}
+
+// loginDisplayURL renders a URL for display: normalized when it is a web URL,
+// otherwise with control characters replaced (upstream displayUrl).
+func loginDisplayURL(value string) string {
+	if normalized, ok := loginWebURL(value); ok {
+		return normalized
+	}
+	return tui.SanitizeUntrustedText(value)
+}
+
+// loginWebLink renders text as an ST-terminated terminal hyperlink to url when
+// url is a web URL, else as plain text (upstream webLink).
+func loginWebLink(text, url string) string {
+	normalized, ok := loginWebURL(url)
+	if !ok {
+		return text
+	}
+	return "\x1b]8;;" + normalized + "\x1b\\" + text + "\x1b]8;;\x1b\\"
+}
+
 // ShowDeviceCode shows the device-code verification URL and user code.
 func (c *LoginDialogComponent) ShowDeviceCode(verificationURI string, userCode string) {
 	c.runOnUI(func() {
@@ -172,17 +208,17 @@ func (c *LoginDialogComponent) ShowDeviceCode(verificationURI string, userCode s
 		c.authUrl = nil
 		c.contentContainer.Clear()
 		c.contentContainer.AddChild(tui.NewSpacer(1))
-		linkedURL := "\x1b]8;;" + verificationURI + "\x07" + verificationURI + "\x1b]8;;\x07"
-		c.contentContainer.AddChild(tui.NewText(theme.Fg("accent", linkedURL), 1, 0, nil))
+		displayURL := loginDisplayURL(verificationURI)
+		c.contentContainer.AddChild(tui.NewText(theme.Fg("accent", loginWebLink(displayURL, verificationURI)), 1, 0, nil))
 
 		clickHint := "Ctrl+click to open"
 		if runtime.GOOS == "darwin" {
 			clickHint = "Cmd+click to open"
 		}
-		hyperlink := "\x1b]8;;" + verificationURI + "\x07" + clickHint + "\x1b]8;;\x07"
-		c.contentContainer.AddChild(tui.NewText(theme.Fg("dim", hyperlink), 1, 0, nil))
+		c.contentContainer.AddChild(tui.NewText(theme.Fg("dim", loginWebLink(clickHint, verificationURI)), 1, 0, nil))
 		c.contentContainer.AddChild(tui.NewSpacer(1))
 		c.contentContainer.AddChild(tui.NewText(theme.Fg("warning", "Enter code: "+userCode), 1, 0, nil))
+		c.contentContainer.AddChild(tui.NewText("("+KeyHint("tui.select.confirm", "to open browser and copy code")+")", 1, 0, nil))
 		c.requestRender()
 	})
 }
@@ -290,12 +326,12 @@ func (c *LoginDialogComponent) ShowInfo(message string, links []ai.AuthInfoLink,
 		c.contentContainer.AddChild(tui.NewSpacer(1))
 		c.contentContainer.AddChild(tui.NewText(theme.Fg("text", message), 1, 0, nil))
 		for _, link := range links {
-			text := link.URL
+			displayURL := loginDisplayURL(link.URL)
+			text := displayURL
 			if link.Label != "" {
-				text = link.Label + ": " + link.URL
+				text = link.Label + ": " + displayURL
 			}
-			hyperlink := "\x1b]8;;" + link.URL + "\x07" + text + "\x1b]8;;\x07"
-			c.contentContainer.AddChild(tui.NewText(theme.Fg("accent", hyperlink), 1, 0, nil))
+			c.contentContainer.AddChild(tui.NewText(theme.Fg("accent", loginWebLink(text, link.URL)), 1, 0, nil))
 		}
 		if showCloseHint {
 			c.contentContainer.AddChild(tui.NewSpacer(1))

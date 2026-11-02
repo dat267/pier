@@ -1,4 +1,4 @@
-// Reference: pi v1.4.0 (4a080252), session-selector.ts.
+// Reference: pi v1.5.0 (f9a26365), session-selector.ts.
 import { component, upstream, corpus, entries, emit, tui } from "./golden-reference.mjs";
 const { SessionSelectorComponent } = await component("session-selector");
 const { KeybindingsManager } = await upstream("coding-agent/src/core/keybindings.ts");
@@ -15,8 +15,14 @@ globalThis.Date = class extends RealDate {
 	}
 };
 const flush = () => new Promise((resolve) => setImmediate(resolve));
+// v1.5.0's session search dereferences allMessagesText, which v1.4.0 stringified.
 const infos = (specs) =>
-	specs.map((s) => ({ ...s, created: new Date(now - s.modifiedAgoMs), modified: new Date(now - s.modifiedAgoMs) }));
+	specs.map((s) => ({
+		...s,
+		allMessagesText: s.allMessagesText ?? "",
+		created: new Date(now - s.modifiedAgoMs),
+		modified: new Date(now - s.modifiedAgoMs),
+	}));
 for (const [label, s] of entries(corpus("session").cases)) {
 	const events = [],
 		renames = [];

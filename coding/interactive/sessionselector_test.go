@@ -552,35 +552,57 @@ func TestFormatTrashErrorHintTruncatesJoinedParts(t *testing.T) {
 	}
 }
 
-// session-selector-search.ts scores a regex match with JS String.search, a
-// UTF-16 code-unit index; the port used the byte offset, so a match after
-// multibyte text scored too high and could reorder results.
-func TestMatchSessionRegexScoreUsesUTF16Index(t *testing.T) {
-	// Search text is "s  éé X " (id, name, text, cwd joined by spaces); "X" is
-	// at UTF-16 index 6 but byte offset 8.
-	session := coding.SessionInfo{ID: "s", AllMessagesText: "éé X"}
-	match := MatchSession(session, ParseSearchQuery("re:X"))
-	if !match.Matches {
-		t.Fatal("expected a match")
+// pi v1.5.0 8c03fef4d (#11220): session search no longer scores match offsets.
+// A regex hit on the session name is the best tier, a hit anywhere else is the
+// text tier, and scattered fuzzy matches rank after both.
+func TestMatchSessionRegexUsesMatchTiers(t *testing.T) {
+	named := coding.SessionInfo{ID: "s", Name: "release notes"}
+	if match := MatchSession(named, ParseSearchQuery("re:notes")); !match.Matches || match.Score != 0 {
+		t.Fatalf("name hit = %+v", match)
 	}
-	idx := 6
-	if match.Score != float64(idx)*0.1 {
-		t.Fatalf("score = %v; want %v (UTF-16 index %d)", match.Score, float64(idx)*0.1, idx)
+	textOnly := coding.SessionInfo{ID: "s", AllMessagesText: "éé X"}
+	if match := MatchSession(textOnly, ParseSearchQuery("re:X")); !match.Matches || match.Score != 1_000_000 {
+		t.Fatalf("message hit = %+v", match)
+	}
+	if match := MatchSession(textOnly, ParseSearchQuery("re:absent")); match.Matches {
+		t.Fatal("absent pattern matched")
 	}
 }
 
-// The phrase branch has the same byte-vs-UTF-16-unit bug: it used
-// strings.Index, whose offset is bytes.
-func TestMatchSessionPhraseScoreUsesUTF16Index(t *testing.T) {
-	// normalizeWhitespaceLower collapses the join spaces, so the search text is
-	// "s 中文éé"; the phrase starts at UTF-16 index 4 but byte offset 8.
-	session := coding.SessionInfo{ID: "s", AllMessagesText: "中文éé"}
-	match := MatchSession(session, ParseSearchQuery(`"éé"`))
-	if !match.Matches {
-		t.Fatal("expected a match")
+// A phrase hit scores by tier too: name first, then id/messages/cwd.
+func TestMatchSessionPhraseUsesMatchTiers(t *testing.T) {
+	named := coding.SessionInfo{ID: "s", Name: "node cve"}
+	match := MatchSession(named, ParseSearchQuery(`"node cve"`))
+	if !match.Matches || match.Score >= 1_000_000 {
+		t.Fatalf("name phrase = %+v", match)
 	}
-	idx := 4
-	if match.Score != float64(idx)*0.1 {
-		t.Fatalf("score = %v; want %v (UTF-16 index %d)", match.Score, float64(idx)*0.1, idx)
+	textOnly := coding.SessionInfo{ID: "s", AllMessagesText: "中文éé"}
+	match = MatchSession(textOnly, ParseSearchQuery(`"éé"`))
+	if !match.Matches || match.Score != 1_000_000 {
+		t.Fatalf("message phrase = %+v", match)
+	}
+}
+
+// Scattered matches in message text are noise: only the name and cwd match
+// fuzzily, everything else is exact (pi v1.5.0 8c03fef4d).
+func TestMatchSessionFuzzyTokensMatchNameAndCwdOnly(t *testing.T) {
+	scatteredText := coding.SessionInfo{ID: "s", AllMessagesText: "n-o-d-e scattered"}
+	if match := MatchSession(scatteredText, ParseSearchQuery("node")); match.Matches {
+		t.Fatal("scattered message match must not match")
+	}
+	named := coding.SessionInfo{ID: "s", Name: "nodes"}
+	match := MatchSession(named, ParseSearchQuery("node"))
+	if !match.Matches || match.Score >= 1_000_000 {
+		t.Fatalf("name fuzzy = %+v", match)
+	}
+	cwdLiteral := coding.SessionInfo{ID: "s", Cwd: "/src/nodes"}
+	if match := MatchSession(cwdLiteral, ParseSearchQuery("node")); !match.Matches || match.Score != 1_000_000 {
+		t.Fatalf("cwd literal = %+v", match)
+	}
+	cwdScattered := coding.SessionInfo{ID: "s", Cwd: "/src/n-o-d-e"}
+	match = MatchSession(cwdScattered, ParseSearchQuery("node"))
+	// The fuzzy bonus can be negative, so the tier base is not a lower bound.
+	if !match.Matches || match.Score <= 1_000_000 || match.Score >= 3_000_000 {
+		t.Fatalf("cwd fuzzy = %+v", match)
 	}
 }

@@ -73,8 +73,141 @@ func normalizeWhitespaceLower(text string) string {
 	return builder.String()
 }
 
-func getSessionSearchText(session coding.SessionInfo) string {
-	return session.ID + " " + session.Name + " " + session.AllMessagesText + " " + session.Cwd
+// Session search tiers, best first (pi v1.5.0 8c03fef4d): each token is scored
+// by the best field it matches, and a tier dominates any fuzzy score so an exact
+// hit anywhere beats a scattered subsequence in a short field.
+const (
+	tierName  = 0 // the query appears in the session name
+	tierText  = 1 // the query appears in the id, messages, or cwd
+	tierFuzzy = 2 // the query characters appear scattered in the name or cwd
+)
+
+const tierWeight = 1_000_000.0
+
+func tierScore(tier int, score float64) float64 {
+	return float64(tier)*tierWeight + score
+}
+
+// sessionSearchFields lowercases each field on demand, once per MatchSession.
+type sessionSearchFields struct {
+	session        coding.SessionInfo
+	nameLower      *string
+	idLower        *string
+	cwdLower       *string
+	textLower      *string
+	nameNormalized *string
+	cwdNormalized  *string
+	textNormalized *string
+}
+
+func (f *sessionSearchFields) name() string {
+	if f.nameLower == nil {
+		lower := ai.JSLower(f.session.Name)
+		f.nameLower = &lower
+	}
+	return *f.nameLower
+}
+
+func (f *sessionSearchFields) id() string {
+	if f.idLower == nil {
+		lower := ai.JSLower(f.session.ID)
+		f.idLower = &lower
+	}
+	return *f.idLower
+}
+
+func (f *sessionSearchFields) cwd() string {
+	if f.cwdLower == nil {
+		lower := ai.JSLower(f.session.Cwd)
+		f.cwdLower = &lower
+	}
+	return *f.cwdLower
+}
+
+func (f *sessionSearchFields) messages() string {
+	if f.textLower == nil {
+		lower := ai.JSLower(f.session.AllMessagesText)
+		f.textLower = &lower
+	}
+	return *f.textLower
+}
+
+func (f *sessionSearchFields) normalizedName() string {
+	if f.nameNormalized == nil {
+		normalized := normalizeWhitespaceLower(f.session.Name)
+		f.nameNormalized = &normalized
+	}
+	return *f.nameNormalized
+}
+
+func (f *sessionSearchFields) normalizedCwd() string {
+	if f.cwdNormalized == nil {
+		normalized := normalizeWhitespaceLower(f.session.Cwd)
+		f.cwdNormalized = &normalized
+	}
+	return *f.cwdNormalized
+}
+
+func (f *sessionSearchFields) normalizedMessages() string {
+	if f.textNormalized == nil {
+		normalized := normalizeWhitespaceLower(f.session.AllMessagesText)
+		f.textNormalized = &normalized
+	}
+	return *f.textNormalized
+}
+
+// matchLiteralSearchToken matches the query text exactly. Messages and ids are
+// only matched exactly: scattered matches in them are noise.
+func matchLiteralSearchToken(fields *sessionSearchFields, value string) (float64, bool) {
+	name := fields.name()
+	if strings.Contains(name, value) {
+		return tierScore(tierName, tui.MatchFuzzy(value, name).Score), true
+	}
+	if strings.Contains(fields.id(), value) || strings.Contains(fields.messages(), value) || strings.Contains(fields.cwd(), value) {
+		return tierScore(tierText, 0), true
+	}
+	return 0, false
+}
+
+func matchFuzzySearchToken(fields *sessionSearchFields, value string) (float64, bool) {
+	if score, ok := matchLiteralSearchToken(fields, ai.JSLower(value)); ok {
+		return score, true
+	}
+	best := 0.0
+	found := false
+	for _, field := range []string{fields.session.Name, fields.session.Cwd} {
+		match := tui.MatchFuzzy(value, field)
+		if match.Matches && (!found || match.Score < best) {
+			best = match.Score
+			found = true
+		}
+	}
+	if !found {
+		return 0, false
+	}
+	return tierScore(tierFuzzy, best), true
+}
+
+func matchPhraseSearchToken(fields *sessionSearchFields, phrase string) (float64, bool) {
+	name := fields.normalizedName()
+	if strings.Contains(name, phrase) {
+		return tierScore(tierName, tui.MatchFuzzy(phrase, name).Score), true
+	}
+	if strings.Contains(fields.id(), phrase) || strings.Contains(fields.normalizedMessages(), phrase) ||
+		strings.Contains(fields.normalizedCwd(), phrase) {
+		return tierScore(tierText, 0), true
+	}
+	return 0, false
+}
+
+func matchRegexSearchToken(fields *sessionSearchFields, regex *regexp.Regexp) (float64, bool) {
+	if fields.session.Name != "" && regex.MatchString(fields.session.Name) {
+		return tierScore(tierName, 0), true
+	}
+	if regex.MatchString(fields.session.ID) || regex.MatchString(fields.session.AllMessagesText) || regex.MatchString(fields.session.Cwd) {
+		return tierScore(tierText, 0), true
+	}
+	return 0, false
 }
 
 // HasSessionName reports whether the session has a non-empty name.
@@ -157,53 +290,40 @@ func ParseSearchQuery(query string) ParsedSearchQuery {
 	return ParsedSearchQuery{Mode: "tokens", Tokens: tokens}
 }
 
-// MatchSession matches a session against a parsed query.
+// MatchSession matches a session against a parsed query. Each field is matched
+// separately, so a token never matches across field boundaries; different tokens
+// may match different fields (pi v1.5.0 8c03fef4d).
 func MatchSession(session coding.SessionInfo, parsed ParsedSearchQuery) MatchResult {
-	text := getSessionSearchText(session)
+	fields := &sessionSearchFields{session: session}
 
 	if parsed.Mode == "regex" {
 		if parsed.Regex == nil {
 			return MatchResult{}
 		}
-		index := parsed.Regex.FindStringIndex(text)
-		if index == nil {
+		score, ok := matchRegexSearchToken(fields, parsed.Regex)
+		if !ok {
 			return MatchResult{}
 		}
-		// JS String.search returns a UTF-16 code-unit index, not a byte offset.
-		return MatchResult{Matches: true, Score: float64(ai.JSLength(text[:index[0]])) * 0.1}
-	}
-
-	if len(parsed.Tokens) == 0 {
-		return MatchResult{Matches: true}
+		return MatchResult{Matches: true, Score: score}
 	}
 
 	totalScore := 0.0
-	normalizedText := ""
-	hasNormalized := false
-
 	for _, token := range parsed.Tokens {
+		var score float64
+		var ok bool
 		if token.Kind == "phrase" {
-			if !hasNormalized {
-				normalizedText = normalizeWhitespaceLower(text)
-				hasNormalized = true
-			}
 			phrase := normalizeWhitespaceLower(token.Value)
 			if phrase == "" {
 				continue
 			}
-			index := strings.Index(normalizedText, phrase)
-			if index < 0 {
-				return MatchResult{}
-			}
-			// JS String.indexOf returns a UTF-16 code-unit index.
-			totalScore += float64(ai.JSLength(normalizedText[:index])) * 0.1
-			continue
+			score, ok = matchPhraseSearchToken(fields, phrase)
+		} else {
+			score, ok = matchFuzzySearchToken(fields, token.Value)
 		}
-		match := tui.MatchFuzzy(token.Value, text)
-		if !match.Matches {
+		if !ok {
 			return MatchResult{}
 		}
-		totalScore += match.Score
+		totalScore += score
 	}
 	return MatchResult{Matches: true, Score: totalScore}
 }
