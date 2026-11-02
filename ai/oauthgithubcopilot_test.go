@@ -359,3 +359,23 @@ func withGitHubDomain(t *testing.T, serverURL string, run func(domain string)) {
 	}()
 	run(parsed.Hostname())
 }
+
+// Pinned v1.5.0 github-copilot.ts uses trustedHttpUrl (new URL), which rejects
+// a hostless http(s) URI; url.Parse alone would accept "https:".
+func TestGitHubCopilotRejectsHostlessVerificationURI(t *testing.T) {
+	for _, verificationURI := range []string{"https:", "http:", "https://", "http://"} {
+		t.Run(verificationURI, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				writer.Header().Set("Content-Type", "application/json")
+				_, _ = writer.Write([]byte(`{"device_code":"d","user_code":"u","verification_uri":"` + verificationURI + `","expires_in":1}`))
+			}))
+			defer server.Close()
+			withGitHubDomain(t, server.URL, func(domain string) {
+				if _, err := StartGitHubDeviceFlow(context.Background(), domain); err == nil ||
+					err.Error() != "Untrusted verification_uri in device code response" {
+					t.Fatalf("%q: err = %v", verificationURI, err)
+				}
+			})
+		})
+	}
+}

@@ -385,12 +385,12 @@ func StartGitHubDeviceFlow(ctx context.Context, domain string) (*GitHubDeviceCod
 	if deviceCode == "" || userCode == "" || verificationURI == "" || !hasExpiry {
 		return nil, fmt.Errorf("Invalid device code response fields")
 	}
-	parsedURI, err := url.Parse(verificationURI)
-	if err != nil || (parsedURI.Scheme != "https" && parsedURI.Scheme != "http") {
+	_, trustedVerificationURI, trusted := normalizeOAuthHTTPURL(verificationURI)
+	if !trusted {
 		return nil, fmt.Errorf("Untrusted verification_uri in device code response")
 	}
 	device := &GitHubDeviceCodeResponse{
-		DeviceCode: deviceCode, UserCode: userCode, VerificationURI: parsedURI.String(),
+		DeviceCode: deviceCode, UserCode: userCode, VerificationURI: trustedVerificationURI,
 		ExpiresIn: oauthSecondsToInt(expiresIn),
 	}
 	if hasInterval {
