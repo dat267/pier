@@ -112,6 +112,23 @@ func parseInline(src string, state *inlineState) []Inline {
 			dest = "mailto:" + text
 			length = len(text)
 		}
+		// A bare autolink stops at CJK punctuation; the prefix is re-tokenized
+		// exactly like upstream's super.url(prefix) (pi v1.5.0 markdown.ts).
+		if cut := cjkAutolinkCut(text); cut >= 0 {
+			if cut == 0 {
+				return 0, Inline{}, false
+			}
+			truncated := text[:cut]
+			if reText, reDest, reLength, ok := matchAutolinkPrefixForm(truncated, 0); ok {
+				text, dest, length = reText, reDest, reLength
+			} else if end, matched := matchBareEmail(truncated, 0); matched {
+				text = truncated[:end]
+				dest = "mailto:" + text
+				length = end
+			} else {
+				return 0, Inline{}, false
+			}
+		}
 		return i + length, Inline{Kind: InlineLink, Text: text, Dest: dest, Children: []Inline{{Kind: InlineText, Text: text}}}, true
 	}
 
