@@ -91,8 +91,8 @@ func radiusGatewayModelFromMap(record map[string]any) (RadiusGatewayModel, bool)
 	model := RadiusGatewayModel{
 		ID: id, Name: name, Reasoning: reasoning,
 		Cost:          radiusCostFromMap(costRecord),
-		ContextWindow: int64(contextWindow),
-		MaxTokens:     int64(maxTokens),
+		ContextWindow: jsNumberToInt64(contextWindow),
+		MaxTokens:     jsNumberToInt64(maxTokens),
 	}
 	for _, item := range input {
 		if text, ok := item.(string); ok {
@@ -136,7 +136,7 @@ func radiusCostFromMap(record map[string]any) ModelCost {
 				continue
 			}
 			cost.Tiers = append(cost.Tiers, ModelCostTier{
-				InputTokensAbove: int64(threshold),
+				InputTokensAbove: jsNumberToInt64(threshold),
 				ModelCostRates: ModelCostRates{
 					Input:      read(tierRecord, "input"),
 					Output:     read(tierRecord, "output"),

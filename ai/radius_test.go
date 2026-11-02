@@ -77,6 +77,28 @@ func TestRadiusGatewayConfigParsing(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 providers/radius-config.ts preserves finite numeric model limits;
+// int64-backed Go fields must not turn large positive values negative.
+func TestRadiusGatewayConfigSaturatesLargeNumericFields(t *testing.T) {
+	config := sanitizeRadiusGatewayConfig(map[string]any{
+		"baseUrl": "https://gateway.example",
+		"models": []any{map[string]any{
+			"id": "m", "name": "M", "reasoning": false, "input": []any{"text"},
+			"contextWindow": float64(1e308), "maxTokens": float64(1e308),
+			"cost": map[string]any{"input": 1.0, "output": 1.0,
+				"tiers": []any{map[string]any{"inputTokensAbove": float64(1e308), "input": 1.0}}},
+		}},
+	})
+	if config == nil || len(config.Models) != 1 {
+		t.Fatalf("config = %+v", config)
+	}
+	model := config.Models[0]
+	if model.ContextWindow != int64(^uint64(0)>>1) || model.MaxTokens != int64(^uint64(0)>>1) ||
+		len(model.Cost.Tiers) != 1 || model.Cost.Tiers[0].InputTokensAbove != int64(^uint64(0)>>1) {
+		t.Fatalf("model = %+v, want positive numeric fields saturated at MaxInt64", model)
+	}
+}
+
 func TestGetRadiusModelsPreservesCostTiers(t *testing.T) {
 	// Pinned providers/radius-config.ts shallow-copies valid catalog models,
 	// including the ModelCost tiers that downstream usage accounting applies.

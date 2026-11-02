@@ -51,6 +51,20 @@ func jsNumberToInt(value float64) int {
 	return int(value)
 }
 
+// jsNumberToInt64 saturates values outside the int64-backed port model range
+// instead of letting finite positive catalog values wrap negative (D334).
+func jsNumberToInt64(value float64) int64 {
+	maxInt64 := int64(^uint64(0) >> 1)
+	minInt64 := -maxInt64 - 1
+	if value >= float64(maxInt64) {
+		return maxInt64
+	}
+	if value <= float64(minInt64) {
+		return minInt64
+	}
+	return int64(value)
+}
+
 func safeJSONStringify(v any) string {
 	enc, err := MarshalJSON(v)
 	if err != nil {

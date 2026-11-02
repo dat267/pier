@@ -4013,6 +4013,18 @@ to truncate as before.
 
 Test: `TestMistralStreamClampsLargeCachedTokenUsage`.
 
+### D334
+
+**Finite Radius model numbers saturate at int64 representation bounds.**
+
+Reference: pi v1.4.0 `packages/ai/src/providers/radius-config.ts` validates
+`contextWindow` and `maxTokens` as numbers and preserves them in the model;
+cost tiers likewise carry numeric `inputTokensAbove`. Pier stores these fields
+as int64, so conversion now saturates out-of-range values rather than wrapping
+large positive catalog numbers negative. In-range values preserve truncation.
+
+Test: `TestRadiusGatewayConfigSaturatesLargeNumericFields`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
