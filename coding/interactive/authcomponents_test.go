@@ -388,3 +388,34 @@ func TestLoginDisplayURLReplacesControlCharacters(t *testing.T) {
 		t.Fatalf("web URL = %q", got)
 	}
 }
+
+// pi v1.5.0 login-dialog.ts showAuth opens the browser only for a normalized
+// http(s) target and displays the normalized URL or a control-replaced one.
+func TestShowAuthRejectsUntrustedURL(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	InitTheme("dark", false)
+	var opened []string
+	SetBrowserOpener(func(url string) { opened = append(opened, url) })
+	defer SetBrowserOpener(nil)
+
+	component := NewLoginDialogComponent(nil, nil, "test", nil, "", "")
+	component.ShowAuth("file:///etc/passwd", "")
+	if len(opened) != 0 {
+		t.Fatalf("opened a non-web URL: %v", opened)
+	}
+	component.ShowAuth("java\nscript:alert(1)", "")
+	if len(opened) != 0 {
+		t.Fatalf("opened a control-laden URL: %v", opened)
+	}
+	if got := component.authUrl.URL(); got != "java script:alert(1)" {
+		t.Fatalf("displayed URL = %q", got)
+	}
+	component.ShowAuth("https://x", "")
+	if len(opened) != 1 || opened[0] != "https://x/" {
+		t.Fatalf("opened = %v", opened)
+	}
+	if got := component.authUrl.URL(); got != "https://x/" {
+		t.Fatalf("displayed URL = %q", got)
+	}
+}

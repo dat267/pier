@@ -148,14 +148,20 @@ func (errLoginCancelled) Error() string { return "Login cancelled" }
 
 // ShowAuth shows the authorization URL and instructions.
 func (c *LoginDialogComponent) ShowAuth(url string, instructions string) {
+	// Open only a normalized http(s) target: the platform URL handler would also
+	// launch a file: URL or a custom protocol (pi v1.5.0 login-dialog.ts).
 	// Opening the browser stays on the flow's goroutine: exec can block, and the
 	// loop has to stay free to deliver input.
-	browserOpener(url)
+	target, isWebURL := loginWebURL(url)
+	if isWebURL {
+		browserOpener(target)
+	}
+	displayURL := loginDisplayURL(url)
 	c.runOnUI(func() {
 		theme := ActiveTheme()
 		c.contentContainer.Clear()
 		c.contentContainer.AddChild(tui.NewSpacer(1))
-		c.authUrl = NewAuthUrlComponent(c.host, c.post, url)
+		c.authUrl = NewAuthUrlComponent(c.host, c.post, displayURL)
 		c.authUrl.copyClipboard = c.copyClipboard
 		c.contentContainer.AddChild(c.authUrl)
 
