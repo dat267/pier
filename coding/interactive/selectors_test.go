@@ -204,3 +204,33 @@ func TestSelectorsAgainstUpstreamGolden(t *testing.T) {
 		checkGolden(t, golden, "custom "+label+"-expanded@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 	}
 }
+
+// pi v1.5.0 user-message-selector.ts: page keys move the selection by one
+// visible page and the open list captures fullscreen viewport input.
+func TestUserMessageListPageKeys(t *testing.T) {
+	previous := tui.GetKeybindings()
+	tui.SetKeybindings(tui.NewKeybindingsManager(tui.TUIKeybindings, nil))
+	t.Cleanup(func() { tui.SetKeybindings(previous) })
+
+	messages := make([]UserMessageItem, 25)
+	for i := range messages {
+		messages[i] = UserMessageItem{ID: "e", Text: "message"}
+	}
+	list := NewUserMessageList(messages, messages[0].ID)
+	if !list.CapturesViewportInput() {
+		t.Fatal("the open list must capture viewport input")
+	}
+	list.HandleInput("\x1b[6~")
+	if list.selectedIndex != 10 {
+		t.Fatalf("page down moved to %d, want 10", list.selectedIndex)
+	}
+	list.HandleInput("\x1b[5~")
+	if list.selectedIndex != 0 {
+		t.Fatalf("page up moved to %d, want 0", list.selectedIndex)
+	}
+	list.selectedIndex = 24
+	list.HandleInput("\x1b[6~")
+	if list.selectedIndex != 24 {
+		t.Fatalf("page down past the end moved to %d", list.selectedIndex)
+	}
+}

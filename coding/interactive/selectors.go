@@ -313,6 +313,10 @@ func NewUserMessageList(messages []UserMessageItem, initialSelectedID string) *U
 // Invalidate drops cached state (none).
 func (l *UserMessageList) Invalidate() {}
 
+// CapturesViewportInput reports that the open list owns page keys
+// (pi v1.5.0 user-message-selector.ts).
+func (l *UserMessageList) CapturesViewportInput() bool { return true }
+
 // Render renders the list.
 func (l *UserMessageList) Render(width int) []string {
 	theme := ActiveTheme()
@@ -360,6 +364,16 @@ func (l *UserMessageList) HandleInput(data string) {
 			l.selectedIndex = 0
 		} else {
 			l.selectedIndex++
+		}
+	case kb.Matches(data, "tui.select.pageUp") || kb.Matches(data, "tui.select.pageDown"):
+		// Page keys move by one visible page, clamped to the list bounds
+		// (pi v1.5.0 user-message-selector.ts).
+		if len(l.messages) == 0 {
+			return
+		}
+		pageIndex, _ := tui.SelectPageIndex(kb, data, l.selectedIndex, len(l.messages), l.maxVisible)
+		if pageIndex != l.selectedIndex {
+			l.selectedIndex = pageIndex
 		}
 	case kb.Matches(data, "tui.select.confirm"):
 		if l.selectedIndex >= 0 && l.selectedIndex < len(l.messages) && l.OnSelect != nil {
