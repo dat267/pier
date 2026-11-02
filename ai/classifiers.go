@@ -87,7 +87,7 @@ func (answer ClassifierAnswer) MarshalJSON() ([]byte, error) {
 			keys = append(keys, "probability")
 		}
 	}
-	return (&orderedMap{keys: keys, values: values}).MarshalJSON()
+	return orderedMapFromValues(keys, values).MarshalJSON()
 }
 
 // orderedClassifierValues shares the JavaScript key-order rules for both record types.
@@ -103,11 +103,11 @@ func orderedClassifierValues[V float64 | ClassifierAnswer](values map[string]V, 
 	for _, key := range extras {
 		keys = appendJSObjectKey(keys, key)
 	}
-	ordered := &orderedMap{keys: keys, values: make(map[string]any, len(values))}
+	orderedValues := make(map[string]any, len(values))
 	for key, value := range values {
-		ordered.values[key] = value
+		orderedValues[key] = value
 	}
-	return ordered
+	return orderedMapFromValues(keys, orderedValues)
 }
 
 // ClassifierResult is the non-rejecting result of a classifier request.
@@ -140,7 +140,7 @@ func (result ClassifierResult) MarshalJSON() ([]byte, error) {
 		values["errorMessage"] = *result.ErrorMessage
 		keys = append(keys, "errorMessage")
 	}
-	return (&orderedMap{keys: keys, values: values}).MarshalJSON()
+	return orderedMapFromValues(keys, values).MarshalJSON()
 }
 
 // ClassifierStopReason labels a classifier result.

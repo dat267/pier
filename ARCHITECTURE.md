@@ -4218,6 +4218,27 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestChatResetStopsBothSweeps`,
 `TestWiringChatResetDropsPendingSweeps`.
 
+### D352
+
+**The Responses input array is assembled canonically instead of re-marshaled per item.**
+
+Reference: pi v1.5.0 `convertResponsesMessages` builds plain objects and
+stringifies once. The Go port built each input item with
+`mustMarshalJSON(orderKeys(...))`, whose `orderedMap` marshaled every key and
+value through `MarshalJSON`, so a 40,000-message transcript ran 600k
+canonicalizations and 7.9M allocations (550 ms, 368 MB) before the final array
+was canonicalized again. `orderedMap` now keeps parallel key/value slices and
+emits canonical bytes directly (`appendCanonicalJSONString`, integer/raw/nested
+map paths); `convertResponsesMessages` appends those ordered maps and the
+assistant converter's items, canonicalizing reasoning signatures on the way,
+and emits the array once without a second full canonicalization pass.
+
+Measured on the same transcript: 550 ms and 368 MB with 7.9M allocations →
+82 ms and 78 MB with 0.79M allocations. Output stays canonical, pinned by
+`TestConvertResponsesMessagesOutputIsCanonical`, the existing Responses input
+and wire parity tests, and a 500-turn allocation budget; the benchmark is
+`BenchmarkConvertResponsesMessages`.
+
 ### D351
 
 **A rejected-candidate run stops the dispatch scan after a fixed budget.**

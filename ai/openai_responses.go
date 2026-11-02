@@ -1,9 +1,9 @@
 package ai
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -391,7 +391,7 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 		options = &ConvertResponsesMessagesOptions{}
 	}
 	normalizedContext := ResolveTranscript(context, options.SupportsMidConvoSystemMessages)
-	messages := []responseInputItem{}
+	var messages []any
 
 	providers := options.ToolCallProviders
 	if providers == nil {
@@ -453,9 +453,9 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 		}
 		if toolSupport == TranscriptToolSupportChanges {
 			if declaredAdditionalTools {
-				messages = append(messages, mustMarshalJSON(orderKeys(map[string]any{
+				messages = append(messages, orderKeys(map[string]any{
 					"role": instructionRole, "content": incrementalToolsNotice(unavailableTools),
-				}, "role", "content")))
+				}, "role", "content"))
 			}
 			declaredAdditionalTools = true
 			converted, err := ConvertResponsesTools(tools, options.ToolOptions)
@@ -463,7 +463,7 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 				return err
 			}
 			item := map[string]any{"type": "additional_tools", "role": "developer", "tools": converted}
-			messages = append(messages, mustMarshalJSON(orderKeys(item, "type", "role", "tools")))
+			messages = append(messages, orderKeys(item, "type", "role", "tools"))
 			return nil
 		}
 		if toolSupport != TranscriptToolSupportAdditions {
@@ -474,11 +474,11 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 			names = append(names, tool.Name)
 		}
 		callID := "pi_tool_load_" + ShortHash(seed+":"+strings.Join(names, ","))
-		messages = append(messages, mustMarshalJSON(orderKeys(map[string]any{
+		messages = append(messages, orderKeys(map[string]any{
 			"type": "tool_search_call", "call_id": callID,
 			"execution": "client", "status": "completed",
 			"arguments": map[string]any{"query": strings.Join(names, " "), "limit": len(names)},
-		}, "type", "call_id", "execution", "status", "arguments")))
+		}, "type", "call_id", "execution", "status", "arguments"))
 		converted, err := ConvertResponsesTools(tools, &ConvertResponsesToolsOptions{
 			Strict:                     toolOptionsStrict(options.ToolOptions),
 			SupportsStrictMode:         toolOptionsStrictMode(options.ToolOptions),
@@ -488,20 +488,20 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 		if err != nil {
 			return err
 		}
-		messages = append(messages, mustMarshalJSON(orderKeys(map[string]any{
+		messages = append(messages, orderKeys(map[string]any{
 			"type": "tool_search_output", "call_id": callID,
 			"execution": "client", "status": "completed", "tools": converted,
-		}, "type", "call_id", "execution", "status", "tools")))
+		}, "type", "call_id", "execution", "status", "tools"))
 		return nil
 	}
 
 	includeInitialSystemMessage := options.IncludeSystemPrompt == nil || *options.IncludeSystemPrompt
 
 	pushConfigurationUpdate := func(effort string) {
-		messages = append(messages, mustMarshalJSON(orderKeys(map[string]any{
+		messages = append(messages, orderKeys(map[string]any{
 			"type":      "configuration_update",
 			"reasoning": map[string]any{"effort": effort},
-		}, "type", "reasoning")))
+		}, "type", "reasoning"))
 	}
 
 	msgIndex := 0
@@ -555,17 +555,17 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 				}
 				text := strings.Join(nonEmpty, "\n\n")
 				if len(text) > 0 {
-					messages = append(messages, mustMarshalJSON(orderKeys(map[string]any{
+					messages = append(messages, orderKeys(map[string]any{
 						"role": instructionRole, "content": SanitizeSurrogates(text),
-					}, "role", "content")))
+					}, "role", "content"))
 				}
 			}
 		case *UserMessage:
 			if m.Content.Blocks == nil {
-				messages = append(messages, mustMarshalJSON(orderKeys(map[string]any{
+				messages = append(messages, orderKeys(map[string]any{
 					"role":    "user",
 					"content": []any{orderKeys(map[string]any{"type": "input_text", "text": SanitizeSurrogates(m.Content.Text)}, "type", "text")},
-				}, "role", "content")))
+				}, "role", "content"))
 			} else {
 				var content []any
 				for _, item := range m.Content.Blocks {
@@ -584,9 +584,9 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 				if len(content) == 0 {
 					continue
 				}
-				messages = append(messages, mustMarshalJSON(orderKeys(map[string]any{
+				messages = append(messages, orderKeys(map[string]any{
 					"role": "user", "content": content,
-				}, "role", "content")))
+				}, "role", "content"))
 			}
 		case *AssistantMessage:
 			items, err := convertResponsesAssistantMessage(model, m, msgIndex, options)
@@ -600,7 +600,9 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 				m.Model == model.ID && m.ProviderThinkingLevel != nil {
 				pushConfigurationUpdate(*m.ProviderThinkingLevel)
 			}
-			messages = append(messages, items...)
+			for _, item := range items {
+				messages = append(messages, item)
+			}
 		case *ToolResultMessage:
 			callID, _, _ := strings.Cut(m.ToolCallID, "|")
 			output := convertResponsesToolResultOutput(model, m.Content)
@@ -608,9 +610,9 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 			if _, ok := options.GrammarToolInputProperties[m.ToolName]; ok {
 				itemType = "custom_tool_call_output"
 			}
-			messages = append(messages, mustMarshalJSON(orderKeys(map[string]any{
+			messages = append(messages, orderKeys(map[string]any{
 				"type": itemType, "call_id": callID, "output": output,
-			}, "type", "call_id", "output")))
+			}, "type", "call_id", "output"))
 		}
 		if !isLeadingSystemMessage {
 			msgIndex++
@@ -620,11 +622,39 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 		pushConfigurationUpdate(options.ConfigurationUpdateEffort)
 	}
 
-	enc, err := MarshalJSON(messages)
-	if err != nil {
-		return nil, err
+	// The items were built with canonical primitives (ordered maps and the
+	// assistant converter's MarshalJSON output), so emit the array directly.
+	// Marshaling it through MarshalJSON canonicalized the whole transcript a
+	// second time (M145).
+	encoded := make([]byte, 0, 64*1024)
+	encoded = append(encoded, '[')
+	for index, item := range messages {
+		if index > 0 {
+			encoded = append(encoded, ',')
+		}
+		switch value := item.(type) {
+		case *orderedMap:
+			var err error
+			encoded, err = value.appendJSON(encoded)
+			if err != nil {
+				return nil, err
+			}
+		case json.RawMessage:
+			canonical, err := canonicalJavaScriptJSON(value)
+			if err != nil {
+				return nil, err
+			}
+			encoded = append(encoded, canonical...)
+		default:
+			itemJSON, err := MarshalJSON(value)
+			if err != nil {
+				return nil, err
+			}
+			encoded = append(encoded, itemJSON...)
+		}
 	}
-	return enc, nil
+	encoded = append(encoded, ']')
+	return encoded, nil
 }
 
 // aiSystemMessageAlias lets the tool-addition helper read ToolsAdded without
@@ -654,8 +684,8 @@ func toolOptionsGrammar(options *ConvertResponsesToolsOptions) bool {
 
 // convertResponsesAssistantMessage projects assistant content into Responses
 // output items (reasoning replay, message items with phases, tool calls).
-func convertResponsesAssistantMessage(model *Model, m *AssistantMessage, msgIndex int, options *ConvertResponsesMessagesOptions) ([]responseInputItem, error) {
-	var output []responseInputItem
+func convertResponsesAssistantMessage(model *Model, m *AssistantMessage, msgIndex int, options *ConvertResponsesMessagesOptions) ([]any, error) {
+	var output []any
 	isSameProviderAndAPI := m.Provider == model.Provider && m.API == model.API
 	isSameModel := isSameProviderAndAPI && m.Model == model.ID
 	isDifferentModel := isSameProviderAndAPI && m.Model != model.ID
@@ -696,7 +726,7 @@ func convertResponsesAssistantMessage(model *Model, m *AssistantMessage, msgInde
 				item["phase"] = phase
 				keys = append(keys, "phase")
 			}
-			output = append(output, mustMarshalJSON(orderKeys(item, keys...)))
+			output = append(output, orderKeys(item, keys...))
 		case ToolCall:
 			parts := strings.SplitN(b.ID, "|", 2)
 			callID := parts[0]
@@ -746,7 +776,7 @@ func convertResponsesAssistantMessage(model *Model, m *AssistantMessage, msgInde
 				item["namespace"] = *b.Namespace
 				keys = append(keys, "namespace")
 			}
-			output = append(output, mustMarshalJSON(orderKeys(item, keys...)))
+			output = append(output, orderKeys(item, keys...))
 		}
 	}
 	return output, nil
@@ -804,44 +834,99 @@ func convertResponsesToolResultOutput(model *Model, content UserContentList) any
 // orderKeys builds a map whose MarshalJSON emits keys in the given order
 // (Go maps sort, which would deviate from upstream key order).
 func orderKeys(values map[string]any, keys ...string) *orderedMap {
-	out := &orderedMap{keys: keys, values: map[string]any{}}
+	return orderedMapFromValues(keys, values)
+}
+
+// orderedMapFromValues pairs keys with their values in declaration order.
+func orderedMapFromValues(keys []string, values map[string]any) *orderedMap {
+	out := &orderedMap{keys: make([]string, 0, len(keys)), values: make([]any, 0, len(keys))}
 	for _, key := range keys {
 		if value, ok := values[key]; ok {
-			out.values[key] = value
+			out.keys = append(out.keys, key)
+			out.values = append(out.values, value)
 		}
 	}
 	return out
 }
 
-// orderedMap marshals its fields in declaration order.
+// orderedMap marshals its fields in declaration order. Parallel slices keep
+// the common few-key object allocation to one backing array each instead of a
+// map per message (M145).
 type orderedMap struct {
 	keys   []string
-	values map[string]any
+	values []any
 }
 
 func (o *orderedMap) MarshalJSON() ([]byte, error) {
-	var buf bytes.Buffer
-	buf.WriteByte('{')
-	for _, key := range o.keys {
-		value, ok := o.values[key]
-		if !ok {
-			continue
+	return o.appendJSON(nil)
+}
+
+// appendJSON emits the map's canonical bytes directly. Keys, strings, bools,
+// integers, raw JSON, arrays of any, and nested ordered maps take allocation-
+// free paths; other values keep the canonical MarshalJSON fallback. The
+// Responses input builder nests these maps per message, and calling
+// MarshalJSON for every key and value canonicalized each fragment separately
+// (600k calls and 550 ms for a 40,000-message transcript).
+func (o *orderedMap) appendJSON(buf []byte) (out []byte, err error) {
+	buf = append(buf, '{')
+	wrote := false
+	for index, key := range o.keys {
+		value := o.values[index]
+		if wrote {
+			buf = append(buf, ',')
 		}
-		if buf.Len() > 1 {
-			buf.WriteByte(',')
-		}
-		keyEnc, err := MarshalJSON(key)
+		wrote = true
+		buf = appendCanonicalJSONString(buf, key)
+		buf = append(buf, ':')
+		buf, err = appendOrderedMapValue(buf, value)
 		if err != nil {
 			return nil, err
 		}
-		buf.Write(keyEnc)
-		buf.WriteByte(':')
-		enc, err := MarshalJSON(value)
-		if err != nil {
-			return nil, err
-		}
-		buf.Write(enc)
 	}
-	buf.WriteByte('}')
-	return buf.Bytes(), nil
+	return append(buf, '}'), nil
+}
+
+func appendOrderedMapValue(buf []byte, value any) ([]byte, error) {
+	switch v := value.(type) {
+	case nil:
+		return append(buf, "null"...), nil
+	case string:
+		return appendCanonicalJSONString(buf, v), nil
+	case bool:
+		if v {
+			return append(buf, "true"...), nil
+		}
+		return append(buf, "false"...), nil
+	case int:
+		return strconv.AppendInt(buf, int64(v), 10), nil
+	case int64:
+		return strconv.AppendInt(buf, v, 10), nil
+	case json.RawMessage:
+		canonical, err := canonicalJavaScriptJSON(v)
+		if err != nil {
+			return nil, err
+		}
+		return append(buf, canonical...), nil
+	case *orderedMap:
+		return v.appendJSON(buf)
+	case []any:
+		buf = append(buf, '[')
+		for index, item := range v {
+			if index > 0 {
+				buf = append(buf, ',')
+			}
+			var err error
+			buf, err = appendOrderedMapValue(buf, item)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return append(buf, ']'), nil
+	default:
+		encoded, err := MarshalJSON(value)
+		if err != nil {
+			return nil, err
+		}
+		return append(buf, encoded...), nil
+	}
 }
