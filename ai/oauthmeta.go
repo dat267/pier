@@ -135,11 +135,11 @@ func metaStartDeviceAuthorization(ctx context.Context) (*metaDeviceAuthorization
 	}
 	device := &metaDeviceAuthorization{DeviceCode: deviceCode, UserCode: userCode, VerificationURI: verificationURI}
 	if interval, ok := body["interval"].(float64); ok && interval > 0 {
-		seconds := int(interval)
+		seconds := oauthSecondsToInt(interval)
 		device.IntervalSeconds = &seconds
 	}
 	if expires, ok := body["expires_in"].(float64); ok && expires > 0 {
-		seconds := int(expires)
+		seconds := oauthSecondsToInt(expires)
 		device.ExpiresInSeconds = &seconds
 	}
 	return device, nil
@@ -171,7 +171,7 @@ func metaPollForIdentityToken(ctx context.Context, device *metaDeviceAuthorizati
 			case "slow_down":
 				result := OAuthDeviceCodePollResult[string]{Status: "slow_down"}
 				if interval, ok := body["interval"].(float64); ok && interval > 0 {
-					seconds := int(interval)
+					seconds := oauthSecondsToInt(interval)
 					result.IntervalSeconds = &seconds
 				}
 				return result, nil

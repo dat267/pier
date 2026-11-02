@@ -80,6 +80,22 @@ func TestParseXaiDeviceCode(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 auth/oauth/xai.ts accepts finite positive expiry seconds; Go must not
+// turn a far-future device authorization into a negative int duration.
+func TestParseXaiDeviceCodeSaturatesLargeFiniteExpiry(t *testing.T) {
+	device, err := parseXaiDeviceCode(map[string]any{
+		"device_code": "d", "user_code": "u", "verification_uri": "https://x.ai/device",
+		"expires_in": float64(1e308),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := int(^uint(0) >> 1)
+	if device.ExpiresInSeconds != want {
+		t.Fatalf("expires_in seconds = %d, want saturated %d", device.ExpiresInSeconds, want)
+	}
+}
+
 func TestXaiCredentialsFromTokenResponse(t *testing.T) {
 	credential, err := xaiCredentialsFromTokenResponse(map[string]any{
 		"access_token": "access", "refresh_token": "refresh", "expires_in": float64(100),

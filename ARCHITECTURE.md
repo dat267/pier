@@ -3986,6 +3986,20 @@ exceeds int64 milliseconds, preventing far-future waits from wrapping to zero.
 
 Test: `TestParseCodexErrorResponseLargeResetTimestampDoesNotWrap`.
 
+### D332
+
+**Finite far-future OAuth device-code seconds saturate at the Go `int` bound.**
+
+Reference: pi v1.4.0 `packages/ai/src/auth/oauth/xai.ts` accepts finite positive
+`expires_in` values and passes them to the device-code poller. Pier stores
+provider expiry and interval seconds as `int`; direct float conversion can wrap
+a large finite positive value to a negative number and expire the authorization
+immediately. `oauthSecondsToInt` preserves ordinary truncation and saturates
+out-of-range values, so a far-future expiry remains future and oversized polling
+intervals still pass through the existing JavaScript timer clamp.
+
+Test: `TestParseXaiDeviceCodeSaturatesLargeFiniteExpiry`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

@@ -57,6 +57,13 @@ type OAuthDeviceCodePollResult[T any] struct {
 	Value T
 }
 
+// oauthSecondsToInt saturates OAuth server seconds outside the platform int
+// range. D332 preserves positive far-future device expiries instead of letting
+// a float-to-int overflow mark them expired immediately.
+func oauthSecondsToInt(seconds float64) int {
+	return jsNumberToInt(seconds)
+}
+
 // deviceCodeIntervalDuration converts server-provided seconds without
 // overflowing, preserving the setTimeout-compatible sleep range.
 func deviceCodeIntervalDuration(intervalSeconds int) time.Duration {

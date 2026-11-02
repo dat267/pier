@@ -196,7 +196,7 @@ func parseXaiDeviceCode(body map[string]any) (*XaiDeviceCode, error) {
 	// RFC 8628 allows interval 0 (no minimum wait), so non-positive or malformed
 	// values fall back to the poller's default.
 	if interval, ok := body["interval"].(float64); ok && interval > 0 {
-		seconds := int(interval)
+		seconds := oauthSecondsToInt(interval)
 		device.IntervalSeconds = &seconds
 	}
 	if complete, ok := body["verification_uri_complete"].(string); ok && complete != "" {
@@ -208,7 +208,7 @@ func parseXaiDeviceCode(body map[string]any) (*XaiDeviceCode, error) {
 	if err != nil {
 		return nil, err
 	}
-	device.ExpiresInSeconds = int(expires)
+	device.ExpiresInSeconds = oauthSecondsToInt(expires)
 	return device, nil
 }
 
@@ -288,7 +288,7 @@ func PollXaiForTokens(ctx context.Context, device *XaiDeviceCode) (*OAuthCredent
 			case "slow_down":
 				result := OAuthDeviceCodePollResult[*OAuthCredential]{Status: "slow_down"}
 				if interval, ok := response.Body["interval"].(float64); ok {
-					seconds := int(interval)
+					seconds := oauthSecondsToInt(interval)
 					result.IntervalSeconds = &seconds
 				}
 				return result, nil
@@ -447,11 +447,11 @@ func StartKimiDeviceAuthorization(ctx context.Context, oauthHost string) (*KimiD
 	}
 	intervalSeconds := KimiCodingDefaultPollInterval
 	if interval, ok := body["interval"].(float64); ok && interval > 0 {
-		intervalSeconds = int(interval)
+		intervalSeconds = oauthSecondsToInt(interval)
 	}
 	expiresInSeconds := KimiCodingDeviceTimeoutSecs
 	if expiresIn, ok := body["expires_in"].(float64); ok && expiresIn > 0 {
-		expiresInSeconds = int(expiresIn)
+		expiresInSeconds = oauthSecondsToInt(expiresIn)
 	}
 	return &KimiDeviceAuthorization{
 		DeviceCode: deviceCode, UserCode: userCode,
@@ -529,7 +529,7 @@ func PollKimiForToken(ctx context.Context, oauthHost string, device *KimiDeviceA
 			case "slow_down":
 				result := OAuthDeviceCodePollResult[*kimiTokenResponse]{Status: "slow_down"}
 				if interval, ok := response.Body["interval"].(float64); ok && interval > 0 {
-					seconds := int(interval)
+					seconds := oauthSecondsToInt(interval)
 					result.IntervalSeconds = &seconds
 				}
 				return result, nil

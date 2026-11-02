@@ -376,10 +376,10 @@ func RequestRadiusDeviceAuthorization(ctx context.Context, gateway string) (*Rad
 	}
 	device := &RadiusDeviceAuthorization{
 		DeviceCode: deviceCode, UserCode: userCode,
-		VerificationURI: verificationURI, ExpiresIn: int(expiresIn),
+		VerificationURI: verificationURI, ExpiresIn: oauthSecondsToInt(expiresIn),
 	}
 	if interval, ok := payload["interval"].(float64); ok {
-		seconds := int(interval)
+		seconds := oauthSecondsToInt(interval)
 		device.IntervalSeconds = &seconds
 	}
 	return device, nil
