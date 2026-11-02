@@ -4198,6 +4198,23 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestSetToolsExpandedNoOpKeepsDeferredWork`,
 `TestToolCardExpansionReachesDeferredCards`.
 
+### D344
+
+**Goal prompt wrappers neutralize closing tags in the text they wrap.**
+
+Goal objectives and blocker text come from `/goal` and from the model's
+`set_goal`, and rounds re-inject the objective inside `<untrusted_objective>` to
+tell the model it is data. Text containing `</untrusted_objective>` used to close
+that block early, leaving its own following lines outside the wrapper and ahead
+of the harness framing lines, so a prompt-injected turn could persist
+instructions that read as harness text later. `escapeGoalText` now rewrites every
+`</` in the embedded objective, blocker code, and blocker message to `&lt;/` in
+`GoalRoundPrompt`, `PauseContext`, and `WrapupContext`; other markup is untouched
+so an objective like `fix <b>` still reads normally. Stored entries and display
+cards are unchanged.
+
+Tests: `TestGoalPromptWrappersCannotBeClosedByTheirContent`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
