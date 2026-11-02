@@ -89,10 +89,36 @@ func expectedProjectTheme(trusted bool) string {
 	return ""
 }
 
-// A switch within the same project must not re-resolve anything: the project's
-// trust was decided at startup, and re-asking the store here could only disagree
-// with what the user already answered.
+// A switch within the same project reuses the decision the run already made:
+// upstream's projectTrustByCwd cache is consulted before the store (v1.5.0
+// main.ts createRuntime), so a store entry rewritten after the answer cannot
+// flip it.
 func TestSwitchWithinTheSameCwdKeepsTheTrustDecision(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	cwd := app.sessionMgr.GetCwd()
+
+	// The cache a startup trust resolution fills.
+	key := coding.CanonicalizePath(coding.ResolvePath(cwd, "", coding.PathInputOptions{}))
+	app.projectTrustByCwd[key] = true
+
+	target := makePersistedSession(t, cwd, "same project")
+	store := coding.NewProjectTrustStore(app.options.AgentDir)
+	if err := store.Set(cwd, new(false)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
+		t.Fatalf("SwitchSession: %v", err)
+	}
+	if !app.settings.IsProjectTrusted() {
+		t.Fatal("a same-cwd switch overrode the run's cached decision from the store")
+	}
+}
+
+// Without a cached decision the store is authoritative even when the project has
+// no trust-requiring resources (v1.5.0 31ade0e0d, #10947), so a saved "Do not
+// trust" keeps project settings out.
+func TestSwitchWithoutCachedDecisionHonorsTheStore(t *testing.T) {
 	app, cleanup := newTestApp(t)
 	defer cleanup()
 	cwd := app.sessionMgr.GetCwd()
@@ -105,8 +131,8 @@ func TestSwitchWithinTheSameCwdKeepsTheTrustDecision(t *testing.T) {
 	if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
 		t.Fatalf("SwitchSession: %v", err)
 	}
-	if !app.settings.IsProjectTrusted() {
-		t.Fatal("a same-cwd switch re-resolved trust from the store")
+	if app.settings.IsProjectTrusted() {
+		t.Fatal("a saved untrusted decision must be honored without a cached answer")
 	}
 }
 
