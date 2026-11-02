@@ -222,6 +222,34 @@ func applyModelOverride(model *ai.Model, override ModelsJSONModelOverride) (*ai.
 	return &updated, nil
 }
 
+// modelsJSONNumberToInt saturates numeric configuration that exceeds the
+// platform int range, preserving positive cache lifetimes (D336).
+func modelsJSONNumberToInt(value float64) int {
+	maxInt := int(^uint(0) >> 1)
+	minInt := -maxInt - 1
+	if value >= float64(maxInt) {
+		return maxInt
+	}
+	if value <= float64(minInt) {
+		return minInt
+	}
+	return int(value)
+}
+
+// modelsJSONNumberToInt64 saturates numeric configuration that exceeds int64
+// representation bounds, preserving positive token thresholds (D336).
+func modelsJSONNumberToInt64(value float64) int64 {
+	maxInt64 := int64(^uint64(0) >> 1)
+	minInt64 := -maxInt64 - 1
+	if value >= float64(maxInt64) {
+		return maxInt64
+	}
+	if value <= float64(minInt64) {
+		return minInt64
+	}
+	return int64(value)
+}
+
 // promptCacheFromJSON converts the seconds-per-tier map of models.json into
 // the model's prompt-cache lifetimes.
 func promptCacheFromJSON(values ModelsJSONPromptCache) ai.ModelPromptCache {
@@ -230,7 +258,7 @@ func promptCacheFromJSON(values ModelsJSONPromptCache) ai.ModelPromptCache {
 	}
 	out := make(ai.ModelPromptCache, len(values))
 	for retention, seconds := range values {
-		out[ai.CacheRetention(retention)] = int(seconds)
+		out[ai.CacheRetention(retention)] = modelsJSONNumberToInt(seconds)
 	}
 	return out
 }
@@ -242,7 +270,7 @@ func costTiersFromJSON(tiers []ModelsJSONCostTier) []ai.ModelCostTier {
 	out := make([]ai.ModelCostTier, 0, len(tiers))
 	for _, tier := range tiers {
 		out = append(out, ai.ModelCostTier{
-			InputTokensAbove: int64(tier.InputTokensAbove),
+			InputTokensAbove: modelsJSONNumberToInt64(tier.InputTokensAbove),
 			Input:            tier.Input, Output: tier.Output,
 			CacheRead: tier.CacheRead, CacheWrite: tier.CacheWrite,
 		})

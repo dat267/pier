@@ -4037,6 +4037,19 @@ negative/no-timer setting. Ordinary values retain truncation.
 
 Test: `TestHTTPIdleTimeoutUsesJavaScriptNumberParsing`.
 
+### D336
+
+**Large finite models.json cache lifetimes and cost thresholds saturate to Go integer bounds.**
+
+Reference: pi v1.4.0 `packages/ai/src/providers/model-schema.ts` accepts positive
+numeric prompt-cache lifetimes and numeric cost-tier thresholds without upper
+bounds; `packages/coding-agent/src/core/provider-composer.ts` carries these
+values into models. Pier stores them as `int` seconds or int64 token thresholds.
+Out-of-range finite values now saturate instead of wrapping negative; ordinary
+in-range values preserve truncation.
+
+Test: `TestModelsJSONSaturatesLargePromptCacheAndCostNumbers`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

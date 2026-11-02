@@ -11,6 +11,33 @@ import (
 // merges an override over the base model's tiers
 // (`{ ...model.promptCache, ...override.promptCache }`). Without it, custom
 // models lose the cache-warming lifetimes built-in catalogs provide.
+func TestModelsJSONSaturatesLargePromptCacheAndCostNumbers(t *testing.T) {
+	base := ai.CreateProvider(ai.CreateProviderOptions{ID: "custom", Models: []*ai.Model{}})
+	config := &ModelConfig{providers: map[string]ModelsJSONProvider{
+		"custom": {
+			BaseURL: "https://provider.test/v1", API: ai.APIOpenAIResponses,
+			Models: []ModelsJSONModel{{
+				ID: "large", PromptCache: ModelsJSONPromptCache{"short": 1e308},
+				Cost: &ModelsJSONCost{ModelsJSONCostRates: ModelsJSONCostRates{Input: 1, Output: 1},
+					Tiers: []ModelsJSONCostTier{{InputTokensAbove: 1e308, ModelsJSONCostRates: ModelsJSONCostRates{Input: 2, Output: 2}}}},
+			}},
+		},
+	}}
+	provider, err := ComposeModelProvider("custom", base, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	models := provider.GetAllModels()
+	if len(models) != 1 {
+		t.Fatalf("models = %+v", models)
+	}
+	model := models[0]
+	if model.PromptCache[ai.CacheRetentionShort] != int(^uint(0)>>1) || len(model.Cost.Tiers) != 1 ||
+		model.Cost.Tiers[0].InputTokensAbove != int64(^uint64(0)>>1) {
+		t.Fatalf("model = %+v, want large positive config values saturated at their integer bounds", model)
+	}
+}
+
 func TestModelsJSONPromptCacheReachesModels(t *testing.T) {
 	builtin := &ai.Model{
 		ID: "builtin", Name: "Builtin", API: ai.APIOpenAIResponses, Provider: "openai",
