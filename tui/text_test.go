@@ -2,9 +2,20 @@ package tui
 
 import "testing"
 
-// packages/tui/src/components/text.ts suppresses text whose String.trim() is empty.
-func TestTextRenderUsesJavaScriptTrim(t *testing.T) {
-	if got := NewText("\uFEFF", 0, 0, nil).Render(80); len(got) != 0 {
-		t.Fatalf("Render(BOM) = %#v; want no lines", got)
+// pi v1.5.0 text.ts setText returns early for the same text, so a renderer that
+// republishes unchanged content does not discard its wrapped lines.
+func TestTextSetSameTextKeepsCache(t *testing.T) {
+	text := NewText("hello world", 0, 0, nil)
+	_ = text.Render(20)
+	if !text.hasCachedLines {
+		t.Fatal("setup: render did not cache lines")
+	}
+	text.SetText("hello world")
+	if !text.hasCachedLines {
+		t.Fatal("re-setting the same text dropped the wrap cache")
+	}
+	text.SetText("changed")
+	if text.hasCachedLines {
+		t.Fatal("changing the text did not drop the wrap cache")
 	}
 }

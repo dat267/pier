@@ -81,6 +81,11 @@ func (t *Text) SetPaddingX(paddingX int) {
 }
 
 func (t *Text) SetText(text string) {
+	// Renderers often set the same text on every update; keep the wrapped lines
+	// then (pi v1.5.0 components/text.ts).
+	if text == t.text {
+		return
+	}
 	t.text = text
 	t.invalidateCache()
 }
