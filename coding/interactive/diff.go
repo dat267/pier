@@ -117,8 +117,10 @@ func diffTokens(oldTokens []string, newTokens []string) []DiffChange {
 	return postProcessWordDiff(changes)
 }
 
+// jsdiff 8.0.4 word.js equals trims JavaScript `\s`, not Go's Unicode space
+// set: U+FEFF is whitespace there and U+0085 is not (M141).
 func wordEquals(left string, right string) bool {
-	return strings.TrimSpace(left) == strings.TrimSpace(right)
+	return strings.TrimFunc(left, isSpaceRune) == strings.TrimFunc(right, isSpaceRune)
 }
 
 // diffComponents returns the jsdiff components for the word tokens, comparing
