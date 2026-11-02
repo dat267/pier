@@ -79,8 +79,10 @@ func FormatCwdForFooter(cwd string, home string) string {
 	if home == "" {
 		return cwd
 	}
-	resolvedCwd := filepath.Clean(cwd)
-	resolvedHome := filepath.Clean(home)
+	// Upstream footer.ts resolves both inputs; Clean alone leaves a relative cwd
+	// relative and lets filepath.Rel fail against an absolute home.
+	resolvedCwd := coding.ResolvePath(cwd, "", coding.PathInputOptions{})
+	resolvedHome := coding.ResolvePath(home, "", coding.PathInputOptions{})
 	relativeToHome, err := filepath.Rel(resolvedHome, resolvedCwd)
 	if err != nil {
 		return cwd

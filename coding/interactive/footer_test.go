@@ -317,3 +317,15 @@ func TestFooterStatusesUseUpstreamLocaleOrdering(t *testing.T) {
 		t.Fatalf("status order = %q, want locale order lower before upper", line)
 	}
 }
+
+// Upstream footer.ts uses path.resolve on both inputs, so a relative cwd under
+// an absolute home still shortens; filepath.Clean left it relative.
+func TestFormatCwdForFooterResolvesRelativeCwd(t *testing.T) {
+	home, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := FormatCwdForFooter("project", home), "~"+string(filepath.Separator)+"project"; got != want {
+		t.Fatalf("FormatCwdForFooter = %q, want %q", got, want)
+	}
+}
