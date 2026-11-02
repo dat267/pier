@@ -594,3 +594,19 @@ func TestToolCardAppliesArgumentDeltasOncePerRender(t *testing.T) {
 		t.Fatalf("render ran the card renderer %d time(s), want 1", renders)
 	}
 }
+
+// pi v1.5.0 render-utils.ts shortenPath uses shortenHomePath: only a path inside
+// home is shortened, so a sibling that shares the prefix stays intact.
+func TestShortenPathRequiresHomeContainment(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	inside := filepath.Join(home, "proj", "a.txt")
+	if got := ShortenPath(inside); got != "~"+string(filepath.Separator)+filepath.Join("proj", "a.txt") {
+		t.Fatalf("inside = %q", got)
+	}
+	sibling := filepath.Join(home+"2", "a.txt")
+	if got := ShortenPath(sibling); got != sibling {
+		t.Fatalf("sibling = %q", got)
+	}
+}

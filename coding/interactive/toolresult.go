@@ -13,16 +13,14 @@ import (
 // through the shell tool's frame, so upstream's bash-execution component is not
 // ported (D246).
 
-// ShortenPath replaces the home directory prefix with "~".
+// ShortenPath replaces a leading home directory with "~" for display
+// (pi v1.5.0 render-utils.ts shortenHomePath).
 func ShortenPath(path string) string {
 	home, err := os.UserHomeDir()
-	if err != nil || home == "" {
+	if err != nil {
 		return path
 	}
-	if strings.HasPrefix(path, home) {
-		return "~" + path[len(home):]
-	}
-	return path
+	return coding.ShortenHomePath(path, home)
 }
 
 // Str normalizes a value to a string: nil becomes "", other non-strings fail.
