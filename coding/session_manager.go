@@ -289,6 +289,11 @@ func OpenSession(path string, sessionDir string, cwdOverride string) (*SessionMa
 			}
 			m.NewSession(nil)
 			m.sessionFile = resolvedPath
+			// The file exists and is empty: claim it so the rewrite truncates and
+			// writes the header instead of taking the exclusive-create path,
+			// which fails on the file that is already there (M74). Upstream's
+			// _setSessionFile does the same for the empty-file case.
+			m.writeState = &sessionWriteState{initialized: true, claimed: true}
 			m.rewriteFile()
 			m.writeStarted = true
 			return m, nil

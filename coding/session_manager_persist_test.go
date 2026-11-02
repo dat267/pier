@@ -108,3 +108,49 @@ func TestSessionManagerPersistStopsAtAssistant(t *testing.T) {
 			"the assistant scan did not short-circuit", largeAllocs, smallAllocs)
 	}
 }
+
+// An existing 0-byte session file is initialized like upstream's
+// _setSessionFile empty-file branch: the header is written, later turns append,
+// and no write error is recorded (M74).
+func TestOpeningEmptySessionFileInitializesIt(t *testing.T) {
+	dir := t.TempDir()
+	path := dir + "/empty.jsonl"
+	if err := os.WriteFile(path, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manager, err := OpenSession(path, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hi"}})
+	if err := manager.FlushWrites(); err != nil {
+		t.Fatal(err)
+	}
+	if failures := manager.DrainWriteErrors(); len(failures) != 0 {
+		t.Fatalf("write errors: %v", failures)
+	}
+
+	lines := strings.Split(strings.TrimSpace(readFileString(t, path)), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("session file has %d lines, want header plus one message:\n%s", len(lines), strings.Join(lines, "\n"))
+	}
+	header, err := UnmarshalFileEntry(lines[0])
+	if err != nil || header.Header == nil || header.Header.ID != manager.GetSessionID() {
+		t.Fatalf("first line is not the session header: %s", lines[0])
+	}
+	if !strings.Contains(lines[1], `"role":"user"`) || !strings.Contains(lines[1], "hi") {
+		t.Fatalf("second line is not the user message: %s", lines[1])
+	}
+	if info, err := os.Stat(path); err != nil || info.Mode().Perm() != 0o600 {
+		t.Fatalf("session file mode = %v, want 0600", info.Mode().Perm())
+	}
+}
+
+func readFileString(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
