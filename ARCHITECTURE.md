@@ -4225,15 +4225,18 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 Reference: pi v1.5.0 `packages/coding-agent/src/utils/syntax-highlight.ts`
 uses `highlight.js` 10.7.3. On a warmed 8 KiB repeated `0x` JSON input (4,096
 pairs), five warmed Node runs measured 1.90–2.01 ms/op and Go's existing
-implementation measured 19.82–20.31 ms/op. A Go byte-buffer prototype improved
-that input to about 4.8 ms/op, but still lost to Node and regressed an 8 KiB
-representative JSON document (2.8 ms/op vs 2.6 ms/op for the existing Go path),
-so the prototype was reverted. The representative JSON measured 2.32–2.51 ms/op
-in Go vs 4.09–4.15 ms/op in Node. No optimization is accepted from a
+implementation measured 19.82–20.31 ms/op. A byte-buffer prototype improved
+that input to about 4.8 ms/op but regressed representative JSON. A second
+source-span/builder prototype reached 3.89–4.57 ms/op on the slow case and
+2.39–2.65 ms/op on representative JSON (2.32–2.51 ms/op baseline), with lower
+allocations and the same output, but remained slower than Node on the slow case;
+both prototypes were reverted. Representative JSON measured 2.32–2.65 ms/op in
+Go vs 4.09–4.15 ms/op in Node. No optimization is accepted from a
 pathological-only win: M140 remains in `TODO.md`, with same-workload benchmarks
-in `internal/highlight/performance_bench_test.go`. Continue only with a change
-that preserves the output tests, beats the pinned implementation on the
-reproduced slow case, and does not regress representative cases.
+in `internal/highlight/performance_bench_test.go` and the Node-generated output
+pinned by `TestLongInvalidJSONNumberMatchesReference`. Continue only with a
+change that beats the pinned implementation on the reproduced slow case without
+regressing representative cases.
 
 ### D347
 
