@@ -4218,6 +4218,30 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestChatResetStopsBothSweeps`,
 `TestWiringChatResetDropsPendingSweeps`.
 
+### D349
+
+**Word diffs trim like JavaScript and tokenize without per-token regexes.**
+
+Reference: pi v1.5.0 (`f9a26365`) `components/diff.ts` uses jsdiff 8.0.4
+`word.js`. Its `equals` trims JavaScript `\s`, and its
+`tokenizeIncludingWhitespace` splits into extended-word runs, whitespace runs
+and single other characters, then copies whitespace onto neighbouring tokens.
+The port trimmed with Go's `strings.TrimSpace`, so a U+FEFF-prefixed word was
+removed and re-added instead of compared equal, and it matched a regex for
+every token part. The equal function now uses the port's JavaScript whitespace
+predicate (`tui.IsWhitespaceRune`, allocation-free), and the tokenizer scans
+runes and records source ranges. Tokens may overlap, exactly as jsdiff's
+duplicated whitespace does; `join` strips the later copy. The rendered output
+is unchanged, pinned by Node-generated diff goldens that now include FEFF, NEL,
+NBSP, punctuation, leading whitespace, emoji, accents and a soft hyphen.
+
+Measured on a 2,000-word line with two changed words (warmed, 50 iterations,
+five runs): 6.27–6.38 ms and 8,160 objects before; 0.55–0.64 ms and 138 objects
+after; pinned jsdiff 0.92–1.00 ms. The allocation regression budget is 1,000
+objects (`TestDiffWordTokenizerAllocationBudget`), and
+`FuzzWordTokenizeRoundTrip` checks that every split can be joined back to the
+source. `BenchmarkDiffWordsLarge` keeps the cost visible.
+
 ### D348
 
 **Ignored single-character illegal runs are batched without changing token output.**
