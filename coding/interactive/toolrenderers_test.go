@@ -569,6 +569,12 @@ func TestShellElapsedPartialWithDurationStaysElapsed(t *testing.T) {
 // the next render applies them, so a call streaming many deltas between frames
 // runs its renderer once per frame instead of once per delta.
 func TestToolCardAppliesArgumentDeltasOncePerRender(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+
 	renders := 0
 	definition := &ToolRenderers{RenderCall: func(args any, theme *Theme, context *ToolRenderContext) tui.Component {
 		renders++
