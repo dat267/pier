@@ -3,6 +3,7 @@ package interactive
 import (
 	"net/url"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -56,7 +57,19 @@ type LoginDialogComponent struct {
 	selectList *tui.SelectList
 	// authUrl is the shown sign-in URL, which app.message.copy copies.
 	authUrl *AuthUrlComponent
-	focused bool
+	// deviceCode is the pending Enter action for a device-code prompt.
+	deviceCode *deviceCodeAction
+	focused    bool
+}
+
+type deviceCodeAction struct {
+	verificationURI string
+	userCode        string
+	hint            *tui.TruncatedText
+}
+
+func (c *LoginDialogComponent) clearDeviceCodeAction() {
+	c.deviceCode = nil
 }
 
 // NewLoginDialogComponent creates the dialog. post marshals mutations from the
@@ -148,6 +161,7 @@ func (errLoginCancelled) Error() string { return "Login cancelled" }
 
 // ShowAuth shows the authorization URL and instructions.
 func (c *LoginDialogComponent) ShowAuth(url string, instructions string) {
+	c.clearDeviceCodeAction()
 	// Open only a normalized http(s) target: the platform URL handler would also
 	// launch a file: URL or a custom protocol (pi v1.5.0 login-dialog.ts).
 	// Opening the browser stays on the flow's goroutine: exec can block, and the
@@ -247,13 +261,57 @@ func (c *LoginDialogComponent) ShowDeviceCode(verificationURI string, userCode s
 		c.contentContainer.AddChild(tui.NewText(theme.Fg("dim", loginWebLink(clickHint, verificationURI)), 1, 0, nil))
 		c.contentContainer.AddChild(tui.NewSpacer(1))
 		c.contentContainer.AddChild(tui.NewText(theme.Fg("warning", "Enter code: "+userCode), 1, 0, nil))
-		c.contentContainer.AddChild(tui.NewText("("+KeyHint("tui.select.confirm", "to open browser and copy code")+")", 1, 0, nil))
+		hint := tui.NewTruncatedText("("+KeyHint("tui.select.confirm", "to open browser and copy code")+")", 1, 0)
+		c.contentContainer.AddChild(hint)
+		c.deviceCode = &deviceCodeAction{verificationURI: verificationURI, userCode: userCode, hint: hint}
 		c.requestRender()
 	})
 }
 
+// activateDeviceCode performs the device-code confirm action: copy the code,
+// then open the verification page when it is a web URL (upstream
+// activateDeviceCode).
+func (c *LoginDialogComponent) activateDeviceCode(action *deviceCodeAction) {
+	if action == nil {
+		return
+	}
+	c.setDeviceCodeStatus(action.hint, "Copying code...")
+	copyClipboard := c.copyClipboard
+	if copyClipboard == nil {
+		copyClipboard = authURLCopier
+	}
+	copyClipboard(action.userCode, func(err error) {
+		apply := func() {
+			if err != nil {
+				c.setDeviceCodeStatus(action.hint, "Copy code manually")
+				return
+			}
+			c.setDeviceCodeStatus(action.hint, "Code copied to clipboard")
+		}
+		if c.post != nil {
+			c.post(apply)
+			return
+		}
+		apply()
+	})
+	target, ok := loginWebURL(action.verificationURI)
+	if !ok {
+		return
+	}
+	browserOpener(target)
+}
+
+func (c *LoginDialogComponent) setDeviceCodeStatus(hint *tui.TruncatedText, message string) {
+	if hint == nil || !c.focused || !slices.Contains(c.contentContainer.Children, tui.Component(hint)) {
+		return
+	}
+	hint.Text = ActiveTheme().Fg("dim", message)
+	c.requestRender()
+}
+
 // ShowManualInput shows the manual code/URL entry prompt.
 func (c *LoginDialogComponent) ShowManualInput(prompt string) <-chan LoginInputResult {
+	c.clearDeviceCodeAction()
 	results := make(chan LoginInputResult, 1)
 	c.runOnUI(func() {
 		theme := ActiveTheme()
@@ -271,6 +329,7 @@ func (c *LoginDialogComponent) ShowManualInput(prompt string) <-chan LoginInputR
 // ShowPrompt shows a prompt and waits for input (content is appended, not
 // cleared, so the authorization URL stays visible).
 func (c *LoginDialogComponent) ShowPrompt(message string, placeholder string) <-chan LoginInputResult {
+	c.clearDeviceCodeAction()
 	results := make(chan LoginInputResult, 1)
 	c.runOnUI(func() {
 		theme := ActiveTheme()
@@ -293,6 +352,7 @@ func (c *LoginDialogComponent) ShowPrompt(message string, placeholder string) <-
 // option's id (upstream's ui.select step: the Bedrock auth-method and profile
 // prompts go through this), or an error when the login is cancelled.
 func (c *LoginDialogComponent) ShowSelect(message string, options []ai.AuthSelectOption) <-chan LoginInputResult {
+	c.clearDeviceCodeAction()
 	items := make([]tui.SelectItem, 0, len(options))
 	for _, option := range options {
 		items = append(items, tui.SelectItem{
@@ -403,6 +463,15 @@ func (c *LoginDialogComponent) HandleInput(data string) {
 	}
 	if c.authUrl != nil && kb.Matches(data, "app.message.copy") {
 		c.authUrl.Copy()
+		return
+	}
+	if c.deviceCode != nil && c.pending == nil && c.focused && kb.Matches(data, "tui.select.confirm") {
+		action := c.deviceCode
+		// Consume once so a repeated Enter cannot launch multiple browsers or
+		// clipboard writes.
+		c.deviceCode = nil
+		c.activateDeviceCode(action)
+		c.requestRender()
 		return
 	}
 	c.input.HandleInput(data)
