@@ -1135,6 +1135,10 @@ func (c *SessionSelectorComponent) SetFocused(focused bool) {
 	}
 }
 
+// CapturesViewportInput reports that the list owns page keys; the rename input
+// must let them through (upstream session-selector.ts).
+func (c *SessionSelectorComponent) CapturesViewportInput() bool { return c.mode != "rename" }
+
 // Focused reports the focus state.
 func (c *SessionSelectorComponent) Focused() bool { return c.focused }
 

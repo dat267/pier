@@ -46,6 +46,8 @@ type modelItem struct {
 
 type modelScopeKind string
 
+const modelSelectorMaxVisible = 10
+
 const (
 	modelScopeAll    modelScopeKind = "all"
 	modelScopeScoped modelScopeKind = "scoped"
@@ -542,6 +544,14 @@ func (c *ModelSelectorComponent) HandleInput(data string) {
 			c.selectedIndex++
 		}
 		c.updateList()
+	case kb.Matches(data, "tui.select.pageUp"), kb.Matches(data, "tui.select.pageDown"):
+		if len(c.filteredModels) == 0 {
+			break
+		}
+		if pageIndex, ok := tui.SelectPageIndex(kb, data, c.selectedIndex, len(c.filteredModels), modelSelectorMaxVisible); ok {
+			c.selectedIndex = pageIndex
+			c.updateList()
+		}
 	case kb.Matches(data, "tui.select.confirm"):
 		if c.selectedIndex >= 0 && c.selectedIndex < len(c.filteredModels) {
 			c.dispose()
@@ -601,6 +611,9 @@ func (c *ModelSelectorComponent) SelectedModel() (*ai.Model, bool) {
 	}
 	return c.filteredModels[c.selectedIndex].model, true
 }
+
+// CapturesViewportInput reports that the open selector owns page keys.
+func (c *ModelSelectorComponent) CapturesViewportInput() bool { return true }
 
 var (
 	_ tui.Component = (*ModelSelectorComponent)(nil)

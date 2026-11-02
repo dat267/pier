@@ -662,6 +662,14 @@ func (c *OAuthSelectorComponent) HandleInput(data string) {
 		}
 		c.selectedIndex = min(len(c.filteredProviders)-1, c.selectedIndex+1)
 		c.updateList()
+	case kb.Matches(data, "tui.select.pageUp"), kb.Matches(data, "tui.select.pageDown"):
+		if len(c.filteredProviders) == 0 {
+			return
+		}
+		if pageIndex, ok := tui.SelectPageIndex(kb, data, c.selectedIndex, len(c.filteredProviders), 8); ok {
+			c.selectedIndex = pageIndex
+			c.updateList()
+		}
 	case kb.Matches(data, "tui.select.confirm"):
 		if c.selectedIndex >= 0 && c.selectedIndex < len(c.filteredProviders) {
 			selected := c.filteredProviders[c.selectedIndex]
@@ -695,6 +703,9 @@ func (c *OAuthSelectorComponent) SelectedProvider() (AuthSelectorProvider, bool)
 	}
 	return c.filteredProviders[c.selectedIndex], true
 }
+
+// CapturesViewportInput reports that the open selector owns page keys.
+func (c *OAuthSelectorComponent) CapturesViewportInput() bool { return true }
 
 var (
 	_ tui.Component = (*OAuthSelectorComponent)(nil)

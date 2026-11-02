@@ -493,6 +493,15 @@ func (c *ScopedModelsSelectorComponent) handleInput(data string) {
 		}
 		c.updateList()
 		return
+	case kb.Matches(data, "tui.select.pageUp"), kb.Matches(data, "tui.select.pageDown"):
+		if len(c.filteredItems) == 0 {
+			return
+		}
+		if pageIndex, ok := tui.SelectPageIndex(kb, data, c.selectedIndex, len(c.filteredItems), c.maxVisible); ok {
+			c.selectedIndex = pageIndex
+			c.updateList()
+		}
+		return
 	case kb.Matches(data, "app.models.reorderUp") || kb.Matches(data, "app.models.reorderDown"):
 		if c.enabledIDs.All {
 			return
@@ -629,6 +638,9 @@ func (c *ScopedModelsSelectorComponent) SetFocused(focused bool) {
 
 // IsFocused implements Focusable.
 func (c *ScopedModelsSelectorComponent) IsFocused() bool { return c.focused }
+
+// CapturesViewportInput reports that the open selector owns page keys.
+func (c *ScopedModelsSelectorComponent) CapturesViewportInput() bool { return true }
 
 var (
 	_ tui.Component = (*ScopedModelsSelectorComponent)(nil)
