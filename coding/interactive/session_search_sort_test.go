@@ -79,12 +79,11 @@ func BenchmarkSessionSearchRelevance(b *testing.B) {
 						list.SearchInput().SetValue(`"needle`)
 						list.HandleInput(`"`)
 					}
-					first := 0
-					if reordered {
-						first = count / 2
-					}
-					if got := list.GetSelectedSessionPath(); got != rows[first].Path {
-						b.Fatalf("selected path = %q, want %q", got, rows[first].Path)
+					// v1.5.0 search tiers both groups are equal-tier text
+					// matches (no position penalty), so relevance falls back to
+					// recency and the newest row wins in either input order.
+					if got := list.GetSelectedSessionPath(); got != rows[0].Path {
+						b.Fatalf("selected path = %q, want %q", got, rows[0].Path)
 					}
 				})
 			}
