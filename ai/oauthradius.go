@@ -89,7 +89,9 @@ func LoadRadiusOAuthDiscovery(ctx context.Context, gateway string) (*RadiusOAuth
 	if err := json.Unmarshal(raw, &parsed); err != nil {
 		return nil, fmt.Errorf("Invalid Radius OAuth config from %s", gateway)
 	}
-	endpoint, ok := parsed["authorizationEndpoint"].(string)
+	// The endpoint is opened with the platform URL handler, so only an
+	// http(s) URL is trusted (pi v1.5.0 radius.ts trustedHttpUrl).
+	endpoint, ok := trustedHTTPURL(parsed["authorizationEndpoint"])
 	if !ok {
 		return nil, fmt.Errorf("Invalid Radius OAuth config from %s", gateway)
 	}
@@ -369,10 +371,15 @@ func RequestRadiusDeviceAuthorization(ctx context.Context, gateway string) (*Rad
 	}
 	deviceCode, _ := payload["device_code"].(string)
 	userCode, _ := payload["user_code"].(string)
-	verificationURI, _ := payload["verification_uri"].(string)
 	expiresIn, hasExpiry := payload["expires_in"].(float64)
-	if deviceCode == "" || userCode == "" || verificationURI == "" || !hasExpiry || expiresIn == 0 {
+	if deviceCode == "" || userCode == "" || !hasExpiry || expiresIn == 0 {
 		return nil, fmt.Errorf("Radius OAuth device authorization response is missing required fields")
+	}
+	// The verification URI is opened in the browser, so only a normalized
+	// http(s) URL is trusted (pi v1.5.0 radius.ts trustedHttpUrl).
+	verificationURI, ok := trustedHTTPURL(payload["verification_uri"])
+	if !ok {
+		return nil, fmt.Errorf("Untrusted verification_uri in Radius OAuth device authorization response")
 	}
 	device := &RadiusDeviceAuthorization{
 		DeviceCode: deviceCode, UserCode: userCode,

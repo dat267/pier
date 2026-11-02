@@ -578,3 +578,46 @@ func TestCreateRadiusOAuthDefinition(t *testing.T) {
 }
 
 func nowMillisApprox() int64 { return time.Now().UnixMilli() }
+
+// pi v1.5.0 radius.ts routes the discovery authorization endpoint and the
+// device verification URI through trustedHttpUrl: both are opened with the
+// platform handler, which would also launch a file: or custom-scheme URL.
+func TestRadiusOAuthRejectsUntrustedURLs(t *testing.T) {
+	discoveryServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"authorizationEndpoint":"file:///etc/passwd"}`))
+	}))
+	defer discoveryServer.Close()
+	if _, err := LoadRadiusOAuthDiscovery(context.Background(), discoveryServer.URL); err == nil ||
+		!strings.Contains(err.Error(), "Invalid Radius OAuth config") {
+		t.Fatalf("file: endpoint err = %v", err)
+	}
+
+	deviceServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"device_code":"device","user_code":"user","verification_uri":"javascript:alert(1)","expires_in":600}`))
+	}))
+	defer deviceServer.Close()
+	if _, err := RequestRadiusDeviceAuthorization(context.Background(), deviceServer.URL); err == nil ||
+		!strings.Contains(err.Error(), "Untrusted verification_uri") {
+		t.Fatalf("javascript: verification err = %v", err)
+	}
+
+	// Controls: an http endpoint and verification URI are accepted, normalized.
+	accepting := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		switch request.URL.Path {
+		case "/v1/oauth":
+			_, _ = writer.Write([]byte(`{"authorizationEndpoint":"http://auth.example/authorize"}`))
+		case "/v1/oauth/device":
+			_, _ = writer.Write([]byte(`{"device_code":"device","user_code":"user","verification_uri":"http://auth.example/device","expires_in":600}`))
+		}
+	}))
+	defer accepting.Close()
+	if discovery, err := LoadRadiusOAuthDiscovery(context.Background(), accepting.URL); err != nil || discovery.AuthorizationEndpoint != "http://auth.example/authorize" {
+		t.Fatalf("http endpoint = %+v err = %v", discovery, err)
+	}
+	if device, err := RequestRadiusDeviceAuthorization(context.Background(), accepting.URL); err != nil || device.VerificationURI != "http://auth.example/device" {
+		t.Fatalf("http verification = %+v err = %v", device, err)
+	}
+}
