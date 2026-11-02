@@ -49,3 +49,15 @@ func TestExternalEditorTempFileUsesNodeDefaultMode(t *testing.T) {
 		t.Fatalf("editor temp file mode = %#o; want Node default %#o", mode, 0o666)
 	}
 }
+
+// A non-zero editor exit reports the code and keeps the prompt, like upstream's
+// "External editor exited with code N; prompt unchanged".
+func TestExternalEditorExitCodeMessage(t *testing.T) {
+	stubExternalEditorRunner(t, func(*exec.Cmd) error {
+		return exec.Command("sh", "-c", "exit 3").Run()
+	})
+	result := EditInExternalEditor(ExternalEditorOptions{Command: "my-editor", Content: "prompt"})
+	if result.Status != "failed" || result.Message != "External editor exited with code 3; prompt unchanged" {
+		t.Fatalf("result = %+v", result)
+	}
+}

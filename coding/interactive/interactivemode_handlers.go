@@ -563,6 +563,8 @@ func newKeyWiring(app *App) *KeyWiring {
 			app.ui.Start()
 			if result.Status == "complete" {
 				app.defaultEditor.SetText(result.Content)
+			} else if result.Message != "" {
+				app.transcript.ShowStatus(result.Message)
 			}
 			app.ui.RequestRender(true)
 		},

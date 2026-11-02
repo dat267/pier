@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"strings"
@@ -222,4 +223,23 @@ func TestClearStatusContainerIfIdleWiring(t *testing.T) {
 	}
 	app.uiState.ActiveStatusIndicator = nil
 	indicator.Dispose()
+}
+
+// ctrl+g failure must be visible, like upstream's showStatus(result.message);
+// the port silently kept the prompt before this check.
+func TestExternalEditorFailureShowsStatus(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	t.Setenv("VISUAL", "visual-editor")
+	app.defaultEditor.SetText("the original prompt")
+	stubExternalEditorRunner(t, func(*exec.Cmd) error { return errors.New("editor failed") })
+
+	newKeyWiring(app).OnExternalEditor()
+
+	if got := app.defaultEditor.GetText(); got != "the original prompt" {
+		t.Fatalf("editor text = %q; a failed editor must not change it", got)
+	}
+	if !strings.Contains(app.transcript.lastStatusMessage, "Failed to launch external editor: visual-editor") {
+		t.Fatalf("status = %q; want the launch failure", app.transcript.lastStatusMessage)
+	}
 }

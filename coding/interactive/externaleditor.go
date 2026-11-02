@@ -1,6 +1,8 @@
 package interactive
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -34,6 +36,8 @@ type ExternalEditorOptions struct {
 type ExternalEditorResult struct {
 	Status  string // "complete" | "failed"
 	Content string
+	// Message is the user-facing failure reason (upstream result.message).
+	Message string
 }
 
 // externalEditorRunner runs the editor, blocking until it exits. It is a seam:
@@ -48,7 +52,7 @@ var externalEditorRunner = func(command *exec.Cmd) error { return command.Run() 
 func EditInExternalEditor(options ExternalEditorOptions) ExternalEditorResult {
 	directory, err := os.MkdirTemp("", "pi-editor-")
 	if err != nil {
-		return ExternalEditorResult{Status: "failed"}
+		return ExternalEditorResult{Status: "failed", Message: "Failed to open external editor: " + err.Error()}
 	}
 	filePath := filepath.Join(directory, "prompt.md")
 	defer func() {
@@ -56,7 +60,7 @@ func EditInExternalEditor(options ExternalEditorOptions) ExternalEditorResult {
 	}()
 
 	if err := os.WriteFile(filePath, []byte(options.Content), 0o666); err != nil {
-		return ExternalEditorResult{Status: "failed"}
+		return ExternalEditorResult{Status: "failed", Message: "Failed to open external editor: " + err.Error()}
 	}
 	_, _ = os.Stdout.WriteString("Launching external editor: " + options.Command +
 		"\nPi will resume when the editor exits.\n")
@@ -65,7 +69,7 @@ func EditInExternalEditor(options ExternalEditorOptions) ExternalEditorResult {
 	editor := parts[0]
 	args := append(append([]string(nil), parts[1:]...), filePath)
 	if editor == "" {
-		return ExternalEditorResult{Status: "failed"}
+		return ExternalEditorResult{Status: "failed", Message: "Failed to launch external editor: " + options.Command}
 	}
 
 	command := exec.Command(editor, args...)
@@ -80,15 +84,27 @@ func EditInExternalEditor(options ExternalEditorOptions) ExternalEditorResult {
 		command.Stderr = os.Stderr
 	}
 	if err := externalEditorRunner(command); err != nil {
-		return ExternalEditorResult{Status: "failed"}
+		return ExternalEditorResult{Status: "failed", Message: externalEditorFailureMessage(err, options.Command)}
 	}
 
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return ExternalEditorResult{Status: "failed"}
+		return ExternalEditorResult{Status: "failed", Message: "Failed to read the edited prompt: " + err.Error()}
 	}
 	content := strings.TrimSuffix(stripBOMString(coding.DecodeUTF8WithReplacement(data)), "\n")
 	return ExternalEditorResult{Status: "complete", Content: content}
+}
+
+// externalEditorFailureMessage matches upstream's launch/exit messages.
+func externalEditorFailureMessage(err error, command string) string {
+	var exitError *exec.ExitError
+	if errors.As(err, &exitError) {
+		if code := exitError.ExitCode(); code >= 0 {
+			return fmt.Sprintf("External editor exited with code %d; prompt unchanged", code)
+		}
+		return "External editor exited unexpectedly; prompt unchanged"
+	}
+	return "Failed to launch external editor: " + command
 }
 
 func stripBOMString(value string) string {
