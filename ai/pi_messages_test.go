@@ -341,11 +341,12 @@ func TestStreamPiMessagesFailures(t *testing.T) {
 		t.Fatalf("message = %+v", message)
 	}
 
-	// A stream without a terminal event is an error.
+	// A stream without a terminal event is an error. (A delta before its start
+	// is a separate failure: pi v1.5.0 rejects the invalid contentIndex.)
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "text/event-stream")
 		writer.WriteHeader(http.StatusOK)
-		_, _ = writer.Write([]byte("data: {\"type\":\"text_delta\",\"contentIndex\":0,\"delta\":\"partial\"}\n\n"))
+		_, _ = writer.Write([]byte("data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text_start\",\"contentIndex\":0}\n\ndata: {\"type\":\"text_delta\",\"contentIndex\":0,\"delta\":\"partial\"}\n\n"))
 	}))
 	defer server.Close()
 	stream = StreamPiMessages(piMessagesModel(server.URL), piMessagesContext(), &PiMessagesOptions{
@@ -410,5 +411,54 @@ func TestStreamPiMessagesSimple(t *testing.T) {
 	options, _ := payload["options"].(map[string]any)
 	if options["reasoning"] != "low" || options["toolChoice"] != "auto" {
 		t.Fatalf("options = %#v", options)
+	}
+}
+
+// pi v1.5.0 pi-messages.ts validates the wire contentIndex per event type: a
+// negative index would index below the array and a huge one would grow it
+// without bound.
+func TestStreamPiMessagesRejectsInvalidContentIndex(t *testing.T) {
+	cases := map[string]string{
+		"negative delta":       "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text_delta\",\"contentIndex\":-1,\"delta\":\"x\"}",
+		"huge start index":     "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text_start\",\"contentIndex\":1000000000}",
+		"delta before a start": "data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text_delta\",\"contentIndex\":0,\"delta\":\"x\"}",
+	}
+	for name, body := range cases {
+		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			writer.Header().Set("Content-Type", "text/event-stream")
+			writer.WriteHeader(http.StatusOK)
+			_, _ = writer.Write([]byte(body + "\n\n"))
+		}))
+		model := piMessagesModel(server.URL)
+		message, err := StreamPiMessages(model, piMessagesContext(), &PiMessagesOptions{APIKey: "k"}).Result(context.Background())
+		server.Close()
+		if err != nil {
+			t.Fatalf("%s: err = %v", name, err)
+		}
+		if message.StopReason != StopError || message.ErrorMessage == nil || !strings.Contains(*message.ErrorMessage, "Invalid contentIndex") {
+			text := "<nil>"
+			if message.ErrorMessage != nil {
+				text = *message.ErrorMessage
+			}
+			t.Fatalf("%s: stop=%v error=%q", name, message.StopReason, text)
+		}
+	}
+}
+
+// A done event's responseModel is recorded on the message.
+func TestStreamPiMessagesRecordsResponseModel(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "text/event-stream")
+		writer.WriteHeader(http.StatusOK)
+		_, _ = writer.Write([]byte(`data: {"type":"start"}` + "\n\n" +
+			`data: {"type":"done","reason":"stop","usage":{"input":1,"output":1,"cacheRead":0,"cacheWrite":0,"totalTokens":2,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"responseModel":"served-model"}` + "\n\n"))
+	}))
+	defer server.Close()
+	message, err := StreamPiMessages(piMessagesModel(server.URL), piMessagesContext(), &PiMessagesOptions{APIKey: "k"}).Result(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if message.ResponseModel == nil || *message.ResponseModel != "served-model" {
+		t.Fatalf("response model = %v", message.ResponseModel)
 	}
 }

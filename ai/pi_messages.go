@@ -52,6 +52,7 @@ type PiMessagesEvent struct {
 	Reason        string                   `json:"reason"`
 	Usage         json.RawMessage          `json:"usage"`
 	ResponseID    *string                  `json:"responseId"`
+	ResponseModel *string                  `json:"responseModel"`
 	ThinkingLevel *string                  `json:"providerThinkingLevel"`
 	ErrorMessage  *string                  `json:"errorMessage"`
 	Rewrite       *PiMessagesRewriteImpact `json:"rewrite"`
@@ -166,9 +167,44 @@ func emptyPiMessagesUsage() Usage {
 	return Usage{Cost: UsageCost{}}
 }
 
+// piMessagesEventCarriesContentIndex reports whether the event indexes the
+// partial's content array.
+func piMessagesEventCarriesContentIndex(eventType string) bool {
+	switch eventType {
+	case "text_start", "text_delta", "text_end",
+		"thinking_start", "thinking_delta", "thinking_end",
+		"toolcall_start", "toolcall_delta", "toolcall_end":
+		return true
+	}
+	return false
+}
+
+// validateContentIndex rejects a wire-supplied content index that would panic
+// or grow the content array without bound (pi v1.5.0 pi-messages.ts): a
+// `_start` event appends the next block, every other event needs an existing
+// one.
+func (c *piMessagesConverter) validateContentIndex(event *PiMessagesEvent) error {
+	limit := len(c.partial.Content) - 1
+	if strings.HasSuffix(event.Type, "_start") {
+		limit = len(c.partial.Content)
+	}
+	if event.ContentIndex < 0 || event.ContentIndex > limit {
+		return fmt.Errorf("Invalid contentIndex %d in pi-messages %s event", event.ContentIndex, event.Type)
+	}
+	return nil
+}
+
 // convert maps one wire event to the protocol event (and assembles the partial).
 func (c *piMessagesConverter) convert(event *PiMessagesEvent) (AssistantMessageEvent, bool) {
 	partial := c.partial
+	if piMessagesEventCarriesContentIndex(event.Type) {
+		if err := c.validateContentIndex(event); err != nil {
+			message := err.Error()
+			partial.StopReason = StopError
+			partial.ErrorMessage = &message
+			return AssistantMessageEvent{Type: EventError, Reason: StopError, Error: partial}, true
+		}
+	}
 	switch event.Type {
 	case "done":
 		partial.StopReason = event.Reason
@@ -176,6 +212,9 @@ func (c *piMessagesConverter) convert(event *PiMessagesEvent) (AssistantMessageE
 			_ = json.Unmarshal(event.Usage, &partial.Usage)
 		}
 		partial.ResponseID = event.ResponseID
+		if event.ResponseModel != nil {
+			partial.ResponseModel = event.ResponseModel
+		}
 		if event.ThinkingLevel != nil {
 			partial.ProviderThinkingLevel = event.ThinkingLevel
 		}
@@ -188,6 +227,9 @@ func (c *piMessagesConverter) convert(event *PiMessagesEvent) (AssistantMessageE
 		}
 		partial.ErrorMessage = event.ErrorMessage
 		partial.ResponseID = event.ResponseID
+		if event.ResponseModel != nil {
+			partial.ResponseModel = event.ResponseModel
+		}
 		if event.ThinkingLevel != nil {
 			partial.ProviderThinkingLevel = event.ThinkingLevel
 		}

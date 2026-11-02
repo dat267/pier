@@ -20,7 +20,7 @@ func TestPiMessagesCallbackFailuresStayInStream(t *testing.T) {
 	if mode := os.Getenv(probeEnv); mode != "" {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("content-type", "text/event-stream")
-			_, _ = w.Write([]byte("data: {\"type\":\"text_delta\",\"contentIndex\":0,\"delta\":\"ok\"}\n\ndata: {\"type\":\"done\",\"reason\":\"stop\"}\n\n"))
+			_, _ = w.Write([]byte("data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text_start\",\"contentIndex\":0}\n\ndata: {\"type\":\"text_delta\",\"contentIndex\":0,\"delta\":\"ok\"}\n\ndata: {\"type\":\"done\",\"reason\":\"stop\"}\n\n"))
 		}))
 		defer server.Close()
 		model := &Model{ID: "fixture", API: APIPiMessages, Provider: "pi", BaseURL: server.URL}
