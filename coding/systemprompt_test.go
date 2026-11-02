@@ -15,7 +15,7 @@ func TestBuildSystemPromptSectionsDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(sections["preamble"], "You are an expert coding assistant operating inside pi") {
+	if !strings.HasPrefix(sections["preamble"], "You are a coding assistant running inside pi") {
 		t.Fatalf("preamble = %q", sections["preamble"])
 	}
 	// Non-preamble sections are XML-wrapped.
@@ -168,7 +168,7 @@ func TestBuildSystemPromptFullRender(t *testing.T) {
 	}
 	// Section order: preamble, addendum?, project_context, cwd...
 	parts := strings.Split(prompt, "\n\n")
-	if !strings.HasPrefix(parts[0], "You are an expert coding assistant") {
+	if !strings.HasPrefix(parts[0], "You are a coding assistant running inside pi") {
 		t.Fatalf("prompt head = %q", parts[0][:40])
 	}
 	if !strings.Contains(prompt, "<project_instructions path=\"AGENTS.md\">\nProject rules here.\n</project_instructions>") {

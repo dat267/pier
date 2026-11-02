@@ -224,7 +224,7 @@ func buildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 	if input.CustomPrompt != "" {
 		promptSections["preamble"] = input.CustomPrompt
 	} else {
-		promptSections["preamble"] = "You are an expert coding assistant operating inside pi, a coding agent harness. You help users by reading files, executing commands, editing code, and writing new files."
+		promptSections["preamble"] = "You are a coding assistant running inside pi, a coding agent harness. Help users inspect files, run commands, and modify code."
 		var visibleTools []string
 		for _, name := range declaredTools {
 			if toolSnippets[name] != "" {
@@ -241,7 +241,7 @@ func buildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 		} else {
 			tools = "(none)"
 		}
-		promptSections["tools"] = tools + "\n\nIn addition to the tools above, you may have access to other custom tools depending on the project."
+		promptSections["tools"] = tools + "\n\nAdditional tools may be available."
 		promptSections["rules"] = buildRules(declaredTools, toolGuidelines, promptGuidelines)
 		// D176: upstream emits a `docs` section (the Pi documentation index).
 		// It routed the model to pi's docs/examples tree, which a pier install

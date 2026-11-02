@@ -51,7 +51,7 @@ func TestCreateAgentSessionLoadsSystemPromptFiles(t *testing.T) {
 	if !strings.Contains(prompt, "You are a custom assistant.") {
 		t.Fatalf("SYSTEM.md was not loaded into the prompt:\n%s", prompt)
 	}
-	if strings.Contains(prompt, "You are an expert coding assistant") {
+	if strings.Contains(prompt, "You are a coding assistant running inside pi") {
 		t.Fatalf("SYSTEM.md must replace the default preamble:\n%s", prompt)
 	}
 	if !strings.Contains(prompt, "Always answer briefly.") {
