@@ -951,15 +951,14 @@ func resumeSession(args *coding.Args, cwd string, agentDir string, settings *cod
 			return nil, fmt.Errorf("--fork cannot be combined with %s", strings.Join(conflicts, ", "))
 		}
 	}
-	if args.Continue {
-		// Upstream -c uses SessionManager.continueRecent(cwd, sessionDir), which
-		// keeps sessionDir = default(cwd) so the resume hint stays `pi --session …`.
-		// A session that cannot be opened is an error, not a silent new session.
-		recent, err := coding.ContinueRecentSession(cwd, sessionDir)
-		if err != nil {
-			return nil, err
+	// Upstream createSessionManager returns an in-memory manager for
+	// --no-session (and --help/--list-models) before resolving any session flag,
+	// so an ephemeral run neither opens nor appends to a stored session.
+	if args.NoSession {
+		if args.SessionID != nil {
+			return coding.InMemorySession(cwd, &coding.NewSessionOptions{ID: *args.SessionID}, nil), nil
 		}
-		return recent, nil
+		return coding.NewSessionManager(cwd, &coding.SessionManagerOptions{Persist: new(bool)}), nil
 	}
 	if args.Fork != nil {
 		// Upstream createSessionManager's fork branch.
@@ -1000,6 +999,31 @@ func resumeSession(args *coding.Args, cwd string, agentDir string, settings *cod
 			return nil, fmt.Errorf("No session found matching '%s'", resolved.arg)
 		}
 	}
+	if args.Resume {
+		// Upstream parsed.resume opens the interactive session picker. A headless
+		// mode keeps stdout for the protocol stream or the final text and draws the
+		// picker on stderr.
+		headless := args.Mode == coding.CLIModeRPC || resolvePrintMode(
+			args,
+			sessionPickerIsTerminal(int(os.Stdin.Fd())),
+			sessionPickerIsTerminal(int(os.Stdout.Fd())),
+		)
+		selected, ok := selectResumeSession(cwd, sessionDir, settings, headless)
+		if !ok {
+			return nil, errNoSessionSelected
+		}
+		return coding.OpenSession(selected, sessionDir, "")
+	}
+	if args.Continue {
+		// Upstream -c uses SessionManager.continueRecent(cwd, sessionDir), which
+		// keeps sessionDir = default(cwd) so the resume hint stays `pi --session …`.
+		// A session that cannot be opened is an error, not a silent new session.
+		recent, err := coding.ContinueRecentSession(cwd, sessionDir)
+		if err != nil {
+			return nil, err
+		}
+		return recent, nil
+	}
 	if args.SessionID != nil {
 		for _, info := range coding.ListSessions(cwd, sessionDir) {
 			if info.ID == *args.SessionID {
@@ -1016,21 +1040,6 @@ func resumeSession(args *coding.Args, cwd string, agentDir string, settings *cod
 		sm := coding.NewSessionManager(cwd, &coding.SessionManagerOptions{SessionDir: sessionDir})
 		sm.NewSession(&coding.NewSessionOptions{ID: *args.SessionID})
 		return sm, nil
-	}
-	if args.Resume {
-		// Upstream parsed.resume opens the interactive session picker. A headless
-		// mode keeps stdout for the protocol stream or the final text and draws the
-		// picker on stderr.
-		headless := args.Mode == coding.CLIModeRPC || resolvePrintMode(
-			args,
-			sessionPickerIsTerminal(int(os.Stdin.Fd())),
-			sessionPickerIsTerminal(int(os.Stdout.Fd())),
-		)
-		selected, ok := selectResumeSession(cwd, sessionDir, settings, headless)
-		if !ok {
-			return nil, errNoSessionSelected
-		}
-		return coding.OpenSession(selected, sessionDir, "")
 	}
 	listed := coding.ListSessions(cwd, sessionDir)
 	if len(listed) == 0 {

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
@@ -452,5 +453,107 @@ func TestResumePickerUsesStderrWhenPrintModeIsInferred(t *testing.T) {
 	_, _ = resumeSession(&coding.Args{Resume: true}, t.TempDir(), t.TempDir(), nil)
 	if !sawHeadless {
 		t.Fatal("resume picker used stdout although the non-TTY stream selects print mode")
+	}
+}
+
+// Reference: pi v1.4.0 packages/coding-agent/src/main.ts createSessionManager
+// resolves --session before --continue, so a specific session wins over the
+// convenience flag.
+func TestResumeSessionPrefersSessionOverContinue(t *testing.T) {
+	isolatedAgentDir(t)
+	cwd := t.TempDir()
+	older := makeSessionFile(t, cwd)
+	newer := makeSessionFile(t, cwd)
+	past := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(older.GetSessionFile(), past, past); err != nil {
+		t.Fatal(err)
+	}
+	if newer.GetSessionID() == older.GetSessionID() {
+		t.Fatal("fixture sessions share an id")
+	}
+
+	args := &coding.Args{Continue: true, Session: new(older.GetSessionID())}
+	sm, err := resumeSession(args, cwd, t.TempDir(), nil)
+	if err != nil {
+		t.Fatalf("resumeSession: %v", err)
+	}
+	if sm.GetSessionID() != older.GetSessionID() {
+		t.Fatalf("resumed %s, want the requested --session %s", sm.GetSessionID(), older.GetSessionID())
+	}
+}
+
+// Reference: pi v1.4.0 createSessionManager shows the picker for --resume
+// before falling through to --continue.
+func TestResumeSessionPrefersResumePickerOverContinue(t *testing.T) {
+	isolatedAgentDir(t)
+	cwd := t.TempDir()
+	older := makeSessionFile(t, cwd)
+	newer := makeSessionFile(t, cwd)
+	past := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(older.GetSessionFile(), past, past); err != nil {
+		t.Fatal(err)
+	}
+	if newer.GetSessionID() == older.GetSessionID() {
+		t.Fatal("fixture sessions share an id")
+	}
+
+	// The picker selects the older session; --continue alone would pick newer.
+	previous := selectResumeSession
+	selectResumeSession = func(_ string, _ string, _ *coding.SettingsManager, _ bool) (string, bool) {
+		return older.GetSessionFile(), true
+	}
+	defer func() { selectResumeSession = previous }()
+
+	args := &coding.Args{Continue: true, Resume: true}
+	sm, err := resumeSession(args, cwd, t.TempDir(), nil)
+	if err != nil {
+		t.Fatalf("resumeSession: %v", err)
+	}
+	if sm.GetSessionID() != older.GetSessionID() {
+		t.Fatalf("resumed %s, want the picker selection %s", sm.GetSessionID(), older.GetSessionID())
+	}
+}
+
+// Reference: pi v1.4.0 createSessionManager returns an in-memory manager when
+// --no-session is set, before resolving --continue/--resume/--session, so an
+// ephemeral run never opens (or appends to) a stored session.
+func TestResumeSessionHonorsNoSessionOverContinue(t *testing.T) {
+	isolatedAgentDir(t)
+	cwd := t.TempDir()
+	recent := makeSessionFile(t, cwd)
+	before, err := os.ReadFile(recent.GetSessionFile())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	args := &coding.Args{NoSession: true, Continue: true}
+	sm, err := resumeSession(args, cwd, t.TempDir(), nil)
+	if err != nil {
+		t.Fatalf("resumeSession: %v", err)
+	}
+	if sm.GetSessionFile() != "" {
+		t.Fatalf("ephemeral run opened %q", sm.GetSessionFile())
+	}
+	after, err := os.ReadFile(recent.GetSessionFile())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(before) {
+		t.Fatal("ephemeral run modified the stored session")
+	}
+}
+
+// Match upstream SessionManager.inMemory(cwd, { id }) for --no-session with
+// --session-id: the id is used, but nothing is persisted.
+func TestResumeSessionNoSessionKeepsRequestedID(t *testing.T) {
+	isolatedAgentDir(t)
+	cwd := t.TempDir()
+	args := &coding.Args{NoSession: true, SessionID: new("ephemeral-id")}
+	sm, err := resumeSession(args, cwd, t.TempDir(), nil)
+	if err != nil {
+		t.Fatalf("resumeSession: %v", err)
+	}
+	if sm.GetSessionID() != "ephemeral-id" || sm.GetSessionFile() != "" {
+		t.Fatalf("session id=%q file=%q", sm.GetSessionID(), sm.GetSessionFile())
 	}
 }

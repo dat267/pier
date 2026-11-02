@@ -316,6 +316,12 @@ func InMemorySession(cwd string, options *NewSessionOptions, entries []FileEntry
 	m := NewSessionManager(cwd, &SessionManagerOptions{Persist: new(false)})
 	if len(entries) > 0 {
 		m.loadEntries(entries, options)
+		return m
+	}
+	// Upstream's constructor falls back to newSession(newSessionOptions) when
+	// there are no preloaded entries, so an explicit id still applies.
+	if options != nil {
+		m.NewSession(options)
 	}
 	return m
 }
