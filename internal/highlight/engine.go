@@ -112,7 +112,10 @@ type highlighter struct {
 	regexWS          jsWorkspace
 }
 
-const noMatch = -1
+const (
+	noMatch                = -1
+	maxHighlightIterations = 1000000
+)
 
 func highlightWith(lang *compiledLanguage, code string, ignoreIllegals bool) *Result {
 	return highlightWithContinuation(lang, code, ignoreIllegals, nil)
@@ -145,6 +148,14 @@ func highlightWithContinuation(lang *compiledLanguage, code string, ignoreIllega
 			h.top.regexIndex = 0
 		}
 		m, next := h.top.mode.matcher.exec(code, h.index, h.top.regexIndex, h.jsLines, &h.regexWS)
+		// Isolated punctuation stays on the ordinary path. Consecutive ignored
+		// character-class matches can be consumed without per-character scans.
+		if m != nil && m.typ == ruleIllegal && h.ignoreIllegals && h.top.regexIndex == 0 &&
+			h.lastMatch != nil && h.lastMatch.typ == ruleIllegal {
+			if batch := h.top.mode.illegalBatch; batch != nil {
+				batch.extend(h, m)
+			}
+		}
 		h.top.regexIndex = next
 		if m == nil {
 			break
@@ -158,7 +169,7 @@ func highlightWithContinuation(lang *compiledLanguage, code string, ignoreIllega
 			// A zero-width match at the end advances one past it; JavaScript's
 			// substr clamps, Go slicing does not.
 			len(code))
-		if h.iterations > 1000000 {
+		if h.iterations > maxHighlightIterations {
 			break
 		}
 	}

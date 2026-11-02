@@ -1,0 +1,4088 @@
+[
+  {
+    "name": "case-0-json",
+    "language": "json",
+    "code": "",
+    "ignoreIllegals": false,
+    "html": "",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-1-json",
+    "language": "json",
+    "code": "",
+    "ignoreIllegals": true,
+    "html": "",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-2-json",
+    "language": "json",
+    "code": "x",
+    "ignoreIllegals": false,
+    "html": "x",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-3-json",
+    "language": "json",
+    "code": "x",
+    "ignoreIllegals": true,
+    "html": "x",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-4-json",
+    "language": "json",
+    "code": "xx",
+    "ignoreIllegals": false,
+    "html": "xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-5-json",
+    "language": "json",
+    "code": "xx",
+    "ignoreIllegals": true,
+    "html": "xx",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-6-json",
+    "language": "json",
+    "code": "x x ",
+    "ignoreIllegals": false,
+    "html": "x x ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-7-json",
+    "language": "json",
+    "code": "x x ",
+    "ignoreIllegals": true,
+    "html": "x x ",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-8-json",
+    "language": "json",
+    "code": "xxxx 123 true false null",
+    "ignoreIllegals": false,
+    "html": "xxxx 123 true false null",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-9-json",
+    "language": "json",
+    "code": "xxxx 123 true false null",
+    "ignoreIllegals": true,
+    "html": "xxxx <span class=\"hljs-number\">123</span> <span class=\"hljs-literal\">true</span> <span class=\"hljs-literal\">false</span> <span class=\"hljs-literal\">null</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-10-json",
+    "language": "json",
+    "code": "0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x",
+    "ignoreIllegals": false,
+    "html": "0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-11-json",
+    "language": "json",
+    "code": "0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-12-json",
+    "language": "json",
+    "code": "xx0x0x !! 12 0xff -1.2e+3 true",
+    "ignoreIllegals": false,
+    "html": "xx0x0x !! 12 0xff -1.2e+3 true",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-13-json",
+    "language": "json",
+    "code": "xx0x0x !! 12 0xff -1.2e+3 true",
+    "ignoreIllegals": true,
+    "html": "xx0x0x !! <span class=\"hljs-number\">12</span> <span class=\"hljs-number\">0xff</span> <span class=\"hljs-number\">-1.2e+3</span> <span class=\"hljs-literal\">true</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-14-json",
+    "language": "json",
+    "code": "xx0x0x\"text\"xx0x0x",
+    "ignoreIllegals": false,
+    "html": "xx0x0x&quot;text&quot;xx0x0x",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-15-json",
+    "language": "json",
+    "code": "xx0x0x\"text\"xx0x0x",
+    "ignoreIllegals": true,
+    "html": "xx0x0x<span class=\"hljs-string\">&quot;text&quot;</span>xx0x0x",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-16-json",
+    "language": "json",
+    "code": "[xx xx \"value\", 123, true, {\"x\": null} ]",
+    "ignoreIllegals": false,
+    "html": "[xx xx <span class=\"hljs-string\">&quot;value&quot;</span>, <span class=\"hljs-number\">123</span>, <span class=\"hljs-literal\">true</span>, {<span class=\"hljs-attr\">&quot;x&quot;</span>: <span class=\"hljs-literal\">null</span>} ]",
+    "relevance": 11,
+    "illegal": false
+  },
+  {
+    "name": "case-17-json",
+    "language": "json",
+    "code": "[xx xx \"value\", 123, true, {\"x\": null} ]",
+    "ignoreIllegals": true,
+    "html": "[xx xx <span class=\"hljs-string\">&quot;value&quot;</span>, <span class=\"hljs-number\">123</span>, <span class=\"hljs-literal\">true</span>, {<span class=\"hljs-attr\">&quot;x&quot;</span>: <span class=\"hljs-literal\">null</span>} ]",
+    "relevance": 11,
+    "illegal": false
+  },
+  {
+    "name": "case-18-json",
+    "language": "json",
+    "code": "{xx xx \"key\":xx xx [true,false,null,123], xx\"after\":2}",
+    "ignoreIllegals": false,
+    "html": "{xx xx &quot;key&quot;:xx xx [true,false,null,123], xx&quot;after&quot;:2}",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-19-json",
+    "language": "json",
+    "code": "{xx xx \"key\":xx xx [true,false,null,123], xx\"after\":2}",
+    "ignoreIllegals": true,
+    "html": "{xx xx <span class=\"hljs-attr\">&quot;key&quot;</span>:xx xx [<span class=\"hljs-literal\">true</span>,<span class=\"hljs-literal\">false</span>,<span class=\"hljs-literal\">null</span>,<span class=\"hljs-number\">123</span>], xx<span class=\"hljs-attr\">&quot;after&quot;</span>:<span class=\"hljs-number\">2</span>}",
+    "relevance": 13,
+    "illegal": false
+  },
+  {
+    "name": "case-20-json",
+    "language": "json",
+    "code": "xx xx // a comment\r\n123",
+    "ignoreIllegals": false,
+    "html": "xx xx // a comment\r\n123",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-21-json",
+    "language": "json",
+    "code": "xx xx // a comment\r\n123",
+    "ignoreIllegals": true,
+    "html": "xx xx <span class=\"hljs-comment\">// a comment</span>\r\n<span class=\"hljs-number\">123</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-22-json",
+    "language": "json",
+    "code": "xx xx /* a comment */ 123",
+    "ignoreIllegals": false,
+    "html": "xx xx /* a comment */ 123",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-23-json",
+    "language": "json",
+    "code": "xx xx /* a comment */ 123",
+    "ignoreIllegals": true,
+    "html": "xx xx <span class=\"hljs-comment\">/* a comment */</span> <span class=\"hljs-number\">123</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-24-json",
+    "language": "json",
+    "code": "xx xx \"escaped \\\" quote\" true",
+    "ignoreIllegals": false,
+    "html": "xx xx &quot;escaped \\&quot; quote&quot; true",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-25-json",
+    "language": "json",
+    "code": "xx xx \"escaped \\\" quote\" true",
+    "ignoreIllegals": true,
+    "html": "xx xx <span class=\"hljs-string\">&quot;escaped \\&quot; quote&quot;</span> <span class=\"hljs-literal\">true</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-26-json",
+    "language": "json",
+    "code": "xx xx \"unfinished\n",
+    "ignoreIllegals": false,
+    "html": "xx xx &quot;unfinished\n",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-27-json",
+    "language": "json",
+    "code": "xx xx \"unfinished\n",
+    "ignoreIllegals": true,
+    "html": "xx xx <span class=\"hljs-string\">&quot;unfinished\n</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-28-json",
+    "language": "json",
+    "code": "xx xx 123 null \"string\"",
+    "ignoreIllegals": false,
+    "html": "xx xx 123 null &quot;string&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-29-json",
+    "language": "json",
+    "code": "xx xx 123 null \"string\"",
+    "ignoreIllegals": true,
+    "html": "xx xx <span class=\"hljs-number\">123</span> <span class=\"hljs-literal\">null</span> <span class=\"hljs-string\">&quot;string&quot;</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-30-json",
+    "language": "json",
+    "code": "xx xx  [1,2]",
+    "ignoreIllegals": false,
+    "html": "xx xx  [1,2]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-31-json",
+    "language": "json",
+    "code": "xx xx  [1,2]",
+    "ignoreIllegals": true,
+    "html": "xx xx  [<span class=\"hljs-number\">1</span>,<span class=\"hljs-number\">2</span>]",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-32-json",
+    "language": "json",
+    "code": "xx xx \u0000\u001b<&> \"<&>\"",
+    "ignoreIllegals": false,
+    "html": "xx xx \u0000\u001b&lt;&amp;&gt; &quot;&lt;&amp;&gt;&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-33-json",
+    "language": "json",
+    "code": "xx xx \u0000\u001b<&> \"<&>\"",
+    "ignoreIllegals": true,
+    "html": "xx xx \u0000\u001b&lt;&amp;&gt; <span class=\"hljs-string\">&quot;&lt;&amp;&gt;&quot;</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-34-json",
+    "language": "json",
+    "code": "xx xx 中文 😀 ́ 123",
+    "ignoreIllegals": false,
+    "html": "xx xx 中文 😀 ́ 123",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-35-json",
+    "language": "json",
+    "code": "xx xx 中文 😀 ́ 123",
+    "ignoreIllegals": true,
+    "html": "xx xx 中文 😀 ́ <span class=\"hljs-number\">123</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-36-json",
+    "language": "json",
+    "code": "[xx xx]",
+    "ignoreIllegals": false,
+    "html": "[xx xx]",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-37-json",
+    "language": "json",
+    "code": "[xx xx]",
+    "ignoreIllegals": true,
+    "html": "[xx xx]",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-38-json",
+    "language": "json",
+    "code": "[xx xx\r\n]",
+    "ignoreIllegals": false,
+    "html": "[xx xx\r\n]",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-39-json",
+    "language": "json",
+    "code": "[xx xx\r\n]",
+    "ignoreIllegals": true,
+    "html": "[xx xx\r\n]",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-40-json",
+    "language": "json",
+    "code": "{xx xx}",
+    "ignoreIllegals": false,
+    "html": "{xx xx}",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-41-json",
+    "language": "json",
+    "code": "{xx xx}",
+    "ignoreIllegals": true,
+    "html": "{xx xx}",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-42-json",
+    "language": "json",
+    "code": "[xx xx [xx xx] xx xx]",
+    "ignoreIllegals": false,
+    "html": "[xx xx [xx xx] xx xx]",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-43-json",
+    "language": "json",
+    "code": "[xx xx [xx xx] xx xx]",
+    "ignoreIllegals": true,
+    "html": "[xx xx [xx xx] xx xx]",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-44-batch-boundaries",
+    "language": "batch-boundaries",
+    "code": "xx xx 0xx 123 true false ab b",
+    "ignoreIllegals": false,
+    "html": "xx xx 0xx 123 true false ab b",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-45-batch-boundaries",
+    "language": "batch-boundaries",
+    "code": "xx xx 0xx 123 true false ab b",
+    "ignoreIllegals": true,
+    "html": "xx xx <span class=\"hljs-number\">0</span>xx <span class=\"hljs-number\">123</span> <span class=\"hljs-keyword\">true</span> <span class=\"hljs-keyword\">false</span> <span class=\"hljs-first\">ab</span> <span class=\"hljs-first\">b</span>",
+    "relevance": 6,
+    "illegal": false
+  },
+  {
+    "name": "case-46-batch-boundaries",
+    "language": "batch-boundaries",
+    "code": "xxx\r@xx\n@yy @zz @",
+    "ignoreIllegals": false,
+    "html": "xxx\r@xx\n@yy @zz @",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-47-batch-boundaries",
+    "language": "batch-boundaries",
+    "code": "xxx\r@xx\n@yy @zz @",
+    "ignoreIllegals": true,
+    "html": "xxx\r<span class=\"hljs-line\">@</span>xx\n<span class=\"hljs-line\">@</span>yy <span class=\"hljs-line\">@</span>zz <span class=\"hljs-line\">@</span>",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-48-batch-boundaries",
+    "language": "batch-boundaries",
+    "code": "!! !! abc ab b",
+    "ignoreIllegals": false,
+    "html": "!! !! abc ab b",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-49-batch-boundaries",
+    "language": "batch-boundaries",
+    "code": "!! !! abc ab b",
+    "ignoreIllegals": true,
+    "html": "!! !! <span class=\"hljs-first\">ab</span>c <span class=\"hljs-first\">ab</span> <span class=\"hljs-first\">b</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-50-batch-boundaries",
+    "language": "batch-boundaries",
+    "code": "xx xx [xx xx \"value\" xx xx 42] true",
+    "ignoreIllegals": false,
+    "html": "xx xx [xx xx &quot;value&quot; xx xx 42] true",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-51-batch-boundaries",
+    "language": "batch-boundaries",
+    "code": "xx xx [xx xx \"value\" xx xx 42] true",
+    "ignoreIllegals": true,
+    "html": "xx xx <span class=\"hljs-nested\">[xx xx <span class=\"hljs-string\">&quot;value&quot;</span> xx xx <span class=\"hljs-number\">42</span>]</span> <span class=\"hljs-keyword\">true</span>",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-52-batch-boundaries",
+    "language": "batch-boundaries",
+    "code": "xx xx[xx xx[xx xx]xx xx] 123",
+    "ignoreIllegals": false,
+    "html": "xx xx[xx xx[xx xx]xx xx] 123",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-53-batch-boundaries",
+    "language": "batch-boundaries",
+    "code": "xx xx[xx xx[xx xx]xx xx] 123",
+    "ignoreIllegals": true,
+    "html": "xx xx<span class=\"hljs-nested\">[xx xx[xx xx]</span>xx xx] <span class=\"hljs-number\">123</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-54-batch-boundaries",
+    "language": "batch-boundaries",
+    "code": "😀😀 中文 !!123",
+    "ignoreIllegals": false,
+    "html": "😀😀 中文 !!123",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-55-batch-boundaries",
+    "language": "batch-boundaries",
+    "code": "😀😀 中文 !!123",
+    "ignoreIllegals": true,
+    "html": "😀😀 中文 !!<span class=\"hljs-number\">123</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-56-batch-multi",
+    "language": "batch-multi",
+    "code": "xxxyZ",
+    "ignoreIllegals": false,
+    "html": "xxxyZ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-57-batch-multi",
+    "language": "batch-multi",
+    "code": "xxxyZ",
+    "ignoreIllegals": true,
+    "html": "xxxyZ",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-58-batch-multi",
+    "language": "batch-multi",
+    "code": "x xyZ yZ",
+    "ignoreIllegals": false,
+    "html": "x xyZ yZ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-59-batch-multi",
+    "language": "batch-multi",
+    "code": "x xyZ yZ",
+    "ignoreIllegals": true,
+    "html": "x xyZ <span class=\"hljs-hit\">yZ</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-60-batch-multi",
+    "language": "batch-multi",
+    "code": "xxxxxyZ",
+    "ignoreIllegals": false,
+    "html": "xxxxxyZ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-61-batch-multi",
+    "language": "batch-multi",
+    "code": "xxxxxyZ",
+    "ignoreIllegals": true,
+    "html": "xxxxxyZ",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-62-batch-zero",
+    "language": "batch-zero",
+    "code": "<xxok>",
+    "ignoreIllegals": false,
+    "html": "&lt;xxok&gt;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-63-batch-zero",
+    "language": "batch-zero",
+    "code": "<xxok>",
+    "ignoreIllegals": true,
+    "html": "&lt;<span class=\"hljs-hit\">ok</span>&gt;",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-64-batch-zero",
+    "language": "batch-zero",
+    "code": "<😀ok>",
+    "ignoreIllegals": false,
+    "html": "&lt;😀ok&gt;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-65-batch-zero",
+    "language": "batch-zero",
+    "code": "<😀ok>",
+    "ignoreIllegals": true,
+    "html": "&lt;<span class=\"hljs-hit\">ok</span>&gt;",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-66-batch-zero",
+    "language": "batch-zero",
+    "code": "<okxxok>",
+    "ignoreIllegals": false,
+    "html": "&lt;okxxok&gt;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-67-batch-zero",
+    "language": "batch-zero",
+    "code": "<okxxok>",
+    "ignoreIllegals": true,
+    "html": "&lt;<span class=\"hljs-hit\">ok</span><span class=\"hljs-hit\">ok</span>&gt;",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-68-batch-zero",
+    "language": "batch-zero",
+    "code": "<xx\r\nok>",
+    "ignoreIllegals": false,
+    "html": "&lt;xx\r\nok&gt;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-69-batch-zero",
+    "language": "batch-zero",
+    "code": "<xx\r\nok>",
+    "ignoreIllegals": true,
+    "html": "&lt;<span class=\"hljs-hit\">ok</span>&gt;",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-70-batch-callback",
+    "language": "batch-callback",
+    "code": "!! !!T0??T1 value>",
+    "ignoreIllegals": false,
+    "html": "!! !!T0??T1 value&gt;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-71-batch-callback",
+    "language": "batch-callback",
+    "code": "!! !!T0??T1 value>",
+    "ignoreIllegals": true,
+    "html": "!! !!T0??<span class=\"hljs-hit\">T1 value&gt;</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-72-batch-callback",
+    "language": "batch-callback",
+    "code": "!! !!T0T1!>value> xx xx T2>",
+    "ignoreIllegals": false,
+    "html": "!! !!T0T1!&gt;value&gt; xx xx T2&gt;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-73-batch-callback",
+    "language": "batch-callback",
+    "code": "!! !!T0T1!>value> xx xx T2>",
+    "ignoreIllegals": true,
+    "html": "!! !!T0<span class=\"hljs-hit\">T1!&gt;value&gt;</span> xx xx <span class=\"hljs-hit\">T2&gt;</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-74-batch-callback",
+    "language": "batch-callback",
+    "code": "xx xx T2>xx xx",
+    "ignoreIllegals": false,
+    "html": "xx xx T2&gt;xx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-75-batch-callback",
+    "language": "batch-callback",
+    "code": "xx xx T2>xx xx",
+    "ignoreIllegals": true,
+    "html": "xx xx <span class=\"hljs-hit\">T2&gt;</span>xx xx",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-76-batch-fold",
+    "language": "batch-fold",
+    "code": "aaZZ 123 éÉ",
+    "ignoreIllegals": false,
+    "html": "aaZZ 123 éÉ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-77-batch-fold",
+    "language": "batch-fold",
+    "code": "aaZZ 123 éÉ",
+    "ignoreIllegals": true,
+    "html": "aaZZ <span class=\"hljs-number\">123</span> éÉ",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-78-batch-fold",
+    "language": "batch-fold",
+    "code": "aaZZ kKK ssſ 123",
+    "ignoreIllegals": false,
+    "html": "aaZZ kKK ssſ 123",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-79-batch-fold",
+    "language": "batch-fold",
+    "code": "aaZZ kKK ssſ 123",
+    "ignoreIllegals": true,
+    "html": "aaZZ kKK ssſ <span class=\"hljs-number\">123</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-80-batch-fold",
+    "language": "batch-fold",
+    "code": "aaZZ00aaZZ",
+    "ignoreIllegals": false,
+    "html": "aaZZ00aaZZ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-81-batch-fold",
+    "language": "batch-fold",
+    "code": "aaZZ00aaZZ",
+    "ignoreIllegals": true,
+    "html": "aaZZ<span class=\"hljs-number\">00</span>aaZZ",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-82-batch-manual",
+    "language": "batch-manual",
+    "code": "xx xx @value; xx",
+    "ignoreIllegals": false,
+    "html": "xx xx @value; xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-83-batch-manual",
+    "language": "batch-manual",
+    "code": "xx xx @value; xx",
+    "ignoreIllegals": true,
+    "html": "xx xx <span class=\"hljs-hit\">@value;</span> xx",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-84-batch-manual",
+    "language": "batch-manual",
+    "code": "xx xx @😀; @more;",
+    "ignoreIllegals": false,
+    "html": "xx xx @😀; @more;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-85-batch-manual",
+    "language": "batch-manual",
+    "code": "xx xx @😀; @more;",
+    "ignoreIllegals": true,
+    "html": "xx xx <span class=\"hljs-hit\">@😀;</span> <span class=\"hljs-hit\">@more;</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-86-batch-manual",
+    "language": "batch-manual",
+    "code": "xx xx\r\n@value;",
+    "ignoreIllegals": false,
+    "html": "xx xx\r\n@value;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-87-batch-manual",
+    "language": "batch-manual",
+    "code": "xx xx\r\n@value;",
+    "ignoreIllegals": true,
+    "html": "xx xx\r\n<span class=\"hljs-hit\">@value;</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-88-batch-embedded",
+    "language": "batch-embedded",
+    "code": "<xx xx 0x0x true>",
+    "ignoreIllegals": false,
+    "html": "&lt;xx xx 0x0x true&gt;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-89-batch-embedded",
+    "language": "batch-embedded",
+    "code": "<xx xx 0x0x true>",
+    "ignoreIllegals": true,
+    "html": "<span class=\"json\">&lt;xx xx <span class=\"hljs-number\">0x0</span>x <span class=\"hljs-literal\">true</span>&gt;</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-90-batch-embedded",
+    "language": "batch-embedded",
+    "code": "<xx xx [\"value\"><xx xx ,123]>",
+    "ignoreIllegals": false,
+    "html": "&lt;xx xx [&quot;value&quot;&gt;&lt;xx xx ,123]&gt;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-91-batch-embedded",
+    "language": "batch-embedded",
+    "code": "<xx xx [\"value\"><xx xx ,123]>",
+    "ignoreIllegals": true,
+    "html": "<span class=\"json\">&lt;xx xx [<span class=\"hljs-string\">&quot;value&quot;</span>&gt;</span><span class=\"json\">&lt;xx xx ,<span class=\"hljs-number\">123</span>]&gt;</span>",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-92-batch-embedded",
+    "language": "batch-embedded",
+    "code": "<xx xx \"unfinished><xx xx quote\">",
+    "ignoreIllegals": false,
+    "html": "&lt;xx xx &quot;unfinished&gt;&lt;xx xx quote&quot;&gt;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-93-batch-embedded",
+    "language": "batch-embedded",
+    "code": "<xx xx \"unfinished><xx xx quote\">",
+    "ignoreIllegals": true,
+    "html": "<span class=\"json\">&lt;xx xx <span class=\"hljs-string\">&quot;unfinished&gt;</span></span><span class=\"json\"><span class=\"hljs-string\">&lt;xx xx quote&quot;</span>&gt;</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-94-json",
+    "language": "json",
+    "code": "\r\n}\" [/*x*/:\\[false",
+    "ignoreIllegals": false,
+    "html": "\r\n}&quot; [/*x*/:\\[false",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-95-json",
+    "language": "json",
+    "code": "\r\n}\" [/*x*/:\\[false",
+    "ignoreIllegals": true,
+    "html": "\r\n}<span class=\"hljs-string\">&quot; [/*x*/:\\[false</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-96-json",
+    "language": "json",
+    "code": ":]//x\nxx xx{\\[/*x*/{ ",
+    "ignoreIllegals": false,
+    "html": ":]//x\nxx xx{\\[/*x*/{ ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-97-json",
+    "language": "json",
+    "code": ":]//x\nxx xx{\\[/*x*/{ ",
+    "ignoreIllegals": true,
+    "html": ":]<span class=\"hljs-comment\">//x</span>\nxx xx{\\[<span class=\"hljs-comment\">/*x*/</span>{ ",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-98-json",
+    "language": "json",
+    "code": "nullxx xx😀12[false😀 null/*x*/",
+    "ignoreIllegals": false,
+    "html": "nullxx xx😀12[false😀 null/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-99-json",
+    "language": "json",
+    "code": "nullxx xx😀12[false😀 null/*x*/",
+    "ignoreIllegals": true,
+    "html": "nullxx xx😀<span class=\"hljs-number\">12</span>[<span class=\"hljs-literal\">false</span>😀 <span class=\"hljs-literal\">null</span><span class=\"hljs-comment\">/*x*/</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-100-json",
+    "language": "json",
+    "code": "true12[/*x*/😀 \r\nxx xx\"\\",
+    "ignoreIllegals": false,
+    "html": "true12[/*x*/😀 \r\nxx xx&quot;\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-101-json",
+    "language": "json",
+    "code": "true12[/*x*/😀 \r\nxx xx\"\\",
+    "ignoreIllegals": true,
+    "html": "true12[<span class=\"hljs-comment\">/*x*/</span>😀 \r\nxx xx<span class=\"hljs-string\">&quot;\\</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-102-json",
+    "language": "json",
+    "code": "//x\n,😀\"value\"null/*x*/\"\\//x\n}",
+    "ignoreIllegals": false,
+    "html": "//x\n,😀&quot;value&quot;null/*x*/&quot;\\//x\n}",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-103-json",
+    "language": "json",
+    "code": "//x\n,😀\"value\"null/*x*/\"\\//x\n}",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\n,😀<span class=\"hljs-string\">&quot;value&quot;</span><span class=\"hljs-literal\">null</span><span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-string\">&quot;\\//x\n}</span>",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-104-json",
+    "language": "json",
+    "code": ":]0x0x}\"12[/*x*/😀\"value\"",
+    "ignoreIllegals": false,
+    "html": ":]0x0x}&quot;12[/*x*/😀&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-105-json",
+    "language": "json",
+    "code": ":]0x0x}\"12[/*x*/😀\"value\"",
+    "ignoreIllegals": true,
+    "html": ":]<span class=\"hljs-number\">0x0</span>x}<span class=\"hljs-string\">&quot;12[/*x*/😀&quot;</span>value<span class=\"hljs-string\">&quot;</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-106-json",
+    "language": "json",
+    "code": "//x\n,true\\nullfalse{\"value\"\r\n}",
+    "ignoreIllegals": false,
+    "html": "//x\n,true\\nullfalse{&quot;value&quot;\r\n}",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-107-json",
+    "language": "json",
+    "code": "//x\n,true\\nullfalse{\"value\"\r\n}",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\n,<span class=\"hljs-literal\">true</span>\\nullfalse{<span class=\"hljs-attr\">&quot;value&quot;</span>\r\n}",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-108-json",
+    "language": "json",
+    "code": "😀\\null/*x*/😀120x0x}😀\"value\"",
+    "ignoreIllegals": false,
+    "html": "😀\\null/*x*/😀120x0x}😀&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-109-json",
+    "language": "json",
+    "code": "😀\\null/*x*/😀120x0x}😀\"value\"",
+    "ignoreIllegals": true,
+    "html": "😀\\<span class=\"hljs-literal\">null</span><span class=\"hljs-comment\">/*x*/</span>😀<span class=\"hljs-number\">120</span>x0x}😀<span class=\"hljs-string\">&quot;value&quot;</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-110-json",
+    "language": "json",
+    "code": "\r\n/*x*/:]\r\nxx xx{ \r\n}",
+    "ignoreIllegals": false,
+    "html": "\r\n/*x*/:]\r\nxx xx{ \r\n}",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-111-json",
+    "language": "json",
+    "code": "\r\n/*x*/:]\r\nxx xx{ \r\n}",
+    "ignoreIllegals": true,
+    "html": "\r\n<span class=\"hljs-comment\">/*x*/</span>:]\r\nxx xx{ \r\n}",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-112-json",
+    "language": "json",
+    "code": "true]\r\nfalse{\\[,true\"value\"",
+    "ignoreIllegals": false,
+    "html": "true]\r\nfalse{\\[,true&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-113-json",
+    "language": "json",
+    "code": "true]\r\nfalse{\\[,true\"value\"",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-literal\">true</span>]\r\n<span class=\"hljs-literal\">false</span>{\\[,true<span class=\"hljs-attr\">&quot;value&quot;</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-114-json",
+    "language": "json",
+    "code": "[xx xx:12nullxx xxtrue12//x\n/*x*/",
+    "ignoreIllegals": false,
+    "html": "[xx xx:<span class=\"hljs-number\">12</span>nullxx xxtrue12<span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-comment\">/*x*/</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-115-json",
+    "language": "json",
+    "code": "[xx xx:12nullxx xxtrue12//x\n/*x*/",
+    "ignoreIllegals": true,
+    "html": "[xx xx:<span class=\"hljs-number\">12</span>nullxx xxtrue12<span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-comment\">/*x*/</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-116-json",
+    "language": "json",
+    "code": "true120x0x/*x*/: //x\n}😀 ",
+    "ignoreIllegals": false,
+    "html": "true120x0x/*x*/: //x\n}😀 ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-117-json",
+    "language": "json",
+    "code": "true120x0x/*x*/: //x\n}😀 ",
+    "ignoreIllegals": true,
+    "html": "true120x0x<span class=\"hljs-comment\">/*x*/</span>: <span class=\"hljs-comment\">//x</span>\n}😀 ",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-118-json",
+    "language": "json",
+    "code": "[/*x*/true\"value\"nullxx xx\"]nullfalse",
+    "ignoreIllegals": false,
+    "html": "[<span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-literal\">true</span><span class=\"hljs-string\">&quot;value&quot;</span>nullxx xx<span class=\"hljs-string\">&quot;]nullfalse</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-119-json",
+    "language": "json",
+    "code": "[/*x*/true\"value\"nullxx xx\"]nullfalse",
+    "ignoreIllegals": true,
+    "html": "[<span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-literal\">true</span><span class=\"hljs-string\">&quot;value&quot;</span>nullxx xx<span class=\"hljs-string\">&quot;]nullfalse</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-120-json",
+    "language": "json",
+    "code": ":\"value\"0x0xfalse\"\"value\"\r\nxx xx\"]",
+    "ignoreIllegals": false,
+    "html": ":&quot;value&quot;0x0xfalse&quot;&quot;value&quot;\r\nxx xx&quot;]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-121-json",
+    "language": "json",
+    "code": ":\"value\"0x0xfalse\"\"value\"\r\nxx xx\"]",
+    "ignoreIllegals": true,
+    "html": ":<span class=\"hljs-string\">&quot;value&quot;</span><span class=\"hljs-number\">0x0</span>xfalse<span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;\r\nxx xx&quot;</span>]",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-122-json",
+    "language": "json",
+    "code": "[xx xx{12\r\nxx xx:\\0x0xxx xx",
+    "ignoreIllegals": false,
+    "html": "[xx xx{12\r\nxx xx:\\0x0xxx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-123-json",
+    "language": "json",
+    "code": "[xx xx{12\r\nxx xx:\\0x0xxx xx",
+    "ignoreIllegals": true,
+    "html": "[xx xx{12\r\nxx xx:\\<span class=\"hljs-number\">0x0</span>xxx xx",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-124-json",
+    "language": "json",
+    "code": "true][xx xx😀\"value\"null,:\\",
+    "ignoreIllegals": false,
+    "html": "true][xx xx😀&quot;value&quot;null,:\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-125-json",
+    "language": "json",
+    "code": "true][xx xx😀\"value\"null,:\\",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-literal\">true</span>][xx xx😀<span class=\"hljs-string\">&quot;value&quot;</span><span class=\"hljs-literal\">null</span>,:\\",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-126-json",
+    "language": "json",
+    "code": "//x\nfalse\"120x0x}😀 nullxx xx",
+    "ignoreIllegals": false,
+    "html": "//x\nfalse&quot;120x0x}😀 nullxx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-127-json",
+    "language": "json",
+    "code": "//x\nfalse\"120x0x}😀 nullxx xx",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-literal\">false</span><span class=\"hljs-string\">&quot;120x0x}😀 nullxx xx</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-128-json",
+    "language": "json",
+    "code": "\"\\//x\nfalse😀\"value\"nullfalse{\"value\"",
+    "ignoreIllegals": false,
+    "html": "&quot;\\//x\nfalse😀&quot;value&quot;nullfalse{&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-129-json",
+    "language": "json",
+    "code": "\"\\//x\nfalse😀\"value\"nullfalse{\"value\"",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-string\">&quot;\\//x\nfalse😀&quot;</span>value<span class=\"hljs-string\">&quot;nullfalse{&quot;</span>value<span class=\"hljs-string\">&quot;</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-130-json",
+    "language": "json",
+    "code": "0x0xxx xx:\\\r\n/*x*/true\\null}",
+    "ignoreIllegals": false,
+    "html": "0x0xxx xx:\\\r\n/*x*/true\\null}",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-131-json",
+    "language": "json",
+    "code": "0x0xxx xx:\\\r\n/*x*/true\\null}",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>xxx xx:\\\r\n<span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-literal\">true</span>\\<span class=\"hljs-literal\">null</span>}",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-132-json",
+    "language": "json",
+    "code": "😀\"value\"nullxx xx:12nullxx xx\"\\",
+    "ignoreIllegals": false,
+    "html": "😀&quot;value&quot;nullxx xx:12nullxx xx&quot;\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-133-json",
+    "language": "json",
+    "code": "😀\"value\"nullxx xx:12nullxx xx\"\\",
+    "ignoreIllegals": true,
+    "html": "😀<span class=\"hljs-string\">&quot;value&quot;</span>nullxx xx:<span class=\"hljs-number\">12</span>nullxx xx<span class=\"hljs-string\">&quot;\\</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-134-json",
+    "language": "json",
+    "code": "nullxx xx\"12//x\nxx xx{12//x\n/*x*/",
+    "ignoreIllegals": false,
+    "html": "nullxx xx&quot;12//x\nxx xx{12//x\n/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-135-json",
+    "language": "json",
+    "code": "nullxx xx\"12//x\nxx xx{12//x\n/*x*/",
+    "ignoreIllegals": true,
+    "html": "nullxx xx<span class=\"hljs-string\">&quot;12//x\nxx xx{12//x\n/*x*/</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-136-json",
+    "language": "json",
+    "code": "😀\"value\"\r\nfalse😀]null,:\"value\"",
+    "ignoreIllegals": false,
+    "html": "😀&quot;value&quot;\r\nfalse😀]null,:&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-137-json",
+    "language": "json",
+    "code": "😀\"value\"\r\nfalse😀]null,:\"value\"",
+    "ignoreIllegals": true,
+    "html": "😀<span class=\"hljs-string\">&quot;value&quot;</span>\r\n<span class=\"hljs-literal\">false</span>😀]<span class=\"hljs-literal\">null</span>,:<span class=\"hljs-string\">&quot;value&quot;</span>",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-138-json",
+    "language": "json",
+    "code": "0x0x}true\\[xx xx: nullxx xx",
+    "ignoreIllegals": false,
+    "html": "0x0x}true\\[xx xx: nullxx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-139-json",
+    "language": "json",
+    "code": "0x0x}true\\[xx xx: nullxx xx",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x}<span class=\"hljs-literal\">true</span>\\[xx xx: nullxx xx",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-140-json",
+    "language": "json",
+    "code": ":\"value\"0x0xxx xx😀\\[/*x*/true ",
+    "ignoreIllegals": false,
+    "html": ":&quot;value&quot;0x0xxx xx😀\\[/*x*/true ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-141-json",
+    "language": "json",
+    "code": ":\"value\"0x0xxx xx😀\\[/*x*/true ",
+    "ignoreIllegals": true,
+    "html": ":<span class=\"hljs-string\">&quot;value&quot;</span><span class=\"hljs-number\">0x0</span>xxx xx😀\\[<span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-literal\">true</span> ",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-142-json",
+    "language": "json",
+    "code": "0x0xfalse{]\r\n,:12//x\nxx xx",
+    "ignoreIllegals": false,
+    "html": "0x0xfalse{]\r\n,:12//x\nxx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-143-json",
+    "language": "json",
+    "code": "0x0xfalse{]\r\n,:12//x\nxx xx",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>xfalse{]\r\n,:<span class=\"hljs-number\">12</span><span class=\"hljs-comment\">//x</span>\nxx xx",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-144-json",
+    "language": "json",
+    "code": "true][xx xx:120x0xxx xxtrue12",
+    "ignoreIllegals": false,
+    "html": "true][xx xx:120x0xxx xxtrue12",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-145-json",
+    "language": "json",
+    "code": "true][xx xx:120x0xxx xxtrue12",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-literal\">true</span>][xx xx:<span class=\"hljs-number\">120</span>x0xxx xxtrue12",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-146-json",
+    "language": "json",
+    "code": "null}😀][,\" //x\n}",
+    "ignoreIllegals": false,
+    "html": "null}😀][,&quot; //x\n}",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-147-json",
+    "language": "json",
+    "code": "null}😀][,\" //x\n}",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-literal\">null</span>}😀][,<span class=\"hljs-string\">&quot; //x\n}</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-148-json",
+    "language": "json",
+    "code": "😀]\r\n/*x*/{\"value\"0x0x,{]",
+    "ignoreIllegals": false,
+    "html": "😀]\r\n/*x*/{&quot;value&quot;0x0x,{]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-149-json",
+    "language": "json",
+    "code": "😀]\r\n/*x*/{\"value\"0x0x,{]",
+    "ignoreIllegals": true,
+    "html": "😀]\r\n<span class=\"hljs-comment\">/*x*/</span>{<span class=\"hljs-attr\">&quot;value&quot;</span>0x0x,{]",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-150-json",
+    "language": "json",
+    "code": "\r\nxx xx\"]null,😀 [xx xx",
+    "ignoreIllegals": false,
+    "html": "\r\nxx xx&quot;]null,😀 [xx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-151-json",
+    "language": "json",
+    "code": "\r\nxx xx\"]null,😀 [xx xx",
+    "ignoreIllegals": true,
+    "html": "\r\nxx xx<span class=\"hljs-string\">&quot;]null,😀 [xx xx</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-152-json",
+    "language": "json",
+    "code": "😀\"value\"//x\nxx xx\"\"value\"\r\nfalse{12",
+    "ignoreIllegals": false,
+    "html": "😀&quot;value&quot;//x\nxx xx&quot;&quot;value&quot;\r\nfalse{12",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-153-json",
+    "language": "json",
+    "code": "😀\"value\"//x\nxx xx\"\"value\"\r\nfalse{12",
+    "ignoreIllegals": true,
+    "html": "😀<span class=\"hljs-string\">&quot;value&quot;</span><span class=\"hljs-comment\">//x</span>\nxx xx<span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;\r\nfalse{12</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-154-json",
+    "language": "json",
+    "code": "nullfalse\"]//x\n}true12//x\n,",
+    "ignoreIllegals": false,
+    "html": "nullfalse&quot;]//x\n}true12//x\n,",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-155-json",
+    "language": "json",
+    "code": "nullfalse\"]//x\n}true12//x\n,",
+    "ignoreIllegals": true,
+    "html": "nullfalse<span class=\"hljs-string\">&quot;]//x\n}true12//x\n,</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-156-json",
+    "language": "json",
+    "code": "😀12//x\nfalsetrue\"value\"\r\n,:\\",
+    "ignoreIllegals": false,
+    "html": "😀12//x\nfalsetrue&quot;value&quot;\r\n,:\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-157-json",
+    "language": "json",
+    "code": "😀12//x\nfalsetrue\"value\"\r\n,:\\",
+    "ignoreIllegals": true,
+    "html": "😀<span class=\"hljs-number\">12</span><span class=\"hljs-comment\">//x</span>\nfalsetrue<span class=\"hljs-string\">&quot;value&quot;</span>\r\n,:\\",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-158-json",
+    "language": "json",
+    "code": "0x0xfalsetrue [false:]0x0xxx xx",
+    "ignoreIllegals": false,
+    "html": "0x0xfalsetrue [false:]0x0xxx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-159-json",
+    "language": "json",
+    "code": "0x0xfalsetrue [false:]0x0xxx xx",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>xfalsetrue [<span class=\"hljs-literal\">false</span>:]<span class=\"hljs-number\">0x0</span>xxx xx",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-160-json",
+    "language": "json",
+    "code": "😀\"value\"0x0xxx xx:12nullxx xx😀12",
+    "ignoreIllegals": false,
+    "html": "😀&quot;value&quot;0x0xxx xx:12nullxx xx😀12",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-161-json",
+    "language": "json",
+    "code": "😀\"value\"0x0xxx xx:12nullxx xx😀12",
+    "ignoreIllegals": true,
+    "html": "😀<span class=\"hljs-string\">&quot;value&quot;</span><span class=\"hljs-number\">0x0</span>xxx xx:<span class=\"hljs-number\">12</span>nullxx xx😀<span class=\"hljs-number\">12</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-162-json",
+    "language": "json",
+    "code": "0x0x/*x*/:\\0x0xxx xxtrue\\\r\n/*x*/",
+    "ignoreIllegals": false,
+    "html": "0x0x/*x*/:\\0x0xxx xxtrue\\\r\n/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-163-json",
+    "language": "json",
+    "code": "0x0x/*x*/:\\0x0xxx xxtrue\\\r\n/*x*/",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x<span class=\"hljs-comment\">/*x*/</span>:\\<span class=\"hljs-number\">0x0</span>xxx xxtrue\\\r\n<span class=\"hljs-comment\">/*x*/</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-164-json",
+    "language": "json",
+    "code": "\"12//x\n,\"120x0xxx xx:]",
+    "ignoreIllegals": false,
+    "html": "&quot;12//x\n,&quot;120x0xxx xx:]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-165-json",
+    "language": "json",
+    "code": "\"12//x\n,\"120x0xxx xx:]",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-string\">&quot;12//x\n,&quot;</span><span class=\"hljs-number\">120</span>x0xxx xx:]",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-166-json",
+    "language": "json",
+    "code": "[false{][,\"][false",
+    "ignoreIllegals": false,
+    "html": "[false{][,&quot;][false",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-167-json",
+    "language": "json",
+    "code": "[false{][,\"][false",
+    "ignoreIllegals": true,
+    "html": "[<span class=\"hljs-literal\">false</span>{][,<span class=\"hljs-attr\">&quot;][false</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-168-json",
+    "language": "json",
+    "code": "{ nullxx xx{\"value\"nullfalse\"\"value\"",
+    "ignoreIllegals": false,
+    "html": "{ nullxx xx{&quot;value&quot;nullfalse&quot;&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-169-json",
+    "language": "json",
+    "code": "{ nullxx xx{\"value\"nullfalse\"\"value\"",
+    "ignoreIllegals": true,
+    "html": "{ nullxx xx{<span class=\"hljs-attr\">&quot;value&quot;</span>nullfalse<span class=\"hljs-attr\">&quot;&quot;</span>value<span class=\"hljs-attr\">&quot;</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-170-json",
+    "language": "json",
+    "code": "nullxx xx\" 0x0x,{120x0xfalse",
+    "ignoreIllegals": false,
+    "html": "nullxx xx&quot; 0x0x,{120x0xfalse",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-171-json",
+    "language": "json",
+    "code": "nullxx xx\" 0x0x,{120x0xfalse",
+    "ignoreIllegals": true,
+    "html": "nullxx xx<span class=\"hljs-string\">&quot; 0x0x,{120x0xfalse</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-172-json",
+    "language": "json",
+    "code": "{\"value\"0x0xxx xxtrue12\r\n}😀\"value\"",
+    "ignoreIllegals": false,
+    "html": "{&quot;value&quot;0x0xxx xxtrue12\r\n}😀&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-173-json",
+    "language": "json",
+    "code": "{\"value\"0x0xxx xxtrue12\r\n}😀\"value\"",
+    "ignoreIllegals": true,
+    "html": "{<span class=\"hljs-attr\">&quot;value&quot;</span>0x0xxx xxtrue12\r\n}😀<span class=\"hljs-string\">&quot;value&quot;</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-174-json",
+    "language": "json",
+    "code": "\r\nfalse:]0x0x/*x*/:12\r\nxx xx",
+    "ignoreIllegals": false,
+    "html": "\r\nfalse:]0x0x/*x*/:12\r\nxx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-175-json",
+    "language": "json",
+    "code": "\r\nfalse:]0x0x/*x*/:12\r\nxx xx",
+    "ignoreIllegals": true,
+    "html": "\r\n<span class=\"hljs-literal\">false</span>:]<span class=\"hljs-number\">0x0</span>x<span class=\"hljs-comment\">/*x*/</span>:<span class=\"hljs-number\">12</span>\r\nxx xx",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-176-json",
+    "language": "json",
+    "code": ":\\//x\nfalse\"]nullfalse:\\",
+    "ignoreIllegals": false,
+    "html": ":\\//x\nfalse&quot;]nullfalse:\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-177-json",
+    "language": "json",
+    "code": ":\\//x\nfalse\"]nullfalse:\\",
+    "ignoreIllegals": true,
+    "html": ":\\<span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-literal\">false</span><span class=\"hljs-string\">&quot;]nullfalse:\\</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-178-json",
+    "language": "json",
+    "code": "null,😀120x0x,true \r\n,",
+    "ignoreIllegals": false,
+    "html": "null,😀120x0x,true \r\n,",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-179-json",
+    "language": "json",
+    "code": "null,😀120x0x,true \r\n,",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-literal\">null</span>,😀<span class=\"hljs-number\">120</span>x0x,<span class=\"hljs-literal\">true</span> \r\n,",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-180-json",
+    "language": "json",
+    "code": "true\"value\"null}\"\\[xx xx{ ",
+    "ignoreIllegals": false,
+    "html": "true&quot;value&quot;null}&quot;\\[xx xx{ ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-181-json",
+    "language": "json",
+    "code": "true\"value\"null}\"\\[xx xx{ ",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-literal\">true</span><span class=\"hljs-string\">&quot;value&quot;</span><span class=\"hljs-literal\">null</span>}<span class=\"hljs-string\">&quot;\\[xx xx{ </span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-182-json",
+    "language": "json",
+    "code": "//x\n/*x*/\"\"value\"[}:12nullfalse",
+    "ignoreIllegals": false,
+    "html": "//x\n/*x*/&quot;&quot;value&quot;[}:12nullfalse",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-183-json",
+    "language": "json",
+    "code": "//x\n/*x*/\"\"value\"[}:12nullfalse",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;[}:12nullfalse</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-184-json",
+    "language": "json",
+    "code": ":]\r\n}\" [}true]",
+    "ignoreIllegals": false,
+    "html": ":]\r\n}&quot; [}true]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-185-json",
+    "language": "json",
+    "code": ":]\r\n}\" [}true]",
+    "ignoreIllegals": true,
+    "html": ":]\r\n}<span class=\"hljs-string\">&quot; [}true]</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-186-json",
+    "language": "json",
+    "code": "\r\nfalse{]nullxx xx😀12null}",
+    "ignoreIllegals": false,
+    "html": "\r\nfalse{]nullxx xx😀12null}",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-187-json",
+    "language": "json",
+    "code": "\r\nfalse{]nullxx xx😀12null}",
+    "ignoreIllegals": true,
+    "html": "\r\n<span class=\"hljs-literal\">false</span>{]nullxx xx😀12null}",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-188-json",
+    "language": "json",
+    "code": ":12//x\nxx xx{]//x\n,:]",
+    "ignoreIllegals": false,
+    "html": ":12//x\nxx xx{]//x\n,:]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-189-json",
+    "language": "json",
+    "code": ":12//x\nxx xx{]//x\n,:]",
+    "ignoreIllegals": true,
+    "html": ":<span class=\"hljs-number\">12</span><span class=\"hljs-comment\">//x</span>\nxx xx{]<span class=\"hljs-comment\">//x</span>\n,:]",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-190-json",
+    "language": "json",
+    "code": "nullxx xx😀\\null,:\"value\"nullfalse",
+    "ignoreIllegals": false,
+    "html": "nullxx xx😀\\null,:&quot;value&quot;nullfalse",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-191-json",
+    "language": "json",
+    "code": "nullxx xx😀\\null,:\"value\"nullfalse",
+    "ignoreIllegals": true,
+    "html": "nullxx xx😀\\<span class=\"hljs-literal\">null</span>,:<span class=\"hljs-string\">&quot;value&quot;</span>nullfalse",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-192-json",
+    "language": "json",
+    "code": "true12null,😀\"value\"\r\n/*x*/true]",
+    "ignoreIllegals": false,
+    "html": "true12null,😀&quot;value&quot;\r\n/*x*/true]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-193-json",
+    "language": "json",
+    "code": "true12null,😀\"value\"\r\n/*x*/true]",
+    "ignoreIllegals": true,
+    "html": "true12null,😀<span class=\"hljs-string\">&quot;value&quot;</span>\r\n<span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-literal\">true</span>]",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-194-json",
+    "language": "json",
+    "code": "[xx xxtrue\\0x0x/*x*/😀]0x0xfalse",
+    "ignoreIllegals": false,
+    "html": "[xx xxtrue\\0x0x/*x*/😀]0x0xfalse",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-195-json",
+    "language": "json",
+    "code": "[xx xxtrue\\0x0x/*x*/😀]0x0xfalse",
+    "ignoreIllegals": true,
+    "html": "[xx xxtrue\\<span class=\"hljs-number\">0x0</span>x<span class=\"hljs-comment\">/*x*/</span>😀]<span class=\"hljs-number\">0x0</span>xfalse",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-196-json",
+    "language": "json",
+    "code": "😀 //x\n}\"]0x0x/*x*/{12",
+    "ignoreIllegals": false,
+    "html": "😀 //x\n}&quot;]0x0x/*x*/{12",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-197-json",
+    "language": "json",
+    "code": "😀 //x\n}\"]0x0x/*x*/{12",
+    "ignoreIllegals": true,
+    "html": "😀 <span class=\"hljs-comment\">//x</span>\n}<span class=\"hljs-string\">&quot;]0x0x/*x*/{12</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-198-json",
+    "language": "json",
+    "code": "0x0x,\"\"value\"\r\n}{\"value\"//x\n}",
+    "ignoreIllegals": false,
+    "html": "0x0x,&quot;&quot;value&quot;\r\n}{&quot;value&quot;//x\n}",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-199-json",
+    "language": "json",
+    "code": "0x0x,\"\"value\"\r\n}{\"value\"//x\n}",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x,<span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;\r\n}{&quot;</span>value<span class=\"hljs-string\">&quot;//x\n}</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-200-json",
+    "language": "json",
+    "code": "true12null,true]//x\nfalse😀\"value\"",
+    "ignoreIllegals": false,
+    "html": "true12null,true]//x\nfalse😀&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-201-json",
+    "language": "json",
+    "code": "true12null,true]//x\nfalse😀\"value\"",
+    "ignoreIllegals": true,
+    "html": "true12null,<span class=\"hljs-literal\">true</span>]<span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-literal\">false</span>😀<span class=\"hljs-string\">&quot;value&quot;</span>",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-202-json",
+    "language": "json",
+    "code": "//x\n}😀\\0x0xfalsetrue120x0x,",
+    "ignoreIllegals": false,
+    "html": "//x\n}😀\\0x0xfalsetrue120x0x,",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-203-json",
+    "language": "json",
+    "code": "//x\n}😀\\0x0xfalsetrue120x0x,",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\n}😀\\<span class=\"hljs-number\">0x0</span>xfalsetrue120x0x,",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-204-json",
+    "language": "json",
+    "code": "\"\\[,{]nullfalse: ",
+    "ignoreIllegals": false,
+    "html": "<span class=\"hljs-string\">&quot;\\[,{]nullfalse: </span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-205-json",
+    "language": "json",
+    "code": "\"\\[,{]nullfalse: ",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-string\">&quot;\\[,{]nullfalse: </span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-206-json",
+    "language": "json",
+    "code": "\r\n/*x*/😀]\r\n}:120x0x}",
+    "ignoreIllegals": false,
+    "html": "\r\n/*x*/😀]\r\n}:120x0x}",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-207-json",
+    "language": "json",
+    "code": "\r\n/*x*/😀]\r\n}:120x0x}",
+    "ignoreIllegals": true,
+    "html": "\r\n<span class=\"hljs-comment\">/*x*/</span>😀]\r\n}:<span class=\"hljs-number\">120</span>x0x}",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-208-json",
+    "language": "json",
+    "code": "😀12//x\n/*x*/\"]\r\nxx xxtrue\"value\"",
+    "ignoreIllegals": false,
+    "html": "😀12//x\n/*x*/&quot;]\r\nxx xxtrue&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-209-json",
+    "language": "json",
+    "code": "😀12//x\n/*x*/\"]\r\nxx xxtrue\"value\"",
+    "ignoreIllegals": true,
+    "html": "😀<span class=\"hljs-number\">12</span><span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-string\">&quot;]\r\nxx xxtrue&quot;</span>value<span class=\"hljs-string\">&quot;</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-210-json",
+    "language": "json",
+    "code": "[,{ \r\n/*x*/true]0x0xxx xx",
+    "ignoreIllegals": false,
+    "html": "[,{ \r\n/*x*/true]0x0xxx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-211-json",
+    "language": "json",
+    "code": "[,{ \r\n/*x*/true]0x0xxx xx",
+    "ignoreIllegals": true,
+    "html": "[,{ \r\n<span class=\"hljs-comment\">/*x*/</span>true]0x0xxx xx",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-212-json",
+    "language": "json",
+    "code": "true\\null}true]//x\n,{12",
+    "ignoreIllegals": false,
+    "html": "true\\null}true]//x\n,{12",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-213-json",
+    "language": "json",
+    "code": "true\\null}true]//x\n,{12",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-literal\">true</span>\\<span class=\"hljs-literal\">null</span>}<span class=\"hljs-literal\">true</span>]<span class=\"hljs-comment\">//x</span>\n,{12",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-214-json",
+    "language": "json",
+    "code": "null/*x*/😀 \r\nxx xxtrue \r\nxx xx",
+    "ignoreIllegals": false,
+    "html": "null/*x*/😀 \r\nxx xxtrue \r\nxx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-215-json",
+    "language": "json",
+    "code": "null/*x*/😀 \r\nxx xxtrue \r\nxx xx",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-literal\">null</span><span class=\"hljs-comment\">/*x*/</span>😀 \r\nxx xxtrue \r\nxx xx",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-216-json",
+    "language": "json",
+    "code": "true12[,: //x\n}:\"value\"",
+    "ignoreIllegals": false,
+    "html": "true12[,: //x\n}:&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-217-json",
+    "language": "json",
+    "code": "true12[,: //x\n}:\"value\"",
+    "ignoreIllegals": true,
+    "html": "true12[,: <span class=\"hljs-comment\">//x</span>\n}:<span class=\"hljs-string\">&quot;value&quot;</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-218-json",
+    "language": "json",
+    "code": "0x0x,😀120x0x,true null,",
+    "ignoreIllegals": false,
+    "html": "0x0x,😀120x0x,true null,",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-219-json",
+    "language": "json",
+    "code": "0x0x,😀120x0x,true null,",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x,😀<span class=\"hljs-number\">120</span>x0x,<span class=\"hljs-literal\">true</span> <span class=\"hljs-literal\">null</span>,",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-220-json",
+    "language": "json",
+    "code": "true\\\r\n/*x*/:\\//x\n}true]",
+    "ignoreIllegals": false,
+    "html": "true\\\r\n/*x*/:\\//x\n}true]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-221-json",
+    "language": "json",
+    "code": "true\\\r\n/*x*/:\\//x\n}true]",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-literal\">true</span>\\\r\n<span class=\"hljs-comment\">/*x*/</span>:\\<span class=\"hljs-comment\">//x</span>\n}<span class=\"hljs-literal\">true</span>]",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-222-json",
+    "language": "json",
+    "code": "[/*x*/\"\"value\"\r\n,{12//x\n/*x*/",
+    "ignoreIllegals": false,
+    "html": "[/*x*/&quot;&quot;value&quot;\r\n,{12//x\n/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-223-json",
+    "language": "json",
+    "code": "[/*x*/\"\"value\"\r\n,{12//x\n/*x*/",
+    "ignoreIllegals": true,
+    "html": "[<span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;\r\n,{12//x\n/*x*/</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-224-json",
+    "language": "json",
+    "code": "\"\"value\"nullxx xx😀]\r\nfalsetrue ",
+    "ignoreIllegals": false,
+    "html": "&quot;&quot;value&quot;nullxx xx😀]\r\nfalsetrue ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-225-json",
+    "language": "json",
+    "code": "\"\"value\"nullxx xx😀]\r\nfalsetrue ",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;nullxx xx😀]\r\nfalsetrue </span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-226-json",
+    "language": "json",
+    "code": "[falsetrue12\r\n,😀]\r\nfalse",
+    "ignoreIllegals": false,
+    "html": "[falsetrue12\r\n,😀]\r\nfalse",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-227-json",
+    "language": "json",
+    "code": "[falsetrue12\r\n,😀]\r\nfalse",
+    "ignoreIllegals": true,
+    "html": "[falsetrue12\r\n,😀]\r\n<span class=\"hljs-literal\">false</span>",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-228-json",
+    "language": "json",
+    "code": "\"\"value\"\r\nxx xx{\\nullfalse😀]",
+    "ignoreIllegals": false,
+    "html": "&quot;&quot;value&quot;\r\nxx xx{\\nullfalse😀]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-229-json",
+    "language": "json",
+    "code": "\"\"value\"\r\nxx xx{\\nullfalse😀]",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;\r\nxx xx{\\nullfalse😀]</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-230-json",
+    "language": "json",
+    "code": "0x0x}true]//x\n,\"][false",
+    "ignoreIllegals": false,
+    "html": "0x0x}true]//x\n,&quot;][false",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-231-json",
+    "language": "json",
+    "code": "0x0x}true]//x\n,\"][false",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x}<span class=\"hljs-literal\">true</span>]<span class=\"hljs-comment\">//x</span>\n,<span class=\"hljs-string\">&quot;][false</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-232-json",
+    "language": "json",
+    "code": "{]nullxx xx:]0x0x/*x*/{\\",
+    "ignoreIllegals": false,
+    "html": "{]nullxx xx:]0x0x/*x*/{\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-233-json",
+    "language": "json",
+    "code": "{]nullxx xx:]0x0x/*x*/{\\",
+    "ignoreIllegals": true,
+    "html": "{]nullxx xx:]<span class=\"hljs-number\">0x0</span>x<span class=\"hljs-comment\">/*x*/</span>{\\",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-234-json",
+    "language": "json",
+    "code": "//x\n}😀\"value\"nullxx xx\"]//x\nxx xx",
+    "ignoreIllegals": false,
+    "html": "//x\n}😀&quot;value&quot;nullxx xx&quot;]//x\nxx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-235-json",
+    "language": "json",
+    "code": "//x\n}😀\"value\"nullxx xx\"]//x\nxx xx",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\n}😀<span class=\"hljs-string\">&quot;value&quot;</span>nullxx xx<span class=\"hljs-string\">&quot;]//x\nxx xx</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-236-json",
+    "language": "json",
+    "code": ":][}\"120x0xfalse{]",
+    "ignoreIllegals": false,
+    "html": ":][}&quot;120x0xfalse{]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-237-json",
+    "language": "json",
+    "code": ":][}\"120x0xfalse{]",
+    "ignoreIllegals": true,
+    "html": ":][}<span class=\"hljs-string\">&quot;120x0xfalse{]</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-238-json",
+    "language": "json",
+    "code": "[}{\\0x0xxx xx:\"value\"\r\nfalse",
+    "ignoreIllegals": false,
+    "html": "[}{\\0x0xxx xx:&quot;value&quot;\r\nfalse",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-239-json",
+    "language": "json",
+    "code": "[}{\\0x0xxx xx:\"value\"\r\nfalse",
+    "ignoreIllegals": true,
+    "html": "[}{\\0x0xxx xx:<span class=\"hljs-string\">&quot;value&quot;</span>\r\n<span class=\"hljs-literal\">false</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-240-json",
+    "language": "json",
+    "code": "😀 null/*x*/true\"value\"\r\n,true ",
+    "ignoreIllegals": false,
+    "html": "😀 null/*x*/true&quot;value&quot;\r\n,true ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-241-json",
+    "language": "json",
+    "code": "😀 null/*x*/true\"value\"\r\n,true ",
+    "ignoreIllegals": true,
+    "html": "😀 <span class=\"hljs-literal\">null</span><span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-literal\">true</span><span class=\"hljs-string\">&quot;value&quot;</span>\r\n,<span class=\"hljs-literal\">true</span> ",
+    "relevance": 5,
+    "illegal": false
+  },
+  {
+    "name": "case-242-json",
+    "language": "json",
+    "code": "0x0x,:\\//x\nxx xx{\\0x0xfalse",
+    "ignoreIllegals": false,
+    "html": "0x0x,:\\//x\nxx xx{\\0x0xfalse",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-243-json",
+    "language": "json",
+    "code": "0x0x,:\\//x\nxx xx{\\0x0xfalse",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x,:\\<span class=\"hljs-comment\">//x</span>\nxx xx{\\0x0xfalse",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-244-json",
+    "language": "json",
+    "code": "true12//x\nxx xx{ \r\nfalse:\"value\"",
+    "ignoreIllegals": false,
+    "html": "true12//x\nxx xx{ \r\nfalse:&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-245-json",
+    "language": "json",
+    "code": "true12//x\nxx xx{ \r\nfalse:\"value\"",
+    "ignoreIllegals": true,
+    "html": "true12<span class=\"hljs-comment\">//x</span>\nxx xx{ \r\nfalse:<span class=\"hljs-string\">&quot;value&quot;</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-246-json",
+    "language": "json",
+    "code": "0x0x/*x*/true120x0x,\" [,",
+    "ignoreIllegals": false,
+    "html": "0x0x/*x*/true120x0x,&quot; [,",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-247-json",
+    "language": "json",
+    "code": "0x0x/*x*/true120x0x,\" [,",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x<span class=\"hljs-comment\">/*x*/</span>true120x0x,<span class=\"hljs-string\">&quot; [,</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-248-json",
+    "language": "json",
+    "code": ":\"value\"null}😀][/*x*/😀\\",
+    "ignoreIllegals": false,
+    "html": ":&quot;value&quot;null}😀][/*x*/😀\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-249-json",
+    "language": "json",
+    "code": ":\"value\"null}😀][/*x*/😀\\",
+    "ignoreIllegals": true,
+    "html": ":<span class=\"hljs-string\">&quot;value&quot;</span><span class=\"hljs-literal\">null</span>}😀][<span class=\"hljs-comment\">/*x*/</span>😀\\",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-250-json",
+    "language": "json",
+    "code": "[}\" [}\"\\[}",
+    "ignoreIllegals": false,
+    "html": "[}<span class=\"hljs-string\">&quot; [}&quot;</span>\\[}",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-251-json",
+    "language": "json",
+    "code": "[}\" [}\"\\[}",
+    "ignoreIllegals": true,
+    "html": "[}<span class=\"hljs-string\">&quot; [}&quot;</span>\\[}",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-252-json",
+    "language": "json",
+    "code": "true //x\n/*x*/true [/*x*/\"\"value\"",
+    "ignoreIllegals": false,
+    "html": "true //x\n/*x*/true [/*x*/&quot;&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-253-json",
+    "language": "json",
+    "code": "true //x\n/*x*/true [/*x*/\"\"value\"",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-literal\">true</span> <span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-literal\">true</span> [<span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;</span>",
+    "relevance": 6,
+    "illegal": false
+  },
+  {
+    "name": "case-254-json",
+    "language": "json",
+    "code": "\r\nfalse\"]\r\n,\"]\r\n,",
+    "ignoreIllegals": false,
+    "html": "\r\nfalse&quot;]\r\n,&quot;]\r\n,",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-255-json",
+    "language": "json",
+    "code": "\r\nfalse\"]\r\n,\"]\r\n,",
+    "ignoreIllegals": true,
+    "html": "\r\n<span class=\"hljs-literal\">false</span><span class=\"hljs-string\">&quot;]\r\n,&quot;</span>]\r\n,",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-256-json",
+    "language": "json",
+    "code": "{\"value\"null}\"\\\r\n,\" ",
+    "ignoreIllegals": false,
+    "html": "{&quot;value&quot;null}&quot;\\\r\n,&quot; ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-257-json",
+    "language": "json",
+    "code": "{\"value\"null}\"\\\r\n,\" ",
+    "ignoreIllegals": true,
+    "html": "{<span class=\"hljs-attr\">&quot;value&quot;</span>null}<span class=\"hljs-string\">&quot;\\\r\n,&quot;</span> ",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-258-json",
+    "language": "json",
+    "code": "\r\nxx xx:12nullfalse{12\r\n,",
+    "ignoreIllegals": false,
+    "html": "\r\nxx xx:12nullfalse{12\r\n,",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-259-json",
+    "language": "json",
+    "code": "\r\nxx xx:12nullfalse{12\r\n,",
+    "ignoreIllegals": true,
+    "html": "\r\nxx xx:<span class=\"hljs-number\">12</span>nullfalse{12\r\n,",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-260-json",
+    "language": "json",
+    "code": ":\"value\"//x\n}:]\r\nxx xxtrue\\",
+    "ignoreIllegals": false,
+    "html": ":&quot;value&quot;//x\n}:]\r\nxx xxtrue\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-261-json",
+    "language": "json",
+    "code": ":\"value\"//x\n}:]\r\nxx xxtrue\\",
+    "ignoreIllegals": true,
+    "html": ":<span class=\"hljs-string\">&quot;value&quot;</span><span class=\"hljs-comment\">//x</span>\n}:]\r\nxx xxtrue\\",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-262-json",
+    "language": "json",
+    "code": "0x0x,😀\"value\"[}\"12null}",
+    "ignoreIllegals": false,
+    "html": "0x0x,😀&quot;value&quot;[}&quot;12null}",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-263-json",
+    "language": "json",
+    "code": "0x0x,😀\"value\"[}\"12null}",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x,😀<span class=\"hljs-string\">&quot;value&quot;</span>[}<span class=\"hljs-string\">&quot;12null}</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-264-json",
+    "language": "json",
+    "code": "{ [}:\\[xx xx\" ",
+    "ignoreIllegals": false,
+    "html": "{ [}:\\[xx xx&quot; ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-265-json",
+    "language": "json",
+    "code": "{ [}:\\[xx xx\" ",
+    "ignoreIllegals": true,
+    "html": "{ [}:\\[xx xx<span class=\"hljs-string\">&quot; </span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-266-json",
+    "language": "json",
+    "code": "//x\n,true]0x0xxx xxtrue nullxx xx",
+    "ignoreIllegals": false,
+    "html": "//x\n,true]0x0xxx xxtrue nullxx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-267-json",
+    "language": "json",
+    "code": "//x\n,true]0x0xxx xxtrue nullxx xx",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\n,<span class=\"hljs-literal\">true</span>]<span class=\"hljs-number\">0x0</span>xxx xxtrue nullxx xx",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-268-json",
+    "language": "json",
+    "code": ":\\\r\nxx xx:\\nullfalsetrue\\",
+    "ignoreIllegals": false,
+    "html": ":\\\r\nxx xx:\\nullfalsetrue\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-269-json",
+    "language": "json",
+    "code": ":\\\r\nxx xx:\\nullfalsetrue\\",
+    "ignoreIllegals": true,
+    "html": ":\\\r\nxx xx:\\nullfalsetrue\\",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-270-json",
+    "language": "json",
+    "code": "null,true][falsetrue][false",
+    "ignoreIllegals": false,
+    "html": "null,true][falsetrue][false",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-271-json",
+    "language": "json",
+    "code": "null,true][falsetrue][false",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-literal\">null</span>,<span class=\"hljs-literal\">true</span>][falsetrue][<span class=\"hljs-literal\">false</span>",
+    "relevance": 5,
+    "illegal": false
+  },
+  {
+    "name": "case-272-json",
+    "language": "json",
+    "code": "\"]\r\n/*x*/true\"value\"//x\n}\"12",
+    "ignoreIllegals": false,
+    "html": "&quot;]\r\n/*x*/true&quot;value&quot;//x\n}&quot;12",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-273-json",
+    "language": "json",
+    "code": "\"]\r\n/*x*/true\"value\"//x\n}\"12",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-string\">&quot;]\r\n/*x*/true&quot;</span>value<span class=\"hljs-string\">&quot;//x\n}&quot;</span><span class=\"hljs-number\">12</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-274-json",
+    "language": "json",
+    "code": "[/*x*/\"\"value\"//x\nxx xx\" [false",
+    "ignoreIllegals": false,
+    "html": "[/*x*/&quot;&quot;value&quot;//x\nxx xx&quot; [false",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-275-json",
+    "language": "json",
+    "code": "[/*x*/\"\"value\"//x\nxx xx\" [false",
+    "ignoreIllegals": true,
+    "html": "[<span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;//x\nxx xx&quot;</span> [<span class=\"hljs-literal\">false</span>",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-276-json",
+    "language": "json",
+    "code": "\"12null,{\"value\"nullxx xx:\\",
+    "ignoreIllegals": false,
+    "html": "&quot;12null,{&quot;value&quot;nullxx xx:\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-277-json",
+    "language": "json",
+    "code": "\"12null,{\"value\"nullxx xx:\\",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-string\">&quot;12null,{&quot;</span>value<span class=\"hljs-string\">&quot;nullxx xx:\\</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-278-json",
+    "language": "json",
+    "code": "//x\n,\"\\null,\"\"value\"0x0xxx xx",
+    "ignoreIllegals": false,
+    "html": "//x\n,&quot;\\null,&quot;&quot;value&quot;0x0xxx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-279-json",
+    "language": "json",
+    "code": "//x\n,\"\\null,\"\"value\"0x0xxx xx",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\n,<span class=\"hljs-string\">&quot;\\null,&quot;</span><span class=\"hljs-string\">&quot;value&quot;</span><span class=\"hljs-number\">0x0</span>xxx xx",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-280-json",
+    "language": "json",
+    "code": "{ [false{][,{\\",
+    "ignoreIllegals": false,
+    "html": "{ [false{][,{\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-281-json",
+    "language": "json",
+    "code": "{ [false{][,{\\",
+    "ignoreIllegals": true,
+    "html": "{ [false{][,{\\",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-282-json",
+    "language": "json",
+    "code": "0x0x,\" \r\nxx xxtrue12null/*x*/",
+    "ignoreIllegals": false,
+    "html": "0x0x,&quot; \r\nxx xxtrue12null/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-283-json",
+    "language": "json",
+    "code": "0x0x,\" \r\nxx xxtrue12null/*x*/",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x,<span class=\"hljs-string\">&quot; \r\nxx xxtrue12null/*x*/</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-284-json",
+    "language": "json",
+    "code": "{12[/*x*/{12[,:]",
+    "ignoreIllegals": false,
+    "html": "{12[/*x*/{12[,:]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-285-json",
+    "language": "json",
+    "code": "{12[/*x*/{12[,:]",
+    "ignoreIllegals": true,
+    "html": "{12[<span class=\"hljs-comment\">/*x*/</span>{12[,:]",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-286-json",
+    "language": "json",
+    "code": "//x\n/*x*/:120x0x,\"\"value\"[,",
+    "ignoreIllegals": false,
+    "html": "//x\n/*x*/:120x0x,&quot;&quot;value&quot;[,",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-287-json",
+    "language": "json",
+    "code": "//x\n/*x*/:120x0x,\"\"value\"[,",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-comment\">/*x*/</span>:<span class=\"hljs-number\">120</span>x0x,<span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;[,</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-288-json",
+    "language": "json",
+    "code": ": \r\n,{ \r\n/*x*/{\\",
+    "ignoreIllegals": false,
+    "html": ": \r\n,{ \r\n/*x*/{\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-289-json",
+    "language": "json",
+    "code": ": \r\n,{ \r\n/*x*/{\\",
+    "ignoreIllegals": true,
+    "html": ": \r\n,{ \r\n<span class=\"hljs-comment\">/*x*/</span>{\\",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-290-json",
+    "language": "json",
+    "code": "0x0x/*x*/😀\\[}true\"value\"\r\n}",
+    "ignoreIllegals": false,
+    "html": "0x0x/*x*/😀\\[}true&quot;value&quot;\r\n}",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-291-json",
+    "language": "json",
+    "code": "0x0x/*x*/😀\\[}true\"value\"\r\n}",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x<span class=\"hljs-comment\">/*x*/</span>😀\\[}<span class=\"hljs-literal\">true</span><span class=\"hljs-string\">&quot;value&quot;</span>\r\n}",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-292-json",
+    "language": "json",
+    "code": "😀12\r\n}😀]\r\n,true]",
+    "ignoreIllegals": false,
+    "html": "😀12\r\n}😀]\r\n,true]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-293-json",
+    "language": "json",
+    "code": "😀12\r\n}😀]\r\n,true]",
+    "ignoreIllegals": true,
+    "html": "😀<span class=\"hljs-number\">12</span>\r\n}😀]\r\n,<span class=\"hljs-literal\">true</span>]",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-294-json",
+    "language": "json",
+    "code": "0x0x}{120x0xfalsetrue]//x\nfalse",
+    "ignoreIllegals": false,
+    "html": "0x0x}{120x0xfalsetrue]//x\nfalse",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-295-json",
+    "language": "json",
+    "code": "0x0x}{120x0xfalsetrue]//x\nfalse",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x}{120x0xfalsetrue]<span class=\"hljs-comment\">//x</span>\nfalse",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-296-json",
+    "language": "json",
+    "code": "😀12\r\nfalse\" [/*x*/\"12",
+    "ignoreIllegals": false,
+    "html": "😀12\r\nfalse&quot; [/*x*/&quot;12",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-297-json",
+    "language": "json",
+    "code": "😀12\r\nfalse\" [/*x*/\"12",
+    "ignoreIllegals": true,
+    "html": "😀<span class=\"hljs-number\">12</span>\r\n<span class=\"hljs-literal\">false</span><span class=\"hljs-string\">&quot; [/*x*/&quot;</span><span class=\"hljs-number\">12</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-298-json",
+    "language": "json",
+    "code": "\r\nxx xxtrue\"value\"null}true\"value\"[false",
+    "ignoreIllegals": false,
+    "html": "\r\nxx xxtrue&quot;value&quot;null}true&quot;value&quot;[false",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-299-json",
+    "language": "json",
+    "code": "\r\nxx xxtrue\"value\"null}true\"value\"[false",
+    "ignoreIllegals": true,
+    "html": "\r\nxx xxtrue<span class=\"hljs-string\">&quot;value&quot;</span><span class=\"hljs-literal\">null</span>}<span class=\"hljs-literal\">true</span><span class=\"hljs-string\">&quot;value&quot;</span>[<span class=\"hljs-literal\">false</span>",
+    "relevance": 5,
+    "illegal": false
+  },
+  {
+    "name": "case-300-json",
+    "language": "json",
+    "code": "true12null/*x*/:\\[false😀\"value\"",
+    "ignoreIllegals": false,
+    "html": "true12null/*x*/:\\[false😀&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-301-json",
+    "language": "json",
+    "code": "true12null/*x*/:\\[false😀\"value\"",
+    "ignoreIllegals": true,
+    "html": "true12null<span class=\"hljs-comment\">/*x*/</span>:\\[<span class=\"hljs-literal\">false</span>😀<span class=\"hljs-string\">&quot;value&quot;</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-302-json",
+    "language": "json",
+    "code": "[}\"12\r\n/*x*/{ nullxx xx",
+    "ignoreIllegals": false,
+    "html": "[}&quot;12\r\n/*x*/{ nullxx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-303-json",
+    "language": "json",
+    "code": "[}\"12\r\n/*x*/{ nullxx xx",
+    "ignoreIllegals": true,
+    "html": "[}<span class=\"hljs-string\">&quot;12\r\n/*x*/{ nullxx xx</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-304-json",
+    "language": "json",
+    "code": "{\\null}: \r\n}\"\\",
+    "ignoreIllegals": false,
+    "html": "{\\null}: \r\n}&quot;\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-305-json",
+    "language": "json",
+    "code": "{\\null}: \r\n}\"\\",
+    "ignoreIllegals": true,
+    "html": "{\\null}: \r\n}<span class=\"hljs-string\">&quot;\\</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-306-json",
+    "language": "json",
+    "code": "0x0xxx xx{\"value\"[xx xx{\\//x\n,",
+    "ignoreIllegals": false,
+    "html": "0x0xxx xx{&quot;value&quot;[xx xx{\\//x\n,",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-307-json",
+    "language": "json",
+    "code": "0x0xxx xx{\"value\"[xx xx{\\//x\n,",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>xxx xx{<span class=\"hljs-attr\">&quot;value&quot;</span>[xx xx{\\<span class=\"hljs-comment\">//x</span>\n,",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-308-json",
+    "language": "json",
+    "code": "😀 //x\nfalse😀 0x0xxx xx{]",
+    "ignoreIllegals": false,
+    "html": "😀 //x\nfalse😀 0x0xxx xx{]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-309-json",
+    "language": "json",
+    "code": "😀 //x\nfalse😀 0x0xxx xx{]",
+    "ignoreIllegals": true,
+    "html": "😀 <span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-literal\">false</span>😀 <span class=\"hljs-number\">0x0</span>xxx xx{]",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-310-json",
+    "language": "json",
+    "code": "//x\n}\"\\[}\" [/*x*/",
+    "ignoreIllegals": false,
+    "html": "//x\n}&quot;\\[}&quot; [/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-311-json",
+    "language": "json",
+    "code": "//x\n}\"\\[}\" [/*x*/",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\n}<span class=\"hljs-string\">&quot;\\[}&quot;</span> [<span class=\"hljs-comment\">/*x*/</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-312-json",
+    "language": "json",
+    "code": ":\\[xx xx😀]//x\n}:\"value\"",
+    "ignoreIllegals": false,
+    "html": ":\\[xx xx😀]//x\n}:&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-313-json",
+    "language": "json",
+    "code": ":\\[xx xx😀]//x\n}:\"value\"",
+    "ignoreIllegals": true,
+    "html": ":\\[xx xx😀]<span class=\"hljs-comment\">//x</span>\n}:<span class=\"hljs-string\">&quot;value&quot;</span>",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-314-json",
+    "language": "json",
+    "code": "[}{\"value\"null,\" //x\n/*x*/",
+    "ignoreIllegals": false,
+    "html": "[}{&quot;value&quot;null,&quot; //x\n/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-315-json",
+    "language": "json",
+    "code": "[}{\"value\"null,\" //x\n/*x*/",
+    "ignoreIllegals": true,
+    "html": "[}{<span class=\"hljs-attr\">&quot;value&quot;</span>null,<span class=\"hljs-attr\">&quot; //x\n/*x*/</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-316-json",
+    "language": "json",
+    "code": ": 0x0xxx xx{]//x\nxx xx😀12",
+    "ignoreIllegals": false,
+    "html": ": 0x0xxx xx{]//x\nxx xx😀12",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-317-json",
+    "language": "json",
+    "code": ": 0x0xxx xx{]//x\nxx xx😀12",
+    "ignoreIllegals": true,
+    "html": ": <span class=\"hljs-number\">0x0</span>xxx xx{]<span class=\"hljs-comment\">//x</span>\nxx xx😀12",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-318-json",
+    "language": "json",
+    "code": "null}true \r\nxx xx😀12null/*x*/",
+    "ignoreIllegals": false,
+    "html": "null}true \r\nxx xx😀12null/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-319-json",
+    "language": "json",
+    "code": "null}true \r\nxx xx😀12null/*x*/",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-literal\">null</span>}<span class=\"hljs-literal\">true</span> \r\nxx xx😀<span class=\"hljs-number\">12</span><span class=\"hljs-literal\">null</span><span class=\"hljs-comment\">/*x*/</span>",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-320-json",
+    "language": "json",
+    "code": "{12null/*x*/:\\[false:]",
+    "ignoreIllegals": false,
+    "html": "{12null/*x*/:\\[false:]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-321-json",
+    "language": "json",
+    "code": "{12null/*x*/:\\[false:]",
+    "ignoreIllegals": true,
+    "html": "{12null<span class=\"hljs-comment\">/*x*/</span>:\\[<span class=\"hljs-literal\">false</span>:]",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-322-json",
+    "language": "json",
+    "code": "0x0xxx xx:\\[}{\"value\"\r\n/*x*/",
+    "ignoreIllegals": false,
+    "html": "0x0xxx xx:\\[}{&quot;value&quot;\r\n/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-323-json",
+    "language": "json",
+    "code": "0x0xxx xx:\\[}{\"value\"\r\n/*x*/",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>xxx xx:\\[}{<span class=\"hljs-attr\">&quot;value&quot;</span>\r\n<span class=\"hljs-comment\">/*x*/</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-324-json",
+    "language": "json",
+    "code": "\"\\[/*x*/\"\"value\"//x\n,:]",
+    "ignoreIllegals": false,
+    "html": "&quot;\\[/*x*/&quot;&quot;value&quot;//x\n,:]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-325-json",
+    "language": "json",
+    "code": "\"\\[/*x*/\"\"value\"//x\n,:]",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-string\">&quot;\\[/*x*/&quot;</span><span class=\"hljs-string\">&quot;value&quot;</span><span class=\"hljs-comment\">//x</span>\n,:]",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-326-json",
+    "language": "json",
+    "code": "nullxx xx:12//x\n,{][/*x*/",
+    "ignoreIllegals": false,
+    "html": "nullxx xx:12//x\n,{][/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-327-json",
+    "language": "json",
+    "code": "nullxx xx:12//x\n,{][/*x*/",
+    "ignoreIllegals": true,
+    "html": "nullxx xx:<span class=\"hljs-number\">12</span><span class=\"hljs-comment\">//x</span>\n,{][<span class=\"hljs-comment\">/*x*/</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-328-json",
+    "language": "json",
+    "code": "{\"value\"//x\n,😀\"value\"[xx xx😀 ",
+    "ignoreIllegals": false,
+    "html": "{&quot;value&quot;//x\n,😀&quot;value&quot;[xx xx😀 ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-329-json",
+    "language": "json",
+    "code": "{\"value\"//x\n,😀\"value\"[xx xx😀 ",
+    "ignoreIllegals": true,
+    "html": "{<span class=\"hljs-attr\">&quot;value&quot;</span><span class=\"hljs-comment\">//x</span>\n,😀<span class=\"hljs-attr\">&quot;value&quot;</span>[xx xx😀 ",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-330-json",
+    "language": "json",
+    "code": "//x\nfalse\" nullfalsetrue\\//x\nfalse",
+    "ignoreIllegals": false,
+    "html": "//x\nfalse&quot; nullfalsetrue\\//x\nfalse",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-331-json",
+    "language": "json",
+    "code": "//x\nfalse\" nullfalsetrue\\//x\nfalse",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-literal\">false</span><span class=\"hljs-string\">&quot; nullfalsetrue\\//x\nfalse</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-332-json",
+    "language": "json",
+    "code": "\" //x\n/*x*/true][,😀12",
+    "ignoreIllegals": false,
+    "html": "&quot; //x\n/*x*/true][,😀12",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-333-json",
+    "language": "json",
+    "code": "\" //x\n/*x*/true][,😀12",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-string\">&quot; //x\n/*x*/true][,😀12</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-334-json",
+    "language": "json",
+    "code": "[,{\\null}\" null/*x*/",
+    "ignoreIllegals": false,
+    "html": "[,{\\null}&quot; null/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-335-json",
+    "language": "json",
+    "code": "[,{\\null}\" null/*x*/",
+    "ignoreIllegals": true,
+    "html": "[,{\\null}<span class=\"hljs-string\">&quot; null/*x*/</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-336-json",
+    "language": "json",
+    "code": "😀\"value\"\r\nfalse:12nullfalse\"]",
+    "ignoreIllegals": false,
+    "html": "😀&quot;value&quot;\r\nfalse:12nullfalse&quot;]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-337-json",
+    "language": "json",
+    "code": "😀\"value\"\r\nfalse:12nullfalse\"]",
+    "ignoreIllegals": true,
+    "html": "😀<span class=\"hljs-string\">&quot;value&quot;</span>\r\n<span class=\"hljs-literal\">false</span>:<span class=\"hljs-number\">12</span>nullfalse<span class=\"hljs-string\">&quot;]</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-338-json",
+    "language": "json",
+    "code": "[/*x*/😀]//x\nxx xx: [/*x*/",
+    "ignoreIllegals": false,
+    "html": "[/*x*/😀]//x\nxx xx: [/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-339-json",
+    "language": "json",
+    "code": "[/*x*/😀]//x\nxx xx: [/*x*/",
+    "ignoreIllegals": true,
+    "html": "[<span class=\"hljs-comment\">/*x*/</span>😀]<span class=\"hljs-comment\">//x</span>\nxx xx: [<span class=\"hljs-comment\">/*x*/</span>",
+    "relevance": 5,
+    "illegal": false
+  },
+  {
+    "name": "case-340-json",
+    "language": "json",
+    "code": ":\\null}😀\\\r\nxx xx:\"value\"",
+    "ignoreIllegals": false,
+    "html": ":\\null}😀\\\r\nxx xx:&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-341-json",
+    "language": "json",
+    "code": ":\\null}😀\\\r\nxx xx:\"value\"",
+    "ignoreIllegals": true,
+    "html": ":\\<span class=\"hljs-literal\">null</span>}😀\\\r\nxx xx:<span class=\"hljs-string\">&quot;value&quot;</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-342-json",
+    "language": "json",
+    "code": "//x\n/*x*/: [xx xx😀12//x\nfalse",
+    "ignoreIllegals": false,
+    "html": "//x\n/*x*/: [xx xx😀12//x\nfalse",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-343-json",
+    "language": "json",
+    "code": "//x\n/*x*/: [xx xx😀12//x\nfalse",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-comment\">/*x*/</span>: [xx xx😀<span class=\"hljs-number\">12</span><span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-literal\">false</span>",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-344-json",
+    "language": "json",
+    "code": "{\\[false:]nullxx xx\" ",
+    "ignoreIllegals": false,
+    "html": "{\\[false:]nullxx xx&quot; ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-345-json",
+    "language": "json",
+    "code": "{\\[false:]nullxx xx\" ",
+    "ignoreIllegals": true,
+    "html": "{\\[false:]nullxx xx<span class=\"hljs-string\">&quot; </span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-346-json",
+    "language": "json",
+    "code": "[,{\"value\"//x\nfalse{ \r\n/*x*/",
+    "ignoreIllegals": false,
+    "html": "[,{&quot;value&quot;//x\nfalse{ \r\n/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-347-json",
+    "language": "json",
+    "code": "[,{\"value\"//x\nfalse{ \r\n/*x*/",
+    "ignoreIllegals": true,
+    "html": "[,{<span class=\"hljs-attr\">&quot;value&quot;</span><span class=\"hljs-comment\">//x</span>\nfalse{ \r\n<span class=\"hljs-comment\">/*x*/</span>",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-348-json",
+    "language": "json",
+    "code": "😀]null/*x*/: null}true]",
+    "ignoreIllegals": false,
+    "html": "😀]null/*x*/: null}true]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-349-json",
+    "language": "json",
+    "code": "😀]null/*x*/: null}true]",
+    "ignoreIllegals": true,
+    "html": "😀]<span class=\"hljs-literal\">null</span><span class=\"hljs-comment\">/*x*/</span>: <span class=\"hljs-literal\">null</span>}<span class=\"hljs-literal\">true</span>]",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-350-json",
+    "language": "json",
+    "code": "nullfalse😀\\//x\n/*x*/{]null/*x*/",
+    "ignoreIllegals": false,
+    "html": "nullfalse😀\\//x\n/*x*/{]null/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-351-json",
+    "language": "json",
+    "code": "nullfalse😀\\//x\n/*x*/{]null/*x*/",
+    "ignoreIllegals": true,
+    "html": "nullfalse😀\\<span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-comment\">/*x*/</span>{]null<span class=\"hljs-comment\">/*x*/</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-352-json",
+    "language": "json",
+    "code": "{\\nullfalse😀 [/*x*/😀\"value\"",
+    "ignoreIllegals": false,
+    "html": "{\\nullfalse😀 [/*x*/😀&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-353-json",
+    "language": "json",
+    "code": "{\\nullfalse😀 [/*x*/😀\"value\"",
+    "ignoreIllegals": true,
+    "html": "{\\nullfalse😀 [<span class=\"hljs-comment\">/*x*/</span>😀<span class=\"hljs-attr\">&quot;value&quot;</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-354-json",
+    "language": "json",
+    "code": "[false\" nullxx xx\"\\//x\nfalse",
+    "ignoreIllegals": false,
+    "html": "[<span class=\"hljs-literal\">false</span><span class=\"hljs-string\">&quot; nullxx xx&quot;</span>\\<span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-literal\">false</span>",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-355-json",
+    "language": "json",
+    "code": "[false\" nullxx xx\"\\//x\nfalse",
+    "ignoreIllegals": true,
+    "html": "[<span class=\"hljs-literal\">false</span><span class=\"hljs-string\">&quot; nullxx xx&quot;</span>\\<span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-literal\">false</span>",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-356-json",
+    "language": "json",
+    "code": "{12nullxx xx\"12[,{\"value\"",
+    "ignoreIllegals": false,
+    "html": "{12nullxx xx&quot;12[,{&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-357-json",
+    "language": "json",
+    "code": "{12nullxx xx\"12[,{\"value\"",
+    "ignoreIllegals": true,
+    "html": "{12nullxx xx<span class=\"hljs-attr\">&quot;12[,{&quot;</span>value<span class=\"hljs-attr\">&quot;</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-358-json",
+    "language": "json",
+    "code": "[,true\\nullxx xx: //x\n,",
+    "ignoreIllegals": false,
+    "html": "[,<span class=\"hljs-literal\">true</span>\\nullxx xx: <span class=\"hljs-comment\">//x</span>\n,",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-359-json",
+    "language": "json",
+    "code": "[,true\\nullxx xx: //x\n,",
+    "ignoreIllegals": true,
+    "html": "[,<span class=\"hljs-literal\">true</span>\\nullxx xx: <span class=\"hljs-comment\">//x</span>\n,",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-360-json",
+    "language": "json",
+    "code": "😀]\r\n,\" 0x0xfalsetrue\"value\"",
+    "ignoreIllegals": false,
+    "html": "😀]\r\n,&quot; 0x0xfalsetrue&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-361-json",
+    "language": "json",
+    "code": "😀]\r\n,\" 0x0xfalsetrue\"value\"",
+    "ignoreIllegals": true,
+    "html": "😀]\r\n,<span class=\"hljs-string\">&quot; 0x0xfalsetrue&quot;</span>value<span class=\"hljs-string\">&quot;</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-362-json",
+    "language": "json",
+    "code": "[false{]0x0xfalse:\"value\"[}",
+    "ignoreIllegals": false,
+    "html": "[false{]0x0xfalse:&quot;value&quot;[}",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-363-json",
+    "language": "json",
+    "code": "[false{]0x0xfalse:\"value\"[}",
+    "ignoreIllegals": true,
+    "html": "[<span class=\"hljs-literal\">false</span>{]0x0xfalse:<span class=\"hljs-string\">&quot;value&quot;</span>[}",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-364-json",
+    "language": "json",
+    "code": "{]0x0x,😀\\[}😀\"value\"",
+    "ignoreIllegals": false,
+    "html": "{]0x0x,😀\\[}😀&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-365-json",
+    "language": "json",
+    "code": "{]0x0x,😀\\[}😀\"value\"",
+    "ignoreIllegals": true,
+    "html": "{]0x0x,😀\\[}😀<span class=\"hljs-string\">&quot;value&quot;</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-366-json",
+    "language": "json",
+    "code": "//x\n/*x*/😀\\\r\n}{12[,",
+    "ignoreIllegals": false,
+    "html": "//x\n/*x*/😀\\\r\n}{12[,",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-367-json",
+    "language": "json",
+    "code": "//x\n/*x*/😀\\\r\n}{12[,",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-comment\">/*x*/</span>😀\\\r\n}{12[,",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-368-json",
+    "language": "json",
+    "code": ":]\r\n}{ //x\n/*x*/😀]",
+    "ignoreIllegals": false,
+    "html": ":]\r\n}{ //x\n/*x*/😀]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-369-json",
+    "language": "json",
+    "code": ":]\r\n}{ //x\n/*x*/😀]",
+    "ignoreIllegals": true,
+    "html": ":]\r\n}{ <span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-comment\">/*x*/</span>😀]",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-370-json",
+    "language": "json",
+    "code": "//x\n,{ 0x0x,{12[xx xx",
+    "ignoreIllegals": false,
+    "html": "//x\n,{ 0x0x,{12[xx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-371-json",
+    "language": "json",
+    "code": "//x\n,{ 0x0x,{12[xx xx",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\n,{ 0x0x,{12[xx xx",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-372-json",
+    "language": "json",
+    "code": "{120x0xxx xx{12[false{ ",
+    "ignoreIllegals": false,
+    "html": "{120x0xxx xx{12[false{ ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-373-json",
+    "language": "json",
+    "code": "{120x0xxx xx{12[false{ ",
+    "ignoreIllegals": true,
+    "html": "{120x0xxx xx{12[false{ ",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-374-json",
+    "language": "json",
+    "code": "null,\"]0x0x,:][,",
+    "ignoreIllegals": false,
+    "html": "null,&quot;]0x0x,:][,",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-375-json",
+    "language": "json",
+    "code": "null,\"]0x0x,:][,",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-literal\">null</span>,<span class=\"hljs-string\">&quot;]0x0x,:][,</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-376-json",
+    "language": "json",
+    "code": ":]//x\n,😀]null}😀 ",
+    "ignoreIllegals": false,
+    "html": ":]//x\n,😀]null}😀 ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-377-json",
+    "language": "json",
+    "code": ":]//x\n,😀]null}😀 ",
+    "ignoreIllegals": true,
+    "html": ":]<span class=\"hljs-comment\">//x</span>\n,😀]<span class=\"hljs-literal\">null</span>}😀 ",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-378-json",
+    "language": "json",
+    "code": "[,true //x\nfalse\"\\[,",
+    "ignoreIllegals": false,
+    "html": "[,<span class=\"hljs-literal\">true</span> <span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-literal\">false</span><span class=\"hljs-string\">&quot;\\[,</span>",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-379-json",
+    "language": "json",
+    "code": "[,true //x\nfalse\"\\[,",
+    "ignoreIllegals": true,
+    "html": "[,<span class=\"hljs-literal\">true</span> <span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-literal\">false</span><span class=\"hljs-string\">&quot;\\[,</span>",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-380-json",
+    "language": "json",
+    "code": ":]//x\nfalsetrue]\r\nfalse😀\"value\"",
+    "ignoreIllegals": false,
+    "html": ":]//x\nfalsetrue]\r\nfalse😀&quot;value&quot;",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-381-json",
+    "language": "json",
+    "code": ":]//x\nfalsetrue]\r\nfalse😀\"value\"",
+    "ignoreIllegals": true,
+    "html": ":]<span class=\"hljs-comment\">//x</span>\nfalsetrue]\r\n<span class=\"hljs-literal\">false</span>😀<span class=\"hljs-string\">&quot;value&quot;</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-382-json",
+    "language": "json",
+    "code": "0x0x,true120x0x}{ [xx xx",
+    "ignoreIllegals": false,
+    "html": "0x0x,true120x0x}{ [xx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-383-json",
+    "language": "json",
+    "code": "0x0x,true120x0x}{ [xx xx",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x,true120x0x}{ [xx xx",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-384-json",
+    "language": "json",
+    "code": "\"]null}{]nullxx xx😀]",
+    "ignoreIllegals": false,
+    "html": "<span class=\"hljs-string\">&quot;]null}{]nullxx xx😀]</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-385-json",
+    "language": "json",
+    "code": "\"]null}{]nullxx xx😀]",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-string\">&quot;]null}{]nullxx xx😀]</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-386-json",
+    "language": "json",
+    "code": "//x\n,:\\//x\nxx xx\"\"value\"//x\nxx xx",
+    "ignoreIllegals": false,
+    "html": "//x\n,:\\//x\nxx xx&quot;&quot;value&quot;//x\nxx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-387-json",
+    "language": "json",
+    "code": "//x\n,:\\//x\nxx xx\"\"value\"//x\nxx xx",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\n,:\\<span class=\"hljs-comment\">//x</span>\nxx xx<span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;//x\nxx xx</span>",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-388-json",
+    "language": "json",
+    "code": ":\\\r\n/*x*/\" \r\n,true]",
+    "ignoreIllegals": false,
+    "html": ":\\\r\n/*x*/&quot; \r\n,true]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-389-json",
+    "language": "json",
+    "code": ":\\\r\n/*x*/\" \r\n,true]",
+    "ignoreIllegals": true,
+    "html": ":\\\r\n<span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-string\">&quot; \r\n,true]</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-390-json",
+    "language": "json",
+    "code": "0x0x,: //x\n,{][xx xx",
+    "ignoreIllegals": false,
+    "html": "0x0x,: //x\n,{][xx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-391-json",
+    "language": "json",
+    "code": "0x0x,: //x\n,{][xx xx",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x,: <span class=\"hljs-comment\">//x</span>\n,{][xx xx",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-392-json",
+    "language": "json",
+    "code": "\"\"value\"[}\"12null/*x*/true\\",
+    "ignoreIllegals": false,
+    "html": "&quot;&quot;value&quot;[}&quot;12null/*x*/true\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-393-json",
+    "language": "json",
+    "code": "\"\"value\"[}\"12null/*x*/true\\",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;[}&quot;</span><span class=\"hljs-number\">12</span><span class=\"hljs-literal\">null</span><span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-literal\">true</span>\\",
+    "relevance": 5,
+    "illegal": false
+  },
+  {
+    "name": "case-394-json",
+    "language": "json",
+    "code": "\r\nxx xx\"\"value\"[}{\"value\"//x\nxx xx",
+    "ignoreIllegals": false,
+    "html": "\r\nxx xx&quot;&quot;value&quot;[}{&quot;value&quot;//x\nxx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-395-json",
+    "language": "json",
+    "code": "\r\nxx xx\"\"value\"[}{\"value\"//x\nxx xx",
+    "ignoreIllegals": true,
+    "html": "\r\nxx xx<span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;[}{&quot;</span>value<span class=\"hljs-string\">&quot;//x\nxx xx</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-396-json",
+    "language": "json",
+    "code": "😀\\\r\nxx xx\"\\\r\nfalse:\\",
+    "ignoreIllegals": false,
+    "html": "😀\\\r\nxx xx&quot;\\\r\nfalse:\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-397-json",
+    "language": "json",
+    "code": "😀\\\r\nxx xx\"\\\r\nfalse:\\",
+    "ignoreIllegals": true,
+    "html": "😀\\\r\nxx xx<span class=\"hljs-string\">&quot;\\\r\nfalse:\\</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-398-json",
+    "language": "json",
+    "code": "nullfalse😀]0x0xfalse:]0x0xxx xx",
+    "ignoreIllegals": false,
+    "html": "nullfalse😀]0x0xfalse:]0x0xxx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-399-json",
+    "language": "json",
+    "code": "nullfalse😀]0x0xfalse:]0x0xxx xx",
+    "ignoreIllegals": true,
+    "html": "nullfalse😀]<span class=\"hljs-number\">0x0</span>xfalse:]<span class=\"hljs-number\">0x0</span>xxx xx",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-400-json",
+    "language": "json",
+    "code": "\" 0x0x}:]0x0x,{ ",
+    "ignoreIllegals": false,
+    "html": "<span class=\"hljs-string\">&quot; 0x0x}:]0x0x,{ </span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-401-json",
+    "language": "json",
+    "code": "\" 0x0x}:]0x0x,{ ",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-string\">&quot; 0x0x}:]0x0x,{ </span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-402-json",
+    "language": "json",
+    "code": "\r\nxx xx\"120x0x,true //x\n}",
+    "ignoreIllegals": false,
+    "html": "\r\nxx xx&quot;120x0x,true //x\n}",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-403-json",
+    "language": "json",
+    "code": "\r\nxx xx\"120x0x,true //x\n}",
+    "ignoreIllegals": true,
+    "html": "\r\nxx xx<span class=\"hljs-string\">&quot;120x0x,true //x\n}</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-404-json",
+    "language": "json",
+    "code": "{\"value\"\r\nxx xx:\"value\"//x\n/*x*/: ",
+    "ignoreIllegals": false,
+    "html": "{&quot;value&quot;\r\nxx xx:&quot;value&quot;//x\n/*x*/: ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-405-json",
+    "language": "json",
+    "code": "{\"value\"\r\nxx xx:\"value\"//x\n/*x*/: ",
+    "ignoreIllegals": true,
+    "html": "{<span class=\"hljs-attr\">&quot;value&quot;</span>\r\nxx xx:<span class=\"hljs-string\">&quot;value&quot;</span><span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-comment\">/*x*/</span>: ",
+    "relevance": 4,
+    "illegal": false
+  },
+  {
+    "name": "case-406-json",
+    "language": "json",
+    "code": "0x0x,:\\nullxx xx{ 0x0x}",
+    "ignoreIllegals": false,
+    "html": "0x0x,:\\nullxx xx{ 0x0x}",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-407-json",
+    "language": "json",
+    "code": "0x0x,:\\nullxx xx{ 0x0x}",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x,:\\nullxx xx{ 0x0x}",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-408-json",
+    "language": "json",
+    "code": "{]null,\" \r\n,:\\",
+    "ignoreIllegals": false,
+    "html": "{]null,&quot; \r\n,:\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-409-json",
+    "language": "json",
+    "code": "{]null,\" \r\n,:\\",
+    "ignoreIllegals": true,
+    "html": "{]null,<span class=\"hljs-attr\">&quot; \r\n,:\\</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-410-json",
+    "language": "json",
+    "code": "//x\nxx xx{]//x\nxx xx😀\"value\"null,",
+    "ignoreIllegals": false,
+    "html": "//x\nxx xx{]//x\nxx xx😀&quot;value&quot;null,",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-411-json",
+    "language": "json",
+    "code": "//x\nxx xx{]//x\nxx xx😀\"value\"null,",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\nxx xx{]<span class=\"hljs-comment\">//x</span>\nxx xx😀<span class=\"hljs-attr\">&quot;value&quot;</span>null,",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-412-json",
+    "language": "json",
+    "code": ":]nullxx xx😀]0x0x,true12",
+    "ignoreIllegals": false,
+    "html": ":]nullxx xx😀]0x0x,true12",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-413-json",
+    "language": "json",
+    "code": ":]nullxx xx😀]0x0x,true12",
+    "ignoreIllegals": true,
+    "html": ":]nullxx xx😀]<span class=\"hljs-number\">0x0</span>x,true12",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-414-json",
+    "language": "json",
+    "code": "0x0x,true [/*x*/\"12nullfalse",
+    "ignoreIllegals": false,
+    "html": "0x0x,true [/*x*/&quot;12nullfalse",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-415-json",
+    "language": "json",
+    "code": "0x0x,true [/*x*/\"12nullfalse",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x,<span class=\"hljs-literal\">true</span> [<span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-string\">&quot;12nullfalse</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-416-json",
+    "language": "json",
+    "code": "😀 \r\nfalse{]null/*x*/true ",
+    "ignoreIllegals": false,
+    "html": "😀 \r\nfalse{]null/*x*/true ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-417-json",
+    "language": "json",
+    "code": "😀 \r\nfalse{]null/*x*/true ",
+    "ignoreIllegals": true,
+    "html": "😀 \r\n<span class=\"hljs-literal\">false</span>{]null<span class=\"hljs-comment\">/*x*/</span>true ",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-418-json",
+    "language": "json",
+    "code": "0x0x}: \r\n}:12\r\n,",
+    "ignoreIllegals": false,
+    "html": "0x0x}: \r\n}:12\r\n,",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-419-json",
+    "language": "json",
+    "code": "0x0x}: \r\n}:12\r\n,",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>x}: \r\n}:<span class=\"hljs-number\">12</span>\r\n,",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-420-json",
+    "language": "json",
+    "code": "{\"value\"0x0x/*x*/😀 null,😀12",
+    "ignoreIllegals": false,
+    "html": "{&quot;value&quot;0x0x/*x*/😀 null,😀12",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-421-json",
+    "language": "json",
+    "code": "{\"value\"0x0x/*x*/😀 null,😀12",
+    "ignoreIllegals": true,
+    "html": "{<span class=\"hljs-attr\">&quot;value&quot;</span>0x0x<span class=\"hljs-comment\">/*x*/</span>😀 null,😀12",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-422-json",
+    "language": "json",
+    "code": "0x0xxx xx:\\0x0x,true120x0x/*x*/",
+    "ignoreIllegals": false,
+    "html": "0x0xxx xx:\\0x0x,true120x0x/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-423-json",
+    "language": "json",
+    "code": "0x0xxx xx:\\0x0x,true120x0x/*x*/",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-number\">0x0</span>xxx xx:\\<span class=\"hljs-number\">0x0</span>x,true120x0x<span class=\"hljs-comment\">/*x*/</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-424-json",
+    "language": "json",
+    "code": ":12//x\n}😀\"value\"nullfalse\"12",
+    "ignoreIllegals": false,
+    "html": ":12//x\n}😀&quot;value&quot;nullfalse&quot;12",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-425-json",
+    "language": "json",
+    "code": ":12//x\n}😀\"value\"nullfalse\"12",
+    "ignoreIllegals": true,
+    "html": ":<span class=\"hljs-number\">12</span><span class=\"hljs-comment\">//x</span>\n}😀<span class=\"hljs-string\">&quot;value&quot;</span>nullfalse<span class=\"hljs-string\">&quot;12</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-426-json",
+    "language": "json",
+    "code": "\r\nxx xxtrue [,\"12null/*x*/",
+    "ignoreIllegals": false,
+    "html": "\r\nxx xxtrue [,&quot;12null/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-427-json",
+    "language": "json",
+    "code": "\r\nxx xxtrue [,\"12null/*x*/",
+    "ignoreIllegals": true,
+    "html": "\r\nxx xxtrue [,<span class=\"hljs-string\">&quot;12null/*x*/</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-428-json",
+    "language": "json",
+    "code": "\"\"value\"0x0xfalse😀12[}😀 ",
+    "ignoreIllegals": false,
+    "html": "&quot;&quot;value&quot;0x0xfalse😀12[}😀 ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-429-json",
+    "language": "json",
+    "code": "\"\"value\"0x0xfalse😀12[}😀 ",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;0x0xfalse😀12[}😀 </span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-430-json",
+    "language": "json",
+    "code": "[xx xx{\"value\"\r\nfalse{][xx xx",
+    "ignoreIllegals": false,
+    "html": "[xx xx{&quot;value&quot;\r\nfalse{][xx xx",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-431-json",
+    "language": "json",
+    "code": "[xx xx{\"value\"\r\nfalse{][xx xx",
+    "ignoreIllegals": true,
+    "html": "[xx xx{<span class=\"hljs-attr\">&quot;value&quot;</span>\r\nfalse{][xx xx",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-432-json",
+    "language": "json",
+    "code": "😀]//x\n}:]0x0x/*x*/:\\",
+    "ignoreIllegals": false,
+    "html": "😀]//x\n}:]0x0x/*x*/:\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-433-json",
+    "language": "json",
+    "code": "😀]//x\n}:]0x0x/*x*/:\\",
+    "ignoreIllegals": true,
+    "html": "😀]<span class=\"hljs-comment\">//x</span>\n}:]<span class=\"hljs-number\">0x0</span>x<span class=\"hljs-comment\">/*x*/</span>:\\",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-434-json",
+    "language": "json",
+    "code": "nullfalse{12[false😀\\\r\n/*x*/",
+    "ignoreIllegals": false,
+    "html": "nullfalse{12[false😀\\\r\n/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-435-json",
+    "language": "json",
+    "code": "nullfalse{12[false😀\\\r\n/*x*/",
+    "ignoreIllegals": true,
+    "html": "nullfalse{12[false😀\\\r\n<span class=\"hljs-comment\">/*x*/</span>",
+    "relevance": 1,
+    "illegal": false
+  },
+  {
+    "name": "case-436-json",
+    "language": "json",
+    "code": "😀]0x0xfalse{ [false{]",
+    "ignoreIllegals": false,
+    "html": "😀]0x0xfalse{ [false{]",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-437-json",
+    "language": "json",
+    "code": "😀]0x0xfalse{ [false{]",
+    "ignoreIllegals": true,
+    "html": "😀]<span class=\"hljs-number\">0x0</span>xfalse{ [false{]",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-438-json",
+    "language": "json",
+    "code": "//x\n,true]null/*x*/\"\"value\"\r\nfalse",
+    "ignoreIllegals": false,
+    "html": "//x\n,true]null/*x*/&quot;&quot;value&quot;\r\nfalse",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-439-json",
+    "language": "json",
+    "code": "//x\n,true]null/*x*/\"\"value\"\r\nfalse",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-comment\">//x</span>\n,<span class=\"hljs-literal\">true</span>]<span class=\"hljs-literal\">null</span><span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;\r\nfalse</span>",
+    "relevance": 5,
+    "illegal": false
+  },
+  {
+    "name": "case-440-json",
+    "language": "json",
+    "code": "\" \r\nfalse{12null,{12",
+    "ignoreIllegals": false,
+    "html": "&quot; \r\nfalse{12null,{12",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-441-json",
+    "language": "json",
+    "code": "\" \r\nfalse{12null,{12",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-string\">&quot; \r\nfalse{12null,{12</span>",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-442-json",
+    "language": "json",
+    "code": "null,\"12\r\nfalse\"\\null}",
+    "ignoreIllegals": false,
+    "html": "null,&quot;12\r\nfalse&quot;\\null}",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-443-json",
+    "language": "json",
+    "code": "null,\"12\r\nfalse\"\\null}",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-literal\">null</span>,<span class=\"hljs-string\">&quot;12\r\nfalse&quot;</span>\\<span class=\"hljs-literal\">null</span>}",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-444-json",
+    "language": "json",
+    "code": ":\\\r\nfalse:\\//x\n/*x*/true12",
+    "ignoreIllegals": false,
+    "html": ":\\\r\nfalse:\\//x\n/*x*/true12",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-445-json",
+    "language": "json",
+    "code": ":\\\r\nfalse:\\//x\n/*x*/true12",
+    "ignoreIllegals": true,
+    "html": ":\\\r\n<span class=\"hljs-literal\">false</span>:\\<span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-comment\">/*x*/</span>true12",
+    "relevance": 3,
+    "illegal": false
+  },
+  {
+    "name": "case-446-json",
+    "language": "json",
+    "code": "\r\n/*x*/{]nullxx xx{\\\r\n/*x*/",
+    "ignoreIllegals": false,
+    "html": "\r\n/*x*/{]nullxx xx{\\\r\n/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-447-json",
+    "language": "json",
+    "code": "\r\n/*x*/{]nullxx xx{\\\r\n/*x*/",
+    "ignoreIllegals": true,
+    "html": "\r\n<span class=\"hljs-comment\">/*x*/</span>{]nullxx xx{\\\r\n<span class=\"hljs-comment\">/*x*/</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-448-json",
+    "language": "json",
+    "code": "😀\\0x0xfalsetrue\\[falsetrue\\",
+    "ignoreIllegals": false,
+    "html": "😀\\0x0xfalsetrue\\[falsetrue\\",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-449-json",
+    "language": "json",
+    "code": "😀\\0x0xfalsetrue\\[falsetrue\\",
+    "ignoreIllegals": true,
+    "html": "😀\\<span class=\"hljs-number\">0x0</span>xfalsetrue\\[falsetrue\\",
+    "relevance": 0,
+    "illegal": false
+  },
+  {
+    "name": "case-450-json",
+    "language": "json",
+    "code": "null,\"\"value\"null}😀 \r\n/*x*/",
+    "ignoreIllegals": false,
+    "html": "null,&quot;&quot;value&quot;null}😀 \r\n/*x*/",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-451-json",
+    "language": "json",
+    "code": "null,\"\"value\"null}😀 \r\n/*x*/",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-literal\">null</span>,<span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;null}😀 \r\n/*x*/</span>",
+    "relevance": 2,
+    "illegal": false
+  },
+  {
+    "name": "case-452-json",
+    "language": "json",
+    "code": "true\\//x\n/*x*/\"\"value\"0x0xfalse😀 ",
+    "ignoreIllegals": false,
+    "html": "true\\//x\n/*x*/&quot;&quot;value&quot;0x0xfalse😀 ",
+    "relevance": 0,
+    "illegal": true
+  },
+  {
+    "name": "case-453-json",
+    "language": "json",
+    "code": "true\\//x\n/*x*/\"\"value\"0x0xfalse😀 ",
+    "ignoreIllegals": true,
+    "html": "<span class=\"hljs-literal\">true</span>\\<span class=\"hljs-comment\">//x</span>\n<span class=\"hljs-comment\">/*x*/</span><span class=\"hljs-string\">&quot;&quot;</span>value<span class=\"hljs-string\">&quot;0x0xfalse😀 </span>",
+    "relevance": 4,
+    "illegal": false
+  }
+]

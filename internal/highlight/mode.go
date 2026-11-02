@@ -133,6 +133,7 @@ type compiledMode struct {
 	contains      []*compiledMode
 	starts        *compiledMode
 	matcher       *resumableMultiRegex
+	illegalBatch  *ignoredIllegalBatch
 	subLanguage   []string
 
 	beforeBegin func(m *match, resp *Response)
@@ -373,6 +374,7 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 		cmode.starts = compiledStarts
 	}
 	cmode.matcher = c.buildModeRegex(cmode)
+	cmode.illegalBatch = newIgnoredIllegalBatch(cmode)
 	return cmode, nil
 }
 

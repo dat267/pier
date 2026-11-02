@@ -7,6 +7,20 @@ import (
 
 // pi v1.5.0 uses highlight.js 10.7.3 for JSON. Its repeated `0x` input
 // highlights only the initial `0x0` as a number and emits the rest as text.
+// M140: ignored single-character illegals must not allocate per character.
+// This budget covers the whole public operation, not the choice of matcher.
+func TestLongInvalidJSONNumberAllocationBudget(t *testing.T) {
+	code := strings.Repeat("0x", 4096)
+	allocs := testing.AllocsPerRun(1, func() {
+		if _, err := HighlightWith(code, "json", true); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if allocs > 256 {
+		t.Fatalf("ignored JSON text allocated %.0f objects, want <= 256", allocs)
+	}
+}
+
 func TestLongInvalidJSONNumberMatchesReference(t *testing.T) {
 	code := strings.Repeat("0x", 4096)
 	result, err := HighlightWith(code, "json", true)

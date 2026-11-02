@@ -4220,23 +4220,44 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 
 ### D348
 
-**Highlighter optimization requires beating the pinned reference without workload regressions.**
+**Ignored single-character illegal runs are batched without changing token output.**
 
-Reference: pi v1.5.0 `packages/coding-agent/src/utils/syntax-highlight.ts`
-uses `highlight.js` 10.7.3. On a warmed 8 KiB repeated `0x` JSON input (4,096
-pairs), five warmed Node runs measured 1.90–2.01 ms/op and Go's existing
-implementation measured 19.82–20.31 ms/op. A byte-buffer prototype improved
-that input to about 4.8 ms/op but regressed representative JSON. A second
-source-span/builder prototype reached 3.89–4.57 ms/op on the slow case and
-2.39–2.65 ms/op on representative JSON (2.32–2.51 ms/op baseline), with lower
-allocations and the same output, but remained slower than Node on the slow case;
-both prototypes were reverted. Representative JSON measured 2.32–2.65 ms/op in
-Go vs 4.09–4.15 ms/op in Node. No optimization is accepted from a
-pathological-only win: M140 remains in `TODO.md`, with same-workload benchmarks
-in `internal/highlight/performance_bench_test.go` and the Node-generated output
-pinned by `TestLongInvalidJSONNumberMatchesReference`. Continue only with a
-change that beats the pinned implementation on the reproduced slow case without
-regressing representative cases.
+Reference: pi v1.5.0 (`f9a26365`)
+`packages/coding-agent/src/utils/syntax-highlight.ts` uses highlight.js 10.7.3.
+Its `core.js` `processLexeme` appends each ignored illegal to `modeBuffer`.
+On the reproduced 8 KiB JSON input (`0x` repeated 4,096 times), Go's immutable
+string concatenation and per-character matching cost about 20 ms/op and 24,700
+allocations. Byte-buffer and source-span prototypes reached 4.8 and 3.9–4.6
+ms/op but still lost to Node, so neither was retained.
+
+`ignoredIllegalBatch` now coalesces consecutive ignored character-class
+illegals into one source slice. A lazy, capture-free regex searches begin/end
+rules once, consuming the real preceding rune before each potential token so
+`^` and `\b` never see an artificial slice boundary. The ordinary matcher then
+resolves rule priority, captures and callbacks at that position. Isolated
+illegals, partial-resume scans, manual rules, zero-width and multi-character
+illegal patterns retain the old scanner. The batched character count preserves
+the port's existing iteration guard, including UTF-16 surrogate units, and
+cannot consume a token past that guard. The per-mode `sync.Once` publishes an
+immutable matcher, runs no user code and adds no UI ownership or worker handoff.
+
+Same-process paired scanner measurements on an Intel N150 (three 100-iteration
+runs, warmed) show 20.07–20.25 ms/op unbatched versus 1.27–1.47 ms/op batched
+(medians 20.14 and 1.27), with allocations falling from about 24,700 to 30.
+Five warmed pinned Node runs measured 1.88–1.99 ms/op (median 1.92), so the
+retained fix beats the reference on the reproduced input. Representative JSON (7,424 bytes), valid JSON, normal
+JavaScript and Python showed no meaningful regression in the paired runs.
+This is a bounded improvement, not a claim that every language beats Node.
+Reproduce with `BenchmarkIgnoredIllegalScanner` and
+`node internal/highlight/testdata/ignored-illegals/benchmark.mjs`.
+
+Tests: the red-first `TestLongInvalidJSONNumberAllocationBudget` (24,654
+allocations before, budget 256), `TestLongInvalidJSONNumberMatchesReference`,
+`TestIgnoredIllegalScannerMatchesReference` (454 Node-generated fixtures),
+`TestIgnoredIllegalBatchPreservesBuiltinScanner`,
+`TestIgnoredIllegalBatchPreservesIterationBudget`, and
+`FuzzIgnoredIllegalBatch` cover output, callbacks, ordering, Unicode, nested and
+continued sublanguages, fallbacks and the original scanner.
 
 ### D347
 
