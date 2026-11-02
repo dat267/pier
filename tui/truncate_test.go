@@ -241,10 +241,11 @@ func TestWrapTextWithAnsi(t *testing.T) {
 		t.Fatalf("lines = %q", lines)
 	}
 
-	// A token carrying an ANSI code is not whitespace even when it ends in a
-	// space (upstream tests `token.trim() === ""` on the raw token).
+	// Codes closing a styled word attach to the following space, so the visible
+	// text decides whether a token is whitespace, and the dropped space's codes
+	// stay on the wrapped line (pi v1.5.0 utils.ts).
 	lines = WrapTextWithAnsi("ab\x1b[31m cd", 2)
-	if strings.Join(lines, "|") != "ab|\x1b[31m|\x1b[31mcd" {
+	if strings.Join(lines, "|") != "ab\x1b[31m|\x1b[31mcd" {
 		t.Fatalf("ansi-space wrap = %q", lines)
 	}
 }

@@ -306,6 +306,11 @@ func (t *ansiCodeTracker) lineEndReset() string {
 	if t.underline {
 		result += "\x1b[24m"
 	}
+	if t.strikethrough {
+		// Strikethrough off only; re-opened at the next line's start via
+		// activeCodes (pi v1.5.0 utils.ts).
+		result += "\x1b[29m"
+	}
 	if t.activeHyperlink != nil {
 		result += t.activeHyperlink.close()
 	}

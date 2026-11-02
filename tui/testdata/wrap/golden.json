@@ -173,7 +173,7 @@
     "text": "\u001b[1;4mbold underline wraps here\u001b[0m",
     "width": 5,
     "expected": [
-      "\u001b[1;4mbold \u001b[24m",
+      "\u001b[1;4mbold\u001b[24m",
       "\u001b[1;4munder\u001b[24m",
       "\u001b[1;4mline\u001b[24m",
       "\u001b[1;4mwraps\u001b[24m",
@@ -1101,8 +1101,7 @@
     "text": "é \u001b[0m\n\r\n-",
     "width": 1,
     "expected": [
-      "é",
-      " \u001b[0m",
+      "é\u001b[0m",
       "",
       "-"
     ]

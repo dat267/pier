@@ -573,13 +573,13 @@
     "name": "legacy/\"\\u001b[1;2P\"",
     "sequence": "\u001b[1;2P",
     "kitty": false,
-    "expected": null
+    "expected": "shift+f1"
   },
   {
     "name": "legacy/\"\\u001b[15;5~\"",
     "sequence": "\u001b[15;5~",
     "kitty": false,
-    "expected": null
+    "expected": "ctrl+f5"
   },
   {
     "name": "legacy/\"\\u001bOA\"",
@@ -603,7 +603,7 @@
     "name": "legacy/\"\\u001b[1;2P\"",
     "sequence": "\u001b[1;2P",
     "kitty": false,
-    "expected": null
+    "expected": "shift+f1"
   },
   {
     "name": "legacy/\"\\u001ba\"",
@@ -1275,13 +1275,13 @@
     "name": "kitty/\"\\u001b[1;2P\"",
     "sequence": "\u001b[1;2P",
     "kitty": true,
-    "expected": null
+    "expected": "shift+f1"
   },
   {
     "name": "kitty/\"\\u001b[15;5~\"",
     "sequence": "\u001b[15;5~",
     "kitty": true,
-    "expected": null
+    "expected": "ctrl+f5"
   },
   {
     "name": "kitty/\"\\u001bOA\"",
@@ -1305,7 +1305,7 @@
     "name": "kitty/\"\\u001b[1;2P\"",
     "sequence": "\u001b[1;2P",
     "kitty": true,
-    "expected": null
+    "expected": "shift+f1"
   },
   {
     "name": "kitty/\"\\u001ba\"",

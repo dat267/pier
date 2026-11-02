@@ -2,6 +2,7 @@ package tui
 
 import (
 	"strings"
+	"unicode/utf8"
 )
 
 // Port of the wrapping half of src/utils.ts: ANSI-aware word wrapping.
@@ -253,6 +254,44 @@ func splitLines(text string) []string {
 	return append(lines, text[start:])
 }
 
+// isWhitespaceToken reports whether a token's visible text is only whitespace.
+// Codes closing a styled word attach to the following space, e.g. "\x1b[22m ",
+// so they are skipped (pi v1.5.0 utils.ts isWhitespaceToken).
+func isWhitespaceToken(token string) bool {
+	for index := 0; index < len(token); {
+		if token[index] == 0x1b {
+			_, length := ExtractANSICode(token, index)
+			if length == 0 {
+				return false // A lone ESC is visible text.
+			}
+			index += length
+			continue
+		}
+		r, size := utf8.DecodeRuneInString(token[index:])
+		if !isWhitespaceRune(r) {
+			return false
+		}
+		index += size
+	}
+	return true
+}
+
+// extractANSICodes returns every terminal sequence in text, in order.
+func extractANSICodes(text string) string {
+	var builder strings.Builder
+	index := 0
+	for index < len(text) {
+		code, length := ExtractANSICode(text, index)
+		if code == "" {
+			index++
+			continue
+		}
+		builder.WriteString(code)
+		index += length
+	}
+	return builder.String()
+}
+
 func wrapSingleLine(line string, width int) []string {
 	if line == "" {
 		return []string{""}
@@ -271,13 +310,18 @@ func wrapSingleLine(line string, width int) []string {
 
 	for _, token := range tokens {
 		tokenVisibleLength := VisibleWidth(token)
-		// Upstream tests `token.trim() === ""` on the raw token, so a token
-		// carrying an ANSI code is not whitespace even when it ends in a space.
-		isWhitespace := IsWhitespaceChar(token)
+		// Codes closing a styled word attach to the following space, so the
+		// visible text decides (pi v1.5.0 utils.ts).
+		isWhitespace := isWhitespaceToken(token)
 
 		// A token longer than the width breaks character by character.
 		if tokenVisibleLength > width && !isWhitespace {
 			if currentLine.Len() > 0 {
+				// Trim before the reset, which would otherwise block the final
+				// trimEnd (pi v1.5.0 utils.ts).
+				trimmed := strings.TrimRightFunc(currentLine.String(), isWhitespaceRune)
+				currentLine.Reset()
+				currentLine.WriteString(trimmed)
 				if lineEndReset := tracker.lineEndReset(); lineEndReset != "" {
 					currentLine.WriteString(lineEndReset)
 				}
@@ -295,8 +339,16 @@ func wrapSingleLine(line string, width int) []string {
 		}
 
 		// Adding the token would exceed the width: wrap.
-		if currentVisibleLength+tokenVisibleLength > width && currentVisibleLength > 0 {
+		totalNeeded := currentVisibleLength + tokenVisibleLength
+		if totalNeeded > width && currentVisibleLength > 0 {
 			lineToWrap := strings.TrimRightFunc(currentLine.String(), isWhitespaceRune)
+			if isWhitespace {
+				// The dropped space may carry codes closing a styled word; keep
+				// them on the wrapped line so the style does not reopen on the
+				// next one (pi v1.5.0 utils.ts).
+				lineToWrap += extractANSICodes(token)
+				updateTrackerFromText(token, tracker)
+			}
 			if lineEndReset := tracker.lineEndReset(); lineEndReset != "" {
 				lineToWrap += lineEndReset
 			}
@@ -306,11 +358,15 @@ func wrapSingleLine(line string, width int) []string {
 				currentLine.Reset()
 				currentLine.WriteString(tracker.activeCodes())
 				currentVisibleLength = 0
-			} else {
-				currentLine.Reset()
-				currentLine.WriteString(tracker.activeCodes() + token)
-				currentVisibleLength = tokenVisibleLength
+				continue
 			}
+			currentLine.Reset()
+			currentLine.WriteString(tracker.activeCodes() + token)
+			currentVisibleLength = tokenVisibleLength
+		} else if isWhitespace && totalNeeded > width && strings.Contains(token, "\x1b") {
+			// Whitespace wider than an empty line: only its codes are kept, or
+			// the trailing reset would block the final trim (pi v1.5.0).
+			currentLine.WriteString(extractANSICodes(token))
 		} else {
 			currentLine.WriteString(token)
 			currentVisibleLength += tokenVisibleLength

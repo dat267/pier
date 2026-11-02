@@ -197,6 +197,25 @@ const (
 	funcPageDown = -13
 	funcHome     = -14
 	funcEnd      = -15
+	funcF1       = -21
+	funcF2       = -22
+	funcF3       = -23
+	funcF4       = -24
+	funcF5       = -25
+	funcF6       = -26
+	funcF7       = -27
+	funcF8       = -28
+	funcF9       = -29
+	funcF10      = -30
+	funcF11      = -31
+	funcF12      = -32
+)
+
+// Kitty reserves this Private Use Area range for functional keys (F13-F35,
+// media keys, modifier keys, ...). CSI-u codepoints in it are never text.
+const (
+	kittyFunctionalPUAStart = 57344
+	kittyFunctionalPUAEnd   = 63743
 )
 
 var kittyFunctionalKeyEquivalents = map[int]int{
@@ -366,7 +385,7 @@ func IsKeyRelease(data string) bool {
 		return false
 	}
 	return containsAny(data,
-		":3u", ":3~", ":3A", ":3B", ":3C", ":3D", ":3H", ":3F")
+		":3u", ":3~", ":3A", ":3B", ":3C", ":3D", ":3H", ":3F", ":3P", ":3Q", ":3S")
 }
 
 // IsKeyRepeat reports whether the input is a Kitty protocol key-repeat event.
@@ -377,7 +396,7 @@ func IsKeyRepeat(data string) bool {
 		return false
 	}
 	return containsAny(data,
-		":2u", ":2~", ":2A", ":2B", ":2C", ":2D", ":2H", ":2F")
+		":2u", ":2~", ":2A", ":2B", ":2C", ":2D", ":2H", ":2F", ":2P", ":2Q", ":2S")
 }
 
 func parseEventType(eventTypeStr string, has bool) KeyEventType {
@@ -398,6 +417,7 @@ var (
 	kittyArrowRegex      = regexp.MustCompile(`^\x1b\[1;(\d+)(?::(\d+))?([ABCD])$`)
 	kittyFuncRegex       = regexp.MustCompile(`^\x1b\[(\d+)(?:;(\d+))?(?::(\d+))?~$`)
 	kittyHomeEndRegex    = regexp.MustCompile(`^\x1b\[1;(\d+)(?::(\d+))?([HF])$`)
+	kittyFKeyRegex       = regexp.MustCompile(`^\x1b\[(?:1;(\d+)(?::(\d+))?)?([PQS])$`)
 	modifyOtherKeysRegex = regexp.MustCompile(`^\x1b\[27;(\d+);(\d+)~$`)
 )
 
@@ -468,6 +488,8 @@ func parseKittySequence(data string) (parsedKittySequence, bool) {
 		}
 		funcCodes := map[int]int{
 			2: funcInsert, 3: funcDelete, 5: funcPageUp, 6: funcPageDown, 7: funcHome, 8: funcEnd,
+			11: funcF1, 12: funcF2, 13: funcF3, 14: funcF4, 15: funcF5, 17: funcF6,
+			18: funcF7, 19: funcF8, 20: funcF9, 21: funcF10, 23: funcF11, 24: funcF12,
 		}
 		if codepoint, ok := funcCodes[keyNum]; ok {
 			parsed := parsedKittySequence{codepoint: codepoint, modifier: modValue - 1}
@@ -475,6 +497,21 @@ func parseKittySequence(data string) (parsedKittySequence, bool) {
 			setLastEventType(parsed.eventType)
 			return parsed, true
 		}
+	}
+
+	// F1, F2, F4: \x1b[P/Q/S or \x1b[1;<mod>P/Q/S or \x1b[1;<mod>:<event>P/Q/S.
+	// F3 is sent as \x1b[13~ because \x1b[1;<mod>R collides with cursor position
+	// reports (pi v1.5.0 keys.ts).
+	if match := kittyFKeyRegex.FindStringSubmatch(data); match != nil {
+		modValue := 1
+		if match[1] != "" {
+			modValue = atoiSafe(match[1])
+		}
+		fKeyCodes := map[string]int{"P": funcF1, "Q": funcF2, "S": funcF4}
+		parsed := parsedKittySequence{codepoint: fKeyCodes[match[3]], modifier: modValue - 1}
+		parsed.eventType = parseEventType(match[2], match[2] != "")
+		setLastEventType(parsed.eventType)
+		return parsed, true
 	}
 
 	// Home/End with modifier: \x1b[1;<mod>H/F or \x1b[1;<mod>:<event>H/F.
@@ -1098,6 +1135,30 @@ func formatParsedKey(codepoint int, modifier int, baseLayoutKey int, hasBaseLayo
 		keyName = "left"
 	case effectiveCodepoint == arrowRight:
 		keyName = "right"
+	case effectiveCodepoint == funcF1:
+		keyName = "f1"
+	case effectiveCodepoint == funcF2:
+		keyName = "f2"
+	case effectiveCodepoint == funcF3:
+		keyName = "f3"
+	case effectiveCodepoint == funcF4:
+		keyName = "f4"
+	case effectiveCodepoint == funcF5:
+		keyName = "f5"
+	case effectiveCodepoint == funcF6:
+		keyName = "f6"
+	case effectiveCodepoint == funcF7:
+		keyName = "f7"
+	case effectiveCodepoint == funcF8:
+		keyName = "f8"
+	case effectiveCodepoint == funcF9:
+		keyName = "f9"
+	case effectiveCodepoint == funcF10:
+		keyName = "f10"
+	case effectiveCodepoint == funcF11:
+		keyName = "f11"
+	case effectiveCodepoint == funcF12:
+		keyName = "f12"
 	case effectiveCodepoint >= 48 && effectiveCodepoint <= 57:
 		keyName = string(rune(effectiveCodepoint))
 	case effectiveCodepoint >= 97 && effectiveCodepoint <= 122:
@@ -1294,6 +1355,10 @@ func DecodeKittyPrintable(data string) (string, bool) {
 	}
 	effectiveCodepoint = normalizeKittyFunctionalCodepoint(effectiveCodepoint)
 	if effectiveCodepoint < 32 {
+		return "", false
+	}
+	// Drop unmapped Kitty functional keys (F13-F35, media keys, ...).
+	if effectiveCodepoint >= kittyFunctionalPUAStart && effectiveCodepoint <= kittyFunctionalPUAEnd {
 		return "", false
 	}
 	if !isValidCodepoint(effectiveCodepoint) {
