@@ -62,7 +62,7 @@ func (a *App) importFromJSONL(_ context.Context, inputPath string, cwdOverride s
 		return nil, err
 	}
 	destination := filepath.Join(sessionDir, filepath.Base(resolved))
-	alreadyStored := filepath.Clean(destination) == filepath.Clean(resolved)
+	alreadyStored := coding.PathsEqual(destination, resolved)
 	if !alreadyStored {
 		extension := filepath.Ext(destination)
 		stem := strings.TrimSuffix(destination, extension)

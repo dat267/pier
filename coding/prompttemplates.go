@@ -312,11 +312,7 @@ func LoadPromptTemplatesWithDiagnostics(options LoadPromptTemplatesOptions) Load
 	projectPromptsDir := filepath.Join(resolvedCwd, ConfigDirName, "prompts")
 
 	isUnderPath := func(target, root string) bool {
-		normalizedRoot := filepath.Clean(root)
-		if target == normalizedRoot {
-			return true
-		}
-		return strings.HasPrefix(target, normalizedRoot+string(filepath.Separator))
+		return IsPathWithin(root, target)
 	}
 
 	getSourceInfo := func(resolvedPath string) SourceInfo {

@@ -839,12 +839,7 @@ func LoadSkills(options LoadSkillsOptions, trustProject bool) LoadSkillsResult {
 	userSkillsDir := filepath.Join(resolvedAgentDir, "skills")
 	projectSkillsDir := filepath.Join(resolvedCwd, ".pi", "skills")
 	isUnderPath := func(target string, root string) bool {
-		normalizedRoot := filepath.Clean(root)
-		if target == normalizedRoot {
-			return true
-		}
-		prefix := normalizedRoot + string(filepath.Separator)
-		return strings.HasPrefix(target, prefix)
+		return IsPathWithin(root, target)
 	}
 
 	userAgentsSkillsDir := userAgentsSkillsDirPath()
@@ -971,11 +966,10 @@ func projectAgentsSkillDirs(cwd string, trusted bool, userAgentsSkillsDir string
 	if !trusted {
 		return nil
 	}
-	normalizedUser := filepath.Clean(userAgentsSkillsDir)
 	dirs := collectAncestorAgentsSkillDirs(cwd)
 	filtered := make([]string, 0, len(dirs))
 	for _, dir := range dirs {
-		if filepath.Clean(dir) == normalizedUser {
+		if PathsEqual(dir, userAgentsSkillsDir) {
 			continue
 		}
 		filtered = append(filtered, dir)
