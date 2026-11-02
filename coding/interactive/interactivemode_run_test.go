@@ -508,3 +508,26 @@ func TestRunLoopMaterializesPendingWorkWhileIdle(t *testing.T) {
 		t.Fatalf("loop ran %d beats, wanted >=3; the loop parked after the first", got)
 	}
 }
+
+// Upstream getModelScopeNotice shows the configured scoped models and the
+// cycle key while startup details are visible, and hides them for
+// quietStartup: header/true (pi v1.5.0 interactive-mode.ts).
+func TestRunStartupHeaderModelScope(t *testing.T) {
+	wiring, _ := newRunTestWiring(t)
+	scoped := []coding.ScopedModel{
+		{Model: &ai.Model{ID: "gpt-5"}, ThinkingLevel: ai.ThinkHigh, HasThinking: true},
+		{Model: &ai.Model{ID: "claude"}},
+	}
+	lines := coding.StripAnsi(strings.Join(wiring.BuildStartupHeader(scoped).Render(200), "\n"))
+	if !strings.Contains(lines, "Model scope: gpt-5:high, claude") {
+		t.Fatalf("header missing the model scope: %q", lines)
+	}
+	if !strings.Contains(lines, "to cycle") {
+		t.Fatalf("header missing the cycle hint: %q", lines)
+	}
+	wiring.QuietStartup = coding.QuietStartupSetting{Header: true}
+	lines = coding.StripAnsi(strings.Join(wiring.BuildStartupHeader(scoped).Render(200), "\n"))
+	if strings.Contains(lines, "Model scope:") {
+		t.Fatalf("quiet header still shows the model scope: %q", lines)
+	}
+}

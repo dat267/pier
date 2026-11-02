@@ -310,12 +310,36 @@ func (w *RunWiring) BuildStartupHeader(scopedModels []coding.ScopedModel) tui.Co
 	// explain its features and look up its docs. Pier ships no docs tree
 	// (D176) and the prompt carries no product-feature inventory, so the claim
 	// was false; the line is dropped.
+	// Model scope notice (upstream getModelScopeNotice): show the configured
+	// scoped models and the cycle key while startup details are visible.
+	modelScopeLine := ""
+	if showDetails && len(scopedModels) > 0 {
+		entries := make([]string, 0, len(scopedModels))
+		for _, scoped := range scopedModels {
+			if scoped.Model == nil {
+				continue
+			}
+			entry := scoped.Model.ID
+			if scoped.HasThinking {
+				entry += ":" + string(scoped.ThinkingLevel)
+			}
+			entries = append(entries, entry)
+		}
+		if len(entries) > 0 {
+			cycle := KeyDisplayText("app.model.cycleForward")
+			hint := ""
+			if cycle != "" {
+				hint = theme.Fg("muted", " ("+cycle+" to cycle)")
+			}
+			modelScopeLine = "\n" + theme.Fg("dim", "Model scope: "+strings.Join(entries, ", ")+hint)
+		}
+	}
 	expanded := w.GetStartupExpansionState()
 	header := NewExpandableText(
 		func() string {
-			return logo + "\n" + compactInstructions + "\n" + compactOnboarding
+			return logo + "\n" + compactInstructions + "\n" + compactOnboarding + modelScopeLine
 		},
-		func() string { return logo + "\n" + expandedInstructions },
+		func() string { return logo + "\n" + expandedInstructions + modelScopeLine },
 		expanded, 1, 0)
 	return header
 }
