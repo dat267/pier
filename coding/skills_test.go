@@ -1,12 +1,16 @@
 package coding
 
 import (
+	"context"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 func writeSkill(t *testing.T, dir string, name string, description string) string {
@@ -578,6 +582,56 @@ func TestLoadSkillsFromDirConcurrentWalksAgree(t *testing.T) {
 	for index, result := range results {
 		if got := strings.Join(skillNames(result), ","); got != want {
 			t.Fatalf("walk %d = %q, want %q", index, got, want)
+		}
+	}
+}
+
+// pi v1.4.0 core/skills.ts recursively walks directories synchronously; the Go
+// port preserves traversal results while bounding its parallel directory scans.
+func TestLoadSkillsFromDirBoundsWorkerGoroutines(t *testing.T) {
+	const childEnv = "PIER_TEST_SKILL_SCAN_GOROUTINE_CHILD"
+	if os.Getenv(childEnv) != "1" {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestLoadSkillsFromDirBoundsWorkerGoroutines$")
+		command.Env = append(os.Environ(), childEnv+"=1")
+		output, err := command.CombinedOutput()
+		if ctx.Err() != nil {
+			t.Fatalf("isolated skill-scan probe timed out: %s", output)
+		}
+		if err != nil {
+			t.Fatalf("isolated skill-scan probe failed: %v\n%s", err, output)
+		}
+		return
+	}
+
+	root := t.TempDir()
+	const directories = 4096
+	for index := range directories {
+		if err := os.Mkdir(filepath.Join(root, fmt.Sprintf("dir-%04d", index)), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	done := make(chan struct{})
+	go func() {
+		LoadSkillsFromDir(root)
+		close(done)
+	}()
+	peak := runtime.NumGoroutine()
+	ticker := time.NewTicker(100 * time.Microsecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-done:
+			if peak > 128 {
+				t.Fatalf("scanning %d directories peaked at %d goroutines, want at most 128", directories, peak)
+			}
+			return
+		case <-ticker.C:
+			if count := runtime.NumGoroutine(); count > peak {
+				peak = count
+			}
 		}
 	}
 }

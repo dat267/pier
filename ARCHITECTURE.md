@@ -4075,6 +4075,21 @@ clamp produce the intended maximum.
 
 Test: `TestSettingsFullscreenWheelScrollLines`.
 
+### D339
+
+**Skill-tree scanning uses a fixed pool rather than one goroutine per directory.**
+
+Reference: pi v1.4.0 `packages/coding-agent/src/core/skills.ts`
+`loadSkillsFromDirInternal` recursively scans child directories synchronously.
+Pier retains parallel directory reads but bounds the worker count at four, rather
+than creating a goroutine for every discovered directory. The scan map is still
+assembled by the existing native directory-order traversal, so skills and
+diagnostics retain their prior ordering.
+
+Tests: `TestLoadSkillsFromDirBoundsWorkerGoroutines`,
+`TestLoadSkillsFromDirScansInReadDirOrder`,
+`TestLoadSkillsFromDirPreservesNativeEntryOrder`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

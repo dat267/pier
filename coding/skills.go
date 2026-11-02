@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
@@ -448,32 +447,53 @@ func loadSkillsFromDir(dir string, source string) LoadSkillsResult {
 // the call, so concurrent walks (and the concurrent boot passes that call this)
 // share no state.
 func scanSkillTree(rootDir string, source string) map[string]*skillScanDir {
+	type scanJob struct {
+		dir              string
+		includeRootFiles bool
+		inheritedRules   []skillIgnoreRule
+	}
+	type scanResult struct {
+		dir  string
+		scan *skillScanDir
+	}
+
 	scans := map[string]*skillScanDir{}
-	var mu sync.Mutex
-	var wait sync.WaitGroup
-	sem := make(chan struct{}, skillScanConcurrency)
-	var walk func(dir string, includeRootFiles bool, inheritedRules []skillIgnoreRule)
-	walk = func(dir string, includeRootFiles bool, inheritedRules []skillIgnoreRule) {
-		// Add happens while the parent's count is still held, so it cannot race
-		// the Wait() below (the standard WaitGroup reuse rule).
-		wait.Go(func() {
-			sem <- struct{}{}
-			scan := readSkillDir(dir, rootDir, source, includeRootFiles, inheritedRules)
-			<-sem
-			mu.Lock()
-			scans[dir] = scan
-			mu.Unlock()
-			// Children are queued after the slot is released and before this
-			// goroutine returns, so a blocked child cannot deadlock the pool.
-			for _, item := range scan.items {
+	jobs := make(chan scanJob)
+	results := make(chan scanResult)
+	for range skillScanConcurrency {
+		go func() {
+			for job := range jobs {
+				scan := readSkillDir(job.dir, rootDir, source, job.includeRootFiles, job.inheritedRules)
+				results <- scanResult{dir: job.dir, scan: scan}
+			}
+		}()
+	}
+
+	queue := []scanJob{{dir: rootDir, includeRootFiles: true}}
+	active := 0
+	for len(queue) > 0 || active > 0 {
+		var nextJob scanJob
+		var send chan scanJob
+		if len(queue) > 0 {
+			nextJob = queue[0]
+			send = jobs
+		}
+		select {
+		case send <- nextJob:
+			queue[0] = scanJob{}
+			queue = queue[1:]
+			active++
+		case result := <-results:
+			scans[result.dir] = result.scan
+			active--
+			for _, item := range result.scan.items {
 				if item.subdir != "" {
-					walk(item.subdir, false, scan.rules)
+					queue = append(queue, scanJob{dir: item.subdir, inheritedRules: result.scan.rules})
 				}
 			}
-		})
+		}
 	}
-	walk(rootDir, true, nil)
-	wait.Wait()
+	close(jobs)
 	return scans
 }
 
