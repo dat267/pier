@@ -56,6 +56,12 @@ func detectTerminalCapabilities(env func(string) string, platform string, tmuxFo
 		// terminal checks, so a leaked KITTY_WINDOW_ID does not decide it
 		// (upstream 0ed1b0431 and 396ecd7b8, #11131).
 		return detectedTerminalCapabilities{images: tui.ImageProtocolKitty, trueColor: true, hyperlinks: true}
+	case termProgram == "orca" && env("ORCA_IMAGE_PROTOCOL") == "kitty":
+		// Orca supports Kitty graphics but only advertises it through
+		// ORCA_IMAGE_PROTOCOL; requiring both keeps older Orca releases on the
+		// text fallback instead of reserving rows nothing renders (pi v1.5.0
+		// terminal-image.ts).
+		return detectedTerminalCapabilities{images: tui.ImageProtocolKitty, trueColor: true, hyperlinks: true}
 	case env("KITTY_WINDOW_ID") != "" || termProgram == "kitty":
 		return detectedTerminalCapabilities{images: tui.ImageProtocolKitty, trueColor: true, hyperlinks: true}
 	case termProgram == "ghostty" || strings.Contains(term, "ghostty") || env("GHOSTTY_RESOURCES_DIR") != "":

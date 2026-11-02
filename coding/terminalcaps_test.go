@@ -105,6 +105,10 @@ func TestDetectTerminalCapabilities(t *testing.T) {
 		// (upstream 0ed1b0431 and 396ecd7b8, #11131).
 		{name: "rex", env: map[string]string{"TERM_PROGRAM": "rex", "TERM": "xterm-256color"}, wantImages: "kitty", wantTrue: true, wantLinks: true},
 		{name: "rex with a leaked kitty window id", env: map[string]string{"TERM_PROGRAM": "rex", "KITTY_WINDOW_ID": "1"}, wantImages: "kitty", wantTrue: true, wantLinks: true},
+		// Orca advertises Kitty graphics only through ORCA_IMAGE_PROTOCOL; both
+		// signals are required (pi v1.5.0 terminal-image.ts).
+		{name: "orca with the image protocol", env: map[string]string{"TERM_PROGRAM": "Orca", "ORCA_IMAGE_PROTOCOL": "kitty"}, wantImages: "kitty", wantTrue: true, wantLinks: true},
+		{name: "orca without the image protocol", env: map[string]string{"TERM_PROGRAM": "Orca"}},
 		{name: "windows terminal", env: map[string]string{"WT_SESSION": "x"}, wantTrue: true, wantLinks: true},
 		{name: "tmux keeps no images", env: map[string]string{"TMUX": "/tmp/t,1,0", "TERM_PROGRAM": "ghostty"}, tmux: true, wantLinks: true},
 		{

@@ -508,27 +508,32 @@ func paintBox(box *LayoutBox, screen []string, totalWidth int) {
 	}
 
 	if box.ScrollView != nil && box.HasScrollContent && box.ScrollView.ScrollTop() > 0 && box.Rect.Height > 0 {
-		for imageRow := box.ScrollView.ScrollTop() - 1; imageRow >= 0; imageRow-- {
+		// Find the nearest image line above the viewport. Placeholder rows below
+		// an image line may hold padding, borders, or side-by-side text, so the
+		// search is bounded by the tallest registered image instead of by row
+		// content (pi v1.5.0 layout.ts).
+		scrollTop := box.ScrollView.ScrollTop()
+		minRow := max(0, scrollTop-MaxKittyImageRows())
+		for imageRow := scrollTop - 1; imageRow >= minRow; imageRow-- {
 			if imageRow >= len(box.ScrollContentLines) {
 				break
 			}
 			imageLine := box.ScrollContentLines[imageRow]
-			if metadata, hasMetadata := GetKittyImageMetadata(imageLine); hasMetadata {
-				hiddenRows := box.ScrollView.ScrollTop() - imageRow
-				if hiddenRows < metadata.Rows {
-					visibleRows := min(box.Rect.Height, metadata.Rows-hiddenRows)
-					cropped := CropKittyImageLine(imageLine, hiddenRows, visibleRows)
-					if box.Rect.X == 0 && box.Rect.Width >= totalWidth {
-						if box.Rect.Y >= 0 && box.Rect.Y < len(screen) {
-							screen[box.Rect.Y] = cropped
-						}
+			metadata, hasMetadata := GetKittyImageMetadata(imageLine)
+			if !hasMetadata {
+				continue
+			}
+			hiddenRows := scrollTop - imageRow
+			if hiddenRows < metadata.Rows {
+				visibleRows := min(box.Rect.Height, metadata.Rows-hiddenRows)
+				cropped := CropKittyImageLine(imageLine, hiddenRows, visibleRows)
+				if box.Rect.X == 0 && box.Rect.Width >= totalWidth {
+					if box.Rect.Y >= 0 && box.Rect.Y < len(screen) {
+						screen[box.Rect.Y] = cropped
 					}
 				}
-				break
 			}
-			if imageLine != "" {
-				break
-			}
+			break
 		}
 	}
 

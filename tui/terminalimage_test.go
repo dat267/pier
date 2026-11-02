@@ -533,3 +533,17 @@ func TestQueryCellSizeOnlyWhenImagesAreSupported(t *testing.T) {
 		t.Fatalf("query = %q", writer.data.String())
 	}
 }
+
+// pi v1.5.0 terminal-image.ts tracks the tallest registered image so layout can
+// bound its backward search for an image line above the viewport.
+func TestMaxKittyImageRows(t *testing.T) {
+	before := MaxKittyImageRows()
+	RegisterKittyImageMetadata(KittyImageMetadata{ImageID: 910001, Rows: before + 3})
+	if got := MaxKittyImageRows(); got != before+3 {
+		t.Fatalf("max rows = %d, want %d", got, before+3)
+	}
+	RegisterKittyImageMetadata(KittyImageMetadata{ImageID: 910002, Rows: 1})
+	if got := MaxKittyImageRows(); got != before+3 {
+		t.Fatalf("a shorter image lowered the maximum to %d", got)
+	}
+}

@@ -203,6 +203,18 @@ var kittyRegistry struct {
 	generation int
 	order      []int
 	byID       map[int]RegisteredKittyImage
+	// maxRows is the tallest registered image. It bounds backward searches for
+	// an image line above a viewport: no line further up can reach into it
+	// (pi v1.5.0 terminal-image.ts).
+	maxRows int
+}
+
+// MaxKittyImageRows returns the row height of the tallest Kitty image
+// registered so far.
+func MaxKittyImageRows() int {
+	kittyRegistry.mu.Lock()
+	defer kittyRegistry.mu.Unlock()
+	return kittyRegistry.maxRows
 }
 
 // RegisterKittyImageMetadata records a placed image so later crop/placement
@@ -214,6 +226,9 @@ func RegisterKittyImageMetadata(metadata KittyImageMetadata) {
 		kittyRegistry.byID = map[int]RegisteredKittyImage{}
 	}
 	kittyRegistry.generation++
+	if metadata.Rows > kittyRegistry.maxRows {
+		kittyRegistry.maxRows = metadata.Rows
+	}
 	kittyRegistry.byID[metadata.ImageID] = RegisteredKittyImage{
 		KittyImageMetadata:     metadata,
 		TransmissionGeneration: kittyRegistry.generation,
