@@ -355,7 +355,9 @@ func TestSourceInfoAndGuidance(t *testing.T) {
 		t.Fatalf("synthetic = %+v", synthetic)
 	}
 
-	if help := GetProviderLoginHelp(); !strings.Contains(help, "Use /login") || !strings.Contains(help, "providers.md") {
+	if help := GetProviderLoginHelp(); !strings.Contains(help, "Use /login") || strings.Contains(help, "providers.md") {
+		// D176: pier ships no docs tree, so the help must not name one; the
+		// shipped-docs shape is covered by TestProviderLoginHelpNamesDocsWhenTheyExist.
 		t.Fatalf("help = %q", help)
 	}
 	if message := FormatNoModelsAvailableMessage(); !strings.HasPrefix(message, "No models available. Use /login") {
@@ -461,3 +463,36 @@ type syncWaitGroup struct{ sync.WaitGroup }
 func timeNowMS() int64 { return time.Now().UnixMilli() }
 
 func timeSleepMS(ms int) { time.Sleep(time.Duration(ms) * time.Millisecond) }
+
+// D176: pier does not name documentation files it does not ship. The login
+// help must only point at docs/providers.md and docs/models.md when that docs
+// tree exists (M76).
+func TestProviderLoginHelpOnlyNamesDocsThatExist(t *testing.T) {
+	SetPackageDir(t.TempDir())
+	t.Cleanup(func() { SetPackageDir("") })
+	help := GetProviderLoginHelp()
+	if !strings.Contains(help, "/login") {
+		t.Fatalf("login help lost the login guidance: %q", help)
+	}
+	if strings.Contains(help, "providers.md") || strings.Contains(help, "models.md") {
+		t.Fatalf("login help names docs that do not exist: %q", help)
+	}
+}
+
+func TestProviderLoginHelpNamesDocsWhenTheyExist(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "docs"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"providers.md", "models.md"} {
+		if err := os.WriteFile(filepath.Join(root, "docs", name), []byte("# doc\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	SetPackageDir(root)
+	t.Cleanup(func() { SetPackageDir("") })
+	help := GetProviderLoginHelp()
+	if !strings.Contains(help, filepath.Join("docs", "providers.md")) || !strings.Contains(help, filepath.Join("docs", "models.md")) {
+		t.Fatalf("login help lost the shipped docs paths: %q", help)
+	}
+}

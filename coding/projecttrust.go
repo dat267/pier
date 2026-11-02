@@ -110,11 +110,18 @@ func CreateSourceInfo(path string, metadata PathMetadata) SourceInfo {
 	}
 }
 
-// GetProviderLoginHelp renders the login help text.
+// GetProviderLoginHelp renders the login help text. Pier ships port notes, not
+// pi's docs tree, so the See block is included only when those files exist at
+// runtime (D176); naming files that are not there sends a new user nowhere.
 func GetProviderLoginHelp() string {
+	const login = "Use /login to log into a provider via OAuth or API key."
 	docs := GetDocsPath()
-	return fmt.Sprintf("Use /login to log into a provider via OAuth or API key. See:\n  %s\n  %s",
-		filepath.Join(docs, "providers.md"), filepath.Join(docs, "models.md"))
+	providers := filepath.Join(docs, "providers.md")
+	models := filepath.Join(docs, "models.md")
+	if !fileExists(providers) || !fileExists(models) {
+		return login
+	}
+	return fmt.Sprintf("%s See:\n  %s\n  %s", login, providers, models)
 }
 
 // FormatNoModelsAvailableMessage reports that no models are available.
