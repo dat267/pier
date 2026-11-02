@@ -454,6 +454,10 @@ func scanPlainStringBytes(s []byte) (content []byte, consumed int, ok bool) {
 		case '\\':
 			return nil, 0, false
 		}
+		if s[i] < 0x20 {
+			// Raw control characters are not valid JSON string content.
+			return nil, 0, false
+		}
 	}
 	return nil, 0, false
 }
@@ -483,59 +487,197 @@ func skipJSONString(s []byte) (consumed int, ok bool) {
 	return 0, false
 }
 
-// skipJSONValue consumes one JSON value of any type, tracking nesting and
-// strings, without validating beyond structure.
+// skipJSONValue consumes one strictly valid JSON value without allocating. It
+// replaced a structural bracket counter that accepted invalid escapes, raw
+// control characters, leading zeros and trailing commas, which let malformed
+// session lines become message shells instead of falling back to the decoder
+// (M146).
 func skipJSONValue(s []byte) (consumed int, ok bool) {
-	if len(s) == 0 {
+	end, ok := scanJSONValueAt(s, 0, 0)
+	if !ok {
 		return 0, false
 	}
-	switch s[0] {
+	return end, true
+}
+
+const maxSessionJSONDepth = 10000
+
+func skipSessionJSONSpace(s []byte, i int) int {
+	for i < len(s) {
+		switch s[i] {
+		case ' ', '\t', '\r', '\n':
+			i++
+		default:
+			return i
+		}
+	}
+	return i
+}
+
+func scanJSONValueAt(s []byte, i int, depth int) (int, bool) {
+	if i >= len(s) || depth > maxSessionJSONDepth {
+		return 0, false
+	}
+	switch s[i] {
 	case '"':
-		return skipJSONString(s)
-	case '{', '[':
-		depth := 0
-		for i := 0; i < len(s); i++ {
+		return scanJSONStringStrict(s, i)
+	case '{':
+		i++
+		i = skipSessionJSONSpace(s, i)
+		if i < len(s) && s[i] == '}' {
+			return i + 1, true
+		}
+		for {
+			i = skipSessionJSONSpace(s, i)
+			if i >= len(s) || s[i] != '"' {
+				return 0, false
+			}
+			next, ok := scanJSONStringStrict(s, i)
+			if !ok {
+				return 0, false
+			}
+			i = skipSessionJSONSpace(s, next)
+			if i >= len(s) || s[i] != ':' {
+				return 0, false
+			}
+			i = skipSessionJSONSpace(s, i+1)
+			next, ok = scanJSONValueAt(s, i, depth+1)
+			if !ok {
+				return 0, false
+			}
+			i = skipSessionJSONSpace(s, next)
+			if i >= len(s) {
+				return 0, false
+			}
 			switch s[i] {
-			case '"':
-				n, ok := skipJSONString(s[i:])
-				if !ok {
-					return 0, false
-				}
-				i += n - 1
-			case '{', '[':
-				depth++
-			case '}', ']':
-				depth--
-				if depth == 0 {
-					return i + 1, true
-				}
+			case ',':
+				i++
+			case '}':
+				return i + 1, true
+			default:
+				return 0, false
 			}
 		}
-		return 0, false
+	case '[':
+		i++
+		i = skipSessionJSONSpace(s, i)
+		if i < len(s) && s[i] == ']' {
+			return i + 1, true
+		}
+		for {
+			i = skipSessionJSONSpace(s, i)
+			next, ok := scanJSONValueAt(s, i, depth+1)
+			if !ok {
+				return 0, false
+			}
+			i = skipSessionJSONSpace(s, next)
+			if i >= len(s) {
+				return 0, false
+			}
+			switch s[i] {
+			case ',':
+				i++
+			case ']':
+				return i + 1, true
+			default:
+				return 0, false
+			}
+		}
 	case 't':
-		if bytes.HasPrefix(s, []byte("true")) {
-			return 4, true
+		if bytes.HasPrefix(s[i:], []byte("true")) {
+			return i + 4, true
 		}
 	case 'f':
-		if bytes.HasPrefix(s, []byte("false")) {
-			return 5, true
+		if bytes.HasPrefix(s[i:], []byte("false")) {
+			return i + 5, true
 		}
 	case 'n':
-		if bytes.HasPrefix(s, []byte("null")) {
-			return 4, true
+		if bytes.HasPrefix(s[i:], []byte("null")) {
+			return i + 4, true
+		}
+	}
+	return scanJSONNumberAt(s, i)
+}
+
+func scanJSONNumberAt(s []byte, i int) (int, bool) {
+	start := i
+	if i < len(s) && s[i] == '-' {
+		i++
+	}
+	if i >= len(s) {
+		return 0, false
+	}
+	switch {
+	case s[i] == '0':
+		i++
+	case s[i] >= '1' && s[i] <= '9':
+		for i < len(s) && s[i] >= '0' && s[i] <= '9' {
+			i++
 		}
 	default:
-		for i := range s {
-			switch {
-			case s[i] >= '0' && s[i] <= '9', s[i] == '-', s[i] == '+', s[i] == '.', s[i] == 'e', s[i] == 'E':
-			default:
-				if i == 0 {
+		return 0, false
+	}
+	if i < len(s) && s[i] == '.' {
+		i++
+		if i >= len(s) || s[i] < '0' || s[i] > '9' {
+			return 0, false
+		}
+		for i < len(s) && s[i] >= '0' && s[i] <= '9' {
+			i++
+		}
+	}
+	if i < len(s) && (s[i] == 'e' || s[i] == 'E') {
+		i++
+		if i < len(s) && (s[i] == '+' || s[i] == '-') {
+			i++
+		}
+		if i >= len(s) || s[i] < '0' || s[i] > '9' {
+			return 0, false
+		}
+		for i < len(s) && s[i] >= '0' && s[i] <= '9' {
+			i++
+		}
+	}
+	if i == start || (i == start+1 && s[start] == '-') {
+		return 0, false
+	}
+	return i, true
+}
+
+// scanJSONStringStrict validates escapes and rejects raw control characters.
+func scanJSONStringStrict(s []byte, start int) (int, bool) {
+	i := start + 1
+	for i < len(s) {
+		switch c := s[i]; {
+		case c == '"':
+			return i + 1, true
+		case c == '\\':
+			i++
+			if i >= len(s) {
+				return 0, false
+			}
+			switch s[i] {
+			case '"', '\\', '/', 'b', 'f', 'n', 'r', 't':
+				i++
+			case 'u':
+				if i+4 >= len(s) {
 					return 0, false
 				}
-				return i, true
+				for k := 1; k <= 4; k++ {
+					hex := s[i+k]
+					if !(hex >= '0' && hex <= '9' || hex >= 'a' && hex <= 'f' || hex >= 'A' && hex <= 'F') {
+						return 0, false
+					}
+				}
+				i += 5
+			default:
+				return 0, false
 			}
+		case c < 0x20:
+			return 0, false
+		default:
+			i++
 		}
-		return len(s), true
 	}
 	return 0, false
 }

@@ -329,3 +329,21 @@ func TestLoadEntriesBufferedAllocatesLikeTheFile(t *testing.T) {
 			fileSize>>10, allocated>>20, (3*fileSize)>>20)
 	}
 }
+
+// The lazy scanner must not turn an invalid message member into a shell: the
+// eager loader (like upstream JSON.parse) rejects the line, so the buffered
+// path has to fall back to the decoder and reject it too (M146).
+func TestLoadEntriesBufferedRejectsInvalidMessageJSON(t *testing.T) {
+	lines := []string{
+		`{"type":"session","version":3,"id":"s1","timestamp":"t0","cwd":"/tmp"}`,
+		`{"type":"message","id":"bad","parentId":null,"timestamp":"t","message":{"role":"user","content":"\q"}}`,
+		`{"type":"message","id":"bad2","parentId":null,"timestamp":"t","message":{"n":01}}`,
+		`{"type":"message","id":"good","parentId":null,"timestamp":"t","message":{"role":"user","content":"ok"}}`,
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "session.jsonl")
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	assertBufferedMatchesEager(t, path)
+}

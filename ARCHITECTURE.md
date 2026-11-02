@@ -1713,7 +1713,14 @@ whose message JSON the typed decoder would reject (a malformed block field, an
 invalid number), the listing may still report that message's metadata where
 upstream's `parseSessionEntryLine` would drop the entry. Valid sessions list
 identically; `TestScanListingMessageMatchesTypedDecode` pins the agreement for
-the shapes both accept.
+the shapes both accept. The lazy loader's `scanSessionLine` is stricter: its
+message member must be strictly valid JSON, or the line falls back to the
+typed decoder and is dropped like upstream's `JSON.parse`. It previously used
+a bracket counter that accepted invalid escapes, raw control characters,
+leading zeros and trailing commas and could turn a corrupt line into a message
+shell (`TestLoadEntriesBufferedRejectsInvalidMessageJSON`,
+`FuzzSessionScanAcceptsOnlyValidJSON`). Strict scanning costs about 2x the
+metadata scan (3 MiB: 2.4 ms to 5.7 ms; still about 600 MB/s).
 
 Measured on a 100 MiB session (30,314 messages): `buildSessionInfo` 1.7s to
 0.3s, and a 105 MiB session directory lists in 0.3s instead of 2.0s.
