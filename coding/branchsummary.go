@@ -437,7 +437,7 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 	if options.Summarize && len(collection.Entries) > 0 {
 		model := s.Model()
 		request := SummarizationRequestAuth{Model: model}
-		if s.control.ModelRuntime != nil {
+		if s.control.ModelRuntime != nil && !s.summariesResolveAuthInStream() {
 			resolution, err := s.control.ModelRuntime.GetAuthForModel(model, &ModelRuntimeAuthOverrides{Ctx: summaryCtx})
 			if err != nil {
 				return nil, err
@@ -550,6 +550,14 @@ type SummarizationRequestAuth struct {
 	APIKey  string
 	Headers ai.ProviderHeaders
 	Env     map[string]string
+}
+
+// summariesResolveAuthInStream reports whether summarization requests go through
+// the stream function that resolves auth itself (the SDK's). Pre-resolving
+// credentials there would make the runtime take its API-key path instead of the
+// stored OAuth login (pi v1.5.0 6fed3cfb9, #11556).
+func (s *AgentSession) summariesResolveAuthInStream() bool {
+	return s.CompactionStreamFn == nil && s.streamFnResolvesAuth
 }
 
 // compactionStreamFn exposes the compaction stream function: the explicit

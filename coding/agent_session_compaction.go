@@ -384,7 +384,7 @@ func (s *AgentSession) RunAutoCompaction(ctx context.Context, reason CompactionR
 		ThinkingLevel: s.ThinkingLevel(),
 		Callbacks:     s.summarizationRetryCallbacksForCompaction(reason),
 	}
-	if s.control.ModelRuntime != nil {
+	if s.control.ModelRuntime != nil && !s.summariesResolveAuthInStream() {
 		resolution, err := s.control.ModelRuntime.GetAuthForModel(model, &ModelRuntimeAuthOverrides{Ctx: compactionCtx})
 		if err == nil && resolution != nil {
 			options.APIKey = resolution.Auth.APIKey

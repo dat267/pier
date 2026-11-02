@@ -165,6 +165,8 @@ type AgentSession struct {
 
 	// streamFn is the session's model stream function (compaction, summaries).
 	streamFn agent.StreamFn
+	// streamFnResolvesAuth mirrors SessionConfig.StreamFnResolvesAuth.
+	streamFnResolvesAuth bool
 
 	listenerMu sync.Mutex
 	listeners  []*sessionListenerKey
@@ -233,11 +235,15 @@ type sessionListenerKey struct {
 
 // SessionConfig configures NewAgentSession.
 type SessionConfig struct {
-	Cwd          string
-	Model        *ai.Model
-	StreamFn     agent.StreamFn
-	APIKey       string
-	SystemPrompt string
+	Cwd      string
+	Model    *ai.Model
+	StreamFn agent.StreamFn
+	// StreamFnResolvesAuth marks a stream function that resolves provider auth
+	// through the session's own ModelRuntime (the SDK's). Summaries must then
+	// not pre-resolve credentials (pi v1.5.0 6fed3cfb9).
+	StreamFnResolvesAuth bool
+	APIKey               string
+	SystemPrompt         string
 	// AppendSystemPrompt is appended to the prompt (before project context).
 	AppendSystemPrompt string
 	// PromptSourcePaths are the loaded system/append prompt files.
@@ -391,12 +397,13 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		copiedAllowedToolNames = append([]string{}, config.AllowedToolNames...)
 	}
 	s := &AgentSession{
-		Agent:    a,
-		Sessions: sessionManager,
-		Settings: settings,
-		Cwd:      config.Cwd,
-		control:  control,
-		streamFn: config.StreamFn,
+		Agent:                a,
+		Sessions:             sessionManager,
+		Settings:             settings,
+		Cwd:                  config.Cwd,
+		control:              control,
+		streamFn:             config.StreamFn,
+		streamFnResolvesAuth: config.StreamFnResolvesAuth,
 		SystemPromptOptions: &BuildSystemPromptOptions{
 			CustomPrompt: config.SystemPrompt, AppendSystemPrompt: config.AppendSystemPrompt, Cwd: config.Cwd,
 			Skills: config.Skills, ContextFiles: config.ContextFiles,
@@ -792,7 +799,7 @@ func (s *AgentSession) runManualCompaction(ctx context.Context, customInstructio
 		StreamFn: s.compactionStreamFn(), Retry: s.retrySettings(),
 		SessionID: s.Sessions.GetSessionID(), ThinkingLevel: s.ThinkingLevel(),
 	}
-	if s.control.ModelRuntime != nil {
+	if s.control.ModelRuntime != nil && !s.summariesResolveAuthInStream() {
 		resolution, err := s.control.ModelRuntime.GetAuthForModel(model, &ModelRuntimeAuthOverrides{Ctx: ctx})
 		if err == nil && resolution != nil {
 			options.APIKey = resolution.Auth.APIKey

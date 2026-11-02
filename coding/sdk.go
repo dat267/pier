@@ -563,13 +563,16 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 	resourceWait.Wait()
 
 	session, err := NewAgentSession(&SessionConfig{
-		Cwd:           cwd,
-		Model:         model,
-		StreamFn:      streamFn,
-		Tools:         activeTools,
-		Sessions:      sessionManager,
-		Settings:      SessionSettings{Retry: retryPolicy, Compaction: compactionSettingsOf(settingsManager, model)},
-		ThinkingLevel: thinkingLevel,
+		Cwd:      cwd,
+		Model:    model,
+		StreamFn: streamFn,
+		// This stream resolves auth through modelRuntime, so summaries must not
+		// pre-resolve it (pi v1.5.0 6fed3cfb9).
+		StreamFnResolvesAuth: true,
+		Tools:                activeTools,
+		Sessions:             sessionManager,
+		Settings:             SessionSettings{Retry: retryPolicy, Compaction: compactionSettingsOf(settingsManager, model)},
+		ThinkingLevel:        thinkingLevel,
 		// The builtin goal features are disabled by --no-tools and
 		// --no-builtin-tools (upstream always has the extension host available).
 		Goal:               options.NoTools == "" && len(activeTools) > 0,
