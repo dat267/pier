@@ -3365,7 +3365,10 @@ removing control characters. Pier removes OSC
 0/1/2 title changes and OSC 52 clipboard operations at the final rendered-line
 boundary while preserving OSC 8 hyperlinks and supported image sequences; it
 also strips Unicode control characters from OSC 0 title text. This is a
-deliberate terminal-output security divergence.
+deliberate terminal-output security divergence. v1.5.0
+`utils.ts replaceControlCharacters` replaces each C0/C1 run with one space
+before `setTitle`; pier keeps removing the characters entirely, which is the
+stronger boundary and does not leave a placeholder in a title.
 
 Tests: `TestApplyLineResetsStripsUnsafeOSC` covers BEL, ESC-ST, C1 ST,
 unterminated controls, image lines and OSC 8;
