@@ -2340,8 +2340,12 @@ numbers with `JSON.stringify`. Go's typed timestamp and token-count fields use
 value outside its type's range. For example, `9223372036854775807` rounds to
 `9223372036854776000`, which cannot be read back into `int64`. The shared JSON
 encoder retains integer token precision while normalizing floating-point
-spellings and negative zero. Tool arguments still use JavaScript double
-semantics through their ordered value decoder.
+spellings and negative zero. A lone surrogate escape (`"\ud800"`) becomes
+U+FFFD instead: Go strings cannot hold an unpaired surrogate, while
+`JSON.stringify` would preserve the escape, so pier normalizes it rather than
+emitting text it cannot represent (a valid pair still becomes the character).
+Tool arguments still use JavaScript double semantics through their ordered
+value decoder.
 
 Test: `TestMarshalJSONPreservesTypedIntegerRange` observes the round-trip
 failure when the encoder normalizes all integer tokens through a double.

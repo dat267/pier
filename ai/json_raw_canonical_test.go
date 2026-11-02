@@ -42,3 +42,20 @@ func TestMarshalRawJSONCanonicalizesJavaScriptValues(t *testing.T) {
 		}
 	}
 }
+
+// D253: a lone surrogate escape cannot live in a Go string, so the encoder
+// writes U+FFFD where JSON.stringify would preserve the escape; a valid
+// surrogate pair still becomes the character.
+func TestMarshalJSONReplacesLoneSurrogateEscapes(t *testing.T) {
+	for _, tc := range []struct{ raw, want string }{
+		{`"a\ud800b"`, "\"a\ufffdb\""},
+		{`"a\udc00b"`, "\"a\ufffdb\""},
+		{`{"k":"\ud800"}`, "{\"k\":\"\ufffd\"}"},
+		{`"\ud83d\ude00"`, "\"😀\""},
+	} {
+		got, err := MarshalJSON(json.RawMessage(tc.raw))
+		if err != nil || string(got) != tc.want {
+			t.Errorf("raw=%s got=%q err=%v want=%q", tc.raw, got, err, tc.want)
+		}
+	}
+}
