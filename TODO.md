@@ -1,4 +1,3 @@
 # Reproduced audit findings
 
-- M92 (medium): `usage.cost` omits `totalFromProvider`, which pinned pi v1.5.0 sets on every calculated cost (`false` for a catalog estimate, `true` for a provider-billed total). Every persisted or streamed usage object therefore differs from the pin, and consumers cannot tell an estimate from a billed total. Evidence: the `ai/testdata/*-stream` goldens regenerated from v1.5.0 differ only by this field.
-- M93 (medium): OpenRouter's reported billing is ignored. Pinned pi v1.5.0 (`utils/openrouter-cost.ts`, `applyOpenRouterReportedCost`) replaces the catalog total with OpenRouter's `cost` (foreign-key `cost_details` for BYOK) in the anthropic-messages and openai-completions streams and marks it provider-reported. Pier keeps the catalog estimate, so the cost shown for OpenRouter runs is wrong.
+No open findings.
