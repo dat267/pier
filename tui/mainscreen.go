@@ -355,7 +355,16 @@ func (s *MainScreen) doRender() {
 	// frames, and this screen owns its buffer: ExtractCursorPosition and
 	// ApplyLineResets both write into the lines they are given, so the
 	// rendered lines are copied before any of them runs.
-	newLines := append([]string(nil), s.resolveFakeCursors(s.renderLocked(width))...)
+	// The terminal reads OSC 133;A as a new shell prompt, which ends the
+	// program-status sequence (OSC 7501). The transcript emits those markers for
+	// fullscreen prompt navigation, so the main screen drops them before writing
+	// (pi v1.5.0 tui-main-screen.ts).
+	rendered := s.renderLocked(width)
+	stripped := make([]string, len(rendered))
+	for index, line := range rendered {
+		stripped[index] = stripOSC133ZonePrefix(line)
+	}
+	newLines := append([]string(nil), s.resolveFakeCursors(stripped)...)
 
 	if s.hasOverlayEntriesLocked() {
 		newLines = s.CompositeOverlays(newLines, width, height)

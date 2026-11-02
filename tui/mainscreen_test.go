@@ -353,3 +353,20 @@ func TestMainScreenTermuxHeightChange(t *testing.T) {
 		}
 	})
 }
+
+// pi v1.5.0 tui-main-screen.ts: the main screen drops the transcript's leading
+// OSC 133 zone markers. The terminal reads 133;A as a shell prompt, which ends
+// the program-status sequence (OSC 7501).
+func TestMainScreenStripsOSC133ZonePrefix(t *testing.T) {
+	terminal := &recordingTerminal{width: 40, height: 10}
+	screen := NewMainScreen(terminal, false, t.TempDir())
+	screen.AddChild(&scriptedComponent{lines: []string{"\x1b]133;A\x07prompt\x1b]133;B\x07\x1b]133;C\x07"}})
+	screen.RenderNow(true)
+	rendered := terminal.takeWrites()
+	if strings.Contains(rendered, "\x1b]133;A") {
+		t.Fatalf("main screen wrote a prompt-start marker: %q", rendered)
+	}
+	if !strings.Contains(rendered, "prompt") {
+		t.Fatalf("main screen lost the text: %q", rendered)
+	}
+}
