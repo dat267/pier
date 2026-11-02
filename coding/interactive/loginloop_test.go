@@ -11,6 +11,11 @@ import (
 	"github.com/dat267/pier/tui"
 )
 
+// loginFlowTimeout is a hang guard for the login flow: generous enough that a
+// starved goroutine under a parallel race suite is not a failure, short enough
+// that a genuinely stalled loop still fails the test.
+const loginFlowTimeout = 30 * time.Second
+
 // findLoginDialog returns the login dialog mounted in the editor container, or
 // nil when none is mounted.
 func findLoginDialog(wiring *AuthWiring) *LoginDialogComponent {
@@ -64,7 +69,10 @@ func TestApiKeyLoginRunsOffTheUILoop(t *testing.T) {
 	// From here on this goroutine is the loop. The dialog is mounted before the
 	// flow starts, so wait for the posted prompt itself rather than the dialog.
 	var dialog *LoginDialogComponent
-	waitForCondition(t, func() bool {
+	// A hang guard, not a latency assertion: the flow goroutine only has to be
+	// scheduled, which the shared 2s polling default is too short for under a
+	// parallel race suite (M75).
+	waitForConditionWithin(t, func() bool {
 		screen.RenderNow(true)
 		found := findLoginDialog(wiring)
 		if found == nil || !strings.Contains(strings.Join(found.ContentLines(80), "\n"), "Enter OpenAI API key") {
@@ -72,15 +80,15 @@ func TestApiKeyLoginRunsOffTheUILoop(t *testing.T) {
 		}
 		dialog = found
 		return true
-	})
+	}, loginFlowTimeout)
 
 	dialog.input.SetValue("sk-test-key")
 	dialog.HandleInput("\r")
 
-	waitForCondition(t, func() bool {
+	waitForConditionWithin(t, func() bool {
 		screen.RenderNow(true)
 		return statuses.len() > 0
-	})
+	}, loginFlowTimeout)
 	if !strings.Contains(statuses.last(), "Saved API key for OpenAI") {
 		t.Fatalf("statuses = %v", statuses.messages)
 	}
