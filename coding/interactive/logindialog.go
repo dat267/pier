@@ -3,6 +3,7 @@ package interactive
 import (
 	"net/url"
 	"runtime"
+	"strings"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
@@ -188,7 +189,29 @@ func loginDisplayURL(value string) string {
 	if normalized, ok := loginWebURL(value); ok {
 		return normalized
 	}
-	return tui.SanitizeUntrustedText(value)
+	// A non-web value is shown as text with each C0/C1 control run replaced by
+	// one space, so it cannot break the dialog into extra lines (pi v1.5.0
+	// login-dialog.ts displayUrl and utils.ts replaceControlCharacters).
+	return replaceLoginControlCharacters(value)
+}
+
+// replaceLoginControlCharacters replaces each run of C0 and C1 control
+// characters with one space.
+func replaceLoginControlCharacters(value string) string {
+	var builder strings.Builder
+	inRun := false
+	for _, r := range value {
+		if r <= 0x1f || (r >= 0x7f && r <= 0x9f) {
+			if !inRun {
+				builder.WriteByte(' ')
+				inRun = true
+			}
+			continue
+		}
+		inRun = false
+		builder.WriteRune(r)
+	}
+	return builder.String()
 }
 
 // loginWebLink renders text as an ST-terminated terminal hyperlink to url when
