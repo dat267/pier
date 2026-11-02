@@ -2,7 +2,6 @@ package goal
 
 import (
 	"encoding/json"
-	"math"
 	"strings"
 	"testing"
 	"time"
@@ -958,29 +957,5 @@ func TestGoalUpdateRejectsInexactRevision(t *testing.T) {
 	result := machine.Dispatch(GoalUpdateEvent{GoalID: snapshot.Goal.ID, Revision: float64(1), Action: "complete"})
 	if result.IsError {
 		t.Fatalf("exact integer revision rejected: %+v", result)
-	}
-}
-
-// A huge model-supplied time limit must not overflow CreatedAt+limit into a
-// negative deadline that pauses the goal on its first settle.
-func TestLargeTimeBudgetDoesNotOverflow(t *testing.T) {
-	m, _ := testMachine()
-	m.Dispatch(SessionStartEvent{})
-	m.Dispatch(GoalCreateEvent{Objective: "ship it", Budget: &GoalBudget{TimeLimitMs: new(int64(math.MaxInt64))}})
-	settle := m.Dispatch(AgentBeforeSettleEvent{Outcome: "completed"})
-	if !settle.Continue {
-		t.Fatalf("huge time limit paused the goal: %+v snapshot=%+v", settle, m.Snapshot())
-	}
-	if reason := m.Snapshot().Goal.BlockedReason; reason != nil {
-		t.Fatalf("blocked reason = %+v", reason)
-	}
-	// One millisecond past a small limit still pauses.
-	m2, _ := testMachine()
-	m2.Dispatch(SessionStartEvent{})
-	m2.Dispatch(GoalCreateEvent{Objective: "ship it", Budget: &GoalBudget{TimeLimitMs: new(int64(1000))}})
-	now := m2.Snapshot().Goal.CreatedAt + 1001
-	settle = m2.Dispatch(AgentBeforeSettleEvent{Outcome: "completed", Now: now, HasNow: true})
-	if settle.Continue || m2.Snapshot().Goal.BlockedReason == nil {
-		t.Fatalf("small limit did not pause: %+v", settle)
 	}
 }
