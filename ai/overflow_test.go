@@ -35,6 +35,8 @@ func TestIsContextOverflowPatterns(t *testing.T) {
 		"This endpoint's maximum context length is 131072 tokens.",
 		"Input length 265330 exceeds the maximum allowed input length of 262144 tokens.",
 		"The input (131073 tokens) is longer than the model's context length (131072 tokens).",
+		// LiteLLM's pre-call check (pi v1.5.0 utils/overflow.ts).
+		"litellm.ContextWindowExceededError: litellm.BadRequestError: Context Window exceeded for given call.",
 		"prompt token count of 265330 exceeds the limit of 262144",
 		"the request exceeds the available context size, try increasing it",
 		"tokens to keep from the initial prompt is greater than the context length",

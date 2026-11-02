@@ -45,6 +45,7 @@ var overflowPatterns = []*regexp.Regexp{
 	compileOverflowPattern(`(?i)input is too long for requested model`),                                                       // Amazon Bedrock
 	compileOverflowPattern(`(?i)exceeds the context window`),                                                                  // OpenAI (Completions & Responses API)
 	compileOverflowPattern(`(?i)exceeds (?:the )?(?:model'?s )?maximum context length(?: of [0-9,]+ tokens?|\s*\([0-9,]+\))`), // OpenAI-compatible proxies (LiteLLM)
+	compileOverflowPattern(`(?i)context window exceeded`),                                                                     // LiteLLM pre-call check (pi v1.5.0)
 	compileOverflowPattern(`(?i)input token count.*exceeds the maximum`),                                                      // Google (Gemini)
 	compileOverflowPattern(`(?i)maximum prompt length is [0-9]+`),                                                             // xAI (Grok)
 	compileOverflowPattern(`(?i)reduce the length of the messages`),                                                           // Groq
