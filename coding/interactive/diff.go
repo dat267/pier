@@ -19,14 +19,6 @@ import (
 // from its source (divergence D87) and verified against the real library
 // through Node goldens.
 
-const extendedWordChars = `a-zA-Z0-9_\x{00AD}\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02C6}\x{02C8}-\x{02D7}\x{02DE}-\x{02FF}\x{1E00}-\x{1EFF}`
-
-// jsdiff uses the JS `\s` class (Unicode whitespace); Go's `\s` is ASCII-only.
-const jsWhitespaceChars = `\t\n\v\f\r \x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}`
-
-var wordTokenizeRegex = regexp.MustCompile(`[` + extendedWordChars + `]+|[` + jsWhitespaceChars + `]+|[^` + extendedWordChars + `]`)
-var whitespaceRegex = regexp.MustCompile(`[` + jsWhitespaceChars + `]`)
-
 // DiffChange is a diff change object.
 type DiffChange struct {
 	Value   string `json:"value"`
@@ -49,36 +41,85 @@ func DiffWords(oldStr string, newStr string) []DiffChange {
 	return diffTokens(oldTokens, newTokens)
 }
 
-// diffWordTokenize mirrors WordDiff.tokenize: split into word/whitespace runs
-// and merge whitespace into the neighbouring token.
+// isExtendedWordRune is jsdiff 8.0.4 word.js's extendedWordChars class.
+func isExtendedWordRune(r rune) bool {
+	if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '_' || r == 0x00AD {
+		return true
+	}
+	return r >= 0x00C0 && r <= 0x00D6 || r >= 0x00D8 && r <= 0x00F6 ||
+		r >= 0x00F8 && r <= 0x02C6 || r >= 0x02C8 && r <= 0x02D7 ||
+		r >= 0x02DE && r <= 0x02FF || r >= 0x1E00 && r <= 0x1EFF
+}
+
+// wordSpan is one token's byte range in the source text. Tokens may overlap:
+// jsdiff copies the whitespace between a word and the following word into both
+// tokens ("a ", " b"), and join strips the duplicate from the later one.
+type wordSpan struct{ start, end int }
+
+// diffWordTokenize mirrors WordDiff.tokenize: word/whitespace runs and single
+// other characters, with whitespace stitched onto the neighbouring token. Every
+// token is a substring of value, so the scan allocates only the result slice.
+// A regex per part allocated thousands of bit-state tables for a long line
+// (M142).
 func diffWordTokenize(value string) []string {
-	parts := wordTokenizeRegex.FindAllString(value, -1)
-	var tokens []string
-	prevPart := ""
-	hasPrev := false
-	for _, part := range parts {
+	var spans []wordSpan
+	prevStart, prevEnd := 0, 0
+	prevSpace, hasPrev := false, false
+	appendPart := func(start, end int, space bool) {
+		last := len(spans) - 1
 		switch {
-		case whitespaceRegex.MatchString(part):
-			if !hasPrev {
-				tokens = append(tokens, part)
+		case space && last < 0:
+			spans = append(spans, wordSpan{start, end})
+		case space:
+			spans[last].end = end
+		case hasPrev && prevSpace:
+			// The previous token is exactly the whitespace part when its span
+			// matches that part; jsdiff compares token text, not identity.
+			if last >= 0 && spans[last].start == prevStart && spans[last].end == prevEnd {
+				spans[last].end = end
 			} else {
-				last := tokens[len(tokens)-1]
-				tokens = tokens[:len(tokens)-1]
-				tokens = append(tokens, last+part)
-			}
-		case hasPrev && whitespaceRegex.MatchString(prevPart):
-			if tokens[len(tokens)-1] == prevPart {
-				last := tokens[len(tokens)-1]
-				tokens = tokens[:len(tokens)-1]
-				tokens = append(tokens, last+part)
-			} else {
-				tokens = append(tokens, prevPart+part)
+				spans = append(spans, wordSpan{prevStart, end})
 			}
 		default:
-			tokens = append(tokens, part)
+			spans = append(spans, wordSpan{start, end})
 		}
-		prevPart = part
-		hasPrev = true
+		prevStart, prevEnd, prevSpace, hasPrev = start, end, space, true
+	}
+	for i := 0; i < len(value); {
+		r, width := utf8.DecodeRuneInString(value[i:])
+		start := i
+		switch {
+		case isExtendedWordRune(r):
+			i += width
+			for i < len(value) {
+				next, nextWidth := utf8.DecodeRuneInString(value[i:])
+				if !isExtendedWordRune(next) {
+					break
+				}
+				i += nextWidth
+			}
+			appendPart(start, i, false)
+		case isSpaceRune(r):
+			i += width
+			for i < len(value) {
+				next, nextWidth := utf8.DecodeRuneInString(value[i:])
+				if !isSpaceRune(next) {
+					break
+				}
+				i += nextWidth
+			}
+			appendPart(start, i, true)
+		default:
+			i += width
+			appendPart(start, i, false)
+		}
+	}
+	if len(spans) == 0 {
+		return nil
+	}
+	tokens := make([]string, len(spans))
+	for i, span := range spans {
+		tokens[i] = value[span.start:span.end]
 	}
 	return tokens
 }

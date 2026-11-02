@@ -777,6 +777,10 @@ func isWhitespaceRune(r rune) bool {
 	return r >= 0x2000 && r <= 0x200A
 }
 
+// IsWhitespaceRune reports whether r is JavaScript `\s`, the whitespace class
+// the reference's regexes and trim use.
+func IsWhitespaceRune(r rune) bool { return isWhitespaceRune(r) }
+
 // IsWhitespaceChar reports whether a string is entirely whitespace.
 func IsWhitespaceChar(char string) bool {
 	for _, r := range char {

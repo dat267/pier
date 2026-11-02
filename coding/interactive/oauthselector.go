@@ -462,7 +462,7 @@ func filterAndSortSessions(sessions []coding.SessionInfo, query string, sortMode
 	return result
 }
 
-func isSpaceRune(r rune) bool { return tui.IsWhitespaceChar(string(r)) }
+func isSpaceRune(r rune) bool { return tui.IsWhitespaceRune(r) }
 
 // ---- OAuth selector ----
 

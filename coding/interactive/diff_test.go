@@ -128,12 +128,15 @@ func TestDiffHelpers(t *testing.T) {
 }
 
 // jsdiff's tokenizeIncludingWhitespace uses the JS `\s` class, so a run of
-// Unicode whitespace is one token.
+// Unicode whitespace stays together and is shared with the next token.
 func TestWordTokenizeUnicodeWhitespace(t *testing.T) {
-	got := wordTokenizeRegex.FindAllString("a\u00a0\u00a0b", -1)
-	want := []string{"a", "\u00a0\u00a0", "b"}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("tokens = %q; want %q", got, want)
+	tokens := diffWordTokenize("a\u00a0\u00a0b")
+	want := []string{"a\u00a0\u00a0", "\u00a0\u00a0b"}
+	if !reflect.DeepEqual(tokens, want) {
+		t.Fatalf("tokens = %q; want %q", tokens, want)
+	}
+	if joined := diffJoin(tokens); joined != "a\u00a0\u00a0b" {
+		t.Fatalf("joined = %q", joined)
 	}
 }
 
