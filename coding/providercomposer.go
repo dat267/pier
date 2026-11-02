@@ -194,10 +194,10 @@ func applyModelOverride(model *ai.Model, override ModelsJSONModelOverride) (*ai.
 		updated.Cost = cost
 	}
 	if override.ContextWindow != nil {
-		updated.ContextWindow = int64(*override.ContextWindow)
+		updated.ContextWindow = modelsJSONNumberToInt64(*override.ContextWindow)
 	}
 	if override.MaxTokens != nil {
-		updated.MaxTokens = int64(*override.MaxTokens)
+		updated.MaxTokens = modelsJSONNumberToInt64(*override.MaxTokens)
 	}
 	if override.SamplingParams != nil {
 		merged := map[string]json.RawMessage{}
@@ -237,7 +237,7 @@ func modelsJSONNumberToInt(value float64) int {
 }
 
 // modelsJSONNumberToInt64 saturates numeric configuration that exceeds int64
-// representation bounds, preserving positive token thresholds (D336).
+// representation bounds, preserving positive limits and thresholds (D336-D337).
 func modelsJSONNumberToInt64(value float64) int64 {
 	maxInt64 := int64(^uint64(0) >> 1)
 	minInt64 := -maxInt64 - 1
@@ -328,11 +328,11 @@ func modelFromJSON(providerID string, definition ModelsJSONModel, providerConfig
 	}
 	contextWindow := int64(128000)
 	if definition.ContextWindow != nil {
-		contextWindow = int64(*definition.ContextWindow)
+		contextWindow = modelsJSONNumberToInt64(*definition.ContextWindow)
 	}
 	maxTokens := int64(16384)
 	if definition.MaxTokens != nil {
-		maxTokens = int64(*definition.MaxTokens)
+		maxTokens = modelsJSONNumberToInt64(*definition.MaxTokens)
 	}
 
 	compat, err := mergeCompatJSON(api, compatFromConfig(providerConfig.Compat, api), definition.Compat)

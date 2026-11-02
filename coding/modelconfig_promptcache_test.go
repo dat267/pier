@@ -38,6 +38,38 @@ func TestModelsJSONSaturatesLargePromptCacheAndCostNumbers(t *testing.T) {
 	}
 }
 
+func TestModelsJSONSaturatesLargeContextAndMaxTokenLimits(t *testing.T) {
+	large := float64(1e308)
+	builtin := &ai.Model{
+		ID: "builtin", Name: "Builtin", API: ai.APIOpenAIResponses, Provider: "custom",
+		BaseURL: "https://provider.test/v1", Type: "chat", ContextWindow: 128000, MaxTokens: 16384,
+	}
+	base := ai.CreateProvider(ai.CreateProviderOptions{ID: "custom", Models: []*ai.Model{builtin}})
+	config := &ModelConfig{providers: map[string]ModelsJSONProvider{
+		"custom": {
+			BaseURL: "https://provider.test/v1", API: ai.APIOpenAIResponses,
+			Models: []ModelsJSONModel{{ID: "defined", ContextWindow: &large, MaxTokens: &large}},
+			ModelOverrides: map[string]ModelsJSONModelOverride{
+				"builtin": {ContextWindow: &large, MaxTokens: &large},
+			},
+		},
+	}}
+	provider, err := ComposeModelProvider("custom", base, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := int64(^uint64(0) >> 1)
+	models := provider.GetAllModels()
+	if len(models) != 2 {
+		t.Fatalf("models = %+v", models)
+	}
+	for _, model := range models {
+		if model.ContextWindow != want || model.MaxTokens != want {
+			t.Errorf("%s context=%d max=%d, want both saturated at %d", model.ID, model.ContextWindow, model.MaxTokens, want)
+		}
+	}
+}
+
 func TestModelsJSONPromptCacheReachesModels(t *testing.T) {
 	builtin := &ai.Model{
 		ID: "builtin", Name: "Builtin", API: ai.APIOpenAIResponses, Provider: "openai",

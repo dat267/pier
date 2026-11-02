@@ -4050,6 +4050,18 @@ in-range values preserve truncation.
 
 Test: `TestModelsJSONSaturatesLargePromptCacheAndCostNumbers`.
 
+### D337
+
+**Finite models.json context and max-token limits saturate at int64 bounds.**
+
+Reference: pi v1.4.0 `packages/ai/src/providers/model-schema.ts` accepts numeric
+`contextWindow` and `maxTokens`; the provider composer carries definition and
+override values into models. Pier stores both as int64, so finite out-of-range
+values saturate instead of wrapping negative. Ordinary in-range values preserve
+truncation.
+
+Test: `TestModelsJSONSaturatesLargeContextAndMaxTokenLimits`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
