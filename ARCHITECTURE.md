@@ -843,7 +843,10 @@ the running image aside first (upstream's self-update quarantine); downloaded
 assets also need their executable bit set.
 
 The card names `pier update` and this module's release page, not `go install`
-or pi.dev's changelog. No module-proxy publication is required. Unorderable
+or pi.dev's changelog. v1.5.0's global `selfUpdateCommand` setting and
+`PI_SELF_UPDATE_COMMAND` override, which run a user-supplied package-manager
+command instead, are not read: pier's update path is always the verified release
+download above. No module-proxy publication is required. Unorderable
 source versions (the commit hash from `just install` or unstamped `0.0.0`)
 produce no card: upstream `isNewerPackageVersion` falls back to inequality for
 non-semver, which would mark these builds outdated forever.
