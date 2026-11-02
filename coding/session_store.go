@@ -868,7 +868,9 @@ func entryTypeFast(line string) (string, bool) {
 	}
 	rest := line[len(prefix):]
 	before, _, ok := strings.Cut(rest, "\"")
-	if !ok {
+	if !ok || strings.Contains(before, "\\") {
+		// An escape would make the cut value differ from the decoded type
+		// (for example an escaped "session" header); use the probe decoder.
 		return "", false
 	}
 	return before, true

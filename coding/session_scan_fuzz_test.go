@@ -114,3 +114,20 @@ func TestSessionScanRejectsInvalidUTF8Strings(t *testing.T) {
 		t.Fatalf("listing content = %+v; want U+FFFD", listing)
 	}
 }
+
+// A type string with an escape is not the literal prefix the fast probe reads;
+// it must fall back to the decoder so an escaped "session" header stays a
+// header (upstream JSON.parse unescapes before the type switch).
+func TestUnmarshalFileEntryRecognizesEscapedHeaderType(t *testing.T) {
+	line := `{"type":"sess\u0069on","version":3,"id":"s1","timestamp":"t","cwd":"/tmp"}`
+	entry, err := UnmarshalFileEntry(line)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry.Header == nil || entry.Header.ID != "s1" {
+		t.Fatalf("entry = %+v; want a session header", entry)
+	}
+	if typ, fast := entryTypeFast(line); fast {
+		t.Fatalf("entryTypeFast returned %q for an escaped type", typ)
+	}
+}
