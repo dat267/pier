@@ -4090,6 +4090,22 @@ Tests: `TestLoadSkillsFromDirBoundsWorkerGoroutines`,
 `TestLoadSkillsFromDirScansInReadDirOrder`,
 `TestLoadSkillsFromDirPreservesNativeEntryOrder`.
 
+### D340
+
+**Goal cards resolve an unknown phase to a neutral color instead of panicking.**
+
+Goal cards render persisted `pi-goal` entries and `set_goal` tool details, whose
+phase is not re-validated before rendering. `Theme.Fg` panics on an unknown
+color name, so a session written by a different build (or corrupted data) killed
+the TUI on its first frame even though `FoldGoal` already treats such a session
+as corrupt and only warns. `internal/goal/render.go` now resolves phase colors
+through one total helper that falls back to `muted`; known phases keep their
+colors, the blocked-reason line keeps its `warning` fallback, and the get_goal
+state line now shows an unknown phase as `muted` instead of `success`.
+
+Tests: `TestGoalEntryRendererRendersUnknownPhase`,
+`TestSetGoalResultRendersUnknownPhase`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

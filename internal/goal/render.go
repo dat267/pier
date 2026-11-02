@@ -29,6 +29,18 @@ var PhaseColor = map[GoalPhase]string{
 	PhaseComplete: "accent",
 }
 
+// phaseColor resolves a phase's theme color, falling back to a neutral one for a
+// phase this build does not recognize. Cards render persisted entries and tool
+// results whose phase is not re-validated first, so the lookup must be total:
+// Theme.Fg panics on an unknown color name. FoldGoal already reports such a
+// session as corrupt, which must stay a warning rather than a render crash.
+func phaseColor(phase GoalPhase) string {
+	if color, ok := PhaseColor[phase]; ok {
+		return color
+	}
+	return "muted"
+}
+
 // ClickToExpand wraps a renderer so a left click toggles the expanded state,
 // rebuilding the child on each toggle.
 func ClickToExpand(render func(expanded bool) tui.Component, initiallyExpanded bool) tui.Component {
@@ -93,7 +105,7 @@ func RenderGoalCard(theme Theme, card GoalCard, expanded bool) *tui.Box {
 	box := tui.NewBox(1, 1, func(text string) string { return theme.Bg("customMessageBg", text) })
 	label := card.Label
 	if card.HasPhase {
-		label = theme.Fg(PhaseColor[card.Phase], label)
+		label = theme.Fg(phaseColor(card.Phase), label)
 	} else {
 		label = theme.Fg("customMessageLabel", theme.Bold(label))
 	}
@@ -254,10 +266,7 @@ func RenderGetGoalRenderResult(goal *GoalView, theme Theme, expanded bool) *tui.
 	if goal.Phase == PhaseActive && !goal.Armed {
 		state += " · disarmed"
 	}
-	stateColor := PhaseColor[goal.Phase]
-	if stateColor == "" {
-		stateColor = "success"
-	}
+	stateColor := phaseColor(goal.Phase)
 	lines := []string{"", theme.Fg(stateColor, state), ""}
 
 	objective, hidden := goalPreview(goal.Objective, expanded)
@@ -346,7 +355,7 @@ func RenderSetGoalRenderResult(result SetGoalResult, theme Theme) *tui.Text {
 	case phase == PhaseBlocked:
 		short = "Goal blocked ✓"
 	}
-	return tui.NewText("\n"+theme.Fg(PhaseColor[phase], short), 0, 0, nil)
+	return tui.NewText("\n"+theme.Fg(phaseColor(phase), short), 0, 0, nil)
 }
 
 // SetGoalCreateResult is the set_goal objective (create or replace) result card

@@ -81,3 +81,46 @@ func TestGoalEntryCardTogglesOnLeftClick(t *testing.T) {
 		t.Fatalf("expanded card = %q", expanded)
 	}
 }
+
+// A phase this build does not recognize (a session written by a newer version,
+// or corrupted data) must render like any other card: the goal machine already
+// treats such a session as corrupt and warns (goal isGoalPhase / FoldGoal),
+// so rendering it must not panic on the missing theme color.
+func TestGoalEntryRendererRendersUnknownPhase(t *testing.T) {
+	theme := newRendererTestTheme(t)
+	renderer := GoalEntryRenderer(goal.GoalCustomType)
+	data, err := json.Marshal(goal.GoalChangeEntry{
+		Operation: goal.OpPause,
+		Goal: &goal.GoalSnapshot{
+			ID: "g1", Revision: 2, Objective: "objective text",
+			Phase: goal.GoalPhase("archived"), CreatedAt: 1, UpdatedAt: 2,
+		},
+		Timestamp: 2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	component := renderer(CustomEntry{CustomType: goal.GoalCustomType, Data: data}, EntryRenderOptions{}, theme)
+	if component == nil {
+		t.Fatal("expected a card")
+	}
+	rendered := coding.StripAnsi(strings.Join(component.Render(120), "\n"))
+	if !strings.Contains(rendered, "Goal paused") || !strings.Contains(rendered, "objective text") {
+		t.Fatalf("card = %q", rendered)
+	}
+}
+
+func TestSetGoalResultRendersUnknownPhase(t *testing.T) {
+	theme := newRendererTestTheme(t)
+	component := goal.RenderSetGoalRenderResult(goal.SetGoalResult{
+		Phase:    goal.GoalPhase("archived"),
+		HasPhase: true,
+		Action:   "pause",
+	}, theme)
+	if component == nil {
+		t.Fatal("expected a status line")
+	}
+	if rendered := coding.StripAnsi(strings.Join(component.Render(80), "\n")); !strings.Contains(rendered, "Goal") {
+		t.Fatalf("status line = %q", rendered)
+	}
+}
