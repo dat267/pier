@@ -192,7 +192,7 @@ func convertCustomMessage(msg *ai.CustomMessage) ai.Message {
 			return nil
 		}
 		return &ai.UserMessage{
-			Content:   ai.StringOrBlocks{Blocks: ai.ContentList{ai.TextContent{Text: BranchSummaryPrefix + fields.Summary + BranchSummarySuffix}}},
+			Content:   ai.StringOrBlocks{Blocks: ai.ContentList{ai.TextContent{Text: BranchSummaryPrefix + escapePromptDelimiters(fields.Summary) + BranchSummarySuffix}}},
 			Timestamp: msg.Timestamp,
 		}
 	case RoleCompactionSummary:
@@ -202,7 +202,7 @@ func convertCustomMessage(msg *ai.CustomMessage) ai.Message {
 		}
 		return &ai.UserMessage{
 			Content: ai.StringOrBlocks{Blocks: ai.ContentList{ai.TextContent{
-				Text: CompactionSummaryPrefix + fields.Summary + CompactionSummarySuffix,
+				Text: CompactionSummaryPrefix + escapePromptDelimiters(fields.Summary) + CompactionSummarySuffix,
 			}}},
 			Timestamp: msg.Timestamp,
 		}

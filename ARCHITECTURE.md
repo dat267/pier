@@ -4234,6 +4234,22 @@ itself still matches upstream byte for byte.
 Tests: `TestConversationSummaryPromptCannotBeClosedByItsContent`,
 `TestSerializeConversationMatchesUpstream`.
 
+### D346
+
+**Stored summaries are escaped when they are re-injected as context.**
+
+Reference: pi v1.4.0 (4a080252) `core/messages.ts` defines
+`COMPACTION_SUMMARY_PREFIX`/`BRANCH_SUMMARY_PREFIX` with `<summary>` tags and
+`convertToLlm` concatenates the stored summary between them unescaped. A summary
+is model output and can contain `</summary>` itself (the M71 fix stops the
+summarizer prompt from being closed, not the model from emitting the text), so
+every later request would end the summary block early and leave the trailing text
+outside it, reading as harness context for the rest of the session. Pier escapes
+`</` in the summary through `escapePromptDelimiters` for both custom roles. The
+stored entry bytes are unchanged; only the converted context is escaped.
+
+Tests: `TestSummaryContextCannotCloseItsWrapper`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
