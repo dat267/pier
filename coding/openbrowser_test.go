@@ -58,3 +58,31 @@ func TestOpenBrowserLaunchesHandler(t *testing.T) {
 	}
 	t.Fatal("the launcher was not invoked")
 }
+
+// pi v1.5.0 open-browser.ts launches from /: WSL's explorer.exe cannot start
+// when the cwd's \\wsl.localhost\... path exceeds MAX_PATH.
+func TestOpenBrowserLaunchesFromRoot(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the PATH stub is a shell script")
+	}
+	dir := t.TempDir()
+	output := filepath.Join(dir, "cwd")
+	script := "#!/bin/sh\nprintf '%s' \"$PWD\" > " + output + ".part && mv " + output + ".part " + output + "\n"
+	name, _ := BrowserCommand("x")
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	OpenBrowser("https://example.com/opened")
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if content, err := os.ReadFile(output); err == nil {
+			if string(content) != "/" {
+				t.Fatalf("launcher cwd = %q, want /", content)
+			}
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("the launcher was not invoked")
+}

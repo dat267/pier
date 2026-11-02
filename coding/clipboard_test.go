@@ -259,3 +259,20 @@ func TestClipboardReadAbortsOverMaxBuffer(t *testing.T) {
 		t.Fatalf("within-limit read = %d bytes, want 64", len(fits))
 	}
 }
+
+// pi v1.5.0 clipboard-command.ts runs helpers from / so a WSL cwd cannot exceed
+// MAX_PATH and a clipboard daemon cannot pin the session directory.
+func TestClipboardCommandRunsFromRoot(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the PATH stub is a shell script")
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "clipboard-cwd"), []byte("#!/bin/sh\nprintf '%s' \"$PWD\"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	output := runClipboardCommand(context.Background(), "clipboard-cwd", nil, clipboardCommandOptions{})
+	if string(output) != "/" {
+		t.Fatalf("clipboard helper cwd = %q, want /", output)
+	}
+}

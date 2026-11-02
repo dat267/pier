@@ -48,6 +48,10 @@ func runClipboardCommand(ctx context.Context, command string, args []string, opt
 	commandCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutMS)*time.Millisecond)
 	defer cancel()
 	cmd := exec.CommandContext(commandCtx, command, args...)
+	// Clipboard helpers ignore the cwd, and a WSL \\wsl.localhost\... cwd can
+	// exceed MAX_PATH for Windows executables; a daemon must not pin the
+	// session's cwd either (pi v1.5.0 clipboard-command.ts, #11592).
+	cmd.Dir = "/"
 	detachClipboardCommand(cmd)
 	cmd.Stderr = nil
 	cmd.Env = os.Environ()
