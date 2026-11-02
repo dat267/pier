@@ -4173,6 +4173,31 @@ Tests: `TestAssistantTextCannotEmitTerminalControls`,
 `TestGoalCardCannotEmitTerminalControls`, and the `tui`
 `SanitizeUntrustedText` unit table.
 
+### D343
+
+**ctrl+o expands the visible window synchronously and catches up off-screen.**
+
+Reference: pi v1.4.0 (4a080252) `modes/interactive/interactive-mode.ts`
+`setToolsExpanded` calls `setExpanded` on every chat child before the next paint.
+Each call rebuilds that card's display and drops its render cache, so the frame
+after ctrl+o re-renders the whole transcript: 137 ms measured for 600 bash cards
+with 200-line outputs, against 0.23 ms for a cached paint. Pier applies the
+expansion to the trailing `toolSweepWindowComponents` (8) cards and queues the
+rest oldest-first, draining `toolSweepChunkComponents` (8) per loop beat through
+`MaterializeToolChunk`; the status line still reports the new state on the
+keypress, and the loop keeps beating while work remains. Off-screen cards keep
+their previous rendering until their turn, which only a scroll into them could
+observe during the ~1 s catch-up. This mirrors the existing ctrl+t thinking
+sweep.
+
+Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
+`TestMaterializeToolChunkExpandsEveryDeferredCard`,
+`TestMaterializeToolChunkIsBounded`,
+`TestSetToolsExpandedRestartsPendingSweep`,
+`TestSetToolsExpandedReportsStatusImmediately`,
+`TestSetToolsExpandedNoOpKeepsDeferredWork`,
+`TestToolCardExpansionReachesDeferredCards`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

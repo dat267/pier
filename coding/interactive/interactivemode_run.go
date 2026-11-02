@@ -856,9 +856,10 @@ func newRunWiring(app *App) *RunWiring {
 				app.transcript.MaterializeDeferred(app.terminalWidth())
 			}
 			app.queue.MaterializeThinkingChunk()
+			app.queue.MaterializeToolChunk()
 		},
 		PendingBeatWork: func() bool {
-			return app.transcript.HasDeferred() || app.queue.HasThinkingChunk()
+			return app.transcript.HasDeferred() || app.queue.HasThinkingChunk() || app.queue.HasToolChunk()
 		},
 		RawTerminal:     app.rawTerminal,
 		RawInputs:       app.loopRawInputs,

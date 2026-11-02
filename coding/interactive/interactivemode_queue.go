@@ -66,6 +66,12 @@ type QueueController struct {
 	// pendingThinkingHide is the visibility those messages are waiting for.
 	pendingThinkingHide bool
 
+	// deferredTools holds the transcript cards a ctrl+o sweep has not rebuilt
+	// yet, oldest-first; MaterializeToolChunk drains it.
+	deferredTools []Expandable
+	// pendingToolsExpanded is the expansion those cards are waiting for.
+	pendingToolsExpanded bool
+
 	// compactionQueuedMessages are the messages queued during compaction.
 	compactionQueuedMessages []CompactionQueuedMessage
 
@@ -441,6 +447,12 @@ func (c *QueueController) ToggleToolOutputExpansion(expanded *bool, setExpanded 
 }
 
 // SetToolsExpanded updates the expansion state of the header and chat children.
+//
+// Rebuilding every card is the expensive half of ctrl+o: `SetExpanded` drops the
+// card's render cache, so the next paint re-renders the whole transcript (137ms
+// for 600 cards on a 200-line tool each — the same shape as ctrl+t before its
+// sweep). Only the trailing window is rebuilt synchronously; the rest drains
+// through MaterializeToolChunk on the loop beat.
 func (c *QueueController) SetToolsExpanded(expanded bool, current *bool, header tui.Component, loadedResources *tui.Container) {
 	if expanded == *current {
 		return
@@ -449,14 +461,30 @@ func (c *QueueController) SetToolsExpanded(expanded bool, current *bool, header 
 	if expandable, ok := IsExpandable(header); ok {
 		expandable.SetExpanded(expanded)
 	}
-	for _, container := range []*tui.Container{loadedResources, c.Chat} {
-		if container == nil {
-			continue
-		}
-		for _, child := range container.Children {
+	if loadedResources != nil {
+		for _, child := range loadedResources.Children {
 			if expandable, ok := IsExpandable(child); ok {
 				expandable.SetExpanded(expanded)
 			}
+		}
+	}
+
+	c.deferredTools = c.deferredTools[:0]
+	c.pendingToolsExpanded = expanded
+	if c.Chat != nil {
+		remaining := toolSweepWindowComponents
+		for _, child := range slices.Backward(c.Chat.Children) {
+			expandable, ok := IsExpandable(child)
+			if !ok {
+				continue
+			}
+			if remaining > 0 {
+				remaining--
+				expandable.SetExpanded(expanded)
+				continue
+			}
+			// Oldest-first once drained from the end, like the thinking sweep.
+			c.deferredTools = append(c.deferredTools, expandable)
 		}
 	}
 	state := "collapsed"
@@ -464,6 +492,41 @@ func (c *QueueController) SetToolsExpanded(expanded bool, current *bool, header 
 		state = "expanded"
 	}
 	c.showStatus("Tool output: " + state)
+	c.requestRender()
+}
+
+// MaterializeToolChunk applies the pending expansion to one small chunk of
+// deferred cards and reports whether more remains. The chunk stays small for
+// the same reason as the thinking sweep: the next paint renders every card it
+// touches, so a large chunk would only move the freeze into that frame.
+func (c *QueueController) MaterializeToolChunk() bool {
+	if len(c.deferredTools) == 0 {
+		return false
+	}
+	for n := 0; n < toolSweepChunkComponents && len(c.deferredTools) > 0; n++ {
+		last := len(c.deferredTools) - 1
+		card := c.deferredTools[last]
+		c.deferredTools[last] = nil
+		c.deferredTools = c.deferredTools[:last]
+		card.SetExpanded(c.pendingToolsExpanded)
+	}
+	c.requestRender()
+	return len(c.deferredTools) > 0
+}
+
+const (
+	// toolSweepWindowComponents is how many trailing cards a ctrl+o sweep
+	// rebuilds synchronously: enough to cover the screen.
+	toolSweepWindowComponents = 8
+	// toolSweepChunkComponents is how many deferred cards are rebuilt per loop
+	// beat.
+	toolSweepChunkComponents = 8
+)
+
+// HasToolChunk reports whether the ctrl+o sweep still has deferred cards (the
+// loop's pending-work arm).
+func (c *QueueController) HasToolChunk() bool {
+	return len(c.deferredTools) > 0
 }
 
 // UpdateThinkingBlockVisibility re-renders the assistant messages.
