@@ -1098,4 +1098,10 @@ func TestSettingsFullscreenWheelScrollLines(t *testing.T) {
 	if encoded := marshalSettingsIndent(manager.globalSettings); !strings.Contains(encoded, `"fullscreenWheelScrollLines": "auto"`) {
 		t.Fatalf("auto encoding = %s", encoded)
 	}
+
+	settings := mapToSettings(map[string]any{"fullscreenWheelScrollLines": float64(1e308)})
+	manager = NewInMemorySettingsManager(settings, SettingsManagerCreateOptions{})
+	if got := manager.GetFullscreenWheelScrollLines(); got != tui.FixedWheelScrollLines(100) {
+		t.Fatalf("large finite setting = %#v, want clamped 100", got)
+	}
 }

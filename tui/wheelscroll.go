@@ -42,7 +42,8 @@ func (w *WheelScrollLines) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &number); err != nil {
 		return err
 	}
-	*w = FixedWheelScrollLines(int(number))
+	// Saturate before SettingsManager's 1..100 clamp (D338).
+	*w = FixedWheelScrollLines(floatToIntSaturated(number))
 	return nil
 }
 

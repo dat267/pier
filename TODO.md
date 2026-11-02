@@ -1,6 +1,5 @@
 # Reproduced audit findings
 
-- M60 (low): finite positive `fullscreenWheelScrollLines=1e308` wraps to `MinInt` when JSON settings decode, so SettingsManager clamps it to 1 instead of the upstream upper limit 100. Evidence: `/tmp/pier-maintenance-20261102-notes.md` M60.
 
 
 - M35 (medium): classifier, MCP OAuth, MCP HTTP JSON, OpenRouter catalog, and Google Vertex metadata-token endpoints read unbounded successful response bodies into memory; synthetic 20 MiB responses parse successfully. Bound choice and protocol impact need product decision. Evidence: `/tmp/pier-maintenance-20261102-notes.md` M35.

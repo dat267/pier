@@ -4062,6 +4062,19 @@ truncation.
 
 Test: `TestModelsJSONSaturatesLargeContextAndMaxTokenLimits`.
 
+### D338
+
+**Oversized finite fullscreen wheel settings saturate before the configured clamp.**
+
+Reference: pi v1.4.0 `packages/coding-agent/src/core/settings-manager.ts`
+accepts finite numeric settings and clamps them to 1..100; the pinned
+`packages/tui/src/wheel-scroll.ts` accepts finite wheel counts. Pier decodes the JSON number into
+an int before SettingsManager applies that bound, so decoding now saturates
+out-of-range values. This preserves ordinary truncation and lets the configured
+clamp produce the intended maximum.
+
+Test: `TestSettingsFullscreenWheelScrollLines`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
