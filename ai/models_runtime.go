@@ -1375,6 +1375,10 @@ func CalculateCost(model *Model, usage *Usage) UsageCost {
 	usage.Cost.CacheRead = (rates.CacheRead / 1000000) * float64(usage.CacheRead)
 	usage.Cost.CacheWrite = (rates.CacheWrite*float64(shortWrite) + rates.Input*2*float64(longWrite)) / 1000000
 	usage.Cost.Total = usage.Cost.Input + usage.Cost.Output + usage.Cost.CacheRead + usage.Cost.CacheWrite
+	// The total is a catalog estimate here; a provider-reported total sets this
+	// back to true (pi v1.5.0 models.ts calculateCost).
+	estimated := false
+	usage.Cost.TotalFromProvider = &estimated
 	return usage.Cost
 }
 

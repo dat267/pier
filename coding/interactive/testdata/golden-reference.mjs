@@ -29,11 +29,17 @@ registerHooks({
 			"@earendil-works/pi-agent-core": "agent",
 			"@earendil-works/pi-telemetry": "telemetry",
 			"@earendil-works/pi-mcp": "mcp",
+			"@earendil-works/pi-schema": "schema",
 		};
 		if (specifier === "marked-cjk-friendly") return { url: "pier-golden:cjk", shortCircuit: true };
 		if (packages[specifier])
 			return {
 				url: pathToFileURL(resolve(root, `packages/${packages[specifier]}/src/index.ts`)).href,
+				shortCircuit: true,
+			};
+		if (specifier === "@earendil-works/pi-schema/formats")
+			return {
+				url: pathToFileURL(resolve(root, "packages/schema/src/formats/index.ts")).href,
 				shortCircuit: true,
 			};
 		return next(specifier, context);

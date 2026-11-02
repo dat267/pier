@@ -4,11 +4,11 @@
     "custom": [
       [
         "pi",
-        "1.4.0"
+        "1.5.0"
       ]
     ],
-    "want": "pi/1.4.0",
-    "amzWant": "pi/1.4.0"
+    "want": "pi/1.5.0",
+    "amzWant": "pi/1.5.0"
   },
   {
     "identity": {

@@ -342,7 +342,8 @@
               "cacheWrite": 0,
               "input": 0.00001,
               "output": 0.00007000000000000001,
-              "total": 0.000080375
+              "total": 0.000080375,
+              "totalFromProvider": false
             },
             "input": 8,
             "output": 7,
@@ -968,7 +969,8 @@
               "cacheWrite": 0,
               "input": 0.000005,
               "output": 0.00002,
-              "total": 0.000025
+              "total": 0.000025,
+              "totalFromProvider": false
             },
             "input": 4,
             "output": 2,

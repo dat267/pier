@@ -11,7 +11,7 @@ import (
 // selected.
 func TestFormatUserAgent(t *testing.T) {
 	detailed := FormatUserAgent(nil)
-	if !strings.HasPrefix(detailed, "pi/1.4.0 ("+runtime.GOOS+"; go/") ||
+	if !strings.HasPrefix(detailed, "pi/1.5.0 ("+runtime.GOOS+"; go/") ||
 		!strings.HasSuffix(detailed, "; "+runtime.GOARCH+")") {
 		t.Fatalf("detailed user agent = %q", detailed)
 	}

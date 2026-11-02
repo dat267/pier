@@ -299,6 +299,9 @@ func parseOpenRouterImagesUsage(raw struct {
 			Output:     model.Cost.Output / 1000000 * float64(outputTokens),
 			CacheRead:  model.Cost.CacheRead / 1000000 * float64(cacheRead),
 			CacheWrite: model.Cost.CacheWrite / 1000000 * float64(cacheWrite),
+			// The image API reports no provider-billed total (pi v1.5.0
+			// openrouter-images.ts).
+			TotalFromProvider: boolPtrFalse(),
 		},
 	}
 	usage.Cost.Total = usage.Cost.Input + usage.Cost.Output + usage.Cost.CacheRead + usage.Cost.CacheWrite

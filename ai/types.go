@@ -221,6 +221,10 @@ type UsageCost struct {
 	CacheRead  float64 `json:"cacheRead"`
 	CacheWrite float64 `json:"cacheWrite"`
 	Total      float64 `json:"total"`
+	// TotalFromProvider is true when Total is the billed cost a provider
+	// reported rather than a catalog estimate. Nil serializes as absent, which
+	// means false (pi v1.5.0).
+	TotalFromProvider *bool `json:"totalFromProvider,omitempty"`
 }
 
 // StopReason explains why an assistant message ended.

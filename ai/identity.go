@@ -15,7 +15,7 @@ import (
 // AIVersion is the pi-ai package version in the detailed user agent. Upstream
 // keeps it in sync with package.json (utils/version.ts); the port pins the
 // reference release here.
-const AIVersion = "1.4.0"
+const AIVersion = "1.5.0"
 
 // ClientAttribution is who requests are attributed to. Name and URL are
 // required upstream.

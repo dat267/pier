@@ -395,7 +395,8 @@
               "cacheWrite": 0,
               "input": 0.000039999999999999996,
               "output": 0.000132,
-              "total": 0.00017700000000000002
+              "total": 0.00017700000000000002,
+              "totalFromProvider": false
             },
             "input": 20,
             "output": 11,
@@ -628,7 +629,8 @@
               "cacheWrite": 0,
               "input": 0.000009999999999999999,
               "output": 0.000012,
-              "total": 0.000022
+              "total": 0.000022,
+              "totalFromProvider": false
             },
             "input": 5,
             "output": 1,
@@ -971,7 +973,8 @@
               "cacheWrite": 0,
               "input": 0.000016,
               "output": 0.000024,
-              "total": 0.000039999999999999996
+              "total": 0.000039999999999999996,
+              "totalFromProvider": false
             },
             "input": 8,
             "output": 2,
