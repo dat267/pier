@@ -140,6 +140,41 @@ func TestPrepareBranchEntries(t *testing.T) {
 	}
 }
 
+// pi v1.5.0 d0fe21308 (#11680): the branch summary input honors context edits,
+// so omitted entries stay out of the summary and replaced entries arrive in
+// their replacement form, file operations included.
+func TestPrepareBranchEntriesAppliesContextEdits(t *testing.T) {
+	entries := branchEntries()
+	entries = append(entries,
+		SessionEntry{Type: "context_edit", ID: "edit-omit", TargetID: "a1", Replacement: json.RawMessage(`null`)},
+		SessionEntry{Type: "context_edit", ID: "edit-replace", TargetID: "root",
+			Replacement: json.RawMessage(`{"content":"replaced start"}`)},
+	)
+	preparation := PrepareBranchEntries(entries, 0)
+	if len(preparation.Messages) != 2 {
+		t.Fatalf("messages = %+v", preparation.Messages)
+	}
+	user, ok := preparation.Messages[0].(*ai.UserMessage)
+	if !ok || user.Content.Text != "replaced start" {
+		t.Fatalf("first message = %+v", preparation.Messages[0])
+	}
+	assistant, ok := preparation.Messages[1].(*ai.AssistantMessage)
+	if !ok || len(assistant.Content) != 1 {
+		t.Fatalf("second message = %+v", preparation.Messages[1])
+	}
+	if _, ok := assistant.Content[0].(ai.ToolCall); !ok {
+		t.Fatalf("second message = %+v", preparation.Messages[1])
+	}
+	// The omitted assistant message carried the read call, so its file op is gone.
+	readFiles, modifiedFiles := ComputeFileLists(preparation.FileOps)
+	if strings.Join(readFiles, ",") != "" {
+		t.Fatalf("readFiles = %v", readFiles)
+	}
+	if strings.Join(modifiedFiles, ",") != "/tmp/b.txt" {
+		t.Fatalf("modifiedFiles = %v", modifiedFiles)
+	}
+}
+
 func TestPrepareBranchEntriesCumulativeFileOps(t *testing.T) {
 	details, err := ai.MarshalJSON(BranchSummaryDetails{
 		ReadFiles: []string{"/tmp/nested.txt"}, ModifiedFiles: []string{"/tmp/written.txt"},

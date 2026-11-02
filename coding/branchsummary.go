@@ -190,12 +190,29 @@ func PrepareBranchEntries(entries []SessionEntry, tokenBudget int) BranchPrepara
 		}
 	}
 
+	// Context edits hide or replace earlier entries in model context; the summary
+	// input honors the latest edit per target (pi v1.5.0 d0fe21308).
+	edits := map[string]*SessionEntry{}
+	for index := range entries {
+		entry := &entries[index]
+		if entry.Type == "context_edit" && entry.TargetID != "" {
+			edits[entry.TargetID] = entry
+		}
+	}
+
 	// Second pass: newest to oldest until the budget is exhausted.
 	for index := len(entries) - 1; index >= 0; index-- {
 		entry := &entries[index]
 		message := branchMessageFromEntry(entry)
 		if message == nil {
 			continue
+		}
+		if edit := edits[entry.ID]; edit != nil && (entry.Type == "message" || entry.Type == "custom_message") {
+			projected := applyContextEdit(projectedMessages(entry, nil), edit.Replacement)
+			if len(projected) == 0 {
+				continue
+			}
+			message = projected[0]
 		}
 		ExtractFileOpsFromMessage(message, fileOps)
 		tokens := EstimateAgentMessageTokens(message)
