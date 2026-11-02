@@ -564,3 +564,27 @@ func TestShellElapsedPartialWithDurationStaysElapsed(t *testing.T) {
 		t.Fatalf("partial with duration = %q; want Elapsed", rendered)
 	}
 }
+
+// pi v1.5.0 tool-execution.ts #9265: argument deltas mark the card pending and
+// the next render applies them, so a call streaming many deltas between frames
+// runs its renderer once per frame instead of once per delta.
+func TestToolCardAppliesArgumentDeltasOncePerRender(t *testing.T) {
+	renders := 0
+	definition := &ToolRenderers{RenderCall: func(args any, theme *Theme, context *ToolRenderContext) tui.Component {
+		renders++
+		return tui.NewText("call", 0, 0, nil)
+	}}
+	component := NewToolExecutionComponent("bash", "call-1", map[string]any{"command": "ls"},
+		ToolExecutionOptions{}, definition, nil, "/tmp")
+	renders = 0
+	for i := 0; i < 20; i++ {
+		component.UpdateArgs(map[string]any{"command": "ls", "extra": i})
+	}
+	if renders != 0 {
+		t.Fatalf("argument deltas rebuilt the card %d time(s) before a render", renders)
+	}
+	component.Render(80)
+	if renders != 1 {
+		t.Fatalf("render ran the card renderer %d time(s), want 1", renders)
+	}
+}

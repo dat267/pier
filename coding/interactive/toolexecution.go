@@ -245,6 +245,9 @@ func (c *ToolExecutionComponent) createResultRegion(component tui.Component) *tu
 // UpdateArgs shows new partial arguments. Applied at the next render, so a call
 // streaming many argument deltas between two frames runs its renderer once per
 // frame, not once per delta (pi v1.5.0 tool-execution.ts #9265).
+// UpdateArgs shows new partial arguments. Applied at the next render, so a call
+// streaming many argument deltas between two frames runs its renderer once per
+// frame, not once per delta (pi v1.5.0 tool-execution.ts #9265).
 func (c *ToolExecutionComponent) UpdateArgs(args any) {
 	c.args = args
 	c.argsPending = true
