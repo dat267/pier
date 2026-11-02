@@ -89,7 +89,7 @@ func TruncateErrorText(text string, maxChars int) string {
 	if JSLength(text) <= maxChars {
 		return text
 	}
-	return JSSlice(text, 0, maxChars) + fmt.Sprintf("... [truncated %d chars]", JSLength(text)-maxChars)
+	return ownedJSSlice(text, 0, maxChars) + fmt.Sprintf("... [truncated %d chars]", JSLength(text)-maxChars)
 }
 
 // ShortHash is a fast deterministic hash to shorten long strings

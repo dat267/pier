@@ -83,7 +83,7 @@ func parsePiMessagesErrorBody(body string) map[string]any {
 func truncateDiagnosticString(value string) string {
 	const maxLength = 8192
 	if JSLength(value) > maxLength {
-		return JSSlice(value, 0, maxLength) + "…"
+		return ownedJSSlice(value, 0, maxLength) + "…"
 	}
 	return value
 }

@@ -169,6 +169,13 @@ func JSNumberToString(f float64) string {
 // JSSlice slices by UTF-16 code units, matching JavaScript's String.slice.
 // A negative start or end counts from the end (String.prototype.slice resolves
 // each index as max(length+index, 0) before clamping).
+// ownedJSSlice is JSSlice with its bytes copied, so a short excerpt of a large
+// provider body does not keep the whole body alive (upstream v1.5.0
+// text.ts ownedSlice; Go substrings share the backing array like a V8 slice).
+func ownedJSSlice(s string, start, end int) string {
+	return strings.Clone(JSSlice(s, start, end))
+}
+
 func JSSlice(s string, start, end int) string {
 	units := utf16.Encode([]rune(s))
 	length := len(units)

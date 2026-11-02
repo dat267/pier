@@ -197,7 +197,7 @@ func GetRadiusModels(providerID string, credential *OAuthCredential) []*Model {
 func truncateHTTPBody(body string) string {
 	trimmed := JSTrim(body)
 	if JSLength(trimmed) > 512 {
-		return JSSlice(trimmed, 0, 512) + "…"
+		return ownedJSSlice(trimmed, 0, 512) + "…"
 	}
 	return trimmed
 }
