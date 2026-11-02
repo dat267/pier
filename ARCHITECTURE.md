@@ -4215,6 +4215,25 @@ cards are unchanged.
 
 Tests: `TestGoalPromptWrappersCannotBeClosedByTheirContent`.
 
+### D345
+
+**Summarization prompts keep message data inside their tagged blocks.**
+
+Reference: pi v1.4.0 (4a080252) `core/compaction/compaction.ts` and
+`core/compaction/branch-summarization.ts` interpolate the serialized conversation
+between `<conversation>` tags (and the chained summary between
+`<previous-summary>` tags) without escaping. Message content comes from users,
+models, and tool results, so text containing `</conversation>` closed the block
+early and left its following lines outside it, ahead of the summarization
+instructions; a chained summary could do the same and persist the payload across
+compactions. Pier now rewrites every `</` in the conversation text and the
+previous summary to `&lt;/` through `escapePromptDelimiters`/`conversationBlock`
+in both summarizers. Other markup is unchanged, and the serialized conversation
+itself still matches upstream byte for byte.
+
+Tests: `TestConversationSummaryPromptCannotBeClosedByItsContent`,
+`TestSerializeConversationMatchesUpstream`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

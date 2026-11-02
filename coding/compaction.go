@@ -713,6 +713,24 @@ func marshalOrderedJSON(raw json.RawMessage) string {
 	}
 }
 
+// escapePromptDelimiters neutralizes a closing-tag prefix in text embedded
+// inside one of the summarization wrappers. Message content and chained
+// summaries are data: text containing "</conversation>" would otherwise end the
+// block early and leave its own lines outside it, ahead of the instructions
+// (M71). Other markup is left alone.
+func escapePromptDelimiters(text string) string {
+	if !strings.Contains(text, "</") {
+		return text
+	}
+	return strings.ReplaceAll(text, "</", "&lt;/")
+}
+
+// conversationBlock wraps serialized conversation text so the summarizer reads
+// it as data. The text is escaped first; the wrapper's own tags stay literal.
+func conversationBlock(conversationText string) string {
+	return "<conversation>\n" + escapePromptDelimiters(conversationText) + "\n</conversation>"
+}
+
 // SerializeConversation renders LLM messages as text so the model summarizes
 // rather than continues (port of serializeConversation).
 func SerializeConversation(messages []ai.Message) string {
@@ -1286,9 +1304,9 @@ func generateTurnPrefixSummary(messages []ai.Message, options CompactionOptions,
 // generateSummaryWithUsage's prompt assembly.
 func conversationSummaryPrompt(messages []ai.Message, options CompactionOptions, previousSummary string) string {
 	conversationText := SerializeConversation(ConvertToLlm(messages))
-	promptText := fmt.Sprintf("<conversation>\n%s\n</conversation>\n\n", conversationText)
+	promptText := conversationBlock(conversationText) + "\n\n"
 	if previousSummary != "" {
-		promptText += fmt.Sprintf("<previous-summary>\n%s\n</previous-summary>\n\n", previousSummary)
+		promptText += "<previous-summary>\n" + escapePromptDelimiters(previousSummary) + "\n</previous-summary>\n\n"
 	}
 	basePrompt := summarizationPrompt
 	if previousSummary != "" {
@@ -1310,7 +1328,7 @@ func turnPrefixSummaryPrompt(messages []ai.Message, previousSummary, customInstr
 		promptText = fmt.Sprintf("# Conversation\n%s\n\n# Instructions\n%s", conversationText, turnPrefixSummarizationPrompt)
 	} else {
 		promptText = fmt.Sprintf("# Conversation\n%s\n\n<previous-summary>\n%s\n</previous-summary>\n\n# Instructions\n%s\n\n%s",
-			conversationText, previousSummary, turnPrefixMergeInstruction, turnPrefixSummarizationPrompt)
+			conversationText, escapePromptDelimiters(previousSummary), turnPrefixMergeInstruction, turnPrefixSummarizationPrompt)
 	}
 	if customInstructions != "" {
 		promptText = fmt.Sprintf("%s\n\nAdditional focus: %s", promptText, customInstructions)

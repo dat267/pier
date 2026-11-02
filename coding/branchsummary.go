@@ -295,7 +295,7 @@ func GenerateBranchSummary(entries []SessionEntry, options GenerateBranchSummary
 	} else if options.CustomInstructions != "" {
 		instructions = branchSummaryPrompt + "\n\nAdditional focus: " + options.CustomInstructions
 	}
-	promptText := "<conversation>\n" + conversationText + "\n</conversation>\n\n" + instructions
+	promptText := conversationBlock(conversationText) + "\n\n" + instructions
 
 	summarizationMessages := []ai.Message{&ai.UserMessage{
 		Content:   ai.StringOrBlocks{Blocks: ai.ContentList{ai.TextContent{Text: promptText}}},
