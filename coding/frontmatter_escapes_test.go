@@ -10,6 +10,13 @@ func TestFrontmatterQuotedScalarEscapes(t *testing.T) {
 		{`"Use \"quoted\" text"`, `Use "quoted" text`},
 		{`"\0\a\b\t\v\f\r\e\ \/\\\N\_\L\P\x41\u4f60\U0001F600"`, "\x00\a\b\t\v\f\r\x1b /\\\u0085\u00a0\u2028\u2029A你😀"},
 		{`"\uD83D\uDE00"`, "😀"},
+		// js-yaml keeps lone surrogate code units; every UTF-8 write replaces
+		// them, so the port's decoded value is the replacement character.
+		{`"\ud800"`, "\uFFFD"},
+		{`"\udc00"`, "\uFFFD"},
+		{`"\U0000D800"`, "\uFFFD"},
+		{`"\ud800\u0041"`, "\uFFFDA"},
+		{`"\ud800x"`, "\uFFFDx"},
 	} {
 		got := ParseFrontmatter("---\ndescription: " + tc.raw + "\n---\nbody")
 		if got.Frontmatter["description"] != tc.want {

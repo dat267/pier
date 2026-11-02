@@ -127,16 +127,26 @@ func yamlQuotedScalar(value string) string {
 		codePoint := rune(code)
 		if utf16Escape && codePoint >= 0xd800 && codePoint <= 0xdbff {
 			lowEscape := i + length + 1
-			if lowEscape+6 > len(body) || body[lowEscape] != '\\' || body[lowEscape+1] != 'u' {
-				return body
+			if lowEscape+6 <= len(body) && body[lowEscape] == '\\' && body[lowEscape+1] == 'u' {
+				low, err := strconv.ParseUint(body[lowEscape+2:lowEscape+6], 16, 16)
+				if err == nil && low >= 0xdc00 && low <= 0xdfff {
+					codePoint = rune(0x10000 + (uint64(codePoint-0xd800) << 10) + (low - 0xdc00))
+					out.WriteRune(codePoint)
+					i += length + 6
+					continue
+				}
 			}
-			low, err := strconv.ParseUint(body[lowEscape+2:lowEscape+6], 16, 16)
-			if err != nil || low < 0xdc00 || low > 0xdfff {
-				return body
-			}
-			codePoint = rune(0x10000 + (uint64(codePoint-0xd800) << 10) + (low - 0xdc00))
-			out.WriteRune(codePoint)
-			i += length + 6
+			// A lone high surrogate has no Go string representation; the YAML
+			// parser keeps a JavaScript string with the lone unit, which every
+			// UTF-8 write replaces with U+FFFD. Emit the replacement and keep
+			// decoding the rest, like JSON's parser.
+			out.WriteRune(utf8.RuneError)
+			i += length
+			continue
+		}
+		if codePoint >= 0xd800 && codePoint <= 0xdfff {
+			out.WriteRune(utf8.RuneError)
+			i += length
 			continue
 		}
 		if !utf8.ValidRune(codePoint) {
