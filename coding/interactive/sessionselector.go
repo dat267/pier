@@ -123,11 +123,14 @@ func formatSessionDate(date time.Time, now time.Time) string {
 	}
 }
 
-func canonicalizeOptionalPath(path string) string {
+// sessionPathKey is the comparison key for a session file path: canonicalized
+// (symlinks followed) and case-folded on Windows, so parent/child paths that
+// differ only in case still form one tree (pi v1.5.0 session-selector.ts).
+func sessionPathKey(path string) string {
 	if path == "" {
 		return path
 	}
-	return coding.CanonicalizePath(path)
+	return coding.PathComparisonKey(coding.CanonicalizePath(path))
 }
 
 type sessionStatusMessage struct {
@@ -393,15 +396,15 @@ type flatSessionNode struct {
 func buildSessionTree(sessions []coding.SessionInfo) []*sessionTreeNode {
 	byPath := map[string]*sessionTreeNode{}
 	for _, session := range sessions {
-		sessionPath := canonicalizeOptionalPath(session.Path)
+		sessionPath := sessionPathKey(session.Path)
 		byPath[sessionPath] = &sessionTreeNode{Session: session, LatestActivity: session.Modified.UnixMilli()}
 	}
 
 	var roots []*sessionTreeNode
 	for _, session := range sessions {
-		sessionPath := canonicalizeOptionalPath(session.Path)
+		sessionPath := sessionPathKey(session.Path)
 		node := byPath[sessionPath]
-		parentPath := canonicalizeOptionalPath(session.ParentSessionPath)
+		parentPath := sessionPathKey(session.ParentSessionPath)
 		if parentPath != "" {
 			if parent, ok := byPath[parentPath]; ok {
 				parent.Children = append(parent.Children, node)
@@ -512,7 +515,7 @@ func NewSessionList(sessions []coding.SessionInfo, showCwd bool, sortMode SortMo
 		sortMode:                    sortMode,
 		nameFilter:                  nameFilter,
 		keybindings:                 keybindings,
-		currentSessionCanonicalPath: canonicalizeOptionalPath(currentSessionFilePath),
+		currentSessionCanonicalPath: sessionPathKey(currentSessionFilePath),
 		maxVisible:                  10,
 		now:                         time.Now,
 	}
@@ -637,7 +640,7 @@ func (l *SessionList) isCurrentSessionPath(path string) bool {
 	if l.currentSessionCanonicalPath == "" {
 		return false
 	}
-	return canonicalizeOptionalPath(path) == l.currentSessionCanonicalPath
+	return sessionPathKey(path) == l.currentSessionCanonicalPath
 }
 
 // Invalidate is a no-op.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -604,5 +605,20 @@ func TestMatchSessionFuzzyTokensMatchNameAndCwdOnly(t *testing.T) {
 	// The fuzzy bonus can be negative, so the tier base is not a lower bound.
 	if !match.Matches || match.Score <= 1_000_000 || match.Score >= 3_000_000 {
 		t.Fatalf("cwd fuzzy = %+v", match)
+	}
+}
+
+// pi v1.5.0 session-selector.ts compares session paths through
+// getPathComparisonKey(canonicalizePath(path)) so parent and child sessions link
+// even when the stored paths differ in normalization (and, on Windows, case).
+func TestSessionPathKeyNormalizes(t *testing.T) {
+	dir := t.TempDir()
+	direct := filepath.Join(dir, "s.jsonl")
+	indirect := filepath.Join(dir, "..", filepath.Base(dir), "s.jsonl")
+	if sessionPathKey(direct) != sessionPathKey(indirect) {
+		t.Fatalf("paths normalize differently: %q vs %q", sessionPathKey(direct), sessionPathKey(indirect))
+	}
+	if sessionPathKey("") != "" {
+		t.Fatal("empty path must stay empty")
 	}
 }
