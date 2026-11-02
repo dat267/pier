@@ -202,3 +202,19 @@ func TestAltScreenSearchOverlay(t *testing.T) {
 		t.Fatal("search not closed")
 	}
 }
+
+// pi v1.5.0 tui-alt-screen.ts uses iTerm2's default word characters, so a
+// double click keeps paths, kebab/snake tokens, dotted names and Windows paths
+// together.
+func TestTerminalWordSelectionJoinersMatchITerm2(t *testing.T) {
+	for _, segment := range []string{"/", "-", "+", "\\", "~", "_", "."} {
+		if !terminalWordSelectionJoiners[segment] {
+			t.Errorf("%q must join a selected word", segment)
+		}
+	}
+	for _, segment := range []string{" ", ":", ","} {
+		if terminalWordSelectionJoiners[segment] {
+			t.Errorf("%q must not join a selected word", segment)
+		}
+	}
+}

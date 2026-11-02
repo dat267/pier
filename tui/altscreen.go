@@ -53,7 +53,11 @@ var (
 	truncatedSgrMouseRegex = regexp.MustCompile(`^\x1b?\[<\d*(;\d*){0,2}[Mm]?$`)
 )
 
-var terminalWordSelectionJoiners = map[string]bool{"/": true, "-": true}
+// iTerm2's default "characters considered part of a word" set (pi v1.5.0
+// tui-alt-screen.ts).
+var terminalWordSelectionJoiners = map[string]bool{
+	"/": true, "-": true, "+": true, "\\": true, "~": true, "_": true, ".": true,
+}
 
 type altSelectionPoint struct {
 	Row        int
