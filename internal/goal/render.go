@@ -87,7 +87,7 @@ var goalTagPattern = regexp.MustCompile(`</?goal_(round|complete|blocked|paused)
 
 // DisplayBody strips the goal wrapper tags for display.
 func DisplayBody(content string) string {
-	return ai.JSTrim(goalTagPattern.ReplaceAllString(content, ""))
+	return tui.SanitizeUntrustedText(ai.JSTrim(goalTagPattern.ReplaceAllString(content, "")))
 }
 
 // GoalCard is the label/body/phase/detail of one goal card.
@@ -113,7 +113,7 @@ func RenderGoalCard(theme Theme, card GoalCard, expanded bool) *tui.Box {
 		label += theme.Fg("dim", " "+card.Detail)
 	}
 	box.AddChild(tui.NewText(label, 0, 0, nil))
-	body := card.Body
+	body := tui.SanitizeUntrustedText(card.Body)
 	if !expanded {
 		preview, hidden := goalPreview(body, false)
 		body = preview
@@ -269,7 +269,7 @@ func RenderGetGoalRenderResult(goal *GoalView, theme Theme, expanded bool) *tui.
 	stateColor := phaseColor(goal.Phase)
 	lines := []string{"", theme.Fg(stateColor, state), ""}
 
-	objective, hidden := goalPreview(goal.Objective, expanded)
+	objective, hidden := goalPreview(tui.SanitizeUntrustedText(goal.Objective), expanded)
 	lines = append(lines, theme.Fg("toolOutput", objective))
 	if hidden > 0 {
 		lines = append(lines, theme.Fg("muted", ai.JSTrim(goalHiddenHint(hidden))))
@@ -286,7 +286,7 @@ func RenderGetGoalRenderResult(goal *GoalView, theme Theme, expanded bool) *tui.
 		if stopColor == "" {
 			stopColor = "warning"
 		}
-		lines = append(lines, theme.Fg(stopColor, "reason: "+goal.BlockedReason.Code+": "+goal.BlockedReason.Message))
+		lines = append(lines, theme.Fg(stopColor, "reason: "+tui.SanitizeUntrustedText(goal.BlockedReason.Code+": "+goal.BlockedReason.Message)))
 	}
 	return tui.NewText(strings.Join(lines, "\n"), 0, 0, nil)
 }
@@ -294,7 +294,7 @@ func RenderGetGoalRenderResult(goal *GoalView, theme Theme, expanded bool) *tui.
 // RenderSetGoalRenderCall is the set_goal call card when an objective is set:
 // a title line and the objective as a wrapped body, like the write card.
 func RenderSetGoalRenderCall(objective string, theme Theme, expanded bool) *tui.Text {
-	shown, hidden := goalPreview(objective, expanded)
+	shown, hidden := goalPreview(tui.SanitizeUntrustedText(objective), expanded)
 	if shown == "" {
 		// Streaming arguments carry no objective yet; show a placeholder like
 		// the shell card does instead of an empty body.
@@ -317,7 +317,7 @@ func RenderSetGoalStatusRenderCall(action, blockedReason string, theme Theme, ex
 		text += theme.Fg("toolTitle", action)
 	}
 	if blockedReason != "" {
-		shown, hidden := goalPreview(blockedReason, expanded)
+		shown, hidden := goalPreview(tui.SanitizeUntrustedText(blockedReason), expanded)
 		text += "\n\n" + theme.Fg("toolOutput", shown)
 		if hidden > 0 {
 			text += theme.Fg("muted", goalHiddenHint(hidden))

@@ -4141,18 +4141,36 @@ thinking, and provider error text as-is; `packages/tui/src/tui.ts`
 filter. A provider or model that returns `ESC[2J` therefore clears the user's
 screen, and cursor/mode controls can do worse. Pier treats that text as data:
 `tui.SanitizeUntrustedText` removes every escape sequence (CSI, OSC, DCS, SOS,
-PM, APC, and single-character escapes) and every C0/C1 control except newline
-and tab, and it runs on assistant text and thinking before Markdown rendering,
-on assistant abort/error lines, on chat errors and warnings, on transcript
-status text, on compaction error text, and on the tree selector's error preview.
+PM, APC, and single-character escapes) and every C0 control except newline and
+tab (C1 characters are ordinary UTF-8 text and stay, matching the goal
+renderers' whitespace parity), and it runs on:
+
+- assistant text and thinking before Markdown rendering, assistant
+  abort/error lines, chat errors and warnings, transcript status text,
+  compaction error text, and the tree selector's error preview;
+- the tool-call fields the cards interpolate: every string and key in the
+  decoded arguments (tool names, paths, commands, patterns, file bodies) and
+  the fallback/self renderer's tool name, while the tool still executes the raw
+  arguments;
+- session display text that other clients or models wrote: the tree selector's
+  entries and tool-call previews, and compaction/branch summaries;
+- goal objectives, blockers, and event bodies in the goal cards.
+
 Renderer-generated styling, hyperlinks, and image escapes are unaffected
-because they are applied after sanitizing.
+because they are applied after sanitizing. Print-mode stdout is deliberately
+left verbatim: it is program output that may be piped, not a terminal render.
 
 Tests: `TestAssistantTextCannotEmitTerminalControls`,
 `TestAssistantThinkingCannotEmitTerminalControls`,
 `TestAssistantErrorMessageCannotEmitTerminalControls`,
 `TestChatErrorCannotEmitTerminalControls`,
-`TestStatusCannotEmitTerminalControls`, and the `tui`
+`TestStatusCannotEmitTerminalControls`,
+`TestToolCallArgumentsCannotEmitTerminalControls`,
+`TestToolNameCannotEmitTerminalControls`,
+`TestTreeToolCallPreviewCannotEmitTerminalControls`,
+`TestTreeEntryTextCannotEmitTerminalControls`,
+`TestSessionSummaryCannotEmitTerminalControls`,
+`TestGoalCardCannotEmitTerminalControls`, and the `tui`
 `SanitizeUntrustedText` unit table.
 
 ## Lock inventory

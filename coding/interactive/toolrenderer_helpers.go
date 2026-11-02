@@ -14,6 +14,78 @@ import (
 
 // toolArgs decodes raw tool arguments into a JSON object.
 func toolArgs(args any) map[string]any {
+	decoded := decodeToolArgs(args)
+	if decoded == nil || !argsNeedSanitizing(decoded) {
+		return decoded
+	}
+	sanitized, _ := sanitizeArgValue(decoded)
+	typed, _ := sanitized.(map[string]any)
+	return typed
+}
+
+// argsNeedSanitizing reports whether any key or string value carries terminal
+// controls, so ordinary arguments render without copying the map.
+func argsNeedSanitizing(value any) bool {
+	switch typed := value.(type) {
+	case string:
+		return tui.HasTerminalControl(typed)
+	case map[string]any:
+		for key, item := range typed {
+			if tui.HasTerminalControl(key) || argsNeedSanitizing(item) {
+				return true
+			}
+		}
+	case []any:
+		for _, item := range typed {
+			if argsNeedSanitizing(item) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// sanitizeArgValue returns a copy of value with every string - keys included -
+// stripped of terminal controls. Tool arguments are model output, so a crafted
+// path, command, pattern, or file body must not reach the terminal as a control
+// sequence (D342). Renderers use these values only for display; the tool
+// executes the raw arguments.
+func sanitizeArgValue(value any) (any, bool) {
+	switch typed := value.(type) {
+	case string:
+		clean := tui.SanitizeUntrustedText(typed)
+		return clean, clean != typed
+	case map[string]any:
+		out := make(map[string]any, len(typed))
+		changed := false
+		for key, item := range typed {
+			cleanKey := tui.SanitizeUntrustedText(key)
+			clean, itemChanged := sanitizeArgValue(item)
+			out[cleanKey] = clean
+			changed = changed || itemChanged || cleanKey != key
+		}
+		if !changed {
+			return value, false
+		}
+		return out, true
+	case []any:
+		out := make([]any, len(typed))
+		changed := false
+		for index, item := range typed {
+			clean, itemChanged := sanitizeArgValue(item)
+			out[index] = clean
+			changed = changed || itemChanged
+		}
+		if !changed {
+			return value, false
+		}
+		return out, true
+	}
+	return value, false
+}
+
+// decodeToolArgs decodes the tool call arguments as a JSON object.
+func decodeToolArgs(args any) map[string]any {
 	switch typed := args.(type) {
 	case json.RawMessage:
 		var decoded map[string]any

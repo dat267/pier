@@ -382,7 +382,8 @@ func decodeCompactionSummary(content json.RawMessage) (string, int64) {
 	if len(content) > 0 {
 		_ = json.Unmarshal(content, &fields)
 	}
-	return fields.Summary, fields.TokensBefore
+	// The summary is model-generated session text; render it as data (D342).
+	return tui.SanitizeUntrustedText(fields.Summary), fields.TokensBefore
 }
 
 func decodeBranchSummary(content json.RawMessage) string {
@@ -392,7 +393,7 @@ func decodeBranchSummary(content json.RawMessage) string {
 	if len(content) > 0 {
 		_ = json.Unmarshal(content, &fields)
 	}
-	return fields.Summary
+	return tui.SanitizeUntrustedText(fields.Summary)
 }
 
 func decodeCustomMessage(content json.RawMessage) (string, string, bool) {

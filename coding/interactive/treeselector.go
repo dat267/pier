@@ -863,6 +863,7 @@ func (t *TreeList) getEntryDisplayText(node *coding.SessionTreeNode, isSelected 
 	var result string
 
 	normalize := func(value string) string {
+		value = tui.SanitizeUntrustedText(value)
 		value = strings.ReplaceAll(value, "\n", " ")
 		value = strings.ReplaceAll(value, "\t", " ")
 		return ai.JSTrim(value)
@@ -896,7 +897,7 @@ func (t *TreeList) getEntryDisplayText(node *coding.SessionTreeNode, isSelected 
 				if name == "" {
 					name = "tool"
 				}
-				result = theme.Fg("muted", "["+name+"]")
+				result = theme.Fg("muted", "["+tui.SanitizeUntrustedText(name)+"]")
 			}
 		case "bashExecution":
 			result = theme.Fg("dim", "[bash]: "+normalize(message.Command))
@@ -904,7 +905,7 @@ func (t *TreeList) getEntryDisplayText(node *coding.SessionTreeNode, isSelected 
 			result = theme.Fg("dim", "["+message.Role+"]")
 		}
 	case "custom_message":
-		result = theme.Fg("customMessageLabel", "["+entry.CustomType+"]: ") + normalize(t.extractFullContent(entry.Content))
+		result = theme.Fg("customMessageLabel", "["+tui.SanitizeUntrustedText(entry.CustomType)+"]: ") + normalize(t.extractFullContent(entry.Content))
 	case "compaction":
 		tokens := entry.TokensBefore / 1000
 		if entry.TokensBefore%1000 >= 500 {
@@ -914,22 +915,22 @@ func (t *TreeList) getEntryDisplayText(node *coding.SessionTreeNode, isSelected 
 	case "branch_summary":
 		result = theme.Fg("warning", "[branch summary]: ") + normalize(entry.Summary)
 	case "model_change":
-		result = theme.Fg("dim", "[model: "+entry.ModelID+"]")
+		result = theme.Fg("dim", "[model: "+tui.SanitizeUntrustedText(entry.ModelID)+"]")
 	case "thinking_level_change":
-		result = theme.Fg("dim", "[thinking: "+entry.ThinkingLevel+"]")
+		result = theme.Fg("dim", "[thinking: "+tui.SanitizeUntrustedText(entry.ThinkingLevel)+"]")
 	case "custom":
-		result = theme.Fg("dim", "[custom: "+entry.CustomType+"]")
+		result = theme.Fg("dim", "[custom: "+tui.SanitizeUntrustedText(entry.CustomType)+"]")
 	case "context_edit":
-		result = theme.Fg("dim", "[context "+contextEditAction(entry)+": "+entry.TargetID+"]")
+		result = theme.Fg("dim", "[context "+tui.SanitizeUntrustedText(contextEditAction(entry))+": "+tui.SanitizeUntrustedText(entry.TargetID)+"]")
 	case "label":
 		label := "(cleared)"
 		if entry.Label != nil {
 			label = *entry.Label
 		}
-		result = theme.Fg("dim", "[label: "+label+"]")
+		result = theme.Fg("dim", "[label: "+tui.SanitizeUntrustedText(label)+"]")
 	case "session_info":
 		if entry.Name != nil {
-			result = theme.Fg("dim", "[title: ") + theme.Fg("dim", *entry.Name) + theme.Fg("dim", "]")
+			result = theme.Fg("dim", "[title: ") + theme.Fg("dim", tui.SanitizeUntrustedText(*entry.Name)) + theme.Fg("dim", "]")
 		} else {
 			result = theme.Fg("dim", "[title: ") + theme.Italic(theme.Fg("dim", "empty")) + theme.Fg("dim", "]")
 		}
@@ -1101,6 +1102,13 @@ func treeShortenPath(path string) string {
 }
 
 func (t *TreeList) formatToolCall(name string, args map[string]any) string {
+	// The row is display text built from model-supplied arguments, so it can
+	// never carry their control sequences (D342).
+	return tui.SanitizeUntrustedText(t.formatToolCallText(name, args))
+}
+
+// formatToolCallText builds the unprefixed row; formatToolCall sanitizes it.
+func (t *TreeList) formatToolCallText(name string, args map[string]any) string {
 	argString := func(key string) string {
 		value, ok := args[key]
 		if !ok || value == nil {

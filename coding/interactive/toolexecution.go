@@ -201,7 +201,7 @@ func (c *ToolExecutionComponent) renderContext(lastComponent tui.Component) *Too
 
 func (c *ToolExecutionComponent) createCallFallback() tui.Component {
 	theme := ActiveTheme()
-	return tui.NewText(theme.Fg("toolTitle", theme.Bold(c.toolName)), 0, 0, nil)
+	return tui.NewText(theme.Fg("toolTitle", theme.Bold(tui.SanitizeUntrustedText(c.toolName))), 0, 0, nil)
 }
 
 func (c *ToolExecutionComponent) createResultFallback() tui.Component {
@@ -525,7 +525,7 @@ func (c *ToolExecutionComponent) textOutput() string {
 
 func (c *ToolExecutionComponent) formatToolExecution() string {
 	theme := ActiveTheme()
-	text := theme.Fg("toolTitle", theme.Bold(c.toolName))
+	text := theme.Fg("toolTitle", theme.Bold(tui.SanitizeUntrustedText(c.toolName)))
 	if c.args != nil {
 		if encoded, err := ai.MarshalIndentJSON(c.args); err == nil && len(encoded) > 0 {
 			text += "\n\n" + string(encoded)

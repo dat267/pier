@@ -16,9 +16,11 @@ import (
 // treats remote text as data (D342).
 //
 // Newlines and tabs survive because they are ordinary text layout; every other
-// C0/C1 control is dropped.
+// C0 control is dropped. C1 characters are kept: they are ordinary Unicode text
+// in UTF-8 (a bare 0x9B CSI byte cannot survive UTF-8 encoding) and the goal
+// renderers pin their whitespace parity with upstream.
 func SanitizeUntrustedText(text string) string {
-	if !hasTerminalControl(text) {
+	if !HasTerminalControl(text) {
 		return text
 	}
 	var result strings.Builder
@@ -44,10 +46,6 @@ func SanitizeUntrustedText(text string) string {
 				i++
 				continue
 			}
-			if r >= 0x80 && r <= 0x9f {
-				i += size
-				continue
-			}
 			result.WriteString(text[i : i+size])
 			i += size
 		}
@@ -55,15 +53,12 @@ func SanitizeUntrustedText(text string) string {
 	return result.String()
 }
 
-// hasTerminalControl reports whether text contains anything SanitizeUntrustedText
-// would remove, so ordinary text stays allocation-free.
-func hasTerminalControl(text string) bool {
+// HasTerminalControl reports whether text contains anything
+// SanitizeUntrustedText would remove, so ordinary text stays allocation-free.
+func HasTerminalControl(text string) bool {
 	for i := 0; i < len(text); i++ {
 		char := text[i]
 		if char == '\x1b' || char == 0x7f || (char < 0x20 && char != '\n' && char != '\t') {
-			return true
-		}
-		if char == 0xc2 && i+1 < len(text) && text[i+1] >= 0x80 && text[i+1] <= 0x9f {
 			return true
 		}
 	}

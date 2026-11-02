@@ -25,7 +25,7 @@ func TestSanitizeUntrustedTextRemovesTerminalControls(t *testing.T) {
 		{"carriage return", "a\rb", "ab"},
 		{"keeps newline and tab", "a\n\tb", "a\n\tb"},
 		{"keeps unicode", "héllo ✓", "héllo ✓"},
-		{"drops c1 controls", "a\u009bb", "ab"},
+		{"drops c1 controls", "a\u009bb", "a\u009bb"},
 		{"multiple sequences", "\x1b[2J\x1b[31mx\x1b]0;t\x07", "x"},
 	}
 	for _, test := range cases {

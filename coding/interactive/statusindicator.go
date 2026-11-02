@@ -195,7 +195,7 @@ func NewBranchSummaryMessageComponent(summary string, markdownTheme *tui.Markdow
 	theme := ActiveTheme()
 	component := &BranchSummaryMessageComponent{
 		Box:           tui.NewBox(outputPad, 1, func(text string) string { return theme.Bg("customMessageBg", text) }),
-		summary:       summary,
+		summary:       tui.SanitizeUntrustedText(summary),
 		markdownTheme: markdownThemeValue(markdownTheme),
 	}
 	component.updateDisplay()
@@ -304,7 +304,7 @@ func NewCompactionSummaryMessageComponent(summary string, tokensBefore int64, ma
 	theme := ActiveTheme()
 	component := &CompactionSummaryMessageComponent{
 		Box:           tui.NewBox(outputPad, 1, func(text string) string { return theme.Bg("customMessageBg", text) }),
-		summary:       summary,
+		summary:       tui.SanitizeUntrustedText(summary),
 		tokensBefore:  tokensBefore,
 		markdownTheme: markdownThemeValue(markdownTheme),
 	}
