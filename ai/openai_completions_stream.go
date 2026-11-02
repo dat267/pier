@@ -188,7 +188,7 @@ type openaiChunkDeltaExtra struct {
 // openaiStreamingToolCall is the live tool-call accumulator.
 type openaiStreamingToolCall struct {
 	call        ToolCall
-	partialArgs string
+	args        streamingArguments
 	customInput *struct {
 		property   string
 		jsonBuffer GrammarToolInputJSONBuffer
@@ -391,10 +391,10 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 						stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: index, Delta: delta, Partial: output})
 					}
 				} else if streaming != nil {
-					block.Arguments, block.ArgumentsError = ParseToolCallArguments(streaming.partialArgs)
+					block.Arguments, block.ArgumentsError = ParseToolCallArguments(streaming.args.String())
 				}
 				if streaming != nil {
-					streaming.partialArgs = ""
+					streaming.args.Reset()
 				}
 				output.Content[index] = block
 				stream.Push(AssistantMessageEvent{Type: EventToolcallEnd, ContentIndex: index, ToolCall: &block, Partial: output})
@@ -467,7 +467,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 					}{property: customInputProperty}
 					block.call.Arguments = mustMarshalJSON(map[string]string{customInputProperty: ""})
 				} else {
-					block.partialArgs = ""
+					block.args.Reset()
 					block.call.Arguments = json.RawMessage("{}")
 				}
 				if delta.Index != nil {
@@ -504,7 +504,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 					property   string
 					jsonBuffer GrammarToolInputJSONBuffer
 				}{property: customInputProperty}
-				block.partialArgs = ""
+				block.args.Reset()
 			}
 			return block
 		}
@@ -637,9 +637,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 					block.call.Name = name
 				}
 				if toolCall.Function != nil && toolCall.Function.Arguments != "" {
-					deltaText := toolCall.Function.Arguments
-					block.partialArgs += deltaText
-					block.call.Arguments = parseStreamingJSONObject(block.partialArgs)
+					block.call.Arguments = block.args.Append(toolCall.Function.Arguments)
 				} else if toolCall.Custom != nil && toolCall.Custom.Input != "" {
 					nextInput := customToolInputValue(block) + toolCall.Custom.Input
 					deltaText, ok, derr := AppendGrammarToolInputJSONDelta(&block.customInput.jsonBuffer, block.customInput.property, nextInput, false)

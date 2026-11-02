@@ -4234,6 +4234,29 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestChatResetStopsBothSweeps`,
 `TestWiringChatResetDropsPendingSweeps`.
 
+### D353
+
+**Large streamed tool arguments update their preview on a byte schedule.**
+
+Reference: pi v1.5.0 `utils/streaming-json.ts` parses each provider append
+incrementally, so a snapshot costs the open path rather than the whole text.
+Pier keeps `parseStreamingJSONObject` (the older repair parser) but recomputes a
+call's preview at the first delta and then at 4 KiB, 8 KiB, 16 KiB, ... of
+accumulated argument text; below 4 KiB every delta still updates it. Final
+arguments remain exact because every provider finishes with
+`ParseToolCallArguments`, the same strict parse the reference uses.
+
+Measurements on a 100 KiB tool argument in 16-byte deltas: before 23 s and 24 GB
+of allocation, after 11 ms and 10 MB (upstream's incremental parser: about
+3 ms). The preview can lag between thresholds, as the reference's copy credit
+can for a large open container. The preview parser also keeps the older repair
+rules for malformed partial strings (raw control characters and invalid escapes
+stay dropped until the text completes, where the reference shows them while it
+streams); no final tool-call value differs.
+
+Tests: `TestStreamingArgumentsPreviewIsThrottled` pins the schedule and exact
+finish; `BenchmarkStreamingArgumentsLarge` keeps the cost visible.
+
 ### D352
 
 **The Responses input array is assembled canonically instead of re-marshaled per item.**

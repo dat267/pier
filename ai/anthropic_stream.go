@@ -392,7 +392,7 @@ func BuildAnthropicRequest(ctx context.Context, model *Model, params any, option
 type anthropicStreamBlock struct {
 	block         Content
 	index         int
-	partial       []byte
+	args          streamingArguments
 	contentBuffer *strings.Builder
 }
 
@@ -731,8 +731,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 					}
 				case "input_json_delta":
 					if tc, ok := blocks[idx].block.(ToolCall); ok {
-						blocks[idx].partial = append(blocks[idx].partial, event.Delta.PartialJSON...)
-						tc.Arguments = parseStreamingJSONObject(string(blocks[idx].partial))
+						tc.Arguments = blocks[idx].args.Append(event.Delta.PartialJSON)
 						output.Content[idx] = tc
 						stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: idx, Delta: event.Delta.PartialJSON, Partial: output})
 					}
@@ -760,7 +759,8 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				case ThinkingContent:
 					stream.Push(AssistantMessageEvent{Type: EventThinkingEnd, ContentIndex: idx, Content: b.Thinking, Partial: output})
 				case ToolCall:
-					b.Arguments, b.ArgumentsError = ParseToolCallArguments(string(blocks[idx].partial))
+					b.Arguments, b.ArgumentsError = ParseToolCallArguments(blocks[idx].args.String())
+					blocks[idx].args.Reset()
 					blocks[idx].block = b
 					output.Content[idx] = b
 					stream.Push(AssistantMessageEvent{Type: EventToolcallEnd, ContentIndex: idx, ToolCall: &b, Partial: output})

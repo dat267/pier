@@ -333,7 +333,7 @@ type responsesOutputSlot struct {
 // responsesStreamingToolCall is the live tool-call accumulator.
 type responsesStreamingToolCall struct {
 	call        ToolCall
-	partialJSON *string
+	args        *streamingArguments
 	customInput *struct {
 		property   string
 		jsonBuffer GrammarToolInputJSONBuffer
@@ -394,12 +394,16 @@ func ProcessResponsesStream(
 			stream.Push(AssistantMessageEvent{Type: EventTextStart, ContentIndex: slot.contentIndex, Partial: output})
 			return slot
 		case "function_call":
-			partial := item.Arguments
 			call := ToolCall{ID: item.CallID + "|" + item.ID, Name: item.Name, Arguments: json.RawMessage("{}"), Namespace: item.Namespace}
 			output.Content = append(output.Content, call)
+			args := &streamingArguments{}
+			if item.Arguments != "" {
+				call.Arguments = args.Append(item.Arguments)
+				output.Content[len(output.Content)-1] = call
+			}
 			slot := &responsesOutputSlot{
 				kind: "toolCall", contentIndex: len(output.Content) - 1,
-				toolCall: &responsesStreamingToolCall{call: call, partialJSON: &partial},
+				toolCall: &responsesStreamingToolCall{call: call, args: args},
 			}
 			unfinishedToolCalls[slot.contentIndex] = true
 			outputSlots[outputIndex] = slot
@@ -664,20 +668,18 @@ func ProcessResponsesStream(
 			stream.Push(AssistantMessageEvent{Type: EventTextDelta, ContentIndex: slot.contentIndex, Delta: event.Delta, Partial: output})
 		case "response.function_call_arguments.delta":
 			slot := getSlot(event.OutputIndex, "toolCall")
-			if slot == nil || slot.toolCall.partialJSON == nil {
+			if slot == nil || slot.toolCall.args == nil {
 				return
 			}
-			*slot.toolCall.partialJSON += event.Delta
-			slot.toolCall.call.Arguments = parseStreamingJSONObject(*slot.toolCall.partialJSON)
+			slot.toolCall.call.Arguments = slot.toolCall.args.Append(event.Delta)
 			updateContent(slot)
 			pushToolCallDelta(slot, event.Delta)
 		case "response.function_call_arguments.done":
 			slot := getSlot(event.OutputIndex, "toolCall")
-			if slot == nil || slot.toolCall.partialJSON == nil {
+			if slot == nil || slot.toolCall.args == nil {
 				return
 			}
-			previous := *slot.toolCall.partialJSON
-			*slot.toolCall.partialJSON = event.Arguments
+			previous := slot.toolCall.args.String()
 			slot.toolCall.call.Arguments, slot.toolCall.call.ArgumentsError = ParseToolCallArguments(event.Arguments)
 			updateContent(slot)
 			if strings.HasPrefix(event.Arguments, previous) {
@@ -739,10 +741,10 @@ func ProcessResponsesStream(
 				updateContent(slot)
 				stream.Push(AssistantMessageEvent{Type: EventTextEnd, ContentIndex: slot.contentIndex, Content: slot.text.Text, Partial: output})
 				delete(outputSlots, event.OutputIndex)
-			case item.Type == "function_call" && slot != nil && slot.kind == "toolCall" && slot.toolCall.partialJSON != nil:
+			case item.Type == "function_call" && slot != nil && slot.kind == "toolCall" && slot.toolCall.args != nil:
 				arguments := item.Arguments
 				if arguments == "" {
-					arguments = *slot.toolCall.partialJSON
+					arguments = slot.toolCall.args.String()
 				}
 				if arguments == "" {
 					arguments = "{}"
@@ -751,7 +753,7 @@ func ProcessResponsesStream(
 				if item.Namespace != nil {
 					slot.toolCall.call.Namespace = item.Namespace
 				}
-				slot.toolCall.partialJSON = nil
+				slot.toolCall.args = nil
 				delete(unfinishedToolCalls, slot.contentIndex)
 				updateContent(slot)
 				call := slot.toolCall.call

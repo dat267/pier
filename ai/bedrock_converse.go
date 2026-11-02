@@ -35,7 +35,7 @@ type bedrockBlock struct {
 	redacted          bool
 	redactedChunks    [][]byte
 	toolCall          ToolCall
-	partialJSON       string
+	args              streamingArguments
 }
 
 // content renders the block for the assistant message.
@@ -67,7 +67,7 @@ func (b *bedrockBlock) flushRedactedContent() {
 
 // finalize clears the streaming scratch state.
 func (b *bedrockBlock) finalize() {
-	b.partialJSON = ""
+	b.args.Reset()
 	b.flushRedactedContent()
 }
 
@@ -1246,8 +1246,7 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 			}
 		case event.Delta.ToolUse != nil && index != -1 && (*blocks)[index].kind == "toolCall":
 			block := (*blocks)[index]
-			block.partialJSON += event.Delta.ToolUse.Input
-			block.toolCall.Arguments = parseStreamingArgs(json.RawMessage(block.partialJSON))
+			block.toolCall.Arguments = block.args.Append(event.Delta.ToolUse.Input)
 			syncBedrockContent(output, *blocks)
 			stream.Push(AssistantMessageEvent{
 				Type: EventToolcallDelta, ContentIndex: index, Delta: event.Delta.ToolUse.Input, Partial: output,
@@ -1320,8 +1319,8 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 				Type: EventThinkingEnd, ContentIndex: index, Content: block.thinking, Partial: output,
 			})
 		case "toolCall":
-			block.toolCall.Arguments, block.toolCall.ArgumentsError = ParseToolCallArguments(block.partialJSON)
-			block.partialJSON = ""
+			block.toolCall.Arguments, block.toolCall.ArgumentsError = ParseToolCallArguments(block.args.String())
+			block.args.Reset()
 			syncBedrockContent(output, *blocks)
 			call := block.toolCall
 			stream.Push(AssistantMessageEvent{

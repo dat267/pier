@@ -255,6 +255,47 @@ func parseOrderedJSONObject(data []byte) (json.RawMessage, bool) {
 	return encodeSchemaValue(value), true
 }
 
+// streamingArgumentsPreviewBytes is how much accumulated argument text may
+// appear before the partial preview is recomputed. Small calls update on every
+// delta; a large streamed value (a write tool's content) otherwise re-parses
+// and re-encodes the whole prefix per delta, which cost 23 s and 24 GB for a
+// 100 KiB value in 16-byte deltas. The preview then updates at 4 KiB, 8 KiB,
+// 16 KiB, ... while the final ParseToolCallArguments remains exact. Upstream
+// v1.5.0's incremental parser keeps every delta cheap; this bounded preview
+// schedule reaches the same responsiveness without a second parser.
+const streamingArgumentsPreviewBytes = 4 << 10
+
+type streamingArguments struct {
+	text   strings.Builder
+	parsed json.RawMessage
+	next   int
+}
+
+// Append adds argument text and returns the preview object. The preview is
+// recomputed at the first delta and at each doubling threshold above 4 KiB.
+func (s *streamingArguments) Append(delta string) json.RawMessage {
+	s.text.WriteString(delta)
+	size := s.text.Len()
+	if s.parsed == nil || size >= s.next {
+		s.parsed = parseStreamingJSONObject(s.text.String())
+		if s.next == 0 {
+			s.next = streamingArgumentsPreviewBytes
+		}
+		for s.next <= size {
+			s.next *= 2
+		}
+	}
+	return s.parsed
+}
+
+func (s *streamingArguments) String() string { return s.text.String() }
+
+func (s *streamingArguments) Reset() {
+	s.text.Reset()
+	s.parsed = nil
+	s.next = 0
+}
+
 // parseStreamingJSONObject attempts to parse potentially incomplete JSON during
 // streaming, preserving object key order (upstream parseStreamingJson). An
 // empty or unparseable input, or a non-object result, yields {}.
