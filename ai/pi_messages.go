@@ -137,7 +137,7 @@ func createPiMessagesResponseError(model *Model, requestURL *url.URL, response *
 // (upstream createEventConverter).
 type piMessagesConverter struct {
 	partial        *AssistantMessage
-	toolJSON       map[int]string
+	toolJSON       map[int]*streamingArguments
 	contentBuffers map[int]*strings.Builder
 }
 
@@ -148,7 +148,7 @@ func newPiMessagesConverter(model *Model) *piMessagesConverter {
 			Usage: emptyPiMessagesUsage(), StopReason: StopPending,
 			Timestamp: time.Now().UnixMilli(),
 		},
-		toolJSON:       map[int]string{},
+		toolJSON:       map[int]*streamingArguments{},
 		contentBuffers: map[int]*strings.Builder{},
 	}
 }
@@ -284,13 +284,16 @@ func (c *piMessagesConverter) convert(event *PiMessagesEvent) (AssistantMessageE
 		setPiContent(partial, event.ContentIndex, ToolCall{
 			ID: event.ID, Name: event.ToolName, Arguments: json.RawMessage(`{}`),
 		})
-		c.toolJSON[event.ContentIndex] = ""
+		c.toolJSON[event.ContentIndex] = &streamingArguments{}
 		return AssistantMessageEvent{Type: EventToolcallStart, ContentIndex: event.ContentIndex, Partial: partial}, false
 	case "toolcall_delta":
-		raw := c.toolJSON[event.ContentIndex] + event.Delta
-		c.toolJSON[event.ContentIndex] = raw
+		args := c.toolJSON[event.ContentIndex]
+		if args == nil {
+			args = &streamingArguments{}
+			c.toolJSON[event.ContentIndex] = args
+		}
 		if call, ok := getPiContent(partial, event.ContentIndex).(ToolCall); ok {
-			call.Arguments = parseStreamingArgs(json.RawMessage(raw))
+			call.Arguments = args.Append(event.Delta)
 			setPiContent(partial, event.ContentIndex, call)
 		}
 		return AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: event.ContentIndex, Delta: event.Delta, Partial: partial}, false
