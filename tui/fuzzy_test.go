@@ -50,3 +50,28 @@ func TestFuzzyMatchUsesUTF16IndicesAndWhitespace(t *testing.T) {
 		t.Fatalf("nbsp score = %v; want %v", got, want)
 	}
 }
+
+// pi v1.5.0 8c03fef4d (#11220): the greedy alignment can scatter the query over
+// an earlier unrelated part of the text, so every contiguous occurrence is
+// scored and the best alignment wins ("opus" must not match via "openRouter").
+func TestFuzzyMatchRanksContiguousOccurrences(t *testing.T) {
+	cases := []struct {
+		query   string
+		scatter string
+	}{
+		{"opus", "openrouter openrouter/anthropic/claude-opus"},
+		{"astra", "radius radius/gpt astra-1"},
+		{"gpt", "google openai gpt-4o openrouter"},
+	}
+	for _, probe := range cases {
+		scattered := MatchFuzzy(probe.query, probe.scatter)
+		if !scattered.Matches {
+			t.Fatalf("%q did not match %q", probe.query, probe.scatter)
+		}
+		// A wholly contiguous match always scores better than the scattered one.
+		contiguous := MatchFuzzy(probe.query, probe.query+"-tail")
+		if contiguous.Score >= scattered.Score {
+			t.Fatalf("%q: contiguous score %v, scattered %v", probe.query, contiguous.Score, scattered.Score)
+		}
+	}
+}

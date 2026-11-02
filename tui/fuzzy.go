@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"math"
 	"regexp"
 	"sort"
 	"strings"
@@ -51,46 +52,28 @@ func MatchFuzzy(query string, text string) FuzzyMatch {
 			return FuzzyMatch{Matches: false, Score: 0}
 		}
 
-		queryIndex := 0
-		score := 0.0
+		positions := make([]int, 0, len(queryUnits))
 		lastMatchIndex := -1
-		consecutiveMatches := 0
-
-		for queryIndex < len(queryUnits) {
+		for queryIndex := 0; queryIndex < len(queryUnits); queryIndex++ {
 			i := indexUnitFrom(textUnits, queryUnits[queryIndex], lastMatchIndex+1)
 			if i == -1 {
-				break
+				return FuzzyMatch{Matches: false, Score: 0}
 			}
-
-			isWordBoundary := i == 0 || isFuzzyBoundaryUnit(textUnits[i-1])
-
-			// Reward consecutive matches.
-			if lastMatchIndex == i-1 {
-				consecutiveMatches++
-				score -= float64(consecutiveMatches) * 5
-			} else {
-				consecutiveMatches = 0
-				// Penalize gaps.
-				if lastMatchIndex >= 0 {
-					score += float64(i-lastMatchIndex-1) * 2
-				}
-			}
-
-			// Reward word-boundary matches.
-			if isWordBoundary {
-				score -= 10
-			}
-
-			// Slight penalty for later matches.
-			score += unfusedProduct(float64(i), 0.1)
-
+			positions = append(positions, i)
 			lastMatchIndex = i
-			queryIndex++
 		}
 
-		if queryIndex < len(queryUnits) {
-			return FuzzyMatch{Matches: false, Score: 0}
+		score := scoreFuzzyUnits(textUnits, positions)
+		// The greedy alignment can scatter the query over an earlier, unrelated
+		// part of the text, so every contiguous occurrence is scored too and the
+		// best alignment wins (pi v1.5.0 8c03fef4d).
+		for start := indexUnitsFrom(textUnits, queryUnits, 0); start != -1; start = indexUnitsFrom(textUnits, queryUnits, start+1) {
+			for k := range positions {
+				positions[k] = start + k
+			}
+			score = math.Min(score, scoreFuzzyUnits(textUnits, positions))
 		}
+
 		if normalizedQuery == textLower {
 			score -= 100
 		}
@@ -112,6 +95,99 @@ func MatchFuzzy(query string, text string) FuzzyMatch {
 		return primaryMatch
 	}
 	return FuzzyMatch{Matches: true, Score: swappedMatch.Score + 5}
+}
+
+// scoreFuzzyUnits scores one alignment over UTF-16 code units (upstream
+// scorePositions): consecutive runs, word boundaries, gaps and a slight
+// later-match penalty.
+func scoreFuzzyUnits(textUnits []uint16, positions []int) float64 {
+	score := 0.0
+	lastMatchIndex := -1
+	consecutiveMatches := 0
+	for _, i := range positions {
+		if lastMatchIndex == i-1 {
+			consecutiveMatches++
+			score -= float64(consecutiveMatches) * 5
+		} else {
+			consecutiveMatches = 0
+			if lastMatchIndex >= 0 {
+				score += float64(i-lastMatchIndex-1) * 2
+			}
+		}
+		if i == 0 || isFuzzyBoundaryUnit(textUnits[i-1]) {
+			score -= 10
+		}
+		score += unfusedProduct(float64(i), 0.1)
+		lastMatchIndex = i
+	}
+	return score
+}
+
+// scoreFuzzyBytes is scoreFuzzyUnits for the ASCII fast path.
+func scoreFuzzyBytes(text string, positions []int) float64 {
+	score := 0.0
+	lastMatchIndex := -1
+	consecutiveMatches := 0
+	for _, i := range positions {
+		if lastMatchIndex == i-1 {
+			consecutiveMatches++
+			score -= float64(consecutiveMatches) * 5
+		} else {
+			consecutiveMatches = 0
+			if lastMatchIndex >= 0 {
+				score += float64(i-lastMatchIndex-1) * 2
+			}
+		}
+		if i == 0 || isFuzzyBoundaryUnit(uint16(lowerASCIIByte(text[i-1]))) {
+			score -= 10
+		}
+		score += unfusedProduct(float64(i), 0.1)
+		lastMatchIndex = i
+	}
+	return score
+}
+
+// indexUnitsFrom returns the first offset at or after start where needle
+// appears contiguously.
+func indexUnitsFrom(haystack []uint16, needle []uint16, start int) int {
+	if start < 0 {
+		start = 0
+	}
+	for i := start; i+len(needle) <= len(haystack); i++ {
+		matched := true
+		for k := range needle {
+			if haystack[i+k] != needle[k] {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return i
+		}
+	}
+	return -1
+}
+
+// indexContiguousASCII returns the first offset at or after start where the
+// query appears contiguously, reading the query through the swap split without
+// allocating.
+func indexContiguousASCII(text, query string, split, start int) int {
+	if start < 0 {
+		start = 0
+	}
+	for i := start; i+len(query) <= len(text); i++ {
+		matched := true
+		for k := 0; k < len(query); k++ {
+			if lowerASCIIByte(text[i+k]) != lowerASCIIByte(asciiQueryByte(query, split, k)) {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return i
+		}
+	}
+	return -1
 }
 
 // unfusedProduct returns a*b with the multiplication rounded before it is
@@ -188,37 +264,33 @@ func matchFuzzyASCII(query string, text string, split int) FuzzyMatch {
 		return FuzzyMatch{Matches: false, Score: 0}
 	}
 
-	queryIndex := 0
-	score := 0.0
+	// A stack buffer keeps the ASCII path allocation-free for ordinary queries
+	// (the upstream scoring collects the same positions in a JS array).
+	var positionBuffer [64]int
+	positions := positionBuffer[:0]
+	if len(query) > len(positionBuffer) {
+		positions = make([]int, 0, len(query))
+	}
 	lastMatchIndex := -1
-	consecutiveMatches := 0
-	for queryIndex < len(query) {
+	for queryIndex := 0; queryIndex < len(query); queryIndex++ {
 		i := indexASCIILowerFrom(text, lowerASCIIByte(asciiQueryByte(query, split, queryIndex)), lastMatchIndex+1)
 		if i == -1 {
-			break
+			return FuzzyMatch{Matches: false, Score: 0}
 		}
-
-		isWordBoundary := i == 0 || isFuzzyBoundaryUnit(uint16(lowerASCIIByte(text[i-1])))
-		if lastMatchIndex == i-1 {
-			consecutiveMatches++
-			score -= float64(consecutiveMatches) * 5
-		} else {
-			consecutiveMatches = 0
-			if lastMatchIndex >= 0 {
-				score += float64(i-lastMatchIndex-1) * 2
-			}
-		}
-		if isWordBoundary {
-			score -= 10
-		}
-		score += unfusedProduct(float64(i), 0.1)
+		positions = append(positions, i)
 		lastMatchIndex = i
-		queryIndex++
 	}
 
-	if queryIndex < len(query) {
-		return FuzzyMatch{Matches: false, Score: 0}
+	score := scoreFuzzyBytes(text, positions)
+	// Also score every contiguous occurrence and keep the best alignment
+	// (pi v1.5.0 8c03fef4d).
+	for start := indexContiguousASCII(text, query, split, 0); start != -1; start = indexContiguousASCII(text, query, split, start+1) {
+		for k := range positions {
+			positions[k] = start + k
+		}
+		score = math.Min(score, scoreFuzzyBytes(text, positions))
 	}
+
 	if asciiEqualFold(query, text, split) {
 		score -= 100
 	}
