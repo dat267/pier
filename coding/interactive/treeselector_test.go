@@ -479,3 +479,22 @@ func TestTreeSelectorSearchesFullCustomMessageString(t *testing.T) {
 		t.Fatalf("search did not match the full custom_message string:\n%s", rendered)
 	}
 }
+
+// pi v1.5.0 tree-selector.ts: the open tree captures fullscreen viewport keys
+// so PageUp/PageDown move its selection; an open label input takes the keys.
+func TestTreeSelectorCapturesViewportInput(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+
+	component := NewTreeSelectorComponent(nil, nil, 20, func(string) {}, func() {}, TreeSelectorOptions{})
+	if !component.CapturesViewportInput() {
+		t.Fatal("the open tree must capture viewport input")
+	}
+	component.showLabelInput("entry", "", false)
+	if component.CapturesViewportInput() {
+		t.Fatal("an open label input must leave viewport keys to the transcript")
+	}
+}

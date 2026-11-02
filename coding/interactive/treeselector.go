@@ -1763,6 +1763,11 @@ func (c *TreeSelectorComponent) hideLabelInput() {
 	c.treeContainer.AddChild(c.treeList)
 }
 
+// CapturesViewportInput reports that an open tree owns page keys, so fullscreen
+// PageUp/PageDown move its selection instead of scrolling the transcript
+// (pi v1.5.0 tree-selector.ts). The label input takes the keys itself.
+func (c *TreeSelectorComponent) CapturesViewportInput() bool { return c.labelInput == nil }
+
 // HandleInput processes the selector input.
 func (c *TreeSelectorComponent) HandleInput(keyData string) {
 	if c.labelInput != nil {

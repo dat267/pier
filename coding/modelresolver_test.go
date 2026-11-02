@@ -396,7 +396,7 @@ func TestResolveCliModelCustomFallback(t *testing.T) {
 
 func TestDefaultModelPerProviderTracksCurrentModels(t *testing.T) {
 	expectations := map[ai.ProviderId]string{
-		"openai":                     "gpt-5.5",
+		"openai":                     "gpt-6.1-sol",
 		"openai-codex":               "gpt-6.1-sol",
 		"fireworks":                  "accounts/fireworks/models/kimi-k3",
 		"together":                   "moonshotai/Kimi-K3",
@@ -628,5 +628,23 @@ func TestFindExactModelReferenceMatchUsesJSLower(t *testing.T) {
 	model := testModel("\u03bf\u03c2", "Final Sigma", "anthropic", false) // ος
 	if got := FindExactModelReferenceMatch("\u039f\u03a3", []*ai.Model{model}); got == nil {
 		t.Fatal("JS toLowerCase should match ΟΣ to ος")
+	}
+}
+
+// pi v1.5.0 model-resolver.ts splitProviderPrefix: provider ids may contain "/",
+// so known ids are matched longest first.
+func TestSplitProviderPrefixMatchesSlashProviders(t *testing.T) {
+	models := []*ai.Model{
+		{Provider: "openai", ID: "gpt-6.1-sol"},
+		{Provider: "https://proxy.example/v1", ID: "m"},
+	}
+	if provider, model, ok := splitProviderPrefix("https://proxy.example/v1/m", models); !ok || provider != "https://proxy.example/v1" || model != "m" {
+		t.Fatalf("slash provider = %q, %q, %v", provider, model, ok)
+	}
+	if provider, model, ok := splitProviderPrefix("openai/gpt-6.1-sol", models); !ok || provider != "openai" || model != "gpt-6.1-sol" {
+		t.Fatalf("plain provider = %q, %q, %v", provider, model, ok)
+	}
+	if _, _, ok := splitProviderPrefix("unknown/model", models); ok {
+		t.Fatal("unknown provider resolved")
 	}
 }

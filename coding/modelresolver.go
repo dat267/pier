@@ -20,7 +20,7 @@ var DefaultModelPerProvider = map[ai.ProviderId]string{
 	"amazon-bedrock":             "us.anthropic.claude-opus-4-6-v1",
 	"ant-ling":                   "Ring-2.6-1T",
 	"anthropic":                  "claude-opus-4-8",
-	"openai":                     "gpt-5.5",
+	"openai":                     "gpt-6.1-sol",
 	"azure":                      "gpt-5.4",
 	"openai-codex":               "gpt-6.1-sol",
 	"radius":                     "balanced",
@@ -157,21 +157,34 @@ func splitThinkingSuffix(text string) (string, ai.ThinkingLevel, bool) {
 }
 
 func splitProviderPrefix(text string, models []*ai.Model) (string, string, bool) {
-	before, after, ok := strings.Cut(text, "/")
-	if !ok {
-		return "", "", false
-	}
-	prefix := ai.JSLower(ai.JSTrim(before))
-	modelText := ai.JSTrim(after)
-	if prefix == "" || modelText == "" {
-		return "", "", false
-	}
+	// Provider ids may contain "/" themselves (URL-derived ids), so match the
+	// known ids longest first (pi v1.5.0 model-resolver.ts).
+	lowerText := ai.JSLower(text)
+	bestProvider, bestModel := "", ""
+	bestLength := -1
 	for _, model := range models {
-		if ai.JSLower(model.Provider) == prefix {
-			return model.Provider, modelText, true
+		prefix := ai.JSLower(ai.JSTrim(model.Provider))
+		if prefix == "" || len(prefix) <= bestLength {
+			continue
 		}
+		slashIndex := strings.Index(lowerText[min(len(prefix), len(lowerText)):], "/")
+		if slashIndex == -1 {
+			continue
+		}
+		slashIndex += min(len(prefix), len(lowerText))
+		if ai.JSTrim(lowerText[:slashIndex]) != prefix {
+			continue
+		}
+		modelText := ai.JSTrim(text[slashIndex+1:])
+		if modelText == "" {
+			continue
+		}
+		bestProvider, bestModel, bestLength = model.Provider, modelText, len(prefix)
 	}
-	return "", "", false
+	if bestProvider == "" {
+		return "", "", false
+	}
+	return bestProvider, bestModel, true
 }
 
 // ResolveModelReference resolves one reference. usable only breaks ties between
