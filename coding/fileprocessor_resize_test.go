@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"image"
+	"image/jpeg"
 	"image/png"
 	"math/rand"
 	"strings"
@@ -152,5 +153,35 @@ func TestFormatDimensionNoteUsesJSFixed(t *testing.T) {
 	})
 	if !strings.Contains(note, "Multiply coordinates by 1.13") {
 		t.Fatalf("note = %q", note)
+	}
+}
+
+// Pinned v1.5.0 image-resize-core.ts prefers the smaller of PNG and JPEG at the
+// configured quality before falling back to lower JPEG qualities; the port used
+// to take PNG whenever it fit.
+func TestResizeInlineImagePrefersSmallerFormat(t *testing.T) {
+	data := noisyPNG(t, 128, 128)
+	source, err := png.Decode(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	scaled := scaleImageBilinear(source, 64, 64)
+	var pngBuffer, jpegBuffer bytes.Buffer
+	if err := png.Encode(&pngBuffer, scaled); err != nil {
+		t.Fatal(err)
+	}
+	if err := jpeg.Encode(&jpegBuffer, scaled, &jpeg.Options{Quality: 80}); err != nil {
+		t.Fatal(err)
+	}
+	if jpegBuffer.Len() >= pngBuffer.Len() {
+		t.Fatalf("fixture needs JPEG smaller than PNG (jpeg=%d png=%d)", jpegBuffer.Len(), pngBuffer.Len())
+	}
+	options := ImageResizeOptions{MaxWidth: 64, MaxHeight: 64, MaxBytes: 1 << 20, JPEGQuality: 80}
+	resized := resizeInlineImage(data, "image/png", options)
+	if resized == nil {
+		t.Fatal("image was not resized")
+	}
+	if resized.MimeType != "image/jpeg" {
+		t.Fatalf("mime = %q; want the smaller image/jpeg", resized.MimeType)
 	}
 }

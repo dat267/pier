@@ -302,20 +302,36 @@ func newEncodedImageCandidate(data []byte, mimeType string) encodedImageCandidat
 	return encodedImageCandidate{Data: encoded, EncodedSize: int64(len(encoded)), MimeType: mimeType}
 }
 
-// encodeImageCandidates encodes the scaled image the way upstream tries formats:
-// PNG first, then JPEG at each quality step, so the first candidate below the
-// byte budget wins.
+// encodeImageCandidates encodes the scaled image the way upstream tries formats.
+// The smaller of PNG and the configured-quality JPEG comes first, then the other,
+// then the lower JPEG qualities, so the first candidate below the byte budget
+// wins (pi v1.5.0 image-resize-core.ts).
 func encodeImageCandidates(img image.Image, jpegQuality int) []encodedImageCandidate {
-	candidates := make([]encodedImageCandidate, 0, 6)
+	var pngCandidate *encodedImageCandidate
 	var pngBuffer bytes.Buffer
 	if err := png.Encode(&pngBuffer, img); err == nil {
-		candidates = append(candidates, newEncodedImageCandidate(pngBuffer.Bytes(), "image/png"))
+		candidate := newEncodedImageCandidate(pngBuffer.Bytes(), "image/png")
+		pngCandidate = &candidate
 	}
+	var jpegCandidates []encodedImageCandidate
 	for _, quality := range jpegQualitySteps(jpegQuality) {
 		var jpegBuffer bytes.Buffer
 		if err := jpeg.Encode(&jpegBuffer, img, &jpeg.Options{Quality: quality}); err == nil {
-			candidates = append(candidates, newEncodedImageCandidate(jpegBuffer.Bytes(), "image/jpeg"))
+			jpegCandidates = append(jpegCandidates, newEncodedImageCandidate(jpegBuffer.Bytes(), "image/jpeg"))
 		}
+	}
+	candidates := make([]encodedImageCandidate, 0, len(jpegCandidates)+1)
+	switch {
+	case pngCandidate == nil:
+		candidates = append(candidates, jpegCandidates...)
+	case len(jpegCandidates) == 0:
+		candidates = append(candidates, *pngCandidate)
+	case jpegCandidates[0].EncodedSize < pngCandidate.EncodedSize:
+		candidates = append(candidates, jpegCandidates[0], *pngCandidate)
+		candidates = append(candidates, jpegCandidates[1:]...)
+	default:
+		candidates = append(candidates, *pngCandidate)
+		candidates = append(candidates, jpegCandidates...)
 	}
 	return candidates
 }
