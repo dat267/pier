@@ -20,9 +20,12 @@ unresolved findings.
   fast and pleasant, and record the difference as a D-row instead of copying it.
   A cache or fast path needs a measured baseline, not a guess.
 - When the port is measurably slower than the pinned reference for the same
-  input (a benchmark, a profile, or a supplied workload), optimize the Go code
-  while keeping the reference behavior byte-identical: pin that behavior with a
-  test, and record the measurement and the approach in a D-row.
+  input (a benchmark, a profile, or a supplied workload), iterate on the Go code
+  until a repeatable, same-workload benchmark shows it beats the reference while
+  preserving behavior. Pin behavior with tests. Do not keep a patch that only
+  wins on a pathological input while regressing representative workloads; keep
+  optimizing or revert it. Record the baseline, reference result, final result,
+  and approach in a D-row.
 - Every behavior change needs a test citing the upstream source. Cite the
   upstream file/commit in the commit message, using `type(scope): summary`;
   document intentional differences with a reproducing D-row comment and an
