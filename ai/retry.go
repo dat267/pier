@@ -401,6 +401,11 @@ var nonRetryableProviderLimitErrorPattern = buildProviderErrorPattern([]string{
 	// Sign in with ChatGPT on a ChatGPT Business plan: a usage limit set by the
 	// workspace admin. Only the admin can raise it (upstream v1.4.0 cedefc532).
 	`subscription_sharing_workplace_individual_usage_limit_exceeded`,
+	// Zhipu/Z.ai (open.bigmodel.cn) error code 1308: the plan's usage limit is
+	// reached, sent as HTTP 429. It resets after hours, not seconds (pi v1.5.0
+	// utils/retry.ts, #11537). Upstream writes a lookahead; RE2 has none, so the
+	// boundary consumes one non-digit or the end of the message.
+	`"code"\s*:\s*"?1308(?:[^0-9]|$)`,
 })
 
 // Retryable provider/transport errors.

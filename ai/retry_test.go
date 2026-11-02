@@ -196,6 +196,20 @@ func TestChatGPTWorkspaceLimitIsNotRetryable(t *testing.T) {
 	}
 }
 
+// Zhipu/Z.ai (open.bigmodel.cn) sends its plan usage limit as HTTP 429 with
+// error code 1308; it resets after hours, so a retry cannot succeed (pi v1.5.0
+// utils/retry.ts).
+func TestZhipuPlanLimitIsNotRetryable(t *testing.T) {
+	message := errorAssistant(`429 {"error":{"code":1308,"message":"The usage limit for this plan has been reached."}}`)
+	if IsRetryableAssistantError(message) {
+		t.Fatal("a Zhipu plan usage limit must not be retried")
+	}
+	// The code must stand alone: another number containing 1308 is not the limit.
+	if !IsRetryableAssistantError(errorAssistant(`500 {"error":{"code":13081,"message":"upstream server error"}}`)) {
+		t.Fatal("a longer code must not match the 1308 pattern")
+	}
+}
+
 // pi v1.4.0 utils/retry.ts builds JavaScript regexes without /s, so `.` does
 // not match CR, U+2028 or U+2029 (Go's `.` only excludes LF).
 func TestRetryableErrorPatternUsesJavaScriptDot(t *testing.T) {
