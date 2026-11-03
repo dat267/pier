@@ -84,8 +84,41 @@ func marshalContentListJSON[T Content](blocks []T) ([]byte, error) {
 }
 
 // marshalContentBlock encodes one block with its type discriminator as the
-// first key, matching upstream key order.
+// first key, matching upstream key order. The common blocks are appended
+// directly: the struct encoder plus discriminator splice canonicalized each
+// block twice, and content lists dominate conversation marshaling (D350).
 func marshalContentBlock(c Content) (json.RawMessage, error) {
+	switch v := c.(type) {
+	case TextContent:
+		return marshalTextContent(v), nil
+	case *TextContent:
+		if v == nil {
+			return json.RawMessage("null"), nil
+		}
+		return marshalTextContent(*v), nil
+	case ThinkingContent:
+		return marshalThinkingContent(v), nil
+	case *ThinkingContent:
+		if v == nil {
+			return json.RawMessage("null"), nil
+		}
+		return marshalThinkingContent(*v), nil
+	case ImageContent:
+		return marshalImageContent(v), nil
+	case *ImageContent:
+		if v == nil {
+			return json.RawMessage("null"), nil
+		}
+		return marshalImageContent(*v), nil
+	case ToolCall:
+		return marshalToolCallContent(v)
+	case *ToolCall:
+		if v == nil {
+			return json.RawMessage("null"), nil
+		}
+		return marshalToolCallContent(*v)
+	}
+	// Unknown content and nil block pointers keep the previous encoder path.
 	var kind ContentKind
 	switch v := c.(type) {
 	case TextContent:
@@ -128,6 +161,67 @@ func marshalContentBlock(c Content) (json.RawMessage, error) {
 		out = append(out, '}')
 	}
 	return out, nil
+}
+
+func marshalTextContent(v TextContent) json.RawMessage {
+	out := make([]byte, 0, len(v.Text)+32)
+	out = append(out, `{"type":"text","text":`...)
+	out = appendCanonicalJSONString(out, v.Text)
+	if v.TextSignature != nil {
+		out = append(out, `,"textSignature":`...)
+		out = appendCanonicalJSONString(out, *v.TextSignature)
+	}
+	return append(out, '}')
+}
+
+func marshalThinkingContent(v ThinkingContent) json.RawMessage {
+	out := make([]byte, 0, len(v.Thinking)+48)
+	out = append(out, `{"type":"thinking","thinking":`...)
+	out = appendCanonicalJSONString(out, v.Thinking)
+	if v.ThinkingSignature != nil {
+		out = append(out, `,"thinkingSignature":`...)
+		out = appendCanonicalJSONString(out, *v.ThinkingSignature)
+	}
+	if v.Redacted {
+		out = append(out, `,"redacted":true`...)
+	}
+	return append(out, '}')
+}
+
+func marshalImageContent(v ImageContent) json.RawMessage {
+	out := make([]byte, 0, len(v.Data)+len(v.MimeType)+40)
+	out = append(out, `{"type":"image","data":`...)
+	out = appendCanonicalJSONString(out, v.Data)
+	out = append(out, `,"mimeType":`...)
+	out = appendCanonicalJSONString(out, v.MimeType)
+	return append(out, '}')
+}
+
+func marshalToolCallContent(v ToolCall) (json.RawMessage, error) {
+	args, err := MarshalJSON(v.Arguments)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]byte, 0, len(v.ID)+len(v.Name)+len(args)+48)
+	out = append(out, `{"type":"toolCall","id":`...)
+	out = appendCanonicalJSONString(out, v.ID)
+	out = append(out, `,"name":`...)
+	out = appendCanonicalJSONString(out, v.Name)
+	out = append(out, `,"arguments":`...)
+	out = append(out, args...)
+	if v.ThoughtSignature != nil {
+		out = append(out, `,"thoughtSignature":`...)
+		out = appendCanonicalJSONString(out, *v.ThoughtSignature)
+	}
+	if v.Namespace != nil {
+		out = append(out, `,"namespace":`...)
+		out = appendCanonicalJSONString(out, *v.Namespace)
+	}
+	if v.ArgumentsError != "" {
+		out = append(out, `,"argumentsError":`...)
+		out = appendCanonicalJSONString(out, v.ArgumentsError)
+	}
+	return append(out, '}'), nil
 }
 
 // unmarshalContentBlock decodes one block by its type discriminator.
