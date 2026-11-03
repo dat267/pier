@@ -636,10 +636,10 @@ func (c *RpcClient) send(command map[string]any) (*response, error) {
 			// never poison the replacement's connection or pending requests.
 			if c.processDone == processDone {
 				c.exitErr = writeErr
-				if c.pending[id] == request {
+				for id, pending := range c.pending {
 					delete(c.pending, id)
-					request.err = writeErr
-					close(request.done)
+					pending.err = writeErr
+					close(pending.done)
 				}
 			}
 			c.mu.Unlock()
