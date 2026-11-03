@@ -1160,10 +1160,15 @@ func cloneCredential(credential *ai.Credential) *ai.Credential {
 	copied := *credential
 	if credential.APIKey != nil {
 		apiKey := *credential.APIKey
+		apiKey.Env = maps.Clone(apiKey.Env)
 		copied.APIKey = &apiKey
 	}
 	if credential.OAuth != nil {
 		oauth := *credential.OAuth
+		oauth.Extra = maps.Clone(oauth.Extra)
+		for key, raw := range oauth.Extra {
+			oauth.Extra[key] = slices.Clone(raw)
+		}
 		copied.OAuth = &oauth
 	}
 	return &copied
