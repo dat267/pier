@@ -182,15 +182,15 @@ func (s *piSchema) convertMembers(value *schemaValue, active map[piCoerceVisit]b
 
 func (s *piSchema) convertArray(value *schemaValue, active map[piCoerceVisit]bool) *schemaValue {
 	prefix := s.items
-	if len(s.prefixItems) > 0 {
+	if s.prefixItems != nil {
 		prefix = s.prefixItems
 	}
-	if len(prefix) > 0 {
+	if prefix != nil {
 		if !value.IsArray {
 			return value
 		}
 		rest := s.itemsOne
-		if len(s.items) > 0 {
+		if s.items != nil {
 			rest = nil
 		}
 		for i, item := range value.Array {

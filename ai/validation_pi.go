@@ -245,6 +245,7 @@ func (s *piSchema) parse(v *schemaValue) {
 	}
 	if items := svProp(v, "items"); items != nil && !items.Null {
 		if items.IsArray {
+			s.items = make([]*piSchema, 0, len(items.Array))
 			for i := range items.Array {
 				s.items = append(s.items, s.doc.node(s.pointer+"/items/"+strconv.Itoa(i)))
 			}
@@ -253,6 +254,7 @@ func (s *piSchema) parse(v *schemaValue) {
 		}
 	}
 	if prefix := svProp(v, "prefixItems"); prefix != nil && prefix.IsArray {
+		s.prefixItems = make([]*piSchema, 0, len(prefix.Array))
 		for i := range prefix.Array {
 			s.prefixItems = append(s.prefixItems, s.doc.node(s.pointer+"/prefixItems/"+strconv.Itoa(i)))
 		}
@@ -815,7 +817,7 @@ func (s *piSchema) addAnnotations(value *schemaValue, out *piAnnotations, forPar
 	}
 	if value.IsArray {
 		prefix := s.items
-		if len(s.prefixItems) > 0 {
+		if s.prefixItems != nil {
 			prefix = s.prefixItems
 		}
 		applied := len(value.Array)
@@ -826,7 +828,7 @@ func (s *piSchema) addAnnotations(value *schemaValue, out *piAnnotations, forPar
 			out.items = applied
 		}
 		rest := s.itemsOne
-		if len(s.items) > 0 {
+		if s.items != nil {
 			rest = s.additionalItems
 		}
 		if rest != nil || s.itemsOne != nil {
@@ -890,7 +892,7 @@ func (s *piSchema) hasObjectKeywords() bool {
 }
 
 func (s *piSchema) hasArrayKeywords() bool {
-	return s.itemsOne != nil || len(s.items) > 0 || len(s.prefixItems) > 0 || s.additionalItems != nil || s.minItems != nil || s.maxItems != nil || s.uniqueItems || s.contains != nil
+	return s.itemsOne != nil || s.items != nil || s.prefixItems != nil || s.additionalItems != nil || s.minItems != nil || s.maxItems != nil || s.uniqueItems || s.contains != nil
 }
 
 func (s *piSchema) itemAt(index int) *piSchema {
@@ -900,10 +902,10 @@ func (s *piSchema) itemAt(index int) *piSchema {
 	if index < len(s.items) {
 		return s.items[index]
 	}
-	if len(s.prefixItems) > 0 {
+	if s.prefixItems != nil {
 		return s.itemsOne
 	}
-	if len(s.items) > 0 {
+	if s.items != nil {
 		return s.additionalItems
 	}
 	return s.itemsOne
