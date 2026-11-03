@@ -55,12 +55,14 @@ func (s *piSchema) dropOptionalNulls(value *schemaValue, active map[piCoerceVisi
 			}
 			value.Object.set(key, property.dropOptionalNulls(field, active))
 		}
+		matched := declared
 		for _, pattern := range s.patternOrder {
 			if re := s.patternRes[pattern]; re != nil && re.MatchString(key) {
+				matched = true
 				value.Object.set(key, s.patternProps[pattern].dropOptionalNulls(field, active))
 			}
 		}
-		if !declared && s.additionalProps != nil {
+		if !matched && s.additionalProps != nil {
 			value.Object.set(key, s.additionalProps.dropOptionalNulls(field, active))
 		}
 	}
