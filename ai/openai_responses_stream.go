@@ -564,7 +564,7 @@ func ProcessResponsesStream(
 			output.Usage = Usage{
 				// OpenAI includes cached and cache-write tokens in
 				// input_tokens, so subtract both.
-				Input:       max(0, inputTokens-cachedTokens-cacheWriteTokens),
+				Input:       jsNumberToInt64(max(0, float64(inputTokens)-float64(cachedTokens)-float64(cacheWriteTokens))),
 				Output:      outputTokens,
 				CacheRead:   cachedTokens,
 				CacheWrite:  cacheWriteTokens,

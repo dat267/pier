@@ -1363,16 +1363,17 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 			output.Usage.Output = derefInt64(usage.OutputTokens)
 			output.Usage.CacheRead = derefInt64(usage.CacheReadInputTokens)
 			output.Usage.CacheWrite = derefInt64(usage.CacheWriteInputTokens)
-			var oneHour int64
+			var oneHourNumber float64
 			for _, detail := range usage.CacheDetails {
 				if detail.TTL == "1h" {
-					oneHour += derefInt64(detail.InputTokens)
+					oneHourNumber += float64(derefInt64(detail.InputTokens))
 				}
 			}
+			oneHour := jsNumberToInt64(oneHourNumber)
 			output.Usage.CacheWrite1h = &oneHour
 			output.Usage.TotalTokens = derefInt64(usage.TotalTokens)
 			if output.Usage.TotalTokens == 0 {
-				output.Usage.TotalTokens = output.Usage.Input + output.Usage.Output
+				output.Usage.TotalTokens = jsNumberToInt64(float64(output.Usage.Input) + float64(output.Usage.Output))
 			}
 			CalculateCost(model, &output.Usage)
 		}

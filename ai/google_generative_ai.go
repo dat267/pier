@@ -462,7 +462,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 			if chunk.UsageMetadata != nil {
 				usage := chunk.UsageMetadata
 				inputTokens := derefI64(usage.PromptTokenCount) - derefI64(usage.CachedContentTokenCount)
-				outputTokens := derefI64(usage.CandidatesTokenCount) + derefI64(usage.ThoughtsTokenCount)
+				outputTokens := jsNumberToInt64(float64(derefI64(usage.CandidatesTokenCount)) + float64(derefI64(usage.ThoughtsTokenCount)))
 				output.Usage = Usage{
 					Input:       inputTokens,
 					Output:      outputTokens,

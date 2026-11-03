@@ -638,7 +638,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				reasoning := *u.OutputTokensDetails.ThinkingTokens
 				output.Usage.Reasoning = &reasoning
 			}
-			output.Usage.TotalTokens = output.Usage.Input + output.Usage.Output + output.Usage.CacheRead + output.Usage.CacheWrite
+			output.Usage.TotalTokens = jsNumberToInt64(float64(output.Usage.Input) + float64(output.Usage.Output) + float64(output.Usage.CacheRead) + float64(output.Usage.CacheWrite))
 			CalculateCost(usageModel, &output.Usage)
 			if IsOpenRouterModel(model) {
 				ApplyOpenRouterReportedCost(&output.Usage, u.OpenRouterUsageAccounting)
@@ -784,7 +784,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				if event.Usage != nil {
 					applyUsage(*event.Usage, false)
 				} else {
-					output.Usage.TotalTokens = output.Usage.Input + output.Usage.Output + output.Usage.CacheRead + output.Usage.CacheWrite
+					output.Usage.TotalTokens = jsNumberToInt64(float64(output.Usage.Input) + float64(output.Usage.Output) + float64(output.Usage.CacheRead) + float64(output.Usage.CacheWrite))
 					CalculateCost(usageModel, &output.Usage)
 				}
 			}

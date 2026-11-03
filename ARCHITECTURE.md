@@ -4764,18 +4764,24 @@ became zero and output/total became MinInt64.
 
 ### D367
 
-**OpenAI completion usage arithmetic saturates at the int64 boundary.**
+**Provider usage arithmetic saturates at the int64 boundary.**
 
-Reference: pi v1.5.0 (`f9a26365`),
-`packages/ai/src/api/openai-completions.ts` `parseChunkUsage` subtracts cached
-counts and sums total usage with JavaScript Numbers. Pier performs those
-operations in float space, then saturates results outside its int64 usage
-representation instead of wrapping. Ordinary token counts are unchanged, and
-larger in-range results follow JavaScript rounding, as in D313.
+Reference: pi v1.5.0 (`f9a26365`), `packages/ai/src/api/`:
+`openai-completions.ts` `parseChunkUsage`, `anthropic-messages.ts` usage updates,
+`mistral-conversations.ts` `consumeChatStream`, the Google adapters' usage
+folding, `openai-responses-shared.ts` `processResponsesStream`, and
+`bedrock-converse-stream.ts` `handleMetadata` use JavaScript Number arithmetic.
+Pier performs their token additions and multi-cache subtraction in float space,
+then saturates results outside its int64 usage representation instead of
+wrapping. Ordinary token counts are unchanged, and larger in-range results
+follow JavaScript rounding, as in D313.
 
-Reproducer: `TestParseChunkUsageDoesNotWrapHugeCacheOrTotalCounts` supplies
-representable `6e18` input/output counts whose total exceeded int64, and cache
-counts whose subtraction previously wrapped into false positive input usage.
+Reproducers: `TestParseChunkUsageDoesNotWrapHugeCacheOrTotalCounts` and
+`ai/provider_usage_arithmetic_test.go` supply representable `6e18` counts whose
+sums exceeded int64, and cache counts whose subtraction previously wrapped
+into false positive input usage. The streaming tests cover initial/delta totals,
+Mistral's missing-total fallback, Google thoughts, Responses cache subtraction,
+and Bedrock's fallback total and repeated one-hour cache details.
 
 ## Lock inventory
 

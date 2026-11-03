@@ -707,7 +707,7 @@ func applyMistralEvent(model *Model, output *AssistantMessage, stream *Assistant
 		if usage.TotalTokens > 0 {
 			output.Usage.TotalTokens = usage.TotalTokens
 		} else {
-			output.Usage.TotalTokens = output.Usage.Input + output.Usage.Output + output.Usage.CacheRead + output.Usage.CacheWrite
+			output.Usage.TotalTokens = jsNumberToInt64(float64(output.Usage.Input) + float64(output.Usage.Output) + float64(output.Usage.CacheRead) + float64(output.Usage.CacheWrite))
 		}
 		CalculateCost(model, &output.Usage)
 	}
