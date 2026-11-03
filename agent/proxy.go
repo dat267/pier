@@ -242,14 +242,38 @@ func StreamProxy(model *ai.Model, context ai.TranscriptContext, options ProxyStr
 // proxyEventScratch accumulates each content block without copying its full
 // prefix on every text or thinking delta. Tool-call bytes feed the incremental
 // JSON parser.
+// proxyToolArguments throttles partial argument previews like the provider
+// adapters (D353): small calls update every delta; a large streamed value
+// recomputes only at 4 KiB, 8 KiB, ... so a proxy client does not reparse the
+// whole prefix per delta. The final ToolCall comes from the server unchanged.
+type proxyToolArguments struct {
+	text   []byte
+	parsed json.RawMessage
+	next   int
+}
+
+func (p *proxyToolArguments) Append(delta string) json.RawMessage {
+	p.text = append(p.text, delta...)
+	if p.parsed == nil || len(p.text) >= p.next {
+		p.parsed = ai.ParseStreamingJSONText(string(p.text))
+		if p.next == 0 {
+			p.next = 4 << 10
+		}
+		for p.next <= len(p.text) {
+			p.next *= 2
+		}
+	}
+	return p.parsed
+}
+
 type proxyEventScratch struct {
 	text     map[int]*strings.Builder
 	thinking map[int]*strings.Builder
-	toolCall map[int][]byte
+	toolCall map[int]*proxyToolArguments
 }
 
 func newProxyEventScratch() *proxyEventScratch {
-	return &proxyEventScratch{toolCall: make(map[int][]byte)}
+	return &proxyEventScratch{toolCall: make(map[int]*proxyToolArguments)}
 }
 
 func (s *proxyEventScratch) textBuilder(index int) *strings.Builder {
@@ -356,7 +380,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 	case "toolcall_start":
 		grow()
 		partial.Content[wire.ContentIndex] = ai.ToolCall{ID: wire.ID, Name: wire.ToolName, Arguments: json.RawMessage("{}")}
-		scratch.toolCall[wire.ContentIndex] = nil
+		scratch.toolCall[wire.ContentIndex] = &proxyToolArguments{}
 		return &ai.AssistantMessageEvent{Type: ai.EventToolcallStart, ContentIndex: wire.ContentIndex, Partial: partial}, nil
 
 	case "toolcall_delta":
@@ -364,8 +388,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 		if !ok {
 			return nil, fmt.Errorf("Received toolcall_delta for non-toolCall content")
 		}
-		scratch.toolCall[wire.ContentIndex] = append(scratch.toolCall[wire.ContentIndex], wire.Delta...)
-		content.Arguments = ai.ParseStreamingJSONText(string(scratch.toolCall[wire.ContentIndex]))
+		content.Arguments = scratch.toolCall[wire.ContentIndex].Append(wire.Delta)
 		partial.Content[wire.ContentIndex] = content
 		return &ai.AssistantMessageEvent{Type: ai.EventToolcallDelta, ContentIndex: wire.ContentIndex, Delta: wire.Delta, Partial: partial}, nil
 

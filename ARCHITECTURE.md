@@ -4268,8 +4268,10 @@ stay dropped until the text completes, where the reference shows them while it
 streams); no final tool-call value differs.
 
 The OpenAI completions, Responses, Anthropic, Bedrock, Mistral, and
-pi-messages adapters all use the shared preview. Tests:
+pi-messages adapters all use the shared preview. The agent proxy applies the
+same schedule to its forwarded delta previews. Tests:
 `TestStreamingArgumentsPreviewIsThrottled` pins the schedule and exact finish;
+`TestProxyToolArgumentsPreviewIsThrottled` covers the proxy;
 `BenchmarkStreamingArgumentsLarge` keeps the cost visible.
 
 ### D352
