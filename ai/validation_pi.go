@@ -10,7 +10,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 // Port of pi v1.5.0's @earendil-works/pi-schema validation and coercion as
@@ -81,7 +82,8 @@ type piSchema struct {
 	thenS *piSchema
 	elseS *piSchema
 
-	ref string
+	ref        string
+	dynamicRef string
 
 	unevaluatedProperties *piSchema
 	unevaluatedFalse      bool
@@ -125,6 +127,11 @@ func (d *piDoc) prewarmRefs(schema *piSchema, seen map[*piSchema]bool) {
 	seen[schema] = true
 	if schema.ref != "" {
 		if target, ok := schema.resolve(); ok && target != nil {
+			d.prewarmRefs(target, seen)
+		}
+	}
+	if schema.dynamicRef != "" {
+		if target, ok := schema.resolveRef(schema.dynamicRef); ok && target != nil {
 			d.prewarmRefs(target, seen)
 		}
 	}
@@ -375,6 +382,7 @@ func (s *piSchema) parse(v *schemaValue) {
 		s.elseS = s.doc.node(s.pointer + "/else")
 	}
 	s.ref = svString(v, "$ref")
+	s.dynamicRef = svString(v, "$dynamicRef")
 	if u := svProp(v, "unevaluatedProperties"); u != nil {
 		if u.IsBool {
 			s.unevaluatedFalse = !u.Bool
@@ -404,10 +412,13 @@ func (s *piSchema) parseList(v *schemaValue, key string) []*piSchema {
 }
 
 func (s *piSchema) resolve() (*piSchema, bool) {
-	if s.ref == "" {
+	return s.resolveRef(s.ref)
+}
+
+func (s *piSchema) resolveRef(ref string) (*piSchema, bool) {
+	if ref == "" {
 		return nil, false
 	}
-	ref := s.ref
 	if strings.HasPrefix(ref, "#") {
 		frag := ref[1:]
 		if unescaped, err := url.PathUnescape(frag); err == nil {
@@ -462,6 +473,12 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 			return false
 		}
 		if target == nil || !target.checkActive(value, active) {
+			return false
+		}
+	}
+	if s.dynamicRef != "" {
+		target, ok := s.resolveRef(s.dynamicRef)
+		if !ok || target == nil || !target.checkActive(value, active) {
 			return false
 		}
 	}
@@ -645,10 +662,10 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 		}
 	}
 	if value.Object != nil && (s.unevaluatedFalse || s.unevaluatedProperties != nil) {
-		evaluated, all := s.evaluatedProps(value)
-		if !all {
+		annotations := s.annotations(value)
+		if !annotations.allProps {
 			for _, key := range value.Object.keys {
-				if evaluated[key] {
+				if annotations.props[key] {
 					continue
 				}
 				if s.unevaluatedFalse {
@@ -656,6 +673,22 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 				}
 				field, _ := value.Object.get(key)
 				if !s.unevaluatedProperties.checkActive(field, active) {
+					return false
+				}
+			}
+		}
+	}
+	if value.IsArray && (s.unevaluatedItemsFalse || s.unevaluatedItems != nil) {
+		annotations := s.annotations(value)
+		if !annotations.allItems {
+			for index := annotations.items; index < len(value.Array); index++ {
+				if annotations.indexes[index] {
+					continue
+				}
+				if s.unevaluatedItemsFalse {
+					return false
+				}
+				if !s.unevaluatedItems.checkActive(value.Array[index], active) {
 					return false
 				}
 			}
@@ -704,75 +737,155 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 	return true
 }
 
-func (s *piSchema) evaluatedProps(value *schemaValue) (map[string]bool, bool) {
-	evaluated := map[string]bool{}
-	var add func(*piSchema)
-	add = func(schema *piSchema) {
-		if schema == nil || schema.false || value.Object == nil {
-			return
+type piAnnotations struct {
+	props    map[string]bool
+	allProps bool
+	items    int
+	allItems bool
+	indexes  map[int]bool
+}
+
+func (a *piAnnotations) addProp(key string) {
+	if a.props == nil {
+		a.props = map[string]bool{}
+	}
+	a.props[key] = true
+}
+
+func (a *piAnnotations) addIndex(index int) {
+	if a.indexes == nil {
+		a.indexes = map[int]bool{}
+	}
+	a.indexes[index] = true
+}
+
+func (a *piAnnotations) merge(b piAnnotations) {
+	for key := range b.props {
+		a.addProp(key)
+	}
+	a.allProps = a.allProps || b.allProps
+	if b.items > a.items {
+		a.items = b.items
+	}
+	a.allItems = a.allItems || b.allItems
+	for index := range b.indexes {
+		a.addIndex(index)
+	}
+}
+
+func (s *piSchema) annotations(value *schemaValue) piAnnotations {
+	out := piAnnotations{}
+	s.addAnnotations(value, &out, false)
+	return out
+}
+
+func (s *piSchema) addAnnotations(value *schemaValue, out *piAnnotations, forParent bool) {
+	if s == nil || s.false || value == nil {
+		return
+	}
+	if s.ref != "" {
+		if target, ok := s.resolve(); ok {
+			target.addAnnotations(value, out, true)
 		}
-		if schema.ref != "" {
-			if target, ok := schema.resolve(); ok {
-				add(target)
-			}
-		}
-		for _, key := range schema.propertyOrder {
+	}
+	if value.Object != nil {
+		for _, key := range s.propertyOrder {
 			if _, ok := value.Object.get(key); ok {
-				evaluated[key] = true
+				out.addProp(key)
 			}
 		}
 		for _, key := range value.Object.keys {
-			for _, pattern := range schema.patternOrder {
-				if re := schema.patternRes[pattern]; re != nil && re.MatchString(key) {
-					evaluated[key] = true
+			for _, pattern := range s.patternOrder {
+				if re := s.patternRes[pattern]; re != nil && re.MatchString(key) {
+					out.addProp(key)
 				}
 			}
 		}
-		if schema.additionalProps != nil || schema.additionalFalse {
+		if s.additionalProps != nil || s.additionalFalse {
 			for _, key := range value.Object.keys {
-				_, declared := schema.properties[key]
+				_, declared := s.properties[key]
 				matched := declared
-				for _, pattern := range schema.patternOrder {
-					if re := schema.patternRes[pattern]; re != nil && re.MatchString(key) {
+				for _, pattern := range s.patternOrder {
+					if re := s.patternRes[pattern]; re != nil && re.MatchString(key) {
 						matched = true
 					}
 				}
 				if !matched {
-					evaluated[key] = true
+					out.addProp(key)
 				}
-			}
-		}
-		for _, sub := range schema.allOf {
-			add(sub)
-		}
-		for _, branches := range [][]*piSchema{schema.anyOf, schema.oneOf} {
-			for _, branch := range branches {
-				if branch.check(value) {
-					add(branch)
-				}
-			}
-		}
-		if schema.ifS != nil {
-			if schema.ifS.check(value) {
-				add(schema.ifS)
-				add(schema.thenS)
-			} else {
-				add(schema.elseS)
-			}
-		}
-		for key, dep := range schema.dependentSchemas {
-			if _, ok := value.Object.get(key); ok {
-				add(dep)
-			}
-		}
-		for key, dep := range schema.dependencies {
-			if _, ok := value.Object.get(key); ok {
-				add(dep)
 			}
 		}
 	}
-	add(s)
-	return evaluated, false
+	if value.IsArray {
+		prefix := s.items
+		if len(s.prefixItems) > 0 {
+			prefix = s.prefixItems
+		}
+		applied := len(value.Array)
+		if applied > len(prefix) {
+			applied = len(prefix)
+		}
+		if applied > out.items {
+			out.items = applied
+		}
+		rest := s.itemsOne
+		if len(s.items) > 0 {
+			rest = s.additionalItems
+		}
+		if rest != nil || s.itemsOne != nil {
+			out.allItems = true
+		}
+		if s.contains != nil {
+			for index, item := range value.Array {
+				if s.contains.check(item) {
+					out.addIndex(index)
+				}
+			}
+		}
+	}
+	for _, sub := range s.allOf {
+		sub.addAnnotations(value, out, true)
+	}
+	for _, branches := range [][]*piSchema{s.anyOf, s.oneOf} {
+		for _, branch := range branches {
+			if branch.check(value) {
+				branch.addAnnotations(value, out, true)
+			}
+		}
+	}
+	if s.ifS != nil {
+		if s.ifS.check(value) {
+			s.ifS.addAnnotations(value, out, true)
+			if s.thenS != nil {
+				s.thenS.addAnnotations(value, out, true)
+			}
+		} else if s.elseS != nil {
+			s.elseS.addAnnotations(value, out, true)
+		}
+	}
+	if value.Object != nil {
+		for key, dep := range s.dependentSchemas {
+			if _, ok := value.Object.get(key); ok {
+				dep.addAnnotations(value, out, true)
+			}
+		}
+		for key, dep := range s.dependencies {
+			if _, ok := value.Object.get(key); ok {
+				dep.addAnnotations(value, out, true)
+			}
+		}
+	}
+	// In a parent scope, a passing unevaluated keyword evaluates everything that
+	// remains. The schema's own check must see the annotations before that mark,
+	// so only parent calls set it.
+	if forParent {
+		if s.unevaluatedFalse || s.unevaluatedProperties != nil {
+			out.allProps = true
+		}
+		if s.unevaluatedItemsFalse || s.unevaluatedItems != nil {
+			out.allItems = true
+		}
+	}
 }
 
 func (s *piSchema) hasObjectKeywords() bool {
@@ -865,22 +978,40 @@ func intPow10(n int) int64 {
 	return out
 }
 
+var (
+	piDurationRE        = regexp.MustCompile(`^P((\d+Y(\d+M(\d+D)?)?|\d+M(\d+D)?|\d+D)(T(\d+H(\d+M(\d+S)?)?|\d+M(\d+S)?|\d+S))?|T(\d+H(\d+M(\d+S)?)?|\d+M(\d+S)?|\d+S)|\d+W)$`)
+	piRelativePointerRE = regexp.MustCompile(`^(?:0|[1-9][0-9]*)(?:#|(?:/(?:[^~/]|~0|~1)*)*)$`)
+	piUUIDRE            = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+	piTimeRE            = regexp.MustCompile(`^(\d\d):(\d\d):(\d\d)(?:\.\d+)?(?:([Zz])|([+-])(\d\d):(\d\d))?$`)
+	piDateTimeSplitRE   = regexp.MustCompile(`(?i)t`)
+	piURITemplateRE     = regexp.MustCompile(`^(?:(?:[^\x00-\x20"<>%\\^` + "`" + `{|}\x7f]|%[0-9a-f]{2})|\{[+#./;?&=,!@|]?(?:[a-z0-9_]|%[0-9a-f]{2})+(?:\.(?:[a-z0-9_]|%[0-9a-f]{2})+)*(?::[1-9]\d{0,3}|\*)?(?:,(?:[a-z0-9_]|%[0-9a-f]{2})+(?:\.(?:[a-z0-9_]|%[0-9a-f]{2})+)*(?::[1-9]\d{0,3}|\*)?)*\})*$`)
+)
+
 func piFormatValid(name, value string) bool {
 	switch name {
 	case "email":
 		addr, err := mail.ParseAddress(value)
 		return err == nil && addr.Address == value && strings.Contains(value, "@")
+	case "idn-email":
+		at := strings.LastIndexByte(value, '@')
+		if at <= 0 || at == len(value)-1 || strings.ContainsAny(value, " <>") {
+			return false
+		}
+		return validIDNLabel(value[at+1:])
 	case "uri":
-		u, err := url.Parse(value)
-		return err == nil && u.IsAbs()
+		return validURIText(value, false) && absoluteURI(value)
 	case "url":
-		u, err := url.Parse(value)
-		return err == nil && u.Scheme != "" && u.Host != ""
+		return validURIText(value, false) && absoluteURL(value)
 	case "uri-reference":
-		_, err := url.Parse(value)
-		return err == nil
+		return validURIText(value, false)
+	case "iri":
+		return validURIText(value, true) && absoluteURI(value)
+	case "iri-reference":
+		return validURIText(value, true)
 	case "hostname":
 		return validHostname(value)
+	case "idn-hostname":
+		return validIDNLabel(value)
 	case "ipv4":
 		ip := net.ParseIP(value)
 		return ip != nil && ip.To4() != nil && !strings.Contains(value, ":")
@@ -888,34 +1019,150 @@ func piFormatValid(name, value string) bool {
 		ip := net.ParseIP(value)
 		return ip != nil && ip.To4() == nil && strings.Contains(value, ":")
 	case "uuid":
-		matched, _ := regexp.MatchString(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`, value)
-		return matched
+		return piUUIDRE.MatchString(value)
 	case "date":
-		_, err := time.Parse("2006-01-02", value)
-		return err == nil
+		return validDate(value)
 	case "date-time":
-		normalized := value
-		if len(normalized) > 10 && normalized[10] == 't' {
-			normalized = normalized[:10] + "T" + normalized[11:]
-		}
-		if strings.HasSuffix(normalized, "z") {
-			normalized = normalized[:len(normalized)-1] + "Z"
-		}
-		_, err := time.Parse(time.RFC3339Nano, normalized)
-		return err == nil
+		parts := piDateTimeSplitRE.Split(value, 2)
+		return len(parts) == 2 && validDate(parts[0]) && validTime(parts[1])
 	case "time":
-		_, err := time.Parse("15:04:05Z07:00", value)
-		return err == nil
+		return validTime(value)
+	case "duration":
+		return piDurationRE.MatchString(value)
 	case "regex":
 		_, err := regexp.Compile(value)
 		return err == nil
 	case "json-pointer":
-		return validJSONPointer(value, false)
+		return validJSONPointer(value, true)
 	case "json-pointer-uri-fragment":
 		return strings.HasPrefix(value, "#") && validJSONPointer(strings.TrimPrefix(value, "#"), true)
+	case "relative-json-pointer":
+		return piRelativePointerRE.MatchString(value)
+	case "uri-template":
+		return validURITemplate(value)
 	default:
 		return true
 	}
+}
+
+func validURIText(value string, allowUnicode bool) bool {
+	for i := 0; i < len(value); i++ {
+		c := value[i]
+		if c <= 0x20 || c == 0x7f || c == '<' || c == '>' || c == '^' || c == '`' || c == '{' || c == '|' || c == '}' || c == '\\' {
+			return false
+		}
+		if c == '%' {
+			if i+2 >= len(value) || !isHex(value[i+1]) || !isHex(value[i+2]) {
+				return false
+			}
+			i += 2
+			continue
+		}
+		if c >= 0x80 && !allowUnicode {
+			return false
+		}
+	}
+	if allowUnicode && !utf8.ValidString(value) {
+		return false
+	}
+	return true
+}
+
+func absoluteURI(value string) bool {
+	u, err := url.Parse(value)
+	return err == nil && u.Scheme != ""
+}
+
+func absoluteURL(value string) bool {
+	u, err := url.Parse(value)
+	return err == nil && u.Scheme != "" && u.Host != ""
+}
+
+func validIDNLabel(value string) bool {
+	if value == "" || strings.HasSuffix(value, ".") {
+		value = strings.TrimSuffix(value, ".")
+	}
+	if value == "" || len(value) > 253 {
+		return false
+	}
+	for _, label := range strings.Split(value, ".") {
+		if label == "" || utf8.RuneCountInString(label) > 63 {
+			return false
+		}
+		runes := []rune(label)
+		if runes[0] == '-' || runes[len(runes)-1] == '-' {
+			return false
+		}
+		for _, r := range runes {
+			if r != '-' && !unicode.IsLetter(r) && !unicode.IsNumber(r) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func validDate(value string) bool {
+	parts := strings.Split(value, "-")
+	if len(parts) != 3 || len(parts[0]) != 4 || len(parts[1]) != 2 || len(parts[2]) != 2 {
+		return false
+	}
+	year, e1 := strconv.Atoi(parts[0])
+	month, e2 := strconv.Atoi(parts[1])
+	day, e3 := strconv.Atoi(parts[2])
+	if e1 != nil || e2 != nil || e3 != nil || month < 1 || month > 12 || day < 1 {
+		return false
+	}
+	days := []int{0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
+	if month == 2 && (year%4 == 0 && (year%100 != 0 || year%400 == 0)) {
+		return day <= 29
+	}
+	return day <= days[month]
+}
+
+func validTime(value string) bool {
+	m := piTimeRE.FindStringSubmatch(value)
+	if m == nil || (m[4] == "" && m[5] == "") {
+		return false
+	}
+	hour, _ := strconv.Atoi(m[1])
+	minute, _ := strconv.Atoi(m[2])
+	second, _ := strconv.Atoi(m[3])
+	if hour > 23 || minute > 59 || second > 60 {
+		return false
+	}
+	if m[5] != "" {
+		tzHour, _ := strconv.Atoi(m[6])
+		tzMinute, _ := strconv.Atoi(m[7])
+		if tzHour > 23 || tzMinute > 59 {
+			return false
+		}
+	}
+	if second < 60 {
+		return true
+	}
+	sign := 1
+	if m[5] == "-" {
+		sign = -1
+	}
+	tzHour, _ := strconv.Atoi(m[6])
+	tzMinute, _ := strconv.Atoi(m[7])
+	total := hour*60 + minute - sign*(tzHour*60+tzMinute)
+	return ((total%1440)+1440)%1440 == 1439
+}
+
+func validURITemplate(value string) bool {
+	for i := 0; i < len(value); i++ {
+		if value[i] <= 0x20 || value[i] == 0x7f || value[i] == '"' || value[i] == '<' || value[i] == '>' || value[i] == '\\' || value[i] == '^' || value[i] == '`' || value[i] == '|' {
+			return false
+		}
+	}
+	re := regexp.MustCompile(`^(?:(?:[^\x00-\x20"<>%\\^` + "`" + `{|}\x7f]|%[0-9a-f]{2})|\{[+#./;?&=,!@|]?(?:[a-z0-9_]|%[0-9a-f]{2})+(?:\.(?:[a-z0-9_]|%[0-9a-f]{2})+)*(?::[1-9]\d{0,3}|\*)?(?:,(?:[a-z0-9_]|%[0-9a-f]{2})+(?:\.(?:[a-z0-9_]|%[0-9a-f]{2})+)*(?::[1-9]\d{0,3}|\*)?)*\})*$`)
+	return re.MatchString(value)
+}
+
+func isHex(c byte) bool {
+	return c >= '0' && c <= '9' || c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F'
 }
 
 func validHostname(value string) bool {

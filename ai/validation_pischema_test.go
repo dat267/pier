@@ -229,3 +229,88 @@ func TestValidateToolArgumentsRecursiveRefs(t *testing.T) {
 		}
 	}
 }
+
+// Reference: pi v1.5.0 packages/schema/src/formats. Tool schemas get every
+// standard format check, not only email/uri/date-time.
+func TestValidateToolArgumentsChecksStandardFormats(t *testing.T) {
+	for _, tc := range []struct {
+		format, value string
+		valid         bool
+	}{
+		{"duration", "P3Y6M4DT12H30M5S", true},
+		{"duration", "P", false},
+		{"idn-email", "café@example.com", true},
+		{"idn-email", "not-an-email", false},
+		{"idn-hostname", "münich.example", true},
+		{"idn-hostname", "bad_host", false},
+		{"iri", "https://例子.测试/路径", true},
+		{"iri", "not a url", false},
+		{"iri-reference", "/路径", true},
+		{"iri-reference", "not a url", false},
+		{"relative-json-pointer", "1/foo", true},
+		{"relative-json-pointer", "01/foo", false},
+		{"uri-template", "http://example.com/{id}", true},
+		{"uri-template", "http://example.com/{id", false},
+		{"uri-reference", "a/b", true},
+		{"uri-reference", "/a b", false},
+		{"time", "23:59:59Z", true},
+		{"time", "23:59:59", false},
+		{"time", "24:00:00Z", false},
+		{"date", "2024-02-29", true},
+		{"date", "2023-02-29", false},
+	} {
+		schema := `{"type":"object","properties":{"v":{"type":"string","format":"` + tc.format + `"}}}`
+		args := `{"v":` + string(mustMarshalJSONString(tc.value)) + `}`
+		outcome := validationOutcome(t, schema, args)
+		if tc.valid && !strings.HasPrefix(outcome, "ok ") {
+			t.Errorf("%s %q: %s", tc.format, tc.value, outcome)
+		}
+		if !tc.valid && !strings.Contains(outcome, "expected format "+tc.format) {
+			t.Errorf("%s %q: %s", tc.format, tc.value, outcome)
+		}
+	}
+}
+
+func mustMarshalJSONString(value string) []byte {
+	encoded, _ := MarshalJSON(value)
+	return encoded
+}
+
+// Reference: pi v1.5.0 packages/schema/src/annotations.ts. Prefix, items,
+// contains and composed-schema evaluations mark array items and object
+// properties as evaluated for unevaluatedItems/unevaluatedProperties.
+func TestValidateToolArgumentsUnevaluatedAnnotations(t *testing.T) {
+	for _, tc := range []struct{ schema, args, want string }{
+		{`{"type":"object","properties":{"l":{"type":"array","prefixItems":[{"type":"number"}],"unevaluatedItems":false}}}`, `{"l":[1,2]}`, "REJECT\n  - l.1: unexpected item"},
+		{`{"type":"object","properties":{"l":{"type":"array","prefixItems":[{"type":"number"}],"contains":{"type":"string"},"unevaluatedItems":false}}}`, `{"l":[1,"x"]}`, `ok {"l":[1,"x"]}`},
+		{`{"type":"object","properties":{"l":{"type":"array","prefixItems":[{"type":"number"}],"contains":{"type":"string"},"unevaluatedItems":false}}}`, `{"l":[1,"x",2]}`, "REJECT\n  - l.2: unexpected item"},
+		{`{"type":"object","properties":{"l":{"type":"array","allOf":[{"prefixItems":[{"type":"number"}]},{"prefixItems":[true,{"type":"string"}]}],"unevaluatedItems":false}}}`, `{"l":[1,"x"]}`, `ok {"l":[1,"x"]}`},
+		{`{"type":"object","properties":{"l":{"type":"array","allOf":[{"prefixItems":[{"type":"number"}]},{"prefixItems":[true,{"type":"string"}]}],"unevaluatedItems":false}}}`, `{"l":[1,"x",3]}`, "REJECT\n  - l.2: unexpected item"},
+		{`{"allOf":[{"type":"object","properties":{"a":{"type":"string"}}},{"type":"object","properties":{"b":{"type":"string"}}}],"unevaluatedProperties":false}`, `{"a":"x","b":"y"}`, `ok {"a":"x","b":"y"}`},
+		{`{"anyOf":[{"type":"object","properties":{"a":{"type":"string"}}},{"type":"object","properties":{"b":{"type":"string"}}}],"unevaluatedProperties":false}`, `{"a":"x","b":"y"}`, `ok {"a":"x","b":"y"}`},
+		{`{"anyOf":[{"type":"object","properties":{"a":{"type":"string"}}},{"type":"object","properties":{"b":{"type":"string"}}}],"unevaluatedProperties":false}`, `{"a":"x","b":"y","c":1}`, "REJECT\n  - c: unknown field"},
+		{`{"type":"object","properties":{"l":{"type":"array","contains":{"type":"number"},"unevaluatedItems":{"type":"string"}}}}`, `{"l":[1,"x"]}`, `ok {"l":[1,"x"]}`},
+	} {
+		if got := validationOutcome(t, tc.schema, tc.args); got != tc.want {
+			t.Errorf("schema=%s args=%s\n got %s\nwant %s", tc.schema, tc.args, got, tc.want)
+		}
+	}
+}
+
+// Reference: pi v1.5.0 packages/schema/src/compiler.ts dynamicRef. A
+// same-resource $dynamicAnchor or pointer resolves like $ref; a dangling
+// dynamic reference rejects only values at its place.
+func TestValidateToolArgumentsDynamicRef(t *testing.T) {
+	anchored := `{"type":"object","properties":{"x":{"$dynamicRef":"#item"}},"$defs":{"item":{"$dynamicAnchor":"item","type":"string"}}}`
+	if got := validationOutcome(t, anchored, `{"x":"x"}`); got != `ok {"x":"x"}` {
+		t.Errorf("dynamic anchor: %s", got)
+	}
+	pointer := `{"type":"object","properties":{"x":{"$dynamicRef":"#/$defs/item"}},"$defs":{"item":{"type":"string"}}}`
+	if got := validationOutcome(t, pointer, `{"x":"x"}`); got != `ok {"x":"x"}` {
+		t.Errorf("dynamic pointer: %s", got)
+	}
+	missing := `{"type":"object","properties":{"x":{"$dynamicRef":"#missing"}}}`
+	if got := validationOutcome(t, missing, `{"x":1}`); !strings.Contains(got, "does not match") {
+		t.Errorf("missing dynamic anchor: %s", got)
+	}
+}

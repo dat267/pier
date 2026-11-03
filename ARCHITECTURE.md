@@ -4286,11 +4286,17 @@ The corpus in `ai/testdata/validation-pi/` holds the 146 serializable upstream
 probes, including recursive refs, pattern/format/length bounds, dependencies,
 composed schemas, `unevaluatedProperties`, and the huge-enum error cutoff.
 
-Deliberate boundaries: Go's RE2 lacks lookbehind and backreferences, so a valid
-ECMAScript pattern using them is left unconstrained; `$dynamicRef`, complete
-`unevaluatedItems` annotations, external `$ref` documents, and formats outside
-the implemented set are not ported. A malformed pattern such as `[` still fails
-schema compilation instead of being ignored.
+`unevaluatedProperties` and `unevaluatedItems` use the same annotation merge as
+the reference: prefix/items/contains, allOf/anyOf/oneOf, if/then/else,
+dependent schemas and refs mark what they evaluated. Every standard format in
+`packages/schema/src/formats` is checked. `$dynamicRef` resolves same-resource
+anchors and pointers like `$ref`; full `$id`-resource dynamic-scope selection is
+not ported. External `$ref` documents stay unresolved because
+`validation.ts` passes no `schemas` map, which matches the reference.
+
+Deliberate boundary: Go's RE2 lacks lookbehind and backreferences, so a valid
+ECMAScript pattern using them is left unconstrained. A malformed pattern such as
+`[` still fails schema compilation instead of being ignored.
 
 ### D362
 

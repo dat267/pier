@@ -98,11 +98,14 @@ func (s *piSchema) walkErrors(value *schemaValue, path string, out *[]piError) {
 			target.walkErrors(value, path, out)
 		}
 	}
+	if len(*out) == start && s.dynamicRef != "" {
+		push("$dynamicRef", "does not match the dynamically referenced schema")
+	}
 	if len(*out) == start && (s.unevaluatedFalse || s.unevaluatedProperties != nil) && value.Object != nil {
-		evaluated, all := s.evaluatedProps(value)
-		if !all {
+		annotations := s.annotations(value)
+		if !annotations.allProps {
 			for _, key := range value.Object.keys {
-				if evaluated[key] {
+				if annotations.props[key] {
 					continue
 				}
 				field, _ := value.Object.get(key)
@@ -115,11 +118,17 @@ func (s *piSchema) walkErrors(value *schemaValue, path string, out *[]piError) {
 		}
 	}
 	if len(*out) == start && (s.unevaluatedItemsFalse || s.unevaluatedItems != nil) && value.IsArray {
-		for i, item := range value.Array {
-			if s.unevaluatedItemsFalse {
-				addPiError(out, path+"/"+strconv.Itoa(i), "unevaluatedItems", "unexpected item")
-			} else if s.unevaluatedItems != nil {
-				s.unevaluatedItems.walkErrors(item, path+"/"+strconv.Itoa(i), out)
+		annotations := s.annotations(value)
+		if !annotations.allItems {
+			for i := annotations.items; i < len(value.Array); i++ {
+				if annotations.indexes[i] {
+					continue
+				}
+				if s.unevaluatedItemsFalse {
+					addPiError(out, path+"/"+strconv.Itoa(i), "unevaluatedItems", "unexpected item")
+				} else if s.unevaluatedItems != nil {
+					s.unevaluatedItems.walkErrors(value.Array[i], path+"/"+strconv.Itoa(i), out)
+				}
 			}
 		}
 	}
