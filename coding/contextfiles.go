@@ -113,14 +113,14 @@ func FindShadowedContextFile(cwd string) *string {
 	mainRepoRoot := filepath.Dir(commonGitDir)
 	// False for an ordinary repository, where the two are the same directory,
 	// and for a sibling worktree, whose main repo is not an ancestor.
-	if !strings.HasPrefix(worktreeRoot, mainRepoRoot+string(filepath.Separator)) {
+	if !IsPathWithin(mainRepoRoot, worktreeRoot) || PathsEqual(worktreeRoot, mainRepoRoot) {
 		return nil
 	}
 	// dirname of the common git dir is the main worktree root only when that
 	// directory is itself checked out from the same repository. In a bare
 	// layout it merely holds the bare git dir, and a submodule's gitdir has no
 	// commondir, so it lands under .git/modules.
-	if CanonicalizePath(filepath.Join(mainRepoRoot, ".git")) != commonGitDir {
+	if !PathsEqual(CanonicalizePath(filepath.Join(mainRepoRoot, ".git")), commonGitDir) {
 		return nil
 	}
 	worktreeContextFile := LoadContextFileFromDir(worktreeRoot)
@@ -156,7 +156,7 @@ func LoadProjectContextFiles(cwd, agentDir string) []ContextFile {
 		// AGENTS.md that symlinks to the main repo's file resolves to the
 		// shadowed path itself.
 		isShadowed := shadowedContextFile != nil && contextFile != nil &&
-			filepath.Join(CanonicalizePath(currentDir), filepath.Base(contextFile.Path)) == *shadowedContextFile
+			PathsEqual(filepath.Join(CanonicalizePath(currentDir), filepath.Base(contextFile.Path)), *shadowedContextFile)
 		if contextFile != nil && !isShadowed && !seenPaths[contextFile.Path] {
 			ancestorContextFiles = append([]ContextFile{*contextFile}, ancestorContextFiles...)
 			seenPaths[contextFile.Path] = true
