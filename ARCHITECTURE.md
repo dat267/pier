@@ -4260,9 +4260,10 @@ appended suffix has no control bytes, reuse the clean-prefix result; controls,
 rewrites, or a previously dirty text fall back to the full scan. The sanitized
 output is identical.
 
-`TestStreamingSanitizerMatchesFullSanitize` checks every transition against the
-full scan; `BenchmarkAssistantStream100KB` measures the end-to-end update plus
-paint, now 9.2 ms with the same allocations.
+`TestStreamingSanitizerMatchesFullSanitize` and
+`FuzzStreamingSanitizerMatchesFull` check every prefix against the full scan;
+`BenchmarkAssistantStream100KB` measures the end-to-end update plus paint, now
+9.2 ms with the same allocations.
 
 ### D356
 
