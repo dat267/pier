@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/big"
 	"net"
 	"net/mail"
 	"net/url"
@@ -947,11 +948,13 @@ func decimalMultiple(value, divisor float64) bool {
 	ds := strconv.FormatFloat(math.Abs(divisor), 'g', -1, 64)
 	vm, ve := decimalParts(vs)
 	dm, de := decimalParts(ds)
+	v, d := big.NewInt(vm), big.NewInt(dm)
 	if ve >= de {
-		pow := intPow10(ve - de)
-		return (vm*pow)%dm == 0
+		v.Mul(v, intPow10(ve-de))
+	} else {
+		d.Mul(d, intPow10(de-ve))
 	}
-	return vm%(dm*intPow10(de-ve)) == 0
+	return new(big.Int).Rem(v, d).Sign() == 0
 }
 
 func decimalParts(s string) (int64, int) {
@@ -970,12 +973,8 @@ func decimalParts(s string) (int64, int) {
 	return n, exp - fraction
 }
 
-func intPow10(n int) int64 {
-	out := int64(1)
-	for range n {
-		out *= 10
-	}
-	return out
+func intPow10(n int) *big.Int {
+	return new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(n)), nil)
 }
 
 var (
