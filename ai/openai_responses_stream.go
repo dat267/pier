@@ -680,6 +680,8 @@ func ProcessResponsesStream(
 				return
 			}
 			previous := slot.toolCall.args.String()
+			slot.toolCall.args.Reset()
+			slot.toolCall.args.Append(event.Arguments)
 			slot.toolCall.call.Arguments, slot.toolCall.call.ArgumentsError = ParseToolCallArguments(event.Arguments)
 			updateContent(slot)
 			if strings.HasPrefix(event.Arguments, previous) {
