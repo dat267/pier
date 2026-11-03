@@ -4265,6 +4265,7 @@ transform: 2.47 s and 1.63 GB allocated before, 37–41 ms and 36 MB after.
 `TestMarkdownTransformStreamingReusesStablePrefix` pins the tail-only render;
 `TestMarkdownTransformStreamingMatchesFreshRender` checks identity, prefixing,
 replacement, and last-line-uppercasing transforms at every prefix;
+`FuzzMarkdownTransformIncrementalMatchesFull` covers arbitrary sources;
 `BenchmarkMarkdownStreamAppendTransform` keeps the scale visible.
 
 ### D355
