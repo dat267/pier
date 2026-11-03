@@ -1645,7 +1645,9 @@ is the pure `goal.DesiredToolNames` next to the state machine. UI notices
 produced during construction (the restored-goal notice) are buffered and
 delivered by `SetUIHooks`. The interactive mode installs that posted UI hook
 and the idle-round launcher on every session bind, including `/new` and switch,
-so replacement controllers do not silently buffer notices. `/reload` calls
+so replacement controllers do not silently buffer notices. The owner checks
+the originating controller before applying a posted notice, rejecting outgoing
+notifications even if they were already enqueued. `/reload` calls
 `Start("reload")` without re-reading the branch by hand.
 Idle round delivery uses the host work scheduler (D143). A queued closure
 checks that its goal id, revision and pending turn still identify an armed,
@@ -1700,7 +1702,8 @@ clear/create records and append events remain intact for persistence and replay.
 Tests: `internal/goal`'s state/machine/command/render suites,
 `coding/goalcontroller_test.go` (effect application, replay, tool exposure,
 continuation/error/abort outcomes),
-`TestSessionReplacementKeepsGoalCommandNoticesVisible` (initial/new/switch), and
+`TestSessionReplacementKeepsGoalCommandNoticesVisible` (initial/new/switch),
+`TestSessionReplacementRejectsRetiredGoalNotices` (posted/late callbacks), and
 `coding/interactive/goalrender_test.go` plus `toolrenderer_goal_test.go`.
 
 ### D224

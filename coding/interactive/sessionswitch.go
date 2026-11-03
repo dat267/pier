@@ -222,6 +222,9 @@ func (a *App) wireGoalController() {
 		controller.SetStartWork(a.events.StartWork)
 		controller.SetUIHooks(func(message string, level string) {
 			a.ui.Post(func() {
+				if a.session.Goal != controller {
+					return
+				}
 				if level == "warning" {
 					a.showWarning(message)
 					return
