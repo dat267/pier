@@ -471,31 +471,40 @@ func (w *SessionWiring) ShowSessionSelector() {
 			},
 			func() { w.requestRender() },
 			SessionSelectorOptions{
-				Post: w.Slot.UI.Post,
-				RenameSession: func(sessionPath string, currentName string) error {
-					next := ai.JSTrim(currentName)
-					if next == "" {
-						return nil
-					}
-					manager, err := coding.OpenSession(sessionPath, "", "")
-					if err != nil {
-						return err
-					}
-					// The rename write runs on the session write queue: the
-					// selector callback runs on the UI loop, which must never
-					// block on the file write.
-					if w.SessionInfo != nil {
-						manager.SetWriteQueue(w.SessionInfo.GetWriteQueue())
-					}
-					manager.AppendSessionInfo(next)
-					return nil
-				},
+				Post:                   w.Slot.UI.Post,
+				RenameSession:          w.renameSessionFile,
 				ShowRenameHint:         true,
 				Keybindings:            w.Keybindings,
 				CurrentSessionFilePath: w.SessionInfo.GetSessionFile(),
 			})
 		return CreatedSelector{Component: selector, Focus: selector}
 	})
+}
+
+// renameSessionFile appends a display name. The write runs on the session write
+// queue because this callback runs on the UI loop.
+func (w *SessionWiring) renameSessionFile(sessionPath string, currentName string) error {
+	next := ai.JSTrim(currentName)
+	if next == "" {
+		return nil
+	}
+	// The active manager already owns this file's leaf chain and shares the
+	// write queue. Opening a second manager here would append from a snapshot
+	// that can miss writes still queued on the UI's session queue.
+	if w.SessionInfo != nil && w.SessionInfo.GetSessionFile() != "" &&
+		coding.PathsEqual(sessionPath, w.SessionInfo.GetSessionFile()) {
+		w.SessionInfo.AppendSessionInfo(next)
+		return nil
+	}
+	manager, err := coding.OpenSession(sessionPath, "", "")
+	if err != nil {
+		return err
+	}
+	if w.SessionInfo != nil {
+		manager.SetWriteQueue(w.SessionInfo.GetWriteQueue())
+	}
+	manager.AppendSessionInfo(next)
+	return nil
 }
 
 // HandleResumeSession switches to another session.

@@ -4877,6 +4877,27 @@ error-path guarantee, not matching-input Node parity: local Node v26.10.0
 accepts this directory input as an empty regular copy rather than throwing.
 Go retains its existing import error instead of adopting that acceptance.
 
+### D372
+
+**Renaming the active session reuses its live manager and leaf chain.**
+
+Reference: pi v1.5.0 (`f9a26365`),
+`packages/coding-agent/src/modes/interactive/interactive-mode.ts` opens a
+second `SessionManager` for the rename. Its synchronous `open` + `appendSessionInfo`
+keeps that safe in the reference's single thread. Pier's session writes run on
+the UI write queue, so opening a second manager while the active one still has
+writes queued would read a stale leaf: the `session_info` entry can then become
+the file's leaf while the newest message becomes a side branch. When the path
+is the active session, the rename now appends through the active manager,
+sharing its leaf chain and write queue. Other sessions keep the opened-manager
+path. The visible entry shape and name sanitization are unchanged.
+
+Reproducer: `TestRenamingCurrentSessionKeepsItsLatestLeaf` blocks the session
+write queue, queues a message, renames, and reopens the file. Previously the
+queued message was missing from the reopened branch and the active manager
+still reported the old name. `TestRenamingAnotherSessionStillWrites` covers the
+non-active path.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
