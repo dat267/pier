@@ -4247,6 +4247,23 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestChatResetStopsBothSweeps`,
 `TestWiringChatResetDropsPendingSweeps`.
 
+### D357
+
+**Streaming assistant text caches its clean sanitization prefix.**
+
+Reference: pi v1.5.0 passes assistant text to the renderer without terminal
+sanitization; pier treats remote text as data (D342). The sanitizer's
+`HasTerminalControl` scanned the whole message on every streaming update, which
+made a 100 KiB reply arriving in 16-byte deltas take 226 ms. Add a per-block
+`StreamingSanitizer`: when the new text starts with the previous text and the
+appended suffix has no control bytes, reuse the clean-prefix result; controls,
+rewrites, or a previously dirty text fall back to the full scan. The sanitized
+output is identical.
+
+`TestStreamingSanitizerMatchesFullSanitize` checks every transition against the
+full scan; `BenchmarkAssistantStream100KB` measures the end-to-end update plus
+paint, now 9.2 ms with the same allocations.
+
 ### D356
 
 **A markdown transform does not disable incremental lexing.**

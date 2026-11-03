@@ -5,6 +5,38 @@ import (
 	"unicode/utf8"
 )
 
+// StreamingSanitizer caches a clean prefix across growing text updates. Most
+// streamed assistant text has no terminal controls; rescanning the whole
+// message for every delta made sanitization quadratic. The zero value is ready
+// to use, and it is not safe for concurrent use.
+type StreamingSanitizer struct {
+	raw         string
+	result      string
+	cleanPrefix bool
+}
+
+// Sanitize returns the sanitized text, reusing the previous result when the
+// text only grew by a clean suffix. Any control in the suffix, a non-prefix
+// rewrite, or a previous text that needed sanitization falls back to a full
+// scan.
+func (s *StreamingSanitizer) Sanitize(text string) string {
+	if text == s.raw {
+		return s.result
+	}
+	if s.cleanPrefix && len(text) >= len(s.raw) && strings.HasPrefix(text, s.raw) {
+		suffix := text[len(s.raw):]
+		if !HasTerminalControl(suffix) {
+			s.raw = text
+			s.result = text
+			return text
+		}
+	}
+	s.raw = text
+	s.result = SanitizeUntrustedText(text)
+	s.cleanPrefix = s.result == text
+	return s.result
+}
+
 // SanitizeUntrustedText removes terminal control sequences and control
 // characters from text that a model, provider, or other remote peer supplied.
 //

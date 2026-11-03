@@ -41,6 +41,9 @@ type AssistantMessageComponent struct {
 	// its whole text on the next paint, so without this every ctrl+t re-rendered
 	// the thinking of the entire transcript and stalled the frame.
 	thinkingMarkdowns map[assistantBlockKey]*tui.Markdown
+	// textSanitizers keep the clean-prefix fast path across streaming updates;
+	// rescanning the whole message per delta was quadratic on long replies.
+	textSanitizers map[assistantBlockKey]*tui.StreamingSanitizer
 	// streamingState is the isStreaming the current content was built for. The
 	// streaming transform renders differently, so a transition has to drop the
 	// reused render caches, which the text/token equality checks cannot see.
@@ -69,6 +72,7 @@ func NewAssistantMessageComponent(message *ai.AssistantMessage, hideThinkingBloc
 		transformers:                transformers,
 		thinkingVisibilityOverrides: map[int]bool{},
 		blockComponents:             map[assistantBlockKey]tui.Component{},
+		textSanitizers:              map[assistantBlockKey]*tui.StreamingSanitizer{},
 	}
 	component.AddChild(component.contentContainer)
 	if message != nil {
@@ -232,7 +236,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 			markdown.Options = tui.MarkdownOptions{
 				Transform: CreateMarkdownTransform("assistant", c.isStreaming, c.transformers),
 			}
-			markdown.SetTextIfChanged(ai.JSTrim(tui.SanitizeUntrustedText(content.Text)))
+			markdown.SetTextIfChanged(c.sanitizeBlock(i, "text", content.Text))
 			c.blockComponents[key] = markdown
 			c.contentContainer.AddChild(markdown)
 		case ai.ThinkingContent:
@@ -240,7 +244,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 			for ; i < len(blocks); i++ {
 				if thinking, ok := blocks[i].(ai.ThinkingContent); ok {
 					if trimmedNonEmpty(thinking.Thinking) {
-						thinkingBlocks = append(thinkingBlocks, ai.JSTrim(tui.SanitizeUntrustedText(thinking.Thinking)))
+						thinkingBlocks = append(thinkingBlocks, c.sanitizeBlock(i, "thinking", thinking.Thinking))
 					}
 					continue
 				}
@@ -354,6 +358,16 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 // trimmedNonEmpty mirrors upstream's `text.trim()` truthiness, i.e. the JS
 // whitespace set (ai.JSTrim), not Go's unicode.IsSpace.
 func trimmedNonEmpty(value string) bool { return ai.JSTrim(value) != "" }
+
+func (c *AssistantMessageComponent) sanitizeBlock(index int, kind, text string) string {
+	key := assistantBlockKey{index: index, kind: kind}
+	sanitizer := c.textSanitizers[key]
+	if sanitizer == nil {
+		sanitizer = &tui.StreamingSanitizer{}
+		c.textSanitizers[key] = sanitizer
+	}
+	return ai.JSTrim(sanitizer.Sanitize(text))
+}
 
 func joinThinkingBlocks(blocks []string) string {
 	var result strings.Builder
