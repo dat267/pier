@@ -146,6 +146,15 @@ func Execute() {
 	}
 }
 
+// describeGetwdError matches v1.5.0 main.ts: a deleted working directory gets a
+// plain recovery hint instead of the raw getwd error.
+func describeGetwdError(err error) error {
+	if errors.Is(err, os.ErrNotExist) {
+		return errors.New("The current working directory no longer exists. Change to an existing directory and try again")
+	}
+	return err
+}
+
 // applyOfflineMode mirrors upstream main.ts, which folds --offline and a truthy
 // PI_OFFLINE into the environment before anything reads it. Offline is
 // process-wide there: the model runtime and the version check consult the
@@ -209,7 +218,7 @@ func run(appName string, args *coding.Args) error {
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		return err
+		return describeGetwdError(err)
 	}
 	// main.ts uses Node's physical process.cwd(); os.Getwd can preserve a
 	// symlink in PWD, which would select a different per-project session directory.
