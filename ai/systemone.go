@@ -525,7 +525,7 @@ func parseSystemOneUsage(raw json.RawMessage, model *Model) *Usage {
 	}
 	input := classifierTokenCount(inputRaw)
 	output := classifierTokenCount(outputRaw)
-	usage := &Usage{Input: input, Output: output, TotalTokens: input + output}
+	usage := &Usage{Input: input, Output: output, TotalTokens: jsNumberToInt64(float64(input) + float64(output))}
 	CalculateCost(model, usage)
 	return usage
 }

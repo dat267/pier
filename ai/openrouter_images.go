@@ -273,27 +273,27 @@ func parseOpenRouterImagesUsage(raw struct {
 		CacheWriteTokens *float64 `json:"cache_write_tokens"`
 	} `json:"prompt_tokens_details"`
 }, model *ImagesModel) Usage {
-	promptTokens := int64(raw.PromptTokens)
+	promptTokens := jsNumberToInt64(raw.PromptTokens)
 	reportedCached := int64(0)
 	cacheWrite := int64(0)
 	if raw.PromptTokensDetails != nil {
 		if raw.PromptTokensDetails.CachedTokens != nil {
-			reportedCached = int64(*raw.PromptTokensDetails.CachedTokens)
+			reportedCached = jsNumberToInt64(*raw.PromptTokensDetails.CachedTokens)
 		}
 		if raw.PromptTokensDetails.CacheWriteTokens != nil {
-			cacheWrite = int64(*raw.PromptTokensDetails.CacheWriteTokens)
+			cacheWrite = jsNumberToInt64(*raw.PromptTokensDetails.CacheWriteTokens)
 		}
 	}
 	cacheRead := reportedCached
 	if cacheWrite > 0 {
-		cacheRead = max(0, reportedCached-cacheWrite)
+		cacheRead = jsNumberToInt64(max(0, float64(reportedCached)-float64(cacheWrite)))
 	}
-	inputTokens := max(0, promptTokens-cacheRead-cacheWrite)
-	outputTokens := int64(raw.CompletionTokens)
+	inputTokens := jsNumberToInt64(max(0, float64(promptTokens)-float64(cacheRead)-float64(cacheWrite)))
+	outputTokens := jsNumberToInt64(raw.CompletionTokens)
 	usage := Usage{
 		Input: inputTokens, Output: outputTokens,
 		CacheRead: cacheRead, CacheWrite: cacheWrite,
-		TotalTokens: inputTokens + outputTokens + cacheRead + cacheWrite,
+		TotalTokens: jsNumberToInt64(float64(inputTokens) + float64(outputTokens) + float64(cacheRead) + float64(cacheWrite)),
 		Cost: UsageCost{
 			Input:      model.Cost.Input / 1000000 * float64(inputTokens),
 			Output:     model.Cost.Output / 1000000 * float64(outputTokens),

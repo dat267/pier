@@ -4787,12 +4787,13 @@ became zero and output/total became MinInt64.
 Reference: pi v1.5.0 (`f9a26365`), `packages/ai/src/api/`:
 `openai-completions.ts` `parseChunkUsage`, `anthropic-messages.ts` usage updates,
 `mistral-conversations.ts` `consumeChatStream`, the Google adapters' usage
-folding, `openai-responses-shared.ts` `processResponsesStream`, and
-`bedrock-converse-stream.ts` `handleMetadata` use JavaScript Number arithmetic.
-Pier performs their token additions and multi-cache subtraction in float space,
-then saturates results outside its int64 usage representation instead of
-wrapping. Ordinary token counts are unchanged, and larger in-range results
-follow JavaScript rounding, as in D313.
+folding, `openai-responses-shared.ts` `processResponsesStream`,
+`bedrock-converse-stream.ts` `handleMetadata`, `classifier-shared.ts`
+`parseClassifierUsage`, and `openrouter-images.ts` `parseUsage` use JavaScript
+Number arithmetic. Pier performs their token additions and multi-cache
+subtraction in float space, then saturates results outside its int64 usage
+representation instead of wrapping. Ordinary token counts are unchanged, and
+larger in-range results follow JavaScript rounding, as in D313.
 
 Reproducers: `TestParseChunkUsageDoesNotWrapHugeCacheOrTotalCounts` and
 `ai/provider_usage_arithmetic_test.go` supply representable `6e18` counts whose
@@ -4800,6 +4801,9 @@ sums exceeded int64, and cache counts whose subtraction previously wrapped
 into false positive input usage. The streaming tests cover initial/delta totals,
 Mistral's missing-total fallback, Google thoughts, Responses cache subtraction,
 and Bedrock's fallback total and repeated one-hour cache details.
+`TestOpenRouterImagesUsageSaturatesHugeFiniteCounts` and
+`TestClassifierUsageSaturatesHugeFiniteCounts` cover the non-streaming image and
+classifier parsers.
 
 ### D368
 

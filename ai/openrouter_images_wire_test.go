@@ -3,6 +3,7 @@ package ai
 import (
 	"encoding/json"
 	"io"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -126,5 +127,35 @@ func TestOpenRouterImagesWireMatchesUpstream(t *testing.T) {
 				t.Errorf("result = %s\nwant     %s", got, want)
 			}
 		})
+	}
+}
+
+// pi v1.5.0 api/openrouter-images.ts parseUsage keeps finite provider token
+// counts in JavaScript Number space. D367's int64 representation must saturate
+// them instead of wrapping through a direct conversion and integer subtraction.
+func TestOpenRouterImagesUsageSaturatesHugeFiniteCounts(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `{"id":"r","choices":[{"message":{"content":"ok"}}],"usage":{"prompt_tokens":1e308,"completion_tokens":1e308}}`)
+	}))
+	defer server.Close()
+	model := ImagesModel{
+		ID: "image-model", API: KnownImagesApiOpenRouter, Provider: "openrouter",
+		BaseURL: server.URL, Output: []string{"image"},
+	}
+	result := (OpenRouterImages{}).GenerateImages(&model,
+		ImagesContext{Input: []ImagesInputContent{TextContent{Text: "x"}}},
+		&ImagesOptions{APIKey: "token"})
+	if result.Usage == nil {
+		t.Fatal("usage was not parsed")
+	}
+	if got, want := result.Usage.Input, int64(math.MaxInt64); got != want {
+		t.Errorf("input tokens = %d, want %d", got, want)
+	}
+	if got, want := result.Usage.Output, int64(math.MaxInt64); got != want {
+		t.Errorf("output tokens = %d, want %d", got, want)
+	}
+	if got, want := result.Usage.TotalTokens, int64(math.MaxInt64); got != want {
+		t.Errorf("total tokens = %d, want %d", got, want)
 	}
 }

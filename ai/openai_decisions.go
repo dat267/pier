@@ -396,17 +396,17 @@ func parseOpenAIDecisionsUsage(raw json.RawMessage, model *Model) *Usage {
 	}
 	input := classifierTokenCount(values["input_tokens"])
 	output := classifierTokenCount(values["output_tokens"])
-	usage := &Usage{Input: input, Output: output, TotalTokens: input + output}
+	usage := &Usage{Input: input, Output: output, TotalTokens: jsNumberToInt64(float64(input) + float64(output))}
 	CalculateCost(model, usage)
 	return usage
 }
 
 func classifierTokenCount(raw json.RawMessage) int64 {
 	value, err := classifierNumber(raw, "token count")
-	if err != nil || value <= 0 || value >= math.MaxInt64 {
+	if err != nil || value <= 0 {
 		return 0
 	}
-	return int64(value)
+	return jsNumberToInt64(value)
 }
 
 func responseHeaders(headers http.Header) map[string]string {
