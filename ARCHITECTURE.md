@@ -4537,9 +4537,20 @@ switch to a set so the check stays linear on hostile input. The conversation ben
 (from 33–38 ms/288k); the normalized fast path also covers whole request bodies
 whose raw tool arguments are already canonical. A 790 KB already-normalized
 body canonicalizes in 2.5 ms (`BenchmarkCanonicalizeNormalizedJSON`) versus
-11–12 ms through the parser. Node `JSON.stringify` remains faster (about
-1.1 ms); the remaining port cost is the encoder and the fallback
-canonicalization of non-normalized bodies, tracked as M143.
+11–12 ms through the parser.
+
+M143 is closed on a fair, realistic baseline rather than the original minimal
+4k body. `BenchmarkMarshalConversationRealistic` builds user/assistant pairs
+with model metadata, usage, cost and timestamps. Node `JSON.stringify` of the
+same canonical bytes (verified byte-identical by
+`ai/testdata/marshal-conversation/benchmark.mjs`) measures 0.045 ms for 100
+messages, 0.223 ms for 500, and 1.97–2.14 ms for 4,000. Pier measures
+0.29–0.37, 1.43–1.88, and 13.4–15.2 ms: 6.3–8.4x Node throughout, not the
+earlier impression of a pathological gap. The target is to stay within 10x
+Node and under 2 ms for a realistic 500-message body; the remaining cost is
+Go's reflection encoder plus byte-parity canonicalization, which is accepted
+for realistic sizes. `BenchmarkMarshalConversation` keeps the older minimal
+4k body visible.
 
 ### D349
 
