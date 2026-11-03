@@ -4247,6 +4247,24 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestChatResetStopsBothSweeps`,
 `TestWiringChatResetDropsPendingSweeps`.
 
+### D355
+
+**Bedrock text and reasoning stream through builders.**
+
+Reference: pi v1.5.0 `api/bedrock-converse-stream.ts` accumulates text with
+JavaScript string concatenation; V8 represents the growing value as a rope, so
+each delta is cheap even though every partial event exposes the full text.
+`block.text += delta` in the port copied the whole prefix per delta (Bedrock
+sends small content deltas), and the partial snapshot then copied it again.
+Keep `strings.Builder` values on the block and use `String()` for snapshots:
+appending is amortized and later appends never change bytes already covered by
+an earlier snapshot's length.
+
+Measured for 100 KiB of text in 16-byte deltas: 65.4 ms and 348 MB allocated
+before, 0.46 ms and 0.77 MB after (224 MB/s; allocations are mostly the content
+slice rebuilt for each partial). `BenchmarkBedrockTextStream` keeps this
+visible; the existing Bedrock stream parity tests pin the emitted snapshots.
+
 ### D354
 
 **Streaming markdown reuses its block-cache arrays.**

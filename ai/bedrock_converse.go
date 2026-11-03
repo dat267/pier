@@ -29,8 +29,8 @@ const (
 type bedrockBlock struct {
 	kind              string // "text" | "thinking" | "toolCall"
 	contentIndex      int
-	text              string
-	thinking          string
+	text              strings.Builder
+	thinking          strings.Builder
 	thinkingSignature string
 	redacted          bool
 	redactedChunks    [][]byte
@@ -42,14 +42,14 @@ type bedrockBlock struct {
 func (b *bedrockBlock) content() Content {
 	switch b.kind {
 	case "text":
-		return TextContent{Text: b.text}
+		return TextContent{Text: b.text.String()}
 	case "thinking":
 		signature := b.thinkingSignature
 		var signaturePtr *string
 		if signature != "" {
 			signaturePtr = &signature
 		}
-		return ThinkingContent{Thinking: b.thinking, ThinkingSignature: signaturePtr, Redacted: b.redacted}
+		return ThinkingContent{Thinking: b.thinking.String(), ThinkingSignature: signaturePtr, Redacted: b.redacted}
 	default:
 		call := b.toolCall
 		return call
@@ -1238,7 +1238,7 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 			}
 			block := (*blocks)[index]
 			if block.kind == "text" {
-				block.text += *event.Delta.Text
+				block.text.WriteString(*event.Delta.Text)
 				syncBedrockContent(output, *blocks)
 				stream.Push(AssistantMessageEvent{
 					Type: EventTextDelta, ContentIndex: index, Delta: *event.Delta.Text, Partial: output,
@@ -1262,7 +1262,7 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 			if block.kind == "thinking" {
 				reasoning := event.Delta.ReasoningContent
 				if reasoning.Text != nil && *reasoning.Text != "" {
-					block.thinking += *reasoning.Text
+					block.thinking.WriteString(*reasoning.Text)
 					syncBedrockContent(output, *blocks)
 					stream.Push(AssistantMessageEvent{
 						Type: EventThinkingDelta, ContentIndex: index, Delta: *reasoning.Text, Partial: output,
@@ -1277,7 +1277,7 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 					if !block.redacted {
 						block.redacted = true
 						block.thinkingSignature = ""
-						block.thinking += bedrockRedactedThinkingPlaceholder
+						block.thinking.WriteString(bedrockRedactedThinkingPlaceholder)
 						syncBedrockContent(output, *blocks)
 						stream.Push(AssistantMessageEvent{
 							Type: EventThinkingDelta, ContentIndex: index,
@@ -1310,13 +1310,13 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 		switch block.kind {
 		case "text":
 			stream.Push(AssistantMessageEvent{
-				Type: EventTextEnd, ContentIndex: index, Content: block.text, Partial: output,
+				Type: EventTextEnd, ContentIndex: index, Content: block.text.String(), Partial: output,
 			})
 		case "thinking":
 			block.flushRedactedContent()
 			syncBedrockContent(output, *blocks)
 			stream.Push(AssistantMessageEvent{
-				Type: EventThinkingEnd, ContentIndex: index, Content: block.thinking, Partial: output,
+				Type: EventThinkingEnd, ContentIndex: index, Content: block.thinking.String(), Partial: output,
 			})
 		case "toolCall":
 			block.toolCall.Arguments, block.toolCall.ArgumentsError = ParseToolCallArguments(block.args.String())
