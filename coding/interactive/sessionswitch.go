@@ -170,7 +170,7 @@ func (a *App) bindSessionManager(sessionManager *coding.SessionManager) (*Sessio
 	// The *AppSession pointer is shared by every wiring, so swapping the
 	// embedded AgentSession rebinds them all at once.
 	a.session.AgentSession = created.Session
-	a.wireGoalStartWork()
+	a.wireGoalController()
 	a.sessionMgr = sessionManager
 	// Upstream's createRuntime builds a fresh extension runtime for every bind,
 	// so the incoming session_start re-reads mcp.json for the new cwd and
@@ -214,12 +214,21 @@ func (a *App) bindSessionManager(sessionManager *coding.SessionManager) (*Sessio
 	return &SessionSwitchResult{}, nil
 }
 
-// wireGoalStartWork routes an idle goal round through the loop's work slot. The
-// goal controller is replaced with the session, so this runs on every bind
-// (construction, /new, /resume, /fork).
-func (a *App) wireGoalStartWork() {
+// wireGoalController restores the idle-round launcher and notifications on
+// every bind (construction, /new, /resume, /fork). Agent-end effects run on a
+// worker, so UI notifications are always posted to the owner (D143/D223).
+func (a *App) wireGoalController() {
 	if controller := a.session.Goal; controller != nil {
 		controller.SetStartWork(a.events.StartWork)
+		controller.SetUIHooks(func(message string, level string) {
+			a.ui.Post(func() {
+				if level == "warning" {
+					a.showWarning(message)
+					return
+				}
+				a.transcript.ShowStatus(message)
+			})
+		})
 	}
 }
 

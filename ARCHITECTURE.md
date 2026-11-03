@@ -1643,8 +1643,10 @@ plain field (like `CacheWarmer`), the `agent_end` hook is called from
 `handleAgentEvent` before listeners see the event, and the tool-exposure policy
 is the pure `goal.DesiredToolNames` next to the state machine. UI notices
 produced during construction (the restored-goal notice) are buffered and
-delivered by `SetUIHooks`, so the interactive mode sets its callbacks once and
-`/reload` calls `Start("reload")` without re-reading the branch by hand.
+delivered by `SetUIHooks`. The interactive mode installs that posted UI hook
+and the idle-round launcher on every session bind, including `/new` and switch,
+so replacement controllers do not silently buffer notices. `/reload` calls
+`Start("reload")` without re-reading the branch by hand.
 Idle round delivery uses the host work scheduler (D143). A queued closure
 checks that its goal id, revision and pending turn still identify an armed,
 active reservation before starting a run; pausing, clearing, replacing or
@@ -1697,7 +1699,8 @@ clear/create records and append events remain intact for persistence and replay.
 
 Tests: `internal/goal`'s state/machine/command/render suites,
 `coding/goalcontroller_test.go` (effect application, replay, tool exposure,
-continuation/error/abort outcomes) and
+continuation/error/abort outcomes),
+`TestSessionReplacementKeepsGoalCommandNoticesVisible` (initial/new/switch), and
 `coding/interactive/goalrender_test.go` plus `toolrenderer_goal_test.go`.
 
 ### D224
