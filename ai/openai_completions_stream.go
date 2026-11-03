@@ -531,7 +531,8 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 				rm := chunk.Model
 				output.ResponseModel = &rm
 			}
-			if len(chunk.Usage) > 0 && string(chunk.Usage) != "null" {
+			hasChunkUsage := jsJSONTruthy(chunk.Usage)
+			if hasChunkUsage {
 				output.Usage = ParseChunkUsage(chunk.Usage, model)
 			}
 
@@ -540,7 +541,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 			}
 			choice := chunk.Choices[0]
 			// Fallback: some providers return usage on the choice.
-			if len(chunk.Usage) == 0 && len(choice.Usage) > 0 && string(choice.Usage) != "null" {
+			if !hasChunkUsage && jsJSONTruthy(choice.Usage) {
 				output.Usage = ParseChunkUsage(choice.Usage, model)
 			}
 
