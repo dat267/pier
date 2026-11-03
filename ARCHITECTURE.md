@@ -1652,7 +1652,10 @@ notifications even if they were already enqueued. `/reload` calls
 Idle round delivery uses the host work scheduler (D143). A queued closure
 checks that its goal id, revision and pending turn still identify an armed,
 active reservation before starting a run; pausing, clearing, replacing or
-pausing/resuming while it waits invalidates it. A rejected resume leaves
+pausing/resuming while it waits invalidates it. The session sink also checks
+its existing disposed flag before delivering deferred goal work, since disposal
+need not change the durable goal reservation
+(`TestDisposedSessionDoesNotStartAReservedGoalRound`). A rejected resume leaves
 activation unchanged, including for terminal completed goals
 (`TestGoalResumeLeavesCompletedGoalDisarmed`). Already-started work retains
 its existing cancellation policy. Tool exposure is synchronized before a
