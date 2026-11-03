@@ -1682,6 +1682,9 @@ them); the `pi-goal` and `pi-goal-turn` entry renderers cover the visible
 cards. Durable entries are published as `entry_appended` events after the
 controller unlocks (upstream emits on append), and entry renderers receive the
 entry's payload, so a live transcript draws the goal cards without a reload.
+Publisher admission is released with a defer, so a session listener that panics
+through the tool dispatcher's recovery does not disable later goal-card
+publication (`TestGoalPublisherResumesAfterRecoveredListenerPanic`).
 The tool cards are multi-line like the built-in ones: `set_goal` shows the
 objective as a wrapped body with a compact created/replaced outcome line, and
 `get_goal` shows state, objective, budget usage and any stop reason, with a

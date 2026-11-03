@@ -326,17 +326,26 @@ func (c *GoalController) emitPendingEntries() {
 		return
 	}
 	c.emittingEntries = true
-	for len(c.pendingEntryEvents) > 0 {
+	c.mu.Unlock()
+	// A panicking session listener aborts this batch, but must not wedge live
+	// goal-card delivery for the rest of the session.
+	defer func() {
+		c.mu.Lock()
+		c.emittingEntries = false
+		c.mu.Unlock()
+	}()
+	for {
+		c.mu.Lock()
 		entries := c.pendingEntryEvents
 		c.pendingEntryEvents = nil
 		c.mu.Unlock()
+		if len(entries) == 0 {
+			return
+		}
 		for _, entry := range entries {
 			c.sink.EmitGoalEntryAppended(entry)
 		}
-		c.mu.Lock()
 	}
-	c.emittingEntries = false
-	c.mu.Unlock()
 }
 
 // dispatchLocked keeps machine mutation and its durable records in one order.
