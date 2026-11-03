@@ -373,6 +373,14 @@ func (c *AssistantMessageComponent) sanitizeBlock(index int, kind, text string) 
 }
 
 func joinThinkingBlocks(blocks []string) string {
+	if len(blocks) == 0 {
+		return ""
+	}
+	if len(blocks) == 1 {
+		// The common streaming case: joining a single block would copy the
+		// whole thinking text on every delta.
+		return blocks[0]
+	}
 	var result strings.Builder
 	for index, block := range blocks {
 		if index > 0 {

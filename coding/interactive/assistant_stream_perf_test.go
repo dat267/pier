@@ -32,3 +32,13 @@ func BenchmarkAssistantStream100KB(b *testing.B) {
 		}
 	}
 }
+
+func TestJoinThinkingBlocksSingleBlockDoesNotCopy(t *testing.T) {
+	blocks := []string{"one thinking block"}
+	if got := joinThinkingBlocks(blocks); got != blocks[0] {
+		t.Fatalf("join = %q, want %q", got, blocks[0])
+	}
+	if allocs := testing.AllocsPerRun(100, func() { _ = joinThinkingBlocks(blocks) }); allocs != 0 {
+		t.Fatalf("single-block join allocates %.1f times", allocs)
+	}
+}

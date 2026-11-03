@@ -4247,6 +4247,21 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestChatResetStopsBothSweeps`,
 `TestWiringChatResetDropsPendingSweeps`.
 
+### D358
+
+**A single thinking block skips the join copy.**
+
+Reference: pi v1.5.0 `assistant-message.ts` joins thinking runs with
+`blocks.join("\n\n")`; JavaScript returns the single element without building
+a new string. The port's `joinThinkingBlocks` always wrote the block into a
+`strings.Builder`, copying the whole thinking text on every streaming delta.
+Return the sole block directly.
+
+Measured end-to-end with 100 KiB of thinking in 16-byte deltas: 148 ms and
+359 MB allocated before, 10.3 ms and 11 MB after.
+`TestJoinThinkingBlocksSingleBlockDoesNotCopy` pins zero allocations;
+`BenchmarkAssistantThinking100KB` keeps the scale visible.
+
 ### D357
 
 **Streaming assistant text caches its clean sanitization prefix.**
