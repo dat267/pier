@@ -1354,11 +1354,11 @@ func (m *Models) CancelDeferred(model *Model, handle *DeferredHandle, options *M
 // CalculateCost computes usage cost from model rates and mutates
 // usage.Cost in place, returning it (upstream calculateCost).
 func CalculateCost(model *Model, usage *Usage) UsageCost {
-	inputTokens := usage.Input + usage.CacheRead + usage.CacheWrite
+	inputTokens := float64(usage.Input) + float64(usage.CacheRead) + float64(usage.CacheWrite)
 	rates := model.Cost.ModelCostRates
 	matchedThreshold := int64(-1)
 	for _, tier := range model.Cost.Tiers {
-		if inputTokens > tier.InputTokensAbove && tier.InputTokensAbove > matchedThreshold {
+		if inputTokens > float64(tier.InputTokensAbove) && tier.InputTokensAbove > matchedThreshold {
 			rates = tier.ModelCostRates
 			matchedThreshold = tier.InputTokensAbove
 		}
