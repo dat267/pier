@@ -4303,11 +4303,13 @@ which rejects text after the first value. The byte scanner and its
 `json.Decoder` fallback both stopped after the first value, so `1 2`,
 `{} trailing` and `truex` were silently truncated (the `json.RawMessage`
 marshal path already guarded with `json.Valid`). After parsing one value the
-scanner now allows only trailing whitespace; the fallback validates the whole
-input with `json.Unmarshal` first, keeping the standard diagnostic.
+scanner now allows only trailing whitespace; the fallback decodes once with
+`UseNumber` (JSON.parse accepts values beyond float64, so `1e1000` must still
+become `null`) and requires a second decode to return EOF, reporting the
+offending character.
 
-`TestCanonicalizeRejectsTrailingText` pins the rejection and trailing
-whitespace acceptance; the differential fuzz oracle now shares the strict
+`TestCanonicalizeRejectsTrailingText` pins the rejection, trailing whitespace
+acceptance, and `1e1000`; the differential fuzz oracle now shares the strict
 behavior.
 
 ### D358
