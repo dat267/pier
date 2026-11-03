@@ -4268,8 +4268,10 @@ before Terra was added to the catalog source. Regenerate upstream data with
 OpenAI Responses, Codex, Bedrock, OpenRouter and gateway providers. The OpenAI
 entry uses the official $1/$5 pricing with a 272k context window; Codex uses a
 500k window. `TestCatalogIncludesGPT61Terra` pins the three first-party
-surfaces. The generator command in `AGENTS.md` and `scripts/gen_catalog.py`
-now names `catalog/generate.ts`.
+surfaces. The image and classifier catalogs were regenerated from the same
+data-only output; `TestImageCatalogCarriesTheV150Refresh` pins the refreshed
+OpenRouter image entry and the existing flux model. The generator commands in
+`AGENTS.md` and the scripts now name `catalog/generate.ts`.
 
 ### D364
 
