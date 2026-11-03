@@ -349,6 +349,9 @@ func run(appName string, args *coding.Args) error {
 		return trustErr
 	}
 	coding.Time("resolveProjectTrust", coding.TimingMain)
+	// Settings parse errors from the bootstrap pass (global settings) would
+	// otherwise be lost when the runtime manager replaces it.
+	bootstrapSettingsDiagnostics := coding.CollectSettingsDiagnostics(settings)
 	// The interactive UI's event loop must never block, so the runtime manager
 	// persists settings through the off-loop queue (the bootstrap manager above
 	// has no writers). FlushPersists runs at teardown via App.StopMode.
@@ -359,6 +362,8 @@ func run(appName string, args *coding.Args) error {
 	if args.UseTheme != nil {
 		settings.ApplyOverrides(&coding.Settings{Theme: args.UseTheme})
 	}
+	settingsDiagnostics := coding.DeduplicateDiagnostics(append(
+		bootstrapSettingsDiagnostics, coding.CollectSettingsDiagnostics(settings)...))
 	// Now that the project's trust is known, its themes and its theme setting are
 	// readable (the pre-boot install could read neither).
 	applyThemeSources(theme, args, settings, agentDir, runtimeCwd, trusted)
@@ -380,7 +385,22 @@ func run(appName string, args *coding.Args) error {
 		return err
 	}
 	coding.Time("resolveModelScope", coding.TimingMain)
-	startupDiagnostics := make([]interactive.StartupDiagnostic, 0, len(scopeDiagnostics))
+	startupDiagnostics := make([]interactive.StartupDiagnostic, 0, len(settingsDiagnostics)+len(scopeDiagnostics))
+	for _, diagnostic := range settingsDiagnostics {
+		startupDiagnostics = append(startupDiagnostics, interactive.StartupDiagnostic{
+			Type:    diagnostic.Type,
+			Message: diagnostic.Message,
+		})
+	}
+	if headlessMode {
+		// Upstream reports startup diagnostics to stderr outside interactive mode
+		// (pi v1.5.0 main.ts reportDiagnostics).
+		for _, diagnostic := range settingsDiagnostics {
+			fmt.Fprintln(os.Stderr, coding.FormatCLIDiagnostic(coding.CLIDiagnostic{
+				Type: diagnostic.Type, Message: diagnostic.Message,
+			}))
+		}
+	}
 	for _, diagnostic := range scopeDiagnostics {
 		startupDiagnostics = append(startupDiagnostics, interactive.StartupDiagnostic{
 			Type:    diagnostic.Type,

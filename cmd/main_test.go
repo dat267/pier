@@ -557,3 +557,23 @@ func TestResumeSessionNoSessionKeepsRequestedID(t *testing.T) {
 		t.Fatalf("session id=%q file=%q", sm.GetSessionID(), sm.GetSessionFile())
 	}
 }
+
+// pi v1.5.0 main.ts collects startup settings diagnostics and reports them
+// before running (stderr outside interactive mode); the port drained them only
+// for --list-models, so an invalid settings file booted silently.
+func TestStartupReportsInvalidSettings(t *testing.T) {
+	isolatedAgentDir(t)
+	agentDir := os.Getenv("PI_CODING_AGENT_DIR")
+	if err := os.WriteFile(filepath.Join(agentDir, "settings.json"), []byte("not json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(t.TempDir())
+	args := coding.ParseArgs([]string{
+		"--offline", "--no-mcp", "--no-session", "--no-tools",
+		"--model", "openai/gpt-4o", "-p", "hi",
+	})
+	_, stderr := captureStdio(t, func() { _ = run("pier", args) })
+	if !strings.Contains(stderr, "Invalid") || !strings.Contains(stderr, "settings") {
+		t.Fatalf("stderr = %q; want the invalid settings diagnostic", stderr)
+	}
+}
