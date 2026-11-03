@@ -4729,6 +4729,21 @@ stored entry bytes are unchanged; only the converted context is escaped.
 
 Tests: `TestSummaryContextCannotCloseItsWrapper`.
 
+### D366
+
+**Finite Mistral usage saturates at the int64 representation boundary.**
+
+Reference: pi v1.5.0 (`f9a26365`),
+`packages/ai/src/api/mistral-conversations.ts` `consumeChatStream` preserves
+provider token counts as JavaScript Numbers. Pier stores them as int64, so
+finite out-of-range prompt, completion and total counts saturate instead of
+wrapping negative or losing input usage. This extends the representation rule
+in D313/D334 to this parser. Ordinary in-range conversion still truncates.
+
+Reproducer: `TestMistralStreamSaturatesFiniteUsageBeyondInt64` serves finite
+`1e308` usage fields through the HTTP streaming boundary. Before the fix, input
+became zero and output/total became MinInt64.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

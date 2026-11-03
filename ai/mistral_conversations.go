@@ -961,13 +961,13 @@ func parseMistralUsage(raw json.RawMessage) (struct {
 		return result, false
 	}
 	if payload.PromptTokens != nil {
-		result.PromptTokens = int64(*payload.PromptTokens)
+		result.PromptTokens = jsNumberToInt64(*payload.PromptTokens)
 	}
 	if payload.CompletionTokens != nil {
-		result.CompletionTokens = int64(*payload.CompletionTokens)
+		result.CompletionTokens = jsNumberToInt64(*payload.CompletionTokens)
 	}
 	if payload.TotalTokens != nil {
-		result.TotalTokens = int64(*payload.TotalTokens)
+		result.TotalTokens = jsNumberToInt64(*payload.TotalTokens)
 	}
 	return result, true
 }
