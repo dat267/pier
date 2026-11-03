@@ -325,7 +325,7 @@ func ContinueRecentSession(cwd string, sessionDir string) (*SessionManager, erro
 	if dir == "" {
 		dir = DefaultSessionDir(cwd, "")
 	}
-	filterCwd := sessionDir != "" && dir != DefaultSessionDir(cwd, "")
+	filterCwd := sessionDir != "" && !PathsEqual(dir, DefaultSessionDir(cwd, ""))
 	filterValue := ""
 	if filterCwd {
 		filterValue = cwd
@@ -1169,7 +1169,7 @@ func ListSessions(cwd string, sessionDir string) []SessionInfo {
 	if dir == "" {
 		dir = DefaultSessionDir(cwd, "")
 	}
-	filterCwd := sessionDir != "" && dir != DefaultSessionDir(cwd, "")
+	filterCwd := sessionDir != "" && !PathsEqual(dir, DefaultSessionDir(cwd, ""))
 	resolvedCwd := ResolvePath(cwd, "", PathInputOptions{})
 
 	var sessions []SessionInfo
@@ -1501,7 +1501,7 @@ func (m *SessionManager) getEntriesLocked() []SessionEntry {
 // UsesDefaultSessionDir reports whether the session uses the default per-cwd
 // directory.
 func (m *SessionManager) UsesDefaultSessionDir() bool {
-	return m.sessionDir == DefaultSessionDir(m.cwd, "")
+	return PathsEqual(m.sessionDir, DefaultSessionDir(m.cwd, ""))
 }
 
 // ListAllSessions lists sessions across every per-cwd directory (or one custom
