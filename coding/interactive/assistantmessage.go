@@ -360,6 +360,9 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 func trimmedNonEmpty(value string) bool { return ai.JSTrim(value) != "" }
 
 func (c *AssistantMessageComponent) sanitizeBlock(index int, kind, text string) string {
+	if c.textSanitizers == nil {
+		c.textSanitizers = map[assistantBlockKey]*tui.StreamingSanitizer{}
+	}
 	key := assistantBlockKey{index: index, kind: kind}
 	sanitizer := c.textSanitizers[key]
 	if sanitizer == nil {
