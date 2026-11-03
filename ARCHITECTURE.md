@@ -4831,6 +4831,24 @@ sums, repeated column additions and ordinary controls.
 a positive-token model bucket even with zero cost, rather than filtering it out
 after its total wraps negative.
 
+### D370
+
+**Cache-miss intermediates use Number arithmetic, with bounded public counters.**
+
+Reference: pi v1.5.0 (`f9a26365`),
+`packages/coding-agent/src/core/cache-stats.ts` `detectMiss`, `asPreviousRequest`
+and `scan`. Private prompt totals, paid-token rates and sticky cache activity
+use float64 Number arithmetic so an intermediate sum cannot wrap or lose a
+miss before subtraction. Public int64 missed-token counts and their cumulative
+totals saturate at representation bounds instead. Missed cost is computed from
+the unbounded Number-space miss, not the saturated display count. The existing
+candidate/full-scan paths, noise floor, price lookup and persistence are intact.
+
+Reproducers in `coding/cache_usage_boundary_test.go` cover a wide prompt with
+an in-range miss, a miss beyond int64, paid-rate overflow, sticky cache activity
+and cumulative missed-token totals, through both cached and reference APIs.
+Ordinary cache-stat goldens remain unchanged.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

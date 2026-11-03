@@ -55,7 +55,7 @@ type ModelPriceSource interface {
 // previousRequest is the last request seen by the scan; everything in its
 // prompt should be cached.
 type previousRequest struct {
-	PromptTokens int64
+	PromptTokens float64
 	ModelKey     string
 	Timestamp    int64
 	// timestampKnown is false for a cache-warming entry whose timestamp did not
@@ -85,8 +85,8 @@ func detectCacheMissFor(prev *previousRequest, message *ai.AssistantMessage, mod
 		return CacheMiss{}, false
 	}
 
-	missedTokens := min(prev.PromptTokens, promptTokens) - usage.CacheRead
-	if missedTokens <= noiseFloorTokens {
+	missedTokens := min(prev.PromptTokens, promptTokens) - float64(usage.CacheRead)
+	if missedTokens <= float64(noiseFloorTokens) {
 		return CacheMiss{}, false
 	}
 
@@ -94,7 +94,7 @@ func detectCacheMissFor(prev *previousRequest, message *ai.AssistantMessage, mod
 	// (input/cacheWrite, including the write premium) instead of the cache-read
 	// rate. Missed tokens can only land in the input or cacheWrite buckets, so
 	// the paid rate comes from this message's own cost breakdown.
-	paidTokens := usage.Input + usage.CacheWrite
+	paidTokens := float64(usage.Input) + float64(usage.CacheWrite)
 	paidPerToken := 0.0
 	if paidTokens > 0 {
 		paidPerToken = (usage.Cost.Input + usage.Cost.CacheWrite) / float64(paidTokens)
@@ -109,7 +109,7 @@ func detectCacheMissFor(prev *previousRequest, message *ai.AssistantMessage, mod
 	}
 
 	return CacheMiss{
-		MissedTokens: missedTokens,
+		MissedTokens: usageTokensFromNumber(missedTokens),
 		MissedCost:   float64(missedTokens) * math.Max(0, paidPerToken-readPerToken),
 		IdleMs:       cacheMissIdleMs(prev, message),
 		ModelChanged: fmt.Sprintf("%s/%s", message.Provider, message.Model) != prev.ModelKey,
@@ -141,7 +141,7 @@ func newPreviousRequest(usage ai.Usage, provider string, model string, timestamp
 		ModelKey:       fmt.Sprintf("%s/%s", provider, model),
 		Timestamp:      timestamp,
 		timestampKnown: true,
-		reportedCache:  reportedCache || usage.CacheRead+usage.CacheWrite > 0,
+		reportedCache:  reportedCache || float64(usage.CacheRead)+float64(usage.CacheWrite) > 0,
 	}
 }
 
@@ -169,8 +169,8 @@ func cacheWarmPreviousRequest(entry *SessionEntry) *previousRequest {
 	return request
 }
 
-func promptTokensOf(usage ai.Usage) int64 {
-	return usage.Input + usage.CacheRead + usage.CacheWrite
+func promptTokensOf(usage ai.Usage) float64 {
+	return float64(usage.Input) + float64(usage.CacheRead) + float64(usage.CacheWrite)
 }
 
 type cacheScanResult struct {
@@ -402,7 +402,7 @@ func scanCacheEntries(entries []SessionEntry, models ModelPriceSource, cache *me
 			continue
 		}
 		if miss, ok := detectCacheMissFor(result.prev, assistant, models); ok {
-			result.totals.MissedTokens += miss.MissedTokens
+			result.totals.MissedTokens = addUsageTokens(result.totals.MissedTokens, miss.MissedTokens)
 			result.totals.MissedCost += miss.MissedCost
 			result.totals.MissCount++
 			result.misses = append(result.misses, CacheMissEntry{EntryIndex: index, Message: assistant, Miss: miss})
@@ -562,7 +562,7 @@ func (m *SessionManager) cacheScanResult(models ModelPriceSource) cacheScanResul
 			continue
 		}
 		if miss, ok := detectCacheMissFor(candidate.prev, candidate.assistant, models); ok {
-			result.totals.MissedTokens += miss.MissedTokens
+			result.totals.MissedTokens = addUsageTokens(result.totals.MissedTokens, miss.MissedTokens)
 			result.totals.MissedCost += miss.MissedCost
 			result.totals.MissCount++
 			// The transcript keys its notices by the memoized message pointer, so

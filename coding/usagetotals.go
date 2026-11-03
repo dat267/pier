@@ -34,7 +34,10 @@ func AddUsageToTotals(totals *UsageTotals, usage ai.Usage) {
 
 // totalTokens follows Number addition and saturates the int64 result (D369).
 func (totals UsageTotals) totalTokens() int64 {
-	tokens := float64(totals.Input) + float64(totals.Output) + float64(totals.CacheRead) + float64(totals.CacheWrite)
+	return usageTokensFromNumber(float64(totals.Input) + float64(totals.Output) + float64(totals.CacheRead) + float64(totals.CacheWrite))
+}
+
+func usageTokensFromNumber(tokens float64) int64 {
 	if tokens >= float64(math.MaxInt64) {
 		return math.MaxInt64
 	}
