@@ -6,6 +6,7 @@ func TestCanonicalJSONIsNormalized(t *testing.T) {
 	normalized := []string{
 		`{}`, `[]`, `{"a":1,"b":[true,null,"x"]}`,
 		`{"0":1,"1":2,"a":3}`,
+		`{"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17}`, // wide-object map path
 		`"\u0001"`, `"\b\f\n\r\t"`, `1.5`, `1e-7`, "\"\u2028\"", "\"\x7f\"",
 	}
 	for _, input := range normalized {

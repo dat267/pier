@@ -84,6 +84,7 @@ func (p *normalizedParser) object(depth int) bool {
 	}
 	var keys [16][]byte
 	keyCount := 0
+	var wideKeys map[string]struct{}
 	seenStringKey := false
 	hasIndex := false
 	var lastIndex uint64
@@ -96,18 +97,32 @@ func (p *normalizedParser) object(depth int) bool {
 			return false
 		}
 		rawKey := p.data[start+1 : p.pos-1]
-		if keyCount >= len(keys) {
-			// Wide objects fall back rather than making the duplicate scan
-			// quadratic on hostile input.
-			return false
-		}
-		for i := 0; i < keyCount; i++ {
-			if bytes.Equal(keys[i], rawKey) {
+		if wideKeys != nil {
+			key := string(rawKey)
+			if _, exists := wideKeys[key]; exists {
 				return false
 			}
+			wideKeys[key] = struct{}{}
+		} else if keyCount < len(keys) {
+			for i := 0; i < keyCount; i++ {
+				if bytes.Equal(keys[i], rawKey) {
+					return false
+				}
+			}
+			keys[keyCount] = rawKey
+			keyCount++
+		} else {
+			// Wide objects switch to a map so the duplicate check stays
+			// linear on hostile input.
+			wideKeys = make(map[string]struct{}, len(keys)+1)
+			for _, key := range keys {
+				wideKeys[string(key)] = struct{}{}
+			}
+			if _, exists := wideKeys[string(rawKey)]; exists {
+				return false
+			}
+			wideKeys[string(rawKey)] = struct{}{}
 		}
-		keys[keyCount] = rawKey
-		keyCount++
 		if index, ok := normalizedArrayIndexKey(rawKey); ok {
 			if seenStringKey || (hasIndex && index <= lastIndex) {
 				return false

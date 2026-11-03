@@ -4481,7 +4481,8 @@ A validator first recognizes input that the encoder already produced in
 canonical form (no insignificant whitespace, canonical escapes and number text,
 index keys first, no duplicates, valid UTF-8) and returns an owned copy without
 reparsing; noncanonical or invalid input takes the full parser, so diagnostics
-are unchanged. The conversation benchmark is now 11–12 ms and 24k allocations
+are unchanged. Small objects check duplicate keys in a fixed array; wider ones
+switch to a set so the check stays linear on hostile input. The conversation benchmark is now 11–12 ms and 24k allocations
 (from 33–38 ms/288k); the normalized fast path also covers whole request bodies
 whose raw tool arguments are already canonical. A 790 KB already-normalized
 body canonicalizes in 2.5 ms (`BenchmarkCanonicalizeNormalizedJSON`) versus
