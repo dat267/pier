@@ -50,6 +50,8 @@ func TestMarshalJSONReplacesLoneSurrogateEscapes(t *testing.T) {
 	for _, tc := range []struct{ raw, want string }{
 		{`"a\ud800b"`, "\"a\ufffdb\""},
 		{`"a\udc00b"`, "\"a\ufffdb\""},
+		{`"\udc00\udc00"`, "\"\ufffd\ufffd\""},
+		{`"\udc00\ud800"`, "\"\ufffd\ufffd\""},
 		{`{"k":"\ud800"}`, "{\"k\":\"\ufffd\"}"},
 		{`"\ud83d\ude00"`, "\"😀\""},
 	} {

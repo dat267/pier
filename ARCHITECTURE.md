@@ -4247,6 +4247,20 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestChatResetStopsBothSweeps`,
 `TestWiringChatResetDropsPendingSweeps`.
 
+### D363
+
+**Each lone low-surrogate escape becomes its own replacement character.**
+
+Reference: JavaScript `JSON.parse` keeps every UTF-16 code unit, so
+`"\udc00\udc00"` is two lone low surrogates; Go strings cannot represent
+them, and D253 replaces each with U+FFFD. The canonical scanner treated any
+surrogate as the high half of a pair, so two consecutive low escapes collapsed
+into one U+FFFD. Only values in `D800–DBFF` may start a pair; a low surrogate is
+emitted as U+FFFD and scanning continues.
+
+`TestMarshalJSONReplacesLoneSurrogateEscapes` covers consecutive low/lows and
+low/high; the canonical differential fuzz preserves two replacements.
+
 ### D362
 
 **Assistant streaming reuses its block-component map.**

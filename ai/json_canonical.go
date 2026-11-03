@@ -325,6 +325,12 @@ func (p *canonicalParser) parseEscapedString(start int) (string, error) {
 					builder = utf8.AppendRune(builder, value)
 					continue
 				}
+				if value < 0xD800 || value > 0xDBFF {
+					// A lone low surrogate cannot start a pair; each escape
+					// gets its own replacement character.
+					builder = utf8.AppendRune(builder, utf8.RuneError)
+					continue
+				}
 				high := value
 				if p.pos+1 < len(p.data) && p.data[p.pos] == '\\' && p.data[p.pos+1] == 'u' {
 					save := p.pos
