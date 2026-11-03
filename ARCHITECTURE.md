@@ -4341,8 +4341,11 @@ pinned byte-for-byte against that decoder oracle by
 `TestCanonicalizeMatchesReference` and `FuzzCanonicalizeMatchesReference` (614k
 inputs in a 30-second run), and `TestCanonicalizeRejectsExcessiveNesting` pins
 the boundary.
-Measured on the same body: canonical pass 55 → 11 ms and 456k → 148k
-allocations; `MarshalJSON` about 38 ms and 304k allocations (benchmarks
+`MarshalJSON` also emits strings, booleans, integers and valid
+`json.RawMessage` directly instead of encoding and re-parsing them, which the
+nested message marshalers do constantly. Measured on the same body: canonical
+pass 55 → 11 ms and 456k → 148k allocations; `MarshalJSON` about 33–36 ms and
+288k allocations (benchmarks
 `BenchmarkCanonicalizeLargeJSON`, `BenchmarkMarshalConversation`). Node
 `JSON.stringify` remains faster (about 1.1 ms); the remaining port cost is the
 per-message nested canonicalization and byte-parity transforms, tracked as M143.

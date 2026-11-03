@@ -12,6 +12,46 @@ import (
 // escaping of <, >, and &. encoding/json escapes those by default, which
 // would break byte parity with pi's transcripts and wire payloads.
 func MarshalJSON(v any) ([]byte, error) {
+	// Scalars and raw JSON take the canonical encoder directly; the general
+	// path below encodes through the standard library and canonicalizes its
+	// text. Nested message marshalers call this for every scalar field, which
+	// pays the encoder/canonical pair each time (M143).
+	switch value := v.(type) {
+	case nil:
+		return []byte("null"), nil
+	case string:
+		return appendCanonicalJSONString(nil, value), nil
+	case bool:
+		if value {
+			return []byte("true"), nil
+		}
+		return []byte("false"), nil
+	case int:
+		return strconv.AppendInt(nil, int64(value), 10), nil
+	case int64:
+		return strconv.AppendInt(nil, value, 10), nil
+	case int32:
+		return strconv.AppendInt(nil, int64(value), 10), nil
+	case int16:
+		return strconv.AppendInt(nil, int64(value), 10), nil
+	case int8:
+		return strconv.AppendInt(nil, int64(value), 10), nil
+	case uint:
+		return strconv.AppendUint(nil, uint64(value), 10), nil
+	case uint64:
+		return strconv.AppendUint(nil, value, 10), nil
+	case uint32:
+		return strconv.AppendUint(nil, uint64(value), 10), nil
+	case uint16:
+		return strconv.AppendUint(nil, uint64(value), 10), nil
+	case uint8:
+		return strconv.AppendUint(nil, uint64(value), 10), nil
+	case json.RawMessage:
+		if value == nil {
+			return []byte("null"), nil
+		}
+		return canonicalJavaScriptJSON(value)
+	}
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
