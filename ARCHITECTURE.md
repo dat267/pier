@@ -4452,8 +4452,10 @@ index keys first, no duplicates, valid UTF-8) and returns an owned copy without
 reparsing; noncanonical or invalid input takes the full parser, so diagnostics
 are unchanged. The conversation benchmark is now 11–12 ms and 24k allocations
 (from 33–38 ms/288k); the normalized fast path also covers whole request bodies
-whose raw tool arguments are already canonical. Node `JSON.stringify` remains
-faster (about 1.1 ms); the remaining port cost is the encoder and the fallback
+whose raw tool arguments are already canonical. A 790 KB already-normalized
+body canonicalizes in 2.5 ms (`BenchmarkCanonicalizeNormalizedJSON`) versus
+11–12 ms through the parser. Node `JSON.stringify` remains faster (about
+1.1 ms); the remaining port cost is the encoder and the fallback
 canonicalization of non-normalized bodies, tracked as M143.
 
 ### D349

@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -153,5 +154,36 @@ func TestCanonicalizeRejectsExcessiveNesting(t *testing.T) {
 	rejected := strings.Repeat("[", 10001) + strings.Repeat("]", 10001)
 	if _, err := canonicalJavaScriptJSON([]byte(rejected)); err == nil {
 		t.Fatal("depth 10001 was accepted")
+	}
+}
+
+// Same body through an encoder configured like MarshalJSON, whose output is
+// already canonical; the validator returns an owned copy (D350).
+func BenchmarkCanonicalizeNormalizedJSON(b *testing.B) {
+	messages := make([]map[string]any, 0, 4000)
+	for i := 0; i < 4000; i++ {
+		messages = append(messages, map[string]any{
+			"role":    "user",
+			"content": "question with <html> & unicode café 😀 and \"quotes\" and \\ backslash",
+			"nested":  map[string]any{"z": i, "2": "two", "1": "one"},
+			"list":    []any{i, "x", true, nil, 1.5},
+		})
+	}
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(messages); err != nil {
+		b.Fatal(err)
+	}
+	normalized := bytes.TrimSuffix(buf.Bytes(), []byte("\n"))
+	if !canonicalJSONIsNormalized(normalized) {
+		b.Fatal("probe is not normalized")
+	}
+	b.SetBytes(int64(len(normalized)))
+	b.ReportAllocs()
+	for b.Loop() {
+		if _, err := canonicalJavaScriptJSON(normalized); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
