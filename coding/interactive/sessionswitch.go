@@ -217,7 +217,7 @@ func (a *App) wireGoalStartWork() {
 // resolving that project's trust first. A switch within the same project, or one
 // with no directory to resolve, keeps the current settings.
 func (a *App) rebindProjectSettings(cwd string) error {
-	if cwd == "" || cwd == a.settings.Cwd() {
+	if cwd == "" || coding.PathsEqual(cwd, a.settings.Cwd()) {
 		return nil
 	}
 	key := coding.CanonicalizePath(coding.ResolvePath(cwd, "", coding.PathInputOptions{}))
