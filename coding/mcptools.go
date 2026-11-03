@@ -272,6 +272,7 @@ func mcpBlockToContent(server string, block protocol.ContentBlock, options Conve
 func decodeMcpBase64(value string) ([]byte, error) {
 	var filtered strings.Builder
 	filtered.Grow(len(value))
+filter:
 	for index := 0; index < len(value); index++ {
 		char := value[index]
 		switch {
@@ -284,7 +285,7 @@ func decodeMcpBase64(value string) ([]byte, error) {
 		case char == '_':
 			filtered.WriteByte('/')
 		case char == '=':
-			return base64.RawStdEncoding.DecodeString(filtered.String())
+			break filter
 		}
 	}
 	text := filtered.String()
