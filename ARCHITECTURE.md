@@ -4443,12 +4443,18 @@ pass 55 → 11 ms and 456k → 148k allocations; `MarshalJSON` about 33–36 ms 
 `BenchmarkCanonicalizeLargeJSON`, `BenchmarkMarshalConversation`). Content
 lists now append their canonical blocks directly instead of round-tripping a
 `[]json.RawMessage`, and the common text/thinking/image/tool-call blocks are
-emitted field by field rather than encoded and spliced. The conversation
-benchmark is now 24–25 ms and 222k allocations (from 33–38 ms/288k). A nil
-block pointer encodes as `null` instead of the previously malformed splice.
-Node `JSON.stringify` remains faster (about 1.1 ms); the remaining port cost is
-the per-message nested canonicalization and byte-parity transforms, tracked as
-M143.
+emitted field by field rather than encoded and spliced. A nil block pointer
+encodes as `null` instead of the previously malformed splice.
+
+A validator first recognizes input that the encoder already produced in
+canonical form (no insignificant whitespace, canonical escapes and number text,
+index keys first, no duplicates, valid UTF-8) and returns an owned copy without
+reparsing; noncanonical or invalid input takes the full parser, so diagnostics
+are unchanged. The conversation benchmark is now 11–12 ms and 24k allocations
+(from 33–38 ms/288k); the normalized fast path also covers whole request bodies
+whose raw tool arguments are already canonical. Node `JSON.stringify` remains
+faster (about 1.1 ms); the remaining port cost is the encoder and the fallback
+canonicalization of non-normalized bodies, tracked as M143.
 
 ### D349
 

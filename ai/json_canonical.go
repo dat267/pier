@@ -19,6 +19,10 @@ import (
 // element. M143: the decoder-based version allocated a token, a buffer and an
 // encoder per string, costing 456k allocations on a 754 KB conversation.
 func canonicalJavaScriptJSON(encoded []byte) ([]byte, error) {
+	if canonicalJSONIsNormalized(encoded) {
+		// Return an owned copy; callers may mutate the result.
+		return append([]byte(nil), encoded...), nil
+	}
 	parser := canonicalParser{data: encoded}
 	parser.skipSpace()
 	out := make([]byte, 0, len(encoded))
