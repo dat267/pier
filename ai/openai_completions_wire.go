@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -378,6 +379,16 @@ func decodeOrderedJSONFields(data []byte) (*orderedJSONFields, error) {
 			return nil, err
 		}
 		fields.set(key, raw)
+	}
+	closing, err := dec.Token()
+	if err != nil {
+		return nil, err
+	}
+	if delimiter, ok := closing.(json.Delim); !ok || delimiter != '}' {
+		return nil, fmt.Errorf("not an object")
+	}
+	if _, err := dec.Token(); err != io.EOF {
+		return nil, fmt.Errorf("unexpected data after the JSON object")
 	}
 	return fields, nil
 }

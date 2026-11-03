@@ -4247,6 +4247,21 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestChatResetStopsBothSweeps`,
 `TestWiringChatResetDropsPendingSweeps`.
 
+### D360
+
+**Ordered JSON object decoding rejects trailing data.**
+
+Reference: pi v1.5.0 parses provider/tool JSON fragments with `JSON.parse`,
+which rejects text after the object. `decodeOrderedJSONFields` (shared by
+OpenAI, Bedrock, Mistral, Google, constrained-sampling and system-one paths)
+stopped after the last member, so `{"a":1}]` was accepted and the suffix
+ignored. Require the closing brace and then EOF, allowing only trailing
+whitespace.
+
+`TestDecodeOrderedJSONFieldsRejectsTrailing` covers trailing text, a second
+object, a stray delimiter, and trailing whitespace; existing provider goldens
+remain byte-identical.
+
 ### D359
 
 **Canonicalization rejects trailing non-whitespace.**
