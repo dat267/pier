@@ -18,8 +18,8 @@ bin := "bin/pier"
 # release workflow passes its own (release.yml stamps the tag or the SHA).
 VERSION := env_var_or_default("VERSION", `git describe --tags --always --dirty 2>/dev/null || true`)
 
-# Pure Go: no cgo anywhere in the port, and the release workflow builds the same
-# way (GOOS=android CGO_ENABLED=0).
+# Pure Go: the port has no cgo source, and the release workflow builds the same
+# way (GOOS=android CGO_ENABLED=0). The race detector still needs cgo tooling.
 ldflags := "-trimpath -ldflags \"-s -w" + (if VERSION == "" { "" } else { " -X " + module + "/coding.Version=" + VERSION }) + "\""
 
 # Build bin/pier.
@@ -66,7 +66,7 @@ install:
 test:
 	go test -count=1 ./...
 
-# Run the test suite under the race detector (not available on android/arm64 — CI runs this).
+# Run the test suite under the race detector (requires cgo, unavailable on android/arm64). CI runs this.
 test-race:
 	go test -race ./...
 

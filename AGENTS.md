@@ -12,9 +12,11 @@ unresolved findings.
   installed bundle. `just reference` verifies the pin. D-rows and test comments
   cite the revision a behavior was verified against, so older ones still name
   v1.4.0 on purpose.
-- Treat JSON as byte-parity: persist and send through `ai.MarshalJSON`, never
-  `encoding/json.Marshal`. Preserve JavaScript key order, stringify behavior and
-  truthiness where upstream depends on them.
+- Treat JSON as byte-parity: persist and send final bytes through
+  `ai.MarshalJSON`, not `encoding/json.Marshal`. `encoding/json` remains
+  appropriate for internal parsing, round-trips and `MarshalJSON` method
+  internals, but not for final persisted or wire bytes. Preserve JavaScript key
+  order, stringify behavior and truthiness where upstream depends on them.
 - Parity never outranks responsiveness. When an upstream behavior would add a
   measured stall, a per-keystroke or per-frame cost, or worse UX, keep the port
   fast and pleasant, and record the difference as a D-row instead of copying it.
@@ -47,9 +49,11 @@ go test -count=1 ./coding -run TestName
 go test -short ./...                       # skips slower real-binary PTY tests
 ```
 
-Go 1.27 is required; CGO is off. CI runs the race gate and cross-builds Windows,
-Linux/arm64, Android/arm64 and macOS. Treat race-only failures as bugs. PTY tests
-use `$PIER_TEST_BIN`, then `bin/pier`, then a temporary build.
+Go 1.27 is required. Builds and releases set `CGO_ENABLED=0`; the race gate
+needs cgo enabled (`just test-race` and CI). CI runs the race gate on linux/amd64
+and cross-builds `windows/{amd64,arm64}`, `linux/arm64`, `android/arm64`, and
+`darwin/{amd64,arm64}`. Treat race-only failures as bugs. PTY tests use
+`$PIER_TEST_BIN`, then `bin/pier`, then a temporary build.
 
 Keep tests quick: small fixtures, allocation checks instead of loops, fake
 sleeps, and never launch the developer's editor. Tests must use temporary agent
@@ -78,19 +82,27 @@ auto-compaction and retry.
 - Go 1.27 may require explicit result types on function-literal arguments. RE2
   has no lookaround and no `\s` inside character classes.
 - Catalog JSON is generated, not hand-edited. Regenerate in a scratch copy of
-  `./pi`: run upstream `node catalog/generate.ts --strict --data-only`, then
-  `scripts/gen_catalog.py`, `scripts/gen_image_catalog.py`, and
-  `scripts/gen_classifier_catalog.py <scratch-pi> openai-decisions` for
-  `ai/classifier_catalog.json` and
-  `scripts/gen_classifier_catalog.py <scratch-pi> typesafe-system-one` for
-  `ai/typesafe_classifier_catalog.json` and
-  `scripts/gen_classifier_catalog.py <scratch-pi> cloudflare-workers-ai-system-one`
-  for `ai/cloudflare_classifier_catalog.json`; the upstream generator fetches
-  models.dev and rewrites its checkout.
+  `./pi`: from `<scratch-pi>/packages/ai`, run
+  `node catalog/generate.ts --strict --data-only`. Then, from this repo, run:
+
+  ```sh
+  python3 scripts/gen_catalog.py <scratch-pi> > ai/models_catalog.json
+  python3 scripts/gen_image_catalog.py <scratch-pi> > ai/image_catalog.json
+  python3 scripts/gen_classifier_catalog.py <scratch-pi> openai-decisions \
+    > ai/classifier_catalog.json
+  python3 scripts/gen_classifier_catalog.py <scratch-pi> typesafe-system-one \
+    > ai/typesafe_classifier_catalog.json
+  python3 scripts/gen_classifier_catalog.py <scratch-pi> cloudflare-workers-ai-system-one \
+    > ai/cloudflare_classifier_catalog.json
+  ```
+
+  The upstream generator fetches models.dev and rewrites its checkout.
 - Upstream goldens in `*/testdata/` are Node-generated; regenerate as each
   fixture instructs and never hand-edit them.
 
 ## Out of scope
 
-Native (Bun FFI) clipboard, Photon image formats, extensions/package manager,
-full stdio RPC, and Mermaid rendering. See `ARCHITECTURE.md` for rationale.
+Native (Bun FFI) clipboard, Photon image formats, extension mechanics and the
+package manager, full upstream stdio-RPC compatibility (the supported subset is
+documented in `ARCHITECTURE.md`), and Mermaid rendering. See `ARCHITECTURE.md`
+for rationale.
