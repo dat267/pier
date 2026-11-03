@@ -4247,6 +4247,22 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestChatResetStopsBothSweeps`,
 `TestWiringChatResetDropsPendingSweeps`.
 
+### D361
+
+**Tool-argument updates skip unchanged raw bytes.**
+
+Reference: pi v1.5.0 streams tool arguments through `ToolCallArgumentsStream`;
+the UI still receives a delta event for every provider chunk. The port's
+`UpdateArgs` marked the display pending unconditionally, so each render
+re-decoded and rebuilt the full argument preview even when the throttled
+preview bytes had not changed. Compare `json.RawMessage`/`[]byte` arguments and
+return before invalidating when they are identical.
+
+A repeated 1 MiB write argument rendered 100 times: 6.53 s and 7.56 GB allocated
+before, 86 ms and 70 MB after. The equality check preserves every changed
+update; `TestUpdateArgsSkipsUnchangedRawMessage` covers both paths and
+`BenchmarkToolArgsRepeat` keeps the scale visible.
+
 ### D360
 
 **Ordered JSON object decoding rejects trailing data.**

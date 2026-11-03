@@ -1,6 +1,8 @@
 package interactive
 
 import (
+	"bytes"
+	"encoding/json"
 	"strings"
 	"time"
 
@@ -249,11 +251,36 @@ func (c *ToolExecutionComponent) createResultRegion(component tui.Component) *tu
 // streaming many argument deltas between two frames runs its renderer once per
 // frame, not once per delta (pi v1.5.0 tool-execution.ts #9265).
 func (c *ToolExecutionComponent) UpdateArgs(args any) {
+	if toolArgsEqual(c.args, args) {
+		// Providers emit a delta event for every chunk but only refresh the
+		// preview at 4 KiB doubling; rebuilding the display for an unchanged
+		// raw argument re-decoded the whole value on every frame.
+		return
+	}
 	c.args = args
 	c.argsPending = true
 	if c.host != nil {
 		c.host.RequestRender(false)
 	}
+}
+
+func toolArgsEqual(a, b any) bool {
+	first, ok := rawToolArgs(a)
+	if !ok {
+		return false
+	}
+	second, ok := rawToolArgs(b)
+	return ok && bytes.Equal(first, second)
+}
+
+func rawToolArgs(value any) ([]byte, bool) {
+	switch typed := value.(type) {
+	case json.RawMessage:
+		return typed, true
+	case []byte:
+		return typed, true
+	}
+	return nil, false
 }
 
 // MarkExecutionStarted records that execution began.
