@@ -189,7 +189,7 @@ func (a *App) bindSessionManager(sessionManager *coding.SessionManager) (*Sessio
 
 	if a.unsubscribe == nil {
 		a.unsubscribe = a.session.Subscribe(func(event *coding.SessionEvent) {
-			a.events.HandleEvent(event)
+			a.sessionEvents.enqueue(event)
 		})
 	}
 	a.footer.Invalidate()
