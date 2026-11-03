@@ -4744,6 +4744,21 @@ Reproducer: `TestMistralStreamSaturatesFiniteUsageBeyondInt64` serves finite
 `1e308` usage fields through the HTTP streaming boundary. Before the fix, input
 became zero and output/total became MinInt64.
 
+### D367
+
+**OpenAI completion usage arithmetic saturates at the int64 boundary.**
+
+Reference: pi v1.5.0 (`f9a26365`),
+`packages/ai/src/api/openai-completions.ts` `parseChunkUsage` subtracts cached
+counts and sums total usage with JavaScript Numbers. Pier performs those
+operations in float space, then saturates results outside its int64 usage
+representation instead of wrapping. Ordinary token counts are unchanged, and
+larger in-range results follow JavaScript rounding, as in D313.
+
+Reproducer: `TestParseChunkUsageDoesNotWrapHugeCacheOrTotalCounts` supplies
+representable `6e18` input/output counts whose total exceeded int64, and cache
+counts whose subtraction previously wrapped into false positive input usage.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

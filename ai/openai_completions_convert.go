@@ -465,14 +465,14 @@ func ParseChunkUsage(raw []byte, model *Model) Usage {
 	if u.PromptTokensDetails != nil && u.PromptTokensDetails.CacheWriteTokens != nil {
 		cacheWriteTokens = *u.PromptTokensDetails.CacheWriteTokens
 	}
-	input := max(0, promptTokens-cacheReadTokens-cacheWriteTokens)
+	input := jsNumberToInt64(max(0, float64(promptTokens)-float64(cacheReadTokens)-float64(cacheWriteTokens)))
 	outputTokens := derefI64(u.CompletionTokens)
 	usage := Usage{
 		Input:       input,
 		Output:      outputTokens,
 		CacheRead:   cacheReadTokens,
 		CacheWrite:  cacheWriteTokens,
-		TotalTokens: input + outputTokens + cacheReadTokens + cacheWriteTokens,
+		TotalTokens: jsNumberToInt64(float64(input) + float64(outputTokens) + float64(cacheReadTokens) + float64(cacheWriteTokens)),
 		Cost:        UsageCost{},
 	}
 	// Upstream always reports a numeric reasoning count
