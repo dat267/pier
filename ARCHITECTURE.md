@@ -4812,6 +4812,25 @@ previous wrapped round total was discarded as negative, bypassing the budget.
 `TestFoldGoalDoesNotWrapCumulativeRoundUsage` pin live/replayed round sums.
 The controller regression also replays its emitted durable entries.
 
+### D369
+
+**Session usage totals saturate instead of wrapping or dropping model buckets.**
+
+Reference: pi v1.5.0 (`f9a26365`),
+`packages/coding-agent/src/core/usage-totals.ts` and `agent-session.ts`
+`getSessionStats` add usage with JavaScript Numbers. Pier's shared usage fold
+saturates each int64 field addition at its representation bounds. The final
+four-field total uses Number arithmetic and saturates at int64 bounds too.
+Session statistics and cached/reference cost breakdowns use that same fold.
+Ordinary counts, cost arithmetic, bucket ordering/filtering and persistence
+layouts are unchanged. Native integer spellings remain governed by D253.
+
+Reproducers: `TestSessionStatsDoNotWrapPositiveUsage` covers huge cross-field
+sums, repeated column additions and ordinary controls.
+`TestUsageCostBreakdownDoesNotDropHugeTokenBuckets` verifies both paths retain
+a positive-token model bucket even with zero cost, rather than filtering it out
+after its total wraps negative.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

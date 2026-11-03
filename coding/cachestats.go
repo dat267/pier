@@ -426,16 +426,11 @@ func (m *SessionManager) SessionStats() *SessionStats {
 	m.mu.Unlock()
 
 	stats := &SessionStats{SessionFile: sessionFile, SessionID: sessionID}
-	var totals ai.Usage
+	var totals UsageTotals
 	addUsage := func(usage *ai.Usage) {
-		if usage == nil {
-			return
+		if usage != nil {
+			AddUsageToTotals(&totals, *usage)
 		}
-		totals.Input += usage.Input
-		totals.Output += usage.Output
-		totals.CacheRead += usage.CacheRead
-		totals.CacheWrite += usage.CacheWrite
-		totals.Cost.Total += usage.Cost.Total
 	}
 	for i := range candidates {
 		candidate := &candidates[i]
@@ -460,8 +455,8 @@ func (m *SessionManager) SessionStats() *SessionStats {
 	stats.Tokens.Output = totals.Output
 	stats.Tokens.CacheRead = totals.CacheRead
 	stats.Tokens.CacheWrite = totals.CacheWrite
-	stats.Tokens.Total = totals.Input + totals.Output + totals.CacheRead + totals.CacheWrite
-	stats.Cost = totals.Cost.Total
+	stats.Tokens.Total = totals.totalTokens()
+	stats.Cost = totals.Cost
 	return stats
 }
 
@@ -508,7 +503,7 @@ func (m *SessionManager) UsageCostBreakdown() []UsageCostBreakdownEntry {
 		out = append(out, UsageCostBreakdownEntry{
 			Key:    key,
 			Cost:   totals.Cost,
-			Tokens: totals.Input + totals.Output + totals.CacheRead + totals.CacheWrite,
+			Tokens: totals.totalTokens(),
 		})
 	}
 	filtered := out[:0]

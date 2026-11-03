@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"math"
 	"sort"
 
 	"github.com/dat267/pier/ai"
@@ -24,11 +25,23 @@ func CreateUsageTotals() UsageTotals {
 
 // AddUsageToTotals folds one usage record in.
 func AddUsageToTotals(totals *UsageTotals, usage ai.Usage) {
-	totals.Input += usage.Input
-	totals.Output += usage.Output
-	totals.CacheRead += usage.CacheRead
-	totals.CacheWrite += usage.CacheWrite
+	totals.Input = addUsageTokens(totals.Input, usage.Input)
+	totals.Output = addUsageTokens(totals.Output, usage.Output)
+	totals.CacheRead = addUsageTokens(totals.CacheRead, usage.CacheRead)
+	totals.CacheWrite = addUsageTokens(totals.CacheWrite, usage.CacheWrite)
 	totals.Cost += usage.Cost.Total
+}
+
+// totalTokens follows Number addition and saturates the int64 result (D369).
+func (totals UsageTotals) totalTokens() int64 {
+	tokens := float64(totals.Input) + float64(totals.Output) + float64(totals.CacheRead) + float64(totals.CacheWrite)
+	if tokens >= float64(math.MaxInt64) {
+		return math.MaxInt64
+	}
+	if tokens <= float64(math.MinInt64) {
+		return math.MinInt64
+	}
+	return int64(tokens)
 }
 
 // UsageCostBreakdownEntry is one model bucket in the cost breakdown.
@@ -106,7 +119,7 @@ func usageCostBreakdown(entries []SessionEntry, cache *messageCache) []UsageCost
 		out = append(out, UsageCostBreakdownEntry{
 			Key:    key,
 			Cost:   totals.Cost,
-			Tokens: totals.Input + totals.Output + totals.CacheRead + totals.CacheWrite,
+			Tokens: totals.totalTokens(),
 		})
 	}
 	filtered := out[:0]
