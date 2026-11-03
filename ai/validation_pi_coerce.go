@@ -72,8 +72,12 @@ func (s *piSchema) convert(value *schemaValue, active map[piCoerceVisit]bool) *s
 		return value
 	}
 	visit := piCoerceVisit{s, value}
-	if active[visit] {
-		return value
+	// Union candidates are private clones. A clone of an already-active value
+	// must not evade the recursion guard when a scalar is wrapped again.
+	for entered := range active {
+		if entered.schema == s && schemaLiteralEqual(entered.value, value) {
+			return value
+		}
 	}
 	active[visit] = true
 	defer delete(active, visit)
@@ -216,12 +220,7 @@ func (s *piSchema) convertArray(value *schemaValue, active map[piCoerceVisit]boo
 	}
 	item := value
 	if s.itemsOne != nil {
-		visit := piCoerceVisit{s.itemsOne, value}
-		if !active[visit] {
-			active[visit] = true
-			item = s.itemsOne.convert(item, active)
-			delete(active, visit)
-		}
+		item = s.itemsOne.convert(item, active)
 	}
 	return &schemaValue{IsArray: true, Array: []*schemaValue{item}}
 }
