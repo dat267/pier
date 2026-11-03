@@ -746,7 +746,11 @@ repeats after appearance reports. Pier also sends nonblocking
 background listener. Sending before raw mode caused echoed queries and an SSH
 freeze. `RunWiring.OnStarted` probes after `UI.Start`, and `RebindTUI` rearms it.
 `CSI ? 2031` notification requests before `Start` only set a flag; `Start`
-replays the toggle.
+replays the toggle. Like pinned v1.5.0 (`f9a26365`) `TuiBase.start/stop`
+in `packages/tui/src/tui.ts`, restarting the same renderer clears query-stop
+state and re-enables the desired notifications. Stop disables their wire mode
+without forgetting that setting, so suspend/external-editor resumes keep
+appearance tracking live.
 
 `HandleTerminalInput` delivers OSC 11 to both the combined query and the
 listener. A background-only late reply can therefore update an auto theme
@@ -755,7 +759,9 @@ environment/system fallback. D218 covers off-loop combined-query waits.
 
 Tests: `TestBackgroundListenerSeesLateReplyDuringColorQuery`,
 `TestSystemColorQueryDoesNotHideStartupBackgroundReply`, and
-`TestBackgroundProbeRoundTripThroughRenderer`.
+`TestBackgroundProbeRoundTripThroughRenderer`,
+`TestRendererColorQueryWorksAfterRestart`, and
+`TestRendererRestoresColorSchemeNotificationsAfterRestart`.
 
 ### D166
 

@@ -387,6 +387,7 @@ func (q *terminalQueries) QueryCellSize(writer terminalQueryWriter) {
 // started, and marks it started.
 func (q *terminalQueries) NotifyOnStart(writer terminalQueryWriter) {
 	q.started = true
+	q.stopped = false
 	if q.notify && writer != nil {
 		writer.Write("\x1b[?2031h")
 	}
@@ -396,13 +397,13 @@ func (q *terminalQueries) NotifyOnStart(writer terminalQueryWriter) {
 // exit restore that cannot go through NotifyOnStop.
 func (q *terminalQueries) NotifyEnabled() bool { return q.notify }
 
-// NotifyOnStop disables an enabled notification and marks the terminal stopped.
+// NotifyOnStop disables an enabled notification and marks the terminal stopped,
+// retaining the desired notification setting for the next Start.
 func (q *terminalQueries) NotifyOnStop(writer terminalQueryWriter) {
 	started := q.started
 	q.started = false
 	q.stopped = true
 	if started && q.notify {
-		q.notify = false
 		if writer != nil {
 			writer.Write("\x1b[?2031l")
 		}
