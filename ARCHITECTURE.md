@@ -1040,6 +1040,13 @@ persisted JSON, or provider payloads. Direct dispatchers still require ordered
 events. `TestQueuedMessageUpdateCannotOverwriteTheNextMessage` checks rendered
 content/pending tools for A's delayed partial and B's valid next partial.
 
+Session subscriptions also capture a binding generation. The owner rejects
+other bindings even if their listener snapshots were admitted before
+unsubscribe and publish after a replacement's queue clear. Those callbacks
+remain safe to finish without changing the listener registry contract.
+`TestSessionReplacementRejectsAnAlreadyAdmittedOldListener` reproduces a late
+custom message reaching the replacement transcript before this filtering.
+
 ### D197
 
 **Pre-paint drains apply at most 64 events with fair service.**

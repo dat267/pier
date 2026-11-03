@@ -50,10 +50,12 @@ const loopInputCapacity = 256
 // The envelope is UI-local and is never persisted or sent to providers.
 type queuedSessionEvent struct {
 	*coding.SessionEvent
+	sessionGeneration uint64
 	messageGeneration uint64
 }
 
 type sessionEventQueue struct {
+	sessionGeneration atomic.Uint64
 	messageGeneration atomic.Uint64
 	lossless          chan queuedSessionEvent
 	partial           chan queuedSessionEvent
@@ -95,10 +97,24 @@ func (q *sessionEventQueue) done() <-chan struct{} {
 func (q *sessionEventQueue) Events() <-chan queuedSessionEvent   { return q.lossless }
 func (q *sessionEventQueue) Partials() <-chan queuedSessionEvent { return q.partial }
 
-// enqueue is the producer entry point (the session subscription callback). It
-// never blocks on a full partial channel and never calls into the UI.
+// newProducer pins a session binding to its events, including callbacks that
+// were admitted before unsubscribe but deliver after a replacement (D196).
+func (q *sessionEventQueue) newProducer() (uint64, func(*coding.SessionEvent)) {
+	generation := q.sessionGeneration.Add(1)
+	return generation, func(event *coding.SessionEvent) { q.enqueueFromSession(event, generation) }
+}
+
+// enqueue is the current-binding producer entry point. It never blocks on a
+// full partial channel and never calls into the UI.
 func (q *sessionEventQueue) enqueue(event *coding.SessionEvent) {
-	if q == nil || event == nil {
+	if q == nil {
+		return
+	}
+	q.enqueueFromSession(event, q.sessionGeneration.Load())
+}
+
+func (q *sessionEventQueue) enqueueFromSession(event *coding.SessionEvent, sessionGeneration uint64) {
+	if event == nil || sessionGeneration != q.sessionGeneration.Load() {
 		return
 	}
 	generation := q.messageGeneration.Load()
@@ -107,7 +123,7 @@ func (q *sessionEventQueue) enqueue(event *coding.SessionEvent) {
 			generation = q.messageGeneration.Add(1)
 		}
 	}
-	queued := queuedSessionEvent{SessionEvent: event, messageGeneration: generation}
+	queued := queuedSessionEvent{SessionEvent: event, sessionGeneration: sessionGeneration, messageGeneration: generation}
 	if isPartialSessionEvent(event.Type) {
 		select {
 		case q.partial <- queued:

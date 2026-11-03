@@ -779,9 +779,9 @@ func (a *App) Init(ctx context.Context) {
 	if a.unsubscribe == nil {
 		// Pure producer: the callback only enqueues; the run loop applies the
 		// event on the UI goroutine (interactivemode_eventqueue.go).
-		a.unsubscribe = a.session.Subscribe(func(event *coding.SessionEvent) {
-			a.sessionEvents.enqueue(event)
-		})
+		generation, enqueue := a.sessionEvents.newProducer()
+		a.events.sessionGeneration = generation
+		a.unsubscribe = a.session.Subscribe(enqueue)
 	}
 	a.autocomplete.SetupAutocompleteProvider()
 	a.showStartupNoticesIfNeeded()

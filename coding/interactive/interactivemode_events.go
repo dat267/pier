@@ -72,6 +72,7 @@ type EventDispatcher struct {
 	MarkdownTheme *tui.MarkdownTheme
 	Transformers  []MarkdownTransformer
 
+	sessionGeneration  uint64
 	messageGeneration  uint64
 	streamingComponent *AssistantMessageComponent
 	streamingMessage   *ai.AssistantMessage
@@ -117,6 +118,10 @@ func (d *EventDispatcher) requestRender() {
 // carries the complete content. Direct HandleEvent callers retain upstream's
 // ordered event contract.
 func (d *EventDispatcher) handleQueuedEvent(event queuedSessionEvent) {
+	// Zero marks local events queued before the first session binding.
+	if event.sessionGeneration != 0 && event.sessionGeneration != d.sessionGeneration {
+		return
+	}
 	if event.Type == coding.SessionMessageUpdate && event.messageGeneration != d.messageGeneration {
 		return
 	}

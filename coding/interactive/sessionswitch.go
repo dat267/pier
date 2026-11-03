@@ -188,9 +188,9 @@ func (a *App) bindSessionManager(sessionManager *coding.SessionManager) (*Sessio
 	a.autocomplete.SessionInfo = sessionManager
 
 	if a.unsubscribe == nil {
-		a.unsubscribe = a.session.Subscribe(func(event *coding.SessionEvent) {
-			a.sessionEvents.enqueue(event)
-		})
+		generation, enqueue := a.sessionEvents.newProducer()
+		a.events.sessionGeneration = generation
+		a.unsubscribe = a.session.Subscribe(enqueue)
 	}
 	a.footer.Invalidate()
 	a.lifecycle.UpdateTerminalTitle()
