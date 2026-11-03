@@ -10,7 +10,7 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
-// Reference: pi v1.4.0 (4a080252) providers/cloudflare-workers-ai.ts,
+// Reference: pi v1.5.0 (f9a26365) providers/cloudflare-workers-ai.ts,
 // providers/cloudflare-stream.ts, api/cloudflare-workers-ai-system-one.ts, and
 // api/system-one-shared.ts.
 func TestCloudflareWorkersAIClassifierProvider(t *testing.T) {
@@ -23,8 +23,8 @@ func TestCloudflareWorkersAIClassifierProvider(t *testing.T) {
 		t.Fatalf("classifier unexpectedly appears in chat model lookup: %+v", model)
 	}
 	classifierModels := provider.GetClassifierModels()
-	if len(classifierModels) != 3 {
-		t.Fatalf("classifier models = %d, want 3: %+v", len(classifierModels), classifierModels)
+	if len(classifierModels) != 5 {
+		t.Fatalf("classifier models = %d, want 5: %+v", len(classifierModels), classifierModels)
 	}
 	var model *ai.Model
 	for _, candidate := range classifierModels {
