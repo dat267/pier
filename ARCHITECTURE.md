@@ -4835,14 +4835,17 @@ Reference: pi v1.5.0 (`f9a26365`),
 saturates each int64 field addition at its representation bounds. The final
 four-field total uses Number arithmetic and saturates at int64 bounds too.
 Session statistics and cached/reference cost breakdowns use that same fold.
-Ordinary counts, cost arithmetic, bucket ordering/filtering and persistence
-layouts are unchanged. Native integer spellings remain governed by D253.
+The session-info and compaction-notice displays also sum through Number-space
+helpers instead of wrapping the saturated columns. Ordinary counts, cost
+arithmetic, bucket ordering/filtering and persistence layouts are unchanged.
+Native integer spellings remain governed by D253.
 
 Reproducers: `TestSessionStatsDoNotWrapPositiveUsage` covers huge cross-field
 sums, repeated column additions and ordinary controls.
 `TestUsageCostBreakdownDoesNotDropHugeTokenBuckets` verifies both paths retain
 a positive-token model bucket even with zero cost, rather than filtering it out
-after its total wraps negative.
+after its total wraps negative. `TestSessionInfoSaturatesHugeTokenColumns` and
+`TestCompactionCostNoticeSaturatesHugeUsage` cover the display sums.
 
 ### D370
 

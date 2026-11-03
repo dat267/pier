@@ -507,7 +507,9 @@ func (w *CommandWiring) SessionInfoPanel(now int64) string {
 	info.WriteString(theme.Fg("dim", "Tools:") + " " + itoa(stats.ToolCalls) + " calls, " +
 		itoa(stats.ToolResults) + " results\n\n")
 	info.WriteString(theme.Bold("Tokens") + "\n")
-	promptTokens := stats.Tokens.Input + stats.Tokens.CacheRead + stats.Tokens.CacheWrite
+	promptTokens := int64(ai.CalculateContextTokens(ai.Usage{
+		Input: stats.Tokens.Input, CacheRead: stats.Tokens.CacheRead, CacheWrite: stats.Tokens.CacheWrite,
+	}))
 	info.WriteString(theme.Fg("dim", "Input:") + " " + formatThousands(promptTokens) + "\n")
 	if promptTokens > 0 && (stats.Tokens.CacheRead > 0 || stats.Tokens.CacheWrite > 0) {
 		hitRate := theme.Fg("dim", "("+formatFixed(float64(stats.Tokens.CacheRead)/float64(promptTokens)*100, 1)+"%)")
@@ -516,8 +518,9 @@ func (w *CommandWiring) SessionInfoPanel(now int64) string {
 		if stats.Tokens.CacheWrite > 0 {
 			written = " " + theme.Fg("dim", "("+formatThousands(stats.Tokens.CacheWrite)+" written to cache)")
 		}
+		uncached := int64(ai.CalculateContextTokens(ai.Usage{Input: stats.Tokens.Input, CacheWrite: stats.Tokens.CacheWrite}))
 		info.WriteString("  " + theme.Fg("dim", "Uncached:") + " " +
-			formatThousands(stats.Tokens.Input+stats.Tokens.CacheWrite) + written + "\n")
+			formatThousands(uncached) + written + "\n")
 	}
 	info.WriteString(theme.Fg("dim", "Output:") + " " + formatThousands(stats.Tokens.Output) + "\n")
 	info.WriteString(theme.Fg("dim", "Total:") + " " + formatThousands(stats.Tokens.Total) + "\n")

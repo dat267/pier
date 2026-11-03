@@ -838,7 +838,9 @@ func (r *TranscriptRenderer) AddCompactionCostNotice(notice CompactionCostNotice
 		return
 	}
 	theme := ActiveTheme()
-	tokens := notice.Usage.Input + notice.Usage.Output + notice.Usage.CacheRead + notice.Usage.CacheWrite
+	totalUsage := notice.Usage
+	totalUsage.TotalTokens = 0
+	tokens := int64(ai.CalculateContextTokens(totalUsage))
 	cost := ""
 	if notice.Usage.Cost.Total >= 0.01 {
 		cost = " (~$" + formatFixed(notice.Usage.Cost.Total, 2) + ")"
