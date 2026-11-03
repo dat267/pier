@@ -814,8 +814,9 @@ func LoadSkills(options LoadSkillsOptions, trustProject bool) LoadSkillsResult {
 	addSkills := func(result LoadSkillsResult) {
 		allDiagnostics = append(allDiagnostics, result.Diagnostics...)
 		for _, skill := range result.Skills {
-			// Resolve symlinks so the same file loaded twice is skipped silently.
-			realPath := CanonicalizePath(skill.FilePath)
+			// Resolve symlinks and case so the same file loaded twice is skipped
+			// silently (upstream getResourcePathKey).
+			realPath := PathComparisonKey(CanonicalizePath(skill.FilePath))
 			if realPathSet[realPath] {
 				continue
 			}
