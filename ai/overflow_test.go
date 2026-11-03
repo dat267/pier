@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"math"
 	"testing"
 )
 
@@ -138,6 +139,21 @@ func TestIsContextOverflowSilentAndLengthStop(t *testing.T) {
 	}
 	if IsContextOverflow(withOutput, 200000) {
 		t.Error("length stops with output are handled by recoverable-length logic")
+	}
+}
+
+// Reference: pi v1.5.0 f9a26365 utils/overflow.ts adds input and cacheRead as
+// JavaScript Numbers, so a provider's near-range usage stays a large positive
+// value. Go's int64 addition would wrap and miss the overflow.
+func TestIsContextOverflowHandlesHugeUsage(t *testing.T) {
+	for _, stop := range []string{StopStop, StopLength} {
+		message := &AssistantMessage{
+			API: APIAnthropicMessages, Provider: "zai", Model: "m", StopReason: stop,
+			Usage: Usage{Input: math.MaxInt64, CacheRead: math.MaxInt64},
+		}
+		if !IsContextOverflow(message, 200000) {
+			t.Errorf("stop %q with huge input+cacheRead must be overflow", stop)
+		}
 	}
 }
 

@@ -3,6 +3,7 @@ package coding
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -269,6 +270,28 @@ func TestConvertToLlmCustomRoles(t *testing.T) {
 		if !strings.HasPrefix(text, "Ran `ls -la`") || !strings.Contains(text, "```\nfile1\n```") {
 			t.Fatalf("bash text = %q", text)
 		}
+	}
+}
+
+// Reference: pi v1.5.0 f9a26365 compaction/compaction.ts
+// calculateContextTokens adds usage as JavaScript Numbers. An int64 sum would
+// wrap a near-range provider value negative and suppress compaction.
+func TestCalculateCompactionContextTokensHandlesHugeUsage(t *testing.T) {
+	if got := CalculateCompactionContextTokens(ai.Usage{Input: math.MaxInt64, CacheRead: math.MaxInt64}); got <= 0 || got < 200000 {
+		t.Fatalf("huge usage tokens = %d, want a saturated positive count", got)
+	}
+}
+
+// Reference: pi v1.5.0 f9a26365 usage-totals.ts adds token counters as
+// JavaScript Numbers. Near-range provider usage must stay a large positive
+// total instead of wrapping negative in Go's int64 addition.
+func TestCombineUsageSaturatesHugeTokens(t *testing.T) {
+	combined := CombineUsage(
+		ai.Usage{Input: math.MaxInt64, TotalTokens: math.MaxInt64},
+		ai.Usage{Input: math.MaxInt64, TotalTokens: math.MaxInt64},
+	)
+	if combined.Input <= 0 || combined.TotalTokens <= 0 {
+		t.Fatalf("combined huge usage = %+v, want saturated positive totals", combined)
 	}
 }
 

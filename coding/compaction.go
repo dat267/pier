@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"time"
@@ -167,12 +168,11 @@ func FormatFileOperations(readFiles, modifiedFiles []string) string {
 const estimatedImageChars = 4800
 
 // CalculateCompactionContextTokens of a usage block (native totalTokens when
-// available).
+// available). The AI helper keeps the reference's JavaScript Number addition
+// and saturates only when the result cannot fit Go's int (D313); summing int64
+// fields here could wrap a near-range provider value negative.
 func CalculateCompactionContextTokens(usage ai.Usage) int {
-	if usage.TotalTokens != 0 {
-		return int(usage.TotalTokens)
-	}
-	return int(usage.Input + usage.Output + usage.CacheRead + usage.CacheWrite)
+	return ai.CalculateContextTokens(usage)
 }
 
 // getAssistantUsage skips aborted, error, and all-zero usage messages.
@@ -933,10 +933,10 @@ type CompactionResult struct {
 // CombineUsage merges two usage blocks (port of combineUsage).
 func CombineUsage(first, second ai.Usage) ai.Usage {
 	out := ai.Usage{
-		Input: first.Input + second.Input, Output: first.Output + second.Output,
-		CacheRead:   first.CacheRead + second.CacheRead,
-		CacheWrite:  first.CacheWrite + second.CacheWrite,
-		TotalTokens: first.TotalTokens + second.TotalTokens,
+		Input: addUsageTokens(first.Input, second.Input), Output: addUsageTokens(first.Output, second.Output),
+		CacheRead:   addUsageTokens(first.CacheRead, second.CacheRead),
+		CacheWrite:  addUsageTokens(first.CacheWrite, second.CacheWrite),
+		TotalTokens: addUsageTokens(first.TotalTokens, second.TotalTokens),
 		Cost: ai.UsageCost{
 			Input:      first.Cost.Input + second.Cost.Input,
 			Output:     first.Cost.Output + second.Cost.Output,
@@ -953,24 +953,37 @@ func CombineUsage(first, second ai.Usage) ai.Usage {
 	if first.CacheWrite1h != nil || second.CacheWrite1h != nil {
 		v := int64(0)
 		if first.CacheWrite1h != nil {
-			v += *first.CacheWrite1h
+			v = addUsageTokens(v, *first.CacheWrite1h)
 		}
 		if second.CacheWrite1h != nil {
-			v += *second.CacheWrite1h
+			v = addUsageTokens(v, *second.CacheWrite1h)
 		}
 		out.CacheWrite1h = &v
 	}
 	if first.Reasoning != nil || second.Reasoning != nil {
 		v := int64(0)
 		if first.Reasoning != nil {
-			v += *first.Reasoning
+			v = addUsageTokens(v, *first.Reasoning)
 		}
 		if second.Reasoning != nil {
-			v += *second.Reasoning
+			v = addUsageTokens(v, *second.Reasoning)
 		}
 		out.Reasoning = &v
 	}
 	return out
+}
+
+// addUsageTokens saturates int64 token counters at their bounds. The reference
+// adds them as JavaScript Numbers; wrapping a near-range provider value
+// negative would turn a large billable total into a credit.
+func addUsageTokens(left, right int64) int64 {
+	if right > 0 && left > math.MaxInt64-right {
+		return math.MaxInt64
+	}
+	if right < 0 && left < math.MinInt64-right {
+		return math.MinInt64
+	}
+	return left + right
 }
 
 // SummarizationCallbacks hook retry notifications.

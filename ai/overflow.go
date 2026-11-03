@@ -114,8 +114,11 @@ func IsContextOverflow(message *AssistantMessage, contextWindow int64) bool {
 	}
 
 	// Case 2: silent overflow (z.ai style): success with usage beyond the window.
+	// Add in float space, as the reference's JavaScript Numbers do: int64
+	// addition can wrap a near-range provider value negative and hide overflow.
 	if contextWindow > 0 && message.StopReason == StopStop {
-		if message.Usage.Input+message.Usage.CacheRead > contextWindow {
+		inputTokens := float64(message.Usage.Input) + float64(message.Usage.CacheRead)
+		if inputTokens > float64(contextWindow) {
 			return true
 		}
 	}
@@ -123,8 +126,8 @@ func IsContextOverflow(message *AssistantMessage, contextWindow int64) bool {
 	// Case 3: length-stop overflow (Xiaomi MiMo style): the server truncates
 	// oversized input to fill the window, leaving no room for output.
 	if contextWindow > 0 && message.StopReason == StopLength && message.Usage.Output == 0 {
-		inputTokens := message.Usage.Input + message.Usage.CacheRead
-		if float64(inputTokens) >= float64(contextWindow)*0.99 {
+		inputTokens := float64(message.Usage.Input) + float64(message.Usage.CacheRead)
+		if inputTokens >= float64(contextWindow)*0.99 {
 			return true
 		}
 	}
