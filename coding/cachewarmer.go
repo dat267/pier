@@ -114,7 +114,8 @@ func lastCacheWarmingPromptTokens(entries []SessionEntry) int64 {
 			continue
 		}
 		if assistant, ok := message.(*ai.AssistantMessage); ok {
-			return assistant.Usage.Input + assistant.Usage.CacheRead + assistant.Usage.CacheWrite
+			usage := assistant.Usage
+			return int64(ai.CalculateContextTokens(ai.Usage{Input: usage.Input, CacheRead: usage.CacheRead, CacheWrite: usage.CacheWrite}))
 		}
 	}
 	return 0
