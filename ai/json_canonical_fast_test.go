@@ -5,7 +5,7 @@ import "testing"
 func TestCanonicalJSONIsNormalized(t *testing.T) {
 	normalized := []string{
 		`{}`, `[]`, `{"a":1,"b":[true,null,"x"]}`,
-		`{"1":1,"2":2,"a":3}`,
+		`{"0":1,"1":2,"a":3}`,
 		`"\u0001"`, `"\b\f\n\r\t"`, `1.5`, `1e-7`, "\"\u2028\"", "\"\x7f\"",
 	}
 	for _, input := range normalized {

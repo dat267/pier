@@ -85,6 +85,7 @@ func (p *normalizedParser) object(depth int) bool {
 	var keys [16][]byte
 	keyCount := 0
 	seenStringKey := false
+	hasIndex := false
 	var lastIndex uint64
 	for {
 		if p.pos >= len(p.data) || p.data[p.pos] != '"' {
@@ -108,9 +109,10 @@ func (p *normalizedParser) object(depth int) bool {
 		keys[keyCount] = rawKey
 		keyCount++
 		if index, ok := normalizedArrayIndexKey(rawKey); ok {
-			if seenStringKey || index <= lastIndex {
+			if seenStringKey || (hasIndex && index <= lastIndex) {
 				return false
 			}
+			hasIndex = true
 			lastIndex = index
 		} else {
 			seenStringKey = true
