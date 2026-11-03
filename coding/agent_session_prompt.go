@@ -505,16 +505,10 @@ func (s *AgentSession) abortAsync(abortBash bool) {
 // waitForSessionIdle blocks until no agent run or compaction is active,
 // resolving as soon as either finishes.
 func (s *AgentSession) waitForSessionIdle(ctx context.Context) error {
-	if s.IsIdle() {
+	wait := s.registerIdleWait()
+	if wait == nil {
 		return nil
 	}
-	state := s.prompt()
-	state.mu.Lock()
-	if state.idleWait == nil {
-		state.idleWait = make(chan struct{})
-	}
-	wait := state.idleWait
-	state.mu.Unlock()
 
 	select {
 	case <-wait:
@@ -522,6 +516,27 @@ func (s *AgentSession) waitForSessionIdle(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+}
+
+// registerIdleWait installs the channel completion closes. Registration is
+// separate from waitForSessionIdle's idle check so a completion between the
+// two cannot be lost: the caller rechecks after registering.
+func (s *AgentSession) registerIdleWait() chan struct{} {
+	state := s.prompt()
+	state.mu.Lock()
+	if state.idleWait == nil {
+		state.idleWait = make(chan struct{})
+	}
+	wait := state.idleWait
+	state.mu.Unlock()
+	// Recheck after publishing the channel. A completion that happened between
+	// the caller's idle check and this registration would otherwise find no
+	// waiter, and the channel below would never close.
+	if s.IsIdle() {
+		s.resolveIdleWaitIfIdle()
+		return nil
+	}
+	return wait
 }
 
 // resolveIdleWaitIfIdle releases the idle waiters once nothing is active.
