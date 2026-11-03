@@ -890,7 +890,7 @@ func (t *StreamableHttpTransport) runGetStream() {
 					t.emitError(err)
 					return
 				}
-			} else if cursor.received || time.Since(openedAt) > time.Duration(t.maxDelay())*time.Millisecond {
+			} else if cursor.received || time.Since(openedAt).Milliseconds() > t.maxDelay() {
 				// A stream that stayed up for a while counts as healthy, even if
 				// it was idle. A broken stream skips this reset (upstream), so
 				// repeated mid-flight failures still exhaust the retry budget.
