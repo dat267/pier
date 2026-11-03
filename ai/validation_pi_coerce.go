@@ -33,7 +33,7 @@ func (s *piSchema) dropOptionalNulls(value *schemaValue, active map[piCoerceVisi
 	defer delete(active, visit)
 	if value.IsArray {
 		for i, item := range value.Array {
-			if schema := s.itemAt(i); schema != nil {
+			if schema := s.coerceItemAt(i); schema != nil {
 				value.Array[i] = schema.dropOptionalNulls(item, active)
 			}
 		}
@@ -313,12 +313,26 @@ func (s *piSchema) coerceTypes(value *schemaValue, active map[piCoerceVisit]bool
 	}
 	if containsType(types, "array") && next.IsArray {
 		for i, item := range next.Array {
-			if schema := s.itemAt(i); schema != nil {
+			if schema := s.coerceItemAt(i); schema != nil {
 				next.Array[i] = schema.coerceTypes(item, active)
 			}
 		}
 	}
 	return next
+}
+
+// Unlike checking, coercion does not visit additionalItems after a legacy tuple.
+func (s *piSchema) coerceItemAt(index int) *piSchema {
+	if s.items != nil {
+		if index < len(s.items) {
+			return s.items[index]
+		}
+		return nil
+	}
+	if index < len(s.prefixItems) {
+		return s.prefixItems[index]
+	}
+	return s.itemsOne
 }
 
 func (s *piSchema) coerceUnion(branches []*piSchema, value *schemaValue, active map[piCoerceVisit]bool) *schemaValue {
