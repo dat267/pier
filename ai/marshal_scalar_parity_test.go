@@ -45,4 +45,13 @@ func TestMarshalJSONScalarsMatchEncoder(t *testing.T) {
 			t.Fatalf("%T %v = %q/%v, want %q", value, value, got, err, reference(value))
 		}
 	}
+	// Malformed raw JSON keeps the encoder's diagnostic instead of being
+	// truncated by the canonical scanner.
+	for _, raw := range []string{"01", "1 2", "{} trailing", "", "[1,]"} {
+		got, gotErr := MarshalJSON(json.RawMessage(raw))
+		want, wantErr := marshalJSONGeneral(json.RawMessage(raw))
+		if gotErr == nil || wantErr == nil || gotErr.Error() != wantErr.Error() || string(got) != string(want) {
+			t.Fatalf("raw %q = %q/%v, want %q/%v", raw, got, gotErr, want, wantErr)
+		}
+	}
 }

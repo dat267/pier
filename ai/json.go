@@ -50,8 +50,19 @@ func MarshalJSON(v any) ([]byte, error) {
 		if value == nil {
 			return []byte("null"), nil
 		}
+		if !json.Valid(value) {
+			// Keep the encoder's diagnostic for malformed raw JSON; the
+			// canonical scanner intentionally ignores trailing text.
+			return marshalJSONGeneral(v)
+		}
 		return canonicalJavaScriptJSON(value)
 	}
+	return marshalJSONGeneral(v)
+}
+
+// marshalJSONGeneral encodes a value through encoding/json and canonicalizes
+// the bytes, including its diagnostics for invalid input.
+func marshalJSONGeneral(v any) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
