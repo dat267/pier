@@ -4348,9 +4348,12 @@ the boundary.
 nested message marshalers do constantly. Measured on the same body: canonical
 pass 55 → 11 ms and 456k → 148k allocations; `MarshalJSON` about 33–36 ms and
 288k allocations (benchmarks
-`BenchmarkCanonicalizeLargeJSON`, `BenchmarkMarshalConversation`). Node
-`JSON.stringify` remains faster (about 1.1 ms); the remaining port cost is the
-per-message nested canonicalization and byte-parity transforms, tracked as M143.
+`BenchmarkCanonicalizeLargeJSON`, `BenchmarkMarshalConversation`). Content
+lists now append their canonical blocks directly instead of round-tripping a
+`[]json.RawMessage`, lowering the conversation benchmark further to 27–28 ms
+and 254k allocations. Node `JSON.stringify` remains faster (about 1.1 ms); the
+remaining port cost is the per-message nested canonicalization and byte-parity
+transforms, tracked as M143.
 
 ### D349
 
