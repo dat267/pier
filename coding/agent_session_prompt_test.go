@@ -437,6 +437,36 @@ func TestRunSettlementFlushesBeforeReportingIdle(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.5.0 f9a26365 core/agent-session.ts _startRun's catch resets
+// _isAgentRunActive, flushes pending messages and resolves idle waiters when
+// preparation throws. Without that cleanup, one failing hook wedges the session
+// in the streaming state.
+func TestPreTurnHookPanicReleasesRun(t *testing.T) {
+	var prompts atomic.Int64
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 8192}
+	session := newPromptSession(t, model, recordingStreamFn(t, &prompts))
+	session.SetBeforeFirstTurn(func(ctxpkg.Context) { panic("pre-turn hook exploded") })
+
+	func() {
+		defer func() {
+			if recover() == nil {
+				t.Fatal("the pre-turn hook panic did not propagate")
+			}
+		}()
+		_ = session.PromptText(ctxpkg.Background(), "first")
+	}()
+
+	if session.IsStreaming() {
+		t.Fatal("the session remained streaming after the pre-turn hook panicked")
+	}
+	if !session.IsIdle() {
+		t.Fatal("the session remained busy after the pre-turn hook panicked")
+	}
+	if err := session.PromptText(ctxpkg.Background(), "second"); err != nil {
+		t.Fatalf("a later prompt was rejected after the panic: %v", err)
+	}
+}
+
 // contentTextJoin is a test helper for the joined text of content.
 func contentTextJoin(content ai.StringOrBlocks) string {
 	if content.String() {

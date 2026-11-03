@@ -292,6 +292,15 @@ func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message
 	state.runCancel = cancel
 	state.runActive = true
 	state.mu.Unlock()
+	// Preparation and user callbacks (onStarted, the pre-turn hook) can panic.
+	// Upstream's _startRun catch still clears the run flag and releases idle
+	// waiters; without this, one panic wedges the session in streaming.
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			s.releaseRunAfterPanic()
+			panic(recovered)
+		}
+	}()
 	for _, notify := range onStarted {
 		notify()
 	}
@@ -334,6 +343,26 @@ func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message
 	s.emit(&SessionEvent{Type: SessionAgentSettled, Aborted: aborted})
 	s.resolveIdleWaitIfIdle()
 	return err
+}
+
+// releaseRunAfterPanic unwinds a run whose preparation or callbacks panicked.
+// It mirrors _startRun's catch: no agent_settled is emitted, but the run flag
+// is cleared, deferred context is flushed and idle waiters are released.
+func (s *AgentSession) releaseRunAfterPanic() {
+	state := s.prompt()
+	state.mu.Lock()
+	active := state.runActive
+	state.runActive = false
+	state.runCancel = nil
+	state.mu.Unlock()
+	if active {
+		s.FlushPendingBashMessages()
+		s.FlushPendingCustomMessages()
+		if s.CacheWarmer != nil {
+			s.CacheWarmer.OnAgentSettled()
+		}
+	}
+	s.resolveIdleWaitIfIdle()
 }
 
 // findLastAssistantMessage returns the most recent assistant message.
