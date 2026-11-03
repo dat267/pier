@@ -4963,7 +4963,10 @@ events; snapshots are taken under it and listeners are called outside it.
 `rpcRuntime.outputMu` guards only the first output error. The byte writer and
 all callbacks run outside it. Prompt admission and cancellation handles belong
 to the command owner; four pending preflights and an unbuffered byte handoff
-bound concurrent work without unbounded queues.
+bound concurrent work without unbounded queues. Prompt workers have separate
+settlement accounting, so `abort` joins canceled preflight cleanup without
+waiting for independently running user bash. The owner admits and joins that
+group (`TestRPCAbortWaitsForCanceledPreflightToSettle`).
 
 Retired along the way (all struck from the code). Searching non-test Go files
 in `tui/` and `coding/interactive/` for mutex declarations finds only the

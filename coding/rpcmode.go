@@ -87,6 +87,7 @@ type rpcRuntime struct {
 	outputMu       sync.Mutex
 	outputErr      error
 	workers        sync.WaitGroup
+	promptWorkers  sync.WaitGroup
 	runCtx         context.Context
 	runCancel      context.CancelFunc
 	admission      <-chan struct{}
@@ -330,6 +331,9 @@ func (r *rpcRuntime) abortSessionRun() {
 	}
 	r.session.AbortTurnAsync()
 	_ = r.session.waitForSessionIdle(r.ctx)
+	// Preflight has no active run flag yet, but still belongs to this abort.
+	// Do not join the general workers: a user bash command is independent.
+	r.promptWorkers.Wait()
 }
 
 // settleWorkers cancels the current run, aborts bash/compaction/retry and waits
@@ -520,7 +524,9 @@ func (r *rpcRuntime) startPrompt(command rpcCommand) error {
 		r.runCtx, r.runCancel = context.WithCancel(r.ctx)
 	}
 	ctx := r.runCtx
+	r.promptWorkers.Add(1)
 	r.workers.Go(func() {
+		defer r.promptWorkers.Done()
 		var released sync.Once
 		release := func() { released.Do(func() { close(ready); <-r.promptSlots }) }
 		defer release()
