@@ -87,7 +87,7 @@ func TestSessionSwitchDropsQueuedEventsFromPreviousSession(t *testing.T) {
 	}
 
 	// Apply exactly what the run loop would find still queued after the switch.
-	drain:
+drain:
 	for {
 		select {
 		case event := <-app.sessionEvents.Events():
