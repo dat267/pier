@@ -1,8 +1,8 @@
 {
  "_meta": {
-  "generatedAt": "2026-10-13T07:41:52.494Z",
+  "generatedAt": "2026-11-03T05:25:03.345Z",
   "schemaVersion": 6,
-  "upstreamManifestSHA256": "d7c1c3111684fc62975e420ee05116b05cd900f8b571155aaefff9b174dcc6fe"
+  "upstreamManifestSHA256": "26b2adb40b11950fd90a8f4912a17030cae522248e3dee3ccddc8f3f22437ccb"
  },
  "providers": {
   "cloudflare-workers-ai": {
@@ -10,6 +10,9 @@
     "@cf/cloudflare/clef": {
      "api": "cloudflare-workers-ai-system-one",
      "baseUrl": "https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/ai",
+     "compat": {
+      "imageInput": "images"
+     },
      "contextWindow": 65536,
      "cost": {
       "cacheRead": 0,
@@ -19,7 +22,8 @@
      },
      "id": "@cf/cloudflare/clef",
      "input": [
-      "text"
+      "text",
+      "image"
      ],
      "name": "Clef",
      "provider": "cloudflare-workers-ai",
@@ -28,36 +32,88 @@
     "@cf/cloudflare/clef-flash": {
      "api": "cloudflare-workers-ai-system-one",
      "baseUrl": "https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/ai",
-     "contextWindow": 65536,
+     "compat": {
+      "imageInput": "images"
+     },
+     "contextWindow": 24576,
      "cost": {
       "cacheRead": 0,
       "cacheWrite": 0,
-      "input": 0.09,
+      "input": 0.038,
       "output": 0
      },
      "id": "@cf/cloudflare/clef-flash",
      "input": [
-      "text"
+      "text",
+      "image"
      ],
      "name": "Clef Flash",
+     "provider": "cloudflare-workers-ai",
+     "type": "classifier"
+    },
+    "@cf/cloudflare/clef-omni": {
+     "api": "cloudflare-workers-ai-system-one",
+     "baseUrl": "https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/ai",
+     "compat": {
+      "imageInput": "images"
+     },
+     "contextWindow": 64000,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.15,
+      "output": 0
+     },
+     "id": "@cf/cloudflare/clef-omni",
+     "input": [
+      "text",
+      "image"
+     ],
+     "name": "Clef Omni",
      "provider": "cloudflare-workers-ai",
      "type": "classifier"
     },
     "typesafe/jev": {
      "api": "cloudflare-workers-ai-system-one",
      "baseUrl": "https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/ai",
+     "compat": {
+      "imageInput": "assets"
+     },
      "contextWindow": 32000,
      "cost": {
       "cacheRead": 0,
       "cacheWrite": 0,
-      "input": 0,
+      "input": 0.042,
       "output": 0
      },
      "id": "typesafe/jev",
      "input": [
-      "text"
+      "text",
+      "image"
      ],
      "name": "Jev",
+     "provider": "cloudflare-workers-ai",
+     "type": "classifier"
+    },
+    "typesafe/jev-1.14.0": {
+     "api": "cloudflare-workers-ai-system-one",
+     "baseUrl": "https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/ai",
+     "compat": {
+      "imageInput": "assets"
+     },
+     "contextWindow": 32000,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.042,
+      "output": 0
+     },
+     "id": "typesafe/jev-1.14.0",
+     "input": [
+      "text",
+      "image"
+     ],
+     "name": "Jev 1.14",
      "provider": "cloudflare-workers-ai",
      "type": "classifier"
     }

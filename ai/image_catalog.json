@@ -1862,6 +1862,37 @@
     "provider": "openrouter",
     "type": "image"
    },
+   "sourceful/riverflow-v2.6-pro": {
+    "api": "openrouter-images",
+    "baseUrl": "https://openrouter.ai/api/v1",
+    "cost": {
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "input": 0,
+     "output": 0
+    },
+    "id": "sourceful/riverflow-v2.6-pro",
+    "input": [
+     "text",
+     "image"
+    ],
+    "inputLimits": {
+     "images": {
+      "resize": {
+       "jpegQuality": 80,
+       "maxBytes": 4718592,
+       "maxHeight": 2000,
+       "maxWidth": 2000
+      }
+     }
+    },
+    "name": "Sourceful: Riverflow V2.6 Pro",
+    "output": [
+     "image"
+    ],
+    "provider": "openrouter",
+    "type": "image"
+   },
    "tencent/hy-image-v3.5-preview": {
     "api": "openrouter-images",
     "baseUrl": "https://openrouter.ai/api/v1",
@@ -1918,37 +1949,6 @@
      }
     },
     "name": "xAI: Grok Imagine Image 2.0",
-    "output": [
-     "image"
-    ],
-    "provider": "openrouter",
-    "type": "image"
-   },
-   "x-ai/grok-imagine-image-quality": {
-    "api": "openrouter-images",
-    "baseUrl": "https://openrouter.ai/api/v1",
-    "cost": {
-     "cacheRead": 0,
-     "cacheWrite": 0,
-     "input": 0,
-     "output": 0
-    },
-    "id": "x-ai/grok-imagine-image-quality",
-    "input": [
-     "text",
-     "image"
-    ],
-    "inputLimits": {
-     "images": {
-      "resize": {
-       "jpegQuality": 80,
-       "maxBytes": 4718592,
-       "maxHeight": 2000,
-       "maxWidth": 2000
-      }
-     }
-    },
-    "name": "SpaceXAI: Grok Imagine Image Quality",
     "output": [
      "image"
     ],

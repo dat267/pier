@@ -315,17 +315,20 @@ func staticCredentialStore(providerID, key string) CredentialStore {
 	return store
 }
 
-// The v1.4.0 image catalog comes from the same generator output as the chat
-// catalog (upstream packages/ai/src/providers/data, IMAGE_MODELS entries), so
-// the models OpenRouter added after the v1.2.0 snapshot are present and every
-// entry still carries the provider and api pier resolves with.
-func TestImageCatalogCarriesTheV140Refresh(t *testing.T) {
-	model := GetBuiltinImageModel("openrouter", "black-forest-labs/flux-3-image")
+// The image catalog comes from the same pi v1.5.0 generator output as the chat
+// catalog (packages/ai/src/providers/data, IMAGE_MODELS entries), so refreshed
+// models are present and every entry still carries the provider and api pier
+// resolves with.
+func TestImageCatalogCarriesTheV150Refresh(t *testing.T) {
+	model := GetBuiltinImageModel("openrouter", "sourceful/riverflow-v2.6-pro")
 	if model == nil {
-		t.Fatal("flux-3-image missing from the image catalog")
+		t.Fatal("riverflow-v2.6-pro missing from the image catalog")
 	}
 	if model.Provider != "openrouter" || model.API != KnownImagesApiOpenRouter || model.Name == "" {
 		t.Fatalf("model = %+v", model)
+	}
+	if flux := GetBuiltinImageModel("openrouter", "black-forest-labs/flux-3-image"); flux == nil {
+		t.Fatal("flux-3-image missing from the image catalog")
 	}
 	for _, candidate := range GetBuiltinImageModels("openrouter") {
 		if candidate.Provider != "openrouter" || candidate.API != KnownImagesApiOpenRouter {

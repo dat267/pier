@@ -3,7 +3,7 @@
 
 Upstream ground truth: pi/packages/ai/src/providers/data/*.json, the same
 generator output the chat catalog uses (`npm run generate-models` in packages/ai,
-or `node scripts/generate-models.ts --strict --data-only`). Both catalogs are
+or `node catalog/generate.ts --strict --data-only`). Both catalogs are
 flattened by upstream's model-catalog.ts: every entry whose `type` is "image",
 keyed by model id under its provider, carried verbatim. The separate
 `generate-image-models` script the older pin needed no longer exists.

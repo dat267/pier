@@ -1,8 +1,8 @@
 {
  "_meta": {
-  "generatedAt": "2026-10-13T07:41:52.494Z",
+  "generatedAt": "2026-11-03T05:25:03.345Z",
   "schemaVersion": 6,
-  "upstreamManifestSHA256": "d7c1c3111684fc62975e420ee05116b05cd900f8b571155aaefff9b174dcc6fe"
+  "upstreamManifestSHA256": "26b2adb40b11950fd90a8f4912a17030cae522248e3dee3ccddc8f3f22437ccb"
  },
  "providers": {
   "openai": {
