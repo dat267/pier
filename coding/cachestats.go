@@ -587,11 +587,12 @@ func (m *SessionManager) cacheScanResult(models ModelPriceSource) cacheScanResul
 func (m *SessionManager) memoizedAssistant(entryID string) *ai.AssistantMessage {
 	m.mu.Lock()
 	entry := m.byID[entryID]
+	cache := m.messages
 	m.mu.Unlock()
 	if entry == nil {
 		return nil
 	}
-	messages := projectedMessages(entry, &m.messages)
+	messages := projectedMessages(entry, cache)
 	if len(messages) == 0 {
 		return nil
 	}

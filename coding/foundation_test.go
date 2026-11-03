@@ -595,7 +595,7 @@ func TestManagerCacheMissesCarryTheMemoizedMessage(t *testing.T) {
 		t.Fatalf("misses = %+v", misses)
 	}
 	entries := manager.GetEntries()
-	projected, _ := projectedMessages(&entries[misses[0].EntryIndex], &manager.messages)[0].(*ai.AssistantMessage)
+	projected, _ := projectedMessages(&entries[misses[0].EntryIndex], manager.messages)[0].(*ai.AssistantMessage)
 	if projected == nil || misses[0].Message != projected {
 		t.Errorf("the miss carries %p, want the memoized %p", misses[0].Message, projected)
 	}

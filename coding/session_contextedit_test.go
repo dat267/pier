@@ -191,7 +191,7 @@ func TestProjectedWindowMatchesSessionContext(t *testing.T) {
 	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "after"}, Timestamp: 4})
 
 	context := manager.Projection()
-	window := projectWindow(materializePointers(manager.GetBranch("")), &manager.messages)
+	window := projectWindow(materializePointers(manager.GetBranch("")), manager.messages)
 	if len(window.Messages) != len(context.Messages) {
 		t.Fatalf("window carries %d messages, projection %d", len(window.Messages), len(context.Messages))
 	}

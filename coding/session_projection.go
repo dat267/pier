@@ -55,12 +55,13 @@ func (m *SessionManager) Projection() SessionContext {
 	// immutable after they are appended, so the pointers stay valid after the
 	// lock is released.
 	path := m.branchPointersLocked("")
+	cache := m.messages
 	m.mu.Unlock()
 
 	// Project outside the lock: decoding a large session takes tens of
 	// milliseconds, and holding m.mu for it parks every other reader (the
 	// footer reads the session per frame).
-	context := buildSessionContextFromPointers(path, &m.messages)
+	context := buildSessionContextFromPointers(path, cache)
 	context.Messages = context.Messages[:len(context.Messages):len(context.Messages)]
 	context.Entries = context.Entries[:len(context.Entries):len(context.Entries)]
 
@@ -194,13 +195,14 @@ func projectWindow(path []*SessionEntry, cache *messageCache) projectedWindow {
 func (m *SessionManager) MessageEntryID(message ai.Message) string {
 	m.mu.Lock()
 	path := m.branchPointersLocked("")
+	cache := m.messages
 	m.mu.Unlock()
 	for _, entry := range slices.Backward(path) {
 
 		if entry.Type != "message" {
 			continue
 		}
-		if slices.Contains(m.messages.messages(entry), message) {
+		if slices.Contains(cache.messages(entry), message) {
 			return entry.ID
 		}
 	}
@@ -239,11 +241,12 @@ func (m *SessionManager) projectedWindow() (projectedWindow, CompactionContextUs
 		return window, estimate
 	}
 	path := m.branchPointersLocked("")
+	cache := m.messages
 	m.mu.Unlock()
 
 	// Project outside the lock, like Projection: decoding a large session must
 	// not park other readers.
-	window := projectWindow(path, &m.messages)
+	window := projectWindow(path, cache)
 	estimate := EstimateProjectedContextTokens(window)
 	window.Entries = window.Entries[:len(window.Entries):len(window.Entries)]
 	window.Messages = window.Messages[:len(window.Messages):len(window.Messages)]

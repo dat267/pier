@@ -80,7 +80,12 @@ is no longer retained by them. In-place forks also clear stale branch/projection
 snapshots and prune decoded-message memos to the retained entry IDs, preserving
 kept message identity. Caller-held snapshots remain valid
 (`TestNewSessionReleasesPreviousPayload`,
-`TestCreateBranchedSessionReleasesDiscardedMessages`).
+`TestCreateBranchedSessionReleasesDiscardedMessages`). Entry paths and their
+message memo are captured together under the manager lock. New/fork generations
+install a detached memo, retaining kept message identity; an old off-lock
+projection may finish with its own memo but cannot repopulate the new one.
+`TestConcurrentProjectionCannotRepopulateDiscardedSessionMemo` checks release
+after both an in-flight decode and a later decode from the old path complete.
 
 ## Stdio RPC
 

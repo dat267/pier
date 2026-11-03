@@ -83,7 +83,7 @@ type SessionManager struct {
 	// messages memoizes each entry's decoded messages and role, so a projection
 	// after an append only decodes the appended entries; see
 	// session_messagecache.go.
-	messages messageCache
+	messages *messageCache
 	// cacheScan is the running cache-miss scan state, so the cache-miss notice
 	// for an assistant message does not rescan the session; see cachestats.go.
 	cacheScan cacheScanState
@@ -213,7 +213,7 @@ func (m *SessionManager) NewSession(options *NewSessionOptions) string {
 	m.projection = projectionCache{}
 	m.projected = projectedWindowCache{}
 	m.latestCompactionEntry = latestCompactionCache{}
-	m.messages.reset()
+	m.messages = m.messages.retained(nil)
 	m.cacheScan.reset()
 	m.cacheSeedGen++
 	m.cacheScanSeeding = false
@@ -457,7 +457,7 @@ func (m *SessionManager) buildIndex() {
 			}
 		}
 	}
-	m.messages.retain(m.byID)
+	m.messages = m.messages.retained(m.byID)
 }
 
 func (m *SessionManager) rewriteFile() {
@@ -903,6 +903,8 @@ func (m *SessionManager) branchPointersLocked(fromID string) []*SessionEntry {
 // scan's decode observable, e.g. to prove the scan is not running on the UI
 // loop.
 func (m *SessionManager) SetMessageDecodeForTest(decode func(*SessionEntry) []ai.Message) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.messages.mu.Lock()
 	m.messages.decode = decode
 	m.messages.mu.Unlock()
@@ -919,7 +921,7 @@ func (m *SessionManager) BuildContextEntriesForLeaf() []SessionEntry {
 // buildContextEntriesForLeafLocked is BuildContextEntriesForLeaf for callers
 // already holding m.mu.
 func (m *SessionManager) buildContextEntriesForLeafLocked() []SessionEntry {
-	return compactionWindowFromPointers(m.branchPointersLocked(""), &m.messages)
+	return compactionWindowFromPointers(m.branchPointersLocked(""), m.messages)
 }
 
 // GetHeader returns the session header.

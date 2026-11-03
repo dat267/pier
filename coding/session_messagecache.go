@@ -18,7 +18,8 @@ import (
 // appended entries instead of the whole session. Before this, every append
 // invalidated the projection and the next resolution re-decoded every message
 // in the window, which is what made any new reader of the session a latency
-// hazard.
+// hazard. The manager captures this memo with its entry path and replaces it
+// on reset/fork, so late readers cannot repopulate a replacement generation.
 //
 // The memoized messages are shared across projections, matching upstream, which
 // holds the message objects in agent state. Callers must treat them as
@@ -97,23 +98,37 @@ func (c *messageCache) role(entry *SessionEntry) string {
 	return role
 }
 
-// reset drops every memoized entry (a manager starting a new session).
+// reset drops every memoized entry in a standalone memo.
 func (c *messageCache) reset() {
 	c.mu.Lock()
 	c.byID = nil
 	c.mu.Unlock()
 }
 
-// retain drops memoized entries removed by an in-place fork while preserving
-// the decoded message identity for entries on the retained path.
-func (c *messageCache) retain(entries map[string]*SessionEntry) {
+// retained starts a detached memo for a new session generation. Kept entries
+// preserve decoded message identity; old readers can finish populating only
+// their retired memo, never the replacement's contents.
+func (c *messageCache) retained(entries map[string]*SessionEntry) *messageCache {
+	next := &messageCache{}
+	if c == nil {
+		return next
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	for id := range c.byID {
-		if entries[id] == nil {
-			delete(c.byID, id)
+	next.decode = c.decode
+	if len(entries) == 0 {
+		return next
+	}
+	for id, cached := range c.byID {
+		if entries[id] != nil {
+			copy := *cached
+			if next.byID == nil {
+				next.byID = map[string]*cachedEntry{}
+			}
+			next.byID[id] = &copy
 		}
 	}
+	return next
 }
 
 // lookupLocked returns the entry's cache slot, creating the map on first use.
@@ -164,6 +179,7 @@ func (m *SessionManager) EntryMessages(entry *SessionEntry) []ai.Message {
 	}
 	m.mu.Lock()
 	canonical := m.byID[entry.ID]
+	cache := m.messages
 	m.mu.Unlock()
 	if canonical == nil || canonical.Type != "message" || len(canonical.Message) != len(entry.Message) {
 		return SessionEntryToContextMessages(entry)
@@ -171,7 +187,7 @@ func (m *SessionManager) EntryMessages(entry *SessionEntry) []ai.Message {
 	if len(entry.Message) > 0 && &canonical.Message[0] != &entry.Message[0] {
 		return SessionEntryToContextMessages(entry)
 	}
-	return m.messages.messages(canonical)
+	return cache.messages(canonical)
 }
 
 // projectedMessages projects an entry's LLM messages, reading through the
