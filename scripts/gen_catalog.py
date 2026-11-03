@@ -4,7 +4,7 @@
 Upstream ground truth: pi/packages/ai/src/providers/data/*.json (the provider
 catalogs) + .manifest.json, produced by upstream's own generator:
 
-    cd <upstream clone>/packages/ai && node scripts/generate-models.ts --strict --data-only
+    cd <upstream clone>/packages/ai && node catalog/generate.ts --strict --data-only
 
 Usage:
     python3 scripts/gen_catalog.py /path/to/pi > ai/models_catalog.json

@@ -67,6 +67,59 @@ func TestOpenRouterPlaceholderPricesAreZero(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.5.0 f9a26365 packages/ai/catalog/providers/openai.ts and
+// openai-codex.ts. GPT-6.1 Terra is in the 1.5.0 catalog with official pricing,
+// tool search, mid-conversation effort, and a 500k Codex context window.
+func TestCatalogIncludesGPT61Terra(t *testing.T) {
+	for _, tc := range []struct {
+		provider   string
+		api        string
+		context    int64
+		maxTokens  int64
+		tiers      bool
+		minimal    string
+		toolSearch bool
+	}{
+		{"openai", APIOpenAIResponses, 272000, 128000, true, "", true},
+		{"azure", APIAzureOpenAIResponses, 272000, 128000, false, "", false},
+		{"openai-codex", APIOpenAICodexResponses, 500000, 128000, true, "low", true},
+	} {
+		t.Run(tc.provider, func(t *testing.T) {
+			m := GetBuiltinModel(tc.provider, "gpt-6.1-terra")
+			if m == nil {
+				t.Fatal("gpt-6.1-terra missing")
+			}
+			if string(m.API) != tc.api || m.Name != "GPT-6.1 Terra" || !m.Reasoning {
+				t.Fatalf("model = %+v", m)
+			}
+			if m.ContextWindow != tc.context || m.MaxTokens != tc.maxTokens {
+				t.Fatalf("context/max = %d/%d; want %d/%d", m.ContextWindow, m.MaxTokens, tc.context, tc.maxTokens)
+			}
+			if m.Cost.Input != 1 || m.Cost.Output != 5 || m.Cost.CacheRead != 0.05 || m.Cost.CacheWrite != 1.25 {
+				t.Fatalf("cost = %+v", m.Cost)
+			}
+			if tc.tiers {
+				if len(m.Cost.Tiers) != 1 || m.Cost.Tiers[0].InputTokensAbove != 272000 {
+					t.Fatalf("cost tiers = %+v", m.Cost.Tiers)
+				}
+			} else if len(m.Cost.Tiers) != 0 {
+				t.Fatalf("unexpected cost tiers = %+v", m.Cost.Tiers)
+			}
+			if off := m.ThinkingLevelMap["off"]; off == nil || *off != "none" {
+				t.Fatalf("thinking levels = %+v", m.ThinkingLevelMap)
+			}
+			if minimal := m.ThinkingLevelMap["minimal"]; (minimal == nil) != (tc.minimal == "") || (minimal != nil && *minimal != tc.minimal) {
+				t.Fatalf("minimal thinking = %v; want %q", minimal, tc.minimal)
+			}
+			if tc.toolSearch {
+				if m.Compat == nil || m.Compat.OpenAIResponses == nil || m.Compat.OpenAIResponses.SupportsToolSearch == nil || !*m.Compat.OpenAIResponses.SupportsToolSearch {
+					t.Fatalf("tool-search compat = %+v", m.Compat)
+				}
+			}
+		})
+	}
+}
+
 func TestCatalogAnthropicOpusSpotCheck(t *testing.T) {
 	m := GetBuiltinModel("anthropic", "claude-opus-4-5")
 	if m == nil {
