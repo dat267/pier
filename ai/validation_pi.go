@@ -787,6 +787,11 @@ func (s *piSchema) addAnnotations(value *schemaValue, out *piAnnotations, forPar
 			target.addAnnotations(value, out, true)
 		}
 	}
+	if s.dynamicRef != "" {
+		if target, ok := s.resolveRef(s.dynamicRef); ok {
+			target.addAnnotations(value, out, true)
+		}
+	}
 	if value.Object != nil {
 		for _, key := range s.propertyOrder {
 			if _, ok := value.Object.get(key); ok {

@@ -98,9 +98,6 @@ func (s *piSchema) walkErrors(value *schemaValue, path string, out *[]piError) {
 			target.walkErrors(value, path, out)
 		}
 	}
-	if len(*out) == start && s.dynamicRef != "" {
-		push("$dynamicRef", "does not match the dynamically referenced schema")
-	}
 	if len(*out) == start && (s.unevaluatedFalse || s.unevaluatedProperties != nil) && value.Object != nil {
 		annotations := s.annotations(value)
 		if !annotations.allProps {
@@ -131,6 +128,9 @@ func (s *piSchema) walkErrors(value *schemaValue, path string, out *[]piError) {
 				}
 			}
 		}
+	}
+	if len(*out) == start && s.dynamicRef != "" {
+		push("$dynamicRef", "does not match the dynamically referenced schema")
 	}
 }
 
