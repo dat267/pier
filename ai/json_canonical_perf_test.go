@@ -119,7 +119,7 @@ func TestCanonicalizeMatchesReference(t *testing.T) {
 func FuzzCanonicalizeMatchesReference(f *testing.F) {
 	for _, seed := range []string{
 		`{"b":1,"a":[true,null,"\u2028"]}`, `01`, `"\ud800"`, "\"\xff\"", `[1,{"2":3}]`, `1e-7`,
-		`{"a":"<&>","b":[1,1.5,1e-7]}`, `{"1":1,"2":2,"z":null}`, `"\u0001"`,
+		`{"a":"<&>","b":[1,1.5,1e-7]}`, `{"1":1,"2":2,"z":null}`, `"\u0001"`, `1e1000`,
 	} {
 		f.Add([]byte(seed))
 	}

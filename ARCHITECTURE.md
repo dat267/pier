@@ -4247,6 +4247,22 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestChatResetStopsBothSweeps`,
 `TestWiringChatResetDropsPendingSweeps`.
 
+### D359
+
+**Canonicalization rejects trailing non-whitespace.**
+
+Reference: pi v1.5.0 parses provider and persisted bodies with `JSON.parse`,
+which rejects text after the first value. The byte scanner and its
+`json.Decoder` fallback both stopped after the first value, so `1 2`,
+`{} trailing` and `truex` were silently truncated (the `json.RawMessage`
+marshal path already guarded with `json.Valid`). After parsing one value the
+scanner now allows only trailing whitespace; the fallback validates the whole
+input with `json.Unmarshal` first, keeping the standard diagnostic.
+
+`TestCanonicalizeRejectsTrailingText` pins the rejection and trailing
+whitespace acceptance; the differential fuzz oracle now shares the strict
+behavior.
+
 ### D358
 
 **A single thinking block skips the join copy.**

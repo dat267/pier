@@ -32,6 +32,12 @@ func canonicalJavaScriptJSON(encoded []byte) ([]byte, error) {
 		// wording that callers report (D269); valid JSON never takes this path.
 		return canonicalJSONDecoderFallback(encoded)
 	}
+	parser.skipSpace()
+	if parser.pos != len(encoded) {
+		// JSON.parse rejects trailing non-whitespace; the scanner otherwise
+		// truncates to the first value.
+		return canonicalJSONDecoderFallback(encoded)
+	}
 	return out, nil
 }
 
@@ -435,7 +441,23 @@ func appendCanonicalJSONString(out []byte, value string) []byte {
 // which callers surface for unparseable provider bodies (D269); the slow path
 // only runs on error.
 func canonicalJSONDecoderFallback(encoded []byte) ([]byte, error) {
+	// json.Decoder decodes the first value and ignores trailing text. Decode
+	// once with UseNumber (JSON.parse accepts values beyond float64) and then
+	// require EOF so trailing garbage is rejected.
 	decoder := json.NewDecoder(bytes.NewReader(encoded))
+	decoder.UseNumber()
+	var checked any
+	if err := decoder.Decode(&checked); err != nil {
+		return nil, err
+	}
+	var extra json.RawMessage
+	if err := decoder.Decode(&extra); err != io.EOF {
+		if err == nil && len(extra) > 0 {
+			return nil, fmt.Errorf("invalid character %q after top-level value", extra[0])
+		}
+		return nil, err
+	}
+	decoder = json.NewDecoder(bytes.NewReader(encoded))
 	decoder.UseNumber()
 	return canonicalJSONDecoderValue(decoder)
 }
