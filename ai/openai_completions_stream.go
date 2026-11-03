@@ -640,22 +640,23 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 				if block.call.Name == "" && name != "" {
 					block.call.Name = name
 				}
+				deltaText := toolCallDeltaText(toolCall)
 				if toolCall.Function != nil && toolCall.Function.Arguments != "" {
 					block.call.Arguments = block.args.Append(toolCall.Function.Arguments)
 				} else if toolCall.Custom != nil && toolCall.Custom.Input != "" {
 					nextInput := customToolInputValue(block) + toolCall.Custom.Input
-					deltaText, ok, derr := AppendGrammarToolInputJSONDelta(&block.customInput.jsonBuffer, block.customInput.property, nextInput, false)
+					wrappedDelta, ok, derr := AppendGrammarToolInputJSONDelta(&block.customInput.jsonBuffer, block.customInput.property, nextInput, false)
 					if derr != nil {
 						panic(derr)
 					}
 					if !ok {
-						deltaText = ""
+						wrappedDelta = ""
 					}
 					block.call.Arguments = mustMarshalJSON(map[string]string{block.customInput.property: nextInput})
-					_ = deltaText
+					deltaText = wrappedDelta
 				}
 				output.Content[outputIdx] = block.call
-				stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: outputIdx, Delta: toolCallDeltaText(toolCall), Partial: output})
+				stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: outputIdx, Delta: deltaText, Partial: output})
 			}
 
 		})
