@@ -151,7 +151,7 @@ func PrepareEditArguments(input json.RawMessage) json.RawMessage {
 				if jsonUnmarshalStrictTool(json.RawMessage(asString), &editShape) == nil && editShape.OldText != nil && editShape.NewText != nil {
 					setValue("edits", mustMarshalJSON([]json.RawMessage{json.RawMessage(asString)}))
 				}
-			} else {
+			} else if parsed != nil {
 				setValue("edits", json.RawMessage(asString))
 			}
 		} else if jsonUnmarshalStrictTool(raw, &editShape) == nil && editShape.OldText != nil && editShape.NewText != nil {
