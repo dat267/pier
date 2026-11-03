@@ -13,15 +13,7 @@ type ContentList []Content
 // MarshalJSON encodes each block with its `type` discriminator first,
 // matching upstream key order.
 func (l ContentList) MarshalJSON() ([]byte, error) {
-	out := make([]json.RawMessage, 0, len(l))
-	for _, c := range l {
-		enc, err := marshalContentBlock(c)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, enc)
-	}
-	return MarshalJSON(out)
+	return marshalContentListJSON(l)
 }
 
 // UnmarshalJSON decodes blocks by their `type` discriminator.
@@ -47,15 +39,7 @@ type UserContentList []UserContent
 
 // MarshalJSON encodes each block with its `type` discriminator.
 func (l UserContentList) MarshalJSON() ([]byte, error) {
-	out := make([]json.RawMessage, 0, len(l))
-	for _, c := range l {
-		enc, err := marshalContentBlock(c)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, enc)
-	}
-	return MarshalJSON(out)
+	return marshalContentListJSON(l)
 }
 
 // UnmarshalJSON decodes blocks by their `type` discriminator, rejecting
@@ -79,6 +63,24 @@ func (l *UserContentList) UnmarshalJSON(data []byte) error {
 	}
 	*l = blocks
 	return nil
+}
+
+// marshalContentListJSON joins already-canonical blocks without reparsing the
+// array, which the previous []json.RawMessage round-trip did on every message.
+func marshalContentListJSON[T Content](blocks []T) ([]byte, error) {
+	out := make([]byte, 0, 2+16*len(blocks))
+	out = append(out, '[')
+	for i, c := range blocks {
+		enc, err := marshalContentBlock(c)
+		if err != nil {
+			return nil, err
+		}
+		if i > 0 {
+			out = append(out, ',')
+		}
+		out = append(out, enc...)
+	}
+	return append(out, ']'), nil
 }
 
 // marshalContentBlock encodes one block with its type discriminator as the
