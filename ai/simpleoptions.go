@@ -65,7 +65,7 @@ func ClampMaxTokensToContext(model *Model, context TranscriptContext, maxTokens 
 	if model.ContextWindow <= 0 {
 		return max(minMaxTokens, maxTokens)
 	}
-	available := int(model.ContextWindow) - EstimateContextTokens(context.Messages).Tokens - contextSafetyTokens
+	available := jsNumberToInt(float64(model.ContextWindow) - float64(EstimateContextTokens(context.Messages).Tokens) - contextSafetyTokens)
 	return min(maxTokens, max(minMaxTokens, available))
 }
 
