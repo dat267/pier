@@ -99,9 +99,10 @@ func (q *sessionEventQueue) Partials() <-chan queuedSessionEvent { return q.part
 
 // newProducer pins a session binding to its events, including callbacks that
 // were admitted before unsubscribe but deliver after a replacement (D196).
-func (q *sessionEventQueue) newProducer() (uint64, func(*coding.SessionEvent)) {
+func (q *sessionEventQueue) newProducer() (uint64, func(*coding.SessionEvent), context.CancelFunc) {
 	generation := q.sessionGeneration.Add(1)
-	return generation, func(event *coding.SessionEvent) { q.enqueueFromSession(event, generation) }
+	ctx, cancel := context.WithCancel(context.Background())
+	return generation, func(event *coding.SessionEvent) { q.enqueueFromSession(event, generation, ctx.Done()) }, cancel
 }
 
 // enqueue is the current-binding producer entry point. It never blocks on a
@@ -110,12 +111,17 @@ func (q *sessionEventQueue) enqueue(event *coding.SessionEvent) {
 	if q == nil {
 		return
 	}
-	q.enqueueFromSession(event, q.sessionGeneration.Load())
+	q.enqueueFromSession(event, q.sessionGeneration.Load(), nil)
 }
 
-func (q *sessionEventQueue) enqueueFromSession(event *coding.SessionEvent, sessionGeneration uint64) {
+func (q *sessionEventQueue) enqueueFromSession(event *coding.SessionEvent, sessionGeneration uint64, stopped <-chan struct{}) {
 	if event == nil || sessionGeneration != q.sessionGeneration.Load() {
 		return
+	}
+	select {
+	case <-stopped:
+		return
+	default:
 	}
 	generation := q.messageGeneration.Load()
 	if event.Type == coding.SessionMessageStart && event.Agent != nil {
@@ -142,6 +148,8 @@ func (q *sessionEventQueue) enqueueFromSession(event *coding.SessionEvent, sessi
 	}
 	select {
 	case q.lossless <- queued:
+	case <-stopped:
+		// Replacement retires this binding before waiting for its run.
 	case <-q.closed:
 		// Shutting down: the consumer is gone, so unblock the producer.
 	case <-q.done():

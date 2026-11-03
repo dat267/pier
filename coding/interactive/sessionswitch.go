@@ -130,13 +130,14 @@ func (a *App) applySessionReplacement(sessionManager *coding.SessionManager) (*S
 }
 
 func (a *App) teardownCurrentSession() {
-	// teardownCurrent: settle any active response, dispose, unsubscribe.
-	a.session.Abort(context.Background())
-	a.session.Dispose()
+	// Retire event admission before waiting: an active producer may be parked
+	// on the lossless queue that this same owner is no longer draining.
 	if a.unsubscribe != nil {
 		a.unsubscribe()
 		a.unsubscribe = nil
 	}
+	a.session.Abort(context.Background())
+	a.session.Dispose()
 	// The loop is running this replacement, so events the outgoing session
 	// queued before its listener was removed are still pending. The incoming
 	// transcript is rebuilt from persisted entries; applying those stale
@@ -188,9 +189,13 @@ func (a *App) bindSessionManager(sessionManager *coding.SessionManager) (*Sessio
 	a.autocomplete.SessionInfo = sessionManager
 
 	if a.unsubscribe == nil {
-		generation, enqueue := a.sessionEvents.newProducer()
+		generation, enqueue, stopProducer := a.sessionEvents.newProducer()
 		a.events.sessionGeneration = generation
-		a.unsubscribe = a.session.Subscribe(enqueue)
+		unsubscribe := a.session.Subscribe(enqueue)
+		a.unsubscribe = func() {
+			stopProducer()
+			unsubscribe()
+		}
 	}
 	a.footer.Invalidate()
 	a.lifecycle.UpdateTerminalTitle()

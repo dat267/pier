@@ -1046,6 +1046,12 @@ unsubscribe and publish after a replacement's queue clear. Those callbacks
 remain safe to finish without changing the listener registry contract.
 `TestSessionReplacementRejectsAnAlreadyAdmittedOldListener` reproduces a late
 custom message reaching the replacement transcript before this filtering.
+Each subscription also owns an enqueue stop signal. Replacement retires it
+before awaiting the outgoing run, releasing a producer parked on the full
+lossless channel without dropping current-binding events or changing session
+persistence. `TestSessionReplacementSettlesAProducerParkedOnTheFullEventQueue`
+reproduces the circular wait when the owner waited for Abort before retiring
+its producer.
 
 ### D197
 
