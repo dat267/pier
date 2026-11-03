@@ -258,15 +258,11 @@ func (s *piSchema) parse(v *schemaValue) {
 		}
 	}
 	if add := svProp(v, "additionalItems"); add != nil {
-		if add.IsBool && !add.Bool {
-			s.additionalItems = &piSchema{doc: s.doc, false: true}
-		} else if !(add.IsBool && add.Bool) {
-			s.additionalItems = s.doc.node(s.pointer + "/additionalItems")
-		}
+		s.additionalItems = s.doc.node(s.pointer + "/additionalItems")
 	}
 	if add := svProp(v, "additionalProperties"); add != nil {
-		if add.IsBool {
-			s.additionalFalse = !add.Bool
+		if add.IsBool && !add.Bool {
+			s.additionalFalse = true
 		} else {
 			s.additionalProps = s.doc.node(s.pointer + "/additionalProperties")
 		}
@@ -385,15 +381,15 @@ func (s *piSchema) parse(v *schemaValue) {
 	s.ref = svString(v, "$ref")
 	s.dynamicRef = svString(v, "$dynamicRef")
 	if u := svProp(v, "unevaluatedProperties"); u != nil {
-		if u.IsBool {
-			s.unevaluatedFalse = !u.Bool
+		if u.IsBool && !u.Bool {
+			s.unevaluatedFalse = true
 		} else {
 			s.unevaluatedProperties = s.doc.node(s.pointer + "/unevaluatedProperties")
 		}
 	}
 	if u := svProp(v, "unevaluatedItems"); u != nil {
-		if u.IsBool {
-			s.unevaluatedItemsFalse = !u.Bool
+		if u.IsBool && !u.Bool {
+			s.unevaluatedItemsFalse = true
 		} else {
 			s.unevaluatedItems = s.doc.node(s.pointer + "/unevaluatedItems")
 		}
