@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 )
@@ -193,7 +192,8 @@ type openaiStreamingToolCall struct {
 		property   string
 		jsonBuffer GrammarToolInputJSONBuffer
 	}
-	streamIndex *int
+	streamIndex  *int
+	contentIndex int
 }
 
 // StreamOpenAICompletions implements the openai-completions stream function.
@@ -367,6 +367,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 		hasFinishReason := false
 		toolCallBlocksByIndex := map[int]*openaiStreamingToolCall{}
 		toolCallBlocksByID := map[string]*openaiStreamingToolCall{}
+		toolCallBlocksByContentIndex := map[int]*openaiStreamingToolCall{}
 
 		finishBlock := func(index int) {
 			if index < 0 || index >= len(output.Content) {
@@ -380,7 +381,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 				output.Content[index] = block
 				stream.Push(AssistantMessageEvent{Type: EventThinkingEnd, ContentIndex: index, Content: block.Thinking, Partial: output})
 			case ToolCall:
-				streaming := findStreaming(toolCallBlocksByIndex, toolCallBlocksByID, block)
+				streaming := toolCallBlocksByContentIndex[index]
 				if streaming != nil && streaming.customInput != nil {
 					nextInput := customToolInputValue(streaming)
 					delta, ok, derr := AppendGrammarToolInputJSONDelta(&streaming.customInput.jsonBuffer, streaming.customInput.property, nextInput, true)
@@ -458,7 +459,8 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 				}
 				hasCustomInput := customInputProperty != ""
 				block = &openaiStreamingToolCall{
-					call: ToolCall{ID: delta.ID, Name: name, Arguments: json.RawMessage(`{"` + customInputProperty + `":""}`)},
+					call:         ToolCall{ID: delta.ID, Name: name, Arguments: json.RawMessage(`{"` + customInputProperty + `":""}`)},
+					contentIndex: len(output.Content),
 				}
 				if hasCustomInput {
 					block.customInput = &struct {
@@ -478,8 +480,9 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 				if delta.ID != "" {
 					toolCallBlocksByID[delta.ID] = block
 				}
+				toolCallBlocksByContentIndex[block.contentIndex] = block
 				output.Content = append(output.Content, block.call)
-				stream.Push(AssistantMessageEvent{Type: EventToolcallStart, ContentIndex: len(output.Content) - 1, Partial: output})
+				stream.Push(AssistantMessageEvent{Type: EventToolcallStart, ContentIndex: block.contentIndex, Partial: output})
 			}
 			if delta.Index != nil && block.streamIndex == nil {
 				idx := *delta.Index
@@ -492,7 +495,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 			}
 			if block.call.Name == "" && name != "" {
 				block.call.Name = name
-				output.Content[outputIndexForCall(output, block)] = block.call
+				output.Content[block.contentIndex] = block.call
 			}
 			if delta.Custom != nil && delta.Function == nil && block.customInput == nil {
 				customInputProperty := "input"
@@ -623,7 +626,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 
 			for _, toolCall := range delta.ToolCalls {
 				block := ensureToolCallBlock(toolCall)
-				outputIdx := outputIndexForCall(output, block)
+				outputIdx := block.contentIndex
 				if block.call.ID == "" && toolCall.ID != "" {
 					block.call.ID = toolCall.ID
 					toolCallBlocksByID[toolCall.ID] = block
@@ -740,31 +743,6 @@ func customToolInputValue(block *openaiStreamingToolCall) string {
 		}
 	}
 	return ""
-}
-
-func outputIndexForCall(output *AssistantMessage, block *openaiStreamingToolCall) int {
-	for i, content := range output.Content {
-		if tc, ok := content.(ToolCall); ok && tc.ID == block.call.ID && tc.Name == block.call.Name {
-			return i
-		}
-	}
-	// Match by reference from the last known output push: fall back to the
-	// last toolcall entry.
-	for i, v := range slices.Backward(output.Content) {
-		if _, ok := v.(ToolCall); ok {
-			return i
-		}
-	}
-	return -1
-}
-
-func findStreaming(byIndex map[int]*openaiStreamingToolCall, byID map[string]*openaiStreamingToolCall, call ToolCall) *openaiStreamingToolCall {
-	for _, block := range byIndex {
-		if block.call.ID == call.ID {
-			return block
-		}
-	}
-	return byID[call.ID]
 }
 
 // appendOpenAIReasoningDetail merges consecutive reasoning deltas
