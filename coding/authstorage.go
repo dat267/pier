@@ -429,9 +429,9 @@ func (s *ReadOnlyAuthStorage) load() (authStorageData, error) {
 		valid := false
 		if credential["type"] == "api_key" {
 			key, hasKey := credential["key"]
-			validKey := !hasKey || key == nil || isStringValue(key)
+			validKey := !hasKey || isStringValue(key)
 			validEnv := true
-			if envValue, hasEnv := credential["env"]; hasEnv && envValue != nil {
+			if envValue, hasEnv := credential["env"]; hasEnv {
 				envObject, isObject := envValue.(map[string]any)
 				validEnv = isObject
 				if validEnv {
