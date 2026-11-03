@@ -91,10 +91,10 @@ func BenchmarkMarkdownRenderMixedANSI(b *testing.B) { benchmarkMarkdownRenderANS
 // stable prefix forward (incremental lex plus the line cache), while the cold
 // variant rebuilds the component every append and re-lexes the whole message.
 func benchmarkMarkdownStream(b *testing.B, reuse bool) {
-	benchmarkMarkdownStreamN(b, reuse, 200)
+	benchmarkMarkdownStreamN(b, reuse, 200, MarkdownOptions{})
 }
 
-func benchmarkMarkdownStreamN(b *testing.B, reuse bool, paragraphs int) {
+func benchmarkMarkdownStreamN(b *testing.B, reuse bool, paragraphs int, options MarkdownOptions) {
 	b.Helper()
 	theme := mdTestTheme()
 	var prefix strings.Builder
@@ -104,7 +104,7 @@ func benchmarkMarkdownStreamN(b *testing.B, reuse bool, paragraphs int) {
 		prefixes = append(prefixes, prefix.String())
 	}
 	if reuse {
-		message := NewMarkdown("", 1, 0, theme, nil, MarkdownOptions{})
+		message := NewMarkdown("", 1, 0, theme, nil, options)
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -119,12 +119,19 @@ func benchmarkMarkdownStreamN(b *testing.B, reuse bool, paragraphs int) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for _, text := range prefixes {
-			message := NewMarkdown(text, 1, 0, theme, nil, MarkdownOptions{})
+			message := NewMarkdown(text, 1, 0, theme, nil, options)
 			_ = message.Render(80)
 		}
 	}
 }
 
-func BenchmarkMarkdownStreamAppend(b *testing.B)     { benchmarkMarkdownStream(b, true) }
-func BenchmarkMarkdownStreamAppendLong(b *testing.B) { benchmarkMarkdownStreamN(b, true, 1000) }
+func BenchmarkMarkdownStreamAppend(b *testing.B) { benchmarkMarkdownStream(b, true) }
+func BenchmarkMarkdownStreamAppendLong(b *testing.B) {
+	benchmarkMarkdownStreamN(b, true, 1000, MarkdownOptions{})
+}
+func BenchmarkMarkdownStreamAppendTransform(b *testing.B) {
+	benchmarkMarkdownStreamN(b, true, 1000, MarkdownOptions{
+		Transform: func(source string, _ int) string { return source },
+	})
+}
 func BenchmarkMarkdownStreamAppendCold(b *testing.B) { benchmarkMarkdownStream(b, false) }

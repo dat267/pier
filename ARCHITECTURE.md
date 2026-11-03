@@ -4247,6 +4247,26 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestChatResetStopsBothSweeps`,
 `TestWiringChatResetDropsPendingSweeps`.
 
+### D356
+
+**A markdown transform does not disable incremental lexing.**
+
+Reference: pi v1.5.0 `components/markdown.ts` applies `options.transform` before
+its token cache and reuses rendered blocks by token, so a transform is not
+grounds for discarding the previous parse. The port's `canReuseLex` rejected
+every transformed source, and the assistant path always installs a transform;
+each streaming delta therefore re-lexed and re-rendered the whole message.
+Keep the transform and let the existing prefix check decide: if the new
+transformed source starts with the cached transformed source, the cached block
+window is still valid. Non-monotonic rewrites fail the prefix check and re-lex.
+
+Measured on 1,000 growing paragraph appends with the production-style identity
+transform: 2.47 s and 1.63 GB allocated before, 37–41 ms and 36 MB after.
+`TestMarkdownTransformStreamingReusesStablePrefix` pins the tail-only render;
+`TestMarkdownTransformStreamingMatchesFreshRender` checks identity, prefixing,
+replacement, and last-line-uppercasing transforms at every prefix;
+`BenchmarkMarkdownStreamAppendTransform` keeps the scale visible.
+
 ### D355
 
 **Bedrock text and reasoning stream through builders.**

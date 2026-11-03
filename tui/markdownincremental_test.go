@@ -141,3 +141,59 @@ func TestMarkdownResizeRerendersAtTheNewWidth(t *testing.T) {
 		}
 	}
 }
+
+// TestMarkdownTransformStreamingMatchesFreshRender covers the assistant path,
+// which always installs a transform. The incremental cache may only be used
+// when the transformed source still starts with the previous transformed
+// source; output must equal a fresh render for every prefix even when the
+// transform rewrites earlier text.
+func TestMarkdownTransformStreamingMatchesFreshRender(t *testing.T) {
+	theme := mdTestTheme()
+	transforms := map[string]func(string, int) string{
+		"identity": func(s string, _ int) string { return s },
+		"prefix":   func(s string, _ int) string { return "> " + s },
+		"replace": func(s string, _ int) string {
+			return strings.Replace(s, "item", "ITEM", 1)
+		},
+		"uppercase-last-line": func(s string, _ int) string {
+			index := strings.LastIndexByte(s, '\n')
+			if index < 0 {
+				return strings.ToUpper(s)
+			}
+			return s[:index+1] + strings.ToUpper(s[index+1:])
+		},
+	}
+	for name, transform := range transforms {
+		for width := range []int{40, 80} {
+			streamed := NewMarkdown("", 1, 0, theme, nil, MarkdownOptions{Transform: transform})
+			for n := 1; n <= len(incrementalSample); n++ {
+				streamed.SetText(incrementalSample[:n])
+				got := streamed.Render(width)
+				fresh := NewMarkdown(incrementalSample[:n], 1, 0, theme, nil, MarkdownOptions{Transform: transform})
+				want := fresh.Render(width)
+				if strings.Join(got, "\n") != strings.Join(want, "\n") {
+					t.Fatalf("%s width %d prefix %d:\n got %q\nwant %q", name, width, n, got, want)
+				}
+			}
+		}
+	}
+}
+
+// TestMarkdownTransformStreamingReusesStablePrefix pins that a transform does
+// not itself disable the incremental lex. Production assistant messages always
+// supply one; rejecting reuse re-lexed the whole message per delta.
+func TestMarkdownTransformStreamingReusesStablePrefix(t *testing.T) {
+	theme := mdTestTheme()
+	identity := func(s string, _ int) string { return s }
+	m := NewMarkdown(incrementalSample, 0, 0, theme, nil, MarkdownOptions{Transform: identity})
+	m.Render(80)
+	full := m.renderedTokens
+	if full < 5 {
+		t.Fatalf("first render rendered %d tokens, want the whole sample", full)
+	}
+	m.SetText(incrementalSample + " one more word")
+	m.Render(80)
+	if tail := m.renderedTokens - full; tail > 3 {
+		t.Fatalf("transform append re-rendered %d tokens, want only the changed tail", tail)
+	}
+}

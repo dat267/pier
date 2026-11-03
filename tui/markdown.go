@@ -558,7 +558,7 @@ func (m *Markdown) canReuseLex(normalizedText string, width int) bool {
 	if m.cacheWindowOffset <= 0 || m.cacheWindowBase <= 0 {
 		return false
 	}
-	if m.Options.Transform != nil || m.cacheWidth != width || m.cacheSource == "" {
+	if m.cacheWidth != width || m.cacheSource == "" {
 		return false
 	}
 	if m.cacheWindowOffset > len(normalizedText) || m.cacheWindowBase > len(m.cacheTokenKeys) {
