@@ -33,7 +33,8 @@ type AssistantMessageComponent struct {
 	// blockComponents reuses the block components across streaming updates so a
 	// reused tui.Markdown keeps its incremental render cache (upstream mutates
 	// `content` in place on every delta).
-	blockComponents map[assistantBlockKey]tui.Component
+	blockComponents      map[assistantBlockKey]tui.Component
+	spareBlockComponents map[assistantBlockKey]tui.Component
 
 	// thinkingMarkdowns caches the rendered thinking markdown per block run,
 	// keyed *without* the visibility flag. Collapsing and re-expanding has to
@@ -219,7 +220,14 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 
 	theme := ActiveTheme()
 	previous := c.blockComponents
-	c.blockComponents = map[assistantBlockKey]tui.Component{}
+	nextComponents := c.spareBlockComponents
+	if nextComponents == nil {
+		nextComponents = map[assistantBlockKey]tui.Component{}
+	} else {
+		clear(nextComponents)
+	}
+	c.blockComponents = nextComponents
+	c.spareBlockComponents = previous
 	thinkingRunIndex := 0
 	for i := 0; i < len(blocks); i++ {
 		switch content := blocks[i].(type) {

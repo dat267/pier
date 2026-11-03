@@ -4247,6 +4247,22 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestChatResetStopsBothSweeps`,
 `TestWiringChatResetDropsPendingSweeps`.
 
+### D362
+
+**Assistant streaming reuses its block-component map.**
+
+Every assistant update built a fresh `map[assistantBlockKey]tui.Component` for
+the current block set, even though the previous map was only read to reuse
+Markdown instances. Alternate between two maps and `clear` the older one; the
+old map's components stay referenced for one generation so lookups remain
+valid, then are released. No output changes.
+
+Measured on the 100 KiB stream: 77k → 64k allocations and 9–10 ms → 6.0–6.7 ms;
+thinking: 102k → 90k allocations and 10.7–13 ms → 9.1–9.6 ms.
+`TestAssistantBlockComponentMapsAreReused` pins the alternation;
+`BenchmarkAssistantStream100KB` and `BenchmarkAssistantThinking100KB` keep the
+scale visible.
+
 ### D361
 
 **Tool-argument updates skip unchanged raw bytes.**

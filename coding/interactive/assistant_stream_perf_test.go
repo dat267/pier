@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -56,5 +57,23 @@ func TestAssistantWithoutTransformersUsesNoTransform(t *testing.T) {
 		if markdown, ok := child.(*tui.Markdown); ok && markdown.Options.Transform != nil {
 			t.Fatal("identity transform installed without transformers")
 		}
+	}
+}
+
+func TestAssistantBlockComponentMapsAreReused(t *testing.T) {
+	_, cleanup := newTestAppB(t)
+	defer cleanup()
+	message := &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{Text: "a"}}}
+	component := NewAssistantMessageComponent(message, false, nil, "", 0, nil)
+	first := component.blockComponents
+	message.Content = ai.ContentList{ai.TextContent{Text: "b"}}
+	component.UpdateContent(message, true)
+	second := component.blockComponents
+	message.Content = ai.ContentList{ai.TextContent{Text: "c"}}
+	component.UpdateContent(message, true)
+	third := component.blockComponents
+	pointer := func(m map[assistantBlockKey]tui.Component) uintptr { return reflect.ValueOf(m).Pointer() }
+	if pointer(first) == pointer(second) || pointer(third) != pointer(first) {
+		t.Fatalf("block component maps were not reused")
 	}
 }
