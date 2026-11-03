@@ -402,7 +402,12 @@ func (m *Markdown) Render(width int) []string {
 		return m.cachedLines
 	}
 
-	normalizedText := strings.ReplaceAll(text, "\t", "   ")
+	normalizedText := text
+	// Replacing tabs copies the whole source; streaming sources usually have
+	// none, so only pay for it when needed.
+	if strings.ContainsRune(text, '\t') {
+		normalizedText = strings.ReplaceAll(text, "\t", "   ")
+	}
 
 	// Incremental lex. When the source only grew since the last render, the
 	// blocks before the trailing open run are unchanged, so re-lex only the tail
@@ -445,7 +450,9 @@ func (m *Markdown) Render(width int) []string {
 	reuse := max(min(max(matched-1, windowBase), total-1), 0)
 
 	renderer := markdown.NewRenderer(m.renderOptions())
-	finals := make([][]string, total)
+	// Keep the per-block line slices across appends: growing the outer slice
+	// amortizes, instead of allocating and copying it on every stream delta.
+	finals := growMarkdownSlice(m.cacheTokenLines, total)
 	for index := range reuse {
 		finals[index] = m.cacheTokenLines[index]
 	}
@@ -464,9 +471,9 @@ func (m *Markdown) Render(width int) []string {
 		}
 	}
 
-	var contentLines []string
+	contentLineCount := 0
 	for _, final := range finals {
-		contentLines = append(contentLines, final...)
+		contentLineCount += len(final)
 	}
 	if len(finals) > 0 {
 		m.cacheTokenLines = finals[:len(finals)-1]
@@ -474,8 +481,7 @@ func (m *Markdown) Render(width int) []string {
 		m.cacheTokenLines = nil
 	}
 
-	fullKeys := make([]mdBlockKey, total)
-	copy(fullKeys, m.cacheTokenKeys[:min(windowBase, len(m.cacheTokenKeys))])
+	fullKeys := growMarkdownSlice(m.cacheTokenKeys, total)
 	copy(fullKeys[windowBase:], markdownBlockKeys(blocks))
 	m.cacheTokenKeys = fullKeys
 	m.cacheWidth = width
@@ -510,9 +516,11 @@ func (m *Markdown) Render(width int) []string {
 		emptyLines = append(emptyLines, line)
 	}
 
-	result := make([]string, 0, len(emptyLines)*2+len(contentLines))
+	result := make([]string, 0, len(emptyLines)*2+contentLineCount)
 	result = append(result, emptyLines...)
-	result = append(result, contentLines...)
+	for _, final := range finals {
+		result = append(result, final...)
+	}
 	result = append(result, emptyLines...)
 
 	m.cachedText = m.Text
@@ -527,6 +535,19 @@ func (m *Markdown) Render(width int) []string {
 		return result
 	}
 	return []string{""}
+}
+
+// growMarkdownSlice returns old resized to length, reusing its backing array
+// and doubling capacity when it must grow. The cached prefix stays valid; the
+// caller overwrites the tail.
+func growMarkdownSlice[T any](old []T, length int) []T {
+	if cap(old) >= length {
+		return old[:length]
+	}
+	capacity := max(length, cap(old)*2)
+	grown := make([]T, length, capacity)
+	copy(grown, old)
+	return grown
 }
 
 // canReuseLex reports whether the previous render's lex can seed this one: the

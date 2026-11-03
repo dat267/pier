@@ -4247,6 +4247,26 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestChatResetStopsBothSweeps`,
 `TestWiringChatResetDropsPendingSweeps`.
 
+### D354
+
+**Streaming markdown reuses its block-cache arrays.**
+
+Reference: pi v1.5.0 `components/markdown.ts` keeps the stable token prefix and
+final lines across `setText` appends. The port had that cache but rebuilt the
+`finals` and `fullKeys` slices and copied every block key on each render, so a
+long streaming message did quadratic allocation; it also copied the whole
+source through `strings.ReplaceAll` even when it had no tabs. Grow the two
+cache slices amortized, overwrite only the tail, and skip the tab normalization
+copy when no tab is present. Flatten the finals directly into the result instead
+of through an intermediate `contentLines`.
+
+Measured on growing paragraph appends (no tabs): 200 appends 11 ms/13.6 MB →
+3.4–5.5 ms/3.0 MB; 1,000 appends 169 ms/306 MB → 45–52 ms/36 MB; 2,000 appends
+682 ms/1.22 GB → 163 ms/124 MB. The remaining growth is the returned line slice,
+which callers receive whole. `TestMarkdownStreamRenderReusesCacheSlices` pins
+the backing arrays; `BenchmarkMarkdownStreamAppendLong` keeps the scale visible
+(D354).
+
 ### D353
 
 **Large streamed tool arguments update their preview on a byte schedule.**

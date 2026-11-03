@@ -91,11 +91,15 @@ func BenchmarkMarkdownRenderMixedANSI(b *testing.B) { benchmarkMarkdownRenderANS
 // stable prefix forward (incremental lex plus the line cache), while the cold
 // variant rebuilds the component every append and re-lexes the whole message.
 func benchmarkMarkdownStream(b *testing.B, reuse bool) {
+	benchmarkMarkdownStreamN(b, reuse, 200)
+}
+
+func benchmarkMarkdownStreamN(b *testing.B, reuse bool, paragraphs int) {
 	b.Helper()
 	theme := mdTestTheme()
 	var prefix strings.Builder
 	var prefixes []string
-	for range 200 {
+	for range paragraphs {
 		prefix.WriteString("Paragraph with **bold** and `code` and a [link](https://example.com).\n\n")
 		prefixes = append(prefixes, prefix.String())
 	}
@@ -122,4 +126,5 @@ func benchmarkMarkdownStream(b *testing.B, reuse bool) {
 }
 
 func BenchmarkMarkdownStreamAppend(b *testing.B)     { benchmarkMarkdownStream(b, true) }
+func BenchmarkMarkdownStreamAppendLong(b *testing.B) { benchmarkMarkdownStreamN(b, true, 1000) }
 func BenchmarkMarkdownStreamAppendCold(b *testing.B) { benchmarkMarkdownStream(b, false) }
