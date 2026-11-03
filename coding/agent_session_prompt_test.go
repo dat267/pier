@@ -389,6 +389,54 @@ func TestAbortAndWaitForIdle(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.5.0 f9a26365 core/agent-session.ts _startRun flushes
+// pending bash/custom messages before _emitAgentSettled clears
+// _isAgentRunActive. Reporting idle first let a new prompt start while the old
+// run was still appending context.
+func TestRunSettlementFlushesBeforeReportingIdle(t *testing.T) {
+	var prompts atomic.Int64
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 8192}
+	session := newPromptSession(t, model, recordingStreamFn(t, &prompts))
+	// agent_end fires while the run is still active and has no later turn_end
+	// to flush this message, so it reaches the run's final settlement flush.
+	session.Subscribe(func(event *SessionEvent) {
+		if event.Type != SessionAgentEnd {
+			return
+		}
+		deferred := &ai.CustomMessage{Role: RoleCustom, Content: []byte(`{"text":"deferred"}`), Timestamp: 1}
+		if err := session.SendMessage(ctxpkg.Background(), deferred, &SendMessageOptions{TriggerTurn: new(false)}); err != nil {
+			t.Errorf("queue deferred message: %v", err)
+		}
+	})
+
+	flushed := false
+	streamingDuringFlush := false
+	session.Subscribe(func(event *SessionEvent) {
+		if event.Type != SessionMessageStart || event.Agent == nil {
+			return
+		}
+		custom, ok := event.Agent.Message.(*ai.CustomMessage)
+		if !ok || custom.Role != RoleCustom {
+			return
+		}
+		flushed = true
+		streamingDuringFlush = session.IsStreaming()
+	})
+
+	if err := session.runAgentPrompt(ctxpkg.Background(), []ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "go"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if !flushed {
+		t.Fatal("the deferred custom message was not flushed")
+	}
+	if !streamingDuringFlush {
+		t.Fatal("the session reported idle while still flushing the settled run")
+	}
+	if !session.IsIdle() {
+		t.Fatal("the session did not become idle after settlement")
+	}
+}
+
 // contentTextJoin is a test helper for the joined text of content.
 func contentTextJoin(content ai.StringOrBlocks) string {
 	if content.String() {

@@ -317,16 +317,19 @@ func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message
 		err = s.runPostRunLoop(ctx)
 	}
 
-	state.mu.Lock()
-	state.runActive = false
-	state.runCancel = nil
-	aborted := state.abortRequested
-	state.mu.Unlock()
+	// Settlement still belongs to this run: upstream flushes pending messages
+	// and notifies the cache warmer before _emitAgentSettled clears the run
+	// flag, so a new prompt cannot start while the old run is appending context.
 	s.FlushPendingBashMessages()
 	s.FlushPendingCustomMessages()
 	if s.CacheWarmer != nil {
 		s.CacheWarmer.OnAgentSettled()
 	}
+	state.mu.Lock()
+	state.runActive = false
+	state.runCancel = nil
+	aborted := state.abortRequested
+	state.mu.Unlock()
 	// Upstream _emitAgentSettled uses the run abort flag, including backoff.
 	s.emit(&SessionEvent{Type: SessionAgentSettled, Aborted: aborted})
 	s.resolveIdleWaitIfIdle()
