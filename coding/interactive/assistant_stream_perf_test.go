@@ -6,6 +6,7 @@ import (
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/tui"
 )
 
 // D357: the streaming sanitizer keeps the clean-prefix fast path; this
@@ -40,5 +41,20 @@ func TestJoinThinkingBlocksSingleBlockDoesNotCopy(t *testing.T) {
 	}
 	if allocs := testing.AllocsPerRun(100, func() { _ = joinThinkingBlocks(blocks) }); allocs != 0 {
 		t.Fatalf("single-block join allocates %.1f times", allocs)
+	}
+}
+
+func TestAssistantWithoutTransformersUsesNoTransform(t *testing.T) {
+	_, cleanup := newTestAppB(t)
+	defer cleanup()
+	message := &ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "test", Model: "m", StopReason: ai.StopPending,
+		Content: ai.ContentList{ai.TextContent{Text: "hello"}},
+	}
+	component := NewAssistantMessageComponent(message, false, nil, "", 0, nil)
+	for _, child := range component.blockComponents {
+		if markdown, ok := child.(*tui.Markdown); ok && markdown.Options.Transform != nil {
+			t.Fatal("identity transform installed without transformers")
+		}
 	}
 }

@@ -4346,7 +4346,10 @@ transform: 2.47 s and 1.63 GB allocated before, 37–41 ms and 36 MB after.
 `TestMarkdownTransformStreamingMatchesFreshRender` checks identity, prefixing,
 replacement, and last-line-uppercasing transforms at every prefix;
 `FuzzMarkdownTransformIncrementalMatchesFull` covers arbitrary sources;
-`BenchmarkMarkdownStreamAppendTransform` keeps the scale visible.
+`BenchmarkMarkdownStreamAppendTransform` keeps the scale visible. When no
+transformer is installed, the assistant leaves `Transform` nil instead of
+building an identity closure on every update (100 KiB stream: 83k → 77k
+allocations), which is behaviorally identical.
 
 ### D355
 

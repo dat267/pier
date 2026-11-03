@@ -234,7 +234,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 			}
 			markdown.PaddingX = c.outputPad
 			markdown.Options = tui.MarkdownOptions{
-				Transform: CreateMarkdownTransform("assistant", c.isStreaming, c.transformers),
+				Transform: c.markdownTransform("assistant"),
 			}
 			markdown.SetTextIfChanged(c.sanitizeBlock(i, "text", content.Text))
 			c.blockComponents[key] = markdown
@@ -296,7 +296,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 					Color: func(text string) string { return theme.Fg("thinkingText", text) }, Italic: true,
 				}
 				markdown.Options = tui.MarkdownOptions{
-					Transform: CreateMarkdownTransform("assistant-thinking", c.isStreaming, c.transformers),
+					Transform: c.markdownTransform("assistant-thinking"),
 					// D263: headings and code bypass the default text style.
 					ForceItalic: styleColorsEnabled(),
 				}
@@ -358,6 +358,15 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 // trimmedNonEmpty mirrors upstream's `text.trim()` truthiness, i.e. the JS
 // whitespace set (ai.JSTrim), not Go's unicode.IsSpace.
 func trimmedNonEmpty(value string) bool { return ai.JSTrim(value) != "" }
+
+func (c *AssistantMessageComponent) markdownTransform(kind string) func(string, int) string {
+	if len(c.transformers) == 0 {
+		// The identity transform has no observable effect; leaving it nil
+		// avoids rebuilding a closure for every streaming update.
+		return nil
+	}
+	return CreateMarkdownTransform(kind, c.isStreaming, c.transformers)
+}
 
 func (c *AssistantMessageComponent) sanitizeBlock(index int, kind, text string) string {
 	if c.textSanitizers == nil {
