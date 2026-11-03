@@ -357,7 +357,7 @@ func FoldGoal(entries []CustomEntry) (FoldedGoal, error) {
 			turnNo = turn.Turn
 			turnsStarted = turn.Turn
 			if turn.Usage != nil {
-				usedTokens += maxInt64(0, turn.Usage.Tokens)
+				usedTokens = addGoalUsageTokens(usedTokens, turn.Usage.Tokens)
 				usedCostUsd += math.Max(0, turn.Usage.CostUsd)
 			}
 		}
@@ -374,6 +374,16 @@ func FoldGoal(entries []CustomEntry) (FoldedGoal, error) {
 		UsedCostUsd:  usedCostUsd,
 	}
 	return FoldedGoal{Goal: &view}, nil
+}
+
+// addGoalUsageTokens ignores negative reports and saturates the goal's int64
+// usage representation instead of wrapping positive cumulative usage (D368).
+func addGoalUsageTokens(total, tokens int64) int64 {
+	tokens = maxInt64(0, tokens)
+	if total > math.MaxInt64-tokens {
+		return math.MaxInt64
+	}
+	return total + tokens
 }
 
 func maxInt64(a, b int64) int64 {

@@ -481,7 +481,7 @@ func (m *GoalMachine) agentEnd(_ ContextUsage, usage *GoalUsage, aborted bool) D
 			Usage:     &usageValue,
 		}})
 		m.view.TurnsStarted = m.view.TurnsStarted + 1
-		m.view.UsedTokens += maxInt64(0, usageValue.Tokens)
+		m.view.UsedTokens = addGoalUsageTokens(m.view.UsedTokens, usageValue.Tokens)
 		m.view.UsedCostUsd += math.Max(0, usageValue.CostUsd)
 		m.createdThisRun = false
 		m.pendingTurn = nil

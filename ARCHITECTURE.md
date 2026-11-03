@@ -4783,6 +4783,26 @@ into false positive input usage. The streaming tests cover initial/delta totals,
 Mistral's missing-total fallback, Google thoughts, Responses cache subtraction,
 and Bedrock's fallback total and repeated one-hour cache details.
 
+### D368
+
+**Goal token totals saturate rather than losing budget accounting.**
+
+D223's native goal feature has no counterpart in pinned pi v1.5.0
+(`f9a26365`). Its token accounting follows the positive-usage accumulation of
+the originally ported extension. Pinned `packages/coding-agent/src/core/usage-totals.ts`
+uses JavaScript Number addition, which cannot wrap positive counts negative.
+Pier's per-run goal total and live/replayed cumulative totals saturate at
+MaxInt64 instead. Negative reports remain ignored. Ordinary counts, budget
+limits, activation and entry/message shapes are unchanged. D253 retains the
+native integer spelling on disk, including a saturated round's usage.
+
+Reproducers: `TestGoalRoundUsageDoesNotOverflowBeforeBudgetCheck` restores a
+valid token budget and supplies two positive `6e18` assistant records. The
+previous wrapped round total was discarded as negative, bypassing the budget.
+`TestGoalMachineDoesNotWrapCumulativeRoundUsage` and
+`TestFoldGoalDoesNotWrapCumulativeRoundUsage` pin live/replayed round sums.
+The controller regression also replays its emitted durable entries.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

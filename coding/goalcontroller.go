@@ -477,7 +477,7 @@ func goalUsageFromAgentEvent(event *agent.AgentEvent) *goal.GoalUsage {
 	for _, message := range event.Messages {
 		if assistant, ok := message.(*ai.AssistantMessage); ok {
 			if assistant.Usage.TotalTokens > 0 {
-				usage.Tokens += assistant.Usage.TotalTokens
+				usage.Tokens = addUsageTokens(usage.Tokens, assistant.Usage.TotalTokens)
 			}
 			if assistant.Usage.Cost.Total > 0 {
 				usage.CostUsd += assistant.Usage.Cost.Total
