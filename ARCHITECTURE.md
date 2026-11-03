@@ -3795,17 +3795,12 @@ separate supported operation.
 
 ### D317
 
-**Tool validation does not implement the full TypeBox schema language.**
+**Superseded by D364: tool validation now ports pi-schema.**
 
-Reference: pi v1.4.0 (`4a080252`), `packages/ai/src/utils/validation.ts`
-compiles and checks TypeBox schemas after applying `Value.Convert`. The Go
-validator supports the first-party subset of types, properties, required,
-items, additionalProperties, anyOf/oneOf/allOf, and enum/const, with primitive
-coercions covered by `ai/validation_test.go`. Other constraints such as
-`pattern`, `format`, `minimum`/`maximum`, string lengths, and array lengths do
-not constrain Go validation. For example, a string failing a schema `pattern`
-can still be accepted; `TestValidateToolArgumentsLeavesUnsupportedPatternUnconstrained`
-reproduces this intentional boundary.
+The v1.4.0 TypeBox subset documented here was replaced for v1.5.0. The old
+validator ignored `pattern`, `format`, numeric and length bounds, and several
+JSON Schema keywords. `TestValidateToolArgumentsEnforcesPattern` and the
+pi-schema corpus keep the replacement honest.
 
 ### D318
 
@@ -4260,6 +4255,40 @@ emitted as U+FFFD and scanning continues.
 
 `TestMarshalJSONReplacesLoneSurrogateEscapes` covers consecutive low/lows and
 low/high; the canonical differential fuzz preserves two replacements.
+
+### D365
+
+**The v1.5.0 model catalog includes GPT-6.1 Terra.**
+
+Reference: pi v1.5.0 `f9a26365`, `packages/ai/catalog/generate.ts` and
+`catalog/providers/openai*.ts`. The checked-in catalog had been generated
+before Terra was added to the catalog source. Regenerate upstream data with
+`node catalog/generate.ts --strict --data-only`, then run
+`scripts/gen_catalog.py`; the resulting catalog adds Terra for OpenAI, Azure
+OpenAI Responses, Codex, Bedrock, OpenRouter and gateway providers. The OpenAI
+entry uses the official $1/$5 pricing with a 272k context window; Codex uses a
+500k window. `TestCatalogIncludesGPT61Terra` pins the three first-party
+surfaces. The generator command in `AGENTS.md` and `scripts/gen_catalog.py`
+now names `catalog/generate.ts`.
+
+### D364
+
+**Tool validation ports pi-schema.**
+
+Reference: pi v1.5.0 (`f9a26365`), `packages/ai/src/utils/validation.ts` and
+`packages/schema/src/{compiler,checks,coerce,explain,resolver}.ts`. Tool
+schemas are parsed into ordered nodes, local `$ref`/`$id`/anchors are resolved,
+all three coercion passes run (optional-null removal, TypeBox conversions,
+primitive coercion), and failures use pi-schema messages and dotted paths.
+The corpus in `ai/testdata/validation-pi/` holds the 146 serializable upstream
+probes, including recursive refs, pattern/format/length bounds, dependencies,
+composed schemas, `unevaluatedProperties`, and the huge-enum error cutoff.
+
+Deliberate boundaries: Go's RE2 lacks lookbehind and backreferences, so a valid
+ECMAScript pattern using them is left unconstrained; `$dynamicRef`, complete
+`unevaluatedItems` annotations, external `$ref` documents, and formats outside
+the implemented set are not ported. A malformed pattern such as `[` still fails
+schema compilation instead of being ignored.
 
 ### D362
 

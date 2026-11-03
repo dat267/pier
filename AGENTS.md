@@ -78,7 +78,7 @@ auto-compaction and retry.
 - Go 1.27 may require explicit result types on function-literal arguments. RE2
   has no lookaround and no `\s` inside character classes.
 - Catalog JSON is generated, not hand-edited. Regenerate in a scratch copy of
-  `./pi`: run upstream `generate-models.ts --strict --data-only`, then
+  `./pi`: run upstream `node catalog/generate.ts --strict --data-only`, then
   `scripts/gen_catalog.py`, `scripts/gen_image_catalog.py`, and
   `scripts/gen_classifier_catalog.py <scratch-pi> openai-decisions` for
   `ai/classifier_catalog.json` and

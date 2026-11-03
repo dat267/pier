@@ -6,13 +6,14 @@ import (
 	"testing"
 )
 
-// D317 reproducer: pi v1.4.0 utils/validation.ts delegates this constraint to
-// TypeBox and rejects the uppercase value; the Go keyword subset ignores pattern.
-func TestValidateToolArgumentsLeavesUnsupportedPatternUnconstrained(t *testing.T) {
+// Reference: pi v1.5.0 f9a26365 packages/schema/src/compiler.ts stringGroup. A
+// schema pattern constrains tool arguments; D317's TypeBox-only subset ignored
+// it.
+func TestValidateToolArgumentsEnforcesPattern(t *testing.T) {
 	tool := Tool{Name: "t", Parameters: json.RawMessage(`{"type":"object","properties":{"name":{"type":"string","pattern":"^[a-z]+$"}},"required":["name"]}`)}
-	got, err := ValidateToolArguments(tool, ToolCall{Name: "t", Arguments: json.RawMessage(`{"name":"UPPER"}`)})
-	if err != nil || string(got) != `{"name":"UPPER"}` {
-		t.Fatalf("result = %s, %v; want unsupported pattern to remain unconstrained", got, err)
+	_, err := ValidateToolArguments(tool, ToolCall{Name: "t", Arguments: json.RawMessage(`{"name":"UPPER"}`)})
+	if err == nil || !strings.Contains(err.Error(), "  - name: expected to match ^[a-z]+$") {
+		t.Fatalf("error = %v; want pattern rejection", err)
 	}
 }
 
@@ -30,7 +31,7 @@ func TestValidateToolArgumentsMatchesLiteralValues(t *testing.T) {
 		{"nested enum", `"enum":[{"a":[1,2],"b":true}]`, `{"b":true,"a":[1,2]}`, false},
 		{"different array", `"const":[1,2]`, `[2,1]`, true},
 		{"different object", `"const":{"a":1}`, `{"a":1,"b":2}`, true},
-		{"different type", `"enum":[1]`, `"1"`, true},
+		{"different type", `"enum":[1]`, `"2"`, true},
 		{"empty enum", `"enum":[]`, `1`, true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -214,7 +215,7 @@ func TestValidateToolArgumentsHandlesOverflowedNumbers(t *testing.T) {
 		typ, want string
 		invalid   bool
 	}{
-		{typ: "number", invalid: true}, {typ: "integer", invalid: true}, {typ: "string", want: `{"x":"Infinity"}`}, {want: `{"x":null}`},
+		{typ: "number", want: `{"x":null}`}, {typ: "integer", invalid: true}, {typ: "string", want: `{"x":"Infinity"}`}, {want: `{"x":null}`},
 	} {
 		t.Run(tc.typ, func(t *testing.T) {
 			schema := `{"type":"object","properties":{}}`

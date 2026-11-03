@@ -1,141 +1,20 @@
 package ai
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
 	"math/big"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
 )
 
-// Port of utils/validation.ts: tool-argument validation with coercion.
-//
-// D317: upstream validates with TypeBox (a full TypeBox/JSON-Schema compiler).
-// The Go port implements the JSON-Schema keyword subset used by first-party
-// tool parameters — type (incl. unions), properties, required, items,
-// additionalProperties, anyOf/oneOf/allOf, enum/const. Unsupported keywords do
-// not constrain validation. Primitive coercions below match TypeBox for the
-// covered parameter types.
+// Tool-argument validation. The pi-schema port lives in validation_pi*.go;
+// this file keeps the ordered JSON value, literal equality and the public
+// ValidateToolArguments entry point.
 
-type jsonSchema struct {
-	RejectAll               bool
-	Raw                     map[string]json.RawMessage `json:"-"`
-	Order                   []string                   `json:"-"`
-	Types                   []string
-	Properties              map[string]*jsonSchema
-	PropertyOrder           []string
-	Required                map[string]bool
-	Items                   []*jsonSchema // tuple form
-	ItemsOne                *jsonSchema   // single form
-	AdditionalProperties    *jsonSchema
-	HasAdditionalProperties bool
-	AnyOf, OneOf, AllOf     []*jsonSchema
-	Enum                    []json.RawMessage
-	Const                   json.RawMessage
-}
-
-func parseJSONSchema(data json.RawMessage) *jsonSchema {
-	schema := &jsonSchema{Raw: map[string]json.RawMessage{}, Required: map[string]bool{}}
-	if string(bytes.TrimSpace(data)) == "false" {
-		schema.RejectAll = true
-		return schema
-	}
-	if len(data) == 0 || string(data) == "null" {
-		return schema
-	}
-	var raw map[string]json.RawMessage
-	if jsonUnmarshalStrict(data, &raw) != nil {
-		return schema
-	}
-	schema.Raw = raw
-	for key := range raw {
-		schema.Order = append(schema.Order, key)
-	}
-	sort.Strings(schema.Order)
-	if t, ok := raw["type"]; ok {
-		var single string
-		if jsonUnmarshalStrict(t, &single) == nil {
-			schema.Types = []string{single}
-		} else {
-			var list []string
-			_ = jsonUnmarshalStrict(t, &list)
-			schema.Types = list
-		}
-	}
-	if p, ok := raw["properties"]; ok {
-		var props map[string]json.RawMessage
-		if jsonUnmarshalStrict(p, &props) == nil {
-			schema.Properties = map[string]*jsonSchema{}
-			for key, propData := range props {
-				schema.Properties[key] = parseJSONSchema(propData)
-			}
-			// Preserve property order from the encoded object.
-			schema.PropertyOrder = orderedKeys(p)
-		}
-	}
-	if r, ok := raw["required"]; ok {
-		var required []string
-		if jsonUnmarshalStrict(r, &required) == nil {
-			for _, key := range required {
-				schema.Required[key] = true
-			}
-		}
-	}
-	if items, ok := raw["items"]; ok && string(items) != "null" {
-		var list []json.RawMessage
-		if jsonUnmarshalStrict(items, &list) == nil {
-			for _, item := range list {
-				schema.Items = append(schema.Items, parseJSONSchema(item))
-			}
-		} else {
-			schema.ItemsOne = parseJSONSchema(items)
-		}
-	}
-	if ap, ok := raw["additionalProperties"]; ok {
-		if string(ap) == "false" {
-			schema.HasAdditionalProperties = true
-		} else if string(ap) != "true" && string(ap) != "null" {
-			schema.AdditionalProperties = parseJSONSchema(ap)
-			schema.HasAdditionalProperties = true
-		}
-	}
-	for _, combinator := range []string{"anyOf", "oneOf", "allOf"} {
-		if c, ok := raw[combinator]; ok {
-			list := []*jsonSchema{}
-			var rawList []json.RawMessage
-			if jsonUnmarshalStrict(c, &rawList) == nil {
-				for _, item := range rawList {
-					list = append(list, parseJSONSchema(item))
-				}
-			}
-			switch combinator {
-			case "anyOf":
-				schema.AnyOf = list
-			case "oneOf":
-				schema.OneOf = list
-			case "allOf":
-				schema.AllOf = list
-			}
-		}
-	}
-	if e, ok := raw["enum"]; ok {
-		var list []json.RawMessage
-		if jsonUnmarshalStrict(e, &list) == nil {
-			schema.Enum = list
-		}
-	}
-	if c, ok := raw["const"]; ok {
-		schema.Const = c
-	}
-	return schema
-}
-
-// schemaValue is decoded JSON preserving object key order.
 type schemaValue struct {
 	Null     bool
 	Bool     bool
@@ -290,119 +169,6 @@ func matchesJSONType(value *schemaValue, typ string) bool {
 	}
 }
 
-// schemaCheck checks a value against a parsed schema (TypeBox Check subset).
-func schemaCheck(value *schemaValue, schema *jsonSchema) bool {
-	if schema == nil {
-		return true
-	}
-	if schema.RejectAll {
-		return false
-	}
-	if schema.AnyOf != nil {
-		matched := false
-		for _, variant := range schema.AnyOf {
-			if schemaCheck(value, variant) {
-				matched = true
-				break
-			}
-		}
-		if !matched {
-			return false
-		}
-	}
-	if schema.OneOf != nil {
-		matches := 0
-		for _, variant := range schema.OneOf {
-			if schemaCheck(value, variant) {
-				matches++
-			}
-		}
-		if matches != 1 {
-			return false
-		}
-	}
-	for _, nested := range schema.AllOf {
-		if !schemaCheck(value, nested) {
-			return false
-		}
-	}
-	if schema.Const != nil {
-		if !schemaLiteralEqual(value, decodeSchemaValue(schema.Const)) {
-			return false
-		}
-	}
-	if schema.Enum != nil {
-		matched := false
-		for _, option := range schema.Enum {
-			if schemaLiteralEqual(value, decodeSchemaValue(option)) {
-				matched = true
-			}
-		}
-		if !matched {
-			return false
-		}
-	}
-	if len(schema.Types) > 0 {
-		matched := false
-		for _, typ := range schema.Types {
-			if matchesJSONType(value, typ) && !(typ == "number" && (math.IsInf(value.Number, 0) || math.IsNaN(value.Number))) {
-				matched = true
-			}
-		}
-		if !matched {
-			return false
-		}
-	}
-	if value.Object != nil {
-		for key := range schema.Required {
-			if _, ok := value.Object.get(key); !ok {
-				return false
-			}
-		}
-		for key, property := range schema.Properties {
-			field, ok := value.Object.get(key)
-			if !ok {
-				if schema.Required[key] {
-					return false
-				}
-				continue
-			}
-			if !schemaCheck(field, property) {
-				return false
-			}
-		}
-		if schema.HasAdditionalProperties {
-			for _, key := range value.Object.keys {
-				if _, declared := schema.Properties[key]; declared {
-					continue
-				}
-				field, _ := value.Object.get(key)
-				if schema.AdditionalProperties == nil || !schemaCheck(field, schema.AdditionalProperties) {
-					return false
-				}
-			}
-		}
-	}
-	if value.IsArray && schema.ItemsOne != nil {
-		for _, item := range value.Array {
-			if !schemaCheck(item, schema.ItemsOne) {
-				return false
-			}
-		}
-	}
-	if value.IsArray && len(schema.Items) > 0 {
-		for i, item := range value.Array {
-			if i >= len(schema.Items) {
-				break
-			}
-			if !schemaCheck(item, schema.Items[i]) {
-				return false
-			}
-		}
-	}
-	return true
-}
-
 var jsDecimalNumberPattern = regexp.MustCompile(`^[+-]?(?:(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?|Infinity)$`)
 
 // ParseJSNumberString parses a nonempty, finite JavaScript numeric string,
@@ -481,10 +247,10 @@ func coercePrimitiveByType(value *schemaValue, typ string) *schemaValue {
 			return &schemaValue{IsBool: true, Bool: false}
 		}
 		if value.IsString {
-			switch strings.ToLower(value.String) {
-			case "true", "1":
+			switch value.String {
+			case "true":
 				return &schemaValue{IsBool: true, Bool: true}
-			case "false", "0":
+			case "false":
 				return &schemaValue{IsBool: true, Bool: false}
 			}
 		}
@@ -523,54 +289,6 @@ func coercePrimitiveByType(value *schemaValue, typ string) *schemaValue {
 
 // trimFloat formats a number like JS String(number).
 func trimFloat(f float64) string { return JSNumberToString(f) }
-
-func coerceWithJSONSchema(value *schemaValue, schema *jsonSchema) *schemaValue {
-	next := value
-	for _, nested := range schema.AllOf {
-		next = coerceWithJSONSchema(next, nested)
-	}
-	if len(schema.AnyOf) > 0 {
-		next = coerceWithUnionSchema(next, schema.AnyOf)
-	}
-	if len(schema.OneOf) > 0 {
-		next = coerceWithUnionSchema(next, schema.OneOf)
-	}
-	matchesUnionMember := false
-	if len(schema.Types) > 1 {
-		for _, typ := range schema.Types {
-			if matchesJSONType(next, typ) {
-				matchesUnionMember = true
-			}
-		}
-	}
-	if len(schema.Types) > 0 && !matchesUnionMember {
-		for _, typ := range schema.Types {
-			candidate := coercePrimitiveByType(next, typ)
-			if !schemaValueEqual(candidate, next) {
-				next = candidate
-				break
-			}
-		}
-	}
-	types := schema.Types
-	isObjectSchema := false
-	isArraySchema := false
-	for _, typ := range types {
-		if typ == "object" {
-			isObjectSchema = true
-		}
-		if typ == "array" {
-			isArraySchema = true
-		}
-	}
-	if isObjectSchema && next.Object != nil {
-		applySchemaObjectCoercion(next.Object, schema)
-	}
-	if isArraySchema && next.IsArray {
-		applySchemaArrayCoercion(next.Array, schema)
-	}
-	return next
-}
 
 func schemaValueEqual(a, b *schemaValue) bool {
 	if a == b {
@@ -617,103 +335,17 @@ func schemaLiteralEqual(a, b *schemaValue) bool {
 	return true
 }
 
-func coerceWithUnionSchema(value *schemaValue, schemas []*jsonSchema) *schemaValue {
-	for _, schema := range schemas {
-		if schemaCheck(value, schema) {
-			return value
-		}
-	}
-	for _, schema := range schemas {
-		candidate := decodeSchemaValue(encodeSchemaValue(value))
-		coerced := coerceWithJSONSchema(candidate, schema)
-		if schemaCheck(coerced, schema) {
-			return coerced
-		}
-	}
-	return value
-}
+var piValidatorCache sync.Map // string(schema) -> *piDoc
 
-func applySchemaObjectCoercion(object *schemaObject, schema *jsonSchema) {
-	for key, propertySchema := range schema.Properties {
-		if field, ok := object.get(key); ok {
-			object.set(key, coerceWithJSONSchema(field, propertySchema))
-		}
-	}
-	if schema.AdditionalProperties != nil && schema.HasAdditionalProperties {
-		for _, key := range append([]string{}, object.keys...) {
-			if _, declared := schema.Properties[key]; declared {
-				continue
-			}
-			field, _ := object.get(key)
-			object.set(key, coerceWithJSONSchema(field, schema.AdditionalProperties))
-		}
-	}
-}
-
-func applySchemaArrayCoercion(values []*schemaValue, schema *jsonSchema) {
-	if len(schema.Items) > 0 {
-		for index, item := range values {
-			if index >= len(schema.Items) {
-				break
-			}
-			values[index] = coerceWithJSONSchema(item, schema.Items[index])
-		}
-		return
-	}
-	if schema.ItemsOne != nil {
-		for index, item := range values {
-			values[index] = coerceWithJSONSchema(item, schema.ItemsOne)
-		}
-	}
-}
-
-// normalizeOptionalNulls drops explicit nulls on optional properties that
-// don't accept null (upstream normalizeOptionalNulls).
-func normalizeOptionalNulls(value *schemaValue, schema *jsonSchema) {
-	if value.IsArray {
-		if len(schema.Items) > 0 {
-			for index, item := range value.Array {
-				if index < len(schema.Items) {
-					normalizeOptionalNulls(item, schema.Items[index])
-				}
-			}
-		} else if schema.ItemsOne != nil {
-			for _, item := range value.Array {
-				normalizeOptionalNulls(item, schema.ItemsOne)
-			}
-		}
-		return
-	}
-	if value.Object == nil || len(schema.Properties) == 0 {
-		return
-	}
-	for _, key := range append([]string{}, value.Object.keys...) {
-		propertySchema, ok := schema.Properties[key]
-		if !ok {
-			continue
-		}
-		field, _ := value.Object.get(key)
-		if field.Null && !schema.Required[key] {
-			if _, hasRef := propertySchema.Raw["$ref"]; !hasRef && !schemaCheck(field, propertySchema) {
-				value.Object.delete(key)
-				continue
-			}
-		}
-		normalizeOptionalNulls(field, propertySchema)
-	}
-}
-
-// validatorCache mirrors upstream's WeakMap validator cache.
-var validatorCache sync.Map // json.RawMessage string → *jsonSchema
-
-func getValidator(schema json.RawMessage) *jsonSchema {
+func getPiValidator(schema json.RawMessage) (*piDoc, *piSchema, error) {
 	key := string(schema)
-	if cached, ok := validatorCache.Load(key); ok {
-		return cached.(*jsonSchema)
+	if cached, ok := piValidatorCache.Load(key); ok {
+		doc := cached.(*piDoc)
+		return doc, doc.rootSchema, doc.err
 	}
-	parsed := parseJSONSchema(schema)
-	validatorCache.Store(key, parsed)
-	return parsed
+	doc, root, err := parsePiSchema(schema)
+	piValidatorCache.Store(key, doc)
+	return doc, root, err
 }
 
 // ValidateToolArguments validates (and coerces) tool call arguments against
@@ -726,24 +358,21 @@ func ValidateToolArguments(tool Tool, toolCall ToolCall) (json.RawMessage, error
 	if toolCall.ArgumentsError != "" {
 		return nil, fmt.Errorf("Invalid arguments for tool %q: %s", toolCall.Name, toolCall.ArgumentsError)
 	}
-	schema := getValidator(tool.Parameters)
-	args := decodeSchemaValue(toolCall.Arguments)
-	normalizeOptionalNulls(args, schema)
-
-	// TypeBox schemas carry a Kind symbol; plain JSON Schema (the Go port's
-	// universal case) always applies the JSON-Schema coercion pass.
-	coerced := coerceWithJSONSchema(args, schema)
-	if !schemaValueEqual(coerced, args) {
-		args = coerced
+	_, schema, schemaErr := getPiValidator(tool.Parameters)
+	if schemaErr != nil {
+		return nil, schemaErr
 	}
+	args := decodeSchemaValue(toolCall.Arguments)
+	args = schema.coerce(args)
 
-	if schemaCheck(args, schema) {
+	if schema.check(args) {
 		return encodeSchemaValue(args), nil
 	}
 
-	errorLines := schemaErrorLines(args, schema, "")
-	if len(errorLines) == 0 {
-		errorLines = append(errorLines, "  - root: Unknown validation error")
+	errors := schema.errors(args)
+	errorLines := make([]string, 0, len(errors))
+	for _, validationError := range errors {
+		errorLines = append(errorLines, "  - "+formatValidationPath(validationError.path)+": "+validationError.message)
 	}
 	var received json.RawMessage = toolCall.Arguments
 	if len(toolCall.Arguments) > 0 {
