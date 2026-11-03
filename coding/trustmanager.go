@@ -71,11 +71,11 @@ func findTrustFileKeys(data trustFile, path string) []string {
 }
 
 // findNearestTrustEntry walks up from cwd looking for a decision.
-func findNearestTrustEntry(data trustFile, cwd string) *ProjectTrustStoreEntry {
+func findNearestTrustEntry(data trustFile, keys []string, cwd string) *ProjectTrustStoreEntry {
 	currentDir := normalizeTrustCwd(cwd)
 	for {
-		for _, key := range findTrustFileKeys(data, currentDir) {
-			if decision := data[key]; decision != nil {
+		for _, key := range keys {
+			if decision := data[key]; decision != nil && PathsEqual(key, currentDir) {
 				return &ProjectTrustStoreEntry{Path: key, Decision: *decision}
 			}
 		}
@@ -137,27 +137,32 @@ func sleepMilliseconds(ms int) { time.Sleep(time.Duration(ms) * time.Millisecond
 
 // readTrustFile parses and validates the trust store.
 func readTrustFile(path string) (trustFile, error) {
+	data, _, err := readTrustFileOrdered(path)
+	return data, err
+}
+
+func readTrustFileOrdered(path string) (trustFile, []string, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return trustFile{}, nil
+			return trustFile{}, nil, nil
 		}
-		return nil, fmt.Errorf("Failed to read trust store %s: %v", path, err)
+		return nil, nil, fmt.Errorf("Failed to read trust store %s: %v", path, err)
 	}
 	var parsed any
 	if err := json.Unmarshal([]byte(StripBom(string(raw))), &parsed); err != nil {
-		return nil, fmt.Errorf("Failed to read trust store %s: %v", path, err)
+		return nil, nil, fmt.Errorf("Failed to read trust store %s: %v", path, err)
 	}
 	object, ok := parsed.(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("Invalid trust store %s: expected an object", path)
+		return nil, nil, fmt.Errorf("Invalid trust store %s: expected an object", path)
 	}
+	keys, _, err := readJSONObjectOrdered([]byte(StripBom(string(raw))))
+	if err != nil {
+		return nil, nil, fmt.Errorf("Failed to read trust store %s: %v", path, err)
+	}
+	keys = mcpJavaScriptObjectKeyOrder(keys)
 	data := trustFile{}
-	keys := make([]string, 0, len(object))
-	for key := range object {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
 	for _, key := range keys {
 		switch value := object[key].(type) {
 		case bool:
@@ -166,10 +171,10 @@ func readTrustFile(path string) (trustFile, error) {
 			data[key] = nil
 		default:
 			name, _ := ai.MarshalJSON(key)
-			return nil, fmt.Errorf("Invalid trust store %s: value for %s must be true, false, or null", path, string(name))
+			return nil, nil, fmt.Errorf("Invalid trust store %s: value for %s must be true, false, or null", path, string(name))
 		}
 	}
-	return data, nil
+	return data, keys, nil
 }
 
 // writeTrustFile writes the store with sorted keys and a trailing newline.
@@ -308,11 +313,11 @@ func (s *ProjectTrustStore) ReadEntry(cwd string) (*ProjectTrustStoreEntry, erro
 		return nil, err
 	}
 	defer release()
-	data, err := readTrustFile(s.trustPath)
+	data, keys, err := readTrustFileOrdered(s.trustPath)
 	if err != nil {
 		return nil, err
 	}
-	return findNearestTrustEntry(data, cwd), nil
+	return findNearestTrustEntry(data, keys, cwd), nil
 }
 
 // Set records one decision.
