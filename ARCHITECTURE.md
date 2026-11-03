@@ -4855,6 +4855,25 @@ an in-range miss, a miss beyond int64, paid-rate overflow, sticky cache activity
 and cumulative missed-token totals, through both cached and reference APIs.
 Ordinary cache-stat goldens remain unchanged.
 
+### D371
+
+**Failed manual imports clean up only their own incomplete copy.**
+
+Reference: pi v1.5.0 (`f9a26365`),
+`packages/coding-agent/src/core/agent-session-runtime.ts` `importFromJsonl`
+delegates to Node `copyFileSync` with `COPYFILE_EXCL`. Pier's private-mode
+copy uses Go file I/O (D289), which can fail after creating the destination.
+On copy/close error it now attempts to remove only that newly created file,
+retaining the original error and never removing a preexisting destination.
+Successful copies whose later session validation fails remain unchanged.
+
+Reproducer: `TestImportCopyFailureDoesNotLeaveAPartialSession` drives a
+rejected directory read through `/import`, with fresh/existing-name controls.
+Previously each failure left an empty numbered session file. This is a Go
+error-path guarantee, not matching-input Node parity: local Node v26.10.0
+accepts this directory input as an empty regular copy rather than throwing.
+Go retains its existing import error instead of adopting that acceptance.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

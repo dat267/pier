@@ -89,7 +89,8 @@ func (a *App) importFromJSONL(_ context.Context, inputPath string, cwdOverride s
 
 // copyFileExclusive copies src to dst, refusing to overwrite. Unlike upstream's
 // COPYFILE_EXCL, the destination retains owner-only permissions (D289).
-func copyFileExclusive(src string, dst string) error {
+// Failed copies remove their newly created destination when possible (D371).
+func copyFileExclusive(src string, dst string) (err error) {
 	source, err := os.Open(src)
 	if err != nil {
 		return err
@@ -99,6 +100,11 @@ func copyFileExclusive(src string, dst string) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err != nil {
+			_ = os.Remove(dst)
+		}
+	}()
 	if _, err := io.Copy(destination, source); err != nil {
 		destination.Close()
 		return err
