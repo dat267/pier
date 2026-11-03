@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"math"
 	"strings"
 	"testing"
 
@@ -26,6 +27,12 @@ func TestSessionInfoSaturatesHugeTokenColumns(t *testing.T) {
 		if !strings.Contains(lines, want) {
 			t.Errorf("missing %q in:\n%s", want, lines)
 		}
+	}
+}
+
+func TestFormatThousandsHandlesMinInt64(t *testing.T) {
+	if got, want := formatThousands(math.MinInt64), "-9,223,372,036,854,775,808"; got != want {
+		t.Fatalf("formatThousands(MinInt64) = %q, want %q", got, want)
 	}
 }
 

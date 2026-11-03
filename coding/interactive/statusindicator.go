@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/tui"
@@ -206,10 +207,13 @@ func NewBranchSummaryMessageComponent(summary string, markdownTheme *tui.Markdow
 // default (en-US) locale.
 func formatThousands(value int64) string {
 	negative := value < 0
+	var magnitude uint64
 	if negative {
-		value = -value
+		magnitude = uint64(-(value + 1)) + 1
+	} else {
+		magnitude = uint64(value)
 	}
-	digits := itoa64(value)
+	digits := strconv.FormatUint(magnitude, 10)
 	var builder strings.Builder
 	for index, digit := range digits {
 		if index > 0 && (len(digits)-index)%3 == 0 {
@@ -222,20 +226,6 @@ func formatThousands(value int64) string {
 		return "-" + result
 	}
 	return result
-}
-
-func itoa64(value int64) string {
-	if value == 0 {
-		return "0"
-	}
-	var digits [20]byte
-	index := len(digits)
-	for value > 0 {
-		index--
-		digits[index] = byte('0' + value%10)
-		value /= 10
-	}
-	return string(digits[index:])
 }
 
 func markdownThemeValue(theme *tui.MarkdownTheme) tui.MarkdownTheme {
