@@ -282,6 +282,21 @@ func TestCalculateCompactionContextTokensHandlesHugeUsage(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.5.0 f9a26365 compaction/compaction.ts adds the usage and
+// trailing-message estimates as JavaScript Numbers. Saturating the usage alone
+// is not enough: adding trailing messages must not wrap the total negative.
+func TestEstimateContextTokensSaturatesHugeUsage(t *testing.T) {
+	assistant := &ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "zai", Model: "m", StopReason: ai.StopStop,
+		Usage: ai.Usage{Input: math.MaxInt64, CacheRead: math.MaxInt64},
+	}
+	trailing := &ai.UserMessage{Content: ai.StringOrBlocks{Text: strings.Repeat("x", 40)}}
+	estimate := EstimateContextTokens([]ai.Message{assistant, trailing})
+	if estimate.Tokens <= 0 || estimate.UsageTokens <= 0 || estimate.TrailingTokens <= 0 {
+		t.Fatalf("huge estimate = %+v, want saturated positive totals", estimate)
+	}
+}
+
 // Reference: pi v1.5.0 f9a26365 usage-totals.ts adds token counters as
 // JavaScript Numbers. Near-range provider usage must stay a large positive
 // total instead of wrapping negative in Go's int64 addition.

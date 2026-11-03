@@ -331,7 +331,7 @@ func EstimateContextTokens(messages []ai.Message) CompactionContextUsageEstimate
 		trailing += EstimateAgentMessageTokens(messages[i])
 	}
 	return CompactionContextUsageEstimate{
-		Tokens: usageTokens + trailing, UsageTokens: usageTokens,
+		Tokens: addTokenCounts(usageTokens, trailing), UsageTokens: usageTokens,
 		TrailingTokens: trailing, LastUsageIndex: usageInfo,
 	}
 }
@@ -982,6 +982,17 @@ func addUsageTokens(left, right int64) int64 {
 	}
 	if right < 0 && left < math.MinInt64-right {
 		return math.MinInt64
+	}
+	return left + right
+}
+
+// addTokenCounts is addUsageTokens for the port's int token estimates.
+func addTokenCounts(left, right int) int {
+	if right > 0 && left > math.MaxInt-right {
+		return math.MaxInt
+	}
+	if right < 0 && left < math.MinInt-right {
+		return math.MinInt
 	}
 	return left + right
 }
