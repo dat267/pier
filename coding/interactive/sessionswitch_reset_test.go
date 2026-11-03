@@ -65,6 +65,46 @@ func TestSwitchSessionResetsTheTranscriptState(t *testing.T) {
 	}
 }
 
+// A replacement must also discard events the outgoing session queued before
+// its listener was removed. The loop is busy running the switch, so those
+// events are still pending when the new session's transcript is rendered; a
+// later drain would otherwise append the old message or status to it.
+func TestSessionSwitchDropsQueuedEventsFromPreviousSession(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+
+	stale := &ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
+		Content: ai.ContentList{ai.TextContent{Text: "stale reply from the old session"}}, StopReason: ai.StopStop,
+	}
+	app.sessionEvents.enqueue(&coding.SessionEvent{
+		Type: coding.SessionMessageStart, Agent: agentEvent("message_start", stale),
+	})
+
+	target := makePersistedSession(t, t.TempDir(), "new session prompt")
+	if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
+		t.Fatalf("SwitchSession: %v", err)
+	}
+
+	// Apply exactly what the run loop would find still queued after the switch.
+	drain:
+	for {
+		select {
+		case event := <-app.sessionEvents.Events():
+			app.events.handleQueuedEvent(event)
+		case event := <-app.sessionEvents.Partials():
+			app.events.handleQueuedEvent(event)
+		default:
+			break drain
+		}
+	}
+
+	rendered := coding.StripAnsi(strings.Join(app.chat.Render(120), "\n"))
+	if strings.Contains(rendered, "stale reply from the old session") {
+		t.Fatalf("the outgoing session's queued event reached the new transcript:\n%s", rendered)
+	}
+}
+
 // A session replacement must re-render the loaded-resources area, not only
 // clear it. Upstream rebindCurrentSession runs renderCurrentSessionState (which
 // clears the container) and then bindCurrentSessionExtensions, whose last step

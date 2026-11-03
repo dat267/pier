@@ -137,6 +137,11 @@ func (a *App) teardownCurrentSession() {
 		a.unsubscribe()
 		a.unsubscribe = nil
 	}
+	// The loop is running this replacement, so events the outgoing session
+	// queued before its listener was removed are still pending. The incoming
+	// transcript is rebuilt from persisted entries; applying those stale
+	// messages or status changes would duplicate or overwrite it.
+	a.sessionEvents.Clear()
 }
 
 func (a *App) bindSessionManager(sessionManager *coding.SessionManager) (*SessionSwitchResult, error) {

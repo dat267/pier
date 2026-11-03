@@ -133,6 +133,29 @@ func (q *sessionEventQueue) enqueue(event *coding.SessionEvent) {
 	}
 }
 
+// Clear discards events already queued by a session that is being replaced.
+// The caller has stopped that session and removed its listener, and the new
+// session's transcript is rebuilt from persisted state, so applying the old
+// messages or status changes would contaminate it.
+func (q *sessionEventQueue) Clear() {
+	if q == nil {
+		return
+	}
+	for {
+		select {
+		case <-q.lossless:
+			continue
+		default:
+		}
+		select {
+		case <-q.partial:
+			continue
+		default:
+			return
+		}
+	}
+}
+
 // Close releases producers blocked on a full lossless channel. It is
 // idempotent and is called once the loop has stopped consuming.
 func (q *sessionEventQueue) Close() {
