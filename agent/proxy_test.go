@@ -103,6 +103,28 @@ func TestProxyRejectsNegativeContentIndex(t *testing.T) {
 	}
 }
 
+// pi v1.5.0 f9a26365 agent/src/proxy.ts checks that the tool-argument stream
+// still exists; a delta after toolcall_end is a protocol error, not a crash.
+func TestProxyToolDeltaAfterEndIsProtocolError(t *testing.T) {
+	partial := &ai.AssistantMessage{Content: ai.ContentList{}}
+	scratch := newProxyEventScratch()
+	_, _ = processProxyEvent(&proxyWireEvent{Type: "toolcall_start", ContentIndex: 0, ID: "c1", ToolName: "read"}, partial, scratch)
+	_, _ = processProxyEvent(&proxyWireEvent{Type: "toolcall_end", ContentIndex: 0, ToolCall: &ai.ToolCall{ID: "c1", Name: "read", Arguments: json.RawMessage(`{}`)}}, partial, scratch)
+
+	var panicValue any
+	var err error
+	func() {
+		defer func() { panicValue = recover() }()
+		_, err = processProxyEvent(&proxyWireEvent{Type: "toolcall_delta", ContentIndex: 0, Delta: `{"x":1}`}, partial, scratch)
+	}()
+	if panicValue != nil {
+		t.Fatalf("toolcall_delta after toolcall_end panicked: %v", panicValue)
+	}
+	if err == nil || !strings.Contains(err.Error(), "toolcall_delta for non-toolCall content") {
+		t.Fatalf("error = %v; want non-toolCall protocol error", err)
+	}
+}
+
 // pi v1.4.0 agent/src/proxy.ts assigns contentSignature on every block end,
 // but assigns providerThinkingLevel only when the terminal event supplies it.
 func TestProxyPreservesOptionalFieldAssignmentSemantics(t *testing.T) {

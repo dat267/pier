@@ -385,10 +385,11 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 
 	case "toolcall_delta":
 		content, ok := contentAt().(ai.ToolCall)
-		if !ok {
+		args := scratch.toolCall[wire.ContentIndex]
+		if !ok || args == nil {
 			return nil, fmt.Errorf("Received toolcall_delta for non-toolCall content")
 		}
-		content.Arguments = scratch.toolCall[wire.ContentIndex].Append(wire.Delta)
+		content.Arguments = args.Append(wire.Delta)
 		partial.Content[wire.ContentIndex] = content
 		return &ai.AssistantMessageEvent{Type: ai.EventToolcallDelta, ContentIndex: wire.ContentIndex, Delta: wire.Delta, Partial: partial}, nil
 
