@@ -125,6 +125,29 @@ func TestProxyToolDeltaAfterEndIsProtocolError(t *testing.T) {
 	}
 }
 
+// pi v1.5.0 f9a26365 agent/src/proxy.ts toolcall_end assigns only the optional
+// payload and still ends the accumulated tool call when it is absent.
+func TestProxyToolcallEndWithoutPayloadStillEndsTheCall(t *testing.T) {
+	partial := &ai.AssistantMessage{Content: ai.ContentList{}}
+	scratch := newProxyEventScratch()
+	if _, err := processProxyEvent(&proxyWireEvent{Type: "toolcall_start", ContentIndex: 0, ID: "c1", ToolName: "read"}, partial, scratch); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := processProxyEvent(&proxyWireEvent{Type: "toolcall_delta", ContentIndex: 0, Delta: `{"path":"a"}`}, partial, scratch); err != nil {
+		t.Fatal(err)
+	}
+	event, err := processProxyEvent(&proxyWireEvent{Type: "toolcall_end", ContentIndex: 0}, partial, scratch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if event == nil || event.Type != ai.EventToolcallEnd || event.ToolCall == nil {
+		t.Fatalf("toolcall_end event = %+v, want the accumulated call", event)
+	}
+	if event.ToolCall.ID != "c1" || event.ToolCall.Name != "read" || string(event.ToolCall.Arguments) != `{"path":"a"}` {
+		t.Fatalf("tool call = %+v", event.ToolCall)
+	}
+}
+
 // pi v1.4.0 agent/src/proxy.ts assigns contentSignature on every block end,
 // but assigns providerThinkingLevel only when the terminal event supplies it.
 func TestProxyPreservesOptionalFieldAssignmentSemantics(t *testing.T) {

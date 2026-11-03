@@ -394,15 +394,18 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 		return &ai.AssistantMessageEvent{Type: ai.EventToolcallDelta, ContentIndex: wire.ContentIndex, Delta: wire.Delta, Partial: partial}, nil
 
 	case "toolcall_end":
-		if _, ok := contentAt().(ai.ToolCall); !ok {
+		content, ok := contentAt().(ai.ToolCall)
+		if !ok {
 			return nil, nil
 		}
-		if wire.ToolCall == nil {
-			return nil, nil
+		// The reference assigns only an optional payload; an absent one still
+		// ends the accumulated tool call.
+		if wire.ToolCall != nil {
+			content = *wire.ToolCall
+			partial.Content[wire.ContentIndex] = content
 		}
-		partial.Content[wire.ContentIndex] = *wire.ToolCall
 		delete(scratch.toolCall, wire.ContentIndex)
-		return &ai.AssistantMessageEvent{Type: ai.EventToolcallEnd, ContentIndex: wire.ContentIndex, ToolCall: wire.ToolCall, Partial: partial}, nil
+		return &ai.AssistantMessageEvent{Type: ai.EventToolcallEnd, ContentIndex: wire.ContentIndex, ToolCall: &content, Partial: partial}, nil
 
 	case "done":
 		partial.StopReason = wire.Reason
