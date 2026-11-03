@@ -565,7 +565,11 @@ func (m *SessionManager) appendEntry(entry *SessionEntry) string {
 	m.byID[entry.ID] = entry
 	leafID := entry.ID
 	m.leafID = &leafID
-	m.cacheScan.consume(entry)
+	if m.cacheScanSeeding {
+		m.cacheScanPending = append(m.cacheScanPending, entry)
+	} else {
+		m.cacheScan.consume(entry)
+	}
 	m.persistEntry(entry)
 	return entry.ID
 }

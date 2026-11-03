@@ -18,9 +18,9 @@ func seedFixture(t *testing.T) (path string, entries []FileEntry) {
 	lines := []string{
 		`{"type":"session","version":3,"id":"s1","timestamp":"t0","cwd":"/tmp"}`,
 		`{"type":"message","id":"m1","parentId":null,"timestamp":"t1","message":{"role":"user","content":"hello"}}`,
-		`{"type":"message","id":"m2","parentId":"m1","timestamp":"t2","message":{"role":"assistant","content":[{"type":"text","text":"hi"}],"usage":{"input":100,"output":10,"cacheRead":0,"cacheWrite":0},"provider":"anthropic","model":"claude","timestamp":"t2"}}`,
+		`{"type":"message","id":"m2","parentId":"m1","timestamp":"t2","message":{"role":"assistant","content":[{"type":"text","text":"hi"}],"usage":{"input":100,"output":10,"cacheRead":0,"cacheWrite":0},"provider":"anthropic","model":"claude","timestamp":2}}`,
 		`{"type":"message","id":"m3","parentId":"m2","timestamp":"t3","message":{"role":"user","content":"again"}}`,
-		`{"type":"message","id":"m4","parentId":"m3","timestamp":"t4","message":{"role":"assistant","content":[{"type":"text","text":"answer"}],"usage":{"input":5000,"output":10,"cacheRead":0,"cacheWrite":0},"provider":"anthropic","model":"claude","timestamp":"t4"}}`,
+		`{"type":"message","id":"m4","parentId":"m3","timestamp":"t4","message":{"role":"assistant","content":[{"type":"text","text":"answer"}],"usage":{"input":5000,"output":10,"cacheRead":0,"cacheWrite":0},"provider":"anthropic","model":"claude","timestamp":4}}`,
 	}
 	dir := t.TempDir()
 	path = filepath.Join(dir, "session.jsonl")
@@ -71,23 +71,26 @@ func TestCacheSeedMatchesEagerConsume(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.5.0 f9a26365 core/agent-session.ts getSessionStats and
+// core/cache-stats.ts scan account for every admitted entry in file order.
 func TestAppendWhileSeedingQueuesInOrder(t *testing.T) {
-	path, _ := seedFixture(t)
-	m, err := OpenSession(path, filepath.Dir(path), "/tmp")
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Append while the seed is in flight; whether this lands before or after
-	// the install, the final state must match an eager consume of everything.
+	_, initialEntries := seedFixture(t)
+	m := InMemorySession("/tmp", nil, initialEntries)
+	// Start the same seed as OpenSession under the existing handoff lock, so
+	// it cannot install until the append below. No sleeps or new test hooks.
 	appended := &SessionEntry{
 		Type: "message",
 		ID:   "m5", Timestamp: "t5",
-		Message: mustRaw(`{"role":"assistant","content":[{"type":"text","text":"late"}],"usage":{"input":9000,"output":1,"cacheRead":0,"cacheWrite":0},"provider":"anthropic","model":"claude","timestamp":"t5"}`),
+		Message: mustRaw(`{"role":"assistant","content":[{"type":"text","text":"late"}],"usage":{"input":9000,"output":1,"cacheRead":0,"cacheWrite":0},"provider":"anthropic","model":"claude","timestamp":5}`),
 	}
 	m.mu.Lock()
+	m.seedCacheScanInBackground()
 	m.appendEntry(appended)
 	m.mu.Unlock()
 	waitForSeed(t, m)
+	if stats := m.SessionStats(); stats.TotalMessages != 5 || stats.AssistantMessages != 3 {
+		t.Fatalf("stats after seed = %+v, want 5 messages including 3 assistants", stats)
+	}
 
 	lazyTotals := m.ComputeCacheWaste(nil)
 
