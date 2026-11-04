@@ -209,3 +209,15 @@ func sortedCoreKeys[V any](values map[string]V) []string {
 	}
 	return keys
 }
+
+// Reference: pi f9a26365 utils/changelog.ts URL_SCHEME_RE is /i, so an
+// uppercase URI scheme stays absolute instead of being rewritten as a
+// repository path.
+func TestNormalizeChangelogLinksKeepsUppercaseSchemes(t *testing.T) {
+	for _, target := range []string{"HTTPS://example.com/a", "FTP://example.com/x", "MailTo:dev@example.com"} {
+		markdown := "[link](" + target + ")"
+		if got := NormalizeChangelogLinks(markdown, "1.0.0"); got != markdown {
+			t.Errorf("NormalizeChangelogLinks(%q) = %q; want unchanged", markdown, got)
+		}
+	}
+}

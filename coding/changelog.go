@@ -27,7 +27,7 @@ var (
 	// RE2 has no lookahead (D70), so the trailing "/ or end" rule is checked
 	// manually in replaceLegacyRepoPrefix.
 	legacyRepoPrefixRe   = regexp.MustCompile(`^https://github\.com/(?:badlogic|earendil-works)/pi-mono`)
-	urlSchemeRe          = regexp.MustCompile(`^[a-z][a-z0-9+.-]*:`)
+	urlSchemeRe          = regexp.MustCompile(`(?i)^[a-z][a-z0-9+.-]*:`)
 	inlineMarkdownLinkRe = regexp.MustCompile(`(!?\[[^\]\n]+\]\()([^\s)]+)((?:\s+[^)]*)?\))`)
 	changelogVersionRe   = regexp.MustCompile(`##\s+\[?(\d+)\.(\d+)\.(\d+)\]?`)
 )
