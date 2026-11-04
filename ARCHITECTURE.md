@@ -1318,8 +1318,14 @@ and GC. D203 cannot yield within one large child.
 At 64 KiB source or more, built-in assistant text/thinking submits a private
 Markdown snapshot to the app's optional backend and displays prior complete
 lines or `Preparing message...`. It admits four jobs total (one running, three
-pending); rejection retains no queued work and requests a later paint. D205
-shares this budget with tool results.
+pending); rejection retains no queued work and requests a later paint. The
+app posts ancestor invalidation to the next owner turn: doing it synchronously
+during Render let that frame cache the rejected placeholder as unchanged.
+When all accepted jobs were superseded and their completions ignored, the
+newest content stayed pending forever. `TestRejectedMarkdownPreparationRetriesAfterSupersededWork`
+(v1.5.0 `f9a26365` interactive-mode.ts) drives that full-queue/stale-completion
+ordering and confirms retry after capacity returns. D205 shares this budget
+with tool results.
 
 Snapshots capture text, width, padding, concrete theme/style, and transform
 configuration, never live caches. Owner-posted completion installs caches only

@@ -88,6 +88,41 @@ func TestStreamingMarkdownBackpressureKeepsCachedFollowingRows(t *testing.T) {
 	}
 }
 
+// D204: superseded preparations can finish without a completion invalidation.
+// A rejected newest frame must retry once the worker capacity becomes available.
+func TestRejectedMarkdownPreparationRetriesAfterSupersededWork(t *testing.T) {
+	app, cleanup := newTestAppB(t)
+	defer cleanup()
+	release := make(chan struct{})
+	var once sync.Once
+	unblock := func() { once.Do(func() { close(release) }) }
+	defer func() { unblock(); app.markdownQueue.Flush() }()
+	app.markdownQueue.GoContext(func(context.Context) { <-release })
+
+	for generation := range 4 {
+		message := &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{Text: strings.Repeat("long paragraph ", 4500) + strings.Repeat("latest", generation+1)}}}
+		typeName := coding.SessionMessageUpdate
+		if generation == 0 {
+			typeName = coding.SessionMessageStart
+		}
+		app.events.HandleEvent(&coding.SessionEvent{Type: typeName, Agent: agentEvent("message_update", message)})
+		if !strings.Contains(strings.Join(app.chat.Render(80), "\n"), "Preparing message...") {
+			t.Fatal("frame should be pending while worker is blocked")
+		}
+	}
+	unblock()
+	app.markdownQueue.Flush()
+	// RenderNow drains posts even before the test terminal starts. Explicitly
+	// paint the chat at the same width to retry, then deliver that result.
+	app.ui.RenderNow(false)
+	app.chat.Render(80)
+	app.markdownQueue.Flush()
+	app.ui.RenderNow(false)
+	if strings.Contains(strings.Join(app.chat.Render(80), "\n"), "Preparing message...") {
+		t.Fatal("newest Markdown stayed pending after superseded work drained")
+	}
+}
+
 // D204: live assistant messages, not only detached session prerenders, opt in.
 func TestStreamingAssistantUsesDetachedMarkdownPreparation(t *testing.T) {
 	app, cleanup := newTestAppB(t)

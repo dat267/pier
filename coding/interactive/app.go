@@ -458,9 +458,13 @@ func NewApp(options AppOptions) *App {
 			})
 		},
 		RequestRender: func() {
-			app.chat.MarkDirty()
-			app.documentContainer.MarkDirty()
-			app.ui.RequestRender(false)
+			// A rejected submission requests a retry during Render. Apply its
+			// invalidation after that frame has cached child revisions, or the
+			// rejected placeholder can be mistaken for a complete cached frame.
+			app.ui.Post(func() {
+				app.chat.MarkDirty()
+				app.documentContainer.MarkDirty()
+			})
 		},
 	}
 	app.transcript.MarkdownPreparation = markdownPreparation
