@@ -290,7 +290,12 @@ func OpenSession(path string, sessionDir string, cwdOverride string) (*SessionMa
 
 	if fileExists(resolvedPath) {
 		if len(entries) == 0 {
-			info, _ := os.Stat(resolvedPath)
+			info, err := os.Stat(resolvedPath)
+			if err != nil {
+				// Upstream's statSync throws when the file vanished between the
+				// existence check and this size check.
+				return nil, err
+			}
 			if info.Size() > 0 {
 				return nil, fmt.Errorf("Session file is not a valid pi session: %s", resolvedPath)
 			}
