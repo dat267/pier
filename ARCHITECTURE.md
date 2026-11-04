@@ -3277,7 +3277,7 @@ Tests: `TestFileSettingsStorageConcurrentFirstWrites`,
 
 ### D284
 
-**AI requests retain Go client hooks and the ten-redirect limit.**
+**AI and MCP requests retain Go client hooks and the ten-redirect limit.**
 
 Reference: pi v1.4.0 (`4a080252`), `packages/ai/src/api/openai-responses.ts`
 uses the SDK's fetch transport. Pier removes authorization, cookies and proxy
@@ -3286,6 +3286,17 @@ but retains the configured `http.DefaultClient` transport, timeout and redirect
 hook, and its existing default ten-hop limit rather than fetch's twenty.
 The global client and original request headers are not mutated.
 Tests: `TestResponsesRedirectCredentials`, `TestProviderRequestRedirectPolicy`.
+
+MCP's built-in Streamable HTTP client also keeps Go's ten-hop limit. Reference:
+v1.5.0 (`f9a26365`) `packages/mcp/src/transports/streamable-http.ts` uses Fetch.
+Because net/http copies the initial headers again on each redirect, checking
+only the latest origin leaked stripped credentials on an A-to-B-to-B chain.
+The hook checks the bounded redirect history and keeps bearer, proxy and cookie
+credentials removed for the rest of that request. Separate requests retain
+their own credentials, and same-origin chains retain nonsensitive headers.
+Tests: `TestStreamableHTTPRedirectChainCannotRestoreCredentials`,
+`TestStreamableHTTPRedirectDoesNotForwardAuthorizationAcrossPorts`,
+`TestStreamableHTTPRedirectLimitRemainsTen`.
 
 ### D285
 

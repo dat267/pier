@@ -311,9 +311,15 @@ func checkHttpRedirect(request *http.Request, via []*http.Request) error {
 	if len(via) >= 10 {
 		return fmt.Errorf("stopped after 10 redirects")
 	}
-	if len(via) > 0 && !sameHttpOrigin(via[len(via)-1].URL, request.URL) {
-		for _, name := range []string{"Authorization", "Proxy-Authorization", "Cookie", "Cookie2"} {
-			request.Header.Del(name)
+	// net/http copies the initial headers again on every hop. Once an origin
+	// changed, keep credentials stripped even if later hops stay on that new
+	// origin. The history is bounded by the ten-hop limit above.
+	for _, previous := range via {
+		if !sameHttpOrigin(previous.URL, request.URL) {
+			for _, name := range []string{"Authorization", "Proxy-Authorization", "Cookie", "Cookie2"} {
+				request.Header.Del(name)
+			}
+			break
 		}
 	}
 	return nil
