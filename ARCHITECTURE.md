@@ -279,13 +279,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D375)
+## Deliberate divergences from pi (D1–D376)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D375**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D376**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -5004,6 +5004,35 @@ and renders a cached status row below it. Previously it panicked with
 complete thinking frame and following row now remain visible under pressure.
 `TestContainerKeepsCachedRowsWhenChildRequestsRetry` also pins the Container
 contract directly with a rejecting Markdown backend and cached following row.
+
+### D376
+
+**Config-command timeout also bounds inherited output-pipe waits.**
+
+Reference: pi v1.5.0 (`f9a26365`)
+`packages/coding-agent/src/core/resolve-config-value.ts` uses
+execSync/spawnSync with a 10,000ms timeout. Go's CommandContext killed the
+shell but Output kept waiting for EOF from a surviving child, so a timed-out
+API-key command could block auth resolution indefinitely. Config commands now
+set a minimal nonzero Cmd.WaitDelay only inside the cancellation hook. Wait
+joins that hook before examining the delay. This closes inherited pipes after
+the failed command is canceled, while normal commands still drain all output
+without a time limit. The shell kill behavior and resolved key values stay
+unchanged. The timeout policy stays 10s; tests shorten it to exercise a real
+FIFO-held child without a slow ordinary test.
+
+Same-input probe (`sleep 11; printf synthetic-value`, 10s timeout) took
+11.006s before. Node execSync took 10.0104–10.0137s over three repeats; final
+Go took 10.0086–10.0098s, returning failed resolution in every case. Normal
+`printf synthetic-value` controls (50 samples per trial) remained correct:
+Go baseline medians 1.70–1.92ms, final unloaded medians 1.60–2.18ms (overlapping
+spawn-time noise), Node medians 2.96–3.85ms. No normal-output truncation or
+extra deadline was introduced.
+
+Reproducers: `TestConfigCommandTimeoutDoesNotWaitForDescendantPipeEOF`,
+`TestConfiguredShellTimeoutDoesNotWaitForDescendantPipeEOF`. Both use a
+controlled FIFO child and release/join it on failure; the original public-path
+test was first observed failing at the real 10s deadline before shortening it.
 
 ## Lock inventory
 

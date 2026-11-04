@@ -295,8 +295,9 @@ func ClearConfigValueCache() {
 	configCommandCacheMu.Unlock()
 }
 
-// configCommandTimeout is upstream's 10s spawnSync/execSync timeout.
-const configCommandTimeout = 10 * time.Second
+// configCommandTimeout is upstream's 10s spawnSync/execSync timeout. Tests
+// shorten the deadline while retaining a real descendant-pipe handshake.
+var configCommandTimeout = 10 * time.Second
 
 // executeWithConfiguredShell runs the command through the resolved shell.
 // executed reports whether the shell could be spawned at all (upstream
@@ -314,6 +315,7 @@ func executeWithConfiguredShell(command string, env map[string]string) (value st
 	ctx, cancel := context.WithTimeout(context.Background(), configCommandTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, config.Shell, args...)
+	limitConfigCommandPipeWaitAfterCancel(cmd)
 	if commandFromStdin {
 		cmd.Stdin = strings.NewReader(command)
 	}
@@ -344,6 +346,7 @@ func executeWithDefaultShell(command string, env map[string]string) (string, boo
 	ctx, cancel := context.WithTimeout(context.Background(), configCommandTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, shell, args...)
+	limitConfigCommandPipeWaitAfterCancel(cmd)
 	if env != nil {
 		cmd.Env = mergeEnvMap(os.Environ(), env)
 	}
@@ -353,6 +356,17 @@ func executeWithDefaultShell(command string, env map[string]string) (string, boo
 	}
 	value := ai.JSTrim(DecodeUTF8WithReplacement(output))
 	return value, value != ""
+}
+
+// limitConfigCommandPipeWaitAfterCancel bounds inherited pipe waits only on a
+// timed-out command. A normal command must still collect its entire output.
+// Cmd.Wait joins the context watcher (and thus Cancel) before reading WaitDelay.
+func limitConfigCommandPipeWaitAfterCancel(cmd *exec.Cmd) {
+	kill := cmd.Cancel
+	cmd.Cancel = func() error {
+		cmd.WaitDelay = time.Nanosecond
+		return kill()
+	}
 }
 
 func executeConfigCommandUncached(commandConfig string) (string, bool) {
