@@ -3554,10 +3554,13 @@ published package versions. Pier's justfile stamps `git describe --tags
 that suffix as a prerelease of `0.0.44`, ranking the final `v0.0.44` release
 newer: the update card appears and `pier update` would reinstall the older tag.
 Pier recognizes the `<base>-<distance>-g<hash>[-dirty]` shape and compares the
-candidate against `<base>` instead; ordinary semver, plain tags and the
-no-tag short-hash fallback keep their existing comparison.
+candidate against `<base>` instead. At an exact tag, Git omits the distance
+and emits `<tag>-dirty`; this local dirty marker is also removed before the
+comparison, so local edits cannot make the base release look newer. Ordinary
+semver, plain tags and the no-tag short-hash fallback keep their comparison.
 
-Test: `TestGitDescribeBuildIsNotOlderThanItsBaseTag`.
+Tests: `TestGitDescribeBuildIsNotOlderThanItsBaseTag`,
+`TestDirtyTaggedBuildDoesNotOfferItsOwnRelease` (v1.5.0 `f9a26365`).
 
 ### D298
 

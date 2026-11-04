@@ -63,6 +63,9 @@ func ComparePackageVersions(leftVersion, rightVersion string) (int, bool) {
 // commits after that tag; semver would read the distance as a prerelease and
 // rank the base release ahead of it, so compare against the named tag instead.
 func IsNewerPackageVersion(candidateVersion, currentVersion string) bool {
+	// At an exact tag, git describe omits the distance/hash and emits just
+	// <tag>-dirty. Local changes do not make that build older than its tag.
+	currentVersion = strings.TrimSuffix(ai.JSTrim(currentVersion), "-dirty")
 	if base, ok := gitDescribeBaseVersion(currentVersion); ok {
 		if comparison, comparable := ComparePackageVersions(candidateVersion, base); comparable {
 			return comparison > 0
