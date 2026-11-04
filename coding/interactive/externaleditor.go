@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 
 	"github.com/dat267/pier/coding"
 )
@@ -101,6 +102,9 @@ func externalEditorFailureMessage(err error, command string) string {
 	if errors.As(err, &exitError) {
 		if code := exitError.ExitCode(); code >= 0 {
 			return fmt.Sprintf("External editor exited with code %d; prompt unchanged", code)
+		}
+		if status, ok := exitError.Sys().(syscall.WaitStatus); ok && status.Signaled() {
+			return fmt.Sprintf("External editor exited with %s; prompt unchanged", coding.ProcessSignalName(status.Signal()))
 		}
 		return "External editor exited unexpectedly; prompt unchanged"
 	}

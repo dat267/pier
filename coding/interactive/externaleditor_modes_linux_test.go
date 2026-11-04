@@ -61,3 +61,15 @@ func TestExternalEditorExitCodeMessage(t *testing.T) {
 		t.Fatalf("result = %+v", result)
 	}
 }
+
+// Upstream external-editor.ts reports a signalled editor by name:
+// "External editor exited with SIGTERM; prompt unchanged".
+func TestExternalEditorSignalMessage(t *testing.T) {
+	stubExternalEditorRunner(t, func(*exec.Cmd) error {
+		return exec.Command("sh", "-c", "kill -TERM $$").Run()
+	})
+	result := EditInExternalEditor(ExternalEditorOptions{Command: "my-editor", Content: "prompt"})
+	if result.Status != "failed" || result.Message != "External editor exited with SIGTERM; prompt unchanged" {
+		t.Fatalf("result = %+v", result)
+	}
+}
