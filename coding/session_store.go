@@ -829,7 +829,7 @@ func LoadEntriesFromFileBuffered(filePath string) ([]FileEntry, []byte, bool, er
 		return nil, data, fast, nil
 	}
 	if !bytes.HasSuffix(data, []byte("\n")) && len(data) > 0 {
-		_ = writePrivateSessionFile(resolved, append(append([]byte{}, data...), '\n'))
+		_ = writeSessionLine(resolved, "\n")
 	}
 	return entries, data, fast, nil
 }
@@ -1526,7 +1526,7 @@ func LoadEntriesFromFile(filePath string) ([]FileEntry, error) {
 		return nil, nil
 	}
 	if !strings.HasSuffix(text, "\n") && text != "" {
-		_ = writePrivateSessionFile(resolved, []byte(text+"\n"))
+		_ = writeSessionLine(resolved, "\n")
 	}
 	return entries, nil
 }
