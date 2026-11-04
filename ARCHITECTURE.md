@@ -4969,6 +4969,8 @@ the real App queue with four occupied slots, streams thinking across 64KiB,
 and renders a cached status row below it. Previously it panicked with
 `index out of range [1] with length 0` at Container.Render. The previous
 complete thinking frame and following row now remain visible under pressure.
+`TestContainerKeepsCachedRowsWhenChildRequestsRetry` also pins the Container
+contract directly with a rejecting Markdown backend and cached following row.
 
 ## Lock inventory
 
