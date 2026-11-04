@@ -16,12 +16,23 @@ func RunStartupScreenLoop(ui *tui.MainScreen, terminal tui.Terminal, settled fun
 		rawTerminal.EnableRawInput()
 	}
 	inputs := make(chan string, 256)
-	ui.EnableLoopInput(func(data string) { inputs <- data }, func() {})
+	closed := make(chan struct{})
+	ui.EnableLoopInput(func(data string) {
+		select {
+		case inputs <- data:
+		case <-closed:
+		}
+	}, func() {})
 	// Post-driven work signals the tick channel; the loop below drains and paints
 	// it, so loader results never apply inline from another goroutine.
 	ui.EnableRenderTicks()
 	ui.Start()
-	defer ui.Stop(tui.TuiStopOptions{})
+	defer func() {
+		// Release a callback already parked on a full queue before handing the
+		// shared terminal reader to the next screen.
+		close(closed)
+		ui.Stop(tui.TuiStopOptions{})
+	}()
 	// Paint the initial state and drain anything the constructor posted.
 	ui.RenderNow(false)
 

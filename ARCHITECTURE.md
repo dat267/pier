@@ -436,6 +436,12 @@ renderers too; callers now drive every renderer.
 The stdin reader, SIGWINCH watcher, and signal handlers only enqueue. The owner
 loop dispatches input, paints on resize, and handles shutdown; upstream delivers
 these on one JS thread. See D143 for the loop; decoding is consumer-owned.
+Startup screens close their input handoff before stopping the terminal, so an
+already-admitted sender parked on a full queue can return. Otherwise the sole
+stdin reader stayed trapped in the retired callback, disabling input after the
+next screen reused it. `TestStartupLoopReleasesBlockedInputProducer` fills the
+startup queue behind a controlled initial paint and confirms producer release
+on settlement (v1.5.0 `f9a26365` cli/startup-ui.ts ownership handoff).
 
 ### D149
 
