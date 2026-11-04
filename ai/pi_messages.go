@@ -299,16 +299,11 @@ func (c *piMessagesConverter) convert(event *PiMessagesEvent) (AssistantMessageE
 		return AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: event.ContentIndex, Delta: event.Delta, Partial: partial}, false
 	case "toolcall_end":
 		if len(event.ToolCall) > 0 {
-			var call ToolCall
+			// Upstream Object.assign copies only the members the wire object
+			// carries, so an end event that omits arguments (or is null) keeps
+			// the arguments accumulated from toolcall_delta.
+			call, _ := getPiContent(partial, event.ContentIndex).(ToolCall)
 			if err := json.Unmarshal(event.ToolCall, &call); err == nil {
-				if current, ok := getPiContent(partial, event.ContentIndex).(ToolCall); ok {
-					if call.ID == "" {
-						call.ID = current.ID
-					}
-					if call.Name == "" {
-						call.Name = current.Name
-					}
-				}
 				setPiContent(partial, event.ContentIndex, call)
 			}
 		}
