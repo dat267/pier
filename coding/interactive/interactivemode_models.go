@@ -445,14 +445,25 @@ func (w *SessionWiring) requestRender() {
 
 // ShowSessionSelector opens the resume-session selector.
 func (w *SessionWiring) ShowSessionSelector() {
+	// Capture listing inputs on the owner. The loaders run off-loop, where
+	// they must wait for accepted renames before reading their disk snapshot.
+	cwd, sessionDir := w.SessionInfo.GetCwd(), w.SessionInfo.GetSessionDir()
+	usesDefaultDir := w.SessionInfo.UsesDefaultSessionDir()
+	writeQueue := w.SessionInfo.GetWriteQueue()
 	currentLoader := func(_ SessionListProgress, _ context.Context) ([]coding.SessionInfo, error) {
-		return coding.ListSessions(w.SessionInfo.GetCwd(), w.SessionInfo.GetSessionDir()), nil
+		if writeQueue != nil {
+			writeQueue.Flush()
+		}
+		return coding.ListSessions(cwd, sessionDir), nil
 	}
 	allLoader := func(_ SessionListProgress, _ context.Context) ([]coding.SessionInfo, error) {
-		if w.SessionInfo.UsesDefaultSessionDir() {
+		if writeQueue != nil {
+			writeQueue.Flush()
+		}
+		if usesDefaultDir {
 			return coding.ListAllSessions(""), nil
 		}
-		return coding.ListAllSessions(w.SessionInfo.GetSessionDir()), nil
+		return coding.ListAllSessions(sessionDir), nil
 	}
 	w.Slot.Show(func(done func()) CreatedSelector {
 		selector := NewSessionSelectorComponent(currentLoader, allLoader,

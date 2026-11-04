@@ -4966,6 +4966,14 @@ queued message was missing from the reopened branch and the active manager
 still reported the old name. `TestRenamingAnotherSessionStillWrites` covers the
 non-active path.
 
+The selector's off-loop current/all-scope loaders capture their directory and
+queue inputs on the owner, then drain accepted writes before reading disk.
+Without this barrier, a rename's immediate refresh could outrun the queued
+save, restore the old name in the list, and stay stale after the save finished.
+`TestSessionSelectorRefreshWaitsForQueuedRename` drives the keyboard rename
+with a controlled blocked writer and verifies the refreshed name. The UI never
+waits on that barrier (upstream's rename/save finishes before its reload).
+
 ### D375
 
 **A render walk retains its admitted child-line cache across reentrant invalidation.**
