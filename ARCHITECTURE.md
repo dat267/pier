@@ -279,13 +279,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D372)
+## Deliberate divergences from pi (D1–D374)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D372**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D374**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -3543,6 +3543,21 @@ Tests: `TestAppRunConvertsAPanicIntoAnUncaughtCrash` (recorded stack),
 `TestQueueReportsWorkerPanicBeforeDying` and
 `TestQueueSurvivesAPanickingReporter` (worker report, fatal panic kept),
 `TestCrashRecordIdentifiesTheBuild`.
+
+### D374
+
+**A git-describe build compares against its base tag, not as a semver prerelease.**
+
+Reference: pi v1.4.0 `packages/coding-agent/src/utils/version-check.ts` compares
+published package versions. Pier's justfile stamps `git describe --tags
+--always --dirty`, so an ahead checkout is `v0.0.44-34-g<hash>`. Semver reads
+that suffix as a prerelease of `0.0.44`, ranking the final `v0.0.44` release
+newer: the update card appears and `pier update` would reinstall the older tag.
+Pier recognizes the `<base>-<distance>-g<hash>[-dirty]` shape and compares the
+candidate against `<base>` instead; ordinary semver, plain tags and the
+no-tag short-hash fallback keep their existing comparison.
+
+Test: `TestGitDescribeBuildIsNotOlderThanItsBaseTag`.
 
 ### D298
 

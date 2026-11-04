@@ -58,12 +58,66 @@ func ComparePackageVersions(leftVersion, rightVersion string) (int, bool) {
 }
 
 // IsNewerPackageVersion reports whether candidate is newer than current. When
-// either side is not valid semver the raw strings are compared instead.
+// either side is not valid semver the raw strings are compared instead. A
+// running version stamped by `git describe` (base-tag-distance-ghash) names
+// commits after that tag; semver would read the distance as a prerelease and
+// rank the base release ahead of it, so compare against the named tag instead.
 func IsNewerPackageVersion(candidateVersion, currentVersion string) bool {
+	if base, ok := gitDescribeBaseVersion(currentVersion); ok {
+		if comparison, comparable := ComparePackageVersions(candidateVersion, base); comparable {
+			return comparison > 0
+		}
+	}
 	if comparison, ok := ComparePackageVersions(candidateVersion, currentVersion); ok {
 		return comparison > 0
 	}
 	return ai.JSTrim(candidateVersion) != ai.JSTrim(currentVersion)
+}
+
+// gitDescribeBaseVersion extracts base from Git's
+// `<base>-<distance>-g<hash>[-dirty]` describe format. The distance is commits
+// after base, so a candidate equal to base is not newer. Unrelated semver
+// prereleases and the no-tag short-hash fallback do not match and stay on the
+// ordinary comparison path.
+func gitDescribeBaseVersion(version string) (string, bool) {
+	value := ai.JSTrim(version)
+	if strings.HasSuffix(value, "-dirty") {
+		value = strings.TrimSuffix(value, "-dirty")
+	}
+	last := strings.LastIndexByte(value, '-')
+	if last < 0 {
+		return "", false
+	}
+	hash := value[last+1:]
+	if len(hash) < 2 || hash[0] != 'g' {
+		return "", false
+	}
+	for _, character := range hash[1:] {
+		if !((character >= '0' && character <= '9') ||
+			(character >= 'a' && character <= 'f') ||
+			(character >= 'A' && character <= 'F')) {
+			return "", false
+		}
+	}
+	rest := value[:last]
+	previous := strings.LastIndexByte(rest, '-')
+	if previous < 0 {
+		return "", false
+	}
+	distance := rest[previous+1:]
+	if distance == "" {
+		return "", false
+	}
+	for _, character := range distance {
+		if character < '0' || character > '9' {
+			return "", false
+		}
+	}
+	base := rest[:previous]
+	if base == "" {
+		return "", false
+	}
+	return base, true
 }
 
 // semver is a parsed semantic version.

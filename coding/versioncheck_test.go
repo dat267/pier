@@ -436,3 +436,28 @@ func TestHTTPIdleTimeoutUsesJavaScriptNumberParsing(t *testing.T) {
 		}
 	}
 }
+
+// M200: a git-describe build carries commits after its base tag. Semver reads
+// the distance suffix as a prerelease, so comparing the raw strings makes the
+// base release look newer and lets `pier update` downgrade an ahead build.
+func TestGitDescribeBuildIsNotOlderThanItsBaseTag(t *testing.T) {
+	current := "v0.0.44-34-g6f42eea9"
+	if IsNewerPackageVersion("v0.0.44", current) {
+		t.Fatal("the base tag must not look newer than a build ahead of it")
+	}
+	if !IsNewerPackageVersion("v0.0.45", current) {
+		t.Fatal("a later tag must still be newer")
+	}
+	if IsNewerPackageVersion("v0.0.43", current) {
+		t.Fatal("an earlier tag must not be newer")
+	}
+	if IsNewerPackageVersion("v0.0.44", "v0.0.44-0-g6f42eea9") {
+		t.Fatal("a zero-distance describe at the tag must not notify")
+	}
+	if !IsNewerPackageVersion("v0.0.44", "v0.0.43-10-g6f42eea9") {
+		t.Fatal("a build based on an older tag must notify")
+	}
+	if !IsNewerPackageVersion("v1.2.4", "v1.2.3") {
+		t.Fatal("ordinary semver comparison changed")
+	}
+}
