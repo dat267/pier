@@ -279,13 +279,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D374)
+## Deliberate divergences from pi (D1–D375)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D374**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D375**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -4948,6 +4948,27 @@ write queue, queues a message, renames, and reopens the file. Previously the
 queued message was missing from the reopened branch and the active manager
 still reported the old name. `TestRenamingAnotherSessionStillWrites` covers the
 non-active path.
+
+### D375
+
+**A render walk retains its admitted child-line cache across reentrant invalidation.**
+
+Reference: pi v1.5.0 (`f9a26365`) `packages/tui/src/tui.ts` renders child
+components synchronously. Pier reuses unchanged children (D229) and defers
+large Markdown (D204). When that bounded queue rejects a streaming thinking
+render, its synchronous retry callback marks the chat dirty. This clears the
+chat's cache while its Render walk is still running; a following unchanged
+row then indexed the cleared cache and panicked. Container already snapshots
+child identities against reentrant changes. It now also retains the admitted
+cached-line slice for that frame, so invalidation affects the next cache
+without invalidating reads already selected by the current walk. This adds
+no cache, worker, copy or synchronization.
+
+Reproducer: `TestStreamingMarkdownBackpressureKeepsCachedFollowingRows` uses
+the real App queue with four occupied slots, streams thinking across 64KiB,
+and renders a cached status row below it. Previously it panicked with
+`index out of range [1] with length 0` at Container.Render. The previous
+complete thinking frame and following row now remain visible under pressure.
 
 ## Lock inventory
 

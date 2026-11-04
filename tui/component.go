@@ -489,9 +489,13 @@ func (c *Container) Render(width int) []string {
 		c.childRenders = make([][]string, len(c.childrenSnapshot))
 	}
 	c.childRenders = c.childRenders[:len(c.childrenSnapshot)]
+	// A child's Render can invalidate this container (for example, a rejected
+	// Markdown preparation requests another frame). Keep the admitted cached
+	// lines alive for this walk even if that callback clears cacheChildren.
+	cachedChildren := c.cacheChildren
 	for i, child := range c.childrenSnapshot {
 		if c.childReusable[i] {
-			c.childRenders[i] = c.cacheChildren[i]
+			c.childRenders[i] = cachedChildren[i]
 		} else {
 			childLines := child.Render(width)
 			// Read after Render: a container bumps its revision while rendering,

@@ -62,6 +62,32 @@ func TestInputContinuesWhileLargeMarkdownPreparationIsBlocked(t *testing.T) {
 	waitForConditionWithin(t, func() bool { return strings.Contains(editorText(app), "responsive") }, 2*time.Second)
 }
 
+// D204: upstream f9a26365 interactive-mode.ts paints on one owner. Rejecting
+// an off-loop preparation must not invalidate that owner's in-progress walk.
+func TestStreamingMarkdownBackpressureKeepsCachedFollowingRows(t *testing.T) {
+	app, cleanup := newTestAppB(t)
+	defer cleanup()
+	release := make(chan struct{})
+	defer func() { close(release); app.markdownQueue.Flush() }()
+	for range 4 {
+		app.markdownQueue.GoContext(func(context.Context) { <-release })
+	}
+
+	message := &ai.AssistantMessage{Content: ai.ContentList{ai.ThinkingContent{Thinking: "short"}}}
+	app.events.HandleEvent(&coding.SessionEvent{Type: coding.SessionMessageStart, Agent: agentEvent("message_start", message)})
+	app.transcript.ShowStatus("following row")
+	app.events.streamingComponent.SetHideThinkingBlock(false)
+	app.chat.Render(80)
+
+	message = &ai.AssistantMessage{Content: ai.ContentList{ai.ThinkingContent{Thinking: strings.Repeat("thinking ", 9000)}}}
+	app.events.HandleEvent(&coding.SessionEvent{Type: coding.SessionMessageUpdate, Agent: agentEvent("message_update", message)})
+	lines := strings.Join(app.chat.Render(80), "\n")
+	// Backpressure keeps the previous complete thinking frame until admitted.
+	if !strings.Contains(lines, "following row") || !strings.Contains(lines, "short") {
+		t.Fatalf("backpressured frame lost the previous thinking or following row: %q", lines)
+	}
+}
+
 // D204: live assistant messages, not only detached session prerenders, opt in.
 func TestStreamingAssistantUsesDetachedMarkdownPreparation(t *testing.T) {
 	app, cleanup := newTestAppB(t)
