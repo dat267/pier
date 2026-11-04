@@ -114,3 +114,15 @@ func TestLatexDisplayIndentationSurvivesShortLeadingLines(t *testing.T) {
 		t.Fatalf("empty fraction = %q, %v; want %q", got, ok, "\n─")
 	}
 }
+
+// Reference: pi f9a26365 tui/src/latex.ts tests the cases condition prefix
+// with /^(?:if|when|for|otherwise)\b/i, so a capitalized condition keeps the
+// plain space prefix instead of gaining " if ". Output verified against the
+// pinned renderLatex with node --experimental-strip-types.
+func TestLatexCasesConditionIsCaseInsensitive(t *testing.T) {
+	got, ok := RenderLatex(`\begin{cases} x & \text{If } x > 0 \\ -x & \text{Otherwise} \end{cases}`, RenderLatexOptions{Display: false})
+	want := "⎧ x  If x > 0\n⎨\n⎩ -x Otherwise"
+	if !ok || got != want {
+		t.Fatalf("capitalized cases = %q, %v; want %q", got, ok, want)
+	}
+}

@@ -29,7 +29,7 @@ var (
 	// express two literal backslashes.
 	latexEnvironmentRowRegex  = regexp.MustCompile(`\\\\(?:\[[^\]\n]*\])?`)
 	latexArrayColumnSpecRegex = regexp.MustCompile(`^\s*\{[^}]*\}`)
-	latexCasesConditionRegex  = regexp.MustCompile(`^(?:if|when|for|otherwise)\b`)
+	latexCasesConditionRegex  = regexp.MustCompile(`(?i)^(?:if|when|for|otherwise)\b`)
 	latexScriptRelationRegex  = regexp.MustCompile(`\s*([=+-])\s*`)
 	latexSimpleWordRegex      = regexp.MustCompile(`^[\p{L}\p{N}.]+$`)
 	// The fraction denominator test is numeric-only upstream (an alphabetic
