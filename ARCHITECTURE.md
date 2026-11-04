@@ -4286,7 +4286,15 @@ renderers' whitespace parity), and it runs on:
   arguments;
 - session display text that other clients or models wrote: the tree selector's
   entries and tool-call previews, and compaction/branch summaries;
-- goal objectives, blockers, and event bodies in the goal cards.
+- goal objectives, blockers, and event bodies in the goal cards;
+- model catalog IDs, display names and provider badges in both model selectors
+  (including unavailable configured IDs), and the footer's model ID. Catalog
+  identity and selection/search values stay raw; only display text is cleaned.
+  Reference: v1.5.0 `f9a26365` components/model-selector.ts and
+  scoped-models-selector.ts render these fields as-is. Reproducers:
+  `TestModelSelectorCatalogFieldsCannotEmitTerminalControls`,
+  `TestScopedModelSelectorCatalogFieldsCannotEmitTerminalControls`,
+  `TestFooterCatalogIDCannotEmitTerminalControls`.
 
 Renderer-generated styling, hyperlinks, and image escapes are unaffected
 because they are applied after sanitizing. Print-mode stdout is deliberately

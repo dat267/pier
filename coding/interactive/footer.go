@@ -199,7 +199,7 @@ func FooterLine(input FooterInput, width int) string {
 		parts = append(parts, text)
 	}
 	if input.ModelID != "" {
-		parts = append(parts, FooterTruncateLeft(input.ModelID, 25))
+		parts = append(parts, FooterTruncateLeft(tui.SanitizeUntrustedText(input.ModelID), 25))
 	}
 	parts = append(parts, FooterTruncate(filepath.Base(input.Cwd), 25))
 	return FooterTruncate(strings.Join(parts, " · "), min(80, max(0, width)))

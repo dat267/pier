@@ -461,17 +461,17 @@ func (c *ModelSelectorComponent) updateList() {
 		if isCurrent {
 			currentMarker = theme.Fg("accent", "✓ ")
 		}
-		modelText := item.id
+		modelText := tui.SanitizeUntrustedText(item.id)
 		if isSelected {
-			modelText = theme.Fg("accent", item.id)
+			modelText = theme.Fg("accent", modelText)
 		}
 		// Show the display name only when it adds words the id does not
 		// (pi v1.5.0 model-search.ts getDistinctModelName).
 		nameText := ""
 		if name, ok := GetDistinctModelName(item.id, item.model.Name); ok {
-			nameText = theme.Fg("muted", " ("+name+")")
+			nameText = theme.Fg("muted", " ("+tui.SanitizeUntrustedText(name)+")")
 		}
-		providerBadge := theme.Fg("muted", "["+item.provider+"]")
+		providerBadge := theme.Fg("muted", "["+tui.SanitizeUntrustedText(item.provider)+"]")
 		c.listContainer.AddChild(tui.NewText(cursor+currentMarker+modelText+nameText+" "+providerBadge+defaultBadge, 0, 0, nil))
 	}
 
@@ -491,7 +491,7 @@ func (c *ModelSelectorComponent) updateList() {
 		if c.selectedIndex >= 0 && c.selectedIndex < len(c.filteredModels) {
 			c.listContainer.AddChild(tui.NewSpacer(1))
 			c.listContainer.AddChild(tui.NewText(theme.Fg("muted",
-				"  Model Name: "+c.filteredModels[c.selectedIndex].model.Name), 0, 0, nil))
+				"  Model Name: "+tui.SanitizeUntrustedText(c.filteredModels[c.selectedIndex].model.Name)), 0, 0, nil))
 		}
 	}
 	if c.refreshStatusMessage != "" {

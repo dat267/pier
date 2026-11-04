@@ -421,9 +421,9 @@ func (c *ScopedModelsSelectorComponent) updateList() {
 		if item.model != nil {
 			id = item.model.ID
 		}
-		styledID := id
+		styledID := tui.SanitizeUntrustedText(id)
 		if item.model == nil {
-			styledID = theme.Strikethrough(id)
+			styledID = theme.Strikethrough(styledID)
 		}
 		modelText := styledID
 		if isSelected {
@@ -432,11 +432,11 @@ func (c *ScopedModelsSelectorComponent) updateList() {
 		providerBadge := theme.Fg("muted", " [unavailable]")
 		nameText := ""
 		if item.model != nil {
-			providerBadge = theme.Fg("muted", " ["+string(item.model.Provider)+"]")
+			providerBadge = theme.Fg("muted", " ["+tui.SanitizeUntrustedText(item.model.Provider)+"]")
 			// The display name is shown only when it adds words the id does not
 			// (pi v1.5.0 model-search.ts getDistinctModelName).
 			if name, ok := GetDistinctModelName(item.model.ID, item.model.Name); ok {
-				nameText = theme.Fg("muted", " ("+name+")")
+				nameText = theme.Fg("muted", " ("+tui.SanitizeUntrustedText(name)+")")
 			}
 		}
 		status := "  "
@@ -455,7 +455,7 @@ func (c *ScopedModelsSelectorComponent) updateList() {
 		selected := c.filteredItems[c.selectedIndex]
 		detail := "Model unavailable"
 		if selected.model != nil {
-			detail = "Model Name: " + selected.model.Name
+			detail = "Model Name: " + tui.SanitizeUntrustedText(selected.model.Name)
 		}
 		c.listContainer.AddChild(tui.NewSpacer(1))
 		c.listContainer.AddChild(tui.NewText(theme.Fg("muted", "  "+detail), 0, 0, nil))
