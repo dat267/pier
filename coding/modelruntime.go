@@ -858,13 +858,14 @@ type PreparedRequest struct {
 }
 
 // PrepareRequest resolves auth for a model request (port of prepareRequest).
+// ctx cancels auth resolution and remains on both returned request options.
 func (r *ModelRuntime) PrepareRequest(model *ai.Model, apiKey string, env map[string]string, ctx context.Context,
 	headers ai.ProviderHeaders, transformHeaders func(ai.ProviderHeaders) ai.ProviderHeaders) (*PreparedRequest, error) {
 	provider := r.models.GetProvider(model.Provider)
 	if provider == nil {
 		return nil, ai.NewModelsError(ai.ErrCodeProvider, fmt.Sprintf("Unknown provider: %s", model.Provider), nil)
 	}
-	resolution, err := r.GetAuthForModel(model, &ModelRuntimeAuthOverrides{APIKey: apiKey, Env: env})
+	resolution, err := r.GetAuthForModel(model, &ModelRuntimeAuthOverrides{APIKey: apiKey, Env: env, Ctx: ctx})
 	if err != nil {
 		return nil, err
 	}
@@ -896,10 +897,10 @@ func (r *ModelRuntime) PrepareRequest(model *ai.Model, apiKey string, env map[st
 		Provider: provider,
 		Model:    requestModel,
 		StreamOptions: &ai.StreamOptions{
-			APIKey: resolvedAPIKey, Headers: merged, Env: finalEnv,
+			APIKey: resolvedAPIKey, Headers: merged, Env: finalEnv, Ctx: ctx,
 		},
 		SimpleOptions: &ai.SimpleStreamOptions{
-			APIKey: resolvedAPIKey, Headers: merged, Env: finalEnv,
+			APIKey: resolvedAPIKey, Headers: merged, Env: finalEnv, Ctx: ctx,
 		},
 	}, nil
 }
