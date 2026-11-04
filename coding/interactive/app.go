@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -872,6 +873,15 @@ func (a *App) restoreTerminalOnExit() {
 // restored, the crash recorded and the process exits 1. Without it a panic
 // would kill the process with the terminal still in raw mode on the alternate
 // screen.
+type panicStackError struct {
+	err   error
+	stack string
+}
+
+func (e *panicStackError) Error() string      { return e.err.Error() }
+func (e *panicStackError) Unwrap() error      { return e.err }
+func (e *panicStackError) StackTrace() string { return e.stack }
+
 func (a *App) runGuarded(body func()) {
 	defer func() {
 		recovered := recover()
@@ -885,7 +895,7 @@ func (a *App) runGuarded(body func()) {
 		if a.lifecycle == nil {
 			panic(recovered)
 		}
-		a.lifecycle.UncaughtCrash(failure)
+		a.lifecycle.UncaughtCrash(&panicStackError{err: failure, stack: string(debug.Stack())})
 	}()
 	body()
 }

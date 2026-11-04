@@ -13,11 +13,13 @@ import (
 func TestAppRunConvertsAPanicIntoAnUncaughtCrash(t *testing.T) {
 	lifecycle, _, exits, _ := newLifecycleTest(t)
 	var recorded string
+	var recordedError error
 	var stderr strings.Builder
 	lifecycle.options.Exit = func(code int) { *exits = append(*exits, code) }
 	lifecycle.options.WriteErr = func(text string) { stderr.WriteString(text) }
 	lifecycle.options.RecordCrash = func(kind string, err error) bool {
 		recorded = kind + ": " + err.Error()
+		recordedError = err
 		return true
 	}
 	app := &App{lifecycle: lifecycle}
@@ -30,6 +32,10 @@ func TestAppRunConvertsAPanicIntoAnUncaughtCrash(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "exiting due to uncaughtException") || !strings.Contains(stderr.String(), "boom") {
 		t.Fatalf("stderr = %q", stderr.String())
+	}
+	stacked, ok := recordedError.(interface{ StackTrace() string })
+	if !ok || !strings.Contains(stacked.StackTrace(), "runGuarded") {
+		t.Fatalf("recorded error has no panic stack: %#v", recordedError)
 	}
 }
 
