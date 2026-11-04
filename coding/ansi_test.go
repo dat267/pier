@@ -98,3 +98,48 @@ func BenchmarkStripAnsiPatternReference(b *testing.B) {
 		_ = referenceStripAnsi(value)
 	}
 }
+
+// Reference: pi f9a26365 utils/ansi.ts CSI_START accepts a private prefix
+// (<, =, >) only immediately after a real CSI introducer, so SGR mouse
+// reports and private DA replies are stripped whole while a bare ESC keeps
+// its final-byte meaning.
+func TestStripAnsiPrivatePrefixCSI(t *testing.T) {
+	cases := map[string]string{
+		"\x1b[<35;59;1M":          "",
+		"\x1b[<0;10;5M":           "",
+		"\x1b[<35;59;1Mtext":      "text",
+		"\x1b[=1;2c":              "",
+		"\x1b[>0c":                "",
+		"\x1b[>1;10;0c":           "",
+		"\u009b<35;59;1M":         "",
+		"\u009b>0c":               "",
+		"before\x1b[<1;2;3Mafter": "beforeafter",
+		// A bare ESC keeps < = > as final bytes (keypad modes).
+		"\x1b<":   "",
+		"\x1b=":   "",
+		"\x1b>":   "",
+		"a\x1b<b": "ab",
+	}
+	for value, want := range cases {
+		if got := StripAnsi(value); got != want {
+			t.Errorf("StripAnsi(%q) = %q, want %q", value, got, want)
+		}
+	}
+}
+
+// A private-prefix CSI split across chunks is held back whole, so its
+// parameters cannot leak as text while streaming.
+func TestSplitIncompleteAnsiSuffixPrivatePrefixCSI(t *testing.T) {
+	complete, pending := splitIncompleteAnsiSuffix("abc\x1b[<35;59")
+	if complete != "abc" || pending != "\x1b[<35;59" {
+		t.Fatalf("split = %q / %q", complete, pending)
+	}
+	complete, pending = splitIncompleteAnsiSuffix("abc\x1b[<35;59;1M")
+	if complete != "abc\x1b[<35;59;1M" || pending != "" {
+		t.Fatalf("complete split = %q / %q", complete, pending)
+	}
+	complete, pending = splitIncompleteAnsiSuffix("abc\u009b>0c")
+	if complete != "abc\u009b>0c" || pending != "" {
+		t.Fatalf("C1 complete split = %q / %q", complete, pending)
+	}
+}

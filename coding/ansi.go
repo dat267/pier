@@ -16,7 +16,7 @@ import (
 //
 // ansiStripPattern is the upstream pattern, kept as the reference: the scanner
 // below must produce byte-identical output (TestStripAnsiMatchesPattern).
-var incompleteCSIPrefixPattern = regexp.MustCompile(`^(?:\x1b|\x{9b})[\[\]()#;?]*(?:\d{1,4}(?:[;:]\d{0,4})*)?$`)
+var incompleteCSIPrefixPattern = regexp.MustCompile(`^(?:(?:\x1b\[|\x{9b})[<=>]|(?:\x1b|\x{9b})[\[\]()#;?]*)(?:\d{1,4}(?:[;:]\d{0,4})*)?$`)
 
 const maxPendingAnsiBytes = 256
 
@@ -25,8 +25,12 @@ var ansiStripPattern = regexp.MustCompile(
 	"(?:\\x1b\\][\\s\\S]*?(?:\\x07|\\x1b\\\\|\\x9c))" +
 		"|" +
 		// CSI and related: ESC/C1, optional intermediates, optional params
-		// (supports ; and :) then a final byte
-		"[\\x1b\\x{9b}][\\[\\]()#;?]*(?:\\d{1,4}(?:[;:]\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]",
+		// (supports ; and :) then a final byte. A private prefix (<, =, >) is
+		// accepted only right after a real CSI introducer (ESC [ or 0x9B), so
+		// ESC[<35;59;1M (SGR mouse report) is stripped whole. After a bare ESC
+		// these bytes stay final bytes: ESC = and ESC > (keypad modes) must not
+		// swallow the digits of the text that follows.
+		"(?:(?:\\x1b\\[|\\x{9b})[<=>]|[\\x1b\\x{9b}][\\[\\]()#;?]*)(?:\\d{1,4}(?:[;:]\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]",
 )
 
 // splitIncompleteAnsiSuffix separates text safe to strip now from a trailing
@@ -137,11 +141,37 @@ func matchAnsiAt(value string, start int) int {
 		}
 	}
 
+	// Private-prefix CSI: a real CSI introducer (ESC [ or U+009B) followed by
+	// <, = or > takes the prefix as part of the introducer, so an SGR mouse
+	// report is stripped whole. The general form below remains the fallback
+	// when no final byte follows (a bare ESC keeps < = > as final bytes).
+	prefixEnd := -1
+	if escape && i < len(value) && value[i] == '[' {
+		if i+1 < len(value) && (value[i+1] == '<' || value[i+1] == '=' || value[i+1] == '>') {
+			prefixEnd = i + 2
+		}
+	} else if !escape && i < len(value) && (value[i] == '<' || value[i] == '=' || value[i] == '>') {
+		prefixEnd = i + 1
+	}
+	if prefixEnd >= 0 {
+		if end := matchCSITail(value, prefixEnd); end >= 0 {
+			return end - start
+		}
+	}
+
 	// Intermediates: [ ] ( ) # ; ?
 	for i < len(value) && isAnsiIntermediate(value[i]) {
 		i++
 	}
-	// Parameters: digits, then any number of ;/: separated digit groups.
+	if end := matchCSITail(value, i); end >= 0 {
+		return end - start
+	}
+	return 0
+}
+
+// matchCSITail parses optional CSI parameters and the final byte starting at i,
+// returning the index after the sequence, or -1 when no final byte follows.
+func matchCSITail(value string, i int) int {
 	paramsStart := i
 	if i < len(value) && isASCIIDigit(value[i]) {
 		i += runOfDigits(value[i:], 4)
@@ -154,10 +184,10 @@ func matchAnsiAt(value string, start int) int {
 	// a parameter can serve as the final byte (\x1b[#8, C1 "1234").
 	for c := i; c >= paramsStart; c-- {
 		if c < len(value) && isAnsiFinal(value[c]) {
-			return c + 1 - start
+			return c + 1
 		}
 	}
-	return 0
+	return -1
 }
 
 func runOfDigits(value string, limit int) int {
