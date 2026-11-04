@@ -771,7 +771,9 @@ func (m *Models) Refresh(options *ModelsRefreshOptions) ModelsRefreshResult {
 			m.mu.Unlock()
 			defer func() {
 				m.mu.Lock()
-				delete(m.refreshCancels, provider.ID)
+				if m.refreshGenerations[provider.ID] == generation {
+					delete(m.refreshCancels, provider.ID)
+				}
 				m.mu.Unlock()
 				cancel()
 			}()

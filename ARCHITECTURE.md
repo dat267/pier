@@ -66,7 +66,12 @@ wrappers must not pre-filter their all-model getter or personalization input.
 `TestCatalogWrappersExposeCompleteModelLists` covers online and offline reads.
 Each wrapper protects its immutable overlay slice snapshot/swap with a local
 mutex. Base-provider getters and publication/personalization callbacks run
-outside it (`TestCatalogWrapperRefreshSynchronizesReads`).
+outside it (`TestCatalogWrapperRefreshSynchronizesReads`). Refresh cleanup
+removes a provider's cancellation handle only while it still owns that refresh
+generation. A retired completion must not erase its replacement's handle,
+which provider removal/replacement still needs to cancel the current work
+(`TestOldRefreshCompletionKeepsReplacementCancellation`, upstream v1.5.0
+`f9a26365` models.ts controller-identity check).
 
 ## Session model
 
