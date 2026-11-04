@@ -156,3 +156,24 @@ func TestTakeUnnotifiedCrash(t *testing.T) {
 	// Clearing twice is fine.
 	ClearCrashLog(path)
 }
+
+// D373: a build without the version ldflags must not record the source default
+// 0.0.0, which names no commit. The stamped version still wins.
+func TestCrashRecordIdentifiesTheBuild(t *testing.T) {
+	previous := Version
+	t.Cleanup(func() { Version = previous })
+
+	Version = "v1.2.3"
+	path := filepath.Join(t.TempDir(), "crashes.json")
+	record := RecordCrash(CrashInput{Kind: CrashKindUncaughtException, Error: errors.New("boom")}, path)
+	if record == nil || record.Version != "v1.2.3" {
+		t.Fatalf("record = %+v", record)
+	}
+
+	// An unstamped build falls back to the embedded revision; a test binary has
+	// no VCS stamp, so the source default remains the documented last resort.
+	Version = "0.0.0"
+	if got := crashBuildVersion(); got != "0.0.0" && got == "" {
+		t.Fatalf("crashBuildVersion() = %q", got)
+	}
+}

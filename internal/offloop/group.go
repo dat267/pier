@@ -14,6 +14,7 @@ type Group struct {
 	mu      sync.Mutex
 	queues  []*Queue
 	stopped bool
+	onPanic func(error)
 }
 
 // NewGroup builds an empty group.
@@ -24,6 +25,18 @@ func (g *Group) Queue() *Queue {
 	q := New()
 	g.Add(q)
 	return q
+}
+
+// SetPanicReporter installs the worker-panic reporter on every queue of the
+// group, including queues registered later. See Queue.SetPanicReporter.
+func (g *Group) SetPanicReporter(report func(error)) {
+	g.mu.Lock()
+	g.onPanic = report
+	queues := append([]*Queue(nil), g.queues...)
+	g.mu.Unlock()
+	for _, q := range queues {
+		q.SetPanicReporter(report)
+	}
 }
 
 // OptionalQueue registers best-effort work (D199). StopAll cancels its context,
@@ -44,7 +57,11 @@ func (g *Group) Add(q *Queue) {
 	if !stopped {
 		g.queues = append(g.queues, q)
 	}
+	report := g.onPanic
 	g.mu.Unlock()
+	if report != nil {
+		q.SetPanicReporter(report)
+	}
 	if stopped {
 		q.Stop()
 	}

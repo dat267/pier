@@ -25,6 +25,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	goruntime "runtime"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -61,6 +62,12 @@ func (code reportedExitCode) ExitCode() int { return int(code) }
 
 // Execute runs the CLI, exiting the process on a fatal error.
 func Execute() {
+	// A fatal panic prints only the panicking goroutine by default. The port's
+	// state is split across the UI owner loop, session writers and provider
+	// goroutines, so an intermittent fault (a torn slice header, for instance)
+	// needs the other goroutines' stacks to be diagnosable at all. This changes
+	// dump verbosity only, never runtime behavior.
+	debug.SetTraceback("all")
 	// Before anything can reach the network: android has no /etc/resolv.conf, so
 	// the pure-Go resolver needs a fallback there.
 	configureResolver()
@@ -148,6 +155,16 @@ func Execute() {
 
 // describeGetwdError matches v1.5.0 main.ts: a deleted working directory gets a
 // plain recovery hint instead of the raw getwd error.
+// cwdForCrash reports the working directory for a crash record, best effort: a
+// crash record is written from paths that must not fail or block.
+func cwdForCrash() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	return cwd
+}
+
 func describeGetwdError(err error) error {
 	if errors.Is(err, os.ErrNotExist) {
 		return errors.New("The current working directory no longer exists. Change to an existing directory and try again")
@@ -215,6 +232,13 @@ func run(appName string, args *coding.Args) error {
 	// the app's theme and pre-render queues. Teardown drains them all with a
 	// single call, so a queue cannot be forgotten.
 	offloopGroup := offloop.NewGroup()
+	// A panic on a worker goroutine would otherwise kill the process with
+	// nothing in the crash log. Record it (with its stack) before the re-raised
+	// panic ends the process.
+	offloopGroup.SetPanicReporter(func(err error) {
+		coding.RecordCrash(coding.CrashInput{Kind: coding.CrashKindUncaughtException, Error: err, Cwd: cwdForCrash()},
+			coding.GetCrashLogPath(coding.GetAgentDir()))
+	})
 
 	cwd, err := os.Getwd()
 	if err != nil {

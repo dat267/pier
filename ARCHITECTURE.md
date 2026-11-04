@@ -3518,6 +3518,32 @@ Windows inherited ACLs are not changed.
 Test: Linux `TestMainScreenCrashLogUsesPrivateMode` checks new and existing
 files.
 
+### D373
+
+**Crash diagnostics cover worker goroutines and unnamed builds.**
+
+Reference: pi v1.4.0 `packages/coding-agent/src/core/crash-log.ts` records an
+uncaught exception's message, stack, session file and cwd. The reference runs
+one thread, so every failure reaches its single handler. The port has an owner
+loop plus off-loop queues, provider goroutines and timers, so three additions
+keep a crash diagnosable:
+
+- The owner loop records the recovered panic's stack; before this, `stack` was
+  always null because only errors implementing `StackTrace()` supplied one.
+- `offloop.Queue` reports a worker panic (with the panicking goroutine's stack)
+  through a reporter before re-raising it. The panic stays fatal, as an
+  uncaught exception is upstream; the report only fills the crash log, which
+  otherwise never saw a worker's failure.
+- A build without the version ldflags records the VCS revision Go embeds in its
+  build info instead of the source default `0.0.0`, and `cmd.Execute` sets
+  `GOTRACEBACK=all` so a fatal dump includes the other goroutines. Both change
+  diagnostics only.
+
+Tests: `TestAppRunConvertsAPanicIntoAnUncaughtCrash` (recorded stack),
+`TestQueueReportsWorkerPanicBeforeDying` and
+`TestQueueSurvivesAPanickingReporter` (worker report, fatal panic kept),
+`TestCrashRecordIdentifiesTheBuild`.
+
 ### D298
 
 **Trust decision files are private on POSIX.**

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"time"
 
 	"github.com/dat267/pier/ai"
@@ -117,7 +118,7 @@ func RecordCrash(crash CrashInput, path string) *CrashRecord {
 	}
 	record := CrashRecord{
 		Timestamp:   time.Now().UTC().Format(time.RFC3339Nano),
-		Version:     Version,
+		Version:     crashBuildVersion(),
 		Kind:        crash.Kind,
 		Message:     message,
 		Stack:       nil,
@@ -136,6 +137,40 @@ func RecordCrash(crash CrashInput, path string) *CrashRecord {
 		return nil
 	}
 	return &record
+}
+
+// crashBuildVersion identifies the build a crash came from. A binary built
+// without the version ldflags (a plain `go install`) otherwise records the
+// source default 0.0.0, which names no commit: fall back to the VCS revision
+// Go embeds in the build info. Upstream records its package version here.
+func crashBuildVersion() string {
+	if Version != "" && Version != "0.0.0" {
+		return Version
+	}
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return Version
+	}
+	revision := ""
+	modified := false
+	for _, setting := range info.Settings {
+		switch setting.Key {
+		case "vcs.revision":
+			revision = setting.Value
+		case "vcs.modified":
+			modified = setting.Value == "true"
+		}
+	}
+	if revision == "" {
+		return Version
+	}
+	if len(revision) > 12 {
+		revision = revision[:12]
+	}
+	if modified {
+		revision += "-dirty"
+	}
+	return revision
 }
 
 // TakeUnnotifiedCrash returns the newest recent unannounced crash and marks

@@ -17,6 +17,8 @@ package offloop
 
 import (
 	"context"
+	"fmt"
+	"runtime/debug"
 	"sync"
 )
 
@@ -43,6 +45,7 @@ type Queue struct {
 	ctx      context.Context
 	cancel   context.CancelFunc     // non-nil only for optional queues (D199)
 	latest   map[string]*latestTask // pending replacements only, guarded by mu
+	onPanic  func(error)            // worker-panic reporter, guarded by mu
 }
 
 // New builds an idle queue. The worker goroutine starts with the first task
@@ -185,6 +188,62 @@ func (q *Queue) enqueueLocked(t task) {
 	q.cond.Signal()
 }
 
+// SetPanicReporter installs a best-effort reporter for a task that panics. It
+// runs on the worker goroutine before the panic is re-raised, so the process
+// still dies with Go's own dump (the reporter must not block or panic). A
+// composition root wires this to the crash log, which otherwise never sees a
+// worker's panic. Passing nil clears the reporter.
+func (q *Queue) SetPanicReporter(report func(error)) {
+	q.mu.Lock()
+	q.onPanic = report
+	q.mu.Unlock()
+}
+
+// workerPanicError carries a worker panic's stack to the crash log. Go's
+// process dump shows only the panicking goroutine by default, and nothing is
+// recorded for a panic that never reaches the owner loop's recovery.
+type workerPanicError struct {
+	recovered any
+	stack     string
+}
+
+func (e *workerPanicError) Error() string {
+	if err, ok := e.recovered.(error); ok {
+		return err.Error()
+	}
+	return fmt.Sprint(e.recovered)
+}
+
+func (e *workerPanicError) Unwrap() error {
+	err, _ := e.recovered.(error)
+	return err
+}
+
+func (e *workerPanicError) StackTrace() string { return e.stack }
+
+// runReportedPanic runs one task, reporting a panic before re-raising it. The
+// stack is captured here, on the panicking goroutine.
+func runReportedPanic(q *Queue, run func()) {
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			return
+		}
+		failure := &workerPanicError{recovered: recovered, stack: string(debug.Stack())}
+		q.mu.Lock()
+		report := q.onPanic
+		q.mu.Unlock()
+		if report != nil {
+			func() {
+				defer func() { _ = recover() }()
+				report(failure)
+			}()
+		}
+		panic(failure)
+	}()
+	run()
+}
+
 func (q *Queue) loop() {
 	for {
 		q.mu.Lock()
@@ -203,7 +262,7 @@ func (q *Queue) loop() {
 		}
 		q.mu.Unlock()
 
-		t.run()
+		runReportedPanic(q, t.run)
 
 		q.mu.Lock()
 		if t.coalesced {
