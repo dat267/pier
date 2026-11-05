@@ -501,8 +501,9 @@ Compared with upstream `theme/{dark,light}.json`:
   blocks, and custom/compaction frames; failed and successful tools otherwise
   had identical output. HTML export uses the same signal tokens.
 - Amber identifies the wordmark, borders, selection, and list bullets.
-  User panels are warm (`#393630` dark, `#f4eee1` light), rather than the
-  original upstream snapshot's `#343541` blue-gray or `#e8e8e8` gray.
+  User panels are warm (`#393630` dark, `#efdcc0` light), rather than the
+  original upstream snapshot's `#343541` blue-gray or `#e8e8e8` gray. D377
+  retuned these values for measured contrast without changing the hues.
 
 Fills remain distinct after `rgbTo256`: low-spread dark colors use the gray
 ramp, hues use the cube. `#393630` maps to 237 versus pending 235; a subtler dark
@@ -5057,6 +5058,28 @@ Reproducers: `TestConfigCommandTimeoutDoesNotWaitForDescendantPipeEOF`,
 `TestConfiguredShellTimeoutDoesNotWaitForDescendantPipeEOF`. Both use a
 controlled FIFO child and release/join it on failure; the original public-path
 test was first observed failing at the real 10s deadline before shortening it.
+
+### D377
+
+**Pier's palette meets measured contrast floors.**
+
+D154's hand-tuned hex values drifted below WCAG AA where text is drawn inside
+the signal panels: `muted`/`toolOutput`/`toolDiffContext`/`mdQuote` reached
+4.04–4.20:1 on the light fills and 3.53:1 on `userMessageBg` dark, `dim` sat at
+1.99–2.98:1, and the pale light fills were only 1.15–1.20:1 from the page. The
+result read as washed out in both appearances. `themes/{dark,light}.json` are
+now adjusted along their existing hue/saturation, not replaced: normal text and
+semantic colors clear 4.5:1 against the page and every panel fill, `dim`,
+`mdLinkUrl`, `thinkingOff` and `thinkingMinimal` clear 3:1, and each fill is at
+least 1.2:1 from the page so a panel edge stays visible. Light fills keep
+mapping to distinct `rgbTo256` indices, pinned by
+`TestPierThemeFilledBackgroundsDiffer`.
+
+Upstream derives its palette from okhsl tokens and tests no contrast, so this is
+a pier divergence, not parity. The gate is measured rather than stylistic:
+`TestBuiltinThemesMeetContrastTargets` computes WCAG relative luminance for both
+built-in documents; the regenerated interactive goldens carry the new values.
+The amber identity (D219) and D154's structural choices are unchanged.
 
 ## Lock inventory
 

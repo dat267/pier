@@ -20,7 +20,7 @@ func TestBuiltinThemesUsePierPaletteWithoutInstaller(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	for _, tc := range []struct{ name, accent string }{
-		{"dark", "#ffb454"}, {"light", "#b45309"},
+		{"dark", "#ffb454"}, {"light", "#a04908"},
 	} {
 		colors, err := GetResolvedThemeColors(tc.name)
 		if err != nil {
@@ -109,7 +109,7 @@ func TestPierThemeSignalPanelColors(t *testing.T) {
 	useBuiltinPierThemeForTest(t)
 	for name, want := range map[string]map[string]string{
 		"dark":  {"toolPendingBg": "#2b2b2b", "toolSuccessBg": "#22302a", "toolErrorBg": "#3a2424", "userMessageBg": "#393630", "customMessageBg": "#2e2640"},
-		"light": {"toolPendingBg": "#ececec", "toolSuccessBg": "#e6f2e9", "toolErrorBg": "#f7e7e7", "userMessageBg": "#f4eee1", "customMessageBg": "#f0e9fb"},
+		"light": {"toolPendingBg": "#e6e6e6", "toolSuccessBg": "#dcece1", "toolErrorBg": "#f1dddd", "userMessageBg": "#efdcc0", "customMessageBg": "#e7dbf5"},
 	} {
 		colors, err := GetResolvedThemeColors(name)
 		if err != nil {
