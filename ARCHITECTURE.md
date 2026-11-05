@@ -1583,8 +1583,21 @@ Tests: `TestBackgroundQueryTimeoutReplyRace`,
 Tests: `TestProbeSystemColorsDoesNotBlockTheCaller`
 (`coding/interactive/interactive_test.go`) and
 `TestRendererBeginTerminalColorsWaitsOffLoop` (`tui/terminalcolors_test.go`).
-Reference: `packages/coding-agent/src/modes/interactive/theme/theme-controller.ts`.
 
+Because the first paint legitimately precedes the reply, the system theme keeps
+upstream's pending state: the controller marks the terminal colors pending when
+it takes over, and `buildSystemTheme` passes `saturation: 0` plus
+`appearanceHint: getTerminalTheme()` until `SetSystemTerminalColors` records the
+first report. The frames before the reply are terminal-default (grayscale)
+rather than ANSI palette colors with a guessed appearance, so the startup look
+does not depend on whether the reply beats the paint. The D193 signal panel fills
+follow the detected appearance, so they too wait for the first report: choosing
+them from the environment fallback made launch show deep-green tool boxes on one
+run and the reported bright variant on the next.
+Test: `TestSystemThemeStartsGrayscaleUntilColorsAreReported`.
+Reference: pinned `f9a26365` `theme-controller.ts` constructor
+`markTerminalColorsPending()` and `theme.ts` `createSystemTheme`.
+Reference: `packages/coding-agent/src/modes/interactive/theme/theme-controller.ts`.
 ### D219
 
 **The adaptive system theme uses Pier amber.**

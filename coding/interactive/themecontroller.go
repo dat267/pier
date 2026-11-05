@@ -99,6 +99,9 @@ func NewInteractiveThemeController(options ThemeControllerOptions) *InteractiveT
 		controller.timeoutMS = 100
 	}
 	controller.terminalTheme = DetectTerminalBackgroundFromEnv(options.Env).Theme
+	// Upstream marks the colors pending here, before the first theme load: the
+	// system theme stays grayscale until the terminal reports them.
+	MarkSystemTerminalColorsPending()
 
 	setting := controller.currentThemeSetting
 	if setting == nil && controller.getSettings != nil {

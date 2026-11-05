@@ -649,17 +649,30 @@ type ThemeInfo struct {
 const SystemThemeName = "system"
 
 var systemThemeState struct {
-	mu     sync.Mutex
-	colors *tui.TerminalColors
-	scheme *TerminalTheme
+	mu      sync.Mutex
+	colors  *tui.TerminalColors
+	scheme  *TerminalTheme
+	pending bool
+}
+
+// MarkSystemTerminalColorsPending reports that a terminal color query is in
+// flight: the system theme renders grayscale until the first report arrives
+// (upstream markTerminalColorsPending). The interactive theme controller marks
+// it when it takes over the terminal, before the query is written.
+func MarkSystemTerminalColorsPending() {
+	systemThemeState.mu.Lock()
+	systemThemeState.pending = true
+	systemThemeState.mu.Unlock()
 }
 
 // SetSystemTerminalColors records the terminal's reported colors; the system
 // theme is generated from them on the next load (upstream setTerminalColors).
+// The first report (even an empty timeout result) ends the pending state.
 func SetSystemTerminalColors(colors tui.TerminalColors) {
 	systemThemeState.mu.Lock()
 	stored := colors
 	systemThemeState.colors = &stored
+	systemThemeState.pending = false
 	systemThemeState.mu.Unlock()
 }
 
@@ -724,8 +737,15 @@ func buildSystemTheme(mode ColorMode) *Theme {
 	}
 	systemThemeState.mu.Lock()
 	colors := systemThemeState.colors
+	pending := systemThemeState.pending
 	systemThemeState.mu.Unlock()
-	input := SystemThemeInput{}
+	input := SystemThemeInput{AppearanceHint: getTerminalTheme()}
+	if pending {
+		// Upstream renders the system theme grayscale until the terminal reports
+		// its colors, so the first frames do not depend on whether the reply
+		// beats the first paint.
+		input.Saturation = new(float64(0))
+	}
 	if colors != nil {
 		input.Foreground = colors.Foreground
 		input.Background = colors.Background
@@ -749,7 +769,14 @@ func buildSystemTheme(mode ColorMode) *Theme {
 	// compaction/custom-message frame has no fill. The port keeps its own signal
 	// fills for the filledBackgroundColors panels (decoration stays transparent,
 	// matching transparentBackgroundColors).
-	if colors == nil || colors.Background == nil {
+	//
+	// The fills follow the detected appearance, so while the terminal's colors are
+	// pending they wait for the first report: painting them from the environment
+	// fallback is what made launch show deep-green tool boxes on one run and the
+	// reported variant on the next. Pending frames are transparent like upstream's
+	// grayscale tier; the first report applies the fills once, with the reported
+	// appearance.
+	if !pending && (colors == nil || colors.Background == nil) {
 		for token, value := range pierSignalPanelColors(getTerminalTheme()) {
 			bgColors[token] = ColorValue{Value: value}
 		}
