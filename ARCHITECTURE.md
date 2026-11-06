@@ -284,13 +284,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D379)
+## Deliberate divergences from pi (D1–D380)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D379**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D380**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -5127,6 +5127,27 @@ path is pinned by `TestTailCommandStartsFromTheLiveContext` and
 `TestTailCommandNeedsAPersistedSession`. Cold history remains readable only
 through the source session; the tail session is a new starting point, not a
 backup.
+
+### D380
+
+**Skill frontmatter parses a flat YAML subset, not block scalars.**
+
+Reference: pi v1.5.0 (`f9a26365`) `utils/frontmatter.ts` parses frontmatter with
+the `yaml` package. Pier parses the flat `key: value` subset the Agent Skills
+spec's frontmatter uses, tracking quoted versus plain scalars and common boolean,
+numeric and null values, but it does not implement block scalars (`|`, `>`),
+anchors or nested structures. A skill that describes itself with `description: |`
+therefore does not load in pier: it reports "description is required" where the
+reference loads the skill with a multiline description (upstream test fixture
+`test/fixtures/skills/multiline-description`). Parse errors also surface as the
+fallback diagnostics instead of the `yaml` package's message: the
+`skills/invalid-yaml` fixture reports "description is required" here and the
+parser's "Flow sequence in block collection..." text there. Every other upstream
+skill fixture (validation, name rules, nested directories, root-skill
+preference) matches, including its diagnostic wording.
+Repair would need a YAML parser or a faithful block-scalar implementation;
+rejecting the file is preferred over storing a wrongly folded description, and
+the limitation is tracked in `TODO.md`.
 
 ### D379
 

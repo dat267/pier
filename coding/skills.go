@@ -17,10 +17,11 @@ import (
 // Port of utils/frontmatter.ts (the YAML subset skill files use) and
 // core/skills.ts.
 
-// D-row D10: upstream parses YAML with the `yaml` package; the Go port
+// D380: upstream parses YAML with the `yaml` package; the Go port
 // implements the flat `key: value` subset the Agent Skills spec's
 // frontmatter uses. It tracks quoted versus plain scalar types and common
-// boolean, numeric and null values, but does not support nested YAML structures.
+// boolean, numeric and null values, but supports neither block scalars nor
+// nested YAML structures (D380).
 
 // ParsedFrontmatter is the parse outcome.
 type ParsedFrontmatter struct {
@@ -85,7 +86,7 @@ func ParseFrontmatter(content string) ParsedFrontmatter {
 	return result
 }
 
-// yamlQuotedScalar decodes the single-line quoted scalars in D10's flat subset.
+// yamlQuotedScalar decodes the single-line quoted scalars in the flat subset (D380).
 func yamlQuotedScalar(value string) string {
 	body := value[1 : len(value)-1]
 	if value[0] == '\'' {
