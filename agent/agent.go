@@ -115,15 +115,17 @@ func (q *pendingMessageQueue) drainDeferring(isDeferred func(ai.Message) bool) [
 		return q.drainLocked()
 	}
 	if q.mode == QueueModeAll {
+		original := q.messages
 		var out []ai.Message
-		kept := q.messages[:0]
-		for _, message := range q.messages {
+		kept := original[:0]
+		for _, message := range original {
 			if isDeferred(message) {
 				kept = append(kept, message)
 				continue
 			}
 			out = append(out, message)
 		}
+		clear(original[len(kept):])
 		q.messages = kept
 		return out
 	}
@@ -132,7 +134,10 @@ func (q *pendingMessageQueue) drainDeferring(isDeferred func(ai.Message) bool) [
 			continue
 		}
 		out := []ai.Message{message}
-		q.messages = append(q.messages[:index], q.messages[index+1:]...)
+		last := len(q.messages) - 1
+		copy(q.messages[index:], q.messages[index+1:])
+		q.messages[last] = nil
+		q.messages = q.messages[:last]
 		return out
 	}
 	return nil

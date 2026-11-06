@@ -69,3 +69,28 @@ func TestDeferredFollowUpSurvivesTheRun(t *testing.T) {
 		t.Fatal("follow-up still queued after release")
 	}
 }
+
+// Taking one message out of the queue must release its slot: the deferring
+// drain is the hot path during a goal, and a stale tail slot would keep the
+// delivered message alive until the next enqueue.
+func TestDrainDeferringClearsConsumedSlots(t *testing.T) {
+	for _, mode := range []QueueMode{QueueModeOneAtATime, QueueModeAll} {
+		queue := &pendingMessageQueue{mode: mode}
+		queue.enqueue(createUserMessage("first"))
+		queue.enqueue(createUserMessage("second"))
+		taken := queue.drainDeferring(func(ai.Message) bool { return false })
+		wantTaken, wantLeft := 1, 1
+		if mode == QueueModeAll {
+			wantTaken, wantLeft = 2, 0
+		}
+		if len(taken) != wantTaken || len(queue.messages) != wantLeft {
+			t.Fatalf("%s: took %d left %d, want %d/%d", mode, len(taken), len(queue.messages), wantTaken, wantLeft)
+		}
+		backing := queue.messages[:cap(queue.messages)]
+		for index := len(queue.messages); index < len(backing); index++ {
+			if backing[index] != nil {
+				t.Fatalf("%s: slot %d retains a consumed message", mode, index)
+			}
+		}
+	}
+}
