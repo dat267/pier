@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
@@ -159,6 +160,11 @@ type AgentSession struct {
 
 	// CacheWarmer keeps the prompt cache entry of session requests warm.
 	CacheWarmer *CacheWarmer
+
+	// goalHeldThisRun records that a goal was active during the current run, so
+	// its user follow-ups stay queued until the run's final answer even when the
+	// goal completes mid-run.
+	goalHeldThisRun atomic.Bool
 
 	// Goal is the builtin session-goal controller (nil when disabled).
 	Goal *GoalController
@@ -452,6 +458,11 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		s.registerGoalTools()
 		s.Goal.Start("startup")
 	}
+	// An active goal holds user follow-ups to the end of its run.
+	a.DeferFollowUp = s.deferGoalFollowUp
+	if s.Goal != nil {
+		s.Goal.SetHoldFollowUps(s.goalHoldsFollowUps)
+	}
 	// Always subscribed: session persistence, queue tracking, compaction,
 	// retry logic.
 	a.Subscribe(func(event agent.AgentEvent, ctx context.Context) error {
@@ -546,6 +557,9 @@ func (s *AgentSession) emit(event *SessionEvent) {
 
 // handleAgentEvent ports the persistence/queue/compaction event handling.
 func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
+	if s.Goal != nil && s.Goal.Pursuing() {
+		s.goalHeldThisRun.Store(true)
+	}
 	// Queue display tracking: user message starts remove queued entries
 	// BEFORE the event fans out. Text is extracted Blocks-aware: queued
 	// messages are built with block content (queueSteer), whose Text field is
@@ -587,6 +601,7 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 			s.Goal.AgentEnd(event)
 		}
 		s.emit(&SessionEvent{Type: SessionAgentEnd, Agent: event, WillRetry: s.willRetry})
+		s.releaseGoalHeldFollowUps(event)
 	} else {
 		s.emit(&SessionEvent{Type: event.Type, Agent: event})
 	}
@@ -638,6 +653,34 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 		// the model before the next turn (upstream _handleAgentEvent).
 		s.FlushPendingCustomMessages()
 	}
+}
+
+// goalHoldsFollowUps reports whether the current run was entered with a goal,
+// so its user follow-ups wait for the goal's final answer.
+func (s *AgentSession) goalHoldsFollowUps() bool { return s.goalHeldThisRun.Load() }
+
+// deferGoalFollowUp is the agent's DeferFollowUp predicate: user messages stay
+// queued while the goal holds the run; goal rounds are custom messages and
+// still pass.
+func (s *AgentSession) deferGoalFollowUp(message ai.Message) bool {
+	return s.goalHoldsFollowUps() && ai.RoleOf(message) == ai.RoleUser
+}
+
+// releaseGoalHeldFollowUps starts the run the goal held back, once the goal is
+// no longer pursuing and the run in which it was active has ended with its
+// final answer. An aborted run leaves its queue to the caller (interactive
+// restores it to the editor).
+func (s *AgentSession) releaseGoalHeldFollowUps(event *agent.AgentEvent) {
+	if s.Goal == nil || !s.goalHeldThisRun.Load() || s.Goal.Pursuing() || goalAgentAborted(event) {
+		return
+	}
+	messages := s.Agent.TakeFollowUpMessages()
+	if len(messages) == 0 {
+		return
+	}
+	s.Goal.RunAfterSettle(func(ctx context.Context) error {
+		return s.PromptMessages(ctx, messages)
+	})
 }
 
 func indexOf(list []string, want string) int { return slices.Index(list, want) }

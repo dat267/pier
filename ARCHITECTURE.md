@@ -290,7 +290,7 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D384)
+## Deliberate divergences from pi (D1–D385)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
@@ -5342,6 +5342,43 @@ resolvable key, unknown provider, no runtime, unresolvable key). The reference's
 side is read from the pin; the equivalent template failure was not driven
 through the reference's MCP path.
 
+### D385
+
+**A goal's user follow-ups wait for its final answer.**
+
+Reference: pinned pi v1.5.0 has no goal; pier's goal is the ported extension
+described under D223. That extension yields to queued user input: its
+`agent_before_settle` dispatch passes `HasPendingMessages` to the state machine,
+which then starts no new round, so a follow-up is delivered between or after
+goal rounds or starts its own run. A user who presses Alt+Enter during a goal
+therefore mixes their message into the goal's stream before the goal has
+finished.
+
+Pier keeps the run's user follow-ups queued until the goal is done and the agent
+has answered it, then delivers them as their own run:
+
+- `agent.AgentOptions.DeferFollowUp` lets the caller hold individual queued
+  follow-ups. The stop boundary and `Agent.Continue` drain the queue through
+  `pendingMessageQueue.drainDeferring`, which skips held messages, keeps their
+  order, and still returns the rest (goal rounds are custom messages, so they
+  pass while user messages wait). `HasDeliverableMessages` keeps the post-run
+  continuation from treating an all-held queue as work.
+- `AgentSession` installs the predicate: a user message is held while the
+  current run was entered with an active goal (`goalHeldThisRun`, latched by any
+  agent event while the goal pursues, so a goal created mid-run counts) and the
+  goal is still pursuing. Goal rounds continue as before (one run each under
+  D223's delivery model).
+- When the goal stops pursuing (complete, blocked, paused, cleared or capped),
+  the session releases the held messages after that run's final answer:
+  `releaseGoalHeldFollowUps` drains them and starts them as a new run on the
+  host work slot. An aborted run releases nothing; interactive's Esc restore
+  owns that queue.
+
+Tests: `agent/hold_followups_test.go` (queue deferral, continuation) and
+`coding/goal_followup_hold_test.go` (two goal rounds complete without the
+follow-up, a third run carries it only afterwards).
+
+## Lock inventory
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

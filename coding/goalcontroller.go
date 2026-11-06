@@ -155,7 +155,10 @@ type GoalController struct {
 	// startWork schedules a run on the host's work slot when the session is
 	// idle. A nil scheduler runs the delivery inline (SDK and print mode).
 	startWork func(fn func(context.Context) error)
-	pending   []goalNotice
+	// holdFollowUps reports whether user follow-ups stay queued for this run,
+	// so a queued message does not suppress the next goal round.
+	holdFollowUps func() bool
+	pending       []goalNotice
 	// pendingEntryEvents are durable entries appended under mu, published to
 	// session listeners after unlocking.
 	pendingEntryEvents []*SessionEntry
@@ -198,6 +201,16 @@ func (c *GoalController) notice(message string, level string) {
 	notify := c.notify
 	c.mu.Unlock()
 	notify(message, level)
+}
+
+// SetHoldFollowUps installs the predicate that reports whether user follow-ups
+// are held for the current run. While held, a queued message does not make the
+// goal yield: the goal's rounds continue and the queue is released after its
+// final answer.
+func (c *GoalController) SetHoldFollowUps(fn func() bool) {
+	c.mu.Lock()
+	c.holdFollowUps = fn
+	c.mu.Unlock()
 }
 
 // SetStartWork installs the host's off-loop work scheduler. When an idle goal
@@ -250,6 +263,30 @@ func (c *GoalController) deliverGoalMessage(customType string, content string, d
 		return
 	}
 	_ = deliver(context.Background())
+}
+
+// Pursuing reports whether an armed goal is active (not completed, blocked,
+// paused or cleared). While true, user follow-ups stay queued until the goal's
+// final answer.
+func (c *GoalController) Pursuing() bool {
+	if c == nil {
+		return false
+	}
+	snapshot := c.Snapshot()
+	return snapshot.Goal != nil && snapshot.Goal.Phase == goal.PhaseActive && snapshot.Armed
+}
+
+// RunAfterSettle schedules a follow-up run after the current one: the host's
+// work slot when wired (interactive), otherwise a goroutine.
+func (c *GoalController) RunAfterSettle(fn func(context.Context) error) {
+	c.mu.Lock()
+	startWork := c.startWork
+	c.mu.Unlock()
+	if startWork != nil {
+		startWork(fn)
+		return
+	}
+	go func() { _ = fn(context.Background()) }()
 }
 
 // Snapshot exposes the machine state.
@@ -477,7 +514,13 @@ func (c *GoalController) AgentEnd(event *agent.AgentEvent) {
 	admission := c.dispatchLocked(goal.AgentEndEvent{Usage: goalUsageFromAgentEvent(event), Aborted: aborted})
 	c.mu.Unlock()
 	c.applyTransition(admission)
+	c.mu.Lock()
+	holdFollowUps := c.holdFollowUps
+	c.mu.Unlock()
 	pending := c.sink.GoalHasPendingMessages()
+	if holdFollowUps != nil && holdFollowUps() {
+		pending = false
+	}
 	c.mu.Lock()
 	settle := c.dispatchLocked(goal.AgentBeforeSettleEvent{Outcome: goalOutcome(event, aborted, willRetry), HasPendingMessages: pending})
 	c.mu.Unlock()

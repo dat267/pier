@@ -292,6 +292,9 @@ func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message
 	state.runCancel = cancel
 	state.runActive = true
 	state.mu.Unlock()
+	// The hold latch is per run: a goal active during this run keeps user
+	// follow-ups queued through its post-run continuation.
+	s.goalHeldThisRun.Store(false)
 	// Preparation and user callbacks (onStarted, the pre-turn hook) can panic.
 	// Upstream's _startRun catch still clears the run flag and releases idle
 	// waiters; without this, one panic wedges the session in streaming.

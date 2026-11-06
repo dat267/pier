@@ -256,6 +256,11 @@ type AgentLoopConfig struct {
 	GetSteeringMessages func(ctx context.Context) ([]ai.Message, error)
 	// GetFollowUpMessages returns post-run follow-up messages.
 	GetFollowUpMessages func(ctx context.Context) ([]ai.Message, error)
+	// DeferFollowUp reports whether a queued follow-up must stay queued for a
+	// later run. While it returns true for a message, the stop boundary and
+	// continuation paths skip it but still deliver the rest of the queue (an
+	// active goal holds user follow-ups until its final answer).
+	DeferFollowUp func(message ai.Message) bool
 	// ToolExecution mode; default "parallel".
 	ToolExecution ToolExecutionMode
 	// BeforeToolCall runs before execution, after validation.

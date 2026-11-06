@@ -64,6 +64,9 @@ type AgentOptions struct {
 	AfterToolCall         func(context *AfterToolCallContext, ctx context.Context) (*AfterToolCallResult, error)
 	PrepareRequest        func(request *PrepareRequestContext, ctx context.Context) (*AgentRequestUpdate, error)
 	FinishTurn            func(turn *AgentTurnContext, ctx context.Context) (*AgentTurnDecision, error)
+	// DeferFollowUp keeps queued user follow-ups for a later run. See
+	// AgentLoopConfig.DeferFollowUp.
+	DeferFollowUp func(message ai.Message) bool
 	// Deprecated: use FinishTurn.
 	ShouldStopAfterTurn        func(turn *AgentTurnContext, ctx context.Context) bool
 	PrepareNextTurn            func(ctx context.Context) (*AgentLoopTurnUpdate, error)
@@ -101,6 +104,75 @@ func (q *pendingMessageQueue) hasItems() bool {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	return len(q.messages) > 0
+}
+
+// drainDeferring drains one (or all) messages that isDeferred does not hold,
+// leaving deferred messages in place and in order.
+func (q *pendingMessageQueue) drainDeferring(isDeferred func(ai.Message) bool) []ai.Message {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if isDeferred == nil {
+		return q.drainLocked()
+	}
+	if q.mode == QueueModeAll {
+		var out []ai.Message
+		kept := q.messages[:0]
+		for _, message := range q.messages {
+			if isDeferred(message) {
+				kept = append(kept, message)
+				continue
+			}
+			out = append(out, message)
+		}
+		q.messages = kept
+		return out
+	}
+	for index, message := range q.messages {
+		if isDeferred(message) {
+			continue
+		}
+		out := []ai.Message{message}
+		q.messages = append(q.messages[:index], q.messages[index+1:]...)
+		return out
+	}
+	return nil
+}
+
+// hasDeliverable reports whether a message would survive the defer predicate.
+func (q *pendingMessageQueue) hasDeliverable(isDeferred func(ai.Message) bool) bool {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	for _, message := range q.messages {
+		if isDeferred == nil || !isDeferred(message) {
+			return true
+		}
+	}
+	return false
+}
+
+// drainLocked is drain with the lock held.
+func (q *pendingMessageQueue) drainLocked() []ai.Message {
+	if q.mode == QueueModeAll {
+		drained := q.messages
+		q.messages = nil
+		return drained
+	}
+	if len(q.messages) == 0 {
+		return nil
+	}
+	first := q.messages[0]
+	q.messages[0] = nil
+	q.messages = q.messages[1:]
+	return []ai.Message{first}
+}
+
+// takeAll removes every queued message regardless of the queue mode.
+func (q *pendingMessageQueue) takeAll() []ai.Message {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	messages := q.messages
+	q.messages = nil
+	return messages
 }
 
 func (q *pendingMessageQueue) drain() []ai.Message {
@@ -172,6 +244,8 @@ type Agent struct {
 	AfterToolCall         func(context *AfterToolCallContext, ctx context.Context) (*AfterToolCallResult, error)
 	PrepareRequest        func(request *PrepareRequestContext, ctx context.Context) (*AgentRequestUpdate, error)
 	FinishTurn            func(turn *AgentTurnContext, ctx context.Context) (*AgentTurnDecision, error)
+	// DeferFollowUp keeps queued user follow-ups for a later run.
+	DeferFollowUp func(message ai.Message) bool
 	// Deprecated: use FinishTurn.
 	ShouldStopAfterTurn        func(turn *AgentTurnContext, ctx context.Context) bool
 	PrepareNextTurn            func(ctx context.Context) (*AgentLoopTurnUpdate, error)
@@ -274,6 +348,7 @@ func NewAgent(options *AgentOptions) (*Agent, error) {
 		AfterToolCall:              options.AfterToolCall,
 		PrepareRequest:             options.PrepareRequest,
 		FinishTurn:                 options.FinishTurn,
+		DeferFollowUp:              options.DeferFollowUp,
 		ShouldStopAfterTurn:        options.ShouldStopAfterTurn,
 		PrepareNextTurn:            options.PrepareNextTurn,
 		PrepareNextTurnWithContext: options.PrepareNextTurnWithContext,
@@ -405,6 +480,9 @@ func (a *Agent) FollowUp(message ai.Message) { a.followUpQueue.enqueue(message) 
 // ClearSteeringQueue removes all queued steering messages.
 func (a *Agent) ClearSteeringQueue() { a.steeringQueue.clear() }
 
+// TakeFollowUpMessages removes and returns every queued follow-up message.
+func (a *Agent) TakeFollowUpMessages() []ai.Message { return a.followUpQueue.takeAll() }
+
 // ClearFollowUpQueue removes all queued follow-up messages.
 func (a *Agent) ClearFollowUpQueue() { a.followUpQueue.clear() }
 
@@ -412,6 +490,25 @@ func (a *Agent) ClearFollowUpQueue() { a.followUpQueue.clear() }
 func (a *Agent) ClearAllQueues() {
 	a.ClearSteeringQueue()
 	a.ClearFollowUpQueue()
+}
+
+// takeFollowUps drains one follow-up (or all, per the queue mode), skipping
+// messages the caller defers. Deferred messages keep their place for a later
+// run.
+func (a *Agent) takeFollowUps() []ai.Message {
+	a.mu.Lock()
+	deferFollow := a.DeferFollowUp
+	a.mu.Unlock()
+	return a.followUpQueue.drainDeferring(deferFollow)
+}
+
+// HasDeliverableMessages reports whether a queue holds input the current run
+// may receive: steering always counts, follow-ups only when not deferred.
+func (a *Agent) HasDeliverableMessages() bool {
+	a.mu.Lock()
+	deferFollow := a.DeferFollowUp
+	a.mu.Unlock()
+	return a.steeringQueue.hasItems() || a.followUpQueue.hasDeliverable(deferFollow)
 }
 
 // HasQueuedMessages reports whether either queue still holds messages.
@@ -515,8 +612,7 @@ func (a *Agent) Continue(ctx context.Context) error {
 		if len(queuedSteering) > 0 {
 			return a.runPromptMessages(ctx, queuedSteering, true)
 		}
-		queuedFollowUps := a.followUpQueue.drain()
-		if len(queuedFollowUps) > 0 {
+		if queuedFollowUps := a.takeFollowUps(); len(queuedFollowUps) > 0 {
 			return a.runPromptMessages(ctx, queuedFollowUps, false)
 		}
 		return fmt.Errorf("Cannot continue from message role: assistant")
@@ -631,7 +727,7 @@ func (a *Agent) createLoopConfig(skipInitialSteeringPoll bool) *AgentLoopConfig 
 		return a.steeringQueue.drain(), nil
 	}
 	config.GetFollowUpMessages = func(ctx context.Context) ([]ai.Message, error) {
-		return a.followUpQueue.drain(), nil
+		return a.takeFollowUps(), nil
 	}
 	if a.ConvertToLlm == nil {
 		config.ConvertToLlm = defaultConvertToLlm

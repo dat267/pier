@@ -205,8 +205,9 @@ func (s *AgentSession) runPostRunLoop(ctx context.Context) error {
 			continue
 		}
 
-		// Messages queued by agent_end listeners need a continuation.
-		if s.Agent.HasQueuedMessages() {
+		// Messages queued by agent_end listeners need a continuation. A held
+		// follow-up waits for the goal's final answer instead.
+		if s.Agent.HasDeliverableMessages() {
 			if err := s.Agent.Continue(ctx); err != nil {
 				return err
 			}
