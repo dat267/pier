@@ -203,9 +203,33 @@ func CapFileLists(fileOps *FileOperations) (readFiles, modifiedFiles []string, r
 		}
 	}
 
+	// FileOperations is exported and Compact is exported, so a caller can build
+	// the sets without the mark helpers. Recency is unknown then; fill the
+	// remaining slots from the sorted rest so the cap still bounds the list.
+	fillFromSet := func(set map[string]bool, selected []string) []string {
+		if len(selected) >= maxSummaryFileListEntries {
+			return selected
+		}
+		rest := make([]string, 0, len(set))
+		for path := range set {
+			rest = append(rest, path)
+		}
+		sortStrings(rest)
+		for _, path := range rest {
+			if len(selected) >= maxSummaryFileListEntries {
+				break
+			}
+			selected = append(selected, path)
+			delete(set, path)
+		}
+		return selected
+	}
+	reads = fillFromSet(readSet, reads)
+	modifieds = fillFromSet(modifiedSet, modifieds)
+
 	sortStrings(reads)
 	sortStrings(modifieds)
-	return reads, modifieds, len(fullRead) - len(reads), len(fullModified) - len(modifieds)
+	return reads, modifieds, len(readSet), len(modifiedSet)
 }
 
 // FormatSummaryFileOperations renders the capped lists, adding a marker line for

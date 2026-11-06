@@ -5130,7 +5130,9 @@ Pier caps each list at `maxSummaryFileListEntries` (100) paths, keeps the most
 recently touched ones, sorts them for stable output, and appends `+N more`
 inside the block. `FileOperations.Order` records the last touch of every path so
 the window outranks the inherited list; inherited entries keep the order of the
-previous, already-sorted details. The cap applies to the prose summary and to
+previous, already-sorted details. A caller that builds the exported
+`FileOperations` sets without the mark helpers has no recency to rank, so the
+remaining slots take the sorted paths and the omitted count stays exact. The cap applies to the prose summary and to
 the persisted `details`, which is what the next compaction inherits, so growth
 stops instead of being capped only in the text. Lists at or under the cap are
 byte-identical to upstream, and the file-ops parity fixture keeps exercising

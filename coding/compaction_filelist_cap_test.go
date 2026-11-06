@@ -181,3 +181,23 @@ func TestSummaryFileListsAtTheCapMatchUpstream(t *testing.T) {
 		t.Errorf("summary = %q, want the upstream bytes %q", got, want)
 	}
 }
+
+// CompactionPreparation.FileOps and Compact are exported, so a caller can build
+// FileOperations without the mark helpers. The cap must still bound the list
+// instead of reporting every path as omitted because recency is unknown.
+func TestCapFileListsHandlesOperationsWithoutOrder(t *testing.T) {
+	fileOps := &FileOperations{Read: map[string]bool{}, Written: map[string]bool{}, Edited: map[string]bool{}}
+	for i := 0; i < maxSummaryFileListEntries+30; i++ {
+		fileOps.Read[fmt.Sprintf("read-%03d", i)] = true
+	}
+	readFiles, modifiedFiles, readOmitted, modifiedOmitted := CapFileLists(fileOps)
+	if len(readFiles) != maxSummaryFileListEntries || readOmitted != 30 {
+		t.Fatalf("read = %d selected, %d omitted; want %d selected, 30 omitted", len(readFiles), readOmitted, maxSummaryFileListEntries)
+	}
+	if len(modifiedFiles) != 0 || modifiedOmitted != 0 {
+		t.Fatalf("modified = %v/%d, want empty", modifiedFiles, modifiedOmitted)
+	}
+	if got := FormatSummaryFileOperations(readFiles, modifiedFiles, readOmitted, modifiedOmitted); !strings.Contains(got, "+30 more") {
+		t.Errorf("summary = %q, want the omitted count", got)
+	}
+}
