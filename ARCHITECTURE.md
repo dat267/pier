@@ -5370,9 +5370,14 @@ has answered it, then delivers them as their own run:
   D223's delivery model).
 - When the goal stops pursuing (complete, blocked, paused, cleared or capped),
   the session releases the held messages after that run's final answer:
-  `releaseGoalHeldFollowUps` drains them and starts them as a new run on the
-  host work slot. An aborted run releases nothing; interactive's Esc restore
-  owns that queue.
+  `releaseGoalHeldFollowUps` drains them and starts them as a new run through
+  the session run pipeline, so the run emits `agent_settled` and keeps retry and
+  compaction handling. On a host with a work slot it is queued there; without
+  one it waits for the run in flight to settle before starting (starting from
+  the agent-end callback would be rejected as already processing). An aborted
+  run releases nothing; interactive's Esc restore owns that queue.
+- The deferring drain clears the slots it empties, so a delivered message is not
+  retained by the queue's backing array.
 
 Tests: `agent/hold_followups_test.go` (queue deferral, continuation) and
 `coding/goal_followup_hold_test.go` (two goal rounds complete without the

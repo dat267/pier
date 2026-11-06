@@ -678,9 +678,22 @@ func (s *AgentSession) releaseGoalHeldFollowUps(event *agent.AgentEvent) {
 	if len(messages) == 0 {
 		return
 	}
-	s.Goal.RunAfterSettle(func(ctx context.Context) error {
-		return s.PromptMessages(ctx, messages)
-	})
+	run := func(ctx context.Context) error {
+		// The released messages run through the session pipeline, so the run
+		// emits agent_settled and keeps retry and compaction handling. The goal
+		// chain before it settled as one run (rounds continue inside it).
+		return s.runAgentPrompt(ctx, messages)
+	}
+	if s.Goal.RunAfterSettle(run) {
+		return
+	}
+	// No host work slot (SDK and print sessions): the current run is still
+	// unwinding inside its agent-end callback, so wait for it before starting
+	// the released run.
+	go func() {
+		_ = s.WaitForIdle(context.Background())
+		_ = run(context.Background())
+	}()
 }
 
 func indexOf(list []string, want string) int { return slices.Index(list, want) }

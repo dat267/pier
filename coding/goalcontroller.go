@@ -276,17 +276,18 @@ func (c *GoalController) Pursuing() bool {
 	return snapshot.Goal != nil && snapshot.Goal.Phase == goal.PhaseActive && snapshot.Armed
 }
 
-// RunAfterSettle schedules a follow-up run after the current one: the host's
-// work slot when wired (interactive), otherwise a goroutine.
-func (c *GoalController) RunAfterSettle(fn func(context.Context) error) {
+// RunAfterSettle schedules a follow-up run on the host's work slot. It reports
+// false when no host is wired, so the caller can wait for the run to settle and
+// start it itself.
+func (c *GoalController) RunAfterSettle(fn func(context.Context) error) bool {
 	c.mu.Lock()
 	startWork := c.startWork
 	c.mu.Unlock()
-	if startWork != nil {
-		startWork(fn)
-		return
+	if startWork == nil {
+		return false
 	}
-	go func() { _ = fn(context.Background()) }()
+	startWork(fn)
+	return true
 }
 
 // Snapshot exposes the machine state.

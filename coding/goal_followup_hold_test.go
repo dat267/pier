@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/internal/goal"
@@ -45,6 +46,12 @@ func TestGoalHoldsFollowUpsUntilItsFinalAnswer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	settled := 0
+	session.Subscribe(func(event *SessionEvent) {
+		if event.Type == SessionAgentSettled {
+			settled++
+		}
+	})
 	var pending []func(context.Context) error
 	session.Goal.SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
 	session.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "after the goal"}})
@@ -77,6 +84,72 @@ func TestGoalHoldsFollowUpsUntilItsFinalAnswer(t *testing.T) {
 	}
 	if queued := session.GetFollowUpMessages(); len(queued) != 0 {
 		t.Fatalf("follow-ups after the released run = %v, want delivered", queued)
+	}
+	last := prompts[len(prompts)-1]
+	if !strings.Contains(last, "after the goal") {
+		t.Fatalf("last run prompt = %q, want the released follow-up", last)
+	}
+	// The goal chain settles once (its second round continues inside the run),
+	// and the released follow-up settles as its own run. A release that bypasses
+	// the session pipeline would emit no second settled event, leaving the UI
+	// busy and skipping retries and compaction for that run.
+	if settled != 2 {
+		t.Fatalf("agent_settled events = %d, want 2", settled)
+	}
+}
+
+// Without a host work slot (SDK, print), the released run must wait for the run
+// in flight to settle; starting it from the agent-end callback would be
+// rejected as "already processing" and the follow-up would be lost.
+func TestGoalReleasedFollowUpsRunWithoutAHost(t *testing.T) {
+	manager, dir := newTestSession(t)
+	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
+	var session *AgentSession
+	var prompts []string
+	round := 0
+	streamFn := func(m *ai.Model, transcript ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		var text strings.Builder
+		for _, message := range transcript.Messages {
+			text.WriteString(extractTextContent(message))
+			text.WriteString("\n")
+		}
+		prompts = append(prompts, text.String())
+		round++
+		if round == 2 {
+			_, _ = session.GetToolDefinition("set_goal").Execute("complete", json.RawMessage(`{"status":"complete"}`), context.Background(), nil)
+		}
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+				API: m.API, Provider: m.Provider, Model: m.ID, StopReason: ai.StopStop,
+				Content: ai.ContentList{ai.TextContent{Text: "done"}},
+			}})
+		}()
+		return stream
+	}
+	var err error
+	session, err = NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, Goal: true, ConvertToLlm: ConvertToLlm,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	settled := make(chan struct{}, 4)
+	session.Subscribe(func(event *SessionEvent) {
+		if event.Type == SessionAgentSettled {
+			settled <- struct{}{}
+		}
+	})
+	session.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "after the goal"}})
+	// No SetStartWork: the release has to wait for the run to settle itself.
+	session.Goal.HandleCommand("set objective")
+	deadline := time.After(5 * time.Second)
+	for count := 0; count < 2; count++ {
+		select {
+		case <-settled:
+		case <-deadline:
+			t.Fatalf("agent_settled events = %d, want the goal chain and the released run", count)
+		}
 	}
 	last := prompts[len(prompts)-1]
 	if !strings.Contains(last, "after the goal") {
