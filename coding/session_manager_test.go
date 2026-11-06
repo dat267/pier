@@ -278,6 +278,9 @@ func TestFindMostRecentSessionEqualMtimesUseNameOrder(t *testing.T) {
 // mtime then basename; ties keep readdirSync order, which libuv returns sorted
 // by directory name.
 func TestListAllSessionsUsesDirectoryNameOrderForDuplicateFilenames(t *testing.T) {
+	home := t.TempDir()
+	setHomeDir(t, home)
+	t.Setenv("PI_CODING_AGENT_DIR", filepath.Join(home, ".pi", "agent"))
 	sessionsDir := DefaultSessionsDir()
 	names := []string{"zeta", "alpha", "mu"}
 	for _, name := range names {
