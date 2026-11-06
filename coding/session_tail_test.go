@@ -147,6 +147,24 @@ func TestTailSessionWithoutCompactionCopiesTheBranch(t *testing.T) {
 	if got := projectionFingerprint(t, tailed); got != want {
 		t.Fatalf("tail projection differs:\n got %q\nwant %q", got, want)
 	}
+
+	// The same copy from a session loaded off disk, where every entry marshals
+	// its retained line: the re-rooted chain must still reach every copied entry.
+	reopened, err := OpenSession(source.GetSessionFile(), "", "")
+	if err != nil {
+		t.Fatalf("reopen: %v", err)
+	}
+	reopenedWant := projectionFingerprint(t, reopened)
+	tailedReopened, err := TailSession(reopened, model, ai.ThinkMedium, reopened.GetCwd(), reopened.GetSessionDir(), true, nil)
+	if err != nil {
+		t.Fatalf("tail reopened: %v", err)
+	}
+	if got := projectionFingerprint(t, tailedReopened); got != reopenedWant {
+		t.Errorf("reopened tail projection differs:\n got %q\nwant %q", got, reopenedWant)
+	}
+	if branch := tailedReopened.GetBranch(""); len(branch) != len(tailedReopened.GetEntries()) {
+		t.Errorf("reopened leaf path has %d of %d entries", len(branch), len(tailedReopened.GetEntries()))
+	}
 }
 
 func TestTailSessionNeedsAConversation(t *testing.T) {
