@@ -1,5 +1,10 @@
 package coding
 
+import (
+	"slices"
+	"strings"
+)
+
 // Port of the CLI's diagnostic reporting: upstream main.ts prints the parse
 // diagnostics straight after parseArgs and treats any error among them as
 // fatal, and reportDiagnostics() prints the runtime ones with the same shape.
@@ -34,4 +39,35 @@ func HasErrorDiagnostics(diagnostics []CLIDiagnostic) bool {
 		}
 	}
 	return false
+}
+
+// UnknownFlagDiagnostics reports the flags ParseArgs could not recognize
+// (upstream agent-session-services' unknownFlags): an extension may claim a
+// long flag there, and whatever is left over is a fatal "Unknown option".
+// Extensions are out of scope (D41), so every unrecognized flag is unknown
+// here and a misspelled option fails the run instead of being ignored.
+// Flags come back in argv order, one diagnostic for all of them, singular or
+// plural like the reference.
+func UnknownFlagDiagnostics(args *Args) []CLIDiagnostic {
+	if args == nil {
+		return nil
+	}
+	names := make([]string, 0, len(args.UnknownFlags))
+	for _, name := range args.UnknownFlagOrder {
+		names = append(names, "--"+name)
+	}
+	if len(names) == 0 {
+		for name := range args.UnknownFlags {
+			names = append(names, "--"+name)
+		}
+		slices.Sort(names)
+	}
+	if len(names) == 0 {
+		return nil
+	}
+	label := "Unknown option"
+	if len(names) > 1 {
+		label = "Unknown options"
+	}
+	return []CLIDiagnostic{{Type: "error", Message: label + ": " + strings.Join(names, ", ")}}
 }

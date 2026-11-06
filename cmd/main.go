@@ -109,9 +109,7 @@ func Execute() {
 	// unusable flag value should not be followed by a run that ignores it, and
 	// upstream reports them straight after parsing, ahead of --version. An error
 	// among them is fatal.
-	for _, diagnostic := range args.Diagnostics {
-		fmt.Fprintln(os.Stderr, coding.FormatCLIDiagnostic(diagnostic))
-	}
+	reportDiagnostics(args.Diagnostics)
 	if coding.HasErrorDiagnostics(args.Diagnostics) {
 		os.Exit(1)
 	}
@@ -137,9 +135,20 @@ func Execute() {
 		fmt.Println("Exported to: " + result)
 		return
 	}
+	// Unknown flags are reported once the modes that answer before a run
+	// (--version, --export, --help) have had their say. Upstream reaches the
+	// same point through agent-session-services: --version returns first,
+	// --export handles its file first, and --help prints the error alongside
+	// its help text without failing (core/agent-session-services.ts).
+	unknownFlags := coding.UnknownFlagDiagnostics(args)
 	if args.Help {
+		reportDiagnostics(unknownFlags)
 		fmt.Print(coding.PrintHelpNamed(appName))
 		return
+	}
+	if len(unknownFlags) > 0 {
+		reportDiagnostics(unknownFlags)
+		os.Exit(1)
 	}
 	if err := run(appName, args); err != nil {
 		var status interface{ ExitCode() int }
@@ -150,6 +159,14 @@ func Execute() {
 			fmt.Fprintln(os.Stderr, appName+": "+err.Error())
 		}
 		os.Exit(1)
+	}
+}
+
+// reportDiagnostics prints diagnostics the way upstream's reportDiagnostics
+// does: one colored line per diagnostic on stderr.
+func reportDiagnostics(diagnostics []coding.CLIDiagnostic) {
+	for _, diagnostic := range diagnostics {
+		fmt.Fprintln(os.Stderr, coding.FormatCLIDiagnostic(diagnostic))
 	}
 }
 

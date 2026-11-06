@@ -58,3 +58,38 @@ func TestParseArgsDiagnosticsAreFormatted(t *testing.T) {
 		t.Error("an unknown option should be fatal")
 	}
 }
+
+// Upstream core/agent-session-services.ts reports unclaimed extension flags as
+// one fatal diagnostic, singular or plural, in argv order.
+func TestUnknownFlagDiagnosticsMatchTheReference(t *testing.T) {
+	cases := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "none", args: []string{"--offline", "-p", "hi"}},
+		{name: "single", args: []string{"--bogus"}, want: "Unknown option: --bogus"},
+		{name: "with value", args: []string{"--bogus", "value"}, want: "Unknown option: --bogus"},
+		{name: "equals value", args: []string{"--bogus=1"}, want: "Unknown option: --bogus"},
+		{name: "plural in argv order", args: []string{"--zed", "--alpha"}, want: "Unknown options: --zed, --alpha"},
+		{name: "alongside known flags", args: []string{"--offline", "--nope", "-p", "hi"}, want: "Unknown option: --nope"},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			diagnostics := UnknownFlagDiagnostics(ParseArgs(testCase.args))
+			if testCase.want == "" {
+				if len(diagnostics) != 0 {
+					t.Fatalf("diagnostics = %v, want none", diagnostics)
+				}
+				return
+			}
+			if len(diagnostics) != 1 || diagnostics[0].Type != "error" || diagnostics[0].Message != testCase.want {
+				t.Fatalf("diagnostics = %v, want one error %q", diagnostics, testCase.want)
+			}
+			got := FormatCLIDiagnostic(diagnostics[0])
+			if got != "\x1b[31mError: "+testCase.want+"\x1b[0m" {
+				t.Fatalf("rendered = %q", got)
+			}
+		})
+	}
+}
