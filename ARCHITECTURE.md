@@ -284,13 +284,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D378)
+## Deliberate divergences from pi (D1–D379)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D378**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D379**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -5113,6 +5113,34 @@ path is pinned by `TestTailCommandStartsFromTheLiveContext` and
 `TestTailCommandNeedsAPersistedSession`. Cold history remains readable only
 through the source session; the tail session is a new starting point, not a
 backup.
+
+### D379
+
+**Summary file lists are capped.**
+
+Reference: pi v1.5.0 (`f9a26365`) `core/compaction/utils.ts`
+(`formatFileOperations`) writes every tracked path into the summary, and
+`core/compaction/compaction.ts` (`extractFileOperations`) seeds the next
+compaction with the previous one's `details`, so the lists only grow. A real
+session reached 2,688 paths: 123 KB of a 149 KB summary (83%, about 31K tokens)
+on every request until the next compaction, including build-cache artifacts and
+duplicate spellings of the same path.
+
+Pier caps each list at `maxSummaryFileListEntries` (100) paths, keeps the most
+recently touched ones, sorts them for stable output, and appends `+N more`
+inside the block. `FileOperations.Order` records the last touch of every path so
+the window outranks the inherited list; inherited entries keep the order of the
+previous, already-sorted details. The cap applies to the prose summary and to
+the persisted `details`, which is what the next compaction inherits, so growth
+stops instead of being capped only in the text. Lists at or under the cap are
+byte-identical to upstream, and the file-ops parity fixture keeps exercising
+`ComputeFileLists`/`FormatFileOperations` unchanged.
+
+Tests: `TestSummaryFileListsCapToTheMostRecentPaths`,
+`TestSummaryFileListsPreferTheCurrentWindow`,
+`TestSummaryFileListsSmallInputMatchesUpstreamFormatting`,
+`TestSummaryFileListsReportOmittedCounts`, and
+`TestCompactSummaryCapsTheFileLists` (summary marker plus capped details).
 
 ## Lock inventory
 

@@ -362,8 +362,8 @@ func GenerateBranchSummary(entries []SessionEntry, options GenerateBranchSummary
 	summary := contentTextOf(response.Content)
 	summary = branchSummaryPreamble + summary
 
-	readFiles, modifiedFiles := ComputeFileLists(preparation.FileOps)
-	summary += FormatFileOperations(readFiles, modifiedFiles)
+	readFiles, modifiedFiles, readOmitted, modifiedOmitted := CapFileLists(preparation.FileOps)
+	summary += FormatSummaryFileOperations(readFiles, modifiedFiles, readOmitted, modifiedOmitted)
 	if summary == "" {
 		summary = "No summary generated"
 	}

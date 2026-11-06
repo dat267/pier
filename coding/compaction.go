@@ -49,6 +49,9 @@ type FileOperations struct {
 	ReadOrder    []string
 	WrittenOrder []string
 	EditedOrder  []string
+	// Order records the last touch of every path across the three sets, so the
+	// D379 cap keeps the most recent files rather than the alphabetically first.
+	Order []string
 }
 
 // CreateFileOps builds an empty set.
@@ -61,6 +64,7 @@ func (f *FileOperations) markRead(path string) {
 		f.Read[path] = true
 		f.ReadOrder = append(f.ReadOrder, path)
 	}
+	f.touch(path)
 }
 
 func (f *FileOperations) markWritten(path string) {
@@ -68,6 +72,7 @@ func (f *FileOperations) markWritten(path string) {
 		f.Written[path] = true
 		f.WrittenOrder = append(f.WrittenOrder, path)
 	}
+	f.touch(path)
 }
 
 func (f *FileOperations) markEdited(path string) {
@@ -75,6 +80,19 @@ func (f *FileOperations) markEdited(path string) {
 		f.Edited[path] = true
 		f.EditedOrder = append(f.EditedOrder, path)
 	}
+	f.touch(path)
+}
+
+// touch moves a path to the end of Order, so a repeated read/edit keeps its
+// recency instead of its first position.
+func (f *FileOperations) touch(path string) {
+	for i, seen := range f.Order {
+		if seen == path {
+			f.Order = append(f.Order[:i], f.Order[i+1:]...)
+			break
+		}
+	}
+	f.Order = append(f.Order, path)
 }
 
 // ExtractFileOpsFromMessage extracts file paths from a tool call
@@ -143,6 +161,67 @@ func ComputeFileLists(fileOps *FileOperations) (readFiles, modifiedFiles []strin
 	}
 	sortStrings(modifiedFiles)
 	return readFiles, modifiedFiles
+}
+
+// D379: summaries carry at most this many paths per list. Upstream merges the
+// previous compaction's details and the current window and prints every path,
+// so the list grows without bound on a long session (thousands of lines, most
+// of the summary's bytes).
+const maxSummaryFileListEntries = 100
+
+// CapFileLists selects at most maxSummaryFileListEntries paths per list, most
+// recently touched first, sorted for stable output, and reports how many paths
+// were left out. Small inputs keep the upstream selection untouched.
+func CapFileLists(fileOps *FileOperations) (readFiles, modifiedFiles []string, readOmitted, modifiedOmitted int) {
+	fullRead, fullModified := ComputeFileLists(fileOps)
+	readSet := make(map[string]bool, len(fullRead))
+	for _, f := range fullRead {
+		readSet[f] = true
+	}
+	modifiedSet := make(map[string]bool, len(fullModified))
+	for _, f := range fullModified {
+		modifiedSet[f] = true
+	}
+
+	reads := make([]string, 0, maxSummaryFileListEntries)
+	modifieds := make([]string, 0, maxSummaryFileListEntries)
+	for i := len(fileOps.Order) - 1; i >= 0; i-- {
+		if len(reads) >= maxSummaryFileListEntries && len(modifieds) >= maxSummaryFileListEntries {
+			break
+		}
+		path := fileOps.Order[i]
+		if readSet[path] {
+			if len(reads) < maxSummaryFileListEntries {
+				reads = append(reads, path)
+				delete(readSet, path)
+			}
+			continue
+		}
+		if modifiedSet[path] && len(modifieds) < maxSummaryFileListEntries {
+			modifieds = append(modifieds, path)
+			delete(modifiedSet, path)
+		}
+	}
+
+	sortStrings(reads)
+	sortStrings(modifieds)
+	return reads, modifieds, len(fullRead) - len(reads), len(fullModified) - len(modifieds)
+}
+
+// FormatSummaryFileOperations renders the capped lists, adding a marker line for
+// the paths the cap left out. With nothing omitted it is the upstream shape.
+func FormatSummaryFileOperations(readFiles, modifiedFiles []string, readOmitted, modifiedOmitted int) string {
+	if readOmitted == 0 && modifiedOmitted == 0 {
+		return FormatFileOperations(readFiles, modifiedFiles)
+	}
+	var sections []string
+	if len(readFiles) > 0 {
+		sections = append(sections, fmt.Sprintf("<read-files>\n%s\n+%d more\n</read-files>", strings.Join(readFiles, "\n"), readOmitted))
+	}
+	if len(modifiedFiles) > 0 {
+		sections = append(sections, fmt.Sprintf("<modified-files>\n%s\n+%d more\n</modified-files>", strings.Join(modifiedFiles, "\n"), modifiedOmitted))
+	}
+	return "\n\n" + strings.Join(sections, "\n\n")
 }
 
 // FormatFileOperations renders the XML file lists for the summary.
@@ -1252,8 +1331,8 @@ func Compact(preparation *CompactionPreparation, options CompactionOptions) (*Co
 		hasUsage = true
 	}
 
-	readFiles, modifiedFiles := ComputeFileLists(preparation.FileOps)
-	summary += FormatFileOperations(readFiles, modifiedFiles)
+	readFiles, modifiedFiles, readOmitted, modifiedOmitted := CapFileLists(preparation.FileOps)
+	summary += FormatSummaryFileOperations(readFiles, modifiedFiles, readOmitted, modifiedOmitted)
 
 	if preparation.FirstKeptEntryID == "" {
 		return nil, fmt.Errorf("First kept entry has no UUID - session may need migration")
