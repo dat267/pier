@@ -5268,7 +5268,12 @@ install into the prompt path would need the active names sourced from the tool
 registry and was not worth the regression risk in the UI and loop paths. The
 difference is limited to an untouched session: once a turn runs, both carry a
 declaration message ahead of the prompt-section message, and the request bytes
-converge.
+converge. Verified against pi-written sessions: the reference's interactive
+sessions persist the same shape (declaration entry first, then `model_change`
+and `thinking_level_change`, then the section message carrying only the delta
+of tools registered later), while a print-mode reference run folds everything
+into one section message. Pier matches the interactive shape, so the extra entry
+is the same one the reference writes whenever a session is created in the TUI.
 
 The model is the second half of the same difference: the reference's session
 always carries a placeholder model (`id: "unknown"`, `provider: "unknown"`) and
