@@ -5038,6 +5038,17 @@ complete thinking frame and following row now remain visible under pressure.
 `TestContainerKeepsCachedRowsWhenChildRequestsRetry` also pins the Container
 contract directly with a rejecting Markdown backend and cached following row.
 
+This is also the root cause of the crash record `index out of range [364] with
+length 0` (2026-11-04, session
+`--home-dat-repos-web--/2026-11-03T21-56-29-871Z_...jsonl`), which predated panic
+stack capture and could not be matched at the time. Restoring the pre-fix read
+(`c.cacheChildren[i]` instead of the frame's snapshot) reproduces that exact
+message at that exact index, and
+`TestContainerKeepsCachedRowsDeepInALongTranscript` keeps the 364-row shape as a
+regression: a long transcript puts the cached following row at index 364, and a
+rejected Markdown retry in the row above it must not lose the frame. The one-off
+index is the row position, not a distinct defect.
+
 ### D376
 
 **Config-command timeout also bounds inherited output-pipe waits.**
