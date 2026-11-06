@@ -11,3 +11,6 @@ pi-session-*.html
 
 # Upstream pi checkout for source diffing (clone it at the pinned tag; see AGENTS.md)
 /pi/
+
+# Local scratch checkouts and analysis
+/tmp/
