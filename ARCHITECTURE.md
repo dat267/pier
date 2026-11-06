@@ -5241,7 +5241,8 @@ and `TestFormatCLIDiagnosticDropsColorWhenDisabled`.
 
 ### D382
 
-**A fresh session's agent carries its tool declaration from construction.**
+**A fresh session's agent differs in what it holds: tools, model placeholder and
+compaction order.**
 
 Reference: pi v1.5.0 (`f9a26365`) builds the coding agent with `tools: []`
 (`core/sdk.ts`) and installs the loadout inside the per-prompt preparation
@@ -5264,11 +5265,23 @@ difference is limited to an untouched session: once a turn runs, both carry a
 declaration message ahead of the prompt-section message, and the request bytes
 converge.
 
+The model is the second half of the same difference: the reference's session
+always carries a placeholder model (`id: "unknown"`, `provider: "unknown"`) and
+`get_state` sends it; pier's `HasModel` treats that placeholder as absent, so
+`get_state` omits the optional `model` field (documented in the RPC section
+above) and `compact` fails with "No model selected" where the reference prepares
+the compaction first and reports "Nothing to compact (session too small)" on an
+empty session. `session.model` being `undefined` is unreachable in the
+reference for that reason (core/agent-session.ts only throws when it is).
+
 Reproducer: `printf '%s\n' '{"type":"get_state","id":"1"}'
 '{"type":"get_messages","id":"2"}' | pier --offline --mode rpc --no-mcp
 --no-session` reports `messageCount: 1` and one system message, where the
-reference reports `0` and `[]`. The model placeholder omitting is separate and
-already documented above.
+reference reports `0` and `[]`; the same run with
+`{"type":"compact","id":"3"}` (stdin kept open, since closing it cancels the
+worker per D235) reports "No model selected", where the reference emits
+`compaction_start`, `compaction_end` with "Compaction failed: Nothing to compact
+(session too small)" and the same error on the response.
 
 ## Lock inventory
 
