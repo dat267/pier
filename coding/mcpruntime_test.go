@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/mcp"
 	"github.com/dat267/pier/mcp/protocol"
@@ -797,5 +798,55 @@ func TestMcpConnectionCloseAbortsConnectAfterInitiatorLeft(t *testing.T) {
 	connection.mu.Unlock()
 	if state != McpServerClosed || opening != nil {
 		t.Fatalf("state=%q opening=%v after Close", state, opening)
+	}
+}
+
+// Upstream renders the progress notification with a JavaScript template string
+// (`Progress ${progress.progress}${total}`, extensions/mcp/tools.ts), so the
+// number is formatted with String(number): full precision, exponent notation
+// below 1e-6 and above 1e21. Pier formatted with %f and an int64 fast path,
+// which rounded fractional values and printed small or huge ones as 0 or a
+// digit run.
+func TestMcpToolProgressTextFormatsNumbersLikeJavaScript(t *testing.T) {
+	cases := []struct {
+		progress float64
+		total    *float64
+		want     string
+	}{
+		{progress: 3, want: "Progress 3"},
+		{progress: 2.5, total: new(10.0), want: "Progress 2.5/10"},
+		{progress: 1.2345678, want: "Progress 1.2345678"},
+		{progress: 1e-7, want: "Progress 1e-7"},
+		{progress: 0.000001, want: "Progress 0.000001"},
+		{progress: 1e21, want: "Progress 1e+21"},
+		{progress: 1234567890123456789, want: "Progress 1234567890123456800"},
+		{progress: 0, total: new(0.0), want: "Progress 0/0"},
+	}
+	for _, testCase := range cases {
+		progress, total := testCase.progress, testCase.total
+		toolDefinition := CreateMcpToolDefinition(McpToolDefinitionOptions{
+			Server: "docs", Tool: protocol.Tool{Name: "slow"}, Name: "mcp__docs__slow",
+			GetClient: func(context.Context) (McpToolCaller, error) {
+				return mcpToolCallerFunc(func(_ context.Context, _ string, _ map[string]any, options mcp.RequestOptions) (*protocol.CallToolResult, error) {
+					if options.OnProgress != nil {
+						options.OnProgress(&protocol.ProgressNotification{Progress: progress, Total: total})
+					}
+					return &protocol.CallToolResult{Content: []protocol.ContentBlock{{Type: protocol.ContentTypeText, Text: "ok"}}}, nil
+				}), nil
+			},
+		})
+		var updates []string
+		if _, err := toolDefinition.Execute("call-1", nil, context.Background(), func(result agent.AgentToolResult) {
+			for _, content := range result.Content {
+				if text, ok := content.(ai.TextContent); ok {
+					updates = append(updates, text.Text)
+				}
+			}
+		}); err != nil {
+			t.Fatalf("%v: %v", testCase.want, err)
+		}
+		if len(updates) != 1 || updates[0] != testCase.want {
+			t.Fatalf("progress %v: updates = %v, want %q", testCase.progress, updates, testCase.want)
+		}
 	}
 }

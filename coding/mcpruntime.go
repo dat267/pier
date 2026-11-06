@@ -913,15 +913,10 @@ func mcpToolParameters(schema json.RawMessage) json.RawMessage {
 	return encoded
 }
 
-// formatMcpNumber renders a JSON number without a trailing `.0`.
-func formatMcpNumber(value float64) string {
-	if value == float64(int64(value)) {
-		return itoaInt(int64(value))
-	}
-	return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", value), "0"), ".")
-}
-
-func itoaInt(value int64) string { return fmt.Sprintf("%d", value) }
+// formatMcpNumber renders a progress number the way the reference's template
+// string does: JavaScript's String(number), with full precision and exponent
+// notation outside 1e-6..1e21 (ai.JSNumberToString).
+func formatMcpNumber(value float64) string { return ai.JSNumberToString(value) }
 
 // mcpOptionalString takes the address of a non-empty string.
 func mcpOptionalString(value string) *string {
