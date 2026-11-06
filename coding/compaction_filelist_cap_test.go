@@ -161,3 +161,23 @@ func TestCompactSummaryCapsTheFileLists(t *testing.T) {
 		t.Fatalf("details = %d read, %d modified; want %d each", len(details.ReadFiles), len(details.ModifiedFiles), maxSummaryFileListEntries)
 	}
 }
+
+// At exactly the cap nothing is omitted, so the summary must still be the
+// upstream bytes with no marker: an off-by-one here would add a "+0 more" line
+// that upstream never writes.
+func TestSummaryFileListsAtTheCapMatchUpstream(t *testing.T) {
+	fileOps := CreateFileOps()
+	readPaths := make([]string, 0, maxSummaryFileListEntries)
+	for i := 0; i < maxSummaryFileListEntries; i++ {
+		path := fmt.Sprintf("read-%03d", i)
+		readPaths = append(readPaths, path)
+		fileOps.markRead(path)
+	}
+	readFiles, modifiedFiles, readOmitted, modifiedOmitted := CapFileLists(fileOps)
+	if readOmitted != 0 || modifiedOmitted != 0 {
+		t.Fatalf("omitted = %d/%d, want 0/0 at the cap", readOmitted, modifiedOmitted)
+	}
+	if got, want := FormatSummaryFileOperations(readFiles, modifiedFiles, readOmitted, modifiedOmitted), FormatFileOperations(readPaths, nil); got != want {
+		t.Errorf("summary = %q, want the upstream bytes %q", got, want)
+	}
+}

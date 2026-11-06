@@ -5136,10 +5136,17 @@ stops instead of being capped only in the text. Lists at or under the cap are
 byte-identical to upstream, and the file-ops parity fixture keeps exercising
 `ComputeFileLists`/`FormatFileOperations` unchanged.
 
+Measured on the real 2,688-path session: the inherited details alone were 1,386
+read plus 1,397 modified paths (127,540 bytes); the cap renders 100 plus 100 with
+the markers in 6,631 bytes, about 95% less per request until the next
+compaction. Paths are still verbatim (no cleaning or existence check), so the
+upstream label is preserved.
+
 Tests: `TestSummaryFileListsCapToTheMostRecentPaths`,
 `TestSummaryFileListsPreferTheCurrentWindow`,
 `TestSummaryFileListsSmallInputMatchesUpstreamFormatting`,
-`TestSummaryFileListsReportOmittedCounts`, and
+`TestSummaryFileListsReportOmittedCounts`,
+`TestSummaryFileListsAtTheCapMatchUpstream` (no marker at exactly the cap), and
 `TestCompactSummaryCapsTheFileLists` (summary marker plus capped details).
 
 ## Lock inventory
