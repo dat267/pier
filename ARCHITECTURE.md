@@ -178,6 +178,14 @@ present, including an empty string. Omitted ids remain omitted.
   (`summary`, `firstKeptEntryId`, `tokensBefore`, optional `estimatedTokensAfter`,
   `usage`, `details`).
 - `set_auto_compaction`, `set_auto_retry`: `enabled` (boolean).
+- Command field types are validated where the reference only casts the parsed
+  JSON to `RpcCommand`: `bash` without a string `command`, a non-boolean
+  `enabled`, `set_session_name` without a name, `switch_session` without a path,
+  `fork` without an entry id, `prompt` without a string message, and malformed
+  `images` all fail with a pier message. The reference instead coerces
+  (`enabled: "yes"` enables compaction), throws a `TypeError` (`prompt` without
+  `message`), or interpolates `undefined` (`set_model` without fields). The
+  typed contract is enforced rather than silently reinterpreted.
 - `abort_retry`: cancels an in-flight auto-retry.
 - `bash`: `command`, optional `excludeFromContext`; runs it in the session cwd
   and returns the bash result (`output`, optional `exitCode`, `cancelled`,

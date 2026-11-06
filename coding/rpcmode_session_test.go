@@ -410,7 +410,9 @@ func TestRPCAbortDoesNotCancelRunningBash(t *testing.T) {
 	}
 }
 
-// pi v1.4.0 requires the new command fields to have the right types.
+// Pier validates the new command fields at runtime. The reference casts the
+// parsed JSON to RpcCommand (rpc-mode.ts), so its TS type is the only check and
+// a malformed field coerces, throws a TypeError, or interpolates undefined.
 func TestRPCNewCommandFieldValidation(t *testing.T) {
 	records := runRPCScript(t, rpcTestSession(t),
 		`{"id":"a","type":"bash","command":5}`+"\n"+
