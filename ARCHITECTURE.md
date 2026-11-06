@@ -146,10 +146,15 @@ present, including an empty string. Omitted ids remain omitted.
   or `null` when no cycle is available.
 - `get_available_thinking_levels`: returns `{ "levels": [...] }`.
 - `set_thinking_level`: `level`; the session clamps a valid level to the model's
-  capabilities.
+  capabilities. An unknown level fails with `level must be a valid thinking
+  level`, where the reference accepts and stores it.
 - `cycle_thinking_level`: returns `{ "level": ... }` or `null`.
 - `set_steering_mode`, `set_follow_up_mode`: `mode` (`"all"` or
-  `"one-at-a-time"`).
+  `"one-at-a-time"`). A value outside that set fails with `mode must be all or
+  one-at-a-time`; the reference stores whatever string it is given and reports
+  success (observed: `set_follow_up_mode` with `"bogus"` leaves `followUpMode:
+  "bogus"` in `get_state` and persists it). Pier rejects instead of adopting a
+  queue mode the agent cannot honor.
 - `get_last_assistant_text`: returns `{ "text": "..." }`, or an empty object
   when there is no assistant text.
 - `get_session_stats`: returns the camelCase session counters, token totals,
