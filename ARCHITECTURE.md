@@ -290,7 +290,7 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D382)
+## Deliberate divergences from pi (D1–D383)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
@@ -5292,6 +5292,31 @@ reference reports `0` and `[]`; the same run with
 worker per D235) reports "No model selected", where the reference emits
 `compaction_start`, `compaction_end` with "Compaction failed: Nothing to compact
 (session too small)" and the same error on the response.
+
+### D383
+
+**Print and JSON mode emit each streaming event with the state it had when it
+was produced.**
+
+Reference: pi v1.5.0 (`f9a26365`) serializes the same shared assistant partial
+for `message_start` and every `message_update` (D285 describes the same live
+helper). Because later deltas mutate that object before the bytes are written,
+the reference's stream shows later state in earlier events: against a local
+openai-completions endpoint whose usage arrives in the final chunk, its
+`message_start` already carried the first text block and every `message_update`
+carried the final usage (12 in / 4 out) while its text deltas were still
+streaming. Pier snapshots the partial on the producing goroutine
+(`AssistantMessageEventStream.Push`), so `message_start` carries an empty
+assistant message and usage ramps per delta, reaching the same values at
+`text_end`.
+
+The frames, deltas, `message_end`, `turn_end`, `agent_end` and the persisted
+assistant entry are identical; only the intermediate events differ. Mirroring
+the reference would mean holding the response until its late fields are known,
+which costs the streaming latency D285 exists to protect, so the snapshotted
+stream stays. Compared on 2026-11-06 against the installed 1.5.0 over the same
+local endpoint: request key order, streamed deltas, `message_end` usage/cost,
+`stopReason`/`rawStopReason` and the session's assistant entry all match.
 
 ## Lock inventory
 
