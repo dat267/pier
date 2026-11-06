@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -713,8 +714,9 @@ func skillEntryType(entry os.DirEntry, fullPath string) (isFile, isDirectory boo
 // readSkillDir reads one directory and parses the skill files directly inside
 // it. A subdirectory becomes an item; its scan is filled in by a later worker.
 func readSkillDir(dir, root string, source string, includeRootFiles bool, inheritedRules []skillIgnoreRule) *skillScanDir {
-	// File.ReadDir preserves the filesystem's native entry order like upstream
-	// readdirSync; package-level os.ReadDir sorts entries by name.
+	// The reference calls readdirSync, whose libuv scandir sorts entry names;
+	// File.ReadDir returns the filesystem's native order, so sort before walking.
+	// Name order decides both the visited order and which root SKILL.md wins.
 	directory, err := os.Open(dir)
 	if err != nil {
 		return &skillScanDir{}
@@ -724,6 +726,7 @@ func readSkillDir(dir, root string, source string, includeRootFiles bool, inheri
 	if err != nil {
 		return &skillScanDir{}
 	}
+	sort.SliceStable(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
 	rules := append([]skillIgnoreRule(nil), inheritedRules...)
 	rules = append(rules, skillIgnoreRulesForDir(dir, root)...)
 	// A root SKILL.md short-circuits (one skill per directory root).
@@ -761,8 +764,8 @@ func readSkillDir(dir, root string, source string, includeRootFiles bool, inheri
 	return scan
 }
 
-// assembleSkillDir replays one directory's scan depth-first in ReadDir order,
-// which reproduces the sequential walk's skills and diagnostics order exactly.
+// assembleSkillDir replays one directory's scan depth-first in name order,
+// which reproduces the reference walk's skills and diagnostics order.
 func assembleSkillDir(dir string, scans map[string]*skillScanDir, skills *[]Skill, diagnostics *[]ResourceDiagnostic) {
 	scan := scans[dir]
 	if scan == nil {

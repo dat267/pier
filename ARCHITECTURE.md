@@ -4239,13 +4239,21 @@ Test: `TestSettingsFullscreenWheelScrollLines`.
 Reference: pi v1.4.0 `packages/coding-agent/src/core/skills.ts`
 `loadSkillsFromDirInternal` recursively scans child directories synchronously.
 Pier retains parallel directory reads but bounds the worker count at four, rather
-than creating a goroutine for every discovered directory. The scan map is still
-assembled by the existing native directory-order traversal, so skills and
-diagnostics retain their prior ordering.
+than creating a goroutine for every discovered directory. The scan map is
+assembled by the worker results and replayed depth-first, so skills and
+diagnostics keep one deterministic order.
+
+Each directory's entries are sorted by name before the walk. The earlier port
+used the filesystem's native order on the belief that `readdirSync` returns it;
+Node goes through libuv's `uv_fs_scandir`, which sorts. The difference only
+showed in a differential run (M222): the same fixture came back alphabetical
+from the reference (`alpha,beta,caps,...`) and in creation order from a raw
+`ReadDir` (`alpha,beta,outer,caps,...`). Sorting matches the reference and keeps
+the skill list in the prompt stable across filesystems.
 
 Tests: `TestLoadSkillsFromDirBoundsWorkerGoroutines`,
-`TestLoadSkillsFromDirScansInReadDirOrder`,
-`TestLoadSkillsFromDirPreservesNativeEntryOrder`.
+`TestLoadSkillsFromDirVisitsEntriesInNameOrder`,
+`TestLoadSkillsFromDirSortsEntriesByName`.
 
 ### D340
 

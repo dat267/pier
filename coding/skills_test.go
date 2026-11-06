@@ -318,12 +318,13 @@ func skillNames(result LoadSkillsResult) []string {
 	return names
 }
 
-// TestLoadSkillsFromDirScansInReadDirOrder pins the depth-first order the
-// bounded walk must preserve: the sequential walk appended each skill as it
-// read it, so the parallel scan may not reorder them. Entries are visited in
-// ReadDir order, root SKILL.md files short-circuit their directory, and
-// nested ordinary Markdown files, dotfiles, node_modules and non-markdown files stay skipped.
-func TestLoadSkillsFromDirScansInReadDirOrder(t *testing.T) {
+// TestLoadSkillsFromDirVisitsEntriesInNameOrder pins the order the bounded walk
+// must produce: the reference calls readdirSync, whose libuv scandir sorts entry
+// names, so a directory's skills and children are visited in name order even
+// though Go's File.ReadDir returns the filesystem's native order. Root SKILL.md
+// files short-circuit their directory, and nested ordinary Markdown files,
+// dotfiles, node_modules and non-markdown files stay skipped.
+func TestLoadSkillsFromDirVisitsEntriesInNameOrder(t *testing.T) {
 	root := t.TempDir()
 	writeSkill(t, root, "a", "skill a") // a/SKILL.md: root short-circuit
 	writeMarkdownSkill(t, filepath.Join(root, "b"), "a.md", "x", "skill x")
@@ -335,74 +336,29 @@ func TestLoadSkillsFromDirScansInReadDirOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	readNative := func(path string) []os.DirEntry {
-		t.Helper()
-		directory, err := os.Open(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		entries, err := directory.ReadDir(-1)
-		if closeErr := directory.Close(); closeErr != nil {
-			t.Fatal(closeErr)
-		}
-		if err != nil {
-			t.Fatal(err)
-		}
-		return entries
-	}
-	var want []string
-	for _, entry := range readNative(root) {
-		switch entry.Name() {
-		case "a":
-			want = append(want, "a")
-		case "b":
-			for _, child := range readNative(filepath.Join(root, "b")) {
-				if child.Name() == "z" {
-					want = append(want, "z")
-				}
-			}
-		case "c.md":
-			want = append(want, "c")
-		}
-	}
+	// Entries sort as .hidden, a, b, c.md, node_modules, notes.txt; only a, b/z
+	// and c.md are skills.
+	want := []string{"a", "z", "c"}
 	result := LoadSkillsFromDir(root)
 	if got := strings.Join(skillNames(result), ","); got != strings.Join(want, ",") {
-		t.Fatalf("skills = %q, want native depth-first order %q", got, strings.Join(want, ","))
+		t.Fatalf("skills = %q, want name-ordered depth-first %q", got, strings.Join(want, ","))
 	}
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("diagnostics = %v", result.Diagnostics)
 	}
 }
 
-// Reference: pi v1.4.0 (4a080252), core/skills.ts uses readdirSync's native
-// directory order; Go's os.ReadDir sorts, so use File.ReadDir for parity.
-func TestLoadSkillsFromDirPreservesNativeEntryOrder(t *testing.T) {
+// Reference: pi v1.5.0 (f9a26365), core/skills.ts calls readdirSync; libuv's
+// uv_fs_scandir sorts names, so discovered skills come back in name order
+// regardless of creation order.
+func TestLoadSkillsFromDirSortsEntriesByName(t *testing.T) {
 	root := t.TempDir()
 	for _, name := range []string{"zeta", "alpha", "mu"} {
 		writeSkill(t, root, name, "skill "+name)
 	}
-
-	dir, err := os.Open(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	entries, err := dir.ReadDir(-1)
-	closeErr := dir.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if closeErr != nil {
-		t.Fatal(closeErr)
-	}
-	var want []string
-	for _, entry := range entries {
-		if entry.IsDir() {
-			want = append(want, entry.Name())
-		}
-	}
 	result := LoadSkillsFromDir(root)
-	if got := strings.Join(skillNames(result), ","); got != strings.Join(want, ",") {
-		t.Fatalf("skills = %q, want native directory order %q", got, strings.Join(want, ","))
+	if got, want := strings.Join(skillNames(result), ","), "alpha,mu,zeta"; got != want {
+		t.Fatalf("skills = %q, want %q", got, want)
 	}
 }
 
