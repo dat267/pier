@@ -68,6 +68,11 @@ func Execute() {
 	// needs the other goroutines' stacks to be diagnosable at all. This changes
 	// dump verbosity only, never runtime behavior.
 	debug.SetTraceback("all")
+	// Diagnostic color follows the same supports-color decision as the pinned
+	// chalk: stdout's terminal state plus the FORCE_COLOR/CI/TERM fallbacks, so
+	// a redirected or CI run carries no escape codes (coding/clicolor.go).
+	coding.SetCLIColorsEnabled(coding.ResolveCLIColors(
+		term.IsTerminal(int(os.Stdout.Fd())), os.LookupEnv, goruntime.GOOS))
 	// Before anything can reach the network: android has no /etc/resolv.conf, so
 	// the pure-Go resolver needs a fallback there.
 	configureResolver()
@@ -1060,7 +1065,7 @@ func resumeSession(args *coding.Args, cwd string, agentDir string, settings *cod
 			}
 			// Upstream prompts to fork the session into the current directory
 			// (promptConfirm + forkSessionOrExit); declining aborts.
-			fmt.Printf("\033[33mSession found in different project: %s\033[0m\n", resolved.cwd)
+			fmt.Println(coding.FormatCLIWarning("Session found in different project: " + resolved.cwd))
 			if !promptConfirm("Fork this session into current directory?") {
 				return nil, errSessionAborted
 			}
@@ -1106,7 +1111,7 @@ func resumeSession(args *coding.Args, cwd string, agentDir string, settings *cod
 		// takeover is active in every non-interactive mode, so the warning must
 		// go to stderr for text and JSON print mode as well as RPC: a JSONL
 		// consumer parses every stdout line.
-		fmt.Fprintf(os.Stderr, "\033[33mWarning: No project session found with id '%s'; creating a new session with that id.\033[0m\n", *args.SessionID)
+		fmt.Fprintln(os.Stderr, coding.FormatCLIWarning(fmt.Sprintf("Warning: No project session found with id '%s'; creating a new session with that id.", *args.SessionID)))
 		sm := coding.NewSessionManager(cwd, &coding.SessionManagerOptions{SessionDir: sessionDir})
 		sm.NewSession(&coding.NewSessionOptions{ID: *args.SessionID})
 		return sm, nil

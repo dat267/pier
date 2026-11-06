@@ -8,10 +8,10 @@ func TestFormatCLIDiagnostic(t *testing.T) {
 		in   CLIDiagnostic
 		want string
 	}{
-		{"error", CLIDiagnostic{Type: "error", Message: "Unknown option: --nope"}, "\x1b[31mError: Unknown option: --nope\x1b[0m"},
-		{"warning", CLIDiagnostic{Type: "warning", Message: "Invalid thinking level"}, "\x1b[33mWarning: Invalid thinking level\x1b[0m"},
+		{"error", CLIDiagnostic{Type: "error", Message: "Unknown option: --nope"}, "\x1b[31mError: Unknown option: --nope\x1b[39m"},
+		{"warning", CLIDiagnostic{Type: "warning", Message: "Invalid thinking level"}, "\x1b[33mWarning: Invalid thinking level\x1b[39m"},
 		// Upstream falls through to dim with no prefix for any other type.
-		{"other", CLIDiagnostic{Type: "info", Message: "note"}, "\x1b[2mnote\x1b[0m"},
+		{"other", CLIDiagnostic{Type: "info", Message: "note"}, "\x1b[2mnote\x1b[22m"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -50,7 +50,7 @@ func TestParseArgsDiagnosticsAreFormatted(t *testing.T) {
 	if len(args.Diagnostics) != 1 {
 		t.Fatalf("diagnostics = %#v, want one", args.Diagnostics)
 	}
-	want := "\x1b[31mError: Unknown option: -z\x1b[0m"
+	want := "\x1b[31mError: Unknown option: -z\x1b[39m"
 	if got := FormatCLIDiagnostic(args.Diagnostics[0]); got != want {
 		t.Errorf("formatted = %q, want %q", got, want)
 	}
@@ -87,7 +87,7 @@ func TestUnknownFlagDiagnosticsMatchTheReference(t *testing.T) {
 				t.Fatalf("diagnostics = %v, want one error %q", diagnostics, testCase.want)
 			}
 			got := FormatCLIDiagnostic(diagnostics[0])
-			if got != "\x1b[31mError: "+testCase.want+"\x1b[0m" {
+			if got != "\x1b[31mError: "+testCase.want+"\x1b[39m" {
 				t.Fatalf("rendered = %q", got)
 			}
 		})

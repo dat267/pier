@@ -284,7 +284,7 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D380)
+## Deliberate divergences from pi (D1–D381)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
@@ -5206,6 +5206,37 @@ Tests: `TestSummaryFileListsCapToTheMostRecentPaths`,
 `TestSummaryFileListsReportOmittedCounts`,
 `TestSummaryFileListsAtTheCapMatchUpstream` (no marker at exactly the cap), and
 `TestCompactSummaryCapsTheFileLists` (summary marker plus capped details).
+
+### D381
+
+**CLI diagnostic color follows the pinned chalk's supports-color decision.**
+
+Reference: pi v1.5.0 (`f9a26365`) prints parse and runtime diagnostics with
+`chalk.red`/`chalk.yellow` (`cli/args.ts`, `main.ts`,
+`core/agent-session-services.ts`), so terminal detection decides whether the
+line carries ANSI codes. Pier always colored them: a redirected stderr, a
+`TERM=dumb` shell and an unnamed CI all received `[31m`. `coding/clicolor.go`
+ports the boolean answer of the bundled supports-color: stdout's terminal
+state, `FORCE_COLOR` (empty, `true` and a numeric level force on; `0` and
+`false` force off), `TERM=dumb`, the platform branch, the known CI providers,
+`TERM_PROGRAM`, `TERM` patterns and `COLORTERM`. Detection reads stdout, not
+stderr, matching chalk: a colored error still appears when only stderr is
+redirected.
+
+The color close codes match chalk too: a foreground color ends with
+`\x1b[39m` and intensity with `\x1b[22m`, not a full `\x1b[0m` reset, so a pty
+run of `--mode nope`, `--thinking nope` or `auth check --bogus` is
+byte-identical to the reference. The `auth` subcommands print their failures
+through the same helpers, so their errors and the dim "Use ..." hint color with
+the terminal instead of never coloring.
+
+The pinned supports-color does not read `NO_COLOR`, so neither does the port: a
+controlled pty run of the reference with `NO_COLOR=1` still colors. That
+difference from modern chalk is pinned by
+`TestResolveCLIColorsMatchesTheReference`, whose cases were each observed on the
+reference binary, together with
+`TestDiagnosticColorFollowsColorSupport` (redirected, forced, forced off, dumb)
+and `TestFormatCLIDiagnosticDropsColorWhenDisabled`.
 
 ## Lock inventory
 

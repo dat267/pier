@@ -204,9 +204,10 @@ func (t *Theme) Bg(color ThemeBg, text string) string {
 	return ansi + text + "\x1b[49m"
 }
 
-// styleColorsState mirrors chalk's color-support detection: when disabled
-// the style helpers return plain text (divergence D86: a package switch
-// instead of chalk's NO_COLOR/FORCE_COLOR environment handling).
+// styleColorsState mirrors chalk's color-support detection for the TUI's style
+// helpers: when disabled they return plain text. The interactive mode only runs
+// on a terminal, so its boot enables them; the CLI's diagnostic decision is the
+// supports-color port in coding/clicolor.go (D381).
 var styleColorsState struct {
 	enabled atomic.Bool
 	set     atomic.Bool

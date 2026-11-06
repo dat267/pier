@@ -13,7 +13,10 @@ const (
 	ansiRed    = "\x1b[31m"
 	ansiYellow = "\x1b[33m"
 	ansiDim    = "\x1b[2m"
-	ansiReset  = "\x1b[0m"
+	// chalk closes a foreground color with 39 and an intensity attribute with
+	// 22; diagnostics are byte-identical to the reference's pty output (D381).
+	ansiFgReset  = "\x1b[39m"
+	ansiDimReset = "\x1b[22m"
 )
 
 // FormatCLIDiagnostic renders one diagnostic the way upstream's CLI does:
@@ -27,7 +30,14 @@ func FormatCLIDiagnostic(d CLIDiagnostic) string {
 	case "warning":
 		color, prefix = ansiYellow, "Warning: "
 	}
-	return color + prefix + d.Message + ansiReset
+	if !CLIColorsEnabled() {
+		return prefix + d.Message
+	}
+	closer := ansiFgReset
+	if color == ansiDim {
+		closer = ansiDimReset
+	}
+	return color + prefix + d.Message + closer
 }
 
 // HasErrorDiagnostics reports whether any diagnostic is an error, which is what
@@ -70,4 +80,22 @@ func UnknownFlagDiagnostics(args *Args) []CLIDiagnostic {
 		label = "Unknown options"
 	}
 	return []CLIDiagnostic{{Type: "error", Message: label + ": " + strings.Join(names, ", ")}}
+}
+
+// FormatCLIError renders an error without the "Error: " prefix, for callers
+// whose text is already complete (upstream's chalk.red lines in main.ts).
+func FormatCLIError(text string) string {
+	if !CLIColorsEnabled() {
+		return text
+	}
+	return ansiRed + text + ansiFgReset
+}
+
+// FormatCLIWarning renders a bare warning line the way upstream's chalk.yellow
+// calls do: colored only where the CLI supports color.
+func FormatCLIWarning(text string) string {
+	if !CLIColorsEnabled() {
+		return text
+	}
+	return ansiYellow + text + ansiFgReset
 }

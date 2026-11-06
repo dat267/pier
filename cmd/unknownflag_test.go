@@ -70,3 +70,44 @@ func TestUnknownFlagCLIHelper(t *testing.T) {
 	os.Args = append([]string{"pier"}, strings.Fields(args)...)
 	Execute()
 }
+
+// Upstream prints diagnostics with chalk, so a redirected stderr carries no
+// escape codes (core/agent-session-services.ts reports through main.ts's
+// chalk.red). FORCE_COLOR overrides that, TERM=dumb disables it, and plain
+// stderr means the message starts with the error prefix.
+func TestDiagnosticColorFollowsColorSupport(t *testing.T) {
+	cases := []struct {
+		name     string
+		env      []string
+		wantANSI bool
+	}{
+		{name: "redirected", env: []string{"TERM=xterm-256color"}, wantANSI: false},
+		{name: "forced", env: []string{"TERM=xterm-256color", "FORCE_COLOR=1"}, wantANSI: true},
+		{name: "forced off", env: []string{"TERM=xterm-256color", "FORCE_COLOR=0"}, wantANSI: false},
+		{name: "dumb terminal", env: []string{"TERM=dumb"}, wantANSI: false},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			isolatedAgentDir(t)
+			ctx, cancel := context.WithTimeout(context.Background(), childProcessTimeout)
+			defer cancel()
+			command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestUnknownFlagCLIHelper$")
+			// A clean environment keeps the developer's CI and terminal
+			// variables out of the decision.
+			command.Env = append([]string{
+				"PIER_TEST_UNKNOWN_FLAG_ARGS=--offline --bogus",
+				"HOME=" + os.Getenv("HOME"),
+			}, testCase.env...)
+			output, err := command.CombinedOutput()
+			if exit := exitCodeOf(err); exit != 1 {
+				t.Fatalf("exit = %d (%v), want 1; output: %q", exit, err, output)
+			}
+			if got := strings.ContainsAny(string(output), "\x1b"); got != testCase.wantANSI {
+				t.Fatalf("ansi = %t, want %t: %q", got, testCase.wantANSI, output)
+			}
+			if !strings.Contains(string(output), "Error: Unknown option: --bogus") {
+				t.Fatalf("missing error line: %q", output)
+			}
+		})
+	}
+}

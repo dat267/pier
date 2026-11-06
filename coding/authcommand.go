@@ -477,7 +477,7 @@ func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer
 	}
 	command, err := parseAuthCommandNamed(appName, args)
 	if err != nil {
-		fmt.Fprintf(stderr, "Error: %s\n", authCommandErrorMessage(err, "Failed to parse auth command"))
+		fmt.Fprintln(stderr, FormatCLIError("Error: "+authCommandErrorMessage(err, "Failed to parse auth command")))
 		return true, 1
 	}
 	if command == nil {
@@ -486,8 +486,8 @@ func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer
 	parsed := ParseArgs(command.Args)
 	if len(parsed.UnknownFlags) > 0 {
 		option := parsed.firstUnknownFlag()
-		fmt.Fprintf(stderr, "Unknown option --%s for %q.\n", option, authCommandName(command.Kind))
-		fmt.Fprintf(stderr, "Use \"%s --help\" or \"%s\".\n", appName, authCommandUsage(appName, command.Kind))
+		fmt.Fprintln(stderr, FormatCLIError(fmt.Sprintf("Unknown option --%s for %q.", option, authCommandName(command.Kind))))
+		fmt.Fprintln(stderr, FormatCLIDiagnostic(CLIDiagnostic{Type: "status", Message: fmt.Sprintf("Use \"%s --help\" or \"%s\".", appName, authCommandUsage(appName, command.Kind))}))
 		return true, 1
 	}
 	if len(parsed.Diagnostics) > 0 {
@@ -495,7 +495,7 @@ func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer
 		for _, diagnostic := range parsed.Diagnostics {
 			messages = append(messages, diagnostic.Message)
 		}
-		fmt.Fprintf(stderr, "Error: %s\n", strings.Join(messages, "\n"))
+		fmt.Fprintln(stderr, FormatCLIError("Error: "+strings.Join(messages, "\n")))
 		if command.Kind == AuthCommandCheck {
 			return true, 2
 		}
@@ -512,12 +512,12 @@ func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer
 			RefreshOnCreate:   &refreshOnCreate,
 		})
 		if err != nil {
-			fmt.Fprintf(stderr, "Error: %s\n", authCommandErrorMessage(err, "Failed to resolve credential"))
+			fmt.Fprintln(stderr, FormatCLIError("Error: "+authCommandErrorMessage(err, "Failed to resolve credential")))
 			return true, 1
 		}
 		credential, err := ResolveCredentialForPrint(parsed, runtime, command.Kind, command.MinExpiryMS)
 		if err != nil {
-			fmt.Fprintf(stderr, "Error: %s\n", authCommandErrorMessage(err, "Failed to resolve credential"))
+			fmt.Fprintln(stderr, FormatCLIError("Error: "+authCommandErrorMessage(err, "Failed to resolve credential")))
 			return true, 1
 		}
 		fmt.Fprintf(stdout, "%s\n", credential)
@@ -526,7 +526,7 @@ func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer
 
 	provider, model, argErr := validateAuthCommandArgs(parsed, AuthCommandCheck)
 	if argErr != nil {
-		fmt.Fprintf(stderr, "Error: %s\n", authCommandErrorMessage(argErr, "Failed to resolve credential"))
+		fmt.Fprintln(stderr, FormatCLIError("Error: "+authCommandErrorMessage(argErr, "Failed to resolve credential")))
 		return true, 2
 	}
 	var credentials ai.CredentialStore
@@ -571,7 +571,7 @@ func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer
 		}{result.Status, result.Provider, result.Reason, result.AuthType, credential}
 		encoded, marshalErr := ai.MarshalJSON(output)
 		if marshalErr != nil {
-			fmt.Fprintf(stderr, "Error: %s\n", marshalErr.Error())
+			fmt.Fprintln(stderr, FormatCLIError("Error: "+marshalErr.Error()))
 			return true, 2
 		}
 		fmt.Fprintf(stdout, "%s\n", encoded)
