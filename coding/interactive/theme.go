@@ -984,6 +984,9 @@ func customThemeInfos() []ThemeInfo {
 			}
 			return
 		}
+		// The reference lists readdirSync entries, which libuv sorts by file
+		// name; the first file to declare a name wins the collision.
+		sort.SliceStable(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
 		for _, entry := range entries {
 			name := coding.DecodeUTF8WithReplacement([]byte(entry.Name()))
 			path := filepath.Join(dir, name)
