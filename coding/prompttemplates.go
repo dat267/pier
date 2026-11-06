@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -254,6 +255,9 @@ func loadTemplatesWithDiagnostics(dir string, getSourceInfo func(filePath string
 	if err != nil {
 		return result
 	}
+	// The reference lists readdirSync entries; libuv's scandir returns them
+	// sorted by name, unlike File.ReadDir's native order.
+	sort.SliceStable(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
 	for _, entry := range entries {
 		name := DecodeUTF8WithReplacement([]byte(entry.Name()))
 		fullPath := filepath.Join(dir, name)

@@ -271,30 +271,12 @@ func TestExpandPromptTemplate(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.4.0 (4a080252), prompt-templates.ts visits
-// readdirSync entries in filesystem order rather than sorting by filename.
-func TestLoadPromptTemplatesPreservesNativeDirectoryOrder(t *testing.T) {
+// Reference: pi v1.5.0 (f9a26365), prompt-templates.ts lists readdirSync
+// entries, and libuv's scandir returns them sorted by name.
+func TestLoadPromptTemplatesSortsNames(t *testing.T) {
 	dir := t.TempDir()
 	for _, name := range []string{"zeta", "alpha", "mu"} {
 		writeSettingsFile(t, filepath.Join(dir, name+".md"), "Template body")
-	}
-	root, err := os.Open(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	entries, err := root.ReadDir(-1)
-	closeErr := root.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if closeErr != nil {
-		t.Fatal(closeErr)
-	}
-	var want []string
-	for _, entry := range entries {
-		if strings.HasSuffix(entry.Name(), ".md") {
-			want = append(want, strings.TrimSuffix(entry.Name(), ".md"))
-		}
 	}
 	templates := LoadTemplatesFromDir(dir, func(path string) SourceInfo {
 		return CreateSyntheticSourceInfo(path, "local", "", "", dir)
@@ -303,8 +285,8 @@ func TestLoadPromptTemplatesPreservesNativeDirectoryOrder(t *testing.T) {
 	for _, template := range templates {
 		got = append(got, template.Name)
 	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("template order = %v, want native directory order %v", got, want)
+	if want := []string{"alpha", "mu", "zeta"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("template order = %v, want %v", got, want)
 	}
 }
 
