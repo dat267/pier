@@ -161,11 +161,25 @@ func Execute() {
 			os.Exit(status.ExitCode())
 		}
 		if !errors.Is(err, errAlreadyReported) {
-			fmt.Fprintln(os.Stderr, appName+": "+err.Error())
+			// Upstream main.ts prints a run failure as a red "Error: {message}"
+			// line; the session-resolution messages it prints without that prefix
+			// carry bareErrorLine.
+			var bare bareErrorLine
+			if errors.As(err, &bare) {
+				fmt.Fprintln(os.Stderr, coding.FormatCLIError(bare.text))
+			} else {
+				reportDiagnostics([]coding.CLIDiagnostic{{Type: "error", Message: err.Error()}})
+			}
 		}
 		os.Exit(1)
 	}
 }
+
+// bareErrorLine marks a run failure the reference prints red without an
+// "Error: " prefix (main.ts resolves a session and prints the message itself).
+type bareErrorLine struct{ text string }
+
+func (e bareErrorLine) Error() string { return e.text }
 
 // reportDiagnostics prints diagnostics the way upstream's reportDiagnostics
 // does: one colored line per diagnostic on stderr.
@@ -1051,7 +1065,7 @@ func resumeSession(args *coding.Args, cwd string, agentDir string, settings *cod
 		case "path", "local", "global":
 			return coding.ForkSession(resolved.path, cwd, sessionDir, &coding.NewSessionOptions{ID: forkID})
 		default:
-			return nil, fmt.Errorf("No session found matching '%s'", resolved.arg)
+			return nil, bareErrorLine{text: fmt.Sprintf("No session found matching '%s'", resolved.arg)}
 		}
 	}
 	if args.Session != nil {
@@ -1071,7 +1085,7 @@ func resumeSession(args *coding.Args, cwd string, agentDir string, settings *cod
 			}
 			return coding.ForkSession(resolved.path, cwd, sessionDir, nil)
 		default:
-			return nil, fmt.Errorf("No session found matching '%s'", resolved.arg)
+			return nil, bareErrorLine{text: fmt.Sprintf("No session found matching '%s'", resolved.arg)}
 		}
 	}
 	if args.Resume {

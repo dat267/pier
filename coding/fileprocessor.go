@@ -424,7 +424,7 @@ func ProcessFileArguments(fileArgs []string, options *ProcessFileOptions) (Proce
 
 		info, err := os.Stat(absolutePath)
 		if err != nil {
-			return ProcessedFiles{}, fmt.Errorf("Error: File not found: %s", absolutePath)
+			return ProcessedFiles{}, fmt.Errorf("File not found: %s", absolutePath)
 		}
 		if info.Size() == 0 {
 			continue
@@ -432,13 +432,13 @@ func ProcessFileArguments(fileArgs []string, options *ProcessFileOptions) (Proce
 
 		mimeType, err := DetectSupportedImageMimeTypeFromFile(absolutePath)
 		if err != nil {
-			return ProcessedFiles{}, fmt.Errorf("Error: Could not read file %s: %v", absolutePath, err)
+			return ProcessedFiles{}, fmt.Errorf("Could not read file %s: %v", absolutePath, err)
 		}
 
 		if mimeType != "" {
 			content, err := os.ReadFile(absolutePath)
 			if err != nil {
-				return ProcessedFiles{}, fmt.Errorf("Error: Could not read file %s: %v", absolutePath, err)
+				return ProcessedFiles{}, fmt.Errorf("Could not read file %s: %v", absolutePath, err)
 			}
 			autoResizeFlag := autoResize
 			processed := ProcessImage(content, mimeType, &ProcessImageOptions{AutoResizeImages: &autoResizeFlag})
@@ -457,7 +457,7 @@ func ProcessFileArguments(fileArgs []string, options *ProcessFileOptions) (Proce
 
 		content, err := os.ReadFile(absolutePath)
 		if err != nil {
-			return ProcessedFiles{}, fmt.Errorf("Error: Could not read file %s: %v", absolutePath, err)
+			return ProcessedFiles{}, fmt.Errorf("Could not read file %s: %v", absolutePath, err)
 		}
 		text.WriteString(fmt.Sprintf("<file name=\"%s\">\n%s\n</file>\n", absolutePath, StripBom(DecodeUTF8WithReplacement(content))))
 	}

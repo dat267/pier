@@ -229,7 +229,7 @@ func TestProcessFileArgumentsTextAndImages(t *testing.T) {
 
 	// A missing file is an error naming the resolved path.
 	if _, err := ProcessFileArguments([]string{filepath.Join(dir, "missing.txt")}, &ProcessFileOptions{Cwd: dir}); err == nil ||
-		!strings.Contains(err.Error(), "Error: File not found: ") {
+		!strings.Contains(err.Error(), "File not found: ") {
 		t.Fatalf("err = %v", err)
 	}
 
