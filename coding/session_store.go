@@ -1576,7 +1576,12 @@ func FindMostRecentSession(sessionDir string, cwd string) *string {
 		files = append(files, candidate{path: full, modTime: info.ModTime()})
 	}
 	sort.SliceStable(files, func(i, j int) bool {
-		return files[i].modTime.After(files[j].modTime)
+		if !files[i].modTime.Equal(files[j].modTime) {
+			return files[i].modTime.After(files[j].modTime)
+		}
+		// Upstream sorts with a stable JS sort over readdirSync order, which
+		// libuv returns by name, so equal times keep the name order.
+		return filepath.Base(files[i].path) < filepath.Base(files[j].path)
 	})
 	for _, file := range files {
 		header := readSessionHeader(file.path)
