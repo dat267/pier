@@ -61,13 +61,16 @@ func TailSession(source *SessionManager, model *ai.Model, thinking ai.ThinkingLe
 		entries[len(entries)-1].ThinkingLevel = string(thinking)
 	}
 	entries = append(entries, window...)
+	// A loaded entry marshals its retained JSON line, so the chain must change
+	// through setParentID; assigning the field alone would leave the written
+	// parent pointing at an entry the window drops.
 	for i := range entries {
 		if i == 0 {
-			entries[i].ParentID = nil
+			entries[i].setParentID(nil)
 			continue
 		}
 		parent := entries[i-1].ID
-		entries[i].ParentID = &parent
+		entries[i].setParentID(&parent)
 	}
 
 	parentSession := source.GetSessionFile()
@@ -112,8 +115,9 @@ func tailWindow(branch []SessionEntry) []SessionEntry {
 	kept := compaction
 	if start == compactionIndex || branch[start].ID != compaction.FirstKeptEntryID {
 		// The first kept entry was outside the branch (or the compaction pointed
-		// at itself); a window without it replays as the compaction alone.
-		kept.FirstKeptEntryID = kept.ID
+		// at itself); a window without it replays as the compaction alone. The
+		// retained line carries the old target too, so rewrite it the same way.
+		kept.setFirstKeptEntryID(kept.ID)
 	}
 	window = append(window, kept)
 	window = append(window, branch[compactionIndex+1:]...)

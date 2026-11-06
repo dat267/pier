@@ -5096,7 +5096,11 @@ The copied set is exactly the window `ProjectedContextEstimate` reads: the newes
 compaction, the branch entries its `firstKeptEntryId` keeps before it (system
 messages are not replayed there, matching `walkCompactionWindow`), and everything
 after it, including context edits. Entry IDs are preserved so the compaction's
-`firstKeptEntryId` stays valid; parents are re-chained so the window is re-rooted,
+`firstKeptEntryId` stays valid; parents are re-chained through `setParentID`
+(and `setFirstKeptEntryID` when the compaction points outside the window),
+because a loaded entry marshals its retained JSON line: setting the struct field
+alone leaves the written parent pointing at an entry the window drops, and the
+kept range stops being reachable from the leaf (M221). Re-chaining re-roots the window,
 and a `model_change`/`thinking_level_change` pair is prepended when the window no
 longer contains them, so a resume keeps the current provider, model and effort.
 The new header records the source as `parentSession`, and the same write path as
@@ -5108,7 +5112,9 @@ silently starting empty.
 The projection is the contract, not the byte count: the new session's messages
 and token estimate are identical to the source's, verified by
 `TestTailSessionKeepsTheLiveContext` (tool pair, context edit, kept system
-message) and `TestTailSessionWithoutCompactionCopiesTheBranch`. The command
+message), `TestTailSessionKeepsTheLiveContextOnAReopenedSession` (loaded entries
+carry their original lines, M221), and
+`TestTailSessionWithoutCompactionCopiesTheBranch`. The command
 path is pinned by `TestTailCommandStartsFromTheLiveContext` and
 `TestTailCommandNeedsAPersistedSession`. Cold history remains readable only
 through the source session; the tail session is a new starting point, not a

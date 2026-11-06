@@ -185,3 +185,44 @@ func TestTailSessionRefusalsNameTail(t *testing.T) {
 		t.Errorf("empty branch error = %v, want \"Nothing to tail yet\"", err)
 	}
 }
+
+// A session loaded from disk carries its original JSON lines. Mutating a loaded
+// entry's parent field alone does not reach that line, so the copied chain must
+// re-chain through the raw helper; otherwise the first copied entry keeps a
+// parent outside the window and the kept range stops being reachable from the
+// leaf.
+func TestTailSessionKeepsTheLiveContextOnAReopenedSession(t *testing.T) {
+	source, model := newTailSource(t)
+	reopened, err := OpenSession(source.GetSessionFile(), "", "")
+	if err != nil {
+		t.Fatalf("reopen: %v", err)
+	}
+	before := projectionFingerprint(t, reopened)
+	beforeBranch := len(reopened.GetBranch(""))
+	beforeEntries := len(reopened.GetEntries())
+
+	tailed, err := TailSession(reopened, model, ai.ThinkHigh, reopened.GetCwd(), reopened.GetSessionDir(), true, nil)
+	if err != nil {
+		t.Fatalf("tail: %v", err)
+	}
+	if got := projectionFingerprint(t, tailed); got != before {
+		t.Errorf("tail context differs:\n got %q\nwant %q", got, before)
+	}
+	branch := tailed.GetBranch("")
+	if len(branch) != len(tailed.GetEntries()) {
+		t.Errorf("leaf path has %d of %d copied entries; the chain is broken", len(branch), len(tailed.GetEntries()))
+	}
+	if len(branch) > 0 {
+		if branch[0].ParentID != nil {
+			t.Errorf("first copied entry still points at %q", *branch[0].ParentID)
+		}
+		for i := 1; i < len(branch); i++ {
+			if branch[i].ParentID == nil || *branch[i].ParentID != branch[i-1].ID {
+				t.Fatalf("entry %d does not chain to its predecessor", i)
+			}
+		}
+	}
+	if len(branch) >= beforeBranch || len(tailed.GetEntries()) >= beforeEntries {
+		t.Errorf("tail did not drop the compacted prefix: %d/%d kept of %d/%d", len(branch), len(tailed.GetEntries()), beforeBranch, beforeEntries)
+	}
+}
