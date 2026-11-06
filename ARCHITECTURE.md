@@ -290,7 +290,7 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D383)
+## Deliberate divergences from pi (D1–D384)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
@@ -5317,6 +5317,30 @@ which costs the streaming latency D285 exists to protect, so the snapshotted
 stream stays. Compared on 2026-11-06 against the installed 1.5.0 over the same
 local endpoint: request key order, streamed deltas, `message_end` usage/cost,
 `stopReason`/`rawStopReason` and the session's assistant entry all match.
+
+### D384
+
+**An MCP provider token that cannot be resolved is reported, not silently
+omitted.**
+
+Reference: pi v1.5.0 (`f9a26365`) wires `auth: { provider }` to
+`modelRegistry.getApiKeyForProvider` (`extensions/mcp/index.ts`), which wraps
+`runtime.getAuth(provider)` in a `try`/`catch` returning `undefined`
+(`core/model-registry.ts`). A provider whose key cannot be resolved therefore
+contributes no `Authorization` header, and the server's 401 is what the user
+sees. Pier's `providerTokenForMCP` (`cmd/main.go`) returns the resolution error
+instead, so the MCP request fails with the cause: `API key auth failed for
+provider <id>: Failed to resolve API key for provider "<id>" from shell command:
+...` or the missing environment variable.
+
+The port keeps the error because a silent 401 sends the user looking at the MCP
+server when the credential template was the problem; the failure is the same
+either way (that server's tools are unavailable for the run). Unknown providers
+and a missing runtime still return an empty token without an error, matching the
+reference's `undefined`. Pinned by `TestProviderTokenForMCP` (four boundaries:
+resolvable key, unknown provider, no runtime, unresolvable key). The reference's
+side is read from the pin; the equivalent template failure was not driven
+through the reference's MCP path.
 
 ## Lock inventory
 
