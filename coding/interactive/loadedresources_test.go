@@ -75,41 +75,27 @@ func TestLoadedThemeWarnings(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.4.0 (4a080252), theme.ts getCustomThemeInfos visits
-// readdirSync entries in native order; the first same-name theme wins.
-func TestDiscoveredThemeCollisionUsesNativeEntryOrder(t *testing.T) {
+// Reference: pi v1.5.0 (f9a26365), theme.ts getCustomThemeInfos visits
+// readdirSync entries, which libuv returns sorted by file name; the first
+// same-name theme wins.
+func TestDiscoveredThemeCollisionUsesFileNameOrder(t *testing.T) {
 	dir := t.TempDir()
 	for _, filename := range []string{"zeta.json", "alpha.json", "mu.json"} {
-		writeThemeFile(t, dir, filename, "shared-native-order", "#123456")
+		writeThemeFile(t, dir, filename, "shared-name-order", "#123456")
 	}
-	handle, err := os.Open(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	entries, err := handle.ReadDir(-1)
-	closeErr := handle.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if closeErr != nil {
-		t.Fatal(closeErr)
-	}
-	if len(entries) == 0 {
-		t.Fatal("theme fixture is empty")
-	}
-	wantPath := filepath.Join(dir, entries[0].Name())
+	wantPath := filepath.Join(dir, "alpha.json")
 	SetCustomThemeSources(CustomThemeSources{Dir: dir})
 	t.Cleanup(func() { SetCustomThemeSources(CustomThemeSources{NoDiscovery: true}) })
 
 	for _, info := range AvailableThemesWithPaths() {
-		if info.Name == "shared-native-order" {
+		if info.Name == "shared-name-order" {
 			if info.Path != wantPath {
-				t.Fatalf("theme path = %q, want native first file %q", info.Path, wantPath)
+				t.Fatalf("theme path = %q, want the first file name %q", info.Path, wantPath)
 			}
 			return
 		}
 	}
-	t.Fatal("shared-native-order theme was not discovered")
+	t.Fatal("shared-name-order theme was not discovered")
 }
 
 // TestThemeCollisionsKeepFirstSource follows resource-loader.ts loadThemes and
