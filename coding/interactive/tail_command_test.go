@@ -25,7 +25,7 @@ func tailFingerprint(t *testing.T, manager *coding.SessionManager) string {
 // /tail is pier-only (D378): a new session seeded with the live context, so
 // the compacted prefix stops traveling with the session while the projection
 // stays identical. The command refuses sessions that do not persist, since there
-// is no file to hand off from.
+// is no file to tail from.
 func TestTailCommandStartsFromTheLiveContext(t *testing.T) {
 	app, cleanup := newTestAppPersisted(t)
 	defer cleanup()
