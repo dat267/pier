@@ -176,6 +176,7 @@ type SubmitHandlers struct {
 	HandleHotkeysCommand    func()
 	ShowUserMessageSelector func()
 	HandleCloneCommand      func() error
+	HandleTailCommand       func() error
 	ShowTreeSelector        func()
 	ShowTrustSelector       func()
 	HandleLoginCommand      func(providerRef string) error
@@ -331,6 +332,12 @@ func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 		clearEditor()
 		if w.Handlers.HandleCloneCommand != nil {
 			_ = w.Handlers.HandleCloneCommand()
+		}
+		return
+	case text == "/tail":
+		clearEditor()
+		if w.Handlers.HandleTailCommand != nil {
+			_ = w.Handlers.HandleTailCommand()
 		}
 		return
 	case text == "/tree":
@@ -732,6 +739,20 @@ func newSubmitWiring(app *App) *SubmitWiring {
 					return nil
 				}
 				app.transcript.ShowStatus("Cloned to new session")
+				return nil
+			},
+			// `/tail` starts a new session from the live context (D378).
+			HandleTailCommand: func() error {
+				result, err := app.tailSession(context.Background())
+				if err != nil {
+					app.showError(err.Error())
+					return err
+				}
+				if result != nil && result.Cancelled {
+					app.ui.RequestRender(false)
+					return nil
+				}
+				app.transcript.ShowStatus("Started a new session from the live context · /resume for the previous one")
 				return nil
 			},
 			HandleCompactCommand: func(instructions string) error {

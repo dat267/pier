@@ -344,6 +344,27 @@ func (a *App) forkAtEntry(_ context.Context, entryID string, atPosition bool) (*
 	return &SelectorForkResult{Cancelled: result.Cancelled, SelectedText: selectedText}, nil
 }
 
+// tailSession starts a new session seeded with the current live context
+// (D378): the newest compaction plus the entries its window keeps, re-rooted so
+// the compacted prefix stops traveling with the session. Upstream has no such
+// command; its only seeding path is the extension setup hook, which is out of
+// scope (D41). A session that does not persist has no file to hand off from, so
+// the command reports instead of silently starting an empty one.
+func (a *App) tailSession(_ context.Context) (*SessionSwitchResult, error) {
+	if !a.sessionMgr.IsPersisted() {
+		return nil, errors.New("Tail needs a saved session")
+	}
+	if a.sessionMgr.GetLeafID() == nil {
+		return nil, errors.New("Nothing to hand off yet")
+	}
+	tailed, err := coding.TailSession(a.sessionMgr, a.session.Model(), a.session.ThinkingLevel(),
+		a.sessionMgr.GetCwd(), a.sessionMgr.GetSessionDir(), a.sessionMgr.SessionDirManaged(), nil)
+	if err != nil {
+		return nil, err
+	}
+	return a.applySessionReplacement(tailed)
+}
+
 // userMessageEntryText returns a message entry's user text, and whether the
 // entry is a user message at all.
 func userMessageEntryText(entry *coding.SessionEntry) (string, bool) {

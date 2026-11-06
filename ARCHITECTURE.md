@@ -284,13 +284,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D377)
+## Deliberate divergences from pi (D1–D378)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D377**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D378**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -5080,6 +5080,39 @@ a pier divergence, not parity. The gate is measured rather than stylistic:
 `TestBuiltinThemesMeetContrastTargets` computes WCAG relative luminance for both
 built-in documents; the regenerated interactive goldens carry the new values.
 The amber identity (D219) and D154's structural choices are unchanged.
+
+### D378
+
+**`/tail` starts a new session from the live context.**
+
+Reference: pi v1.5.0 (`f9a26365`). Upstream has no such command: `newSession`
+takes only a `setup(sessionManager)` callback that extension code uses to seed
+entries, and extension mechanics are out of scope here (D41). Pier adds
+`/tail`, which writes a new session holding the same live context while the
+compacted prefix stops traveling with the file. This is deliberate, so it does
+not claim upstream behavior.
+
+The copied set is exactly the window `ProjectedContextEstimate` reads: the newest
+compaction, the branch entries its `firstKeptEntryId` keeps before it (system
+messages are not replayed there, matching `walkCompactionWindow`), and everything
+after it, including context edits. Entry IDs are preserved so the compaction's
+`firstKeptEntryId` stays valid; parents are re-chained so the window is re-rooted,
+and a `model_change`/`thinking_level_change` pair is prepended when the window no
+longer contains them, so a resume keeps the current provider, model and effort.
+The new header records the source as `parentSession`, and the same write path as
+a branch fork (`writeForkedSession`) produces the file. A session without a
+compaction has no window to cut, so the whole branch is copied and the context
+still matches. Sessions that do not persist are refused with a status instead of
+silently starting empty.
+
+The projection is the contract, not the byte count: the new session's messages
+and token estimate are identical to the source's, verified by
+`TestTailSessionKeepsTheLiveContext` (tool pair, context edit, kept system
+message) and `TestTailSessionWithoutCompactionCopiesTheBranch`. The command
+path is pinned by `TestTailCommandStartsFromTheLiveContext` and
+`TestTailCommandNeedsAPersistedSession`. Cold history remains readable only
+through the source session; the tail session is a new starting point, not a
+backup.
 
 ## Lock inventory
 

@@ -26,6 +26,7 @@ var BuiltinSlashCommands = []BuiltinSlashCommand{
 	{Name: "hotkeys", Description: "Show all keyboard shortcuts"},
 	{Name: "fork", Description: "Create a new fork from a previous user message"},
 	{Name: "clone", Description: "Duplicate the current session at the current position"},
+	{Name: "tail", Description: "Start a new session from the live context, dropping compacted history"},
 	{Name: "trust", Description: "Save project trust decision for future sessions"},
 	{Name: "login", Description: "Configure provider authentication", ArgumentHint: "<provider>"},
 	{Name: "logout", Description: "Remove provider authentication"},

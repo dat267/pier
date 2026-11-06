@@ -103,6 +103,17 @@ func TestAppEndToEndLoop(t *testing.T) {
 
 func newTestApp(t *testing.T) (*App, func()) {
 	t.Helper()
+	return newTestAppWithPersist(t, false)
+}
+
+// newTestAppPersisted is newTestApp with a session file, for commands that need
+// one (handoff).
+func newTestAppPersisted(t *testing.T) (*App, func()) {
+	t.Helper()
+	return newTestAppWithPersist(t, true)
+}
+
+func newTestAppWithPersist(t *testing.T, persist bool) (*App, func()) {
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	SetTrueColorSupport(true)
@@ -133,7 +144,6 @@ func newTestApp(t *testing.T) (*App, func()) {
 		t.Fatal("no anthropic models in the catalog")
 	}
 	settings := coding.NewInMemorySettingsManager(nil, coding.SettingsManagerCreateOptions{})
-	persist := false
 	sessions := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: &persist})
 	fauxModel := anthropicModels[0]
 	streamFn := func(model *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
