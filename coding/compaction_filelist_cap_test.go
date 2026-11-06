@@ -201,3 +201,26 @@ func TestCapFileListsHandlesOperationsWithoutOrder(t *testing.T) {
 		t.Errorf("summary = %q, want the omitted count", got)
 	}
 }
+
+// Recency wins for the paths that carry it, and the slots left over go to the
+// paths whose caller never recorded a touch.
+func TestCapFileListsMixesRecencyAndUnrecordedPaths(t *testing.T) {
+	fileOps := CreateFileOps()
+	for i := 0; i < 150; i++ {
+		fileOps.markRead(fmt.Sprintf("recent-%03d", i))
+	}
+	for i := 0; i < 30; i++ {
+		fileOps.Read[fmt.Sprintf("unrecorded-%03d", i)] = true
+	}
+	readFiles, _, readOmitted, _ := CapFileLists(fileOps)
+	if len(readFiles) != maxSummaryFileListEntries || readOmitted != 80 {
+		t.Fatalf("read = %d selected, %d omitted; want %d/80", len(readFiles), readOmitted, maxSummaryFileListEntries)
+	}
+	// All 100 slots are taken by the most recently touched paths, so no
+	// unrecorded path is selected while recency is available.
+	for _, path := range readFiles {
+		if strings.HasPrefix(path, "unrecorded-") {
+			t.Fatalf("selected %q while 100 recent paths were available", path)
+		}
+	}
+}
