@@ -647,14 +647,22 @@ func (m *SessionManager) AppendCompaction(summary string, firstKeptEntryID strin
 	entry.TokensBefore = tokensBefore
 	entry.Details = details
 	entry.Usage = usage
-	if fromHook {
-		entry.FromHook = new(true)
-	}
+	// The reference writes fromHook whenever it has a value, including false
+	// (session-manager.ts appendCompaction and branchWithSummary), so persist
+	// the flag rather than only true.
+	entry.FromHook = &fromHook
 	if systemMessage != nil {
 		// The recorded system message carries the compaction's own timestamp
 		// (upstream stamps it with new Date(timestamp).getTime()).
 		systemMessage.Timestamp = now.UnixMilli()
-		entry.SystemMessageJSON = mustMarshalJSON(systemMessage)
+		// ai.MarshalMessage splices the leading role, which the bare
+		// SystemMessage marshaling omits; the reference records the current
+		// system message as a full message (role, content, sections, tools).
+		encoded, err := ai.MarshalMessage(systemMessage)
+		if err != nil {
+			panic(err)
+		}
+		entry.SystemMessageJSON = encoded
 	}
 	return m.appendEntry(&entry)
 }
@@ -1010,9 +1018,10 @@ func (m *SessionManager) BranchWithSummary(branchFromID string, summary string, 
 	entry.Summary = summary
 	entry.Details = details
 	entry.Usage = usage
-	if fromHook {
-		entry.FromHook = new(true)
-	}
+	// The reference writes fromHook whenever it has a value, including false
+	// (session-manager.ts appendCompaction and branchWithSummary), so persist
+	// the flag rather than only true.
+	entry.FromHook = &fromHook
 	return m.appendEntry(&entry)
 }
 
