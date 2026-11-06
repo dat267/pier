@@ -1,10 +1,16 @@
 package coding
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Reference: pi v1.5.0 (f9a26365), core/compaction/compaction.ts findCutPoint
@@ -28,6 +34,10 @@ func TestPrepareCompactionMatchesUpstreamFixture(t *testing.T) {
 			ReserveTokens    int64 `json:"reserveTokens"`
 			KeepRecentTokens int64 `json:"keepRecentTokens"`
 		} `json:"settings"`
+		Projection struct {
+			Count  int    `json:"count"`
+			Digest string `json:"digest"`
+		} `json:"projection"`
 		Cut struct {
 			Index       int    `json:"index"`
 			TurnStart   int    `json:"turnStartIndex"`
@@ -62,6 +72,13 @@ func TestPrepareCompactionMatchesUpstreamFixture(t *testing.T) {
 	entries := manager.GetEntries()
 	if len(entries) != golden.Entries {
 		t.Fatalf("entries = %d, want %d", len(entries), golden.Entries)
+	}
+
+	if got, want := projectionDigest(t, manager.Projection().Messages), golden.Projection.Digest; got != want {
+		t.Errorf("projection digest = %s, want %s", got, want)
+	}
+	if got := len(manager.Projection().Messages); got != golden.Projection.Count {
+		t.Errorf("projection messages = %d, want %d", got, golden.Projection.Count)
 	}
 
 	settings := DefaultCompactionSettings
@@ -99,5 +116,63 @@ func TestPrepareCompactionMatchesUpstreamFixture(t *testing.T) {
 	}
 	if JSLength(preparation.PreviousSummary) != golden.Preparation.PreviousSummaryLength {
 		t.Errorf("previous summary length = %d, want %d", JSLength(preparation.PreviousSummary), golden.Preparation.PreviousSummaryLength)
+	}
+}
+
+// projectionDigest describes each projected message the way the golden does:
+// the role, then one entry per content block with the JS length of its text,
+// thinking or tool arguments. Only lengths are compared, so key order and
+// escaping differences cannot mask a content change.
+func projectionDigest(t *testing.T, messages []ai.Message) string {
+	t.Helper()
+	lines := make([]string, 0, len(messages))
+	for _, message := range messages {
+		var blocks []string
+		switch m := message.(type) {
+		case *ai.UserMessage:
+			if m.Content.String() {
+				blocks = append(blocks, "text:"+strconv.Itoa(JSLength(m.Content.Text)))
+			} else {
+				blocks = append(blocks, describeProjectedBlocks(m.Content.Blocks)...)
+			}
+		case *ai.AssistantMessage:
+			blocks = append(blocks, describeProjectedBlocks(m.Content)...)
+		case *ai.ToolResultMessage:
+			blocks = append(blocks, describeProjectedBlocks(m.Content)...)
+		}
+		lines = append(lines, string(ai.RoleOf(message))+"|"+strings.Join(blocks, ","))
+	}
+	sum := sha256.Sum256([]byte(strings.Join(lines, "\n")))
+	return hex.EncodeToString(sum[:])
+}
+
+func describeProjectedBlocks(blocks any) []string {
+	described := make([]string, 0, 4)
+	switch list := blocks.(type) {
+	case ai.ContentList:
+		for _, block := range list {
+			described = append(described, describeProjectedBlock(block))
+		}
+	case ai.UserContentList:
+		for _, block := range list {
+			described = append(described, describeProjectedBlock(block))
+		}
+	}
+	return described
+}
+
+func describeProjectedBlock(block any) string {
+	switch b := block.(type) {
+	case ai.TextContent:
+		return "text:" + strconv.Itoa(JSLength(b.Text))
+	case ai.ThinkingContent:
+		return "thinking:" + strconv.Itoa(JSLength(b.Thinking))
+	case ai.ToolCall:
+		encoded, _ := ai.MarshalJSON(b.Arguments)
+		return "toolCall:" + b.Name + ":" + strconv.Itoa(JSLength(string(encoded)))
+	case ai.ImageContent:
+		return "image"
+	default:
+		return "other"
 	}
 }

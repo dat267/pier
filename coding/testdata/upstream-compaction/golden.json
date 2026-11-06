@@ -12,6 +12,10 @@
     "isSplitTurn": true,
     "type": "message"
   },
+  "projection": {
+    "count": 446,
+    "digest": "c4e245c2b7d4dae32a69333922769ef6055c9e4bd2614a9284b5dd20979ad921"
+  },
   "preparation": {
     "firstKeptIndex": 946,
     "tokensBefore": 180820,
