@@ -358,6 +358,7 @@ func (o *localShellOperations) Exec(ctx context.Context, command, cwd string, ex
 
 	var timedOut atomic.Bool
 	var timeoutTimer *time.Timer
+	var gate killGate
 	var killOnce sync.Once
 	var closeOnce sync.Once
 	closeOutput := func() {
@@ -413,16 +414,18 @@ func (o *localShellOperations) Exec(ctx context.Context, command, cwd string, ex
 			select {
 			case <-stopAbort:
 			case <-execOptions.Signal:
-				killTree()
+				gate.runKill(killTree)
 			case <-ctx.Done():
-				killTree()
+				gate.runKill(killTree)
 			}
 		}()
 	}
 	if execOptions.Timeout != nil && *execOptions.Timeout > 0 {
 		timeoutTimer = time.AfterFunc(*execOptions.Timeout, func() {
-			timedOut.Store(true)
-			killTree()
+			gate.runKill(func() {
+				timedOut.Store(true)
+				killTree()
+			})
 		})
 	}
 
@@ -430,6 +433,9 @@ func (o *localShellOperations) Exec(ctx context.Context, command, cwd string, ex
 	// preserves late writes from descendants while cancellation still closes
 	// the readers to release a detached writer promptly.
 	waitErr := waitForProcessAndPipeDrain(cmd, streamWG, activity, started, closeOutput)
+	// The child is reaped here: a kill that fires later must not run, and a
+	// timeout recorded before this point is what the result reports.
+	gate.finish()
 	close(stopAbort)
 	if timeoutTimer != nil {
 		timeoutTimer.Stop()
@@ -472,6 +478,33 @@ func formatTimeout(timeout *time.Duration) string {
 		return ""
 	}
 	return fmt.Sprintf("%d", timeout.Milliseconds())
+}
+
+// killGate serializes timeout and abort kills with the wait's completion. A
+// timer or abort that fires after the child was reaped must not signal the
+// group (whose pid can be reused) and must not turn a completed command into a
+// timeout.
+type killGate struct {
+	mu       sync.Mutex
+	finished bool
+}
+
+// runKill runs kill unless the wait already finished, reporting whether it ran.
+func (g *killGate) runKill(kill func()) bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.finished {
+		return false
+	}
+	kill()
+	return true
+}
+
+// finish closes the gate and waits for a kill already in flight.
+func (g *killGate) finish() {
+	g.mu.Lock()
+	g.finished = true
+	g.mu.Unlock()
 }
 
 // signalClosed reports whether a cancel channel is already closed.

@@ -921,7 +921,10 @@ inherited output pipes open beyond the killed tree. Both shell entry points
 close output readers on cancellation and bound post-exit draining with
 `waitForPipeDrain`. They wait for the direct child to exit before starting the
 100 ms idle grace, matching `packages/coding-agent/src/utils/child-process.ts`
-and preserving descendant output written shortly after shell exit.
+and preserving descendant output written shortly after shell exit. A kill gate
+serializes timeout and abort kills with that wait (`coding/bashexecutor.go`):
+once the child is reaped, a late timer cannot signal the group (whose pid can be
+reused) or turn a completed command into a timeout.
 
 Windows additionally uses a job object: `TerminateJobObject` reaches children
 whose parent exited, unlike `taskkill /T`; assignment failure falls back to
