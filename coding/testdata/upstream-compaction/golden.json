@@ -1,0 +1,23 @@
+{
+  "fixture": "before-compaction.jsonl",
+  "settings": {
+    "enabled": true,
+    "reserveTokens": 16384,
+    "keepRecentTokens": 20000
+  },
+  "entries": 1002,
+  "cut": {
+    "index": 946,
+    "turnStartIndex": 939,
+    "isSplitTurn": true,
+    "type": "message"
+  },
+  "preparation": {
+    "firstKeptIndex": 946,
+    "tokensBefore": 180820,
+    "isSplitTurn": true,
+    "summarize": 383,
+    "turnPrefix": 7,
+    "previousSummaryLength": 3649
+  }
+}
