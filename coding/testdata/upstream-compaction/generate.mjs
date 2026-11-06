@@ -11,6 +11,8 @@ const root = resolve(process.argv[2] ?? "./pi");
 const here = dirname(fileURLToPath(import.meta.url));
 const sm = await import(pathToFileURL(join(root, "packages/coding-agent/src/core/session-manager.ts")));
 const comp = await import(pathToFileURL(join(root, "packages/coding-agent/src/core/compaction/index.ts")));
+const utils = await import(pathToFileURL(join(root, "packages/coding-agent/src/core/compaction/utils.ts")));
+const messagesMod = await import(pathToFileURL(join(root, "packages/coding-agent/src/core/messages.ts")));
 const entries = sm.parseSessionEntries(readFileSync(join(here, "before-compaction.jsonl"), "utf8"));
 sm.migrateSessionEntries(entries);
 const path = entries.filter(entry => entry.type !== "session");
@@ -45,6 +47,10 @@ console.log(JSON.stringify({
     type: path[cut.firstKeptEntryIndex]?.type ?? null,
   },
   projection: { count: context.messages.length, digest: projectionDigest },
+  conversation: (() => {
+    const text = utils.serializeConversation(messagesMod.convertToLlm(context.messages));
+    return { length: text.length, digest: createHash("sha256").update(text).digest("hex") };
+  })(),
   preparation: {
     firstKeptIndex: path.findIndex(entry => entry.id === prep.firstKeptEntryId),
     tokensBefore: prep.tokensBefore,

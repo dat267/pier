@@ -38,6 +38,10 @@ func TestPrepareCompactionMatchesUpstreamFixture(t *testing.T) {
 			Count  int    `json:"count"`
 			Digest string `json:"digest"`
 		} `json:"projection"`
+		Conversation struct {
+			Length int    `json:"length"`
+			Digest string `json:"digest"`
+		} `json:"conversation"`
 		Cut struct {
 			Index       int    `json:"index"`
 			TurnStart   int    `json:"turnStartIndex"`
@@ -79,6 +83,14 @@ func TestPrepareCompactionMatchesUpstreamFixture(t *testing.T) {
 	}
 	if got := len(manager.Projection().Messages); got != golden.Projection.Count {
 		t.Errorf("projection messages = %d, want %d", got, golden.Projection.Count)
+	}
+
+	serialized := SerializeConversation(ConvertToLlm(manager.Projection().Messages))
+	if JSLength(serialized) != golden.Conversation.Length {
+		t.Errorf("serialized conversation length = %d, want %d", JSLength(serialized), golden.Conversation.Length)
+	}
+	if got := sha256Hex(serialized); got != golden.Conversation.Digest {
+		t.Errorf("serialized conversation digest = %s, want %s", got, golden.Conversation.Digest)
 	}
 
 	settings := DefaultCompactionSettings
@@ -142,8 +154,7 @@ func projectionDigest(t *testing.T, messages []ai.Message) string {
 		}
 		lines = append(lines, string(ai.RoleOf(message))+"|"+strings.Join(blocks, ","))
 	}
-	sum := sha256.Sum256([]byte(strings.Join(lines, "\n")))
-	return hex.EncodeToString(sum[:])
+	return sha256Hex(strings.Join(lines, "\n"))
 }
 
 func describeProjectedBlocks(blocks any) []string {
@@ -175,4 +186,9 @@ func describeProjectedBlock(block any) string {
 	default:
 		return "other"
 	}
+}
+
+func sha256Hex(value string) string {
+	sum := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(sum[:])
 }

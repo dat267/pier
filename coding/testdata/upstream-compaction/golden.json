@@ -16,6 +16,10 @@
     "count": 446,
     "digest": "c4e245c2b7d4dae32a69333922769ef6055c9e4bd2614a9284b5dd20979ad921"
   },
+  "conversation": {
+    "length": 411160,
+    "digest": "1cf57748c30f5a2072ce8d9a2c4766840330a1075ac38ecc2cf6bb1818e0f38b"
+  },
   "preparation": {
     "firstKeptIndex": 946,
     "tokensBefore": 180820,
