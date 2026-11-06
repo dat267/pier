@@ -20,11 +20,11 @@ import (
 // the source context.
 func TailSession(source *SessionManager, model *ai.Model, thinking ai.ThinkingLevel, targetCwd string, sessionDir string, manageDir bool, options *NewSessionOptions) (*SessionManager, error) {
 	if source == nil {
-		return nil, errors.New("Nothing to hand off yet")
+		return nil, errors.New("Nothing to tail yet")
 	}
 	branch := source.GetBranch("")
 	if len(branch) == 0 {
-		return nil, errors.New("Nothing to hand off yet")
+		return nil, errors.New("Nothing to tail yet")
 	}
 
 	window := tailWindow(branch)

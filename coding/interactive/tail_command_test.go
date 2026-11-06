@@ -91,3 +91,19 @@ func TestTailCommandNeedsAPersistedSession(t *testing.T) {
 		t.Errorf("no refusal error in the transcript: %q", transcript)
 	}
 }
+
+// The refusal must name the command the user typed. /tail replaced /handoff, and
+// the leftover wording told the user about a command that no longer exists.
+func TestTailCommandOnAnEmptySessionNamesTail(t *testing.T) {
+	app, cleanup := newTestAppPersisted(t)
+	defer cleanup()
+	leaf := app.sessionMgr.GetLeafID()
+
+	app.submit.HandleSubmit(context.Background(), "/tail")
+	if transcript := strings.Join(transcriptTexts(app), "\n"); !strings.Contains(transcript, "Nothing to tail yet") {
+		t.Errorf("refusal = %q, want \"Nothing to tail yet\"", transcript)
+	}
+	if got := app.sessionMgr.GetLeafID(); got != leaf {
+		t.Error("the refused tail appended entries")
+	}
+}

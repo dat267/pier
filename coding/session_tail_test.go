@@ -173,3 +173,15 @@ func entriesIfAny(entries []SessionEntry) any {
 	first.Message = json.RawMessage(nil)
 	return first
 }
+
+// TailSession's own refusals carry the same wording as the command, so the
+// message does not name the command /tail replaced.
+func TestTailSessionRefusalsNameTail(t *testing.T) {
+	if _, err := TailSession(nil, nil, "", "", "", false, nil); err == nil || err.Error() != "Nothing to tail yet" {
+		t.Errorf("nil source error = %v, want \"Nothing to tail yet\"", err)
+	}
+	source := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: new(false)})
+	if _, err := TailSession(source, nil, "", "", "", false, nil); err == nil || err.Error() != "Nothing to tail yet" {
+		t.Errorf("empty branch error = %v, want \"Nothing to tail yet\"", err)
+	}
+}

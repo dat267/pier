@@ -348,14 +348,11 @@ func (a *App) forkAtEntry(_ context.Context, entryID string, atPosition bool) (*
 // (D378): the newest compaction plus the entries its window keeps, re-rooted so
 // the compacted prefix stops traveling with the session. Upstream has no such
 // command; its only seeding path is the extension setup hook, which is out of
-// scope (D41). A session that does not persist has no file to hand off from, so
+// scope (D41). A session that does not persist has no file to tail from, so
 // the command reports instead of silently starting an empty one.
 func (a *App) tailSession(_ context.Context) (*SessionSwitchResult, error) {
 	if !a.sessionMgr.IsPersisted() {
 		return nil, errors.New("Tail needs a saved session")
-	}
-	if a.sessionMgr.GetLeafID() == nil {
-		return nil, errors.New("Nothing to hand off yet")
 	}
 	tailed, err := coding.TailSession(a.sessionMgr, a.session.Model(), a.session.ThinkingLevel(),
 		a.sessionMgr.GetCwd(), a.sessionMgr.GetSessionDir(), a.sessionMgr.SessionDirManaged(), nil)
