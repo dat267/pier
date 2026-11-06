@@ -156,3 +156,53 @@ func TestGoalReleasedFollowUpsRunWithoutAHost(t *testing.T) {
 		t.Fatalf("last run prompt = %q, want the released follow-up", last)
 	}
 }
+
+// A release queued while the session is being disposed must not start a run on
+// the closed session.
+func TestGoalReleaseSkipsDisposedSession(t *testing.T) {
+	manager, dir := newTestSession(t)
+	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
+	var session *AgentSession
+	calls := 0
+	round := 0
+	streamFn := func(m *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		calls++
+		round++
+		if round == 2 {
+			_, _ = session.GetToolDefinition("set_goal").Execute("complete", json.RawMessage(`{"status":"complete"}`), context.Background(), nil)
+		}
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+				API: m.API, Provider: m.Provider, Model: m.ID, StopReason: ai.StopStop,
+				Content: ai.ContentList{ai.TextContent{Text: "done"}},
+			}})
+		}()
+		return stream
+	}
+	var err error
+	session, err = NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, Goal: true, ConvertToLlm: ConvertToLlm,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pending []func(context.Context) error
+	session.Goal.SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
+	session.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "after the goal"}})
+	session.Goal.HandleCommand("set objective")
+	if err := pending[0](context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if len(pending) != 2 {
+		t.Fatalf("released work = %d, want 1", len(pending)-1)
+	}
+	session.Dispose()
+	before := calls
+	if err := pending[1](context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if calls != before {
+		t.Fatalf("disposed session ran %d extra model calls", calls-before)
+	}
+}

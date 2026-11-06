@@ -5377,8 +5377,10 @@ has answered it, then delivers them as their own run:
   the session run pipeline, so the run emits `agent_settled` and keeps retry and
   compaction handling. On a host with a work slot it is queued there; without
   one it waits for the run in flight to settle before starting (starting from
-  the agent-end callback would be rejected as already processing). An aborted
-  run releases nothing; interactive's Esc restore owns that queue.
+  the agent-end callback would be rejected as already processing). Both paths
+  check the disposed flag: a release queued during shutdown must not start a run
+  on a closed session. An aborted run releases nothing; interactive's Esc
+  restore owns that queue.
 - The deferring drain clears the slots it empties, so a delivered message is not
   retained by the queue's backing array.
 
