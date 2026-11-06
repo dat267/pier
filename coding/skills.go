@@ -17,11 +17,11 @@ import (
 // Port of utils/frontmatter.ts (the YAML subset skill files use) and
 // core/skills.ts.
 
-// D380: upstream parses YAML with the `yaml` package; the Go port
-// implements the flat `key: value` subset the Agent Skills spec's
-// frontmatter uses. It tracks quoted versus plain scalar types and common
-// boolean, numeric and null values, but supports neither block scalars nor
-// nested YAML structures (D380).
+// D380: upstream parses YAML with the `yaml` package; the Go port implements
+// the subset the Agent Skills spec's frontmatter uses. It tracks quoted versus
+// plain scalar types and common boolean, numeric and null values, and reads
+// literal and folded block scalars, but it does not parse nested YAML
+// structures or report the package's syntax errors.
 
 // ParsedFrontmatter is the parse outcome.
 type ParsedFrontmatter struct {
@@ -56,8 +56,13 @@ func ParseFrontmatter(content string) ParsedFrontmatter {
 	yamlString := normalized[4 : 3+endIndex+1]
 	body := ai.JSTrim(normalized[3+endIndex+4:])
 
-	for line := range strings.SplitSeq(yamlString, "\n") {
-		line = strings.TrimSpace(line)
+	// The block ends just before the closing delimiter's newline, so the final
+	// newline is the delimiter's own and not a content line.
+	yamlString = strings.TrimSuffix(yamlString, "\n")
+	lines := strings.Split(yamlString, "\n")
+	for index := 0; index < len(lines); index++ {
+		rawLine := lines[index]
+		line := strings.TrimSpace(rawLine)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
@@ -67,6 +72,13 @@ func ParseFrontmatter(content string) ParsedFrontmatter {
 		}
 		key := strings.TrimSpace(line[:colon])
 		value := strings.TrimSpace(line[colon+1:])
+		// A block scalar continues on the following lines, so it consumes them.
+		if header, ok := parseYAMLBlockScalarHeader(value); ok {
+			blockLines, next := yamlBlockScalarLines(lines, index+1, yamlIndentWidth(rawLine), header)
+			result.Frontmatter[key] = renderYAMLBlockScalar(blockLines, header)
+			index = next
+			continue
+		}
 		if commentIndex := yamlInlineCommentIndex(value); commentIndex >= 0 {
 			value = strings.TrimSpace(value[:commentIndex])
 		}
@@ -86,7 +98,162 @@ func ParseFrontmatter(content string) ParsedFrontmatter {
 	return result
 }
 
-// yamlQuotedScalar decodes the single-line quoted scalars in the flat subset (D380).
+// yamlBlockScalarHeader is the parsed indicator of a literal or folded block
+// scalar: `|`/`>` with an optional chomping indicator and indentation digit.
+type yamlBlockScalarHeader struct {
+	folded bool
+	strip  bool
+	keep   bool
+	indent int
+}
+
+// parseYAMLBlockScalarHeader reports the header of a block scalar value and
+// whether the value is one. A trailing comment is allowed; anything else means
+// the value is an ordinary plain scalar that starts with `|` or `>`.
+func parseYAMLBlockScalarHeader(value string) (yamlBlockScalarHeader, bool) {
+	if value == "" || (value[0] != '|' && value[0] != '>') {
+		return yamlBlockScalarHeader{}, false
+	}
+	header := yamlBlockScalarHeader{folded: value[0] == '>'}
+	rest := value[1:]
+indicators:
+	for rest != "" {
+		switch character := rest[0]; {
+		case character == '-' && !header.strip && !header.keep:
+			header.strip = true
+		case character == '+' && !header.strip && !header.keep:
+			header.keep = true
+		case character >= '1' && character <= '9' && header.indent == 0:
+			header.indent = int(character - '0')
+		default:
+			break indicators
+		}
+		rest = rest[1:]
+	}
+	rest = strings.TrimLeft(rest, " \t")
+	if rest != "" && !strings.HasPrefix(rest, "#") {
+		return yamlBlockScalarHeader{}, false
+	}
+	return header, true
+}
+
+// yamlIndentWidth counts a line's leading spaces. Tabs are not YAML
+// indentation, so they end the count.
+func yamlIndentWidth(line string) int {
+	width := 0
+	for width < len(line) && line[width] == ' ' {
+		width++
+	}
+	return width
+}
+
+// yamlBlockScalarLines collects the indented lines after a block scalar header,
+// dedented by the block's indentation, and reports the last line it consumed.
+// The block ends at the first non-empty line that is less indented, which is
+// the caller's next key.
+func yamlBlockScalarLines(lines []string, start int, keyIndent int, header yamlBlockScalarHeader) ([]string, int) {
+	blockIndent := 0
+	if header.indent > 0 {
+		blockIndent = keyIndent + header.indent
+	}
+	var content []string
+	last := start - 1
+	for index := start; index < len(lines); index++ {
+		line := lines[index]
+		width := yamlIndentWidth(line)
+		blank := strings.TrimSpace(line) == ""
+		// A whitespace-only line is empty content only when it does not extend
+		// past the block's indentation; spaces beyond it are more-indented
+		// content and keep their text.
+		if blank && (blockIndent == 0 || width <= blockIndent) {
+			content = append(content, "")
+			last = index
+			continue
+		}
+		if blockIndent == 0 {
+			blockIndent = width
+			if blockIndent <= keyIndent {
+				break
+			}
+		}
+		if !blank && width < blockIndent {
+			break
+		}
+		content = append(content, line[blockIndent:])
+		last = index
+	}
+	return content, last
+}
+
+// renderYAMLBlockScalar applies the literal or folded style and the chomping
+// indicator to the block's lines.
+func renderYAMLBlockScalar(lines []string, header yamlBlockScalarHeader) string {
+	// Trailing empty lines are the chomping region. Keep preserves them as one
+	// break each; clip and strip drop them and clip adds a single break.
+	trailing := 1
+	if header.keep {
+		trailing = 0
+		for len(lines) > 0 && lines[len(lines)-1] == "" {
+			lines = lines[:len(lines)-1]
+			trailing++
+		}
+		if trailing == 0 {
+			trailing = 1
+		}
+	} else {
+		for len(lines) > 0 && lines[len(lines)-1] == "" {
+			lines = lines[:len(lines)-1]
+		}
+	}
+	if len(lines) == 0 {
+		return ""
+	}
+	text := strings.Join(lines, "\n")
+	if header.folded {
+		text = foldYAMLBlockScalar(lines)
+	}
+	if header.strip {
+		return text
+	}
+	return text + strings.Repeat("\n", trailing)
+}
+
+// foldYAMLBlockScalar folds line breaks to spaces. Consecutive content lines
+// join with a space; each empty line between them contributes a newline, and a
+// break next to a more-indented line contributes a newline of its own.
+func foldYAMLBlockScalar(lines []string) string {
+	var builder strings.Builder
+	started, previousMoreIndented := false, false
+	for index := 0; index < len(lines); index++ {
+		line := lines[index]
+		if line == "" {
+			continue // Counted with the break that follows it.
+		}
+		moreIndented := line[0] == ' ' || line[0] == '\t'
+		emptyLines := 0
+		for back := index - 1; back >= 0 && lines[back] == ""; back-- {
+			emptyLines++
+		}
+		switch {
+		case !started:
+			builder.WriteString(strings.Repeat("\n", emptyLines))
+		case emptyLines > 0 && (moreIndented || previousMoreIndented):
+			builder.WriteString(strings.Repeat("\n", emptyLines+1))
+		case emptyLines > 0:
+			builder.WriteString(strings.Repeat("\n", emptyLines))
+		case moreIndented || previousMoreIndented:
+			builder.WriteString("\n")
+		default:
+			builder.WriteString(" ")
+		}
+		builder.WriteString(line)
+		started = true
+		previousMoreIndented = moreIndented
+	}
+	return builder.String()
+}
+
+// yamlQuotedScalar decodes the single-line quoted scalars in the subset (D380).
 func yamlQuotedScalar(value string) string {
 	body := value[1 : len(value)-1]
 	if value[0] == '\'' {

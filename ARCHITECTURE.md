@@ -5130,24 +5130,34 @@ backup.
 
 ### D380
 
-**Skill frontmatter parses a flat YAML subset, not block scalars.**
+**Skill frontmatter parses a YAML subset, including block scalars.**
 
 Reference: pi v1.5.0 (`f9a26365`) `utils/frontmatter.ts` parses frontmatter with
-the `yaml` package. Pier parses the flat `key: value` subset the Agent Skills
-spec's frontmatter uses, tracking quoted versus plain scalars and common boolean,
-numeric and null values, but it does not implement block scalars (`|`, `>`),
-anchors or nested structures. A skill that describes itself with `description: |`
-therefore does not load in pier: it reports "description is required" where the
-reference loads the skill with a multiline description (upstream test fixture
-`test/fixtures/skills/multiline-description`). Parse errors also surface as the
-fallback diagnostics instead of the `yaml` package's message: the
-`skills/invalid-yaml` fixture reports "description is required" here and the
-parser's "Flow sequence in block collection..." text there. Every other upstream
-skill fixture (validation, name rules, nested directories, root-skill
-preference) matches, including its diagnostic wording.
-Repair would need a YAML parser or a faithful block-scalar implementation;
-rejecting the file is preferred over storing a wrongly folded description, and
-the limitation is tracked in `TODO.md`.
+the `yaml` package. Pier parses the subset the Agent Skills spec's frontmatter
+uses: flat `key: value` pairs, quoted and plain scalars with the common boolean,
+numeric and null values, and literal (`|`) and folded (`>`) block scalars with
+either chomping indicator (`-`, `+`) and an indentation digit. Block scalars are
+loaded from the same lines the reference passes to the parser, so the
+frontmatter's closing delimiter drops its own final newline before chomping; that
+one-line difference is what makes `|+` with a single trailing blank line render
+as `"a\n"` in both. 145 generated cases (`coding/testdata/frontmatter-block`)
+match the package for value text, string typing and body.
+
+Remaining differences, both outside the Agent Skills spec:
+
+- Nested mappings and sequences are not parsed; a nested key is skipped rather
+  than stored as an object.
+- Invalid YAML is reported differently: the `skills/invalid-yaml` fixture warns
+  "description is required" where the reference prints the parser's "Flow
+  sequence in block collection..." message. Values pier cannot parse never
+  reach the prompt, so the warning is the actionable part.
+
+Every upstream skill fixture now matches, including `skills/multiline-description`
+(the block-scalar case that motivated this row) and each fixture's diagnostic
+wording. Tests: `TestParseFrontmatterBlockScalars`,
+`TestParseFrontmatterBlockScalarKeepsStringTypes`,
+`TestLoadSkillWithBlockScalarDescription`, and
+`TestParseFrontmatterBlockScalarsMatchUpstream`.
 
 ### D379
 

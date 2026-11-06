@@ -1,0 +1,1182 @@
+[
+  {
+    "name": "| two lines",
+    "content": "---\ndescription: |\n  line one\n  line two\n---\nBody\n",
+    "strings": {
+      "description": "line one\nline two\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| one line",
+    "content": "---\ndescription: |\n  one\n---\nBody\n",
+    "strings": {
+      "description": "one\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| blank line",
+    "content": "---\ndescription: |\n  a\n\n  b\n---\nBody\n",
+    "strings": {
+      "description": "a\n\nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| trailing blank",
+    "content": "---\ndescription: |\n  a\n\n---\nBody\n",
+    "strings": {
+      "description": "a\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| trailing blanks",
+    "content": "---\ndescription: |\n  a\n\n\n---\nBody\n",
+    "strings": {
+      "description": "a\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| empty",
+    "content": "---\ndescription: |\nname: n\n---\nBody\n",
+    "strings": {
+      "description": "",
+      "name": "n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| then key",
+    "content": "---\ndescription: |\n  a\n  b\nname: n\n---\nBody\n",
+    "strings": {
+      "description": "a\nb\n",
+      "name": "n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| trailing spaces",
+    "content": "---\ndescription: |\n  a   \n  b\n---\nBody\n",
+    "strings": {
+      "description": "a   \nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| dashes",
+    "content": "---\ndescription: |\n  ---\n  b\n---\nBody\n",
+    "strings": {
+      "description": "---\nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| deep lines",
+    "content": "---\ndescription: |\n  a\n    deeper\n  c\n---\nBody\n",
+    "strings": {
+      "description": "a\n  deeper\nc\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| bool text",
+    "content": "---\nflag: |\n  true\n---\nBody\n",
+    "strings": {
+      "flag": "true\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| number text",
+    "content": "---\ncount: |\n  42\n---\nBody\n",
+    "strings": {
+      "count": "42\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| crlf",
+    "content": "---\r\ndescription: |\r\n  a\r\n  b\r\n---\r\nBody\n",
+    "strings": {
+      "description": "a\nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| comment",
+    "content": "---\ndescription: | # note\n  a\n---\nBody\n",
+    "strings": {
+      "description": "a\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| indent digit",
+    "content": "---\ndescription: |2\n    four spent\n---\nBody\n",
+    "strings": {
+      "description": "  four spent\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| before other key",
+    "content": "---\nname: n\ndescription: |\n  a\nargument-hint: \"<x>\"\n---\nBody\n",
+    "strings": {
+      "name": "n",
+      "description": "a\n",
+      "argument-hint": "<x>"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| leading blank",
+    "content": "---\ndescription: |\n\n  a\n---\nBody\n",
+    "strings": {
+      "description": "\na\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "| unicode",
+    "content": "---\ndescription: |\n  héllo 😀\n  wörld\n---\nBody\n",
+    "strings": {
+      "description": "héllo 😀\nwörld\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- two lines",
+    "content": "---\ndescription: |-\n  line one\n  line two\n---\nBody\n",
+    "strings": {
+      "description": "line one\nline two"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- one line",
+    "content": "---\ndescription: |-\n  one\n---\nBody\n",
+    "strings": {
+      "description": "one"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- blank line",
+    "content": "---\ndescription: |-\n  a\n\n  b\n---\nBody\n",
+    "strings": {
+      "description": "a\n\nb"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- trailing blank",
+    "content": "---\ndescription: |-\n  a\n\n---\nBody\n",
+    "strings": {
+      "description": "a"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- trailing blanks",
+    "content": "---\ndescription: |-\n  a\n\n\n---\nBody\n",
+    "strings": {
+      "description": "a"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- empty",
+    "content": "---\ndescription: |-\nname: n\n---\nBody\n",
+    "strings": {
+      "description": "",
+      "name": "n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- then key",
+    "content": "---\ndescription: |-\n  a\n  b\nname: n\n---\nBody\n",
+    "strings": {
+      "description": "a\nb",
+      "name": "n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- trailing spaces",
+    "content": "---\ndescription: |-\n  a   \n  b\n---\nBody\n",
+    "strings": {
+      "description": "a   \nb"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- dashes",
+    "content": "---\ndescription: |-\n  ---\n  b\n---\nBody\n",
+    "strings": {
+      "description": "---\nb"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- deep lines",
+    "content": "---\ndescription: |-\n  a\n    deeper\n  c\n---\nBody\n",
+    "strings": {
+      "description": "a\n  deeper\nc"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- bool text",
+    "content": "---\nflag: |-\n  true\n---\nBody\n",
+    "strings": {
+      "flag": "true"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- number text",
+    "content": "---\ncount: |-\n  42\n---\nBody\n",
+    "strings": {
+      "count": "42"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- crlf",
+    "content": "---\r\ndescription: |-\r\n  a\r\n  b\r\n---\r\nBody\n",
+    "strings": {
+      "description": "a\nb"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- comment",
+    "content": "---\ndescription: |- # note\n  a\n---\nBody\n",
+    "strings": {
+      "description": "a"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- indent digit",
+    "content": "---\ndescription: |-2\n    four spent\n---\nBody\n",
+    "strings": {
+      "description": "  four spent"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- before other key",
+    "content": "---\nname: n\ndescription: |-\n  a\nargument-hint: \"<x>\"\n---\nBody\n",
+    "strings": {
+      "name": "n",
+      "description": "a",
+      "argument-hint": "<x>"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- leading blank",
+    "content": "---\ndescription: |-\n\n  a\n---\nBody\n",
+    "strings": {
+      "description": "\na"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|- unicode",
+    "content": "---\ndescription: |-\n  héllo 😀\n  wörld\n---\nBody\n",
+    "strings": {
+      "description": "héllo 😀\nwörld"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ two lines",
+    "content": "---\ndescription: |+\n  line one\n  line two\n---\nBody\n",
+    "strings": {
+      "description": "line one\nline two\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ one line",
+    "content": "---\ndescription: |+\n  one\n---\nBody\n",
+    "strings": {
+      "description": "one\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ blank line",
+    "content": "---\ndescription: |+\n  a\n\n  b\n---\nBody\n",
+    "strings": {
+      "description": "a\n\nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ trailing blank",
+    "content": "---\ndescription: |+\n  a\n\n---\nBody\n",
+    "strings": {
+      "description": "a\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ trailing blanks",
+    "content": "---\ndescription: |+\n  a\n\n\n---\nBody\n",
+    "strings": {
+      "description": "a\n\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ empty",
+    "content": "---\ndescription: |+\nname: n\n---\nBody\n",
+    "strings": {
+      "description": "",
+      "name": "n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ then key",
+    "content": "---\ndescription: |+\n  a\n  b\nname: n\n---\nBody\n",
+    "strings": {
+      "description": "a\nb\n",
+      "name": "n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ trailing spaces",
+    "content": "---\ndescription: |+\n  a   \n  b\n---\nBody\n",
+    "strings": {
+      "description": "a   \nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ dashes",
+    "content": "---\ndescription: |+\n  ---\n  b\n---\nBody\n",
+    "strings": {
+      "description": "---\nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ deep lines",
+    "content": "---\ndescription: |+\n  a\n    deeper\n  c\n---\nBody\n",
+    "strings": {
+      "description": "a\n  deeper\nc\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ bool text",
+    "content": "---\nflag: |+\n  true\n---\nBody\n",
+    "strings": {
+      "flag": "true\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ number text",
+    "content": "---\ncount: |+\n  42\n---\nBody\n",
+    "strings": {
+      "count": "42\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ crlf",
+    "content": "---\r\ndescription: |+\r\n  a\r\n  b\r\n---\r\nBody\n",
+    "strings": {
+      "description": "a\nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ comment",
+    "content": "---\ndescription: |+ # note\n  a\n---\nBody\n",
+    "strings": {
+      "description": "a\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ indent digit",
+    "content": "---\ndescription: |+2\n    four spent\n---\nBody\n",
+    "strings": {
+      "description": "  four spent\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ before other key",
+    "content": "---\nname: n\ndescription: |+\n  a\nargument-hint: \"<x>\"\n---\nBody\n",
+    "strings": {
+      "name": "n",
+      "description": "a\n",
+      "argument-hint": "<x>"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ leading blank",
+    "content": "---\ndescription: |+\n\n  a\n---\nBody\n",
+    "strings": {
+      "description": "\na\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "|+ unicode",
+    "content": "---\ndescription: |+\n  héllo 😀\n  wörld\n---\nBody\n",
+    "strings": {
+      "description": "héllo 😀\nwörld\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> two lines",
+    "content": "---\ndescription: >\n  line one\n  line two\n---\nBody\n",
+    "strings": {
+      "description": "line one line two\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> one line",
+    "content": "---\ndescription: >\n  one\n---\nBody\n",
+    "strings": {
+      "description": "one\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> blank line",
+    "content": "---\ndescription: >\n  a\n\n  b\n---\nBody\n",
+    "strings": {
+      "description": "a\nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> trailing blank",
+    "content": "---\ndescription: >\n  a\n\n---\nBody\n",
+    "strings": {
+      "description": "a\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> trailing blanks",
+    "content": "---\ndescription: >\n  a\n\n\n---\nBody\n",
+    "strings": {
+      "description": "a\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> empty",
+    "content": "---\ndescription: >\nname: n\n---\nBody\n",
+    "strings": {
+      "description": "",
+      "name": "n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> then key",
+    "content": "---\ndescription: >\n  a\n  b\nname: n\n---\nBody\n",
+    "strings": {
+      "description": "a b\n",
+      "name": "n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> trailing spaces",
+    "content": "---\ndescription: >\n  a   \n  b\n---\nBody\n",
+    "strings": {
+      "description": "a    b\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> dashes",
+    "content": "---\ndescription: >\n  ---\n  b\n---\nBody\n",
+    "strings": {
+      "description": "--- b\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> deep lines",
+    "content": "---\ndescription: >\n  a\n    deeper\n  c\n---\nBody\n",
+    "strings": {
+      "description": "a\n  deeper\nc\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> bool text",
+    "content": "---\nflag: >\n  true\n---\nBody\n",
+    "strings": {
+      "flag": "true\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> number text",
+    "content": "---\ncount: >\n  42\n---\nBody\n",
+    "strings": {
+      "count": "42\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> crlf",
+    "content": "---\r\ndescription: >\r\n  a\r\n  b\r\n---\r\nBody\n",
+    "strings": {
+      "description": "a b\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> comment",
+    "content": "---\ndescription: > # note\n  a\n---\nBody\n",
+    "strings": {
+      "description": "a\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> indent digit",
+    "content": "---\ndescription: >2\n    four spent\n---\nBody\n",
+    "strings": {
+      "description": "  four spent\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> before other key",
+    "content": "---\nname: n\ndescription: >\n  a\nargument-hint: \"<x>\"\n---\nBody\n",
+    "strings": {
+      "name": "n",
+      "description": "a\n",
+      "argument-hint": "<x>"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> leading blank",
+    "content": "---\ndescription: >\n\n  a\n---\nBody\n",
+    "strings": {
+      "description": "\na\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "> unicode",
+    "content": "---\ndescription: >\n  héllo 😀\n  wörld\n---\nBody\n",
+    "strings": {
+      "description": "héllo 😀 wörld\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- two lines",
+    "content": "---\ndescription: >-\n  line one\n  line two\n---\nBody\n",
+    "strings": {
+      "description": "line one line two"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- one line",
+    "content": "---\ndescription: >-\n  one\n---\nBody\n",
+    "strings": {
+      "description": "one"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- blank line",
+    "content": "---\ndescription: >-\n  a\n\n  b\n---\nBody\n",
+    "strings": {
+      "description": "a\nb"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- trailing blank",
+    "content": "---\ndescription: >-\n  a\n\n---\nBody\n",
+    "strings": {
+      "description": "a"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- trailing blanks",
+    "content": "---\ndescription: >-\n  a\n\n\n---\nBody\n",
+    "strings": {
+      "description": "a"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- empty",
+    "content": "---\ndescription: >-\nname: n\n---\nBody\n",
+    "strings": {
+      "description": "",
+      "name": "n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- then key",
+    "content": "---\ndescription: >-\n  a\n  b\nname: n\n---\nBody\n",
+    "strings": {
+      "description": "a b",
+      "name": "n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- trailing spaces",
+    "content": "---\ndescription: >-\n  a   \n  b\n---\nBody\n",
+    "strings": {
+      "description": "a    b"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- dashes",
+    "content": "---\ndescription: >-\n  ---\n  b\n---\nBody\n",
+    "strings": {
+      "description": "--- b"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- deep lines",
+    "content": "---\ndescription: >-\n  a\n    deeper\n  c\n---\nBody\n",
+    "strings": {
+      "description": "a\n  deeper\nc"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- bool text",
+    "content": "---\nflag: >-\n  true\n---\nBody\n",
+    "strings": {
+      "flag": "true"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- number text",
+    "content": "---\ncount: >-\n  42\n---\nBody\n",
+    "strings": {
+      "count": "42"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- crlf",
+    "content": "---\r\ndescription: >-\r\n  a\r\n  b\r\n---\r\nBody\n",
+    "strings": {
+      "description": "a b"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- comment",
+    "content": "---\ndescription: >- # note\n  a\n---\nBody\n",
+    "strings": {
+      "description": "a"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- indent digit",
+    "content": "---\ndescription: >-2\n    four spent\n---\nBody\n",
+    "strings": {
+      "description": "  four spent"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- before other key",
+    "content": "---\nname: n\ndescription: >-\n  a\nargument-hint: \"<x>\"\n---\nBody\n",
+    "strings": {
+      "name": "n",
+      "description": "a",
+      "argument-hint": "<x>"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- leading blank",
+    "content": "---\ndescription: >-\n\n  a\n---\nBody\n",
+    "strings": {
+      "description": "\na"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">- unicode",
+    "content": "---\ndescription: >-\n  héllo 😀\n  wörld\n---\nBody\n",
+    "strings": {
+      "description": "héllo 😀 wörld"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ two lines",
+    "content": "---\ndescription: >+\n  line one\n  line two\n---\nBody\n",
+    "strings": {
+      "description": "line one line two\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ one line",
+    "content": "---\ndescription: >+\n  one\n---\nBody\n",
+    "strings": {
+      "description": "one\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ blank line",
+    "content": "---\ndescription: >+\n  a\n\n  b\n---\nBody\n",
+    "strings": {
+      "description": "a\nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ trailing blank",
+    "content": "---\ndescription: >+\n  a\n\n---\nBody\n",
+    "strings": {
+      "description": "a\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ trailing blanks",
+    "content": "---\ndescription: >+\n  a\n\n\n---\nBody\n",
+    "strings": {
+      "description": "a\n\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ empty",
+    "content": "---\ndescription: >+\nname: n\n---\nBody\n",
+    "strings": {
+      "description": "",
+      "name": "n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ then key",
+    "content": "---\ndescription: >+\n  a\n  b\nname: n\n---\nBody\n",
+    "strings": {
+      "description": "a b\n",
+      "name": "n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ trailing spaces",
+    "content": "---\ndescription: >+\n  a   \n  b\n---\nBody\n",
+    "strings": {
+      "description": "a    b\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ dashes",
+    "content": "---\ndescription: >+\n  ---\n  b\n---\nBody\n",
+    "strings": {
+      "description": "--- b\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ deep lines",
+    "content": "---\ndescription: >+\n  a\n    deeper\n  c\n---\nBody\n",
+    "strings": {
+      "description": "a\n  deeper\nc\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ bool text",
+    "content": "---\nflag: >+\n  true\n---\nBody\n",
+    "strings": {
+      "flag": "true\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ number text",
+    "content": "---\ncount: >+\n  42\n---\nBody\n",
+    "strings": {
+      "count": "42\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ crlf",
+    "content": "---\r\ndescription: >+\r\n  a\r\n  b\r\n---\r\nBody\n",
+    "strings": {
+      "description": "a b\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ comment",
+    "content": "---\ndescription: >+ # note\n  a\n---\nBody\n",
+    "strings": {
+      "description": "a\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ indent digit",
+    "content": "---\ndescription: >+2\n    four spent\n---\nBody\n",
+    "strings": {
+      "description": "  four spent\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ before other key",
+    "content": "---\nname: n\ndescription: >+\n  a\nargument-hint: \"<x>\"\n---\nBody\n",
+    "strings": {
+      "name": "n",
+      "description": "a\n",
+      "argument-hint": "<x>"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ leading blank",
+    "content": "---\ndescription: >+\n\n  a\n---\nBody\n",
+    "strings": {
+      "description": "\na\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": ">+ unicode",
+    "content": "---\ndescription: >+\n  héllo 😀\n  wörld\n---\nBody\n",
+    "strings": {
+      "description": "héllo 😀 wörld\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "indicator order digit strip",
+    "content": "---\ndescription: |2-\n    a\n    b\n---\nBody\n",
+    "strings": {
+      "description": "  a\n  b"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "indicator order strip digit",
+    "content": "---\ndescription: |-2\n    a\n---\nBody\n",
+    "strings": {
+      "description": "  a"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "folded explicit indent",
+    "content": "---\ndescription: >2\n    a\n    b\n---\nBody\n",
+    "strings": {
+      "description": "  a\n  b\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "block of only blanks",
+    "content": "---\ndescription: |\n\n\n---\nBody\n",
+    "strings": {
+      "description": ""
+    },
+    "body": "Body"
+  },
+  {
+    "name": "block with comment line inside",
+    "content": "---\ndescription: |\n  # not a comment\n  b\n---\nBody\n",
+    "strings": {
+      "description": "# not a comment\nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "two block scalars",
+    "content": "---\nname: |\n  n\ndescription: |\n  d\n---\nBody\n",
+    "strings": {
+      "name": "n\n",
+      "description": "d\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "block at end without newline",
+    "content": "---\ndescription: |\n  a",
+    "strings": {},
+    "body": "---\ndescription: |\n  a"
+  },
+  {
+    "name": "space-only line inside",
+    "content": "---\ndescription: |\n  a\n   \n  b\n---\nBody\n",
+    "strings": {
+      "description": "a\n \nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "folded trailing spaces",
+    "content": "---\ndescription: >\n  a   \n  b\n---\nBody\n",
+    "strings": {
+      "description": "a    b\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "folded more indented then blank then normal",
+    "content": "---\ndescription: >\n  a\n   b\n\n  c\n---\nBody\n",
+    "strings": {
+      "description": "a\n b\n\nc\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "folded leading blank",
+    "content": "---\ndescription: >\n\n  a\n  b\n---\nBody\n",
+    "strings": {
+      "description": "\na b\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "literal tab inside content",
+    "content": "---\ndescription: |\n  a\tb\n---\nBody\n",
+    "strings": {
+      "description": "a\tb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "indent digit one",
+    "content": "---\ndescription: |1\n a\n---\nBody\n",
+    "strings": {
+      "description": "a\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "block then blank then key",
+    "content": "---\ndescription: |\n  a\n\nname: n\n---\nBody\n",
+    "strings": {
+      "description": "a\n",
+      "name": "n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "header trailing spaces",
+    "content": "---\ndescription: |   \n  a\n---\nBody\n",
+    "strings": {
+      "description": "a\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "empty block at delimiter",
+    "content": "---\ndescription: |\n---\nBody\n",
+    "strings": {
+      "description": ""
+    },
+    "body": "Body"
+  },
+  {
+    "name": "space line then deeper line",
+    "content": "---\ndescription: |\n  a\n     \n  b\n---\nBody\n",
+    "strings": {
+      "description": "a\n   \nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "folded clip trailing blank",
+    "content": "---\ndescription: >\n  a\n\n---\nBody\n",
+    "strings": {
+      "description": "a\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "keep content trailing spaces",
+    "content": "---\ndescription: |+\n  a   \n---\nBody\n",
+    "strings": {
+      "description": "a   \n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "folded three blanks inside",
+    "content": "---\ndescription: >\n  a\n\n\n  b\n---\nBody\n",
+    "strings": {
+      "description": "a\n\nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "folded more indented first line",
+    "content": "---\ndescription: >\n  a\n    b\n  c\n---\nBody\n",
+    "strings": {
+      "description": "a\n  b\nc\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "indent digit one content",
+    "content": "---\ndescription: |1\n a\n b\n---\nBody\n",
+    "strings": {
+      "description": "a\nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "bom before frontmatter",
+    "content": "﻿---\ndescription: |\n  a\n---\nBody\n",
+    "strings": {
+      "description": "a\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "cr only line endings in block",
+    "content": "---\ndescription: |\r  a\r  b\r---\rBody\n",
+    "strings": {
+      "description": "a\nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "folded comment lines",
+    "content": "---\ndescription: >\n  # one\n  # two\n---\nBody\n",
+    "strings": {
+      "description": "# one # two\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "unicode combining",
+    "content": "---\ndescription: |\n  école\n  ok\n---\nBody\n",
+    "strings": {
+      "description": "école\nok\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "block after empty key",
+    "content": "---\ndescription:\nname: |\n  n\n---\nBody\n",
+    "strings": {
+      "name": "n\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "block scalar then empty value",
+    "content": "---\ndescription: |\n  a\nargument-hint:\n---\nBody\n",
+    "strings": {
+      "description": "a\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "literal with trailing tab",
+    "content": "---\ndescription: |\n  a\t\n  b\n---\nBody\n",
+    "strings": {
+      "description": "a\t\nb\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "folded single word per line",
+    "content": "---\ndescription: >\n  one\n  two\n  three\n---\nBody\n",
+    "strings": {
+      "description": "one two three\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "keep two trailing blank lines",
+    "content": "---\ndescription: |+\n  a\n\n\n---\nBody\n",
+    "strings": {
+      "description": "a\n\n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "strip leading and trailing blanks",
+    "content": "---\ndescription: |-\n\n  a\n\n---\nBody\n",
+    "strings": {
+      "description": "\na"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "plain scalar with pipe",
+    "content": "---\ndescription: a | b\n---\nBody\n",
+    "strings": {
+      "description": "a | b"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "quoted pipe",
+    "content": "---\ndescription: \"|\"\n---\nBody\n",
+    "strings": {
+      "description": "|"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "quoted greater",
+    "content": "---\ndescription: \">\"\n---\nBody\n",
+    "strings": {
+      "description": ">"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "empty value",
+    "content": "---\ndescription:\n---\nBody\n",
+    "strings": {},
+    "body": "Body"
+  },
+  {
+    "name": "no frontmatter",
+    "content": "Body\n",
+    "strings": {},
+    "body": "Body\n"
+  }
+]
