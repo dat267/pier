@@ -136,7 +136,8 @@ present, including an empty string. Omitted ids remain omitted.
 - `clear_queue`: returns `{ "steering": [...], "followUp": [...] }`.
 - `get_state`: returns model/thinking selection, activity and queue modes,
   session identity, auto-compaction status, and message/queue counts. Optional
-  model, session-file, and session-name fields are omitted when absent.
+  model, session-file, and session-name fields are omitted when absent. A fresh
+  session reports one message (D382).
 - `get_messages`: returns `{ "messages": [...] }`, with role-tagged messages.
 - `get_available_models`: returns `{ "models": [...] }` from the authenticated
   availability snapshot.
@@ -284,7 +285,7 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D381)
+## Deliberate divergences from pi (D1–D382)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
@@ -5237,6 +5238,37 @@ difference from modern chalk is pinned by
 reference binary, together with
 `TestDiagnosticColorFollowsColorSupport` (redirected, forced, forced off, dumb)
 and `TestFormatCLIDiagnosticDropsColorWhenDisabled`.
+
+### D382
+
+**A fresh session's agent carries its tool declaration from construction.**
+
+Reference: pi v1.5.0 (`f9a26365`) builds the coding agent with `tools: []`
+(`core/sdk.ts`) and installs the loadout inside the per-prompt preparation
+(`core/agent-session.ts` sets `agent.state.tools`), so an untouched session has
+no messages: RPC `get_state` reports `messageCount: 0` and `get_messages`
+returns `[]`. Pier passes the configured tools into the agent's initial state
+(`coding/agent_session.go`), which makes `ai.CreateInitialSystemMessage` install
+the leading `{role: "system", content: "", toolsAdded: [...]}` message at
+construction. Until a turn runs, RPC therefore reports `messageCount: 1` and
+`get_messages` returns that declaration (with the schemas of every enabled
+tool), while the reference reports none.
+
+The port keeps the early install because `GetActiveToolNames` (used by
+`/tools` and by the session round-trip) must answer before any prompt, and
+because non-prompt loops (goal reminders, injected bash messages, compaction
+retries) rely on the agent already holding the executable set. Moving the
+install into the prompt path would need the active names sourced from the tool
+registry and was not worth the regression risk in the UI and loop paths. The
+difference is limited to an untouched session: once a turn runs, both carry a
+declaration message ahead of the prompt-section message, and the request bytes
+converge.
+
+Reproducer: `printf '%s\n' '{"type":"get_state","id":"1"}'
+'{"type":"get_messages","id":"2"}' | pier --offline --mode rpc --no-mcp
+--no-session` reports `messageCount: 1` and one system message, where the
+reference reports `0` and `[]`. The model placeholder omitting is separate and
+already documented above.
 
 ## Lock inventory
 
