@@ -1,0 +1,19 @@
+{
+  "skills": [
+    {
+      "name": "hidden-skill",
+      "description": "Hidden from the prompt",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "first-skill",
+      "description": "First description with <xml> & chars",
+      "disableModelInvocation": false
+    }
+  ],
+  "prompts": {
+    "read": "\n\nThe following skills provide specialized instructions for specific tasks.\nUse the read tool to load a skill's file when the task matches its description.\nResolve relative paths against the skill's directory (parent of SKILL.md). Use absolute paths in tool calls.\n\n<available_skills>\n  <skill>\n    <name>first-skill</name>\n    <description>First description with &lt;xml&gt; &amp; chars</description>\n    <location><dir>/visible/SKILL.md</location>\n  </skill>\n</available_skills>",
+    "bash": "\n\nThe following skills provide specialized instructions for specific tasks.\nUse bash to load a skill's file when the task matches its description.\nResolve relative paths against the skill's directory (parent of SKILL.md). Use absolute paths in tool calls.\n\n<available_skills>\n  <skill>\n    <name>first-skill</name>\n    <description>First description with &lt;xml&gt; &amp; chars</description>\n    <location><dir>/visible/SKILL.md</location>\n  </skill>\n</available_skills>",
+    "indirect": "\n\nThe following skills provide specialized instructions for specific tasks.\nLoad a skill's file when the task matches its description.\nResolve relative paths against the skill's directory (parent of SKILL.md). Use absolute paths in tool calls.\n\n<available_skills>\n  <skill>\n    <name>first-skill</name>\n    <description>First description with &lt;xml&gt; &amp; chars</description>\n    <location><dir>/visible/SKILL.md</location>\n  </skill>\n</available_skills>"
+  }
+}
