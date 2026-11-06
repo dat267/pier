@@ -1533,6 +1533,9 @@ func ListAllSessions(sessionDir string) []SessionInfo {
 	if err != nil {
 		return nil
 	}
+	// Upstream walks readdirSync entries, which libuv returns sorted by name;
+	// the stable sort below keeps that order for sessions that tie.
+	sort.SliceStable(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
 	var sessions []SessionInfo
 	for _, entry := range entries {
 		// Upstream keeps directories and symlinks.

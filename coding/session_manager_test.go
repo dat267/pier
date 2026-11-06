@@ -274,12 +274,10 @@ func TestFindMostRecentSessionEqualMtimesUseNameOrder(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.4.0 (4a080252), session-manager.ts listAll preserves
-// native directory order when candidate mtime and basename tie.
-func TestListAllSessionsPreservesNativeOrderForDuplicateFilenames(t *testing.T) {
-	home := t.TempDir()
-	setHomeDir(t, home)
-	t.Setenv("PI_CODING_AGENT_DIR", filepath.Join(home, ".pi", "agent"))
+// Reference: pi v1.5.0 (f9a26365), session-manager.ts listAll sorts stably by
+// mtime then basename; ties keep readdirSync order, which libuv returns sorted
+// by directory name.
+func TestListAllSessionsUsesDirectoryNameOrderForDuplicateFilenames(t *testing.T) {
 	sessionsDir := DefaultSessionsDir()
 	names := []string{"zeta", "alpha", "mu"}
 	for _, name := range names {
@@ -306,27 +304,12 @@ func TestListAllSessionsPreservesNativeOrderForDuplicateFilenames(t *testing.T) 
 			t.Fatal(err)
 		}
 	}
-	directory, err := os.Open(sessionsDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	entries, err := directory.ReadDir(-1)
-	closeErr := directory.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if closeErr != nil {
-		t.Fatal(closeErr)
-	}
-	if len(entries) == 0 {
-		t.Fatal("session directory fixture is empty")
-	}
 	list := ListAllSessions("")
 	if len(list) != len(names) {
 		t.Fatalf("sessions = %d, want %d", len(list), len(names))
 	}
-	if list[0].ID != entries[0].Name() {
-		t.Fatalf("first session = %q, want native-order directory %q", list[0].ID, entries[0].Name())
+	if list[0].ID != "alpha" {
+		t.Fatalf("first session = %q, want name-ordered directory %q", list[0].ID, "alpha")
 	}
 }
 
