@@ -282,6 +282,45 @@ func TestNormalizeContext(t *testing.T) {
 // Upstream builds every non-custom message as { role, ...fields }, so the role
 // key is first. MarshalMessage must not reorder the fields through a map:
 // session files and proxy payloads are compared byte for byte.
+// The reference builds an assistant message as { role, content, api,
+// provider, model, usage, stopReason, timestamp } and appends the stream-set
+// fields afterwards: providerThinkingLevel at message start, responseId and
+// responseModel from the first chunk, rawStopReason and errorMessage at
+// finish, then durationMs when the stream ends (utils/event-stream.ts) and
+// thinkingLevel last (agent-loop.ts Object.assign). Persisted sessions and
+// message_end/get_messages bytes must keep that order.
+func TestMarshalMessageOrdersStreamFieldsLikeTheReference(t *testing.T) {
+	providerThinkingLevel := "high"
+	responseID, responseModel := "r1", "m-2"
+	rawStop := "end_turn"
+	errorMessage := "provider said stop"
+	duration := int64(12)
+	thinkingLevel := ModelThinkingLevel("low")
+	message := &AssistantMessage{
+		Content:               ContentList{},
+		API:                   APIAnthropicMessages,
+		Provider:              "anthropic",
+		Model:                 "m",
+		StopReason:            StopStop,
+		Timestamp:             2,
+		ProviderThinkingLevel: &providerThinkingLevel,
+		ResponseID:            &responseID,
+		ResponseModel:         &responseModel,
+		RawStopReason:         &rawStop,
+		ErrorMessage:          &errorMessage,
+		DurationMs:            &duration,
+		ThinkingLevel:         &thinkingLevel,
+	}
+	enc, err := MarshalMessage(message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"role":"assistant","content":[],"api":"anthropic-messages","provider":"anthropic","model":"m","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"totalTokens":0,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"stop","timestamp":2,"providerThinkingLevel":"high","responseId":"r1","responseModel":"m-2","rawStopReason":"end_turn","errorMessage":"provider said stop","durationMs":12,"thinkingLevel":"low"}`
+	if string(enc) != want {
+		t.Fatalf("marshal:\n got %s\nwant %s", enc, want)
+	}
+}
+
 func TestMarshalMessageKeepsRoleFirst(t *testing.T) {
 	cases := []struct {
 		name    string

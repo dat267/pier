@@ -404,33 +404,40 @@ type AssistantMessage struct {
 	API      Api         `json:"api"`
 	Provider ProviderId  `json:"provider"`
 	Model    string      `json:"model"`
-	// ResponseModel is the concrete model reported by the provider when
-	// different from the requested Model.
-	ResponseModel *string `json:"responseModel,omitempty"`
-	// ResponseID is the provider-specific response/message identifier when
-	// the upstream API exposes one.
-	ResponseID *string `json:"responseId,omitempty"`
+	// The reference creates the message with the fields above plus usage,
+	// stopReason and timestamp, then appends the stream-set fields in the order
+	// below: the message-start effort level, the ids from the first chunk, the
+	// finish reason and error text, then the stream's duration and finally the
+	// agent loop's requested thinking level (agent-loop.ts Object.assign).
+	// Persisted sessions and wire frames keep that insertion order, so the
+	// struct order must follow it rather than the reference's type order.
+	Usage      Usage      `json:"usage"`
+	StopReason StopReason `json:"stopReason"`
+	Timestamp  int64      `json:"timestamp"`
 	// ProviderThinkingLevel is the exact provider-native effort level used
 	// for this response. Absent for legacy or unmanaged responses.
 	ProviderThinkingLevel *string `json:"providerThinkingLevel,omitempty"`
-	// ThinkingLevel is the Pi thinking level the agent loop requested for this
-	// response. Absent outside the agent loop and for legacy responses.
-	ThinkingLevel *ModelThinkingLevel          `json:"thinkingLevel,omitempty"`
-	Diagnostics   []AssistantMessageDiagnostic `json:"diagnostics,omitempty"`
-	Usage         Usage                        `json:"usage"`
-	StopReason    StopReason                   `json:"stopReason"`
-	Deferred      *DeferredHandle              `json:"deferred,omitempty"`
-	ErrorMessage  *string                      `json:"errorMessage,omitempty"`
-	RawStopReason *string                      `json:"rawStopReason,omitempty"`
+	// ResponseID is the provider-specific response/message identifier when
+	// the upstream API exposes one.
+	ResponseID *string `json:"responseId,omitempty"`
+	// ResponseModel is the concrete model reported by the provider when
+	// different from the requested Model.
+	ResponseModel *string `json:"responseModel,omitempty"`
+	RawStopReason *string `json:"rawStopReason,omitempty"`
+	ErrorMessage  *string `json:"errorMessage,omitempty"`
 	// EndTurn is the provider indication of whether the model explicitly
 	// ended its turn. Preserved for debugging and does not currently affect
 	// agent control flow.
-	EndTurn   *bool `json:"endTurn,omitempty"`
-	Timestamp int64 `json:"timestamp"`
+	EndTurn     *bool                        `json:"endTurn,omitempty"`
+	Deferred    *DeferredHandle              `json:"deferred,omitempty"`
+	Diagnostics []AssistantMessageDiagnostic `json:"diagnostics,omitempty"`
 	// DurationMs is the wall time from the request start to the final message, measured with
 	// a monotonic clock by the stream that saw the response start. Absent for a message that
 	// was only forwarded, such as a deferred result fetched later (upstream #10549).
 	DurationMs *int64 `json:"durationMs,omitempty"`
+	// ThinkingLevel is the Pi thinking level the agent loop requested for this
+	// response. Absent outside the agent loop and for legacy responses.
+	ThinkingLevel *ModelThinkingLevel `json:"thinkingLevel,omitempty"`
 }
 
 func (*AssistantMessage) messageRole() Role { return RoleAssistant }
