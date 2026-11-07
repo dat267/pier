@@ -507,15 +507,17 @@ Tests: `TestBackgroundListenerSeesLateReplyDuringColorQuery`,
 **A stable theme handle replaces the upstream Proxy.**
 
 Upstream's `theme` Proxy reads `globalThis[THEME_KEY]` per access. Pier's
-`ActiveTheme()` now returns a stable `*Theme`: `Fg`, `Bg`, `GetFgAnsi`,
+`ActiveTheme()` returns a stable `*Theme`: `Fg`, `Bg`, `GetFgAnsi`,
 `GetBgAnsi`, and `ColorMode` forward through `Theme.concrete` to `CurrentTheme`.
 `GetMarkdownTheme` factories capture that handle, and `Renderer.Invalidate`
-clears caches after a switch. This replaces stale captured concrete themes and
-the attempted `App.rebuildForTheme` workaround.
+clears caches after a switch. This replaces components capturing stale
+concrete themes and the attempted `App.rebuildForTheme` workaround.
 
 Construction-time `theme.fg` strings, such as header Text, remain baked on both
-sides; `onChanged` still follows `updateEditorBorderColor`. Tests:
-`TestThemeHandleResolvesTheCurrentTheme`, `TestMarkdownThemeRecolorsAfterASwitch`.
+sides; `onChanged` still follows `updateEditorBorderColor`.
+
+Tests: `TestThemeHandleResolvesTheCurrentTheme`,
+`TestMarkdownThemeRecolorsAfterASwitch`.
 
 ### D167
 
@@ -800,6 +802,7 @@ unsubscribe and publish after a replacement's queue clear. Those callbacks
 remain safe to finish without changing the listener registry contract.
 `TestSessionReplacementRejectsAnAlreadyAdmittedOldListener` reproduces a late
 custom message reaching the replacement transcript before this filtering.
+
 Each subscription also owns an enqueue stop signal. Replacement retires it
 before awaiting the outgoing run, releasing a producer parked on the full
 lossless channel without dropping current-binding events or changing session
@@ -885,9 +888,9 @@ posted switch/preview callbacks, paste, and canceled transcript publication.
 
 ### D200
 
-**Mode-owned optional producers and a shared 2 s terminal-exit grace.**
+**Optional producers are mode-owned, and terminal exit shares one 2 s grace.**
 
-D199's cancellation rules now include clipboard copies and explicit detached
+D199's cancellation rules extend to clipboard copies and explicit detached
 work. `/copy`, fullscreen selection, and OAuth URL copies share the app's
 optional FIFO instead of a process-global queue. Platform helpers receive its
 context; cancellation stops fallback commands and cannot fall through to OSC 52.
@@ -998,13 +1001,13 @@ D200 still governs display output remaining at exit. D201 bounds app clipboard
 jobs (including waiting producers) to four; this API does not bound arbitrary
 SDK callers that spawn their own waiting goroutines.
 
-A title remains one atomic existing value: an oversized title on an idle
-terminal is allowed to overshoot instead of truncating or deadlocking. Deferred
-metadata memory is therefore bounded by one title value plus one fixed progress
-sequence, not by an absolute title-byte limit. Generic `Write`, standalone
-clipboard APIs and standalone fullscreen selection defaults retain compatibility;
-this is not a global hard byte cap or an admission rule for arbitrary SDK writes.
-No saved session/settings JSON or provider payload changes.
+A title stays one atomic value: an oversized title on an idle terminal is
+allowed to overshoot instead of truncating or deadlocking. Deferred metadata
+memory is therefore bounded by one title value plus one fixed progress sequence,
+not by an absolute title-byte limit. Generic `Write`, standalone clipboard APIs
+and standalone fullscreen selection defaults retain compatibility; this is not a
+global hard byte cap or an admission rule for arbitrary SDK writes. No saved
+session/settings JSON or provider payload changes.
 
 Blocked-writer regression: 64 repeated same-title/progress updates plus 10
 virtual keepalive ticks formerly added 1,296 committed bytes behind a 262,144-byte
