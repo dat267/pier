@@ -137,6 +137,15 @@ func (l *blockLexer) lexQuote(start int) (*Block, int) {
 
 func (l *blockLexer) lexHTML(start int) (*Block, int) {
 	src := l.src
+	if closer := htmlBlockCloser(nextLine(src, start).text); closer != "" {
+		// Types 1-5 end at their own closing token, which takes the rest of
+		// its line with it; an unclosed block runs to the end of the source.
+		end := len(src)
+		if index := closingTokenIndex(src, closer, start); index >= 0 {
+			end = nextLine(src, index).next
+		}
+		return &Block{Kind: BlockHTML, Start: start, End: end, Raw: src[start:end]}, end
+	}
 	at := start
 	for at < len(src) {
 		ln := nextLine(src, at)
@@ -146,6 +155,76 @@ func (l *blockLexer) lexHTML(start int) (*Block, int) {
 		at = ln.next
 	}
 	return &Block{Kind: BlockHTML, Start: start, End: at, Raw: src[start:at]}, at
+}
+
+// htmlBlockCloser returns the token that ends a CommonMark HTML block of types
+// 1-5, or "" for types 6 and 7, which Marked ends at a blank line: a script,
+// pre, style or textarea element, a comment, a processing instruction, a
+// declaration and a CDATA section. The reference's html rule carries the `i`
+// flag, so the element names match case-insensitively.
+func htmlBlockCloser(line string) string {
+	i, width := skipIndent(line, 4)
+	if width >= 4 || i >= len(line) || line[i] != '<' {
+		return ""
+	}
+	rest := line[i+1:]
+	switch {
+	case strings.HasPrefix(rest, "!--"):
+		return "-->"
+	case strings.HasPrefix(rest, "?"):
+		return "?>"
+	case hasPrefixFold(rest, "![CDATA["):
+		return "]]>"
+	case rest != "" && rest[0] == '!' && len(rest) > 1 && isASCIILetter(rest[1]):
+		return ">"
+	}
+	for _, name := range []string{"script", "pre", "style", "textarea"} {
+		if !hasPrefixFold(rest, name) || len(rest) == len(name) {
+			continue
+		}
+		if c := rest[len(name)]; c == ' ' || c == '\t' || c == '>' {
+			return "</" + name + ">"
+		}
+	}
+	return ""
+}
+
+// closingTokenIndex finds token in src at or after from. The element closers
+// need case-insensitive matching (</PRE> closes <pre>); the punctuation-only
+// ones do not.
+func closingTokenIndex(src, token string, from int) int {
+	if !strings.ContainsAny(token, "abcdefghijklmnopqrstuvwxyz") {
+		if index := strings.Index(src[from:], token); index >= 0 {
+			return from + index
+		}
+		return -1
+	}
+	for i := from; i+len(token) <= len(src); i++ {
+		if hasPrefixFold(src[i:], token) {
+			return i
+		}
+	}
+	return -1
+}
+
+// hasPrefixFold reports a case-insensitive ASCII prefix match.
+func hasPrefixFold(value, prefix string) bool {
+	if len(value) < len(prefix) {
+		return false
+	}
+	for i := 0; i < len(prefix); i++ {
+		left, right := value[i], prefix[i]
+		if 'A' <= left && left <= 'Z' {
+			left += 'a' - 'A'
+		}
+		if 'A' <= right && right <= 'Z' {
+			right += 'a' - 'A'
+		}
+		if left != right {
+			return false
+		}
+	}
+	return true
 }
 
 func (l *blockLexer) lexIndentedCode(start int) (*Block, int) {
