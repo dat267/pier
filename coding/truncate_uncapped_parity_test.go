@@ -17,20 +17,8 @@ import (
 // 9223372036854775807 instead of 9007199254740991.
 func TestUncappedTruncationDetailsUseMaxSafeInteger(t *testing.T) {
 	const maxSafeInteger = 9007199254740991
-	dir := t.TempDir()
-	// One long line: the byte limit fires while the line limit must not.
-	long := "needle " + strings.Repeat("z", 60000)
-	if err := os.WriteFile(filepath.Join(dir, "long.txt"), []byte(long+"\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	for index := range 900 {
-		name := fmt.Sprintf("f%03d-%s.txt", index, strings.Repeat("n", 60))
-		if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
 
-	check := func(label string, details json.RawMessage) {
+	check := func(t *testing.T, label string, details json.RawMessage) {
 		t.Helper()
 		if len(details) == 0 {
 			t.Fatalf("%s: no details", label)
@@ -51,26 +39,48 @@ func TestUncappedTruncationDetailsUseMaxSafeInteger(t *testing.T) {
 		}
 	}
 
-	// ls caps entries before bytes, so its fixture needs long names to cross
-	// the 50KB byte limit within the 500-entry cap.
-	lsDir := t.TempDir()
-	for index := range 600 {
-		name := fmt.Sprintf("e%03d-%s.txt", index, strings.Repeat("m", 120))
-		if err := os.WriteFile(filepath.Join(lsDir, name), []byte("x"), 0o600); err != nil {
+	t.Run("ls", func(t *testing.T) {
+		// ls caps entries before bytes, so its fixture needs long names to
+		// cross the 50KB byte limit within the 500-entry cap.
+		lsDir := t.TempDir()
+		for index := range 600 {
+			name := fmt.Sprintf("e%03d-%s.txt", index, strings.Repeat("m", 120))
+			if err := os.WriteFile(filepath.Join(lsDir, name), []byte("x"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		result, err := CreateLsTool(lsDir).Execute("c", json.RawMessage(`{"path":"."}`), context.Background(), nil)
+		if err != nil {
 			t.Fatal(err)
 		}
-	}
+		check(t, "ls", result.Details)
+	})
 
-	findResult, err := CreateFindTool(dir).Execute("c", json.RawMessage(`{"pattern":"*"}`), context.Background(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	check("find", findResult.Details)
-
-	lsResult, err := CreateLsTool(lsDir).Execute("c", json.RawMessage(`{"path":"."}`), context.Background(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	check("ls", lsResult.Details)
-
+	t.Run("find", func(t *testing.T) {
+		// find spawns fd; runners without it cannot exercise the tool (the
+		// convention of TestFindToolMatchesUpstream). Details parity is still
+		// pinned by the ls leg, which reads the same constant.
+		if _, err := execLookPath("fd"); err != nil {
+			if _, altErr := execLookPath("fdfind"); altErr != nil {
+				t.Skip("fd not installed")
+			}
+		}
+		dir := t.TempDir()
+		// One long line: the byte limit fires while the line limit must not.
+		long := "needle " + strings.Repeat("z", 60000)
+		if err := os.WriteFile(filepath.Join(dir, "long.txt"), []byte(long+"\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		for index := range 900 {
+			name := fmt.Sprintf("f%03d-%s.txt", index, strings.Repeat("n", 60))
+			if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		result, err := CreateFindTool(dir).Execute("c", json.RawMessage(`{"pattern":"*"}`), context.Background(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		check(t, "find", result.Details)
+	})
 }
