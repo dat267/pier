@@ -1059,12 +1059,12 @@ Markdown snapshot to the app's optional backend and displays prior complete
 lines or `Preparing message...`. It admits four jobs total (one running, three
 pending); rejection retains no queued work and requests a later paint. The
 app posts ancestor invalidation to the next owner turn: doing it synchronously
-during Render let that frame cache the rejected placeholder as unchanged.
-When all accepted jobs were superseded and their completions ignored, the
-newest content stayed pending forever. `TestRejectedMarkdownPreparationRetriesAfterSupersededWork`
-(v1.5.0 `f9a26365` interactive-mode.ts) drives that full-queue/stale-completion
-ordering and confirms retry after capacity returns. D205 shares this budget
-with tool results.
+during Render let that frame cache the rejected placeholder as unchanged, and
+when every accepted job was then superseded, the newest content stayed pending
+forever. `TestRejectedMarkdownPreparationRetriesAfterSupersededWork` (v1.5.0
+`f9a26365` interactive-mode.ts) drives that full-queue/stale-completion ordering
+and confirms retry after capacity returns. D205 shares this budget with tool
+results.
 
 Snapshots capture text, width, padding, concrete theme/style, and transform
 configuration, never live caches. Owner-posted completion installs caches only
@@ -1091,7 +1091,7 @@ and synchronous detached warming.
 
 Upstream `packages/coding-agent/src/core/tools/renderers/{read,bash}.ts` formats
 expanded read and both shell modes synchronously. Live/replayed expanded read,
-bash, and powershell now opt into D204's shared four-job budget at 64 KiB text.
+bash, and powershell opt into D204's shared four-job budget at 64 KiB text.
 Workers capture content, expansion/partial state, concrete theme, key hint,
 truncation/full-output metadata, and copied slices/pointers. Persisted JSON
 metadata up to 16 KiB is copied, not decoded on-owner. Elapsed clocks remain
@@ -1248,13 +1248,15 @@ may already reference the failed one. It keeps the accepted prefix in memory
 and the next save rewrites that prefix (the failed append marked the state
 uninitialized), so the file never gains a child with a missing parent; a failure
 with no later append leaves memory ahead until the reported error is handled.
-Teardown drains saves then routes unresolved diagnostics through D200's output
-grace, never direct stdout.
-Print mode flushes on ordinary and signal returns; persistence failures report
-on stderr and cause exit 1 on ordinary returns, while signal returns retain
-129/143. This preserves JSON stdout. Formats remain unchanged. Tests cover sync/queued
-initial and append failures, prefix/truncation recovery, per-task duplicate
-prevention, coalesced wakeups, idle reporting, teardown, and print exit codes.
+
+Teardown drains saves, then routes unresolved diagnostics through D200's output
+grace, never direct stdout. Print mode flushes on ordinary and signal returns;
+persistence failures report on stderr and exit 1 on ordinary returns, while
+signal returns keep 129/143, so JSON stdout stays clean. Formats are unchanged.
+
+Tests cover sync/queued initial and append failures, prefix/truncation
+recovery, per-task duplicate prevention, coalesced wakeups, idle reporting,
+teardown, and print exit codes.
 
 ### D211
 
@@ -1298,19 +1300,12 @@ the stored colors (upstream `applyTerminalColors` merges field by field), so an
 empty timeout result cannot clobber a background that arrived after the timeout.
 Before the merge, a timeout applied after the standalone listener's reply zeroed
 the background and the system theme lost the terminal's real appearance.
-Test: `TestStaleSystemColorSnapshotDoesNotClobberLateBackground`.
 
 The retained blocking OSC 11 background and color-scheme helpers also use the
 existing query handoff mutex for pending requests and timeout/reply settlement.
 Scheme waiters are separate from owner-only listener registries; off-loop cleanup
 never mutates attached callbacks. Listeners run after unlocking and before the
 scheme waiters receive their results. No UI-state lock is added.
-Tests: `TestBackgroundQueryTimeoutReplyRace`,
-`TestColorSchemeQueryTimeoutReplyRace`, `TestColorSchemeQueryWaitsForPriorListeners`.
-
-Tests: `TestProbeSystemColorsDoesNotBlockTheCaller`
-(`coding/interactive/interactive_test.go`) and
-`TestRendererBeginTerminalColorsWaitsOffLoop` (`tui/terminalcolors_test.go`).
 
 Because the first paint legitimately precedes the reply, the system theme keeps
 upstream's pending state: the controller marks the terminal colors pending when
@@ -1322,10 +1317,19 @@ does not depend on whether the reply beats the paint. The D193 signal panel fill
 follow the detected appearance, so they too wait for the first report: choosing
 them from the environment fallback made launch show deep-green tool boxes on one
 run and the reported bright variant on the next.
-Test: `TestSystemThemeStartsGrayscaleUntilColorsAreReported`.
-Reference: pinned `f9a26365` `theme-controller.ts` constructor
-`markTerminalColorsPending()` and `theme.ts` `createSystemTheme`.
-Reference: `packages/coding-agent/src/modes/interactive/theme/theme-controller.ts`.
+
+Reference: pinned `f9a26365`
+`packages/coding-agent/src/modes/interactive/theme/theme-controller.ts` (the
+constructor's `markTerminalColorsPending()`) and `theme.ts` `createSystemTheme`.
+
+Tests: `TestProbeSystemColorsDoesNotBlockTheCaller`
+(`coding/interactive/interactive_test.go`) and
+`TestRendererBeginTerminalColorsWaitsOffLoop` (`tui/terminalcolors_test.go`) for
+the off-loop wait; `TestStaleSystemColorSnapshotDoesNotClobberLateBackground`
+for the merge; `TestBackgroundQueryTimeoutReplyRace`,
+`TestColorSchemeQueryTimeoutReplyRace` and
+`TestColorSchemeQueryWaitsForPriorListeners` for the blocking helpers; and
+`TestSystemThemeStartsGrayscaleUntilColorsAreReported` for the pending state.
 
 ### D219
 
@@ -1343,23 +1347,22 @@ backgrounds, and indexed fallback.
 
 ### D220
 
-**The interactive create-time model catalog refresh is offline; the background
-pass performs it.**
+**Interactive startup skips the create-time catalog refresh; the background
+pass does it.**
 
 Upstream `packages/coding-agent/src/core/sdk.ts` refreshes the model catalogs at
 create (`refreshOnCreate` defaults to true). When the persisted
-`models-store.json` is older than four hours
-(`RemoteCatalogRefreshIntervalMS`), that makes the first launch after a break
-wait on one HTTP request per provider, bounded by the 15 s
-`ModelRefreshTimeoutMS`. Pier keeps the create-time refresh for print mode and
-`--list-models`, which resolve a model before any background pass, but the
-interactive mode runs create with `AllowModelNetwork: false`: it restores the
-persisted overlay and availability snapshot from `models-store.json` without a
-request, and the `RefreshModelCatalogs` pass that `interactive.Run` already
-schedules after startup performs the network refresh. Startup for an
-interactive session after the freshness window drops from the request time to
-the store-load time (measured ~260-310 ms to ~25 ms here), and the catalog
-still updates a moment later through the same runtime.
+`models-store.json` is older than four hours (`RemoteCatalogRefreshIntervalMS`),
+that makes the first launch after a break wait on one HTTP request per provider,
+bounded by the 15 s `ModelRefreshTimeoutMS`. Pier keeps the create-time refresh
+for print mode and `--list-models`, which resolve a model before any background
+pass, but the interactive mode runs create with `AllowModelNetwork: false`: it
+restores the persisted overlay and availability snapshot from
+`models-store.json` without a request, and the `RefreshModelCatalogs` pass that
+`interactive.Run` already schedules after startup performs the network refresh.
+Startup for an interactive session after the freshness window drops from the
+request time to the store-load time (~260-310 ms to ~25 ms on the development
+host), and the catalog still updates a moment later through the same runtime.
 
 Tests: `TestCatalogRefreshAllowedAtCreate` (`cmd/catalogrefresh_test.go`) and
 `TestCreateModelRuntimeOfflineCreateLoadsTheStoreWithoutNetwork`
@@ -1481,7 +1484,7 @@ continuation/error/abort outcomes),
 
 ### D224
 
-**Reconcile a pending goal round's hidden prompt after compaction.**
+**A pending goal round's hidden prompt is restored after compaction.**
 
 The upstream goal extension queues one `pi-goal-event` round message at
 `agent_before_settle` (`~/.pi/agent/extensions/goal/index.ts`). A compaction
