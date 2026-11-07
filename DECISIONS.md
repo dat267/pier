@@ -2404,6 +2404,9 @@ The non-RGI ZWJ width divergence is gone: the port carries the generated Unicode
 reference's ICU 78 data), so a chain Unicode never joined keeps its part-by-part
 width and a real sequence is one two-cell emoji.
 
+Tests: `TestRGIEmojiZWJTable` (sorted, duplicate-free generated table holding
+the reference's sequences) and `TestRGIEmojiWidth`.
+
 ### D261
 
 **An invalid `file://` URL is returned unchanged instead of raising.**
@@ -2851,9 +2854,12 @@ and returned resource string agrees with the pin; only the helper's own output
 and a mismatch message built from it can differ. WHATWG whitespace
 preprocessing is applied before parsing, so padded inputs behave as upstream.
 
-Test: `mcp/oauth/testdata/parse/golden.json` pins the whitespace cases and the
+Tests: `TestOAuthResourceURLMatchesUpstream` and
+`TestOAuthSelectResourceMatchesUpstream` replay
+`mcp/oauth/testdata/parse/golden.json`, which pins the whitespace cases and the
 `selectResource` decisions; the default-port and host-case helper outputs are
-excluded there for this reason.
+excluded there for this reason. `TestResourceURLKeepsDefaultPortAndHostCase`
+pins those excluded outputs and that `SelectResource` still matches them.
 
 ### D277
 
@@ -4527,6 +4533,12 @@ Deliberate boundary: Go's RE2 lacks lookbehind and backreferences, so a valid
 ECMAScript pattern using them is left unconstrained. A malformed pattern such as
 `[` still fails schema compilation instead of being ignored.
 
+Tests: `TestValidateToolArgumentsPiSchemaCorpus` replays the corpus;
+`TestValidateToolArgumentsLeavesRE2UnsupportedPatternsUnconstrained` pins the
+lookbehind and backreference boundary (each pattern rejects the value under
+Node's `u`-flag RegExp) against a supported control pattern, and
+`TestValidateToolArgumentsCompilesPiSchema` the malformed-pattern failure.
+
 ### D365
 
 **The v1.5.0 model catalog includes GPT-6.1 Terra.**
@@ -4641,7 +4653,11 @@ candidate/full-scan paths, noise floor, price lookup and persistence are intact.
 
 Reproducers in `coding/cache_usage_boundary_test.go` cover a wide prompt with
 an in-range miss, a miss beyond int64, paid-rate overflow, sticky cache activity
-and cumulative missed-token totals, through both cached and reference APIs.
+and cumulative missed-token totals, through both cached and reference APIs:
+`TestCacheMissDoesNotLoseHugePositivePromptUsage`,
+`TestCacheMissKeepsPaidRateWhenTokenSumExceedsInt64`,
+`TestCacheMissRemembersHugePositiveCacheActivity` and
+`TestCacheWasteDoesNotWrapPositiveMissTotals`.
 Ordinary cache-stat goldens remain unchanged.
 
 ### D371
@@ -5018,6 +5034,10 @@ worker per D235) reports "No model selected", where the reference emits
 `compaction_start`, `compaction_end` with "Compaction failed: Nothing to compact
 (session too small)" and the same error on the response.
 
+Test: `TestRPCFreshSessionHoldsTheToolDeclaration` pins the in-process shape
+with the coding tools: `messageCount: 1`, no `model` field, the single empty
+system declaration, and "No model selected" from `compact`.
+
 ### D383
 
 **Print and JSON mode emit each streaming event with the state it had when it
@@ -5042,6 +5062,11 @@ which costs the streaming latency D285 exists to protect, so the snapshotted
 stream stays. Compared on 2026-11-06 against the installed 1.5.0 over the same
 local endpoint: request key order, streamed deltas, `message_end` usage/cost,
 `stopReason`/`rawStopReason` and the session's assistant entry all match.
+
+Tests: `TestAssistantStreamSnapshotDoesNotChangeLiveNext` pins the Push-time
+snapshot (an empty start partial with zero usage while the live helper has
+moved on), and `TestAssistantStreamForwardingPreservesProducerSnapshot` keeps
+it across a forwarding stream.
 
 ### D384
 
@@ -5106,9 +5131,12 @@ has answered it, then delivers them as their own run:
 - The deferring drain clears the slots it empties, so a delivered message is not
   retained by the queue's backing array.
 
-Tests: `agent/hold_followups_test.go` (queue deferral, continuation) and
-`coding/goal_followup_hold_test.go` (two goal rounds complete without the
-follow-up, a third run carries it only afterwards).
+Tests: `TestDrainDeferringSkipsHeldMessages`, `TestDeferredFollowUpSurvivesTheRun`
+and `TestDrainDeferringClearsConsumedSlots` (queue deferral, continuation, slot
+clearing); `TestGoalHoldsFollowUpsUntilItsFinalAnswer` (two goal rounds complete
+without the follow-up, a third run carries it only afterwards),
+`TestGoalReleasedFollowUpsRunWithoutAHost` and
+`TestGoalReleaseSkipsDisposedSession`.
 
 ### D386
 
