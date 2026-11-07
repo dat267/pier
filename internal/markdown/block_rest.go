@@ -20,7 +20,12 @@ func interruptsParagraph(line string) bool {
 	if listMarkerInterrupts(line) {
 		return true
 	}
-	if isHTMLBlockStart(line) {
+	// The html alternative: marked's paragraph pattern continues a line that
+	// does not start `</?tag` for a type-6 tag name or one of
+	// script/pre/style/textarea/comment, and only at the very line start (its
+	// other alternatives carry ` {0,3}` but this one does not, so `  <br>` does
+	// not interrupt either). quoteHTMLInterrupt (quote.go) is that test.
+	if line != "" && line[0] == '<' && quoteHTMLInterrupt.MatchString(line) {
 		return true
 	}
 	if isLatexBlockStart(line) {
