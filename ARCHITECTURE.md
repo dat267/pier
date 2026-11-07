@@ -298,7 +298,7 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D386)
+## Deliberate divergences from pi (D1–D387)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
@@ -5421,6 +5421,30 @@ export-fidelity divergence.
 Tests: `TestExportSessionToHTML` asserts the document contains no
 `{{HIGHLIGHT_JS}}` and keeps both `$&` and `$${totalCost.toFixed(3)}` byte for
 byte.
+
+### D387
+
+**The trust store round-trips every value and sorts keys like JavaScript.**
+
+Reference: pi v1.5.0 `core/trust-manager.ts` `writeTrustFile` copies entries whose
+value is `true`, `false` or `null`, then serializes `Object.keys(data).sort()`
+order. Pier dropped `null` members on every write and sorted with Go's byte
+comparison, unlike UTF-16 code-unit order.
+
+A `null` member is the "Trust parent folder" option's tombstone for the project
+path (`setMany` clears the key when the decision is null). Both implementations
+read `null` as no decision, so a dropped tombstone does not change which
+decision wins; the defect is a persistence round-trip one. A store written by
+pi (or by an earlier pier) loses those entries on the next unrelated decision,
+and keys holding astral characters are re-serialized in a different order than
+the reference, so `trust.json` bytes drift from the reference for the same
+logical store. Astral ordering cannot change which entry resolves: rows that
+differ only in path spelling separate at ASCII segments.
+
+Pier now keeps `null` members and sorts with `compareUTF16`.
+
+Test: `TestProjectTrustStoreWriteMatchesReference` pins the exact bytes against
+the reference's own output for the same store.
 
 ## Lock inventory
 

@@ -178,14 +178,18 @@ func readTrustFileOrdered(path string) (trustFile, []string, error) {
 }
 
 // writeTrustFile writes the store with sorted keys and a trailing newline.
+//
+// Reference: pi v1.5.0 core/trust-manager.ts writeTrustFile keeps every true,
+// false or null value and sorts with Object.keys(data).sort(), which compares
+// UTF-16 code units: an astral path sorts before a BMP scalar like U+E000, and
+// dropping a null member would silently rewrite a store the user (or another
+// pi version) wrote.
 func writeTrustFile(path string, data trustFile) error {
 	keys := make([]string, 0, len(data))
-	for key, value := range data {
-		if value != nil {
-			keys = append(keys, key)
-		}
+	for key := range data {
+		keys = append(keys, key)
 	}
-	sort.Strings(keys)
+	sort.Slice(keys, func(i, j int) bool { return compareUTF16(keys[i], keys[j]) < 0 })
 	var builder strings.Builder
 	builder.WriteString("{")
 	for index, key := range keys {
@@ -199,11 +203,14 @@ func writeTrustFile(path string, data trustFile) error {
 		}
 		builder.Write(name)
 		builder.WriteString(": ")
-		value, err := ai.MarshalJSON(*data[key])
-		if err != nil {
-			return err
+		encoded := []byte("null")
+		if decision := data[key]; decision != nil {
+			encoded, err = ai.MarshalJSON(*decision)
+			if err != nil {
+				return err
+			}
 		}
-		builder.Write(value)
+		builder.Write(encoded)
 	}
 	if len(keys) > 0 {
 		builder.WriteString("\n")
