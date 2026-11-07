@@ -4201,7 +4201,7 @@ continued sublanguages, fallbacks and the original scanner.
 Reference: pi v1.5.0 (`f9a26365`) `components/diff.ts` uses jsdiff 8.0.4
 `word.js`. Its `equals` trims JavaScript `\s`, and its
 `tokenizeIncludingWhitespace` splits into extended-word runs, whitespace runs
-and single other characters, then copies whitespace onto neighbouring tokens.
+and single other characters, then copies whitespace onto neighboring tokens.
 The port trimmed with Go's `strings.TrimSpace`, so a U+FEFF-prefixed word was
 removed and re-added instead of compared equal, and it matched a regex for
 every token part. The equal function now uses the port's JavaScript whitespace
@@ -4243,6 +4243,7 @@ pinned byte-for-byte against that decoder oracle by
 `TestCanonicalizeMatchesReference` and `FuzzCanonicalizeMatchesReference` (614k
 inputs in a 30-second run), and `TestCanonicalizeRejectsExcessiveNesting` pins
 the boundary.
+
 `MarshalJSON` also emits strings, booleans, integers and valid
 `json.RawMessage` directly instead of encoding and re-parsing them, which the
 nested message marshalers do constantly. Measured on the same body: canonical
@@ -4357,17 +4358,17 @@ Reference: pi v1.5.0 `components/markdown.ts` keeps the stable token prefix and
 final lines across `setText` appends. The port had that cache but rebuilt the
 `finals` and `fullKeys` slices and copied every block key on each render, so a
 long streaming message did quadratic allocation; it also copied the whole
-source through `strings.ReplaceAll` even when it had no tabs. Grow the two
-cache slices amortized, overwrite only the tail, and skip the tab normalization
-copy when no tab is present. Flatten the finals directly into the result instead
-of through an intermediate `contentLines`.
+source through `strings.ReplaceAll` even when it had no tabs. The port now grows
+the two cache slices amortized, overwrites only the tail, skips the
+tab-normalization copy when no tab is present, and flattens the finals directly
+into the result instead of through an intermediate `contentLines`.
 
 Measured on growing paragraph appends (no tabs): 200 appends 11 ms/13.6 MB →
 3.4–5.5 ms/3.0 MB; 1,000 appends 169 ms/306 MB → 45–52 ms/36 MB; 2,000 appends
 682 ms/1.22 GB → 163 ms/124 MB. The remaining growth is the returned line slice,
 which callers receive whole. `TestMarkdownStreamRenderReusesCacheSlices` pins
-the backing arrays; `BenchmarkMarkdownStreamAppendLong` keeps the scale visible
-(D354).
+the backing arrays; `BenchmarkMarkdownStreamAppendLong` keeps the scale
+visible.
 
 ### D355
 
@@ -4378,7 +4379,8 @@ JavaScript string concatenation; V8 represents the growing value as a rope, so
 each delta is cheap even though every partial event exposes the full text.
 `block.text += delta` in the port copied the whole prefix per delta (Bedrock
 sends small content deltas), and the partial snapshot then copied it again.
-Keep `strings.Builder` values on the block and use `String()` for snapshots:
+The port keeps `strings.Builder` values on the block and uses `String()` for
+snapshots:
 appending is amortized and later appends never change bytes already covered by
 an earlier snapshot's length.
 
@@ -4395,8 +4397,8 @@ Reference: pi v1.5.0 `components/markdown.ts` applies `options.transform` before
 its token cache and reuses rendered blocks by token, so a transform is not
 grounds for discarding the previous parse. The port's `canReuseLex` rejected
 every transformed source, and the assistant path always installs a transform;
-each streaming delta therefore re-lexed and re-rendered the whole message.
-Keep the transform and let the existing prefix check decide: if the new
+each streaming delta therefore re-lexed and re-rendered the whole message. The
+port keeps the transform and lets the existing prefix check decide: if the new
 transformed source starts with the cached transformed source, the cached block
 window is still valid. Non-monotonic rewrites fail the prefix check and re-lex.
 
@@ -4418,11 +4420,11 @@ allocations), which is behaviorally identical.
 Reference: pi v1.5.0 passes assistant text to the renderer without terminal
 sanitization; pier treats remote text as data (D342). The sanitizer's
 `HasTerminalControl` scanned the whole message on every streaming update, which
-made a 100 KiB reply arriving in 16-byte deltas take 226 ms. Add a per-block
-`StreamingSanitizer`: when the new text starts with the previous text and the
-appended suffix has no control bytes, reuse the clean-prefix result; controls,
-rewrites, or a previously dirty text fall back to the full scan. The sanitized
-output is identical.
+made a 100 KiB reply arriving in 16-byte deltas take 226 ms. A per-block
+`StreamingSanitizer` fixes that: when the new text starts with the previous text
+and the appended suffix has no control bytes, reuse the clean-prefix result;
+controls, rewrites, or a previously dirty text fall back to the full scan. The
+sanitized output is identical.
 
 `TestStreamingSanitizerMatchesFullSanitize` and
 `FuzzStreamingSanitizerMatchesFull` check every prefix against the full scan;
@@ -4436,8 +4438,8 @@ output is identical.
 Reference: pi v1.5.0 `assistant-message.ts` joins thinking runs with
 `blocks.join("\n\n")`; JavaScript returns the single element without building
 a new string. The port's `joinThinkingBlocks` always wrote the block into a
-`strings.Builder`, copying the whole thinking text on every streaming delta.
-Return the sole block directly.
+`strings.Builder`, copying the whole thinking text on every streaming delta. It
+now returns the sole block directly.
 
 Measured end-to-end with 100 KiB of thinking in 16-byte deltas: 148 ms and
 359 MB allocated before, 10.3 ms and 11 MB after.
