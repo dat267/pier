@@ -1,6 +1,10 @@
 package coding
 
-import "testing"
+import (
+	"strconv"
+	"strings"
+	"testing"
+)
 
 // Upstream generateUnifiedPatch delegates to jsdiff createTwoFilesPatch with
 // FILE_HEADERS_ONLY: no index or underline header, newline-carrying line tokens
@@ -112,5 +116,43 @@ func TestGenerateDiffStringReportsUnchanged(t *testing.T) {
 	}
 	if diff, first, ok := GenerateDiffString("old\n", "new\n", 3); diff == "" || first != 1 || !ok {
 		t.Fatalf("changed diff = %q first=%d ok=%v", diff, first, ok)
+	}
+}
+
+// jsdiff 8.0.4 structuredPatch (libesm/patch/create.js) joins an unchanged run
+// of at most 2*context lines into the open hunk only when `i < diff.length - 2`,
+// that is, when another change follows. The last real run before the appended
+// sentinel closes the hunk with min(len, context) lines, so a trailing run of
+// context+1..2*context lines must not extend the hunk through EOF. Expectations
+// generated through pi v1.5.0 core/tools/edit-diff.ts generateUnifiedPatch with
+// its default contextLines = 4.
+func TestGenerateUnifiedPatchTrailingRunKeepsContextLimit(t *testing.T) {
+	numbered := func(n int) string {
+		var s string
+		for i := 1; i <= n; i++ {
+			s += "l" + strconv.Itoa(i) + "\n"
+		}
+		return s
+	}
+	ten, twenty := numbered(10), numbered(20)
+	cases := []struct {
+		name, oldContent, newContent, want string
+	}{
+		{
+			"one change, five trailing lines", ten, strings.Replace(ten, "l5\n", "L5\n", 1),
+			"--- f.txt\n+++ f.txt\n@@ -1,9 +1,9 @@\n l1\n l2\n l3\n l4\n-l5\n+L5\n l6\n l7\n l8\n l9\n",
+		},
+		{
+			"joined hunks, eight trailing lines", twenty,
+			strings.Replace(strings.Replace(twenty, "l3\n", "L3\n", 1), "l12\n", "L12\n", 1),
+			"--- f.txt\n+++ f.txt\n@@ -1,16 +1,16 @@\n l1\n l2\n-l3\n+L3\n l4\n l5\n l6\n l7\n l8\n l9\n l10\n l11\n-l12\n+L12\n l13\n l14\n l15\n l16\n",
+		},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			if got := GenerateUnifiedPatch("f.txt", test.oldContent, test.newContent, 4); got != test.want {
+				t.Fatalf("patch = %q; want %q", got, test.want)
+			}
+		})
 	}
 }

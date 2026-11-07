@@ -564,9 +564,12 @@ func buildPatchHunks(oldTokens, newTokens []string, ops []diffOp, context int) [
 			continue
 		}
 		if oldRangeStart != 0 {
-			// An unchanged run of at most 2*context lines joins the hunks; the
-			// final sentinel (index len(parts)-1) always closes the range.
-			if len(part.lines) <= context*2 && index < len(parts)-1 {
+			// An unchanged run of at most 2*context lines joins the hunks only
+			// when another change follows it. Like jsdiff's
+			// `i < diff.length - 2`, the last real run (just before the
+			// sentinel at len(parts)-1) closes the range with up to context
+			// lines rather than running through EOF.
+			if len(part.lines) <= context*2 && index < len(parts)-2 {
 				current = append(current, contextLines(part.lines)...)
 			} else {
 				contextSize := min(len(part.lines), context)
