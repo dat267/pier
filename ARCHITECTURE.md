@@ -298,7 +298,7 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D393)
+## Deliberate divergences from pi (D1–D394)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
@@ -5602,6 +5602,29 @@ This row records a deliberate trust-policy choice, not a defect to fix: adopting
 the reference's default would read project settings before trust is known, which
 the project trust boundary exists to prevent. Revisit only with an explicit
 decision to match the reference here.
+
+### D394
+
+**An unset `defaultTools` layer keeps the inherited list.**
+
+Reference: pi v1.5.0 `core/settings-manager.ts` `mergeDefaultTools` returns
+`base` as its first check (`if (overrides === undefined) return base;`), so a
+project settings file that does not mention `defaultTools` leaves the global
+selection alone. Pier returned nil for that case while its merge caller assigned
+the result only when non-nil, so a global `defaultTools` was dropped as soon as
+the project layer set anything.
+
+Reproduced through the settings files: global `"defaultTools": ["read","bash"]`
+with a project `{"defaultTools": ["+grep"]}` gives the reference
+`read, bash, grep` in the system prompt's tools section; pier exposed only the
+built-in defaults, so the project's `+grep` added nothing. `mergeDefaultTools`
+now returns `base` before the modifier check, matching the reference.
+
+Test: `TestMergeDefaultToolsKeepsTheBaseWhenTheOverrideIsUnset` covers base kept,
+empty base kept as empty, both unset, modifier appends, plain replacement and a
+nil base; the first case failed before the change. Verified after the fix with a
+rebuilt binary: the same project now exposes `read, bash, grep` as the reference
+does (pier additionally lists its own `set_goal`, D223).
 
 ## Lock inventory
 

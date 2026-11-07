@@ -1087,11 +1087,13 @@ func applyToolModifiers(base, entries []string) []string {
 }
 
 // mergeDefaultTools merges two defaultTools layers: a list of only +name/-name
-// entries appends to the inherited list, anything else replaces it. nil means
-// the layer does not set defaultTools (upstream mergeDefaultTools).
+// entries appends to the inherited list, anything else replaces it, and a layer
+// that does not set defaultTools keeps the inherited one (upstream
+// mergeDefaultTools checks `overrides === undefined` first). callers assign the
+// result only when it is non-nil, so returning nil here would drop the base.
 func mergeDefaultTools(base, overrides []string) []string {
 	if overrides == nil {
-		return nil
+		return base
 	}
 	if !overridesOnlyToolModifiers(overrides) {
 		return overrides
