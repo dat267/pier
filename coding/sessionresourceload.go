@@ -22,6 +22,25 @@ type resourceOptions struct {
 	NoPromptTemplates bool
 }
 
+// scopedListPaths returns one array setting from the project scope and then the
+// agent scope. The merged view cannot be used for a list: deep-merge replaces
+// arrays, so a project value would hide the agent's, while upstream
+// core/package-manager.ts resolve() adds project overrides only when trusted and
+// user overrides always, both into one path map (A398).
+func scopedListPaths(settings *SettingsManager, pick func(*Settings) []string) []string {
+	if settings == nil {
+		return nil
+	}
+	var paths []string
+	if project := settings.GetProjectSettings(); project != nil {
+		paths = append(paths, pick(project)...)
+	}
+	if global := settings.GetGlobalSettings(); global != nil {
+		paths = append(paths, pick(global)...)
+	}
+	return paths
+}
+
 // contextFiles returns the project context files.
 func (o resourceOptions) contextFiles(cwd string, agentDir string) []ContextFile {
 	if o.NoContextFiles {
@@ -33,9 +52,14 @@ func (o resourceOptions) contextFiles(cwd string, agentDir string) []ContextFile
 // skills returns the skills, from the explicit paths and (unless discovery is
 // off) the settings'.
 func (o resourceOptions) skills(cwd string, agentDir string, settings *SettingsManager, trusted bool) LoadSkillsResult {
+	// CLI paths before the settings' (upstream mergePaths([...cliEnabledSkills,
+	// ...enabledSkills], additionalSkillPaths)), so a --skill path wins a name
+	// collision (A399).
 	skillPaths := append([]string{}, o.SkillPaths...)
-	if !o.NoSkills && settings != nil {
-		skillPaths = append(settings.GetSkillPaths(), skillPaths...)
+	if !o.NoSkills {
+		skillPaths = append(skillPaths, scopedListPaths(settings, func(settings *Settings) []string {
+			return settings.Skills
+		})...)
 	}
 	return LoadSkills(LoadSkillsOptions{
 		Cwd: cwd, AgentDir: agentDir, SkillPaths: skillPaths,
@@ -46,8 +70,10 @@ func (o resourceOptions) skills(cwd string, agentDir string, settings *SettingsM
 // promptTemplates returns the file-based prompt templates.
 func (o resourceOptions) promptTemplates(cwd string, agentDir string, settings *SettingsManager) LoadPromptTemplatesResult {
 	promptPaths := append([]string{}, o.PromptTemplatePaths...)
-	if !o.NoPromptTemplates && settings != nil {
-		promptPaths = append(settings.GetPromptTemplatePaths(), promptPaths...)
+	if !o.NoPromptTemplates {
+		promptPaths = append(promptPaths, scopedListPaths(settings, func(settings *Settings) []string {
+			return settings.Prompts
+		})...)
 	}
 	loaded := LoadPromptTemplatesWithDiagnostics(LoadPromptTemplatesOptions{
 		Cwd: cwd, AgentDir: agentDir, PromptPaths: promptPaths,

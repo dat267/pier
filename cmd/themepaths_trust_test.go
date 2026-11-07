@@ -61,9 +61,18 @@ func TestThemePathsPreTrustReadTheGlobalScopeOnly(t *testing.T) {
 	if got, want := pre, []string{globalTheme}; !slices.Equal(got, want) {
 		t.Errorf("pre-trust theme paths = %v, want the global scope only", got)
 	}
+	// Post-trust, the project scope and the agent scope both load (upstream
+	// package-manager.ts resolve adds project overrides only when trusted and
+	// user overrides always, into one path map), then the CLI paths
+	// (resource-loader.ts mergePaths([...cliEnabledThemes, ...enabledThemes],
+	// additionalThemePaths)).
 	post := themePathsFor(args, settings, cwd, true)
-	if got, want := post, []string{filepath.Join(cwd, ".pi", "project.json"), filepath.Join(cwd, "cli.json")}; !slices.Equal(got, want) {
-		t.Errorf("post-trust theme paths = %v, want the project scope and the CLI flag", got)
+	if got, want := post, []string{
+		filepath.Join(cwd, ".pi", "project.json"),
+		globalTheme,
+		filepath.Join(cwd, "cli.json"),
+	}; !slices.Equal(got, want) {
+		t.Errorf("post-trust theme paths = %v, want the project scope, the global scope and the CLI flag", got)
 	}
 
 	// End to end: the named project file is not read or registered pre-trust.
@@ -82,5 +91,21 @@ func TestThemePathsPreTrustReadTheGlobalScopeOnly(t *testing.T) {
 	}
 	if !slices.Contains(names, "globalized") {
 		t.Errorf("the global scope's theme missing pre-trust: %v", names)
+	}
+
+	// Post-trust both scopes register: the project's file and the agent's
+	// (A398; upstream package-manager.ts resolve adds both to one path map).
+	boot.ApplySources(interactive.ThemeSources{
+		AgentDir:   agentDir,
+		Cwd:        cwd,
+		ThemeName:  themeNameFor(settings),
+		ThemePaths: post,
+		Trusted:    true,
+	})
+	names = interactive.AvailableThemes()
+	for _, want := range []string{"project", "globalized"} {
+		if !slices.Contains(names, want) {
+			t.Errorf("post-trust themes missing %q: %v", want, names)
+		}
 	}
 }

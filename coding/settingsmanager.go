@@ -2452,7 +2452,9 @@ func (m *SettingsManager) SetProjectPackages(packages []any) {
 	m.updateProjectSettings("packages", func(settings *Settings) { settings.Packages = packages })
 }
 
-// GetExtensionPaths returns the extension paths.
+// GetExtensionPaths returns the merged extension paths. Merged arrays are
+// project-replaces-agent (deepMergeObjects), so a resource loader must read the
+// scopes through GetProjectSettings and GetGlobalSettings instead (A398).
 func (m *SettingsManager) GetExtensionPaths() []string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -2475,13 +2477,6 @@ func (m *SettingsManager) SetProjectExtensionPaths(paths []string) {
 	m.updateProjectSettings("extensions", func(settings *Settings) { settings.Extensions = paths })
 }
 
-// GetSkillPaths returns the skill paths.
-func (m *SettingsManager) GetSkillPaths() []string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return append([]string{}, m.settings.Skills...)
-}
-
 // SetSkillPaths stores the global skill paths.
 func (m *SettingsManager) SetSkillPaths(paths []string) {
 	m.mu.Lock()
@@ -2496,13 +2491,6 @@ func (m *SettingsManager) SetProjectSkillPaths(paths []string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.updateProjectSettings("skills", func(settings *Settings) { settings.Skills = paths })
-}
-
-// GetPromptTemplatePaths returns the prompt template paths.
-func (m *SettingsManager) GetPromptTemplatePaths() []string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return append([]string{}, m.settings.Prompts...)
 }
 
 // SetPromptTemplatePaths stores the global prompt template paths.
@@ -2521,12 +2509,10 @@ func (m *SettingsManager) SetProjectPromptTemplatePaths(paths []string) {
 	m.updateProjectSettings("prompts", func(settings *Settings) { settings.Prompts = paths })
 }
 
-// GetThemePaths returns the theme paths.
-func (m *SettingsManager) GetThemePaths() []string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return append([]string{}, m.settings.Themes...)
-}
+// The array settings (themes, skills, prompts, extensions) have no merged-view
+// getter on purpose: deep-merge replaces arrays, so a project list would hide
+// the agent's (A398). Read the scopes through GetProjectSettings and
+// GetGlobalSettings.
 
 // SetThemePaths stores the global theme paths.
 func (m *SettingsManager) SetThemePaths(paths []string) {

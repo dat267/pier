@@ -776,12 +776,21 @@ func themeNameFor(settings *coding.SettingsManager) string {
 // and by --theme against the working directory. Pre-trust the paths are the
 // global scope's values only: upstream's loadStartupThemes resolves them
 // through an in-memory global-only settings manager (cli/startup-ui.ts), and
-// neither side names a project file there. The merged settings and the --theme
-// values join once the project's trust is known.
+// neither side names a project file there. Once the project's trust is known,
+// the project scope, the agent scope and the --theme values all join.
 func themePathsFor(args *coding.Args, settings *coding.SettingsManager, cwd string, trusted bool) []string {
 	var paths []string
 	if trusted {
-		paths = append(paths, settings.GetThemePaths()...)
+		// Project then agent scope, not the merged view: deep-merge replaces
+		// arrays, so a project `themes` would hide the agent list, while
+		// upstream core/package-manager.ts resolve() adds both into one path
+		// map (project entries only when trusted) (A398).
+		if project := settings.GetProjectSettings(); project != nil {
+			paths = append(paths, project.Themes...)
+		}
+		if global := settings.GetGlobalSettings(); global != nil {
+			paths = append(paths, global.Themes...)
+		}
 		paths = append(paths, args.Themes...)
 	} else if global := settings.GetGlobalSettings(); global != nil {
 		paths = append(paths, global.Themes...)
