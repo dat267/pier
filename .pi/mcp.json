@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "gopls": {
+      "command": "gopls",
+      "args": ["mcp"],
+      "exposure": "direct"
+    }
+  }
+}
