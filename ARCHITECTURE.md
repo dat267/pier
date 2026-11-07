@@ -1,10 +1,10 @@
 # Architecture and performance
 
-This is the design reference for `pier`, a Go port of pi v1.5.0
-(`f9a26365`). [AGENTS.md](AGENTS.md) contains contributor rules; use `git log`
-for release and review history. Deliberate differences from pi are recorded
-as D-rows in [DECISIONS.md](DECISIONS.md); the lock inventory below is the
-source of truth for retained and retired UI locks.
+The design reference for `pier`, a Go port of pi v1.5.0 (`f9a26365`): runtime
+structure, performance evidence, the stdio RPC contract, and the lock inventory,
+which is the source of truth for retained and retired UI locks. Deliberate
+differences from pi are D-rows in [DECISIONS.md](DECISIONS.md), contributor
+rules are in [AGENTS.md](AGENTS.md), and history is in `git log`.
 
 ## Runtime structure
 
@@ -59,38 +59,41 @@ byte-parity regressions.
 
 ## Model catalogs
 
-Remote overlays merge complete chat, image and classifier catalogs. Personalized
-catalogs replace the complete list when nonempty, falling back to builtins only
-when empty. `GetAllModels` exposes every type, while `GetModels` filters chats;
-wrappers must not pre-filter their all-model getter or personalization input.
-`TestCatalogWrappersExposeCompleteModelLists` covers online and offline reads.
-Each wrapper protects its immutable overlay slice snapshot/swap with a local
-mutex. Base-provider getters and publication/personalization callbacks run
-outside it (`TestCatalogWrapperRefreshSynchronizesReads`). Refresh cleanup
-removes a provider's cancellation handle only while it still owns that refresh
-generation. A retired completion must not erase its replacement's handle,
-which provider removal/replacement still needs to cancel the current work
-(`TestOldRefreshCompletionKeepsReplacementCancellation`, upstream v1.5.0
-`f9a26365` models.ts controller-identity check).
+- Remote overlays merge complete chat, image and classifier catalogs. A
+  nonempty personalized catalog replaces the whole list; builtins apply only
+  when it is empty.
+- `GetAllModels` returns every type and `GetModels` only chat models, so
+  wrappers must not pre-filter their all-model getter or personalization input
+  (`TestCatalogWrappersExposeCompleteModelLists`, online and offline).
+- Each wrapper guards its immutable overlay slice snapshot/swap with a local
+  mutex; base-provider getters and publication/personalization callbacks run
+  outside it (`TestCatalogWrapperRefreshSynchronizesReads`).
+- Refresh cleanup removes a provider's cancellation handle only while that
+  refresh generation still owns it, so a retired completion cannot erase the
+  handle its replacement needs to cancel current work on provider removal or
+  replacement (`TestOldRefreshCompletionKeepsReplacementCancellation`, upstream
+  v1.5.0 `f9a26365` models.ts controller-identity check).
 
 ## Session model
 
-`SessionManager.Projection` is the canonical branch-versioned view for model
-context. Do not rebuild it by hand or rescan entries per message. Session writes
-preserve JavaScript JSON bytes and key order through `ai.MarshalJSON`. Cached
-model/message reads preserve isolation and identity only at validated canonical
-boundaries; see D271–D273 and the session/model-store tests. Starting a new
-session drops manager-owned branch and projection caches so discarded history
-is no longer retained by them. In-place forks also clear stale branch/projection
-snapshots and prune decoded-message memos to the retained entry IDs, preserving
-kept message identity. Caller-held snapshots remain valid
-(`TestNewSessionReleasesPreviousPayload`,
-`TestCreateBranchedSessionReleasesDiscardedMessages`). Entry paths and their
-message memo are captured together under the manager lock. New/fork generations
-install a detached memo, retaining kept message identity; an old off-lock
-projection may finish with its own memo but cannot repopulate the new one.
-`TestConcurrentProjectionCannotRepopulateDiscardedSessionMemo` checks release
-after both an in-flight decode and a later decode from the old path complete.
+- `SessionManager.Projection` is the canonical branch-versioned view for model
+  context. Do not rebuild it by hand or rescan entries per message.
+- Session writes preserve JavaScript JSON bytes and key order through
+  `ai.MarshalJSON`.
+- Cached model/message reads preserve isolation and identity only at validated
+  canonical boundaries (D271–D273 and the session/model-store tests).
+- Starting a new session drops the manager's branch and projection caches, so
+  they stop retaining discarded history. In-place forks also clear stale
+  branch/projection snapshots and prune decoded-message memos to the retained
+  entry IDs, keeping the identity of kept messages. Caller-held snapshots stay
+  valid (`TestNewSessionReleasesPreviousPayload`,
+  `TestCreateBranchedSessionReleasesDiscardedMessages`).
+- Entry paths and their message memo are captured together under the manager
+  lock. New and fork generations install a detached memo that keeps kept
+  message identity; an old off-lock projection may finish with its own memo but
+  cannot repopulate the new one
+  (`TestConcurrentProjectionCannotRepopulateDiscardedSessionMemo` covers an
+  in-flight decode and a later decode from the old path).
 
 ## Stdio RPC
 
@@ -151,11 +154,10 @@ present, including an empty string. Omitted ids remain omitted.
   level`, where the reference accepts and stores it.
 - `cycle_thinking_level`: returns `{ "level": ... }` or `null`.
 - `set_steering_mode`, `set_follow_up_mode`: `mode` (`"all"` or
-  `"one-at-a-time"`). A value outside that set fails with `mode must be all or
-  one-at-a-time`; the reference stores whatever string it is given and reports
-  success (observed: `set_follow_up_mode` with `"bogus"` leaves `followUpMode:
-  "bogus"` in `get_state` and persists it). Pier rejects instead of adopting a
-  queue mode the agent cannot honor.
+  `"one-at-a-time"`). Any other value fails with `mode must be all or
+  one-at-a-time`, so the agent never adopts a mode it cannot honor; the
+  reference stores and persists any string (`"bogus"` then appears as
+  `followUpMode` in `get_state`).
 - `get_last_assistant_text`: returns `{ "text": "..." }`, or an empty object
   when there is no assistant text.
 - `get_session_stats`: returns the camelCase session counters, token totals,
@@ -179,14 +181,6 @@ present, including an empty string. Omitted ids remain omitted.
   (`summary`, `firstKeptEntryId`, `tokensBefore`, optional `estimatedTokensAfter`,
   `usage`, `details`).
 - `set_auto_compaction`, `set_auto_retry`: `enabled` (boolean).
-- Command field types are validated where the reference only casts the parsed
-  JSON to `RpcCommand`: `bash` without a string `command`, a non-boolean
-  `enabled`, `set_session_name` without a name, `switch_session` without a path,
-  `fork` without an entry id, `prompt` without a string message, and malformed
-  `images` all fail with a pier message. The reference instead coerces
-  (`enabled: "yes"` enables compaction), throws a `TypeError` (`prompt` without
-  `message`), or interpolates `undefined` (`set_model` without fields). The
-  typed contract is enforced rather than silently reinterpreted.
 - `abort_retry`: cancels an in-flight auto-retry.
 - `bash`: `command`, optional `excludeFromContext`; runs it in the session cwd
   and returns the bash result (`output`, optional `exitCode`, `cancelled`,
@@ -202,6 +196,14 @@ present, including an empty string. Omitted ids remain omitted.
   `{ "text": ..., "cancelled": false }`; `at` keeps the entry and omits `text`.
 - `clone`: forks at the current leaf and returns `{ "cancelled": false }`. An
   empty session fails with `Cannot clone session: no current entry selected`.
+
+Field types are validated; the reference only casts the parsed JSON to
+`RpcCommand`. `bash` without a string `command`, a non-boolean `enabled`,
+`set_session_name` without a name, `switch_session` without a path, `fork`
+without an entry id, `prompt` without a string message, and malformed `images`
+all fail with a pier message. The reference instead coerces (`enabled: "yes"`
+enables compaction), throws a `TypeError` (`prompt` without `message`), or
+interpolates `undefined` (`set_model` without fields).
 
 The replacement commands run through the host's session factory. `new_session`,
 `switch_session`, `fork` and `clone` fail with `Session replacement is not
@@ -308,6 +310,8 @@ This is the authoritative inventory for that ownership boundary: retained UI
 handoff, terminal I/O and logging locks, plus selected cross-goroutine `coding/`
 collaborators. It is not an inventory of every core, provider or storage lock.
 File paths intentionally omit line numbers so ordinary edits do not stale them.
+None of the mechanisms below adds a mutex beyond the ones it names, or a
+UI-state worker.
 
 `ai.EventStream.mu` protects its FIFO, waiters and terminal state. Completion
 closes a shared notification channel so every result waiter observes the same
@@ -339,13 +343,12 @@ entries, and invoke no user callback while locked.
 `coding.CacheWarmer.mu` also guards callback detachment at session disposal and
 synchronizes the mutable run phase read by status, policy evaluation, mode
 changes and scheduling. Disposal clears the current run, stops its timer,
-cancels its request context
-and releases `OnWarmed`. Refresh workers snapshot an admitted callback under
-that mutex and invoke it outside the lock; an already-admitted callback may
-finish without making disposal join itself. Host currency and mode callbacks run
-outside that mutex, so their stop is run-scoped: stale refreshes and lifecycle
-notifications stop only the run they observed, matching the reference's
-single-threaded check-and-stop. No new worker or mutex is added.
+cancels its request context and releases `OnWarmed`. Refresh workers snapshot
+an admitted callback under that mutex and invoke it outside the lock; an
+already-admitted callback may finish without making disposal join itself. Host
+currency and mode callbacks run outside that mutex, so their stop is
+run-scoped: stale refreshes and lifecycle notifications stop only the run they
+observed, matching the reference's single-threaded check-and-stop.
 
 `coding.GoalController.mu` serializes machine transitions with their durable
 append effects. A clear/create pair cannot interleave with another tool's
@@ -358,9 +361,8 @@ notification callbacks may reenter `Snapshot`. Durable entry events share one
 publisher admitted under this mutex, with listener calls outside it. Reentrant
 transitions enqueue behind the current batch, so every subscriber sees
 clear/create entries in log order (`TestGoalEntryEventsKeepAppendOrderOnReentry`).
-Deferred idle round workers also
-check their goal id, revision and pending turn before starting, so a stopped or
-superseded reservation cannot launch later.
+Deferred idle round workers also check their goal id, revision and pending turn
+before starting, so a stopped or superseded reservation cannot launch later.
 
 `coding.McpServerConnection.mu` protects attachment, shared-open admission and
 lifecycle. Each attempt publishes its own client/error before closing its done
@@ -368,7 +370,7 @@ channel; caller cancellation only stops waiting, while `Close` cancels the open.
 Tool-change handlers run discovery off the transport reader, and the live client
 owns request timeout/close cancellation. Stale results are rejected under the
 connection mutex. Manager error queries snapshot state and diagnostic together;
-callbacks remain outside locks. No new mutex or UI-state worker is introduced.
+callbacks remain outside locks.
 
 MCP listener registries retain stable entry pointers, so slice growth and
 snapshot compaction cannot invalidate unsubscribe handles. Unsubscribe unlinks
@@ -378,10 +380,10 @@ Empty notification-method registries are removed. Callbacks remain outside
 their existing registry mutexes. `mcp.Client.mu` admits incoming request
 cancellation before its handler starts on a worker; the stdio reader remains
 free to dispatch cancellation notifications. Unknown-method error replies also
-write off-reader, so output backpressure cannot stall unrelated responses. Close snapshots and clears incoming
-cancellation handles under the mutex, then invokes them outside it. User handlers
-run outside locks and their panics are converted to JSON-RPC error responses.
-No new mutex or interactive UI worker is introduced. In-memory transports use
+write off-reader, so output backpressure cannot stall unrelated responses. Close
+snapshots and clears incoming cancellation handles under the mutex, then invokes
+them outside it. User handlers run outside locks and their panics are converted
+to JSON-RPC error responses. In-memory transports use
 that existing mutex to append copied messages and claim one FIFO delivery
 worker per peer. The worker removes a message under the mutex, then invokes
 listeners after unlocking; close discards queued messages without waiting for
@@ -417,32 +419,33 @@ It reclaims artifacts older than 10 seconds (including legacy regular files),
 refreshes live leases every 5 seconds, and joins its refresher before release.
 Release checks file identity before removing the lock; a write callback also
 checks identity before commit (D288). Storage callbacks and file I/O remain off
-the interactive owner loop; no new UI-state lock is added.
+the interactive owner loop.
 
-D205 adds no lock: tool result generations, displayed lines and shell elapsed
-state stay on-owner. Workers mutate only private component snapshots and return
-owner-applied completions through D204's bounded optional queue and UI-post gate.
-D206 extends those private snapshots through Box padding/background preparation.
-Only the owner adopts the completed cache, rebinding cache and mouse metadata to
-its original children; elapsed clocks and arbitrary callbacks never run on the
-worker. No additional lock or queue is introduced.
-D207's completed-frame retention, live clock-row refresh and displayed-width
-mouse dispatch are owner-only state. Prepared and displayed metadata remain
-separate, and parent render-version skipping cannot suppress pending admission.
-D208 uses owner revisions for accepted pending clock updates, mutating only the
-owner's retained frame rows. Unadmitted work remains unversioned and copies rows
-when needed; detached worker snapshots remain immutable after handoff.
-The tool frame lifecycle is consolidated in `coding/interactive/toolframes.go`;
-callers supply captured input and delegate render/hit-test metadata without
-reading its admission or publication state. The executor seam and lock inventory
-are unchanged.
-D209 extends owner-only in-place Container flattening to first-child changes.
-Revision/change-offset metadata guards parent caches, and removed string slots
-are cleared on shrink. No shared UI mutation or additional lock is introduced.
-Syntax highlighting adds no UI lock or off-loop path: D231 wires the
-`highlight` port in, `coding/interactive/codehighlight.go` is pure and calls the
-`highlight` package, whose compiled-language cache is guarded by that package's
-own mutex, so no UI lock or off-loop path is introduced.
+The transcript-preparation rows keep their state owner-only and add no queue:
+
+- D205: tool result generations, displayed lines and shell elapsed state stay
+  on the owner. Workers mutate only private component snapshots and return
+  owner-applied completions through D204's bounded optional queue and UI-post
+  gate.
+- D206 extends those snapshots through Box padding/background preparation. Only
+  the owner adopts the completed cache, rebinding cache and mouse metadata to
+  its original children; elapsed clocks and arbitrary callbacks never run on the
+  worker.
+- D207: completed-frame retention, live clock-row refresh and displayed-width
+  mouse dispatch are owner-only. Prepared and displayed metadata stay separate,
+  and parent render-version skipping cannot suppress pending admission.
+- D208 uses owner revisions for accepted pending clock updates, mutating only
+  the owner's retained frame rows. Unadmitted work stays unversioned and copies
+  rows when needed; detached worker snapshots are immutable after handoff. The
+  tool frame lifecycle lives in `coding/interactive/toolframes.go`; callers
+  supply captured input and delegate render/hit-test metadata without reading
+  its admission or publication state.
+- D209 extends owner-only in-place Container flattening to first-child changes.
+  Revision/change-offset metadata guards parent caches, and removed string slots
+  are cleared on shrink.
+- D231 (syntax highlighting) adds no off-loop path:
+  `coding/interactive/codehighlight.go` is pure and calls the `highlight`
+  package, whose compiled-language cache has that package's own mutex.
 
 | Lock | Where | Protects | Retirement |
 |---|---|---|---|
@@ -467,7 +470,7 @@ own mutex, so no UI lock or off-loop path is introduced.
 context. Synchronous responses release that link on return; an SSE response
 worker owns it through stream consumption. Closing the transport therefore
 cancels both POSTs and GETs, without canceling a live SSE body at the initial
-Send return or changing shared auth recovery ownership. No new mutex is added.
+Send return or changing shared auth recovery ownership.
 
 The typed `coding/rpcclient.RpcClient` snapshots request/listener state under
 `mu` and serializes stdin writes under `writeMu`. Event callbacks run outside
@@ -476,7 +479,7 @@ final events. Natural process exit still rejects pending requests immediately;
 `Stop` waits for that process-exit publication, not reader completion, since a
 reader callback may itself call `Stop`. Startup reserves admission under `mu`
 before spawning outside it, and releases that reservation on setup failure.
-No callback queue or UI lock is added.
+No callback queue is added.
 
 D235's stdio RPC runtime adds no UI lock. The existing `AgentSession.mu` also
 guards steering/follow-up display queues across command admission and agent
@@ -489,9 +492,11 @@ settlement accounting, so `abort` joins canceled preflight cleanup without
 waiting for independently running user bash. The owner admits and joins that
 group (`TestRPCAbortWaitsForCanceledPreflightToSettle`).
 
-Retired along the way (all struck from the code). Searching non-test Go files
-in `tui/` and `coding/interactive/` for mutex declarations finds only the
-retained locks listed above (UI-state handoff plus the package-global caches):
+Retired locks, all removed from the code. "Retired in" names what replaced
+each: the owner loop, or a step of the ownership refactor (the
+`refactor(stage N)` commits; `git log --grep='(stage '`). Searching non-test Go
+files in `tui/` and `coding/interactive/` for mutex declarations finds only the
+retained locks above (UI-state handoff plus the package-global caches):
 
 | Lock | Where | Retired in |
 |---|---|---|
@@ -525,12 +530,11 @@ retained locks listed above (UI-state handoff plus the package-global caches):
 When retiring a lock, the invariant is unchanged: no user code under a lock;
 snapshot under and deliver outside.
 
-The mutex-deadlock PTY watchdog flows consumed this list: while a UI
-mutex existed, a flow could park the loop behind one, so the suite drove the real
-binary through the offending interaction and checked the `SIGQUIT` dump. With
-every UI-state lock retired, those specific deadlock paths are gone. Core
-locks and blocking work can still stall the loop, so `internal/uiblock` guards
-the owner-loop invariant statically. The watchdog flows' functional coverage
-moved to `coding/interactive/ptyflow_test.go`, which drives the app
-in process rather than spawning a PTY. Other real-binary PTY tests and the
-deliberately deadlocking parser helper remain.
+The PTY watchdog flows used to consume this list: while UI mutexes existed, a
+flow drove the real binary through an interaction that could park the loop
+behind one and checked the `SIGQUIT` dump. With every UI-state lock retired,
+those deadlock paths are gone. Core locks and blocking work can still stall the
+loop, so `internal/uiblock` checks the owner-loop invariant statically, and the
+flows' functional coverage moved to `coding/interactive/ptyflow_test.go`, which
+drives the app in process. Other real-binary PTY tests and the deliberately
+deadlocking parser helper remain.

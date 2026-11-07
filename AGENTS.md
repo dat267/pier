@@ -1,38 +1,40 @@
 # AGENTS.md
 
-Project rules for coding agents. For user help see [README.md](README.md); use
-`git log` for release and change history; design, the stdio RPC contract and the
-lock inventory are in [ARCHITECTURE.md](ARCHITECTURE.md), and D-rows (deliberate
-divergences) are in [DECISIONS.md](DECISIONS.md). `TODO.md` contains only
-reproduced, unresolved findings.
+Project rules for coding agents. Where things live:
+
+- [README.md](README.md): user help.
+- [ARCHITECTURE.md](ARCHITECTURE.md): design, the stdio RPC contract and the
+  lock inventory.
+- [DECISIONS.md](DECISIONS.md): D-rows, the deliberate differences from upstream.
+- `TODO.md`: reproduced, unresolved findings only.
+- `git log`: release and change history.
 
 ## Upstream parity
 
 - `./pi` is the pinned upstream implementation (v1.5.0, `f9a26365`); pier is a
-  near-identical Go port. Read its TypeScript to preserve behavior, not an
-  installed bundle. `just reference` verifies the pin. D-rows and test comments
-  cite the revision a behavior was verified against, so older ones still name
-  v1.4.0 on purpose.
-- Treat JSON as byte-parity: persist and send final bytes through
-  `ai.MarshalJSON`, not `encoding/json.Marshal`. `encoding/json` remains
-  appropriate for internal parsing, round-trips and `MarshalJSON` method
-  internals, but not for final persisted or wire bytes. Preserve JavaScript key
-  order, stringify behavior and truthiness where upstream depends on them.
-- Parity never outranks responsiveness. When an upstream behavior would add a
+  near-identical Go port. To preserve behavior, read its TypeScript, not an
+  installed bundle; `just reference` verifies the pin. D-rows and test comments
+  cite the revision they were verified against, so older ones name v1.4.0 on
+  purpose.
+- JSON is byte-parity: persist and send final bytes through `ai.MarshalJSON`.
+  `encoding/json` is fine for internal parsing, round-trips and `MarshalJSON`
+  method internals, never for final persisted or wire bytes. Preserve
+  JavaScript key order, stringify behavior and truthiness where upstream
+  depends on them.
+- Parity never outranks responsiveness. If an upstream behavior would add a
   measured stall, a per-keystroke or per-frame cost, or worse UX, keep the port
-  fast and pleasant, and record the difference as a D-row instead of copying it.
-  A cache or fast path needs a measured baseline, not a guess.
-- When the port is measurably slower than the pinned reference for the same
-  input (a benchmark, a profile, or a supplied workload), iterate on the Go code
-  until a repeatable, same-workload benchmark shows it beats the reference while
-  preserving behavior. Pin behavior with tests. Do not keep a patch that only
-  wins on a pathological input while regressing representative workloads; keep
-  optimizing or revert it. Record the baseline, reference result, final result,
-  and approach in a D-row.
-- Every behavior change needs a test citing the upstream source. Cite the
-  upstream file/commit in the commit message, using `type(scope): summary`;
-  document intentional differences with a reproducing D-row comment and an
-  entry in `DECISIONS.md`, inserted in numeric order and naming its test.
+  fast and record the difference as a D-row instead of copying it. A cache or
+  fast path needs a measured baseline, not a guess.
+- When the port is measurably slower than the reference on the same input (a
+  benchmark, profile or supplied workload), iterate until a repeatable
+  same-workload benchmark shows it beating the reference, with behavior pinned
+  by tests. Do not keep a patch that wins only on a pathological input while
+  regressing representative workloads; keep optimizing or revert it. Record the
+  baseline, reference result, final result and approach in a D-row.
+- Every behavior change needs a test citing the upstream source, and a
+  `type(scope): summary` commit message citing the upstream file/commit. An
+  intentional difference also needs a D-row comment at its reproducing test and
+  a `DECISIONS.md` entry, in numeric order, that names the test.
 
 ## Structure
 
@@ -82,7 +84,7 @@ value-shaped loops on the UI thread.
 ## Gotchas
 
 - `NewAgentSession` installs its collaborators; an empty control block disables
-auto-compaction and retry.
+  auto-compaction and retry.
 - `filepath.Rel` returns `"."` for equal paths (Node returns `""`); `path.Clean`
   drops trailing slashes; render tests distinguish nil from empty slices.
 - Go 1.27 may require explicit result types on function-literal arguments. RE2

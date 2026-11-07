@@ -1,12 +1,19 @@
 # Deliberate divergences from pi (D1–D395)
 
-Representative rationales for deliberate differences from pi: Go runtime
-constraints, corrected upstream defects, and project choices. The runtime design,
-stdio RPC contract and lock inventory are in [ARCHITECTURE.md](ARCHITECTURE.md).
-D IDs also appear in code comments; not every ID has a full entry here, since
-closed, retired, withdrawn, historical and removed-code rows are pruned. Entries
-are ordered numerically; overlapping rows refer to the owning explanation. Port
-and review history are available with `git log --oneline`.
+Each D-row records a deliberate difference from pi: a Go runtime constraint, a
+corrected upstream defect, or a project choice. Rows are in numeric order and
+usually have:
+
+- a bold one-line summary;
+- `Reference:` the upstream source, with the revision it was compared against;
+- what pier does instead, and why;
+- a `Test:` line naming the tests that reproduce the difference.
+
+Code comments cite rows by number (`// D149: ...`). Not every number has an
+entry: closed, retired, withdrawn and removed-code rows are pruned, and their
+history is in `git log`. A row that overlaps another refers to the one that owns
+the explanation. The runtime design, stdio RPC contract and lock inventory are
+in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### D41
 
@@ -39,8 +46,8 @@ matches upstream: `cmd.applyOfflineMode` folds `--offline` and truthy
 
 ### D44/D47
 
-Go uses function fields instead of overridable methods; listeners are compared
-by code pointer.
+**Go uses function fields instead of overridable methods; listeners are compared
+by code pointer.**
 
 ### D50
 
@@ -63,7 +70,7 @@ repairs the old permanent closed flag and restart reader admission.
 
 ### D51
 
-`StdinBuffer` uses callbacks instead of `EventEmitter`.
+**`StdinBuffer` uses callbacks instead of `EventEmitter`.**
 
 ### D75
 
@@ -80,9 +87,12 @@ filesystem-watcher dependency.
 
 ### D90
 
-Narrow runtime interfaces provide test seams across the wirings.
+**Narrow runtime interfaces provide test seams across the wirings.**
 
 ### D105/D106
+
+**The renderer `Proxy` becomes an explicit forwarder, and the clipboard uses
+platform commands.**
 
 The ES `Proxy` renderer reference becomes an explicit forwarder. Clipboard
 copy/read operations are injected; the native (Bun FFI) clipboard has no Go
@@ -107,6 +117,8 @@ applies through the owner post, matching the asynchronous preview in v1.2.0
 that handoff.
 
 ### D140
+
+**The hyper and commandcode provider extensions are compiled in.**
 
 The user's hyper and commandcode provider extensions are compiled in as
 `providers.ExtensionProviders()`, not loaded from `~/.pi/agent/extensions`
@@ -720,8 +732,9 @@ incremental line counts.
 
 For a 2000-line result, tick cost fell from 2.15 ms to 0.07 ms; bash preview
 from 139 µs to 0.0009 ms. D238 sets the shell tick; D207/D208 refine
-pending-frame clocks. References: `packages/coding-agent/src/modes/interactive/components/tool-execution.ts`
-and `packages/coding-agent/src/core/tools/renderers/bash.ts`.
+pending-frame clocks. References:
+`packages/coding-agent/src/modes/interactive/components/tool-execution.ts` and
+`packages/coding-agent/src/core/tools/renderers/bash.ts`.
 
 ### D193
 
@@ -858,10 +871,11 @@ Cancellation does not kill arbitrary goroutines, reads, preparation, or legacy
 clipboard providers; late results are ignored and clipboard subprocess timeouts
 remain. Clipboard subprocess cancellation closes the parent's reader/writer
 pipes as well as killing the direct child, so daemonized descendants cannot
-strand a pipe read or input-copy goroutine after timeout. The descendants
-are not killed merely for retaining clipboard ownership. This original policy did not cover process-wide copy queues/detached
-work; D200 extends ownership and bounds permanent terminal exit. Session/provider
-serialization is unchanged; accepted saves still have no timeout.
+strand a pipe read or input-copy goroutine after timeout. The descendants are
+not killed merely for retaining clipboard ownership. This original policy did
+not cover process-wide copy queues/detached work; D200 extends ownership and
+bounds permanent terminal exit. Session/provider serialization is unchanged;
+accepted saves still have no timeout.
 
 `TestGroupShutdownCancelsOptionalWorkButDrainsSaves` uses `testing/synctest` to
 hold a save and cancellation-ignoring worker: cancellation precedes save release,
@@ -941,18 +955,11 @@ owner input painting with a blocked clipboard daemon.
 **Optional terminal output waits before FIFO admission.**
 
 At 256 KiB committed output, title/active-progress updates keep one newest
-uncommitted hint each until recovery to 128 KiB. Essential progress-clear
-invalidates delayed active hints. Permanent shutdown discards only uncommitted
-metadata, never committed frames.
-
-Interactive OSC 52 fallback uses the stable FIFO through a cancellation-aware
-off-loop API, not raw stdout. Whole packets wait for 256 KiB capacity and a closed
-renderer frame; oversized packets reject. Accepted packets/frames stay FIFO.
-Essential protocol/lifecycle output, SDK writes, and standalone APIs retain their
-admission, so this is not a global cap; one oversized title can overshoot.
-The [lock inventory](ARCHITECTURE.md#lock-inventory) is authoritative.
-Tests cover blocked backlog, cancellation, atomic recovery, stale progress,
-oversized-title progress, and app clipboard routing.
+uncommitted hint each until recovery to 128 KiB, and the interactive OSC 52
+fallback waits for capacity instead of writing raw stdout. Permanent shutdown
+discards only uncommitted metadata, never committed frames. The FIFO and its
+waiters are `ProcessTerminal.writesMu` in the
+[lock inventory](ARCHITECTURE.md#lock-inventory).
 
 #### Direct terminal output inventory
 
@@ -1380,9 +1387,9 @@ Tests: `TestParseToolCallArguments`, `TestValidateToolArgumentsReportsMalformedA
 
 `~/.pi/agent/extensions/goal` is an installed user extension, not stock pi, and
 the port has no extension host (D41). An earlier builtin was removed, then
-re-ported as tree code on the user's request: `internal/goal` holds the state, machine, command parser and
-renderers, `coding.GoalController` is the host glue, and `coding/interactive`
-renders the transcript and tool cards.
+re-ported as tree code at the user's request: `internal/goal` holds the state,
+machine, command parser and renderers, `coding.GoalController` is the host
+glue, and `coding/interactive` renders the transcript and tool cards.
 
 The port follows the current extension sources, which are newer than the
 removed builtin: `agent_before_settle` (continuation with a hidden round
@@ -1404,6 +1411,7 @@ so replacement controllers do not silently buffer notices. The owner checks
 the originating controller before applying a posted notice, rejecting outgoing
 notifications even if they were already enqueued. `/reload` calls
 `Start("reload")` without re-reading the branch by hand.
+
 Idle round delivery uses the host work scheduler (D143). A queued closure
 checks that its goal id, revision and pending turn still identify an armed,
 active reservation before starting a run; pausing, clearing, replacing or
@@ -1416,24 +1424,25 @@ activation unchanged, including for terminal completed goals
 its existing cancellation policy. Tool exposure is synchronized before a
 trigger-turn message can start an idle model request inline, so the first round
 has the active goal's tools rather than waiting until that run returns.
-Machine transitions and their durable append effects share the controller lock,
-so concurrent goal tools cannot persist clear/create entries out of order. The
-private session adapter appends records under that lock (interactive disk I/O
-still uses the existing write queue); tool changes, notices and model work run
-after unlocking.
+Machine transitions and their durable append effects share the controller lock
+(see `coding.GoalController.mu` in the
+[lock inventory](ARCHITECTURE.md#lock-inventory)), so concurrent goal tools
+cannot persist clear/create entries out of order.
 
-The two tools (`get_goal`/`set_goal`, D234) are registered in the session
-tool registry and join the default active set; unlike the extension, an explicit `--tools` allowlist still
-filters them out, because `SetActiveToolsByName` owns pier's allowlist
-semantics. The `registerMessageRenderer` for hidden `pi-goal-event` messages is
-not ported (those messages are `display:false`, so the transcript never draws
-them); the `pi-goal` and `pi-goal-turn` entry renderers cover the visible
-cards. Durable entries are published as `entry_appended` events after the
-controller unlocks (upstream emits on append), and entry renderers receive the
-entry's payload, so a live transcript draws the goal cards without a reload.
-Publisher admission is released with a defer, so a session listener that panics
-through the tool dispatcher's recovery does not disable later goal-card
-publication (`TestGoalPublisherResumesAfterRecoveredListenerPanic`).
+The two tools (`get_goal`/`set_goal`, D234) are registered in the session tool
+registry and join the default active set. Unlike the extension, an explicit
+`--tools` allowlist still filters them out, because `SetActiveToolsByName` owns
+pier's allowlist semantics. The `registerMessageRenderer` for hidden
+`pi-goal-event` messages is not ported (those messages are `display:false`, so
+the transcript never draws them); the `pi-goal` and `pi-goal-turn` entry
+renderers cover the visible cards. Durable entries are published as
+`entry_appended` events after the controller unlocks (upstream emits on append),
+and entry renderers receive the entry's payload, so a live transcript draws the
+goal cards without a reload. Publisher admission is released with a defer, so a
+session listener that panics through the tool dispatcher's recovery does not
+disable later goal-card publication
+(`TestGoalPublisherResumesAfterRecoveredListenerPanic`).
+
 The tool cards are multi-line like the built-in ones: `set_goal` shows the
 objective as a wrapped body with a compact created/replaced outcome line, and
 `get_goal` shows state, objective, budget usage and any stop reason, with a
@@ -1757,7 +1766,7 @@ pi built-in tool.
 
 ### D235
 
-**Stdio RPC has a bounded extension-free first milestone.**
+**Stdio RPC is a bounded, extension-free subset.**
 
 Reference: pi v1.4.0 `packages/coding-agent/src/modes/rpc/{rpc-mode,rpc-types,jsonl}.ts`.
 `coding/rpcmode.go` implements prompt/steer/follow_up/abort/clear_queue,
@@ -1839,8 +1848,9 @@ retry and bash commands and the new field validation.
 `cmd/rpcmode_test.go` exercises CLI boot, noninteractive startup boundaries,
 stdout cleanliness, signal unwinding, and an end-to-end `new_session` through
 the real binary. `TestSessionAbortBashReachesExecution`
-reproduces and guards the shell cancellation fix. See the Stdio RPC section
-above for usage and the complete supported subset.
+reproduces and guards the shell cancellation fix. See
+[Stdio RPC](ARCHITECTURE.md#stdio-rpc) for usage and the complete supported
+subset.
 
 ### D236
 
@@ -1908,16 +1918,16 @@ declarations reach the restored set. Extension activation stays out of scope
 
 ### D238
 
-The shell elapsed label ticks at 100ms instead of upstream's 1000ms.
+**The shell elapsed label ticks at 100ms instead of upstream's 1000ms.**
+
 `core/tools/render-utils.ts` arms `setInterval(() => context.invalidate(), 1000)`
 while a shell call runs, but its label formats with `toFixed(1)` (tenths), so
 the running clock is displayed with a resolution its redraw period cannot show:
 `Elapsed 2.0s` jumps to `3.0s` a whole second at a time. The port's
 `shellElapsedTick` is 100ms, so the display moves by .1s and the tenths
 resolution is real. Non-shell running tools keep the upstream 1s tick, and the
-final `Took` value is unaffected (it reads the recorded duration). This departs
-from upstream's 1000 ms tick for the shell label only; the cost is ten small
-differential paints a second while a shell command runs.
+final `Took` value is unaffected (it reads the recorded duration). The cost is
+ten small differential paints a second while a shell command runs.
 
 ### D239
 
@@ -2219,29 +2229,30 @@ provider request's `timeoutMs` from `retry.provider.timeoutMs`, falling back to
 the effective idle timeout only when no provider override exists. OpenAI,
 Anthropic, Codex, Mistral, and OpenRouter image APIs pass `timeoutMs` to their
 requests (`api/azure-openai-responses.ts` shares the OpenAI SDK); Google,
-Vertex, Bedrock, and Pi Messages rely on the dispatcher timeout. Go's
-`http.Transport` has no per-request header timeout, and writing
+Vertex, Bedrock, and Pi Messages rely on the dispatcher timeout.
+
+Go's `http.Transport` has no per-request header timeout, and writing
 `ResponseHeaderTimeout` on the process-wide `http.DefaultTransport` races with
-in-flight requests (D40). The port arms one
-timer per provider request (`ai/streamidle.go`), including the single-request
-OpenRouter image generation. Dispatcher-only requests use the
-raw settings delay for both header and body idle phases, matching Undici's
-FastTimer. `coding/sdk.go` passes the global setting separately from the
-provider SDK `TimeoutMs`; a provider retry override therefore cannot shorten
-the body-idle setting. OpenAI, Anthropic, and OpenRouter image SDK requests also
-have a Node `setTimeout` deadline around `fetch`
-(`pi/node_modules/openai/src/client.ts`,
+in-flight requests (D40). The port therefore arms one timer per provider request
+(`ai/streamidle.go`), including the single-request OpenRouter image generation.
+Dispatcher-only requests use the raw settings delay for both header and body
+idle phases, matching Undici's FastTimer. `coding/sdk.go` passes the global
+setting separately from the provider SDK `TimeoutMs`; a provider retry override
+therefore cannot shorten the body-idle setting. OpenAI, Anthropic, and
+OpenRouter image SDK requests also have a Node `setTimeout` deadline around
+`fetch` (`pi/node_modules/openai/src/client.ts`,
 `pi/node_modules/@anthropic-ai/sdk/src/client.ts`): the port uses the smaller of
 that SDK deadline and the global header-idle timeout, then switches to the raw
 Undici body-idle delay after headers arrive. In either case every body read
 re-arms the timer, so only silence fails the stream and a stream that keeps
-producing data outlives the timeout. The timer counts time blocked in a body
-read, not wall-clock
-silence: a callback that fires while the consumer is processing re-arms instead
-of cancelling, and the deadline runs from the last delivered bytes, so a loaded
-machine, a GC pause or a slow renderer cannot abort a connection whose bytes
-already arrived. A nil or non-positive global idle setting disables only the
-Undici bound; an SDK header deadline remains independent.
+producing data outlives the timeout.
+
+The timer counts time blocked in a body read, not wall-clock silence: a callback
+that fires while the consumer is processing re-arms instead of cancelling, and
+the deadline runs from the last delivered bytes, so a loaded machine, a GC pause
+or a slow renderer cannot abort a connection whose bytes already arrived. A nil
+or non-positive global idle setting disables only the Undici bound; an SDK
+header deadline remains independent.
 
 Close marks the body closed before stopping the timer; resets check that flag
 again afterwards. A pending read returning buffered bytes after close, or a late
@@ -2257,8 +2268,7 @@ upstream's `AbortSignal.timeout` wraps the headers only) while its body idles
 under the shared guard. The federation stream (`ai/pi_messages.go`) and the
 agent proxy fetch (`agent/proxy.go`) use the global idle timeout. The proxy's
 provider `TimeoutMs` remains local and is not serialized, matching
-`agent/proxy.ts`.
-The port's other idle-timeout wording ("Provider response headers idle",
+`agent/proxy.ts`. The port's other idle-timeout wording ("Provider response headers idle",
 "Provider stream idle") is its own: upstream surfaces undici's
 `Headers Timeout Error`/`Body Timeout Error` instead.
 
@@ -3135,20 +3145,22 @@ successor's lock.
 
 **Session JSONL storage is private to the owning user on POSIX systems.**
 
-Reference: pi v1.4.0 (`4a080252`), `packages/coding-agent/src/core/session-manager.ts`
-and `packages/coding-agent/src/core/session-export.ts` use Node's default
-0666/0777 creation modes, filtered by umask; `packages/coding-agent/src/core/agent-session-runtime.ts`
-preserves imported source modes with `copyFileSync`. Pier creates and rewrites session JSONL files with mode 0600,
-uses mode 0700 for session directories, hardens existing session files and known
-session directories when opened, and does not copy source permissions to imported
-sessions. A directory inherited from a session file opened by explicit path is
-not a pier session store: sessions derived from that manager (new, clone, fork,
-import) keep using it for placement but leave its mode alone, so cloning a
-session from a shared or user-owned directory cannot chmod it (M73).
-Newly created export parent directories use 0700; explicitly selected
-existing export directories retain their permissions. On Windows these POSIX
-mode bits do not replace inherited ACLs; this hardening addresses the reproduced
-permissive-umask exposure on POSIX.
+Reference: pi v1.4.0 (`4a080252`),
+`packages/coding-agent/src/core/session-manager.ts` and
+`packages/coding-agent/src/core/session-export.ts` use Node's default 0666/0777
+creation modes, filtered by umask;
+`packages/coding-agent/src/core/agent-session-runtime.ts` preserves imported
+source modes with `copyFileSync`. Pier creates and rewrites session JSONL files
+with mode 0600, uses mode 0700 for session directories, hardens existing session
+files and known session directories when opened, and does not copy source
+permissions to imported sessions. A directory inherited from a session file
+opened by explicit path is not a pier session store: sessions derived from that
+manager (new, clone, fork, import) keep using it for placement but leave its
+mode alone, so cloning a session from a shared or user-owned directory cannot
+chmod it (M73). Newly created export parent directories use 0700; explicitly
+selected existing export directories retain their permissions. On Windows these
+POSIX mode bits do not replace inherited ACLs; this hardening addresses the
+reproduced permissive-umask exposure on POSIX.
 
 Tests: `TestSessionManagerPersistsFilesWithPrivateMode`,
 `TestOpeningExistingSessionMakesFilePrivate`, `TestForkedSessionUsesPrivateModes`,
@@ -3582,10 +3594,10 @@ Reference: pi v1.4.0 (`4a080252`),
 `packages/coding-agent/src/modes/interactive/session-share.ts`, `bug-report.ts`,
 `interactive-mode.ts`, and `components/settings-selector.ts`. The port omits
 `/share` and `/bug`; it does not upload session transcripts to Radius/GitHub
-Gists or collect and deliver bug report bundles. The associated `sessionShareDestination` setting row is also
-absent because neither destination has an effect here. The live-service and
-sensitive-data consent flows are outside this port. Local HTML export is a
-separate supported operation.
+Gists or collect and deliver bug report bundles. The associated
+`sessionShareDestination` setting row is also absent because neither destination
+has an effect here. The live-service and sensitive-data consent flows are
+outside this port. Local HTML export is a separate supported operation.
 
 ### D317
 
@@ -4152,13 +4164,13 @@ immutable matcher, runs no user code and adds no UI ownership or worker handoff.
 
 Same-process paired scanner measurements on an Intel N150 (three 100-iteration
 runs, warmed) show 20.07–20.25 ms/op unbatched versus 1.27–1.47 ms/op batched
-(medians 20.14 and 1.27), with allocations falling from about 24,700 to 30.
-Five warmed pinned Node runs measured 1.88–1.99 ms/op (median 1.92), so the
-retained fix beats the reference on the reproduced input. Representative JSON (7,424 bytes), valid JSON, normal
-JavaScript and Python showed no meaningful regression in the paired runs.
-This is a bounded improvement, not a claim that every language beats Node.
-Reproduce with `BenchmarkIgnoredIllegalScanner` and
-`node internal/highlight/testdata/ignored-illegals/benchmark.mjs`.
+(medians 20.14 and 1.27), with allocations falling from about 24,700 to 30. Five
+warmed pinned Node runs measured 1.88–1.99 ms/op (median 1.92), so the retained
+fix beats the reference on the reproduced input. Representative JSON (7,424
+bytes), valid JSON, normal JavaScript and Python showed no meaningful regression
+in the paired runs. This is a bounded improvement, not a claim that every
+language beats Node. Reproduce with `BenchmarkIgnoredIllegalScanner` and `node
+internal/highlight/testdata/ignored-illegals/benchmark.mjs`.
 
 Tests: the red-first `TestLongInvalidJSONNumberAllocationBudget` (24,654
 allocations before, budget 256), `TestLongInvalidJSONNumberMatchesReference`,
@@ -4233,11 +4245,11 @@ canonical form (no insignificant whitespace, canonical escapes and number text,
 index keys first, no duplicates, valid UTF-8) and returns an owned copy without
 reparsing; noncanonical or invalid input takes the full parser, so diagnostics
 are unchanged. Small objects check duplicate keys in a fixed array; wider ones
-switch to a set so the check stays linear on hostile input. The conversation benchmark is now 11–12 ms and 24k allocations
-(from 33–38 ms/288k); the normalized fast path also covers whole request bodies
-whose raw tool arguments are already canonical. A 790 KB already-normalized
-body canonicalizes in 2.5 ms (`BenchmarkCanonicalizeNormalizedJSON`) versus
-11–12 ms through the parser.
+switch to a set so the check stays linear on hostile input. The conversation
+benchmark is now 11–12 ms and 24k allocations (from 33–38 ms/288k); the
+normalized fast path also covers whole request bodies whose raw tool arguments
+are already canonical. A 790 KB already-normalized body canonicalizes in 2.5 ms
+(`BenchmarkCanonicalizeNormalizedJSON`) versus 11–12 ms through the parser.
 
 M143 is closed on a fair, realistic baseline rather than the original minimal
 4k body. `BenchmarkMarshalConversationRealistic` builds user/assistant pairs
@@ -4883,11 +4895,12 @@ inside the block. `FileOperations.Order` records the last touch of every path so
 the window outranks the inherited list; inherited entries keep the order of the
 previous, already-sorted details. A caller that builds the exported
 `FileOperations` sets without the mark helpers has no recency to rank, so the
-remaining slots take the sorted paths and the omitted count stays exact. The cap applies to the prose summary and to
-the persisted `details`, which is what the next compaction inherits, so growth
-stops instead of being capped only in the text. Lists at or under the cap are
-byte-identical to upstream, and the file-ops parity fixture keeps exercising
-`ComputeFileLists`/`FormatFileOperations` unchanged.
+remaining slots take the sorted paths and the omitted count stays exact. The cap
+applies to the prose summary and to the persisted `details`, which is what the
+next compaction inherits, so growth stops instead of being capped only in the
+text. Lists at or under the cap are byte-identical to upstream, and the file-ops
+parity fixture keeps exercising `ComputeFileLists`/`FormatFileOperations`
+unchanged.
 
 Measured on the real 2,688-path session: the inherited details alone were 1,386
 read plus 1,397 modified paths (127,540 bytes); the cap renders 100 plus 100 with
@@ -5008,11 +5021,12 @@ is the same one the reference writes whenever a session is created in the TUI.
 The model is the second half of the same difference: the reference's session
 always carries a placeholder model (`id: "unknown"`, `provider: "unknown"`) and
 `get_state` sends it; pier's `HasModel` treats that placeholder as absent, so
-`get_state` omits the optional `model` field (documented in the RPC section
-above) and `compact` fails with "No model selected" where the reference prepares
-the compaction first and reports "Nothing to compact (session too small)" on an
-empty session. `session.model` being `undefined` is unreachable in the
-reference for that reason (core/agent-session.ts only throws when it is).
+`get_state` omits the optional `model` field (documented in [Stdio
+RPC](ARCHITECTURE.md#stdio-rpc)) and `compact` fails with "No model selected"
+where the reference prepares the compaction first and reports "Nothing to
+compact (session too small)" on an empty session. `session.model` being
+`undefined` is unreachable in the reference for that reason
+(core/agent-session.ts only throws when it is).
 
 Reproducer: `printf '%s\n' '{"type":"get_state","id":"1"}'
 '{"type":"get_messages","id":"2"}' | pier --offline --mode rpc --no-mcp
