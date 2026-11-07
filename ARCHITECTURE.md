@@ -5397,7 +5397,6 @@ Tests: `agent/hold_followups_test.go` (queue deferral, continuation) and
 follow-up, a third run carries it only afterwards).
 
 ## Lock inventory
-## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
 Referenced from `AGENTS.md`.
