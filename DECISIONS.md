@@ -108,7 +108,8 @@ admission are covered by D200/D201.
 
 ### D133
 
-**Narrowed: edit preview matches the pin; extension renderer definitions stay out.**
+**Tool renderers stay built-in; the edit preview runs asynchronously as upstream
+does.**
 
 Tool renderers still resolve to built-ins, not extension definitions (D41). The
 synchronous-preview gap is closed: `computeEditsPreview` runs on a worker and
@@ -143,15 +144,16 @@ so `/tui` and exit-replay renderer swaps reach every holder.
 The interactive loop selects over session events, submissions, work completions,
 and `ctx.Done()`. Blocking work runs off-loop; streaming partials coalesce
 latest-wins. Input/signals, selector callbacks, and lifecycle callbacks also
-apply on that loop (stages 3–4). Upstream awaits prompts on the JS event loop.
+apply on that loop (ownership refactor stages 3–4). Upstream awaits prompts on
+the JS event loop.
 D144/D145 define input/render ownership; D196/D197 define queue ordering and
 fairness. Session-selector loader posts recheck their captured load context
 when the owner executes them, so cancellation or refresh also invalidates
 already-queued progress/completions
 (`TestSessionSelectorRejectsPostedResultsAfterCancel`). Status-expiry timers
 also post to that owner; their cancellation check runs inside the posted
-callback (`TestSessionSelectorStatusTimerAppliesOnOwner`).
-[ARCHITECTURE.md](ARCHITECTURE.md) holds the full design.
+callback (`TestSessionSelectorStatusTimerAppliesOnOwner`). The full design is
+in [Runtime structure](ARCHITECTURE.md#runtime-structure).
 
 ### D144
 
@@ -169,11 +171,11 @@ The stdin reader, SIGWINCH watcher, and signal handlers only enqueue. The owner
 loop dispatches input, paints on resize, and handles shutdown; upstream delivers
 these on one JS thread. See D143 for the loop; decoding is consumer-owned.
 Startup screens close their input handoff before stopping the terminal, so an
-already-admitted sender parked on a full queue can return. Otherwise the sole
-stdin reader stayed trapped in the retired callback, disabling input after the
-next screen reused it. `TestStartupLoopReleasesBlockedInputProducer` fills the
-startup queue behind a controlled initial paint and confirms producer release
-on settlement (v1.5.0 `f9a26365` cli/startup-ui.ts ownership handoff).
+already-admitted sender parked on a full queue can return. Before this, the sole
+stdin reader stayed trapped in the retired callback and input stopped working
+once the next screen reused it. `TestStartupLoopReleasesBlockedInputProducer`
+fills the startup queue behind a controlled initial paint and confirms producer
+release on settlement (v1.5.0 `f9a26365` cli/startup-ui.ts ownership handoff).
 
 ### D149
 
@@ -181,10 +183,10 @@ on settlement (v1.5.0 `f9a26365` cli/startup-ui.ts ownership handoff).
 
 `FooterDataProvider.mu` (`coding/footerdata.go`) protects cwd, git paths/branch,
 statuses, and listeners shared by footer rendering and its 500 ms git-HEAD
-watcher. Retirement would require posting poll results to the UI loop and
-delivering listeners outside the lock, a `coding/` change outside the UI
-refactor. The watcher reads git state and calls `Refresh`. See
-[the lock inventory](ARCHITECTURE.md#lock-inventory) for the authoritative inventory.
+watcher, which reads git state and calls `Refresh`. Retiring it would require
+posting poll results to the UI loop and delivering listeners outside the lock,
+a `coding/` change outside the UI refactor. The
+[lock inventory](ARCHITECTURE.md#lock-inventory) is authoritative.
 
 ### D151
 
@@ -329,11 +331,11 @@ Tests: `TestRadiusLoginMenuShimmersOnlyWhileSelected`,
 
 **Home-path completion splits raw input before cleaning.**
 
-Upstream `getFileSuggestions` expands `~` before splitting directory/filter;
-`path.join`/`filepath.Join` clean `~/.` to home, then split home into its parent
-and name. Tab consequently listed `/home` and offered `~/dat/`. Pier splits
-first: trailing `.` filters dotfiles inside home, while `..` clears the filter
-and remains in the suggestion. Upstream has the same bug.
+Upstream `getFileSuggestions` expands `~` before splitting directory and
+filter. `path.join` (like `filepath.Join`) cleans `~/.` to the home directory,
+which then splits into its parent and name, so Tab on `~/.` lists `/home` and
+offers `~/dat/`. Pier splits the raw input first: a trailing `.` filters
+dotfiles inside home, while `..` clears the filter and stays in the suggestion.
 `TestFileCompletionUnderHomeFiltersInsideHome` guards the fix.
 
 ### D158
@@ -433,26 +435,24 @@ context, system prompt, themes, and trust otherwise follow the session project.
 
 **Tool scratch logs are swept to a 256 MB budget.**
 
-Upstream leaves truncated output files to the OS. On this host, one 174 MB
-command persisted for days; after three days, 230 files occupied 442 MB of
-scratch RAM on tmpfs. Pier sweeps oldest-first when creating a log, down to
+Upstream leaves truncated output files to the OS. On the development host, one
+174 MB command persisted for days; after three days, 230 files occupied 442 MB
+of scratch RAM on tmpfs. Pier sweeps oldest-first when creating a log, down to
 256 MB, covering `pi-bash-<id>.log`, `pi-output`, and `pi-powershell` prefixes.
 The file being created and other output files still open by this process,
 unrelated tool logs, and matching directory names are never touched. Closed
-files remain eligible for the budget sweep. Files open by another pier process
-are not visible to this process's active-file registry and remain subject to the
-oldest-first sweep. The model still receives
-"[Output truncated. Full output: <path>]". `TestSweepTempOutputFiles` checks
-exclusions and oldest-first order.
+files remain eligible, and so do files another pier process holds open, since
+the active-file registry is per process. The model still receives "[Output
+truncated. Full output: <path>]". `TestSweepTempOutputFiles` checks exclusions
+and oldest-first order.
 
 The sweep stops at the tool-output prefixes on purpose. MCP output files
 (`pi-mcp-<hex>.txt` and binary resource dumps, written by `SaveMcpToTempFile`
 through the same `utils/output-files.ts` convention) are left to the OS exactly
 as upstream leaves them: they are not swept, are not part of the budget, and a
-sweep triggered by another tool skips them. Extending the sweep to them would
-delete files the model was told it could read back, a further departure this
-port does not need, so a growing MCP scratch directory on tmpfs is accepted and
-matches the reference (CR-072).
+sweep triggered by another tool skips them. Sweeping them would delete files
+the model was told it could read back, so a growing MCP scratch directory on
+tmpfs is accepted, as in the reference (CR-072).
 
 ### D164
 
@@ -497,7 +497,7 @@ without the combined query's final DA1 sentinel. No reply leaves the
 environment/system fallback. D218 covers off-loop combined-query waits.
 
 Tests: `TestBackgroundListenerSeesLateReplyDuringColorQuery`,
-`TestSystemColorQueryDoesNotHideStartupBackgroundReply`, and
+`TestSystemColorQueryDoesNotHideStartupBackgroundReply`,
 `TestBackgroundProbeRoundTripThroughRenderer`,
 `TestRendererColorQueryWorksAfterRestart`, and
 `TestRendererRestoresColorSchemeNotificationsAfterRestart`.
