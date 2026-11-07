@@ -81,8 +81,13 @@ fmt:
 vet:
 	go vet ./...
 
-# What CI runs, minus -race (the test and cross-build jobs).
-check: fmt vet test
+# Report go.mod/go.sum drift (a missing or unused requirement).
+tidy:
+	go mod tidy -diff
+
+# What CI runs, minus -race (the test and cross-build jobs). The tests include
+# internal/docscheck, which keeps DECISIONS.md and the other root docs consistent.
+check: fmt tidy vet test
 
 # Cross-build and cross-vet every OS the port targets (mirrors the CI matrix).
 cross:

@@ -44,11 +44,16 @@ Packages mirror upstream: `ai`, `agent`, `coding` (including `interactive`),
 ## Build and verification
 
 ```sh
-just check                                  # gofmt, vet, tests
+just check                                  # gofmt, go mod tidy, vet, tests
 just cross                                  # cross-build and vet CI targets
 go test -count=1 ./coding -run TestName
 go test -short ./...                       # skips slower real-binary PTY tests
 ```
+
+`internal/docscheck` tests the root documents: D-rows unique, ascending and
+inside the title range, each row naming an existing test or cited by number from
+Go source, every named test defined, `FILE.md#anchor` links resolving, and the
+pin matching. Fix the document, not the check.
 
 Go 1.27 is required. Builds and releases set `CGO_ENABLED=0`; the race gate
 needs cgo enabled (`just test-race` and CI). CI runs the race gate on linux/amd64
