@@ -138,7 +138,7 @@ func blockExtendable(b *Block, src string) bool {
 		return true
 	}
 	switch b.Kind {
-	case BlockSpace, BlockList, BlockQuote:
+	case BlockSpace, BlockList, BlockQuote, BlockLinkDef:
 		return true
 	case BlockCode:
 		return codeBlockOpen(b.Raw)

@@ -29,6 +29,10 @@ const (
 	BlockHTML
 	BlockLatex
 	BlockSpace
+	// BlockLinkDef is a link reference definition (`[x]: /u`). It renders
+	// nothing (marked 18.0.11 def, A414); Text (tag), Href and Title carry the
+	// registered value for the later link resolution.
+	BlockLinkDef
 )
 
 // Block is a block-level element. Blocks form a tree: BlockQuote and BlockList
@@ -44,6 +48,11 @@ type Block struct {
 	// Raw is the block's source text where the projection needs it (code,
 	// html, latex). It is empty when the source slice is not retained.
 	Raw string
+
+	// Href is a link reference definition's target URL (BlockLinkDef).
+	Href string
+	// Title is a link reference definition's optional title (BlockLinkDef).
+	Title string
 
 	// Level is an ATX/setext heading level (1-6).
 	Level int

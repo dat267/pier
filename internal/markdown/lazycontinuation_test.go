@@ -61,6 +61,8 @@ func referenceShapeJoin(blocks []*Block, sep string) string {
 			out += "hr"
 		case BlockHTML:
 			out += "html"
+		case BlockLinkDef:
+			out += "def:" + fmt.Sprintf("%q", b.Text)
 		default:
 			out += fmt.Sprint(b.Kind)
 		}

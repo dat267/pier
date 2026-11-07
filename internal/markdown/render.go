@@ -89,6 +89,9 @@ func (r *Renderer) block(b *Block, width int, next *Block, styleContext *inlineS
 	var lines []string
 
 	switch b.Kind {
+	case BlockLinkDef:
+		// A link reference definition renders nothing (marked's def token).
+
 	case BlockHeading:
 		level := b.Level
 		headingPrefix := strings.Repeat("#", level) + " "

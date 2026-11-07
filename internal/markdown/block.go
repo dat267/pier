@@ -159,6 +159,11 @@ func (l *blockLexer) lexBlock(start int, raw string, ln line) (*Block, int, bool
 		b, next := l.lexHTML(start)
 		return b, next, true
 	}
+	// Link reference definition (before the table/lheading/paragraph branch,
+	// marked 18.0.11 order).
+	if tag, href, title, end, ok := parseLinkDef(l.src, start); ok {
+		return &Block{Kind: BlockLinkDef, Start: start, End: end, Text: tag, Href: href, Title: title, Raw: l.src[start:end]}, end, true
+	}
 	// Indented code.
 	if indentWidth(raw) >= 4 {
 		b, next := l.lexIndentedCode(start)
