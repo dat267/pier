@@ -298,7 +298,7 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D390)
+## Deliberate divergences from pi (D1–D393)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
@@ -5547,6 +5547,61 @@ case-specific entries. The session-resolution child dropped from ~15 s to 0.08 s
 Test: `TestChildProcessesUseTheIsolatedAgentDir` spawns the helper through that
 builder and asserts the child's `GetAgentDir()` is the isolated directory; it
 failed with `/home/dat/.pi/agent` at both sites before the change.
+
+### D392
+
+**The session directory honors the environment variable and the setting.**
+
+Reference: pi v1.5.0 `main.ts` resolves the session directory as
+`--session-dir` (`normalizePath`) ?? `$PI_CODING_AGENT_SESSION_DIR`
+(`expandTildePath`) ?? `settingsManager.getSessionDir()`, and passes the result
+to `createSessionManager`, so the resume picker, `--continue`, `--session-id`
+creation and a fresh run all use it. Pier read only `--session-dir`: a run with
+`PI_CODING_AGENT_SESSION_DIR` or the `sessionDir` setting configured wrote its
+session into the default per-cwd agent directory instead, and `-c`/`-r` searched
+there.
+
+`resolveSessionDirectory` in `cmd/main.go` now applies the reference's
+precedence and expansion, and both the fresh and resume paths take the directory
+from it. An unset configuration still yields the empty string, which keeps the
+per-cwd default under the agent directory.
+
+Tests: `TestResolveSessionDirectoryMatchesTheReferencePrecedence` (setting only,
+environment over setting, flag over both, tilde expansion, unconfigured),
+`TestResumeSessionIDUsesTheConfiguredSessionDir` and
+`TestFreshSessionUsesTheConfiguredSessionDir`. The resume test failed against
+the previous wiring, which created the session under
+`~/.pi/agent/sessions/--<cwd>--`. A rebuilt binary was also compared with the
+reference: a first run and `-c` land in the configured directory for both the
+environment variable and the setting, and `-c` reports the same continued
+session.
+
+### D393
+
+**The startup settings manager still gates the project scope on trust.**
+
+Reference: pi v1.5.0 `main.ts` builds its startup manager as
+`SettingsManager.create(cwd, agentDir)` with no `projectTrusted` option, and
+`fromStorageWithPaths` defaults that to `true`. The startup manager therefore
+reads project `.pi/settings.json` before any trust decision is made, which is
+observable in two ways: `getSessionDir()` returns a project-configured
+`sessionDir` (so `createSessionManager` uses it), and an unreadable project
+settings file is reported as a warning
+(`Warning: Invalid settings file …/.pi/settings.json: …`) before the TUI starts.
+Reproduced against the reference binary for both.
+
+Pier keeps the startup manager project-untrusted so no project value is read
+before the trust decision, which is the stronger boundary. The cost is those two
+observable differences: a project-level `sessionDir` is ignored at startup (the
+runtime manager applies it once the project is trusted, and project settings are
+otherwise still gated as before), and an invalid untrusted project settings file
+produces no startup warning. `--session-dir` and `$PI_CODING_AGENT_SESSION_DIR`
+still outrank any setting and work as the reference's do (D392).
+
+This row records a deliberate trust-policy choice, not a defect to fix: adopting
+the reference's default would read project settings before trust is known, which
+the project trust boundary exists to prevent. Revisit only with an explicit
+decision to match the reference here.
 
 ## Lock inventory
 

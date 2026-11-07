@@ -286,9 +286,16 @@ func run(appName string, args *coding.Args) error {
 	agentDir := coding.GetAgentDir()
 
 	// Bootstrap settings: global settings only, because whether the project's may
-	// be read is exactly what is not decided yet (upstream's
-	// `SettingsManager.create(cwd, agentDir, { projectTrusted: false })`). The
-	// theme and the -r picker run off this manager.
+	// be read is exactly what is not decided yet. The theme and the -r picker run
+	// off this manager.
+	//
+	// Reference: pi v1.5.0 main.ts builds `startupSettingsManager` with
+	// `SettingsManager.create(cwd, agentDir)` and no projectTrusted option,
+	// which defaults the project scope to trusted. That manager both resolves
+	// the session directory (so a project `.pi/settings.json` sessionDir
+	// applies) and reports an unreadable project settings file. Pier gates the
+	// project scope off here so no untrusted project value is read before the
+	// decision; see D393 for the observable differences that costs.
 	projectUntrusted := false
 	settings := coding.NewSettingsManagerFromFiles(cwd, agentDir, coding.SettingsManagerCreateOptions{
 		ProjectTrusted: &projectUntrusted,
@@ -339,10 +346,7 @@ func run(appName string, args *coding.Args) error {
 		}
 	}
 	if sessions == nil {
-		options := &coding.SessionManagerOptions{}
-		if args.SessionDir != nil {
-			options.SessionDir = *args.SessionDir
-		}
+		options := &coding.SessionManagerOptions{SessionDir: resolveSessionDirectory(args, settings)}
 		if args.NoSession || listingModels {
 			persist := false
 			options.Persist = &persist
@@ -994,13 +998,29 @@ var selectResumeSession = func(cwd string, sessionDir string, settings *coding.S
 	return selected, selected != ""
 }
 
+// resolveSessionDirectory is where sessions are stored and looked up
+// (upstream main.ts): --session-dir, then $PI_CODING_AGENT_SESSION_DIR
+// (tilde-expanded), then the settings' sessionDir. Empty keeps the per-cwd
+// default under the agent directory.
+func resolveSessionDirectory(args *coding.Args, settings *coding.SettingsManager) string {
+	if args != nil && args.SessionDir != nil {
+		return *args.SessionDir
+	}
+	if envDir := os.Getenv("PI_CODING_AGENT_SESSION_DIR"); envDir != "" {
+		return coding.ExpandPath(envDir)
+	}
+	if settings != nil {
+		if configured := settings.GetSessionDir(); configured != nil {
+			return *configured
+		}
+	}
+	return ""
+}
+
 // resumeSession opens the session requested by the CLI flags (upstream
 // createSessionManager's session selection).
 func resumeSession(args *coding.Args, cwd string, agentDir string, settings *coding.SettingsManager) (*coding.SessionManager, error) {
-	sessionDir := ""
-	if args.SessionDir != nil {
-		sessionDir = *args.SessionDir
-	}
+	sessionDir := resolveSessionDirectory(args, settings)
 	// Upstream validateSessionIdFlags: --session-id rejects conflicting flags
 	// and invalid id formats before any session is opened.
 	if args.SessionID != nil {
