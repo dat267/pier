@@ -41,6 +41,29 @@ func scopedListPaths(settings *SettingsManager, pick func(*Settings) []string) [
 	return paths
 }
 
+// mergeResourcePaths resolves and deduplicates paths in input order, like
+// upstream's resource-loader.ts mergePaths and getResourcePathKey. Canonical
+// filesystem paths compare equal across relative, absolute and symlink aliases.
+func mergeResourcePaths(cwd string, groups ...[]string) []string {
+	var paths []string
+	seen := make(map[string]struct{})
+	for _, group := range groups {
+		for _, raw := range group {
+			resolved, key := raw, raw
+			if IsLocalPath(raw) {
+				resolved = ResolvePath(raw, cwd, PathInputOptions{Trim: true})
+				key = PathComparisonKey(CanonicalizePath(resolved))
+			}
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			paths = append(paths, resolved)
+		}
+	}
+	return paths
+}
+
 // contextFiles returns the project context files.
 func (o resourceOptions) contextFiles(cwd string, agentDir string) []ContextFile {
 	if o.NoContextFiles {
@@ -54,13 +77,13 @@ func (o resourceOptions) contextFiles(cwd string, agentDir string) []ContextFile
 func (o resourceOptions) skills(cwd string, agentDir string, settings *SettingsManager, trusted bool) LoadSkillsResult {
 	// Settings paths precede the additional CLI paths, as in upstream's
 	// mergePaths([...cliEnabledSkills, ...enabledSkills], additionalSkillPaths).
-	skillPaths := []string{}
+	var settingsPaths []string
 	if !o.NoSkills {
-		skillPaths = append(skillPaths, scopedListPaths(settings, func(settings *Settings) []string {
+		settingsPaths = scopedListPaths(settings, func(settings *Settings) []string {
 			return settings.Skills
-		})...)
+		})
 	}
-	skillPaths = append(skillPaths, o.SkillPaths...)
+	skillPaths := mergeResourcePaths(cwd, settingsPaths, o.SkillPaths)
 	return LoadSkills(LoadSkillsOptions{
 		Cwd: cwd, AgentDir: agentDir, SkillPaths: skillPaths,
 		IncludeDefaults: !o.NoSkills,
@@ -69,13 +92,13 @@ func (o resourceOptions) skills(cwd string, agentDir string, settings *SettingsM
 
 // promptTemplates returns the file-based prompt templates.
 func (o resourceOptions) promptTemplates(cwd string, agentDir string, settings *SettingsManager) LoadPromptTemplatesResult {
-	promptPaths := []string{}
+	var settingsPaths []string
 	if !o.NoPromptTemplates {
-		promptPaths = append(promptPaths, scopedListPaths(settings, func(settings *Settings) []string {
+		settingsPaths = scopedListPaths(settings, func(settings *Settings) []string {
 			return settings.Prompts
-		})...)
+		})
 	}
-	promptPaths = append(promptPaths, o.PromptTemplatePaths...)
+	promptPaths := mergeResourcePaths(cwd, settingsPaths, o.PromptTemplatePaths)
 	loaded := LoadPromptTemplatesWithDiagnostics(LoadPromptTemplatesOptions{
 		Cwd: cwd, AgentDir: agentDir, PromptPaths: promptPaths,
 		IncludeDefaults: !o.NoPromptTemplates,

@@ -95,3 +95,28 @@ func TestResourceSettingsPathsPrecedeCLIPaths(t *testing.T) {
 		t.Errorf("noncolliding CLI prompt = %q, want cli-only", got)
 	}
 }
+
+// TestPromptTemplatePathsDeduplicateAcrossScopes follows pi v1.5.0
+// (f9a26365) core/resource-loader.ts mergePaths, which canonicalizes and drops
+// duplicate paths before any resources are loaded. Listing the same directory
+// in both scope settings must not load the same template twice or report a
+// false name collision.
+func TestPromptTemplatePathsDeduplicateAcrossScopes(t *testing.T) {
+	cwd := t.TempDir()
+	agentDir := t.TempDir()
+	shared := filepath.Join(t.TempDir(), "shared-prompts")
+	writeSettingsFile(t, filepath.Join(shared, "hello.md"), "Hello")
+	writeSettingsFile(t, filepath.Join(cwd, ".pi", "settings.json"),
+		`{"prompts": ["`+shared+`"]}`)
+	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"),
+		`{"prompts": ["`+shared+`"]}`)
+
+	settings := NewSettingsManagerFromFiles(cwd, agentDir, SettingsManagerCreateOptions{})
+	loaded := (resourceOptions{}).promptTemplates(cwd, agentDir, settings)
+	if len(loaded.Templates) != 1 {
+		t.Fatalf("templates = %d, want one", len(loaded.Templates))
+	}
+	if len(loaded.Diagnostics) != 0 {
+		t.Errorf("duplicate path produced diagnostics: %#v", loaded.Diagnostics)
+	}
+}
