@@ -9,7 +9,6 @@ package coding
 import (
 	"bytes"
 	"fmt"
-	"math"
 	"strings"
 	"unicode/utf8"
 
@@ -30,11 +29,12 @@ const (
 	DefaultMaxBytes = 50 * 1024
 	// GrepMaxLineLength is the max chars per grep match line.
 	GrepMaxLineLength = 500
-	// uncappedLines is the largest line limit an int can hold, used where a
-	// tool reads a whole result and limits only by bytes (upstream uses
-	// Number.MAX_SAFE_INTEGER; the platform int is the port's equivalent and
-	// fits a 32-bit int).
-	uncappedLines = math.MaxInt
+	// uncappedLines is where a tool reads a whole result and limits only by
+	// bytes. The value is recorded in the tool's truncation details
+	// (`details.truncation = truncation`), so it is observable: upstream passes
+	// Number.MAX_SAFE_INTEGER at core/tools/{find,ls,grep}.ts, and that number
+	// is what a persisted detail must show.
+	uncappedLines = 9007199254740991
 )
 
 // TruncatedBy identifies which limit fired.
