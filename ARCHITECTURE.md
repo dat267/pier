@@ -298,7 +298,7 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D387)
+## Deliberate divergences from pi (D1–D388)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
@@ -5445,6 +5445,33 @@ Pier now keeps `null` members and sorts with `compareUTF16`.
 
 Test: `TestProjectTrustStoreWriteMatchesReference` pins the exact bytes against
 the reference's own output for the same store.
+
+### D388
+
+**Persisted JSON writers keep `JSON.parse` key order.**
+
+Reference: pi v1.5.0 `settings-manager.ts` `persistScopedSettings`,
+`extensions/mcp/config.ts` `editMcpServers` and `core/models-store.ts`
+`FileModelsStore` all read the file, mutate the parsed object and
+`JSON.stringify` it. Because the parsed value is an ordinary object, JavaScript's
+own property enumeration applies: array-index keys (`"0"`, `"1"`, `"2"`,
+`"10"`, but not `"01"`, `"-1"` or `"4294967295"`) come first in numeric order,
+then the remaining keys keep insertion order.
+
+Pier emitted pure file order for `settings.json`, `mcp.json` and
+`models-store.json`, so a hand-written file with numeric keys was rewritten in a
+different order than the reference produces for the same edit. The order is
+stable and both sides preserve the other keys, so this is a byte-parity defect
+rather than a data one; it also affected the read order pier reported for
+`models-store.json` providers.
+
+All three writers now route their key list through the existing
+`mcpJavaScriptObjectKeyOrder` helper.
+
+Test: `TestPersistedJSONWritersUseJavaScriptKeyOrder` pins the exact bytes for
+each file against the reference's own output (`"1"`, `"2"`, `"10"` before the
+ordinary keys, `"01"`/`"4294967295"` staying in place) and failed on all three
+writers before the fix.
 
 ## Lock inventory
 

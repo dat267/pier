@@ -1250,8 +1250,9 @@ func marshalSettingsIndent(settings *Settings) string {
 }
 
 // settingsRawKeyOrder returns the top-level keys of a JSON settings object in
-// the order the file lists them (upstream merges into the parsed object and
-// writes that order back).
+// the order the reference writes them back: upstream merges into the object
+// JSON.parse produced, whose enumeration puts array-index keys first in numeric
+// order (`"1"`, `"2"`, `"10"`), then the remaining keys in file order.
 func settingsRawKeyOrder(text string) []string {
 	decoder := json.NewDecoder(strings.NewReader(text))
 	decoder.UseNumber()
@@ -1275,7 +1276,7 @@ func settingsRawKeyOrder(text string) []string {
 			return keys
 		}
 	}
-	return keys
+	return mcpJavaScriptObjectKeyOrder(keys)
 }
 
 // settingsDeclarationOrder is the order the typed writer emits known fields.

@@ -34,6 +34,9 @@ func AddMcpServerConfig(path, name string, config json.RawMessage) (bool, error)
 	if err != nil {
 		return false, fmt.Errorf("%s: %w", path, err)
 	}
+	// The reference re-parses the document and stringifies it, so JSON.parse's
+	// enumeration order applies: array-index keys first, in numeric order.
+	keys = mcpJavaScriptObjectKeyOrder(keys)
 	serverKeys := []string{}
 	servers := map[string]json.RawMessage{}
 	if raw, ok := values["mcpServers"]; ok {

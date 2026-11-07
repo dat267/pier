@@ -175,7 +175,10 @@ func parseStoredModels(content *string) (storedModels, []string, error) {
 	if _, err := decoder.Token(); err != io.EOF {
 		return nil, nil, fmt.Errorf("Invalid models store: unexpected content after the object")
 	}
-	return data, order, nil
+	// The reference re-parses and re-stringifies the file, so JSON.parse's
+	// enumeration order (array-index keys first, in numeric order) is what a
+	// write persists.
+	return data, mcpJavaScriptObjectKeyOrder(order), nil
 }
 
 // marshalStoredModels renders models-store.json like JSON.stringify(data, null, 2).
