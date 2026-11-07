@@ -225,8 +225,10 @@ func fenceStart(line string) (marker, info string, ok bool) {
 	return marker, strings.Trim(rest, " \t"), true
 }
 
-// isFenceEnd reports a closing fence: the same character and at least as long
-// as the opener, with nothing but whitespace after.
+// isFenceEnd reports a closing fence. Marked's pattern is
+// `{0,3}\1[~`]* *(?=\n|$)`: after the opener's own run, any run of backticks and
+// tildes, then spaces only. So "```~~~" closes a "```" fence and "```\t" does
+// not.
 func isFenceEnd(line, marker string) bool {
 	i, width := skipIndent(line, 4)
 	if width >= 4 || i >= len(line) || line[i] != marker[0] {
@@ -239,7 +241,10 @@ func isFenceEnd(line, marker string) bool {
 	if j-i < len(marker) {
 		return false
 	}
-	return strings.Trim(line[j:], " \t") == ""
+	for j < len(line) && (line[j] == '~' || line[j] == '`') {
+		j++
+	}
+	return strings.Trim(line[j:], " ") == ""
 }
 
 // fenceIndentCompensation reproduces marked's indentCodeCompensation, which a
