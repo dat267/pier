@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D395)
+# Deliberate divergences from pi (D1–D396)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5397,4 +5397,36 @@ zeros for the unreadable part.
 
 Test: `TestSessionStatsToleratesAnIncompleteAssistantUsage` covers the absent,
 `null` and partial-usage shapes (one assistant message, input tokens 0/0/5).
+
+### D396
+
+**MCP tool frames collapse arguments and preview results like the reference.**
+
+Reference: pi v1.5.0 (f9a26365) `extensions/mcp/tools.ts`
+`createMcpToolRenderers` renders a call through
+`core/tools/render-utils.ts` `formatToolCallWithArgs` (collapsed: the
+`server/tool` label plus `key=value` pairs cut to 100 characters; expanded: one
+`key: value` line per argument) and a result through
+`modes/interactive/components/visual-truncate.ts` `VisualLinePreview`
+(`OUTPUT_PREVIEW_LINES = 5`, `keep: "start"`, `... (N more lines, ctrl+o to
+expand)`, plus `Full output: <path>` while collapsed).
+
+Pier's `agent.AgentTool` carries no renderers, so MCP calls fell back to
+`ToolExecutionComponent.formatToolExecution`: the arguments as pretty-printed
+JSON and every result line. A call with a handful of arguments spanned a dozen
+rows, and a result with one long minified JSON line wrapped across the whole
+screen. `coding/interactive/toolrenderer_mcp.go` ports both halves, and the
+app's session adapter resolves them for an `mcp__` tool from its registered
+`server/tool` label.
+
+Collapsed arguments count UTF-16 code units through `ai.JSSlice`, and the key
+order follows `Object.entries` (array-index names first, then file order), so
+the header is byte-identical to the reference's for the same arguments.
+
+Tests: `TestMcpToolCallFramesCollapseArguments` (collapsed pairs, the 100-unit
+budget, `Object.entries` order against the reference's own output, and the
+expanded indented form) and `TestMcpToolResultFramesLimitVisualLines` (5 wrapped
+lines with the hint, one long line bounded, expanded shows everything, and the
+saved full-output path) and `TestMcpToolFramesReachTheTranscript` (the app's
+adapter resolves the renderers from the tool label).
 

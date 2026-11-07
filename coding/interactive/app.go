@@ -30,7 +30,8 @@ import (
 //   D131: process-level effects and resource-loader/extension collaborators are
 //   injected seams.
 //   D133: the app's transcript session adapter returns no extension tool
-//   renderers (D41); built-in tools render through the fallback renderer.
+//   renderers (D41); built-in and MCP tools render through their own
+//   renderers, everything else through the fallback.
 //   D134: the app takes a pre-booted session/settings/runtime (main.ts builds
 //   them); the syntax-grammar load, package-update check and extension rebind
 //   are no-ops (out of scope).
@@ -44,9 +45,19 @@ type AppSession struct {
 
 // GetToolRenderers resolves a tool's custom renderers: an extension-registered
 // definition falling back to the built-in one. Extension mechanics are out of
-// scope (D41), so this always resolves to the built-in renderers.
+// scope (D41), so this resolves to the built-in renderers, and to the MCP
+// renderers for an MCP tool (extensions/mcp/tools.ts registers them with the
+// tool definition upstream).
 func (s *AppSession) GetToolRenderers(toolName string) *ToolRenderers {
-	return WithBuiltInRenderers(toolName, nil)
+	if renderers := WithBuiltInRenderers(toolName, nil); renderers != nil {
+		return renderers
+	}
+	// An MCP tool's label is `server/tool`; it is what the frame shows.
+	label := ""
+	if tool := s.GetToolDefinition(toolName); tool != nil {
+		label = tool.Label
+	}
+	return mcpToolRenderersFor(toolName, label)
 }
 
 // AppOptions are the booted collaborators the app composes.

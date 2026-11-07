@@ -340,8 +340,13 @@ func jsonObjectKeyOrder(raw json.RawMessage, field string) []string {
 	return mcpJavaScriptObjectKeyOrder(keys)
 }
 
-// mcpJavaScriptObjectKeyOrder matches Object.keys: array-index property names
+// JavaScriptObjectKeyOrder matches Object.keys: array-index property names
 // sort numerically first, followed by other names in their insertion order.
+func JavaScriptObjectKeyOrder(keys []string) []string {
+	return mcpJavaScriptObjectKeyOrder(keys)
+}
+
+// mcpJavaScriptObjectKeyOrder is JavaScriptObjectKeyOrder for the writers here.
 func mcpJavaScriptObjectKeyOrder(keys []string) []string {
 	type indexedKey struct {
 		name  string
