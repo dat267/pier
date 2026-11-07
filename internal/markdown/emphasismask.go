@@ -9,21 +9,53 @@ import (
 // maskEmphasisSource follows Marked 18 Lexer.inlineTokens' anyPunctuation and
 // blockSkip masks. Byte lengths are preserved so delimiter offsets still index
 // the original UTF-8 source, rather than JavaScript's UTF-16 source.
+//
+// It copies only when it masks: a span with nothing to mask returns src
+// itself, and a pass that masks builds its result once. The former
+// []byte/string round trips were half of this function's profile on the
+// streaming path (BenchmarkMarkdownStreamAppend, BenchmarkInlineIsolated).
 func maskEmphasisSource(src string) string {
-	masked := []byte(src)
+	return maskBlockSkip(maskEscapedPunctuation(src))
+}
+
+// maskEscapedPunctuation replaces each backslash escape of punctuation or a
+// symbol (the backslash and the escaped character's bytes) with '+'.
+func maskEscapedPunctuation(src string) string {
+	var out strings.Builder
+	last := 0
 	for i := 0; i+1 < len(src); i++ {
 		if src[i] != '\\' {
 			continue
 		}
 		next, size := utf8.DecodeRuneInString(src[i+1:])
-		if unicode.IsPunct(next) || unicode.IsSymbol(next) {
-			for end := i + 1 + size; i < end; i++ {
-				masked[i] = '+'
-			}
-			i--
+		if !unicode.IsPunct(next) && !unicode.IsSymbol(next) {
+			continue
 		}
+		if out.Len() == 0 {
+			out.Grow(len(src))
+		}
+		out.WriteString(src[last:i])
+		end := i + 1 + size
+		for range end - i {
+			out.WriteByte('+')
+		}
+		last = end
+		i = end - 1
 	}
-	source := string(masked)
+	if last == 0 {
+		return src
+	}
+	out.WriteString(src[last:])
+	return out.String()
+}
+
+// maskBlockSkip masks code spans, autolink-shaped `<...>` runs and inline
+// links as '[' 'a'... ']' so emphasis delimiters inside them are skipped. It
+// reads source (the escape-masked text) while writing a separate result, so a
+// mask never feeds back into the scan.
+func maskBlockSkip(source string) string {
+	var out strings.Builder
+	last := 0
 	for i := 0; i < len(source); i++ {
 		end := -1
 		switch source[i] {
@@ -40,16 +72,28 @@ func maskEmphasisSource(src string) string {
 		case '[':
 			end = emphasisLinkMaskEnd(source, i)
 		}
-		if end > i {
-			masked[i] = '['
-			for j := i + 1; j < end-1; j++ {
-				masked[j] = 'a'
-			}
-			masked[end-1] = ']'
-			i = end - 1
+		if end <= i {
+			continue
 		}
+		if out.Len() == 0 {
+			out.Grow(len(source))
+		}
+		out.WriteString(source[last:i])
+		if end-i > 1 {
+			out.WriteByte('[')
+			for range end - i - 2 {
+				out.WriteByte('a')
+			}
+		}
+		out.WriteByte(']')
+		last = end
+		i = end - 1
 	}
-	return string(masked)
+	if last == 0 {
+		return source
+	}
+	out.WriteString(source[last:])
+	return out.String()
 }
 
 // Marked's blockSkip code alternative requires non-backtick content followed
