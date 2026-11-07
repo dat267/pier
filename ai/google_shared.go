@@ -230,7 +230,9 @@ func ConvertGoogleMessages(model *Model, context TranscriptContext) ([]GoogleCon
 	// sent as systemInstruction.
 	collapsed := CollapseSystemMessages(context)
 	conversation := WithoutInitialSystemMessage(collapsed.Messages)
-	var contents []GoogleContent
+	// The reference builds `const contents: Content[] = []`, so an empty
+	// transcript writes `"contents": []`, not `null` (A419).
+	contents := []GoogleContent{}
 
 	normalizeToolCallID := func(id string, _ *Model, _ *AssistantMessage) string {
 		if !RequiresToolCallID(model.ID) {
