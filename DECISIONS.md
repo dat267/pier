@@ -1527,7 +1527,9 @@ whose message JSON the typed decoder would reject (a malformed block field, an
 invalid number), the listing may still report that message's metadata where
 upstream's `parseSessionEntryLine` would drop the entry. Valid sessions list
 identically; `TestScanListingMessageMatchesTypedDecode` pins the agreement for
-the shapes both accept. The lazy loader's `scanSessionLine` is stricter: its
+the shapes both accept.
+
+The lazy loader's `scanSessionLine` is stricter: its
 message member must be strictly valid JSON, or the line falls back to the
 typed decoder and is dropped like upstream's `JSON.parse`. It previously used
 a bracket counter that accepted invalid escapes, raw control characters,
@@ -1558,7 +1560,7 @@ request with `Messages with role 'tool' must be a response to a preceding
 message with 'tool_calls'` (request reproduced from the 100 MiB session: one
 orphan tool result).
 
-`ConvertToLlm` now holds converted custom messages while an assistant message's
+`ConvertToLlm` holds converted custom messages while an assistant message's
 tool calls are unanswered and emits them after the results, mirroring the
 transform's existing transparency for system messages. Genuine user messages
 are untouched (they still interrupt tool flow through the transform). The note
@@ -1667,15 +1669,15 @@ italic/bold/underline, `addition`/`deletion`->
 theme palette (D154).
 
 The reference builds highlight.js's HTML and then re-parses it; the port's
-`highlight` package already returns the same scope tree, so `renderHighlightedNodes`
-walks the tree directly and skips the HTML round-trip (equivalent, since the
-HTML walk was exactly escape-then-unescape). On the 10.9 KB
-`internal/highlight/testdata/sample_big.go`, the wired path measures 1.86 ms (5.86 MB/s)
-against the reference's JS wired path at 3.20 ms (3.42 MB/s) in the same
-session, so that stall does not return, and the port has no third-party
-dependency:
-`github.com/alecthomas/chroma/v3` and its `dlclark/regexp2` indirect dependency
-stay removed, keeping the binary and startup gains that removal produced.
+`highlight` package already returns the same scope tree, so
+`renderHighlightedNodes` walks the tree directly and skips the HTML round-trip
+(equivalent, since the HTML walk was exactly escape-then-unescape). On the 10.9
+KB `internal/highlight/testdata/sample_big.go`, the wired path measures 1.86 ms
+(5.86 MB/s) against the reference's JS wired path at 3.20 ms (3.42 MB/s) in the
+same session, so the stall does not return. The port uses no third-party
+highlighter: `github.com/alecthomas/chroma/v3` and its indirect
+`dlclark/regexp2` dependency stay removed, keeping the binary-size and startup
+gains of their removal.
 
 Auto-detection follows `core.js highlightAuto`: relevance first, then the base
 language of a `supersetOf` pair (Arduino prefers C++), then the reference's
@@ -1758,17 +1760,18 @@ queues the first round.
 `get_goal` is the only other tool. `DesiredToolNames` keeps `set_goal` always
 active and `get_goal` only while a goal is pursued.
 
-All three `set_goal` properties explicitly accept null, while remaining optional.
-Reproducer: a caller exposes every property as required without strict-schema
-conversion, forcing a non-null `status` alongside a new `objective`; execution
-rejects both and retries cannot express the intended call. Nullable properties
-let that caller send `{"objective":"fix it","status":null,"blocked_reason":null}`.
-The reverse ends a goal with a null objective. Exactly one nonempty objective or
-status is still required; two active values and two null values remain errors.
-The regression test exercises both strict and non-strict Responses declarations
-with all properties required, normal agent validation, and execution. The
-upstream reference is the extension's separate create/update tools above, not a
-pi built-in tool.
+All three `set_goal` properties explicitly accept null, while remaining
+optional. Reproducer: a caller exposes every property as required without
+strict-schema conversion, forcing a non-null `status` alongside a new
+`objective`; execution rejects both and retries cannot express the intended
+call. Nullable properties let that caller send
+`{"objective":"fix it","status":null,"blocked_reason":null}`. The reverse ends a
+goal with a null objective. Exactly one nonempty objective or status is still
+required; two active values and two null values remain errors. The regression
+test exercises both strict and non-strict Responses declarations with all
+properties required, normal agent validation, and execution. The upstream
+counterpart is the extension's separate create/update tools, not a pi built-in
+tool.
 
 ### D235
 
@@ -1862,24 +1865,21 @@ subset.
 
 **The unreachable reference packages are removed from the tree.**
 
-Reference: pi v1.4.0 `packages/{chord,durable,telemetry}`; the `client`,
-`protocol` and `server` packages were already replaced by the typed host before
-v1.3.0. The Go port had a counterpart for these and for the already-removed
-`client`/`protocol`/`server` packages, but none is reachable from the built CLI:
-`go list -deps github.com/dat267/pier` never pulls in `chord`,
+Reference: pi v1.4.0 `packages/{chord,durable,telemetry}`; upstream's typed
+host had already replaced its `client`, `protocol` and `server` packages before
+v1.3.0. The port had counterparts for all of them, but none is reachable from
+the built CLI: `go list -deps github.com/dat267/pier` never pulls in `chord`,
 `chord/{delta,services,facets}`, `client`, `protocol`, `server`,
-`server/testing`, `telemetry` or `durable`. The CLI's only consumers are the
-interactive, print and RPC modes over `ai`/`agent`/`coding`/`tui`/`mcp`; the
-chord transport belongs to the durable remote-execution host, which the CLI does
-not run, and upstream's typed-host rewrite already replaced those packages
-(see Git history). `telemetry` is ported but imported by nothing:
-upstream `ai` only carries an optional `telemetryContext`, which the port does
-not set.
+`server/testing`, `telemetry` or `durable`. The CLI runs the interactive, print
+and RPC modes over `ai`/`agent`/`coding`/`tui`/`mcp`; the chord transport
+belongs to the durable remote-execution host, which the CLI does not run.
+`telemetry` was ported but imported by nothing: upstream `ai` only carries an
+optional `telemetryContext`, which the port does not set.
 
 The packages and their tests are removed from `main` and preserved on the
-`unwired-packages` branch, which points at the pre-removal commit. `go mod
-tidy` drops the dependencies they alone used (`github.com/sgtdi/fswatcher`,
-`modernc.org/sqlite`). Later D-rows that describe
+`unwired-packages` branch, which points at the pre-removal commit.
+`go mod tidy` drops the dependencies they alone used
+(`github.com/sgtdi/fswatcher`, `modernc.org/sqlite`). Later D-rows that describe
 those packages are historical, not a description of the current tree.
 
 Reintroducing any of them is a feature decision, not a port fix: wire it into a
@@ -1994,8 +1994,7 @@ backpressure, and the diagnostics upstream would redirect are written to stderr
 directly (`cmd/main.go`, `coding.FormatCLIDiagnostic`). The `--resume` picker,
 which upstream's takeover would also send to stderr, instead draws on stderr for
 the explicit headless flags (`--print`, `--mode json`) and on stdout otherwise
-(`cmd.sessionPickerOutput`). `restoreStdout` has no
-counterpart.
+(`cmd.sessionPickerOutput`). `restoreStdout` has no counterpart.
 
 ### D242
 
