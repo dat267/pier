@@ -258,7 +258,11 @@ type StdinBuffer struct {
 	// flushedHead holds what a deadline flush just released when it could still
 	// be an SGR mouse head. Late tails may arrive in several reads or share a
 	// read with more reports; reassemble them before dispatch (D169).
-	flushedHead         string
+	flushedHead string
+	// rejoinedHead is the flushed head rejoined at the front of buffer. It was
+	// already dispatched, so it is dropped again once the buffer can no longer
+	// become a mouse report.
+	rejoinedHead        string
 	pendingCodepoint    int
 	hasPendingCodepoint bool
 }
@@ -327,8 +331,9 @@ func (b *StdinBuffer) process(str string) {
 		head := b.flushedHead
 		b.flushedHead = ""
 		joined := head + str
-		if str != "" && (mouseReportPrefixRegex.MatchString(joined) || mouseReportHeadRegex.MatchString(joined)) {
+		if str != "" && b.buffer == "" && couldBeMouseReport(joined) {
 			str = joined
+			b.rejoinedHead = head
 		}
 	}
 
@@ -344,8 +349,16 @@ func (b *StdinBuffer) process(str string) {
 	}
 
 	b.buffer += str
+	if head := b.rejoinedHead; head != "" && !couldBeMouseReport(b.buffer) {
+		b.rejoinedHead = ""
+		if startsWith(b.buffer, head) {
+			// The tail is ordinary input after a dispatched Escape (D169).
+			b.buffer = b.buffer[len(head):]
+		}
+	}
 
 	if b.pasteMode {
+		b.rejoinedHead = ""
 		b.pasteBuffer.WriteString(b.buffer)
 		b.buffer = ""
 		b.finishPasteIfAvailable()
@@ -353,6 +366,7 @@ func (b *StdinBuffer) process(str string) {
 	}
 
 	if startIndex := indexOf(b.buffer, bracketedPasteStart); startIndex != -1 {
+		b.rejoinedHead = ""
 		if startIndex > 0 {
 			beforePaste := b.buffer[:startIndex]
 			sequences, _ := extractCompleteSequences(beforePaste)
@@ -379,6 +393,9 @@ func (b *StdinBuffer) process(str string) {
 
 	sequences, remainder := extractCompleteSequences(b.buffer)
 	b.buffer = remainder
+	if len(sequences) > 0 {
+		b.rejoinedHead = ""
+	}
 
 	for _, sequence := range sequences {
 		b.emitDataSequence(sequence)
@@ -490,7 +507,13 @@ func (b *StdinBuffer) FlushExpired(now time.Time) []string {
 	}
 	sequence := b.buffer
 	b.rememberFlushedHead(sequence)
+	if b.rejoinedHead == stdinEscape && sequence == stdinEscape+"[" {
+		// A lone "[" typed after a dispatched Escape is text until "<" makes
+		// it a mouse head; keep the head for a late "<..." tail (D169).
+		sequence = "["
+	}
 	b.buffer = ""
+	b.rejoinedHead = ""
 	b.pendingCodepoint = 0
 	b.hasPendingCodepoint = false
 	if len(sequence) > 2 && isControlString(sequence) {
@@ -517,6 +540,12 @@ func isControlString(sequence string) bool {
 		startsWith(sequence, stdinEscape+"_")
 }
 
+// couldBeMouseReport reports whether s is an SGR mouse report, possibly
+// followed by more input, or a prefix of one.
+func couldBeMouseReport(s string) bool {
+	return mouseReportPrefixRegex.MatchString(s) || mouseReportHeadRegex.MatchString(s)
+}
+
 // rememberFlushedHead notes a flushed sequence that a following tail may
 // complete (see flushedHead).
 func (b *StdinBuffer) rememberFlushedHead(sequence string) {
@@ -534,6 +563,7 @@ func (b *StdinBuffer) Flush() []string {
 	sequences := []string{b.buffer}
 	b.rememberFlushedHead(b.buffer)
 	b.buffer = ""
+	b.rejoinedHead = ""
 	b.pendingCodepoint = 0
 	b.hasPendingCodepoint = false
 	return sequences
@@ -545,6 +575,7 @@ func (b *StdinBuffer) Clear() {
 	b.buffer = ""
 	b.utf8Pending = ""
 	b.flushedHead = ""
+	b.rejoinedHead = ""
 	b.pasteMode = false
 	b.pasteBuffer = nil
 	b.pasteSearchFrom = 0

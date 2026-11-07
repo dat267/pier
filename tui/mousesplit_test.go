@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"slices"
 	"testing"
 	"time"
 )
@@ -161,6 +162,42 @@ func TestTruncatedMouseReportIsConsumed(t *testing.T) {
 	for _, text := range []string{"[", "[65;59", "<65;59;42M", "hello[<65"} {
 		if screen.isMouseSequence(text) {
 			t.Errorf("%q was swallowed as a mouse fragment", text)
+		}
+	}
+}
+
+// D169: rejoin a flushed ESC only while the tail can still become a mouse
+// report. Typing "[200~" after a dispatched Escape is text in upstream
+// src/stdin-buffer.ts (pi v1.5.0), so it must neither duplicate the ESC into
+// a CSI nor open a bracketed paste that swallows the Enter after it.
+func TestExpiredEscapeHeadReleasesNonMouseTail(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		chunks []string
+		want   []string
+	}{
+		{"paste start", []string{"[", "2", "00~\r"}, []string{"[", "2", "0", "0", "~", "\r"}},
+		{"arrow", []string{"[", "A"}, []string{"[", "A"}},
+		{"one read", []string{"[A"}, []string{"[", "A"}},
+		{"diverging field", []string{"[<", "0;x"}, []string{"[", "<", "0", ";", "x"}},
+		{"bracket then pause", []string{"[", "", "a"}, []string{"[", "a"}},
+	} {
+		buffer := NewStdinBuffer(StdinBufferOptions{})
+		var got []string
+		buffer.OnData = func(sequence string) { got = append(got, sequence) }
+		buffer.ProcessString("\x1b")
+		deadline, _ := buffer.PendingTimeout()
+		flushed := buffer.FlushExpired(deadline)
+		for _, chunk := range tc.chunks {
+			if chunk == "" { // the deadline passes
+				deadline, _ := buffer.PendingTimeout()
+				got = append(got, buffer.FlushExpired(deadline)...)
+				continue
+			}
+			buffer.ProcessString(chunk)
+		}
+		if len(flushed) != 1 || flushed[0] != "\x1b" || !slices.Equal(got, tc.want) {
+			t.Errorf("%s: flushed %q, then %q; want %q", tc.name, flushed, got, tc.want)
 		}
 	}
 }

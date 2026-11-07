@@ -568,7 +568,10 @@ same failure.
 
 Pier remembers a flushed potential head (ESC, `\x1b[`, or truncated
 `\x1b[<...`) and rejoins valid continuations across multiple reads, including
-bursts with subsequent reports or keys. Unrelated input clears the head. AltScreen
+bursts with subsequent reports or keys. Unrelated input clears the head, and a
+rejoined head is dropped again once the buffer can no longer become a report, so
+typing `[200~` or `[A` after Escape stays text; a lone `[` that times out is
+released as text too. AltScreen
 also accepts ESC-less reports and consumes truncated fragments. An Android
 `books` replay reproduced `64;11;24M` leaking into the old editor; the fixed
 binary consumed the burst and stayed in alternate screen. An Escape already
@@ -578,6 +581,7 @@ Tests: `TestSplitMouseReportAcrossTheDeadline`,
 `TestExpiredMouseHeadRejoinsWheelBurst`,
 `TestExpiredMouseTailReassemblesAcrossReads`,
 `TestExpiredMouseReportRejoinsAtEveryBoundary`,
+`TestExpiredEscapeHeadReleasesNonMouseTail`,
 `TestOrphanedMouseReportIsStillDispatched`, and
 `TestTruncatedMouseReportIsConsumed`.
 
