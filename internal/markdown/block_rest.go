@@ -238,26 +238,62 @@ func hasPrefixFold(value, prefix string) bool {
 func (l *blockLexer) lexIndentedCode(start int) (*Block, int) {
 	src := l.src
 	at := start
-	var sb strings.Builder
+	type codeLine struct {
+		text string
+		end  int
+	}
+	var lines []codeLine
 	for at < len(src) {
 		ln := nextLine(src, at)
-		if isBlankLine(ln.text) {
-			sb.WriteByte('\n')
-			at = ln.next
-			continue
-		}
-		if indentWidth(ln.text) < 4 {
+		if !isBlankLine(ln.text) && indentWidth(ln.text) < 4 {
 			break
 		}
-		sb.WriteString(stripIndent(ln.text, 4))
-		sb.WriteByte('\n')
+		lines = append(lines, codeLine{ln.text, ln.next})
 		at = ln.next
 	}
-	body := strings.TrimRight(sb.String(), "\n")
-	if body != "" && strings.HasSuffix(src[start:at], "\n") {
-		body += "\n"
+	// The reference runs the raw through `te` (marked 18.0.11): trailing
+	// blankish pieces are cut from the raw when two or more of them follow the
+	// last content line. The pieces are the lines plus the empty piece that a
+	// final newline contributes, so `    code\n \n` (a whitespace-only line
+	// plus the final newline) loses both, while a single final newline stays
+	// in the text (`    indented\n` keeps `text: "indented\n"`).
+	trailing := 0
+	for trailing < len(lines) && isBlankLine(lines[len(lines)-1-trailing].text) {
+		trailing++
 	}
-	return &Block{Kind: BlockCode, Start: start, End: at, Body: body, Raw: src[start:at]}, at
+	synthetic := at > start && src[at-1] == '\n'
+	pieces := trailing
+	if synthetic {
+		pieces++
+	}
+	kept := len(lines)
+	end := at
+	var body string
+	if pieces >= 2 {
+		kept -= trailing
+		if kept > 0 {
+			end = lines[kept-1].end - 1 // without the newline the cut follows
+		} else {
+			end = start
+		}
+		for _, line := range lines[:kept] {
+			if len(body) > 0 {
+				body += "\n"
+			}
+			body += stripIndent(line.text, 4)
+		}
+	} else {
+		for _, line := range lines {
+			if len(body) > 0 {
+				body += "\n"
+			}
+			body += stripIndent(line.text, 4)
+		}
+		if synthetic {
+			body += "\n"
+		}
+	}
+	return &Block{Kind: BlockCode, Start: start, End: end, Body: body, Raw: src[start:end]}, end
 }
 
 func stripIndent(line string, width int) string {
