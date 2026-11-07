@@ -535,11 +535,13 @@ func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer
 	} else {
 		credentials = NewAuthStorage(authPath)
 	}
+	// The reference's createAuthCheckModelRuntime (cli/auth-check.ts) creates
+	// the runtime without a modelsPath override, so models.json providers are
+	// part of the check exactly as they are for print-api-key.
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
 		Credentials:       credentials,
 		AllowModelNetwork: false,
 		RefreshOnCreate:   &refreshOnCreate,
-		DisableModelsJSON: true,
 	})
 	invalid := func() AuthCheckResult {
 		resolved := provider

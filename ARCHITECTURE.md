@@ -298,7 +298,7 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D389)
+## Deliberate divergences from pi (D1–D390)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
@@ -5494,6 +5494,32 @@ Test: `TestCanonicalizePathMatchesRealpathOnRelativeInput` pins the absolute
 result for `""`, `"."`, `".."`, `"sub"`, `"./sub"` and `"sub/"`, checks that two
 spellings of one directory compare equal, and keeps an already absolute path
 unchanged as the control.
+
+### D390
+
+**`auth check` sees `models.json` providers, like the reference.**
+
+Reference: pi v1.5.0 `cli/auth-check.ts` `createAuthCheckModelRuntime` calls
+`ModelRuntime.create` with only `credentials`, `modelsStore` and
+`allowModelNetwork`, so the runtime loads the default `models.json` and a
+provider declared there is found by `checkProviderAuth`. Pier's auth-check
+runtime passed `DisableModelsJSON: true` (added with the `pi auth` subcommands),
+so `pi auth check --provider <models.json provider>` reported
+`provider_not_found` with exit 1 while `pi auth print-api-key` for the same
+provider resolved its literal, `$ENV` or `!command` key: the two subcommands
+disagreed about which providers exist. `auth check --model <provider>/<id>` for
+such a provider also failed with `invalid_state` and exit 2.
+
+Pier now builds the check runtime the way the reference does. The initial
+catalog refresh stays off (`RefreshOnCreate: false`), matching
+`refreshOnCreate: false`, so the check neither touches the network nor merges a
+`models-store.json` overlay the reference would not have.
+
+Test: `TestAuthCheckSeesModelsJSONProviders` covers a literal key, an `$ENV` key,
+a provider without a key (`credentials_not_configured`, exit 1) and the
+`--model` form; all four failed with `provider_not_found` before the fix. A
+rebuild was also compared against the reference binary: eight `auth check` /
+`print-api-key` cases now match on stdout and exit code.
 
 ## Lock inventory
 
