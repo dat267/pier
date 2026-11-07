@@ -298,7 +298,7 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D385)
+## Deliberate divergences from pi (D1–D386)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
@@ -5395,6 +5395,32 @@ has answered it, then delivers them as their own run:
 Tests: `agent/hold_followups_test.go` (queue deferral, continuation) and
 `coding/goal_followup_hold_test.go` (two goal rounds complete without the
 follow-up, a third run carries it only afterwards).
+
+### D386
+
+**HTML export substitutes template placeholders literally.**
+
+Reference: pi v1.5.0 `packages/coding-agent/src/core/export-html/index.ts`
+builds the document with `template.replace("{{HIGHLIGHT_JS}}", hljsJs)` and
+friends. `String.replace` with a string pattern expands `$` replacements in the
+*replacement* text, and the pinned bundles contain them: the highlight bundle's
+CSS-selector character class includes `$&`, and `template.js` writes the footer
+cost as `$${totalCost.toFixed(3)}`. The reference's own export therefore embeds
+the literal text `{{HIGHLIGHT_JS}}` inside its highlighter (in place of `$&`) and
+exports a cost line reading `${totalCost.toFixed(3)}`, which is a
+`ReferenceError` for the undefined identifier `totalCost` when the document
+renders.
+
+Pier substitutes with `strings.Replace`, so the injected bytes are exactly the
+bundled bytes: the `$&` selector survives, no placeholder text remains in the
+document, and the literal `$${totalCost…}` is preserved for the footer renderer.
+The exported HTML is still self-contained; it differs from the reference's
+corrupted output only where the reference lost bytes. This is an intentional
+export-fidelity divergence.
+
+Tests: `TestExportSessionToHTML` asserts the document contains no
+`{{HIGHLIGHT_JS}}` and keeps both `$&` and `$${totalCost.toFixed(3)}` byte for
+byte.
 
 ## Lock inventory
 

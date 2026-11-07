@@ -256,6 +256,17 @@ func TestExportSessionToHTML(t *testing.T) {
 			t.Errorf("placeholder %s not substituted", placeholder)
 		}
 	}
+	// JS String.replace expands `$` patterns in the replacement, and the pinned
+	// bundles contain them, so the reference's own export loses bytes: its
+	// highlight bundle's `$&` becomes the literal "{{HIGHLIGHT_JS}}" and its
+	// footer `$${totalCost.toFixed(3)}` collapses to `${...}`, an undefined
+	// identifier. Pier substitutes literally (D386).
+	if !strings.Contains(document, `[-+*\/?!$&|:<=>@^~]`) {
+		t.Error("export lost the highlight bundle's $& selector to replacement expansion")
+	}
+	if !strings.Contains(document, "$${totalCost.toFixed(3)}") {
+		t.Error("export lost the footer's literal $${totalCost} to replacement expansion")
+	}
 	// The pinned export bundles Marked's CJK-friendly tokenizer override, which
 	// its template.js applies to emStrong; without it exported emphasis next to
 	// CJK text renders differently from the reference.
