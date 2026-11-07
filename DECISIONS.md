@@ -4472,8 +4472,8 @@ Reference: pi v1.5.0 parses provider/tool JSON fragments with `JSON.parse`,
 which rejects text after the object. `decodeOrderedJSONFields` (shared by
 OpenAI, Bedrock, Mistral, Google, constrained-sampling and system-one paths)
 stopped after the last member, so `{"a":1}]` was accepted and the suffix
-ignored. Require the closing brace and then EOF, allowing only trailing
-whitespace.
+ignored. The decoder now requires the closing brace and then EOF, allowing only
+trailing whitespace.
 
 `TestDecodeOrderedJSONFieldsRejectsTrailing` covers trailing text, a second
 object, a stray delimiter, and trailing whitespace; existing provider goldens
@@ -4487,8 +4487,8 @@ Reference: pi v1.5.0 streams tool arguments through `ToolCallArgumentsStream`;
 the UI still receives a delta event for every provider chunk. The port's
 `UpdateArgs` marked the display pending unconditionally, so each render
 re-decoded and rebuilt the full argument preview even when the throttled
-preview bytes had not changed. Compare `json.RawMessage`/`[]byte` arguments and
-return before invalidating when they are identical.
+preview bytes had not changed. It now compares `json.RawMessage`/`[]byte`
+arguments and returns before invalidating when they are identical.
 
 A repeated 1 MiB write argument rendered 100 times: 6.53 s and 7.56 GB allocated
 before, 86 ms and 70 MB after. The equality check preserves every changed
@@ -4501,9 +4501,9 @@ update; `TestUpdateArgsSkipsUnchangedRawMessage` covers both paths and
 
 Every assistant update built a fresh `map[assistantBlockKey]tui.Component` for
 the current block set, even though the previous map was only read to reuse
-Markdown instances. Alternate between two maps and `clear` the older one; the
-old map's components stay referenced for one generation so lookups remain
-valid, then are released. No output changes.
+Markdown instances. The port now alternates between two maps and calls `clear`
+on the older one; the old map's components stay referenced for one generation so
+lookups remain valid, then are released. No output changes.
 
 Measured on the 100 KiB stream: 77k → 64k allocations and 9–10 ms → 6.0–6.7 ms;
 thinking: 102k → 90k allocations and 10.7–13 ms → 9.1–9.6 ms.
@@ -4562,9 +4562,9 @@ Node's `u`-flag RegExp) against a supported control pattern, and
 
 Reference: pi v1.5.0 `f9a26365`, `packages/ai/catalog/generate.ts` and
 `catalog/providers/openai*.ts`. The checked-in catalog had been generated
-before Terra was added to the catalog source. Regenerate upstream data with
-`node catalog/generate.ts --strict --data-only`, then run
-`scripts/gen_catalog.py`; the resulting catalog adds Terra for OpenAI, Azure
+before Terra was added to the catalog source. Regenerating upstream data with
+`node catalog/generate.ts --strict --data-only` and then running
+`scripts/gen_catalog.py` adds Terra for OpenAI, Azure
 OpenAI Responses, Codex, Bedrock, OpenRouter and gateway providers. The OpenAI
 entry uses the official $1/$5 pricing with a 272k context window; Codex uses a
 500k window. `TestCatalogIncludesGPT61Terra` pins the three first-party
@@ -4617,9 +4617,9 @@ classifier parsers.
 
 **Goal token totals saturate rather than losing budget accounting.**
 
-D223's native goal feature has no counterpart in pinned pi v1.5.0
-(`f9a26365`). Its token accounting follows the positive-usage accumulation of
-the originally ported extension. Pinned `packages/coding-agent/src/core/usage-totals.ts`
+D223's native goal feature has no counterpart in pinned pi v1.5.0 (`f9a26365`).
+Its token accounting follows the positive-usage accumulation of the originally
+ported extension. The pinned `packages/coding-agent/src/core/usage-totals.ts`
 uses JavaScript Number addition, which cannot wrap positive counts negative.
 Pier's per-run goal total and live/replayed cumulative totals saturate at
 MaxInt64 instead. Negative reports remain ignored. Ordinary counts, budget
@@ -4865,30 +4865,30 @@ entries, and extension mechanics are out of scope here (D41). Pier adds
 compacted prefix stops traveling with the file. This is deliberate, so it does
 not claim upstream behavior.
 
-The copied set is exactly the window `ProjectedContextEstimate` reads: the newest
-compaction, the branch entries its `firstKeptEntryId` keeps before it (system
-messages are not replayed there, matching `walkCompactionWindow`), and everything
-after it, including context edits. Entry IDs are preserved so the compaction's
-`firstKeptEntryId` stays valid; parents are re-chained through `setParentID`
-(and `setFirstKeptEntryID` when the compaction points outside the window),
-because a loaded entry marshals its retained JSON line: setting the struct field
-alone leaves the written parent pointing at an entry the window drops, and the
-kept range stops being reachable from the leaf (M221). Re-chaining re-roots the window,
-and a `model_change`/`thinking_level_change` pair is prepended when the window no
-longer contains them, so a resume keeps the current provider, model and effort.
-The new header records the source as `parentSession`, and the same write path as
-a branch fork (`writeForkedSession`) produces the file. A session without a
-compaction has no window to cut, so the whole branch is copied and the context
-still matches. Sessions that do not persist are refused with a status instead of
-silently starting empty.
+The copied set is exactly the window `ProjectedContextEstimate` reads: the
+newest compaction, the branch entries its `firstKeptEntryId` keeps before it
+(system messages are not replayed there, matching `walkCompactionWindow`), and
+everything after it, including context edits. Entry IDs are preserved so the
+compaction's `firstKeptEntryId` stays valid; parents are re-chained through
+`setParentID` (and `setFirstKeptEntryID` when the compaction points outside the
+window), because a loaded entry marshals its retained JSON line: setting the
+struct field alone leaves the written parent pointing at an entry the window
+drops, and the kept range stops being reachable from the leaf (M221).
+Re-chaining re-roots the window, and a `model_change`/`thinking_level_change`
+pair is prepended when the window no longer contains them, so a resume keeps the
+current provider, model and effort. The new header records the source as
+`parentSession`, and the same write path as a branch fork (`writeForkedSession`)
+produces the file. A session without a compaction has no window to cut, so the
+whole branch is copied and the context still matches. Sessions that do not
+persist are refused with a status instead of silently starting empty.
 
 The projection is the contract, not the byte count: the new session's messages
 and token estimate are identical to the source's, verified by
 `TestTailSessionKeepsTheLiveContext` (tool pair, context edit, kept system
 message), `TestTailSessionKeepsTheLiveContextOnAReopenedSession` (loaded entries
 carry their original lines, M221), and
-`TestTailSessionWithoutCompactionCopiesTheBranch`. The command
-path is pinned by `TestTailCommandStartsFromTheLiveContext` and
+`TestTailSessionWithoutCompactionCopiesTheBranch`. The command path is pinned by
+`TestTailCommandStartsFromTheLiveContext` and
 `TestTailCommandNeedsAPersistedSession`. Cold history remains readable only
 through the source session; the tail session is a new starting point, not a
 backup.
@@ -4967,7 +4967,9 @@ prompt.
 
 Every upstream skill fixture now matches, including `skills/multiline-description`
 (the block-scalar case that motivated this row) and each fixture's diagnostic
-wording. Tests: `TestParseFrontmatterBlockScalars`,
+wording.
+
+Tests: `TestParseFrontmatterBlockScalars`,
 `TestParseFrontmatterBlockScalarKeepsStringTypes`,
 `TestLoadSkillWithBlockScalarDescription`, and
 `TestParseFrontmatterBlockScalarsMatchUpstream`.
