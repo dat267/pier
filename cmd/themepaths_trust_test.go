@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"slices"
@@ -21,10 +22,10 @@ import (
 // because createStartupTui reads settingsManager.getThemeSetting(). The CLI
 // --theme values are absent there too: they flow into the trusted runtime's
 // resource loader, and pier follows that order. Pier's startup manager reads
-// the project scope (M249), so themePathsFor must gate the list on trust
-// itself: pre-trust the global scope's values, post-trust the merged ones
-// (upstream deep-merge replaces arrays, so a project `themes` replaces the
-// global one there).
+// the project scope (M249), so themePathsFor gates the list on trust itself:
+// pre-trust it uses the global scope; post-trust it concatenates project paths,
+// agent paths and --theme paths because upstream package-manager.ts resolves
+// both settings scopes as resources.
 func TestThemePathsPreTrustReadTheGlobalScopeOnly(t *testing.T) {
 	agentDir := t.TempDir()
 	cwd := t.TempDir()
@@ -106,6 +107,51 @@ func TestThemePathsPreTrustReadTheGlobalScopeOnly(t *testing.T) {
 	for _, want := range []string{"project", "globalized"} {
 		if !slices.Contains(names, want) {
 			t.Errorf("post-trust themes missing %q: %v", want, names)
+		}
+	}
+}
+
+// Reference: pi v1.5.0 (f9a26365) core/resource-loader.ts mergePaths uses
+// getResourcePathKey before loadThemes, so the same theme path from both scopes
+// is loaded once and does not create a name-collision diagnostic.
+func TestThemePathsDeduplicateAcrossScopes(t *testing.T) {
+	agentDir, cwd := t.TempDir(), t.TempDir()
+	dark, err := os.ReadFile("../coding/interactive/themes/dark.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	themePath := filepath.Join(t.TempDir(), "shared.json")
+	content := strings.Replace(string(dark), `"name": "dark"`, `"name": "scope-shared"`, 1)
+	if err := os.WriteFile(themePath, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	paths, err := json.Marshal([]string{themePath})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, settingsPath := range []string{
+		filepath.Join(agentDir, "settings.json"),
+		filepath.Join(cwd, ".pi", "settings.json"),
+	} {
+		if err := os.MkdirAll(filepath.Dir(settingsPath), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		config := []byte(`{"themes":` + string(paths) + `}`)
+		if err := os.WriteFile(settingsPath, config, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	settings := newStartupSettingsManager(cwd, agentDir)
+	gotPaths := themePathsFor(&coding.Args{}, settings, cwd, true)
+	if len(gotPaths) != 1 {
+		t.Errorf("theme paths = %v, want one canonical path", gotPaths)
+	}
+	boot := interactive.NewThemeBoot()
+	boot.EnableCapabilities()
+	boot.ApplySources(interactive.ThemeSources{AgentDir: agentDir, Cwd: cwd, ThemePaths: gotPaths, Trusted: true})
+	for _, diagnostic := range interactive.ThemeDiagnostics() {
+		if diagnostic.Type == "collision" {
+			t.Errorf("same theme file produced a collision: %+v", diagnostic)
 		}
 	}
 }

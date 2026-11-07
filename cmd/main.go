@@ -795,7 +795,7 @@ func themePathsFor(args *coding.Args, settings *coding.SettingsManager, cwd stri
 	} else if global := settings.GetGlobalSettings(); global != nil {
 		paths = append(paths, global.Themes...)
 	}
-	return coding.ResolveCLIPaths(cwd, paths)
+	return coding.MergeResourcePaths(cwd, paths)
 }
 
 // listModels prints the available-model table (upstream main.ts's --list-models

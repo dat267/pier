@@ -41,10 +41,10 @@ func scopedListPaths(settings *SettingsManager, pick func(*Settings) []string) [
 	return paths
 }
 
-// mergeResourcePaths resolves and deduplicates paths in input order, like
+// MergeResourcePaths resolves and deduplicates paths in input order, like
 // upstream's resource-loader.ts mergePaths and getResourcePathKey. Canonical
 // filesystem paths compare equal across relative, absolute and symlink aliases.
-func mergeResourcePaths(cwd string, groups ...[]string) []string {
+func MergeResourcePaths(cwd string, groups ...[]string) []string {
 	var paths []string
 	seen := make(map[string]struct{})
 	for _, group := range groups {
@@ -83,7 +83,7 @@ func (o resourceOptions) skills(cwd string, agentDir string, settings *SettingsM
 			return settings.Skills
 		})
 	}
-	skillPaths := mergeResourcePaths(cwd, settingsPaths, o.SkillPaths)
+	skillPaths := MergeResourcePaths(cwd, settingsPaths, o.SkillPaths)
 	return LoadSkills(LoadSkillsOptions{
 		Cwd: cwd, AgentDir: agentDir, SkillPaths: skillPaths,
 		IncludeDefaults: !o.NoSkills,
@@ -98,7 +98,7 @@ func (o resourceOptions) promptTemplates(cwd string, agentDir string, settings *
 			return settings.Prompts
 		})
 	}
-	promptPaths := mergeResourcePaths(cwd, settingsPaths, o.PromptTemplatePaths)
+	promptPaths := MergeResourcePaths(cwd, settingsPaths, o.PromptTemplatePaths)
 	loaded := LoadPromptTemplatesWithDiagnostics(LoadPromptTemplatesOptions{
 		Cwd: cwd, AgentDir: agentDir, PromptPaths: promptPaths,
 		IncludeDefaults: !o.NoPromptTemplates,
