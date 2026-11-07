@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/dat267/pier/coding"
@@ -94,5 +95,49 @@ func TestFreshSessionUsesTheConfiguredSessionDir(t *testing.T) {
 	manager := coding.NewSessionManager(t.TempDir(), options)
 	if got := manager.GetSessionDir(); got != dir {
 		t.Errorf("fresh session dir = %q, want %q", got, dir)
+	}
+}
+
+// Reference: pi v1.5.0 main.ts builds `startupSettingsManager` with
+// `SettingsManager.create(cwd, agentDir)`, whose project scope defaults to
+// trusted (core/settings-manager.ts `options.projectTrusted ?? true`). A
+// project `.pi/settings.json` sessionDir therefore picks the startup session
+// directory, an unreadable project file joins the startup diagnostics, and
+// defaultProjectTrust still comes only from the global settings
+// (`getDefaultProjectTrust` reads globalSettings), so a project cannot trust
+// itself.
+func TestStartupSettingsReadTheProjectScopeLikeTheReference(t *testing.T) {
+	agentDir := t.TempDir()
+	t.Setenv("PI_CODING_AGENT_SESSION_DIR", "")
+	writeProject := func(cwd, body string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Join(cwd, ".pi"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(cwd, ".pi", "settings.json"), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	cwd := t.TempDir()
+	fromProject := filepath.Join(t.TempDir(), "from-project")
+	writeProject(cwd, `{"sessionDir": "`+fromProject+`", "defaultProjectTrust": "always"}`)
+	settings := newStartupSettingsManager(cwd, agentDir)
+	if got := resolveSessionDirectory(nil, settings); got != fromProject {
+		t.Errorf("startup sessionDir = %q, want the project's %q", got, fromProject)
+	}
+	if got := settings.GetDefaultProjectTrust(); got != "ask" {
+		t.Errorf("defaultProjectTrust = %q, want the global default ask (a project cannot trust itself)", got)
+	}
+	if diagnostics := coding.CollectSettingsDiagnostics(settings); len(diagnostics) != 0 {
+		t.Errorf("valid project settings reported %v", diagnostics)
+	}
+
+	broken := t.TempDir()
+	writeProject(broken, `{not json`)
+	diagnostics := coding.CollectSettingsDiagnostics(newStartupSettingsManager(broken, agentDir))
+	if len(diagnostics) != 1 || diagnostics[0].Type != "warning" ||
+		!strings.Contains(diagnostics[0].Message, filepath.Join(broken, ".pi", "settings.json")) {
+		t.Errorf("broken project settings diagnostics = %+v, want one project warning", diagnostics)
 	}
 }

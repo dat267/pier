@@ -285,21 +285,9 @@ func run(appName string, args *coding.Args) error {
 	cwd = coding.CanonicalizePath(cwd)
 	agentDir := coding.GetAgentDir()
 
-	// Bootstrap settings: global settings only, because whether the project's may
-	// be read is exactly what is not decided yet. The theme and the -r picker run
-	// off this manager.
-	//
-	// Reference: pi v1.5.0 main.ts builds `startupSettingsManager` with
-	// `SettingsManager.create(cwd, agentDir)` and no projectTrusted option,
-	// which defaults the project scope to trusted. That manager both resolves
-	// the session directory (so a project `.pi/settings.json` sessionDir
-	// applies) and reports an unreadable project settings file. Pier gates the
-	// project scope off here so no untrusted project value is read before the
-	// decision; see D393 for the observable differences that costs.
-	projectUntrusted := false
-	settings := coding.NewSettingsManagerFromFiles(cwd, agentDir, coding.SettingsManagerCreateOptions{
-		ProjectTrusted: &projectUntrusted,
-	})
+	// Startup settings: the theme, the session directory and the -r picker run
+	// off this manager until the trust decision builds the runtime one.
+	settings := newStartupSettingsManager(cwd, agentDir)
 	// The global settings' proxy seeds the HTTP environment before anything
 	// makes a request (upstream applyHttpProxySettings on the bootstrap manager).
 	if global := settings.GetGlobalSettings(); global != nil && global.HTTPProxy != nil {
@@ -422,7 +410,7 @@ func run(appName string, args *coding.Args) error {
 		return trustErr
 	}
 	coding.Time("resolveProjectTrust", coding.TimingMain)
-	// Settings parse errors from the bootstrap pass (global settings) would
+	// Settings parse errors from the startup pass (global and project) would
 	// otherwise be lost when the runtime manager replaces it.
 	bootstrapSettingsDiagnostics := coding.CollectSettingsDiagnostics(settings)
 	// The interactive UI's event loop must never block, so the runtime manager
@@ -996,6 +984,20 @@ var selectResumeSession = func(cwd string, sessionDir string, settings *coding.S
 		Terminal:      tui.NewProcessTerminal(os.Stdin, sessionPickerOutput(headless)),
 	})
 	return selected, selected != ""
+}
+
+// newStartupSettingsManager builds the settings manager that runs before the
+// project trust decision.
+//
+// Reference: pi v1.5.0 main.ts builds `startupSettingsManager` with
+// `SettingsManager.create(cwd, agentDir)` and no projectTrusted option, which
+// defaults the project scope to trusted. A project `.pi/settings.json` therefore
+// sets the startup sessionDir, theme setting and terminal overrides, and its
+// parse errors join the startup diagnostics. Project themes, skills and other
+// resources still wait for the trust decision, and defaultProjectTrust reads
+// only the global settings, so a project cannot trust itself.
+func newStartupSettingsManager(cwd, agentDir string) *coding.SettingsManager {
+	return coding.NewSettingsManagerFromFiles(cwd, agentDir, coding.SettingsManagerCreateOptions{})
 }
 
 // resolveSessionDirectory is where sessions are stored and looked up

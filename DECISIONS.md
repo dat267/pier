@@ -5340,33 +5340,6 @@ reference: a first run and `-c` land in the configured directory for both the
 environment variable and the setting, and `-c` reports the same continued
 session.
 
-### D393
-
-**The startup settings manager still gates the project scope on trust.**
-
-Reference: pi v1.5.0 `main.ts` builds its startup manager as
-`SettingsManager.create(cwd, agentDir)` with no `projectTrusted` option, and
-`fromStorageWithPaths` defaults that to `true`. The startup manager therefore
-reads project `.pi/settings.json` before any trust decision is made, which is
-observable in two ways: `getSessionDir()` returns a project-configured
-`sessionDir` (so `createSessionManager` uses it), and an unreadable project
-settings file is reported as a warning
-(`Warning: Invalid settings file …/.pi/settings.json: …`) before the TUI starts.
-Both reproduce on the reference binary.
-
-Pier keeps the startup manager project-untrusted so no project value is read
-before the trust decision, which is the stronger boundary. The cost is those two
-observable differences: a project-level `sessionDir` is ignored at startup (the
-runtime manager applies it once the project is trusted, and project settings are
-otherwise still gated as before), and an invalid untrusted project settings file
-produces no startup warning. `--session-dir` and `$PI_CODING_AGENT_SESSION_DIR`
-still outrank any setting and work as the reference's do (D392).
-
-This row records a deliberate trust-policy choice, not a defect to fix: adopting
-the reference's default would read project settings before trust is known, which
-the project trust boundary exists to prevent. Revisit only with an explicit
-decision to match the reference here.
-
 ### D394
 
 **An unset `defaultTools` layer keeps the inherited list.**
