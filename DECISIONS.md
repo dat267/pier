@@ -3542,8 +3542,8 @@ Reference: pi v1.4.0 (`4a080252`), `packages/agent/src/agent.ts`
 `processEvents` iterates its live `Set`; if a listener unsubscribes a later
 listener during dispatch, that listener is skipped for the current event (and
 newly added listeners can be visited). Go snapshots listeners under `listenerMu`
-before releasing the lock and invoking callbacks, so subscription
-changes apply to subsequent events only. This is intentional to keep user code
+before releasing the lock and invoking callbacks, so subscription changes apply
+to subsequent events only. This is intentional to keep user code
 outside the mutex and make concurrent subscribe/unsubscribe safe, per the
 single-writer callback ownership rules in `AGENTS.md`.
 
@@ -3569,7 +3569,7 @@ listener in each case.
 **Context token totals follow JavaScript Number precision within Go's int range.**
 
 Reference: pi v1.4.0 (`4a080252`), `packages/ai/src/utils/estimate.ts`
-adds token usage and trailing estimates as JavaScript `Number`s. Go now rounds
+adds token usage and trailing estimates as JavaScript `Number`s. Go rounds
 through `float64` for usage-field sums and context totals, so values above 2^53
 match JavaScript's loss of integer precision rather than retaining exact int64
 arithmetic. The public Go result uses `int`; values beyond that type's range
@@ -3584,15 +3584,16 @@ Reproducers: `TestCalculateContextTokensUsesJSNumberRounding`,
 
 **Read and ls cancellation cannot interrupt synchronous filesystem calls.**
 
-Reference: pi v1.4.0 (`4a080252`), `packages/coding-agent/src/core/tools/read.ts`
-and `ls.ts` install abort listeners while awaiting filesystem operations,
-rejecting with `Operation aborted` as soon as the signal fires. Go's `os.Stat`,
-MIME sniff, `os.ReadFile`, and directory reads are synchronous and cannot be
-interrupted by a context. The read and ls tools now check cancellation after
-filesystem or image-processing boundaries and before returning, preventing a
-canceled operation from later resolving successfully. If a filesystem call is
-blocked, however, the caller still waits for that call to return. Running these
-calls in detached goroutines would leak work and is not done.
+Reference: pi v1.4.0 (`4a080252`),
+`packages/coding-agent/src/core/tools/read.ts` and `ls.ts` install abort
+listeners while awaiting filesystem operations, rejecting with
+`Operation aborted` as soon as the signal fires. Go's `os.Stat`, MIME sniff,
+`os.ReadFile`, and directory reads are synchronous and cannot be interrupted by
+a context. The read and ls tools check cancellation after filesystem or
+image-processing boundaries and before returning, preventing a canceled
+operation from later resolving successfully. If a filesystem call is blocked,
+however, the caller still waits for that call to return. Running these calls in
+detached goroutines would leak work and is not done.
 
 Reproducers: `TestReadToolReturnsAbortWhenCanceledDuringMimeSniff` in
 `coding/read_cancel_unix_test.go` uses a FIFO to cancel during MIME detection,
@@ -3708,7 +3709,7 @@ with more than one remaining message, the later iterations run after the
 clear and survive in both the session queue and the restored compaction
 queue. Pier restores, returns, and leaves every message in the restored queue
 only: the duplication in the multi-message microtask window is a timing
-artifact, not observable behaviour users can rely on, and it would display,
+artifact, not observable behavior users can rely on, and it would display,
 restore and send the same message twice.
 
 Test: `TestCompactionQueueFailureDoesNotDuplicateQueuedMessages`.
@@ -3779,11 +3780,10 @@ Reference: the pinned Anthropic SDK source
 `node_modules/@anthropic-ai/sdk/src/lib/credentials/token-cache.ts` compares a
 cached token's remaining lifetime against the refresh thresholds before reuse.
 Pier's `FederationTokenCache.RefreshBackoff` is a configurable int64 seconds
-value; adding an extreme positive backoff to `now` must not wrap the threshold
+value, and adding an extreme positive backoff to `now` could wrap the threshold
 into the past and make an expired token appear fresh. The comparison uses
-saturating Unix-second addition so a positive backoff that exceeds int64
-forces refresh instead of wrapping into the past and making an expired token
-appear fresh.
+saturating Unix-second addition, so a backoff that exceeds int64 forces a
+refresh.
 
 Test: `TestFederationTokenCacheLargeRefreshBackoffDoesNotReuseExpiredToken`.
 
@@ -3861,10 +3861,10 @@ Test: `TestParseXaiDeviceCodeSaturatesLargeFiniteExpiry`.
 
 Reference: pi v1.4.0 `packages/ai/src/api/mistral-conversations.ts` computes
 `Math.min(promptTokens, Math.max(0, cachedTokens))` after accepting only finite
-numbers. Pier's cached-token count is stored as int64; clamp the finite provider
-number to the known prompt-token bound before conversion so huge values cannot
-wrap negative and become a false zero. Ordinary in-range conversion continues
-to truncate as before.
+numbers. Pier stores the cached-token count as int64 and clamps the finite
+provider number to the known prompt-token bound before conversion, so huge
+values cannot wrap negative and become a false zero. Ordinary in-range
+conversion continues to truncate as before.
 
 Test: `TestMistralStreamClampsLargeCachedTokenUsage`.
 
@@ -3875,7 +3875,7 @@ Test: `TestMistralStreamClampsLargeCachedTokenUsage`.
 Reference: pi v1.4.0 `packages/ai/src/providers/radius-config.ts` validates
 `contextWindow` and `maxTokens` as numbers and preserves them in the model;
 cost tiers likewise carry numeric `inputTokensAbove`. Pier stores these fields
-as int64, so conversion now saturates out-of-range values rather than wrapping
+as int64, so conversion saturates out-of-range values rather than wrapping
 large positive catalog numbers negative. In-range values preserve truncation.
 
 Test: `TestRadiusGatewayConfigSaturatesLargeNumericFields`.
@@ -3886,7 +3886,7 @@ Test: `TestRadiusGatewayConfigSaturatesLargeNumericFields`.
 
 Reference: pi v1.4.0 `packages/coding-agent/src/core/http-dispatcher.ts`
 accepts finite nonnegative JavaScript numbers and floors them. Pier stores the
-setting as int64 milliseconds, so finite values beyond that representation now
+setting as int64 milliseconds, so finite values beyond that representation
 saturate at MaxInt64 rather than wrapping negative and being treated as a
 negative/no-timer setting. Ordinary values retain truncation.
 
@@ -3896,12 +3896,12 @@ Test: `TestHTTPIdleTimeoutUsesJavaScriptNumberParsing`.
 
 **Large finite models.json cache lifetimes and cost thresholds saturate to Go integer bounds.**
 
-Reference: pi v1.4.0 `packages/ai/src/providers/model-schema.ts` accepts positive
-numeric prompt-cache lifetimes and numeric cost-tier thresholds without upper
-bounds; `packages/coding-agent/src/core/provider-composer.ts` carries these
-values into models. Pier stores them as `int` seconds or int64 token thresholds.
-Out-of-range finite values now saturate instead of wrapping negative; ordinary
-in-range values preserve truncation.
+Reference: pi v1.4.0 `packages/ai/src/providers/model-schema.ts` accepts
+positive numeric prompt-cache lifetimes and numeric cost-tier thresholds without
+upper bounds; `packages/coding-agent/src/core/provider-composer.ts` carries
+these values into models. Pier stores them as `int` seconds or int64 token
+thresholds. Out-of-range finite values saturate instead of wrapping negative;
+ordinary in-range values preserve truncation.
 
 Test: `TestModelsJSONSaturatesLargePromptCacheAndCostNumbers`.
 
@@ -3923,10 +3923,10 @@ Test: `TestModelsJSONSaturatesLargeContextAndMaxTokenLimits`.
 
 Reference: pi v1.4.0 `packages/coding-agent/src/core/settings-manager.ts`
 accepts finite numeric settings and clamps them to 1..100; the pinned
-`packages/tui/src/wheel-scroll.ts` accepts finite wheel counts. Pier decodes the JSON number into
-an int before SettingsManager applies that bound, so decoding now saturates
-out-of-range values. This preserves ordinary truncation and lets the configured
-clamp produce the intended maximum.
+`packages/tui/src/wheel-scroll.ts` accepts finite wheel counts. Pier decodes the
+JSON number into an int before SettingsManager applies that bound, so decoding
+saturates out-of-range values. This preserves ordinary truncation and lets the
+configured clamp produce the intended maximum.
 
 Test: `TestSettingsFullscreenWheelScrollLines`.
 
