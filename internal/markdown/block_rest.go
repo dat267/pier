@@ -17,7 +17,7 @@ func interruptsParagraph(line string) bool {
 	if isBlockquoteStart(line) {
 		return true
 	}
-	if _, _, ok := listItemStart(line); ok {
+	if listMarkerInterrupts(line) {
 		return true
 	}
 	if isHTMLBlockStart(line) {
@@ -27,6 +27,35 @@ func interruptsParagraph(line string) bool {
 		return true
 	}
 	return false
+}
+
+// listMarkerInterrupts reports a line whose list marker may interrupt a
+// paragraph. The reference's paragraph rule is
+// ` {0,3}(?:[*+-]|1[.)])[ \t]+[^ \t\n]`, so only an ordered marker numbered 1
+// counts, and the marker must be followed by a non-space character: `text\n2. x`
+// and `text\n1.` stay one paragraph, `text\n1. x` does not.
+func listMarkerInterrupts(line string) bool {
+	_, ordered, ok := listItemStart(line)
+	if !ok {
+		return false
+	}
+	if ordered {
+		// The reference's pattern is `1[.)]`: the literal digit one, so `0. x`
+		// does not interrupt. orderedStart normalizes 0 to 1 for a list's start
+		// number, so the digits are read here instead.
+		markerStart, _ := skipIndent(line, 4)
+		markerEnd := markerStart
+		for markerEnd < len(line) && line[markerEnd] >= '0' && line[markerEnd] <= '9' {
+			markerEnd++
+		}
+		if line[markerStart:markerEnd] != "1" {
+			return false
+		}
+	}
+	// contentIndent is a visual column, so the marker end is what bounds the
+	// content. A marker followed only by spaces has no content to interrupt.
+	markerEnd := markerEndIndex(line)
+	return strings.Trim(line[min(markerEnd, len(line)):], " \t") != ""
 }
 
 func (l *blockLexer) lexParagraph(start, to int) (*Block, int) {
@@ -121,7 +150,26 @@ func (l *blockLexer) lexQuote(start int) (*Block, int) {
 				at = ln.next
 				continue
 			}
-			break
+			// Lazy continuation: the reference's blockquote rule is
+			// /^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+/, and its
+			// `paragraph` is a run of lines that do not start another block
+			// (headings, rules, quotes, fences, lists and HTML do; tables do
+			// not), so a prose line without the `>` marker still belongs to
+			// the quote.
+			if isBlankLine(ln.text) || interruptsQuote(ln.text) || quoteEndsInCode(sb.String()) {
+				break
+			}
+			// The reference indents a setext underline that lacks the `>` marker
+			// (blockquoteSetextReplace turns `\n {0,3}(=+|-+) *` into
+			// `\n    $1`), so a lazy line followed by `===` stays a paragraph
+			// instead of becoming a heading.
+			if _, ok := setextLevel(ln.text); ok {
+				sb.WriteString("    ")
+			}
+			sb.WriteString(ln.text)
+			sb.WriteByte('\n')
+			at = ln.next
+			continue
 		}
 		sb.WriteString(stripBlockquote(ln.text))
 		sb.WriteByte('\n')
@@ -133,6 +181,47 @@ func (l *blockLexer) lexQuote(start int) (*Block, int) {
 		inner = inner[:len(inner)-1]
 	}
 	return &Block{Kind: BlockQuote, Start: start, End: quoteEnd, Text: inner, Blocks: lexBlocksIn(inner)}, at
+}
+
+// interruptsQuote reports a line that ends the reference's blockquote
+// paragraph pattern. A table start is deliberately absent: the reference's
+// blockquote `paragraph` pattern drops its table alternative, so a table row
+// continues the quote.
+func interruptsQuote(line string) bool {
+	if _, _, ok := atxHeading(line); ok {
+		return true
+	}
+	if _, _, ok := fenceStart(line); ok {
+		return true
+	}
+	if isThematicBreak(line) {
+		return true
+	}
+	if isBlockquoteStart(line) {
+		return true
+	}
+	if _, _, ok := listItemStart(line); ok {
+		return true
+	}
+	if isHTMLBlockStart(line) {
+		return true
+	}
+	if isLatexBlockStart(line) {
+		return true
+	}
+	return false
+}
+
+// quoteEndsInCode reports whether the quote's collected inner source would end
+// in a code block, in which case the reference breaks out instead of taking a
+// lazy line. The fence check keeps the lex off the common path where the quote
+// has no fence at all.
+func quoteEndsInCode(inner string) bool {
+	if !strings.Contains(inner, "```") && !strings.Contains(inner, "~~~") {
+		return false
+	}
+	blocks := lexBlocksIn(strings.TrimSuffix(inner, "\n"))
+	return len(blocks) > 0 && blocks[len(blocks)-1].Kind == BlockCode
 }
 
 func (l *blockLexer) lexHTML(start int) (*Block, int) {
@@ -290,10 +379,26 @@ func (l *blockLexer) lexList(start int) (*Block, int, bool) {
 		marker := strings.TrimRight(ln.text[markerStart:markerEnd], " \t")
 		itemStart := at
 		var sb strings.Builder
-		sb.WriteString(ln.text[markerEnd:])
+		firstLine := ln.text[markerEnd:]
+		sb.WriteString(firstLine)
 		sb.WriteByte('\n')
 		at = ln.next
 		sawBlank := false
+		// The reference lets an item take a lazy line only when the item's own
+		// first line is plain prose: it breaks when that line is empty, indented
+		// four or more, or starts a fence, heading or rule
+		// (`O || h.search(nonSpaceChar) >= 4 || ne.test(h) || re.test(h) ||
+		// E.test(h)`).
+		lazyAllowed := !isBlankLine(firstLine) && indentWidth(firstLine) < 4
+		if lazyAllowed {
+			if _, _, ok := fenceStart(firstLine); ok {
+				lazyAllowed = false
+			} else if _, _, ok := atxHeading(firstLine); ok {
+				lazyAllowed = false
+			} else if isThematicBreak(firstLine) {
+				lazyAllowed = false
+			}
+		}
 		for at < len(src) {
 			next := nextLine(src, at)
 			if isBlankLine(next.text) {
@@ -323,9 +428,22 @@ func (l *blockLexer) lexList(start int) (*Block, int, bool) {
 				at = next.next
 				continue
 			}
-			// A disallowed lazy continuation: another marker of the list is
-			// handled by the outer loop; anything else starts a new block.
-			break
+			// Lazy continuation: the reference's list tokenizer keeps a line
+			// that does not start another block in the item's text
+			// (`c += "\n" + d`), which the item's own lex then joins to its
+			// last paragraph.
+			// Any list marker ends the item (the reference breaks on
+			// nextBulletRegex, which accepts every marker); the outer loop then
+			// continues this list or starts another.
+			if !lazyAllowed || interruptsParagraph(next.text) {
+				break
+			}
+			if _, _, ok := listItemStart(next.text); ok {
+				break
+			}
+			sb.WriteString(next.text)
+			sb.WriteByte('\n')
+			at = next.next
 		}
 		content := strings.TrimRight(sb.String(), "\n")
 		if sawBlank && content != "" && !strings.Contains(content, "\n\n") {
