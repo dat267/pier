@@ -228,6 +228,84 @@ func TestMcpCallHeaderStaysUnreflowedWhenExpanded(t *testing.T) {
 	}
 }
 
+// TestMcpResultPreviewWrapsAtTheRenderWidth is the reproduction of the reported
+// reflow: the collapsed preview was pre-wrapped at a fixed 80 columns, so on a
+// wider terminal it broke a line that the expanded view left whole, and on a
+// narrower one it broke it differently. Reference: pi v1.5.0
+// modes/interactive/components/visual-truncate.ts VisualLinePreview measures
+// with the width its render(width) receives, so collapsed and expanded wrap
+// identically at every width.
+func TestMcpResultPreviewWrapsAtTheRenderWidth(t *testing.T) {
+	theme := newRendererTestTheme(t)
+	// One long line that fits on a wide terminal and wraps on a narrow one.
+	body := "The `/home/dat/repos/pier` directory uses Go modules, with the following main modules: " +
+		"/home/dat/repos/pier/go.mod (module github.com/dat267/pier)"
+	more := make([]string, 12)
+	for index := range more {
+		more[index] = "trailing line " + itoa(index)
+	}
+	result := textResult(body + "\n" + strings.Join(more, "\n"))
+
+	for _, width := range []int{160, 120, 100, 72} {
+		collapsed := renderMcpResultAt(t, result, false, theme, width)
+		expanded := renderMcpResultAt(t, result, true, theme, width)
+		// Every collapsed row must be a prefix of the expanded frame's rows at
+		// the same width: expanding only adds lines below the preview.
+		previewRows := mcpOutputPreviewLines
+		for index := 1; index <= previewRows && index < len(expanded); index++ {
+			if collapsed[index] != expanded[index] {
+				t.Fatalf("width %d row %d: collapsed %q, expanded %q; the preview must wrap at the render width",
+					width, index, collapsed[index], expanded[index])
+			}
+		}
+		// And a collapsed preview never exceeds the width.
+		for index, row := range collapsed {
+			if codingWidth(row) > width {
+				t.Errorf("width %d row %d is %d wide: %q", width, index, codingWidth(row), row)
+			}
+		}
+	}
+}
+
+// TestMcpResultPreviewHintCountsVisualLines pins the hint's number at the render
+// width: counting at a fixed width reported lines the user cannot see.
+func TestMcpResultPreviewHintCountsVisualLines(t *testing.T) {
+	theme := newRendererTestTheme(t)
+	lines := make([]string, 0, 20)
+	for index := range 20 {
+		lines = append(lines, "line "+itoa(index))
+	}
+	result := textResult(strings.Join(lines, "\n"))
+	narrow := renderMcpResultAt(t, result, false, theme, 40)
+	hint := narrow[len(narrow)-1]
+	if !strings.Contains(hint, "15 more lines") {
+		t.Errorf("hint at width 40 = %q, want 15 more lines (20 lines minus the 5 shown)", hint)
+	}
+}
+
+// renderMcpResultAt renders an MCP result at a given width.
+func renderMcpResultAt(t *testing.T, result *SortToolResultContent, expanded bool, theme *Theme, width int) []string {
+	t.Helper()
+	renderers := mcpRenderers("gopls/go_workspace")
+	component := renderers.RenderResult(result, ToolRenderResultOptions{Expanded: expanded}, theme,
+		&ToolRenderContext{Cwd: "/tmp/proj", ShowImages: false, IsError: result.IsError})
+	return trimRenderedRows(component.Render(width))
+}
+
+// trimRenderedRows strips ANSI and the theme's padding to the render width.
+func trimRenderedRows(lines []string) []string {
+	out := make([]string, len(lines))
+	for index, line := range lines {
+		out[index] = strings.TrimRight(coding.StripAnsi(line), " ")
+	}
+	return out
+}
+
+// codingWidth is the visible width of a rendered row.
+func codingWidth(row string) int {
+	return len([]rune(row))
+}
+
 // TestMcpResultExpansionKeepsThePreviewInPlace is the other half of D397: the
 // body grows below the preview lines instead of being replaced, so the rows
 // already on screen stay where they were.

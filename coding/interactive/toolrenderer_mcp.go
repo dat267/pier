@@ -46,9 +46,10 @@ func mcpRenderers(label string) ToolRenderers {
 				return container
 			}
 			isError := context != nil && context.IsError
-			text := formatMcpResult(output, options.Expanded, isError, theme)
 			container.AddChild(tui.NewSpacer(1))
-			container.AddChild(tui.NewText(text, 0, 0, nil))
+			container.AddChild(&mcpResultComponent{
+				text: output, isError: isError, theme: theme, expanded: options.Expanded,
+			})
 			if !options.Expanded {
 				if path := mcpFullOutputPath(result); path != "" {
 					container.AddChild(tui.NewText(theme.Fg("muted", "Full output: "+path), 0, 0, nil))
@@ -158,38 +159,53 @@ func mcpArgumentsJSON(args any) (string, bool) {
 	return string(encoded), true
 }
 
-// formatMcpResult styles the result and, collapsed, keeps the first
-// mcpOutputPreviewLines wrapped lines plus the expand hint. Counting wrapped
-// lines rather than logical ones keeps one long JSON line from filling the
-// screen (like bash's preview and upstream's VisualLinePreview).
-func formatMcpResult(output string, expanded bool, isError bool, theme *Theme) string {
-	color := "toolOutput"
-	if isError {
-		color = "error"
-	}
-	lines := strings.Split(strings.ReplaceAll(output, "\t", "   "), "\n")
-	styled := make([]string, 0, len(lines))
-	for _, line := range lines {
-		styled = append(styled, theme.Fg(color, line))
-	}
-	text := strings.Join(styled, "\n")
-	if expanded {
-		return text
-	}
-	preview := TruncateToVisualLinesStart(text, mcpOutputPreviewLines, mcpPreviewWidth, 0)
-	joined := strings.Join(preview.VisualLines, "\n")
-	if preview.SkippedCount > 0 {
-		joined += "\n" + theme.Fg("muted", "... ("+itoa(preview.SkippedCount)+" more lines,") +
-			" " + KeyHint("app.tools.expand", "to expand") + theme.Fg("muted", ")")
-	}
-	return joined
+// mcpResultComponent renders an MCP result: its styled text, or, while
+// collapsed, the first mcpOutputPreviewLines visual lines and the expand hint.
+// Both states wrap at the width Render receives (upstream's VisualLinePreview
+// measures the same way), so expanding only adds the rows below the preview and
+// never re-wraps one that is already on screen.
+type mcpResultComponent struct {
+	text     string
+	isError  bool
+	theme    *Theme
+	expanded bool
+
+	cachedWidth  int
+	cachedLines  []string
+	cachedExpand bool
+	hasCache     bool
 }
 
-// mcpPreviewWidth is the width the visual-line preview measures against. The
-// component re-renders through tui.Text at the real width, so the preview is
-// only a bound: counting at a typical terminal width keeps the line count
-// steady across resizes while still capping a long line.
-const mcpPreviewWidth = 80
+func (c *mcpResultComponent) Render(width int) []string {
+	if c.hasCache && c.cachedWidth == width && c.cachedExpand == c.expanded {
+		return c.cachedLines
+	}
+	color := "toolOutput"
+	if c.isError {
+		color = "error"
+	}
+	rows := strings.Split(c.text, "\n")
+	styled := make([]string, 0, len(rows))
+	for _, row := range rows {
+		styled = append(styled, c.theme.Fg(color, row))
+	}
+	// Wrap once, at the width the caller gave us, then either show every visual
+	// line (expanded) or the first mcpOutputPreviewLines and the hint. Both
+	// states therefore wrap identically, so expanding only adds rows below the
+	// preview (upstream's VisualLinePreview + Text pair).
+	visual := tui.NewText(strings.Join(styled, "\n"), 0, 0, nil).Render(width)
+	lines := visual
+	if !c.expanded && len(visual) > mcpOutputPreviewLines {
+		lines = make([]string, 0, mcpOutputPreviewLines+1)
+		lines = append(lines, visual[:mcpOutputPreviewLines]...)
+		lines = append(lines, c.theme.Fg("muted", "... ("+itoa(len(visual)-mcpOutputPreviewLines)+" more lines,")+
+			" "+KeyHint("app.tools.expand", "to expand")+c.theme.Fg("muted", ")"))
+	}
+	c.cachedWidth, c.cachedExpand, c.cachedLines, c.hasCache = width, c.expanded, lines, true
+	return lines
+}
+
+func (c *mcpResultComponent) Invalidate() { c.hasCache = false }
 
 // TruncateToVisualLinesStart keeps the first maxVisualLines wrapped lines.
 // TruncateToVisualLines keeps the last ones (bash's tail preview).
