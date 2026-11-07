@@ -92,7 +92,9 @@ func TestLazyContinuationJoinsTheLastParagraph(t *testing.T) {
 		{"> a\n```\nx\n```\n", `quote[p:"a"] | code:"x"`},
 
 		// A setext underline without the `>` marker does not make a heading.
-		{"> a\n===\n", `quote[p:"a\n    ==="]`},
+		// Alone in its chunk, the underline has no preceding newline for
+		// blockquoteSetextReplace to indent, so it joins the paragraph as is.
+		{"> a\n===\n", `quote[p:"a\n==="]`},
 		{"> a\nb\n===\n", `quote[p:"a\nb\n    ==="]`},
 
 		// No continuation when the container's last child is not a paragraph.

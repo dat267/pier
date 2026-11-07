@@ -83,8 +83,13 @@ type blockLexer struct {
 
 // lexBlocks lexes src[from:to] into blocks.
 func (l *blockLexer) lexBlocks(from, to int) []*Block {
+	return l.lexBlocksCap(from, to, 16)
+}
+
+// lexBlocksCap is lexBlocks with an initial capacity for the result.
+func (l *blockLexer) lexBlocksCap(from, to, capacity int) []*Block {
 	src := l.src
-	blocks := make([]*Block, 0, 16)
+	blocks := make([]*Block, 0, capacity)
 	at := from
 	for at < to {
 		lineStart := at
@@ -168,8 +173,10 @@ func (l *blockLexer) lexBlock(start int, raw string, ln line) (*Block, int, bool
 
 // atxHeading parses `{0,3}#{1,6} text`, stripping an optional closing run of #.
 func atxHeading(line string) (level int, text string, ok bool) {
-	i, _ := skipIndent(line, 4)
-	if i >= len(line) {
+	// marked's heading rule is /^ {0,3}(#{1,6})(?=\s|$)/: four spaces of
+	// indent make indented code instead.
+	i, width := skipIndent(line, 4)
+	if width >= 4 || i >= len(line) {
 		return 0, "", false
 	}
 	j := i

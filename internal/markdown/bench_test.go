@@ -24,12 +24,26 @@ func benchDoc(bytes int) string {
 	return b.String()
 }
 
+// benchContainers is nested lists, loose items, lazy continuations and quotes
+// holding lists: the container tokenizers' (list.go, quote.go) workload.
+func benchContainers(bytes int) string {
+	var b strings.Builder
+	for b.Len() < bytes {
+		b.WriteString("- first item with a long line of prose that wraps the way an answer does\n  and a continuation line indented under it\n  - nested point one\n  - nested point two\n- second item\nlazy continuation of the second item\n\n")
+		b.WriteString("1. step one\n2. step two\n\n   more detail for step two\n3. step three\n\n")
+		b.WriteString("> quoted text that runs\n> over several lines\nwith a lazy line\n> - a list inside\n> - the quote\n\n")
+	}
+	return b.String()
+}
+
 func BenchmarkLexProse40(b *testing.B)  { benchmarkLex(b, benchProse(40)) }
 func BenchmarkLexProse500(b *testing.B) { benchmarkLex(b, benchProse(500)) }
 func BenchmarkLexMixed8(b *testing.B)   { benchmarkLex(b, benchMixed(8)) }
 func BenchmarkLexDoc64KB(b *testing.B)  { benchmarkLex(b, benchDoc(64<<10)) }
 func BenchmarkLexDoc256KB(b *testing.B) { benchmarkLex(b, benchDoc(256<<10)) }
 func BenchmarkLexDoc1MB(b *testing.B)   { benchmarkLex(b, benchDoc(1<<20)) }
+
+func BenchmarkLexContainers256KB(b *testing.B) { benchmarkLex(b, benchContainers(256<<10)) }
 
 func benchmarkLex(b *testing.B, text string) {
 	b.Helper()

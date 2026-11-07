@@ -138,92 +138,6 @@ func setextLevel(line string) (int, bool) {
 	return 2, true
 }
 
-func (l *blockLexer) lexQuote(start int) (*Block, int) {
-	src := l.src
-	at := start
-	var sb strings.Builder
-	for at < len(src) {
-		ln := nextLine(src, at)
-		if !isBlockquoteStart(ln.text) {
-			if isBlankLine(ln.text) && isBlockquoteStart(nextLine(src, ln.next).text) {
-				sb.WriteByte('\n')
-				at = ln.next
-				continue
-			}
-			// Lazy continuation: the reference's blockquote rule is
-			// /^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+/, and its
-			// `paragraph` is a run of lines that do not start another block
-			// (headings, rules, quotes, fences, lists and HTML do; tables do
-			// not), so a prose line without the `>` marker still belongs to
-			// the quote.
-			if isBlankLine(ln.text) || interruptsQuote(ln.text) || quoteEndsInCode(sb.String()) {
-				break
-			}
-			// The reference indents a setext underline that lacks the `>` marker
-			// (blockquoteSetextReplace turns `\n {0,3}(=+|-+) *` into
-			// `\n    $1`), so a lazy line followed by `===` stays a paragraph
-			// instead of becoming a heading.
-			if _, ok := setextLevel(ln.text); ok {
-				sb.WriteString("    ")
-			}
-			sb.WriteString(ln.text)
-			sb.WriteByte('\n')
-			at = ln.next
-			continue
-		}
-		sb.WriteString(stripBlockquote(ln.text))
-		sb.WriteByte('\n')
-		at = ln.next
-	}
-	inner := sb.String()
-	quoteEnd := at
-	if strings.HasSuffix(inner, "\n") {
-		inner = inner[:len(inner)-1]
-	}
-	return &Block{Kind: BlockQuote, Start: start, End: quoteEnd, Text: inner, Blocks: lexBlocksIn(inner)}, at
-}
-
-// interruptsQuote reports a line that ends the reference's blockquote
-// paragraph pattern. A table start is deliberately absent: the reference's
-// blockquote `paragraph` pattern drops its table alternative, so a table row
-// continues the quote.
-func interruptsQuote(line string) bool {
-	if _, _, ok := atxHeading(line); ok {
-		return true
-	}
-	if _, _, ok := fenceStart(line); ok {
-		return true
-	}
-	if isThematicBreak(line) {
-		return true
-	}
-	if isBlockquoteStart(line) {
-		return true
-	}
-	if _, _, ok := listItemStart(line); ok {
-		return true
-	}
-	if isHTMLBlockStart(line) {
-		return true
-	}
-	if isLatexBlockStart(line) {
-		return true
-	}
-	return false
-}
-
-// quoteEndsInCode reports whether the quote's collected inner source would end
-// in a code block, in which case the reference breaks out instead of taking a
-// lazy line. The fence check keeps the lex off the common path where the quote
-// has no fence at all.
-func quoteEndsInCode(inner string) bool {
-	if !strings.Contains(inner, "```") && !strings.Contains(inner, "~~~") {
-		return false
-	}
-	blocks := lexBlocksIn(strings.TrimSuffix(inner, "\n"))
-	return len(blocks) > 0 && blocks[len(blocks)-1].Kind == BlockCode
-}
-
 func (l *blockLexer) lexHTML(start int) (*Block, int) {
 	src := l.src
 	if closer := htmlBlockCloser(nextLine(src, start).text); closer != "" {
@@ -358,117 +272,6 @@ func stripIndent(line string, width int) string {
 }
 
 // lexList lexes a consecutive run of list items.
-func (l *blockLexer) lexList(start int) (*Block, int, bool) {
-	src := l.src
-	first := nextLine(src, start)
-	_, ordered, _ := listItemStart(first.text)
-	list := &Block{Kind: BlockList, Start: start, Ordered: ordered}
-	if ordered {
-		list.StartNumber = orderedStart(first.text)
-	}
-	at := start
-	tight := true
-	for at < len(src) {
-		ln := nextLine(src, at)
-		contentIndent, itemOrdered, ok := listItemStart(ln.text)
-		if !ok || itemOrdered != ordered {
-			break
-		}
-		markerEnd := markerEndIndex(ln.text)
-		markerStart, _ := skipIndent(ln.text, 4)
-		marker := strings.TrimRight(ln.text[markerStart:markerEnd], " \t")
-		itemStart := at
-		var sb strings.Builder
-		firstLine := ln.text[markerEnd:]
-		sb.WriteString(firstLine)
-		sb.WriteByte('\n')
-		at = ln.next
-		sawBlank := false
-		// The reference lets an item take a lazy line only when the item's own
-		// first line is plain prose: it breaks when that line is empty, indented
-		// four or more, or starts a fence, heading or rule
-		// (`O || h.search(nonSpaceChar) >= 4 || ne.test(h) || re.test(h) ||
-		// E.test(h)`).
-		lazyAllowed := !isBlankLine(firstLine) && indentWidth(firstLine) < 4
-		if lazyAllowed {
-			if _, _, ok := fenceStart(firstLine); ok {
-				lazyAllowed = false
-			} else if _, _, ok := atxHeading(firstLine); ok {
-				lazyAllowed = false
-			} else if isThematicBreak(firstLine) {
-				lazyAllowed = false
-			}
-		}
-		for at < len(src) {
-			next := nextLine(src, at)
-			if isBlankLine(next.text) {
-				follow := nextLine(src, next.next)
-				if isBlankLine(follow.text) {
-					break
-				}
-				// Another item of this list: the blank is a loose separator; end
-				// the item and let the outer loop start the next one.
-				if _, followOrdered, isItem := listItemStart(follow.text); isItem && followOrdered == ordered {
-					sawBlank = true
-					at = next.next
-					break
-				}
-				// An indented continuation keeps the item open.
-				if indentWidth(follow.text) >= contentIndent {
-					sawBlank = true
-					sb.WriteByte('\n')
-					at = next.next
-					continue
-				}
-				break
-			}
-			if indentWidth(next.text) >= contentIndent {
-				sb.WriteString(stripIndent(next.text, contentIndent))
-				sb.WriteByte('\n')
-				at = next.next
-				continue
-			}
-			// Lazy continuation: the reference's list tokenizer keeps a line
-			// that does not start another block in the item's text
-			// (`c += "\n" + d`), which the item's own lex then joins to its
-			// last paragraph.
-			// Any list marker ends the item (the reference breaks on
-			// nextBulletRegex, which accepts every marker); the outer loop then
-			// continues this list or starts another.
-			if !lazyAllowed || interruptsParagraph(next.text) {
-				break
-			}
-			if _, _, ok := listItemStart(next.text); ok {
-				break
-			}
-			sb.WriteString(next.text)
-			sb.WriteByte('\n')
-			at = next.next
-		}
-		content := strings.TrimRight(sb.String(), "\n")
-		if sawBlank && content != "" && !strings.Contains(content, "\n\n") {
-			content += "\n"
-		}
-		item := &Block{Kind: BlockListItem, Start: itemStart, End: at, Text: content, Marker: marker}
-		if _, checked, rest, ok := stripTaskMarker(content); ok {
-			item.Task = true
-			item.Checked = checked
-			item.Text = rest
-		}
-		item.Blocks = lexBlocksIn(item.Text)
-		if sawBlank {
-			tight = false
-		}
-		list.Blocks = append(list.Blocks, item)
-	}
-	list.Tight = tight
-	for _, item := range list.Blocks {
-		item.Tight = tight
-	}
-	list.End = at
-	return list, at, true
-}
-
 // stripTaskMarker removes a leading `[ ] ` / `[x] ` task checkbox.
 func stripTaskMarker(content string) (task bool, checked bool, rest string, ok bool) {
 	i := 0
@@ -534,7 +337,9 @@ func orderedStart(line string) int {
 }
 
 func lexBlocksIn(src string) []*Block {
-	return (&blockLexer{src: src}).lexBlocks(0, len(src))
+	// A list item or quote chunk usually holds one or two blocks; a top-level
+	// document's 16-slot start is wasted allocation here.
+	return (&blockLexer{src: src}).lexBlocksCap(0, len(src), 2)
 }
 
 // isHTMLBlockStart reports a line starting with an HTML tag or comment. An
