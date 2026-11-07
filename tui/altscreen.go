@@ -371,7 +371,8 @@ func (s *AltScreen) CopyActiveSelectionToClipboard() bool {
 	if !ok || text == "" {
 		return false
 	}
-	return s.copyTextToClipboard(text)
+	// This runs on the owner loop, so the flash paints directly.
+	return s.copyTextToClipboard(text, s.Flash)
 }
 
 // ResetTextSelection drops the selection and the multi-click history. A host about to
@@ -1856,9 +1857,17 @@ func (s *AltScreen) handleSelectionMouseEventLocked(event sgrMouseEvent) {
 				// the OSC 52 fallback is synchronous (upstream fires and
 				// forgets the promise).
 				if s.copySelection != nil {
-					go s.copyTextToClipboard(text)
+					// A418: the copy continuation runs off-loop (upstream's
+					// async copySelection resumes on the single-threaded event
+					// loop, so its flash was safe there). Marshal the flash
+					// through Post, which holds postMu, instead of mutating
+					// the flash container from this goroutine.
+					flash := func(message string, durationMS ...int) {
+						s.Post(func() { s.flashes.Flash(message, durationMS...) })
+					}
+					go s.copyTextToClipboard(text, flash)
 				} else {
-					s.copyTextToClipboard(text)
+					s.copyTextToClipboard(text, s.Flash)
 				}
 			}
 		}
@@ -2009,22 +2018,27 @@ func (s *AltScreen) getActiveSelectionTextLocked() (string, bool) {
 	return text, true
 }
 
-func (s *AltScreen) copyTextToClipboard(text string) bool {
+// copyTextToClipboard runs the copy path; flash is the caller's Flash policy:
+// s.Flash paints on the owner loop, and a copy goroutine passes one that posts.
+func (s *AltScreen) copyTextToClipboard(text string, flash func(message string, durationMS ...int)) bool {
+	if flash == nil {
+		flash = s.Flash
+	}
 	if s.copySelection != nil {
 		handled, ok, message := s.copySelection(text)
 		if handled {
 			if ok {
-				s.Flash("Copied!")
+				flash("Copied!")
 			} else if message != "" {
-				s.Flash(message, copyErrorFlashDurationMS)
+				flash(message, copyErrorFlashDurationMS)
 			} else {
-				s.Flash("Copy failed", copyErrorFlashDurationMS)
+				flash("Copy failed", copyErrorFlashDurationMS)
 			}
 			return ok
 		}
 	}
 	s.Terminal.Write("\x1b]52;c;" + base64.StdEncoding.EncodeToString([]byte(text)) + "\x07")
-	s.Flash("Copied!")
+	flash("Copied!")
 	return true
 }
 
