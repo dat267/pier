@@ -110,6 +110,11 @@ type TranscriptRenderer struct {
 	// worker never races an invalidate. Chunks leave from the tail, so the stale
 	// ones are always a prefix.
 	staleBelow int
+	// deferredDisplay is the display state the deferred components reflect.
+	// ctrl+o, ctrl+t and an output-padding change sweep only the attached chat
+	// children, so when Display moves away from it the queue goes stale, and
+	// refreshDeferredTail applies the current state as each chunk comes up.
+	deferredDisplay DisplayOptions
 
 	// PrerenderQueue warms the deferred components' render caches off the UI
 	// loop (internal/offloop): a large entry's markdown lex + styling is the
@@ -178,8 +183,25 @@ func (r *TranscriptRenderer) refreshDeferredTail(count int) {
 	// Lowered first: an Invalidate that re-enters the chat's invalidate marks
 	// the whole queue stale again, and that must survive this loop.
 	r.staleBelow = from
+	display := r.deferredDisplay
 	for _, component := range r.deferredComponents[from:stale] {
+		applyDisplayOptions(component, display)
 		component.Invalidate()
+	}
+}
+
+// applyDisplayOptions gives a component the display state the chat sweeps
+// apply to attached children: ctrl+o's expansion, ctrl+t's thinking
+// visibility, and the output padding.
+func applyDisplayOptions(component tui.Component, display DisplayOptions) {
+	if expandable, ok := IsExpandable(component); ok {
+		expandable.SetExpanded(display.ToolOutputExpanded)
+	}
+	if assistant, ok := component.(*AssistantMessageComponent); ok {
+		assistant.SetHideThinkingBlock(display.HideThinkingBlock)
+	}
+	if padded, ok := component.(interface{ SetOutputPad(int) }); ok {
+		padded.SetOutputPad(display.OutputPad)
 	}
 }
 
@@ -479,6 +501,9 @@ func (r *TranscriptRenderer) RenderSessionItems(items []RenderSessionItem, updat
 		children := collector.Children
 		cut := max(len(children)-lazyTranscriptWindowComponents, 0)
 		r.deferredComponents = children[:cut:cut]
+		if r.Display != nil {
+			r.deferredDisplay = *r.Display
+		}
 		for _, component := range children[cut:] {
 			realChat.AddChild(component)
 		}
@@ -515,6 +540,10 @@ const lazyTranscriptChunkComponents = 64
 func (r *TranscriptRenderer) MaterializeDeferred(width int) bool {
 	if len(r.deferredComponents) == 0 {
 		return false
+	}
+	if r.Display != nil && *r.Display != r.deferredDisplay {
+		r.deferredDisplay = *r.Display
+		r.invalidateDeferred()
 	}
 	if r.PrerenderQueue == nil {
 		// Synchronous fallback (tests, one-shot renders): warm in place, then

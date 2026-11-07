@@ -282,3 +282,58 @@ func TestLazyTranscriptThemeChangeReachesDeferredComponents(t *testing.T) {
 		})
 	}
 }
+
+// ctrl+o and ctrl+t sweep the attached chat children (D343); components still
+// in the deferred queue must come out in the state the sweep chose, not the one
+// they were built with. Upstream has no deferred queue: pi v1.5.0 (f9a26365)
+// modes/interactive/interactive-mode.ts setToolsExpanded and the thinking
+// toggle update every chat child.
+func TestLazyTranscriptSweepsReachDeferredComponents(t *testing.T) {
+	for _, prerender := range []bool{false, true} {
+		t.Run(fmt.Sprintf("prerender=%v", prerender), func(t *testing.T) {
+			initSweepTheme(t)
+			manager := coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{Persist: new(false)})
+			first := manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "kept"}})
+			manager.AppendCompaction("summary body", first, 1234, nil, false, nil)
+			for i := range 500 {
+				manager.AppendMessage(&ai.AssistantMessage{StopReason: ai.StopStop, Content: ai.ContentList{
+					ai.ThinkingContent{Thinking: fmt.Sprintf("secret-thought-%d", i)}, ai.TextContent{Text: "answer"}}})
+			}
+			chat := &tui.Container{}
+			transcript := NewTranscriptRenderer(chat, nil, nil, nil, manager)
+			if prerender {
+				queue := offloop.New()
+				defer queue.Stop()
+				transcript.PrerenderQueue = queue
+			}
+			transcript.RenderInitialMessages()
+			if len(transcript.deferredComponents) == 0 {
+				t.Fatal("the session must load lazily for the reproduction")
+			}
+			// A warm in flight or ready under the old display state.
+			transcript.MaterializeDeferred(100)
+
+			controller := &QueueController{Chat: chat}
+			transcript.Display.ToolOutputExpanded = true // what ctrl+o's setExpanded records
+			transcript.Display.HideThinkingBlock = true  // and ctrl+t's
+			expanded := false
+			controller.SetToolsExpanded(true, &expanded, nil, nil)
+			controller.UpdateThinkingBlockVisibility(true)
+			for controller.MaterializeToolChunk() || controller.MaterializeThinkingChunk() {
+			}
+			deadline := time.Now().Add(10 * time.Second)
+			for transcript.MaterializeDeferred(100) {
+				if time.Now().After(deadline) {
+					t.Fatalf("materialization did not finish: %d deferred left", len(transcript.deferredComponents))
+				}
+			}
+			out := strings.Join(chat.Render(100), "\n")
+			if strings.Contains(out, "to expand") {
+				t.Error("the deferred compaction box stayed collapsed after ctrl+o")
+			}
+			if n := strings.Count(out, "secret-thought-"); n != 0 {
+				t.Errorf("thinking still shown in %d messages after ctrl+t", n)
+			}
+		})
+	}
+}
