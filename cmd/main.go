@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -1248,5 +1249,15 @@ func startMCPServers(
 			return providerTokenForMCP(runtime, provider)
 		},
 	})
-	return manager, config.Errors
+	return manager, appendMCPUnreachableWarning(config)
+}
+
+// appendMCPUnreachableWarning returns the config's load errors followed by the
+// warning for tools pier cannot expose (McpUnreachableToolsWarning).
+func appendMCPUnreachableWarning(config coding.LoadedMcpConfig) []string {
+	messages := config.Errors
+	if warning := coding.McpUnreachableToolsWarning(config); warning != "" {
+		messages = append(slices.Clip(messages), warning)
+	}
+	return messages
 }

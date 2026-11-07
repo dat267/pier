@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -1372,6 +1373,9 @@ func (a *App) reloadMCP(ctx context.Context, cwd string) []string {
 	a.mcpManager = next
 	if next != nil {
 		a.wireMcpManager(next)
+	}
+	if warning := coding.McpUnreachableToolsWarning(config); warning != "" {
+		return append(slices.Clip(config.Errors), warning)
 	}
 	return config.Errors
 }

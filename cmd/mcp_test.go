@@ -37,8 +37,9 @@ func TestSetupMCPServers(t *testing.T) {
 	// A server whose command cannot run fails to connect; the manager keeps
 	// the connection and reports it, and exposes no tools. The connect runs in
 	// the background, so the failure surfaces on the connection, not in the
-	// boot-time errors (which are config errors only).
-	writeMCPConfig(t, agentDir, `{"mcpServers":{"broken":{"command":"/nonexistent/pier-mcp-test"}}}`)
+	// boot-time errors (which are config errors only). Direct exposure keeps
+	// the unreachable-tools warning (D185) out of those messages.
+	writeMCPConfig(t, agentDir, `{"mcpServers":{"broken":{"command":"/nonexistent/pier-mcp-test","exposure":"direct"}}}`)
 	manager, errors = startMCPServers(context.Background(), nil, agentDir, cwd, false, false)
 	if manager == nil {
 		t.Fatal("missing manager")

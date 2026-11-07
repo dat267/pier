@@ -704,6 +704,15 @@ for exposure, namespaces, codemode, `tool_search`, resources, `/mcp` UI, and
 - `direct` tools enter `CreateAgentSessionOptions.ExtraTools` and built-in
   `--tools`/`defaultTools` selection. `codemode`, `deferred`, and `hidden` tools
   register but are never exposed; there is no codemode or `tool_search`.
+  `codemode` stays the default exposure so an `mcp.json` means the same as in
+  pi, which makes a server added without `"exposure": "direct"` contribute no
+  tools. Upstream's `ensureDiscoveryActive` warns when such tools have no tool
+  to reach them; pier warns under the same condition at startup, `/reload` and
+  session replacement, naming the servers and the `"exposure": "direct"` fix
+  instead of upstream's generic text, since no setting activates the missing
+  tools. Tests: `TestMcpUnreachableToolsWarningFollowsConfiguredExposures`,
+  `TestStartupMCPMessagesAppendTheUnreachableWarning` and
+  `TestReloadMCPWarnsAboutUnreachableTools`.
 - OAuth uses a per-process credential store, not `auth.json`; `/mcp` sign-in
   persistence is unported. Accordingly, `oauth.clientRegistration: "cimd"` is
   not carried through config/runtime: upstream's Client ID Metadata Document

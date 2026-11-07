@@ -234,6 +234,44 @@ func McpToolExposure(config *McpServerConfig, toolName string) McpExposure {
 	return McpExposureCodemode
 }
 
+// McpUnreachableToolsWarning names the enabled servers whose tools pier cannot
+// expose, or returns "" when there are none.
+//
+// Reference: pi v1.5.0 extensions/mcp/index.ts `ensureDiscoveryActive` reads
+// each enabled server's configured exposures (`configuredExposures`: the
+// server's exposure, default codemode, plus its toolExposure values) and warns
+// once when `codemode` or `deferred` tools have no codemode or tool_search
+// tool to reach them. Pier ports neither tool (D185), so such tools are always
+// unreachable. The message names the servers and the fix instead of upstream's
+// generic text, because in pier no setting can activate the missing tools.
+func McpUnreachableToolsWarning(config LoadedMcpConfig) string {
+	var names []string
+	for _, server := range config.Servers {
+		if server.Config == nil || (server.Config.Enabled != nil && !*server.Config.Enabled) {
+			continue
+		}
+		exposures := []McpExposure{McpExposureCodemode}
+		if server.Config.Exposure != nil {
+			exposures[0] = *server.Config.Exposure
+		}
+		for _, exposure := range server.Config.ToolExposure {
+			exposures = append(exposures, exposure)
+		}
+		if slices.Contains(exposures, McpExposureCodemode) || slices.Contains(exposures, McpExposureDeferred) {
+			names = append(names, strconv.Quote(server.Name))
+		}
+	}
+	if len(names) == 0 {
+		return ""
+	}
+	subject := "MCP server " + names[0] + " has"
+	if len(names) > 1 {
+		subject = "MCP servers " + strings.Join(names, ", ") + " have"
+	}
+	return subject + ` tools with codemode or deferred exposure, which pier does not support; ` +
+		`those tools cannot be called. Set "exposure": "direct" in mcp.json to declare them to the model.`
+}
+
 // ValidateMcpServerConfig validates one `mcpServers` entry (upstream
 // validateMcpServerConfig). It returns the config with exposure aliases
 // resolved, or an error whose message matches upstream's.
