@@ -211,6 +211,13 @@ const (
 	funcF12      = -32
 )
 
+// functionKeyCodepoints maps the f1..f12 key ids to their internal kitty
+// codepoints (upstream FUNCTIONAL_CODEPOINTS).
+var functionKeyCodepoints = map[string]int{
+	"f1": funcF1, "f2": funcF2, "f3": funcF3, "f4": funcF4, "f5": funcF5, "f6": funcF6,
+	"f7": funcF7, "f8": funcF8, "f9": funcF9, "f10": funcF10, "f11": funcF11, "f12": funcF12,
+}
+
 // Kitty reserves this Private Use Area range for functional keys (F13-F35,
 // media keys, modifier keys, ...). CSI-u codepoints in it are never text.
 const (
@@ -1019,10 +1026,13 @@ func MatchesKey(data string, keyID KeyId) bool {
 		return matchesKittySequence(data, arrowRight, modifier)
 
 	case "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12":
-		if modifier != 0 {
-			return false
+		// Kitty sends F1, F2 and F4 as CSI P/Q/S and any modified F-key as a
+		// CSI sequence with a modifier, so both fall back to the kitty parser
+		// (pi v1.5.0 keys.ts, upstream deb12d78e #11468).
+		if modifier == 0 && matchesLegacySequence(data, legacyKeySequences[key]) {
+			return true
 		}
-		return matchesLegacySequence(data, legacyKeySequences[key])
+		return matchesKittySequence(data, functionKeyCodepoints[key], modifier)
 	}
 
 	// Handle single letter/digit/symbol keys.

@@ -356,3 +356,56 @@ func TestParseKeyKittyPrintablePassthrough(t *testing.T) {
 		t.Fatalf("base layout = %q,%v", key, ok)
 	}
 }
+
+// Mirrors pi v1.5.0 packages/tui/test/keys.test.ts "should match Kitty
+// function keys F1-F12 with and without modifiers" and "ignores unmapped
+// Kitty functional keys such as F13-F35" (upstream deb12d78e, #11468): kitty
+// sends F1, F2 and F4 as CSI P/Q/S and a modified F-key with its modifier, so
+// matchesKey falls back to the kitty parser for f1..f12.
+func TestMatchesKittyFunctionKeys(t *testing.T) {
+	for _, kitty := range []bool{false, true} {
+		SetKittyProtocolActive(kitty)
+		for _, test := range []struct {
+			data string
+			key  KeyId
+			want bool
+		}{
+			{"\x1b[P", "f1", true},
+			{"\x1b[Q", "f2", true},
+			{"\x1b[13~", "f3", true},
+			{"\x1b[S", "f4", true},
+			{"\x1b[1;5P", "ctrl+f1", true},
+			{"\x1b[1;5P", "f1", false},
+			{"\x1b[1;2S", "shift+f4", true},
+			{"\x1b[15;5~", "ctrl+f5", true},
+			{"\x1b[24;3~", "alt+f12", true},
+			{"\x1b[15;1:2~", "f5", true},
+			{"\x1b[11;6~", "ctrl+shift+f1", true},
+			{"\x1b[1;13Q", "ctrl+super+f2", true},
+		} {
+			if got := MatchesKey(test.data, test.key); got != test.want {
+				t.Errorf("kitty=%v MatchesKey(%q, %q) = %v; want %v", kitty, test.data, test.key, got, test.want)
+			}
+		}
+		for data, want := range map[string]string{"\x1b[P": "f1", "\x1b[1;5P": "ctrl+f1", "\x1b[13~": "f3", "\x1b[21;2~": "shift+f10"} {
+			if got, _ := ParseKey(data); got != want {
+				t.Errorf("kitty=%v ParseKey(%q) = %q; want %q", kitty, data, got, want)
+			}
+		}
+		if got, ok := ParseKey("\x1b[1;5R"); ok {
+			t.Errorf("kitty=%v ParseKey(cursor position report) = %q", kitty, got)
+		}
+		if !IsKeyRelease("\x1b[1;1:3P") || !IsKeyRepeat("\x1b[1;1:2S") {
+			t.Errorf("kitty=%v P/Q/S release or repeat not recognized", kitty)
+		}
+		for _, data := range []string{"\x1b[57376u", "\x1b[57398;2u"} {
+			if got, ok := DecodeKittyPrintable(data); ok {
+				t.Errorf("kitty=%v DecodeKittyPrintable(%q) = %q", kitty, data, got)
+			}
+		}
+		if got, ok := DecodePrintableKey("\x1b[57382u"); ok {
+			t.Errorf("kitty=%v DecodePrintableKey(F19) = %q", kitty, got)
+		}
+	}
+	SetKittyProtocolActive(false)
+}
