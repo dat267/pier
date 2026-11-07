@@ -49,28 +49,49 @@ func TestResourcePathsKeepBothScopes(t *testing.T) {
 	}
 }
 
-// TestResourcePathsPutCLIPathsFirst pins the collision tie-break. Reference:
+// TestResourceSettingsPathsPrecedeCLIPaths pins the collision order. Reference:
 // pi v1.5.0 (f9a26365) core/resource-loader.ts builds the list as
-// mergePaths([...cliEnabledSkills, ...enabledSkills], additionalSkillPaths), so
-// a --skill path precedes the settings' paths and wins a name collision
-// (dedupePrompts/dedupe keep the first occurrence).
-func TestResourcePathsPutCLIPathsFirst(t *testing.T) {
+// mergePaths([...cliEnabledSkills, ...enabledSkills], additionalSkillPaths)
+// and the analogous prompt list, so settings paths precede --skill and
+// --prompt-template paths; first-occurrence dedupe keeps the settings' resource.
+func TestResourceSettingsPathsPrecedeCLIPaths(t *testing.T) {
 	cwd := t.TempDir()
 	agentDir := t.TempDir()
 	settingsSkills := filepath.Join(cwd, "settings-skills")
 	cliSkills := filepath.Join(cwd, "cli-skills")
 	writeSkill(t, settingsSkills, "shared", "from settings")
 	writeSkill(t, cliSkills, "shared", "from the flag")
+	writeSkill(t, cliSkills, "cli-only", "still loaded from the flag")
+	settingsPrompts := filepath.Join(cwd, "settings-prompts")
+	cliPrompts := filepath.Join(cwd, "cli-prompts")
+	writeSettingsFile(t, filepath.Join(settingsPrompts, "shared.md"), "settings prompt")
+	writeSettingsFile(t, filepath.Join(cliPrompts, "shared.md"), "CLI prompt")
+	writeSettingsFile(t, filepath.Join(cliPrompts, "cli-only.md"), "CLI-only prompt")
 	writeSettingsFile(t, filepath.Join(cwd, ".pi", "settings.json"),
-		`{"skills": ["`+settingsSkills+`"]}`)
+		`{"skills": ["`+settingsSkills+`"], "prompts": ["`+settingsPrompts+`"]}`)
 
 	settings := NewSettingsManagerFromFiles(cwd, agentDir, SettingsManagerCreateOptions{})
-	options := resourceOptions{SkillPaths: []string{cliSkills}}
-	loaded := options.skills(cwd, agentDir, settings, true)
-	if len(loaded.Skills) != 1 {
-		t.Fatalf("skills = %d, want one deduped skill", len(loaded.Skills))
+	options := resourceOptions{
+		SkillPaths: []string{cliSkills}, PromptTemplatePaths: []string{cliPrompts},
 	}
-	if got := loaded.Skills[0].Description; got != "from the flag" {
-		t.Errorf("collision kept %q, want the --skill path to win", got)
+	loaded := options.skills(cwd, agentDir, settings, true)
+	if len(loaded.Skills) != 2 {
+		t.Fatalf("skills = %d, want the deduped shared skill and the CLI-only skill", len(loaded.Skills))
+	}
+	if got := loaded.Skills[0].Description; got != "from settings" {
+		t.Errorf("skill collision kept %q, want settings", got)
+	}
+	if len(loaded.Skills) != 2 || loaded.Skills[1].Name != "cli-only" {
+		t.Errorf("noncolliding CLI skill was not loaded: %v", loaded.Skills)
+	}
+	prompts := options.promptTemplates(cwd, agentDir, settings)
+	if len(prompts.Templates) != 2 {
+		t.Fatalf("prompt templates = %d, want shared and CLI-only", len(prompts.Templates))
+	}
+	if got := prompts.Templates[0].FilePath; got != filepath.Join(settingsPrompts, "shared.md") {
+		t.Errorf("prompt collision kept %q, want settings path %q", got, filepath.Join(settingsPrompts, "shared.md"))
+	}
+	if got := prompts.Templates[1].Name; got != "cli-only" {
+		t.Errorf("noncolliding CLI prompt = %q, want cli-only", got)
 	}
 }

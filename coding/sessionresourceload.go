@@ -52,15 +52,15 @@ func (o resourceOptions) contextFiles(cwd string, agentDir string) []ContextFile
 // skills returns the skills, from the explicit paths and (unless discovery is
 // off) the settings'.
 func (o resourceOptions) skills(cwd string, agentDir string, settings *SettingsManager, trusted bool) LoadSkillsResult {
-	// CLI paths before the settings' (upstream mergePaths([...cliEnabledSkills,
-	// ...enabledSkills], additionalSkillPaths)), so a --skill path wins a name
-	// collision (A399).
-	skillPaths := append([]string{}, o.SkillPaths...)
+	// Settings paths precede the additional CLI paths, as in upstream's
+	// mergePaths([...cliEnabledSkills, ...enabledSkills], additionalSkillPaths).
+	skillPaths := []string{}
 	if !o.NoSkills {
 		skillPaths = append(skillPaths, scopedListPaths(settings, func(settings *Settings) []string {
 			return settings.Skills
 		})...)
 	}
+	skillPaths = append(skillPaths, o.SkillPaths...)
 	return LoadSkills(LoadSkillsOptions{
 		Cwd: cwd, AgentDir: agentDir, SkillPaths: skillPaths,
 		IncludeDefaults: !o.NoSkills,
@@ -69,12 +69,13 @@ func (o resourceOptions) skills(cwd string, agentDir string, settings *SettingsM
 
 // promptTemplates returns the file-based prompt templates.
 func (o resourceOptions) promptTemplates(cwd string, agentDir string, settings *SettingsManager) LoadPromptTemplatesResult {
-	promptPaths := append([]string{}, o.PromptTemplatePaths...)
+	promptPaths := []string{}
 	if !o.NoPromptTemplates {
 		promptPaths = append(promptPaths, scopedListPaths(settings, func(settings *Settings) []string {
 			return settings.Prompts
 		})...)
 	}
+	promptPaths = append(promptPaths, o.PromptTemplatePaths...)
 	loaded := LoadPromptTemplatesWithDiagnostics(LoadPromptTemplatesOptions{
 		Cwd: cwd, AgentDir: agentDir, PromptPaths: promptPaths,
 		IncludeDefaults: !o.NoPromptTemplates,
