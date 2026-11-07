@@ -173,41 +173,61 @@ func defTitle(src string, at int) (int, bool) {
 	}
 	switch src[at] {
 	case '"':
+		// `\\"?` prefers taking a quote after a backslash; with no closing
+		// quote later the regex backtracks to the last such quote.
+		lastEscaped := -1
 		i := at + 1
 		for i < len(src) {
 			switch {
 			case src[i] == '\\':
-				if i+1 >= len(src) {
-					return 0, false
+				if i+1 < len(src) && src[i+1] == '"' {
+					lastEscaped = i + 1
+					i += 2
+					continue
 				}
-				i += 2
+				i++
 			case src[i] == '"':
 				return i + 1, true
 			default:
 				i++
 			}
 		}
+		if lastEscaped >= 0 {
+			return lastEscaped + 1, true
+		}
 	case '\'':
-		// The single-quoted form may spread across lines.
+		// `'[^'\n]*(?:\n[^'\n]+)*\n?'`: lines of non-quote text, with no
+		// blank line inside.
 		i := at + 1
-		for i < len(src) {
-			if src[i] == '\n' {
-				if i+1 >= len(src) {
-					break
-				}
+		for {
+			for i < len(src) && src[i] != '\'' && src[i] != '\n' {
 				i++
-				continue
+			}
+			if i >= len(src) {
+				return 0, false
 			}
 			if src[i] == '\'' {
 				return i + 1, true
 			}
+			// A newline: the closing quote, or another non-empty line.
+			if i+1 < len(src) && src[i+1] == '\'' {
+				return i + 2, true
+			}
+			if i+1 >= len(src) || src[i+1] == '\n' {
+				return 0, false
+			}
+			i++
 		}
 	case '(':
-		i := strings.IndexByte(src[at:], ')')
-		if i < 0 {
-			return 0, false
+		// `\([^()]*\)`: no parenthesis inside.
+		for i := at + 1; i < len(src); i++ {
+			switch src[i] {
+			case ')':
+				return i + 1, true
+			case '(':
+				return 0, false
+			}
 		}
-		return at + i + 1, true
 	}
 	return 0, false
 }

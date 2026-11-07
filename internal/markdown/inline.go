@@ -59,7 +59,12 @@ func parseInline(src string, state *inlineState) []Inline {
 	if !hasInlineMarkup(src) {
 		return []Inline{{Kind: InlineText, Text: src}}
 	}
-	masked := maskEmphasisSource(src)
+	maskSrc := src
+	if len(state.links) > 0 && strings.IndexByte(src, '[') >= 0 {
+		// inlineTokens masks reference links before the other spans.
+		maskSrc = maskRefLinks(src, state.links)
+	}
+	masked := maskEmphasisSource(maskSrc)
 	var out []Inline
 	var text strings.Builder
 	var prevText rune
@@ -268,11 +273,28 @@ func parseInline(src string, state *inlineState) []Inline {
 					continue
 				}
 			}
+			if i+1 < len(src) && src[i+1] == '[' && len(state.links) > 0 {
+				if inline, consumed, ok := parseRefLink(src, i, true, state); ok {
+					flush()
+					out = append(out, inline)
+					i = consumed
+					continue
+				}
+			}
 			text.WriteByte(c)
 			i++
 		case '[':
 			if linkCandidate(i) {
 				if inline, consumed, ok := parseLink(src, i, false, state); ok {
+					flush()
+					out = append(out, inline)
+					i = consumed
+					continue
+				}
+			}
+			// Tokenizer.reflink runs after Tokenizer.link (marked 18.0.11).
+			if len(state.links) > 0 {
+				if inline, consumed, ok := parseRefLink(src, i, false, state); ok {
 					flush()
 					out = append(out, inline)
 					i = consumed

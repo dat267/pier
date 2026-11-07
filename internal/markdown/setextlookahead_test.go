@@ -11,8 +11,9 @@ import "testing"
 //  2. b        any ordered number, not only 1, blocks the conversion
 //     | - |       a delimiter-row-shaped first line blocks the conversion
 //
-// When the conversion is blocked mid-paragraph, the paragraph ends before that
-// line and the line lexes as its own block.
+// When the conversion is blocked, the paragraph rule lexes the same lines and
+// no underline interrupts it; `x\n2. b\n---` still ends before `2. b` because
+// those two lines have gfmTable's shape (blocktokens_parity_test.go).
 func TestSetextUnderlineFollowsTheLHeadingLookahead(t *testing.T) {
 	for _, testCase := range []struct {
 		src  string
@@ -21,8 +22,9 @@ func TestSetextUnderlineFollowsTheLHeadingLookahead(t *testing.T) {
 		// The tracker's first case: the whole pair stays a paragraph.
 		{"| - |\n===\n", `p:"| - |\n==="`},
 		{"||| - |||\n===\n", `p:"||| - |||\n==="`},
-		// The tracker's second case: the paragraph stops before "10. a", which
-		// is a list on its own, and the dashes are a rule.
+		// The tracker's second case: the paragraph stops before "10. a" (its
+		// line and the dashes have gfmTable's shape), which is a list on its
+		// own, and the dashes are a rule.
 		{"| x |\n10. a\n---\n", `p:"| x |" | ol[(p:"a")] | hr`},
 		// A bullet line blocks the same way.
 		{"| x |\n- a\n---\n", `p:"| x |" | ul[(p:"a")] | hr`},

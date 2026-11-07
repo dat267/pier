@@ -1,6 +1,9 @@
 package markdown
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // Document is an incrementally-updated markdown source. Update reuses the
 // tokens of every block that appending cannot affect and re-lexes only the
@@ -9,6 +12,7 @@ import "strings"
 type Document struct {
 	src    string
 	blocks []*Block
+	defs   []Definition
 	parsed int // blocks[:parsed] have inline content resolved
 }
 
@@ -26,7 +30,7 @@ func (d *Document) Blocks() []*Block { return d.blocks }
 func (d *Document) Update(src string) []*Block {
 	if !strings.HasPrefix(src, d.src) || d.blocks == nil {
 		d.src = src
-		d.blocks = Lex(src)
+		d.blocks, d.defs = LexDefinitions(src, 0, nil)
 		d.parsed = len(d.blocks)
 		return d.blocks
 	}
@@ -36,8 +40,14 @@ func (d *Document) Update(src string) []*Block {
 	start := FirstUnstable(d.blocks, d.src)
 	offset := d.blocks[start].Start
 	reused := append([]*Block(nil), d.blocks[:start]...)
-	tail := (&blockLexer{src: src}).lexBlocks(offset, len(src))
-	ParseInlines(tail)
+	tail, defs := LexDefinitions(src, offset, DefinitionsBefore(d.defs, offset))
+	if !SameDefinitions(defs, d.defs) {
+		// The reused blocks resolved their reference links without the new
+		// definitions.
+		d.src = ""
+		d.blocks = nil
+		return d.Update(src)
+	}
 	d.src = src
 	d.blocks = append(reused, tail...)
 	d.parsed = len(d.blocks)
@@ -68,12 +78,50 @@ func FirstUnstable(blocks []*Block, src string) int {
 // FirstUnstable) can re-lex only the tail and keep the earlier blocks' keys and
 // rendered lines. from at or below zero is a full Lex.
 func LexFrom(src string, from int) []*Block {
-	if from <= 0 {
-		return Lex(src)
+	blocks, _ := LexDefinitions(src, from, nil)
+	return blocks
+}
+
+// LexDefinitions is LexFrom for a source with link reference definitions:
+// prior holds the definitions the blocks before from keep (a previous call's
+// result whose Offset is below from), and the result holds them followed by
+// the tail's. Marked resolves reference links once every block is lexed, so the
+// tail's inline content sees every definition, and a definition in the tail can
+// change how a block before from renders: a caller reusing those blocks'
+// lines must compare the results (SameDefinitions).
+func LexDefinitions(src string, from int, prior []Definition) ([]*Block, []Definition) {
+	from = max(from, 0)
+	blocks := (&blockLexer{src: src}).lexBlocks(from, len(src))
+	defs := prior
+	if mayHoldDefinition(src[from:]) {
+		blocks, defs = collectDefinitions(blocks, slices.Clip(prior))
 	}
-	tail := (&blockLexer{src: src}).lexBlocks(from, len(src))
-	ParseInlines(tail)
-	return tail
+	parseInlines(blocks, &inlineState{links: linksFor(defs)})
+	return blocks, defs
+}
+
+// DefinitionsBefore returns the definitions held by blocks starting before
+// offset.
+func DefinitionsBefore(defs []Definition, offset int) []Definition {
+	n := 0
+	for n < len(defs) && defs[n].Offset < offset {
+		n++
+	}
+	return defs[:n:n]
+}
+
+// SameDefinitions reports whether two definition lists resolve every label
+// the same way.
+func SameDefinitions(a, b []Definition) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].Label != b[i].Label || a[i].Href != b[i].Href || a[i].Title != b[i].Title {
+			return false
+		}
+	}
+	return true
 }
 
 // blockMidLine reports a block whose raw ends without a newline: the next

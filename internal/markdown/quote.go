@@ -358,6 +358,10 @@ func appendQuoteChunk(blocks, chunk []*Block, continuation bool) []*Block {
 			clipped = false
 		case b.Kind == BlockCode && indentWidth(b.Raw) >= 4 && last != nil && last.Kind == BlockParagraph:
 			last.Text += "\n" + b.Body
+		case b.Kind == BlockLinkDef && last != nil && last.Kind == BlockParagraph:
+			// blockTokens joins a definition after a paragraph as its raw
+			// (marked 18.0.11): it is text, not a definition.
+			last.Text += "\n" + strings.TrimSuffix(b.Raw, "\n")
 		default:
 			blocks = append(blocks, b)
 		}

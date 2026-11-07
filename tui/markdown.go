@@ -150,6 +150,11 @@ type Markdown struct {
 	cacheWindowOffset int
 	cacheWindowBase   int
 	cacheSource       string
+	// cacheDefs are the link reference definitions of cacheSource. The cached
+	// lines resolved their reference links with them, so a render whose
+	// definitions differ reuses none (marked resolves reference links after
+	// lexing every block, pi v1.5.0 markdown.ts).
+	cacheDefs []markdown.Definition
 
 	// renderedTokens counts block renders (test seam).
 	renderedTokens int
@@ -214,6 +219,7 @@ func (m *Markdown) Invalidate() {
 	m.cacheWindowOffset = 0
 	m.cacheWindowBase = 0
 	m.cacheSource = ""
+	m.cacheDefs = nil
 	bumpContentRevision()
 }
 
@@ -399,6 +405,7 @@ func (m *Markdown) Render(width int) []string {
 		m.cacheWindowOffset = 0
 		m.cacheWindowBase = 0
 		m.cacheSource = ""
+		m.cacheDefs = nil
 		return m.cachedLines
 	}
 
@@ -419,7 +426,7 @@ func (m *Markdown) Render(width int) []string {
 	if m.canReuseLex(normalizedText, width) {
 		windowBase, windowOffset = m.cacheWindowBase, m.cacheWindowOffset
 	}
-	blocks := markdown.LexFrom(normalizedText, windowOffset)
+	blocks, defs := markdown.LexDefinitions(normalizedText, windowOffset, markdown.DefinitionsBefore(m.cacheDefs, windowOffset))
 	markdown.TrimPartialClosingFences(blocks)
 	total := windowBase + len(blocks)
 
@@ -438,14 +445,21 @@ func (m *Markdown) Render(width int) []string {
 	if !cacheMatchesWidth {
 		matched = windowBase
 	}
-	if windowBase > 0 && matched == windowBase {
-		// The stable-prefix invariant did not hold; redo the whole source.
-		// canReuseLex required the same width, so the recomputed match is safe.
+	definitionsChanged := !markdown.SameDefinitions(defs, m.cacheDefs)
+	if windowBase > 0 && (matched == windowBase || definitionsChanged) {
+		// The stable-prefix invariant did not hold, or a definition in the
+		// tail changes how the blocks before it resolve reference links;
+		// redo the whole source. canReuseLex required the same width, so the
+		// recomputed match is safe.
 		windowBase, windowOffset = 0, 0
-		blocks = markdown.LexFrom(normalizedText, 0)
+		blocks, defs = markdown.LexDefinitions(normalizedText, 0, nil)
 		markdown.TrimPartialClosingFences(blocks)
 		total = len(blocks)
 		matched = matchBlockKeys(blocks, 0, total, m.cacheTokenKeys)
+	}
+	if definitionsChanged {
+		// The block keys do not hold the definitions their lines resolved.
+		matched = 0
 	}
 	reuse := max(min(max(matched-1, windowBase), total-1), 0)
 
@@ -486,6 +500,7 @@ func (m *Markdown) Render(width int) []string {
 	m.cacheTokenKeys = fullKeys
 	m.cacheWidth = width
 	m.cacheSource = normalizedText
+	m.cacheDefs = defs
 
 	// Record where the next render can begin re-lexing: the block just before
 	// the first one an append can still change. Only the tail is in hand, so the

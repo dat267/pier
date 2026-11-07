@@ -1,6 +1,9 @@
 package markdown
 
-import "strings"
+import (
+	"strings"
+	"unicode/utf8"
+)
 
 // interruptsParagraph reports a line that ends a paragraph (the block starts
 // that may interrupt a paragraph in Marked/CommonMark).
@@ -26,9 +29,6 @@ func interruptsParagraph(line string) bool {
 	// other alternatives carry ` {0,3}` but this one does not, so `  <br>` does
 	// not interrupt either). quoteHTMLInterrupt (quote.go) is that test.
 	if line != "" && line[0] == '<' && quoteHTMLInterrupt.MatchString(line) {
-		return true
-	}
-	if isLatexBlockStart(line) {
 		return true
 	}
 	return false
@@ -67,6 +67,7 @@ func (l *blockLexer) lexParagraph(start, to int) (*Block, int) {
 	src := l.src
 	at := start
 	count := 0
+	noSetext := false
 	for at < to {
 		ln := nextLine(src, at)
 		if isBlankLine(ln.text) {
@@ -77,31 +78,31 @@ func (l *blockLexer) lexParagraph(start, to int) (*Block, int) {
 			// only when the lines the heading would swallow satisfy the
 			// reference's lheading lookahead (marked 18.0.11): a line starting
 			// any list marker (not only 1.) or the paragraph's own first line
-			// looking like a delimiter row invalidates the conversion.
-			if level, ok := setextLevel(ln.text); ok {
-				decision, stop := lheadingDecision(src, start, at)
-				switch decision {
-				case lheadingDeniedFirst, lheadingDeniedAt:
-					if stop <= start {
-						// The first line itself is delimiter-row shaped: the
-						// underline line joins the paragraph as text, since
-						// marked's paragraph pattern continues over it.
-						text := strings.TrimSuffix(src[start:ln.next], "\n")
-						return &Block{Kind: BlockParagraph, Start: start, End: ln.next, Text: text}, ln.next
+			// looking like a delimiter row invalidates the conversion. marked
+			// then lexes the same lines with its paragraph rule, which no
+			// setext underline interrupts (`|lheading` is removed from it), so
+			// the paragraph goes on unless the line interrupts it otherwise.
+			if !noSetext {
+				if level, ok := setextLevel(ln.text); ok {
+					if lheadingAccepts(src, start, at) {
+						headingEnd := ln.next
+						// Tokenizer.lheading trims the text (marked 18.0.11).
+						text := jsTrim(src[start:at])
+						return &Block{Kind: BlockHeading, Start: start, End: headingEnd, Level: level, Text: text}, headingEnd
 					}
-					text := strings.TrimSuffix(src[start:stop], "\n")
-					return &Block{Kind: BlockParagraph, Start: start, End: stop, Text: text}, stop
-				case lheadingAllowed:
-					headingEnd := ln.next
-					text := strings.TrimSuffix(src[start:at], "\n")
-					return &Block{Kind: BlockHeading, Start: start, End: headingEnd, Level: level, Text: text}, headingEnd
+					noSetext = true
 				}
 			}
-			// A table header row interrupts the paragraph.
-			if l.looksLikeTableStart(at) {
-				break
-			}
-			if interruptsParagraph(ln.text) {
+			// A table header row or another block interrupts the paragraph.
+			if l.looksLikeTableStart(at) || interruptsParagraph(ln.text) || l.latexInterrupts(at, ln.text) {
+				// marked tries lheading on the block before its paragraph
+				// rule, and lheading's text runs on past an interrupting line
+				// its own lookahead accepts (`a\nb\n---`, `a\n<div>x\n---`).
+				if !noSetext && lheadingLookahead(ln.text) {
+					if b, end, ok := l.lheadingPast(start, at, to); ok {
+						return b, end
+					}
+				}
 				break
 			}
 		}
@@ -114,35 +115,56 @@ func (l *blockLexer) lexParagraph(start, to int) (*Block, int) {
 	return &Block{Kind: BlockParagraph, Start: start, End: at, Text: text}, at
 }
 
-// lheadingDecision mirrors the alternation marked's lheading (18.0.11) uses to
+// latexInterrupts reports a `$$` or `\[` line that ends a paragraph. The
+// latexBlock extension's start clips the paragraph before such a line, but
+// when the tokenizer then declines it, marked's lastParagraphClipped joins the
+// next paragraph back with a newline (pi v1.5.0 markdown.ts, marked 18.0.11
+// Lexer.blockTokens), so only an opener the tokenizer takes interrupts.
+func (l *blockLexer) latexInterrupts(at int, line string) bool {
+	if !isLatexBlockStart(line) {
+		return false
+	}
+	_, _, ok := l.lexLatex(at)
+	return ok
+}
+
+// lheadingPast reports marked's lheading match for the paragraph at start
+// when it reaches past the interrupting line at: every line through the
+// underline must pass the lheading lookahead.
+func (l *blockLexer) lheadingPast(start, at, to int) (*Block, int, bool) {
+	src := l.src
+	if !lheadingAccepts(src, start, at) {
+		return nil, 0, false
+	}
+	for at < to {
+		ln := nextLine(src, at)
+		if level, ok := setextLevel(ln.text); ok {
+			text := jsTrim(src[start:at])
+			return &Block{Kind: BlockHeading, Start: start, End: ln.next, Level: level, Text: text}, ln.next, true
+		}
+		if !lheadingLookahead(ln.text) {
+			break
+		}
+		at = ln.next
+	}
+	return nil, 0, false
+}
+
+// lheadingAccepts mirrors the alternation marked's lheading (18.0.11) uses to
 // veto the conversion (packages/tui/src/components/markdown.ts lexes with
 // marked): its text is lines that start no list marker (any ordered number, not
 // only 1.), no code block, fence, quote, heading or full-line html tag, and
-// whose first line is not delimiter-row shaped.
-func lheadingDecision(src string, start, underlineAt int) (lheadingDecisionKind, int) {
-	at := start
-	first := true
-	for at < underlineAt {
+// none of them is delimiter-row shaped.
+func lheadingAccepts(src string, start, underlineAt int) bool {
+	for at := start; at < underlineAt; {
 		ln := nextLine(src, at)
 		if !lheadingLookahead(ln.text) {
-			if first {
-				return lheadingDeniedFirst, at
-			}
-			return lheadingDeniedAt, at
+			return false
 		}
-		first = false
 		at = ln.next
 	}
-	return lheadingAllowed, 0
+	return true
 }
-
-type lheadingDecisionKind uint8
-
-const (
-	lheadingAllowed lheadingDecisionKind = iota
-	lheadingDeniedAt
-	lheadingDeniedFirst
-)
 
 // lheadingLookahead reports a line the reference's lheading rule accepts as its
 // text: `(?:.|\n(?!...))+?` with the alternation
@@ -151,7 +173,7 @@ func lheadingLookahead(line string) bool {
 	if isBlankLine(line) {
 		return false
 	}
-	if lheadingListStart(line) || lheadingCodeStart(line) || isThematicBreak(line) {
+	if lheadingListStart(line) || lheadingCodeStart(line) {
 		return false
 	}
 	if _, _, ok := fenceStart(line); ok {
@@ -226,33 +248,19 @@ func lheadingHeadingStart(line string) bool {
 	return i >= len(line) || (line[i] == ' ' || line[i] == '\t')
 }
 
-// lheadingHTMLOpen is the html alternative of the same lookahead: a
-// line whose angle tag fills the line blocks the heading (the lookahead
-// newline is the line end here).
+// lheadingHTMLOpen is the html alternative of the same lookahead,
+// ` {0,3}<[^\n>]+>\n` (marked 18.0.11): one tag that fills the line blocks the
+// heading (the lookahead newline is the line end here), while `<x>y` or
+// `<a href=x>y</a>` does not.
 func lheadingHTMLOpen(line string) bool {
-	if line == "" || line[0] != '<' {
-		return false
-	}
-	rest := line[1:]
 	i := 0
-	for i < len(rest) && (isAlnum(rest[i]) || rest[i] == '-' || rest[i] == ':') {
+	for i < len(line) && i < 3 && line[i] == ' ' {
 		i++
 	}
-	if i == 0 {
+	if len(line)-i < 3 || line[i] != '<' || line[len(line)-1] != '>' {
 		return false
 	}
-	// `(?: space | tag closed )`: whitespace right after the name, or the
-	// tag closes the line.
-	if i == len(rest) {
-		return false
-	}
-	if rest[i] == ' ' || rest[i] == '\t' {
-		return true
-	}
-	if rest[i] == '/' && i+1 < len(rest) && rest[i+1] == '>' && i+2 == len(rest) {
-		return true
-	}
-	return false
+	return !strings.Contains(line[i+1:len(line)-1], ">")
 }
 
 // delimiterRowShape is the lookahead's delimiter-row alternative
@@ -293,26 +301,74 @@ func tailColonDashSpace(s string) bool {
 	return true
 }
 
-// looksLikeTableStart reports a header row followed by a delimiter row.
+// looksLikeTableStart reports the paragraph rule's table interrupt: the line at
+// at followed by a row of gfmTable's align shape (rules.ts, marked 18.0.11).
+// The paragraph pattern only matches the shape; Tokenizer.table may still
+// reject the rows, and then they lex as other blocks (`a\n2. b\n---` is a
+// paragraph, a list and a rule).
 func (l *blockLexer) looksLikeTableStart(at int) bool {
 	header := nextLine(l.src, at)
 	delim := nextLine(l.src, header.next)
 	if delim.next <= header.next {
 		return false
 	}
-	if !tableStartRows(header.text, delim.text) {
-		return false
-	}
-	_, ok := parseDelimiterRow(delim.text)
-	return ok
+	return alignRowShape(delim.text)
 }
 
-// tableStartRows reports whether a header row and a delimiter row start a table.
-// A pipe-free header still starts one when the delimiter row has a pipe; with a
-// pipe on neither row the delimiter row is a setext underline or a thematic
-// break instead (Marked's table rule, upstream 2ed3118b0's case).
-func tableStartRows(header string, delimiter string) bool {
-	return strings.Contains(header, "|") || strings.Contains(delimiter, "|")
+// alignRowShape matches gfmTable's align row
+// ` {0,3}((?:\| *)?:?-+:? *(?:\| *:?-+:? *)*(?:\| *)?)` up to the line end.
+func alignRowShape(line string) bool {
+	i := 0
+	for i < len(line) && i < 3 && line[i] == ' ' {
+		i++
+	}
+	skipSpaces := func() {
+		for i < len(line) && line[i] == ' ' {
+			i++
+		}
+	}
+	cell := func() bool {
+		if i < len(line) && line[i] == ':' {
+			i++
+		}
+		dashes := i
+		for i < len(line) && line[i] == '-' {
+			i++
+		}
+		if i == dashes {
+			return false
+		}
+		if i < len(line) && line[i] == ':' {
+			i++
+		}
+		skipSpaces()
+		return true
+	}
+	if i < len(line) && line[i] == '|' {
+		i++
+		skipSpaces()
+	}
+	if !cell() {
+		return false
+	}
+	for i < len(line) && line[i] == '|' {
+		i++
+		skipSpaces()
+		if i == len(line) {
+			return true
+		}
+		if !cell() {
+			return false
+		}
+	}
+	return i == len(line)
+}
+
+// tableStartRows reports whether a delimiter row may start a table: it needs a
+// pipe or a colon (tableDelimiter in Tokenizer.table, marked 18.0.11), so
+// `| x |\n-` is a setext heading and `x\n:-` is a table.
+func tableStartRows(delimiter string) bool {
+	return strings.ContainsAny(delimiter, ":|")
 }
 
 func setextLevel(line string) (int, bool) {
@@ -354,7 +410,11 @@ func (l *blockLexer) lexHTML(start int) (*Block, int) {
 	at := start
 	for at < len(src) {
 		ln := nextLine(src, at)
-		if isBlankLine(ln.text) && at > start {
+		// The html rule ends types 6 and 7 at `(?:\n[ \t]*)+\n|$` (marked
+		// 18.0.11): a blank line ends the block only when a newline follows
+		// it, so a whitespace-only last line stays in it, and
+		// trimTrailingBlankLines keeps that one line.
+		if isBlankLine(ln.text) && at > start && at+len(ln.text) < len(src) {
 			break
 		}
 		at = ln.next
@@ -509,27 +569,31 @@ func stripIndent(line string, width int) string {
 	return line[i:]
 }
 
-// stripTaskMarker removes a leading `[ ] ` / `[x] ` task checkbox.
-func stripTaskMarker(content string) (task bool, checked bool, rest string, ok bool) {
-	i := 0
-	for i < len(content) && (content[i] == ' ' || content[i] == '\t') {
-		i++
+// stripTaskMarker removes a leading `[ ] ` / `[x] ` task checkbox the way
+// marked's list tokenizer does (marked 18.0.11): listIsTask
+// `^\[[ xX]\] +\S` marks the item, and listReplaceTask `^\[[ xX]\] +`
+// strips it.
+func stripTaskMarker(content string) (checked bool, rest string, ok bool) {
+	// The tokenizer has expanded the first line's tabs to spaces by then
+	// (listReplaceTabs), so a tab separates the box as a space does.
+	if len(content) < 4 || content[0] != '[' || content[2] != ']' || (content[3] != ' ' && content[3] != '\t') {
+		return false, content, false
 	}
-	if i+3 > len(content) || content[i] != '[' || content[i+2] != ']' {
-		return false, false, content, false
-	}
-	mark := content[i+1]
+	mark := content[1]
 	if mark != ' ' && mark != 'x' && mark != 'X' {
-		return false, false, content, false
+		return false, content, false
 	}
-	after := i + 3
-	if after < len(content) && content[after] != ' ' && content[after] != '\t' && content[after] != '\n' {
-		return false, false, content, false
-	}
+	after := 3
 	for after < len(content) && (content[after] == ' ' || content[after] == '\t') {
 		after++
 	}
-	return true, mark != ' ', content[after:], true
+	if after == len(content) {
+		return false, content, false
+	}
+	if r, _ := utf8.DecodeRuneInString(content[after:]); isWhitespaceRune(r) {
+		return false, content, false
+	}
+	return mark != ' ', content[after:], true
 }
 
 // markerEndIndex returns the index just past a list marker and its following
@@ -579,10 +643,150 @@ func lexBlocksIn(src string) []*Block {
 	return (&blockLexer{src: src}).lexBlocksCap(0, len(src), 2)
 }
 
-// isHTMLBlockStart reports a line starting with an HTML tag or comment. An
-// autolink (`<http://x>`, `<a@b.com>`) has no valid tag name and is not an HTML
-// block.
+// isHTMLBlockStart reports a line that starts marked's html block rule
+// (marked 18.0.11, block `html`, which carries the `i` flag): a script, pre,
+// style or textarea element, a comment, a processing instruction, a
+// declaration or CDATA (types 1-5), an opening or closing tag from the block
+// tag list followed by spaces, the line end, `>` or `/>` (type 6), or a
+// complete open or closing tag of any other name alone on its line (type 7).
+// An inline tag followed by text on its line (`<span>x</span>`, `<kbd>a</kbd>
+// b`) is not a block start: the line is paragraph text with inline HTML.
 func isHTMLBlockStart(line string) bool {
+	i, width := skipIndent(line, 4)
+	if width >= 4 || i+1 >= len(line) || line[i] != '<' {
+		return false
+	}
+	rest := line[i:]
+	switch {
+	case strings.HasPrefix(rest, "<!--"), strings.HasPrefix(rest, "<?"), strings.HasPrefix(rest, "<![CDATA["):
+		return true
+	case rest[1] == '!':
+		return len(rest) > 2 && isASCIILetter(rest[2])
+	}
+	closing := rest[1] == '/'
+	nameStart := 1
+	if closing {
+		nameStart = 2
+	}
+	j := nameStart
+	for j < len(rest) && (isAlnum(rest[j]) || rest[j] == '-' || rest[j] == '_') {
+		j++
+	}
+	if j == nameStart || !isASCIILetter(rest[nameStart]) {
+		return false
+	}
+	name := strings.ToLower(rest[nameStart:j])
+	after := rest[j:]
+	// Type 1: `<(script|pre|style|textarea)[\s>]`, opening tags only.
+	if !closing && (name == "script" || name == "pre" || name == "style" || name == "textarea") {
+		return after == "" || after[0] == '>' || after[0] == ' ' || after[0] == '\t'
+	}
+	// Type 6: a block tag name, then ` +`, the line end, `>` or `/>`. The
+	// tag alternation is tried prefix-first, so the name may be a prefix of
+	// the run (`<h1x>` is not a block tag, but `<header>` is).
+	for k := len(name); k > 0; k-- {
+		if !markedBlockTag(name[:k]) {
+			continue
+		}
+		tail := rest[nameStart+k:]
+		if tail == "" || tail[0] == ' ' || tail[0] == '>' || strings.HasPrefix(tail, "/>") {
+			return true
+		}
+	}
+	// Type 7 excludes names starting with script, pre, style or textarea
+	// (`(?!script|pre|style|textarea)`).
+	for _, excluded := range []string{"script", "pre", "style", "textarea"} {
+		if strings.HasPrefix(name, excluded) {
+			return false
+		}
+	}
+	if closing {
+		// `</name\s*>` and nothing but spaces or tabs after it.
+		k := strings.TrimLeft(after, " \t")
+		return strings.HasPrefix(k, ">") && strings.TrimLeft(k[1:], " \t") == ""
+	}
+	end, ok := htmlOpenTagAttributesEnd(after)
+	return ok && strings.TrimLeft(after[end:], " \t") == ""
+}
+
+// htmlOpenTagAttributesEnd matches marked's `(?:attribute)*? */?>` after an
+// open tag's name and returns the offset after the `>`. An attribute is
+// ` +[a-zA-Z:_][\w.:-]*` with an optional ` *= *` value: double-quoted,
+// single-quoted (neither spanning a line) or unquoted `[^\s"'=<>\x60]+`.
+func htmlOpenTagAttributesEnd(s string) (int, bool) {
+	i := 0
+	for {
+		j := i
+		for j < len(s) && s[j] == ' ' {
+			j++
+		}
+		if j < len(s) && s[j] == '>' {
+			return j + 1, true
+		}
+		if j+1 < len(s) && s[j] == '/' && s[j+1] == '>' {
+			return j + 2, true
+		}
+		// Another attribute needs at least one space before its name.
+		if j == i || j >= len(s) || !(isASCIILetter(s[j]) || s[j] == ':' || s[j] == '_') {
+			return 0, false
+		}
+		j++
+		for j < len(s) && (isAlnum(s[j]) || s[j] == '_' || s[j] == '.' || s[j] == ':' || s[j] == '-') {
+			j++
+		}
+		k := j
+		for k < len(s) && s[k] == ' ' {
+			k++
+		}
+		if k < len(s) && s[k] == '=' {
+			k++
+			for k < len(s) && s[k] == ' ' {
+				k++
+			}
+			switch {
+			case k < len(s) && (s[k] == '"' || s[k] == '\''):
+				close := strings.IndexByte(s[k+1:], s[k])
+				if close < 0 {
+					return 0, false
+				}
+				j = k + 1 + close + 1
+			default:
+				v := k
+				for v < len(s) && !strings.ContainsRune(" \t\"'=<>\x60", rune(s[v])) {
+					v++
+				}
+				if v == k {
+					return 0, false
+				}
+				j = v
+			}
+		}
+		i = j
+	}
+}
+
+// markedBlockTag reports a name in marked's type-6 block tag list.
+func markedBlockTag(name string) bool {
+	_, ok := markedBlockTagSet[name]
+	return ok
+}
+
+var markedBlockTagSet = func() map[string]struct{} {
+	set := map[string]struct{}{}
+	for _, tag := range strings.Split(markedBlockTags, "|") {
+		if tag == "h[1-6]" {
+			for _, n := range "123456" {
+				set["h"+string(n)] = struct{}{}
+			}
+			continue
+		}
+		set[tag] = struct{}{}
+	}
+	return set
+}()
+
+// startsHTMLLine is the broad tag-at-line-start check a table body ends at.
+func startsHTMLLine(line string) bool {
 	i, width := skipIndent(line, 4)
 	if width >= 4 || i >= len(line) || line[i] != '<' {
 		return false
@@ -623,15 +827,23 @@ func (l *blockLexer) tryTable(start int) (*Block, bool) {
 	if delim.next <= header.next {
 		return nil, false
 	}
-	if !tableStartRows(header.text, delim.text) {
+	// gfmTable's align row (at most three spaces of indent, spaces only) and
+	// Tokenizer.table's pipe-or-colon check (marked 18.0.11).
+	if !alignRowShape(delim.text) || !tableStartRows(delim.text) {
 		return nil, false
 	}
 	aligns, ok := parseDelimiterRow(delim.text)
 	if !ok {
 		return nil, false
 	}
+	// Tokenizer.table rejects a header whose cell count differs from the
+	// delimiter row's (marked 18.0.11): `x y\n:-: | -` is a paragraph.
+	headers := splitTableRow(header.text)
+	if len(headers) != len(aligns) {
+		return nil, false
+	}
 	table := &Block{Kind: BlockTable, Start: start, Align: aligns}
-	table.Header = tableRowCells(header.text, len(aligns))
+	table.Header = headers
 	at := delim.next
 	for at < len(src) {
 		ln := nextLine(src, at)
@@ -659,7 +871,7 @@ func startsOtherBlock(line string) bool {
 	if _, _, ok := fenceStart(line); ok {
 		return true
 	}
-	if isThematicBreak(line) || isBlockquoteStart(line) || isHTMLBlockStart(line) || indentWidth(line) >= 4 {
+	if isThematicBreak(line) || isBlockquoteStart(line) || startsHTMLLine(line) || indentWidth(line) >= 4 {
 		return true
 	}
 	_, _, ok := listItemStart(line)
@@ -718,13 +930,34 @@ func parseDelimiterRow(line string) ([]Align, bool) {
 	return aligns, true
 }
 
+// splitTableRow is marked's splitCells (helpers.ts, marked 18.0.11) without a
+// count: an unescaped pipe delimits cells, an empty first or last cell is
+// dropped, and each cell is trimmed with its `\|` unescaped.
 func splitTableRow(line string) []string {
-	line = strings.TrimSpace(line)
-	line = strings.TrimPrefix(line, "|")
-	line = strings.TrimSuffix(line, "|")
-	parts := strings.Split(line, "|")
-	for i := range parts {
-		parts[i] = strings.TrimSpace(parts[i])
+	var cells []string
+	cellStart := 0
+	for i := 0; i < len(line); i++ {
+		if line[i] != '|' {
+			continue
+		}
+		slashes := 0
+		for j := i - 1; j >= 0 && line[j] == '\\'; j-- {
+			slashes++
+		}
+		if slashes%2 == 0 {
+			cells = append(cells, line[cellStart:i])
+			cellStart = i + 1
+		}
 	}
-	return parts
+	cells = append(cells, line[cellStart:])
+	if jsTrim(cells[0]) == "" {
+		cells = cells[1:]
+	}
+	if len(cells) > 0 && jsTrim(cells[len(cells)-1]) == "" {
+		cells = cells[:len(cells)-1]
+	}
+	for i, cell := range cells {
+		cells[i] = strings.ReplaceAll(jsTrim(cell), `\|`, "|")
+	}
+	return cells
 }

@@ -279,12 +279,17 @@ func (l *blockLexer) lexList(start int) (*Block, int, bool) {
 	}
 
 	for _, block := range list.Blocks {
-		if _, checked, rest, ok := stripTaskMarker(block.Text); ok {
+		// marked lexes the item with its checkbox text in place and only
+		// places the checkbox when the first token is text or a paragraph;
+		// otherwise `[ ]` stays text (`- [ ] t\n===` is a heading "[ ] t").
+		block.Blocks = lexItemBlocks(block.Text)
+		if checked, rest, ok := stripTaskMarker(block.Text); ok && len(block.Blocks) > 0 && block.Blocks[0].Kind == BlockParagraph {
+			first := block.Blocks[0]
+			_, first.Text, _ = stripTaskMarker(first.Text)
 			block.Task = true
 			block.Checked = checked
 			block.Text = rest
 		}
-		block.Blocks = lexBlocksIn(block.Text)
 	}
 	// Pier's tight/loose reading is unchanged: a blank line inside the list
 	// makes it loose. That covers marked's two rules (an item ending in a blank

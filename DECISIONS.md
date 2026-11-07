@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D397)
+# Deliberate divergences from pi (D1–D398)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5477,3 +5477,34 @@ expanded rows and never exceed the width),
 `TestMcpToolCallFramesCollapseArguments` (the collapsed header still matches the
 reference's output).
 
+
+### D398
+
+**A paragraph whose second character opens display math stays whole.**
+
+Reference: pi v1.5.0 (f9a26365) `packages/tui/src/components/markdown.ts`
+registers the `latexBlock` extension with the start hook
+`/(?:^|\n) {0,3}(?:\$\$|\\\[)/`. marked 18.0.11 `Lexer.blockTokens` runs that
+hook on `src.slice(1)` to clip the top-level paragraph before an extension
+start, then joins the next paragraph back with `"\n"` when the extension
+declines (`lastParagraphClipped`). Because the hook's `^` matches the start of
+the sliced source, a paragraph whose second character (after up to three
+spaces) begins `$$` or `\[` is clipped after its first character. Upstream
+renders `a $$ b` as the lines `a`, a blank line and `$$ b`, and `x$$ y` as `x`
+and `$$ y`.
+
+Pier ports the line-start case. A `$$` or `\[` line ends a paragraph only when
+the LaTeX tokenizer takes it, so `text\n$$ plain` stays one paragraph as it
+does upstream. Pier does not split a paragraph at its second character, so the
+sentence renders as written.
+
+The same flag has a document-wide side effect that pier does not port either.
+The hook finds any later opener, so `lastParagraphClipped` is set for every
+paragraph before a display-math line. Two paragraphs that marked would emit
+separately are then joined: `a\nb c\n-|-` is the paragraphs `a` and `b c\n-|-`,
+but with `\n\n$$x$$` appended upstream lexes one paragraph. Porting it would
+make every earlier paragraph depend on the rest of the source, which the
+markdown component's windowed re-lex (`tui/markdown.go`) relies on not
+happening.
+
+Test: `TestMarkdownKeepsAParagraphWhoseSecondCharacterOpensMath`.

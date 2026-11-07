@@ -16,6 +16,8 @@ import (
 type inlineState struct {
 	linkEmitted bool
 	inLink      bool
+	// links is the document's tokens.links for reference links.
+	links linkMap
 }
 
 // matchAutolinkPrefixForm matches the rule's `protocol://`/`www.` alternative.

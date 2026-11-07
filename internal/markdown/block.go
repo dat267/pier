@@ -9,9 +9,7 @@ import (
 // Lex parses src into top-level blocks with their inline content resolved.
 // It is the full (non-incremental) entry point.
 func Lex(src string) []*Block {
-	l := &blockLexer{src: src}
-	blocks := l.lexBlocks(0, len(src))
-	ParseInlines(blocks)
+	blocks, _ := LexDefinitions(src, 0, nil)
 	return blocks
 }
 
@@ -88,8 +86,30 @@ func (l *blockLexer) lexBlocks(from, to int) []*Block {
 
 // lexBlocksCap is lexBlocks with an initial capacity for the result.
 func (l *blockLexer) lexBlocksCap(from, to, capacity int) []*Block {
+	return l.lexBlocksMode(from, to, capacity, true)
+}
+
+// lexItemBlocks lexes a list item's text the way marked's list tokenizer
+// does: with `lexer.state.top = false` (marked 18.0.11 Tokenizer.list, then
+// Lexer.blockTokens). Without the top-level paragraph rule, every line is
+// tried against the block tokenizers and a plain line is a `text` token that
+// joins the text before it. An indented-code line after text joins it with
+// the code's de-indented text, and a definition joins it as its raw, so
+// `- a\n      c` is the text `a\nc`. blockTokens sets `state.top` back to true
+// when it returns, so after a nested list the rest of the item lexes as top
+// level again.
+func lexItemBlocks(src string) []*Block {
+	return (&blockLexer{src: src}).lexBlocksMode(0, len(src), 2, false)
+}
+
+// lexBlocksMode lexes src[from:to]; top selects marked's top-level paragraph
+// rule over its line-by-line text rule (see lexItemBlocks).
+func (l *blockLexer) lexBlocksMode(from, to, capacity int, top bool) []*Block {
 	src := l.src
 	blocks := make([]*Block, 0, capacity)
+	// lastText is set while the last block is a paragraph or text token that
+	// indented code or a definition joins (and, below the top, a text line).
+	lastText := false
 	at := from
 	for at < to {
 		lineStart := at
@@ -104,19 +124,105 @@ func (l *blockLexer) lexBlocksCap(from, to, capacity int) []*Block {
 				at = bl.next
 			}
 			blocks = append(blocks, &Block{Kind: BlockSpace, Start: lineStart, End: at})
+			lastText = false
 			continue
 		}
 		if b, next, ok := l.lexBlock(lineStart, raw, ln); ok {
-			blocks = append(blocks, b)
 			at = next
+			if lastText {
+				last := blocks[len(blocks)-1]
+				switch {
+				case b.Kind == BlockCode && indentWidth(b.Raw) >= 4:
+					last.Text += "\n" + b.Body
+					last.End = b.End
+					continue
+				case b.Kind == BlockLinkDef:
+					last.Text += "\n" + strings.TrimSuffix(b.Raw, "\n")
+					last.End = b.End
+					continue
+				}
+			}
+			blocks = append(blocks, b)
+			lastText = false
+			if b.Kind == BlockList {
+				top = true
+			}
 			continue
 		}
 		// Paragraph (also handles a setext heading on the next line).
 		b, next := l.lexParagraph(lineStart, to)
-		blocks = append(blocks, b)
-		at = next
+		if top || b.Kind != BlockParagraph {
+			blocks = append(blocks, b)
+			// blockTokens joins indented code and a definition into a last
+			// paragraph token at any level (marked 18.0.11).
+			lastText = b.Kind == BlockParagraph
+			at = next
+			continue
+		}
+		// Text: the paragraph's lines up to the first that starts a block of
+		// its own, which the top-level paragraph would have continued through.
+		// marked also tries lheading at each text line, so an underline after
+		// a line its lookahead rejects makes the lines after that one a
+		// heading (lexParagraph has already taken the case with none).
+		stop := nextLine(src, lineStart).next
+		for stop < next {
+			inner := nextLine(src, stop)
+			if mayStartBlock(inner.text) {
+				if _, _, ok := l.lexBlock(stop, inner.text, inner); ok {
+					break
+				}
+			}
+			if _, ok := setextLevel(inner.text); ok {
+				if from := afterLastLookaheadReject(src, lineStart, stop); from > lineStart && from < stop {
+					stop = from
+					break
+				}
+			}
+			stop = inner.next
+		}
+		text := strings.TrimSuffix(src[lineStart:min(stop, next)], "\n")
+		if lastText {
+			last := blocks[len(blocks)-1]
+			last.Text += "\n" + text
+			last.End = stop
+		} else {
+			b.End, b.Text = stop, text
+			blocks = append(blocks, b)
+		}
+		lastText = true
+		at = stop
 	}
 	return blocks
+}
+
+// afterLastLookaheadReject returns the offset after the last line in
+// src[from:to] that marked's lheading lookahead rejects, or from when it
+// accepts them all.
+func afterLastLookaheadReject(src string, from, to int) int {
+	after := from
+	for at := from; at < to; {
+		ln := nextLine(src, at)
+		if !lheadingLookahead(ln.text) {
+			after = ln.next
+		}
+		at = ln.next
+	}
+	return after
+}
+
+// mayStartBlock is a cheap filter for a paragraph's inner line: no block
+// lexBlock knows starts with another character. A table is not among them,
+// since lexParagraph already ends before a line with a delimiter row after it.
+func mayStartBlock(line string) bool {
+	i := 0
+	for i < len(line) && line[i] == ' ' {
+		i++
+	}
+	if i >= 4 || i == len(line) {
+		return true
+	}
+	c := line[i]
+	return c >= '0' && c <= '9' || strings.IndexByte("\t#`~-*_>+<[$\\", c) >= 0
 }
 
 // lexBlock tries the single-line block starts in Marked's order. It returns the
@@ -162,6 +268,13 @@ func (l *blockLexer) lexBlock(start int, raw string, ln line) (*Block, int, bool
 	// Link reference definition (before the table/lheading/paragraph branch,
 	// marked 18.0.11 order).
 	if tag, href, title, end, ok := parseLinkDef(l.src, start); ok {
+		// marked's def tokenizer trims the match's trailing newlines (rtrim in
+		// Tokenizer.def, marked 18.0.11) and blockTokens folds a lone "\n"
+		// space into it, so the def keeps one newline and the blank lines
+		// after it lex as space.
+		for end > start+1 && l.src[end-1] == '\n' && l.src[end-2] == '\n' {
+			end--
+		}
 		return &Block{Kind: BlockLinkDef, Start: start, End: end, Text: tag, Href: href, Title: title, Raw: l.src[start:end]}, end, true
 	}
 	// Indented code.
@@ -355,59 +468,72 @@ func containsTableStart(lines []string) bool {
 	return false
 }
 
-// lexLatex lexes a `$$…$$` or `\[…\]` block, folding a following blank line
-// into its raw like Marked's extension token. ok is false when the body reaches
-// a table start, which makes the opener ordinary text.
+// lexLatex is upstream's tokenizeBlockLatex (pi v1.5.0 markdown.ts):
+//
+//	^ {0,3}\$\$[ \t]*(?:\n)?([\s\S]*?)\$\$[ \t]*(?:\n|$)    (and the \[ \] form)
+//
+// The closer must end its line, the body must be non-empty and must not reach
+// a table start. Otherwise an opener whose rest of the source qualifies is a
+// pending block that runs to the end of the source (`\[` always, `$$` only
+// when the rest looks like math). A following blank line folds into the raw
+// like Marked's one-character space token. ok is false when neither form
+// applies, which makes the opener ordinary text.
 func (l *blockLexer) lexLatex(start int) (*Block, int, bool) {
 	src := l.src
-	first := nextLine(src, start)
-	trimmed := strings.TrimSpace(first.text)
-	var closer string
-	var openerLen int
-	if strings.HasPrefix(trimmed, "$$") {
-		closer, openerLen = "$$", 2
-	} else {
-		closer, openerLen = `\]`, 2
+	i := start
+	for i < len(src) && i-start < 3 && src[i] == ' ' {
+		i++
 	}
-	body := strings.TrimSpace(trimmed[openerLen:])
-	bodyLines := []string{trimmed[openerLen:]}
-	at := first.next
-	closed := false
-	if body != "" && strings.HasSuffix(body, closer) {
-		body = strings.TrimSpace(body[:len(body)-len(closer)])
-		bodyLines = []string{body}
-		closed = true
+	closer := `\]`
+	if strings.HasPrefix(src[i:], "$$") {
+		closer = "$$"
 	}
-	if !closed {
-		for at < len(src) {
-			ln := nextLine(src, at)
-			if idx := strings.Index(ln.text, closer); idx >= 0 {
-				if body != "" {
-					body += "\n"
-				}
-				body += ln.text[:idx]
-				bodyLines = append(bodyLines, ln.text[:idx])
-				at = ln.next
-				closed = true
-				break
-			}
-			if body != "" {
-				body += "\n"
-			}
-			body += ln.text
-			bodyLines = append(bodyLines, ln.text)
-			at = ln.next
+	i += 2
+	for i < len(src) && (src[i] == ' ' || src[i] == '\t') {
+		i++
+	}
+	if i < len(src) && src[i] == '\n' {
+		i++
+	}
+	bodyStart := i
+	// The lazy body ends at the first closer followed by blanks and a line end.
+	for j := bodyStart; j < len(src); {
+		k := strings.Index(src[j:], closer)
+		if k < 0 {
+			break
 		}
+		pos := j + k
+		end := pos + len(closer)
+		for end < len(src) && (src[end] == ' ' || src[end] == '\t') {
+			end++
+		}
+		if end < len(src) && src[end] != '\n' {
+			j = pos + 1
+			continue
+		}
+		body := src[bodyStart:pos]
+		if body == "" || containsTableStart(strings.Split(body, "\n")) {
+			break
+		}
+		if end < len(src) {
+			end++
+		}
+		end = absorbBlankLine(src, end)
+		return &Block{Kind: BlockLatex, Start: start, End: end, Raw: src[start:end], Text: jsTrim(body)}, end, true
 	}
-	if containsTableStart(bodyLines) {
+	rest := src[bodyStart:]
+	if rest == "" || (closer == "$$" && !looksLikePendingDollarMath(rest)) || containsTableStart(strings.Split(rest, "\n")) {
 		return nil, start, false
 	}
-	end := at
-	// A single following blank line is absorbed into the raw.
+	return &Block{Kind: BlockLatex, Start: start, End: len(src), Raw: src[start:], Text: rest, Pending: true}, len(src), true
+}
+
+// absorbBlankLine folds one following blank line into a block ending at end.
+func absorbBlankLine(src string, end int) int {
 	if next := nextLine(src, end); isBlankLine(next.text) && next.next > end {
-		end = next.next
+		return next.next
 	}
-	return &Block{Kind: BlockLatex, Start: start, End: end, Raw: src[start:end], Text: strings.TrimSpace(body), Pending: !closed}, end, true
+	return end
 }
 
 func isThematicBreak(line string) bool {
