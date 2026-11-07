@@ -2,9 +2,9 @@
 
 This is the design reference for `pier`, a Go port of pi v1.5.0
 (`f9a26365`). [AGENTS.md](AGENTS.md) contains contributor rules; use `git log`
-for release and review history. Deliberate differences from pi are recorded as
-D-rows in [DECISIONS.md](DECISIONS.md); the lock inventory below is the source of
-truth for retained and retired UI locks.
+for release and review history. Deliberate differences from pi are recorded
+as D-rows in [DECISIONS.md](DECISIONS.md); the lock inventory below is the
+source of truth for retained and retired UI locks.
 
 ## Runtime structure
 
@@ -96,8 +96,9 @@ after both an in-flight decode and a later decode from the old path complete.
 
 `pier --mode rpc` runs the coding agent as a local subprocess controlled by
 JSONL on stdin. Responses and session events share stdout; diagnostics use
-stderr. The command and event shapes follow **pi v1.3.0** for the supported
-subset below. This is not the framed-CBOR chord transport (removed from the
+stderr. The command and event shapes were verified against **pi v1.3.0** for
+the supported subset below; upstream `modes/rpc` is unchanged through the
+v1.5.0 pin. This is not the framed-CBOR chord transport (removed from the
 tree; D236), and it is not an MCP server.
 
 RPC runs the enabled agent tools with the same permissions as the CLI. It is
@@ -290,18 +291,17 @@ defer client.Stop()
 state, err := client.State()
 ```
 
-### Not implemented in this milestone
+### Not implemented
 
 - Extensions, extension UI requests/responses, and extension commands.
 
 The underlying CLI and session APIs may support operations that are not yet
-exposed through RPC. Unsupported commands fail explicitly; this milestone does
-not claim complete upstream RPC compatibility.
+exposed through RPC. Unsupported commands fail explicitly; pier does not claim
+complete upstream RPC compatibility.
 
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
-Referenced from `AGENTS.md`.
 
 The `tui/` and `coding/interactive/` refactor retired every UI-state mutex.
 This is the authoritative inventory for that ownership boundary: retained UI

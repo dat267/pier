@@ -954,7 +954,6 @@ The [lock inventory](ARCHITECTURE.md#lock-inventory) is authoritative.
 Tests cover blocked backlog, cancellation, atomic recovery, stale progress,
 oversized-title progress, and app clipboard routing.
 
-
 #### Direct terminal output inventory
 
 D198's paint watermarks do not cover direct terminal writes. The direct-write
@@ -1289,7 +1288,7 @@ the stored colors (upstream `applyTerminalColors` merges field by field), so an
 empty timeout result cannot clobber a background that arrived after the timeout.
 Before the merge, a timeout applied after the standalone listener's reply zeroed
 the background and the system theme lost the terminal's real appearance.
-Tests: `TestStaleSystemColorSnapshotDoesNotClobberLateBackground`.
+Test: `TestStaleSystemColorSnapshotDoesNotClobberLateBackground`.
 
 The retained blocking OSC 11 background and color-scheme helpers also use the
 existing query handoff mutex for pending requests and timeout/reply settlement.
@@ -2039,7 +2038,7 @@ trailing carriage return and preserves the rest of the name; the trim is the
 upstream defect here. Every other line-normalization rule matches: empty lines
 are skipped and the path is still relativized against the search root.
 
-Tests: `TestFindToolPreservesWhitespaceInFileNames`.
+Test: `TestFindToolPreservesWhitespaceInFileNames`.
 
 ### D245
 
@@ -2158,7 +2157,7 @@ text. The port restores `!` + the recorded command (`!!` for the excluded form)
 while replaying the message. The command was trimmed before execution, so the
 restored entry is the normalized form rather than the raw typed text.
 
-Tests: `TestTranscriptRestoresBashCommandHistory`.
+Test: `TestTranscriptRestoresBashCommandHistory`.
 
 ### D251
 
@@ -2397,16 +2396,6 @@ names `/login <provider>`, which exists. The OAuth form now points at the
 
 Test: `TestMcpConnectionAsksOAuthServersToSignIn`.
 
-### D260 (resolved)
-
-The non-RGI ZWJ width divergence is gone: the port carries the generated Unicode
-17.0 `RGI_Emoji_ZWJ_Sequence` table (`tui/emojizwjdata.go`, matching the
-reference's ICU 78 data), so a chain Unicode never joined keeps its part-by-part
-width and a real sequence is one two-cell emoji.
-
-Tests: `TestRGIEmojiZWJTable` (sorted, duplicate-free generated table holding
-the reference's sequences) and `TestRGIEmojiWidth`.
-
 ### D261
 
 **An invalid `file://` URL is returned unchanged instead of raising.**
@@ -2611,7 +2600,7 @@ pinned `bedrockUserAgent` function and AWS SDK middleware.
 `TestBedrockIdentityHeaderOverrides` covers caller overrides, null/empty
 values, reserved headers and the signed `x-amz-user-agent` header.
 
-### D267 (partially resolved)
+### D267
 
 **Request params keep JavaScript member order; map-backed options need order sidecars.**
 
@@ -4078,7 +4067,7 @@ instructions that read as harness text later. `escapeGoalText` now rewrites ever
 so an objective like `fix <b>` still reads normally. Stored entries and display
 cards are unchanged.
 
-Tests: `TestGoalPromptWrappersCannotBeClosedByTheirContent`.
+Test: `TestGoalPromptWrappersCannotBeClosedByTheirContent`.
 
 ### D345
 
@@ -4113,7 +4102,7 @@ outside it, reading as harness context for the rest of the session. Pier escapes
 `</` in the summary through `escapePromptDelimiters` for both custom roles. The
 stored entry bytes are unchanged; only the converted context is escaped.
 
-Tests: `TestSummaryContextCannotCloseItsWrapper`.
+Test: `TestSummaryContextCannotCloseItsWrapper`.
 
 ### D347
 

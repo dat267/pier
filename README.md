@@ -2,9 +2,9 @@
 
 pier is a terminal-based AI coding agent and a from-scratch Go port of
 [Mario Zechner's pi](https://github.com/earendil-works/pi). It is pinned to pi
-v1.5.0 (`f9a26365`); use `git log` for release/change history and
-[ARCHITECTURE.md](ARCHITECTURE.md) for design and [DECISIONS.md](DECISIONS.md) for
-deliberate differences.
+v1.5.0 (`f9a26365`); use `git log` for release/change history,
+[ARCHITECTURE.md](ARCHITECTURE.md) for design and [DECISIONS.md](DECISIONS.md)
+for deliberate differences.
 
 There is no built-in filesystem sandbox: shell, write and edit tools use your OS
 permissions, including outside the workspace. Use external confinement.
@@ -40,7 +40,6 @@ in [the RPC contract](ARCHITECTURE.md#stdio-rpc).
 
 ## Development
 
-Packages follow pi's layout. The UI uses a single owner loop; session projections
-build model context, and persisted JSON preserves JavaScript key order. See
-[AGENTS.md](AGENTS.md) for contributor rules, [ARCHITECTURE.md](ARCHITECTURE.md)
-for design details, [DECISIONS.md](DECISIONS.md) for D-rows; use `git log` for coverage and change history.
+Packages follow pi's layout. [AGENTS.md](AGENTS.md) holds the contributor
+rules, [ARCHITECTURE.md](ARCHITECTURE.md) the design and
+[DECISIONS.md](DECISIONS.md) the D-rows; use `git log` for change history.
