@@ -250,6 +250,26 @@ func TestEditorAutocompleteSerializesProviderRequests(t *testing.T) {
 	host.drain()
 }
 
+// waitForAutocompletePrefix drains posted callbacks until the editor shows the
+// wanted autocomplete prefix. It asserts the observable state instead of a post
+// count, so it cannot pass or hang on an interleaving of the owner loop.
+func waitForAutocompletePrefix(t *testing.T, host *loopHost, editor *Editor, want string) {
+	t.Helper()
+	timer := time.NewTimer(5 * time.Second)
+	defer timer.Stop()
+	for {
+		host.drain()
+		if editor.autocompletePrefix == want {
+			return
+		}
+		select {
+		case <-host.posted:
+		case <-timer.C:
+			t.Fatalf("autocomplete prefix = %q, want %q", editor.autocompletePrefix, want)
+		}
+	}
+}
+
 func waitForAutocompleteProvider(t *testing.T, host *loopHost, started <-chan struct{}) {
 	t.Helper()
 	timer := time.NewTimer(5 * time.Second)
@@ -330,9 +350,8 @@ func TestEditorAutocompleteDropsStaleResults(t *testing.T) {
 	// the replacement request, even when the old provider ignores cancellation.
 	close(releaseFirst)
 	waitForAutocompleteProvider(t, host, second.started)
-	host.waitPost(t)
-	host.drain()
-	if editor.autocompletePrefix != "@ab" {
-		t.Fatalf("prefix = %q, want the second request's @ab", editor.autocompletePrefix)
-	}
+	// Wait for the applied result rather than for one more post: the stale
+	// request's post and the replacement's can both be drained by the wait
+	// above, so counting posts races with the owner loop.
+	waitForAutocompletePrefix(t, host, editor, "@ab")
 }
