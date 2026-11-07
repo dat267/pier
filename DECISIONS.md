@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D396)
+# Deliberate divergences from pi (D1–D397)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5429,4 +5429,33 @@ expanded indented form) and `TestMcpToolResultFramesLimitVisualLines` (5 wrapped
 lines with the hint, one long line bounded, expanded shows everything, and the
 saved full-output path) and `TestMcpToolFramesReachTheTranscript` (the app's
 adapter resolves the renderers from the tool label).
+
+### D397
+
+**An expanded MCP frame keeps its header row; only the body grows.**
+
+Reference: pi v1.5.0 (f9a26365) `extensions/mcp/tools.ts`
+`createMcpToolRenderers` rebuilds the call header on every display update
+through `core/tools/render-utils.ts` `formatToolCallWithArgs(label, args,
+theme, context.expanded)`. Collapsed, that is one line of `key=value` pairs;
+expanded, it is the label plus one indented `key: value` line per argument.
+
+`ToolExecutionComponent` wraps both the call header and the result in
+`createResultRegion` (`modes/interactive/components/tool-execution.ts`), whose
+handler expands on any left click in the region without a position check. A
+click on the `... (N more lines, ctrl+o to expand)` hint therefore reflowed the
+header too, moving the row under the pointer as the frame grew. The same
+happens on the reference.
+
+Pier keeps the one-line header in both states, so expanding grows the body
+below the preview and the rows already on screen stay put; collapsing restores
+the frame exactly. The argument pairs, their `Object.entries` order and the
+100-unit budget are unchanged, so a collapsed frame is identical to the
+reference's.
+
+Tests: `TestMcpCallHeaderStaysUnreflowedWhenExpanded` (the two states are the
+same single line, with the expected pairs),
+`TestMcpResultExpansionKeepsThePreviewInPlace` (expanding keeps the leading rows
+and adds lines below) and `TestMcpToolCallFramesCollapseArguments` (the collapsed
+header still matches the reference's output).
 

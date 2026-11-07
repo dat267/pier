@@ -40,21 +40,12 @@ func TestMcpToolCallFramesCollapseArguments(t *testing.T) {
 		t.Errorf("collapsed call kept the raw pretty JSON:\n%s", collapsed)
 	}
 
-	// Expanded shows strings raw and other values as JSON.stringify(value,
-	// null, 2) with continuation lines indented by four spaces.
+	// D397: the header keeps its shape when the frame expands. The reference
+	// reflows it (see the differential below), but a click anywhere in the frame
+	// toggles expansion, so reflowing moved the row under the pointer.
 	expanded := renderMcpCall(t, args, theme, true)
-	want := []string{
-		"docs/search",
-		`  uri: file:///tmp/x`,
-		`  server: docs`,
-		`  query: a`,
-		"  deep: {",
-		`      "k": "v",`,
-		`      "j": 1`,
-		"    }",
-	}
-	if expanded != strings.Join(want, "\n") {
-		t.Errorf("expanded call =\n%s\nwant\n%s", expanded, strings.Join(want, "\n"))
+	if expanded != collapsed {
+		t.Errorf("expanded call =\n%s\nwant the collapsed header unchanged:\n%s", expanded, collapsed)
 	}
 
 	// Argument keys follow Object.entries order: array-index names first,
@@ -213,5 +204,53 @@ func TestMcpCallFrameUsesTheServerToolLabelFromARegisteredTool(t *testing.T) {
 	rendered := trimRenderedRight(call.Render(100))
 	if !strings.HasPrefix(rendered, "docs-server/search.tool ") {
 		t.Errorf("MCP call frame = %q, want the registered server/tool label", rendered)
+	}
+}
+
+// TestMcpCallHeaderStaysUnreflowedWhenExpanded is the D397 differential: the
+// reference rebuilds the header through formatToolCallWithArgs with
+// expanded=true, so the one-line `label key=value ...` becomes `label` plus one
+// `key: value` line per argument. Pier keeps the one-line form in both states
+// (see the row for why), which is the only difference from the reference here.
+func TestMcpCallHeaderStaysUnreflowedWhenExpanded(t *testing.T) {
+	theme := newRendererTestTheme(t)
+	args := json.RawMessage(`{"path":"/tmp/notes.txt","offset":10,"limit":5}`)
+	collapsed := renderMcpCall(t, args, theme, false)
+	expanded := renderMcpCall(t, args, theme, true)
+	if collapsed != expanded {
+		t.Fatalf("collapsed = %q, expanded = %q; the header must not reflow", collapsed, expanded)
+	}
+	if strings.Contains(expanded, "\n") {
+		t.Fatalf("expanded header = %q, want one line", expanded)
+	}
+	if want := `docs/search path="/tmp/notes.txt" offset=10 limit=5`; expanded != want {
+		t.Errorf("header = %q, want %q", expanded, want)
+	}
+}
+
+// TestMcpResultExpansionKeepsThePreviewInPlace is the other half of D397: the
+// body grows below the preview lines instead of being replaced, so the rows
+// already on screen stay where they were.
+func TestMcpResultExpansionKeepsThePreviewInPlace(t *testing.T) {
+	theme := newRendererTestTheme(t)
+	lines := make([]string, 40)
+	for index := range lines {
+		lines[index] = "line " + itoa(index)
+	}
+	result := textResult(strings.Join(lines, "\n"))
+	collapsed := strings.Split(renderMcpResult(t, result, false, theme), "\n")
+	expanded := strings.Split(renderMcpResult(t, result, true, theme), "\n")
+	if len(expanded) <= len(collapsed) {
+		t.Fatalf("expanded result = %d lines, want more than collapsed %d", len(expanded), len(collapsed))
+	}
+	// The shell's spacer line, then the same preview lines at the same rows.
+	if expanded[0] != collapsed[0] {
+		t.Fatalf("first row moved: collapsed %q, expanded %q", collapsed[0], expanded[0])
+	}
+	previewRows := mcpOutputPreviewLines
+	for index := 1; index <= previewRows; index++ {
+		if expanded[index] != collapsed[index] {
+			t.Errorf("row %d moved: collapsed %q, expanded %q", index, collapsed[index], expanded[index])
+		}
 	}
 }

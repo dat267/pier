@@ -34,8 +34,7 @@ func mcpRenderers(label string) ToolRenderers {
 	return ToolRenderers{
 		RenderCall: func(args any, theme *Theme, context *ToolRenderContext) tui.Component {
 			text := toolTextComponent(context)
-			expanded := context != nil && context.Expanded
-			text.SetText(formatMcpCall(label, args, theme, expanded))
+			text.SetText(formatMcpCall(label, args, theme))
 			return text
 		},
 		RenderResult: func(result *SortToolResultContent, options ToolRenderResultOptions, theme *Theme, context *ToolRenderContext) tui.Component {
@@ -75,21 +74,17 @@ func mcpToolRenderersFor(toolName string, label string) *ToolRenderers {
 	return &renderers
 }
 
-// formatMcpCall renders the call header: the label alone while the arguments
-// are still streaming in, then `key=value` pairs cut to the budget when
-// collapsed, and one `key: value` line per argument when expanded.
-func formatMcpCall(label string, args any, theme *Theme, expanded bool) string {
+// formatMcpCall renders the call header as one line: the label and its
+// `key=value` pairs, cut to the budget. D397: the header does not reflow when
+// the frame expands. The reference rebuilds it through formatToolCallWithArgs
+// with expanded=true, which turns the pairs into one `key: value` line per
+// argument; because a click anywhere in the frame toggles expansion, that moved
+// the row under the pointer. Only the body below grows.
+func formatMcpCall(label string, args any, theme *Theme) string {
 	header := theme.Fg("toolTitle", theme.Bold(tui.SanitizeUntrustedText(label)))
 	entries := mcpArgumentEntries(args)
 	if len(entries) == 0 {
 		return header
-	}
-	if expanded {
-		lines := make([]string, 0, len(entries))
-		for _, entry := range entries {
-			lines = append(lines, "  "+entry.key+": "+mcpExpandedValue(entry.value))
-		}
-		return header + "\n" + theme.Fg("muted", strings.Join(lines, "\n"))
 	}
 	pairs := make([]string, 0, len(entries))
 	for _, entry := range entries {
@@ -107,23 +102,6 @@ func formatMcpCall(label string, args any, theme *Theme, expanded bool) string {
 type mcpArgumentEntry struct {
 	key   string
 	value string
-}
-
-// mcpExpandedValue follows upstream's `key: value` line: a string is shown
-// raw, anything else as JSON.stringify(value, null, 2). Tabs become three
-// spaces and the value's continuation lines are indented under the key.
-func mcpExpandedValue(encoded string) string {
-	text := encoded
-	if len(encoded) > 0 && encoded[0] == '"' {
-		var unquoted string
-		if err := json.Unmarshal([]byte(encoded), &unquoted); err == nil {
-			text = unquoted
-		}
-	} else if indented, err := ai.MarshalIndentJSON(json.RawMessage(encoded)); err == nil {
-		text = string(indented)
-	}
-	text = NormalizeDisplayText(strings.ReplaceAll(text, "\t", "   "))
-	return strings.ReplaceAll(text, "\n", "\n    ")
 }
 
 func mcpArgumentEntries(args any) []mcpArgumentEntry {
