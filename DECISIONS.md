@@ -4981,14 +4981,13 @@ Tests: `TestParseFrontmatterBlockScalars`,
 Reference: pi v1.5.0 (`f9a26365`) prints parse and runtime diagnostics with
 `chalk.red`/`chalk.yellow` (`cli/args.ts`, `main.ts`,
 `core/agent-session-services.ts`), so terminal detection decides whether the
-line carries ANSI codes. Pier always colored them: a redirected stderr, a
-`TERM=dumb` shell and an unnamed CI all received `[31m`. `coding/clicolor.go`
-ports the boolean answer of the bundled supports-color: stdout's terminal
-state, `FORCE_COLOR` (empty, `true` and a numeric level force on; `0` and
-`false` force off), `TERM=dumb`, the platform branch, the known CI providers,
-`TERM_PROGRAM`, `TERM` patterns and `COLORTERM`. Detection reads stdout, not
-stderr, matching chalk: a colored error still appears when only stderr is
-redirected.
+line carries ANSI codes. Pier colored them unconditionally: a redirected stderr,
+a `TERM=dumb` shell and an unnamed CI all received `[31m`. `coding/clicolor.go`
+ports the boolean answer of the bundled supports-color: stdout's terminal state,
+`FORCE_COLOR` (empty, `true` and a numeric level force on; `0` and `false` force
+off), `TERM=dumb`, the platform branch, the known CI providers, `TERM_PROGRAM`,
+`TERM` patterns and `COLORTERM`. Detection reads stdout, not stderr, matching
+chalk: a colored error still appears when only stderr is redirected.
 
 The color close codes match chalk too: a foreground color ends with
 `\x1b[39m` and intensity with `\x1b[22m`, not a full `\x1b[0m` reset, so a pty
@@ -4998,12 +4997,12 @@ through the same helpers, so their errors and the dim "Use ..." hint color with
 the terminal instead of never coloring.
 
 The pinned supports-color does not read `NO_COLOR`, so neither does the port: a
-controlled pty run of the reference with `NO_COLOR=1` still colors. That
-difference from modern chalk is pinned by
-`TestResolveCLIColorsMatchesTheReference`, whose cases were each observed on the
-reference binary, together with
-`TestDiagnosticColorFollowsColorSupport` (redirected, forced, forced off, dumb)
-and `TestFormatCLIDiagnosticDropsColorWhenDisabled`.
+controlled pty run of the reference with `NO_COLOR=1` still colors, unlike
+modern chalk.
+
+Tests: `TestResolveCLIColorsMatchesTheReference` (every case observed on the
+reference binary), `TestDiagnosticColorFollowsColorSupport` (redirected,
+forced, forced off, dumb) and `TestFormatCLIDiagnosticDropsColorWhenDisabled`.
 
 ### D382
 
@@ -5036,15 +5035,15 @@ of tools registered later), while a print-mode reference run folds everything
 into one section message. Pier matches the interactive shape, so the extra entry
 is the same one the reference writes whenever a session is created in the TUI.
 
-The model is the second half of the same difference: the reference's session
-always carries a placeholder model (`id: "unknown"`, `provider: "unknown"`) and
-`get_state` sends it; pier's `HasModel` treats that placeholder as absent, so
-`get_state` omits the optional `model` field (documented in [Stdio
-RPC](ARCHITECTURE.md#stdio-rpc)) and `compact` fails with "No model selected"
-where the reference prepares the compaction first and reports "Nothing to
-compact (session too small)" on an empty session. `session.model` being
-`undefined` is unreachable in the reference for that reason
-(core/agent-session.ts only throws when it is).
+The model placeholder is the second half of the difference: the reference's
+session always carries a placeholder model (`id: "unknown"`,
+`provider: "unknown"`) and `get_state` sends it; pier's `HasModel` treats that
+placeholder as absent, so `get_state` omits the optional `model` field
+(documented in [Stdio RPC](ARCHITECTURE.md#stdio-rpc)) and `compact` fails with
+"No model selected" where the reference prepares the compaction first and
+reports "Nothing to compact (session too small)" on an empty session. The
+reference's own "No model selected" throw (`core/agent-session.ts`) needs
+`session.model` to be `undefined`, which the placeholder makes unreachable.
 
 Reproducer: `printf '%s\n' '{"type":"get_state","id":"1"}'
 '{"type":"get_messages","id":"2"}' | pier --offline --mode rpc --no-mcp
@@ -5108,10 +5107,12 @@ The port keeps the error because a silent 401 sends the user looking at the MCP
 server when the credential template was the problem; the failure is the same
 either way (that server's tools are unavailable for the run). Unknown providers
 and a missing runtime still return an empty token without an error, matching the
-reference's `undefined`. Pinned by `TestProviderTokenForMCP` (four boundaries:
-resolvable key, unknown provider, no runtime, unresolvable key). The reference's
-side is read from the pin; the equivalent template failure was not driven
-through the reference's MCP path.
+reference's `undefined`.
+
+Test: `TestProviderTokenForMCP` covers four boundaries: resolvable key, unknown
+provider, no runtime and unresolvable key. The reference side was read from the
+pinned source; the equivalent template failure was not driven through its MCP
+path.
 
 ### D385
 
@@ -5178,10 +5179,9 @@ Pier substitutes with `strings.Replace`, so the injected bytes are exactly the
 bundled bytes: the `$&` selector survives, no placeholder text remains in the
 document, and the literal `$${totalCost…}` is preserved for the footer renderer.
 The exported HTML is still self-contained; it differs from the reference's
-corrupted output only where the reference lost bytes. This is an intentional
-export-fidelity divergence.
+corrupted output only where the reference lost bytes.
 
-Tests: `TestExportSessionToHTML` asserts the document contains no
+Test: `TestExportSessionToHTML` asserts the document contains no
 `{{HIGHLIGHT_JS}}` and keeps both `$&` and `$${totalCost.toFixed(3)}` byte for
 byte.
 
@@ -5189,10 +5189,10 @@ byte.
 
 **The trust store round-trips every value and sorts keys like JavaScript.**
 
-Reference: pi v1.5.0 `core/trust-manager.ts` `writeTrustFile` copies entries whose
-value is `true`, `false` or `null`, then serializes `Object.keys(data).sort()`
-order. Pier dropped `null` members on every write and sorted with Go's byte
-comparison, unlike UTF-16 code-unit order.
+Reference: pi v1.5.0 `core/trust-manager.ts` `writeTrustFile` copies entries
+whose value is `true`, `false` or `null`, then serializes
+`Object.keys(data).sort()` order. Pier dropped `null` members on every write and
+sorted by Go byte comparison rather than UTF-16 code-unit order.
 
 A `null` member is the "Trust parent folder" option's tombstone for the project
 path (`setMany` clears the key when the decision is null). Both implementations
@@ -5204,7 +5204,7 @@ the reference, so `trust.json` bytes drift from the reference for the same
 logical store. Astral ordering cannot change which entry resolves: rows that
 differ only in path spelling separate at ASCII segments.
 
-Pier now keeps `null` members and sorts with `compareUTF16`.
+Pier keeps `null` members and sorts with `compareUTF16`.
 
 Test: `TestProjectTrustStoreWriteMatchesReference` pins the exact bytes against
 the reference's own output for the same store.
@@ -5228,7 +5228,7 @@ stable and both sides preserve the other keys, so this is a byte-parity defect
 rather than a data one; it also affected the read order pier reported for
 `models-store.json` providers.
 
-All three writers now route their key list through the existing
+All three writers route their key list through the existing
 `mcpJavaScriptObjectKeyOrder` helper.
 
 Test: `TestPersistedJSONWritersUseJavaScriptKeyOrder` pins the exact bytes for
@@ -5247,7 +5247,7 @@ symlinks but keeps a relative input relative, so the same directory produced two
 comparison keys: `CanonicalizePath("sub")` was `sub` where the reference gives
 `/work/sub`, and `PathsEqual` therefore treated one location as two.
 
-The helper now resolves through `filepath.Abs` before `EvalSymlinks`, so a
+The helper resolves through `filepath.Abs` before `EvalSymlinks`, so a
 relative input yields the absolute physical path and a failed resolution still
 falls back to the raw path as before. Every current caller passes an absolute or
 already-resolved path (boot cwd, session cwd, a `ResolvePath` result), so this
@@ -5273,7 +5273,7 @@ provider resolved its literal, `$ENV` or `!command` key: the two subcommands
 disagreed about which providers exist. `auth check --model <provider>/<id>` for
 such a provider also failed with `invalid_state` and exit 2.
 
-Pier now builds the check runtime the way the reference does. The initial
+Pier builds the check runtime the way the reference does. The initial
 catalog refresh stays off (`RefreshOnCreate: false`), matching
 `refreshOnCreate: false`, so the check neither touches the network nor merges a
 `models-store.json` overlay the reference would not have.
@@ -5296,16 +5296,17 @@ developer's `CI`, `NO_COLOR` and `TERM` out of the color decision), which also
 dropped `PI_CODING_AGENT_DIR`: the child then resolved the developer's real
 `~/.pi/agent` instead of the temporary directory `isolatedAgentDir` sets.
 
-The session-resolution case scans that directory. On this host it holds 445 MB
-and 57 session files, so the child took ~15 s alone and was killed at the 30 s
-`childProcessTimeout` under `go test -race ./...`, which reported
+The session-resolution case scans that directory. On the developer's host it
+held 445 MB and 57 session files, so the child took ~15 s alone and was killed
+at the 30 s `childProcessTimeout` under `go test -race ./...`, which reported
 `exit = -1 (signal: killed)`. That violates the AGENTS.md rule that tests use
 temporary agent state and never the real agent directory, and it made the gate
 load-dependent.
 
-`childAgentEnv` in `cmd/helpers_test.go` is now the single environment builder
-for those children: it passes `PI_CODING_AGENT_DIR` and `HOME` and appends the
-case-specific entries. The session-resolution child dropped from ~15 s to 0.08 s.
+`childAgentEnv` in `cmd/helpers_test.go` is the single environment builder for
+those children: it passes `PI_CODING_AGENT_DIR` and `HOME` and appends the
+case-specific entries. The session-resolution child dropped from ~15 s to 0.08
+s.
 
 Test: `TestChildProcessesUseTheIsolatedAgentDir` spawns the helper through that
 builder and asserts the child's `GetAgentDir()` is the isolated directory; it
@@ -5324,7 +5325,7 @@ creation and a fresh run all use it. Pier read only `--session-dir`: a run with
 session into the default per-cwd agent directory instead, and `-c`/`-r` searched
 there.
 
-`resolveSessionDirectory` in `cmd/main.go` now applies the reference's
+`resolveSessionDirectory` in `cmd/main.go` applies the reference's
 precedence and expansion, and both the fresh and resume paths take the directory
 from it. An unset configuration still yields the empty string, which keeps the
 per-cwd default under the agent directory.
@@ -5351,7 +5352,7 @@ observable in two ways: `getSessionDir()` returns a project-configured
 `sessionDir` (so `createSessionManager` uses it), and an unreadable project
 settings file is reported as a warning
 (`Warning: Invalid settings file …/.pi/settings.json: …`) before the TUI starts.
-Reproduced against the reference binary for both.
+Both reproduce on the reference binary.
 
 Pier keeps the startup manager project-untrusted so no project value is read
 before the trust decision, which is the stronger boundary. The cost is those two
@@ -5381,7 +5382,7 @@ Reproduced through the settings files: global `"defaultTools": ["read","bash"]`
 with a project `{"defaultTools": ["+grep"]}` gives the reference
 `read, bash, grep` in the system prompt's tools section; pier exposed only the
 built-in defaults, so the project's `+grep` added nothing. `mergeDefaultTools`
-now returns `base` before the modifier check, matching the reference.
+returns `base` before the modifier check, matching the reference.
 
 Test: `TestMergeDefaultToolsKeepsTheBaseWhenTheOverrideIsUnset` covers base kept,
 empty base kept as empty, both unset, modifier appends, plain replacement and a
@@ -5410,8 +5411,8 @@ record (verified on a persisted fake-provider session), so this only reaches the
 boundary through a hand-edited or foreign session file. The port keeps the
 tolerant read on purpose: a damaged transcript still reports how many messages it
 holds, and an RPC surface that fails whole is a worse outcome than one reporting
-zeros for the unreadable part. This is a deliberate divergence, not a parity gap
-to close.
+zeros for the unreadable part.
 
 Test: `TestSessionStatsToleratesAnIncompleteAssistantUsage` covers the absent,
 `null` and partial-usage shapes (one assistant message, input tokens 0/0/5).
+
