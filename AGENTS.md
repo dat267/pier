@@ -1,9 +1,10 @@
 # AGENTS.md
 
 Project rules for coding agents. For user help see [README.md](README.md); use
-`git log` for release and change history; design, D-rows and lock inventory are
-in [ARCHITECTURE.md](ARCHITECTURE.md). `TODO.md` contains only reproduced,
-unresolved findings.
+`git log` for release and change history; design, the stdio RPC contract and the
+lock inventory are in [ARCHITECTURE.md](ARCHITECTURE.md), and D-rows (deliberate
+divergences) are in [DECISIONS.md](DECISIONS.md). `TODO.md` contains only
+reproduced, unresolved findings.
 
 ## Upstream parity
 
@@ -31,7 +32,7 @@ unresolved findings.
 - Every behavior change needs a test citing the upstream source. Cite the
   upstream file/commit in the commit message, using `type(scope): summary`;
   document intentional differences with a reproducing D-row comment and an
-  entry in `ARCHITECTURE.md`.
+  entry in `DECISIONS.md`, inserted in numeric order and naming its test.
 
 ## Structure
 
@@ -67,7 +68,7 @@ The interactive UI is single-writer. Producers enqueue; workers do blocking
 work off-loop and never mutate attached UI state. Audit ownership, shutdown and
 callback re-entrancy when adding workers, handoffs or locks. Never run user code
 under a retained mutex; snapshot callbacks under lock and deliver after unlock.
-See the lock inventory and D-rows in `ARCHITECTURE.md`.
+See the lock inventory in `ARCHITECTURE.md` and the D-rows in `DECISIONS.md`.
 
 Optimize only with a reproducible test, benchmark or report. Avoid speculative
 caches and fast paths, hand-built session projections, per-message rescans, or
@@ -104,5 +105,5 @@ auto-compaction and retry.
 
 Native (Bun FFI) clipboard, Photon image formats, extension mechanics and the
 package manager, full upstream stdio-RPC compatibility (the supported subset is
-documented in `ARCHITECTURE.md`), and Mermaid rendering. See `ARCHITECTURE.md`
+documented in `ARCHITECTURE.md`), and Mermaid rendering. See `DECISIONS.md`
 for rationale.

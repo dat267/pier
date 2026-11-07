@@ -30,7 +30,8 @@ type FooterDataProviderOptions struct {
 type FooterDataProvider struct {
 	// D149: retained cross-goroutine lock. It protects cwd, git paths/branch,
 	// statuses and the listener registry shared by footer rendering and the
-	// 500 ms git-HEAD watcher. See ARCHITECTURE.md.
+	// 500 ms git-HEAD watcher. See DECISIONS.md and the ARCHITECTURE.md lock
+	// inventory.
 	mu sync.Mutex
 
 	cwd       string
