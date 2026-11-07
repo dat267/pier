@@ -85,7 +85,11 @@ func (s *sessionGoalSink) SendGoalMessage(customType string, content string, dis
 		s.session.FollowUp(goalEventMessage(customType, content, display, details))
 		return
 	}
-	s.session.AppendCustomMessage(goalEventMessage(customType, content, display, details))
+	// Upstream sendCustomMessage defers a non-trigger message sent while
+	// streaming to the end of the turn (agent-session.ts, v1.5.0): appending it
+	// mid-tool-execution would sit between the set_goal call and its result,
+	// which pi's provider replay then rejects as an orphaned tool result.
+	_ = s.session.SendMessage(context.Background(), goalEventMessage(customType, content, display, details), &SendMessageOptions{TriggerTurn: new(false)})
 }
 
 func (s *sessionGoalSink) GoalIsStreaming() bool {
