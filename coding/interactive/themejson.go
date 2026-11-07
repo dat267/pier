@@ -102,10 +102,10 @@ var optionalThemeColors = []string{
 func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 	var theme ThemeJSON
 	if err := json.Unmarshal(raw, &theme); err != nil {
-		return nil, fmt.Errorf("Invalid theme %q: expected an object with a \"colors\" map.", label)
+		return nil, fmt.Errorf("Invalid theme \"%s\": expected an object with a \"colors\" map.", label)
 	}
 	if theme.Colors == nil {
-		return nil, fmt.Errorf("Invalid theme %q: expected an object with a \"colors\" map.", label)
+		return nil, fmt.Errorf("Invalid theme \"%s\": expected an object with a \"colors\" map.", label)
 	}
 
 	var missing []string
@@ -117,7 +117,7 @@ func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 	if len(missing) > 0 {
 		sort.Strings(missing)
 		var builder strings.Builder
-		fmt.Fprintf(&builder, "Invalid theme %q:\n", label)
+		fmt.Fprintf(&builder, "Invalid theme \"%s\":\n", label)
 		builder.WriteString("\nMissing required color tokens:\n")
 		for _, name := range missing {
 			builder.WriteString("  - " + name + "\n")
@@ -167,13 +167,13 @@ func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 	if len(otherErrors) > 0 {
 		sort.Strings(otherErrors)
 		var builder strings.Builder
-		fmt.Fprintf(&builder, "Invalid theme %q:\n", label)
+		fmt.Fprintf(&builder, "Invalid theme \"%s\":\n", label)
 		builder.WriteString("\nOther errors:\n")
 		builder.WriteString(strings.Join(otherErrors, "\n"))
 		return nil, fmt.Errorf("%s", builder.String())
 	}
 	if strings.Contains(theme.Name, "/") {
-		return nil, fmt.Errorf("Invalid theme name %q: theme names cannot contain \"/\" because it is reserved for automatic light/dark theme settings.", theme.Name)
+		return nil, fmt.Errorf("Invalid theme name \"%s\": theme names cannot contain \"/\" because it is reserved for automatic light/dark theme settings.", theme.Name)
 	}
 	return &theme, nil
 }
@@ -186,10 +186,10 @@ func ParseThemeJSON(label string, raw json.RawMessage, validate bool) (*ThemeJSO
 	}
 	var theme ThemeJSON
 	if err := json.Unmarshal(raw, &theme); err != nil {
-		return nil, fmt.Errorf("Invalid theme %q: expected an object with a \"colors\" map.", label)
+		return nil, fmt.Errorf("Invalid theme \"%s\": expected an object with a \"colors\" map.", label)
 	}
 	if theme.Colors == nil {
-		return nil, fmt.Errorf("Invalid theme %q: expected an object with a \"colors\" map.", label)
+		return nil, fmt.Errorf("Invalid theme \"%s\": expected an object with a \"colors\" map.", label)
 	}
 	return &theme, nil
 }

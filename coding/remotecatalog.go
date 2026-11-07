@@ -95,7 +95,7 @@ func ParseRemoteCatalog(providerID string, value any) ([]*ai.Model, error) {
 			}
 		}
 	default:
-		return nil, fmt.Errorf("Invalid model catalog for provider %q", providerID)
+		return nil, fmt.Errorf("Invalid model catalog for provider \"%s\"", providerID)
 	}
 	var models []*ai.Model
 	for _, entry := range entries {

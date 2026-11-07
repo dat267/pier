@@ -1978,22 +1978,22 @@ func (m *SettingsManager) compactionTokenSetting(field string, model *ai.Model) 
 		modelKey := model.Provider + "/" + model.ID
 		if entry, ok := compaction.ModelOverrides[modelKey]; ok {
 			if entry.entryNull {
-				return 0, fmt.Errorf("Invalid compaction.modelOverrides[%q] setting: null. Expected an object.", modelKey)
+				return 0, fmt.Errorf("Invalid compaction.modelOverrides[\"%s\"] setting: null. Expected an object.", modelKey)
 			}
 			if field == "reserveTokens" {
 				if entry.reserveTokensNull {
-					return 0, fmt.Errorf("Invalid compaction.modelOverrides[%q].%s setting: null. Expected a non-negative safe integer.", modelKey, field)
+					return 0, fmt.Errorf("Invalid compaction.modelOverrides[\"%s\"].%s setting: null. Expected a non-negative safe integer.", modelKey, field)
 				}
 				override = entry.ReserveTokens
 			} else {
 				if entry.keepRecentTokensNull {
-					return 0, fmt.Errorf("Invalid compaction.modelOverrides[%q].%s setting: null. Expected a non-negative safe integer.", modelKey, field)
+					return 0, fmt.Errorf("Invalid compaction.modelOverrides[\"%s\"].%s setting: null. Expected a non-negative safe integer.", modelKey, field)
 				}
 				override = entry.KeepRecentTokens
 			}
 			if override != nil && *override < 0 {
 				return 0, fmt.Errorf(
-					"Invalid compaction.modelOverrides[%q].%s setting: %d. Expected a non-negative safe integer.",
+					"Invalid compaction.modelOverrides[\"%s\"].%s setting: %d. Expected a non-negative safe integer.",
 					modelKey, field, *override)
 			}
 		}

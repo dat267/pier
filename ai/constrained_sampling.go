@@ -351,14 +351,14 @@ func ResolveJSONSchemaStrictSampling(tool Tool, supportsStrictMode bool, check U
 				if cfg.Strict != "require" {
 					return false, true, nil
 				}
-				return false, false, fmt.Errorf("Tool %q requires JSON-schema constrained sampling, but %s.", tool.Name, err.Error())
+				return false, false, fmt.Errorf("Tool \"%s\" requires JSON-schema constrained sampling, but %s.", tool.Name, err.Error())
 			}
 			return false, false, err
 		}
 		return true, false, nil
 	}
 	if cfg.Strict == "require" {
-		return false, false, fmt.Errorf("Tool %q requires JSON-schema constrained sampling, but strict tools are unsupported.", tool.Name)
+		return false, false, fmt.Errorf("Tool \"%s\" requires JSON-schema constrained sampling, but strict tools are unsupported.", tool.Name)
 	}
 	return false, true, nil
 }

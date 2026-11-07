@@ -1139,7 +1139,7 @@ func loadThemeJSON(name string) (*ThemeJSON, error) {
 		if registered.json != nil {
 			return registered.json, nil
 		}
-		return nil, fmt.Errorf("Theme %q does not have a source path for export", name)
+		return nil, fmt.Errorf("Theme \"%s\" does not have a source path for export", name)
 	}
 	if theme, ok := getBuiltinThemes()[name]; ok {
 		return theme, nil

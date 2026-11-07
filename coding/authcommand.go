@@ -146,7 +146,7 @@ func parseAuthCommandNamed(appName string, args []string) (*AuthCommand, error) 
 			name = args[1]
 		}
 		return nil, &AuthCommandError{Message: fmt.Sprintf(
-			`Unknown auth command %q. Use "%s auth print-api-key", "%s auth print-bearer-token", or "%s auth check".`,
+			`Unknown auth command "%s". Use "%s auth print-api-key", "%s auth print-bearer-token", or "%s auth check".`,
 			name, appName, appName, appName)}
 	}
 	command := &AuthCommand{Kind: kind}
@@ -194,7 +194,7 @@ func validateAuthCommandArgs(args *Args, kind AuthCommandKind) (string, string, 
 	model := strings.TrimSpace(derefString(args.Model))
 	if len(args.UnknownFlags) > 0 {
 		option := args.firstUnknownFlag()
-		return "", "", &AuthCommandError{Message: fmt.Sprintf("Unknown option --%s for %q.", option, authCommandName(kind))}
+		return "", "", &AuthCommandError{Message: fmt.Sprintf("Unknown option --%s for \"%s\".", option, authCommandName(kind))}
 	}
 	if args.APIKey != nil || len(args.Messages) > 0 || len(args.FileArgs) > 0 {
 		return "", "", &AuthCommandError{Message: "Auth commands only accept --provider and --model"}
@@ -270,7 +270,7 @@ func CheckProviderAuth(args *Args, runtime *ModelRuntime, refresh bool) (AuthChe
 		if resolved.Error != "" || resolved.Model == nil {
 			message := resolved.Error
 			if message == "" {
-				message = fmt.Sprintf("Unable to resolve model %q", cliModel)
+				message = fmt.Sprintf("Unable to resolve model \"%s\"", cliModel)
 			}
 			return AuthCheckResult{}, &AuthCommandError{Message: message}
 		}
@@ -346,7 +346,7 @@ func ResolveCredentialForPrint(args *Args, runtime *ModelRuntime, kind AuthComma
 	if cliProvider != "" {
 		provider := runtime.GetProvider(cliProvider)
 		if provider == nil {
-			return "", &AuthCommandError{Message: fmt.Sprintf(`Unknown provider %q. Use --list-models to see available providers.`, cliProvider)}
+			return "", &AuthCommandError{Message: fmt.Sprintf(`Unknown provider "%s". Use --list-models to see available providers.`, cliProvider)}
 		}
 		if cliModel != "" {
 			resolved := ResolveCliModel(ResolveCliModelOptions{CLIProvider: provider.ID, CLIModel: cliModel, ModelRuntime: runtime})
@@ -380,7 +380,7 @@ func ResolveCredentialForPrint(args *Args, runtime *ModelRuntime, kind AuthComma
 			}
 		}
 		if len(providers) == 0 {
-			return "", &AuthCommandError{Message: fmt.Sprintf(`Model %q not found. Use --list-models to see available models.`, cliModel)}
+			return "", &AuthCommandError{Message: fmt.Sprintf(`Model "%s" not found. Use --list-models to see available models.`, cliModel)}
 		}
 	}
 
@@ -430,10 +430,10 @@ func ResolveCredentialForPrint(args *Args, runtime *ModelRuntime, kind AuthComma
 		}
 		credentialType := credentialTypes[providerID]
 		if cliProvider != "" && kind == AuthCommandPrintAPIKey && credentialType == ai.CredentialOAuth {
-			return "", &AuthCommandError{Message: fmt.Sprintf(`Provider %q is configured with OAuth, not an API key`, providerID)}
+			return "", &AuthCommandError{Message: fmt.Sprintf(`Provider "%s" is configured with OAuth, not an API key`, providerID)}
 		}
 		if cliProvider != "" && kind == AuthCommandPrintBearerToken && credentialType != ai.CredentialOAuth {
-			return "", &AuthCommandError{Message: fmt.Sprintf(`Provider %q is not configured with an OAuth bearer token`, providerID)}
+			return "", &AuthCommandError{Message: fmt.Sprintf(`Provider "%s" is not configured with an OAuth bearer token`, providerID)}
 		}
 		label := "API key"
 		if kind == AuthCommandPrintBearerToken {
@@ -486,7 +486,7 @@ func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer
 	parsed := ParseArgs(command.Args)
 	if len(parsed.UnknownFlags) > 0 {
 		option := parsed.firstUnknownFlag()
-		fmt.Fprintln(stderr, FormatCLIError(fmt.Sprintf("Unknown option --%s for %q.", option, authCommandName(command.Kind))))
+		fmt.Fprintln(stderr, FormatCLIError(fmt.Sprintf("Unknown option --%s for \"%s\".", option, authCommandName(command.Kind))))
 		fmt.Fprintln(stderr, FormatCLIDiagnostic(CLIDiagnostic{Type: "status", Message: fmt.Sprintf("Use \"%s --help\" or \"%s\".", appName, authCommandUsage(appName, command.Kind))}))
 		return true, 1
 	}

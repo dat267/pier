@@ -613,7 +613,7 @@ func (r *ModelRuntime) GetError() string {
 	}
 	r.mu.Lock()
 	for providerID, err := range r.compositionErrors {
-		errors = append(errors, fmt.Sprintf("Provider %q: %s", providerID, err))
+		errors = append(errors, fmt.Sprintf("Provider \"%s\": %s", providerID, err))
 	}
 	if r.availabilityError != "" {
 		errors = append(errors, "Availability refresh: "+r.availabilityError)

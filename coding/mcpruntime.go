@@ -289,7 +289,7 @@ func (c *McpServerConnection) GetClient(ctx context.Context) (*mcp.Client, error
 	c.mu.Lock()
 	if c.closed {
 		c.mu.Unlock()
-		return nil, fmt.Errorf("MCP server %q is shut down", c.Entry.Name)
+		return nil, fmt.Errorf("MCP server \"%s\" is shut down", c.Entry.Name)
 	}
 	if c.client != nil && c.client.ConnectionState() == mcp.StateConnected {
 		client := c.client
@@ -312,7 +312,7 @@ func (c *McpServerConnection) GetClient(ctx context.Context) (*mcp.Client, error
 			c.mu.Lock()
 			if c.closed && err == nil {
 				client = nil
-				err = fmt.Errorf("MCP server %q is shut down", c.Entry.Name)
+				err = fmt.Errorf("MCP server \"%s\" is shut down", c.Entry.Name)
 			}
 			c.opening = nil
 			c.openingCancel = nil
@@ -411,9 +411,9 @@ func (c *McpServerConnection) signInRequiredMessage() string {
 		provider = c.Entry.Config.Auth.Provider
 	}
 	if provider != "" {
-		return fmt.Sprintf("MCP server %q requires sign-in. Run /login %s to sign in.", c.Entry.Name, provider)
+		return fmt.Sprintf("MCP server \"%s\" requires sign-in. Run /login %s to sign in.", c.Entry.Name, provider)
 	}
-	return fmt.Sprintf("MCP server %q requires sign-in. Configure its oauth credentials in mcp.json to sign in.", c.Entry.Name)
+	return fmt.Sprintf("MCP server \"%s\" requires sign-in. Configure its oauth credentials in mcp.json to sign in.", c.Entry.Name)
 }
 
 // markNeedsAuth moves the connection into the sign-in state.
@@ -599,7 +599,7 @@ func (c *McpServerConnection) connectFailed(err error) error {
 	c.Error = message
 	c.mu.Unlock()
 	c.changed()
-	return fmt.Errorf("MCP server %q failed to connect: %s", c.Entry.Name, message)
+	return fmt.Errorf("MCP server \"%s\" failed to connect: %s", c.Entry.Name, message)
 }
 
 // handleClientClose records a dropped connection; the next call reconnects
@@ -761,7 +761,7 @@ func McpDefaultTransport(entry McpServerEntry, cwd string, authProvider mcp.Auth
 	}
 	env := map[string]string{}
 	for key, value := range entry.Config.Env {
-		expanded, err := ResolveConfigValueOrThrow(value, fmt.Sprintf("MCP server %q env %q", entry.Name, key), nil)
+		expanded, err := ResolveConfigValueOrThrow(value, fmt.Sprintf("MCP server \"%s\" env \"%s\"", entry.Name, key), nil)
 		if err != nil {
 			return nil, err
 		}

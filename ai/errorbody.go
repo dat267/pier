@@ -255,11 +255,11 @@ func ResolveGrammarConstrainedSampling(tool Tool, supportsOpenAIGrammarTools boo
 	hasLarkDefinition := hasLark && JSTrim(larkDefinition) != ""
 	hasRegexDefinition := hasRegex && JSTrim(regexDefinition) != ""
 	if !hasLarkDefinition && !hasRegexDefinition {
-		return nil, fmt.Errorf("Tool %q cannot use grammar constrained sampling: no supported grammar variant was provided.", tool.Name)
+		return nil, fmt.Errorf("Tool \"%s\" cannot use grammar constrained sampling: no supported grammar variant was provided.", tool.Name)
 	}
 	inputProperty, err := inferGrammarInputProperty(tool)
 	if err != nil {
-		return nil, fmt.Errorf("Tool %q cannot use grammar constrained sampling: %s", tool.Name, err.Error())
+		return nil, fmt.Errorf("Tool \"%s\" cannot use grammar constrained sampling: %s.", tool.Name, err.Error())
 	}
 	if hasLarkDefinition {
 		return &GrammarConstrainedSampling{Format: "lark", Definition: larkDefinition, InputProperty: inputProperty}, nil
@@ -279,7 +279,7 @@ func GetGrammarToolInput(toolName string, arguments json.RawMessage, inputProper
 			}
 		}
 	}
-	return "", fmt.Errorf("Grammar tool call %q requires argument %q to be a string.", toolName, inputProperty)
+	return "", fmt.Errorf("Grammar tool call \"%s\" requires argument \"%s\" to be a string.", toolName, inputProperty)
 }
 
 // GrammarToolInputJSONBuffer tracks the streaming custom-tool input.
@@ -297,10 +297,10 @@ func AppendGrammarToolInputJSONDelta(buffer *GrammarToolInputJSONBuffer, inputPr
 		if close && nextInput == buffer.Input {
 			return "", true, nil
 		}
-		return "", false, fmt.Errorf("grammar tool input for property %q changed after it was closed", inputProperty)
+		return "", false, fmt.Errorf("grammar tool input for property \"%s\" changed after it was closed", inputProperty)
 	}
 	if !strings.HasPrefix(nextInput, buffer.Input) {
-		return "", false, fmt.Errorf("grammar tool input for property %q changed non-monotonically", inputProperty)
+		return "", false, fmt.Errorf("grammar tool input for property \"%s\" changed non-monotonically", inputProperty)
 	}
 	// buffer.Input is a byte prefix of nextInput (checked above), so the delta
 	// starts at len(buffer.Input). JS slice(buffer.input.length) indexes UTF-16

@@ -426,7 +426,7 @@ func StreamPiMessages(model *Model, context TranscriptContext, options *PiMessag
 		}()
 
 		if options.APIKey == "" {
-			fail(fmt.Errorf("No API key provided for provider %q", model.Provider))
+			fail(fmt.Errorf("No API key provided for provider \"%s\"", model.Provider))
 			return
 		}
 		requestURL, err := url.Parse(strings.TrimRight(model.BaseURL, "/") + "/messages")

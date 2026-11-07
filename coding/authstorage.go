@@ -424,7 +424,7 @@ func (s *ReadOnlyAuthStorage) load() (authStorageData, error) {
 	for providerID, rawCredential := range object {
 		credential, ok := rawCredential.(map[string]any)
 		if !ok {
-			return nil, fmt.Errorf("Invalid auth.json credential for provider %q", providerID)
+			return nil, fmt.Errorf("Invalid auth.json credential for provider \"%s\"", providerID)
 		}
 		valid := false
 		if credential["type"] == "api_key" {
@@ -451,7 +451,7 @@ func (s *ReadOnlyAuthStorage) load() (authStorageData, error) {
 			valid = accessOK && refreshOK && expiresOK && isFinite(expires)
 		}
 		if !valid {
-			return nil, fmt.Errorf("Invalid auth.json credential for provider %q", providerID)
+			return nil, fmt.Errorf("Invalid auth.json credential for provider \"%s\"", providerID)
 		}
 		encoded, err := json.Marshal(credential)
 		if err != nil {
@@ -459,7 +459,7 @@ func (s *ReadOnlyAuthStorage) load() (authStorageData, error) {
 		}
 		var aiCredential ai.Credential
 		if err := json.Unmarshal(encoded, &aiCredential); err != nil {
-			return nil, fmt.Errorf("Invalid auth.json credential for provider %q", providerID)
+			return nil, fmt.Errorf("Invalid auth.json credential for provider \"%s\"", providerID)
 		}
 		data[providerID] = aiCredential
 	}

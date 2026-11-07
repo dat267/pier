@@ -275,7 +275,7 @@ func (s *AgentSession) validateModelAuth(ctx context.Context) error {
 		return nil
 	}
 	if runtime.IsUsingOAuth(model.Provider) {
-		return fmt.Errorf("Authentication failed for %q. Credentials may have expired or network is unavailable. Run '/login %s' to re-authenticate.",
+		return fmt.Errorf("Authentication failed for \"%s\". Credentials may have expired or network is unavailable. Run '/login %s' to re-authenticate.",
 			model.Provider, model.Provider)
 	}
 	return fmt.Errorf("%s", FormatNoAPIKeyFoundMessage(model.Provider))

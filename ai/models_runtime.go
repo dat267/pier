@@ -135,7 +135,7 @@ func (p *Provider) Classify(model *Model, context ClassifierContext, options *Cl
 	}
 	implementation := p.classifiers[model.API]
 	if implementation == nil {
-		return classifierErrorResult(model, NewModelsError(ErrCodeProvider, fmt.Sprintf("Provider %s has no classifier implementation for %q", p.ID, model.API), nil), options)
+		return classifierErrorResult(model, NewModelsError(ErrCodeProvider, fmt.Sprintf("Provider %s has no classifier implementation for \"%s\"", p.ID, model.API), nil), options)
 	}
 	return implementation.Classify(model, context, options)
 }
@@ -144,7 +144,7 @@ func dispatchStreams(p *Provider, model *Model, run func(ProviderStreams) *Assis
 	streams := p.streamsFor(model)
 	if streams == nil {
 		return LazyStream(model, func() (eventSource, error) {
-			return nil, NewModelsError(ErrCodeStream, fmt.Sprintf("Provider %s has no API implementation for %q", p.ID, model.API), nil)
+			return nil, NewModelsError(ErrCodeStream, fmt.Sprintf("Provider %s has no API implementation for \"%s\"", p.ID, model.API), nil)
 		})
 	}
 	return run(streams)
@@ -157,7 +157,7 @@ func (p *Provider) FetchDeferred(model *Model, handle *DeferredHandle, options *
 		implementation := p.streamsForModel(model)
 		d, ok := implementation.(DeferredStreamer)
 		if implementation == nil || !ok {
-			return nil, NewModelsError(ErrCodeProvider, fmt.Sprintf("Provider %s does not support deferred responses for %q", p.ID, model.API), nil)
+			return nil, NewModelsError(ErrCodeProvider, fmt.Sprintf("Provider %s does not support deferred responses for \"%s\"", p.ID, model.API), nil)
 		}
 		return AsEventSource(d.FetchDeferred(model, handle, options)), nil
 	})
@@ -168,7 +168,7 @@ func (p *Provider) CancelDeferred(model *Model, handle *DeferredHandle, options 
 	implementation := p.streamsForModel(model)
 	d, ok := implementation.(DeferredStreamer)
 	if implementation == nil || !ok {
-		return NewModelsError(ErrCodeProvider, fmt.Sprintf("Provider %s cannot cancel deferred responses for %q", p.ID, model.API), nil)
+		return NewModelsError(ErrCodeProvider, fmt.Sprintf("Provider %s cannot cancel deferred responses for \"%s\"", p.ID, model.API), nil)
 	}
 	return d.CancelDeferred(model, handle, options)
 }
@@ -1255,7 +1255,7 @@ func (m *Models) Classify(model *Model, classifierContext ClassifierContext, opt
 		return classifierErrorResult(model, NewModelsError(ErrCodeProvider, fmt.Sprintf("Provider %s does not support classification", model.Provider), nil), &options.ClassifierOptions)
 	}
 	if provider.classifiers[model.API] == nil {
-		return classifierErrorResult(model, NewModelsError(ErrCodeProvider, fmt.Sprintf("Provider %s has no classifier implementation for %q", model.Provider, model.API), nil), &options.ClassifierOptions)
+		return classifierErrorResult(model, NewModelsError(ErrCodeProvider, fmt.Sprintf("Provider %s has no classifier implementation for \"%s\"", model.Provider, model.API), nil), &options.ClassifierOptions)
 	}
 	requestModel, requestOptions, err := m.applyAuth(model, &ModelsStreamOptions{StreamOptions: options.StreamOptions})
 	if err != nil {

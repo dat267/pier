@@ -296,7 +296,7 @@ func resolveReferenceText(text string, request ModelReferenceRequest, pool []*ai
 		return inner
 	}
 	inner.ThinkingLevel, inner.HasThinking = "", false
-	inner.Warning = fmt.Sprintf("Invalid thinking level %q in pattern %q. Using default instead.", suffix, text)
+	inner.Warning = fmt.Sprintf("Invalid thinking level \"%s\" in pattern \"%s\". Using default instead.", suffix, text)
 	return inner
 }
 
@@ -507,7 +507,7 @@ func ResolveModelScopeFromModels(patterns []string, models []*ai.Model) ResolveM
 	}
 	noMatch := func(pattern string) {
 		diagnostics = append(diagnostics, ModelScopeDiagnostic{
-			Type: "warning", Code: "no-match", Message: fmt.Sprintf("No models match pattern %q", pattern), Pattern: pattern,
+			Type: "warning", Code: "no-match", Message: fmt.Sprintf("No models match pattern \"%s\"", pattern), Pattern: pattern,
 		})
 	}
 	ambiguous := func(pattern string, candidates []*ai.Model) {
@@ -522,7 +522,7 @@ func ResolveModelScopeFromModels(patterns []string, models []*ai.Model) ResolveM
 		sort.Strings(providers)
 		diagnostics = append(diagnostics, ModelScopeDiagnostic{
 			Type: "warning", Code: "ambiguous", Pattern: pattern,
-			Message: fmt.Sprintf("Pattern %q matches several providers: %s. Use provider/id to choose one.", pattern, strings.Join(providers, ", ")),
+			Message: fmt.Sprintf("Pattern \"%s\" matches several providers: %s. Use provider/id to choose one.", pattern, strings.Join(providers, ", ")),
 		})
 	}
 
@@ -636,7 +636,7 @@ func ResolveCliModel(options ResolveCliModelOptions) ResolveCliModelResult {
 			}
 		}
 		if provider == "" {
-			return ResolveCliModelResult{Error: fmt.Sprintf("Unknown provider %q. Use --list-models to see available providers/models.", cliProvider)}
+			return ResolveCliModelResult{Error: fmt.Sprintf("Unknown provider \"%s\". Use --list-models to see available providers/models.", cliProvider)}
 		}
 	}
 
@@ -670,13 +670,13 @@ func ResolveCliModel(options ResolveCliModelOptions) ResolveCliModelResult {
 			authHint = "More than one matching provider is authenticated."
 		}
 		return ResolveCliModelResult{Error: fmt.Sprintf(
-			"Model %q is ambiguous across providers: %s. %s Use --provider or provider/model.",
+			"Model \"%s\" is ambiguous across providers: %s. %s Use --provider or provider/model.",
 			cliModel, strings.Join(described, ", "), authHint)}
 	}
 
 	target := result.Target
 	if target == nil {
-		return ResolveCliModelResult{Error: fmt.Sprintf("Model %q not found. Use --list-models to see available models.", cliModel)}
+		return ResolveCliModelResult{Error: fmt.Sprintf("Model \"%s\" not found. Use --list-models to see available models.", cliModel)}
 	}
 
 	// Use the thinking level suffix only when --thinking is not explicitly
@@ -703,7 +703,7 @@ func ResolveCliModel(options ResolveCliModelOptions) ResolveCliModelResult {
 	}
 	return ResolveCliModelResult{
 		Model: model, ThinkingLevel: fallbackThinking, HasThinking: hasFallbackThinking,
-		Warning: fmt.Sprintf("Model %q not found for provider %q. Using custom model id.", modelID, target.Provider),
+		Warning: fmt.Sprintf("Model \"%s\" not found for provider \"%s\". Using custom model id.", modelID, target.Provider),
 	}
 }
 

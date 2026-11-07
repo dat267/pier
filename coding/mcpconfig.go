@@ -148,7 +148,7 @@ func readMcpConfigFile(path string, scope McpServerScope, state *mcpConfigState)
 		raw := serverValues[name]
 		var value any
 		if err := json.Unmarshal(raw, &value); err != nil {
-			state.errors = append(state.errors, fmt.Sprintf("%s: server %q must be an object", path, name))
+			state.errors = append(state.errors, fmt.Sprintf("%s: server \"%s\" must be an object", path, name))
 			continue
 		}
 		// A project entry without command, url, or type overrides only the
@@ -165,7 +165,7 @@ func readMcpConfigFile(path string, scope McpServerScope, state *mcpConfigState)
 		// Names that differ only in `-` and `_` would share a namespace.
 		for _, other := range state.order {
 			if other != name && McpNamespace(other) == McpNamespace(name) {
-				state.errors = append(state.errors, fmt.Sprintf("%s: server %q conflicts with %q", path, name, other))
+				state.errors = append(state.errors, fmt.Sprintf("%s: server \"%s\" conflicts with \"%s\"", path, name, other))
 				config = nil
 				break
 			}
@@ -174,7 +174,7 @@ func readMcpConfigFile(path string, scope McpServerScope, state *mcpConfigState)
 			continue
 		}
 		if scope == McpScopeProject && config.IsHTTP() && config.Auth != nil {
-			state.errors = append(state.errors, fmt.Sprintf("%s: server %q: auth is only allowed in the global mcp.json", path, name))
+			state.errors = append(state.errors, fmt.Sprintf("%s: server \"%s\": auth is only allowed in the global mcp.json", path, name))
 			continue
 		}
 		// Keep the file's toolExposure pattern order (upstream walks the object
@@ -210,28 +210,28 @@ var mcpOverrideKeys = map[string]bool{"enabled": true, "exposure": true, "toolEx
 func applyMcpOverride(path, name string, raw json.RawMessage, state *mcpConfigState) {
 	base, ok := state.servers[name]
 	if !ok {
-		state.errors = append(state.errors, fmt.Sprintf("%s: server %q needs \"command\" or \"url\", or a global server to override", path, name))
+		state.errors = append(state.errors, fmt.Sprintf("%s: server \"%s\" needs \"command\" or \"url\", or a global server to override", path, name))
 		return
 	}
 	keys, _, err := readJSONObjectOrdered(raw)
 	if err != nil {
-		state.errors = append(state.errors, fmt.Sprintf("%s: server %q must be an object", path, name))
+		state.errors = append(state.errors, fmt.Sprintf("%s: server \"%s\" must be an object", path, name))
 		return
 	}
 	for _, key := range keys {
 		if !mcpOverrideKeys[key] {
-			state.errors = append(state.errors, fmt.Sprintf("%s: server %q: an override can only set enabled, exposure, toolExposure", path, name))
+			state.errors = append(state.errors, fmt.Sprintf("%s: server \"%s\": an override can only set enabled, exposure, toolExposure", path, name))
 			return
 		}
 	}
 	merged, err := mergeJSONObjects(base.raw, raw)
 	if err != nil {
-		state.errors = append(state.errors, fmt.Sprintf("%s: server %q: %s", path, name, err.Error()))
+		state.errors = append(state.errors, fmt.Sprintf("%s: server \"%s\": %s", path, name, err.Error()))
 		return
 	}
 	var mergedValue any
 	if err := json.Unmarshal(merged, &mergedValue); err != nil {
-		state.errors = append(state.errors, fmt.Sprintf("%s: server %q: %s", path, name, err.Error()))
+		state.errors = append(state.errors, fmt.Sprintf("%s: server \"%s\": %s", path, name, err.Error()))
 		return
 	}
 	// The override replaces toolExposure wholesale, so validation walks its own

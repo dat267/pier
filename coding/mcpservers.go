@@ -296,7 +296,7 @@ func validateMcpServerConfig(name string, raw any, toolExposureOrder []string) (
 	}
 	value, ok := mcpRecord(raw)
 	if !ok {
-		return nil, fmt.Errorf("server %q must be an object", name)
+		return nil, fmt.Errorf("server \"%s\" must be an object", name)
 	}
 	value = resolveMcpExposureAliases(value)
 
@@ -309,71 +309,71 @@ func validateMcpServerConfig(name string, raw any, toolExposureOrder []string) (
 	commandTransport := !hasType || (typeIsString && serverType == "stdio")
 	exposureNames := make([]string, 0, len(mcpExposures))
 	for _, exposure := range mcpExposures {
-		exposureNames = append(exposureNames, fmt.Sprintf("%q", exposure))
+		exposureNames = append(exposureNames, fmt.Sprintf("\"%s\"", exposure))
 	}
 	exposures := strings.Join(exposureNames, ", ")
 
 	if exposure, ok := value["exposure"]; ok && !isMcpExposure(exposure) {
-		return nil, fmt.Errorf("server %q: exposure must be one of %s", name, exposures)
+		return nil, fmt.Errorf("server \"%s\": exposure must be one of %s", name, exposures)
 	}
 	if toolExposure, ok := value["toolExposure"]; ok {
 		record, isRecord := mcpRecord(toolExposure)
 		if !isRecord {
-			return nil, fmt.Errorf("server %q: toolExposure must map tool names to exposures", name)
+			return nil, fmt.Errorf("server \"%s\": toolExposure must map tool names to exposures", name)
 		}
 		for _, tool := range orderedKeys(record, toolExposureOrder) {
 			if !isMcpExposure(record[tool]) {
-				return nil, fmt.Errorf("server %q: toolExposure %q must be one of %s", name, tool, exposures)
+				return nil, fmt.Errorf("server \"%s\": toolExposure \"%s\" must be one of %s", name, tool, exposures)
 			}
 		}
 	}
 	if enabled, ok := value["enabled"]; ok && !isBool(enabled) {
-		return nil, fmt.Errorf("server %q: enabled must be a boolean", name)
+		return nil, fmt.Errorf("server \"%s\": enabled must be a boolean", name)
 	}
 	if _, ok := value["description"]; ok && !isString(value["description"]) {
-		return nil, fmt.Errorf("server %q: description must be a string", name)
+		return nil, fmt.Errorf("server \"%s\": description must be a string", name)
 	}
 	if timeout, ok := value["timeout"]; ok {
 		number, isNumber := mcpNumber(timeout)
 		if !isNumber || number <= 0 {
-			return nil, fmt.Errorf("server %q: timeout must be a positive number of seconds", name)
+			return nil, fmt.Errorf("server \"%s\": timeout must be a positive number of seconds", name)
 		}
 	}
 	if typeIsString && serverType == "sse" {
-		return nil, fmt.Errorf("server %q: legacy SSE transport is not supported; use the streamable HTTP URL", name)
+		return nil, fmt.Errorf("server \"%s\": legacy SSE transport is not supported; use the streamable HTTP URL", name)
 	}
 
 	config := &McpServerConfig{}
 	if err := applyMcpServerConfigBase(config, value); err != nil {
-		return nil, fmt.Errorf("server %q: %w", name, err)
+		return nil, fmt.Errorf("server \"%s\": %w", name, err)
 	}
 
 	if serverURL, ok := value["url"].(string); ok && urlTransport {
 		parsed, effectiveURL, err := parseMcpHTTPURL(serverURL)
 		if err != nil {
-			return nil, fmt.Errorf("server %q: url must be an http or https URL", name)
+			return nil, fmt.Errorf("server \"%s\": url must be an http or https URL", name)
 		}
 		if headers, ok := value["headers"]; ok {
 			record, isRecord := mcpStringRecord(headers)
 			if !isRecord {
-				return nil, fmt.Errorf("server %q: headers must map names to strings", name)
+				return nil, fmt.Errorf("server \"%s\": headers must map names to strings", name)
 			}
 			config.Headers = record
 		}
 		oauthValue, hasOAuth := value["oauth"]
 		oauth, oauthError := validateMcpOAuth(oauthValue, hasOAuth)
 		if oauthError != "" {
-			return nil, fmt.Errorf("server %q: %s", name, oauthError)
+			return nil, fmt.Errorf("server \"%s\": %s", name, oauthError)
 		}
 		config.OAuth = oauth
 		if authValue, ok := value["auth"]; ok {
 			record, isRecord := mcpRecord(authValue)
 			provider, isString := record["provider"].(string)
 			if !isRecord || !isString || provider == "" {
-				return nil, fmt.Errorf("server %q: auth.provider must be a provider name", name)
+				return nil, fmt.Errorf("server \"%s\": auth.provider must be a provider name", name)
 			}
 			if parsed.Scheme != "https" && !isMcpLoopbackHost(parsed.Hostname()) {
-				return nil, fmt.Errorf("server %q: auth requires an https URL, or http on localhost, 127.0.0.1, or [::1]", name)
+				return nil, fmt.Errorf("server \"%s\": auth requires an https URL, or http on localhost, 127.0.0.1, or [::1]", name)
 			}
 			config.Auth = &McpProviderAuth{Provider: provider}
 		}
@@ -385,19 +385,19 @@ func validateMcpServerConfig(name string, raw any, toolExposureOrder []string) (
 		if argsValue, ok := value["args"]; ok {
 			args, isStringArray := mcpStringArray(argsValue)
 			if !isStringArray {
-				return nil, fmt.Errorf("server %q: args must be an array of strings", name)
+				return nil, fmt.Errorf("server \"%s\": args must be an array of strings", name)
 			}
 			config.Args = args
 		}
 		if envValue, ok := value["env"]; ok {
 			record, isRecord := mcpStringRecord(envValue)
 			if !isRecord {
-				return nil, fmt.Errorf("server %q: env must map names to strings", name)
+				return nil, fmt.Errorf("server \"%s\": env must map names to strings", name)
 			}
 			config.Env = record
 		}
 		if cwd, ok := value["cwd"]; ok && !isString(cwd) {
-			return nil, fmt.Errorf("server %q: cwd must be a string", name)
+			return nil, fmt.Errorf("server \"%s\": cwd must be a string", name)
 		}
 		if cwd, ok := value["cwd"].(string); ok {
 			config.Cwd = cwd
@@ -405,7 +405,7 @@ func validateMcpServerConfig(name string, raw any, toolExposureOrder []string) (
 		config.Command = command
 		return config, nil
 	}
-	return nil, fmt.Errorf("server %q needs either \"command\" (stdio) or \"url\" (streamable HTTP)", name)
+	return nil, fmt.Errorf("server \"%s\" needs either \"command\" (stdio) or \"url\" (streamable HTTP)", name)
 }
 
 // applyMcpServerConfigBase copies the shared fields.

@@ -356,7 +356,7 @@ func ValidateToolArguments(tool Tool, toolCall ToolCall) (json.RawMessage, error
 	// with the text the model sent, rather than validating the empty object
 	// (#10944).
 	if toolCall.ArgumentsError != "" {
-		return nil, fmt.Errorf("Invalid arguments for tool %q: %s", toolCall.Name, toolCall.ArgumentsError)
+		return nil, fmt.Errorf("Invalid arguments for tool \"%s\": %s", toolCall.Name, toolCall.ArgumentsError)
 	}
 	_, schema, schemaErr := getPiValidator(tool.Parameters)
 	if schemaErr != nil {
@@ -380,6 +380,6 @@ func ValidateToolArguments(tool Tool, toolCall ToolCall) (json.RawMessage, error
 			received = formatted
 		}
 	}
-	return nil, fmt.Errorf("Validation failed for tool %q:\n%s\n\nReceived arguments:\n%s",
+	return nil, fmt.Errorf("Validation failed for tool \"%s\":\n%s\n\nReceived arguments:\n%s",
 		toolCall.Name, strings.Join(errorLines, "\n"), received)
 }

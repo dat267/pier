@@ -99,7 +99,7 @@ func (anthropicStreams) StreamSimple(model *ai.Model, context ai.TranscriptConte
 
 func (anthropicStreams) FetchDeferred(model *ai.Model, handle *ai.DeferredHandle, options *ai.StreamOptions) *ai.AssistantMessageEventStream {
 	stream := ai.NewAssistantMessageEventStream()
-	err := fmt.Errorf("Provider anthropic does not support deferred responses for %q", model.API)
+	err := fmt.Errorf("Provider anthropic does not support deferred responses for \"%s\"", model.API)
 	msgText := err.Error()
 	msg := &ai.AssistantMessage{API: model.API, Provider: model.Provider, Model: model.ID,
 		StopReason: ai.StopError, ErrorMessage: &msgText, Timestamp: time.Now().UnixMilli()}

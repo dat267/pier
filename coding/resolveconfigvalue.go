@@ -276,7 +276,7 @@ func ResolveHeadersOrThrow(headers map[string]string, description string, env ma
 	}
 	resolved := map[string]string{}
 	for key, value := range headers {
-		resolvedValue, err := ResolveConfigValueOrThrow(value, fmt.Sprintf("%s header %q", description, key), env)
+		resolvedValue, err := ResolveConfigValueOrThrow(value, fmt.Sprintf("%s header \"%s\"", description, key), env)
 		if err != nil {
 			return nil, err
 		}

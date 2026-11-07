@@ -567,7 +567,7 @@ func failToolCallsFromTruncatedMessage(toolCalls []ai.ToolCall, emit AgentEventS
 		})
 		finalized := finalizedToolCallOutcome{
 			toolCall: toolCall,
-			result:   createErrorToolResult(fmt.Sprintf("Tool call %q was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments.", toolCall.Name)),
+			result:   createErrorToolResult(fmt.Sprintf("Tool call \"%s\" was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments.", toolCall.Name)),
 			isError:  true,
 		}
 		emitToolExecutionEnd(finalized, emit)
