@@ -794,5 +794,3 @@ func IsWhitespaceChar(char string) bool {
 func isLetterRune(r rune) bool { return unicode.IsLetter(r) }
 
 func isDigitRune(r rune) bool { return unicode.IsDigit(r) }
-
-func isMarkRune(r rune) bool { return unicode.IsMark(r) }

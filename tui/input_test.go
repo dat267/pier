@@ -378,7 +378,7 @@ func navigationKey(text string, cursor int) string {
 
 // TestWordNavigationAgainstUpstreamGolden verifies the word navigation
 // functions. Cursors are JS string offsets; the corpus is ASCII plus accented
-// characters where both agree (divergence D58 for full UAX #29).
+// characters where both agree (D399 for dictionary scripts).
 func TestWordNavigationAgainstUpstreamGolden(t *testing.T) {
 	golden := loadWordsGolden(t)
 

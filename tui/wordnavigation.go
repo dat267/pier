@@ -1,7 +1,5 @@
 package tui
 
-import "unicode/utf8"
-
 // Port of src/undo-stack.ts, src/kill-ring.ts, and src/word-navigation.ts.
 
 // UndoStack stores state snapshots. Upstream clones on push with
@@ -99,100 +97,10 @@ type WordSegment struct {
 	IsWordLike bool
 }
 
-// WordSegments segments text with word granularity.
-//
-// Upstream uses Intl.Segmenter (full UAX #29 word segmentation); the Go port
-// implements the practical rules observed from ICU (divergence D58): word
-// characters are letters, digits, marks, and connector punctuation; a single
-// mid-word "." merges between alphanumerics, "'" between letters, and ","
-// between digits; whitespace runs and individual punctuation cells are
-// non-word segments.
+// WordSegments segments text with word granularity, like upstream's
+// Intl.Segmenter (see segmentWords).
 func WordSegments(text string) []WordSegment {
-	// Walk the source directly so segments can reference its bytes instead of
-	// allocating rune and byte-offset tables.
-	var segments []WordSegment
-	byteOffset := 0
-	// Keep indices compatible with encoding each decoded rune to a Go string;
-	// invalid UTF-8 therefore advances by the RuneError encoding width.
-	logicalOffset := 0
-	for byteOffset < len(text) {
-		startByte := byteOffset
-		startIndex := logicalOffset
-		r, size := utf8.DecodeRuneInString(text[byteOffset:])
-
-		if isWhitespaceRune(r) {
-			byteOffset += size
-			logicalOffset += utf8.RuneLen(r)
-			for byteOffset < len(text) {
-				next, nextSize := utf8.DecodeRuneInString(text[byteOffset:])
-				if !isWhitespaceRune(next) {
-					break
-				}
-				byteOffset += nextSize
-				logicalOffset += utf8.RuneLen(next)
-			}
-			segments = append(segments, WordSegment{
-				Segment: text[startByte:byteOffset], Index: startIndex,
-			})
-			continue
-		}
-
-		if !isWordChar(r) {
-			segment := text[byteOffset : byteOffset+size]
-			if r == utf8.RuneError && size == 1 {
-				segment = string(r)
-			}
-			segments = append(segments, WordSegment{Segment: segment, Index: startIndex})
-			byteOffset += size
-			logicalOffset += utf8.RuneLen(r)
-			continue
-		}
-
-		previous := r
-		byteOffset += size
-		logicalOffset += utf8.RuneLen(r)
-		for byteOffset < len(text) {
-			current, currentSize := utf8.DecodeRuneInString(text[byteOffset:])
-			if isWordChar(current) {
-				byteOffset += currentSize
-				logicalOffset += utf8.RuneLen(current)
-				previous = current
-				continue
-			}
-
-			afterOffset := byteOffset + currentSize
-			if afterOffset < len(text) {
-				after, afterSize := utf8.DecodeRuneInString(text[afterOffset:])
-				if isWordChar(after) && isMidWordChar(current, previous, after) {
-					byteOffset = afterOffset + afterSize
-					logicalOffset += utf8.RuneLen(current) + utf8.RuneLen(after)
-					previous = after
-					continue
-				}
-			}
-			break
-		}
-		segments = append(segments, WordSegment{
-			Segment: text[startByte:byteOffset], Index: startIndex, IsWordLike: true,
-		})
-	}
-	return segments
-}
-
-func isMidWordChar(mid rune, before rune, after rune) bool {
-	switch mid {
-	case '.':
-		return isWordChar(before) && isWordChar(after)
-	case '\'':
-		return isLetterRune(before) && isLetterRune(after)
-	case ',':
-		return isDigitRune(before) && isDigitRune(after)
-	}
-	return false
-}
-
-func isWordChar(r rune) bool {
-	return isLetterRune(r) || isDigitRune(r) || isMarkRune(r) || r == '_'
+	return segmentWords(text)
 }
 
 // FindWordBackward returns the cursor position after moving one word backward.

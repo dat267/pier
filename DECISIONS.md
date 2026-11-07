@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D398)
+# Deliberate divergences from pi (D1–D399)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5508,3 +5508,24 @@ markdown component's windowed re-lex (`tui/markdown.go`) relies on not
 happening.
 
 Test: `TestMarkdownKeepsAParagraphWhoseSecondCharacterOpensMath`.
+
+### D399
+
+**Han, kana and Southeast Asian runs stay one word.**
+
+Reference: pi v1.5.0 (f9a26365) `packages/tui/src/utils.ts` segments words
+with `Intl.Segmenter`. That is ICU's word break iterator (Node 26, ICU 78.3,
+Unicode 17), the UAX #29 rules as tailored by ICU's `word.txt`. Pier implements
+those rules over a table that `scripts/gen_wordbreak.py` generates from the
+Unicode 17 UCD. With Han, kana and Complex_Context scripts left out, its
+segments and `isWordLike` match `Intl.Segmenter` on 55,000 random strings drawn
+from every Word_Break class. Word navigation then matches at every grapheme
+boundary.
+
+ICU also hands runs of Han and kana, and of Thai, Lao, Khmer and Myanmar, to
+dictionary break engines, which split them into words (`日本語` `の` `テキスト`).
+Pier keeps the run that the rules' `$KanaKanji` chain, or the ALetter rules for
+Complex_Context text, produce as one word. Matching the engines would mean
+shipping ICU's dictionaries. Ctrl+arrow therefore skips a whole such run.
+
+Test: `TestWordSegmentsKeepDictionaryRunsWhole`.
