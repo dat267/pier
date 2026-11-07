@@ -3,6 +3,7 @@ package markdown
 import (
 	"regexp"
 	"strings"
+	"unicode/utf8"
 )
 
 // Lex parses src into top-level blocks with their inline content resolved.
@@ -241,6 +242,41 @@ func isFenceEnd(line, marker string) bool {
 	return strings.Trim(line[j:], " \t") == ""
 }
 
+// fenceIndentCompensation reproduces marked's indentCodeCompensation, which a
+// fence tokenizer applies to its body: a backtick fence that starts after
+// whitespace removes that many leading whitespace characters from every body
+// line that has at least as many. The reference's regex (`/^(\s+)(?:```)/`)
+// only matches a backtick fence, so a tilde fence keeps its indentation.
+func fenceIndentCompensation(raw, body string) string {
+	indent := 0
+	for indent < len(raw) && (raw[indent] == ' ' || raw[indent] == '\t') {
+		indent++
+	}
+	if indent == 0 || !strings.HasPrefix(raw[indent:], "```") {
+		return body
+	}
+	lines := strings.Split(body, "\n")
+	for index, line := range lines {
+		lead := 0
+		for _, r := range line {
+			if !isWhitespaceRune(r) || lead == indent {
+				break
+			}
+			lead++
+		}
+		if lead < indent {
+			continue
+		}
+		cut := 0
+		for dropped := 0; dropped < indent; dropped++ {
+			_, size := utf8.DecodeRuneInString(line[cut:])
+			cut += size
+		}
+		lines[index] = line[cut:]
+	}
+	return strings.Join(lines, "\n")
+}
+
 func (l *blockLexer) lexFence(start int, marker, info string) (*Block, int, bool) {
 	src := l.src
 	at := nextLine(src, start).next
@@ -256,7 +292,7 @@ func (l *blockLexer) lexFence(start int, marker, info string) (*Block, int, bool
 		}
 		at = ln.next
 	}
-	body := strings.TrimSuffix(src[bodyStart:bodyEnd], "\n")
+	body := fenceIndentCompensation(src[start:], strings.TrimSuffix(src[bodyStart:bodyEnd], "\n"))
 	end := len(src)
 	if closed {
 		closeLine := nextLine(src, bodyEnd)
