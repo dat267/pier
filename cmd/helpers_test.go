@@ -15,6 +15,19 @@ import (
 // short guard fails on load rather than on a real hang.
 const childProcessTimeout = 30 * time.Second
 
+// childAgentEnv is the environment every spawned child in this package starts
+// from: the isolated agent directory this test run set, plus the developer's
+// HOME. A child whose environment is built from scratch otherwise resolves the
+// real ~/.pi/agent and scans it, which AGENTS.md forbids and which made the
+// session-resolution case time out at childProcessTimeout under full-suite load.
+func childAgentEnv(extra ...string) []string {
+	env := []string{
+		"PI_CODING_AGENT_DIR=" + os.Getenv("PI_CODING_AGENT_DIR"),
+		"HOME=" + os.Getenv("HOME"),
+	}
+	return append(env, extra...)
+}
+
 // TestExecutableName derives the display name from the invoked binary, falling
 // back to the product name (main.ts's executable name).
 func TestExecutableName(t *testing.T) {

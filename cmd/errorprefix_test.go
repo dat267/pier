@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/coding"
 )
 
 // Upstream main.ts reports a run failure as a red "Error: {message}" line and
@@ -48,11 +51,10 @@ func TestRunFailuresUseTheReferenceErrorLine(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), childProcessTimeout)
 			defer cancel()
 			command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestRunFailureCLIHelper$")
-			env := []string{
-				"PIER_TEST_RUN_FAILURE_ARGS=" + testCase.args,
-				"HOME=" + os.Getenv("HOME"),
+			env := childAgentEnv(
+				"PIER_TEST_RUN_FAILURE_ARGS="+testCase.args,
 				"TERM=xterm-256color",
-			}
+			)
 			if testCase.wantANSI {
 				env = append(env, "FORCE_COLOR=1")
 			}
@@ -82,6 +84,10 @@ func TestRunFailuresUseTheReferenceErrorLine(t *testing.T) {
 }
 
 func TestRunFailureCLIHelper(t *testing.T) {
+	if os.Getenv("PIER_TEST_PRINT_AGENT_DIR") != "" {
+		fmt.Fprintf(os.Stderr, "AGENTDIR=%s\n", coding.GetAgentDir())
+		return
+	}
 	args, ok := os.LookupEnv("PIER_TEST_RUN_FAILURE_ARGS")
 	if !ok {
 		return

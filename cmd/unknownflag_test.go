@@ -3,10 +3,13 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/coding"
 )
 
 // Upstream main.ts hands every unclaimed unknown flag to agent-session-services,
@@ -63,6 +66,10 @@ func exitCodeOf(err error) int {
 }
 
 func TestUnknownFlagCLIHelper(t *testing.T) {
+	if os.Getenv("PIER_TEST_PRINT_AGENT_DIR") != "" {
+		fmt.Fprintf(os.Stderr, "AGENTDIR=%s\n", coding.GetAgentDir())
+		return
+	}
 	args, ok := os.LookupEnv("PIER_TEST_UNKNOWN_FLAG_ARGS")
 	if !ok {
 		return
@@ -94,10 +101,8 @@ func TestDiagnosticColorFollowsColorSupport(t *testing.T) {
 			command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestUnknownFlagCLIHelper$")
 			// A clean environment keeps the developer's CI and terminal
 			// variables out of the decision.
-			command.Env = append([]string{
-				"PIER_TEST_UNKNOWN_FLAG_ARGS=--offline --bogus",
-				"HOME=" + os.Getenv("HOME"),
-			}, testCase.env...)
+			command.Env = childAgentEnv(append(
+				[]string{"PIER_TEST_UNKNOWN_FLAG_ARGS=--offline --bogus"}, testCase.env...)...)
 			output, err := command.CombinedOutput()
 			if exit := exitCodeOf(err); exit != 1 {
 				t.Fatalf("exit = %d (%v), want 1; output: %q", exit, err, output)

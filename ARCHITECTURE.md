@@ -5521,6 +5521,33 @@ a provider without a key (`credentials_not_configured`, exit 1) and the
 rebuild was also compared against the reference binary: eight `auth check` /
 `print-api-key` cases now match on stdout and exit code.
 
+### D391
+
+**Spawned test children inherit the isolated agent directory.**
+
+Not a reference divergence but a port-testing invariant recorded here because it
+outlived a CI-shaped failure. `cmd`'s child-process tests spawn this binary as a
+test helper to check exit codes, color decisions and headless startup. Three
+sites built `command.Env` from scratch (a clean environment keeps the
+developer's `CI`, `NO_COLOR` and `TERM` out of the color decision), which also
+dropped `PI_CODING_AGENT_DIR`: the child then resolved the developer's real
+`~/.pi/agent` instead of the temporary directory `isolatedAgentDir` sets.
+
+The session-resolution case scans that directory. On this host it holds 445 MB
+and 57 session files, so the child took ~15 s alone and was killed at the 30 s
+`childProcessTimeout` under `go test -race ./...`, which reported
+`exit = -1 (signal: killed)`. That violates the AGENTS.md rule that tests use
+temporary agent state and never the real agent directory, and it made the gate
+load-dependent.
+
+`childAgentEnv` in `cmd/helpers_test.go` is now the single environment builder
+for those children: it passes `PI_CODING_AGENT_DIR` and `HOME` and appends the
+case-specific entries. The session-resolution child dropped from ~15 s to 0.08 s.
+
+Test: `TestChildProcessesUseTheIsolatedAgentDir` spawns the helper through that
+builder and asserts the child's `GetAgentDir()` is the isolated directory; it
+failed with `/home/dat/.pi/agent` at both sites before the change.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
