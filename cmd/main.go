@@ -756,7 +756,7 @@ func applyThemeSources(boot *interactive.ThemeBoot, args *coding.Args, settings 
 		AgentDir:   agentDir,
 		Cwd:        cwd,
 		ThemeName:  themeNameFor(settings),
-		ThemePaths: themePathsFor(args, settings, cwd),
+		ThemePaths: themePathsFor(args, settings, cwd, trusted),
 		Trusted:    trusted,
 		NoThemes:   args.NoThemes,
 	})
@@ -772,10 +772,19 @@ func themeNameFor(settings *coding.SettingsManager) string {
 }
 
 // themePathsFor resolves the theme files and directories named by the settings
-// and by --theme against the working directory.
-func themePathsFor(args *coding.Args, settings *coding.SettingsManager, cwd string) []string {
-	paths := append([]string{}, settings.GetThemePaths()...)
-	paths = append(paths, args.Themes...)
+// and by --theme against the working directory. Pre-trust the paths are the
+// global scope's values only: upstream's loadStartupThemes resolves them
+// through an in-memory global-only settings manager (cli/startup-ui.ts), and
+// neither side names a project file there. The merged settings and the --theme
+// values join once the project's trust is known.
+func themePathsFor(args *coding.Args, settings *coding.SettingsManager, cwd string, trusted bool) []string {
+	var paths []string
+	if trusted {
+		paths = append(paths, settings.GetThemePaths()...)
+		paths = append(paths, args.Themes...)
+	} else if global := settings.GetGlobalSettings(); global != nil {
+		paths = append(paths, global.Themes...)
+	}
 	return coding.ResolveCLIPaths(cwd, paths)
 }
 
