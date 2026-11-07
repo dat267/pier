@@ -231,6 +231,12 @@ func bumpContentRevision() { contentRevision.Add(1) }
 type Container struct {
 	Children []Component
 
+	// OnInvalidate, when set, runs after Invalidate has reached every child. An
+	// owner that holds components on the container's behalf without attaching
+	// them yet (the transcript's deferred queue) uses it to learn that they are
+	// stale too. It runs on the caller's goroutine, outside any lock.
+	OnInvalidate func()
+
 	// mouseLayout is the child hit-test layout from the last render. Render is
 	// loop-owned, so it needs no lock.
 	mouseLayout      []mouseChild
@@ -403,6 +409,9 @@ func (c *Container) Invalidate() {
 	children := append([]Component{}, c.Children...)
 	for _, child := range children {
 		child.Invalidate()
+	}
+	if c.OnInvalidate != nil {
+		c.OnInvalidate()
 	}
 }
 

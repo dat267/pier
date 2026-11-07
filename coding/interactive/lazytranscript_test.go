@@ -211,3 +211,74 @@ func TestLazyTranscriptPrerenderRewarmsAfterWidthChange(t *testing.T) {
 		t.Fatal("transcript incomplete after a width change")
 	}
 }
+
+// A theme switch must reach the components still waiting in the deferred
+// queue. Reproduction: with `theme: system`, an old session loads while the
+// terminal-color reply is pending, so every component is built against the
+// grayscale theme; the reply's full invalidate reached only the attached
+// window, and an early compaction box kept a white `[compaction]` label (its
+// text is colored at construction) over the correct, render-time background.
+// Upstream has no deferred queue: pi v1.5.0 (f9a26365)
+// modes/interactive/interactive-mode.ts renders every chat child, so its
+// theme invalidate reaches the compaction component
+// (components/compaction-summary-message.ts `invalidate` → `updateDisplay`).
+func TestLazyTranscriptThemeChangeReachesDeferredComponents(t *testing.T) {
+	for _, prerender := range []bool{false, true} {
+		t.Run(fmt.Sprintf("prerender=%v", prerender), func(t *testing.T) {
+			SetCustomThemesDir(t.TempDir())
+			SetRegisteredThemes(nil)
+			SetTrueColorSupport(true)
+			SetStyleColorsEnabled(true)
+			InitTheme("dark", false)
+			t.Cleanup(func() { InitTheme("dark", false) })
+
+			manager := coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{Persist: new(false)})
+			first := manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "kept"}})
+			manager.AppendCompaction("summary", first, 378775, nil, false, nil)
+			for i := range 800 {
+				manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: fmt.Sprintf("lazy-msg-%04d", i)}})
+			}
+
+			chat := &tui.Container{}
+			transcript := NewTranscriptRenderer(chat, nil, nil, nil, manager)
+			if prerender {
+				queue := offloop.New()
+				defer queue.Stop()
+				transcript.PrerenderQueue = queue
+			}
+			transcript.RenderInitialMessages()
+			// Start a warm under the old theme, so the prerender path also has
+			// an in-flight or ready chunk to discard.
+			transcript.MaterializeDeferred(100)
+
+			darkLabel := ActiveTheme().Fg("customMessageLabel", "x")
+			InitTheme("light", false)
+			lightLabel := ActiveTheme().Fg("customMessageLabel", "x")
+			if darkLabel == lightLabel {
+				t.Fatal("the label color must differ between the themes")
+			}
+			chat.Invalidate() // what tui.Renderer.Invalidate does on a theme change
+
+			deadline := time.Now().Add(10 * time.Second)
+			for transcript.MaterializeDeferred(100) {
+				if time.Now().After(deadline) {
+					t.Fatalf("materialization did not finish: %d deferred left", len(transcript.deferredComponents))
+				}
+			}
+			var compaction *CompactionSummaryMessageComponent
+			for _, child := range chat.Children {
+				if c, ok := child.(*CompactionSummaryMessageComponent); ok {
+					compaction = c
+				}
+			}
+			if compaction == nil {
+				t.Fatal("no compaction component in the transcript")
+			}
+			rendered := strings.Join(compaction.Render(100), "\n")
+			labelColor := strings.TrimSuffix(lightLabel, "x\x1b[39m")
+			if !strings.Contains(rendered, labelColor+"\x1b[1m[compaction]") {
+				t.Fatalf("compaction label kept the old theme:\n%q\nwant prefix %q", rendered, labelColor)
+			}
+		})
+	}
+}

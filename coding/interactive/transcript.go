@@ -102,6 +102,14 @@ type TranscriptRenderer struct {
 	// multi-hundred-millisecond full-transcript render. Touched only on the
 	// loop goroutine (render/entry paths and loop beats all run there).
 	deferredComponents []tui.Component
+	// staleBelow is how many of deferredComponents (from the oldest) missed an
+	// invalidate of the chat: a theme change reaches only attached children,
+	// and these were built, and may have been warmed, against the old theme.
+	// They are invalidated on the loop just before their chunk is warmed or
+	// attached, so a change costs nothing up front for a long queue and the
+	// worker never races an invalidate. Chunks leave from the tail, so the stale
+	// ones are always a prefix.
+	staleBelow int
 
 	// PrerenderQueue warms the deferred components' render caches off the UI
 	// loop (internal/offloop): a large entry's markdown lex + styling is the
@@ -128,7 +136,7 @@ type prerenderState struct {
 
 // NewTranscriptRenderer creates the renderer.
 func NewTranscriptRenderer(chat *tui.Container, ui tui.RenderRequester, settings *coding.SettingsManager, session TranscriptSession, sessionInfo *coding.SessionManager) *TranscriptRenderer {
-	return &TranscriptRenderer{
+	r := &TranscriptRenderer{
 		Chat:         chat,
 		UI:           ui,
 		Settings:     settings,
@@ -136,6 +144,42 @@ func NewTranscriptRenderer(chat *tui.Container, ui tui.RenderRequester, settings
 		SessionInfo:  sessionInfo,
 		Display:      &DisplayOptions{},
 		pendingTools: map[string]*ToolExecutionComponent{},
+	}
+	if chat != nil {
+		chat.OnInvalidate = r.invalidateDeferred
+	}
+	return r
+}
+
+// invalidateDeferred marks every deferred component stale after the chat was
+// invalidated, and discards a warmed chunk: it was rendered against what the
+// invalidate replaced. An in-flight warm is left alone (the worker owns those
+// components until it finishes); the generation bump makes its result ignored.
+func (r *TranscriptRenderer) invalidateDeferred() {
+	if len(r.deferredComponents) == 0 {
+		return
+	}
+	r.staleBelow = len(r.deferredComponents)
+	r.pre.mu.Lock()
+	r.pre.ready = false
+	r.pre.gen++
+	r.pre.mu.Unlock()
+}
+
+// refreshDeferredTail invalidates the stale components among the count at the
+// tail of the deferred queue, the next chunk to warm or attach. It runs on the
+// loop while no warm holds those components.
+func (r *TranscriptRenderer) refreshDeferredTail(count int) {
+	from := len(r.deferredComponents) - count
+	stale := r.staleBelow
+	if stale <= from {
+		return
+	}
+	// Lowered first: an Invalidate that re-enters the chat's invalidate marks
+	// the whole queue stale again, and that must survive this loop.
+	r.staleBelow = from
+	for _, component := range r.deferredComponents[from:stale] {
+		component.Invalidate()
 	}
 }
 
@@ -476,6 +520,7 @@ func (r *TranscriptRenderer) MaterializeDeferred(width int) bool {
 		// Synchronous fallback (tests, one-shot renders): warm in place, then
 		// attach, exactly as before the pre-render worker existed.
 		count := min(lazyTranscriptChunkComponents, len(r.deferredComponents))
+		r.refreshDeferredTail(count)
 		warmComponents(r.deferredComponents[len(r.deferredComponents)-count:], width)
 		r.attachDeferredTail(count)
 		return len(r.deferredComponents) > 0
@@ -501,10 +546,14 @@ func (r *TranscriptRenderer) MaterializeDeferred(width int) bool {
 		return true
 	}
 	count := min(lazyTranscriptChunkComponents, len(r.deferredComponents))
-	components := r.deferredComponents[len(r.deferredComponents)-count:]
 	gen := r.pre.gen
 	r.pre.busy = true
 	r.pre.mu.Unlock()
+	// Component Invalidate can be extension code, so it runs unlocked; busy
+	// keeps another beat from handing out this chunk, and an invalidate that
+	// re-enters meanwhile bumps gen, so this warm's result is ignored.
+	r.refreshDeferredTail(count)
+	components := r.deferredComponents[len(r.deferredComponents)-count:]
 
 	r.PrerenderQueue.GoContext(func(ctx context.Context) {
 		warmComponentsContext(ctx, components, width)
@@ -549,6 +598,7 @@ func (r *TranscriptRenderer) attachDeferredTail(count int) {
 // its result cannot land in the rebuilt transcript.
 func (r *TranscriptRenderer) resetDeferred() {
 	r.deferredComponents = nil
+	r.staleBelow = 0
 	r.pre.mu.Lock()
 	r.pre.ready = false
 	r.pre.gen++
