@@ -14,3 +14,7 @@ pi-session-*.html
 
 # Local scratch checkouts and analysis
 /tmp/
+
+# Project MCP servers are local to this checkout (mcp.json holds machine paths
+# and credentials); the shape is documented in docs/mcp.md.
+/.pi/
