@@ -9,11 +9,15 @@ import (
 	"syscall"
 )
 
-// configureDetachedCommand starts the command in its own process group so a
-// kill can target the whole tree (upstream's `detached: true`, which it sets on
-// every platform but Windows).
+// configureDetachedCommand starts the command in a session of its own
+// (upstream's `detached: true`, which it sets on every platform but Windows and
+// libuv implements with setsid()). The session leader also leads a new process
+// group, so a kill can target the whole tree. The command has no controlling
+// terminal: a prompt that opens /dev/tty fails at once instead of reading pier's
+// terminal from a background group, where SIGTTIN stops it and the command
+// hangs.
 func configureDetachedCommand(cmd *exec.Cmd) {
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 }
 
 // killProcessTreePlatform kills the process group with SIGKILL, falling back to
