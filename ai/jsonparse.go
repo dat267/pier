@@ -167,6 +167,19 @@ func ParseToolCallArguments(jsonText string) (json.RawMessage, string) {
 	return encodeSchemaValue(value), ""
 }
 
+// ParseJavaScriptJSONValue parses one JSON value with JSON.parse/JSON.stringify
+// semantics: object member order is retained and every number goes through a
+// double. It is the value form of ParseToolCallArguments for callers that
+// re-serialize a provider-supplied value (a renderer showing tool arguments).
+// ok is false when data is not exactly one valid JSON value.
+func ParseJavaScriptJSONValue(data []byte) (json.RawMessage, bool) {
+	value, err := decodeOrderedJSON(data)
+	if err != nil {
+		return nil, false
+	}
+	return encodeSchemaValue(value), true
+}
+
 // decodeOrderedJSON parses one JSON value keeping object member order.
 // Upstream parses tool arguments with JSON.parse and re-stringifies the object,
 // so the model's key order survives; a map[string]any would sort it (D6's

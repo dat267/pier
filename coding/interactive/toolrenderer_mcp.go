@@ -131,12 +131,28 @@ func mcpArgumentEntries(args any) []mcpArgumentEntry {
 			return entries
 		}
 		keys = append(keys, key)
-		values[key] = string(value)
+		values[key] = mcpJSONStringify(value)
 	}
 	for _, key := range coding.JavaScriptObjectKeyOrder(keys) {
 		entries = append(entries, mcpArgumentEntry{key: key, value: values[key]})
 	}
 	return entries
+}
+
+// mcpJSONStringify renders one argument value the way the reference's
+// `JSON.stringify(value)` does: the parsed value re-serialized, not the
+// provider's original text. Decoding through `any` gives JavaScript number
+// semantics (1.0 -> 1, 1e3 -> 1000, an integer past 2^53 in exponent form).
+// Unparseable values fall back to their raw text, which is what
+// `JSON.stringify` would have received from a decoded JSON body anyway.
+// ParseJavaScriptJSONValue keeps nested object key order, so a value like
+// `{"k":"v","j":1}` is not re-sorted.
+func mcpJSONStringify(raw json.RawMessage) string {
+	encoded, ok := ai.ParseJavaScriptJSONValue(raw)
+	if !ok {
+		return string(raw)
+	}
+	return string(encoded)
 }
 
 // mcpArgumentsJSON returns the call arguments as a JSON object, or ok=false

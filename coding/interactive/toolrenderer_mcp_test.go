@@ -228,6 +228,32 @@ func TestMcpCallHeaderStaysUnreflowedWhenExpanded(t *testing.T) {
 	}
 }
 
+// TestMcpCallHeaderSerializesValuesLikeJSONStringify pins the value text of the
+// call header. Reference: pi v1.5.0 (f9a26365) core/tools/render-utils.ts
+// formatToolCallWithArgs builds each pair as `${key}=${JSON.stringify(value)}`,
+// so the header shows the parsed value re-serialized (1.0 renders as 1,
+// "\u0041" as "A", 1e3 as 1000, and an integer beyond 2^53 in exponent form).
+// Pier printed the argument's raw JSON text instead, so a provider's spelling
+// leaked into the header.
+func TestMcpCallHeaderSerializesValuesLikeJSONStringify(t *testing.T) {
+	theme := newRendererTestTheme(t)
+	cases := []struct {
+		args string
+		want string
+	}{
+		{`{"n":1.0,"s":"a\u0041"}`, `docs/search n=1 s="aA"`},
+		{`{"n":1e3,"b":true,"z":null}`, `docs/search n=1000 b=true z=null`},
+		{`{"nested":{"a":1.0},"arr":[1.0,2]}`, `docs/search nested={"a":1} arr=[1,2]`},
+		{`{"big":1234567890123456789012}`, `docs/search big=1.2345678901234568e+21`},
+		{`{"neg":-0}`, `docs/search neg=0`},
+	}
+	for _, testCase := range cases {
+		if got := renderMcpCall(t, json.RawMessage(testCase.args), theme, false); got != testCase.want {
+			t.Errorf("header for %s = %q, want %q", testCase.args, got, testCase.want)
+		}
+	}
+}
+
 // TestMcpResultPreviewWrapsAtTheRenderWidth is the reproduction of the reported
 // reflow: the collapsed preview was pre-wrapped at a fixed 80 columns, so on a
 // wider terminal it broke a line that the expanded view left whole, and on a
