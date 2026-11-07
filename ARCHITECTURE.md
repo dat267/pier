@@ -5180,6 +5180,16 @@ Remaining differences, both outside the Agent Skills spec:
   sequence in block collection..." message. Values pier cannot parse never
   reach the prompt, so the warning is the actionable part.
 
+A differential over whole skill trees confirms the subset holds where it
+matters: block and plain descriptions, quoted values, `name: true` and `name: ~`
+(which fall back to the directory name because the loader only accepts string
+values), `disable-model-invocation` in both boolean and quoted form, a nested
+mapping, a missing description and a numeric description. Both sides load the
+same eight titles with the same descriptions and flags, and report the same two
+`description is required` diagnostics (the missing and the numeric case), so the
+typed values the parser distinguishes never change which skills reach the
+prompt.
+
 Every upstream skill fixture now matches, including `skills/multiline-description`
 (the block-scalar case that motivated this row) and each fixture's diagnostic
 wording. Tests: `TestParseFrontmatterBlockScalars`,
