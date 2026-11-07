@@ -3045,6 +3045,7 @@ credentials after an origin change and keeps them removed on subsequent hops,
 but retains the configured `http.DefaultClient` transport, timeout and redirect
 hook, and its existing default ten-hop limit rather than fetch's twenty.
 The global client and original request headers are not mutated.
+
 Tests: `TestResponsesRedirectCredentials`, `TestProviderRequestRedirectPolicy`.
 
 MCP's built-in Streamable HTTP client also keeps Go's ten-hop limit. Reference:
@@ -3054,6 +3055,7 @@ only the latest origin leaked stripped credentials on an A-to-B-to-B chain.
 The hook checks the bounded redirect history and keeps bearer, proxy and cookie
 credentials removed for the rest of that request. Separate requests retain
 their own credentials, and same-origin chains retain nonsensitive headers.
+
 Tests: `TestStreamableHTTPRedirectChainCannotRestoreCredentials`,
 `TestStreamableHTTPRedirectDoesNotForwardAuthorizationAcrossPorts`,
 `TestStreamableHTTPRedirectLimitRemainsTen`.
@@ -3080,6 +3082,7 @@ callers that need concurrent read/retention use `NextSnapshot` instead. Producer
 must publish through `AssistantMessageEventStream.Push`.
 
 No UI-state lock, callback queue, or provider/session JSON field is added.
+
 Tests: `TestAgentOwnsProxyPartialsDuringStreaming` reproduces mutation of an
 emitted event without the race detector, and also covers the race under `-race`;
 `TestAssistantStreamSnapshotDoesNotChangeLiveNext` and
@@ -3108,6 +3111,7 @@ scripts in bash").
 
 The rule is built in `buildRules`, not in the per-tool contributions, so the
 upstream-cited snippet and guideline tables stay byte-comparable with pi.
+
 Tests: `TestSystemPromptForbidsShellFileWrites`,
 `TestSystemPromptShellWriteRuleNamesTheAvailableFileTool` and
 `TestSystemPromptShellWriteRuleNeedsAFileTool`.
@@ -3186,8 +3190,8 @@ and `TestDerivedForkKeepsParentDirectoryMode`.
 Reference: pi v1.4.0 `packages/tui/src/tui.ts` `applyLineResets` and
 `packages/tui/src/utils.ts` `normalizeTerminalOutput` pass OSC 52 through;
 `packages/tui/src/terminal.ts` `setTitle` wraps the provided title without
-removing control characters. Pier removes OSC
-0/1/2 title changes and OSC 52 clipboard operations at the final rendered-line
+removing control characters. Pier removes OSC 0/1/2 title changes and OSC 52
+clipboard operations at the final rendered-line
 boundary while preserving OSC 8 hyperlinks and supported image sequences; it
 also strips Unicode control characters from OSC 0 title text. This is a
 deliberate terminal-output security divergence. v1.5.0
@@ -3204,14 +3208,16 @@ sequence cannot be terminated by title content.
 
 **Custom export colors are validated before HTML interpolation.**
 
-Reference: pi v1.4.0 `packages/coding-agent/src/modes/interactive/theme/theme-schema.ts`
-accepts string color values; `packages/coding-agent/src/modes/interactive/theme/theme.ts`
+Reference: pi v1.4.0
+`packages/coding-agent/src/modes/interactive/theme/theme-schema.ts` accepts
+string color values;
+`packages/coding-agent/src/modes/interactive/theme/theme.ts`
 `getThemeExportColors` returns custom CSS strings, and
 `packages/coding-agent/src/core/export-html/index.ts` inserts them into the
-`<style>` element. A color such as
-`#123456</style><script>…` closes the style element and executes when the export
-is opened. Pier now validates export values with its color parser and
-omits invalid values. This is an intentional export-security divergence.
+`<style>` element. A color such as `#123456</style><script>…` closes the style
+element and executes when the export is opened. Pier validates export values
+with its color parser and omits invalid values. This is an intentional
+export-security divergence.
 
 Test: `TestGenerateSessionHTMLEscapesCustomExportCSS` reproduces and prevents
 an injected script in the generated style element.
