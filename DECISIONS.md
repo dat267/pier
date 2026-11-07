@@ -57,8 +57,15 @@ by code pointer.**
 read. If that read completes while still stopped, it discards its bytes and
 relinquishes reader ownership. A later `Start` reopens input with a fresh buffer
 and handler, reusing an in-flight reader rather than competing for the same fd.
-`stdinReaderMu` serializes admission and exit only; reads, parsing and callbacks
-run outside it. The raw buffer stays on the UI owner, while library-mode buffers
+The reader belongs to the input file, not to one terminal: every
+`ProcessTerminal` on that file shares it, and a read goes to whichever terminal
+is started when it returns, as Node's single `process.stdin` stream delivers to
+the attached listener. Without that, the startup trust prompt or the `--resume`
+picker left its read in flight next to the app's new reader. That read then won
+the app's first input, the terminal-color replies, and discarded it, so the
+system theme never got the terminal's colors. The shared reader's mutex
+serializes admission and exit only; reads, parsing and callbacks run outside
+it. The raw buffer stays on the UI owner, while library-mode buffers
 are atomically published to the one reader. Restarting inside an input callback
 is supported. A blocked read may remain until input/EOF arrives; this is not
 Node's synchronous `process.stdin.pause()` behavior.
@@ -67,6 +74,9 @@ Reference: pi v1.4.0 (`4a080252`), `packages/tui/src/terminal.ts` `start`/`stop`
 Scenario: a renderer-mode switch or suspend/resume stops and starts the same
 terminal; new input must work, with no second concurrent stdin reader. CR-053
 repairs the old permanent closed flag and restart reader admission.
+
+Test: `TestStdinHandoffBetweenTerminalsDeliversToTheStartedOne`
+(`tui/terminal_handoff_test.go`).
 
 ### D51
 

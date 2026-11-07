@@ -156,7 +156,7 @@ type RawInputTerminal interface {
 // The interactive consumer (the UI loop) owns input — it feeds raw
 // bytes through FeedInput and drives flushing via NextInputFlushDeadline /
 // FlushPendingInput, so the stdin buffer and the keyboard-protocol
-// negotiation state are loop-owned and lock-free. stdinReaderMu only gates
+// negotiation state are loop-owned and lock-free. The shared stdinReader's mutex only gates
 // reader admission/exit across restarts; it never retains a lock over a read,
 // parsing or a callback. The protocol flags are atomics. writeMu serializes
 // raw-mode transitions and the ordering of
@@ -192,15 +192,13 @@ type ProcessTerminal struct {
 	// sentinel yet.
 	programStatusQueryPending bool
 	stdinBuffer               *StdinBuffer
-	// stdinReaderMu only serializes reader admission/exit with Start. Blocking
-	// reads, parsing and callbacks run outside it. A stopped reader may still
-	// be inside Read; Start reuses it rather than competing for the same fd.
-	stdinReaderMu      sync.Mutex
-	stdinReaderRunning bool
-	legacyStdinBuffer  atomic.Pointer[StdinBuffer]
-	progressInterval   *time.Ticker
-	progressDone       chan struct{}
-	writeLogPath       string
+	// reader is the stdin reader shared by every ProcessTerminal on this input
+	// file (see stdinReaderFor).
+	reader            *stdinReader
+	legacyStdinBuffer atomic.Pointer[StdinBuffer]
+	progressInterval  *time.Ticker
+	progressDone      chan struct{}
+	writeLogPath      string
 
 	// Console writes run on a dedicated goroutine (writesMu/writes/writesCond).
 	// The UI loop must never make a console write itself: on Windows the
@@ -257,9 +255,46 @@ func NewProcessTerminal(stdin *os.File, stdout *os.File) *ProcessTerminal {
 	if stdout == nil {
 		stdout = os.Stdout
 	}
-	terminal := &ProcessTerminal{stdin: stdin, stdout: stdout, writeLogPath: resolveWriteLogPath()}
+	terminal := &ProcessTerminal{stdin: stdin, stdout: stdout, writeLogPath: resolveWriteLogPath(), reader: stdinReaderFor(stdin)}
 	terminal.writesCond = sync.NewCond(&terminal.writesMu)
 	return terminal
+}
+
+// stdinReader is the one reader goroutine of an input file, shared by every
+// ProcessTerminal on it (D50). A stopped terminal's console Read cannot be
+// interrupted, so a screen that hands the terminal to another instance (the
+// startup prompt or the session picker, then the app) would otherwise leave
+// its read competing with the next terminal's reader and losing the first
+// input, such as the app's terminal-color replies. Like Node's single
+// process.stdin stream, a read goes to whichever terminal is started when it
+// returns. A read that returns while none is started is discarded and the
+// reader exits, so an external program run while pier is stopped (the editor)
+// loses at most that one read, as before. mu serializes admission and exit
+// only; reads, parsing and callbacks run outside it.
+type stdinReader struct {
+	mu      sync.Mutex
+	running bool
+	owner   *ProcessTerminal
+}
+
+var stdinReaders struct {
+	mu sync.Mutex
+	m  map[*os.File]*stdinReader
+}
+
+// stdinReaderFor returns the shared reader of an input file.
+func stdinReaderFor(file *os.File) *stdinReader {
+	stdinReaders.mu.Lock()
+	defer stdinReaders.mu.Unlock()
+	if stdinReaders.m == nil {
+		stdinReaders.m = map[*os.File]*stdinReader{}
+	}
+	reader := stdinReaders.m[file]
+	if reader == nil {
+		reader = &stdinReader{}
+		stdinReaders.m[file] = reader
+	}
+	return reader
 }
 
 func resolveWriteLogPath() string {
@@ -341,50 +376,58 @@ func (t *ProcessTerminal) Start(onInput func(data string), onResize func()) {
 		// Legacy library consumers reassemble on the one stdin reader.
 		t.setupLegacyStdinBuffer()
 	}
-	t.stdinReaderMu.Lock()
+	reader := t.reader
+	reader.mu.Lock()
 	t.closed.Store(false)
-	if !t.stdinReaderRunning {
-		t.stdinReaderRunning = true
-		go t.readStdin()
+	reader.owner = t
+	if !reader.running {
+		reader.running = true
+		go reader.read(t.stdin)
 	}
-	t.stdinReaderMu.Unlock()
+	reader.mu.Unlock()
 
 	// Query Kitty keyboard protocol; fall back to modifyOtherKeys when the DA
 	// sentinel confirms no Kitty response.
 	t.queryAndEnableKittyProtocol()
 }
 
-// readStdin is the sole reader until EOF or until a read finishes while stopped.
-// Stop cannot interrupt a console Read (D50); a restart reuses an in-flight
-// reader, or starts another only after the previous reader has relinquished it.
-func (t *ProcessTerminal) readStdin() {
+// read is the sole reader of file until EOF or until a read finishes while
+// no terminal is started. Stop cannot interrupt a console Read (D50); a Start
+// of any terminal on file reuses an in-flight reader, or starts another only
+// after the previous reader has relinquished it.
+func (r *stdinReader) read(file *os.File) {
 	buf := make([]byte, 4096)
 	for {
-		n, err := t.stdin.Read(buf)
-		t.stdinReaderMu.Lock()
-		if t.closed.Load() {
-			t.stdinReaderRunning = false
-			t.stdinReaderMu.Unlock()
+		n, err := file.Read(buf)
+		r.mu.Lock()
+		owner := r.owner
+		if owner == nil || owner.closed.Load() {
+			r.running = false
+			r.mu.Unlock()
 			return
-		}
-		t.stdinReaderMu.Unlock()
-		if n > 0 {
-			data := append([]byte(nil), buf[:n]...)
-			if t.useRawInput.Load() {
-				t.lastInputAt.Store(time.Now().UnixNano())
-				if handler := t.loadInputHandler(); handler != nil {
-					handler(string(data))
-				}
-			} else if buffer := t.legacyStdinBuffer.Load(); buffer != nil {
-				buffer.processUTF8Input(data)
-			}
 		}
 		if err != nil {
-			t.stdinReaderMu.Lock()
-			t.stdinReaderRunning = false
-			t.stdinReaderMu.Unlock()
+			r.running = false
+		}
+		r.mu.Unlock()
+		if n > 0 {
+			owner.deliverStdin(append([]byte(nil), buf[:n]...))
+		}
+		if err != nil {
 			return
 		}
+	}
+}
+
+// deliverStdin hands one read to this terminal's consumer.
+func (t *ProcessTerminal) deliverStdin(data []byte) {
+	if t.useRawInput.Load() {
+		t.lastInputAt.Store(time.Now().UnixNano())
+		if handler := t.loadInputHandler(); handler != nil {
+			handler(string(data))
+		}
+	} else if buffer := t.legacyStdinBuffer.Load(); buffer != nil {
+		buffer.processUTF8Input(data)
 	}
 }
 
@@ -781,6 +824,11 @@ func (t *ProcessTerminal) Stop() {
 	t.disableModifyOtherKeysLocked()
 
 	t.closed.Store(true)
+	t.reader.mu.Lock()
+	if t.reader.owner == t {
+		t.reader.owner = nil
+	}
+	t.reader.mu.Unlock()
 	t.setInputHandler(nil)
 	stopResizeWatcher()
 
