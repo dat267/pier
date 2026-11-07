@@ -2009,10 +2009,10 @@ its successful settle can reserve the next one. A final non-retried error still
 pauses with `run-error`. User aborts, exhausted budgets, and reload pauses keep
 their existing pause behavior (D239 covers the context-only pause message).
 
-This applies to transient HTTP/2 stream resets as well: D171's classifier now
-recognizes Go's `stream error: stream ID ...; PROTOCOL_ERROR; received from
-peer` and HTTP/2 GOAWAY wording, which upstream's fetch/websocket error list does
-not contain.
+This applies to transient HTTP/2 stream resets as well: D171's classifier
+recognizes Go's
+`stream error: stream ID ...; PROTOCOL_ERROR; received from peer` and HTTP/2
+GOAWAY wording, which upstream's fetch/websocket error list does not contain.
 
 Tests: `TestAgentSessionRetryableFailureRecoveryKeepsGoalActive`,
 `TestGoalControllerFinalFailureStillPauses`, and
@@ -2092,8 +2092,9 @@ a manual shell **tool call**: it builds the same `ToolExecutionComponent` a
 model `bash` call uses (with `core/tools/renderers/bash.ts`), so the call line,
 collapsed preview and hidden-line hint, click-to-expand, partial/error
 backgrounds and the Elapsed/Took label are upstream's tool behavior, and the
-frame joins the transcript as soon as the command is triggered. The session
-entry is unchanged: a `bashExecution` custom message recorded by
+frame joins the transcript as soon as the command is triggered.
+
+The session entry is unchanged: a `bashExecution` custom message recorded by
 `recordBashResult` (deferred to the turn's end while the agent streams), which
 `ConvertToLlm` still projects as a user message; D248 restores the frame's
 position on replay. A running `!` command belongs to the active turn, so Escape
@@ -2114,15 +2115,15 @@ Reference: `packages/mcp/src/oauth/callback.ts` clears and deletes a state in a
 single-threaded JavaScript event loop. Go's `time.AfterFunc` callbacks can run
 concurrently with callback handling. A timer that had fired before its old
 waiter was removed could otherwise delete a newly registered waiter with the
-same state. The port now expires a state only when the map still points to that
+same state. The port expires a state only when the map still points to that
 timer's entry.
 
 Test: `TestStaleCallbackTimeoutDoesNotDeleteReplacementWaiter`.
 
 ### D248
 
-**A `!` frame replayed from the session keeps the position the live transcript
-gave it, not its entry order.**
+**A replayed `!` frame keeps its live transcript position, not its entry
+order.**
 
 Reference: `core/agent-session.ts` `recordBashResult` defers the message while
 the agent is streaming ("to avoid breaking tool_use/tool_result ordering") and
@@ -2195,12 +2196,13 @@ Tests: `TestBashCommandFromTheEditor`,
 
 **Proxy content events reject negative array indices.**
 
-Reference: `packages/agent/src/proxy.ts` assigns `partial.content[contentIndex]`.
-A proxy sending `{"type":"text_start","contentIndex":-1}` creates a JavaScript
-array property that is absent from JSON output. The same assignment panicked
-in the port's streaming goroutine and could terminate the process. Indexed
-proxy events now return a protocol error for negative indices; the stream
-reports its ordinary error event instead of attempting a Go slice access.
+Reference: `packages/agent/src/proxy.ts` assigns
+`partial.content[contentIndex]`. A proxy sending
+`{"type":"text_start","contentIndex":-1}` creates a JavaScript array property
+that is absent from JSON output. The same assignment panicked in the port's
+streaming goroutine and could terminate the process. Indexed proxy events return
+a protocol error for negative indices; the stream reports its ordinary error
+event instead of attempting a Go slice access.
 
 Test: `TestProxyRejectsNegativeContentIndex` covers every indexed event type.
 
@@ -2273,8 +2275,8 @@ upstream's `AbortSignal.timeout` wraps the headers only) while its body idles
 under the shared guard. The federation stream (`ai/pi_messages.go`) and the
 agent proxy fetch (`agent/proxy.go`) use the global idle timeout. The proxy's
 provider `TimeoutMs` remains local and is not serialized, matching
-`agent/proxy.ts`. The port's other idle-timeout wording ("Provider response headers idle",
-"Provider stream idle") is its own: upstream surfaces undici's
+`agent/proxy.ts`. The other idle-timeout messages ("Provider response headers
+idle", "Provider stream idle") are the port's own; upstream surfaces undici's
 `Headers Timeout Error`/`Body Timeout Error` instead.
 
 The same change removed a port-only defect: the Codex SSE path cancelled the
@@ -2406,7 +2408,7 @@ Reference: `extensions/mcp/runtime.ts`, `signInRequiredMessage`, tells the user
 to run `/mcp` when a server has no provider auth. Upstream drives OAuth sign-in
 from that command; the port has neither the command nor a sign-in entry point
 (D185 keeps the OAuth store per-process). The provider form of the message still
-names `/login <provider>`, which exists. The OAuth form now points at the
+names `/login <provider>`, which exists. The OAuth form points at the
 `oauth` block in `mcp.json` instead of at a command that does not exist.
 
 Test: `TestMcpConnectionAsksOAuthServersToSignIn`.
@@ -2417,16 +2419,15 @@ Test: `TestMcpConnectionAsksOAuthServersToSignIn`.
 
 Reference: `utils/paths.ts`, `normalizePath`, calls Node's `fileURLToPath`
 unguarded, so a non-local host (`file://host/x`), an encoded slash
-(`file:///tmp/a%2Fb`), malformed percent encoding or invalid encoded UTF-8 throws
-and the caller reports
-a URL error. `NormalizePath` returns a string and has no error result, so it
-returns the input unchanged when `filePathFromURL` rejects the URL; the caller
-then fails on a path ("file not found: file://host/x") instead of on the URL.
-The follow-up URL-parser audit matched 1,174 generated inputs against Node:
-dot segments resolve before encoded-slash validation, invalid encoded UTF-8 is
-rejected, raw tabs/newlines and trailing C0 whitespace follow WHATWG rules,
-escaped localhost is recognized, and drive-letter roots survive parent segments
-(including the legacy `C|` spelling).
+(`file:///tmp/a%2Fb`), malformed percent encoding or invalid encoded UTF-8
+throws and the caller reports a URL error. `NormalizePath` returns a string and
+has no error result, so it returns the input unchanged when `filePathFromURL`
+rejects the URL; the caller then fails on a path ("file not found:
+file://host/x") instead of on the URL. The follow-up URL-parser audit matched
+1,174 generated inputs against Node: dot segments resolve before encoded-slash
+validation, invalid encoded UTF-8 is rejected, raw tabs/newlines and trailing C0
+whitespace follow WHATWG rules, escaped localhost is recognized, and
+drive-letter roots survive parent segments (including the legacy `C|` spelling).
 
 Tests: `TestNormalizePathKeepsAnInvalidFileURL`,
 `TestNormalizePathFileURLRemovesEncodedSlashBeforeValidation`,
@@ -2437,17 +2438,17 @@ Tests: `TestNormalizePathKeepsAnInvalidFileURL`,
 
 ### D262
 
-**An escaped suffix after a wildcard is matched literally, without minimatch's
-fast-path shortcut.**
+**An escaped suffix after a wildcard matches literally, unlike minimatch's fast
+path.**
 
 Reference: `core/model-resolver.ts` matches scoped-model patterns with
 `minimatch(value, pattern, { nocase: true })`. A follow-up comparison of 61,412
-generated pattern/value pairs left 87 mismatches, all in the escaped-suffix
-shortcut below, for brace expansion (comma groups,
+generated pattern/value pairs covered brace expansion (comma groups,
 `{1..3}`-style sequences, literal `{a}`, inner-first nesting, escapes), path
 canonicalization (`..` removes the preceding segment; `.` stays literal), the
 `.`/`..` and dotfile segment rules, empty paths, absolute paths, repeated and
-trailing separators, and globstars.
+trailing separators, and globstars. It left 87 mismatches, all in the
+escaped-suffix fast path described below.
 
 Brace expansion caps Cartesian-product allocation and nested alternatives before
 growing buffers, retains suffixes after truncating alternatives, ignores discarded
