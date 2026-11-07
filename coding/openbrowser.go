@@ -34,6 +34,8 @@ func OpenBrowser(target string) {
 	// explorer.exe, whose MAX_PATH limit rejects a \\wsl.localhost\... cwd
 	// (pi v1.5.0 open-browser.ts, #11592).
 	command.Dir = "/"
+	// Upstream spawns the launcher `detached` (open-browser.ts).
+	detachHelperCommand(command)
 	if err := command.Start(); err != nil {
 		return
 	}

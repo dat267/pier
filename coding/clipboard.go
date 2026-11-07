@@ -52,7 +52,7 @@ func runClipboardCommand(ctx context.Context, command string, args []string, opt
 	// exceed MAX_PATH for Windows executables; a daemon must not pin the
 	// session's cwd either (pi v1.5.0 clipboard-command.ts, #11592).
 	cmd.Dir = "/"
-	detachClipboardCommand(cmd)
+	detachHelperCommand(cmd)
 	cmd.Stderr = nil
 	cmd.Env = os.Environ()
 	if options.input == nil {
