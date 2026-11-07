@@ -73,11 +73,29 @@ func (l *blockLexer) lexParagraph(start, to int) (*Block, int) {
 			break
 		}
 		if count > 0 {
-			// A setext underline turns the whole paragraph into a heading.
+			// A setext underline turns the whole paragraph into a heading, but
+			// only when the lines the heading would swallow satisfy the
+			// reference's lheading lookahead (marked 18.0.11): a line starting
+			// any list marker (not only 1.) or the paragraph's own first line
+			// looking like a delimiter row invalidates the conversion.
 			if level, ok := setextLevel(ln.text); ok {
-				headingEnd := ln.next
-				text := strings.TrimSuffix(src[start:at], "\n")
-				return &Block{Kind: BlockHeading, Start: start, End: headingEnd, Level: level, Text: text}, headingEnd
+				decision, stop := lheadingDecision(src, start, at)
+				switch decision {
+				case lheadingDeniedFirst, lheadingDeniedAt:
+					if stop <= start {
+						// The first line itself is delimiter-row shaped: the
+						// underline line joins the paragraph as text, since
+						// marked's paragraph pattern continues over it.
+						text := strings.TrimSuffix(src[start:ln.next], "\n")
+						return &Block{Kind: BlockParagraph, Start: start, End: ln.next, Text: text}, ln.next
+					}
+					text := strings.TrimSuffix(src[start:stop], "\n")
+					return &Block{Kind: BlockParagraph, Start: start, End: stop, Text: text}, stop
+				case lheadingAllowed:
+					headingEnd := ln.next
+					text := strings.TrimSuffix(src[start:at], "\n")
+					return &Block{Kind: BlockHeading, Start: start, End: headingEnd, Level: level, Text: text}, headingEnd
+				}
 			}
 			// A table header row interrupts the paragraph.
 			if l.looksLikeTableStart(at) {
@@ -94,6 +112,185 @@ func (l *blockLexer) lexParagraph(start, to int) (*Block, int) {
 	// line separators), so it allocates nothing.
 	text := strings.TrimSuffix(src[start:at], "\n")
 	return &Block{Kind: BlockParagraph, Start: start, End: at, Text: text}, at
+}
+
+// lheadingDecision mirrors the alternation marked's lheading (18.0.11) uses to
+// veto the conversion (packages/tui/src/components/markdown.ts lexes with
+// marked): its text is lines that start no list marker (any ordered number, not
+// only 1.), no code block, fence, quote, heading or full-line html tag, and
+// whose first line is not delimiter-row shaped.
+func lheadingDecision(src string, start, underlineAt int) (lheadingDecisionKind, int) {
+	at := start
+	first := true
+	for at < underlineAt {
+		ln := nextLine(src, at)
+		if !lheadingLookahead(ln.text) {
+			if first {
+				return lheadingDeniedFirst, at
+			}
+			return lheadingDeniedAt, at
+		}
+		first = false
+		at = ln.next
+	}
+	return lheadingAllowed, 0
+}
+
+type lheadingDecisionKind uint8
+
+const (
+	lheadingAllowed lheadingDecisionKind = iota
+	lheadingDeniedAt
+	lheadingDeniedFirst
+)
+
+// lheadingLookahead reports a line the reference's lheading rule accepts as its
+// text: `(?:.|\n(?!...))+?` with the alternation
+// `any list marker | code | fences | quote | heading | html-open | delimiter`.
+func lheadingLookahead(line string) bool {
+	if isBlankLine(line) {
+		return false
+	}
+	if lheadingListStart(line) || lheadingCodeStart(line) || isThematicBreak(line) {
+		return false
+	}
+	if _, _, ok := fenceStart(line); ok {
+		return false
+	}
+	if isBlockquoteStart(line) || lheadingHeadingStart(line) || lheadingHTMLOpen(line) {
+		return false
+	}
+	return !delimiterRowShape(line)
+}
+
+// lheadingListStart is the lookahead's list alternative
+// ` {0,3}(?:[*+-]|\d{1,9}[.)]) `: any bullet or ordered number followed by a
+// space (the trailing space is part of the pattern).
+func lheadingListStart(line string) bool {
+	i := 0
+	for i < len(line) && i < 3 && line[i] == ' ' {
+		i++
+	}
+	if i >= len(line) {
+		return false
+	}
+	switch c := line[i]; {
+	case c == '-' || c == '*' || c == '+':
+		i++
+	case c >= '0' && c <= '9':
+		j := i
+		for j < len(line) && j-i < 9 && line[j] >= '0' && line[j] <= '9' {
+			j++
+		}
+		if j >= len(line) || (line[j] != '.' && line[j] != ')') {
+			return false
+		}
+		i = j + 1
+	default:
+		return false
+	}
+	return i < len(line) && line[i] == ' '
+}
+
+// lheadingCodeStart is the code alternative ` {4}| {0,3}\t`.
+func lheadingCodeStart(line string) bool {
+	i := 0
+	for i < len(line) && i < 3 && line[i] == ' ' {
+		i++
+	}
+	if i < len(line) {
+		switch {
+		case line[i] == '\t' && i < 4 || (i == 3 && line[i] == '\t'):
+			return true
+		case i == 3 && line[i] == ' ':
+			return true
+		}
+	}
+	return false
+}
+
+// lheadingHeadingStart is the heading alternative ` {0,3}#{1,6}(?:\s|$)`.
+func lheadingHeadingStart(line string) bool {
+	i := 0
+	for i < len(line) && i < 3 && line[i] == ' ' {
+		i++
+	}
+	hashes := 0
+	for i < len(line) && line[i] == '#' && hashes < 6 {
+		hashes++
+		i++
+	}
+	if hashes == 0 {
+		return false
+	}
+	return i >= len(line) || (line[i] == ' ' || line[i] == '\t')
+}
+
+// lheadingHTMLOpen is the html alternative of the same lookahead: a
+// line whose angle tag fills the line blocks the heading (the lookahead
+// newline is the line end here).
+func lheadingHTMLOpen(line string) bool {
+	if line == "" || line[0] != '<' {
+		return false
+	}
+	rest := line[1:]
+	i := 0
+	for i < len(rest) && (isAlnum(rest[i]) || rest[i] == '-' || rest[i] == ':') {
+		i++
+	}
+	if i == 0 {
+		return false
+	}
+	// `(?: space | tag closed )`: whitespace right after the name, or the
+	// tag closes the line.
+	if i == len(rest) {
+		return false
+	}
+	if rest[i] == ' ' || rest[i] == '\t' {
+		return true
+	}
+	if rest[i] == '/' && i+1 < len(rest) && rest[i+1] == '>' && i+2 == len(rest) {
+		return true
+	}
+	return false
+}
+
+// delimiterRowShape is the lookahead's delimiter-row alternative
+// ` {0,3}\|?(?:[:\- ]*\|)+[\:\- ]*(?:\n|$)`, which a leading pipe (or none),
+// units of colons/dashes/spaces ending in a pipe, and any trailing
+// colon/dash/space run compose into.
+func delimiterRowShape(line string) bool {
+	i := 0
+	for i < len(line) && i < 3 && line[i] == ' ' {
+		i++
+	}
+	if i < len(line) && line[i] == '|' {
+		i++
+	}
+	units := 0
+	for {
+		if tailColonDashSpace(line[i:]) {
+			return units > 0 || (units == 0 && i < len(line))
+		}
+		j := i
+		for j < len(line) && strings.IndexByte(":- ", line[j]) >= 0 {
+			j++
+		}
+		if j >= len(line) || line[j] != '|' {
+			return false
+		}
+		i = j + 1
+		units++
+	}
+}
+
+func tailColonDashSpace(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if strings.IndexByte(":- ", s[i]) < 0 {
+			return false
+		}
+	}
+	return true
 }
 
 // looksLikeTableStart reports a header row followed by a delimiter row.
@@ -312,7 +509,6 @@ func stripIndent(line string, width int) string {
 	return line[i:]
 }
 
-// lexList lexes a consecutive run of list items.
 // stripTaskMarker removes a leading `[ ] ` / `[x] ` task checkbox.
 func stripTaskMarker(content string) (task bool, checked bool, rest string, ok bool) {
 	i := 0
