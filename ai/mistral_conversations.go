@@ -1117,7 +1117,9 @@ func stripJSONSymbolKeys(raw json.RawMessage) json.RawMessage {
 }
 
 func toMistralChatMessages(messages []Message, supportsImages bool) []mistralChatMessage {
-	var result []mistralChatMessage
+	// The reference builds `const result: MistralChatMessage[] = []`, so an
+	// empty transcript writes `"messages": []`, not `null` (A423).
+	result := []mistralChatMessage{}
 	for index, message := range messages {
 		switch typed := message.(type) {
 		case *SystemMessage:
