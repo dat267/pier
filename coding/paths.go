@@ -34,8 +34,13 @@ type PathInputOptions struct {
 
 // CanonicalizePath resolves to the canonical (real) form following symlinks,
 // falling back to the raw path when resolution fails (port of
-// canonicalizePath).
+// canonicalizePath). Node's realpathSync resolves a relative input against
+// process.cwd() and always returns an absolute path; filepath.EvalSymlinks
+// keeps it relative, so resolve first.
 func CanonicalizePath(path string) string {
+	if absolute, err := filepath.Abs(path); err == nil {
+		path = absolute
+	}
 	if resolved, err := filepath.EvalSymlinks(path); err == nil {
 		return resolved
 	}

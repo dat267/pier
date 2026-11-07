@@ -298,7 +298,7 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D388)
+## Deliberate divergences from pi (D1–D389)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
@@ -5472,6 +5472,28 @@ Test: `TestPersistedJSONWritersUseJavaScriptKeyOrder` pins the exact bytes for
 each file against the reference's own output (`"1"`, `"2"`, `"10"` before the
 ordinary keys, `"01"`/`"4294967295"` staying in place) and failed on all three
 writers before the fix.
+
+### D389
+
+**`CanonicalizePath` returns an absolute path like `realpathSync`.**
+
+Reference: pi v1.5.0 `utils/paths.ts` `canonicalizePath` is `fs.realpathSync`,
+which resolves a relative argument against `process.cwd()` and therefore always
+returns an absolute path. Pier used `filepath.EvalSymlinks`, which resolves
+symlinks but keeps a relative input relative, so the same directory produced two
+comparison keys: `CanonicalizePath("sub")` was `sub` where the reference gives
+`/work/sub`, and `PathsEqual` therefore treated one location as two.
+
+The helper now resolves through `filepath.Abs` before `EvalSymlinks`, so a
+relative input yields the absolute physical path and a failed resolution still
+falls back to the raw path as before. Every current caller passes an absolute or
+already-resolved path (boot cwd, session cwd, a `ResolvePath` result), so this
+was a latent contract mismatch rather than a reachable behavioral difference.
+
+Test: `TestCanonicalizePathMatchesRealpathOnRelativeInput` pins the absolute
+result for `""`, `"."`, `".."`, `"sub"`, `"./sub"` and `"sub/"`, checks that two
+spellings of one directory compare equal, and keeps an already absolute path
+unchanged as the control.
 
 ## Lock inventory
 
