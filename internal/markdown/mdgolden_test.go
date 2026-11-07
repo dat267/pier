@@ -260,6 +260,17 @@ func inlineTypeName(k InlineKind) string {
 	return "unknown"
 }
 
+// goldenBlocks lexes a corpus case and applies the wrapper upstream applies
+// before rendering it (markdown.ts: `trimPartialClosingFences(tokens)`), which
+// is what the golden's token text reflects. Lex alone is Marked's token text
+// (`partial-fence-no-newline` keeps its cut-off fence there), so the comparison
+// runs the same pipeline the renderer does.
+func goldenBlocks(src string) []*Block {
+	blocks := Lex(src)
+	TrimPartialClosingFences(blocks)
+	return blocks
+}
+
 // TestMarkedGoldenParity is the differential harness: it reports every case the
 // new renderer does not yet match, so the work can be driven by the corpus.
 func TestMarkedGoldenParity(t *testing.T) {
@@ -277,7 +288,7 @@ func TestMarkedGoldenParity(t *testing.T) {
 		if !ok {
 			t.Fatalf("missing golden %q", name)
 		}
-		got := stableValue(projectBlocks(Lex(corpus[name])))
+		got := stableValue(projectBlocks(goldenBlocks(corpus[name])))
 		if got != want {
 			failed = append(failed, name)
 		}
@@ -289,7 +300,7 @@ func TestMarkedGoldenParity(t *testing.T) {
 			if i >= show {
 				break
 			}
-			got := stableValue(projectBlocks(Lex(corpus[name])))
+			got := stableValue(projectBlocks(goldenBlocks(corpus[name])))
 			t.Errorf("%s:\n got %s\nwant %s", name, got, golden[name])
 		}
 		t.Fatalf("%d cases differ: %v", len(failed), failed)

@@ -265,13 +265,6 @@ func (l *blockLexer) lexFence(start int, marker, info string) (*Block, int, bool
 		if end < len(src) && src[end] == '\n' {
 			end--
 		}
-	} else if body != "" && !strings.HasSuffix(src[bodyStart:bodyEnd], "\n") {
-		// A partial (newline-less) final line is not part of the text.
-		if i := strings.LastIndexByte(body, '\n'); i >= 0 {
-			body = body[:i]
-		} else {
-			body = ""
-		}
 	}
 	return &Block{Kind: BlockCode, Start: start, End: end, Info: info, Body: body, Raw: src[start:end]}, end, true
 }

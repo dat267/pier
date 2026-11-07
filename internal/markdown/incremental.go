@@ -105,7 +105,7 @@ func TrimPartialClosingFences(blocks []*Block) {
 		return
 	}
 
-	marker, _, ok := fenceStart(b.Raw)
+	marker, ok := fenceMarkerOf(b.Raw)
 	if !ok {
 		return
 	}
@@ -114,7 +114,20 @@ func TrimPartialClosingFences(blocks []*Block) {
 	if lastLine == "" || len(lastLine) >= len(marker) || lastLine != strings.Repeat(string(marker[0]), len(lastLine)) {
 		return
 	}
-	b.Body = strings.TrimSuffix(b.Body[:len(b.Body)-len(lastLine)], "\n")
+	// The reference slices with `text.slice(0, -lastLine.length)`, which clamps
+	// to "" when the body is shorter; an unclamped slice panicked there.
+	cut := max(len(b.Body)-len(lastLine), 0)
+	b.Body = strings.TrimSuffix(b.Body[:cut], "\n")
+}
+
+// fenceMarkerOf returns the opening fence marker of a block's raw source. The
+// reference reads it from the start of token.raw with /^(`{3,}|~{3,})/, so only
+// the first line decides: the raw's later lines, including a streamed partial
+// closing fence, are not the opening line's info string.
+func fenceMarkerOf(raw string) (string, bool) {
+	first, _, _ := strings.Cut(raw, "\n")
+	marker, _, ok := fenceStart(first)
+	return marker, ok
 }
 
 // blockExtendable reports whether appending text after b can change b or merge
@@ -136,7 +149,7 @@ func blockExtendable(b *Block, src string) bool {
 // codeBlockOpen reports an indented or unclosed fenced code block (one a later
 // append can still extend).
 func codeBlockOpen(raw string) bool {
-	marker, _, ok := fenceStart(raw)
+	marker, ok := fenceMarkerOf(raw)
 	if !ok {
 		return true // indented code
 	}
