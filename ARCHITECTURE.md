@@ -298,7 +298,7 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D394)
+## Deliberate divergences from pi (D1–D395)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
@@ -5635,6 +5635,33 @@ empty base kept as empty, both unset, modifier appends, plain replacement and a
 nil base; the first case failed before the change. Verified after the fix with a
 rebuilt binary: the same project now exposes `read, bash, grep` as the reference
 does (pier additionally lists its own `set_goal`, D223).
+
+### D395
+
+**Session statistics tolerate an assistant message without a complete usage.**
+
+Reference: pi v1.5.0 `core/agent-session.ts` `getSessionStats` calls
+`addUsageToTotals(usageTotals, assistantMsg.usage)` for every assistant message,
+and `core/usage-totals.ts` `addUsageToTotals` dereferences `usage.input`,
+`usage.output`, `usage.cacheRead`, `usage.cacheWrite` and `usage.cost.total`
+without a guard. A persisted assistant message whose usage is absent, `null` or
+partially populated therefore makes the whole call throw: over RPC,
+`get_session_stats` answers `success: false` with
+`Cannot read properties of undefined (reading 'input')` (`null` gives the
+`null` wording, and a usage without `cost` gives `(reading 'total')`).
+
+Pier decodes usage into a value type during projection, so those three shapes
+read as zeros and `get_session_stats` returns the counts, an empty token total
+and the context usage. Every message either side writes carries a complete usage
+record (verified on a persisted fake-provider session), so this only reaches the
+boundary through a hand-edited or foreign session file. The port keeps the
+tolerant read on purpose: a damaged transcript still reports how many messages it
+holds, and an RPC surface that fails whole is a worse outcome than one reporting
+zeros for the unreadable part. This is a deliberate divergence, not a parity gap
+to close.
+
+Test: `TestSessionStatsToleratesAnIncompleteAssistantUsage` covers the absent,
+`null` and partial-usage shapes (one assistant message, input tokens 0/0/5).
 
 ## Lock inventory
 
