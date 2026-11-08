@@ -4354,9 +4354,12 @@ Reference: pi v1.5.0 `utils/streaming-json.ts` parses each provider append
 incrementally and shares completed values between snapshots, so a snapshot
 costs the open path. Pier ports the parser's rules exactly (`ai/streaming_json.go`)
 but writes the canonical `JSON.stringify` bytes of the root object into an
-append-only buffer as it reads, splicing the two cases `JSON.parse` orders
-differently (a duplicate key keeps its first position; array-index keys sort
-first). A preview is that buffer plus the closing tail of the open path.
+append-only buffer as it reads. Two cases `JSON.parse` orders differently
+from the text (a duplicate key keeps its first position; array-index keys sort
+first, ascending) turn that object unordered: its members stay in arrival
+order in the buffer, a preview emits them in JS order, and closing the object
+rewrites its bytes in canonical order once. A preview is that buffer plus the
+closing tail of the open path.
 Contiguous `json.RawMessage` previews cannot share bytes (each one ends where
 the next continues), so every preview copies the buffer: previews up to 1 KiB
 refresh at every delta, larger ones at most once per 16 ms frame, and the
@@ -4383,6 +4386,16 @@ byte-doubling schedule, 1.2 ms in the reference, and 0.81 ms and 1.1 MB now; a
 reference's freshness copied 30 MB for the 100 KiB write (10 ms), and none that
 beat it kept the preview within a few KiB.
 
+Keys out of order (A424) were first spliced into the buffer by copying every
+member after the insertion point, and placed by a linear rescan of the frame,
+so `BenchmarkStreamingArgumentsKeyShapes` (2,000 members, about 22 KB) took
+1.1 ms for named keys, 12.6 ms for ascending index keys and 123 ms for
+descending ones, behind the reference's 132, 76 and 106 ms; at 4,000 members
+descending took 522 ms against the reference's 255. Placing an in-order key
+in O(1) and keeping an out-of-order object unordered brings them to 1.2, 1.2
+and 1.4 ms (1.8, 2.4 and 3.2 ms at 4,000), with the named and large-call
+benchmarks unchanged.
+
 The OpenAI completions, Responses, Anthropic, Bedrock, Mistral, and
 pi-messages adapters and the agent proxy share the stream. Tests:
 `TestStreamingArgumentsPreviewIsThrottled` pins the frame schedule and exact
@@ -4390,6 +4403,9 @@ finish; `TestStreamingArgumentsSmallCallUpdatesEveryDelta` pins the per-delta
 window; `TestStreamingArgumentsFinishMatchesFullParse` and
 `FuzzStreamingArguments` pin `Finish` to the full parse;
 `TestStreamingJSONUpstreamCases` carries the reference's test cases;
+`TestStreamingJSONOutOfOrderKeysMatchReference` pins out-of-order previews to
+the reference's and `TestStreamingArgumentsDescendingIndexKeysStayLinear` keeps
+them linear;
 `TestProxyToolArgumentsPreviewIsThrottled` covers the proxy;
 `TestStreamingArgumentsPauseRefreshesThrottledPreview`,
 `TestStreamingArgumentsPauseRefreshWaitsForUndeliveredText` and

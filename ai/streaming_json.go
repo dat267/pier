@@ -1,8 +1,10 @@
 package ai
 
 import (
+	"cmp"
 	"encoding/json"
 	"math"
+	"slices"
 	"strconv"
 	"time"
 	"unicode/utf8"
@@ -19,9 +21,12 @@ import (
 // a copy instead of a re-parse (D353).
 //
 // Only an object root is rendered: ToolCallArgumentsStream shows any other
-// root as no arguments yet. Two cases JSON.parse orders differently from text
-// order are spliced into place: a duplicate key keeps its first position, and
-// an array-index key ("0", "12") sorts before the other keys.
+// root as no arguments yet. JSON.parse orders two cases differently from text
+// order: a duplicate key keeps its first position, and an array-index key
+// ("0", "12") sorts before the other keys, ascending. An object that receives
+// such a key stops being contiguous in canonical order: its members stay in
+// arrival order in the buffer, a snapshot emits them in JS order, and closing
+// the object rewrites its bytes in that order once (A424).
 type streamingJSONParser struct {
 	out   []byte
 	stack []sjFrame
@@ -50,6 +55,11 @@ type streamingJSONParser struct {
 	// partialRune holds the bytes of a UTF-8 sequence split across pieces.
 	partialRune []byte
 
+	// unordered counts the attached objects whose members are in arrival
+	// order in out rather than canonical order.
+	unordered int
+	scratch   []byte
+
 	suffix     []byte
 	renderedAt int64 // sjNow of the last large render
 	dirty      bool
@@ -77,9 +87,12 @@ const (
 type sjMember struct {
 	// key is the member name's canonical encoding without quotes, which is
 	// injective, so it also serves as the member's identity.
-	key        string
+	key string
+	// start and end bound the member's latest `"key":value` bytes in out,
+	// without a separator.
 	start, end int
-	bytes      []byte // set only for members held in a splice tail
+	num        uint64 // the array index of an index key
+	isIndex    bool
 }
 
 type sjFrame struct {
@@ -92,13 +105,18 @@ type sjFrame struct {
 	afterComma bool
 	start      int // offset of the opening bracket in out (attached frames)
 
-	// Attached objects: members in JS enumeration order. While a member value
-	// is open it is the last entry, and tail holds the members JS orders after
-	// it, rendered before the closer.
-	members []sjMember
-	index   map[string]int
-	open    bool
-	tail    []sjMember
+	// Attached objects: one entry per distinct key, in first-arrival order.
+	// While the frame is ordered this is also JS enumeration order (index
+	// keys ascending, then named keys) and the members are contiguous in out.
+	// An unordered frame renders index members by order, then named ones.
+	members    []sjMember
+	index      map[string]int
+	named      int // members with a non-index key
+	open       bool
+	openMember int // the member whose value is being read, while open
+	unordered  bool
+	order      []int // unordered: index members by ascending num
+	orderStale bool
 }
 
 type sjString struct {
@@ -840,9 +858,16 @@ func (p *streamingJSONParser) closeContainer(closer byte) {
 		p.loose = true
 	}
 	if p.topAttached() {
-		if frame.array {
+		switch {
+		case frame.array:
 			p.out = append(p.out, ']')
-		} else {
+		case frame.unordered:
+			// Once, at the close: the object's bytes in canonical order, so a
+			// closed root is JSON.stringify's bytes again.
+			p.scratch = p.emitFrame(p.scratch[:0], len(p.stack)-1)
+			p.out = append(p.out[:frame.start], p.scratch...)
+			p.unordered--
+		default:
 			p.out = append(p.out, '}')
 		}
 		p.attached--
@@ -871,7 +896,9 @@ func (p *streamingJSONParser) valueEnded() {
 }
 
 // beginValue writes the separator (and member name) for a value placed at
-// slot in the innermost, attached frame.
+// slot in the innermost, attached frame. A member that JS orders before
+// existing ones, or a duplicate key, turns the frame unordered: the member is
+// still appended, and rendering places it.
 func (p *streamingJSONParser) beginValue(slot sjSlot) {
 	frame := p.top()
 	if slot == sjElementSlot {
@@ -881,59 +908,43 @@ func (p *streamingJSONParser) beginValue(slot sjSlot) {
 		frame.count++
 		return
 	}
-	position, duplicate := frame.memberPosition(frame.key)
-	if position < len(frame.members) {
-		// Splice: the members JSON.parse orders after this one move to the tail.
-		from := position
-		if duplicate {
-			from++
-		}
-		frame.tail = frame.tail[:0]
-		for _, member := range frame.members[from:] {
-			member.bytes = append([]byte(nil), p.out[member.start:member.end]...)
-			frame.tail = append(frame.tail, member)
-		}
-		if position == 0 {
-			p.out = p.out[:frame.start+1]
-		} else {
-			p.out = p.out[:frame.members[position-1].end]
-		}
-		frame.members = frame.members[:position]
+	position, duplicate := frame.lookup(frame.key)
+	num, isIndex := jsArrayIndexKey(frame.key)
+	if !frame.unordered && (duplicate || isIndex && frame.named+len(frame.members) > 0 &&
+		(frame.named > 0 || num < frame.members[len(frame.members)-1].num)) {
+		frame.unordered = true
+		frame.orderStale = true
+		p.unordered++
 	}
 	if len(frame.members) > 0 {
 		p.out = append(p.out, ',')
 	}
-	member := sjMember{key: frame.key, start: len(p.out)}
+	start := len(p.out)
 	p.out = append(p.out, '"')
 	p.out = append(p.out, frame.key...)
 	p.out = append(p.out, '"', ':')
-	frame.members = append(frame.members, member)
+	if duplicate {
+		frame.members[position].start = start
+	} else {
+		position = len(frame.members)
+		frame.members = append(frame.members, sjMember{key: frame.key, start: start, num: num, isIndex: isIndex})
+		if frame.index != nil {
+			frame.index[frame.key] = position
+		}
+		if !isIndex {
+			frame.named++
+		} else if frame.unordered {
+			frame.orderStale = true
+		}
+	}
+	frame.openMember = position
 	frame.open = true
 }
 
-// commitMember ends the open member and restores any spliced tail after it.
+// commitMember ends the open member.
 func (p *streamingJSONParser) commitMember(frame *sjFrame) {
 	frame.open = false
-	last := len(frame.members) - 1
-	frame.members[last].end = len(p.out)
-	if frame.index != nil {
-		frame.index[frame.members[last].key] = last
-	}
-	for _, member := range frame.tail {
-		p.out = append(p.out, ',')
-		member.start = len(p.out)
-		p.out = append(p.out, member.bytes...)
-		member.end = len(p.out)
-		member.bytes = nil
-		if frame.index != nil {
-			frame.index[member.key] = len(frame.members)
-		}
-		frame.members = append(frame.members, member)
-	}
-	if len(frame.tail) > 0 {
-		p.dirty = true
-	}
-	frame.tail = frame.tail[:0]
+	frame.members[frame.openMember].end = len(p.out)
 	if frame.index == nil && len(frame.members) >= sjIndexThreshold {
 		frame.index = make(map[string]int, 2*len(frame.members))
 		for i, member := range frame.members {
@@ -942,32 +953,48 @@ func (p *streamingJSONParser) commitMember(frame *sjFrame) {
 	}
 }
 
-// memberPosition is where key goes in JS enumeration order: its existing
-// position for a duplicate, before the larger array-index keys for an index
-// key, otherwise the end.
-func (f *sjFrame) memberPosition(key string) (int, bool) {
+// lookup finds key's member.
+func (f *sjFrame) lookup(key string) (int, bool) {
 	if f.index != nil {
-		if i, ok := f.index[key]; ok {
-			return i, true
-		}
-	} else {
-		for i := range f.members {
-			if f.members[i].key == key {
-				return i, true
-			}
-		}
-	}
-	index, ok := jsArrayIndexKey(key)
-	if !ok {
-		return len(f.members), false
+		i, ok := f.index[key]
+		return i, ok
 	}
 	for i := range f.members {
-		other, isIndex := jsArrayIndexKey(f.members[i].key)
-		if !isIndex || other > index {
-			return i, false
+		if f.members[i].key == key {
+			return i, true
 		}
 	}
-	return len(f.members), false
+	return 0, false
+}
+
+// indexPosition is where a new index key goes in an ordered frame, whose
+// index members are an ascending prefix.
+func (f *sjFrame) indexPosition(num uint64) int {
+	low, high := 0, len(f.members)-f.named
+	for low < high {
+		mid := int(uint(low+high) >> 1)
+		if f.members[mid].num < num {
+			low = mid + 1
+		} else {
+			high = mid
+		}
+	}
+	return low
+}
+
+// sortedOrder returns an unordered frame's index members by ascending index.
+func (f *sjFrame) sortedOrder() []int {
+	if f.orderStale {
+		f.order = f.order[:0]
+		for i := range f.members {
+			if f.members[i].isIndex {
+				f.order = append(f.order, i)
+			}
+		}
+		slices.SortFunc(f.order, func(a, b int) int { return cmp.Compare(f.members[a].num, f.members[b].num) })
+		f.orderStale = false
+	}
+	return f.order
 }
 
 // stale reports whether the last preview was throttled: the text changed it
@@ -990,72 +1017,188 @@ func (p *streamingJSONParser) refresh() json.RawMessage {
 // tail to a cap-limited view of the buffer, so growslice copies the buffer
 // once and clears only its spare capacity.
 func (p *streamingJSONParser) render() json.RawMessage {
-	tail := p.suffix[:0]
-	prefix, middle, rest, spliced := p.pendingSplice()
-	tail = append(tail, middle...)
-	tail = append(tail, rest...)
-	if p.inString && p.str.attached {
-		if p.str.high != 0 {
-			tail = appendLoneSurrogate(tail, p.str.high)
-		}
-		tail = append(tail, '"')
+	if p.unordered > 0 {
+		out := p.emitFrame(make([]byte, 0, len(p.out)+len(p.suffix)+16), 0)
+		return out[:len(out):len(out)]
 	}
+	from, to, member, placed := p.pendingPlacement()
+	tail := p.suffix[:0]
+	prefix := p.out
+	if placed {
+		prefix = p.out[:from]
+		tail = append(tail, member...)
+		tail = append(tail, p.out[to:]...)
+	}
+	tail = p.appendOpenString(tail)
 	for i := p.attached - 1; i >= 0; i-- {
-		frame := &p.stack[i]
-		for _, member := range frame.tail {
-			tail = append(tail, ',')
-			tail = append(tail, member.bytes...)
-		}
-		if frame.array {
-			tail = append(tail, ']')
-		} else {
-			tail = append(tail, '}')
-		}
+		tail = append(tail, closerOf(&p.stack[i]))
 	}
 	p.suffix = tail
-	if !spliced {
-		prefix = p.out
-	}
 	out := append(prefix[:len(prefix):len(prefix)], tail...)
 	return out[:len(out):len(out)]
 }
 
-// pendingSplice places the unterminated scalar: it returns the part of the
-// buffer before it, its separator and member, and the part of the buffer JS
-// orders after it. spliced is false when the scalar goes at the end, after
-// the whole buffer.
-func (p *streamingJSONParser) pendingSplice() (prefix, middle, rest []byte, spliced bool) {
-	if !p.inScalar || !p.placedAttached(p.scalarSlot) || len(p.scalar) > sjMaxPendingScalar {
-		return nil, nil, nil, false
+func closerOf(frame *sjFrame) byte {
+	if frame.array {
+		return ']'
 	}
-	value, ok := pendingScalarValue(p.scalar)
+	return '}'
+}
+
+// appendOpenString closes an attached string value that is still streaming.
+func (p *streamingJSONParser) appendOpenString(dst []byte) []byte {
+	if p.inString && p.str.attached {
+		if p.str.high != 0 {
+			dst = appendLoneSurrogate(dst, p.str.high)
+		}
+		dst = append(dst, '"')
+	}
+	return dst
+}
+
+// pendingValue is the value an unterminated scalar shows in the innermost,
+// attached frame; false when it shows nothing.
+func (p *streamingJSONParser) pendingValue() (string, bool) {
+	if !p.inScalar || !p.placedAttached(p.scalarSlot) || len(p.scalar) > sjMaxPendingScalar {
+		return "", false
+	}
+	return pendingScalarValue(p.scalar)
+}
+
+// pendingPlacement places the unterminated scalar in an ordered innermost
+// frame: it replaces out[from:to] (from == to for an insert) with member.
+func (p *streamingJSONParser) pendingPlacement() (from, to int, member []byte, placed bool) {
+	value, ok := p.pendingValue()
 	if !ok {
-		return nil, nil, nil, false
+		return 0, 0, nil, false
 	}
 	frame := p.top()
+	end := len(p.out)
 	if p.scalarSlot == sjElementSlot {
 		if frame.count > 0 {
-			middle = append(middle, ',')
+			member = append(member, ',')
 		}
-		return nil, append(middle, value...), nil, false
+		return end, end, append(member, value...), true
 	}
-	position, duplicate := frame.memberPosition(frame.key)
-	member := make([]byte, 0, len(frame.key)+len(value)+4)
+	position, duplicate := frame.lookup(frame.key)
+	if !duplicate {
+		position = len(frame.members)
+		if num, isIndex := jsArrayIndexKey(frame.key); isIndex {
+			position = frame.indexPosition(num)
+		}
+	}
+	member = make([]byte, 0, len(frame.key)+len(value)+5)
 	if position == len(frame.members) && len(frame.members) > 0 {
 		member = append(member, ',')
 	}
-	member = append(member, '"')
-	member = append(member, frame.key...)
-	member = append(member, '"', ':')
-	member = append(member, value...)
+	member = appendMemberBytes(member, frame.key, value)
 	switch {
 	case position == len(frame.members):
-		return nil, member, nil, false
+		return end, end, member, true
 	case duplicate:
 		old := frame.members[position]
-		return p.out[:old.start], member, p.out[old.end:], true
+		return old.start, old.end, member, true
 	default:
 		at := frame.members[position].start
-		return p.out[:at], append(member, ','), p.out[at:], true
+		return at, at, append(member, ','), true
 	}
+}
+
+func appendMemberBytes(dst []byte, key, value string) []byte {
+	dst = append(dst, '"')
+	dst = append(dst, key...)
+	dst = append(dst, '"', ':')
+	return append(dst, value...)
+}
+
+// emitFrame appends attached frame i, with everything open inside it, to
+// dst: the general render, used while any attached object is unordered.
+func (p *streamingJSONParser) emitFrame(dst []byte, i int) []byte {
+	frame := &p.stack[i]
+	top := i == p.attached-1
+	end := len(p.out)
+	if !top {
+		end = p.stack[i+1].start
+	}
+	if !frame.unordered {
+		if top {
+			if from, to, member, placed := p.pendingPlacement(); placed {
+				dst = append(dst, p.out[frame.start:from]...)
+				dst = append(dst, member...)
+				dst = append(dst, p.out[to:end]...)
+			} else {
+				dst = append(dst, p.out[frame.start:end]...)
+			}
+			dst = p.appendOpenString(dst)
+		} else {
+			dst = append(dst, p.out[frame.start:end]...)
+			dst = p.emitFrame(dst, i+1)
+		}
+		return append(dst, closerOf(frame))
+	}
+
+	// The pending scalar's member, if this is its frame.
+	pendingAt, pendingNew := -1, false
+	var pendingNum uint64
+	var pendingIsIndex bool
+	value, pending := "", false
+	if top {
+		value, pending = p.pendingValue()
+	}
+	if pending {
+		if position, duplicate := frame.lookup(frame.key); duplicate {
+			pendingAt = position
+		} else {
+			pendingNew = true
+			pendingNum, pendingIsIndex = jsArrayIndexKey(frame.key)
+		}
+	}
+	dst = append(dst, '{')
+	first := true
+	emit := func(j int) {
+		if !first {
+			dst = append(dst, ',')
+		}
+		first = false
+		member := &frame.members[j]
+		switch {
+		case j == pendingAt:
+			dst = appendMemberBytes(dst, member.key, value)
+		case frame.open && j == frame.openMember:
+			dst = append(dst, p.out[member.start:end]...)
+			if top {
+				dst = p.appendOpenString(dst)
+			} else {
+				dst = p.emitFrame(dst, i+1)
+			}
+		default:
+			dst = append(dst, p.out[member.start:member.end]...)
+		}
+	}
+	emitPending := func() {
+		if !first {
+			dst = append(dst, ',')
+		}
+		first = false
+		dst = appendMemberBytes(dst, frame.key, value)
+		pendingNew = false
+	}
+	for _, j := range frame.sortedOrder() {
+		if pendingNew && pendingIsIndex && pendingNum < frame.members[j].num {
+			emitPending()
+		}
+		emit(j)
+	}
+	if pendingNew && pendingIsIndex {
+		emitPending()
+	}
+	for j := range frame.members {
+		if !frame.members[j].isIndex {
+			emit(j)
+		}
+	}
+	if pendingNew {
+		emitPending()
+	}
+	return append(dst, '}')
 }
