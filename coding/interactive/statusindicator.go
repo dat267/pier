@@ -3,6 +3,7 @@ package interactive
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dat267/pier/tui"
 )
@@ -77,6 +78,23 @@ func NewWorkingStatusIndicator(host tui.RenderRequester, message string, indicat
 		messageColor = func(text string) string { return ActiveTheme().Fg("muted", text) }
 	}
 	return NewStatusIndicator(StatusWorking, host, spinnerColor, messageColor, message, indicator)
+}
+
+// workingElapsedLabel is the working indicator's elapsed time in whole
+// seconds, so the label changes once a second: (12s), (1m 5s), (1h 2m 3s).
+func workingElapsedLabel(elapsed time.Duration) string {
+	return "(" + formatWholeSeconds(int(elapsed/time.Second)) + ")"
+}
+
+func formatWholeSeconds(total int) string {
+	minutes, seconds := total/60, total%60
+	switch {
+	case minutes == 0:
+		return strconv.Itoa(seconds) + "s"
+	case minutes < 60:
+		return strconv.Itoa(minutes) + "m " + strconv.Itoa(seconds) + "s"
+	}
+	return strconv.Itoa(minutes/60) + "h " + strconv.Itoa(minutes%60) + "m " + strconv.Itoa(seconds) + "s"
 }
 
 // RetryStatusIndicator shows the retry countdown.

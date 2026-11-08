@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"sort"
+	"time"
 
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
@@ -22,6 +23,10 @@ const MaxWidgetLines = 10
 type InteractiveUIState struct {
 	UI      tui.TUI
 	TuiMode string
+
+	// workingSince is when the running agent started; the working indicator
+	// shows the time since (D402). Zero while idle.
+	workingSince time.Time
 
 	FooterData *coding.FooterDataProvider
 	Footer     *FooterComponent
@@ -188,7 +193,31 @@ func (s *InteractiveUIState) ShowWorkingStatusIndicator(thinkingLevel string) {
 	if message == "" {
 		message = s.DefaultWorkingMessage
 	}
-	s.ShowStatusIndicator(NewWorkingStatusIndicator(s.UI, message, s.WorkingIndicatorOptions, colorFn))
+	indicator := NewWorkingStatusIndicator(s.UI, message, s.WorkingIndicatorOptions, colorFn)
+	if !s.workingSince.IsZero() {
+		indicator.SetElapsed(s.workingSince, workingElapsedLabel)
+	}
+	s.ShowStatusIndicator(indicator)
+}
+
+// StartWorkingClock records that the agent started working at now and
+// shows the elapsed time on the working indicator (D402).
+func (s *InteractiveUIState) StartWorkingClock(now time.Time) {
+	s.workingSince = now
+	if working, ok := s.ActiveStatusIndicator.(*StatusIndicator); ok && working.Kind == StatusWorking {
+		working.SetElapsed(now, workingElapsedLabel)
+	}
+}
+
+// StopWorkingClock ends the working clock and returns how long the agent
+// worked; false when no clock was running.
+func (s *InteractiveUIState) StopWorkingClock(now time.Time) (time.Duration, bool) {
+	if s.workingSince.IsZero() {
+		return 0, false
+	}
+	worked := max(now.Sub(s.workingSince), 0)
+	s.workingSince = time.Time{}
+	return worked, true
 }
 
 // ClearStatusContainerIfIdle drops the status container's contents when no

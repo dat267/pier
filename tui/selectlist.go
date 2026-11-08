@@ -480,6 +480,11 @@ type Loader struct {
 	startedAt      time.Time
 	running        bool
 	messageValue   string
+
+	// elapsedSince and elapsedLabel add a clock-derived label after the
+	// message, refreshed each second (D402).
+	elapsedSince time.Time
+	elapsedLabel func(time.Duration) string
 }
 
 var defaultLoaderFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
@@ -541,16 +546,36 @@ func (l *Loader) Invalidate() {
 // AnimationFrame implements Animator: the loader needs a frame whenever it is
 // running with more than one frame.
 func (l *Loader) AnimationFrame(now time.Time) (bool, time.Duration) {
-	if !l.running || len(l.frames) <= 1 {
+	if !l.running {
 		return false, 0
 	}
-	interval := time.Duration(l.intervalMS) * time.Millisecond
-	if interval <= 0 {
-		interval = time.Duration(defaultLoaderIntervalMS) * time.Millisecond
+	need, next := false, time.Duration(0)
+	if len(l.frames) > 1 {
+		interval := time.Duration(l.intervalMS) * time.Millisecond
+		if interval <= 0 {
+			interval = time.Duration(defaultLoaderIntervalMS) * time.Millisecond
+		}
+		elapsed := max(now.Sub(l.startedAt), 0)
+		need, next = true, interval-(elapsed%interval)
 	}
-	elapsed := max(now.Sub(l.startedAt), 0)
-	next := interval - (elapsed % interval)
-	return true, next
+	if l.elapsedLabel != nil {
+		// The label changes on each whole second since elapsedSince.
+		elapsed := max(now.Sub(l.elapsedSince), 0)
+		untilSecond := time.Second - elapsed%time.Second
+		if !need || untilSecond < next {
+			next = untilSecond
+		}
+		need = true
+	}
+	return need, next
+}
+
+// SetElapsed shows label(now - since) after the message, or nothing when
+// label is nil (D402).
+func (l *Loader) SetElapsed(since time.Time, label func(time.Duration) string) {
+	l.elapsedSince = since
+	l.elapsedLabel = label
+	l.updateDisplay()
 }
 
 // SetIndicator configures the animation frames and interval.
@@ -618,12 +643,21 @@ func (l *Loader) updateDisplay() {
 // the only mutator, so Render recomputes here (stage 4) or the spinner would
 // freeze on the frame cached at start.
 func (l *Loader) refreshDisplay() {
-	renderedFrame := l.RenderedIndicatorAt(time.Now())
+	now := time.Now()
+	renderedFrame := l.RenderedIndicatorAt(now)
 	indicator := ""
 	if len(renderedFrame) > 0 {
 		indicator = renderedFrame + " "
 	}
-	l.Text.SetText(indicator + l.messageColor(l.messageValue))
+	message := l.messageValue
+	if l.elapsedLabel != nil {
+		if label := l.elapsedLabel(max(now.Sub(l.elapsedSince), 0)); label != "" && message != "" {
+			message += " " + label
+		} else if label != "" {
+			message = label
+		}
+	}
+	l.Text.SetText(indicator + l.messageColor(message))
 }
 
 // ---- CancellableLoader ----

@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"context"
+	"time"
 
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
@@ -151,6 +152,9 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 
 	switch event.Type {
 	case coding.SessionAgentStart:
+		if d.UIState != nil {
+			d.UIState.StartWorkingClock(workingClock())
+		}
 		d.pendingTools = map[string]*ToolExecutionComponent{}
 		if d.Transcript != nil {
 			d.Transcript.goalActions = goalActionCards{}
@@ -251,6 +255,11 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 			d.Transcript.Chat.RemoveChild(d.streamingComponent)
 			d.streamingComponent = nil
 			d.streamingMessage = nil
+		}
+		if d.UIState != nil {
+			if worked, ok := d.UIState.StopWorkingClock(workingClock()); ok && d.Transcript != nil {
+				d.Transcript.AddWorkedFor(worked)
+			}
 		}
 		d.pendingTools = map[string]*ToolExecutionComponent{}
 		d.requestRender()
@@ -675,3 +684,6 @@ func sortToolResultFromAgent(result agent.AgentToolResult) *SortToolResultConten
 	}
 	return converted
 }
+
+// workingClock reads the clock for the working timer (D402); tests pin it.
+var workingClock = time.Now

@@ -242,6 +242,17 @@ func (r *TranscriptRenderer) ShowManagedToolStatus(status ManagedToolStatus) {
 	r.requestRender()
 }
 
+// AddWorkedFor notes in the transcript how long the agent worked on a
+// prompt (D402). It is its own line, so a later status does not replace it.
+func (r *TranscriptRenderer) AddWorkedFor(worked time.Duration) {
+	label := "Worked for " + formatDuration(float64(worked.Milliseconds()))
+	r.Chat.AddChild(tui.NewSpacer(1))
+	r.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg("dim", label) }, 1, 0))
+	r.lastStatusSpacer = nil
+	r.lastStatusText = nil
+	r.requestRender()
+}
+
 // ShowStatus shows a status message, replacing a previous consecutive status.
 func (r *TranscriptRenderer) ShowStatus(message string) {
 	// Status text can carry a provider error, i.e. remote data; the terminal

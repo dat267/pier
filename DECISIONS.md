@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D401)
+# Deliberate divergences from pi (D1–D402)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5584,3 +5584,22 @@ that one table for both APIs, so Vertex Flash-Lite also sends 512. The other
 levels and models send the same budgets as upstream.
 
 Test: `TestVertexFlashLiteMinimalBudgetUsesFlashLiteTable`.
+
+### D402
+
+**The working indicator shows elapsed time, and the transcript notes how long a run worked.**
+
+Reference: pi v1.5.0 (f9a26365)
+`packages/coding-agent/src/modes/interactive/components/status-indicator.ts`
+shows only the working message, and an agent run ends without a transcript
+line. Pier is a project choice here: from `agent_start`, the working indicator
+appends the time since in whole seconds (`Working (1m 5s)`), counted from the
+run's start across every working indicator the run shows (after a retry or
+compaction indicator, for example), and ticking once a second even when a
+custom indicator hides the spinner frames. At `agent_end` the transcript adds
+a dim `Worked for 1m 23s` line, with tenths under a minute as the bash tool's
+`Took` label has. The line is display-only: it is not written to the session,
+so a resumed session does not show it.
+
+Tests: `TestWorkingIndicatorShowsElapsedAndTranscriptNotesTheRun`,
+`TestWorkingElapsedLabelFormats`, `TestLoaderElapsedLabelTicksEachSecond`.
