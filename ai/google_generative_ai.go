@@ -199,7 +199,7 @@ var googleToolCallCounter atomic.Int64
 
 // googleChunk is one streamed GenerateContentResponse.
 type googleChunk struct {
-	ResponseID string          `json:"responseId"`
+	ResponseID *string         `json:"responseId"`
 	Raw        json.RawMessage `json:"-"`
 	Candidates []struct {
 		Content *struct {
@@ -342,13 +342,13 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 		var currentBlockBuffer *strings.Builder
 		blockIndex := func() int { return len(output.Content) - 1 }
 
-		iterErr := iterateGoogleChunks(ctx, resp.Body, func(chunk *googleChunk) {
+		iterErr := iterateGoogleChunks(ctx, resp.Body, func(chunk *googleChunk) error {
 			if options.OnProviderStreamEvent != nil {
 				options.OnProviderStreamEvent(chunk.Raw, model)
 			}
-			if chunk.ResponseID != "" && output.ResponseID == nil {
-				id := chunk.ResponseID
-				output.ResponseID = &id
+			// Upstream output.responseId ||= chunk.responseId.
+			if output.ResponseID == nil || *output.ResponseID == "" {
+				output.ResponseID = chunk.ResponseID
 			}
 			if len(chunk.Candidates) > 0 {
 				candidate := chunk.Candidates[0]
@@ -427,7 +427,8 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 									time.Now().UnixMilli(), googleToolCallCounter.Add(1))
 							}
 							args := part.FunctionCall.Args
-							if len(args) == 0 {
+							if len(args) == 0 || string(args) == "null" {
+								// Upstream (functionCall.args ?? {}).
 								args = json.RawMessage("{}")
 							}
 							call := ToolCall{ID: toolCallID, Name: part.FunctionCall.Name, Arguments: args}
@@ -447,7 +448,11 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 				if candidate.FinishReason != "" {
 					raw := candidate.FinishReason
 					output.RawStopReason = &raw
-					output.StopReason = MapGoogleStopReason(candidate.FinishReason)
+					stopReason, err := MapGoogleStopReason(candidate.FinishReason)
+					if err != nil {
+						return err
+					}
+					output.StopReason = stopReason
 					hasToolCall := false
 					for _, block := range output.Content {
 						if _, ok := block.(ToolCall); ok {
@@ -475,6 +480,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 				output.Usage.Reasoning = &reasoning
 				CalculateCost(model, &output.Usage)
 			}
+			return nil
 		})
 		if iterErr != nil {
 			fail(iterErr)
@@ -595,33 +601,38 @@ func requestGoogleStream(ctx context.Context, model *Model, body []byte, options
 }
 
 // iterateGoogleChunks decodes the Gemini SSE stream.
-func iterateGoogleChunks(ctx context.Context, body io.Reader, emit func(chunk *googleChunk)) error {
+// iterateGoogleChunks decodes the SSE body and hands each chunk to emit; an
+// error from emit stops the stream, as a throw inside upstream's loop does.
+func iterateGoogleChunks(ctx context.Context, body io.Reader, emit func(chunk *googleChunk) error) error {
 	scanner := newSSEScanner(body)
 	decoder := &SSEDecoder{}
-	process := func(data string) {
+	process := func(data string) error {
 		data = strings.TrimSpace(data)
 		if data == "" || data == "[DONE]" {
-			return
+			return nil
 		}
 		var chunk googleChunk
 		if jsonUnmarshalStrict(json.RawMessage(data), &chunk) == nil {
 			chunk.Raw = json.RawMessage(data)
-			emit(&chunk)
+			return emit(&chunk)
 		}
+		return nil
 	}
 	for scanner.Scan() {
 		if ctxErr(ctx) != nil {
 			return ctxErr(ctx)
 		}
 		if event := decoder.decodeLine(scanner.Text()); event != nil {
-			process(event.Data)
+			if err := process(event.Data); err != nil {
+				return err
+			}
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return err
 	}
 	if event := decoder.flush(); event != nil {
-		process(event.Data)
+		return process(event.Data)
 	}
 	return nil
 }

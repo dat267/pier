@@ -193,6 +193,29 @@ const scenarios = [
 			done("STOP"),
 		],
 	},
+	// v1.5.0: functionCall.args ?? {} turns null arguments into {}.
+	{
+		name: "null-function-args",
+		chunks: [
+			{ candidates: [{ content: { role: "model", parts: [{ functionCall: { name: "lookup", args: null, id: "fc_1" } }] } }] },
+			done("STOP"),
+		],
+	},
+	// mapStopReason is exhaustive over the SDK enum and throws for anything else.
+	{
+		name: "unknown-finish-reason",
+		chunks: [
+			text("before"),
+			{ candidates: [{ content: { role: "model", parts: [] }, finishReason: "NEW_THING" }] },
+			text("after"),
+			done("STOP"),
+		],
+	},
+	// output.responseId ||= chunk.responseId records an empty id as "".
+	{
+		name: "empty-response-id",
+		chunks: [{ ...done("STOP"), responseId: "" }],
+	},
 ];
 
 // `partial` is the documented live response-so-far helper rather than an

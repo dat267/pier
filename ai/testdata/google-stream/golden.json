@@ -1045,5 +1045,188 @@
         }
       }
     ]
+  },
+  {
+    "name": "null-function-args",
+    "sse": "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"functionCall\":{\"name\":\"lookup\",\"args\":null,\"id\":\"fc_1\"}}]}}]}\n\ndata: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"\"}]},\"finishReason\":\"STOP\"}]}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "toolcall_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 0,
+        "delta": "{}"
+      },
+      {
+        "type": "toolcall_end",
+        "contentIndex": 0,
+        "toolCall": {
+          "id": "fc_1",
+          "name": "lookup",
+          "arguments": {}
+        }
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 1
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 1,
+        "delta": ""
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 1,
+        "content": ""
+      },
+      {
+        "type": "done",
+        "reason": "toolUse",
+        "message": {
+          "content": [
+            {
+              "type": "toolCall",
+              "id": "fc_1",
+              "name": "lookup",
+              "arguments": {}
+            },
+            {
+              "type": "text",
+              "text": ""
+            }
+          ],
+          "api": "google-generative-ai",
+          "provider": "google",
+          "model": "gemini-3-pro",
+          "stopReason": "toolUse",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "rawStopReason": "STOP"
+        }
+      }
+    ]
+  },
+  {
+    "name": "unknown-finish-reason",
+    "sse": "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"before\"}]}}]}\n\ndata: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[]},\"finishReason\":\"NEW_THING\"}]}\n\ndata: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"after\"}]}}]}\n\ndata: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"\"}]},\"finishReason\":\"STOP\"}]}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "before"
+      },
+      {
+        "type": "error",
+        "reason": "error",
+        "error": {
+          "content": [
+            {
+              "type": "text",
+              "text": "before"
+            }
+          ],
+          "api": "google-generative-ai",
+          "provider": "google",
+          "model": "gemini-3-pro",
+          "stopReason": "error",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "rawStopReason": "NEW_THING",
+          "errorMessage": "Unhandled stop reason: NEW_THING"
+        }
+      }
+    ]
+  },
+  {
+    "name": "empty-response-id",
+    "sse": "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"\"}]},\"finishReason\":\"STOP\"}],\"responseId\":\"\"}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": ""
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 0,
+        "content": ""
+      },
+      {
+        "type": "done",
+        "reason": "stop",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": ""
+            }
+          ],
+          "api": "google-generative-ai",
+          "provider": "google",
+          "model": "gemini-3-pro",
+          "stopReason": "stop",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "responseId": "",
+          "rawStopReason": "STOP"
+        }
+      }
+    ]
   }
 ]

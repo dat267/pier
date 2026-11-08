@@ -611,13 +611,19 @@ func ResolveGoogleFunctionCallingMode(tools []Tool, toolChoice string, supportsS
 
 // MapGoogleStopReason maps a Gemini finish reason to pi's StopReason; any
 // safety/other reason is an error (port of mapStopReason).
-func MapGoogleStopReason(reason string) StopReason {
+func MapGoogleStopReason(reason string) (StopReason, error) {
 	switch reason {
 	case "STOP":
-		return StopStop
+		return StopStop, nil
 	case "MAX_TOKENS":
-		return StopLength
+		return StopLength, nil
+	case "BLOCKLIST", "PROHIBITED_CONTENT", "SPII", "SAFETY", "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT",
+		"IMAGE_RECITATION", "IMAGE_OTHER", "RECITATION", "FINISH_REASON_UNSPECIFIED", "OTHER", "LANGUAGE",
+		"MALFORMED_FUNCTION_CALL", "UNEXPECTED_TOOL_CALL", "TOO_MANY_TOOL_CALLS", "NO_IMAGE":
+		return StopError, nil
 	default:
-		return StopError
+		// Upstream's switch is exhaustive over the SDK enum and throws for
+		// anything else.
+		return "", fmt.Errorf("Unhandled stop reason: %s", reason)
 	}
 }

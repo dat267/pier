@@ -13,10 +13,11 @@ func TestGoogleChunkParserAcceptsCROnlyEventBoundaries(t *testing.T) {
 	second := `{"candidates":[{"content":{"parts":[{"text":"two"}]}}]}`
 	body := "data: " + first + "\r\rdata: " + second + "\r\r"
 	var texts []string
-	err := iterateGoogleChunks(context.Background(), strings.NewReader(body), func(chunk *googleChunk) {
+	err := iterateGoogleChunks(context.Background(), strings.NewReader(body), func(chunk *googleChunk) error {
 		if len(chunk.Candidates) != 0 && chunk.Candidates[0].Content != nil && len(chunk.Candidates[0].Content.Parts) != 0 {
 			texts = append(texts, chunk.Candidates[0].Content.Parts[0].Text)
 		}
+		return nil
 	})
 	if err != nil {
 		t.Fatalf("iterateGoogleChunks returned error: %v", err)

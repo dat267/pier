@@ -245,13 +245,24 @@ func TestBuildGoogleParams(t *testing.T) {
 }
 
 func TestMapGoogleStopReasonAndToolChoice(t *testing.T) {
-	if MapGoogleStopReason("STOP") != StopStop || MapGoogleStopReason("MAX_TOKENS") != StopLength {
+	mapped := func(reason string) StopReason {
+		stop, err := MapGoogleStopReason(reason)
+		if err != nil {
+			t.Fatalf("%s: %v", reason, err)
+		}
+		return stop
+	}
+	if mapped("STOP") != StopStop || mapped("MAX_TOKENS") != StopLength {
 		t.Fatal("basic mapping")
 	}
-	for _, safety := range []string{"SAFETY", "RECITATION", "MALFORMED_FUNCTION_CALL"} {
-		if MapGoogleStopReason(safety) != StopError {
+	for _, safety := range []string{"SAFETY", "RECITATION", "MALFORMED_FUNCTION_CALL", "NO_IMAGE"} {
+		if mapped(safety) != StopError {
 			t.Fatalf("%s should map to error", safety)
 		}
+	}
+	// Upstream google-shared.ts mapStopReason (v1.5.0) throws outside the SDK enum.
+	if _, err := MapGoogleStopReason("NEW_THING"); err == nil || err.Error() != "Unhandled stop reason: NEW_THING" {
+		t.Fatalf("unknown reason error = %v", err)
 	}
 	if MapGoogleToolChoice("any") != "ANY" || MapGoogleToolChoice("none") != "NONE" || MapGoogleToolChoice("auto") != "AUTO" {
 		t.Fatal("tool choice mapping")
