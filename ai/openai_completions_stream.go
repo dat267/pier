@@ -110,7 +110,8 @@ func openAIStreamErrorMessage(raw json.RawMessage) string {
 
 // openaiChunk is the parsed ChatCompletionChunk subset pi consumes.
 type openaiChunk struct {
-	ID      string          `json:"id"`
+	// ID is nil when the chunk has no id member.
+	ID      *string         `json:"id"`
 	Model   string          `json:"model"`
 	Usage   json.RawMessage `json:"usage,omitempty"`
 	Error   json.RawMessage `json:"error,omitempty"`
@@ -527,9 +528,9 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 			if options.OnProviderStreamEvent != nil {
 				options.OnProviderStreamEvent(raw, model)
 			}
-			if chunk.ID != "" && output.ResponseID == nil {
-				id := chunk.ID
-				output.ResponseID = &id
+			// Upstream output.responseId ||= chunk.id.
+			if output.ResponseID == nil || *output.ResponseID == "" {
+				output.ResponseID = chunk.ID
 			}
 			if chunk.Model != "" && chunk.Model != model.ID && output.ResponseModel == nil {
 				rm := chunk.Model

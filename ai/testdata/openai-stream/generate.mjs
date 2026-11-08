@@ -232,6 +232,31 @@ const scenarios = [
 			"[DONE]",
 		],
 	},
+	// v1.5.0: output.responseId ||= chunk.id records an empty id as "" and a
+	// later non-empty id replaces it.
+	{
+		name: "empty-then-real-chunk-id",
+		chunks: [
+			{ ...chunk({ content: "a" }), id: "" },
+			{ ...chunk({ content: "b" }), id: "chatcmpl-2" },
+			{ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] },
+			"[DONE]",
+		],
+	},
+	{
+		name: "empty-chunk-id",
+		chunks: [{ ...chunk({ content: "a" }, { finish_reason: "stop" }), id: "" }, "[DONE]"],
+	},
+	// The same model-scoped tool-call id on one stream index keeps the first id.
+	{
+		name: "tool-call-id-changes",
+		chunks: [
+			chunk({ tool_calls: [{ index: 0, id: "call_1", type: "function", function: { name: "lookup", arguments: "" } }] }),
+			chunk({ tool_calls: [{ index: 0, id: "call_2", function: { arguments: "{}" } }] }),
+			{ choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] },
+			"[DONE]",
+		],
+	},
 ];
 
 // `partial` is the documented live response-so-far helper rather than an

@@ -274,6 +274,15 @@ const scenarios = [
 			{ type: "response.failed", response: { id: "resp_1", status: "failed", error: { code: "server_error", message: "boom" } } },
 		],
 	},
+	// response.created assigns output.responseId = event.response.id, so an
+	// empty created id is kept when the terminal response has none.
+	{
+		name: "empty-created-id",
+		events: [
+			{ type: "response.created", response: { id: "", status: "in_progress" } },
+			{ type: "response.completed", response: { status: "completed" } },
+		],
+	},
 	{
 		name: "incomplete-content-filter",
 		events: [

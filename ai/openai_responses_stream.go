@@ -638,10 +638,13 @@ func ProcessResponsesStream(
 		}
 		switch event.Type {
 		case "response.created":
-			var response responsesTerminalResponse
-			if jsonUnmarshalStrict(event.Response, &response) == nil && response.ID != "" {
-				id := response.ID
-				output.ResponseID = &id
+			// Upstream assigns output.responseId = event.response.id, so an
+			// empty id is recorded and a missing one clears it.
+			var response struct {
+				ID *string `json:"id"`
+			}
+			if jsonUnmarshalStrict(event.Response, &response) == nil {
+				output.ResponseID = response.ID
 			}
 		case "response.output_item.added":
 			var item responsesItem
