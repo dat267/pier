@@ -4348,33 +4348,42 @@ and wire parity tests, and a 500-turn allocation budget; the benchmark is
 
 ### D353
 
-**Large streamed tool arguments update their preview on a byte schedule.**
+**Streamed tool arguments render a large preview at most once a frame.**
 
 Reference: pi v1.5.0 `utils/streaming-json.ts` parses each provider append
-incrementally, so a snapshot costs the open path rather than the whole text.
-Pier keeps `parseStreamingJSONObject` (the older repair parser) but recomputes a
-call's preview on every delta below 1 KiB of accumulated argument text and then
-at 1 KiB, 2 KiB, 4 KiB, ...; a short call (a bash command, a path) so shows each
-piece as it arrives. Final arguments remain exact because every provider
-finishes with `ParseToolCallArguments`, the same strict parse the reference
-uses.
+incrementally and shares completed values between snapshots, so a snapshot
+costs the open path. Pier ports the parser's rules exactly (`ai/streaming_json.go`)
+but writes the canonical `JSON.stringify` bytes of the root object into an
+append-only buffer as it reads, splicing the two cases `JSON.parse` orders
+differently (a duplicate key keeps its first position; array-index keys sort
+first). A preview is that buffer plus the closing tail of the open path.
+Contiguous `json.RawMessage` previews cannot share bytes (each one ends where
+the next continues), so every preview copies the buffer: previews up to 1 KiB
+refresh at every delta, larger ones at most once per 16 ms frame, and the
+preview is exact once the root object closes. The reference instead spends
+per-append copy credit and lets a large open container lag.
 
-Measurements on a 100 KiB tool argument in 16-byte deltas: before 23 s and 24 GB
-of allocation, after 11 ms and 10 MB (upstream's incremental parser: about 3
-ms). The first version only recomputed at the first delta and then from 4 KiB,
-so short calls froze on their first piece; per-delta updates below 1 KiB cost
-9.2 ms to 11.5 ms and 10.2 MB to 12.1 MB on the same benchmark (4 KiB would have
-cost 37 ms). The preview can lag between thresholds, as the reference's copy
-credit can for a large open container. The preview parser also keeps the older
-repair rules for malformed partial strings (raw control characters and invalid
-escapes stay dropped until the text completes, where the reference shows them
-while it streams); no final tool-call value differs.
+When the complete text is one strict JSON object, the buffer already is the
+final value, so `streamingArguments.Finish` returns it without the full
+`ParseToolCallArguments` parse; any tolerated or malformed input, or a lone
+surrogate, takes that parse, which also reports malformed arguments.
+
+Measured in 16-byte deltas including the finish, `BenchmarkStreamingArgumentsLarge`
+against the reference's `ToolCallArgumentsStream` (append + finish) under Node
+on the same machine: a 100 KiB write took 11.5 ms and 12.1 MB in the previous
+byte-doubling schedule, 1.2 ms in the reference, and 0.81 ms and 1.1 MB now; a
+200-edit call (19 KB) 7.9 ms, 0.80 ms and 0.30 ms; a 55-byte bash call 19 µs,
+3.3 µs and 1.35 µs. Byte-credit schedules were measured first: matching the
+reference's freshness copied 30 MB for the 100 KiB write (10 ms), and none that
+beat it kept the preview within a few KiB.
 
 The OpenAI completions, Responses, Anthropic, Bedrock, Mistral, and
-pi-messages adapters all use the shared preview. The agent proxy applies the
-same schedule to its forwarded delta previews. Tests:
-`TestStreamingArgumentsPreviewIsThrottled` pins the schedule and exact finish;
-`TestStreamingArgumentsSmallCallUpdatesEveryDelta` pins the per-delta window;
+pi-messages adapters and the agent proxy share the stream. Tests:
+`TestStreamingArgumentsPreviewIsThrottled` pins the frame schedule and exact
+finish; `TestStreamingArgumentsSmallCallUpdatesEveryDelta` pins the per-delta
+window; `TestStreamingArgumentsFinishMatchesFullParse` and
+`FuzzStreamingArguments` pin `Finish` to the full parse;
+`TestStreamingJSONUpstreamCases` carries the reference's test cases;
 `TestProxyToolArgumentsPreviewIsThrottled` covers the proxy;
 `BenchmarkStreamingArgumentsLarge` keeps the cost visible.
 

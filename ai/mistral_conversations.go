@@ -940,7 +940,7 @@ func finishMistralToolCalls(output *AssistantMessage, stream *AssistantMessageEv
 			continue
 		}
 		if args, ok := state.partialArgs[index]; ok {
-			block.Arguments, block.ArgumentsError = ParseToolCallArguments(args.String())
+			block.Arguments, block.ArgumentsError = args.Finish()
 			output.Content[index] = block
 		}
 		stream.Push(AssistantMessageEvent{Type: EventToolcallEnd, ContentIndex: index, ToolCall: &block, Partial: output})

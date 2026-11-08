@@ -268,47 +268,50 @@ func parseOrderedJSONObject(data []byte) (json.RawMessage, bool) {
 	return encodeSchemaValue(value), true
 }
 
-// streamingArgumentsPreviewBytes is how much accumulated argument text may
-// appear before the partial preview is recomputed. Small calls update on every
-// delta; a large streamed value (a write tool's content) otherwise re-parses
-// and re-encodes the whole prefix per delta, which cost 23 s and 24 GB for a
-// 100 KiB value in 16-byte deltas. Below 1 KiB every delta updates the
-// preview; it then updates at 1 KiB, 2 KiB, 4 KiB, ... while the final
-// ParseToolCallArguments remains exact. Upstream
-// v1.5.0's incremental parser keeps every delta cheap; this bounded preview
-// schedule reaches the same responsiveness without a second parser.
-const streamingArgumentsPreviewBytes = 1 << 10
-
+// streamingArguments holds one streaming tool call's arguments: the raw text
+// for the one full parse when the call ends, and an incremental parser for
+// the partial arguments in between (upstream ToolCallArgumentsStream, D353).
 type streamingArguments struct {
 	text   strings.Builder
-	parsed json.RawMessage
-	next   int
+	parser streamingJSONParser
 }
 
-// Append adds argument text and returns the preview object. The preview is
-// recomputed on every delta below 4 KiB, then at each doubling threshold.
+// Append adds argument text and returns the partial arguments, a new slice
+// whenever they changed.
 func (s *streamingArguments) Append(delta string) json.RawMessage {
 	s.text.WriteString(delta)
-	size := s.text.Len()
-	if s.parsed == nil || size < streamingArgumentsPreviewBytes || size >= s.next {
-		s.parsed = parseStreamingJSONObject(s.text.String())
-		if s.next == 0 {
-			s.next = streamingArgumentsPreviewBytes
-		}
-		for s.next <= size {
-			s.next *= 2
-		}
-	}
-	return s.parsed
+	s.parser.append(delta)
+	return s.parser.snap()
 }
 
 func (s *streamingArguments) String() string { return s.text.String() }
 
+// Finish returns the final arguments, the value ParseToolCallArguments gives
+// for the complete text. When the text was one strict JSON object the
+// incremental parser already holds its canonical bytes; anything else takes
+// the full parse, which also reports malformed arguments.
+func (s *streamingArguments) Finish() (json.RawMessage, string) {
+	if value, ok := s.parser.strictObject(); ok {
+		return value, ""
+	}
+	return ParseToolCallArguments(s.text.String())
+}
+
 func (s *streamingArguments) Reset() {
 	s.text.Reset()
-	s.parsed = nil
-	s.next = 0
+	s.parser = streamingJSONParser{}
 }
+
+// ToolCallArgumentsStream is the exported form of the provider adapters'
+// streaming arguments, used by the agent proxy (upstream
+// ToolCallArgumentsStream).
+type ToolCallArgumentsStream struct{ args streamingArguments }
+
+// Append adds argument text and returns the partial arguments.
+func (s *ToolCallArgumentsStream) Append(delta string) json.RawMessage { return s.args.Append(delta) }
+
+// Text is the raw argument text received so far.
+func (s *ToolCallArgumentsStream) Text() string { return s.args.String() }
 
 // parseStreamingJSONObject attempts to parse potentially incomplete JSON during
 // streaming, preserving object key order (upstream parseStreamingJson). An

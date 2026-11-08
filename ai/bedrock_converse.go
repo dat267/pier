@@ -1319,7 +1319,7 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 				Type: EventThinkingEnd, ContentIndex: index, Content: block.thinking.String(), Partial: output,
 			})
 		case "toolCall":
-			block.toolCall.Arguments, block.toolCall.ArgumentsError = ParseToolCallArguments(block.args.String())
+			block.toolCall.Arguments, block.toolCall.ArgumentsError = block.args.Finish()
 			block.args.Reset()
 			syncBedrockContent(output, *blocks)
 			call := block.toolCall

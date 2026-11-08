@@ -767,7 +767,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				case ThinkingContent:
 					stream.Push(AssistantMessageEvent{Type: EventThinkingEnd, ContentIndex: idx, Content: b.Thinking, Partial: output})
 				case ToolCall:
-					b.Arguments, b.ArgumentsError = ParseToolCallArguments(open.args.String())
+					b.Arguments, b.ArgumentsError = open.args.Finish()
 					open.args.Reset()
 					open.block = b
 					output.Content[idx] = b
@@ -847,9 +847,9 @@ func parseStreamingArgs(args json.RawMessage) json.RawMessage {
 }
 
 // ParseStreamingJSONText parses a partially streamed JSON object, repairing an
-// incomplete tail; an empty or unparseable input yields {}. The exported
-// wrapper is used by the agent proxy stream (upstream parseStreamingJson with
-// the `|| {}` default).
+// incomplete tail; an empty or unparseable input yields {} (upstream
+// parseStreamingJson with the `|| {}` default). Streaming previews use
+// ToolCallArgumentsStream instead.
 func ParseStreamingJSONText(text string) json.RawMessage {
 	return parseStreamingJSONObject(text)
 }

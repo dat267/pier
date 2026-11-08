@@ -393,7 +393,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 						stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: index, Delta: delta, Partial: output})
 					}
 				} else if streaming != nil {
-					block.Arguments, block.ArgumentsError = ParseToolCallArguments(streaming.args.String())
+					block.Arguments, block.ArgumentsError = streaming.args.Finish()
 				}
 				if streaming != nil {
 					streaming.args.Reset()

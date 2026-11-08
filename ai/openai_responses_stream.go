@@ -765,7 +765,11 @@ func ProcessResponsesStream(
 				if arguments == "" {
 					arguments = "{}"
 				}
-				slot.toolCall.call.Arguments, slot.toolCall.call.ArgumentsError = ParseToolCallArguments(arguments)
+				if arguments == slot.toolCall.args.String() {
+					slot.toolCall.call.Arguments, slot.toolCall.call.ArgumentsError = slot.toolCall.args.Finish()
+				} else {
+					slot.toolCall.call.Arguments, slot.toolCall.call.ArgumentsError = ParseToolCallArguments(arguments)
+				}
 				if item.Namespace != nil {
 					slot.toolCall.call.Namespace = item.Namespace
 				}

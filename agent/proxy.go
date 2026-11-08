@@ -240,43 +240,17 @@ func StreamProxy(model *ai.Model, context ai.TranscriptContext, options ProxyStr
 }
 
 // proxyEventScratch accumulates each content block without copying its full
-// prefix on every text or thinking delta. Tool-call bytes feed the incremental
-// JSON parser.
-// proxyToolArguments throttles partial argument previews like the provider
-// adapters (D353): small calls update every delta; a large streamed value
-// recomputes only at 4 KiB, 8 KiB, ... so a proxy client does not reparse the
-// whole prefix per delta. The final ToolCall comes from the server unchanged.
-// proxyPreviewBytes matches the provider adapters' per-delta window (D353).
-const proxyPreviewBytes = 1 << 10
-
-type proxyToolArguments struct {
-	text   []byte
-	parsed json.RawMessage
-	next   int
-}
-
-func (p *proxyToolArguments) Append(delta string) json.RawMessage {
-	p.text = append(p.text, delta...)
-	if p.parsed == nil || len(p.text) < proxyPreviewBytes || len(p.text) >= p.next {
-		p.parsed = ai.ParseStreamingJSONText(string(p.text))
-		if p.next == 0 {
-			p.next = proxyPreviewBytes
-		}
-		for p.next <= len(p.text) {
-			p.next *= 2
-		}
-	}
-	return p.parsed
-}
-
+// prefix on every text or thinking delta. Tool-call bytes feed the shared
+// incremental arguments parser (upstream proxy.ts ToolCallArgumentsStream,
+// D353); the final ToolCall comes from the server unchanged.
 type proxyEventScratch struct {
 	text     map[int]*strings.Builder
 	thinking map[int]*strings.Builder
-	toolCall map[int]*proxyToolArguments
+	toolCall map[int]*ai.ToolCallArgumentsStream
 }
 
 func newProxyEventScratch() *proxyEventScratch {
-	return &proxyEventScratch{toolCall: make(map[int]*proxyToolArguments)}
+	return &proxyEventScratch{toolCall: make(map[int]*ai.ToolCallArgumentsStream)}
 }
 
 func (s *proxyEventScratch) textBuilder(index int) *strings.Builder {
@@ -383,7 +357,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 	case "toolcall_start":
 		grow()
 		partial.Content[wire.ContentIndex] = ai.ToolCall{ID: wire.ID, Name: wire.ToolName, Arguments: json.RawMessage("{}")}
-		scratch.toolCall[wire.ContentIndex] = &proxyToolArguments{}
+		scratch.toolCall[wire.ContentIndex] = &ai.ToolCallArgumentsStream{}
 		return &ai.AssistantMessageEvent{Type: ai.EventToolcallStart, ContentIndex: wire.ContentIndex, Partial: partial}, nil
 
 	case "toolcall_delta":
