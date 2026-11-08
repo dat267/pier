@@ -92,12 +92,17 @@ type pendingMessageQueue struct {
 	mu       sync.Mutex
 	messages []ai.Message
 	mode     QueueMode
+	// gen counts changes to messages or mode. The defer predicate is caller
+	// code, so drainDeferring and hasDeliverable decide on a snapshot with the
+	// lock released and re-decide when gen moved meanwhile (A425).
+	gen uint64
 }
 
 func (q *pendingMessageQueue) enqueue(message ai.Message) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.messages = append(q.messages, message)
+	q.gen++
 }
 
 func (q *pendingMessageQueue) hasItems() bool {
@@ -108,51 +113,93 @@ func (q *pendingMessageQueue) hasItems() bool {
 
 // drainDeferring drains one (or all) messages that isDeferred does not hold,
 // leaving deferred messages in place and in order.
+//
+// isDeferred is caller code, so it never runs under q.mu: the decision is made
+// on a snapshot, and a queue change while it ran re-decides on the new state
+// (ARCHITECTURE.md: caller-supplied predicates run outside the mutex and may
+// reenter; a self-lock here hung the process, A425).
 func (q *pendingMessageQueue) drainDeferring(isDeferred func(ai.Message) bool) []ai.Message {
-	q.mu.Lock()
-	defer q.mu.Unlock()
 	if isDeferred == nil {
+		q.mu.Lock()
+		defer q.mu.Unlock()
 		return q.drainLocked()
 	}
-	if q.mode == QueueModeAll {
-		original := q.messages
-		var out []ai.Message
-		kept := original[:0]
-		for _, message := range original {
+	for {
+		q.mu.Lock()
+		gen := q.gen
+		snapshot := append([]ai.Message(nil), q.messages...)
+		all := q.mode == QueueModeAll
+		q.mu.Unlock()
+
+		released := make([]bool, len(snapshot))
+		count := 0
+		for index, message := range snapshot {
 			if isDeferred(message) {
-				kept = append(kept, message)
 				continue
 			}
-			out = append(out, message)
+			released[index] = true
+			count++
+			if !all {
+				break
+			}
 		}
-		clear(original[len(kept):])
-		q.messages = kept
-		return out
-	}
-	for index, message := range q.messages {
-		if isDeferred(message) {
+
+		q.mu.Lock()
+		if q.gen != gen {
+			// The queue changed (an enqueue, another drain, a clear) while the
+			// predicate ran: decide again on the current state.
+			q.mu.Unlock()
 			continue
 		}
-		out := []ai.Message{message}
-		last := len(q.messages) - 1
-		copy(q.messages[index:], q.messages[index+1:])
-		q.messages[last] = nil
-		q.messages = q.messages[:last]
+		if count == 0 {
+			q.mu.Unlock()
+			return nil
+		}
+		out := make([]ai.Message, 0, count)
+		kept := make([]ai.Message, 0, len(snapshot)-count)
+		for index, message := range snapshot {
+			if released[index] {
+				out = append(out, message)
+				continue
+			}
+			kept = append(kept, message)
+		}
+		q.messages = kept
+		q.gen++
+		q.mu.Unlock()
 		return out
 	}
-	return nil
 }
 
 // hasDeliverable reports whether a message would survive the defer predicate.
+// The predicate runs outside the lock, as in drainDeferring.
 func (q *pendingMessageQueue) hasDeliverable(isDeferred func(ai.Message) bool) bool {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-	for _, message := range q.messages {
-		if isDeferred == nil || !isDeferred(message) {
-			return true
+	if isDeferred == nil {
+		q.mu.Lock()
+		defer q.mu.Unlock()
+		return len(q.messages) > 0
+	}
+	for {
+		q.mu.Lock()
+		gen := q.gen
+		snapshot := append([]ai.Message(nil), q.messages...)
+		q.mu.Unlock()
+
+		deliverable := false
+		for _, message := range snapshot {
+			if !isDeferred(message) {
+				deliverable = true
+				break
+			}
+		}
+
+		q.mu.Lock()
+		unchanged := q.gen == gen
+		q.mu.Unlock()
+		if unchanged {
+			return deliverable
 		}
 	}
-	return false
 }
 
 // drainLocked is drain with the lock held.
@@ -160,6 +207,9 @@ func (q *pendingMessageQueue) drainLocked() []ai.Message {
 	if q.mode == QueueModeAll {
 		drained := q.messages
 		q.messages = nil
+		if len(drained) > 0 {
+			q.gen++
+		}
 		return drained
 	}
 	if len(q.messages) == 0 {
@@ -168,6 +218,7 @@ func (q *pendingMessageQueue) drainLocked() []ai.Message {
 	first := q.messages[0]
 	q.messages[0] = nil
 	q.messages = q.messages[1:]
+	q.gen++
 	return []ai.Message{first}
 }
 
@@ -177,36 +228,34 @@ func (q *pendingMessageQueue) takeAll() []ai.Message {
 	defer q.mu.Unlock()
 	messages := q.messages
 	q.messages = nil
+	if len(messages) > 0 {
+		q.gen++
+	}
 	return messages
 }
 
 func (q *pendingMessageQueue) drain() []ai.Message {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	if q.mode == QueueModeAll {
-		drained := q.messages
-		q.messages = nil
-		return drained
-	}
-	if len(q.messages) == 0 {
-		return nil
-	}
-	first := q.messages[0]
-	q.messages[0] = nil
-	q.messages = q.messages[1:]
-	return []ai.Message{first}
+	return q.drainLocked()
 }
 
 func (q *pendingMessageQueue) clear() {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	q.messages = nil
+	if len(q.messages) > 0 {
+		q.messages = nil
+		q.gen++
+	}
 }
 
 func (q *pendingMessageQueue) setMode(mode QueueMode) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	q.mode = mode
+	if q.mode != mode {
+		q.mode = mode
+		q.gen++
+	}
 }
 
 func (q *pendingMessageQueue) getMode() QueueMode {

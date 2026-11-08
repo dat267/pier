@@ -322,6 +322,13 @@ event unless `End` explicitly closes delivery. A terminal claim is made under
 that mutex after predicate evaluation, so concurrently evaluated pushes cannot
 both publish terminal events.
 
+`agent.pendingMessageQueue.mu` protects the steering and follow-up queues. Its
+caller-supplied defer predicate (`AgentOptions.DeferFollowUp`) runs outside the
+mutex on a snapshot, and the drain re-checks a change counter before applying.
+An enqueue, another drain, a clear or a mode switch meanwhile makes it decide
+again, so a predicate that reenters the queue, and the UI thread's clear or
+restore racing a drain, can neither deadlock nor double deliver (A425).
+
 `ai.InMemoryCredentialStore.mu` protects the credential map and per-provider
 completion-chain tails, never callback execution. Callbacks receive deep owned
 snapshots and commit under the data mutex after their error/cancellation checks;
