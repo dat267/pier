@@ -77,6 +77,10 @@ type OpenAIResponsesCompat struct {
 	SupportsExplicitPromptCacheMode *bool                  `json:"supportsExplicitPromptCacheMode,omitempty"`
 	SupportsMidConvoEffort          *bool                  `json:"supportsMidConvoEffort,omitempty"`
 	SupportsMaxOutputTokens         *bool                  `json:"supportsMaxOutputTokens,omitempty"`
+	// SupportsReasoningEffort is inert for this API (only
+	// openai-completions.ts reads it), but the catalog may declare it on a
+	// responses model and the reference stringifies the whole compat object.
+	SupportsReasoningEffort *bool `json:"supportsReasoningEffort,omitempty"`
 }
 
 // AnthropicAllowedFallbackModel names a model Anthropic accepts in
