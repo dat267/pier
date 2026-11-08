@@ -27,17 +27,24 @@ type EventBusController interface {
 	Clear()
 }
 
+// eventSubscription is one handler with its id, kept in subscription order so a
+// channel dispatches like the Node EventEmitter its reference wraps (A428).
+type eventSubscription struct {
+	id      int
+	handler EventHandler
+}
+
 type eventBus struct {
 	mu          sync.Mutex
 	nextID      int
-	subscribers map[string]map[int]EventHandler
+	subscribers map[string][]eventSubscription
 	// OnHandlerError observes handler failures; upstream logs to stderr.
 	OnHandlerError func(channel string, err error)
 }
 
 // CreateEventBus builds an event bus (upstream createEventBus).
 func CreateEventBus() EventBusController {
-	return &eventBus{subscribers: map[string]map[int]EventHandler{}}
+	return &eventBus{subscribers: map[string][]eventSubscription{}}
 }
 
 func (b *eventBus) SetHandlerErrorReporter(reporter func(channel string, err error)) {
@@ -46,11 +53,14 @@ func (b *eventBus) SetHandlerErrorReporter(reporter func(channel string, err err
 	b.mu.Unlock()
 }
 
+// Emit dispatches to the channel's handlers in subscription order, the order
+// the reference's EventEmitter uses (A428).
 func (b *eventBus) Emit(channel string, data any) {
 	b.mu.Lock()
-	handlers := make([]EventHandler, 0, len(b.subscribers[channel]))
-	for _, handler := range b.subscribers[channel] {
-		handlers = append(handlers, handler)
+	subscriptions := b.subscribers[channel]
+	handlers := make([]EventHandler, 0, len(subscriptions))
+	for _, subscription := range subscriptions {
+		handlers = append(handlers, subscription.handler)
 	}
 	onError := b.OnHandlerError
 	b.mu.Unlock()
@@ -81,19 +91,22 @@ func (b *eventBus) report(onError func(string, error), channel string, err error
 
 func (b *eventBus) On(channel string, handler EventHandler) func() {
 	b.mu.Lock()
-	if b.subscribers[channel] == nil {
-		b.subscribers[channel] = map[int]EventHandler{}
-	}
 	id := b.nextID
 	b.nextID++
-	b.subscribers[channel][id] = handler
+	b.subscribers[channel] = append(b.subscribers[channel], eventSubscription{id: id, handler: handler})
 	b.mu.Unlock()
 
 	var once sync.Once
 	return func() {
 		once.Do(func() {
 			b.mu.Lock()
-			delete(b.subscribers[channel], id)
+			subscriptions := b.subscribers[channel]
+			for index, subscription := range subscriptions {
+				if subscription.id == id {
+					b.subscribers[channel] = append(subscriptions[:index], subscriptions[index+1:]...)
+					break
+				}
+			}
 			b.mu.Unlock()
 		})
 	}
@@ -101,7 +114,7 @@ func (b *eventBus) On(channel string, handler EventHandler) func() {
 
 func (b *eventBus) Clear() {
 	b.mu.Lock()
-	b.subscribers = map[string]map[int]EventHandler{}
+	b.subscribers = map[string][]eventSubscription{}
 	b.mu.Unlock()
 }
 
