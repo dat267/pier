@@ -114,6 +114,11 @@ func parseAuthMinExpiry(value string) (int64, bool) {
 	}
 	const maxInt64 = int64(1<<63 - 1)
 	if err != nil || amount > maxInt64/multiplier {
+		// The reference multiplies JavaScript numbers, so digits past 2^53
+		// yield a float (9223372036854775807ms becomes 9223372036854776000, and
+		// 999999999999999999999h becomes 3.6e27). Saturating keeps the same
+		// outcome: no token's remaining life can reach either value, so the
+		// credential is rejected as too short-lived either way.
 		return maxInt64, true
 	}
 	return amount * multiplier, true

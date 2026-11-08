@@ -1,0 +1,430 @@
+[
+	{
+		"args": [],
+		"result": null
+	},
+	{
+		"args": [
+			"auth"
+		],
+		"result": {
+			"error": "Unknown auth command \"\". Use \"pi auth print-api-key\", \"pi auth print-bearer-token\", or \"pi auth check\"."
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"help"
+		],
+		"result": {
+			"error": "Unknown auth command \"help\". Use \"pi auth print-api-key\", \"pi auth print-bearer-token\", or \"pi auth check\"."
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"nope"
+		],
+		"result": {
+			"error": "Unknown auth command \"nope\". Use \"pi auth print-api-key\", \"pi auth print-bearer-token\", or \"pi auth check\"."
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"check"
+		],
+		"result": {
+			"kind": "check",
+			"args": [],
+			"json": false,
+			"credentials": false,
+			"noRefresh": false
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"check",
+			"--json"
+		],
+		"result": {
+			"kind": "check",
+			"args": [],
+			"json": true,
+			"credentials": false,
+			"noRefresh": false
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"check",
+			"--credentials",
+			"--no-refresh"
+		],
+		"result": {
+			"kind": "check",
+			"args": [],
+			"json": false,
+			"credentials": true,
+			"noRefresh": true
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"check",
+			"--json",
+			"--json"
+		],
+		"result": {
+			"kind": "check",
+			"args": [],
+			"json": true,
+			"credentials": false,
+			"noRefresh": false
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"check",
+			"--provider",
+			"anthropic"
+		],
+		"result": {
+			"kind": "check",
+			"args": [
+				"--provider",
+				"anthropic"
+			],
+			"json": false,
+			"credentials": false,
+			"noRefresh": false
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"print-api-key"
+		],
+		"result": {
+			"kind": "api_key",
+			"args": [],
+			"json": false,
+			"credentials": false,
+			"noRefresh": false
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"print-api-key",
+			"--json"
+		],
+		"result": {
+			"error": "--json is only supported by auth check"
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"print-api-key",
+			"--model",
+			"x"
+		],
+		"result": {
+			"kind": "api_key",
+			"args": [
+				"--model",
+				"x"
+			],
+			"json": false,
+			"credentials": false,
+			"noRefresh": false
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"print-bearer-token"
+		],
+		"result": {
+			"kind": "bearer_token",
+			"args": [],
+			"json": false,
+			"credentials": false,
+			"noRefresh": false
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"print-bearer-token",
+			"--min-expiry",
+			"30m"
+		],
+		"result": {
+			"kind": "bearer_token",
+			"args": [],
+			"json": false,
+			"credentials": false,
+			"noRefresh": false,
+			"minExpiryMs": 1800000
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"print-bearer-token",
+			"--min-expiry",
+			"30M"
+		],
+		"result": {
+			"kind": "bearer_token",
+			"args": [],
+			"json": false,
+			"credentials": false,
+			"noRefresh": false,
+			"minExpiryMs": 108000000
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"print-bearer-token",
+			"--min-expiry",
+			"500ms"
+		],
+		"result": {
+			"kind": "bearer_token",
+			"args": [],
+			"json": false,
+			"credentials": false,
+			"noRefresh": false,
+			"minExpiryMs": 500
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"print-bearer-token",
+			"--min-expiry",
+			"2h"
+		],
+		"result": {
+			"kind": "bearer_token",
+			"args": [],
+			"json": false,
+			"credentials": false,
+			"noRefresh": false,
+			"minExpiryMs": 7200000
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"print-bearer-token",
+			"--min-expiry",
+			"00030m"
+		],
+		"result": {
+			"kind": "bearer_token",
+			"args": [],
+			"json": false,
+			"credentials": false,
+			"noRefresh": false,
+			"minExpiryMs": 1800000
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"print-bearer-token",
+			"--min-expiry",
+			"1"
+		],
+		"result": {
+			"error": "--min-expiry must use a duration such as 30m or 1h"
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"print-bearer-token",
+			"--min-expiry"
+		],
+		"result": {
+			"error": "--min-expiry must use a duration such as 30m or 1h"
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"print-bearer-token",
+			"--min-expiry",
+			""
+		],
+		"result": {
+			"error": "--min-expiry must use a duration such as 30m or 1h"
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"print-bearer-token",
+			"--min-expiry",
+			" 30m"
+		],
+		"result": {
+			"error": "--min-expiry must use a duration such as 30m or 1h"
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"print-bearer-token",
+			"--min-expiry",
+			"30m",
+			"--json"
+		],
+		"result": {
+			"error": "--json is only supported by auth check"
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"print-bearer-token",
+			"--min-expiry",
+			"30ms",
+			"--min-expiry",
+			"1h"
+		],
+		"result": {
+			"kind": "bearer_token",
+			"args": [],
+			"json": false,
+			"credentials": false,
+			"noRefresh": false,
+			"minExpiryMs": 3600000
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"check",
+			"--min-expiry",
+			"30m"
+		],
+		"result": {
+			"error": "--min-expiry is only supported by print-bearer-token"
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"check",
+			"--credentials",
+			"--min-expiry",
+			"30m"
+		],
+		"result": {
+			"error": "--min-expiry is only supported by print-bearer-token"
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"check",
+			"-h"
+		],
+		"result": {
+			"kind": "check",
+			"args": [
+				"-h"
+			],
+			"json": false,
+			"credentials": false,
+			"noRefresh": false
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"check",
+			"--",
+			"x"
+		],
+		"result": {
+			"kind": "check",
+			"args": [
+				"--",
+				"x"
+			],
+			"json": false,
+			"credentials": false,
+			"noRefresh": false
+		}
+	},
+	{
+		"args": [
+			"--provider",
+			"auth",
+			"check"
+		],
+		"result": null
+	},
+	{
+		"args": [
+			"Auth",
+			"check"
+		],
+		"result": null
+	},
+	{
+		"args": [
+			"auth",
+			"CHECK"
+		],
+		"result": {
+			"error": "Unknown auth command \"CHECK\". Use \"pi auth print-api-key\", \"pi auth print-bearer-token\", or \"pi auth check\"."
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"check",
+			""
+		],
+		"result": {
+			"kind": "check",
+			"args": [
+				""
+			],
+			"json": false,
+			"credentials": false,
+			"noRefresh": false
+		}
+	},
+	{
+		"args": [
+			"auth",
+			"print-bearer-token",
+			"--min-expiry",
+			"30s",
+			"stray"
+		],
+		"result": {
+			"kind": "bearer_token",
+			"args": [
+				"stray"
+			],
+			"json": false,
+			"credentials": false,
+			"noRefresh": false,
+			"minExpiryMs": 30000
+		}
+	}
+]
