@@ -151,13 +151,13 @@ present, including an empty string. Omitted ids remain omitted.
 - `get_available_thinking_levels`: returns `{ "levels": [...] }`.
 - `set_thinking_level`: `level`; the session clamps a valid level to the model's
   capabilities. An unknown level fails with `level must be a valid thinking
-  level`, where the reference accepts and stores it.
+  level`, where the reference accepts and stores it (D404).
 - `cycle_thinking_level`: returns `{ "level": ... }` or `null`.
 - `set_steering_mode`, `set_follow_up_mode`: `mode` (`"all"` or
   `"one-at-a-time"`). Any other value fails with `mode must be all or
   one-at-a-time`, so the agent never adopts a mode it cannot honor; the
   reference stores and persists any string (`"bogus"` then appears as
-  `followUpMode` in `get_state`).
+  `followUpMode` in `get_state`; D404).
 - `get_last_assistant_text`: returns `{ "text": "..." }`, or an empty object
   when there is no assistant text.
 - `get_session_stats`: returns the camelCase session counters, token totals,

@@ -245,6 +245,7 @@ func (command rpcCommand) validate() error {
 			return fmt.Errorf("streamingBehavior must be steer or followUp")
 		}
 	case "set_thinking_level":
+		// D404: the reference stores any level; pier rejects one it cannot honor.
 		if !IsValidThinkingLevel(command.Level) {
 			return fmt.Errorf("level must be a valid thinking level")
 		}
@@ -618,6 +619,7 @@ func (r *rpcRuntime) handle(command rpcCommand) (any, bool, error) {
 		}
 		return jsonEventObject{{"level", level}}, true, nil
 	case "set_steering_mode", "set_follow_up_mode":
+		// D404: the reference stores and persists any mode string.
 		if command.Mode != QueueModeAll && command.Mode != QueueModeOneAtATime {
 			return nil, false, fmt.Errorf("mode must be all or one-at-a-time")
 		}

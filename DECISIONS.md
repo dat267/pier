@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D403)
+# Deliberate divergences from pi (D1–D404)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5659,3 +5659,18 @@ label.
 Tests: `TestCollapsedThinkingShowsHowLongItThought`,
 `TestCollapsedThinkingTimesEachRun`,
 `TestCollapsedThinkingTicksThroughTheRenderer`.
+
+### D404
+
+**RPC rejects a queue mode or thinking level it cannot honor.**
+
+Reference: pi v1.5.0 (f9a26365) `modes/rpc/rpc-mode.ts` passes
+`command.mode` straight to `setSteeringMode`/`setFollowUpMode` and
+`command.level` to `session.setThinkingLevel` without validating either, so a
+`"bogus"` mode or level is stored, persisted, and reported by `get_state`.
+Pier fails those commands with `mode must be all or one-at-a-time` and
+`level must be a valid thinking level`, leaving the current mode and level
+unchanged, so the agent never adopts a value it cannot honor. The rest of the
+command surface validates field types the same way.
+
+Test: `TestRPCRejectsModesAndThinkingLevelsItCannotHonor`.
