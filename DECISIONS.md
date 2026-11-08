@@ -4592,7 +4592,9 @@ into one U+FFFD. Only values in `D800–DBFF` may start a pair; a low surrogate 
 emitted as U+FFFD and scanning continues.
 
 `TestMarshalJSONReplacesLoneSurrogateEscapes` covers consecutive low/lows and
-low/high; the canonical differential fuzz preserves two replacements.
+low/high; the canonical differential fuzz preserves two replacements, and
+`TestParseToolCallArgumentsMatchesReference` normalizes the reference's golden
+the same way for tool arguments.
 
 ### D364
 
