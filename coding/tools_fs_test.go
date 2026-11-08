@@ -118,11 +118,13 @@ func TestReadToolTextAndTruncation(t *testing.T) {
 		t.Fatalf("details = %s", result.Details)
 	}
 
-	// Upstream read.ts passes numeric limits to Array.slice, including negative and fractional values.
+	// Upstream read.ts passes numeric limits to Array.slice, including negative and fractional values,
+	// and any user limit (`limit !== undefined`) gets the remaining-lines notice (pi v1.5.0 read.ts).
 	os.WriteFile(file, []byte("a\nb\nc"), 0o644)
 	result = execTool(t, tool, `{"path":"sample.txt","limit":-1}`)
-	if got := result.Content[0].(ai.TextContent).Text; got != "a\nb" {
-		t.Fatalf("negative-limit content = %q; want %q", got, "a\nb")
+	if got, want := result.Content[0].(ai.TextContent).Text,
+		"a\nb\n\n[4 more lines in file. Use offset=0 to continue.]"; got != want {
+		t.Fatalf("negative-limit content = %q; want %q", got, want)
 	}
 	result = execTool(t, tool, `{"path":"sample.txt","limit":1.5}`)
 	if got, want := result.Content[0].(ai.TextContent).Text,
