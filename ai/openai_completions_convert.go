@@ -28,7 +28,7 @@ func ConvertOpenAICompletionsMessages(
 	options *ConvertCompletionsMessagesOptions,
 ) []OpenAIMessage {
 	normalizedContext := ResolveTranscript(context, compat.SupportsMidConvoSystemMessages)
-	var params []OpenAIMessage
+	params := []OpenAIMessage{}
 
 	normalizeToolCallID := func(id string) string {
 		// Pipe-separated ids from the Responses API: {call_id}|{item_id}.

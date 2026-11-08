@@ -63,7 +63,7 @@ func contentListToUserContent(content ContentList) UserContentList {
 // deduplicating consecutive placeholders (upstream semantics: a placeholder
 // is emitted once per run of images).
 func replaceImagesWithPlaceholder(content ContentList, placeholder string) ContentList {
-	var result ContentList
+	result := make(ContentList, 0, len(content))
 	previousWasPlaceholder := false
 	for _, block := range content {
 		if _, ok := block.(ImageContent); ok {

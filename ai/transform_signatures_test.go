@@ -44,3 +44,23 @@ func TestTransformToolSignatureUsesTruthiness(t *testing.T) {
 		t.Fatalf("empty signature was dropped: %+v", call)
 	}
 }
+
+// Reference: pi v1.5.0 api/transform-messages.ts replaceImagesWithPlaceholder
+// maps block content to a new array, so an empty block list stays an empty
+// array for text-only models; openai-completions then skips the message
+// instead of sending a "" string, and its params start as [].
+func TestTransformTextOnlyKeepsEmptyBlockContent(t *testing.T) {
+	model := &Model{ID: "m", Provider: "p", API: APIOpenAICompletions, Input: []string{"text"}}
+	out := TransformMessages([]Message{&UserMessage{Content: StringOrBlocks{Blocks: ContentList{}}, Timestamp: 1}}, model, nil)
+	if user := out[0].(*UserMessage); user.Content.String() {
+		t.Fatalf("content = %+v, want an empty block list", user.Content)
+	}
+	messages := ConvertOpenAICompletionsMessages(model, NormalizeContext(Context{Messages: out}), GetOpenAICompletionsCompat(model), nil)
+	body, err := MarshalJSON(messages)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != "[]" {
+		t.Fatalf("messages = %s, want []", body)
+	}
+}
