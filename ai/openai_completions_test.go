@@ -708,3 +708,34 @@ func TestConvertOpenAICompletionsWhitespaceToolResultUsesPlaceholder(t *testing.
 		}
 	}
 }
+
+// Upstream api/openai-completions.ts ensureToolCallBlock (v1.5.0) only adds a
+// later id on the same stream index as another lookup key; the block keeps
+// the id it started with.
+func TestStreamOpenAICompletionsToolCallKeepsFirstID(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		for _, c := range []string{
+			`{"id":"c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_1","function":{"name":"run"}}]}}]}`,
+			`{"id":"c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_2","function":{"arguments":"{}"}}]},"finish_reason":"tool_calls"}]}`,
+		} {
+			_, _ = w.Write([]byte("data: " + c + "\n\n"))
+		}
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+	}))
+	defer server.Close()
+	model := testOpenAIModel()
+	model.BaseURL = server.URL
+	result, err := StreamOpenAICompletions(model, NormalizeContext(Context{
+		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
+	}), &OpenAICompletionsOptions{APIKey: "k"}).Result(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Content) != 1 {
+		t.Fatalf("content = %+v", result.Content)
+	}
+	if call := result.Content[0].(ToolCall); call.ID != "call_1" {
+		t.Fatalf("tool call id = %q, want call_1", call.ID)
+	}
+}

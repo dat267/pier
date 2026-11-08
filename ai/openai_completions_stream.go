@@ -490,7 +490,8 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 				toolCallBlocksByIndex[idx] = block
 			}
 			if delta.ID != "" {
-				block.call.ID = delta.ID
+				// A later id only becomes another lookup key; the block keeps
+				// its first id (the caller fills an empty one).
 				toolCallBlocksByID[delta.ID] = block
 			}
 			if block.call.Name == "" && name != "" {
