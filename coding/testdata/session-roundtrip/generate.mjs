@@ -8,10 +8,45 @@
 // Pierre reads a session written by the reference, then rewrites the file
 // after a branch edit or a compaction. That rewrite must reproduce the
 // reference's bytes for every entry type, or the two tools diverge on disk.
+import { registerHooks } from "node:module";
 import { resolve, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+
+// The fixture has to regenerate byte for byte: the pinned SessionManager
+// stamps new Date() and draws ids from randomUUID()/uuidv7(), so freeze the
+// clock and the random source.
+const FIXED_NOW = Date.parse("2026-01-01T00:00:00.000Z");
+const RealDate = Date;
+globalThis.Date = class extends RealDate {
+	constructor(...args) {
+		super(...(args.length === 0 ? [FIXED_NOW] : args));
+	}
+	static now() {
+		return FIXED_NOW;
+	}
+};
+let randomSeed = 0x2f6b;
+Object.defineProperty(globalThis.crypto, "getRandomValues", {
+	configurable: true,
+	value(array) {
+		for (let index = 0; index < array.length; index++) {
+			randomSeed = (randomSeed * 1103515245 + 12345) & 0x7fffffff;
+			array[index] = randomSeed & 0xff;
+		}
+		return array;
+	},
+});
+const shimURL = pathToFileURL(resolve(import.meta.dirname, "crypto-shim.mjs")).href;
+registerHooks({
+	resolve(specifier, context, next) {
+		if ((specifier === "crypto" || specifier === "node:crypto") && context.parentURL !== shimURL) {
+			return { url: shimURL, shortCircuit: true };
+		}
+		return next(specifier, context);
+	},
+});
 
 const root = resolve(process.argv[2] ?? "./pi");
 const { SessionManager, loadEntriesFromFile } = await import(
@@ -73,7 +108,7 @@ const messages = [
 
 let session;
 try {
-	session = SessionManager.create(agentDir, agentDir);
+	session = SessionManager.create("/work", agentDir);
 	const userID = session.appendMessage(messages[0]);
 	const assistantID = session.appendMessage(messages[1]);
 	session.appendMessage(messages[2]);

@@ -107,6 +107,10 @@ value-shaped loops on the UI thread.
   The upstream generator fetches models.dev and rewrites its checkout.
 - Upstream goldens in `*/testdata/` are Node-generated; regenerate as each
   fixture instructs and never hand-edit them.
+  A fixture must regenerate byte for byte: when the pinned code stamps a clock,
+  a random id or a temp path, freeze it in the generator (`coding/testdata/
+  session-roundtrip/generate.mjs` patches `Date` and redirects `node:crypto`),
+  so a diff means a real change.
 
 ## Out of scope
 
