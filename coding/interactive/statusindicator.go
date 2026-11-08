@@ -167,23 +167,25 @@ func (r *RetryStatusIndicator) Dispose() {
 // NewCompactionStatusIndicator creates the compaction indicator. colorFn, when
 // set, colors the spinner and message (the editor border color when embedded).
 //
-// D405: every reason renders the same "Compacting (12s)" label, where upstream
-// v1.5.0 status-indicator.ts CompactionStatusIndicator prints the reason as text
-// together with a cancel hint ("Compacting context...", "Auto-compacting...",
+// D405: a manual run is labelled "Compacting" and an automatic one
+// "Auto-compacting", each with the working indicator's elapsed tick, where
+// upstream v1.5.0 status-indicator.ts CompactionStatusIndicator prints a
+// sentence and a cancel hint ("Compacting context...", "Auto-compacting...",
 // "Context overflow detected, Auto-compacting...", each plus "(escape to
 // cancel)"). Escape still aborts compaction (handleCompactionStart swaps
-// Editor.OnEscape); only the hint text is gone, so the reason now reaches the
-// session event and RPC state alone. reason stays in the signature to keep the
-// event's source visible at the call site, and
-// TestCompactionIndicatorShowsOneTickingLabel checks all three values.
+// Editor.OnEscape); only the hint text and the overflow prefix are gone.
+// TestCompactionIndicatorShowsOneTickingLabel checks all three reasons.
 func NewCompactionStatusIndicator(host tui.RenderRequester, reason string, colorFn func(string) string) *StatusIndicator {
-	_ = reason
-	return newCompactionStatusIndicator(host, colorFn, time.Now())
+	label := "Compacting"
+	if reason != "" && reason != "manual" {
+		label = "Auto-compacting"
+	}
+	return newCompactionStatusIndicator(host, label, colorFn, time.Now())
 }
 
 // newCompactionStatusIndicator builds the indicator with the clock reading it
 // counts from, so a test can pin the elapsed tick.
-func newCompactionStatusIndicator(host tui.RenderRequester, colorFn func(string) string, since time.Time) *StatusIndicator {
+func newCompactionStatusIndicator(host tui.RenderRequester, label string, colorFn func(string) string, since time.Time) *StatusIndicator {
 	spinnerColor := colorFn
 	messageColor := colorFn
 	if spinnerColor == nil {
@@ -192,7 +194,7 @@ func newCompactionStatusIndicator(host tui.RenderRequester, colorFn func(string)
 	if messageColor == nil {
 		messageColor = func(text string) string { return ActiveTheme().Fg("muted", text) }
 	}
-	indicator := NewStatusIndicator(StatusCompaction, host, spinnerColor, messageColor, "Compacting", nil)
+	indicator := NewStatusIndicator(StatusCompaction, host, spinnerColor, messageColor, label, nil)
 	indicator.SetElapsed(since, compactionElapsedLabel)
 	return indicator
 }

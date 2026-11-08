@@ -61,42 +61,45 @@ func TestCompactionIndicatorDrivesAnimation(t *testing.T) {
 	}
 }
 
-// TestCompactionIndicatorShowsOneTickingLabel pins D405: pier prints one
-// "Compacting" label for every reason and appends the working indicator's
-// elapsed tick, where upstream v1.5.0 (packages/coding-agent/src/modes/
-// interactive/components/status-indicator.ts CompactionStatusIndicator) prints
-// the reason as text, no clock and a cancel hint: "Compacting context...
-// (escape to cancel)", "Auto-compacting... (escape to cancel)" or "Context
-// overflow detected, Auto-compacting... (escape to cancel)". Escape still
-// aborts compaction (handleCompactionStart swaps Editor.OnEscape); only the
-// hint is gone.
+// TestCompactionIndicatorShowsOneTickingLabel pins D405: pier labels a manual
+// run "Compacting" and an automatic one "Auto-compacting", and appends the
+// working indicator's elapsed tick, where upstream v1.5.0
+// (packages/coding-agent/src/modes/interactive/components/status-indicator.ts
+// CompactionStatusIndicator) prints a sentence with no clock and a cancel hint:
+// "Compacting context... (escape to cancel)", "Auto-compacting... (escape to
+// cancel)" or "Context overflow detected, Auto-compacting... (escape to
+// cancel)". Escape still aborts compaction (handleCompactionStart swaps
+// Editor.OnEscape); only the hint text and the overflow prefix are gone.
 func TestCompactionIndicatorShowsOneTickingLabel(t *testing.T) {
 	SetTrueColorSupport(true)
 	SetStyleColorsEnabled(true)
 	SetRegisteredThemes(nil)
 	InitTheme("dark", false)
-	for _, reason := range []string{"manual", "threshold", "overflow"} {
-		indicator := NewCompactionStatusIndicator(nil, reason, nil)
+	for _, testCase := range []struct{ reason, want string }{
+		{"manual", "Compacting (0s)"},
+		{"threshold", "Auto-compacting (0s)"},
+		{"overflow", "Auto-compacting (0s)"},
+	} {
+		indicator := NewCompactionStatusIndicator(nil, testCase.reason, nil)
 		text := strings.Join(indicator.Render(120), "\n")
 		indicator.Dispose()
-		want := "Compacting (0s)"
-		if !strings.Contains(text, want) {
-			t.Fatalf("%s: render = %q, want %q", reason, text, want)
+		if !strings.Contains(text, testCase.want) {
+			t.Fatalf("%s: render = %q, want %q", testCase.reason, text, testCase.want)
 		}
-		for _, gone := range []string{"context", "Auto-compacting", "overflow detected", "cancel"} {
+		for _, gone := range []string{"context", "overflow detected", "cancel"} {
 			if strings.Contains(text, gone) {
-				t.Fatalf("%s: render still carries %q: %q", reason, gone, text)
+				t.Fatalf("%s: render still carries %q: %q", testCase.reason, gone, text)
 			}
 		}
 	}
 	// The suffix is the clock, not a constant: the same indicator counts from
 	// the reading it was built with, and a longer run renders the minutes form.
-	short := newCompactionStatusIndicator(nil, nil, time.Now().Add(-12*time.Second))
+	short := newCompactionStatusIndicator(nil, "Compacting", nil, time.Now().Add(-12*time.Second))
 	defer short.Dispose()
 	if text := strings.Join(short.Render(120), "\n"); !strings.Contains(text, "Compacting (12s)") {
 		t.Fatalf("render = %q, want the 12s tick", text)
 	}
-	long := newCompactionStatusIndicator(nil, nil, time.Now().Add(-65*time.Second))
+	long := newCompactionStatusIndicator(nil, "Compacting", nil, time.Now().Add(-65*time.Second))
 	defer long.Dispose()
 	if text := strings.Join(long.Render(120), "\n"); !strings.Contains(text, "Compacting (1m 5s)") {
 		t.Fatalf("render = %q, want the 1m 5s tick", text)
