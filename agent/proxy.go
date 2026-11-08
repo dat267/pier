@@ -246,6 +246,9 @@ func StreamProxy(model *ai.Model, context ai.TranscriptContext, options ProxyStr
 // adapters (D353): small calls update every delta; a large streamed value
 // recomputes only at 4 KiB, 8 KiB, ... so a proxy client does not reparse the
 // whole prefix per delta. The final ToolCall comes from the server unchanged.
+// proxyPreviewBytes matches the provider adapters' per-delta window (D353).
+const proxyPreviewBytes = 1 << 10
+
 type proxyToolArguments struct {
 	text   []byte
 	parsed json.RawMessage
@@ -254,10 +257,10 @@ type proxyToolArguments struct {
 
 func (p *proxyToolArguments) Append(delta string) json.RawMessage {
 	p.text = append(p.text, delta...)
-	if p.parsed == nil || len(p.text) >= p.next {
+	if p.parsed == nil || len(p.text) < proxyPreviewBytes || len(p.text) >= p.next {
 		p.parsed = ai.ParseStreamingJSONText(string(p.text))
 		if p.next == 0 {
-			p.next = 4 << 10
+			p.next = proxyPreviewBytes
 		}
 		for p.next <= len(p.text) {
 			p.next *= 2

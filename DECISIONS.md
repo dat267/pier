@@ -4353,23 +4353,28 @@ and wire parity tests, and a 500-turn allocation budget; the benchmark is
 Reference: pi v1.5.0 `utils/streaming-json.ts` parses each provider append
 incrementally, so a snapshot costs the open path rather than the whole text.
 Pier keeps `parseStreamingJSONObject` (the older repair parser) but recomputes a
-call's preview at the first delta and then at 4 KiB, 8 KiB, 16 KiB, ... of
-accumulated argument text; below 4 KiB every delta still updates it. Final
-arguments remain exact because every provider finishes with
-`ParseToolCallArguments`, the same strict parse the reference uses.
+call's preview on every delta below 1 KiB of accumulated argument text and then
+at 1 KiB, 2 KiB, 4 KiB, ...; a short call (a bash command, a path) so shows each
+piece as it arrives. Final arguments remain exact because every provider
+finishes with `ParseToolCallArguments`, the same strict parse the reference
+uses.
 
 Measurements on a 100 KiB tool argument in 16-byte deltas: before 23 s and 24 GB
-of allocation, after 11 ms and 10 MB (upstream's incremental parser: about
-3 ms). The preview can lag between thresholds, as the reference's copy credit
-can for a large open container. The preview parser also keeps the older repair
-rules for malformed partial strings (raw control characters and invalid escapes
-stay dropped until the text completes, where the reference shows them while it
-streams); no final tool-call value differs.
+of allocation, after 11 ms and 10 MB (upstream's incremental parser: about 3
+ms). The first version only recomputed at the first delta and then from 4 KiB,
+so short calls froze on their first piece; per-delta updates below 1 KiB cost
+9.2 ms to 11.5 ms and 10.2 MB to 12.1 MB on the same benchmark (4 KiB would have
+cost 37 ms). The preview can lag between thresholds, as the reference's copy
+credit can for a large open container. The preview parser also keeps the older
+repair rules for malformed partial strings (raw control characters and invalid
+escapes stay dropped until the text completes, where the reference shows them
+while it streams); no final tool-call value differs.
 
 The OpenAI completions, Responses, Anthropic, Bedrock, Mistral, and
 pi-messages adapters all use the shared preview. The agent proxy applies the
 same schedule to its forwarded delta previews. Tests:
 `TestStreamingArgumentsPreviewIsThrottled` pins the schedule and exact finish;
+`TestStreamingArgumentsSmallCallUpdatesEveryDelta` pins the per-delta window;
 `TestProxyToolArgumentsPreviewIsThrottled` covers the proxy;
 `BenchmarkStreamingArgumentsLarge` keeps the cost visible.
 
