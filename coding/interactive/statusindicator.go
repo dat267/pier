@@ -167,18 +167,23 @@ func (r *RetryStatusIndicator) Dispose() {
 // NewCompactionStatusIndicator creates the compaction indicator. colorFn, when
 // set, colors the spinner and message (the editor border color when embedded).
 //
-// Labels and cancel hints already match v1.2.0
-// status-indicator.ts CompactionStatusIndicator.
+// D405: every reason renders the same "Compacting (12s)" label, where upstream
+// v1.5.0 status-indicator.ts CompactionStatusIndicator prints the reason as text
+// together with a cancel hint ("Compacting context...", "Auto-compacting...",
+// "Context overflow detected, Auto-compacting...", each plus "(escape to
+// cancel)"). Escape still aborts compaction (handleCompactionStart swaps
+// Editor.OnEscape); only the hint text is gone, so the reason now reaches the
+// session event and RPC state alone. reason stays in the signature to keep the
+// event's source visible at the call site, and
+// TestCompactionIndicatorShowsOneTickingLabel checks all three values.
 func NewCompactionStatusIndicator(host tui.RenderRequester, reason string, colorFn func(string) string) *StatusIndicator {
-	// Upstream labels the manual, threshold and overflow reasons differently.
-	cancelHint := "(" + KeyText("app.interrupt") + " to cancel)"
-	label := "Auto-compacting... " + cancelHint
-	switch reason {
-	case "manual":
-		label = "Compacting context... " + cancelHint
-	case "overflow":
-		label = "Context overflow detected, Auto-compacting... " + cancelHint
-	}
+	_ = reason
+	return newCompactionStatusIndicator(host, colorFn, time.Now())
+}
+
+// newCompactionStatusIndicator builds the indicator with the clock reading it
+// counts from, so a test can pin the elapsed tick.
+func newCompactionStatusIndicator(host tui.RenderRequester, colorFn func(string) string, since time.Time) *StatusIndicator {
 	spinnerColor := colorFn
 	messageColor := colorFn
 	if spinnerColor == nil {
@@ -187,7 +192,15 @@ func NewCompactionStatusIndicator(host tui.RenderRequester, reason string, color
 	if messageColor == nil {
 		messageColor = func(text string) string { return ActiveTheme().Fg("muted", text) }
 	}
-	return NewStatusIndicator(StatusCompaction, host, spinnerColor, messageColor, label, nil)
+	indicator := NewStatusIndicator(StatusCompaction, host, spinnerColor, messageColor, "Compacting", nil)
+	indicator.SetElapsed(since, compactionElapsedLabel)
+	return indicator
+}
+
+// compactionElapsedLabel is the compaction indicator's suffix: the elapsed time
+// in whole seconds, so it changes once a second (D405), e.g. (12s) or (1m 5s).
+func compactionElapsedLabel(elapsed time.Duration) string {
+	return "(" + formatWholeSeconds(int(elapsed/time.Second)) + ")"
 }
 
 // NewBranchSummaryStatusIndicator creates the branch summary indicator.

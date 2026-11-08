@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D404)
+# Deliberate divergences from pi (D1–D405)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5679,3 +5679,23 @@ unchanged, so the agent never adopts a value it cannot honor. The rest of the
 command surface validates field types the same way.
 
 Test: `TestRPCRejectsModesAndThinkingLevelsItCannotHonor`.
+
+### D405
+
+**The compaction spinner shows one ticking "Compacting" label.**
+
+Reference: pi v1.5.0 (f9a26365) `modes/interactive/components/status-indicator.ts`
+`CompactionStatusIndicator` prints the reason as text plus a cancel hint and no
+clock: `Compacting context... (escape to cancel)` for a manual compaction,
+`Auto-compacting... (escape to cancel)` at the threshold and
+`Context overflow detected, Auto-compacting... (escape to cancel)` for overflow.
+
+Pier prints `Compacting (12s)` for every reason: one label in place of the three
+reason variants and the hint, with the working indicator's elapsed-time suffix
+(`tui.Loader.SetElapsed`, D402) refreshed on each whole second, so a long
+compaction shows a moving clock instead of a static line. The reason still
+reaches the session event and the RPC `isCompacting` state, and escape still
+aborts a compaction because `handleCompactionStart` swaps `Editor.OnEscape`;
+only the hint text is gone.
+
+Test: `TestCompactionIndicatorShowsOneTickingLabel`.

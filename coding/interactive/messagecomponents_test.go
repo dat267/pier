@@ -179,9 +179,11 @@ func TestMessagesAgainstUpstreamGolden(t *testing.T) {
 	retry := NewRetryStatusIndicator(nil, 2, 5, 3000)
 	retry.Dispose()
 	checkGolden(t, golden, "status retry", retry.Render(60))
-	compactionStatus := NewCompactionStatusIndicator(nil, "threshold", nil)
-	compactionStatus.Dispose()
-	checkGolden(t, golden, "status compaction", compactionStatus.Render(60))
+	// D405: pier renders a single "Compacting (Ns)" label with the working
+	// indicator's elapsed tick, where upstream prints the compaction reason and
+	// "(escape to cancel)", so the reference line no longer applies. It stays in
+	// the golden as documentation; TestCompactionIndicatorShowsOneTickingLabel
+	// pins the label, the colours and the padding.
 	branchStatus := NewBranchSummaryStatusIndicator(nil)
 	branchStatus.Dispose()
 	checkGolden(t, golden, "status branch", branchStatus.Render(60))

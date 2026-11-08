@@ -61,24 +61,56 @@ func TestCompactionIndicatorDrivesAnimation(t *testing.T) {
 	}
 }
 
-// TestCompactionStatusLabels covers the compaction status labels (upstream
-// CompactionStatusIndicator): manual vs auto vs overflow.
-func TestCompactionStatusLabels(t *testing.T) {
+// TestCompactionIndicatorShowsOneTickingLabel pins D405: pier prints one
+// "Compacting" label for every reason and appends the working indicator's
+// elapsed tick, where upstream v1.5.0 (packages/coding-agent/src/modes/
+// interactive/components/status-indicator.ts CompactionStatusIndicator) prints
+// the reason as text, no clock and a cancel hint: "Compacting context...
+// (escape to cancel)", "Auto-compacting... (escape to cancel)" or "Context
+// overflow detected, Auto-compacting... (escape to cancel)". Escape still
+// aborts compaction (handleCompactionStart swaps Editor.OnEscape); only the
+// hint is gone.
+func TestCompactionIndicatorShowsOneTickingLabel(t *testing.T) {
 	SetTrueColorSupport(true)
 	SetStyleColorsEnabled(true)
 	SetRegisteredThemes(nil)
 	InitTheme("dark", false)
-	cases := []struct{ reason, want string }{
-		{"manual", "Compacting context..."},
-		{"threshold", "Auto-compacting..."},
-		{"overflow", "Context overflow detected, Auto-compacting..."},
-	}
-	for _, tc := range cases {
-		indicator := NewCompactionStatusIndicator(nil, tc.reason, nil)
+	for _, reason := range []string{"manual", "threshold", "overflow"} {
+		indicator := NewCompactionStatusIndicator(nil, reason, nil)
+		text := strings.Join(indicator.Render(120), "\n")
 		indicator.Dispose()
-		text := strings.Join(indicator.Render(80), "\n")
-		if !strings.Contains(text, tc.want) {
-			t.Fatalf("%s: render = %q, want %q", tc.reason, text, tc.want)
+		want := "Compacting (0s)"
+		if !strings.Contains(text, want) {
+			t.Fatalf("%s: render = %q, want %q", reason, text, want)
 		}
+		for _, gone := range []string{"context", "Auto-compacting", "overflow detected", "cancel"} {
+			if strings.Contains(text, gone) {
+				t.Fatalf("%s: render still carries %q: %q", reason, gone, text)
+			}
+		}
+	}
+	// The suffix is the clock, not a constant: the same indicator counts from
+	// the reading it was built with, and a longer run renders the minutes form.
+	short := newCompactionStatusIndicator(nil, nil, time.Now().Add(-12*time.Second))
+	defer short.Dispose()
+	if text := strings.Join(short.Render(120), "\n"); !strings.Contains(text, "Compacting (12s)") {
+		t.Fatalf("render = %q, want the 12s tick", text)
+	}
+	long := newCompactionStatusIndicator(nil, nil, time.Now().Add(-65*time.Second))
+	defer long.Dispose()
+	if text := strings.Join(long.Render(120), "\n"); !strings.Contains(text, "Compacting (1m 5s)") {
+		t.Fatalf("render = %q, want the 1m 5s tick", text)
+	}
+	// The line keeps the loader's shape at a narrow width: an empty first line
+	// and a second one padded out to the width it was rendered at.
+	lines := long.Render(60)
+	if len(lines) != 2 || lines[0] != "" || tui.VisibleWidth(lines[1]) != 60 {
+		t.Fatalf("Render(60) = %q, want an empty line then a 60-cell line", lines)
+	}
+	// A running indicator has to ask for a repaint inside one second, or the
+	// tick would freeze between spinner frames (the seam D402 needed for the
+	// working clock).
+	if frame, next := long.AnimationFrame(time.Now()); !frame || next <= 0 || next > time.Second {
+		t.Fatalf("AnimationFrame = %v, %v; want a frame within one second", frame, next)
 	}
 }
