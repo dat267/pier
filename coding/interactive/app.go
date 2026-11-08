@@ -985,6 +985,17 @@ func (a *App) Close() {
 // LifecycleCheckShutdown performs a requested shutdown.
 func (a *App) lifecycleCheckShutdown() { a.lifecycle.CheckShutdownRequested() }
 
+// installRenderErrorHandler makes a main-screen render failure (a line wider
+// than the terminal) end the app like upstream's uncaught exception: the
+// renderer throws there and interactive mode's uncaughtCrash restores the
+// terminal, prints the error, records the crash and exits 1. The render runs on
+// the UI loop, which owns the lifecycle's shutdown.
+func (a *App) installRenderErrorHandler(screen tui.TUI) {
+	if mainScreen, ok := screen.(*tui.MainScreen); ok && a.lifecycle != nil {
+		mainScreen.OnRenderError = func(err error) { a.lifecycle.UncaughtCrash(err) }
+	}
+}
+
 // newLoopTui creates a renderer wired to the UI loop: terminal input and
 // resize notifications are delivered as channel messages instead of being
 // dispatched inline (stage 3). With a raw-input terminal the handler
@@ -1016,6 +1027,7 @@ func (a *App) newLoopTui(options InteractiveTuiOptions) tui.TUI {
 	if screen == nil {
 		return screen
 	}
+	a.installRenderErrorHandler(screen)
 	if raw, ok := options.Terminal.(tui.RawInputTerminal); ok {
 		raw.EnableRawInput()
 		a.rawTerminal = raw
