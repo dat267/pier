@@ -265,3 +265,35 @@ func TestEditToolPromptGuidelinesMatchV150(t *testing.T) {
 		t.Fatalf("guidelines = %q", EditToolSystemPromptGuidelines)
 	}
 }
+
+// edit.ts checks the target with fsAccess(R_OK|W_OK) before reading, so an
+// existing file the process may not read or write is refused as
+// "Could not edit file: <path>. Error code: EACCES." rather than with the
+// platform's read/write error (A433).
+func TestEditReportsPermissionRefusalLikeUpstream(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("root bypasses the permission check")
+	}
+	for _, mode := range []os.FileMode{0o444, 0o000} {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "f.txt")
+		if err := os.WriteFile(path, []byte("alpha\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(path, mode); err != nil {
+			t.Fatal(err)
+		}
+		if file, err := os.OpenFile(path, os.O_WRONLY, 0); err == nil {
+			file.Close()
+			t.Skip("the filesystem ignores file modes")
+		}
+		tool := CreateEditTool(dir)
+		_, err := tool.Execute("c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"alpha","newText":"beta"}]}`), nil, nil)
+		if err == nil {
+			t.Fatalf("mode %o: edit succeeded", mode)
+		}
+		if want := "Could not edit file: f.txt. Error code: EACCES."; err.Error() != want {
+			t.Fatalf("mode %o: error = %q; want %q", mode, err.Error(), want)
+		}
+	}
+}

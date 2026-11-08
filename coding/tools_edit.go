@@ -63,6 +63,19 @@ func EditFileErrorMessage(path string, err error) string {
 	return fmt.Sprintf("Could not edit file: %s. %v.", path, err)
 }
 
+// editFileRefusalError matches edit.ts's access preflight: a file the process
+// may not read or write is refused with `Could not edit file: <path>. Error
+// code: <code>.` instead of the platform's read or write error (A433). Other
+// failures stay raw, as they do upstream when access succeeds and the read or
+// write itself fails.
+func editFileRefusalError(path string, err error) error {
+	switch nodeErrorCode(err) {
+	case "EACCES", "EPERM", "EROFS":
+		return fmt.Errorf("%s", EditFileErrorMessage(path, err))
+	}
+	return err
+}
+
 // EditToolDetails carries the edit's diff and patch.
 type EditToolDetails struct {
 	// Diff is the display-oriented diff of the changes made.
@@ -251,8 +264,8 @@ func CreateEditTool(cwd string) agent.AgentTool {
 
 				data, err := os.ReadFile(absolutePath)
 				if err != nil {
-					resultErr = err
-					return err
+					resultErr = editFileRefusalError(input.Path, err)
+					return resultErr
 				}
 				if ctxErrOf(ctx) != nil {
 					resultErr = fmt.Errorf("Operation aborted")
@@ -276,8 +289,8 @@ func CreateEditTool(cwd string) agent.AgentTool {
 
 				finalContent := bom + RestoreLineEndings(applied.NewContent, originalEnding)
 				if err := os.WriteFile(absolutePath, []byte(finalContent), 0o644); err != nil {
-					resultErr = err
-					return err
+					resultErr = editFileRefusalError(input.Path, err)
+					return resultErr
 				}
 				if ctxErrOf(ctx) != nil {
 					resultErr = fmt.Errorf("Operation aborted")
