@@ -44,6 +44,12 @@ const scenarios = [
 	{ name: "thinking-before-and-after-call", chunks: [chunk({ content: [thought("before")] }), chunk({ tool_calls: [call(0, '{"x":1}', { id: "call0" })] }), chunk({ content: [thought("after")] }, "tool_calls")] },
 	{ name: "zero-total-usage", chunks: [chunk({ content: "hi" }, "stop", { usage: { prompt_tokens: 5, completion_tokens: 2, total_tokens: 0 } })] },
 	{ name: "keepalive-comment", chunks: [{ comment: ": ping" }, chunk({ content: "ok" }, "stop")] },
+	// v1.5.0: string items and unknown chunk objects can share a content array.
+	{ name: "mixed-content-items", chunks: [chunk({ content: ["Hel", { type: "image_url", image_url: "x" }, { type: "thinking" }, "lo"] }, "stop")] },
+	// output.responseId ||= chunk.id records an empty chunk id as "".
+	{ name: "empty-chunk-id", chunks: [chunk({ content: "hi" }, "stop", { id: "" })] },
+	// Object arguments are re-serialized with JSON.stringify, not forwarded as wire text.
+	{ name: "object-arguments-wire-spacing", chunks: ['{"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call0","function":{"name":"lookup","arguments": {"z": 1.50, "a": "\\u00e9"}}}]},"finish_reason":"tool_calls"}]}'] },
 ];
 const indexed = new Set(["text_start", "text_delta", "text_end", "thinking_start", "thinking_delta", "thinking_end", "toolcall_start", "toolcall_delta", "toolcall_end"]);
 function canonical(value) {
@@ -76,7 +82,7 @@ const model = { api: "mistral-conversations", provider: "mistral", id: "mistral-
 const fixtures = [];
 for (const scenario of scenarios) {
 	const newline = scenario.separator ?? "\n";
-	let body = scenario.chunks.map(value => `data: ${JSON.stringify(value)}${newline}${newline}`).join("");
+	let body = scenario.chunks.map(value => `data: ${typeof value === "string" ? value : JSON.stringify(value)}${newline}${newline}`).join("");
 	if (scenario.unterminated) body = body.trimEnd();
 	if (!scenario.noDone) body += `data: [DONE]${newline}${newline}`;
 	globalThis.fetch = async () => new Response(body, { headers: { "content-type": "text/event-stream" } });

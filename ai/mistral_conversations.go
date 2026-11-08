@@ -124,7 +124,8 @@ type mistralStreamContentChunk struct {
 }
 
 type mistralCompletionEvent struct {
-	ID  string          `json:"id"`
+	// ID is nil when the chunk has no id member.
+	ID  *string         `json:"id"`
 	Raw json.RawMessage `json:"-"`
 	// Usage stays raw so the cached-token field can be read in any of the
 	// shapes providers send.
@@ -702,9 +703,10 @@ func consumeMistralChatStream(
 
 // applyMistralEvent folds one completion event into the output message.
 func applyMistralEvent(model *Model, output *AssistantMessage, stream *AssistantMessageEventStream, state *mistralStreamState, event *mistralCompletionEvent) {
-	// The streamed chunk id is the stable response identifier.
-	if output.ResponseID == nil && event.ID != "" {
-		output.ResponseID = &event.ID
+	// The streamed chunk id is the stable response identifier
+	// (upstream output.responseId ||= chunk.id).
+	if output.ResponseID == nil || *output.ResponseID == "" {
+		output.ResponseID = event.ID
 	}
 
 	if usage, ok := parseMistralUsage(event.Usage); ok {
@@ -741,9 +743,20 @@ func applyMistralEvent(model *Model, output *AssistantMessage, stream *Assistant
 		if err := json.Unmarshal(choice.Delta.Content, &text); err == nil {
 			appendMistralText(output, stream, state, text)
 		} else {
-			var chunks []mistralStreamContentChunk
-			if err := json.Unmarshal(choice.Delta.Content, &chunks); err == nil {
-				for _, chunk := range chunks {
+			// Items are strings or chunk objects; decode each on its own so
+			// one unexpected item does not drop the rest.
+			var items []json.RawMessage
+			if err := json.Unmarshal(choice.Delta.Content, &items); err == nil {
+				for _, item := range items {
+					var itemText string
+					if err := json.Unmarshal(item, &itemText); err == nil {
+						appendMistralText(output, stream, state, itemText)
+						continue
+					}
+					var chunk mistralStreamContentChunk
+					if err := json.Unmarshal(item, &chunk); err != nil {
+						continue
+					}
 					switch chunk.Type {
 					case "thinking":
 						var parts []string
@@ -901,6 +914,9 @@ func appendMistralToolCall(output *AssistantMessage, stream *AssistantMessageEve
 		var asString string
 		if err := json.Unmarshal(arguments, &asString); err == nil {
 			argsDelta = asString
+		} else if stringified, err := canonicalJavaScriptJSON(arguments); err == nil {
+			// Upstream JSON.stringify(arguments || {}) of the decoded value.
+			argsDelta = string(stringified)
 		} else {
 			argsDelta = string(arguments)
 		}
