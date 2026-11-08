@@ -49,6 +49,16 @@ type mistralContentChunk struct {
 	Thinking []mistralTextChunk `json:"thinking,omitempty"`
 }
 
+// MarshalJSON always writes a text chunk's text, as upstream's
+// { type: "text", text } literal does even when text is empty.
+func (c mistralContentChunk) MarshalJSON() ([]byte, error) {
+	if c.Type == "text" {
+		return MarshalJSON(mistralTextChunk{Type: c.Type, Text: c.Text})
+	}
+	type plain mistralContentChunk
+	return MarshalJSON(plain(c))
+}
+
 type mistralTextChunk struct {
 	Type string `json:"type"`
 	Text string `json:"text"`

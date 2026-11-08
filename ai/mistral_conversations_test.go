@@ -558,3 +558,19 @@ func TestMistralFinishReasonErrorIsRetryable(t *testing.T) {
 		t.Error("an unmapped Mistral stop reason was retried")
 	}
 }
+
+// Upstream api/mistral-conversations.ts toChatMessages (v1.5.0) maps a user
+// text block to { type: "text", text }, so an empty text block still sends
+// "text":"".
+func TestMistralUserTextChunkKeepsEmptyText(t *testing.T) {
+	messages := toMistralChatMessages([]Message{
+		&UserMessage{Content: StringOrBlocks{Blocks: ContentList{TextContent{Text: ""}}}, Timestamp: 1},
+	}, true)
+	body, err := MarshalJSON(messages)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `[{"role":"user","content":[{"type":"text","text":""}]}]`; string(body) != want {
+		t.Fatalf("messages = %s\nwant %s", body, want)
+	}
+}
