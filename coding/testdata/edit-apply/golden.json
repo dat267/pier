@@ -446,5 +446,1343 @@
       "newContent": "a\nb\nc\n",
       "error": null
     }
+  },
+  {
+    "name": "adjacent-allowed",
+    "content": "abcdef\n",
+    "edits": [
+      {
+        "oldText": "abc",
+        "newText": "X"
+      },
+      {
+        "oldText": "def",
+        "newText": "Y"
+      }
+    ],
+    "expected": {
+      "baseContent": "abcdef\n",
+      "newContent": "XY\n",
+      "error": null
+    }
+  },
+  {
+    "name": "crlf-in-old-text",
+    "content": "a\nb\n",
+    "edits": [
+      {
+        "oldText": "a\r\nb",
+        "newText": "a\nb"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "No changes made to f.txt. The replacement produced identical content. This might indicate an issue with special characters or the text not existing as expected."
+    }
+  },
+  {
+    "name": "crlf-in-new-text",
+    "content": "a\nb\n",
+    "edits": [
+      {
+        "oldText": "a",
+        "newText": "x\r\ny"
+      }
+    ],
+    "expected": {
+      "baseContent": "a\nb\n",
+      "newContent": "x\ny\nb\n",
+      "error": null
+    }
+  },
+  {
+    "name": "combining-marks",
+    "content": "café\n",
+    "edits": [
+      {
+        "oldText": "café",
+        "newText": "café"
+      }
+    ],
+    "expected": {
+      "baseContent": "café\n",
+      "newContent": "café\n",
+      "error": null
+    }
+  },
+  {
+    "name": "fuzzy-duplicate",
+    "content": "x  \nx\n",
+    "edits": [
+      {
+        "oldText": "x",
+        "newText": "y"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Found 2 occurrences of the text in f.txt. The text must be unique. Please provide more context to make it unique."
+    }
+  },
+  {
+    "name": "fuzzy-not-found",
+    "content": "alpha   \n",
+    "edits": [
+      {
+        "oldText": "beta",
+        "newText": "y"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find the exact text in f.txt. The old text must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "whole-content",
+    "content": "one\ntwo\n",
+    "edits": [
+      {
+        "oldText": "one\ntwo\n",
+        "newText": "three\n"
+      }
+    ],
+    "expected": {
+      "baseContent": "one\ntwo\n",
+      "newContent": "three\n",
+      "error": null
+    }
+  },
+  {
+    "name": "three-occurrences",
+    "content": "a\na\na\n",
+    "edits": [
+      {
+        "oldText": "a",
+        "newText": "b"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Found 3 occurrences of the text in f.txt. The text must be unique. Please provide more context to make it unique."
+    }
+  },
+  {
+    "name": "many-edits",
+    "content": "a\nb\nc\nd\ne\nf\n",
+    "edits": [
+      {
+        "oldText": "a",
+        "newText": "A"
+      },
+      {
+        "oldText": "c",
+        "newText": "C"
+      },
+      {
+        "oldText": "e",
+        "newText": "E"
+      }
+    ],
+    "expected": {
+      "baseContent": "a\nb\nc\nd\ne\nf\n",
+      "newContent": "A\nb\nC\nd\nE\nf\n",
+      "error": null
+    }
+  },
+  {
+    "name": "fuzzy-no-change",
+    "content": "same  \n",
+    "edits": [
+      {
+        "oldText": "same",
+        "newText": "same"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "No changes made to f.txt. The replacement produced identical content. This might indicate an issue with special characters or the text not existing as expected."
+    }
+  },
+  {
+    "name": "random-0",
+    "content": "epsilon  \n  delta\nalpha\ntheta\ntheta\n",
+    "edits": [
+      {
+        "oldText": "ALPHA",
+        "newText": "beta"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find the exact text in f.txt. The old text must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "random-1",
+    "content": "theta\ngamma\nalpha\n\tzeta\ntheta\n",
+    "edits": [
+      {
+        "oldText": "absent-1",
+        "newText": "alpha"
+      },
+      {
+        "oldText": "gamma\nalpha\t",
+        "newText": "beta"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find edits[0] in f.txt. The oldText must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "random-2",
+    "content": "alpha\n  delta\n\n\n\tzeta\n",
+    "edits": [
+      {
+        "oldText": "\tzeta",
+        "newText": ""
+      },
+      {
+        "oldText": "\n\t",
+        "newText": "gamma"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Found 5 occurrences of edits[1] in f.txt. Each oldText must be unique. Please provide more context to make it unique."
+    }
+  },
+  {
+    "name": "random-3",
+    "content": "gamma\nepsilon  \neta\nalpha\n",
+    "edits": [
+      {
+        "oldText": "epsilon  ",
+        "newText": ""
+      },
+      {
+        "oldText": "alpha",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": "gamma\nepsilon  \neta\nalpha\n",
+      "newContent": "gamma\n\neta\n\n",
+      "error": null
+    }
+  },
+  {
+    "name": "random-4",
+    "content": "\ntheta\n\nalpha\n",
+    "edits": [
+      {
+        "oldText": "theta\n",
+        "newText": "alpha"
+      },
+      {
+        "oldText": "",
+        "newText": "gamma"
+      },
+      {
+        "oldText": "theta\n\nalpha",
+        "newText": "gamma"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[1].oldText must not be empty in f.txt."
+    }
+  },
+  {
+    "name": "random-5",
+    "content": "theta\neta\n",
+    "edits": [
+      {
+        "oldText": "eta",
+        "newText": "epsilon  "
+      },
+      {
+        "oldText": "eta",
+        "newText": ""
+      },
+      {
+        "oldText": "eta\t",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Found 2 occurrences of edits[0] in f.txt. Each oldText must be unique. Please provide more context to make it unique."
+    }
+  },
+  {
+    "name": "random-6",
+    "content": "\tzeta\r\nbeta\r\n\tzeta\r\neta\r\nalpha\n",
+    "edits": [
+      {
+        "oldText": "eta",
+        "newText": ""
+      },
+      {
+        "oldText": "absent-6",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Found 4 occurrences of edits[0] in f.txt. Each oldText must be unique. Please provide more context to make it unique."
+    }
+  },
+  {
+    "name": "random-7",
+    "content": "theta\n  delta\n\n\n",
+    "edits": [
+      {
+        "oldText": "theta\n  delta",
+        "newText": ""
+      },
+      {
+        "oldText": "theta",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0] and edits[1] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-8",
+    "content": "\n\ngamma\n  delta\n",
+    "edits": [
+      {
+        "oldText": "\ngamma\t",
+        "newText": ""
+      },
+      {
+        "oldText": "gamma",
+        "newText": ""
+      },
+      {
+        "oldText": "\ngamma\n  delta",
+        "newText": "gamma"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0] and edits[2] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-9",
+    "content": "theta\ngamma\n\tzeta\nbeta\n",
+    "edits": [
+      {
+        "oldText": "theta\ngamma\t",
+        "newText": ""
+      },
+      {
+        "oldText": "beta\t",
+        "newText": "  delta"
+      },
+      {
+        "oldText": "gamma\n\tzeta\nbeta",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0] and edits[2] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-10",
+    "content": "\n",
+    "edits": [
+      {
+        "oldText": "",
+        "newText": ""
+      },
+      {
+        "oldText": "",
+        "newText": "gamma"
+      },
+      {
+        "oldText": "",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0].oldText must not be empty in f.txt."
+    }
+  },
+  {
+    "name": "random-11",
+    "content": "theta\n\n",
+    "edits": [
+      {
+        "oldText": "",
+        "newText": "gamma"
+      },
+      {
+        "oldText": "",
+        "newText": "\tzeta"
+      },
+      {
+        "oldText": "",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0].oldText must not be empty in f.txt."
+    }
+  },
+  {
+    "name": "random-12",
+    "content": "theta\n",
+    "edits": [
+      {
+        "oldText": "theta",
+        "newText": "epsilon  "
+      },
+      {
+        "oldText": "theta",
+        "newText": "beta"
+      },
+      {
+        "oldText": "theta\t",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0] and edits[1] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-13",
+    "content": "  delta\nbeta\nepsilon  \n",
+    "edits": [
+      {
+        "oldText": "  DELTA\nBETA",
+        "newText": "  delta"
+      },
+      {
+        "oldText": "epsilon  ",
+        "newText": "theta"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find edits[0] in f.txt. The oldText must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "random-14",
+    "content": "epsilon  \n\n\ntheta\ntheta\n",
+    "edits": [
+      {
+        "oldText": "theta\ntheta  ",
+        "newText": "theta"
+      }
+    ],
+    "expected": {
+      "baseContent": "epsilon  \n\n\ntheta\ntheta\n",
+      "newContent": "epsilon  \n\n\ntheta\n",
+      "error": null
+    }
+  },
+  {
+    "name": "random-15",
+    "content": "eta\nbeta\n",
+    "edits": [
+      {
+        "oldText": "eta\nbeta",
+        "newText": "\tzeta"
+      },
+      {
+        "oldText": "beta",
+        "newText": "alpha"
+      },
+      {
+        "oldText": "beta",
+        "newText": "epsilon  "
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0] and edits[1] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-16",
+    "content": "\tzeta\n\tzeta\neta\n",
+    "edits": [
+      {
+        "oldText": "absent-16",
+        "newText": "alpha"
+      },
+      {
+        "oldText": "\tzeta",
+        "newText": ""
+      },
+      {
+        "oldText": "\tzeta\n\tzeta\neta",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find edits[0] in f.txt. The oldText must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "random-17",
+    "content": "alpha\n",
+    "edits": [
+      {
+        "oldText": "alpha",
+        "newText": "theta"
+      }
+    ],
+    "expected": {
+      "baseContent": "alpha\n",
+      "newContent": "theta\n",
+      "error": null
+    }
+  },
+  {
+    "name": "random-18",
+    "content": "  delta\nbeta\nalpha\n\n",
+    "edits": [
+      {
+        "oldText": "BETA\nALPHA\n",
+        "newText": "gamma"
+      },
+      {
+        "oldText": "alpha",
+        "newText": ""
+      },
+      {
+        "oldText": "",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[2].oldText must not be empty in f.txt."
+    }
+  },
+  {
+    "name": "random-19",
+    "content": "theta\n",
+    "edits": [
+      {
+        "oldText": "theta",
+        "newText": "theta"
+      },
+      {
+        "oldText": "theta",
+        "newText": "beta"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0] and edits[1] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-20",
+    "content": "theta\n",
+    "edits": [
+      {
+        "oldText": "theta",
+        "newText": "epsilon  "
+      }
+    ],
+    "expected": {
+      "baseContent": "theta\n",
+      "newContent": "epsilon  \n",
+      "error": null
+    }
+  },
+  {
+    "name": "random-21",
+    "content": "alpha\n  delta\ntheta\n\tzeta\n",
+    "edits": [
+      {
+        "oldText": "alpha",
+        "newText": "beta"
+      }
+    ],
+    "expected": {
+      "baseContent": "alpha\n  delta\ntheta\n\tzeta\n",
+      "newContent": "beta\n  delta\ntheta\n\tzeta\n",
+      "error": null
+    }
+  },
+  {
+    "name": "random-22",
+    "content": "beta\n  delta\n",
+    "edits": [
+      {
+        "oldText": "delta",
+        "newText": ""
+      },
+      {
+        "oldText": "BETA",
+        "newText": "alpha"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find edits[1] in f.txt. The oldText must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "random-23",
+    "content": "  delta\n",
+    "edits": [
+      {
+        "oldText": "  delta\t",
+        "newText": ""
+      },
+      {
+        "oldText": "  delta",
+        "newText": ""
+      },
+      {
+        "oldText": "  delta",
+        "newText": "beta"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0] and edits[1] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-24",
+    "content": "  delta\n",
+    "edits": [
+      {
+        "oldText": "  delta",
+        "newText": "\tzeta"
+      }
+    ],
+    "expected": {
+      "baseContent": "  delta\n",
+      "newContent": "\tzeta\n",
+      "error": null
+    }
+  },
+  {
+    "name": "random-25",
+    "content": "epsilon  \n\tzeta\ntheta\n",
+    "edits": [
+      {
+        "oldText": "epsilon  ",
+        "newText": ""
+      },
+      {
+        "oldText": "absent-25",
+        "newText": "  delta"
+      },
+      {
+        "oldText": "theta",
+        "newText": "  delta"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find edits[1] in f.txt. The oldText must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "random-26",
+    "content": "gamma\nepsilon  \n\tzeta\n",
+    "edits": [
+      {
+        "oldText": "epsilon  \n\tzeta",
+        "newText": ""
+      },
+      {
+        "oldText": "epsilon  ",
+        "newText": "  delta"
+      },
+      {
+        "oldText": "gamma\nepsilon  \n\tzeta",
+        "newText": "\tzeta"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[2] and edits[0] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-27",
+    "content": "beta\n",
+    "edits": [
+      {
+        "oldText": "absent-27",
+        "newText": "beta"
+      },
+      {
+        "oldText": "beta\t",
+        "newText": ""
+      },
+      {
+        "oldText": "beta",
+        "newText": "gamma"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find edits[0] in f.txt. The oldText must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "random-28",
+    "content": "alpha\nalpha\n\n",
+    "edits": [
+      {
+        "oldText": "alpha\n",
+        "newText": ""
+      },
+      {
+        "oldText": "alpha\nalpha",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Found 2 occurrences of edits[0] in f.txt. Each oldText must be unique. Please provide more context to make it unique."
+    }
+  },
+  {
+    "name": "random-29",
+    "content": "eta\r\nbeta\r\n  delta\r\neta\r\n  delta\n",
+    "edits": [
+      {
+        "oldText": "  delta\neta",
+        "newText": ""
+      },
+      {
+        "oldText": "  delta",
+        "newText": "eta"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Found 2 occurrences of edits[1] in f.txt. Each oldText must be unique. Please provide more context to make it unique."
+    }
+  },
+  {
+    "name": "random-30",
+    "content": "beta\r\nepsilon  \r\nepsilon  \n",
+    "edits": [
+      {
+        "oldText": "epsilon  ",
+        "newText": "alpha"
+      },
+      {
+        "oldText": "epsilon  ",
+        "newText": "\tzeta"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Found 2 occurrences of edits[0] in f.txt. Each oldText must be unique. Please provide more context to make it unique."
+    }
+  },
+  {
+    "name": "random-31",
+    "content": "  delta\ntheta\n\n",
+    "edits": [
+      {
+        "oldText": "  delta\ntheta",
+        "newText": "\tzeta"
+      }
+    ],
+    "expected": {
+      "baseContent": "  delta\ntheta\n\n",
+      "newContent": "\tzeta\n\n",
+      "error": null
+    }
+  },
+  {
+    "name": "random-32",
+    "content": "gamma\nbeta\n",
+    "edits": [
+      {
+        "oldText": "beta",
+        "newText": "beta"
+      },
+      {
+        "oldText": "gamma\nbeta",
+        "newText": "theta"
+      },
+      {
+        "oldText": "GAMMA\nBETA",
+        "newText": "eta"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find edits[2] in f.txt. The oldText must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "random-33",
+    "content": "\tzeta\ngamma\n\tzeta\nalpha\n",
+    "edits": [
+      {
+        "oldText": "\tzeta\ngamma\n\tzeta\nalpha",
+        "newText": "eta"
+      },
+      {
+        "oldText": "alpha",
+        "newText": "\tzeta"
+      },
+      {
+        "oldText": "\tzeta\nalpha",
+        "newText": "epsilon  "
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0] and edits[2] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-34",
+    "content": "theta\ngamma\ngamma\n\n",
+    "edits": [
+      {
+        "oldText": "gamma",
+        "newText": "\tzeta"
+      },
+      {
+        "oldText": "",
+        "newText": ""
+      },
+      {
+        "oldText": "gamma\ngamma\n",
+        "newText": "epsilon  "
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[1].oldText must not be empty in f.txt."
+    }
+  },
+  {
+    "name": "random-35",
+    "content": "theta\nbeta\nbeta\neta\n",
+    "edits": [
+      {
+        "oldText": "eta",
+        "newText": "epsilon  "
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Found 4 occurrences of the text in f.txt. The text must be unique. Please provide more context to make it unique."
+    }
+  },
+  {
+    "name": "random-36",
+    "content": "gamma\neta\nalpha\ngamma\n\n",
+    "edits": [
+      {
+        "oldText": "alpha\ngamma\n",
+        "newText": ""
+      },
+      {
+        "oldText": "GAMMA\n",
+        "newText": "alpha"
+      },
+      {
+        "oldText": "GAMMA\n",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find edits[1] in f.txt. The oldText must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "random-37",
+    "content": "theta\r\ngamma\r\ntheta\n",
+    "edits": [
+      {
+        "oldText": "theta",
+        "newText": ""
+      },
+      {
+        "oldText": "theta\t",
+        "newText": "alpha"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Found 2 occurrences of edits[0] in f.txt. Each oldText must be unique. Please provide more context to make it unique."
+    }
+  },
+  {
+    "name": "random-38",
+    "content": "eta\n  delta\n",
+    "edits": [
+      {
+        "oldText": "  delta",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": "eta\n  delta\n",
+      "newContent": "eta\n\n",
+      "error": null
+    }
+  },
+  {
+    "name": "random-39",
+    "content": "epsilon  \n",
+    "edits": [
+      {
+        "oldText": "epsilon  ",
+        "newText": "gamma"
+      },
+      {
+        "oldText": "epsilon    ",
+        "newText": "\tzeta"
+      },
+      {
+        "oldText": "epsilon  ",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0] and edits[1] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-40",
+    "content": "epsilon  \r\nepsilon  \n",
+    "edits": [
+      {
+        "oldText": "absent-40",
+        "newText": "eta"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find the exact text in f.txt. The old text must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "random-41",
+    "content": "\tzeta\nalpha\nbeta\nbeta\n",
+    "edits": [
+      {
+        "oldText": "beta",
+        "newText": "eta"
+      },
+      {
+        "oldText": "beta  ",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Found 2 occurrences of edits[0] in f.txt. Each oldText must be unique. Please provide more context to make it unique."
+    }
+  },
+  {
+    "name": "random-42",
+    "content": "\tzeta\n",
+    "edits": [
+      {
+        "oldText": "\tzeta\t",
+        "newText": "  delta"
+      },
+      {
+        "oldText": "\tzeta",
+        "newText": "gamma"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0] and edits[1] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-43",
+    "content": "eta\ngamma\nbeta\n  delta\nalpha\n",
+    "edits": [
+      {
+        "oldText": "beta\n  delta",
+        "newText": ""
+      },
+      {
+        "oldText": "  delta",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0] and edits[1] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-44",
+    "content": "\tzeta\n",
+    "edits": [
+      {
+        "oldText": "\tzeta",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": "\tzeta\n",
+      "newContent": "\n",
+      "error": null
+    }
+  },
+  {
+    "name": "random-45",
+    "content": "beta\r\n\tzeta\r\ngamma\r\nepsilon  \n",
+    "edits": [
+      {
+        "oldText": "epsilon  ",
+        "newText": ""
+      },
+      {
+        "oldText": "gamma\nepsilon  ",
+        "newText": "epsilon  "
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[1] and edits[0] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-46",
+    "content": "  delta\n",
+    "edits": [
+      {
+        "oldText": "  delta\t",
+        "newText": "gamma"
+      },
+      {
+        "oldText": "  delta",
+        "newText": "theta"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0] and edits[1] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-47",
+    "content": "gamma\n  delta\neta\neta\n",
+    "edits": [
+      {
+        "oldText": "  delta\neta",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": "gamma\n  delta\neta\neta\n",
+      "newContent": "gamma\n\neta\n",
+      "error": null
+    }
+  },
+  {
+    "name": "random-48",
+    "content": "epsilon  \n\tzeta\ntheta\n\tzeta\n",
+    "edits": [
+      {
+        "oldText": "theta\n\tzeta",
+        "newText": "gamma"
+      },
+      {
+        "oldText": "\tzeta",
+        "newText": "\tzeta"
+      },
+      {
+        "oldText": "\tzeta\ntheta",
+        "newText": "eta"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Found 2 occurrences of edits[1] in f.txt. Each oldText must be unique. Please provide more context to make it unique."
+    }
+  },
+  {
+    "name": "random-49",
+    "content": "theta\n\nepsilon  \ngamma\n",
+    "edits": [
+      {
+        "oldText": "gamma",
+        "newText": ""
+      },
+      {
+        "oldText": "theta\n\nepsilon  ",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": "theta\n\nepsilon  \ngamma\n",
+      "newContent": "\n\n",
+      "error": null
+    }
+  },
+  {
+    "name": "random-50",
+    "content": "eta\nalpha\ngamma\nalpha\n",
+    "edits": [
+      {
+        "oldText": "eta\nalpha\ngamma\nalpha\t",
+        "newText": "theta"
+      },
+      {
+        "oldText": "gamma\nalpha",
+        "newText": "  delta"
+      },
+      {
+        "oldText": "gamma",
+        "newText": "  delta"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0] and edits[1] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-51",
+    "content": "theta\n",
+    "edits": [
+      {
+        "oldText": "theta",
+        "newText": "alpha"
+      },
+      {
+        "oldText": "theta",
+        "newText": ""
+      },
+      {
+        "oldText": "theta",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0] and edits[1] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-52",
+    "content": "eta\n\n  delta\nalpha\n\tzeta\n",
+    "edits": [
+      {
+        "oldText": "  DELTA\nALPHA\n\tZETA",
+        "newText": "epsilon  "
+      },
+      {
+        "oldText": "\tzeta",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find edits[0] in f.txt. The oldText must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "random-53",
+    "content": "\n",
+    "edits": [
+      {
+        "oldText": "",
+        "newText": "gamma"
+      },
+      {
+        "oldText": "",
+        "newText": "gamma"
+      },
+      {
+        "oldText": "",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0].oldText must not be empty in f.txt."
+    }
+  },
+  {
+    "name": "random-54",
+    "content": "  delta\n\tzeta\ntheta\n",
+    "edits": [
+      {
+        "oldText": "theta  ",
+        "newText": ""
+      },
+      {
+        "oldText": "\tzeta\ntheta",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[1] and edits[0] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-55",
+    "content": "\nalpha\ntheta\nepsilon  \n",
+    "edits": [
+      {
+        "oldText": "epsilon  ",
+        "newText": ""
+      },
+      {
+        "oldText": "theta\nepsilon  ",
+        "newText": "alpha"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[1] and edits[0] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "random-56",
+    "content": "alpha\neta\ngamma\nalpha\n",
+    "edits": [
+      {
+        "oldText": "GAMMA\nALPHA",
+        "newText": "\tzeta"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find the exact text in f.txt. The old text must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "random-57",
+    "content": "epsilon  \n\n",
+    "edits": [
+      {
+        "oldText": "",
+        "newText": "gamma"
+      },
+      {
+        "oldText": "",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0].oldText must not be empty in f.txt."
+    }
+  },
+  {
+    "name": "random-58",
+    "content": "  delta\r\nbeta\r\n\r\ntheta\n",
+    "edits": [
+      {
+        "oldText": "absent-58",
+        "newText": "theta"
+      },
+      {
+        "oldText": "beta\n\ntheta",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find edits[0] in f.txt. The oldText must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "random-59",
+    "content": "gamma\ntheta\nalpha\n",
+    "edits": [
+      {
+        "oldText": "gamma\ntheta",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": "gamma\ntheta\nalpha\n",
+      "newContent": "\nalpha\n",
+      "error": null
+    }
   }
 ]
