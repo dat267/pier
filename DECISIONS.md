@@ -1880,7 +1880,10 @@ retry and bash commands and the new field validation.
 `cmd/rpcmode_test.go` exercises CLI boot, noninteractive startup boundaries,
 stdout cleanliness, signal unwinding, and an end-to-end `new_session` through
 the real binary. `TestSessionAbortBashReachesExecution`
-reproduces and guards the shell cancellation fix. See
+reproduces and guards the shell cancellation fix.
+`TestRPCRejectsFieldTypesItCannotHonor` pins each rejected field type with its
+message, the echoed command and an unchanged session;
+`TestRPCValidToggleChangesTheReportedState` is its control. See
 [Stdio RPC](ARCHITECTURE.md#stdio-rpc) for usage and the complete supported
 subset.
 
