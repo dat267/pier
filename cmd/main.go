@@ -204,7 +204,7 @@ func cwdForCrash() string {
 
 func describeGetwdError(err error) error {
 	if errors.Is(err, os.ErrNotExist) {
-		return errors.New("The current working directory no longer exists. Change to an existing directory and try again")
+		return errors.New("The current working directory no longer exists. Change to an existing directory and try again.")
 	}
 	return err
 }

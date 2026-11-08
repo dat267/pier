@@ -578,10 +578,11 @@ func TestStartupReportsInvalidSettings(t *testing.T) {
 	}
 }
 
-// v1.5.0 main.ts catches ENOENT from process.cwd() and prints a recovery hint.
+// v1.5.0 (f9a26365) main.ts, from 88ffcdc73 (#11511), catches ENOENT from
+// process.cwd() and prints the recovery hint, ending in a period.
 func TestDescribeGetwdError(t *testing.T) {
 	if err := describeGetwdError(&os.PathError{Op: "getwd", Path: ".", Err: os.ErrNotExist}); err == nil ||
-		err.Error() != "The current working directory no longer exists. Change to an existing directory and try again" {
+		err.Error() != "The current working directory no longer exists. Change to an existing directory and try again." {
 		t.Fatalf("err = %v", err)
 	}
 	if err := describeGetwdError(os.ErrPermission); !errors.Is(err, os.ErrPermission) {
