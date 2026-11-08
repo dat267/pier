@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -969,5 +970,44 @@ func TestBedrockStrictToolLimitFallsBack(t *testing.T) {
 	}
 	if len(message.Diagnostics) != 1 || message.Diagnostics[0].Type != "bedrock_strict_tools_fallback" {
 		t.Fatalf("diagnostics = %+v", message.Diagnostics)
+	}
+}
+
+// Upstream pi v1.5.0 (f9a26365) bedrock-converse-stream.ts, from f76c1db66
+// "feat(ai): add Claude Haiku 5.5": Haiku 5 is detected for adaptive thinking,
+// native xhigh, thinking block binding and prompt caching, so a Bedrock Haiku
+// 5.5 request sends adaptive effort and cache points instead of a token budget.
+func TestBedrockHaiku5IsAClaude5Model(t *testing.T) {
+	for _, id := range []string{"anthropic.claude-haiku-5-5", "us.anthropic.claude-haiku-5-5", "eu.anthropic.claude-haiku-5-5"} {
+		model := &Model{ID: id, Name: "Claude Haiku 5.5", Reasoning: true}
+		if !SupportsAdaptiveThinking(model.ID, model.Name) {
+			t.Errorf("%s must support adaptive thinking", id)
+		}
+		if !SupportsNativeXhighEffort(model) {
+			t.Errorf("%s must support native xhigh", id)
+		}
+		if !SupportsThinkingBlockBinding(model) {
+			t.Errorf("%s must support thinking block binding", id)
+		}
+		if !SupportsBedrockPromptCaching(model, nil) {
+			t.Errorf("%s must support prompt caching", id)
+		}
+		fields := BuildBedrockAdditionalModelRequestFields(model, &BedrockOptions{Reasoning: ThinkXHigh})
+		raw, err := MarshalJSON(fields)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Node: buildAdditionalModelRequestFields for the same model and options.
+		want := `{"thinking":{"type":"adaptive","display":"summarized","block_binding":{"prefix_mismatch_behavior":"drop_block"}},"output_config":{"effort":"xhigh"},"anthropic_beta":["thinking-binding-controls-2026-08-01"]}`
+		var got, expected any
+		if err := json.Unmarshal(raw, &got); err != nil {
+			t.Fatal(err)
+		}
+		if err := json.Unmarshal([]byte(want), &expected); err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got, expected) {
+			t.Errorf("%s fields = %s\nwant %s", id, raw, want)
+		}
 	}
 }
