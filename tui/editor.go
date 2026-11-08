@@ -129,8 +129,12 @@ type Editor struct {
 
 	preferredVisualCol    int
 	hasPreferredVisualCol bool
-	snappedFromCursorCol  int
 	hasSnappedFromCursor  bool
+	// snappedFromUnits is the pre-snap column as upstream stores it, a UTF-16
+	// index into the line it was taken from. It can land inside a surrogate
+	// pair, and upstream later resolves it against whatever line holds the
+	// cursor, so it is kept in units rather than as a byte offset.
+	snappedFromUnits int
 
 	undoStack UndoStack[editorSnapshot]
 
@@ -171,7 +175,6 @@ func NewEditor(host EditorHost, theme EditorTheme, options EditorOptions) *Edito
 		autocompleteTriggers:     append([]string(nil), defaultAutocompleteTriggerCharacters...),
 		autocompleteMaxVisible:   maxVisible,
 		preferredVisualCol:       -1,
-		snappedFromCursorCol:     -1,
 	}
 	return editor
 }
@@ -283,7 +286,6 @@ func (e *Editor) navigateHistory(direction int) {
 			e.state = *draft
 			e.preferredVisualCol = -1
 			e.hasPreferredVisualCol = false
-			e.snappedFromCursorCol = -1
 			e.hasSnappedFromCursor = false
 			e.scrollOffset = 0
 			if e.OnChange != nil {
@@ -1246,7 +1248,6 @@ func (e *Editor) setCursorCol(col int) {
 	e.state.cursorCol = col
 	e.preferredVisualCol = -1
 	e.hasPreferredVisualCol = false
-	e.snappedFromCursorCol = -1
 	e.hasSnappedFromCursor = false
 }
 
@@ -1264,44 +1265,49 @@ func (e *Editor) moveToVisualLine(visualLines []editorVisualLine, currentVisualL
 	currentVL := visualLines[currentVisualLine]
 	targetVL := visualLines[targetVisualLine]
 
+	// Upstream's visual columns are UTF-16 offsets within the visual line
+	// (cursorCol - startCol over JS strings), so the sticky-column arithmetic
+	// runs in code units and only the final cursor is a byte offset.
+	currentText := e.lineText(currentVL.logicalLine)
 	currentVisualCol := 0
 	if e.hasSnappedFromCursor {
-		vlIndex := e.findVisualLineAt(visualLines, currentVL.logicalLine, e.snappedFromCursorCol)
-		currentVisualCol = e.snappedFromCursorCol - visualLines[vlIndex].startCol
+		vlIndex := e.findVisualLineAtUnits(visualLines, currentVL.logicalLine, e.snappedFromUnits)
+		snapVL := visualLines[vlIndex]
+		currentVisualCol = e.snappedFromUnits - utf16Span(e.lineText(snapVL.logicalLine), 0, snapVL.startCol)
 	} else {
-		currentVisualCol = e.state.cursorCol - currentVL.startCol
+		currentVisualCol = utf16Span(currentText, currentVL.startCol, e.state.cursorCol)
 	}
+	currentLength := utf16Span(currentText, currentVL.startCol, currentVL.startCol+currentVL.length)
+	targetText := e.lineText(targetVL.logicalLine)
+	targetLength := utf16Span(targetText, targetVL.startCol, targetVL.startCol+targetVL.length)
 
 	isLastSourceSegment := currentVisualLine == len(visualLines)-1 ||
 		visualLines[currentVisualLine+1].logicalLine != currentVL.logicalLine
-	sourceMaxVisualCol := max(0, currentVL.length-1)
+	sourceMaxVisualCol := max(0, currentLength-1)
 	if isLastSourceSegment {
-		sourceMaxVisualCol = currentVL.length
+		sourceMaxVisualCol = currentLength
 	}
 
 	isLastTargetSegment := targetVisualLine == len(visualLines)-1 ||
 		visualLines[targetVisualLine+1].logicalLine != targetVL.logicalLine
-	targetMaxVisualCol := max(0, targetVL.length-1)
+	targetMaxVisualCol := max(0, targetLength-1)
 	if isLastTargetSegment {
-		targetMaxVisualCol = targetVL.length
+		targetMaxVisualCol = targetLength
 	}
 
 	moveToVisualCol := e.computeVerticalMoveColumn(currentVisualCol, sourceMaxVisualCol, targetMaxVisualCol)
 
 	e.state.cursorLine = targetVL.logicalLine
-	targetCol := targetVL.startCol + moveToVisualCol
-	logicalLine := ""
-	if targetVL.logicalLine < len(e.state.lines) {
-		logicalLine = e.state.lines[targetVL.logicalLine]
-	}
-	e.state.cursorCol = min(targetCol, len(logicalLine))
+	logicalLine := targetText
+	targetCol, midSurrogate := byteOffsetAfterUTF16Units(logicalLine, targetVL.startCol, moveToVisualCol)
+	e.state.cursorCol = targetCol
 
 	// Snap the cursor to atomic segment boundaries (e.g. paste markers).
 	for _, segment := range e.segmentLocked(logicalLine, "grapheme") {
 		if segment.Index > e.state.cursorCol {
 			break
 		}
-		if len(segment.Segment) <= 1 {
+		if jsLength(segment.Segment) <= 1 {
 			continue
 		}
 		if e.state.cursorCol < segment.Index+len(segment.Segment) {
@@ -1319,14 +1325,70 @@ func (e *Editor) moveToVisualLine(visualLines []editorVisualLine, currentVisualL
 					return
 				}
 			}
-			e.snappedFromCursorCol = e.state.cursorCol
 			e.hasSnappedFromCursor = true
+			e.snappedFromUnits = utf16Span(logicalLine, 0, e.state.cursorCol)
+			if midSurrogate {
+				e.snappedFromUnits++
+			}
 			e.state.cursorCol = segment.Index
 			return
 		}
 	}
-	e.snappedFromCursorCol = -1
 	e.hasSnappedFromCursor = false
+}
+
+// findVisualLineAtUnits is findVisualLineAt for a UTF-16 column, measuring
+// each visual line in code units like upstream's findVisualLineAt.
+func (e *Editor) findVisualLineAtUnits(visualLines []editorVisualLine, line int, col int) int {
+	for i, vl := range visualLines {
+		if vl.logicalLine != line {
+			continue
+		}
+		text := e.lineText(vl.logicalLine)
+		offset := col - utf16Span(text, 0, vl.startCol)
+		length := utf16Span(text, vl.startCol, vl.startCol+vl.length)
+		isLastSegmentOfLine := i == len(visualLines)-1 || visualLines[i+1].logicalLine != vl.logicalLine
+		if offset >= 0 && (offset < length || (isLastSegmentOfLine && offset == length)) {
+			return i
+		}
+	}
+	return len(visualLines) - 1
+}
+
+// lineText returns a logical line, or "" past the end.
+func (e *Editor) lineText(index int) string {
+	if index >= 0 && index < len(e.state.lines) {
+		return e.state.lines[index]
+	}
+	return ""
+}
+
+// utf16Span counts the UTF-16 code units of text[start:end], clamped.
+func utf16Span(text string, start, end int) int {
+	start = max(0, min(start, len(text)))
+	end = max(start, min(end, len(text)))
+	return jsLength(text[start:end])
+}
+
+// byteOffsetAfterUTF16Units advances units code units from byte offset start,
+// clamped to the text like upstream's Math.min(col, line.length). Landing
+// inside an astral rune's surrogate pair returns the rune's start and true.
+func byteOffsetAfterUTF16Units(text string, start, units int) (int, bool) {
+	start = max(0, min(start, len(text)))
+	for index, r := range text[start:] {
+		if units <= 0 {
+			return start + index, false
+		}
+		width := 1
+		if r > 0xFFFF {
+			width = 2
+		}
+		if units < width {
+			return start + index, true
+		}
+		units -= width
+	}
+	return len(text), false
 }
 
 func (e *Editor) computeVerticalMoveColumn(currentVisualCol int, sourceMaxVisualCol int, targetMaxVisualCol int) int {
@@ -1590,7 +1652,8 @@ func (e *Editor) moveCursorLocked(deltaLine int, deltaCol int) {
 				e.state.cursorLine++
 				e.setCursorCol(0)
 			} else if currentVisualLine >= 0 && currentVisualLine < len(visualLines) {
-				e.preferredVisualCol = e.state.cursorCol - visualLines[currentVisualLine].startCol
+				vl := visualLines[currentVisualLine]
+				e.preferredVisualCol = utf16Span(currentLine, vl.startCol, e.state.cursorCol)
 				e.hasPreferredVisualCol = true
 			}
 		} else {
