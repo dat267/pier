@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D399)
+# Deliberate divergences from pi (D1–D400)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5533,3 +5533,17 @@ Complex_Context text, produce as one word. Matching the engines would mean
 shipping ICU's dictionaries. Ctrl+arrow therefore skips a whole such run.
 
 Test: `TestWordSegmentsKeepDictionaryRunsWhole`.
+
+### D400
+
+**A fractional read offset still reports an oversized first line.**
+
+Reference: pi v1.5.0 (f9a26365) `packages/coding-agent/src/core/tools/read.ts`
+sizes the oversized first line with `allLines[startLine]`. The schema accepts
+any number, and a fractional `offset` such as `2.5` makes `startLine` fractional,
+so the lookup is `undefined` and `Buffer.byteLength` throws a `TypeError` that
+the model sees as the tool result. Pier sizes the line it actually sliced
+(`slice` truncates the index) and returns the usual `sed -n` hint, which the
+model can act on. Every other fractional-offset result matches upstream.
+
+Test: `TestReadToolFractionalOffsetReportsOversizedLine`.

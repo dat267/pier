@@ -122,8 +122,9 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 			}
 			sliceStart := jsArraySliceIndex(startLine, len(allLines))
 			var selectedContent string
-			userLimitedLines := -1.0
-			if input.Limit != nil {
+			userLimitedLines := 0.0
+			hasUserLimit := input.Limit != nil
+			if hasUserLimit {
 				endLine := math.Min(startLine+*input.Limit, float64(len(allLines)))
 				sliceEnd := max(jsArraySliceIndex(endLine, len(allLines)), sliceStart)
 				selectedContent = strings.Join(allLines[sliceStart:sliceEnd], "\n")
@@ -148,7 +149,7 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 					outputText += fmt.Sprintf("\n\n[Showing lines %s-%s of %d (%s limit). Use offset=%s to continue.]",
 						formatToolNumber(startLineDisplay), formatToolNumber(endLineDisplay), totalFileLines, FormatSize(DefaultMaxBytes), formatToolNumber(nextOffset))
 				}
-			} else if userLimitedLines >= 0 && startLine+userLimitedLines < float64(len(allLines)) {
+			} else if hasUserLimit && startLine+userLimitedLines < float64(len(allLines)) {
 				remaining := float64(len(allLines)) - (startLine + userLimitedLines)
 				nextOffset := startLine + userLimitedLines + 1
 				outputText = fmt.Sprintf("%s\n\n[%s more lines in file. Use offset=%s to continue.]",
