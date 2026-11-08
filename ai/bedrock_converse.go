@@ -353,7 +353,7 @@ func ConvertBedrockMessages(context TranscriptContext, model *Model, cacheRetent
 	messages := TransformMessages(WithoutInitialSystemMessage(context.Messages), model,
 		func(id string, _ *Model, _ *AssistantMessage) string { return NormalizeBedrockToolCallID(id) })
 
-	var result []any
+	result := []any{}
 	for index := 0; index < len(messages); index++ {
 		message := messages[index]
 		switch typed := message.(type) {

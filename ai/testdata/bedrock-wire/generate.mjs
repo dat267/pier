@@ -1,4 +1,5 @@
 // Regenerate: node --experimental-strip-types ai/testdata/bedrock-wire/generate.mjs ./pi > ai/testdata/bedrock-wire/golden.json
+// system-only-empty-messages and haiku-5-adaptive-cached verified against pi v1.5.0 (f9a26365).
 // Captures the pinned stream's command and AWS SDK HTTP request. No network.
 import { registerHooks, createRequire } from "node:module";
 import { resolve } from "node:path";
@@ -83,6 +84,11 @@ const cases=[{name:"minimal",messages:[{role:"user",content:"hello",timestamp:1}
 }, {
 	name:"disabled-required-strict",strictSupport:false,
 	messages:[{role:"system",content:"system",toolsAdded:[{name:"lookup",parameters:{type:"object",$ref:"#/$defs/X"},constrainedSampling:{type:"json_schema",strict:"require"}}],timestamp:1},{role:"user",content:"hello",timestamp:2}],options:{toolChoice:"none"},
+}, {
+	name:"system-only-empty-messages",messages:[{role:"system",content:"system",timestamp:1}],options:{},
+}, {
+	name:"haiku-5-adaptive-cached",modelId:"us.anthropic.claude-haiku-5-5",modelName:"Claude Haiku 5.5",messages:[
+		{role:"system",content:"system",timestamp:1},{role:"user",content:"hello",timestamp:2}],options:{reasoning:"xhigh",cacheRetention:"short"},
 }];
 const fixtures=[];
 for(const input of cases){
