@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D400)
+# Deliberate divergences from pi (D1–D401)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5552,3 +5552,17 @@ the model sees as the tool result. Pier sizes the line it actually sliced
 model can act on. Every other fractional-offset result matches upstream.
 
 Test: `TestReadToolFractionalOffsetReportsOversizedLine`.
+
+### D401
+
+**Vertex Gemini 2.5 Flash-Lite uses the Flash-Lite thinking budgets.**
+
+Reference: pi v1.5.0 (f9a26365) `packages/ai/src/api/google-vertex.ts`
+`getGoogleBudget` has no `2.5-flash-lite` branch, so Flash-Lite matches the
+`2.5-flash` table and minimal reasoning sends a 128-token budget, below the
+512-token minimum Google documents for Flash-Lite. The same function in
+`google-generative-ai.ts` has the Flash-Lite branch and sends 512. Pier uses
+that one table for both APIs, so Vertex Flash-Lite also sends 512. The other
+levels and models send the same budgets as upstream.
+
+Test: `TestVertexFlashLiteMinimalBudgetUsesFlashLiteTable`.

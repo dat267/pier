@@ -442,3 +442,36 @@ func TestStreamGoogleVertexSimpleThinking(t *testing.T) {
 		t.Fatalf("thinkingLevel = %#v", thinking["thinkingLevel"])
 	}
 }
+
+// D401: pi v1.5.0 (f9a26365) google-vertex.ts getGoogleBudget has no
+// 2.5-flash-lite branch, so minimal reasoning on Vertex Flash-Lite falls into
+// the 2.5-flash table and sends 128, below Flash-Lite's documented 512 minimum.
+// Pier shares upstream google-generative-ai.ts's table, which sends 512. Every
+// other Vertex budget matches upstream.
+func TestVertexFlashLiteMinimalBudgetUsesFlashLiteTable(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.Header().Set("Content-Type", "text/event-stream")
+		_, _ = writer.Write([]byte(vertexStreamBody))
+	}))
+	defer server.Close()
+	for id, want := range map[string]float64{"gemini-2.5-flash-lite": 512, "gemini-2.5-flash": 128, "gemini-2.5-pro": 128} {
+		model := &Model{ID: id, API: APIGoogleVertex, Provider: "google-vertex", BaseURL: server.URL, Reasoning: true, ContextWindow: 1000, MaxTokens: 100}
+		var payload map[string]any
+		stream := StreamGoogleVertexSimple(model, TranscriptContext{Messages: []Message{
+			&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
+		}}, &SimpleStreamOptions{StreamOptions: StreamOptions{APIKey: "AIzaSyRealKey", OnPayload: func(raw json.RawMessage, _ *Model) json.RawMessage {
+			if err := json.Unmarshal(raw, &payload); err != nil {
+				t.Error(err)
+			}
+			return nil
+		}}, Reasoning: ThinkMinimal})
+		if _, err := stream.Result(ctxpkg.Background()); err != nil {
+			t.Fatalf("%s: %v", id, err)
+		}
+		config, _ := payload["config"].(map[string]any)
+		thinking, _ := config["thinkingConfig"].(map[string]any)
+		if thinking["thinkingBudget"] != want {
+			t.Errorf("%s thinkingConfig = %#v, want budget %v", id, thinking, want)
+		}
+	}
+}
