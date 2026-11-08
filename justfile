@@ -155,6 +155,39 @@ reference:
 	echo "      check it out with: git -C pi checkout --detach $pin_tag" >&2
 	exit 1
 
+# Only fixtures that print a golden.json to stdout are covered. The ones that
+# rewrite their own file in place (internal/highlight, word-diff) are verified by
+# running them and expecting a clean `git status`, and angle-html needs a temp
+# install of its marked version.
+#
+# Verify every committed Node golden still regenerates from the pinned ./pi.
+goldens:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	tmp="$(mktemp -d)"
+	trap 'rm -rf "$tmp"' EXIT
+
+	checked=0
+	failed=0
+	while IFS= read -r gen; do
+		golden="$(dirname "$gen")/golden.json"
+		[[ -f "$golden" ]] || continue
+		checked=$((checked + 1))
+		if ! node --experimental-strip-types "$gen" ./pi >"$tmp/out" 2>"$tmp/err"; then
+			echo "error: $gen" >&2
+			sed -n '1,5p' "$tmp/err" >&2
+			failed=$((failed + 1))
+			continue
+		fi
+		if ! cmp -s "$tmp/out" "$golden"; then
+			echo "drift: $golden" >&2
+			failed=$((failed + 1))
+		fi
+	done < <(git ls-files '*/testdata/*/generate.mjs')
+
+	echo "goldens: $((checked - failed))/$checked regenerate from the pin"
+	[[ "$failed" -eq 0 ]] || exit 1
+
 # Fast-forward when the history is linear, a merge commit when it is not. The tree
 # must be clean, and a conflict aborts the merge and reports the files instead of
 # leaving a half-finished one. Nothing is pushed, so the run ends by saying what is
