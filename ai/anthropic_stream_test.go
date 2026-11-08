@@ -589,3 +589,48 @@ func TestGetPiUserAgent(t *testing.T) {
 		t.Fatalf("user agent = %q", ua)
 	}
 }
+
+// Upstream api/anthropic-messages.ts (v1.5.0) keeps an openBlocks map keyed by
+// the Anthropic block index: a stop closes the entry, so later deltas for it
+// are ignored, and a new start on the same index replaces the entry. Deltas to
+// a tool block after another block started must not reuse copied stream state.
+func TestStreamAnthropicOpenBlocksFollowBlockIndex(t *testing.T) {
+	ev := func(name, data string) string { return "event: " + name + "\ndata: " + data + "\n\n" }
+	events := []string{
+		ev("message_start", `{"type":"message_start","message":{"id":"msg_1","model":"claude-opus-4-5","usage":{"input_tokens":1,"output_tokens":1}}}`),
+		ev("content_block_start", `{"type":"content_block_start","index":0,"content_block":{"type":"text","text":"a"}}`),
+		ev("content_block_stop", `{"type":"content_block_stop","index":0}`),
+		ev("content_block_delta", `{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"late"}}`),
+		ev("content_block_start", `{"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"toolu_1","name":"lookup","input":{}}}`),
+		ev("content_block_delta", `{"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\"z\":"}}`),
+		ev("content_block_start", `{"type":"content_block_start","index":2,"content_block":{"type":"thinking","thinking":""}}`),
+		ev("content_block_start", `{"type":"content_block_start","index":3,"content_block":{"type":"text","text":""}}`),
+		ev("content_block_delta", `{"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"\"q\"}"}}`),
+		ev("content_block_stop", `{"type":"content_block_stop","index":1}`),
+		ev("content_block_start", `{"type":"content_block_start","index":3,"content_block":{"type":"text","text":"b"}}`),
+		ev("content_block_delta", `{"type":"content_block_delta","index":3,"delta":{"type":"text_delta","text":"c"}}`),
+		ev("message_delta", `{"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":2}}`),
+		ev("message_stop", `{"type":"message_stop"}`),
+	}
+	server := sseServer(t, events, nil)
+	defer server.Close()
+	model := testAnthropicModel()
+	model.BaseURL = server.URL
+	result, err := StreamAnthropic(model, NormalizeContext(Context{
+		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
+	}), &AnthropicOptions{APIKey: "k"}).Result(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.StopReason != StopStop {
+		t.Fatalf("stop = %s error = %v", result.StopReason, deref(result.ErrorMessage))
+	}
+	content, err := MarshalJSON(result.Content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `[{"type":"text","text":"a"},{"type":"toolCall","id":"toolu_1","name":"lookup","arguments":{"z":"q"}},{"type":"thinking","thinking":"","thinkingSignature":""},{"type":"text","text":""},{"type":"text","text":"bc"}]`
+	if string(content) != want {
+		t.Fatalf("content = %s\nwant %s", content, want)
+	}
+}

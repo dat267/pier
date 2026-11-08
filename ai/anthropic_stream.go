@@ -389,9 +389,12 @@ func BuildAnthropicRequest(ctx context.Context, model *Model, params any, option
 
 // anthropicStreamBlock is the live per-block accumulator (upstream's Block
 // with the partialJson scratch buffer).
+// anthropicStreamBlock is the stream state of one open Anthropic block,
+// kept off the content blocks like upstream's openBlocks entries.
 type anthropicStreamBlock struct {
-	block         Content
-	index         int
+	block Content
+	// contentIndex is the block's position in output.Content.
+	contentIndex  int
 	args          streamingArguments
 	contentBuffer *strings.Builder
 }
@@ -600,7 +603,13 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 		}
 		stream.Push(AssistantMessageEvent{Type: EventStart, Partial: output})
 
-		var blocks []anthropicStreamBlock
+		// openBlocks maps an Anthropic block index to its open block; a stop
+		// closes it and a later start on the same index replaces it.
+		openBlocks := map[int]*anthropicStreamBlock{}
+		openBlock := func(index int, block Content) {
+			output.Content = append(output.Content, block)
+			openBlocks[index] = &anthropicStreamBlock{block: block, contentIndex: len(output.Content) - 1}
+		}
 		usageModel := model
 		var inputTransformations []anthropicInputTransformation
 
@@ -681,19 +690,16 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				}
 				switch cb.Type {
 				case "text":
-					blocks = append(blocks, anthropicStreamBlock{block: TextContent{Text: cb.Text}, index: event.Index})
-					output.Content = append(output.Content, TextContent{Text: cb.Text})
+					openBlock(event.Index, TextContent{Text: cb.Text})
 					stream.Push(AssistantMessageEvent{Type: EventTextStart, ContentIndex: len(output.Content) - 1, Partial: output})
 				case "thinking":
 					sig := cb.Signature
-					blocks = append(blocks, anthropicStreamBlock{block: ThinkingContent{Thinking: cb.Thinking, ThinkingSignature: &sig}, index: event.Index})
-					output.Content = append(output.Content, ThinkingContent{Thinking: cb.Thinking, ThinkingSignature: &sig})
+					openBlock(event.Index, ThinkingContent{Thinking: cb.Thinking, ThinkingSignature: &sig})
 					stream.Push(AssistantMessageEvent{Type: EventThinkingStart, ContentIndex: len(output.Content) - 1, Partial: output})
 				case "redacted_thinking":
 					sig := cb.Data
 					redacted := ThinkingContent{Thinking: "[Reasoning redacted]", ThinkingSignature: &sig, Redacted: true}
-					blocks = append(blocks, anthropicStreamBlock{block: redacted, index: event.Index})
-					output.Content = append(output.Content, redacted)
+					openBlock(event.Index, redacted)
 					stream.Push(AssistantMessageEvent{Type: EventThinkingStart, ContentIndex: len(output.Content) - 1, Partial: output})
 				case "tool_use":
 					name := cb.Name
@@ -705,38 +711,38 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 						input = json.RawMessage("{}")
 					}
 					call := ToolCall{ID: cb.ID, Name: name, Arguments: input}
-					blocks = append(blocks, anthropicStreamBlock{block: call, index: event.Index})
-					output.Content = append(output.Content, call)
+					openBlock(event.Index, call)
 					stream.Push(AssistantMessageEvent{Type: EventToolcallStart, ContentIndex: len(output.Content) - 1, Partial: output})
 				}
 			case "content_block_delta":
-				idx := findBlock(blocks, event.Index)
-				if idx < 0 {
+				open := openBlocks[event.Index]
+				if open == nil {
 					return
 				}
+				idx := open.contentIndex
 				switch event.Delta.Type {
 				case "text_delta":
-					if tc, ok := blocks[idx].block.(TextContent); ok {
-						tc.Text = blocks[idx].appendContent(tc.Text, event.Delta.Text)
-						blocks[idx].block = tc
+					if tc, ok := open.block.(TextContent); ok {
+						tc.Text = open.appendContent(tc.Text, event.Delta.Text)
+						open.block = tc
 						output.Content[idx] = tc
 						stream.Push(AssistantMessageEvent{Type: EventTextDelta, ContentIndex: idx, Delta: event.Delta.Text, Partial: output})
 					}
 				case "thinking_delta":
-					if tc, ok := blocks[idx].block.(ThinkingContent); ok {
-						tc.Thinking = blocks[idx].appendContent(tc.Thinking, event.Delta.Thinking)
-						blocks[idx].block = tc
+					if tc, ok := open.block.(ThinkingContent); ok {
+						tc.Thinking = open.appendContent(tc.Thinking, event.Delta.Thinking)
+						open.block = tc
 						output.Content[idx] = tc
 						stream.Push(AssistantMessageEvent{Type: EventThinkingDelta, ContentIndex: idx, Delta: event.Delta.Thinking, Partial: output})
 					}
 				case "input_json_delta":
-					if tc, ok := blocks[idx].block.(ToolCall); ok {
-						tc.Arguments = blocks[idx].args.Append(event.Delta.PartialJSON)
+					if tc, ok := open.block.(ToolCall); ok {
+						tc.Arguments = open.args.Append(event.Delta.PartialJSON)
 						output.Content[idx] = tc
 						stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: idx, Delta: event.Delta.PartialJSON, Partial: output})
 					}
 				case "signature_delta":
-					if tc, ok := blocks[idx].block.(ThinkingContent); ok {
+					if tc, ok := open.block.(ThinkingContent); ok {
 						sig := deref(tc.ThinkingSignature)
 						if sig == "" {
 							sig = event.Delta.Signature
@@ -744,24 +750,26 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 							sig += event.Delta.Signature
 						}
 						tc.ThinkingSignature = &sig
-						blocks[idx].block = tc
+						open.block = tc
 						output.Content[idx] = tc
 					}
 				}
 			case "content_block_stop":
-				idx := findBlock(blocks, event.Index)
-				if idx < 0 {
+				open := openBlocks[event.Index]
+				delete(openBlocks, event.Index)
+				if open == nil {
 					return
 				}
-				switch b := blocks[idx].block.(type) {
+				idx := open.contentIndex
+				switch b := open.block.(type) {
 				case TextContent:
 					stream.Push(AssistantMessageEvent{Type: EventTextEnd, ContentIndex: idx, Content: b.Text, Partial: output})
 				case ThinkingContent:
 					stream.Push(AssistantMessageEvent{Type: EventThinkingEnd, ContentIndex: idx, Content: b.Thinking, Partial: output})
 				case ToolCall:
-					b.Arguments, b.ArgumentsError = ParseToolCallArguments(blocks[idx].args.String())
-					blocks[idx].args.Reset()
-					blocks[idx].block = b
+					b.Arguments, b.ArgumentsError = ParseToolCallArguments(open.args.String())
+					open.args.Reset()
+					open.block = b
 					output.Content[idx] = b
 					stream.Push(AssistantMessageEvent{Type: EventToolcallEnd, ContentIndex: idx, ToolCall: &b, Partial: output})
 				}
@@ -830,15 +838,6 @@ func stopDetailsExplanation(d *anthropicStreamStopDelta) string {
 		return ""
 	}
 	return d.StopDetails.Explanation
-}
-
-func findBlock(blocks []anthropicStreamBlock, index int) int {
-	for i, b := range blocks {
-		if b.index == index {
-			return i
-		}
-	}
-	return -1
 }
 
 // parseStreamingArgs finalizes tool-call arguments from the scratch buffer
