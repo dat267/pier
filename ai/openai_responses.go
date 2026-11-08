@@ -171,6 +171,9 @@ type OpenAIResponsesTool struct {
 	Strict       *bool                `json:"strict,omitempty"`
 	Format       *OpenAIGrammarFormat `json:"format,omitempty"`
 	DeferLoading *bool                `json:"defer_loading,omitempty"`
+	// StrictNull writes "strict":null, upstream's explicit null default
+	// when Strict is unset.
+	StrictNull bool `json:"-"`
 }
 
 // MarshalJSON keeps the existing Go format descriptor while emitting the flat
@@ -183,20 +186,29 @@ func (tool OpenAIResponsesTool) MarshalJSON() ([]byte, error) {
 			OpenAIGrammarDef
 		}{tool.Format.Type, tool.Format.Grammar}
 	}
+	var strict json.RawMessage
+	if tool.Strict != nil {
+		strict = mustMarshalJSON(*tool.Strict)
+	} else if tool.StrictNull {
+		strict = json.RawMessage("null")
+	}
 	return MarshalJSON(struct {
 		Type         string          `json:"type"`
 		Name         string          `json:"name"`
 		Description  string          `json:"description"`
 		Parameters   json.RawMessage `json:"parameters,omitempty"`
-		Strict       *bool           `json:"strict,omitempty"`
+		Strict       json.RawMessage `json:"strict,omitempty"`
 		Format       any             `json:"format,omitempty"`
 		DeferLoading *bool           `json:"defer_loading,omitempty"`
-	}{tool.Type, tool.Name, tool.Description, tool.Parameters, tool.Strict, format, tool.DeferLoading})
+	}{tool.Type, tool.Name, tool.Description, tool.Parameters, strict, format, tool.DeferLoading})
 }
 
 // ConvertResponsesToolsOptions tune tool conversion.
 type ConvertResponsesToolsOptions struct {
+	// Strict is the default strict flag (nil means false). StrictNull makes
+	// the default upstream's explicit null instead.
 	Strict                     *bool
+	StrictNull                 bool
 	SupportsStrictMode         bool
 	SupportsOpenAIGrammarTools bool
 	ToolSearchResult           bool
@@ -249,7 +261,11 @@ func ConvertResponsesTools(tools []Tool, options *ConvertResponsesToolsOptions) 
 			entry.DeferLoading = new(true)
 		}
 		if options.SupportsStrictMode {
-			entry.Strict = new(strict)
+			if unset && options.StrictNull {
+				entry.StrictNull = true
+			} else {
+				entry.Strict = new(strict)
+			}
 		}
 		out = append(out, entry)
 	}
@@ -479,12 +495,12 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 			"execution": "client", "status": "completed",
 			"arguments": map[string]any{"query": strings.Join(names, " "), "limit": len(names)},
 		}, "type", "call_id", "execution", "status", "arguments"))
-		converted, err := ConvertResponsesTools(tools, &ConvertResponsesToolsOptions{
-			Strict:                     toolOptionsStrict(options.ToolOptions),
-			SupportsStrictMode:         toolOptionsStrictMode(options.ToolOptions),
-			SupportsOpenAIGrammarTools: toolOptionsGrammar(options.ToolOptions),
-			ToolSearchResult:           true,
-		})
+		searchOptions := ConvertResponsesToolsOptions{SupportsStrictMode: true}
+		if options.ToolOptions != nil {
+			searchOptions = *options.ToolOptions
+		}
+		searchOptions.ToolSearchResult = true
+		converted, err := ConvertResponsesTools(tools, &searchOptions)
 		if err != nil {
 			return err
 		}
@@ -660,27 +676,6 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 // aiSystemMessageAlias lets the tool-addition helper read ToolsAdded without
 // importing the shared struct name.
 type aiSystemMessageAlias = SystemMessage
-
-func toolOptionsStrict(options *ConvertResponsesToolsOptions) *bool {
-	if options == nil {
-		return nil
-	}
-	return options.Strict
-}
-
-func toolOptionsStrictMode(options *ConvertResponsesToolsOptions) bool {
-	if options == nil {
-		return true
-	}
-	return options.SupportsStrictMode
-}
-
-func toolOptionsGrammar(options *ConvertResponsesToolsOptions) bool {
-	if options == nil {
-		return false
-	}
-	return options.SupportsOpenAIGrammarTools
-}
 
 // convertResponsesAssistantMessage projects assistant content into Responses
 // output items (reasoning replay, message items with phases, tool calls).

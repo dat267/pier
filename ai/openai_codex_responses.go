@@ -340,7 +340,11 @@ func BuildCodexRequestBody(model *Model, context TranscriptContext, options *Ope
 		options = &OpenAICodexResponsesOptions{}
 	}
 	compat := GetOpenAIResponsesCompat(model)
-	supportsStrictMode := compat.SupportsStrictMode
+	// Codex defaults strict mode on (upstream model.compat?.supportsStrictMode ?? true).
+	supportsStrictMode := true
+	if model.Compat != nil && model.Compat.OpenAIResponses != nil && model.Compat.OpenAIResponses.SupportsStrictMode != nil {
+		supportsStrictMode = *model.Compat.OpenAIResponses.SupportsStrictMode
+	}
 	supportsAdditionalTools := compat.SupportsAdditionalTools
 	supportsToolSearch := compat.SupportsToolSearch
 	transcriptTools := ResolveTranscriptTools(context.Messages, GetResponsesToolSupport(
@@ -357,7 +361,7 @@ func BuildCodexRequestBody(model *Model, context TranscriptContext, options *Ope
 		SupportsToolSearch:             supportsToolSearch,
 		ToolCallProviders:              codexToolCallProviders,
 		ToolOptions: &ConvertResponsesToolsOptions{
-			Strict:                     nil,
+			StrictNull:                 true,
 			SupportsStrictMode:         supportsStrictMode,
 			SupportsOpenAIGrammarTools: compat.SupportsOpenAIGrammarTools,
 		},
@@ -402,7 +406,7 @@ func BuildCodexRequestBody(model *Model, context TranscriptContext, options *Ope
 	}
 	if len(transcriptTools.RequestTools) > 0 {
 		converted, err := ConvertResponsesTools(transcriptTools.RequestTools, &ConvertResponsesToolsOptions{
-			Strict:                     nil,
+			StrictNull:                 true,
 			SupportsStrictMode:         supportsStrictMode,
 			SupportsOpenAIGrammarTools: compat.SupportsOpenAIGrammarTools,
 		})
@@ -440,6 +444,30 @@ func BuildCodexRequestBody(model *Model, context TranscriptContext, options *Ope
 		}
 	}
 	return body, nil
+}
+
+// codexRequestBodyOrder is the member order of upstream buildRequestBody's
+// object literal followed by its later assignments.
+var codexRequestBodyOrder = []string{
+	"model", "store", "stream", "instructions", "input", "text", "include", "prompt_cache_key",
+	"tool_choice", "parallel_tool_calls", "temperature", "service_tier", "tools", "reasoning",
+}
+
+// marshalCodexRequestBody writes the body in upstream's member order; a Go
+// map would otherwise sort the keys.
+func marshalCodexRequestBody(body map[string]any) ([]byte, error) {
+	var fields orderedJSONFields
+	for _, key := range codexRequestBodyOrder {
+		if value, ok := body[key]; ok {
+			if err := fields.setAny(key, value); err != nil {
+				return nil, err
+			}
+		}
+	}
+	if len(fields.keys) != len(body) {
+		return nil, fmt.Errorf("codex request body has an unordered member")
+	}
+	return fields.marshal()
 }
 
 func boolPtrFalse() *bool { value := false; return &value }
@@ -630,16 +658,18 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 			fail(err)
 			return
 		}
-		var payload any = body
-		if options.OnPayload != nil {
-			if next := options.OnPayload(mustMarshalJSON(body), model); next != nil {
-				payload = next
-			}
-		}
-		bodyJSON, err := MarshalJSON(payload)
+		bodyJSON, err := marshalCodexRequestBody(body)
 		if err != nil {
 			fail(err)
 			return
+		}
+		if options.OnPayload != nil {
+			if next := options.OnPayload(bodyJSON, model); next != nil {
+				if bodyJSON, err = MarshalJSON(next); err != nil {
+					fail(err)
+					return
+				}
+			}
 		}
 		headers := buildCodexSSEHeaders(IdentityHeaders(model, options.Identity), model.Headers, options.Headers, accountID, options.APIKey, cacheSessionID)
 

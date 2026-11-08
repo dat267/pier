@@ -523,3 +523,39 @@ func TestCodexProviderFactory(t *testing.T) {
 		t.Fatal("no catalog models")
 	}
 }
+
+// Upstream api/openai-codex-responses.ts buildRequestBody (v1.5.0) sends the
+// body in its object-literal member order, defaults strict mode on, and
+// converts tools with strict: null, so a tool without constrained sampling
+// sends "strict":null. Expected bytes come from upstream streamSimple's
+// onPayload with the same model and context.
+func TestCodexRequestBodyOrderAndNullStrict(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte("{}"))
+	}))
+	defer server.Close()
+	model := codexModel(server.URL)
+	model.Compat = &ModelCompat{OpenAIResponses: &OpenAIResponsesCompat{
+		SupportsAdditionalTools: new(true), SupportsMidConvoSystemMessages: new(true),
+	}}
+	tool := Tool{Name: "lookup", Description: "Look up", Parameters: json.RawMessage(`{"type":"object","properties":{"z":{"type":"string"}},"required":["z"]}`)}
+	messages := []Message{
+		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+		&SystemMessage{ToolsAdded: []Tool{tool}, Timestamp: 2},
+	}
+	zero, temperature := 0, 0.0
+	var payload string
+	options := &SimpleStreamOptions{}
+	options.APIKey = codexToken(t, "acc")
+	options.SessionID = "s1"
+	options.Temperature = &temperature
+	options.MaxRetries = &zero
+	options.Env = ProviderEnv{}
+	options.OnPayload = func(p json.RawMessage, _ *Model) json.RawMessage { payload = string(p); return nil }
+	_, _ = StreamOpenAICodexResponsesSimple(model, TranscriptContext{Messages: messages}, options).Result(ctxpkg.Background())
+	want := `{"model":"gpt-5.5","store":false,"stream":true,"instructions":"You are a helpful assistant.","input":[{"role":"user","content":[{"type":"input_text","text":"hi"}]},{"type":"additional_tools","role":"developer","tools":[{"type":"function","name":"lookup","description":"Look up","parameters":{"type":"object","properties":{"z":{"type":"string"}},"required":["z"]},"strict":null}]}],"text":{"verbosity":"low"},"include":["reasoning.encrypted_content"],"prompt_cache_key":"s1","tool_choice":"auto","parallel_tool_calls":true,"temperature":0,"reasoning":{"effort":"none"}}`
+	if payload != want {
+		t.Fatalf("payload =\n%s\nwant\n%s", payload, want)
+	}
+}
