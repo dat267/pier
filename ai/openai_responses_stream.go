@@ -456,11 +456,20 @@ func ProcessResponsesStream(
 			output.Content[slot.contentIndex] = slot.toolCall.call
 		}
 	}
+	// pushToolCallDelta pushes even an empty argument delta, as upstream
+	// does for every function_call_arguments.delta.
 	pushToolCallDelta := func(slot *responsesOutputSlot, delta string) {
-		if slot == nil || delta == "" {
+		if slot == nil {
 			return
 		}
 		stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: slot.contentIndex, Delta: delta, Partial: output})
+	}
+	// pushCustomInputDelta pushes a custom-input JSON delta; the helpers return
+	// "" where upstream's return undefined.
+	pushCustomInputDelta := func(slot *responsesOutputSlot, delta string) {
+		if delta != "" {
+			pushToolCallDelta(slot, delta)
+		}
 	}
 	customToolCallInput := func(slot *responsesOutputSlot) string {
 		if slot.toolCall.customInput == nil {
@@ -679,27 +688,29 @@ func ProcessResponsesStream(
 			if slot == nil || slot.toolCall.args == nil {
 				return
 			}
+			// Upstream replaces the streamed text and keeps the partial value;
+			// only output_item.done finishes the arguments.
 			previous := slot.toolCall.args.String()
 			slot.toolCall.args.Reset()
-			slot.toolCall.args.Append(event.Arguments)
-			slot.toolCall.call.Arguments, slot.toolCall.call.ArgumentsError = ParseToolCallArguments(event.Arguments)
+			slot.toolCall.call.Arguments = slot.toolCall.args.Append(event.Arguments)
 			updateContent(slot)
 			if strings.HasPrefix(event.Arguments, previous) {
-				delta := event.Arguments[len(previous):]
-				pushToolCallDelta(slot, delta)
+				if delta := event.Arguments[len(previous):]; delta != "" {
+					pushToolCallDelta(slot, delta)
+				}
 			}
 		case "response.custom_tool_call_input.delta":
 			slot := getSlot(event.OutputIndex, "toolCall")
 			if slot == nil || slot.toolCall.customInput == nil {
 				return
 			}
-			pushToolCallDelta(slot, appendCustomToolCallInput(slot, customToolCallInput(slot)+event.Delta, false))
+			pushCustomInputDelta(slot, appendCustomToolCallInput(slot, customToolCallInput(slot)+event.Delta, false))
 		case "response.custom_tool_call_input.done":
 			slot := getSlot(event.OutputIndex, "toolCall")
 			if slot == nil || slot.toolCall.customInput == nil {
 				return
 			}
-			pushToolCallDelta(slot, appendCustomToolCallInput(slot, event.Input, true))
+			pushCustomInputDelta(slot, appendCustomToolCallInput(slot, event.Input, true))
 		case "response.output_item.done":
 			var item responsesItem
 			if jsonUnmarshalStrict(event.Item, &item) != nil {
@@ -766,7 +777,7 @@ func ProcessResponsesStream(
 				if item.Input != nil {
 					nextInput = *item.Input
 				}
-				pushToolCallDelta(slot, appendCustomToolCallInput(slot, nextInput, true))
+				pushCustomInputDelta(slot, appendCustomToolCallInput(slot, nextInput, true))
 				if item.Namespace != nil {
 					slot.toolCall.call.Namespace = item.Namespace
 				}

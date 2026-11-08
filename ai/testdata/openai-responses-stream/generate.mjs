@@ -257,6 +257,24 @@ const scenarios = [
 		],
 	},
 	{
+		// v1.5.0: an empty argument delta still emits toolcall_delta, and
+		// function_call_arguments.done keeps the partial value of its text
+		// without finishing (no argumentsError) until output_item.done.
+		name: "arguments-done-keeps-partial",
+		events: [
+			created,
+			{
+				type: "response.output_item.added",
+				output_index: 0,
+				item: { ...functionItem(""), arguments: "" },
+			},
+			{ type: "response.function_call_arguments.delta", output_index: 0, item_id: "fc_1", delta: "" },
+			{ type: "response.function_call_arguments.delta", output_index: 0, item_id: "fc_1", delta: '{"z":"q' },
+			{ type: "response.function_call_arguments.done", output_index: 0, item_id: "fc_1", arguments: '{"z":"q"' },
+			{ type: "response.failed", response: { id: "resp_1", status: "failed", error: { code: "server_error", message: "boom" } } },
+		],
+	},
+	{
 		name: "incomplete-content-filter",
 		events: [
 			created,

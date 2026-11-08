@@ -801,6 +801,71 @@
     ]
   },
   {
+    "name": "arguments-done-keeps-partial",
+    "sse": "event: response.created\ndata: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_1\",\"status\":\"in_progress\"}}\n\nevent: response.output_item.added\ndata: {\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":{\"type\":\"function_call\",\"id\":\"fc_1\",\"call_id\":\"call_1\",\"name\":\"lookup\",\"arguments\":\"\",\"status\":\"completed\"}}\n\nevent: response.function_call_arguments.delta\ndata: {\"type\":\"response.function_call_arguments.delta\",\"output_index\":0,\"item_id\":\"fc_1\",\"delta\":\"\"}\n\nevent: response.function_call_arguments.delta\ndata: {\"type\":\"response.function_call_arguments.delta\",\"output_index\":0,\"item_id\":\"fc_1\",\"delta\":\"{\\\"z\\\":\\\"q\"}\n\nevent: response.function_call_arguments.done\ndata: {\"type\":\"response.function_call_arguments.done\",\"output_index\":0,\"item_id\":\"fc_1\",\"arguments\":\"{\\\"z\\\":\\\"q\\\"\"}\n\nevent: response.failed\ndata: {\"type\":\"response.failed\",\"response\":{\"id\":\"resp_1\",\"status\":\"failed\",\"error\":{\"code\":\"server_error\",\"message\":\"boom\"}}}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "toolcall_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 0,
+        "delta": ""
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 0,
+        "delta": "{\"z\":\"q"
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 0,
+        "delta": "\""
+      },
+      {
+        "type": "error",
+        "reason": "error",
+        "error": {
+          "content": [
+            {
+              "type": "toolCall",
+              "id": "call_1|fc_1",
+              "name": "lookup",
+              "arguments": {
+                "z": "q"
+              }
+            }
+          ],
+          "api": "openai-responses",
+          "provider": "openai",
+          "model": "gpt-5",
+          "stopReason": "error",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "responseId": "resp_1",
+          "rawStopReason": "failed",
+          "errorMessage": "server_error: boom"
+        }
+      }
+    ]
+  },
+  {
     "name": "incomplete-content-filter",
     "sse": "event: response.created\ndata: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_1\",\"status\":\"in_progress\"}}\n\nevent: response.output_item.added\ndata: {\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":{\"type\":\"message\",\"id\":\"msg_1\",\"role\":\"assistant\",\"content\":[]}}\n\nevent: response.output_text.delta\ndata: {\"type\":\"response.output_text.delta\",\"output_index\":0,\"item_id\":\"msg_1\",\"delta\":\"cut\"}\n\nevent: response.output_item.done\ndata: {\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":{\"type\":\"message\",\"id\":\"msg_1\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"cut\"}]}}\n\nevent: response.incomplete\ndata: {\"type\":\"response.incomplete\",\"response\":{\"id\":\"resp_1\",\"status\":\"incomplete\",\"incomplete_details\":{\"reason\":\"content_filter\"}}}\n\n",
     "events": [
