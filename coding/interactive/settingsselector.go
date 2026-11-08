@@ -787,7 +787,7 @@ func NewSettingsSelectorComponent(config SettingsConfig, callbacks SettingsCallb
 		{
 			ID:           "tui-mode",
 			Label:        "TUI mode",
-			Description:  "Interface layout; fullscreen mode is experimental",
+			Description:  "Interface layout; regular mode uses the terminal's normal scrollback",
 			CurrentValue: config.TuiMode,
 			Values:       []string{"regular", "fullscreen"},
 		},
@@ -885,7 +885,7 @@ func NewSettingsSelectorComponent(config SettingsConfig, callbacks SettingsCallb
 	insertAfter("skill-commands", tui.SettingItem{
 		ID:           "show-hardware-cursor",
 		Label:        "Show hardware cursor",
-		Description:  "Show the terminal cursor while still positioning it for IME support",
+		Description:  "Use the terminal cursor instead of Pi's drawn cursor",
 		CurrentValue: boolStr(config.ShowHardwareCursor),
 		Values:       []string{"true", "false"},
 	})
@@ -899,7 +899,7 @@ func NewSettingsSelectorComponent(config SettingsConfig, callbacks SettingsCallb
 	insertAfter("editor-padding", tui.SettingItem{
 		ID:           "output-padding",
 		Label:        "Output padding",
-		Description:  "Horizontal padding for user messages, assistant messages, and thinking",
+		Description:  "Horizontal padding for messages, tool output, and command output",
 		CurrentValue: itoa(config.OutputPad),
 		Values:       []string{"0", "1"},
 	})

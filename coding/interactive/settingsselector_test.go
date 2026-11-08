@@ -328,6 +328,31 @@ func TestTrustSettingDoesNotAdvertiseExtensions(t *testing.T) {
 	}
 }
 
+// TestSettingsDescriptionsMatchUpstream pins the row descriptions pi v1.5.0
+// (f9a26365) modes/interactive/components/settings-selector.ts shows. They
+// changed with 88ff80b98 (fullscreen default), 1cedd3272 (hardware cursor
+// replaces the drawn one) and the output padding setting's wider scope.
+func TestSettingsDescriptionsMatchUpstream(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+
+	events := []string{}
+	component := NewSettingsSelectorComponent(baseSettingsConfig(t), recordingCallbacks(&events))
+	for id, want := range map[string]string{
+		"tui-mode":             "Interface layout; regular mode uses the terminal's normal scrollback",
+		"show-hardware-cursor": "Use the terminal cursor instead of Pi's drawn cursor",
+		"output-padding":       "Horizontal padding for messages, tool output, and command output",
+	} {
+		component.GetSettingsList().SelectItem(id)
+		if rendered := coding.StripAnsi(strings.Join(component.Render(160), "\n")); !strings.Contains(rendered, want) {
+			t.Errorf("%s description missing %q: %q", id, want, rendered)
+		}
+	}
+}
+
 // TestSettingsSelectorHelpers covers the theme helpers.
 func TestSettingsSelectorHelpers(t *testing.T) {
 	themes := []string{"dark", "light", "solarized"}
