@@ -5587,7 +5587,7 @@ Test: `TestVertexFlashLiteMinimalBudgetUsesFlashLiteTable`.
 
 ### D402
 
-**The working indicator shows elapsed time, and the transcript notes how long a run worked.**
+**The working indicator shows elapsed time and tokens, and the transcript notes what a run used.**
 
 Reference: pi v1.5.0 (f9a26365)
 `packages/coding-agent/src/modes/interactive/components/status-indicator.ts`
@@ -5596,9 +5596,14 @@ line. Pier is a project choice here: from `agent_start`, the working indicator
 appends the time since in whole seconds (`Working (1m 5s)`), counted from the
 run's start across every working indicator the run shows (after a retry or
 compaction indicator, for example), and ticking once a second even when a
-custom indicator hides the spinner frames. At `agent_end` the transcript adds
-a dim `Worked for 1m 23s` line, with tenths under a minute as the bash tool's
-`Took` label has. The line is display-only: it is not written to the session,
+custom indicator hides the spinner frames. Once the provider reports usage it
+adds the run's tokens in and out in the footer's token format
+(`Working (1m 5s · ↑48k ↓3.2k)`): finished assistant messages plus the
+streaming one's usage so far, where in counts every prompt token processed
+(input, cache reads and cache writes), so a multi-turn run counts its context
+once per turn. At `agent_end` the transcript adds a dim
+`Worked for 1m 23s · ↑48k ↓3.2k` line, with tenths under a minute as the bash
+tool's `Took` label has. The line is display-only: it is not written to the session,
 so a resumed session does not show it.
 
 Tests: `TestWorkingIndicatorShowsElapsedAndTranscriptNotesTheRun`,

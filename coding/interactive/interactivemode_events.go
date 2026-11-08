@@ -224,9 +224,15 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 		d.handleMessageStart(event)
 
 	case coding.SessionMessageUpdate:
+		if assistant, ok := eventMessage(event).(*ai.AssistantMessage); ok && d.UIState != nil {
+			d.UIState.SetWorkingMessageUsage(assistant.Usage)
+		}
 		d.handleMessageUpdate(event)
 
 	case coding.SessionMessageEnd:
+		if assistant, ok := eventMessage(event).(*ai.AssistantMessage); ok && d.UIState != nil {
+			d.UIState.EndWorkingMessageUsage(assistant.Usage)
+		}
 		d.handleMessageEnd(event)
 
 	case coding.SessionBashExecutionUpdate:
@@ -257,8 +263,8 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 			d.streamingMessage = nil
 		}
 		if d.UIState != nil {
-			if worked, ok := d.UIState.StopWorkingClock(workingClock()); ok && d.Transcript != nil {
-				d.Transcript.AddWorkedFor(worked)
+			if worked, tokens, ok := d.UIState.StopWorkingClock(workingClock()); ok && d.Transcript != nil {
+				d.Transcript.AddWorkedFor(worked, tokens)
 			}
 		}
 		d.pendingTools = map[string]*ToolExecutionComponent{}

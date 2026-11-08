@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
@@ -43,9 +44,28 @@ func TestWorkingIndicatorShowsElapsedAndTranscriptNotesTheRun(t *testing.T) {
 		t.Fatalf("re-shown working indicator = %q", got)
 	}
 
+	// Tokens: the streaming message's usage so far, then each finished
+	// message's, summed over the run. In counts input, cache reads and writes.
+	message := func(eventType string, usage ai.Usage) *coding.SessionEvent {
+		kind := map[string]string{coding.SessionMessageStart: "message_start", coding.SessionMessageUpdate: "message_update", coding.SessionMessageEnd: "message_end"}[eventType]
+		return &coding.SessionEvent{Type: eventType, Agent: agentEvent(kind, &ai.AssistantMessage{Usage: usage, StopReason: ai.StopStop})}
+	}
+	dispatcher.HandleEvent(message(coding.SessionMessageStart, ai.Usage{}))
+	dispatcher.HandleEvent(message(coding.SessionMessageUpdate, ai.Usage{Input: 1200, CacheRead: 30000, Output: 50}))
+	if got := renderedText(working.Render(80)); !strings.Contains(got, "Working (1m 15s · ↑31k ↓50)") {
+		t.Fatalf("streaming tokens = %q", got)
+	}
+	dispatcher.HandleEvent(message(coding.SessionMessageEnd, ai.Usage{Input: 1200, CacheRead: 30000, CacheWrite: 800, Output: 400}))
+	dispatcher.HandleEvent(message(coding.SessionMessageStart, ai.Usage{}))
+	dispatcher.HandleEvent(message(coding.SessionMessageUpdate, ai.Usage{Input: 10, CacheRead: 32000, Output: 2800}))
+	if got := renderedText(working.Render(80)); !strings.Contains(got, "Working (1m 15s · ↑64k ↓3.2k)") {
+		t.Fatalf("second message tokens = %q", got)
+	}
+
 	workingClock = func() time.Time { return started.Add(83*time.Second + 400*time.Millisecond) }
+	dispatcher.HandleEvent(message(coding.SessionMessageEnd, ai.Usage{Input: 10, CacheRead: 32000, Output: 2800}))
 	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentEnd})
-	if got := renderedText(transcript.Chat.Render(80)); !strings.Contains(got, "Worked for 1m 23s") {
+	if got := renderedText(transcript.Chat.Render(80)); !strings.Contains(got, "Worked for 1m 23s · ↑64k ↓3.2k") {
 		t.Fatalf("transcript = %q, want the worked-for notice", got)
 	}
 	// The notice is its own line: a later status does not replace it.
@@ -64,15 +84,16 @@ func TestWorkingIndicatorShowsElapsedAndTranscriptNotesTheRun(t *testing.T) {
 func TestWorkingElapsedLabelFormats(t *testing.T) {
 	for _, tc := range []struct {
 		elapsed time.Duration
+		tokens  workingTokenCount
 		want    string
 	}{
-		{0, "(0s)"},
-		{999 * time.Millisecond, "(0s)"},
-		{59 * time.Second, "(59s)"},
-		{65 * time.Second, "(1m 5s)"},
-		{3723 * time.Second, "(1h 2m 3s)"},
+		{0, workingTokenCount{}, "(0s)"},
+		{999 * time.Millisecond, workingTokenCount{}, "(0s)"},
+		{59 * time.Second, workingTokenCount{in: 950, out: 0}, "(59s · ↑950 ↓0)"},
+		{65 * time.Second, workingTokenCount{in: 48200, out: 3240}, "(1m 5s · ↑48k ↓3.2k)"},
+		{3723 * time.Second, workingTokenCount{in: 2_400_000, out: 51_000}, "(1h 2m 3s · ↑2.4M ↓51k)"},
 	} {
-		if got := workingElapsedLabel(tc.elapsed); got != tc.want {
+		if got := workingElapsedLabel(tc.elapsed, tc.tokens); got != tc.want {
 			t.Errorf("%v: got %q, want %q", tc.elapsed, got, tc.want)
 		}
 	}

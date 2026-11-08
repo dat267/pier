@@ -4,6 +4,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
@@ -27,6 +28,10 @@ type InteractiveUIState struct {
 	// workingSince is when the running agent started; the working indicator
 	// shows the time since (D402). Zero while idle.
 	workingSince time.Time
+	// workingTokens sums the run's finished assistant messages, and
+	// workingMessage holds the streaming one's usage so far.
+	workingTokens  workingTokenCount
+	workingMessage workingTokenCount
 
 	FooterData *coding.FooterDataProvider
 	Footer     *FooterComponent
@@ -195,29 +200,57 @@ func (s *InteractiveUIState) ShowWorkingStatusIndicator(thinkingLevel string) {
 	}
 	indicator := NewWorkingStatusIndicator(s.UI, message, s.WorkingIndicatorOptions, colorFn)
 	if !s.workingSince.IsZero() {
-		indicator.SetElapsed(s.workingSince, workingElapsedLabel)
+		indicator.SetElapsed(s.workingSince, s.workingLabel)
 	}
 	s.ShowStatusIndicator(indicator)
+}
+
+// workingLabel is the working indicator's suffix: the elapsed time and,
+// once the provider reports usage, the run's tokens in and out (D402).
+func (s *InteractiveUIState) workingLabel(elapsed time.Duration) string {
+	return workingElapsedLabel(elapsed, s.workingTokens.plus(s.workingMessage))
+}
+
+// SetWorkingMessageUsage records the streaming assistant message's usage so
+// far.
+func (s *InteractiveUIState) SetWorkingMessageUsage(usage ai.Usage) {
+	if !s.workingSince.IsZero() {
+		s.workingMessage = workingTokensOf(usage)
+	}
+}
+
+// EndWorkingMessageUsage adds a finished assistant message's usage to the
+// run.
+func (s *InteractiveUIState) EndWorkingMessageUsage(usage ai.Usage) {
+	if !s.workingSince.IsZero() {
+		s.workingTokens = s.workingTokens.plus(workingTokensOf(usage))
+		s.workingMessage = workingTokenCount{}
+	}
 }
 
 // StartWorkingClock records that the agent started working at now and
 // shows the elapsed time on the working indicator (D402).
 func (s *InteractiveUIState) StartWorkingClock(now time.Time) {
 	s.workingSince = now
+	s.workingTokens = workingTokenCount{}
+	s.workingMessage = workingTokenCount{}
 	if working, ok := s.ActiveStatusIndicator.(*StatusIndicator); ok && working.Kind == StatusWorking {
-		working.SetElapsed(now, workingElapsedLabel)
+		working.SetElapsed(now, s.workingLabel)
 	}
 }
 
 // StopWorkingClock ends the working clock and returns how long the agent
-// worked; false when no clock was running.
-func (s *InteractiveUIState) StopWorkingClock(now time.Time) (time.Duration, bool) {
+// worked and the tokens its messages used; false when no clock was running.
+func (s *InteractiveUIState) StopWorkingClock(now time.Time) (time.Duration, workingTokenCount, bool) {
 	if s.workingSince.IsZero() {
-		return 0, false
+		return 0, workingTokenCount{}, false
 	}
 	worked := max(now.Sub(s.workingSince), 0)
+	tokens := s.workingTokens.plus(s.workingMessage)
 	s.workingSince = time.Time{}
-	return worked, true
+	s.workingTokens = workingTokenCount{}
+	s.workingMessage = workingTokenCount{}
+	return worked, tokens, true
 }
 
 // ClearStatusContainerIfIdle drops the status container's contents when no

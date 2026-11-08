@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
 )
 
@@ -80,10 +81,36 @@ func NewWorkingStatusIndicator(host tui.RenderRequester, message string, indicat
 	return NewStatusIndicator(StatusWorking, host, spinnerColor, messageColor, message, indicator)
 }
 
-// workingElapsedLabel is the working indicator's elapsed time in whole
-// seconds, so the label changes once a second: (12s), (1m 5s), (1h 2m 3s).
-func workingElapsedLabel(elapsed time.Duration) string {
-	return "(" + formatWholeSeconds(int(elapsed/time.Second)) + ")"
+// workingTokenCount is a run's tokens in (every prompt token the provider
+// processed: input, cache reads and cache writes) and out (D402).
+type workingTokenCount struct{ in, out int64 }
+
+func workingTokensOf(usage ai.Usage) workingTokenCount {
+	return workingTokenCount{in: usage.Input + usage.CacheRead + usage.CacheWrite, out: usage.Output}
+}
+
+func (c workingTokenCount) plus(other workingTokenCount) workingTokenCount {
+	return workingTokenCount{in: c.in + other.in, out: c.out + other.out}
+}
+
+// String is "↑48k ↓3.2k" in the footer's token format, or "" before the
+// provider reports usage.
+func (c workingTokenCount) String() string {
+	if c.in == 0 && c.out == 0 {
+		return ""
+	}
+	return "↑" + FormatTokens(c.in) + " ↓" + FormatTokens(c.out)
+}
+
+// workingElapsedLabel is the working indicator's suffix: the elapsed time in
+// whole seconds, so it changes once a second, then the tokens when known:
+// (12s), (1m 5s · ↑48k ↓3.2k).
+func workingElapsedLabel(elapsed time.Duration, tokens workingTokenCount) string {
+	label := formatWholeSeconds(int(elapsed / time.Second))
+	if text := tokens.String(); text != "" {
+		label += " · " + text
+	}
+	return "(" + label + ")"
 }
 
 func formatWholeSeconds(total int) string {
