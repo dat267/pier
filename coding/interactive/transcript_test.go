@@ -339,6 +339,87 @@ func TestTranscriptThinkingDropNotice(t *testing.T) {
 	}
 }
 
+// TestTranscriptNoticesRepaintAfterSystemThemeColorsArrive pins upstream's
+// ThemedText notices (interactive-mode.ts:4210 addCacheWarmingUsage, :4226
+// addCompactionCostNotice, :4268 maybeShowThinkingDropNotice, :4301
+// addCacheMissNotice). The notice is built while the system theme still lacks
+// the terminal's reported colors: the controller marks them pending before the
+// first load, and a resumed session replays its transcript during that window.
+// Upstream rebuilds the string at render, so the notice colors in once the
+// terminal answers; pier baked the pending palette and stayed uncolored.
+func TestTranscriptNoticesRepaintAfterSystemThemeColorsArrive(t *testing.T) {
+	renderer, settings := newTranscriptTestRenderer(t, false)
+	settings.SetShowCacheMissNotices(true)
+	t.Cleanup(func() {
+		SetSystemTerminalColors(tui.TerminalColors{})
+		InitTheme("dark", false)
+	})
+	MarkSystemTerminalColorsPending()
+	InitTheme(SystemThemeName, false)
+	renderer.SessionInfo = coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
+
+	transformations, _ := json.Marshal(map[string]any{"transformations": []map[string]any{{"type": "thinking_dropped"}}})
+	renderer.AddCacheWarmingUsage(&coding.SessionEntry{
+		Type: "usage", Kind: "cache_warm", Usage: &ai.Usage{Cost: ai.UsageCost{Total: 0.0012}},
+	})
+	renderer.AddCompactionCostNotice(CompactionCostNotice{
+		Kind: "compaction", Usage: ai.Usage{Input: 140000, Cost: ai.UsageCost{Total: 0.03}},
+	})
+	renderer.AddCacheMissNotice(coding.CacheMiss{MissedTokens: 30000, MissedCost: 0.5})
+	renderer.MaybeShowThinkingDropNotice(&ai.AssistantMessage{Diagnostics: []ai.AssistantMessageDiagnostic{{
+		Type: "anthropic_input_transformations", Details: transformations,
+	}}})
+
+	markers := []string{
+		"Cache warmed: $0.001",
+		"Compaction: 140k tokens billed (~$0.03)",
+		"Cache miss: 30k tokens re-billed (~$0.50)",
+		"Anthropic dropped 1 thinking block (details in session)",
+	}
+	render := func() map[string]string {
+		lines := renderChat(t, renderer.Chat)
+		found := map[string]string{}
+		for _, marker := range markers {
+			for _, line := range lines {
+				if strings.Contains(coding.StripAnsi(line), marker) {
+					found[marker] = line
+				}
+			}
+		}
+		return found
+	}
+	pending := render()
+	for _, marker := range markers {
+		line, ok := pending[marker]
+		if !ok {
+			t.Fatalf("notice %q not rendered", marker)
+		}
+		if strings.Contains(line, "\x1b[38;") {
+			t.Fatalf("pending system theme already colored %q: %q", marker, line)
+		}
+	}
+
+	// The terminal reports its colors: the controller reloads the theme and the
+	// app invalidates the UI (interactivemode_run.go OnThemeChange).
+	background := tui.RgbColor{R: 24, G: 28, B: 34}
+	SetSystemTerminalColors(tui.TerminalColors{Background: &background})
+	InitTheme(SystemThemeName, false)
+	renderer.Chat.Invalidate()
+	reported := render()
+	for _, marker := range markers {
+		line, ok := reported[marker]
+		if !ok {
+			t.Fatalf("notice %q lost its text", marker)
+		}
+		if !strings.Contains(line, "\x1b[38;") {
+			t.Fatalf("notice %q stayed uncolored after the terminal reported colors: %q", marker, line)
+		}
+		if coding.StripAnsi(line) != coding.StripAnsi(pending[marker]) {
+			t.Fatalf("notice %q text changed: %q -> %q", marker, pending[marker], line)
+		}
+	}
+}
+
 // TestTranscriptRenderSessionEntries covers the entry projection.
 func TestTranscriptRenderSessionEntries(t *testing.T) {
 	renderer, settings := newTranscriptTestRenderer(t, false)

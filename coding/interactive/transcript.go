@@ -920,9 +920,9 @@ func (r *TranscriptRenderer) AddCacheWarmingUsage(entry *coding.SessionEntry) {
 	if r.Settings == nil || !r.Settings.GetShowCacheMissNotices() {
 		return
 	}
-	theme := ActiveTheme()
+	usage := coding.FormatCacheWarmingUsage(entry)
 	r.Chat.AddChild(tui.NewSpacer(1))
-	r.Chat.AddChild(tui.NewText(theme.Fg("dim", coding.FormatCacheWarmingUsage(entry)), 1, 0, nil))
+	r.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg("dim", usage) }, 1, 0))
 }
 
 // AddCompactionCostNotice renders a compaction/branch-summary billing notice.
@@ -930,7 +930,6 @@ func (r *TranscriptRenderer) AddCompactionCostNotice(notice CompactionCostNotice
 	if r.Settings == nil || !r.Settings.GetShowCacheMissNotices() {
 		return
 	}
-	theme := ActiveTheme()
 	totalUsage := notice.Usage
 	totalUsage.TotalTokens = 0
 	tokens := int64(ai.CalculateContextTokens(totalUsage))
@@ -951,7 +950,7 @@ func (r *TranscriptRenderer) AddCompactionCostNotice(notice CompactionCostNotice
 	}
 	line += FormatTokens(tokens) + " tokens billed" + cost
 	r.Chat.AddChild(tui.NewSpacer(1))
-	r.Chat.AddChild(tui.NewText(theme.Fg("warning", line), 1, 0, nil))
+	r.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg("warning", line) }, 1, 0))
 }
 
 // CountDroppedThinkingBlocks counts the dropped-thinking diagnostics.
@@ -1009,14 +1008,13 @@ func (r *TranscriptRenderer) MaybeShowThinkingDropNotice(message *ai.AssistantMe
 		return
 	}
 
-	theme := ActiveTheme()
 	noun := "thinking blocks"
 	if droppedCount == 1 {
 		noun = "thinking block"
 	}
+	dropped := "Anthropic dropped " + itoa(droppedCount) + " " + noun + " (details in session)"
 	r.Chat.AddChild(tui.NewSpacer(1))
-	r.Chat.AddChild(tui.NewText(theme.Fg("warning",
-		"Anthropic dropped "+itoa(droppedCount)+" "+noun+" (details in session)"), 1, 0, nil))
+	r.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg("warning", dropped) }, 1, 0))
 }
 
 // MaybeShowCacheMissNotice shows a notice for a significant cache miss.
@@ -1050,9 +1048,9 @@ func (r *TranscriptRenderer) AddCacheMissNotice(miss coding.CacheMiss) {
 		}
 		label = "Cache miss after " + itoa(int(minutes)) + "m idle"
 	}
-	theme := ActiveTheme()
+	line := label + ": " + reBilled
 	r.Chat.AddChild(tui.NewSpacer(1))
-	r.Chat.AddChild(tui.NewText(theme.Fg("warning", label+": "+reBilled), 1, 0, nil))
+	r.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg("warning", line) }, 1, 0))
 }
 
 // RenderInitialMessages renders the initial transcript and the compaction
