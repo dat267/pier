@@ -40,6 +40,10 @@ func TestStripAnsiMatchesPattern(t *testing.T) {
 		"\x1b[;5m",
 		"a\x1b[0mb\x1b[1mc",
 		"\x1b[0m\x1b[0m",
+		// The final-byte class is A-P, R-T, Z: S (scroll up) is stripped and
+		// U-Y are not (pi v1.5.0 utils/ansi.ts CSI_FINAL).
+		"\x1b[2Sx\x1b[3Tx\x1b[4Ux\x1b[5Vx\x1b[6Wx\x1b[7Xx\x1b[8Yx\x1b[9Zx",
+		"\u009bS",
 		"\x1b]0;t\x07dangling\x1b[",
 		"\u009b0m",
 		"\u009b31mred\u009b0m",

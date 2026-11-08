@@ -209,16 +209,16 @@ func isAnsiIntermediate(value byte) bool {
 }
 
 // isAnsiFinal reports whether value is in the pattern's final-byte class
-// [\dA-PR-TZcf-nq-uy=><~]: digits, A-P, R, T-Z, c, f-n, q-u, y, = > < ~.
+// [\dA-PR-TZcf-nq-uy=><~]: digits, A-P, R-T, Z, c, f-n, q-u, y, = > < ~.
 func isAnsiFinal(value byte) bool {
 	switch {
 	case isASCIIDigit(value):
 		return true
 	case value >= 'A' && value <= 'P':
 		return true
-	case value == 'R':
+	case value >= 'R' && value <= 'T':
 		return true
-	case value >= 'T' && value <= 'Z':
+	case value == 'Z':
 		return true
 	case value == 'c':
 		return true
