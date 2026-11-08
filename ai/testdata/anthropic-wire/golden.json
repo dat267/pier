@@ -1,0 +1,350 @@
+[
+	{
+		"name": "minimal",
+		"messages": [
+			{
+				"role": "user",
+				"content": "hi",
+				"timestamp": 1
+			}
+		],
+		"path": "/v1/messages",
+		"headers": {},
+		"body": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"hi\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":64000,\"stream\":true}",
+		"payload": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"hi\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":64000,\"stream\":true}"
+	},
+	{
+		"name": "system-tools-cache",
+		"messages": [
+			{
+				"role": "system",
+				"content": "sys",
+				"toolsAdded": [
+					{
+						"name": "read_file",
+						"description": "Reads a file",
+						"parameters": {
+							"type": "object",
+							"properties": {
+								"path": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"path"
+							]
+						}
+					}
+				],
+				"timestamp": 0
+			},
+			{
+				"role": "user",
+				"content": [
+					{
+						"type": "text",
+						"text": "hi"
+					},
+					{
+						"type": "image",
+						"data": "aW1hZ2U=",
+						"mimeType": "image/png"
+					}
+				],
+				"timestamp": 1
+			}
+		],
+		"path": "/v1/messages",
+		"headers": {},
+		"body": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"hi\"},{\"type\":\"image\",\"source\":{\"type\":\"base64\",\"media_type\":\"image/png\",\"data\":\"aW1hZ2U=\"},\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":64000,\"stream\":true,\"system\":[{\"type\":\"text\",\"text\":\"sys\",\"cache_control\":{\"type\":\"ephemeral\"}}],\"tools\":[{\"name\":\"read_file\",\"description\":\"Reads a file\",\"eager_input_streaming\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}},\"required\":[\"path\"]},\"cache_control\":{\"type\":\"ephemeral\"}}]}",
+		"payload": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"hi\"},{\"type\":\"image\",\"source\":{\"type\":\"base64\",\"media_type\":\"image/png\",\"data\":\"aW1hZ2U=\"},\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":64000,\"stream\":true,\"system\":[{\"type\":\"text\",\"text\":\"sys\",\"cache_control\":{\"type\":\"ephemeral\"}}],\"tools\":[{\"name\":\"read_file\",\"description\":\"Reads a file\",\"eager_input_streaming\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}},\"required\":[\"path\"]},\"cache_control\":{\"type\":\"ephemeral\"}}]}"
+	},
+	{
+		"name": "thinking-budget",
+		"messages": [
+			{
+				"role": "user",
+				"content": "think",
+				"timestamp": 1
+			}
+		],
+		"options": {
+			"thinkingEnabled": true,
+			"thinkingBudgetTokens": 2048,
+			"temperature": 0.9,
+			"maxTokens": 4096
+		},
+		"path": "/v1/messages",
+		"headers": {},
+		"body": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"think\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":4096,\"stream\":true,\"thinking\":{\"type\":\"enabled\",\"budget_tokens\":2048,\"display\":\"summarized\"}}",
+		"payload": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"think\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":4096,\"stream\":true,\"betas\":[\"interleaved-thinking-2025-05-14\"],\"thinking\":{\"type\":\"enabled\",\"budget_tokens\":2048,\"display\":\"summarized\"}}"
+	},
+	{
+		"name": "assistant-replay",
+		"messages": [
+			{
+				"role": "user",
+				"content": "go",
+				"timestamp": 1
+			},
+			{
+				"role": "assistant",
+				"timestamp": 2,
+				"stopReason": "toolUse",
+				"content": [
+					{
+						"type": "thinking",
+						"thinking": "plan",
+						"thinkingSignature": "c2ln"
+					},
+					{
+						"type": "thinking",
+						"thinking": "[Reasoning redacted]",
+						"thinkingSignature": "cmVk",
+						"redacted": true
+					},
+					{
+						"type": "text",
+						"text": "calling"
+					},
+					{
+						"type": "toolCall",
+						"id": "toolu_1",
+						"name": "read_file",
+						"arguments": {
+							"path": "a.txt",
+							"nested": [
+								1,
+								{
+									"z": null
+								}
+							]
+						}
+					}
+				],
+				"api": "anthropic-messages",
+				"provider": "anthropic",
+				"model": "claude-opus-4-5"
+			},
+			{
+				"role": "toolResult",
+				"toolCallId": "toolu_1",
+				"toolName": "read_file",
+				"isError": true,
+				"content": [
+					{
+						"type": "text",
+						"text": "missing"
+					}
+				],
+				"timestamp": 3
+			},
+			{
+				"role": "user",
+				"content": "again",
+				"timestamp": 4
+			}
+		],
+		"path": "/v1/messages",
+		"headers": {},
+		"body": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":\"go\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"plan\",\"signature\":\"c2ln\"},{\"type\":\"redacted_thinking\",\"data\":\"cmVk\"},{\"type\":\"text\",\"text\":\"calling\"},{\"type\":\"tool_use\",\"id\":\"toolu_1\",\"name\":\"read_file\",\"input\":{\"path\":\"a.txt\",\"nested\":[1,{\"z\":null}]}}]},{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"toolu_1\",\"content\":\"missing\",\"is_error\":true}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"again\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":64000,\"stream\":true}",
+		"payload": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":\"go\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"plan\",\"signature\":\"c2ln\"},{\"type\":\"redacted_thinking\",\"data\":\"cmVk\"},{\"type\":\"text\",\"text\":\"calling\"},{\"type\":\"tool_use\",\"id\":\"toolu_1\",\"name\":\"read_file\",\"input\":{\"path\":\"a.txt\",\"nested\":[1,{\"z\":null}]}}]},{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"toolu_1\",\"content\":\"missing\",\"is_error\":true}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"again\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":64000,\"stream\":true}"
+	},
+	{
+		"name": "forced-tool",
+		"messages": [
+			{
+				"role": "system",
+				"content": "sys",
+				"toolsAdded": [
+					{
+						"name": "read_file",
+						"description": "Reads a file",
+						"parameters": {
+							"type": "object",
+							"properties": {
+								"path": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"path"
+							]
+						}
+					}
+				],
+				"timestamp": 0
+			},
+			{
+				"role": "user",
+				"content": "read",
+				"timestamp": 1
+			}
+		],
+		"options": {
+			"toolChoice": {
+				"type": "tool",
+				"name": "read_file"
+			},
+			"temperature": 0
+		},
+		"path": "/v1/messages",
+		"headers": {},
+		"body": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"read\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":64000,\"stream\":true,\"system\":[{\"type\":\"text\",\"text\":\"sys\",\"cache_control\":{\"type\":\"ephemeral\"}}],\"temperature\":0,\"tools\":[{\"name\":\"read_file\",\"description\":\"Reads a file\",\"eager_input_streaming\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}},\"required\":[\"path\"]},\"cache_control\":{\"type\":\"ephemeral\"}}],\"tool_choice\":{\"type\":\"tool\",\"name\":\"read_file\"}}",
+		"payload": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"read\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":64000,\"stream\":true,\"system\":[{\"type\":\"text\",\"text\":\"sys\",\"cache_control\":{\"type\":\"ephemeral\"}}],\"temperature\":0,\"tools\":[{\"name\":\"read_file\",\"description\":\"Reads a file\",\"eager_input_streaming\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}},\"required\":[\"path\"]},\"cache_control\":{\"type\":\"ephemeral\"}}],\"tool_choice\":{\"type\":\"tool\",\"name\":\"read_file\"}}"
+	},
+	{
+		"name": "strict-schema",
+		"messages": [
+			{
+				"role": "system",
+				"content": "sys",
+				"toolsAdded": [
+					{
+						"name": "emit",
+						"description": "Emit data",
+						"parameters": {
+							"type": "object",
+							"properties": {
+								"z": {
+									"type": "string"
+								},
+								"a": {
+									"type": "number"
+								}
+							},
+							"required": [
+								"z",
+								"a"
+							],
+							"additionalProperties": false
+						},
+						"constrainedSampling": {
+							"type": "json_schema",
+							"strict": "prefer"
+						}
+					}
+				],
+				"timestamp": 0
+			},
+			{
+				"role": "user",
+				"content": "emit",
+				"timestamp": 1
+			}
+		],
+		"path": "/v1/messages",
+		"headers": {},
+		"body": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"emit\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":64000,\"stream\":true,\"system\":[{\"type\":\"text\",\"text\":\"sys\",\"cache_control\":{\"type\":\"ephemeral\"}}],\"tools\":[{\"name\":\"emit\",\"description\":\"Emit data\",\"eager_input_streaming\":true,\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"z\":{\"type\":\"string\"},\"a\":{\"type\":\"number\"}},\"required\":[\"z\",\"a\"],\"additionalProperties\":false},\"cache_control\":{\"type\":\"ephemeral\"}}]}",
+		"payload": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"emit\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":64000,\"stream\":true,\"system\":[{\"type\":\"text\",\"text\":\"sys\",\"cache_control\":{\"type\":\"ephemeral\"}}],\"tools\":[{\"name\":\"emit\",\"description\":\"Emit data\",\"eager_input_streaming\":true,\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"z\":{\"type\":\"string\"},\"a\":{\"type\":\"number\"}},\"required\":[\"z\",\"a\"],\"additionalProperties\":false},\"cache_control\":{\"type\":\"ephemeral\"}}]}"
+	},
+	{
+		"name": "adaptive-effort",
+		"compat": {
+			"forceAdaptiveThinking": true
+		},
+		"messages": [
+			{
+				"role": "user",
+				"content": "effort",
+				"timestamp": 1
+			}
+		],
+		"options": {
+			"thinkingEnabled": true,
+			"effort": "high"
+		},
+		"path": "/v1/messages",
+		"headers": {},
+		"body": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"effort\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":64000,\"stream\":true,\"thinking\":{\"type\":\"adaptive\",\"display\":\"summarized\"},\"output_config\":{\"effort\":\"high\"}}",
+		"payload": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"effort\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":64000,\"stream\":true,\"thinking\":{\"type\":\"adaptive\",\"display\":\"summarized\"},\"output_config\":{\"effort\":\"high\"}}"
+	},
+	{
+		"name": "mid-convo-effort",
+		"compat": {
+			"supportsMidConvoEffort": true
+		},
+		"messages": [
+			{
+				"role": "user",
+				"content": "one",
+				"timestamp": 1
+			},
+			{
+				"role": "assistant",
+				"content": [
+					{
+						"type": "text",
+						"text": "first"
+					}
+				],
+				"stopReason": "stop",
+				"timestamp": 2,
+				"api": "anthropic-messages",
+				"provider": "anthropic",
+				"model": "claude-opus-4-5"
+			},
+			{
+				"role": "user",
+				"content": "two",
+				"timestamp": 3
+			}
+		],
+		"options": {
+			"thinkingEnabled": true,
+			"effort": "max"
+		},
+		"path": "/v1/messages",
+		"headers": {},
+		"body": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":\"one\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"first\"}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"two\",\"cache_control\":{\"type\":\"ephemeral\"}}]},{\"role\":\"system\",\"content\":[],\"output_config\":{\"effort\":\"max\"}}],\"max_tokens\":64000,\"stream\":true,\"thinking\":{\"type\":\"adaptive\",\"display\":\"summarized\",\"block_binding\":{\"prefix_mismatch_behavior\":\"drop_block\"}},\"output_config\":{\"effort\":\"low\"}}",
+		"payload": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":\"one\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"first\"}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"two\",\"cache_control\":{\"type\":\"ephemeral\"}}]},{\"role\":\"system\",\"content\":[],\"output_config\":{\"effort\":\"max\"}}],\"max_tokens\":64000,\"stream\":true,\"betas\":[\"interleaved-thinking-2025-05-14\",\"mid-conversation-output-config-2026-07-01\",\"thinking-binding-controls-2026-08-01\"],\"thinking\":{\"type\":\"adaptive\",\"display\":\"summarized\",\"block_binding\":{\"prefix_mismatch_behavior\":\"drop_block\"}},\"output_config\":{\"effort\":\"low\"}}"
+	},
+	{
+		"name": "tool-result-image",
+		"messages": [
+			{
+				"role": "user",
+				"content": "shot",
+				"timestamp": 1
+			},
+			{
+				"role": "assistant",
+				"timestamp": 2,
+				"stopReason": "toolUse",
+				"content": [
+					{
+						"type": "toolCall",
+						"id": "toolu_2",
+						"name": "shoot",
+						"arguments": {}
+					}
+				],
+				"api": "anthropic-messages",
+				"provider": "anthropic",
+				"model": "claude-opus-4-5"
+			},
+			{
+				"role": "toolResult",
+				"toolCallId": "toolu_2",
+				"toolName": "shoot",
+				"isError": false,
+				"content": [
+					{
+						"type": "text",
+						"text": "here"
+					},
+					{
+						"type": "image",
+						"data": "aW1n",
+						"mimeType": "image/jpeg"
+					}
+				],
+				"timestamp": 3
+			}
+		],
+		"path": "/v1/messages",
+		"headers": {},
+		"body": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":\"shot\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"toolu_2\",\"name\":\"shoot\",\"input\":{}}]},{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"toolu_2\",\"content\":[{\"type\":\"text\",\"text\":\"here\"},{\"type\":\"image\",\"source\":{\"type\":\"base64\",\"media_type\":\"image/jpeg\",\"data\":\"aW1n\"}}],\"is_error\":false,\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":64000,\"stream\":true}",
+		"payload": "{\"model\":\"claude-opus-4-5\",\"messages\":[{\"role\":\"user\",\"content\":\"shot\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"toolu_2\",\"name\":\"shoot\",\"input\":{}}]},{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"toolu_2\",\"content\":[{\"type\":\"text\",\"text\":\"here\"},{\"type\":\"image\",\"source\":{\"type\":\"base64\",\"media_type\":\"image/jpeg\",\"data\":\"aW1n\"}}],\"is_error\":false,\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":64000,\"stream\":true}"
+	}
+]
