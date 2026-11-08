@@ -4001,7 +4001,8 @@ OAuth responses without a byte cap. Those documents are untrusted network input
 from a provider, MCP server, or authorization server, and pier buffers them
 before validating, so an endpoint could exhaust process memory. Pier reads them
 through `internal/boundedio` and fails as a protocol error once the body exceeds
-the limit: 1 MiB for classifier, OAuth, and Vertex metadata-token documents, and
+the limit: 1 MiB for classifier, OAuth, and Vertex token documents (the
+metadata server's token and an authorized-user file's refresh endpoint), and
 16 MiB for the OpenRouter catalog and MCP JSON-RPC responses (the existing
 `MaxMessageBytes` default, shared with the SSE and stdio paths). Error bodies and
 SSE frames already had their own caps.
@@ -4010,6 +4011,8 @@ Tests: `TestOpenAIDecisionsRejectsOversizedResponseBody`,
 `TestTypeSafeSystemOneRejectsOversizedResponseBody`,
 `TestPersonalizeOpenRouterCatalogRejectsOversizedResponseBody`,
 `TestVertexMetadataTokenRejectsOversizedResponseBody`,
+`TestVertexADCTokenResponseOverTheLimitIsAProtocolError`,
+`TestVertexADCTokenResponseCutOffSurfacesTheReadError`,
 `TestStreamableHTTPRejectsOversizedJSONResponse`,
 `TestDiscoverProtectedResourceMetadataRejectsOversizedBody`,
 `TestExchangeAuthorizationCodeRejectsOversizedBody`,

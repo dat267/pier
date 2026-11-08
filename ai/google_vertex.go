@@ -22,10 +22,12 @@ import (
 	"github.com/dat267/pier/internal/boundedio"
 )
 
-// vertexMetadataTokenBodyLimit bounds the instance-metadata token document. A
-// real response is a fraction of a KB; the cap stops a misconfigured or hostile
-// metadata host from buffering without bound (D341).
-const vertexMetadataTokenBodyLimit = 1 << 20
+// vertexTokenBodyLimit bounds an ADC token document: the instance-metadata
+// server's or an authorized-user file's refresh endpoint. A real response is a
+// fraction of a KB; the cap stops a misconfigured or hostile host from
+// buffering without bound, and failing at the cap reports the protocol error
+// D341 promises instead of accepting a truncated body (A426).
+const vertexTokenBodyLimit = 1 << 20
 
 // Port of api/google-vertex.ts and the Google Application Default Credentials
 // resolution its client performs.
@@ -399,13 +401,20 @@ func refreshAuthorizedUserToken(ctx ctxpkg.Context, cacheKey string, credentials
 		return "", err
 	}
 	defer resp.Body.Close()
-	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if resp.StatusCode >= 400 {
+		// The body is the error message, so a capped read still says something.
+		raw, _ := io.ReadAll(io.LimitReader(resp.Body, vertexTokenBodyLimit))
 		return "", &ProviderError{
 			Status: resp.StatusCode, Headers: resp.Header,
 			Message: fmt.Sprintf("%d %s: %s", resp.StatusCode, http.StatusText(resp.StatusCode), string(raw)),
 			Body:    string(raw),
 		}
+	}
+	// A successful token document fails at the cap and surfaces a read error,
+	// as D341 requires of the other OAuth documents (A426).
+	raw, err := boundedio.ReadAll(resp.Body, vertexTokenBodyLimit)
+	if err != nil {
+		return "", err
 	}
 	var payload struct {
 		AccessToken string `json:"access_token"`
@@ -470,7 +479,7 @@ func metadataAccessToken(ctx ctxpkg.Context, env ProviderEnv) (string, error) {
 		AccessToken string `json:"access_token"`
 		ExpiresIn   int64  `json:"expires_in"`
 	}
-	raw, err := boundedio.ReadAll(resp.Body, vertexMetadataTokenBodyLimit)
+	raw, err := boundedio.ReadAll(resp.Body, vertexTokenBodyLimit)
 	if err != nil {
 		return "", err
 	}
