@@ -343,7 +343,7 @@ func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message
 	aborted := state.abortRequested
 	state.mu.Unlock()
 	// Upstream _emitAgentSettled uses the run abort flag, including backoff.
-	s.emit(&SessionEvent{Type: SessionAgentSettled, Aborted: aborted})
+	s.emit(&SessionEvent{Type: SessionAgentSettled, Aborted: aborted, GoalPursuing: s.Goal != nil && s.Goal.Pursuing()})
 	s.resolveIdleWaitIfIdle()
 	return err
 }

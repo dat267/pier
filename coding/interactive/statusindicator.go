@@ -93,6 +93,10 @@ func (c workingTokenCount) plus(other workingTokenCount) workingTokenCount {
 	return workingTokenCount{in: c.in + other.in, out: c.out + other.out}
 }
 
+func (c workingTokenCount) atLeast(other workingTokenCount) workingTokenCount {
+	return workingTokenCount{in: max(c.in, other.in), out: max(c.out, other.out)}
+}
+
 // String is "↑48k ↓3.2k" in the footer's token format, or "" before the
 // provider reports usage.
 func (c workingTokenCount) String() string {

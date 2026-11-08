@@ -152,7 +152,10 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 
 	switch event.Type {
 	case coding.SessionAgentStart:
-		if d.UIState != nil {
+		// A retry, compaction continuation or queued follow-up starts another
+		// agent run inside the same working period; the clock and tokens keep
+		// counting until the session settles (D402).
+		if d.UIState != nil && !d.UIState.WorkingClockRunning() {
 			d.UIState.StartWorkingClock(workingClock())
 		}
 		d.pendingTools = map[string]*ToolExecutionComponent{}
@@ -221,6 +224,21 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 		}
 
 	case coding.SessionMessageStart:
+		if d.UIState != nil {
+			switch eventMessage(event).(type) {
+			case *ai.AssistantMessage:
+				d.UIState.StartWorkingMessageUsage()
+			case *ai.UserMessage:
+				// A prompt after a goal settled without another round (the goal
+				// was paused while idle) closes that period first.
+				if worked, tokens, ok := d.UIState.CloseIdleWorkingPeriod(); ok {
+					if d.Transcript != nil {
+						d.Transcript.AddWorkedFor(worked, tokens)
+					}
+					d.UIState.StartWorkingClock(workingClock())
+				}
+			}
+		}
 		d.handleMessageStart(event)
 
 	case coding.SessionMessageUpdate:
@@ -262,15 +280,19 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 			d.streamingComponent = nil
 			d.streamingMessage = nil
 		}
-		if d.UIState != nil {
-			if worked, tokens, ok := d.UIState.StopWorkingClock(workingClock()); ok && d.Transcript != nil {
-				d.Transcript.AddWorkedFor(worked, tokens)
-			}
-		}
+
 		d.pendingTools = map[string]*ToolExecutionComponent{}
 		d.requestRender()
 
 	case coding.SessionAgentSettled:
+		if d.UIState != nil {
+			if event.GoalPursuing && !event.Aborted {
+				// The goal is not done: its next round continues the period.
+				d.UIState.PauseWorkingClock(workingClock())
+			} else if worked, tokens, ok := d.UIState.StopWorkingClock(workingClock()); ok && d.Transcript != nil {
+				d.Transcript.AddWorkedFor(worked, tokens)
+			}
+		}
 		if d.CheckShutdownRequested != nil {
 			d.CheckShutdownRequested()
 		}

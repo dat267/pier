@@ -5592,22 +5592,29 @@ Test: `TestVertexFlashLiteMinimalBudgetUsesFlashLiteTable`.
 Reference: pi v1.5.0 (f9a26365)
 `packages/coding-agent/src/modes/interactive/components/status-indicator.ts`
 shows only the working message, and an agent run ends without a transcript
-line. Pier is a project choice here: from `agent_start`, the working indicator
-appends the time since in whole seconds (`Working (1m 5s)`), counted from the
-run's start across every working indicator the run shows (after a retry or
-compaction indicator, for example), and ticking once a second even when a
-custom indicator hides the spinner frames. Once the provider reports usage it
+line. Pier is a project choice here: the working period runs from the first
+`agent_start` until `agent_settled`, so the agent runs a retry, a compaction
+continuation or a queued follow-up starts inside it count as one period. An
+active armed goal also keeps it open: an `agent_settled` whose goal is still
+pursued (and not aborted) waits for the goal's next round, so a goal's rounds
+are one period with one notice; if a user prompt arrives instead, the waiting
+period closes at that settle before the prompt starts its own. The
+working indicator appends the time since in whole seconds (`Working (1m 5s)`),
+across every working indicator the period shows, and ticks once a second even
+when a custom indicator hides the spinner frames. Once the provider reports usage it
 adds the run's tokens in and out in the footer's token format
 (`Working (1m 5s · ↑48k ↓3.2k)`): finished assistant messages plus the
-streaming one's usage so far, where in counts every prompt token processed
+streaming one's usage so far (never lower than that message already showed),
+where in counts every prompt token processed
 (input, cache reads and cache writes), so a multi-turn run counts its context
-once per turn. At `agent_end` the transcript adds a dim
+once per turn. At `agent_settled` the transcript adds a dim
 `Worked for 1m 23s · ↑48k ↓3.2k` line, with tenths under a minute as the bash
 tool's `Took` label has. The line is display-only: it is not written to the session,
 so a resumed session does not show it.
 
 Tests: `TestWorkingIndicatorShowsElapsedAndTranscriptNotesTheRun`,
-`TestWorkingElapsedLabelFormats`, `TestLoaderElapsedLabelTicksEachSecond`.
+`TestWorkingPeriodSpansGoalRounds`, `TestWorkingElapsedLabelFormats`,
+`TestLoaderElapsedLabelTicksEachSecond`.
 
 ### D403
 

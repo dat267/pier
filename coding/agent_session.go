@@ -100,6 +100,9 @@ type SessionEvent struct {
 	Agent *agent.AgentEvent
 	// agent_end / compaction_end
 	WillRetry bool
+	// agent_settled: an armed goal is still active, so another round follows
+	// (the interactive working period stays open, D402). Not serialized.
+	GoalPursuing bool
 	// queue_update
 	Steering []string
 	FollowUp []string

@@ -32,6 +32,9 @@ type InteractiveUIState struct {
 	// workingMessage holds the streaming one's usage so far.
 	workingTokens  workingTokenCount
 	workingMessage workingTokenCount
+	// workingIdleSince is when a goal round settled with the goal still
+	// active; the period waits for the next round. Zero otherwise.
+	workingIdleSince time.Time
 
 	FooterData *coding.FooterDataProvider
 	Footer     *FooterComponent
@@ -211,11 +214,43 @@ func (s *InteractiveUIState) workingLabel(elapsed time.Duration) string {
 	return workingElapsedLabel(elapsed, s.workingTokens.plus(s.workingMessage))
 }
 
+// PauseWorkingClock keeps the period open across a goal round boundary,
+// remembering when it went idle in case no round follows.
+func (s *InteractiveUIState) PauseWorkingClock(now time.Time) {
+	if !s.workingSince.IsZero() {
+		s.workingIdleSince = now
+	}
+}
+
+// CloseIdleWorkingPeriod ends a period that was waiting for a goal round,
+// timed to when it went idle; false when none was waiting.
+func (s *InteractiveUIState) CloseIdleWorkingPeriod() (time.Duration, workingTokenCount, bool) {
+	if s.workingIdleSince.IsZero() {
+		return 0, workingTokenCount{}, false
+	}
+	return s.StopWorkingClock(s.workingIdleSince)
+}
+
+// WorkingClockRunning reports whether a working period is being timed.
+func (s *InteractiveUIState) WorkingClockRunning() bool { return !s.workingSince.IsZero() }
+
+// StartWorkingMessageUsage begins a new assistant message. A previous one
+// that never ended keeps the usage it reported.
+func (s *InteractiveUIState) StartWorkingMessageUsage() {
+	// The waited-for round is producing a reply.
+	s.workingIdleSince = time.Time{}
+	if !s.workingSince.IsZero() {
+		s.workingTokens = s.workingTokens.plus(s.workingMessage)
+		s.workingMessage = workingTokenCount{}
+	}
+}
+
 // SetWorkingMessageUsage records the streaming assistant message's usage so
-// far.
+// far. It never lowers a count the message already showed: a provider that
+// reports a field in some chunks only would make the total jump down.
 func (s *InteractiveUIState) SetWorkingMessageUsage(usage ai.Usage) {
 	if !s.workingSince.IsZero() {
-		s.workingMessage = workingTokensOf(usage)
+		s.workingMessage = s.workingMessage.atLeast(workingTokensOf(usage))
 	}
 }
 
@@ -223,7 +258,7 @@ func (s *InteractiveUIState) SetWorkingMessageUsage(usage ai.Usage) {
 // run.
 func (s *InteractiveUIState) EndWorkingMessageUsage(usage ai.Usage) {
 	if !s.workingSince.IsZero() {
-		s.workingTokens = s.workingTokens.plus(workingTokensOf(usage))
+		s.workingTokens = s.workingTokens.plus(s.workingMessage.atLeast(workingTokensOf(usage)))
 		s.workingMessage = workingTokenCount{}
 	}
 }
@@ -232,6 +267,7 @@ func (s *InteractiveUIState) EndWorkingMessageUsage(usage ai.Usage) {
 // shows the elapsed time on the working indicator (D402).
 func (s *InteractiveUIState) StartWorkingClock(now time.Time) {
 	s.workingSince = now
+	s.workingIdleSince = time.Time{}
 	s.workingTokens = workingTokenCount{}
 	s.workingMessage = workingTokenCount{}
 	if working, ok := s.ActiveStatusIndicator.(*StatusIndicator); ok && working.Kind == StatusWorking {
@@ -248,6 +284,7 @@ func (s *InteractiveUIState) StopWorkingClock(now time.Time) (time.Duration, wor
 	worked := max(now.Sub(s.workingSince), 0)
 	tokens := s.workingTokens.plus(s.workingMessage)
 	s.workingSince = time.Time{}
+	s.workingIdleSince = time.Time{}
 	s.workingTokens = workingTokenCount{}
 	s.workingMessage = workingTokenCount{}
 	return worked, tokens, true
