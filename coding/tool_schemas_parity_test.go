@@ -3,6 +3,7 @@ package coding
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/dat267/pier/ai"
@@ -31,8 +32,13 @@ func TestBuiltinToolSchemasMatchUpstream(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if string(encoded) != fixture.Parameters {
-				t.Fatalf("parameters = %s\nwant         %s", encoded, fixture.Parameters)
+			want := fixture.Parameters
+			if fixture.Name == "bash" {
+				// D407: the timeout has a default, so its description names it.
+				want = strings.Replace(want, "(optional, no default timeout)", "(optional, defaults to 600)", 1)
+			}
+			if string(encoded) != want {
+				t.Fatalf("parameters = %s\nwant         %s", encoded, want)
 			}
 		})
 	}

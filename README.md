@@ -34,6 +34,9 @@ events. Options include `--model`, `--provider`, `--offline` and `--help`.
 Configure MCP servers in settings to add tools; `/login` opens provider
 authorization in a browser.
 
+A shell call the agent starts without a `timeout` stops after 10 minutes, so a
+hung command hands control back to the agent with its output so far.
+
 `/goal` tracks multi-round objectives in session history. The agent can manage
 them with `get_goal` and `set_goal`. Stdio RPC (`pier --mode rpc`) is documented
 in [the RPC contract](ARCHITECTURE.md#stdio-rpc).

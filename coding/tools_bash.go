@@ -483,7 +483,7 @@ var bashSchemaJSON = mustMarshalJSON(json.RawMessage(`{
 	"required": ["command"],
 	"properties": {
 		"command": {"type": "string", "description": "Shell command to execute"},
-		"timeout": {"type": "number", "description": "Timeout in seconds (optional, no default timeout)"}
+		"timeout": {"type": "number", "description": "Timeout in seconds (optional, defaults to 600)"}
 	}
 }`))
 
@@ -699,8 +699,15 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 				}()
 			}
 			var timedOut atomicBool
+			// D407: a call without a timeout gets the default one, so a hung
+			// command hands control back to the agent instead of blocking the turn
+			// until the user aborts it. Upstream has no default.
+			timeoutSeconds := defaultBashTimeoutSeconds
 			if input.Timeout != nil {
-				timeoutDur, terr := ResolveTimeoutSeconds(*input.Timeout)
+				timeoutSeconds = *input.Timeout
+			}
+			{
+				timeoutDur, terr := ResolveTimeoutSeconds(timeoutSeconds)
 				if terr != nil {
 					killTree()
 					return agent.AgentToolResult{}, terr
@@ -795,7 +802,11 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 				// timeout or abort throws with empty text (upstream's catch path).
 				if timedOut.Load() {
 					outputText, _ := formatOutput("")
-					return agent.AgentToolResult{}, fmt.Errorf("%s", appendStatus(outputText, bashTimeoutMessage(*input.Timeout)))
+					message := bashTimeoutMessage(timeoutSeconds)
+					if input.Timeout == nil {
+						message += " (the default timeout; pass a larger timeout if the command needs longer)"
+					}
+					return agent.AgentToolResult{}, fmt.Errorf("%s", appendStatus(outputText, message))
 				}
 				if ws, ok := waitErr.(*exec.ExitError); ok {
 					// A non-zero exit is an isError result, not a thrown error:
@@ -860,6 +871,10 @@ func shellEnv(sessionEnv map[string]string, expose bool) []string {
 	}
 	return filtered
 }
+
+// defaultBashTimeoutSeconds is the timeout of a shell call that names none
+// (D407). A variable so tests can shorten it.
+var defaultBashTimeoutSeconds = 600.0
 
 // bashTimeoutMessage is upstream's `Command timed out after ${timeoutSecs}
 // seconds`, where timeoutSecs is String(timeout) carried through the

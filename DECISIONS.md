@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D406)
+# Deliberate divergences from pi (D1–D407)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5718,3 +5718,26 @@ leaves the duration zero and keeps the reference text, because a session stores
 the summary usage but not the run's wall time.
 
 Tests: `TestTranscriptNotices`, `TestEventDispatcherCompaction`.
+
+### D407
+
+**A shell call without a timeout stops after 600 seconds.**
+
+Reference: pi v1.5.0 (f9a26365) `packages/coding-agent/src/core/tools/bash.ts`
+declares `timeout` as "Timeout in seconds (optional, no default timeout)" and
+sets no timer when it is undefined, so a command that never exits (a pager, a
+prompt waiting for input, a server or watcher run in the foreground) blocks the
+turn until the user aborts it, and the abort ends the turn instead of returning
+control to the agent.
+
+Pier applies a 600-second timeout to a call that names none, through upstream's
+own timeout path: the process tree is killed and the call fails with the output
+so far, which the session stores in the call's tool result like any other, plus
+`Command timed out after 600 seconds (the default timeout; pass a larger timeout
+if the command needs longer)`. The schema's description says `(optional,
+defaults to 600)` so the model knows to pass a longer timeout. An explicit
+timeout replaces the default and keeps upstream's message. `!` commands run
+through the user bash executor and are not affected.
+
+Tests: `TestBashDefaultTimeoutEndsAHungCommand`,
+`TestBuiltinToolSchemasMatchUpstream`.

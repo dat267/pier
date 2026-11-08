@@ -399,6 +399,39 @@ func TestBashTimeout(t *testing.T) {
 	}
 }
 
+// D407: a call that names no timeout still ends, after the default one, with
+// the output so far and a note that names the default. pi v1.5.0
+// core/tools/bash.ts sets no timer when timeout is undefined.
+func TestBashDefaultTimeoutEndsAHungCommand(t *testing.T) {
+	requirePosixShell(t)
+	if defaultBashTimeoutSeconds != 600 {
+		t.Fatalf("default = %v", defaultBashTimeoutSeconds)
+	}
+	previous := defaultBashTimeoutSeconds
+	defaultBashTimeoutSeconds = 0.3
+	t.Cleanup(func() { defaultBashTimeoutSeconds = previous })
+	tool := CreateBashTool(t.TempDir(), nil)
+	start := time.Now()
+	_, err := tool.Execute("c", json.RawMessage(`{"command":"echo before-hang; sleep 30"}`), context.Background(), nil)
+	if err == nil || !strings.Contains(err.Error(), "before-hang") ||
+		!strings.Contains(err.Error(), "Command timed out after 0.3 seconds (the default timeout; pass a larger timeout if the command needs longer)") {
+		t.Fatalf("err = %v", err)
+	}
+	if elapsed := time.Since(start); elapsed > 5*time.Second {
+		t.Fatalf("the default timeout was not honored: %v", elapsed)
+	}
+	// An explicit timeout replaces the default and keeps upstream's message.
+	_, err = tool.Execute("c", json.RawMessage(`{"command":"sleep 30","timeout":0.2}`), context.Background(), nil)
+	if err == nil || !strings.HasSuffix(err.Error(), "Command timed out after 0.2 seconds") {
+		t.Fatalf("explicit err = %v", err)
+	}
+	// A command that finishes in time is unaffected.
+	if result, err := tool.Execute("c", json.RawMessage(`{"command":"echo quick"}`), context.Background(), nil); err != nil ||
+		!strings.Contains(result.Content[0].(ai.TextContent).Text, "quick") {
+		t.Fatalf("quick = %v %v", result, err)
+	}
+}
+
 func TestBashAbort(t *testing.T) {
 	dir := t.TempDir()
 	tool := CreateBashTool(dir, nil)
