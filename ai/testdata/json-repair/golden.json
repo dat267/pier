@@ -1,0 +1,2118 @@
+[
+	{
+		"input": "{\"a\":\"\\d\"}",
+		"output": "{\"a\":\"\\\\d\"}"
+	},
+	{
+		"input": "{\"a\":\"x\ty\"}",
+		"output": "{\"a\":\"x\\ty\"}"
+	},
+	{
+		"input": "{\"a\":\"x\u0001y\"}",
+		"output": "{\"a\":\"x\\u0001y\"}"
+	},
+	{
+		"input": "{\"a\":\"\\u12\"}",
+		"output": "{\"a\":\"\\\\u12\"}"
+	},
+	{
+		"input": "{\"a\":\"\\u12zz\"}",
+		"output": "{\"a\":\"\\\\u12zz\"}"
+	},
+	{
+		"input": "{\"a\":\"\\u00e9\"}",
+		"output": "{\"a\":\"\\u00e9\"}"
+	},
+	{
+		"input": "{\"a\":\"\\uD83D\"}",
+		"output": "{\"a\":\"\\uD83D\"}"
+	},
+	{
+		"input": "{\"a\":\"\\ud83d\\ude00\"}",
+		"output": "{\"a\":\"\\ud83d\\ude00\"}"
+	},
+	{
+		"input": "{\"a\":\"x\\ud83dy\"}",
+		"output": "{\"a\":\"x\\ud83dy\"}"
+	},
+	{
+		"input": "{\"a\":\"\\ud83d\"}",
+		"output": "{\"a\":\"\\ud83d\"}"
+	},
+	{
+		"input": "{\"a\":\"\\udc00\\udc00\"}",
+		"output": "{\"a\":\"\\udc00\\udc00\"}"
+	},
+	{
+		"input": "{\"a\":\"\\",
+		"output": "{\"a\":\"\\\\"
+	},
+	{
+		"input": "{\"a\":\"\\\"}",
+		"output": "{\"a\":\"\\\"}"
+	},
+	{
+		"input": "{\"a\":\"\\\\\"}",
+		"output": "{\"a\":\"\\\\\"}"
+	},
+	{
+		"input": "{\"a\":\"\\/\"}",
+		"output": "{\"a\":\"\\/\"}"
+	},
+	{
+		"input": "{\"a\":\"\\b\\f\\n\\r\\t\"}",
+		"output": "{\"a\":\"\\b\\f\\n\\r\\t\"}"
+	},
+	{
+		"input": "{\"a\":\"\\q\\ \"}",
+		"output": "{\"a\":\"\\\\q\\\\ \"}"
+	},
+	{
+		"input": "{\"a\":\"unterminated",
+		"output": "{\"a\":\"unterminated"
+	},
+	{
+		"input": "{\"a\":1,\"b\":{\"c\":[1,2,\"\\x\"]}}",
+		"output": "{\"a\":1,\"b\":{\"c\":[1,2,\"\\\\x\"]}}"
+	},
+	{
+		"input": "[1,2,\"\\u00\"]",
+		"output": "[1,2,\"\\\\u00\"]"
+	},
+	{
+		"input": "\"just a string",
+		"output": "\"just a string"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "   ",
+		"output": "   "
+	},
+	{
+		"input": "{\"é\":\"😀\"}",
+		"output": "{\"é\":\"😀\"}"
+	},
+	{
+		"input": "{\"a\":\"\u0000\u001f\"}",
+		"output": "{\"a\":\"\\u0000\\u001f\"}"
+	},
+	{
+		"input": "{\"a\":\"\\u0000\"}",
+		"output": "{\"a\":\"\\u0000\"}"
+	},
+	{
+		"input": "{\"a\":\"\\uZZZZ\"}",
+		"output": "{\"a\":\"\\\\uZZZZ\"}"
+	},
+	{
+		"input": "{\"a\":\"\\uABCD\"}",
+		"output": "{\"a\":\"\\uABCD\"}"
+	},
+	{
+		"input": "{\"a\":\"é😀 \u0001 \\q\"}",
+		"output": "{\"a\":\"é😀 \\u0001 \\\\q\"}"
+	},
+	{
+		"input": "\\u00e9\t\\ud83d\\/u\\ud83dZ ",
+		"output": "\\u00e9\t\\ud83d\\/u\\ud83dZ "
+	},
+	{
+		"input": "\\\\d\t\u0001}\u0000/bb\\\\\\/\\ud83d,n\\d\nt",
+		"output": "\\\\d\t\u0001}\u0000/bb\\\\\\/\\ud83d,n\\d\nt"
+	},
+	{
+		"input": ",é9:é\u0001x]",
+		"output": ",é9:é\u0001x]"
+	},
+	{
+		"input": "}",
+		"output": "}"
+	},
+	{
+		"input": "tr0r\t\\ ",
+		"output": "tr0r\t\\ "
+	},
+	{
+		"input": "{\t0uér t\t[}",
+		"output": "{\t0uér t\t[}"
+	},
+	{
+		"input": "\\uF\\u1\\d}u1a}99:ab",
+		"output": "\\uF\\u1\\d}u1a}99:ab"
+	},
+	{
+		"input": "r0Fn/]\u0000Z90A\\/",
+		"output": "r0Fn/]\u0000Z90A\\/"
+	},
+	{
+		"input": "\\\\]a}n\\u:f\\u00e9é[{\\\né{\u0001",
+		"output": "\\\\]a}n\\u:f\\u00e9é[{\\\né{\u0001"
+	},
+	{
+		"input": "}b\\\\AuF\nfFZ]/",
+		"output": "}b\\\\AuF\nfFZ]/"
+	},
+	{
+		"input": "\"9:\t\\u\\u00e9éra,n}",
+		"output": "\"9:\\t\\\\u\\u00e9éra,n}"
+	},
+	{
+		"input": "r/ffA{é{t[b\u0001n\u0000\tf\t",
+		"output": "r/ffA{é{t[b\u0001n\u0000\tf\t"
+	},
+	{
+		"input": "FF",
+		"output": "FF"
+	},
+	{
+		"input": "xZZ😀F😀\\ \nt\\u00e9n1😀}",
+		"output": "xZZ😀F😀\\ \nt\\u00e9n1😀}"
+	},
+	{
+		"input": "xA\\dF1\\ud83d:1\\F,1é,",
+		"output": "xA\\dF1\\ud83d:1\\F,1é,"
+	},
+	{
+		"input": "/\\\\,\\[Z}r\\ua\\ZFaF",
+		"output": "/\\\\,\\[Z}r\\ua\\ZFaF"
+	},
+	{
+		"input": ":  ]Au\"\\:Zf\\\\\\ud83dt",
+		"output": ":  ]Au\"\\\\:Zf\\\\\\ud83dt"
+	},
+	{
+		"input": "\nA:\\\u0000f\\a😀r9x\\\\r1n",
+		"output": "\nA:\\\u0000f\\a😀r9x\\\\r1n"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "}\\ud83d}😀}n\\",
+		"output": "}\\ud83d}😀}n\\"
+	},
+	{
+		"input": "1:t1rt\u0000",
+		"output": "1:t1rt\u0000"
+	},
+	{
+		"input": "f9}1\u0000\\ud83dFéa\\\\\\da9a9\\\\",
+		"output": "f9}1\u0000\\ud83dFéa\\\\\\da9a9\\\\"
+	},
+	{
+		"input": "a\u0001\t]::}é\\ud83d\\ud83d\\ud83dA\\d\"\n \t ",
+		"output": "a\u0001\t]::}é\\ud83d\\ud83d\\ud83dA\\d\"\\n \\t "
+	},
+	{
+		"input": "b1}n😀,té\u0001n😀a\\uF\\ud83d}9",
+		"output": "b1}n😀,té\u0001n😀a\\uF\\ud83d}9"
+	},
+	{
+		"input": ",x\\r]\\\\é\nu\\ud83dx\"\\\\[\\u00e9 \"1",
+		"output": ",x\\r]\\\\é\nu\\ud83dx\"\\\\[\\u00e9 \"1"
+	},
+	{
+		"input": "\\ud83d[\\\\A",
+		"output": "\\ud83d[\\\\A"
+	},
+	{
+		"input": "/\u00009\\\\,]\\u00e9u",
+		"output": "/\u00009\\\\,]\\u00e9u"
+	},
+	{
+		"input": "r\u0000",
+		"output": "r\u0000"
+	},
+	{
+		"input": "}\\\\\\f\\ud83d\\d\"\\ud83d\\ut\u0001😀😀\",\u0000\u0001}",
+		"output": "}\\\\\\f\\ud83d\\d\"\\ud83d\\\\ut\\u0001😀😀\",\u0000\u0001}"
+	},
+	{
+		"input": "\t\\u01]/u\\u9]\u0000{\u0001",
+		"output": "\t\\u01]/u\\u9]\u0000{\u0001"
+	},
+	{
+		"input": "\n9Z\\u00e9\u0001\\A0\\frr\n",
+		"output": "\n9Z\\u00e9\u0001\\A0\\frr\n"
+	},
+	{
+		"input": "\\u00e9}\\ud83d\\ud83d91rfr\\",
+		"output": "\\u00e9}\\ud83d\\ud83d91rfr\\"
+	},
+	{
+		"input": "F\u0001\"\u0001FA]rA",
+		"output": "F\u0001\"\\u0001FA]rA"
+	},
+	{
+		"input": ",1\\d\\u00e9x\\\\a\\ud83d\"\t\\\\xé t1",
+		"output": ",1\\d\\u00e9x\\\\a\\ud83d\"\\t\\\\xé t1"
+	},
+	{
+		"input": "{\\u",
+		"output": "{\\u"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "\"é,9\\d",
+		"output": "\"é,9\\\\d"
+	},
+	{
+		"input": "\u0001\\dF\\u00e9:nrtx]\\ud83d[u\u0000}Z\\u",
+		"output": "\u0001\\dF\\u00e9:nrtx]\\ud83d[u\u0000}Z\\u"
+	},
+	{
+		"input": "\"9\\\\t1Zr]\\u",
+		"output": "\"9\\\\t1Zr]\\\\u"
+	},
+	{
+		"input": "]Fn\\\\a\"\\/9\"{t\t{}",
+		"output": "]Fn\\\\a\"\\/9\"{t\t{}"
+	},
+	{
+		"input": "\\\\\n\\u00e9\\u00e9\\ud83dé,a",
+		"output": "\\\\\n\\u00e9\\u00e9\\ud83dé,a"
+	},
+	{
+		"input": "\\\\1]f\\ud83da\t\\\\t\\d \\ud83d\"\\b\\ud83d",
+		"output": "\\\\1]f\\ud83da\t\\\\t\\d \\ud83d\"\\b\\ud83d"
+	},
+	{
+		"input": ",",
+		"output": ","
+	},
+	{
+		"input": "]r[}F,}n]é1\\u\"\\u00e9",
+		"output": "]r[}F,}n]é1\\u\"\\u00e9"
+	},
+	{
+		"input": "\t\\d😀r}\"00\\dZ\"u😀",
+		"output": "\t\\d😀r}\"00\\\\dZ\"u😀"
+	},
+	{
+		"input": "a\\\\\u0001{}/\\u{}[AF\n",
+		"output": "a\\\\\u0001{}/\\u{}[AF\n"
+	},
+	{
+		"input": "0x[\\u",
+		"output": "0x[\\u"
+	},
+	{
+		"input": "[:\u0000réb/é\\d 1\\d\\u[\u0001Z",
+		"output": "[:\u0000réb/é\\d 1\\d\\u[\u0001Z"
+	},
+	{
+		"input": "b}r\\\\\t/f\"1",
+		"output": "b}r\\\\\t/f\"1"
+	},
+	{
+		"input": "1f\u0001é\\\\ A\\ud83dé\\}",
+		"output": "1f\u0001é\\\\ A\\ud83dé\\}"
+	},
+	{
+		"input": "\tr00\\ud83dn\" Z\"\u0001f 9é\\u",
+		"output": "\tr00\\ud83dn\" Z\"\u0001f 9é\\u"
+	},
+	{
+		"input": "x:FAAu😀😀\\ud83d",
+		"output": "x:FAAu😀😀\\ud83d"
+	},
+	{
+		"input": "n: nn,0\"",
+		"output": "n: nn,0\""
+	},
+	{
+		"input": "\\d/\"\u0001aAn/",
+		"output": "\\d/\"\\u0001aAn/"
+	},
+	{
+		"input": "1,uéé\\btéf,/",
+		"output": "1,uéé\\btéf,/"
+	},
+	{
+		"input": "1\\ud83d\\d\nu\u0001\\dx\\ud83da/aF}fr9",
+		"output": "1\\ud83d\\d\nu\u0001\\dx\\ud83da/aF}fr9"
+	},
+	{
+		"input": "]]\\u\\ud83d:/:} 0\\d\\u00e9Zt\\u00e9f😀n",
+		"output": "]]\\u\\ud83d:/:} 0\\d\\u00e9Zt\\u00e9f😀n"
+	},
+	{
+		"input": "9\u0001😀bt\\dab\\ux\tf\"Z",
+		"output": "9\u0001😀bt\\dab\\ux\tf\"Z"
+	},
+	{
+		"input": "\\t\"na\\u00e9a[\\ud83dr\\\\:\\d\\uu",
+		"output": "\\t\"na\\u00e9a[\\ud83dr\\\\:\\\\d\\\\uu"
+	},
+	{
+		"input": "\u00011\\dx[[t}\\",
+		"output": "\u00011\\dx[[t}\\"
+	},
+	{
+		"input": ",F {t\\\\\\\\a",
+		"output": ",F {t\\\\\\\\a"
+	},
+	{
+		"input": "\n]t[0u:",
+		"output": "\n]t[0u:"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "\t\tZ\u0001r[aA\u0000{,",
+		"output": "\t\tZ\u0001r[aA\u0000{,"
+	},
+	{
+		"input": "é Zub9\u0000[\\ud83d:tr",
+		"output": "é Zub9\u0000[\\ud83d:tr"
+	},
+	{
+		"input": "éf\\]ZfA\\u00e9\t9\\u,{f\\d\t}",
+		"output": "éf\\]ZfA\\u00e9\t9\\u,{f\\d\t}"
+	},
+	{
+		"input": "xr\\ud83d\u0000\\F\t:r}/f\"\\ud83d{aa",
+		"output": "xr\\ud83d\u0000\\F\t:r}/f\"\\ud83d{aa"
+	},
+	{
+		"input": "[Z \n\\\u0001",
+		"output": "[Z \n\\\u0001"
+	},
+	{
+		"input": "b\\u00e9ra",
+		"output": "b\\u00e9ra"
+	},
+	{
+		"input": "b\\u00e9\"[é]\\u",
+		"output": "b\\u00e9\"[é]\\\\u"
+	},
+	{
+		"input": "Zf{\\u00e9ér\\u\\d\\\t n\\😀ux\\u",
+		"output": "Zf{\\u00e9ér\\u\\d\\\t n\\😀ux\\u"
+	},
+	{
+		"input": "a\\u\u00000]\\n{",
+		"output": "a\\u\u00000]\\n{"
+	},
+	{
+		"input": ",",
+		"output": ","
+	},
+	{
+		"input": "]{t\\u00e9\t1é0FA1\tb",
+		"output": "]{t\\u00e9\t1é0FA1\tb"
+	},
+	{
+		"input": "\\\\Ft\\d😀\té\\/a",
+		"output": "\\\\Ft\\d😀\té\\/a"
+	},
+	{
+		"input": ":a0:\n]]",
+		"output": ":a0:\n]]"
+	},
+	{
+		"input": "f/ Zx :A0",
+		"output": "f/ Zx :A0"
+	},
+	{
+		"input": "Z\u00011 {",
+		"output": "Z\u00011 {"
+	},
+	{
+		"input": "\u0000x}r]a\"\n0tf,nff9\\u00e9a",
+		"output": "\u0000x}r]a\"\\n0tf,nff9\\u00e9a"
+	},
+	{
+		"input": "[😀\"x\\é]b\t\t[1 :nFa\t",
+		"output": "[😀\"x\\\\é]b\\t\\t[1 :nFa\\t"
+	},
+	{
+		"input": "😀A\\dAf[é,",
+		"output": "😀A\\dAf[é,"
+	},
+	{
+		"input": "9Atf\"\"\\u\u00000uan\\\u0001:\\d\\u\t",
+		"output": "9Atf\"\"\\u\u00000uan\\\u0001:\\d\\u\t"
+	},
+	{
+		"input": "f\"/é\\\\é/",
+		"output": "f\"/é\\\\é/"
+	},
+	{
+		"input": "[]\\u9\\ud83d\t{\\ud83d\\\\\\Z::",
+		"output": "[]\\u9\\ud83d\t{\\ud83d\\\\\\Z::"
+	},
+	{
+		"input": "9F:Z",
+		"output": "9F:Z"
+	},
+	{
+		"input": "t0é",
+		"output": "t0é"
+	},
+	{
+		"input": "rZ\\ud83d1A9",
+		"output": "rZ\\ud83d1A9"
+	},
+	{
+		"input": "😀:\n\\ud83d\\ba\n\u00010\\a",
+		"output": "😀:\n\\ud83d\\ba\n\u00010\\a"
+	},
+	{
+		"input": "f,r]\\\\\"",
+		"output": "f,r]\\\\\""
+	},
+	{
+		"input": "A/\\\\😀",
+		"output": "A/\\\\😀"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "9}\\\\\\ud83dF\\ud83dn[F\"",
+		"output": "9}\\\\\\ud83dF\\ud83dn[F\""
+	},
+	{
+		"input": ",nt\"\t{}\"n\\d",
+		"output": ",nt\"\\t{}\"n\\d"
+	},
+	{
+		"input": ",ft]9\u00000A,},\u0000é{",
+		"output": ",ft]9\u00000A,},\u0000é{"
+	},
+	{
+		"input": "\t\\u\\dA9:\u0001nb9]\n]",
+		"output": "\t\\u\\dA9:\u0001nb9]\n]"
+	},
+	{
+		"input": "\\\\ud83d1\\ua\\1 tf",
+		"output": "\\\\ud83d1\\ua\\1 tf"
+	},
+	{
+		"input": "Z:0 xb",
+		"output": "Z:0 xb"
+	},
+	{
+		"input": "1\\dr\\u\u0001Z",
+		"output": "1\\dr\\u\u0001Z"
+	},
+	{
+		"input": "]",
+		"output": "]"
+	},
+	{
+		"input": "n0\\u00e9n\\d\\u",
+		"output": "n0\\u00e9n\\d\\u"
+	},
+	{
+		"input": "]\\\\br/ \\un\t",
+		"output": "]\\\\br/ \\un\t"
+	},
+	{
+		"input": "0}\"1",
+		"output": "0}\"1"
+	},
+	{
+		"input": "0é}\"Z{nut\t",
+		"output": "0é}\"Z{nut\\t"
+	},
+	{
+		"input": "/a}1x😀a\\u/\\ud83d😀9",
+		"output": "/a}1x😀a\\u/\\ud83d😀9"
+	},
+	{
+		"input": "b\"9n\u0000\n\t",
+		"output": "b\"9n\\u0000\\n\\t"
+	},
+	{
+		"input": "\u0000\\ud83df\u0000Aéf",
+		"output": "\u0000\\ud83df\u0000Aéf"
+	},
+	{
+		"input": "u\\u00e9 x:x:",
+		"output": "u\\u00e9 x:x:"
+	},
+	{
+		"input": "/\u0001]f}ta\\ud83d\"\n\n\t:1:",
+		"output": "/\u0001]f}ta\\ud83d\"\\n\\n\\t:1:"
+	},
+	{
+		"input": "😀t,A",
+		"output": "😀t,A"
+	},
+	{
+		"input": "[\u0001ér{/19b\\u00e9:Z\u0001}\\\\]]Z",
+		"output": "[\u0001ér{/19b\\u00e9:Z\u0001}\\\\]]Z"
+	},
+	{
+		"input": "\\dn\u0000[nbZ/ ",
+		"output": "\\dn\u0000[nbZ/ "
+	},
+	{
+		"input": "\"\\u9:",
+		"output": "\"\\\\u9:"
+	},
+	{
+		"input": "{\\u1Z",
+		"output": "{\\u1Z"
+	},
+	{
+		"input": " \\ud83dt",
+		"output": " \\ud83dt"
+	},
+	{
+		"input": "{\"ba\\ud83da:\u0000\"1",
+		"output": "{\"ba\\ud83da:\\u0000\"1"
+	},
+	{
+		"input": "9\\ud83d9",
+		"output": "9\\ud83d9"
+	},
+	{
+		"input": "\u0001xrxé\t😀t\"",
+		"output": "\u0001xrxé\t😀t\""
+	},
+	{
+		"input": "0\u0000",
+		"output": "0\u0000"
+	},
+	{
+		"input": "9\\\\]1,\\ud83d",
+		"output": "9\\\\]1,\\ud83d"
+	},
+	{
+		"input": "n\"Fxb",
+		"output": "n\"Fxb"
+	},
+	{
+		"input": "/\\da\n t\u0000raA\\",
+		"output": "/\\da\n t\u0000raA\\"
+	},
+	{
+		"input": "{\u0001A",
+		"output": "{\u0001A"
+	},
+	{
+		"input": "n}\u0001é",
+		"output": "n}\u0001é"
+	},
+	{
+		"input": "fé1\":\\ud83dnZ/😀",
+		"output": "fé1\":\\ud83dnZ/😀"
+	},
+	{
+		"input": ",b\tt{\\Zu{,b",
+		"output": ",b\tt{\\Zu{,b"
+	},
+	{
+		"input": "[",
+		"output": "["
+	},
+	{
+		"input": "\"ua/tt0u\\d\"\n0/",
+		"output": "\"ua/tt0u\\\\d\"\n0/"
+	},
+	{
+		"input": "b9\nAu\t\\\\F",
+		"output": "b9\nAu\t\\\\F"
+	},
+	{
+		"input": "\\]😀😀f\u0000a\"\\uFr\nZ",
+		"output": "\\]😀😀f\u0000a\"\\\\uFr\\nZ"
+	},
+	{
+		"input": "\\d1\\ud83dZZ\\d",
+		"output": "\\d1\\ud83dZZ\\d"
+	},
+	{
+		"input": "Zt\tF",
+		"output": "Zt\tF"
+	},
+	{
+		"input": "\\u00e9\u0001\\\\b{0\"a1😀Ax/",
+		"output": "\\u00e9\u0001\\\\b{0\"a1😀Ax/"
+	},
+	{
+		"input": "x0\\ud83d\t{1",
+		"output": "x0\\ud83d\t{1"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "\\u\u0001A\u0000\\u\t\\u\\\u0000t",
+		"output": "\\u\u0001A\u0000\\u\t\\u\\\u0000t"
+	},
+	{
+		"input": "\"n",
+		"output": "\"n"
+	},
+	{
+		"input": "b /1😀\u0001Ab1A\"r\\d\\u00e9a{\\u00e9",
+		"output": "b /1😀\u0001Ab1A\"r\\\\d\\u00e9a{\\u00e9"
+	},
+	{
+		"input": "\n1\\\\{\t[\t}]\"😀",
+		"output": "\n1\\\\{\t[\t}]\"😀"
+	},
+	{
+		"input": "1,F",
+		"output": "1,F"
+	},
+	{
+		"input": "\\d1\u0001b",
+		"output": "\\d1\u0001b"
+	},
+	{
+		"input": "{:\" ,😀é[}\\\\\u0001\\\\,A",
+		"output": "{:\" ,😀é[}\\\\\\u0001\\\\,A"
+	},
+	{
+		"input": "\na😀fZ\\\\n\"/b:",
+		"output": "\na😀fZ\\\\n\"/b:"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "\u0001fn,\\uA",
+		"output": "\u0001fn,\\uA"
+	},
+	{
+		"input": "\n😀r\tfr\\d:au\u0000}a\u0001Fu]",
+		"output": "\n😀r\tfr\\d:au\u0000}a\u0001Fu]"
+	},
+	{
+		"input": "\\ud83d01é]\"] 1t\\dr]1",
+		"output": "\\ud83d01é]\"] 1t\\\\dr]1"
+	},
+	{
+		"input": "ux{\\u00e911f\\ud83db\\\\f",
+		"output": "ux{\\u00e911f\\ud83db\\\\f"
+	},
+	{
+		"input": "[]u{n\"9\u0001fF]\\un n9",
+		"output": "[]u{n\"9\\u0001fF]\\\\un n9"
+	},
+	{
+		"input": "1",
+		"output": "1"
+	},
+	{
+		"input": "]b\\\\\\rb0é]9é\"",
+		"output": "]b\\\\\\rb0é]9é\""
+	},
+	{
+		"input": "{A\\\\n\\tu\t\u0001a:😀",
+		"output": "{A\\\\n\\tu\t\u0001a:😀"
+	},
+	{
+		"input": "f/\tt\\Ab0\u0000éau",
+		"output": "f/\tt\\Ab0\u0000éau"
+	},
+	{
+		"input": "xu",
+		"output": "xu"
+	},
+	{
+		"input": "\\ud83d} t{\"",
+		"output": "\\ud83d} t{\""
+	},
+	{
+		"input": "\\u00e9,x",
+		"output": "\\u00e9,x"
+	},
+	{
+		"input": "}\\}",
+		"output": "}\\}"
+	},
+	{
+		"input": "\\u00e9\nééAf\\u\"\u0001/",
+		"output": "\\u00e9\nééAf\\u\"\\u0001/"
+	},
+	{
+		"input": "\\ux\u0000\\u😀,n\"\nx\\ud83d",
+		"output": "\\ux\u0000\\u😀,n\"\\nx\\ud83d"
+	},
+	{
+		"input": "ru\\A{0\\d",
+		"output": "ru\\A{0\\d"
+	},
+	{
+		"input": "\t]{AZ\n\":ut:",
+		"output": "\t]{AZ\n\":ut:"
+	},
+	{
+		"input": "a:]x: ",
+		"output": "a:]x: "
+	},
+	{
+		"input": "\\ud83d\u0000\n",
+		"output": "\\ud83d\u0000\n"
+	},
+	{
+		"input": "\u0001\\\\u00e9,9t\n\\ud83da1\t/",
+		"output": "\u0001\\\\u00e9,9t\n\\ud83da1\t/"
+	},
+	{
+		"input": "Aé \u0001[\n1\\ud83d\\d \n1/u\\ud83d",
+		"output": "Aé \u0001[\n1\\ud83d\\d \n1/u\\ud83d"
+	},
+	{
+		"input": "Zat9",
+		"output": "Zat9"
+	},
+	{
+		"input": "\u0000af\t\u0000\\\\1\u0000nZau",
+		"output": "\u0000af\t\u0000\\\\1\u0000nZau"
+	},
+	{
+		"input": "\\\\[\u0000}\\u😀0}tx0 éA\\u00e91",
+		"output": "\\\\[\u0000}\\u😀0}tx0 éA\\u00e91"
+	},
+	{
+		"input": "\\u00e9\t1\n",
+		"output": "\\u00e9\t1\n"
+	},
+	{
+		"input": "\\\\u00e9Fn19:",
+		"output": "\\\\u00e9Fn19:"
+	},
+	{
+		"input": "]\\\nn 😀\\}Zf/",
+		"output": "]\\\nn 😀\\}Zf/"
+	},
+	{
+		"input": "x",
+		"output": "x"
+	},
+	{
+		"input": "\"rA\\,r",
+		"output": "\"rA\\\\,r"
+	},
+	{
+		"input": "afa{\t\\u00e9:\\u",
+		"output": "afa{\t\\u00e9:\\u"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "/b",
+		"output": "/b"
+	},
+	{
+		"input": "\"tnZb😀",
+		"output": "\"tnZb😀"
+	},
+	{
+		"input": ":Zé{😀\\1xZ",
+		"output": ":Zé{😀\\1xZ"
+	},
+	{
+		"input": "\u0000\\d\\u00e9\\}\\ud83d\\dxu\\u00e9[\"{\"\nA",
+		"output": "\u0000\\d\\u00e9\\}\\ud83d\\dxu\\u00e9[\"{\"\nA"
+	},
+	{
+		"input": "\\ud83d\\\\\\\\{[b,,\u0000F😀0u",
+		"output": "\\ud83d\\\\\\\\{[b,,\u0000F😀0u"
+	},
+	{
+		"input": "Z\u0000\t1]\u0000[\\u00e9\\\\😀a\\uF\\u\\u\nb",
+		"output": "Z\u0000\t1]\u0000[\\u00e9\\\\😀a\\uF\\u\\u\nb"
+	},
+	{
+		"input": "\\d\\\\\u0000}r\"]\\\\\t[A\\ud83dt",
+		"output": "\\d\\\\\u0000}r\"]\\\\\\t[A\\ud83dt"
+	},
+	{
+		"input": "nuZ ,\\u[]0",
+		"output": "nuZ ,\\u[]0"
+	},
+	{
+		"input": "\\dé\\ud83dfxt:\\\\[,\nx9a:",
+		"output": "\\dé\\ud83dfxt:\\\\[,\nx9a:"
+	},
+	{
+		"input": "x\"n",
+		"output": "x\"n"
+	},
+	{
+		"input": "\t,\\u00e9😀r{A😀\tr1",
+		"output": "\t,\\u00e9😀r{A😀\tr1"
+	},
+	{
+		"input": "\u00001",
+		"output": "\u00001"
+	},
+	{
+		"input": "9r\\dr\u0001/r\\\\é\\]\\ud83d9A",
+		"output": "9r\\dr\u0001/r\\\\é\\]\\ud83d9A"
+	},
+	{
+		"input": "\"Z\\u00e9{axb\\\\,}bru\\a\\u00e9\t",
+		"output": "\"Z\\u00e9{axb\\\\,}bru\\\\a\\u00e9\\t"
+	},
+	{
+		"input": "]é😀]\\\\Atré\"t",
+		"output": "]é😀]\\\\Atré\"t"
+	},
+	{
+		"input": "FZn{\\\\d\u0001 t\"\\\\\\u,",
+		"output": "FZn{\\\\d\u0001 t\"\\\\\\\\u,"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": ":0n: 1nu1\\u00e9aZ\\\"\\\\\n",
+		"output": ":0n: 1nu1\\u00e9aZ\\\"\\\\\\n"
+	},
+	{
+		"input": "\u0000n\n09}ué",
+		"output": "\u0000n\n09}ué"
+	},
+	{
+		"input": "\\u\u0001u\t\\uaFur",
+		"output": "\\u\u0001u\t\\uaFur"
+	},
+	{
+		"input": "fxxF/Z\\u00e9",
+		"output": "fxxF/Z\\u00e9"
+	},
+	{
+		"input": "}},\n\\\"é\u00019n",
+		"output": "}},\n\\\"é\\u00019n"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "{fuft:A,:\\\\Aft\n9",
+		"output": "{fuft:A,:\\\\Aft\n9"
+	},
+	{
+		"input": "t0t\u0000\\F{ftZ,",
+		"output": "t0t\u0000\\F{ftZ,"
+	},
+	{
+		"input": "xFn1é\n\u0000",
+		"output": "xFn1é\n\u0000"
+	},
+	{
+		"input": "{\\Z\u0000réu😀\n\tF😀\\u00e9\\ud83d\\uu",
+		"output": "{\\Z\u0000réu😀\n\tF😀\\u00e9\\ud83d\\uu"
+	},
+	{
+		"input": "\\",
+		"output": "\\"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "\t/9\\ud83dné90 \t:\u0001",
+		"output": "\t/9\\ud83dné90 \t:\u0001"
+	},
+	{
+		"input": "\tr:/b\\\\]}",
+		"output": "\tr:/b\\\\]}"
+	},
+	{
+		"input": "\tn\\\\u]\\u1a\t",
+		"output": "\tn\\\\u]\\u1a\t"
+	},
+	{
+		"input": "9}\\:A\nfrZn\u0000",
+		"output": "9}\\:A\nfrZn\u0000"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "u\u0000\téx]\\d\n",
+		"output": "u\u0000\téx]\\d\n"
+	},
+	{
+		"input": "😀Frx: ru//\\u00e90b",
+		"output": "😀Frx: ru//\\u00e90b"
+	},
+	{
+		"input": "][\\u00e91Z,1 Z9/]} \n}",
+		"output": "][\\u00e91Z,1 Z9/]} \n}"
+	},
+	{
+		"input": "F\\\\ua:\t\\u A\u0001[\u0000a]é\\d\\",
+		"output": "F\\\\ua:\t\\u A\u0001[\u0000a]é\\d\\"
+	},
+	{
+		"input": "0r}é",
+		"output": "0r}é"
+	},
+	{
+		"input": "\\\\[/[9\\u00e9",
+		"output": "\\\\[/[9\\u00e9"
+	},
+	{
+		"input": "x[1 x😀\\ud83d\\u00e9u\u0001F[",
+		"output": "x[1 x😀\\ud83d\\u00e9u\u0001F["
+	},
+	{
+		"input": "[\nx:[n😀",
+		"output": "[\nx:[n😀"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "\u0001\\\\\\\\\\u\\d\n0😀\\u00e9}nx{\u0001 ",
+		"output": "\u0001\\\\\\\\\\u\\d\n0😀\\u00e9}nx{\u0001 "
+	},
+	{
+		"input": "r\"[😀\t1\\d9\tZaa",
+		"output": "r\"[😀\\t1\\\\d9\\tZaa"
+	},
+	{
+		"input": "\u0000t\"1u\\\\A\\ud83d9\"0tntf😀]",
+		"output": "\u0000t\"1u\\\\A\\ud83d9\"0tntf😀]"
+	},
+	{
+		"input": "Ff\"ér{9",
+		"output": "Ff\"ér{9"
+	},
+	{
+		"input": "\\\\9A9}1\u0001\\\\\t\\\\\\",
+		"output": "\\\\9A9}1\u0001\\\\\t\\\\\\"
+	},
+	{
+		"input": "\"\\\\/u\n[",
+		"output": "\"\\\\/u\\n["
+	},
+	{
+		"input": "\\\\xF😀FuF\"a\\",
+		"output": "\\\\xF😀FuF\"a\\\\"
+	},
+	{
+		"input": "\\\u0001ax]\\u00e9}0ba9nF\\d\u0000n]\n",
+		"output": "\\\u0001ax]\\u00e9}0ba9nF\\d\u0000n]\n"
+	},
+	{
+		"input": " bt\\Z",
+		"output": " bt\\Z"
+	},
+	{
+		"input": "f0\\u00e9\\u/1\t\u0000",
+		"output": "f0\\u00e9\\u/1\t\u0000"
+	},
+	{
+		"input": "\n91\\u00e9]\"\t/\nu\\ub\" fn1",
+		"output": "\n91\\u00e9]\"\\t/\\nu\\\\ub\" fn1"
+	},
+	{
+		"input": "{",
+		"output": "{"
+	},
+	{
+		"input": "F1,\\ud83dn[\tn\\d\\\\}f",
+		"output": "F1,\\ud83dn[\tn\\d\\\\}f"
+	},
+	{
+		"input": "A1\"x,/ ",
+		"output": "A1\"x,/ "
+	},
+	{
+		"input": "\u0000,\"F\u0000,\\\\{ré\"}",
+		"output": "\u0000,\"F\\u0000,\\\\{ré\"}"
+	},
+	{
+		"input": "{fA9\tA:",
+		"output": "{fA9\tA:"
+	},
+	{
+		"input": "\\u00e9,,\\u00e9}\\\\\\\\ud83d0\"b9Af",
+		"output": "\\u00e9,,\\u00e9}\\\\\\\\ud83d0\"b9Af"
+	},
+	{
+		"input": "}\\d😀0Z\nar[b{0x]\nb",
+		"output": "}\\d😀0Z\nar[b{0x]\nb"
+	},
+	{
+		"input": "x\u0000, \\ud83du[\u0001]9\\u00e9",
+		"output": "x\u0000, \\ud83du[\u0001]9\\u00e9"
+	},
+	{
+		"input": "r:nr",
+		"output": "r:nr"
+	},
+	{
+		"input": "\u0000\nx\nf:0]:/{",
+		"output": "\u0000\nx\nf:0]:/{"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "a\u0001éé",
+		"output": "a\u0001éé"
+	},
+	{
+		"input": "xZrx]\\u1,\\ud83d\n",
+		"output": "xZrx]\\u1,\\ud83d\n"
+	},
+	{
+		"input": "r]1\"\tA\\ud83d\\1 0,]\t\\[[",
+		"output": "r]1\"\\tA\\ud83d\\\\1 0,]\\t\\\\[["
+	},
+	{
+		"input": "\\u00e9\\dé09\"xf\t\\ud83d:b\\ud83dF9",
+		"output": "\\u00e9\\dé09\"xf\\t\\ud83d:b\\ud83dF9"
+	},
+	{
+		"input": "u",
+		"output": "u"
+	},
+	{
+		"input": "[\n\\d",
+		"output": "[\n\\d"
+	},
+	{
+		"input": "é\\uAt\\{AZ😀un\\d",
+		"output": "é\\uAt\\{AZ😀un\\d"
+	},
+	{
+		"input": "😀",
+		"output": "😀"
+	},
+	{
+		"input": ":t{n\\u00e9\u0000]{\\u00e9",
+		"output": ":t{n\\u00e9\u0000]{\\u00e9"
+	},
+	{
+		"input": "😀éZ}\\du1\\ud83d0,\u0001[\\,/:f",
+		"output": "😀éZ}\\du1\\ud83d0,\u0001[\\,/:f"
+	},
+	{
+		"input": "😀\\d1xA\\\\ud83d\u0000}\"\\\\ 0{",
+		"output": "😀\\d1xA\\\\ud83d\u0000}\"\\\\ 0{"
+	},
+	{
+		"input": "\\u\t\\\\Z1\\\\u",
+		"output": "\\u\t\\\\Z1\\\\u"
+	},
+	{
+		"input": ",uZ,😀0ré[\\\\nZ",
+		"output": ",uZ,😀0ré[\\\\nZ"
+	},
+	{
+		"input": "f",
+		"output": "f"
+	},
+	{
+		"input": ":u\\u",
+		"output": ":u\\u"
+	},
+	{
+		"input": "\\\\f\\\\f\\\\\u0001",
+		"output": "\\\\f\\\\f\\\\\u0001"
+	},
+	{
+		"input": "\txZux\\,\\\\r\\uZ:aA😀",
+		"output": "\txZux\\,\\\\r\\uZ:aA😀"
+	},
+	{
+		"input": "f{Z😀\u00000\n\\u\t\u00010",
+		"output": "f{Z😀\u00000\n\\u\t\u00010"
+	},
+	{
+		"input": "\\ud83d\\u00e9\\n\n[",
+		"output": "\\ud83d\\u00e9\\n\n["
+	},
+	{
+		"input": "\u0001rf}xxf\u0000\\\"\"\u0001A",
+		"output": "\u0001rf}xxf\u0000\\\"\"\u0001A"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "\\d9é😀a/t",
+		"output": "\\d9é😀a/t"
+	},
+	{
+		"input": "\\ud83d}/u\n\\u\\ud83dn\\\\😀\\ud83d\t9n",
+		"output": "\\ud83d}/u\n\\u\\ud83dn\\\\😀\\ud83d\t9n"
+	},
+	{
+		"input": "F\"F}\"\\d\\ud83d",
+		"output": "F\"F}\"\\d\\ud83d"
+	},
+	{
+		"input": "0r/n\u0001tf\\u9r",
+		"output": "0r/n\u0001tf\\u9r"
+	},
+	{
+		"input": " 1tx/[",
+		"output": " 1tx/["
+	},
+	{
+		"input": "\u0000\\r\\a\u0001f\\ud83d\u0000/",
+		"output": "\u0000\\r\\a\u0001f\\ud83d\u0000/"
+	},
+	{
+		"input": "1f",
+		"output": "1f"
+	},
+	{
+		"input": "\\b\t\u0000éu{/\n\\u00e9 ",
+		"output": "\\b\t\u0000éu{/\n\\u00e9 "
+	},
+	{
+		"input": "\\\\u\\dnZt\\u00e9😀\u0001{\\ur\\u00e91",
+		"output": "\\\\u\\dnZt\\u00e9😀\u0001{\\ur\\u00e91"
+	},
+	{
+		"input": "\\ud83d9b\n90Fx0\u0001",
+		"output": "\\ud83d9b\n90Fx0\u0001"
+	},
+	{
+		"input": "[",
+		"output": "["
+	},
+	{
+		"input": "\\Z0Fé{1\\:\\ud83d\\ud83d0A\\ud83d\u0000😀",
+		"output": "\\Z0Fé{1\\:\\ud83d\\ud83d0A\\ud83d\u0000😀"
+	},
+	{
+		"input": "tr\té",
+		"output": "tr\té"
+	},
+	{
+		"input": "9nb",
+		"output": "9nb"
+	},
+	{
+		"input": "1,x{\\urtur0\\\\t0aF{Z}",
+		"output": "1,x{\\urtur0\\\\t0aF{Z}"
+	},
+	{
+		"input": "\\",
+		"output": "\\"
+	},
+	{
+		"input": "/0\t\t/\\Fé",
+		"output": "/0\t\t/\\Fé"
+	},
+	{
+		"input": "\tu\\ud83d/F\\9A\\u00e9A\\ud83d\\u00e9{",
+		"output": "\tu\\ud83d/F\\9A\\u00e9A\\ud83d\\u00e9{"
+	},
+	{
+		"input": "\\",
+		"output": "\\"
+	},
+	{
+		"input": "1é\t9,1\t1😀f",
+		"output": "1é\t9,1\t1😀f"
+	},
+	{
+		"input": "0:,\u0000 \\ud83d},\\r😀",
+		"output": "0:,\u0000 \\ud83d},\\r😀"
+	},
+	{
+		"input": "\\u\\u00e9Zaa",
+		"output": "\\u\\u00e9Zaa"
+	},
+	{
+		"input": "\nxxZn A1\u0001\\dénr,9",
+		"output": "\nxxZn A1\u0001\\dénr,9"
+	},
+	{
+		"input": "\n:]\n\"{\\\\",
+		"output": "\n:]\n\"{\\\\"
+	},
+	{
+		"input": "\u0000/",
+		"output": "\u0000/"
+	},
+	{
+		"input": "ZZ😀Zt",
+		"output": "ZZ😀Zt"
+	},
+	{
+		"input": "{\\ud83d{ \\\\]arZ\\u00e9😀un\",,",
+		"output": "{\\ud83d{ \\\\]arZ\\u00e9😀un\",,"
+	},
+	{
+		"input": "\\ud83dt[\\\\dZ\n\\\\ud83d,Aé:b",
+		"output": "\\ud83dt[\\\\dZ\n\\\\ud83d,Aé:b"
+	},
+	{
+		"input": "f]aZ\u0000/\\u00e91",
+		"output": "f]aZ\u0000/\\u00e91"
+	},
+	{
+		"input": "ra9\t\n\tx\n😀 é}😀]A",
+		"output": "ra9\t\n\tx\n😀 é}😀]A"
+	},
+	{
+		"input": "r",
+		"output": "r"
+	},
+	{
+		"input": "tnb/😀\\dA",
+		"output": "tnb/😀\\dA"
+	},
+	{
+		"input": ",1",
+		"output": ",1"
+	},
+	{
+		"input": "\\uré\\u00e9/😀0\\u00e91\\fF/,u[\"\t",
+		"output": "\\uré\\u00e9/😀0\\u00e91\\fF/,u[\"\\t"
+	},
+	{
+		"input": "Af\u0001\\u00e9\t😀x",
+		"output": "Af\u0001\\u00e9\t😀x"
+	},
+	{
+		"input": ":\\un\t\\]9Z\\u00e9\nF,\\\\\\u00e9 ",
+		"output": ":\\un\t\\]9Z\\u00e9\nF,\\\\\\u00e9 "
+	},
+	{
+		"input": "tA9 1\u0000x\"A{/n0",
+		"output": "tA9 1\u0000x\"A{/n0"
+	},
+	{
+		"input": "é\\\u0001",
+		"output": "é\\\u0001"
+	},
+	{
+		"input": "\\dZ\t\\u00e9\u0001\tn",
+		"output": "\\dZ\t\\u00e9\u0001\tn"
+	},
+	{
+		"input": "[\u0000é\\df\\dn:xFF\\ud83d/\\ud83d\\d",
+		"output": "[\u0000é\\df\\dn:xFF\\ud83d/\\ud83d\\d"
+	},
+	{
+		"input": "a[\u0001}r",
+		"output": "a[\u0001}r"
+	},
+	{
+		"input": "}😀\u0000/ur",
+		"output": "}😀\u0000/ur"
+	},
+	{
+		"input": ",é[bA\"]\\d,,\n\trFx\\\\",
+		"output": ",é[bA\"]\\\\d,,\\n\\trFx\\\\"
+	},
+	{
+		"input": "]\u0001\\A9😀n\\u00e9:\u0001bf",
+		"output": "]\u0001\\A9😀n\\u00e9:\u0001bf"
+	},
+	{
+		"input": "}",
+		"output": "}"
+	},
+	{
+		"input": "x{1ZxuF{\\Z",
+		"output": "x{1ZxuF{\\Z"
+	},
+	{
+		"input": "😀\u0000\\u00e9\\ud83d]Zb}1\\ud83duFba",
+		"output": "😀\u0000\\u00e9\\ud83d]Zb}1\\ud83duFba"
+	},
+	{
+		"input": "tu{f",
+		"output": "tu{f"
+	},
+	{
+		"input": "\\u00e9\\u00e9uf/\\d99\u0001Zu\\u00e911é",
+		"output": "\\u00e9\\u00e9uf/\\d99\u0001Zu\\u00e911é"
+	},
+	{
+		"input": "uF\\ud83d,\\ud83d]\\ud83d]a:bf😀\\u}\\u00e9t",
+		"output": "uF\\ud83d,\\ud83d]\\ud83d]a:bf😀\\u}\\u00e9t"
+	},
+	{
+		"input": "/F\n]afa99{\"\n",
+		"output": "/F\n]afa99{\"\\n"
+	},
+	{
+		"input": "]9n\u0001[Z\"1\n",
+		"output": "]9n\u0001[Z\"1\\n"
+	},
+	{
+		"input": "00",
+		"output": "00"
+	},
+	{
+		"input": "t",
+		"output": "t"
+	},
+	{
+		"input": "0  :tr:\u0001\\\\u00e9at,uf\\u:",
+		"output": "0  :tr:\u0001\\\\u00e9at,uf\\u:"
+	},
+	{
+		"input": ":/raf\\dt\nb\\\\bAZr\\u00e9}",
+		"output": ":/raf\\dt\nb\\\\bAZr\\u00e9}"
+	},
+	{
+		"input": "[/\\\\\\\\\"",
+		"output": "[/\\\\\\\\\""
+	},
+	{
+		"input": "\\u\"",
+		"output": "\\u\""
+	},
+	{
+		"input": "Z",
+		"output": "Z"
+	},
+	{
+		"input": "\\ud83drn\\\\9\tfZ r\\d",
+		"output": "\\ud83drn\\\\9\tfZ r\\d"
+	},
+	{
+		"input": "A\"]x[\\u\\\\",
+		"output": "A\"]x[\\\\u\\\\"
+	},
+	{
+		"input": "]A:n\nx]é::\\u\"x",
+		"output": "]A:n\nx]é::\\u\"x"
+	},
+	{
+		"input": ",aZ\\",
+		"output": ",aZ\\"
+	},
+	{
+		"input": "\\ud83df\t ,F \u0000ftt{xt]a",
+		"output": "\\ud83df\t ,F \u0000ftt{xt]a"
+	},
+	{
+		"input": "\u0000",
+		"output": "\u0000"
+	},
+	{
+		"input": "x\\u\\ub, r\"\u0000\nZ\\\\\u0000A}b[",
+		"output": "x\\u\\ub, r\"\\u0000\\nZ\\\\\\u0000A}b["
+	},
+	{
+		"input": "\\uu9\\\\]é/Z",
+		"output": "\\uu9\\\\]é/Z"
+	},
+	{
+		"input": ",x\\d",
+		"output": ",x\\d"
+	},
+	{
+		"input": "\\\\{ar,",
+		"output": "\\\\{ar,"
+	},
+	{
+		"input": "]x\\\\A",
+		"output": "]x\\\\A"
+	},
+	{
+		"input": "nx/t\u0001,\\😀 u",
+		"output": "nx/t\u0001,\\😀 u"
+	},
+	{
+		"input": " \\\\u\\dxZZ\nfF\n\\u\\u00e9\t",
+		"output": " \\\\u\\dxZZ\nfF\n\\u\\u00e9\t"
+	},
+	{
+		"input": "\u0001t,",
+		"output": "\u0001t,"
+	},
+	{
+		"input": "\"\\u00e9{Ar\\ud83d,",
+		"output": "\"\\u00e9{Ar\\ud83d,"
+	},
+	{
+		"input": "é\u00009\\ud83d\\d0\u0000\\\\u\\u[\\d\u00011\t😀]",
+		"output": "é\u00009\\ud83d\\d0\u0000\\\\u\\u[\\d\u00011\t😀]"
+	},
+	{
+		"input": "Au/",
+		"output": "Au/"
+	},
+	{
+		"input": "}f",
+		"output": "}f"
+	},
+	{
+		"input": "\\u00e9Fa\\\\\\\\,:\\/x\tf\"F",
+		"output": "\\u00e9Fa\\\\\\\\,:\\/x\tf\"F"
+	},
+	{
+		"input": "\\d\\F[\u0000\\u91\\d1 a",
+		"output": "\\d\\F[\u0000\\u91\\d1 a"
+	},
+	{
+		"input": ",\\u\\x\\d0\u0000",
+		"output": ",\\u\\x\\d0\u0000"
+	},
+	{
+		"input": "😀\\db\u0001aa1rA]",
+		"output": "😀\\db\u0001aa1rA]"
+	},
+	{
+		"input": "]\\f\\0\\ud83d \"\\ud83d\\\n\\n \\u00e9\\d1",
+		"output": "]\\f\\0\\ud83d \"\\ud83d\\\\\\n\\n \\u00e9\\\\d1"
+	},
+	{
+		"input": "t1b 9}\\\\ {b\\ud83d}]r\\ud83d\\d/ ",
+		"output": "t1b 9}\\\\ {b\\ud83d}]r\\ud83d\\d/ "
+	},
+	{
+		"input": "u\\d1/{\n",
+		"output": "u\\d1/{\n"
+	},
+	{
+		"input": "0\\\\Z9/0t",
+		"output": "0\\\\Z9/0t"
+	},
+	{
+		"input": "[[nx",
+		"output": "[[nx"
+	},
+	{
+		"input": "Z1\\ud83d\\u00e9f{{😀\\é\\\\t[A9,",
+		"output": "Z1\\ud83d\\u00e9f{{😀\\é\\\\t[A9,"
+	},
+	{
+		"input": "1aFb]}\\ZF\u0000199",
+		"output": "1aFb]}\\ZF\u0000199"
+	},
+	{
+		"input": "\"\" }/1/At\\\\,: \\uZ",
+		"output": "\"\" }/1/At\\\\,: \\uZ"
+	},
+	{
+		"input": ",\\u00e9\\\\ fé\\d\\u}é\u0000\u0001",
+		"output": ",\\u00e9\\\\ fé\\d\\u}é\u0000\u0001"
+	},
+	{
+		"input": ",A\\d}\"",
+		"output": ",A\\d}\""
+	},
+	{
+		"input": "a9\\d\\\\{u\\u\"\\u00e90",
+		"output": "a9\\d\\\\{u\\u\"\\u00e90"
+	},
+	{
+		"input": "[Fé]\"\\\\",
+		"output": "[Fé]\"\\\\"
+	},
+	{
+		"input": "]nA:0\t\"x",
+		"output": "]nA:0\t\"x"
+	},
+	{
+		"input": "bnén,Z😀",
+		"output": "bnén,Z😀"
+	},
+	{
+		"input": ":[\\\\Ffa",
+		"output": ":[\\\\Ffa"
+	},
+	{
+		"input": "x",
+		"output": "x"
+	},
+	{
+		"input": "x\\d{\\u00e9A,",
+		"output": "x\\d{\\u00e9A,"
+	},
+	{
+		"input": "n",
+		"output": "n"
+	},
+	{
+		"input": "é😀\\ur",
+		"output": "é😀\\ur"
+	},
+	{
+		"input": "ufx9éf",
+		"output": "ufx9éf"
+	},
+	{
+		"input": "b0\t\u0000 Zé",
+		"output": "b0\t\u0000 Zé"
+	},
+	{
+		"input": "Zn\\\\rb]xaff{t:é\\\\ud83d,",
+		"output": "Zn\\\\rb]xaff{t:é\\\\ud83d,"
+	},
+	{
+		"input": "u\\[r1\\u00e9\\d\\\\,\u0000][\\ud83d",
+		"output": "u\\[r1\\u00e9\\d\\\\,\u0000][\\ud83d"
+	},
+	{
+		"input": "9\\0{\\df",
+		"output": "9\\0{\\df"
+	},
+	{
+		"input": "\u0001\"/F/ \\un[A\\\\é\n\\ud83d,",
+		"output": "\u0001\"/F/ \\\\un[A\\\\é\\n\\ud83d,"
+	},
+	{
+		"input": "\\\\{\\ud83dfn1x,",
+		"output": "\\\\{\\ud83dfn1x,"
+	},
+	{
+		"input": "1tu\t[\t9r\\uxb\\u[{é",
+		"output": "1tu\t[\t9r\\uxb\\u[{é"
+	},
+	{
+		"input": "\u0001n\n[\\ud83d:tF0éar{a\\\\a",
+		"output": "\u0001n\n[\\ud83d:tF0éar{a\\\\a"
+	},
+	{
+		"input": "Z:\u0000\t}x:",
+		"output": "Z:\u0000\t}x:"
+	},
+	{
+		"input": "\n\\u00e9\"9\"Z,a\u0001\\d:a\\",
+		"output": "\n\\u00e9\"9\"Z,a\u0001\\d:a\\"
+	},
+	{
+		"input": "9u\u0000",
+		"output": "9u\u0000"
+	},
+	{
+		"input": "\"😀😀AuZ \\u00e9r1\\ud83dF😀\\u00e9,:\\",
+		"output": "\"😀😀AuZ \\u00e9r1\\ud83dF😀\\u00e9,:\\\\"
+	},
+	{
+		"input": "t9a//\\u",
+		"output": "t9a//\\u"
+	},
+	{
+		"input": "b}{}\n\u0000ZF",
+		"output": "b}{}\n\u0000ZF"
+	},
+	{
+		"input": "u",
+		"output": "u"
+	},
+	{
+		"input": ",",
+		"output": ","
+	},
+	{
+		"input": "]\\\\ud83d\\u00e9\\u0bt\\dua",
+		"output": "]\\\\ud83d\\u00e9\\u0bt\\dua"
+	},
+	{
+		"input": "\\u00e9\u0001b{1\\d9]1\\d\n\\ud83d",
+		"output": "\\u00e9\u0001b{1\\d9]1\\d\n\\ud83d"
+	},
+	{
+		"input": "[1\\u\u0001\n]9{F\u0000]b,😀\\ud83d\\d\"",
+		"output": "[1\\u\u0001\n]9{F\u0000]b,😀\\ud83d\\d\""
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "uu[u u\t1nr\\\n,\u0001:",
+		"output": "uu[u u\t1nr\\\n,\u0001:"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "1",
+		"output": "1"
+	},
+	{
+		"input": "Faaa",
+		"output": "Faaa"
+	},
+	{
+		"input": "a",
+		"output": "a"
+	},
+	{
+		"input": "\\ud83d[\" /1}a\u0000é\n😀 bt",
+		"output": "\\ud83d[\" /1}a\\u0000é\\n😀 bt"
+	},
+	{
+		"input": "n\u0001é[\u0001\\\\\\dA",
+		"output": "n\u0001é[\u0001\\\\\\dA"
+	},
+	{
+		"input": "\\\\1",
+		"output": "\\\\1"
+	},
+	{
+		"input": " \u0001a",
+		"output": " \u0001a"
+	},
+	{
+		"input": "FZ\tr],a\\u00e9\u0001 ]tZZ\\d",
+		"output": "FZ\tr],a\\u00e9\u0001 ]tZZ\\d"
+	},
+	{
+		"input": "r,\u00010rt0n",
+		"output": "r,\u00010rt0n"
+	},
+	{
+		"input": "/n:/Z10AuA",
+		"output": "/n:/Z10AuA"
+	},
+	{
+		"input": "bf[9\nZ]Aur",
+		"output": "bf[9\nZ]Aur"
+	},
+	{
+		"input": "a\t{\\\\\t{,9b",
+		"output": "a\t{\\\\\t{,9b"
+	},
+	{
+		"input": "brxrAu}[Z]\\u00e9]Ax}\t19",
+		"output": "brxrAu}[Z]\\u00e9]Ax}\t19"
+	},
+	{
+		"input": "u😀r19{r\u0000t,\\ud83d",
+		"output": "u😀r19{r\u0000t,\\ud83d"
+	},
+	{
+		"input": "[\\u\\ud83dn1\u0000b0x\u00011\\u00e9",
+		"output": "[\\u\\ud83dn1\u0000b0x\u00011\\u00e9"
+	},
+	{
+		"input": " [n[1",
+		"output": " [n[1"
+	},
+	{
+		"input": "\trFnZ\u0000t:A\\u00e9Z}",
+		"output": "\trFnZ\u0000t:A\\u00e9Z}"
+	},
+	{
+		"input": "\u0000éb,r:\u0001n}AZ:]\"AFZ:",
+		"output": "\u0000éb,r:\u0001n}AZ:]\"AFZ:"
+	},
+	{
+		"input": "a\u0000]\" u}\n\t\u0000\\1Af9",
+		"output": "a\u0000]\" u}\\n\\t\\u0000\\\\1Af9"
+	},
+	{
+		"input": "\"{nu\\ud83d",
+		"output": "\"{nu\\ud83d"
+	},
+	{
+		"input": "\u0000}\u0000\n😀\\un}",
+		"output": "\u0000}\u0000\n😀\\un}"
+	},
+	{
+		"input": "n:\tn\n/[/\\u00e9",
+		"output": "n:\tn\n/[/\\u00e9"
+	},
+	{
+		"input": "\\\\[\t:1\\uAfF] ",
+		"output": "\\\\[\t:1\\uAfF] "
+	},
+	{
+		"input": "[t}\u0000\\u00e90/",
+		"output": "[t}\u0000\\u00e90/"
+	},
+	{
+		"input": "r😀abn91\\u00e9uFt,r",
+		"output": "r😀abn91\\u00e9uFt,r"
+	},
+	{
+		"input": "é\\u[rx9a9A\u0001",
+		"output": "é\\u[rx9a9A\u0001"
+	},
+	{
+		"input": "\\u00e9{\\d}\\u00e9F\\u00e9n9FF,",
+		"output": "\\u00e9{\\d}\\u00e9F\\u00e9n9FF,"
+	},
+	{
+		"input": "F\u0001\\]\tuf",
+		"output": "F\u0001\\]\tuf"
+	},
+	{
+		"input": "bZ\\\\t😀Zxf[{",
+		"output": "bZ\\\\t😀Zxf[{"
+	},
+	{
+		"input": "Z{}\\ud83d0/[\n\",\\u00e9xn\\",
+		"output": "Z{}\\ud83d0/[\n\",\\u00e9xn\\\\"
+	},
+	{
+		"input": "t]\\ud83d😀\\[",
+		"output": "t]\\ud83d😀\\["
+	},
+	{
+		"input": "9\\u0:\\u00e9né\\ud83d\\ud83d,brrt",
+		"output": "9\\u0:\\u00e9né\\ud83d\\ud83d,brrt"
+	},
+	{
+		"input": "\\u00e9:A\\u\\\\\\u00e9\t",
+		"output": "\\u00e9:A\\u\\\\\\u00e9\t"
+	},
+	{
+		"input": "\\\\\t\\d\\ud83d0,Fa\" ur😀\t",
+		"output": "\\\\\t\\d\\ud83d0,Fa\" ur😀\\t"
+	},
+	{
+		"input": "\n:",
+		"output": "\n:"
+	},
+	{
+		"input": "F\"/",
+		"output": "F\"/"
+	},
+	{
+		"input": "\\ ",
+		"output": "\\ "
+	},
+	{
+		"input": "n\\ud83d😀\tt\t",
+		"output": "n\\ud83d😀\tt\t"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "\u0000x:b9n{:n",
+		"output": "\u0000x:b9n{:n"
+	},
+	{
+		"input": "F09\\d",
+		"output": "F09\\d"
+	},
+	{
+		"input": "1b\n0 {9😀 é:",
+		"output": "1b\n0 {9😀 é:"
+	},
+	{
+		"input": ":u\\d}",
+		"output": ":u\\d}"
+	},
+	{
+		"input": "}1t\t/t/\\u00e9rF",
+		"output": "}1t\t/t/\\u00e9rF"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "x0:a",
+		"output": "x0:a"
+	},
+	{
+		"input": "\"f/😀\\ua[}[,\n0n",
+		"output": "\"f/😀\\\\ua[}[,\\n0n"
+	},
+	{
+		"input": "[\\duZ\u0001",
+		"output": "[\\duZ\u0001"
+	},
+	{
+		"input": "\\\\\\,a,\u0000:\u0000\\\\d\\uf:",
+		"output": "\\\\\\,a,\u0000:\u0000\\\\d\\uf:"
+	},
+	{
+		"input": "au",
+		"output": "au"
+	},
+	{
+		"input": "\\u]}\u0000/9}FA\\u00e9t\\\\\\\u0000[\\u00e9",
+		"output": "\\u]}\u0000/9}FA\\u00e9t\\\\\\\u0000[\\u00e9"
+	},
+	{
+		"input": " nF ,,\\u\":\\ud83d\u000010/{xF",
+		"output": " nF ,,\\u\":\\ud83d\\u000010/{xF"
+	},
+	{
+		"input": ":0",
+		"output": ":0"
+	},
+	{
+		"input": "[😀t,u\té}xnf{9:\\ud83drZ",
+		"output": "[😀t,u\té}xnf{9:\\ud83drZ"
+	},
+	{
+		"input": "[:x😀\t 9:b[ ",
+		"output": "[:x😀\t 9:b[ "
+	},
+	{
+		"input": ":é]:\\\\ua\\u00e9\nt\u0001\u0000aAb",
+		"output": ":é]:\\\\ua\\u00e9\nt\u0001\u0000aAb"
+	},
+	{
+		"input": "tu}1][\"😀\\A\\A:n\nb\\ud83d0",
+		"output": "tu}1][\"😀\\\\A\\\\A:n\\nb\\ud83d0"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "\t",
+		"output": "\t"
+	},
+	{
+		"input": "/\nfébt9n}\\d\\\\",
+		"output": "/\nfébt9n}\\d\\\\"
+	},
+	{
+		"input": "[\\ud83d\u0000F:ua}]n}ta",
+		"output": "[\\ud83d\u0000F:ua}]n}ta"
+	},
+	{
+		"input": "a",
+		"output": "a"
+	},
+	{
+		"input": "0\\uAéfb\\\\\\ud83d\\ud83d",
+		"output": "0\\uAéfb\\\\\\ud83d\\ud83d"
+	},
+	{
+		"input": "\u0001\\dZZ}😀a{\\\\b,",
+		"output": "\u0001\\dZZ}😀a{\\\\b,"
+	},
+	{
+		"input": "rZ]\u0001uaf\"a",
+		"output": "rZ]\u0001uaf\"a"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "\\\\\u0001r{x}\"",
+		"output": "\\\\\u0001r{x}\""
+	},
+	{
+		"input": "bA A}b[{\u0000u",
+		"output": "bA A}b[{\u0000u"
+	},
+	{
+		"input": "\u0000:\\u}\\u00e9\"u\\]",
+		"output": "\u0000:\\u}\\u00e9\"u\\\\]"
+	},
+	{
+		"input": "x😀\\\\uaf:901\t\\\\\"}\\u00e9,",
+		"output": "x😀\\\\uaf:901\t\\\\\"}\\u00e9,"
+	},
+	{
+		"input": ": /\u0001\\ud83duZ😀\u0001",
+		"output": ": /\u0001\\ud83duZ😀\u0001"
+	},
+	{
+		"input": "\\u\tn:én/",
+		"output": "\\u\tn:én/"
+	},
+	{
+		"input": " tf/é\\u00e9,},F\\d",
+		"output": " tf/é\\u00e9,},F\\d"
+	},
+	{
+		"input": "119FénAn}r",
+		"output": "119FénAn}r"
+	},
+	{
+		"input": "\t\\\\",
+		"output": "\t\\\\"
+	},
+	{
+		"input": "\trb0😀A/\\d\\u00e9",
+		"output": "\trb0😀A/\\d\\u00e9"
+	},
+	{
+		"input": "9😀bf}é0😀]/\\ud83d ]\n",
+		"output": "9😀bf}é0😀]/\\ud83d ]\n"
+	},
+	{
+		"input": "F,\\\\",
+		"output": "F,\\\\"
+	},
+	{
+		"input": "Z[AZ\u0000xZ\u0001é:9t",
+		"output": "Z[AZ\u0000xZ\u0001é:9t"
+	},
+	{
+		"input": "9b0F\\féF\\u00e9a9]\\u",
+		"output": "9b0F\\féF\\u00e9a9]\\u"
+	},
+	{
+		"input": "\",x\\\\\t9\\bF]",
+		"output": "\",x\\\\\\t9\\bF]"
+	},
+	{
+		"input": "0\",[\\ud83d1]\\\\nZ f,]{\\u00e9\n",
+		"output": "0\",[\\ud83d1]\\\\nZ f,]{\\u00e9\\n"
+	},
+	{
+		"input": "\u0001r/\u0000",
+		"output": "\u0001r/\u0000"
+	},
+	{
+		"input": "10xu/[\\dZb\u0000\n,aé,é/",
+		"output": "10xu/[\\dZb\u0000\n,aé,é/"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "[\\db\\d\\\\  \\\\",
+		"output": "[\\db\\d\\\\  \\\\"
+	},
+	{
+		"input": "",
+		"output": ""
+	},
+	{
+		"input": "/\"t\\ 0\u00019\u0000At}[",
+		"output": "/\"t\\\\ 0\\u00019\\u0000At}["
+	},
+	{
+		"input": "/\\ud83d\\u\u0000Ff\\u00e9A\\u00e99:/é a",
+		"output": "/\\ud83d\\u\u0000Ff\\u00e9A\\u00e99:/é a"
+	},
+	{
+		"input": ",\\u00e9:/F,]]\u0001\\ud83dt\"",
+		"output": ",\\u00e9:/F,]]\u0001\\ud83dt\""
+	},
+	{
+		"input": "}\\\\\"b\\]}bnA😀",
+		"output": "}\\\\\"b\\\\]}bnA😀"
+	},
+	{
+		"input": " {:[{ \\u{}]\\xa\\u00e9]é}",
+		"output": " {:[{ \\u{}]\\xa\\u00e9]é}"
+	},
+	{
+		"input": "a",
+		"output": "a"
+	},
+	{
+		"input": "\t\\t0b0n9A \tx",
+		"output": "\t\\t0b0n9A \tx"
+	},
+	{
+		"input": "\\u00e9x\u0000F{x\"",
+		"output": "\\u00e9x\u0000F{x\""
+	},
+	{
+		"input": "{é\\u00e9,x\\ud83d\tZ",
+		"output": "{é\\u00e9,x\\ud83d\tZ"
+	},
+	{
+		"input": "/\\uA\t\\\\:é]{",
+		"output": "/\\uA\t\\\\:é]{"
+	},
+	{
+		"input": "}A\\d\\u\u0001bt1\tF fa\\\\",
+		"output": "}A\\d\\u\u0001bt1\tF fa\\\\"
+	},
+	{
+		"input": "r",
+		"output": "r"
+	},
+	{
+		"input": "b/}n\\d{\"F\nx[",
+		"output": "b/}n\\d{\"F\\nx["
+	},
+	{
+		"input": "é",
+		"output": "é"
+	},
+	{
+		"input": ",t0t]/{//r]",
+		"output": ",t0t]/{//r]"
+	},
+	{
+		"input": "F{a",
+		"output": "F{a"
+	},
+	{
+		"input": "\"\n]AZ{\\",
+		"output": "\"\\n]AZ{\\\\"
+	},
+	{
+		"input": "10aé:\\\\",
+		"output": "10aé:\\\\"
+	},
+	{
+		"input": "\u0001\u0001\\\\",
+		"output": "\u0001\u0001\\\\"
+	},
+	{
+		"input": "]Af\\ud83d,,F aAnbx/b\u0001😀\u0001",
+		"output": "]Af\\ud83d,,F aAnbx/b\u0001😀\u0001"
+	},
+	{
+		"input": "[f\\\\1",
+		"output": "[f\\\\1"
+	},
+	{
+		"input": "{t}b:],r9\ta n\"\\ud83dt",
+		"output": "{t}b:],r9\ta n\"\\ud83dt"
+	},
+	{
+		"input": "}\\\\9,f/9x",
+		"output": "}\\\\9,f/9x"
+	},
+	{
+		"input": "{\u0001\",\" 0",
+		"output": "{\u0001\",\" 0"
+	},
+	{
+		"input": "\\u00e9un:\\u\\u\"",
+		"output": "\\u00e9un:\\u\\u\""
+	},
+	{
+		"input": "]",
+		"output": "]"
+	},
+	{
+		"input": "/[:",
+		"output": "/[:"
+	},
+	{
+		"input": ",f\u0000/{\"1a",
+		"output": ",f\u0000/{\"1a"
+	},
+	{
+		"input": ",\t1r\n,é\\\u0001\u0001:b:x\\\\:",
+		"output": ",\t1r\n,é\\\u0001\u0001:b:x\\\\:"
+	},
+	{
+		"input": "9\\u00e90{\\/néb:]u\"",
+		"output": "9\\u00e90{\\/néb:]u\""
+	}
+]
