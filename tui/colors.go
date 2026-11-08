@@ -68,7 +68,7 @@ func NewRgbColor(r, g, b float64) (Color, error) {
 			return Color{}, err
 		}
 		if channel.value < 0 || channel.value > 255 {
-			return Color{}, fmt.Errorf("%s must be between 0 and 255: %v", channel.name, channel.value)
+			return Color{}, fmt.Errorf("%s must be between 0 and 255: %s", channel.name, jsNumberString(channel.value))
 		}
 	}
 	return Color{Kind: ColorKindRGB, R: r, G: g, B: b}, nil
@@ -85,10 +85,10 @@ func NewOklchColor(l, c, h float64) (Color, error) {
 		}
 	}
 	if l < 0 || l > 1 {
-		return Color{}, fmt.Errorf("l must be between 0 and 1: %v", l)
+		return Color{}, fmt.Errorf("l must be between 0 and 1: %s", jsNumberString(l))
 	}
 	if c < 0 {
-		return Color{}, fmt.Errorf("c must not be negative: %v", c)
+		return Color{}, fmt.Errorf("c must not be negative: %s", jsNumberString(c))
 	}
 	return Color{Kind: ColorKindOklch, L: l, C: c, H: math.Mod(math.Mod(h, 360)+360, 360)}, nil
 }
@@ -106,10 +106,10 @@ func NewOkhslColor(h, s, l float64) (Color, error) {
 		return Color{}, err
 	}
 	if s < 0 || s > 1 {
-		return Color{}, fmt.Errorf("s must be between 0 and 1: %v", s)
+		return Color{}, fmt.Errorf("s must be between 0 and 1: %s", jsNumberString(s))
 	}
 	if l < 0 || l > 1 {
-		return Color{}, fmt.Errorf("l must be between 0 and 1: %v", l)
+		return Color{}, fmt.Errorf("l must be between 0 and 1: %s", jsNumberString(l))
 	}
 	rgb := OkhslToRgb(h, s, l)
 	return NewRgbColor(float64(rgb.R), float64(rgb.G), float64(rgb.B))
@@ -125,7 +125,7 @@ func ParseColor(value any) (Color, error) {
 			return Color{}, fmt.Errorf("Invalid color value: %v", value)
 		}
 		if math.IsNaN(number) || math.IsInf(number, 0) || math.Trunc(number) != number || number < 0 || number > 255 {
-			return Color{}, fmt.Errorf("ANSI color index must be an integer from 0 to 255: %v", number)
+			return Color{}, fmt.Errorf("ANSI color index must be an integer from 0 to 255: %s", jsNumberString(number))
 		}
 		return IndexedColor(int(number))
 	}
@@ -266,7 +266,7 @@ func MixColors(first, second Color, amount float64, space ColorMixSpace) (Color,
 		return Color{}, err
 	}
 	if amount < 0 || amount > 1 {
-		return Color{}, fmt.Errorf("amount must be between 0 and 1: %v", amount)
+		return Color{}, fmt.Errorf("amount must be between 0 and 1: %s", jsNumberString(amount))
 	}
 	if space == ColorMixSrgb {
 		a := ColorToRgb(first)

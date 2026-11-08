@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"math"
+	"strconv"
 	"strings"
 
 	"golang.org/x/text/cases"
@@ -71,4 +73,33 @@ func utf16IndexForByteOffset(text string, byteOffset int) int {
 		}
 	}
 	return units
+}
+
+// jsNumberString formats a float like JavaScript's String(number), the
+// interpolation `${value}` performs: fixed notation from 1e-6 up to 1e21,
+// exponent notation (without zero padding) outside it. It mirrors
+// ai.JSNumberToString, which tui does not import.
+func jsNumberString(f float64) string {
+	switch {
+	case f == 0:
+		return "0"
+	case math.IsNaN(f):
+		return "NaN"
+	case math.IsInf(f, 1):
+		return "Infinity"
+	case math.IsInf(f, -1):
+		return "-Infinity"
+	}
+	if abs := math.Abs(f); abs >= 1e-6 && abs < 1e21 {
+		return strconv.FormatFloat(f, 'f', -1, 64)
+	}
+	mantissa, exponent, _ := strings.Cut(strconv.FormatFloat(f, 'e', -1, 64), "e")
+	sign := ""
+	if exponent != "" && (exponent[0] == '+' || exponent[0] == '-') {
+		sign, exponent = exponent[:1], exponent[1:]
+	}
+	if exponent = strings.TrimLeft(exponent, "0"); exponent == "" {
+		exponent = "0"
+	}
+	return mantissa + "e" + sign + exponent
 }
