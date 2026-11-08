@@ -178,7 +178,7 @@ func TestToolsExpandTogglesLoadedResources(t *testing.T) {
 	}
 }
 
-// TestFormatSkillDiagnostics covers the [Skill conflicts] body: collision
+// TestFormatSkillDiagnostics covers the [Skill warnings] body: collision
 // groups keep the winner and list the skipped losers, like upstream
 // formatDiagnostics.
 func TestFormatSkillDiagnostics(t *testing.T) {

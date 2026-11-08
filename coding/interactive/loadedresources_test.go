@@ -35,6 +35,33 @@ func TestLoadedPromptConflictsFollowsQuietStartup(t *testing.T) {
 	}
 }
 
+// TestLoadedSkillDiagnosticsUseWarningsHeading follows pi v1.5.0 (f9a26365)
+// interactive-mode.ts showLoadedResources, from f14813e96 (#11566): skill
+// diagnostics are mostly validation warnings for skills that still load, so
+// the heading is [Skill warnings], not [Skill conflicts].
+func TestLoadedSkillDiagnosticsUseWarningsHeading(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	dir := filepath.Join(t.TempDir(), "long-skill")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	skill := "---\nname: long-skill\ndescription: " + strings.Repeat("x", 1025) + "\n---\nbody\n"
+	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(skill), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	app.options.Settings.SetSkillPaths([]string{dir})
+	app.session.Reload()
+	app.showLoadedResources(false)
+	output := coding.StripAnsi(strings.Join(app.loadedResourcesContainer.Render(160), "\n"))
+	if !strings.Contains(output, "[Skill warnings]") || !strings.Contains(output, "description exceeds 1024 characters (1025)") {
+		t.Fatalf("loaded diagnostics = %q", output)
+	}
+	if strings.Contains(output, "[Skill conflicts]") {
+		t.Fatalf("old heading shown: %q", output)
+	}
+}
+
 // TestLoadedResourcesHasNoThemesSection follows v1.2.0 showLoadedResources:
 // themes contribute diagnostic metadata, not a separate startup listing.
 func TestLoadedResourcesHasNoThemesSection(t *testing.T) {
