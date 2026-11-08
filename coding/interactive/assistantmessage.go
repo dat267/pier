@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"strings"
+	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
@@ -49,6 +50,79 @@ type AssistantMessageComponent struct {
 	// streaming transform renders differently, so a transition has to drop the
 	// reused render caches, which the text/token equality checks cannot see.
 	streamingState bool
+
+	// thinkingRuns times each run of thinking blocks this component saw
+	// stream, keyed by the run's first block index; collapsed runs show the
+	// time (D403). thinkingLabels are the collapsed labels of the current
+	// content, so the animation tick can update them in place.
+	thinkingRuns   map[int]*thinkingRunTiming
+	thinkingLabels map[int]*tui.Text
+}
+
+// thinkingRunTiming is when a thinking run started streaming and, once a
+// later block or the end of the message arrived, when it ended. An untimed
+// run was first seen complete (already followed by a block, or not
+// streaming), so its duration is unknown and it keeps the plain label.
+type thinkingRunTiming struct {
+	start, end time.Time
+	untimed    bool
+}
+
+// thinkingClock reads the clock for the thinking timers; tests pin it.
+var thinkingClock = time.Now
+
+// collapsedThinkingLabel is the label of a collapsed thinking run: the plain
+// label without timing, the elapsed whole seconds while it streams, then how
+// long it thought, in tenths under a minute (D403).
+func collapsedThinkingLabel(label string, timing *thinkingRunTiming, now time.Time) string {
+	if timing == nil {
+		return label
+	}
+	if timing.end.IsZero() {
+		return label + " (" + formatWholeSeconds(int(max(now.Sub(timing.start), 0)/time.Second)) + ")"
+	}
+	took := formatDuration(float64(max(timing.end.Sub(timing.start), 0).Milliseconds()))
+	if label == defaultHiddenThinkingLabel {
+		return "Thought for " + took
+	}
+	return label + " (" + took + ")"
+}
+
+// AnimationFrame implements tui.Animator: a collapsed thinking run that is
+// still streaming asks for a frame at each whole second of its timer.
+func (c *AssistantMessageComponent) AnimationFrame(now time.Time) (bool, time.Duration) {
+	need, next := false, time.Duration(0)
+	for start := range c.thinkingLabels {
+		timing := c.thinkingRuns[start]
+		if timing == nil || !timing.end.IsZero() {
+			continue
+		}
+		until := time.Second - max(now.Sub(timing.start), 0)%time.Second
+		if !need || until < next {
+			need, next = true, until
+		}
+	}
+	return need, next
+}
+
+// AnimationTick implements tui.AnimationTicker: it rewrites the running
+// collapsed labels without rebuilding the message's blocks.
+func (c *AssistantMessageComponent) AnimationTick() {
+	now := thinkingClock()
+	theme := ActiveTheme()
+	changed := false
+	for start, text := range c.thinkingLabels {
+		timing := c.thinkingRuns[start]
+		if timing == nil || !timing.end.IsZero() {
+			continue
+		}
+		text.SetText(theme.Italic(theme.Fg("thinkingText", collapsedThinkingLabel(c.hiddenThinkingLabel, timing, now))))
+		changed = true
+	}
+	if changed {
+		c.contentContainer.MarkDirty()
+		c.Container.MarkDirty()
+	}
 }
 
 // assistantBlockKey identifies one block component across updates.
@@ -184,6 +258,29 @@ func (c *AssistantMessageComponent) SetMarkdownPreparation(preparation *tui.Mark
 	}
 }
 
+// timeThinkingRun records the timing of the thinking run starting at block
+// start: it starts when first seen streaming and ends when a later block
+// appears or the message stops streaming. A message that never streamed here
+// (one loaded from the session), or first seen with a later block, has no
+// timing.
+func (c *AssistantMessageComponent) timeThinkingRun(start int, hasLaterBlock, isStreaming bool, now time.Time) *thinkingRunTiming {
+	if c.thinkingRuns == nil {
+		c.thinkingRuns = map[int]*thinkingRunTiming{}
+	}
+	timing := c.thinkingRuns[start]
+	if timing == nil {
+		timing = &thinkingRunTiming{start: now, untimed: hasLaterBlock || !isStreaming}
+		c.thinkingRuns[start] = timing
+	}
+	if timing.untimed {
+		return nil
+	}
+	if timing.end.IsZero() && (hasLaterBlock || !isStreaming) {
+		timing.end = now
+	}
+	return timing
+}
+
 // UpdateContent rebuilds the content for a message.
 func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, isStreaming bool) {
 	c.lastMessage = message
@@ -199,6 +296,11 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 	}
 	c.isStreaming = isStreaming
 	c.contentContainer.Clear()
+	now := thinkingClock()
+	clear(c.thinkingLabels)
+	if c.thinkingLabels == nil {
+		c.thinkingLabels = map[int]*tui.Text{}
+	}
 
 	blocks := message.Content
 	hasVisibleContent := false
@@ -248,6 +350,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 			c.blockComponents[key] = markdown
 			c.contentContainer.AddChild(markdown)
 		case ai.ThinkingContent:
+			runStart := i
 			var thinkingBlocks []string
 			for ; i < len(blocks); i++ {
 				if thinking, ok := blocks[i].(ai.ThinkingContent); ok {
@@ -259,6 +362,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 				break
 			}
 			i--
+			timing := c.timeThinkingRun(runStart, i+1 < len(blocks), isStreaming, now)
 
 			if len(thinkingBlocks) == 0 {
 				continue
@@ -291,7 +395,11 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 			key := assistantBlockKey{index: i, kind: "thinking", hidden: hidden}
 			var thinkingComponent tui.Component
 			if hidden {
-				thinkingComponent = tui.NewText(theme.Italic(theme.Fg("thinkingText", c.hiddenThinkingLabel)), c.outputPad, 0, nil)
+				label := tui.NewText(theme.Italic(theme.Fg("thinkingText", collapsedThinkingLabel(c.hiddenThinkingLabel, timing, now))), c.outputPad, 0, nil)
+				if timing != nil {
+					c.thinkingLabels[runStart] = label
+				}
+				thinkingComponent = label
 			} else {
 				markdownKey := assistantBlockKey{index: i, kind: "thinking"}
 				markdown := c.thinkingMarkdowns[markdownKey]

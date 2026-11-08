@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D402)
+# Deliberate divergences from pi (D1–D403)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5608,3 +5608,24 @@ so a resumed session does not show it.
 
 Tests: `TestWorkingIndicatorShowsElapsedAndTranscriptNotesTheRun`,
 `TestWorkingElapsedLabelFormats`, `TestLoaderElapsedLabelTicksEachSecond`.
+
+### D403
+
+**A collapsed thinking block shows how long it has been thinking, then how long it thought.**
+
+Reference: pi v1.5.0 (f9a26365)
+`packages/coding-agent/src/modes/interactive/components/assistant-message.ts`
+shows the hidden-thinking label alone in place of a collapsed thinking block.
+Pier is a project choice here: each run of thinking blocks that streams into
+the transcript is timed from when it first appears until a later block (text
+or a tool call) appears or the message stops streaming. While it streams, the
+collapsed label shows the elapsed whole seconds and ticks each second
+(`Thinking... (12s)`); once it ends it reads `Thought for 12.3s`, or a custom
+label followed by the time (`Pondering (12.3s)`). Expanded thinking is
+unchanged. The timing is display-only and lives on the transcript component,
+so a message loaded from the session, or a rebuilt transcript, shows the plain
+label.
+
+Tests: `TestCollapsedThinkingShowsHowLongItThought`,
+`TestCollapsedThinkingTimesEachRun`,
+`TestCollapsedThinkingTicksThroughTheRenderer`.
