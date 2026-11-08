@@ -46,7 +46,7 @@
       "path": "readme.md"
     },
     "expected": {
-      "error": "[fd error]: Search path '<dir>/readme.md' is not a directory.\n[fd error]: No valid search paths given."
+      "error": "[fd error]: Search path <dir>/readme.md is not a directory.\n[fd error]: No valid search paths given."
     }
   },
   {
@@ -56,7 +56,7 @@
       "path": "nope"
     },
     "expected": {
-      "error": "[fd error]: Search path '<dir>/nope' is not a directory.\n[fd error]: No valid search paths given."
+      "error": "[fd error]: Search path <dir>/nope is not a directory.\n[fd error]: No valid search paths given."
     }
   }
 ]

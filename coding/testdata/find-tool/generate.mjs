@@ -59,7 +59,12 @@ for (const testCase of cases) {
 		const notices = footer === -1 ? [] : lines.slice(footer);
 		result = { text: [...body.sort(), ...notices].join("\n"), details: value.details ?? null };
 	} catch (error) {
-		result = { error: error.message.replaceAll(dir, "<dir>") };
+		// fd quotes the offending search path, and the quote character changed
+		// between fd releases (single to double in 10.5). Pin the message without
+		// the quotes so one golden regenerates on either version.
+		result = {
+			error: error.message.replaceAll(dir, "<dir>").replace(/["'](<dir>[^"']*)["']/g, "$1"),
+		};
 	}
 	fixtures.push({ name: testCase.name, args, expected: result });
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -71,9 +72,13 @@ func TestFindToolMatchesUpstream(t *testing.T) {
 				if execErr == nil {
 					t.Fatalf("expected error %q, got success", fixture.Expected.Error)
 				}
-				want := strings.ReplaceAll(fixture.Expected.Error, "<dir>", dir)
-				if execErr.Error() != want {
-					t.Fatalf("error = %q, want %q", execErr.Error(), want)
+				// fd quoted the offending path with single quotes before 10.5 and
+				// double quotes after it, so both sides lose the quotes before the
+				// directory substitution.
+				want := normalizeFdQuotedPath(fixture.Expected.Error)
+				got := normalizeFdQuotedPath(strings.ReplaceAll(execErr.Error(), dir, "<dir>"))
+				if got != want {
+					t.Fatalf("error = %q, want %q", got, want)
 				}
 				return
 			}
@@ -154,4 +159,23 @@ func TestFindToolResultLimitNotice(t *testing.T) {
 	if notice := lines[len(lines)-1]; notice != "[2 results limit reached. Use limit=4 for more, or refine pattern]" {
 		t.Fatalf("notice = %q", notice)
 	}
+}
+
+// fdQuotedPath matches the search path fd quotes in its not-a-directory error.
+var fdQuotedPath = []*regexp.Regexp{
+	regexp.MustCompile(`"<dir>[^"]*"`),
+	regexp.MustCompile(`'<dir>[^']*'`),
+}
+
+// normalizeFdQuotedPath strips the quotes fd puts around an offending search
+// path, whose character changed between fd releases: the golden pinned single
+// quotes and fd 10.5 prints double quotes, so `just goldens` and this test
+// failed against an updated fd (A434).
+func normalizeFdQuotedPath(message string) string {
+	for _, pattern := range fdQuotedPath {
+		message = pattern.ReplaceAllStringFunc(message, func(match string) string {
+			return match[1 : len(match)-1]
+		})
+	}
+	return message
 }
