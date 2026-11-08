@@ -331,9 +331,12 @@ func FetchGitHubCopilotModels(ctx context.Context, copilotToken, enterpriseDomai
 		return nil, err
 	}
 	defer response.Body.Close()
-	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode >= 400 {
 		return nil, fmt.Errorf("%d %s: %s", response.StatusCode, http.StatusText(response.StatusCode), string(raw))
+	}
+	if readErr != nil {
+		return nil, readErr
 	}
 	var payload map[string]any
 	if err := json.Unmarshal(raw, &payload); err != nil {
@@ -369,9 +372,12 @@ func StartGitHubDeviceFlow(ctx context.Context, domain string) (*GitHubDeviceCod
 		return nil, err
 	}
 	defer response.Body.Close()
-	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode >= 400 {
 		return nil, fmt.Errorf("%d %s: %s", response.StatusCode, http.StatusText(response.StatusCode), string(raw))
+	}
+	if readErr != nil {
+		return nil, readErr
 	}
 	var data map[string]any
 	if err := json.Unmarshal(raw, &data); err != nil {
@@ -430,7 +436,10 @@ func PollForGitHubAccessToken(ctx context.Context, domain string, device *GitHub
 				return OAuthDeviceCodePollResult[string]{Status: "failed", Message: err.Error()}, nil
 			}
 			defer response.Body.Close()
-			raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+			raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
+			if readErr != nil {
+				return OAuthDeviceCodePollResult[string]{Status: "failed", Message: readErr.Error()}, nil
+			}
 			var payload map[string]any
 			if err := json.Unmarshal(raw, &payload); err != nil {
 				return OAuthDeviceCodePollResult[string]{Status: "failed", Message: "Invalid device token response"}, nil
@@ -487,9 +496,12 @@ func RefreshGitHubCopilotAccessToken(ctx context.Context, refreshToken, enterpri
 		return nil, err
 	}
 	defer response.Body.Close()
-	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode >= 400 {
 		return nil, fmt.Errorf("%d %s: %s", response.StatusCode, http.StatusText(response.StatusCode), string(raw))
+	}
+	if readErr != nil {
+		return nil, readErr
 	}
 	var payload map[string]any
 	if err := json.Unmarshal(raw, &payload); err != nil {

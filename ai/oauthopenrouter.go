@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -132,8 +131,11 @@ func ExchangeOpenRouterAuthorizationCode(ctx context.Context, code, verifier str
 		return nil, err
 	}
 	defer response.Body.Close()
-	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	ok := response.StatusCode < 400
+	if ok && readErr != nil {
+		return nil, readErr
+	}
 	payload := map[string]any{}
 	parsed := any(nil)
 	if err := json.Unmarshal(raw, &parsed); err == nil {

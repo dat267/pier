@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -102,13 +101,16 @@ func GetOpenAICodexAccountID(accessToken string) string {
 
 // ReadOpenAICodexTokenResponse decodes a token endpoint response.
 func ReadOpenAICodexTokenResponse(response *http.Response, operation string) (*OpenAICodexTokenResponse, error) {
-	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode >= 400 {
 		text := string(raw)
 		if text == "" {
 			text = response.Status
 		}
 		return nil, fmt.Errorf("OpenAI Codex token %s failed (%d): %s", operation, response.StatusCode, text)
+	}
+	if readErr != nil {
+		return nil, readErr
 	}
 	var payload struct {
 		AccessToken  string   `json:"access_token"`
@@ -205,7 +207,7 @@ func StartOpenAICodexDeviceAuth(ctx context.Context) (*OpenAICodexDeviceAuthInfo
 		return nil, err
 	}
 	defer response.Body.Close()
-	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode >= 400 {
 		if response.StatusCode == http.StatusNotFound {
 			return nil, fmt.Errorf("OpenAI Codex device code login is not enabled for this server. " +
@@ -216,6 +218,9 @@ func StartOpenAICodexDeviceAuth(ctx context.Context) (*OpenAICodexDeviceAuthInfo
 			message += ": " + string(raw)
 		}
 		return nil, fmt.Errorf("%s", message)
+	}
+	if readErr != nil {
+		return nil, readErr
 	}
 	var payload map[string]any
 	if err := json.Unmarshal(raw, &payload); err != nil {
@@ -280,7 +285,10 @@ func PollOpenAICodexDeviceAuth(ctx context.Context, device *OpenAICodexDeviceAut
 				return OAuthDeviceCodePollResult[*OpenAICodexDeviceTokenSuccess]{Status: "failed", Message: err.Error()}, nil
 			}
 			defer response.Body.Close()
-			raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+			raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
+			if response.StatusCode < 400 && readErr != nil {
+				return OAuthDeviceCodePollResult[*OpenAICodexDeviceTokenSuccess]{Status: "failed", Message: readErr.Error()}, nil
+			}
 
 			if response.StatusCode < 400 {
 				var payload struct {

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -246,9 +245,12 @@ func postOAuthJSON(ctx context.Context, requestURL string, body map[string]any) 
 		return "", err
 	}
 	defer response.Body.Close()
-	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode >= 400 {
 		return "", fmt.Errorf("HTTP request failed. status=%d; url=%s; body=%s", response.StatusCode, requestURL, string(raw))
+	}
+	if readErr != nil {
+		return "", readErr
 	}
 	return string(raw), nil
 }

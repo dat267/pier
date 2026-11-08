@@ -4016,8 +4016,10 @@ Tests: `TestOpenAIDecisionsRejectsOversizedResponseBody`,
 `TestStreamableHTTPRejectsOversizedJSONResponse`,
 `TestDiscoverProtectedResourceMetadataRejectsOversizedBody`,
 `TestExchangeAuthorizationCodeRejectsOversizedBody`,
-`TestRegisterClientRejectsOversizedBody`, plus the `internal/boundedio` unit
-controls.
+`TestRegisterClientRejectsOversizedBody`,
+`TestOAuthDocumentOverTheCapIsAProtocolError`,
+`TestOAuthDocumentCutOffSurfacesTheReadError`, plus the `internal/boundedio`
+unit controls.
 
 ### D342
 

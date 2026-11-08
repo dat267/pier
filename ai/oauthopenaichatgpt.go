@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -337,9 +336,12 @@ func requestOpenAIChatGPTToken(ctx context.Context, body url.Values) (*openAICha
 		return nil, err
 	}
 	defer response.Body.Close()
-	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode >= 400 {
 		return nil, fmt.Errorf("OpenAI OAuth token request failed (%d): %s", response.StatusCode, strings.TrimSpace(string(raw)))
+	}
+	if readErr != nil {
+		return nil, readErr
 	}
 	var payload struct {
 		AccessToken  string   `json:"access_token"`

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -76,8 +75,16 @@ func oauthPostForm(ctx context.Context, requestURL string, fields map[string]str
 		return oauthHTTPResponse{}, err
 	}
 	defer response.Body.Close()
-	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	ok := response.StatusCode < 400
+	if ok && readErr != nil {
+		// D341: a successful document fails at its cap and surfaces a read
+		// error instead of being read as a silent prefix (A427).
+		if ctx != nil && ctx.Err() != nil {
+			return oauthHTTPResponse{}, fmt.Errorf("Login cancelled")
+		}
+		return oauthHTTPResponse{}, readErr
+	}
 	body := map[string]any{}
 	var parsed any
 	if err := json.Unmarshal(raw, &parsed); err == nil {

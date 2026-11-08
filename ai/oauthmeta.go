@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -88,7 +87,10 @@ func metaDo(request *http.Request, loginCtx context.Context) (int, map[string]an
 		return 0, nil, err
 	}
 	defer response.Body.Close()
-	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
+	if response.StatusCode < 400 && readErr != nil {
+		return 0, nil, readErr
+	}
 	body := map[string]any{}
 	var parsed any
 	if err := json.Unmarshal(raw, &parsed); err == nil {

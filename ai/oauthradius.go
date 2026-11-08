@@ -81,9 +81,12 @@ func LoadRadiusOAuthDiscovery(ctx context.Context, gateway string) (*RadiusOAuth
 		return nil, err
 	}
 	defer response.Body.Close()
-	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode >= 400 {
 		return nil, fmt.Errorf("Could not load Radius OAuth config from %s: %d %s", gateway, response.StatusCode, string(raw))
+	}
+	if readErr != nil {
+		return nil, readErr
 	}
 	var parsed map[string]any
 	if err := json.Unmarshal(raw, &parsed); err != nil {
@@ -155,7 +158,10 @@ func postRadiusGatewayForm(ctx context.Context, gateway, path string, form url.V
 	if response.StatusCode >= 400 {
 		return nil, readRadiusOAuthError(response, failurePrefix)
 	}
-	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
+	if readErr != nil {
+		return nil, readErr
+	}
 	return raw, nil
 }
 
