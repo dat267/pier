@@ -296,7 +296,7 @@ func (c *piMessagesConverter) convert(event *PiMessagesEvent) (AssistantMessageE
 			call.Arguments = args.Append(event.Delta)
 			setPiContent(partial, event.ContentIndex, call)
 		}
-		return AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: event.ContentIndex, Delta: event.Delta, Partial: partial}, false
+		return AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: event.ContentIndex, Delta: event.Delta, Partial: partial}.withArguments(args), false
 	case "toolcall_end":
 		if len(event.ToolCall) > 0 {
 			// Upstream Object.assign copies only the members the wire object

@@ -658,7 +658,11 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 					deltaText = wrappedDelta
 				}
 				output.Content[outputIdx] = block.call
-				stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: outputIdx, Delta: deltaText, Partial: output})
+				event := AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: outputIdx, Delta: deltaText, Partial: output}
+				if toolCall.Function != nil && toolCall.Function.Arguments != "" {
+					event = event.withArguments(&block.args)
+				}
+				stream.Push(event)
 			}
 
 		})

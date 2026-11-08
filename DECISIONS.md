@@ -4361,7 +4361,13 @@ Contiguous `json.RawMessage` previews cannot share bytes (each one ends where
 the next continues), so every preview copies the buffer: previews up to 1 KiB
 refresh at every delta, larger ones at most once per 16 ms frame, and the
 preview is exact once the root object closes. The reference instead spends
-per-append copy credit and lets a large open container lag.
+per-append copy credit and lets a large open container lag. So that a stream
+pausing mid-call still shows every byte received, a toolcall_delta whose
+preview was held back carries a refresh handle: when the agent's
+`NextSnapshot` sees no event within a frame, it renders the current preview
+under the arguments' lock (only if no later text awaits its own event) and
+delivers it as a toolcall_delta with an empty delta. JSON and RPC output
+therefore carry those extra empty-delta updates during pauses.
 
 When the complete text is one strict JSON object, the buffer already is the
 final value, so `streamingArguments.Finish` returns it without the full
@@ -4385,6 +4391,9 @@ window; `TestStreamingArgumentsFinishMatchesFullParse` and
 `FuzzStreamingArguments` pin `Finish` to the full parse;
 `TestStreamingJSONUpstreamCases` carries the reference's test cases;
 `TestProxyToolArgumentsPreviewIsThrottled` covers the proxy;
+`TestStreamingArgumentsPauseRefreshesThrottledPreview`,
+`TestStreamingArgumentsPauseRefreshWaitsForUndeliveredText` and
+`TestEventStreamNextWithinNeverLosesAnEvent` pin the pause refresh;
 `BenchmarkStreamingArgumentsLarge` keeps the cost visible.
 
 ### D354

@@ -1250,7 +1250,7 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 			syncBedrockContent(output, *blocks)
 			stream.Push(AssistantMessageEvent{
 				Type: EventToolcallDelta, ContentIndex: index, Delta: event.Delta.ToolUse.Input, Partial: output,
-			})
+			}.withArguments(&block.args))
 		case event.Delta.ReasoningContent != nil:
 			if index == -1 {
 				*blocks = append(*blocks, &bedrockBlock{kind: "thinking", contentIndex: event.ContentBlockIndex})

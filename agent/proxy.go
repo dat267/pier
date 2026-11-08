@@ -368,7 +368,9 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 		}
 		content.Arguments = args.Append(wire.Delta)
 		partial.Content[wire.ContentIndex] = content
-		return &ai.AssistantMessageEvent{Type: ai.EventToolcallDelta, ContentIndex: wire.ContentIndex, Delta: wire.Delta, Partial: partial}, nil
+		event := &ai.AssistantMessageEvent{Type: ai.EventToolcallDelta, ContentIndex: wire.ContentIndex, Delta: wire.Delta, Partial: partial}
+		args.Tag(event)
+		return event, nil
 
 	case "toolcall_end":
 		content, ok := contentAt().(ai.ToolCall)

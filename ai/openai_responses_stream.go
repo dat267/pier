@@ -462,7 +462,11 @@ func ProcessResponsesStream(
 		if slot == nil {
 			return
 		}
-		stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: slot.contentIndex, Delta: delta, Partial: output})
+		event := AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: slot.contentIndex, Delta: delta, Partial: output}
+		if slot.toolCall != nil && slot.toolCall.args != nil {
+			event = event.withArguments(slot.toolCall.args)
+		}
+		stream.Push(event)
 	}
 	// pushCustomInputDelta pushes a custom-input JSON delta; the helpers return
 	// "" where upstream's return undefined.

@@ -739,7 +739,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 					if tc, ok := open.block.(ToolCall); ok {
 						tc.Arguments = open.args.Append(event.Delta.PartialJSON)
 						output.Content[idx] = tc
-						stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: idx, Delta: event.Delta.PartialJSON, Partial: output})
+						stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: idx, Delta: event.Delta.PartialJSON, Partial: output}.withArguments(&open.args))
 					}
 				case "signature_delta":
 					if tc, ok := open.block.(ThinkingContent); ok {

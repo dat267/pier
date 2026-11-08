@@ -970,6 +970,21 @@ func (f *sjFrame) memberPosition(key string) (int, bool) {
 	return len(f.members), false
 }
 
+// stale reports whether the last preview was throttled: the text changed it
+// and no snapshot shows that yet.
+func (p *streamingJSONParser) stale() bool {
+	return p.dirty && p.snapshot != nil && p.rootObject
+}
+
+// refresh renders the current preview regardless of the frame gate, for a
+// consumer that saw the stream pause.
+func (p *streamingJSONParser) refresh() json.RawMessage {
+	p.dirty = false
+	p.snapshot = p.render()
+	p.renderedAt = sjNow()
+	return p.snapshot
+}
+
 // render builds a snapshot: the buffer, the pending scalar, and the closing
 // tail of every open rendered container. The common case appends the small
 // tail to a cap-limited view of the buffer, so growslice copies the buffer

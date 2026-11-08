@@ -928,7 +928,7 @@ func appendMistralToolCall(output *AssistantMessage, stream *AssistantMessageEve
 	}
 	block.Arguments = args.Append(argsDelta)
 	output.Content[blockIndex] = block
-	stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: blockIndex, Delta: argsDelta, Partial: output})
+	stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: blockIndex, Delta: argsDelta, Partial: output}.withArguments(args))
 }
 
 // finishMistralToolCalls emits toolcall_end for every collected tool block.

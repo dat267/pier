@@ -8,6 +8,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 	"unicode/utf16"
 )
 
@@ -271,26 +272,42 @@ func parseOrderedJSONObject(data []byte) (json.RawMessage, bool) {
 // streamingArguments holds one streaming tool call's arguments: the raw text
 // for the one full parse when the call ends, and an incremental parser for
 // the partial arguments in between (upstream ToolCallArgumentsStream, D353).
+//
+// The producer goroutine owns it; mu only lets a consumer render a throttled
+// preview while the stream pauses (argumentsRefresh, D353).
 type streamingArguments struct {
+	mu     sync.Mutex
 	text   strings.Builder
 	parser streamingJSONParser
+	// seq counts appends, so a refresh can tell whether text arrived after
+	// the event it refreshes.
+	seq uint64
 }
 
 // Append adds argument text and returns the partial arguments, a new slice
 // whenever they changed.
 func (s *streamingArguments) Append(delta string) json.RawMessage {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.text.WriteString(delta)
 	s.parser.append(delta)
+	s.seq++
 	return s.parser.snap()
 }
 
-func (s *streamingArguments) String() string { return s.text.String() }
+func (s *streamingArguments) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.text.String()
+}
 
 // Finish returns the final arguments, the value ParseToolCallArguments gives
 // for the complete text. When the text was one strict JSON object the
 // incremental parser already holds its canonical bytes; anything else takes
 // the full parse, which also reports malformed arguments.
 func (s *streamingArguments) Finish() (json.RawMessage, string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if value, ok := s.parser.strictObject(); ok {
 		return value, ""
 	}
@@ -298,8 +315,49 @@ func (s *streamingArguments) Finish() (json.RawMessage, string) {
 }
 
 func (s *streamingArguments) Reset() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.text.Reset()
 	s.parser = streamingJSONParser{}
+	s.seq++
+}
+
+// argumentsRefresh names the throttled preview a toolcall_delta event
+// carried: the arguments it came from and the append that produced it.
+type argumentsRefresh struct {
+	args *streamingArguments
+	seq  uint64
+}
+
+// pendingRefresh returns the refresh for the preview the last Append
+// returned, or nil when that preview was current.
+func (s *streamingArguments) pendingRefresh() *argumentsRefresh {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.parser.stale() {
+		return nil
+	}
+	return &argumentsRefresh{args: s, seq: s.seq}
+}
+
+// preview renders the current preview when no text arrived after the
+// refreshed event (that text's own event is on its way); false otherwise or
+// when the preview became current.
+func (r *argumentsRefresh) preview() (json.RawMessage, bool) {
+	s := r.args
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.seq != r.seq || !s.parser.stale() {
+		return nil, false
+	}
+	return s.parser.refresh(), true
+}
+
+// withArguments marks a toolcall_delta event whose preview args throttled,
+// so a consumer can refresh it if the stream pauses (D353).
+func (e AssistantMessageEvent) withArguments(args *streamingArguments) AssistantMessageEvent {
+	e.argumentsRefresh = args.pendingRefresh()
+	return e
 }
 
 // ToolCallArgumentsStream is the exported form of the provider adapters'
@@ -312,6 +370,12 @@ func (s *ToolCallArgumentsStream) Append(delta string) json.RawMessage { return 
 
 // Text is the raw argument text received so far.
 func (s *ToolCallArgumentsStream) Text() string { return s.args.String() }
+
+// Tag marks a toolcall_delta event built from the last Append, so a pause
+// after a throttled preview still shows the arguments received (D353).
+func (s *ToolCallArgumentsStream) Tag(event *AssistantMessageEvent) {
+	*event = event.withArguments(&s.args)
+}
 
 // parseStreamingJSONObject attempts to parse potentially incomplete JSON during
 // streaming, preserving object key order (upstream parseStreamingJson). An

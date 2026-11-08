@@ -44,6 +44,10 @@ type AssistantMessageEvent struct {
 	// uses this owned handoff without changing Partial's live-helper contract.
 	partialSnapshot *AssistantMessage
 
+	// argumentsRefresh is set on a toolcall_delta whose arguments preview the
+	// frame gate held back; NextSnapshot refreshes it if the stream pauses.
+	argumentsRefresh *argumentsRefresh
+
 	// ContentIndex is set on the *_start/*_delta/*_end events.
 	ContentIndex int `json:"contentIndex,omitempty"`
 

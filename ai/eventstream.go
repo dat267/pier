@@ -186,6 +186,55 @@ func (s *EventStream[T, R]) Next(ctx context.Context) (T, bool) {
 	}
 }
 
+// nextWithin is Next that gives up after d: timedOut reports that no event
+// arrived in time. An event pushed while the wait is abandoned is returned,
+// never lost.
+func (s *EventStream[T, R]) nextWithin(ctx context.Context, d time.Duration) (event T, ok, timedOut bool) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	s.mu.Lock()
+	if len(s.queue) > 0 {
+		event = s.queue[0]
+		s.queue = s.queue[1:]
+		s.mu.Unlock()
+		return event, true, false
+	}
+	if s.exhausted {
+		s.mu.Unlock()
+		return event, false, false
+	}
+	ch := make(chan iteratorResult[T], 1)
+	s.waiting = append(s.waiting, ch)
+	s.mu.Unlock()
+
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case res := <-ch:
+		return res.value, !res.done, false
+	case <-timer.C:
+		timedOut = true
+	case <-ctx.Done():
+	}
+	s.mu.Lock()
+	removed := false
+	for i, w := range s.waiting {
+		if w == ch {
+			s.waiting = append(s.waiting[:i], s.waiting[i+1:]...)
+			removed = true
+			break
+		}
+	}
+	s.mu.Unlock()
+	if !removed {
+		// Push or End already answered this waiter.
+		res := <-ch
+		return res.value, !res.done, false
+	}
+	return event, false, timedOut
+}
+
 // Result resolves the stream's final result, blocking until a terminal event
 // or End fixes it.
 func (s *EventStream[T, R]) Result(ctx context.Context) (R, error) {
@@ -228,6 +277,9 @@ type AssistantMessageEventStream struct {
 	startedAt int64
 	// startedAtMonotonic is the same instant, for the elapsed measurement.
 	startedAtMonotonic time.Time
+	// pendingArguments is the last delivered toolcall_delta whose preview was
+	// throttled; NextSnapshot's consumer owns it.
+	pendingArguments *AssistantMessageEvent
 }
 
 // NewAssistantMessageEventStream builds a stream whose result is the final
@@ -276,13 +328,66 @@ func (s *AssistantMessageEventStream) Push(event AssistantMessageEvent) {
 // safe to retain across further provider updates. The existing Next method
 // keeps upstream's shared live Partial helper; concurrent consumers such as
 // the agent use this owned handoff instead. Producers must publish via Push.
+//
+// D353: when the last toolcall_delta carried a preview the frame gate held
+// back and no event follows within a frame, NextSnapshot renders the current
+// preview and returns it as a toolcall_delta with an empty delta, so a stream
+// that pauses mid-call still shows every argument byte received. It has one
+// consumer, which owns the pending refresh.
 func (s *AssistantMessageEventStream) NextSnapshot(ctx context.Context) (AssistantMessageEvent, bool) {
+	if pending := s.pendingArguments; pending != nil {
+		s.pendingArguments = nil
+		event, ok, timedOut := s.EventStream.nextWithin(ctx, time.Duration(sjFrameNanos))
+		if !timedOut {
+			return s.ownSnapshot(event), ok
+		}
+		if refreshed, ok := refreshedToolCallDelta(pending); ok {
+			return refreshed, true
+		}
+	}
 	event, ok := s.EventStream.Next(ctx)
+	return s.ownSnapshot(event), ok
+}
+
+// ownSnapshot swaps in the Push-time partial and remembers a throttled
+// toolcall_delta for NextSnapshot's pause refresh.
+func (s *AssistantMessageEventStream) ownSnapshot(event AssistantMessageEvent) AssistantMessageEvent {
 	if event.partialSnapshot != nil {
 		event.Partial = event.partialSnapshot
 		event.partialSnapshot = nil
 	}
-	return event, ok
+	if event.argumentsRefresh != nil && event.Type == EventToolcallDelta && event.Partial != nil {
+		pending := event
+		s.pendingArguments = &pending
+	}
+	event.argumentsRefresh = nil
+	return event
+}
+
+// refreshedToolCallDelta builds the pause refresh of a delivered event: a
+// copy of its partial whose tool call shows the current preview.
+func refreshedToolCallDelta(event *AssistantMessageEvent) (AssistantMessageEvent, bool) {
+	index := event.ContentIndex
+	if index < 0 || index >= len(event.Partial.Content) {
+		return AssistantMessageEvent{}, false
+	}
+	call, ok := event.Partial.Content[index].(ToolCall)
+	if !ok {
+		return AssistantMessageEvent{}, false
+	}
+	refresh := event.argumentsRefresh
+	if refresh == nil {
+		return AssistantMessageEvent{}, false
+	}
+	arguments, ok := refresh.preview()
+	if !ok {
+		return AssistantMessageEvent{}, false
+	}
+	partial := *event.Partial
+	partial.Content = slices.Clone(event.Partial.Content)
+	call.Arguments = arguments
+	partial.Content[index] = call
+	return AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: index, Partial: &partial}, true
 }
 
 // End settles the stream, timing a result passed directly to it (upstream
