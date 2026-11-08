@@ -645,3 +645,67 @@ func TestCompactionReportsEstimatedTokensAfter(t *testing.T) {
 		t.Fatalf("estimatedTokensAfter = %d exceeds tokensBefore = %d", result.EstimatedTokensAfter, result.TokensBefore)
 	}
 }
+
+func failingSummaryStreamFn(errorMessage string) agent.StreamFn {
+	return func(model *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			message := &ai.AssistantMessage{
+				API: ai.APIAnthropicMessages, Provider: model.Provider, Model: model.ID,
+				StopReason: ai.StopError, ErrorMessage: new(errorMessage),
+			}
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopError, Error: message})
+		}()
+		return stream
+	}
+}
+
+// A failed auto-compaction names what failed: pi v1.5.0 (f9a26365)
+// agent-session.ts _runAutoCompaction reports "Auto-compaction failed: <error>"
+// for threshold compaction and "Context overflow recovery failed: <error>" for
+// overflow recovery, and no message when the compaction was aborted. The port
+// reported the bare summarization error, so the transcript showed a provider
+// error with no hint that compaction produced it.
+func TestAutoCompactionFailureNamesTheCompaction(t *testing.T) {
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 1000, MaxTokens: 100}
+	for _, tc := range []struct {
+		reason CompactionReason
+		prefix string
+	}{
+		{CompactionThreshold, "Auto-compaction failed: "},
+		{CompactionOverflow, "Context overflow recovery failed: "},
+	} {
+		session := compactionTestSession(t, model, failingSummaryStreamFn("429 rate limited"), smallCompactionSettings())
+		seedBranch(t, session)
+		events := []*SessionEvent{}
+		session.Subscribe(func(event *SessionEvent) { events = append(events, event) })
+		_, _ = session.RunAutoCompaction(ctxpkg.Background(), tc.reason, false)
+		var end *SessionEvent
+		for _, event := range events {
+			if event.Type == SessionCompactionEnd {
+				end = event
+			}
+		}
+		if end == nil || end.Aborted || !strings.HasPrefix(end.ErrorMessage, tc.prefix) || !strings.Contains(end.ErrorMessage, "429 rate limited") {
+			t.Fatalf("%s end = %+v", tc.reason, end)
+		}
+	}
+
+	// An aborted compaction reports no error message.
+	session := compactionTestSession(t, model, failingSummaryStreamFn("aborted"), smallCompactionSettings())
+	seedBranch(t, session)
+	events := []*SessionEvent{}
+	session.Subscribe(func(event *SessionEvent) { events = append(events, event) })
+	ctx, cancel := ctxpkg.WithCancel(ctxpkg.Background())
+	session.Subscribe(func(event *SessionEvent) {
+		if event.Type == SessionCompactionStart {
+			cancel()
+		}
+	})
+	_, _ = session.RunAutoCompaction(ctx, CompactionThreshold, false)
+	for _, event := range events {
+		if event.Type == SessionCompactionEnd && (!event.Aborted || event.ErrorMessage != "") {
+			t.Fatalf("aborted end = %+v", event)
+		}
+	}
+}

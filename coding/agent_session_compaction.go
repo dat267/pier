@@ -400,9 +400,20 @@ func (s *AgentSession) RunAutoCompaction(ctx context.Context, reason CompactionR
 
 	result, err := Compact(preparation, options)
 	if err != nil {
+		// Upstream _runAutoCompaction names the failed operation and reports no
+		// message for an aborted one.
+		aborted := compactionCtx.Err() != nil
+		errorMessage := ""
+		if !aborted {
+			if reason == CompactionOverflow {
+				errorMessage = "Context overflow recovery failed: " + err.Error()
+			} else {
+				errorMessage = "Auto-compaction failed: " + err.Error()
+			}
+		}
 		s.emit(&SessionEvent{
-			Type: SessionCompactionEnd, Reason: reason, Aborted: compactionCtx.Err() != nil,
-			ErrorMessage: err.Error(),
+			Type: SessionCompactionEnd, Reason: reason, Aborted: aborted,
+			ErrorMessage: errorMessage,
 		})
 		return false, err
 	}
