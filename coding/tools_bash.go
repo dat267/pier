@@ -795,7 +795,7 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 				// timeout or abort throws with empty text (upstream's catch path).
 				if timedOut.Load() {
 					outputText, _ := formatOutput("")
-					return agent.AgentToolResult{}, fmt.Errorf("%s", appendStatus(outputText, fmt.Sprintf("Command timed out after %g seconds", *input.Timeout)))
+					return agent.AgentToolResult{}, fmt.Errorf("%s", appendStatus(outputText, bashTimeoutMessage(*input.Timeout)))
 				}
 				if ws, ok := waitErr.(*exec.ExitError); ok {
 					// A non-zero exit is an isError result, not a thrown error:
@@ -859,4 +859,11 @@ func shellEnv(sessionEnv map[string]string, expose bool) []string {
 		}
 	}
 	return filtered
+}
+
+// bashTimeoutMessage is upstream's `Command timed out after ${timeoutSecs}
+// seconds`, where timeoutSecs is String(timeout) carried through the
+// "timeout:" error, so a large timeout is never written in exponent form.
+func bashTimeoutMessage(timeout float64) string {
+	return "Command timed out after " + ai.JSNumberToString(timeout) + " seconds"
 }
