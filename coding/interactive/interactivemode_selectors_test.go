@@ -330,6 +330,54 @@ func TestSelectorTree(t *testing.T) {
 	}
 }
 
+// The copy key in /tree copies the selected entry's text and reports it, or
+// reports that the entry has none (pi v1.5.0 (f9a26365) interactive-mode.ts
+// showTreeSelector selector.onCopy, from 3b686ac22). The port never wired the
+// selector's OnCopy, so the key did nothing.
+func TestTreeSelectorCopyKeyCopiesSelectedEntry(t *testing.T) {
+	appKeybindings := NewAppKeybindingsManager(nil, "")
+	previousBindings := tui.GetKeybindings()
+	tui.SetKeybindings(appKeybindings.KeybindingsManager)
+	t.Cleanup(func() { tui.SetKeybindings(previousBindings) })
+	wiring, _, _, _ := newSelectorTestWiring(t)
+	statuses := []string{}
+	errs := []string{}
+	copied := []string{}
+	wiring.ShowStatus = func(message string) { statuses = append(statuses, message) }
+	wiring.ShowError = func(message string) { errs = append(errs, message) }
+	wiring.CopyToClipboard = func(text string) (bool, string) {
+		copied = append(copied, text)
+		return true, ""
+	}
+	wiring.TerminalRows = func() int { return 30 }
+	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
+	wiring.SessionInfo = manager
+	manager.AppendMessage(ai.Message(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "copy me"}}))
+
+	wiring.ShowTreeSelector(context.Background(), "", false)
+	tree, ok := wiring.Slot.ActiveSelectorComponent().(*TreeSelectorComponent)
+	if !ok {
+		t.Fatalf("selector type = %T", wiring.Slot.ActiveSelectorComponent())
+	}
+	tree.HandleInput("\x18") // ctrl+x, app.message.copy
+	if len(copied) != 1 || copied[0] != "copy me" {
+		t.Fatalf("copied = %q", copied)
+	}
+	if len(statuses) == 0 || statuses[len(statuses)-1] != "Copied selected message to clipboard" {
+		t.Fatalf("statuses = %v", statuses)
+	}
+
+	wiring.handleTreeCopy("", false)
+	if len(errs) != 1 || errs[0] != "Selected entry has no text to copy" {
+		t.Fatalf("errors = %v", errs)
+	}
+	wiring.CopyToClipboard = func(string) (bool, string) { return false, "Clipboard busy" }
+	wiring.handleTreeCopy("text", true)
+	if len(errs) != 2 || errs[1] != "Clipboard busy" {
+		t.Fatalf("errors = %v", errs)
+	}
+}
+
 // Upstream's /tree navigation does more than move the leaf: it rebuilds the
 // transcript (chatContainer.clear() then renderInitialMessages()), offers the
 // navigated point's message text in the editor when the editor is empty, and

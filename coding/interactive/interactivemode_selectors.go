@@ -136,6 +136,9 @@ type SelectorWiring struct {
 	ShowStatus func(message string)
 	// ShowError reports an error.
 	ShowError func(message string)
+	// CopyToClipboard copies text, returning (ok, message); the tree
+	// selector's copy key uses it.
+	CopyToClipboard func(text string) (bool, string)
 	// UpdateEditorBorderColor refreshes the editor border.
 	UpdateEditorBorderColor func()
 	// AgentDir is the project trust store directory.
@@ -384,8 +387,27 @@ func (w *SelectorWiring) ShowTreeSelector(ctx context.Context, initialSelectedID
 					}
 				},
 			})
+		selector.OnCopy = w.handleTreeCopy
 		return CreatedSelector{Component: selector, Focus: selector}
 	})
+}
+
+// handleTreeCopy copies the selected tree entry's text (upstream
+// showTreeSelector selector.onCopy, pi v1.5.0 interactive-mode.ts).
+func (w *SelectorWiring) handleTreeCopy(text string, hasText bool) {
+	if !hasText || text == "" {
+		w.showError("Selected entry has no text to copy")
+		return
+	}
+	if w.CopyToClipboard == nil {
+		w.showError("Clipboard is not available")
+		return
+	}
+	if ok, message := w.CopyToClipboard(text); !ok {
+		w.showError(message)
+		return
+	}
+	w.showStatus("Copied selected message to clipboard")
 }
 
 // handleTreeLabelChange records a label edit on the session (upstream
@@ -540,6 +562,7 @@ func newSelectorWiring(app *App) *SelectorWiring {
 		AgentDir:                app.options.AgentDir,
 		ShowStatus:              func(message string) { app.transcript.ShowStatus(message) },
 		ShowError:               func(message string) { app.showError(message) },
+		CopyToClipboard:         app.copyToClipboardOffLoop,
 		UpdateEditorBorderColor: func() { app.updateEditorBorderColor() },
 		TerminalRows:            func() int { return app.ui.GetTerminal().Rows() },
 		ShowStatusIndicator: func(kind StatusIndicatorKind) {

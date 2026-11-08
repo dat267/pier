@@ -859,22 +859,7 @@ func newCommandWiring(app *App) *CommandWiring {
 			return app.session.ExportSessionToHTML(outputPath, themeName)
 		},
 
-		CopyToClipboard: func(text string) (bool, string) {
-			// The clipboard subprocess can hang for up to its timeout (xclip
-			// serving a selection, a wedged clipboard daemon), so it runs off
-			// the loop; the command confirms optimistically and failures are
-			// marshaled back through the error seam.
-			accepted := app.tryCopyClipboard(text, func(err error) {
-				if err == nil {
-					return
-				}
-				app.ui.Post(func() { app.showError(err.Error()) })
-			})
-			if !accepted {
-				return false, errClipboardBusy.Error()
-			}
-			return true, ""
-		},
+		CopyToClipboard: app.copyToClipboardOffLoop,
 		WriteDebugLog:   WriteDebugLogFile,
 		EditorContainer: app.editorContainer,
 		Editor:          app.defaultEditor,
