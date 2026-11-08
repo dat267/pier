@@ -1,3 +1,5 @@
 # Reproduced audit findings
 
-None open.
+## P3
+
+- **A424 (M263)**: The incremental argument parser is quadratic in the number of members when the keys are array indices (canonical decimal): `sjFrame.memberPosition` scans the frame's members to place an index key, and a key that sorts before existing members takes `beginValue`'s splice, which copies every following member's bytes into the tail, with `commitMember` copying them back. Each insert is therefore O(members) or O(bytes), so N numeric keys cost O(N²), where the reference's `setMember` on a JS object is O(1) amortized. Measured with 16-byte deltas through `streamingArguments.Append` (`go test ./ai -bench BenchmarkStreamingArgumentsKeyShapes`, 2,000 members, ~22 KB): 1.0 ms/op for named keys, 13.5 ms/op for ascending index keys, 119 ms/op for descending ones. Correctness is unaffected (previews and `Finish` match; the 20,000-case split-anywhere fuzz in `ai/streaming_json_test.go` passes); the fix is to stop rescanning and recopying once a frame holds index keys, for example with an ordered index list per frame.
