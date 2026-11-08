@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -222,10 +221,13 @@ func LoadRadiusGatewayConfig(ctx context.Context, gateway, apiKey string) (*Radi
 		return nil, err
 	}
 	defer response.Body.Close()
-	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode >= 400 {
 		return nil, fmt.Errorf("Could not load Radius config from %s: %d: %s",
 			gateway, response.StatusCode, truncateHTTPBody(string(raw)))
+	}
+	if readErr != nil {
+		return nil, readErr
 	}
 	var parsed map[string]any
 	if err := json.Unmarshal(raw, &parsed); err != nil {

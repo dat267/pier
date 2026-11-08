@@ -112,7 +112,13 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 		options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: headers}, hookModel)
 	}
 
-	raw, _ := io.ReadAll(io.LimitReader(response.Body, 8<<20))
+	raw, readErr := readCappedDocument(response.Body, openRouterImagesBodyLimit)
+	if readErr != nil {
+		output.StopReason = ImagesStopError
+		message := FormatProviderError(NormalizeProviderError(readErr), "")
+		output.ErrorMessage = &message
+		return output
+	}
 	var payload struct {
 		ID      string `json:"id"`
 		Choices []struct {

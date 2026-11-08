@@ -8,8 +8,12 @@ import (
 )
 
 // oauthDocumentBodyLimit bounds one OAuth document this package reads from an
-// authorization or token endpoint (D341).
-const oauthDocumentBodyLimit = 1 << 20
+// authorization or token endpoint, and openRouterImagesBodyLimit bounds one
+// image-generation response (D341; A429).
+const (
+	oauthDocumentBodyLimit    = 1 << 20
+	openRouterImagesBodyLimit = 8 << 20
+)
 
 // readCappedDocument reads a response body of at most limit bytes and reports
 // both the bytes read and a protocol error. D341 requires a successful remote
