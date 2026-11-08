@@ -9,6 +9,8 @@ const root = resolve(process.argv[2] ?? "./pi");
 registerHooks({ resolve(specifier, context, next) {
 	const map = {
 		"@earendil-works/pi-telemetry": "packages/telemetry/src/index.ts",
+		"@earendil-works/pi-schema": "packages/schema/src/index.ts",
+		"@earendil-works/pi-schema/formats": "packages/schema/src/formats/index.ts",
 		"@earendil-works/pi-ai": "packages/ai/src/index.ts",
 		"@earendil-works/pi-agent-core": "packages/agent/src/index.ts",
 	};

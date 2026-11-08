@@ -12,6 +12,8 @@ registerHooks({ resolve(specifier, context, next) {
 		"@earendil-works/pi-agent-core": "packages/agent/src/index.ts",
 		"@earendil-works/pi-ai": "packages/ai/src/index.ts",
 		"@earendil-works/pi-telemetry": "packages/telemetry/src/index.ts",
+		"@earendil-works/pi-schema": "packages/schema/src/index.ts",
+		"@earendil-works/pi-schema/formats": "packages/schema/src/formats/index.ts",
 	};
 	if (context.parentURL?.endsWith("/core/tools/grep.ts")) {
 		if (specifier === "./renderers/grep.ts") return { url: "data:text/javascript,export const grepRenderers={};", shortCircuit: true };
