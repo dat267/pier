@@ -369,7 +369,7 @@ func TestConvertAnthropicMessagesThinkingReplay(t *testing.T) {
 	if len(blocks) != 3 {
 		t.Fatalf("blocks = %+v", blocks)
 	}
-	if blocks[0].Type != "thinking" || blocks[0].Thinking != "deliberation" || *blocks[0].Signature != sig {
+	if blocks[0].Type != "thinking" || deref(blocks[0].Thinking) != "deliberation" || *blocks[0].Signature != sig {
 		t.Fatalf("block 0 = %+v", blocks[0])
 	}
 	// Unsigned thinking converts to text for replay; the text block follows.
@@ -627,4 +627,59 @@ func TestAnthropicStrictToolSchema(t *testing.T) {
 			t.Fatalf("supported strict = %+v", supported.Strict)
 		}
 	})
+}
+
+// Upstream api/anthropic-messages.ts buildParams (v1.5.0, e3bc05e87) sends a
+// fixed top-level effort of "low" with per-message effort markers, and
+// convertMessages starts from an empty array, so a context whose only user
+// turn has no content still sends "messages":[].
+func TestBuildParamsManagedEffortTopLevelLowAndEmptyMessages(t *testing.T) {
+	model := &Model{
+		ID: "claude-opus-5", API: APIAnthropicMessages, Provider: "anthropic", Reasoning: true,
+		Compat: &ModelCompat{AnthropicMessages: &AnthropicMessagesCompat{SupportsMidConvoEffort: new(true)}},
+	}
+	enabled := true
+	params := build(t, model, []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
+		&AnthropicOptions{ThinkingEnabled: &enabled, Effort: AnthropicEffortMax})
+	if params.OutputConfig == nil || params.OutputConfig.Effort != AnthropicEffortLow {
+		t.Fatalf("top-level output_config = %+v, want low", params.OutputConfig)
+	}
+	last := params.Messages[len(params.Messages)-1]
+	if last.OutputConfig == nil || last.OutputConfig.Effort != AnthropicEffortMax {
+		t.Fatalf("active marker = %+v, want max", last.OutputConfig)
+	}
+
+	plain := build(t, testAnthropicModel(), []Message{&UserMessage{Content: StringOrBlocks{Blocks: ContentList{}}, Timestamp: 1}}, nil)
+	body, err := MarshalJSON(plain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), `"messages":[]`) {
+		t.Fatalf("payload = %s, want \"messages\":[]", body)
+	}
+}
+
+// Upstream api/anthropic-messages.ts convertMessages (v1.5.0) always sets
+// `thinking` on a signed thinking block and `data` on a redacted one, so an
+// empty thought or an empty redacted payload still sends the key.
+func TestConvertAnthropicMessagesKeepsEmptyThinkingAndData(t *testing.T) {
+	sig, empty := "sigA", ""
+	params := build(t, testAnthropicModel(), []Message{
+		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+		&AssistantMessage{
+			API: APIAnthropicMessages, Provider: "anthropic", Model: "claude-opus-4-5", StopReason: StopStop,
+			Content: ContentList{
+				ThinkingContent{Thinking: "", ThinkingSignature: &sig},
+				ThinkingContent{Thinking: "", ThinkingSignature: &empty, Redacted: true},
+			},
+		},
+	}, nil)
+	body, err := MarshalJSON(params.Messages[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"role":"assistant","content":[{"type":"thinking","thinking":"","signature":"sigA"},{"type":"redacted_thinking","data":""}]}`
+	if string(body) != want {
+		t.Fatalf("assistant = %s\nwant %s", body, want)
+	}
 }

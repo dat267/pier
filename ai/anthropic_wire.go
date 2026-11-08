@@ -186,10 +186,10 @@ type AnthropicContentBlock struct {
 	// image
 	Source *AnthropicImageSource `json:"source,omitempty"`
 	// thinking
-	Thinking  string  `json:"thinking,omitempty"`
+	Thinking  *string `json:"thinking,omitempty"`
 	Signature *string `json:"signature,omitempty"`
 	// redacted_thinking
-	Data string `json:"data,omitempty"`
+	Data *string `json:"data,omitempty"`
 	// tool_use
 	ID    string          `json:"id,omitempty"`
 	Name  string          `json:"name,omitempty"`
@@ -417,7 +417,7 @@ func ConvertAnthropicMessages(
 	// nil when tool changes are not native.
 	convertToolDefinitions func([]Tool) ([]AnthropicTool, error),
 ) (ConvertedAnthropicMessages, error) {
-	var params []AnthropicMessage
+	params := []AnthropicMessage{}
 	assistantLevels := map[int]AnthropicEffort{}
 	var pendingSystemMessages []AnthropicMessage
 	flushPending := func() {
@@ -519,7 +519,7 @@ func ConvertAnthropicMessages(
 				case ThinkingContent:
 					// Redacted thinking: pass the opaque payload back.
 					if b.Redacted {
-						blocks = append(blocks, AnthropicContentBlock{Type: "redacted_thinking", Data: deref(b.ThinkingSignature)})
+						blocks = append(blocks, AnthropicContentBlock{Type: "redacted_thinking", Data: b.ThinkingSignature})
 						continue
 					}
 					thinkingSignature := deref(b.ThinkingSignature)
@@ -533,7 +533,7 @@ func ConvertAnthropicMessages(
 						if allowEmptySignature {
 							sig := ""
 							blocks = append(blocks, AnthropicContentBlock{
-								Type: "thinking", Thinking: SanitizeSurrogates(b.Thinking), Signature: &sig,
+								Type: "thinking", Thinking: new(SanitizeSurrogates(b.Thinking)), Signature: &sig,
 							})
 						} else {
 							blocks = append(blocks, AnthropicContentBlock{
@@ -542,7 +542,7 @@ func ConvertAnthropicMessages(
 						}
 					} else {
 						blocks = append(blocks, AnthropicContentBlock{
-							Type: "thinking", Thinking: SanitizeSurrogates(b.Thinking), Signature: &thinkingSignature,
+							Type: "thinking", Thinking: new(SanitizeSurrogates(b.Thinking)), Signature: &thinkingSignature,
 						})
 					}
 				case ToolCall:
@@ -987,7 +987,10 @@ func BuildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 			Display:      &display,
 			BlockBinding: &AnthropicThinkingBlockBinding{PrefixMismatchBehavior: "drop_block"},
 		}
-		params.OutputConfig = &AnthropicOutputConfig{Effort: AnthropicEffortHigh}
+		// Effort markers set the level for every reply. The top-level effort is
+		// part of the cached prompt, so it stays fixed at "low": organizations
+		// can cap effort and reject requests containing any level above the cap.
+		params.OutputConfig = &AnthropicOutputConfig{Effort: AnthropicEffortLow}
 	} else if model.Reasoning && options.ThinkingEnabled != nil && *options.ThinkingEnabled {
 		display := options.ThinkingDisplay
 		if display == "" {
