@@ -83,6 +83,9 @@ type EventDispatcher struct {
 	hasRetryEscapeHandler       bool
 	autoCompactionEscapeHandler func()
 	hasAutoCompactionEscape     bool
+	// compactionStartedAt is when the running compaction started, so its end
+	// event can report the elapsed time (D406).
+	compactionStartedAt time.Time
 }
 
 // NewEventDispatcher creates the dispatcher.
@@ -609,6 +612,7 @@ func (d *EventDispatcher) handleCompactionStart(event *coding.SessionEvent) {
 	if d.UIState != nil {
 		d.UIState.ShowStatusIndicator(NewCompactionStatusIndicator(d.UIState.UI, event.Reason, d.UIState.EmbeddedStatusColorFn(d.thinkingLevel())))
 	}
+	d.compactionStartedAt = time.Now()
 	d.requestRender()
 }
 
@@ -647,9 +651,14 @@ func (d *EventDispatcher) handleCompactionEnd(event *coding.SessionEvent) {
 				d.Transcript.AddMessageToChat(coding.CreateCompactionSummaryMessage(
 					event.Result.Summary, event.Result.TokensBefore, 0), false)
 				if event.Result.Usage != nil {
-					d.Transcript.AddCompactionCostNotice(CompactionCostNotice{
+					notice := CompactionCostNotice{
 						Type: "compaction_cost", Kind: "compaction", Usage: *event.Result.Usage,
-					})
+					}
+					// D406: the run's wall time, measured from its start event.
+					if !d.compactionStartedAt.IsZero() {
+						notice.Duration = time.Since(d.compactionStartedAt)
+					}
+					d.Transcript.AddCompactionCostNotice(notice)
 				}
 			}
 		}
@@ -667,6 +676,9 @@ func (d *EventDispatcher) handleCompactionEnd(event *coding.SessionEvent) {
 			d.Transcript.Chat.AddChild(tui.NewText(theme.Fg("error", tui.SanitizeUntrustedText(event.ErrorMessage)), 1, 0, nil))
 		}
 	}
+	// The run is over whether it produced a summary or not, so a later
+	// compaction cannot inherit this start time (D406).
+	d.compactionStartedAt = time.Time{}
 	if d.FlushCompactionQueue != nil {
 		flush := d.FlushCompactionQueue
 		if d.StartWork != nil {

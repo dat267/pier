@@ -5,6 +5,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
@@ -108,6 +109,10 @@ type CompactionCostNotice struct {
 	Type  string // "compaction_cost"
 	Kind  string // "compaction" | "branch_summary"
 	Usage ai.Usage
+	// Duration is how long a live compaction took, shown before the billed
+	// tokens (D406). Replayed notices leave it zero: only the summary usage is
+	// persisted, not the run's wall time.
+	Duration time.Duration
 }
 
 // Dead terminal error codes.

@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D405)
+# Deliberate divergences from pi (D1–D406)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5699,3 +5699,20 @@ aborts a compaction because `handleCompactionStart` swaps `Editor.OnEscape`;
 only the hint text is gone.
 
 Test: `TestCompactionIndicatorShowsOneTickingLabel`.
+
+### D406
+
+**A live compaction notice reports how long the run took.**
+
+Reference: pi v1.5.0 (f9a26365) `modes/interactive/interactive-mode.ts`
+`addCompactionCostNotice` prints `${label}: ${formatTokens(tokens)} tokens
+billed${cost}` and nothing about time.
+
+Pier prefixes the elapsed time of a live compaction in the same form as the
+"Worked for" line, e.g. `Compaction: 6m 18s · 2.0k tokens billed (~$0.03)`,
+measured from the compaction start event to its result, so a multi-minute
+auto-compaction reads as a run rather than an instant charge. A replayed notice
+leaves the duration zero and keeps the reference text, because a session stores
+the summary usage but not the run's wall time.
+
+Tests: `TestTranscriptNotices`, `TestEventDispatcherCompaction`.

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
@@ -408,6 +409,8 @@ func TestEventDispatcherCompaction(t *testing.T) {
 	dispatcher.Transcript.UpdateEditorBorderColor = func() { borderUpdates++ }
 
 	dispatcher.Settings.SetShowCacheMissNotices(true)
+	// D406: the end event reports the run's measured duration.
+	dispatcher.compactionStartedAt = time.Now().Add(-6*time.Minute - 18*time.Second)
 	usage := ai.Usage{Input: 100, Cost: ai.UsageCost{Total: 0.5}}
 	dispatcher.HandleEvent(&coding.SessionEvent{
 		Type: coding.SessionCompactionEnd, Reason: coding.CompactionManual,
@@ -422,6 +425,9 @@ func TestEventDispatcherCompaction(t *testing.T) {
 	lines = strings.Join(renderChat(t, transcript.Chat), "\n")
 	if !strings.Contains(lines, "[compaction]") || !strings.Contains(lines, "Compaction: ") {
 		t.Fatalf("compaction render = %q", lines)
+	}
+	if !strings.Contains(lines, "Compaction: 6m 18s · ") && !strings.Contains(lines, "Compaction: 6m 19s · ") {
+		t.Fatalf("compaction render carries no elapsed time: %q", lines)
 	}
 }
 

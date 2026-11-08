@@ -942,9 +942,16 @@ func (r *TranscriptRenderer) AddCompactionCostNotice(notice CompactionCostNotice
 	if notice.Kind == "compaction" {
 		label = "Compaction"
 	}
+	line := label + ": "
+	// D406: a live compaction reports how long the run took, in the same form as
+	// the "Worked for" line (e.g. "6m 18s · 2.0k tokens billed"), where upstream
+	// prints the billed tokens alone.
+	if notice.Duration > 0 {
+		line += formatDuration(float64(notice.Duration.Milliseconds())) + " · "
+	}
+	line += FormatTokens(tokens) + " tokens billed" + cost
 	r.Chat.AddChild(tui.NewSpacer(1))
-	r.Chat.AddChild(tui.NewText(theme.Fg("warning",
-		label+": "+FormatTokens(tokens)+" tokens billed"+cost), 1, 0, nil))
+	r.Chat.AddChild(tui.NewText(theme.Fg("warning", line), 1, 0, nil))
 }
 
 // CountDroppedThinkingBlocks counts the dropped-thinking diagnostics.

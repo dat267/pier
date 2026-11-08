@@ -276,6 +276,15 @@ func TestTranscriptNotices(t *testing.T) {
 	if !strings.Contains(lines, "Compaction: 2.0k tokens billed (~$0.03)") {
 		t.Fatalf("compaction notice = %q", lines)
 	}
+	// D406: a live compaction also reports how long it took, in the same form as
+	// the "Worked for" line.
+	renderer.AddCompactionCostNotice(CompactionCostNotice{Kind: "compaction", Usage: ai.Usage{
+		Input: 1000, Output: 500, CacheRead: 500, Cost: ai.UsageCost{Total: 0.0315},
+	}, Duration: 6*time.Minute + 18*time.Second})
+	lines = strings.Join(renderChat(t, renderer.Chat), "\n")
+	if !strings.Contains(lines, "Compaction: 6m 18s · 2.0k tokens billed (~$0.03)") {
+		t.Fatalf("timed compaction notice = %q", lines)
+	}
 	// Below the cost threshold: no suffix.
 	renderer.AddCompactionCostNotice(CompactionCostNotice{Kind: "branch_summary", Usage: ai.Usage{
 		Input: 100, Cost: ai.UsageCost{Total: 0.001},
