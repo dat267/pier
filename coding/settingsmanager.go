@@ -1969,7 +1969,7 @@ func (m *SettingsManager) compactionTokenSetting(field string, model *ai.Model) 
 			ordinary = compaction.KeepRecentTokens
 		}
 	}
-	if ordinary != nil && *ordinary < 0 {
+	if ordinary != nil && !isSettingsSafeTokenCount(*ordinary) {
 		return 0, fmt.Errorf("Invalid compaction.%s setting: %d. Expected a non-negative safe integer.", field, *ordinary)
 	}
 
@@ -1991,7 +1991,7 @@ func (m *SettingsManager) compactionTokenSetting(field string, model *ai.Model) 
 				}
 				override = entry.KeepRecentTokens
 			}
-			if override != nil && *override < 0 {
+			if override != nil && !isSettingsSafeTokenCount(*override) {
 				return 0, fmt.Errorf(
 					"Invalid compaction.modelOverrides[\"%s\"].%s setting: %d. Expected a non-negative safe integer.",
 					modelKey, field, *override)
@@ -2008,6 +2008,17 @@ func (m *SettingsManager) compactionTokenSetting(field string, model *ai.Model) 
 		return DefaultCompactionReserveTokens, nil
 	}
 	return DefaultCompactionKeepRecentTokens, nil
+}
+
+// settingsMaxSafeInteger is JavaScript's Number.MAX_SAFE_INTEGER: the largest
+// value a JS number holds exactly. The reference validates these settings with
+// Number.isSafeInteger, so a larger value is rejected rather than used.
+const settingsMaxSafeInteger = int64(1)<<53 - 1
+
+// isSettingsSafeTokenCount reports a value the reference's Number.isSafeInteger
+// accepts and that is not negative.
+func isSettingsSafeTokenCount(value int64) bool {
+	return value >= 0 && value <= settingsMaxSafeInteger
 }
 
 // GetCompactionReserveTokens resolves the reserve-token setting.
