@@ -289,8 +289,9 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 
 	case coding.SessionAgentSettled:
 		if d.UIState != nil {
-			if event.GoalPursuing && !event.Aborted {
-				// The goal is not done: its next round continues the period.
+			if (event.GoalPursuing || event.FollowUpsPending) && !event.Aborted {
+				// Another run belongs to this period: the goal's next round, or
+				// the follow-ups the goal held (D385).
 				d.UIState.PauseWorkingClock(workingClock())
 			} else if worked, tokens, ok := d.UIState.StopWorkingClock(workingClock()); ok && d.Transcript != nil {
 				d.Transcript.AddWorkedFor(worked, tokens)

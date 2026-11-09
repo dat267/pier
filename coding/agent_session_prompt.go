@@ -292,8 +292,10 @@ func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message
 	state.runActive = true
 	state.mu.Unlock()
 	// The hold latch is per run: a goal active during this run keeps user
-	// follow-ups queued through its post-run continuation.
+	// follow-ups queued through its post-run continuation. A run that starts
+	// consumes the pending release this flag reported.
 	s.goalHeldThisRun.Store(false)
+	s.followUpReleasePending.Store(false)
 	// Preparation and user callbacks (onStarted, the pre-turn hook) can panic.
 	// Upstream's _startRun catch still clears the run flag and releases idle
 	// waiters; without this, one panic wedges the session in streaming.
@@ -342,7 +344,11 @@ func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message
 	aborted := state.abortRequested
 	state.mu.Unlock()
 	// Upstream _emitAgentSettled uses the run abort flag, including backoff.
-	s.emit(&SessionEvent{Type: SessionAgentSettled, Aborted: aborted, GoalPursuing: s.Goal != nil && s.Goal.Pursuing()})
+	s.emit(&SessionEvent{
+		Type: SessionAgentSettled, Aborted: aborted,
+		GoalPursuing:     s.Goal != nil && s.Goal.Pursuing(),
+		FollowUpsPending: s.followUpReleasePending.Load(),
+	})
 	s.resolveIdleWaitIfIdle()
 	return err
 }

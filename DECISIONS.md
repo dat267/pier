@@ -5643,7 +5643,11 @@ continuation or a queued follow-up starts inside it count as one period. An
 active armed goal also keeps it open: an `agent_settled` whose goal is still
 pursued (and not aborted) waits for the goal's next round, so a goal's rounds
 are one period with one notice; if a user prompt arrives instead, the waiting
-period closes at that settle before the prompt starts its own. The
+period closes at that settle before the prompt starts its own. The follow-ups
+that goal held (D385) belong to the same period: the settle that releases them
+reports the run still to come (`SessionEvent.FollowUpsPending`), so the
+released run's time and tokens are added to the agent's until everything
+finishes, with one notice at the end. The
 working indicator appends the time since in whole seconds (`Working (1m 5s)`),
 across every working indicator the period shows, and ticks once a second even
 when a custom indicator hides the spinner frames. Once the provider reports usage it
@@ -5658,8 +5662,9 @@ tool's `Took` label has. The line is display-only: it is not written to the sess
 so a resumed session does not show it.
 
 Tests: `TestWorkingIndicatorShowsElapsedAndTranscriptNotesTheRun`,
-`TestWorkingPeriodSpansGoalRounds`, `TestWorkingElapsedLabelFormats`,
-`TestLoaderElapsedLabelTicksEachSecond`.
+`TestWorkingPeriodSpansGoalRounds`, `TestWorkingPeriodSpansTheReleasedFollowUpRun`,
+`TestWorkingElapsedLabelFormats`, `TestLoaderElapsedLabelTicksEachSecond`;
+`TestGoalSettleReportsThePendingFollowUpRun` covers the flag itself.
 
 ### D403
 

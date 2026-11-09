@@ -103,6 +103,10 @@ type SessionEvent struct {
 	// agent_settled: an armed goal is still active, so another round follows
 	// (the interactive working period stays open, D402). Not serialized.
 	GoalPursuing bool
+	// agent_settled: follow-ups this run held (D385) are released as a run of
+	// their own after this settle, so the working period stays open for them
+	// too (D402). Not serialized.
+	FollowUpsPending bool
 	// queue_update
 	Steering []string
 	FollowUp []string
@@ -168,6 +172,11 @@ type AgentSession struct {
 	// its user follow-ups stay queued until the run's final answer even when the
 	// goal completes mid-run.
 	goalHeldThisRun atomic.Bool
+
+	// followUpReleasePending records that a run carrying released follow-ups is
+	// queued or waiting to start, so the settle that precedes it reports the
+	// follow-up run that is still coming (D402).
+	followUpReleasePending atomic.Bool
 
 	// Goal is the builtin session-goal controller (nil when disabled).
 	Goal *GoalController
@@ -698,6 +707,9 @@ func (s *AgentSession) releaseGoalHeldFollowUps(event *agent.AgentEvent) {
 		// chain before it settled as one run (rounds continue inside it).
 		return s.runAgentPrompt(ctx, messages)
 	}
+	// The released run starts after this run settles, so the settle reports it:
+	// the working period stays open across the release (D402).
+	s.followUpReleasePending.Store(true)
 	if s.Goal.RunAfterSettle(run) {
 		return
 	}

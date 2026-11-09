@@ -186,3 +186,48 @@ func TestWorkingPeriodSpansGoalRounds(t *testing.T) {
 		t.Fatal("the prompt after an idle goal did not start a new period")
 	}
 }
+
+// D402/D385: a goal that held Alt+Enter follow-ups releases them as another run
+// after its own settles. That released run belongs to the same working period,
+// so the follow-up's time and tokens are added to the agent's instead of
+// starting a second period with its own notice.
+func TestWorkingPeriodSpansTheReleasedFollowUpRun(t *testing.T) {
+	dispatcher, _, transcript, uiState := newEventTestDispatcher(t)
+	started := time.Now()
+	at := func(d time.Duration) { workingClock = func() time.Time { return started.Add(d) } }
+	saved := workingClock
+	t.Cleanup(func() { workingClock = saved })
+	assistant := func(eventType string, usage ai.Usage) *coding.SessionEvent {
+		kind := map[string]string{coding.SessionMessageStart: "message_start", coding.SessionMessageEnd: "message_end"}[eventType]
+		return &coding.SessionEvent{Type: eventType, Agent: agentEvent(kind, &ai.AssistantMessage{Usage: usage, StopReason: ai.StopStop})}
+	}
+	notices := func() string { return renderedText(transcript.Chat.Render(80)) }
+
+	// The goal's chain: two goal rounds inside one run, then a settle that
+	// reports the released follow-up run still to come.
+	at(0)
+	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentStart})
+	dispatcher.HandleEvent(assistant(coding.SessionMessageStart, ai.Usage{}))
+	dispatcher.HandleEvent(assistant(coding.SessionMessageEnd, ai.Usage{Input: 1000, Output: 100}))
+	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentEnd})
+	at(20 * time.Second)
+	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentSettled, FollowUpsPending: true})
+	if got := notices(); strings.Contains(got, "Worked for") {
+		t.Fatalf("settling with a released follow-up run pending added a notice: %q", got)
+	}
+	if !uiState.WorkingClockRunning() {
+		t.Fatal("the period closed before the released follow-up ran")
+	}
+
+	// The released run: the clock and tokens continue, no second period.
+	at(21 * time.Second)
+	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentStart})
+	dispatcher.HandleEvent(assistant(coding.SessionMessageStart, ai.Usage{}))
+	dispatcher.HandleEvent(assistant(coding.SessionMessageEnd, ai.Usage{Input: 500, Output: 50}))
+	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentEnd})
+	at(25 * time.Second)
+	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentSettled})
+	if got := notices(); strings.Count(got, "Worked for") != 1 || !strings.Contains(got, "Worked for 25.0s · ↑1.5k ↓150") {
+		t.Fatalf("transcript = %q, want one notice covering the goal and its follow-up", got)
+	}
+}
