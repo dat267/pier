@@ -550,6 +550,18 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 			if err := jsonUnmarshalStrictTool(params, &input); err != nil {
 				return agent.AgentToolResult{}, err
 			}
+			// Upstream validates the timeout first: createLocalShellOperations.exec
+			// calls resolveTimeoutMs before it resolves the shell config, checks the
+			// working directory or spawns. A rejected timeout therefore never runs
+			// the command, and a call cannot leak a child it never reaps.
+			timeoutSeconds := defaultBashTimeoutSeconds // D407
+			if input.Timeout != nil {
+				timeoutSeconds = *input.Timeout
+			}
+			timeoutDur, timeoutErr := ResolveTimeoutSeconds(timeoutSeconds)
+			if timeoutErr != nil {
+				return agent.AgentToolResult{}, timeoutErr
+			}
 			command := input.Command
 			if commandPrefix != "" {
 				command = commandPrefix + "\n" + command
@@ -702,22 +714,11 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 			// D407: a call without a timeout gets the default one, so a hung
 			// command hands control back to the agent instead of blocking the turn
 			// until the user aborts it. Upstream has no default.
-			timeoutSeconds := defaultBashTimeoutSeconds
-			if input.Timeout != nil {
-				timeoutSeconds = *input.Timeout
-			}
-			{
-				timeoutDur, terr := ResolveTimeoutSeconds(timeoutSeconds)
-				if terr != nil {
-					killTree()
-					return agent.AgentToolResult{}, terr
-				}
-				timed := time.AfterFunc(timeoutDur, func() {
-					timedOut.Store(true)
-					killTree()
-				})
-				defer timed.Stop()
-			}
+			timed := time.AfterFunc(timeoutDur, func() {
+				timedOut.Store(true)
+				killTree()
+			})
+			defer timed.Stop()
 
 			streams := &sync.WaitGroup{}
 			activity := make(chan struct{}, 1)

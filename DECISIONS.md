@@ -5739,5 +5739,12 @@ defaults to 600)` so the model knows to pass a longer timeout. An explicit
 timeout replaces the default and keeps upstream's message. `!` commands run
 through the user bash executor and are not affected.
 
+The default is validated where upstream validates an explicit one: before the
+shell is resolved, before the working directory is checked and before the
+command is spawned, so a call whose timeout is rejected reports that error and
+never runs the command. An earlier version checked the timeout after
+`cmd.Start()`, which left every rejected call's shell spawned and unreaped.
+
 Tests: `TestBashDefaultTimeoutEndsAHungCommand`,
-`TestBuiltinToolSchemasMatchUpstream`.
+`TestBuiltinToolSchemasMatchUpstream`, `TestBashRejectedTimeoutDoesNotSpawn`,
+`TestBashTimeoutValidationPrecedesOtherInputChecks`.
