@@ -298,18 +298,22 @@ type OpenAICompletionsParams struct {
 
 	// Optional/request-shaped fields, emitted in upstream key order via
 	// MarshalJSON override below.
-	PromptCacheKey           *string                    `json:"prompt_cache_key,omitempty"`
-	PromptCacheRetention     *string                    `json:"prompt_cache_retention,omitempty"`
-	StreamOptions            *OpenAIStreamOptions       `json:"stream_options,omitempty"`
-	Store                    *bool                      `json:"store,omitempty"`
-	MaxCompletionTokens      *int64                     `json:"max_completion_tokens,omitempty"`
-	MaxTokens                *int64                     `json:"max_tokens,omitempty"`
-	Temperature              *float64                   `json:"temperature,omitempty"`
-	Tools                    []OpenAITool               `json:"tools,omitempty"`
-	ToolChoice               json.RawMessage            `json:"tool_choice,omitempty"`
-	ToolStream               *bool                      `json:"tool_stream,omitempty"`
-	Priority                 *float64                   `json:"priority,omitempty"`
-	Thinking                 *OpenAIThinkingParam       `json:"thinking,omitempty"`
+	PromptCacheKey       *string              `json:"prompt_cache_key,omitempty"`
+	PromptCacheRetention *string              `json:"prompt_cache_retention,omitempty"`
+	StreamOptions        *OpenAIStreamOptions `json:"stream_options,omitempty"`
+	Store                *bool                `json:"store,omitempty"`
+	MaxCompletionTokens  *int64               `json:"max_completion_tokens,omitempty"`
+	MaxTokens            *int64               `json:"max_tokens,omitempty"`
+	Temperature          *float64             `json:"temperature,omitempty"`
+	Tools                []OpenAITool         `json:"tools,omitempty"`
+	ToolChoice           json.RawMessage      `json:"tool_choice,omitempty"`
+	ToolStream           *bool                `json:"tool_stream,omitempty"`
+	Priority             *float64             `json:"priority,omitempty"`
+	Thinking             *OpenAIThinkingParam `json:"thinking,omitempty"`
+	// ThinkingString is upstream's `thinking` field for the string-thinking
+	// format (openai-completions.ts 949-950), which sends a bare level-name
+	// string rather than the zai/deepseek `{type}` object.
+	ThinkingString           *string                    `json:"-"`
 	EnableThinking           *bool                      `json:"enable_thinking,omitempty"`
 	ChatTemplateKwargs       map[string]any             `json:"chat_template_kwargs,omitempty"`
 	ChatTemplateArgs         map[string]any             `json:"chat_template_args,omitempty"`
@@ -520,6 +524,10 @@ func (p *OpenAICompletionsParams) MarshalJSON() ([]byte, error) {
 	}
 	if p.Thinking != nil {
 		if err := fields.setAny("thinking", p.Thinking); err != nil {
+			return nil, err
+		}
+	} else if p.ThinkingString != nil {
+		if err := fields.setAny("thinking", *p.ThinkingString); err != nil {
 			return nil, err
 		}
 	}

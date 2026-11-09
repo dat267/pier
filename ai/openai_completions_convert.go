@@ -694,9 +694,10 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 			if mapped := resolveLevelMapValueOrLevel(model, options.ReasoningEffort); mapped != nil {
 				level = *mapped
 			}
-			params.Thinking = &OpenAIThinkingParam{Type: level}
+			params.ThinkingString = &level
 		} else if !thinkingLevelMapOffIsNull(model) {
-			params.Thinking = &OpenAIThinkingParam{Type: resolveLevelMapValueOrNone(model, ThinkOff)}
+			none := resolveLevelMapValueOrNone(model, ThinkOff)
+			params.ThinkingString = &none
 		}
 	} else if options.ReasoningEffort != "" && model.Reasoning && compat.SupportsReasoningEffort {
 		params.ReasoningEffort = resolveLevelMapValueOrLevel(model, options.ReasoningEffort)
