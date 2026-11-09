@@ -48,6 +48,13 @@ func NewStatusIndicator(kind StatusIndicatorKind, host tui.RenderRequester, spin
 }
 
 // RenderInBorder renders the message line without the leading space.
+//
+// D417: upstream keeps the first line the loader wraps to, so a narrow
+// border cut the label at a word break ("⠋ Working (1m 16s"). When the line
+// wraps, pier truncates the whole unwrapped line with an ellipsis instead
+// ("⠋ Working (1m 16s · ↑3.4M ↓…"), so the cut is visible. A line that fits,
+// or one so narrow that upstream keeps only the spinner, renders exactly as
+// upstream's.
 func (s *StatusIndicator) RenderInBorder(width int) string {
 	lines := s.Loader.Render(width + 2)
 	line := ""
@@ -57,7 +64,16 @@ func (s *StatusIndicator) RenderInBorder(width int) string {
 	if len(line) > 0 && line[0] == ' ' {
 		line = line[1:]
 	}
-	return tui.TruncateToWidth(trimRightSpaces(line), width, "", false)
+	line = trimRightSpaces(line)
+	if len(lines) > 2 && tui.VisibleWidth(line) > tui.VisibleWidth(s.Loader.RenderedIndicator()) {
+		full, _, _ := strings.Cut(s.Loader.Text.Text(), "\n")
+		// Cut one column short and drop the spaces the cut ends on, so the
+		// ellipsis follows the last visible character ("Working…", not
+		// "Working …").
+		kept := trimRightSpaces(tui.StripTerminalSequences(tui.TruncateToWidth(full, width-1, "", false)))
+		return tui.TruncateToWidth(full, tui.VisibleWidth(kept), "", false) + "…"
+	}
+	return tui.TruncateToWidth(line, width, "", false)
 }
 
 // RenderSpinnerInBorder renders just the spinner frame.

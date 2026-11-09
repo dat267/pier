@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"os"
 	"runtime"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/tui"
 )
@@ -120,5 +122,40 @@ func TestCustomEditorAgainstUpstreamGolden(t *testing.T) {
 			events = []string{}
 		}
 		checkGolden(t, golden, "input "+label, []any{events, editor.GetText()})
+	}
+}
+
+// D417: a working label too wide for the editor border ends in an ellipsis
+// instead of stopping at the word break the loader wrapped at. pi v1.5.0
+// components/status-indicator.ts renderInBorder keeps the first wrapped line
+// with no ellipsis; a label that fits renders the same as upstream's.
+func TestWorkingStatusInBorderElidesOnNarrowScreens(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	InitTheme("dark", false)
+	indicator := NewWorkingStatusIndicator(nil, "Working", nil, nil)
+	indicator.Loader.SetElapsed(time.Now().Add(-76*time.Second), func(elapsed time.Duration) string {
+		return workingElapsedLabel(elapsed, workingTokenCount{in: 3_400_000, out: 5600})
+	})
+	render := func(width int) string { return tui.StripTerminalSequences(indicator.RenderInBorder(width)) }
+	if got := render(40); !strings.HasSuffix(got, " Working (1m 16s · ↑3.4M ↓5.6k)") {
+		t.Fatalf("wide = %q", got)
+	}
+	for _, width := range []int{30, 18, 12} {
+		got := render(width)
+		if !strings.HasSuffix(got, "…") || strings.HasSuffix(got, " …") || tui.VisibleWidth(got) > width || !strings.Contains(got, " Working") {
+			t.Errorf("width %d = %q", width, got)
+		}
+	}
+	if got := render(18); !strings.HasSuffix(got, " Working (1m 16s…") {
+		t.Fatalf("width 18 = %q", got)
+	}
+	// A cut that lands on a space puts the ellipsis right after the word.
+	if got := render(11); !strings.HasSuffix(got, " Working…") {
+		t.Fatalf("width 11 = %q", got)
+	}
+	// Where upstream keeps only the spinner, so does pier.
+	if got := render(5); strings.Contains(got, "…") || strings.Contains(got, "W") {
+		t.Fatalf("width 5 = %q", got)
 	}
 }
