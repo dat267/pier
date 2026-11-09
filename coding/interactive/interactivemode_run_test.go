@@ -531,3 +531,61 @@ func TestRunStartupHeaderModelScope(t *testing.T) {
 		t.Fatalf("quiet header still shows the model scope: %q", lines)
 	}
 }
+
+// ownerCheckUI records whether renderer mutations arrive through Post, the
+// only entry point tui.TUI documents as safe for a producer goroutine.
+type ownerCheckUI struct {
+	tui.TUI
+	inPost      atomic.Bool
+	posts       atomic.Int32
+	offLoop     atomic.Int32
+	invalidated chan struct{}
+}
+
+func (u *ownerCheckUI) Post(fn func()) {
+	u.inPost.Store(true)
+	defer u.inPost.Store(false)
+	u.posts.Add(1)
+	fn()
+}
+
+func (u *ownerCheckUI) Invalidate() {
+	if !u.inPost.Load() {
+		u.offLoop.Add(1)
+	}
+	u.TUI.Invalidate()
+	select {
+	case u.invalidated <- struct{}{}:
+	default:
+	}
+}
+
+// A background loader must invalidate the component tree through Post: an
+// invalidation walks the mounted components and drops their render caches,
+// which belong to the owner loop (tui.TUI.Post, AGENTS.md "UI ownership").
+func TestHighlightLanguageLoadInvalidatesOnTheOwnerLoop(t *testing.T) {
+	wiring, _ := newRunTestWiring(t)
+	ui := &ownerCheckUI{TUI: wiring.UI, invalidated: make(chan struct{}, 1)}
+	wiring.UI = ui
+	started := make(chan struct{})
+	release := make(chan struct{})
+	wiring.LoadHighlightLanguages = func() error {
+		close(started)
+		<-release
+		return nil
+	}
+	wiring.Init(context.Background(), nil, nil, nil, coding.QuietStartupSetting{})
+	<-started
+	close(release)
+	select {
+	case <-ui.invalidated:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the loader did not invalidate the tree")
+	}
+	if got := ui.offLoop.Load(); got != 0 {
+		t.Fatalf("%d renderer invalidations ran off the owner loop", got)
+	}
+	if ui.posts.Load() == 0 {
+		t.Fatal("the loader ran no work through Post")
+	}
+}

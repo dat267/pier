@@ -431,15 +431,23 @@ func (w *RunWiring) Init(ctx context.Context, scopedModels []coding.ScopedModel,
 		w.UI.RenderNow(false)
 	}
 	if w.LoadHighlightLanguages != nil {
+		// Only the grammar loading (file reads and parsing) runs off the loop:
+		// an invalidation walks the mounted components and drops their render
+		// caches, so it goes through Post, the one entry point tui.TUI documents
+		// as safe for a producer goroutine.
+		ui := w.UI
 		go func() {
 			_ = w.LoadHighlightLanguages()
-			if !w.initialized {
+			if ui == nil {
 				return
 			}
-			if w.UI != nil {
-				w.UI.Invalidate()
-			}
-			w.requestRender()
+			ui.Post(func() {
+				if !w.initialized {
+					return
+				}
+				ui.Invalidate()
+				w.requestRender()
+			})
 		}()
 	}
 }
