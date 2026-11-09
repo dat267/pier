@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D415)
+# Deliberate divergences from pi (D1–D416)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6065,3 +6065,18 @@ scan of its own bytes, which is what the rest of the sniffing code guarantees.
 Test: `coding/exiforientation_chunk_sign_test.go`
 (`TestExifWebPChunkSizeWithHighBitSet`), which also pins the two well-formed
 controls.
+
+### D416
+
+**The worked-for notice names the time the agent finished.**
+
+Reference: pi v1.5.0 (f9a26365) ends an agent run without a transcript line;
+pier's `Worked for` notice is itself a project addition (D402).
+
+The notice ends with the local wall-clock time the working period finished, in
+24-hour hours and minutes: `Worked for 1m 23s · ↑48k ↓3.2k · finished at 14:32`.
+It reads the same clock as the period (`workingClock`), so the time is the
+settle that closed it, and it stays display-only like the rest of the line.
+
+Tests: `TestWorkedForNoticeNamesTheLocalFinishTime`,
+`TestWorkingIndicatorShowsElapsedAndTranscriptNotesTheRun`.

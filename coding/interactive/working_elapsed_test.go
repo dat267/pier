@@ -94,6 +94,11 @@ func TestWorkingIndicatorShowsElapsedAndTranscriptNotesTheRun(t *testing.T) {
 	if strings.Count(renderedText(transcript.Chat.Render(80)), "Worked for") != 1 {
 		t.Fatal("the working period added more than one notice")
 	}
+	// D416: the notice ends with the local time the period finished.
+	finished := started.Add(83*time.Second + 400*time.Millisecond).Format("15:04")
+	if got := renderedText(transcript.Chat.Render(80)); !strings.Contains(got, "Worked for 1m 23s · ↑70k ↓4.2k · finished at "+finished) {
+		t.Fatalf("transcript = %q, want the finish time %s", got, finished)
+	}
 	// The notice is its own line: a later status does not replace it.
 	transcript.ShowStatus("Model switched")
 	if got := renderedText(transcript.Chat.Render(80)); !strings.Contains(got, "Worked for 1m 23s") || !strings.Contains(got, "Model switched") {
@@ -233,5 +238,19 @@ func TestWorkingPeriodSpansTheReleasedFollowUpRun(t *testing.T) {
 	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentSettled})
 	if got := notices(); strings.Count(got, "Worked for") != 1 || !strings.Contains(got, "Worked for 25.0s · ↑1.5k ↓150") {
 		t.Fatalf("transcript = %q, want one notice covering the goal and its follow-up", got)
+	}
+}
+
+// D416: the worked-for notice names its finish time in local 24-hour
+// hours:minutes. pi v1.5.0 adds no such line (see D402).
+func TestWorkedForNoticeNamesTheLocalFinishTime(t *testing.T) {
+	transcript, _ := newTranscriptTestRenderer(t, false)
+	previous := workingClock
+	t.Cleanup(func() { workingClock = previous })
+	// 07:05 UTC is 14:05 in the TestMain zone (UTC+7).
+	workingClock = func() time.Time { return time.Date(2026, 11, 10, 7, 5, 59, 0, time.UTC) }
+	transcript.AddWorkedFor(4*time.Second, workingTokenCount{})
+	if got := renderedText(transcript.Chat.Render(80)); !strings.Contains(got, "Worked for 4.0s · finished at 14:05") {
+		t.Fatalf("notice = %q", got)
 	}
 }

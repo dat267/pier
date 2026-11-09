@@ -243,12 +243,14 @@ func (r *TranscriptRenderer) ShowManagedToolStatus(status ManagedToolStatus) {
 }
 
 // AddWorkedFor notes in the transcript how long the agent worked on a
-// prompt (D402). It is its own line, so a later status does not replace it.
+// prompt (D402) and the local time it finished (D416). It is its own line,
+// so a later status does not replace it.
 func (r *TranscriptRenderer) AddWorkedFor(worked time.Duration, tokens workingTokenCount) {
 	label := "Worked for " + formatDuration(float64(worked.Milliseconds()))
 	if text := tokens.String(); text != "" {
 		label += " · " + text
 	}
+	label += " · finished at " + workingClock().Local().Format("15:04")
 	r.Chat.AddChild(tui.NewSpacer(1))
 	r.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg("dim", label) }, 1, 0))
 	r.lastStatusSpacer = nil
