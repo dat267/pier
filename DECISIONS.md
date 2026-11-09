@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D412)
+# Deliberate divergences from pi (D1–D413)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5968,3 +5968,37 @@ Tests: `tui/tracker_overflow_test.go`
 `coding/interactive/exporthtml_sgrparameter_test.go`
 (`TestAnsiSGRParameterClampsWideFields`,
 `TestAnsiSGRParameterNeverWrapsToReset`).
+
+### D413
+
+**Two reference grammars stop matching where the port keeps going.**
+
+Reference: pi v1.5.0 (f9a26365) renders highlight.js 10.7.3. Two of its grammars
+have rules that do not match the text they were meant to match, and a
+bug-for-bug port would color less than the port does.
+
+`languages/nginx.js` builds its third variable variant as
+`begin: /[$@]/ + hljs.UNDERSCORE_IDENT_RE`. In JavaScript a RegExp plus a string
+is string concatenation, so the reference compiles `/[$@]/[a-zA-Z_]\w*` — a
+literal `/`, a `$` or `@`, another `/` — and matches no nginx variable at all:
+`echo $HOME`, `set $x 1;` and `map $a $b { }` all render uncolored variables.
+Pier writes the pattern the grammar meant (`[$@]` + `[a-zA-Z_]\w*`) and colors
+them.
+
+`languages/ruby.js` ends its variable rule with
+`(?=[^@$?])(?![A-Za-z])(?![@$?'])`. The regex engine backtracks `(\w+)` to
+satisfy those lookaheads, so the reference drops the last word character of a
+variable that ends the input: `@a42` renders `@a4` plus a plain `2`, and
+`x = @decorator42` renders `@decorator4` plus `2`. RE2 has no lookahead, so the
+port checks the following character in a before-begin guard and declines the
+match instead, leaving the text uncolored; a variable followed by anything else
+matches in both. Reproducing the reference exactly would color a truncated name,
+so the port keeps declining.
+
+Neither difference is deliberate in the sense of a design choice the port made
+first: both were found by a differential run of 4,584 documents over the 191
+registered languages, where they are the only mismatches. They are recorded here
+because the port keeps its own output.
+
+Tests: `internal/highlight/reference_grammar_quirks_test.go`
+(`TestNginxVariablesAreHighlighted`, `TestRubyVariableAtEndOfInputIsNotPartial`).
