@@ -211,7 +211,7 @@ func buildJS(typescript bool) *Language {
 		ClassName: "params",
 		Variants: []*Mode{
 			Zero(Mode{ClassName: "params", Begin: UnderscoreIdentRe}),
-			{ClassName: "params", Begin: `\(\s*\)`, Skip: true},
+			{NoClassName: true, Begin: `\(\s*\)`, Skip: true},
 			{
 				ClassName:    "params",
 				Begin:        `\(`,

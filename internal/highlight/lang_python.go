@@ -95,7 +95,7 @@ func Python() *Language {
 	params := &Mode{
 		ClassName: "params",
 		Variants: []*Mode{
-			{ClassName: "", Begin: `\(\s*\)`, Skip: true},
+			{NoClassName: true, Begin: `\(\s*\)`, Skip: true},
 			{
 				ClassName:    "params",
 				Begin:        `\(`,

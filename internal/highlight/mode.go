@@ -11,7 +11,13 @@ import (
 // Mode is a highlight.js mode definition. Language files build these; the
 // compiler turns them into compiledMode.
 type Mode struct {
-	ClassName      string
+	ClassName string
+	// NoClassName marks a variant that upstream declares with
+	// `className: ""` or `className: null`. Go cannot tell that from an omitted
+	// field, and expandOrCloneMode would otherwise give the variant its
+	// wrapper's class: python's empty-parameter variant rendered an empty
+	// `hljs-params` span (A444).
+	NoClassName    bool
 	Begin          string
 	End            string
 	BeginKeywords  string
@@ -495,7 +501,7 @@ func expandOrCloneMode(mode *Mode) []*Mode {
 					inherited.Relevance = mode.Relevance
 					changed = true
 				}
-				if inherited.ClassName == "" && mode.ClassName != "" {
+				if !inherited.NoClassName && inherited.ClassName == "" && mode.ClassName != "" {
 					inherited.ClassName = mode.ClassName
 					changed = true
 				}
