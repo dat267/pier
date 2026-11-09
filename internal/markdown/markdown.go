@@ -11,7 +11,11 @@
 //
 // The model keeps each top-level block's byte range so the lexer can be driven
 // incrementally: appending to a source reuses the blocks before the trailing
-// open block and re-lexes only the tail.
+// open block and re-lexes only the tail. Those offsets point into the source it
+// was given, so the caller performs the two rewrites upstream performs before
+// lexing: tui/markdown.go expands tabs to three spaces (markdown.ts) and turns
+// CRLF or a bare CR into LF (marked's Lexer.lex), and a source with neither is
+// passed through unchanged.
 package markdown
 
 // BlockKind identifies a block-level element.

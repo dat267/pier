@@ -410,10 +410,15 @@ func (m *Markdown) Render(width int) []string {
 	}
 
 	normalizedText := text
-	// Replacing tabs copies the whole source; streaming sources usually have
-	// none, so only pay for it when needed.
-	if strings.ContainsRune(text, '\t') {
-		normalizedText = strings.ReplaceAll(text, "\t", "   ")
+	// Replacing tabs and carriage returns copies the whole source; streaming
+	// sources usually have neither, so only pay for it when needed. Both
+	// rewrites happen before any rule runs upstream: markdown.ts expands tabs to
+	// three spaces, then marked's Lexer.lex normalizes line endings with
+	// `src.replace(/\r\n|\r/g, "\n")` (marked 18.0.11 carriageReturn). Doing
+	// them in one pass is equivalent, and a lone CR is a line terminator, not
+	// text.
+	if strings.ContainsAny(text, "\t\r") {
+		normalizedText = normalizeMarkdownSource(text)
 	}
 
 	// Incremental lex. When the source only grew since the last render, the
@@ -676,4 +681,27 @@ type RenderLatexOptions struct {
 // in a later round (divergence D68).
 func RenderLatex(source string, options RenderLatexOptions) (string, bool) {
 	return renderLatexImpl(source, options)
+}
+
+// normalizeMarkdownSource applies the two rewrites upstream performs before
+// lexing: a tab becomes three spaces (markdown.ts) and CRLF or a bare CR
+// becomes LF (marked's Lexer.lex). A CR inside inline text or a code block is a
+// terminator, so it must not reach the block or inline parsers.
+func normalizeMarkdownSource(text string) string {
+	var builder strings.Builder
+	builder.Grow(len(text))
+	for index := 0; index < len(text); index++ {
+		switch text[index] {
+		case '\t':
+			builder.WriteString("   ")
+		case '\r':
+			builder.WriteByte('\n')
+			if index+1 < len(text) && text[index+1] == '\n' {
+				index++
+			}
+		default:
+			builder.WriteByte(text[index])
+		}
+	}
+	return builder.String()
 }
