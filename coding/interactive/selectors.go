@@ -669,7 +669,11 @@ func (c *CustomMessageComponent) rebuild() {
 	c.Container.AddChild(c.box)
 	c.box.Clear()
 
-	label := theme.Fg("customMessageLabel", "\x1b[1m["+c.message.CustomType+"]\x1b[22m")
+	// customType comes from an extension's sendMessage call and is persisted in
+	// the session file, so it is session text like the body below: render it as
+	// data instead of letting an escape sequence it carries run in the frame
+	// (D342, A464).
+	label := theme.Fg("customMessageLabel", "\x1b[1m["+tui.SanitizeUntrustedText(c.message.CustomType)+"]\x1b[22m")
 	c.box.AddChild(tui.NewText(label, 0, 0, nil))
 	c.box.AddChild(tui.NewSpacer(1))
 

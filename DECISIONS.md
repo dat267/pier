@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D421)
+# Deliberate divergences from pi (D1–D422)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6255,3 +6255,30 @@ stream reports as an error instead of panicking.
 
 Tests: `TestProxyRejectsAnOutOfRangeContentIndex`,
 `TestProxyAcceptsARealisticBlockCount`.
+
+### D422
+
+**A custom message's label and renderer-failure text render as data.**
+
+Reference: pi v1.5.0 (`f9a26365`)
+`modes/interactive/components/custom-message.ts` (`rebuild`) and
+`components/custom-entry.ts` interpolate the entry's own text into the frame
+unfiltered:
+
+```ts
+const label = theme.fg("customMessageLabel", `\x1b[1m[${this.message.customType}]\x1b[22m`);
+```
+
+`customType` is persisted in the session and comes from an extension's
+`sendMessage`; a value carrying an escape sequence ran a terminal control
+function (an OSC 0 title set, a mode change) in the middle of a frame. The
+custom entry's renderer-failure fallback interpolated both the `customType` and
+the recovered panic text the same way.
+
+The port already treats that content as data one line below (D342: model- and
+extension-generated session text renders as data), so the label and the
+fallback message now pass through `tui.SanitizeUntrustedText` too. What the
+reference shows for ordinary labels is unchanged.
+
+Tests: `TestTranscriptCustomMessageLabelIsSanitized`,
+`TestCustomEntryFallbackSanitizesItsText`.
