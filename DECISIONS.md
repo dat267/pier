@@ -6000,5 +6000,14 @@ first: both were found by a differential run of 4,584 documents over the 191
 registered languages, where they are the only mismatches. They are recorded here
 because the port keeps its own output.
 
+The nginx variant colors a variable but scores nothing, because the reference's
+broken pattern adds no relevance either: without that, `highlightAuto` picked
+nginx for perl, bash and processing snippets where the reference picks those
+languages. A second differential run of 444 documents through
+`hljs.highlightAuto` matches the reference on every document once the variant's
+relevance is pinned.
+
 Tests: `internal/highlight/reference_grammar_quirks_test.go`
-(`TestNginxVariablesAreHighlighted`, `TestRubyVariableAtEndOfInputIsNotPartial`).
+(`TestNginxVariablesAreHighlighted`, `TestRubyVariableAtEndOfInputIsNotPartial`)
+and `internal/highlight/autodetect_nginx_score_test.go`
+(`TestNginxVariableVariantScoresNothing`).

@@ -9,7 +9,15 @@ func Nginx() *Language {
 	variable.Variants = []*Mode{
 		Variant(variable, func(m *Mode) { m.Begin = `\$\d+` }),
 		Variant(variable, func(m *Mode) { m.Begin = `\$\{`; m.End = `\}` }),
-		Variant(variable, func(m *Mode) { m.Begin = `[$@]` + UnderscoreIdentRe }),
+		// D413: the reference composes this variant from a RegExp and a string,
+		// so it never matches and contributes no relevance. The port's working
+		// pattern colors the variable but scores nothing, which keeps nginx's
+		// auto-detection score equal to the reference's.
+		Variant(variable, func(m *Mode) {
+			m.Begin = `[$@]` + UnderscoreIdentRe
+			m.HasRelevance = true
+			m.Relevance = 0
+		}),
 	}
 
 	strMode := &Mode{ClassName: "string", Contains: []*Mode{BackslashEscape, variable}}
