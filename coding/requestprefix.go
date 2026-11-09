@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"reflect"
 	"sync"
 
 	"github.com/dat267/pier/ai"
@@ -77,7 +78,7 @@ func (s *AgentSession) replayPrefix() *CompactionPrefix {
 		return nil
 	}
 	for index, message := range captured.Messages {
-		if context[index] != message {
+		if !sameWireMessage(context[index], message) {
 			return nil
 		}
 	}
@@ -97,6 +98,19 @@ func llmConverter(convert func([]ai.Message) []ai.Message) func([]ai.Message) []
 		return func(messages []ai.Message) []ai.Message { return messages }
 	}
 	return convert
+}
+
+// sameWireMessage reports whether two messages reach the provider as the same
+// bytes. ConvertToLlm allocates a fresh message for every custom message (a bash
+// execution, a goal event, a compaction or branch summary), so the live context
+// holds a different pointer for the same conversation, and comparing pointers
+// alone made every session that had run a `!cmd`, a goal round or a compaction
+// turn the cache hit off (D419).
+func sameWireMessage(live, captured ai.Message) bool {
+	if live == captured {
+		return true
+	}
+	return reflect.DeepEqual(live, captured)
 }
 
 // endsWithToolCall reports an assistant message that still expects tool results.

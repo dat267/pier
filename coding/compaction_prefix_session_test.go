@@ -294,3 +294,84 @@ func TestSessionCompactionReplaysAcrossTurns(t *testing.T) {
 		t.Fatalf("last message is not the summary instruction: %q", instruction)
 	}
 }
+
+// D419: a custom message (a bash execution, a goal event) converts to a fresh
+// UserMessage on every ConvertToLlm call, so the replay's check that the live
+// context still starts with the captured request must compare messages by
+// content, not by the identity of the pointer the converter allocates. Comparing
+// pointers made every session that ran a `!cmd` or a goal round fall back to the
+// cold serialized summary.
+func TestSessionCompactionReplaysPastACustomMessage(t *testing.T) {
+	manager := NewSessionManager(t.TempDir(), nil)
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 8192}
+	answer := func(requestModel *ai.Model, text string) *ai.AssistantMessageEventStream {
+		message := &ai.AssistantMessage{
+			API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
+			Content: ai.ContentList{ai.TextContent{Text: text}}, StopReason: ai.StopStop,
+			Timestamp: time.Now().UnixMilli(), Usage: ai.Usage{Input: 10, TotalTokens: 10},
+		}
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: message.StopReason, Message: message})
+		}()
+		return stream
+	}
+	var turnPrefix []ai.Message
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: t.TempDir(), Sessions: manager, Model: model, ConvertToLlm: ConvertToLlm,
+		StreamFn: func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			turnPrefix = append([]ai.Message{}, transcript.Messages...)
+			return answer(requestModel, "done")
+		},
+		Settings: SessionSettings{Compaction: smallCompactionSettings()},
+		Control:  &AgentSessionControl{autoCompaction: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A bash execution lands in the context without a request of its own, so the
+	// next request carries the message it converted to.
+	session.recordBashResultAt("echo marker", BashResult{Output: "custom-output"}, false, time.Now().UnixMilli())
+	if err := session.Prompt(context.Background(), "please work", &PromptOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	carried := false
+	for _, message := range turnPrefix {
+		if strings.Contains(prefixMessageText(message), "custom-output") {
+			carried = true
+		}
+	}
+	if !carried {
+		t.Fatalf("the turn's request did not carry the bash execution: %d messages", len(turnPrefix))
+	}
+
+	var summaryRequests []ai.TranscriptContext
+	session.CompactionStreamFn = func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		summaryRequests = append(summaryRequests, transcript)
+		return answer(requestModel, "## Goal\ncontinue")
+	}
+	if _, err := session.CompactSession(context.Background(), ""); err != nil {
+		t.Fatal(err)
+	}
+	if len(summaryRequests) != 1 {
+		t.Fatalf("summary requests = %d", len(summaryRequests))
+	}
+	// The stock path sends one serialized prompt; the replay sends the
+	// conversation itself, so the shape alone proves which ran.
+	sent := summaryRequests[0].Messages
+	if len(sent) < len(turnPrefix)+1 {
+		t.Fatalf("summary request sent %d messages, want the %d-message turn prefix plus the instruction (stock path)",
+			len(sent), len(turnPrefix))
+	}
+	for index, message := range turnPrefix {
+		if text, want := prefixMessageText(sent[index]), prefixMessageText(message); text != want {
+			t.Fatalf("message %d = %q, want the turn's %q", index, text, want)
+		}
+	}
+	if tail := prefixMessageText(sent[len(sent)-2]); tail != "done" {
+		t.Fatalf("replayed tail = %q, want the turn's answer", tail)
+	}
+	if instruction := prefixMessageText(sent[len(sent)-1]); !strings.Contains(instruction, "conversation to summarize") {
+		t.Fatalf("last message is not the summary instruction: %q", instruction)
+	}
+}

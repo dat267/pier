@@ -6172,8 +6172,11 @@ appended tail is new input.
 
 It steps aside, and the stock serialized prompt runs, when the capture is
 missing, the current context no longer starts with the captured request (the
-converter is re-run and every captured message must still be the live one at its
-index, which is how a branch switch or a cleared session reads), the context now
+converter is re-run and every captured message must still be the same message at
+its index, compared by content rather than by pointer, because `ConvertToLlm`
+allocates a fresh message for every custom message, so a `!cmd`, a goal event or
+a summary in the prefix is the same conversation at a new address; that check is
+how a branch switch or a cleared session reads), the context now
 ends in an unanswered tool call (which cannot be the last message of a request),
 the model or provider changed (a wire format and its cache are per
 model), the replay plus instruction would not fit the context window (overflow
@@ -6198,4 +6201,5 @@ Tests: `TestCompactSummarizesFromTheCapturedPrefix`,
 `TestCompactReplaysTheCapturedCacheRetention`,
 `TestSessionCompactionSkipsThePrefixAfterBranchNavigation`,
 `TestSessionCompactionReplaysAppendedContext`,
-`TestSessionCompactionReplaysAcrossTurns`.
+`TestSessionCompactionReplaysAcrossTurns`,
+`TestSessionCompactionReplaysPastACustomMessage`.
