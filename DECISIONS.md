@@ -5806,10 +5806,12 @@ full 48 MB encoding when the tool emitted it unpadded or URL-safe, which is what
 `base64 -w0`-style output and many encoders produce.
 
 `DecodeImageBase64` ports Node's rules, and the tool-result normalizer, the
-prompt-image normalizer and the kitty PNG transcoder all use it, so a payload is
-bounded identically whatever alphabet carried it. The decoder returns one flag for
-"nothing usable", which keeps the existing keep-the-original-block behavior for a
-payload that is really not base64.
+prompt-image normalizer, the kitty PNG transcoder and the MCP resource-blob path
+all use it, so a payload is bounded identically whatever alphabet carried it.
+The decoder returns one flag for "nothing usable", which keeps the existing
+keep-the-original-block behavior for a payload that is really not base64; the MCP
+path turns the same flag into its `invalid base64` note. Consolidating also
+removed a second, hand-rolled copy of these rules in `coding/mcptools.go`.
 
 Tests: `TestDecodeImageBase64MatchesNode` (padded, unpadded, URL-safe, mixed,
 wrapped, padded-then-trailing-garbage, and the single-trailing-character drop,

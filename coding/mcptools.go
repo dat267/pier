@@ -3,7 +3,6 @@ package coding
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"net/url"
@@ -265,34 +264,16 @@ func mcpBlockToContent(server string, block protocol.ContentBlock, options Conve
 }
 
 // decodeMcpBase64 decodes a resource blob like Node's
-// Buffer.from(value, "base64"): non-alphabet characters (whitespace, line
-// breaks) are ignored, the first `=` ends the data, and a lone trailing
-// character is dropped. MCP servers routinely wrap base64 at 76 columns, which
-// Go's strict decoder rejected.
+// Buffer.from(value, "base64"), the rules DecodeImageBase64 implements for the
+// image paths. MCP servers routinely wrap base64 at 76 columns, which Go's
+// strict decoder rejected. The only difference is the error: this path reports
+// a blob it cannot decode instead of keeping an undecodable image block.
 func decodeMcpBase64(value string) ([]byte, error) {
-	var filtered strings.Builder
-	filtered.Grow(len(value))
-filter:
-	for index := 0; index < len(value); index++ {
-		char := value[index]
-		switch {
-		case char >= 'A' && char <= 'Z', char >= 'a' && char <= 'z', char >= '0' && char <= '9', char == '+', char == '/':
-			filtered.WriteByte(char)
-		// Node's base64 decoder accepts the base64url alphabet, mapping `-` to
-		// 62 and `_` to 63 (Buffer.from(value, "base64")).
-		case char == '-':
-			filtered.WriteByte('+')
-		case char == '_':
-			filtered.WriteByte('/')
-		case char == '=':
-			break filter
-		}
+	data, ok := DecodeImageBase64(value)
+	if !ok {
+		return nil, fmt.Errorf("invalid base64")
 	}
-	text := filtered.String()
-	if len(text)%4 == 1 {
-		text = text[:len(text)-1]
-	}
-	return base64.RawStdEncoding.DecodeString(text)
+	return data, nil
 }
 
 // mcpStringValue dereferences an optional string ("" when absent).
