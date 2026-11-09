@@ -603,7 +603,10 @@ func parseLink(src string, i int, image bool, state *inlineState) (Inline, int, 
 		return Inline{}, 0, false
 	}
 	target := strings.TrimSpace(src[end+2 : close])
-	dest, title := splitLinkTarget(target)
+	dest, title, ok := splitLinkTarget(target)
+	if !ok {
+		return Inline{}, 0, false
+	}
 	label := strings.ReplaceAll(strings.ReplaceAll(src[open+1:end], `\[`, "["), `\]`, "]")
 	kind := InlineLink
 	if image {
@@ -663,23 +666,103 @@ func findLinkTargetClosing(src string, start int) int {
 	return -1
 }
 
-func splitLinkTarget(target string) (dest, title string) {
-	if len(target) == 0 {
-		return "", ""
+// splitLinkTarget parses the part of an inline link between the parentheses
+// the way marked 18.0.11's `link` rule does
+// (`^\(\s*(href)(?:(?:[ \t]+(?:\n[ \t]*)?|\n[ \t]*)(title))?\s*\)`), and reports
+// false when the text is not a link at all: pier used to split on the first
+// space and trim quotes, which turned `[t](u v)` into a link with the title
+// `v` and silently dropped ` v` from the rendered message (A437).
+//
+// A destination is an angle span `<...>` (no newline, `<` or `>` inside) or a
+// run of bytes above U+0020 (no ASCII space, tab, newline or control), and
+// may be empty. An optional title follows whitespace in one of three forms:
+// double quoted, single quoted, or parenthesized. Escaped punctuation in
+// either is unescaped, as marked's `anyPunctuation` replacement does (A438).
+func splitLinkTarget(target string) (dest, title string, ok bool) {
+	rest := target
+	if dest, rest, ok = angleLinkDestination(rest); !ok {
+		end := 0
+		for end < len(rest) && rest[end] > 0x20 {
+			end++
+		}
+		dest, rest = rest[:end], rest[end:]
 	}
-	if target[0] == '<' {
-		if end := strings.IndexByte(target, '>'); end >= 0 {
-			dest = target[1:end]
-			rest := strings.TrimSpace(target[end+1:])
-			return dest, strings.Trim(rest, `"'`)
+	// marked strips one angle pair from a matched href whose text still has
+	// one, which is how `[](<>)` yields an empty destination.
+	if len(dest) >= 2 && dest[0] == '<' && dest[len(dest)-1] == '>' {
+		dest = dest[1 : len(dest)-1]
+	}
+	rest = skipLinkTitleSeparator(rest)
+	if rest != "" {
+		if title, rest, ok = splitLinkTitle(rest); !ok {
+			return "", "", false
 		}
 	}
-	for i := 0; i < len(target); i++ {
-		if target[i] == ' ' || target[i] == '\t' {
-			return target[:i], strings.Trim(strings.TrimSpace(target[i:]), `"'`)
+	if rest = strings.TrimSpace(rest); rest != "" {
+		return "", "", false
+	}
+	return unescapePunctuation(dest), unescapePunctuation(title), true
+}
+
+// angleLinkDestination reads `<(?:\.|[^\n<>\\])+>` (`\` escapes the next
+// byte) and reports false when the source is not that form, so the caller can
+// fall back to the bare destination alternative.
+func angleLinkDestination(s string) (dest, rest string, ok bool) {
+	if len(s) == 0 || s[0] != '<' {
+		return "", s, false
+	}
+	for index := 1; index < len(s); index++ {
+		switch s[index] {
+		case '\\':
+			index++
+		case '\n', '<':
+			return "", s, false
+		case '>':
+			if index == 1 {
+				return "", s, false
+			}
+			return s[1:index], s[index+1:], true
 		}
 	}
-	return target, ""
+	return "", s, false
+}
+
+// skipLinkTitleSeparator consumes marked's `(?:[ \t]+(?:\n[ \t]*)?|\n[ \t]*)`:
+// spaces or tabs, then at most one newline with its indentation.
+func skipLinkTitleSeparator(s string) string {
+	index := 0
+	for index < len(s) && (s[index] == ' ' || s[index] == '\t') {
+		index++
+	}
+	if index < len(s) && s[index] == '\n' {
+		index++
+		for index < len(s) && (s[index] == ' ' || s[index] == '\t') {
+			index++
+		}
+	}
+	return s[index:]
+}
+
+// splitLinkTitle reads a title in marked's three forms: "x", 'x' or (x).
+// A backslash escapes the next byte in every form, so an escaped closing
+// delimiter does not end the title.
+func splitLinkTitle(s string) (title, rest string, ok bool) {
+	closing := s[0]
+	if closing != '"' && closing != '\'' && closing != '(' {
+		return "", s, false
+	}
+	if closing == '(' {
+		closing = ')'
+	}
+	for index := 1; index < len(s); index++ {
+		switch s[index] {
+		case '\\':
+			index++
+		case closing:
+			return s[1:index], s[index+1:], true
+		}
+	}
+	return "", s, false
 }
 
 // parseAngle parses an autolink `<scheme:...>` or `<user@host>`.

@@ -5,13 +5,6 @@ Reference: pi v1.5.0 (f9a26365).
 
 ## Open
 
-- **A437** (medium) markdown: an inline link target accepts whitespace in the
-  destination and an unquoted title, so `[docs](https://x/a b)` becomes a link
-  and drops ` b` from the message. Test:
-  `internal/markdown/link_target_parity_test.go`.
-- **A438** (low) markdown: inline link and image destinations keep backslash
-  escapes (`u\)v`), which marked unescapes as `anyPunctuation`. Test:
-  `internal/markdown/link_target_parity_test.go`.
 - **A439** (low) markdown: a table followed by a whitespace-only final line
   renders an extra blank line. Test: `tui/markdown_table_eol_test.go`.
 - **A440** (medium) markdown: an ordered list starting at `0.` renders from 1,
