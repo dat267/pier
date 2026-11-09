@@ -3,6 +3,7 @@ package coding
 import (
 	"maps"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -13,9 +14,10 @@ import (
 // extension statuses, available provider count) used by the interactive mode.
 //
 // Divergences: upstream uses fs.watch/fs.watchFile (with WSL polling); the Go
-// port polls HEAD on a ticker instead (D107, same approach as the theme
-// watcher D75). The branch resolution is synchronous inside the poll
-// goroutine instead of the upstream async exec.
+// port polls HEAD (and a reftable repository's table list, as upstream watches
+// both) on a ticker instead, the same polling approach as the theme watcher
+// (D75). The branch resolution is synchronous inside the poll goroutine
+// instead of the upstream async exec.
 
 // FooterDataProviderOptions configure the provider.
 type FooterDataProviderOptions struct {
@@ -34,15 +36,19 @@ type FooterDataProvider struct {
 	// inventory.
 	mu sync.Mutex
 
-	cwd       string
-	gitPaths  *GitPaths
-	branch    *string // nil = unresolved; "" = detached (upstream null)
-	resolved  bool
-	statuses  map[string]string
-	providers int
-	callbacks map[int]func()
-	nextCB    int
-	disposed  bool
+	cwd      string
+	gitPaths *GitPaths
+	// reftableTablesList is the reftable table list to poll in addition to
+	// HEAD, or "" when the repository is not using the reftable backend
+	// (resolved once, like upstream's existsSync check at setup).
+	reftableTablesList string
+	branch             *string // nil = unresolved; "" = detached (upstream null)
+	resolved           bool
+	statuses           map[string]string
+	providers          int
+	callbacks          map[int]func()
+	nextCB             int
+	disposed           bool
 
 	stopWatch chan struct{}
 	watchDone chan struct{}
@@ -50,11 +56,13 @@ type FooterDataProvider struct {
 
 // NewFooterDataProvider creates the provider for a working directory.
 func NewFooterDataProvider(cwd string, options FooterDataProviderOptions) *FooterDataProvider {
+	gitPaths := FindGitPaths(cwd)
 	provider := &FooterDataProvider{
-		cwd:       cwd,
-		gitPaths:  FindGitPaths(cwd),
-		statuses:  map[string]string{},
-		callbacks: map[int]func(){},
+		cwd:                cwd,
+		gitPaths:           gitPaths,
+		reftableTablesList: reftableTablesListPath(gitPaths),
+		statuses:           map[string]string{},
+		callbacks:          map[int]func(){},
 	}
 	if !options.DisableWatch {
 		interval := 500 * time.Millisecond
@@ -163,6 +171,7 @@ func (f *FooterDataProvider) SetCwd(cwd string) {
 	f.resolved = false
 	f.branch = nil
 	f.gitPaths = FindGitPaths(cwd)
+	f.reftableTablesList = reftableTablesListPath(f.gitPaths)
 	f.mu.Unlock()
 	f.notifyBranchChange()
 }
@@ -226,40 +235,73 @@ func (f *FooterDataProvider) Refresh() {
 	}
 }
 
-// watchLoop polls the git head. The channels are passed in because Dispose
+// watchLoop polls the git state. The channels are passed in because Dispose
 // nils the fields (a double dispose must not close a nil channel).
 func (f *FooterDataProvider) watchLoop(stopWatch, watchDone chan struct{}, interval time.Duration) {
 	defer close(watchDone)
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
-	lastHead := f.readHeadContent()
+	lastState := f.readGitState()
 	for {
 		select {
 		case <-stopWatch:
 			return
 		case <-ticker.C:
-			current := f.readHeadContent()
-			if current == lastHead {
+			current := f.readGitState()
+			if current == lastState {
 				continue
 			}
-			lastHead = current
+			lastState = current
 			f.Refresh()
 		}
 	}
 }
 
-func (f *FooterDataProvider) readHeadContent() string {
+// readGitState returns the git files the footer derives its branch from: HEAD
+// and, in a reftable repository, the table list. Upstream watches both
+// (`core/footer-data-provider.ts` watches `.git/reftable` and
+// `.git/reftable/tables.list`) because "branch switches update files in the
+// reftable directory instead of HEAD"; there HEAD is permanently
+// `ref: refs/heads/.invalid`, so watching HEAD alone never notices a switch.
+func (f *FooterDataProvider) readGitState() string {
 	f.mu.Lock()
 	gitPaths := f.gitPaths
+	tablesListPath := f.reftableTablesList
 	f.mu.Unlock()
 	if gitPaths == nil {
 		return ""
 	}
-	content, err := os.ReadFile(gitPaths.HeadPath)
+	head, err := os.ReadFile(gitPaths.HeadPath)
 	if err != nil {
 		return ""
 	}
-	return DecodeUTF8WithReplacement(content)
+	state := DecodeUTF8WithReplacement(head)
+	if tablesListPath == "" {
+		return state
+	}
+	tablesList, err := os.ReadFile(tablesListPath)
+	if err != nil {
+		return state
+	}
+	return state + "\x00" + DecodeUTF8WithReplacement(tablesList)
+}
+
+// reftableTablesListPath returns the reftable table list of a repository that
+// uses the reftable ref backend, or "" (upstream footer-data-provider.ts
+// checks for .git/reftable and then its tables.list once, at setup).
+func reftableTablesListPath(gitPaths *GitPaths) string {
+	if gitPaths == nil {
+		return ""
+	}
+	reftableDir := filepath.Join(gitPaths.CommonGitDir, "reftable")
+	if info, err := os.Stat(reftableDir); err != nil || !info.IsDir() {
+		return ""
+	}
+	tablesList := filepath.Join(reftableDir, "tables.list")
+	if !fileExists(tablesList) {
+		return ""
+	}
+	return tablesList
 }
 
 // resolveGitBranch resolves the branch from HEAD (caller holds the lock).

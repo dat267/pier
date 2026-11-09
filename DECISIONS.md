@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D409)
+# Deliberate divergences from pi (D1–D410)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5843,3 +5843,26 @@ wrapped, padded-then-trailing-garbage, and the single-trailing-character drop,
 each against bytes measured from Node) and
 `TestToolResultImagesNormalizeUnpaddedAndURLSafeBase64` (all three alphabets
 produce the same normalized image).
+
+### D410
+
+**The footer's git watcher polls the reftable table list too.**
+
+Reference: pi v1.5.0 (f9a26365) `packages/coding-agent/src/core/footer-data-provider.ts`
+watches the directory holding `HEAD` and, when the repository has a
+`reftable` directory, also `.git/reftable` and `.git/reftable/tables.list`,
+because "branch switches update files in the reftable directory instead of
+HEAD". Pier replaces those fs events with a 500 ms poll (D75), and it polled
+`HEAD` alone, so in a reftable repository it never saw a switch: the branch it
+resolved at startup stayed on screen for the rest of the session. Such a
+repository keeps `HEAD` at `ref: refs/heads/.invalid` permanently, so no
+content comparison of `HEAD` can ever change. The poll now compares `HEAD` and
+the table list together, and the table list is resolved once at setup, matching
+upstream's one-time `existsSync` checks.
+
+The `.invalid` sentinel itself is still resolved with `git symbolic-ref`, as
+upstream resolves it. Upstream also watches the reftable directory, which the
+port does not need: every reftable mutation rewrites `tables.list`.
+
+Tests: `TestFooterDataProviderSeesBranchSwitchInReftableRepo` and the files
+backend control `TestFooterDataProviderSeesBranchSwitchInFilesRepo`.
