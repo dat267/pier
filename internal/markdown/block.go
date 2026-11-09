@@ -432,7 +432,11 @@ func (l *blockLexer) lexFence(start int, marker, info string) (*Block, int, bool
 			end--
 		}
 	}
-	return &Block{Kind: BlockCode, Start: start, End: end, Info: info, Body: body, Raw: src[start:end]}, end, true
+	// marked's fences tokenizer trims the info string and then unescapes
+	// punctuation in it (`lang: t[2].trim().replace(anyPunctuation, "$1")`), so
+	// ```\,[r]: \/u``` reports `,[r]: /u` (A441). The string is displayed in the
+	// fence header and passed to the highlighter.
+	return &Block{Kind: BlockCode, Start: start, End: end, Info: unescapePunctuation(info), Body: body, Raw: src[start:end]}, end, true
 }
 
 // isLatexBlockStart reports a `$$` or `\[` block opener.
