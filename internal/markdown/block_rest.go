@@ -850,7 +850,18 @@ func (l *blockLexer) tryTable(start int) (*Block, bool) {
 		// A table body ends at a blank line or at another block; any other line
 		// is a row, even without a pipe, and its cells are fitted to the header
 		// count (Marked's table rule; verified against marked 18.0.11).
-		if isBlankLine(ln.text) || startsOtherBlock(ln.text) {
+		if isBlankLine(ln.text) {
+			// marked's row lookahead accepts a whitespace-only final line that
+			// has no newline after it and does not begin an indented code line
+			// (`(?! *\n|...code...)`), so the line joins the token raw and is
+			// dropped from the rows by `tableRowBlankLine`. Pier used to end
+			// the table there and render the line as an extra blank line (A439).
+			if ln.next == len(src) && ln.next > at && src[ln.next-1] != '\n' && !tableRowExcluded(ln.text) {
+				at = ln.next
+			}
+			break
+		}
+		if startsOtherBlock(ln.text) {
 			break
 		}
 		table.Rows = append(table.Rows, tableRowCells(ln.text, len(aligns)))
@@ -960,4 +971,22 @@ func splitTableRow(line string) []string {
 		cells[i] = strings.ReplaceAll(jsTrim(cell), `\|`, "|")
 	}
 	return cells
+}
+
+// tableRowExcluded reports whether a whitespace-only line begins an indented
+// code line, which is what stops marked's table row group: the `code`
+// alternative of the lookahead is `(?: {4}| {0,3}\t)[^\n]`, so the indent run
+// must be followed by another character.
+func tableRowExcluded(line string) bool {
+	spaces := 0
+	for spaces < len(line) && spaces < 4 && line[spaces] == ' ' {
+		spaces++
+	}
+	if spaces == 4 {
+		return len(line) > 4
+	}
+	if spaces < len(line) && line[spaces] == '\t' {
+		return len(line) > spaces+1
+	}
+	return false
 }
