@@ -49,6 +49,28 @@ matches upstream: `cmd.applyOfflineMode` folds `--offline` and truthy
 **Go uses function fields instead of overridable methods; listeners are compared
 by code pointer.**
 
+### D49
+
+**An astral-plane character is one `StdinBuffer` sequence, not two surrogates.**
+
+Reference: pi v1.5.0 (f9a26365) `packages/tui/src/stdin-buffer.ts`
+`extractCompleteSequences` takes one UTF-16 code unit per step
+(`sequences.push(remaining[0])`), so a character outside the BMP reaches the
+listener as two lone-surrogate strings. Go strings cannot hold an unpaired
+surrogate, so the port iterates runes and emits the whole character once; the
+same reason makes `runeCount` count runes where upstream tests
+`sequence.length === 1`, which only feeds the pending Kitty printable-codepoint
+dedupe.
+
+A byte-level differential run of 1500 inputs (escape sequences, bracketed
+pastes, terminal replies, CJK and Latin text, randomly split across chunks and
+decoded through Node's `StringDecoder` the way `stdin.setEncoding("utf8")` does)
+matched the pinned buffer on every input without an astral character; the astral
+split is the only difference it found.
+
+Tests: `TestProcessTerminalReassemblesUTF8Input` and
+`TestStdinBufferPreservesUnicodeEscapeCharacters`.
+
 ### D50
 
 **Go stdin reads cannot be paused like Node's stdin stream.**
