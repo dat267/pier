@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D417)
+# Deliberate divergences from pi (D1–D418)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -1811,8 +1811,8 @@ validates every step. The agent's objective path uses a create-or-replace
 `agent_before_settle` reserves the next one), unlike the human `/goal set`, which
 queues the first round.
 
-`get_goal` is the only other tool. `DesiredToolNames` keeps `set_goal` always
-active and `get_goal` only while a goal is pursued.
+`get_goal` is the only other tool. `DesiredToolNames` keeps both active for the
+whole session, so a goal transition never changes the request prefix (D418).
 
 All three `set_goal` properties explicitly accept null, while remaining
 optional. Reproducer: a caller exposes every property as required without
@@ -6103,3 +6103,24 @@ case).
 
 Tests: `TestWorkingStatusInBorderElidesOnNarrowScreens`,
 `TestCustomEditorAgainstUpstreamGolden`.
+
+### D418
+
+**Both goal tools stay exposed for the whole session.**
+
+Reference: the goal extension's `DesiredToolNames` (D223, D234) exposes
+`get_goal` only while a goal is pursued, and withdraws it when the goal
+completes, pauses or is cleared.
+
+A provider caches the request prefix, and the tool array plus the system
+prompt's tools and rules sections sit at the front of it. Toggling `get_goal`
+rewrote both, so every create, complete, pause and resume re-billed the whole
+conversation as uncached input: in this repository's session log one `set_goal`
+create was followed by a request of 53,685 uncached input tokens with
+`cacheRead` 0. Both tools are now active from session start, and `get_goal`
+answers `{"goal": null}` when there is none, so a transition only appends
+messages.
+
+Test: `TestGoalToolSetStaysConstantAcrossTransitions`,
+`TestGoalControllerToolExposure`,
+`TestDesiredToolNamesKeepsGetGoalAfterAGoalEnds`

@@ -358,19 +358,21 @@ func goalPausedWithReason(entries []recordedGoalEntry, code string) bool {
 	return false
 }
 
+// D418: both goal tools are active for the whole session, so no transition
+// changes the tool array or the prompt sections a prefix cache covers.
 func TestGoalControllerToolExposure(t *testing.T) {
 	controller, sink := newGoalControllerTest(t)
 	controller.Start("startup")
-	if strings.Join(sink.active, ",") != "set_goal" {
+	if strings.Join(sink.active, ",") != "set_goal,get_goal" {
 		t.Fatalf("active = %v", sink.active)
 	}
 	goalToolText(t, controller, "set_goal", `{"objective":"do it"}`)
 	if strings.Join(sink.active, ",") != "set_goal,get_goal" {
-		t.Fatalf("active = %v", sink.active)
+		t.Fatalf("creating a goal changed the active set: %v", sink.active)
 	}
 	goalToolText(t, controller, "set_goal", `{"status":"complete"}`)
-	if strings.Join(sink.active, ",") != "set_goal" {
-		t.Fatalf("active = %v", sink.active)
+	if strings.Join(sink.active, ",") != "set_goal,get_goal" {
+		t.Fatalf("completing a goal changed the active set: %v", sink.active)
 	}
 }
 

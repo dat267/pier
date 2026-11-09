@@ -4,11 +4,14 @@
 package goal
 
 // DesiredToolNames returns the active tool names the goal feature exposes,
-// given the current list and whether a goal is being pursued. set_goal stays
-// available so the model can be asked to set one; get_goal only means
-// something while a goal is active. The current order is preserved and missing
+// given the current list. Both tools stay available for the whole session so
+// the goal phase never changes the request prefix (D418): a provider caches the
+// prefix, and the tool array plus the system prompt's tools and rules sections
+// sit at its front, so exposing get_goal only while a goal is pursued rewrote
+// both on every create, complete, pause and resume. get_goal reports that there
+// is no goal when that is the case. The current order is preserved and missing
 // names append.
-func DesiredToolNames(current []string, pursuing bool) []string {
+func DesiredToolNames(current []string) []string {
 	seen := map[string]bool{}
 	next := make([]string, 0, len(current)+2)
 	for _, name := range current {
@@ -17,22 +20,11 @@ func DesiredToolNames(current []string, pursuing bool) []string {
 			seen[name] = true
 		}
 	}
-	if !seen["set_goal"] {
-		next = append(next, "set_goal")
-		seen["set_goal"] = true
-	}
-	if pursuing && !seen["get_goal"] {
-		next = append(next, "get_goal")
-		seen["get_goal"] = true
-	}
-	if !pursuing {
-		filtered := next[:0]
-		for _, name := range next {
-			if name != "get_goal" {
-				filtered = append(filtered, name)
-			}
+	for _, name := range []string{"set_goal", "get_goal"} {
+		if !seen[name] {
+			next = append(next, name)
+			seen[name] = true
 		}
-		next = filtered
 	}
 	return next
 }

@@ -464,16 +464,12 @@ func (c *GoalController) Apply(effects []goal.Effect) {
 	}
 }
 
-// SyncTools mirrors the goal phase onto the active tool set.
+// SyncTools mirrors the goal tool set onto the active tools. The set does not
+// depend on the goal phase (D418), so a transition appends messages instead of
+// rewriting the request prefix.
 func (c *GoalController) SyncTools() {
 	current := c.sink.GoalActiveTools()
-	c.mu.Lock()
-	pursuing := false
-	if snapshot := c.machine.Snapshot(); snapshot.Goal != nil {
-		pursuing = snapshot.Goal.Phase == goal.PhaseActive
-	}
-	c.mu.Unlock()
-	next := goal.DesiredToolNames(current, pursuing)
+	next := goal.DesiredToolNames(current)
 	if !sameToolSet(next, current) {
 		c.sink.SetGoalActiveTools(next)
 	}
