@@ -801,7 +801,13 @@ Remaining differences:
   whose status names "MCP servers" among reloaded items.
 - No `mcp_servers` prompt section: it describes non-direct exposures Pier does
   not expose (D185).
-- `WaitForDirectTools` polls every 20ms instead of awaiting ready promises.
+- `WaitForDirectTools` polls every 20ms instead of awaiting ready promises, so
+  it reads a per-attempt `settled` flag rather than the live connection state:
+  upstream's `ready` promise settles when an attempt connects or fails and is
+  only replaced by a reconnect, so a direct server that dropped after it
+  connected must not make the first prompt wait the budget again
+  (`TestWaitForDirectToolsReturnsAfterAConnectedServerDrops`,
+  `TestWaitForDirectToolsStillWaitsForAnUnsettledServer`).
 
 ### D196
 

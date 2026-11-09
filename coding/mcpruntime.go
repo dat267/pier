@@ -127,11 +127,16 @@ type McpServerConnection struct {
 	// Challenge is the last OAuth challenge, for sign-in.
 	Challenge *oauth.OAuthChallenge
 
-	client          *mcp.Client
-	opening         *mcpOpenResult
-	openingCancel   context.CancelFunc
-	openingClient   *mcp.Client
-	toolsReady      bool
+	client        *mcp.Client
+	opening       *mcpOpenResult
+	openingCancel context.CancelFunc
+	openingClient *mcp.Client
+	toolsReady    bool
+	// settled records that the current connect attempt finished, either by
+	// connecting and publishing its tools or by failing. Upstream keeps a
+	// per-attempt `ready` promise, so a connection that drops after it settled
+	// does not make the next first-prompt wait start over.
+	settled         bool
 	closed          bool
 	stderrTail      string
 	cwd             string
@@ -305,6 +310,7 @@ func (c *McpServerConnection) GetClient(ctx context.Context) (*mcp.Client, error
 		c.opening = opening
 		c.openingCancel = cancel
 		c.toolsReady = false
+		c.settled = false
 		c.mu.Unlock()
 
 		go func() {
@@ -317,6 +323,9 @@ func (c *McpServerConnection) GetClient(ctx context.Context) (*mcp.Client, error
 			c.opening = nil
 			c.openingCancel = nil
 			c.openingClient = nil
+			// The attempt is over whether it connected or failed, which is what
+			// the first-prompt wait needs to know (upstream's ready promise).
+			c.settled = true
 			opening.client, opening.err = client, err
 			c.mu.Unlock()
 			cancel()

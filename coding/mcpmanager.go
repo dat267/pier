@@ -288,9 +288,10 @@ func HasMcpDirectTools(entry McpServerEntry) bool {
 
 // WaitForDirectTools waits until every connection whose configured exposures
 // contain `direct` has settled (connected, failed, needs-auth or closed —
-// upstream awaits the ready promises, which settle on connect or failure).
-// It reports false when the timeout expires or ctx is canceled first; the
-// still-connecting servers keep connecting in the background either way.
+// upstream awaits the ready promises, which settle on connect or failure and
+// are not restarted by a later drop). It reports false when the timeout
+// expires or ctx is canceled first; the still-connecting servers keep
+// connecting in the background either way.
 func (m *McpManager) WaitForDirectTools(ctx context.Context, timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 	for {
@@ -302,7 +303,14 @@ func (m *McpManager) WaitForDirectTools(ctx context.Context, timeout time.Durati
 			connection.mu.Lock()
 			state := connection.State
 			toolsReady := connection.toolsReady
+			settled := connection.settled
 			connection.mu.Unlock()
+			if settled {
+				// The attempt already connected or failed, as upstream's
+				// ready promise did. A later drop keeps it settled: waiting
+				// again would stall the first prompt on a server that answered.
+				continue
+			}
 			switch state {
 			case McpServerConnecting, McpServerDisconnected:
 				pending = true
