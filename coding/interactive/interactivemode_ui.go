@@ -35,6 +35,10 @@ type InteractiveUIState struct {
 	// workingIdleSince is when a goal round settled with the goal still
 	// active; the period waits for the next round. Zero otherwise.
 	workingIdleSince time.Time
+	// workingFollowUps marks the waiting period as continuing into the run that
+	// carries the follow-ups its settle released (D385); that run's leading user
+	// message closes nothing.
+	workingFollowUps bool
 
 	FooterData *coding.FooterDataProvider
 	Footer     *FooterComponent
@@ -222,6 +226,25 @@ func (s *InteractiveUIState) PauseWorkingClock(now time.Time) {
 	}
 }
 
+// ContinueWorkingPeriodAcrossFollowUps marks the next run as the one carrying
+// the follow-ups this period's settle released (D385). That run opens with the
+// follow-up's user message, which belongs to the period like a goal round's
+// custom message, so it must not close the waiting period as a fresh prompt
+// does.
+func (s *InteractiveUIState) ContinueWorkingPeriodAcrossFollowUps() {
+	if !s.workingSince.IsZero() {
+		s.workingFollowUps = true
+	}
+}
+
+// ConsumeWorkingContinuation reports, once, whether the next user message
+// starts the released follow-up run rather than a fresh prompt.
+func (s *InteractiveUIState) ConsumeWorkingContinuation() bool {
+	continues := s.workingFollowUps
+	s.workingFollowUps = false
+	return continues
+}
+
 // CloseIdleWorkingPeriod ends a period that was waiting for a goal round,
 // timed to when it went idle; false when none was waiting.
 func (s *InteractiveUIState) CloseIdleWorkingPeriod() (time.Duration, workingTokenCount, bool) {
@@ -268,6 +291,7 @@ func (s *InteractiveUIState) EndWorkingMessageUsage(usage ai.Usage) {
 func (s *InteractiveUIState) StartWorkingClock(now time.Time) {
 	s.workingSince = now
 	s.workingIdleSince = time.Time{}
+	s.workingFollowUps = false
 	s.workingTokens = workingTokenCount{}
 	s.workingMessage = workingTokenCount{}
 	if working, ok := s.ActiveStatusIndicator.(*StatusIndicator); ok && working.Kind == StatusWorking {
@@ -285,6 +309,7 @@ func (s *InteractiveUIState) StopWorkingClock(now time.Time) (time.Duration, wor
 	tokens := s.workingTokens.plus(s.workingMessage)
 	s.workingSince = time.Time{}
 	s.workingIdleSince = time.Time{}
+	s.workingFollowUps = false
 	s.workingTokens = workingTokenCount{}
 	s.workingMessage = workingTokenCount{}
 	return worked, tokens, true

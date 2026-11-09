@@ -5647,7 +5647,10 @@ period closes at that settle before the prompt starts its own. The follow-ups
 that goal held (D385) belong to the same period: the settle that releases them
 reports the run still to come (`SessionEvent.FollowUpsPending`), so the
 released run's time and tokens are added to the agent's until everything
-finishes, with one notice at the end. The
+finishes, with one notice at the end. Because that run opens with the
+follow-up's own user message, the settle also marks the period as continuing,
+and that one message starts no new period; an actual prompt still closes a
+waiting period at its settle. The
 working indicator appends the time since in whole seconds (`Working (1m 5s)`),
 across every working indicator the period shows, and ticks once a second even
 when a custom indicator hides the spinner frames. Once the provider reports usage it

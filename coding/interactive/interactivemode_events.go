@@ -232,8 +232,12 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 			case *ai.AssistantMessage:
 				d.UIState.StartWorkingMessageUsage()
 			case *ai.UserMessage:
-				// A prompt after a goal settled without another round (the goal
-				// was paused while idle) closes that period first.
+				// The released follow-up run continues the period its settle
+				// reported (D385); anything else is a fresh prompt, which closes
+				// a period left waiting (a goal paused while idle) first.
+				if d.UIState.ConsumeWorkingContinuation() {
+					break
+				}
 				if worked, tokens, ok := d.UIState.CloseIdleWorkingPeriod(); ok {
 					if d.Transcript != nil {
 						d.Transcript.AddWorkedFor(worked, tokens)
@@ -293,6 +297,9 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 				// Another run belongs to this period: the goal's next round, or
 				// the follow-ups the goal held (D385).
 				d.UIState.PauseWorkingClock(workingClock())
+				if event.FollowUpsPending {
+					d.UIState.ContinueWorkingPeriodAcrossFollowUps()
+				}
 			} else if worked, tokens, ok := d.UIState.StopWorkingClock(workingClock()); ok && d.Transcript != nil {
 				d.Transcript.AddWorkedFor(worked, tokens)
 			}

@@ -219,9 +219,13 @@ func TestWorkingPeriodSpansTheReleasedFollowUpRun(t *testing.T) {
 		t.Fatal("the period closed before the released follow-up ran")
 	}
 
-	// The released run: the clock and tokens continue, no second period.
+	// The released run: the clock and tokens continue, no second period. Its
+	// transcript opens with the held follow-up's user message, which belongs to
+	// this period just as a goal round's custom message does, so it must not be
+	// mistaken for a fresh prompt that closes the waiting period.
 	at(21 * time.Second)
 	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentStart})
+	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionMessageStart, Agent: agentEvent("message_start", &ai.UserMessage{Content: ai.StringOrBlocks{Text: "after the goal"}})})
 	dispatcher.HandleEvent(assistant(coding.SessionMessageStart, ai.Usage{}))
 	dispatcher.HandleEvent(assistant(coding.SessionMessageEnd, ai.Usage{Input: 500, Output: 50}))
 	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentEnd})
