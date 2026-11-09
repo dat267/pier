@@ -5685,8 +5685,8 @@ streaming one's usage so far (never lower than that message already showed),
 where in counts every prompt token processed
 (input, cache reads and cache writes), so a multi-turn run counts its context
 once per turn. At `agent_settled` the transcript adds a dim
-`Worked for 1m 23s · ↑48k ↓3.2k` line, with tenths under a minute as the bash
-tool's `Took` label has. The line is display-only: it is not written to the session,
+`Finished at 14:32 · worked for 1m 23s · ↑48k ↓3.2k · 89% cached` line (D416),
+with tenths under a minute as the bash tool's `Took` label has. The line is display-only: it is not written to the session,
 so a resumed session does not show it. A period belongs to the session it
 timed, so replacing the session discards it in `teardownCurrentSession` instead
 of carrying its elapsed time and tokens into the new session's first notice,
@@ -6076,12 +6076,21 @@ controls.
 Reference: pi v1.5.0 (f9a26365) ends an agent run without a transcript line;
 pier's `Worked for` notice is itself a project addition (D402).
 
-The notice ends with the local wall-clock time the working period finished, in
-24-hour hours and minutes: `Worked for 1m 23s · ↑48k ↓3.2k · finished at 14:32`.
+The notice is read for when a run ended, so it leads with the local wall-clock
+time the working period finished, in 24-hour hours and minutes, then the
+duration, then the tokens, then the share of them the provider served from its
+prompt cache: `Finished at 14:32 · worked for 1m 23s · ↑48k ↓3.2k · 89% cached`.
 It reads the same clock as the period (`workingClock`), so the time is the
 settle that closed it, and it stays display-only like the rest of the line.
 
+The cache share is `cacheRead` over the counted input (D402's in, which already
+includes cache reads and writes), rounded to a whole percent. A provider that
+reports no cache activity has no share to show, so the field is omitted rather
+than printed as 0%; the working indicator's own label is unchanged (D417 keeps
+it narrow). The compaction notice keeps the duration-first form of D406.
+
 Tests: `TestWorkedForNoticeNamesTheLocalFinishTime`,
+`TestWorkedForNoticeLeadsWithFinishTimeAndCacheShare`,
 `TestWorkingIndicatorShowsElapsedAndTranscriptNotesTheRun`.
 
 ### D417

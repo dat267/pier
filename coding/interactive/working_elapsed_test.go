@@ -72,7 +72,7 @@ func TestWorkingIndicatorShowsElapsedAndTranscriptNotesTheRun(t *testing.T) {
 	// A retry ends the agent run and starts another inside the same working
 	// period: no notice yet, and the clock and tokens keep counting.
 	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentEnd, WillRetry: true})
-	if got := renderedText(transcript.Chat.Render(80)); strings.Contains(got, "Worked for") {
+	if got := renderedText(transcript.Chat.Render(80)); strings.Contains(got, "worked for") {
 		t.Fatalf("agent_end before settling added a notice: %q", got)
 	}
 	workingClock = func() time.Time { return started.Add(80 * time.Second) }
@@ -88,20 +88,20 @@ func TestWorkingIndicatorShowsElapsedAndTranscriptNotesTheRun(t *testing.T) {
 
 	workingClock = func() time.Time { return started.Add(83*time.Second + 400*time.Millisecond) }
 	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentSettled})
-	if got := renderedText(transcript.Chat.Render(80)); !strings.Contains(got, "Worked for 1m 23s · ↑70k ↓4.2k") {
+	if got := renderedText(transcript.Chat.Render(80)); !strings.Contains(got, "worked for 1m 23s · ↑70k ↓4.2k") {
 		t.Fatalf("transcript = %q, want the worked-for notice for the whole period", got)
 	}
-	if strings.Count(renderedText(transcript.Chat.Render(80)), "Worked for") != 1 {
+	if strings.Count(renderedText(transcript.Chat.Render(80)), "worked for") != 1 {
 		t.Fatal("the working period added more than one notice")
 	}
 	// D416: the notice ends with the local time the period finished.
 	finished := started.Add(83*time.Second + 400*time.Millisecond).Format("15:04")
-	if got := renderedText(transcript.Chat.Render(80)); !strings.Contains(got, "Worked for 1m 23s · ↑70k ↓4.2k · finished at "+finished) {
+	if got := renderedText(transcript.Chat.Render(80)); !strings.Contains(got, "Finished at "+finished+" · worked for 1m 23s · ↑70k ↓4.2k") {
 		t.Fatalf("transcript = %q, want the finish time %s", got, finished)
 	}
 	// The notice is its own line: a later status does not replace it.
 	transcript.ShowStatus("Model switched")
-	if got := renderedText(transcript.Chat.Render(80)); !strings.Contains(got, "Worked for 1m 23s") || !strings.Contains(got, "Model switched") {
+	if got := renderedText(transcript.Chat.Render(80)); !strings.Contains(got, "worked for 1m 23s") || !strings.Contains(got, "Model switched") {
 		t.Fatalf("transcript after a status = %q", got)
 	}
 	// Settling without a running clock (a replayed event) adds nothing.
@@ -157,24 +157,24 @@ func TestWorkingPeriodSpansGoalRounds(t *testing.T) {
 
 	at(0)
 	round(ai.Usage{Input: 1000, Output: 100}, 10*time.Second, true)
-	if strings.Contains(notices(), "Worked for") {
+	if strings.Contains(notices(), "worked for") {
 		t.Fatalf("a goal round still pursuing added a notice: %q", notices())
 	}
 	at(11 * time.Second)
 	round(ai.Usage{Input: 2000, Output: 200}, 20*time.Second, false)
-	if got := notices(); strings.Count(got, "Worked for") != 1 || !strings.Contains(got, "Worked for 20.0s · ↑3.0k ↓300") {
+	if got := notices(); strings.Count(got, "worked for") != 1 || !strings.Contains(got, "worked for 20.0s · ↑3.0k ↓300") {
 		t.Fatalf("transcript = %q, want one notice for both goal rounds", got)
 	}
 
 	// An aborted settle ends the period even while the goal is active.
 	at(30 * time.Second)
 	round(ai.Usage{Output: 5}, 32*time.Second, true)
-	before := strings.Count(notices(), "Worked for")
+	before := strings.Count(notices(), "worked for")
 	at(33 * time.Second)
 	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentStart})
 	at(34 * time.Second)
 	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentSettled, Aborted: true, GoalPursuing: true})
-	if got := strings.Count(notices(), "Worked for"); got != before+1 || !strings.Contains(notices(), "Worked for 4.0s") {
+	if got := strings.Count(notices(), "worked for"); got != before+1 || !strings.Contains(notices(), "worked for 4.0s") {
 		t.Fatalf("aborted goal round: %q", notices())
 	}
 
@@ -184,7 +184,7 @@ func TestWorkingPeriodSpansGoalRounds(t *testing.T) {
 	round(ai.Usage{Output: 7}, 45*time.Second, true)
 	at(90 * time.Second)
 	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionMessageStart, Agent: agentEvent("message_start", &ai.UserMessage{Content: ai.StringOrBlocks{Text: "next"}})})
-	if !strings.Contains(notices(), "Worked for 5.0s · ↑0 ↓7") {
+	if !strings.Contains(notices(), "worked for 5.0s · ↑0 ↓7") {
 		t.Fatalf("idle goal period: %q", notices())
 	}
 	if !uiState.WorkingClockRunning() {
@@ -217,7 +217,7 @@ func TestWorkingPeriodSpansTheReleasedFollowUpRun(t *testing.T) {
 	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentEnd})
 	at(20 * time.Second)
 	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentSettled, FollowUpsPending: true})
-	if got := notices(); strings.Contains(got, "Worked for") {
+	if got := notices(); strings.Contains(got, "worked for") {
 		t.Fatalf("settling with a released follow-up run pending added a notice: %q", got)
 	}
 	if !uiState.WorkingClockRunning() {
@@ -236,7 +236,7 @@ func TestWorkingPeriodSpansTheReleasedFollowUpRun(t *testing.T) {
 	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentEnd})
 	at(25 * time.Second)
 	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentSettled})
-	if got := notices(); strings.Count(got, "Worked for") != 1 || !strings.Contains(got, "Worked for 25.0s · ↑1.5k ↓150") {
+	if got := notices(); strings.Count(got, "worked for") != 1 || !strings.Contains(got, "worked for 25.0s · ↑1.5k ↓150") {
 		t.Fatalf("transcript = %q, want one notice covering the goal and its follow-up", got)
 	}
 }
@@ -250,7 +250,31 @@ func TestWorkedForNoticeNamesTheLocalFinishTime(t *testing.T) {
 	// 07:05 UTC is 14:05 in the TestMain zone (UTC+7).
 	workingClock = func() time.Time { return time.Date(2026, 11, 10, 7, 5, 59, 0, time.UTC) }
 	transcript.AddWorkedFor(4*time.Second, workingTokenCount{})
-	if got := renderedText(transcript.Chat.Render(80)); !strings.Contains(got, "Worked for 4.0s · finished at 14:05") {
+	if got := renderedText(transcript.Chat.Render(80)); !strings.Contains(got, "Finished at 14:05 · worked for 4.0s") {
 		t.Fatalf("notice = %q", got)
+	}
+}
+
+// The worked-for notice is read for when a run ended, so it leads with that,
+// and its cache share says how much of the input the provider served from its
+// prompt cache.
+func TestWorkedForNoticeLeadsWithFinishTimeAndCacheShare(t *testing.T) {
+	transcript, _ := newTranscriptTestRenderer(t, false)
+	previous := workingClock
+	t.Cleanup(func() { workingClock = previous })
+	// 20:25 UTC is 03:25 in the TestMain zone (UTC+7).
+	workingClock = func() time.Time { return time.Date(2026, 11, 10, 20, 25, 0, 0, time.UTC) }
+	transcript.AddWorkedFor(4*time.Minute+17*time.Second, workingTokenCount{in: 899_000, out: 5_700, cacheRead: 852_000})
+	want := "Finished at 03:25 · worked for 4m 17s · ↑899k ↓5.7k · 95% cached"
+	if got := renderedText(transcript.Chat.Render(80)); !strings.Contains(got, want) {
+		t.Fatalf("notice = %q, want %q", got, want)
+	}
+
+	// A provider that reports no cache activity has no share to show.
+	transcript2, _ := newTranscriptTestRenderer(t, false)
+	transcript2.AddWorkedFor(2*time.Second, workingTokenCount{in: 100, out: 10})
+	want = "Finished at 03:25 · worked for 2.0s · ↑100 ↓10"
+	if got := renderedText(transcript2.Chat.Render(80)); !strings.Contains(got, want) || strings.Contains(got, "cached") {
+		t.Fatalf("notice = %q, want %q", got, want)
 	}
 }

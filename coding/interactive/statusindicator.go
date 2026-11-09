@@ -99,18 +99,31 @@ func NewWorkingStatusIndicator(host tui.RenderRequester, message string, indicat
 
 // workingTokenCount is a run's tokens in (every prompt token the provider
 // processed: input, cache reads and cache writes) and out (D402).
-type workingTokenCount struct{ in, out int64 }
+type workingTokenCount struct {
+	in, out int64
+	// cacheRead is the part of in the provider served from its prompt cache.
+	cacheRead int64
+}
 
 func workingTokensOf(usage ai.Usage) workingTokenCount {
-	return workingTokenCount{in: usage.Input + usage.CacheRead + usage.CacheWrite, out: usage.Output}
+	return workingTokenCount{
+		in: usage.Input + usage.CacheRead + usage.CacheWrite, out: usage.Output,
+		cacheRead: usage.CacheRead,
+	}
 }
 
 func (c workingTokenCount) plus(other workingTokenCount) workingTokenCount {
-	return workingTokenCount{in: c.in + other.in, out: c.out + other.out}
+	return workingTokenCount{
+		in: c.in + other.in, out: c.out + other.out,
+		cacheRead: c.cacheRead + other.cacheRead,
+	}
 }
 
 func (c workingTokenCount) atLeast(other workingTokenCount) workingTokenCount {
-	return workingTokenCount{in: max(c.in, other.in), out: max(c.out, other.out)}
+	return workingTokenCount{
+		in: max(c.in, other.in), out: max(c.out, other.out),
+		cacheRead: max(c.cacheRead, other.cacheRead),
+	}
 }
 
 // String is "↑48k ↓3.2k" in the footer's token format, or "" before the
@@ -120,6 +133,20 @@ func (c workingTokenCount) String() string {
 		return ""
 	}
 	return "↑" + FormatTokens(c.in) + " ↓" + FormatTokens(c.out)
+}
+
+// cacheShare is how much of the counted input the provider served from its
+// prompt cache, as `95% cached`, or "" when it reported no cache activity (a
+// provider without a cache reports nothing, and 0% would be noise there).
+func (c workingTokenCount) cacheShare() string {
+	if c.cacheRead <= 0 || c.in <= 0 {
+		return ""
+	}
+	share := (float64(c.cacheRead)/float64(c.in))*100 + 0.5
+	if share > 100 {
+		share = 100
+	}
+	return strconv.Itoa(int(share)) + "% cached"
 }
 
 // workingElapsedLabel is the working indicator's suffix: the elapsed time in

@@ -84,10 +84,10 @@ func TestSessionSwitchDiscardsTheOldWorkingPeriod(t *testing.T) {
 			app.events.HandleEvent(&coding.SessionEvent{Type: coding.SessionAgentSettled})
 
 			notices := strings.Join(app.chat.Render(120), "\n")
-			if got := strings.Count(notices, "Worked for"); got != 1 {
+			if got := strings.Count(notices, "worked for"); got != 1 {
 				t.Fatalf("notices = %d, want the new session's one:\n%s", got, notices)
 			}
-			if !strings.Contains(notices, "Worked for 5.0s · ↑10 ↓2") {
+			if !strings.Contains(notices, "worked for 5.0s · ↑10 ↓2") {
 				t.Fatalf("transcript = %q, want only the new session's work", notices)
 			}
 		})

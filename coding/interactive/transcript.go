@@ -242,15 +242,19 @@ func (r *TranscriptRenderer) ShowManagedToolStatus(status ManagedToolStatus) {
 	r.requestRender()
 }
 
-// AddWorkedFor notes in the transcript how long the agent worked on a
-// prompt (D402) and the local time it finished (D416). It is its own line,
-// so a later status does not replace it.
+// AddWorkedFor notes in the transcript when the agent finished and how long it
+// worked on a prompt (D402, D416). The finish time leads because that is what
+// the line is read for; the tokens and the cache share follow. It is its own
+// line, so a later status does not replace it.
 func (r *TranscriptRenderer) AddWorkedFor(worked time.Duration, tokens workingTokenCount) {
-	label := "Worked for " + formatDuration(float64(worked.Milliseconds()))
+	label := "Finished at " + workingClock().Local().Format("15:04") +
+		" · worked for " + formatDuration(float64(worked.Milliseconds()))
 	if text := tokens.String(); text != "" {
 		label += " · " + text
 	}
-	label += " · finished at " + workingClock().Local().Format("15:04")
+	if share := tokens.cacheShare(); share != "" {
+		label += " · " + share
+	}
 	r.Chat.AddChild(tui.NewSpacer(1))
 	r.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg("dim", label) }, 1, 0))
 	r.lastStatusSpacer = nil
@@ -945,8 +949,8 @@ func (r *TranscriptRenderer) AddCompactionCostNotice(notice CompactionCostNotice
 	}
 	line := label + ": "
 	// D406: a live compaction reports how long the run took, in the same form as
-	// the "Worked for" line (e.g. "6m 18s · 2.0k tokens billed"), where upstream
-	// prints the billed tokens alone.
+	// the worked-for line's duration (e.g. "6m 18s · 2.0k tokens billed"), where
+	// upstream prints the billed tokens alone.
 	if notice.Duration > 0 {
 		line += formatDuration(float64(notice.Duration.Milliseconds())) + " · "
 	}
