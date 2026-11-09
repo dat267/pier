@@ -437,8 +437,10 @@ func unorderedListMarker(item *Block) (string, bool) {
 func (r *Renderer) renderList(list *Block, depth int, width int, styleContext *inlineStyleContext) []string {
 	var lines []string
 	indent := strings.Repeat("    ", depth)
+	// The reference uses the token's numeric start, which zero satisfies;
+	// 1 is only the fallback for a list without one (A440).
 	startNumber := 1
-	if list.StartNumber > 0 {
+	if list.Ordered {
 		startNumber = list.StartNumber
 	}
 

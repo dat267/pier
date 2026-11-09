@@ -46,8 +46,7 @@ func listMarkerInterrupts(line string) bool {
 	}
 	if ordered {
 		// The reference's pattern is `1[.)]`: the literal digit one, so `0. x`
-		// does not interrupt. orderedStart normalizes 0 to 1 for a list's start
-		// number, so the digits are read here instead.
+		// does not interrupt a paragraph.
 		markerStart, _ := skipIndent(line, 4)
 		markerEnd := markerStart
 		for markerEnd < len(line) && line[markerEnd] >= '0' && line[markerEnd] <= '9' {
@@ -624,15 +623,16 @@ func markerEndIndex(line string) int {
 	return i
 }
 
+// orderedStart reads an ordered list's start number the way marked's list
+// tokenizer does (`start: +bull.slice(0, -1)`): the marker digits themselves,
+// so `0. a` starts at zero. The renderer picks 1 only for a list with no
+// number at all (A440).
 func orderedStart(line string) int {
 	i, _ := skipIndent(line, 4)
 	n := 0
 	for i < len(line) && line[i] >= '0' && line[i] <= '9' {
 		n = n*10 + int(line[i]-'0')
 		i++
-	}
-	if n == 0 {
-		n = 1
 	}
 	return n
 }
