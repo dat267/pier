@@ -144,6 +144,16 @@ func (a *App) teardownCurrentSession() {
 	}
 	a.session.Abort(context.Background())
 	a.session.Dispose()
+	// The working period and the indicator that showed it belonged to the
+	// session going away: drop both, so nothing works, spins or adds the old
+	// run's time to the new session's first notice (D402). Upstream's own
+	// replacement paths begin with clearStatusIndicator
+	// (interactive-mode.ts handleResumeSession, handleImportCommand,
+	// handleClearCommand, stop).
+	if a.uiState != nil {
+		a.uiState.DiscardWorkingPeriod()
+		a.uiState.ClearStatusIndicator("", false)
+	}
 	// The loop is running this replacement, so events the outgoing session
 	// queued before its listener was removed are still pending. The incoming
 	// transcript is rebuilt from persisted entries; applying those stale

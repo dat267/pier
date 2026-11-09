@@ -5662,11 +5662,17 @@ where in counts every prompt token processed
 once per turn. At `agent_settled` the transcript adds a dim
 `Worked for 1m 23s · ↑48k ↓3.2k` line, with tenths under a minute as the bash
 tool's `Took` label has. The line is display-only: it is not written to the session,
-so a resumed session does not show it.
+so a resumed session does not show it. A period belongs to the session it
+timed, so replacing the session discards it in `teardownCurrentSession` instead
+of carrying its elapsed time and tokens into the new session's first notice,
+and drops the working indicator with it; upstream's own replacement paths begin
+with `clearStatusIndicator` (`interactive-mode.ts` `handleResumeSession`,
+`handleImportCommand`, `handleClearCommand`, `stop`).
 
 Tests: `TestWorkingIndicatorShowsElapsedAndTranscriptNotesTheRun`,
 `TestWorkingPeriodSpansGoalRounds`, `TestWorkingPeriodSpansTheReleasedFollowUpRun`,
-`TestWorkingElapsedLabelFormats`, `TestLoaderElapsedLabelTicksEachSecond`;
+`TestWorkingElapsedLabelFormats`, `TestLoaderElapsedLabelTicksEachSecond`,
+`TestSessionSwitchDiscardsTheOldWorkingPeriod`;
 `TestGoalSettleReportsThePendingFollowUpRun` covers the flag itself.
 
 ### D403

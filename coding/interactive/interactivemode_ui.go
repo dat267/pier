@@ -254,6 +254,17 @@ func (s *InteractiveUIState) CloseIdleWorkingPeriod() (time.Duration, workingTok
 	return s.StopWorkingClock(s.workingIdleSince)
 }
 
+// DiscardWorkingPeriod drops a period without a notice. A period belongs to the
+// session it timed, so replacing the session discards it instead of carrying
+// its elapsed time and tokens into the new session's first notice (D402).
+func (s *InteractiveUIState) DiscardWorkingPeriod() {
+	s.workingSince = time.Time{}
+	s.workingIdleSince = time.Time{}
+	s.workingFollowUps = false
+	s.workingTokens = workingTokenCount{}
+	s.workingMessage = workingTokenCount{}
+}
+
 // WorkingClockRunning reports whether a working period is being timed.
 func (s *InteractiveUIState) WorkingClockRunning() bool { return !s.workingSince.IsZero() }
 
