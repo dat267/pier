@@ -6145,8 +6145,10 @@ $0.087.
 prefix cache covers the conversation and only the instruction is new. The replay
 uses the conversation's `SessionID`, the captured thinking level (a template
 that renders effort in the system prompt would otherwise re-prefill everything)
-and `CacheRetentionShort` instead of the summarization path's usual
-`CacheRetentionNone`.
+and the conversation's `CacheRetention`, resolved the way the turn's own request
+resolved it (a `cache_control` marker is part of the cached prefix, so a replay
+that asked for a different retention than the turn did would miss), instead of
+the summarization path's usual `CacheRetentionNone`.
 
 It steps aside, and the stock serialized prompt runs, when the capture is
 missing, the model or provider changed (a wire format and its cache are per
@@ -6162,4 +6164,5 @@ Tests: `TestCompactSummarizesFromTheCapturedPrefix`,
 `TestCompactFallsBackWhenThePrefixModelDiffers`,
 `TestCompactFallsBackWhenThePrefixSummaryDoesNotFit`,
 `TestCompactSkipsThePrefixWhenTheWindowIsFull`,
-`TestCompactPrefixInstructionFollowsTheConversation`.
+`TestCompactPrefixInstructionFollowsTheConversation`,
+`TestCompactReplaysTheCapturedCacheRetention`.

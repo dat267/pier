@@ -29,6 +29,7 @@ func (c *requestPrefixCapture) record(model *ai.Model, transcript ai.TranscriptC
 	prefix := &CompactionPrefix{Model: model, Messages: append([]ai.Message{}, transcript.Messages...)}
 	if options != nil {
 		prefix.Reasoning = options.Reasoning
+		prefix.CacheRetention = options.CacheRetention
 	}
 	c.mu.Lock()
 	c.prefix = prefix

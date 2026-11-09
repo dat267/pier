@@ -223,3 +223,46 @@ func TestCompactSkipsThePrefixWhenTheWindowIsFull(t *testing.T) {
 		t.Fatal("a full window must fall back to the serialized prompt")
 	}
 }
+
+// The cache_control marker a request carries depends on its retention, so a
+// replay that resolves a different retention than the turn did changes the
+// prefix and loses the cache read it exists for (D419).
+func TestCompactReplaysTheCapturedCacheRetention(t *testing.T) {
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000}
+	cases := []struct {
+		name     string
+		captured ai.CacheRetention
+		envLong  bool
+		want     ai.CacheRetention
+	}{
+		{name: "unset turn follows the provider default", want: ai.CacheRetentionShort},
+		{name: "the turn asked for a long cache", captured: ai.CacheRetentionLong, want: ai.CacheRetentionLong},
+		{name: "the environment asks for a long cache", envLong: true, want: ai.CacheRetentionLong},
+		{name: "the turn disabled caching", captured: ai.CacheRetentionNone, want: ai.CacheRetentionNone},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			if testCase.envLong {
+				t.Setenv("PI_CACHE_RETENTION", "long")
+			} else {
+				t.Setenv("PI_CACHE_RETENTION", "")
+			}
+			var requests []summaryRequest
+			options := CompactionOptions{
+				Model: model, Ctx: context.Background(), StreamFn: summaryStreamFn(&requests, nil),
+				Prefix: &CompactionPrefix{
+					Model: model, Messages: prefixUserTurns("first"), CacheRetention: testCase.captured,
+				},
+			}
+			if _, err := Compact(prefixTestPreparation(t), options); err != nil {
+				t.Fatal(err)
+			}
+			if len(requests) != 1 {
+				t.Fatalf("requests = %d", len(requests))
+			}
+			if got := requests[0].options.CacheRetention; got != testCase.want {
+				t.Fatalf("replay retention = %q, want %q", got, testCase.want)
+			}
+		})
+	}
+}

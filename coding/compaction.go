@@ -1329,6 +1329,10 @@ type CompactionPrefix struct {
 	// Reasoning is the thinking level the captured request ran at. Replaying it
 	// keeps the prompt identical on providers whose template renders it.
 	Reasoning ai.ThinkingLevel
+	// CacheRetention is the retention the captured request asked for, empty when
+	// it left the choice to the provider environment. The replay resolves it the
+	// same way, because the marker it produces is part of the cached prefix.
+	CacheRetention ai.CacheRetention
 }
 
 // Compact generates summaries for compaction using prepared data
@@ -1464,8 +1468,12 @@ func summarizeFromPrefix(preparation *CompactionPreparation, options CompactionO
 
 	escalation := &summarizationEscalation{}
 	reasoning := prefix.Reasoning
+	// The turn left the choice to the provider environment unless it named one,
+	// and the marker that choice produces is part of the prefix the provider
+	// cached, so replay it resolved exactly as the turn's own request did.
 	response, err := requestSummarization(options.Model, ai.TranscriptContext{Messages: messages}, options,
-		summarizationReasoningEnabled(options.Model, reasoning), reasoning, ai.CacheRetentionShort, escalation)
+		summarizationReasoningEnabled(options.Model, reasoning), reasoning,
+		ai.ResolveCacheRetention(prefix.CacheRetention, ai.ProviderEnv(options.Env)), escalation)
 	usage := escalation.usage
 	if err != nil {
 		return "", &usage, false
@@ -1783,8 +1791,8 @@ func requestSummarization(
 		Env:       ai.ProviderEnv(options.Env),
 		SessionID: options.SessionID,
 		Headers:   stringHeaders(options.Headers),
-		// Only a replay reads a cache entry that already exists (D419); a stock
-		// summary request keeps skipping cache writes.
+		// A replay asks for the conversation's own retention so its marker matches
+		// the cached prefix (D419); a stock summary request skips cache writes.
 		CacheRetention: retention,
 	}
 	if reasoningEnabled {
