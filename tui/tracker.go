@@ -213,6 +213,14 @@ func (t *ansiCodeTracker) process(ansiCode string) {
 	}
 }
 
+// maxSGRParameter clamps an SGR field that is wider than an int. It sits well
+// past every code the tracker reads, so a clamped field matches no branch, which
+// is what the huge Number upstream's Number.parseInt produces for it.
+const maxSGRParameter = 1 << 20
+
+// parseSGRNumber parses one SGR parameter field. Clamping instead of wrapping
+// matters: a wrapped value could land on 0, the reset code, which dropped the
+// tracked style across the wrap (A435).
 func parseSGRNumber(part string) (int, bool) {
 	if part == "" {
 		return 0, false
@@ -222,7 +230,12 @@ func parseSGRNumber(part string) (int, bool) {
 		if digit < '0' || digit > '9' {
 			return 0, false
 		}
-		value = value*10 + int(digit-'0')
+		if value < maxSGRParameter {
+			value = value*10 + int(digit-'0')
+			if value > maxSGRParameter {
+				value = maxSGRParameter
+			}
+		}
 	}
 	return value, true
 }

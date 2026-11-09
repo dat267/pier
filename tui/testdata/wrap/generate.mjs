@@ -20,6 +20,14 @@ const cases = [
 	["supercalifragilisticexpialidocious", 5], ["a very long word here", 6],
 	["\x1b[31m\x1b[0m", 5], ["\x1b[31m", 5], ["text\x1b[31m", 5], ["\x1b[31mred\nplain", 8],
 	["| a | b |", 3], ["**bold** and `code`", 5], ["a  b   c", 3], ["a  b   c", 5],
+	// An SGR field wider than 2^53 parses to a Number matching no code, so the
+	// sequence leaves the tracked style alone (DECISIONS.md D412, A435).
+	["\x1b[31mabc\x1b[18446744073709551616mdef", 3],
+	["\x1b[31mabc\x1b[99999999999999999999mdef", 3],
+	["\x1b[31mabc\x1b[4294967296mdef", 3],
+	["\x1b[4mabc\x1b[18446744073709551616mdef", 3],
+	["\x1b[44mabc\x1b[99999999999999999999mdef", 3],
+	["\x1b[1;31mabc\x1b[18446744073709551616mdef", 2],
 ];
 const alphabet = ["a", "bb", "ccc", "\x1b[31m", "\x1b[0m", "\x1b[1m", "\x1b[4m", " ", "  ", "\n", "\r\n",
 	"日", "本", "😀", "e\u0301", "\t", "word", "longwordhere", "|", "-"];

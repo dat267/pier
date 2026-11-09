@@ -384,6 +384,55 @@
     ]
   },
   {
+    "text": "\u001b[31mabc\u001b[18446744073709551616mdef",
+    "width": 3,
+    "expected": [
+      "\u001b[31mabc\u001b[18446744073709551616m",
+      "\u001b[31mdef"
+    ]
+  },
+  {
+    "text": "\u001b[31mabc\u001b[99999999999999999999mdef",
+    "width": 3,
+    "expected": [
+      "\u001b[31mabc\u001b[99999999999999999999m",
+      "\u001b[31mdef"
+    ]
+  },
+  {
+    "text": "\u001b[31mabc\u001b[4294967296mdef",
+    "width": 3,
+    "expected": [
+      "\u001b[31mabc\u001b[4294967296m",
+      "\u001b[31mdef"
+    ]
+  },
+  {
+    "text": "\u001b[4mabc\u001b[18446744073709551616mdef",
+    "width": 3,
+    "expected": [
+      "\u001b[4mabc\u001b[18446744073709551616m\u001b[24m",
+      "\u001b[4mdef"
+    ]
+  },
+  {
+    "text": "\u001b[44mabc\u001b[99999999999999999999mdef",
+    "width": 3,
+    "expected": [
+      "\u001b[44mabc\u001b[99999999999999999999m",
+      "\u001b[44mdef"
+    ]
+  },
+  {
+    "text": "\u001b[1;31mabc\u001b[18446744073709551616mdef",
+    "width": 2,
+    "expected": [
+      "\u001b[1;31mab",
+      "\u001b[1;31mc\u001b[18446744073709551616md",
+      "\u001b[1;31mef"
+    ]
+  },
+  {
     "text": "日\u001b[0m😀\r\n",
     "width": 4,
     "expected": [

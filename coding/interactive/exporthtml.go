@@ -120,6 +120,32 @@ func hasHTMLStyle(style *htmlTextStyle) bool {
 	return style.fg != "" || style.bg != "" || style.bold || style.dim || style.italic || style.underline
 }
 
+// maxSGRParameter clamps an SGR field that is wider than an int. It sits well
+// past every code the parser reads, so a clamped field falls through every
+// branch, which is what the huge Number upstream's `parseInt(p, 10) || 0`
+// produces for it. Empty and non-numeric fields are 0, matching `|| 0`.
+const maxSGRParameter = 1 << 20
+
+// ansiSGRParameter parses one SGR field. Clamping instead of wrapping matters:
+// a wrapped value could land on 0, the reset code, which dropped the styling of
+// the rest of the line (A435).
+func ansiSGRParameter(part string) int {
+	value := 0
+	for index := 0; index < len(part); index++ {
+		digit := part[index]
+		if digit < '0' || digit > '9' {
+			return 0
+		}
+		if value < maxSGRParameter {
+			value = value*10 + int(digit-'0')
+			if value > maxSGRParameter {
+				value = maxSGRParameter
+			}
+		}
+	}
+	return value
+}
+
 func applySGRCode(params []int, style *htmlTextStyle) {
 	for i := 0; i < len(params); i++ {
 		code := params[i]
@@ -191,11 +217,7 @@ func AnsiToHTML(text string) string {
 		if paramStr != "" {
 			params = params[:0]
 			for part := range strings.SplitSeq(paramStr, ";") {
-				value, err := strconv.Atoi(part)
-				if err != nil || value == 0 {
-					value = 0
-				}
-				params = append(params, value)
+				params = append(params, ansiSGRParameter(part))
 			}
 		}
 		if inSpan {

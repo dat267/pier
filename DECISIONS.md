@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D411)
+# Deliberate divergences from pi (D1–D412)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5909,3 +5909,40 @@ extended
 `class-posix-alpha`, `class-posix-digit`, `class-posix-upper`, `class-range`,
 `class-escaped-close`, `class-unterminated` and `class-unknown-posix`, read by
 `TestSkillsIgnoreDiscoveryMatchesUpstream`.
+
+### D412
+
+**An SGR parameter wider than an int is clamped, not wrapped.**
+
+Reference: pi v1.5.0 (f9a26365) reads SGR parameters with JavaScript's
+`Number.parseInt`: `packages/tui/src/utils.ts` `AnsiCodeTracker.process` and
+`packages/coding-agent/src/core/export-html/ansi-to-html.ts` `applySgrCode`
+(the latter as `parseInt(p, 10) || 0`). A field wider than 2^53 parses to a huge
+Number that is truthy and matches no SGR branch, so the sequence leaves every
+attribute untouched.
+
+Go's `strconv.Atoi` fails on such a field and the port stored `0`, which is the
+reset code: one malformed parameter in the middle of a styled line dropped every
+attribute for the rest of it. `tui/tracker.go` `parseSGRNumber` accumulated into
+an `int` instead, so `\x1b[18446744073709551616m` wrapped to exactly `0` and did
+the same across a wrapped line. Both readers now clamp at `maxSGRParameter`
+(2^20, past every code either parser reads), so a wide field falls through every
+branch like the reference's huge Number.
+
+`color256ToHex` is unchanged: the reference computes a gray ramp with plain
+Number arithmetic, so an out-of-range 256-color index already produced the same
+odd hex on both sides, and clamping it was a divergence, not a fix. A 256-color
+index above `maxSGRParameter` therefore differs (both sides emit a nonsensical
+color, in different nonsense).
+
+Tests: `tui/tracker_overflow_test.go`
+(`TestTrackerIgnoresOutOfRangeSGRParameter`,
+`TestTrackerKeepsUnderlineAcrossOutOfRangeSGRParameter`),
+`tui/tracker_sgrparameter_test.go` (`TestParseSGRNumberClampsWideFields`,
+`TestParseSGRNumberNeverWrapsToReset`),
+`coding/interactive/exporthtml_ansi_overflow_test.go`
+(`TestAnsiToHTMLIgnoresOutOfRangeSGRParameter`,
+`TestAnsiToHTMLKeepsStylesAcrossOutOfRangeParameter`) and
+`coding/interactive/exporthtml_sgrparameter_test.go`
+(`TestAnsiSGRParameterClampsWideFields`,
+`TestAnsiSGRParameterNeverWrapsToReset`).
