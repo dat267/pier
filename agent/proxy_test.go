@@ -109,7 +109,7 @@ func TestProxyToolDeltaAfterEndIsProtocolError(t *testing.T) {
 	partial := &ai.AssistantMessage{Content: ai.ContentList{}}
 	scratch := newProxyEventScratch()
 	_, _ = processProxyEvent(&proxyWireEvent{Type: "toolcall_start", ContentIndex: 0, ID: "c1", ToolName: "read"}, partial, scratch)
-	_, _ = processProxyEvent(&proxyWireEvent{Type: "toolcall_end", ContentIndex: 0, ToolCall: &ai.ToolCall{ID: "c1", Name: "read", Arguments: json.RawMessage(`{}`)}}, partial, scratch)
+	_, _ = processProxyEvent(&proxyWireEvent{Type: "toolcall_end", ContentIndex: 0, ToolCall: proxyToolCallForTest("c1", "read", `{}`)}, partial, scratch)
 
 	var panicValue any
 	var err error
@@ -409,4 +409,10 @@ func TestStreamProxyAbortsWhenResponseHeadersIdle(t *testing.T) {
 		!strings.Contains(*result.ErrorMessage, "headers idle") {
 		t.Fatalf("result = %+v", result)
 	}
+}
+
+// proxyToolCallForTest builds the payload of a complete toolcall_end event.
+func proxyToolCallForTest(id, name, arguments string) *proxyToolCallPatch {
+	raw := json.RawMessage(arguments)
+	return &proxyToolCallPatch{ID: &id, Name: &name, Arguments: &raw}
 }

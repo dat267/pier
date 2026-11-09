@@ -57,17 +57,57 @@ type proxyRequest struct {
 
 // proxyWireEvent is one server event, with the partial field stripped.
 type proxyWireEvent struct {
-	Type                  string       `json:"type"`
-	ContentIndex          int          `json:"contentIndex"`
-	Delta                 string       `json:"delta"`
-	ContentSignature      *string      `json:"contentSignature"`
-	ID                    string       `json:"id"`
-	ToolName              string       `json:"toolName"`
-	ToolCall              *ai.ToolCall `json:"toolCall"`
-	Reason                string       `json:"reason"`
-	Usage                 *ai.Usage    `json:"usage"`
-	ProviderThinkingLevel *string      `json:"providerThinkingLevel"`
-	ErrorMessage          *string      `json:"errorMessage"`
+	Type                  string              `json:"type"`
+	ContentIndex          int                 `json:"contentIndex"`
+	Delta                 string              `json:"delta"`
+	ContentSignature      *string             `json:"contentSignature"`
+	ID                    string              `json:"id"`
+	ToolName              string              `json:"toolName"`
+	ToolCall              *proxyToolCallPatch `json:"toolCall"`
+	Reason                string              `json:"reason"`
+	Usage                 *ai.Usage           `json:"usage"`
+	ProviderThinkingLevel *string             `json:"providerThinkingLevel"`
+	ErrorMessage          *string             `json:"errorMessage"`
+}
+
+// proxyToolCallPatch is the `toolCall` field of a toolcall_end event, held
+// field by field because upstream merges it into the accumulated call with
+// `Object.assign(content, proxyEvent.toolCall)` and an omitted field must keep
+// the accumulated value (A442).
+type proxyToolCallPatch struct {
+	ID               *string          `json:"id"`
+	Name             *string          `json:"name"`
+	Arguments        *json.RawMessage `json:"arguments"`
+	ThoughtSignature *string          `json:"thoughtSignature"`
+	Namespace        *string          `json:"namespace"`
+	ArgumentsError   *string          `json:"argumentsError"`
+}
+
+// mergeToolCall ports `Object.assign(content, proxyEvent.toolCall)`: a field
+// the payload carries replaces the accumulated one, and a field it omits keeps
+// it. An explicit JSON `null` for an optional pointer field is indistinguishable
+// from an omitted one here, so it keeps the accumulated value instead of
+// clearing it; no server sends one.
+func (p *proxyToolCallPatch) mergeToolCall(call ai.ToolCall) ai.ToolCall {
+	if p.ID != nil {
+		call.ID = *p.ID
+	}
+	if p.Name != nil {
+		call.Name = *p.Name
+	}
+	if p.Arguments != nil {
+		call.Arguments = *p.Arguments
+	}
+	if p.ThoughtSignature != nil {
+		call.ThoughtSignature = p.ThoughtSignature
+	}
+	if p.Namespace != nil {
+		call.Namespace = p.Namespace
+	}
+	if p.ArgumentsError != nil {
+		call.ArgumentsError = *p.ArgumentsError
+	}
+	return call
 }
 
 func proxyRequestOptionsOf(options ProxyStreamOptions) proxyRequestOptions {
@@ -380,7 +420,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 		// The reference assigns only an optional payload; an absent one still
 		// ends the accumulated tool call.
 		if wire.ToolCall != nil {
-			content = *wire.ToolCall
+			content = wire.ToolCall.mergeToolCall(content)
 			partial.Content[wire.ContentIndex] = content
 		}
 		delete(scratch.toolCall, wire.ContentIndex)
