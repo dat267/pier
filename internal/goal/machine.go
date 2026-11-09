@@ -344,6 +344,11 @@ func (m *GoalMachine) goalUpdate(goalID string, rawRevision any, rawAction, bloc
 	}
 
 	// action == "blocked"
+	// A finished goal cannot be blocked, and the round-count guard below would
+	// answer first and send the model back to work it already finished.
+	if m.view.Phase == PhaseComplete {
+		return DispatchResult{Reply: new("Goal is already complete. Set an objective to start a new goal."), IsError: true}
+	}
 	if m.view.TurnsStarted < BlockedAfterTurns {
 		return DispatchResult{Reply: new(fmt.Sprintf("Cannot block before %d consecutive goal rounds (current: %d). Keep working or try a different approach.", BlockedAfterTurns, m.view.TurnsStarted)), IsError: true}
 	}

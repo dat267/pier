@@ -6222,4 +6222,9 @@ current state and the next step (a stale revision is answered with the current
 id and revision), and this one now matches them. `blocked` on a finished goal
 keeps its own guard, which reports the round count.
 
-Test: `TestSetGoalCompleteOnAFinishedGoal`.
+`blocked` on a finished goal is answered the same way. It used to hit the
+round-count guard first, which told the model to keep working over a goal it
+had already finished.
+
+Tests: `TestSetGoalCompleteOnAFinishedGoal`,
+`TestSetGoalBlockedOnAFinishedGoal`.
