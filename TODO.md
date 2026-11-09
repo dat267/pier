@@ -1,10 +1,5 @@
 # Reproduced audit findings
 
-- **A442** (low) agent: a `toolcall_end` payload replaces the accumulated tool
-  call instead of merging into it (`Object.assign` upstream), so a server that
-  omits `id` or `name` erases them and the call cannot be dispatched. Full
-  record: 2026-11-09-agent-mcp-audit. Tests:
-  `agent/proxy_toolcall_patch_test.go`.
 - **A443** (low, docs) the port cites D-rows that have no entry: D1, D2, D3, D5,
   D8, D21-D29, D32, D34-D40 and D49 are named from Go source but `DECISIONS.md`
   starts at D41. D49 is added with this pass; the rest need a decision
