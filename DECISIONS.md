@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D416)
+# Deliberate divergences from pi (D1–D417)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6080,3 +6080,23 @@ settle that closed it, and it stays display-only like the rest of the line.
 
 Tests: `TestWorkedForNoticeNamesTheLocalFinishTime`,
 `TestWorkingIndicatorShowsElapsedAndTranscriptNotesTheRun`.
+
+### D417
+
+**A working label too wide for the editor border ends in an ellipsis.**
+
+Reference: pi v1.5.0 (f9a26365)
+`packages/coding-agent/src/modes/interactive/components/status-indicator.ts`
+`renderInBorder` renders the loader at the border's width and keeps its first
+line, truncated with no ellipsis, so on a narrow screen the label stops at the
+word break the loader wrapped at (`⠋ Working (1m 16s`) and reads as complete.
+
+When the loader wraps, pier truncates the whole unwrapped line to the border
+width with an ellipsis instead (`⠋ Working (1m 16s · ↑3.4M ↓…`), so the cut is
+visible and the label keeps as much of the clock and tokens as fits. A label that
+fits renders exactly as upstream's, and so does a border so narrow that
+upstream's first line holds only the spinner (the editor goldens pin that
+case).
+
+Tests: `TestWorkingStatusInBorderElidesOnNarrowScreens`,
+`TestCustomEditorAgainstUpstreamGolden`.
