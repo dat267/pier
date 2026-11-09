@@ -6168,7 +6168,13 @@ It steps aside, and the stock serialized prompt runs, when the capture is
 missing, the model or provider changed (a wire format and its cache are per
 model), the replay plus instruction would not fit the context window (overflow
 recovery is where the window is the problem), or the answer cannot become a
-checkpoint: a length stop, a tool call, an error. A failed replay's usage still
+checkpoint: a length stop, a tool call, an error. A captured request speaks only
+for the branch that was current when it was sent, so the capture is released
+when a compaction spends it, when the session is disposed, and when the session
+replaces its context wholesale (`NavigateTree`, which also carries `/clear`):
+replaying it after a branch switch would summarize a conversation the new branch
+never had, and no conversion-level check can stand in for that, because the
+capture holds the converted wire messages, not the live ones. A failed replay's usage still
 joins the summary that replaces it. Because a replay describes everything above
 the instruction, it produces one conversation checkpoint and no separate
 split-turn section; a stock compaction keeps that structure (D264).
@@ -6179,4 +6185,5 @@ Tests: `TestCompactSummarizesFromTheCapturedPrefix`,
 `TestCompactFallsBackWhenThePrefixSummaryDoesNotFit`,
 `TestCompactSkipsThePrefixWhenTheWindowIsFull`,
 `TestCompactPrefixInstructionFollowsTheConversation`,
-`TestCompactReplaysTheCapturedCacheRetention`.
+`TestCompactReplaysTheCapturedCacheRetention`,
+`TestSessionCompactionSkipsThePrefixAfterBranchNavigation`.

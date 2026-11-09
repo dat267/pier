@@ -539,6 +539,10 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 	// Refresh agent state from the new branch.
 	sessionContext := s.Sessions.Projection()
 	s.Agent.SetMessages(sessionContext.Messages)
+	// The captured request speaks for the branch that was current when it was
+	// sent. This one replaced that context, so a later compaction must not
+	// replay it (D419).
+	s.requestPrefix.clear()
 	s.RestoreToolsFromTranscript()
 
 	return &NavigateTreeResult{EditorText: editorText, SummaryEntry: summaryEntry}, nil
