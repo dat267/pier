@@ -13,6 +13,11 @@ const skills = [
  { path: "nested/deeper/blocked/SKILL.md", name: "blocked-deep" },
  { path: "nested/visible/SKILL.md", name: "visible" },
  { path: "root.md", name: "root-file" },
+ { path: "alpha/SKILL.md", name: "alpha" },
+ { path: "1digit/SKILL.md", name: "one-digit" },
+ { path: "ZDIGIT/SKILL.md", name: "zero-digit" },
+ { path: "bracket]/SKILL.md", name: "bracket-close" },
+ { path: "c/SKILL.md", name: "c" },
 ];
 const skillFiles = Object.fromEntries(skills.map(skill => [skill.path, `---\nname: ${skill.name}\ndescription: A fixture skill\n---\nInstructions.\n`]));
 const scenarios = [
@@ -23,6 +28,16 @@ const scenarios = [
  ["file-negation", "SKILL.md\n!nested/visible/SKILL.md\n"],
  ["pruned-directory-negation", "blocked/\n!nested/blocked/SKILL.md\n"],
  ["globstar", "**/blocked/\n"],
+ // Bracket expressions follow the grammar of git's wildmatch.c.
+ ["class-caret-negation", "[^a]*/SKILL.md\n"],
+ ["class-bang-negation", "[!a]*/SKILL.md\n"],
+ ["class-posix-alpha", "[[:alpha:]]*/SKILL.md\n"],
+ ["class-posix-digit", "[[:digit:]]*/SKILL.md\n"],
+ ["class-posix-upper", "[[:upper:]]*/SKILL.md\n"],
+ ["class-range", "[a-b]*/SKILL.md\n"],
+ ["class-escaped-close", "[\\]]*/SKILL.md\n"],
+ ["class-unterminated", "[alpha*/SKILL.md\n"],
+ ["class-unknown-posix", "[[:nosuch:]]*/SKILL.md\n"],
 ];
 const inputs = [];
 for (const ignoreFile of [".gitignore", ".ignore", ".fdignore"]) {

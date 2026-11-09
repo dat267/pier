@@ -4,14 +4,24 @@
     "nested/blocked/SKILL.md": "---\nname: blocked-nested\ndescription: A fixture skill\n---\nInstructions.\n",
     "nested/deeper/blocked/SKILL.md": "---\nname: blocked-deep\ndescription: A fixture skill\n---\nInstructions.\n",
     "nested/visible/SKILL.md": "---\nname: visible\ndescription: A fixture skill\n---\nInstructions.\n",
-    "root.md": "---\nname: root-file\ndescription: A fixture skill\n---\nInstructions.\n"
+    "root.md": "---\nname: root-file\ndescription: A fixture skill\n---\nInstructions.\n",
+    "alpha/SKILL.md": "---\nname: alpha\ndescription: A fixture skill\n---\nInstructions.\n",
+    "1digit/SKILL.md": "---\nname: one-digit\ndescription: A fixture skill\n---\nInstructions.\n",
+    "ZDIGIT/SKILL.md": "---\nname: zero-digit\ndescription: A fixture skill\n---\nInstructions.\n",
+    "bracket]/SKILL.md": "---\nname: bracket-close\ndescription: A fixture skill\n---\nInstructions.\n",
+    "c/SKILL.md": "---\nname: c\ndescription: A fixture skill\n---\nInstructions.\n"
   },
   "allNames": [
     "blocked-root",
     "blocked-nested",
     "blocked-deep",
     "visible",
-    "root-file"
+    "root-file",
+    "alpha",
+    "one-digit",
+    "zero-digit",
+    "bracket-close",
+    "c"
   ],
   "cases": [
     {
@@ -20,6 +30,11 @@
         ".gitignore": "blocked/\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "bracket-close",
+        "c",
         "visible",
         "root-file"
       ]
@@ -39,7 +54,12 @@
         ".gitignore": "nested/blocked/\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
         "blocked-root",
+        "bracket-close",
+        "c",
         "blocked-deep",
         "visible",
         "root-file"
@@ -51,6 +71,11 @@
         ".gitignore": "/blocked/\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "bracket-close",
+        "c",
         "visible",
         "root-file"
       ]
@@ -71,6 +96,11 @@
         ".gitignore": "blocked/\n!nested/blocked/SKILL.md\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "bracket-close",
+        "c",
         "visible",
         "root-file"
       ]
@@ -81,6 +111,149 @@
         ".gitignore": "**/blocked/\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "bracket-close",
+        "c",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".gitignore/class-caret-negation",
+      "ignoreFiles": {
+        ".gitignore": "[^a]*/SKILL.md\n"
+      },
+      "names": [
+        "alpha",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".gitignore/class-bang-negation",
+      "ignoreFiles": {
+        ".gitignore": "[!a]*/SKILL.md\n"
+      },
+      "names": [
+        "alpha",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".gitignore/class-posix-alpha",
+      "ignoreFiles": {
+        ".gitignore": "[[:alpha:]]*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".gitignore/class-posix-digit",
+      "ignoreFiles": {
+        ".gitignore": "[[:digit:]]*/SKILL.md\n"
+      },
+      "names": [
+        "zero-digit",
+        "alpha",
+        "blocked-root",
+        "bracket-close",
+        "c",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".gitignore/class-posix-upper",
+      "ignoreFiles": {
+        ".gitignore": "[[:upper:]]*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".gitignore/class-range",
+      "ignoreFiles": {
+        ".gitignore": "[a-b]*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "zero-digit",
+        "c",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".gitignore/class-escaped-close",
+      "ignoreFiles": {
+        ".gitignore": "[\\]]*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "blocked-root",
+        "bracket-close",
+        "c",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".gitignore/class-unterminated",
+      "ignoreFiles": {
+        ".gitignore": "[alpha*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "blocked-root",
+        "bracket-close",
+        "c",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".gitignore/class-unknown-posix",
+      "ignoreFiles": {
+        ".gitignore": "[[:nosuch:]]*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "blocked-root",
+        "bracket-close",
+        "c",
+        "blocked-nested",
+        "blocked-deep",
         "visible",
         "root-file"
       ]
@@ -91,7 +264,12 @@
         "nested/.gitignore": "blocked/\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
         "blocked-root",
+        "bracket-close",
+        "c",
         "blocked-deep",
         "visible",
         "root-file"
@@ -103,6 +281,11 @@
         ".ignore": "blocked/\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "bracket-close",
+        "c",
         "visible",
         "root-file"
       ]
@@ -122,7 +305,12 @@
         ".ignore": "nested/blocked/\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
         "blocked-root",
+        "bracket-close",
+        "c",
         "blocked-deep",
         "visible",
         "root-file"
@@ -134,6 +322,11 @@
         ".ignore": "/blocked/\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "bracket-close",
+        "c",
         "visible",
         "root-file"
       ]
@@ -154,6 +347,11 @@
         ".ignore": "blocked/\n!nested/blocked/SKILL.md\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "bracket-close",
+        "c",
         "visible",
         "root-file"
       ]
@@ -164,6 +362,149 @@
         ".ignore": "**/blocked/\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "bracket-close",
+        "c",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/class-caret-negation",
+      "ignoreFiles": {
+        ".ignore": "[^a]*/SKILL.md\n"
+      },
+      "names": [
+        "alpha",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/class-bang-negation",
+      "ignoreFiles": {
+        ".ignore": "[!a]*/SKILL.md\n"
+      },
+      "names": [
+        "alpha",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/class-posix-alpha",
+      "ignoreFiles": {
+        ".ignore": "[[:alpha:]]*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/class-posix-digit",
+      "ignoreFiles": {
+        ".ignore": "[[:digit:]]*/SKILL.md\n"
+      },
+      "names": [
+        "zero-digit",
+        "alpha",
+        "blocked-root",
+        "bracket-close",
+        "c",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/class-posix-upper",
+      "ignoreFiles": {
+        ".ignore": "[[:upper:]]*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/class-range",
+      "ignoreFiles": {
+        ".ignore": "[a-b]*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "zero-digit",
+        "c",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/class-escaped-close",
+      "ignoreFiles": {
+        ".ignore": "[\\]]*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "blocked-root",
+        "bracket-close",
+        "c",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/class-unterminated",
+      "ignoreFiles": {
+        ".ignore": "[alpha*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "blocked-root",
+        "bracket-close",
+        "c",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/class-unknown-posix",
+      "ignoreFiles": {
+        ".ignore": "[[:nosuch:]]*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "blocked-root",
+        "bracket-close",
+        "c",
+        "blocked-nested",
+        "blocked-deep",
         "visible",
         "root-file"
       ]
@@ -174,7 +515,12 @@
         "nested/.ignore": "blocked/\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
         "blocked-root",
+        "bracket-close",
+        "c",
         "blocked-deep",
         "visible",
         "root-file"
@@ -186,6 +532,11 @@
         ".fdignore": "blocked/\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "bracket-close",
+        "c",
         "visible",
         "root-file"
       ]
@@ -205,7 +556,12 @@
         ".fdignore": "nested/blocked/\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
         "blocked-root",
+        "bracket-close",
+        "c",
         "blocked-deep",
         "visible",
         "root-file"
@@ -217,6 +573,11 @@
         ".fdignore": "/blocked/\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "bracket-close",
+        "c",
         "visible",
         "root-file"
       ]
@@ -237,6 +598,11 @@
         ".fdignore": "blocked/\n!nested/blocked/SKILL.md\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "bracket-close",
+        "c",
         "visible",
         "root-file"
       ]
@@ -247,6 +613,149 @@
         ".fdignore": "**/blocked/\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "bracket-close",
+        "c",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/class-caret-negation",
+      "ignoreFiles": {
+        ".fdignore": "[^a]*/SKILL.md\n"
+      },
+      "names": [
+        "alpha",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/class-bang-negation",
+      "ignoreFiles": {
+        ".fdignore": "[!a]*/SKILL.md\n"
+      },
+      "names": [
+        "alpha",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/class-posix-alpha",
+      "ignoreFiles": {
+        ".fdignore": "[[:alpha:]]*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/class-posix-digit",
+      "ignoreFiles": {
+        ".fdignore": "[[:digit:]]*/SKILL.md\n"
+      },
+      "names": [
+        "zero-digit",
+        "alpha",
+        "blocked-root",
+        "bracket-close",
+        "c",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/class-posix-upper",
+      "ignoreFiles": {
+        ".fdignore": "[[:upper:]]*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/class-range",
+      "ignoreFiles": {
+        ".fdignore": "[a-b]*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "zero-digit",
+        "c",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/class-escaped-close",
+      "ignoreFiles": {
+        ".fdignore": "[\\]]*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "blocked-root",
+        "bracket-close",
+        "c",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/class-unterminated",
+      "ignoreFiles": {
+        ".fdignore": "[alpha*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "blocked-root",
+        "bracket-close",
+        "c",
+        "blocked-nested",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/class-unknown-posix",
+      "ignoreFiles": {
+        ".fdignore": "[[:nosuch:]]*/SKILL.md\n"
+      },
+      "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
+        "blocked-root",
+        "bracket-close",
+        "c",
+        "blocked-nested",
+        "blocked-deep",
         "visible",
         "root-file"
       ]
@@ -257,7 +766,12 @@
         "nested/.fdignore": "blocked/\n"
       },
       "names": [
+        "one-digit",
+        "zero-digit",
+        "alpha",
         "blocked-root",
+        "bracket-close",
+        "c",
         "blocked-deep",
         "visible",
         "root-file"

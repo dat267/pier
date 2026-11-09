@@ -743,12 +743,19 @@ func parseSkillIgnoreRule(line, prefix string) (skillIgnoreRule, bool) {
 	if pattern == "" {
 		return skillIgnoreRule{}, false
 	}
-	pattern = strings.ToLower(pattern)
-	regexPattern := globToRegexp(pattern)
+	// Matching is case-insensitive, as the pinned matcher compiles its rules
+	// with the `i` flag. The pattern itself is not folded: node-ignore compares
+	// raw characters when it decides whether a `-` opens a range, so `[a-Z]`
+	// drops the reversed range and keeps `a`, while a folded `[a-z]` would
+	// match every letter.
+	regexPattern, ok := globToRegexp(pattern)
+	if !ok {
+		return skillIgnoreRule{}, false
+	}
 	if !strings.Contains(pattern, "/") {
 		regexPattern = `(?:[^/]+/)*` + regexPattern
 	}
-	compiled, err := regexp.Compile(`^` + regexPattern + `$`)
+	compiled, err := regexp.Compile(`(?i)^` + regexPattern + `$`)
 	if err != nil {
 		return skillIgnoreRule{}, false
 	}
@@ -783,7 +790,10 @@ func writeIgnoreLiteral(builder *strings.Builder, character rune) {
 	builder.WriteString(regexp.QuoteMeta(string(rune(0xF0000 + 0xDC00 + (character & 0x3FF)))))
 }
 
-func globToRegexp(pattern string) string {
+// globToRegexp translates a gitignore pattern body to a regular expression. The
+// bool is false when the pattern can never match, which is git's `WM_ABORT_ALL`
+// for a bracket expression that never closes or names an unknown POSIX class.
+func globToRegexp(pattern string) (string, bool) {
 	var builder strings.Builder
 	runes := []rune(pattern)
 	for index := 0; index < len(runes); index++ {
@@ -814,37 +824,180 @@ func globToRegexp(pattern string) string {
 		case '?':
 			builder.WriteString(`[^/]`)
 		case '[':
-			end := index + 1
-			for end < len(runes) {
-				if runes[end] == '\\' && end+1 < len(runes) {
-					end += 2
-					continue
-				}
-				if runes[end] == ']' {
-					break
-				}
-				end++
+			source, end, ok := scanIgnoreBracket(runes, index)
+			if !ok {
+				return "", false
 			}
-			if end == len(runes) || end == index+1 || (end == index+2 && runes[index+1] == '!') {
-				builder.WriteString(regexp.QuoteMeta("["))
-				continue
-			}
-			class := runes[index+1 : end]
-			builder.WriteByte('[')
-			if class[0] == '!' {
-				builder.WriteByte('^')
-				class = class[1:]
-			} else if class[0] == '^' {
-				builder.WriteByte('\\')
-			}
-			builder.WriteString(string(class))
-			builder.WriteByte(']')
+			builder.WriteString(source)
 			index = end
 		default:
 			writeIgnoreLiteral(&builder, runes[index])
 		}
 	}
+	return builder.String(), true
+}
+
+// ignoreRuneInterval is one inclusive range of a bracket expression.
+type ignoreRuneInterval struct{ low, high rune }
+
+// ignorePOSIXClasses expands the twelve ASCII classes git's `wildmatch.c`
+// recognizes, with git's own ASCII-only ctype boundaries. `upper` and `lower`
+// both name `a-z`: the pattern is compiled with the regexp `i` flag, which is
+// how the pinned matcher makes `[[:upper:]]` match `a` as well as `A`.
+var ignorePOSIXClasses = map[string][]ignoreRuneInterval{
+	"alnum":  {{'0', '9'}, {'a', 'z'}},
+	"alpha":  {{'a', 'z'}},
+	"blank":  {{' ', ' '}, {'\t', '\t'}},
+	"cntrl":  {{0x00, 0x1f}, {0x7f, 0x7f}},
+	"digit":  {{'0', '9'}},
+	"graph":  {{0x21, 0x7e}},
+	"lower":  {{'a', 'z'}},
+	"print":  {{0x20, 0x7e}},
+	"punct":  {{0x21, 0x2f}, {0x3a, 0x40}, {0x5b, 0x60}, {0x7b, 0x7e}},
+	"space":  {{' ', ' '}, {'\t', '\t'}, {'\n', '\n'}, {'\r', '\r'}},
+	"upper":  {{'a', 'z'}},
+	"xdigit": {{'0', '9'}, {'a', 'f'}},
+}
+
+// scanIgnoreBracket reads the bracket expression that starts at
+// pattern[start] === '[', mirroring `scanBracket` in the pinned node-ignore
+// package, which follows the member loop of git's `wildmatch.c`:
+//
+//   - a `]` right after `[` or after `!`/`^` is a literal member, not the end
+//   - `[:name:]` is one of the twelve ASCII classes, an unknown name or an
+//     unterminated expression aborts the whole pattern
+//   - `\` escapes the next member
+//   - an out-of-order range keeps its lower bound and drops the range
+//   - a bracket expression never matches a path separator
+//
+// It returns the regular-expression source, the index of the closing `]`, and
+// whether the pattern survived. Before this port the body was copied verbatim,
+// which read a leading `^` as a literal member (turning `[^a]` into `[\^a]`),
+// dropped any pattern whose body was not a valid Go class (`[[:alpha:]]`,
+// `[c-a]`) and let a class match a `/`.
+func scanIgnoreBracket(pattern []rune, start int) (string, int, bool) {
+	length := len(pattern)
+	index := start + 1
+	negated := false
+	if index < length && (pattern[index] == '!' || pattern[index] == '^') {
+		negated = true
+		index++
+	}
+
+	var intervals []ignoreRuneInterval
+	// prev is the member a `-` could extend into a range, or 0 when the
+	// previous member can not open one.
+	var prev rune
+
+	for {
+		if index >= length {
+			return "", 0, false
+		}
+		character := pattern[index]
+
+		switch {
+		case character == '\\':
+			if index+1 >= length {
+				return "", 0, false
+			}
+			escaped := pattern[index+1]
+			intervals = append(intervals, ignoreRuneInterval{escaped, escaped})
+			prev = escaped
+			index++
+		case character == '-' && prev != 0 && index+1 < length && pattern[index+1] != ']':
+			index++
+			high := pattern[index]
+			if high == '\\' {
+				index++
+				if index >= length {
+					return "", 0, false
+				}
+				high = pattern[index]
+			}
+			if prev <= high {
+				intervals = append(intervals, ignoreRuneInterval{prev, high})
+			}
+			prev = 0
+		case character == '[' && index+1 < length && pattern[index+1] == ':':
+			nameStart := index + 2
+			end := nameStart
+			for end < length && pattern[end] != ']' {
+				end++
+			}
+			if end == length {
+				return "", 0, false
+			}
+			if end > nameStart && pattern[end-1] == ':' {
+				expansion, ok := ignorePOSIXClasses[string(pattern[nameStart:end-1])]
+				if !ok {
+					return "", 0, false
+				}
+				intervals = append(intervals, expansion...)
+				prev = 0
+				index = end
+			} else {
+				// No closing `:]`, so the `[` is a plain member.
+				intervals = append(intervals, ignoreRuneInterval{'[', '['})
+				prev = '['
+				index = nameStart - 2
+			}
+		default:
+			intervals = append(intervals, ignoreRuneInterval{character, character})
+			prev = character
+		}
+
+		index++
+		if index < length && pattern[index] == ']' {
+			return ignoreClassSource(negated, intervals), index, true
+		}
+	}
+}
+
+// ignoreClassSource renders the class, never letting it match a path
+// separator: a negated class excludes `/` outright, and a positive one has `/`
+// cut out of every interval that spans it. node-ignore guards the positive form
+// with a `(?!\/)` lookahead, which RE2 does not have.
+func ignoreClassSource(negated bool, intervals []ignoreRuneInterval) string {
+	var builder strings.Builder
+	if negated {
+		builder.WriteString(`[^/`)
+	} else {
+		builder.WriteByte('[')
+	}
+	for _, interval := range intervals {
+		parts := []ignoreRuneInterval{interval}
+		if !negated && interval.low <= '/' && '/' <= interval.high {
+			parts = parts[:0]
+			if interval.low < '/' {
+				parts = append(parts, ignoreRuneInterval{interval.low, '/' - 1})
+			}
+			if interval.high > '/' {
+				parts = append(parts, ignoreRuneInterval{'/' + 1, interval.high})
+			}
+			if len(parts) == 0 {
+				parts = append(parts, ignoreRuneInterval{interval.low, interval.low})
+			}
+		}
+		for _, part := range parts {
+			writeIgnoreClassMember(&builder, part.low)
+			if part.high != part.low {
+				builder.WriteByte('-')
+				writeIgnoreClassMember(&builder, part.high)
+			}
+		}
+	}
+	builder.WriteByte(']')
 	return builder.String()
+}
+
+// writeIgnoreClassMember writes one character for use inside a character class,
+// escaping the members that would otherwise end or change it.
+func writeIgnoreClassMember(builder *strings.Builder, character rune) {
+	switch character {
+	case '\\', ']', '^', '-', '[':
+		builder.WriteByte('\\')
+	}
+	builder.WriteRune(character)
 }
 
 func skillPathIgnored(path string, isDirectory bool, rules []skillIgnoreRule) bool {

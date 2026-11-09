@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D410)
+# Deliberate divergences from pi (D1–D411)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5866,3 +5866,46 @@ port does not need: every reftable mutation rewrites `tables.list`.
 
 Tests: `TestFooterDataProviderSeesBranchSwitchInReftableRepo` and the files
 backend control `TestFooterDataProviderSeesBranchSwitchInFilesRepo`.
+
+### D411
+
+**Skill ignore files read bracket expressions with git's `wildmatch` grammar.**
+
+Reference: pi v1.5.0 (f9a26365) `packages/coding-agent/src/core/skills.ts` hands
+every `.gitignore`/`.ignore`/`.fdignore` line to the pinned `node_modules/ignore`,
+whose `scanBracket` follows git's `wildmatch.c`. Pier translates each rule to an
+RE2 pattern instead, and its bracket handling was a verbatim body copy: a
+leading `^` became the literal member `^` (so `[^a]` matched `a` and `^` and
+nothing else), `[:name:]` produced `[[:alpha:]` and the whole rule was dropped,
+a leading `]` was read as the terminator, a reversed range (`[c-a]`) was dropped,
+and an unterminated `[` matched literally instead of aborting the pattern.
+
+`scanIgnoreBracket` now ports the member loop: `!`/`^` negate, a leading `]` is a
+member, `\` escapes the next member, the twelve POSIX ASCII classes expand
+(an unknown one aborts the pattern), an out-of-order range keeps its lower
+bound, an unterminated expression aborts the pattern, and an escaped trailing
+backslash aborts it. A bracket expression never matches `/`: a negated class
+excludes it, and a positive one has `/` cut out of every interval that spans it,
+since RE2 has no lookahead to subtract it the way node-ignore does.
+
+Case-insensitivity is now the regexp `i` flag rather than folding the pattern
+first. node-ignore compares raw characters when deciding whether a `-` opens a
+range, so `[a-Z]` drops the reversed range and keeps `a`, while a folded
+`[a-z]` matched every letter. `[[:upper:]]` and `[[:lower:]]` therefore expand
+case-insensitively, which is what the pinned matcher's `i` flag makes them do.
+
+Known remaining difference: node-ignore's `ignores()` also walks parent
+directories, while the loader prunes a matched directory and never descends.
+A single-segment comparison agrees; a rule whose effect depends on an
+intermediate parent alone (`a/b` against the path `a/b/c`, where `a/b` is a
+file-level pattern) can differ. No rule in the corpus depends on it.
+
+Tests: `coding/skills_ignore_bracket_test.go`
+(`TestSkillIgnoreBracketExpressionsMatchNodeIgnore`,
+`TestSkillIgnoreUnterminatedBracketMatchesNothing`,
+`TestSkillIgnoreMatchesCaseInsensitivelyWithoutFoldingThePattern`) and the
+extended
+`coding/testdata/skills-ignore/golden.json` cases `class-caret-negation`,
+`class-posix-alpha`, `class-posix-digit`, `class-posix-upper`, `class-range`,
+`class-escaped-close`, `class-unterminated` and `class-unknown-posix`, read by
+`TestSkillsIgnoreDiscoveryMatchesUpstream`.
