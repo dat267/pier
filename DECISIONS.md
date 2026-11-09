@@ -6226,5 +6226,8 @@ keeps its own guard, which reports the round count.
 round-count guard first, which told the model to keep working over a goal it
 had already finished.
 
+`/goal resume` on a finished goal is answered the same way; it used to reach
+the validator and report `illegal transition complete -> active`.
+
 Tests: `TestSetGoalCompleteOnAFinishedGoal`,
-`TestSetGoalBlockedOnAFinishedGoal`.
+`TestSetGoalBlockedOnAFinishedGoal`, `TestGoalResumeOnAFinishedGoal`.

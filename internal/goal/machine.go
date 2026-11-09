@@ -443,6 +443,11 @@ func (m *GoalMachine) goalResume() DispatchResult {
 	if m.view == nil || (m.view.Phase == PhaseActive && m.armed) {
 		return DispatchResult{Reply: new("No stopped goal to resume."), IsError: true}
 	}
+	// A finished goal is terminal, not stopped: the validator would answer with
+	// "illegal transition complete -> active" (D420).
+	if m.view.Phase == PhaseComplete {
+		return DispatchResult{Reply: new("Goal is already complete. Set an objective to start a new goal."), IsError: true}
+	}
 	if stopReason := budgetStopReason(m.view, m.now().UnixMilli()); stopReason != nil {
 		return DispatchResult{Reply: new(stopReason.Message + " Start a new goal with a larger budget."), IsError: true}
 	}
