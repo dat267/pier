@@ -174,6 +174,13 @@ func conversionHint(from, to string) string {
 	return fmt.Sprintf("[Image converted from %s to %s.]", from, to)
 }
 
+// maxInlineImagePixels bounds the canvas a decoder may allocate from an
+// untrusted header (D408). A 74-byte PNG can declare a 30000x30000 canvas,
+// which Go allocates as 3.4 GiB before it discovers the pixel data is missing,
+// and a larger one kills the process with a fatal out-of-memory instead of
+// reaching the omission message.
+const maxInlineImagePixels = 100_000_000
+
 // decodeInlineImage contains decoder panics like upstream's Photon try/catch.
 // In particular, Go decoders can panic on unallocatable image dimensions.
 func decodeInlineImage(data []byte) (source image.Image, err error) {
@@ -183,6 +190,17 @@ func decodeInlineImage(data []byte) (source image.Image, err error) {
 			err = fmt.Errorf("image decoding failed: %v", recovered)
 		}
 	}()
+	// DecodeConfig reads the header only, so the canvas is bounded before any
+	// decoder allocates it (D408).
+	config, _, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	if config.Width <= 0 || config.Height <= 0 ||
+		int64(config.Width)*int64(config.Height) > maxInlineImagePixels {
+		return nil, fmt.Errorf("image canvas %dx%d exceeds the %d-pixel inline limit",
+			config.Width, config.Height, maxInlineImagePixels)
+	}
 	source, _, err = image.Decode(bytes.NewReader(data))
 	return source, err
 }

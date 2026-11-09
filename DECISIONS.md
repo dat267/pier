@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D407)
+# Deliberate divergences from pi (D1–D408)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5754,3 +5754,34 @@ never runs the command. An earlier version checked the timeout after
 Tests: `TestBashDefaultTimeoutEndsAHungCommand`,
 `TestBuiltinToolSchemasMatchUpstream`, `TestBashRejectedTimeoutDoesNotSpawn`,
 `TestBashTimeoutValidationPrecedesOtherInputChecks`.
+
+### D408
+
+**An inline image's declared canvas is bounded before a decoder allocates it.**
+
+Reference: pi v1.5.0 (f9a26365) `packages/coding-agent/src/utils/image-resize-core.ts`
+`resizeImageInProcess` decodes through Photon (`PhotonImage.new_from_byteslice`)
+inside one `try`/`catch` that returns `null` on any throw, and
+`utils/image-process.ts` `processImage` turns that `null` into
+`[Image omitted: could not be resized below the inline image size limit.]`.
+Photon runs in WASM, so a canvas larger than its linear memory traps as a JS
+exception and takes the omission path.
+
+Go's decoders allocate the whole canvas from the header before they read any
+pixel data, and a failed allocation is a fatal runtime error that no `recover`
+catches. A 74-byte PNG declaring a 30000x30000 canvas allocated 3.4 GiB before
+reporting missing pixel data, and a larger declaration aborted the process
+outright, so the same input that is an omission message upstream killed the
+agent.
+
+`decodeInlineImage` reads the header with `image.DecodeConfig` first and refuses
+a declared canvas above 100 megapixels (which keeps every phone photo, medium
+format capture and stitched panorama inside the bound while capping the
+transient decode allocation), reporting the same omission message as a decode
+that failed. `EncodeImageAsPNG` reaches the guard through the same decoder, so
+the kitty transcode path is bounded too.
+
+Tests: `TestProcessImageRejectsAnOversizeImageCanvas` (the allocation stays under
+256 MiB for a 74-byte 30000x30000 PNG and the result is the omission message)
+and `TestDecodeInlineImageKeepsNormalImages` (the control: 1x1 and 3000x100
+still decode).
