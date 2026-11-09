@@ -6197,4 +6197,5 @@ Tests: `TestCompactSummarizesFromTheCapturedPrefix`,
 `TestCompactPrefixInstructionFollowsTheConversation`,
 `TestCompactReplaysTheCapturedCacheRetention`,
 `TestSessionCompactionSkipsThePrefixAfterBranchNavigation`,
-`TestSessionCompactionReplaysAppendedContext`.
+`TestSessionCompactionReplaysAppendedContext`,
+`TestSessionCompactionReplaysAcrossTurns`.

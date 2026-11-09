@@ -2,6 +2,7 @@ package coding
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -230,5 +231,66 @@ func TestSessionCompactionReplaysAppendedContext(t *testing.T) {
 	}
 	if !appended {
 		t.Fatalf("the summary request dropped the context appended after the turn: %d messages", len(sent))
+	}
+}
+
+// The replay is only correct while every captured message is still the live one
+// at its index, and the agent rebuilds the system prompt each turn. This pins
+// that a grown session still replays its whole conversation, so the check cannot
+// silently disable the cache win (D419).
+func TestSessionCompactionReplaysAcrossTurns(t *testing.T) {
+	manager := NewSessionManager(t.TempDir(), nil)
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 8192}
+	answer := func(requestModel *ai.Model, text string) *ai.AssistantMessageEventStream {
+		message := &ai.AssistantMessage{
+			API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
+			Content: ai.ContentList{ai.TextContent{Text: text}}, StopReason: ai.StopStop,
+			Timestamp: time.Now().UnixMilli(), Usage: ai.Usage{Input: 10, TotalTokens: 10},
+		}
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: message.StopReason, Message: message})
+		}()
+		return stream
+	}
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: t.TempDir(), Sessions: manager, Model: model, ConvertToLlm: ConvertToLlm,
+		StreamFn: func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			return answer(requestModel, "done")
+		},
+		Settings: SessionSettings{Compaction: smallCompactionSettings()},
+		Control:  &AgentSessionControl{autoCompaction: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for turn := range 3 {
+		if err := session.Prompt(context.Background(), "turn"+strconv.Itoa(turn), &PromptOptions{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var summaryRequests []ai.TranscriptContext
+	session.CompactionStreamFn = func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		summaryRequests = append(summaryRequests, transcript)
+		return answer(requestModel, "## Goal\ncontinue")
+	}
+	if _, err := session.CompactSession(context.Background(), ""); err != nil {
+		t.Fatal(err)
+	}
+	if len(summaryRequests) != 1 {
+		t.Fatalf("summary requests = %d", len(summaryRequests))
+	}
+	sent := summaryRequests[0].Messages
+	want := []string{"", "turn0", "done", "turn1", "done", "turn2", "done"}
+	if len(sent) != len(want)+1 {
+		t.Fatalf("replay sent %d messages, want the %d-message conversation plus the instruction", len(sent), len(want))
+	}
+	for index, text := range want {
+		if got := prefixMessageText(sent[index]); got != text {
+			t.Fatalf("message %d = %q, want %q", index, got, text)
+		}
+	}
+	if instruction := prefixMessageText(sent[len(sent)-1]); !strings.Contains(instruction, "conversation to summarize") {
+		t.Fatalf("last message is not the summary instruction: %q", instruction)
 	}
 }
