@@ -228,8 +228,24 @@ func (m *McpManager) rebuildTools() {
 		serverTools := append([]protocol.Tool{}, connection.Tools...)
 		timeoutMs := connection.TimeoutMs()
 		connection.mu.Unlock()
+		// Upstream's `plain` list: every distinct name the server offers, mapped
+		// through createMcpToolName with no taken check. A candidate it holds
+		// twice means two of the server's tools sanitize to one name, and both
+		// get the hash suffix, so the plain name never depends on the order of
+		// the list (index.ts registerTools).
+		plainCounts := map[string]int{}
+		seenPlain := map[string]bool{}
 		for _, tool := range serverTools {
-			toolName := CreateMcpToolName(name, tool.Name, func(candidate string) bool { return taken[candidate] })
+			if seenPlain[tool.Name] {
+				continue
+			}
+			seenPlain[tool.Name] = true
+			plainCounts[CreateMcpToolName(name, tool.Name, nil)]++
+		}
+		for _, tool := range serverTools {
+			toolName := CreateMcpToolName(name, tool.Name, func(candidate string) bool {
+				return taken[candidate] || plainCounts[candidate] > 1
+			})
 			taken[toolName] = true
 			if McpToolExposure(config, tool.Name) != McpExposureDirect {
 				continue
