@@ -7,7 +7,7 @@ import (
 )
 
 // TerminalCapabilities holds the terminal feature flags the markdown renderer
-// consults (upstream getCapabilities(); divergence D69: injectable instead of
+// consults (upstream getCapabilities(); injectable instead of
 // environment-detected).
 type TerminalCapabilities struct {
 	Hyperlinks bool
@@ -28,7 +28,7 @@ func GetTerminalCapabilities() TerminalCapabilities {
 }
 
 // SetTerminalCapabilities installs the capability flags the markdown renderer and the
-// alternate screen consult. The interactive mode installs them at boot; D69 keeps them
+// alternate screen consult. The interactive mode installs them at boot; they stay
 // injected rather than detected inside this package.
 func SetTerminalCapabilities(capabilities TerminalCapabilities) {
 	terminalCapabilitiesState.capabilities = capabilities
@@ -677,8 +677,7 @@ type RenderLatexOptions struct {
 
 // RenderLatex renders a LaTeX math expression as terminal-friendly Unicode.
 // It reports false when the expression contains unsupported or malformed
-// syntax (upstream returns undefined). See latex.go: the full renderer lands
-// in a later round (divergence D68).
+// syntax (upstream returns undefined). See latex.go.
 func RenderLatex(source string, options RenderLatexOptions) (string, bool) {
 	return renderLatexImpl(source, options)
 }

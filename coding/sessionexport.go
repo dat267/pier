@@ -29,7 +29,7 @@ func serializeSessionBranch(sessionManager *SessionManager, createTrailingEntrie
 	}
 	// MarshalFileEntry writes the `type` discriminator (the header has no
 	// `type` struct field, so marshalling it directly would produce an invalid
-	// session file; D130).
+	// session file).
 	headerLine, err := MarshalFileEntry(FileEntry{Header: &header})
 	if err != nil {
 		return "", err

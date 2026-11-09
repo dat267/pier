@@ -256,7 +256,7 @@ func TestSessionSelectorHelpers(t *testing.T) {
 }
 
 // TestSessionSelectorDeleteFlow checks the confirmation and deletion plumbing
-// with an injected deleter (D102).
+// with an injected deleter (D155).
 func TestSessionSelectorDeleteFlow(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)

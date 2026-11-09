@@ -8,7 +8,7 @@ import (
 // Port of core/project-trust.ts, core/source-info.ts, core/auth-guidance.ts,
 // and core/settings-diagnostics.ts.
 //
-// D39: resolveProjectTrusted's extension hook (emitProjectTrustEvent) is
+// D41: resolveProjectTrusted's extension hook (emitProjectTrustEvent) is
 // extension mechanics and omitted; the remaining decision order (override,
 // no-resource fast path, stored decision, default, UI selection) is ported.
 

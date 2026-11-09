@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -144,7 +145,11 @@ var scanGoSources = sync.OnceValue(func() goScan {
 				scan.tests[string(m[1])] = true
 			}
 		}
-		citeDRows(b, scan.cited)
+		// This package's own fixtures spell out D-numbers on purpose, so they
+		// are not citations of a row.
+		if filepath.Dir(path) != filepath.Join(root, "internal", "docscheck") {
+			citeDRows(b, scan.cited)
+		}
 		return nil
 	})
 	return scan
@@ -263,5 +268,39 @@ func TestCiteDRowsMatchesWholeWords(t *testing.T) {
 		if !got[n] {
 			t.Errorf("D%d not cited; got %v", n, got)
 		}
+	}
+}
+
+// TestEveryCitedDRowHasAnEntry keeps the citation contract the title of
+// DECISIONS.md promises: a Go comment that cites `D<n>` points at a row that
+// explains it. Thirty-eight such numbers predated this file and were silently
+// dangling, so a citation could name nothing and still pass every other check.
+func TestEveryCitedDRowHasAnEntry(t *testing.T) {
+	_, cited := goSources(t)
+	text := readDoc(t, "DECISIONS.md")
+	defined := map[int]bool{}
+	for _, m := range dRowHeading.FindAllStringSubmatch(text, -1) {
+		for _, id := range strings.Split(m[1], "/") {
+			n, err := strconv.Atoi(id[1:])
+			if err != nil {
+				t.Fatalf("bad row id %q", id)
+			}
+			defined[n] = true
+		}
+	}
+	var missing []string
+	for n := range cited {
+		if !defined[n] {
+			missing = append(missing, strconv.Itoa(n))
+		}
+	}
+	if len(missing) > 0 {
+		sort.Slice(missing, func(i, j int) bool {
+			a, _ := strconv.Atoi(missing[i])
+			b, _ := strconv.Atoi(missing[j])
+			return a < b
+		})
+		t.Errorf("Go source cites %d D-row numbers with no DECISIONS.md entry: D%s",
+			len(missing), strings.Join(missing, ", D"))
 	}
 }

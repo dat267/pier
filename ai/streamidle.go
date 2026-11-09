@@ -14,7 +14,7 @@ import (
 // Port of the idle timeout upstream installs on its HTTP dispatcher:
 // core/http-dispatcher.ts sets Undici headersTimeout and bodyTimeout (D254).
 // Go's http.Transport cannot take either per request, so one timer is armed
-// before the request and re-armed by each body read (D40). Dispatcher-only
+// before the request and re-armed by each body read (D254). Dispatcher-only
 // requests use the raw FastTimer delay in both phases. SDK-backed OpenAI and
 // Anthropic requests also use Node setTimeout while waiting for headers, then
 // switch to the raw Undici body delay after headers arrive.

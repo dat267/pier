@@ -5,7 +5,7 @@ package tui
 //
 // Upstream tags components with a symbol-keyed method and models the node as
 // a TS union. Go uses a provider interface and a struct with a Kind
-// discriminator (divergence D54).
+// discriminator.
 
 // LayoutViewport is the available viewport for visibility checks.
 type LayoutViewport struct {

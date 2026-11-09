@@ -213,7 +213,7 @@ func imageResizeOptionsFor(model *ai.Model) ImageResizeOptions {
 }
 
 // readImageFile prepares an image the way upstream's read tool does. The bytes go
-// through ProcessImage, which resizes within the limits (D26: bilinear resampling
+// through ProcessImage, which resizes within the limits (D408: bilinear resampling
 // rather than Photon's Lanczos3) or reports an omission message,
 // which resizes within the limits or reports an omission message; the processing
 // hints and the non-vision note are folded into the text, and the image content

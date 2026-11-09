@@ -21,7 +21,7 @@ import (
 // setupAutocompleteProvider).
 //
 // Divergences: the process-level effects and the resource-loader/extension
-// collaborators are injected seams (D131, D41).
+// collaborators are injected seams (D90, D41).
 
 // TrustCrashWiring carries the trust/crash helpers.
 type TrustCrashWiring struct {

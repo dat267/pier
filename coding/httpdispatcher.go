@@ -11,7 +11,7 @@ import (
 // counterpart: Go's transport already pools connections and reads the proxy
 // environment, and its dialer handles connect tuning internally.
 //
-// D40: upstream's dispatcher sets both headersTimeout and bodyTimeout to the idle
+// D254: upstream's dispatcher sets both headersTimeout and bodyTimeout to the idle
 // timeout and can be reconfigured at runtime. Go's http.Transport exposes
 // ResponseHeaderTimeout (the headersTimeout equivalent) and IdleConnTimeout, and
 // there is no per-read body timeout, so the configured timeout reaches the wire

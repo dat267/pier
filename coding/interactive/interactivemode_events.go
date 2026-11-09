@@ -14,7 +14,7 @@ import (
 // src/modes/interactive/interactive-mode.ts: subscribeToAgent + handleEvent.
 //
 // Divergences: the mode's collaborators are injected as function values
-// (D113); extension-related events are absent because extension mechanics are
+// (D90); extension-related events are absent because extension mechanics are
 // out of scope (D41).
 
 // EventSession is the session surface the dispatcher needs.

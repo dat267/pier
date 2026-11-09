@@ -15,7 +15,7 @@ import (
 )
 
 // Port of core/remote-catalog-provider.ts: a persisted pi.dev catalog overlay
-// on top of a static built-in provider (closing D37).
+// on top of a static built-in provider.
 
 // DefaultCatalogBaseURL is the default catalog host.
 const DefaultCatalogBaseURL = "https://pi.dev"

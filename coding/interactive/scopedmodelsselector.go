@@ -224,7 +224,7 @@ type ScopedModelsSelectorComponent struct {
 	refreshStatus *tui.Text
 
 	// mu serializes rendering/input against the background catalog refresh
-	// (the Go port has no single-threaded event loop: D119/D96).
+	// (the Go port has no single-threaded event loop: D143).
 }
 
 // NewScopedModelsSelectorComponent creates the selector.

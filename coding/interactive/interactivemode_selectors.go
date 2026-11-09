@@ -14,8 +14,8 @@ import (
 // selector constructors and their command handlers).
 //
 // Divergences: the fork/navigate/dialog collaborators are injected function
-// values (D116); the extension dialogs (showExtensionSelector/Editor) are
-// seams (D41).
+// values (D90); the extension dialogs (showExtensionSelector/Editor) are seams
+// (D41).
 
 // SelectorSession is the session surface the selector wiring needs.
 type SelectorSession interface {
@@ -434,7 +434,7 @@ func (w *SelectorWiring) handleTreeSelection(ctx context.Context, done func(), e
 	customInstructions := ""
 	// The summarization dialog is part of the extension UI surface; when it is
 	// not wired the port skips the prompt (equivalent to the skip-prompt
-	// setting), D116.
+	// setting, D155).
 	promptForSummary := w.ShowExtensionSelector != nil
 	if w.Settings != nil && w.Settings.GetBranchSummarySkipPrompt() {
 		promptForSummary = false

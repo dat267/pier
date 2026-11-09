@@ -18,7 +18,7 @@ import (
 //
 // Divergences: Go writes the file and waits for the child process (upstream
 // avoids spawnSync on Windows for console-input reasons that do not apply to
-// Go) (D77).
+// Go).
 //
 // The child inherits this process's console (os.Stdin/os.Stdout/os.Stderr) and
 // its environment, which is the point when a user pressed ctrl+g and the wrong

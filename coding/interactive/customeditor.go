@@ -10,8 +10,8 @@ import (
 // Port of src/modes/interactive/components/custom-editor.ts: the editor with
 // the app-level keybindings and the embedded working-status border.
 //
-// Divergence D109: Go has no subclassing, so the editor's top-border override
-// is a field hook (tui.Editor.TopBorder) and the app key handling lives in
+// Go has no subclassing, so the editor's top-border override is a field hook
+// (tui.Editor.TopBorder) and the app key handling lives in
 // CustomEditor.HandleInput (callers hold the wrapper, not the embedded editor).
 
 // CustomEditorOptions configure the custom editor.

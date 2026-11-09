@@ -87,7 +87,7 @@ func NewScrollView(component Component, options ScrollViewOptions) *ScrollView {
 		view.thumbStyle = func(text string) string { return "\x1b[37m" + text + "\x1b[39m" }
 	}
 	// Upstream defaults the transient scrollbar hide delay to 1000ms; an
-	// explicit 0 disables the timer (D119).
+	// explicit 0 disables the timer.
 	view.hideDelayMS = 1000
 	if options.HasScrollbarHideDelay {
 		view.hideDelayMS = max(0, options.ScrollbarHideDelayMS)

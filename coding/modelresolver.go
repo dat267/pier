@@ -709,7 +709,7 @@ func ResolveCliModel(options ResolveCliModelOptions) ResolveCliModelResult {
 
 // InitialModelResult is the initial model selection.
 //
-// D21: upstream prints a CLI error and exits the process when the explicit
+// Upstream prints a CLI error and exits the process when the explicit
 // --provider/--model pair cannot be resolved; the Go port reports it in Error
 // so the caller decides (library code must not exit).
 type InitialModelResult struct {
@@ -799,7 +799,7 @@ func FindInitialModel(options FindInitialModelOptions) InitialModelResult {
 
 // DefaultProviderOrder is the order providers are considered for defaults.
 //
-// D21: upstream iterates the object keys of defaultModelPerProvider (insertion
+// Upstream iterates the object keys of defaultModelPerProvider (insertion
 // order); Go maps have no order, so the declaration order is kept explicitly.
 var DefaultProviderOrder = []ai.ProviderId{
 	"amazon-bedrock", "ant-ling", "anthropic", "openai", "azure", "openai-codex",

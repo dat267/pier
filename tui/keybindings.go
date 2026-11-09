@@ -160,8 +160,7 @@ type keybindingsSnapshot struct {
 
 // NewKeybindingsManager creates a manager. Upstream's definitions object has
 // declaration order; Go maps do not, so the order follows the canonical
-// TUIKeybindings order when the definitions map is the built-in one
-// (divergence D60).
+// TUIKeybindings order when the definitions map is the built-in one.
 func NewKeybindingsManager(definitions map[Keybinding]KeybindingDefinition, userBindings map[string][]string) *KeybindingsManager {
 	return NewKeybindingsManagerOrdered(definitions, canonicalBindingOrder(definitions), userBindings)
 }

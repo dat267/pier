@@ -18,7 +18,7 @@ import (
 // encoding runes back to UTF-16 therefore produces only valid scalar values
 // and surrogate pairs. Sanitizing is a no-op for every Go string.
 //
-// D-row D2: JS strings are UTF-16; Go strings are UTF-8. Unpaired surrogates
+// D253: JS strings are UTF-16; Go strings are UTF-8. Unpaired surrogates
 // cannot survive a Go string round-trip, so the sanitized output can only
 // differ from upstream's on inputs that were already corrupt in JS.
 
@@ -113,8 +113,8 @@ func JSTrimIsEmpty(s string) bool {
 	return JSTrim(s) == ""
 }
 
-// JSLength counts UTF-16 code units, matching JavaScript's string.length
-// (D-row D1). The canonical implementation lives here; faux re-exports.
+// JSLength counts UTF-16 code units, matching JavaScript's string.length.
+// The canonical implementation lives here; faux re-exports.
 func JSLength(s string) int {
 	n := 0
 	for _, r := range s {
@@ -197,8 +197,8 @@ func JSSlice(s string, start, end int) string {
 
 // GetPiUserAgent renders the pi user agent: "pi (<platform> <release>; <arch>)"
 // (port of utils/pi-user-agent.ts). Node's os.release() is the kernel
-// version; Go reads uname where available (D-row D5: os-release mapping is
-// best-effort per platform).
+// version; Go reads uname where available (os-release mapping is best-effort
+// per platform).
 func GetPiUserAgent() string {
 	release := kernelRelease()
 	if release == "" {

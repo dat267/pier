@@ -8,7 +8,7 @@ import (
 // Port of utils/ansi.ts: stripAnsi, derived upstream from ansi-regex /
 // strip-ansi (MIT, Sindre Sorhus).
 //
-// D29: upstream runs on JavaScript UTF-16 strings, so the 8-bit CSI introducer
+// Upstream runs on JavaScript UTF-16 strings, so the 8-bit CSI introducer
 // is the single code unit 0x9b. Go strings are UTF-8, where a bare 0x9b byte is
 // invalid and decodes to U+FFFD; the pattern therefore matches the code point
 // U+009B (and ESC). Real terminals emit ESC, so this only affects streams that

@@ -16,8 +16,8 @@ import (
 // the partial/error/success backgrounds, the preview truncation, and the
 // expansion toggle.
 //
-// Images are out of scope (D26/D89), so the image branches only produce the
-// fallback indicators from GetTextOutput.
+// Images are out of scope, so the image branches only produce the fallback
+// indicators from GetTextOutput.
 
 const fallbackPreviewLines = 10
 

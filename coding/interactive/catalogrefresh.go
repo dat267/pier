@@ -159,10 +159,10 @@ func (c *ModelCatalogRefreshCoordinator) join(runtime ModelCatalogRuntime) *acti
 func (c *ModelCatalogRefreshCoordinator) run(runtime ModelCatalogRuntime, active *activeCatalogRefresh, ctx context.Context) {
 	result, err := runtime.Refresh(ctx, nil)
 	active.outcome.Store(&refreshOutcome{result: result, err: err})
-	// Unpublish before signalling completion (D98): the Go port has real
-	// concurrency, so a caller arriving after the shared refresh finished must
-	// start a fresh refresh instead of joining the completed one and observing
-	// its (possibly cancelled) error.
+	// Unpublish before signalling completion: the Go port has real concurrency,
+	// so a caller arriving after the shared refresh finished must start a fresh
+	// refresh instead of joining the completed one and observing its (possibly
+	// cancelled) error.
 	c.unpublish(runtime, active)
 	active.settled.Store(true)
 	close(active.done)
@@ -182,7 +182,7 @@ func (c *ModelCatalogRefreshCoordinator) releaseWaiter(runtime ModelCatalogRunti
 		return
 	}
 	// The last waiter gave up: cancel the shared operation and let a later
-	// caller start fresh (D98). done is closed by run.
+	// caller start fresh. done is closed by run.
 	if active.settled.Load() {
 		return
 	}

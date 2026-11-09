@@ -14,7 +14,7 @@ import (
 // Upstream applies the settings-backed idle timeout to every provider request
 // twice: core/http-dispatcher.ts sets undici's headersTimeout and bodyTimeout to
 // it. The port arms the same timer before the request and re-arms it on every
-// body read (D40, D254).
+// body read (D254).
 
 // stallServer answers every request the same way: sendHeaders controls whether
 // the response headers arrive, and prelude is written and flushed before the

@@ -17,10 +17,10 @@ import (
 // Port of src/modes/interactive/components/session-selector.ts: the resume
 // session selector with the tree view, search, delete and rename.
 //
-// Divergences: AbortController becomes a context (D100); the status-message
-// timer is injectable (D101); the session-file deleter is injectable (D102);
-// loader results are applied under a state mutex with a settle helper because
-// the Go port has no single-threaded event loop (D103).
+// Divergences: AbortController becomes a context; the status-message timer and
+// the session-file deleter are injectable (D155); loader results are applied
+// under a state mutex with a settle helper because the Go port has no
+// single-threaded event loop (D143).
 
 // SessionScope selects the loaded session set.
 type SessionScope = string
@@ -44,7 +44,7 @@ type SessionDeleteResult struct {
 	Error  string
 }
 
-// SessionFileDeleter deletes a session file (D102).
+// SessionFileDeleter deletes a session file (D155).
 type SessionFileDeleter func(sessionPath string) SessionDeleteResult
 
 var sessionFileDeleter SessionFileDeleter = DeleteSessionFile
@@ -910,9 +910,9 @@ type SessionSelectorOptions struct {
 	CurrentSessionFilePath string
 	// Now overrides the clock (test seam).
 	Now func() time.Time
-	// ScheduleTimer overrides the status-message timer (test seam, D101).
+	// ScheduleTimer overrides the status-message timer (test seam, D155).
 	ScheduleTimer func(ms int, fn func())
-	// DeleteSession overrides the session file deleter (test seam, D102).
+	// DeleteSession overrides the session file deleter (test seam, D155).
 	DeleteSession func(sessionPath string) SessionDeleteResult
 }
 
@@ -1092,8 +1092,8 @@ func (c *SessionSelectorComponent) requestRenderNow() {
 }
 
 // WaitForPendingLoads blocks until the in-flight loaders have finished (test
-// seam, D103). It does not run the posted applies; a test without a UI loop
-// installs a Post queue and drains it after this returns.
+// seam). It does not run the posted applies; a test without a UI loop installs
+// a Post queue and drains it after this returns.
 func (c *SessionSelectorComponent) WaitForPendingLoads() {
 	c.loads.Wait()
 }

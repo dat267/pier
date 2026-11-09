@@ -6,7 +6,7 @@ import (
 )
 
 // Cases ported from packages/tui/test/terminal-image.test.ts, for the hyperlink half
-// of detectCapabilitiesFromEnvironment that this port keeps (D69).
+// of detectCapabilitiesFromEnvironment that this port keeps.
 func TestHyperlinksSupported(t *testing.T) {
 	cases := []struct {
 		name     string

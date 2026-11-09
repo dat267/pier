@@ -14,7 +14,7 @@ import (
 
 // Port of utils/json-parse.ts.
 //
-// D-row D3: upstream's partial fallback uses the npm `partial-json` package.
+// D325: upstream's partial fallback uses the npm `partial-json` package.
 // The Go port implements the subset of partial-JSON semantics the streaming
 // path needs: an object keeps its complete prefix fields, a truncated string
 // keeps its complete prefix, an unfinished keyword completes ("tru" is true)
@@ -22,7 +22,7 @@ import (
 // document trim partial-json applies. It returns {} for a partial value that
 // is not an object, because every streaming caller parses tool arguments.
 // 15,679 progressive prefixes of generated arguments matched partial-json
-// after these rules; unpaired-surrogate tails stay unrepresentable (D2).
+// after these rules; unpaired-surrogate tails stay unrepresentable (D253).
 
 const validJSONEscapes = `"\/bfnrt"`
 
@@ -183,9 +183,8 @@ func ParseJavaScriptJSONValue(data []byte) (json.RawMessage, bool) {
 
 // decodeOrderedJSON parses one JSON value keeping object member order.
 // Upstream parses tool arguments with JSON.parse and re-stringifies the object,
-// so the model's key order survives; a map[string]any would sort it (D6's
-// ordered representation is reused here). Trailing data is rejected like
-// JSON.parse.
+// so the model's key order survives; a map[string]any would sort it. Trailing
+// data is rejected like JSON.parse (D360).
 func decodeOrderedJSON(data []byte) (*schemaValue, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.UseNumber()

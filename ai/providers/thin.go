@@ -253,7 +253,7 @@ func GoogleVertexProvider() *ai.Provider {
 	return EnvAPIKeyProvider(EnvAPIKeyProviderSpec{
 		ID: "google-vertex", Name: "Google Vertex AI", Vertex: true,
 		AuthName: "Google Cloud credentials",
-		// Vertex accepts an explicit API key or ADC (see D27).
+		// Vertex accepts an explicit API key or ADC.
 		EnvVars: []string{"GOOGLE_CLOUD_API_KEY"},
 	})
 }

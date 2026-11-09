@@ -17,7 +17,7 @@ type StackEntryOptions struct {
 
 // StackEntry is a stack child with its resolved sizing. Upstream declares
 // StackEntry and StackLayoutEntry separately but they are structurally
-// identical, so Go aliases them (divergence D56).
+// identical, so Go aliases them.
 type StackEntry = StackLayoutEntry
 
 // StackOptions configure a stack.

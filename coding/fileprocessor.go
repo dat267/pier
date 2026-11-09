@@ -74,7 +74,7 @@ type ProcessImageResult struct {
 // imageBytesConverter converts an unsupported image format to PNG, reporting
 // whether the conversion succeeded.
 //
-// D26: upstream converts through Photon (Rust/WASM), which also handles formats
+// D408: upstream converts through Photon (Rust/WASM), which also handles formats
 // the Go standard library cannot decode (notably BMP). The Go port decodes what
 // image/png, image/jpeg, and image/gif provide and reports failure otherwise.
 type imageBytesConverter func(bytes []byte) ([]byte, bool)
@@ -86,7 +86,7 @@ var convertImageBytesToPNG imageBytesConverter = func(bytes []byte) ([]byte, boo
 // ProcessImage normalizes and (optionally) resizes one inline image
 // (upstream processImage).
 //
-// D26: oversize images are resized with a pure-Go bilinear resampler rather than
+// D408: oversize images are resized with a pure-Go bilinear resampler rather than
 // Photon's Lanczos3 (Rust/WASM, which the port does not have), and re-encoding
 // produces PNG or JPEG. Formats the standard library cannot decode at all —
 // webp, and bmp outside the sniffing path — still report the upstream omission
@@ -283,7 +283,7 @@ func decodeInlineImage(data []byte) (source image.Image, err error) {
 // The strategy is upstream resizeImageInProcess's: fit to the max dimensions,
 // prefer the first candidate below maxBytes in the order PNG-then-JPEG, and when
 // nothing fits reduce both dimensions by 0.75 until 1x1. The resampling is
-// bilinear rather than upstream's Lanczos3 (D26: Photon is Rust/WASM and the port
+// bilinear rather than upstream's Lanczos3 (D408: Photon is Rust/WASM and the port
 // has no equivalent), and re-encoding always produces PNG or JPEG, as upstream's
 // candidate list does.
 func resizeInlineImage(data []byte, mimeType string, options ImageResizeOptions) *ResizedImage {

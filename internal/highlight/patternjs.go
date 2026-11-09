@@ -8,7 +8,7 @@ import (
 // JavaScript regexes without /u accept several Annex B escapes and quantifier
 // forms that Go's parser rejects or interprets differently:
 //
-//   - `\uXXXX` is a UTF-16 code unit escape; a value in D800-DFFF becomes the
+//   - `\uXXXX` is a UTF-16 code unit escape; a value in 0xD800-0xDFFF becomes the
 //     mapped unit rune used for astral matching. `\u` without four hex digits
 //     is an identity escape for "u".
 //   - `\xHH` is a two-digit escape; otherwise \x is an identity escape for "x".

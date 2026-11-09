@@ -17,7 +17,7 @@ import (
 // the tool-output/thinking toggles and the editor border color).
 //
 // Divergences: the extension-command check is always false because extension
-// mechanics are out of scope (D41/D114).
+// mechanics are out of scope (D41).
 
 // QueueSession is the session surface the queue controller needs.
 type QueueSession interface {
@@ -171,7 +171,7 @@ func (c *QueueController) HandleFollowUp(ctx context.Context) {
 
 	if c.Session.IsCompacting() {
 		// Extension commands execute immediately upstream; extension mechanics
-		// are out of scope (D41/D114), so IsExtensionCommand is always false.
+		// are out of scope (D41), so IsExtensionCommand is always false.
 		if c.IsExtensionCommand(text) {
 			c.Editor.AddToHistory(text)
 			c.Editor.SetText("")
@@ -270,7 +270,7 @@ func (c *QueueController) QueueCompactionMessage(text string, mode string) {
 }
 
 // IsExtensionCommand reports whether the text is an extension command
-// (always false: extension mechanics are out of scope, D41/D114).
+// (always false: extension mechanics are out of scope, D41).
 func (c *QueueController) IsExtensionCommand(text string) bool { return false }
 
 // FlushCompactionQueue sends the queued messages after compaction.

@@ -12,10 +12,10 @@ import (
 // Port of src/tui-main-screen.ts: the differential renderer that writes into
 // the terminal's main screen and scrollback.
 //
-// Divergences: the surrogate-pair-aware 1 MiB chunking becomes rune-aware
-// (Go strings are UTF-8: D78); the over-wide-line path writes the crash log and
-// reports through OnRenderError instead of throwing (D79); the debug render
-// dumps gated on PI_TUI_DEBUG are omitted.
+// Divergences: the surrogate-pair-aware 1 MiB chunking becomes rune-aware (Go
+// strings are UTF-8); the over-wide-line path writes the crash log and reports
+// through OnRenderError instead of throwing; the debug render dumps gated on
+// PI_TUI_DEBUG are omitted.
 
 const maxRenderWriteChars = 1024 * 1024
 
@@ -169,7 +169,7 @@ type MainScreen struct {
 	previousViewportTop   int
 
 	// OnRenderError is called when a rendered line exceeds the terminal width;
-	// upstream throws after writing the crash log (D79).
+	// upstream throws after writing the crash log.
 	OnRenderError func(err error)
 }
 
@@ -670,7 +670,7 @@ func (s *MainScreen) doRender() {
 }
 
 // reportOverwideLine writes the crash log and reports the error (upstream
-// throws; D79).
+// throws).
 func (s *MainScreen) reportOverwideLine(lines []string, index int, width int) error {
 	crashLogPath := s.LogDirectory
 	if crashLogPath == "" {

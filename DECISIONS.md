@@ -9,11 +9,14 @@ usually have:
 - what pier does instead, and why;
 - a `Test:` line naming the tests that reproduce the difference.
 
-Code comments cite rows by number (`// D149: ...`). Not every number has an
-entry: closed, retired, withdrawn and removed-code rows are pruned, and their
-history is in `git log`. A row that overlaps another refers to the one that owns
-the explanation. The runtime design, stdio RPC contract and lock inventory are
-in [ARCHITECTURE.md](ARCHITECTURE.md).
+Code comments cite rows by number (`// D149: ...`), and every number a comment
+cites has a row here: the comments that cited numbers from before this file
+existed now name the row that owns the explanation, or state the difference
+inline without a number. Rows are pruned when their divergence is resolved, and
+the pruning commit removes the citations with them; the history is in `git log`.
+A row that overlaps another refers to the one that owns the explanation. The
+runtime design, stdio RPC contract and lock inventory are in
+[ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### D41
 

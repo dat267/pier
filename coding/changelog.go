@@ -24,7 +24,7 @@ const ChangelogGitHubRepo = "earendil-works/pi"
 const changelogLinkBasePath = "packages/coding-agent"
 
 var (
-	// RE2 has no lookahead (D70), so the trailing "/ or end" rule is checked
+	// RE2 has no lookahead (D303), so the trailing "/ or end" rule is checked
 	// manually in replaceLegacyRepoPrefix.
 	legacyRepoPrefixRe   = regexp.MustCompile(`^https://github\.com/(?:badlogic|earendil-works)/pi-mono`)
 	urlSchemeRe          = regexp.MustCompile(`(?i)^[a-z][a-z0-9+.-]*:`)

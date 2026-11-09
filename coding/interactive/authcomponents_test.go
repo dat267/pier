@@ -144,7 +144,7 @@ func TestSessionSearchAgainstUpstreamGolden(t *testing.T) {
 		var parseError any
 		if parsed.Error != "" {
 			parseError = parsed.Error
-			// The V8 regexp error wording differs from Go's (D93); only the
+			// The V8 regexp error wording differs from Go's; only the
 			// empty-pattern message is reproduced verbatim.
 			if parsed.Mode == "regex" && parsed.Error != "Empty regex" {
 				parseError = "Invalid regular expression"

@@ -13,13 +13,13 @@ import (
 // built-in providers with models.json custom models, overrides, configured
 // auth, and request headers.
 //
-// D35: the extension layer of upstream's composer (ProviderConfigInput,
+// D41: the extension layer of upstream's composer (ProviderConfigInput,
 // ExtensionOAuthConfig, registerProvider / streamSimple overrides) is extension
 // mechanics and is out of scope for the port, so every function here takes only
 // the models.json config. The behaviour of the remaining layers (base provider
-// plus models.json) is ported in full. D36 records that the ported compat union
-// is the typed ai.ModelCompat, so merging decodes the merged flat object with
-// the model's api (upstream merges flat objects that consumers interpret).
+// plus models.json) is ported in full. The ported compat union is the typed
+// ai.ModelCompat, so merging decodes the merged flat object with the model's api
+// (upstream merges flat objects that consumers interpret).
 
 // AuthStatus is the auth configuration summary surfaced to the UI.
 type AuthStatus struct {

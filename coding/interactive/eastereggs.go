@@ -13,8 +13,8 @@ import (
 // first-time-setup,earendil-announcement,daxnuts,armin}.ts.
 //
 // Divergences: the XBM/RGB easter eggs use an injectable random source because
-// the upstream effects call Math.random (D95); the bundled announcement image
-// asset is not shipped, so only its text renders (D94).
+// the upstream effects call Math.random; the bundled announcement image asset
+// is not shipped, so only its text renders.
 
 // SkillInvocationMessageComponent renders a skill block with the
 // collapsed/expanded state.
@@ -228,7 +228,7 @@ type EarendilAnnouncementComponent struct {
 const earendilBlogURL = "https://mariozechner.at/posts/2026-04-08-ive-sold-out/"
 
 // NewEarendilAnnouncementComponent creates the announcement. The bundled
-// image asset is not shipped, so the image branch is omitted (D94).
+// image asset is not shipped, so the image branch is omitted.
 func NewEarendilAnnouncementComponent() *EarendilAnnouncementComponent {
 	theme := ActiveTheme()
 	component := &EarendilAnnouncementComponent{Container: &tui.Container{}}
@@ -238,9 +238,9 @@ func NewEarendilAnnouncementComponent() *EarendilAnnouncementComponent {
 	component.AddChild(tui.NewText(theme.Fg("muted", "Read the blog post:"), 1, 0, nil))
 	component.AddChild(tui.NewText(theme.Fg("mdLink", earendilBlogURL), 1, 0, nil))
 	component.AddChild(tui.NewSpacer(1))
-	// The bundled image asset is not shipped (D94); upstream's Image component
-	// renders no lines without image capabilities, so only the surrounding
-	// spacer remains, keeping the rendered shape identical.
+	// The bundled image asset is not shipped; upstream's Image component renders
+	// no lines without image capabilities, so only the surrounding spacer
+	// remains, keeping the rendered shape identical.
 	component.AddChild(tui.NewSpacer(1))
 	component.AddChild(NewDynamicBorder(func(text string) string { return theme.Fg("accent", text) }))
 	return component
@@ -482,8 +482,7 @@ func ArminFinalGrid() [][]string {
 
 // ArminComponent renders the easter egg. The animation effects run on the
 // owner loop through the tui.Animator seam (upstream arms a setInterval; the
-// port keeps no component timer, stage 4) and use an injectable random source
-// (D95).
+// port keeps no component timer, stage 4) and use an injectable random source.
 type ArminComponent struct {
 	host      tui.RenderRequester
 	Effect    string

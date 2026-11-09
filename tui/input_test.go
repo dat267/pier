@@ -125,7 +125,7 @@ func TestInputAgainstUpstreamGolden(t *testing.T) {
 			t.Fatalf("input %s render:\n got %s\nwant %s", tc.label, got, wantRender)
 		}
 		// Upstream cursors are UTF-16 code-unit offsets; the Go port uses byte
-		// offsets (divergence D61), so the golden cursor is translated.
+		// offsets, so the golden cursor is translated.
 		wantCursor := jsOffsetToByteOffset(input.Value(), wantCursorJS)
 		if input.cursor != wantCursor {
 			t.Fatalf("input %s cursor = %d want %d", tc.label, input.cursor, wantCursor)
@@ -151,7 +151,7 @@ func parseInputGolden(t *testing.T, golden string) (value string, cursor int, re
 }
 
 // jsOffsetToByteOffset translates a UTF-16 code-unit offset into the
-// corresponding byte offset in the UTF-8 string (divergence D61).
+// corresponding byte offset in the UTF-8 string.
 func jsOffsetToByteOffset(value string, jsOffset int) int {
 	units := 0
 	for index, r := range value {
@@ -401,7 +401,7 @@ func TestWordNavigationAgainstUpstreamGolden(t *testing.T) {
 	}
 }
 
-// The input uses byte offsets (D61), so word movement must too.
+// The input uses byte offsets, so word movement must too.
 func TestInputWordMovementUsesByteOffsets(t *testing.T) {
 	input := NewInput(InputOptions{})
 	input.SetValue("héllo wörld")

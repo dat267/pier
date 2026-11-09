@@ -23,7 +23,7 @@ import (
 // completeProviderAuthentication, showAmbientAuthDialog).
 //
 // Divergences: the extension-selector dialog is a seam (D41) and the
-// runtime/collaborators are injected (D120).
+// runtime/collaborators are injected (D90).
 
 // AuthSession is the session surface the auth wiring needs.
 type AuthSession interface {

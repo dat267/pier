@@ -19,7 +19,7 @@ type FuzzyMatch struct {
 
 // MatchFuzzy matches query characters in order within text. Upstream names
 // both the type and the function fuzzyMatch/FuzzyMatch; Go cannot, so the
-// function is MatchFuzzy (divergence D66).
+// function is MatchFuzzy.
 func MatchFuzzy(query string, text string) FuzzyMatch {
 	if isASCII(query) && isASCII(text) {
 		// ASCII byte offsets equal UTF-16 code-unit offsets, so lowercase bytes

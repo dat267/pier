@@ -220,7 +220,7 @@ func TestSettingsCallbacks(t *testing.T) {
 		t.Fatalf("transport setting/session = %q/%q, want websocket/websocket", settings.GetTransport(), session.transport)
 	}
 	// The value is written, not installed into the transport: there is no
-	// dispatcher to reconfigure, and mutating the live one races (D40). It reaches
+	// dispatcher to reconfigure, and mutating the live one races (D254). It reaches
 	// the wire per request.
 	callbacks.OnHTTPIdleTimeoutMsChange(60000)
 	if got, err := settings.GetHTTPIdleTimeoutMS(); err != nil || got != 60000 {

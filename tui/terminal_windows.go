@@ -12,7 +12,7 @@ import (
 // SIGWINCH, so the size cache is refreshed by a poller that runs off the UI
 // loop (a console size query can block while a mouse selection is active).
 // nativeShiftPressed is upstream's isNativeModifierPressed("shift"), which
-// needs the native platform helper; it is out of scope (divergence D52).
+// needs the native platform helper; it is out of scope.
 
 // windowsResizePollInterval is how often the poller asks the console for its
 // size. It runs on its own goroutine, so the cost is not on the UI loop; 200ms

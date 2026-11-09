@@ -23,7 +23,7 @@ import (
 // handoff, not renderer or component state.
 
 // Terminal is the terminal abstraction used by the renderer (see
-// src/terminal.ts). Getters are methods in Go (divergence D46). The concrete
+// src/terminal.ts). Getters are methods in Go. The concrete
 // ProcessTerminal lands with the terminal port.
 type Terminal interface {
 	// Start starts the terminal with input and resize handlers.
@@ -738,7 +738,7 @@ func (t *Renderer) containsComponent(root Component, target Component) bool {
 	}
 	// Upstream checks `root instanceof Container`; in Go any component that
 	// exposes its children through the Container (or embeds one, like Stack)
-	// is treated the same (divergence D55).
+	// is treated the same.
 	holder, ok := root.(childrenHolder)
 	if !ok {
 		return false

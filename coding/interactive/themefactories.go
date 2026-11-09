@@ -23,7 +23,7 @@ var activeTheme = &Theme{resolve: CurrentTheme}
 
 // ActiveTheme returns the active theme; it panics when no theme is
 // initialized (upstream's Proxy throws). Named ActiveTheme because Theme is
-// the type (divergence D85).
+// the type.
 func ActiveTheme() *Theme {
 	if CurrentTheme() == nil {
 		panic("Theme not initialized. Call InitTheme() first.")

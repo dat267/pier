@@ -16,8 +16,8 @@ import (
 // search through `fd`.
 //
 // Divergences: the provider list is a single CommandEntry slice instead of a
-// SlashCommand/AutocompleteItem union (D73); comparisons use byte ordering
-// where upstream uses localeCompare (D72).
+// SlashCommand/AutocompleteItem union; comparisons use byte ordering where
+// upstream uses localeCompare (D257).
 
 // CommandEntry is a slash command or a plain completion entry.
 type CommandEntry struct {
@@ -849,7 +849,7 @@ func (p *CombinedAutocompleteProvider) getFuzzyFileSuggestions(ctx context.Conte
 
 // localeCompareLike approximates JavaScript's localeCompare (ICU collation):
 // the primary comparison is case-insensitive with the original bytes as the
-// tie-break (divergence D72: full ICU collation is not reproduced).
+// tie-break (divergence D257: full ICU collation is not reproduced).
 func localeCompareLike(a string, b string) int {
 	lowerA := strings.ToLower(a)
 	lowerB := strings.ToLower(b)

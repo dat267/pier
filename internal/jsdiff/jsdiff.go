@@ -1,7 +1,7 @@
 // Package jsdiff is jsdiff v8's Myers diff core, shared by the word-diff
 // renderer and the unified-patch generator. The npm package is unavailable
-// offline, so the algorithm is ported from its source (D87) and verified
-// against the real library through Node goldens.
+// offline, so the algorithm is ported from its source and verified against the
+// real library through Node goldens.
 package jsdiff
 
 // Component is one run of equal, added or removed tokens in diff order.

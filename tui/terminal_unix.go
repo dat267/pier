@@ -14,8 +14,8 @@ func isDarwin() bool  { return runtime.GOOS == "darwin" }
 func isWindows() bool { return runtime.GOOS == "windows" }
 
 // nativeShiftPressed is upstream's isNativeModifierPressed("shift"), which
-// needs the native platform helper (C/ObjC). Out of scope (divergence D52);
-// native Shift+Enter detection stays disabled.
+// needs the native platform helper (C/ObjC). Out of scope; native Shift+Enter
+// detection stays disabled.
 func nativeShiftPressed() bool { return false }
 
 // resizeWatcher delivers SIGWINCH-driven resize notifications.

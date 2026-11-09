@@ -21,7 +21,7 @@ import (
 // rejected explicitly, while the default "auto" uses the SSE path (upstream
 // falls back to SSE on transport failures too).
 //
-// D28 records the WebSocket omission.
+// The WebSocket transport is omitted; only "auto" and "sse" are supported.
 
 // Codex defaults.
 const (
@@ -635,7 +635,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 		}()
 
 		if options.Transport == "websocket" {
-			fail(fmt.Errorf("The openai-codex WebSocket transport is not supported by the Go port (D28); use transport \"sse\""))
+			fail(fmt.Errorf("The openai-codex WebSocket transport is not supported by the Go port; use transport \"sse\""))
 			return
 		}
 		if options.APIKey == "" {
@@ -693,7 +693,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 			request.Header = headers.Clone()
 			// Upstream arms the headers timeout around the fetch alone and leaves
 			// the body alone; the shared guard bounds the headers wait and keeps
-			// the body alive only while it produces data (D40).
+			// the body alive only while it produces data (D254).
 			response, err = DoProviderRequestWithAbortSignalTimeoutAndIdle(request, options.TimeoutMs, options.HTTPIdleTimeoutMs)
 			if err != nil {
 				var idle *idleTimeoutError

@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-// TestCustomEntryDataField guards D129: the custom entry payload serializes as
-// `data` (upstream CustomEntry.data), not `details`.
+// TestCustomEntryDataField pins the field name: the custom entry payload
+// serializes as `data` (upstream CustomEntry.data), not `details`.
 func TestCustomEntryDataField(t *testing.T) {
 	manager := NewSessionManager("/tmp/proj", &SessionManagerOptions{Persist: new(false)})
 	payload := json.RawMessage(`{"hello":"world"}`)

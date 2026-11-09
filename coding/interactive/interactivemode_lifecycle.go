@@ -21,7 +21,7 @@ import (
 // register/unregisterSignalHandlers).
 //
 // Divergences: the process-level effects (exit, signals, terminal title,
-// stdout writes) are injected so the lifecycle is testable (D122); the
+// stdout writes) are injected so the lifecycle is testable (D90); the
 // extension/resource collaborators are seams (D41).
 
 // LifecycleSession is the session surface the lifecycle needs.

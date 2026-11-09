@@ -645,7 +645,7 @@ func run(appName string, args *coding.Args) error {
 	installBrowserOpener()
 	// The explicit setting wins; otherwise the terminal is asked through the environment
 	// detection upstream uses. The port injects capabilities instead of detecting them
-	// inside the tui package (D69), so this is where they are installed.
+	// inside the tui package, so this is where they are installed.
 	capabilities := coding.DetectTerminalCapabilities(os.Getenv, goruntime.GOOS, coding.TmuxForwardsHyperlinks)
 	if terminalOverrides.Hyperlinks != nil {
 		capabilities.Hyperlinks = *terminalOverrides.Hyperlinks

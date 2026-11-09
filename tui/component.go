@@ -77,7 +77,7 @@ type TuiMouseDispatchTarget struct {
 
 // TuiMouseDispatchResult is the result of dispatching to a concrete component.
 // Handled lives in the embedded TuiMouseEventResult (upstream narrows it to the
-// literal `true`; Go keeps the same single field: divergence D48).
+// literal `true`; Go keeps the same single field.)
 type TuiMouseDispatchResult struct {
 	TuiMouseEventResult
 	Target TuiMouseDispatchTarget
@@ -124,7 +124,7 @@ type Focusable interface {
 // zero-width escape that terminals ignore; components emit it at the cursor
 // position when focused, and the renderer strips it and positions the hardware
 // cursor there. (Upstream exposes a public `focused` field; Go uses
-// SetFocused/IsFocused: divergence D43.)
+// SetFocused/IsFocused.)
 const CursorMarker = "\x1b_pi:c\x07"
 
 // FakeCursorStart and FakeCursorEnd mark the text drawn in place of the cursor.
@@ -189,7 +189,7 @@ func RetargetMouseEvent(event TuiMouseEvent, target TuiMouseDispatchTarget) TuiM
 }
 
 // childrenHolder exposes a component's children to the renderer's mount
-// checks (upstream uses `instanceof Container`; D55).
+// checks (upstream uses `instanceof Container`).
 type childrenHolder interface {
 	childComponents() []Component
 }

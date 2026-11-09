@@ -42,7 +42,7 @@ type SettingsList struct {
 	items         []SettingItem
 	filteredItems []SettingItem
 	// filteredIndexes maps display positions to indexes in items, so
-	// activation mutates the stored item rather than a filtered copy (D97).
+	// activation mutates the stored item rather than a filtered copy.
 	filteredIndexes   []int
 	theme             SettingsListTheme
 	selectedIndex     int
@@ -331,8 +331,8 @@ func (s *SettingsList) getDisplayItems() []SettingItem {
 	if !s.searchEnabled || s.filteredIndexes == nil {
 		return s.items
 	}
-	// Rebuild from the stored items so value mutations are visible (D97):
-	// upstream's filtered array holds references to the same objects.
+	// Rebuild from the stored items so value mutations are visible: upstream's
+	// filtered array holds references to the same objects.
 	display := make([]SettingItem, 0, len(s.filteredIndexes))
 	for _, index := range s.filteredIndexes {
 		if index >= 0 && index < len(s.items) {

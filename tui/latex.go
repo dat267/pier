@@ -10,7 +10,7 @@ import (
 // latexdata.go, extracted from the upstream source).
 //
 // RE2 has no lookbehind/lookahead, so the named-operator spacing patterns and
-// the \limits modifier match are implemented with manual scans (D70).
+// the \limits modifier match are implemented with manual scans (D303).
 
 const (
 	latexNamedOperatorStart = "\U000F0004"

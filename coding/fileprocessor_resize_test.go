@@ -40,7 +40,7 @@ func solidPNG(t *testing.T, width, height int) []byte {
 	return buffer.Bytes()
 }
 
-// TestResizeInlineImageFitsTheMaxDimensions covers the resizer D26 recorded as
+// TestResizeInlineImageFitsTheMaxDimensions covers the resizer that used to be
 // missing: upstream's resizeImageInProcess fits the image to maxWidth/maxHeight
 // and re-encodes it, where the port used to return nil (and the caller then
 // reported an omission).

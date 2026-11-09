@@ -8,10 +8,10 @@ import (
 
 // JavaScript character classes range over UTF-16 code units while the encoded
 // text stores surrogate units as plane-15 runes. A positive class whose BMP
-// range crosses D800-DFFF (for example Julia's [\u00A1-\uFFFF]) must therefore
-// also include the mapped units; a negated class must exclude them. Classes
-// that already name an astral character exclude or include its mapped units
-// explicitly and need no change.
+// range crosses the surrogate block (0xD800-0xDFFF, for example Julia's
+// [\u00A1-\uFFFF]) must therefore also include the mapped units; a negated
+// class must exclude them. Classes that already name an astral character
+// exclude or include its mapped units explicitly and need no change.
 func augmentSurrogateClasses(src string) string {
 	var b strings.Builder
 	last := 0

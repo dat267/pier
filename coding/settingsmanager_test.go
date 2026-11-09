@@ -351,8 +351,8 @@ func TestSettingsProjectTrust(t *testing.T) {
 		t.Fatalf("theme = %v", theme)
 	}
 
-	// Writes to an untrusted project are refused and recorded (D23: the Go port
-	// records the error where upstream throws).
+	// Writes to an untrusted project are refused and recorded: the Go port
+	// records the error where upstream throws.
 	writeSettingsFile(t, projectPath, `{"packages":["npm:existing"]}`)
 	untrustedManager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{ProjectTrusted: &untrusted})
 	untrustedManager.SetProjectPackages([]any{"npm:new"})

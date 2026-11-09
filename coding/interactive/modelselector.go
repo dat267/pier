@@ -58,7 +58,7 @@ type ModelSelectorComponent struct {
 	*tui.Container
 
 	// mu serializes rendering, input handling, and the background refresh
-	// application (the Go port has no single-threaded event loop: D84/D96).
+	// application (the Go port has no single-threaded event loop: D143).
 
 	searchInput *tui.Input
 	focused     bool

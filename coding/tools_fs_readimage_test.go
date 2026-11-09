@@ -13,8 +13,8 @@ import (
 )
 
 // A wide image is resized on the way to the model, with the dimension note in the
-// text (D8: the resize used to be left for later, and the tool sent the original
-// bytes at whatever size they were).
+// text. The resize used to be left for later, and the tool sent the original
+// bytes at whatever size they were.
 func TestReadToolResizesWideImages(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "wide.png")
@@ -70,7 +70,7 @@ func TestReadToolNotesNonVisionModels(t *testing.T) {
 
 // A format the sniffer accepts but the standard library cannot decode degrades to
 // a text-only result carrying the omission message, rather than attaching bytes
-// the model cannot read (D26).
+// the model cannot read.
 func TestReadToolReportsUndecodableImages(t *testing.T) {
 	dir := t.TempDir()
 	// A WebP header is enough for the sniffer; image/webp has no standard-library

@@ -16,7 +16,7 @@ import (
 // handleStartupSubmit, setupEditorSubmitHandler).
 //
 // Divergences: the command handlers and the clipboard/browser helpers are
-// injected as function values (D115); the extension-command branch is absent
+// injected as function values (D90); the extension-command branch is absent
 // (D41). D155: absent collaborators are never silently nil — each seam the
 // wiring needs is assigned at composition time, so a feature cannot be disabled
 // by an unset function field.
@@ -160,7 +160,7 @@ type SubmitSession interface {
 	Prompt(ctx context.Context, text string, options *coding.PromptOptions) error
 }
 
-// SubmitHandlers are the slash-command handlers (injected; D115).
+// SubmitHandlers are the slash-command handlers (injected; D90).
 type SubmitHandlers struct {
 	ShowSettingsSelector    func()
 	ShowModelsSelector      func() error

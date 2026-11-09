@@ -16,8 +16,7 @@ import (
 // formatter with intra-line highlighting.
 //
 // The npm package is unavailable offline, so the algorithm is ported directly
-// from its source (divergence D87) and verified against the real library
-// through Node goldens.
+// from its source and verified against the real library through Node goldens.
 
 // DiffChange is a diff change object.
 type DiffChange struct {

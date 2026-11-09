@@ -701,8 +701,8 @@ type SettingsManagerCreateOptions struct {
 
 // SettingsManager is the scoped settings facade (upstream SettingsManager).
 //
-// D23: upstream serializes writes through a promise queue because its storage
-// is asynchronous; Go storage is synchronous, so writes run inline under the
+// Upstream serializes writes through a promise queue because its storage is
+// asynchronous; Go storage is synchronous, so writes run inline under the
 // manager lock and failures are recorded (never thrown from save), matching the
 // observable behavior (errors surface through DrainErrors). With a PersistQueue
 // the storage roundtrip moves off the calling goroutine (the UI loop), ordered
@@ -900,8 +900,8 @@ func StripBom(content string) string {
 
 // MigrateSettings applies the legacy-format migrations to a settings value.
 //
-// D24: upstream mutates a JS object; the Go port round-trips through a JSON map
-// so unknown and future keys survive the migration untouched.
+// Upstream mutates a JS object; the Go port round-trips through a JSON map so
+// unknown and future keys survive the migration untouched.
 func MigrateSettings(settings *Settings) *Settings {
 	if settings == nil {
 		return &Settings{}

@@ -432,7 +432,7 @@ func (t *TruncatedText) Render(width int) []string {
 // ---- Loader ----
 
 // RenderRequester is the render request surface the loader needs (upstream
-// takes the whole TUI: divergence D62).
+// takes the whole TUI).
 type RenderRequester interface {
 	RequestRender(force bool)
 }
@@ -507,8 +507,7 @@ func NewLoader(requestRender RenderRequester, spinnerColor func(string) string, 
 		loader.messageColor = func(text string) string { return text }
 	}
 	// Upstream's "Loading..." is a parameter default: an explicit empty message
-	// stays empty (D110). Callers that want the default pass
-	// DefaultLoaderMessage.
+	// stays empty. Callers that want the default pass DefaultLoaderMessage.
 	loader.SetIndicator(indicator)
 	return loader
 }

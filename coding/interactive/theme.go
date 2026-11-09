@@ -1548,7 +1548,7 @@ func StopThemeWatcher() {
 func stopThemeWatcher() { StopThemeWatcher() }
 
 // trueColorState reports the terminal's truecolor support; the host installs
-// the capability flag (D69: injectable capabilities).
+// the capability flag (injectable capabilities).
 var trueColorState struct {
 	enabled atomic.Bool
 	known   atomic.Bool

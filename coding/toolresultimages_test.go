@@ -99,7 +99,7 @@ func TestNormalizeToolResultImagesPassthrough(t *testing.T) {
 func TestNormalizeToolResultImagesMimeNormalization(t *testing.T) {
 	// A non-canonical mime (image/jpg) normalizes to image/jpeg: the block is
 	// rewritten without a conversion hint (upstream only hints when the Photon
-	// converter runs, D26). A real (decodable) image is required so the
+	// converter runs). A real (decodable) image is required so the
 	// normalization path succeeds.
 	var buffer bytes.Buffer
 	if err := png.Encode(&buffer, image.NewRGBA(image.Rect(0, 0, 2, 2))); err != nil {

@@ -7,7 +7,7 @@ import (
 )
 
 // TestDiffComponentsMatchesPinnedJsdiff replays the pinned jsdiff 8 fixture, so
-// the port's component runs match exactly what edit-diff.ts renders (D87).
+// the port's component runs match exactly what edit-diff.ts renders.
 func TestDiffComponentsMatchesPinnedJsdiff(t *testing.T) {
 	data, err := os.ReadFile("testdata/parity/cases.json")
 	if err != nil {

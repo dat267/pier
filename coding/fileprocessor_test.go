@@ -140,16 +140,16 @@ func TestProcessImagePassesThroughSmallImages(t *testing.T) {
 		t.Fatalf("result = %+v", result)
 	}
 
-	// An unsupported format reports the upstream omission message (D26: the Go
-	// port cannot convert it without Photon).
+	// An unsupported format reports the upstream omission message: the Go port
+	// cannot convert it without Photon.
 	result = ProcessImage([]byte("not an image"), "application/octet-stream", nil)
 	if result.OK || result.Message != "[Image omitted: could not be converted to a supported inline image format.]" {
 		t.Fatalf("result = %+v", result)
 	}
 
 	// An image that needs resizing is scaled to the max dimensions and carries the
-	// dimension note (D26: this used to be an omission, because the port had no
-	// resizer).
+	// dimension note. This used to be an omission, because the port had no
+	// resizer.
 	large := pngBytes(t, 2100, 4)
 	result = ProcessImage(large, "image/png", nil)
 	if !result.OK {

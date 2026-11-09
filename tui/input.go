@@ -7,7 +7,7 @@ import (
 // Port of src/components/input.ts: a single-line text input with horizontal
 // scrolling, a fake cursor, bracketed-paste handling, the kill ring, and
 // undo. Upstream indexes by UTF-16 code units; Go uses byte offsets into the
-// UTF-8 string (divergence D61).
+// UTF-8 string.
 
 type inputState struct {
 	value  string
@@ -377,7 +377,7 @@ func (in *Input) moveWordBackwards() {
 	}
 	in.lastAction = ""
 	// FindWordBackward works in UTF-16 offsets; the input's cursor is a byte
-	// offset (D61).
+	// offset.
 	utf16Cursor := utf16IndexForByteOffset(in.value, in.cursor)
 	in.cursor = byteOffsetForUTF16Index(in.value, FindWordBackward(in.value, utf16Cursor))
 }
@@ -492,7 +492,7 @@ func (in *Input) Render(width int) []string {
 }
 
 // sliceFrom returns text[offset:] or "" when the offset is out of range
-// (JS String.slice clamps; divergence D61).
+// (JS String.slice clamps).
 func sliceFrom(text string, offset int) string {
 	if offset < 0 || offset >= len(text) {
 		return ""

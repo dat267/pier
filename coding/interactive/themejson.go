@@ -12,8 +12,7 @@ import (
 //
 // Upstream validates with typebox (kept out of the palette path to avoid the
 // module graph). The Go port validates structurally and reports the same
-// missing-color summary; the exact typebox message wording is not reproduced
-// (divergence D34).
+// missing-color summary; the exact typebox message wording is not reproduced.
 
 // ColorValue is a theme color: a hex string ("#rrggbb"), a variable reference
 // (a name in "vars"), an empty string (terminal default), or a 256-color index.

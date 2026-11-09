@@ -302,7 +302,7 @@ type cachedVertexToken struct {
 // credential file (GOOGLE_APPLICATION_CREDENTIALS or the gcloud ADC file)
 // refreshed against its token endpoint, or the GCE metadata server.
 //
-// D27: upstream delegates to google-auth-library, which also signs
+// Upstream delegates to google-auth-library, which also signs
 // service-account keys and speaks workload identity; the Go port implements the
 // refresh-token and metadata flows and reports the unimplemented credential
 // types explicitly.
@@ -362,7 +362,7 @@ func readAuthorizedUserCredentials(path string) (*authorizedUserCredentials, err
 	case "authorized_user":
 		return &credentials, nil
 	case "service_account":
-		return nil, fmt.Errorf("service-account key files are not supported by the Go port (D27); " +
+		return nil, fmt.Errorf("service-account key files are not supported by the Go port; " +
 			"use an authorized-user credential, the gcloud ADC file, or a Vertex API key")
 	default:
 		return nil, nil

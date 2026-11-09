@@ -33,9 +33,9 @@ func compileRegex(pattern string) *regexp.Regexp {
 // modifyOtherKeys fallback, and the input helpers.
 //
 // Out of scope: the native platform helpers (enableWindowsVTInput,
-// isNativeModifierPressed) — divergence D52; native Shift+Enter detection is
-// disabled, the sequence normalization hook stays. Stdin cannot be paused in
-// Go, so Stop discards buffered input instead of pausing it (divergence D50).
+// isNativeModifierPressed); native Shift+Enter detection is disabled, the
+// sequence normalization hook stays. Stdin cannot be paused in Go, so Stop
+// discards buffered input instead of pausing it (D50).
 
 const (
 	terminalProgressKeepaliveMS               = 1000
@@ -98,8 +98,7 @@ func IsAppleTerminalSession() bool {
 
 // NormalizeNativeShiftEnterInput maps a bare CR to the native Shift+Enter
 // sequence when the native modifier detection is available. Upstream consults
-// isNativeModifierPressed; the Go port takes the shift state from the
-// caller (divergence D52).
+// isNativeModifierPressed; the Go port takes the shift state from the caller.
 func NormalizeNativeShiftEnterInput(data string, shouldDetectNativeShiftEnter bool, isShiftPressed bool) string {
 	if shouldDetectNativeShiftEnter && isNativeShiftEnterCandidate(data) && isShiftPressed {
 		return nativeShiftEnterSequence

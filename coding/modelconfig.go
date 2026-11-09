@@ -17,7 +17,7 @@ import (
 // Port of core/model-config.ts: an immutable, credential-blind models.json
 // snapshot, plus utils/json.ts (stripJsonComments).
 //
-// D34: upstream validates with typebox and reports typebox's message texts.
+// Upstream validates with typebox and reports typebox's message texts.
 // The Go port reproduces the same schema (fields, types, required properties,
 // minLength, maxItems, integer and numeric bounds, and literal unions) and
 // upstream's error *paths*, but the message text is the Go port's own phrasing

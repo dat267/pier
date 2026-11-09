@@ -285,7 +285,7 @@ func TestModelConfigErrors(t *testing.T) {
 		t.Fatalf("error = %q", config.GetError())
 	}
 
-	// D34 preserves deterministic lexical paths with port-local messages for
+	// The port preserves deterministic lexical paths with local messages for
 	// pi 4a080252 core/model-config.ts's schema errors, including nested records.
 	path := write(t, `{"providers":{"z":false,"a":{"headers":{"z":1,"a":1},"compat":{"chatTemplateKwargs":{"z":{"$var":"bad"},"a":{"$var":"bad"}}},"models":[{"id":"m","promptCache":{"z":0,"a":0}}],"modelOverrides":{"z":1,"a":1}}}}`)
 	want := "Invalid models.json schema:\n" +

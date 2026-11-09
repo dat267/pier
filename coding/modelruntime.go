@@ -20,7 +20,7 @@ import (
 //
 // Built-in catalogs are layered with pi.dev's refreshable catalog in the same
 // provider setup as upstream; OpenRouter additionally personalizes the refreshed
-// list to the active key. D35 still applies: extension provider registration is
+// list to the active key. D41 still applies: extension provider registration is
 // extension mechanics and omitted.
 
 // ModelRuntimeSnapshot is the cached provider/model/auth view.

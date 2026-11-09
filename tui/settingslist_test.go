@@ -263,8 +263,9 @@ func TestSettingsListBehaviour(t *testing.T) {
 	}
 }
 
-// TestSettingsListFilteredActivationMutation guards D97: activating a row while
-// a search filter is active must update the stored item, not a filtered copy.
+// TestSettingsListFilteredActivationMutation covers filtered activation:
+// activating a row while a search filter is active must update the stored item,
+// not a filtered copy.
 func TestSettingsListFilteredActivationMutation(t *testing.T) {
 	theme := SettingsListTheme{
 		Label:       func(text string, selected bool) string { return text },

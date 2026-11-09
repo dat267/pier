@@ -10,8 +10,8 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
-// TestSerializeSessionBranchHeader guards D130: the serialized branch starts
-// with a valid session header (`type: "session"`).
+// TestSerializeSessionBranchHeader pins the header discriminator: the
+// serialized branch starts with a valid session header (`type: "session"`).
 func TestSerializeSessionBranchHeader(t *testing.T) {
 	manager := NewSessionManager("/tmp/proj", &SessionManagerOptions{Persist: new(false)})
 	manager.AppendMessage(ai.Message(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}))

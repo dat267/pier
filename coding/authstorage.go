@@ -26,7 +26,7 @@ import (
 // Port of core/auth-storage.ts: credential storage backed by auth.json.
 // Provider auth orchestration belongs to the model runtime.
 //
-// D32: upstream's AuthStorageBackend is generic over the lock result and uses
+// Upstream's AuthStorageBackend is generic over the lock result and uses
 // proper-lockfile (a lock *directory* with staleness detection and an
 // onCompromised callback). The Go backend uses an explicit result/next pair and
 // a lock directory with the same staleness window; "compromised" is detected by

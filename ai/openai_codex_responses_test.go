@@ -419,7 +419,7 @@ func TestStreamCodexResponsesErrors(t *testing.T) {
 		t.Fatalf("message = %+v", message)
 	}
 
-	// An explicit websocket transport is rejected (D28).
+	// An explicit websocket transport is rejected.
 	stream = StreamOpenAICodexResponses(model, TranscriptContext{Messages: []Message{
 		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
 	}}, &OpenAICodexResponsesOptions{

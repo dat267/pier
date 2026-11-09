@@ -11,7 +11,7 @@ import (
 // its change callbacks.
 //
 // Divergences: the collaborators (session, theme controller, renderer, chat,
-// selector refresh) are injected as small interfaces/function values (D117).
+// selector refresh) are injected as small interfaces/function values (D90).
 
 // SettingsSession is the session surface the settings selector needs.
 type SettingsSession interface {
@@ -229,7 +229,7 @@ func (w *SettingsWiring) BuildSettingsCallbacks(done func(), refresh func()) Set
 		},
 		OnHTTPIdleTimeoutMsChange: func(timeoutMS int64) {
 			// The value is written here and applied at the next start, where the
-			// dispatcher is configured before any request exists (D40): Go's
+			// dispatcher is configured before any request exists (D254): Go's
 			// transport has no safe way to be reconfigured while in flight.
 			settings.SetHTTPIdleTimeoutMS(timeoutMS)
 			w.showStatus("HTTP idle timeout: " + coding.FormatHTTPIdleTimeoutMS(timeoutMS))

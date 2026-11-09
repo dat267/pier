@@ -3,7 +3,7 @@ package tui
 // Port of pi v1.4.0 packages/tui/src/terminal-image.ts: inline-image capability
 // detection inputs, the kitty and iTerm2 encoders, image dimension parsing,
 // cell-size math, the kitty placement registry used for scroll clipping, and
-// the text fallback. The package-level capability value is injected (D69), so
+// the text fallback. The package-level capability value is injected, so
 // detection itself lives with the caller; this file only consumes it.
 
 import (

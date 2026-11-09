@@ -16,7 +16,7 @@ import (
 // Oversized images make the provider reject the whole conversation, not just
 // the offending turn, so normalize them once on arrival.
 //
-// D26: upstream resizes with Photon; the Go image pipeline reports the upstream
+// D408: upstream resizes with Photon; the Go image pipeline reports the upstream
 // omission message when an image needs resizing, and NormalizedToolResultImages
 // keeps the original block in that case so a tool's output is never silently
 // deleted (matching upstream's processImage-failure handling).

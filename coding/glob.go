@@ -19,7 +19,7 @@ import (
 // and `!`/`^` negation, brace groups (comma alternatives and `{1..3}`-style
 // sequences) and `\` escaping.
 //
-// D22: minimatch's extended globs (`!(...)`, `+(...)`, `?(...)`, `@(...)`,
+// minimatch's extended globs (`!(...)`, `+(...)`, `?(...)`, `@(...)`,
 // `*(...)`), extglob negation patterns (`!pattern`), its POSIX character
 // classes, `\`-escaped separators, and its `matchBase`/`nocase` options beyond
 // ASCII case folding are not implemented; model ids never use them. D262 covers

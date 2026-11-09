@@ -18,7 +18,7 @@ import (
 // showModelsSelector, showSessionSelector, handleResumeSession).
 //
 // Divergences: the runtime/session-switch collaborators are injected function
-// values (D118); the refresh timeout is driven by a scheduler seam.
+// values (D90); the refresh timeout is driven by a scheduler seam.
 
 // ModelSession is the session surface the model selectors need.
 type ModelSession interface {

@@ -4,8 +4,7 @@ package tui
 // modifyOtherKeys decoding.
 //
 // Upstream's KeyId is a TypeScript string-literal union; Go uses a plain
-// string alias and the Key helper object carries the same names (divergence
-// D53).
+// string alias and the Key helper object carries the same names.
 
 import (
 	"os"

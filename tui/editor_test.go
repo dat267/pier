@@ -139,7 +139,7 @@ func TestEditorAgainstUpstreamGolden(t *testing.T) {
 		}
 		checkGolden(t, golden.values, label+" text", mustJSON(editor.GetText()))
 		// Upstream cursors are UTF-16 code-unit offsets; the Go port uses byte
-		// offsets (divergence D61), so the golden cursor is translated.
+		// offsets, so the golden cursor is translated.
 		wantCursor, ok := golden.values[label+" cursor"]
 		if !ok {
 			t.Fatalf("missing golden %q", label+" cursor")

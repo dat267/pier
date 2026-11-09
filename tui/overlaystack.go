@@ -1,8 +1,8 @@
 package tui
 
 // Port of the overlay stack and its focus-restore state machine (upstream's
-// TuiBase overlay/focus surface; D55 covers the childrenHolder divergence in the
-// mount check).
+// TuiBase overlay/focus surface; childrenHolder covers the mount-check
+// divergence).
 //
 // The stack owns the entries, the focused component, the focus order and the
 // inactive|eligible|blocked restore union. The two things the machine cannot

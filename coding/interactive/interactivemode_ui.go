@@ -14,8 +14,8 @@ import (
 // listeners). The extension runner itself is out of scope (D41), so this is a
 // standalone state machine driven by the mode.
 //
-// Divergence D111: the extension widget/header factories receive the TUI and
-// theme through function values (upstream's `(tui, thm) => Component`).
+// The extension widget/header factories receive the TUI and theme through
+// function values (upstream's `(tui, thm) => Component`).
 
 // MaxWidgetLines is the maximum total widget line count.
 const MaxWidgetLines = 10

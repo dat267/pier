@@ -15,8 +15,8 @@ import (
 // with copy, transcript search, flashes, and the scroll-to-end indicator).
 //
 // Divergences: selection auto-scroll uses a time.AfterFunc loop guarded by a
-// mutex (D82); clipboard writes go through the injected CopySelection hook or
-// an OSC 52 escape (native clipboard is out of scope). The kitty upload
+// mutex; clipboard writes go through the injected CopySelection hook or an
+// OSC 52 escape (native clipboard is out of scope, D105). The kitty upload
 // cache/eviction and the WezTerm draw-images-last ordering are ported
 // (upstream prepareKittyScreen / drawKittyImagesLast).
 
@@ -426,7 +426,7 @@ func (s *AltScreen) beforeTerminalStart() {
 	s.uploadedKittyImages = nil
 	s.kittyImageOrder = nil
 	// The iterm2 capability swap upstream performs only affects image
-	// rendering, which is out of scope (D81).
+	// rendering, which is out of scope.
 	s.lastDocument = nil
 	s.selectionAnchor = nil
 	s.selectionFocus = nil

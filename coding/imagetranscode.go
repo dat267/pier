@@ -4,7 +4,7 @@ package coding
 // accepts PNG (f=100), so a non-PNG image shown in a kitty terminal must be
 // re-encoded first (upstream #10292, ensurePngTranscoder). Go's standard
 // decoders cover PNG, JPEG and GIF; formats the port cannot decode (WebP, BMP)
-// fall back to the text placeholder (D26).
+// fall back to the text placeholder.
 
 import (
 	"bytes"

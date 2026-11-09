@@ -27,8 +27,8 @@ import (
 // state only. The upstream formatting helpers that remain
 // (FormatTokens, FormatCwdForFooter) keep their upstream behavior.
 //
-// Divergence D108: the footer takes a narrow FooterSession interface instead of
-// the concrete AgentSession so the formatting logic is testable.
+// The footer takes a narrow FooterSession interface instead of the concrete
+// AgentSession so the formatting logic is testable (D90).
 
 // FooterSession is the session surface the footer needs.
 type FooterSession interface {

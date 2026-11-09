@@ -14,7 +14,7 @@ import (
 // history, the kill ring, undo, and autocomplete integration.
 //
 // Divergences: the state snapshot on undo copies the lines slice explicitly
-// instead of structuredClone (D59). Autocomplete follows upstream's debounce,
+// instead of structuredClone. Autocomplete follows upstream's debounce,
 // abort and off-loop provider call; a host without the Post seam (test doubles,
 // a nil host) keeps the synchronous provider call.
 
@@ -31,7 +31,7 @@ type EditorOptions struct {
 }
 
 // EditorHost is the TUI surface the editor needs (upstream takes the whole
-// TUI: divergence D62).
+// TUI).
 type EditorHost interface {
 	Rows() int
 	RequestRender(force bool)
@@ -330,8 +330,8 @@ func (e *Editor) setTextInternal(text string, placement string) {
 }
 
 // TopBorder overrides the top border rendering when set (upstream's protected
-// renderTopBorder override, D109). Implementations that want the default
-// rendering call DefaultRenderTopBorder.
+// renderTopBorder override). Implementations that want the default rendering
+// call DefaultRenderTopBorder.
 func (e *Editor) renderTopBorder(width int, hiddenLineCount int) string {
 	if e.TopBorder != nil {
 		return e.TopBorder(width, hiddenLineCount)

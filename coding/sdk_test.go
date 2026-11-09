@@ -835,7 +835,7 @@ func TestCreateAgentSessionRequestOptions(t *testing.T) {
 // The global HTTP idle timeout and provider SDK timeout are propagated
 // separately, so provider retry overrides cannot replace the dispatcher's body
 // idle limit. Per-request values are rebuilt after settings changes instead of
-// mutating the shared transport (D40).
+// mutating the shared transport (D254).
 func TestHTTPIdleTimeoutReachesTheRequest(t *testing.T) {
 	tempAgentDir(t)
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{

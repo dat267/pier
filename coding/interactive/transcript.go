@@ -22,8 +22,8 @@ import (
 // status lines.
 //
 // Divergences: the extension entry/message renderers are seams that return nil
-// because extension mechanics are out of scope (D41/D112); the tool renderer
-// registry is injected as a resolver.
+// because extension mechanics are out of scope (D41); the tool renderer registry
+// is injected as a resolver.
 
 // RenderSessionItem is one transcript render input.
 type RenderSessionItem struct {

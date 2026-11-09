@@ -4,7 +4,7 @@ package tui
 
 // UndoStack stores state snapshots. Upstream clones on push with
 // structuredClone; Go callers pass already-detached values, and the stack
-// stores them as-is (divergence D59: no deep clone).
+// stores them as-is (no deep clone).
 type UndoStack[S any] struct {
 	stack []S
 }

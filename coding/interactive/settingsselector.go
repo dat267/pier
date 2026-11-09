@@ -831,7 +831,7 @@ func NewSettingsSelectorComponent(config SettingsConfig, callbacks SettingsCallb
 	}
 
 	// Image toggles depend on terminal capabilities; images are inert in the
-	// Go port, so they are omitted (D26).
+	// Go port, so they are omitted.
 	insertAfter := func(id string, item tui.SettingItem) {
 		for index, existing := range items {
 			if existing.ID == id {

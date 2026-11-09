@@ -12,7 +12,7 @@ import (
 
 // Port of packages/tui/src/terminal-image.ts detectCapabilities and
 // detectCapabilitiesFromEnvironment. The tui package injects terminal
-// capabilities instead of detecting them itself (D69), so the detection lives
+// capabilities instead of detecting them itself, so the detection lives
 // here and the CLI installs the result at boot.
 
 // tmuxTermfeaturesTimeoutMS bounds the tmux probe; upstream allows it 250 ms.

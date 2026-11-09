@@ -12,7 +12,7 @@ import (
 // Port of core/model-registry.ts: the synchronous compatibility facade over the
 // model runtime.
 //
-// D35 applies here too: the extension registerProvider/unregisterProvider
+// D41 applies here too: the extension registerProvider/unregisterProvider
 // surface is extension mechanics and omitted, so the facade covers the runtime
 // reads, request auth resolution, and streaming.
 

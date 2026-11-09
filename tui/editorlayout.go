@@ -6,7 +6,7 @@ import (
 
 // Port of the module-level helpers of src/components/editor.ts: paste-marker
 // aware segmentation, word wrapping, scroll borders, and the autocomplete
-// trigger matching (implemented manually because RE2 has no lookaround: D70).
+// trigger matching (implemented manually because RE2 has no lookaround: D303).
 
 var pasteMarkerRegex = mustCompileRegex(`\[paste #(\d+)( (\+\d+ lines|\d+ chars))?\]`)
 var pasteMarkerSingleRegex = mustCompileRegex(`^\[paste #(\d+)( (\+\d+ lines|\d+ chars))?\]$`)
@@ -199,7 +199,7 @@ func createScrollBorder(direction string, hiddenLineCount int, width int) string
 
 // editorTriggerMatch reports whether text before the cursor ends with an
 // autocomplete trigger token at a boundary, mirroring the editor's
-// buildTriggerPattern regex (see D70 for the lookaround replacement).
+// buildTriggerPattern regex (see D303 for the lookaround replacement).
 func editorTriggerMatch(text string, triggerCharacters []string) bool {
 	if text == "" {
 		return false

@@ -17,7 +17,7 @@ import (
 // clearEditor, showError, showWarning, showNewVersionNotification,
 // showPackageUpdateNotification, getStartupExpansionState).
 //
-// Divergences: the collaborators are injected function values (D124); the
+// Divergences: the collaborators are injected function values (D90); the
 // extension/resource seams stay out of scope (D41).
 
 // LatestRelease is the new-version notification payload. Upstream's feed carries

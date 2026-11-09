@@ -18,7 +18,7 @@ import (
 // Changelog commands, the easter eggs and stop). The session-share and
 // bug-report flows (D316) are not part of this port.
 //
-// Divergences: the runtime/clipboard/report collaborators are injected (D125);
+// Divergences: the runtime/clipboard/report collaborators are injected (D90);
 // the extension seams stay out of scope (D41).
 
 // CommandSession is the session surface the command handlers need.

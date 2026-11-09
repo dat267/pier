@@ -27,14 +27,14 @@ import (
 // boot (flags, session/services creation); this file owns the object graph.
 //
 // Divergences:
-//   D131: process-level effects and resource-loader/extension collaborators are
-//   injected seams.
+//   Process-level effects and resource-loader/extension collaborators are
+//   injected seams (D90).
 //   D133: the app's transcript session adapter returns no extension tool
 //   renderers (D41); built-in and MCP tools render through their own
 //   renderers, everything else through the fallback.
-//   D134: the app takes a pre-booted session/settings/runtime (main.ts builds
-//   them); the syntax-grammar load, package-update check and extension rebind
-//   are no-ops (out of scope).
+//   The app takes a pre-booted session/settings/runtime (main.ts builds them);
+//   the syntax-grammar load, package-update check and extension rebind are
+//   no-ops (out of scope).
 
 // AppSession adapts *coding.AgentSession to the interactive-mode session
 // interfaces. It adds the extension tool-renderer lookup (D133) that the
@@ -116,7 +116,7 @@ type AppOptions struct {
 	// startupDiagnostics, e.g. a --models pattern that matched nothing).
 	StartupDiagnostics []StartupDiagnostic
 
-	// Process seams (D122).
+	// Process seams (D90).
 	Exit                func(code int)
 	WriteOut            func(text string)
 	WriteErr            func(text string)
@@ -834,7 +834,7 @@ func (a *App) showStartupNoticesIfNeeded() {
 
 // applySettingsDependentUI re-applies the settings-derived state (upstream
 // applyRuntimeSettings, minus the terminal-capability and HTTP-dispatcher parts;
-// the latter is configured once before any request exists, D40). It runs after
+// the latter is configured once before any request exists, D254). It runs after
 // /reload and after a session switch re-points the settings manager at another
 // project. It returns whether applying output padding rebuilt the transcript.
 func (a *App) applySettingsDependentUI() bool {
