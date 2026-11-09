@@ -625,9 +625,7 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 	} else if compat.ThinkingFormat == "qwen" && model.Reasoning {
 		params.EnableThinking = new(options.ReasoningEffort != "")
 		if options.ReasoningEffort != "" && compat.SupportsReasoningEffort {
-			if effort := resolveLevelMapValue(model, options.ReasoningEffort, true); effort != nil {
-				params.ReasoningEffort = effort
-			}
+			params.ReasoningEffort = resolveLevelMapValueOrLevel(model, options.ReasoningEffort)
 		}
 	} else if compat.ThinkingFormat == "qwen-chat-template" && model.Reasoning {
 		params.ChatTemplateKwargs = map[string]any{
@@ -663,13 +661,11 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 			params.Thinking = &OpenAIThinkingParam{Type: "disabled"}
 		}
 		if options.ReasoningEffort != "" && compat.SupportsReasoningEffort {
-			if effort := resolveLevelMapValue(model, options.ReasoningEffort, true); effort != nil {
-				params.ReasoningEffort = effort
-			}
+			params.ReasoningEffort = resolveLevelMapValueOrLevel(model, options.ReasoningEffort)
 		}
 	} else if compat.ThinkingFormat == "openrouter" && model.Reasoning {
 		if options.ReasoningEffort != "" {
-			params.ReasoningObj = &OpenAIReasoningParam{Effort: resolveLevelMapValue(model, options.ReasoningEffort, true)}
+			params.ReasoningObj = &OpenAIReasoningParam{Effort: resolveLevelMapValueOrLevel(model, options.ReasoningEffort)}
 		} else if !thinkingLevelMapOffIsNull(model) {
 			// Upstream sends `thinkingLevelMap?.off ?? "none"`: a missing off
 			// mapping means "none", not the literal level name (CR-213).
@@ -688,16 +684,22 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 	} else if compat.ThinkingFormat == "together" && model.Reasoning {
 		params.ReasoningObj = &OpenAIReasoningParam{Enabled: new(options.ReasoningEffort != "")}
 		if options.ReasoningEffort != "" && compat.SupportsReasoningEffort {
-			params.ReasoningEffort = resolveLevelMapValue(model, options.ReasoningEffort, true)
+			params.ReasoningEffort = resolveLevelMapValueOrLevel(model, options.ReasoningEffort)
 		}
 	} else if compat.ThinkingFormat == "string-thinking" && model.Reasoning {
 		if options.ReasoningEffort != "" {
-			params.Thinking = &OpenAIThinkingParam{Type: resolveLevelMapValueOrNone(model, options.ReasoningEffort)}
+			// upstream: map?.[effort] ?? effort, so a null mapping sends the
+			// requested level name rather than "none".
+			level := options.ReasoningEffort
+			if mapped := resolveLevelMapValueOrLevel(model, options.ReasoningEffort); mapped != nil {
+				level = *mapped
+			}
+			params.Thinking = &OpenAIThinkingParam{Type: level}
 		} else if !thinkingLevelMapOffIsNull(model) {
 			params.Thinking = &OpenAIThinkingParam{Type: resolveLevelMapValueOrNone(model, ThinkOff)}
 		}
 	} else if options.ReasoningEffort != "" && model.Reasoning && compat.SupportsReasoningEffort {
-		params.ReasoningEffort = resolveLevelMapValue(model, options.ReasoningEffort, true)
+		params.ReasoningEffort = resolveLevelMapValueOrLevel(model, options.ReasoningEffort)
 	} else if options.ReasoningEffort == "" && model.Reasoning && compat.SupportsReasoningEffort {
 		if mapped, ok := model.ThinkingLevelMap[ThinkOff]; ok && mapped != nil {
 			params.ReasoningEffort = mapped
@@ -757,6 +759,21 @@ func resolveLevelMapValue(model *Model, level ThinkingLevel, fallbackToRequested
 		return new(level)
 	}
 	return nil
+}
+
+// resolveLevelMapValueOrLevel mirrors upstream's `map?.[level] ?? level`: a
+// missing mapping and an explicit null both fall back to the requested level
+// name, because JavaScript's ?? treats null like undefined. That differs from
+// resolveLevelMapValue, which names upstream's `map?.[level] === undefined`
+// test and keeps null as "unsupported".
+func resolveLevelMapValueOrLevel(model *Model, level ThinkingLevel) *string {
+	if mapped, ok := model.ThinkingLevelMap[level]; ok && mapped != nil {
+		return mapped
+	}
+	if level == "" {
+		return nil
+	}
+	return new(level)
 }
 
 func resolveLevelMapValueOrNone(model *Model, level ThinkingLevel) string {
