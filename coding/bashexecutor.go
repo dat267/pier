@@ -76,12 +76,16 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 		options = &BashExecutorOptions{}
 	}
 	var outputChunks []string
-	outputBytes := 0
 	// outputUnits is the rolling buffer's JavaScript length (UTF-16 units).
 	// bash-executor.ts compares `text.length` with DEFAULT_MAX_BYTES * 2, so
 	// multibyte text must not consume two to four units per character.
 	outputUnits := 0
 	maxOutputBytes := DefaultMaxBytes * 2
+
+	// rawBytes counts the bytes received from the child before sanitizing, the
+	// way bash-executor.ts adds `data.length` to totalBytes in onData; the
+	// full-output file starts once that raw count crosses DEFAULT_MAX_BYTES.
+	rawBytes := 0
 
 	var tempFilePath string
 	var tempFile *os.File
@@ -121,11 +125,10 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 		}
 
 		outputChunks = append(outputChunks, text)
-		outputBytes += len(text)
 		outputUnits += JSLength(text)
 
-		// Start writing to the temp file once the threshold is crossed.
-		if tempFilePath == "" && outputBytes > DefaultMaxBytes {
+		// Start writing to the temp file once the raw threshold is crossed.
+		if tempFilePath == "" && rawBytes > DefaultMaxBytes {
 			if err := ensureTempFile(); err != nil && tempErr == nil {
 				tempErr = err
 			}
@@ -143,7 +146,6 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 		for outputUnits > maxOutputBytes && len(outputChunks) > 1 {
 			removed := outputChunks[0]
 			outputChunks = outputChunks[1:]
-			outputBytes -= len(removed)
 			outputUnits -= JSLength(removed)
 			if flushedChunks > 0 {
 				flushedChunks--
@@ -180,6 +182,7 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 
 	onData := func(data []byte) {
 		mu.Lock()
+		rawBytes += len(data)
 		complete, pending := splitIncompleteAnsiSuffix(pendingAnsi + string(data))
 		pendingAnsi = pending
 		appendOutput(decoder.decode([]byte(complete), false))
