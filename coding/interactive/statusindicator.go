@@ -136,17 +136,18 @@ func (c workingTokenCount) String() string {
 }
 
 // cacheShare is how much of the counted input the provider served from its
-// prompt cache, as `CH95%`, or "" when it reported no cache activity (a
-// provider without a cache reports nothing, and 0% would be noise there).
+// prompt cache, as `CH94.8%`, or "" when it reported no cache activity (a
+// provider without a cache reports nothing, and 0% would be noise there). The
+// tenth matters at this scale: 92.7% cached still costs three times a full hit.
 func (c workingTokenCount) cacheShare() string {
 	if c.cacheRead <= 0 || c.in <= 0 {
 		return ""
 	}
-	share := (float64(c.cacheRead)/float64(c.in))*100 + 0.5
+	share := (float64(c.cacheRead) / float64(c.in)) * 100
 	if share > 100 {
 		share = 100
 	}
-	return "CH" + strconv.Itoa(int(share)) + "%"
+	return "CH" + strconv.FormatFloat(share, 'f', 1, 64) + "%"
 }
 
 // workingElapsedLabel is the working indicator's suffix: the elapsed time in

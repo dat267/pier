@@ -281,7 +281,7 @@ func TestWorkedForNoticeLeadsWithFinishTimeAndCacheShare(t *testing.T) {
 	// 20:25 UTC is 03:25 in the TestMain zone (UTC+7).
 	workingClock = func() time.Time { return time.Date(2026, 11, 10, 20, 25, 0, 0, time.UTC) }
 	transcript.AddWorkedFor(4*time.Minute+17*time.Second, workingTokenCount{in: 899_000, out: 5_700, cacheRead: 852_000})
-	want := "03:25 · 4m 17s · ↑899k ↓5.7k · CH95%"
+	want := "03:25 · 4m 17s · ↑899k ↓5.7k · CH94.8%"
 	if got := renderedText(transcript.Chat.Render(80)); !strings.Contains(got, want) {
 		t.Fatalf("notice = %q, want %q", got, want)
 	}

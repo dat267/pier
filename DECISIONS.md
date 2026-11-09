@@ -5685,7 +5685,7 @@ streaming one's usage so far (never lower than that message already showed),
 where in counts every prompt token processed
 (input, cache reads and cache writes), so a multi-turn run counts its context
 once per turn. At `agent_settled` the transcript adds a dim
-`14:32 · 1m 23s · ↑48k ↓3.2k · CH89%` line (D416),
+`14:32 · 1m 23s · ↑48k ↓3.2k · CH89.4%` line (D416),
 with tenths under a minute as the bash tool's `Took` label has. The line is display-only: it is not written to the session,
 so a resumed session does not show it. A period belongs to the session it
 timed, so replacing the session discards it in `teardownCurrentSession` instead
@@ -6079,7 +6079,7 @@ pier's `Worked for` notice is itself a project addition (D402).
 The notice is read for when a run ended, so it leads with the local wall-clock
 time the working period finished, in 24-hour hours and minutes, then the
 duration, then the tokens, then the share of them the provider served from its
-prompt cache: `14:32 · 1m 23s · ↑48k ↓3.2k · CH89%`. No word labels the first
+prompt cache: `14:32 · 1m 23s · ↑48k ↓3.2k · CH89.4%`. No word labels the first
 two fields: a clock time and a duration are told apart by their shape, and the
 notice only ever appears at the end of a run, so the time cannot be read as a
 start. It reads the same clock as the period (`workingClock`), so the time is
@@ -6088,8 +6088,8 @@ The date is left out because the line never reaches the session: every copy was
 written by the process showing it, whose day is the day of the notice.
 
 The cache share is `cacheRead` over the counted input (D402's in, which already
-includes cache reads and writes), rounded to a whole percent and written tight
-against its label (`CH89%`) to keep the line narrow. A provider that
+includes cache reads and writes), to a tenth of a percent, written tight against
+its label (`CH89.4%`) to keep the line narrow. A provider that
 reports no cache activity has no share to show, so the field is omitted rather
 than printed as 0%; the working indicator's own label is unchanged (D417 keeps
 it narrow). The compaction notice keeps the duration-first form of D406.
