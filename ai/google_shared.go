@@ -422,26 +422,30 @@ var googleJSONSchemaMetaDeclarations = map[string]bool{
 
 // sanitizeForOpenAPI strips JSON-Schema meta declarations (needed when the
 // legacy `parameters` field is used, e.g. Claude behind Cloud Code Assist).
-func sanitizeForOpenAPI(schema any) any {
-	switch typed := schema.(type) {
-	case map[string]any:
-		result := map[string]any{}
-		for key, value := range typed {
-			if googleJSONSchemaMetaDeclarations[key] {
-				continue
-			}
-			result[key] = sanitizeForOpenAPI(value)
-		}
-		return result
-	case []any:
-		out := make([]any, 0, len(typed))
-		for _, item := range typed {
-			out = append(out, sanitizeForOpenAPI(item))
-		}
-		return out
-	default:
+// The schema is rewritten in place rather than decoded into an unordered Go
+// value: the reference walks the parsed object, so member order survives, and
+// it returns an array as it stands (D414 is the same rule for wire bytes).
+func sanitizeForOpenAPI(schema json.RawMessage) json.RawMessage {
+	trimmed := bytes.TrimSpace(schema)
+	if len(trimmed) == 0 || trimmed[0] != '{' {
 		return schema
 	}
+	fields, err := decodeOrderedJSONFields(trimmed)
+	if err != nil {
+		return schema
+	}
+	out := &orderedJSONFields{}
+	for _, key := range fields.keys {
+		if googleJSONSchemaMetaDeclarations[key] {
+			continue
+		}
+		out.set(key, sanitizeForOpenAPI(fields.values[key]))
+	}
+	encoded, err := out.marshal()
+	if err != nil {
+		return schema
+	}
+	return encoded
 }
 
 // googleJSONSchemaNameMaps are schema keywords whose values map names to
@@ -543,9 +547,7 @@ func ConvertGoogleTools(tools []Tool, useParameters bool, supportsStrictMode boo
 		parameters := GetJSONSchemaToolParameters(tool, strict && !unset)
 		declaration := GoogleFunctionDeclaration{Name: tool.Name, Description: tool.Description}
 		if useParameters {
-			var decoded any
-			_ = jsonUnmarshalStrict(parameters, &decoded)
-			declaration.Parameters = mustMarshalJSON(sanitizeForOpenAPI(decoded))
+			declaration.Parameters = sanitizeForOpenAPI(parameters)
 		} else {
 			declaration.ParametersJSONSchema = rewriteGoogleConstAsEnum(parameters, false)
 		}

@@ -61,3 +61,38 @@ func TestConvertGoogleToolsRewritesConstToEnum(t *testing.T) {
 		t.Fatalf("parametersJsonSchema = %s", schema)
 	}
 }
+
+// The reference sanitizer walks the parsed schema object with Object.entries,
+// so member order survives, and it returns an array as it stands
+// (google-shared.ts sanitizeForOpenApi).
+func TestGoogleLegacyParametersKeepSchemaKeyOrder(t *testing.T) {
+	convert := func(parameters string) string {
+		t.Helper()
+		groups, err := ConvertGoogleTools([]Tool{{
+			Name: "t", Description: "d", Parameters: json.RawMessage(parameters),
+		}}, true, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(groups) != 1 || len(groups[0].FunctionDeclarations) != 1 {
+			t.Fatalf("groups = %#v", groups)
+		}
+		return string(groups[0].FunctionDeclarations[0].Parameters)
+	}
+	// Declared order, not sorted order.
+	schema := `{"type":"object","properties":{"zeta":{"type":"string"},"alpha":{"type":"string"}}}`
+	if got := convert(schema); got != schema {
+		t.Fatalf("parameters = %s, want the schema's own order %s", got, schema)
+	}
+	// Meta declarations go, at any depth of an object.
+	schema = `{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"a":{"$id":"x","type":"string"}}}`
+	want := `{"type":"object","properties":{"a":{"type":"string"}}}`
+	if got := convert(schema); got != want {
+		t.Fatalf("parameters = %s, want %s", got, want)
+	}
+	// An array is returned as it stands, as the reference does.
+	schema = `{"type":"object","anyOf":[{"$schema":"x","type":"string"}]}`
+	if got := convert(schema); got != schema {
+		t.Fatalf("parameters = %s, want the array untouched: %s", got, schema)
+	}
+}
