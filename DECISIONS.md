@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D419)
+# Deliberate divergences from pi (D1–D420)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6203,3 +6203,23 @@ Tests: `TestCompactSummarizesFromTheCapturedPrefix`,
 `TestSessionCompactionReplaysAppendedContext`,
 `TestSessionCompactionReplaysAcrossTurns`,
 `TestSessionCompactionReplaysPastACustomMessage`.
+
+### D420
+
+**A status call on a finished goal says so.**
+
+Reference: the installed goal extension's `machine.ts` (the extension source,
+D223). Its `set_goal` status path hands a `complete` change to the state
+validator, and a goal that is already complete has no transition to complete,
+so the model received `illegal transition complete -> complete`: the phase
+graph's own wording, naming a state machine the model cannot see or act on. A
+real session made exactly that call after finishing its goal.
+
+The port answers instead: `Goal is already complete. Set an objective to start
+a new goal.` The phase graph's error stays as it is for an impossible
+transition the port never produces itself. The sibling refusals already name the
+current state and the next step (a stale revision is answered with the current
+id and revision), and this one now matches them. `blocked` on a finished goal
+keeps its own guard, which reports the round count.
+
+Test: `TestSetGoalCompleteOnAFinishedGoal`.

@@ -322,6 +322,12 @@ func (m *GoalMachine) goalUpdate(goalID string, rawRevision any, rawAction, bloc
 	}
 
 	if rawAction == "complete" {
+		// A finished goal has no transition to complete (goalTransitions leaves
+		// complete terminal), and the graph's own error is not something the
+		// model can act on: say what stands and how to start another goal.
+		if m.view.Phase == PhaseComplete {
+			return DispatchResult{Reply: new("Goal is already complete. Set an objective to start a new goal."), IsError: true}
+		}
 		next := m.view.GoalSnapshot
 		next.Phase = PhaseComplete
 		next.BlockedReason = nil
