@@ -1032,6 +1032,9 @@ func (s *AgentSession) Dispose() {
 	s.listenerMu.Lock()
 	s.listeners = nil
 	s.listenerMu.Unlock()
+	// The captured prefix is the disposed session's transcript; nothing will
+	// replay it, and it would keep that history alive.
+	s.requestPrefix.clear()
 }
 
 // SessionManager returns the session manager backing this session.

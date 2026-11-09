@@ -383,6 +383,7 @@ func (s *AgentSession) RunAutoCompaction(ctx context.Context, reason CompactionR
 		Retry: s.retrySettings(), SessionID: s.Sessions.GetSessionID(),
 		ThinkingLevel: s.ThinkingLevel(),
 		Callbacks:     s.summarizationRetryCallbacksForCompaction(reason),
+		Prefix:        s.requestPrefix.snapshot(),
 	}
 	if s.control.ModelRuntime != nil && !s.summariesResolveAuthInStream() {
 		resolution, err := s.control.ModelRuntime.GetAuthForModel(model, &ModelRuntimeAuthOverrides{Ctx: compactionCtx})
@@ -399,6 +400,9 @@ func (s *AgentSession) RunAutoCompaction(ctx context.Context, reason CompactionR
 	}
 
 	result, err := Compact(preparation, options)
+	// The replay is spent either way, and the captured transcript is the
+	// pre-compaction history once a summary replaces it (D419).
+	s.requestPrefix.clear()
 	if err != nil {
 		// Upstream _runAutoCompaction names the failed operation and reports no
 		// message for an aborted one.

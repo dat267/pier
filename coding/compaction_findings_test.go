@@ -122,7 +122,9 @@ func TestCompactionFailureKeepsLiveContextProjected(t *testing.T) {
 		return base(m, transcript, options)
 	}, smallCompactionSettings())
 	seedBranch(t, session)
-	session.CompactionStreamFn = erroringStreamFn(1, "summarizer unavailable")
+	// The summarizer fails on every attempt, including the replayed-prefix one
+	// (D419) that precedes the stock path, so the compaction still fails.
+	session.CompactionStreamFn = erroringStreamFn(1<<30, "summarizer unavailable")
 	err := session.PromptText(context.Background(), "continue the task")
 	if err == nil || !strings.Contains(err.Error(), "summarizer unavailable") {
 		t.Fatalf("expected the summary failure, got %v", err)

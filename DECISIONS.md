@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D418)
+# Deliberate divergences from pi (D1–D419)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6124,3 +6124,42 @@ messages.
 Test: `TestGoalToolSetStaysConstantAcrossTransitions`,
 `TestGoalControllerToolExposure`,
 `TestDesiredToolNamesKeepsGetGoalAfterAGoalEnds`
+
+### D419
+
+**A compaction summarizes from the session's own last request.**
+
+Reference: pi v1.5.0 (f9a26365) `core/compaction/compaction.ts`
+(`generateSummaryWithUsage`, `serializeConversation`): a summary is a new
+request whose system prompt is the summarization prompt and whose only user
+message is the serialized conversation.
+
+That request shares no prefix with anything the provider has processed, so its
+whole input is a cold prefill of a transcript copy. This repository's own
+session log records it: 20 compactions, every one with `cacheRead` 0, 4,828,865
+cold input tokens and $0.78 of input, the largest a 290,519-token request for
+$0.087.
+
+`coding.requestPrefixCapture` records each request the agent sends, and
+`Compact` replays it with the summary instruction appended, so the provider's
+prefix cache covers the conversation and only the instruction is new. The replay
+uses the conversation's `SessionID`, the captured thinking level (a template
+that renders effort in the system prompt would otherwise re-prefill everything)
+and `CacheRetentionShort` instead of the summarization path's usual
+`CacheRetentionNone`.
+
+It steps aside, and the stock serialized prompt runs, when the capture is
+missing, the model or provider changed (a wire format and its cache are per
+model), the replay plus instruction would not fit the context window (overflow
+recovery is where the window is the problem), or the answer cannot become a
+checkpoint: a length stop, a tool call, an error. A failed replay's usage still
+joins the summary that replaces it. Because a replay describes everything above
+the instruction, it produces one conversation checkpoint and no separate
+split-turn section; a stock compaction keeps that structure (D264).
+
+Tests: `TestCompactSummarizesFromTheCapturedPrefix`,
+`TestSessionCompactionReplaysTheLastTurnPrefix`,
+`TestCompactFallsBackWhenThePrefixModelDiffers`,
+`TestCompactFallsBackWhenThePrefixSummaryDoesNotFit`,
+`TestCompactSkipsThePrefixWhenTheWindowIsFull`,
+`TestCompactPrefixInstructionFollowsTheConversation`.

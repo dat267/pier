@@ -181,6 +181,10 @@ type AgentSession struct {
 	// Goal is the builtin session-goal controller (nil when disabled).
 	Goal *GoalController
 
+	// requestPrefix remembers the last request the agent sent, so compaction can
+	// summarize from it instead of reserializing the conversation (D419).
+	requestPrefix *requestPrefixCapture
+
 	// streamFn is the session's model stream function (compaction, summaries).
 	streamFn agent.StreamFn
 	// streamFnResolvesAuth mirrors SessionConfig.StreamFnResolvesAuth.
@@ -374,9 +378,21 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		Tools:         config.Tools,
 		Messages:      config.InitialMessages,
 	}
+	// Capture the request the agent sends, byte for byte, before it leaves: a
+	// rebuilt one can drift (tool loadout, prompt sections, thinking level) and
+	// a drifted prefix costs the cache hit it exists for.
+	requestPrefix := &requestPrefixCapture{}
+	agentStreamFn := config.StreamFn
+	if agentStreamFn != nil {
+		inner := agentStreamFn
+		agentStreamFn = func(model *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			requestPrefix.record(model, transcript, options)
+			return inner(model, transcript, options)
+		}
+	}
 	a, err := agent.NewAgent(&agent.AgentOptions{
 		InitialState:    initialState,
-		StreamFn:        config.StreamFn,
+		StreamFn:        agentStreamFn,
 		ConvertToLlm:    config.ConvertToLlm,
 		SessionID:       config.SessionID,
 		SteeringMode:    config.SteeringMode,
@@ -420,6 +436,7 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		Settings:             settings,
 		Cwd:                  config.Cwd,
 		control:              control,
+		requestPrefix:        requestPrefix,
 		streamFn:             config.StreamFn,
 		streamFnResolvesAuth: config.StreamFnResolvesAuth,
 		SystemPromptOptions: &BuildSystemPromptOptions{
@@ -880,6 +897,7 @@ func (s *AgentSession) runManualCompaction(ctx context.Context, customInstructio
 		Model: model, Ctx: ctx, CustomInstructions: customInstructions,
 		StreamFn: s.compactionStreamFn(), Retry: s.retrySettings(),
 		SessionID: s.Sessions.GetSessionID(), ThinkingLevel: s.ThinkingLevel(),
+		Prefix: s.requestPrefix.snapshot(),
 	}
 	if s.control.ModelRuntime != nil && !s.summariesResolveAuthInStream() {
 		resolution, err := s.control.ModelRuntime.GetAuthForModel(model, &ModelRuntimeAuthOverrides{Ctx: ctx})
@@ -896,6 +914,9 @@ func (s *AgentSession) runManualCompaction(ctx context.Context, customInstructio
 	}
 
 	result, err := Compact(preparation, options)
+	// The replay is spent either way, and the captured transcript is the
+	// pre-compaction history once a summary replaces it (D419).
+	s.requestPrefix.clear()
 	if err != nil {
 		return nil, err
 	}

@@ -1109,7 +1109,9 @@ type SummarizationCallbacks struct {
 
 // CompleteSummarization wraps one summarization LLM call in the assistant
 // retry loop (port of completeSummarization). One-off summaries skip cache
-// writes and receive a fresh routing session id when the caller has none.
+// writes unless the caller asks for them (a replayed prefix reads the
+// conversation's cache, D419) and receive a fresh routing session id when the
+// caller has none.
 func CompleteSummarization(
 	model *ai.Model,
 	context ai.TranscriptContext,
@@ -1119,7 +1121,9 @@ func CompleteSummarization(
 	callbacks *SummarizationCallbacks,
 ) (*ai.AssistantMessage, error) {
 	requestOptions := *options
-	requestOptions.CacheRetention = ai.CacheRetentionNone
+	if requestOptions.CacheRetention == "" {
+		requestOptions.CacheRetention = ai.CacheRetentionNone
+	}
 	if requestOptions.SessionID == "" {
 		requestOptions.SessionID = UUIDv7()
 	}
@@ -1309,6 +1313,22 @@ type CompactionOptions struct {
 	Retry              *ai.RetryPolicy
 	Callbacks          *SummarizationCallbacks
 	SessionID          string
+	// Prefix is the session's last real turn as the model received it. Compact
+	// summarizes from it so the provider's prefix cache covers the conversation
+	// instead of re-prefilling a serialized copy (D419). Nil or unusable
+	// prefixes use the stock serialized path.
+	Prefix *CompactionPrefix
+}
+
+// CompactionPrefix is one real provider request, captured verbatim: the
+// messages the model was sent (the leading system message first), the model
+// they were sent for, and the prompt-affecting options that shaped them.
+type CompactionPrefix struct {
+	Model    *ai.Model
+	Messages []ai.Message
+	// Reasoning is the thinking level the captured request ran at. Replaying it
+	// keeps the prompt identical on providers whose template renders it.
+	Reasoning ai.ThinkingLevel
 }
 
 // Compact generates summaries for compaction using prepared data
@@ -1320,7 +1340,18 @@ func Compact(preparation *CompactionPreparation, options CompactionOptions) (*Co
 	var summaryUsage ai.Usage
 	hasUsage := false
 
-	if preparation.IsSplitTurn && len(preparation.TurnPrefixMessages) > 0 {
+	// A replayed prefix describes everything above the instruction, which the
+	// conversation checkpoint format already covers, so it needs neither the
+	// serialized history nor the split-turn section (D419). Any other shape, and
+	// a replay that cannot become a checkpoint, takes the stock path.
+	prefixText, prefixUsage, replayed := summarizeFromPrefix(preparation, options)
+	if replayed {
+		summary = prefixText
+		hasUsage = true
+		if prefixUsage != nil {
+			summaryUsage = *prefixUsage
+		}
+	} else if preparation.IsSplitTurn && len(preparation.TurnPrefixMessages) > 0 {
 		historyText := preparation.PreviousSummary
 		if historyText == "" {
 			historyText = "No prior history."
@@ -1354,6 +1385,11 @@ func Compact(preparation *CompactionPreparation, options CompactionOptions) (*Co
 		summaryUsage = *result.usage
 		hasUsage = true
 	}
+	// A replayed request that could not become a checkpoint still spent its
+	// tokens, so its usage joins the summary that replaced it.
+	if !replayed && hasUsage && prefixUsage != nil {
+		summaryUsage = CombineUsage(*prefixUsage, summaryUsage)
+	}
 
 	readFiles, modifiedFiles, readOmitted, modifiedOmitted := CapFileLists(preparation.FileOps)
 	summary += FormatSummaryFileOperations(readFiles, modifiedFiles, readOmitted, modifiedOmitted)
@@ -1373,6 +1409,72 @@ func Compact(preparation *CompactionPreparation, options CompactionOptions) (*Co
 		result.Usage = &u
 	}
 	return result, nil
+}
+
+// summarizeFromPrefix summarizes the conversation from the session's own last
+// request (D419). A provider caches the request prefix, so replaying that request
+// with the summary instruction appended makes the compaction a cache read
+// instead of a cold prefill of a serialized copy of the same conversation.
+//
+// It reports ok=false, with any usage it spent, when the replay cannot stand in
+// for the serialized prompt: no capture, a capture from another model (its wire
+// format and cache are per model), or an answer that cannot become a checkpoint
+// (a length stop, a tool call, an error). The caller then runs the stock path.
+//
+// It covers a split turn too: the capture ends with that turn, so "summarize
+// everything above" covers the turn prefix the split path would summarize
+// separately, and one checkpoint replaces both sections.
+func summarizeFromPrefix(preparation *CompactionPreparation, options CompactionOptions) (string, *ai.Usage, bool) {
+	prefix := options.Prefix
+	if prefix == nil || len(prefix.Messages) == 0 || options.Model == nil || prefix.Model == nil {
+		return "", nil, false
+	}
+	if prefix.Model.ID != options.Model.ID || prefix.Model.Provider != options.Model.Provider {
+		return "", nil, false
+	}
+	messages := make([]ai.Message, 0, len(prefix.Messages)+2)
+	messages = append(messages, prefix.Messages...)
+	if preparation.PreviousSummary != "" {
+		messages = append(messages, &ai.UserMessage{Content: ai.StringOrBlocks{
+			Text: "<previous-summary>\n" + escapePromptDelimiters(preparation.PreviousSummary) + "\n</previous-summary>",
+		}})
+	}
+	instruction := summarizationPrompt
+	if preparation.PreviousSummary != "" {
+		instruction = updateSummarizationPrompt
+	}
+	if options.CustomInstructions != "" {
+		instruction = fmt.Sprintf("%s\n\nAdditional focus: %s", instruction, options.CustomInstructions)
+	}
+	messages = append(messages, &ai.UserMessage{Content: ai.StringOrBlocks{Text: instruction}})
+
+	// The replay is the whole conversation plus the instruction, so it needs the
+	// window the request it replays already fit into, with room for the answer.
+	// An overflow recovery has nothing left, and there the stock path's smaller
+	// input is the only option.
+	if window := options.Model.ContextWindow; window > 0 {
+		replayTokens := int64(preparation.TokensBefore)
+		for _, message := range messages[len(prefix.Messages):] {
+			replayTokens += int64(EstimateAgentMessageTokens(message))
+		}
+		if replayTokens >= int64(window) {
+			return "", nil, false
+		}
+	}
+
+	escalation := &summarizationEscalation{}
+	reasoning := prefix.Reasoning
+	response, err := requestSummarization(options.Model, ai.TranscriptContext{Messages: messages}, options,
+		summarizationReasoningEnabled(options.Model, reasoning), reasoning, ai.CacheRetentionShort, escalation)
+	usage := escalation.usage
+	if err != nil {
+		return "", &usage, false
+	}
+	result, err := summarizationResult("Summarization", response)
+	if err != nil {
+		return "", &usage, false
+	}
+	return result.text, &usage, true
 }
 
 // summaryWithUsage is the generateSummaryWithUsage outcome.
@@ -1518,7 +1620,7 @@ func summarizeChunks(
 		return nil, summarizationLengthFailure(plan.label)
 	}
 	context := summarizationContext(plan.prompt(messages, previousSummary))
-	response, err := requestSummarization(model, context, options, summarizationReasoningEnabled(model, reasoning), reasoning, escalation)
+	response, err := requestSummarization(model, context, options, summarizationReasoningEnabled(model, reasoning), reasoning, ai.CacheRetentionNone, escalation)
 	if err != nil {
 		return nil, err
 	}
@@ -1529,7 +1631,7 @@ func summarizeChunks(
 	// provider already sized the budget from the request, so only the reasoning
 	// share is left to free.
 	if summarizationReasoningEnabled(model, reasoning) {
-		response, err = requestSummarization(model, context, options, false, ai.ThinkOff, escalation)
+		response, err = requestSummarization(model, context, options, false, ai.ThinkOff, ai.CacheRetentionNone, escalation)
 		if err != nil {
 			return nil, err
 		}
@@ -1672,6 +1774,7 @@ func requestSummarization(
 	options CompactionOptions,
 	reasoningEnabled bool,
 	reasoning ai.ThinkingLevel,
+	retention ai.CacheRetention,
 	escalation *summarizationEscalation,
 ) (*ai.AssistantMessage, error) {
 	streamOptions := ai.SimpleStreamOptions{
@@ -1680,6 +1783,9 @@ func requestSummarization(
 		Env:       ai.ProviderEnv(options.Env),
 		SessionID: options.SessionID,
 		Headers:   stringHeaders(options.Headers),
+		// Only a replay reads a cache entry that already exists (D419); a stock
+		// summary request keeps skipping cache writes.
+		CacheRetention: retention,
 	}
 	if reasoningEnabled {
 		streamOptions.Reasoning = reasoning
