@@ -136,7 +136,7 @@ func (c workingTokenCount) String() string {
 }
 
 // cacheShare is how much of the counted input the provider served from its
-// prompt cache, as `95% cached`, or "" when it reported no cache activity (a
+// prompt cache, as `CH95%`, or "" when it reported no cache activity (a
 // provider without a cache reports nothing, and 0% would be noise there).
 func (c workingTokenCount) cacheShare() string {
 	if c.cacheRead <= 0 || c.in <= 0 {
@@ -146,7 +146,7 @@ func (c workingTokenCount) cacheShare() string {
 	if share > 100 {
 		share = 100
 	}
-	return strconv.Itoa(int(share)) + "% cached"
+	return "CH" + strconv.Itoa(int(share)) + "%"
 }
 
 // workingElapsedLabel is the working indicator's suffix: the elapsed time in

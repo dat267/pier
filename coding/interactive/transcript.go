@@ -244,11 +244,13 @@ func (r *TranscriptRenderer) ShowManagedToolStatus(status ManagedToolStatus) {
 
 // AddWorkedFor notes in the transcript when the agent finished and how long it
 // worked on a prompt (D402, D416). The finish time leads because that is what
-// the line is read for; the tokens and the cache share follow. It is its own
-// line, so a later status does not replace it.
+// the line is read for; the tokens and the cache share follow. Neither the time
+// nor the duration carries a label: they are told apart by their shape, and the
+// line only appears at the end of a run. It is its own line, so a later status
+// does not replace it.
 func (r *TranscriptRenderer) AddWorkedFor(worked time.Duration, tokens workingTokenCount) {
-	label := "Finished at " + workingClock().Local().Format("15:04") +
-		" · worked for " + formatDuration(float64(worked.Milliseconds()))
+	label := workingClock().Local().Format("15:04") + " · " +
+		formatDuration(float64(worked.Milliseconds()))
 	if text := tokens.String(); text != "" {
 		label += " · " + text
 	}
