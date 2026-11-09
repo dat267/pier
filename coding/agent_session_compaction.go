@@ -383,7 +383,7 @@ func (s *AgentSession) RunAutoCompaction(ctx context.Context, reason CompactionR
 		Retry: s.retrySettings(), SessionID: s.Sessions.GetSessionID(),
 		ThinkingLevel: s.ThinkingLevel(),
 		Callbacks:     s.summarizationRetryCallbacksForCompaction(reason),
-		Prefix:        s.requestPrefix.snapshot(),
+		Prefix:        s.replayPrefix(),
 	}
 	if s.control.ModelRuntime != nil && !s.summariesResolveAuthInStream() {
 		resolution, err := s.control.ModelRuntime.GetAuthForModel(model, &ModelRuntimeAuthOverrides{Ctx: compactionCtx})

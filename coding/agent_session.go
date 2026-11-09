@@ -184,6 +184,9 @@ type AgentSession struct {
 	// requestPrefix remembers the last request the agent sent, so compaction can
 	// summarize from it instead of reserializing the conversation (D419).
 	requestPrefix *requestPrefixCapture
+	// convertToLlm is the config's converter, so a compaction can tell whether
+	// the current context still starts with the captured request (D419).
+	convertToLlm func([]ai.Message) []ai.Message
 
 	// streamFn is the session's model stream function (compaction, summaries).
 	streamFn agent.StreamFn
@@ -437,6 +440,7 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		Cwd:                  config.Cwd,
 		control:              control,
 		requestPrefix:        requestPrefix,
+		convertToLlm:         llmConverter(config.ConvertToLlm),
 		streamFn:             config.StreamFn,
 		streamFnResolvesAuth: config.StreamFnResolvesAuth,
 		SystemPromptOptions: &BuildSystemPromptOptions{
@@ -897,7 +901,7 @@ func (s *AgentSession) runManualCompaction(ctx context.Context, customInstructio
 		Model: model, Ctx: ctx, CustomInstructions: customInstructions,
 		StreamFn: s.compactionStreamFn(), Retry: s.retrySettings(),
 		SessionID: s.Sessions.GetSessionID(), ThinkingLevel: s.ThinkingLevel(),
-		Prefix: s.requestPrefix.snapshot(),
+		Prefix: s.replayPrefix(),
 	}
 	if s.control.ModelRuntime != nil && !s.summariesResolveAuthInStream() {
 		resolution, err := s.control.ModelRuntime.GetAuthForModel(model, &ModelRuntimeAuthOverrides{Ctx: ctx})
