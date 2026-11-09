@@ -388,7 +388,7 @@ func (r *TranscriptRenderer) AddMessageToChat(message ai.Message, populateHistor
 			component.SetExpanded(r.Display.ToolOutputExpanded)
 			r.Chat.AddChild(component)
 		default:
-			customType, content, display := decodeCustomMessage(typed.Content)
+			customType, text, blocks, display := decodeCustomMessage(typed.Content)
 			if !display {
 				return
 			}
@@ -396,7 +396,7 @@ func (r *TranscriptRenderer) AddMessageToChat(message ai.Message, populateHistor
 			if r.MessageRenderer != nil {
 				renderer = r.MessageRenderer(customType)
 			}
-			component := NewCustomMessageComponent(CustomMessagePayload{CustomType: customType, Text: content},
+			component := NewCustomMessageComponent(CustomMessagePayload{CustomType: customType, Text: text, Blocks: blocks},
 				renderer, r.MarkdownTheme, r.Display.OutputPad)
 			component.SetExpanded(r.Display.ToolOutputExpanded)
 			r.Chat.AddChild(component)
@@ -484,7 +484,7 @@ func decodeBranchSummary(content json.RawMessage) string {
 	return tui.SanitizeUntrustedText(fields.Summary)
 }
 
-func decodeCustomMessage(content json.RawMessage) (string, string, bool) {
+func decodeCustomMessage(content json.RawMessage) (string, string, []string, bool) {
 	var fields struct {
 		CustomType string          `json:"customType"`
 		Content    json.RawMessage `json:"content"`
@@ -493,17 +493,39 @@ func decodeCustomMessage(content json.RawMessage) (string, string, bool) {
 	if len(content) > 0 {
 		_ = json.Unmarshal(content, &fields)
 	}
-	text := ""
-	if len(fields.Content) > 0 {
-		var plain string
-		if err := json.Unmarshal(fields.Content, &plain); err == nil {
-			text = plain
-		} else {
-			text = ""
+	text, blocks := decodeCustomMessageText(fields.Content)
+	display := fields.Display == nil || *fields.Display
+	return fields.CustomType, text, blocks, display
+}
+
+// decodeCustomMessageText splits the custom message's content the way the
+// reference component does (pi v1.5.0 f9a26365
+// modes/interactive/components/custom-message.ts rebuild): string content is
+// the text, and a block list contributes its text blocks, joined with newlines.
+// The same block form reaches the model through convertCustomMessage's
+// customContentToBlocks, so dropping it here rendered those messages blank.
+func decodeCustomMessageText(content json.RawMessage) (string, []string) {
+	if len(content) == 0 {
+		return "", nil
+	}
+	var plain string
+	if err := json.Unmarshal(content, &plain); err == nil {
+		return plain, nil
+	}
+	var blocks []struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	}
+	if err := json.Unmarshal(content, &blocks); err != nil {
+		return "", nil
+	}
+	texts := make([]string, 0, len(blocks))
+	for _, block := range blocks {
+		if block.Type == "text" {
+			texts = append(texts, block.Text)
 		}
 	}
-	display := fields.Display == nil || *fields.Display
-	return fields.CustomType, text, display
+	return "", texts
 }
 
 // RenderSessionItems renders a list of transcript items.
