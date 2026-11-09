@@ -121,12 +121,15 @@ func Python() *Language {
 		},
 	}
 
-	// The reference's end is `(?=#)|$`; the zero-width-before-`#` alternative is
-	// not expressible in RE2, so an end-of-line terminator is used.
+	// The reference's end is `(?=#)|$`. RE2 has no lookahead, so the `#`
+	// alternative matches the character itself with ReturnEnd: the mode closes
+	// before it and the scanner resumes at it, which is the zero-width end's
+	// effect and lets the comment rule color a trailing comment (A449).
 	decorator := &Mode{
 		ClassName: "meta",
 		Begin:     `^[\t ]*@`,
-		End:       `$`,
+		End:       `#|$`,
+		ReturnEnd: true,
 		Contains:  []*Mode{number, params, stringMode},
 	}
 
