@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D413)
+# Deliberate divergences from pi (D1–D414)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6011,3 +6011,26 @@ Tests: `internal/highlight/reference_grammar_quirks_test.go`
 (`TestNginxVariablesAreHighlighted`, `TestRubyVariableAtEndOfInputIsNotPartial`)
 and `internal/highlight/autodetect_nginx_score_test.go`
 (`TestNginxVariableVariantScoresNothing`).
+
+### D414
+
+**Request-level `samplingParams` needs an explicit order channel to match the
+reference's key order.**
+
+Upstream keeps a request's `samplingParams` as a JavaScript object, so
+`Object.assign` onto the request body and `JSON.stringify` emit its keys in
+insertion order. A Go map has no order, so the port sorts the keys it was not
+told the order of: `{top_k: 5, min_p: 0.1}` becomes `"min_p":0.1,"top_k":5`
+where the reference sends `"top_k":5,"min_p":0.1`.
+
+`StreamOptions.SamplingParamsOrder` is the channel. The builtin catalog uses it
+for `Model.SamplingParams` (from the raw JSON keys), so model-level parameters
+already match the reference byte for byte; a caller that builds a request-level
+map from JSON should fill it the same way. Omitting it is supported and
+deterministic, just not the reference's order.
+
+Merging is unaffected: an extra that names an existing field keeps that field's
+position and takes the extra's value, as JavaScript assignment does.
+
+Test: `ai/sampling_order_channel_test.go`
+(`TestRequestSamplingParamsOrderChannel`).
