@@ -44,7 +44,7 @@ func (s *AgentSession) retrySettings() *ai.RetryPolicy {
 		resolved := s.control.Settings.GetRetrySettings()
 		return &ai.RetryPolicy{
 			Enabled: resolved.Enabled, MaxRetries: resolved.MaxRetries,
-			BaseDelayMS: int(resolved.BaseDelayMS), MaxAgentDelayMS: resolved.MaxAgentDelayMS,
+			BaseDelayMS: int(resolved.BaseDelayMS), MaxAgentDelayMS: resolved.MaxAgentDelayMS, MaxAgentDelayMSSet: true,
 		}
 	}
 	return s.Settings.Retry

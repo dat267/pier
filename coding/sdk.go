@@ -488,7 +488,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 	retryResolved := settingsManager.GetRetrySettings()
 	retryPolicy := &ai.RetryPolicy{
 		Enabled: retryResolved.Enabled, MaxRetries: retryResolved.MaxRetries,
-		BaseDelayMS: int(retryResolved.BaseDelayMS), MaxAgentDelayMS: retryResolved.MaxAgentDelayMS,
+		BaseDelayMS: int(retryResolved.BaseDelayMS), MaxAgentDelayMS: retryResolved.MaxAgentDelayMS, MaxAgentDelayMSSet: true,
 	}
 	maxRetryDelay := int(providerRetry.MaxRetryDelayMS)
 	// The request-options wiring always wraps the transport: the settings-backed

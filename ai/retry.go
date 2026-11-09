@@ -230,24 +230,44 @@ type RetryPolicy struct {
 	MaxRetries int
 	// BaseDelayMS: per-attempt delay is BaseDelayMS * 2^(attempt-1) before jitter.
 	BaseDelayMS int
-	// MaxAgentDelayMS caps each computed delay; defaults to 60 seconds.
+	// MaxAgentDelayMS caps each computed delay; defaults to 60 seconds when
+	// MaxAgentDelayMSSet is false.
 	MaxAgentDelayMS int64
+	// MaxAgentDelayMSSet marks a cap that was configured, so a zero or negative
+	// value is honored as the reference's `maxAgentDelayMs ?? default` does.
+	MaxAgentDelayMSSet bool
 }
 
 const DefaultMaxAgentRetryDelayMS = 60_000
 
-// RetryDelayMS computes the delay for an attempt (1-indexed).
+// maxSafeInteger is JavaScript's Number.MAX_SAFE_INTEGER (2^53-1).
+const maxSafeInteger = 1<<53 - 1
+
+// RetryDelayMS computes the delay for an attempt (1-indexed). It mirrors the
+// reference's `Math.min(Number.isSafeInteger(delay) ? delay :
+// Number.MAX_SAFE_INTEGER, maxAgentDelayMs ?? default)`: a delay beyond the
+// safe-integer range clamps to 2^53-1, and a configured zero or negative cap is
+// honored rather than replaced by the default (A447).
 func RetryDelayMS(policy RetryPolicy, attempt int) int64 {
 	delay := float64(policy.BaseDelayMS) * math.Pow(2, float64(max(0, attempt-1)))
 	safeDelay := delay
-	if safeDelay > math.MaxInt64 {
-		safeDelay = math.MaxInt64
+	if !isSafeInteger(delay) {
+		safeDelay = maxSafeInteger
 	}
-	capDelay := policy.MaxAgentDelayMS
-	if capDelay == 0 {
-		capDelay = DefaultMaxAgentRetryDelayMS
+	// A non-zero cap is honored without the flag, as it always was; the flag is
+	// what lets an explicit zero survive.
+	capDelay := float64(DefaultMaxAgentRetryDelayMS)
+	if policy.MaxAgentDelayMSSet || policy.MaxAgentDelayMS != 0 {
+		capDelay = float64(policy.MaxAgentDelayMS)
 	}
-	return int64(math.Min(safeDelay, float64(capDelay)))
+	return int64(math.Min(safeDelay, capDelay))
+}
+
+// isSafeInteger is Number.isSafeInteger: a finite integral value within
+// ±(2^53-1).
+func isSafeInteger(value float64) bool {
+	return !math.IsInf(value, 0) && !math.IsNaN(value) && value == math.Trunc(value) &&
+		value >= -maxSafeInteger && value <= maxSafeInteger
 }
 
 // RetryCallbacks are emitted by RetryAssistantCall around each retry.

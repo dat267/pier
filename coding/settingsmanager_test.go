@@ -1105,3 +1105,25 @@ func TestSettingsFullscreenWheelScrollLines(t *testing.T) {
 		t.Fatalf("large finite setting = %#v, want clamped 100", got)
 	}
 }
+
+// pi v1.5.0 (f9a26365) packages/ai/src/utils/retry.ts retryDelayMs keeps a
+// configured zero cap (`policy.maxAgentDelayMs ?? default`), so a settings file
+// with `maxAgentDelayMs: 0` retries without a backoff delay. The policy the
+// session builds from those settings must therefore carry the zero through
+// instead of falling back to the 60 s default (A447).
+func TestSettingsRetryZeroMaxAgentDelayReachesThePolicy(t *testing.T) {
+	zero := int64(0)
+	manager := NewInMemorySettingsManager(&Settings{Retry: &SettingsRetry{MaxAgentDelayMS: &zero}}, SettingsManagerCreateOptions{})
+	resolved := manager.GetRetrySettings()
+	if resolved.MaxAgentDelayMS != 0 {
+		t.Fatalf("resolved maxAgentDelayMs = %d, want 0", resolved.MaxAgentDelayMS)
+	}
+	policy := ai.RetryPolicy{
+		Enabled: resolved.Enabled, MaxRetries: resolved.MaxRetries,
+		BaseDelayMS: int(resolved.BaseDelayMS), MaxAgentDelayMS: resolved.MaxAgentDelayMS,
+		MaxAgentDelayMSSet: true,
+	}
+	if got := ai.RetryDelayMS(policy, 1); got != 0 {
+		t.Errorf("RetryDelayMS = %d, want 0", got)
+	}
+}
