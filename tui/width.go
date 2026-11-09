@@ -782,13 +782,16 @@ func isWhitespaceRune(r rune) bool {
 func IsWhitespaceRune(r rune) bool { return isWhitespaceRune(r) }
 
 // IsWhitespaceChar reports whether a string is entirely whitespace.
+// A caller may hand it more than one character (a multi-character insertion),
+// so this mirrors the reference exactly: `/\s/.test(char)` is true when the
+// string contains a whitespace character anywhere (A448).
 func IsWhitespaceChar(char string) bool {
 	for _, r := range char {
-		if !isWhitespaceRune(r) {
-			return false
+		if isWhitespaceRune(r) {
+			return true
 		}
 	}
-	return len(char) > 0
+	return false
 }
 
 func isLetterRune(r rune) bool { return unicode.IsLetter(r) }
