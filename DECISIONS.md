@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D414)
+# Deliberate divergences from pi (D1–D415)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6034,3 +6034,34 @@ position and takes the extra's value, as JavaScript assignment does.
 
 Test: `ai/sampling_order_channel_test.go`
 (`TestRequestSamplingParamsOrderChannel`).
+
+### D415
+
+**A WebP chunk length is read unsigned, so a malformed RIFF chunk reports no
+orientation instead of hanging.**
+
+`utils/exif-orientation.ts` folds a chunk's four length bytes into a signed
+int:
+
+```ts
+const chunkSize = bytes[o+4] | (bytes[o+5] << 8) | (bytes[o+6] << 16) | (bytes[o+7] << 24);
+```
+
+A length with the high bit set is therefore negative, and both uses misbehave:
+
+- an `EXIF` chunk of `0x80000000` passes `dataStart + chunkSize > bytes.length`
+  and `chunkSize >= 6`, so the size is ignored and the chunk's bytes are read as
+  TIFF, reporting whatever orientation they encode;
+- a non-`EXIF` chunk of `0xFFFFFFF8` computes `offset = dataStart + chunkSize +
+  chunkSize % 2` back to its own start, so `while (offset + 8 <= bytes.length)`
+  never advances. Measured on the pinned source: still looping after 3 seconds;
+  the process needs a signal.
+
+The port reads the length as unsigned and rejects a chunk that does not fit,
+so a malformed WebP reports orientation 1 (the image is embedded unrotated) and
+returns immediately. A truncated or hostile image cannot cost more than the
+scan of its own bytes, which is what the rest of the sniffing code guarantees.
+
+Test: `coding/exiforientation_chunk_sign_test.go`
+(`TestExifWebPChunkSizeWithHighBitSet`), which also pins the two well-formed
+controls.

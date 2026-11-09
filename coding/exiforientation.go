@@ -66,7 +66,13 @@ func findWebPTIFFOffset(data []byte) int {
 	offset := 12
 	for offset+8 <= len(data) {
 		chunkID := string(data[offset : offset+4])
-		chunkSize := int(data[offset+4]) | int(data[offset+5])<<8 | int(data[offset+6])<<16 | int(data[offset+7])<<24
+		// Read the length unsigned. The reference folds the four bytes into a
+		// signed int, so a length with the high bit set goes negative and its
+		// loop either reads the chunk as TIFF regardless of the size or never
+		// advances (D415). An unsigned length with the bounds check below
+		// rejects a chunk that cannot fit instead.
+		chunkSize := int(uint32(data[offset+4]) | uint32(data[offset+5])<<8 |
+			uint32(data[offset+6])<<16 | uint32(data[offset+7])<<24)
 		dataStart := offset + 8
 		if chunkID == "EXIF" {
 			if dataStart+chunkSize > len(data) {
