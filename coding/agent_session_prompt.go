@@ -2,7 +2,6 @@ package coding
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -122,8 +121,8 @@ func (s *AgentSession) normalizePromptImages(images []ai.ImageContent) ([]ai.Ima
 	var normalized []ai.ImageContent
 	var hints []string
 	for _, image := range images {
-		data, err := base64.StdEncoding.DecodeString(image.Data)
-		if err != nil {
+		data, ok := DecodeImageBase64(image.Data)
+		if !ok {
 			// Upstream decodes base64 leniently; keep an undecodable block
 			// rather than dropping it.
 			normalized = append(normalized, image)

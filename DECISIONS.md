@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D408)
+# Deliberate divergences from pi (D1–D409)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5785,3 +5785,34 @@ Tests: `TestProcessImageRejectsAnOversizeImageCanvas` (the allocation stays unde
 256 MiB for a 74-byte 30000x30000 PNG and the result is the omission message)
 and `TestDecodeInlineImageKeepsNormalImages` (the control: 1x1 and 3000x100
 still decode).
+
+### D409
+
+**Image base64 is decoded the way `Buffer.from(data, "base64")` does.**
+
+Reference: pi v1.5.0 (f9a26365) `packages/coding-agent/src/utils/tool-result-images.ts`
+`normalizeToolResultImages` and `core/agent-session.ts` `_normalizePromptImages`
+both decode a block with `Buffer.from(block.data, "base64")` before calling
+`processImage`. Node's decoder ignores characters outside the alphabet, accepts
+either the standard or the URL-safe one (mixed freely), needs no padding, and
+stops at the first `=`.
+
+Pier used `base64.StdEncoding.DecodeString`, which rejects all of those. A block
+whose payload was unpadded or URL-safe failed to decode, and both call sites then
+keep the original block (a deliberate choice: a tool's output is never silently
+deleted). The block therefore skipped the inline limits entirely: the same
+3000x3000 PNG that is resized to 2.5 MB as padded standard base64 traveled at its
+full 48 MB encoding when the tool emitted it unpadded or URL-safe, which is what
+`base64 -w0`-style output and many encoders produce.
+
+`DecodeImageBase64` ports Node's rules, and the tool-result normalizer, the
+prompt-image normalizer and the kitty PNG transcoder all use it, so a payload is
+bounded identically whatever alphabet carried it. The decoder returns one flag for
+"nothing usable", which keeps the existing keep-the-original-block behavior for a
+payload that is really not base64.
+
+Tests: `TestDecodeImageBase64MatchesNode` (padded, unpadded, URL-safe, mixed,
+wrapped, padded-then-trailing-garbage, and the single-trailing-character drop,
+each against bytes measured from Node) and
+`TestToolResultImagesNormalizeUnpaddedAndURLSafeBase64` (all three alphabets
+produce the same normalized image).

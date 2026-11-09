@@ -181,6 +181,79 @@ func conversionHint(from, to string) string {
 // reaching the omission message.
 const maxInlineImagePixels = 100_000_000
 
+// DecodeImageBase64 decodes an image payload the way
+// Buffer.from(data, "base64") does, which every upstream image path uses:
+// utils/tool-result-images.ts normalizeToolResultImages and
+// core/agent-session.ts _normalizePromptImages both decode with it before
+// processImage.
+//
+// Node ignores characters outside the base64 alphabet, accepts either alphabet
+// (standard and URL-safe mix freely), needs no padding, and stops at the first
+// pad character. encoding/json's decoder rejects all of that, so a tool that
+// emitted unpadded or URL-safe base64 used to skip normalization entirely and
+// reach the provider at full size (M290).
+func DecodeImageBase64(data string) ([]byte, bool) {
+	normalized := make([]byte, 0, len(data))
+	for index := 0; index < len(data); index++ {
+		character := data[index]
+		switch {
+		case character >= 'A' && character <= 'Z',
+			character >= 'a' && character <= 'z',
+			character >= '0' && character <= '9',
+			character == '+', character == '/':
+			normalized = append(normalized, character)
+		case character == '-' || character == '_':
+			// Node maps the URL-safe alphabet onto the standard one.
+			normalized = append(normalized, base64URLAlphabet[character])
+		case character == '=':
+			// Padding ends the payload: Node ignores everything after it.
+			return decodeNormalizedBase64(normalized)
+		}
+		// Every other byte (whitespace, punctuation, invalid UTF-8) is ignored.
+	}
+	return decodeNormalizedBase64(normalized)
+}
+
+// base64URLAlphabet maps Node's URL-safe characters onto the standard ones.
+var base64URLAlphabet = map[byte]byte{'-': '+', '_': '/'}
+
+// decodeNormalizedBase64 decodes the cleaned alphabet, taking only the whole
+// 3-byte groups a prefix can carry (Node drops a lone trailing character).
+func decodeNormalizedBase64(normalized []byte) ([]byte, bool) {
+	usable := len(normalized) - len(normalized)%4
+	decoded := make([]byte, 0, usable/4*3)
+	for group := 0; group < usable; group += 4 {
+		var value uint32
+		for _, character := range normalized[group : group+4] {
+			bits := strings.IndexByte(base64StandardAlphabet, character)
+			if bits < 0 {
+				return nil, false
+			}
+			value = value<<6 | uint32(bits)
+		}
+		decoded = append(decoded, byte(value>>16), byte(value>>8), byte(value))
+	}
+	// A trailing partial group still carries whole bytes.
+	if remainder := len(normalized) % 4; remainder > 1 {
+		var value uint32
+		for _, character := range normalized[usable:] {
+			bits := strings.IndexByte(base64StandardAlphabet, character)
+			if bits < 0 {
+				return nil, false
+			}
+			value = value<<6 | uint32(bits)
+		}
+		value <<= 6 * (4 - remainder)
+		decoded = append(decoded, byte(value>>16))
+		if remainder == 3 {
+			decoded = append(decoded, byte(value>>8))
+		}
+	}
+	return decoded, true
+}
+
+const base64StandardAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+
 // decodeInlineImage contains decoder panics like upstream's Photon try/catch.
 // In particular, Go decoders can panic on unallocatable image dimensions.
 func decodeInlineImage(data []byte) (source image.Image, err error) {

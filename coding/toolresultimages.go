@@ -1,7 +1,6 @@
 package coding
 
 import (
-	"encoding/base64"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -57,8 +56,10 @@ func NormalizeToolResultImages(content ai.UserContentList, options *NormalizeToo
 			normalized = append(normalized, block)
 			continue
 		}
-		data, err := base64.StdEncoding.DecodeString(image.Data)
-		if err != nil {
+		// Upstream decodes with Buffer.from(data, "base64"), which tolerates an
+		// unpadded, URL-safe or wrapped payload (M290).
+		data, ok := DecodeImageBase64(image.Data)
+		if !ok {
 			// Not decodable base64: keep the original block.
 			normalized = append(normalized, block)
 			continue

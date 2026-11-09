@@ -20,8 +20,8 @@ func EncodeImageAsPNG(base64Data string, mimeType string) (string, bool) {
 	if mimeType == "image/png" {
 		return base64Data, true
 	}
-	decoded, err := base64.StdEncoding.DecodeString(base64Data)
-	if err != nil {
+	decoded, ok := DecodeImageBase64(base64Data)
+	if !ok {
 		return "", false
 	}
 	source, err := decodeInlineImage(decoded)
