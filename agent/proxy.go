@@ -311,6 +311,15 @@ func (s *proxyEventScratch) thinkingBuilder(index int) *strings.Builder {
 	return builder
 }
 
+// maxProxyContentBlocks bounds the content block index a proxy server event may
+// address. The reference stores an event's index as a sparse JavaScript array
+// entry, so an out-of-range index costs one slot; Go's grow() materializes every
+// slot in between, and the server is untrusted (it can be a remote endpoint), so
+// one event must not be able to size the partial message. A real answer holds a
+// few dozen blocks (text, thinking, tool calls); this leaves three orders of
+// magnitude of room and still bounds the allocation (A463).
+const maxProxyContentBlocks = 4096
+
 // processProxyEvent applies one server event to the partial message and returns
 // the client event to push (upstream processProxyEvent).
 func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scratch *proxyEventScratch) (*ai.AssistantMessageEvent, error) {
@@ -321,6 +330,9 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 	case "text_start", "text_delta", "text_end", "thinking_start", "thinking_delta", "thinking_end", "toolcall_start", "toolcall_delta", "toolcall_end":
 		if wire.ContentIndex < 0 {
 			return nil, fmt.Errorf("Received %s with negative content index %d", wire.Type, wire.ContentIndex)
+		}
+		if wire.ContentIndex >= maxProxyContentBlocks {
+			return nil, fmt.Errorf("Received %s with content index %d past the %d-block limit", wire.Type, wire.ContentIndex, maxProxyContentBlocks)
 		}
 	}
 	grow := func() {

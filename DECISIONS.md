@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D420)
+# Deliberate divergences from pi (D1–D421)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6231,3 +6231,27 @@ the validator and report `illegal transition complete -> active`.
 
 Tests: `TestSetGoalCompleteOnAFinishedGoal`,
 `TestSetGoalBlockedOnAFinishedGoal`, `TestGoalResumeOnAFinishedGoal`.
+
+### D421
+
+**A proxy event's content index is bounded.**
+
+Reference: pi v1.5.0 (`f9a26365`) `packages/agent/src/proxy.ts`
+(`processProxyEvent`) assigns `partial.content[proxyEvent.contentIndex]`. A
+JavaScript array accepts an arbitrary index as a sparse entry, so an
+out-of-range index costs one slot. Go's `grow()` in `agent/proxy.go` extends the
+slice to `contentIndex`, materializing every interface slot below it.
+
+The proxy server is untrusted input: it can be a remote endpoint, so a
+compromised or buggy one must not size the agent's message from one line of
+JSON. Measured on the current code: a single `text_start` with
+`contentIndex: 50000000` allocated 4,934,256,400 bytes and grew the partial
+message to 50,000,001 blocks, before the event type was validated.
+
+`maxProxyContentBlocks` (4096) bounds it. A real answer holds a few dozen
+blocks, so the cap leaves three orders of magnitude of room. An event past it is
+rejected with the same shape as D252's negative-index rejection, which the
+stream reports as an error instead of panicking.
+
+Tests: `TestProxyRejectsAnOutOfRangeContentIndex`,
+`TestProxyAcceptsARealisticBlockCount`.
