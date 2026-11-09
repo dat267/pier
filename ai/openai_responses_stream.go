@@ -90,7 +90,10 @@ func BuildOpenAIResponsesParamsWithProviders(
 	if options.Temperature != nil && !omitUnsupportedFields {
 		params.Temperature = options.Temperature
 	}
-	if options.ServiceTier != "" {
+	// The azure dialect has no service-tier option (azure-openai-responses.ts
+	// declares AzureOpenAIResponsesOptions without one), so it never sends the
+	// field even when a caller shares the responses options (A453).
+	if options.ServiceTier != "" && model.API != APIAzureOpenAIResponses {
 		tier := options.ServiceTier
 		params.ServiceTier = &tier
 	}
