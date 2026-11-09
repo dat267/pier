@@ -537,6 +537,13 @@ func (a *Agent) ClearSteeringQueue() { a.steeringQueue.clear() }
 // TakeFollowUpMessages removes and returns every queued follow-up message.
 func (a *Agent) TakeFollowUpMessages() []ai.Message { return a.followUpQueue.takeAll() }
 
+// ReleaseFollowUpMessages removes and returns the follow-ups the queue mode
+// admits: one message in one-at-a-time mode (the default), every message in all
+// mode. It ignores DeferFollowUp, because its caller releases the queue only
+// once the reason for holding it is gone; the messages it leaves behind are
+// then delivered by that run's stop boundary, one turn at a time.
+func (a *Agent) ReleaseFollowUpMessages() []ai.Message { return a.followUpQueue.drain() }
+
 // ClearFollowUpQueue removes all queued follow-up messages.
 func (a *Agent) ClearFollowUpQueue() { a.followUpQueue.clear() }
 

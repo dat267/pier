@@ -677,7 +677,10 @@ func (s *AgentSession) releaseGoalHeldFollowUps(event *agent.AgentEvent) {
 	if s.Goal == nil || !s.goalHeldThisRun.Load() || s.Goal.Pursuing() || goalAgentAborted(event) {
 		return
 	}
-	messages := s.Agent.TakeFollowUpMessages()
+	// Release with the queue's own granularity: in one-at-a-time mode the
+	// released run carries the first follow-up, and that run's stop boundary
+	// delivers the rest one turn at a time (D385).
+	messages := s.Agent.ReleaseFollowUpMessages()
 	if len(messages) == 0 {
 		return
 	}

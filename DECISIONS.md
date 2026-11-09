@@ -5230,6 +5230,13 @@ has answered it, then delivers them as their own run:
   check the disposed flag: a release queued during shutdown must not start a run
   on a closed session. An aborted run releases nothing; interactive's Esc
   restore owns that queue.
+- The release keeps the queue's own granularity. `Agent.ReleaseFollowUpMessages`
+  drains by mode and ignores `DeferFollowUp`, because the release runs only once
+  the reason for holding is gone. In the default one-at-a-time mode the released
+  run carries the first held follow-up, and that run's own stop boundary delivers
+  the rest one turn at a time; `all` still delivers the whole queue in one turn.
+  Before this, the release took every held message and one request answered all
+  of them, so several Alt+Enter presses were answered together.
 - The deferring drain clears the slots it empties, so a delivered message is not
   retained by the queue's backing array.
 
@@ -5238,7 +5245,11 @@ and `TestDrainDeferringClearsConsumedSlots` (queue deferral, continuation, slot
 clearing); `TestGoalHoldsFollowUpsUntilItsFinalAnswer` (two goal rounds complete
 without the follow-up, a third run carries it only afterwards),
 `TestGoalReleasedFollowUpsRunWithoutAHost` and
-`TestGoalReleaseSkipsDisposedSession`.
+`TestGoalReleaseSkipsDisposedSession`; `TestGoalReleasedFollowUpsAreDeliveredOneAtATime`
+(three held follow-ups each get their own request, in queue order),
+`TestQueuedFollowUpsAreDeliveredOneAtATimeWithoutAGoal` (the control, with a
+handshake instead of sleeps) and `TestQueuedFollowUpsFollowTheAllMode` (the mode
+still batches).
 
 ### D386
 
