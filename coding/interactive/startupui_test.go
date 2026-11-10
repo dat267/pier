@@ -39,7 +39,7 @@ func startupSelectorPrompt(t *testing.T, keys string) (string, bool, []string) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("the startup screen never started the terminal input pump")
 	}
-	time.Sleep(200 * time.Millisecond) // let it render
+	terminal.waitForOutput(t, "Do not trust")
 	terminal.onInput(keys)
 
 	select {
