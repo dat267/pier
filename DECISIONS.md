@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D428)
+# Deliberate divergences from pi (D1–D429)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6466,3 +6466,31 @@ The goal feature has no upstream counterpart, so there is no reference to cite.
 Tests: `TestChatNoticeIsBounded` (a 100 KB single line and a 15,000-line reason
 each add at most eight chat lines) and `TestChatNoticeKeepsAShortMessage` (an
 ordinary notice is unchanged).
+
+### D429
+
+**A JSON Schema `type` array keeps its members even when some are not strings.**
+
+Reference: `packages/ai/src/api/constrained-sampling.ts` (pi v1.5.0,
+`f9a26365`), line 40:
+`typeof schema.type === "string" ? [schema.type] : Array.isArray(schema.type) ? schema.type : []`.
+The membership tests compare each member against a type name, so a non-string
+member can never match but does not remove its neighbours.
+
+The port decoded the member into `[]string`, so one non-string element failed
+the whole decode and `schemaTypes` returned nil. `isStructuredSchema` then
+answered false for `{"type":["object",5]}` and the `anyOf` guard accepted a
+union the reference rejects: `{"anyOf":[{"type":["object",5]}]}` built a strict
+schema in the port and threw `object and array unions are unsupported` in the
+reference.
+
+`schemaTypes` now decodes the array into raw members, keeps the ones that are
+JSON strings, and ignores the rest, which answers identically for every
+membership test. The string form and a `type` that is neither a string nor an
+array keep their previous answers. Two decode quirks are handled explicitly
+because `encoding/json` decodes a JSON `null` into a Go string as `""` with no
+error: a `type` of `null` previously produced the single type name `""`.
+
+Tests: `TestSchemaTypesKeepsStringsFromAMixedArray` and
+`TestMixedTypeArrayIsAStructuredUnion`, whose plain-object variant is the
+control that both implementations reject.

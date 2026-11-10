@@ -1,27 +1,24 @@
 # Reproduced audit findings
 
-## A472 a model-supplied blocked reason becomes an unbounded chat notice
+## A473 `schemaTypes` drops a `type` array with any non-string member
 
-- Severity: medium (UI cost; user-visible transcript blow-up, same class as A471).
-- Measured (`RunWiring.ShowChatWarning`, then `Render(80)`):
-
-  | blocked_reason | chat lines |
-  |---|---|
-  | 100 KB on one line | 1,284 |
-  | 15,000 short lines | 15,001 |
-
-  100 KB single line: 11 ms; 15,000 lines: 7 ms.
-- Cause: `goalUpdate`'s blocked branch (`internal/goal/machine.go:355`) trims
-  `blocked_reason` and stores it unbounded; `pauseNotice` embeds it in
-  `NotifyEffect`, `GoalController.notice` forwards it, and
-  `RunWiring.ShowChatWarning` sanitizes escape sequences but adds every line to
-  the chat. `set_goal`'s schema gives `blocked_reason` no length limit.
-- Reachable: a model calling `set_goal status=blocked` after three rounds with a
-  long reason. Also the get_goal result card and the durable goal entry render
-  the same text through `goalPreview`, which D427 already bounds.
-- Fix: bound the notice at the point it becomes a chat line, so every notice
-  path inherits it, and keep the untruncated text in the goal state (the card
-  and the model-facing messages already carry it).
-- Verification: a test asserting a 100 KB one-line reason and a 15,000-line
-  reason each add a bounded number of chat lines, while a short reason is
-  unchanged.
+- Severity: medium (parity; provider request differs from the reference).
+- Reference (pi v1.5.0 `f9a26365`,
+  `packages/ai/src/api/constrained-sampling.ts:40`):
+  `const types = typeof schema.type === "string" ? [schema.type] : Array.isArray(schema.type) ? schema.type : [];`
+  A mixed array keeps its string members, so
+  `isStructuredSchema({"type":["object",5]})` is `true` and the `anyOf` guard
+  throws `object and array unions are unsupported`.
+- Port: `schemaTypes` (`ai/constrained_sampling.go:22`) decodes into
+  `[]string`; a single non-string member fails the decode and the whole array
+  becomes `nil`, so `isStructuredSchema` answers `false` and the guard passes.
+- Measured, same nested schema:
+  `{"anyOf":[{"type":["object",5]}]}` -> port err=`nil`, reference throws
+  `object and array unions are unsupported`.
+  `{"anyOf":[{"type":"object"}]}` -> both throw (the control).
+- Reachable: a tool's JSON schema is model- or extension-supplied; it reaches
+  `MakeStrictJSONSchema` for providers using strict structured output.
+- Fix: decode the array as raw members, keep the ones that are strings, and
+  drop the rest, matching JS exactly.
+- Verification: a test asserting the guard now rejects the mixed array, with
+  the plain-object variant as the control.

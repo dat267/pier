@@ -19,16 +19,38 @@ var unsupportedStrictSchemaKeys = []string{
 	"contains", "prefixItems", "not", "if", "then", "else",
 }
 
+// schemaTypes reads a JSON Schema `type` member the way the reference does
+// (pi v1.5.0 f9a26365 api/constrained-sampling.ts:40): a string is one type, and
+// an array keeps its string members whatever the other members are. Decoding
+// into []string instead would drop a whole ["object",5] array and let an object
+// union past the anyOf guard (D429).
 func schemaTypes(data json.RawMessage) []string {
-	var single string
-	if err := jsonUnmarshalStrict(data, &single); err == nil {
-		return []string{single}
+	// encoding/json decodes a JSON null into a string as "" without an error,
+	// so require the member to actually be a JSON string.
+	if len(data) > 0 && data[0] == '"' {
+		var single string
+		if err := jsonUnmarshalStrict(data, &single); err == nil {
+			return []string{single}
+		}
 	}
-	var list []string
-	if err := jsonUnmarshalStrict(data, &list); err == nil {
-		return list
+	var members []json.RawMessage
+	if err := jsonUnmarshalStrict(data, &members); err != nil {
+		return nil
 	}
-	return nil
+	types := make([]string, 0, len(members))
+	for _, member := range members {
+		// encoding/json decodes a JSON null into a string as "" without an
+		// error, which would add an empty type name; require the member's own
+		// JSON type to be a string.
+		if len(member) == 0 || member[0] != '"' {
+			continue
+		}
+		var name string
+		if err := jsonUnmarshalStrict(member, &name); err == nil {
+			types = append(types, name)
+		}
+	}
+	return types
 }
 
 func isStructuredSchema(data json.RawMessage) bool {
