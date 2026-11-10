@@ -14,6 +14,7 @@ import (
 
 func TestProcessTerminalWriteDoesNotBlockOnAPausedConsole(t *testing.T) {
 	terminal := NewProcessTerminal(nil, nil)
+	releaseWriterAtCleanup(t, terminal)
 	release := make(chan struct{})
 	terminal.writeFn = func(string) { <-release }
 
@@ -37,6 +38,7 @@ func TestProcessTerminalWriteDoesNotBlockOnAPausedConsole(t *testing.T) {
 // Pier removes controls so the title cannot terminate its OSC 0 sequence.
 func TestProcessTerminalSetTitleStripsControlCharacters(t *testing.T) {
 	terminal := NewProcessTerminal(nil, nil)
+	releaseWriterAtCleanup(t, terminal)
 	writes := make(chan string, 1)
 	terminal.writeFn = func(data string) { writes <- data }
 	terminal.SetTitle("safe\x1b]52;c;Zm9v\x07tail\nname")
@@ -48,6 +50,7 @@ func TestProcessTerminalSetTitleStripsControlCharacters(t *testing.T) {
 
 func TestProcessTerminalWritesInOrder(t *testing.T) {
 	terminal := NewProcessTerminal(nil, nil)
+	releaseWriterAtCleanup(t, terminal)
 	var mu sync.Mutex
 	var got strings.Builder
 	terminal.writeFn = func(data string) {
@@ -73,6 +76,7 @@ func TestProcessTerminalWritesInOrder(t *testing.T) {
 
 func TestProcessTerminalFlushWaitsForAPausedWriter(t *testing.T) {
 	terminal := NewProcessTerminal(nil, nil)
+	releaseWriterAtCleanup(t, terminal)
 	release := make(chan struct{})
 	started := make(chan struct{})
 	var once sync.Once
@@ -110,6 +114,7 @@ func TestProcessTerminalFlushWaitsForAPausedWriter(t *testing.T) {
 
 func TestProcessTerminalKeepsQueuedFrames(t *testing.T) {
 	terminal := NewProcessTerminal(nil, nil)
+	releaseWriterAtCleanup(t, terminal)
 	release := make(chan struct{})
 	started := make(chan struct{})
 	var once sync.Once
@@ -145,6 +150,7 @@ func TestProcessTerminalKeepsQueuedFrames(t *testing.T) {
 
 func TestProcessTerminalFrameCoalescingKeepsDurableWrites(t *testing.T) {
 	terminal := NewProcessTerminal(nil, nil)
+	releaseWriterAtCleanup(t, terminal)
 	release := make(chan struct{})
 	started := make(chan struct{})
 	var once sync.Once
@@ -177,5 +183,50 @@ func TestProcessTerminalFrameCoalescingKeepsDurableWrites(t *testing.T) {
 	// Every write survives, in submission order.
 	if got.String() != "setupframe-Amodeframe-B" {
 		t.Fatalf("got %q, want setupframe-Amodeframe-B", got.String())
+	}
+}
+
+// releaseWriterAtCleanup ends the terminal's writer goroutine when the test
+// finishes, for tests that never start (and so never stop) the terminal.
+func releaseWriterAtCleanup(t *testing.T, terminal *ProcessTerminal) {
+	t.Helper()
+	t.Cleanup(terminal.FinishShutdownOutput)
+}
+
+// A stopped terminal's idle writer exits instead of parking for the life of the
+// process, and the first write after a restart starts a new one. Upstream
+// terminal.ts writes synchronously and has no writer to stop.
+func TestProcessTerminalWriterExitsOnStopAndRestartsOnWrite(t *testing.T) {
+	terminal := NewProcessTerminal(nil, nil)
+	releaseWriterAtCleanup(t, terminal)
+	var mu sync.Mutex
+	var got strings.Builder
+	terminal.writeFn = func(data string) {
+		mu.Lock()
+		got.WriteString(data)
+		mu.Unlock()
+	}
+	terminal.Write("before;")
+	terminal.Stop()
+	writerRunning := func() bool {
+		terminal.writesMu.Lock()
+		defer terminal.writesMu.Unlock()
+		return terminal.writesStarted
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for writerRunning() {
+		if time.Now().After(deadline) {
+			t.Fatal("the writer kept running after Stop")
+		}
+		time.Sleep(time.Millisecond)
+	}
+
+	terminal.closed.Store(false) // what Start does
+	terminal.Write("after")
+	terminal.flushWrites()
+	mu.Lock()
+	defer mu.Unlock()
+	if text := got.String(); !strings.HasPrefix(text, "before;") || !strings.HasSuffix(text, "after") {
+		t.Fatalf("output = %q, want the writes before and after the restart", text)
 	}
 }

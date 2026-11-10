@@ -835,6 +835,10 @@ func (t *ProcessTerminal) Stop() {
 	// permits graceful exit to restore raw mode after the output grace expires;
 	// undelivered terminal protocol/display cleanup may then be lost at exit.
 	t.flushWrites()
+	// Release the idle writer; it does not outlive a stopped terminal.
+	t.writesMu.Lock()
+	t.writesCond.Broadcast()
+	t.writesMu.Unlock()
 
 	// Restore raw mode state. The stdin buffer and the negotiation state are
 	// owned by the input consumer (the loop) and are left alone here: the
@@ -955,10 +959,13 @@ func (t *ProcessTerminal) writeLoop() {
 	var batch strings.Builder
 	for {
 		t.writesMu.Lock()
-		for len(t.writes) == 0 && !t.writesFinishing {
+		for len(t.writes) == 0 && !t.writesFinishing && !t.closed.Load() {
 			t.writesCond.Wait()
 		}
 		if len(t.writes) == 0 {
+			// Finished, or stopped with nothing left to write: the next
+			// write after a restart starts a new writer.
+			t.writesStarted = false
 			t.writesMu.Unlock()
 			return
 		}
