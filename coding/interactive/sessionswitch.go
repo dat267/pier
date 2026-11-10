@@ -131,6 +131,16 @@ func (a *App) sessionNew(ctx context.Context) (*SessionSwitchResult, error) {
 // createRuntime + rebindCurrentSession; the extension lifecycle events are
 // no-ops in this port, D41).
 func (a *App) applySessionReplacement(sessionManager *coding.SessionManager) (*SessionSwitchResult, error) {
+	// A485: every replacement path (switch, fork, import, new) must keep the
+	// write queue. OpenSession builds a manager without one, and nil means the
+	// session file is written synchronously on the calling goroutine, which for
+	// this path is the owner loop. cmd/main.go wires the queue for the same
+	// reason; sessionNew forwards it explicitly and the others did not.
+	if sessionManager != nil && sessionManager.GetWriteQueue() == nil {
+		if queue := a.sessionMgr.GetWriteQueue(); queue != nil {
+			sessionManager.SetWriteQueue(queue)
+		}
+	}
 	a.teardownCurrentSession()
 	return a.bindSessionManager(sessionManager)
 }
