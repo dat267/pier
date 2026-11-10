@@ -489,8 +489,7 @@ func (s *AgentSession) SendMessage(ctx context.Context, message *ai.CustomMessag
 
 // AppendCustomMessage appends a custom message to the transcript and session.
 func (s *AgentSession) AppendCustomMessage(message *ai.CustomMessage) {
-	messages := append(s.Agent.State().Messages, ai.Message(message))
-	s.Agent.SetMessages(messages)
+	s.Agent.AppendMessages(message)
 	var fields customMessageFields
 	if err := json.Unmarshal(message.Content, &fields); err == nil && fields.CustomType != "" {
 		s.Sessions.AppendCustomMessageEntry(fields.CustomType, fields.Content, fields.Display, fields.Details)

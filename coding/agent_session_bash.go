@@ -116,8 +116,7 @@ func (s *AgentSession) recordBashResultAt(command string, result BashResult, exc
 
 // appendBashMessage adds a bash message to agent state and session history.
 func (s *AgentSession) appendBashMessage(message *ai.CustomMessage) {
-	messages := append(s.Agent.State().Messages, ai.Message(message))
-	s.Agent.SetMessages(messages)
+	s.Agent.AppendMessages(message)
 	s.Sessions.AppendMessage(message)
 }
 

@@ -460,6 +460,10 @@ func (a *Agent) State() AgentState {
 	defer a.mu.Unlock()
 	snapshot := *a.state
 	snapshot.PendingToolCalls = maps.Clone(a.state.PendingToolCalls)
+	// Clip the capacity: a caller appending to the snapshot then gets its own
+	// array instead of writing into spare slots the agent or another caller
+	// also appends into.
+	snapshot.Messages = a.state.Messages[:len(a.state.Messages):len(a.state.Messages)]
 	return snapshot
 }
 
@@ -468,6 +472,15 @@ func (a *Agent) SetTools(tools []AgentTool) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.state.Tools = append([]AgentTool{}, tools...)
+}
+
+// AppendMessages appends to the transcript in one step. A caller that read
+// State().Messages and later called SetMessages would drop whatever was
+// appended in between (a run's starting prompt, another caller's append).
+func (a *Agent) AppendMessages(messages ...ai.Message) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.state.Messages = append(a.state.Messages[:len(a.state.Messages):len(a.state.Messages)], messages...)
 }
 
 // SetMessages replaces the transcript (copied).
