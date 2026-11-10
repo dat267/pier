@@ -313,6 +313,14 @@ File paths intentionally omit line numbers so ordinary edits do not stale them.
 None of the mechanisms below adds a mutex beyond the ones it names, or a
 UI-state worker.
 
+Three gates keep the inventory honest. `internal/lockcall` fails the tests when
+code calls a func value (field, parameter, variable, map entry) with a sync
+mutex held, outside a short allowlist of locks that exist to cover their call.
+`internal/leakcheck`, run by every package's `TestMain`, fails a package whose
+tests leave goroutines running. `just test-stress` (also in CI) race-tests the
+most concurrent packages shuffled on one CPU and on four, beside lifecycle
+stress tests that overlap prompt, abort, Dispose, Close and Stop.
+
 `ai.EventStream.mu` protects its FIFO, waiters and terminal state. Completion
 closes a shared notification channel so every result waiter observes the same
 immutable result. Caller-supplied completion predicates and result extractors
