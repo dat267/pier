@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -107,16 +108,38 @@ type workingTokenCount struct {
 
 func workingTokensOf(usage ai.Usage) workingTokenCount {
 	return workingTokenCount{
-		in: usage.Input + usage.CacheRead + usage.CacheWrite, out: usage.Output,
+		// The prompt total folds in Number space and saturates at the int64
+		// bounds, like every other display sum (D369); adding the three columns
+		// in int64 wrapped a large prompt negative.
+		in: int64(ai.CalculateContextTokens(ai.Usage{
+			Input: usage.Input, CacheRead: usage.CacheRead, CacheWrite: usage.CacheWrite,
+		})),
+		out:       usage.Output,
 		cacheRead: usage.CacheRead,
 	}
 }
 
+// plus adds one message's counts to the run's. A provider's usage fields are
+// int64, so two large messages wrap in int64; the run's own totals saturate at
+// the representation bounds instead (D369, D402).
 func (c workingTokenCount) plus(other workingTokenCount) workingTokenCount {
 	return workingTokenCount{
-		in: c.in + other.in, out: c.out + other.out,
-		cacheRead: c.cacheRead + other.cacheRead,
+		in: saturatingTokenSum(c.in, other.in), out: saturatingTokenSum(c.out, other.out),
+		cacheRead: saturatingTokenSum(c.cacheRead, other.cacheRead),
 	}
+}
+
+// saturatingTokenSum adds two counts, clamping at the int64 bounds so a display
+// total cannot wrap negative.
+func saturatingTokenSum(a, b int64) int64 {
+	sum := a + b
+	if b > 0 && sum < a {
+		return math.MaxInt64
+	}
+	if b < 0 && sum > a {
+		return math.MinInt64
+	}
+	return sum
 }
 
 func (c workingTokenCount) atLeast(other workingTokenCount) workingTokenCount {

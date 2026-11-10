@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D422)
+# Deliberate divergences from pi (D1–D423)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6282,3 +6282,26 @@ reference shows for ordinary labels is unchanged.
 
 Tests: `TestTranscriptCustomMessageLabelIsSanitized`,
 `TestCustomEntryFallbackSanitizesItsText`.
+
+### D423
+
+**The worked-for run totals saturate.**
+
+D369 established that session usage display sums fold in Number space and
+saturate at the int64 bounds, and 06be6972 applied that to the session-info panel
+and the compaction notices. The worked-for notice (D402) reintroduced the wrap:
+`workingTokensOf` added `Input + CacheRead + CacheWrite` in int64 and
+`workingTokenCount.plus` added each column in int64, so a run over two messages
+that each reported a large cache read wrapped negative and rendered
+`↑-8446744073709551616`. A single message whose own prompt fields overflow
+rendered `↑-2`.
+
+`workingTokensOf` now folds the prompt total through
+`ai.CalculateContextTokens` (the same Number-space helper the panel uses), and
+`plus` adds through `saturatingTokenSum`, which clamps at the int64 bounds.
+Ordinary counts are unchanged. The reference computes these with JavaScript
+numbers, which saturate at 2^53 instead of wrapping, so no wrap is visible
+there either.
+
+Tests: `TestWorkingTokenCountsSaturateOnOverflow`,
+`TestWorkingTokenCountsKeepOrdinaryValues`.
