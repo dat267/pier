@@ -29,9 +29,21 @@
 - Reachable: `ExecuteBash` (`coding/interactive/interactivemode_handlers.go:662`)
   is called from off-loop handler work; `cmd` and `rpcmode` wire a write queue,
   but the queue is `nil` for sessions created without one.
-- Fix: keep the idle decision under `state.mu`, then append after unlocking
-  while preserving order, or resolve the write queue before releasing so the
-  append enqueues rather than writes. Must not reintroduce the interleaving
-  D438 fixed.
+- Attempted and reverted: releasing `state.mu` before the idle append (the
+  obvious fix) breaks D438's two-store ordering.
+  `TestAgentSessionConcurrentAPIKeepsTranscriptAndPersistenceInStep` fails at
+  -count=10 with the agent transcript and the session file disagreeing (e.g.
+  agent `[custom bashExecution bashExecution bashExecution user assistant]` vs
+  persisted `[custom bashExecution bashExecution user bashExecution
+  assistant]`), because a concurrent writer interleaves between the two
+  stores. Holding the lock across the append is what makes the pair atomic, so
+  the cost is the price of the ordering guarantee, not an oversight.
+- Remaining option, unverified: make the append cheap rather than unlocked.
+  The measured cost is the synchronous `os.OpenFile`+`WriteString`+`Close` in
+  `writeSessionLine` (plus the JSON marshal), so keeping an append-only file
+  handle open, or ensuring the write queue is always wired, removes the disk
+  cost while the lock keeps the ordering. Neither is a one-line change and
+  neither has a test yet, so this stays open rather than patched.
 - Verification: a test asserting `state.mu` is not held across the append (a
-  concurrent acquirer must not stall), plus D438's ordering test still green.
+  concurrent acquirer must not stall) AND D438's ordering test green at
+  `-count=10`. The naive fix satisfies the first and fails the second.
