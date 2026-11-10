@@ -11,6 +11,7 @@ import (
 // frame retention deterministic, independent of the writer's scheduling.
 func TestProcessTerminalBacklogDuringPausedConsole(t *testing.T) {
 	terminal := NewProcessTerminal(nil, nil)
+	releaseWriterAtCleanup(t, terminal)
 	backlog := terminal.WriteBacklog
 	pending, ok := any(terminal).(interface{ PendingWriteBytes() int64 })
 	if !ok {

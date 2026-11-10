@@ -30,6 +30,7 @@ func TestRunLoopWithBlockedConsole(t *testing.T) {
 			defer reader.Close()
 			defer writer.Close()
 			terminal := tui.NewProcessTerminal(nil, writer)
+			defer terminal.FinishShutdownOutput() // end its writer goroutine
 			wiring, _ := newRunTestWiring(t)
 			dispatcher, _, _, _ := newEventTestDispatcher(t)
 			queue := newSessionEventQueue()

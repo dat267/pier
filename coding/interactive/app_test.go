@@ -192,6 +192,9 @@ func newTestAppWithPersist(t *testing.T, persist bool) (*App, func()) {
 		app.lifecycle.UnregisterSignalHandlers()
 		tui.SetKeybindings(previous)
 	}
+	// Close stops the app's workers (the footer's git watcher, the off-loop
+	// queues) so a test cannot leave them running (internal/leakcheck).
+	t.Cleanup(app.Close)
 	return app, cleanup
 }
 

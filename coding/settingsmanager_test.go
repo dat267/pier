@@ -876,8 +876,10 @@ func TestSettingsPersistLandsOffLoop(t *testing.T) {
 	settingsPath := filepath.Join(agentDir, "settings.json")
 	writeSettingsFile(t, settingsPath, `{"theme":"light"}`)
 
+	queue := offloop.New()
+	defer queue.Stop()
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{
-		PersistQueue: offloop.New(),
+		PersistQueue: queue,
 	})
 	manager.SetTheme("dark")
 	manager.SetDefaultThinkingLevel("high")

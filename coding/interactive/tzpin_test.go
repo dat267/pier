@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"github.com/dat267/pier/internal/leakcheck"
 	"os"
 	"path/filepath"
 	"testing"
@@ -39,7 +40,7 @@ func TestMain(m *testing.M) {
 		os.Setenv("HOME", home)
 		os.Setenv("USERPROFILE", home)
 	}
-	code := m.Run()
+	code := leakcheck.Run(m)
 	if err == nil {
 		_ = os.RemoveAll(dir)
 	}

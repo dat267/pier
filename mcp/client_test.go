@@ -421,7 +421,8 @@ func TestClientRenewsTimeoutOnProgress(t *testing.T) {
 func TestClientCancelsAbortedAndTimedOutRequests(t *testing.T) {
 	client, server := connectTestClient(t)
 	server.setHandler("tools/call", func(*protocol.JsonRpcRequest) (any, error) {
-		select {}
+		<-blockUntilCleanup(t)
+		return nil, errors.New("test ended")
 	})
 	ctx, cancel := context.WithCancelCause(context.Background())
 	done := make(chan error, 1)
@@ -586,7 +587,8 @@ func TestClientDefaultsMissingToolResultContent(t *testing.T) {
 func TestClientTimedOutInitializeSendsNoCancellation(t *testing.T) {
 	server, clientTransport := newTestServer()
 	server.setHandler("initialize", func(*protocol.JsonRpcRequest) (any, error) {
-		select {}
+		<-blockUntilCleanup(t)
+		return nil, errors.New("test ended")
 	})
 	client := NewClient(ClientOptions{Name: "test-client", Version: "1.0.0", RequestTimeoutMs: 5})
 	if _, err := client.Connect(context.Background(), clientTransport); err == nil {
@@ -608,7 +610,8 @@ func TestClientNotifiesCloseListenersOnceOnTransportDrop(t *testing.T) {
 	closeCount := 0
 	client.OnClose(func() { closeCount++ })
 	server.setHandler("tools/call", func(*protocol.JsonRpcRequest) (any, error) {
-		select {}
+		<-blockUntilCleanup(t)
+		return nil, errors.New("test ended")
 	})
 	done := make(chan error, 1)
 	go func() {
@@ -895,4 +898,12 @@ func TestClientInitializeValidationUsesJavaScriptTypeChecks(t *testing.T) {
 		err.Error() != "Invalid MCP initialize result" {
 		t.Fatalf("null instructions err = %v; want Invalid MCP initialize result", err)
 	}
+}
+
+// blockUntilCleanup returns a channel that closes when the test ends, for a
+// handler that must never answer while the test runs but must not outlive it.
+func blockUntilCleanup(t *testing.T) <-chan struct{} {
+	release := make(chan struct{})
+	t.Cleanup(func() { close(release) })
+	return release
 }

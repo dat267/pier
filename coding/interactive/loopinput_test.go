@@ -229,6 +229,7 @@ func TestCompactCommandDuringTurnDoesNotQueueBehindIt(t *testing.T) {
 	defer cleanup()
 
 	session := &compactWhileBusySession{started: make(chan struct{}), release: make(chan struct{})}
+	defer close(session.release)
 	session.CommandSession = app.commands.Session
 	app.commands.Session = session
 

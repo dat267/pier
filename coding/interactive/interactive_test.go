@@ -899,13 +899,16 @@ func TestTerminalDetection(t *testing.T) {
 func TestThemeSettingAppliesOnTheQueue(t *testing.T) {
 	ui := &fakeThemeUI{}
 	var marshaled int
+	queue := offloop.New()
+	defer queue.Stop()
 	controller := NewInteractiveThemeController(ThemeControllerOptions{
 		UI:         ui,
 		TimeoutMS:  1,
 		Env:        func(string) string { return "" },
 		Marshal:    func(fn func()) { marshaled++; fn() },
-		ThemeQueue: offloop.New(),
+		ThemeQueue: queue,
 	})
+	defer controller.Dispose()
 	controller.SetThemeSetting("light")
 	controller.ThemeQueueFlushForTest() // observe this accepted load before the next selection
 	controller.SetThemeSetting("dark")

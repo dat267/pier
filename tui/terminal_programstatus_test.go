@@ -12,6 +12,7 @@ import (
 func newProgramStatusTerminal(t *testing.T) (*ProcessTerminal, func() string) {
 	t.Helper()
 	terminal := NewProcessTerminal(nil, nil)
+	releaseWriterAtCleanup(t, terminal)
 	var mu sync.Mutex
 	var captured []string
 	terminal.writeFn = func(data string) {
@@ -94,6 +95,7 @@ func TestOlderDeviceAttributesDoNotCancelRestartedProgramStatusQuery(t *testing.
 // a keyboard-protocol query is outstanding; otherwise it forwards the reply.
 func TestUnrequestedDeviceAttributesAreForwarded(t *testing.T) {
 	terminal := NewProcessTerminal(nil, nil)
+	releaseWriterAtCleanup(t, terminal)
 	terminal.setupLegacyStdinBuffer()
 	const reply = "\x1b[?1;2c"
 	got := terminal.FeedInput([]byte(reply))

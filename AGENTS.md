@@ -68,7 +68,10 @@ Keep tests quick: small fixtures, allocation checks instead of loops, fake
 sleeps, and never launch the developer's editor. Tests must use temporary agent
 state (`t.TempDir`/`t.Setenv`), not the real agent directory. Package `TestMain`s
 pin relevant environment and golden timezone; test file-reporting stubs should
-write then rename so readers never see partial files.
+write then rename so readers never see partial files. `TestMain`s run the tests
+through `internal/leakcheck`, which fails a package that leaves goroutines
+running: stop what a test starts (Dispose, Close, `offloop.Queue.Stop`).
+`GODEBUG=tracebackancestors=20` names the test that started a leak.
 
 ## UI ownership
 

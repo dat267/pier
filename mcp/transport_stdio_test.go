@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"github.com/dat267/pier/internal/leakcheck"
 	"io"
 	"os"
 	"os/exec"
@@ -61,7 +62,7 @@ func TestMain(m *testing.M) {
 			stubbornFixtureBin = bin
 		}
 	}
-	code := m.Run()
+	code := leakcheck.Run(m)
 	_ = os.RemoveAll(tempDir)
 	os.Exit(code)
 }

@@ -201,8 +201,15 @@ func TestCacheWarmerEconomicsAndWarm(t *testing.T) {
 		Usage:      ai.Usage{Input: 1000, CacheRead: 0, TotalTokens: 1000},
 	})
 
+	defer warmer.Cancel()
 	warmed := make(chan *SessionEntry, 1)
-	warmer.OnWarmed = func(entry *SessionEntry) { warmed <- entry }
+	// The forced decision keeps warming; later warms must not block the warmer.
+	warmer.OnWarmed = func(entry *SessionEntry) {
+		select {
+		case warmed <- entry:
+		default:
+		}
+	}
 	// The decision override is installed before Start so the timer goroutine
 	// observes it without a race.
 	warmer.Decide = func(event CacheWarmingDecisionEvent) CacheWarmingAction { return CacheWarmingActionWarm }

@@ -462,6 +462,7 @@ func TestWaitForPipeDrain(t *testing.T) {
 	alreadyStarted <- struct{}{}
 	alreadyStarted <- struct{}{}
 	stuck.Add(1)
+	defer stuck.Done() // release the drain's waiter when the test ends
 	start = timeNowMS()
 	waitForPipeDrain(&stuck.WaitGroup, make(chan struct{}), alreadyStarted)
 	elapsed := timeNowMS() - start

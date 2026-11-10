@@ -31,6 +31,7 @@ func TestInvalidThemeFallsBackToSystem(t *testing.T) {
 				}
 				if entry == "queued-controller" {
 					options.ThemeQueue = offloop.New()
+					defer options.ThemeQueue.Stop()
 				}
 				controller := NewInteractiveThemeController(options)
 				defer controller.Dispose()

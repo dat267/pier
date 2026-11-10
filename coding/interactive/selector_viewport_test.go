@@ -26,6 +26,7 @@ func TestSelectorsCaptureViewportInput(t *testing.T) {
 	pageUp := "\x1b[5~"
 
 	modelSelector := NewModelSelectorComponent(nil, nil, nil, &fakeModelRuntime{models: models}, nil, nil, nil, "", nil, nil)
+	defer modelSelector.Dispose()
 	if !modelSelector.CapturesViewportInput() {
 		t.Fatal("model selector does not capture page keys")
 	}

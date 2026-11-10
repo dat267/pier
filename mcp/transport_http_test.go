@@ -1065,6 +1065,7 @@ func TestStreamableHTTPPostsSetContentLength(t *testing.T) {
 	if _, err := client.Connect(context.Background(), transport); err != nil {
 		t.Fatal(err)
 	}
+	defer client.Close(context.Background())
 	if _, err := client.ListTools(context.Background(), RequestOptions{}); err != nil {
 		t.Fatal(err)
 	}

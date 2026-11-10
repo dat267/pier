@@ -14,6 +14,7 @@ import (
 func TestRenamingCurrentSessionKeepsItsLatestLeaf(t *testing.T) {
 	dir := t.TempDir()
 	queue := offloop.New()
+	defer queue.Stop()
 	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{SessionDir: dir, WriteQueue: queue})
 	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "first"}})
 	queue.Flush()

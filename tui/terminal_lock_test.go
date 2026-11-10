@@ -27,6 +27,7 @@ func TestTerminalInputHandlerNotHeldUnderLock(t *testing.T) {
 	defer outW.Close()
 
 	terminal := NewProcessTerminal(inR, outW)
+	releaseWriterAtCleanup(t, terminal)
 	// The handler writes to the terminal, which takes writeMu.
 	terminal.setInputHandler(func(string) { terminal.Write("ok") })
 	terminal.setupLegacyStdinBuffer()
@@ -62,6 +63,7 @@ func TestRawTerminalFeedInput(t *testing.T) {
 	defer outW.Close()
 
 	terminal := NewProcessTerminal(inR, outW)
+	releaseWriterAtCleanup(t, terminal)
 	terminal.EnableRawInput()
 	terminal.Start(func(string) {}, func() {})
 	defer terminal.Stop()

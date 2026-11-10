@@ -17,9 +17,11 @@ import (
 
 func TestSessionWritesLandInOrderOnTheQueue(t *testing.T) {
 	dir := t.TempDir()
+	queue := offloop.New()
+	defer queue.Stop()
 	m := NewSessionManager(dir, &SessionManagerOptions{
 		SessionDir: filepath.Join(dir, "sessions"),
-		WriteQueue: offloop.New(),
+		WriteQueue: queue,
 	})
 	// The flush-on-first-conversation contract: the file is created by the
 	// rewrite that fires when the first user or assistant message lands.
