@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D438)
+# Deliberate divergences from pi (D1–D439)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6756,3 +6756,33 @@ Tests: `TestAgentSessionConcurrentAPIKeepsTranscriptAndPersistenceInStep`
 `TestFlushWritesIncludesHeldSessionWrites`,
 `TestHeldSessionWriteGoesAheadOfANewlyWiredQueue` and
 `TestDeferredFlushPanicStillWritesAcceptedEntries` for its edges.
+
+### D439
+
+**Session and message JSON decode accepts what `JSON.parse` accepts: unpaired
+surrogate escapes and duplicate member names.**
+
+Reference: `core/session-manager.ts` and `core/agent-session.ts` (pi v1.5.0,
+`f9a26365`) read session lines with `JSON.parse`, which accepts `"\ud83d"` (an
+unpaired surrogate escape) and keeps the last value of a duplicate member name;
+`JSON.stringify` writes the surrogate back as `\ud83d`. The port decodes session
+lines and message content with `encoding/json/v2` for speed (707 ms to 276 ms on
+a 55 MB session), and v2's default options reject both forms at the lexer, so
+`UnmarshalFileEntry` dropped the entry and `Projection` dropped the message.
+
+The port therefore calls `json/v2` with `jsontext.AllowInvalidUTF8` and
+`jsontext.AllowDuplicateNames` on the session-entry decode and on the message
+decode path. Both options only admit input that failed before: anything that
+already decoded is unchanged, and a message's raw bytes stay byte-identical, so
+re-persisting a session the reference wrote keeps its bytes. A Go string cannot
+hold an unpaired surrogate, so the decoded text carries U+FFFD while the raw
+JSON keeps the escape.
+
+This mattered most for older files: opening a v1/v2-format session migrates and
+rewrites it, so the dropped entries were deleted from the user's file rather
+than only hidden.
+
+Test: `TestLoneSurrogateEntrySurvivesMigration` (the entry is gone from the
+rewritten file without the options), `TestLoneSurrogateMessageReachesProjection`
+(the projected message count is short without them) and
+`TestDuplicateMemberNameEntrySurvivesLoad`.

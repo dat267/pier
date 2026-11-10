@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
+	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
 	"fmt"
 	"io"
@@ -927,6 +928,16 @@ func entryTypeFast(line string) (string, bool) {
 	return before, true
 }
 
+// decodeSessionLine decodes one session JSONL line. A486: json/v2 rejects
+// unpaired surrogate escapes and duplicate member names, both of which
+// JSON.parse accepts (pi v1.5.0 f9a26365 reads session lines with JSON.parse), so
+// the two rules are turned off here. That can only admit lines that failed
+// before; input that already decoded is unchanged.
+func decodeSessionLine(data []byte, v any) error {
+	return jsonv2.Unmarshal(data, v,
+		jsontext.AllowInvalidUTF8(true), jsontext.AllowDuplicateNames(true))
+}
+
 func UnmarshalFileEntry(line string) (*FileEntry, error) {
 	// encoding/json/v2 directly: the v1 API wraps v2 with legacy compatibility
 	// (case-insensitive members, etc.) that costs ~2.5x on the 23k-line session
@@ -938,21 +949,21 @@ func UnmarshalFileEntry(line string) (*FileEntry, error) {
 		var probe struct {
 			Type string `json:"type"`
 		}
-		if err := jsonv2.Unmarshal([]byte(line), &probe); err != nil {
+		if err := decodeSessionLine([]byte(line), &probe); err != nil {
 			return nil, err
 		}
 		typ = probe.Type
 	}
 	if typ == "session" {
 		var header SessionHeader
-		if err := jsonv2.Unmarshal([]byte(line), &header); err != nil {
+		if err := decodeSessionLine([]byte(line), &header); err != nil {
 			return nil, err
 		}
 		header.raw = json.RawMessage(line)
 		return &FileEntry{Header: &header}, nil
 	}
 	var entry SessionEntry
-	if err := jsonv2.Unmarshal([]byte(line), &entry); err != nil {
+	if err := decodeSessionLine([]byte(line), &entry); err != nil {
 		return nil, err
 	}
 	entry.raw = json.RawMessage(line)

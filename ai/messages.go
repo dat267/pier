@@ -3,12 +3,24 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
 	"fmt"
 	"maps"
 	"slices"
 	"sort"
 )
+
+// unmarshalMessageJSONText decodes persisted or replayed message JSON. A486:
+// json/v2 rejects unpaired surrogate escapes and duplicate member names, both of
+// which JSON.parse accepts (pi v1.5.0 f9a26365 decodes session lines with
+// JSON.parse). Turning both rules off can only admit input that failed before;
+// anything that already decoded is unchanged, and a message's raw bytes are
+// preserved either way.
+func unmarshalMessageJSONText(data []byte, v any) error {
+	return jsonv2.Unmarshal(data, v,
+		jsontext.AllowInvalidUTF8(true), jsontext.AllowDuplicateNames(true))
+}
 
 // ContentKind discriminates content blocks.
 type ContentKind = string
@@ -127,10 +139,10 @@ func (s StringOrBlocks) MarshalJSON() ([]byte, error) {
 func (s *StringOrBlocks) UnmarshalJSON(data []byte) error {
 	if len(data) > 0 && data[0] == '"' {
 		s.Blocks = nil
-		return jsonv2.Unmarshal(data, &s.Text)
+		return unmarshalMessageJSONText(data, &s.Text)
 	}
 	var raw []json.RawMessage
-	if err := jsonv2.Unmarshal(data, &raw); err != nil {
+	if err := unmarshalMessageJSONText(data, &raw); err != nil {
 		return err
 	}
 	blocks := make([]Content, 0, len(raw))
@@ -306,7 +318,7 @@ func decodeSections(data []byte, m *SystemMessage) error {
 		}
 		if string(raw) != "null" {
 			var s string
-			if err := jsonv2.Unmarshal(raw, &s); err != nil {
+			if err := unmarshalMessageJSONText(raw, &s); err != nil {
 				return err
 			}
 			value = &s
@@ -370,7 +382,7 @@ func (m *SystemMessage) UnmarshalJSON(data []byte) error {
 		ToolsRemoved []ToolReference `json:"toolsRemoved"`
 		Timestamp    int64           `json:"timestamp"`
 	}
-	if err := jsonv2.Unmarshal(data, &wire); err != nil {
+	if err := unmarshalMessageJSONText(data, &wire); err != nil {
 		return err
 	}
 	*m = SystemMessage{
