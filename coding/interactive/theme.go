@@ -1343,6 +1343,14 @@ var themeState struct {
 	validator   atomic.Pointer[func(label string, raw json.RawMessage) (*ThemeJSON, error)]
 }
 
+// themePublishMu orders the writers of themeState.current and
+// themeState.registered. Readers stay lock-free; the lock lets the file
+// watcher re-check that its theme is still the selected one and publish its
+// reload in one step, so a theme switch made while the file was being read is
+// not overwritten (upstream's fs.watch callback runs on the single event loop).
+// It is a leaf: nothing is called while it is held.
+var themePublishMu sync.Mutex
+
 func registeredThemesSnapshot() map[string]*Theme {
 	registered := themeState.registered.Load()
 	out := map[string]*Theme{}
@@ -1373,7 +1381,9 @@ func SetRegisteredThemes(themes []*Theme) {
 		}
 		registered[theme.Name] = theme
 	}
+	themePublishMu.Lock()
 	themeState.registered.Store(&registered)
+	themePublishMu.Unlock()
 }
 
 // InitTheme loads the given theme (or the detected default) into the global slot.
@@ -1403,8 +1413,10 @@ func mustLoadTheme(name string) *Theme {
 }
 
 func setGlobalTheme(name string, theme *Theme) {
+	themePublishMu.Lock()
 	themeState.current.Store(theme)
 	themeState.currentName.Store(&name)
+	themePublishMu.Unlock()
 }
 
 // SetTheme switches the global theme.
@@ -1473,6 +1485,9 @@ func CurrentThemeName() string {
 
 // startThemeWatcher polls a custom theme file for changes (D75: no fs.watch in
 // the Go port).
+// themeWatcherLoad reloads a watched theme file (a seam for tests).
+var themeWatcherLoad = LoadThemeFromPath
+
 func startThemeWatcher(themeName string) {
 	startThemeWatcherContext(context.Background(), themeName)
 }
@@ -1518,23 +1533,42 @@ func startThemeWatcherContext(ctx context.Context, themeName string) {
 					continue
 				}
 				lastMod = info.ModTime()
-				reloaded, err := LoadThemeFromPath(themeFile, "")
+				reloaded, err := themeWatcherLoad(themeFile, "")
 				if err != nil || ctx.Err() != nil {
 					// The file may be mid-write or shutdown may have canceled
 					// the read. Never publish a late reload.
 					continue
 				}
-				if registered := themeState.registered.Load(); registered != nil {
-					updated := make(map[string]*Theme, len(*registered)+1)
-					maps.Copy(updated, *registered)
-					updated[themeName] = reloaded
-					themeState.registered.Store(&updated)
+				if !publishWatchedTheme(themeName, reloaded, stop) {
+					return
 				}
-				themeState.current.Store(reloaded)
 				notifyThemeChange()
 			}
 		}
 	}()
+}
+
+// publishWatchedTheme installs a watcher's reload unless the selection moved on
+// or the watcher was stopped while the file was being read.
+func publishWatchedTheme(themeName string, reloaded *Theme, stop chan struct{}) bool {
+	themePublishMu.Lock()
+	defer themePublishMu.Unlock()
+	select {
+	case <-stop:
+		return false
+	default:
+	}
+	if CurrentThemeName() != themeName {
+		return false
+	}
+	if registered := themeState.registered.Load(); registered != nil {
+		updated := make(map[string]*Theme, len(*registered)+1)
+		maps.Copy(updated, *registered)
+		updated[themeName] = reloaded
+		themeState.registered.Store(&updated)
+	}
+	themeState.current.Store(reloaded)
+	return true
 }
 
 // StopThemeWatcher stops the theme file watcher.
