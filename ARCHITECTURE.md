@@ -313,13 +313,32 @@ File paths intentionally omit line numbers so ordinary edits do not stale them.
 None of the mechanisms below adds a mutex beyond the ones it names, or a
 UI-state worker.
 
-Three gates keep the inventory honest. `internal/lockcall` fails the tests when
+Four gates keep the inventory honest. `internal/lockcall` fails the tests when
 code calls a func value (field, parameter, variable, map entry) with a sync
 mutex held, outside a short allowlist of locks that exist to cover their call.
 `internal/leakcheck`, run by every package's `TestMain`, fails a package whose
 tests leave goroutines running. `just test-stress` (also in CI) race-tests the
 most concurrent packages shuffled on one CPU and on four, beside lifecycle
 stress tests that overlap prompt, abort, Dispose, Close and Stop.
+`just test-isolated` (also in CI) runs every test alone and twice in its
+process, so none relies on another test's leftover global state.
+
+None of these gates sees a logical race: a lock released correctly, followed by
+a write to shared state that a successor goroutine can already own. That shape
+is neither unsynchronized memory (so the race detector is silent) nor a callback
+under a lock (so `lockcall` is silent). A481 was one, in `runWithLifecycle`'s
+teardown: it published `activeRun = nil` and unlocked before deleting the run's
+process-wide context entry, so a run starting in that window lost its context
+and a later `context.WithCancel(nil)` panicked. The guard is the rule below.
+
+State a goroutine retires lives on the token it owns, not in a second structure
+keyed by the owner, so clearing the slot inside the critical section that frees
+it removes exactly that generation. Where state must stay keyed elsewhere,
+cleanup re-reads the slot under the lock and abandons when it moved
+(`coding.CacheWarmer.validateRun` is the worked example; the run slot is
+re-checked that way at eight sites before cleanup).
+After unlocking, code may touch its own captured token and nothing a successor
+can claim. `agent.Agent.activeRun` carries its own `ctx` for this reason.
 
 `ai.EventStream.mu` protects its FIFO, waiters and terminal state. Completion
 closes a shared notification channel so every result waiter observes the same
