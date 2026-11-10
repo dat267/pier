@@ -62,6 +62,13 @@ const middleCases = [
 	{ content: repeat("漢", 20), maxBytes: 15 },
 	{ content: `${lines(100)}\n`, maxBytes: 100 },
 	{ content: repeat("😀", 10), maxBytes: 9 },
+	// A non-positive or tiny budget: the reference's subarray resolves these
+	// indices instead of throwing, so the port must match them (A467).
+	{ content: "abc", maxBytes: 0 },
+	{ content: "abc", maxBytes: -1 },
+	{ content: "abcdef", maxBytes: 3 },
+	{ content: repeat("é", 10), maxBytes: -4 },
+	{ content: "abc", maxBytes: 1 },
 ];
 for (const { content, maxBytes } of middleCases) {
 	outputs.push({ name: `middle/${content.length}/${maxBytes}`, kind: "middle", content, maxBytes, expected: truncate.truncateMiddle(content, maxBytes) });

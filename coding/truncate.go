@@ -129,17 +129,33 @@ func TruncateMiddle(content string, maxBytes int) MiddleTruncationResult {
 	isBoundary := func(index int) bool {
 		return index >= len(content) || content[index]&0xc0 != 0x80
 	}
-	headEnd := maxBytes / 2
+	// Math.floor, not Go's truncating division: for a negative maxBytes the
+	// reference's headEnd is negative, which subarray then resolves from the
+	// end (A467).
+	headEnd := floorDiv2(maxBytes)
 	for headEnd > 0 && !isBoundary(headEnd) {
 		headEnd--
 	}
-	tailStart := len(content) - (maxBytes - maxBytes/2)
+	// The reference slices a Buffer with these indices, and subarray resolves a
+	// negative index from the end and clamps both ends to the buffer, so any
+	// maxBytes (including a non-positive or tiny one) produces a defined result.
+	// An unclamped Go slice panicked instead: a non-positive maxBytes pushed
+	// tailStart below zero or past headEnd (D424).
+	tailStart := resolveSubarrayIndex(len(content)-(maxBytes-maxBytes/2), len(content))
 	for tailStart < len(content) && !isBoundary(tailStart) {
 		tailStart++
 	}
-	head := content[:headEnd]
-	tail := content[tailStart:]
-	removedChars := utf8.RuneCountInString(content[headEnd:tailStart])
+	headIndex := resolveSubarrayIndex(headEnd, len(content))
+	tailIndex := tailStart
+	// subarray(end, start) with start below end yields an empty range.
+	middleStart, middleEnd := headIndex, tailIndex
+	if tailIndex < headIndex {
+		tailIndex = headIndex
+		middleEnd = middleStart
+	}
+	head := content[:headIndex]
+	tail := content[tailIndex:]
+	removedChars := utf8.RuneCountInString(content[middleStart:middleEnd])
 	return MiddleTruncationResult{
 		Content:      head + "…" + strconv.Itoa(removedChars) + " chars truncated…" + tail,
 		Truncated:    true,
@@ -150,6 +166,29 @@ func TruncateMiddle(content string, maxBytes int) MiddleTruncationResult {
 }
 
 // FormatSize formats bytes as a human-readable size.
+// floorDiv2 is Math.floor(value / 2).
+func floorDiv2(value int) int {
+	if value >= 0 {
+		return value / 2
+	}
+	return -((-value + 1) / 2)
+}
+
+// resolveSubarrayIndex applies Buffer.prototype.subarray's index rule: a
+// negative index counts from the end, and either sign clamps to [0, length].
+func resolveSubarrayIndex(index, length int) int {
+	if index < 0 {
+		index += length
+	}
+	if index < 0 {
+		return 0
+	}
+	if index > length {
+		return length
+	}
+	return index
+}
+
 func FormatSize(bytes int64) string {
 	if bytes < 1024 {
 		return fmt.Sprintf("%dB", bytes)

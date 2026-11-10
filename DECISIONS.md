@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D423)
+# Deliberate divergences from pi (D1–D424)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6305,3 +6305,27 @@ there either.
 
 Tests: `TestWorkingTokenCountsSaturateOnOverflow`,
 `TestWorkingTokenCountsKeepOrdinaryValues`.
+
+### D424
+
+**`TruncateMiddle` resolves its slice indices like a JavaScript Buffer.**
+
+Reference: pi v1.5.0 (`f9a26365`) `core/tools/truncate.ts` `truncateMiddle`.
+It computes `headEnd = Math.floor(maxBytes / 2)` and
+`tailStart = buf.length - (maxBytes - Math.floor(maxBytes / 2))`, then slices
+the Buffer with both. `Buffer.prototype.subarray` resolves a negative index from
+the end and clamps either sign to the buffer, so every `maxBytes` produces a
+result, and a non-positive or tiny one returns a still-truncated document:
+`truncateMiddle("abc", -1)` is `"ab…1 chars truncated…"`.
+
+The port divided with Go's truncating integer division (`maxBytes / 2`, so -1
+gave 0 rather than the reference's -1) and sliced the string with the raw
+indices, which panicked with `slice bounds out of range` once `tailStart` fell
+below zero or past the end. `floorDiv2`, `resolveSubarrayIndex` and the
+`subarray(end, start)` empty-range rule now apply the reference's arithmetic.
+`LimitMcpContent` only ever passes 20 KB, so this was latent rather than
+reachable from the tool path, but a panicking helper reached from rendering is
+not a contract worth keeping.
+
+Tests: the `middle/*` cases in `coding/testdata/truncate`, regenerated from the
+pinned function by `coding/testdata/truncate/generate.mjs`.

@@ -2141,6 +2141,71 @@
     }
   },
   {
+    "name": "middle/3/0",
+    "kind": "middle",
+    "content": "abc",
+    "maxBytes": 0,
+    "expected": {
+      "content": "…3 chars truncated…",
+      "truncated": true,
+      "removedChars": 3,
+      "totalBytes": 3,
+      "totalLines": 1
+    }
+  },
+  {
+    "name": "middle/3/-1",
+    "kind": "middle",
+    "content": "abc",
+    "maxBytes": -1,
+    "expected": {
+      "content": "ab…1 chars truncated…",
+      "truncated": true,
+      "removedChars": 1,
+      "totalBytes": 3,
+      "totalLines": 1
+    }
+  },
+  {
+    "name": "middle/6/3",
+    "kind": "middle",
+    "content": "abcdef",
+    "maxBytes": 3,
+    "expected": {
+      "content": "a…3 chars truncated…ef",
+      "truncated": true,
+      "removedChars": 3,
+      "totalBytes": 6,
+      "totalLines": 1
+    }
+  },
+  {
+    "name": "middle/10/-4",
+    "kind": "middle",
+    "content": "éééééééééé",
+    "maxBytes": -4,
+    "expected": {
+      "content": "ééééééééé…1 chars truncated…",
+      "truncated": true,
+      "removedChars": 1,
+      "totalBytes": 20,
+      "totalLines": 1
+    }
+  },
+  {
+    "name": "middle/3/1",
+    "kind": "middle",
+    "content": "abc",
+    "maxBytes": 1,
+    "expected": {
+      "content": "…2 chars truncated…c",
+      "truncated": true,
+      "removedChars": 2,
+      "totalBytes": 3,
+      "totalLines": 1
+    }
+  },
+  {
     "name": "size/0",
     "kind": "size",
     "bytes": 0,

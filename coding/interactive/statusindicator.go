@@ -109,7 +109,7 @@ type workingTokenCount struct {
 func workingTokensOf(usage ai.Usage) workingTokenCount {
 	return workingTokenCount{
 		// The prompt total folds in Number space and saturates at the int64
-		// bounds, like every other display sum (D369); adding the three columns
+		// bounds, like every other display sum (D369, D423); adding the three columns
 		// in int64 wrapped a large prompt negative.
 		in: int64(ai.CalculateContextTokens(ai.Usage{
 			Input: usage.Input, CacheRead: usage.CacheRead, CacheWrite: usage.CacheWrite,

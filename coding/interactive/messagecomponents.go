@@ -190,7 +190,7 @@ func (c *CustomEntryComponent) rebuild() {
 				message := errorMessage(recovered)
 				box := tui.NewBox(1, 1, func(text string) string { return theme.Bg("customMessageBg", text) })
 				// The customType is drawn from the session file and the panic text
-				// can quote whatever caused it, so both render as data (D342, A464).
+				// can quote whatever caused it, so both render as data (D342, D422).
 				box.AddChild(tui.NewText(theme.Fg("error",
 					tui.SanitizeUntrustedText("["+c.entry.CustomType+"] renderer failed: "+message)), 0, 0, nil))
 				component = box
