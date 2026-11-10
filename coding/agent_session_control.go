@@ -1017,6 +1017,12 @@ func (s *AgentSession) GetContextUsage() *ContextUsageReport {
 
 // Dispose aborts every active operation and drops listeners.
 func (s *AgentSession) Dispose() {
+	// Mark the session first: a goal round or released follow-up the host runs
+	// while the steps below are still in progress must see it and not start.
+	// Upstream's synchronous dispose cannot interleave with them.
+	s.control.stateMu.Lock()
+	s.control.disposed = true
+	s.control.stateMu.Unlock()
 	// Upstream wraps only the aborts: "Dispose must succeed even if an abort
 	// hook throws". The cleanup below must run either way.
 	func() {
@@ -1035,9 +1041,6 @@ func (s *AgentSession) Dispose() {
 	// session id, like upstream's cleanupSessionResources(this.sessionId).
 	// Cleanup is best-effort; the remaining dispose steps still run.
 	_ = CleanupSessionResources(s.SessionID())
-	s.control.stateMu.Lock()
-	s.control.disposed = true
-	s.control.stateMu.Unlock()
 	s.listenerMu.Lock()
 	s.listeners = nil
 	s.listenerMu.Unlock()
