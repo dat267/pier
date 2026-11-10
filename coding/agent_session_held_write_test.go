@@ -74,6 +74,20 @@ func TestHeldSessionWriteKeepsFileOrder(t *testing.T) {
 	}
 }
 
+// FlushWrites promises every accepted write is on disk, and a held one is
+// accepted: a caller that flushes and then reads the file sees it.
+func TestFlushWritesIncludesHeldSessionWrites(t *testing.T) {
+	manager := newTestSessionManager(t)
+	manager.AppendMessage(createUserMessage("started"))
+	manager.AppendMessageHeld(createUserMessage("held-line"))
+	if err := manager.FlushWrites(); err != nil {
+		t.Fatal(err)
+	}
+	if text := readSessionFileText(t, manager); strings.Count(text, "held-line") != 1 {
+		t.Fatalf("the held line is not on disk after FlushWrites:\n%s", text)
+	}
+}
+
 func readSessionFileText(t *testing.T, manager *SessionManager) string {
 	t.Helper()
 	data, err := os.ReadFile(manager.GetSessionFile())

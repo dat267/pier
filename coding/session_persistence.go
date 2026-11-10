@@ -76,6 +76,8 @@ func (m *SessionManager) DrainWriteErrors() []SessionWriteError {
 // FlushWrites waits for accepted writes, then reports unresolved failures.
 // Completion of the queue alone does not imply successful persistence.
 func (m *SessionManager) FlushWrites() error {
+	// A held synchronous write is accepted too (AppendMessageHeld).
+	m.FlushHeldWrites()
 	if m.writeQueue != nil {
 		m.writeQueue.Flush()
 	}
