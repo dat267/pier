@@ -15,6 +15,10 @@ import (
 // use ANSI palette indices, so what the user sees at startup depends on whether
 // the terminal's color reply beats the first paint.
 func TestSystemThemeStartsGrayscaleUntilColorsAreReported(t *testing.T) {
+	// The system theme state is process-wide: start from "nothing reported"
+	// whatever an earlier test left there (A482).
+	SetSystemTerminalColors(tui.TerminalColors{})
+	SetSystemTerminalColorScheme(nil)
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	SetTrueColorSupport(true)

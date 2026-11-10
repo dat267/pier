@@ -45,6 +45,13 @@ func (r *recordingTerminal) joinedWrites() string {
 // until Start, the OSC 11 probe writes the query without blocking, and a reply
 // switches the auto theme. This is the end-to-end shape of the app wiring.
 func TestBackgroundProbeRoundTripThroughRenderer(t *testing.T) {
+	// The OSC 11 replies below store a background in the process-wide system
+	// theme state; leaving it set made a later test's "pending" system theme
+	// render from that background (A482, reproduced with -shuffle).
+	t.Cleanup(func() {
+		SetSystemTerminalColors(tui.TerminalColors{})
+		SetSystemTerminalColorScheme(nil)
+	})
 	dir := t.TempDir()
 	SetCustomThemesDir(dir)
 	SetRegisteredThemes(nil)
@@ -58,6 +65,7 @@ func TestBackgroundProbeRoundTripThroughRenderer(t *testing.T) {
 		TimeoutMS:           1,
 		Env:                 func(key string) string { return "" },
 	})
+	defer controller.Dispose()
 	controller.ApplyFromSettings()
 
 	if terminal.hasWrite("\x1b[?2031h") {
