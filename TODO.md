@@ -1,32 +1,30 @@
 # Reproduced audit findings
 
-## A470 `JSSlice` UTF-16-encodes the whole input to return a short prefix
+## A471 `goalPreview` caps a goal card by line count only, so one long line renders in full
 
-- Severity: medium (measured; provider error path, ID sanitizing, faux chunks).
-- Measured `ai.JSSlice(body, 0, 500)` prefix of a body, old implementation
-  against new (same process, 20 reps each):
+- Severity: medium (UI cost; user-visible transcript blow-up).
+- Measured through the real renderer (`goalSetRenderers.RenderCall` then
+  `Render(80)` in `coding/interactive`):
 
-  | body | before | after | speedup |
-  |---|---|---|---|
-  | 64 KB | 372 µs | 6.0 µs | 62x |
-  | 1 MB | 5.71 ms | 10.0 µs | 574x |
-  | 8 MB | 34.8 ms | 5.5 µs | 6308x |
+  | objective | rendered lines |
+  |---|---|
+  | 100,000 short lines | 8 |
+  | 1 MB on a single line | 12,502 |
+  | 20 lines of 200 KB each | 12,503 |
 
-  Allocations for the 500-char prefix of an 8 MB body: 6 -> 5. The remaining
-  cost is flat in the body size, which is the point.
-  Reference: `ownedSlice` (pi v1.5.0 `packages/ai/src/utils/text.ts:48`) is
-  O(1) in the returned length because V8's `slice` is a view.
-- Reachable in production: `TruncateErrorText` (`ai/errorbody.go:89`,
-  reference `utils/error-body.ts:139`, cap 500), `truncateHTTPBody` (radius,
-  512), `truncateErrorText` (mistral), `SanitizeID` (64), `pi_messages.go`
-  (maxLength). `fauxSplitStringByTokenSize` calls it once per emitted chunk.
-- Cause: `JSSlice` did `utf16.Encode([]rune(s))` over the whole string before
-  clamping, so every call was O(len(s)) in time and allocation.
-- Fix: `jsSliceAbsolute` walks only up to `end` when both indices are
-  non-negative, and appends each UTF-16 unit by index so a cut inside a
-  surrogate pair still decodes to U+FFFD like the full encode. The negative-index
-  path keeps the full encode, since it needs the string's UTF-16 length.
-- Verification: `TestJSSliceMatchesFullEncoding` (differential against the old
-  implementation over ASCII, astral, combining and invalid-UTF-8 inputs across
-  negative, zero, in-range and out-of-range index pairs) and
-  `TestJSSlicePrefixDoesNotScanTheWholeString` (allocation ceiling).
+  1 MB single-line render: 82 ms. The 100,000-short-line case shows the cap
+  working; any line longer than the cap itself is passed through whole.
+- Cause: `goalPreview` (`internal/goal/render.go:238`) splits on newlines,
+  keeps `goalPreviewLines` lines, and returns each kept line unchanged, so the
+  column bound is unbounded. `tui.Text.Render` then wraps that line to the
+  transcript width, producing one output line per width band.
+- Reachable: `set_goal`'s `objective` argument is free text with no length
+  limit in the tool schema (`coding/goalcontroller.go:694`); the card is drawn
+  from the call's arguments, and again from the durable goal entry, and again
+  by `get_goal`'s result card (`RenderGetGoalRenderResult`).
+- Fix: bound each kept line to a character budget in `goalPreview` and report
+  the elided remainder in the existing hidden-count hint, so a wide line
+  collapses like extra lines do.
+- Verification: a test that renders a 1 MB single-line objective, a 20x200 KB
+  objective and 100,000 short lines, asserting the rendered line count stays
+  bounded while the full text is still reachable when expanded.

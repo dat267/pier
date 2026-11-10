@@ -30,8 +30,14 @@ func TestGoalCardsCapPreviewByLines(t *testing.T) {
 			t.Errorf("%s: showed a line past the cap: %q", item.name, got)
 		}
 	}
-	single := RenderSetGoalRenderCall(strings.Repeat("😀", 79)+"abc", stubTheme{}, false)
-	if got := strings.Join(single.Render(500), "\n"); strings.Contains(got, "click or expand") {
-		t.Errorf("a single line must not offer expansion: %q", got)
+	// D427: a line past the character budget is clipped and counted as hidden;
+	// a short single line still needs no expansion.
+	short := RenderSetGoalRenderCall("one short line", stubTheme{}, false)
+	if got := strings.Join(short.Render(500), "\n"); strings.Contains(got, "click or expand") {
+		t.Errorf("a short single line must not offer expansion: %q", got)
+	}
+	wide := RenderSetGoalRenderCall(strings.Repeat("😀", 400), stubTheme{}, false)
+	if got := strings.Join(wide.Render(500), "\n"); !strings.Contains(got, "click or expand") {
+		t.Errorf("an over-wide single line must offer expansion: %q", got)
 	}
 }

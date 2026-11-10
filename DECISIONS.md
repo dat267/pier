@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D426)
+# Deliberate divergences from pi (D1–D427)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6404,3 +6404,38 @@ Tests: `TestJSSliceMatchesFullEncoding` compares the fast path against the full
 encoding for every index pair over ASCII, astral, combining and invalid UTF-8
 inputs; `TestJSSlicePrefixDoesNotScanTheWholeString` caps its allocations at the
 full encoding's.
+
+### D427
+
+**A collapsed goal card bounds each line, not just the line count.**
+
+The goal card keeps the objective unmangled: `goalPreview` returns the first
+`goalPreviewLines` lines rather than flattening them into a summary. That cap
+counts lines, so one long line was passed through whole and `tui.Text.Render`
+then wrapped it to the transcript width, emitting one output line per width
+band. Measured through the real renderer (`goalSetRenderers.RenderCall`, then
+`Render(80)`): a 1 MB objective on a single line drew 12,502 lines in 82 ms, and
+20 lines of 200 KB drew 12,503; 100,000 short lines correctly drew 8.
+
+`set_goal`'s `objective` is free text with no length limit in the tool schema,
+and the same objective is drawn from the call's arguments, from the durable goal
+entry, and by `get_goal`'s result card. `goalPreview` now also clips each kept
+line to `goalPreviewChars` on a rune boundary and counts each clipped line as
+hidden, so the existing `... (N more lines, click or expand for full text)` hint
+covers it and an expanded card still shows the whole objective.
+
+The goal feature has no upstream counterpart (it is pier-only), so this is a
+port-side fix with no reference to cite; the bound is 240 bytes, comfortably
+wider than one screen line at any terminal width the UI supports.
+
+D223 chose a line-count cap over a character cap so a long objective keeps its
+line structure instead of a mid-word cut. That still holds for a multi-line
+objective; what D427 adds is a per-line bound, because an unbroken 1 MB line
+has no line structure to keep. `TestCollapsedGoalCardsCapByLines` keeps
+covering the multi-line shape.
+
+Tests: `TestGoalPreviewBoundsALongLine` (1 MB single line, 20x200 KB lines and
+100,000 short lines each render at most 40 lines),
+`TestGoalPreviewKeepsEverythingWhenExpanded` (expanded keeps every character,
+collapsed hides some), and the updated
+`TestCollapsedGoalCardClipsOneOverWideLine`.

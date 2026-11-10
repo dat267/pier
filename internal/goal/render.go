@@ -4,12 +4,12 @@ package goal
 
 import (
 	"fmt"
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/tui"
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/tui"
+	"unicode/utf8"
 )
 
 // Theme is the rendering surface the goal cards need. The port's
@@ -228,23 +228,41 @@ func RenderGetGoalRenderCall(theme Theme) *tui.Text {
 
 // goalPreviewLines is the collapsed body height for an objective or blocker: a
 // card shows this many lines and how many it hides, like the shell preview.
-// The cap counts lines, not characters, so one long line is shown whole.
 const goalPreviewLines = 5
+
+// goalPreviewChars bounds one collapsed line (D427). Without it a single long
+// line is passed through whole and tui.Text.Render emits one output line per
+// width band: a 1 MB objective on one line drew 12,502 lines.
+const goalPreviewChars = 240
 
 // goalPreview returns the text a collapsed card shows and the number of lines
 // it hides. An expanded card keeps the text as written, including its own line
 // structure; a collapsed one keeps its first lines unmangled rather than
-// flattening them into a summary.
+// flattening them into a summary, but bounds each of them so a wide line
+// collapses like an extra one does.
 func goalPreview(text string, expanded bool) (shown string, hidden int) {
 	trimmed := ai.JSTrim(text)
 	if expanded || trimmed == "" {
 		return trimmed, 0
 	}
 	lines := strings.Split(trimmed, "\n")
-	if len(lines) <= goalPreviewLines {
-		return trimmed, 0
+	kept := min(len(lines), goalPreviewLines)
+	hidden = len(lines) - kept
+	clipped := make([]string, 0, kept)
+	for _, line := range lines[:kept] {
+		if len(line) <= goalPreviewChars {
+			clipped = append(clipped, line)
+			continue
+		}
+		// Cut on a rune boundary so the card never splits a character.
+		cut := goalPreviewChars
+		for cut > 0 && !utf8.RuneStart(line[cut]) {
+			cut--
+		}
+		clipped = append(clipped, line[:cut]+"…")
+		hidden++
 	}
-	return strings.Join(lines[:goalPreviewLines], "\n"), len(lines) - goalPreviewLines
+	return strings.Join(clipped, "\n"), hidden
 }
 
 // goalHiddenHint is the hidden-line note under a collapsed preview, in the

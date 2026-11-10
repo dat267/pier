@@ -45,15 +45,24 @@ func TestCollapsedGoalCardsCapByLines(t *testing.T) {
 	}
 }
 
-// A single long line has no hidden lines, so it is shown whole: the cap counts
-// lines, not characters.
-func TestCollapsedGoalCardKeepsOneLongLine(t *testing.T) {
+// D427: a single over-wide line is clipped and counted as hidden. Keeping it
+// whole drew 12,502 rendered lines for a 1 MB objective, because tui.Text
+// wraps the line to the transcript width. The line structure is still kept:
+// clipping truncates, it does not re-wrap or rejoin.
+func TestCollapsedGoalCardClipsOneOverWideLine(t *testing.T) {
 	objective := strings.TrimSpace(strings.Repeat("acceptance criterion ", 40))
 	got := flatten(RenderSetGoalRenderCall(objective, stubTheme{}, false), 400)
-	if !strings.Contains(got, objective) {
-		t.Fatalf("a single long line was cut: %q", got)
+	if strings.Contains(got, objective) {
+		t.Fatalf("a %d-byte single line was shown whole: %q", len(objective), got)
 	}
-	if strings.Contains(got, "more lines") || strings.Contains(got, "click or expand") {
-		t.Fatalf("a single line must not offer expansion: %q", got)
+	if !strings.Contains(got, "acceptance criterion") {
+		t.Fatalf("the start of the line should survive: %q", got)
+	}
+	if !strings.Contains(got, "click or expand") {
+		t.Fatalf("a clipped line must offer expansion: %q", got)
+	}
+	expanded := flatten(RenderSetGoalRenderCall(objective, stubTheme{}, true), 400)
+	if !strings.Contains(expanded, objective) {
+		t.Fatalf("expanded card lost the objective")
 	}
 }
