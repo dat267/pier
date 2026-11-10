@@ -45,7 +45,7 @@ func (s *handlerTestSession) Abort(context.Context) {
 }
 
 // AbortAsync is the loop-safe half of Abort: it signals without waiting.
-func (s *handlerTestSession) AbortTurnAsync() { s.abortCalls++ }
+func (s *handlerTestSession) AbortAsync() { s.abortCalls++ }
 func (s *handlerTestSession) CycleThinkingLevel(coding.ModelMutationOptions) (ai.ThinkingLevel, bool) {
 	return s.thinking, s.thinking != ""
 }

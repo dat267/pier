@@ -60,7 +60,7 @@ func (s *queueTestSession) FollowUp(message ai.Message) {
 	}
 }
 func (s *queueTestSession) Abort(context.Context) { s.abortCalls++ }
-func (s *queueTestSession) AbortTurnAsync()       { s.abortCalls++ }
+func (s *queueTestSession) AbortAsync()           { s.abortCalls++ }
 func (s *queueTestSession) CycleThinkingLevel(coding.ModelMutationOptions) (ai.ThinkingLevel, bool) {
 	return s.thinking, s.thinking != ""
 }

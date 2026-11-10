@@ -459,7 +459,9 @@ func TestEscapeCancelsTheManualCommandWithTheTurn(t *testing.T) {
 		newKeyWiring(app).HandleEscape(func() int64 { return time.Now().UnixMilli() })
 		return 0
 	})
+	// Well under the command's 10s: a command Escape left running fails here
+	// instead of passing once it ends on its own.
 	waitForConditionWithin(t, func() bool {
 		return !app.session.IsBashRunning() && !app.session.IsStreaming()
-	}, 10*time.Second)
+	}, 5*time.Second)
 }

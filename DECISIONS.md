@@ -575,10 +575,11 @@ unwound. A live trace measured `slow UI phase "raw-input" 188ms` in
 `HandleEscape`, `RestoreQueuedMessagesToEditor`, and `Abort`, with neighboring
 keystrokes at `read=8.8ms write=91ms`.
 
-`AbortTurnAsync` cancels the retry, compaction and agent run and returns
-immediately; like upstream's `abort()`, it leaves a user bash command running
-(`TestAbortLeavesAUserBashCommandRunning`). Queue restoration already precedes
-cancellation. `Abort` retains its wait where
+Escape calls `AbortAsync`, which cancels the retry, compaction, agent run and
+a running `!` command (it belongs to the turn, D246) and returns immediately.
+`Abort`, like upstream's `abort()`, stops the turn but leaves a user bash
+command running (`TestAbortLeavesAUserBashCommandRunning`). Queue restoration
+already precedes cancellation. `Abort` retains its wait where
 settlement is required: session replacement (`sessionswitch.go`, before
 disposal) and tree navigation (`interactivemode_selectors.go`, before reading
 the tree). `TestEscapeHandlerDoesNotWaitForIdle` covers the loop-safe path.
