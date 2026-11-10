@@ -20,33 +20,42 @@ import (
 // serializes these on one event loop; the port must not lose or corrupt state
 // when they overlap (D438).
 func TestAgentSessionConcurrentAPIKeepsTranscriptAndPersistenceInStep(t *testing.T) {
-	runSessionChaos(t, nil)
+	runSessionChaos(t, nil, false)
 }
 
 // The same, with the session's heavier operations mixed in: compaction, tree
 // navigation, tool and thinking changes, next-turn and user messages.
 func TestAgentSessionConcurrentHeavyAPIKeepsTranscriptAndPersistenceInStep(t *testing.T) {
-	runSessionChaos(t, func(session *AgentSession) []func(int) {
-		return []func(int){
-			func(int) { _, _ = session.CompactSession(context.Background(), "") },
-			func(int) {
-				forks := session.GetUserMessagesForForking()
-				if len(forks) > 0 {
-					_, _ = session.NavigateTree(context.Background(), forks[rand.IntN(len(forks))].EntryID, NavigateTreeOptions{})
-				}
-			},
-			func(int) { _, _ = session.CycleThinkingLevel(ModelMutationOptions{}) },
-			func(int) { session.SetActiveToolsByName([]string{"read", "bash"}[:1+rand.IntN(2)]) },
-			func(i int) {
-				session.QueueNextTurnMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: fmt.Sprintf("next %d", i)}})
-			},
-			func(i int) { _ = session.SendUserMessage(context.Background(), fmt.Sprintf("user %d", i), "followUp") },
-			func(int) { _ = session.Model(); _ = session.ThinkingLevel(); _ = session.SystemPrompt() },
-		}
-	})
+	runSessionChaos(t, heavySessionOps, false)
 }
 
-func runSessionChaos(t *testing.T, extra func(*AgentSession) []func(int)) {
+// Dispose lands at a random point while every other operation keeps going:
+// each call still returns and the session settles. Persistence stops at the
+// disposal, so only liveness is checked.
+func TestAgentSessionDisposedMidChaosSettles(t *testing.T) {
+	runSessionChaos(t, heavySessionOps, true)
+}
+
+func heavySessionOps(session *AgentSession) []func(int) {
+	return []func(int){
+		func(int) { _, _ = session.CompactSession(context.Background(), "") },
+		func(int) {
+			forks := session.GetUserMessagesForForking()
+			if len(forks) > 0 {
+				_, _ = session.NavigateTree(context.Background(), forks[rand.IntN(len(forks))].EntryID, NavigateTreeOptions{})
+			}
+		},
+		func(int) { _, _ = session.CycleThinkingLevel(ModelMutationOptions{}) },
+		func(int) { session.SetActiveToolsByName([]string{"read", "bash"}[:1+rand.IntN(2)]) },
+		func(i int) {
+			session.QueueNextTurnMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: fmt.Sprintf("next %d", i)}})
+		},
+		func(i int) { _ = session.SendUserMessage(context.Background(), fmt.Sprintf("user %d", i), "followUp") },
+		func(int) { _ = session.Model(); _ = session.ThinkingLevel(); _ = session.SystemPrompt() },
+	}
+}
+
+func runSessionChaos(t *testing.T, extra func(*AgentSession) []func(int), disposeMidway bool) {
 	t.Helper()
 	const workers, operations = 6, 60
 	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
@@ -102,6 +111,12 @@ func runSessionChaos(t *testing.T, extra func(*AgentSession) []func(int)) {
 		ops = append(ops, extra(session)...)
 	}
 	var group sync.WaitGroup
+	if disposeMidway {
+		group.Go(func() {
+			time.Sleep(time.Duration(rand.IntN(3000)) * time.Microsecond)
+			session.Dispose()
+		})
+	}
 	for worker := range workers {
 		group.Go(func() {
 			for index := range operations {
@@ -117,6 +132,14 @@ func runSessionChaos(t *testing.T, extra func(*AgentSession) []func(int)) {
 		t.Fatal("a concurrent session call did not return")
 	}
 
+	if disposeMidway {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := session.WaitForIdle(ctx); err != nil {
+			t.Fatalf("the disposed session did not settle: %v", err)
+		}
+		return
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	session.ClearQueue()
