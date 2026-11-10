@@ -127,3 +127,20 @@
 - Verification: a test asserting the link is present with capabilities on, the
   plain styled path with them off, and that a relative path resolves against
   `cwd`.
+
+## A482 one `just check` run failed and never reproduced
+
+- Severity: low (a single unexplained gate failure; if real, it is a flaky test).
+- Observed: `just check` at 13:16 printed `FAIL` and
+  `error: recipe 'test' failed on line 67 with exit code 1` with no failing
+  package line captured in the truncated tail. The immediately following run,
+  and every run since, passed.
+- Not reproduced after: 3 further `just check` runs, 6 `go test -count=1 ./...`
+  runs (19 packages ok each), 8 `./coding/interactive`, 6 `./tui ./coding ./mcp
+  ./agent`, a `go clean -testcache` run, and 3 `./...` runs under 6 background
+  CPU burners. The tight-deadline tests (`agent/abort_settlement_test.go:78` 20ms,
+  `ai/mistral_timeout_zero_test.go:47` 20ms, `ai/*_test.go` 25ms) were the
+  prime suspects by inspection and did not fire under load.
+- Unconfirmed: no red-capable seam exists for "a test that failed once", so per
+  the red-first rule this stays unpatched. Re-open with the failing package and
+  test name if it recurs.
