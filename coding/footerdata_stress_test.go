@@ -54,7 +54,13 @@ func TestFooterDataProviderSurvivesConcurrentUseAndDispose(t *testing.T) {
 	})
 	spin(func(int) { provider.OnBranchChange(func() {})() })
 
-	time.Sleep(150 * time.Millisecond)
+	// Run for a while and until the stress has produced branch changes; on one
+	// CPU under -race the busy spinners can starve the cwd switcher for a time.
+	minimum := time.Now().Add(150 * time.Millisecond)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(minimum) || (notified.Load() < 3 && time.Now().Before(deadline)) {
+		time.Sleep(5 * time.Millisecond)
+	}
 	var disposers sync.WaitGroup
 	for range 3 {
 		disposers.Go(provider.Dispose)
