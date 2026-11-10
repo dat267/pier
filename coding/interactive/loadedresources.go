@@ -6,6 +6,9 @@ import (
 	"sort"
 	"strings"
 
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
+
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
@@ -121,8 +124,14 @@ func formatScopeGroups(groups []scopeGroup, formatPath func(scopeGroupItem) stri
 	for _, group := range groups {
 		lines = append(lines, "  "+theme.Fg("accent", group.scope))
 
+		// D257/D434: the reference sorts with localeCompare, so use
+		// locale-neutral collation rather than byte order.
+		collator := collate.New(language.Und)
+		byPath := func(a, b string) bool { return collator.CompareString(a, b) < 0 }
 		sortedPaths := append([]scopeGroupItem{}, group.paths...)
-		sort.Slice(sortedPaths, func(i, j int) bool { return sortedPaths[i].path < sortedPaths[j].path })
+		sort.SliceStable(sortedPaths, func(i, j int) bool {
+			return byPath(sortedPaths[i].path, sortedPaths[j].path)
+		})
 		for _, item := range sortedPaths {
 			lines = append(lines, theme.Fg("dim", "    "+formatPath(item)))
 		}
@@ -131,11 +140,11 @@ func formatScopeGroups(groups []scopeGroup, formatPath func(scopeGroupItem) stri
 		for source := range group.packages {
 			sources = append(sources, source)
 		}
-		sort.Strings(sources)
+		sort.SliceStable(sources, func(i, j int) bool { return byPath(sources[i], sources[j]) })
 		for _, source := range sources {
 			lines = append(lines, "    "+theme.Fg("mdLink", source))
 			items := append([]scopeGroupItem{}, group.packages[source]...)
-			sort.Slice(items, func(i, j int) bool { return items[i].path < items[j].path })
+			sort.SliceStable(items, func(i, j int) bool { return byPath(items[i].path, items[j].path) })
 			for _, item := range items {
 				lines = append(lines, theme.Fg("dim", "      "+formatPackagePath(item, source)))
 			}
@@ -160,7 +169,11 @@ func formatCompactListSorted(labels []string, sorted bool) string {
 		}
 	}
 	if sorted {
-		sort.Strings(trimmed)
+		// D257/D434: the reference sorts labels with localeCompare.
+		collator := collate.New(language.Und)
+		sort.SliceStable(trimmed, func(i, j int) bool {
+			return collator.CompareString(trimmed[i], trimmed[j]) < 0
+		})
 	}
 	return ActiveTheme().Fg("dim", "  "+strings.Join(trimmed, ", "))
 }

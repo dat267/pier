@@ -29,3 +29,40 @@
   short-circuit.
 - Verification: a table test over the fitting and non-fitting cases at widths
   1-4, plus a CJK case.
+
+## A478 `formatScopeGroups` sorts by byte order, not the reference's collation
+
+- Severity: low (visible order in the loaded-resources listing).
+- Reference (pi v1.5.0 `f9a26365`,
+  `modes/interactive/interactive-mode.ts:1778-1787`): sorts the group's paths,
+  the package sources and each package's paths with `a.localeCompare(b)`.
+- Port: `formatScopeGroups` (`coding/interactive/loadedresources.go:129-138`)
+  uses `sort.Slice` with `<` on the path and `sort.Strings` on the sources, so
+  ordering is UTF-8 byte order.
+- Measured, five of six corpora differ:
+
+  | input | reference (`localeCompare`) | port (byte order) |
+  |---|---|---|
+  | `a/b.md`, `a/B.md`, `a/c.md` | `a/b.md`, `a/B.md`, `a/c.md` | `a/B.md`, `a/b.md`, `a/c.md` |
+  | `Zebra.md`, `apple.md`, `Banana.md`, `cherry.md` | `apple.md`, `Banana.md`, `cherry.md`, `Zebra.md` | `Banana.md`, `Zebra.md`, `apple.md`, `cherry.md` |
+  | `x/A.md`, `x/a.md`, `x/ä.md`, `x/z.md` | `x/a.md`, `x/A.md`, `x/ä.md`, `x/z.md` | `x/A.md`, `x/a.md`, `x/z.md`, `x/ä.md` |
+  | `a/b/c.md`, `a/b-c.md`, `a/b_c.md`, `a/b.c.md`, `a/b1.md` | `a/b_c.md`, `a/b-c.md`, `a/b.c.md`, `a/b/c.md`, `a/b1.md` | `a/b-c.md`, `a/b.c.md`, `a/b/c.md`, `a/b1.md`, `a/b_c.md` |
+  | `README.md`, `agents.md`, `Agent.md`, `zzz.md`, `_x.md`, `-y.md` | `_x.md`, `-y.md`, `Agent.md`, `agents.md`, `README.md`, `zzz.md` | `-y.md`, `Agent.md`, `README.md`, `_x.md`, `agents.md`, `zzz.md` |
+
+  The sixth corpus (package sources) matches by coincidence.
+- Same defect in the adjacent `formatCompactListSorted`
+  (`loadedresources.go:172`): the reference's `formatCompactList`
+  (`interactive-mode.ts:1888-1893`) sorts labels with `localeCompare` too, so
+  `Zebra, apple, Banana, cherry` renders `Banana, Zebra, apple, cherry` instead
+  of `apple, Banana, cherry, Zebra`. `{sort:false}` callers (context files) are
+  unaffected.
+- Reachable: `formatScopeGroups` renders the expanded `/loaded` listing, called
+  from `coding/interactive/loadedresources.go:314` and `:337`.
+- Cause: the port already chose locale-neutral root collation for this exact
+  question (D257) in `modelselector.go`, `footer.go` and `listmodels.go`, but
+  this call site was missed. A host with mixed-case resource names therefore
+  lists them in an order the reference never produces.
+- Fix: sort with `collate.New(language.Und)`, matching the three existing
+  sites.
+- Verification: root collation matches `localeCompare` on all six corpora
+  (0 diffs); a table test pins the ordering.

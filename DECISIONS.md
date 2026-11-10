@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D433)
+# Deliberate divergences from pi (D1–D434)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6598,3 +6598,34 @@ gains the missing check.
 
 Tests: `TestFooterTruncateKeepsFittingText` (fitting and non-fitting cases at
 widths 1-4, plus a CJK case).
+
+### D434
+
+**The loaded-resources listing sorts with root collation.**
+
+Reference: `modes/interactive/interactive-mode.ts` (pi v1.5.0, `f9a26365`):
+`formatScopeGroups` lines 1778-1787 sorts a group's paths, its package sources
+and each package's paths with `a.localeCompare(b)`, and `formatCompactList`
+lines 1888-1893 sorts its labels the same way.
+
+The port used `sort.Slice`/`sort.Strings`, i.e. UTF-8 byte order, so five of six
+corpora list in an order the reference never produces:
+
+| input | reference | port before |
+|---|---|---|
+| `a/b.md`, `a/B.md`, `a/c.md` | `a/b.md`, `a/B.md`, `a/c.md` | `a/B.md`, `a/b.md`, `a/c.md` |
+| `Zebra.md`, `apple.md`, `Banana.md`, `cherry.md` | `apple.md`, `Banana.md`, `cherry.md`, `Zebra.md` | `Banana.md`, `Zebra.md`, `apple.md`, `cherry.md` |
+| `a/b/c.md`, `a/b-c.md`, `a/b_c.md`, `a/b.c.md`, `a/b1.md` | `a/b_c.md`, `a/b-c.md`, `a/b.c.md`, `a/b/c.md`, `a/b1.md` | `a/b-c.md`, `a/b.c.md`, `a/b/c.md`, `a/b1.md`, `a/b_c.md` |
+
+D257 already settled this question for model and footer ordering by choosing
+`golang.org/x/text/collate` root collation over byte order or a host locale;
+this call site was missed. The same collator now sorts the group paths, the
+package sources, the per-package paths and the collapsed label list. Root
+collation reproduces `localeCompare` on all six corpora (0 diffs), including
+case folding and `ä`. `sort:false` callers keep their discovery order.
+
+Reachable from the expanded `/loaded` listing
+(`coding/interactive/loadedresources.go:314` and `:337`).
+
+Tests: `TestFormatScopeGroupsUsesLocaleOrdering`,
+`TestFormatCompactListUsesLocaleOrdering`.
