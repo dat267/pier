@@ -4,6 +4,8 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -17,6 +19,34 @@ type scriptedTerminal struct {
 	fakeRendererTerminal
 	onInput func(string)
 	started chan struct{}
+
+	outputMu sync.Mutex
+	output   strings.Builder
+}
+
+func (s *scriptedTerminal) Write(data string) {
+	s.outputMu.Lock()
+	s.output.WriteString(data)
+	s.outputMu.Unlock()
+}
+
+// waitForOutput waits until the picker has painted text, i.e. its loads have
+// settled into a render that the next key acts on.
+func (s *scriptedTerminal) waitForOutput(t *testing.T, text string) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		s.outputMu.Lock()
+		painted := strings.Contains(s.output.String(), text)
+		s.outputMu.Unlock()
+		if painted {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("the picker never painted %q", text)
+		}
+		time.Sleep(time.Millisecond)
+	}
 }
 
 func (s *scriptedTerminal) Start(onInput func(string), onResize func()) {
@@ -32,8 +62,8 @@ func TestSelectSessionSelects(t *testing.T) {
 	InitTheme("dark", false)
 
 	sessions := []coding.SessionInfo{
-		{Path: "/s/a.jsonl", FirstMessage: "a", Modified: time.Now()},
-		{Path: "/s/b.jsonl", FirstMessage: "b", Modified: time.Now().Add(-time.Hour)},
+		{Path: "/s/a.jsonl", FirstMessage: "alpha-first", Modified: time.Now()},
+		{Path: "/s/b.jsonl", FirstMessage: "beta-first", Modified: time.Now().Add(-time.Hour)},
 	}
 	loader := func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) {
 		return sessions, nil
@@ -53,13 +83,12 @@ func TestSelectSessionSelects(t *testing.T) {
 		done <- result{path: path}
 	}()
 
-	time.Sleep(200 * time.Millisecond)
 	select {
 	case <-terminal.started:
 	case <-time.After(5 * time.Second):
 		t.Fatal("picker never started the terminal input pump")
 	}
-	time.Sleep(200 * time.Millisecond) // let the loads settle and render
+	terminal.waitForOutput(t, "alpha-first")
 	terminal.onInput("\r")
 
 	select {
@@ -93,13 +122,12 @@ func TestSelectSessionCancel(t *testing.T) {
 		})
 	}()
 
-	time.Sleep(200 * time.Millisecond)
 	select {
 	case <-terminal.started:
 	case <-time.After(5 * time.Second):
 		t.Fatal("picker never started the terminal input pump")
 	}
-	time.Sleep(200 * time.Millisecond) // let the loads settle and render
+	terminal.waitForOutput(t, "No sessions in current folder")
 	terminal.onInput("\x1b")
 
 	select {
@@ -130,7 +158,7 @@ func TestSelectSessionLoadsConfiguredApplicationKeybindings(t *testing.T) {
 	t.Cleanup(func() { tui.SetKeybindings(tui.NewKeybindingsManager(tui.TUIKeybindings, nil)) })
 
 	loader := func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) {
-		return []coding.SessionInfo{{Path: "/s/a.jsonl", FirstMessage: "a", Modified: time.Now()}}, nil
+		return []coding.SessionInfo{{Path: "/s/a.jsonl", FirstMessage: "alpha-first", Modified: time.Now()}}, nil
 	}
 	terminal := &scriptedTerminal{width: 80, height: 24, started: make(chan struct{})}
 	done := make(chan string, 1)
@@ -143,7 +171,7 @@ func TestSelectSessionLoadsConfiguredApplicationKeybindings(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("picker never started the terminal input pump")
 	}
-	time.Sleep(200 * time.Millisecond)
+	terminal.waitForOutput(t, "alpha-first")
 	terminal.onInput("\r")
 	select {
 	case got := <-done:
