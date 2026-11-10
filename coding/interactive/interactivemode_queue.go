@@ -30,7 +30,9 @@ type QueueSession interface {
 	Steer(message ai.Message)
 	FollowUp(message ai.Message)
 	Abort(ctx context.Context)
-	AbortAsync()
+	// AbortTurnAsync stops the turn but leaves a user bash command running
+	// (upstream session.abort() does not abort bash).
+	AbortTurnAsync()
 	CycleThinkingLevel(options coding.ModelMutationOptions) (ai.ThinkingLevel, bool)
 	CycleModel(ctx context.Context, direction string, options coding.ModelMutationOptions) (*coding.ModelCycleResult, error)
 	SupportsThinking() bool
@@ -232,7 +234,7 @@ func (c *QueueController) RestoreQueuedMessagesToEditor(abort bool, currentText 
 	if len(allQueued) == 0 {
 		c.UpdatePendingMessagesDisplay()
 		if abort {
-			c.Session.AbortAsync()
+			c.Session.AbortTurnAsync()
 		}
 		return 0
 	}
@@ -253,7 +255,7 @@ func (c *QueueController) RestoreQueuedMessagesToEditor(abort bool, currentText 
 	if abort {
 		// The queue is restored above, so nothing here waits for the turn to
 		// unwind: this runs on the UI loop (D168).
-		c.Session.AbortAsync()
+		c.Session.AbortTurnAsync()
 	}
 	return len(allQueued)
 }

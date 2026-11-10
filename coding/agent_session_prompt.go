@@ -504,8 +504,12 @@ func (s *AgentSession) takePendingNextTurnMessages() []ai.Message {
 // Abort aborts the current operation and waits for idle. Callers that need the
 // session settled before they continue (session switch, tree navigation) use
 // this; a caller on the UI loop must not, because the wait parks the loop (D168).
+//
+// Like upstream session.abort(), it stops the turn (agent run, retry,
+// compaction, branch summary) but not a user bash command, which keeps running
+// and reports when the turn ends; Dispose and AbortAsync abort bash too.
 func (s *AgentSession) Abort(ctx context.Context) {
-	s.AbortAsync()
+	s.abortAsync(false)
 	_ = s.waitForSessionIdle(ctx)
 }
 
