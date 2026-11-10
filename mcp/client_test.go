@@ -420,8 +420,9 @@ func TestClientRenewsTimeoutOnProgress(t *testing.T) {
 
 func TestClientCancelsAbortedAndTimedOutRequests(t *testing.T) {
 	client, server := connectTestClient(t)
+	release := blockUntilCleanup(t)
 	server.setHandler("tools/call", func(*protocol.JsonRpcRequest) (any, error) {
-		<-blockUntilCleanup(t)
+		<-release
 		return nil, errors.New("test ended")
 	})
 	ctx, cancel := context.WithCancelCause(context.Background())
@@ -586,8 +587,9 @@ func TestClientDefaultsMissingToolResultContent(t *testing.T) {
 
 func TestClientTimedOutInitializeSendsNoCancellation(t *testing.T) {
 	server, clientTransport := newTestServer()
+	release := blockUntilCleanup(t)
 	server.setHandler("initialize", func(*protocol.JsonRpcRequest) (any, error) {
-		<-blockUntilCleanup(t)
+		<-release
 		return nil, errors.New("test ended")
 	})
 	client := NewClient(ClientOptions{Name: "test-client", Version: "1.0.0", RequestTimeoutMs: 5})
@@ -609,8 +611,9 @@ func TestClientNotifiesCloseListenersOnceOnTransportDrop(t *testing.T) {
 	client, server := connectTestClient(t)
 	closeCount := 0
 	client.OnClose(func() { closeCount++ })
+	release := blockUntilCleanup(t)
 	server.setHandler("tools/call", func(*protocol.JsonRpcRequest) (any, error) {
-		<-blockUntilCleanup(t)
+		<-release
 		return nil, errors.New("test ended")
 	})
 	done := make(chan error, 1)
@@ -902,6 +905,8 @@ func TestClientInitializeValidationUsesJavaScriptTypeChecks(t *testing.T) {
 
 // blockUntilCleanup returns a channel that closes when the test ends, for a
 // handler that must never answer while the test runs but must not outlive it.
+// Call it from the test, not the handler: a request can reach the handler after
+// the test has finished, and a cleanup registered then never runs.
 func blockUntilCleanup(t *testing.T) <-chan struct{} {
 	release := make(chan struct{})
 	t.Cleanup(func() { close(release) })

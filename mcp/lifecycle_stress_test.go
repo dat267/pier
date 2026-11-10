@@ -20,11 +20,12 @@ func TestClientCloseRacingInFlightCallsSettlesEverything(t *testing.T) {
 		client, server := connectTestClient(t)
 		var closes atomic.Int32
 		client.OnClose(func() { closes.Add(1) })
+		release := blockUntilCleanup(t)
 		server.setHandler("tools/call", func(*protocol.JsonRpcRequest) (any, error) {
 			if round%2 == 0 {
 				return map[string]any{"content": []any{}}, nil
 			}
-			<-blockUntilCleanup(t)
+			<-release
 			return map[string]any{"content": []any{}}, nil
 		})
 
