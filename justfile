@@ -76,9 +76,9 @@ test-stress:
 
 # A test that fails only on its own depends on state an earlier test left
 # (the active theme, a package default).
-# Run every test alone in a fresh process.
+# Run every test alone in a fresh process, twice.
 test-isolated:
-	scripts/test_isolated.sh
+	COUNT=2 scripts/test_isolated.sh
 
 # Report formatting differences.
 fmt:

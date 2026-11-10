@@ -63,7 +63,8 @@ needs cgo enabled (`just test-race` and CI). CI runs the race gate on linux/amd6
 and cross-builds `windows/{amd64,arm64}`, `linux/arm64`, `android/arm64`, and
 `darwin/{amd64,arm64}`. CI also runs the `just test-stress` command (the most concurrent
 packages shuffled, on one CPU and four) and `just test-isolated` (every test
-alone, so none relies on global state such as the theme that another test set). Treat race-only failures as bugs, and
+alone and twice in its process, so none relies on global state such as the
+theme that another test set, or leaves state that breaks its own rerun). Treat race-only failures as bugs, and
 call no func value with a mutex held (`internal/lockcall`). PTY tests use
 `$PIER_TEST_BIN`, then `bin/pier`, then a temporary build.
 
