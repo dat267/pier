@@ -20,6 +20,34 @@ import (
 // serializes these on one event loop; the port must not lose or corrupt state
 // when they overlap (D438).
 func TestAgentSessionConcurrentAPIKeepsTranscriptAndPersistenceInStep(t *testing.T) {
+	runSessionChaos(t, nil)
+}
+
+// The same, with the session's heavier operations mixed in: compaction, tree
+// navigation, tool and thinking changes, next-turn and user messages.
+func TestAgentSessionConcurrentHeavyAPIKeepsTranscriptAndPersistenceInStep(t *testing.T) {
+	runSessionChaos(t, func(session *AgentSession) []func(int) {
+		return []func(int){
+			func(int) { _, _ = session.CompactSession(context.Background(), "") },
+			func(int) {
+				forks := session.GetUserMessagesForForking()
+				if len(forks) > 0 {
+					_, _ = session.NavigateTree(context.Background(), forks[rand.IntN(len(forks))].EntryID, NavigateTreeOptions{})
+				}
+			},
+			func(int) { _, _ = session.CycleThinkingLevel(ModelMutationOptions{}) },
+			func(int) { session.SetActiveToolsByName([]string{"read", "bash"}[:1+rand.IntN(2)]) },
+			func(i int) {
+				session.QueueNextTurnMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: fmt.Sprintf("next %d", i)}})
+			},
+			func(i int) { _ = session.SendUserMessage(context.Background(), fmt.Sprintf("user %d", i), "followUp") },
+			func(int) { _ = session.Model(); _ = session.ThinkingLevel(); _ = session.SystemPrompt() },
+		}
+	})
+}
+
+func runSessionChaos(t *testing.T, extra func(*AgentSession) []func(int)) {
+	t.Helper()
 	const workers, operations = 6, 60
 	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
 	streamFn := func(m *ai.Model, _ ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
@@ -69,6 +97,9 @@ func TestAgentSessionConcurrentAPIKeepsTranscriptAndPersistenceInStep(t *testing
 		func(int) { _ = session.GetSessionStats(); _ = session.Messages(); _ = session.GetContextUsage() },
 		func(i int) { session.SetSessionName(fmt.Sprintf("name %d", i)) },
 		func(int) { session.ClearQueue() },
+	}
+	if extra != nil {
+		ops = append(ops, extra(session)...)
 	}
 	var group sync.WaitGroup
 	for worker := range workers {

@@ -73,6 +73,10 @@ type promptState struct {
 	// and Dispose's mark-then-abort cannot interleave: either the start sees
 	// the mark, or the abort sees the started run's cancel.
 	disposed bool
+	// navigating is set while NavigateTree replaces the branch. D438: it is
+	// claimed and checked under this lock together with runActive, so a run
+	// and a navigation never overlap.
+	navigating bool
 }
 
 // isDisposed reports whether Dispose has run.
@@ -197,9 +201,10 @@ func (s *AgentSession) Prompt(ctx context.Context, text string, options *PromptO
 		return nil
 	}
 
-	// Flush deferred messages before the new turn.
-	s.FlushPendingBashMessages()
-	s.FlushPendingCustomMessages()
+	// Flush deferred messages before the new turn. D438: only while idle,
+	// under the run-lifecycle lock; a run that started since the check above
+	// delivers them at its end instead.
+	s.flushDeferredIfIdle()
 
 	if !s.HasModel() {
 		preflight(false)
@@ -323,6 +328,10 @@ func (s *AgentSession) startAgentPrompt(ctx context.Context, messages []ai.Messa
 		state.mu.Unlock()
 		return fmt.Errorf("Agent is already processing a prompt. Use Steer() or FollowUp() to queue messages, or wait for completion.")
 	}
+	if state.navigating {
+		state.mu.Unlock()
+		return fmt.Errorf("Cannot submit a prompt while compaction is in progress. Wait for compaction to finish and retry.")
+	}
 	state.abortRequested = false
 	state.runCancel = cancel
 	state.runActive = true
@@ -395,6 +404,35 @@ func (s *AgentSession) startAgentPrompt(ctx context.Context, messages []ai.Messa
 	return err
 }
 
+// replaceAgentMessagesFromSession reloads the agent transcript from the
+// session's current branch (after a compaction or a tree navigation). D438:
+// the read and the replace are one step under the lock idle appends take, so
+// a message appended in between is not persisted but dropped from the agent.
+func (s *AgentSession) replaceAgentMessagesFromSession() SessionContext {
+	state := s.prompt()
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	sessionContext := s.Sessions.Projection()
+	s.Agent.SetMessages(sessionContext.Messages)
+	return sessionContext
+}
+
+// flushDeferredIfIdle delivers deferred bash and custom messages when no run
+// is active, deciding and appending under the run-lifecycle lock.
+func (s *AgentSession) flushDeferredIfIdle() {
+	state := s.prompt()
+	state.mu.Lock()
+	if state.runActive || s.Agent.State().IsStreaming {
+		state.mu.Unlock()
+		return
+	}
+	custom := s.flushDeferredLocked(state)
+	state.mu.Unlock()
+	for _, message := range custom {
+		s.emitCustomMessage(message)
+	}
+}
+
 // flushDeferredLocked appends the bash and custom messages deferred to the
 // run and returns the custom ones for the caller to emit after unlocking.
 // The caller holds state.mu.
@@ -425,8 +463,7 @@ func (s *AgentSession) releaseRunAfterPanic() {
 	state.runCancel = nil
 	state.mu.Unlock()
 	if active {
-		s.FlushPendingBashMessages()
-		s.FlushPendingCustomMessages()
+		s.flushDeferredIfIdle()
 		if s.CacheWarmer != nil {
 			s.CacheWarmer.OnAgentSettled()
 		}

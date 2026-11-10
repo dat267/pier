@@ -6737,7 +6737,13 @@ messages decide "append now or defer to the run" and append, to the agent
 transcript and then the session, under that same lock, so a run cannot start in
 between and two appends land in the same order in memory and on disk. The run's
 end delivers anything deferred after its own flush before clearing the flag.
+A prompt flushes deferred messages only while idle, under the same lock. Tree
+navigation claims the session under it too, so a run and a navigation never
+overlap, and compaction and navigation reload the agent transcript from the
+session in one step under it.
 
 Tests: `TestAgentSessionConcurrentAPIKeepsTranscriptAndPersistenceInStep`
-(the transcript and the session file diverged in about 8 runs in 20 before) and
+(the transcript and the session file diverged in about 8 runs in 20 before),
+`TestAgentSessionConcurrentHeavyAPIKeepsTranscriptAndPersistenceInStep`
+(compaction, navigation and tool changes mixed in) and
 `TestALosingRunStartLeavesTheActiveRunsState`.

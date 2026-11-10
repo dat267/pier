@@ -399,6 +399,25 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 	if s.IsCompacting() {
 		return nil, fmt.Errorf("Wait for the current compaction or tree navigation to finish before navigating the session tree.")
 	}
+	// D438: claim the session against run starts under the lock that installs
+	// a run; a prompt that passed its own check meanwhile is refused there.
+	state := s.prompt()
+	state.mu.Lock()
+	switch {
+	case state.runActive || s.Agent.State().IsStreaming:
+		state.mu.Unlock()
+		return nil, fmt.Errorf("Wait for the current response to finish before navigating the session tree.")
+	case state.navigating:
+		state.mu.Unlock()
+		return nil, fmt.Errorf("Wait for the current compaction or tree navigation to finish before navigating the session tree.")
+	}
+	state.navigating = true
+	state.mu.Unlock()
+	defer func() {
+		state.mu.Lock()
+		state.navigating = false
+		state.mu.Unlock()
+	}()
 
 	oldLeafID := ""
 	if leaf := s.Sessions.GetLeafID(); leaf != nil {
@@ -537,8 +556,7 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 	}
 
 	// Refresh agent state from the new branch.
-	sessionContext := s.Sessions.Projection()
-	s.Agent.SetMessages(sessionContext.Messages)
+	s.replaceAgentMessagesFromSession()
 	// The captured request speaks for the branch that was current when it was
 	// sent. This one replaced that context, so a later compaction must not
 	// replay it (D419).

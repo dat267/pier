@@ -269,8 +269,7 @@ func (s *AgentSession) omitRecoveryAttempt(assistant *ai.AssistantMessage) error
 	// Refresh immediately (upstream _omitRecoveryAttempt calls
 	// _refreshFinalizedContext): the omission must reach live agent state even
 	// if the follow-up summarization fails.
-	sessionContext := s.Sessions.Projection()
-	s.Agent.SetMessages(sessionContext.Messages)
+	sessionContext := s.replaceAgentMessagesFromSession()
 	s.refreshFinalizedContext(sessionContext)
 	return nil
 }
@@ -427,8 +426,7 @@ func (s *AgentSession) RunAutoCompaction(ctx context.Context, reason CompactionR
 	}
 
 	s.Sessions.AppendCompaction(result.Summary, result.FirstKeptEntryID, result.TokensBefore, result.Details, false, result.Usage)
-	sessionContext := s.Sessions.Projection()
-	s.Agent.SetMessages(sessionContext.Messages)
+	sessionContext := s.replaceAgentMessagesFromSession()
 	// Report the context size after the compaction and refresh the entry mapping
 	// to the finalized context (upstream _refreshFinalizedContext plus
 	// estimatedTokensAfter).

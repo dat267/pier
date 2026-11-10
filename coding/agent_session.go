@@ -927,8 +927,7 @@ func (s *AgentSession) runManualCompaction(ctx context.Context, customInstructio
 	}
 
 	s.Sessions.AppendCompaction(result.Summary, result.FirstKeptEntryID, result.TokensBefore, result.Details, false, result.Usage)
-	sessionContext := s.Sessions.Projection()
-	s.Agent.SetMessages(sessionContext.Messages)
+	sessionContext := s.replaceAgentMessagesFromSession()
 	result.EstimatedTokensAfter = int64(estimateMessagesTokens(sessionContext.Messages))
 	s.refreshFinalizedContext(sessionContext)
 	return result, nil
