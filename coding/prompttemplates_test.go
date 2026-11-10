@@ -312,7 +312,7 @@ func TestLoadPromptTemplatesAndFiles(t *testing.T) {
 	}
 
 	templates := LoadPromptTemplates(LoadPromptTemplatesOptions{
-		Cwd: cwd, AgentDir: agentDir, IncludeDefaults: true,
+		Cwd: cwd, AgentDir: agentDir, IncludeDefaults: true, ProjectTrusted: true,
 	})
 	if len(templates) != 2 {
 		t.Fatalf("templates = %+v", templates)

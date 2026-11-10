@@ -285,10 +285,15 @@ func loadTemplatesWithDiagnostics(dir string, getSourceInfo func(filePath string
 
 // LoadPromptTemplatesOptions configure LoadPromptTemplates.
 type LoadPromptTemplatesOptions struct {
-	Cwd             string
-	AgentDir        string
+	Cwd      string
+	AgentDir string
+	// PromptPaths are the explicitly enabled template paths; they always load.
 	PromptPaths     []string
 	IncludeDefaults bool
+	// ProjectTrusted gates the project's own prompts directory. A487: upstream
+	// resolves project resources inside `if (projectTrusted)`, and prompts are
+	// one of them (pi v1.5.0 f9a26365 core/package-manager.ts).
+	ProjectTrusted bool
 }
 
 // LoadPromptTemplatesResult carries loaded templates and resource diagnostics.
@@ -336,7 +341,12 @@ func LoadPromptTemplatesWithDiagnostics(options LoadPromptTemplatesOptions) Load
 
 	if options.IncludeDefaults {
 		addResult(loadTemplatesWithDiagnostics(globalPromptsDir, getSourceInfo))
-		addResult(loadTemplatesWithDiagnostics(projectPromptsDir, getSourceInfo))
+		// A487: the project's own prompts need trust, as skills and themes do
+		// (pi v1.5.0 f9a26365 core/package-manager.ts gates every project
+		// resource on projectTrusted).
+		if options.ProjectTrusted {
+			addResult(loadTemplatesWithDiagnostics(projectPromptsDir, getSourceInfo))
+		}
 	}
 
 	for _, rawPath := range options.PromptPaths {

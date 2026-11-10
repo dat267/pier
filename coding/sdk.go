@@ -557,7 +557,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 	}()
 	go func() {
 		defer resourceWait.Done()
-		promptTemplates = resources.promptTemplates(cwd, agentDir, settingsManager)
+		promptTemplates = resources.promptTemplates(cwd, agentDir, settingsManager, projectTrusted)
 	}()
 	go func() { defer resourceWait.Done(); promptOverrides = LoadPromptOverrides(promptSources) }()
 	resourceWait.Wait()

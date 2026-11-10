@@ -39,7 +39,7 @@ func TestResourcePathsKeepBothScopes(t *testing.T) {
 		t.Errorf("skills = %v, want [project-skill agent-skill]", names)
 	}
 
-	templates := options.promptTemplates(cwd, agentDir, settings)
+	templates := options.promptTemplates(cwd, agentDir, settings, true)
 	templateNames := make([]string, 0, len(templates.Templates))
 	for _, template := range templates.Templates {
 		templateNames = append(templateNames, template.Name)
@@ -84,7 +84,7 @@ func TestResourceSettingsPathsPrecedeCLIPaths(t *testing.T) {
 	if len(loaded.Skills) != 2 || loaded.Skills[1].Name != "cli-only" {
 		t.Errorf("noncolliding CLI skill was not loaded: %v", loaded.Skills)
 	}
-	prompts := options.promptTemplates(cwd, agentDir, settings)
+	prompts := options.promptTemplates(cwd, agentDir, settings, true)
 	if len(prompts.Templates) != 2 {
 		t.Fatalf("prompt templates = %d, want shared and CLI-only", len(prompts.Templates))
 	}
@@ -112,7 +112,7 @@ func TestPromptTemplatePathsDeduplicateAcrossScopes(t *testing.T) {
 		`{"prompts": ["`+shared+`"]}`)
 
 	settings := NewSettingsManagerFromFiles(cwd, agentDir, SettingsManagerCreateOptions{})
-	loaded := (resourceOptions{}).promptTemplates(cwd, agentDir, settings)
+	loaded := (resourceOptions{}).promptTemplates(cwd, agentDir, settings, true)
 	if len(loaded.Templates) != 1 {
 		t.Fatalf("templates = %d, want one", len(loaded.Templates))
 	}

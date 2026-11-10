@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D439)
+# Deliberate divergences from pi (D1–D440)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6793,3 +6793,25 @@ rewritten file without the options), `TestLoneSurrogateMessageReachesProjection`
 `TestDuplicateMemberNameEntrySurvivesLoad`,
 `TestSystemMessageKeepsToolWithLoneSurrogate` and
 `TestToolConstrainedSamplingAcceptsLoneSurrogate`.
+
+### D440
+
+**`LoadPromptTemplates` takes the trust answer, so project prompts are off by
+default for an embedder.**
+
+Reference: pi v1.5.0 `f9a26365` splits this differently. Its
+`core/resource-loader.ts` calls `loadPromptTemplates` with an explicit path list
+and `includeDefaults: false`, and `core/package-manager.ts` builds that list
+inside `if (projectTrusted)`, so the trust filter lives in the caller and the
+loader itself never sees `<cwd>/.pi/prompts` when the project is untrusted.
+
+The port has no package manager (out of scope, D41), so the loader resolves the
+default directories itself. It therefore takes `ProjectTrusted` in
+`LoadPromptTemplatesOptions` and gates only the project directory on it; the
+user's prompts load either way, as upstream's do. The zero value is untrusted, so
+an embedder that leaves the field alone gets no project commands until it says
+otherwise. That is the deliberate divergence: upstream's loader would load them
+when handed the path, and the port's cannot tell without being told.
+
+Test: `TestProjectPromptsRequireTrust` (an untrusted project's command was
+loaded before the gate, alongside the user's).

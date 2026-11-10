@@ -99,7 +99,7 @@ func (s *AgentSession) reloadResources() {
 	}
 	contextFiles := s.resources.contextFiles(s.Cwd, s.agentDir)
 	skills := s.resources.skills(s.Cwd, s.agentDir, s.control.Settings, trusted)
-	promptTemplates := s.resources.promptTemplates(s.Cwd, s.agentDir, s.control.Settings)
+	promptTemplates := s.resources.promptTemplates(s.Cwd, s.agentDir, s.control.Settings, trusted)
 	overrides := LoadPromptOverrides(PromptFileSources{
 		Cwd: s.Cwd, AgentDir: s.agentDir, ProjectTrusted: trusted,
 		SystemPrompt: s.promptSources.SystemPrompt, AppendSystemPrompt: s.promptSources.AppendSystemPrompt,

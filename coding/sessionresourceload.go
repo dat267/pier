@@ -91,7 +91,7 @@ func (o resourceOptions) skills(cwd string, agentDir string, settings *SettingsM
 }
 
 // promptTemplates returns the file-based prompt templates.
-func (o resourceOptions) promptTemplates(cwd string, agentDir string, settings *SettingsManager) LoadPromptTemplatesResult {
+func (o resourceOptions) promptTemplates(cwd string, agentDir string, settings *SettingsManager, trusted bool) LoadPromptTemplatesResult {
 	var settingsPaths []string
 	if !o.NoPromptTemplates {
 		settingsPaths = scopedListPaths(settings, func(settings *Settings) []string {
@@ -102,6 +102,7 @@ func (o resourceOptions) promptTemplates(cwd string, agentDir string, settings *
 	loaded := LoadPromptTemplatesWithDiagnostics(LoadPromptTemplatesOptions{
 		Cwd: cwd, AgentDir: agentDir, PromptPaths: promptPaths,
 		IncludeDefaults: !o.NoPromptTemplates,
+		ProjectTrusted:  trusted,
 	})
 	// v1.2.0 resource-loader.ts dedupePrompts keeps the first discovered name.
 	result := LoadPromptTemplatesResult{Diagnostics: loaded.Diagnostics}
