@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D425)
+# Deliberate divergences from pi (D1–D426)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6379,3 +6379,28 @@ Tests: `TestSessionJSONStringScanMatchesStrictScan` pins the two scanners to the
 same accept set and result, `TestSessionScanAcceptsOnlyValidJSON` and
 `FuzzSessionScanAcceptsOnlyValidJSON` pin the shell against `encoding/json`, and
 `TestScanSessionIndexEquivalence` pins the full-file scan.
+
+### D426
+
+**`JSSlice` walks only the prefix it needs for non-negative indices.**
+
+Reference: `packages/ai/src/utils/text.ts` (pi v1.5.0, `f9a26365`), `ownedSlice`:
+`` `${text.slice(start, end)} `.slice(0, -1) ``. V8's `String.prototype.slice`
+returns a view, so a 500-character excerpt of a megabyte body costs the excerpt.
+
+The port encoded the whole string to UTF-16 before clamping, so every call was
+O(len(s)) in time and allocation. Measured `JSSlice(body, 0, 500)` against the
+old implementation in one process: 64 KB 372 µs -> 6.0 µs, 1 MB 5.71 ms ->
+10.0 µs, 8 MB 34.8 ms -> 5.5 µs; allocations 6 -> 5. The callers are error-body
+truncation (500 characters from a provider body), radius body truncation,
+mistral error text, `SanitizeID` (64) and pi-messages ids.
+
+`jsSliceAbsolute` walks only up to `end` and appends UTF-16 units by index, so a
+cut inside a surrogate pair still yields U+FFFD exactly as the full encode does.
+A negative index keeps the full encode, because `slice` resolves it against the
+string's UTF-16 length.
+
+Tests: `TestJSSliceMatchesFullEncoding` compares the fast path against the full
+encoding for every index pair over ASCII, astral, combining and invalid UTF-8
+inputs; `TestJSSlicePrefixDoesNotScanTheWholeString` caps its allocations at the
+full encoding's.

@@ -177,6 +177,13 @@ func ownedJSSlice(s string, start, end int) string {
 }
 
 func JSSlice(s string, start, end int) string {
+	if start >= 0 && end >= 0 {
+		// Both indices are absolute, so nothing after `end` matters and the
+		// tail is never measured: a 500-character excerpt of a megabyte error
+		// body must not cost the body (D426). The full encode below stays for
+		// a negative index, which needs the string's UTF-16 length.
+		return jsSliceAbsolute(s, start, end)
+	}
 	units := utf16.Encode([]rune(s))
 	length := len(units)
 	if start < 0 {
@@ -193,6 +200,53 @@ func JSSlice(s string, start, end int) string {
 		return ""
 	}
 	return string(utf16.Decode(units[start:end]))
+}
+
+// jsSliceAbsolute implements String.prototype.slice for start >= 0 and
+// end >= 0 without encoding the whole string: it walks s once, stops at the
+// last unit it needs, and decodes only the kept range. A surrogate pair cut in
+// half decodes to U+FFFD, which is what the full encoding holds at that index.
+func jsSliceAbsolute(s string, start, end int) string {
+	if start >= end {
+		return ""
+	}
+	// A unit is at most 4 bytes of s, so end-start units are a safe cap and the
+	// append below never grows. Guard against a caller passing a huge range on a
+	// short string.
+	capacity := end - start
+	if capacity > len(s) {
+		capacity = len(s)
+	}
+	kept := make([]uint16, 0, capacity)
+	units := 0
+	for _, r := range s {
+		if units >= end {
+			break
+		}
+		first, second := uint16(r), uint16(0)
+		width := 1
+		if r >= 0x10000 {
+			high, low := utf16.EncodeRune(r)
+			first, second = uint16(high), uint16(low)
+			width = 2
+		}
+		for half := 0; half < width && units < end; half++ {
+			if units >= start {
+				if half == 0 {
+					kept = append(kept, first)
+				} else {
+					kept = append(kept, second)
+				}
+			}
+			units++
+		}
+	}
+	if len(kept) == 0 {
+		return ""
+	}
+	// utf16.Decode turns a surrogate whose partner was cut off into U+FFFD,
+	// which is the character the fully decoded string holds at that index.
+	return string(utf16.Decode(kept))
 }
 
 // GetPiUserAgent renders the pi user agent: "pi (<platform> <release>; <arch>)"
