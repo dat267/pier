@@ -1,79 +1,72 @@
 # Reproduced audit findings
 
-## A483 an idle bash append holds the run-lifecycle lock across a session-file write
+## A483 an idle bash append holds the run-lifecycle lock across the session-file append
 
-- Severity: medium (blocks run starts and prompt submission for ~105 us per
-  idle bash result; grows with session size and with a slow disk).
+- Severity: low, downgraded from medium. Re-measured after A484
+  (`990d6d03`): one idle bash append holds `state.mu` for **p50 26us, p99 254us**
+  (was p50 182us, p99 454us). A484's O(n^2) rescan was most of the original
+  cost, not the append.
 - Where: `coding/agent_session_bash.go` `recordBashResultAt` (commit `4262b919`,
   D438) and `coding/agent_session_prompt.go` `flushDeferredLocked`.
 - Port: `recordBashResultAt` takes `state.mu` to decide idle-vs-deferred and,
-  on the idle branch, calls `appendBashMessage` while holding it. That reaches
-  `SessionManager.appendEntry` -> `persistEntry` -> `appendLine`, which writes
-  the session file **synchronously on the calling goroutine when no write
-  queue is wired** (`m.writeQueue == nil`). `flushDeferredLocked`, called from
-  the run teardown with `state.mu` held, does the same for deferred bash
-  messages.
-- Evidence: 200 idle `RecordBashResult` calls on a real session with no write
-  queue took 20.95 ms, **104.76 us each** of `state.mu`-held time. A
-  controlled handshake (a goroutine acquiring `state.mu` while the appends
-  ran) observed a stall above 200 us, proving the write happens inside the
-  critical section rather than beside it.
-- Authority: the local invariant in `ARCHITECTURE.md`'s lock inventory (no I/O
-  under a retained lock) and `AGENTS.md` ("never run user code under a retained
-  mutex"; the off-loop rule "nothing on the main event loop may block").
-  Upstream `agent-session.ts` appends on one event loop with no lock and no
-  synchronous file write, so this is a port-only consequence of the fix.
-- Cause: D438 correctly moved the decision under the lock, but moved the
-  append with it. The ordering requirement is on the *order* of the two
-  stores, not on holding the lock across disk.
-- Reachable: `ExecuteBash` (`coding/interactive/interactivemode_handlers.go:662`)
-  is called from off-loop handler work; `cmd` and `rpcmode` wire a write queue,
-  but the queue is `nil` for sessions created without one.
-- Attempted and reverted: releasing `state.mu` before the idle append (the
-  obvious fix) breaks D438's two-store ordering.
-  `TestAgentSessionConcurrentAPIKeepsTranscriptAndPersistenceInStep` fails at
-  -count=10 with the agent transcript and the session file disagreeing (e.g.
-  agent `[custom bashExecution bashExecution bashExecution user assistant]` vs
-  persisted `[custom bashExecution bashExecution user bashExecution
-  assistant]`), because a concurrent writer interleaves between the two
-  stores. Holding the lock across the append is what makes the pair atomic, so
-  the cost is the price of the ordering guarantee, not an oversight.
-- Remaining option, unverified: make the append cheap rather than unlocked.
-  The measured cost is the synchronous `os.OpenFile`+`WriteString`+`Close` in
-  `writeSessionLine` (plus the JSON marshal), so keeping an append-only file
-  handle open, or ensuring the write queue is always wired, removes the disk
-  cost while the lock keeps the ordering. Neither is a one-line change and
-  neither has a test yet, so this stays open rather than patched.
-- Verification: a test asserting `state.mu` is not held across the append (a
-  concurrent acquirer must not stall) AND D438's ordering test green at
-  `-count=10`. The naive fix satisfies the first and fails the second.
+  on the idle branch, calls `appendBashMessage` while holding it, which reaches
+  `SessionManager.appendEntry` -> `persistEntry` -> `appendLine`. With no write
+  queue wired, `appendLine` writes the session file synchronously.
+- Evidence (re-measured, 400 appends each, conversation already started so
+  `writeStarted` is true): with a write queue p50 17us / p99 181us; without one
+  p50 24us / p99 128us. The queue moves only the file write, so the residual
+  ~17us is the JSON marshal plus `consume`, both of which run under the lock by
+  the write-queue contract (`session_manager.go:118-126`: "the line is
+  marshaled synchronously (the caller's lock stays authoritative)").
+- Authority: `ARCHITECTURE.md`'s lock inventory says no I/O under a retained
+  lock; the synchronous write path violates that, the marshal does not, because
+  the contract names it.
+- Cause: D438 correctly moved the idle-vs-deferred decision under the lock but
+  moved the append with it.
+- Attempted and reverted: releasing `state.mu` before the append breaks D438's
+  two-store ordering. `TestAgentSessionConcurrentAPIKeepsTranscriptAndPersistenceInStep`
+  fails at -count=10 with the agent transcript and the session file disagreeing,
+  because a concurrent writer interleaves between the two stores. Holding the
+  lock across the append is what makes the pair atomic.
+- Remaining scope: only the synchronous write when `writeQueue == nil`
+  (~7us of the 24us p50, and the disk-dependent part of the p99 tail). Every
+  production entry point wires a queue (`cmd/main.go:350`, `rpcmode.go:457`,
+  `rpcmode.go:653`, the interactive rebinds), so the affected configuration is
+  a session created without one.
+- Verification: a test asserting `state.mu` is not held across the synchronous
+  write AND D438's ordering test green at `-count=10`. The naive fix satisfies
+  the first and fails the second.
 
-## A484 persistEntry re-decodes every entry before the first conversation message
 
-- Severity: medium (`AppendMessage` cost grew 5.8x across 1200 appends, all of
-  it under `SessionManager.mu`; the same lock an idle bash append holds, so it
-  compounds A483).
-- Where: `coding/session_manager.go` `persistEntry` -> `hasConversation`.
-- Port: `persistEntry` calls `hasConversation()` on **every** append while
-  `writeStarted` is false, and `hasConversation` walks all of `fileEntries`,
-  `json.Unmarshal`-ing each message's JSON to read its role. A session that
-  has not yet seen a user or assistant message therefore pays O(n) per append,
-  O(n^2) overall.
-- Evidence: 1200 `AppendMessage` calls of a bash-execution message (a
-  `message` entry whose role is neither user nor assistant, so the scan never
-  short-circuits): first 200 appends 29.8ms, last 200 appends 173.0ms, **5.8x**.
-  Isolated, `hasConversation` alone measured 899us at 900-1200 entries.
-- Authority: pi v1.5.0 `f9a26365` `core/session-manager.ts:1167`
-  `_hasConversation` reads `e.message.role` from the already-parsed entry, so
-  it never decodes; the scan is linear in the array with no per-entry parse.
-  Local invariant: one append's cost must not grow with entries already
-  appended.
-- Cause: the port keeps entries as raw JSON, so reading a role needs a decode,
-  and the decision was recomputed instead of remembered.
-- Fix: memoize the answer, kept exact incrementally. An entry that starts a
-  conversation sets it true; any other entry leaves the previous answer
-  correct, because the scan only looks for a user or assistant message. Bulk
-  changes (reset, load) invalidate.
-- Verification: `TestAppendCostDoesNotGrowBeforeFirstConversation` (5.8x before,
-  flat after), `TestConversationMemoMatchesAFreshScan` (ordering and
-  late-first-message cases), `TestConversationMemoRefreshesOnLoad`.
+## A485 an interactive session switch drops the write queue, so writes return to the UI loop
+
+- Severity: medium (after `/resume`, `/fork` or import, session writes run
+  synchronously on the calling goroutine, which for the interactive path is the
+  owner loop — the exact condition `cmd/main.go:343-351` wires a queue to
+  prevent).
+- Where: `coding/interactive/sessionswitch.go` `switchSession` (`OpenSession`
+  at :20, `a.sessionMgr = sessionManager` in `applySessionReplacement` at :133)
+  and the import path at :80.
+- Port: `OpenSession` (`coding/session_manager.go:257`) builds a manager with
+  no `WriteQueue`, and `switchSession` never calls `SetWriteQueue` afterwards,
+  although `sessionNew` (:122) explicitly forwards `WriteQueue:
+  a.sessionMgr.GetWriteQueue()`. So a switch replaces a queued manager with an
+  unqueued one and nothing restores it.
+- Evidence: `grep -c SetWriteQueue coding/interactive/sessionswitch.go` -> 0.
+  `cmd/main.go:350` sets it only for the initial manager, and its comment says
+  why it must: "A resumed, continued or forked session is created without a
+  queue, so wire it here rather than only on the fresh path — otherwise those
+  sessions wrote synchronously on the loop." The interactive switch takes the
+  same `OpenSession` path but lacks that wire-up.
+- Authority: `ARCHITECTURE.md` ("Terminal output is serialized by an off-loop
+  FIFO"; nothing on the main event loop may block) and the port's own
+  `SessionManagerOptions.WriteQueue` contract: nil "keeps writes synchronous",
+  which is documented as correct only for one-shot consumers, not the UI loop.
+- Cause: the queue is treated as a property of the initial wiring rather than of
+  the session manager, so every replacement path must remember to forward it.
+  `sessionNew` remembers; `switchSession` and the import path do not.
+- Fix: forward `WriteQueue` on every replacement, as `sessionNew` does — or
+  read it in `applySessionReplacement` from the manager being replaced.
+- Verification: a test asserting the manager installed by `switchSession`
+  carries the previous manager's write queue.
+
