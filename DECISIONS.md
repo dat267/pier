@@ -5258,6 +5258,8 @@ has answered it, then delivers them as their own run:
   check the disposed flag: a release queued during shutdown must not start a run
   on a closed session. `Dispose` sets the flag before its abort and cleanup
   steps, so a release the host runs while they are in progress is skipped too.
+  The flag lives under the prompt-state lock that also installs a run, so a
+  release racing `Dispose` either sees it or starts a run the abort reaches.
   An aborted run releases nothing; interactive's Esc
   restore owns that queue.
 - The release keeps the queue's own granularity. `Agent.ReleaseFollowUpMessages`
@@ -5276,7 +5278,8 @@ clearing); `TestGoalHoldsFollowUpsUntilItsFinalAnswer` (two goal rounds complete
 without the follow-up, a third run carries it only afterwards),
 `TestGoalReleasedFollowUpsRunWithoutAHost` and
 `TestGoalReleaseSkipsDisposedSession`,
-`TestGoalReleaseDuringDisposeCleanupSkipsTheRun`; `TestGoalReleasedFollowUpsAreDeliveredOneAtATime`
+`TestGoalReleaseDuringDisposeCleanupSkipsTheRun`,
+`TestGoalReleaseRacingDisposeLeavesNoUnabortableRun`; `TestGoalReleasedFollowUpsAreDeliveredOneAtATime`
 (three held follow-ups each get their own request, in queue order),
 `TestQueuedFollowUpsAreDeliveredOneAtATimeWithoutAGoal` (the control, with a
 handshake instead of sleeps) and `TestQueuedFollowUpsFollowTheAllMode` (the mode

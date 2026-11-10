@@ -68,6 +68,19 @@ type promptState struct {
 	runCancel      context.CancelFunc
 	// idleWait resolves once the session becomes idle.
 	idleWait chan struct{}
+	// disposed is set by Dispose. It lives under the same lock as runActive
+	// and runCancel, so a guarded run start (runAgentPromptUnlessDisposed)
+	// and Dispose's mark-then-abort cannot interleave: either the start sees
+	// the mark, or the abort sees the started run's cancel.
+	disposed bool
+}
+
+// isDisposed reports whether Dispose has run.
+func (s *AgentSession) isDisposed() bool {
+	state := s.prompt()
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	return state.disposed
 }
 
 func (s *AgentSession) prompt() *promptState {
@@ -283,10 +296,25 @@ func (s *AgentSession) validateModelAuth(ctx context.Context) error {
 // runAgentPrompt runs one agent prompt with the run-active flag and idle
 // resolution.
 func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message, onStarted ...func()) error {
+	return s.startAgentPrompt(ctx, messages, false, onStarted...)
+}
+
+// runAgentPromptUnlessDisposed is runAgentPrompt for work the host runs later
+// (released follow-ups): it starts nothing once Dispose has marked the
+// session, checking in the same critical section that installs the run.
+func (s *AgentSession) runAgentPromptUnlessDisposed(ctx context.Context, messages []ai.Message) error {
+	return s.startAgentPrompt(ctx, messages, true)
+}
+
+func (s *AgentSession) startAgentPrompt(ctx context.Context, messages []ai.Message, unlessDisposed bool, onStarted ...func()) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	state := s.prompt()
 	state.mu.Lock()
+	if unlessDisposed && state.disposed {
+		state.mu.Unlock()
+		return nil
+	}
 	state.abortRequested = false
 	state.runCancel = cancel
 	state.runActive = true

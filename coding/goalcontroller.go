@@ -104,10 +104,7 @@ func (s *sessionGoalSink) RunGoalTurn(ctx context.Context, customType string, co
 		return nil
 	}
 	// A queued reservation can remain current after the session is disposed.
-	s.session.control.stateMu.Lock()
-	disposed := s.session.control.disposed
-	s.session.control.stateMu.Unlock()
-	if disposed {
+	if s.session.isDisposed() {
 		return nil
 	}
 	return s.session.SendMessage(ctx, goalEventMessage(customType, content, display, details), &SendMessageOptions{DeliverAs: "followUp"})

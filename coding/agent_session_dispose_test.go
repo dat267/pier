@@ -26,10 +26,7 @@ func TestDisposeFinishesWhenAnAbortPanics(t *testing.T) {
 	if listeners != 0 {
 		t.Fatalf("listeners after Dispose = %d, want 0", listeners)
 	}
-	session.control.stateMu.Lock()
-	disposed := session.control.disposed
-	session.control.stateMu.Unlock()
-	if !disposed {
+	if !session.isDisposed() {
 		t.Fatal("the session was not marked disposed")
 	}
 }

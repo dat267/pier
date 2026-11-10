@@ -566,7 +566,7 @@ func TestSessionNamesAndForking(t *testing.T) {
 
 	// Dispose clears listeners and aborts.
 	session.Dispose()
-	if !session.control.disposed {
+	if !session.isDisposed() {
 		t.Fatal("dispose must mark the control block")
 	}
 	session.emit(&SessionEvent{Type: SessionQueueUpdate})

@@ -70,7 +70,6 @@ type AgentSessionControl struct {
 	autoCompaction       bool
 	autoRetry            bool
 	branchSummaryCancel  context.CancelFunc
-	disposed             bool
 
 	// defaultSync is the last defaultsync outcome (D151), and
 	// defaultSyncSuspended records an explicit model override that the sync
@@ -1020,9 +1019,10 @@ func (s *AgentSession) Dispose() {
 	// Mark the session first: a goal round or released follow-up the host runs
 	// while the steps below are still in progress must see it and not start.
 	// Upstream's synchronous dispose cannot interleave with them.
-	s.control.stateMu.Lock()
-	s.control.disposed = true
-	s.control.stateMu.Unlock()
+	state := s.prompt()
+	state.mu.Lock()
+	state.disposed = true
+	state.mu.Unlock()
 	// Upstream wraps only the aborts: "Dispose must succeed even if an abort
 	// hook throws". The cleanup below must run either way.
 	func() {

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -264,5 +266,86 @@ func TestGoalReleaseDuringDisposeCleanupSkipsTheRun(t *testing.T) {
 	}
 	if calls != before {
 		t.Fatalf("release during Dispose ran %d extra model calls", calls-before)
+	}
+}
+
+// A release racing Dispose either starts nothing or starts a run Dispose's
+// abort reaches: the disposed check and the run start share one critical
+// section with Dispose's mark-then-abort (D385). A model call that outlives
+// Dispose uncancelled is the run nothing could stop.
+func TestGoalReleaseRacingDisposeLeavesNoUnabortableRun(t *testing.T) {
+	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
+	const rounds = 20
+	for range rounds {
+		manager, dir := newTestSession(t)
+		var session *AgentSession
+		var calls atomic.Int32
+		var unaborted atomic.Int32
+		var released sync.WaitGroup
+		streamFn := func(m *ai.Model, _ ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			call := calls.Add(1)
+			if call == 2 {
+				_, _ = session.GetToolDefinition("set_goal").Execute("complete", json.RawMessage(`{"status":"complete"}`), context.Background(), nil)
+			}
+			stream := ai.NewAssistantMessageEventStream()
+			done := &ai.AssistantMessage{
+				API: m.API, Provider: m.Provider, Model: m.ID, StopReason: ai.StopStop,
+				Content: ai.ContentList{ai.TextContent{Text: "done"}},
+			}
+			if call <= 2 {
+				go stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: done})
+				return stream
+			}
+			// The released run's call: it must be cancelled by Dispose.
+			released.Add(1)
+			go func() {
+				defer released.Done()
+				select {
+				case <-options.Ctx.Done():
+					aborted := &ai.AssistantMessage{API: m.API, Provider: m.Provider, Model: m.ID, StopReason: ai.StopAborted}
+					stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopAborted, Error: aborted})
+				case <-time.After(2 * time.Second):
+					unaborted.Add(1)
+					stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: done})
+				}
+			}()
+			return stream
+		}
+		var err error
+		session, err = NewAgentSession(&SessionConfig{
+			Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, Goal: true, ConvertToLlm: ConvertToLlm,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var pending []func(context.Context) error
+		session.Goal.SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
+		session.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "after the goal"}})
+		session.Goal.HandleCommand("set objective")
+		if err := pending[0](context.Background()); err != nil {
+			t.Fatal(err)
+		}
+		if len(pending) != 2 {
+			t.Fatalf("released work = %d, want 1", len(pending)-1)
+		}
+		start := make(chan struct{})
+		var group sync.WaitGroup
+		group.Add(2)
+		go func() {
+			defer group.Done()
+			<-start
+			_ = pending[1](context.Background())
+		}()
+		go func() {
+			defer group.Done()
+			<-start
+			session.Dispose()
+		}()
+		close(start)
+		group.Wait()
+		released.Wait()
+		if unaborted.Load() != 0 {
+			t.Fatal("the released run's model call outlived Dispose uncancelled")
+		}
 	}
 }

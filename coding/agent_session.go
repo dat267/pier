@@ -720,17 +720,11 @@ func (s *AgentSession) releaseGoalHeldFollowUps(event *agent.AgentEvent) {
 	}
 	run := func(ctx context.Context) error {
 		// A disposed session must not start the run: the release can be queued
-		// while the host is shutting down and disposing the session.
-		s.control.stateMu.Lock()
-		disposed := s.control.disposed
-		s.control.stateMu.Unlock()
-		if disposed {
-			return nil
-		}
-		// The released messages run through the session pipeline, so the run
-		// emits agent_settled and keeps retry and compaction handling. The goal
-		// chain before it settled as one run (rounds continue inside it).
-		return s.runAgentPrompt(ctx, messages)
+		// while the host is shutting down and disposing the session. The
+		// released messages run through the session pipeline, so the run emits
+		// agent_settled and keeps retry and compaction handling. The goal chain
+		// before it settled as one run (rounds continue inside it).
+		return s.runAgentPromptUnlessDisposed(ctx, messages)
 	}
 	// The released run starts after this run settles, so the settle reports it:
 	// the working period stays open across the release (D402).
