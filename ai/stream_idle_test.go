@@ -210,6 +210,8 @@ func TestProviderStreamsAbortWhenResponseHeadersIdle(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Each case waits out its own timeout against its own server.
+			t.Parallel()
 			want := "headers idle"
 			switch tc.name {
 			case "openai-codex":
