@@ -1,19 +1,20 @@
 # Reproduced audit findings
 
-## A474 null custom-message content becomes an empty text block in the request
+## A475 a null identity version reads as an explicit empty version
 
-- Severity: low (parity; an extra empty block in a provider request).
-- Reference (pi v1.5.0 `f9a26365`, `core/messages.ts:163`):
-  `const content = typeof m.content === "string" ? [{type:"text", text:m.content}] : m.content;`
-  `typeof null === "object"`, so a null content is passed through as-is and adds
-  no text block.
-- Port: `customContentToBlocks` (`coding/converttollm.go:220`) decodes into a
-  Go string first, and `json.Unmarshal([]byte("null"), &text)` succeeds as "",
-  so a null content becomes one empty text block.
-- Measured, `ConvertToLlm` on `{"customType":"note","content":null}`:
-  port `[{"type":"text","text":""}]`, reference no block.
-- Reachable: a custom message written with a null content (an extension or a
-  hand-edited session) puts an extra empty block in every following request.
-- Fix: require the raw member to actually be a JSON string before decoding it
-  as text, then fall through to the block and raw-text paths.
-- Verification: a test over null, empty string, plain string and block content.
+- Severity: low (parity; malformed `User-Agent` header).
+- Reference (pi v1.5.0 `f9a26365`, `utils/identity.ts:63`):
+  `getClientVersion` is `identity?.version ?? PI_AI_VERSION`, and `??` treats
+  `null` like absent, so `{"version":null}` yields the default version.
+- Port: `ClientIdentity.UnmarshalJSON` sets `VersionSet = true` for a present
+  `version` member whatever its JSON type, so a null version reads as the
+  explicit empty version and `FormatUserAgent` renders `pi/ (linux; ...)`.
+- Measured: `{"version":null}` -> port `pi/ (linux; go/1.27.3; amd64)`,
+  reference `pi/1.5.0 (linux; node/...; x64)`.
+- Also: `{"userAgent":{"mode":"custom","custom":null}}` yields an empty custom
+  string where the reference passes a null `custom` through. That value is not
+  a string either way, so it is not patched here.
+- Fix: treat a `version` member that is JSON null as absent, keeping the
+  explicit-empty case for `""`.
+- Verification: a test over null, empty and set versions and the rendered
+  header.

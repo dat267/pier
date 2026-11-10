@@ -114,6 +114,11 @@ func (i ClientIdentity) MarshalJSON() ([]byte, error) {
 	)
 }
 
+// isJSONNull reports whether raw is the JSON null literal.
+func isJSONNull(raw []byte) bool {
+	return bytes.Equal(bytes.TrimSpace(raw), []byte("null"))
+}
+
 func (i *ClientIdentity) UnmarshalJSON(data []byte) error {
 	fields, err := decodeIdentityJSON(data)
 	if err != nil {
@@ -142,8 +147,13 @@ func (i *ClientIdentity) UnmarshalJSON(data []byte) error {
 			decoded.AttributionSet = true
 			err = json.Unmarshal(field.raw, &decoded.Attribution)
 		case "version":
-			decoded.VersionSet = true
-			err = json.Unmarshal(field.raw, &decoded.Version)
+			// The reference resolves this with `identity?.version ?? PI_AI_VERSION`
+			// (utils/identity.ts:63), so a JSON null reads as absent while "" stays
+			// an explicit empty version (D431).
+			if !isJSONNull(field.raw) {
+				decoded.VersionSet = true
+				err = json.Unmarshal(field.raw, &decoded.Version)
+			}
 		}
 		if err != nil {
 			return err

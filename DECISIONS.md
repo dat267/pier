@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D430)
+# Deliberate divergences from pi (D1–D431)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6518,3 +6518,26 @@ upstream.
 Tests: `TestCustomContentNullAddsNoBlock` (null, empty string, plain string and
 block content) and `TestCustomMessageNullContentReachesNoBlock` (the converted
 request carries no block).
+
+### D431
+
+**A null identity version reads as absent, not as an explicit empty version.**
+
+Reference: `packages/ai/src/utils/identity.ts` (pi v1.5.0, `f9a26365`), line 63:
+`identity?.version ?? PI_AI_VERSION`. `??` treats `null` like absent, so
+`{"version":null}` renders the default version while `{"version":""}` renders an
+empty one.
+
+The port's decoder set `VersionSet` for any present `version` member, including
+JSON null, so a stored null read as the explicit empty version and
+`FormatUserAgent` emitted `pi/ (linux; ...)` with no version at all.
+`isJSONNull` now keeps that member absent, and the explicit-empty case stays for
+`""`, which is what `VersionSet` exists for.
+
+A second null case in the same decoder is left alone deliberately:
+`{"userAgent":{"mode":"custom","custom":null}}` reads as an empty custom string,
+where the reference passes a null `custom` through. Neither value is a string a
+header can carry, so there is no observable difference worth a special case.
+
+Tests: `TestIdentityNullVersionUsesTheDefault` (null uses the default, `""`
+stays explicit, a real version still wins).
