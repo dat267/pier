@@ -182,6 +182,7 @@ func TestToolsExpandTogglesLoadedResources(t *testing.T) {
 // groups keep the winner and list the skipped losers, like upstream
 // formatDiagnostics.
 func TestFormatSkillDiagnostics(t *testing.T) {
+	InitTheme("dark", false)
 	rendered := coding.StripAnsi(formatSkillDiagnostics([]coding.ResourceDiagnostic{
 		{Type: "collision", Message: "name \"dup\" collision", Collision: &coding.ResourceCollision{
 			ResourceType: "skill", Name: "dup", WinnerPath: "/a/dup/SKILL.md", LoserPath: "/b/dup/SKILL.md",

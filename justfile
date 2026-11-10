@@ -74,6 +74,12 @@ test-race:
 test-stress:
 	go test -race -count=2 -cpu=1,4 -shuffle=on -timeout 900s ./agent ./coding ./coding/interactive ./mcp
 
+# A test that fails only on its own depends on state an earlier test left
+# (the active theme, a package default).
+# Run every test alone in a fresh process.
+test-isolated:
+	scripts/test_isolated.sh
+
 # Report formatting differences.
 fmt:
 	#!/usr/bin/env bash

@@ -92,6 +92,7 @@ func TestTranscriptResizeYieldsBetweenWarmChunks(t *testing.T) {
 // cache once reused block lines rendered at the old width, so a scrolled
 // transcript kept its old width and the renderer truncated it.
 func TestTranscriptResizeRerendersMarkdownWidth(t *testing.T) {
+	InitTheme("dark", false)
 	mdTheme := GetMarkdownTheme()
 	chat := &tui.Container{}
 	for range 5 {

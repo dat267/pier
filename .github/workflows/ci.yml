@@ -52,6 +52,11 @@ jobs:
           PIER_TEST_BIN: ${{ github.workspace }}/pier
         run: go test -race -count=2 -cpu=1,4 -shuffle=on -timeout 900s ./agent ./coding ./coding/interactive ./mcp
 
+      # Each test alone in a fresh process: shuffling rarely runs a test
+      # first, so it misses one that relies on an earlier test's global state.
+      - name: isolated tests
+        run: scripts/test_isolated.sh
+
       # vet also compiles every _test.go, catching platform-specific syscall
       # use. Keep every former matrix target, without acquiring more runners.
       - name: cross-build and vet
