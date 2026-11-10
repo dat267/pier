@@ -51,7 +51,12 @@ func TestFetchWithRetryRetriesOnAttemptTimeout(t *testing.T) {
 	var attempts atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if attempts.Add(1) == 1 {
-			time.Sleep(500 * time.Millisecond)
+			// Hang until the client abandons the attempt (closing the server
+			// would otherwise wait out a fixed sleep).
+			select {
+			case <-r.Context().Done():
+			case <-time.After(5 * time.Second):
+			}
 			return
 		}
 		w.WriteHeader(http.StatusOK)

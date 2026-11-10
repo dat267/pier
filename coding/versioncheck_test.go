@@ -139,7 +139,12 @@ func TestFetchWithRetryTransport(t *testing.T) {
 
 func TestFetchWithRetryCancellationAndTimeouts(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		time.Sleep(200 * time.Millisecond)
+		// Slower than every budget below; ends early once the client gives up.
+		select {
+		case <-request.Context().Done():
+			return
+		case <-time.After(200 * time.Millisecond):
+		}
 		writer.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -172,7 +177,12 @@ func TestFetchWithRetryCancellationAndTimeouts(t *testing.T) {
 	var attempts atomic.Int64
 	attemptServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		attempts.Add(1)
-		time.Sleep(150 * time.Millisecond)
+		// Slower than every budget below; ends early once the client gives up.
+		select {
+		case <-request.Context().Done():
+			return
+		case <-time.After(150 * time.Millisecond):
+		}
 		writer.WriteHeader(http.StatusOK)
 	}))
 	defer attemptServer.Close()
