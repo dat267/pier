@@ -193,6 +193,10 @@ type AgentSession struct {
 	// streamFnResolvesAuth mirrors SessionConfig.StreamFnResolvesAuth.
 	streamFnResolvesAuth bool
 
+	// unsubscribeAgent detaches handleAgentEvent; Dispose calls it
+	// (upstream _disconnectFromAgent).
+	unsubscribeAgent func()
+
 	listenerMu sync.Mutex
 	listeners  []*sessionListenerKey
 
@@ -498,7 +502,7 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 	}
 	// Always subscribed: session persistence, queue tracking, compaction,
 	// retry logic.
-	a.Subscribe(func(event agent.AgentEvent, ctx context.Context) error {
+	s.unsubscribeAgent = a.Subscribe(func(event agent.AgentEvent, ctx context.Context) error {
 		s.handleAgentEvent(&event)
 		return nil
 	})

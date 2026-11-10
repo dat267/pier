@@ -1,7 +1,9 @@
 package coding
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/ai"
 )
@@ -34,4 +36,51 @@ func TestDisposeFinishesWhenAnAbortPanics(t *testing.T) {
 
 func unusedSessionStreamFn(*ai.Model, ai.TranscriptContext, *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 	panic("the dispose test never streams")
+}
+
+// Upstream dispose calls _disconnectFromAgent right after the aborts, so the
+// events the aborted run emits later (its aborted assistant message, agent_end)
+// never reach the disposed session: nothing more is persisted for it.
+func TestDisposedSessionIgnoresTheAbortedRunsLateEvents(t *testing.T) {
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 8192}
+	started := make(chan struct{})
+	finish := make(chan struct{})
+	streamFn := func(_ *ai.Model, _ ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		stream := ai.NewAssistantMessageEventStream()
+		partial := &ai.AssistantMessage{API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m", StopReason: ai.StopPending}
+		stream.Push(ai.AssistantMessageEvent{Type: ai.EventStart, Partial: partial})
+		close(started)
+		go func() {
+			<-options.Ctx.Done()
+			<-finish // the abort lands after Dispose returns
+			aborted := *partial
+			aborted.StopReason = ai.StopAborted
+			message := ai.RequestAbortedMessage
+			aborted.ErrorMessage = &message
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopAborted, Error: &aborted})
+		}()
+		return stream
+	}
+	session := newPromptSession(t, model, streamFn)
+	promptDone := make(chan struct{})
+	go func() {
+		defer close(promptDone)
+		_ = session.Prompt(context.Background(), "hello", nil)
+	}()
+	<-started
+	before := len(session.Sessions.GetEntries())
+
+	session.Dispose()
+	close(finish)
+	select {
+	case <-promptDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the prompt did not return after Dispose")
+	}
+	if err := session.Agent.WaitForIdle(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if after := len(session.Sessions.GetEntries()); after != before {
+		t.Fatalf("the disposed session persisted %d more entries from the aborted run", after-before)
+	}
 }

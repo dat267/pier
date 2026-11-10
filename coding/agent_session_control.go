@@ -1023,6 +1023,11 @@ func (s *AgentSession) Dispose() {
 		defer func() { _ = recover() }()
 		s.AbortAsync()
 	}()
+	// Upstream _disconnectFromAgent: the aborted run's late events must not
+	// reach (and persist into) the disposed session.
+	if s.unsubscribeAgent != nil {
+		s.unsubscribeAgent()
+	}
 	if s.CacheWarmer != nil {
 		s.CacheWarmer.dispose()
 	}
