@@ -105,7 +105,13 @@ func (s *AgentSession) recordBashResultAt(command string, result BashResult, exc
 	message := CreateBashExecutionMessage(command, result.Output, result.ExitCode,
 		result.Cancelled, result.Truncated, result.FullOutputPath, excludeFromContext, at, result.DurationMS)
 
-	if s.IsStreaming() {
+	// D438: decide and append under the lock that installs a run, so a run cannot
+	// start between "idle" and the append, and two appends land in the same
+	// order in the agent's transcript and the session file.
+	state := s.prompt()
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if state.runActive || s.Agent.State().IsStreaming {
 		s.bashMu.Lock()
 		s.pendingBashMessages = append(s.pendingBashMessages, message)
 		s.bashMu.Unlock()

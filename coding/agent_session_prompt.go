@@ -315,6 +315,14 @@ func (s *AgentSession) startAgentPrompt(ctx context.Context, messages []ai.Messa
 		state.mu.Unlock()
 		return nil
 	}
+	// D438: a start that lost the race with another (both saw the session idle)
+	// fails the way the agent would, without touching the winner's run flag,
+	// cancel or idle state: clearing them on its way out would make the
+	// session look idle between the winner's agent runs.
+	if state.runActive {
+		state.mu.Unlock()
+		return fmt.Errorf("Agent is already processing a prompt. Use Steer() or FollowUp() to queue messages, or wait for completion.")
+	}
 	state.abortRequested = false
 	state.runCancel = cancel
 	state.runActive = true
@@ -370,7 +378,13 @@ func (s *AgentSession) startAgentPrompt(ctx context.Context, messages []ai.Messa
 	state.runActive = false
 	state.runCancel = nil
 	aborted := state.abortRequested
+	// An append that saw the run still active after the flushes above was
+	// deferred to it; deliver it now, before a new run can start.
+	lateCustom := s.flushDeferredLocked(state)
 	state.mu.Unlock()
+	for _, message := range lateCustom {
+		s.emitCustomMessage(message)
+	}
 	// Upstream _emitAgentSettled uses the run abort flag, including backoff.
 	s.emit(&SessionEvent{
 		Type: SessionAgentSettled, Aborted: aborted,
@@ -379,6 +393,25 @@ func (s *AgentSession) startAgentPrompt(ctx context.Context, messages []ai.Messa
 	})
 	s.resolveIdleWaitIfIdle()
 	return err
+}
+
+// flushDeferredLocked appends the bash and custom messages deferred to the
+// run and returns the custom ones for the caller to emit after unlocking.
+// The caller holds state.mu.
+func (s *AgentSession) flushDeferredLocked(state *promptState) []*ai.CustomMessage {
+	s.bashMu.Lock()
+	bash := s.pendingBashMessages
+	s.pendingBashMessages = nil
+	s.bashMu.Unlock()
+	for _, message := range bash {
+		s.appendBashMessage(message)
+	}
+	custom := state.pendingCustomMessages
+	state.pendingCustomMessages = nil
+	for _, message := range custom {
+		s.appendCustomMessageEntry(message)
+	}
+	return custom
 }
 
 // releaseRunAfterPanic unwinds a run whose preparation or callbacks panicked.
@@ -482,13 +515,31 @@ func (s *AgentSession) SendMessage(ctx context.Context, message *ai.CustomMessag
 		}
 		return nil
 	default:
-		s.AppendCustomMessage(message)
+		// Idle: append under the run-lifecycle lock (see recordBashResultAt);
+		// a run that started since the check above takes the message at its
+		// end instead.
+		state.mu.Lock()
+		if state.runActive || s.Agent.State().IsStreaming {
+			state.pendingCustomMessages = append(state.pendingCustomMessages, message)
+			state.mu.Unlock()
+			return nil
+		}
+		s.appendCustomMessageEntry(message)
+		state.mu.Unlock()
+		s.emitCustomMessage(message)
 		return nil
 	}
 }
 
 // AppendCustomMessage appends a custom message to the transcript and session.
 func (s *AgentSession) AppendCustomMessage(message *ai.CustomMessage) {
+	s.appendCustomMessageEntry(message)
+	s.emitCustomMessage(message)
+}
+
+// appendCustomMessageEntry adds the message to the agent transcript and the
+// session; it calls no listeners, so it may run under the prompt-state lock.
+func (s *AgentSession) appendCustomMessageEntry(message *ai.CustomMessage) {
 	s.Agent.AppendMessages(message)
 	var fields customMessageFields
 	if err := json.Unmarshal(message.Content, &fields); err == nil && fields.CustomType != "" {
@@ -496,6 +547,10 @@ func (s *AgentSession) AppendCustomMessage(message *ai.CustomMessage) {
 	} else {
 		s.Sessions.AppendCustomMessageEntry(message.Role, message.Content, false, nil)
 	}
+}
+
+// emitCustomMessage publishes an appended custom message to listeners.
+func (s *AgentSession) emitCustomMessage(message *ai.CustomMessage) {
 	// The custom entry is already persisted. Publish directly rather than
 	// passing through handleAgentEvent, which would append it a second time.
 	s.emit(&SessionEvent{Type: SessionMessageStart, Agent: &agent.AgentEvent{Type: agent.MessageStart, Message: message}})

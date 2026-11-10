@@ -14,7 +14,8 @@ import (
 // with "already processing" and leaves the winning run's state alone, so the
 // session still reports it as streaming and an abort still reaches it.
 // Upstream _startRun (agent-session.ts, v1.5.0 f9a26365) has the same window
-// at its awaits and lets the loser's finally settle the session.
+// at its awaits and lets the loser's finally settle the session; the port's
+// start is exclusive instead (D438).
 func TestALosingRunStartLeavesTheActiveRunsState(t *testing.T) {
 	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 8192}
 	started := make(chan struct{}, 1)
@@ -43,6 +44,15 @@ func TestALosingRunStartLeavesTheActiveRunsState(t *testing.T) {
 	}
 	if !session.IsStreaming() {
 		t.Fatal("the losing start marked the session idle while the first run streams")
+	}
+	// The session's own flag covers the gaps between the winner's agent runs
+	// (its post-run follow-ups and retries), where the agent is not streaming.
+	state := session.prompt()
+	state.mu.Lock()
+	active, cancel := state.runActive, state.runCancel
+	state.mu.Unlock()
+	if !active || cancel == nil {
+		t.Fatalf("after the losing start runActive=%v runCancel set=%v; the winner's run state was cleared", active, cancel != nil)
 	}
 	idle := make(chan struct{})
 	go func() {

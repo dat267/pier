@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D437)
+# Deliberate divergences from pi (D1–D438)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6714,3 +6714,30 @@ the reference (`indexOf` + `splice`), and an empty entry can only be the one
 being delivered, since `Steer` records exactly one entry per queued message.
 
 Tests: `TestQueueDisplayRemovalHandlesEmptyText`.
+
+### D438
+
+**A run start is exclusive, and idle transcript appends are ordered with it.**
+
+Reference: `core/agent-session.ts` (pi v1.5.0, `f9a26365`): `prompt()` checks
+`isStreaming` before awaiting `checkAuth` and `_startRun`, and
+`recordBashResult` and `sendCustomMessage` check it before appending. On one
+event loop the appends cannot interleave with each other, and a second
+`_startRun` that slips past the check fails in `agent.prompt` but still runs its
+`finally`, which settles the session while the first run continues.
+
+In the port those callers overlap: a goal round or a bash completion runs off
+the UI loop while a user prompt runs on it. The session's run start therefore
+checks `runActive` in the critical section that sets it, and a start that finds
+a run already active fails with the agent's "already processing" error, leaving
+the winner's run flag, cancel and idle waiters alone. Clearing them would make
+the session look idle between the winner's agent runs (its follow-ups and
+retries, where the agent itself is not streaming). Bash results and idle custom
+messages decide "append now or defer to the run" and append, to the agent
+transcript and then the session, under that same lock, so a run cannot start in
+between and two appends land in the same order in memory and on disk. The run's
+end delivers anything deferred after its own flush before clearing the flag.
+
+Tests: `TestAgentSessionConcurrentAPIKeepsTranscriptAndPersistenceInStep`
+(the transcript and the session file diverged in about 8 runs in 20 before) and
+`TestALosingRunStartLeavesTheActiveRunsState`.
