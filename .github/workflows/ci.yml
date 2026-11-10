@@ -44,6 +44,14 @@ jobs:
         # guard, not a performance budget; measure suite duration separately.
         run: go test -race -count=2 -timeout 300s ./...
 
+      # The packages with the most shared state again, shuffled, on one CPU and
+      # on four: GOMAXPROCS=1 starves goroutines the way a busy machine does,
+      # and shuffling catches a test that depends on another's leftovers.
+      - name: race stress
+        env:
+          PIER_TEST_BIN: ${{ github.workspace }}/pier
+        run: go test -race -count=2 -cpu=1,4 -shuffle=on -timeout 900s ./agent ./coding ./coding/interactive ./mcp
+
       # vet also compiles every _test.go, catching platform-specific syscall
       # use. Keep every former matrix target, without acquiring more runners.
       - name: cross-build and vet

@@ -70,6 +70,10 @@ test:
 test-race:
 	go test -race ./...
 
+# Race-test the most concurrent packages shuffled, on one CPU and on four.
+test-stress:
+	go test -race -count=2 -cpu=1,4 -shuffle=on -timeout 900s ./agent ./coding ./coding/interactive ./mcp
+
 # Report formatting differences.
 fmt:
 	#!/usr/bin/env bash
