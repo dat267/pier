@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D431)
+# Deliberate divergences from pi (D1–D432)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6541,3 +6541,28 @@ header can carry, so there is no observable difference worth a special case.
 
 Tests: `TestIdentityNullVersionUsesTheDefault` (null uses the default, `""`
 stays explicit, a real version still wins).
+
+### D432
+
+**The unknown-action reply bounds the value it echoes.**
+
+`set_goal` echoes a rejected action back to the model so it can retry with a
+legal one. `goalUpdate` interpolated that value whole, so a 100,000-character
+action produced a 100,057-character reply: the model's own malformed input
+spent context to be read back verbatim.
+
+The sibling command path already bounds the same echo: `command.go` prints
+`Unknown subcommand "…"` through `TruncateObjective(trimmed, 20)`. `goalUpdate`
+now uses the same bound, which also flattens whitespace and keeps the quoting
+intact. A short typo is still shown as written.
+
+The tool path bounds nothing extra: `coding/goalcontroller.go` rejects an
+unknown status before dispatching, so this reply reaches the model only when
+the machine is driven directly. It is fixed at the machine because that is
+where the echo is written, and because the next caller should not have to
+remember the rule.
+
+The goal feature has no upstream counterpart, so there is no reference to cite.
+
+Tests: `TestUnknownActionReplyIsBounded` and
+`TestUnknownActionReplyKeepsAShortValue`.

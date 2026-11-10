@@ -290,7 +290,10 @@ func (m *GoalMachine) pausedMessage() []Effect {
 
 func (m *GoalMachine) goalUpdate(goalID string, rawRevision any, rawAction, blockedReason string) DispatchResult {
 	if rawAction != "complete" && rawAction != "blocked" && rawAction != "clear" {
-		return DispatchResult{Reply: new(fmt.Sprintf(`Unknown action %s. Use "complete", "blocked", or "clear".`, jsonQuote(rawAction))), IsError: true}
+		// Bound the echo like the command path does (command.go:54): the action is
+		// model-supplied and a 100 KB value produced a 100 KB reply (D432).
+		return DispatchResult{Reply: new(fmt.Sprintf(`Unknown action %s. Use "complete", "blocked", or "clear".`,
+			jsonQuote(TruncateObjective(rawAction, 20)))), IsError: true}
 	}
 	revision, ok := coerceRevision(rawRevision)
 	if !ok {
