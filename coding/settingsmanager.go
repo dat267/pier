@@ -15,6 +15,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/dat267/pier/ai"
@@ -716,8 +717,12 @@ type SettingsManager struct {
 	persistQueue    *offloop.Queue
 	globalSettings  *Settings
 	projectSettings *Settings
-	settings        *Settings
-	projectTrusted  bool
+	// settings is the merged view. It is replaced, never mutated in place
+	// (each merge builds a fresh deep copy), so setMerged also publishes it
+	// to merged, which getters read without taking mu.
+	settings       *Settings
+	merged         atomic.Pointer[Settings]
+	projectTrusted bool
 	// projectBinding separates dirty-state acknowledgments across RebindProject.
 	projectBinding uint64
 
@@ -738,6 +743,12 @@ type SettingsManager struct {
 	// re-pointed at another project (RebindProject).
 	cwd      string
 	agentDir string
+}
+
+// setMerged replaces the merged view (caller holds mu).
+func (m *SettingsManager) setMerged(settings *Settings) {
+	m.settings = settings
+	m.merged.Store(settings)
 }
 
 // Cwd is the project directory this manager's project scope belongs to. It is
@@ -798,7 +809,7 @@ func (m *SettingsManager) RebindProject(cwd string, trusted bool) {
 		m.projectSettings = &Settings{}
 		m.projectSettingsLoadError = nil
 		m.projectRejected = nil
-		m.settings = mergeSettingsWithRejects(m.globalSettings, m.projectSettings, nil)
+		m.setMerged(mergeSettingsWithRejects(m.globalSettings, m.projectSettings, nil))
 		return
 	}
 	projectLoad, projectRejected, projectErr := tryLoadFromStorageWithRejects(m.storage, SettingsScopeProject, trusted)
@@ -808,7 +819,7 @@ func (m *SettingsManager) RebindProject(cwd string, trusted bool) {
 	if projectErr != nil {
 		m.recordErrorLocked(SettingsScopeProject, projectErr)
 	}
-	m.settings = mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected)
+	m.setMerged(mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected))
 }
 
 func newSettingsManagerFromStorage(storage SettingsStorage, options SettingsManagerCreateOptions, paths map[SettingsScope]string) *SettingsManager {
@@ -834,7 +845,7 @@ func newSettingsManagerFromStorage(storage SettingsStorage, options SettingsMana
 		projectRejected:          projectRejected,
 		settingsPaths:            paths,
 	}
-	manager.settings = mergeSettingsWithRejects(manager.globalSettings, manager.projectSettings, manager.projectRejected)
+	manager.setMerged(mergeSettingsWithRejects(manager.globalSettings, manager.projectSettings, manager.projectRejected))
 	if globalErr != nil {
 		manager.recordError(SettingsScopeGlobal, globalErr)
 	}
@@ -1376,7 +1387,7 @@ func (m *SettingsManager) SetProjectTrusted(trusted bool) {
 		m.projectSettings = &Settings{}
 		m.projectSettingsLoadError = nil
 		m.projectRejected = nil
-		m.settings = mergeSettingsWithRejects(m.globalSettings, m.projectSettings, nil)
+		m.setMerged(mergeSettingsWithRejects(m.globalSettings, m.projectSettings, nil))
 		return
 	}
 	projectLoad, projectRejected, projectErr := tryLoadFromStorageWithRejects(m.storage, SettingsScopeProject, trusted)
@@ -1386,7 +1397,7 @@ func (m *SettingsManager) SetProjectTrusted(trusted bool) {
 	if projectErr != nil {
 		m.recordErrorLocked(SettingsScopeProject, projectErr)
 	}
-	m.settings = mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected)
+	m.setMerged(mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected))
 }
 
 // Reload re-reads both scopes from storage.
@@ -1413,14 +1424,14 @@ func (m *SettingsManager) Reload() {
 		m.projectSettingsLoadError = projectErr
 		m.recordErrorLocked(SettingsScopeProject, projectErr)
 	}
-	m.settings = mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected)
+	m.setMerged(mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected))
 }
 
 // ApplyOverrides layers additional settings over the current view.
 func (m *SettingsManager) ApplyOverrides(overrides *Settings) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.settings = DeepMergeSettings(m.settings, overrides)
+	m.setMerged(DeepMergeSettings(m.settings, overrides))
 }
 
 // DrainErrors returns and clears the recorded settings errors.
@@ -1487,7 +1498,7 @@ func (m *SettingsManager) clearModifiedScope(scope SettingsScope) {
 // storage roundtrip (lock retries, file read and write) runs on the persist
 // queue because the caller is the UI loop in interactive mode.
 func (m *SettingsManager) save() {
-	m.settings = mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected)
+	m.setMerged(mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected))
 	if m.globalSettingsLoadError != nil {
 		return
 	}
@@ -1573,7 +1584,7 @@ func (m *SettingsManager) saveProjectSettings(settings *Settings) {
 		return
 	}
 	m.projectSettings = cloneSettings(settings)
-	m.settings = mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected)
+	m.setMerged(mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected))
 	if m.projectSettingsLoadError != nil {
 		return
 	}
@@ -1675,9 +1686,8 @@ func copyNestedSet(source map[string]map[string]bool) map[string]map[string]bool
 
 // GetLastChangelogVersion returns the last seen changelog version.
 func (m *SettingsManager) GetLastChangelogVersion() *string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.settings.LastChangelogVersion
+	settings := m.merged.Load()
+	return settings.LastChangelogVersion
 }
 
 // SetLastChangelogVersion records the last seen changelog version.
@@ -1729,27 +1739,24 @@ func (m *SettingsManager) SetLastChangelogVersion(version string) {
 
 // GetSessionDir returns the custom session directory.
 func (m *SettingsManager) GetSessionDir() *string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.SessionDir == nil || *m.settings.SessionDir == "" {
-		return m.settings.SessionDir
+	settings := m.merged.Load()
+	if settings.SessionDir == nil || *settings.SessionDir == "" {
+		return settings.SessionDir
 	}
-	normalized := NormalizePath(*m.settings.SessionDir, PathInputOptions{})
+	normalized := NormalizePath(*settings.SessionDir, PathInputOptions{})
 	return &normalized
 }
 
 // GetDefaultProvider returns the default provider.
 func (m *SettingsManager) GetDefaultProvider() *string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.settings.DefaultProvider
+	settings := m.merged.Load()
+	return settings.DefaultProvider
 }
 
 // GetDefaultModel returns the default model id.
 func (m *SettingsManager) GetDefaultModel() *string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.settings.DefaultModel
+	settings := m.merged.Load()
+	return settings.DefaultModel
 }
 
 // SetDefaultProvider stores the default provider.
@@ -1784,12 +1791,11 @@ func (m *SettingsManager) SetDefaultModelAndProvider(provider, modelID string) {
 // GetSteeringMode returns the steering mode (default one-at-a-time). Upstream
 // uses `||`, so an empty stored string also resolves to the default.
 func (m *SettingsManager) GetSteeringMode() string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.SteeringMode == nil || *m.settings.SteeringMode == "" {
+	settings := m.merged.Load()
+	if settings.SteeringMode == nil || *settings.SteeringMode == "" {
 		return "one-at-a-time"
 	}
-	return *m.settings.SteeringMode
+	return *settings.SteeringMode
 }
 
 // SetSteeringMode stores the steering mode.
@@ -1804,12 +1810,11 @@ func (m *SettingsManager) SetSteeringMode(mode string) {
 // GetFollowUpMode returns the follow-up mode (default one-at-a-time). Upstream
 // uses `||`, so an empty stored string also resolves to the default.
 func (m *SettingsManager) GetFollowUpMode() string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.FollowUpMode == nil || *m.settings.FollowUpMode == "" {
+	settings := m.merged.Load()
+	if settings.FollowUpMode == nil || *settings.FollowUpMode == "" {
 		return "one-at-a-time"
 	}
-	return *m.settings.FollowUpMode
+	return *settings.FollowUpMode
 }
 
 // SetFollowUpMode stores the follow-up mode.
@@ -1823,9 +1828,8 @@ func (m *SettingsManager) SetFollowUpMode(mode string) {
 
 // GetThemeSetting returns the raw theme setting.
 func (m *SettingsManager) GetThemeSetting() *string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.settings.Theme
+	settings := m.merged.Load()
+	return settings.Theme
 }
 
 // GetTheme returns the theme name unless it is a path.
@@ -1848,9 +1852,8 @@ func (m *SettingsManager) SetTheme(theme string) {
 
 // GetDefaultThinkingLevel returns the default thinking level.
 func (m *SettingsManager) GetDefaultThinkingLevel() *string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.settings.DefaultThinkingLevel
+	settings := m.merged.Load()
+	return settings.DefaultThinkingLevel
 }
 
 // SetDefaultThinkingLevel stores the default thinking level.
@@ -1864,12 +1867,11 @@ func (m *SettingsManager) SetDefaultThinkingLevel(level string) {
 
 // GetModelThinkingLevel returns one model's thinking level override.
 func (m *SettingsManager) GetModelThinkingLevel(provider, modelID string) *string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.ModelThinkingLevels == nil {
+	settings := m.merged.Load()
+	if settings.ModelThinkingLevels == nil {
 		return nil
 	}
-	if level, ok := m.settings.ModelThinkingLevels[provider+"/"+modelID]; ok {
+	if level, ok := settings.ModelThinkingLevels[provider+"/"+modelID]; ok {
 		return &level
 	}
 	return nil
@@ -1877,10 +1879,9 @@ func (m *SettingsManager) GetModelThinkingLevel(provider, modelID string) *strin
 
 // GetAllModelThinkingLevels returns a copy of the model override map.
 func (m *SettingsManager) GetAllModelThinkingLevels() map[string]string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	settings := m.merged.Load()
 	out := map[string]string{}
-	maps.Copy(out, m.settings.ModelThinkingLevels)
+	maps.Copy(out, settings.ModelThinkingLevels)
 	return out
 }
 
@@ -1913,12 +1914,11 @@ func (m *SettingsManager) RemoveModelThinkingLevel(provider, modelID string) {
 
 // GetTransport returns the transport setting (default auto).
 func (m *SettingsManager) GetTransport() string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.Transport == nil {
+	settings := m.merged.Load()
+	if settings.Transport == nil {
 		return "auto"
 	}
-	return *m.settings.Transport
+	return *settings.Transport
 }
 
 // SetTransport stores the transport setting.
@@ -1932,12 +1932,11 @@ func (m *SettingsManager) SetTransport(transport string) {
 
 // GetCompactionEnabled reports whether compaction is enabled (default true).
 func (m *SettingsManager) GetCompactionEnabled() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.Compaction == nil || m.settings.Compaction.Enabled == nil {
+	settings := m.merged.Load()
+	if settings.Compaction == nil || settings.Compaction.Enabled == nil {
 		return true
 	}
-	return *m.settings.Compaction.Enabled
+	return *settings.Compaction.Enabled
 }
 
 // SetCompactionEnabled stores the compaction toggle.
@@ -2069,15 +2068,14 @@ type BranchSummarySettingsResult struct {
 
 // GetBranchSummarySettings resolves the branch-summary configuration.
 func (m *SettingsManager) GetBranchSummarySettings() BranchSummarySettingsResult {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	settings := m.merged.Load()
 	reserve := int64(16384)
-	if m.settings.BranchSummary != nil && m.settings.BranchSummary.ReserveTokens != nil {
-		reserve = *m.settings.BranchSummary.ReserveTokens
+	if settings.BranchSummary != nil && settings.BranchSummary.ReserveTokens != nil {
+		reserve = *settings.BranchSummary.ReserveTokens
 	}
 	skip := false
-	if m.settings.BranchSummary != nil && m.settings.BranchSummary.SkipPrompt != nil {
-		skip = *m.settings.BranchSummary.SkipPrompt
+	if settings.BranchSummary != nil && settings.BranchSummary.SkipPrompt != nil {
+		skip = *settings.BranchSummary.SkipPrompt
 	}
 	return BranchSummarySettingsResult{ReserveTokens: reserve, SkipPrompt: skip}
 }
@@ -2089,12 +2087,11 @@ func (m *SettingsManager) GetBranchSummarySkipPrompt() bool {
 
 // GetRetryEnabled reports whether retries are enabled (default true).
 func (m *SettingsManager) GetRetryEnabled() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.Retry == nil || m.settings.Retry.Enabled == nil {
+	settings := m.merged.Load()
+	if settings.Retry == nil || settings.Retry.Enabled == nil {
 		return true
 	}
-	return *m.settings.Retry.Enabled
+	return *settings.Retry.Enabled
 }
 
 // SetRetryEnabled stores the retry toggle.
@@ -2119,24 +2116,23 @@ type RetrySettingsResult struct {
 
 // GetRetrySettings resolves the retry configuration.
 func (m *SettingsManager) GetRetrySettings() RetrySettingsResult {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	settings := m.merged.Load()
 	enabled := true
 	maxRetries := 3
 	baseDelay := int64(2000)
 	maxAgentDelay := int64(ai.DefaultMaxAgentRetryDelayMS)
-	if m.settings.Retry != nil {
-		if m.settings.Retry.Enabled != nil {
-			enabled = *m.settings.Retry.Enabled
+	if settings.Retry != nil {
+		if settings.Retry.Enabled != nil {
+			enabled = *settings.Retry.Enabled
 		}
-		if m.settings.Retry.MaxRetries != nil {
-			maxRetries = *m.settings.Retry.MaxRetries
+		if settings.Retry.MaxRetries != nil {
+			maxRetries = *settings.Retry.MaxRetries
 		}
-		if m.settings.Retry.BaseDelayMS != nil {
-			baseDelay = *m.settings.Retry.BaseDelayMS
+		if settings.Retry.BaseDelayMS != nil {
+			baseDelay = *settings.Retry.BaseDelayMS
 		}
-		if m.settings.Retry.MaxAgentDelayMS != nil {
-			maxAgentDelay = *m.settings.Retry.MaxAgentDelayMS
+		if settings.Retry.MaxAgentDelayMS != nil {
+			maxAgentDelay = *settings.Retry.MaxAgentDelayMS
 		}
 	}
 	return RetrySettingsResult{Enabled: enabled, MaxRetries: maxRetries, BaseDelayMS: baseDelay, MaxAgentDelayMS: maxAgentDelay}
@@ -2144,14 +2140,13 @@ func (m *SettingsManager) GetRetrySettings() RetrySettingsResult {
 
 // GetHTTPIdleTimeoutMS resolves the HTTP idle timeout.
 func (m *SettingsManager) GetHTTPIdleTimeoutMS() (int64, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	value, ok := ParseHTTPIdleTimeoutMS(m.settings.HTTPIdleTimeoutMS)
+	settings := m.merged.Load()
+	value, ok := ParseHTTPIdleTimeoutMS(settings.HTTPIdleTimeoutMS)
 	if ok {
 		return value, nil
 	}
-	if m.settings.HTTPIdleTimeoutMS != nil {
-		return 0, fmt.Errorf("Invalid httpIdleTimeoutMs setting: %v", m.settings.HTTPIdleTimeoutMS)
+	if settings.HTTPIdleTimeoutMS != nil {
+		return 0, fmt.Errorf("Invalid httpIdleTimeoutMs setting: %v", settings.HTTPIdleTimeoutMS)
 	}
 	return DefaultHTTPIdleTimeoutMS, nil
 }
@@ -2178,14 +2173,13 @@ type ProviderRetrySettingsResult struct {
 
 // GetProviderRetrySettings resolves the provider retry configuration.
 func (m *SettingsManager) GetProviderRetrySettings() ProviderRetrySettingsResult {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	settings := m.merged.Load()
 	result := ProviderRetrySettingsResult{MaxRetryDelayMS: 60000}
-	if m.settings.Retry != nil && m.settings.Retry.Provider != nil {
-		result.TimeoutMS = m.settings.Retry.Provider.TimeoutMS
-		result.MaxRetries = m.settings.Retry.Provider.MaxRetries
-		if m.settings.Retry.Provider.MaxRetryDelayMS != nil {
-			result.MaxRetryDelayMS = *m.settings.Retry.Provider.MaxRetryDelayMS
+	if settings.Retry != nil && settings.Retry.Provider != nil {
+		result.TimeoutMS = settings.Retry.Provider.TimeoutMS
+		result.MaxRetries = settings.Retry.Provider.MaxRetries
+		if settings.Retry.Provider.MaxRetryDelayMS != nil {
+			result.MaxRetryDelayMS = *settings.Retry.Provider.MaxRetryDelayMS
 		}
 	}
 	return result
@@ -2193,23 +2187,20 @@ func (m *SettingsManager) GetProviderRetrySettings() ProviderRetrySettingsResult
 
 // GetWebSocketConnectTimeoutMS resolves the WebSocket connect timeout.
 func (m *SettingsManager) GetWebSocketConnectTimeoutMS() (int64, bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return ParseHTTPIdleTimeoutMS(m.settings.WebsocketConnectTimeoutMS)
+	settings := m.merged.Load()
+	return ParseHTTPIdleTimeoutMS(settings.WebsocketConnectTimeoutMS)
 }
 
 // GetHideThinkingBlock reports whether thinking blocks are hidden.
 func (m *SettingsManager) GetHideThinkingBlock() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.settings.HideThinkingBlock != nil && *m.settings.HideThinkingBlock
+	settings := m.merged.Load()
+	return settings.HideThinkingBlock != nil && *settings.HideThinkingBlock
 }
 
 // GetShowCacheMissNotices reports whether cache notices are shown.
 func (m *SettingsManager) GetShowCacheMissNotices() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.settings.ShowCacheMissNotices != nil && *m.settings.ShowCacheMissNotices
+	settings := m.merged.Load()
+	return settings.ShowCacheMissNotices != nil && *settings.ShowCacheMissNotices
 }
 
 // GetExternalEditorCommand resolves the external editor command.
@@ -2252,12 +2243,11 @@ func (m *SettingsManager) SetShowCacheMissNotices(show bool) {
 
 // GetShellPath returns the configured shell path.
 func (m *SettingsManager) GetShellPath() *string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.ShellPath == nil || *m.settings.ShellPath == "" {
-		return m.settings.ShellPath
+	settings := m.merged.Load()
+	if settings.ShellPath == nil || *settings.ShellPath == "" {
+		return settings.ShellPath
 	}
-	normalized := NormalizePath(*m.settings.ShellPath, PathInputOptions{})
+	normalized := NormalizePath(*settings.ShellPath, PathInputOptions{})
 	return &normalized
 }
 
@@ -2272,12 +2262,11 @@ func (m *SettingsManager) SetShellPath(path *string) {
 
 // GetQuietStartup reports the quiet-startup mode (false unless set).
 func (m *SettingsManager) GetQuietStartup() QuietStartupSetting {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.QuietStartup == nil {
+	settings := m.merged.Load()
+	if settings.QuietStartup == nil {
 		return QuietStartupSetting{}
 	}
-	return *m.settings.QuietStartup
+	return *settings.QuietStartup
 }
 
 // SetQuietStartup stores the quiet-startup mode.
@@ -2313,9 +2302,8 @@ func (m *SettingsManager) SetDefaultProjectTrust(policy string) {
 
 // GetShellCommandPrefix returns the shell command prefix.
 func (m *SettingsManager) GetShellCommandPrefix() *string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.settings.ShellCommandPrefix
+	settings := m.merged.Load()
+	return settings.ShellCommandPrefix
 }
 
 // SetShellCommandPrefix stores the shell command prefix.
@@ -2329,12 +2317,11 @@ func (m *SettingsManager) SetShellCommandPrefix(prefix *string) {
 
 // GetNpmCommand returns a copy of the npm command argv.
 func (m *SettingsManager) GetNpmCommand() []string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.NpmCommand == nil {
+	settings := m.merged.Load()
+	if settings.NpmCommand == nil {
 		return nil
 	}
-	return append([]string{}, m.settings.NpmCommand...)
+	return append([]string{}, settings.NpmCommand...)
 }
 
 // SetNpmCommand stores the npm command argv.
@@ -2352,9 +2339,8 @@ func (m *SettingsManager) SetNpmCommand(command []string) {
 
 // GetCollapseChangelog reports the collapse-changelog toggle.
 func (m *SettingsManager) GetCollapseChangelog() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.settings.CollapseChangelog != nil && *m.settings.CollapseChangelog
+	settings := m.merged.Load()
+	return settings.CollapseChangelog != nil && *settings.CollapseChangelog
 }
 
 // SetCollapseChangelog stores the collapse-changelog toggle.
@@ -2368,12 +2354,11 @@ func (m *SettingsManager) SetCollapseChangelog(collapse bool) {
 
 // GetEnableInstallTelemetry reports the install telemetry toggle (default true).
 func (m *SettingsManager) GetEnableInstallTelemetry() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.EnableInstallTelemetry == nil {
+	settings := m.merged.Load()
+	if settings.EnableInstallTelemetry == nil {
 		return true
 	}
-	return *m.settings.EnableInstallTelemetry
+	return *settings.EnableInstallTelemetry
 }
 
 // SetEnableInstallTelemetry stores the install telemetry toggle.
@@ -2387,16 +2372,14 @@ func (m *SettingsManager) SetEnableInstallTelemetry(enabled bool) {
 
 // GetEnableAnalytics reports the analytics opt-in.
 func (m *SettingsManager) GetEnableAnalytics() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.settings.EnableAnalytics != nil && *m.settings.EnableAnalytics
+	settings := m.merged.Load()
+	return settings.EnableAnalytics != nil && *settings.EnableAnalytics
 }
 
 // GetTrackingID returns the analytics tracking id.
 func (m *SettingsManager) GetTrackingID() *string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.settings.TrackingID
+	settings := m.merged.Load()
+	return settings.TrackingID
 }
 
 // GetOrCreateDeviceID returns this installation's stable UUID, creating and
@@ -2442,9 +2425,8 @@ func newTrackingID() string {
 
 // GetPackages returns a copy of the package sources.
 func (m *SettingsManager) GetPackages() []any {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return append([]any{}, m.settings.Packages...)
+	settings := m.merged.Load()
+	return append([]any{}, settings.Packages...)
 }
 
 // SetPackages stores the global package sources.
@@ -2467,9 +2449,8 @@ func (m *SettingsManager) SetProjectPackages(packages []any) {
 // project-replaces-agent (deepMergeObjects), so a resource loader must read the
 // scopes through GetProjectSettings and GetGlobalSettings instead (A398).
 func (m *SettingsManager) GetExtensionPaths() []string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return append([]string{}, m.settings.Extensions...)
+	settings := m.merged.Load()
+	return append([]string{}, settings.Extensions...)
 }
 
 // SetExtensionPaths stores the global extension paths.
@@ -2543,12 +2524,11 @@ func (m *SettingsManager) SetProjectThemePaths(paths []string) {
 
 // GetEnableSkillCommands reports whether skills are registered as commands.
 func (m *SettingsManager) GetEnableSkillCommands() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.EnableSkillCommands == nil {
+	settings := m.merged.Load()
+	if settings.EnableSkillCommands == nil {
 		return true
 	}
-	return *m.settings.EnableSkillCommands
+	return *settings.EnableSkillCommands
 }
 
 // SetEnableSkillCommands stores the skill-command toggle.
@@ -2562,19 +2542,17 @@ func (m *SettingsManager) SetEnableSkillCommands(enabled bool) {
 
 // GetThinkingBudgets returns the thinking budgets.
 func (m *SettingsManager) GetThinkingBudgets() *SettingsThinkingBudgets {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.settings.ThinkingBudgets
+	settings := m.merged.Load()
+	return settings.ThinkingBudgets
 }
 
 // GetShowImages reports the show-images toggle (default true).
 func (m *SettingsManager) GetShowImages() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.Terminal == nil || m.settings.Terminal.ShowImages == nil {
+	settings := m.merged.Load()
+	if settings.Terminal == nil || settings.Terminal.ShowImages == nil {
 		return true
 	}
-	return *m.settings.Terminal.ShowImages
+	return *settings.Terminal.ShowImages
 }
 
 // SetShowImages stores the show-images toggle.
@@ -2591,12 +2569,11 @@ func (m *SettingsManager) SetShowImages(show bool) {
 
 // GetImageWidthCells returns the preferred inline image width (default 60).
 func (m *SettingsManager) GetImageWidthCells() int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.Terminal == nil || m.settings.Terminal.ImageWidthCells == nil {
+	settings := m.merged.Load()
+	if settings.Terminal == nil || settings.Terminal.ImageWidthCells == nil {
 		return 60
 	}
-	width := *m.settings.Terminal.ImageWidthCells
+	width := *settings.Terminal.ImageWidthCells
 	if width < 1 {
 		return 1
 	}
@@ -2631,10 +2608,9 @@ type TerminalCapabilityOverrides struct {
 // GetTerminalCapabilityOverrides resolves the terminal.trueColor, hyperlinks
 // and images overrides (upstream getTerminalCapabilityOverrides).
 func (m *SettingsManager) GetTerminalCapabilityOverrides() TerminalCapabilityOverrides {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	settings := m.merged.Load()
 	var out TerminalCapabilityOverrides
-	terminal := m.settings.Terminal
+	terminal := settings.Terminal
 	if terminal == nil {
 		return out
 	}
@@ -2662,10 +2638,9 @@ func (m *SettingsManager) GetTerminalCapabilityOverrides() TerminalCapabilityOve
 // GetClearOnShrink reports the clear-on-shrink toggle (settings, then
 // PI_CLEAR_ON_SHRINK, then false).
 func (m *SettingsManager) GetClearOnShrink() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.Terminal != nil && m.settings.Terminal.ClearOnShrink != nil {
-		return *m.settings.Terminal.ClearOnShrink
+	settings := m.merged.Load()
+	if settings.Terminal != nil && settings.Terminal.ClearOnShrink != nil {
+		return *settings.Terminal.ClearOnShrink
 	}
 	return os.Getenv("PI_CLEAR_ON_SHRINK") == "1"
 }
@@ -2684,10 +2659,9 @@ func (m *SettingsManager) SetClearOnShrink(enabled bool) {
 
 // GetShowTerminalProgress reports the terminal-progress toggle.
 func (m *SettingsManager) GetShowTerminalProgress() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.settings.Terminal != nil && m.settings.Terminal.ShowTerminalProgress != nil &&
-		*m.settings.Terminal.ShowTerminalProgress
+	settings := m.merged.Load()
+	return settings.Terminal != nil && settings.Terminal.ShowTerminalProgress != nil &&
+		*settings.Terminal.ShowTerminalProgress
 }
 
 // SetShowTerminalProgress stores the terminal-progress toggle.
@@ -2704,9 +2678,8 @@ func (m *SettingsManager) SetShowTerminalProgress(enabled bool) {
 
 // GetTuiMode returns the TUI mode (fullscreen unless explicitly regular).
 func (m *SettingsManager) GetTuiMode() string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.TuiMode != nil && *m.settings.TuiMode == "regular" {
+	settings := m.merged.Load()
+	if settings.TuiMode != nil && *settings.TuiMode == "regular" {
 		return "regular"
 	}
 	return "fullscreen"
@@ -2723,9 +2696,8 @@ func (m *SettingsManager) SetTuiMode(mode string) {
 
 // GetFullscreenExitOutput returns the fullscreen exit output mode.
 func (m *SettingsManager) GetFullscreenExitOutput() string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.FullscreenExitOutput != nil && *m.settings.FullscreenExitOutput == "resume-hint" {
+	settings := m.merged.Load()
+	if settings.FullscreenExitOutput != nil && *settings.FullscreenExitOutput == "resume-hint" {
 		return "resume-hint"
 	}
 	return "transcript"
@@ -2742,10 +2714,9 @@ func (m *SettingsManager) SetFullscreenExitOutput(output string) {
 
 // GetFullscreenScrollbar returns the fullscreen scrollbar mode.
 func (m *SettingsManager) GetFullscreenScrollbar() string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.FullscreenScrollbar != nil {
-		value := *m.settings.FullscreenScrollbar
+	settings := m.merged.Load()
+	if settings.FullscreenScrollbar != nil {
+		value := *settings.FullscreenScrollbar
 		if value == "always" || value == "hidden" {
 			return value
 		}
@@ -2764,12 +2735,11 @@ func (m *SettingsManager) SetFullscreenScrollbar(mode string) {
 
 // GetFullscreenCopyOnSelect reports the copy-on-select toggle (default true).
 func (m *SettingsManager) GetFullscreenCopyOnSelect() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.FullscreenCopyOnSelect == nil {
+	settings := m.merged.Load()
+	if settings.FullscreenCopyOnSelect == nil {
 		return true
 	}
-	return *m.settings.FullscreenCopyOnSelect
+	return *settings.FullscreenCopyOnSelect
 }
 
 // SetFullscreenCopyOnSelect stores the copy-on-select toggle.
@@ -2785,9 +2755,8 @@ func (m *SettingsManager) SetFullscreenCopyOnSelect(enabled bool) {
 // "auto"; a fixed count is clamped 1..100). Upstream
 // getFullscreenWheelScrollLines.
 func (m *SettingsManager) GetFullscreenWheelScrollLines() tui.WheelScrollLines {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	value := m.settings.FullscreenWheelScrollLines
+	settings := m.merged.Load()
+	value := settings.FullscreenWheelScrollLines
 	if value == nil || value.Auto {
 		return tui.AutoWheelScrollLines()
 	}
@@ -2813,12 +2782,11 @@ func clampWheelScrollLines(lines int) int { return max(1, min(100, lines)) }
 
 // GetImageAutoResize reports the image auto-resize toggle (default true).
 func (m *SettingsManager) GetImageAutoResize() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.Images == nil || m.settings.Images.AutoResize == nil {
+	settings := m.merged.Load()
+	if settings.Images == nil || settings.Images.AutoResize == nil {
 		return true
 	}
-	return *m.settings.Images.AutoResize
+	return *settings.Images.AutoResize
 }
 
 // SetImageAutoResize stores the image auto-resize toggle.
@@ -2835,9 +2803,8 @@ func (m *SettingsManager) SetImageAutoResize(enabled bool) {
 
 // GetBlockImages reports the block-images toggle.
 func (m *SettingsManager) GetBlockImages() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.settings.Images != nil && m.settings.Images.BlockImages != nil && *m.settings.Images.BlockImages
+	settings := m.merged.Load()
+	return settings.Images != nil && settings.Images.BlockImages != nil && *settings.Images.BlockImages
 }
 
 // SetBlockImages stores the block-images toggle.
@@ -2854,9 +2821,8 @@ func (m *SettingsManager) SetBlockImages(blocked bool) {
 
 // GetEnabledModels returns the model patterns for cycling.
 func (m *SettingsManager) GetEnabledModels() []string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.settings.EnabledModels
+	settings := m.merged.Load()
+	return settings.EnabledModels
 }
 
 // SetEnabledModels stores the model patterns for cycling.
@@ -2871,22 +2837,20 @@ func (m *SettingsManager) SetEnabledModels(patterns []string) {
 // GetDefaultTools returns the resolved default tool selection, or nil when no
 // settings layer sets defaultTools.
 func (m *SettingsManager) GetDefaultTools() []string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.DefaultTools == nil {
+	settings := m.merged.Load()
+	if settings.DefaultTools == nil {
 		return nil
 	}
-	return resolveDefaultTools(m.settings.DefaultTools)
+	return resolveDefaultTools(settings.DefaultTools)
 }
 
 // GetDoubleEscapeAction returns the double-escape action (default tree).
 func (m *SettingsManager) GetDoubleEscapeAction() string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.DoubleEscapeAction == nil {
+	settings := m.merged.Load()
+	if settings.DoubleEscapeAction == nil {
 		return "tree"
 	}
-	return *m.settings.DoubleEscapeAction
+	return *settings.DoubleEscapeAction
 }
 
 // SetDoubleEscapeAction stores the double-escape action.
@@ -2900,10 +2864,9 @@ func (m *SettingsManager) SetDoubleEscapeAction(action string) {
 
 // GetTreeFilterMode returns the tree filter mode (default default).
 func (m *SettingsManager) GetTreeFilterMode() string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.TreeFilterMode != nil {
-		value := *m.settings.TreeFilterMode
+	settings := m.merged.Load()
+	if settings.TreeFilterMode != nil {
+		value := *settings.TreeFilterMode
 		if slices.Contains([]string{"default", "no-tools", "user-only", "labeled-only", "all"}, value) {
 			return value
 		}
@@ -2923,10 +2886,9 @@ func (m *SettingsManager) SetTreeFilterMode(mode string) {
 // GetShowHardwareCursor reports the hardware-cursor toggle (settings, then
 // PI_HARDWARE_CURSOR).
 func (m *SettingsManager) GetShowHardwareCursor() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.ShowHardwareCursor != nil {
-		return *m.settings.ShowHardwareCursor
+	settings := m.merged.Load()
+	if settings.ShowHardwareCursor != nil {
+		return *settings.ShowHardwareCursor
 	}
 	return os.Getenv("PI_HARDWARE_CURSOR") == "1"
 }
@@ -2942,12 +2904,11 @@ func (m *SettingsManager) SetShowHardwareCursor(enabled bool) {
 
 // GetEditorPaddingX returns the editor padding (clamped 0..3).
 func (m *SettingsManager) GetEditorPaddingX() int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.EditorPaddingX == nil {
+	settings := m.merged.Load()
+	if settings.EditorPaddingX == nil {
 		return 0
 	}
-	return *m.settings.EditorPaddingX
+	return *settings.EditorPaddingX
 }
 
 // SetEditorPaddingX stores the editor padding.
@@ -2962,9 +2923,8 @@ func (m *SettingsManager) SetEditorPaddingX(padding int) {
 
 // GetOutputPad returns the output padding (0 or 1).
 func (m *SettingsManager) GetOutputPad() int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.OutputPad != nil && *m.settings.OutputPad == 0 {
+	settings := m.merged.Load()
+	if settings.OutputPad != nil && *settings.OutputPad == 0 {
 		return 0
 	}
 	return 1
@@ -2981,12 +2941,11 @@ func (m *SettingsManager) SetOutputPad(padding int) {
 
 // GetAutocompleteMaxVisible returns the autocomplete item limit (default 5).
 func (m *SettingsManager) GetAutocompleteMaxVisible() int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.AutocompleteMaxVisible == nil {
+	settings := m.merged.Load()
+	if settings.AutocompleteMaxVisible == nil {
 		return 5
 	}
-	return *m.settings.AutocompleteMaxVisible
+	return *settings.AutocompleteMaxVisible
 }
 
 // SetAutocompleteMaxVisible stores the autocomplete item limit.
@@ -3001,20 +2960,18 @@ func (m *SettingsManager) SetAutocompleteMaxVisible(maxVisible int) {
 
 // GetCodeBlockIndent returns the markdown code block indent (default two spaces).
 func (m *SettingsManager) GetCodeBlockIndent() string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.Markdown == nil || m.settings.Markdown.CodeBlockIndent == nil {
+	settings := m.merged.Load()
+	if settings.Markdown == nil || settings.Markdown.CodeBlockIndent == nil {
 		return "  "
 	}
-	return *m.settings.Markdown.CodeBlockIndent
+	return *settings.Markdown.CodeBlockIndent
 }
 
 // GetMermaidRenderingMode returns the mermaid rendering mode.
 func (m *SettingsManager) GetMermaidRenderingMode() string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.settings.Markdown != nil && m.settings.Markdown.Mermaid != nil {
-		value := *m.settings.Markdown.Mermaid
+	settings := m.merged.Load()
+	if settings.Markdown != nil && settings.Markdown.Mermaid != nil {
+		value := *settings.Markdown.Mermaid
 		if value == "off" || value == "final" {
 			return value
 		}
@@ -3036,11 +2993,10 @@ func (m *SettingsManager) SetMermaidRenderingMode(mode string) {
 
 // GetWarnings returns a copy of the warning toggles.
 func (m *SettingsManager) GetWarnings() SettingsWarnings {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	settings := m.merged.Load()
 	out := SettingsWarnings{}
-	if m.settings.Warnings != nil {
-		out = *m.settings.Warnings
+	if settings.Warnings != nil {
+		out = *settings.Warnings
 	}
 	return out
 }
