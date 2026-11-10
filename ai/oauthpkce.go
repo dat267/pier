@@ -85,6 +85,10 @@ func deviceCodeIntervalDuration(intervalSeconds int) time.Duration {
 // spending ~25 s of the suite asleep.
 var deviceCodeSleep = AbortableSleep
 
+// deviceCodeNow is the poll loop's clock, injectable with deviceCodeSleep so
+// tests can expire a flow without waiting for it.
+var deviceCodeNow = time.Now
+
 // oauthRetrySleep is the backoff sleep of the OAuth retry loops (the Copilot
 // rate-limit retry and the Kimi refresh). The requested delay is production
 // behavior under test, so the tests record the schedule and return instead of
@@ -126,7 +130,7 @@ func AbortableSleep(ctx context.Context, duration time.Duration, cancelMessage s
 // (upstream pollOAuthDeviceCodeFlow), applying RFC 8628 slow_down semantics.
 func PollOAuthDeviceCodeFlow[T any](options OAuthDeviceCodePollOptions[T]) (T, error) {
 	var zero T
-	startedAt := time.Now()
+	startedAt := deviceCodeNow()
 	hasExpiration := options.ExpiresInSeconds != nil
 	expiresInSeconds := int64(0)
 	if hasExpiration {
@@ -143,7 +147,7 @@ func PollOAuthDeviceCodeFlow[T any](options OAuthDeviceCodePollOptions[T]) (T, e
 		if !hasExpiration {
 			return time.Duration(1) << 62, true
 		}
-		elapsed := time.Since(startedAt)
+		elapsed := deviceCodeNow().Sub(startedAt)
 		if elapsed < 0 {
 			elapsed = 0
 		}

@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -455,11 +456,20 @@ func readAll(request *http.Request) ([]byte, error) {
 // sleep. Tests in this package do not run in parallel, so the swap is safe.
 func fastDeviceCodeFlows(t *testing.T) {
 	t.Helper()
-	previous := deviceCodeSleep
-	deviceCodeSleep = func(ctx context.Context, _ time.Duration, cancelMessage string) error {
-		return AbortableSleep(ctx, time.Millisecond, cancelMessage)
+	previous, previousNow := deviceCodeSleep, deviceCodeNow
+	// The fake clock advances by each requested sleep, so expiry is reached
+	// on schedule without waiting for it.
+	var slept atomic.Int64
+	start := time.Now()
+	deviceCodeNow = func() time.Time { return start.Add(time.Duration(slept.Load())) }
+	deviceCodeSleep = func(ctx context.Context, wait time.Duration, cancelMessage string) error {
+		if err := AbortableSleep(ctx, time.Millisecond, cancelMessage); err != nil {
+			return err
+		}
+		slept.Add(int64(wait))
+		return nil
 	}
-	t.Cleanup(func() { deviceCodeSleep = previous })
+	t.Cleanup(func() { deviceCodeSleep, deviceCodeNow = previous, previousNow })
 }
 
 // fastOAuthRetries records the delays the OAuth backoff loops request and
