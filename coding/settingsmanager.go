@@ -2822,7 +2822,10 @@ func (m *SettingsManager) SetBlockImages(blocked bool) {
 // GetEnabledModels returns the model patterns for cycling.
 func (m *SettingsManager) GetEnabledModels() []string {
 	settings := m.merged.Load()
-	return settings.EnabledModels
+	// The snapshot is shared with every reader; clip the capacity so a caller
+	// that appends (addPersistedDefaultToNonEmptyScope) gets its own array
+	// instead of writing into the published one.
+	return settings.EnabledModels[:len(settings.EnabledModels):len(settings.EnabledModels)]
 }
 
 // SetEnabledModels stores the model patterns for cycling.

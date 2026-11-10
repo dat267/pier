@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -54,4 +55,29 @@ func TestSettingsGettersDoNotWaitForAPersistInProgress(t *testing.T) {
 	}
 	close(storage.release)
 	<-setDone
+}
+
+// The enabled-model list a getter returns is the shared settings snapshot, so
+// it carries no spare capacity: a caller extending it (as
+// addPersistedDefaultToNonEmptyScope does) must not write into the array
+// every other reader holds. Upstream getEnabledModels (settings-manager.ts,
+// v1.5.0 f9a26365) returns the array on a single event loop.
+func TestEnabledModelsSnapshotCannotBeExtendedInPlace(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	// Decoding grows the slice, so three patterns typically leave spare room.
+	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"),
+		`{"enabledModels":["anthropic/a","anthropic/b","anthropic/c"]}`)
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	got := manager.GetEnabledModels()
+	if len(got) != 3 || cap(got) != len(got) {
+		t.Fatalf("enabled models len=%d cap=%d, want a clipped three-element snapshot", len(got), cap(got))
+	}
+	extended := append(got, "anthropic/d")
+	extended[0] = "changed"
+	if again := manager.GetEnabledModels(); len(again) != 3 || again[0] != "anthropic/a" {
+		t.Fatalf("snapshot after a caller extended it = %v", again)
+	}
+	if empty := NewInMemorySettingsManager(&Settings{}, SettingsManagerCreateOptions{}).GetEnabledModels(); empty != nil {
+		t.Fatalf("unset enabled models = %#v, want nil", empty)
+	}
 }
