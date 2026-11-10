@@ -397,8 +397,9 @@ type UserMessageSelectorComponent struct {
 }
 
 // NewUserMessageSelectorComponent creates the selector. post marshals the
-// auto-cancel onto the UI side (upstream's single-threaded timer); nil falls
-// back to a direct call.
+// auto-cancel onto the UI loop (upstream's single-threaded timer); with no
+// post there is no loop to run it on, so the selector does not auto-cancel
+// rather than calling onCancel from the timer goroutine.
 func NewUserMessageSelectorComponent(messages []UserMessageItem, onSelect func(entryID string), onCancel func(), initialSelectedID string, post func(func())) *UserMessageSelectorComponent {
 	theme := ActiveTheme()
 	component := &UserMessageSelectorComponent{Container: &tui.Container{}}
@@ -418,22 +419,12 @@ func NewUserMessageSelectorComponent(messages []UserMessageItem, onSelect func(e
 	component.AddChild(tui.NewSpacer(1))
 	component.AddChild(NewDynamicBorder(nil))
 
-	if len(messages) == 0 {
+	if len(messages) == 0 && post != nil && onCancel != nil {
 		go func() {
 			// Auto-cancel shortly after mounting (upstream's 100ms timer),
-			// marshaled onto the UI side like any render-side mutation.
+			// marshaled onto the UI loop like any render-side mutation.
 			delayMillis(100)
-			if post != nil {
-				post(func() {
-					if onCancel != nil {
-						onCancel()
-					}
-				})
-				return
-			}
-			if onCancel != nil {
-				onCancel()
-			}
+			post(onCancel)
 		}()
 	}
 	return component
@@ -695,10 +686,9 @@ func safeMessageRender(renderer MessageRenderer, message CustomMessagePayload, o
 	return renderer(message, options, theme)
 }
 
-// delayMillis sleeps for the given duration (the upstream setTimeout seam).
-func delayMillis(ms int) {
-	timerSleep(ms)
-}
+// delayMillis sleeps for the given duration (the upstream setTimeout seam;
+// tests replace it).
+var delayMillis = timerSleep
 
 // timerSleep sleeps for the given number of milliseconds.
 func timerSleep(ms int) {
