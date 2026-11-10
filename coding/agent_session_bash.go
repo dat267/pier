@@ -108,7 +108,10 @@ func (s *AgentSession) recordBashResultAt(command string, result BashResult, exc
 	// D438: decide and append under the lock that installs a run, so a run cannot
 	// start between "idle" and the append, and two appends land in the same
 	// order in the agent's transcript and the session file.
+	// The entry order is fixed under the lock; the synchronous file write (a
+	// session with no write queue) runs after it is released (A483).
 	state := s.prompt()
+	defer s.Sessions.FlushHeldWrites()
 	state.mu.Lock()
 	defer state.mu.Unlock()
 	if state.runActive || s.Agent.State().IsStreaming {
@@ -117,7 +120,14 @@ func (s *AgentSession) recordBashResultAt(command string, result BashResult, exc
 		s.bashMu.Unlock()
 		return
 	}
-	s.appendBashMessage(message)
+	s.appendBashMessageHeld(message)
+}
+
+// appendBashMessageHeld is appendBashMessage for a caller holding the
+// prompt-state lock: the caller flushes the held file write after unlocking.
+func (s *AgentSession) appendBashMessageHeld(message *ai.CustomMessage) {
+	s.Agent.AppendMessages(message)
+	s.Sessions.AppendMessageHeld(message)
 }
 
 // appendBashMessage adds a bash message to agent state and session history.

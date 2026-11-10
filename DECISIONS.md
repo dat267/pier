@@ -6735,7 +6735,11 @@ the session look idle between the winner's agent runs (its follow-ups and
 retries, where the agent itself is not streaming). Bash results and idle custom
 messages decide "append now or defer to the run" and append, to the agent
 transcript and then the session, under that same lock, so a run cannot start in
-between and two appends land in the same order in memory and on disk. The run's
+between and two appends land in the same order in memory and on disk. Only the
+entry's place is fixed under the lock: on a session with no write queue the
+synchronous file write is held and made after the unlock, and any other
+synchronous write makes the held ones first, so the file keeps that order
+(A483). The run's
 end delivers anything deferred after its own flush before clearing the flag.
 A prompt flushes deferred messages only while idle, under the same lock. Tree
 navigation claims the session under it too, so a run and a navigation never
@@ -6746,4 +6750,6 @@ Tests: `TestAgentSessionConcurrentAPIKeepsTranscriptAndPersistenceInStep`
 (the transcript and the session file diverged in about 8 runs in 20 before),
 `TestAgentSessionConcurrentHeavyAPIKeepsTranscriptAndPersistenceInStep`
 (compaction, navigation and tool changes mixed in) and
-`TestALosingRunStartLeavesTheActiveRunsState`.
+`TestALosingRunStartLeavesTheActiveRunsState`;
+`TestIdleBashAppendWritesTheSessionFileOutsideTheRunLock` and
+`TestHeldSessionWriteKeepsFileOrder` for the held write.

@@ -44,6 +44,11 @@ type SessionManager struct {
 	hasConversationCached bool
 	hasConversationKnown  bool
 	writeState            *sessionWriteState
+	// holdWrite is set for the duration of one held append (under mu), and
+	// heldWrites are the synchronous file writes those appends left for
+	// FlushHeldWrites; see AppendMessageHeld (A483).
+	holdWrite  bool
+	heldWrites []heldSessionWrite
 
 	// writeQueue, when wired, carries the file writes (offloop); nil keeps
 	// them synchronous. See SessionManagerOptions.WriteQueue.
@@ -481,7 +486,7 @@ func (m *SessionManager) rewriteFile() {
 	}
 	path, state := m.sessionFile, m.writeState
 	if m.writeQueue == nil {
-		m.recordWriteResult(path, "rewrite", state.rewrite(path, m.fileEntries))
+		m.syncWrite(heldSessionWrite{path: path, state: state, rewrite: true, entries: m.fileEntries[:len(m.fileEntries):len(m.fileEntries)]})
 		return
 	}
 	// Snapshot under the manager lock; the worker serializes and writes in
@@ -587,12 +592,63 @@ func (m *SessionManager) appendLine(entry *SessionEntry) {
 	// New sessions/branches replace the slice and write state, so an old worker
 	// cannot apply its completion to a replacement session.
 	snapshot := m.fileEntries[:len(m.fileEntries):len(m.fileEntries)]
-	write := func() { m.recordWriteResult(path, "append", state.append(path, line, marshalErr, snapshot)) }
 	if m.writeQueue == nil {
-		write()
+		m.syncWrite(heldSessionWrite{path: path, state: state, line: line, marshalErr: marshalErr, entries: snapshot})
 		return
 	}
-	m.writeQueue.Go(write)
+	m.writeQueue.Go(func() { m.recordWriteResult(path, "append", state.append(path, line, marshalErr, snapshot)) })
+}
+
+// heldSessionWrite is one synchronous file write (no write queue wired),
+// captured under mu so it can run after the caller's own lock is released.
+type heldSessionWrite struct {
+	path       string
+	state      *sessionWriteState
+	rewrite    bool
+	line       string
+	marshalErr error
+	entries    []FileEntry
+}
+
+func (m *SessionManager) runWrite(write heldSessionWrite) {
+	if write.rewrite {
+		m.recordWriteResult(write.path, "rewrite", write.state.rewrite(write.path, write.entries))
+		return
+	}
+	m.recordWriteResult(write.path, "append", write.state.append(write.path, write.line, write.marshalErr, write.entries))
+}
+
+// syncWrite performs a synchronous write, or leaves it for FlushHeldWrites
+// when the append asked to hold it. Writes held earlier always go first, so
+// the file keeps the order of the entries whoever writes next. The caller
+// holds mu.
+func (m *SessionManager) syncWrite(write heldSessionWrite) {
+	if m.holdWrite {
+		m.heldWrites = append(m.heldWrites, write)
+		return
+	}
+	m.runHeldWrites()
+	m.runWrite(write)
+}
+
+// runHeldWrites performs the held writes in order. The caller holds mu.
+func (m *SessionManager) runHeldWrites() {
+	held := m.heldWrites
+	m.heldWrites = nil
+	for _, write := range held {
+		m.runWrite(write)
+	}
+}
+
+// FlushHeldWrites performs the file writes that AppendMessageHeld and
+// AppendCustomMessageEntryHeld left pending. It is cheap when there are none.
+func (m *SessionManager) FlushHeldWrites() {
+	if m == nil {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.runHeldWrites()
 }
 
 func (m *SessionManager) appendEntry(entry *SessionEntry) string {
@@ -628,8 +684,24 @@ func (m *SessionManager) nextEntry(entryType string) SessionEntry {
 
 // AppendMessage appends a message as a child of the current leaf.
 func (m *SessionManager) AppendMessage(message ai.Message) string {
+	return m.appendMessage(message, false)
+}
+
+// AppendMessageHeld appends like AppendMessage, but with no write queue wired
+// it leaves the synchronous file write for FlushHeldWrites. A caller that
+// appends under its own lock uses it to keep the entry order decided under
+// that lock without holding the lock across disk I/O (A483); it must call
+// FlushHeldWrites once it has unlocked. Any other synchronous write performs
+// the held ones first, so the file order never changes.
+func (m *SessionManager) AppendMessageHeld(message ai.Message) string {
+	return m.appendMessage(message, true)
+}
+
+func (m *SessionManager) appendMessage(message ai.Message, hold bool) string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	m.holdWrite = hold
+	defer func() { m.holdWrite = false }()
 	encoded, err := ai.MarshalMessage(message)
 	if err != nil {
 		panic(err)
@@ -758,8 +830,20 @@ func (m *SessionManager) GetSessionName() string {
 
 // AppendCustomMessageEntry appends an LLM-context custom message entry.
 func (m *SessionManager) AppendCustomMessageEntry(customType string, content json.RawMessage, display bool, details json.RawMessage) string {
+	return m.appendCustomMessageEntry(customType, content, display, details, false)
+}
+
+// AppendCustomMessageEntryHeld is AppendCustomMessageEntry with the file
+// write held for FlushHeldWrites; see AppendMessageHeld.
+func (m *SessionManager) AppendCustomMessageEntryHeld(customType string, content json.RawMessage, display bool, details json.RawMessage) string {
+	return m.appendCustomMessageEntry(customType, content, display, details, true)
+}
+
+func (m *SessionManager) appendCustomMessageEntry(customType string, content json.RawMessage, display bool, details json.RawMessage, hold bool) string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	m.holdWrite = hold
+	defer func() { m.holdWrite = false }()
 	entry := m.nextEntry("custom_message")
 	entry.CustomType = customType
 	entry.Content = content

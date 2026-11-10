@@ -114,7 +114,7 @@ func (s *sessionWriteState) append(path, line string, marshalErr error, entries 
 	}
 	err := marshalErr
 	if err == nil {
-		err = writeSessionLine(path, line)
+		err = sessionLineWriter(path, line)
 	}
 	s.initialized = err == nil
 	return err
@@ -153,6 +153,9 @@ func marshalSessionEntries(entries []FileEntry) ([]byte, error) {
 	}
 	return []byte(buffer.String()), nil
 }
+
+// sessionLineWriter is writeSessionLine; a test replaces it to observe a write.
+var sessionLineWriter = writeSessionLine
 
 // writeSessionLine appends one pre-marshaled line, including close failures.
 func writeSessionLine(path string, line string) error {

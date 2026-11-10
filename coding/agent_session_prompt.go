@@ -391,6 +391,7 @@ func (s *AgentSession) startAgentPrompt(ctx context.Context, messages []ai.Messa
 	// deferred to it; deliver it now, before a new run can start.
 	lateCustom := s.flushDeferredLocked(state)
 	state.mu.Unlock()
+	s.Sessions.FlushHeldWrites()
 	for _, message := range lateCustom {
 		s.emitCustomMessage(message)
 	}
@@ -428,6 +429,7 @@ func (s *AgentSession) flushDeferredIfIdle() {
 	}
 	custom := s.flushDeferredLocked(state)
 	state.mu.Unlock()
+	s.Sessions.FlushHeldWrites()
 	for _, message := range custom {
 		s.emitCustomMessage(message)
 	}
@@ -435,19 +437,20 @@ func (s *AgentSession) flushDeferredIfIdle() {
 
 // flushDeferredLocked appends the bash and custom messages deferred to the
 // run and returns the custom ones for the caller to emit after unlocking.
-// The caller holds state.mu.
+// The caller holds state.mu and calls Sessions.FlushHeldWrites after
+// unlocking: the appends leave their synchronous file writes for it (A483).
 func (s *AgentSession) flushDeferredLocked(state *promptState) []*ai.CustomMessage {
 	s.bashMu.Lock()
 	bash := s.pendingBashMessages
 	s.pendingBashMessages = nil
 	s.bashMu.Unlock()
 	for _, message := range bash {
-		s.appendBashMessage(message)
+		s.appendBashMessageHeld(message)
 	}
 	custom := state.pendingCustomMessages
 	state.pendingCustomMessages = nil
 	for _, message := range custom {
-		s.appendCustomMessageEntry(message)
+		s.appendCustomMessageEntry(message, true)
 	}
 	return custom
 }
@@ -561,8 +564,9 @@ func (s *AgentSession) SendMessage(ctx context.Context, message *ai.CustomMessag
 			state.mu.Unlock()
 			return nil
 		}
-		s.appendCustomMessageEntry(message)
+		s.appendCustomMessageEntry(message, true)
 		state.mu.Unlock()
+		s.Sessions.FlushHeldWrites()
 		s.emitCustomMessage(message)
 		return nil
 	}
@@ -570,20 +574,26 @@ func (s *AgentSession) SendMessage(ctx context.Context, message *ai.CustomMessag
 
 // AppendCustomMessage appends a custom message to the transcript and session.
 func (s *AgentSession) AppendCustomMessage(message *ai.CustomMessage) {
-	s.appendCustomMessageEntry(message)
+	s.appendCustomMessageEntry(message, false)
 	s.emitCustomMessage(message)
 }
 
 // appendCustomMessageEntry adds the message to the agent transcript and the
 // session; it calls no listeners, so it may run under the prompt-state lock.
-func (s *AgentSession) appendCustomMessageEntry(message *ai.CustomMessage) {
+// Such a caller passes held and calls Sessions.FlushHeldWrites after
+// unlocking, so the synchronous file write is not made under the lock (A483).
+func (s *AgentSession) appendCustomMessageEntry(message *ai.CustomMessage, held bool) {
 	s.Agent.AppendMessages(message)
+	customType, content, display, details := message.Role, message.Content, false, json.RawMessage(nil)
 	var fields customMessageFields
 	if err := json.Unmarshal(message.Content, &fields); err == nil && fields.CustomType != "" {
-		s.Sessions.AppendCustomMessageEntry(fields.CustomType, fields.Content, fields.Display, fields.Details)
-	} else {
-		s.Sessions.AppendCustomMessageEntry(message.Role, message.Content, false, nil)
+		customType, content, display, details = fields.CustomType, fields.Content, fields.Display, fields.Details
 	}
+	if held {
+		s.Sessions.AppendCustomMessageEntryHeld(customType, content, display, details)
+		return
+	}
+	s.Sessions.AppendCustomMessageEntry(customType, content, display, details)
 }
 
 // emitCustomMessage publishes an appended custom message to listeners.
