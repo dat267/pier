@@ -5,6 +5,8 @@
 # shuffled run only catches when the dependent test happens to run first.
 #
 # Usage: scripts/test_isolated.sh [packages...]   (default: ./...)
+# COUNT=2 runs each test twice in its process, so one that leaves global state
+# behind (a sync.Once, a package default) fails its own second run.
 set -euo pipefail
 
 jobs=${JOBS:-8}
@@ -20,8 +22,8 @@ for package in "${packages[@]}"; do
 	failures="$work/failures"
 	: >"$failures"
 	(cd "$dir" && "$binary" -test.list '^Test' | grep '^Test' || true) |
-		xargs -r -P "$jobs" -I{} bash -c \
-			'cd "$1" && PIER_LEAKCHECK=off "$2" -test.run "^$3\$" -test.short -test.count=1 >/dev/null 2>&1 || echo "$3" >>"$4"' \
+		xargs -r -P "$jobs" -I{} env COUNT="${COUNT:-1}" bash -c \
+			'cd "$1" && PIER_LEAKCHECK=off "$2" -test.run "^$3\$" -test.short -test.count=${COUNT:-1} >/dev/null 2>&1 || echo "$3" >>"$4"' \
 			_ "$dir" "$binary" {} "$failures"
 	if [[ -s $failures ]]; then
 		failed=1
