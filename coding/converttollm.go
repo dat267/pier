@@ -218,9 +218,15 @@ func convertCustomMessage(msg *ai.CustomMessage) ai.Message {
 
 // customContentToBlocks normalizes string|blocks content to blocks.
 func customContentToBlocks(content json.RawMessage) ai.StringOrBlocks {
-	var text string
-	if err := json.Unmarshal(content, &text); err == nil {
-		return ai.StringOrBlocks{Blocks: ai.ContentList{ai.TextContent{Text: text}}}
+	// The reference branches on `typeof content === "string"`, so only a JSON
+	// string is text: encoding/json decodes a null into a Go string as "" without
+	// an error, which would add an empty text block the reference never emits
+	// (D430).
+	if len(content) > 0 && content[0] == '"' {
+		var text string
+		if err := json.Unmarshal(content, &text); err == nil {
+			return ai.StringOrBlocks{Blocks: ai.ContentList{ai.TextContent{Text: text}}}
+		}
 	}
 	var list ai.ContentList
 	if err := json.Unmarshal(content, &list); err == nil {

@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D429)
+# Deliberate divergences from pi (D1–D430)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6494,3 +6494,27 @@ error: a `type` of `null` previously produced the single type name `""`.
 Tests: `TestSchemaTypesKeepsStringsFromAMixedArray` and
 `TestMixedTypeArrayIsAStructuredUnion`, whose plain-object variant is the
 control that both implementations reject.
+
+### D430
+
+**Only a JSON string becomes a text block for custom-message content.**
+
+Reference: `packages/coding-agent/src/core/messages.ts` (pi v1.5.0,
+`f9a26365`), line 163:
+`typeof m.content === "string" ? [{type:"text", text: m.content}] : m.content`.
+`typeof null === "object"`, so a null content passes through and adds nothing.
+
+The port decoded the member into a Go string first, and `encoding/json` decodes
+a JSON `null` into a string as `""` without an error, so a null content became
+one empty text block: `ConvertToLlm` on `{"customType":"note","content":null}`
+produced `[{"type":"text","text":""}]` where the reference produces no block.
+That stray block reached every following request.
+
+`customContentToBlocks` now requires the raw member to start with a quote before
+treating it as string content, then falls through to the block path and finally
+to the raw-text fallback. An empty string is still string content, as it is
+upstream.
+
+Tests: `TestCustomContentNullAddsNoBlock` (null, empty string, plain string and
+block content) and `TestCustomMessageNullContentReachesNoBlock` (the converted
+request carries no block).
