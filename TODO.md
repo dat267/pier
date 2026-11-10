@@ -47,3 +47,33 @@
 - Verification: a test asserting `state.mu` is not held across the append (a
   concurrent acquirer must not stall) AND D438's ordering test green at
   `-count=10`. The naive fix satisfies the first and fails the second.
+
+## A484 persistEntry re-decodes every entry before the first conversation message
+
+- Severity: medium (`AppendMessage` cost grew 5.8x across 1200 appends, all of
+  it under `SessionManager.mu`; the same lock an idle bash append holds, so it
+  compounds A483).
+- Where: `coding/session_manager.go` `persistEntry` -> `hasConversation`.
+- Port: `persistEntry` calls `hasConversation()` on **every** append while
+  `writeStarted` is false, and `hasConversation` walks all of `fileEntries`,
+  `json.Unmarshal`-ing each message's JSON to read its role. A session that
+  has not yet seen a user or assistant message therefore pays O(n) per append,
+  O(n^2) overall.
+- Evidence: 1200 `AppendMessage` calls of a bash-execution message (a
+  `message` entry whose role is neither user nor assistant, so the scan never
+  short-circuits): first 200 appends 29.8ms, last 200 appends 173.0ms, **5.8x**.
+  Isolated, `hasConversation` alone measured 899us at 900-1200 entries.
+- Authority: pi v1.5.0 `f9a26365` `core/session-manager.ts:1167`
+  `_hasConversation` reads `e.message.role` from the already-parsed entry, so
+  it never decodes; the scan is linear in the array with no per-entry parse.
+  Local invariant: one append's cost must not grow with entries already
+  appended.
+- Cause: the port keeps entries as raw JSON, so reading a role needs a decode,
+  and the decision was recomputed instead of remembered.
+- Fix: memoize the answer, kept exact incrementally. An entry that starts a
+  conversation sets it true; any other entry leaves the previous answer
+  correct, because the scan only looks for a user or assistant message. Bulk
+  changes (reset, load) invalidate.
+- Verification: `TestAppendCostDoesNotGrowBeforeFirstConversation` (5.8x before,
+  flat after), `TestConversationMemoMatchesAFreshScan` (ordering and
+  late-first-message cases), `TestConversationMemoRefreshesOnLoad`.

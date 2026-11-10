@@ -36,7 +36,14 @@ type SessionManager struct {
 	persist     bool
 	// writeStarted tracks admission of the initial rewrite, not disk success.
 	writeStarted bool
-	writeState   *sessionWriteState
+	// hasConversationCached memoizes hasConversation so persistEntry does not
+	// re-decode every entry on each append before the first user or assistant
+	// message exists (A484). It is exact, not a hint: only a "message" entry can
+	// start a conversation, so appendEntry recomputes it for those and leaves it
+	// alone for every other type.
+	hasConversationCached bool
+	hasConversationKnown  bool
+	writeState            *sessionWriteState
 
 	// writeQueue, when wired, carries the file writes (offloop); nil keeps
 	// them synchronous. See SessionManagerOptions.WriteQueue.
@@ -220,6 +227,7 @@ func (m *SessionManager) NewSession(options *NewSessionOptions) string {
 	m.cacheScanPending = nil
 	m.writeStarted = false
 	m.writeState = &sessionWriteState{}
+	m.invalidateConversationMemo()
 
 	if m.persist {
 		fileTimestamp := sessionFileTimestamp(timestamp)
@@ -372,9 +380,11 @@ func (m *SessionManager) loadEntries(entries []FileEntry, options *NewSessionOpt
 		if migrateToCurrentVersion(m.fileEntries) {
 			m.rewriteFile()
 		}
+		m.invalidateConversationMemo()
 	} else {
 		m.NewSession(options)
 		m.fileEntries = append(m.fileEntries, entries...)
+		m.invalidateConversationMemo()
 	}
 	m.buildIndex()
 }
@@ -516,19 +526,39 @@ func (m *SessionManager) GetSessionFile() string { return m.sessionFile }
 // at the user message keeps the prompt on disk if the first turn never
 // completes (upstream _hasConversation, ff72faba2).
 func (m *SessionManager) hasConversation() bool {
+	if m.hasConversationKnown {
+		return m.hasConversationCached
+	}
+	found := false
 	for i := range m.fileEntries {
-		e := m.fileEntries[i].Entry
-		if e == nil || e.Type != "message" {
-			continue
-		}
-		var msg struct {
-			Role string `json:"role"`
-		}
-		if json.Unmarshal(e.Message, &msg) == nil && (msg.Role == "user" || msg.Role == "assistant") {
-			return true
+		if entry := m.fileEntries[i].Entry; entry != nil && entryStartsConversation(entry) {
+			found = true
+			break
 		}
 	}
-	return false
+	m.hasConversationCached, m.hasConversationKnown = found, true
+	return found
+}
+
+// entryStartsConversation reports whether the entry is a user or assistant
+// message, the condition that creates the session file (upstream
+// session-manager.ts:1167 reads e.message.role from the parsed entry, so it
+// never decodes).
+func entryStartsConversation(entry *SessionEntry) bool {
+	if entry.Type != "message" {
+		return false
+	}
+	var msg struct {
+		Role string `json:"role"`
+	}
+	return json.Unmarshal(entry.Message, &msg) == nil && (msg.Role == "user" || msg.Role == "assistant")
+}
+
+// invalidateConversationMemo drops the memo after a bulk change to
+// fileEntries.
+func (m *SessionManager) invalidateConversationMemo() {
+	m.hasConversationKnown = false
+	m.hasConversationCached = false
 }
 
 // persistEntry writes the entry, honoring the flush-on-first-conversation
@@ -574,6 +604,13 @@ func (m *SessionManager) appendEntry(entry *SessionEntry) string {
 		m.cacheScanPending = append(m.cacheScanPending, entry)
 	} else {
 		m.cacheScan.consume(entry)
+	}
+	// A484: keep the conversation memo exact without rescanning. An entry that
+	// starts a conversation makes the answer true from here on; any other entry
+	// leaves the previous answer correct, because the scan only ever looks for
+	// a user or assistant message.
+	if entryStartsConversation(entry) {
+		m.hasConversationCached, m.hasConversationKnown = true, true
 	}
 	m.persistEntry(entry)
 	return entry.ID
