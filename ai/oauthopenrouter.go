@@ -206,8 +206,11 @@ func StartOpenRouterCallbackServer(callbackPath, verifier string, ctx context.Co
 		callback.credential = credential
 		callback.waitErr = waitErr
 		callback.mu.Unlock()
-		callback.stopListening()
 		close(callback.done)
+		// finish runs inside the callback handler, whose own connection keeps
+		// a synchronous Shutdown waiting until its timeout. Upstream's finish
+		// only settles; stop the server without holding up the response.
+		go callback.stopListening()
 	}
 
 	mux := http.NewServeMux()
