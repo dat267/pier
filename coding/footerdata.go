@@ -72,7 +72,11 @@ func NewFooterDataProvider(cwd string, options FooterDataProviderOptions) *Foote
 		if interval > 0 {
 			provider.stopWatch = make(chan struct{})
 			provider.watchDone = make(chan struct{})
-			go provider.watchLoop(provider.stopWatch, provider.watchDone, interval)
+			// The baseline is read here, not in the goroutine: a switch made
+			// before the scheduler first runs it must still differ from it
+			// (A482).
+			baseline := provider.readGitState()
+			go provider.watchLoop(provider.stopWatch, provider.watchDone, interval, baseline)
 		}
 	}
 	return provider
@@ -235,13 +239,16 @@ func (f *FooterDataProvider) Refresh() {
 	}
 }
 
-// watchLoop polls the git state. The channels are passed in because Dispose
-// nils the fields (a double dispose must not close a nil channel).
-func (f *FooterDataProvider) watchLoop(stopWatch, watchDone chan struct{}, interval time.Duration) {
+// watchLoop polls the git state against lastState, the state when the
+// provider was created. The channels are passed in because Dispose nils the
+// fields (a double dispose must not close a nil channel).
+func (f *FooterDataProvider) watchLoop(stopWatch, watchDone chan struct{}, interval time.Duration, lastState string) {
 	defer close(watchDone)
+	if footerWatchStartHook != nil {
+		footerWatchStartHook()
+	}
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
-	lastState := f.readGitState()
 	for {
 		select {
 		case <-stopWatch:
@@ -256,6 +263,11 @@ func (f *FooterDataProvider) watchLoop(stopWatch, watchDone chan struct{}, inter
 		}
 	}
 }
+
+// footerWatchStartHook runs when a watcher goroutine starts, before it does
+// anything else. Nil outside tests, which use it to hold the goroutine back the
+// way a busy scheduler can.
+var footerWatchStartHook func()
 
 // readGitState returns the git files the footer derives its branch from: HEAD
 // and, in a reftable repository, the table list. Upstream watches both

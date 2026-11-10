@@ -30,6 +30,33 @@ func TestFooterDataProviderSeesBranchSwitchInReftableRepo(t *testing.T) {
 	waitForBranch(t, provider, "feature")
 }
 
+// A switch made before the watcher goroutine first runs is still seen: the
+// baseline the poll compares against is the state at construction, like
+// upstream's fs.watch, which is armed synchronously in the constructor
+// (core/footer-data-provider.ts). Taking it when the goroutine started missed
+// the switch whenever the scheduler ran the goroutine late (A482: one CPU or a
+// loaded machine), and the footer kept the startup branch.
+func TestFooterDataProviderSeesASwitchMadeBeforeTheWatcherRuns(t *testing.T) {
+	for _, format := range []string{"files", "reftable"} {
+		t.Run(format, func(t *testing.T) {
+			dir, run := newGitRepo(t, format)
+			release := make(chan struct{})
+			started := make(chan struct{})
+			footerWatchStartHook = func() { close(started); <-release }
+			t.Cleanup(func() { footerWatchStartHook = nil })
+			provider := NewFooterDataProvider(dir, FooterDataProviderOptions{PollIntervalMS: 20})
+			defer provider.Dispose()
+			if branch, ok := provider.GetGitBranch(); !ok || branch == "" {
+				t.Fatalf("initial branch = %q, %v; want a name", branch, ok)
+			}
+			<-started
+			run("switch", "-q", "-c", "feature")
+			close(release)
+			waitForBranch(t, provider, "feature")
+		})
+	}
+}
+
 // TestFooterDataProviderSeesBranchSwitchInFilesRepo is the control for the
 // reftable case: with the files ref backend HEAD itself names the branch, and
 // the same watcher follows a switch.
