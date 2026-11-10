@@ -6782,7 +6782,14 @@ This mattered most for older files: opening a v1/v2-format session migrates and
 rewrites it, so the dropped entries were deleted from the user's file rather
 than only hidden.
 
+A tool definition carries its own `UnmarshalJSON`, so the rule reaches
+`Tool` and `ConstrainedSamplingConfig` too: one tool with a surrogate in its
+description otherwise fails its whole system message, dropping the tool set from
+the replay.
+
 Test: `TestLoneSurrogateEntrySurvivesMigration` (the entry is gone from the
 rewritten file without the options), `TestLoneSurrogateMessageReachesProjection`
-(the projected message count is short without them) and
-`TestDuplicateMemberNameEntrySurvivesLoad`.
+(the projected message count is short without them),
+`TestDuplicateMemberNameEntrySurvivesLoad`,
+`TestSystemMessageKeepsToolWithLoneSurrogate` and
+`TestToolConstrainedSamplingAcceptsLoneSurrogate`.

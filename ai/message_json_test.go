@@ -385,3 +385,36 @@ func TestMarshalMessageKeepsRoleFirst(t *testing.T) {
 		t.Fatalf("nil message = %s (%v)", nilEnc, err)
 	}
 }
+
+// Reference: pi v1.5.0 (f9a26365) reads session lines with JSON.parse, which
+// accepts an unpaired surrogate escape inside a tool definition. json/v2 rejects
+// it by default, and Tool has its own UnmarshalJSON, so one such tool took the
+// whole system message (and its tool set) down with it (A486, D439).
+func TestSystemMessageKeepsToolWithLoneSurrogate(t *testing.T) {
+	data := json.RawMessage(`{"role":"system","content":[{"type":"text","text":"sys"}],` +
+		`"toolsAdded":[{"name":"t","description":"\ud83d","parameters":{"type":"object"}}]}`)
+	var m SystemMessage
+	if err := json.Unmarshal(data, &m); err != nil {
+		t.Fatalf("a tool description with a lone surrogate failed the whole system message: %v", err)
+	}
+	if len(m.ToolsAdded) != 1 || m.ToolsAdded[0].Name != "t" {
+		t.Fatalf("tools added = %d, want the one tool", len(m.ToolsAdded))
+	}
+}
+
+// The same rule reaches a tool's constrained-sampling config.
+func TestToolConstrainedSamplingAcceptsLoneSurrogate(t *testing.T) {
+	raw := json.RawMessage(`{"name":"c","description":"x","parameters":{"type":"object"},` +
+		`"constrainedSampling":{"type":"json_schema","strict":"prefer"}}`)
+	var tool Tool
+	if err := json.Unmarshal(raw, &tool); err != nil {
+		t.Fatalf("tool with constrained sampling: %v", err)
+	}
+	var cfg ConstrainedSamplingConfig
+	if err := json.Unmarshal([]byte(`{"type":"grammar","variants":{"v":"\ud83d"}}`), &cfg); err != nil {
+		t.Fatalf("constrained sampling with a lone surrogate: %v", err)
+	}
+	if cfg.Variants["v"] == "" {
+		t.Fatalf("variant text was dropped: %#v", cfg.Variants)
+	}
+}
