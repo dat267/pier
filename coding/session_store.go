@@ -655,6 +655,17 @@ func scanJSONNumberAt(s []byte, i int) (int, bool) {
 func scanJSONStringStrict(s []byte, start int) (int, bool) {
 	i := start + 1
 	for i < len(s) {
+		// Most string bytes are ASCII that cannot end the string, start an
+		// escape or be a control byte; skip them a word at a time (D425). This
+		// scan runs twice per message body (shell, then listing), 233 MB per
+		// large session, and a byte-at-a-time switch there was 54.6% of the
+		// listing profile.
+		if n := scanJSONStringPlainRun(s[i:]); n > 0 {
+			i += n
+			if i >= len(s) {
+				return 0, false
+			}
+		}
 		switch c := s[i]; {
 		case c == '"':
 			return i + 1, true
@@ -687,6 +698,46 @@ func scanJSONStringStrict(s []byte, start int) (int, bool) {
 		}
 	}
 	return 0, false
+}
+
+// scanJSONStringPlainRun returns the length of the run of bytes at the start
+// of s that can appear inside a JSON string without change: no quote, no
+// backslash, no control byte. Any byte >= 0x80 counts as plain, matching the
+// byte-at-a-time scan this replaces (invalid UTF-8 in a string is the decoder's
+// business, exactly as before).
+func scanJSONStringPlainRun(s []byte) int {
+	i := 0
+	for ; i+8 <= len(s); i += 8 {
+		word := binary.LittleEndian.Uint64(s[i:])
+		if hasJSONStringSpecialByte(word) {
+			break
+		}
+	}
+	for ; i < len(s); i++ {
+		c := s[i]
+		if c == '"' || c == '\\' || c < 0x20 {
+			break
+		}
+	}
+	return i
+}
+
+// hasJSONStringSpecialByte reports whether any byte of word is a quote, a
+// backslash or a control byte (< 0x20). Byte values 0x20-0x7f other than the
+// quote and backslash are plain.
+func hasJSONStringSpecialByte(word uint64) bool {
+	// A zero byte in b^0x22 marks a quote; in b^0x5c a backslash.
+	if hasZeroByte(word^0x2222222222222222) || hasZeroByte(word^0x5c5c5c5c5c5c5c5c) {
+		return true
+	}
+	// A byte < 0x20 has its high three bits clear.
+	return hasZeroByte(word & 0xe0e0e0e0e0e0e0e0)
+}
+
+// hasZeroByte reports whether word contains a zero byte.
+func hasZeroByte(word uint64) bool {
+	const ones = 0x0101010101010101
+	return (word-ones)&^word&0x8080808080808080 != 0
 }
 
 // parallelSessionScanBytes is the session size above which the metadata scan

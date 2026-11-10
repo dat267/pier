@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D424)
+# Deliberate divergences from pi (D1–D425)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6341,3 +6341,41 @@ cases in `coding/testdata/truncate`, regenerated from the pinned functions by
 `coding/testdata/truncate/generate.mjs`. The negative cases run over non-empty
 content only: the reference reads `lines[0]` before its loop, so an empty
 content throws there.
+
+### D425
+
+**The session-listing string scan skips plain runs a word at a time.**
+
+Reference: `packages/coding-agent/src/core/session-manager.ts` (pi v1.5.0,
+`f9a26365`), `parseSessionEntryLine` over `JSON.parse`, and
+`buildSessionInfosWithConcurrency` with `MAX_CONCURRENT_SESSION_INFO_LOADS = 10`.
+
+The reference parses each line once, in V8's native JSON parser. The port's
+`scanSessionLine` shells the line and hands the message body to
+`scanListingMessage`, so every message body is scanned twice; on a 260 MB
+session that is 466 MB of string scanning. `scanJSONStringStrict` did it one
+byte at a time with a four-way `switch`, which was 54.6% of the CPU profile of
+the listing path.
+
+`scanJSONStringStrict` now skips runs of plain bytes eight at a time with
+`scanJSONStringPlainRun` and only enters the byte-at-a-time `switch` at a quote,
+a backslash or a control byte. `hasZeroByte` finds those with the usual
+`(word-ones)&^word&0x80..` test; a control byte is detected by its high three
+bits being clear. The accept set is unchanged: any byte >= 0x80 is still plain,
+and invalid UTF-8 in a string is still left to the decoder, as
+`scanPlainStringBytes` already did.
+
+Measured on the real corpus under `~/.pi/agent/sessions` (60 files, 503 MB):
+
+- one 260 MB session, single file: reference 939-998 ms, port 1143-1176 ms
+  before, 942-963 ms after;
+- whole corpus: reference 1952-1976 ms, port 2214 ms before, 1777-1785 ms
+  after.
+
+`BenchmarkSessionJSONStringScanStrict` reports 737 MB/s before and 2023 MB/s
+after on the same input.
+
+Tests: `TestSessionJSONStringScanMatchesStrictScan` pins the two scanners to the
+same accept set and result, `TestSessionScanAcceptsOnlyValidJSON` and
+`FuzzSessionScanAcceptsOnlyValidJSON` pin the shell against `encoding/json`, and
+`TestScanSessionIndexEquivalence` pins the full-file scan.
