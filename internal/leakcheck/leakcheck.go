@@ -20,6 +20,9 @@ import (
 	"time"
 )
 
+// childMarker is set in the environment of a checked test binary.
+const childMarker = "PIER_LEAKCHECK_PARENT"
+
 // grace is how long Run waits for goroutines that are already ending.
 var grace = 3 * time.Second
 
@@ -43,8 +46,17 @@ var ignoredFrames = []string{
 // Run runs the tests and returns their exit code, or 1 when they passed but
 // left goroutines running. Set PIER_LEAKCHECK=off to skip the check, or
 // PIER_LEAKCHECK=warn to report leaks without failing.
+//
+// A test binary that another one started (a helper re-running the binary as
+// the CLI) is not checked: its goroutines die with it and the parent judges
+// only the child's output and exit code.
 func Run(m *testing.M) int {
 	mode := os.Getenv("PIER_LEAKCHECK")
+	if os.Getenv(childMarker) == "1" {
+		mode = "off"
+	}
+	// Children inherit the environment, so they see they are children.
+	_ = os.Setenv(childMarker, "1")
 	before := goroutineIDs(stacks())
 	code := m.Run()
 	if code != 0 || mode == "off" {

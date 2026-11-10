@@ -15,6 +15,7 @@ import (
 
 func TestQueueRunsTasksInSubmissionOrder(t *testing.T) {
 	q := New()
+	t.Cleanup(q.Stop)
 	var mu sync.Mutex
 	var order []int
 	for i := range 50 {
@@ -36,6 +37,7 @@ func TestQueueRunsTasksInSubmissionOrder(t *testing.T) {
 
 func TestQueueCoalescesSameKeyWhileTaskRuns(t *testing.T) {
 	q := New()
+	t.Cleanup(q.Stop)
 	release := make(chan struct{})
 	var ran atomic.Int32
 	q.GoCoalesced("paste", func() {
@@ -61,6 +63,7 @@ func TestQueueCoalescesSameKeyWhileTaskRuns(t *testing.T) {
 
 func TestQueueFlushWaitsForRunningTask(t *testing.T) {
 	q := New()
+	t.Cleanup(q.Stop)
 	var done atomic.Bool
 	q.Go(func() {
 		time.Sleep(20 * time.Millisecond)
@@ -74,6 +77,7 @@ func TestQueueFlushWaitsForRunningTask(t *testing.T) {
 
 func TestQueueStopRejectsNewTasksButDrainsQueued(t *testing.T) {
 	q := New()
+	t.Cleanup(q.Stop)
 	var ran atomic.Int32
 	q.Go(func() { ran.Add(1) })
 	q.Stop()
@@ -86,6 +90,7 @@ func TestQueueStopRejectsNewTasksButDrainsQueued(t *testing.T) {
 
 func TestQueueConcurrentSubmitsKeepOrderPerSubmission(t *testing.T) {
 	q := New()
+	t.Cleanup(q.Stop)
 	const n = 200
 	var counter atomic.Int64
 	var wg sync.WaitGroup

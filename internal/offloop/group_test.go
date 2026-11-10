@@ -14,6 +14,7 @@ import (
 
 func TestGroupFlushAllWaitsForEveryQueue(t *testing.T) {
 	g := NewGroup()
+	t.Cleanup(g.StopAll)
 	a, b := g.Queue(), g.Queue()
 	var done atomic.Int32
 	a.Go(func() {
@@ -32,6 +33,7 @@ func TestGroupFlushAllWaitsForEveryQueue(t *testing.T) {
 
 func TestGroupFlushAllDoesNotStopQueues(t *testing.T) {
 	g := NewGroup()
+	t.Cleanup(g.StopAll)
 	q := g.Queue()
 	g.FlushAll()
 	var ran atomic.Bool
@@ -44,6 +46,7 @@ func TestGroupFlushAllDoesNotStopQueues(t *testing.T) {
 
 func TestGroupStopAllStopsEveryQueue(t *testing.T) {
 	g := NewGroup()
+	t.Cleanup(g.StopAll)
 	a, b := g.Queue(), g.Queue()
 	var ran atomic.Int32
 	a.Go(func() { ran.Add(1) })
@@ -63,6 +66,7 @@ func TestGroupStopAllStopsEveryQueue(t *testing.T) {
 
 func TestGroupAddRegistersAnExistingQueue(t *testing.T) {
 	g := NewGroup()
+	t.Cleanup(g.StopAll)
 	q := New() // created outside the group
 	g.Add(q)
 	var ran atomic.Bool
@@ -75,6 +79,7 @@ func TestGroupAddRegistersAnExistingQueue(t *testing.T) {
 
 func TestGroupQueueCreatedAfterStopAllIsStopped(t *testing.T) {
 	g := NewGroup()
+	t.Cleanup(g.StopAll)
 	g.StopAll()
 	q := g.Queue()
 	var ran atomic.Bool
@@ -87,6 +92,7 @@ func TestGroupQueueCreatedAfterStopAllIsStopped(t *testing.T) {
 
 func TestGroupConcurrentQueueCreation(t *testing.T) {
 	g := NewGroup()
+	t.Cleanup(g.StopAll)
 	const n = 32
 	var wg sync.WaitGroup
 	var ran atomic.Int32
