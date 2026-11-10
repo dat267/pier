@@ -836,8 +836,12 @@ func (a *Agent) runWithLifecycle(ctx context.Context, executor func(ctx context.
 		a.state.StreamingMessage = nil
 		a.state.PendingToolCalls = map[string]bool{}
 		a.activeRun = nil
-		a.mu.Unlock()
+		// A481: delete the context entry in the same critical section that
+		// clears activeRun. Outside it, a run that starts in the window stores
+		// its own context and this Delete removes it, so a live run would see a
+		// nil runContext().
 		runContexts.Delete(a)
+		a.mu.Unlock()
 		cancel()
 		close(run.done)
 	}()

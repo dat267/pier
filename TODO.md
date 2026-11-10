@@ -127,29 +127,3 @@
 - Verification: a test asserting the link is present with capabilities on, the
   plain styled path with them off, and that a relative path resolves against
   `cwd`.
-
-## A481 a live run can lose its context to the previous run's teardown
-
-- Severity: high (a hook receives `nil`; `context.WithCancel(nil)` panics).
-- Where: `agent/agent.go:833-843`, the `runWithLifecycle` defer.
-- Port: the defer takes `a.mu`, resets state, clears `activeRun`, **unlocks**,
-  and only then calls `runContexts.Delete(a)`. A run that acquires `a.mu` in
-  that window stores its own context with `runContexts.Store`, and the older
-  run's `Delete` then removes it.
-- Consequence: `a.runContext()` (`:799-816`) returns `nil` for a run that is
-  live. The hook closures at `:752-773` pass that value to
-  `PrepareRequest`, `FinishTurn`, `ShouldStopAfterTurn` and
-  `PrepareNextTurn`; `maybeAutoCompact` forwards it to
-  `RunAutoCompaction`, which calls `context.WithCancel(ctx)`
-  (`coding/agent_session_compaction.go:362`) and panics with "cannot create
-  context from nil parent".
-- Evidence: 8 goroutines × 40k `runWithLifecycle` calls, executor checking
-  `a.runContext()`: `run context lost 91 times`; reproduced under `-race` with
-  no data-race report (a logical race, not a data race). Control: a single
-  sequential run never observes `nil`.
-- Cause: the teardown publishes `activeRun = nil` (allowing a successor) in one
-  critical section and removes the map entry outside it.
-- Fix: delete this run's context entry inside the same critical section that
-  clears `activeRun`, so no successor can be observed between them.
-- Verification: a regression test that observes `runContext() == nil` for a
-  live run; must fail before the change and pass after.
