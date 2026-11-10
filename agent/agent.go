@@ -265,6 +265,7 @@ func (q *pendingMessageQueue) getMode() QueueMode {
 }
 
 type activeRun struct {
+	ctx    context.Context
 	cancel context.CancelFunc
 	done   chan struct{}
 }
@@ -749,19 +750,23 @@ func (a *Agent) createLoopConfig(skipInitialSteeringPoll bool) *AgentLoopConfig 
 	if a.ThinkingBudgets != nil {
 		config.ThinkingBudgets = a.ThinkingBudgets
 	}
-	if a.PrepareRequest != nil {
+	// Upstream agent.ts createLoopConfig copies prepareRequest and finishTurn
+	// into the config, so the run keeps the hooks it started with; the
+	// closures capture them for the same reason (and so the loop never reads
+	// the public fields while a caller may assign them).
+	if prepareRequest := a.PrepareRequest; prepareRequest != nil {
 		config.PrepareRequest = func(request *PrepareRequestContext, ctx context.Context) (*AgentRequestUpdate, error) {
-			return a.PrepareRequest(request, a.runContext())
+			return prepareRequest(request, a.runContext())
 		}
 	}
-	if a.FinishTurn != nil {
+	if finishTurn := a.FinishTurn; finishTurn != nil {
 		config.FinishTurn = func(turn *AgentTurnContext, ctx context.Context) (*AgentTurnDecision, error) {
-			return a.FinishTurn(turn, a.runContext())
+			return finishTurn(turn, a.runContext())
 		}
 	}
-	if a.ShouldStopAfterTurn != nil {
+	if shouldStop := a.ShouldStopAfterTurn; shouldStop != nil {
 		config.ShouldStopAfterTurn = func(turn *AgentTurnContext) bool {
-			return a.ShouldStopAfterTurn(turn, a.runContext())
+			return shouldStop(turn, a.runContext())
 		}
 	}
 	if a.PrepareNextTurnWithContext != nil || a.PrepareNextTurn != nil {
@@ -802,17 +807,7 @@ func (a *Agent) runContext() context.Context {
 	if a.activeRun == nil {
 		return nil
 	}
-	// The cancel func doubles as the run's context source.
-	return runContextStore(a)
-}
-
-var runContexts sync.Map
-
-func runContextStore(a *Agent) context.Context {
-	if v, ok := runContexts.Load(a); ok {
-		return v.(context.Context)
-	}
-	return nil
+	return a.activeRun.ctx
 }
 
 func (a *Agent) runWithLifecycle(ctx context.Context, executor func(ctx context.Context) error) error {
@@ -822,9 +817,8 @@ func (a *Agent) runWithLifecycle(ctx context.Context, executor func(ctx context.
 		return fmt.Errorf("Agent is already processing.")
 	}
 	runCtx, cancel := context.WithCancel(contextOrBackground(ctx))
-	run := &activeRun{cancel: cancel, done: make(chan struct{})}
+	run := &activeRun{ctx: runCtx, cancel: cancel, done: make(chan struct{})}
 	a.activeRun = run
-	runContexts.Store(a, runCtx)
 	a.state.IsStreaming = true
 	a.state.StreamingMessage = nil
 	a.state.ErrorMessage = ""
@@ -835,12 +829,10 @@ func (a *Agent) runWithLifecycle(ctx context.Context, executor func(ctx context.
 		a.state.IsStreaming = false
 		a.state.StreamingMessage = nil
 		a.state.PendingToolCalls = map[string]bool{}
+		// The run's context lives on activeRun, so clearing it here cannot
+		// remove a newer run's context (A481: a process-wide map keyed by the
+		// agent could, when its Delete ran outside this critical section).
 		a.activeRun = nil
-		// A481: delete the context entry in the same critical section that
-		// clears activeRun. Outside it, a run that starts in the window stores
-		// its own context and this Delete removes it, so a live run would see a
-		// nil runContext().
-		runContexts.Delete(a)
 		a.mu.Unlock()
 		cancel()
 		close(run.done)
@@ -962,6 +954,6 @@ func (a *Agent) processEvents(event AgentEvent, ctx context.Context) error {
 // sinkOf adapts processEvents to the AgentEventSink signature.
 func sinkOf(a *Agent) AgentEventSink {
 	return func(event AgentEvent) error {
-		return a.processEvents(event, runContextStore(a))
+		return a.processEvents(event, a.runContext())
 	}
 }

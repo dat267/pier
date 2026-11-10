@@ -7,10 +7,11 @@ import (
 	"testing"
 )
 
-// A481: runWithLifecycle publishes activeRun = nil and unlocks before it calls
-// runContexts.Delete(a). A run that starts in that window stores its own
-// context, and the older run's Delete then removes it, so a live run observes a
-// nil context. Reference: upstream has no equivalent map; the invariant is
+// A481: runWithLifecycle used to publish activeRun = nil and unlock before it
+// called runContexts.Delete(a) on a process-wide map. A run that started in
+// that window stored its own context, and the older run's Delete then removed
+// it, so a live run observed a nil context. The context now lives on activeRun
+// itself. Reference: upstream has no equivalent map; the invariant is
 // local, "a live run always has its context".
 func TestRunContextIsPresentForTheWholeRun(t *testing.T) {
 	a, err := NewAgent(&AgentOptions{StreamFn: unusedStreamFn()})

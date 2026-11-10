@@ -86,3 +86,38 @@ func TestGetAPIKeyErrorFailsRun(t *testing.T) {
 		t.Fatalf("ErrorMessage = %q, want %q", got, wantErr)
 	}
 }
+
+// Upstream agent.ts createLoopConfig copies prepareRequest and finishTurn into
+// the loop config, so a hook assigned during a run takes effect on the next run,
+// not the current one.
+func TestRunKeepsTheRequestHooksItStartedWith(t *testing.T) {
+	var calls []string
+	var a *Agent
+	replacement := func(*AgentTurnContext, context.Context) (*AgentTurnDecision, error) {
+		calls = append(calls, "replacement")
+		return nil, nil
+	}
+	a, err := NewAgent(&AgentOptions{
+		StreamFn: unusedStreamFn(),
+		PrepareRequest: func(*PrepareRequestContext, context.Context) (*AgentRequestUpdate, error) {
+			a.FinishTurn = replacement
+			return nil, nil
+		},
+		FinishTurn: func(*AgentTurnContext, context.Context) (*AgentTurnDecision, error) {
+			calls = append(calls, "original")
+			return nil, nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := a.PromptText(context.Background(), "first"); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.PromptText(context.Background(), "second"); err != nil {
+		t.Fatal(err)
+	}
+	if len(calls) != 2 || calls[0] != "original" || calls[1] != "replacement" {
+		t.Fatalf("finishTurn calls = %v, want [original replacement]", calls)
+	}
+}
