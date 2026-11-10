@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/internal/offloop"
 )
 
 // A483: an idle bash append fixes the entry's place under the run-lifecycle
@@ -85,6 +86,57 @@ func TestFlushWritesIncludesHeldSessionWrites(t *testing.T) {
 	}
 	if text := readSessionFileText(t, manager); strings.Count(text, "held-line") != 1 {
 		t.Fatalf("the held line is not on disk after FlushWrites:\n%s", text)
+	}
+}
+
+// A write queue wired while a write is still held takes the held write ahead
+// of the next one, so the two cannot reach the file out of order.
+func TestHeldSessionWriteGoesAheadOfANewlyWiredQueue(t *testing.T) {
+	manager := newTestSessionManager(t)
+	manager.AppendMessage(createUserMessage("started"))
+	manager.AppendMessageHeld(createUserMessage("held-line"))
+	queue := offloop.New()
+	t.Cleanup(queue.Stop)
+	manager.SetWriteQueue(queue)
+	manager.AppendModelChange("anthropic", "later-line")
+	if err := manager.FlushWrites(); err != nil {
+		t.Fatal(err)
+	}
+	text := readSessionFileText(t, manager)
+	held, later := strings.Index(text, "held-line"), strings.Index(text, "later-line")
+	if held < 0 || later < 0 || held > later || strings.Count(text, "held-line") != 1 {
+		t.Fatalf("held line at %d, later line at %d:\n%s", held, later, text)
+	}
+}
+
+// A deferred flush that panics part-way (a message that cannot be marshaled)
+// still writes the entries it had already accepted, and releases the lock.
+func TestDeferredFlushPanicStillWritesAcceptedEntries(t *testing.T) {
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 8192}
+	session := newPromptSession(t, model, unusedSessionStreamFn)
+	manager := newTestSessionManager(t)
+	manager.AppendMessage(createUserMessage("started"))
+	session.Sessions = manager
+	good := CreateBashExecutionMessage("echo accepted-line", "ok", new(0), false, false, "", false, 1, nil)
+	bad := CreateBashExecutionMessage("echo bad", "ok", new(0), false, false, "", false, 2, nil)
+	bad.Content = []byte("{not json")
+	session.pendingBashMessages = []*ai.CustomMessage{good, bad}
+
+	panicked := func() (recovered any) {
+		defer func() { recovered = recover() }()
+		session.flushDeferredIfIdle()
+		return nil
+	}()
+	if panicked == nil {
+		t.Fatal("the unmarshalable message did not panic; the test no longer covers the path")
+	}
+	state := session.prompt()
+	if !state.mu.TryLock() {
+		t.Fatal("the run-lifecycle lock is still held after the panic")
+	}
+	state.mu.Unlock()
+	if text := readSessionFileText(t, manager); !strings.Contains(text, "accepted-line") {
+		t.Fatalf("the entry accepted before the panic was not written:\n%s", text)
 	}
 }
 

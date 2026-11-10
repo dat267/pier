@@ -6752,4 +6752,7 @@ Tests: `TestAgentSessionConcurrentAPIKeepsTranscriptAndPersistenceInStep`
 (compaction, navigation and tool changes mixed in) and
 `TestALosingRunStartLeavesTheActiveRunsState`;
 `TestIdleBashAppendWritesTheSessionFileOutsideTheRunLock` and
-`TestHeldSessionWriteKeepsFileOrder` for the held write.
+`TestHeldSessionWriteKeepsFileOrder` for the held write, with
+`TestFlushWritesIncludesHeldSessionWrites`,
+`TestHeldSessionWriteGoesAheadOfANewlyWiredQueue` and
+`TestDeferredFlushPanicStillWritesAcceptedEntries` for its edges.

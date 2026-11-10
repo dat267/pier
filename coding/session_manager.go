@@ -489,6 +489,7 @@ func (m *SessionManager) rewriteFile() {
 		m.syncWrite(heldSessionWrite{path: path, state: state, rewrite: true, entries: m.fileEntries[:len(m.fileEntries):len(m.fileEntries)]})
 		return
 	}
+	m.queueHeldWrites()
 	// Snapshot under the manager lock; the worker serializes and writes in
 	// FIFO order and touches only its captured write state and diagnostics.
 	snapshot := append([]FileEntry(nil), m.fileEntries...)
@@ -596,7 +597,19 @@ func (m *SessionManager) appendLine(entry *SessionEntry) {
 		m.syncWrite(heldSessionWrite{path: path, state: state, line: line, marshalErr: marshalErr, entries: snapshot})
 		return
 	}
+	m.queueHeldWrites()
 	m.writeQueue.Go(func() { m.recordWriteResult(path, "append", state.append(path, line, marshalErr, snapshot)) })
+}
+
+// queueHeldWrites hands writes held before a write queue was wired to that
+// queue, ahead of the write about to be queued, so the file keeps the entry
+// order. The caller holds mu.
+func (m *SessionManager) queueHeldWrites() {
+	held := m.heldWrites
+	m.heldWrites = nil
+	for _, write := range held {
+		m.writeQueue.Go(func() { m.runWrite(write) })
+	}
 }
 
 // heldSessionWrite is one synchronous file write (no write queue wired),
@@ -635,6 +648,13 @@ func (m *SessionManager) syncWrite(write heldSessionWrite) {
 func (m *SessionManager) runHeldWrites() {
 	held := m.heldWrites
 	m.heldWrites = nil
+	if m.writeQueue != nil {
+		// A queue was wired since: its worker owns the write state now.
+		for _, write := range held {
+			m.writeQueue.Go(func() { m.runWrite(write) })
+		}
+		return
+	}
 	for _, write := range held {
 		m.runWrite(write)
 	}

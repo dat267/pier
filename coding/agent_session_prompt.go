@@ -383,15 +383,7 @@ func (s *AgentSession) startAgentPrompt(ctx context.Context, messages []ai.Messa
 	if s.CacheWarmer != nil {
 		s.CacheWarmer.OnAgentSettled()
 	}
-	state.mu.Lock()
-	state.runActive = false
-	state.runCancel = nil
-	aborted := state.abortRequested
-	// An append that saw the run still active after the flushes above was
-	// deferred to it; deliver it now, before a new run can start.
-	lateCustom := s.flushDeferredLocked(state)
-	state.mu.Unlock()
-	s.Sessions.FlushHeldWrites()
+	aborted, lateCustom := s.endRun(state)
 	for _, message := range lateCustom {
 		s.emitCustomMessage(message)
 	}
@@ -422,17 +414,51 @@ func (s *AgentSession) replaceAgentMessagesFromSession() SessionContext {
 // is active, deciding and appending under the run-lifecycle lock.
 func (s *AgentSession) flushDeferredIfIdle() {
 	state := s.prompt()
-	state.mu.Lock()
-	if state.runActive || s.Agent.State().IsStreaming {
-		state.mu.Unlock()
-		return
-	}
-	custom := s.flushDeferredLocked(state)
-	state.mu.Unlock()
-	s.Sessions.FlushHeldWrites()
+	custom := s.flushDeferredWhileIdle(state)
 	for _, message := range custom {
 		s.emitCustomMessage(message)
 	}
+}
+
+// endRun clears the run flag and delivers what was deferred to the run after
+// its own flushes, before a new run can start. The session-file writes those
+// appends held are made once the lock is released (A483); the flush is
+// deferred, so a panic part-way through the appends still writes the entries
+// already accepted.
+func (s *AgentSession) endRun(state *promptState) (aborted bool, lateCustom []*ai.CustomMessage) {
+	defer s.Sessions.FlushHeldWrites()
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	state.runActive = false
+	state.runCancel = nil
+	return state.abortRequested, s.flushDeferredLocked(state)
+}
+
+// flushDeferredWhileIdle appends the deferred messages unless a run is
+// active, and returns the custom ones to emit. Held writes as in endRun.
+func (s *AgentSession) flushDeferredWhileIdle(state *promptState) []*ai.CustomMessage {
+	defer s.Sessions.FlushHeldWrites()
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if state.runActive || s.Agent.State().IsStreaming {
+		return nil
+	}
+	return s.flushDeferredLocked(state)
+}
+
+// appendCustomMessageWhileIdle appends the message unless a run is active, in
+// which case the run takes it at its end; it reports whether it appended.
+// Held writes as in endRun.
+func (s *AgentSession) appendCustomMessageWhileIdle(state *promptState, message *ai.CustomMessage) bool {
+	defer s.Sessions.FlushHeldWrites()
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if state.runActive || s.Agent.State().IsStreaming {
+		state.pendingCustomMessages = append(state.pendingCustomMessages, message)
+		return false
+	}
+	s.appendCustomMessageEntry(message, true)
+	return true
 }
 
 // flushDeferredLocked appends the bash and custom messages deferred to the
@@ -558,16 +584,9 @@ func (s *AgentSession) SendMessage(ctx context.Context, message *ai.CustomMessag
 		// Idle: append under the run-lifecycle lock (see recordBashResultAt);
 		// a run that started since the check above takes the message at its
 		// end instead.
-		state.mu.Lock()
-		if state.runActive || s.Agent.State().IsStreaming {
-			state.pendingCustomMessages = append(state.pendingCustomMessages, message)
-			state.mu.Unlock()
-			return nil
+		if s.appendCustomMessageWhileIdle(state, message) {
+			s.emitCustomMessage(message)
 		}
-		s.appendCustomMessageEntry(message, true)
-		state.mu.Unlock()
-		s.Sessions.FlushHeldWrites()
-		s.emitCustomMessage(message)
 		return nil
 	}
 }
