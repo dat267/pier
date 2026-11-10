@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func BenchmarkZZJSSliceASCII(b *testing.B) {
+func BenchmarkJSSliceASCII(b *testing.B) {
 	s := strings.Repeat("a", 1<<20)
 	b.SetBytes(int64(len(s)))
 	b.ResetTimer()
@@ -14,7 +14,7 @@ func BenchmarkZZJSSliceASCII(b *testing.B) {
 	}
 }
 
-func BenchmarkZZJSSliceUnicode(b *testing.B) {
+func BenchmarkJSSliceUnicode(b *testing.B) {
 	s := strings.Repeat("é", 1<<19)
 	b.SetBytes(int64(len(s)))
 	b.ResetTimer()
@@ -23,7 +23,7 @@ func BenchmarkZZJSSliceUnicode(b *testing.B) {
 	}
 }
 
-func BenchmarkZZGoSlicePrefix(b *testing.B) {
+func BenchmarkGoSlicePrefixBaseline(b *testing.B) {
 	s := strings.Repeat("a", 1<<20)
 	b.SetBytes(int64(len(s)))
 	b.ResetTimer()

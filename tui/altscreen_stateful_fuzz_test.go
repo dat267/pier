@@ -11,7 +11,7 @@ import (
 // for unknown scroll views, a resized screen, focus changes) must not panic.
 // A stale cache or a misclamped event offset would surface as a panic in a
 // later frame, and panics report their seed.
-func TestZZAltScreenStatefulFuzz(t *testing.T) {
+func TestAltScreenStatefulFuzz(t *testing.T) {
 	terminal := &recordingTerminal{width: 40, height: 10}
 	screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
 	screen.DisableAutoRender()
