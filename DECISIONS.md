@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D436)
+# Deliberate divergences from pi (D1–D437)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6684,3 +6684,21 @@ is unchanged, so terminals without support see the same bytes as before.
 Reachable from the `read`, `write`, `edit` and `ls` renderers.
 
 Tests: `TestRenderToolPathLinksWhenHyperlinksAreOn`.
+
+### D437
+
+**An image-only queued message still clears its dock-banner entry.**
+
+Reference: `core/agent-session.ts` (pi v1.5.0, `f9a26365`) line 1141 guards
+the dequeue removal with `if (messageText)`. A queued message with no text
+(images only) records `""`: `contentText(content, "")` returns `""` for a block
+list with no text block, and `_queueSteer` at line 2324 pushes that value. The
+guard then skips removal, so the entry survives the `message_start` that
+delivers it and `pendingMessageCount` (line 2499) never returns to zero: the
+dock banner keeps showing a message already in the transcript.
+
+pier drops the empty entry, so the banner clears. The removal is by text, as in
+the reference (`indexOf` + `splice`), and an empty entry can only be the one
+being delivered, since `Steer` records exactly one entry per queued message.
+
+Tests: `TestQueueDisplayRemovalHandlesEmptyText`.
