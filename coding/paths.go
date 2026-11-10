@@ -182,6 +182,10 @@ func pathToFileURL(path string) string {
 	return "file://" + (&url.URL{Path: slashed}).EscapedPath()
 }
 
+// PathToFileURL exposes pathToFileURL for callers outside this package that
+// need Node's file:// URL form (the renderer's tool-path hyperlink).
+func PathToFileURL(path string) string { return pathToFileURL(path) }
+
 // filePathFromURL converts a file:// URL to a path (fileURLToPath).
 func filePathFromURL(url string) (string, error) {
 	const scheme = "file://"

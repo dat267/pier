@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D435)
+# Deliberate divergences from pi (D1–D436)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6659,3 +6659,28 @@ through `ai.JSNumberToFixed`; the clamp and the empty cases (no cache activity,
 no counted input) are unchanged.
 
 Tests: `TestCacheShareRoundsHalvesLikeToFixed`.
+
+### D436
+
+**A rendered tool path becomes a clickable file link.**
+
+Reference: `core/tools/render-utils.ts` (pi v1.5.0, `f9a26365`),
+`renderToolPath` lines 170-180 returns
+`linkPath(theme.fg("accent", shortenPath(value)), value, cwd)`, and `linkPath`
+lines 15-19 returns the styled text when `getCapabilities().hyperlinks` is off
+and otherwise wraps it in `pathToFileURL(resolvePath(rawPath, cwd)).href`.
+
+The port implemented only the capability-off branch: `RenderToolPath` accepted
+`cwd` and never used it, so output was byte-identical whether the terminal
+reported hyperlinks or not, and a path in the transcript was never clickable
+while markdown links beside it were.
+
+The fix resolves the path against `cwd`, converts it with
+`coding.PathToFileURL` (already present and byte-identical to Node's
+`pathToFileURL` on seven cases including `#`, `?`, `%`, `+`, `[` and non-ASCII),
+and wraps the styled text with `tui.Hyperlink`. With hyperlinks off the output
+is unchanged, so terminals without support see the same bytes as before.
+
+Reachable from the `read`, `write`, `edit` and `ls` renderers.
+
+Tests: `TestRenderToolPathLinksWhenHyperlinksAreOn`.

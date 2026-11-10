@@ -108,7 +108,12 @@ func RenderToolPath(rawPath *string, theme *Theme, cwd string, emptyFallback str
 	if value == "" {
 		return theme.Fg("toolOutput", "...")
 	}
-	// Hyperlinks need the path-to-file-URL conversion; with capabilities off
-	// this is the plain styled path (same as upstream's fallback).
-	return theme.Fg("accent", ShortenPath(value))
+	styled := theme.Fg("accent", ShortenPath(value))
+	// render-utils.ts linkPath: with hyperlinks off the styled text is already
+	// the answer; with them on, resolve against cwd and wrap it in a file://
+	// URL (D436).
+	if !tui.GetTerminalCapabilities().Hyperlinks {
+		return styled
+	}
+	return tui.Hyperlink(styled, coding.PathToFileURL(coding.ResolvePath(value, cwd, coding.PathInputOptions{})))
 }

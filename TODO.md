@@ -94,3 +94,36 @@
   everywhere else.
 - Fix: format with `ai.JSNumberToFixed`, as `formatFixed` does.
 - Verification: a table test over the halfway ratios plus the clamp.
+
+## A480 a tool path is never a clickable hyperlink
+
+- Severity: low (lost terminal affordance; the path renders identically with
+  hyperlinks on and off).
+- Reference (pi v1.5.0 `f9a26365`, `core/tools/render-utils.ts:170-180`):
+  `renderToolPath` returns
+  `linkPath(theme.fg("accent", shortenPath(value)), value, cwd)`, and
+  `linkPath` (`:15-19`) returns the styled text unchanged when
+  `getCapabilities().hyperlinks` is off, else wraps it in a `pathToFileURL`
+  hyperlink built from `resolvePath(rawPath, cwd)`.
+- Port: `RenderToolPath` (`coding/interactive/toolresult.go:100-113`) takes
+  `cwd` but never uses it, and returns the styled path with the comment
+  "Hyperlinks need the path-to-file-URL conversion; with capabilities off this
+  is the plain styled path". Measured:
+
+  | capabilities | port output |
+  |---|---|
+  | `Hyperlinks: true` | `\x1b[38;5;215m/home/dat/repos/pier/coding/paths.go\x1b[39m` |
+  | `Hyperlinks: false` | identical |
+
+  So a terminal that supports OSC 8 gets no link, while markdown links in the
+  same transcript do get one (`tui/markdown.go:669`,
+  `internal/markdown/layout.go:55`).
+- Reachable: the `read`, `write`, `edit` and `ls` renderers all call
+  `RenderToolPath`.
+- Cause: the port implemented the capability-off branch only and dropped the
+  URL construction.
+- Fix: resolve the path against `cwd`, convert to a `file://` URL, and wrap the
+  styled text in OSC 8 when `Hyperlinks` is on.
+- Verification: a test asserting the link is present with capabilities on, the
+  plain styled path with them off, and that a relative path resolves against
+  `cwd`.
