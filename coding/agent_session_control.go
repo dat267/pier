@@ -1017,8 +1017,12 @@ func (s *AgentSession) GetContextUsage() *ContextUsageReport {
 
 // Dispose aborts every active operation and drops listeners.
 func (s *AgentSession) Dispose() {
-	defer func() { _ = recover() }()
-	s.AbortAsync()
+	// Upstream wraps only the aborts: "Dispose must succeed even if an abort
+	// hook throws". The cleanup below must run either way.
+	func() {
+		defer func() { _ = recover() }()
+		s.AbortAsync()
+	}()
 	if s.CacheWarmer != nil {
 		s.CacheWarmer.dispose()
 	}
