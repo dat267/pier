@@ -50,9 +50,26 @@ for (const [contentName, content] of Object.entries(contents)) {
 		});
 	}
 }
+// A negative budget: the reference's loops simply never run, so both functions
+// return a defined empty window, and truncateTail's partial-line branch takes
+// the end of the line with a negative length (an empty string). The port
+// pre-sized its slice with the negative value and panicked (A468). Content must
+// be non-empty here: the reference reads lines[0] before its loop, so an empty
+// content throws there.
+const negativeOptionSets = {
+	negativeLines: { maxLines: -1 },
+	negativeBytes: { maxBytes: -1 },
+	bothNegative: { maxLines: -5, maxBytes: -5 },
+};
+for (const [optionName, options] of Object.entries(negativeOptionSets)) {
+	for (const [contentName, content] of Object.entries({ single: contents.single, singleHugeLine: contents.singleHugeLine })) {
+		outputs.push({ name: `head/${contentName}/${optionName}`, content, options, expected: truncate.truncateHead(content, options) });
+		outputs.push({ name: `tail/${contentName}/${optionName}`, content, options, expected: truncate.truncateTail(content, options) });
+	}
+}
 const lineCases = ["", "short", repeat("a", 500), repeat("b", 501), `${repeat("漢", 250)}${repeat("😀", 10)}`, `${repeat("c", 499)}😀`];
 for (const line of lineCases) {
-	for (const maxChars of [500, 10, 0]) {
+	for (const maxChars of [500, 10, 0, -1]) {
 		outputs.push({ name: `line/${line.length}/${maxChars}`, kind: "line", line, maxChars, expected: truncate.truncateLine(line, maxChars) });
 	}
 }

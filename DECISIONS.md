@@ -6327,5 +6327,17 @@ below zero or past the end. `floorDiv2`, `resolveSubarrayIndex` and the
 reachable from the tool path, but a panicking helper reached from rendering is
 not a contract worth keeping.
 
-Tests: the `middle/*` cases in `coding/testdata/truncate`, regenerated from the
-pinned function by `coding/testdata/truncate/generate.mjs`.
+`truncateTail` had the same class of gap on the other side of the window: it
+pre-sized its slice with `make([]string, 0, min(maxLines, totalLines))` (in both
+`TruncateTail` and `TruncateTailLines`) and panicked with `makeslice: cap out of
+range` for a negative `maxLines`, where the reference's loop condition simply
+never holds. Its partial-line branch then reached
+`truncateStringToBytesFromEnd` with a negative length, which sliced out of
+range, where `Buffer.prototype.slice` clamps and returns "". A negative
+`maxLines` or `maxBytes` now returns the reference's defined empty window.
+
+Tests: the `middle/*`, `head/*negative*`, `tail/*negative*` and `line/*/-1`
+cases in `coding/testdata/truncate`, regenerated from the pinned functions by
+`coding/testdata/truncate/generate.mjs`. The negative cases run over non-empty
+content only: the reference reads `lines[0]` before its loop, so an empty
+content throws there.

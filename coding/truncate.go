@@ -298,7 +298,11 @@ func TruncateTailLines(lines []string, totalBytes int, options TruncationOptions
 		return emptyWindowToNil(lines), false
 	}
 
-	window := make([]string, 0, min(maxLines, totalLines))
+	// The reference's loop condition (`outputLinesArr.length < maxLines`) never
+	// holds for a negative budget, so it returns an empty truncated result. Go
+	// must not pre-size the window with that negative cap (D424 rule for
+	// TruncateMiddle applies here too, A468).
+	window := make([]string, 0, max(0, min(maxLines, totalLines)))
 	outputBytesCount := 0
 	for i := totalLines - 1; i >= 0 && len(window) < maxLines; i-- {
 		lineBytes := len(counted[i])
@@ -357,7 +361,7 @@ func TruncateTail(content string, options TruncationOptions) TruncationResult {
 	// Collect the window backwards, then reverse it once: prepending into a
 	// fresh slice per kept line made this quadratic (34 MB allocated to keep
 	// 2000 lines), and the bash tool snapshots its output on every 64 KB read.
-	reversed := make([]string, 0, min(maxLines, totalLines))
+	reversed := make([]string, 0, max(0, min(maxLines, totalLines)))
 	outputBytesCount := 0
 	truncatedBy := TruncatedByLines
 	lastLinePartial := false
@@ -406,7 +410,10 @@ func truncateStringToBytesFromEnd(str string, maxBytes int) string {
 	if len(str) <= maxBytes {
 		return str
 	}
-	start := len(str) - maxBytes
+	// Buffer.prototype.slice clamps both ends, so a start past the end (which a
+	// negative maxBytes produces) yields an empty string instead of an
+	// out-of-range Go slice (A468).
+	start := resolveSubarrayIndex(len(str)-maxBytes, len(str))
 	// Find a valid UTF-8 boundary.
 	for start < len(str) && (str[start]&0xc0) == 0x80 {
 		start++
