@@ -31,7 +31,10 @@ func TestConfiguredShellTimeoutDoesNotWaitForDescendantPipeEOF(t *testing.T) {
 func assertConfigCommandPipeTimeout(t *testing.T, run func(string) bool) {
 	t.Helper()
 	previous := configCommandTimeout
-	configCommandTimeout = 250 * time.Millisecond
+	// Only "it timed out" is asserted, so the window only has to outlast the
+	// shell's own startup; a shorter one cannot make the assertion pass by
+	// accident.
+	configCommandTimeout = 100 * time.Millisecond
 	t.Cleanup(func() { configCommandTimeout = previous })
 	gate := filepath.Join(t.TempDir(), "gate")
 	if err := unix.Mkfifo(gate, 0o600); err != nil {

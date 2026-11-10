@@ -157,7 +157,10 @@ func TestBashCapturesOutputWrittenAfterShellExit(t *testing.T) {
 	requirePosixShell(t)
 	dir := t.TempDir()
 	tool := CreateBashTool(dir, nil)
-	command := `(touch ready; sleep 0.45; printf late) & while [ ! -f ready ]; do sleep 0.01; done; sleep 0.4; exit 0`
+	// The descendant writes 50ms after the shell exits, which is the relationship
+	// the grace window is about; the absolute times only have to exceed process
+	// startup.
+	command := `(touch ready; sleep 0.2; printf late) & while [ ! -f ready ]; do sleep 0.01; done; sleep 0.15; exit 0`
 	params, _ := json.Marshal(map[string]string{"command": command})
 	result, err := tool.Execute("c", params, context.Background(), nil)
 	if err != nil {
@@ -173,7 +176,10 @@ func TestBashCapturesOutputWrittenAfterShellExit(t *testing.T) {
 func TestExecuteBashCapturesOutputWrittenAfterShellExit(t *testing.T) {
 	requirePosixShell(t)
 	dir := t.TempDir()
-	command := `(touch ready; sleep 0.45; printf late) & while [ ! -f ready ]; do sleep 0.01; done; sleep 0.4; exit 0`
+	// The descendant writes 50ms after the shell exits, which is the relationship
+	// the grace window is about; the absolute times only have to exceed process
+	// startup.
+	command := `(touch ready; sleep 0.2; printf late) & while [ ! -f ready ]; do sleep 0.01; done; sleep 0.15; exit 0`
 	result, err := ExecuteBash(context.Background(), command, dir, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -385,16 +391,20 @@ func TestBashTimeout(t *testing.T) {
 	dir := t.TempDir()
 	tool := CreateBashTool(dir, nil)
 	start := time.Now()
-	_, err := tool.Execute("c", json.RawMessage(`{"command":"echo partial; sleep 30","timeout":1}`), context.Background(), nil)
+	// A fifth of a second, not a whole one: the timeout must fire against a
+	// command that cannot finish, and bashTimeoutMessage's whole-second wording is
+	// pinned by TestBashTimeoutMessage. The margin only has to clear the shell's
+	// own startup.
+	_, err := tool.Execute("c", json.RawMessage(`{"command":"echo partial; sleep 30","timeout":0.2}`), context.Background(), nil)
 	elapsed := time.Since(start)
-	if err == nil || !strings.Contains(err.Error(), "Command timed out after 1 seconds") {
+	if err == nil || !strings.Contains(err.Error(), "Command timed out after 0.2 seconds") {
 		t.Fatalf("err = %v", err)
 	}
 	// The partial output survives into the error.
 	if !strings.Contains(err.Error(), "partial") {
 		t.Fatalf("partial output missing: %v", err)
 	}
-	if elapsed > 5*time.Second {
+	if elapsed > 2*time.Second {
 		t.Fatalf("timeout not honored: %v", elapsed)
 	}
 }

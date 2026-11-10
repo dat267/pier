@@ -176,7 +176,7 @@ func TestResolveConfigValueCommandCacheDeduplicatesConcurrentCalls(t *testing.T)
 
 	marker := filepath.Join(t.TempDir(), "executions")
 	quotedMarker := "'" + strings.ReplaceAll(marker, "'", "'\\''") + "'"
-	config := "!printf x >> " + quotedMarker + "; sleep 0.3; printf cached"
+	config := "!printf x >> " + quotedMarker + "; sleep 0.1; printf cached"
 	const callers = 8
 	start := make(chan struct{})
 	var wait sync.WaitGroup

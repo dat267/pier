@@ -63,8 +63,9 @@ func TestBashRejectedTimeoutDoesNotSpawn(t *testing.T) {
 		}
 	}
 	// The shell exits at once when it is spawned, so a leaked child reaches the
-	// zombie state quickly; poll rather than assume the scheduler ran it.
-	deadline := time.Now().Add(500 * time.Millisecond)
+	// zombie state quickly; poll rather than assume the scheduler ran it. The
+	// poll runs every 10ms, so 200ms is twenty checks.
+	deadline := time.Now().Add(200 * time.Millisecond)
 	for {
 		if leaked := zombieChildren(t) - before; leaked > 0 {
 			t.Fatalf("%d unreaped child process(es) after 10 rejected timeouts; the command must not be spawned", leaked)

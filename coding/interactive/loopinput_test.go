@@ -186,7 +186,7 @@ func TestCompactCommandDoesNotBlockInput(t *testing.T) {
 	app.postTerminalInput("/compact\r")
 	select {
 	case <-session.started:
-	case <-time.After(700 * time.Millisecond):
+	case <-time.After(150 * time.Millisecond):
 		app.postTerminalInput("\r")
 		select {
 		case <-session.started:
@@ -254,7 +254,7 @@ func TestCompactCommandDuringTurnDoesNotQueueBehindIt(t *testing.T) {
 	app.postTerminalInput("\r")
 	select {
 	case <-turnStarted:
-	case <-time.After(700 * time.Millisecond):
+	case <-time.After(150 * time.Millisecond):
 		// The autocomplete may consume the first Enter; retry once.
 		app.postTerminalInput("\r")
 		select {
@@ -269,7 +269,7 @@ func TestCompactCommandDuringTurnDoesNotQueueBehindIt(t *testing.T) {
 	app.postTerminalInput("/compact\r")
 	select {
 	case <-session.started:
-	case <-time.After(700 * time.Millisecond):
+	case <-time.After(150 * time.Millisecond):
 		// The autocomplete may consume the first Enter; retry once.
 		app.postTerminalInput("\r")
 		select {
