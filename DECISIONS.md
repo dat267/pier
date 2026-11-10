@@ -1481,7 +1481,10 @@ active reservation before starting a run; pausing, clearing, replacing or
 pausing/resuming while it waits invalidates it. The session sink also checks
 its existing disposed flag before delivering deferred goal work, since disposal
 need not change the durable goal reservation
-(`TestDisposedSessionDoesNotStartAReservedGoalRound`). A rejected resume leaves
+(`TestDisposedSessionDoesNotStartAReservedGoalRound`). The round's run start
+re-checks it in the critical section that installs the run, so a round racing
+`Dispose` cannot start a run the abort misses
+(`TestReservedGoalRoundRacingDisposeLeavesNoUnabortableRun`). A rejected resume leaves
 activation unchanged, including for terminal completed goals
 (`TestGoalResumeLeavesCompletedGoalDisarmed`). Already-started work retains
 its existing cancellation policy. Tool exposure is synchronized before a

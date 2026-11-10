@@ -451,6 +451,9 @@ type SendMessageOptions struct {
 	TriggerTurn *bool
 	// DeliverAs queues as "steer" or "followUp" when a run is active.
 	DeliverAs string
+	// unlessDisposed starts the turn only if Dispose has not marked the
+	// session, checked where the run is installed (deferred goal rounds).
+	unlessDisposed bool
 }
 
 // SendMessage injects a custom message into the conversation.
@@ -463,7 +466,7 @@ func (s *AgentSession) SendMessage(ctx context.Context, message *ai.CustomMessag
 	state := s.prompt()
 	switch {
 	case triggerTurn && !s.IsStreaming():
-		return s.runAgentPrompt(ctx, []ai.Message{message})
+		return s.startAgentPrompt(ctx, []ai.Message{message}, options.unlessDisposed)
 	case s.IsStreaming():
 		if !triggerTurn {
 			// Appending now would sit between a tool call and its result.

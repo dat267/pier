@@ -276,7 +276,7 @@ func TestGoalReleaseDuringDisposeCleanupSkipsTheRun(t *testing.T) {
 func TestGoalReleaseRacingDisposeLeavesNoUnabortableRun(t *testing.T) {
 	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
 	const rounds = 20
-	for range rounds {
+	for round := range rounds {
 		manager, dir := newTestSession(t)
 		var session *AgentSession
 		var calls atomic.Int32
@@ -339,6 +339,9 @@ func TestGoalReleaseRacingDisposeLeavesNoUnabortableRun(t *testing.T) {
 		go func() {
 			defer group.Done()
 			<-start
+			// Stagger Dispose so some rounds land it while the release is
+			// between its check and the run start.
+			time.Sleep(time.Duration(round) * 25 * time.Microsecond)
 			session.Dispose()
 		}()
 		close(start)

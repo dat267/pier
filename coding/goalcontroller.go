@@ -107,7 +107,7 @@ func (s *sessionGoalSink) RunGoalTurn(ctx context.Context, customType string, co
 	if s.session.isDisposed() {
 		return nil
 	}
-	return s.session.SendMessage(ctx, goalEventMessage(customType, content, display, details), &SendMessageOptions{DeliverAs: "followUp"})
+	return s.session.SendMessage(ctx, goalEventMessage(customType, content, display, details), &SendMessageOptions{DeliverAs: "followUp", unlessDisposed: true})
 }
 
 func (s *sessionGoalSink) GoalActiveTools() []string {
