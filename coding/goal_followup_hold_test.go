@@ -209,7 +209,7 @@ func TestGoalReleaseSkipsDisposedSession(t *testing.T) {
 
 // Dispose marks the session disposed before its abort and cleanup steps, so a
 // release the host runs while Dispose is still cleaning up (here: from a
-// session resource cleanup) does not start a run either. Upstream dispose
+// session resource cleanup) does not start a run either (D385). Upstream dispose
 // (agent-session.ts, v1.5.0 f9a26365) is synchronous and cannot interleave.
 func TestGoalReleaseDuringDisposeCleanupSkipsTheRun(t *testing.T) {
 	manager, dir := newTestSession(t)
