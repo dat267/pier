@@ -265,6 +265,18 @@ func goalPreview(text string, expanded bool) (shown string, hidden int) {
 	return strings.Join(clipped, "\n"), hidden
 }
 
+// CollapsedNoticeText bounds free text that reaches a chat notice: at most
+// goalPreviewLines lines, each at most goalPreviewChars bytes, with the elided
+// remainder named in the expand hint. A goal's blocked reason is model-supplied
+// with no length limit, and 100 KB on one line drew 1,284 chat lines (D428).
+func CollapsedNoticeText(text string) string {
+	shown, hidden := goalPreview(text, false)
+	if hidden > 0 {
+		shown += goalHiddenHint(hidden)
+	}
+	return shown
+}
+
 // goalHiddenHint is the hidden-line note under a collapsed preview, in the
 // shell card's "... (N earlier lines, ...)" shape. It names both ways to expand
 // instead of the shell's keybinding-only hint, because a goal card opens on a

@@ -9,6 +9,7 @@ import (
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/internal/goal"
 	"github.com/dat267/pier/tui"
 )
 
@@ -196,12 +197,13 @@ func (w *RunWiring) ShowChatError(message string) {
 	w.requestRender()
 }
 
-// ShowChatWarning appends a warning line to the chat.
+// ShowChatWarning appends a warning line to the chat. A notice stays a notice:
+// these carry model-supplied goal text, which is unbounded (D428).
 func (w *RunWiring) ShowChatWarning(message string) {
 	if w.Chat == nil {
 		return
 	}
-	warningMessage := tui.SanitizeUntrustedText(message)
+	warningMessage := tui.SanitizeUntrustedText(goal.CollapsedNoticeText(message))
 	w.Chat.AddChild(tui.NewSpacer(1))
 	w.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg("warning", "Warning: "+warningMessage) }, 1, 0))
 	w.requestRender()

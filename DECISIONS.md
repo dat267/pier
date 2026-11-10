@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D427)
+# Deliberate divergences from pi (D1–D428)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6439,3 +6439,30 @@ Tests: `TestGoalPreviewBoundsALongLine` (1 MB single line, 20x200 KB lines and
 `TestGoalPreviewKeepsEverythingWhenExpanded` (expanded keeps every character,
 collapsed hides some), and the updated
 `TestCollapsedGoalCardClipsOneOverWideLine`.
+
+### D428
+
+**A chat notice is bounded; the goal state keeps the full text.**
+
+`set_goal status=blocked` stores the model's `blocked_reason` trimmed and
+otherwise unbounded (`internal/goal/machine.go`), and `pauseNotice` embeds it in
+a `NotifyEffect` that reaches `RunWiring.ShowChatWarning`. That sanitized escape
+sequences but appended every line to the transcript. Measured through the real
+path, then `Render(80)`:
+
+| blocked_reason | chat lines before | after |
+|---|---|---|
+| 100 KB on one line | 1,284 | 6 |
+| 15,000 short lines | 15,001 | 6 |
+
+`internal/goal.CollapsedNoticeText` applies the same bounds D427 set for a goal
+card (five lines, 240 bytes each) and names the elided remainder in the existing
+expand hint. Only the chat line is bounded: the goal state, the durable entry
+and the `get_goal` card keep the whole reason, and the model-facing wrap-up
+message carries it unchanged, so nothing that needs the full text loses it.
+
+The goal feature has no upstream counterpart, so there is no reference to cite.
+
+Tests: `TestChatNoticeIsBounded` (a 100 KB single line and a 15,000-line reason
+each add at most eight chat lines) and `TestChatNoticeKeepsAShortMessage` (an
+ordinary notice is unchanged).

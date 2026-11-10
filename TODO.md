@@ -1,30 +1,27 @@
 # Reproduced audit findings
 
-## A471 `goalPreview` caps a goal card by line count only, so one long line renders in full
+## A472 a model-supplied blocked reason becomes an unbounded chat notice
 
-- Severity: medium (UI cost; user-visible transcript blow-up).
-- Measured through the real renderer (`goalSetRenderers.RenderCall` then
-  `Render(80)` in `coding/interactive`):
+- Severity: medium (UI cost; user-visible transcript blow-up, same class as A471).
+- Measured (`RunWiring.ShowChatWarning`, then `Render(80)`):
 
-  | objective | rendered lines |
+  | blocked_reason | chat lines |
   |---|---|
-  | 100,000 short lines | 8 |
-  | 1 MB on a single line | 12,502 |
-  | 20 lines of 200 KB each | 12,503 |
+  | 100 KB on one line | 1,284 |
+  | 15,000 short lines | 15,001 |
 
-  1 MB single-line render: 82 ms. The 100,000-short-line case shows the cap
-  working; any line longer than the cap itself is passed through whole.
-- Cause: `goalPreview` (`internal/goal/render.go:238`) splits on newlines,
-  keeps `goalPreviewLines` lines, and returns each kept line unchanged, so the
-  column bound is unbounded. `tui.Text.Render` then wraps that line to the
-  transcript width, producing one output line per width band.
-- Reachable: `set_goal`'s `objective` argument is free text with no length
-  limit in the tool schema (`coding/goalcontroller.go:694`); the card is drawn
-  from the call's arguments, and again from the durable goal entry, and again
-  by `get_goal`'s result card (`RenderGetGoalRenderResult`).
-- Fix: bound each kept line to a character budget in `goalPreview` and report
-  the elided remainder in the existing hidden-count hint, so a wide line
-  collapses like extra lines do.
-- Verification: a test that renders a 1 MB single-line objective, a 20x200 KB
-  objective and 100,000 short lines, asserting the rendered line count stays
-  bounded while the full text is still reachable when expanded.
+  100 KB single line: 11 ms; 15,000 lines: 7 ms.
+- Cause: `goalUpdate`'s blocked branch (`internal/goal/machine.go:355`) trims
+  `blocked_reason` and stores it unbounded; `pauseNotice` embeds it in
+  `NotifyEffect`, `GoalController.notice` forwards it, and
+  `RunWiring.ShowChatWarning` sanitizes escape sequences but adds every line to
+  the chat. `set_goal`'s schema gives `blocked_reason` no length limit.
+- Reachable: a model calling `set_goal status=blocked` after three rounds with a
+  long reason. Also the get_goal result card and the durable goal entry render
+  the same text through `goalPreview`, which D427 already bounds.
+- Fix: bound the notice at the point it becomes a chat line, so every notice
+  path inherits it, and keep the untruncated text in the goal state (the card
+  and the model-facing messages already carry it).
+- Verification: a test asserting a 100 KB one-line reason and a 15,000-line
+  reason each add a bounded number of chat lines, while a short reason is
+  unchanged.
