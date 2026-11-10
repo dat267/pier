@@ -212,7 +212,9 @@ func StartRadiusCallbackServer(expectedState string, ctx context.Context) *Radiu
 	callback := &RadiusCallbackServer{done: make(chan struct{})}
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", radiusCallbackHost, RadiusCallbackPort))
 	if err != nil {
+		// Settled already: the deferred Close must not close done again.
 		callback.unavailable = true
+		callback.settled = true
 		close(callback.done)
 		return callback
 	}

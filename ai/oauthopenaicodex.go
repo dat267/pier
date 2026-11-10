@@ -399,7 +399,10 @@ func StartOpenAICodexCallbackServer(expectedState string) *OpenAICodexCallbackSe
 	}
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", oauthCallbackHost(), OpenAICodexCallbackPort))
 	if err != nil {
+		// Settled already: CancelWait (the manual-entry handoff) must not
+		// close done a second time.
 		callback.unavailable = true
+		callback.settled = true
 		close(callback.done)
 		return callback
 	}
