@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D434)
+# Deliberate divergences from pi (D1–D435)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6629,3 +6629,33 @@ Reachable from the expanded `/loaded` listing
 
 Tests: `TestFormatScopeGroupsUsesLocaleOrdering`,
 `TestFormatCompactListUsesLocaleOrdering`.
+
+### D435
+
+**The working indicator's cache share rounds halves like JS `toFixed`.**
+
+`cacheShare` (`coding/interactive/statusindicator.go:165`) is pier's own display
+(D416), so there is no upstream string to match. The question is internal
+consistency: every other one-decimal or fixed display in this module formats
+through `formatFixed` -> `ai.JSNumberToFixed`, which follows JS `toFixed`
+(upstream `modes/interactive/components/footer.ts:27-29`, `:162`). `cacheShare`
+used `strconv.FormatFloat(share, 'f', 1, 64)`, and Go rounds halfway cases to
+even.
+
+Over `cacheRead` 1..3 and `in` 1..2000, twelve values differed; nine were
+halfway cases:
+
+| in | cacheRead | port before | JS `toFixed(1)` |
+|---|---|---|---|
+| 16 | 1 | `CH6.2%` | `CH6.3%` |
+| 32 | 2 | `CH6.2%` | `CH6.3%` |
+| 80 | 1 | `CH1.2%` | `CH1.3%` |
+| 400 | 1 | `CH0.2%` | `CH0.3%` |
+| 1600 | 100 | `CH6.2%` | `CH6.3%` |
+
+Reachable whenever `2000*cacheRead/in` is an odd integer. The other three
+differences are the deliberate `> 100` clamp, which stays. The share now formats
+through `ai.JSNumberToFixed`; the clamp and the empty cases (no cache activity,
+no counted input) are unchanged.
+
+Tests: `TestCacheShareRoundsHalvesLikeToFixed`.

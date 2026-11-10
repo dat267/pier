@@ -66,3 +66,31 @@
   sites.
 - Verification: root collation matches `localeCompare` on all six corpora
   (0 diffs); a table test pins the ordering.
+
+## A479 `cacheShare` rounds halves to even where the module formats JS-style
+
+- Severity: low (a 0.1 point difference in the working indicator's cache
+  share).
+- Context: `cacheShare` is pier-specific (D416), so there is no upstream string
+  to match. The question is internal consistency: the same one-decimal display
+  is formatted by `formatFixed` -> `ai.JSNumberToFixed` in `footer.go`, while
+  `statusindicator.go:171` uses `strconv.FormatFloat(share, 'f', 1, 64)`.
+- Go's `FormatFloat` rounds halfway cases to even; JS `toFixed` rounds them
+  away from zero (upstream `footer.ts:162` and `:27-29` rely on that).
+- Measured over `cacheRead` 1..3 and `in` 1..2000, 12 differ; 9 are the
+  halfway cases (the other 3 are the deliberate `> 100` clamp):
+
+  | in | cacheRead | port | JS `toFixed(1)` |
+  |---|---|---|---|
+  | 16 | 1 | `CH6.2%` | `CH6.3%` |
+  | 32 | 2 | `CH6.2%` | `CH6.3%` |
+  | 80 | 1 | `CH1.2%` | `CH1.3%` |
+  | 400 | 1 | `CH0.2%` | `CH0.3%` |
+  | 1600 | 100 | `CH6.2%` | `CH6.3%` |
+
+  Reachable whenever `2000*cacheRead/in` is an odd integer, e.g. `in` 1600 with
+  `cacheRead` 100, a plausible real pair.
+- Cause: a second rounding rule for a display the module formats one way
+  everywhere else.
+- Fix: format with `ai.JSNumberToFixed`, as `formatFixed` does.
+- Verification: a table test over the halfway ratios plus the clamp.

@@ -170,7 +170,9 @@ func (c workingTokenCount) cacheShare() string {
 	if share > 100 {
 		share = 100
 	}
-	return "CH" + strconv.FormatFloat(share, 'f', 1, 64) + "%"
+	// Format through the JS toFixed rule the rest of the module uses, so a
+	// ratio landing on a half rounds away from zero (D435).
+	return "CH" + ai.JSNumberToFixed(share, 1) + "%"
 }
 
 // workingElapsedLabel is the working indicator's suffix: the elapsed time in
