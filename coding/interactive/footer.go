@@ -124,11 +124,17 @@ func sanitizeStatusText(text string) string {
 // FooterTruncate truncates by display width (CJK-safe); plain text only, no
 // ANSI (format.ts truncate).
 func FooterTruncate(text string, maxWidth int) string {
-	if maxWidth <= 3 {
-		return "..."[:max(0, maxWidth)]
+	if maxWidth <= 0 {
+		return ""
 	}
-	if tui.VisibleWidth(text) <= maxWidth {
+	// The reference's ellipsis branch returns a text that already fits before
+	// clipping the ellipsis, so a fitting value is never replaced by dots
+	// (D433, tui/src/utils.ts:1192-1205).
+	if textWidth := tui.VisibleWidth(text); textWidth <= maxWidth {
 		return text
+	}
+	if maxWidth <= 3 {
+		return "..."[:maxWidth]
 	}
 	var out strings.Builder
 	w := 0

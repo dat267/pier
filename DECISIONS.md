@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D432)
+# Deliberate divergences from pi (D1–D433)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6566,3 +6566,35 @@ The goal feature has no upstream counterpart, so there is no reference to cite.
 
 Tests: `TestUnknownActionReplyIsBounded` and
 `TestUnknownActionReplyKeepsAShortValue`.
+
+### D433
+
+**`FooterTruncate` returns a text that already fits.**
+
+Reference: `packages/tui/src/utils.ts` (pi v1.5.0, `f9a26365`),
+`truncateToWidth` lines 1192-1205, which `footer.ts` calls. When the ellipsis
+does not fit (`ellipsisWidth >= maxWidth`) it first returns the text unchanged
+if the text itself fits, and only then clips the ellipsis.
+
+The port short-circuited every `maxWidth <= 3` to `"..."[:maxWidth]` before any
+width check, so a fitting footer value became dots:
+
+| text | width | reference | port before |
+|---|---|---|---|
+| `ab` | 2 | `ab` | `..` |
+| `a` | 2 | `a` | `..` |
+| `a` | 1 | `a` | `.` |
+| `` | 2 | `` | `..` |
+| `abc` | 3 | `abc` | `...` |
+
+`FooterTruncate` renders the footer's cwd basename at 25 columns and the joined
+status line at `min(80, width)`, so a narrow terminal reaches that branch. The
+fix applies the fits-check first, in the reference's order; texts wider than the
+budget still collapse to the ellipsis (`日本語` at 2 is `..` in both).
+
+`tui.TruncateToWidth` already ports this branch correctly but emits ANSI resets,
+which the footer's plain strings cannot carry, so the plain helper stays and
+gains the missing check.
+
+Tests: `TestFooterTruncateKeepsFittingText` (fitting and non-fitting cases at
+widths 1-4, plus a CJK case).
