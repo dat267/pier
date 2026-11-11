@@ -39,6 +39,158 @@
     "result": "{\"api\":\"openrouter-images\",\"provider\":\"openrouter\",\"model\":\"google/gemini-2.5-flash-image\",\"output\":[{\"type\":\"text\",\"text\":\"ok\"},{\"type\":\"image\",\"mimeType\":\"image/png\",\"data\":\"QUJD\"}],\"stopReason\":\"stop\",\"timestamp\":1,\"responseId\":\"r\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2,\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0,\"total\":0,\"totalFromProvider\":false}}}"
   },
   {
+    "name": "multi-image",
+    "model": {
+      "id": "google/gemini-2.5-flash-image",
+      "name": "Gemini Image",
+      "api": "openrouter-images",
+      "provider": "openrouter",
+      "baseUrl": "https://invalid.test/api/v1",
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "image",
+        "text"
+      ],
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "input": [
+      {
+        "type": "text",
+        "text": "two pictures"
+      },
+      {
+        "type": "image",
+        "data": "QUJD",
+        "mimeType": "image/png"
+      },
+      {
+        "type": "image",
+        "data": "REVG",
+        "mimeType": "image/jpeg"
+      }
+    ],
+    "path": "/api/v1/chat/completions",
+    "body": "{\"model\":\"google/gemini-2.5-flash-image\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"two pictures\"},{\"type\":\"image_url\",\"image_url\":{\"url\":\"data:image/png;base64,QUJD\"}},{\"type\":\"image_url\",\"image_url\":{\"url\":\"data:image/jpeg;base64,REVG\"}}]}],\"stream\":false,\"modalities\":[\"image\",\"text\"]}",
+    "responded": true,
+    "result": "{\"api\":\"openrouter-images\",\"provider\":\"openrouter\",\"model\":\"google/gemini-2.5-flash-image\",\"output\":[{\"type\":\"text\",\"text\":\"ok\"},{\"type\":\"image\",\"mimeType\":\"image/png\",\"data\":\"QUJD\"}],\"stopReason\":\"stop\",\"timestamp\":1,\"responseId\":\"r\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2,\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0,\"total\":0,\"totalFromProvider\":false}}}"
+  },
+  {
+    "name": "image-only",
+    "model": {
+      "id": "google/gemini-2.5-flash-image",
+      "name": "Gemini Image",
+      "api": "openrouter-images",
+      "provider": "openrouter",
+      "baseUrl": "https://invalid.test/api/v1",
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "image",
+        "text"
+      ],
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "input": [
+      {
+        "type": "image",
+        "data": "QUJD",
+        "mimeType": "image/png"
+      }
+    ],
+    "path": "/api/v1/chat/completions",
+    "body": "{\"model\":\"google/gemini-2.5-flash-image\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"image_url\",\"image_url\":{\"url\":\"data:image/png;base64,QUJD\"}}]}],\"stream\":false,\"modalities\":[\"image\",\"text\"]}",
+    "responded": true,
+    "result": "{\"api\":\"openrouter-images\",\"provider\":\"openrouter\",\"model\":\"google/gemini-2.5-flash-image\",\"output\":[{\"type\":\"text\",\"text\":\"ok\"},{\"type\":\"image\",\"mimeType\":\"image/png\",\"data\":\"QUJD\"}],\"stopReason\":\"stop\",\"timestamp\":1,\"responseId\":\"r\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2,\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0,\"total\":0,\"totalFromProvider\":false}}}"
+  },
+  {
+    "name": "text-only",
+    "model": {
+      "id": "google/gemini-2.5-flash-image",
+      "name": "Gemini Image",
+      "api": "openrouter-images",
+      "provider": "openrouter",
+      "baseUrl": "https://invalid.test/api/v1",
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "image",
+        "text"
+      ],
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "input": [
+      {
+        "type": "text",
+        "text": "no picture"
+      }
+    ],
+    "path": "/api/v1/chat/completions",
+    "body": "{\"model\":\"google/gemini-2.5-flash-image\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"no picture\"}]}],\"stream\":false,\"modalities\":[\"image\",\"text\"]}",
+    "responded": true,
+    "result": "{\"api\":\"openrouter-images\",\"provider\":\"openrouter\",\"model\":\"google/gemini-2.5-flash-image\",\"output\":[{\"type\":\"text\",\"text\":\"ok\"},{\"type\":\"image\",\"mimeType\":\"image/png\",\"data\":\"QUJD\"}],\"stopReason\":\"stop\",\"timestamp\":1,\"responseId\":\"r\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2,\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0,\"total\":0,\"totalFromProvider\":false}}}"
+  },
+  {
+    "name": "unicode-text",
+    "model": {
+      "id": "google/gemini-2.5-flash-image",
+      "name": "Gemini Image",
+      "api": "openrouter-images",
+      "provider": "openrouter",
+      "baseUrl": "https://invalid.test/api/v1",
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "image",
+        "text"
+      ],
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "input": [
+      {
+        "type": "text",
+        "text": "emoji 😀🚀 astral 𝒜 cjk 日本語 \"quoted\" \\backslash\nsecond line"
+      },
+      {
+        "type": "image",
+        "data": "QUJD",
+        "mimeType": "image/png"
+      }
+    ],
+    "path": "/api/v1/chat/completions",
+    "body": "{\"model\":\"google/gemini-2.5-flash-image\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"emoji 😀🚀 astral 𝒜 cjk 日本語 \\\"quoted\\\" \\\\backslash\\nsecond line\"},{\"type\":\"image_url\",\"image_url\":{\"url\":\"data:image/png;base64,QUJD\"}}]}],\"stream\":false,\"modalities\":[\"image\",\"text\"]}",
+    "responded": true,
+    "result": "{\"api\":\"openrouter-images\",\"provider\":\"openrouter\",\"model\":\"google/gemini-2.5-flash-image\",\"output\":[{\"type\":\"text\",\"text\":\"ok\"},{\"type\":\"image\",\"mimeType\":\"image/png\",\"data\":\"QUJD\"}],\"stopReason\":\"stop\",\"timestamp\":1,\"responseId\":\"r\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2,\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0,\"total\":0,\"totalFromProvider\":false}}}"
+  },
+  {
     "name": "payload-replacement",
     "model": {
       "id": "google/gemini-2.5-flash-image",

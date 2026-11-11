@@ -19,7 +19,40 @@ const cases = [{ name: "minimal", messages: [{role:"user",content:"hello",timest
 }, {
 	name:"payload-replacement",messages:[{role:"user",content:"hello",timestamp:1}],options:{},
 	replacement:{model:"replacement",input:[{role:"user",content:"changed"}],stream:true,metadata:{z:"1",a:"2"},custom:{z:1,a:2}},
-}];
+},
+{ name:"reasoning-replay", messages:[
+	{role:"user",content:"go",timestamp:1},
+	{role:"assistant",timestamp:2,stopReason:"toolUse",content:[
+		{type:"thinking",thinking:"plan",thinkingSignature:"c2ln"},
+		{type:"thinking",thinking:"[Reasoning redacted]",thinkingSignature:"cmVk",redacted:true},
+		{type:"text",text:"calling"},
+		{type:"toolCall",id:"call_1",name:"lookup",arguments:{q:"x"}}]},
+	{role:"toolResult",toolCallId:"call_1",toolName:"lookup",isError:false,content:[{type:"text",text:"result"}],timestamp:3},
+	{role:"user",content:"next",timestamp:4},
+], options:{} },
+{ name:"parallel-tools-key-order", messages:[
+	{role:"user",content:"both",timestamp:1},
+	{role:"assistant",timestamp:2,stopReason:"toolUse",content:[
+		{type:"toolCall",id:"call_a",name:"lookup",arguments:{zeta:1,alpha:[null,true,false,1.5,"x"],mid:{nested:[],"ключ":"välue"},path:"a"}},
+		{type:"toolCall",id:"call_b",name:"lookup",arguments:{}}]},
+	{role:"toolResult",toolCallId:"call_a",toolName:"lookup",isError:false,content:[{type:"text",text:"A"}],timestamp:3},
+	{role:"toolResult",toolCallId:"call_b",toolName:"lookup",isError:true,content:[{type:"text",text:"B"}],timestamp:4},
+], options:{} },
+{ name:"two-system-and-images", messages:[
+	{role:"system",content:"first system",timestamp:0},
+	{role:"system",content:"second system",timestamp:1},
+	{role:"user",content:[{type:"text",text:"two shots"},{type:"image",data:"aW1hZ2Ux",mimeType:"image/png"},{type:"image",data:"aW1hZ2Uy",mimeType:"image/gif"}],timestamp:2},
+], options:{} },
+{ name:"unicode-and-escapes", messages:[
+	{role:"system",content:'sys é日 "quoted" \\backslash\nnewline',timestamp:0},
+	{role:"user",content:"emoji 😀🚀 astral 𝒜 cjk 日本語\nsecond line",timestamp:1},
+], options:{temperature:0.25,maxTokens:64} },
+{ name:"empty-text", messages:[
+	{role:"user",content:[{type:"text",text:""},{type:"text",text:"   "},{type:"text",text:"real"}],timestamp:1},
+	{role:"assistant",timestamp:2,stopReason:"stop",content:[{type:"text",text:""}]},
+	{role:"user",content:"again",timestamp:3},
+], options:{} },
+];
 const model = { api:"azure-openai-responses", id:"gpt-5", provider:"azure", baseUrl:"https://invalid.test/openai/v1", reasoning:true,
 	maxTokens:8192, contextWindow:128000, input:["text","image"], cost:{input:0,output:0,cacheRead:0,cacheWrite:0} };
 const fixtures=[];

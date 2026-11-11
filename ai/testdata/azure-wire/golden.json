@@ -146,5 +146,249 @@
     "path": "/openai/v1/responses",
     "apiVersion": "v1",
     "body": "{\"model\":\"replacement\",\"input\":[{\"role\":\"user\",\"content\":\"changed\"}],\"stream\":true,\"metadata\":{\"z\":\"1\",\"a\":\"2\"},\"custom\":{\"z\":1,\"a\":2}}"
+  },
+  {
+    "name": "reasoning-replay",
+    "messages": [
+      {
+        "role": "user",
+        "content": "go",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "timestamp": 2,
+        "stopReason": "toolUse",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "plan",
+            "thinkingSignature": "c2ln"
+          },
+          {
+            "type": "thinking",
+            "thinking": "[Reasoning redacted]",
+            "thinkingSignature": "cmVk",
+            "redacted": true
+          },
+          {
+            "type": "text",
+            "text": "calling"
+          },
+          {
+            "type": "toolCall",
+            "id": "call_1",
+            "name": "lookup",
+            "arguments": {
+              "q": "x"
+            }
+          }
+        ]
+      },
+      {
+        "role": "toolResult",
+        "toolCallId": "call_1",
+        "toolName": "lookup",
+        "isError": false,
+        "content": [
+          {
+            "type": "text",
+            "text": "result"
+          }
+        ],
+        "timestamp": 3
+      },
+      {
+        "role": "user",
+        "content": "next",
+        "timestamp": 4
+      }
+    ],
+    "options": {},
+    "payload": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"go\"}]},{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"calling\",\"annotations\":[]}],\"status\":\"completed\",\"id\":\"msg_pi_1\"},{\"type\":\"function_call\",\"call_id\":\"call_1\",\"name\":\"lookup\",\"arguments\":\"{\\\"q\\\":\\\"x\\\"}\"},{\"type\":\"function_call_output\",\"call_id\":\"call_1\",\"output\":\"result\"},{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"next\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}",
+    "path": "/openai/v1/responses",
+    "apiVersion": "v1",
+    "body": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"go\"}]},{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"calling\",\"annotations\":[]}],\"status\":\"completed\",\"id\":\"msg_pi_1\"},{\"type\":\"function_call\",\"call_id\":\"call_1\",\"name\":\"lookup\",\"arguments\":\"{\\\"q\\\":\\\"x\\\"}\"},{\"type\":\"function_call_output\",\"call_id\":\"call_1\",\"output\":\"result\"},{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"next\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}"
+  },
+  {
+    "name": "parallel-tools-key-order",
+    "messages": [
+      {
+        "role": "user",
+        "content": "both",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "timestamp": 2,
+        "stopReason": "toolUse",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "call_a",
+            "name": "lookup",
+            "arguments": {
+              "zeta": 1,
+              "alpha": [
+                null,
+                true,
+                false,
+                1.5,
+                "x"
+              ],
+              "mid": {
+                "nested": [],
+                "ключ": "välue"
+              },
+              "path": "a"
+            }
+          },
+          {
+            "type": "toolCall",
+            "id": "call_b",
+            "name": "lookup",
+            "arguments": {}
+          }
+        ]
+      },
+      {
+        "role": "toolResult",
+        "toolCallId": "call_a",
+        "toolName": "lookup",
+        "isError": false,
+        "content": [
+          {
+            "type": "text",
+            "text": "A"
+          }
+        ],
+        "timestamp": 3
+      },
+      {
+        "role": "toolResult",
+        "toolCallId": "call_b",
+        "toolName": "lookup",
+        "isError": true,
+        "content": [
+          {
+            "type": "text",
+            "text": "B"
+          }
+        ],
+        "timestamp": 4
+      }
+    ],
+    "options": {},
+    "payload": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"both\"}]},{\"type\":\"function_call\",\"call_id\":\"call_a\",\"name\":\"lookup\",\"arguments\":\"{\\\"zeta\\\":1,\\\"alpha\\\":[null,true,false,1.5,\\\"x\\\"],\\\"mid\\\":{\\\"nested\\\":[],\\\"ключ\\\":\\\"välue\\\"},\\\"path\\\":\\\"a\\\"}\"},{\"type\":\"function_call\",\"call_id\":\"call_b\",\"name\":\"lookup\",\"arguments\":\"{}\"},{\"type\":\"function_call_output\",\"call_id\":\"call_a\",\"output\":\"A\"},{\"type\":\"function_call_output\",\"call_id\":\"call_b\",\"output\":\"B\"}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}",
+    "path": "/openai/v1/responses",
+    "apiVersion": "v1",
+    "body": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"both\"}]},{\"type\":\"function_call\",\"call_id\":\"call_a\",\"name\":\"lookup\",\"arguments\":\"{\\\"zeta\\\":1,\\\"alpha\\\":[null,true,false,1.5,\\\"x\\\"],\\\"mid\\\":{\\\"nested\\\":[],\\\"ключ\\\":\\\"välue\\\"},\\\"path\\\":\\\"a\\\"}\"},{\"type\":\"function_call\",\"call_id\":\"call_b\",\"name\":\"lookup\",\"arguments\":\"{}\"},{\"type\":\"function_call_output\",\"call_id\":\"call_a\",\"output\":\"A\"},{\"type\":\"function_call_output\",\"call_id\":\"call_b\",\"output\":\"B\"}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}"
+  },
+  {
+    "name": "two-system-and-images",
+    "messages": [
+      {
+        "role": "system",
+        "content": "first system",
+        "timestamp": 0
+      },
+      {
+        "role": "system",
+        "content": "second system",
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "two shots"
+          },
+          {
+            "type": "image",
+            "data": "aW1hZ2Ux",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "aW1hZ2Uy",
+            "mimeType": "image/gif"
+          }
+        ],
+        "timestamp": 2
+      }
+    ],
+    "options": {},
+    "payload": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"developer\",\"content\":\"first system\\n\\nsecond system\"},{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"two shots\"},{\"type\":\"input_image\",\"detail\":\"auto\",\"image_url\":\"data:image/png;base64,aW1hZ2Ux\"},{\"type\":\"input_image\",\"detail\":\"auto\",\"image_url\":\"data:image/gif;base64,aW1hZ2Uy\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}",
+    "path": "/openai/v1/responses",
+    "apiVersion": "v1",
+    "body": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"developer\",\"content\":\"first system\\n\\nsecond system\"},{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"two shots\"},{\"type\":\"input_image\",\"detail\":\"auto\",\"image_url\":\"data:image/png;base64,aW1hZ2Ux\"},{\"type\":\"input_image\",\"detail\":\"auto\",\"image_url\":\"data:image/gif;base64,aW1hZ2Uy\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}"
+  },
+  {
+    "name": "unicode-and-escapes",
+    "messages": [
+      {
+        "role": "system",
+        "content": "sys é日 \"quoted\" \\backslash\nnewline",
+        "timestamp": 0
+      },
+      {
+        "role": "user",
+        "content": "emoji 😀🚀 astral 𝒜 cjk 日本語\nsecond line",
+        "timestamp": 1
+      }
+    ],
+    "options": {
+      "temperature": 0.25,
+      "maxTokens": 64
+    },
+    "payload": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"developer\",\"content\":\"sys é日 \\\"quoted\\\" \\\\backslash\\nnewline\"},{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"emoji 😀🚀 astral 𝒜 cjk 日本語\\nsecond line\"}]}],\"stream\":true,\"store\":false,\"max_output_tokens\":64,\"temperature\":0.25,\"reasoning\":{\"effort\":\"none\"}}",
+    "path": "/openai/v1/responses",
+    "apiVersion": "v1",
+    "body": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"developer\",\"content\":\"sys é日 \\\"quoted\\\" \\\\backslash\\nnewline\"},{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"emoji 😀🚀 astral 𝒜 cjk 日本語\\nsecond line\"}]}],\"stream\":true,\"store\":false,\"max_output_tokens\":64,\"temperature\":0.25,\"reasoning\":{\"effort\":\"none\"}}"
+  },
+  {
+    "name": "empty-text",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "   "
+          },
+          {
+            "type": "text",
+            "text": "real"
+          }
+        ],
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "timestamp": 2,
+        "stopReason": "stop",
+        "content": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "again",
+        "timestamp": 3
+      }
+    ],
+    "options": {},
+    "payload": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"\"},{\"type\":\"input_text\",\"text\":\"   \"},{\"type\":\"input_text\",\"text\":\"real\"}]},{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"\",\"annotations\":[]}],\"status\":\"completed\",\"id\":\"msg_pi_1\"},{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"again\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}",
+    "path": "/openai/v1/responses",
+    "apiVersion": "v1",
+    "body": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"\"},{\"type\":\"input_text\",\"text\":\"   \"},{\"type\":\"input_text\",\"text\":\"real\"}]},{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"\",\"annotations\":[]}],\"status\":\"completed\",\"id\":\"msg_pi_1\"},{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"again\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}"
   }
 ]
