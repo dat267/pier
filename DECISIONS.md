@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D450)
+# Deliberate divergences from pi (D1–D451)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7065,3 +7065,25 @@ write lands on the first frame. The port sanitizes the cwd and, defensively, the
 statuses it is handed, following D342/D422.
 
 Tests: `TestFooterLineSanitizesStoredCwd`.
+
+### D451
+
+**Selection lists sanitize their item text; the reference draws it verbatim.**
+
+Reference: pi v1.5.0 `f9a26365` `components/select-list.ts` renders
+`item.label || item.value` and the description as given, which is what the port
+did too.
+
+The reachable path is `@`-completion. A cloned repository can contain a file whose
+name carries escape sequences (Linux permits any byte but `/` and NUL), so the
+suggestion list draws attacker-chosen bytes while the user types, and `ESC[2J` or
+an OSC 52 clipboard write executes without the user selecting anything. Other
+providers fill the same list with project skill and command text.
+
+Only the display is sanitized, following D342/D422: `item.Value` stays exact,
+because callers insert it as a path. The editor's own rendering of an inserted
+name is a separate, still-open path recorded in `TODO.md`: its layout and cursor
+arithmetic run over the raw buffer and its output is pinned by goldens, so
+sanitizing there needs a design decision rather than a one-line fix.
+
+Tests: `TestSelectListSanitizesItemText`.

@@ -164,7 +164,7 @@ func (s *SelectList) Render(width int) []string {
 		isSelected := i == s.selectedIndex
 		description := ""
 		if item.Description != "" {
-			description = normalizeToSingleLine(item.Description)
+			description = SanitizeUntrustedText(normalizeToSingleLine(item.Description))
 		}
 		lines = append(lines, s.renderItem(item, isSelected, width, description, primaryColumnWidth))
 	}
@@ -341,7 +341,10 @@ func (s *SelectList) getPrimaryColumnBounds() (minWidth int, maxWidth int) {
 }
 
 func (s *SelectList) truncatePrimary(item SelectItem, isSelected bool, maxWidth int, columnWidth int) string {
-	displayValue := s.getDisplayValue(item)
+	// Item text can come from disk (an @-completion lists file names) or from a
+	// provider, so it is untrusted for the terminal. Only the display is
+	// sanitized: item.Value stays exact for callers that insert it (D342, D451).
+	displayValue := SanitizeUntrustedText(s.getDisplayValue(item))
 	truncatedValue := TruncateToWidth(displayValue, maxWidth, "", false)
 	if s.layout.TruncatePrimary != nil {
 		truncatedValue = s.layout.TruncatePrimary(SelectListTruncatePrimaryContext{

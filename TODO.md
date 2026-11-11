@@ -73,3 +73,30 @@
 - Conclusion for the next attempt: A493 is a work item of its own, and the
   highest-value first slice is the 28 `... done` findings, because they are the
   post-replacement rebind and A494's fix already removed the largest of them.
+
+## A503 — medium: the editor renders escape sequences from its buffer
+
+- Category and affected paths: terminal-control injection in `tui/editor.go`
+  `Render`/`layoutTextLocked`; the buffer it lays out can hold bytes the user
+  never typed.
+- Scenario: complete an `@` suggestion whose file name carries escape sequences
+  (a cloned repository can contain one), or paste text containing them. The
+  completion inserts the exact name so the path still works, and the editor then
+  draws it. Expected: the port's rule for untrusted terminal text (D342, D422).
+  Actual: probed directly before D451, `SetText("hi \x1b[2J…")` renders the
+  sequences raw, and D451 fixes only the suggestion list that leads to it.
+- Evidence: the D451 probe renders the list and, separately, an editor holding
+  the same bytes; the list is fixed, the editor is not. `just check` cannot see
+  it because no existing test feeds control bytes into a buffer.
+- Authority: D342/D422, and D451's own reasoning: sanitizing where the bytes
+  enter the terminal is the rule.
+- Root cause: the editor assumes its buffer holds keystrokes, which can carry no
+  raw escape byte; completions and paste are not keystrokes.
+- Repair plan: needs a design decision, not a one-liner. Layout, cursor mapping,
+  selection and highlighting all run over the raw buffer, so sanitizing at the
+  output stage would misalign them; sanitizing on entry would rewrite paths the
+  user needs exact. Options: a display-width-preserving replacement at layout
+  entry, or an explicit "unrenderable bytes" marker per cell. The 76 editor
+  goldens pin the current bytes, so whichever option lands needs a D-row.
+- Verification owed: an editor test that a buffer with ESC renders no non-theme
+  sequence, plus the existing goldens.
