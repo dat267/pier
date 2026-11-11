@@ -23,6 +23,7 @@ const (
 	AuthCommandCheck            AuthCommandKind = "check"
 	AuthCommandPrintAPIKey      AuthCommandKind = "api_key"
 	AuthCommandPrintBearerToken AuthCommandKind = "bearer_token"
+	AuthCommandLogout           AuthCommandKind = "logout"
 )
 
 // AuthCommand is a parsed `pi auth` invocation. Args are the remaining
@@ -58,6 +59,8 @@ func authCommandUsage(appName string, kind AuthCommandKind) string {
 		return fmt.Sprintf("%s auth check --provider <provider> [--json] [--credentials] [--no-refresh]", appName)
 	case AuthCommandPrintAPIKey:
 		return fmt.Sprintf("%s auth print-api-key --provider <provider> [--model <model>]", appName)
+	case AuthCommandLogout:
+		return fmt.Sprintf("%s auth logout <provider>", appName)
 	default:
 		return fmt.Sprintf("%s auth print-bearer-token --provider <provider> [--model <model>] [--min-expiry <duration>]", appName)
 	}
@@ -82,6 +85,7 @@ func IsAuthCommandHelp(args []string) bool {
 // PrintAuthCommandHelp renders the `pi auth` usage text.
 func PrintAuthCommandHelp(appName string) string {
 	return fmt.Sprintf(`Usage:
+  %[1]s auth logout <provider>
   %[1]s auth print-api-key [--provider <provider>] [--model <model>]
   %[1]s auth print-bearer-token [--provider <provider>] [--model <model>] [--min-expiry <duration>]
   %[1]s auth check [--provider <provider>] [--model <model>] [--json] [--credentials] [--no-refresh]
@@ -143,6 +147,8 @@ func parseAuthCommandNamed(appName string, args []string) (*AuthCommand, error) 
 			kind = AuthCommandPrintAPIKey
 		case "print-bearer-token":
 			kind = AuthCommandPrintBearerToken
+		case "logout":
+			kind = AuthCommandLogout
 		}
 	}
 	if kind == "" {
@@ -505,6 +511,10 @@ func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer
 			return true, 2
 		}
 		return true, 1
+	}
+
+	if command.Kind == AuthCommandLogout {
+		return true, runAuthLogout(appName, command, stdout, stderr)
 	}
 
 	authPath := filepath.Join(GetAgentDir(), "auth.json")
