@@ -52,14 +52,15 @@ type EventDispatcher struct {
 	// UpdateEditorBorderColor refreshes the editor border on
 	// thinking_level_changed.
 	UpdateEditorBorderColor func()
-	// FlushCompactionQueue drains the queued compaction messages.
+	// FlushCompactionQueue drains the queued compaction messages. It is called
+	// on the loop; the host takes the queue there and sends it via StartWork.
 	FlushCompactionQueue func(willRetry bool)
 	// ResetSweeps drops the expansion sweeps that targeted the transcript a
 	// compaction rebuild replaces (M77).
 	ResetSweeps func()
-	// StartWork runs blocking work off the UI loop. The flush can start a
-	// turn, so it must not run inside event application (which would stop the
-	// loop from draining that turn's events). Nil runs inline (tests).
+	// StartWork runs blocking work off the UI loop. The flush's send can start
+	// a turn, so it must not run inside event application (which would stop
+	// the loop from draining that turn's events). Nil runs inline (tests).
 	StartWork func(fn func(context.Context) error)
 	// CheckShutdownRequested handles a pending shutdown.
 	CheckShutdownRequested func()
@@ -687,16 +688,10 @@ func (d *EventDispatcher) handleCompactionEnd(event *coding.SessionEvent) {
 	// The run is over whether it produced a summary or not, so a later
 	// compaction cannot inherit this start time (D406).
 	d.compactionStartedAt = time.Time{}
+	// The flush takes the queue here, on the loop that owns it, and sends it
+	// through StartWork, off the loop, since a prompt blocks for its run.
 	if d.FlushCompactionQueue != nil {
-		flush := d.FlushCompactionQueue
-		if d.StartWork != nil {
-			d.StartWork(func(context.Context) error {
-				flush(event.WillRetry)
-				return nil
-			})
-		} else {
-			flush(event.WillRetry)
-		}
+		d.FlushCompactionQueue(event.WillRetry)
 	}
 	d.requestRender()
 }

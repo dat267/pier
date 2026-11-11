@@ -7,6 +7,7 @@ import (
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/tui"
 )
 
 // Upstream flushCompactionQueue (interactive-mode.ts, pi v1.5.2 b4afdddf)
@@ -61,3 +62,37 @@ func TestCompactionQueueFlushDeliversEveryQueuedMessage(t *testing.T) {
 		}
 	}
 }
+
+// The flush's send runs on a work goroutine while the loop keeps queueing:
+// the queue and the pending display stay loop-owned (the send posts its
+// updates), so the race detector finds no shared access. Upstream runs both
+// on one event loop (interactive-mode.ts, pi v1.5.2 b4afdddf).
+func TestCompactionQueueSendLeavesTheQueueToTheLoop(t *testing.T) {
+	controller, _, _ := newQueueTestController(t)
+	posted := make(chan func(), 64)
+	controller.UI = &postRecorder{posted: posted}
+	controller.QueueCompactionMessage("first", "followUp")
+	controller.QueueCompactionMessage("second", "followUp")
+	queued := controller.TakeCompactionQueue()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		controller.SendCompactionQueue(context.Background(), queued, false)
+	}()
+	controller.QueueCompactionMessage("typed meanwhile", "steer")
+	<-done
+	for len(posted) > 0 {
+		(<-posted)()
+	}
+	if got := controller.CompactionQueuedMessages(); len(got) != 1 || got[0].Text != "typed meanwhile" {
+		t.Fatalf("compaction queue = %v", got)
+	}
+}
+
+// postRecorder is a TUI whose Post hands the update to the test's loop.
+type postRecorder struct {
+	tui.TUI
+	posted chan func()
+}
+
+func (p *postRecorder) Post(fn func()) { p.posted <- fn }

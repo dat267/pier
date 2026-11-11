@@ -546,7 +546,14 @@ func NewApp(options AppOptions) *App {
 	app.events.MarkdownTheme = app.markdownTheme()
 	app.events.TerminalProgress = func(active bool) { terminal.SetProgress(active) }
 	app.events.FlushCompactionQueue = func(willRetry bool) {
-		app.queue.FlushCompactionQueue(context.Background(), willRetry)
+		queued := app.queue.TakeCompactionQueue()
+		if len(queued) == 0 {
+			return
+		}
+		app.events.StartWork(func(ctx context.Context) error {
+			app.queue.SendCompactionQueue(ctx, queued, willRetry)
+			return nil
+		})
 	}
 	app.events.CheckShutdownRequested = app.lifecycleCheckShutdown
 	app.events.Init = func() {

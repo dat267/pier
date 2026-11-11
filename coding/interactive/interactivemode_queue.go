@@ -273,24 +273,53 @@ func (c *QueueController) QueueCompactionMessage(text string, mode string) {
 // (always false: extension mechanics are out of scope, D41).
 func (c *QueueController) IsExtensionCommand(text string) bool { return false }
 
-// FlushCompactionQueue sends the queued messages after compaction.
+// FlushCompactionQueue sends the queued messages after compaction, taking and
+// sending them on the caller's goroutine.
 func (c *QueueController) FlushCompactionQueue(ctx context.Context, willRetry bool) {
+	c.SendCompactionQueue(ctx, c.TakeCompactionQueue(), willRetry)
+}
+
+// TakeCompactionQueue empties the compaction queue and refreshes the pending
+// display. It runs on the UI loop, which owns the queue and the display.
+func (c *QueueController) TakeCompactionQueue() []CompactionQueuedMessage {
 	if len(c.compactionQueuedMessages) == 0 {
-		return
+		return nil
 	}
 	queuedMessages := append([]CompactionQueuedMessage{}, c.compactionQueuedMessages...)
 	c.compactionQueuedMessages = nil
 	c.UpdatePendingMessagesDisplay()
+	return queuedMessages
+}
 
+// onLoop runs a UI update on the loop: posted when the controller has a UI
+// (the send runs on a work goroutine, D168), inline otherwise.
+func (c *QueueController) onLoop(update func()) {
+	if c.UI != nil {
+		c.UI.Post(update)
+		return
+	}
+	update()
+}
+
+// SendCompactionQueue sends messages TakeCompactionQueue took (port of the
+// sending half of flushCompactionQueue). Prompting blocks for the run, so the
+// host calls it off the loop; its queue and display updates go back to the
+// loop through onLoop.
+func (c *QueueController) SendCompactionQueue(ctx context.Context, queuedMessages []CompactionQueuedMessage, willRetry bool) {
+	if len(queuedMessages) == 0 {
+		return
+	}
 	restoreQueue := func(err error) {
 		c.Session.ClearQueue()
-		c.compactionQueuedMessages = queuedMessages
-		c.UpdatePendingMessagesDisplay()
-		suffix := ""
-		if len(queuedMessages) > 1 {
-			suffix = "s"
-		}
-		c.showError("Failed to send queued message" + suffix + ": " + err.Error())
+		c.onLoop(func() {
+			c.compactionQueuedMessages = queuedMessages
+			c.UpdatePendingMessagesDisplay()
+			suffix := ""
+			if len(queuedMessages) > 1 {
+				suffix = "s"
+			}
+			c.showError("Failed to send queued message" + suffix + ": " + err.Error())
+		})
 	}
 
 	if willRetry {
@@ -303,7 +332,7 @@ func (c *QueueController) FlushCompactionQueue(ctx context.Context, willRetry bo
 				c.Session.Steer(userMessage(message.Text))
 			}
 		}
-		c.UpdatePendingMessagesDisplay()
+		c.onLoop(c.UpdatePendingMessagesDisplay)
 		return
 	}
 
@@ -345,7 +374,7 @@ func (c *QueueController) FlushCompactionQueue(ctx context.Context, willRetry bo
 		restoreQueue(err)
 		return
 	}
-	c.UpdatePendingMessagesDisplay()
+	c.onLoop(c.UpdatePendingMessagesDisplay)
 }
 
 // queueCompactionRest queues the messages after the first post-compaction
