@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand/v2"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -122,6 +123,19 @@ func TestRPCAnswersEveryCommandOnceUnderAnInterleavedLoad(t *testing.T) {
 		`"type":"cycle_thinking_level"`,
 		`"type":"clear_queue"`,
 		`"type":"set_auto_compaction","enabled":false`,
+		`"type":"set_auto_retry","enabled":true`,
+		`"type":"abort_retry"`,
+		`"type":"set_model","provider":"anthropic","modelId":"fixture"`,
+		`"type":"cycle_model"`,
+		`"type":"get_available_models"`,
+		`"type":"get_available_thinking_levels"`,
+		`"type":"set_thinking_level","level":"high"`,
+		`"type":"set_steering_mode","mode":"all"`,
+		`"type":"set_follow_up_mode","mode":"one-at-a-time"`,
+		`"type":"get_last_assistant_text"`,
+		`"type":"get_commands"`,
+		fmt.Sprintf(`"type":"switch_session","sessionPath":%q`, filepath.Join(t.TempDir(), "other.jsonl")),
+		`"type":"export_html"`,
 	}
 	const total = 200
 	input, writer := io.Pipe()
