@@ -71,18 +71,30 @@ func ParseCommandArgs(argsString string) []string {
 	// Tracks whether a token has started, so quoted empty strings ("" or '')
 	// are kept as arguments (#10867).
 	hasToken := false
+	// Where the open quote started, so an unclosed quote can be re-read as
+	// literal text.
+	quoteStart := 0
 
-	for _, char := range argsString {
+	// pi v1.5.2 (b4afdddf) parseCommandArgs: quotes only open at the start of an
+	// argument, so an apostrophe inside a word stays literal; a backslash before
+	// the open quote's character keeps it as text; an unclosed quote is literal.
+	runes := []rune(argsString)
+	for i := 0; i < len(runes); i++ {
+		char := runes[i]
 		switch {
 		case hasQuote:
-			if char == inQuote {
+			if char == '\\' && i+1 < len(runes) && runes[i+1] == inQuote {
+				current.WriteRune(inQuote)
+				i++
+			} else if char == inQuote {
 				hasQuote = false
 			} else {
 				current.WriteRune(char)
 			}
-		case char == '"' || char == '\'':
+		case (char == '"' || char == '\'') && !hasToken:
 			inQuote = char
 			hasQuote = true
+			quoteStart = i
 			hasToken = true
 		case isJSWhitespace(char):
 			if hasToken {
@@ -93,6 +105,16 @@ func ParseCommandArgs(argsString string) []string {
 		default:
 			current.WriteRune(char)
 			hasToken = true
+		}
+
+		if hasQuote && i == len(runes)-1 {
+			// Unclosed quote: keep the quote character as text and parse the rest
+			// normally. The current token is empty when the quote opened, because
+			// quotes only open a new argument.
+			hasQuote = false
+			current.Reset()
+			current.WriteRune(runes[quoteStart])
+			i = quoteStart
 		}
 	}
 	if hasToken {

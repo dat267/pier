@@ -213,7 +213,9 @@ func TestParseCommandArgsQuoting(t *testing.T) {
 		{"\"line1\nline2\" third", []string{"line1\nline2", "third"}},
 		{"unquoted\nnewline", []string{"unquoted", "newline"}},
 		{"mixed \t  whitespace", []string{"mixed", "whitespace"}},
-		{`"quoted \"text\""`, []string{`quoted \text\`}},
+		// pi v1.5.2 (b4afdddf): a backslash before the open quote's character keeps
+		// it as text, so escaped quotes survive instead of ending the quote.
+		{`"quoted \"text\""`, []string{`quoted "text"`}},
 		{"trailing   ", []string{"trailing"}},
 		{"   leading", []string{"leading"}},
 	}
@@ -446,5 +448,29 @@ func TestLoadTemplateFrontmatterArgumentHint(t *testing.T) {
 	template = LoadTemplateFromFile(long, CreateSyntheticSourceInfo(long, "local", "", "", root))
 	if template == nil || len(template.Description) != 63 || !strings.HasSuffix(template.Description, "...") {
 		t.Fatalf("description = %q", template.Description)
+	}
+}
+
+// pi v1.5.2 (b4afdddf) core/prompt-templates.ts parseCommandArgs: a backslash
+// before the open quote's character keeps it as text, quotes only open at the
+// start of an argument so apostrophes inside words stay literal, and an unclosed
+// quote is re-read as literal text instead of swallowing the rest of the line.
+func TestParseCommandArgsQuotesAndEscapes(t *testing.T) {
+	cases := []struct {
+		input string
+		want  []string
+	}{
+		{"don't stop", []string{"don't", "stop"}},
+		{`"say \"hi\""`, []string{`say "hi"`}},
+		{`'it\'s' now`, []string{"it's", "now"}},
+		{`"unclosed rest`, []string{`"unclosed`, "rest"}},
+		{`mid"quote`, []string{`mid"quote`}},
+		{`x "a b"`, []string{"x", "a b"}},
+		{`"open 'inner' quote"`, []string{"open 'inner' quote"}},
+	}
+	for _, testCase := range cases {
+		if got := ParseCommandArgs(testCase.input); !reflect.DeepEqual(got, testCase.want) {
+			t.Errorf("ParseCommandArgs(%q) = %#v, want %#v", testCase.input, got, testCase.want)
+		}
 	}
 }
