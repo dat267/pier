@@ -78,7 +78,10 @@ func TestListSessionsWithProgressReportsPartials(t *testing.T) {
 // A cancelled load stops instead of reading every file: the picker cancels when
 // the user switches scope, and the port used to keep scanning.
 func TestListSessionsWithProgressStopsOnCancel(t *testing.T) {
-	dir := writeListingFixture(t, 12, 4096)
+	// Enough files that a long tail remains after the first publish, which is
+	// what the cancel can actually skip: the progress interval is 10 files and
+	// the listing runs 10 workers, so a 12-file fixture leaves nothing to prove.
+	dir := writeListingFixture(t, 60, 4096)
 	ctx, cancel := context.WithCancel(context.Background())
 	seen := 0
 	_, err := ListSessionsWithProgress(ctx, dir, dir, func(loaded int, total int, partial []SessionInfo) {
@@ -93,7 +96,7 @@ func TestListSessionsWithProgressStopsOnCancel(t *testing.T) {
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("err = %v, want context.Canceled", err)
 	}
-	if seen >= 12 {
+	if seen >= 60 {
 		t.Fatalf("the listing read every file after cancellation: %d", seen)
 	}
 }

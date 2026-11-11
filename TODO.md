@@ -56,25 +56,3 @@
   (2) an off-loop seam rule so a wiring closure invoked only inside a detached
   worker is not rooted (the `/reload` pair); (3) repairs or reasoned allowlist
   entries for the remainder, with `bindSessionManager`'s rebind work first.
-
-## A495 — low: the A488 cancellation test cannot fail for the reason it asserts
-
-- Category and affected paths: flaky verification test,
-  `coding/session_listing_progress_test.go`
-  `TestListSessionsWithProgressStopsOnCancel`.
-- Scenario: `go test -race -count=5 ./coding -run
-  TestListSessionsWithProgressStopsOnCancel` (the race shape the repo asks for on
-  concurrency changes). Expected: green. Actual: "the listing read every file
-  after cancellation: 12" on every run.
-- Evidence: the fixture has 12 files and `currentSessionListPublishInterval` is
-  10, so the first progress callback (where the test cancels) cannot fire before
-  10 files are read; with 10 concurrent workers the remaining two are already
-  dispatched, so `seen` reaches 12 by construction. The test passed without
-  `-race` only because scheduling let the cancel land between files 10 and 12.
-- Authority: the test's own comment ("a cancelled load stops instead of reading
-  every file"); A488's design publishes partial results every 10 files.
-- Root cause: the fixture is too small to leave work that cancellation could
-  skip, so the assertion depends on scheduling.
-- Repair plan: enlarge the fixture so a large tail remains after the first
-  publish, keep both assertions, and re-run the race shape.
-- Verification: `-race -count=5` on the test, then `just check`.
