@@ -24,20 +24,31 @@ func requireBinary(t *testing.T, name string) {
 	}
 }
 
-func TestFindToolForwardsFractionalLimitToFD(t *testing.T) {
+// pi v1.5.2 (b4afdddf) find.ts floors the limit and asks for one result past it
+// (`Math.max(1, Math.floor(limit ?? DEFAULT_LIMIT))`), so a fractional limit no
+// longer reaches fd as an invalid --max-results value.
+func TestFindToolFloorsFractionalLimitForFD(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("uses a POSIX fd test stub")
 	}
+	argsFile := filepath.Join(t.TempDir(), "args")
 	stubDir := t.TempDir()
 	stub := filepath.Join(stubDir, "fd")
-	if err := os.WriteFile(stub, []byte("#!/bin/sh\nfor arg do\n  if [ \"$arg\" = \"1.5\" ]; then echo 'invalid max-results: 1.5' >&2; exit 2; fi\ndone\nexit 0\n"), 0o755); err != nil {
+	script := "#!/bin/sh\nfor arg do\n  if [ \"$arg\" = \"1.5\" ]; then echo 'invalid max-results: 1.5' >&2; exit 2; fi\ndone\nprintf '%s\\n' \"$*\" > " + argsFile + "\nexit 0\n"
+	if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", stubDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	tool := CreateFindTool(t.TempDir())
-	_, err := tool.Execute("c", json.RawMessage(`{"pattern":"*.txt","limit":1.5}`), context.Background(), nil)
-	if err == nil || err.Error() != "invalid max-results: 1.5" {
+	if _, err := tool.Execute("c", json.RawMessage(`{"pattern":"*.txt","limit":1.5}`), context.Background(), nil); err != nil {
 		t.Fatalf("fractional find limit error = %v", err)
+	}
+	recorded, err := os.ReadFile(argsFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(recorded), "--max-results 2 ") {
+		t.Fatalf("fd args = %q; want the floored limit plus one", recorded)
 	}
 }
 

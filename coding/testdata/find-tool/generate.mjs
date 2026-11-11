@@ -1,4 +1,4 @@
-// Reference: pi v1.4.0 (4a080252), core/tools/find.ts with default (fd) operations.
+// Reference: pi v1.5.2 (b4afdddf), core/tools/find.ts with default (fd) operations.
 // Regenerate from the repository root:
 // node --experimental-strip-types coding/testdata/find-tool/generate.mjs ./pi > coding/testdata/find-tool/golden.json
 import { registerHooks } from "node:module";
@@ -38,6 +38,10 @@ const cases = [
 	{ name: "path-containing", pattern: "src/**/*.spec.ts" },
 	{ name: "hidden", pattern: "*.ts" },
 	{ name: "no-match", pattern: "*.nope" },
+	// Exactly as many matches as the limit: no limit notice. Limits below the
+	// match count are not fixture cases because which matches fd returns first is
+	// its traversal order; TestFindToolLimitBoundaryAndFloor pins those with a stub.
+	{ name: "limit-exact", pattern: "*.ts", limit: 3 },
 	{ name: "path-file", pattern: "*.md", path: "readme.md" },
 	{ name: "missing-path", pattern: "*.ts", path: "nope" },
 ];

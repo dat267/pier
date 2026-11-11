@@ -40,6 +40,17 @@
     }
   },
   {
+    "name": "limit-exact",
+    "args": {
+      "pattern": "*.ts",
+      "limit": 3
+    },
+    "expected": {
+      "text": ".hidden.ts\nsrc/a.ts\nsrc/deep/b.spec.ts",
+      "details": null
+    }
+  },
+  {
     "name": "path-file",
     "args": {
       "pattern": "*.md",

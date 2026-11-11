@@ -106,6 +106,9 @@ func CreateFindTool(cwd string) agent.AgentTool {
 			if input.Limit != nil {
 				effectiveLimit = *input.Limit
 			}
+			// fd treats --max-results 0 as unlimited, so a limit below 1 means 1,
+			// and the schema's Number is floored (pi v1.5.2 find.ts).
+			effectiveLimit = math.Max(1, math.Floor(effectiveLimit))
 
 			// The reference resolves fd before spawning and never stats the path:
 			// fd's own error (or the unavailable-tool message) is what callers see.
@@ -139,7 +142,9 @@ func CreateFindTool(cwd string) agent.AgentTool {
 			if !insideGitRepo {
 				args = append(args, "--no-require-git")
 			}
-			args = append(args, "--max-results", formatToolNumber(effectiveLimit))
+			// One result past the limit tells "exactly N matches" apart from
+			// "more than N".
+			args = append(args, "--max-results", formatToolNumber(effectiveLimit+1))
 
 			// fd --glob matches basenames unless --full-path; a path-
 			// containing pattern needs a leading **/ to match anything.
@@ -187,7 +192,10 @@ func CreateFindTool(cwd string) agent.AgentTool {
 				}
 				relativized = append(relativized, RelativizeFindResultPath(line, searchPath))
 			}
-			resultLimitReached := float64(len(relativized)) >= effectiveLimit
+			resultLimitReached := float64(len(relativized)) > effectiveLimit
+			if int(effectiveLimit) < len(relativized) {
+				relativized = relativized[:int(effectiveLimit)]
+			}
 			rawOutput2 := strings.Join(relativized, "\n")
 			truncation := TruncateHead(rawOutput2, TruncationOptions{MaxLines: uncappedLines})
 			resultOutput := truncation.Content
