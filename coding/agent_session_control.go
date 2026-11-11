@@ -818,7 +818,66 @@ func (s *AgentSession) addPersistedDefaultToNonEmptyScope(model *ai.Model) {
 	s.control.Settings.SetEnabledModels(append(enabledModels, reference))
 }
 
-// SetThinkingLevel clamps the level to the model's capabilities, appends a
+// recordSelection records the live model and thinking level on the current
+// branch, so a resume restores them (pi v1.5.2 agent-session.ts
+// _recordSelection). Tree navigation can leave the latest model or level change
+// on another branch.
+func (s *AgentSession) recordSelection() {
+	branch := s.Sessions.GetBranch("")
+	s.recordModelSelection(branch)
+	s.recordThinkingLevel(branch)
+}
+
+// recordModelSelection records the model the branch implies when it differs. A
+// response cannot record a virtual selection because it names a physical model,
+// so a physical record is replaced only when a virtual model runs.
+func (s *AgentSession) recordModelSelection(branch []SessionEntry) {
+	model := s.Model()
+	if model == nil {
+		return
+	}
+	getModel := func(provider, modelID string) *ai.Model {
+		if s.control.ModelRuntime == nil {
+			return nil
+		}
+		return s.control.ModelRuntime.GetModel(provider, modelID)
+	}
+	recorded := GetBranchSelection(branch, getModel)
+	if recorded == nil || (recorded.Provider == model.Provider && recorded.ModelID == model.ID) {
+		return
+	}
+	recordedModel := getModel(recorded.Provider, recorded.ModelID)
+	if !IsVirtualModel(model) && !(recordedModel != nil && IsVirtualModel(recordedModel)) {
+		return
+	}
+	s.Sessions.AppendModelChange(model.Provider, model.ID)
+}
+
+// recordThinkingLevel records the live level when the branch's latest one
+// differs, comparing after clamping to the current model so a clamped level is
+// not recorded over the requested one (#11451).
+func (s *AgentSession) recordThinkingLevel(branch []SessionEntry) {
+	var recorded *SessionEntry
+	for index := len(branch) - 1; index >= 0; index-- {
+		if branch[index].Type == "thinking_level_change" {
+			recorded = &branch[index]
+			break
+		}
+	}
+	if recorded == nil {
+		return
+	}
+	recordedLevel := ai.ThinkingLevel(recorded.ThinkingLevel)
+	effective := recordedLevel
+	if available := s.GetAvailableThinkingLevels(); !slices.Contains(available, recordedLevel) {
+		effective = s.clampThinkingLevel(recordedLevel)
+	}
+	if effective == s.ThinkingLevel() {
+		return
+	}
+	s.Sessions.AppendThinkingLevelChange(s.ThinkingLevel())
+}
+
 // transcript entry when it changes, and optionally persists the requested level.
 func (s *AgentSession) SetThinkingLevel(level ai.ThinkingLevel, optionList ...ModelMutationOptions) {
 	options := ModelMutationOptions{}

@@ -362,6 +362,9 @@ func (s *AgentSession) startAgentPrompt(ctx context.Context, messages []ai.Messa
 	for _, notify := range onStarted {
 		notify()
 	}
+	// The run records the live selection so a resume restores it (pi v1.5.2
+	// _recordSelection).
+	s.recordSelection()
 	// The once-per-session pre-turn hook (upstream before_agent_start): the
 	// MCP first-prompt wait installs here, so the first request carries the
 	// tools that connected in time.
