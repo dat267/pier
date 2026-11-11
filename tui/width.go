@@ -286,6 +286,11 @@ func isGraphemeExtend(r rune) bool {
 	if r == 0x200C || r == 0x200D {
 		return true
 	}
+	// U+FF9E/U+FF9F are letters, not Marks, but UCD GraphemeBreakProperty lists
+	// them as Extend, so they join the preceding character's cluster (A508).
+	if r == 0xFF9E || r == 0xFF9F {
+		return true
+	}
 	return r >= 0xE0020 && r <= 0xE007F
 }
 
