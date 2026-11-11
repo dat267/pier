@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D452)
+# Deliberate divergences from pi (D1–D453)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7114,3 +7114,27 @@ a name is unusable through a completion either way, and the buffer stays
 editable.
 
 Tests: `TestEditorSanitizesTextOnEntry`, one case per entry point.
+
+### D453
+
+**A failed output spill publishes no full-output path.** When a tool result is
+truncated, pier appends `[Output truncated. Full output: <path>]` and spills the
+whole output to a temp file. If a write to that file fails — ENOSPC on a tmpfs
+is the expected case, which is why D161 sweeps this scratch at all — upstream
+keeps the path it already returned, so the model reads a partial file as the
+complete output. pier discards the file on the first write failure and reports
+no path, keeping the truncation notice and the retained tail.
+
+`Reference:` pi v1.5.0 (f9a26365) `core/tools/output-accumulator.ts`
+`ensureTempFile` assigns `this.tempFilePath` before writing the buffered chunks,
+and the writes go to a Node stream whose `error` event nothing listens for, so
+`fullOutputPath` is returned either way. In Go the write error is synchronous,
+so the port had already recorded it (the executor kept it in a `tempErr` it never
+read) and only had to stop publishing the path.
+
+The latch matters: after a failed spill, a later `Snapshot` or `Finish` must not
+create a second file for output that is no longer buffered, which would be an
+empty file offered as the full one.
+
+`Test:` `TestOutputAccumulatorDropsAFailedSpill` (buffered backlog and streamed
+chunk) and `TestBashExecutorDropsAFailedSpill`.

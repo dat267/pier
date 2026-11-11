@@ -49,6 +49,21 @@ type OutputAccumulator struct {
 	rawChunks                [][]byte
 	tempFilePath             string
 	tempFile                 *os.File
+	// spillWrite writes to the temp file; nil means the file's own Write. Tests
+	// replace it to exercise a failing disk (ENOSPC) without one (A505).
+	spillWrite func(*os.File, []byte) error
+	// spillErr latches a failed spill so no later call publishes a path for a
+	// file that could not be written (A505).
+	spillErr error
+}
+
+// writeSpill appends data to the spill file through the write seam.
+func (o *OutputAccumulator) writeSpill(file *os.File, data []byte) error {
+	if o.spillWrite != nil {
+		return o.spillWrite(file, data)
+	}
+	_, err := file.Write(data)
+	return err
 }
 
 // BashUpdateThrottleMS is how often streamed bash output updates are emitted
@@ -124,7 +139,11 @@ func (o *OutputAccumulator) Append(data []byte) error {
 		if err := o.ensureTempFileLocked(); err != nil {
 			return err
 		}
-		if _, err := o.tempFile.Write(data); err != nil {
+		if err := o.writeSpill(o.tempFile, data); err != nil {
+			// The file now holds only part of the output: discard it rather
+			// than offer a truncated file as the full output (A505).
+			o.abandonSpillLocked(o.tempFilePath, o.tempFile, err)
+			o.tempFilePath, o.tempFile = "", nil
 			return err
 		}
 	} else if len(data) > 0 {
@@ -383,6 +402,9 @@ func (o *OutputAccumulator) shouldUseTempFile() bool {
 }
 
 func (o *OutputAccumulator) ensureTempFileLocked() error {
+	if o.spillErr != nil {
+		return o.spillErr
+	}
 	if o.tempFilePath != "" {
 		return nil
 	}
@@ -395,17 +417,31 @@ func (o *OutputAccumulator) ensureTempFileLocked() error {
 	if err != nil {
 		return err
 	}
-	o.tempFilePath = path
-	o.tempFile = file
+	// Write the buffered backlog before publishing the path: a spill that
+	// cannot be written must not tell the caller a full-output file exists
+	// (A505).
 	for _, chunk := range o.rawChunks {
-		if _, err := file.Write(chunk); err != nil {
+		if err := o.writeSpill(file, chunk); err != nil {
+			o.abandonSpillLocked(path, file, err)
 			return err
 		}
 	}
+	o.tempFilePath = path
+	o.tempFile = file
 	o.rawChunks = nil
 	// D161: bound the scratch this leaves behind (tempoutput.go).
 	sweepTempOutputFiles(filepath.Dir(path), path, tempOutputBudgetBytes)
 	return nil
+}
+
+// abandonSpillLocked discards a spill file that could not be written and
+// latches the failure, so no later call publishes a path for a partial file
+// (A505). Best effort: scratch must never fail a tool call twice.
+func (o *OutputAccumulator) abandonSpillLocked(path string, file *os.File, failure error) {
+	_ = file.Close()
+	unregisterActiveTempOutput(path)
+	_ = os.Remove(path)
+	o.spillErr = failure
 }
 
 // atomicBool is a sized-down atomic.Bool alias for readability.

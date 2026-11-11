@@ -117,6 +117,24 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 		return nil
 	}
 
+	// abandonTempFile discards a spill file that could not be written and
+	// latches the failure, so the result names no path and a later attempt does
+	// not leave an empty file in its place (A505).
+	abandonTempFile := func(failure error) {
+		if tempErr == nil {
+			tempErr = failure
+		}
+		if tempFile != nil {
+			_ = tempFile.Close()
+			tempFile = nil
+		}
+		if tempFilePath != "" {
+			unregisterActiveTempOutput(tempFilePath)
+			_ = os.Remove(tempFilePath)
+			tempFilePath = ""
+		}
+	}
+
 	appendOutput := func(rawText string) {
 		// Sanitize: strip ANSI, replace binary garbage, normalize newlines.
 		text := strings.ReplaceAll(SanitizeBinaryOutput(StripAnsi(rawText)), "\r", "")
@@ -135,8 +153,11 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 		}
 		if tempFile != nil {
 			for _, chunk := range outputChunks[flushedChunks:] {
-				if _, err := tempFile.WriteString(chunk); err != nil && tempErr == nil {
-					tempErr = err
+				if _, err := tempOutputWriteString(tempFile, chunk); err != nil {
+					// The file holds only part of the output: discard it rather
+					// than offer a truncated file as the full output (A505).
+					abandonTempFile(err)
+					break
 				}
 				flushedChunks++
 			}
@@ -220,7 +241,7 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 	finish := func(cancelled bool, exitCode *int) BashResult {
 		fullOutput := joinOutput()
 		truncation := TruncateTail(fullOutput, TruncationOptions{})
-		if truncation.Truncated && tempFilePath == "" {
+		if truncation.Truncated && tempFilePath == "" && tempErr == nil {
 			_ = ensureTempFile()
 			finishTempFile()
 		} else {
@@ -540,6 +561,12 @@ func tempFileID() string {
 		out[index*2+1] = hexDigits[value&0xf]
 	}
 	return string(out)
+}
+
+// tempOutputWriteString appends a chunk to the full-output temp file; tests
+// replace it to exercise a failing disk (ENOSPC) without one (A505).
+var tempOutputWriteString = func(file *os.File, text string) (int, error) {
+	return file.WriteString(text)
 }
 
 // exitStdioGraceMS is upstream's post-exit stdio grace window.
