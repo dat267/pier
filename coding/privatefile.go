@@ -34,16 +34,48 @@ func ensurePrivateDirectory(path string) error {
 
 // writePrivateFile creates or replaces private user data with owner-only mode.
 func writePrivateFile(path string, data []byte) error {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+	return replaceFileAtomically(path, data)
+}
+
+// WritePrivateFile creates or replaces private user data with owner-only mode.
+// It is exported for the interactive package's export writer, which had its own
+// copy of the same logic.
+func WritePrivateFile(path string, data []byte) error { return writePrivateFile(path, data) }
+
+// replaceFileAtomically writes data to a new file beside path, flushes it, and
+// renames it over the target, so a failed or interrupted write leaves the
+// previous content readable (A506). Upstream truncates the target in place
+// (`writeFileSync`), which is why a full disk during a session rewrite loses the
+// transcript; see D454.
+//
+// A directory that forbids creating the temp file fails the write rather than
+// falling back to a destructive in-place overwrite: the caller can retry once
+// there is room, but the previous content cannot be recovered.
+func replaceFileAtomically(path string, data []byte) error {
+	temp, err := os.CreateTemp(filepath.Dir(path), ".pi-replace-*.tmp")
 	if err != nil {
 		return err
 	}
-	if err := file.Chmod(0o600); err != nil {
-		return errors.Join(err, file.Close())
-	}
-	written, writeErr := file.Write(data)
+	tempPath := temp.Name()
+	written, writeErr := temp.Write(data)
 	if writeErr == nil && written != len(data) {
 		writeErr = io.ErrShortWrite
 	}
-	return errors.Join(writeErr, file.Close())
+	if writeErr == nil {
+		// Without this a power loss can publish the rename while the data is
+		// still only in the page cache, leaving an empty file.
+		writeErr = temp.Sync()
+	}
+	if closeErr := temp.Close(); writeErr == nil {
+		writeErr = closeErr
+	}
+	if writeErr != nil {
+		_ = os.Remove(tempPath)
+		return writeErr
+	}
+	if err := os.Rename(tempPath, path); err != nil {
+		_ = os.Remove(tempPath)
+		return err
+	}
+	return nil
 }

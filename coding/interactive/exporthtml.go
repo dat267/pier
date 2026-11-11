@@ -14,9 +14,7 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -550,19 +548,10 @@ func ExportSessionToHTML(session *coding.AgentSession, outputPath string, themeN
 	return outputPath, nil
 }
 
+// writePrivateFile publishes the export through the shared atomic replace, so a
+// failed export cannot truncate a file the user already had (A506, D454).
 func writePrivateFile(path string, data []byte) error {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
-	if err != nil {
-		return err
-	}
-	if err := file.Chmod(0o600); err != nil {
-		return errors.Join(err, file.Close())
-	}
-	written, writeErr := file.Write(data)
-	if writeErr == nil && written != len(data) {
-		writeErr = io.ErrShortWrite
-	}
-	return errors.Join(writeErr, file.Close())
+	return coding.WritePrivateFile(path, data)
 }
 
 // ExportSessionToHTML exports the current session branch to an HTML file

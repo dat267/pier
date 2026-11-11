@@ -3,7 +3,6 @@ package coding
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"runtime"
 	"strings"
@@ -199,17 +198,9 @@ func openPrivateSessionFile(path string, flags int) (*os.File, error) {
 	return file, nil
 }
 
+// writePrivateSessionFile replaces a session file. The new content is published
+// by a rename, so a rewrite that fails partway leaves the previous transcript
+// readable (A506, D454).
 func writePrivateSessionFile(path string, data []byte) error {
-	if err := os.Chmod(path, 0o600); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	file, err := openPrivateSessionFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY)
-	if err != nil {
-		return err
-	}
-	written, writeErr := file.Write(data)
-	if writeErr == nil && written != len(data) {
-		writeErr = io.ErrShortWrite
-	}
-	return errors.Join(writeErr, file.Close())
+	return replaceFileAtomically(path, data)
 }

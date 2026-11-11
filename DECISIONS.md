@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D453)
+# Deliberate divergences from pi (D1–D454)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7138,3 +7138,32 @@ empty file offered as the full one.
 
 `Test:` `TestOutputAccumulatorDropsAFailedSpill` (buffered backlog and streamed
 chunk) and `TestBashExecutorDropsAFailedSpill`.
+
+### D454
+
+**A rewritten file is published by a rename.** `trust.json`, `mcp.json`, the
+crash and debug logs, the `/export` target and a whole-file session rewrite are
+produced by writing a temp file beside the target, syncing and closing it, then
+renaming it into place. A write that fails partway therefore leaves the previous
+content readable.
+
+`Reference:` pi v1.5.0 (f9a26365) `core/private-file.ts` and
+`core/agent-session.ts` publish with `writeFileSync`, which truncates the
+destination before writing it. A full disk, a device error, or a killed process
+inside that window therefore leaves an empty or half-written file — for a
+session rewrite that is the whole transcript, and for `mcp.json` it is
+hand-written configuration.
+
+The port keeps the previous behavior on success: the same bytes, the same
+owner-only `0600` mode, and no leftover temp file (`createTemp` + rename). The
+temp name carries a `.tmp` suffix, so a crashed write cannot leave something
+`/resume` might read as a session.
+
+One consequence is deliberate: a directory that forbids creating the temp file
+now fails the write instead of falling back to truncating the target. Failing
+loudly keeps the old data; the alternative is the data loss this row exists to
+prevent.
+
+`Test:` `TestSessionRewriteKeepsThePreviousFileOnFailure`,
+`TestPrivateFileWriteKeepsThePreviousContentOnFailure`,
+`TestExportWritePublishesAtomically`.
