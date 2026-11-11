@@ -30,7 +30,8 @@ func TestAgentSessionConcurrentAPIKeepsTranscriptAndPersistenceInStep(t *testing
 }
 
 // The same, with the session's heavier operations mixed in: compaction, tree
-// navigation, tool and thinking changes, next-turn and user messages.
+// navigation, tool, model, thinking and queue-mode changes, next-turn, user
+// and turn-triggering custom messages, ! commands and every kind of abort.
 func TestAgentSessionConcurrentHeavyAPIKeepsTranscriptAndPersistenceInStep(t *testing.T) {
 	runSessionChaos(t, heavySessionOps, false)
 }
@@ -91,6 +92,20 @@ func heavySessionOps(session *AgentSession) []func(int) {
 			_, _ = session.ExecuteBash(context.Background(), fmt.Sprintf("echo bash %d", i), nil, &ExecuteBashOptions{ExcludeFromContext: i%2 == 0})
 		},
 		func(int) { session.AbortBash() },
+		func(i int) {
+			copied := *session.Model()
+			copied.ID = fmt.Sprintf("fixture-%d", i%2)
+			_ = session.SetModel(context.Background(), &copied, ModelMutationOptions{})
+		},
+		func(i int) {
+			content, _ := ai.MarshalJSON(fmt.Sprintf("turn note %d", i))
+			_ = session.SendMessage(context.Background(), CreateCustomMessage("note", content, true, nil, 0),
+				&SendMessageOptions{DeliverAs: []string{"steer", "followUp"}[i%2]})
+		},
+		func(int) { session.AbortCompaction() },
+		func(int) { session.AbortAsync() },
+		func(i int) { session.SetSteeringMode([]QueueMode{QueueModeAll, QueueModeOneAtATime}[i%2]) },
+		func(i int) { session.SetFollowUpMode([]QueueMode{QueueModeAll, QueueModeOneAtATime}[i%2]) },
 	}
 }
 
