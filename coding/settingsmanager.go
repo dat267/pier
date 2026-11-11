@@ -568,10 +568,17 @@ func (s *FileSettingsStorage) WithLock(scope SettingsScope, fn func(current *str
 	if !lock.stillOwned() {
 		return fmt.Errorf("settings lock was lost before committing %s", path)
 	}
+	return saveSettingsContent(scope, path, *next)
+}
+
+// saveSettingsContent writes one settings file for its scope: the global file
+// is private (0600), a project file keeps the shared mode it always had (0666,
+// masked by the umask).
+func saveSettingsContent(scope SettingsScope, path, content string) error {
 	if scope == SettingsScopeGlobal {
-		return writePrivateFile(path, []byte(*next))
+		return writePrivateFile(path, []byte(content))
 	}
-	return os.WriteFile(path, []byte(*next), 0o666)
+	return replaceFileAtomically(path, []byte(content), 0o666)
 }
 
 type settingsFileLock struct {

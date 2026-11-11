@@ -1,6 +1,8 @@
 package coding
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -34,7 +36,7 @@ func ensurePrivateDirectory(path string) error {
 
 // writePrivateFile creates or replaces private user data with owner-only mode.
 func writePrivateFile(path string, data []byte) error {
-	return replaceFileAtomically(path, data)
+	return replaceFileAtomically(path, data, 0o600)
 }
 
 // WritePrivateFile creates or replaces private user data with owner-only mode.
@@ -42,19 +44,41 @@ func writePrivateFile(path string, data []byte) error {
 // copy of the same logic.
 func WritePrivateFile(path string, data []byte) error { return writePrivateFile(path, data) }
 
+// ReplaceFileAtomically publishes data at path by renaming a fully written temp
+// file into place, so a failed write leaves the previous content readable. mode
+// has os.WriteFile's meaning (A507, D454).
+func ReplaceFileAtomically(path string, data []byte, mode os.FileMode) error {
+	return replaceFileAtomically(path, data, mode)
+}
+
 // replaceFileAtomically writes data to a new file beside path, flushes it, and
 // renames it over the target, so a failed or interrupted write leaves the
 // previous content readable (A506). Upstream truncates the target in place
 // (`writeFileSync`), which is why a full disk during a session rewrite loses the
 // transcript; see D454.
 //
-// A directory that forbids creating the temp file fails the write rather than
-// falling back to a destructive in-place overwrite: the caller can retry once
-// there is room, but the previous content cannot be recovered.
-func replaceFileAtomically(path string, data []byte) error {
-	temp, err := os.CreateTemp(filepath.Dir(path), ".pi-replace-*.tmp")
-	if err != nil {
-		return err
+// mode has os.WriteFile's meaning: it applies when the new file is created, so
+// the umask still decides the result. A directory that forbids creating the temp
+// file fails the write rather than falling back to a destructive in-place
+// overwrite: the caller can retry once there is room, but the previous content
+// cannot be recovered.
+func replaceFileAtomically(path string, data []byte, mode os.FileMode) error {
+	dir := filepath.Dir(path)
+	var temp *os.File
+	var err error
+	for attempt := 0; ; attempt++ {
+		var suffix [8]byte
+		if _, err = rand.Read(suffix[:]); err != nil {
+			return err
+		}
+		tempPath := filepath.Join(dir, ".pi-replace-"+hex.EncodeToString(suffix[:])+".tmp")
+		temp, err = os.OpenFile(tempPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, mode)
+		if err == nil {
+			break
+		}
+		if !errors.Is(err, os.ErrExist) || attempt == 4 {
+			return err
+		}
 	}
 	tempPath := temp.Name()
 	written, writeErr := temp.Write(data)

@@ -202,5 +202,5 @@ func openPrivateSessionFile(path string, flags int) (*os.File, error) {
 // by a rename, so a rewrite that fails partway leaves the previous transcript
 // readable (A506, D454).
 func writePrivateSessionFile(path string, data []byte) error {
-	return replaceFileAtomically(path, data)
+	return replaceFileAtomically(path, data, 0o600)
 }

@@ -368,18 +368,12 @@ func (b *FileAuthStorageBackend) acquireAuthLockAsync(ctx context.Context) (*aut
 	}
 }
 
-// writeFileMode writes with the creation mode masked by the process umask,
-// matching Node's mode option on creation.
+// writeFileMode replaces the file with the creation mode masked by the process
+// umask, matching Node's mode option on creation. The write is published by a
+// rename, so a failed save leaves the previous credentials in place (A507,
+// D454): a refresh token cannot be derived again.
 func writeFileMode(path, content string, mode os.FileMode) error {
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
-	if err != nil {
-		return err
-	}
-	if _, err := file.WriteString(content); err != nil {
-		_ = file.Close()
-		return err
-	}
-	return file.Close()
+	return replaceFileAtomically(path, []byte(content), mode)
 }
 
 // ReadOnlyAuthStorage reads auth.json and refuses mutations.

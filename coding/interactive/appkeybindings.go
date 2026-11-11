@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
 
@@ -347,7 +348,9 @@ func MigrateKeybindingsFile(path string) bool {
 	if err != nil {
 		return false
 	}
-	if err := os.WriteFile(path, encoded, 0o644); err != nil {
+	// Published by a rename, so a failed migration cannot truncate the user's
+	// bindings (A507, D454).
+	if err := coding.ReplaceFileAtomically(path, encoded, 0o644); err != nil {
 		return false
 	}
 	return true

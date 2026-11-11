@@ -7141,10 +7141,10 @@ chunk) and `TestBashExecutorDropsAFailedSpill`.
 
 ### D454
 
-**A rewritten file is published by a rename.** `trust.json`, `mcp.json`, the
-crash and debug logs, the `/export` target and a whole-file session rewrite are
-produced by writing a temp file beside the target, syncing and closing it, then
-renaming it into place. A write that fails partway therefore leaves the previous
+**A rewritten file is published by a rename.** `trust.json`, `mcp.json`,
+`auth.json`, `keybindings.json`, settings, the crash and debug logs, the
+`/export` target and a whole-file session rewrite are produced by writing a temp
+file beside the target, syncing and closing it, then renaming it into place. A write that fails partway therefore leaves the previous
 content readable.
 
 `Reference:` pi v1.5.0 (f9a26365) `core/private-file.ts` and
@@ -7159,6 +7159,10 @@ owner-only `0600` mode, and no leftover temp file (`createTemp` + rename). The
 temp name carries a `.tmp` suffix, so a crashed write cannot leave something
 `/resume` might read as a session.
 
+The mode argument keeps `os.WriteFile`'s meaning (it applies on creation, so the
+umask still decides), which is why the project settings file stays `0666` masked
+and `keybindings.json` stays `0644` rather than becoming owner-only.
+
 One consequence is deliberate: a directory that forbids creating the temp file
 now fails the write instead of falling back to truncating the target. Failing
 loudly keeps the old data; the alternative is the data loss this row exists to
@@ -7166,4 +7170,8 @@ prevent.
 
 `Test:` `TestSessionRewriteKeepsThePreviousFileOnFailure`,
 `TestPrivateFileWriteKeepsThePreviousContentOnFailure`,
-`TestExportWritePublishesAtomically`.
+`TestExportWritePublishesAtomically`,
+`TestAuthWriteKeepsThePreviousFileOnFailure`,
+`TestProjectSettingsWriteKeepsThePreviousFileOnFailure`,
+`TestKeybindingMigrationKeepsTheFileOnFailure`,
+`TestAtomicReplaceKeepsTheRequestedMode`.
