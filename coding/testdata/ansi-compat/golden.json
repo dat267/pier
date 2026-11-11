@@ -1,0 +1,1496 @@
+[
+  {
+    "input": "plain",
+    "strip": "plain",
+    "complete": "plain",
+    "pending": ""
+  },
+  {
+    "input": "a\u001b[31mred\u001b[0mz",
+    "strip": "aredz",
+    "complete": "a\u001b[31mred\u001b[0mz",
+    "pending": ""
+  },
+  {
+    "input": "a\u001b]8;;https://example.com\u0007link\u001b]8;;\u0007z",
+    "strip": "alinkz",
+    "complete": "a\u001b]8;;https://example.com\u0007link\u001b]8;;\u0007z",
+    "pending": ""
+  },
+  {
+    "input": "a\u001b]unterminated",
+    "strip": "anterminated",
+    "complete": "a",
+    "pending": "\u001b]unterminated"
+  },
+  {
+    "input": "a\u001b]funterminated",
+    "strip": "aunterminated",
+    "complete": "a",
+    "pending": "\u001b]funterminated"
+  },
+  {
+    "input": "a\u001bPabc\u001b\\z",
+    "strip": "aabc\u001b\\z",
+    "complete": "a\u001bPabc\u001b\\z",
+    "pending": ""
+  },
+  {
+    "input": "a\u001b^abc\u0007z",
+    "strip": "a\u001b^abc\u0007z",
+    "complete": "a\u001b^abc\u0007z",
+    "pending": ""
+  },
+  {
+    "input": "a\u001b_abcz",
+    "strip": "a\u001b_abcz",
+    "complete": "a\u001b_abcz",
+    "pending": ""
+  },
+  {
+    "input": "aabcz",
+    "strip": "aabcz",
+    "complete": "aabcz",
+    "pending": ""
+  },
+  {
+    "input": "aabcz",
+    "strip": "aabcz",
+    "complete": "aabcz",
+    "pending": ""
+  },
+  {
+    "input": "a31mred",
+    "strip": "ared",
+    "complete": "a31mred",
+    "pending": ""
+  },
+  {
+    "input": "a\u001b(0x",
+    "strip": "ax",
+    "complete": "a\u001b(0x",
+    "pending": ""
+  },
+  {
+    "input": "a\u001b*0x",
+    "strip": "a\u001b*0x",
+    "complete": "a\u001b*0x",
+    "pending": ""
+  },
+  {
+    "input": "a\u001b+c",
+    "strip": "a\u001b+c",
+    "complete": "a\u001b+c",
+    "pending": ""
+  },
+  {
+    "input": "a\u001b/0x",
+    "strip": "a\u001b/0x",
+    "complete": "a\u001b/0x",
+    "pending": ""
+  },
+  {
+    "input": "a\u001bcok",
+    "strip": "aok",
+    "complete": "a\u001bcok",
+    "pending": ""
+  },
+  {
+    "input": "a\u001b\\ok",
+    "strip": "a\u001b\\ok",
+    "complete": "a\u001b\\ok",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bay",
+    "strip": "x\u001bay",
+    "complete": "x\u001bay",
+    "pending": ""
+  },
+  {
+    "input": "xay",
+    "strip": "xay",
+    "complete": "xay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001baay",
+    "strip": "x\u001baay",
+    "complete": "x\u001baay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001ba1y",
+    "strip": "x\u001ba1y",
+    "complete": "x\u001ba1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001ba[y",
+    "strip": "x\u001ba[y",
+    "complete": "x\u001ba[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001ba)y",
+    "strip": "x\u001ba)y",
+    "complete": "x\u001ba)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bamy",
+    "strip": "x\u001bamy",
+    "complete": "x\u001bamy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001ba\\y",
+    "strip": "x\u001ba\\y",
+    "complete": "x\u001ba\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bay",
+    "strip": "x\u001ba",
+    "complete": "x\u001bay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bay",
+    "strip": "x\u001bay",
+    "complete": "x\u001bay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bfy",
+    "strip": "xy",
+    "complete": "x\u001bfy",
+    "pending": ""
+  },
+  {
+    "input": "xfy",
+    "strip": "xy",
+    "complete": "xfy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bfay",
+    "strip": "xay",
+    "complete": "x\u001bfay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bf1y",
+    "strip": "x1y",
+    "complete": "x\u001bf1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bf[y",
+    "strip": "x[y",
+    "complete": "x\u001bf[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bf)y",
+    "strip": "x)y",
+    "complete": "x\u001bf)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bfmy",
+    "strip": "xmy",
+    "complete": "x\u001bfmy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bf\\y",
+    "strip": "x\\y",
+    "complete": "x\u001bf\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bfy",
+    "strip": "x",
+    "complete": "x\u001bfy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bfy",
+    "strip": "xy",
+    "complete": "x\u001bfy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b0y",
+    "strip": "x",
+    "complete": "x\u001b0y",
+    "pending": ""
+  },
+  {
+    "input": "x0y",
+    "strip": "x",
+    "complete": "x0y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b0ay",
+    "strip": "xay",
+    "complete": "x\u001b0ay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b01y",
+    "strip": "x",
+    "complete": "x\u001b01y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b0[y",
+    "strip": "x[y",
+    "complete": "x\u001b0[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b0)y",
+    "strip": "x)y",
+    "complete": "x\u001b0)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b0my",
+    "strip": "xy",
+    "complete": "x\u001b0my",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b0\\y",
+    "strip": "x\\y",
+    "complete": "x\u001b0\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b0y",
+    "strip": "x",
+    "complete": "x\u001b0y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b0y",
+    "strip": "xy",
+    "complete": "x\u001b0y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b1y",
+    "strip": "x",
+    "complete": "x\u001b1y",
+    "pending": ""
+  },
+  {
+    "input": "x1y",
+    "strip": "x",
+    "complete": "x1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b1ay",
+    "strip": "xay",
+    "complete": "x\u001b1ay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b11y",
+    "strip": "x",
+    "complete": "x\u001b11y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b1[y",
+    "strip": "x[y",
+    "complete": "x\u001b1[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b1)y",
+    "strip": "x)y",
+    "complete": "x\u001b1)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b1my",
+    "strip": "xy",
+    "complete": "x\u001b1my",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b1\\y",
+    "strip": "x\\y",
+    "complete": "x\u001b1\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b1y",
+    "strip": "x",
+    "complete": "x\u001b1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b1y",
+    "strip": "xy",
+    "complete": "x\u001b1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b;y",
+    "strip": "x",
+    "complete": "x\u001b;y",
+    "pending": ""
+  },
+  {
+    "input": "x;y",
+    "strip": "x",
+    "complete": "x;y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b;ay",
+    "strip": "x\u001b;ay",
+    "complete": "x\u001b;ay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b;1y",
+    "strip": "x",
+    "complete": "x\u001b;1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b;[y",
+    "strip": "x",
+    "complete": "x\u001b;[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b;)y",
+    "strip": "x",
+    "complete": "x\u001b;)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b;my",
+    "strip": "xy",
+    "complete": "x\u001b;my",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b;\\y",
+    "strip": "x\u001b;\\y",
+    "complete": "x\u001b;\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b;y",
+    "strip": "x\u001b;",
+    "complete": "x\u001b;y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b;y",
+    "strip": "x\u001b;y",
+    "complete": "x\u001b;y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b:y",
+    "strip": "x\u001b:y",
+    "complete": "x\u001b:y",
+    "pending": ""
+  },
+  {
+    "input": "x:y",
+    "strip": "x:y",
+    "complete": "x:y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b:ay",
+    "strip": "x\u001b:ay",
+    "complete": "x\u001b:ay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b:1y",
+    "strip": "x\u001b:1y",
+    "complete": "x\u001b:1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b:[y",
+    "strip": "x\u001b:[y",
+    "complete": "x\u001b:[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b:)y",
+    "strip": "x\u001b:)y",
+    "complete": "x\u001b:)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b:my",
+    "strip": "x\u001b:my",
+    "complete": "x\u001b:my",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b:\\y",
+    "strip": "x\u001b:\\y",
+    "complete": "x\u001b:\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b:y",
+    "strip": "x\u001b:",
+    "complete": "x\u001b:y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b:y",
+    "strip": "x\u001b:y",
+    "complete": "x\u001b:y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b[y",
+    "strip": "x",
+    "complete": "x\u001b[y",
+    "pending": ""
+  },
+  {
+    "input": "x[y",
+    "strip": "x",
+    "complete": "x[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b[ay",
+    "strip": "x\u001b[ay",
+    "complete": "x\u001b[ay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b[1y",
+    "strip": "x",
+    "complete": "x\u001b[1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b[[y",
+    "strip": "x",
+    "complete": "x\u001b[[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b[)y",
+    "strip": "x",
+    "complete": "x\u001b[)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b[my",
+    "strip": "xy",
+    "complete": "x\u001b[my",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b[\\y",
+    "strip": "x\u001b[\\y",
+    "complete": "x\u001b[\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b[y",
+    "strip": "x\u001b[",
+    "complete": "x\u001b[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b[y",
+    "strip": "x\u001b[y",
+    "complete": "x\u001b[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b]y",
+    "strip": "x",
+    "complete": "x",
+    "pending": "\u001b]y"
+  },
+  {
+    "input": "x]y",
+    "strip": "x",
+    "complete": "x]y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b]ay",
+    "strip": "x\u001b]ay",
+    "complete": "x",
+    "pending": "\u001b]ay"
+  },
+  {
+    "input": "x\u001b]1y",
+    "strip": "x",
+    "complete": "x",
+    "pending": "\u001b]1y"
+  },
+  {
+    "input": "x\u001b][y",
+    "strip": "x",
+    "complete": "x",
+    "pending": "\u001b][y"
+  },
+  {
+    "input": "x\u001b])y",
+    "strip": "x",
+    "complete": "x",
+    "pending": "\u001b])y"
+  },
+  {
+    "input": "x\u001b]my",
+    "strip": "xy",
+    "complete": "x",
+    "pending": "\u001b]my"
+  },
+  {
+    "input": "x\u001b]\\y",
+    "strip": "x\u001b]\\y",
+    "complete": "x",
+    "pending": "\u001b]\\y"
+  },
+  {
+    "input": "x\u001b]y",
+    "strip": "x\u001b]",
+    "complete": "x",
+    "pending": "\u001b]y"
+  },
+  {
+    "input": "x\u001b]y",
+    "strip": "x\u001b]y",
+    "complete": "x",
+    "pending": "\u001b]y"
+  },
+  {
+    "input": "x\u001b(y",
+    "strip": "x",
+    "complete": "x\u001b(y",
+    "pending": ""
+  },
+  {
+    "input": "x(y",
+    "strip": "x",
+    "complete": "x(y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b(ay",
+    "strip": "x\u001b(ay",
+    "complete": "x\u001b(ay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b(1y",
+    "strip": "x",
+    "complete": "x\u001b(1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b([y",
+    "strip": "x",
+    "complete": "x\u001b([y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b()y",
+    "strip": "x",
+    "complete": "x\u001b()y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b(my",
+    "strip": "xy",
+    "complete": "x\u001b(my",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b(\\y",
+    "strip": "x\u001b(\\y",
+    "complete": "x\u001b(\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b(y",
+    "strip": "x\u001b(",
+    "complete": "x\u001b(y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b(y",
+    "strip": "x\u001b(y",
+    "complete": "x\u001b(y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b)y",
+    "strip": "x",
+    "complete": "x\u001b)y",
+    "pending": ""
+  },
+  {
+    "input": "x)y",
+    "strip": "x",
+    "complete": "x)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b)ay",
+    "strip": "x\u001b)ay",
+    "complete": "x\u001b)ay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b)1y",
+    "strip": "x",
+    "complete": "x\u001b)1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b)[y",
+    "strip": "x",
+    "complete": "x\u001b)[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b))y",
+    "strip": "x",
+    "complete": "x\u001b))y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b)my",
+    "strip": "xy",
+    "complete": "x\u001b)my",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b)\\y",
+    "strip": "x\u001b)\\y",
+    "complete": "x\u001b)\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b)y",
+    "strip": "x\u001b)",
+    "complete": "x\u001b)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b)y",
+    "strip": "x\u001b)y",
+    "complete": "x\u001b)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b#y",
+    "strip": "x",
+    "complete": "x\u001b#y",
+    "pending": ""
+  },
+  {
+    "input": "x#y",
+    "strip": "x",
+    "complete": "x#y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b#ay",
+    "strip": "x\u001b#ay",
+    "complete": "x\u001b#ay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b#1y",
+    "strip": "x",
+    "complete": "x\u001b#1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b#[y",
+    "strip": "x",
+    "complete": "x\u001b#[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b#)y",
+    "strip": "x",
+    "complete": "x\u001b#)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b#my",
+    "strip": "xy",
+    "complete": "x\u001b#my",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b#\\y",
+    "strip": "x\u001b#\\y",
+    "complete": "x\u001b#\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b#y",
+    "strip": "x\u001b#",
+    "complete": "x\u001b#y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b#y",
+    "strip": "x\u001b#y",
+    "complete": "x\u001b#y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b?y",
+    "strip": "x",
+    "complete": "x\u001b?y",
+    "pending": ""
+  },
+  {
+    "input": "x?y",
+    "strip": "x",
+    "complete": "x?y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b?ay",
+    "strip": "x\u001b?ay",
+    "complete": "x\u001b?ay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b?1y",
+    "strip": "x",
+    "complete": "x\u001b?1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b?[y",
+    "strip": "x",
+    "complete": "x\u001b?[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b?)y",
+    "strip": "x",
+    "complete": "x\u001b?)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b?my",
+    "strip": "xy",
+    "complete": "x\u001b?my",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b?\\y",
+    "strip": "x\u001b?\\y",
+    "complete": "x\u001b?\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b?y",
+    "strip": "x\u001b?",
+    "complete": "x\u001b?y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b?y",
+    "strip": "x\u001b?y",
+    "complete": "x\u001b?y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bmy",
+    "strip": "xy",
+    "complete": "x\u001bmy",
+    "pending": ""
+  },
+  {
+    "input": "xmy",
+    "strip": "xy",
+    "complete": "xmy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bmay",
+    "strip": "xay",
+    "complete": "x\u001bmay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bm1y",
+    "strip": "x1y",
+    "complete": "x\u001bm1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bm[y",
+    "strip": "x[y",
+    "complete": "x\u001bm[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bm)y",
+    "strip": "x)y",
+    "complete": "x\u001bm)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bmmy",
+    "strip": "xmy",
+    "complete": "x\u001bmmy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bm\\y",
+    "strip": "x\\y",
+    "complete": "x\u001bm\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bmy",
+    "strip": "x",
+    "complete": "x\u001bmy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bmy",
+    "strip": "xy",
+    "complete": "x\u001bmy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bPy",
+    "strip": "xy",
+    "complete": "x\u001bPy",
+    "pending": ""
+  },
+  {
+    "input": "xPy",
+    "strip": "xy",
+    "complete": "xPy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bPay",
+    "strip": "xay",
+    "complete": "x\u001bPay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bP1y",
+    "strip": "x1y",
+    "complete": "x\u001bP1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bP[y",
+    "strip": "x[y",
+    "complete": "x\u001bP[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bP)y",
+    "strip": "x)y",
+    "complete": "x\u001bP)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bPmy",
+    "strip": "xmy",
+    "complete": "x\u001bPmy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bP\\y",
+    "strip": "x\\y",
+    "complete": "x\u001bP\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bPy",
+    "strip": "x",
+    "complete": "x\u001bPy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bPy",
+    "strip": "xy",
+    "complete": "x\u001bPy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b_y",
+    "strip": "x\u001b_y",
+    "complete": "x\u001b_y",
+    "pending": ""
+  },
+  {
+    "input": "x_y",
+    "strip": "x_y",
+    "complete": "x_y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b_ay",
+    "strip": "x\u001b_ay",
+    "complete": "x\u001b_ay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b_1y",
+    "strip": "x\u001b_1y",
+    "complete": "x\u001b_1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b_[y",
+    "strip": "x\u001b_[y",
+    "complete": "x\u001b_[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b_)y",
+    "strip": "x\u001b_)y",
+    "complete": "x\u001b_)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b_my",
+    "strip": "x\u001b_my",
+    "complete": "x\u001b_my",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b_\\y",
+    "strip": "x\u001b_\\y",
+    "complete": "x\u001b_\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b_y",
+    "strip": "x\u001b_",
+    "complete": "x\u001b_y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b_y",
+    "strip": "x\u001b_y",
+    "complete": "x\u001b_y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\\y",
+    "strip": "x\u001b\\y",
+    "complete": "x\u001b\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\\y",
+    "strip": "x\\y",
+    "complete": "x\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\\ay",
+    "strip": "x\u001b\\ay",
+    "complete": "x\u001b\\ay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\\1y",
+    "strip": "x\u001b\\1y",
+    "complete": "x\u001b\\1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\\[y",
+    "strip": "x\u001b\\[y",
+    "complete": "x\u001b\\[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\\)y",
+    "strip": "x\u001b\\)y",
+    "complete": "x\u001b\\)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\\my",
+    "strip": "x\u001b\\my",
+    "complete": "x\u001b\\my",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\\\\y",
+    "strip": "x\u001b\\\\y",
+    "complete": "x\u001b\\\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\\y",
+    "strip": "x\u001b\\",
+    "complete": "x\u001b\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\\y",
+    "strip": "x\u001b\\y",
+    "complete": "x\u001b\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u0007y",
+    "strip": "x\u001b\u0007y",
+    "complete": "x\u001b\u0007y",
+    "pending": ""
+  },
+  {
+    "input": "x\u0007y",
+    "strip": "x\u0007y",
+    "complete": "x\u0007y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u0007ay",
+    "strip": "x\u001b\u0007ay",
+    "complete": "x\u001b\u0007ay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u00071y",
+    "strip": "x\u001b\u00071y",
+    "complete": "x\u001b\u00071y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u0007[y",
+    "strip": "x\u001b\u0007[y",
+    "complete": "x\u001b\u0007[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u0007)y",
+    "strip": "x\u001b\u0007)y",
+    "complete": "x\u001b\u0007)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u0007my",
+    "strip": "x\u001b\u0007my",
+    "complete": "x\u001b\u0007my",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u0007\\y",
+    "strip": "x\u001b\u0007\\y",
+    "complete": "x\u001b\u0007\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u0007y",
+    "strip": "x\u001b\u0007",
+    "complete": "x\u001b\u0007y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u0007y",
+    "strip": "x\u001b\u0007y",
+    "complete": "x\u001b\u0007y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u001by",
+    "strip": "x\u001b",
+    "complete": "x\u001b\u001by",
+    "pending": ""
+  },
+  {
+    "input": "x\u001by",
+    "strip": "x",
+    "complete": "x\u001by",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u001bay",
+    "strip": "x\u001b\u001bay",
+    "complete": "x\u001b\u001bay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u001b1y",
+    "strip": "x\u001b",
+    "complete": "x\u001b\u001b1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u001b[y",
+    "strip": "x\u001b",
+    "complete": "x\u001b\u001b[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u001b)y",
+    "strip": "x\u001b",
+    "complete": "x\u001b\u001b)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u001bmy",
+    "strip": "x\u001by",
+    "complete": "x\u001b\u001bmy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u001b\\y",
+    "strip": "x\u001b\u001b\\y",
+    "complete": "x\u001b\u001b\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u001by",
+    "strip": "x\u001b\u001b",
+    "complete": "x\u001b\u001by",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\u001by",
+    "strip": "x\u001b\u001by",
+    "complete": "x\u001b\u001by",
+    "pending": ""
+  },
+  {
+    "input": "x\u001by",
+    "strip": "x\u001b",
+    "complete": "x\u001by",
+    "pending": ""
+  },
+  {
+    "input": "xy",
+    "strip": "x",
+    "complete": "xy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bay",
+    "strip": "x\u001bay",
+    "complete": "x\u001bay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b1y",
+    "strip": "x\u001b",
+    "complete": "x\u001b1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b[y",
+    "strip": "x\u001b",
+    "complete": "x\u001b[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b)y",
+    "strip": "x\u001b",
+    "complete": "x\u001b)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bmy",
+    "strip": "x\u001by",
+    "complete": "x\u001bmy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\\y",
+    "strip": "x\u001b\\y",
+    "complete": "x\u001b\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001by",
+    "strip": "x\u001b",
+    "complete": "x\u001by",
+    "pending": ""
+  },
+  {
+    "input": "x\u001by",
+    "strip": "x\u001by",
+    "complete": "x\u001by",
+    "pending": ""
+  },
+  {
+    "input": "x\u001by",
+    "strip": "x\u001by",
+    "complete": "x\u001by",
+    "pending": ""
+  },
+  {
+    "input": "xy",
+    "strip": "xy",
+    "complete": "xy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bay",
+    "strip": "x\u001bay",
+    "complete": "x\u001bay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b1y",
+    "strip": "x\u001b1y",
+    "complete": "x\u001b1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b[y",
+    "strip": "x\u001b[y",
+    "complete": "x\u001b[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b)y",
+    "strip": "x\u001b)y",
+    "complete": "x\u001b)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bmy",
+    "strip": "x\u001bmy",
+    "complete": "x\u001bmy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\\y",
+    "strip": "x\u001b\\y",
+    "complete": "x\u001b\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001by",
+    "strip": "x\u001b",
+    "complete": "x\u001by",
+    "pending": ""
+  },
+  {
+    "input": "x\u001by",
+    "strip": "x\u001by",
+    "complete": "x\u001by",
+    "pending": ""
+  },
+  {
+    "input": "x\u001by",
+    "strip": "x\u001by",
+    "complete": "x\u001by",
+    "pending": ""
+  },
+  {
+    "input": "xy",
+    "strip": "xy",
+    "complete": "xy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bay",
+    "strip": "x\u001bay",
+    "complete": "x\u001bay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b1y",
+    "strip": "x\u001b1y",
+    "complete": "x\u001b1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b[y",
+    "strip": "x\u001b[y",
+    "complete": "x\u001b[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b)y",
+    "strip": "x\u001b)y",
+    "complete": "x\u001b)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bmy",
+    "strip": "x\u001bmy",
+    "complete": "x\u001bmy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\\y",
+    "strip": "x\u001b\\y",
+    "complete": "x\u001b\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001by",
+    "strip": "x\u001b",
+    "complete": "x\u001by",
+    "pending": ""
+  },
+  {
+    "input": "x\u001by",
+    "strip": "x\u001by",
+    "complete": "x\u001by",
+    "pending": ""
+  },
+  {
+    "input": "x\u001by",
+    "strip": "x\u001by",
+    "complete": "x\u001by",
+    "pending": ""
+  },
+  {
+    "input": "xy",
+    "strip": "xy",
+    "complete": "xy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bay",
+    "strip": "x\u001bay",
+    "complete": "x\u001bay",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b1y",
+    "strip": "x\u001b1y",
+    "complete": "x\u001b1y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b[y",
+    "strip": "x\u001b[y",
+    "complete": "x\u001b[y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b)y",
+    "strip": "x\u001b)y",
+    "complete": "x\u001b)y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001bmy",
+    "strip": "x\u001bmy",
+    "complete": "x\u001bmy",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b\\y",
+    "strip": "x\u001b\\y",
+    "complete": "x\u001b\\y",
+    "pending": ""
+  },
+  {
+    "input": "x\u001by",
+    "strip": "x\u001b",
+    "complete": "x\u001by",
+    "pending": ""
+  },
+  {
+    "input": "x\u001by",
+    "strip": "x\u001by",
+    "complete": "x\u001by",
+    "pending": ""
+  },
+  {
+    "input": "\u001b[<35;59;1Mstep 1",
+    "strip": "step 1",
+    "complete": "\u001b[<35;59;1Mstep 1",
+    "pending": ""
+  },
+  {
+    "input": "a\u001b[<0;10;20mb",
+    "strip": "ab",
+    "complete": "a\u001b[<0;10;20mb",
+    "pending": ""
+  },
+  {
+    "input": "a\u001b[>0;276;0cb",
+    "strip": "ab",
+    "complete": "a\u001b[>0;276;0cb",
+    "pending": ""
+  },
+  {
+    "input": "a\u001b[>cb",
+    "strip": "ab",
+    "complete": "a\u001b[>cb",
+    "pending": ""
+  },
+  {
+    "input": "a\u001b[=5hb",
+    "strip": "ab",
+    "complete": "a\u001b[=5hb",
+    "pending": ""
+  },
+  {
+    "input": "a<35;59;1Mb",
+    "strip": "ab",
+    "complete": "a<35;59;1Mb",
+    "pending": ""
+  },
+  {
+    "input": "\u001b[?1h\u001b=123 tests passed",
+    "strip": "123 tests passed",
+    "complete": "\u001b[?1h\u001b=123 tests passed",
+    "pending": ""
+  },
+  {
+    "input": "\u001b[?1l\u001b>42 files",
+    "strip": "42 files",
+    "complete": "\u001b[?1l\u001b>42 files",
+    "pending": ""
+  },
+  {
+    "input": "\u001b<10 items",
+    "strip": "10 items",
+    "complete": "\u001b<10 items",
+    "pending": ""
+  },
+  {
+    "input": "\u001bcdone",
+    "strip": "done",
+    "complete": "\u001bcdone",
+    "pending": ""
+  },
+  {
+    "input": "x\u001b[<35;59",
+    "strip": "x",
+    "complete": "x",
+    "pending": "\u001b[<35;59"
+  },
+  {
+    "input": "x\u001b=",
+    "strip": "x",
+    "complete": "x\u001b=",
+    "pending": ""
+  }
+]
