@@ -84,6 +84,12 @@ func heavySessionOps(session *AgentSession) []func(int) {
 		},
 		func(i int) { _ = session.SendUserMessage(context.Background(), fmt.Sprintf("user %d", i), "followUp") },
 		func(int) { _ = session.Model(); _ = session.ThinkingLevel(); _ = session.SystemPrompt() },
+		// A real ! command records its result when it finishes, whatever the
+		// session is doing by then; an abort cancels any that are running.
+		func(i int) {
+			_, _ = session.ExecuteBash(context.Background(), fmt.Sprintf("echo bash %d", i), nil, &ExecuteBashOptions{ExcludeFromContext: i%2 == 0})
+		},
+		func(int) { session.AbortBash() },
 	}
 }
 
