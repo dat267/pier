@@ -108,5 +108,200 @@
       "errorCode": "ModelStreamErrorException",
       "requestId": "req-stream"
     }
+  },
+  {
+    "name": "overflow-validation-exception",
+    "requestId": "req-overflow",
+    "http": {
+      "status": 400,
+      "contentType": "application/json",
+      "body": "{\"message\":\"Input is too long for requested model.\",\"__type\":\"ValidationException\"}"
+    },
+    "errorMessage": "Validation error: Input is too long for requested model.",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 400,
+      "errorCode": "ValidationException",
+      "requestId": "req-overflow"
+    }
+  },
+  {
+    "name": "namespaced-error-type",
+    "requestId": "req-ns",
+    "http": {
+      "status": 400,
+      "contentType": "application/json",
+      "body": "{\"message\":\"model error\",\"__type\":\"com.amazon#ModelErrorException\"}"
+    },
+    "errorMessage": "ModelErrorException: model error",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 400,
+      "errorCode": "ModelErrorException",
+      "requestId": "req-ns"
+    }
+  },
+  {
+    "name": "throttling-stream-error",
+    "requestId": "req-stream-throttle",
+    "streamError": {
+      "name": "ThrottlingException",
+      "member": "throttlingException",
+      "message": "slow down",
+      "originalStatusCode": 429,
+      "originalMessage": "rate exceeded"
+    },
+    "errorMessage": "Throttling error: slow down",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 200,
+      "errorCode": "ThrottlingException",
+      "requestId": "req-stream-throttle"
+    }
+  },
+  {
+    "name": "non-string-message",
+    "requestId": "req-nonstring",
+    "http": {
+      "status": 400,
+      "contentType": "application/json",
+      "body": "{\"message\":123,\"__type\":\"ValidationException\"}"
+    },
+    "errorMessage": "Validation error: 123",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 400,
+      "errorCode": "ValidationException",
+      "requestId": "req-nonstring"
+    }
+  },
+  {
+    "name": "json-array-body",
+    "requestId": "req-array",
+    "http": {
+      "status": 500,
+      "contentType": "application/json",
+      "body": "[1,2,3]"
+    },
+    "errorMessage": "Unknown: UnknownError",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 500,
+      "requestId": "req-array"
+    }
+  },
+  {
+    "name": "unicode-message",
+    "requestId": "req-unicode",
+    "http": {
+      "status": 400,
+      "contentType": "application/json",
+      "body": "{\"message\":\"größe überschritten 😀\",\"__type\":\"ValidationException\"}"
+    },
+    "errorMessage": "Validation error: größe überschritten 😀",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 400,
+      "errorCode": "ValidationException",
+      "requestId": "req-unicode"
+    }
+  },
+  {
+    "name": "boolean-message",
+    "requestId": "req-bool",
+    "http": {
+      "status": 400,
+      "contentType": "application/json",
+      "body": "{\"message\":true,\"__type\":\"ValidationException\"}"
+    },
+    "errorMessage": "Validation error: true",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 400,
+      "errorCode": "ValidationException",
+      "requestId": "req-bool"
+    }
+  },
+  {
+    "name": "null-message",
+    "requestId": "req-null",
+    "http": {
+      "status": 400,
+      "contentType": "application/json",
+      "body": "{\"message\":null,\"__type\":\"ValidationException\"}"
+    },
+    "errorMessage": "Validation error: UnknownError",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 400,
+      "errorCode": "ValidationException",
+      "requestId": "req-null"
+    }
+  },
+  {
+    "name": "object-message",
+    "requestId": "req-object",
+    "http": {
+      "status": 400,
+      "contentType": "application/json",
+      "body": "{\"message\":{\"a\":1},\"__type\":\"ValidationException\"}"
+    },
+    "errorMessage": "Validation error: [object Object]",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 400,
+      "errorCode": "ValidationException",
+      "requestId": "req-object"
+    }
+  },
+  {
+    "name": "array-message",
+    "requestId": "req-array-msg",
+    "http": {
+      "status": 400,
+      "contentType": "application/json",
+      "body": "{\"message\":[\"x\",\"y\"],\"__type\":\"ValidationException\"}"
+    },
+    "errorMessage": "Validation error: x,y",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 400,
+      "errorCode": "ValidationException",
+      "requestId": "req-array-msg"
+    }
+  },
+  {
+    "name": "float-message",
+    "requestId": "req-float",
+    "http": {
+      "status": 400,
+      "contentType": "application/json",
+      "body": "{\"message\":1.5,\"__type\":\"ValidationException\"}"
+    },
+    "errorMessage": "Validation error: 1.5",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 400,
+      "errorCode": "ValidationException",
+      "requestId": "req-float"
+    }
+  },
+  {
+    "name": "empty-stream-exception-message",
+    "requestId": "req-empty-stream",
+    "streamError": {
+      "name": "ThrottlingException",
+      "member": "throttlingException",
+      "message": "",
+      "originalStatusCode": 429,
+      "originalMessage": ""
+    },
+    "errorMessage": "Throttling error: ",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 200,
+      "errorCode": "ThrottlingException",
+      "requestId": "req-empty-stream"
+    }
   }
 ]

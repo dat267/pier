@@ -48,7 +48,7 @@ func TestBedrockErrorsMatchPinnedSDK(t *testing.T) {
 					w.Header().Set("content-type", "application/vnd.amazon.eventstream")
 					frame := buildAWSEventStreamMessage(nil, map[string]any{
 						":message-type":   "exception",
-						":exception-type": "ModelStreamErrorException",
+						":exception-type": fixture.StreamError.Member,
 						":content-type":   "application/json",
 					}, mustMarshalJSON(map[string]any{
 						"message":            fixture.StreamError.Message,

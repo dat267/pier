@@ -12,6 +12,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 // Port of api/bedrock-converse-stream.ts: the Bedrock Converse streaming
@@ -1046,8 +1048,7 @@ func bedrockHTTPError(status int, headers http.Header, raw []byte) error {
 	}
 	message := "UnknownError"
 	for _, key := range []string{"message", "Message"} {
-		var value string
-		if json.Unmarshal(fields[key], &value) == nil && value != "" {
+		if value, ok := bedrockErrorMessageText(fields[key]); ok && value != "" {
 			message = value
 			break
 		}
@@ -1144,11 +1145,7 @@ func readBedrockConverseStream(
 				Message string `json:"message"`
 			}
 			_ = json.Unmarshal(message.Payload, &payload)
-			messageText := payload.Message
-			if messageText == "" {
-				messageText = exceptionType
-			}
-			return &BedrockServiceError{Code: exceptionType, Message: messageText}
+			return &BedrockServiceError{Code: bedrockExceptionClassName(exceptionType), Message: payload.Message}
 		}
 		if err := applyBedrockConverseEvent(eventType, message.Payload, model, output, stream, blocks); err != nil {
 			return err
@@ -1386,6 +1383,63 @@ func derefInt64(value *int64) int64 {
 		return 0
 	}
 	return *value
+}
+
+// bedrockExceptionClassName maps the event stream's exception member name to
+// the modeled exception class name, which is what upstream reads as the AWS
+// SDK error's name: `throttlingException` becomes `ThrottlingException`. The
+// prefix table and the diagnostic errorCode are keyed on the class name.
+func bedrockExceptionClassName(member string) string {
+	if member == "" {
+		return ""
+	}
+	first, size := utf8.DecodeRuneInString(member)
+	return string(unicode.ToUpper(first)) + member[size:]
+}
+
+// bedrockErrorMessageText renders an error body's message field the way the
+// AWS SDK does on the reference, where JavaScript stringifies whatever the body
+// held: 123 reports "123", true reports "true", an object reports
+// "[object Object]" and an array joins its items with commas. A null value is
+// absent, so the caller keeps its placeholder.
+func bedrockErrorMessageText(raw json.RawMessage) (string, bool) {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 || string(trimmed) == "null" {
+		return "", false
+	}
+	switch trimmed[0] {
+	case '"':
+		var text string
+		if json.Unmarshal(trimmed, &text) != nil {
+			return "", false
+		}
+		return text, true
+	case 't':
+		return "true", true
+	case 'f':
+		return "false", true
+	case '{':
+		return "[object Object]", true
+	case '[':
+		var items []json.RawMessage
+		if json.Unmarshal(trimmed, &items) != nil {
+			return "", false
+		}
+		parts := make([]string, 0, len(items))
+		for _, item := range items {
+			text, ok := bedrockErrorMessageText(item)
+			if !ok {
+				text = "null"
+			}
+			parts = append(parts, text)
+		}
+		return strings.Join(parts, ","), true
+	}
+	var number float64
+	if json.Unmarshal(trimmed, &number) != nil {
+		return "", false
+	}
+	return JSNumberToString(number), true
 }
 
 // bedrockExceptionCode carries the AWS modeled exception name.
