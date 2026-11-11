@@ -56,3 +56,32 @@
   (2) an off-loop seam rule so a wiring closure invoked only inside a detached
   worker is not rooted (the `/reload` pair); (3) repairs or reasoned allowlist
   entries for the remainder, with `bindSessionManager`'s rebind work first.
+
+## A494 — medium: a session replacement's rebind redoes the expensive work on the owner loop
+
+- Category and affected paths: performance on the loop in
+  `coding/interactive/sessionswitch.go` `bindSessionManager`
+  (`coding.CreateAgentSession`, `SessionManager` index/context scans,
+  `FooterDataProvider.SetCwd`) reached from `applyOpenedSession`, which D442
+  posts onto the loop after the file work finishes.
+- Scenario: switch to, fork from, import or tail a session with 12,500 turns
+  (25,000 entries, the size of this user's largest session). Expected: after
+  the off-loop open, the posted rebind applies prepared state. Actual: the loop
+  blocks for the rebind itself.
+- Evidence: probe (deleted) that opened the file with `coding.OpenSession` and
+  then timed only `app.applyOpenedSession`, which is the loop-side half:
+  5 turns 0.88 ms, 3,000 turns 48.6 ms, 12,500 turns 222.3 ms, so roughly
+  18 µs per entry and linear. The CPU profile is dominated by
+  `encoding/json` scanning of every message, `ai.appendCanonicalJSONString`,
+  and the resulting GC work (`scanObjectsSmall`, `tryDeferToSpanScan`).
+- Authority: `AGENTS.md` UI-ownership rule; D442 moved the file work but
+  assumed the rebind was cheap, which the measurement contradicts.
+- Root cause: the rebind reconstructs session-derived state (agent session,
+  model config, index, context projection) from entries instead of receiving it
+  with the prepared session.
+- Repair plan: build the `AgentSession` and the session index inside the
+  off-loop work function that already produces the `*SessionManager`, and keep
+  only attached-state rebinding (transcript, footer, events, MCP pointers) on
+  the loop. Then re-measure the same three sizes.
+- Verification: a test that the loop-side callback no longer scales with entry
+  count, plus the existing switch/fork/import suites and `just check`.
