@@ -231,16 +231,10 @@ func (c *ModelSelectorComponent) startRefresh() {
 			case result.Aborted && timedOut:
 				c.errorMessage = "Model refresh timed out; showing cached models."
 			case len(result.Errors) == 1:
-				key := firstErrorKey(result.Errors)
-				c.errorMessage = "Could not refresh " + key + "; showing cached models."
+				c.errorMessage = "Could not refresh " + errorProviders(result.Errors)[0] + "; showing cached models."
 			case len(result.Errors) > 1:
-				keys := make([]string, 0, len(result.Errors))
-				for key := range result.Errors {
-					keys = append(keys, key)
-				}
-				sort.Strings(keys)
 				c.errorMessage = "Could not refresh " + itoa(len(result.Errors)) + " model catalogs (" +
-					strings.Join(keys, ", ") + "); showing cached models."
+					strings.Join(errorProviders(result.Errors), ", ") + "); showing cached models."
 			default:
 				c.errorMessage = c.runtime.GetError()
 				if c.errorMessage == "" {
@@ -269,18 +263,6 @@ func (c *ModelSelectorComponent) postApply(fn func()) {
 		return
 	}
 	c.Post(fn)
-}
-
-func firstErrorKey(errors map[string]error) string {
-	keys := make([]string, 0, len(errors))
-	for key := range errors {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	if len(keys) == 0 {
-		return ""
-	}
-	return keys[0]
 }
 
 // GetDefaultModelReference returns the default-model reference (test seam).

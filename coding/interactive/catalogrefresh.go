@@ -3,6 +3,7 @@ package interactive
 import (
 	"context"
 	"maps"
+	"sort"
 	"sync/atomic"
 
 	"github.com/dat267/pier/ai"
@@ -11,6 +12,19 @@ import (
 
 // Port of src/modes/interactive/model-catalog-refresh.ts: share concurrent
 // all-catalog refreshes while keeping each caller's cancellation independent.
+
+// errorProviders names the providers a catalog refresh could not update, in
+// sorted order. The reference registers each failure as a concurrent
+// Promise.all promise settles (packages/ai/src/models.ts:603), so its order is
+// completion order and changes from run to run; the port sorts instead (D456).
+func errorProviders(errors map[string]error) []string {
+	providers := make([]string, 0, len(errors))
+	for provider := range errors {
+		providers = append(providers, provider)
+	}
+	sort.Strings(providers)
+	return providers
+}
 
 // ModelCatalogRuntime is the refresh surface the coordinator needs.
 type ModelCatalogRuntime interface {

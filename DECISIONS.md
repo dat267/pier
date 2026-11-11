@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D455)
+# Deliberate divergences from pi (D1–D456)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7201,3 +7201,18 @@ cursor) pairs now differs only for cursors inside a surrogate pair, plus the
 dictionary-run case D399 records.
 
 `Test:` `TestWordNavigationNormalizesItsCursor`.
+
+### D456
+
+**A model-refresh failure list is sorted, because the reference's order is
+completion order.**
+
+A "Could not refresh …" message names the providers whose catalog refresh
+failed. The reference registers each failure in a `Map` from inside the
+concurrent `Promise.all` refresh (`packages/ai/src/models.ts:603`) and then lists
+that map's keys, so the order is whichever provider failed first and changes from
+run to run. The port returns a Go map (`ModelsRefreshResult.Errors`) and sorts
+the keys in `errorProviders`, so the same failure set always produces the same
+message, which is also what the tests can assert.
+
+`Test:` `TestModelRefreshErrorProvidersAreSorted`.

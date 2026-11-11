@@ -131,12 +131,7 @@ func (w *ModelWiring) HandleModelCommand(ctx context.Context, searchTerm string)
 		case result.Aborted:
 			w.showWarning("Model refresh timed out; searching cached models.")
 		case len(result.Errors) > 0:
-			providers := make([]string, 0, len(result.Errors))
-			for provider := range result.Errors {
-				providers = append(providers, provider)
-			}
-			sortStringsAscending(providers)
-			w.showWarning("Could not refresh " + strings.Join(providers, ", ") + "; searching cached models.")
+			w.showWarning("Could not refresh " + strings.Join(errorProviders(result.Errors), ", ") + "; searching cached models.")
 		}
 		match = coding.FindExactModelReferenceMatch(searchTerm, w.Session.ModelRuntime().GetAvailableSnapshot())
 	}
@@ -207,14 +202,6 @@ func EnabledIdsFromPatterns(patterns []string, models []*ai.Model) *EnabledIds {
 		}
 	}
 	return &EnabledIds{IDs: ids}
-}
-
-func sortStringsAscending(values []string) {
-	for i := 1; i < len(values); i++ {
-		for j := i; j > 0 && values[j-1] > values[j]; j-- {
-			values[j-1], values[j] = values[j], values[j-1]
-		}
-	}
 }
 
 func containsID(ids []string, id string) bool {
@@ -366,12 +353,7 @@ func (w *ModelWiring) ShowModelsSelector(ctx context.Context) {
 				case result.Aborted && timedOut.Load():
 					selector.SetRefreshStatus("Model refresh timed out; showing cached models.", "warning")
 				case len(result.Errors) > 0:
-					providers := make([]string, 0, len(result.Errors))
-					for provider := range result.Errors {
-						providers = append(providers, provider)
-					}
-					sortStringsAscending(providers)
-					selector.SetRefreshStatus("Could not refresh "+strings.Join(providers, ", ")+"; showing cached models.", "warning")
+					selector.SetRefreshStatus("Could not refresh "+strings.Join(errorProviders(result.Errors), ", ")+"; showing cached models.", "warning")
 				default:
 					selector.SetRefreshStatus("Model catalogs refreshed.", "success")
 				}
