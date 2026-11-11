@@ -50,6 +50,8 @@ type McpManager struct {
 	// number of the newest rebuild whose tool set is in tools.
 	rebuildStarted uint64
 	published      uint64
+	// attachMu orders AttachTo's read-and-attach steps.
+	attachMu sync.Mutex
 }
 
 // NewMcpManager connects every enabled server (in configuration order), waits
@@ -153,10 +155,20 @@ func (m *McpManager) SetOnToolsChange(onToolsChange func()) {
 func (m *McpManager) AttachSession(session *AgentSession) {
 	m.mu.Lock()
 	if m.onToolsChange == nil {
-		m.onToolsChange = func() { _ = session.AttachExtraTools(m.DirectTools()) }
+		m.onToolsChange = func() { _ = m.AttachTo(session) }
 	}
 	m.mu.Unlock()
-	_ = session.AttachExtraTools(m.DirectTools())
+	_ = m.AttachTo(session)
+}
+
+// AttachTo attaches the manager's current direct tools to the session. The
+// rebuild callbacks of servers that connect at once call it concurrently; the
+// tool set is read under attachMu, so the attach that runs last attaches the
+// newest set, and an older set read earlier cannot land after it.
+func (m *McpManager) AttachTo(session *AgentSession) []string {
+	m.attachMu.Lock()
+	defer m.attachMu.Unlock()
+	return session.AttachExtraTools(m.DirectTools())
 }
 
 // McpSessionFactory builds a fresh manager from re-read config (upstream the

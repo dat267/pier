@@ -1352,7 +1352,7 @@ func (a *App) wireMcpManager(manager *coding.McpManager) {
 			if a.mcpManager != manager {
 				return
 			}
-			_ = a.session.AttachExtraTools(manager.DirectTools())
+			_ = manager.AttachTo(a.session.AgentSession)
 		})
 	})
 	manager.AttachSession(a.session.AgentSession)
@@ -1363,7 +1363,7 @@ func (a *App) wireMcpManager(manager *coding.McpManager) {
 			if !manager.WaitForDirectTools(ctx, time.Duration(coding.McpStartupWaitMs)*time.Millisecond) {
 				a.transcript.ShowStatus("MCP servers are still connecting; their tools become available once connected.")
 			}
-			_ = a.session.AttachExtraTools(manager.DirectTools())
+			_ = manager.AttachTo(a.session.AgentSession)
 			for _, message := range manager.ConnectionErrors() {
 				a.showWarning(message)
 			}

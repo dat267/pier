@@ -11,6 +11,7 @@ import (
 
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/internal/goal"
 )
 
 // Port of the state/control surface of core/agent-session.ts: read-only state
@@ -444,6 +445,8 @@ func (s *AgentSession) GetToolDefinition(name string) *agent.AgentTool {
 // active unless the session's allowlist or exclusions reject them; the returned
 // list contains only names newly added to the registry.
 func (s *AgentSession) AttachExtraTools(tools []agent.AgentTool) []string {
+	s.toolsMu.Lock()
+	defer s.toolsMu.Unlock()
 	incomingMcp := make(map[string]agent.AgentTool, len(tools))
 	for _, tool := range tools {
 		if tool.Name != "" && strings.HasPrefix(tool.Name, "mcp__") {
@@ -495,7 +498,7 @@ func (s *AgentSession) AttachExtraTools(tools []agent.AgentTool) []string {
 		seen[name] = true
 		filtered = append(filtered, name)
 	}
-	s.SetActiveToolsByName(filtered)
+	s.setActiveToolsByNameLocked(filtered)
 	if len(added) == 0 {
 		return nil
 	}
@@ -523,6 +526,26 @@ func (s *AgentSession) registerGoalTools() {
 // SetActiveToolsByName enables named registry tools allowed by this session's
 // allowlist and exclusions, then rebuilds the system prompt.
 func (s *AgentSession) SetActiveToolsByName(names []string) {
+	s.toolsMu.Lock()
+	defer s.toolsMu.Unlock()
+	s.setActiveToolsByNameLocked(names)
+}
+
+// syncGoalTools exposes the goal tools the goal feature wants, reading and
+// setting the active set in one step under toolsMu.
+func (s *AgentSession) syncGoalTools() {
+	s.toolsMu.Lock()
+	defer s.toolsMu.Unlock()
+	current := s.ActiveToolNames()
+	next := goal.DesiredToolNames(current)
+	if !sameToolSet(next, current) {
+		s.setActiveToolsByNameLocked(next)
+	}
+}
+
+// setActiveToolsByNameLocked is SetActiveToolsByName for a caller holding
+// toolsMu.
+func (s *AgentSession) setActiveToolsByNameLocked(names []string) {
 	// The active tools are a set: tools that stay active keep their current
 	// order and newly active ones append, so reordering the same names does not
 	// change the declared tool order or the prompt (pi v1.5.0 b9e3eef6c).

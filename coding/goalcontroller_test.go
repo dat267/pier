@@ -66,9 +66,11 @@ func (f *fakeGoalSink) RunGoalTurn(ctx context.Context, customType string, conte
 
 func (f *fakeGoalSink) GoalIsStreaming() bool { return f.streaming }
 
-func (f *fakeGoalSink) GoalActiveTools() []string { return append([]string{}, f.active...) }
-
-func (f *fakeGoalSink) SetGoalActiveTools(names []string) { f.active = append([]string{}, names...) }
+func (f *fakeGoalSink) SyncGoalTools() {
+	if next := goal.DesiredToolNames(f.active); !sameToolSet(next, f.active) {
+		f.active = append([]string{}, next...)
+	}
+}
 
 func (f *fakeGoalSink) GoalHasPendingMessages() bool { return f.pending }
 

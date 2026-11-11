@@ -229,6 +229,12 @@ type AgentSession struct {
 	// options on /reload and tool changes.
 	SystemPromptOptions *BuildSystemPromptOptions
 	promptOptionsMu     sync.Mutex
+	// toolsMu serializes every read-modify-write of the active tool set
+	// (SetActiveToolsByName, AttachExtraTools, the goal's tool sync). Each reads
+	// the active names and sets a new list; overlapping, the later set dropped
+	// what the other had just activated. Taken before stateMu and the agent's
+	// lock, and held over no callbacks.
+	toolsMu sync.Mutex
 
 	// skillDiagnostics are the skill loader's warnings/collisions. They,
 	// promptDiagnostics and control.PromptTemplates are replaced by Reload and

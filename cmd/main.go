@@ -534,7 +534,7 @@ func run(appName string, args *coding.Args) error {
 			session := mcpSession
 			mcpSessionMu.Unlock()
 			if session != nil {
-				session.AttachExtraTools(mcpManager.DirectTools())
+				mcpManager.AttachTo(session)
 			}
 			for _, message := range mcpManager.ConnectionErrors() {
 				fmt.Fprintln(os.Stderr, coding.FormatCLIDiagnostic(coding.CLIDiagnostic{Type: "warning", Message: message}))

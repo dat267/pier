@@ -38,10 +38,9 @@ type goalSink interface {
 	RunGoalTurn(ctx context.Context, customType string, content string, display bool, details json.RawMessage) error
 	// GoalIsStreaming reports whether an agent run is active.
 	GoalIsStreaming() bool
-	// GoalActiveTools lists the active tool names.
-	GoalActiveTools() []string
-	// SetGoalActiveTools replaces the active tool names.
-	SetGoalActiveTools(names []string)
+	// SyncGoalTools exposes the goal tools goal.DesiredToolNames wants, as one
+	// read-modify-write of the active tool set.
+	SyncGoalTools()
 	// GoalHasPendingMessages reports queued user input awaiting delivery.
 	GoalHasPendingMessages() bool
 	// GoalBranchEntries returns the current branch's custom entries for replay.
@@ -115,16 +114,9 @@ func (s *sessionGoalSink) RunGoalTurn(ctx context.Context, customType string, co
 	return s.session.SendMessage(ctx, goalEventMessage(customType, content, display, details), &SendMessageOptions{DeliverAs: "followUp", unlessDisposed: true})
 }
 
-func (s *sessionGoalSink) GoalActiveTools() []string {
-	if s.session == nil {
-		return nil
-	}
-	return s.session.ActiveToolNames()
-}
-
-func (s *sessionGoalSink) SetGoalActiveTools(names []string) {
+func (s *sessionGoalSink) SyncGoalTools() {
 	if s.session != nil {
-		s.session.SetActiveToolsByName(names)
+		s.session.syncGoalTools()
 	}
 }
 
@@ -471,11 +463,7 @@ func (c *GoalController) Apply(effects []goal.Effect) {
 // depend on the goal phase (D418), so a transition appends messages instead of
 // rewriting the request prefix.
 func (c *GoalController) SyncTools() {
-	current := c.sink.GoalActiveTools()
-	next := goal.DesiredToolNames(current)
-	if !sameToolSet(next, current) {
-		c.sink.SetGoalActiveTools(next)
-	}
+	c.sink.SyncGoalTools()
 }
 
 func sameToolSet(a, b []string) bool {
