@@ -456,20 +456,20 @@ func (w *SessionWiring) ShowSessionSelector() {
 	cwd, sessionDir := w.SessionInfo.GetCwd(), w.SessionInfo.GetSessionDir()
 	usesDefaultDir := w.SessionInfo.UsesDefaultSessionDir()
 	writeQueue := w.SessionInfo.GetWriteQueue()
-	currentLoader := func(_ SessionListProgress, _ context.Context) ([]coding.SessionInfo, error) {
+	currentLoader := func(onProgress SessionListProgress, ctx context.Context) ([]coding.SessionInfo, error) {
 		if writeQueue != nil {
 			writeQueue.Flush()
 		}
-		return coding.ListSessions(cwd, sessionDir), nil
+		return coding.ListSessionsWithProgress(ctx, cwd, sessionDir, progressSink(onProgress))
 	}
-	allLoader := func(_ SessionListProgress, _ context.Context) ([]coding.SessionInfo, error) {
+	allLoader := func(onProgress SessionListProgress, ctx context.Context) ([]coding.SessionInfo, error) {
 		if writeQueue != nil {
 			writeQueue.Flush()
 		}
 		if usesDefaultDir {
-			return coding.ListAllSessions(""), nil
+			return coding.ListAllSessionsWithProgress(ctx, "", progressSink(onProgress))
 		}
-		return coding.ListAllSessions(sessionDir), nil
+		return coding.ListAllSessionsWithProgress(ctx, sessionDir, progressSink(onProgress))
 	}
 	w.Slot.Show(func(done func()) CreatedSelector {
 		selector := NewSessionSelectorComponent(currentLoader, allLoader,
@@ -623,4 +623,15 @@ func newSessionWiring(app *App) *SessionWiring {
 		SwitchSession:        app.switchSessionAsync,
 		RenameQueue:          app.sessionQueue,
 		PostToUI:             app.postToOwnerLoop}
+}
+
+// progressSink adapts the picker's progress callback to the listing's, and
+// drops a nil one so the listing can skip building partial lists.
+func progressSink(onProgress SessionListProgress) coding.SessionListProgress {
+	if onProgress == nil {
+		return nil
+	}
+	return func(loaded int, total int, partial []coding.SessionInfo) {
+		onProgress(loaded, total, partial)
+	}
 }

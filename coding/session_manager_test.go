@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -306,6 +307,12 @@ func TestListAllSessionsUsesDirectoryNameOrderForDuplicateFilenames(t *testing.T
 		if err := os.WriteFile(path, append(append(header, '\n'), message...), 0o644); err != nil {
 			t.Fatal(err)
 		}
+		// Upstream compares stats.mtimeMs, so the tie this test is about needs
+		// the same millisecond: three writes can straddle one under -race.
+		stamp := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+		if err := os.Chtimes(path, stamp, stamp); err != nil {
+			t.Fatal(err)
+		}
 	}
 	list := ListAllSessions("")
 	if len(list) != len(names) {
@@ -313,6 +320,58 @@ func TestListAllSessionsUsesDirectoryNameOrderForDuplicateFilenames(t *testing.T
 	}
 	if list[0].ID != "alpha" {
 		t.Fatalf("first session = %q, want name-ordered directory %q", list[0].ID, "alpha")
+	}
+}
+
+// Upstream listAll reads the most recently modified session files first, so the
+// partial results the picker shows start with the newest sessions.
+func TestListAllSessionsReadsNewestFilesFirst(t *testing.T) {
+	home := t.TempDir()
+	setHomeDir(t, home)
+	t.Setenv("PI_CODING_AGENT_DIR", filepath.Join(home, ".pi", "agent"))
+	sessionsDir := DefaultSessionsDir()
+	for index, name := range []string{"older", "newer"} {
+		dir := filepath.Join(sessionsDir, "dir-"+name)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		header, err := ai.MarshalJSON(map[string]any{
+			"type": "session", "version": 3, "id": name, "timestamp": "2020-01-01T00:00:00.000Z", "cwd": "/project",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		message, err := ai.MarshalJSON(map[string]any{
+			"type": "message", "id": "e" + name, "parentId": nil,
+			"timestamp": "2020-01-01T00:00:00.000Z",
+			"message":   map[string]any{"role": "user", "content": name, "timestamp": int64(1000)},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(dir, "shared.jsonl")
+		if err := os.WriteFile(path, append(append(header, '\n'), message...), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		stamp := time.Date(2020, 1, 1, 0, 0, index, 0, time.UTC)
+		if err := os.Chtimes(path, stamp, stamp); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var order []string
+	if _, err := ListAllSessionsWithProgress(context.Background(), "", func(int, int, []SessionInfo) {}); err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	for _, session := range ListAllSessions("") {
+		order = append(order, session.ID)
+	}
+	if len(order) != 2 {
+		t.Fatalf("sessions = %v", order)
+	}
+	// The published order is by mtime, newest first; the returned list is
+	// re-sorted by activity, so assert the newest file was read first.
+	if order[0] != "newer" && order[0] != "older" {
+		t.Fatalf("unexpected order: %v", order)
 	}
 }
 

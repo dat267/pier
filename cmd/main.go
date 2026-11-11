@@ -984,17 +984,27 @@ func sessionPickerOutput(headless bool) *os.File {
 	return os.Stdout
 }
 
+// sessionProgressSink adapts the picker's progress callback to the listing's.
+func sessionProgressSink(onProgress interactive.SessionListProgress) coding.SessionListProgress {
+	if onProgress == nil {
+		return nil
+	}
+	return func(loaded int, total int, partial []coding.SessionInfo) {
+		onProgress(loaded, total, partial)
+	}
+}
+
 // selectResumeSession shows the interactive session picker (upstream
 // cli/session-picker.ts selectSession). A var so tests can stub it.
 var selectResumeSession = func(cwd string, sessionDir string, settings *coding.SettingsManager, headless bool) (string, bool) {
-	current := func(_ interactive.SessionListProgress, ctx context.Context) ([]coding.SessionInfo, error) {
-		return coding.ListSessions(cwd, sessionDir), nil
+	current := func(onProgress interactive.SessionListProgress, ctx context.Context) ([]coding.SessionInfo, error) {
+		return coding.ListSessionsWithProgress(ctx, cwd, sessionDir, sessionProgressSink(onProgress))
 	}
-	all := func(_ interactive.SessionListProgress, ctx context.Context) ([]coding.SessionInfo, error) {
+	all := func(onProgress interactive.SessionListProgress, ctx context.Context) ([]coding.SessionInfo, error) {
 		if sessionDir != "" {
-			return coding.ListAllSessions(sessionDir), nil
+			return coding.ListAllSessionsWithProgress(ctx, sessionDir, sessionProgressSink(onProgress))
 		}
-		return coding.ListAllSessions(""), nil
+		return coding.ListAllSessionsWithProgress(ctx, "", sessionProgressSink(onProgress))
 	}
 	selected := interactive.SelectSession(interactive.SelectSessionOptions{
 		Settings:      settings,

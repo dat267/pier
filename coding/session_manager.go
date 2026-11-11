@@ -3,6 +3,7 @@ package coding
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -1303,44 +1304,232 @@ type SessionInfo struct {
 	AllMessagesText   string
 }
 
-// scanSessionDir collects listing info for every session file in dir, without
-// sorting or cwd filtering.
-func scanSessionDir(dir string) []SessionInfo {
-	var sessions []SessionInfo
-	dirEntries, err := os.ReadDir(dir)
-	if err != nil {
-		return sessions
-	}
-	for _, dirEntry := range dirEntries {
-		name := DecodeUTF8WithReplacement([]byte(dirEntry.Name()))
-		if !strings.HasSuffix(name, ".jsonl") {
-			continue
-		}
-		if info := buildSessionInfo(filepath.Join(dir, name)); info != nil {
-			sessions = append(sessions, *info)
-		}
-	}
+// ListSessions lists sessions for a cwd's directory, newest first
+// (port of SessionManager.list).
+func ListSessions(cwd string, sessionDir string) []SessionInfo {
+	sessions, _ := ListSessionsWithProgress(context.Background(), cwd, sessionDir, nil)
 	return sessions
 }
 
-// ListSessions lists sessions for a cwd's directory, newest first
-// (port of SessionManager.list; progress callback omitted).
-func ListSessions(cwd string, sessionDir string) []SessionInfo {
+// SessionListProgress reports a listing's progress: loaded of total files and
+// the sessions found so far, sorted, or nil when this update carries none
+// (upstream SessionListProgress).
+type SessionListProgress func(loaded int, total int, partial []SessionInfo)
+
+// ListSessionsWithProgress lists a cwd's sessions, reporting progress as files
+// are read and stopping when ctx is done (the picker's loader seam).
+func ListSessionsWithProgress(ctx context.Context, cwd string, sessionDir string, onProgress SessionListProgress) ([]SessionInfo, error) {
 	dir := sessionDir
 	if dir == "" {
 		dir = DefaultSessionDir(cwd, "")
 	}
 	filterCwd := sessionDir != "" && !PathsEqual(dir, DefaultSessionDir(cwd, ""))
 	resolvedCwd := ResolvePath(cwd, "", PathInputOptions{})
-
+	scanned, err := scanSessionDirWithProgress(ctx, dir, onProgress)
+	if err != nil {
+		return nil, err
+	}
 	var sessions []SessionInfo
-	for _, info := range scanSessionDir(dir) {
+	for _, info := range scanned {
 		if filterCwd && !PathsEqual(ResolvePath(info.Cwd, "", PathInputOptions{}), resolvedCwd) {
 			continue
 		}
 		sessions = append(sessions, info)
 	}
-	return sortSessionInfos(sessions)
+	return sortSessionInfos(sessions), nil
+}
+
+// ListAllSessionsWithProgress lists every session under the sessions root (or
+// one directory). Upstream listAll gathers every session file first, orders the
+// candidates by file mtime and then by name, and reads them with one pool, so
+// the rows published first are the most recent sessions.
+func ListAllSessionsWithProgress(ctx context.Context, sessionDir string, onProgress SessionListProgress) ([]SessionInfo, error) {
+	if sessionDir != "" {
+		scanned, err := scanSessionDirWithProgress(ctx, sessionDir, onProgress)
+		if err != nil {
+			return nil, err
+		}
+		return sortSessionInfos(scanned), nil
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	sessionsDir := DefaultSessionsDir()
+	directory, err := os.Open(sessionsDir)
+	if err != nil {
+		return nil, nil
+	}
+	entries, err := directory.ReadDir(-1)
+	_ = directory.Close()
+	if err != nil {
+		return nil, nil
+	}
+	// Upstream walks readdirSync entries, which libuv returns sorted by name;
+	// (*os.File).ReadDir returns directory order, so sort it here. Ties in the
+	// mtime sort below then keep this order.
+	sort.SliceStable(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
+	type candidate struct {
+		path     string
+		modified time.Time
+		hasTime  bool
+	}
+	var candidates []candidate
+	for _, entry := range entries {
+		// Upstream keeps directories and symlinks.
+		if !entry.IsDir() && entry.Type()&fs.ModeSymlink == 0 {
+			continue
+		}
+		name := DecodeUTF8WithReplacement([]byte(entry.Name()))
+		dirPath := filepath.Join(sessionsDir, name)
+		files, err := os.ReadDir(dirPath)
+		if err != nil {
+			continue
+		}
+		for _, file := range files {
+			fileName := DecodeUTF8WithReplacement([]byte(file.Name()))
+			if !strings.HasSuffix(fileName, ".jsonl") {
+				continue
+			}
+			path := filepath.Join(dirPath, fileName)
+			info, err := os.Stat(path)
+			if err != nil {
+				candidates = append(candidates, candidate{path: path})
+				continue
+			}
+			candidates = append(candidates, candidate{path: path, modified: info.ModTime(), hasTime: true})
+		}
+	}
+	// Upstream orders by stats.mtimeMs, which truncates to milliseconds: files
+	// written together tie and keep readdir order (directory name), so the
+	// comparison must use the same resolution.
+	sort.SliceStable(candidates, func(i, j int) bool {
+		left, right := candidates[i], candidates[j]
+		leftMS, rightMS := int64(0), int64(0)
+		if left.hasTime {
+			leftMS = left.modified.UnixMilli()
+		}
+		if right.hasTime {
+			rightMS = right.modified.UnixMilli()
+		}
+		if left.hasTime && right.hasTime && leftMS != rightMS {
+			return leftMS > rightMS
+		}
+		return filepath.Base(left.path) > filepath.Base(right.path)
+	})
+	paths := make([]string, 0, len(candidates))
+	for _, item := range candidates {
+		paths = append(paths, item.path)
+	}
+	sessions, err := buildSessionInfosWithProgress(ctx, paths, onProgress)
+	if err != nil {
+		return nil, err
+	}
+	return sortSessionInfos(sessions), nil
+}
+
+// Listing concurrency and progress cadence, ported from upstream
+// (MAX_CONCURRENT_SESSION_INFO_LOADS, CURRENT_SESSION_LIST_PUBLISH_INTERVAL).
+const (
+	maxConcurrentSessionInfoLoads     = 10
+	currentSessionListPublishInterval = 10
+)
+
+// scanSessionDirWithProgress builds listing info for every session file in dir,
+// reading maxConcurrentSessionInfoLoads files at a time and reporting the rows
+// found so far as each batch finishes. Upstream reads the directory
+// newest-name-first and keeps that order in the result.
+func scanSessionDirWithProgress(ctx context.Context, dir string, onProgress SessionListProgress) ([]SessionInfo, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, nil
+	}
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		name := DecodeUTF8WithReplacement([]byte(entry.Name()))
+		if strings.HasSuffix(name, ".jsonl") {
+			names = append(names, name)
+		}
+	}
+	sort.Sort(sort.Reverse(sort.StringSlice(names)))
+	paths := make([]string, 0, len(names))
+	for _, name := range names {
+		paths = append(paths, filepath.Join(dir, name))
+	}
+	return buildSessionInfosWithProgress(ctx, paths, onProgress)
+}
+
+// buildSessionInfosWithProgress reads the listed files maxConcurrentSessionInfoLoads
+// at a time, publishing the rows found so far when the first finishes, every
+// currentSessionListPublishInterval files, and at the end (upstream
+// buildSessionInfosWithConcurrency plus listSessionsFromDir's publish rule).
+func buildSessionInfosWithProgress(ctx context.Context, paths []string, onProgress SessionListProgress) ([]SessionInfo, error) {
+	total := len(paths)
+	if total == 0 {
+		return nil, nil
+	}
+
+	type listedFile struct {
+		index int
+		info  *SessionInfo
+	}
+	results := make([]*SessionInfo, total)
+	work := make(chan int)
+	finished := make(chan listedFile)
+	workers := min(maxConcurrentSessionInfoLoads, total)
+	var group sync.WaitGroup
+	for range workers {
+		group.Add(1)
+		go func() {
+			defer group.Done()
+			for index := range work {
+				if ctx.Err() != nil {
+					finished <- listedFile{index: index}
+					continue
+				}
+				finished <- listedFile{index: index, info: buildSessionInfoContext(ctx, paths[index])}
+			}
+		}()
+	}
+	go func() {
+		defer close(work)
+		for index := range paths {
+			select {
+			case work <- index:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	go func() {
+		group.Wait()
+		close(finished)
+	}()
+
+	partial := make([]SessionInfo, 0, total)
+	loaded := 0
+	for item := range finished {
+		results[item.index] = item.info
+		loaded++
+		if item.info != nil {
+			partial = append(partial, *item.info)
+		}
+		if onProgress != nil && (loaded == 1 || loaded%currentSessionListPublishInterval == 0 || loaded == total) {
+			onProgress(loaded, total, sortSessionInfos(append([]SessionInfo(nil), partial...)))
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	sessions := make([]SessionInfo, 0, len(partial))
+	for _, info := range results {
+		if info != nil {
+			sessions = append(sessions, *info)
+		}
+	}
+	return sessions, nil
 }
 
 // buildSessionInfo extracts listing metadata (port of buildSessionInfo). The
@@ -1348,6 +1537,13 @@ func ListSessions(cwd string, sessionDir string) []SessionInfo {
 // loop; reading it whole and splitting it doubled the memory of listing a
 // large session directory.
 func buildSessionInfo(filePath string) *SessionInfo {
+	return buildSessionInfoContext(context.Background(), filePath)
+}
+
+// buildSessionInfoContext is buildSessionInfo, abandoning the scan when ctx is
+// done: a listing of a 248 MB session must not outlive its cancel (upstream
+// aborts the read stream through its AbortSignal).
+func buildSessionInfoContext(ctx context.Context, filePath string) *SessionInfo {
 	stats, err := os.Stat(filePath)
 	if err != nil {
 		return nil
@@ -1445,7 +1641,10 @@ func buildSessionInfo(filePath string) *SessionInfo {
 		return false
 	}
 
-	for {
+	for lines := 0; ; lines++ {
+		if lines%256 == 0 && ctx.Err() != nil {
+			return nil
+		}
 		line, readErr := reader.ReadBytes('\n')
 		line = bytes.TrimRight(line, "\r\n")
 		if len(bytes.TrimSpace(line)) != 0 && process(line) {
@@ -1668,34 +1867,8 @@ func (m *SessionManager) UsesDefaultSessionDir() bool {
 // ListAllSessions lists sessions across every per-cwd directory (or one custom
 // directory) sorted by modification time (port of SessionManager.listAll).
 func ListAllSessions(sessionDir string) []SessionInfo {
-	if sessionDir != "" {
-		// Upstream listAll(customSessionDir) scans the directory without a cwd
-		// filter (listSessionsFromDir), never through list().
-		return sortSessionInfos(listSessionsFromDir(sessionDir))
-	}
-	sessionsDir := DefaultSessionsDir()
-	directory, err := os.Open(sessionsDir)
-	if err != nil {
-		return nil
-	}
-	entries, err := directory.ReadDir(-1)
-	_ = directory.Close()
-	if err != nil {
-		return nil
-	}
-	// Upstream walks readdirSync entries, which libuv returns sorted by name;
-	// the stable sort below keeps that order for sessions that tie.
-	sort.SliceStable(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
-	var sessions []SessionInfo
-	for _, entry := range entries {
-		// Upstream keeps directories and symlinks.
-		if !entry.IsDir() && entry.Type()&fs.ModeSymlink == 0 {
-			continue
-		}
-		name := DecodeUTF8WithReplacement([]byte(entry.Name()))
-		sessions = append(sessions, listSessionsFromDir(filepath.Join(sessionsDir, name))...)
-	}
-	return sortSessionInfos(sessions)
+	sessions, _ := ListAllSessionsWithProgress(context.Background(), sessionDir, nil)
+	return sessions
 }
 
 // sortSessionInfos orders sessions like upstream sortSessionInfos: modified
@@ -1715,9 +1888,6 @@ func sortSessionInfos(sessions []SessionInfo) []SessionInfo {
 
 // listSessionsFromDir scans one directory for session files without applying
 // any cwd filter (upstream listSessionsFromDir).
-func listSessionsFromDir(dir string) []SessionInfo {
-	return sortSessionInfos(scanSessionDir(dir))
-}
 
 // messageListing is the listing view of one message: the role, the message
 // timestamp and the text the message contributes. Listing never reads tool
