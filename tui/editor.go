@@ -630,9 +630,7 @@ func (e *Editor) handleInputLocked(data string) {
 				e.lastAction = ""
 				result := e.autocompleteProvider.ApplyCompletion(
 					e.state.lines, e.state.cursorLine, e.state.cursorCol, autocompleteItemFromSelect(selected), e.autocompletePrefix)
-				e.state.lines = result.Lines
-				e.state.cursorLine = result.CursorLine
-				e.setCursorCol(result.CursorCol)
+				e.applyCompletionResultLocked(result)
 				if strings.HasPrefix(e.autocompletePrefix, "/") && kb.Matches(data, "tui.select.confirm") {
 					e.cancelAutocompleteLocked()
 					// Fall through to submit.
@@ -902,7 +900,13 @@ func (e *Editor) InsertTextAtCursor(text string) {
 func (e *Editor) normalizeText(text string) string {
 	text = strings.ReplaceAll(text, "\r\n", "\n")
 	text = strings.ReplaceAll(text, "\r", "\n")
-	return strings.ReplaceAll(text, "\t", "    ")
+	text = strings.ReplaceAll(text, "\t", "    ")
+	// The editor draws its buffer, and text reaches it from completions and
+	// InsertTextAtCursor as well as from keystrokes, which never carry a raw
+	// escape byte. Sanitizing here, before the buffer and the cursor see the
+	// text, keeps layout and cursor arithmetic in step; sanitizing at render time
+	// would move every column (D342, D452).
+	return SanitizeUntrustedText(text)
 }
 
 func (e *Editor) insertTextAtCursorInternal(text string) {
@@ -2109,9 +2113,7 @@ func (e *Editor) createAutocompleteListLocked(prefix string, items []Autocomplet
 			e.state.lines, e.state.cursorLine, e.state.cursorCol,
 			autocompleteItemFromSelect(selected),
 			e.autocompletePrefix)
-		e.state.lines = result.Lines
-		e.state.cursorLine = result.CursorLine
-		e.setCursorCol(result.CursorCol)
+		e.applyCompletionResultLocked(result)
 		e.cancelAutocompleteLocked()
 		if e.OnChange != nil {
 			e.OnChange(e.getTextLocked())
@@ -2242,6 +2244,26 @@ func (e *Editor) startAutocompleteRequestLocked(startToken int, force bool, expl
 	}()
 }
 
+// applyCompletionResultLocked installs a provider's completion. The item can come
+// from a provider that reads the filesystem (an @-completion lists file names, and
+// a cloned repository can hold one with escape sequences), so the text it inserts
+// is untrusted for the terminal. Sanitizing here keeps the buffer and the cursor
+// in step, which a render-time fix could not do without moving every column
+// (D342, D452).
+func (e *Editor) applyCompletionResultLocked(result CompletionResult) {
+	lines := make([]string, len(result.Lines))
+	for index, line := range result.Lines {
+		lines[index] = SanitizeUntrustedText(line)
+	}
+	e.state.lines = lines
+	e.state.cursorLine = result.CursorLine
+	column := result.CursorCol
+	if result.CursorLine >= 0 && result.CursorLine < len(lines) {
+		column = min(column, len(lines[result.CursorLine]))
+	}
+	e.setCursorCol(column)
+}
+
 // applyAutocompleteResultLocked ports runAutocompleteRequest's tail: empty
 // results clear the popup, a forced single Tab completion applies directly, and
 // anything else becomes the suggestion list.
@@ -2258,9 +2280,7 @@ func (e *Editor) applyAutocompleteResultLocked(suggestions *AutocompleteSuggesti
 		e.lastAction = ""
 		result := e.autocompleteProvider.ApplyCompletion(
 			e.state.lines, e.state.cursorLine, e.state.cursorCol, item, suggestions.Prefix)
-		e.state.lines = result.Lines
-		e.state.cursorLine = result.CursorLine
-		e.setCursorCol(result.CursorCol)
+		e.applyCompletionResultLocked(result)
 		if e.OnChange != nil {
 			e.OnChange(e.getTextLocked())
 		}

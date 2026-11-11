@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D451)
+# Deliberate divergences from pi (D1–D452)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7087,3 +7087,30 @@ arithmetic run over the raw buffer and its output is pinned by goldens, so
 sanitizing there needs a design decision rather than a one-line fix.
 
 Tests: `TestSelectListSanitizesItemText`.
+
+### D452
+
+**The editor sanitizes text on entry, so its buffer never holds a raw escape
+sequence; the reference inserts what it is given.**
+
+Reference: pi v1.5.0 `f9a26365` `editor.ts` inserts the text its API is handed and
+draws the buffer as-is. The port now strips escape sequences in `normalizeText`
+(which `SetText`, `InsertTextAtCursor` and the paste path already funnel through)
+and in `applyCompletionResultLocked`, which installs the whole lines a provider
+returns.
+
+The buffer is a terminal sink: the editor draws it directly. Text reaches it
+without a keystroke in two ways. A completion can insert a file name from disk,
+and a cloned repository can hold one with escape sequences; a paste can carry
+them as raw bytes, though the port's paste path already filtered control
+characters, so only the programmatic paths were open. Keystrokes cannot produce a
+raw ESC, which is why the buffer had been assumed safe.
+
+Sanitizing on entry rather than at render time is the point: layout, cursor
+mapping, selection and highlighting all run over the buffer, so a display-layer
+fix would move every column, and 76 goldens pin the current bytes. The cost is
+that a completed name containing escapes no longer matches the file exactly; such
+a name is unusable through a completion either way, and the buffer stays
+editable.
+
+Tests: `TestEditorSanitizesTextOnEntry`, one case per entry point.
