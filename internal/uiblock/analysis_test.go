@@ -61,6 +61,13 @@ func registerPosted() {
  surface := &Surface{}
  surface.Post(func() { os.Mkdir("posted", 0700) })
 }
+// Work finishes on a queue and posts its result back: the posted closure is what
+// the loop applies, and the func value that delivers it is invisible to a static
+// traversal, so the callback parameter is where the loop side has to be rooted.
+func runSessionFileWork[T any](work func() T, done func(T)) { done(work()) }
+func registerLoopCallback() {
+ runSessionFileWork(func() int { return 1 }, func(int) { os.Remove("loop callback") })
+}
 `,
 	}
 	for name, content := range files {
@@ -90,6 +97,7 @@ func TestAnalysisFindsBlockingPaths(t *testing.T) {
 		".HandleSignal":       Sleep,
 		".RenderFile":         Syscall,
 		"PointerSurface":      Syscall,
+		"runSessionFileWork":  Syscall,
 	}
 	if len(findings) != len(want) {
 		t.Fatalf("findings = %+v, want %d distinct blocking paths", findings, len(want))

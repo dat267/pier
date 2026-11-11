@@ -10,10 +10,12 @@
 //
 // Method. Roots are the UI-loop entry points: the loop and drain functions,
 // every pier implementation of HandleEvent / HandleTerminalInput / RenderNow /
-// Render / Invalidate / HandleSignal, the beat's materializers, and every
-// closure marshaled onto the loop via UI.Post / runOnUI. From each root the
-// traversal follows static call edges (direct calls to named functions and
-// methods) plus interface-method invocations resolved to pier implementations
+// Render / Invalidate / HandleSignal, the beat's materializers, every closure
+// marshaled onto the loop via UI.Post / runOnUI, and every closure handed to a
+// helper's post-back callback (loopCallbackParams), which is how the off-loop
+// framework delivers finished work. From each root the traversal follows static
+// call edges (direct calls to named functions and methods) plus interface-method
+// invocations resolved to pier implementations
 // by method name. Dynamic dispatch through func values is deliberately not
 // followed: a func-typed field can hold any closure of its signature, and
 // signature-based expansion (CHA) produces impossible chains; the surfaces the
@@ -218,6 +220,7 @@ func loadModule(dir string) (*module, error) {
 	// (OnBeat, settings callbacks, key handlers). Their bodies are rooted here
 	// because func-value calls are not followed during traversal.
 	wiringClosures(prog, all, roots)
+	loopCallbackClosures(all, roots)
 
 	// Closures marshaled onto the loop via Post/runOnUI run on the UI goroutine.
 	for fn := range all {
@@ -415,6 +418,70 @@ func wiringClosures(prog *ssa.Program, all map[*ssa.Function]bool, roots map[*ss
 	}
 }
 
+// loopCallbackParams lists the helpers whose named callback parameter runs back
+// on the owner loop. The traversal cannot follow a func value, so a closure
+// handed to such a parameter is rooted directly: it is what the app applies
+// after the off-loop work finishes, and a blocking call in it blocks the loop
+// exactly like a direct root. runSessionFileWork passes its done callback to the
+// post function it is given, which is the app's postToOwnerLoop.
+var loopCallbackParams = []struct {
+	function  string
+	parameter string
+}{
+	{"runSessionFileWork", "done"},
+}
+
+// loopCallbackClosures roots closures handed to a post-back callback. The index
+// comes from the callee's own parameter names, so a generic instantiation's
+// leading dictionary parameter cannot shift it.
+func loopCallbackClosures(all map[*ssa.Function]bool, roots map[*ssa.Function]string) {
+	for fn := range all {
+		if fn.Blocks == nil {
+			continue
+		}
+		for _, block := range fn.Blocks {
+			for _, instr := range block.Instrs {
+				call, ok := instr.(ssa.CallInstruction)
+				if !ok {
+					continue
+				}
+				common := call.Common()
+				callee := common.StaticCallee()
+				if callee == nil {
+					continue
+				}
+				name := callee.RelString(nil)
+				for _, entry := range loopCallbackParams {
+					if !strings.Contains(name, entry.function) {
+						continue
+					}
+					index := -1
+					for position, param := range callee.Params {
+						if param.Name() == entry.parameter {
+							index = position
+							break
+						}
+					}
+					if index < 0 || index >= len(common.Args) {
+						continue
+					}
+					// A closure with no captures is passed as a bare function value.
+					switch value := common.Args[index].(type) {
+					case *ssa.Function:
+						if value.Synthetic == "" {
+							roots[value] = "via " + name + "." + entry.parameter
+						}
+					case *ssa.MakeClosure:
+						if f, ok := value.Fn.(*ssa.Function); ok && f.Synthetic == "" {
+							roots[f] = "via " + name + "." + entry.parameter
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 func fieldName(field *ssa.FieldAddr) string {
 	structType := typeUnderPointer(field.X.Type())
 	if named, ok := structType.(*types.Named); ok {
@@ -440,6 +507,9 @@ func isPier(fn *ssa.Function) bool {
 	rel := fn.RelString(nil)
 	// Package-level functions are "github.com/dat267/pier/...pkg.Func"; methods
 	// are "(github.com/dat267/pier/...Type).Method" (receiver first).
+	// TODO(A493): the pointer form "(*github.com/dat267/pier/...Type).Method" is
+	// missing, so the walk skips nearly every method of this codebase. Fixing it
+	// exposes ~200 findings that must be triaged first.
 	return strings.HasPrefix(rel, "github.com/dat267/pier/") ||
 		strings.HasPrefix(rel, "(github.com/dat267/pier/")
 }
