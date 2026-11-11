@@ -712,6 +712,31 @@ func stringHeaders(headers map[string]string) ai.ProviderHeaders {
 	return out
 }
 
+// SettleCredentialWrites waits until the credential changes in flight finish
+// (pi v1.5.2 agent-session-runtime.ts dispose, #11692). An OAuth refresh may have
+// spent the single-use refresh token before it saved the new one, so exiting
+// earlier loses the login.
+func (r *ModelRuntime) SettleCredentialWrites(ctx context.Context) error {
+	for {
+		r.mu.Lock()
+		pending := make([]chan struct{}, 0, len(r.credentialOps))
+		for _, done := range r.credentialOps {
+			pending = append(pending, done)
+		}
+		r.mu.Unlock()
+		if len(pending) == 0 {
+			return nil
+		}
+		for _, done := range pending {
+			select {
+			case <-done:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+	}
+}
+
 // enqueueCredentialOperation serializes credential changes per provider.
 func (r *ModelRuntime) enqueueCredentialOperation(providerID string, ctx context.Context, task func() error) error {
 	r.mu.Lock()

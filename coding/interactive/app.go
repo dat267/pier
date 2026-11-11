@@ -999,6 +999,15 @@ func (a *App) Close() {
 	a.footer.Dispose()
 	a.footerData.Dispose()
 	StopThemeWatcher()
+	// A rotated OAuth token has to be saved before the process exits: an
+	// in-flight refresh may already have spent the single-use token (#11692,
+	// pi v1.5.2 agent-session-runtime.ts dispose). Bounded, because a wedged write
+	// must not keep the user's terminal open.
+	if a.session != nil && a.session.ModelRuntime() != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		_ = a.session.ModelRuntime().SettleCredentialWrites(ctx)
+		cancel()
+	}
 }
 
 // LifecycleCheckShutdown performs a requested shutdown.
