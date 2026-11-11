@@ -69,21 +69,11 @@ type SessionImportFileNotFoundError struct{ FilePath string }
 
 func (e *SessionImportFileNotFoundError) Error() string { return "File not found: " + e.FilePath }
 
-// importFromJSONL imports a session file into the current session directory and
-// switches to it (upstream AgentSessionRuntime.importFromJsonl). The file is
-// copied rather than opened in place so the imported session becomes part of
-// this project's session list; an existing session with the same name is never
-// clobbered — the copy takes a numbered name instead.
-func (a *App) importFromJSONL(_ context.Context, inputPath string, cwdOverride string) (*SessionSwitchResult, error) {
-	var result *SessionSwitchResult
-	var err error
-	runSessionFileWork(nil, nil, sessionFileWorkKey, a.importSessionWork(inputPath, cwdOverride), func(opened *coding.SessionManager, openErr error) {
-		result, err = a.applyOpenedSession(opened, openErr)
-	})
-	return result, err
-}
-
-// importFromJSONLAsync copies and opens the import off the owner loop.
+// importFromJSONLAsync copies and opens the import off the owner loop: the file
+// is copied rather than opened in place so the imported session becomes part of
+// this project's session list, and an existing session with the same name is
+// never clobbered because the copy takes a numbered name instead (upstream
+// AgentSessionRuntime.importFromJsonl).
 func (a *App) importFromJSONLAsync(_ context.Context, inputPath string, cwdOverride string, done func(*SessionSwitchResult, error)) {
 	runSessionFileWork(a.sessionQueue, a.postToOwnerLoop, sessionFileWorkKey,
 		a.importSessionWork(inputPath, cwdOverride), func(opened *coding.SessionManager, openErr error) {
@@ -456,23 +446,13 @@ func (a *App) applyFork(outcome *forkOutcome, workErr error) (*SelectorForkResul
 	return &SelectorForkResult{Cancelled: result.Cancelled, SelectedText: outcome.selectedText}, nil
 }
 
-// tailSession starts a new session seeded with the current live context
-// (D378): the newest compaction plus the entries its window keeps, re-rooted so
-// the compacted prefix stops traveling with the session. Upstream has no such
-// command; its only seeding path is the extension setup hook, which is out of
-// scope (D41). A session that does not persist has no file to tail from, so
-// the command reports instead of silently starting an empty one.
-func (a *App) tailSession(_ context.Context) (*SessionSwitchResult, error) {
-	var result *SessionSwitchResult
-	var err error
-	runSessionFileWork(nil, nil, sessionFileWorkKey, a.tailWork(), func(tailed *coding.SessionManager, workErr error) {
-		result, err = a.applyOpenedSession(tailed, workErr)
-	})
-	return result, err
-}
-
-// tailSessionAsync seeds the new session off the owner loop: it writes a session
-// file the same way a fork does.
+// tailSessionAsync seeds a new session with the current live context off the
+// owner loop (D378): the newest compaction plus the entries its window keeps,
+// re-rooted so the compacted prefix stops traveling with the session, written the
+// same way a fork does. Upstream has no such command; its only seeding path is
+// the extension setup hook, which is out of scope (D41). A session that does not
+// persist has no file to tail from, so the command reports instead of silently
+// starting an empty one.
 func (a *App) tailSessionAsync(_ context.Context, done func(*SessionSwitchResult, error)) {
 	runSessionFileWork(a.sessionQueue, a.postToOwnerLoop, sessionFileWorkKey, a.tailWork(),
 		func(tailed *coding.SessionManager, workErr error) {
