@@ -73,6 +73,11 @@ func TestDecisionRowsAreUniqueAndOrdered(t *testing.T) {
 }
 
 var (
+	// headingLike matches every `###` heading, including the ones the row
+	// pattern rejects, so a malformed row is reported instead of silently
+	// escaping the row checks.
+	headingLike = regexp.MustCompile(`(?m)^### .*$`)
+
 	namedTest = regexp.MustCompile("`((?:Test|Benchmark|Fuzz)[A-Za-z0-9_]+)")
 	testFunc  = regexp.MustCompile(`(?m)^func ((?:Test|Benchmark|Fuzz)[A-Za-z0-9_]+)\(`)
 )
@@ -154,6 +159,24 @@ var scanGoSources = sync.OnceValue(func() goScan {
 	})
 	return scan
 })
+
+// TestEveryDecisionHeadingIsARow fails when a `###` heading in DECISIONS.md is
+// not a row the other checks parse. A heading outside the shape
+// (`### D12 — words`) is invisible to uniqueness, ordering, the reproduction
+// rule and the citation check, and only a malformed *highest* row trips the
+// title range: a row written that way can cite nothing, name no test, and break
+// the order, with every other check in this package still green. That phantom
+// row was reproduced before this check existed: `### D100 — a malformed row
+// heading` with a placeholder body under D50 left the package passing.
+func TestEveryDecisionHeadingIsARow(t *testing.T) {
+	text := readDoc(t, "DECISIONS.md")
+	for _, m := range headingLike.FindAllStringIndex(text, -1) {
+		heading := text[m[0]:m[1]]
+		if dRowHeading.FindStringIndex(heading) == nil {
+			t.Errorf("%q is not a row heading; write `### D<n>` (or `### D<n>/D<m>`) with nothing after the number", heading)
+		}
+	}
+}
 
 // TestDocumentedTestsExist fails when a document names a test that no longer
 // exists, so a rename or deletion updates the row that cites it.
