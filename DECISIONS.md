@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D456)
+# Deliberate divergences from pi (D1–D457)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7216,3 +7216,20 @@ the keys in `errorProviders`, so the same failure set always produces the same
 message, which is also what the tests can assert.
 
 `Test:` `TestModelRefreshErrorProvidersAreSorted`.
+
+### D457
+
+**Two partial tool-argument values are approximated while they stream.**
+
+Both are visible only in the partial arguments the UI shows between deltas, and
+both correct themselves on the next delta; completed arguments always come from
+the full text, so a tool never receives either.
+
+A string that ends inside a surrogate pair: the reference keeps the half it has
+and stringifies it as an escape (`\ud83d`), a Go string cannot hold a lone
+surrogate, and the port writes U+FFFD. A number the reference rejects outright
+(`01`, `.5`, `1.`, `+1`): it reports no partial value, while the port salvages
+what it can (`01` reports 1), which keeps the field visible instead of blanking
+it.
+
+`Test:` `TestStreamingJSONPartialApproximations`.

@@ -414,9 +414,10 @@ func parseStreamingJSONInto(partialJSON string, v any) {
 // package's default behavior for the streaming cases pi relies on, and keeps
 // object key order in the same representation the ordered JSON decoder uses.
 func partialParse(text string) (*schemaValue, error) {
-	// partial-json's entry point trims the document before parsing, so an
-	// open string's trailing whitespace is not part of the value.
-	p := &partialParser{units: utf16.Encode([]rune(JSTrim(text)))}
+	// Leading whitespace is not part of the document. Trailing whitespace can be
+	// part of an open string's value, and the reference keeps it: the call
+	// arguments stream reports {"":"empty "} for `{"":"empty `.
+	p := &partialParser{units: utf16.Encode([]rune(JSTrimLeft(text)))}
 	v, err := p.parseValue()
 	if err != nil {
 		return nil, err
@@ -673,6 +674,17 @@ func (p *partialParser) tryParseFullString() (string, bool) {
 	return "", false
 }
 
+// lastExponentIndex reports the position of the last exponent marker, `e` or
+// `E`, so an unfinished exponent keeps its mantissa whichever case the stream
+// used (`1E+2` cut while streaming as `1E` reports 1).
+func lastExponentIndex(text string) int {
+	lower := strings.LastIndexByte(text, 'e')
+	if upper := strings.LastIndexByte(text, 'E'); upper > lower {
+		return upper
+	}
+	return lower
+}
+
 func (p *partialParser) parseLiteral() (*schemaValue, error) {
 	rest := string(utf16.Decode(p.units[p.pos:]))
 	for _, lit := range []struct {
@@ -713,7 +725,7 @@ func (p *partialParser) parseLiteral() (*schemaValue, error) {
 	if err != nil && !errors.Is(err, strconv.ErrRange) {
 		// An unfinished exponent keeps the mantissa (partial-json retries the
 		// text before the last lowercase "e"): "1e" reports 1.
-		if cut := strings.LastIndexByte(numText, 'e'); cut > 0 {
+		if cut := lastExponentIndex(numText); cut > 0 {
 			numText = numText[:cut]
 			f, err = strconv.ParseFloat(numText, 64)
 		}

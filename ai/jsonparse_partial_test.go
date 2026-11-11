@@ -8,7 +8,8 @@ import (
 )
 
 // Reference: pi v1.4.0 utils/json-parse.ts parseStreamingJson falls back to the
-// npm partial-json package, which trims the document, completes a keyword
+// npm partial-json package, which trims the document's leading whitespace,
+// completes a keyword
 // prefix at end of input ("tru" -> true) and keeps a number's mantissa before an
 // unfinished exponent ("1e" -> 1).
 func TestParseStreamingJSONCompletesPartialLiterals(t *testing.T) {
@@ -22,9 +23,9 @@ func TestParseStreamingJSONCompletesPartialLiterals(t *testing.T) {
 		{`{"k":fals`, map[string]any{"k": false}},
 		{`{"k":n`, map[string]any{"k": nil}},
 		{`{"k":nul`, map[string]any{"k": nil}},
-		// partial-json trims the whole document, so an open string's trailing
-		// whitespace is not part of the value.
-		{"{\"k\":\"x ", map[string]any{"k": "x"}},
+		// An open string keeps its trailing whitespace: the reference reports
+		// {"":"empty "} for `{"":"empty `.
+		{"{\"k\":\"x ", map[string]any{"k": "x "}},
 		// An unfinished exponent keeps the mantissa.
 		{`{"k":1e`, map[string]any{"k": float64(1)}},
 		{`{"k":1.5e`, map[string]any{"k": 1.5}},
