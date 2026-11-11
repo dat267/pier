@@ -178,6 +178,11 @@ type ModelsJSONCompat struct {
 	RequiresThinkingAsText                      *bool                                  `json:"requiresThinkingAsText,omitempty"`
 	RequiresReasoningContentOnAssistantMessages *bool                                  `json:"requiresReasoningContentOnAssistantMessages,omitempty"`
 	ThinkingFormat                              *string                                `json:"thinkingFormat,omitempty"`
+	ZaiToolStream                               *bool                                  `json:"zaiToolStream,omitempty"`
+	SupportsThinkingTokenBudget                 *bool                                  `json:"supportsThinkingTokenBudget,omitempty"`
+	ThinkingTokenBudgetField                    *string                                `json:"thinkingTokenBudgetField,omitempty"`
+	SupportsMidConvoSystemMessages              *bool                                  `json:"supportsMidConvoSystemMessages,omitempty"`
+	SupportsMidConvoToolAdditions               *bool                                  `json:"supportsMidConvoToolAdditions,omitempty"`
 	ChatTemplateKwargs                          map[string]ModelsJSONChatTemplateKwarg `json:"chatTemplateKwargs,omitempty"`
 	ChatTemplateArgs                            map[string]ModelsJSONChatTemplateKwarg `json:"chatTemplateArgs,omitempty"`
 	CacheControlFormat                          *string                                `json:"cacheControlFormat,omitempty"`
@@ -191,7 +196,10 @@ type ModelsJSONCompat struct {
 	PromptCacheKeyMode                          *string                                `json:"promptCacheKeyMode,omitempty"`
 	VLLMPriority                                *float64                               `json:"vllmPriority,omitempty"`
 	// OpenAI Responses.
-	SupportsMaxOutputTokens *bool `json:"supportsMaxOutputTokens,omitempty"`
+	SupportsMaxOutputTokens         *bool `json:"supportsMaxOutputTokens,omitempty"`
+	SupportsAdditionalTools         *bool `json:"supportsAdditionalTools,omitempty"`
+	SupportsToolSearch              *bool `json:"supportsToolSearch,omitempty"`
+	SupportsExplicitPromptCacheMode *bool `json:"supportsExplicitPromptCacheMode,omitempty"`
 	// Anthropic Messages.
 	SupportsEagerToolInputStreaming *bool                     `json:"supportsEagerToolInputStreaming,omitempty"`
 	SupportsCacheControlOnTools     *bool                     `json:"supportsCacheControlOnTools,omitempty"`
@@ -200,6 +208,7 @@ type ModelsJSONCompat struct {
 	AllowEmptySignature             *bool                     `json:"allowEmptySignature,omitempty"`
 	SupportsStrictTools             *bool                     `json:"supportsStrictTools,omitempty"`
 	SupportsMidConvoEffort          *bool                     `json:"supportsMidConvoEffort,omitempty"`
+	SupportsMidConvoToolChanges     *bool                     `json:"supportsMidConvoToolChanges,omitempty"`
 	AllowedFallbackModels           []ModelsJSONFallbackModel `json:"allowedFallbackModels,omitempty"`
 }
 
@@ -739,6 +748,14 @@ var compatFields = []compatField{
 	{name: "sessionAffinityFormat", kind: compatLiteral, literals: []string{"openai", "openai-nosession", "openrouter"}},
 	{name: "supportsLongCacheRetention", kind: compatBool},
 	{name: "promptCacheKeyMode", kind: compatLiteral, literals: []string{"auto", "enabled", "disabled"}},
+	{name: "zaiToolStream", kind: compatBool},
+	{name: "supportsThinkingTokenBudget", kind: compatBool},
+	{name: "supportsMidConvoSystemMessages", kind: compatBool},
+	{name: "supportsMidConvoToolAdditions", kind: compatBool},
+	{name: "supportsMidConvoToolChanges", kind: compatBool},
+	{name: "supportsAdditionalTools", kind: compatBool},
+	{name: "supportsToolSearch", kind: compatBool},
+	{name: "supportsExplicitPromptCacheMode", kind: compatBool},
 	{name: "vllmPriority", kind: compatNumber},
 	{name: "supportsMaxOutputTokens", kind: compatBool},
 	{name: "supportsEagerToolInputStreaming", kind: compatBool},
