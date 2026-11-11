@@ -381,10 +381,10 @@ func TestSessionSearchUsesJSWhitespace(t *testing.T) {
 // pi v1.5.0 login-dialog.ts displayUrl: a non-web URL is shown with each C0/C1
 // control run replaced by one space, so it cannot add dialog lines.
 func TestLoginDisplayURLReplacesControlCharacters(t *testing.T) {
-	if got := loginDisplayURL("java\nscript:\x00alert(1)\x1b"); got != "java script: alert(1) " {
+	if got := coding.DisplayURL("java\nscript:\x00alert(1)\x1b"); got != "java script: alert(1) " {
 		t.Fatalf("display = %q", got)
 	}
-	if got := loginDisplayURL("https://x"); got != "https://x/" {
+	if got := coding.DisplayURL("https://x"); got != "https://x/" {
 		t.Fatalf("web URL = %q", got)
 	}
 }

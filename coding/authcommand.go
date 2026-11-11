@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -24,6 +25,7 @@ const (
 	AuthCommandPrintAPIKey      AuthCommandKind = "api_key"
 	AuthCommandPrintBearerToken AuthCommandKind = "bearer_token"
 	AuthCommandLogout           AuthCommandKind = "logout"
+	AuthCommandLogin            AuthCommandKind = "login"
 )
 
 // AuthCommand is a parsed `pi auth` invocation. Args are the remaining
@@ -61,6 +63,8 @@ func authCommandUsage(appName string, kind AuthCommandKind) string {
 		return fmt.Sprintf("%s auth print-api-key --provider <provider> [--model <model>]", appName)
 	case AuthCommandLogout:
 		return fmt.Sprintf("%s auth logout <provider>", appName)
+	case AuthCommandLogin:
+		return AuthLoginUsage(appName)
 	default:
 		return fmt.Sprintf("%s auth print-bearer-token --provider <provider> [--model <model>] [--min-expiry <duration>]", appName)
 	}
@@ -85,6 +89,7 @@ func IsAuthCommandHelp(args []string) bool {
 // PrintAuthCommandHelp renders the `pi auth` usage text.
 func PrintAuthCommandHelp(appName string) string {
 	return fmt.Sprintf(`Usage:
+  %[1]s auth login <provider> [--api-key] [--no-browser]
   %[1]s auth logout <provider>
   %[1]s auth print-api-key [--provider <provider>] [--model <model>]
   %[1]s auth print-bearer-token [--provider <provider>] [--model <model>] [--min-expiry <duration>]
@@ -149,6 +154,8 @@ func parseAuthCommandNamed(appName string, args []string) (*AuthCommand, error) 
 			kind = AuthCommandPrintBearerToken
 		case "logout":
 			kind = AuthCommandLogout
+		case "login":
+			kind = AuthCommandLogin
 		}
 	}
 	if kind == "" {
@@ -493,6 +500,16 @@ func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer
 	}
 	if command == nil {
 		return false, 0
+	}
+	if command.Kind == AuthCommandLogin {
+		// The login flags differ from the credential commands', so it parses its
+		// own arguments (upstream parseLoginRequest).
+		cwd, _ := os.Getwd()
+		agentDir := GetAgentDir()
+		settings := NewSettingsManagerFromFiles(cwd, agentDir, SettingsManagerCreateOptions{})
+		terminal := NewProcessLoginTerminal(os.Stdin, stdout, stderr,
+			isInteractiveTerminal(os.Stdin, stdout), terminalSecretFD(os.Stdin))
+		return true, RunAuthLogin(appName, command.Args, terminal, agentDir, cwd, settings.GetOrCreateDeviceID)
 	}
 	parsed := ParseArgs(command.Args)
 	if len(parsed.UnknownFlags) > 0 {

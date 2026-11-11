@@ -1,12 +1,11 @@
 package interactive
 
 import (
-	"net/url"
 	"runtime"
 	"slices"
-	"strings"
 
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
 
@@ -166,11 +165,11 @@ func (c *LoginDialogComponent) ShowAuth(url string, instructions string) {
 	// launch a file: URL or a custom protocol (pi v1.5.0 login-dialog.ts).
 	// Opening the browser stays on the flow's goroutine: exec can block, and the
 	// loop has to stay free to deliver input.
-	target, isWebURL := loginWebURL(url)
+	target, isWebURL := coding.WebURL(url)
 	if isWebURL {
 		browserOpener(target)
 	}
-	displayURL := loginDisplayURL(url)
+	displayURL := coding.DisplayURL(url)
 	c.runOnUI(func() {
 		theme := ActiveTheme()
 		c.contentContainer.Clear()
@@ -187,57 +186,10 @@ func (c *LoginDialogComponent) ShowAuth(url string, instructions string) {
 	})
 }
 
-// loginWebURL normalizes an http(s) URL the way upstream's webUrl does
-// (`new URL(value).href`): the empty path becomes "/", so the displayed and
-// linked forms match (pi v1.5.0 login-dialog.ts).
-func loginWebURL(value string) (string, bool) {
-	parsed, err := url.Parse(value)
-	if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") {
-		return "", false
-	}
-	normalized := *parsed
-	normalized.Opaque = ""
-	if normalized.Path == "" {
-		normalized.Path = "/"
-	}
-	return normalized.String(), true
-}
-
-// loginDisplayURL renders a URL for display: normalized when it is a web URL,
-// otherwise with control characters replaced (upstream displayUrl).
-func loginDisplayURL(value string) string {
-	if normalized, ok := loginWebURL(value); ok {
-		return normalized
-	}
-	// A non-web value is shown as text with each C0/C1 control run replaced by
-	// one space, so it cannot break the dialog into extra lines (pi v1.5.0
-	// login-dialog.ts displayUrl and utils.ts replaceControlCharacters).
-	return replaceLoginControlCharacters(value)
-}
-
-// replaceLoginControlCharacters replaces each run of C0 and C1 control
-// characters with one space.
-func replaceLoginControlCharacters(value string) string {
-	var builder strings.Builder
-	inRun := false
-	for _, r := range value {
-		if r <= 0x1f || (r >= 0x7f && r <= 0x9f) {
-			if !inRun {
-				builder.WriteByte(' ')
-				inRun = true
-			}
-			continue
-		}
-		inRun = false
-		builder.WriteRune(r)
-	}
-	return builder.String()
-}
-
 // loginWebLink renders text as an ST-terminated terminal hyperlink to url when
 // url is a web URL, else as plain text (upstream webLink).
 func loginWebLink(text, url string) string {
-	normalized, ok := loginWebURL(url)
+	normalized, ok := coding.WebURL(url)
 	if !ok {
 		return text
 	}
@@ -251,7 +203,7 @@ func (c *LoginDialogComponent) ShowDeviceCode(verificationURI string, userCode s
 		c.authUrl = nil
 		c.contentContainer.Clear()
 		c.contentContainer.AddChild(tui.NewSpacer(1))
-		displayURL := loginDisplayURL(verificationURI)
+		displayURL := coding.DisplayURL(verificationURI)
 		c.contentContainer.AddChild(tui.NewText(theme.Fg("accent", loginWebLink(displayURL, verificationURI)), 1, 0, nil))
 
 		clickHint := "Ctrl+click to open"
@@ -294,7 +246,7 @@ func (c *LoginDialogComponent) activateDeviceCode(action *deviceCodeAction) {
 		}
 		apply()
 	})
-	target, ok := loginWebURL(action.verificationURI)
+	target, ok := coding.WebURL(action.verificationURI)
 	if !ok {
 		return
 	}
@@ -415,7 +367,7 @@ func (c *LoginDialogComponent) ShowInfo(message string, links []ai.AuthInfoLink,
 		c.contentContainer.AddChild(tui.NewSpacer(1))
 		c.contentContainer.AddChild(tui.NewText(theme.Fg("text", message), 1, 0, nil))
 		for _, link := range links {
-			displayURL := loginDisplayURL(link.URL)
+			displayURL := coding.DisplayURL(link.URL)
 			text := displayURL
 			if link.Label != "" {
 				text = link.Label + ": " + displayURL
