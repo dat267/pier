@@ -44,7 +44,7 @@ var acceptedFindings = map[string]string{
 	"(*github.com/dat267/pier/coding/interactive.EventDispatcher).HandleEvent":                 "one decode per appended entry, on the event that carries it, not per frame",
 	"wiring field Prompt":     "the compaction check appends a context edit through the session write queue (A483, A485); the writer the walk lists is the queue's own path for a session with no queue, which production never has",
 	"wiring field NewSession": "one EnsurePrivateSessionDir mkdir plus the same rebind a switch performs (see the runSessionFileWork entry)",
-	"(*github.com/dat267/pier/tui.Renderer).HandleTerminalInput -> (*github.com/dat267/pier/tui.Editor).HandleInput (interface HandleInput)":                              "tracked as TODO A504: the editor posts its autocomplete request back to the owner loop, so the provider's tree walk and possible fd exec run there, debounced but on the loop. Allowed by callee so the rest of the input handler stays under the invariant while A504 is repaired",
+	"(*github.com/dat267/pier/tui.Renderer).HandleTerminalInput -> (*github.com/dat267/pier/tui.Editor).HandleInput (interface HandleInput)":                              "the inline provider call is the branch for a host that does not implement EditorPoster, which production's editorHostAdapter does (app.go:1622 posts to the owner loop); the production request debounces, hands the provider to its own goroutine and posts the result back for the stale-token check",
 	"(*github.com/dat267/pier/tui.Renderer).HandleTerminalInput -> (*github.com/dat267/pier/coding/interactive.TreeList).HandleInput (interface HandleInput)":             "tree search filters over text memoized per node (A496); the search itself is a string compare per visible row",
 	"(*github.com/dat267/pier/tui.Renderer).HandleTerminalInput -> (*github.com/dat267/pier/tui.terminalQueries).ConsumeInput":                                            "terminal query parser: consumes buffered bytes already read from the terminal, no I/O",
 	"(*github.com/dat267/pier/tui.Renderer).HandleTerminalInput -> (*github.com/dat267/pier/coding/interactive.LoginDialogComponent).HandleInput (interface HandleInput)": "escape in the login dialog closes its cancel channel; a close cannot block",
@@ -137,12 +137,17 @@ func TestBareBlockingGoroutinesAreAllowlisted(t *testing.T) {
 		"/home/dat/repos/pier/coding/sdk.go:554:2":                                "CreateAgentSession loads context files, skills, prompt templates and overrides on four parallel goroutines and waits for all of them; the calls come from the D442 rebind, which is off the loop (A494)",
 		"/home/dat/repos/pier/coding/sdk.go:558:2":                                "CreateAgentSession loads context files, skills, prompt templates and overrides on four parallel goroutines and waits for all of them; the calls come from the D442 rebind, which is off the loop (A494)",
 		"/home/dat/repos/pier/coding/sdk.go:562:2":                                "CreateAgentSession loads context files, skills, prompt templates and overrides on four parallel goroutines and waits for all of them; the calls come from the D442 rebind, which is off the loop (A494)",
+		"/home/dat/repos/pier/coding/settingsmanager.go:641:2":                    "the settings lock's maintenance goroutine, which holds the lock alive while it is taken",
+		"/home/dat/repos/pier/coding/skills.go:643:3":                             "the skill scan's parallel directory walk; the caller waits for it",
+		"/home/dat/repos/pier/mcp/transport_stdio.go:193:3":                       "the stdio transport's stderr pump, one per connection, ended when the server exits",
+		"/home/dat/repos/pier/mcp/transport_stdio.go:196:2":                       "the stdio transport's stdout pump, the connection's only reader",
+		"/home/dat/repos/pier/mcp/transport_stdio.go:201:2":                       "the stdio transport's exit watcher, which ends the connection when the server exits",
+		"/home/dat/repos/pier/mcp/transport_stdio.go:492:2":                       "the process exit hook's goroutine, which runs when the process exits",
+		"/home/dat/repos/pier/tui/terminal.go:1302:4":                             "the terminal's progress-reporting goroutine for the current OSC 9;4 state",
+		"/home/dat/repos/pier/tui/terminal.go:384:3":                              "the terminal's input reader, the source of every key the loop handles",
+		"/home/dat/repos/pier/tui/terminal.go:897:3":                              "the terminal's write loop, which drains queued output frames",
 	}
 	for _, f := range findings {
-		if reason, ok := lookedUp(acceptedFindings, f); ok {
-			t.Logf("allowed by surface: %s %s (%s)", f.Kind, f.Pos, reason)
-			continue
-		}
 		if reason, ok := allowlist[f.Pos]; ok {
 			t.Logf("allowed: %s %s (%s)", f.Kind, f.Pos, reason)
 			continue

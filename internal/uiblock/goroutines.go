@@ -36,12 +36,12 @@ func FindGoroutines(dir string) ([]Finding, error) {
 	}
 	visited := map[*ssa.Function][]string{}
 	queue := []node{}
-	for fn, label := range m.roots {
-		if fn.Blocks == nil {
+	for _, seed := range m.rootSeeds() {
+		if seed.fn.Blocks == nil {
 			continue
 		}
-		visited[fn] = []string{label}
-		queue = append(queue, node{fn, []string{label}})
+		visited[seed.fn] = []string{seed.label}
+		queue = append(queue, node{seed.fn, []string{seed.label}})
 	}
 
 	var findings []Finding

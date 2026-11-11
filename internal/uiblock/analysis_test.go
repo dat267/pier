@@ -10,8 +10,8 @@ import (
 )
 
 // analysisFixture exercises the analyzer's public entry points without loading
-// the application. Every blocking path has a distinct root so root attribution
-// cannot depend on traversal order. Unreachable code must not be reported.
+// the application. Every blocking path has a distinct root so each case names
+// the finding it means. Unreachable code must not be reported.
 func analysisFixture(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -154,5 +154,29 @@ func TestModuleLeavesExternalFunctionBodiesUnbuilt(t *testing.T) {
 	}
 	if external == 0 {
 		t.Fatal("fixture did not retain external function declarations")
+	}
+}
+
+// TestRootSeedsAreOrdered guards the walk against map iteration order: a
+// function reachable from two roots reports whichever chain the traversal visits
+// first, so an unordered seed list would make a finding's chain head, and the
+// allowlist key that names it, vary between runs.
+func TestRootSeedsAreOrdered(t *testing.T) {
+	m, err := cachedModule("../..")
+	if err != nil {
+		t.Fatalf("analysis failed: %v", err)
+	}
+	seeds := m.rootSeeds()
+	if len(seeds) < 2 {
+		t.Fatalf("only %d roots; the fixture is too small to order", len(seeds))
+	}
+	for i := 1; i < len(seeds); i++ {
+		previous, current := seeds[i-1], seeds[i]
+		before := previous.label < current.label ||
+			(previous.label == current.label && previous.fn.RelString(nil) < current.fn.RelString(nil))
+		if !before {
+			t.Errorf("root %d (%q %s) does not sort before root %d (%q %s)",
+				i-1, previous.label, previous.fn.RelString(nil), i, current.label, current.fn.RelString(nil))
+		}
 	}
 }

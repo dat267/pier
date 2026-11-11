@@ -260,13 +260,36 @@ func loadModule(dir string) (*module, error) {
 	return &module{prog: prog, all: all, roots: roots, pierMethods: pierMethods}, nil
 }
 
+// rootSeeds returns the loop roots in a fixed order. The roots live in a map, so
+// iterating it directly would let a function reachable from two roots report
+// whichever chain the runtime happened to visit first, which makes findings and
+// their allowlist keys unstable between runs.
+func (m *module) rootSeeds() []rootSeed {
+	seeds := make([]rootSeed, 0, len(m.roots))
+	for fn, label := range m.roots {
+		seeds = append(seeds, rootSeed{fn: fn, label: label})
+	}
+	sort.Slice(seeds, func(i, j int) bool {
+		if seeds[i].label != seeds[j].label {
+			return seeds[i].label < seeds[j].label
+		}
+		return seeds[i].fn.RelString(nil) < seeds[j].fn.RelString(nil)
+	})
+	return seeds
+}
+
+type rootSeed struct {
+	fn    *ssa.Function
+	label string
+}
+
 // Find runs the analysis over the module rooted at dir.
 func Find(dir string) ([]Finding, error) {
 	m, err := cachedModule(dir)
 	if err != nil {
 		return nil, err
 	}
-	prog, roots, pierMethods := m.prog, m.roots, m.pierMethods
+	prog, pierMethods := m.prog, m.pierMethods
 
 	type node struct {
 		fn    *ssa.Function
@@ -274,9 +297,9 @@ func Find(dir string) ([]Finding, error) {
 	}
 	visited := map[*ssa.Function][]string{}
 	queue := []node{}
-	for fn, label := range roots {
-		visited[fn] = []string{label}
-		queue = append(queue, node{fn, []string{label}})
+	for _, seed := range m.rootSeeds() {
+		visited[seed.fn] = []string{seed.label}
+		queue = append(queue, node{seed.fn, []string{seed.label}})
 	}
 	var findings []Finding
 	for len(queue) > 0 {
