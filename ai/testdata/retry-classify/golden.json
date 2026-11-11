@@ -1,0 +1,1906 @@
+[
+ {
+  "errorMessage": "overloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "server_busy",
+  "want": true
+ },
+ {
+  "errorMessage": "servers are currently busy",
+  "want": true
+ },
+ {
+  "errorMessage": "currently experiencing high demand",
+  "want": true
+ },
+ {
+  "errorMessage": "model is at capacity",
+  "want": true
+ },
+ {
+  "errorMessage": "rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "rate-limit",
+  "want": true
+ },
+ {
+  "errorMessage": "rateLimit",
+  "want": true
+ },
+ {
+  "errorMessage": "ratelimit",
+  "want": true
+ },
+ {
+  "errorMessage": "too many requests",
+  "want": true
+ },
+ {
+  "errorMessage": "Error 429",
+  "want": true
+ },
+ {
+  "errorMessage": "429",
+  "want": true
+ },
+ {
+  "errorMessage": "status 429",
+  "want": true
+ },
+ {
+  "errorMessage": "HTTP 500",
+  "want": true
+ },
+ {
+  "errorMessage": "502 Bad Gateway",
+  "want": true
+ },
+ {
+  "errorMessage": "503 Service Unavailable",
+  "want": true
+ },
+ {
+  "errorMessage": "504",
+  "want": true
+ },
+ {
+  "errorMessage": "520",
+  "want": true
+ },
+ {
+  "errorMessage": "524",
+  "want": true
+ },
+ {
+  "errorMessage": "request 429123",
+  "want": false
+ },
+ {
+  "errorMessage": "id=429",
+  "want": true
+ },
+ {
+  "errorMessage": "429429",
+  "want": false
+ },
+ {
+  "errorMessage": "x429",
+  "want": false
+ },
+ {
+  "errorMessage": "429x",
+  "want": false
+ },
+ {
+  "errorMessage": "429_",
+  "want": true
+ },
+ {
+  "errorMessage": "_429",
+  "want": true
+ },
+ {
+  "errorMessage": "429abc",
+  "want": false
+ },
+ {
+  "errorMessage": "code 5001",
+  "want": false
+ },
+ {
+  "errorMessage": "1500",
+  "want": false
+ },
+ {
+  "errorMessage": "5000 bytes",
+  "want": false
+ },
+ {
+  "errorMessage": "a500b",
+  "want": false
+ },
+ {
+  "errorMessage": "The service is temporarily unavailable",
+  "want": true
+ },
+ {
+  "errorMessage": "service unavailable",
+  "want": true
+ },
+ {
+  "errorMessage": "ServiceUnavailable",
+  "want": true
+ },
+ {
+  "errorMessage": "server error",
+  "want": true
+ },
+ {
+  "errorMessage": "server_error",
+  "want": true
+ },
+ {
+  "errorMessage": "internal error",
+  "want": true
+ },
+ {
+  "errorMessage": "internal_error",
+  "want": true
+ },
+ {
+  "errorMessage": "Provider returned error",
+  "want": true
+ },
+ {
+  "errorMessage": "The upstream provider returned an error",
+  "want": true
+ },
+ {
+  "errorMessage": "exceeded request buffer limit while retrying upstream",
+  "want": true
+ },
+ {
+  "errorMessage": "unable to forward upstream",
+  "want": true
+ },
+ {
+  "errorMessage": "upstream request failed",
+  "want": true
+ },
+ {
+  "errorMessage": "upstream_stream_read_error",
+  "want": true
+ },
+ {
+  "errorMessage": "stream was interrupted",
+  "want": true
+ },
+ {
+  "errorMessage": "HTTP/2 stream failed",
+  "want": true
+ },
+ {
+  "errorMessage": "http/2 stream failed",
+  "want": true
+ },
+ {
+  "errorMessage": "network error",
+  "want": true
+ },
+ {
+  "errorMessage": "connection error",
+  "want": true
+ },
+ {
+  "errorMessage": "connection refused",
+  "want": true
+ },
+ {
+  "errorMessage": "connection lost",
+  "want": true
+ },
+ {
+  "errorMessage": "other side closed",
+  "want": true
+ },
+ {
+  "errorMessage": "fetch failed",
+  "want": true
+ },
+ {
+  "errorMessage": "request to https://x failed, reason:",
+  "want": true
+ },
+ {
+  "errorMessage": "getaddrinfo ENOTFOUND",
+  "want": true
+ },
+ {
+  "errorMessage": "GoUsageLimitError",
+  "want": false
+ },
+ {
+  "errorMessage": "FreeUsageLimitError",
+  "want": false
+ },
+ {
+  "errorMessage": "Monthly usage limit reached",
+  "want": false
+ },
+ {
+  "errorMessage": "available balance",
+  "want": false
+ },
+ {
+  "errorMessage": "insufficient_quota",
+  "want": false
+ },
+ {
+  "errorMessage": "out of budget",
+  "want": false
+ },
+ {
+  "errorMessage": "quota exceeded",
+  "want": false
+ },
+ {
+  "errorMessage": "billing hard limit reached",
+  "want": false
+ },
+ {
+  "errorMessage": "subscription_sharing_usage_limit_exceeded",
+  "want": false
+ },
+ {
+  "errorMessage": "subscription_sharing_workplace_individual_usage_limit_exceeded",
+  "want": false
+ },
+ {
+  "errorMessage": "\"code\"s*:s*\"1308\"",
+  "want": false
+ },
+ {
+  "errorMessage": "\"code\": 1308",
+  "want": false
+ },
+ {
+  "errorMessage": "\"code\":13080",
+  "want": false
+ },
+ {
+  "errorMessage": "\"code\": \"1308\"",
+  "want": false
+ },
+ {
+  "errorMessage": "Monthly usage limit reached: rate limit",
+  "want": false
+ },
+ {
+  "errorMessage": "available balance: rate limit",
+  "want": false
+ },
+ {
+  "errorMessage": "",
+  "want": false
+ },
+ {
+  "errorMessage": "unknown",
+  "want": false
+ },
+ {
+  "errorMessage": "invalid input",
+  "want": false
+ },
+ {
+  "errorMessage": "401 Unauthorized",
+  "want": false
+ },
+ {
+  "errorMessage": "model not found",
+  "want": false
+ },
+ {
+  "errorMessage": "overloadedéx",
+  "want": true
+ },
+ {
+  "errorMessage": "1rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": " overloadedxrate limit_",
+  "want": true
+ },
+ {
+  "errorMessage": "503429x9Z",
+  "want": false
+ },
+ {
+  "errorMessage": "Z",
+  "want": false
+ },
+ {
+  "errorMessage": "overloaded95039",
+  "want": true
+ },
+ {
+  "errorMessage": "overloadeda",
+  "want": true
+ },
+ {
+  "errorMessage": "1billingbilling503billing",
+  "want": false
+ },
+ {
+  "errorMessage": "overloadedoverloaded_",
+  "want": true
+ },
+ {
+  "errorMessage": "500429_x",
+  "want": false
+ },
+ {
+  "errorMessage": "billing429500",
+  "want": false
+ },
+ {
+  "errorMessage": "9 rate limitbilling",
+  "want": false
+ },
+ {
+  "errorMessage": "500a",
+  "want": false
+ },
+ {
+  "errorMessage": "__503503_",
+  "want": false
+ },
+ {
+  "errorMessage": "ZaZrate limitZ",
+  "want": true
+ },
+ {
+  "errorMessage": "503",
+  "want": true
+ },
+ {
+  "errorMessage": " 11ax",
+  "want": false
+ },
+ {
+  "errorMessage": "x_Z1",
+  "want": false
+ },
+ {
+  "errorMessage": "éx-Z",
+  "want": false
+ },
+ {
+  "errorMessage": "503",
+  "want": true
+ },
+ {
+  "errorMessage": "a",
+  "want": false
+ },
+ {
+  "errorMessage": "4294295039",
+  "want": false
+ },
+ {
+  "errorMessage": "overloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "429érate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "503éa",
+  "want": true
+ },
+ {
+  "errorMessage": "éa",
+  "want": false
+ },
+ {
+  "errorMessage": "éoverloadedx429 ",
+  "want": true
+ },
+ {
+  "errorMessage": "_-_Zbilling",
+  "want": false
+ },
+ {
+  "errorMessage": "11-",
+  "want": false
+ },
+ {
+  "errorMessage": "é",
+  "want": false
+ },
+ {
+  "errorMessage": "a",
+  "want": false
+ },
+ {
+  "errorMessage": "99billing",
+  "want": false
+ },
+ {
+  "errorMessage": " x500",
+  "want": false
+ },
+ {
+  "errorMessage": "-",
+  "want": false
+ },
+ {
+  "errorMessage": "Z",
+  "want": false
+ },
+ {
+  "errorMessage": "billingoverloadedé",
+  "want": false
+ },
+ {
+  "errorMessage": "503billingé",
+  "want": false
+ },
+ {
+  "errorMessage": "Z",
+  "want": false
+ },
+ {
+  "errorMessage": "9",
+  "want": false
+ },
+ {
+  "errorMessage": "1",
+  "want": false
+ },
+ {
+  "errorMessage": "503",
+  "want": true
+ },
+ {
+  "errorMessage": "overloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "5034291",
+  "want": false
+ },
+ {
+  "errorMessage": "xoverloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "-_- Z",
+  "want": false
+ },
+ {
+  "errorMessage": "xoverloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "500 ",
+  "want": true
+ },
+ {
+  "errorMessage": "503ééé1",
+  "want": true
+ },
+ {
+  "errorMessage": "-1",
+  "want": false
+ },
+ {
+  "errorMessage": "_rate limitoverloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "a500a1",
+  "want": false
+ },
+ {
+  "errorMessage": "a ",
+  "want": false
+ },
+ {
+  "errorMessage": "9Z1503é",
+  "want": false
+ },
+ {
+  "errorMessage": " 1Z",
+  "want": false
+ },
+ {
+  "errorMessage": " xaoverloadedZ",
+  "want": true
+ },
+ {
+  "errorMessage": "x_500",
+  "want": true
+ },
+ {
+  "errorMessage": "429",
+  "want": true
+ },
+ {
+  "errorMessage": "-",
+  "want": false
+ },
+ {
+  "errorMessage": "ébillinga",
+  "want": false
+ },
+ {
+  "errorMessage": "éZ",
+  "want": false
+ },
+ {
+  "errorMessage": "rate limit503_1_",
+  "want": true
+ },
+ {
+  "errorMessage": "5005031",
+  "want": false
+ },
+ {
+  "errorMessage": "rate limit-é",
+  "want": true
+ },
+ {
+  "errorMessage": "429503503",
+  "want": false
+ },
+ {
+  "errorMessage": "_119",
+  "want": false
+ },
+ {
+  "errorMessage": " ",
+  "want": false
+ },
+ {
+  "errorMessage": "overloaded1_5039",
+  "want": true
+ },
+ {
+  "errorMessage": "billing-",
+  "want": false
+ },
+ {
+  "errorMessage": "a429",
+  "want": false
+ },
+ {
+  "errorMessage": "1 billing-",
+  "want": false
+ },
+ {
+  "errorMessage": "5031",
+  "want": false
+ },
+ {
+  "errorMessage": "4299 503",
+  "want": true
+ },
+ {
+  "errorMessage": "overloadeda",
+  "want": true
+ },
+ {
+  "errorMessage": "9rate limitx",
+  "want": true
+ },
+ {
+  "errorMessage": "503billingrate limit500429",
+  "want": false
+ },
+ {
+  "errorMessage": "a9 -overloaded",
+  "want": true
+ },
+ {
+  "errorMessage": " ",
+  "want": false
+ },
+ {
+  "errorMessage": "éx-429500",
+  "want": false
+ },
+ {
+  "errorMessage": "Z503",
+  "want": false
+ },
+ {
+  "errorMessage": "Zrate limit429x",
+  "want": true
+ },
+ {
+  "errorMessage": " ",
+  "want": false
+ },
+ {
+  "errorMessage": " ",
+  "want": false
+ },
+ {
+  "errorMessage": "- ",
+  "want": false
+ },
+ {
+  "errorMessage": "_rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "aé500rate limita",
+  "want": true
+ },
+ {
+  "errorMessage": "9",
+  "want": false
+ },
+ {
+  "errorMessage": "_overloadedrate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "billing4299",
+  "want": false
+ },
+ {
+  "errorMessage": "500500",
+  "want": false
+ },
+ {
+  "errorMessage": "é_503",
+  "want": true
+ },
+ {
+  "errorMessage": "x",
+  "want": false
+ },
+ {
+  "errorMessage": "aZoverloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "429",
+  "want": true
+ },
+ {
+  "errorMessage": "é",
+  "want": false
+ },
+ {
+  "errorMessage": "billing",
+  "want": false
+ },
+ {
+  "errorMessage": "9overloadedbillingoverloadedé",
+  "want": false
+ },
+ {
+  "errorMessage": "429overloadedrate limit a",
+  "want": true
+ },
+ {
+  "errorMessage": "9 é1",
+  "want": false
+ },
+ {
+  "errorMessage": "429aa-overloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "1--",
+  "want": false
+ },
+ {
+  "errorMessage": "billing",
+  "want": false
+ },
+ {
+  "errorMessage": "_500é-",
+  "want": true
+ },
+ {
+  "errorMessage": "Zx429",
+  "want": false
+ },
+ {
+  "errorMessage": "503",
+  "want": true
+ },
+ {
+  "errorMessage": "billing",
+  "want": false
+ },
+ {
+  "errorMessage": "éé4299_",
+  "want": false
+ },
+ {
+  "errorMessage": "éa",
+  "want": false
+ },
+ {
+  "errorMessage": "érate limit500",
+  "want": true
+ },
+ {
+  "errorMessage": "rate limita9503a",
+  "want": true
+ },
+ {
+  "errorMessage": "ébilling",
+  "want": false
+ },
+ {
+  "errorMessage": "overloaded429Zoverloaded_",
+  "want": true
+ },
+ {
+  "errorMessage": "x500 -500",
+  "want": true
+ },
+ {
+  "errorMessage": "503billinga",
+  "want": false
+ },
+ {
+  "errorMessage": "x_é503billing",
+  "want": false
+ },
+ {
+  "errorMessage": "Za500",
+  "want": false
+ },
+ {
+  "errorMessage": "a ",
+  "want": false
+ },
+ {
+  "errorMessage": " 429 -",
+  "want": true
+ },
+ {
+  "errorMessage": "500",
+  "want": true
+ },
+ {
+  "errorMessage": " Z429",
+  "want": false
+ },
+ {
+  "errorMessage": "1",
+  "want": false
+ },
+ {
+  "errorMessage": "a503éx",
+  "want": false
+ },
+ {
+  "errorMessage": "429é Z ",
+  "want": true
+ },
+ {
+  "errorMessage": "500",
+  "want": true
+ },
+ {
+  "errorMessage": "429rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "rate limit ",
+  "want": true
+ },
+ {
+  "errorMessage": "9Z500a",
+  "want": false
+ },
+ {
+  "errorMessage": "billing503 overloadedrate limit",
+  "want": false
+ },
+ {
+  "errorMessage": "500500érate limit1",
+  "want": true
+ },
+ {
+  "errorMessage": "aZ_",
+  "want": false
+ },
+ {
+  "errorMessage": "9500abilling",
+  "want": false
+ },
+ {
+  "errorMessage": "rate limit-é500429",
+  "want": true
+ },
+ {
+  "errorMessage": "1",
+  "want": false
+ },
+ {
+  "errorMessage": "503-",
+  "want": true
+ },
+ {
+  "errorMessage": "billingx429-",
+  "want": false
+ },
+ {
+  "errorMessage": "billing",
+  "want": false
+ },
+ {
+  "errorMessage": "rate limitoverloadedé1",
+  "want": true
+ },
+ {
+  "errorMessage": "_429a",
+  "want": false
+ },
+ {
+  "errorMessage": "429",
+  "want": true
+ },
+ {
+  "errorMessage": "1",
+  "want": false
+ },
+ {
+  "errorMessage": "9 ",
+  "want": false
+ },
+ {
+  "errorMessage": "Za",
+  "want": false
+ },
+ {
+  "errorMessage": "a4295031",
+  "want": false
+ },
+ {
+  "errorMessage": "-",
+  "want": false
+ },
+ {
+  "errorMessage": "Z1",
+  "want": false
+ },
+ {
+  "errorMessage": "_abilling",
+  "want": false
+ },
+ {
+  "errorMessage": "é 500-",
+  "want": true
+ },
+ {
+  "errorMessage": "_overloadedoverloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "xbillingZ",
+  "want": false
+ },
+ {
+  "errorMessage": "9",
+  "want": false
+ },
+ {
+  "errorMessage": "-1500",
+  "want": false
+ },
+ {
+  "errorMessage": "Z1_429",
+  "want": true
+ },
+ {
+  "errorMessage": "9",
+  "want": false
+ },
+ {
+  "errorMessage": " overloaded42999",
+  "want": true
+ },
+ {
+  "errorMessage": " _billingbilling9",
+  "want": false
+ },
+ {
+  "errorMessage": "overloaded1Z1",
+  "want": true
+ },
+ {
+  "errorMessage": "500-",
+  "want": true
+ },
+ {
+  "errorMessage": "Z500",
+  "want": false
+ },
+ {
+  "errorMessage": "1",
+  "want": false
+ },
+ {
+  "errorMessage": "--rate limit9",
+  "want": true
+ },
+ {
+  "errorMessage": "1503",
+  "want": false
+ },
+ {
+  "errorMessage": "5031billingoverloaded",
+  "want": false
+ },
+ {
+  "errorMessage": "rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "rate limit503xZ",
+  "want": true
+ },
+ {
+  "errorMessage": "1",
+  "want": false
+ },
+ {
+  "errorMessage": "billing_Z9",
+  "want": false
+ },
+ {
+  "errorMessage": "Z aa",
+  "want": false
+ },
+ {
+  "errorMessage": "billing",
+  "want": false
+ },
+ {
+  "errorMessage": "aZ500",
+  "want": false
+ },
+ {
+  "errorMessage": "billing1503503",
+  "want": false
+ },
+ {
+  "errorMessage": "-x500x",
+  "want": false
+ },
+ {
+  "errorMessage": " 503rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "xrate limitbillingZ",
+  "want": false
+ },
+ {
+  "errorMessage": "429500",
+  "want": false
+ },
+ {
+  "errorMessage": "xoverloaded500aa",
+  "want": true
+ },
+ {
+  "errorMessage": "éZ_500",
+  "want": true
+ },
+ {
+  "errorMessage": "-429é",
+  "want": true
+ },
+ {
+  "errorMessage": "ZaZbilling",
+  "want": false
+ },
+ {
+  "errorMessage": "a500",
+  "want": false
+ },
+ {
+  "errorMessage": "1_rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "rate limitrate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "429billing",
+  "want": false
+ },
+ {
+  "errorMessage": "overloadedébilling9é",
+  "want": false
+ },
+ {
+  "errorMessage": "-a_rate limitoverloaded",
+  "want": true
+ },
+ {
+  "errorMessage": " 500rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "é  rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "429overloaded ",
+  "want": true
+ },
+ {
+  "errorMessage": "a-",
+  "want": false
+ },
+ {
+  "errorMessage": "_overloaded503",
+  "want": true
+ },
+ {
+  "errorMessage": "_ x",
+  "want": false
+ },
+ {
+  "errorMessage": "a",
+  "want": false
+ },
+ {
+  "errorMessage": "billingrate limitéoverloadeda",
+  "want": false
+ },
+ {
+  "errorMessage": "--_ overloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "--9a",
+  "want": false
+ },
+ {
+  "errorMessage": "é_429rate limit503",
+  "want": true
+ },
+ {
+  "errorMessage": "429",
+  "want": true
+ },
+ {
+  "errorMessage": " 99",
+  "want": false
+ },
+ {
+  "errorMessage": "Z500500",
+  "want": false
+ },
+ {
+  "errorMessage": "é",
+  "want": false
+ },
+ {
+  "errorMessage": "aoverloadedrate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "a500",
+  "want": false
+ },
+ {
+  "errorMessage": "503-500billing",
+  "want": false
+ },
+ {
+  "errorMessage": "x",
+  "want": false
+ },
+ {
+  "errorMessage": "aoverloadedx503",
+  "want": true
+ },
+ {
+  "errorMessage": "91rate limit1a",
+  "want": true
+ },
+ {
+  "errorMessage": "503 - ",
+  "want": true
+ },
+ {
+  "errorMessage": "overloaded_503",
+  "want": true
+ },
+ {
+  "errorMessage": "aZ",
+  "want": false
+ },
+ {
+  "errorMessage": "5035001billingbilling",
+  "want": false
+ },
+ {
+  "errorMessage": "x503Z_overloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "rate limitoverloaded billing9",
+  "want": false
+ },
+ {
+  "errorMessage": "_x9429",
+  "want": false
+ },
+ {
+  "errorMessage": " a500rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "Z429rate limit-1",
+  "want": true
+ },
+ {
+  "errorMessage": "billing9",
+  "want": false
+ },
+ {
+  "errorMessage": "Z-500-",
+  "want": true
+ },
+ {
+  "errorMessage": "-xbilling1",
+  "want": false
+ },
+ {
+  "errorMessage": "503a1",
+  "want": false
+ },
+ {
+  "errorMessage": "Z",
+  "want": false
+ },
+ {
+  "errorMessage": "billingéZ500",
+  "want": false
+ },
+ {
+  "errorMessage": "Z429",
+  "want": false
+ },
+ {
+  "errorMessage": "rate limit9503",
+  "want": true
+ },
+ {
+  "errorMessage": "é",
+  "want": false
+ },
+ {
+  "errorMessage": "é500429",
+  "want": false
+ },
+ {
+  "errorMessage": "500é",
+  "want": true
+ },
+ {
+  "errorMessage": "Zoverloaded",
+  "want": true
+ },
+ {
+  "errorMessage": " 500é500x",
+  "want": true
+ },
+ {
+  "errorMessage": " _",
+  "want": false
+ },
+ {
+  "errorMessage": "x500",
+  "want": false
+ },
+ {
+  "errorMessage": "9429a503rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "429 ",
+  "want": true
+ },
+ {
+  "errorMessage": "500overloaded503429",
+  "want": true
+ },
+ {
+  "errorMessage": "1-",
+  "want": false
+ },
+ {
+  "errorMessage": "overloaded-9500billing",
+  "want": false
+ },
+ {
+  "errorMessage": " x_",
+  "want": false
+ },
+ {
+  "errorMessage": "Z_500billingbilling",
+  "want": false
+ },
+ {
+  "errorMessage": "rate limit19",
+  "want": true
+ },
+ {
+  "errorMessage": "9-é500",
+  "want": true
+ },
+ {
+  "errorMessage": "503_billing500",
+  "want": false
+ },
+ {
+  "errorMessage": "rate limit  ",
+  "want": true
+ },
+ {
+  "errorMessage": "é",
+  "want": false
+ },
+ {
+  "errorMessage": "a--",
+  "want": false
+ },
+ {
+  "errorMessage": "Zx-",
+  "want": false
+ },
+ {
+  "errorMessage": "4291x429billing",
+  "want": false
+ },
+ {
+  "errorMessage": "billing",
+  "want": false
+ },
+ {
+  "errorMessage": "1billing1é",
+  "want": false
+ },
+ {
+  "errorMessage": "a",
+  "want": false
+ },
+ {
+  "errorMessage": "500",
+  "want": true
+ },
+ {
+  "errorMessage": "a",
+  "want": false
+ },
+ {
+  "errorMessage": "rate limit-billingaa",
+  "want": false
+ },
+ {
+  "errorMessage": "Zé",
+  "want": false
+ },
+ {
+  "errorMessage": "500-",
+  "want": true
+ },
+ {
+  "errorMessage": "é-x429",
+  "want": false
+ },
+ {
+  "errorMessage": "é429Zrate limit1",
+  "want": true
+ },
+ {
+  "errorMessage": "aoverloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "billingaaoverloaded",
+  "want": false
+ },
+ {
+  "errorMessage": "rate limit-ax",
+  "want": true
+ },
+ {
+  "errorMessage": "503",
+  "want": true
+ },
+ {
+  "errorMessage": "-429 ",
+  "want": true
+ },
+ {
+  "errorMessage": "99_",
+  "want": false
+ },
+ {
+  "errorMessage": "arate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "500-billing429x",
+  "want": false
+ },
+ {
+  "errorMessage": " 500429é503",
+  "want": true
+ },
+ {
+  "errorMessage": "9503_-",
+  "want": false
+ },
+ {
+  "errorMessage": "1429aaa",
+  "want": false
+ },
+ {
+  "errorMessage": "Z91Z",
+  "want": false
+ },
+ {
+  "errorMessage": "500",
+  "want": true
+ },
+ {
+  "errorMessage": " ",
+  "want": false
+ },
+ {
+  "errorMessage": "éxZ-503",
+  "want": true
+ },
+ {
+  "errorMessage": " 429billing9503",
+  "want": false
+ },
+ {
+  "errorMessage": "9-Z429503",
+  "want": false
+ },
+ {
+  "errorMessage": "9-billing",
+  "want": false
+ },
+ {
+  "errorMessage": "9",
+  "want": false
+ },
+ {
+  "errorMessage": "503",
+  "want": true
+ },
+ {
+  "errorMessage": "rate limitZ",
+  "want": true
+ },
+ {
+  "errorMessage": "500500",
+  "want": false
+ },
+ {
+  "errorMessage": "é500overloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "Z ",
+  "want": false
+ },
+ {
+  "errorMessage": "xébillingérate limit",
+  "want": false
+ },
+ {
+  "errorMessage": "xoverloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "x-",
+  "want": false
+ },
+ {
+  "errorMessage": "9-x503_",
+  "want": false
+ },
+ {
+  "errorMessage": "503   ",
+  "want": true
+ },
+ {
+  "errorMessage": "429rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "503429Z9",
+  "want": false
+ },
+ {
+  "errorMessage": "rate limit9",
+  "want": true
+ },
+ {
+  "errorMessage": "rate limit95039",
+  "want": true
+ },
+ {
+  "errorMessage": "9503429Z",
+  "want": false
+ },
+ {
+  "errorMessage": "rate limitZ overloaded429",
+  "want": true
+ },
+ {
+  "errorMessage": "5031500",
+  "want": false
+ },
+ {
+  "errorMessage": "503503billing-",
+  "want": false
+ },
+ {
+  "errorMessage": "x429é",
+  "want": false
+ },
+ {
+  "errorMessage": "500",
+  "want": true
+ },
+ {
+  "errorMessage": "503rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "xé1500a",
+  "want": false
+ },
+ {
+  "errorMessage": "_5001",
+  "want": false
+ },
+ {
+  "errorMessage": "-",
+  "want": false
+ },
+ {
+  "errorMessage": "billing_rate limit",
+  "want": false
+ },
+ {
+  "errorMessage": "_429",
+  "want": true
+ },
+ {
+  "errorMessage": "503",
+  "want": true
+ },
+ {
+  "errorMessage": "a",
+  "want": false
+ },
+ {
+  "errorMessage": "_1429overloadedé",
+  "want": true
+ },
+ {
+  "errorMessage": "-429",
+  "want": true
+ },
+ {
+  "errorMessage": " ",
+  "want": false
+ },
+ {
+  "errorMessage": "a",
+  "want": false
+ },
+ {
+  "errorMessage": "4299rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "_Zéaé",
+  "want": false
+ },
+ {
+  "errorMessage": "429",
+  "want": true
+ },
+ {
+  "errorMessage": "overloadedxa500",
+  "want": true
+ },
+ {
+  "errorMessage": "503xoverloadedrate limitrate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "9 rate limit_",
+  "want": true
+ },
+ {
+  "errorMessage": "1_429billing",
+  "want": false
+ },
+ {
+  "errorMessage": "5031billing",
+  "want": false
+ },
+ {
+  "errorMessage": "x",
+  "want": false
+ },
+ {
+  "errorMessage": "x",
+  "want": false
+ },
+ {
+  "errorMessage": "_503é",
+  "want": true
+ },
+ {
+  "errorMessage": "500aoverloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "xZ",
+  "want": false
+ },
+ {
+  "errorMessage": "billing",
+  "want": false
+ },
+ {
+  "errorMessage": "500 500",
+  "want": true
+ },
+ {
+  "errorMessage": "Z5009",
+  "want": false
+ },
+ {
+  "errorMessage": "Z",
+  "want": false
+ },
+ {
+  "errorMessage": "429",
+  "want": true
+ },
+ {
+  "errorMessage": "-",
+  "want": false
+ },
+ {
+  "errorMessage": "a",
+  "want": false
+ },
+ {
+  "errorMessage": " rate limita1_",
+  "want": true
+ },
+ {
+  "errorMessage": "-rate limit-",
+  "want": true
+ },
+ {
+  "errorMessage": "-xZé",
+  "want": false
+ },
+ {
+  "errorMessage": "rate limit9 overloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "9xx_",
+  "want": false
+ },
+ {
+  "errorMessage": "billinga",
+  "want": false
+ },
+ {
+  "errorMessage": "-",
+  "want": false
+ },
+ {
+  "errorMessage": "429_500500 ",
+  "want": true
+ },
+ {
+  "errorMessage": "xé",
+  "want": false
+ },
+ {
+  "errorMessage": "rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "-x",
+  "want": false
+ },
+ {
+  "errorMessage": "503",
+  "want": true
+ },
+ {
+  "errorMessage": "9rate limit429é",
+  "want": true
+ },
+ {
+  "errorMessage": " rate limit ",
+  "want": true
+ },
+ {
+  "errorMessage": "4294295039429",
+  "want": false
+ },
+ {
+  "errorMessage": "billing503-Zbilling",
+  "want": false
+ },
+ {
+  "errorMessage": "1",
+  "want": false
+ },
+ {
+  "errorMessage": "Za",
+  "want": false
+ },
+ {
+  "errorMessage": "503billing-503",
+  "want": false
+ },
+ {
+  "errorMessage": "__aé",
+  "want": false
+ },
+ {
+  "errorMessage": "429 500429",
+  "want": true
+ },
+ {
+  "errorMessage": "5039500",
+  "want": false
+ },
+ {
+  "errorMessage": "_a",
+  "want": false
+ },
+ {
+  "errorMessage": "é191-",
+  "want": false
+ },
+ {
+  "errorMessage": "-billingéZ",
+  "want": false
+ },
+ {
+  "errorMessage": "500_rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "overloaded500",
+  "want": true
+ },
+ {
+  "errorMessage": "overloaded500_500billing",
+  "want": false
+ },
+ {
+  "errorMessage": "1 ",
+  "want": false
+ },
+ {
+  "errorMessage": "-",
+  "want": false
+ },
+ {
+  "errorMessage": " Z503-é",
+  "want": false
+ },
+ {
+  "errorMessage": "billingé",
+  "want": false
+ },
+ {
+  "errorMessage": "-500",
+  "want": true
+ },
+ {
+  "errorMessage": "x500rate limitZ",
+  "want": true
+ },
+ {
+  "errorMessage": "500",
+  "want": true
+ },
+ {
+  "errorMessage": "rate limitxx9",
+  "want": true
+ },
+ {
+  "errorMessage": "overloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "-a503",
+  "want": false
+ },
+ {
+  "errorMessage": "overloadedbillingarate limit503",
+  "want": false
+ },
+ {
+  "errorMessage": "aa500",
+  "want": false
+ },
+ {
+  "errorMessage": "x9overloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "x aoverloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "xbillingbilling-é",
+  "want": false
+ },
+ {
+  "errorMessage": "_Zx_",
+  "want": false
+ },
+ {
+  "errorMessage": "x",
+  "want": false
+ },
+ {
+  "errorMessage": "11x_",
+  "want": false
+ },
+ {
+  "errorMessage": "-",
+  "want": false
+ },
+ {
+  "errorMessage": "_xabilling",
+  "want": false
+ },
+ {
+  "errorMessage": "503  ",
+  "want": true
+ },
+ {
+  "errorMessage": "-é _",
+  "want": false
+ },
+ {
+  "errorMessage": "1503billing",
+  "want": false
+ },
+ {
+  "errorMessage": "billing",
+  "want": false
+ },
+ {
+  "errorMessage": "rate limitrate limité_ ",
+  "want": true
+ },
+ {
+  "errorMessage": "--overloaded",
+  "want": true
+ },
+ {
+  "errorMessage": "rate limit503_",
+  "want": true
+ },
+ {
+  "errorMessage": "503rate limit",
+  "want": true
+ },
+ {
+  "errorMessage": "9--é9",
+  "want": false
+ },
+ {
+  "errorMessage": "__a",
+  "want": false
+ },
+ {
+  "errorMessage": "a503",
+  "want": false
+ },
+ {
+  "errorMessage": "1Z1_",
+  "want": false
+ },
+ {
+  "errorMessage": "a19billing",
+  "want": false
+ },
+ {
+  "errorMessage": "500_11",
+  "want": true
+ },
+ {
+  "errorMessage": "a5031",
+  "want": false
+ },
+ {
+  "errorMessage": "_é-_",
+  "want": false
+ },
+ {
+  "errorMessage": "é42999",
+  "want": false
+ },
+ {
+  "errorMessage": "overloadedZbilling5009",
+  "want": false
+ },
+ {
+  "errorMessage": "éx9 429",
+  "want": true
+ },
+ {
+  "errorMessage": "overloaded503",
+  "want": true
+ },
+ {
+  "errorMessage": "4294291503_",
+  "want": false
+ },
+ {
+  "errorMessage": "overloadedZ_",
+  "want": true
+ },
+ {
+  "errorMessage": "éxbilling503503",
+  "want": false
+ },
+ {
+  "errorMessage": "aaa429",
+  "want": false
+ },
+ {
+  "errorMessage": "rate limitrate limit4299x",
+  "want": true
+ },
+ {
+  "errorMessage": "é billing500a",
+  "want": false
+ },
+ {
+  "errorMessage": "503",
+  "want": true
+ },
+ {
+  "errorMessage": "x_",
+  "want": false
+ }
+]
