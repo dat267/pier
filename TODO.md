@@ -1,1 +1,3 @@
 # Reproduced audit findings
+
+- **A521, medium:** a `supportsMessageThreads` compat entry in `models.json` is accepted and ignored. pi v1.5.2 (b4afdddf) `api/anthropic-messages.ts` sends Anthropic's `message-threads-2026-08-12` beta with a per-session thread id, hashes the unchanged prefix, records the thread the reply belongs to and starts a new thread when the provider rejects the old one; pier has none of that state, so the flag is a no-op and every turn re-sends the whole transcript. No shipped catalog sets the flag, so only a user override reaches it. Repair is a feature port (thread map with its bound, prefix hash, rollback, `new-thread` recovery), not a fix.
