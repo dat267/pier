@@ -669,3 +669,19 @@ func TestRendererStopFlushesAfterThePostStopHook(t *testing.T) {
 		t.Fatal("the post-stop hook's write was not delivered")
 	}
 }
+
+// pi v1.5.2 (b4afdddf) tui.ts: the first cursor marker on the selected line
+// determines the hardware cursor position and every other marker on it is a
+// stale internal sentinel, so all of them are stripped before the line is
+// written. Leaving one behind wrote an APC sequence to the terminal.
+func TestExtractCursorPositionStripsEveryMarker(t *testing.T) {
+	renderer := NewRenderer(&fakeTerminal{width: 20, height: 6})
+	lines := []string{"top", "ab" + CursorMarker + "cd" + CursorMarker + "ef"}
+	row, col, ok := renderer.ExtractCursorPosition(lines, 6)
+	if !ok || row != 1 || col != 2 {
+		t.Fatalf("cursor = (%d,%d,%v), want (1,2,true)", row, col, ok)
+	}
+	if lines[1] != "abcdef" {
+		t.Fatalf("markers left in the line: %q", lines[1])
+	}
+}

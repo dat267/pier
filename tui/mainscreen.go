@@ -382,6 +382,14 @@ func (s *MainScreen) doRender() {
 	}
 
 	cursorRow, cursorCol, hasCursor := s.ExtractCursorPosition(newLines, height)
+	// The cursor position is taken above, so no marker may reach the terminal:
+	// a marker on another line, or outside the scanned viewport, is stale render
+	// metadata (pi v1.5.2 tui.ts prepareLines strips them from every line).
+	for i, line := range newLines {
+		if !IsImageLine(line) && strings.Contains(line, CursorMarker) {
+			newLines[i] = strings.ReplaceAll(line, CursorMarker, "")
+		}
+	}
 	cursorPos := struct {
 		Row, Col int
 		Has      bool

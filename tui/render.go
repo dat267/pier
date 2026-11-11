@@ -1125,7 +1125,9 @@ func (t *Renderer) ExtractCursorPosition(lines []string, height int) (row int, c
 		if markerIndex != -1 {
 			beforeMarker := line[:markerIndex]
 			col := VisibleWidth(beforeMarker)
-			lines[r] = line[:markerIndex] + line[markerIndex+len(CursorMarker):]
+			// The first marker sets the position; any other mark on the line is a
+			// stale sentinel, so all of them are stripped (pi v1.5.2 tui.ts).
+			lines[r] = strings.ReplaceAll(line, CursorMarker, "")
 			return r, col, true
 		}
 	}
