@@ -576,10 +576,12 @@ func (r *rpcRuntime) handle(command rpcCommand) (any, bool, error) {
 	switch command.Type {
 	case "steer", "follow_up":
 		text := ExpandPromptTemplate(session.expandSkillCommand(*command.Message), session.PromptTemplates())
+		// Upstream steer/followUp queue whether or not a run is active; an
+		// idle queue is delivered with the next prompt.
 		if command.Type == "steer" {
-			session.queueSteer(text, command.Images)
+			session.Steer(queuedUserMessage(text, command.Images))
 		} else {
-			session.queueFollowUp(text, command.Images)
+			session.FollowUp(queuedUserMessage(text, command.Images))
 		}
 		return jsonEventObject{{"disposition", "queued"}}, true, nil
 	case "get_available_models":

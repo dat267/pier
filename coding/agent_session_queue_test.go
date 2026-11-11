@@ -9,7 +9,7 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
-// Steering queued while streaming is built with BLOCK content (queueSteer):
+// Steering queued while streaming is built with BLOCK content (queuedUserMessage):
 // the dequeue-removal hook must match those messages too, not just
 // Text-content ones, or the dock banner keeps showing the steered message
 // after it is pushed into the transcript.
@@ -62,7 +62,7 @@ func TestSteerBlockContentRemovedOnMessageStart(t *testing.T) {
 		}
 	})
 
-	// What queueSteer builds: block content, Text empty.
+	// What queuedUserMessage builds: block content, Text empty.
 	session.Steer(&ai.UserMessage{Content: ai.StringOrBlocks{Blocks: ai.ContentList{ai.TextContent{Text: "steered blocks"}}}})
 	if got := session.GetSteeringMessages(); len(got) != 1 || got[0] != "steered blocks" {
 		t.Fatalf("queued = %v", got)

@@ -183,22 +183,21 @@ func (s *AgentSession) Prompt(ctx context.Context, text string, options *PromptO
 		expandedText = ExpandPromptTemplate(expandedText, s.PromptTemplates())
 	}
 
-	// While streaming, the prompt must be queued with an explicit behavior.
-	if s.IsStreaming() {
-		if options.StreamingBehavior == "" {
-			preflight(false)
-			return fmt.Errorf("Agent is already processing. Specify streamingBehavior ('steer' or 'followUp') to queue the message.")
+	// While streaming, the prompt must be queued with an explicit behavior. A
+	// behavior queues only while a run is active, decided under the run lock
+	// (queueWhileRunActive); a run that ended meanwhile leaves the session
+	// idle, and the prompt starts its own run below.
+	if options.StreamingBehavior != "" {
+		if s.queueWhileRunActive(queuedUserMessage(expandedText, options.Images), options.StreamingBehavior == "followUp") {
+			preflight(true)
+			if options.OnAccepted != nil {
+				options.OnAccepted("queued")
+			}
+			return nil
 		}
-		if options.StreamingBehavior == "followUp" {
-			s.queueFollowUp(expandedText, options.Images)
-		} else {
-			s.queueSteer(expandedText, options.Images)
-		}
-		preflight(true)
-		if options.OnAccepted != nil {
-			options.OnAccepted("queued")
-		}
-		return nil
+	} else if s.IsStreaming() {
+		preflight(false)
+		return fmt.Errorf("Agent is already processing. Specify streamingBehavior ('steer' or 'followUp') to queue the message.")
 	}
 
 	// Flush deferred messages before the new turn. D438: only while idle,
@@ -262,20 +261,13 @@ func (s *AgentSession) Prompt(ctx context.Context, text string, options *PromptO
 	})
 }
 
-func (s *AgentSession) queueSteer(text string, images []ai.ImageContent) {
+// queuedUserMessage builds the user message a queued prompt delivers.
+func queuedUserMessage(text string, images []ai.ImageContent) *ai.UserMessage {
 	content := ai.ContentList{ai.TextContent{Text: text}}
 	for _, image := range images {
 		content = append(content, image)
 	}
-	s.Steer(&ai.UserMessage{Content: ai.StringOrBlocks{Blocks: content}, Timestamp: time.Now().UnixMilli()})
-}
-
-func (s *AgentSession) queueFollowUp(text string, images []ai.ImageContent) {
-	content := ai.ContentList{ai.TextContent{Text: text}}
-	for _, image := range images {
-		content = append(content, image)
-	}
-	s.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Blocks: content}, Timestamp: time.Now().UnixMilli()})
+	return &ai.UserMessage{Content: ai.StringOrBlocks{Blocks: content}, Timestamp: time.Now().UnixMilli()}
 }
 
 // validateModelAuth checks that the selected model's provider has usable auth.
@@ -369,21 +361,34 @@ func (s *AgentSession) startAgentPrompt(ctx context.Context, messages []ai.Messa
 	}
 
 	err := s.Agent.PromptMessages(ctx, messages)
-	if err == nil {
-		// Post-run continuation: auto-retry, then queued continuations
-		// (upstream's _runAgentPrompt loop).
-		err = s.runPostRunLoop(ctx)
-	}
+	var aborted bool
+	var lateCustom []*ai.CustomMessage
+	for {
+		if err == nil {
+			// Post-run continuation: auto-retry, then queued continuations
+			// (upstream's _runAgentPrompt loop).
+			err = s.runPostRunLoop(ctx)
+		}
 
-	// Settlement still belongs to this run: upstream flushes pending messages
-	// and notifies the cache warmer before _emitAgentSettled clears the run
-	// flag, so a new prompt cannot start while the old run is appending context.
-	s.FlushPendingBashMessages()
-	s.FlushPendingCustomMessages()
-	if s.CacheWarmer != nil {
-		s.CacheWarmer.OnAgentSettled()
+		// Settlement still belongs to this run: upstream flushes pending
+		// messages and notifies the cache warmer before _emitAgentSettled
+		// clears the run flag, so a new prompt cannot start while the old run
+		// is appending context.
+		s.FlushPendingBashMessages()
+		s.FlushPendingCustomMessages()
+		if s.CacheWarmer != nil {
+			s.CacheWarmer.OnAgentSettled()
+		}
+		var ended bool
+		ended, aborted, lateCustom = s.endRun(state, err == nil && ctx.Err() == nil)
+		if ended {
+			break
+		}
+		// A message was queued after the post-run loop's last check; the run
+		// takes it instead of ending (D438). The next request restarts cache
+		// warming, so the settle notification above is superseded.
+		err = s.Agent.Continue(ctx)
 	}
-	aborted, lateCustom := s.endRun(state)
 	for _, message := range lateCustom {
 		s.emitCustomMessage(message)
 	}
@@ -425,13 +430,23 @@ func (s *AgentSession) flushDeferredIfIdle() {
 // appends held are made once the lock is released (A483); the flush is
 // deferred, so a panic part-way through the appends still writes the entries
 // already accepted.
-func (s *AgentSession) endRun(state *promptState) (aborted bool, lateCustom []*ai.CustomMessage) {
+//
+// When canContinue holds and a deliverable message was queued after the
+// post-run loop's last check, endRun leaves the run active and reports
+// ended false, so the run continues and takes it. Queueing checks the run
+// flag under the same lock (queueWhileRunActive), so a message queued for
+// this run is either seen here or finds the session idle.
+func (s *AgentSession) endRun(state *promptState, canContinue bool) (ended, aborted bool, lateCustom []*ai.CustomMessage) {
 	defer s.Sessions.FlushHeldWrites()
 	state.mu.Lock()
 	defer state.mu.Unlock()
+	if canContinue && !state.abortRequested && s.Agent.HasDeliverableMessages() {
+		return false, false, nil
+	}
+	ended = true
 	state.runActive = false
 	state.runCancel = nil
-	return state.abortRequested, s.flushDeferredLocked(state)
+	return ended, state.abortRequested, s.flushDeferredLocked(state)
 }
 
 // flushDeferredWhileIdle appends the deferred messages unless a run is
@@ -578,12 +593,12 @@ func (s *AgentSession) SendMessage(ctx context.Context, message *ai.CustomMessag
 	case !s.IsStreaming():
 		return s.startAgentPrompt(ctx, []ai.Message{message}, options.unlessDisposed)
 	default:
-		if options.DeliverAs == "followUp" {
-			s.FollowUp(message)
-		} else {
-			s.Steer(message)
+		// Queue for the active run, or start one if it ended since the check
+		// above (queueWhileRunActive).
+		if s.queueWhileRunActive(message, options.DeliverAs == "followUp") {
+			return nil
 		}
-		return nil
+		return s.startAgentPrompt(ctx, []ai.Message{message}, options.unlessDisposed)
 	}
 }
 

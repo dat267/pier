@@ -6758,7 +6758,13 @@ Tests: `TestAgentSessionConcurrentAPIKeepsTranscriptAndPersistenceInStep`
 `TestDeferredFlushPanicStillWritesAcceptedEntries` for its edges;
 `TestCustomMessageSentAsARunEndsIsNotStranded` for a custom message sent
 without a turn, whose "defer to the run's end or append now" decision is made
-under the lock too.
+under the lock too; and
+`TestPromptQueuedAsARunEndsIsNotStranded` for a prompt queued as a steer or
+follow-up: it queues only while a run is active, decided under the lock, and
+the run's end checks for queued messages under the same lock and continues
+instead of ending, so a queued message is always taken by the run or finds the
+session idle and starts its own. Upstream makes the last queue check and
+clears its run flag in one synchronous stretch of its event loop.
 
 ### D439
 

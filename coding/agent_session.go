@@ -599,7 +599,7 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 	}
 	// Queue display tracking: user message starts remove queued entries
 	// BEFORE the event fans out. Text is extracted Blocks-aware: queued
-	// messages are built with block content (queueSteer), whose Text field is
+	// messages are built with block content (queuedUserMessage), whose Text field is
 	// empty — matching on Content.Text alone left the dock banner showing the
 	// steered message after it was pushed into the transcript.
 	if event.Type == agent.MessageStart && event.Message != nil && ai.RoleOf(event.Message) == ai.RoleUser {
@@ -778,24 +778,56 @@ func (s *AgentSession) willRetryAfterAgentEnd(event *agent.AgentEvent) bool {
 // Steer queues a steering message (drained after the current turn). The queue
 // records the message's text so it can be restored to the editor.
 func (s *AgentSession) Steer(message ai.Message) {
-	s.mu.Lock()
-	s.Agent.Steer(message)
-	if user, ok := message.(*ai.UserMessage); ok {
-		s.steeringMessages = append(s.steeringMessages, contentTextJoinedNoSep(user.Content))
-	}
-	s.mu.Unlock()
+	s.enqueue(message, false)
 	s.emitQueueUpdate()
 }
 
 // FollowUp queues a message to run after the agent would stop.
 func (s *AgentSession) FollowUp(message ai.Message) {
-	s.mu.Lock()
-	s.Agent.FollowUp(message)
-	if user, ok := message.(*ai.UserMessage); ok {
-		s.followUpMessages = append(s.followUpMessages, contentTextJoinedNoSep(user.Content))
-	}
-	s.mu.Unlock()
+	s.enqueue(message, true)
 	s.emitQueueUpdate()
+}
+
+// enqueue adds the message to the agent's steering or follow-up queue and
+// records its text for the queue display, in one step under s.mu, so a run
+// that takes the message cannot do so before its text is recorded. It emits
+// nothing; the caller emits the queue update after releasing its locks.
+func (s *AgentSession) enqueue(message ai.Message, followUp bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	user, isUser := message.(*ai.UserMessage)
+	if followUp {
+		s.Agent.FollowUp(message)
+		if isUser {
+			s.followUpMessages = append(s.followUpMessages, contentTextJoinedNoSep(user.Content))
+		}
+		return
+	}
+	s.Agent.Steer(message)
+	if isUser {
+		s.steeringMessages = append(s.steeringMessages, contentTextJoinedNoSep(user.Content))
+	}
+}
+
+// queueWhileRunActive queues the message for the active run and reports true,
+// or reports false without queueing when no run is active, so the caller
+// starts one. D438: the check and the queueing are one step under the
+// run-lifecycle lock, and the run's end checks for queued messages under the
+// same lock (endRun), so a queued message is always either taken by the run
+// or finds the session idle. Deciding on an unlocked IsStreaming and queueing
+// afterwards could leave the message queued after the run had ended.
+func (s *AgentSession) queueWhileRunActive(message ai.Message, followUp bool) bool {
+	state := s.prompt()
+	state.mu.Lock()
+	active := state.runActive || s.Agent.State().IsStreaming
+	if active {
+		s.enqueue(message, followUp)
+	}
+	state.mu.Unlock()
+	if active {
+		s.emitQueueUpdate()
+	}
+	return active
 }
 
 // PromptText runs a prompt from text.
