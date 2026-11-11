@@ -197,5 +197,41 @@
     "error": true,
     "reloads": 0,
     "expected": "{\"mcpServers\":null}"
+  },
+  {
+    "name": "namespace-collision",
+    "initial": "{\"mcpServers\":{\"radius\":{\"command\":\"unused\"},\"radius_mcp\":{\"command\":\"also-unused\"}}}",
+    "choice": "Yes",
+    "offer": true,
+    "error": false,
+    "reloads": 1,
+    "expected": "{\n  \"mcpServers\": {\n    \"radius\": {\n      \"command\": \"unused\"\n    },\n    \"radius_mcp\": {\n      \"command\": \"also-unused\"\n    },\n    \"radius-mcp-2\": {\n      \"url\": \"https://radius.pi.dev/mcp\",\n      \"auth\": {\n        \"provider\": \"radius\"\n      }\n    }\n  }\n}\n"
+  },
+  {
+    "name": "three-names-used",
+    "initial": "{\"mcpServers\":{\"radius\":{\"command\":\"a\"},\"radius-mcp\":{\"command\":\"b\"},\"radius-mcp-2\":{\"command\":\"c\"}}}",
+    "choice": "Yes",
+    "offer": true,
+    "error": false,
+    "reloads": 1,
+    "expected": "{\n  \"mcpServers\": {\n    \"radius\": {\n      \"command\": \"a\"\n    },\n    \"radius-mcp\": {\n      \"command\": \"b\"\n    },\n    \"radius-mcp-2\": {\n      \"command\": \"c\"\n    },\n    \"radius-mcp-3\": {\n      \"url\": \"https://radius.pi.dev/mcp\",\n      \"auth\": {\n        \"provider\": \"radius\"\n      }\n    }\n  }\n}\n"
+  },
+  {
+    "name": "existing-name-kept",
+    "initial": "{\"mcpServers\":{\"radius-mcp-7\":{\"url\":\"https://radius.pi.dev/mcp\"}}}",
+    "choice": "Yes",
+    "offer": true,
+    "error": false,
+    "reloads": 1,
+    "expected": "{\n  \"mcpServers\": {\n    \"radius-mcp-7\": {\n      \"url\": \"https://radius.pi.dev/mcp\",\n      \"auth\": {\n        \"provider\": \"radius\"\n      }\n    }\n  }\n}\n"
+  },
+  {
+    "name": "existing-name-kept-with-collision",
+    "initial": "{\"mcpServers\":{\"radius-mcp-7\":{\"url\":\"https://radius.pi.dev/mcp\"},\"radius\":{\"command\":\"x\"}}}",
+    "choice": "Yes",
+    "offer": true,
+    "error": false,
+    "reloads": 1,
+    "expected": "{\n  \"mcpServers\": {\n    \"radius-mcp-7\": {\n      \"url\": \"https://radius.pi.dev/mcp\",\n      \"auth\": {\n        \"provider\": \"radius\"\n      }\n    },\n    \"radius\": {\n      \"command\": \"x\"\n    }\n  }\n}\n"
   }
 ]

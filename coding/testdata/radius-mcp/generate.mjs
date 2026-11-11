@@ -62,6 +62,12 @@ const cases = [
   {name: "null", initial: 'null', choice: "Yes"},
   {name: "array", initial: '[]', choice: "Yes"},
   {name: "bad-servers", initial: '{"mcpServers":null}', choice: "Yes"},
+  // Namespaces compare with "-" folded to "_" (mcpNamespace), so a server named
+  // radius_mcp collides with radius-mcp.
+  {name: "namespace-collision", initial: '{"mcpServers":{"radius":{"command":"unused"},"radius_mcp":{"command":"also-unused"}}}', choice: "Yes"},
+  {name: "three-names-used", initial: '{"mcpServers":{"radius":{"command":"a"},"radius-mcp":{"command":"b"},"radius-mcp-2":{"command":"c"}}}', choice: "Yes"},
+  {name: "existing-name-kept", initial: '{"mcpServers":{"radius-mcp-7":{"url":"https://radius.pi.dev/mcp"}}}', choice: "Yes"},
+  {name: "existing-name-kept-with-collision", initial: '{"mcpServers":{"radius-mcp-7":{"url":"https://radius.pi.dev/mcp"},"radius":{"command":"x"}}}', choice: "Yes"},
 ];
 const results = cases.map((entry) => {
   const dir = mkdtempSync(path.join(tmpdir(), "pier-radius-mcp-"));
