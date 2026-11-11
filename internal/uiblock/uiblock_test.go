@@ -23,10 +23,10 @@ var acceptedFindings = map[string]string{
 
 	// Surfaces the gate only saw once it descended into pointer-receiver
 	// methods (A493). Each reason names what was checked.
-	"wiring field ReloadNow":            "off the loop in production: every call site is inside the closure handed to RunDetached (interactivemode_commands.go:370-390); the inline branch runs only when RunDetached is nil, which is the test-app composition",
+	"wiring field ReloadNow":            "off the loop in production: every call site is inside the closure handed to RunDetached (interactivemode_commands.go:374-397); the inline branch runs only when RunDetached is nil, which is the test-app composition",
 	"wiring field ReloadMCP":            "off the loop in production, in the same RunDetached closure as ReloadNow; the inline branch is the test-app path",
 	"wiring field ExportToHTML":         "off the loop: /export runs on the export queue (D441)",
-	"wiring field WarnAnthropic":        "off the loop: activatemode_run.go:523 calls it as `go w.WarnAnthropic(ctx)`, so its auth-storage reads and any `!command` credential run on that goroutine",
+	"wiring field WarnAnthropic":        "off the loop: interactivemode_run.go:523 calls it as `go w.WarnAnthropic(ctx)`, so its auth-storage reads and any `!command` credential run on that goroutine",
 	"wiring field Stop":                 "shutdown: the crash/trust wiring invokes it as the app exits, after the loop stops",
 	"wiring field ReloadGoal":           "goal status card: one text update, no I/O",
 	"wiring field SwitchTuiMode":        "tui-mode switch: terminal-mode escape sequences and one render",
