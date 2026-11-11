@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"slices"
@@ -56,6 +57,8 @@ type flatNode struct {
 	// per node instead of once per keystroke (M66).
 	messageDecoded  bool
 	message         treeMessage
+	blocksKnown     bool
+	blocks          []treeContentBlock
 	searchTextCache string
 	searchTextKnown bool
 	hasTextKnown    bool
@@ -133,22 +136,50 @@ type treeMessage struct {
 	Command      string          `json:"command"`
 }
 
-// toolCallInfo is a tool call extracted from an assistant message.
+// toolCallInfo is a tool call extracted from an assistant message. Arguments
+// stay raw: a row only formats the calls of the lines on screen, so the whole
+// session's argument maps are never materialized.
 type toolCallInfo struct {
 	Name      string
-	Arguments map[string]any
+	Arguments json.RawMessage
+}
+
+// toolCallArguments decodes a call's arguments for the row that shows them.
+func (c toolCallInfo) toolCallArguments() map[string]any {
+	if len(c.Arguments) == 0 {
+		return nil
+	}
+	var args map[string]any
+	if err := json.Unmarshal(c.Arguments, &args); err != nil {
+		return nil
+	}
+	return args
+}
+
+// treeContentBlock is one decoded content block. Text and tool-call fields share
+// the type so a single decode serves has-text, the tool-call map and the search
+// text.
+type treeContentBlock struct {
+	Type      string          `json:"type"`
+	Text      string          `json:"text"`
+	ID        string          `json:"id"`
+	Name      string          `json:"name"`
+	Arguments json.RawMessage `json:"arguments"`
 }
 
 // TreeList is the tree list component.
 type TreeList struct {
-	flatNodes           []*flatNode
-	filteredNodes       []*flatNode
-	selectedIndex       int
-	currentLeafID       *string
-	maxVisibleLines     int
-	filterMode          FilterMode
-	searchQuery         string
-	toolCallMap         map[string]toolCallInfo
+	flatNodes       []*flatNode
+	filteredNodes   []*flatNode
+	selectedIndex   int
+	currentLeafID   *string
+	maxVisibleLines int
+	filterMode      FilterMode
+	searchQuery     string
+	toolCallMap     map[string]toolCallInfo
+	// toolCallArgs caches the decoded arguments of the calls whose rows have
+	// been rendered. The tree is immutable while the selector is open.
+	toolCallArgs        map[string]map[string]any
 	multipleRoots       bool
 	showLabelTimestamps bool
 	activePathIDs       map[string]bool
@@ -318,19 +349,28 @@ func (t *TreeList) flattenTree(roots []*coding.SessionTreeNode) []*flatNode {
 		stack = stack[:len(stack)-1]
 
 		entry := item.node.Entry
+		flat := &flatNode{
+			Node: item.node, Indent: item.indent, ShowConnector: item.showConnector,
+			IsLast: item.isLast, Gutters: item.gutters, IsVirtualRootChild: item.isVirtualRootChild,
+		}
 		if entry.Type == "message" {
 			message := decodeTreeMessage(entry.Message)
+			// Seed the decode so the filter pass, the search text and the display
+			// path reuse it rather than decoding the same entry again.
+			flat.message = message
+			flat.messageDecoded = true
 			if message.Role == "assistant" {
-				for _, call := range toolCallsFromContent(message.Content) {
-					t.toolCallMap[call.ID] = toolCallInfo{Name: call.Name, Arguments: call.Arguments}
+				flat.blocks = parseContentBlocks(message.Content)
+				flat.blocksKnown = true
+				for _, block := range flat.blocks {
+					if block.Type == "toolCall" {
+						t.toolCallMap[block.ID] = toolCallInfo{Name: block.Name, Arguments: block.Arguments}
+					}
 				}
 			}
 		}
 
-		result = append(result, &flatNode{
-			Node: item.node, Indent: item.indent, ShowConnector: item.showConnector,
-			IsLast: item.isLast, Gutters: item.gutters, IsVirtualRootChild: item.isVirtualRootChild,
-		})
+		result = append(result, flat)
 
 		children := item.node.Children
 		multipleChildren := len(children) > 1
@@ -674,11 +714,35 @@ func (t *TreeList) nodeMessage(id *flatNode) treeMessage {
 	return id.message
 }
 
-// nodeHasText reports whether a message carries text blocks, decoding the
-// content once per node rather than once per filter pass.
+// decodedToolCallArguments returns a call's arguments for the row that shows
+// them, decoding once per call rather than once per frame.
+func (t *TreeList) decodedToolCallArguments(id string, call toolCallInfo) map[string]any {
+	if args, ok := t.toolCallArgs[id]; ok {
+		return args
+	}
+	args := call.toolCallArguments()
+	if t.toolCallArgs == nil {
+		t.toolCallArgs = map[string]map[string]any{}
+	}
+	t.toolCallArgs[id] = args
+	return args
+}
+
+// nodeBlocks decodes a node's content blocks once and reuses them for the
+// has-text check, the tool-call map and the search text.
+func (t *TreeList) nodeBlocks(id *flatNode) []treeContentBlock {
+	if !id.blocksKnown {
+		id.blocks = parseContentBlocks(t.nodeMessage(id).Content)
+		id.blocksKnown = true
+	}
+	return id.blocks
+}
+
+// nodeHasText reports whether a message carries text blocks, reading them from
+// the node's single content decode rather than re-parsing the content.
 func (t *TreeList) nodeHasText(id *flatNode, message treeMessage) bool {
 	if !id.hasTextKnown {
-		id.hasText = hasTextContent(message.Content)
+		id.hasText = hasTextContent(message.Content, t.nodeBlocks(id))
 		id.hasTextKnown = true
 	}
 	return id.hasText
@@ -934,7 +998,7 @@ func (t *TreeList) getEntryDisplayText(node *coding.SessionTreeNode, isSelected 
 		case "toolResult":
 			call, ok := t.toolCallMap[message.ToolCallID]
 			if ok {
-				result = theme.Fg("muted", t.formatToolCall(call.Name, call.Arguments))
+				result = theme.Fg("muted", t.formatToolCall(call.Name, t.decodedToolCallArguments(message.ToolCallID, call)))
 			} else {
 				name := message.ToolName
 				if name == "" {
@@ -1074,20 +1138,16 @@ func (t *TreeList) getEntryCopyText(node *coding.SessionTreeNode) (string, bool)
 	return text, true
 }
 
-func hasTextContent(content json.RawMessage) bool {
-	if len(content) == 0 {
+// hasTextContent reports whether the content carries non-blank text. A string
+// content is checked directly; blocks come from the caller's single decode.
+func hasTextContent(content json.RawMessage, blocks []treeContentBlock) bool {
+	trimmed := bytes.TrimSpace(content)
+	if len(trimmed) == 0 {
 		return false
 	}
-	var text string
-	if err := json.Unmarshal(content, &text); err == nil {
-		return ai.JSTrim(text) != ""
-	}
-	var blocks []struct {
-		Type string `json:"type"`
-		Text string `json:"text"`
-	}
-	if err := json.Unmarshal(content, &blocks); err != nil {
-		return false
+	if trimmed[0] == '"' {
+		var text string
+		return json.Unmarshal(trimmed, &text) == nil && ai.JSTrim(text) != ""
 	}
 	for _, block := range blocks {
 		if block.Type == "text" && ai.JSTrim(block.Text) != "" {
@@ -1105,32 +1165,16 @@ func decodeTreeMessage(raw json.RawMessage) treeMessage {
 	return message
 }
 
-type treeToolCall struct {
-	ID        string
-	Name      string
-	Arguments map[string]any
-}
-
-func toolCallsFromContent(content json.RawMessage) []treeToolCall {
+// parseContentBlocks decodes a message's content blocks once.
+func parseContentBlocks(content json.RawMessage) []treeContentBlock {
 	if len(content) == 0 {
 		return nil
 	}
-	var blocks []struct {
-		Type      string         `json:"type"`
-		ID        string         `json:"id"`
-		Name      string         `json:"name"`
-		Arguments map[string]any `json:"arguments"`
-	}
+	var blocks []treeContentBlock
 	if err := json.Unmarshal(content, &blocks); err != nil {
 		return nil
 	}
-	var calls []treeToolCall
-	for _, block := range blocks {
-		if block.Type == "toolCall" {
-			calls = append(calls, treeToolCall{ID: block.ID, Name: block.Name, Arguments: block.Arguments})
-		}
-	}
-	return calls
+	return blocks
 }
 
 func treeShortenPath(path string) string {
@@ -1687,6 +1731,15 @@ type TreeSelectorOptions struct {
 
 // NewTreeSelectorComponent creates the selector.
 func NewTreeSelectorComponent(tree []*coding.SessionTreeNode, currentLeafID *string, terminalHeight int, onSelect func(entryID string), onCancel func(), options TreeSelectorOptions) *TreeSelectorComponent {
+	maxVisibleLines := max(5, terminalHeight/2)
+	list := NewTreeList(tree, currentLeafID, maxVisibleLines, options.InitialSelectedID, options.InitialFilterMode)
+	return NewTreeSelectorComponentWithList(list, len(tree) == 0, onSelect, onCancel, options)
+}
+
+// NewTreeSelectorComponentWithList builds the selector around a tree list the
+// caller already built, so the decode-heavy part can run off the owner loop.
+// empty reports that the session has no entries, which arms the auto-cancel.
+func NewTreeSelectorComponentWithList(list *TreeList, empty bool, onSelect func(entryID string), onCancel func(), options TreeSelectorOptions) *TreeSelectorComponent {
 	component := &TreeSelectorComponent{
 		Container:     &tui.Container{},
 		onLabelChange: options.OnLabelChange,
@@ -1696,8 +1749,7 @@ func NewTreeSelectorComponent(tree []*coding.SessionTreeNode, currentLeafID *str
 		component.scheduleTimer = options.ScheduleTimer
 	}
 
-	maxVisibleLines := max(5, terminalHeight/2)
-	component.treeList = NewTreeList(tree, currentLeafID, maxVisibleLines, options.InitialSelectedID, options.InitialFilterMode)
+	component.treeList = list
 	if options.Now != nil {
 		component.treeList.SetNow(options.Now)
 	}
@@ -1729,7 +1781,7 @@ func NewTreeSelectorComponent(tree []*coding.SessionTreeNode, currentLeafID *str
 	component.AddChild(tui.NewSpacer(1))
 	component.AddChild(NewDynamicBorder(nil))
 
-	if len(tree) == 0 {
+	if empty {
 		component.scheduleTimer(100, func() {
 			if onCancel != nil {
 				onCancel()

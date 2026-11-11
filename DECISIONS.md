@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D440)
+# Deliberate divergences from pi (D1–D441)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6815,3 +6815,37 @@ when handed the path, and the port's cannot tell without being told.
 
 Test: `TestProjectPromptsRequireTrust` (an untrusted project's command was
 loaded before the gate, alongside the user's).
+
+### D441
+
+**`/tree` and `/export` do their work off the owner loop and hand the result
+back, where the reference blocks the event loop.**
+
+Reference: pi v1.5.0 `f9a26365` builds the tree inside the key handler
+(`interactive-mode.ts showTreeSelector` → `buildSessionTree`) and serializes the
+branch inside the export handler (`core/session-export.ts`), both synchronously
+in front of the UI. Its parsed session entries are already JavaScript objects, so
+the tree build only walks them; the port keeps the raw line bytes and has to
+decode each entry's message, which costs the same on every open.
+
+Measured on a 25,583-entry session (53 MB), opening `/tree` took 596 ms and
+`/export out.jsonl` 887 ms, both on the owner loop, so the terminal painted
+nothing for that long. Parity does not outrank responsiveness, so both now take
+an `offloop.Queue` and a `PostToUI` callback: the work runs on the queue, the
+resulting selector or the status message is delivered on the loop, and the loop
+keeps painting. A nil queue or nil `PostToUI` keeps the synchronous path, which
+is what tests and embedders use.
+
+The same commit removes repeated decoding rather than moving it: the tree
+decodes each entry's message and its content blocks once (596 ms → 274 ms) and
+keeps tool-call arguments raw until a row is formatted (only the visible rows
+decode them), and the export skips re-chaining an entry whose stored `parentId`
+already equals the previous entry's id (887 ms → 482 ms, 1.84 M → 329 k
+allocations). Those two are not divergences: output bytes and tree contents are
+unchanged, and the golden fixtures still match.
+
+Tests: `TestTreeSelectorOpenBuildsOffTheOwnerLoop` and
+`TestExportCommandRunsOffTheOwnerLoop`; both packages' synchronous twins,
+`TestTreeSelectorOpenWithoutAQueueStaysSynchronous` and
+`TestExportCommandWithoutAQueueStaysSynchronous`, pin the fallback.
+`BenchmarkTreeOpen` and `BenchmarkSessionExport` pin the cost.

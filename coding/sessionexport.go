@@ -39,7 +39,14 @@ func serializeSessionBranch(sessionManager *SessionManager, createTrailingEntrie
 	for _, entry := range sessionManager.GetBranch("") {
 		// A fresh pointer per entry: they all re-chain to the previous entry.
 		current := parentID
-		entry.setParentID(current)
+		// Re-chaining parses and rebuilds the entry's stored line. On a linear
+		// branch the stored parentId is already the previous entry's id, so only
+		// the first entry (and a branch's cut point) actually changes. Both-nil
+		// still re-chains: the stored line may omit the member, and upstream's
+		// assignment writes it.
+		if entry.ParentID == nil || current == nil || *entry.ParentID != *current {
+			entry.setParentID(current)
+		}
 		line, err := MarshalFileEntry(FileEntry{Entry: &entry})
 		if err != nil {
 			return "", err

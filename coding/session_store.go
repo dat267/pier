@@ -256,7 +256,14 @@ func setRawJSONMember(raw json.RawMessage, key string, value json.RawMessage) (j
 	if err != nil {
 		return raw, false
 	}
-	if _, exists := values[key]; !exists {
+	existing, exists := values[key]
+	if exists && bytes.Equal(existing, value) {
+		// The line already holds this value in this position, so rebuilding it
+		// would reproduce the same bytes: export re-chains every entry, and on a
+		// linear branch almost none of them change.
+		return raw, true
+	}
+	if !exists {
 		keys = append(keys, key)
 	}
 	values[key] = value

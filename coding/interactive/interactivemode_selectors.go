@@ -6,6 +6,7 @@ import (
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/internal/offloop"
 	"github.com/dat267/pier/tui"
 )
 
@@ -174,6 +175,11 @@ type SelectorWiring struct {
 	// escape handler, so escape aborts a running branch summary.
 	EditorEscapeHandler    func() func()
 	SetEditorEscapeHandler func(handler func())
+	// TreeQueue builds the session tree off the owner loop; TreeQueue or
+	// PostToUI nil builds it synchronously (tests and embedders).
+	TreeQueue *offloop.Queue
+	// PostToUI delivers a built selector back to the owner loop.
+	PostToUI func(func())
 }
 
 func (w *SelectorWiring) showStatus(message string) {
@@ -355,40 +361,77 @@ func (w *SelectorWiring) ShowTrustSelector() {
 }
 
 // ShowTreeSelector opens the session tree selector and handles navigation.
+//
+// Building the list decodes every entry's message, which on a long session is
+// hundreds of milliseconds. The decode runs on TreeQueue when one is wired, and
+// the selector is handed back with PostToUI, so the loop keeps painting; the
+// synchronous path is what tests and embedders use.
 func (w *SelectorWiring) ShowTreeSelector(ctx context.Context, initialSelectedID string, hasInitial bool) {
 	if w.SessionInfo == nil {
 		return
 	}
-	tree := w.SessionInfo.GetTree()
 	realLeafID := w.SessionInfo.GetLeafID()
-	if len(tree) == 0 {
-		w.showStatus("No entries in session")
-		return
-	}
 	terminalHeight := 40
 	if w.TerminalRows != nil {
 		terminalHeight = w.TerminalRows()
 	}
-	w.Slot.Show(func(done func()) CreatedSelector {
-		selector := NewTreeSelectorComponent(tree, realLeafID, terminalHeight,
-			func(entryID string) {
-				w.handleTreeSelection(ctx, done, entryID)
-			},
-			func() {
-				done()
-				if w.Slot.UI != nil {
-					w.Slot.UI.RequestRender(false)
-				}
-			},
-			TreeSelectorOptions{
-				OnLabelChange: func(entryID string, label *string) {
-					if _, err := w.SessionInfo.AppendLabelChange(entryID, label); err != nil {
-						w.showError(err.Error())
+	maxVisibleLines := max(5, terminalHeight/2)
+
+	// build returns nil when the session has no entries.
+	build := func() *TreeList {
+		tree := w.SessionInfo.GetTree()
+		if len(tree) == 0 {
+			return nil
+		}
+		return NewTreeList(tree, realLeafID, maxVisibleLines, nil, FilterDefault)
+	}
+	show := func(list *TreeList, empty bool) {
+		w.Slot.Show(func(done func()) CreatedSelector {
+			selector := NewTreeSelectorComponentWithList(list, empty,
+				func(entryID string) {
+					w.handleTreeSelection(ctx, done, entryID)
+				},
+				func() {
+					done()
+					if w.Slot.UI != nil {
+						w.Slot.UI.RequestRender(false)
 					}
 				},
-			})
-		selector.OnCopy = w.handleTreeCopy
-		return CreatedSelector{Component: selector, Focus: selector}
+				TreeSelectorOptions{
+					OnLabelChange: func(entryID string, label *string) {
+						if _, err := w.SessionInfo.AppendLabelChange(entryID, label); err != nil {
+							w.showError(err.Error())
+						}
+					},
+				})
+			selector.OnCopy = w.handleTreeCopy
+			return CreatedSelector{Component: selector, Focus: selector}
+		})
+	}
+	report := func(list *TreeList) {
+		if list == nil {
+			w.showStatus("No entries in session")
+			return
+		}
+		show(list, false)
+	}
+	if w.TreeQueue == nil || w.PostToUI == nil {
+		report(build())
+		return
+	}
+	// No status line: a status replaces the last one in the transcript, and this
+	// one has no result to replace it with. The selector opening is the signal.
+	w.TreeQueue.GoLatestContext("session-tree", func(ctx context.Context) {
+		list := build()
+		if ctx.Err() != nil {
+			return
+		}
+		w.PostToUI(func() {
+			if ctx.Err() != nil {
+				return
+			}
+			report(list)
+		})
 	})
 }
 
@@ -564,6 +607,8 @@ func newSelectorWiring(app *App) *SelectorWiring {
 		ShowError:               func(message string) { app.showError(message) },
 		CopyToClipboard:         app.copyToClipboardOffLoop,
 		UpdateEditorBorderColor: func() { app.updateEditorBorderColor() },
+		TreeQueue:               app.offloopGroup.Queue(),
+		PostToUI:                func(fn func()) { app.ui.Post(fn) },
 		TerminalRows:            func() int { return app.ui.GetTerminal().Rows() },
 		ShowStatusIndicator: func(kind StatusIndicatorKind) {
 			// The tree navigation is the only caller: it summarizes a branch and

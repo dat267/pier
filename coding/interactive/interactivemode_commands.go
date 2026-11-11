@@ -9,6 +9,7 @@ import (
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/internal/offloop"
 	"github.com/dat267/pier/tui"
 )
 
@@ -60,6 +61,11 @@ type CommandWiring struct {
 
 	// ExportToHTML exports the session as an HTML file.
 	ExportToHTML func(outputPath string) (string, error)
+	// ExportQueue runs the export off the owner loop; ExportQueue or PostToUI
+	// nil exports synchronously (tests and embedders).
+	ExportQueue *offloop.Queue
+	// PostToUI delivers the export's result back to the owner loop.
+	PostToUI func(func())
 	// HandleFatalRuntimeError reports a fatal runtime error and shuts down
 	// (upstream handleFatalRuntimeError).
 	HandleFatalRuntimeError func(ctx context.Context, prefix string, err error)
@@ -168,28 +174,51 @@ func GetPathCommandArgument(text string, command string) (string, bool) {
 }
 
 // HandleExportCommand exports the session as JSONL or HTML.
+//
+// Serializing a long session re-chains and re-marshals every entry, which froze
+// the UI for hundreds of milliseconds. The work runs on ExportQueue when one is
+// wired and reports back through PostToUI, so the loop keeps painting; the
+// synchronous path is what tests and embedders use.
 func (w *CommandWiring) HandleExportCommand(ctx context.Context, text string) {
 	outputPath, hasPath := GetPathCommandArgument(text, "/export")
-	if hasPath && strings.HasSuffix(outputPath, ".jsonl") {
-		filePath, err := w.Session.ExportToJsonl(outputPath)
+	run := func() (string, error) {
+		if hasPath && strings.HasSuffix(outputPath, ".jsonl") {
+			return w.Session.ExportToJsonl(outputPath)
+		}
+		if w.ExportToHTML == nil {
+			return "", errExportHTMLUnavailable
+		}
+		return w.ExportToHTML(outputPath)
+	}
+	report := func(filePath string, err error) {
 		if err != nil {
 			w.showError("Failed to export session: " + err.Error())
 			return
 		}
 		w.showStatus("Session exported to: " + filePath)
+	}
+	if w.ExportQueue == nil || w.PostToUI == nil {
+		filePath, err := run()
+		report(filePath, err)
 		return
 	}
-	if w.ExportToHTML == nil {
-		w.showError("Failed to export session: HTML export is not available")
-		return
-	}
-	filePath, err := w.ExportToHTML(outputPath)
-	if err != nil {
-		w.showError("Failed to export session: " + err.Error())
-		return
-	}
-	w.showStatus("Session exported to: " + filePath)
+	w.showStatus("Exporting session…")
+	w.ExportQueue.GoLatestContext("session-export", func(ctx context.Context) {
+		filePath, err := run()
+		if ctx.Err() != nil {
+			return
+		}
+		w.PostToUI(func() {
+			if ctx.Err() != nil {
+				return
+			}
+			report(filePath, err)
+		})
+	})
 }
+
+// errExportHTMLUnavailable reports a missing HTML exporter.
+var errExportHTMLUnavailable = errors.New("HTML export is not available")
 
 // HandleImportCommand imports a session from JSONL.
 func (w *CommandWiring) HandleImportCommand(ctx context.Context, text string) {
@@ -850,6 +879,8 @@ func newCommandWiring(app *App) *CommandWiring {
 			result := app.session.LastDefaultSync()
 			return result.Message, result.Warning
 		},
+		ExportQueue: app.offloopGroup.Queue(),
+		PostToUI:    func(fn func()) { app.ui.Post(fn) },
 		ExportToHTML: func(outputPath string) (string, error) {
 			themeSetting := app.settings.GetThemeSetting()
 			themeName := ""
