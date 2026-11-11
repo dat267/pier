@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D457)
+# Deliberate divergences from pi (D1–D458)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7263,3 +7263,20 @@ hands it the preserved code unit.
 
 `Test:` `TestStreamingJSONPartialApproximations`,
 `TestToolCallArgumentsReplaceLoneSurrogates`.
+
+### D458
+
+**An MCP tool's schema is completed and re-serialized, so its keys are sorted.**
+
+`Reference:` `packages/mcp/src/input-schema.ts` `normalizeMcpInputSchema`, pi
+v1.5.2 (b4afdddf). It returns `{...schema, type, properties}`, keeping the
+server's key order and appending the two it fills in.
+
+The port completes the same two fields, but round-trips the object through a Go
+map (`coding/mcpruntime.go` `mcpToolParameters`), so the keys come out sorted
+instead of in server order. A JSON object is unordered and every provider parses
+it as one, so only the bytes differ, and sorting is stable where the server's
+order is arbitrary. Keeping the server's order would need an ordered map for a
+field whose order nothing observes.
+
+`Test:` `TestMcpToolParametersCompleteTheSchema`.
