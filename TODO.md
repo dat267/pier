@@ -33,6 +33,26 @@
   `wiring field ReloadMCP` (14), `Prompt` (14), `ExportToHTML` (13), `Stop`
   (11). Several are real blocking work the gate has never seen; each needs
   either a repair or an allowlist reason that is true today.
-- Not done in this session: the triage above. `isPier` is left unfixed with a
-  TODO beside it so the gate stays green; the loop-callback rooting landed and is
-  inert until this is fixed.
+- Not done: the triage above. `isPier` is left unfixed with a TODO beside it so
+  the gate stays green; the loop-callback rooting landed and is inert until this.
+- Triage evidence gathered. The 20 surfaces split into two kinds, and the
+  biggest are **false positives from the wiring-closure root rule**:
+  `ReloadNow` (44) and `ReloadMCP` (14) are invoked inside
+  `w.RunDetached(func(){...})` (`interactivemode_commands.go:370-390`), which is
+  the port's off-loop seam for `/reload`; the analyzer roots every wiring
+  closure as loop code, so it reports the detached worker's body. The inline
+  branch below `RunDetached` is the test-app path only.
+- The rest look like genuine loop work and need repairs, not exemptions:
+  `via runSessionFileWork ... done` (28) is `bindSessionManager` doing
+  `SetCwd -> FindGitPaths` (a `git` exec), `CreateAgentSession ->
+  LoadModelConfig` (file reads) and `CreateBranchedSession -> buildIndex ->
+  scanMessageFacts` (CPU over the session) on the loop after every replacement;
+  `FooterComponent.Render` (4) estimates context tokens per frame;
+  `ToolExecutionComponent.Invalidate` (5) decodes tool arguments; `Prompt` (3)
+  appends a context edit; `OnModelCycleBackward` (2) sends over the RPC client;
+  `WarnAnthropic` (21, startup) reads auth storage and can run a
+  `!command` credential through the shell.
+- So landing A493 needs three steps, in order: (1) the pointer-receiver form;
+  (2) an off-loop seam rule so a wiring closure invoked only inside a detached
+  worker is not rooted (the `/reload` pair); (3) repairs or reasoned allowlist
+  entries for the remainder, with `bindSessionManager`'s rebind work first.

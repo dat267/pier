@@ -508,8 +508,10 @@ func isPier(fn *ssa.Function) bool {
 	// Package-level functions are "github.com/dat267/pier/...pkg.Func"; methods
 	// are "(github.com/dat267/pier/...Type).Method" (receiver first).
 	// TODO(A493): the pointer form "(*github.com/dat267/pier/...Type).Method" is
-	// missing, so the walk skips nearly every method of this codebase. Fixing it
-	// exposes ~200 findings that must be triaged first.
+	// missing, so the walk skips nearly every method of this codebase. Landing
+	// it needs the triage in TODO.md first: it takes the gate from 39 findings
+	// to ~240, and the largest surfaces are wiring fields whose closures run
+	// inside RunDetached, which the root rule wrongly treats as loop code.
 	return strings.HasPrefix(rel, "github.com/dat267/pier/") ||
 		strings.HasPrefix(rel, "(github.com/dat267/pier/")
 }
