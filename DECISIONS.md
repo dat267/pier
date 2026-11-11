@@ -6770,7 +6770,10 @@ follow-up: it queues only while a run is active, decided under the lock, and
 the run's end checks for queued messages under the same lock and continues
 instead of ending, so a queued message is always taken by the run or finds the
 session idle and starts its own. Upstream makes the last queue check and
-clears its run flag in one synchronous stretch of its event loop.
+clears its run flag in one synchronous stretch of its event loop. A custom message that triggers a turn (goal
+rounds among them) queues behind an active run or starts one, and a start
+that loses to another caller's run queues behind that run instead of failing
+(`TestTurnTriggeringCustomMessageIsDeliveredWhenARunStartsFirst`).
 
 ### D439
 

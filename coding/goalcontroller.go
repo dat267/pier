@@ -30,7 +30,9 @@ type goalSink interface {
 	EmitGoalEntryAppended(entry *SessionEntry)
 	// SendGoalMessage adds a continuation or wrap-up message to the model
 	// context without starting a run; the caller checked that one is active.
-	SendGoalMessage(customType string, content string, display bool, details json.RawMessage, triggerTurn bool)
+	// A trigger-turn message is queued only while a run is active; it reports
+	// false when none is, and the caller starts the round as an idle one.
+	SendGoalMessage(customType string, content string, display bool, details json.RawMessage, triggerTurn bool) bool
 	// RunGoalTurn delivers a trigger-turn goal message and starts a run when no
 	// run is active (upstream sendCustomMessage's not-streaming branch).
 	RunGoalTurn(ctx context.Context, customType string, content string, display bool, details json.RawMessage) error
@@ -74,22 +76,25 @@ func (s *sessionGoalSink) EmitGoalEntryAppended(entry *SessionEntry) {
 	s.session.emit(&SessionEvent{Type: SessionEntryAppended, Entry: entry})
 }
 
-func (s *sessionGoalSink) SendGoalMessage(customType string, content string, display bool, details json.RawMessage, triggerTurn bool) {
+func (s *sessionGoalSink) SendGoalMessage(customType string, content string, display bool, details json.RawMessage, triggerTurn bool) bool {
 	if s.session == nil {
-		return
+		return true
 	}
 	if triggerTurn {
 		// Upstream `sendMessage(..., { triggerTurn: true, deliverAs: "followUp" })`:
 		// the round prompt enters the context as a display:false custom message
 		// (invisible in the transcript) and the queued follow-up starts the turn.
-		s.session.FollowUp(goalEventMessage(customType, content, display, details))
-		return
+		// D438: queued only while a run is active, decided under the run lock,
+		// so a run that ended since the caller's check cannot strand the round
+		// in an idle queue.
+		return s.session.queueWhileRunActive(goalEventMessage(customType, content, display, details), true)
 	}
 	// Upstream sendCustomMessage defers a non-trigger message sent while
 	// streaming to the end of the turn (agent-session.ts, v1.5.0): appending it
 	// mid-tool-execution would sit between the set_goal call and its result,
 	// which pi's provider replay then rejects as an orphaned tool result.
 	_ = s.session.SendMessage(context.Background(), goalEventMessage(customType, content, display, details), &SendMessageOptions{TriggerTurn: new(false)})
+	return true
 }
 
 func (s *sessionGoalSink) GoalIsStreaming() bool {
@@ -240,8 +245,9 @@ func (c *GoalController) deliverGoalMessage(customType string, content string, d
 		c.sink.SendGoalMessage(customType, content, display, details, false)
 		return
 	}
-	if c.sink.GoalIsStreaming() {
-		c.sink.SendGoalMessage(customType, content, display, details, true)
+	// Queue behind an active run; when none is active (including one that
+	// ended since this check), start the round as an idle one below.
+	if c.sink.GoalIsStreaming() && c.sink.SendGoalMessage(customType, content, display, details, true) {
 		return
 	}
 	reserved := c.Snapshot()

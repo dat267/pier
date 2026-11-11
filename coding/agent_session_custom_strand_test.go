@@ -71,3 +71,62 @@ func TestCustomMessageSentAsARunEndsIsNotStranded(t *testing.T) {
 		}
 	}
 }
+
+// A custom message that triggers a turn is delivered whether it finds a run
+// active (queued behind it) or the session idle (starting a run), even when
+// another caller starts a run in between; it is never refused as "already
+// processing". Upstream sendCustomMessage (core/agent-session.ts, pi v1.5.2
+// b4afdddf) makes the choice in one step on its event loop. Goal rounds are
+// delivered this way.
+func TestTurnTriggeringCustomMessageIsDeliveredWhenARunStartsFirst(t *testing.T) {
+	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
+	streamFn := func(m *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			time.Sleep(time.Duration(rand.IntN(200)) * time.Microsecond)
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+				API: m.API, Provider: m.Provider, Model: m.ID, StopReason: ai.StopStop,
+				Content: ai.ContentList{ai.TextContent{Text: "ok"}},
+			}})
+		}()
+		return stream
+	}
+	manager, dir := newTestSession(t)
+	session, err := NewAgentSession(&SessionConfig{Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, ConvertToLlm: ConvertToLlm})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Dispose()
+
+	const rounds = 60
+	for round := range rounds {
+		var group sync.WaitGroup
+		group.Go(func() { _ = session.Prompt(context.Background(), fmt.Sprintf("prompt %d", round), nil) })
+		var sendErr error
+		group.Go(func() {
+			time.Sleep(time.Duration(rand.IntN(300)) * time.Microsecond)
+			content, _ := json.Marshal(map[string]any{"customType": "round", "content": fmt.Sprintf("round %d", round), "display": false})
+			sendErr = session.SendMessage(context.Background(), &ai.CustomMessage{Role: "custom", Content: content},
+				&SendMessageOptions{DeliverAs: "followUp"})
+		})
+		group.Wait()
+		if sendErr != nil {
+			t.Fatalf("round %d: the turn-triggering message was refused: %v", round, sendErr)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		err := session.WaitForIdle(ctx)
+		cancel()
+		if err != nil {
+			t.Fatal(err)
+		}
+		found := false
+		for _, message := range session.Agent.State().Messages {
+			if custom, ok := message.(*ai.CustomMessage); ok && strings.Contains(string(custom.Content), fmt.Sprintf(`"round %d"`, round)) {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatalf("round %d: the message never reached the transcript", round)
+		}
+	}
+}

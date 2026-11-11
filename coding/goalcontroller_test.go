@@ -53,8 +53,9 @@ func (f *fakeGoalSink) EmitGoalEntryAppended(entry *SessionEntry) {
 	f.emitted = append(f.emitted, entry)
 }
 
-func (f *fakeGoalSink) SendGoalMessage(customType string, content string, display bool, details json.RawMessage, triggerTurn bool) {
+func (f *fakeGoalSink) SendGoalMessage(customType string, content string, display bool, details json.RawMessage, triggerTurn bool) bool {
 	f.messages = append(f.messages, recordedGoalMessage{customType: customType, content: content, display: display, triggerTurn: triggerTurn})
+	return true
 }
 
 func (f *fakeGoalSink) RunGoalTurn(ctx context.Context, customType string, content string, display bool, details json.RawMessage) error {

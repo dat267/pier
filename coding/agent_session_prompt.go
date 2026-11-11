@@ -3,6 +3,7 @@ package coding
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -318,7 +319,7 @@ func (s *AgentSession) startAgentPrompt(ctx context.Context, messages []ai.Messa
 	// session look idle between the winner's agent runs.
 	if state.runActive {
 		state.mu.Unlock()
-		return fmt.Errorf("Agent is already processing a prompt. Use Steer() or FollowUp() to queue messages, or wait for completion.")
+		return errRunAlreadyActive
 	}
 	if state.navigating {
 		state.mu.Unlock()
@@ -559,6 +560,9 @@ func (s *AgentSession) SendUserMessage(ctx context.Context, content any, deliver
 	})
 }
 
+// errRunAlreadyActive is a run start that lost to another caller's run (D438).
+var errRunAlreadyActive = errors.New("Agent is already processing a prompt. Use Steer() or FollowUp() to queue messages, or wait for completion.")
+
 // SendMessageOptions configure SendMessage.
 type SendMessageOptions struct {
 	// TriggerTurn starts a turn for the message (default true).
@@ -590,15 +594,22 @@ func (s *AgentSession) SendMessage(ctx context.Context, message *ai.CustomMessag
 			s.emitCustomMessage(message)
 		}
 		return nil
-	case !s.IsStreaming():
-		return s.startAgentPrompt(ctx, []ai.Message{message}, options.unlessDisposed)
 	default:
-		// Queue for the active run, or start one if it ended since the check
-		// above (queueWhileRunActive).
-		if s.queueWhileRunActive(message, options.DeliverAs == "followUp") {
-			return nil
+		// Upstream queues a turn-triggering message behind an active run and
+		// otherwise starts one. Both are decided under the run lock
+		// (queueWhileRunActive, startAgentPrompt), and a start that loses to a
+		// run another caller started queues behind that run instead of failing,
+		// so the message is never dropped (D438).
+		followUp := options.DeliverAs == "followUp"
+		for {
+			if s.queueWhileRunActive(message, followUp) {
+				return nil
+			}
+			err := s.startAgentPrompt(ctx, []ai.Message{message}, options.unlessDisposed)
+			if !errors.Is(err, errRunAlreadyActive) {
+				return err
+			}
 		}
-		return s.startAgentPrompt(ctx, []ai.Message{message}, options.unlessDisposed)
 	}
 }
 
