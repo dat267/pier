@@ -46,6 +46,10 @@ type McpManager struct {
 	// late tools to the live session; the session-attached manager re-attaches
 	// after every rebuild, `/reload` included (upstream _pendingToolNames).
 	onToolsChange func()
+	// rebuildStarted numbers each rebuild as it starts; published is the
+	// number of the newest rebuild whose tool set is in tools.
+	rebuildStarted uint64
+	published      uint64
 }
 
 // NewMcpManager connects every enabled server (in configuration order), waits
@@ -211,6 +215,8 @@ func (m *McpManager) Close(ctx context.Context) error {
 // (upstream registers a definition per tool and exposes the direct ones).
 func (m *McpManager) rebuildTools() {
 	m.mu.Lock()
+	m.rebuildStarted++
+	generation := m.rebuildStarted
 	connections := append([]*McpServerConnection{}, m.connections...)
 	m.mu.Unlock()
 	taken := map[string]bool{}
@@ -273,6 +279,15 @@ func (m *McpManager) rebuildTools() {
 		}
 	}
 	m.mu.Lock()
+	// Servers that connect at once rebuild concurrently. A rebuild that started
+	// later read every connection after this one began, and each connect
+	// rebuilds after it settles, so once a later rebuild has published, this
+	// older set may lack a server and must not replace it.
+	if generation < m.published {
+		m.mu.Unlock()
+		return
+	}
+	m.published = generation
 	m.tools = tools
 	changed := m.onToolsChange
 	m.mu.Unlock()
