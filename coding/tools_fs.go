@@ -367,7 +367,9 @@ func CreateLsTool(cwd string) agent.AgentTool {
 			dirPath := ResolveToCwd(orDefault(input.Path, "."), cwd)
 			effectiveLimit := float64(lsDefaultLimit)
 			if input.Limit != nil {
-				effectiveLimit = *input.Limit
+				// A fractional limit is floored and never below 1: a limit of 0 would
+				// list nothing and report an empty directory (pi v1.5.2 ls.ts).
+				effectiveLimit = math.Max(1, math.Floor(*input.Limit))
 			}
 
 			// D315: check after synchronous filesystem calls so cancellation cannot

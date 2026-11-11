@@ -2,7 +2,7 @@
 
 pier is a terminal-based AI coding agent and a from-scratch Go port of
 [Mario Zechner's pi](https://github.com/earendil-works/pi). It is pinned to pi
-v1.5.0 (`f9a26365`); use `git log` for release/change history,
+v1.5.2 (`b4afdddf`); use `git log` for release/change history,
 [ARCHITECTURE.md](ARCHITECTURE.md) for design and [DECISIONS.md](DECISIONS.md)
 for deliberate differences.
 

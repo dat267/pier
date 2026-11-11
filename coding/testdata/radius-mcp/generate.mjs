@@ -4,24 +4,40 @@
 // extensions/mcp/config.ts addMcpServerConfig. Execute the actual method with
 // a minimal host instead of importing the interactive app and native helpers.
 import { execFileSync } from "node:child_process";
-import { stripTypeScriptTypes } from "node:module";
+import { registerHooks, stripTypeScriptTypes } from "node:module";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 
 const root = path.resolve(process.argv[2] ?? "./pi");
-if (!execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).startsWith("f9a26365")) {
-  throw new Error("requires pinned pi v1.5.0 (f9a26365)");
+if (!execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).startsWith("b4afdddf")) {
+  throw new Error("requires pinned pi v1.5.2 (b4afdddf)");
 }
+// Load the pin's sources: the installed workspace packages are published
+// bundles, and the installed pi-mcp lacks exports its own source has.
+registerHooks({ resolve(specifier, context, next) {
+	const map = {
+		"@earendil-works/pi-ai": "packages/ai/src/index.ts",
+		"@earendil-works/pi-ai/utils/oauth-page": "packages/ai/src/utils/oauth-page.ts",
+		"@earendil-works/pi-agent-core": "packages/agent/src/index.ts",
+		"@earendil-works/pi-mcp": "packages/mcp/src/index.ts",
+		"@earendil-works/pi-mcp/oauth": "packages/mcp/src/oauth/index.ts",
+		"@earendil-works/pi-schema": "packages/schema/src/index.ts",
+		"@earendil-works/pi-telemetry": "packages/telemetry/src/index.ts",
+		"@earendil-works/pi-tui": "packages/tui/src/index.ts",
+	};
+	return map[specifier] ? { url: pathToFileURL(path.resolve(root, map[specifier])).href, shortCircuit: true } : next(specifier, context);
+} });
 const { loadMcpConfig, addMcpServerConfig } = await import(pathToFileURL(path.join(root, "packages/coding-agent/src/extensions/mcp/config.ts")));
 const { DEFAULT_RADIUS_GATEWAY, normalizeRadiusGatewayUrl } = await import(pathToFileURL(path.join(root, "packages/ai/src/providers/radius-config.ts")));
+const { planRadiusMcpServer } = await import(pathToFileURL(path.join(root, "packages/coding-agent/src/core/radius-mcp.ts")));
 const source = readFileSync(path.join(root, "packages/coding-agent/src/modes/interactive/interactive-mode.ts"), "utf8");
 const start = source.indexOf("\tprivate offerRadiusMcpServer(");
 const end = source.indexOf("\n\t// =========================================================================", start);
 if (start < 0 || end < 0) throw new Error("offerRadiusMcpServer moved");
 const method = stripTypeScriptTypes(source.slice(start, end).replace("private offerRadiusMcpServer", "function offerRadiusMcpServer"));
-const createMethod = new Function("path", "getAgentDir", "loadMcpConfig", "RADIUS_MCP_URL", "ExtensionSelectorComponent", "addMcpServerConfig", method + "\nreturn offerRadiusMcpServer;");
+const createMethod = new Function("path", "getAgentDir", "loadMcpConfig", "RADIUS_MCP_URL", "ExtensionSelectorComponent", "addMcpServerConfig", "planRadiusMcpServer", method + "\nreturn offerRadiusMcpServer;");
 
 const cases = [
   {name: "missing-yes", initial: null, choice: "Yes"},
@@ -60,7 +76,7 @@ const results = cases.map((entry) => {
     class Selector {
       constructor(title, options, onSelect, onCancel) { selector = { onSelect, onCancel }; }
     }
-    const offer = createMethod(path, () => dir, loadMcpConfig, `${normalizeRadiusGatewayUrl(DEFAULT_RADIUS_GATEWAY)}/mcp`, Selector, addMcpServerConfig);
+    const offer = createMethod(path, () => dir, loadMcpConfig, `${normalizeRadiusGatewayUrl(DEFAULT_RADIUS_GATEWAY)}/mcp`, Selector, addMcpServerConfig, planRadiusMcpServer);
     offer.call({
       sessionManager: {getCwd: () => dir},
       showSelector: (create) => create(() => {}),

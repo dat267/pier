@@ -252,11 +252,17 @@ func TestLsToolSortingAndLimits(t *testing.T) {
 		t.Fatalf("limit notice missing: %q", text)
 	}
 
-	// Upstream ls.ts compares results.length directly with the numeric limit.
+	// pi v1.5.2 floors a fractional limit and never goes below 1.
 	result = execTool(t, tool, `{"limit":1.5}`)
 	text = result.Content[0].(ai.TextContent).Text
-	if !strings.HasPrefix(text, ".dot\nAlpha.txt\n") || !strings.Contains(text, "1.5 entries limit reached. Use limit=3 for more") {
+	if !strings.HasPrefix(text, ".dot\n") || !strings.Contains(text, "1 entries limit reached. Use limit=2 for more") {
 		t.Fatalf("fractional limit output = %q", text)
+	}
+	// A limit of 0 would list nothing, so it means 1.
+	result = execTool(t, tool, `{"limit":0}`)
+	text = result.Content[0].(ai.TextContent).Text
+	if !strings.HasPrefix(text, ".dot\n") || !strings.Contains(text, "1 entries limit reached") {
+		t.Fatalf("zero limit output = %q", text)
 	}
 
 	// File (not directory).

@@ -5,9 +5,27 @@
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { registerHooks } from "node:module";
 import { pathToFileURL } from "node:url";
 
 const root = resolve(process.argv[2] ?? "./pi");
+// Load the pin's sources: the installed workspace packages are published
+// bundles, and the installed pi-mcp lacks exports its own source has.
+registerHooks({ resolve(specifier, context, next) {
+	const map = {
+		"@earendil-works/pi-ai": "packages/ai/src/index.ts",
+		"@earendil-works/pi-ai/utils/oauth-page": "packages/ai/src/utils/oauth-page.ts",
+		"@earendil-works/pi-agent-core": "packages/agent/src/index.ts",
+		"@earendil-works/pi-mcp": "packages/mcp/src/index.ts",
+		"@earendil-works/pi-mcp/oauth": "packages/mcp/src/oauth/index.ts",
+		"@earendil-works/pi-schema": "packages/schema/src/index.ts",
+		"@earendil-works/pi-schema/formats": "packages/schema/src/formats/index.ts",
+		"@earendil-works/pi-telemetry": "packages/telemetry/src/index.ts",
+		"@earendil-works/pi-tui": "packages/tui/src/index.ts",
+	};
+	return map[specifier] ? { url: pathToFileURL(resolve(root, map[specifier])).href, shortCircuit: true } : next(specifier, context);
+} });
+
 const { hasTrustRequiringProjectResources, ProjectTrustStore } = await import(
 	pathToFileURL(join(root, "packages/coding-agent/src/core/trust-manager.ts")).href,
 );

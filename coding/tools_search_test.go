@@ -138,29 +138,37 @@ func TestFindRelativizePosix(t *testing.T) {
 	}
 }
 
-// Upstream grep.ts kills ripgrep as soon as the configured match limit is reached.
+// pi v1.5.2 grep.ts keeps reading after the limit match so the last match's
+// trailing context can arrive, and finishes once another match proves the limit
+// cut results off.
 func TestGrepToolStopsRipgrepAtMatchLimit(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("uses a POSIX rg test stub")
 	}
 	stubDir := t.TempDir()
 	stub := filepath.Join(stubDir, "rg")
-	script := "#!/bin/sh\nprintf '%s\\n' '{\"type\":\"match\",\"data\":{\"path\":{\"text\":\"" + filepath.Join(stubDir, "match.txt") + "\"},\"line_number\":1,\"lines\":{\"text\":\"needle\\n\"}}}'\nexec sleep 30\n"
+	first := `{"type":"match","data":{"path":{"text":"` + filepath.Join(stubDir, "match.txt") + `"},"line_number":1,"lines":{"text":"needle\\n"}}}`
+	second := `{"type":"match","data":{"path":{"text":"` + filepath.Join(stubDir, "match.txt") + `"},"line_number":2,"lines":{"text":"needle again\\n"}}}`
+	script := "#!/bin/sh\nprintf '%s\\n' '" + first + "'\nsleep 0.2\nprintf '%s\\n' '" + second + "'\nexec sleep 30\n"
 	if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(stubDir, "match.txt"), []byte("needle\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(stubDir, "match.txt"), []byte("needle\nneedle again\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", stubDir+string(os.PathListSeparator)+os.Getenv("PATH"))
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	result, err := CreateGrepTool(stubDir).Execute("c", json.RawMessage(`{"pattern":"needle","limit":1}`), ctx, nil)
 	if err != nil {
 		t.Fatalf("grep did not finish after reaching limit: %v", err)
 	}
-	if text := result.Content[0].(ai.TextContent).Text; !strings.Contains(text, "match.txt:1: needle") {
+	text := result.Content[0].(ai.TextContent).Text
+	if !strings.Contains(text, "match.txt:1: needle") {
 		t.Fatalf("grep output = %q", text)
+	}
+	if strings.Contains(text, "needle again") || !strings.Contains(text, "1 matches limit reached") {
+		t.Fatalf("limit output = %q", text)
 	}
 }
 
@@ -180,11 +188,11 @@ func TestGrepToolMatches(t *testing.T) {
 		t.Fatalf("non-matching file in output: %q", text)
 	}
 
-	// Upstream grep.ts clamps the number with Math.max but preserves fractions.
+	// pi v1.5.2 floors the limit and never goes below 1.
 	result = execTool(t, tool, `{"pattern":"alpha","limit":1.5}`)
 	text = result.Content[0].(ai.TextContent).Text
-	if !strings.Contains(text, "a.txt:1: alpha one") || !strings.Contains(text, "a.txt:3: alpha three") ||
-		!strings.Contains(text, "1.5 matches limit reached. Use limit=3 for more") {
+	if !strings.Contains(text, "a.txt:1: alpha one") || strings.Contains(text, "alpha three") ||
+		!strings.Contains(text, "1 matches limit reached. Use limit=2 for more") {
 		t.Fatalf("fractional grep limit = %q", text)
 	}
 
@@ -217,10 +225,10 @@ func TestGrepToolMatches(t *testing.T) {
 		t.Fatalf("context grep = %q", text)
 	}
 
-	// Upstream grep.ts carries fractional context through its line-number loop.
+	// pi v1.5.2 floors the context, so a fraction below one means no context.
 	result = execTool(t, tool, `{"pattern":"beta two","context":0.5}`)
 	text = result.Content[0].(ai.TextContent).Text
-	if text != "a.txt-1.5- \na.txt-2.5- " {
+	if text != "a.txt:2: beta two" {
 		t.Fatalf("fractional context grep = %q", text)
 	}
 

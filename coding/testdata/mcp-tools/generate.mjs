@@ -3,10 +3,32 @@
 // Reference: pi v1.4.0 (4a080252), packages/coding-agent/src/extensions/mcp/tools.ts.
 // Executes the pinned createMcpToolName and toModelContent, never an installed bundle.
 import { resolve, join } from "node:path";
+import { registerHooks } from "node:module";
 import { pathToFileURL } from "node:url";
 
 const root = resolve(process.argv[2] ?? "./pi");
-const { createMcpToolName, toModelContent } = await import(
+// Load the pin's sources: the installed workspace packages are published
+// bundles, and the installed pi-mcp lacks exports its own source has.
+registerHooks({ resolve(specifier, context, next) {
+	const map = {
+		"@earendil-works/pi-ai": "packages/ai/src/index.ts",
+		"@earendil-works/pi-ai/utils/oauth-page": "packages/ai/src/utils/oauth-page.ts",
+		"@earendil-works/pi-agent-core": "packages/agent/src/index.ts",
+		"@earendil-works/pi-mcp": "packages/mcp/src/index.ts",
+		"@earendil-works/pi-mcp/oauth": "packages/mcp/src/oauth/index.ts",
+		"@earendil-works/pi-schema": "packages/schema/src/index.ts",
+		"@earendil-works/pi-schema/formats": "packages/schema/src/formats/index.ts",
+		"@earendil-works/pi-telemetry": "packages/telemetry/src/index.ts",
+		"@earendil-works/pi-tui": "packages/tui/src/index.ts",
+	};
+	return map[specifier] ? { url: pathToFileURL(resolve(root, map[specifier])).href, shortCircuit: true } : next(specifier, context);
+} });
+
+// createMcpToolName moved into the mcp package in the pinned release.
+const { createMcpToolName } = await import(
+	pathToFileURL(join(root, "packages/mcp/src/naming.ts")).href,
+);
+const { toModelContent } = await import(
 	pathToFileURL(join(root, "packages/coding-agent/src/extensions/mcp/tools.ts")).href,
 );
 

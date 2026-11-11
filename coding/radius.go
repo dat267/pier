@@ -2,6 +2,7 @@ package coding
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -34,10 +35,18 @@ func PrepareRadiusMcpServerConfig(agentDir string) (string, json.RawMessage) {
 		}
 	}
 	if !existing {
+		// Pick a free name instead of replacing an unrelated server: a taken
+		// `radius` yields `radius-mcp`, then `radius-mcp-2`, and so on (pi v1.5.2
+		// core/radius-mcp.ts planRadiusMcpServer).
+		namespaces := make(map[string]bool, len(loaded.Servers))
 		for _, server := range loaded.Servers {
-			if server.Name == name {
+			namespaces[McpNamespace(server.Name)] = true
+		}
+		for suffix := 1; namespaces[McpNamespace(name)]; suffix++ {
+			if suffix == 1 {
 				name = "radius-mcp"
-				break
+			} else {
+				name = "radius-mcp-" + strconv.Itoa(suffix)
 			}
 		}
 	}

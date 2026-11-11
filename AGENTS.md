@@ -11,7 +11,7 @@ Project rules for coding agents. Where things live:
 
 ## Upstream parity
 
-- `./pi` is the pinned upstream implementation (v1.5.0, `f9a26365`); pier is a
+- `./pi` is the pinned upstream implementation (v1.5.2, `b4afdddf`); pier is a
   near-identical Go port. To preserve behavior, read its TypeScript, not an
   installed bundle; `just reference` verifies the pin. D-rows and test comments
   cite the revision they were verified against, so older ones name v1.4.0 on

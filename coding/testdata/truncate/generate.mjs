@@ -73,22 +73,29 @@ for (const line of lineCases) {
 		outputs.push({ name: `line/${line.length}/${maxChars}`, kind: "line", line, maxChars, expected: truncate.truncateLine(line, maxChars) });
 	}
 }
-const middleCases = [
-	{ content: "", maxBytes: 10 },
-	{ content: "short text", maxBytes: 10 },
-	{ content: repeat("漢", 20), maxBytes: 15 },
-	{ content: `${lines(100)}\n`, maxBytes: 100 },
-	{ content: repeat("😀", 10), maxBytes: 9 },
-	// A non-positive or tiny budget: the reference's subarray resolves these
-	// indices instead of throwing, so the port must match them (A467).
-	{ content: "abc", maxBytes: 0 },
-	{ content: "abc", maxBytes: -1 },
-	{ content: "abcdef", maxBytes: 3 },
-	{ content: repeat("é", 10), maxBytes: -4 },
-	{ content: "abc", maxBytes: 1 },
+const cap = 20 * 1024;
+const mcpCases = [
+	{ name: "under", content: repeat("x", cap - 1) },
+	{ name: "at-cap", content: repeat("x", cap) },
+	{ name: "over-ascii", content: repeat("x", cap + 100) },
+	{ name: "over-astral", content: repeat("😀", Math.floor(cap / 4) + 50) },
+	{ name: "over-multiline", content: lines(4000) },
 ];
-for (const { content, maxBytes } of middleCases) {
-	outputs.push({ name: `middle/${content.length}/${maxBytes}`, kind: "middle", content, maxBytes, expected: truncate.truncateMiddle(content, maxBytes) });
+// Middle truncation moved into the mcp package as a private helper of
+// limitMcpContent, which caps at a fixed budget, so the behavior is pinned
+// through that public entry point.
+const { limitMcpContent } = await import(pathToFileURL(join(root, "packages/mcp/src/index.ts")).href);
+const savedPath = "/tmp/full.txt";
+const saveOutput = async () => savedPath;
+for (const { name, content } of mcpCases) {
+	const result = await limitMcpContent([{ type: "text", text: content }], saveOutput);
+	outputs.push({
+		name: `mcp/${name}`,
+		kind: "mcp",
+		content,
+		savePath: savedPath,
+		expected: result.content.map((block) => block.text ?? "").join(""),
+	});
 }
 const sizes = [0, 1, 1023, 1024, 1025, 51200, 1048575, 1048576, 1572864];
 for (const bytes of sizes) {

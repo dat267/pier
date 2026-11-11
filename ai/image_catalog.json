@@ -814,6 +814,68 @@
     "provider": "openrouter",
     "type": "image"
    },
+   "minimax/minimax-h3-image": {
+    "api": "openrouter-images",
+    "baseUrl": "https://openrouter.ai/api/v1",
+    "cost": {
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "input": 2.3,
+     "output": 0
+    },
+    "id": "minimax/minimax-h3-image",
+    "input": [
+     "text",
+     "image"
+    ],
+    "inputLimits": {
+     "images": {
+      "resize": {
+       "jpegQuality": 80,
+       "maxBytes": 4718592,
+       "maxHeight": 2000,
+       "maxWidth": 2000
+      }
+     }
+    },
+    "name": "MiniMax: MiniMax H3 Image",
+    "output": [
+     "image"
+    ],
+    "provider": "openrouter",
+    "type": "image"
+   },
+   "minimax/minimax-h3-image-highspeed": {
+    "api": "openrouter-images",
+    "baseUrl": "https://openrouter.ai/api/v1",
+    "cost": {
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "input": 2.3,
+     "output": 0
+    },
+    "id": "minimax/minimax-h3-image-highspeed",
+    "input": [
+     "text",
+     "image"
+    ],
+    "inputLimits": {
+     "images": {
+      "resize": {
+       "jpegQuality": 80,
+       "maxBytes": 4718592,
+       "maxHeight": 2000,
+       "maxWidth": 2000
+      }
+     }
+    },
+    "name": "MiniMax: MiniMax H3 Image Highspeed",
+    "output": [
+     "image"
+    ],
+    "provider": "openrouter",
+    "type": "image"
+   },
    "openai/gpt-5-image": {
     "api": "openrouter-images",
     "baseUrl": "https://openrouter.ai/api/v1",
@@ -1065,6 +1127,68 @@
     "provider": "openrouter",
     "type": "image"
    },
+   "openai/gpt-image-2.6-flare": {
+    "api": "openrouter-images",
+    "baseUrl": "https://openrouter.ai/api/v1",
+    "cost": {
+     "cacheRead": 2,
+     "cacheWrite": 10,
+     "input": 8,
+     "output": 8
+    },
+    "id": "openai/gpt-image-2.6-flare",
+    "input": [
+     "text",
+     "image"
+    ],
+    "inputLimits": {
+     "images": {
+      "resize": {
+       "jpegQuality": 80,
+       "maxBytes": 4718592,
+       "maxHeight": 2000,
+       "maxWidth": 2000
+      }
+     }
+    },
+    "name": "OpenAI: GPT Image 2.6 Flare",
+    "output": [
+     "image"
+    ],
+    "provider": "openrouter",
+    "type": "image"
+   },
+   "openai/gpt-image-2.6-sunburst": {
+    "api": "openrouter-images",
+    "baseUrl": "https://openrouter.ai/api/v1",
+    "cost": {
+     "cacheRead": 2,
+     "cacheWrite": 10,
+     "input": 8,
+     "output": 8
+    },
+    "id": "openai/gpt-image-2.6-sunburst",
+    "input": [
+     "text",
+     "image"
+    ],
+    "inputLimits": {
+     "images": {
+      "resize": {
+       "jpegQuality": 80,
+       "maxBytes": 4718592,
+       "maxHeight": 2000,
+       "maxWidth": 2000
+      }
+     }
+    },
+    "name": "OpenAI: GPT Image 2.6 Sunburst",
+    "output": [
+     "image"
+    ],
+    "provider": "openrouter",
+    "type": "image"
+   },
    "openrouter/auto": {
     "api": "openrouter-images",
     "baseUrl": "https://openrouter.ai/api/v1",
@@ -1122,6 +1246,38 @@
      }
     },
     "name": "Auto Router (Beta)",
+    "output": [
+     "text",
+     "image"
+    ],
+    "provider": "openrouter",
+    "type": "image"
+   },
+   "openrouter/auto-code": {
+    "api": "openrouter-images",
+    "baseUrl": "https://openrouter.ai/api/v1",
+    "cost": {
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "input": 0,
+     "output": 0
+    },
+    "id": "openrouter/auto-code",
+    "input": [
+     "text",
+     "image"
+    ],
+    "inputLimits": {
+     "images": {
+      "resize": {
+       "jpegQuality": 80,
+       "maxBytes": 4718592,
+       "maxHeight": 2000,
+       "maxWidth": 2000
+      }
+     }
+    },
+    "name": "Auto Code",
     "output": [
      "text",
      "image"

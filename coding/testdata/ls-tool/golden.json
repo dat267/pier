@@ -42,9 +42,9 @@
     "path": "tree",
     "limit": 2.5,
     "expected": {
-      "text": "_x\n-y\n.hidden\n\n[2.5 entries limit reached. Use limit=5 for more]",
+      "text": "_x\n-y\n\n[2 entries limit reached. Use limit=4 for more]",
       "details": {
-        "entryLimitReached": 2.5
+        "entryLimitReached": 2
       }
     }
   },

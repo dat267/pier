@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
+	"unicode/utf16"
 	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
@@ -435,7 +436,28 @@ func TruncateLine(line string, maxChars int) TruncateLineOutput {
 		return TruncateLineOutput{Text: line, WasTruncated: false}
 	}
 	return TruncateLineOutput{
-		Text:         ai.JSSlice(line, 0, maxChars) + "... [truncated]",
+		Text:         SliceHead(line, maxChars) + "... [truncated]",
 		WasTruncated: true,
 	}
 }
+
+// SliceHead returns at most the first maxUnits UTF-16 code units of text without
+// splitting a surrogate pair (pi v1.5.2 truncate.ts sliceHead): a lone high
+// surrogate before the cut would be invalid UTF-16, so the whole character is
+// left out. A negative budget yields "", where JavaScript's `slice(0, -1)`
+// dropped the last character instead.
+func SliceHead(text string, maxUnits int) string {
+	end := max(0, maxUnits)
+	units := utf16.Encode([]rune(text))
+	if end > len(units) {
+		end = len(units)
+	}
+	if end > 0 && end < len(units) && isHighSurrogateUnit(units[end-1]) && isLowSurrogateUnit(units[end]) {
+		end--
+	}
+	return string(utf16.Decode(units[:end]))
+}
+
+func isHighSurrogateUnit(unit uint16) bool { return unit >= 0xd800 && unit <= 0xdbff }
+
+func isLowSurrogateUnit(unit uint16) bool { return unit >= 0xdc00 && unit <= 0xdfff }

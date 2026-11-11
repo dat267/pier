@@ -81,7 +81,7 @@ func TestCatalogIncludesGPT61Terra(t *testing.T) {
 		toolSearch bool
 	}{
 		{"openai", APIOpenAIResponses, 272000, 128000, true, "", true},
-		{"azure", APIAzureOpenAIResponses, 272000, 128000, false, "", false},
+		{"azure", APIAzureOpenAIResponses, 1050000, 128000, true, "", false},
 		{"openai-codex", APIOpenAICodexResponses, 500000, 128000, true, "low", true},
 	} {
 		t.Run(tc.provider, func(t *testing.T) {

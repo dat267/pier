@@ -143,7 +143,13 @@ func TestRunAuthCommandUnknownSubcommandUsesTheInvokedName(t *testing.T) {
 	if !handled || code != 1 {
 		t.Fatalf("handled=%v code=%d stderr=%s", handled, code, stderr.String())
 	}
-	if !strings.Contains(stderr.String(), `Use "pier auth print-api-key"`) || strings.Contains(stderr.String(), `Use "pi auth`) {
+	// pi v1.5.2 lists login, logout, print-api-key, print-bearer-token and check.
+	for _, subcommand := range []string{"login", "logout", "print-api-key", "print-bearer-token", "check"} {
+		if !strings.Contains(stderr.String(), `"pier auth `+subcommand+`"`) {
+			t.Fatalf("unknown-command guidance omits %q:\n%s", subcommand, stderr.String())
+		}
+	}
+	if strings.Contains(stderr.String(), `Use "pi auth`) {
 		t.Fatalf("unknown-command guidance does not name the invoked binary:\n%s", stderr.String())
 	}
 }

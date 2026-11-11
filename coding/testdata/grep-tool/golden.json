@@ -82,7 +82,7 @@
       "context": 0.5
     },
     "expected": {
-      "text": "a.txt-1.5- \na.txt-2.5- ",
+      "text": "a.txt:2: beta two",
       "details": null
     }
   },
@@ -107,9 +107,9 @@
       "limit": 1.5
     },
     "expected": {
-      "text": "a.txt:1: alpha one\na.txt:3: alpha three\n[1.5 matches limit reached. Use limit=3 for more, or refine pattern]",
+      "text": "a.txt:1: alpha one\n[1 matches limit reached. Use limit=2 for more, or refine pattern]",
       "details": {
-        "matchLimitReached": 1.5
+        "matchLimitReached": 1
       }
     }
   },

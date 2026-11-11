@@ -151,8 +151,8 @@ func parseAuthCommandNamed(appName string, args []string) (*AuthCommand, error) 
 			name = args[1]
 		}
 		return nil, &AuthCommandError{Message: fmt.Sprintf(
-			`Unknown auth command "%s". Use "%s auth print-api-key", "%s auth print-bearer-token", or "%s auth check".`,
-			name, appName, appName, appName)}
+			`Unknown auth command "%s". Use "%s auth login", "%s auth logout", "%s auth print-api-key", "%s auth print-bearer-token", or "%s auth check".`,
+			name, appName, appName, appName, appName, appName)}
 	}
 	command := &AuthCommand{Kind: kind}
 	for index := 2; index < len(args); index++ {

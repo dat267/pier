@@ -1,6 +1,6 @@
 # Architecture and performance
 
-The design reference for `pier`, a Go port of pi v1.5.0 (`f9a26365`): runtime
+The design reference for `pier`, a Go port of pi v1.5.2 (`b4afdddf`): runtime
 structure, performance evidence, the stdio RPC contract, and the lock inventory,
 which is the source of truth for retained and retired UI locks. Deliberate
 differences from pi are D-rows in [DECISIONS.md](DECISIONS.md), contributor
@@ -83,7 +83,7 @@ byte-parity regressions.
   refresh generation still owns it, so a retired completion cannot erase the
   handle its replacement needs to cancel current work on provider removal or
   replacement (`TestOldRefreshCompletionKeepsReplacementCancellation`, upstream
-  v1.5.0 `f9a26365` models.ts controller-identity check).
+  v1.5.2 `b4afdddf` models.ts controller-identity check).
 
 ## Session model
 
@@ -111,8 +111,9 @@ byte-parity regressions.
 `pier --mode rpc` runs the coding agent as a local subprocess controlled by
 JSONL on stdin. Responses and session events share stdout; diagnostics use
 stderr. The command and event shapes were verified against **pi v1.3.0** for
-the supported subset below; upstream `modes/rpc` is unchanged through the
-v1.5.0 pin. This is not the framed-CBOR chord transport (removed from the
+the supported subset below; the command set of upstream `modes/rpc` is
+unchanged through the v1.5.2 pin, and the changes since v1.5.0 are extension and
+shutdown mechanics outside this subset. This is not the framed-CBOR chord transport (removed from the
 tree; D236), and it is not an MCP server.
 
 RPC runs the enabled agent tools with the same permissions as the CLI. It is

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/dat267/pier/ai"
 	"testing"
 )
 
@@ -50,6 +52,7 @@ func TestTruncationMatchesUpstream(t *testing.T) {
 		Line     string          `json:"line"`
 		MaxChars *int            `json:"maxChars"`
 		Bytes    int             `json:"bytes"`
+		SavePath string          `json:"savePath"`
 		MaxBytes *int            `json:"maxBytes"`
 		Expected json.RawMessage `json:"expected"`
 	}
@@ -83,25 +86,26 @@ func TestTruncationMatchesUpstream(t *testing.T) {
 				if got.Text != want.Text || got.WasTruncated != want.WasTruncated {
 					t.Errorf("TruncateLine = %+v, want %+v", got, want)
 				}
-			case test.Kind == "middle":
-				var want struct {
-					Content      string `json:"content"`
-					Truncated    bool   `json:"truncated"`
-					RemovedChars int    `json:"removedChars"`
-					TotalBytes   int    `json:"totalBytes"`
-					TotalLines   int    `json:"totalLines"`
-				}
+			case test.Kind == "mcp":
+				// Middle truncation moved into the pin's mcp package behind
+				// limitMcpContent, which caps at a fixed budget, so the behavior
+				// is pinned through that entry point.
+				var want string
 				if err := json.Unmarshal(test.Expected, &want); err != nil {
 					t.Fatal(err)
 				}
-				maxBytes := 0
-				if test.MaxBytes != nil {
-					maxBytes = *test.MaxBytes
+				limited, _ := LimitMcpContent(
+					[]ai.Content{ai.TextContent{Text: test.Content}},
+					func([]byte, string) (string, error) { return test.SavePath, nil },
+				)
+				var got strings.Builder
+				for _, block := range limited {
+					if text, ok := block.(ai.TextContent); ok {
+						got.WriteString(text.Text)
+					}
 				}
-				got := TruncateMiddle(test.Content, maxBytes)
-				if got.Content != want.Content || got.Truncated != want.Truncated ||
-					got.RemovedChars != want.RemovedChars || got.TotalBytes != want.TotalBytes || got.TotalLines != want.TotalLines {
-					t.Errorf("TruncateMiddle = %+v, want %+v", got, want)
+				if got.String() != want {
+					t.Errorf("LimitMcpContent = %q, want %q", got.String(), want)
 				}
 			default:
 				var want truncateFixtureResult

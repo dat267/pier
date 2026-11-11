@@ -157,6 +157,7 @@ var ThinProviderSpecs = []EnvAPIKeyProviderSpec{
 	{ID: "qwen-token-plan", Name: "Qwen Token Plan", BaseURL: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1", EnvVars: []string{"QWEN_TOKEN_PLAN_API_KEY"}, Completions: true},
 	{ID: "qwen-token-plan-cn", Name: "Qwen Token Plan CN", BaseURL: "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1", AuthName: "Qwen Token Plan CN API key", EnvVars: []string{"QWEN_TOKEN_PLAN_CN_API_KEY"}, Completions: true},
 	{ID: "qwen-token-plan-individual", Name: "Qwen Token Plan Individual", BaseURL: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1", AuthName: "Qwen Token Plan Individual API key", EnvVars: []string{"QWEN_TOKEN_PLAN_API_KEY"}, Completions: true},
+	{ID: "qwen-token-plan-individual-cn", Name: "Qwen Token Plan Individual CN", BaseURL: "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1", AuthName: "Qwen Token Plan Individual CN API key", EnvVars: []string{"QWEN_TOKEN_PLAN_CN_API_KEY"}, Completions: true},
 	{ID: "together", Name: "Together", BaseURL: "https://api.together.ai/v1", EnvVars: []string{"TOGETHER_API_KEY"}, Completions: true},
 	{ID: "typesafe", Name: "TypeSafe", AuthName: "TypeSafe API key", EnvVars: []string{"TYPESAFE_API_KEY"}, SystemOneClassifier: true},
 	{ID: "vercel-ai-gateway", Name: "Vercel AI Gateway", BaseURL: "https://ai-gateway.vercel.sh", AuthName: "Vercel AI Gateway API key", EnvVars: []string{"AI_GATEWAY_API_KEY"}, Anthropic: true, SystemOneClassifier: true},
@@ -325,7 +326,7 @@ var BuiltinProviderIDs = []string{
 	"google", "google-vertex", "groq", "huggingface", "kimi-coding", "meta", "minimax", "minimax-cn",
 	"mistral", "moonshotai", "moonshotai-cn", "nvidia", "openai", "openai-codex", "opencode",
 	"opencode-go", "openrouter", "qwen-token-plan", "qwen-token-plan-cn",
-	"qwen-token-plan-individual", "radius", "together", "typesafe", "vercel-ai-gateway", "xai", "xiaomi",
+	"qwen-token-plan-individual", "qwen-token-plan-individual-cn", "radius", "together", "typesafe", "vercel-ai-gateway", "xai", "xiaomi",
 	"xiaomi-token-plan-ams", "xiaomi-token-plan-cn", "xiaomi-token-plan-sgp", "zai", "zai-coding-cn",
 }
 

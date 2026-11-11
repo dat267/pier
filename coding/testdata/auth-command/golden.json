@@ -8,7 +8,7 @@
 			"auth"
 		],
 		"result": {
-			"error": "Unknown auth command \"\". Use \"pi auth print-api-key\", \"pi auth print-bearer-token\", or \"pi auth check\"."
+			"error": "Unknown auth command \"\". Use \"pi auth login\", \"pi auth logout\", \"pi auth print-api-key\", \"pi auth print-bearer-token\", or \"pi auth check\"."
 		}
 	},
 	{
@@ -17,7 +17,7 @@
 			"help"
 		],
 		"result": {
-			"error": "Unknown auth command \"help\". Use \"pi auth print-api-key\", \"pi auth print-bearer-token\", or \"pi auth check\"."
+			"error": "Unknown auth command \"help\". Use \"pi auth login\", \"pi auth logout\", \"pi auth print-api-key\", \"pi auth print-bearer-token\", or \"pi auth check\"."
 		}
 	},
 	{
@@ -26,7 +26,7 @@
 			"nope"
 		],
 		"result": {
-			"error": "Unknown auth command \"nope\". Use \"pi auth print-api-key\", \"pi auth print-bearer-token\", or \"pi auth check\"."
+			"error": "Unknown auth command \"nope\". Use \"pi auth login\", \"pi auth logout\", \"pi auth print-api-key\", \"pi auth print-bearer-token\", or \"pi auth check\"."
 		}
 	},
 	{
@@ -389,7 +389,7 @@
 			"CHECK"
 		],
 		"result": {
-			"error": "Unknown auth command \"CHECK\". Use \"pi auth print-api-key\", \"pi auth print-bearer-token\", or \"pi auth check\"."
+			"error": "Unknown auth command \"CHECK\". Use \"pi auth login\", \"pi auth logout\", \"pi auth print-api-key\", \"pi auth print-bearer-token\", or \"pi auth check\"."
 		}
 	},
 	{

@@ -1,8 +1,8 @@
 {
  "_meta": {
-  "generatedAt": "2026-11-03T05:25:03.345Z",
+  "generatedAt": "2026-11-11T16:37:41.855Z",
   "schemaVersion": 6,
-  "upstreamManifestSHA256": "26b2adb40b11950fd90a8f4912a17030cae522248e3dee3ccddc8f3f22437ccb"
+  "upstreamManifestSHA256": "3815bab851de9406dc863f19a16d580b69145848fc993fc513c9f7e0f26dd855"
  },
  "providers": {
   "cloudflare-workers-ai": {

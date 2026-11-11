@@ -87,7 +87,7 @@
     "offer": true,
     "error": false,
     "reloads": 1,
-    "expected": "{\n  \"mcpServers\": {\n    \"radius\": {\n      \"command\": \"unused\"\n    },\n    \"radius-mcp\": {\n      \"url\": \"https://radius.pi.dev/mcp\",\n      \"auth\": {\n        \"provider\": \"radius\"\n      }\n    }\n  }\n}\n"
+    "expected": "{\n  \"mcpServers\": {\n    \"radius\": {\n      \"command\": \"unused\"\n    },\n    \"radius-mcp\": {\n      \"command\": \"also-unused\"\n    },\n    \"radius-mcp-2\": {\n      \"url\": \"https://radius.pi.dev/mcp\",\n      \"auth\": {\n        \"provider\": \"radius\"\n      }\n    }\n  }\n}\n"
   },
   {
     "name": "first-endpoint",
