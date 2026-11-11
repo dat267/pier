@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"strings"
 
 	"github.com/dat267/pier/ai"
 )
@@ -262,6 +263,24 @@ func GoogleVertexProvider() *ai.Provider {
 // GitHubCopilotProvider builds the built-in GitHub Copilot provider
 // (upstream githubCopilotProvider). OAuth model filtering by the credential's
 // available model ids is ported; the OAuth login flow is not.
+// copilotSystemOneClassifier adds the version prefix Copilot requires for System
+// One: it serves it at /v1/systemone while its chat APIs have no version prefix,
+// and the login replaces the catalog base URL with the account's endpoint, so the
+// prefix is added per request (pi v1.5.2 providers/github-copilot.ts
+// copilotSystemOne).
+type copilotSystemOneClassifier struct {
+	inner ai.ProviderClassifier
+}
+
+func (c copilotSystemOneClassifier) Classify(model *ai.Model, classifierContext ai.ClassifierContext, options *ai.ClassifierOptions) *ai.ClassifierResult {
+	if model != nil {
+		copied := *model
+		copied.BaseURL = strings.TrimRight(copied.BaseURL, "/") + "/v1"
+		model = &copied
+	}
+	return c.inner.Classify(model, classifierContext, options)
+}
+
 func GitHubCopilotProvider() *ai.Provider {
 	return ai.CreateProvider(ai.CreateProviderOptions{
 		ID:      "github-copilot",
@@ -271,7 +290,13 @@ func GitHubCopilotProvider() *ai.Provider {
 			APIKey: ai.EnvApiKeyAuth("GitHub Copilot token", []string{"COPILOT_GITHUB_TOKEN"}),
 			OAuth:  ai.GitHubCopilotOAuth(),
 		},
-		Models: ai.GetBuiltinModels("github-copilot"),
+		// The classifier catalog ships the System One models Copilot serves; the
+		// provider offers them alongside its chat models (pi v1.5.2 b4afdddf
+		// providers/github-copilot.ts).
+		Models: append(ai.GetBuiltinModels("github-copilot"), ai.GetBuiltinClassifierModels("github-copilot")...),
+		Classifiers: map[string]ai.ProviderClassifier{
+			ai.APITypeSafeSystemOne: copilotSystemOneClassifier{inner: ai.TypeSafeSystemOne{}},
+		},
 		FilterModels: func(models []*ai.Model, credential *ai.Credential) []*ai.Model {
 			if credential == nil || credential.Type != ai.CredentialOAuth || credential.OAuth == nil {
 				return models
