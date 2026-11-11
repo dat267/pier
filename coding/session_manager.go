@@ -1886,9 +1886,6 @@ func sortSessionInfos(sessions []SessionInfo) []SessionInfo {
 	return sessions
 }
 
-// listSessionsFromDir scans one directory for session files without applying
-// any cwd filter (upstream listSessionsFromDir).
-
 // messageListing is the listing view of one message: the role, the message
 // timestamp and the text the message contributes. Listing never reads tool
 // arguments, thinking or tool-result bodies, so the scanner skips them instead
