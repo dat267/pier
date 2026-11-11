@@ -59,7 +59,7 @@ Go source, every named test defined, `FILE.md#anchor` links resolving, and the
 pin matching. Fix the document, not the check.
 
 Go 1.27 is required. Builds and releases set `CGO_ENABLED=0`; the race gate
-needs cgo enabled (`just test-race` and CI). CI runs the race gate on linux/amd64
+needs cgo enabled (CI runs `just test-race`). CI runs the race gate on linux/amd64
 and cross-builds `windows/{amd64,arm64}`, `linux/arm64`, `android/arm64`, and
 `darwin/{amd64,arm64}`. CI also runs the `just test-stress` command (the most concurrent
 packages shuffled, on one CPU and four) and `just test-isolated` (every test
@@ -67,6 +67,11 @@ alone and twice in its process, so none relies on global state such as the
 theme that another test set, or leaves state that breaks its own rerun). Treat race-only failures as bugs, and
 call no func value with a mutex held (`internal/lockcall`). PTY tests use
 `$PIER_TEST_BIN`, then `bin/pier`, then a temporary build.
+
+Do not run the long race suites during local development: skip `just test-race`
+and `just test-stress` and let CI enforce both. `just check` is the local gate.
+Add `-race` to a focused `-run` when the change touches concurrency,
+cancellation, or shutdown, because those take seconds rather than minutes.
 
 Keep tests quick: small fixtures, allocation checks instead of loops, fake
 sleeps, and never launch the developer's editor. Tests must use temporary agent
