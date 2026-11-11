@@ -46,6 +46,7 @@ func TestReadToolMatchesUpstreamTextPath(t *testing.T) {
 		"invalid.txt":                      {0xff, 0x0a, 'A', 0x0a},
 		"long-line.txt":                    []byte(strings.Repeat("x", 60000) + "\nsecond\n"),
 		"many-lines.txt":                   []byte(manyLines(2500)),
+		"wide.txt":                         []byte(strings.Repeat("日本語 line\n", 12000)),
 		filepath.Join("sub", "nested.txt"): []byte("nested\n"),
 	}
 	for name, content := range files {

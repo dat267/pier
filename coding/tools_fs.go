@@ -102,40 +102,51 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 				return readImageFile(ctx, absolutePath, mimeType, input.Path, autoResize, modelFor)
 			}
 
-			data, err := os.ReadFile(absolutePath)
-			if err != nil {
-				return agent.AgentToolResult{}, err
-			}
-			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
-			}
-			textContent := DecodeUTF8WithReplacement(data)
-			allLines := strings.Split(textContent, "\n")
-			totalFileLines := len(allLines)
 			startLine := 0.0
 			if input.Offset != nil {
 				startLine = math.Max(0, *input.Offset-1)
 			}
 			startLineDisplay := startLine + 1
-			if startLine >= float64(len(allLines)) {
-				return agent.AgentToolResult{}, fmt.Errorf("Offset %s is beyond end of file (%d lines total)", formatToolNumber(*input.Offset), len(allLines))
+			// Whole integer ranges stream, so reading a large file costs memory in
+			// proportion to the lines shown; other ranges keep whole-file array
+			// slicing, whose JavaScript rules define what they select (v1.5.2
+			// read.ts isStreamableRange).
+			var selection readSelection
+			var selectionErr error
+			if isStreamableReadRange(input.Offset, input.Limit) {
+				limit := (*int)(nil)
+				if input.Limit != nil {
+					value := int(*input.Limit)
+					limit = &value
+				}
+				selection, selectionErr = selectTextLinesFromStream(absolutePath, int(startLine), limit, ctx)
+			} else {
+				data, readErr := os.ReadFile(absolutePath)
+				if readErr != nil {
+					return agent.AgentToolResult{}, readErr
+				}
+				selection = selectTextLinesFromBuffer(data, startLine, input.Limit)
 			}
-			sliceStart := jsArraySliceIndex(startLine, len(allLines))
-			var selectedContent string
+			if selectionErr != nil {
+				return agent.AgentToolResult{}, selectionErr
+			}
+			if ctxErrOf(ctx) != nil {
+				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
+			}
+			totalFileLines := selection.totalFileLines
+			if startLine >= float64(totalFileLines) {
+				return agent.AgentToolResult{}, fmt.Errorf("Offset %s is beyond end of file (%d lines total)", formatToolNumber(*input.Offset), totalFileLines)
+			}
+			// A user-specified limit is honored before truncation.
 			userLimitedLines := 0.0
 			hasUserLimit := input.Limit != nil
 			if hasUserLimit {
-				endLine := math.Min(startLine+*input.Limit, float64(len(allLines)))
-				sliceEnd := max(jsArraySliceIndex(endLine, len(allLines)), sliceStart)
-				selectedContent = strings.Join(allLines[sliceStart:sliceEnd], "\n")
-				userLimitedLines = endLine - startLine
-			} else {
-				selectedContent = strings.Join(allLines[sliceStart:], "\n")
+				userLimitedLines = math.Min(startLine+*input.Limit, float64(totalFileLines)) - startLine
 			}
-			truncation := TruncateHead(selectedContent, TruncationOptions{})
+			truncation := selection.truncation
 			var outputText string
 			if truncation.FirstLineExceedsLimit {
-				firstLineSize := FormatSize(int64(len(allLines[sliceStart])))
+				firstLineSize := FormatSize(int64(selection.firstLineBytes))
 				outputText = fmt.Sprintf("[Line %s is %s, exceeds %s limit. Use bash: sed -n '%sp' %s | head -c %d]",
 					formatToolNumber(startLineDisplay), firstLineSize, FormatSize(DefaultMaxBytes), formatToolNumber(startLineDisplay), input.Path, DefaultMaxBytes)
 			} else if truncation.Truncated {
@@ -149,8 +160,8 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 					outputText += fmt.Sprintf("\n\n[Showing lines %s-%s of %d (%s limit). Use offset=%s to continue.]",
 						formatToolNumber(startLineDisplay), formatToolNumber(endLineDisplay), totalFileLines, FormatSize(DefaultMaxBytes), formatToolNumber(nextOffset))
 				}
-			} else if hasUserLimit && startLine+userLimitedLines < float64(len(allLines)) {
-				remaining := float64(len(allLines)) - (startLine + userLimitedLines)
+			} else if hasUserLimit && startLine+userLimitedLines < float64(totalFileLines) {
+				remaining := float64(totalFileLines) - (startLine + userLimitedLines)
 				nextOffset := startLine + userLimitedLines + 1
 				outputText = fmt.Sprintf("%s\n\n[%s more lines in file. Use offset=%s to continue.]",
 					truncation.Content, formatToolNumber(remaining), formatToolNumber(nextOffset))

@@ -38,9 +38,14 @@ await writeFile(resolve(dir, "bom.txt"), "\uFEFFfirst\nsecond\n");
 await writeFile(resolve(dir, "invalid.txt"), Buffer.from([0xff, 0x0a, 0x41, 0x0a]));
 await writeFile(resolve(dir, "long-line.txt"), "x".repeat(60000) + "\nsecond\n");
 await writeFile(resolve(dir, "many-lines.txt"), Array.from({ length: 2500 }, (_, i) => `line ${i + 1}`).join("\n") + "\n");
+// 180 KB of multi-byte lines: the read streams it in chunks, so runes straddle
+// the chunk boundaries.
+await writeFile(resolve(dir, "wide.txt"), "日本語 line\n".repeat(12000));
 await writeFile(resolve(dir, "sub/nested.txt"), "nested\n");
 const cases = [
 	{ name: "empty", path: "empty.txt" },
+	{ name: "wide-offset", path: "wide.txt", offset: 9000, limit: 3 },
+	{ name: "wide-tail", path: "wide.txt", offset: 11999 },
 	{ name: "three", path: "three.txt" },
 	{ name: "no-newline", path: "no-newline.txt" },
 	{ name: "blank-lines", path: "blank-lines.txt" },

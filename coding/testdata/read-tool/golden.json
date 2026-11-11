@@ -8,6 +8,25 @@
     }
   },
   {
+    "name": "wide-offset",
+    "path": "wide.txt",
+    "offset": 9000,
+    "limit": 3,
+    "expected": {
+      "text": "日本語 line\n日本語 line\n日本語 line\n\n[2999 more lines in file. Use offset=9003 to continue.]",
+      "details": null
+    }
+  },
+  {
+    "name": "wide-tail",
+    "path": "wide.txt",
+    "offset": 11999,
+    "expected": {
+      "text": "日本語 line\n日本語 line\n",
+      "details": null
+    }
+  },
+  {
     "name": "three",
     "path": "three.txt",
     "expected": {
