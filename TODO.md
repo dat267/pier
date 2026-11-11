@@ -56,3 +56,20 @@
   (2) an off-loop seam rule so a wiring closure invoked only inside a detached
   worker is not rooted (the `/reload` pair); (3) repairs or reasoned allowlist
   entries for the remainder, with `bindSessionManager`'s rebind work first.
+- Step 2 was implemented and does not fire, for a reason worth keeping: the
+  seam rule skips a wiring field only when every call site of the field runs
+  inside a detached closure, and `/reload` calls `ReloadNow` and `ReloadMCP`
+  twice in one function, once inside `RunDetached` and once as the inline
+  fallback taken when `RunDetached` is nil (`interactivemode_commands.go:399`,
+  the test-app path). Statically that is a loop call site, so both fields stay
+  rooted: 44 and 14 findings survive the rule.
+- Step 3 measured with the pointer form applied: about 196 findings over 22
+  surfaces, of which 63 sit under *definitive* roots (`runSessionFileWork ...
+  done` 28, `EventDispatcher.HandleEvent` 11, `tui.Renderer.
+  HandleTerminalInput` 10, `ToolExecutionComponent.Invalidate` 7, `TreeList.
+  Render` 4, `FooterComponent.Render` 2, `RunWiring.Run` 1). So splitting the
+  gate into "strict" and "inventory" halves would still leave 63 decisions that
+  are not wiring-field judgement calls.
+- Conclusion for the next attempt: A493 is a work item of its own, and the
+  highest-value first slice is the 28 `... done` findings, because they are the
+  post-replacement rebind and A494's fix already removed the largest of them.
