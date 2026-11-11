@@ -89,7 +89,11 @@ func formatMcpCall(label string, args any, theme *Theme) string {
 	}
 	pairs := make([]string, 0, len(entries))
 	for _, entry := range entries {
-		pairs = append(pairs, entry.key+"="+entry.value)
+		// The key is decoded from the call's JSON, so an escape sequence in it is
+		// a real escape byte; the value is re-serialized and JSON-escaped, but an
+		// unparseable value falls back to its raw text. Both are untrusted text
+		// for the terminal (D342, D449).
+		pairs = append(pairs, tui.SanitizeUntrustedText(entry.key)+"="+tui.SanitizeUntrustedText(entry.value))
 	}
 	preview := strings.Join(pairs, " ")
 	if ai.JSLength(preview) > mcpCollapsedArgsChars {

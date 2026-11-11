@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -127,6 +128,14 @@ func TestStoredSessionTextRendersOnlyThemeEscapes(t *testing.T) {
 		component.WaitForPendingLoads()
 		component.enterRenameMode("/tmp/x.jsonl", storedPayload)
 		assertOnlyThemeEscapes(t, component.Render(120))
+	})
+
+	t.Run("mcp call header", func(t *testing.T) {
+		// An argument key is decoded from the call's JSON, so an escape sequence in
+		// it is a real escape byte; the value is re-serialized and therefore
+		// JSON-escaped. Both are rendered into the same line.
+		line := formatMcpCall("server/tool", json.RawMessage(`{"\u001b[2Jkey":"\u001b[2Jvalue"}`), ActiveTheme())
+		assertOnlyThemeEscapes(t, []string{line})
 	})
 
 	t.Run("status", func(t *testing.T) {

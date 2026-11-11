@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D448)
+# Deliberate divergences from pi (D1–D449)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7028,3 +7028,23 @@ text (D342, D422).
 
 Tests: `TestStoredSessionNameIsSanitized`, whose two subtests fail independently
 when either path is reverted.
+
+### D449
+
+**An MCP call's argument keys are sanitized in the frame header; the reference
+interpolates them verbatim.**
+
+Reference: pi v1.5.0 `f9a26365` `core/tools/render-utils.ts:107` builds the
+collapsed argument preview as `` `${key}=${JSON.stringify(value)}` ``. The value
+is safe by accident, because `JSON.stringify` escapes control characters, but the
+key is not: a key such as `"\u001b[2J"` in the call's JSON decodes to a real
+escape byte and reaches the terminal, where it clears the screen or writes the
+clipboard (OSC 52).
+
+A tool call is model output and also lives in the session JSONL, so both a
+prompt-injected model and a shared session file can carry such a key. The port
+sanitizes the key and the value when it assembles the line, following D342/D422;
+an unparseable value falls back to its raw text, so it is covered too.
+
+Tests: `TestStoredSessionTextRendersOnlyThemeEscapes`, the `mcp call header`
+case.
