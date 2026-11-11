@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -118,7 +119,11 @@ func TestChangelogAgainstUpstreamGolden(t *testing.T) {
 	}
 	entries := ParseChangelog(changelogPath)
 	checkCoreGolden(t, golden, "changelog entries", entries)
-	checkCoreGolden(t, golden, "changelog new", GetNewChangelogEntries(entries, corpus.LastVersion))
+	changelogNew, comparable := GetNewChangelogEntries(entries, corpus.LastVersion)
+	if !comparable {
+		t.Fatalf("corpus lastVersion %q must parse", corpus.LastVersion)
+	}
+	checkCoreGolden(t, golden, "changelog new", changelogNew)
 	comparisons := make([]int, 0, len(corpus.Compare))
 	for _, pair := range corpus.Compare {
 		comparisons = append(comparisons, CompareChangelogVersions(pair[0], pair[1]))
@@ -218,6 +223,45 @@ func TestNormalizeChangelogLinksKeepsUppercaseSchemes(t *testing.T) {
 		markdown := "[link](" + target + ")"
 		if got := NormalizeChangelogLinks(markdown, "1.0.0"); got != markdown {
 			t.Errorf("NormalizeChangelogLinks(%q) = %q; want unchanged", markdown, got)
+		}
+	}
+}
+
+// pi v1.5.2 (b4afdddf) utils/changelog.ts getNewEntries reads only the leading
+// major.minor.patch, so a prerelease such as 0.1.5-20261020.7 counts as 0.1.5 and
+// its notes are not shown again on every launch (#11703). A saved version
+// without that prefix has nothing to compare against: the caller records the
+// current version and shows nothing.
+func TestGetNewChangelogEntriesReadsTheLeadingVersion(t *testing.T) {
+	entries := []ChangelogEntry{
+		{Major: 0, Minor: 1, Patch: 5, Content: "0.1.5"},
+		{Major: 0, Minor: 1, Patch: 6, Content: "0.1.6"},
+		{Major: 0, Minor: 2, Patch: 0, Content: "0.2.0"},
+	}
+	contents := func(entries []ChangelogEntry) []string {
+		out := make([]string, 0, len(entries))
+		for _, entry := range entries {
+			out = append(out, entry.Content)
+		}
+		return out
+	}
+
+	newer, ok := GetNewChangelogEntries(entries, "0.1.5-20261020.7")
+	if !ok {
+		t.Fatal("a prerelease of a released version must parse")
+	}
+	if got := contents(newer); !reflect.DeepEqual(got, []string{"0.1.6", "0.2.0"}) {
+		t.Fatalf("prerelease entries = %v", got)
+	}
+
+	newer, ok = GetNewChangelogEntries(entries, "v0.1.5")
+	if !ok || len(newer) != 2 {
+		t.Fatalf("prefixed version = %v, %v", contents(newer), ok)
+	}
+
+	for _, unreadable := range []string{"", "nightly", "0.1", "0.1.x"} {
+		if _, ok := GetNewChangelogEntries(entries, unreadable); ok {
+			t.Fatalf("%q parsed; want no comparison target", unreadable)
 		}
 	}
 }

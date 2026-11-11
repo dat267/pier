@@ -278,7 +278,15 @@ func (w *StartupWiring) GetChangelogForDisplay() string {
 		}
 		return ""
 	}
-	newEntries := coding.GetNewChangelogEntries(entries, lastVersion)
+	newEntries, comparable := coding.GetNewChangelogEntries(entries, lastVersion)
+	if !comparable {
+		// Unreadable saved version: show nothing and record the current one, so
+		// later updates compare again (pi v1.5.2 interactive-mode.ts).
+		if w.Settings != nil {
+			w.Settings.SetLastChangelogVersion(w.Version)
+		}
+		return ""
+	}
 	if len(newEntries) == 0 {
 		return ""
 	}

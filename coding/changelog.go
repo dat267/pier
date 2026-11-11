@@ -237,26 +237,29 @@ func CompareChangelogVersions(v1 ChangelogEntry, v2 ChangelogEntry) int {
 	return v1.Patch - v2.Patch
 }
 
-// GetNewChangelogEntries returns the entries newer than lastVersion.
-func GetNewChangelogEntries(entries []ChangelogEntry, lastVersion string) []ChangelogEntry {
-	parts := strings.Split(lastVersion, ".")
-	numbers := make([]int, 0, 3)
-	for index := range 3 {
-		value := 0
-		if index < len(parts) {
-			parsed, err := strconv.Atoi(strings.TrimSpace(parts[index]))
-			if err == nil {
-				value = parsed
-			}
-		}
-		numbers = append(numbers, value)
+// leadingVersionPattern matches the major.minor.patch a changelog heading and a
+// saved version share (pi v1.5.2 utils/changelog.ts getNewEntries).
+var leadingVersionPattern = regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)`)
+
+// GetNewChangelogEntries returns the entries newer than lastVersion. ok is false
+// when lastVersion has no leading major.minor.patch to compare against; the
+// caller then records the current version and shows nothing. Only the leading
+// major.minor.patch counts, so a prerelease such as 0.1.5-20261020.7 is 0.1.5
+// and its notes are not shown again on every launch (#11703).
+func GetNewChangelogEntries(entries []ChangelogEntry, lastVersion string) ([]ChangelogEntry, bool) {
+	parts := leadingVersionPattern.FindStringSubmatch(strings.TrimSpace(lastVersion))
+	if parts == nil {
+		return nil, false
 	}
-	last := ChangelogEntry{Major: numbers[0], Minor: numbers[1], Patch: numbers[2]}
+	major, _ := strconv.Atoi(parts[1])
+	minor, _ := strconv.Atoi(parts[2])
+	patch, _ := strconv.Atoi(parts[3])
+	last := ChangelogEntry{Major: major, Minor: minor, Patch: patch}
 	var result []ChangelogEntry
 	for _, entry := range entries {
 		if CompareChangelogVersions(entry, last) > 0 {
 			result = append(result, entry)
 		}
 	}
-	return result
+	return result, true
 }
