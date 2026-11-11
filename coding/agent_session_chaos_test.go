@@ -332,6 +332,32 @@ func runSessionChaosGoal(t *testing.T, extra func(*AgentSession) []func(int), di
 			t.Fatalf("file entry %d is %s, the session's is %s", index, onDisk[index], entry.ID)
 		}
 	}
+	// The file reopens to the entries the session holds, each with the parent
+	// the session linked it to. A navigation that appended nothing moves only
+	// the live leaf (upstream reopens at the last entry), so compare the
+	// entries and the live leaf's branch rather than the reopened leaf.
+	reopened, err := OpenSession(manager.GetSessionFile(), "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reopenedEntries := reopened.GetEntries()
+	if len(reopenedEntries) != len(entries) {
+		t.Fatalf("the reopened file holds %d entries, the session %d", len(reopenedEntries), len(entries))
+	}
+	for index := range entries {
+		got, _ := ai.MarshalJSON(reopenedEntries[index])
+		want, _ := ai.MarshalJSON(entries[index])
+		if string(got) != string(want) {
+			t.Fatalf("reopened entry %d\n got %s\nwant %s", index, got, want)
+		}
+	}
+	if leaf := manager.GetLeafID(); leaf != nil {
+		got, _ := ai.MarshalJSON(reopened.GetBranch(*leaf))
+		want, _ := ai.MarshalJSON(manager.GetBranch(*leaf))
+		if string(got) != string(want) {
+			t.Fatalf("the reopened branch to %s differs\n got %s\nwant %s", *leaf, got, want)
+		}
+	}
 	if withGoal {
 		// Every persisted goal transition replays: the machine accepted them
 		// in the order the file holds them.
