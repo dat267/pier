@@ -1,0 +1,3165 @@
+[
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "prompt is too long: 210000 tokens > 200000 maximum",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "prompt is too long: 210000 tokens > 200000 maximum",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "prompt is too long: 210000 tokens > 200000 maximum",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "prompt is too long: 210000 tokens > 200000 maximum",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "prompt is too long: 210000 tokens > 200000 maximum",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "prompt is too long: 210000 tokens > 200000 maximum",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "prompt is too long: 210000 tokens > 200000 maximum",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "request_too_large",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "request_too_large",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "request_too_large",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "request_too_large",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "request_too_large",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "request_too_large",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "request_too_large",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "This model's maximum context length is 128000 tokens. However, your messages resulted in 140000 tokens.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "This model's maximum context length is 128000 tokens. However, your messages resulted in 140000 tokens.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "This model's maximum context length is 128000 tokens. However, your messages resulted in 140000 tokens.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "This model's maximum context length is 128000 tokens. However, your messages resulted in 140000 tokens.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "This model's maximum context length is 128000 tokens. However, your messages resulted in 140000 tokens.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "This model's maximum context length is 128000 tokens. However, your messages resulted in 140000 tokens.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "This model's maximum context length is 128000 tokens. However, your messages resulted in 140000 tokens.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "exceeds the context window",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "exceeds the context window",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "exceeds the context window",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "exceeds the context window",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "exceeds the context window",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "exceeds the context window",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "exceeds the context window",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "exceeds the model's maximum context length of 8192 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "exceeds the model's maximum context length of 8192 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "exceeds the model's maximum context length of 8192 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "exceeds the model's maximum context length of 8192 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "exceeds the model's maximum context length of 8192 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "exceeds the model's maximum context length of 8192 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "exceeds the model's maximum context length of 8192 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "exceeds model's maximum context length (128000)",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "exceeds model's maximum context length (128000)",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "exceeds model's maximum context length (128000)",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "exceeds model's maximum context length (128000)",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "exceeds model's maximum context length (128000)",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "exceeds model's maximum context length (128000)",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "exceeds model's maximum context length (128000)",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "input token count exceeds the maximum number of tokens allowed",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "input token count exceeds the maximum number of tokens allowed",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "input token count exceeds the maximum number of tokens allowed",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "input token count exceeds the maximum number of tokens allowed",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "input token count exceeds the maximum number of tokens allowed",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "input token count exceeds the maximum number of tokens allowed",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "input token count exceeds the maximum number of tokens allowed",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "maximum prompt length is 4096 but request contains 5000",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "maximum prompt length is 4096 but request contains 5000",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "maximum prompt length is 4096 but request contains 5000",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "maximum prompt length is 4096 but request contains 5000",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "maximum prompt length is 4096 but request contains 5000",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "maximum prompt length is 4096 but request contains 5000",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "maximum prompt length is 4096 but request contains 5000",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Please reduce the length of the messages",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "Please reduce the length of the messages",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "Please reduce the length of the messages",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "Please reduce the length of the messages",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "Please reduce the length of the messages",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "Please reduce the length of the messages",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "Please reduce the length of the messages",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "failed to parse request",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "failed to parse request",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "failed to parse request",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "failed to parse request",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "failed to parse request",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "failed to parse request",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "failed to parse request",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Prompt contains 5000 tokens, which is too large for model with 4096 maximum context length",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "Prompt contains 5000 tokens, which is too large for model with 4096 maximum context length",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "Prompt contains 5000 tokens, which is too large for model with 4096 maximum context length",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "Prompt contains 5000 tokens, which is too large for model with 4096 maximum context length",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "Prompt contains 5000 tokens, which is too large for model with 4096 maximum context length",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "Prompt contains 5000 tokens, which is too large for model with 4096 maximum context length",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "Prompt contains 5000 tokens, which is too large for model with 4096 maximum context length",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "maximum context length is 8192 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "maximum context length is 8192 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "maximum context length is 8192 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "maximum context length is 8192 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "maximum context length is 8192 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "maximum context length is 8192 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "maximum context length is 8192 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Input length 5000 exceeds the maximum allowed input length of 4096 tokens.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "Input length 5000 exceeds the maximum allowed input length of 4096 tokens.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "Input length 5000 exceeds the maximum allowed input length of 4096 tokens.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "Input length 5000 exceeds the maximum allowed input length of 4096 tokens.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "Input length 5000 exceeds the maximum allowed input length of 4096 tokens.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "Input length 5000 exceeds the maximum allowed input length of 4096 tokens.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "Input length 5000 exceeds the maximum allowed input length of 4096 tokens.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "The input (5000 tokens) is longer than the model's context length (4096 tokens).",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "The input (5000 tokens) is longer than the model's context length (4096 tokens).",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "The input (5000 tokens) is longer than the model's context length (4096 tokens).",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "The input (5000 tokens) is longer than the model's context length (4096 tokens).",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "The input (5000 tokens) is longer than the model's context length (4096 tokens).",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "The input (5000 tokens) is longer than the model's context length (4096 tokens).",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "The input (5000 tokens) is longer than the model's context length (4096 tokens).",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "exceeds the available context size",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "exceeds the available context size",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "exceeds the available context size",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "exceeds the available context size",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "exceeds the available context size",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "exceeds the available context size",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "exceeds the available context size",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "greater than the context length",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "greater than the context length",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "greater than the context length",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "greater than the context length",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "greater than the context length",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "greater than the context length",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "greater than the context length",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "exceeded model token limit: 4096 (requested: 5000)",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "exceeded model token limit: 4096 (requested: 5000)",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "exceeded model token limit: 4096 (requested: 5000)",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "exceeded model token limit: 4096 (requested: 5000)",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "exceeded model token limit: 4096 (requested: 5000)",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "exceeded model token limit: 4096 (requested: 5000)",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "exceeded model token limit: 4096 (requested: 5000)",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Prompt has 5000 tokens, but the configured context size is 4096 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "Prompt has 5000 tokens, but the configured context size is 4096 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "Prompt has 5000 tokens, but the configured context size is 4096 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "Prompt has 5000 tokens, but the configured context size is 4096 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "Prompt has 5000 tokens, but the configured context size is 4096 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "Prompt has 5000 tokens, but the configured context size is 4096 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "Prompt has 5000 tokens, but the configured context size is 4096 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Range of input length should be [1, 4096]",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "Range of input length should be [1, 4096]",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "Range of input length should be [1, 4096]",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "Range of input length should be [1, 4096]",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "Range of input length should be [1, 4096]",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "Range of input length should be [1, 4096]",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "Range of input length should be [1, 4096]",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Prompt too long",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "Prompt too long",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "Prompt too long",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "Prompt too long",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "Prompt too long",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "Prompt too long",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "Prompt too long",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Too many requests: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "Too many requests: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "Too many requests: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "Too many requests: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "Too many requests: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "Too many requests: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "Too many requests: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "rate limit reached while sending context_length_exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "rate limit reached while sending context_length_exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "rate limit reached while sending context_length_exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "rate limit reached while sending context_length_exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "rate limit reached while sending context_length_exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "rate limit reached while sending context_length_exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "rate limit reached while sending context_length_exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "429 Too Many Requests: token limit exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "429 Too Many Requests: token limit exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "429 Too Many Requests: token limit exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "429 Too Many Requests: token limit exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "429 Too Many Requests: token limit exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "429 Too Many Requests: token limit exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "429 Too Many Requests: token limit exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "413 rate limit exceeded: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "413 rate limit exceeded: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "413 rate limit exceeded: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "413 rate limit exceeded: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "413 rate limit exceeded: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "413 rate limit exceeded: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "413 rate limit exceeded: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Throttling error: context length exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "Throttling error: context length exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "Throttling error: context length exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "Throttling error: context length exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "Throttling error: context length exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "Throttling error: context length exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "Throttling error: context length exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Service unavailable: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "Service unavailable: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "Service unavailable: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "Service unavailable: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "Service unavailable: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "Service unavailable: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "Service unavailable: too many tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Rate limit reached",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "Rate limit reached",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "Rate limit reached",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "Rate limit reached",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "Rate limit reached",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "Rate limit reached",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "Rate limit reached",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Throttling error: rate exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "Throttling error: rate exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "Throttling error: rate exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "Throttling error: rate exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "Throttling error: rate exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "Throttling error: rate exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "Throttling error: rate exceeded",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Service unavailable: try later",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "Service unavailable: try later",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "Service unavailable: try later",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "Service unavailable: try later",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "Service unavailable: try later",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "Service unavailable: try later",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "Service unavailable: try later",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "401 Unauthorized",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "401 Unauthorized",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "401 Unauthorized",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "401 Unauthorized",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "401 Unauthorized",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "401 Unauthorized",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "401 Unauthorized",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "invalid api key",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "invalid api key",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "invalid api key",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "invalid api key",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "invalid api key",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "invalid api key",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "invalid api key",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Input is too long for requested model.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "anthropic",
+  "stopReason": "error",
+  "errorMessage": "Input is too long for requested model.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "cerebras",
+  "stopReason": "error",
+  "errorMessage": "Input is too long for requested model.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "google",
+  "stopReason": "error",
+  "errorMessage": "Input is too long for requested model.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "error",
+  "errorMessage": "Input is too long for requested model.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "together",
+  "stopReason": "error",
+  "errorMessage": "Input is too long for requested model.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xai",
+  "stopReason": "error",
+  "errorMessage": "Input is too long for requested model.",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "PROMPT IS TOO LONG: 210000 TOKENS > 200000 MAXIMUM",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "prompt is too long: 210000 tokens > 200000 maximum",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "pRoMpT Is tOo lOnG: 210000 ToKeNs > 200000 MaXiMuM",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "prefix prompt is too long: 210000 tokens > 200000 maximum suffix",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "prompt iſ too long: 210000 toKenſ > 200000 maximum",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "prompt İs too long: 210000 tokens > 200000 maxİmum",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "prompt is too long: 210000 tokеns > 200000 maximum",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "EXCEEDS THE CONTEXT WINDOW",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "exceeds the context window",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "eXcEeDs tHe cOnTeXt wInDoW",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "prefix exceeds the context window suffix",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "exceedſ the context window",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "exceeds the context wİndow",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "еxcееds thе contеxt window",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "MAXIMUM CONTEXT LENGTH IS 8192 TOKENS",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "maximum context length is 8192 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "mAxImUm cOnTeXt lEnGtH Is 8192 ToKeNs",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "prefix maximum context length is 8192 tokens suffix",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "maximum context length iſ 8192 toKenſ",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "maxİmum context length İs 8192 tokens",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "maximum contеxt lеngth is 8192 tokеns",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "PROMPT TOO LONG",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "prompt too long",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "pRoMpT ToO LoNg",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "prefix Prompt too long suffix",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Prompt too long",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Prompt too long",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Prompt too long",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "RANGE OF INPUT LENGTH SHOULD BE [1, 4096]",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "range of input length should be [1, 4096]",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "rAnGe oF InPuT LeNgTh sHoUlD Be [1, 4096]",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "prefix Range of input length should be [1, 4096] suffix",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Range of input length ſhould be [1, 4096]",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Range of İnput length should be [1, 4096]",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "error",
+  "errorMessage": "Rangе of input lеngth should bе [1, 4096]",
+  "contextWindow": 0,
+  "usage": {
+   "input": 0,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "zai",
+  "stopReason": "stop",
+  "contextWindow": 200000,
+  "usage": {
+   "input": 210000,
+   "output": 5,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "zai",
+  "stopReason": "stop",
+  "contextWindow": 200000,
+  "usage": {
+   "input": 190000,
+   "output": 5,
+   "cacheRead": 10000
+  },
+  "want": false
+ },
+ {
+  "provider": "xiaomi",
+  "stopReason": "length",
+  "contextWindow": 200000,
+  "usage": {
+   "input": 199000,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": true
+ },
+ {
+  "provider": "xiaomi",
+  "stopReason": "length",
+  "contextWindow": 200000,
+  "usage": {
+   "input": 100000,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ },
+ {
+  "provider": "openai",
+  "stopReason": "length",
+  "contextWindow": 200000,
+  "usage": {
+   "input": 10,
+   "output": 0,
+   "cacheRead": 0
+  },
+  "want": false
+ }
+]
