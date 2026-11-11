@@ -5,11 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand/v2"
+	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/internal/offloop"
 )
 
 // Many goroutines drive one session's public API at once (prompts, queueing,
@@ -36,6 +40,14 @@ func TestAgentSessionDisposedMidChaosSettles(t *testing.T) {
 	runSessionChaos(t, heavySessionOps, true)
 }
 
+// The same heavy mix with the session's file writes on a write queue, as every
+// production host wires them: the file still lists the entries in their order.
+func TestAgentSessionConcurrentHeavyAPIWithAWriteQueueKeepsTheFileInOrder(t *testing.T) {
+	queue := offloop.New()
+	t.Cleanup(queue.Stop)
+	runSessionChaosWith(t, heavySessionOps, false, queue)
+}
+
 func heavySessionOps(session *AgentSession) []func(int) {
 	return []func(int){
 		func(int) { _, _ = session.CompactSession(context.Background(), "") },
@@ -57,6 +69,11 @@ func heavySessionOps(session *AgentSession) []func(int) {
 
 func runSessionChaos(t *testing.T, extra func(*AgentSession) []func(int), disposeMidway bool) {
 	t.Helper()
+	runSessionChaosWith(t, extra, disposeMidway, nil)
+}
+
+func runSessionChaosWith(t *testing.T, extra func(*AgentSession) []func(int), disposeMidway bool, queue *offloop.Queue) {
+	t.Helper()
 	const workers, operations = 6, 60
 	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
 	streamFn := func(m *ai.Model, _ ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
@@ -67,6 +84,15 @@ func runSessionChaos(t *testing.T, extra func(*AgentSession) []func(int), dispos
 				aborted := &ai.AssistantMessage{API: m.API, Provider: m.Provider, Model: m.ID, StopReason: ai.StopAborted}
 				stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopAborted, Error: aborted})
 			case <-time.After(time.Duration(rand.IntN(500)) * time.Microsecond):
+				// One response in three calls the tool, so runs have tool
+				// executions and results for the other calls to land between.
+				if rand.IntN(3) == 0 {
+					stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopToolUse, Message: &ai.AssistantMessage{
+						API: m.API, Provider: m.Provider, Model: m.ID, StopReason: ai.StopToolUse,
+						Content: ai.ContentList{ai.ToolCall{ID: fmt.Sprintf("call-%d", rand.Uint64()), Name: "read", Arguments: json.RawMessage(`{}`)}},
+					}})
+					return
+				}
 				stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
 					API: m.API, Provider: m.Provider, Model: m.ID, StopReason: ai.StopStop,
 					Content: ai.ContentList{ai.TextContent{Text: "ok"}},
@@ -76,7 +102,21 @@ func runSessionChaos(t *testing.T, extra func(*AgentSession) []func(int), dispos
 		return stream
 	}
 	manager, dir := newTestSession(t)
-	session, err := NewAgentSession(&SessionConfig{Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, ConvertToLlm: ConvertToLlm})
+	if queue != nil {
+		manager.SetWriteQueue(queue)
+	}
+	slowTool := testTool("read")
+	slowTool.Execute = func(_ string, _ json.RawMessage, ctx context.Context, _ func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
+		select {
+		case <-ctx.Done():
+		case <-time.After(time.Duration(rand.IntN(300)) * time.Microsecond):
+		}
+		return agent.AgentToolResult{Content: ai.ContentList{ai.TextContent{Text: "read"}}}, nil
+	}
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, ConvertToLlm: ConvertToLlm,
+		Tools: []agent.AgentTool{slowTool},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,6 +205,37 @@ func runSessionChaos(t *testing.T, extra func(*AgentSession) []func(int), dispos
 			}
 			t.Fatalf("message %d: agent role %q, persisted role %q\nagent     %v\npersisted %v", index,
 				ai.RoleOf(inMemory[index]), ai.RoleOf(persisted[index]), roles(inMemory), roles(persisted))
+		}
+	}
+	// The file lists the entries in the order the session holds them, whether
+	// each write was synchronous, held past the run lock (A483) or queued.
+	if err := manager.FlushWrites(); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(manager.GetSessionFile())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var onDisk []string
+	for line := range strings.SplitSeq(strings.TrimSpace(string(data)), "\n") {
+		var entry struct {
+			Type string `json:"type"`
+			ID   string `json:"id"`
+		}
+		if err := json.Unmarshal([]byte(line), &entry); err != nil {
+			t.Fatalf("session file line %q: %v", line, err)
+		}
+		if entry.Type != "session" {
+			onDisk = append(onDisk, entry.ID)
+		}
+	}
+	entries := manager.GetEntries()
+	if len(onDisk) != len(entries) {
+		t.Fatalf("the file holds %d entries, the session %d", len(onDisk), len(entries))
+	}
+	for index, entry := range entries {
+		if onDisk[index] != entry.ID {
+			t.Fatalf("file entry %d is %s, the session's is %s", index, onDisk[index], entry.ID)
 		}
 	}
 	session.Dispose()
