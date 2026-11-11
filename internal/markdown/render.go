@@ -151,6 +151,15 @@ func (r *Renderer) block(b *Block, width int, next *Block, styleContext *inlineS
 		if !b.Pending && r.opts.LatexEnabled && r.opts.Latex != nil {
 			if latex, ok := r.opts.Latex(b.Text, true); ok {
 				rendered = latex
+				// A 2D layout cannot be wrapped row by row, so fall back to the
+				// raw source when a rendered line does not fit
+				// (components/markdown.ts:589-591).
+				for latexLine := range strings.SplitSeq(latex, "\n") {
+					if visibleWidth(latexLine) > width {
+						rendered = jsTrim(b.Raw)
+						break
+					}
+				}
 			} else {
 				rendered = jsTrim(b.Raw)
 			}
