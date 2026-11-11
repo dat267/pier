@@ -6755,7 +6755,10 @@ Tests: `TestAgentSessionConcurrentAPIKeepsTranscriptAndPersistenceInStep`
 `TestHeldSessionWriteKeepsFileOrder` for the held write, with
 `TestFlushWritesIncludesHeldSessionWrites`,
 `TestHeldSessionWriteGoesAheadOfANewlyWiredQueue` and
-`TestDeferredFlushPanicStillWritesAcceptedEntries` for its edges.
+`TestDeferredFlushPanicStillWritesAcceptedEntries` for its edges;
+`TestCustomMessageSentAsARunEndsIsNotStranded` for a custom message sent
+without a turn, whose "defer to the run's end or append now" decision is made
+under the lock too.
 
 ### D439
 

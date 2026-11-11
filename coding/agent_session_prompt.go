@@ -564,28 +564,24 @@ func (s *AgentSession) SendMessage(ctx context.Context, message *ai.CustomMessag
 
 	state := s.prompt()
 	switch {
-	case triggerTurn && !s.IsStreaming():
-		return s.startAgentPrompt(ctx, []ai.Message{message}, options.unlessDisposed)
-	case s.IsStreaming():
-		if !triggerTurn {
-			// Appending now would sit between a tool call and its result.
-			state.mu.Lock()
-			state.pendingCustomMessages = append(state.pendingCustomMessages, message)
-			state.mu.Unlock()
-			return nil
+	case !triggerTurn:
+		// D438: "streaming, so defer to the run's end" and "idle, so append
+		// now" are one decision under the run-lifecycle lock, like
+		// recordBashResultAt. Deciding on an unlocked IsStreaming and queueing
+		// afterwards strands the message when the run's final flush runs in
+		// between. While streaming, appending would sit between a tool call
+		// and its result, so the run takes the message at its end.
+		if s.appendCustomMessageWhileIdle(state, message) {
+			s.emitCustomMessage(message)
 		}
+		return nil
+	case !s.IsStreaming():
+		return s.startAgentPrompt(ctx, []ai.Message{message}, options.unlessDisposed)
+	default:
 		if options.DeliverAs == "followUp" {
 			s.FollowUp(message)
 		} else {
 			s.Steer(message)
-		}
-		return nil
-	default:
-		// Idle: append under the run-lifecycle lock (see recordBashResultAt);
-		// a run that started since the check above takes the message at its
-		// end instead.
-		if s.appendCustomMessageWhileIdle(state, message) {
-			s.emitCustomMessage(message)
 		}
 		return nil
 	}
