@@ -110,9 +110,7 @@ func FindWordBackward(text string, cursor int) int {
 	if cursor <= 0 {
 		return 0
 	}
-	if limit := jsLength(text); cursor > limit {
-		cursor = limit
-	}
+	cursor = normalizeWordCursor(text, cursor)
 	byteCursor := byteOffsetForUTF16Index(text, cursor)
 	segments := WordSegments(text[:byteCursor])
 
@@ -158,11 +156,24 @@ func FindWordBackward(text string, cursor int) int {
 	return newCursor
 }
 
+// normalizeWordCursor moves a cursor that falls inside a supplementary code
+// point to that code point's end, the boundary byteOffsetForUTF16Index already
+// rounds to. The pin would segment the lone surrogate instead, which Go cannot
+// represent, so an out-of-contract cursor answers as the pair's end (A509,
+// D455).
+func normalizeWordCursor(text string, cursor int) int {
+	if cursor <= 0 {
+		return 0
+	}
+	return utf16IndexForByteOffset(text, byteOffsetForUTF16Index(text, cursor))
+}
+
 // FindWordForward returns the cursor position after moving one word forward.
 // Cursors and results are UTF-16 code-unit offsets (upstream JS string
 // offsets), so the caller converts from its own byte offsets.
 func FindWordForward(text string, cursor int) int {
 	limit := jsLength(text)
+	cursor = normalizeWordCursor(text, cursor)
 	if cursor >= limit {
 		return limit
 	}

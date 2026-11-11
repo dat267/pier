@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D454)
+# Deliberate divergences from pi (D1–D455)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7175,3 +7175,29 @@ prevent.
 `TestProjectSettingsWriteKeepsThePreviousFileOnFailure`,
 `TestKeybindingMigrationKeepsTheFileOnFailure`,
 `TestAtomicReplaceKeepsTheRequestedMode`.
+
+### D455
+
+**A word-navigation cursor inside a surrogate pair moves to the pair's end.**
+
+`FindWordBackward` and `FindWordForward` take UTF-16 code-unit offsets, like the
+pin's functions. A caller contract that the editor already honours is that the
+cursor sits on a code-point boundary; a cursor that does not (inside a
+supplementary code point) is now normalized to that code point's end before
+segmenting, so the result is always a valid offset in `[0, len]`.
+
+`Reference:` pi v1.5.0 (f9a26365) `packages/tui/src/word-navigation.ts` slices
+`text.slice(0, cursor)`, so a mid-pair cursor hands `Intl.Segmenter` a lone
+surrogate — half a code point, which has no representation in Go's strings and
+no defined segmentation. Its answers there are incidental: `🇯🇵 flag` at cursor 1
+moves forward to 4 and backward to 0.
+
+Pier previously answered `-1` for the backward case, because
+`byteOffsetForUTF16Index` rounds such a cursor up to the next rune while the
+cursor value stayed behind it. A caller slicing with the raw result would have
+panicked. D399's claim that word navigation matches at every grapheme boundary
+still holds and is unchanged by this row; a differential over 1180 (text,
+cursor) pairs now differs only for cursors inside a surrogate pair, plus the
+dictionary-run case D399 records.
+
+`Test:` `TestWordNavigationNormalizesItsCursor`.
