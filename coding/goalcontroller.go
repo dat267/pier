@@ -831,5 +831,8 @@ func goalEventMessage(customType string, content string, display bool, details j
 	if err != nil {
 		fields = []byte(`{}`)
 	}
-	return &ai.CustomMessage{Role: RoleCustom, Content: fields}
+	// Upstream sendCustomMessage stamps every message it builds (agent-session.ts
+	// v1.5.2 b4afdddf), so the agent's copy carries the timestamp a reload reads
+	// back from the entry.
+	return &ai.CustomMessage{Role: RoleCustom, Content: fields, Timestamp: time.Now().UnixMilli()}
 }

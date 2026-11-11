@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -92,6 +93,11 @@ func heavySessionOps(session *AgentSession) []func(int) {
 		func(int) { session.AbortBash() },
 	}
 }
+
+// chaosTimestamp drops a message's timestamp from the comparison: the agent's
+// copy and the session entry are stamped by separate clock reads, as upstream
+// stamps them.
+var chaosTimestamp = regexp.MustCompile(`,?"timestamp":[0-9]+`)
 
 func runSessionChaos(t *testing.T, extra func(*AgentSession) []func(int), disposeMidway bool) {
 	t.Helper()
@@ -183,8 +189,8 @@ func runSessionChaosGoal(t *testing.T, extra func(*AgentSession) []func(int), di
 			session.RecordBashResult(fmt.Sprintf("echo %d", i), BashResult{Output: "ok", ExitCode: new(0)}, false)
 		},
 		func(i int) {
-			content, _ := json.Marshal(map[string]any{"customType": "note", "content": fmt.Sprintf("note %d", i), "display": true})
-			_ = session.SendMessage(context.Background(), &ai.CustomMessage{Role: "custom", Content: content},
+			content, _ := ai.MarshalJSON(fmt.Sprintf("note %d", i))
+			_ = session.SendMessage(context.Background(), CreateCustomMessage("note", content, true, nil, 0),
 				&SendMessageOptions{TriggerTurn: new(false)})
 		},
 		func(int) { session.SetThinkingLevel(ai.ThinkingLevel([]string{"off", "low", "high"}[rand.IntN(3)])) },
@@ -276,6 +282,13 @@ func runSessionChaosGoal(t *testing.T, extra func(*AgentSession) []func(int), di
 		t.Fatalf("agent holds %d messages, the session persisted %d", len(inMemory), len(persisted))
 	}
 	for index := range inMemory {
+		agentBytes, _ := ai.MarshalJSON(inMemory[index])
+		persistedBytes, _ := ai.MarshalJSON(persisted[index])
+		agentBytes = chaosTimestamp.ReplaceAll(agentBytes, nil)
+		persistedBytes = chaosTimestamp.ReplaceAll(persistedBytes, nil)
+		if string(agentBytes) != string(persistedBytes) {
+			t.Fatalf("message %d differs\nagent     %s\npersisted %s", index, agentBytes, persistedBytes)
+		}
 		if ai.RoleOf(inMemory[index]) != ai.RoleOf(persisted[index]) {
 			roles := func(messages []ai.Message) []string {
 				var out []string
