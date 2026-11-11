@@ -38,7 +38,18 @@ func invoke(job Job) { job.Work() }
 func (Surface) HandleEvent() { invoke(Worker{}) }
 func (Surface) RenderNow() { ch := make(chan int); ch <- 1 }
 func (Surface) HandleSignal() { time.Sleep(time.Second) }
+// A method of a blocking stdlib type: its name is "(*os.File).Write", so the
+// package must come from the callee's object, not from splitting the name.
+func (Surface) RenderFile(f *os.File) { f.Write([]byte("method")) }
+// A pointer-receiver implementation of a loop entry point: documentation
+// promises every implementation is a root, and Go UI types are pointers.
+type PointerSurface struct{}
+func (*PointerSurface) Invalidate() { os.Stat("pointer receiver root") }
 func (Surface) Invalidate() { go helper.Background() }
+// RenderFile runs from a value-receiver root, so the callee-classification case
+// does not also depend on pointer-receiver roots.
+type ValueHost struct{}
+func (ValueHost) HandleEvent(f *os.File) { Surface{}.RenderFile(f) }
 type FixtureWiring struct { OnBeat func() }
 func makeWiring() *FixtureWiring {
  wiring := &FixtureWiring{}
@@ -77,6 +88,8 @@ func TestAnalysisFindsBlockingPaths(t *testing.T) {
 		".Post":               Syscall,
 		".RenderNow":          Channel,
 		".HandleSignal":       Sleep,
+		".RenderFile":         Syscall,
+		"PointerSurface":      Syscall,
 	}
 	if len(findings) != len(want) {
 		t.Fatalf("findings = %+v, want %d distinct blocking paths", findings, len(want))

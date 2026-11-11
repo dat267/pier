@@ -31,11 +31,20 @@ func TestNothingBlockingReachableFromTheUIGoroutine(t *testing.T) {
 		"wiring field TakeCrash":        "runs during Init, before the loop starts",
 		"wiring field CheckVersion":     "invoked only from the notifyNewVersion goroutine (go w.notifyNewVersion)",
 		"wiring field WriteDebugLog":    "user-invoked /debug; MkdirAll, one WriteFile and agent-dir path resolution, sub-millisecond",
+		"(*github.com/dat267/pier/coding/interactive.EventDispatcher).HandleEvent -> github.com/dat267/pier/coding.SessionEntryToContextMessages": "one appended custom_message whose display flag is set, decoded so it can be rendered; sub-millisecond, and a new blocking call in the dispatcher still fails above",
 	}
 	for _, f := range findings {
 		if reason, ok := allowlist[f.Chain[0]]; ok {
 			t.Logf("allowed: %s %s (%s)", f.Kind, f.Pos, reason)
 			continue
+		}
+		// A root can carry one accepted call while the rest of it stays under
+		// the invariant; key those by the root and its immediate callee.
+		if len(f.Chain) > 1 {
+			if reason, ok := allowlist[f.Chain[0]+" -> "+f.Chain[1]]; ok {
+				t.Logf("allowed: %s %s (%s)", f.Kind, f.Pos, reason)
+				continue
+			}
 		}
 		t.Errorf("%s %s\n  chain: %s", f.Kind, f.Pos, strings.Join(f.Chain, " -> "))
 	}

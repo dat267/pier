@@ -75,7 +75,9 @@ var pkgBlockers = map[string]Kind{
 
 // cheapOS are os functions that never touch the kernel.
 var cheapOS = map[string]bool{
-	"os.JoinPath": true, "os.PathSeparator": true, "os.PathListSeparator": true,
+	// UserHomeDir reads $HOME (os/file.go), so it makes no syscall.
+	"os.UserHomeDir": true,
+	"os.JoinPath":    true, "os.PathSeparator": true, "os.PathListSeparator": true,
 	"os.Getenv": true, "os.Setenv": true, "os.Unsetenv": true, "os.Clearenv": true,
 	"os.Expand": true, "os.Getpagesize": true,
 }
@@ -105,19 +107,23 @@ var namedBlockers = map[string]Kind{
 
 func blockingCallee(fn *ssa.Function) (Kind, bool) {
 	rel := fn.RelString(nil)
-	if dot := strings.Index(rel, "."); dot > 0 {
-		pkg := rel[:dot]
-		if k, ok := pkgBlockers[pkg]; ok && !cheapOS[rel] {
-			return k, true
-		}
-	}
 	if k, ok := namedBlockers[rel]; ok {
 		return k, true
+	}
+	// Resolve the callee's package from its object, not from RelString: a
+	// method's name is "(*os.File).Write", so splitting on the first dot yields
+	// "(*os" and every method of a blocking package was silently skipped.
+	if obj := fn.Object(); obj != nil {
+		if pkg := obj.Pkg(); pkg != nil {
+			if k, ok := pkgBlockers[pkg.Path()]; ok && !cheapOS[rel] {
+				return k, true
+			}
+		}
 	}
 	return 0, false
 }
 
-var pierRootRE = regexp.MustCompile(`^\(github\.com/dat267/pier/[^()]+\)\.(HandleEvent|HandleTerminalInput|RenderNow|Render|Invalidate|HandleSignal)$`)
+var pierRootRE = regexp.MustCompile(`^\(\*?github\.com/dat267/pier/[^()]+\)\.(HandleEvent|HandleTerminalInput|RenderNow|Render|Invalidate|HandleSignal)$`)
 
 var pierNamedRoots = []string{
 	"(*github.com/dat267/pier/coding/interactive.RunWiring).Run",
