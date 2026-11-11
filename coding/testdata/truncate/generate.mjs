@@ -97,6 +97,38 @@ for (const { name, content } of mcpCases) {
 		expected: result.content.map((block) => block.text ?? "").join(""),
 	});
 }
+
+// Shapes a port can get wrong: several text blocks joined with a newline, the
+// image that follows the truncated text, the other blocks that are dropped, and
+// a saver that fails.
+const image = { type: "image", data: Buffer.from("png-bytes").toString("base64"), mimeType: "image/png" };
+const link = { type: "resource_link", uri: "file:///x", name: "x" };
+const failingSave = async () => {
+	throw new Error("disk full");
+};
+// Long text is recorded as a repeat spec so the corpus stays readable.
+const longText = (char, count) => ({ type: "text", repeat: { char, count } });
+const shapeCases = [
+	{ name: "two-text-blocks-over", blocks: [longText("a", cap - 10), { type: "text", text: "b".repeat(20) }] },
+	{ name: "text-image-over", blocks: [longText("x", cap + 100), image] },
+	{ name: "text-link-over", blocks: [longText("x", cap + 100), link] },
+	{ name: "image-only", blocks: [image] },
+	{ name: "two-text-blocks-under", blocks: [{ type: "text", text: "a" }, { type: "text", text: "b" }] },
+	{ name: "save-fails", blocks: [longText("x", cap + 100)], saveError: true },
+];
+for (const { name, blocks, saveError } of shapeCases) {
+	const materialized = blocks.map((block) => (block.repeat ? { type: "text", text: block.repeat.char.repeat(block.repeat.count) } : block));
+	const result = await limitMcpContent(materialized, saveError ? failingSave : saveOutput);
+	outputs.push({
+		name: `mcp/${name}`,
+		kind: "mcp-blocks",
+		blocks: blocks.map((block) => (block.type === "image" ? { ...block, data: "<image>" } : block)),
+		saveError: Boolean(saveError),
+		savePath: savedPath,
+		fullOutputPath: result.fullOutputPath ?? null,
+		expected: JSON.stringify(result.content.map((block) => (block.type === "image" ? { type: "image", mimeType: block.mimeType } : block))),
+	});
+}
 const sizes = [0, 1, 1023, 1024, 1025, 51200, 1048575, 1048576, 1572864];
 for (const bytes of sizes) {
 	outputs.push({ name: `size/${bytes}`, kind: "size", bytes, expected: truncate.formatSize(bytes) });

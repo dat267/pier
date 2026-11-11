@@ -3,8 +3,10 @@ package coding
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -49,12 +51,23 @@ func TestTruncationMatchesUpstream(t *testing.T) {
 			MaxLines *int `json:"maxLines"`
 			MaxBytes *int `json:"maxBytes"`
 		} `json:"options"`
-		Line     string          `json:"line"`
-		MaxChars *int            `json:"maxChars"`
-		Bytes    int             `json:"bytes"`
-		SavePath string          `json:"savePath"`
-		MaxBytes *int            `json:"maxBytes"`
-		Expected json.RawMessage `json:"expected"`
+		Line     string `json:"line"`
+		MaxChars *int   `json:"maxChars"`
+		Bytes    int    `json:"bytes"`
+		SavePath string `json:"savePath"`
+		Blocks   []struct {
+			Type     string `json:"type"`
+			Text     string `json:"text"`
+			MimeType string `json:"mimeType"`
+			Repeat   *struct {
+				Char  string `json:"char"`
+				Count int    `json:"count"`
+			} `json:"repeat"`
+		} `json:"blocks"`
+		SaveError      bool            `json:"saveError"`
+		FullOutputPath *string         `json:"fullOutputPath"`
+		MaxBytes       *int            `json:"maxBytes"`
+		Expected       json.RawMessage `json:"expected"`
 	}
 	if err := json.Unmarshal(raw, &cases); err != nil {
 		t.Fatal(err)
@@ -106,6 +119,57 @@ func TestTruncationMatchesUpstream(t *testing.T) {
 				}
 				if got.String() != want {
 					t.Errorf("LimitMcpContent = %q, want %q", got.String(), want)
+				}
+			case test.Kind == "mcp-blocks":
+				// The truncated result keeps the text and the images and drops
+				// every other block, and a failing saver only changes the notice.
+				var want string
+				if err := json.Unmarshal(test.Expected, &want); err != nil {
+					t.Fatal(err)
+				}
+				var content []ai.Content
+				for _, block := range test.Blocks {
+					switch block.Type {
+					case "text":
+						text := block.Text
+						if block.Repeat != nil {
+							text = strings.Repeat(block.Repeat.Char, block.Repeat.Count)
+						}
+						content = append(content, ai.TextContent{Text: text})
+					case "image":
+						content = append(content, ai.ImageContent{Data: "cG5nLWJ5dGVz", MimeType: block.MimeType})
+					default:
+						// The pin's only non-text non-image block is a resource
+						// link; pier converts those to text before limiting, so a
+						// thinking block stands in for the dropped-kind rule.
+						content = append(content, ai.ThinkingContent{Thinking: "dropped"})
+					}
+				}
+				save := func([]byte, string) (string, error) { return test.SavePath, nil }
+				if test.SaveError {
+					save = func([]byte, string) (string, error) { return "", errors.New("disk full") }
+				}
+				limited, path := LimitMcpContent(content, save)
+				var blocks []map[string]string
+				for _, block := range limited {
+					switch typed := block.(type) {
+					case ai.TextContent:
+						blocks = append(blocks, map[string]string{"type": "text", "text": typed.Text})
+					case ai.ImageContent:
+						blocks = append(blocks, map[string]string{"type": "image", "mimeType": typed.MimeType})
+					}
+				}
+				var wantBlocks []map[string]string
+				if err := json.Unmarshal([]byte(want), &wantBlocks); err != nil {
+					t.Fatal(err)
+				}
+				// Key order differs between the two encoders; compare the blocks.
+				if !reflect.DeepEqual(blocks, wantBlocks) {
+					got, _ := json.Marshal(blocks)
+					t.Errorf("LimitMcpContent blocks = %s, want %s", got, want)
+				}
+				if (path == nil) != (test.FullOutputPath == nil) || (path != nil && *path != *test.FullOutputPath) {
+					t.Errorf("fullOutputPath = %v, want %v", path, test.FullOutputPath)
 				}
 			default:
 				var want truncateFixtureResult
