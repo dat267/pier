@@ -9,15 +9,14 @@ registerHooks({ resolve(s, c, next) {
 		: next(s, c);
 } });
 const fixtures = [];
-for (const api of ["openai-responses", "openai-completions"]) {
+const build = async (api, property, id) => {
 	const { stream } = await import(pathToFileURL(resolve(root, `packages/ai/src/api/${api}.ts`)));
-	for (const property of ["payload", ""]) {
+	{
 		const model = { api, id: "gpt-5", provider: "openai", baseUrl: "https://api.openai.com/v1", reasoning: false,
 			compat: { supportsOpenAIGrammarTools: true }, input: ["text"], maxTokens: 8192, contextWindow: 128000,
 			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } };
 		const tool = { name: "expression", description: "Expression", parameters: { type: "object", properties: { [property]: { type: "string" } }, required: [property] },
 			constrainedSampling: { type: "grammar", variants: { openai_regex: ".+" } } };
-		const id = api === "openai-responses" ? "call_1|ctc_1" : "call_1";
 		const messages = [
 			{ role: "system", content: "sys", toolsAdded: [tool], timestamp: 0 },
 			{ role: "user", content: "an expression", timestamp: 1 },
@@ -32,7 +31,28 @@ for (const api of ["openai-responses", "openai-completions"]) {
 			{ headers: { "content-type": "text/event-stream" } }),
 		}).result();
 		if (result.errorMessage || !payload) throw new Error(result.errorMessage ?? "no payload");
-		fixtures.push({ name: `${api}-${property || "empty-property"}`, model, messages, payload });
+		return { model, messages, payload };
 	}
+};
+
+for (const api of ["openai-responses", "openai-completions"]) {
+	for (const property of ["payload", ""]) {
+		const id = api === "openai-responses" ? "call_1|ctc_1" : "call_1";
+		const built = await build(api, property, id);
+		fixtures.push({ name: `${api}-${property || "empty-property"}`, ...built });
+	}
+}
+
+// The replayed item id must match the type the call is replayed as: a call
+// recorded with the other prefix loses its item id rather than sending one of
+// the wrong type, and a third segment is dropped.
+for (const { name, api, property, id } of [
+	{ name: "openai-responses-function-prefix-on-custom-tool", api: "openai-responses", property: "payload", id: "call_1|fc_1" },
+	{ name: "openai-responses-extra-segment", api: "openai-responses", property: "payload", id: "call_1|ctc_1|extra" },
+	{ name: "openai-responses-no-item-id", api: "openai-responses", property: "payload", id: "call_1" },
+	{ name: "openai-completions-pipe-id", api: "openai-completions", property: "payload", id: "call_1|ctc_1" },
+]) {
+	const built = await build(api, property, id);
+	fixtures.push({ name, ...built });
 }
 console.log(JSON.stringify(fixtures, null, 2));

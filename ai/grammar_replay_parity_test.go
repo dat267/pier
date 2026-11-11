@@ -24,6 +24,9 @@ func TestGrammarToolReplayMatchesUpstream(t *testing.T) {
 	if err := json.Unmarshal(data, &fixtures); err != nil {
 		t.Fatal(err)
 	}
+	if len(fixtures) < 8 {
+		t.Fatalf("fixture has %d cases, expected the full grammar replay corpus", len(fixtures))
+	}
 	for _, fixture := range fixtures {
 		t.Run(fixture.Name, func(t *testing.T) {
 			var messages []Message
