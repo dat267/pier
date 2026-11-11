@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// pi v1.4.0 (4a080252), packages/coding-agent/src/cli/args.ts parseArgs.
+// pi v1.5.0 (f9a26365), packages/coding-agent/src/cli/args.ts parseArgs.
 // Regenerate:
 //
 //	node --experimental-strip-types coding/testdata/cli-args/generate.mjs ./pi > coding/testdata/cli-args/golden.json

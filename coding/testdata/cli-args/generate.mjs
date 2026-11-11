@@ -1,4 +1,4 @@
-// Reference: pi v1.4.0 (4a080252), packages/coding-agent/src/cli/args.ts parseArgs.
+// Reference: pi v1.5.0 (f9a26365), packages/coding-agent/src/cli/args.ts parseArgs.
 // Regenerate from the repository root:
 // node --experimental-strip-types coding/testdata/cli-args/generate.mjs ./pi > coding/testdata/cli-args/golden.json
 import { registerHooks } from "node:module";
@@ -39,6 +39,23 @@ const vectors = [
 	["--approve", "false"], ["--no-approve", "--approve"], ["--print", "--"],
 	["--mode", "text", "--mode", "json"], ["--export"], ["--use-theme"],
 	["--tools", "read", "--tools", "bash"], ["--no-tools", "--tools", "read"],
+	// Empty values, and values that look like flags.
+	["--model="], ["--mode="], ["--tools="], ["--thinking="], ["--name="], ["--models="],
+	["--thinking", ""], ["--append-system-prompt", ""], ["--list-models", ""],
+	["--name", "--"], ["--export", "--"], ["--session-dir", "--"], ["--name", "-p"],
+	["--model", "--model", "x"], ["--session-id", ""], ["--session-id", "bad/id"],
+	["--no-session=1"], ["-nt="],
+	// Positional and message rules around --print and --.
+	["--print", "foo", "bar"], ["-p", "foo", "bar"], ["-p", "---x"], ["-p", "--", "x"],
+	["-p", "--", "--"], ["-pc"], ["-rc"], ["-cr"], ["-nt", "--", "x"],
+	["--", "--", "x"], ["--", "-p", "x"], ["@"], ["@@x"], ["@--x"], ["--", "@"], ["--", "@@y"],
+	// Lists are consumed once, never twice.
+	["--tools", "a", "b"], ["--models", "a", "b"], ["--skills", "a", "b"], ["--themes", "a", "b"],
+	["--prompt-templates", "a", "b"], ["--exclude-tools", "a", "b"],
+	// Trust pair, unicode, and a listing flag next to a filter flag.
+	["-a"], ["-a", "--no-approve"], ["--approve", "--no-approve"],
+	["héllo"], ["--name", "héllo"], ["-p", "héllo", "@f"],
+	["--list-models", "--offline"], ["--list-models", "@x"], ["--offline", "--list-models-all", "--verbose"],
 ];
 const projection = (args) => {
 	const p = (v) => (v === undefined ? null : v);
