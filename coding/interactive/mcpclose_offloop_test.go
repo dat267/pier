@@ -48,8 +48,12 @@ func TestMCPReplacementDoesNotWaitForTheClose(t *testing.T) {
 	app.mcpOptionsOverride = func(loaded coding.LoadedMcpConfig) coding.McpManagerOptions {
 		return coding.McpManagerOptions{Config: loaded, Cwd: app.sessionMgr.GetCwd(), CreateTransport: transport}
 	}
+	// Direct, so WaitForDirectTools waits for the connect and the transport is
+	// installed before the replacement retires this manager. A lazy entry would
+	// let Close run against a connection that has nothing to close yet.
+	direct := coding.McpExposureDirect
 	config := coding.LoadedMcpConfig{Servers: []coding.McpServerEntry{
-		{Name: "hung", Scope: coding.McpScopeGlobal, Config: &coding.McpServerConfig{Command: "unused"}},
+		{Name: "hung", Scope: coding.McpScopeGlobal, Config: &coding.McpServerConfig{Command: "unused", Exposure: &direct}},
 	}}
 	app.mcpManager = coding.NewMcpManagerAsync(context.Background(), coding.McpManagerOptions{
 		Config: config, Cwd: app.sessionMgr.GetCwd(), CreateTransport: transport,
@@ -66,9 +70,12 @@ func TestMCPReplacementDoesNotWaitForTheClose(t *testing.T) {
 		defer close(returned)
 		app.reloadMCP(context.Background(), app.sessionMgr.GetCwd())
 	}()
+	// Generous: under `go test ./...` on four cores the worker can be queued
+	// behind other packages. The bug this pins never delays this first step (the
+	// old code entered Close inline), so the margin costs nothing.
 	select {
 	case <-entered:
-	case <-time.After(5 * time.Second):
+	case <-time.After(60 * time.Second):
 		t.Fatal("the retired manager was never closed")
 	}
 	select {
