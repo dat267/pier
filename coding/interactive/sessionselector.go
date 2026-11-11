@@ -683,11 +683,14 @@ func (l *SessionList) Render(width int) []string {
 		age := formatSessionDate(session.Modified, now)
 		msgCount := itoa(session.MessageCount)
 		rightPart := msgCount + " " + age
+		// The header's cwd and the file path are untrusted text: a session file
+		// can carry escape sequences, and this column reaches the terminal. The
+		// reference renders them verbatim; the port follows D342/D422 (D445).
 		if l.showCwd && session.Cwd != "" {
-			rightPart = shortenSessionPath(session.Cwd) + " " + rightPart
+			rightPart = sanitizeSessionMetadata(shortenSessionPath(session.Cwd)) + " " + rightPart
 		}
 		if l.showPath {
-			rightPart = shortenSessionPath(session.Path) + " " + rightPart
+			rightPart = sanitizeSessionMetadata(shortenSessionPath(session.Path)) + " " + rightPart
 		}
 
 		cursor := "  "
@@ -756,6 +759,13 @@ func (l *SessionList) Render(width int) []string {
 }
 
 // stripControlCharacters replaces control characters with spaces.
+// sanitizeSessionMetadata makes a stored path or cwd safe for a row: escape
+// sequences are removed and remaining control characters become spaces, the
+// treatment the name and message columns already get.
+func sanitizeSessionMetadata(text string) string {
+	return stripControlCharacters(tui.SanitizeUntrustedText(text))
+}
+
 func stripControlCharacters(text string) string {
 	var builder strings.Builder
 	for _, r := range text {

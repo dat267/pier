@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D444)
+# Deliberate divergences from pi (D1–D445)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6949,3 +6949,24 @@ inline only when there is no queue, which is a test app and also its only writer
 
 Tests: `TestMCPReplacementDoesNotWaitForTheClose`, which blocks in the transport's
 `Close` and fails if the rebind waits for it.
+
+### D445
+
+**The session picker sanitizes a stored cwd and path; the reference renders them
+verbatim.**
+
+Reference: pi v1.5.0 `f9a26365` `modes/interactive/components/session-selector.ts:466`
+puts `shortenHomePath(session.cwd)` into the row as-is, and the path toggle does
+the same with the session path.
+
+Both strings are untrusted in the port's terms: `SessionInfo.Cwd` is the session
+header's `cwd` copied straight out of a JSONL file (`coding/session_manager.go`),
+so a shared, imported or otherwise planted session file chooses the bytes shown
+in every row of the all-projects scope. Escape sequences there reach the terminal
+verbatim, which is a clipboard write away from `\x1b]52;c;…\x07` and a screen
+clear away from `\x1b[2J`. The row already sanitized its name and message
+columns, and D342/D422 make sanitizing untrusted terminal text the port's rule,
+so the metadata columns now get the same treatment: escape sequences are dropped
+and remaining control characters become spaces.
+
+Tests: `TestSessionListSanitizesStoredCwd`.
