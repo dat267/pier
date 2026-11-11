@@ -2,6 +2,7 @@ package ai
 
 import (
 	"fmt"
+	"math"
 	"time"
 )
 
@@ -10,6 +11,12 @@ import (
 const (
 	contextSafetyTokens = 4096
 	minMaxTokens        = 1
+	// contextSafetyRatio is the input margin as a fraction of the counted
+	// input, applied when it exceeds the fixed margin.
+	contextSafetyRatio = 0.15
+	// minOutputWithRatioMargin is the smallest output room that still justifies
+	// the ratio margin; below it only the fixed margin is kept.
+	minOutputWithRatioMargin = 32768
 
 	// MinAnswerTokens are always left for the answer when a thinking budget
 	// shares the response ceiling.
@@ -65,8 +72,22 @@ func ClampMaxTokensToContext(model *Model, context TranscriptContext, maxTokens 
 	if model.ContextWindow <= 0 {
 		return max(minMaxTokens, maxTokens)
 	}
-	available := jsNumberToInt(float64(model.ContextWindow) - float64(EstimateContextTokens(context.Messages).Tokens) - contextSafetyTokens)
-	return min(maxTokens, max(minMaxTokens, available))
+	// The arithmetic stays in float64 like upstream's Numbers: D313 saturates
+	// an oversized usage estimate at the int bound, and integer subtraction
+	// there would wrap a huge negative room back into positive answer room.
+	input := float64(EstimateContextTokens(context.Messages).Tokens)
+	// OpenRouter counts the input with its own tokenizer and rejects
+	// input + max_tokens above the window before routing, counting prose up to
+	// 12% above the provider's count (#10497), so keep a 15% input margin.
+	margin := math.Max(float64(contextSafetyTokens), math.Ceil(input*contextSafetyRatio))
+	room := float64(model.ContextWindow) - input - margin
+	if room < float64(minOutputWithRatioMargin) {
+		// The ratio margin only applies while it leaves room to answer: a
+		// nearly full large window, or a small one, keeps the fixed margin and
+		// caps output at that size.
+		room = math.Min(float64(minOutputWithRatioMargin), float64(model.ContextWindow)-input-float64(contextSafetyTokens))
+	}
+	return jsNumberToInt(math.Min(float64(maxTokens), math.Max(float64(minMaxTokens), room)))
 }
 
 // withSimpleMaxTokens ports buildBaseOptions' output ceiling without changing
