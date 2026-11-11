@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D446)
+# Deliberate divergences from pi (D1–D447)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6988,3 +6988,22 @@ reachable the same way: a stored message whose role is not one the tree knows
 produces no tree node at all (probed), so only the label is treated here.
 
 Tests: `TestTreeRenderSanitizesStoredRowFields`.
+
+### D447
+
+**A user message's text is sanitized before it reaches the terminal; the reference
+renders it verbatim.**
+
+Reference: pi v1.5.0 `f9a26365` `modes/interactive/components/user-message.ts:47`
+builds its Markdown from `this.text` unchanged, and the Markdown renderer forwards
+escape sequences (verified by rendering one through `tui.NewMarkdown`).
+
+A resumed session replays its stored user messages through this component, so a
+shared, imported or planted session file chooses those bytes, and the transcript
+executes whatever they contain: `\x1b[2J` clears the screen, `\x1b]52;c;…\x07`
+writes the clipboard. Assistant text, status lines, tool frames and error
+messages already go through the port's rule for untrusted terminal text (D342,
+D422); the user-message component now does too, in `rebuild`, which covers both
+construction and `SetText`.
+
+Tests: `TestUserMessageSanitizesStoredText`.

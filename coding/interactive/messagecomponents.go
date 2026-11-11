@@ -91,7 +91,10 @@ func (c *UserMessageComponent) rebuild() {
 	// The Markdown pads and colors its own background: a Box around it would
 	// keep a second full-width copy of every line, with identical output
 	// (upstream e792ba131).
-	c.Container.AddChild(tui.NewMarkdown(c.text, c.outputPad, 1, c.markdownTheme,
+	// A resumed session renders stored user messages here, so the text is
+	// untrusted: the Markdown renderer forwards escape sequences, and the
+	// terminal must never execute them (D342, D447).
+	c.Container.AddChild(tui.NewMarkdown(tui.SanitizeUntrustedText(c.text), c.outputPad, 1, c.markdownTheme,
 		&tui.DefaultTextStyle{
 			Color:   func(content string) string { return theme.Fg("userMessageText", content) },
 			BgColor: func(content string) string { return theme.Bg("userMessageBg", content) },
