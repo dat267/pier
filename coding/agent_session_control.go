@@ -697,6 +697,29 @@ func (s *AgentSession) SetModel(ctx context.Context, model *ai.Model, options Mo
 	return nil
 }
 
+// nextCycleIndex is the model to cycle to, and false when there is nothing to
+// switch to (pi v1.5.2 agent-session.ts getNextCycleIndex). When the current
+// model is not in the list (currentIndex -1), forward picks the first entry and
+// backward the last, so a one-entry list still selects its only model.
+func nextCycleIndex(currentIndex, length int, direction string) (int, bool) {
+	if length == 0 {
+		return 0, false
+	}
+	if currentIndex == -1 {
+		if direction == "forward" {
+			return 0, true
+		}
+		return length - 1, true
+	}
+	if length == 1 {
+		return 0, false
+	}
+	if direction == "forward" {
+		return (currentIndex + 1) % length, true
+	}
+	return (currentIndex - 1 + length) % length, true
+}
+
 // CycleModel advances to the next (or previous) model in scope or availability.
 func (s *AgentSession) CycleModel(ctx context.Context, direction string, options ModelMutationOptions) (*ModelCycleResult, error) {
 	if len(s.ScopedModels()) > 0 {
@@ -713,22 +736,19 @@ func (s *AgentSession) cycleScopedModel(ctx context.Context, direction string, o
 			scoped = append(scoped, candidate)
 		}
 	}
-	if len(scoped) <= 1 {
-		return nil, nil
-	}
 	current := s.Model()
-	index := 0
+	index := -1
 	for position, candidate := range scoped {
 		if ai.ModelsAreEqual(candidate.Model, current) {
 			index = position
 			break
 		}
 	}
-	nextIndex := index + 1
-	if direction == "backward" {
-		nextIndex = index - 1 + len(scoped)
+	nextIndex, ok := nextCycleIndex(index, len(scoped), direction)
+	if !ok {
+		return nil, nil
 	}
-	next := scoped[nextIndex%len(scoped)]
+	next := scoped[nextIndex]
 	return s.applyModelCycle(ctx, next.Model, next.ThinkingLevel, options, true)
 }
 
@@ -737,22 +757,19 @@ func (s *AgentSession) cycleAvailableModel(ctx context.Context, direction string
 	if s.control.ModelRuntime != nil {
 		models = s.control.ModelRuntime.GetAvailableSnapshot()
 	}
-	if len(models) <= 1 {
-		return nil, nil
-	}
 	current := s.Model()
-	index := 0
+	index := -1
 	for position, candidate := range models {
 		if ai.ModelsAreEqual(candidate, current) {
 			index = position
 			break
 		}
 	}
-	nextIndex := index + 1
-	if direction == "backward" {
-		nextIndex = index - 1 + len(models)
+	nextIndex, ok := nextCycleIndex(index, len(models), direction)
+	if !ok {
+		return nil, nil
 	}
-	next := models[nextIndex%len(models)]
+	next := models[nextIndex]
 	return s.applyModelCycle(ctx, next, "", options, false)
 }
 
