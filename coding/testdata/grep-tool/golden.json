@@ -271,5 +271,131 @@
         "matchLimitReached": 2
       }
     }
+  },
+  {
+    "name": "dot-path",
+    "args": {
+      "pattern": "alpha",
+      "path": "."
+    },
+    "expected": {
+      "text": "a.txt:1: alpha one\na.txt:3: alpha three\nsub/c.txt:1: deep alpha",
+      "details": null
+    }
+  },
+  {
+    "name": "dot-slash-subdir-path",
+    "args": {
+      "pattern": "alpha",
+      "path": "./sub"
+    },
+    "expected": {
+      "text": "c.txt:1: deep alpha",
+      "details": null
+    }
+  },
+  {
+    "name": "trailing-slash-path",
+    "args": {
+      "pattern": "alpha",
+      "path": "sub/"
+    },
+    "expected": {
+      "text": "c.txt:1: deep alpha",
+      "details": null
+    }
+  },
+  {
+    "name": "dot-slash-glob",
+    "args": {
+      "pattern": "alpha",
+      "glob": "./*.txt"
+    },
+    "expected": {
+      "text": "a.txt:1: alpha one\na.txt:3: alpha three\nsub/c.txt:1: deep alpha",
+      "details": null
+    }
+  },
+  {
+    "name": "dot-slash-recursive-glob",
+    "args": {
+      "pattern": "alpha",
+      "glob": ".//**/*.txt"
+    },
+    "expected": {
+      "text": "a.txt:1: alpha one\na.txt:3: alpha three\nsub/c.txt:1: deep alpha",
+      "details": null
+    }
+  },
+  {
+    "name": "recursive-glob",
+    "args": {
+      "pattern": "alpha",
+      "glob": "**/*.txt"
+    },
+    "expected": {
+      "text": "a.txt:1: alpha one\na.txt:3: alpha three\nsub/c.txt:1: deep alpha",
+      "details": null
+    }
+  },
+  {
+    "name": "negated-glob",
+    "args": {
+      "pattern": "alpha",
+      "glob": "!sub/**"
+    },
+    "expected": {
+      "text": "a.txt:1: alpha one\na.txt:3: alpha three",
+      "details": null
+    }
+  },
+  {
+    "name": "glob-with-slash",
+    "args": {
+      "pattern": "alpha",
+      "glob": "sub/*.txt"
+    },
+    "expected": {
+      "text": "sub/c.txt:1: deep alpha",
+      "details": null
+    }
+  },
+  {
+    "name": "negated-dot-slash-glob",
+    "args": {
+      "pattern": "alpha",
+      "glob": "!./sub/**"
+    },
+    "expected": {
+      "text": "a.txt:1: alpha one\na.txt:3: alpha three",
+      "details": null
+    }
+  },
+  {
+    "name": "crlf-lines",
+    "args": {
+      "pattern": "crlf"
+    },
+    "extra": {
+      "crlf.txt": "before\r\ncrlf one\r\nafter\r\n"
+    },
+    "expected": {
+      "text": "crlf.txt:2: crlf one",
+      "details": null
+    }
+  },
+  {
+    "name": "crlf-context",
+    "args": {
+      "pattern": "crlf one",
+      "context": 1
+    },
+    "extra": {
+      "crlf.txt": "before\r\ncrlf one\r\nafter\r\n"
+    },
+    "expected": {
+      "text": "crlf.txt-1- before\ncrlf.txt-3- after\ncrlf.txt:2: crlf one",
+      "details": null
+    }
   }
 ]

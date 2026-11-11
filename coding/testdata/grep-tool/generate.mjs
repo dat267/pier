@@ -59,6 +59,22 @@ const cases = [
 	{ name: "context-at-first-line", pattern: "alpha one", context: 2 },
 	{ name: "limit-with-context", pattern: "alpha", path: "a.txt", limit: 1, context: 1 },
 	{ name: "fractional-limit-two-point-nine", pattern: "match", path: "many.txt", limit: 2.9 },
+	// Path and glob resolution. A directory search runs inside the search path
+	// and globs are rooted there, so these spellings must agree.
+	{ name: "dot-path", pattern: "alpha", path: "." },
+	{ name: "dot-slash-subdir-path", pattern: "alpha", path: "./sub" },
+	{ name: "trailing-slash-path", pattern: "alpha", path: "sub/" },
+	{ name: "dot-slash-glob", pattern: "alpha", glob: "./*.txt" },
+	{ name: "dot-slash-recursive-glob", pattern: "alpha", glob: ".//**/*.txt" },
+	{ name: "recursive-glob", pattern: "alpha", glob: "**/*.txt" },
+	{ name: "negated-glob", pattern: "alpha", glob: "!sub/**" },
+	{ name: "glob-with-slash", pattern: "alpha", glob: "sub/*.txt" },
+	// The dot-slash strip keeps a leading negation marker.
+	{ name: "negated-dot-slash-glob", pattern: "alpha", glob: "!./sub/**" },
+	// ripgrep prints CRLF lines with the carriage return; the start of a window
+	// keeps it and the terminator is trimmed once.
+	{ name: "crlf-lines", pattern: "crlf", extra: { "crlf.txt": "before\r\ncrlf one\r\nafter\r\n" } },
+	{ name: "crlf-context", pattern: "crlf one", context: 1, extra: { "crlf.txt": "before\r\ncrlf one\r\nafter\r\n" } },
 ];
 const tool = createGrepToolDefinition(dir);
 const fixtures = [];
