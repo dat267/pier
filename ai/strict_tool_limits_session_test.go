@@ -16,6 +16,20 @@ import (
 // preferred strict tools non-strict at once, so the rejection is not repeated.
 // Rejecting it again would also miss the prompt cache when strictness returns.
 
+// forgetStrictToolLimits clears the process-wide latch for the test's session
+// ids before and after it, so a rerun in the same process (-count=2) starts
+// from a session that has not seen the rejection.
+func forgetStrictToolLimits(t *testing.T, sessionIDs ...string) {
+	t.Helper()
+	forget := func() {
+		for _, id := range sessionIDs {
+			ResetStrictToolLimits(id)
+		}
+	}
+	forget()
+	t.Cleanup(forget)
+}
+
 func strictLimitTool() Tool {
 	return Tool{
 		Name: "lookup", Description: "Look up a value",
@@ -70,6 +84,7 @@ func anthropicStrictLimitServer(t *testing.T) (*httptest.Server, func() (attempt
 }
 
 func TestStreamAnthropicSkipsPreferredStrictToolsForALatchedSession(t *testing.T) {
+	forgetStrictToolLimits(t, "session-latched", "session-fresh")
 	server, snapshot, reset := anthropicStrictLimitServer(t)
 	defer server.Close()
 	model := testAnthropicModel()
@@ -118,6 +133,7 @@ func TestStreamAnthropicSkipsPreferredStrictToolsForALatchedSession(t *testing.T
 }
 
 func TestBedrockSkipsPreferredStrictToolsForALatchedSession(t *testing.T) {
+	forgetStrictToolLimits(t, "bedrock-latched")
 	frames := [][]byte{
 		bedrockEventFrame("messageStart", map[string]any{"role": "assistant"}),
 		bedrockEventFrame("contentBlockDelta", map[string]any{"contentBlockIndex": 0, "delta": map[string]any{"text": "ok"}}),
