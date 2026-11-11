@@ -41,6 +41,16 @@ const cases = {
 	"tool-long-ascii": [toolResult([{ type: "text", text: long("x", 2500) }])],
 	"tool-long-astral": [toolResult([{ type: "text", text: long("😀", 1500) }])],
 	"mixed": [user("start"), assistant([{ type: "text", text: "working" }, toolCall("c1", "read", { path: "a" })]), toolResult([{ type: "text", text: "contents" }]), assistant([{ type: "text", text: "done" }])],
+	// Arguments are re-serialized through JSON.stringify, so number spelling
+	// follows JavaScript, not the JSON text the message was parsed from.
+	"assistant-number-args": [assistant([toolCall("c1", "nums", { one: 1.0, exp: 1e21, small: -0.5, zero: 0, tiny: 1e-7 })])],
+	"assistant-thinking-only": [assistant([{ type: "thinking", thinking: "plan" }])],
+	// Roles the reference does not serialize contribute nothing.
+	"custom-and-bash-ignored": [
+		{ role: "custom", customType: "note", content: "hidden", display: false, timestamp: 4 },
+		{ role: "bashExecution", command: "ls", output: "a", exitCode: 0, cancelled: false, timestamp: 5 },
+	],
+	"system-ignored": [{ role: "system", content: "sys", timestamp: 6 }],
 };
 const fixtures = Object.entries(cases).map(([name, messages]) => ({ name, messages, expected: serializeConversation(messages) }));
 console.log(JSON.stringify(fixtures, null, 2));

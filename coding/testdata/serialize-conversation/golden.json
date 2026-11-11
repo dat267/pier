@@ -467,5 +467,113 @@
       }
     ],
     "expected": "[User]: start\n\n[Assistant]: working\n\n[Assistant tool calls]: read(path=\"a\")\n\n[Tool result]: contents\n\n[Assistant]: done"
+  },
+  {
+    "name": "assistant-number-args",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "c1",
+            "name": "nums",
+            "arguments": {
+              "one": 1,
+              "exp": 1e+21,
+              "small": -0.5,
+              "zero": 0,
+              "tiny": 1e-7
+            }
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "stop",
+        "timestamp": 2
+      }
+    ],
+    "expected": "[Assistant tool calls]: nums(one=1, exp=1e+21, small=-0.5, zero=0, tiny=1e-7)"
+  },
+  {
+    "name": "assistant-thinking-only",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "plan"
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "stop",
+        "timestamp": 2
+      }
+    ],
+    "expected": ""
+  },
+  {
+    "name": "custom-and-bash-ignored",
+    "messages": [
+      {
+        "role": "custom",
+        "customType": "note",
+        "content": "hidden",
+        "display": false,
+        "timestamp": 4
+      },
+      {
+        "role": "bashExecution",
+        "command": "ls",
+        "output": "a",
+        "exitCode": 0,
+        "cancelled": false,
+        "timestamp": 5
+      }
+    ],
+    "expected": ""
+  },
+  {
+    "name": "system-ignored",
+    "messages": [
+      {
+        "role": "system",
+        "content": "sys",
+        "timestamp": 6
+      }
+    ],
+    "expected": ""
   }
 ]
