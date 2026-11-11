@@ -138,6 +138,34 @@ func TestStoredSessionTextRendersOnlyThemeEscapes(t *testing.T) {
 		assertOnlyThemeEscapes(t, []string{line})
 	})
 
+	t.Run("built-in tool frames", func(t *testing.T) {
+		// A resumed session replays every stored tool call through its renderer, so
+		// each renderer is a terminal sink for the call's arguments and result.
+		// These cases guard the end-to-end invariant rather than one mechanism:
+		// removing the arg sanitizer alone does not leak here, because the frame's
+		// width truncation also drops non-SGR sequences.
+		cases := map[string]map[string]any{
+			"bash":      {"command": storedPayload},
+			"read":      {"path": storedPayload},
+			"grep":      {"pattern": storedPayload, "path": storedPayload},
+			"find":      {"pattern": storedPayload, "path": storedPayload},
+			"ls":        {"path": storedPayload},
+			"write":     {"path": storedPayload, "content": storedPayload},
+			"edit":      {"path": storedPayload, "oldText": storedPayload, "newText": storedPayload},
+			"web_fetch": {"url": storedPayload},
+		}
+		for name, args := range cases {
+			t.Run(name, func(t *testing.T) {
+				frame := newToolFrame(name, "call-"+name, args, toolFrameOptions{})
+				frame.SetArgsComplete()
+				frame.UpdateResult(&SortToolResultContent{Content: []ToolResultContent{
+					{Type: "text", Text: storedPayload},
+				}}, false)
+				assertOnlyThemeEscapes(t, frame.Render(120))
+			})
+		}
+	})
+
 	t.Run("status", func(t *testing.T) {
 		renderer := &TranscriptRenderer{Chat: &tui.Container{}, Display: &DisplayOptions{}}
 		renderer.ShowStatus(storedPayload)
