@@ -15,6 +15,9 @@
       "pattern": "a.b",
       "literal": true
     },
+    "extra": {
+      "c.txt": "a.b\naxb\n"
+    },
     "expected": {
       "text": "c.txt:1: a.b",
       "details": null
@@ -133,6 +136,140 @@
     },
     "expected": {
       "error": "Path not found: <dir>/nope"
+    }
+  },
+  {
+    "name": "limit-zero",
+    "args": {
+      "pattern": "match",
+      "path": "many.txt",
+      "limit": 0
+    },
+    "expected": {
+      "text": "many.txt:1: match 1\n[1 matches limit reached. Use limit=2 for more, or refine pattern]",
+      "details": {
+        "matchLimitReached": 1
+      }
+    }
+  },
+  {
+    "name": "limit-negative",
+    "args": {
+      "pattern": "match",
+      "path": "many.txt",
+      "limit": -3
+    },
+    "expected": {
+      "text": "many.txt:1: match 1\n[1 matches limit reached. Use limit=2 for more, or refine pattern]",
+      "details": {
+        "matchLimitReached": 1
+      }
+    }
+  },
+  {
+    "name": "no-match-with-limit",
+    "args": {
+      "pattern": "match",
+      "path": "a.txt",
+      "limit": 1
+    },
+    "expected": {
+      "text": "No matches found",
+      "details": null
+    }
+  },
+  {
+    "name": "limit-equals-match-count",
+    "args": {
+      "pattern": "row",
+      "path": "rows.txt",
+      "limit": 2
+    },
+    "extra": {
+      "rows.txt": "row 1\nrow 2\n"
+    },
+    "expected": {
+      "text": "rows.txt:1: row 1\nrows.txt:2: row 2",
+      "details": null
+    }
+  },
+  {
+    "name": "limit-one-below-match-count",
+    "args": {
+      "pattern": "row",
+      "path": "rows.txt",
+      "limit": 1
+    },
+    "extra": {
+      "rows.txt": "row 1\nrow 2\n"
+    },
+    "expected": {
+      "text": "rows.txt:1: row 1\n[1 matches limit reached. Use limit=2 for more, or refine pattern]",
+      "details": {
+        "matchLimitReached": 1
+      }
+    }
+  },
+  {
+    "name": "context-fraction-below-one",
+    "args": {
+      "pattern": "beta two",
+      "context": 0.99
+    },
+    "expected": {
+      "text": "a.txt:2: beta two",
+      "details": null
+    }
+  },
+  {
+    "name": "context-beyond-file",
+    "args": {
+      "pattern": "beta two",
+      "context": 50
+    },
+    "expected": {
+      "text": "a.txt-1- alpha one\na.txt-3- alpha three\na.txt:2: beta two",
+      "details": null
+    }
+  },
+  {
+    "name": "context-at-first-line",
+    "args": {
+      "pattern": "alpha one",
+      "context": 2
+    },
+    "expected": {
+      "text": "a.txt-2- beta two\na.txt-3- alpha three\na.txt:1: alpha one",
+      "details": null
+    }
+  },
+  {
+    "name": "limit-with-context",
+    "args": {
+      "pattern": "alpha",
+      "path": "a.txt",
+      "context": 1,
+      "limit": 1
+    },
+    "expected": {
+      "text": "a.txt-2- beta two\na.txt:1: alpha one\n[1 matches limit reached. Use limit=2 for more, or refine pattern]",
+      "details": {
+        "matchLimitReached": 1
+      }
+    }
+  },
+  {
+    "name": "fractional-limit-two-point-nine",
+    "args": {
+      "pattern": "match",
+      "path": "many.txt",
+      "limit": 2.9
+    },
+    "expected": {
+      "text": "many.txt:1: match 1\nmany.txt:2: match 2\n[2 matches limit reached. Use limit=4 for more, or refine pattern]",
+      "details": {
+        "matchLimitReached": 2
+      }
     }
   }
 ]

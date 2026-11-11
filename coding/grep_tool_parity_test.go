@@ -26,8 +26,9 @@ func TestGrepToolMatchesUpstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	var fixtures []struct {
-		Name     string         `json:"name"`
-		Args     map[string]any `json:"args"`
+		Name     string            `json:"name"`
+		Args     map[string]any    `json:"args"`
+		Extra    map[string]string `json:"extra"`
 		Expected struct {
 			Text    string          `json:"text"`
 			Details json.RawMessage `json:"details"`
@@ -53,8 +54,8 @@ func TestGrepToolMatchesUpstream(t *testing.T) {
 				"long.txt":  strings.Repeat("x", 600) + "NEEDLE\n",
 				"many.txt":  manyGrepLines(12),
 			}
-			if fixture.Name == "literal" {
-				files["c.txt"] = "a.b\naxb\n"
+			for name, content := range fixture.Extra {
+				files[name] = content
 			}
 			for name, content := range files {
 				if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {

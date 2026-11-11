@@ -45,6 +45,20 @@ const cases = [
 	{ name: "fractional-limit", pattern: "alpha", path: "a.txt", limit: 1.5 },
 	{ name: "long-line", pattern: "NEEDLE" },
 	{ name: "missing-path", pattern: "alpha", path: "nope" },
+	// Boundaries of the floored numbers and of the limit-proof rule.
+	{ name: "limit-zero", pattern: "match", path: "many.txt", limit: 0 },
+	{ name: "limit-negative", pattern: "match", path: "many.txt", limit: -3 },
+	{ name: "no-match-with-limit", pattern: "match", path: "a.txt", limit: 1 },
+	// many.txt holds twelve matches: at the limit with no further match there is
+	// no truncation proof, so no notice; one below it, the extra match proves it.
+	// A per-case file, so the directory-wide "match" cases are unchanged.
+	{ name: "limit-equals-match-count", pattern: "row", path: "rows.txt", limit: 2, extra: { "rows.txt": "row 1\nrow 2\n" } },
+	{ name: "limit-one-below-match-count", pattern: "row", path: "rows.txt", limit: 1, extra: { "rows.txt": "row 1\nrow 2\n" } },
+	{ name: "context-fraction-below-one", pattern: "beta two", context: 0.99 },
+	{ name: "context-beyond-file", pattern: "beta two", context: 50 },
+	{ name: "context-at-first-line", pattern: "alpha one", context: 2 },
+	{ name: "limit-with-context", pattern: "alpha", path: "a.txt", limit: 1, context: 1 },
+	{ name: "fractional-limit-two-point-nine", pattern: "match", path: "many.txt", limit: 2.9 },
 ];
 const tool = createGrepToolDefinition(dir);
 const fixtures = [];
@@ -65,7 +79,7 @@ for (const testCase of cases) {
 	} catch (error) {
 		result = { error: error.message.replaceAll(dir, "<dir>") };
 	}
-	fixtures.push({ name: testCase.name, args, expected: result });
+	fixtures.push({ name: testCase.name, args, extra: testCase.extra, expected: result });
 	if (testCase.extra) for (const name of Object.keys(testCase.extra)) await rm(resolve(dir, name), { force: true });
 }
 console.log(JSON.stringify(fixtures, null, 2));
