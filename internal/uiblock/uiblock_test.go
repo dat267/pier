@@ -109,6 +109,23 @@ func lookedUp(allowlist map[string]string, finding Finding) (string, bool) {
 	return "", false
 }
 
+// goroutineKey names a goroutine finding by its file and the goroutine's own
+// function. A line number moves whenever the surrounding code changes, which
+// once broke the gate for an edit that did not touch the goroutine.
+func goroutineKey(f Finding) string {
+	file := f.Pos
+	if index := strings.LastIndex(file, "/"); index >= 0 {
+		file = file[index+1:]
+	}
+	if index := strings.Index(file, ":"); index >= 0 {
+		file = file[:index]
+	}
+	if len(f.Chain) == 0 {
+		return f.Pos
+	}
+	return file + " " + strings.TrimPrefix(f.Chain[len(f.Chain)-1], "go ")
+}
+
 // TestBareBlockingGoroutinesAreAllowlisted lists `go` statements reachable
 // from the UI loop whose goroutine body does blocking work. A goroutine does
 // not block the loop — the loop never waits on it — so this is not the
@@ -124,31 +141,33 @@ func TestBareBlockingGoroutinesAreAllowlisted(t *testing.T) {
 		t.Fatalf("analysis failed: %v", err)
 	}
 	// Background helpers the loop only starts: a goroutine never blocks the loop,
-	// and these are deliberate workers with their own lifetime.
+	// and these are deliberate workers with their own lifetime. Keys name the file
+	// and the goroutine function, so an unrelated edit that moves the line does not
+	// break the gate.
 	allowlist := map[string]string{
-		"/home/dat/repos/pier/ai/models_runtime.go:765:3":                         "the model runtime's own background catalog refresh (upstream refreshes on create)",
-		"/home/dat/repos/pier/coding/authstorage.go:1058:3":                       "a credential read's watcher goroutine, started per read and finished by it",
-		"/home/dat/repos/pier/coding/authstorage.go:148:2":                        "the auth lock's refresh goroutine, which keeps a held lock alive (its whole purpose)",
-		"/home/dat/repos/pier/coding/interactive/catalogrefresh.go:153:3":         "the catalog refresh coordinator's own worker goroutine, which joins concurrent refreshes and lives until they finish",
-		"/home/dat/repos/pier/coding/interactive/interactivemode_models.go:596:5": "the model-selected handler starts the startup auth warning as a goroutine; the loop does not wait for it",
-		"/home/dat/repos/pier/coding/modelruntime.go:387:3":                       "the model runtime's availability refresh goroutine, started by Refresh and finished by it",
-		"/home/dat/repos/pier/coding/modelsstore.go:290:3":                        "the models store's read watcher goroutine, started per read and finished by it",
-		"/home/dat/repos/pier/coding/sdk.go:553:2":                                "CreateAgentSession loads context files, skills, prompt templates and overrides on four parallel goroutines and waits for all of them; the calls come from the D442 rebind, which is off the loop (A494)",
-		"/home/dat/repos/pier/coding/sdk.go:554:2":                                "CreateAgentSession loads context files, skills, prompt templates and overrides on four parallel goroutines and waits for all of them; the calls come from the D442 rebind, which is off the loop (A494)",
-		"/home/dat/repos/pier/coding/sdk.go:558:2":                                "CreateAgentSession loads context files, skills, prompt templates and overrides on four parallel goroutines and waits for all of them; the calls come from the D442 rebind, which is off the loop (A494)",
-		"/home/dat/repos/pier/coding/sdk.go:562:2":                                "CreateAgentSession loads context files, skills, prompt templates and overrides on four parallel goroutines and waits for all of them; the calls come from the D442 rebind, which is off the loop (A494)",
-		"/home/dat/repos/pier/coding/settingsmanager.go:641:2":                    "the settings lock's maintenance goroutine, which holds the lock alive while it is taken",
-		"/home/dat/repos/pier/coding/skills.go:643:3":                             "the skill scan's parallel directory walk; the caller waits for it",
-		"/home/dat/repos/pier/mcp/transport_stdio.go:193:3":                       "the stdio transport's stderr pump, one per connection, ended when the server exits",
-		"/home/dat/repos/pier/mcp/transport_stdio.go:196:2":                       "the stdio transport's stdout pump, the connection's only reader",
-		"/home/dat/repos/pier/mcp/transport_stdio.go:201:2":                       "the stdio transport's exit watcher, which ends the connection when the server exits",
-		"/home/dat/repos/pier/mcp/transport_stdio.go:492:2":                       "the process exit hook's goroutine, which runs when the process exits",
-		"/home/dat/repos/pier/tui/terminal.go:1302:4":                             "the terminal's progress-reporting goroutine for the current OSC 9;4 state",
-		"/home/dat/repos/pier/tui/terminal.go:384:3":                              "the terminal's input reader, the source of every key the loop handles",
-		"/home/dat/repos/pier/tui/terminal.go:897:3":                              "the terminal's write loop, which drains queued output frames",
+		"authstorage.go (*github.com/dat267/pier/coding.AuthStorage).readLatestData$1":                                                 "a credential read's watcher goroutine, started per read and finished by it",
+		"authstorage.go (*github.com/dat267/pier/coding.authFileLock).refresh":                                                         "the auth lock's refresh goroutine, which keeps a held lock alive (its whole purpose)",
+		"catalogrefresh.go (*github.com/dat267/pier/coding/interactive.ModelCatalogRefreshCoordinator).run":                            "the catalog refresh coordinator's own worker goroutine, which joins concurrent refreshes and lives until they finish",
+		"interactivemode_models.go (*github.com/dat267/pier/coding/interactive.StartupWiring).MaybeWarnAboutAnthropicSubscriptionAuth": "the model-selected handler starts the startup auth warning as a goroutine; the loop does not wait for it",
+		"modelruntime.go (*github.com/dat267/pier/coding.ModelRuntime).runAvailabilityRefresh$1":                                       "the model runtime's availability refresh goroutine, started by Refresh and finished by it",
+		"models_runtime.go (*github.com/dat267/pier/ai.Models).Refresh$1":                                                              "the model runtime's own background catalog refresh (upstream refreshes on create)",
+		"modelsstore.go (*github.com/dat267/pier/coding.FileModelsStore).readLatest$1":                                                 "the models store's read watcher goroutine, started per read and finished by it",
+		"sdk.go github.com/dat267/pier/coding.CreateAgentSession$10":                                                                   "CreateAgentSession loads context files, skills, prompt templates and overrides on four parallel goroutines and waits for all of them; the calls come from the D442 rebind, which is off the loop (A494)",
+		"sdk.go github.com/dat267/pier/coding.CreateAgentSession$7":                                                                    "CreateAgentSession loads context files, skills, prompt templates and overrides on four parallel goroutines and waits for all of them; the calls come from the D442 rebind, which is off the loop (A494)",
+		"sdk.go github.com/dat267/pier/coding.CreateAgentSession$8":                                                                    "CreateAgentSession loads context files, skills, prompt templates and overrides on four parallel goroutines and waits for all of them; the calls come from the D442 rebind, which is off the loop (A494)",
+		"sdk.go github.com/dat267/pier/coding.CreateAgentSession$9":                                                                    "CreateAgentSession loads context files, skills, prompt templates and overrides on four parallel goroutines and waits for all of them; the calls come from the D442 rebind, which is off the loop (A494)",
+		"settingsmanager.go github.com/dat267/pier/coding.maintainSettingsLock$1":                                                      "the settings lock's maintenance goroutine, which holds the lock alive while it is taken",
+		"skills.go github.com/dat267/pier/coding.scanSkillTree$1":                                                                      "the skill scan's parallel directory walk; the caller waits for it",
+		"terminal.go (*github.com/dat267/pier/tui.ProcessTerminal).SetProgress$1":                                                      "the terminal's progress-reporting goroutine for the current OSC 9;4 state",
+		"terminal.go (*github.com/dat267/pier/tui.ProcessTerminal).writeLoop":                                                          "the terminal's write loop, which drains queued output frames",
+		"terminal.go (*github.com/dat267/pier/tui.stdinReader).read":                                                                   "the terminal's input reader, the source of every key the loop handles",
+		"transport_stdio.go (*github.com/dat267/pier/mcp.StdioTransport).pumpStderr":                                                   "the stdio transport's stderr pump, one per connection, ended when the server exits",
+		"transport_stdio.go (*github.com/dat267/pier/mcp.StdioTransport).pumpStdout":                                                   "the stdio transport's stdout pump, the connection's only reader",
+		"transport_stdio.go (*github.com/dat267/pier/mcp.StdioTransport).watchExit":                                                    "the stdio transport's exit watcher, which ends the connection when the server exits",
+		"transport_stdio.go github.com/dat267/pier/mcp.installExitHook$1":                                                              "the process exit hook's goroutine, which runs when the process exits",
 	}
 	for _, f := range findings {
-		if reason, ok := allowlist[f.Pos]; ok {
+		if reason, ok := allowlist[goroutineKey(f)]; ok {
 			t.Logf("allowed: %s %s (%s)", f.Kind, f.Pos, reason)
 			continue
 		}
