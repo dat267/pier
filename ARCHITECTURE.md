@@ -42,7 +42,9 @@ Key bounds and invariants:
   on the loop (D441, D442). A test app with no loop runs the work inline, so
   nothing waits on a post that is never drained. The session picker's delete is
   the exception: it unlinks directly and runs inline, since there is no
-  subprocess to stall the loop behind (D443).
+  subprocess to stall the loop behind (D443). The MCP manager a replacement
+  retires closes on the same queue, because a server that ignores stdin close and
+  SIGTERM costs the transport's full 2.5 s kill sequence (D444).
 
 ## Performance evidence
 

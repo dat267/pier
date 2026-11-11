@@ -1401,9 +1401,12 @@ func (a *App) reloadMCP(ctx context.Context, cwd string) []string {
 		}
 		next = coding.NewMcpManagerAsync(ctx, buildOptions(config))
 	} else {
-		next = coding.ReloadMCPExchange(ctx, a.mcpManager, func(mcpCtx context.Context, reloaded coding.LoadedMcpConfig) *coding.McpManager {
-			return coding.NewMcpManagerAsync(mcpCtx, buildOptions(reloaded))
-		}, config, nil)
+		// D444: the retired manager closes on the session queue. ReloadMCPExchange
+		// would do it inline, and its Close blocks for a transport's whole
+		// grace-and-kill sequence (2.50 s for a server that ignores stdin close and
+		// SIGTERM, A492) while this rebind runs on the owner loop.
+		a.retireMCPManager(a.mcpManager)
+		next = coding.NewMcpManagerAsync(ctx, buildOptions(config))
 	}
 	a.mcpManager = next
 	if next != nil {
@@ -1413,6 +1416,24 @@ func (a *App) reloadMCP(ctx context.Context, cwd string) []string {
 		return append(slices.Clip(config.Errors), warning)
 	}
 	return config.Errors
+}
+
+// retireMCPManager closes the manager a session replacement left behind. Its
+// Close can block for a transport's whole grace-and-kill sequence (D444), and
+// nothing waits on the answer: the replacement is independent, and
+// wireMcpManager ignores callbacks from a manager that is no longer attached.
+// The close therefore runs on the session queue, and inline only where there is
+// no queue, which is a test app and also the only writer (D442).
+func (a *App) retireMCPManager(manager *coding.McpManager) {
+	if manager == nil {
+		return
+	}
+	closeManager := func() { _ = manager.Close(context.Background()) }
+	if a.sessionQueue != nil {
+		a.sessionQueue.Go(closeManager)
+		return
+	}
+	closeManager()
 }
 
 // mcpOptions builds a manager option set for the CLI wiring: the config plus

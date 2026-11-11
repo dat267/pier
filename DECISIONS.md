@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D443)
+# Deliberate divergences from pi (D1–D444)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6920,3 +6920,32 @@ Tests: `TestDeleteSessionFileDoesNotRunTheTrashCLI` (a `trash` stub on `PATH`
 that records being run), `TestDeleteSessionFileMissingFileIsNotAnError` and
 `TestDeleteSessionFileReportsAnUnlinkFailure`; the picker flow stays covered by
 `TestSessionSelectorDeleteFlow`.
+
+### D444
+
+**The MCP manager a session replacement retires closes on the session queue; the
+reference awaits its shutdown before the replacement starts.**
+
+Reference: pi v1.5.0 `f9a26365` `extensions/mcp/index.ts` `reload()` awaits
+`session_shutdown` before `session_start` reconnects, and the port's
+`coding.ReloadMCPExchange` did the same: `manager.Close(ctx)` inline, then the
+new manager.
+
+The port's rebind runs on the owner loop, and closing one stdio server that
+ignores stdin close and SIGTERM costs the transport's full sequence: 500 ms of
+stdin-close grace, then SIGTERM, then 2000 ms before SIGKILL
+(`mcp/transport_stdio.go`). Measured end to end on a `sh -c 'trap "" TERM; sleep
+3600'` server: `Close` 2.502 s, `ReloadMCPExchange` 2.503 s, so every session
+switch froze the UI for 2.5 s per such server. The user's own machine produced
+exactly this class of hang once, with `trash` never exiting (D443).
+
+Nothing waits on the answer. The replacement connects from the re-read config
+independently, and `wireMcpManager` ignores callbacks from a manager that is no
+longer attached, so a late close cannot disturb the new session. The cost is a
+brief overlap in which both managers exist: a hung server is being killed while
+its replacement starts, and a healthy one closes in microseconds. The close runs
+inline only when there is no queue, which is a test app and also its only writer
+(D442).
+
+Tests: `TestMCPReplacementDoesNotWaitForTheClose`, which blocks in the transport's
+`Close` and fails if the rebind waits for it.
