@@ -3,6 +3,8 @@ package coding
 import (
 	"fmt"
 	"sync"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of packages/ai/src/session-resources.ts: the cleanup registry for
@@ -47,6 +49,10 @@ func RegisterSessionResourceCleanup(cleanup SessionResourceCleanup) func() {
 // cleanupSessionResources). Individual failures are collected and reported as
 // one aggregated error.
 func CleanupSessionResources(sessionID string) error {
+	// The strict-tool-limit latch lives in ai, which cannot import this
+	// registry; forget the session here where its resources are released
+	// (upstream registers it with cleanupSessionResources in packages/ai).
+	ai.ResetStrictToolLimits(sessionID)
 	sessionResourceMu.Lock()
 	cleanups := make([]SessionResourceCleanup, 0, len(sessionResourceList))
 	for _, handle := range sessionResourceList {

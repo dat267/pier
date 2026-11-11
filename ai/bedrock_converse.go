@@ -864,7 +864,9 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 		// it reports as a ValidationException before streaming starts. Retry once
 		// without declaring those tools strict (pi v1.5.0
 		// bedrock-converse-stream.ts).
-		disablePreferredStrictTools := false
+		// A session that already had its strict tools rejected starts without
+		// them (pi v1.5.2 api/strict-tool-limits.ts).
+		disablePreferredStrictTools := HasExceededStrictToolLimits(options.SessionID)
 		hasPreferredStrictTools := false
 		var response *http.Response
 		for {
@@ -965,6 +967,7 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 			if !disablePreferredStrictTools && hasPreferredStrictTools && ctxErr(ctx) == nil &&
 				isBedrockStrictToolLimitError(providerErr) {
 				disablePreferredStrictTools = true
+				MarkStrictToolLimitsExceeded(options.SessionID)
 				output.Diagnostics = append(output.Diagnostics, AssistantMessageDiagnostic{
 					Type: "bedrock_strict_tools_fallback", Timestamp: time.Now().UnixMilli(),
 					Error:   &DiagnosticErrorInfo{Message: providerErr.Error()},

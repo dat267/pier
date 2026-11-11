@@ -522,7 +522,16 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 			}
 			return params, nil
 		}
-		params, err := BuildAnthropicParams(model, normalizedContext, isOAuth, options)
+		// A session that already had its strict tools rejected builds without
+		// them, so the rejection is not repeated (v1.5.2 api/strict-tool-limits.ts).
+		disablePreferredStrictTools := HasExceededStrictToolLimits(options.SessionID)
+		buildContext := normalizedContext
+		if disablePreferredStrictTools {
+			if downgraded, changed := downgradePreferredStrictAnthropicTools(normalizedContext); changed {
+				buildContext = downgraded
+			}
+		}
+		params, err := BuildAnthropicParams(model, buildContext, isOAuth, options)
 		if err != nil {
 			fail(err)
 			return
@@ -568,7 +577,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 			}, &ProviderRetryOptions{MaxRetries: options.MaxRetries, MaxRetryDelayMS: options.MaxRetryDelayMs})
 		}
 		resp, requestErr := sendRequest(payload)
-		if requestErr != nil && ctxErr(ctx) == nil && hasPreferredStrictAnthropicTools(model, normalizedContext) {
+		if requestErr != nil && !disablePreferredStrictTools && ctxErr(ctx) == nil && hasPreferredStrictAnthropicTools(model, normalizedContext) {
 			fallbackContext, changed := downgradePreferredStrictAnthropicTools(normalizedContext)
 			if changed && isAnthropicStrictToolLimitError(requestErr) {
 				fallbackParams, buildErr := BuildAnthropicParams(model, fallbackContext, isOAuth, options)
@@ -581,6 +590,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 					fail(payloadErr)
 					return
 				}
+				MarkStrictToolLimitsExceeded(options.SessionID)
 				output.Diagnostics = append(output.Diagnostics, AssistantMessageDiagnostic{
 					Type: "anthropic_strict_tools_fallback", Timestamp: time.Now().UnixMilli(),
 					Error:   &DiagnosticErrorInfo{Message: requestErr.Error()},
