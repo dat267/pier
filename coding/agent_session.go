@@ -230,7 +230,9 @@ type AgentSession struct {
 	SystemPromptOptions *BuildSystemPromptOptions
 	promptOptionsMu     sync.Mutex
 
-	// skillDiagnostics are the skill loader's warnings/collisions.
+	// skillDiagnostics are the skill loader's warnings/collisions. They,
+	// promptDiagnostics and control.PromptTemplates are replaced by Reload and
+	// guarded by promptOptionsMu.
 	skillDiagnostics  []ResourceDiagnostic
 	promptDiagnostics []ResourceDiagnostic
 

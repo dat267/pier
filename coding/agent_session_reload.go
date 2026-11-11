@@ -115,10 +115,12 @@ func (s *AgentSession) reloadResources() {
 		options.ContextFiles = contextFiles
 		s.SystemPromptOptions = &options
 	}
-	s.promptOptionsMu.Unlock()
+	// The detached /reload runs this off the UI loop while the loop and
+	// prompts read the templates and diagnostics, so they share the lock.
 	s.skillDiagnostics = skills.Diagnostics
 	s.control.PromptTemplates = promptTemplates.Templates
 	s.promptDiagnostics = promptTemplates.Diagnostics
+	s.promptOptionsMu.Unlock()
 }
 
 // ActiveToolNames returns the active tools' names in order (upstream

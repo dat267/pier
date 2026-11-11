@@ -313,6 +313,8 @@ func (s *AgentSession) SetScopedModels(models []ScopedModel) {
 
 // PromptTemplates returns the file-based prompt templates.
 func (s *AgentSession) PromptTemplates() []PromptTemplate {
+	s.promptOptionsMu.Lock()
+	defer s.promptOptionsMu.Unlock()
 	if len(s.control.PromptTemplates) == 0 {
 		return nil
 	}
@@ -349,11 +351,15 @@ func (s *AgentSession) ContextFiles() []ContextFile {
 
 // PromptDiagnostics returns prompt loader warnings and name collisions.
 func (s *AgentSession) PromptDiagnostics() []ResourceDiagnostic {
+	s.promptOptionsMu.Lock()
+	defer s.promptOptionsMu.Unlock()
 	return append([]ResourceDiagnostic{}, s.promptDiagnostics...)
 }
 
 // SkillDiagnostics returns the skill loader's warnings/collisions.
 func (s *AgentSession) SkillDiagnostics() []ResourceDiagnostic {
+	s.promptOptionsMu.Lock()
+	defer s.promptOptionsMu.Unlock()
 	return append([]ResourceDiagnostic{}, s.skillDiagnostics...)
 }
 
