@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -48,6 +49,25 @@ func TestAgentSessionConcurrentHeavyAPIWithAWriteQueueKeepsTheFileInOrder(t *tes
 	runSessionChaosWith(t, heavySessionOps, false, queue)
 }
 
+// The heavy mix with a goal set, paused, resumed and cleared at random while
+// its rounds run on their own goroutines: the transcript and the file stay in
+// step, and the persisted goal transitions replay.
+func TestAgentSessionConcurrentGoalCommandsKeepTranscriptAndGoalReplayable(t *testing.T) {
+	runSessionChaosGoal(t, func(session *AgentSession) []func(int) {
+		return append(heavySessionOps(session), goalCommandOps(session)...)
+	}, false, nil, true)
+}
+
+func goalCommandOps(session *AgentSession) []func(int) {
+	return []func(int){
+		func(i int) { session.Goal.HandleCommand(fmt.Sprintf("set objective %d", i)) },
+		func(int) { session.Goal.HandleCommand("pause") },
+		func(int) { session.Goal.HandleCommand("resume") },
+		func(int) { session.Goal.HandleCommand("clear") },
+		func(int) { _ = session.Goal.Snapshot(); _ = session.Goal.Pursuing() },
+	}
+}
+
 func heavySessionOps(session *AgentSession) []func(int) {
 	return []func(int){
 		func(int) { _, _ = session.CompactSession(context.Background(), "") },
@@ -73,6 +93,11 @@ func runSessionChaos(t *testing.T, extra func(*AgentSession) []func(int), dispos
 }
 
 func runSessionChaosWith(t *testing.T, extra func(*AgentSession) []func(int), disposeMidway bool, queue *offloop.Queue) {
+	t.Helper()
+	runSessionChaosGoal(t, extra, disposeMidway, queue, false)
+}
+
+func runSessionChaosGoal(t *testing.T, extra func(*AgentSession) []func(int), disposeMidway bool, queue *offloop.Queue, withGoal bool) {
 	t.Helper()
 	const workers, operations = 6, 60
 	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
@@ -115,10 +140,24 @@ func runSessionChaosWith(t *testing.T, extra func(*AgentSession) []func(int), di
 	}
 	session, err := NewAgentSession(&SessionConfig{
 		Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, ConvertToLlm: ConvertToLlm,
-		Tools: []agent.AgentTool{slowTool},
+		Tools: []agent.AgentTool{slowTool}, Goal: withGoal,
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	// Goal rounds run on their own goroutines, as a host's work queue runs
+	// them, until the test stops pursuing the goal.
+	var goalRounds sync.WaitGroup
+	roundCtx, stopRounds := context.WithCancel(context.Background())
+	defer stopRounds()
+	if withGoal {
+		session.Goal.SetStartWork(func(work func(context.Context) error) {
+			goalRounds.Go(func() {
+				if roundCtx.Err() == nil {
+					_ = work(roundCtx)
+				}
+			})
+		})
 	}
 	unsubscribe := session.Subscribe(func(*SessionEvent) {})
 	defer unsubscribe()
@@ -157,8 +196,10 @@ func runSessionChaosWith(t *testing.T, extra func(*AgentSession) []func(int), di
 			session.Dispose()
 		})
 	}
+	var finished atomic.Int64
 	for worker := range workers {
 		group.Go(func() {
+			defer finished.Add(1)
 			for index := range operations {
 				ops[rand.IntN(len(ops))](worker*operations + index)
 			}
@@ -166,6 +207,28 @@ func runSessionChaosWith(t *testing.T, extra func(*AgentSession) []func(int), di
 	}
 	done := make(chan struct{})
 	go func() { group.Wait(); close(done) }()
+	if withGoal {
+		// A prompt's run keeps continuing while the goal is pursued, by
+		// design, and blocks its worker. Once any worker has finished, keep
+		// clearing the goal (a late "set" can revive it) until all return.
+		go func() {
+			for finished.Load() == 0 {
+				select {
+				case <-done:
+					return
+				case <-time.After(time.Millisecond):
+				}
+			}
+			for {
+				session.Goal.HandleCommand("clear")
+				select {
+				case <-done:
+					return
+				case <-time.After(5 * time.Millisecond):
+				}
+			}
+		}()
+	}
 	select {
 	case <-done:
 	case <-time.After(30 * time.Second):
@@ -182,6 +245,18 @@ func runSessionChaosWith(t *testing.T, extra func(*AgentSession) []func(int), di
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	if withGoal {
+		// Stop pursuing the goal, so the session can settle.
+		session.Goal.HandleCommand("clear")
+		stopRounds()
+		roundsDone := make(chan struct{})
+		go func() { goalRounds.Wait(); close(roundsDone) }()
+		select {
+		case <-roundsDone:
+		case <-ctx.Done():
+			t.Fatal("a goal round did not return")
+		}
+	}
 	session.ClearQueue()
 	if err := session.WaitForIdle(ctx); err != nil {
 		t.Fatalf("the session did not settle: %v", err)
@@ -236,6 +311,25 @@ func runSessionChaosWith(t *testing.T, extra func(*AgentSession) []func(int), di
 	for index, entry := range entries {
 		if onDisk[index] != entry.ID {
 			t.Fatalf("file entry %d is %s, the session's is %s", index, onDisk[index], entry.ID)
+		}
+	}
+	if withGoal {
+		// Every persisted goal transition replays: the machine accepted them
+		// in the order the file holds them.
+		var warnings []string
+		var warningsMu sync.Mutex
+		session.Goal.SetUIHooks(func(message, level string) {
+			if level == "warning" && strings.Contains(message, "corrupt") {
+				warningsMu.Lock()
+				warnings = append(warnings, message)
+				warningsMu.Unlock()
+			}
+		})
+		session.Goal.Start("startup")
+		warningsMu.Lock()
+		defer warningsMu.Unlock()
+		if len(warnings) > 0 {
+			t.Fatalf("the persisted goal transitions did not replay: %v", warnings)
 		}
 	}
 	session.Dispose()

@@ -531,28 +531,9 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 		}
 	}
 
-	var summaryEntry *SessionEntry
-	if summaryText != "" {
-		summaryID := s.Sessions.BranchWithSummary(newLeafID, summaryText, summaryDetails, false, summaryUsage)
-		summaryEntry = s.Sessions.GetEntry(summaryID)
-		if options.Label != "" {
-			label := options.Label
-			if _, err := s.Sessions.AppendLabelChange(summaryID, &label); err != nil {
-				return nil, err
-			}
-		}
-	} else if newLeafID == "" {
-		s.Sessions.ResetLeaf()
-	} else {
-		if err := s.Sessions.Branch(newLeafID); err != nil {
-			return nil, err
-		}
-	}
-	if options.Label != "" && summaryText == "" {
-		label := options.Label
-		if _, err := s.Sessions.AppendLabelChange(targetID, &label); err != nil {
-			return nil, err
-		}
+	summaryEntry, err := s.moveLeafForNavigation(targetID, newLeafID, summaryText, summaryDetails, summaryUsage, options.Label)
+	if err != nil {
+		return nil, err
 	}
 
 	// Refresh agent state from the new branch.
@@ -562,8 +543,48 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 	// replay it (D419).
 	s.requestPrefix.clear()
 	s.RestoreToolsFromTranscript()
+	if s.Goal != nil {
+		// The goal was re-folded with the move; expose its tools again over
+		// the loadout the transcript restored.
+		s.Goal.SyncTools()
+	}
 
 	return &NavigateTreeResult{EditorText: editorText, SummaryEntry: summaryEntry}, nil
+}
+
+// moveLeafForNavigation moves the session leaf for NavigateTree (with a
+// branch summary, to the root, or to an entry) and applies the label. The goal
+// is branch state (D223), so goal transitions are held across the move and the
+// goal is re-folded from the new branch before they resume: a goal set on the
+// abandoned branch is not kept, and no command persists against it once the
+// leaf has moved.
+func (s *AgentSession) moveLeafForNavigation(targetID, newLeafID, summaryText string, summaryDetails json.RawMessage, summaryUsage *ai.Usage, label string) (*SessionEntry, error) {
+	if s.Goal != nil {
+		s.Goal.beginBranchMove()
+		defer s.Goal.finishBranchMove("tree")
+	}
+	var summaryEntry *SessionEntry
+	if summaryText != "" {
+		summaryID := s.Sessions.BranchWithSummary(newLeafID, summaryText, summaryDetails, false, summaryUsage)
+		summaryEntry = s.Sessions.GetEntry(summaryID)
+		if label != "" {
+			if _, err := s.Sessions.AppendLabelChange(summaryID, &label); err != nil {
+				return nil, err
+			}
+		}
+		return summaryEntry, nil
+	}
+	if newLeafID == "" {
+		s.Sessions.ResetLeaf()
+	} else if err := s.Sessions.Branch(newLeafID); err != nil {
+		return nil, err
+	}
+	if label != "" {
+		if _, err := s.Sessions.AppendLabelChange(targetID, &label); err != nil {
+			return nil, err
+		}
+	}
+	return nil, nil
 }
 
 // SummarizationRequestAuth is the resolved summarization request auth.

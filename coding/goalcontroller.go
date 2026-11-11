@@ -502,6 +502,29 @@ func (c *GoalController) Start(reason string) {
 	}
 }
 
+// beginBranchMove holds goal transitions while the session moves its leaf:
+// the controller lock covers every transition and its durable append, so none
+// can persist against the old branch's goal once the leaf has moved.
+// finishBranchMove must follow, even when the move fails. The caller holds no
+// run-lifecycle lock: the run's end reaches the follow-up hold under that lock.
+func (c *GoalController) beginBranchMove() {
+	c.mu.Lock()
+}
+
+// finishBranchMove re-folds the goal from the session's new branch, as a fork
+// does (activation is not inherited, so a goal still on the branch comes back
+// disarmed), and releases the transitions beginBranchMove held.
+func (c *GoalController) finishBranchMove(reason string) {
+	result := c.dispatchLocked(goal.SessionStartEvent{Entries: c.sink.GoalBranchEntries(), Reason: reason})
+	c.mu.Unlock()
+	c.applyTransition(result)
+	c.SyncTools()
+	snapshot := c.Snapshot()
+	if snapshot.Goal != nil && snapshot.Goal.Phase == goal.PhaseActive {
+		c.notice("Goal restored (disarmed): "+goal.TruncateObjective(snapshot.Goal.Objective, 60)+"\nUse /goal resume to continue.", "info")
+	}
+}
+
 // AgentEnd admits goal work and settles its round. A retryable failure stays
 // active for the session's retry; final outcomes may pause or queue the next
 // round. Both hook effects go through Apply.

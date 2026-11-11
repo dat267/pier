@@ -1473,7 +1473,13 @@ and the idle-round launcher on every session bind, including `/new` and switch,
 so replacement controllers do not silently buffer notices. The owner checks
 the originating controller before applying a posted notice, rejecting outgoing
 notifications even if they were already enqueued. `/reload` calls
-`Start("reload")` without re-reading the branch by hand.
+`Start("reload")` without re-reading the branch by hand. Tree navigation
+moves the branch the goal is folded from, so it re-folds the goal from the new
+branch, disarmed as a fork would be, while goal transitions are held across the
+leaf move: a goal set on the abandoned branch is not kept, and no command
+persists against it once the leaf has moved
+(`TestGoalFollowsTheBranchAcrossTreeNavigation`,
+`TestAgentSessionConcurrentGoalCommandsKeepTranscriptAndGoalReplayable`).
 
 Idle round delivery uses the host work scheduler (D143). A queued closure
 checks that its goal id, revision and pending turn still identify an armed,
