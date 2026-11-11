@@ -6773,7 +6773,10 @@ session idle and starts its own. Upstream makes the last queue check and
 clears its run flag in one synchronous stretch of its event loop. A custom message that triggers a turn (goal
 rounds among them) queues behind an active run or starts one, and a start
 that loses to another caller's run queues behind that run instead of failing
-(`TestTurnTriggeringCustomMessageIsDeliveredWhenARunStartsFirst`).
+(`TestTurnTriggeringCustomMessageIsDeliveredWhenARunStartsFirst`). A prompt
+given a streaming behavior does the same, and a prompt whose run did not start
+puts back the next-turn messages it took, since upstream refuses a busy prompt
+before taking them (`TestPromptWithABehaviorQueuesWhenAnotherRunStartsFirst`).
 
 ### D439
 

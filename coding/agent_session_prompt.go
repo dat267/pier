@@ -237,7 +237,8 @@ func (s *AgentSession) Prompt(ctx context.Context, text string, options *PromptO
 		userContent = append(userContent, image)
 	}
 	messages := []ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Blocks: userContent}, Timestamp: time.Now().UnixMilli()}}
-	messages = append(messages, s.takePendingNextTurnMessages()...)
+	nextTurn := s.takePendingNextTurnMessages()
+	messages = append(messages, nextTurn...)
 	// Install the prompt/tool loadout as a leading system message so the model
 	// receives the built sections (upstream _preparePromptAndToolLoadout).
 	if update := s.preparePromptAndToolLoadout(); update != nil {
@@ -254,12 +255,27 @@ func (s *AgentSession) Prompt(ctx context.Context, text string, options *PromptO
 			Model: s.Model(), Context: ai.Context{Messages: messages}, Options: requestOptions,
 		}, s.cacheContextIsCurrent())
 	}
-	return s.runAgentPrompt(ctx, messages, func() {
+	started := false
+	err := s.runAgentPrompt(ctx, messages, func() {
+		started = true
 		preflight(true)
 		if options.OnAccepted != nil {
 			options.OnAccepted("started")
 		}
 	})
+	if !started {
+		// Upstream refuses a busy prompt before taking the next-turn messages;
+		// a prompt whose run did not start leaves them for the next one (D438).
+		s.restorePendingNextTurnMessages(nextTurn)
+	}
+	if options.StreamingBehavior != "" && errors.Is(err, errRunAlreadyActive) {
+		// D438: the session was idle at the queue check, but another caller's
+		// run started before this one. A prompt with a behavior queues behind
+		// that run, as it would have had the run started first, instead of
+		// failing.
+		return s.Prompt(ctx, text, options)
+	}
+	return err
 }
 
 // queuedUserMessage builds the user message a queued prompt delivers.
@@ -662,6 +678,18 @@ func (s *AgentSession) QueueNextTurnMessage(message ai.Message) {
 	state := s.prompt()
 	state.mu.Lock()
 	state.pendingNextTurnMessages = append(state.pendingNextTurnMessages, message)
+	state.mu.Unlock()
+}
+
+// restorePendingNextTurnMessages puts back next-turn messages a prompt took
+// but did not send, ahead of any queued since.
+func (s *AgentSession) restorePendingNextTurnMessages(messages []ai.Message) {
+	if len(messages) == 0 {
+		return
+	}
+	state := s.prompt()
+	state.mu.Lock()
+	state.pendingNextTurnMessages = append(messages[:len(messages):len(messages)], state.pendingNextTurnMessages...)
 	state.mu.Unlock()
 }
 
