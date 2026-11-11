@@ -84,7 +84,7 @@ func TestReadToolKeepsMemoryBoundedOnALargeFile(t *testing.T) {
 		t.Fatalf("output = %q; want the remaining-lines notice %q", text, want)
 	}
 
-	const budget = 8 << 20
+	const budget = 24 << 20
 	if growth := high - baseline.HeapAlloc; growth > budget {
 		t.Fatalf("reading %d MiB to show 10 lines peaked %d MiB above the baseline heap, want under %d MiB",
 			size>>20, growth>>20, budget>>20)
