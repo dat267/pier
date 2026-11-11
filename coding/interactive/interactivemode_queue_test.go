@@ -47,6 +47,11 @@ func (s *queueTestSession) ClearQueue() ([]string, []string) {
 func (s *queueTestSession) Prompt(_ context.Context, text string, options *coding.PromptOptions) error {
 	s.prompted = append(s.prompted, text)
 	s.promptOptions = append(s.promptOptions, options)
+	// The real session reports acceptance once the prompt's run is active (or
+	// it queued); a refused prompt is never accepted.
+	if s.promptErr == nil && options != nil && options.OnAccepted != nil {
+		options.OnAccepted("started")
+	}
 	return s.promptErr
 }
 func (s *queueTestSession) Steer(message ai.Message) {

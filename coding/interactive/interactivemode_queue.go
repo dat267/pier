@@ -329,14 +329,28 @@ func (c *QueueController) FlushCompactionQueue(ctx context.Context, willRetry bo
 		_ = c.Session.Prompt(ctx, message.Text, nil)
 	}
 
-	if err := c.Session.Prompt(ctx, firstPrompt.Text, &coding.PromptOptions{StreamingBehavior: firstPrompt.Mode}); err != nil {
+	// Upstream starts the first prompt without awaiting it and queues the rest
+	// into that run. The port's Prompt returns only when its run ends, so the
+	// rest are queued once the prompt is accepted (its run active, or the
+	// prompt queued behind one); queued after the run, nothing would take them.
+	err := c.Session.Prompt(ctx, firstPrompt.Text, &coding.PromptOptions{
+		StreamingBehavior: firstPrompt.Mode,
+		OnAccepted:        func(string) { c.queueCompactionRest(ctx, rest) },
+	})
+	if err != nil {
 		// Upstream's rejection handler clears the session queue and restores every
-		// queued message before the pending rest is sent, so the restored messages
-		// must not also be queued here (they would be shown and sent twice).
+		// queued message, so each lives in the restored queue once (D323): a
+		// refused prompt queued none of the rest, and a run that failed after
+		// taking the prompt has its queued rest cleared here.
 		restoreQueue(err)
 		return
 	}
+	c.UpdatePendingMessagesDisplay()
+}
 
+// queueCompactionRest queues the messages after the first post-compaction
+// prompt into its run.
+func (c *QueueController) queueCompactionRest(ctx context.Context, rest []CompactionQueuedMessage) {
 	for _, message := range rest {
 		if c.IsExtensionCommand(message.Text) {
 			_ = c.Session.Prompt(ctx, message.Text, nil)
@@ -346,7 +360,6 @@ func (c *QueueController) FlushCompactionQueue(ctx context.Context, willRetry bo
 			c.Session.Steer(userMessage(message.Text))
 		}
 	}
-	c.UpdatePendingMessagesDisplay()
 }
 
 // FlushPendingBashComponents moves pending bash components into the chat.
