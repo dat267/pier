@@ -41,8 +41,8 @@ Key bounds and invariants:
   export run on a queue; the rebind, the selector and the status they produce run
   on the loop (D441, D442). A test app with no loop runs the work inline, so
   nothing waits on a post that is never drained. The session picker's delete is
-  the exception: it runs inline until its async version can be reproduced
-  failing in a fullscreen session (D442).
+  the exception: it unlinks directly and runs inline, since there is no
+  subprocess to stall the loop behind (D443).
 
 ## Performance evidence
 

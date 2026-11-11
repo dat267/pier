@@ -541,20 +541,6 @@ func TestSessionSelectorApplyStaysOnTheLoop(t *testing.T) {
 	}
 }
 
-// Upstream slices the joined trash error parts by UTF-16 units, and the
-// "trash: " prefix is added after the cut.
-func TestFormatTrashErrorHintTruncatesJoinedParts(t *testing.T) {
-	joined := strings.Repeat("中", 199)
-	if got := formatTrashErrorHint(nil, joined); got != "trash: "+joined {
-		t.Fatalf("hint = %q", got)
-	}
-	long := strings.Repeat("中", 250)
-	want := "trash: " + strings.Repeat("中", 200)
-	if got := formatTrashErrorHint(nil, long); got != want {
-		t.Fatalf("hint = %q; want %q", got, want)
-	}
-}
-
 // pi v1.5.0 8c03fef4d (#11220): session search no longer scores match offsets.
 // A regex hit on the session name is the best tier, a hit anywhere else is the
 // text tier, and scattered fuzzy matches rank after both.

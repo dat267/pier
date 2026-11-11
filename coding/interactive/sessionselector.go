@@ -3,7 +3,6 @@ package interactive
 import (
 	"context"
 	"os"
-	"os/exec"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -49,46 +48,18 @@ type SessionFileDeleter func(sessionPath string) SessionDeleteResult
 
 var sessionFileDeleter SessionFileDeleter = DeleteSessionFile
 
-// DeleteSessionFile deletes a session file, trying the `trash` CLI first and
-// falling back to a permanent unlink.
+// DeleteSessionFile removes a session file permanently.
+//
+// The reference hands the path to the `trash` CLI first, so a mistaken delete
+// can be undone from the desktop trash. A `trash` that stalls blocks the picker
+// behind it — the reporter's did — and the file is recoverable from the
+// session's own history only, so the port unlinks directly (D443). A missing
+// file counts as deleted: deleting twice is not an error.
 func DeleteSessionFile(sessionPath string) SessionDeleteResult {
-	trashArgs := []string{sessionPath}
-	if strings.HasPrefix(sessionPath, "-") {
-		trashArgs = []string{"--", sessionPath}
-	}
-	command := exec.Command("trash", trashArgs...)
-	output, err := command.CombinedOutput()
-	_, statErr := os.Stat(sessionPath)
-	if err == nil || os.IsNotExist(statErr) {
-		return SessionDeleteResult{OK: true, Method: "trash"}
-	}
-	stderr := string(output)
-
-	if removeErr := os.Remove(sessionPath); removeErr != nil {
-		message := removeErr.Error()
-		if hint := formatTrashErrorHint(err, stderr); hint != "" {
-			message = message + " (" + hint + ")"
-		}
-		return SessionDeleteResult{OK: false, Method: "unlink", Error: message}
+	if err := os.Remove(sessionPath); err != nil && !os.IsNotExist(err) {
+		return SessionDeleteResult{OK: false, Method: "unlink", Error: err.Error()}
 	}
 	return SessionDeleteResult{OK: true, Method: "unlink"}
-}
-
-// formatTrashErrorHint renders the `trash` failure hint (upstream
-// getTrashErrorHint). Upstream slices the joined parts, not the prefix, by
-// UTF-16 code units.
-func formatTrashErrorHint(err error, stderr string) string {
-	var parts []string
-	if err != nil {
-		parts = append(parts, err.Error())
-	}
-	if trimmed := ai.JSTrim(stderr); trimmed != "" {
-		parts = append(parts, strings.Split(trimmed, "\n")[0])
-	}
-	if len(parts) == 0 {
-		return ""
-	}
-	return "trash: " + ai.JSSlice(strings.Join(parts, " · "), 0, 200)
 }
 
 func shortenSessionPath(path string) string {
@@ -1210,11 +1181,9 @@ func (c *SessionSelectorComponent) confirmRename(value string) {
 
 // deleteSessionAndRefresh deletes the file and updates the list in one step.
 //
-// It stays synchronous on purpose: running it on a worker and applying the
-// result by post lost the deletion in a fullscreen session (the prompt cleared,
-// nothing else happened). `trash` is cheap (0.2s for a 240MB file here), so the
-// only cost of keeping it inline is a slow delete when the trash CLI itself
-// hangs. An async version needs a reproduction first; see D442.
+// It runs inline because the delete is now a single unlink (D443): there is no
+// subprocess to stall the loop behind. An async version would only add the
+// window where a second key event sees the row the first one is deleting.
 func (c *SessionSelectorComponent) deleteSessionAndRefresh(sessionPath string) {
 	result := c.deleteSession(sessionPath)
 	if result.OK {

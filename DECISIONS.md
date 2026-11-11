@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D442)
+# Deliberate divergences from pi (D1–D443)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6873,13 +6873,11 @@ Each of those is now split: the file work runs on the session-file queue, and
 the rebind (which owns attached UI state, the MCP manager and the transcript)
 runs on the loop, delivered through `postToUI`.
 
-The picker's delete was moved the same way and then put back: in a fullscreen
-session the confirmation prompt cleared and nothing else happened, so the file
-survived and the row stayed. It could not be reproduced in a plain pty, where
-the same build deleted the file and refreshed the list, so the async version
-comes back only with a reproduction. Keeping it inline costs one `trash` call in
-front of the paint, measured at 0.2 s for a 240 MB file; a hung `trash` CLI is
-the only case where that is worth removing. The three processes share one
+The picker's delete was moved the same way and then put back, and its cause
+turned out to be the subprocess itself: in a fullscreen session the confirmation
+prompt cleared and nothing else happened, because the worker was parked in a
+`trash` that never exited. D443 removes the subprocess, which both frees the
+loop and makes the inline path a syscall, so the delete stays inline. The three processes share one
 queue slot, so a switch, fork, import or tail started later supersedes an
 earlier one instead of applying over the session the user chose; a rename keeps
 its own slot, because cancelling it would leave the picker waiting for a report
@@ -6895,4 +6893,30 @@ Tests: `TestSwitchSessionOpensOffTheOwnerLoop`,
 `TestForkSessionWritesOffTheOwnerLoop`, `TestImportCopiesOffTheOwnerLoop`,
 `TestRenameOtherSessionOpensOffTheOwnerLoop` and
 `TestPickerRenameWaitsForItsReport`; the delete stays covered by
+`TestSessionSelectorDeleteFlow`.
+
+### D443
+
+**Deleting a session unlinks the file; the reference hands it to the `trash`
+CLI first.**
+
+Reference: pi v1.5.0 `f9a26365` `session-selector.ts` `deleteSessionFile` runs
+`trash <path>` and only unlinks when that fails, so a mistaken delete can be
+undone from the desktop trash.
+
+A `trash` that does not exit blocks whoever waits for it. In the port that was
+the owner loop: `/resume`'s Ctrl+D froze the terminal with no status and no way
+out, and the off-loop version looked like a delete that did nothing, because the
+worker stayed inside the subprocess and the result never came back. The reporter
+hit both. `DeleteSessionFile` now calls `os.Remove` and reports `unlink`, so the
+pick pause is a syscall. A missing file counts as deleted, so a repeated delete
+is not an error.
+
+The cost is the recoverability the reference buys: a deleted session is gone,
+not in the trash. The picker still asks for confirmation, and the row names the
+session it is about to delete.
+
+Tests: `TestDeleteSessionFileDoesNotRunTheTrashCLI` (a `trash` stub on `PATH`
+that records being run), `TestDeleteSessionFileMissingFileIsNotAnError` and
+`TestDeleteSessionFileReportsAnUnlinkFailure`; the picker flow stays covered by
 `TestSessionSelectorDeleteFlow`.
