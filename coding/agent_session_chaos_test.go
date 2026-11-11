@@ -103,6 +103,20 @@ func heavySessionOps(session *AgentSession) []func(int) {
 				&SendMessageOptions{DeliverAs: []string{"steer", "followUp"}[i%2]})
 		},
 		func(int) { session.AbortCompaction() },
+		func(int) { session.Reload() },
+		func(int) {
+			_ = session.PromptTemplates()
+			_ = session.Skills()
+			_ = session.ContextFiles()
+			_ = session.SkillDiagnostics()
+			_ = session.GetActiveToolNames()
+			_ = session.GetAllTools()
+			_ = session.SessionName()
+			_ = session.ScopedModels()
+			_ = session.GetLastAssistantText()
+			_ = session.IsRetrying()
+			_ = session.GetCacheWarmingStatus()
+		},
 		func(int) { session.AbortAsync() },
 		func(i int) { session.SetSteeringMode([]QueueMode{QueueModeAll, QueueModeOneAtATime}[i%2]) },
 		func(i int) { session.SetFollowUpMode([]QueueMode{QueueModeAll, QueueModeOneAtATime}[i%2]) },
