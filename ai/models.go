@@ -110,6 +110,7 @@ type AnthropicMessagesCompat struct {
 	SupportsMidConvoEffort          *bool                           `json:"supportsMidConvoEffort,omitempty"`
 	SupportsMidConvoSystemMessages  *bool                           `json:"supportsMidConvoSystemMessages,omitempty"`
 	SupportsMidConvoToolChanges     *bool                           `json:"supportsMidConvoToolChanges,omitempty"`
+	SupportsMessageThreads          *bool                           `json:"supportsMessageThreads,omitempty"`
 	AllowedFallbackModels           []AnthropicAllowedFallbackModel `json:"allowedFallbackModels,omitempty"`
 }
 

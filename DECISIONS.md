@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D458)
+# Deliberate divergences from pi (D1–D459)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7281,3 +7281,23 @@ order is arbitrary. Keeping the server's order would need an ordered map for a
 field whose order nothing observes.
 
 `Test:` `TestMcpToolParametersCompleteTheSchema`.
+
+### D459
+
+**The Anthropic thread prefix hash is canonical JSON, not the reference's
+stringify.**
+
+`Reference:` `packages/ai/src/api/anthropic-messages.ts` `hashThreadPrefix`, pi
+v1.5.2 (b4afdddf). It hashes `JSON.stringify` of the request settings and the
+messages the server holds, so its hash depends on member order.
+
+The port (`ai/anthropic_threads.go` `hashAnthropicThreadPrefix`) parses the same
+values and hashes a canonical form with sorted keys through `ShortHash`, keeping
+the normalization upstream relies on: `cache_control` members are dropped and a
+string `content` counts as one text block. The hash never leaves the process; it
+is stored beside a session's thread and compared only with a request the port
+built itself, so both sides always come from the same encoder. The result is the
+semantically correct answer where the reference's byte hash would treat a
+reordered message as changed.
+
+`Test:` `TestAnthropicMessageThreadsPrefixHashNormalization`.

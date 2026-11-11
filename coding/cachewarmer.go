@@ -487,6 +487,10 @@ func (w *CacheWarmer) refresh(run *cacheWarmingRun) {
 	options.MaxTokens = &one
 	options.MaxRetries = &zeroRetries
 	options.Ctx = run.ctx
+	// The refresh repeats the last request and must not replace the
+	// conversation's provider continuation state (upstream
+	// api/cache-warming.ts getCacheWarmingRequestOptions).
+	options.DisableContinuation = true
 	var (
 		message *ai.AssistantMessage
 		err     error

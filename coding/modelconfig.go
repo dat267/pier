@@ -209,6 +209,7 @@ type ModelsJSONCompat struct {
 	SupportsStrictTools             *bool                     `json:"supportsStrictTools,omitempty"`
 	SupportsMidConvoEffort          *bool                     `json:"supportsMidConvoEffort,omitempty"`
 	SupportsMidConvoToolChanges     *bool                     `json:"supportsMidConvoToolChanges,omitempty"`
+	SupportsMessageThreads          *bool                     `json:"supportsMessageThreads,omitempty"`
 	AllowedFallbackModels           []ModelsJSONFallbackModel `json:"allowedFallbackModels,omitempty"`
 }
 
@@ -765,6 +766,7 @@ var compatFields = []compatField{
 	{name: "allowEmptySignature", kind: compatBool},
 	{name: "supportsStrictTools", kind: compatBool},
 	{name: "supportsMidConvoEffort", kind: compatBool},
+	{name: "supportsMessageThreads", kind: compatBool},
 	{name: "allowedFallbackModels", kind: compatFallbackModels},
 }
 

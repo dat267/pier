@@ -507,8 +507,21 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 			return
 		}
 		isOAuth := IsOAuthAnthropicToken(options.APIKey)
+		// Session whose requests may use threads; empty when threads don't apply.
+		// Sessions where the endpoint rejected threads ("off") still send the
+		// threads beta, which the resend that turned them off was accepted with;
+		// prepareAnthropicThreadRequest just sends no `thread`.
+		cacheSessionID := ""
+		if ResolveCacheRetention(options.CacheRetention, options.Env) != CacheRetentionNone {
+			cacheSessionID = options.SessionID
+		}
+		compat := GetAnthropicCompat(model)
+		threadSessionID := ""
+		if compat.SupportsMessageThreads {
+			threadSessionID = cacheSessionID
+		}
 
-		applyPayload := func(params *AnthropicMessageCreateParams) (any, error) {
+		applyPayload := func(params *AnthropicMessageCreateParams) (json.RawMessage, error) {
 			if options.OnPayload != nil {
 				if next := options.OnPayload(mustMarshalJSON(params), model); next != nil {
 					replaced, err := decodeOrderedJSONFields(next)
@@ -520,7 +533,8 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 					return json.RawMessage(encoded), err
 				}
 			}
-			return params, nil
+			encoded, err := MarshalJSON(params)
+			return encoded, err
 		}
 		// A session that already had its strict tools rejected builds without
 		// them, so the rejection is not repeated (v1.5.2 api/strict-tool-limits.ts).
@@ -531,30 +545,17 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				buildContext = downgraded
 			}
 		}
-		params, err := BuildAnthropicParams(model, buildContext, isOAuth, options)
-		if err != nil {
-			fail(err)
-			return
-		}
-		payload, err := applyPayload(params)
-		if err != nil {
-			fail(err)
-			return
-		}
 
 		clientOpts := anthropicClientOptions{
 			APIKey:           options.APIKey,
 			Headers:          options.Headers,
-			SessionID:        options.SessionID,
+			SessionID:        cacheSessionID,
 			Identity:         options.Identity,
 			FederationBearer: federationBearer,
 		}
-		if clientOpts.SessionID != "" && ResolveCacheRetention(options.CacheRetention, options.Env) == CacheRetentionNone {
-			clientOpts.SessionID = ""
-		}
 
 		// Each request gets a fresh body so a strict-tool fallback can retry once.
-		sendRequest := func(params any) (*http.Response, error) {
+		sendRequest := func(params json.RawMessage) (*http.Response, error) {
 			return RetryProviderRequest(ctx, func() (*http.Response, error) {
 				req, berr := BuildAnthropicRequest(ctx, model, params, clientOpts)
 				if berr != nil {
@@ -576,27 +577,45 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				return hresp, nil
 			}, &ProviderRetryOptions{MaxRetries: options.MaxRetries, MaxRetryDelayMS: options.MaxRetryDelayMs})
 		}
-		resp, requestErr := sendRequest(payload)
+		// buildAndSend builds one request for buildContext, applies the payload
+		// hook, and sends it with its thread request when the session uses
+		// threads.
+		buildAndSend := func(buildContext TranscriptContext) (*http.Response, *anthropicPreparedThread, error) {
+			params, err := buildAnthropicParams(model, buildContext, isOAuth, options, anthropicBuildFlags{
+				messageThreads: threadSessionID != "",
+			})
+			if err != nil {
+				return nil, nil, err
+			}
+			payload, err := applyPayload(params)
+			if err != nil {
+				return nil, nil, err
+			}
+			var thread *anthropicPreparedThread
+			if threadSessionID != "" && !options.DisableContinuation {
+				thread, err = prepareAnthropicThreadRequest(model, threadSessionID, payload)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+			if thread == nil {
+				response, err := sendRequest(payload)
+				return response, nil, err
+			}
+			response, sent, err := sendAnthropicThreadRequest(model, thread, sendRequest, output, ctx)
+			return response, sent, err
+		}
+		resp, thread, requestErr := buildAndSend(buildContext)
 		if requestErr != nil && !disablePreferredStrictTools && ctxErr(ctx) == nil && hasPreferredStrictAnthropicTools(model, normalizedContext) {
 			fallbackContext, changed := downgradePreferredStrictAnthropicTools(normalizedContext)
 			if changed && isAnthropicStrictToolLimitError(requestErr) {
-				fallbackParams, buildErr := BuildAnthropicParams(model, fallbackContext, isOAuth, options)
-				if buildErr != nil {
-					fail(buildErr)
-					return
-				}
-				fallbackPayload, payloadErr := applyPayload(fallbackParams)
-				if payloadErr != nil {
-					fail(payloadErr)
-					return
-				}
 				MarkStrictToolLimitsExceeded(options.SessionID)
 				output.Diagnostics = append(output.Diagnostics, AssistantMessageDiagnostic{
 					Type: "anthropic_strict_tools_fallback", Timestamp: time.Now().UnixMilli(),
 					Error:   &DiagnosticErrorInfo{Message: requestErr.Error()},
 					Details: json.RawMessage(`{"reason":"strict_tool_limits_exceeded"}`),
 				})
-				resp, requestErr = sendRequest(fallbackPayload)
+				resp, thread, requestErr = buildAndSend(fallbackContext)
 			}
 		}
 		if requestErr != nil {
@@ -827,6 +846,9 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 			}
 			fail(fmt.Errorf("%s", msg))
 			return
+		}
+		if thread != nil {
+			recordAnthropicThreadReply(model, thread, output, isOAuth, compat.AllowEmptySignature)
 		}
 		if len(inputTransformations) > 0 {
 			details, _ := MarshalJSON(map[string]any{"transformations": inputTransformations})

@@ -466,3 +466,56 @@ func TestFormatCacheWarmingUsageUsesJSFixed(t *testing.T) {
 		t.Fatalf("text = %q; want $0.007813", got)
 	}
 }
+
+// Reference: pi v1.5.2 (b4afdddf) api/cache-warming.ts
+// `getCacheWarmingRequestOptions`: the refresh repeats the last request with a
+// one-token output cap, without retries and without replacing the
+// conversation's provider continuation state (Anthropic message threads).
+func TestCacheWarmingReplayDisablesContinuation(t *testing.T) {
+	model := warmerModel()
+	manager := newTestSessionManager(t)
+	manager.AppendMessage(&ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
+		Content: ai.ContentList{ai.TextContent{Text: "reply"}}, StopReason: ai.StopStop,
+		Usage: ai.Usage{Input: 1000, Output: 1, TotalTokens: 1001},
+	})
+	captured := make(chan *ai.SimpleStreamOptions, 1)
+	warmer := NewCacheWarmer(func(streamModel *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		select {
+		case captured <- options:
+		default:
+		}
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			message := &ai.AssistantMessage{
+				API: ai.APIAnthropicMessages, Provider: streamModel.Provider, Model: streamModel.ID,
+				Content: ai.ContentList{ai.TextContent{Text: "warm"}}, StopReason: ai.StopStop,
+				Usage: ai.Usage{Input: 1000, CacheRead: 900, Output: 1, TotalTokens: 1001},
+			}
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: message})
+		}()
+		return stream
+	}, manager, func() CacheWarmingMode { return CacheWarmingIdle })
+	defer warmer.Cancel()
+	warmer.Decide = func(event CacheWarmingDecisionEvent) CacheWarmingAction { return CacheWarmingActionWarm }
+	warmer.Start(CacheWarmRequest{
+		Model:   model,
+		Options: &ai.SimpleStreamOptions{MaxTokens: new(100), MaxRetries: new(5)},
+	}, func() bool { return true })
+	warmer.OnAgentSettled()
+
+	select {
+	case options := <-captured:
+		if !options.DisableContinuation {
+			t.Fatal("warm request would replace the conversation's thread state")
+		}
+		if options.MaxTokens == nil || *options.MaxTokens != 1 {
+			t.Fatalf("maxTokens = %v", options.MaxTokens)
+		}
+		if options.MaxRetries == nil || *options.MaxRetries != 0 {
+			t.Fatalf("maxRetries = %v", options.MaxRetries)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("warm request did not start")
+	}
+}

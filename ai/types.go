@@ -160,6 +160,11 @@ type StreamOptions struct {
 	Transport           Transport
 	CacheRetention      CacheRetention
 	SessionID           string
+	// DisableContinuation asks the provider not to use or record server-side
+	// continuation state for this request (Anthropic message threads). Set it
+	// for replays such as cache warming, which must not replace the state of
+	// the real conversation.
+	DisableContinuation bool
 	// TimeoutMs is the provider request's SDK timeout, when supported.
 	TimeoutMs *int
 	// HTTPIdleTimeoutMs is the independent global Undici dispatcher timeout.

@@ -32,17 +32,18 @@ type ProxyStreamOptions struct {
 
 // proxyRequestOptions is the serialized subset upstream sends.
 type proxyRequestOptions struct {
-	Temperature     *float64                   `json:"temperature,omitempty"`
-	SamplingParams  map[string]json.RawMessage `json:"samplingParams,omitempty"`
-	MaxTokens       *int                       `json:"maxTokens,omitempty"`
-	Reasoning       string                     `json:"reasoning,omitempty"`
-	CacheRetention  string                     `json:"cacheRetention,omitempty"`
-	SessionID       string                     `json:"sessionId,omitempty"`
-	Headers         ai.ProviderHeaders         `json:"headers,omitempty"`
-	Metadata        map[string]json.RawMessage `json:"metadata,omitempty"`
-	Transport       string                     `json:"transport,omitempty"`
-	ThinkingBudgets *ai.ThinkingBudgets        `json:"thinkingBudgets,omitempty"`
-	MaxRetryDelayMS *int                       `json:"maxRetryDelayMs,omitempty"`
+	Temperature         *float64                   `json:"temperature,omitempty"`
+	SamplingParams      map[string]json.RawMessage `json:"samplingParams,omitempty"`
+	MaxTokens           *int                       `json:"maxTokens,omitempty"`
+	Reasoning           string                     `json:"reasoning,omitempty"`
+	CacheRetention      string                     `json:"cacheRetention,omitempty"`
+	SessionID           string                     `json:"sessionId,omitempty"`
+	DisableContinuation bool                       `json:"disableContinuation,omitempty"` // a replay must keep the thread
+	Headers             ai.ProviderHeaders         `json:"headers,omitempty"`
+	Metadata            map[string]json.RawMessage `json:"metadata,omitempty"`
+	Transport           string                     `json:"transport,omitempty"`
+	ThinkingBudgets     *ai.ThinkingBudgets        `json:"thinkingBudgets,omitempty"`
+	MaxRetryDelayMS     *int                       `json:"maxRetryDelayMs,omitempty"`
 }
 
 type proxyRequestContext struct {
@@ -113,17 +114,18 @@ func (p *proxyToolCallPatch) mergeToolCall(call ai.ToolCall) ai.ToolCall {
 func proxyRequestOptionsOf(options ProxyStreamOptions) proxyRequestOptions {
 	stream := options.StreamOptions
 	out := proxyRequestOptions{
-		Temperature:     stream.Temperature,
-		SamplingParams:  stream.SamplingParams,
-		MaxTokens:       stream.MaxTokens,
-		Reasoning:       options.Reasoning,
-		CacheRetention:  stream.CacheRetention,
-		SessionID:       stream.SessionID,
-		Headers:         stream.Headers,
-		Metadata:        stream.Metadata,
-		Transport:       stream.Transport,
-		ThinkingBudgets: options.ThinkingBudgets,
-		MaxRetryDelayMS: stream.MaxRetryDelayMs,
+		Temperature:         stream.Temperature,
+		SamplingParams:      stream.SamplingParams,
+		MaxTokens:           stream.MaxTokens,
+		Reasoning:           options.Reasoning,
+		CacheRetention:      stream.CacheRetention,
+		SessionID:           stream.SessionID,
+		DisableContinuation: stream.DisableContinuation,
+		Headers:             stream.Headers,
+		Metadata:            stream.Metadata,
+		Transport:           stream.Transport,
+		ThinkingBudgets:     options.ThinkingBudgets,
+		MaxRetryDelayMS:     stream.MaxRetryDelayMs,
 	}
 	return out
 }

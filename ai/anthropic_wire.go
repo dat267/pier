@@ -134,6 +134,7 @@ type AnthropicCompat struct {
 	SupportsStrictTools             bool
 	SupportsMidConvoSystemMessages  bool
 	SupportsMidConvoToolChanges     bool
+	SupportsMessageThreads          bool
 }
 
 // GetAnthropicCompat resolves the compatibility surface for a model, with
@@ -146,12 +147,18 @@ func GetAnthropicCompat(model *Model) AnthropicCompat {
 		}
 		return d
 	}
+	// Gateways that drop unknown request fields would silently turn a continue
+	// into a request without the earlier conversation, so the default is
+	// limited to Anthropic's own endpoint. Widen or remove this restriction
+	// once proxies generally forward the thread field.
+	supportsMessageThreads := model.Provider == "anthropic" && strings.Contains(model.BaseURL, "api.anthropic.com")
 	compat := AnthropicCompat{
 		SupportsEagerToolInputStreaming: true,
 		SupportsLongCacheRetention:      true,
 		SendSessionAffinityHeaders:      isOpenRouter,
 		SupportsCacheControlOnTools:     true,
 		SupportsTemperature:             true,
+		SupportsMessageThreads:          supportsMessageThreads,
 	}
 	if model.Compat != nil && model.Compat.AnthropicMessages != nil {
 		c := model.Compat.AnthropicMessages
@@ -169,6 +176,7 @@ func GetAnthropicCompat(model *Model) AnthropicCompat {
 		compat.SupportsStrictTools = boolOr(c.SupportsStrictTools, false)
 		compat.SupportsMidConvoSystemMessages = boolOr(c.SupportsMidConvoSystemMessages, false)
 		compat.SupportsMidConvoToolChanges = boolOr(c.SupportsMidConvoToolChanges, false)
+		compat.SupportsMessageThreads = boolOr(c.SupportsMessageThreads, supportsMessageThreads)
 	} else if isOpenRouter {
 		compat.SessionAffinityFormat = "openrouter"
 	}
@@ -301,6 +309,7 @@ const (
 	MidConversationOutputConfigBeta = "mid-conversation-output-config-2026-07-01"
 	ThinkingBindingControlsBeta     = "thinking-binding-controls-2026-08-01"
 	InlineToolsBeta                 = "inline-tools-2026-09-15"
+	MessageThreadsBeta              = "message-threads-2026-08-12"
 )
 
 // deferredToolPlaceholder is declared whenever native tool changes are in
@@ -766,7 +775,7 @@ func overlaySchema(parameters, legacy json.RawMessage) (json.RawMessage, error) 
 }
 
 // GetBetaFeatures resolves the anthropic-beta list (port of getBetaFeatures).
-func GetBetaFeatures(model *Model, context TranscriptContext, isOAuthToken, nativeToolChanges bool, options *AnthropicOptions) []string {
+func GetBetaFeatures(model *Model, context TranscriptContext, isOAuthToken, nativeToolChanges, messageThreads bool, options *AnthropicOptions) []string {
 	if options == nil {
 		options = &AnthropicOptions{}
 	}
@@ -834,12 +843,27 @@ func GetBetaFeatures(model *Model, context TranscriptContext, isOAuthToken, nati
 	if nativeToolChanges {
 		add(InlineToolsBeta)
 	}
+	if messageThreads {
+		add(MessageThreadsBeta)
+	}
 	return features
+}
+
+// anthropicBuildFlags are the per-request build flags (upstream's
+// BuildParamsFlags).
+type anthropicBuildFlags struct {
+	// messageThreads means the session uses message threads, so the threads
+	// beta is sent.
+	messageThreads bool
 }
 
 // BuildAnthropicParams builds the streaming request body
 // (port of buildParams).
 func BuildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken bool, options *AnthropicOptions) (*AnthropicMessageCreateParams, error) {
+	return buildAnthropicParams(model, context, isOAuthToken, options, anthropicBuildFlags{})
+}
+
+func buildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken bool, options *AnthropicOptions, flags anthropicBuildFlags) (*AnthropicMessageCreateParams, error) {
 	if options == nil {
 		options = &AnthropicOptions{}
 	}
@@ -895,7 +919,7 @@ func BuildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 	if activeEffort == "" {
 		activeEffort = AnthropicEffortHigh
 	}
-	betaFeatures := GetBetaFeatures(model, context, isOAuthToken, nativeToolChanges, options)
+	betaFeatures := GetBetaFeatures(model, context, isOAuthToken, nativeToolChanges, flags.messageThreads, options)
 
 	var messages []AnthropicMessage
 	if managedProvider != "" {

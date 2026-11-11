@@ -53,6 +53,7 @@ func CleanupSessionResources(sessionID string) error {
 	// registry; forget the session here where its resources are released
 	// (upstream registers it with cleanupSessionResources in packages/ai).
 	ai.ResetStrictToolLimits(sessionID)
+	ai.ResetAnthropicMessageThreads(sessionID)
 	sessionResourceMu.Lock()
 	cleanups := make([]SessionResourceCleanup, 0, len(sessionResourceList))
 	for _, handle := range sessionResourceList {

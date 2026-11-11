@@ -18,6 +18,9 @@ func TestModelJSONCompatUsesAPI(t *testing.T) {
 	}{
 		{APIOpenAICompletions, `{"supportsReasoningEffort":false}`, &ModelCompat{OpenAICompletions: &OpenAICompletionsCompat{SupportsReasoningEffort: &no}}},
 		{APIAnthropicMessages, `{"supportsTemperature":false}`, &ModelCompat{AnthropicMessages: &AnthropicMessagesCompat{SupportsTemperature: &no}}},
+		// A models.json supportsMessageThreads entry overrides the threads
+		// default (api/anthropic-messages.ts getAnthropicCompat).
+		{APIAnthropicMessages, `{"supportsMessageThreads":false}`, &ModelCompat{AnthropicMessages: &AnthropicMessagesCompat{SupportsMessageThreads: &no}}},
 		{APIBedrockConverse, `{"supportsStrictMode":false}`, &ModelCompat{Bedrock: &BedrockCompat{SupportsStrictMode: &no}}},
 		{APIMistralConversations, `{"supportsMidConvoSystemMessages":false}`, &ModelCompat{MistralConversations: &MistralConversationsCompat{SupportsMidConvoSystemMessages: &no}}},
 		{APIOpenAIResponses, `{"supportsMidConvoSystemMessages":false}`, &ModelCompat{OpenAIResponses: &OpenAIResponsesCompat{SupportsMidConvoSystemMessages: &no}}},

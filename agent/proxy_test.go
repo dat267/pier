@@ -416,3 +416,30 @@ func proxyToolCallForTest(id, name, arguments string) *proxyToolCallPatch {
 	raw := json.RawMessage(arguments)
 	return &proxyToolCallPatch{ID: &id, Name: &name, Arguments: &raw}
 }
+
+// Reference: pi v1.5.2 (b4afdddf) packages/agent/src/proxy.ts
+// buildProxyRequestOptions forwards `disableContinuation`, so a cache-warming
+// replay keeps the conversation's Anthropic message thread.
+func TestProxyForwardsDisableContinuation(t *testing.T) {
+	model := &ai.Model{ID: "m", Provider: "p", API: ai.APIOpenAIResponses}
+	body, err := buildProxyRequest(model, proxyContext(), ProxyStreamOptions{
+		StreamOptions: ai.StreamOptions{SessionID: "s", DisableContinuation: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Upstream's key order: sessionId, disableContinuation, then headers.
+	if !strings.Contains(string(body), `"sessionId":"s","disableContinuation":true`) {
+		t.Fatalf("body = %s", body)
+	}
+	// Unset stays undefined, which JSON.stringify drops.
+	body, err = buildProxyRequest(model, proxyContext(), ProxyStreamOptions{
+		StreamOptions: ai.StreamOptions{SessionID: "s"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(body), "disableContinuation") {
+		t.Fatalf("body = %s", body)
+	}
+}

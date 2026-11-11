@@ -74,9 +74,10 @@ func TestModelsJSONForwardsEveryCompatSchemaFlag(t *testing.T) {
 			},
 		},
 		{
-			name:   "anthropic",
-			api:    string(ai.APIAnthropicMessages),
-			compat: `{"supportsMidConvoSystemMessages": true, "supportsMidConvoToolChanges": true}`,
+			name: "anthropic",
+			api:  string(ai.APIAnthropicMessages),
+			compat: `{"supportsMidConvoSystemMessages": true, "supportsMidConvoToolChanges": true,
+				"supportsMessageThreads": true}`,
 			check: func(t *testing.T, compat *ai.ModelCompat) {
 				c := compat.AnthropicMessages
 				if c == nil {
@@ -87,6 +88,9 @@ func TestModelsJSONForwardsEveryCompatSchemaFlag(t *testing.T) {
 				}
 				if c.SupportsMidConvoToolChanges == nil || !*c.SupportsMidConvoToolChanges {
 					t.Fatalf("supportsMidConvoToolChanges = %v", c.SupportsMidConvoToolChanges)
+				}
+				if c.SupportsMessageThreads == nil || !*c.SupportsMessageThreads {
+					t.Fatalf("supportsMessageThreads = %v", c.SupportsMessageThreads)
 				}
 			},
 		},
