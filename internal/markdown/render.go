@@ -229,7 +229,8 @@ func (r *Renderer) block(b *Block, width int, next *Block, styleContext *inlineS
 		}
 
 	case BlockHTML:
-		lines = append(lines, r.applyDefaultStyle(jsTrim(b.Raw)))
+		// Comments are hidden: an unclosed one runs to the end of the block.
+		lines = append(lines, r.applyDefaultStyle(jsTrim(StripHTMLComments(b.Raw))))
 
 	case BlockSpace:
 		lines = append(lines, "")
@@ -350,7 +351,15 @@ func (r *Renderer) renderInlineTokens(inlines []Inline, styleContext *inlineStyl
 		return strings.Join(segments, "\n")
 	}
 
-	for _, in := range inlines {
+	// After a skipped HTML comment, drop the next text's leading space if the
+	// text before ended with one, so "a <!-- c --> b" renders as "a b".
+	dropLeadingSpace := false
+	for i := 0; i < len(inlines); i++ {
+		in := inlines[i]
+		if dropLeadingSpace && in.Kind == InlineText && len(in.Children) == 0 && startsWithSpaceOrTab(in.Text) {
+			in.Text = strings.TrimLeft(in.Text, " \t")
+		}
+		dropLeadingSpace = false
 		switch in.Kind {
 		case InlineLatex:
 			rendered := in.Raw
@@ -412,7 +421,12 @@ func (r *Renderer) renderInlineTokens(inlines []Inline, styleContext *inlineStyl
 			builder.WriteString("\n")
 
 		case InlineHTML:
-			builder.WriteString(applyTextWithNewlines(in.Text))
+			// Comments are hidden; an unclosed one hides the rest of the flow.
+			if strings.HasPrefix(in.Text, "<!--") {
+				dropLeadingSpace = i == 0 || endsWithSpaceOrTab(inlines[i-1].Raw+inlines[i-1].Text)
+			} else {
+				builder.WriteString(applyTextWithNewlines(in.Text))
+			}
 
 		default:
 			if in.Text != "" {

@@ -433,6 +433,7 @@ func (m *Markdown) Render(width int) []string {
 	}
 	blocks, defs := markdown.LexDefinitions(normalizedText, windowOffset, markdown.DefinitionsBefore(m.cacheDefs, windowOffset))
 	markdown.TrimPartialClosingFences(blocks)
+	blocks = markdown.RemoveHTMLCommentBlocks(blocks)
 	total := windowBase + len(blocks)
 
 	// Reuse every block before the re-lex window (whose source is byte-identical)
