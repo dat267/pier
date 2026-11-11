@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D447)
+# Deliberate divergences from pi (D1–D448)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7007,3 +7007,24 @@ D422); the user-message component now does too, in `rebuild`, which covers both
 construction and `SetText`.
 
 Tests: `TestUserMessageSanitizesStoredText`.
+
+### D448
+
+**A stored session name is sanitized wherever the port shows it or seeds an editor
+with it; the reference interpolates it verbatim.**
+
+Reference: pi v1.5.0 `f9a26365` renders the name raw in three places:
+`modes/interactive/interactive-mode.ts:6776` (`Session name: ${currentName}`),
+`:6791` (`Session name set: ${displayName}`), and
+`modes/interactive/components/session-selector.ts:818`, which seeds the rename
+editor with `session?.name`.
+
+The name lives in the session JSONL, so a shared, imported or planted session
+file chooses those bytes, and the port would draw them in the transcript or right
+inside the editor, where `\x1b[2J` clears the screen and `\x1b]52;c;…\x07`
+writes the clipboard. The picker's own rows already sanitized the name; these
+three paths had not, so they now follow the port's rule for untrusted terminal
+text (D342, D422).
+
+Tests: `TestStoredSessionNameIsSanitized`, whose two subtests fail independently
+when either path is reverted.

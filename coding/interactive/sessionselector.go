@@ -1142,7 +1142,9 @@ func (c *SessionSelectorComponent) cancelLoads() {
 func (c *SessionSelectorComponent) enterRenameMode(sessionPath string, currentName string) {
 	c.mode = "rename"
 	c.renameTargetPath = sessionPath
-	c.renameInput.SetValue(currentName)
+	// The name comes from the session file: the editor would otherwise draw its
+	// escape sequences (D342, D448).
+	c.renameInput.SetValue(tui.SanitizeUntrustedText(currentName))
 	c.renameInput.SetFocused(true)
 
 	theme := ActiveTheme()

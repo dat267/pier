@@ -445,7 +445,9 @@ func (w *CommandWiring) HandleCopyCommand(flashConfirmation bool, preferSelectio
 func (w *CommandWiring) HandleNameCommand(text string) {
 	name := ai.JSTrim(strings.TrimPrefix(text, "/name"))
 	if name == "" {
-		currentName := w.SessionInfo.GetSessionName()
+		// The name comes from the session file, so it is untrusted text for the
+		// terminal (D342, D448).
+		currentName := tui.SanitizeUntrustedText(w.SessionInfo.GetSessionName())
 		if currentName != "" {
 			theme := ActiveTheme()
 			w.Chat.AddChild(tui.NewSpacer(1))
@@ -464,9 +466,9 @@ func (w *CommandWiring) HandleNameCommand(text string) {
 		w.showWarning("Session name was normalized from " + jsonQuote(name) + " to " + jsonQuote(sessionName))
 	}
 	w.Chat.AddChild(tui.NewSpacer(1))
-	display := sessionName
+	display := tui.SanitizeUntrustedText(sessionName)
 	if display == "" {
-		display = name
+		display = tui.SanitizeUntrustedText(name)
 	}
 	w.Chat.AddChild(tui.NewText(theme.Fg("dim", "Session name set: "+display), 1, 0, nil))
 	w.requestRender()
