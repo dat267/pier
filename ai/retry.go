@@ -461,6 +461,10 @@ var retryableProviderErrorPattern = buildProviderErrorPattern([]string{
 	// Codex CLI mid-stream disconnect relayed by proxies that wrap the Codex CLI,
 	// e.g. "stream closed before response.completed" (upstream v1.4.0 29057ece3).
 	`stream disconnected before completion`,
+	// Magpie gateway relaying a dropped upstream Anthropic stream, e.g.
+	// "Claude Code's stream from Anthropic was cut short after the reply had
+	// begun" (upstream v1.5.2 b4afdddf, #11879).
+	`cut short after the reply had begun`,
 	// Go's net/http2 surfaces peer-reset streams as `stream error: stream ID N;
 	// CODE; received from peer`. Retry that transport error like D171's socket
 	// resets; Go's HTTP/2 wording has no upstream fetch/websocket equivalent.

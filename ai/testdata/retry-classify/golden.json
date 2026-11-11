@@ -180,6 +180,22 @@
   "want": true
  },
  {
+  "errorMessage": "stream disconnected before completion: stream closed before response.completed",
+  "want": true
+ },
+ {
+  "errorMessage": "Claude Code's stream from Anthropic was cut short after the reply had begun",
+  "want": true
+ },
+ {
+  "errorMessage": "stream from Anthropic was cut short",
+  "want": false
+ },
+ {
+  "errorMessage": "cut short",
+  "want": false
+ },
+ {
   "errorMessage": "HTTP/2 stream failed",
   "want": true
  },

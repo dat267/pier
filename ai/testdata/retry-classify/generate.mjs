@@ -1,6 +1,6 @@
 // Regenerate: node --experimental-strip-types ai/testdata/retry-classify/generate.mjs ./pi > ai/testdata/retry-classify/golden.json
 //
-// Each expectation is pi v1.5.0 (f9a26365) utils/retry.ts
+// Each expectation is pi v1.5.2 (b4afdddf) utils/retry.ts
 // `isRetryableAssistantError` for that error message. The corpus holds every
 // needle its two pattern lists document, the texts that must stay
 // non-retryable (subscription, quota and billing exhaustion), the status-code
@@ -23,6 +23,9 @@ const messages = [
 	"Provider returned error", "The upstream provider returned an error",
 	"exceeded request buffer limit while retrying upstream", "unable to forward upstream",
 	"upstream request failed", "upstream_stream_read_error", "stream was interrupted",
+	"stream disconnected before completion: stream closed before response.completed",
+	"Claude Code's stream from Anthropic was cut short after the reply had begun",
+	"stream from Anthropic was cut short", "cut short",
 	"HTTP/2 stream failed", "http/2 stream failed",
 	"network error", "connection error", "connection refused", "connection lost",
 	"other side closed", "fetch failed", "request to https://x failed, reason:", "getaddrinfo ENOTFOUND",
