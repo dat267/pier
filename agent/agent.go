@@ -105,6 +105,18 @@ func (q *pendingMessageQueue) enqueue(message ai.Message) {
 	q.gen++
 }
 
+// requeue puts messages taken from the queue back at its front, ahead of any
+// queued since, so they keep their place.
+func (q *pendingMessageQueue) requeue(messages []ai.Message) {
+	if len(messages) == 0 {
+		return
+	}
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.messages = append(messages[:len(messages):len(messages)], q.messages...)
+	q.gen++
+}
+
 func (q *pendingMessageQueue) hasItems() bool {
 	q.mu.Lock()
 	defer q.mu.Unlock()
@@ -557,6 +569,10 @@ func (a *Agent) TakeFollowUpMessages() []ai.Message { return a.followUpQueue.tak
 // once the reason for holding it is gone; the messages it leaves behind are
 // then delivered by that run's stop boundary, one turn at a time.
 func (a *Agent) ReleaseFollowUpMessages() []ai.Message { return a.followUpQueue.drain() }
+
+// RequeueFollowUpMessages puts released follow-ups back at the front of the
+// follow-up queue, for a caller whose release could not start its run.
+func (a *Agent) RequeueFollowUpMessages(messages []ai.Message) { a.followUpQueue.requeue(messages) }
 
 // ClearFollowUpQueue removes all queued follow-up messages.
 func (a *Agent) ClearFollowUpQueue() { a.followUpQueue.clear() }

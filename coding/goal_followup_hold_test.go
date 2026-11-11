@@ -352,3 +352,81 @@ func TestGoalReleaseRacingDisposeLeavesNoUnabortableRun(t *testing.T) {
 		}
 	}
 }
+
+// A released follow-up run that finds another caller's run already started
+// queues the follow-ups behind that run rather than failing "already
+// processing" and dropping them (D438). Upstream has no goal hold; its
+// follow-ups stay queued until a run takes them.
+func TestGoalReleasedFollowUpsQueueBehindARunThatStartedFirst(t *testing.T) {
+	manager, dir := newTestSession(t)
+	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
+	var session *AgentSession
+	var calls atomic.Int32
+	interloperStarted := make(chan struct{})
+	finishInterloper := make(chan struct{})
+	streamFn := func(m *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		call := calls.Add(1)
+		if call == 2 {
+			_, _ = session.GetToolDefinition("set_goal").Execute("complete", json.RawMessage(`{"status":"complete"}`), context.Background(), nil)
+		}
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			if call == 3 {
+				close(interloperStarted)
+				<-finishInterloper
+			}
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+				API: m.API, Provider: m.Provider, Model: m.ID, StopReason: ai.StopStop,
+				Content: ai.ContentList{ai.TextContent{Text: "done"}},
+			}})
+		}()
+		return stream
+	}
+	var err error
+	session, err = NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, Goal: true, ConvertToLlm: ConvertToLlm,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Dispose()
+	var pending []func(context.Context) error
+	session.Goal.SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
+	session.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "after the goal"}})
+	session.Goal.HandleCommand("set objective")
+	if err := pending[0](context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if len(pending) != 2 {
+		t.Fatalf("released work = %d, want 1", len(pending)-1)
+	}
+
+	// Another caller's run starts before the host runs the release.
+	interloper := make(chan error, 1)
+	go func() { interloper <- session.Prompt(context.Background(), "interloper", nil) }()
+	<-interloperStarted
+	if err := pending[1](context.Background()); err != nil {
+		t.Fatalf("the released follow-up run failed: %v", err)
+	}
+	close(finishInterloper)
+	if err := <-interloper; err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := session.WaitForIdle(ctx); err != nil {
+		t.Fatal(err)
+	}
+	delivered := 0
+	for _, message := range session.Agent.State().Messages {
+		if user, ok := message.(*ai.UserMessage); ok && contentTextJoinedNoSep(user.Content) == "after the goal" {
+			delivered++
+		}
+	}
+	if delivered != 1 {
+		t.Fatalf("the released follow-up reached the transcript %d times, want once", delivered)
+	}
+	if queued := session.GetFollowUpMessages(); len(queued) != 0 {
+		t.Fatalf("follow-ups still displayed as queued: %v", queued)
+	}
+}

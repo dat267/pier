@@ -6777,6 +6777,10 @@ that loses to another caller's run queues behind that run instead of failing
 given a streaming behavior does the same, and a prompt whose run did not start
 puts back the next-turn messages it took, since upstream refuses a busy prompt
 before taking them (`TestPromptWithABehaviorQueuesWhenAnotherRunStartsFirst`).
+Follow-ups the goal released go back to the front of the queue when another
+caller's run started before their own
+(`TestGoalReleasedFollowUpsQueueBehindARunThatStartedFirst`,
+`TestRequeuedFollowUpsKeepTheirPlace`).
 
 ### D439
 

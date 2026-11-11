@@ -3,6 +3,7 @@ package coding
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -724,7 +725,7 @@ func (s *AgentSession) releaseGoalHeldFollowUps(event *agent.AgentEvent) {
 		// released messages run through the session pipeline, so the run emits
 		// agent_settled and keeps retry and compaction handling. The goal chain
 		// before it settled as one run (rounds continue inside it).
-		return s.runAgentPromptUnlessDisposed(ctx, messages)
+		return s.runReleasedFollowUps(ctx, messages)
 	}
 	// The released run starts after this run settles, so the settle reports it:
 	// the working period stays open across the release (D402).
@@ -739,6 +740,37 @@ func (s *AgentSession) releaseGoalHeldFollowUps(event *agent.AgentEvent) {
 		_ = s.WaitForIdle(context.Background())
 		_ = run(context.Background())
 	}()
+}
+
+// runReleasedFollowUps starts the run for follow-ups the goal released. D438:
+// another caller's run can start between the release and this start; the
+// follow-ups then go back to the front of the queue for that run to take,
+// decided under the run-lifecycle lock like queueWhileRunActive, instead of
+// failing "already processing" and dropping them. Their display text was never
+// removed, so it still shows them queued.
+func (s *AgentSession) runReleasedFollowUps(ctx context.Context, messages []ai.Message) error {
+	for {
+		if s.requeueFollowUpsWhileRunActive(messages) {
+			return nil
+		}
+		err := s.runAgentPromptUnlessDisposed(ctx, messages)
+		if !errors.Is(err, errRunAlreadyActive) {
+			return err
+		}
+	}
+}
+
+// requeueFollowUpsWhileRunActive puts the follow-ups back at the front of the
+// queue and reports true while a run is active; otherwise it reports false.
+func (s *AgentSession) requeueFollowUpsWhileRunActive(messages []ai.Message) bool {
+	state := s.prompt()
+	state.mu.Lock()
+	active := state.runActive || s.Agent.State().IsStreaming
+	if active {
+		s.Agent.RequeueFollowUpMessages(messages)
+	}
+	state.mu.Unlock()
+	return active
 }
 
 func indexOf(list []string, want string) int { return slices.Index(list, want) }

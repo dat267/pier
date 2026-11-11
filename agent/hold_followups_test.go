@@ -94,3 +94,20 @@ func TestDrainDeferringClearsConsumedSlots(t *testing.T) {
 		}
 	}
 }
+
+// Requeued follow-ups go back ahead of any queued after they were released,
+// so a release that could not start its run keeps the user's order.
+func TestRequeuedFollowUpsKeepTheirPlace(t *testing.T) {
+	queue := &pendingMessageQueue{mode: QueueModeAll}
+	queue.enqueue(createUserMessage("first"))
+	released := queue.drain()
+	queue.enqueue(createUserMessage("later"))
+	queue.requeue(released)
+	var texts []string
+	for _, message := range queue.takeAll() {
+		texts = append(texts, message.(*ai.UserMessage).Content.Text)
+	}
+	if len(texts) != 2 || texts[0] != "first" || texts[1] != "later" {
+		t.Fatalf("queue after requeue = %q, want [first later]", texts)
+	}
+}
