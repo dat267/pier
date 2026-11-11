@@ -67,6 +67,8 @@ func goalCommandOps(session *AgentSession) []func(int) {
 		func(int) { session.Goal.HandleCommand("resume") },
 		func(int) { session.Goal.HandleCommand("clear") },
 		func(int) { _ = session.Goal.Snapshot(); _ = session.Goal.Pursuing() },
+		// /reload replays the branch and durably pauses a live goal.
+		func(int) { session.Goal.Start("reload") },
 	}
 }
 
@@ -104,6 +106,9 @@ func heavySessionOps(session *AgentSession) []func(int) {
 		},
 		func(int) { session.AbortCompaction() },
 		func(int) { session.Reload() },
+		func(i int) { session.SetRetryEnabled(i%2 == 0) },
+		func(i int) { session.SetAutoCompactionEnabled(i%2 == 0) },
+		func(i int) { session.SetAutoRetryEnabled(i%2 == 0) },
 		func(int) {
 			_ = session.PromptTemplates()
 			_ = session.Skills()

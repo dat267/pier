@@ -41,3 +41,34 @@ func TestReloadWhileResourcesAreReadIsRaceFree(t *testing.T) {
 	})
 	group.Wait()
 }
+
+// A session without a settings manager keeps its retry policy on the session;
+// toggling it while a run's end reads it (willRetryAfterAgentEnd, PrepareRetry)
+// must not race. Upstream setAutoRetryEnabled and the retry check share one
+// event loop (agent-session.ts, pi v1.5.2 b4afdddf).
+func TestRetryToggleWhileRunsReadThePolicyIsRaceFree(t *testing.T) {
+	manager, dir := newTestSession(t)
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 8192}
+	session, err := NewAgentSession(&SessionConfig{Cwd: dir, Sessions: manager, Model: model, StreamFn: stubStreamFn})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Dispose()
+	var group sync.WaitGroup
+	group.Go(func() {
+		for i := range 200 {
+			session.SetRetryEnabled(i%2 == 0)
+		}
+	})
+	group.Go(func() {
+		for range 10 {
+			_ = session.Prompt(context.Background(), "hello", &PromptOptions{StreamingBehavior: "followUp"})
+		}
+	})
+	group.Go(func() {
+		for range 200 {
+			_ = session.RetryEnabled()
+		}
+	})
+	group.Wait()
+}

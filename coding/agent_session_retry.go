@@ -47,7 +47,15 @@ func (s *AgentSession) retrySettings() *ai.RetryPolicy {
 			BaseDelayMS: int(resolved.BaseDelayMS), MaxAgentDelayMS: resolved.MaxAgentDelayMS, MaxAgentDelayMSSet: true,
 		}
 	}
-	return s.Settings.Retry
+	// SetRetryEnabled flips this policy under s.mu while runs read it from
+	// their own goroutines, so callers get a copy taken under the same lock.
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.Settings.Retry == nil {
+		return nil
+	}
+	policy := *s.Settings.Retry
+	return &policy
 }
 
 // PrepareRetry prepares a retryable error for continuation with exponential
