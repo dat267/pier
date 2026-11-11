@@ -1019,7 +1019,9 @@ func buildOpenAIResponsesRequest(
 			req.Header.Set("x-session-id", cacheSessionID)
 		} else {
 			if compat.SessionAffinityFormat == SessionAffinityOpenAI {
-				req.Header.Set("session_id", cacheSessionID)
+				// Hyphenated here and in the completions path upstream keeps the
+				// underscore: pi v1.5.2 (b4afdddf) openai-responses.ts.
+				req.Header.Set("session-id", cacheSessionID)
 			}
 			req.Header.Set("x-client-request-id", cacheSessionID)
 		}

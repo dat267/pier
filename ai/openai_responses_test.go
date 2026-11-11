@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -732,5 +733,41 @@ func TestOpenAIResponsesChatGPTLimitHints(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// pi v1.5.2 (b4afdddf) openai-responses.ts sends the OpenAI session-affinity
+// header as `session-id`; v1.5.0 used `session_id`. A gateway configured with
+// sessionAffinityFormat "openai" routed on the hyphenated name, so pier's turns
+// of one conversation went to different upstreams and missed the prompt cache.
+func TestResponsesSendsHyphenatedSessionAffinityHeader(t *testing.T) {
+	headers := make(chan http.Header, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		headers <- r.Header.Clone()
+		w.Header().Set("Content-Type", "text/event-stream")
+		io.WriteString(w, `data: {"type":"response.completed","response":{"id":"r1","status":"completed","output":[],"usage":{"input_tokens":0,"output_tokens":0,"total_tokens":0}}}`+"\n\n")
+	}))
+	defer server.Close()
+
+	format := SessionAffinityOpenAI
+	model := testResponsesModel()
+	model.BaseURL = server.URL
+	model.Compat = &ModelCompat{OpenAIResponses: &OpenAIResponsesCompat{SessionAffinityFormat: &format}}
+	stream := StreamOpenAIResponses(model, TranscriptContext{Messages: []Message{
+		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+	}}, &OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "sk-test", SessionID: "sess-1"}})
+	if _, err := stream.Result(context.Background()); err != nil {
+		t.Fatalf("stream: %v", err)
+	}
+
+	got := <-headers
+	if value := got.Get("session-id"); value != "sess-1" {
+		t.Fatalf("session-id = %q, want sess-1", value)
+	}
+	if value := got.Get("session_id"); value != "" {
+		t.Fatalf("session_id = %q; the OpenAI affinity header is hyphenated", value)
+	}
+	if value := got.Get("x-client-request-id"); value != "sess-1" {
+		t.Fatalf("x-client-request-id = %q, want sess-1", value)
 	}
 }
