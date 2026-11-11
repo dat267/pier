@@ -7232,4 +7232,9 @@ surrogate, and the port writes U+FFFD. A number the reference rejects outright
 what it can (`01` reports 1), which keeps the field visible instead of blanking
 it.
 
-`Test:` `TestStreamingJSONPartialApproximations`.
+The same constraint reaches the completed arguments, so a model that emits half
+a surrogate pair in its tool arguments hands the tool U+FFFD where the reference
+hands it the preserved code unit.
+
+`Test:` `TestStreamingJSONPartialApproximations`,
+`TestToolCallArgumentsReplaceLoneSurrogates`.
