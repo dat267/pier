@@ -267,16 +267,55 @@ func TestSessionSelectorWiring(t *testing.T) {
 		}
 		onDone(&SessionSwitchResult{}, nil)
 	}
-	wiring.PromptForMissingCwd = func(_ context.Context, issue coding.SessionCwdIssue, onCwd func(string, bool)) {
-		onCwd(issue.FallbackCwd, true)
+	wiring.PromptForMissingCwd = func(_ context.Context, _ coding.SessionCwdIssue, onAnswer func(coding.MissingSessionCwdChoice)) {
+		onAnswer(coding.MissingSessionCwdContinue)
 	}
 	wiring.HandleResumeSession(context.Background(), "session-c")
 	if statuses[len(statuses)-1] != "Resumed session in current cwd" {
 		t.Fatalf("statuses = %v", statuses)
 	}
+	// Forking into the current cwd switches to the fork and names it.
+	forked := []string{}
+	wiring.PromptForMissingCwd = func(_ context.Context, _ coding.SessionCwdIssue, onAnswer func(coding.MissingSessionCwdChoice)) {
+		onAnswer(coding.MissingSessionCwdFork)
+	}
+	wiring.ForkIntoSession = func(_ context.Context, sourcePath string, cwd string, onDone func(*ForkedSessionResult, error)) {
+		forked = append(forked, sourcePath+" -> "+cwd)
+		onDone(&ForkedSessionResult{SessionID: "fork-1", Cwd: cwd}, nil)
+	}
+	wiring.HandleResumeSession(context.Background(), "session-f")
+	if len(forked) != 1 || forked[0] != "session-f -> /here" {
+		t.Fatalf("forked = %v", forked)
+	}
+	if statuses[len(statuses)-1] != "Forked into new session fork-1 in /here" {
+		t.Fatalf("statuses = %v", statuses)
+	}
+	// A vetoed switch reports nothing, like upstream's fork case.
+	before := len(statuses)
+	wiring.ForkIntoSession = func(_ context.Context, _ string, _ string, onDone func(*ForkedSessionResult, error)) {
+		onDone(&ForkedSessionResult{Cancelled: true}, nil)
+	}
+	wiring.HandleResumeSession(context.Background(), "session-g")
+	if len(statuses) != before {
+		t.Fatalf("statuses = %v", statuses)
+	}
+	// A fork failure is fatal with the resume prefix.
+	fatalForks := 0
+	wiring.HandleFatalRuntimeError = func(_ context.Context, prefix string, _ error) {
+		if prefix == "Failed to resume session" {
+			fatalForks++
+		}
+	}
+	wiring.ForkIntoSession = func(_ context.Context, _ string, _ string, onDone func(*ForkedSessionResult, error)) {
+		onDone(nil, errors.New("fork boom"))
+	}
+	wiring.HandleResumeSession(context.Background(), "session-h")
+	if fatalForks != 1 {
+		t.Fatalf("fatal forks = %d, want 1", fatalForks)
+	}
 	// Declining the prompt cancels.
-	wiring.PromptForMissingCwd = func(_ context.Context, _ coding.SessionCwdIssue, onCwd func(string, bool)) {
-		onCwd("", false)
+	wiring.PromptForMissingCwd = func(_ context.Context, _ coding.SessionCwdIssue, onAnswer func(coding.MissingSessionCwdChoice)) {
+		onAnswer(coding.MissingSessionCwdCancel)
 	}
 	wiring.HandleResumeSession(context.Background(), "session-d")
 	if statuses[len(statuses)-1] != "Resume cancelled" {

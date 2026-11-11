@@ -78,7 +78,10 @@ type CommandWiring struct {
 	// callback on the UI loop (upstream's extension-UI confirm, awaited there).
 	ShowExtensionConfirm func(ctx context.Context, title string, message string, onAnswer func(confirmed bool))
 	// PromptForMissingCwd resolves a missing-cwd error.
-	PromptForMissingCwd func(ctx context.Context, issue coding.SessionCwdIssue, onCwd func(cwd string, ok bool))
+	PromptForMissingCwd func(ctx context.Context, issue coding.SessionCwdIssue, onAnswer func(choice coding.MissingSessionCwdChoice))
+	// ForkIntoSession forks a session whose stored cwd is gone into cwd and
+	// switches to the fork (upstream switchToForkedSession).
+	ForkIntoSession func(ctx context.Context, sourcePath string, cwd string, onDone func(*ForkedSessionResult, error))
 	// CopyToClipboard copies text, returning (ok, message).
 	CopyToClipboard func(text string) (bool, string)
 	// CopyActiveSelection copies the alt-screen selection.
@@ -257,12 +260,15 @@ func (w *CommandWiring) HandleImportCommand(ctx context.Context, text string) {
 			}
 			var cwdErr *coding.MissingSessionCwdError
 			if w.PromptForMissingCwd != nil && errors.As(err, &cwdErr) {
-				w.PromptForMissingCwd(ctx, cwdErr.Issue, func(selectedCwd string, selected bool) {
-					if !selected {
+				w.PromptForMissingCwd(ctx, cwdErr.Issue, func(choice coding.MissingSessionCwdChoice) {
+					switch choice {
+					case coding.MissingSessionCwdContinue:
+						importWith(cwdErr.Issue.FallbackCwd)
+					case coding.MissingSessionCwdFork:
+						w.forkImportIntoSession(ctx, inputPath, cwdErr.Issue.FallbackCwd)
+					default:
 						w.showStatus("Import cancelled")
-						return
 					}
-					importWith(selectedCwd)
 				})
 				return
 			}
@@ -284,6 +290,31 @@ func (w *CommandWiring) HandleImportCommand(ctx context.Context, text string) {
 			return
 		}
 		importWith("")
+	})
+}
+
+// forkImportIntoSession forks the imported session into cwd and switches to the
+// fork (upstream handleImportCommand's fork case): a vetoed switch reports the
+// import as cancelled.
+func (w *CommandWiring) forkImportIntoSession(ctx context.Context, sourcePath string, cwd string) {
+	if w.ForkIntoSession == nil {
+		w.showStatus("Import cancelled")
+		return
+	}
+	w.ForkIntoSession(ctx, sourcePath, cwd, func(forked *ForkedSessionResult, err error) {
+		if err != nil {
+			if w.HandleFatalRuntimeError != nil {
+				w.HandleFatalRuntimeError(ctx, "Failed to import session", err)
+				return
+			}
+			w.showError("Failed to import session: " + err.Error())
+			return
+		}
+		if forked == nil || forked.Cancelled {
+			w.showStatus("Import cancelled")
+			return
+		}
+		w.showStatus(forked.Status())
 	})
 }
 
@@ -906,9 +937,10 @@ func newCommandWiring(app *App) *CommandWiring {
 		ShowExtensionConfirm: func(ctx context.Context, title string, message string, onAnswer func(confirmed bool)) {
 			app.askConfirm(title, message, onAnswer)
 		},
-		PromptForMissingCwd: func(ctx context.Context, issue coding.SessionCwdIssue, onCwd func(cwd string, ok bool)) {
-			app.askMissingSessionCwd(issue, onCwd)
+		PromptForMissingCwd: func(ctx context.Context, issue coding.SessionCwdIssue, onAnswer func(coding.MissingSessionCwdChoice)) {
+			app.askMissingSessionCwd(issue, onAnswer)
 		},
+		ForkIntoSession: app.forkIntoSessionAsync,
 		// `/import` copies a session file into this project's session directory and
 		// switches to it.
 		ImportFromJSONL: func(ctx context.Context, inputPath string, cwdOverride string, onDone func(bool, error)) {

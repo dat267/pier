@@ -54,6 +54,40 @@ func FormatMissingSessionCwdPrompt(issue SessionCwdIssue) string {
 		issue.SessionCwd, issue.FallbackCwd)
 }
 
+// MissingSessionCwdChoice is how to open a session whose stored cwd is gone
+// (upstream core/session-cwd.ts MissingSessionCwdChoice; cancel is the zero
+// value, which upstream spells undefined).
+type MissingSessionCwdChoice int
+
+const (
+	MissingSessionCwdCancel MissingSessionCwdChoice = iota
+	MissingSessionCwdContinue
+	MissingSessionCwdFork
+)
+
+// MissingSessionCwdOption is one prompt choice: the label shown and the answer
+// it reports.
+type MissingSessionCwdOption struct {
+	Label  string
+	Choice MissingSessionCwdChoice
+}
+
+// MissingSessionCwdOptions lists the ways to open a session whose stored cwd is
+// gone, naming the current cwd (upstream getMissingSessionCwdOptions).
+func MissingSessionCwdOptions(issue SessionCwdIssue) []MissingSessionCwdOption {
+	return []MissingSessionCwdOption{
+		{
+			Label:  fmt.Sprintf("Continue in %s (asks again next time)", issue.FallbackCwd),
+			Choice: MissingSessionCwdContinue,
+		},
+		{
+			Label:  fmt.Sprintf("Fork into %s (new session ID, original kept)", issue.FallbackCwd),
+			Choice: MissingSessionCwdFork,
+		},
+		{Label: "Cancel", Choice: MissingSessionCwdCancel},
+	}
+}
+
 // MissingSessionCwdError is returned by AssertSessionCwdExists.
 type MissingSessionCwdError struct {
 	Issue SessionCwdIssue

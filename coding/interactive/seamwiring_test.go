@@ -177,24 +177,36 @@ func TestAppConfirmDialogs(t *testing.T) {
 
 	t.Run("missing cwd continue", func(t *testing.T) {
 		issue := coding.SessionCwdIssue{SessionCwd: "/gone", FallbackCwd: "/fallback"}
-		var cwd string
-		var ok bool
-		app.askMissingSessionCwd(issue, func(selected string, selectedOK bool) { cwd, ok = selected, selectedOK })
+		var choice coding.MissingSessionCwdChoice = -1
+		app.askMissingSessionCwd(issue, func(answer coding.MissingSessionCwdChoice) { choice = answer })
 		selectorIn(t, app).HandleInput("\r")
-		if !ok || cwd != "/fallback" {
-			t.Errorf("cwd=%q ok=%v, want the fallback", cwd, ok)
+		if choice != coding.MissingSessionCwdContinue {
+			t.Errorf("choice = %v, want continue", choice)
+		}
+	})
+
+	t.Run("missing cwd fork", func(t *testing.T) {
+		issue := coding.SessionCwdIssue{SessionCwd: "/gone", FallbackCwd: "/fallback"}
+		var choice coding.MissingSessionCwdChoice = -1
+		app.askMissingSessionCwd(issue, func(answer coding.MissingSessionCwdChoice) { choice = answer })
+		selector := selectorIn(t, app)
+		selector.HandleInput("\x1b[B") // move to Fork
+		selector.HandleInput("\r")
+		if choice != coding.MissingSessionCwdFork {
+			t.Errorf("choice = %v, want fork", choice)
 		}
 	})
 
 	t.Run("missing cwd cancel", func(t *testing.T) {
 		issue := coding.SessionCwdIssue{SessionCwd: "/gone", FallbackCwd: "/fallback"}
-		var ok bool
-		app.askMissingSessionCwd(issue, func(_ string, selectedOK bool) { ok = selectedOK })
+		var choice coding.MissingSessionCwdChoice = -1
+		app.askMissingSessionCwd(issue, func(answer coding.MissingSessionCwdChoice) { choice = answer })
 		selector := selectorIn(t, app)
+		selector.HandleInput("\x1b[B") // move to Fork
 		selector.HandleInput("\x1b[B") // move to Cancel
 		selector.HandleInput("\r")
-		if ok {
-			t.Error("Cancel reported a cwd")
+		if choice != coding.MissingSessionCwdCancel {
+			t.Errorf("choice = %v, want cancel", choice)
 		}
 	})
 }

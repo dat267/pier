@@ -75,23 +75,25 @@ func (w *TrustCrashWiring) RenderProjectTrustWarningIfNeeded() {
 			" resources are ignored. Use /trust to save a trust decision, then restart pi."), 1, 0, nil))
 }
 
-// PromptForMissingSessionCwd asks for a fallback cwd.
-func (w *TrustCrashWiring) PromptForMissingSessionCwd(ctx context.Context, issue coding.SessionCwdIssue, onCwd func(cwd string, ok bool)) {
+// PromptForMissingSessionCwd answers a missing-cwd prompt. The fallback asks a
+// yes/no confirm, so it can only continue or cancel; fork needs the
+// three-option selector app.askMissingSessionCwd shows.
+func (w *TrustCrashWiring) PromptForMissingSessionCwd(ctx context.Context, issue coding.SessionCwdIssue, onAnswer func(choice coding.MissingSessionCwdChoice)) {
 	if w.ShowExtensionConfirm == nil {
-		if onCwd != nil {
-			onCwd("", false)
+		if onAnswer != nil {
+			onAnswer(coding.MissingSessionCwdCancel)
 		}
 		return
 	}
 	w.ShowExtensionConfirm(ctx, "Session cwd not found", coding.FormatMissingSessionCwdPrompt(issue), func(confirmed bool) {
-		if onCwd == nil {
+		if onAnswer == nil {
 			return
 		}
 		if !confirmed {
-			onCwd("", false)
+			onAnswer(coding.MissingSessionCwdCancel)
 			return
 		}
-		onCwd(issue.FallbackCwd, true)
+		onAnswer(coding.MissingSessionCwdContinue)
 	})
 }
 

@@ -191,12 +191,58 @@ func TestCommandExportImport(t *testing.T) {
 		}
 		onDone(false, nil)
 	}
-	wiring.PromptForMissingCwd = func(_ context.Context, issue coding.SessionCwdIssue, onCwd func(string, bool)) {
-		onCwd(issue.FallbackCwd, true)
+	wiring.PromptForMissingCwd = func(_ context.Context, _ coding.SessionCwdIssue, onAnswer func(coding.MissingSessionCwdChoice)) {
+		onAnswer(coding.MissingSessionCwdContinue)
 	}
 	wiring.HandleImportCommand(context.Background(), "/import in.jsonl")
 	if statuses[len(statuses)-1] != "Session imported from: in.jsonl" {
 		t.Fatalf("statuses = %v", statuses)
+	}
+	// Forking the imported session into the current cwd switches to the fork
+	// (upstream interactive-mode.ts handleImportCommand's fork case).
+	forked := []string{}
+	wiring.PromptForMissingCwd = func(_ context.Context, _ coding.SessionCwdIssue, onAnswer func(coding.MissingSessionCwdChoice)) {
+		onAnswer(coding.MissingSessionCwdFork)
+	}
+	wiring.ForkIntoSession = func(_ context.Context, sourcePath string, cwd string, onDone func(*ForkedSessionResult, error)) {
+		forked = append(forked, sourcePath+" -> "+cwd)
+		onDone(&ForkedSessionResult{SessionID: "fork-1", Cwd: cwd}, nil)
+	}
+	wiring.HandleImportCommand(context.Background(), "/import in.jsonl")
+	if len(forked) != 1 || forked[0] != "in.jsonl -> /here" {
+		t.Fatalf("forked = %v", forked)
+	}
+	if statuses[len(statuses)-1] != "Forked into new session fork-1 in /here" {
+		t.Fatalf("statuses = %v", statuses)
+	}
+	// A vetoed switch reports the import as cancelled and leaves no fork.
+	wiring.ForkIntoSession = func(_ context.Context, _ string, _ string, onDone func(*ForkedSessionResult, error)) {
+		onDone(&ForkedSessionResult{Cancelled: true}, nil)
+	}
+	wiring.HandleImportCommand(context.Background(), "/import in.jsonl")
+	if statuses[len(statuses)-1] != "Import cancelled" {
+		t.Fatalf("statuses = %v", statuses)
+	}
+	// Declining the prompt cancels the import.
+	wiring.PromptForMissingCwd = func(_ context.Context, _ coding.SessionCwdIssue, onAnswer func(coding.MissingSessionCwdChoice)) {
+		onAnswer(coding.MissingSessionCwdCancel)
+	}
+	wiring.HandleImportCommand(context.Background(), "/import in.jsonl")
+	if statuses[len(statuses)-1] != "Import cancelled" {
+		t.Fatalf("statuses = %v", statuses)
+	}
+	// A fork failure is fatal with the import prefix.
+	fatal := []string{}
+	wiring.HandleFatalRuntimeError = func(_ context.Context, prefix string, _ error) { fatal = append(fatal, prefix) }
+	wiring.PromptForMissingCwd = func(_ context.Context, _ coding.SessionCwdIssue, onAnswer func(coding.MissingSessionCwdChoice)) {
+		onAnswer(coding.MissingSessionCwdFork)
+	}
+	wiring.ForkIntoSession = func(_ context.Context, _ string, _ string, onDone func(*ForkedSessionResult, error)) {
+		onDone(nil, errors.New("fork boom"))
+	}
+	wiring.HandleImportCommand(context.Background(), "/import in.jsonl")
+	if len(fatal) != 1 || fatal[0] != "Failed to import session" {
+		t.Fatalf("fatal = %v", fatal)
 	}
 }
 

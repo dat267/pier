@@ -14,7 +14,15 @@ import (
 // file exists on disk (persistEntry flushes on the first assistant message).
 func makePersistedSession(t *testing.T, cwd string, text string) *coding.SessionManager {
 	t.Helper()
-	sm := coding.NewSessionManager(cwd, nil)
+	return makePersistedSessionIn(t, cwd, "", text)
+}
+
+// makePersistedSessionIn is makePersistedSession with an explicit session
+// directory ("" = the default store for cwd).
+func makePersistedSessionIn(t *testing.T, cwd string, sessionDir string, text string) *coding.SessionManager {
+	t.Helper()
+	persist := true
+	sm := coding.NewSessionManager(cwd, &coding.SessionManagerOptions{SessionDir: sessionDir, Persist: &persist})
 	sm.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: text}})
 	sm.AppendMessage(&ai.AssistantMessage{
 		API:        ai.APIAnthropicMessages,

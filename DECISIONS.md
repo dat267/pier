@@ -301,10 +301,11 @@ and selector `RuntimeFork` (`coding.ForkSessionAtEntry`, `App.forkAtEntry`),
 `OnLabelChange`, and `ApplyFullscreenScrollbarSetting`.
 
 Dialogs use callback chains, not value-returning seams: `ShowExtensionConfirm`
-and `PromptForMissingCwd` deliver via `onAnswer`/`onCwd`, since selector `Show`
-mounts and returns while upstream awaits answers. This enables `/import`'s
-"Replace current session?" and import/resume missing-cwd prompts. App helpers
-reuse the extension selector's title/description/options/timeout component.
+and `PromptForMissingCwd` deliver via `onAnswer`, since selector `Show` mounts
+and returns while upstream awaits answers. This enables `/import`'s "Replace
+current session?" and the import/resume missing-cwd prompts, whose answer is a
+`coding.MissingSessionCwdChoice`. App helpers reuse the extension selector's
+title/description/options/timeout component.
 Retries key on `coding.MissingSessionCwdError`, not `strings.Contains(err, "cwd")`,
 which missed upstream's "working directory" wording. Bedrock's `ShowAuthSelect`
 is a list inside the login dialog, preserving its focus/input routing (D156).

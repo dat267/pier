@@ -209,10 +209,54 @@ func TestImportCommandMissingCwdPrompt(t *testing.T) {
 
 		newCommandWiring(app).HandleImportCommand(context.Background(), "/import "+source)
 		answerConfirm(t, app, 0) // replace the current session
-		answerConfirm(t, app, 1) // cancel at the cwd prompt
+		answerConfirm(t, app, 2) // cancel at the cwd prompt
 
 		if !transcriptHasStatus(app, "Import cancelled") {
 			t.Errorf("no cancellation status: %q", transcriptTexts(app))
+		}
+	})
+
+	// A fork copies the session into the current cwd with a new id and switches to
+	// the copy, leaving the original alone (upstream handleImportCommand's fork
+	// case → switchToForkedSession).
+	t.Run("fork switches to a copy in the current cwd", func(t *testing.T) {
+		app, cleanup := newTestApp(t)
+		defer cleanup()
+		sessionDir := withSessionDir(t, app)
+		source := newGoneSession(t)
+		original, err := os.ReadFile(source)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		newCommandWiring(app).HandleImportCommand(context.Background(), "/import "+source)
+		answerConfirm(t, app, 0) // replace the current session
+		answerConfirm(t, app, 1) // fork into the current cwd
+
+		forked := app.sessionMgr.GetSessionFile()
+		if filepath.Dir(forked) != sessionDir || forked == source {
+			t.Errorf("session file = %q, want a fork in %q", forked, sessionDir)
+		}
+		if !transcriptHasStatus(app, "Forked into new session ") {
+			t.Errorf("no fork status: %q", transcriptTexts(app))
+		}
+		entries, err := coding.LoadEntriesFromFile(forked)
+		if err != nil {
+			t.Fatal(err)
+		}
+		header := entries[0].Header
+		if header == nil || header.Cwd != app.sessionMgr.GetCwd() {
+			t.Fatalf("fork header = %+v", header)
+		}
+		if header.ParentSession == nil || *header.ParentSession != coding.ResolvePath(source, "", coding.PathInputOptions{}) {
+			t.Errorf("parentSession = %v, want %q", header.ParentSession, source)
+		}
+		after, err := os.ReadFile(source)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(after) != string(original) {
+			t.Error("the fork rewrote the imported session file")
 		}
 	})
 }

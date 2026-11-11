@@ -255,6 +255,23 @@ func TestMissingSessionCwd(t *testing.T) {
 	if prompt := FormatMissingSessionCwdPrompt(*issue); !strings.Contains(prompt, "continue in current cwd\n"+dir) {
 		t.Fatalf("prompt = %q", prompt)
 	}
+	// The prompt's options are upstream getMissingSessionCwdOptions
+	// (core/session-cwd.ts): continue in the current cwd, fork into it, cancel.
+	options := MissingSessionCwdOptions(*issue)
+	wantLabels := []string{
+		"Continue in " + dir + " (asks again next time)",
+		"Fork into " + dir + " (new session ID, original kept)",
+		"Cancel",
+	}
+	wantChoices := []MissingSessionCwdChoice{MissingSessionCwdContinue, MissingSessionCwdFork, MissingSessionCwdCancel}
+	if len(options) != len(wantLabels) {
+		t.Fatalf("options = %+v", options)
+	}
+	for i, option := range options {
+		if option.Label != wantLabels[i] || option.Choice != wantChoices[i] {
+			t.Errorf("option %d = %+v, want %q/%v", i, option, wantLabels[i], wantChoices[i])
+		}
+	}
 
 	err := AssertSessionCwdExists(stubSessionCwd{cwd: missing, sessionFile: "/s.json"}, dir)
 	var missingErr *MissingSessionCwdError

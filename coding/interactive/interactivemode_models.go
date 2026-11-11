@@ -390,7 +390,10 @@ type SessionWiring struct {
 	RenameQueue *offloop.Queue
 	PostToUI    func(func())
 	// PromptForMissingCwd resolves a missing-cwd error.
-	PromptForMissingCwd func(ctx context.Context, issue coding.SessionCwdIssue, onCwd func(cwd string, ok bool))
+	PromptForMissingCwd func(ctx context.Context, issue coding.SessionCwdIssue, onAnswer func(choice coding.MissingSessionCwdChoice))
+	// ForkIntoSession forks a session whose stored cwd is gone into cwd and
+	// switches to the fork (upstream switchToForkedSession).
+	ForkIntoSession func(ctx context.Context, sourcePath string, cwd string, onDone func(*ForkedSessionResult, error))
 	// ShowStatus reports a status line.
 	ShowStatus func(message string)
 	// ShowError reports an error.
@@ -541,12 +544,15 @@ func (w *SessionWiring) HandleResumeSession(ctx context.Context, sessionPath str
 			}
 			var cwdErr *coding.MissingSessionCwdError
 			if w.PromptForMissingCwd != nil && errors.As(err, &cwdErr) {
-				w.PromptForMissingCwd(ctx, cwdErr.Issue, func(selectedCwd string, selected bool) {
-					if !selected {
+				w.PromptForMissingCwd(ctx, cwdErr.Issue, func(choice coding.MissingSessionCwdChoice) {
+					switch choice {
+					case coding.MissingSessionCwdContinue:
+						resumeWith(cwdErr.Issue.FallbackCwd)
+					case coding.MissingSessionCwdFork:
+						w.forkResumeIntoSession(ctx, sessionPath, cwdErr.Issue.FallbackCwd)
+					default:
 						w.showStatus("Resume cancelled")
-						return
 					}
-					resumeWith(selectedCwd)
 				})
 				return
 			}
@@ -558,6 +564,29 @@ func (w *SessionWiring) HandleResumeSession(ctx context.Context, sessionPath str
 		})
 	}
 	resumeWith("")
+}
+
+// forkResumeIntoSession forks the resumed session into cwd and switches to the
+// fork (upstream handleResumeSession's fork case): a vetoed switch shows
+// nothing, like upstream's.
+func (w *SessionWiring) forkResumeIntoSession(ctx context.Context, sourcePath string, cwd string) {
+	if w.ForkIntoSession == nil {
+		return
+	}
+	w.ForkIntoSession(ctx, sourcePath, cwd, func(forked *ForkedSessionResult, err error) {
+		if err != nil {
+			if w.HandleFatalRuntimeError != nil {
+				w.HandleFatalRuntimeError(ctx, "Failed to resume session", err)
+				return
+			}
+			w.showError("Failed to resume session: " + err.Error())
+			return
+		}
+		if forked == nil || forked.Cancelled {
+			return
+		}
+		w.showStatus(forked.Status())
+	})
 }
 
 // newModelWiring assembles the ModelWiring (port of the corresponding InteractiveMode wiring).
@@ -586,16 +615,17 @@ func newModelWiring(app *App) *ModelWiring {
 func newSessionWiring(app *App) *SessionWiring {
 	return &SessionWiring{
 		// The resume flow's missing-cwd prompt, same dialog as the import's.
-		PromptForMissingCwd: func(ctx context.Context, issue coding.SessionCwdIssue, onCwd func(cwd string, ok bool)) {
-			app.askMissingSessionCwd(issue, onCwd)
+		PromptForMissingCwd: func(ctx context.Context, issue coding.SessionCwdIssue, onAnswer func(coding.MissingSessionCwdChoice)) {
+			app.askMissingSessionCwd(issue, onAnswer)
 		},
-		Slot:        app.slot,
-		Settings:    app.settings,
-		SessionInfo: app.sessionMgr,
-		UI:          app.ui,
-		Keybindings: app.keybindings.KeybindingsManager,
-		ShowStatus:  func(message string) { app.transcript.ShowStatus(message) },
-		ShowError:   func(message string) { app.showError(message) },
+		ForkIntoSession: app.forkIntoSessionAsync,
+		Slot:            app.slot,
+		Settings:        app.settings,
+		SessionInfo:     app.sessionMgr,
+		UI:              app.ui,
+		Keybindings:     app.keybindings.KeybindingsManager,
+		ShowStatus:      func(message string) { app.transcript.ShowStatus(message) },
+		ShowError:       func(message string) { app.showError(message) },
 		HandleFatalRuntimeError: func(ctx context.Context, prefix string, err error) {
 			app.trust.HandleFatalRuntimeError(ctx, prefix, err)
 		},

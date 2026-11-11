@@ -115,28 +115,27 @@ func TestPromptForMissingCwd(t *testing.T) {
 	issue := coding.SessionCwdIssue{SessionCwd: "/gone", FallbackCwd: "/tmp/fallback"}
 
 	// Without the dialog seam the prompt cancels.
-	var cwd string
-	var ok bool
-	wiring.PromptForMissingSessionCwd(context.Background(), issue, func(selected string, selectedOK bool) {
-		cwd, ok = selected, selectedOK
+	var choice coding.MissingSessionCwdChoice = -1
+	wiring.PromptForMissingSessionCwd(context.Background(), issue, func(answer coding.MissingSessionCwdChoice) {
+		choice = answer
 	})
-	if ok {
-		t.Fatal("prompt should cancel without the seam")
+	if choice != coding.MissingSessionCwdCancel {
+		t.Fatalf("choice = %v, want cancel", choice)
 	}
 	wiring.ShowExtensionConfirm = func(_ context.Context, _, _ string, onAnswer func(bool)) { onAnswer(true) }
-	wiring.PromptForMissingSessionCwd(context.Background(), issue, func(selected string, selectedOK bool) {
-		cwd, ok = selected, selectedOK
+	wiring.PromptForMissingSessionCwd(context.Background(), issue, func(answer coding.MissingSessionCwdChoice) {
+		choice = answer
 	})
-	if !ok || cwd != "/tmp/fallback" {
-		t.Fatalf("cwd = %q ok = %v", cwd, ok)
+	if choice != coding.MissingSessionCwdContinue {
+		t.Fatalf("choice = %v, want continue", choice)
 	}
 	// A declined confirm cancels.
 	wiring.ShowExtensionConfirm = func(_ context.Context, _, _ string, onAnswer func(bool)) { onAnswer(false) }
-	wiring.PromptForMissingSessionCwd(context.Background(), issue, func(selected string, selectedOK bool) {
-		cwd, ok = selected, selectedOK
+	wiring.PromptForMissingSessionCwd(context.Background(), issue, func(answer coding.MissingSessionCwdChoice) {
+		choice = answer
 	})
-	if ok {
-		t.Fatal("declined prompt returned a cwd")
+	if choice != coding.MissingSessionCwdCancel {
+		t.Fatalf("choice = %v, want cancel", choice)
 	}
 }
 

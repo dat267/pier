@@ -165,6 +165,61 @@ func copyFileExclusive(src string, dst string) (err error) {
 	return destination.Close()
 }
 
+// ForkedSessionResult is the outcome of forking a session into another cwd and
+// switching to it (upstream switchToForkedSession).
+type ForkedSessionResult struct {
+	SessionID string
+	Cwd       string
+	Cancelled bool
+}
+
+// Status is upstream's status line after a successful fork.
+func (r *ForkedSessionResult) Status() string {
+	return "Forked into new session " + r.SessionID + " in " + r.Cwd
+}
+
+// forkIntoSessionAsync forks the session at sourcePath into cwd and switches to
+// the fork (upstream InteractiveMode.switchToForkedSession, #11060). A vetoed
+// switch removes the fork, so cancelling leaves no copy behind.
+func (a *App) forkIntoSessionAsync(ctx context.Context, sourcePath string, cwd string, done func(*ForkedSessionResult, error)) {
+	// Snapshot the target directory on the owner loop; the fork writes the whole
+	// log off it.
+	sessionDir := a.sessionMgr.GetSessionDir()
+	fork := coding.ForkSession
+	if !a.sessionMgr.SessionDirManaged() {
+		fork = coding.ForkSessionDerived
+	}
+	work := func(context.Context) (*coding.SessionManager, error) {
+		return fork(sourcePath, cwd, sessionDir, nil)
+	}
+	runSessionFileWork(a.sessionQueue, a.postToOwnerLoop, sessionFileWorkKey, work, func(forked *coding.SessionManager, forkErr error) {
+		if forkErr != nil {
+			done(nil, forkErr)
+			return
+		}
+		forkPath := forked.GetSessionFile()
+		if a.sessions.SwitchSession == nil {
+			_ = os.Remove(forkPath)
+			done(&ForkedSessionResult{Cancelled: true}, nil)
+			return
+		}
+		a.sessions.SwitchSession(ctx, forkPath, "", func(result *SessionSwitchResult, err error) {
+			if err != nil {
+				done(nil, err)
+				return
+			}
+			if result != nil && result.Cancelled {
+				// An extension vetoed the switch; drop the fork so cancelling
+				// leaves no copy behind.
+				_ = os.Remove(forkPath)
+				done(&ForkedSessionResult{Cancelled: true}, nil)
+				return
+			}
+			done(&ForkedSessionResult{SessionID: forked.GetSessionID(), Cwd: cwd}, nil)
+		})
+	})
+}
+
 // SessionNew starts a fresh session in the current session directory (upstream
 // AgentSessionRuntime.newSession).
 func (a *App) sessionNew(ctx context.Context) (*SessionSwitchResult, error) {

@@ -8,6 +8,18 @@ import (
 // source's non-header entries (upstream SessionManager.forkFrom): the new
 // header points at the source as parentSession and carries targetCwd.
 func ForkSession(sourcePath string, targetCwd string, sessionDir string, options *NewSessionOptions) (*SessionManager, error) {
+	return forkSession(sourcePath, targetCwd, sessionDir, true, options)
+}
+
+// ForkSessionDerived is ForkSession for a directory inherited from a session
+// file opened by path rather than chosen as a session store: the directory
+// places the fork but keeps the user's permissions instead of being hardened to
+// 0700 (M73). Callers pick it with the current session's SessionDirManaged().
+func ForkSessionDerived(sourcePath string, targetCwd string, sessionDir string, options *NewSessionOptions) (*SessionManager, error) {
+	return forkSession(sourcePath, targetCwd, sessionDir, false, options)
+}
+
+func forkSession(sourcePath string, targetCwd string, sessionDir string, manageDir bool, options *NewSessionOptions) (*SessionManager, error) {
 	resolvedSourcePath := ResolvePath(sourcePath, "", PathInputOptions{})
 	sourceEntries, err := LoadEntriesFromFile(resolvedSourcePath)
 	if err != nil {
@@ -36,5 +48,5 @@ func ForkSession(sourcePath string, targetCwd string, sessionDir string, options
 			entries = append(entries, *fileEntry.Entry)
 		}
 	}
-	return writeForkedSession(targetCwd, sessionDir, true, &resolvedSourcePath, entries, options)
+	return writeForkedSession(targetCwd, sessionDir, manageDir, &resolvedSourcePath, entries, options)
 }

@@ -40,18 +40,25 @@ func (a *App) askConfirm(title string, message string, onAnswer func(confirmed b
 	})
 }
 
-// askMissingSessionCwd offers to continue in the fallback directory when a
-// session's stored cwd is gone (upstream promptForMissingSessionCwd: Continue or
-// Cancel, with the fallback cwd as the answer).
-func (a *App) askMissingSessionCwd(issue coding.SessionCwdIssue, onCwd func(cwd string, ok bool)) {
-	a.askChoose("Session cwd not found", coding.FormatMissingSessionCwdPrompt(issue), []string{"Continue", "Cancel"}, func(option string) {
-		if onCwd == nil {
+// askMissingSessionCwd offers the ways to open a session whose stored cwd is
+// gone (upstream promptForMissingSessionCwd): continue in the fallback
+// directory once, fork into it, or cancel.
+func (a *App) askMissingSessionCwd(issue coding.SessionCwdIssue, onAnswer func(choice coding.MissingSessionCwdChoice)) {
+	options := coding.MissingSessionCwdOptions(issue)
+	labels := make([]string, len(options))
+	for i, option := range options {
+		labels[i] = option.Label
+	}
+	a.askChoose("Session cwd not found", coding.FormatMissingSessionCwdPrompt(issue), labels, func(option string) {
+		if onAnswer == nil {
 			return
 		}
-		if option != "Continue" {
-			onCwd("", false)
-			return
+		for _, candidate := range options {
+			if candidate.Label == option {
+				onAnswer(candidate.Choice)
+				return
+			}
 		}
-		onCwd(issue.FallbackCwd, true)
+		onAnswer(coding.MissingSessionCwdCancel)
 	})
 }
