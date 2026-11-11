@@ -17,6 +17,8 @@ for (const { name, id = "call_1|fc_1", source = {}, namespace } of [
 	{ name: "different-model-omits-item-id", source: { model: "gpt-5-mini" } },
 	{ name: "no-item-id", id: "call_1" },
 	{ name: "foreign-item-id", source: { api: "anthropic-messages", provider: "anthropic", model: "claude" } },
+	{ name: "foreign-multi-pipe-item-id", id: "call_1|second|third", source: { api: "anthropic-messages", provider: "anthropic", model: "claude" } },
+	{ name: "same-model-multi-pipe-item-id", id: "call_1|fc_a|fc_b" },
 ]) {
 	const messages = [
 		{ role: "user", content: "look up", timestamp: 1 },

@@ -391,6 +391,19 @@ func getConfigurationUpdateEffort(model *Model, options *OpenAIResponsesOptions,
 }
 
 // normalizeResponsesIDPart sanitizes/truncates an id part (≤64 chars).
+// splitToolCallID splits an id of the form "call|item|..." the way upstream
+// destructures `const [callId, itemId] = id.split("|")`
+// (api/openai-responses-shared.ts:215, :363): the call id is the first segment,
+// the item id is the second, and any remaining segments are dropped.
+func splitToolCallID(id string) (callID, itemID string) {
+	first, rest, found := strings.Cut(id, "|")
+	if !found {
+		return first, ""
+	}
+	second, _, _ := strings.Cut(rest, "|")
+	return first, second
+}
+
 func normalizeResponsesIDPart(part string) string {
 	sanitized := sanitizeID(part)
 	if JSLength(sanitized) > 64 {
@@ -420,14 +433,14 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 		if !strings.Contains(id, "|") {
 			return normalizeResponsesIDPart(id)
 		}
-		parts := strings.SplitN(id, "|", 2)
-		normalizedCallID := normalizeResponsesIDPart(parts[0])
+		callID, itemID := splitToolCallID(id)
+		normalizedCallID := normalizeResponsesIDPart(callID)
 		isForeignToolCall := source.Provider != model.Provider || source.API != model.API
 		var normalizedItemID string
 		if isForeignToolCall {
-			normalizedItemID = normalizeResponsesIDPart("fc_" + ShortHash(parts[1]))
+			normalizedItemID = normalizeResponsesIDPart("fc_" + ShortHash(itemID))
 		} else {
-			normalizedItemID = normalizeResponsesIDPart(parts[1])
+			normalizedItemID = normalizeResponsesIDPart(itemID)
 		}
 		if !strings.HasPrefix(normalizedItemID, "fc_") {
 			normalizedItemID = normalizeResponsesIDPart("fc_" + normalizedItemID)
@@ -723,12 +736,7 @@ func convertResponsesAssistantMessage(model *Model, m *AssistantMessage, msgInde
 			}
 			output = append(output, orderKeys(item, keys...))
 		case ToolCall:
-			parts := strings.SplitN(b.ID, "|", 2)
-			callID := parts[0]
-			var itemID string
-			if len(parts) > 1 {
-				itemID = parts[1]
-			}
+			callID, itemID := splitToolCallID(b.ID)
 			customInputProperty, isCustomTool := options.GrammarToolInputProperties[b.Name]
 
 			// Different-model messages omit the item id entirely to avoid pairing

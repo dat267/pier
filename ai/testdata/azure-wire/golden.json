@@ -390,5 +390,148 @@
     "path": "/openai/v1/responses",
     "apiVersion": "v1",
     "body": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"\"},{\"type\":\"input_text\",\"text\":\"   \"},{\"type\":\"input_text\",\"text\":\"real\"}]},{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"\",\"annotations\":[]}],\"status\":\"completed\",\"id\":\"msg_pi_1\"},{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"again\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}"
+  },
+  {
+    "name": "text-only-model-drops-image",
+    "modelInput": [
+      "text"
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "look"
+          },
+          {
+            "type": "image",
+            "data": "aW1hZ2U=",
+            "mimeType": "image/png"
+          }
+        ],
+        "timestamp": 1
+      }
+    ],
+    "options": {},
+    "payload": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"look\"},{\"type\":\"input_text\",\"text\":\"(image omitted: model does not support images)\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}",
+    "path": "/openai/v1/responses",
+    "apiVersion": "v1",
+    "body": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"look\"},{\"type\":\"input_text\",\"text\":\"(image omitted: model does not support images)\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}"
+  },
+  {
+    "name": "foreign-thinking-dropped",
+    "messages": [
+      {
+        "role": "user",
+        "content": "go",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "api": "openai-responses",
+        "provider": "openai",
+        "model": "other",
+        "timestamp": 2,
+        "stopReason": "stop",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "foreign plan",
+            "thinkingSignature": "{\"id\":\"rs_1\",\"encrypted_content\":\"abc\"}"
+          },
+          {
+            "type": "text",
+            "text": "kept"
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "next",
+        "timestamp": 3
+      }
+    ],
+    "options": {},
+    "payload": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"go\"}]},{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"kept\",\"annotations\":[]}],\"status\":\"completed\",\"id\":\"msg_pi_1\"},{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"next\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}",
+    "path": "/openai/v1/responses",
+    "apiVersion": "v1",
+    "body": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"go\"}]},{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"kept\",\"annotations\":[]}],\"status\":\"completed\",\"id\":\"msg_pi_1\"},{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"next\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}"
+  },
+  {
+    "name": "unmatched-tool-result",
+    "messages": [
+      {
+        "role": "user",
+        "content": "go",
+        "timestamp": 1
+      },
+      {
+        "role": "toolResult",
+        "toolCallId": "call_missing",
+        "toolName": "lookup",
+        "isError": false,
+        "content": [
+          {
+            "type": "text",
+            "text": "orphan"
+          }
+        ],
+        "timestamp": 2
+      },
+      {
+        "role": "user",
+        "content": "next",
+        "timestamp": 3
+      }
+    ],
+    "options": {},
+    "payload": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"go\"}]},{\"type\":\"function_call_output\",\"call_id\":\"call_missing\",\"output\":\"orphan\"},{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"next\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}",
+    "path": "/openai/v1/responses",
+    "apiVersion": "v1",
+    "body": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"go\"}]},{\"type\":\"function_call_output\",\"call_id\":\"call_missing\",\"output\":\"orphan\"},{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"next\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}"
+  },
+  {
+    "name": "normalized-tool-id",
+    "messages": [
+      {
+        "role": "user",
+        "content": "go",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "timestamp": 2,
+        "stopReason": "toolUse",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "call|with|pipes|and|a|very|long|composite|identifier|that|exceeds|sixty|four|characters|easily",
+            "name": "lookup",
+            "arguments": {
+              "q": "x"
+            }
+          }
+        ]
+      },
+      {
+        "role": "toolResult",
+        "toolCallId": "call|with|pipes|and|a|very|long|composite|identifier|that|exceeds|sixty|four|characters|easily",
+        "toolName": "lookup",
+        "isError": false,
+        "content": [
+          {
+            "type": "text",
+            "text": "ok"
+          }
+        ],
+        "timestamp": 3
+      }
+    ],
+    "options": {},
+    "payload": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"go\"}]},{\"type\":\"function_call\",\"id\":\"fc_777pr21ebxqvc\",\"call_id\":\"call\",\"name\":\"lookup\",\"arguments\":\"{\\\"q\\\":\\\"x\\\"}\"},{\"type\":\"function_call_output\",\"call_id\":\"call\",\"output\":\"ok\"}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}",
+    "path": "/openai/v1/responses",
+    "apiVersion": "v1",
+    "body": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"go\"}]},{\"type\":\"function_call\",\"id\":\"fc_777pr21ebxqvc\",\"call_id\":\"call\",\"name\":\"lookup\",\"arguments\":\"{\\\"q\\\":\\\"x\\\"}\"},{\"type\":\"function_call_output\",\"call_id\":\"call\",\"output\":\"ok\"}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}"
   }
 ]

@@ -52,6 +52,27 @@ const cases = [{ name: "minimal", messages: [{role:"user",content:"hello",timest
 	{role:"assistant",timestamp:2,stopReason:"stop",content:[{type:"text",text:""}]},
 	{role:"user",content:"again",timestamp:3},
 ], options:{} },
+{ name:"text-only-model-drops-image", modelInput:["text"], messages:[
+	{role:"user",content:[{type:"text",text:"look"},{type:"image",data:"aW1hZ2U=",mimeType:"image/png"}],timestamp:1},
+], options:{} },
+{ name:"foreign-thinking-dropped", messages:[
+	{role:"user",content:"go",timestamp:1},
+	{role:"assistant",api:"openai-responses",provider:"openai",model:"other",timestamp:2,stopReason:"stop",content:[
+		{type:"thinking",thinking:"foreign plan",thinkingSignature:"{\"id\":\"rs_1\",\"encrypted_content\":\"abc\"}"},
+		{type:"text",text:"kept"}]},
+	{role:"user",content:"next",timestamp:3},
+], options:{} },
+{ name:"unmatched-tool-result", messages:[
+	{role:"user",content:"go",timestamp:1},
+	{role:"toolResult",toolCallId:"call_missing",toolName:"lookup",isError:false,content:[{type:"text",text:"orphan"}],timestamp:2},
+	{role:"user",content:"next",timestamp:3},
+], options:{} },
+{ name:"normalized-tool-id", messages:[
+	{role:"user",content:"go",timestamp:1},
+	{role:"assistant",timestamp:2,stopReason:"toolUse",content:[
+		{type:"toolCall",id:"call|with|pipes|and|a|very|long|composite|identifier|that|exceeds|sixty|four|characters|easily",name:"lookup",arguments:{q:"x"}}]},
+	{role:"toolResult",toolCallId:"call|with|pipes|and|a|very|long|composite|identifier|that|exceeds|sixty|four|characters|easily",toolName:"lookup",isError:false,content:[{type:"text",text:"ok"}],timestamp:3},
+], options:{} },
 ];
 const model = { api:"azure-openai-responses", id:"gpt-5", provider:"azure", baseUrl:"https://invalid.test/openai/v1", reasoning:true,
 	maxTokens:8192, contextWindow:128000, input:["text","image"], cost:{input:0,output:0,cacheRead:0,cacheWrite:0} };
@@ -62,8 +83,9 @@ for(const input of cases) {
 		const parsed=new URL(url); path=parsed.pathname;apiVersion=parsed.searchParams.get("api-version");body=init.body;
 		return new Response('data: {"type":"response.completed","response":{"id":"r1","status":"completed","output":[],"usage":{"input_tokens":0,"output_tokens":0,"total_tokens":0}}}\n\n', {headers:{"content-type":"text/event-stream"}});
 	};
-	const result=await stream(model,{messages:input.messages},{...input.options,apiKey:"token",env:{},onPayload(p){payload=JSON.stringify(p);return input.replacement;}}).result();
-	if(result.errorMessage||typeof body!=="string")throw Error(result.errorMessage??"no request");
+	const modelForCase = input.modelInput ? { ...model, input: input.modelInput } : model;
+	const result=await stream(modelForCase,{messages:input.messages},{...input.options,apiKey:"token",env:{},onPayload(p){payload=JSON.stringify(p);return input.replacement;}}).result();
+	if(result.errorMessage||typeof body!=="string")throw Error(`${input.name}: ${result.errorMessage??"no request"}`);
 	fixtures.push({...input,payload,path,apiVersion,body});
 }
 console.log(JSON.stringify(fixtures,null,2));

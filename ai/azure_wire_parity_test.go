@@ -28,6 +28,7 @@ func TestAzureRequestsMatchUpstreamWire(t *testing.T) {
 			ReasoningSummary string          `json:"reasoningSummary"`
 			ToolChoice       json.RawMessage `json:"toolChoice"`
 		} `json:"options"`
+		ModelInput  []string        `json:"modelInput"`
 		Replacement json.RawMessage `json:"replacement"`
 		Payload     string          `json:"payload"`
 		Path        string          `json:"path"`
@@ -52,6 +53,11 @@ func TestAzureRequestsMatchUpstreamWire(t *testing.T) {
 			}))
 			defer server.Close()
 			model := &Model{API: APIAzureOpenAIResponses, ID: "gpt-5", Provider: "azure", BaseURL: server.URL + "/openai/v1", Reasoning: true, MaxTokens: 8192, ContextWindow: 128000, Input: []string{"text", "image"}}
+			if len(fixture.ModelInput) > 0 {
+				// A case may pin a different capability set, e.g. a text-only
+				// model, which changes what the request may contain.
+				model.Input = fixture.ModelInput
+			}
 			var messages []Message
 			for _, raw := range fixture.Messages {
 				message, err := UnmarshalMessage(raw)
