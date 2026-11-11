@@ -900,6 +900,10 @@ func (s *AgentSession) WaitForIdle(ctx context.Context) error {
 // compaction events, resolves summarization auth, and distinguishes
 // "Already compacted" from "Nothing to compact (session too small)".
 func (s *AgentSession) CompactSession(ctx context.Context, customInstructions string) (*CompactionResult, error) {
+	// Abort cancels any running compaction and waits for the session to go
+	// idle, so a second manual compaction cannot claim its cancel while the
+	// first is live: it aborts it and takes over (upstream compact()). Keep the
+	// order: claiming before Abort would let Abort cancel this very compaction.
 	s.Abort(ctx)
 
 	compactionCtx, cancel := context.WithCancel(ctx)
