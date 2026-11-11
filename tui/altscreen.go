@@ -2405,12 +2405,13 @@ func (s *AltScreen) doRender() {
 			imageAnchorsNeedRedraw = true
 		}
 	}
-	isWezTerm := os.Getenv("WEZTERM_PANE") != "" || strings.ToLower(os.Getenv("TERM_PROGRAM")) == "wezterm"
-	// WezTerm erases an intersecting kitty image cell when a later row write
-	// touches a row the placement covers, even when the image line itself did
-	// not change (upstream imageCellsNeedRedraw).
+	// Some terminals store kitty images in the cells they cover (WezTerm, and
+	// xterm.js's image addon in Orca), so a later row write touching a covered
+	// row erases that part of the image even when the image line itself did not
+	// change. Terminals that keep images on a separate layer are unaffected
+	// (pi v1.5.2 tui-alt-screen.ts, upstream imageCellsNeedRedraw).
 	imageCellsNeedRedraw := false
-	if !imageAnchorsNeedRedraw && isWezTerm && s.imageProtocol == ImageProtocolKitty {
+	if !imageAnchorsNeedRedraw && s.imageProtocol == ImageProtocolKitty {
 		anyChanged := false
 		for _, changed := range changedRows {
 			if changed {
@@ -2474,7 +2475,7 @@ func (s *AltScreen) doRender() {
 	}
 	builder.WriteString(evictedImageDeletion)
 
-	clearRowsBeforeKittyImages := redrawImages && s.imageProtocol == "kitty" && containsImageLine(screen) && isWezTerm
+	clearRowsBeforeKittyImages := redrawImages && s.imageProtocol == "kitty" && containsImageLine(screen)
 	if clearRowsBeforeKittyImages {
 		for row := range height {
 			previous := ""

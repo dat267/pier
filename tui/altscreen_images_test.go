@@ -64,10 +64,29 @@ func TestPrepareKittyScreenEvictsOffscreenBeyondLimits(t *testing.T) {
 	}
 }
 
-// On WezTerm, image placements are drawn after every text row so a later write
-// cannot erase an intersecting kitty image.
-func TestAltScreenWezTermDrawsKittyImagesLast(t *testing.T) {
-	t.Setenv("WEZTERM_PANE", "1")
+// Some terminals store kitty images in the cells they cover (WezTerm, xterm.js's
+// image addon in Orca), so clearing or writing a covered row erases that part of
+// the image. pi v1.5.2 (b4afdddf) tui-alt-screen.ts therefore draws placements
+// after every text row on every kitty terminal, not only on WezTerm.
+func TestAltScreenDrawsKittyImagesLast(t *testing.T) {
+	for _, terminal := range []struct {
+		name string
+		env  map[string]string
+	}{
+		{"wezterm", map[string]string{"WEZTERM_PANE": "1"}},
+		{"orca-xterm-js", map[string]string{"TERM_PROGRAM": "Orca"}},
+		{"kitty", map[string]string{"KITTY_WINDOW_ID": "1"}},
+	} {
+		t.Run(terminal.name, func(t *testing.T) {
+			for name, value := range terminal.env {
+				t.Setenv(name, value)
+			}
+			testAltScreenDrawsKittyImagesLast(t)
+		})
+	}
+}
+
+func testAltScreenDrawsKittyImagesLast(t *testing.T) {
 	previous := GetTerminalCapabilities()
 	previousCells := GetCellDimensions()
 	t.Cleanup(func() {
