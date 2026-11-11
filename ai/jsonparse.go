@@ -709,17 +709,19 @@ func (p *partialParser) parseLiteral() (*schemaValue, error) {
 	}
 	numText := rest[:end]
 	p.pos += end
-	var f float64
-	if err := json.Unmarshal([]byte(numText), &f); err != nil {
+	f, err := strconv.ParseFloat(numText, 64)
+	if err != nil && !errors.Is(err, strconv.ErrRange) {
 		// An unfinished exponent keeps the mantissa (partial-json retries the
-		// text before the last lowercase "e").
+		// text before the last lowercase "e"): "1e" reports 1.
 		if cut := strings.LastIndexByte(numText, 'e'); cut > 0 {
 			numText = numText[:cut]
-			err = json.Unmarshal([]byte(numText), &f)
+			f, err = strconv.ParseFloat(numText, 64)
 		}
 		if err != nil {
 			return nil, err
 		}
 	}
+	// A range overflow is JavaScript's Infinity, which the encoder writes as
+	// null, exactly as the complete-number path already does.
 	return &schemaValue{Number: f, IsNumber: true}, nil
 }
