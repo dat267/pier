@@ -942,7 +942,9 @@ func (t *TreeList) Render(width int) []string {
 
 		label := ""
 		if flatNode.Node.HasLabel {
-			label = theme.Fg("warning", "["+flatNode.Node.Label+"] ")
+			// A label is stored in the session file, so a planted or shared
+			// session chooses these bytes (D342, A498).
+			label = theme.Fg("warning", "["+tui.SanitizeUntrustedText(flatNode.Node.Label)+"] ")
 		}
 		labelTimestamp := ""
 		if t.showLabelTimestamps && flatNode.Node.HasLabel && flatNode.Node.LabelTimestamp != "" {

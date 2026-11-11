@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D445)
+# Deliberate divergences from pi (D1–D446)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6970,3 +6970,21 @@ so the metadata columns now get the same treatment: escape sequences are dropped
 and remaining control characters become spaces.
 
 Tests: `TestSessionListSanitizesStoredCwd`.
+
+### D446
+
+**The tree sanitizes a label bookmark; the reference renders it verbatim.**
+
+Reference: pi v1.5.0 `f9a26365` `modes/interactive/components/tree-selector.ts:747`
+interpolates `flatNode.node.label` into the row as-is.
+
+A label lives in the session JSONL, so a shared, imported or planted session file
+chooses those bytes, and the tree shows them in every row that carries the
+bookmark. As with the picker's cwd (D445), the port applies its rule for
+untrusted terminal text (D342, D422) and drops escape sequences instead.
+
+An unrecognized message role takes the row's default branch too, but it is not
+reachable the same way: a stored message whose role is not one the tree knows
+produces no tree node at all (probed), so only the label is treated here.
+
+Tests: `TestTreeRenderSanitizesStoredRowFields`.
