@@ -138,7 +138,7 @@ func TestTreeSelectorCompactionMaxTokensDoesNotOverflow(t *testing.T) {
 		tokens++
 	}
 	entry := &coding.SessionTreeNode{Entry: coding.SessionEntry{Type: "compaction", TokensBefore: maxInt64}}
-	got := (&TreeList{}).getEntryDisplayText(entry, false)
+	got := (&TreeList{}).getEntryDisplayText(&flatNode{Node: entry}, false)
 	want := "[compaction: " + itoa(int(tokens)) + "k tokens]"
 	if !strings.Contains(got, want) {
 		t.Fatalf("compaction label = %q, want substring %q", got, want)

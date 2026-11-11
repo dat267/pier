@@ -80,7 +80,7 @@ func TestTreeEntryTextCannotEmitTerminalControls(t *testing.T) {
 	InitTheme("dark", false)
 	content, _ := json.Marshal([]map[string]string{{"type": "text", "text": "hello\x1b[2Jworld"}})
 	entry := &coding.SessionTreeNode{Entry: coding.SessionEntry{Type: "message", Message: json.RawMessage(`{"role":"assistant","content":` + string(content) + `}`)}}
-	got := (&TreeList{}).getEntryDisplayText(entry, false)
+	got := (&TreeList{}).getEntryDisplayText(&flatNode{Node: entry}, false)
 	if strings.Contains(got, "\x1b[2J") {
 		t.Fatalf("tree entry control reached output: %q", got)
 	}

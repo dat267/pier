@@ -187,6 +187,11 @@ type TreeList struct {
 	visibleChildrenMap  map[visibleChildrenKey][]string
 	lastSelectedID      *string
 	foldedNodes         map[string]bool
+	// contentPreviews and contentTexts cache a decoded row preview and a decoded
+	// full content per entry id. Content is immutable after append, and a render
+	// shows only a preview of it, so decoding per frame was pure waste (A496).
+	contentPreviews map[string]string
+	contentTexts    map[string]string
 
 	OnSelect    func(entryID string)
 	OnCancel    func()
@@ -660,7 +665,7 @@ func (t *TreeList) getSearchableText(node *coding.SessionTreeNode) string {
 		message := decodeTreeMessage(entry.Message)
 		parts = append(parts, message.Role)
 		if len(message.Content) > 0 {
-			parts = append(parts, t.extractContent(message.Content))
+			parts = append(parts, t.entryPreview(entry.ID, message.Content))
 		}
 		if message.Role == "bashExecution" && message.Command != "" {
 			parts = append(parts, message.Command)
@@ -673,7 +678,7 @@ func (t *TreeList) getSearchableText(node *coding.SessionTreeNode) string {
 		if err := json.Unmarshal(entry.Content, &text); err == nil {
 			parts = append(parts, text)
 		} else {
-			parts = append(parts, t.extractContent(entry.Content))
+			parts = append(parts, t.entryPreview(entry.ID, entry.Content))
 		}
 	case "compaction":
 		parts = append(parts, "compaction")
@@ -943,7 +948,7 @@ func (t *TreeList) Render(width int) []string {
 		if t.showLabelTimestamps && flatNode.Node.HasLabel && flatNode.Node.LabelTimestamp != "" {
 			labelTimestamp = theme.Fg("muted", t.formatLabelTimestamp(flatNode.Node.LabelTimestamp)+" ")
 		}
-		content := t.getEntryDisplayText(flatNode.Node, isSelected)
+		content := t.getEntryDisplayText(flatNode, isSelected)
 		prefixPart := theme.Fg("dim", prefix) + foldMarker + pathMarker
 		anchorCol := tui.VisibleWidth(prefixPart)
 		gutter := cursor
@@ -964,9 +969,9 @@ func (t *TreeList) Render(width int) []string {
 	return lines
 }
 
-func (t *TreeList) getEntryDisplayText(node *coding.SessionTreeNode, isSelected bool) string {
+func (t *TreeList) getEntryDisplayText(id *flatNode, isSelected bool) string {
 	theme := ActiveTheme()
-	entry := node.Entry
+	entry := id.Node.Entry
 	var result string
 
 	normalize := func(value string) string {
@@ -978,12 +983,12 @@ func (t *TreeList) getEntryDisplayText(node *coding.SessionTreeNode, isSelected 
 
 	switch entry.Type {
 	case "message":
-		message := decodeTreeMessage(entry.Message)
+		message := t.nodeMessage(id)
 		switch message.Role {
 		case "user":
-			result = theme.Fg("accent", "user: ") + normalize(t.extractContent(message.Content))
+			result = theme.Fg("accent", "user: ") + normalize(t.entryPreview(entry.ID, message.Content))
 		case "assistant":
-			textContent := normalize(t.extractContent(message.Content))
+			textContent := normalize(t.entryPreview(entry.ID, message.Content))
 			switch {
 			case textContent != "":
 				result = theme.Fg("success", "assistant: ") + textContent
@@ -1012,7 +1017,7 @@ func (t *TreeList) getEntryDisplayText(node *coding.SessionTreeNode, isSelected 
 			result = theme.Fg("dim", "["+message.Role+"]")
 		}
 	case "custom_message":
-		result = theme.Fg("customMessageLabel", "["+tui.SanitizeUntrustedText(entry.CustomType)+"]: ") + normalize(t.extractFullContent(entry.Content))
+		result = theme.Fg("customMessageLabel", "["+tui.SanitizeUntrustedText(entry.CustomType)+"]: ") + normalize(t.entryContent(entry.ID, entry.Content))
 	case "compaction":
 		tokens := entry.TokensBefore / 1000
 		if entry.TokensBefore%1000 >= 500 {
@@ -1087,6 +1092,40 @@ func (t *TreeList) extractContent(content json.RawMessage) string {
 	return ai.JSSlice(t.extractFullContent(content), 0, 200)
 }
 
+// entryPreview is extractContent for a known entry, decoded once: a row renders
+// the same 200-character preview on every frame, and decoding the whole message
+// per frame cost 16 MB and 21 ms for 20 rows of 400 KB (A496).
+func (t *TreeList) entryPreview(entryID string, content json.RawMessage) string {
+	if entryID == "" {
+		return t.extractContent(content)
+	}
+	if preview, ok := t.contentPreviews[entryID]; ok {
+		return preview
+	}
+	preview := t.extractContent(content)
+	if t.contentPreviews == nil {
+		t.contentPreviews = map[string]string{}
+	}
+	t.contentPreviews[entryID] = preview
+	return preview
+}
+
+// entryContent is extractFullContent for a known entry, decoded once.
+func (t *TreeList) entryContent(entryID string, content json.RawMessage) string {
+	if entryID == "" {
+		return t.extractFullContent(content)
+	}
+	if text, ok := t.contentTexts[entryID]; ok {
+		return text
+	}
+	text := t.extractFullContent(content)
+	if t.contentTexts == nil {
+		t.contentTexts = map[string]string{}
+	}
+	t.contentTexts[entryID] = text
+	return text
+}
+
 func (t *TreeList) extractFullContent(content json.RawMessage) string {
 	if len(content) == 0 {
 		return ""
@@ -1120,13 +1159,13 @@ func (t *TreeList) getEntryCopyText(node *coding.SessionTreeNode) (string, bool)
 		if message.Role == "bashExecution" {
 			text = message.Command
 		} else if len(message.Content) > 0 {
-			text = t.extractFullContent(message.Content)
+			text = t.entryContent(entry.ID, message.Content)
 			if text == "" && message.Role == "assistant" {
 				text = message.ErrorMessage
 			}
 		}
 	case "custom_message":
-		text = t.extractFullContent(entry.Content)
+		text = t.entryContent(entry.ID, entry.Content)
 	case "compaction":
 		text = entry.Summary
 	case "branch_summary":
