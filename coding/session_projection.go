@@ -71,9 +71,19 @@ func (m *SessionManager) Projection() SessionContext {
 	// the new session can reuse.
 	if m.projectionVersionLocked() == version {
 		m.projection = projectionCache{valid: true, version: version, context: context}
+		m.projectionBuilds++
 	}
 	m.mu.Unlock()
 	return context
+}
+
+// ProjectionBuilds reports how many times an uncached projection was derived.
+// A worker that opens a session warms it so the posted rebind does not pay it on
+// the owner loop (A494); tests pin that with this count.
+func (m *SessionManager) ProjectionBuilds() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.projectionBuilds
 }
 
 // projectionVersionLocked is the cache key for the current branch.

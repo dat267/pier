@@ -88,6 +88,8 @@ type SessionManager struct {
 	// projection is the cached session projection for the branch above; see
 	// session_projection.go.
 	projection projectionCache
+	// projectionBuilds counts uncached projections, for tests (A494).
+	projectionBuilds int
 	// projected caches the compaction window and its token estimate for the same
 	// version, so status reads stop re-walking the transcript (M139).
 	projected projectedWindowCache

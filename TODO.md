@@ -57,31 +57,24 @@
   worker is not rooted (the `/reload` pair); (3) repairs or reasoned allowlist
   entries for the remainder, with `bindSessionManager`'s rebind work first.
 
-## A494 — medium: a session replacement's rebind redoes the expensive work on the owner loop
+## A495 — low: the A488 cancellation test cannot fail for the reason it asserts
 
-- Category and affected paths: performance on the loop in
-  `coding/interactive/sessionswitch.go` `bindSessionManager`
-  (`coding.CreateAgentSession`, `SessionManager` index/context scans,
-  `FooterDataProvider.SetCwd`) reached from `applyOpenedSession`, which D442
-  posts onto the loop after the file work finishes.
-- Scenario: switch to, fork from, import or tail a session with 12,500 turns
-  (25,000 entries, the size of this user's largest session). Expected: after
-  the off-loop open, the posted rebind applies prepared state. Actual: the loop
-  blocks for the rebind itself.
-- Evidence: probe (deleted) that opened the file with `coding.OpenSession` and
-  then timed only `app.applyOpenedSession`, which is the loop-side half:
-  5 turns 0.88 ms, 3,000 turns 48.6 ms, 12,500 turns 222.3 ms, so roughly
-  18 µs per entry and linear. The CPU profile is dominated by
-  `encoding/json` scanning of every message, `ai.appendCanonicalJSONString`,
-  and the resulting GC work (`scanObjectsSmall`, `tryDeferToSpanScan`).
-- Authority: `AGENTS.md` UI-ownership rule; D442 moved the file work but
-  assumed the rebind was cheap, which the measurement contradicts.
-- Root cause: the rebind reconstructs session-derived state (agent session,
-  model config, index, context projection) from entries instead of receiving it
-  with the prepared session.
-- Repair plan: build the `AgentSession` and the session index inside the
-  off-loop work function that already produces the `*SessionManager`, and keep
-  only attached-state rebinding (transcript, footer, events, MCP pointers) on
-  the loop. Then re-measure the same three sizes.
-- Verification: a test that the loop-side callback no longer scales with entry
-  count, plus the existing switch/fork/import suites and `just check`.
+- Category and affected paths: flaky verification test,
+  `coding/session_listing_progress_test.go`
+  `TestListSessionsWithProgressStopsOnCancel`.
+- Scenario: `go test -race -count=5 ./coding -run
+  TestListSessionsWithProgressStopsOnCancel` (the race shape the repo asks for on
+  concurrency changes). Expected: green. Actual: "the listing read every file
+  after cancellation: 12" on every run.
+- Evidence: the fixture has 12 files and `currentSessionListPublishInterval` is
+  10, so the first progress callback (where the test cancels) cannot fire before
+  10 files are read; with 10 concurrent workers the remaining two are already
+  dispatched, so `seen` reaches 12 by construction. The test passed without
+  `-race` only because scheduling let the cancel land between files 10 and 12.
+- Authority: the test's own comment ("a cancelled load stops instead of reading
+  every file"); A488's design publishes partial results every 10 files.
+- Root cause: the fixture is too small to leave work that cancellation could
+  skip, so the assertion depends on scheduling.
+- Repair plan: enlarge the fixture so a large tail remains after the first
+  publish, keep both assertions, and re-run the race shape.
+- Verification: `-race -count=5` on the test, then `just check`.

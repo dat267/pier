@@ -33,6 +33,19 @@ func (a *App) switchSessionAsync(_ context.Context, sessionPath string, cwdOverr
 		})
 }
 
+// warmSessionProjection derives the session projection on the worker that built
+// the manager. Projection() caches by version, so the rebind that runs on the
+// owner loop reads the cache instead of decoding every entry: at 12,500 turns
+// that decode was 151 ms of a 204 ms rebind, and warming it in the worker cut the
+// loop half from 204 ms to 67 ms (A494). The manager is new here, so no reader
+// can be racing this pass.
+func warmSessionProjection(manager *coding.SessionManager) *coding.SessionManager {
+	if manager != nil {
+		_ = manager.Projection()
+	}
+	return manager
+}
+
 // openSessionWork parses the session file and checks its stored cwd; it is the
 // part that runs on a worker.
 func (a *App) openSessionWork(sessionPath string, cwdOverride string) func(context.Context) (*coding.SessionManager, error) {
@@ -44,7 +57,7 @@ func (a *App) openSessionWork(sessionPath string, cwdOverride string) func(conte
 		if err := coding.AssertSessionCwdExists(sessionManager, a.options.Cwd); err != nil {
 			return nil, err
 		}
-		return sessionManager, nil
+		return warmSessionProjection(sessionManager), nil
 	}
 }
 
@@ -123,7 +136,7 @@ func (a *App) importSessionWork(inputPath string, cwdOverride string) func(conte
 		if err := coding.AssertSessionCwdExists(sessionManager, a.options.Cwd); err != nil {
 			return nil, err
 		}
-		return sessionManager, nil
+		return warmSessionProjection(sessionManager), nil
 	}
 }
 
@@ -413,7 +426,7 @@ func (a *App) forkWork(entryID string, atPosition bool) func(context.Context) (*
 		if err != nil {
 			return nil, err
 		}
-		return &forkOutcome{forked: forked, selectedText: selectedText}, nil
+		return &forkOutcome{forked: warmSessionProjection(forked), selectedText: selectedText}, nil
 	}
 }
 
@@ -465,8 +478,12 @@ func (a *App) tailWork() func(context.Context) (*coding.SessionManager, error) {
 		if !a.sessionMgr.IsPersisted() {
 			return nil, errors.New("Tail needs a saved session")
 		}
-		return coding.TailSession(a.sessionMgr, a.session.Model(), a.session.ThinkingLevel(),
+		tailed, err := coding.TailSession(a.sessionMgr, a.session.Model(), a.session.ThinkingLevel(),
 			a.sessionMgr.GetCwd(), a.sessionMgr.GetSessionDir(), a.sessionMgr.SessionDirManaged(), nil)
+		if err != nil {
+			return nil, err
+		}
+		return warmSessionProjection(tailed), nil
 	}
 }
 
