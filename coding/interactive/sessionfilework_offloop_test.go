@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,11 +14,25 @@ import (
 )
 
 // wireOffLoopSessionWork installs the queue and post seam the command's
-// composition wires, and returns a pump that runs the posted callback.
+// composition wires, and returns a pump that releases the queue, waits for the
+// work, then runs the posted callback.
+//
+// A queue runs its first task as soon as it is submitted, so a test that
+// checks a side effect of that work immediately afterwards races the worker: on
+// a loaded machine the copy or rename is already done and the "did this happen
+// off the owner loop" assertion fails for the wrong reason. A blocking task
+// submitted first keeps the worker busy until the pump releases it, which makes
+// the state before the work deterministic. The release runs before the queue's
+// cleanup (registered later, so it runs first) so a failed test cannot hang.
 func wireOffLoopSessionWork(t *testing.T, app *App) func() {
 	t.Helper()
 	queue := offloop.New()
+	release := make(chan struct{})
+	var releaseOnce sync.Once
+	unblock := func() { releaseOnce.Do(func() { close(release) }) }
+	t.Cleanup(unblock)
 	t.Cleanup(queue.Stop)
+	queue.Go(func() { <-release })
 	posted := make(chan func(), 1)
 	app.sessionQueue = queue
 	app.postToUI = func(fn func()) { posted <- fn }
@@ -25,6 +40,8 @@ func wireOffLoopSessionWork(t *testing.T, app *App) func() {
 	app.sessions.RenameQueue = queue
 	app.sessions.PostToUI = app.postToOwnerLoop
 	return func() {
+		unblock()
+		queue.Flush()
 		select {
 		case fn := <-posted:
 			fn()
