@@ -38,6 +38,12 @@ func TestHyperlinksSupported(t *testing.T) {
 		{name: "iterm by term program", env: map[string]string{"TERM_PROGRAM": "iTerm.app"}, want: true},
 		{name: "windows terminal", env: map[string]string{"WT_SESSION": "x"}, want: true},
 		{name: "alacritty", env: map[string]string{"TERM_PROGRAM": "alacritty"}, want: true},
+		// pi v1.5.2 (b4afdddf) terminal-image.ts: Alacritty does not set
+		// TERM_PROGRAM. It sets TERM=alacritty when its terminfo entry is
+		// installed and ALACRITTY_WINDOW_ID on Unix and macOS.
+		{name: "alacritty by term", env: map[string]string{"TERM": "alacritty"}, want: true},
+		{name: "alacritty by term suffix", env: map[string]string{"TERM": "alacritty-direct"}, want: true},
+		{name: "alacritty by window id", env: map[string]string{"ALACRITTY_WINDOW_ID": "1"}, want: true},
 		{name: "vscode", env: map[string]string{"TERM_PROGRAM": "vscode"}, want: true},
 		{name: "zed", env: map[string]string{"TERM_PROGRAM": "zed"}, want: true},
 		{name: "screen does not forward", env: map[string]string{"TERM": "screen-256color"}, want: false},

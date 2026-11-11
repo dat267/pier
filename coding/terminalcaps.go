@@ -74,7 +74,11 @@ func detectTerminalCapabilities(env func(string) string, platform string, tmuxFo
 		return detectedTerminalCapabilities{images: tui.ImageProtocolITerm2, trueColor: true, hyperlinks: true}
 	case env("WT_SESSION") != "":
 		return detectedTerminalCapabilities{images: "", trueColor: true, hyperlinks: true}
-	case termProgram == "alacritty" || termProgram == "vscode" || termProgram == "zed":
+	// Alacritty does not set TERM_PROGRAM. It sets TERM=alacritty when its
+	// terminfo entry is installed and ALACRITTY_WINDOW_ID on Unix and macOS
+	// (pi v1.5.2 terminal-image.ts).
+	case termProgram == "alacritty" || strings.HasPrefix(term, "alacritty") ||
+		env("ALACRITTY_WINDOW_ID") != "" || termProgram == "vscode" || termProgram == "zed":
 		return detectedTerminalCapabilities{images: "", trueColor: true, hyperlinks: true}
 	case terminalEmulator == "jetbrains-jediterm":
 		return detectedTerminalCapabilities{images: "", trueColor: true, hyperlinks: false}

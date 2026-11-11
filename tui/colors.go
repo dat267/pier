@@ -412,7 +412,11 @@ func terminalDetectsTrueColor(env func(string) string, windowsConsole bool) bool
 	if env("WT_SESSION") != "" {
 		return true
 	}
-	if termProgram == "alacritty" || termProgram == "vscode" || termProgram == "zed" {
+	// Alacritty does not set TERM_PROGRAM. It sets TERM=alacritty when its
+	// terminfo entry is installed and ALACRITTY_WINDOW_ID on Unix and macOS
+	// (pi v1.5.2 terminal-image.ts).
+	if termProgram == "alacritty" || strings.HasPrefix(term, "alacritty") ||
+		env("ALACRITTY_WINDOW_ID") != "" || termProgram == "vscode" || termProgram == "zed" {
 		return true
 	}
 	if terminalEmulator == "jetbrains-jediterm" {

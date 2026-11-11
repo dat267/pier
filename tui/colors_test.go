@@ -151,6 +151,10 @@ func TestTerminalDetectsTrueColor(t *testing.T) {
 		{"WezTerm pane", map[string]string{"WEZTERM_PANE": "1"}, true},
 		{"Warp session", map[string]string{"WARP_SESSION_ID": "1"}, true},
 		{"Windows Terminal", map[string]string{"WT_SESSION": "1"}, true},
+		// pi v1.5.2 (b4afdddf) terminal-image.ts: Alacritty sets neither a
+		// TERM_PROGRAM nor always a truecolor COLORTERM.
+		{"Alacritty by term", map[string]string{"TERM": "alacritty"}, true},
+		{"Alacritty by window id", map[string]string{"ALACRITTY_WINDOW_ID": "1"}, true},
 		{"TERM 256color", map[string]string{"TERM": "xterm-256color"}, false},
 		{"nothing", map[string]string{}, false},
 	}
