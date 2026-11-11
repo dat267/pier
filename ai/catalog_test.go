@@ -272,6 +272,19 @@ func TestGetEnvApiKey(t *testing.T) {
 		t.Fatalf("unset deepseek = %q", got)
 	}
 
+	// pi v1.5.2 (b4afdddf) env-api-keys.ts maps the CN individual token plan to
+	// QWEN_TOKEN_PLAN_CN_API_KEY, while the global individual plan uses the same
+	// variable as qwen-token-plan.
+	if got := GetEnvApiKey("qwen-token-plan-individual-cn", ProviderEnv{"QWEN_TOKEN_PLAN_CN_API_KEY": "cn"}); got != "cn" {
+		t.Fatalf("qwen-token-plan-individual-cn = %q, want the CN key", got)
+	}
+	if got := GetEnvApiKey("qwen-token-plan-individual-cn", ProviderEnv{"QWEN_TOKEN_PLAN_API_KEY": "global"}); got != "" {
+		t.Fatalf("qwen-token-plan-individual-cn picked the global key: %q", got)
+	}
+	if got := GetEnvApiKey("qwen-token-plan-individual", ProviderEnv{"QWEN_TOKEN_PLAN_API_KEY": "global"}); got != "global" {
+		t.Fatalf("qwen-token-plan-individual = %q", got)
+	}
+
 	// Meta resolves from META_API_KEY.
 	if got := GetEnvApiKey("meta", ProviderEnv{"META_API_KEY": "m"}); got != "m" {
 		t.Fatalf("meta = %q", got)
