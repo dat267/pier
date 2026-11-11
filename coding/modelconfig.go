@@ -173,6 +173,8 @@ type ModelsJSONCompat struct {
 	MaxTokensField                              *string                                `json:"maxTokensField,omitempty"`
 	RequiresToolResultName                      *bool                                  `json:"requiresToolResultName,omitempty"`
 	RequiresAssistantAfterToolResult            *bool                                  `json:"requiresAssistantAfterToolResult,omitempty"`
+	RequiresNonNullAssistantContent             *bool                                  `json:"requiresNonNullAssistantContent,omitempty"`
+	RequiresToolsWithToolHistory                *bool                                  `json:"requiresToolsWithToolHistory,omitempty"`
 	RequiresThinkingAsText                      *bool                                  `json:"requiresThinkingAsText,omitempty"`
 	RequiresReasoningContentOnAssistantMessages *bool                                  `json:"requiresReasoningContentOnAssistantMessages,omitempty"`
 	ThinkingFormat                              *string                                `json:"thinkingFormat,omitempty"`
@@ -186,6 +188,7 @@ type ModelsJSONCompat struct {
 	SendSessionAffinityHeaders                  *bool                                  `json:"sendSessionAffinityHeaders,omitempty"`
 	SessionAffinityFormat                       *string                                `json:"sessionAffinityFormat,omitempty"`
 	SupportsLongCacheRetention                  *bool                                  `json:"supportsLongCacheRetention,omitempty"`
+	PromptCacheKeyMode                          *string                                `json:"promptCacheKeyMode,omitempty"`
 	VLLMPriority                                *float64                               `json:"vllmPriority,omitempty"`
 	// OpenAI Responses.
 	SupportsMaxOutputTokens *bool `json:"supportsMaxOutputTokens,omitempty"`
@@ -717,6 +720,8 @@ var compatFields = []compatField{
 	{name: "maxTokensField", kind: compatLiteral, literals: []string{"max_completion_tokens", "max_tokens"}},
 	{name: "requiresToolResultName", kind: compatBool},
 	{name: "requiresAssistantAfterToolResult", kind: compatBool},
+	{name: "requiresNonNullAssistantContent", kind: compatBool},
+	{name: "requiresToolsWithToolHistory", kind: compatBool},
 	{name: "requiresThinkingAsText", kind: compatBool},
 	{name: "requiresReasoningContentOnAssistantMessages", kind: compatBool},
 	{name: "thinkingFormat", kind: compatLiteral, literals: []string{
@@ -733,6 +738,7 @@ var compatFields = []compatField{
 	{name: "sendSessionAffinityHeaders", kind: compatBool},
 	{name: "sessionAffinityFormat", kind: compatLiteral, literals: []string{"openai", "openai-nosession", "openrouter"}},
 	{name: "supportsLongCacheRetention", kind: compatBool},
+	{name: "promptCacheKeyMode", kind: compatLiteral, literals: []string{"auto", "enabled", "disabled"}},
 	{name: "vllmPriority", kind: compatNumber},
 	{name: "supportsMaxOutputTokens", kind: compatBool},
 	{name: "supportsEagerToolInputStreaming", kind: compatBool},

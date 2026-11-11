@@ -34,6 +34,8 @@ type ResolvedOpenAICompletionsCompat struct {
 	MaxTokensField                              string // "max_completion_tokens" | "max_tokens"
 	RequiresToolResultName                      bool
 	RequiresAssistantAfterToolResult            bool
+	RequiresNonNullAssistantContent             bool
+	RequiresToolsWithToolHistory                bool
 	RequiresThinkingAsText                      bool
 	RequiresReasoningContentOnAssistantMessages bool
 	ThinkingFormat                              string
@@ -50,6 +52,7 @@ type ResolvedOpenAICompletionsCompat struct {
 	SendSessionAffinityHeaders                  bool
 	SessionAffinityFormat                       SessionAffinityFormat
 	SupportsLongCacheRetention                  bool
+	PromptCacheKeyMode                          string // "auto" | "enabled" | "disabled"
 	VllmPriority                                *float64
 }
 
@@ -137,6 +140,7 @@ func DetectOpenAICompletionsCompat(model *Model) ResolvedOpenAICompletionsCompat
 			return SessionAffinityOpenAI
 		}(),
 		SupportsLongCacheRetention: !(isTogether || isCloudflareWorkersAI || isCloudflareAiGateway || isNvidia || isAntLing),
+		PromptCacheKeyMode:         "auto",
 	}
 }
 
@@ -165,6 +169,8 @@ func GetOpenAICompletionsCompat(model *Model) ResolvedOpenAICompletionsCompat {
 	}
 	out.RequiresToolResultName = boolOr(c.RequiresToolResultName, detected.RequiresToolResultName)
 	out.RequiresAssistantAfterToolResult = boolOr(c.RequiresAssistantAfterToolResult, detected.RequiresAssistantAfterToolResult)
+	out.RequiresNonNullAssistantContent = boolOr(c.RequiresNonNullAssistantContent, detected.RequiresNonNullAssistantContent)
+	out.RequiresToolsWithToolHistory = boolOr(c.RequiresToolsWithToolHistory, detected.RequiresToolsWithToolHistory)
 	out.RequiresThinkingAsText = boolOr(c.RequiresThinkingAsText, detected.RequiresThinkingAsText)
 	out.RequiresReasoningContentOnAssistantMessages = boolOr(c.RequiresReasoningContentOnAssistantMessages, detected.RequiresReasoningContentOnAssistantMessages)
 	if c.ThinkingFormat != nil {
@@ -193,6 +199,9 @@ func GetOpenAICompletionsCompat(model *Model) ResolvedOpenAICompletionsCompat {
 		out.SessionAffinityFormat = *c.SessionAffinityFormat
 	}
 	out.SupportsLongCacheRetention = boolOr(c.SupportsLongCacheRetention, detected.SupportsLongCacheRetention)
+	if c.PromptCacheKeyMode != nil {
+		out.PromptCacheKeyMode = *c.PromptCacheKeyMode
+	}
 	if c.VllmPriority != nil {
 		out.VllmPriority = c.VllmPriority
 	}

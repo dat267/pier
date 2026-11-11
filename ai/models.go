@@ -43,6 +43,8 @@ type OpenAICompletionsCompat struct {
 	MaxTokensField                              *string                    `json:"maxTokensField,omitempty"` // "max_completion_tokens" | "max_tokens"
 	RequiresToolResultName                      *bool                      `json:"requiresToolResultName,omitempty"`
 	RequiresAssistantAfterToolResult            *bool                      `json:"requiresAssistantAfterToolResult,omitempty"`
+	RequiresNonNullAssistantContent             *bool                      `json:"requiresNonNullAssistantContent,omitempty"`
+	RequiresToolsWithToolHistory                *bool                      `json:"requiresToolsWithToolHistory,omitempty"`
 	RequiresThinkingAsText                      *bool                      `json:"requiresThinkingAsText,omitempty"`
 	RequiresReasoningContentOnAssistantMessages *bool                      `json:"requiresReasoningContentOnAssistantMessages,omitempty"`
 	ThinkingFormat                              *string                    `json:"thinkingFormat,omitempty"`
@@ -61,6 +63,7 @@ type OpenAICompletionsCompat struct {
 	SendSessionAffinityHeaders                  *bool                      `json:"sendSessionAffinityHeaders,omitempty"`
 	SessionAffinityFormat                       *SessionAffinityFormat     `json:"sessionAffinityFormat,omitempty"`
 	SupportsLongCacheRetention                  *bool                      `json:"supportsLongCacheRetention,omitempty"`
+	PromptCacheKeyMode                          *string                    `json:"promptCacheKeyMode,omitempty"` // "auto" | "enabled" | "disabled"
 	VllmPriority                                *float64                   `json:"vllmPriority,omitempty"`
 }
 
@@ -70,6 +73,7 @@ type OpenAIResponsesCompat struct {
 	SupportsMidConvoSystemMessages  *bool                  `json:"supportsMidConvoSystemMessages,omitempty"`
 	SessionAffinityFormat           *SessionAffinityFormat `json:"sessionAffinityFormat,omitempty"`
 	SupportsLongCacheRetention      *bool                  `json:"supportsLongCacheRetention,omitempty"`
+	PromptCacheKeyMode              *string                `json:"promptCacheKeyMode,omitempty"` // "auto" | "enabled" | "disabled"
 	SupportsStrictMode              *bool                  `json:"supportsStrictMode,omitempty"`
 	SupportsOpenAIGrammarTools      *bool                  `json:"supportsOpenAIGrammarTools,omitempty"`
 	SupportsAdditionalTools         *bool                  `json:"supportsAdditionalTools,omitempty"`

@@ -40,6 +40,7 @@ type ResolvedOpenAIResponsesCompat struct {
 	SupportsMidConvoSystemMessages  bool
 	SessionAffinityFormat           SessionAffinityFormat
 	SupportsLongCacheRetention      bool
+	PromptCacheKeyMode              string // "auto" | "enabled" | "disabled"
 	SupportsStrictMode              bool
 	SupportsOpenAIGrammarTools      bool
 	SupportsAdditionalTools         bool
@@ -66,6 +67,7 @@ func GetOpenAIResponsesCompat(model *Model) ResolvedOpenAIResponsesCompat {
 		SessionAffinityFormat:      detectOpenAIResponsesSessionAffinity(model),
 		SupportsLongCacheRetention: true,
 		SupportsMaxOutputTokens:    true,
+		PromptCacheKeyMode:         "auto",
 	}
 	if model.Compat != nil && model.Compat.OpenAIResponses != nil {
 		c := model.Compat.OpenAIResponses
@@ -80,6 +82,9 @@ func GetOpenAIResponsesCompat(model *Model) ResolvedOpenAIResponsesCompat {
 		}
 		if c.SupportsLongCacheRetention != nil {
 			compat.SupportsLongCacheRetention = *c.SupportsLongCacheRetention
+		}
+		if c.PromptCacheKeyMode != nil {
+			compat.PromptCacheKeyMode = *c.PromptCacheKeyMode
 		}
 		if c.SupportsStrictMode != nil {
 			compat.SupportsStrictMode = *c.SupportsStrictMode

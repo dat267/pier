@@ -72,7 +72,11 @@ func BuildOpenAIResponsesParamsWithProviders(
 		Stream: true,
 		Store:  new(false),
 	}
-	if (cacheRetention != CacheRetentionNone || model.API == APIAzureOpenAIResponses) && options.SessionID != "" {
+	// promptCacheKeyMode "disabled" never sends the key (v1.5.2
+	// providers/compat-schema.ts); "auto" and "enabled" both send it whenever
+	// caching is active on this API.
+	if compat.PromptCacheKeyMode != "disabled" &&
+		(cacheRetention != CacheRetentionNone || model.API == APIAzureOpenAIResponses) && options.SessionID != "" {
 		clamped := ClampOpenAIPromptCacheKey(options.SessionID)
 		params.PromptCacheKey = &clamped
 	}

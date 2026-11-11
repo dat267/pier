@@ -135,7 +135,7 @@ func ConvertOpenAICompletionsMessages(
 		case *AssistantMessage:
 			// Some providers don't accept null content, use empty string instead.
 			content := openaiNull
-			if compat.RequiresAssistantAfterToolResult {
+			if compat.RequiresAssistantAfterToolResult || compat.RequiresNonNullAssistantContent {
 				content = mustMarshalJSON("")
 			}
 			assistantMsg := OpenAIMessage{Role: "assistant", Content: content}
@@ -557,8 +557,14 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 		Messages: messages,
 		Stream:   true,
 	}
-	if (strings.Contains(model.BaseURL, "api.openai.com") && cacheRetention != CacheRetentionNone) ||
-		(cacheRetention == CacheRetentionLong && compat.SupportsLongCacheRetention) {
+	// promptCacheKeyMode gates the field: "disabled" never sends it, "enabled"
+	// sends it whenever caching is active, and "auto" only to OpenAI or with
+	// long cache retention support.
+	supportsPromptCacheKey := compat.PromptCacheKeyMode == "enabled" ||
+		(compat.PromptCacheKeyMode != "disabled" &&
+			(strings.Contains(model.BaseURL, "api.openai.com") ||
+				(cacheRetention == CacheRetentionLong && compat.SupportsLongCacheRetention)))
+	if cacheRetention != CacheRetentionNone && supportsPromptCacheKey {
 		if options.SessionID != "" {
 			clamped := ClampOpenAIPromptCacheKey(options.SessionID)
 			params.PromptCacheKey = &clamped
@@ -593,9 +599,9 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 		if compat.ZaiToolStream {
 			params.ToolStream = new(true)
 		}
-	} else if hasOpenAIToolHistory(context.Messages) {
-		// Anthropic (via LiteLLM/proxy) requires the tools param when the
-		// conversation has tool_calls/tool_results.
+	} else if compat.RequiresToolsWithToolHistory && hasOpenAIToolHistory(context.Messages) {
+		// Some proxies in front of Anthropic (older LiteLLM) require the tools
+		// param when the conversation has tool_calls/tool_results.
 		params.Tools = []OpenAITool{}
 	}
 	if cacheControl != nil {
