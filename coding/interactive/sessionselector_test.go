@@ -146,9 +146,9 @@ func TestSessionSelectorAgainstUpstreamGolden(t *testing.T) {
 			canRename = *spec.CanRename
 		}
 		if canRename {
-			options.RenameSession = func(sessionPath string, currentName string) error {
+			options.RenameSession = func(sessionPath string, currentName string, onDone func(error)) {
 				renames = append(renames, sessionPath+"="+currentName)
-				return nil
+				onDone(nil)
 			}
 		}
 		if spec.ShowRenameHint != nil {
@@ -307,6 +307,8 @@ func TestSessionSelectorDeleteFlow(t *testing.T) {
 	list.HandleInput("\x04")
 	list.HandleInput("\r")
 	component.WaitForPendingLoads()
+	// Deleting forks `trash` off the owner loop; its result arrives by post.
+	queue.drain()
 	if len(deleted) != 1 || deleted[0] != "/s/b.jsonl" {
 		t.Fatalf("deleted = %v", deleted)
 	}

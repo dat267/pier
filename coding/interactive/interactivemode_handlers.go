@@ -729,30 +729,34 @@ func newSubmitWiring(app *App) *SubmitWiring {
 					app.transcript.ShowStatus("Nothing to clone yet")
 					return nil
 				}
-				result, err := app.forkAtEntry(context.Background(), *leafID, true)
-				if err != nil {
-					app.showError(err.Error())
-					return err
-				}
-				if result != nil && result.Cancelled {
-					app.ui.RequestRender(false)
-					return nil
-				}
-				app.transcript.ShowStatus("Cloned to new session")
+				// The fork is written off the owner loop; the outcome is applied
+				// when it lands.
+				app.forkAtEntryAsync(context.Background(), *leafID, true, func(result *SelectorForkResult, err error) {
+					if err != nil {
+						app.showError(err.Error())
+						return
+					}
+					if result != nil && result.Cancelled {
+						app.ui.RequestRender(false)
+						return
+					}
+					app.transcript.ShowStatus("Cloned to new session")
+				})
 				return nil
 			},
 			// `/tail` starts a new session from the live context (D378).
 			HandleTailCommand: func() error {
-				result, err := app.tailSession(context.Background())
-				if err != nil {
-					app.showError(err.Error())
-					return err
-				}
-				if result != nil && result.Cancelled {
-					app.ui.RequestRender(false)
-					return nil
-				}
-				app.transcript.ShowStatus("Started a new session from the live context · /resume for the previous one")
+				app.tailSessionAsync(context.Background(), func(result *SessionSwitchResult, err error) {
+					if err != nil {
+						app.showError(err.Error())
+						return
+					}
+					if result != nil && result.Cancelled {
+						app.ui.RequestRender(false)
+						return
+					}
+					app.transcript.ShowStatus("Started a new session from the live context · /resume for the previous one")
+				})
 				return nil
 			},
 			HandleCompactCommand: func(instructions string) error {

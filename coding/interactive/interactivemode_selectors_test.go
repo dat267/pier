@@ -219,10 +219,10 @@ func TestSelectorUserMessages(t *testing.T) {
 		{EntryID: "e2", Text: "second"},
 	}
 	selected := ""
-	wiring.RuntimeFork = func(_ context.Context, entryID string, _ bool) (*SelectorForkResult, error) {
+	wiring.RuntimeFork = func(_ context.Context, entryID string, _ bool, onDone func(*SelectorForkResult, error)) {
 		selected = entryID
 		text := "forked text"
-		return &SelectorForkResult{SelectedText: &text}, nil
+		onDone(&SelectorForkResult{SelectedText: &text}, nil)
 	}
 	wiring.OnEditorText = func(text string) { selected += ":" + text }
 	wiring.ShowUserMessageSelector(context.Background())

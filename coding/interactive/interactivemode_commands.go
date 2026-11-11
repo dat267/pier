@@ -71,8 +71,9 @@ type CommandWiring struct {
 	HandleFatalRuntimeError func(ctx context.Context, prefix string, err error)
 	// NewSession starts a new session.
 	NewSession func(ctx context.Context) (bool, error)
-	// ImportFromJSONL imports a session ("" cwd = the session's cwd).
-	ImportFromJSONL func(ctx context.Context, inputPath string, cwdOverride string) (bool, error)
+	// ImportFromJSONL imports a session ("" cwd = the session's cwd). It reports
+	// through onDone: the file is copied and read off the owner loop.
+	ImportFromJSONL func(ctx context.Context, inputPath string, cwdOverride string, onDone func(bool, error))
 	// ShowExtensionConfirm asks a yes/no question; the answer arrives through the
 	// callback on the UI loop (upstream's extension-UI confirm, awaited there).
 	ShowExtensionConfirm func(ctx context.Context, title string, message string, onAnswer func(confirmed bool))
@@ -240,36 +241,37 @@ func (w *CommandWiring) HandleImportCommand(ctx context.Context, text string) {
 		if w.ClearStatusIndicator != nil {
 			w.ClearStatusIndicator()
 		}
-		cancelled, err := w.ImportFromJSONL(ctx, inputPath, cwdOverride)
-		if err == nil {
-			if cancelled {
-				w.showStatus("Import cancelled")
-				return
-			}
-			w.showStatus("Session imported from: " + inputPath)
-			return
-		}
-		var notFound *SessionImportFileNotFoundError
-		if errors.As(err, &notFound) {
-			w.showError("Failed to import session: " + notFound.Error())
-			return
-		}
-		var cwdErr *coding.MissingSessionCwdError
-		if w.PromptForMissingCwd != nil && errors.As(err, &cwdErr) {
-			w.PromptForMissingCwd(ctx, cwdErr.Issue, func(selectedCwd string, selected bool) {
-				if !selected {
+		w.ImportFromJSONL(ctx, inputPath, cwdOverride, func(cancelled bool, err error) {
+			if err == nil {
+				if cancelled {
 					w.showStatus("Import cancelled")
 					return
 				}
-				importWith(selectedCwd)
-			})
-			return
-		}
-		if w.HandleFatalRuntimeError != nil {
-			w.HandleFatalRuntimeError(ctx, "Failed to import session", err)
-			return
-		}
-		w.showError("Failed to import session: " + err.Error())
+				w.showStatus("Session imported from: " + inputPath)
+				return
+			}
+			var notFound *SessionImportFileNotFoundError
+			if errors.As(err, &notFound) {
+				w.showError("Failed to import session: " + notFound.Error())
+				return
+			}
+			var cwdErr *coding.MissingSessionCwdError
+			if w.PromptForMissingCwd != nil && errors.As(err, &cwdErr) {
+				w.PromptForMissingCwd(ctx, cwdErr.Issue, func(selectedCwd string, selected bool) {
+					if !selected {
+						w.showStatus("Import cancelled")
+						return
+					}
+					importWith(selectedCwd)
+				})
+				return
+			}
+			if w.HandleFatalRuntimeError != nil {
+				w.HandleFatalRuntimeError(ctx, "Failed to import session", err)
+				return
+			}
+			w.showError("Failed to import session: " + err.Error())
+		})
 	}
 
 	if w.ShowExtensionConfirm == nil {
@@ -907,12 +909,10 @@ func newCommandWiring(app *App) *CommandWiring {
 		},
 		// `/import` copies a session file into this project's session directory and
 		// switches to it.
-		ImportFromJSONL: func(ctx context.Context, inputPath string, cwdOverride string) (bool, error) {
-			result, err := app.importFromJSONL(ctx, inputPath, cwdOverride)
-			if err != nil {
-				return false, err
-			}
-			return result.Cancelled, nil
+		ImportFromJSONL: func(ctx context.Context, inputPath string, cwdOverride string, onDone func(bool, error)) {
+			app.importFromJSONLAsync(ctx, inputPath, cwdOverride, func(result *SessionSwitchResult, err error) {
+				onDone(result != nil && result.Cancelled, err)
+			})
 		},
 		NewSession: func(ctx context.Context) (bool, error) {
 			result, err := app.sessionNew(ctx)

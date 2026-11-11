@@ -234,6 +234,13 @@ type App struct {
 	markdownQueue  *offloop.Queue
 	copyText       func(context.Context, string) error
 
+	// sessionQueue runs the session-file work (open, fork write, import copy) off
+	// the owner loop; the UI rebind that follows stays on the loop. postToUI is
+	// where that work is handed back. Both stay nil unless the command supplies
+	// an off-loop group, so a test app (no loop draining posts) runs the work
+	// inline instead of waiting for a callback that never comes.
+	sessionQueue *offloop.Queue
+	postToUI     func(func())
 	// offloopGroup owns the app's off-loop queues (theme, pre-render, paste) so
 	// teardown is one StopAll. In production the command passes its group, which
 	// also owns the settings and session queues.
@@ -300,6 +307,11 @@ func NewApp(options AppOptions) *App {
 		app.offloopGroup = offloop.NewGroup()
 	}
 
+	if options.Offloop != nil {
+		// Only the command's composition has a running loop to post back to.
+		app.sessionQueue = app.offloopGroup.Queue()
+		app.postToUI = func(fn func()) { app.ui.Post(fn) }
+	}
 	app.optionalContext, app.cancelOptional = context.WithCancel(context.Background())
 	app.clipboardQueue = app.offloopGroup.OptionalQueue()
 	app.detachedSlots = make(chan struct{}, 4)

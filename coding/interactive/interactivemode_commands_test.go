@@ -156,9 +156,9 @@ func TestCommandExportImport(t *testing.T) {
 	}
 	// Pinned interactive-mode.ts treats a quoted empty argument like no path.
 	emptyImportCalls := 0
-	wiring.ImportFromJSONL = func(_ context.Context, _ string, _ string) (bool, error) {
+	wiring.ImportFromJSONL = func(_ context.Context, _ string, _ string, onDone func(bool, error)) {
 		emptyImportCalls++
-		return false, nil
+		onDone(false, nil)
 	}
 	wiring.HandleImportCommand(context.Background(), `/import ""`)
 	if emptyImportCalls != 0 || errorsShown[len(errorsShown)-1] != "Usage: /import <path.jsonl>" {
@@ -173,22 +173,23 @@ func TestCommandExportImport(t *testing.T) {
 	// A successful import.
 	imported := []string{}
 	wiring.ShowExtensionConfirm = func(_ context.Context, _, _ string, onAnswer func(bool)) { onAnswer(true) }
-	wiring.ImportFromJSONL = func(_ context.Context, path string, _ string) (bool, error) {
+	wiring.ImportFromJSONL = func(_ context.Context, path string, _ string, onDone func(bool, error)) {
 		imported = append(imported, path)
-		return false, nil
+		onDone(false, nil)
 	}
 	wiring.HandleImportCommand(context.Background(), "/import in.jsonl")
 	if len(imported) != 1 || statuses[len(statuses)-1] != "Session imported from: in.jsonl" {
 		t.Fatalf("imported = %v statuses = %v", imported, statuses)
 	}
 	// A missing-cwd error prompts and retries.
-	wiring.ImportFromJSONL = func(_ context.Context, _ string, cwdOverride string) (bool, error) {
+	wiring.ImportFromJSONL = func(_ context.Context, _ string, cwdOverride string, onDone func(bool, error)) {
 		if cwdOverride == "" {
-			return false, &coding.MissingSessionCwdError{Issue: coding.SessionCwdIssue{
+			onDone(false, &coding.MissingSessionCwdError{Issue: coding.SessionCwdIssue{
 				SessionCwd: "/gone", FallbackCwd: "/here",
-			}}
+			}})
+			return
 		}
-		return false, nil
+		onDone(false, nil)
 	}
 	wiring.PromptForMissingCwd = func(_ context.Context, issue coding.SessionCwdIssue, onCwd func(string, bool)) {
 		onCwd(issue.FallbackCwd, true)

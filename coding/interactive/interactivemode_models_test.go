@@ -234,9 +234,9 @@ func TestSessionSelectorWiring(t *testing.T) {
 	wiring.ClearStatusIndicator = func() {}
 
 	resumed := []string{}
-	wiring.SwitchSession = func(_ context.Context, sessionPath string, cwdOverride string) (*SessionSwitchResult, error) {
+	wiring.SwitchSession = func(_ context.Context, sessionPath string, cwdOverride string, onDone func(*SessionSwitchResult, error)) {
 		resumed = append(resumed, sessionPath)
-		return &SessionSwitchResult{}, nil
+		onDone(&SessionSwitchResult{}, nil)
 	}
 	wiring.ShowSessionSelector()
 	if !wiring.Slot.HasActiveSelector() {
@@ -252,19 +252,20 @@ func TestSessionSelectorWiring(t *testing.T) {
 	}
 
 	// A cancelled switch reports nothing.
-	wiring.SwitchSession = func(context.Context, string, string) (*SessionSwitchResult, error) {
-		return &SessionSwitchResult{Cancelled: true}, nil
+	wiring.SwitchSession = func(_ context.Context, _ string, _ string, onDone func(*SessionSwitchResult, error)) {
+		onDone(&SessionSwitchResult{Cancelled: true}, nil)
 	}
 	wiring.HandleResumeSession(context.Background(), "session-b")
 
 	// A missing-cwd error can be resolved by prompting.
-	wiring.SwitchSession = func(_ context.Context, _ string, cwdOverride string) (*SessionSwitchResult, error) {
+	wiring.SwitchSession = func(_ context.Context, _ string, cwdOverride string, onDone func(*SessionSwitchResult, error)) {
 		if cwdOverride == "" {
-			return nil, &coding.MissingSessionCwdError{Issue: coding.SessionCwdIssue{
+			onDone(nil, &coding.MissingSessionCwdError{Issue: coding.SessionCwdIssue{
 				SessionCwd: "/gone", FallbackCwd: "/here",
-			}}
+			}})
+			return
 		}
-		return &SessionSwitchResult{}, nil
+		onDone(&SessionSwitchResult{}, nil)
 	}
 	wiring.PromptForMissingCwd = func(_ context.Context, issue coding.SessionCwdIssue, onCwd func(string, bool)) {
 		onCwd(issue.FallbackCwd, true)
@@ -284,8 +285,8 @@ func TestSessionSelectorWiring(t *testing.T) {
 	// Any other switch error is fatal (upstream handleFatalRuntimeError).
 	fatal := []string{}
 	wiring.HandleFatalRuntimeError = func(_ context.Context, prefix string, err error) { fatal = append(fatal, prefix) }
-	wiring.SwitchSession = func(context.Context, string, string) (*SessionSwitchResult, error) {
-		return nil, errors.New("boom")
+	wiring.SwitchSession = func(_ context.Context, _ string, _ string, onDone func(*SessionSwitchResult, error)) {
+		onDone(nil, errors.New("boom"))
 	}
 	wiring.HandleResumeSession(context.Background(), "session-e")
 	if len(fatal) != 1 || fatal[0] != "Failed to resume session" {

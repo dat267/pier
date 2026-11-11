@@ -26,8 +26,10 @@ func TestRenamingCurrentSessionKeepsItsLatestLeaf(t *testing.T) {
 		Content: ai.ContentList{ai.TextContent{Text: "kept answer"}}, StopReason: ai.StopStop,
 	})
 	wiring := &SessionWiring{SessionInfo: manager}
-	if err := wiring.renameSessionFile(manager.GetSessionFile(), "renamed"); err != nil {
-		t.Fatal(err)
+	var renameErr error
+	wiring.renameSessionFile(manager.GetSessionFile(), "renamed", func(err error) { renameErr = err })
+	if renameErr != nil {
+		t.Fatal(renameErr)
 	}
 	if name := manager.GetSessionName(); name != "renamed" {
 		t.Fatalf("active session name = %q, want the rename to update its own manager", name)
@@ -66,8 +68,10 @@ func TestRenamingAnotherSessionStillWrites(t *testing.T) {
 	currentDir := t.TempDir()
 	current := coding.NewSessionManager(currentDir, &coding.SessionManagerOptions{SessionDir: currentDir})
 	wiring := &SessionWiring{SessionInfo: current}
-	if err := wiring.renameSessionFile(target.GetSessionFile(), "other session"); err != nil {
-		t.Fatal(err)
+	renameErr := error(nil)
+	wiring.renameSessionFile(target.GetSessionFile(), "other session", func(err error) { renameErr = err })
+	if renameErr != nil {
+		t.Fatal(renameErr)
 	}
 	reopened, err := coding.OpenSession(target.GetSessionFile(), "", "")
 	if err != nil {

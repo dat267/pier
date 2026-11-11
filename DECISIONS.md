@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D441)
+# Deliberate divergences from pi (D1–D442)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -6849,3 +6849,41 @@ Tests: `TestTreeSelectorOpenBuildsOffTheOwnerLoop` and
 `TestTreeSelectorOpenWithoutAQueueStaysSynchronous` and
 `TestExportCommandWithoutAQueueStaysSynchronous`, pin the fallback.
 `BenchmarkTreeOpen` and `BenchmarkSessionExport` pin the cost.
+
+### D442
+
+**The session-file work of `/resume`, `/fork`, `/clone`, `/tail`, `/import` and
+the picker's rename and delete runs off the owner loop; the UI rebind stays on
+it.**
+
+Reference: pi v1.5.0 `f9a26365` does this work inline in the handler
+(`agent-session-runtime.ts switchSession`/`fork`/`importFromJsonl`,
+`session-manager.ts` delete). Its file operations are async `fs` calls in an
+event-loop runtime that yields between them, so the blocking part is small; in
+the port the same operations are synchronous system calls on the goroutine that
+paints.
+
+Measured on a 25,583-entry session (53 MB), each on the owner loop: opening the
+file for `/resume` 57 ms, writing the fork's new file for `/fork` and `/clone`
+519 ms, copying an import 22 ms, and a rename of a session other than the active
+one opens its file (57 ms). With a hung `trash` the picker's delete had no bound
+at all. The first paint after each of those started late by that much.
+
+Each operation is now split: the file work runs on the session-file queue, and
+the rebind (which owns attached UI state, the MCP manager and the transcript)
+runs on the loop, delivered through `postToUI`. The three processes share one
+queue slot, so a switch, fork, import or tail started later supersedes an
+earlier one instead of applying over the session the user chose; a rename keeps
+its own slot, because cancelling it would leave the picker waiting for a report
+that never comes. The queue and the post seam are wired only when the command
+supplies an off-loop group: a test app or an embedder without a loop runs the
+work inline, where it is also the only writer.
+
+The synchronous entry points stay: `switchSession`, `importFromJSONL`,
+`forkAtEntry`, `tailSession` and the picker's deleter are what the async paths
+fall back to, so nothing depends on a loop that happens to be running.
+
+Tests: `TestSwitchSessionOpensOffTheOwnerLoop`,
+`TestForkSessionWritesOffTheOwnerLoop`, `TestImportCopiesOffTheOwnerLoop`,
+`TestRenameOtherSessionOpensOffTheOwnerLoop`,
+`TestPickerDeleteRunsOffTheOwnerLoop` and `TestPickerRenameWaitsForItsReport`.

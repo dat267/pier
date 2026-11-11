@@ -131,8 +131,9 @@ type SelectorWiring struct {
 	Settings    *coding.SettingsManager
 	SessionInfo *coding.SessionManager
 
-	// RuntimeFork forks the session at an entry (runtimeHost.fork).
-	RuntimeFork func(ctx context.Context, entryID string, atPosition bool) (*SelectorForkResult, error)
+	// RuntimeFork forks the session at an entry (runtimeHost.fork). It reports
+	// through onDone because writing the fork happens off the owner loop.
+	RuntimeFork func(ctx context.Context, entryID string, atPosition bool, onDone func(*SelectorForkResult, error))
 	// ShowStatus reports a status line.
 	ShowStatus func(message string)
 	// ShowError reports an error.
@@ -285,25 +286,8 @@ func (w *SelectorWiring) ShowUserMessageSelector(ctx context.Context) {
 				if w.RuntimeFork == nil {
 					return
 				}
-				result, err := w.RuntimeFork(ctx, entryID, false)
-				if err != nil {
-					w.showError(err.Error())
-					return
-				}
-				if result != nil && result.Cancelled {
-					if w.Slot.UI != nil {
-						w.Slot.UI.RequestRender(false)
-					}
-					return
-				}
-				if result != nil && w.OnEditorText != nil {
-					selectedText := ""
-					if result.SelectedText != nil {
-						selectedText = *result.SelectedText
-					}
-					w.OnEditorText(selectedText)
-				}
-				w.showStatus("Forked to new session")
+				// The fork is written off the owner loop; its result arrives here.
+				w.RuntimeFork(ctx, entryID, false, w.applyForkResult)
 			},
 			func() {
 				done()
@@ -314,6 +298,28 @@ func (w *SelectorWiring) ShowUserMessageSelector(ctx context.Context) {
 			initialSelectedID, post)
 		return CreatedSelector{Component: selector, Focus: selector.GetMessageList()}
 	})
+}
+
+// applyForkResult reports a completed fork on the owner loop.
+func (w *SelectorWiring) applyForkResult(result *SelectorForkResult, err error) {
+	if err != nil {
+		w.showError(err.Error())
+		return
+	}
+	if result != nil && result.Cancelled {
+		if w.Slot.UI != nil {
+			w.Slot.UI.RequestRender(false)
+		}
+		return
+	}
+	if result != nil && w.OnEditorText != nil {
+		selectedText := ""
+		if result.SelectedText != nil {
+			selectedText = *result.SelectedText
+		}
+		w.OnEditorText(selectedText)
+	}
+	w.showStatus("Forked to new session")
 }
 
 // ShowTrustSelector opens the project trust selector.
@@ -647,6 +653,6 @@ func newSelectorWiring(app *App) *SelectorWiring {
 		FlushCompactionQueue: func() { app.queue.FlushCompactionQueue(context.Background(), false) },
 		// Forking from a message (the tree/user-message selector) goes through the
 		// runtime fork, which /clone shares.
-		RuntimeFork: app.forkAtEntry,
+		RuntimeFork: app.forkAtEntryAsync,
 	}
 }

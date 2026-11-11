@@ -904,7 +904,7 @@ type SessionSelectorOptions struct {
 	// Post marshals background loader results onto the UI loop. It must be set
 	// at construction: the initial load starts inside the constructor.
 	Post                   func(fn func())
-	RenameSession          func(sessionPath string, currentName string) error
+	RenameSession          func(sessionPath string, currentName string, onDone func(error))
 	ShowRenameHint         bool
 	Keybindings            *tui.KeybindingsManager
 	CurrentSessionFilePath string
@@ -934,7 +934,10 @@ type SessionSelectorComponent struct {
 	allSessionsLoader     SessionsLoader
 	requestRender         func()
 
-	renameSession func(sessionPath string, currentName string) error
+	// renameSession records a display name; it reports through onDone because a
+	// session other than the active one is opened to append the name, and that
+	// file read belongs off the owner loop.
+	renameSession func(sessionPath string, currentName string, onDone func(error))
 	canRename     bool
 
 	currentLoad context.CancelFunc
@@ -1195,16 +1198,40 @@ func (c *SessionSelectorComponent) confirmRename(value string) {
 		c.exitRenameMode()
 		return
 	}
-	if err := c.renameSession(target, next); err != nil {
+	c.renameSession(target, next, func(err error) {
+		if err != nil {
+			c.exitRenameMode()
+			return
+		}
+		c.refreshSessionsAfterMutation()
 		c.exitRenameMode()
+	})
+}
+
+// runOffLoop runs picker file work off the owner loop and applies its result on
+// the loop. Without a Post seam it runs inline: there is no other writer.
+func (c *SessionSelectorComponent) runOffLoop(work func(), apply func()) {
+	if c.Post == nil {
+		work()
+		apply()
 		return
 	}
-	c.refreshSessionsAfterMutation()
-	c.exitRenameMode()
+	c.loads.Go(func() {
+		work()
+		c.postApply(apply)
+	})
 }
 
 func (c *SessionSelectorComponent) deleteSessionAndRefresh(sessionPath string) {
-	result := c.deleteSession(sessionPath)
+	// Deleting forks `trash` and waits for it, so it runs off the owner loop.
+	var result SessionDeleteResult
+	c.runOffLoop(
+		func() { result = c.deleteSession(sessionPath) },
+		func() { c.applySessionDelete(sessionPath, result) },
+	)
+}
+
+func (c *SessionSelectorComponent) applySessionDelete(sessionPath string, result SessionDeleteResult) {
 	if result.OK {
 		c.currentSessions = filterOutSession(c.currentSessions, sessionPath)
 		c.allSessions = filterOutSession(c.allSessions, sessionPath)

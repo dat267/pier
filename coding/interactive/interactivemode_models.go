@@ -10,6 +10,7 @@ import (
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/internal/offloop"
 	"github.com/dat267/pier/tui"
 )
 
@@ -399,8 +400,13 @@ type SessionWiring struct {
 	UI          tui.TUI
 	Keybindings *tui.KeybindingsManager
 
-	// SwitchSession resumes a session (runtimeHost.switchSession).
-	SwitchSession func(ctx context.Context, sessionPath string, cwdOverride string) (*SessionSwitchResult, error)
+	// SwitchSession resumes a session (runtimeHost.switchSession). It reports
+	// through onDone because the session file is read off the owner loop.
+	SwitchSession func(ctx context.Context, sessionPath string, cwdOverride string, onDone func(*SessionSwitchResult, error))
+	// RenameQueue/PostToUI run a rename's file work off the owner loop; nil
+	// keeps it synchronous (tests and embedders).
+	RenameQueue *offloop.Queue
+	PostToUI    func(func())
 	// PromptForMissingCwd resolves a missing-cwd error.
 	PromptForMissingCwd func(ctx context.Context, issue coding.SessionCwdIssue, onCwd func(cwd string, ok bool))
 	// ShowStatus reports a status line.
@@ -492,12 +498,14 @@ func (w *SessionWiring) ShowSessionSelector() {
 	})
 }
 
-// renameSessionFile appends a display name. The write runs on the session write
-// queue because this callback runs on the UI loop.
-func (w *SessionWiring) renameSessionFile(sessionPath string, currentName string) error {
+// renameSessionFile appends a display name. Naming the active session stays
+// inline (the append goes on the session write queue); naming another session
+// opens its file, which runs off the owner loop.
+func (w *SessionWiring) renameSessionFile(sessionPath string, currentName string, onDone func(error)) {
 	next := ai.JSTrim(currentName)
 	if next == "" {
-		return nil
+		onDone(nil)
+		return
 	}
 	// The active manager already owns this file's leaf chain and shares the
 	// write queue. Opening a second manager here would append from a snapshot
@@ -505,17 +513,22 @@ func (w *SessionWiring) renameSessionFile(sessionPath string, currentName string
 	if w.SessionInfo != nil && w.SessionInfo.GetSessionFile() != "" &&
 		coding.PathsEqual(sessionPath, w.SessionInfo.GetSessionFile()) {
 		w.SessionInfo.AppendSessionInfo(next)
-		return nil
+		onDone(nil)
+		return
 	}
-	manager, err := coding.OpenSession(sessionPath, "", "")
-	if err != nil {
-		return err
-	}
-	if w.SessionInfo != nil {
-		manager.SetWriteQueue(w.SessionInfo.GetWriteQueue())
-	}
-	manager.AppendSessionInfo(next)
-	return nil
+	runSessionFileWork(w.RenameQueue, w.PostToUI, sessionFileWorkKey+":rename",
+		func(context.Context) (struct{}, error) {
+			manager, err := coding.OpenSession(sessionPath, "", "")
+			if err != nil {
+				return struct{}{}, err
+			}
+			if w.SessionInfo != nil {
+				manager.SetWriteQueue(w.SessionInfo.GetWriteQueue())
+			}
+			manager.AppendSessionInfo(next)
+			return struct{}{}, nil
+		},
+		func(_ struct{}, err error) { onDone(err) })
 }
 
 // HandleResumeSession switches to another session.
@@ -532,34 +545,35 @@ func (w *SessionWiring) HandleResumeSession(ctx context.Context, sessionPath str
 	// callback chain.
 	var resumeWith func(cwdOverride string)
 	resumeWith = func(cwdOverride string) {
-		result, err := w.SwitchSession(ctx, sessionPath, cwdOverride)
-		if err == nil {
-			if result != nil && result.Cancelled {
-				return
-			}
-			if cwdOverride == "" {
-				w.showStatus("Resumed session")
-				return
-			}
-			w.showStatus("Resumed session in current cwd")
-			return
-		}
-		var cwdErr *coding.MissingSessionCwdError
-		if w.PromptForMissingCwd != nil && errors.As(err, &cwdErr) {
-			w.PromptForMissingCwd(ctx, cwdErr.Issue, func(selectedCwd string, selected bool) {
-				if !selected {
-					w.showStatus("Resume cancelled")
+		w.SwitchSession(ctx, sessionPath, cwdOverride, func(result *SessionSwitchResult, err error) {
+			if err == nil {
+				if result != nil && result.Cancelled {
 					return
 				}
-				resumeWith(selectedCwd)
-			})
-			return
-		}
-		if w.HandleFatalRuntimeError != nil {
-			w.HandleFatalRuntimeError(ctx, "Failed to resume session", err)
-			return
-		}
-		w.showError("Failed to resume session: " + err.Error())
+				if cwdOverride == "" {
+					w.showStatus("Resumed session")
+					return
+				}
+				w.showStatus("Resumed session in current cwd")
+				return
+			}
+			var cwdErr *coding.MissingSessionCwdError
+			if w.PromptForMissingCwd != nil && errors.As(err, &cwdErr) {
+				w.PromptForMissingCwd(ctx, cwdErr.Issue, func(selectedCwd string, selected bool) {
+					if !selected {
+						w.showStatus("Resume cancelled")
+						return
+					}
+					resumeWith(selectedCwd)
+				})
+				return
+			}
+			if w.HandleFatalRuntimeError != nil {
+				w.HandleFatalRuntimeError(ctx, "Failed to resume session", err)
+				return
+			}
+			w.showError("Failed to resume session: " + err.Error())
+		})
 	}
 	resumeWith("")
 }
@@ -606,5 +620,7 @@ func newSessionWiring(app *App) *SessionWiring {
 		Shutdown:             func() { app.lifecycle.Shutdown(false) },
 		RequestRender:        func() { app.ui.RequestRender(false) },
 		ClearStatusIndicator: func() { app.uiState.ClearStatusIndicator("", false) },
-		SwitchSession:        app.switchSession}
+		SwitchSession:        app.switchSessionAsync,
+		RenameQueue:          app.sessionQueue,
+		PostToUI:             app.postToOwnerLoop}
 }
