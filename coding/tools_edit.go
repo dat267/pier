@@ -275,7 +275,6 @@ func CreateEditTool(cwd string) agent.AgentTool {
 				// Strip the BOM before matching: the model will not include an
 				// invisible BOM in oldText.
 				bom, content := SplitBom(rawContent)
-				originalEnding := DetectLineEnding(content)
 				normalizedContent := NormalizeToLF(content)
 				applied, err := ApplyEditsToNormalizedContent(normalizedContent, input.Edits, input.Path)
 				if err != nil {
@@ -287,7 +286,10 @@ func CreateEditTool(cwd string) agent.AgentTool {
 					return resultErr
 				}
 
-				finalContent := bom + RestoreLineEndings(applied.NewContent, originalEnding)
+				// Unchanged text keeps its bytes and line endings; inserted line
+				// breaks take the ending of the line the edit starts on (v1.5.2
+				// applyReplacementsToOriginal).
+				finalContent := bom + applyReplacementsToOriginal(content, applied.Replacements)
 				if err := os.WriteFile(absolutePath, []byte(finalContent), 0o644); err != nil {
 					resultErr = editFileRefusalError(input.Path, err)
 					return resultErr
