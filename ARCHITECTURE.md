@@ -423,10 +423,11 @@ and attaches it in one step (`AttachTo`), so an older set cannot land last
 (`TestMcpConcurrentConnectsKeepEveryServersTools`).
 
 `coding.AgentSession.toolsMu` serializes the read-modify-writes of the active
-tool set (`SetActiveToolsByName`, `AttachExtraTools`, the goal's tool sync). It
-is taken before `stateMu`, the prompt-options lock and the agent's lock, and no
-callback runs under it
-(`TestMcpConcurrentConnectsAttachEveryServersToolsToTheSession`).
+tool set (`SetActiveToolsByName`, `AttachExtraTools`, the goal's tool sync, the
+`/reload` activation of new default tools). It is taken before `stateMu`, the
+prompt-options lock and the agent's lock, and no callback runs under it
+(`TestMcpConcurrentConnectsAttachEveryServersToolsToTheSession`,
+`TestReloadKeepsToolsAttachedWhileItRuns`).
 
 MCP listener registries retain stable entry pointers, so slice growth and
 snapshot compaction cannot invalidate unsubscribe handles. Unsubscribe unlinks

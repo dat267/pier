@@ -2,10 +2,12 @@ package coding
 
 import (
 	ctxpkg "context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -979,4 +981,45 @@ func TestCreateAgentSessionCacheWarmerStarts(t *testing.T) {
 func agentDirForSettings(t *testing.T) string {
 	t.Helper()
 	return t.TempDir()
+}
+
+// A reload that activates new defaultTools reads and sets the active set in
+// one step: MCP tools attached while it runs stay active. Upstream reload and
+// the MCP registry refresh share one event loop (agent-session.ts, pi v1.5.2
+// b4afdddf).
+func TestReloadKeepsToolsAttachedWhileItRuns(t *testing.T) {
+	tempAgentDir(t)
+	runtime := testSessionRuntime(t)
+	settings, settingsPath := newReloadSettings(t)
+	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeReloadSettings(t, settingsPath, `{"defaultTools":["+grep"]}`)
+	const attaches = 40
+	var group sync.WaitGroup
+	group.Go(func() {
+		for range 20 {
+			session.Session.Reload()
+		}
+	})
+	group.Go(func() {
+		var tools []agent.AgentTool
+		for index := range attaches {
+			tools = append(tools, testTool(fmt.Sprintf("mcp__srv__t%d", index)))
+			session.Session.AttachExtraTools(append([]agent.AgentTool{}, tools...))
+		}
+	})
+	group.Wait()
+	active := 0
+	for _, name := range session.Session.ActiveToolNames() {
+		if strings.HasPrefix(name, "mcp__") {
+			active++
+		}
+	}
+	if active != attaches {
+		t.Fatalf("%d of %d attached MCP tools are active after the reloads", active, attaches)
+	}
 }

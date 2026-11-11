@@ -33,26 +33,7 @@ func (s *AgentSession) Reload() {
 	ai.ResetAPIProviders()
 	s.reloadResources()
 	if s.usesDefaultTools && s.control.Settings != nil {
-		// Activate tools newly added to defaultTools. Removed ones stay active,
-		// and tools disabled during the session stay disabled unless the setting
-		// newly adds them; explicit --tools/--no-tools sessions never take this
-		// path (upstream _buildRuntime + _refreshToolRegistry).
-		names := append([]string{}, s.ActiveToolNames()...)
-		for _, name := range s.selectedDefaultToolNames() {
-			if !previousDefaultTools[name] {
-				names = append(names, name)
-			}
-		}
-		filtered := make([]string, 0, len(names))
-		seen := map[string]bool{}
-		for _, name := range names {
-			if seen[name] || matchesAnyToolPattern(s.excludedToolNames, name) {
-				continue
-			}
-			seen[name] = true
-			filtered = append(filtered, name)
-		}
-		s.SetActiveToolsByName(filtered)
+		s.activateNewDefaultTools(previousDefaultTools)
 	} else {
 		s.RebuildSystemPrompt(s.ActiveToolNames())
 	}
@@ -61,6 +42,34 @@ func (s *AgentSession) Reload() {
 	if !s.defaultSyncSuspended() {
 		s.recordDefaultSync(s.SyncSessionModelToDefault(context.Background(), "reload"))
 	}
+}
+
+// activateNewDefaultTools adds the tools the reloaded defaultTools setting
+// newly names to the active set, reading and setting it under toolsMu so an
+// MCP attach or goal sync in between is not undone.
+func (s *AgentSession) activateNewDefaultTools(previousDefaultTools map[string]bool) {
+	s.toolsMu.Lock()
+	defer s.toolsMu.Unlock()
+	// Activate tools newly added to defaultTools. Removed ones stay active,
+	// and tools disabled during the session stay disabled unless the setting
+	// newly adds them; explicit --tools/--no-tools sessions never take this
+	// path (upstream _buildRuntime + _refreshToolRegistry).
+	names := append([]string{}, s.ActiveToolNames()...)
+	for _, name := range s.selectedDefaultToolNames() {
+		if !previousDefaultTools[name] {
+			names = append(names, name)
+		}
+	}
+	filtered := make([]string, 0, len(names))
+	seen := map[string]bool{}
+	for _, name := range names {
+		if seen[name] || matchesAnyToolPattern(s.excludedToolNames, name) {
+			continue
+		}
+		seen[name] = true
+		filtered = append(filtered, name)
+	}
+	s.setActiveToolsByNameLocked(filtered)
 }
 
 func (s *AgentSession) selectedDefaultToolNames() []string {
