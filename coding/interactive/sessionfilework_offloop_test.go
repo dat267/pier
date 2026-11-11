@@ -144,55 +144,6 @@ func TestRenameOtherSessionOpensOffTheOwnerLoop(t *testing.T) {
 	}
 }
 
-// Deleting a session forks `trash` and waits for it, so the picker runs it off
-// the owner loop and applies the outcome by post.
-func TestPickerDeleteRunsOffTheOwnerLoop(t *testing.T) {
-	InitTheme("dark", false)
-	previous := tui.GetKeybindings()
-	tui.SetKeybindings(NewAppKeybindingsManager(nil, "").KeybindingsManager)
-	t.Cleanup(func() { tui.SetKeybindings(previous) })
-	deleted := ""
-	queue := &postQueue{}
-	component := NewSessionSelectorComponent(
-		func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) {
-			return []coding.SessionInfo{{Path: "/s/a.jsonl", ID: "a"}}, nil
-		},
-		func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) {
-			return []coding.SessionInfo{{Path: "/s/a.jsonl", ID: "a"}}, nil
-		},
-		func(string) {}, func() {}, func() {}, func() {},
-		SessionSelectorOptions{
-			DeleteSession: func(sessionPath string) SessionDeleteResult {
-				deleted = sessionPath
-				return SessionDeleteResult{OK: true, Method: "trash"}
-			},
-			ScheduleTimer: func(int, func()) {},
-			Post:          queue.Post,
-		})
-	component.WaitForPendingLoads()
-	queue.drain()
-
-	list := component.GetSessionList()
-	list.HandleInput("\x04")
-	if list.confirmingDeletePath == nil {
-		t.Fatalf("confirmation not started; list len=%d selected=%d current=%q",
-			len(list.filtered), list.selectedIndex, list.currentSessionCanonicalPath)
-	}
-	list.HandleInput("\r")
-	component.WaitForPendingLoads()
-	// The result is applied by the post, so nothing has changed yet.
-	if component.GetHeader().statusMessage != nil {
-		t.Fatalf("the delete applied before its result reached the loop: %+v", component.GetHeader().statusMessage)
-	}
-	queue.drain()
-	if deleted != "/s/a.jsonl" {
-		t.Fatalf("deleted = %q", deleted)
-	}
-	if message := component.GetHeader().statusMessage; message == nil || message.Message != "Session moved to trash" {
-		t.Fatalf("status = %+v", message)
-	}
-}
-
 // Naming another session opens its file, and the picker only leaves the rename
 // once the wiring reports back.
 func TestPickerRenameWaitsForItsReport(t *testing.T) {

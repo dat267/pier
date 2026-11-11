@@ -37,10 +37,12 @@ Key bounds and invariants:
   immutable snapshots where supported (D203–D209). Ownership and exceptions are
   detailed in the D-rows ([DECISIONS.md](DECISIONS.md)) and lock inventory.
 - The session-file work of a session replacement (`/resume`, `/fork`, `/clone`,
-  `/tail`, `/import`), the picker's rename and delete, the `/tree` build and a
-  session export run on a queue; the rebind, the selector and the status they
-  produce run on the loop (D441, D442). A test app with no loop runs the work
-  inline, so nothing waits on a post that is never drained.
+  `/tail`, `/import`), the picker's rename, the `/tree` build and a session
+  export run on a queue; the rebind, the selector and the status they produce run
+  on the loop (D441, D442). A test app with no loop runs the work inline, so
+  nothing waits on a post that is never drained. The session picker's delete is
+  the exception: it runs inline until its async version can be reproduced
+  failing in a fullscreen session (D442).
 
 ## Performance evidence
 

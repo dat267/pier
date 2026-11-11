@@ -1208,30 +1208,15 @@ func (c *SessionSelectorComponent) confirmRename(value string) {
 	})
 }
 
-// runOffLoop runs picker file work off the owner loop and applies its result on
-// the loop. Without a Post seam it runs inline: there is no other writer.
-func (c *SessionSelectorComponent) runOffLoop(work func(), apply func()) {
-	if c.Post == nil {
-		work()
-		apply()
-		return
-	}
-	c.loads.Go(func() {
-		work()
-		c.postApply(apply)
-	})
-}
-
+// deleteSessionAndRefresh deletes the file and updates the list in one step.
+//
+// It stays synchronous on purpose: running it on a worker and applying the
+// result by post lost the deletion in a fullscreen session (the prompt cleared,
+// nothing else happened). `trash` is cheap (0.2s for a 240MB file here), so the
+// only cost of keeping it inline is a slow delete when the trash CLI itself
+// hangs. An async version needs a reproduction first; see D442.
 func (c *SessionSelectorComponent) deleteSessionAndRefresh(sessionPath string) {
-	// Deleting forks `trash` and waits for it, so it runs off the owner loop.
-	var result SessionDeleteResult
-	c.runOffLoop(
-		func() { result = c.deleteSession(sessionPath) },
-		func() { c.applySessionDelete(sessionPath, result) },
-	)
-}
-
-func (c *SessionSelectorComponent) applySessionDelete(sessionPath string, result SessionDeleteResult) {
+	result := c.deleteSession(sessionPath)
 	if result.OK {
 		c.currentSessions = filterOutSession(c.currentSessions, sessionPath)
 		c.allSessions = filterOutSession(c.allSessions, sessionPath)

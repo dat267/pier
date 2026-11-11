@@ -6853,8 +6853,8 @@ Tests: `TestTreeSelectorOpenBuildsOffTheOwnerLoop` and
 ### D442
 
 **The session-file work of `/resume`, `/fork`, `/clone`, `/tail`, `/import` and
-the picker's rename and delete runs off the owner loop; the UI rebind stays on
-it.**
+the picker's rename runs off the owner loop; the UI rebind stays on it. The
+picker's delete stays inline.**
 
 Reference: pi v1.5.0 `f9a26365` does this work inline in the handler
 (`agent-session-runtime.ts switchSession`/`fork`/`importFromJsonl`,
@@ -6866,12 +6866,20 @@ paints.
 Measured on a 25,583-entry session (53 MB), each on the owner loop: opening the
 file for `/resume` 57 ms, writing the fork's new file for `/fork` and `/clone`
 519 ms, copying an import 22 ms, and a rename of a session other than the active
-one opens its file (57 ms). With a hung `trash` the picker's delete had no bound
-at all. The first paint after each of those started late by that much.
+one opens its file (57 ms). The first paint after each of those started late by
+that much.
 
-Each operation is now split: the file work runs on the session-file queue, and
+Each of those is now split: the file work runs on the session-file queue, and
 the rebind (which owns attached UI state, the MCP manager and the transcript)
-runs on the loop, delivered through `postToUI`. The three processes share one
+runs on the loop, delivered through `postToUI`.
+
+The picker's delete was moved the same way and then put back: in a fullscreen
+session the confirmation prompt cleared and nothing else happened, so the file
+survived and the row stayed. It could not be reproduced in a plain pty, where
+the same build deleted the file and refreshed the list, so the async version
+comes back only with a reproduction. Keeping it inline costs one `trash` call in
+front of the paint, measured at 0.2 s for a 240 MB file; a hung `trash` CLI is
+the only case where that is worth removing. The three processes share one
 queue slot, so a switch, fork, import or tail started later supersedes an
 earlier one instead of applying over the session the user chose; a rename keeps
 its own slot, because cancelling it would leave the picker waiting for a report
@@ -6885,5 +6893,6 @@ fall back to, so nothing depends on a loop that happens to be running.
 
 Tests: `TestSwitchSessionOpensOffTheOwnerLoop`,
 `TestForkSessionWritesOffTheOwnerLoop`, `TestImportCopiesOffTheOwnerLoop`,
-`TestRenameOtherSessionOpensOffTheOwnerLoop`,
-`TestPickerDeleteRunsOffTheOwnerLoop` and `TestPickerRenameWaitsForItsReport`.
+`TestRenameOtherSessionOpensOffTheOwnerLoop` and
+`TestPickerRenameWaitsForItsReport`; the delete stays covered by
+`TestSessionSelectorDeleteFlow`.
