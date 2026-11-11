@@ -202,12 +202,14 @@ func FooterLine(input FooterInput, width int) string {
 		if text == "" {
 			continue
 		}
-		parts = append(parts, text)
+		// Every part of the line is untrusted text: statuses can carry a provider
+		// error and the cwd comes from the session file's header (D342, D450).
+		parts = append(parts, tui.SanitizeUntrustedText(text))
 	}
 	if input.ModelID != "" {
 		parts = append(parts, FooterTruncateLeft(tui.SanitizeUntrustedText(input.ModelID), 25))
 	}
-	parts = append(parts, FooterTruncate(filepath.Base(input.Cwd), 25))
+	parts = append(parts, FooterTruncate(tui.SanitizeUntrustedText(filepath.Base(input.Cwd)), 25))
 	return FooterTruncate(strings.Join(parts, " · "), min(80, max(0, width)))
 }
 

@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D449)
+# Deliberate divergences from pi (D1–D450)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7048,3 +7048,20 @@ an unparseable value falls back to its raw text, so it is covered too.
 
 Tests: `TestStoredSessionTextRendersOnlyThemeEscapes`, the `mcp call header`
 case.
+
+### D450
+
+**The footer sanitizes the cwd it shows; the reference renders it verbatim.**
+
+Reference: pi v1.5.0 `f9a26365` `modes/interactive/components/footer.ts:165` builds
+its pwd as `formatCwdForFooter(sessionManager.getCwd(), HOME…)` and draws it
+without sanitizing; only the extension statuses go through `sanitizeStatusText`.
+
+The cwd comes from the session file's header (`coding/session_manager.go` sets it
+from `header.Cwd`), so a shared, imported or planted session chooses those bytes.
+The footer is always visible, so unlike the tree or the rename prompt this needs
+no command: opening the session is enough, and `ESC[2J` or an OSC 52 clipboard
+write lands on the first frame. The port sanitizes the cwd and, defensively, the
+statuses it is handed, following D342/D422.
+
+Tests: `TestFooterLineSanitizesStoredCwd`.
