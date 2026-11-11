@@ -129,6 +129,77 @@ const cases = [
 			{ role: "toolResult", toolCallId: "toolu_2", toolName: "shoot", isError: false, content: [{ type: "text", text: "here" }, { type: "image", data: "aW1n", mimeType: "image/jpeg" }], timestamp: 3 },
 		],
 	},
+	{
+		name: "multi-image-user",
+		messages: [
+			{
+				role: "user",
+				timestamp: 1,
+				content: [
+					{ type: "text", text: "two shots" },
+					{ type: "image", data: "aW1hZ2Ux", mimeType: "image/png" },
+					{ type: "image", data: "aW1hZ2Uy", mimeType: "image/gif" },
+				],
+			},
+		],
+	},
+	{
+		name: "unicode-and-escapes",
+		messages: [
+			{ role: "system", content: 'sys \u00e9\u65e5 "quoted" \\backslash\nnewline', timestamp: 0 },
+			{ role: "user", content: "emoji \ud83d\ude00\ud83e\ud83d\ude80 astral \ud835\udc9c cjk \u65e5\u672c\u8a9e\nsecond line", timestamp: 1 },
+		],
+	},
+	{
+		name: "parallel-tool-results",
+		messages: [
+			{ role: "user", content: "both", timestamp: 1 },
+			{
+				role: "assistant",
+				timestamp: 2,
+				stopReason: "toolUse",
+				content: [
+					{ type: "toolCall", id: "toolu_a", name: "read_file", arguments: { path: "a" } },
+					{ type: "toolCall", id: "toolu_b", name: "read_file", arguments: { path: "b" } },
+				],
+			},
+			{ role: "toolResult", toolCallId: "toolu_a", toolName: "read_file", isError: false, content: [{ type: "text", text: "A" }], timestamp: 3 },
+			{ role: "toolResult", toolCallId: "toolu_b", toolName: "read_file", isError: true, content: [{ type: "text", text: "B" }], timestamp: 4 },
+		],
+	},
+	{
+		name: "tool-args-key-order",
+		messages: [
+			{ role: "system", content: "sys", toolsAdded: [readTool], timestamp: 0 },
+			{
+				role: "assistant",
+				timestamp: 2,
+				stopReason: "toolUse",
+				content: [
+					{
+						type: "toolCall",
+						id: "toolu_3",
+						name: "read_file",
+						arguments: { zeta: 1, alpha: [null, true, false, 1.5, "x"], mid: { nested: [], "ключ": "välue" }, path: "a" },
+					},
+				],
+			},
+			{ role: "toolResult", toolCallId: "toolu_3", toolName: "read_file", isError: false, content: [{ type: "text", text: "" }], timestamp: 3 },
+		],
+	},
+	{
+		name: "two-system-messages",
+		messages: [
+			{ role: "system", content: "first system", timestamp: 0 },
+			{ role: "system", content: "second system", timestamp: 1 },
+			{ role: "user", content: "go", timestamp: 2 },
+		],
+	},
+	{
+		name: "long-cache-retention",
+		messages: [{ role: "user", content: "go", timestamp: 1 }],
+		options: { temperature: 0.25, maxTokens: 64, cacheRetention: "long" },
+	},
 ];
 
 const fixtures = [];

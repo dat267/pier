@@ -28,13 +28,17 @@ func TestAnthropicRequestBodiesMatchReference(t *testing.T) {
 	if err := json.Unmarshal(raw, &fixtures); err != nil {
 		t.Fatal(err)
 	}
-	if len(fixtures) < 9 {
+	if len(fixtures) < 15 {
 		t.Fatalf("golden holds %d cases", len(fixtures))
 	}
 	for _, fixture := range fixtures {
 		t.Run(fixture.Name, func(t *testing.T) {
 			model, messages, options := anthropicWireFixture(fixture.Name)
-			params, err := BuildAnthropicParams(model, NormalizeContext(Context{Messages: messages}), false, options)
+			// StreamAnthropic resolves the transcript (collapsing later system
+			// messages for a model that cannot take them mid-conversation) before
+			// building params, so the builder is handed the resolved context.
+			context := ResolveTranscript(NormalizeContext(Context{Messages: messages}), GetAnthropicCompat(model).SupportsMidConvoSystemMessages)
+			params, err := BuildAnthropicParams(model, context, false, options)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -160,6 +164,51 @@ func anthropicWireFixture(name string) (*Model, []Message, *AnthropicOptions) {
 				ImageContent{Data: "aW1n", MimeType: "image/jpeg"},
 			}, false, 3),
 		}, nil
+	case "multi-image-user":
+		return model, []Message{
+			&UserMessage{Content: StringOrBlocks{Blocks: ContentList{
+				TextContent{Text: "two shots"},
+				ImageContent{Data: "aW1hZ2Ux", MimeType: "image/png"},
+				ImageContent{Data: "aW1hZ2Uy", MimeType: "image/gif"},
+			}}, Timestamp: 1},
+		}, nil
+	case "unicode-and-escapes":
+		return model, []Message{
+			&SystemMessage{Content: StringOrBlocks{Text: "sys é日 \"quoted\" \\backslash\nnewline"}, Timestamp: 0},
+			userText("emoji 😀🚀 astral 𝒜 cjk 日本語\nsecond line", 1),
+		}, nil
+	case "parallel-tool-results":
+		return model, []Message{
+			userText("both", 1),
+			assistant(ContentList{
+				ToolCall{ID: "toolu_a", Name: "read_file", Arguments: json.RawMessage(`{"path":"a"}`)},
+				ToolCall{ID: "toolu_b", Name: "read_file", Arguments: json.RawMessage(`{"path":"b"}`)},
+			}, StopToolUse, 2),
+			toolResult("toolu_a", "read_file", UserContentList{TextContent{Text: "A"}}, false, 3),
+			toolResult("toolu_b", "read_file", UserContentList{TextContent{Text: "B"}}, true, 4),
+		}, nil
+	case "tool-args-key-order":
+		return model, []Message{
+			system(readTool),
+			assistant(ContentList{
+				ToolCall{ID: "toolu_3", Name: "read_file", Arguments: json.RawMessage(`{"zeta":1,"alpha":[null,true,false,1.5,"x"],"mid":{"nested":[],"ключ":"välue"},"path":"a"}`)},
+			}, StopToolUse, 2),
+			toolResult("toolu_3", "read_file", UserContentList{TextContent{Text: ""}}, false, 3),
+		}, nil
+	case "two-system-messages":
+		return model, []Message{
+			&SystemMessage{Content: StringOrBlocks{Text: "first system"}, Timestamp: 0},
+			&SystemMessage{Content: StringOrBlocks{Text: "second system"}, Timestamp: 1},
+			userText("go", 2),
+		}, nil
+	case "long-cache-retention":
+		return model, []Message{userText("go", 1)}, &AnthropicOptions{
+			StreamOptions: StreamOptions{
+				Temperature:    new(0.25),
+				MaxTokens:      new(64),
+				CacheRetention: CacheRetentionLong,
+			},
+		}
 	}
 	panic("unknown anthropic-wire fixture: " + name)
 }
