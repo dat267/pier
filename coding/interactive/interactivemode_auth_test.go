@@ -76,9 +76,9 @@ func TestAuthLoginProviderOptions(t *testing.T) {
 	if len(all) == 0 {
 		t.Fatal("no providers")
 	}
-	// Sorted by name.
+	// Preferred partners first, then sorted by name.
 	for i := 1; i < len(all); i++ {
-		if all[i-1].Name > all[i].Name {
+		if coding.ComparePreferredProviders(all[i-1].ID, all[i-1].Name, all[i].ID, all[i].Name) > 0 {
 			t.Fatalf("not sorted: %q > %q", all[i-1].Name, all[i].Name)
 		}
 	}
@@ -343,5 +343,36 @@ func TestLoginProviderEmptyMessagesMatchUpstream(t *testing.T) {
 		if got := loginProviderEmptyMessage(testCase.authType); got != testCase.want {
 			t.Fatalf("loginProviderEmptyMessage(%q) = %q, want %q", testCase.authType, got, testCase.want)
 		}
+	}
+}
+
+// pi v1.5.2 (b4afdddf) core/preferred-providers.ts compareProviders: the login
+// and logout lists put the preferred partner providers first, in their order,
+// then every other provider by name.
+func TestAuthProviderOptionsPreferPartners(t *testing.T) {
+	wiring, _ := newAuthTestWiring(t)
+	options := wiring.GetLoginProviderOptions("")
+	if len(options) < 2 {
+		t.Fatalf("only %d providers", len(options))
+	}
+	seen := make([]string, 0, len(options))
+	for _, option := range options {
+		if len(seen) == 0 || seen[len(seen)-1] != option.ID {
+			seen = append(seen, option.ID)
+		}
+	}
+	// A provider with both auth methods contributes two adjacent rows.
+	if len(seen) < 2 || seen[0] != "radius" || seen[1] != "openrouter" {
+		t.Fatalf("login order starts with %v, want radius and openrouter first", seen[:min(len(seen), 5)])
+	}
+	last := ""
+	for _, option := range options {
+		if coding.IsPreferredProvider(option.ID) {
+			continue
+		}
+		if last > option.Name {
+			t.Fatalf("remaining providers are not sorted by name: %q > %q", last, option.Name)
+		}
+		last = option.Name
 	}
 }

@@ -148,7 +148,10 @@ func (w *AuthWiring) GetLoginProviderOptions(authType string) []AuthSelectorProv
 			})
 		}
 	}
-	sort.SliceStable(options, func(i int, j int) bool { return options[i].Name < options[j].Name })
+	// Preferred partners first, then by name (pi v1.5.2 preferred-providers.ts).
+	sort.SliceStable(options, func(i int, j int) bool {
+		return coding.ComparePreferredProviders(options[i].ID, options[i].Name, options[j].ID, options[j].Name) < 0
+	})
 	return options
 }
 
@@ -172,7 +175,11 @@ func (w *AuthWiring) GetLogoutProviderOptions(ctx context.Context) ([]AuthSelect
 			Status: &ai.AuthCheck{Type: credential.Type, Source: "stored credential"}, Subscription: &subscription,
 		})
 	}
-	sort.SliceStable(options, func(i int, j int) bool { return options[i].Name < options[j].Name })
+	// The stable sort keeps a provider's account rows together and, like the
+	// login list, puts preferred partners first (pi v1.5.2 preferred-providers.ts).
+	sort.SliceStable(options, func(i int, j int) bool {
+		return coding.ComparePreferredProviders(options[i].ID, options[i].Name, options[j].ID, options[j].Name) < 0
+	})
 	return options, nil
 }
 
