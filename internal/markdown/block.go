@@ -570,19 +570,6 @@ func isBlockquoteStart(line string) bool {
 	return line[i] == '>'
 }
 
-// stripBlockquote removes one `>` marker and an optional following space.
-func stripBlockquote(line string) string {
-	i, _ := skipIndent(line, 4)
-	if i >= len(line) || line[i] != '>' {
-		return line
-	}
-	i++
-	if i < len(line) && (line[i] == ' ' || line[i] == '\t') {
-		i++
-	}
-	return line[i:]
-}
-
 // listItemStart reports a bullet or ordered list marker: the marker width, the
 // content indent (marker plus following spaces), and whether it is ordered.
 func listItemStart(line string) (contentIndent int, ordered bool, ok bool) {
