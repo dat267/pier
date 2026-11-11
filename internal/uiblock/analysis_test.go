@@ -46,6 +46,12 @@ func (Surface) RenderFile(f *os.File) { f.Write([]byte("method")) }
 type PointerSurface struct{}
 func (*PointerSurface) Invalidate() { os.Stat("pointer receiver root") }
 func (Surface) Invalidate() { go helper.Background() }
+// A pointer-receiver method is pier code, so the walk must descend into it: the
+// descent guard spelled only the value-receiver form, which skipped nearly every
+// method in this module (A493).
+type MethodSurface struct{}
+func (MethodSurface) HandleEvent() { (&MethodSurface{}).TouchFile() }
+func (*MethodSurface) TouchFile() { os.Stat("method") }
 // RenderFile runs from a value-receiver root, so the callee-classification case
 // does not also depend on pointer-receiver roots.
 type ValueHost struct{}
@@ -89,15 +95,16 @@ func TestAnalysisFindsBlockingPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string]Kind{
-		".Block":              Syscall,
-		"interface Work":      Syscall,
-		"wiring field OnBeat": Syscall,
-		".Post":               Syscall,
-		".RenderNow":          Channel,
-		".HandleSignal":       Sleep,
-		".RenderFile":         Syscall,
-		"PointerSurface":      Syscall,
-		"runSessionFileWork":  Syscall,
+		".Block":                    Syscall,
+		"interface Work":            Syscall,
+		"wiring field OnBeat":       Syscall,
+		".Post":                     Syscall,
+		".RenderNow":                Channel,
+		".HandleSignal":             Sleep,
+		".RenderFile":               Syscall,
+		"PointerSurface":            Syscall,
+		".MethodSurface).TouchFile": Syscall,
+		"runSessionFileWork":        Syscall,
 	}
 	if len(findings) != len(want) {
 		t.Fatalf("findings = %+v, want %d distinct blocking paths", findings, len(want))

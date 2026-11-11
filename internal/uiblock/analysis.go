@@ -327,6 +327,15 @@ func Find(dir string) ([]Finding, error) {
 							if !isPier(impl) {
 								continue
 							}
+							// coding/rpcclient is the client side of the RPC
+							// protocol: external processes drive a pier server
+							// through it, and the app's own loop never wires it, so
+							// its methods are not loop code. Without this, every
+							// interface the app calls resolves to the client's
+							// implementation as well and reports its I/O.
+							if strings.HasPrefix(impl.RelString(nil), "(*github.com/dat267/pier/coding/rpcclient.") {
+								continue
+							}
 							if _, seen := visited[impl]; !seen {
 								chain := append(append([]string{}, n.chain...),
 									impl.RelString(nil)+" (interface "+name+")")
@@ -507,13 +516,12 @@ func isPier(fn *ssa.Function) bool {
 	rel := fn.RelString(nil)
 	// Package-level functions are "github.com/dat267/pier/...pkg.Func"; methods
 	// are "(github.com/dat267/pier/...Type).Method" (receiver first).
-	// TODO(A493): the pointer form "(*github.com/dat267/pier/...Type).Method" is
-	// missing, so the walk skips nearly every method of this codebase. Landing
-	// it needs the triage in TODO.md first: it takes the gate from 39 findings
-	// to ~240, and the largest surfaces are wiring fields whose closures run
-	// inside RunDetached, which the root rule wrongly treats as loop code.
+	// Almost every type here is used through a pointer, so the pointer form is
+	// the common one: "(*github.com/dat267/pier/...Type).Method". Missing it made
+	// the walk skip those methods, which hid a real stall (A493).
 	return strings.HasPrefix(rel, "github.com/dat267/pier/") ||
-		strings.HasPrefix(rel, "(github.com/dat267/pier/")
+		strings.HasPrefix(rel, "(github.com/dat267/pier/") ||
+		strings.HasPrefix(rel, "(*github.com/dat267/pier/")
 }
 
 // isLoopIdle marks the loop's own select: those receives are the idle wait.

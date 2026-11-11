@@ -2,6 +2,7 @@ package uiblock
 
 import (
 	"sort"
+	"strings"
 
 	"golang.org/x/tools/go/ssa"
 )
@@ -76,6 +77,12 @@ func FindGoroutines(dir string) ([]Finding, error) {
 					name := com.Method.Name()
 					for _, impl := range m.pierMethods[name] {
 						if !isPier(impl) || impl.Blocks == nil {
+							continue
+						}
+						// The RPC client is the client side of the protocol; the
+						// app's own loop never wires it (see the same exclusion in
+						// the main traversal).
+						if strings.HasPrefix(impl.RelString(nil), "(*github.com/dat267/pier/coding/rpcclient.") {
 							continue
 						}
 						if _, seen := visited[impl]; !seen {
