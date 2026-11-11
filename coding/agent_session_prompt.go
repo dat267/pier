@@ -746,12 +746,18 @@ func (s *AgentSession) registerIdleWait() chan struct{} {
 }
 
 // resolveIdleWaitIfIdle releases the idle waiters once nothing is active.
+//
+// Idleness is decided under the run-lifecycle lock, which waiters register
+// under and a run start takes: deciding it before taking the lock let a run
+// start in between, and the release then closed the channel a waiter for that
+// new run had just joined.
 func (s *AgentSession) resolveIdleWaitIfIdle() {
-	if !s.IsIdle() {
-		return
-	}
 	state := s.prompt()
 	state.mu.Lock()
+	if state.runActive || s.Agent.State().IsStreaming || s.IsCompacting() {
+		state.mu.Unlock()
+		return
+	}
 	wait := state.idleWait
 	state.idleWait = nil
 	state.mu.Unlock()
