@@ -41,10 +41,12 @@ func TestSDKCacheWarmingStreamsThroughTheModelRuntime(t *testing.T) {
 		}},
 	})
 	runtime := runtimeWithProviders(t, provider)
+	sessions := NewSessionManager(t.TempDir(), nil)
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	created, err := CreateAgentSession(context.Background(), &CreateAgentSessionOptions{
 		Cwd: t.TempDir(), AgentDir: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings, Model: model,
-		NoSkills: true, NoContextFiles: true, NoPromptTemplates: true,
+		SessionManager: sessions,
+		NoSkills:       true, NoContextFiles: true, NoPromptTemplates: true,
 		StreamFn: func(model *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 			stream := ai.NewAssistantMessageEventStream()
 			go func() {
@@ -84,5 +86,16 @@ func TestSDKCacheWarmingStreamsThroughTheModelRuntime(t *testing.T) {
 	options := warmOptions.Load()
 	if options == nil || options.MaxTokens == nil || *options.MaxTokens != 1 || !options.DisableContinuation {
 		t.Fatalf("warm options = %+v, want a one-token replay that keeps the continuation state", options)
+	}
+	// The refresh bills the provider, so its spend has to reach the session as a
+	// cache_warm usage entry (upstream cache-warmer.ts appendUsage).
+	warmed := 0
+	for _, entry := range sessions.GetBranch("") {
+		if entry.Type == "usage" && entry.Kind == "cache_warm" {
+			warmed++
+		}
+	}
+	if warmed != 1 {
+		t.Fatalf("cache_warm usage entries = %d, want 1", warmed)
 	}
 }
