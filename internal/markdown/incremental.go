@@ -191,7 +191,42 @@ func blockExtendable(b *Block, src string) bool {
 	case BlockCode:
 		return codeBlockOpen(b.Raw)
 	}
-	return false
+	// A pending display-math opener reaches the end of the source
+	// (markdown.ts tokenizeBlockLatex), so text appended after blank lines can
+	// still turn this block into one.
+	return pendingLatexOpen(b, src)
+}
+
+// pendingLatexOpen reports a block the reference's pending display-math rule can
+// still absorb: a paragraph or an already-pending latex block whose source
+// starts with an unclosed `$$` or `\[` opener. That rule matches to the end of
+// the source and then accepts the rest when it looks like math, so the block is
+// never stable while the document can still grow.
+func pendingLatexOpen(b *Block, src string) bool {
+	if b.Kind != BlockParagraph && b.Kind != BlockLatex {
+		return false
+	}
+	if b.Kind == BlockLatex && !b.Pending {
+		return false
+	}
+	end := min(b.End, len(src))
+	offset := b.Start
+	for spaces := 0; spaces < 3 && offset < end && src[offset] == ' '; spaces++ {
+		offset++
+	}
+	if offset+1 >= end {
+		return false
+	}
+	opener := ""
+	switch {
+	case src[offset] == '$' && src[offset+1] == '$':
+		opener = "$$"
+	case src[offset] == '\\' && src[offset+1] == '[':
+		opener = "\\["
+	default:
+		return false
+	}
+	return !strings.Contains(src[offset+len(opener):end], opener)
 }
 
 // codeBlockOpen reports an indented or unclosed fenced code block (one a later

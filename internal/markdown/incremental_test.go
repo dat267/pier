@@ -215,3 +215,24 @@ func TestFirstUnstableMarksOnlyExtendableBlocks(t *testing.T) {
 		t.Fatalf("FirstUnstable of an open fence = %d, want 1", got)
 	}
 }
+
+// A pending display-math block reaches the end of the source
+// (markdown.ts tokenizeBlockLatex: `^ {0,3}\$\$…([\s\S]*)$` plus
+// looksLikePendingDollarMath), so text appended after blank lines can turn a
+// closed `$$` paragraph into one. An incremental update must re-lex from that
+// paragraph instead of keeping it.
+func TestIncrementalPendingLatexBlockMatchesFullLex(t *testing.T) {
+	for _, source := range []string{
+		"$$\nx\n\n*a **b** c*",
+		"$$\nx\n\na *b*",
+		"\\[\nx\n\n*a*",
+		"$$\n\\alpha\n\n*a*",
+	} {
+		doc := NewDocument()
+		for n := 1; n <= len(source); n++ {
+			if got, want := doc.Update(source[:n]), Lex(source[:n]); !reflect.DeepEqual(got, want) {
+				t.Fatalf("%q prefix %d:\n got %s\nwant %s", source, n, blockKinds(got), blockKinds(want))
+			}
+		}
+	}
+}
