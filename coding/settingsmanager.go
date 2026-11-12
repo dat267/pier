@@ -1717,12 +1717,14 @@ var CacheWarmingModes = []CacheWarmingMode{CacheWarmingOff, CacheWarmingStreamin
 func (m *SettingsManager) GetCacheWarmingMode() CacheWarmingMode {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	// pi v1.5.2 core/settings-defaults.ts: cacheWarming defaults to "idle", and
+	// an unrecognized stored value resolves to the same default.
 	if m.globalSettings.CacheWarming == nil {
-		return CacheWarmingStreaming
+		return CacheWarmingIdle
 	}
 	mode := *m.globalSettings.CacheWarming
 	if !slices.Contains(CacheWarmingModes, mode) {
-		return CacheWarmingStreaming
+		return CacheWarmingIdle
 	}
 	return mode
 }

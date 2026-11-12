@@ -26,18 +26,23 @@ func TestSettingsNewKeysFollowDeclarationOrder(t *testing.T) {
 	}
 }
 
-// An unrecognized stored mode falls back to the default, like upstream's
-// getCacheWarmingMode, whose CACHE_WARMING_MODES guard keeps a hand-edited or
-// foreign value from reaching the warmer (which would then keep warming an
-// idle session instead of stopping it).
+// An unset or unrecognized stored mode falls back to the default, like
+// upstream's getCacheWarmingMode: pi v1.5.2 (b4afdddf) core/settings-defaults.ts
+// has `cacheWarming: "idle"`, and its CACHE_WARMING_MODES guard keeps a
+// hand-edited or foreign value from reaching the warmer.
 func TestSettingsCacheWarmingUnrecognizedModeFallsBack(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	if got := manager.GetCacheWarmingMode(); got != CacheWarmingIdle {
+		t.Fatalf("cache warming = %q, want %q", got, CacheWarmingIdle)
+	}
 	for _, stored := range []string{`"idle "`, `"IDLE"`, `"on"`} {
 		t.Run(stored, func(t *testing.T) {
 			agentDir, projectDir := settingsDirs(t)
 			writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"cacheWarming":`+stored+`}`)
 			manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
-			if got := manager.GetCacheWarmingMode(); got != CacheWarmingStreaming {
-				t.Fatalf("cache warming = %q, want %q", got, CacheWarmingStreaming)
+			if got := manager.GetCacheWarmingMode(); got != CacheWarmingIdle {
+				t.Fatalf("cache warming = %q, want %q", got, CacheWarmingIdle)
 			}
 		})
 	}
