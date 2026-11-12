@@ -180,6 +180,21 @@ func (r *Renderer) block(b *Block, width int, next *Block, styleContext *inlineS
 		lines = append(lines, r.renderTable(b, width, next, styleContext)...)
 
 	case BlockQuote:
+		// With no room for another border ("│ " plus at least one content column),
+		// the nested content renders without one (markdown.ts): each extra level
+		// would otherwise re-wrap every child line at width 1, and the output grows
+		// exponentially with nesting depth.
+		if width < 3 {
+			for index, quoteBlock := range b.Blocks {
+				var nextQuote *Block
+				if index+1 < len(b.Blocks) {
+					nextQuote = b.Blocks[index+1]
+				}
+				lines = append(lines, r.block(quoteBlock, width, nextQuote, styleContext)...)
+			}
+			return lines
+		}
+
 		quoteStyle := func(text string) string { return r.style.Quote(r.style.Italic(text)) }
 		quoteStylePrefix := r.stylePrefixOf(quoteStyle)
 		applyQuoteStyle := func(line string) string {
@@ -190,7 +205,7 @@ func (r *Renderer) block(b *Block, width int, next *Block, styleContext *inlineS
 			return quoteStyle(lineWithReappliedStyle)
 		}
 
-		quoteContentWidth := max(1, width-2)
+		quoteContentWidth := width - 2
 		quoteInlineStyleContext := inlineStyleContext{
 			applyText:   func(text string) string { return text },
 			stylePrefix: quoteStylePrefix,
