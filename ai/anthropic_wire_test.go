@@ -683,3 +683,11 @@ func TestConvertAnthropicMessagesKeepsEmptyThinkingAndData(t *testing.T) {
 		t.Fatalf("assistant = %s\nwant %s", body, want)
 	}
 }
+
+// pi v1.5.2 (b4afdddf, a05e3a077) api/anthropic-messages.ts reports Claude Code
+// 2.1.322 in the OAuth user-agent.
+func TestAnthropicOAuthClaudeCodeVersion(t *testing.T) {
+	if claudeCodeVersion != "2.1.322" {
+		t.Fatalf("claudeCodeVersion = %q, want 2.1.322", claudeCodeVersion)
+	}
+}

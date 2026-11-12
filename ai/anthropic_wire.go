@@ -82,7 +82,7 @@ func GetCacheControl(model *Model, cacheRetention CacheRetention, env ProviderEn
 
 // Stealth mode: mimic Claude Code's tool naming exactly.
 
-const claudeCodeVersion = "2.1.280"
+const claudeCodeVersion = "2.1.322"
 
 var claudeCodeTools = []string{
 	"Read", "Write", "Edit", "Bash", "Grep", "Glob", "AskUserQuestion",
