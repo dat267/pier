@@ -231,7 +231,28 @@ func TestIncrementalPendingLatexBlockMatchesFullLex(t *testing.T) {
 		doc := NewDocument()
 		for n := 1; n <= len(source); n++ {
 			if got, want := doc.Update(source[:n]), Lex(source[:n]); !reflect.DeepEqual(got, want) {
-				t.Fatalf("%q prefix %d:\n got %s\nwant %s", source, n, blockKinds(got), blockKinds(want))
+				t.Fatalf("%q prefix %d:\n got %v\nwant %v", source, n, blockKinds(got), blockKinds(want))
+			}
+		}
+	}
+}
+
+// A setext underline merges a paragraph with the lines an interrupting block
+// already claimed (block_rest.go lheadingPast, marked 18.0.11's lheading before
+// its paragraph rule), so such a paragraph is not stable until the underline
+// arrives.
+func TestIncrementalSetextHeadingAbsorbsAnInterruptingLine(t *testing.T) {
+	for _, source := range []string{
+		"a\n<!--\n=",
+		"a\n<!--\n===",
+		"| a |\n<!--\n=",
+		"x\n$$y$$\n-",
+		"z\n$$x$$\n- ",
+	} {
+		doc := NewDocument()
+		for n := 1; n <= len(source); n++ {
+			if got, want := doc.Update(source[:n]), Lex(source[:n]); !reflect.DeepEqual(got, want) {
+				t.Fatalf("%q prefix %d:\n got %v\nwant %v", source, n, blockKinds(got), blockKinds(want))
 			}
 		}
 	}

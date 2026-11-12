@@ -190,11 +190,38 @@ func blockExtendable(b *Block, src string) bool {
 		return true
 	case BlockCode:
 		return codeBlockOpen(b.Raw)
+	case BlockParagraph:
+		return pendingLatexOpen(b, src) || paragraphLheadingOpen(b, src)
 	}
 	// A pending display-math opener reaches the end of the source
 	// (markdown.ts tokenizeBlockLatex), so text appended after blank lines can
 	// still turn this block into one.
 	return pendingLatexOpen(b, src)
+}
+
+// paragraphLheadingOpen reports a paragraph an appended setext underline could
+// still turn into a heading together with the lines after it. The reference
+// tries lheading before its paragraph rule and accepts lines past an
+// interrupting one (block_rest.go lheadingPast), so a paragraph an interrupting
+// block already ended stays unstable while every line after it passes that
+// lookahead: appending `=` or `-` then merges them into one heading
+// (`a\n<!--\n=`, `x\n$$y$$\n-`). A blank line, a fence, a heading or any
+// other line the lookahead rejects makes it stable again.
+func paragraphLheadingOpen(b *Block, src string) bool {
+	if b.Kind != BlockParagraph || b.End >= len(src) {
+		return false
+	}
+	for at := b.End; at < len(src); {
+		ln := nextLine(src, at)
+		if !lheadingLookahead(ln.text) {
+			return false
+		}
+		if _, ok := setextLevel(ln.text); ok {
+			return false
+		}
+		at = ln.next
+	}
+	return true
 }
 
 // pendingLatexOpen reports a block the reference's pending display-math rule can
