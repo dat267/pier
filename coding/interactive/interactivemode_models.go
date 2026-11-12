@@ -539,7 +539,8 @@ func (w *SessionWiring) HandleResumeSession(ctx context.Context, sessionPath str
 					w.showStatus("Resumed session")
 					return
 				}
-				w.showStatus("Resumed session in current cwd")
+				// The cwd is named, like upstream (handleResumeSession).
+				w.showStatus("Resumed session in " + cwdOverride)
 				return
 			}
 			var cwdErr *coding.MissingSessionCwdError

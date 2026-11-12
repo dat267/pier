@@ -271,7 +271,9 @@ func TestSessionSelectorWiring(t *testing.T) {
 		onAnswer(coding.MissingSessionCwdContinue)
 	}
 	wiring.HandleResumeSession(context.Background(), "session-c")
-	if statuses[len(statuses)-1] != "Resumed session in current cwd" {
+	// pi v1.5.2 (b4afdddf) interactive-mode.ts handleResumeSession names the cwd:
+	// "Resumed session in ${error.issue.fallbackCwd}".
+	if statuses[len(statuses)-1] != "Resumed session in /here" {
 		t.Fatalf("statuses = %v", statuses)
 	}
 	// Forking into the current cwd switches to the fork and names it.
