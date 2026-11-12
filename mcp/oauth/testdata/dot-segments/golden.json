@@ -1,0 +1,94 @@
+{
+	"source": "WHATWG URL pathname",
+	"base": "https://h",
+	"rows": [
+		{
+			"path": "/a/./b",
+			"pathname": "/a/b"
+		},
+		{
+			"path": "/a/../b",
+			"pathname": "/b"
+		},
+		{
+			"path": "/a/b/..",
+			"pathname": "/a/"
+		},
+		{
+			"path": "/a/b/.",
+			"pathname": "/a/b/"
+		},
+		{
+			"path": "/.",
+			"pathname": "/"
+		},
+		{
+			"path": "/..",
+			"pathname": "/"
+		},
+		{
+			"path": "/../a",
+			"pathname": "/a"
+		},
+		{
+			"path": "/a/../../b",
+			"pathname": "/b"
+		},
+		{
+			"path": "/a/%2e/b",
+			"pathname": "/a/b"
+		},
+		{
+			"path": "/a/%2E%2E/b",
+			"pathname": "/b"
+		},
+		{
+			"path": "/a/.%2e/b",
+			"pathname": "/b"
+		},
+		{
+			"path": "/a/%2e./b",
+			"pathname": "/b"
+		},
+		{
+			"path": "/a/..%2f/b",
+			"pathname": "/a/..%2f/b"
+		},
+		{
+			"path": "/a/%2e%2e%2f/b",
+			"pathname": "/a/%2e%2e%2f/b"
+		},
+		{
+			"path": "/a/...",
+			"pathname": "/a/..."
+		},
+		{
+			"path": "/a/..b",
+			"pathname": "/a/..b"
+		},
+		{
+			"path": "/a/%2e%2e",
+			"pathname": "/"
+		},
+		{
+			"path": "/a/%2e%2e/",
+			"pathname": "/"
+		},
+		{
+			"path": "/a/b/%2e",
+			"pathname": "/a/b/"
+		},
+		{
+			"path": "/a//../b",
+			"pathname": "/a/b"
+		},
+		{
+			"path": "/a/..;/b",
+			"pathname": "/a/..;/b"
+		},
+		{
+			"path": "/a/%2e%2e%2e/b",
+			"pathname": "/a/%2e%2e%2e/b"
+		}
+	]
+}
