@@ -233,11 +233,22 @@ func lexQuoteChunks(lines []string) ([]*Block, string, int) {
 				break
 			}
 		}
-		chunk := text.addChunk(rest[:i])
+		chunk := chunkText(rest[:i])
+		chunkBlocks := lexBlocksIn(chunk)
 		rest = rest[i:]
 		// Every chunk has at least one line, so a leftover tail is consumed.
 		tail = false
-		blocks = appendQuoteChunk(blocks, lexBlocksIn(chunk), text.chunks > 1)
+		if chunk == "" && len(chunkBlocks) == 0 {
+			// A chunk of blank marker lines contributes no text and no blocks. It
+			// must not add a separator newline to the quote's text, and it has no
+			// last block for a continuation to attach to (A531).
+			if len(rest) == 0 {
+				break
+			}
+			continue
+		}
+		text.addChunk(chunk)
+		blocks = appendQuoteChunk(blocks, chunkBlocks, text.chunks > 1)
 		if len(rest) == 0 {
 			break
 		}
@@ -281,36 +292,39 @@ func lexQuoteChunks(lines []string) ([]*Block, string, int) {
 }
 
 // quoteText is the quote's stripped text: its chunk texts joined by newlines,
-// written into one buffer. Each chunk is a slice of that buffer, which stays
-// valid as the builder grows (it only appends, and a reallocation leaves the
-// earlier bytes in place for the slices still holding them).
+// written into one buffer. Chunks are rendered on their own and appended, so a
+// chunk that contributes nothing can be skipped before it adds a separator.
 type quoteText struct {
 	sb     strings.Builder
 	chunks int
 }
 
-// addChunk appends the chunk text of lines and returns it. A chunk's text:
-// blockquoteSetextReplace indents a lazy setext underline (` {0,3}(=+|-+) *`
-// after a newline) to four spaces so it stays paragraph text, then
-// blockquoteSetextReplace2 strips one marker, ` {0,3}>[ \t]?`, from every
-// line.
-func (t *quoteText) addChunk(lines []string) string {
+// chunkText renders one chunk's stripped text. blockquoteSetextReplace indents
+// a lazy setext underline (` {0,3}(=+|-+) *` after a newline) to four spaces so
+// it stays paragraph text, then blockquoteSetextReplace2 strips one marker,
+// ` {0,3}>[ \t]?`, from every line.
+func chunkText(lines []string) string {
+	var sb strings.Builder
+	for i, line := range lines {
+		if i > 0 {
+			sb.WriteByte('\n')
+			if isSetextUnderlineRun(line) {
+				sb.WriteString("    ")
+				line = strings.TrimLeft(line, " ")
+			}
+		}
+		sb.WriteString(stripMarkedQuoteMarker(line))
+	}
+	return sb.String()
+}
+
+// addChunk appends a rendered chunk text, separating chunks with a newline.
+func (t *quoteText) addChunk(chunk string) {
 	if t.chunks > 0 {
 		t.sb.WriteByte('\n')
 	}
 	t.chunks++
-	start := t.sb.Len()
-	for i, line := range lines {
-		if i > 0 {
-			t.sb.WriteByte('\n')
-			if isSetextUnderlineRun(line) {
-				t.sb.WriteString("    ")
-				line = strings.TrimLeft(line, " ")
-			}
-		}
-		t.sb.WriteString(stripMarkedQuoteMarker(line))
-	}
-	return t.sb.String()[start:]
+	t.sb.WriteString(chunk)
 }
 
 func (t *quoteText) String() string { return t.sb.String() }

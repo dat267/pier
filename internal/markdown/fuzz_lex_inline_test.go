@@ -10,6 +10,8 @@ func FuzzLexAndInline(f *testing.F) {
 		"", "# h", "- a\n- b", "> q\n> r", "```go\nx\n```", "| a | b |\n|---|---|\n| 1 | 2 |",
 		"$$x$$ and $y$", "[l](u(v))", "<a href=\"x\">t</a>", "![i](p)", "***", "~~~~",
 		"1. a\n2. b", "\tcode", "a  \nb", "\\[x", "$", "`x", "<!-- c -->", "text\u2028more",
+		// A contentless quote chunk followed by an unmarked line (A531).
+		">\t\n0",
 	}
 	for _, seed := range seeds {
 		f.Add(seed)
