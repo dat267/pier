@@ -129,5 +129,5 @@ value-shaped loops on the UI thread.
 
 Native (Bun FFI) clipboard, Photon image formats, extension mechanics and the
 package manager, full upstream stdio-RPC compatibility (the supported subset is
-documented in `ARCHITECTURE.md`), and Mermaid rendering. See `DECISIONS.md`
-for rationale.
+documented in `ARCHITECTURE.md`), Mermaid rendering, and `/share` (uploading a
+session to Radius or a gist). See `DECISIONS.md` for rationale.
