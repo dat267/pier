@@ -1,0 +1,319 @@
+{
+	"source": "utils/paths.ts",
+	"home": "/home/tester",
+	"base": "/base/dir",
+	"cases": [
+		{
+			"input": "",
+			"normalize": "",
+			"trimmed": "",
+			"spaces": "",
+			"resolve": "/base/dir",
+			"noTilde": "",
+			"cwdRelative": "."
+		},
+		{
+			"input": " ",
+			"normalize": " ",
+			"trimmed": "",
+			"spaces": " ",
+			"resolve": "/base/dir/ ",
+			"noTilde": " ",
+			"cwdRelative": " "
+		},
+		{
+			"input": ".",
+			"normalize": ".",
+			"trimmed": ".",
+			"spaces": ".",
+			"resolve": "/base/dir",
+			"noTilde": ".",
+			"cwdRelative": "."
+		},
+		{
+			"input": "..",
+			"normalize": "..",
+			"trimmed": "..",
+			"spaces": "..",
+			"resolve": "/base",
+			"noTilde": ".."
+		},
+		{
+			"input": "~",
+			"normalize": "/home/tester",
+			"trimmed": "/home/tester",
+			"spaces": "/home/tester",
+			"resolve": "/home/tester",
+			"noTilde": "~"
+		},
+		{
+			"input": "~/",
+			"normalize": "/home/tester",
+			"trimmed": "/home/tester",
+			"spaces": "/home/tester",
+			"resolve": "/home/tester",
+			"noTilde": "~/"
+		},
+		{
+			"input": "~/x",
+			"normalize": "/home/tester/x",
+			"trimmed": "/home/tester/x",
+			"spaces": "/home/tester/x",
+			"resolve": "/home/tester/x",
+			"noTilde": "~/x"
+		},
+		{
+			"input": "~/x/",
+			"normalize": "/home/tester/x/",
+			"trimmed": "/home/tester/x/",
+			"spaces": "/home/tester/x/",
+			"resolve": "/home/tester/x",
+			"noTilde": "~/x/"
+		},
+		{
+			"input": "~//x",
+			"normalize": "/home/tester/x",
+			"trimmed": "/home/tester/x",
+			"spaces": "/home/tester/x",
+			"resolve": "/home/tester/x",
+			"noTilde": "~//x"
+		},
+		{
+			"input": "~x",
+			"normalize": "~x",
+			"trimmed": "~x",
+			"spaces": "~x",
+			"resolve": "/base/dir/~x",
+			"noTilde": "~x"
+		},
+		{
+			"input": "@file",
+			"normalize": "@file",
+			"trimmed": "@file",
+			"spaces": "file",
+			"resolve": "/base/dir/@file",
+			"noTilde": "@file",
+			"cwdRelative": "@file"
+		},
+		{
+			"input": "@",
+			"normalize": "@",
+			"trimmed": "@",
+			"spaces": "",
+			"resolve": "/base/dir/@",
+			"noTilde": "@",
+			"cwdRelative": "@"
+		},
+		{
+			"input": "@/abs/x",
+			"normalize": "@/abs/x",
+			"trimmed": "@/abs/x",
+			"spaces": "/abs/x",
+			"resolve": "/base/dir/@/abs/x",
+			"noTilde": "@/abs/x",
+			"cwdRelative": "@/abs/x"
+		},
+		{
+			"input": "/abs/x",
+			"normalize": "/abs/x",
+			"trimmed": "/abs/x",
+			"spaces": "/abs/x",
+			"resolve": "/abs/x",
+			"noTilde": "/abs/x"
+		},
+		{
+			"input": "rel",
+			"normalize": "rel",
+			"trimmed": "rel",
+			"spaces": "rel",
+			"resolve": "/base/dir/rel",
+			"noTilde": "rel",
+			"cwdRelative": "rel"
+		},
+		{
+			"input": "./rel/",
+			"normalize": "./rel/",
+			"trimmed": "./rel/",
+			"spaces": "./rel/",
+			"resolve": "/base/dir/rel",
+			"noTilde": "./rel/",
+			"cwdRelative": "rel"
+		},
+		{
+			"input": "a/../../b",
+			"normalize": "a/../../b",
+			"trimmed": "a/../../b",
+			"spaces": "a/../../b",
+			"resolve": "/base/b",
+			"noTilde": "a/../../b"
+		},
+		{
+			"input": "file:///tmp/x",
+			"normalize": "/tmp/x",
+			"trimmed": "/tmp/x",
+			"spaces": "/tmp/x",
+			"resolve": "/tmp/x",
+			"noTilde": "/tmp/x"
+		},
+		{
+			"input": "file:///tmp/a%20b",
+			"normalize": "/tmp/a b",
+			"trimmed": "/tmp/a b",
+			"spaces": "/tmp/a b",
+			"resolve": "/tmp/a b",
+			"noTilde": "/tmp/a b"
+		},
+		{
+			"input": "\\\\server\\share",
+			"normalize": "\\\\server\\share",
+			"trimmed": "\\\\server\\share",
+			"spaces": "\\\\server\\share",
+			"resolve": "/base/dir/\\\\server\\share",
+			"noTilde": "\\\\server\\share",
+			"cwdRelative": "\\\\server\\share"
+		},
+		{
+			"input": "C:\\x",
+			"normalize": "C:\\x",
+			"trimmed": "C:\\x",
+			"spaces": "C:\\x",
+			"resolve": "/base/dir/C:\\x",
+			"noTilde": "C:\\x",
+			"cwdRelative": "C:\\x"
+		},
+		{
+			"input": "a b",
+			"normalize": "a b",
+			"trimmed": "a b",
+			"spaces": "a b",
+			"resolve": "/base/dir/a b",
+			"noTilde": "a b",
+			"cwdRelative": "a b"
+		},
+		{
+			"input": "Café",
+			"normalize": "Café",
+			"trimmed": "Café",
+			"spaces": "Café",
+			"resolve": "/base/dir/Café",
+			"noTilde": "Café",
+			"cwdRelative": "Café"
+		},
+		{
+			"input": "Café",
+			"normalize": "Café",
+			"trimmed": "Café",
+			"spaces": "Café",
+			"resolve": "/base/dir/Café",
+			"noTilde": "Café",
+			"cwdRelative": "Café"
+		},
+		{
+			"input": "a' b",
+			"normalize": "a' b",
+			"trimmed": "a' b",
+			"spaces": "a' b",
+			"resolve": "/base/dir/a' b",
+			"noTilde": "a' b",
+			"cwdRelative": "a' b"
+		},
+		{
+			"input": "x7 AM.png",
+			"normalize": "x7 AM.png",
+			"trimmed": "x7 AM.png",
+			"spaces": "x7 AM.png",
+			"resolve": "/base/dir/x7 AM.png",
+			"noTilde": "x7 AM.png",
+			"cwdRelative": "x7 AM.png"
+		}
+	],
+	"comparisons": [
+		{
+			"parent": "/a/b",
+			"child": "/a/b",
+			"within": true,
+			"equal": true
+		},
+		{
+			"parent": "/a/b",
+			"child": "/a/b/c",
+			"within": true,
+			"equal": false
+		},
+		{
+			"parent": "/a/b",
+			"child": "/a/bc",
+			"within": false,
+			"equal": false
+		},
+		{
+			"parent": "/a/b/",
+			"child": "/a/b/c",
+			"within": true,
+			"equal": false
+		},
+		{
+			"parent": "/a/b",
+			"child": "/a",
+			"within": false,
+			"equal": false
+		},
+		{
+			"parent": "/a/b",
+			"child": "/a/b/../c",
+			"within": false,
+			"equal": false
+		},
+		{
+			"parent": "/",
+			"child": "/x",
+			"within": true,
+			"equal": false
+		},
+		{
+			"parent": "/a/b",
+			"child": "relative",
+			"within": false,
+			"equal": false
+		},
+		{
+			"parent": "/a/b",
+			"child": "/a/b/",
+			"within": true,
+			"equal": true
+		},
+		{
+			"parent": ".",
+			"child": "./x",
+			"within": true,
+			"equal": false
+		}
+	],
+	"shortened": [
+		{
+			"path": "/home/tester/x",
+			"home": "/home/tester",
+			"result": "~/x"
+		},
+		{
+			"path": "/home/tester",
+			"home": "/home/tester",
+			"result": "~"
+		},
+		{
+			"path": "/home/testerx",
+			"home": "/home/tester",
+			"result": "/home/testerx"
+		},
+		{
+			"path": "rel",
+			"home": "/home/tester",
+			"result": "rel"
+		},
+		{
+			"path": "/home/tester/x/y",
+			"home": "/home/tester",
+			"result": "~/x/y"
+		}
+	]
+}
