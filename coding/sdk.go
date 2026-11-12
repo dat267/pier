@@ -438,7 +438,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 
 	// The session stream function applies the settings-backed request options
 	// and restarts cache warming from session requests.
-	cacheWarmer := NewCacheWarmer(nil, sessionManager, func() CacheWarmingMode {
+	cacheWarmer := NewCacheWarmer(cacheWarmingStreamFn(modelRuntime), sessionManager, func() CacheWarmingMode {
 		return settingsManager.GetCacheWarmingMode()
 	})
 	buildRequestOptions := func(requestModel *ai.Model, requestOptions *ai.SimpleStreamOptions) *ai.SimpleStreamOptions {
@@ -652,6 +652,15 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		DefaultSyncMessage:   defaultSync.Message,
 		DefaultSyncWarning:   defaultSync.Warning,
 	}, nil
+}
+
+// cacheWarmingStreamFn streams a refresh through the model runtime. pi v1.5.2
+// core/sdk.ts:334 gives the warmer the runtime itself, so a refresh never
+// restarts warming and ignores a session's StreamFn override.
+func cacheWarmingStreamFn(runtime *ModelRuntime) func(*ai.Model, ai.TranscriptContext, *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+	return func(model *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		return runtime.StreamSimple(model, ai.Context{Messages: context.Messages}, &ai.ModelsSimpleStreamOptions{SimpleStreamOptions: *options})
+	}
 }
 
 func derefString(value *string) string {
