@@ -711,17 +711,15 @@ func formatCacheWarmingDecisionTime(nextWarmAt int64, now int64) string {
 	return fmt.Sprintf("Decision in %s", strings.Join(parts, " "))
 }
 
-// FormatCacheWarmingUsage renders the one-line transcript text for persisted
-// cache-warming usage.
-func FormatCacheWarmingUsage(entry *SessionEntry) string {
-	note := ""
-	if entry.Note != nil && *entry.Note != "" {
-		note = fmt.Sprintf(" (%s)", *entry.Note)
+// FormatCacheWarmingUsage renders the one-line transcript text for cache-warming
+// spend. One line covers one or more consecutive refreshes (upstream
+// cache-warmer.ts formatCacheWarmingUsage takes the cumulative cost).
+func FormatCacheWarmingUsage(totalCost float64, note string) string {
+	noteText := ""
+	if note != "" {
+		noteText = fmt.Sprintf(" (%s)", note)
 	}
-	if entry.Usage == nil {
-		return fmt.Sprintf("Cache warmed%s: $0", note)
-	}
-	cost := ai.JSNumberToFixed(entry.Usage.Cost.Total, 6)
+	cost := ai.JSNumberToFixed(totalCost, 6)
 	// Trim trailing zeroes in the tail while keeping at least three decimals.
 	if dot := strings.Index(cost, "."); dot != -1 {
 		tail := strings.TrimRight(cost[dot+1:], "0")
@@ -730,5 +728,5 @@ func FormatCacheWarmingUsage(entry *SessionEntry) string {
 		}
 		cost = cost[:dot+1] + tail
 	}
-	return fmt.Sprintf("Cache warmed%s: $%s", note, cost)
+	return fmt.Sprintf("Cache warmed%s: $%s", noteText, cost)
 }

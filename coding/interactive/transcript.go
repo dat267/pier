@@ -94,6 +94,9 @@ type TranscriptRenderer struct {
 	lastStatusText           *ThemedText
 	lastStatusMessage        string
 	managedToolStatusStarted bool
+	// cacheWarmingNotice totals consecutive cache refreshes into the trailing
+	// warming line (upstream addCacheWarmingUsage).
+	cacheWarmingNotice *cacheWarmingNotice
 
 	// Lazy materialization: on a large session load only the last window of
 	// components attaches to Chat immediately (the visible bottom); the rest
@@ -945,14 +948,42 @@ func placeReplayedBashFrames(items []RenderSessionItem, entryTimes []int64) ([]R
 	return mergedItems, mergedTimes
 }
 
-// AddCacheWarmingUsage renders a cache-warming usage entry.
+// cacheWarmingNotice is the trailing warming line and the spend it totals.
+type cacheWarmingNotice struct {
+	component *ThemedText
+	total     float64
+	note      string
+}
+
+// AddCacheWarmingUsage renders a cache-warming usage entry. Back-to-back
+// refreshes land on the trailing line with the cumulative cost (upstream
+// interactive-mode addCacheWarmingUsage).
 func (r *TranscriptRenderer) AddCacheWarmingUsage(entry *coding.SessionEntry) {
 	if r.Settings == nil || !r.Settings.GetShowCacheMissNotices() {
 		return
 	}
-	usage := coding.FormatCacheWarmingUsage(entry)
+	total := 0.0
+	if entry.Usage != nil {
+		total = entry.Usage.Cost.Total
+	}
+	note := ""
+	if entry.Note != nil {
+		note = *entry.Note
+	}
+	previous := r.cacheWarmingNotice
+	children := r.Chat.Children
+	if previous != nil && len(children) > 0 && children[len(children)-1] == tui.Component(previous.component) && previous.note == note {
+		previous.total += total
+		previous.component.Invalidate()
+		return
+	}
+	notice := &cacheWarmingNotice{total: total, note: note}
+	notice.component = NewThemedText(func() string {
+		return ActiveTheme().Fg("dim", coding.FormatCacheWarmingUsage(notice.total, notice.note))
+	}, 1, 0)
+	r.cacheWarmingNotice = notice
 	r.Chat.AddChild(tui.NewSpacer(1))
-	r.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg("dim", usage) }, 1, 0))
+	r.Chat.AddChild(notice.component)
 }
 
 // AddCompactionCostNotice renders a compaction/branch-summary billing notice.

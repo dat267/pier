@@ -261,7 +261,12 @@ func TestCacheWarmerEconomicsAndWarm(t *testing.T) {
 
 	// The usage text renders the trimmed cost.
 	entries := manager.GetEntries()
-	text := FormatCacheWarmingUsage(&entries[len(entries)-1])
+	last := &entries[len(entries)-1]
+	note := ""
+	if last.Note != nil {
+		note = *last.Note
+	}
+	text := FormatCacheWarmingUsage(last.Usage.Cost.Total, note)
 	// The forced decision is an extension override, which the usage note carries.
 	if !strings.HasPrefix(text, "Cache warmed (extension override): $0.0003") {
 		t.Fatalf("text = %q", text)
@@ -461,8 +466,7 @@ func TestFormatDollarsUsesJSFixed(t *testing.T) {
 
 // Upstream uses toFixed(6), which rounds half away from zero.
 func TestFormatCacheWarmingUsageUsesJSFixed(t *testing.T) {
-	entry := &SessionEntry{Usage: &ai.Usage{Cost: ai.UsageCost{Total: 0.0078125}}}
-	if got := FormatCacheWarmingUsage(entry); got != "Cache warmed: $0.007813" {
+	if got := FormatCacheWarmingUsage(0.0078125, ""); got != "Cache warmed: $0.007813" {
 		t.Fatalf("text = %q; want $0.007813", got)
 	}
 }
