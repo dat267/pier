@@ -6,7 +6,7 @@ import (
 )
 
 // TestEditorSanitizesTextOnEntry pins the editor against terminal control
-// injection through its buffer (D452, TODO A503). The editor draws its buffer,
+// injection through its buffer (D452). The editor draws its buffer,
 // and text can arrive from a paste or a completion rather than a keystroke, which
 // never carries a raw escape byte. Reference: pi v1.5.0 f9a26365 editor.ts
 // inserts the text it is given, as the port did.
