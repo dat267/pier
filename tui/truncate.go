@@ -314,7 +314,11 @@ func SliceWithWidth(line string, startCol int, length int, strict bool) SlicedLi
 					pendingAnsi = ""
 				}
 				result.WriteString(code)
-			} else if currentCol < startCol {
+			} else if currentCol < startCol && !strings.HasPrefix(code, "\x1b_") {
+				// APC sequences (the cursor marker, a kitty command) are positional
+				// one-shot commands, not persistent style, so a code before the
+				// range carries over only when it is not APC (upstream
+				// sliceWithWidth).
 				pendingAnsi += code
 			}
 			i += codeLength
