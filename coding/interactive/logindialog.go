@@ -186,18 +186,6 @@ func (c *LoginDialogComponent) ShowAuth(url string, instructions string) {
 	})
 }
 
-// loginWebLink renders text as an ST-terminated terminal hyperlink to url when
-// url is a web URL, else as plain text (upstream webLink). The framing is the
-// renderer's own (tui.Hyperlink), so the dialog holds no escape string of its
-// own that untrusted text could end early.
-func loginWebLink(text, url string) string {
-	normalized, ok := coding.WebURL(url)
-	if !ok {
-		return text
-	}
-	return tui.Hyperlink(text, normalized)
-}
-
 // ShowDeviceCode shows the device-code verification URL and user code.
 func (c *LoginDialogComponent) ShowDeviceCode(verificationURI string, userCode string) {
 	c.runOnUI(func() {
@@ -206,13 +194,13 @@ func (c *LoginDialogComponent) ShowDeviceCode(verificationURI string, userCode s
 		c.contentContainer.Clear()
 		c.contentContainer.AddChild(tui.NewSpacer(1))
 		displayURL := coding.DisplayURL(verificationURI)
-		c.contentContainer.AddChild(tui.NewText(theme.Fg("accent", loginWebLink(displayURL, verificationURI)), 1, 0, nil))
+		c.contentContainer.AddChild(tui.NewText(theme.Fg("accent", webLink(displayURL, verificationURI)), 1, 0, nil))
 
 		clickHint := "Ctrl+click to open"
 		if runtime.GOOS == "darwin" {
 			clickHint = "Cmd+click to open"
 		}
-		c.contentContainer.AddChild(tui.NewText(theme.Fg("dim", loginWebLink(clickHint, verificationURI)), 1, 0, nil))
+		c.contentContainer.AddChild(tui.NewText(theme.Fg("dim", webLink(clickHint, verificationURI)), 1, 0, nil))
 		c.contentContainer.AddChild(tui.NewSpacer(1))
 		c.contentContainer.AddChild(tui.NewText(theme.Fg("warning", "Enter code: "+tui.SanitizeUntrustedText(userCode)), 1, 0, nil))
 		hint := tui.NewTruncatedText("("+KeyHint("tui.select.confirm", "to open browser and copy code")+")", 1, 0)
@@ -374,7 +362,7 @@ func (c *LoginDialogComponent) ShowInfo(message string, links []ai.AuthInfoLink,
 			if link.Label != "" {
 				text = tui.SanitizeUntrustedText(link.Label) + ": " + displayURL
 			}
-			c.contentContainer.AddChild(tui.NewText(theme.Fg("accent", loginWebLink(text, link.URL)), 1, 0, nil))
+			c.contentContainer.AddChild(tui.NewText(theme.Fg("accent", webLink(text, link.URL)), 1, 0, nil))
 		}
 		if showCloseHint {
 			c.contentContainer.AddChild(tui.NewSpacer(1))

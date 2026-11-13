@@ -7324,7 +7324,8 @@ carries no control characters, so ordinary sign-in output is unchanged.
 
 The sign-in URL block (`components/auth-url.ts`) shows the server's URL as both
 the link target and its label; pier sanitizes it and frames it through
-`loginWebLink`, which falls back to plain text when the value is not a web URL,
+`webLink` (`coding/interactive/weblink.go`), which falls back to plain text
+when the value is not a web URL,
 so a control character cannot end the hyperlink early.
 
 The renderer's own framing is the last line of defence: `tui.Hyperlink` drops
@@ -7421,8 +7422,8 @@ the check's response, so a control character in either one retitles the terminal
 of a user who is only being told an update exists.
 
 The port passes both through `tui.SanitizeUntrustedText` (D342) and frames the
-link through `loginWebLink`, which falls back to plain text when the value is
-not a web URL. A real version and release page carry no control character, so
+link through `webLink`, which falls back to plain text when the value is not a
+web URL. A real version and release page carry no control character, so
 the card is unchanged.
 
 `Test:` `TestStoredSessionTextRendersOnlyThemeEscapes/update_notice`.

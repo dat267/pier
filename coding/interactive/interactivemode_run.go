@@ -248,7 +248,7 @@ func (w *RunWiring) ShowNewVersionNotification(release LatestRelease, hyperlinks
 		theme := ActiveTheme()
 		changelogLink := theme.Fg("accent", safeURL)
 		if hyperlinks {
-			changelogLink = loginWebLink(theme.Fg("accent", safeURL), safeURL)
+			changelogLink = webLink(theme.Fg("accent", safeURL), safeURL)
 		}
 		return theme.Fg("muted", "Changelog: ") + changelogLink
 	}, 1, 0))

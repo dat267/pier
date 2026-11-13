@@ -29,7 +29,7 @@ func NewAuthUrlComponent(host tui.RenderRequester, post func(func()), url string
 	// retitle the terminal (D460).
 	safe := tui.SanitizeUntrustedText(url)
 	component := &AuthUrlComponent{Container: &tui.Container{}, url: safe, host: host, post: post}
-	component.AddChild(tui.NewText(ActiveTheme().Fg("accent", loginWebLink(safe, safe)), 1, 0, nil))
+	component.AddChild(tui.NewText(ActiveTheme().Fg("accent", webLink(safe, safe)), 1, 0, nil))
 	component.hint = tui.NewText("", 1, 0, nil)
 	component.AddChild(component.hint)
 	component.setHint(KeyHint("app.message.copy", "to copy"))
@@ -71,7 +71,7 @@ func (c *AuthUrlComponent) setHint(suffix string) {
 	if runtime.GOOS == "darwin" {
 		clickHint = "Cmd+click to open"
 	}
-	c.hint.SetText(theme.Fg("dim", loginWebLink(clickHint, c.url)) + " " + theme.Fg("dim", "•") + " " + suffix)
+	c.hint.SetText(theme.Fg("dim", webLink(clickHint, c.url)) + " " + theme.Fg("dim", "•") + " " + suffix)
 	c.requestRender()
 }
 
