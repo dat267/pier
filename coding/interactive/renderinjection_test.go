@@ -3,6 +3,7 @@ package interactive
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -29,27 +30,83 @@ import (
 // (`ESC_pi:…BEL`).
 func assertOnlyThemeEscapes(t *testing.T, rendered []string) {
 	t.Helper()
+	if err := onlyThemeEscapes(rendered); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// onlyThemeEscapes walks one render's escapes. A hyperlink must be framed: the
+// renderer opens it around text it chose and closes it, so opens and closes
+// alternate across the whole render (a link may span wrapped lines) and none is
+// left open. Text that ends a frame inside a link of its own would otherwise
+// make everything after it clickable.
+func onlyThemeEscapes(rendered []string) error {
+	linkOpen := false
 	for _, line := range rendered {
-		for index := 0; index < len(line); index++ {
-			if line[index] != 0x1b {
+		for pos := 0; pos < len(line); {
+			index := strings.IndexByte(line[pos:], 0x1b)
+			if index < 0 {
+				break
+			}
+			at := pos + index
+			rest := line[at+1:]
+			if strings.HasPrefix(rest, "[") {
+				sgr := sgrPrefix(rest)
+				if sgr == "" || !strings.HasSuffix(sgr, "m") {
+					return fmt.Errorf("rendered a non-theme escape sequence %q in %q", escapeAt(rest), line)
+				}
+				pos = at + 1 + len(sgr)
 				continue
 			}
-			rest := line[index+1:]
-			switch {
-			case strings.HasPrefix(rest, "[") && strings.HasSuffix(sgrPrefix(rest), "m"):
+			if strings.HasPrefix(rest, "]") || strings.HasPrefix(rest, "_pi:") {
+				body, consumed, ok := oscBody(rest)
+				if !ok {
+					return fmt.Errorf("rendered an unterminated escape sequence %q in %q", escapeAt(rest), line)
+				}
+				pos = at + 1 + consumed
+				switch {
+				case strings.HasPrefix(body, "]133;"):
+				case strings.HasPrefix(body, "_pi:"):
+				case strings.HasPrefix(body, "]8;"):
+					uri := body[strings.IndexByte(body, ';')+1:]
+					uri = strings.TrimPrefix(uri, ";")
+					switch {
+					case uri == "":
+						if !linkOpen {
+							return fmt.Errorf("rendered a closing hyperlink with none open in %q", line)
+						}
+						linkOpen = false
+					case linkOpen:
+						return fmt.Errorf("rendered a nested hyperlink in %q", line)
+					default:
+						linkOpen = true
+					}
+				default:
+					return fmt.Errorf("rendered a non-theme OSC sequence %q in %q", body, line)
+				}
 				continue
-			case strings.HasPrefix(rest, "]8;"), strings.HasPrefix(rest, "]133;"), strings.HasPrefix(rest, "\\"):
-				// OSC 8 and OSC 133 come from the renderer (tui.Hyperlink and the
-				// shell-integration zones); an ST terminator closes a hyperlink,
-				// which the renderer always emits itself.
-				continue
-			case strings.HasPrefix(rest, "_pi:"):
-				continue
-			default:
-				t.Fatalf("rendered a non-theme escape sequence %q in %q", escapeAt(rest), line)
 			}
+			return fmt.Errorf("rendered a non-theme escape sequence %q in %q", escapeAt(rest), line)
 		}
 	}
+	if linkOpen {
+		return fmt.Errorf("rendered output ends inside an open hyperlink")
+	}
+	return nil
+}
+
+// oscBody returns the body of an OSC or metadata sequence and how many bytes it
+// occupies after the ESC, terminated by BEL or ST.
+func oscBody(rest string) (string, int, bool) {
+	for index := 1; index < len(rest); index++ {
+		switch {
+		case rest[index] == 0x07:
+			return rest[:index], index + 1, true
+		case rest[index] == 0x1b && index+1 < len(rest) && rest[index+1] == '\\':
+			return rest[:index], index + 2, true
+		}
+	}
+	return "", 0, false
 }
 
 // sgrPrefix returns a CSI sequence's parameters and final byte, so the caller can
@@ -186,4 +243,35 @@ func TestStoredSessionTextRendersOnlyThemeEscapes(t *testing.T) {
 		renderer.ShowStatus(storedPayload)
 		assertOnlyThemeEscapes(t, renderer.Chat.Render(120))
 	})
+}
+
+// TestEscapeWalkerRejectsInjectedFraming keeps the invariant above from
+// passing vacuously: the walker must accept the renderer's own escapes and
+// reject framing that untrusted text would have to supply itself.
+func TestEscapeWalkerRejectsInjectedFraming(t *testing.T) {
+	allowed := map[string][]string{
+		"sgr":       {"\x1b[31mred\x1b[39m"},
+		"hyperlink": {"\x1b]8;;https://a\x1b\\one", "two\x1b]8;;\x1b\\"},
+		"osc 133":   {"\x1b]133;A\x07prompt"},
+		"pier meta": {"\x1b_pi:x\x07text"},
+	}
+	for name, rendered := range allowed {
+		if err := onlyThemeEscapes(rendered); err != nil {
+			t.Errorf("%s: rejected renderer output: %v", name, err)
+		}
+	}
+	rejected := map[string][]string{
+		"osc 52":       {"\x1b]52;c;cGF3bmVk\x07"},
+		"csi erase":    {"\x1b[2J"},
+		"unterminated": {"\x1b]8;;https://evil"},
+		"left open":    {"\x1b]8;;https://evil\x07rest of the frame"},
+		"nested":       {"\x1b]8;;https://a\x07\x1b]8;;https://b\x07"},
+		"stray close":  {"text\x1b]8;;\x07"},
+		"bare st":      {"text\x1b\\"},
+	}
+	for name, rendered := range rejected {
+		if err := onlyThemeEscapes(rendered); err == nil {
+			t.Errorf("%s: accepted injected framing %q", name, rendered)
+		}
+	}
 }
