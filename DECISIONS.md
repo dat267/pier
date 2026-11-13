@@ -7327,9 +7327,15 @@ the link target and its label; pier sanitizes it and frames it through
 `loginWebLink`, which falls back to plain text when the value is not a web URL,
 so a control character cannot end the hyperlink early.
 
+The renderer's own framing is the last line of defence: `tui.Hyperlink` drops
+control characters from the target it is given, because an OSC 8 body ends at ST
+or BEL and a target that a caller did not write would otherwise end the link
+early. An ordinary target, including an empty one, is emitted unchanged.
+
 `Test:` `TestAuthLoginNotifyDropsProviderTerminalControl`,
 `TestLoginDialogDropsProviderTerminalControl`,
-`TestStoredSessionTextRendersOnlyThemeEscapes/auth_url`.
+`TestStoredSessionTextRendersOnlyThemeEscapes/auth_url`,
+`TestHyperlinkKeepsControlCharactersOutOfTheFraming`.
 
 ### D461
 

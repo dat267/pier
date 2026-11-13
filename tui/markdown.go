@@ -667,6 +667,11 @@ var _ Component = (*Markdown)(nil)
 func Hyperlink(text string, url string) string {
 	// Both OSC 8 sequences always end with ST, like upstream: the link text
 	// is payload and must not change the framing (CR-211).
+	//
+	// The body ends at ST or BEL, so a control character in the target would end
+	// the link early and leave the rest of the string as terminal input. The
+	// target is data here: callers pass a URL they did not write (D460, D465).
+	url = SanitizeUntrustedText(url)
 	return "\x1b]8;;" + url + "\x1b\\" + text + "\x1b]8;;\x1b\\"
 }
 

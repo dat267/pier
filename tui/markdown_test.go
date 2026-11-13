@@ -202,3 +202,21 @@ func TestMarkdownCacheAndLatexFallback(t *testing.T) {
 		t.Fatal("unknown command must be unsupported")
 	}
 }
+
+// The framing must survive any URL a caller passes: an OSC 8 body ends at ST or
+// BEL, so a URL carrying one would close the link early and leave the rest of
+// the string as terminal input (D460, D465). Callers sanitize the label; the
+// target is the renderer's own responsibility.
+func TestHyperlinkKeepsControlCharactersOutOfTheFraming(t *testing.T) {
+	hostile := "https://evil.example/\x1b]0;owned\x07done"
+	link := Hyperlink("label", hostile)
+	if strings.Contains(link, "\x1b]0;") || strings.Contains(link, "\x07") {
+		t.Fatalf("framing carried the payload: %q", link)
+	}
+	if !strings.HasPrefix(link, "\x1b]8;;") || !strings.HasSuffix(link, "\x1b]8;;\x1b\\") {
+		t.Fatalf("framing lost its shape: %q", link)
+	}
+	if got, want := Hyperlink("label", "https://ok.example/a?b=c"), "\x1b]8;;https://ok.example/a?b=c\x1b\\label\x1b]8;;\x1b\\"; got != want {
+		t.Fatalf("ordinary URL changed: %q", got)
+	}
+}
