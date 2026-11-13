@@ -1161,3 +1161,21 @@ func TestSummaryContextCannotCloseItsWrapper(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.5.2 (b4afdddf) core/compaction/utils.ts truncateForSummary slices with
+// sliceHead, which never splits a surrogate pair. JSSlice cuts between the two
+// halves, and the lone surrogate decodes to U+FFFD in the summary.
+func TestTruncateForSummaryKeepsSurrogatePairsWhole(t *testing.T) {
+	// 1999 ASCII units then an emoji: the 2000th unit is its high surrogate.
+	text := strings.Repeat("a", 1999) + "😀" + strings.Repeat("b", 10)
+	got := truncateForSummary(text, 2000)
+	if strings.ContainsRune(got, '\uFFFD') {
+		t.Fatalf("summary holds a replacement character: %q", got[len(got)-80:])
+	}
+	if !strings.HasPrefix(got, strings.Repeat("a", 1999)) {
+		t.Fatalf("summary lost its head: %q", got[:20])
+	}
+	if strings.Contains(got, "😀") {
+		t.Fatalf("the cut kept the whole emoji: %q", got[len(got)-80:])
+	}
+}
