@@ -18,6 +18,7 @@ const families = [
 	"exec",
 	"message",
 	"modelsel",
+	"searchtool-parity",
 	"selector",
 	"session",
 	"settings",

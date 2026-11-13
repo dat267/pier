@@ -1,0 +1,455 @@
+{
+	"cwd": "/tmp/pier_parity",
+	"cases": {
+		"grep-simple": {
+			"tool": "grep",
+			"args": {
+				"pattern": "foo",
+				"path": "src"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "src/f.go:1: match 1\nsrc/f.go:2: match 2\nsrc/f.go:3: match 3"
+					}
+				],
+				"isError": false
+			}
+		},
+		"grep-no-path": {
+			"tool": "grep",
+			"args": {
+				"pattern": "foo"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "src/a.go:1: foo"
+					}
+				],
+				"isError": false
+			}
+		},
+		"grep-glob-limit": {
+			"tool": "grep",
+			"args": {
+				"pattern": "foo",
+				"path": "",
+				"glob": "*.go",
+				"limit": 20
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "src/a.go:1: foo"
+					}
+				],
+				"isError": false
+			}
+		},
+		"grep-missing-pattern": {
+			"tool": "grep",
+			"args": {
+				"path": "src"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "x"
+					}
+				],
+				"isError": false
+			}
+		},
+		"grep-many-lines": {
+			"tool": "grep",
+			"args": {
+				"pattern": "foo"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "src/f.go:1: match 1\nsrc/f.go:2: match 2\nsrc/f.go:3: match 3\nsrc/f.go:4: match 4\nsrc/f.go:5: match 5\nsrc/f.go:6: match 6\nsrc/f.go:7: match 7\nsrc/f.go:8: match 8\nsrc/f.go:9: match 9\nsrc/f.go:10: match 10\nsrc/f.go:11: match 11\nsrc/f.go:12: match 12\nsrc/f.go:13: match 13\nsrc/f.go:14: match 14\nsrc/f.go:15: match 15\nsrc/f.go:16: match 16\nsrc/f.go:17: match 17\nsrc/f.go:18: match 18\nsrc/f.go:19: match 19\nsrc/f.go:20: match 20"
+					}
+				],
+				"isError": false
+			}
+		},
+		"grep-many-expanded": {
+			"tool": "grep",
+			"args": {
+				"pattern": "foo"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "src/f.go:1: match 1\nsrc/f.go:2: match 2\nsrc/f.go:3: match 3\nsrc/f.go:4: match 4\nsrc/f.go:5: match 5\nsrc/f.go:6: match 6\nsrc/f.go:7: match 7\nsrc/f.go:8: match 8\nsrc/f.go:9: match 9\nsrc/f.go:10: match 10\nsrc/f.go:11: match 11\nsrc/f.go:12: match 12\nsrc/f.go:13: match 13\nsrc/f.go:14: match 14\nsrc/f.go:15: match 15\nsrc/f.go:16: match 16\nsrc/f.go:17: match 17\nsrc/f.go:18: match 18\nsrc/f.go:19: match 19\nsrc/f.go:20: match 20"
+					}
+				],
+				"isError": false
+			},
+			"expanded": true
+		},
+		"grep-match-limit": {
+			"tool": "grep",
+			"args": {
+				"pattern": "foo"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "src/f.go:1: match 1\nsrc/f.go:2: match 2"
+					}
+				],
+				"isError": false,
+				"details": {
+					"matchLimitReached": 100
+				}
+			}
+		},
+		"grep-bytes-truncation": {
+			"tool": "grep",
+			"args": {
+				"pattern": "foo"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "src/f.go:1: match 1\nsrc/f.go:2: match 2"
+					}
+				],
+				"isError": false,
+				"details": {
+					"truncation": {
+						"content": "",
+						"truncated": true,
+						"truncatedBy": "bytes",
+						"totalLines": 9,
+						"totalBytes": 90000,
+						"outputLines": 2,
+						"outputBytes": 51200,
+						"maxBytes": 51200
+					}
+				}
+			}
+		},
+		"grep-lines-truncated": {
+			"tool": "grep",
+			"args": {
+				"pattern": "foo"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "src/f.go:1: match 1\nsrc/f.go:2: match 2"
+					}
+				],
+				"isError": false,
+				"details": {
+					"linesTruncated": true
+				}
+			}
+		},
+		"grep-all-warnings": {
+			"tool": "grep",
+			"args": {
+				"pattern": "foo"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "src/f.go:1: match 1\nsrc/f.go:2: match 2"
+					}
+				],
+				"isError": false,
+				"details": {
+					"matchLimitReached": 5,
+					"linesTruncated": true,
+					"truncation": {
+						"content": "",
+						"truncated": true,
+						"truncatedBy": "lines",
+						"totalLines": 9,
+						"totalBytes": 900,
+						"outputLines": 2,
+						"outputBytes": 100
+					}
+				}
+			}
+		},
+		"grep-error": {
+			"tool": "grep",
+			"args": {
+				"pattern": "foo"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ripgrep failed"
+					}
+				],
+				"isError": true
+			}
+		},
+		"grep-empty": {
+			"tool": "grep",
+			"args": {
+				"pattern": "foo"
+			},
+			"width": 80,
+			"result": {
+				"content": [],
+				"isError": false
+			}
+		},
+		"grep-duration": {
+			"tool": "grep",
+			"args": {
+				"pattern": "foo"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "src/f.go:1: match 1"
+					}
+				],
+				"isError": false,
+				"durationMs": 1500
+			}
+		},
+		"find-simple": {
+			"tool": "find",
+			"args": {
+				"pattern": "*.go",
+				"path": "src"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "src/a.go\nsrc/b.go"
+					}
+				],
+				"isError": false
+			}
+		},
+		"find-limit": {
+			"tool": "find",
+			"args": {
+				"pattern": "*.go",
+				"path": "",
+				"limit": 10
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a.go"
+					}
+				],
+				"isError": false
+			}
+		},
+		"find-many": {
+			"tool": "find",
+			"args": {
+				"pattern": "*"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "f1.go\nf2.go\nf3.go\nf4.go\nf5.go\nf6.go\nf7.go\nf8.go\nf9.go\nf10.go\nf11.go\nf12.go\nf13.go\nf14.go\nf15.go\nf16.go\nf17.go\nf18.go\nf19.go\nf20.go"
+					}
+				],
+				"isError": false
+			}
+		},
+		"find-many-expanded": {
+			"tool": "find",
+			"args": {
+				"pattern": "*"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "f1.go\nf2.go\nf3.go\nf4.go\nf5.go\nf6.go\nf7.go\nf8.go\nf9.go\nf10.go\nf11.go\nf12.go\nf13.go\nf14.go\nf15.go\nf16.go\nf17.go\nf18.go\nf19.go\nf20.go"
+					}
+				],
+				"isError": false
+			},
+			"expanded": true
+		},
+		"find-result-limit": {
+			"tool": "find",
+			"args": {
+				"pattern": "*"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a.go"
+					}
+				],
+				"isError": false,
+				"details": {
+					"resultLimitReached": 100
+				}
+			}
+		},
+		"find-missing-pattern": {
+			"tool": "find",
+			"args": {},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "x"
+					}
+				],
+				"isError": false
+			}
+		},
+		"ls-simple": {
+			"tool": "ls",
+			"args": {
+				"path": "src"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a.go\nb/"
+					}
+				],
+				"isError": false
+			}
+		},
+		"ls-default-path": {
+			"tool": "ls",
+			"args": {},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a.go"
+					}
+				],
+				"isError": false
+			}
+		},
+		"ls-many": {
+			"tool": "ls",
+			"args": {
+				"path": "src"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "e1\ne2\ne3\ne4\ne5\ne6\ne7\ne8\ne9\ne10\ne11\ne12\ne13\ne14\ne15\ne16\ne17\ne18\ne19\ne20"
+					}
+				],
+				"isError": false
+			}
+		},
+		"ls-many-expanded": {
+			"tool": "ls",
+			"args": {
+				"path": "src"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "e1\ne2\ne3\ne4\ne5\ne6\ne7\ne8\ne9\ne10\ne11\ne12\ne13\ne14\ne15\ne16\ne17\ne18\ne19\ne20"
+					}
+				],
+				"isError": false
+			},
+			"expanded": true
+		},
+		"ls-entry-limit": {
+			"tool": "ls",
+			"args": {
+				"path": "src"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a.go"
+					}
+				],
+				"isError": false,
+				"details": {
+					"entryLimitReached": 500
+				}
+			}
+		},
+		"ls-error": {
+			"tool": "ls",
+			"args": {
+				"path": "nope"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ENOENT"
+					}
+				],
+				"isError": true
+			}
+		},
+		"ls-empty": {
+			"tool": "ls",
+			"args": {
+				"path": "src"
+			},
+			"width": 80,
+			"result": {
+				"content": [],
+				"isError": false
+			}
+		}
+	}
+}
