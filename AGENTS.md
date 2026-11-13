@@ -48,6 +48,7 @@ Packages mirror upstream: `ai`, `agent`, `coding` (including `interactive`),
 ```sh
 just check                                  # gofmt, go mod tidy, vet, tests
 just cross                                  # cross-build and vet CI targets
+just fetch-reference                        # clone the pinned ./pi (gitignored)
 just goldens                                # every node golden regenerates from ./pi
 go test -count=1 ./coding -run TestName
 go test -short ./...                       # skips slower real-binary PTY tests
@@ -66,7 +67,9 @@ packages shuffled, on one CPU and four) and `just test-isolated` (every test
 alone and twice in its process, so none relies on global state such as the
 theme that another test set, or leaves state that breaks its own rerun). Treat race-only failures as bugs, and
 call no func value with a mutex held (`internal/lockcall`). PTY tests use
-`$PIER_TEST_BIN`, then `bin/pier`, then a temporary build. CI also runs
+`$PIER_TEST_BIN`, then `bin/pier`, then a temporary build. The goldens
+generators import the reference's packages, so `just goldens` needs `npm ci` and
+`npm run build` inside `./pi` once; CI does that after `just fetch-reference`. CI also runs
 `just fetch-reference` and `just goldens` (after `npm ci` and `npm run build` in
 `./pi`, which the generators import), so a fixture that no longer regenerates
 from the pin fails the push and not just a local run.
