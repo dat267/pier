@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/tui"
 )
 
 // TestBashToolRenderUpstreamParity pins the shell tool's rendered rows against
@@ -24,6 +25,13 @@ func TestBashToolRenderUpstreamParity(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	InitTheme("dark", false)
+
+	// The collapsed preview's hint carries keyText("app.tools.expand"), so the
+	// row needs the app keybindings; pin them here instead of inheriting the
+	// package's, which another test's manager can replace.
+	previous := tui.GetKeybindings()
+	tui.SetKeybindings(NewAppKeybindingsManager(nil, "").KeybindingsManager)
+	defer tui.SetKeybindings(previous)
 
 	var corpus struct {
 		Cwd   string `json:"cwd"`
