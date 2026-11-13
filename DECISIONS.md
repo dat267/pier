@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D470)
+# Deliberate divergences from pi (D1–D471)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7554,3 +7554,26 @@ compares their write streams in full.
 
 Tests: `TestAltScreenOverWideClampKeepsLineReset`,
 `TestAltScreenDeferredReplayClampKeepsLineReset`, `TestAltScreenAgainstUpstreamGolden`.
+
+### D471
+
+**The pi-schema port is pi v1.5.0 and lags the v1.5.2 pin.**
+
+Reference: pi v1.5.0 (`f9a26365`) `packages/schema/src/coerce.ts`, ported in
+`ai/validation_pi_coerce.go`, and the corpus dumped from that revision
+(`ai/testdata/validation-pi/probes.json`, whose README documents the dump). Three
+rules changed before the pin, and the v1.5.0 corpus cannot see them:
+
+- commit `af79b0c3d` added TypeBox's `tryBigInt`/`tryUndefined`, so a `bigint`
+  schema converts `1` to `"1n"` and `"12"` to `"12n"` instead of rejecting.
+  Pier's `schemaValue` has no bigint kind.
+- the same commit changed `matchesType` to `Number.isFinite(value)`, so a
+  non-finite argument stops matching `"number"`; pier accepts it and the writer
+  emits `null`.
+- the resolver applies the root schema's own `$id` through `baseFor`, which no
+  probe exercises.
+
+Regenerating the corpus needs the upstream dump block, which edits the pinned
+checkout, so the divergence is pinned by tests rather than fixed:
+`TestPiSchemaPortKeepsV150BigIntRejection` and
+`TestPiSchemaPortKeepsV150NonFiniteNumber`.
