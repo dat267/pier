@@ -238,6 +238,31 @@ func TestStoredSessionTextRendersOnlyThemeEscapes(t *testing.T) {
 		assertOnlyThemeEscapes(t, component.Render(120))
 	})
 
+	t.Run("assistant markdown", func(t *testing.T) {
+		// Assistant text goes through the markdown renderer, a different path from
+		// the plain text components above.
+		message := &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{
+			Text: "# " + storedPayload + "\n\n| a | b |\n| - | - |\n| " + storedPayload + " | x |\n",
+		}}}
+		component := NewAssistantMessageComponent(message, false, nil, "Thinking", 0, nil)
+		assertOnlyThemeEscapes(t, component.Render(120))
+	})
+
+	t.Run("compaction summary", func(t *testing.T) {
+		component := NewCompactionSummaryMessageComponent(storedPayload, 1000, nil, 0)
+		assertOnlyThemeEscapes(t, component.Render(120))
+	})
+
+	t.Run("model selector", func(t *testing.T) {
+		catalog := []*ai.Model{{Provider: storedPayload, ID: storedPayload, Name: storedPayload}}
+		component := NewModelSelectorComponent(nil, func(func()) {}, catalog[0],
+			&fakeModelRuntime{models: catalog}, nil, func(*ai.Model) {}, func() {}, "", nil, nil)
+		// The constructor starts a background catalog refresh, and leakcheck fails
+		// a package that leaves it running.
+		defer component.Dispose()
+		assertOnlyThemeEscapes(t, component.Render(120))
+	})
+
 	t.Run("status", func(t *testing.T) {
 		renderer := &TranscriptRenderer{Chat: &tui.Container{}, Display: &DisplayOptions{}}
 		renderer.ShowStatus(storedPayload)
