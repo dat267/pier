@@ -1,0 +1,191 @@
+{
+	"cases": {
+		"single-bool": {
+			"initial": null,
+			"ops": [
+				[
+					"hideThinkingBlock",
+					true
+				]
+			]
+		},
+		"toggle-back": {
+			"initial": null,
+			"ops": [
+				[
+					"hideThinkingBlock",
+					true
+				],
+				[
+					"hideThinkingBlock",
+					false
+				]
+			]
+		},
+		"strings": {
+			"initial": null,
+			"ops": [
+				[
+					"theme",
+					"light"
+				],
+				[
+					"shellPath",
+					"/bin/zsh"
+				]
+			]
+		},
+		"clear-string": {
+			"initial": null,
+			"ops": [
+				[
+					"shellPath",
+					"/bin/zsh"
+				],
+				[
+					"shellPath",
+					null
+				]
+			]
+		},
+		"npm-command": {
+			"initial": null,
+			"ops": [
+				[
+					"npmCommand",
+					[
+						"npm",
+						"--silent"
+					]
+				],
+				[
+					"npmCommand",
+					null
+				]
+			]
+		},
+		"numbers": {
+			"initial": null,
+			"ops": [
+				[
+					"outputPad",
+					3
+				],
+				[
+					"editorPaddingX",
+					2
+				],
+				[
+					"imageWidthCells",
+					42
+				],
+				[
+					"autocompleteMaxVisible",
+					9
+				]
+			]
+		},
+		"enums": {
+			"initial": null,
+			"ops": [
+				[
+					"tuiMode",
+					"fullscreen"
+				],
+				[
+					"steeringMode",
+					"all"
+				],
+				[
+					"transport",
+					"websocket"
+				],
+				[
+					"cacheWarmingMode",
+					"always"
+				],
+				[
+					"doubleEscapeAction",
+					"tree"
+				],
+				[
+					"treeFilterMode",
+					"no-tools"
+				],
+				[
+					"fullscreenScrollbar",
+					"always"
+				],
+				[
+					"fullscreenExitOutput",
+					"clear"
+				]
+			]
+		},
+		"initial-preserved": {
+			"initial": {
+				"theme": "dark",
+				"hideThinkingBlock": true
+			},
+			"ops": [
+				[
+					"outputPad",
+					2
+				]
+			]
+		},
+		"many": {
+			"initial": null,
+			"ops": [
+				[
+					"showCacheMissNotices",
+					true
+				],
+				[
+					"collapseChangelog",
+					false
+				],
+				[
+					"enableInstallTelemetry",
+					false
+				],
+				[
+					"enableSkillCommands",
+					false
+				],
+				[
+					"defaultProjectTrust",
+					"always"
+				],
+				[
+					"defaultProvider",
+					"openai"
+				],
+				[
+					"defaultModel",
+					"gpt-5"
+				],
+				[
+					"compactionEnabled",
+					false
+				],
+				[
+					"retryEnabled",
+					false
+				],
+				[
+					"fullscreenCopyOnSelect",
+					true
+				],
+				[
+					"mermaidRenderingMode",
+					"none"
+				],
+				[
+					"lastChangelogVersion",
+					"0.0.1"
+				]
+			]
+		}
+	}
+}

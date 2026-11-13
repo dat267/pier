@@ -24,6 +24,7 @@ const families = [
 	"selector",
 	"session",
 	"settingsgetters-parity",
+	"settingssetters-parity",
 	"settings",
 	"theme",
 	"transcript-parity",
