@@ -87,8 +87,10 @@ func ListModelsText(models []*ai.Model, searchPattern string) string {
 	rows := make([]modelListRow, 0, len(filtered))
 	for _, model := range filtered {
 		rows = append(rows, modelListRow{
-			provider: model.Provider,
-			model:    model.ID,
+			// A provider or model id comes from provider configuration, so it is
+			// data (D462). Sorting and filtering above use the raw values.
+			provider: tui.SanitizeUntrustedText(model.Provider),
+			model:    tui.SanitizeUntrustedText(model.ID),
 			context:  FormatTokenCount(model.ContextWindow),
 			maxOut:   FormatTokenCount(model.MaxTokens),
 			thinking: yesNo(model.Reasoning),

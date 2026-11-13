@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D461)
+# Deliberate divergences from pi (D1–D462)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7342,3 +7342,20 @@ unchanged, and the user's own typed provider name in the same message was
 already sanitized.
 
 `Test:` `TestAuthLogoutSanitizesStoredProviderIDs`.
+
+### D462
+
+**The model list sanitizes a provider or model id before printing it.**
+
+`Reference:` `packages/coding-agent/src/cli/list-models.ts`, pi v1.5.2
+(b4afdddf). The table prints `provider` and `model` as they arrive from provider
+configuration, which pier reads from `models.json` and the pi.dev catalog, so a
+id carrying `ESC]0;title BEL` or `ESC[2J` reaches the user's terminal when they
+run `--list-models`.
+
+The port passes both columns through `tui.SanitizeUntrustedText` (D342, D461)
+when it builds each row, so the column widths are measured on the sanitized
+text and stay aligned. Sorting and filtering still use the raw values, so the
+order matches upstream. Ids without control characters render unchanged.
+
+`Test:` `TestListModelsTextSanitizesCatalogIdentifiers`.

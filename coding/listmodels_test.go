@@ -185,3 +185,23 @@ func TestListModelsTextSearchFilter(t *testing.T) {
 		t.Errorf("got %q", got)
 	}
 }
+
+// D462: provider and model ids come from provider configuration, which pier
+// reads from models.json and the pi.dev catalog, so they are data even though
+// they are printed to a terminal by a CLI command rather than the renderer.
+func TestListModelsTextSanitizesCatalogIdentifiers(t *testing.T) {
+	hostile := "evil\x1b]0;owned\x07"
+	got := ListModelsText([]*ai.Model{{
+		Provider: hostile, ID: "m\x1b[2Jx", ContextWindow: 200_000, MaxTokens: 8_192,
+	}}, "")
+	if strings.ContainsAny(got, "\x1b\x07") {
+		t.Fatalf("catalog identifier reached the terminal: %q", got)
+	}
+	if !strings.Contains(got, "evil") || !strings.Contains(got, "mx") {
+		t.Fatalf("sanitizing dropped the identifier text: %q", got)
+	}
+	control := ListModelsText([]*ai.Model{{Provider: "evil", ID: "mx", ContextWindow: 200_000, MaxTokens: 8_192}}, "")
+	if got != control {
+		t.Fatalf("clean identifiers changed the table:\n%q\n%q", got, control)
+	}
+}
