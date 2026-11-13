@@ -379,15 +379,15 @@ func itoa(n int) string {
 	return string(buf[i:])
 }
 
-// The emphasis cases added for v1.4.0 b2d0da6fe were generated with marked
-// 18.0.11 plus marked-cjk-friendly 0.1.2 (upstream's markdown.ts pipeline):
+// The golden is generated from the pinned reference's own markdown pipeline
+// (marked 18.0.11 plus marked-cjk-friendly 0.1.2, the LaTeX extensions and
+// trimPartialClosingFences in tui/src/components/markdown.ts):
 //
-//	node -e '...' > cases   # lex tui/testdata/md_corpus.json, project tokens
+//	node --experimental-strip-types tui/testdata/md/generate.mjs ./pi
 //
-// The projection mirrors projectBlock/projectInline above; the LaTeX extension
-// and trimPartialClosingFences are pier/upstream wrapper behaviors that the
-// generator does not apply, so those existing lines were kept as generated
-// earlier.
+// It rewrites tui/testdata/md_golden.txt in place, and `just goldens` runs it,
+// so a case that stops matching the pin fails the gate. The projection mirrors
+// projectBlock/projectInline above.
 func TestMarkedGoldenParityCoversCJKEmphasis(t *testing.T) {
 	corpus := loadGoldenCorpus(t)
 	golden := loadGolden(t)
