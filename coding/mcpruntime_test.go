@@ -850,3 +850,18 @@ func TestMcpToolProgressTextFormatsNumbersLikeJavaScript(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.5.2 (b4afdddf) extensions/mcp/runtime.ts expandHome also expands a
+// Windows home reference, `~\…`, which the port only did for `~/…`.
+func TestExpandMcpHomeHandlesWindowsSeparator(t *testing.T) {
+	home := t.TempDir()
+	if got, want := expandMcpHomeOn(`~\bin\server.exe`, home, "windows"), filepath.Join(home, `bin\server.exe`); got != want {
+		t.Fatalf(`~\ = %q, want %q`, got, want)
+	}
+	if got := expandMcpHomeOn(`~\bin`, home, "linux"); got != `~\bin` {
+		t.Fatalf("linux kept the Windows form: %q", got)
+	}
+	if got, want := expandMcpHomeOn("~/work", home, "windows"), filepath.Join(home, "work"); got != want {
+		t.Fatalf("~/ on windows = %q, want %q", got, want)
+	}
+}

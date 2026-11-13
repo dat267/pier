@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -799,10 +800,15 @@ func expandMcpHome(value string) string {
 	if err != nil {
 		return value
 	}
+	return expandMcpHomeOn(value, home, runtime.GOOS)
+}
+
+// expandMcpHomeOn is expandHome for one platform: Windows also accepts `~\…`.
+func expandMcpHomeOn(value string, home string, goos string) string {
 	if value == "~" {
 		return home
 	}
-	if strings.HasPrefix(value, "~/") {
+	if strings.HasPrefix(value, "~/") || (goos == "windows" && strings.HasPrefix(value, `~\`)) {
 		return filepath.Join(home, value[2:])
 	}
 	return value
