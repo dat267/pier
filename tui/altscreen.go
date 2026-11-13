@@ -286,6 +286,7 @@ func NewAltScreen(terminal Terminal, showHardwareCursor bool, logDirectory strin
 	screen.LogDirectory = logDirectory
 	screen.DoRender = screen.doRender
 	screen.OnResetRenderState = screen.resetRenderState
+	screen.OnAnimationFrame = screen.AnimationFrame
 	screen.OnBeforeTerminalStart = screen.beforeTerminalStart
 	screen.OnBeforeTerminalStop = screen.beforeTerminalStop
 	screen.OnAfterTerminalStop = screen.afterTerminalStop

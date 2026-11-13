@@ -116,6 +116,11 @@ type Renderer struct {
 	OnBeforeTerminalStop  func(options TuiStopOptions)
 	OnAfterTerminalStop   func(options TuiStopOptions)
 	OnResetRenderState    func()
+	// OnAnimationFrame lets the screen itself animate. The walk starts at the
+	// mounted roots, and the screen is the renderer rather than a child, so a
+	// screen-level deadline (a flash expiry, a held selection drag) would
+	// otherwise never be evaluated; upstream's TuiBase owns those timers.
+	OnAnimationFrame func(now time.Time) (bool, time.Duration)
 	// MountedRoots overrides the roots used by mount checks and Invalidate
 	// (upstream's getMountedRoots override).
 	MountedRoots func() []Component
@@ -253,9 +258,10 @@ func (t *Renderer) RawChildren() []Component {
 	return t.Children
 }
 
-// NextAnimation reports whether any mounted component animates and how long
-// until its next frame. Components own no timers: the owner renders and asks
-// again (stage 4).
+// NextAnimation reports whether anything animates and how long until its next
+// frame. Components own no timers: the owner renders and asks again (stage 4).
+// The screen's own frame counts too: a flash deadline and a held selection drag
+// belong to the screen, which is the renderer rather than a mounted child.
 func (t *Renderer) NextAnimation() (bool, time.Duration) {
 	now := t.clock()
 	if t.animationTicks == nil {
@@ -272,7 +278,14 @@ func (t *Renderer) NextAnimation() (bool, time.Duration) {
 		t.animationRevision = revision
 		t.animationWalkedAt = now
 	}
-	return evaluateAnimators(t.animationAnimators, now, t.animationTicks)
+	want, delay := evaluateAnimators(t.animationAnimators, now, t.animationTicks)
+	if t.OnAnimationFrame != nil {
+		screenWant, screenDelay := t.OnAnimationFrame(now)
+		if screenWant && (!want || delay <= 0 || (screenDelay > 0 && screenDelay < delay)) {
+			want, delay = true, screenDelay
+		}
+	}
+	return want, delay
 }
 
 // animationWalkBox bounds how long the cached animator list is trusted.
