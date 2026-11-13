@@ -122,6 +122,30 @@ reference-fetch:
 	git -C pi fetch --tags --quiet origin
 	@echo "fetched upstream tags into pi"
 
+# Clone the pinned reference into ./pi (gitignored) when it is missing or elsewhere.
+fetch-reference:
+	#!/usr/bin/env bash
+	set -euo pipefail
+
+	line="$(grep -m1 'upstream implementation (v' AGENTS.md)"
+	tag="$(sed -n 's/.*upstream implementation (\(v[0-9.]*\),.*/\1/p' <<<"$line")"
+	pin="$(sed -n 's/.*`\([0-9a-f]*\)`.*/\1/p' <<<"$line")"
+	if [[ -z $tag || -z $pin ]]; then
+		echo "fetch-reference: no pin line in AGENTS.md" >&2
+		exit 1
+	fi
+	if [[ -d pi/.git ]] && [[ "$(git -C pi rev-parse HEAD)" == "$pin"* ]]; then
+		echo "fetch-reference: ./pi is at $tag"
+		exit 0
+	fi
+	rm -rf pi
+	git clone --quiet --depth 1 --branch "$tag" https://github.com/earendil-works/pi pi
+	if [[ "$(git -C pi rev-parse HEAD)" != "$pin"* ]]; then
+		echo "fetch-reference: cloned $tag is not $pin" >&2
+		exit 1
+	fi
+	echo "fetch-reference: cloned $tag"
+
 # Reads local state only, so it works offline; `just reference-fetch` refreshes the
 # tags it can see. It fails when the checkout is at another tag, because that is the
 # state in which an "against upstream" review quietly becomes wrong.

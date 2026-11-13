@@ -34,6 +34,21 @@ jobs:
       - name: vet
         run: go vet ./...
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - uses: extractions/setup-just@v2
+
+      - name: reference
+        # ./pi is gitignored; the golden generators read the pinned checkout.
+        run: just fetch-reference
+
+      - name: goldens
+        # Every fixture regenerates byte for byte from the pinned ./pi, so a diff
+        # here means the port drifted from the reference.
+        run: just goldens
+
       - name: build pier (used by the real-binary PTY tests)
         run: go build -o pier .
 
