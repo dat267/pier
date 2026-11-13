@@ -124,6 +124,11 @@ value-shaped loops on the UI thread.
   a random id or a temp path, freeze it in the generator (`coding/testdata/
   session-roundtrip/generate.mjs` patches `Date` and redirects `node:crypto`),
   so a diff means a real change.
+  `just goldens` runs every generator with no arguments: one whose fixture is
+  named `golden.json` is compared on stdout, one named otherwise is run and
+  must leave the tree unchanged, and one that cannot run offline is named as
+  uncovered (`internal/markdown/testdata/angle-html` needs `marked@18.0.11` and
+  `marked-cjk-friendly@0.1.2` installed).
 
 ## Out of scope
 

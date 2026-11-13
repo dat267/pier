@@ -179,9 +179,39 @@ goldens:
 
 	checked=0
 	failed=0
+	notcovered=""
 	while IFS= read -r gen; do
 		golden="$(dirname "$gen")/golden.json"
-		[[ -f "$golden" ]] || continue
+		if [[ ! -f "$golden" ]]; then
+			# A generator whose fixture has another name (fixtures.json,
+			# cases.json) or is written in place: run it, then require the run to
+			# leave the tree alone (in-place generators) or to print the committed
+			# fixture (stdout generators).
+			dir="$(dirname "$gen")"
+			if ! node --experimental-strip-types "$gen" >"$tmp/out" 2>"$tmp/err"; then
+				# Cannot run offline (it needs an npm install of the reference's
+				# own dependencies); name it instead of skipping silently.
+				notcovered+="$dir "
+				continue
+			fi
+			checked=$((checked + 1))
+			if [[ -n "$(git status --porcelain -- "$dir")" ]]; then
+				echo "drift: $dir changed on regeneration" >&2
+				failed=$((failed + 1))
+				continue
+			fi
+			json="$(ls "$dir"/*.json 2>/dev/null | head -1)"
+			# A fixture on stdout starts with "{" or "[", unlike a log line or a
+			# count that a generating run prints.
+			if [[ -n "$json" ]] && head -c 1 "$tmp/out" | grep -q '[{[]' &&
+				node -e 'JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"))' "$tmp/out" 2>/dev/null; then
+				if ! cmp -s "$tmp/out" "$json"; then
+					echo "drift: $json" >&2
+					failed=$((failed + 1))
+				fi
+			fi
+			continue
+		fi
 		checked=$((checked + 1))
 		if ! node --experimental-strip-types "$gen" ./pi >"$tmp/out" 2>"$tmp/err"; then
 			echo "error: $gen" >&2
@@ -196,6 +226,10 @@ goldens:
 	done < <(git ls-files '*/testdata/*/generate.mjs')
 
 	echo "goldens: $((checked - failed))/$checked regenerate from the pin"
+	if [[ -n "$notcovered" ]]; then
+		echo "goldens: not covered by this gate (no golden.json):"
+		for dir in $notcovered; do echo "  $dir"; done
+	fi
 	[[ "$failed" -eq 0 ]] || exit 1
 
 # Fast-forward when the history is linear, a merge commit when it is not. The tree
