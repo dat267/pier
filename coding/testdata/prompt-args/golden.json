@@ -1,0 +1,3736 @@
+{
+	"substitutions": [
+		{
+			"template": "$1",
+			"args": [
+				"one"
+			],
+			"result": "one"
+		},
+		{
+			"template": "$2",
+			"args": [
+				"one"
+			],
+			"result": ""
+		},
+		{
+			"template": "$1 $2",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "one two"
+		},
+		{
+			"template": "$10",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"ten"
+			],
+			"result": "ten"
+		},
+		{
+			"template": "$ARGUMENTS",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b c"
+		},
+		{
+			"template": "$@",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b c"
+		},
+		{
+			"template": "$0",
+			"args": [
+				"one"
+			],
+			"result": ""
+		},
+		{
+			"template": "$$",
+			"args": [
+				"one"
+			],
+			"result": "$$"
+		},
+		{
+			"template": "${1}",
+			"args": [
+				"one"
+			],
+			"result": "${1}"
+		},
+		{
+			"template": "${1} and $1",
+			"args": [
+				"one"
+			],
+			"result": "${1} and one"
+		},
+		{
+			"template": "${@:1}",
+			"args": [
+				"one",
+				"two",
+				"three"
+			],
+			"result": "one two three"
+		},
+		{
+			"template": "${@:2}",
+			"args": [
+				"one",
+				"two",
+				"three"
+			],
+			"result": "two three"
+		},
+		{
+			"template": "${@:1:2}",
+			"args": [
+				"one",
+				"two",
+				"three"
+			],
+			"result": "one two"
+		},
+		{
+			"template": "${@:2:1}",
+			"args": [
+				"one",
+				"two",
+				"three"
+			],
+			"result": "two"
+		},
+		{
+			"template": "${@:0}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "one two"
+		},
+		{
+			"template": "${@:0:2}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "one two"
+		},
+		{
+			"template": "${@:99}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": ""
+		},
+		{
+			"template": "${@:2:99}",
+			"args": [
+				"one",
+				"two",
+				"three"
+			],
+			"result": "two three"
+		},
+		{
+			"template": "${@:1:0}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": ""
+		},
+		{
+			"template": "${@:3:0}",
+			"args": [
+				"one",
+				"two",
+				"three"
+			],
+			"result": ""
+		},
+		{
+			"template": "${@:1:2} ${@:2}",
+			"args": [
+				"a b",
+				"c",
+				"d"
+			],
+			"result": "a b c c d"
+		},
+		{
+			"template": "${@:99999999999}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": ""
+		},
+		{
+			"template": "${@:1:99999999999}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "one two"
+		},
+		{
+			"template": "${@:18446744073709551616}",
+			"args": [
+				"one"
+			],
+			"result": ""
+		},
+		{
+			"template": "${@:99999999999999999999999999:2}",
+			"args": [
+				"one"
+			],
+			"result": ""
+		},
+		{
+			"template": "${1:-d}",
+			"args": [],
+			"result": "d"
+		},
+		{
+			"template": "${1:-d}",
+			"args": [
+				"one"
+			],
+			"result": "one"
+		},
+		{
+			"template": "${1:-d}",
+			"args": [
+				""
+			],
+			"result": "d"
+		},
+		{
+			"template": "${2:-fallback}",
+			"args": [
+				"one"
+			],
+			"result": "fallback"
+		},
+		{
+			"template": "${@:-none}",
+			"args": [],
+			"result": "none"
+		},
+		{
+			"template": "${@:-none}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "one two"
+		},
+		{
+			"template": "${ARGUMENTS:-none}",
+			"args": [],
+			"result": "none"
+		},
+		{
+			"template": "${ARGUMENTS:-none}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b c"
+		},
+		{
+			"template": "${2:-}",
+			"args": [
+				"one"
+			],
+			"result": ""
+		},
+		{
+			"template": "${@:-}",
+			"args": [],
+			"result": ""
+		},
+		{
+			"template": "$",
+			"args": [
+				"one"
+			],
+			"result": "$"
+		},
+		{
+			"template": "$*",
+			"args": [
+				"one"
+			],
+			"result": "$*"
+		},
+		{
+			"template": "\\$1",
+			"args": [
+				"one"
+			],
+			"result": "\\one"
+		},
+		{
+			"template": "$1$2",
+			"args": [
+				"a",
+				"b"
+			],
+			"result": "ab"
+		},
+		{
+			"template": "plain text",
+			"args": [],
+			"result": "plain text"
+		},
+		{
+			"template": "",
+			"args": [],
+			"result": ""
+		},
+		{
+			"template": "   ",
+			"args": [],
+			"result": "   "
+		},
+		{
+			"template": "é $1 é",
+			"args": [
+				"ü"
+			],
+			"result": "é ü é"
+		},
+		{
+			"template": "line\n$1\nline",
+			"args": [
+				"two"
+			],
+			"result": "line\ntwo\nline"
+		},
+		{
+			"template": "$1\n$2",
+			"args": [
+				"a",
+				"b"
+			],
+			"result": "a\nb"
+		},
+		{
+			"template": "$1-$2-$1",
+			"args": [
+				"a",
+				"b"
+			],
+			"result": "a-b-a"
+		},
+		{
+			"template": "$999",
+			"args": [
+				"a"
+			],
+			"result": ""
+		},
+		{
+			"template": "$12345678901234567890",
+			"args": [
+				"a"
+			],
+			"result": ""
+		},
+		{
+			"template": "$ARGUMENTS$ARGUMENTS",
+			"args": [
+				"x"
+			],
+			"result": "xx"
+		},
+		{
+			"template": "$1:",
+			"args": [
+				"a",
+				"b"
+			],
+			"result": "a:"
+		},
+		{
+			"template": "$1:-1",
+			"args": [
+				"a",
+				"b",
+				"c"
+			],
+			"result": "a:-1"
+		},
+		{
+			"template": "${@:0}$@$$1$2",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "pad 2 3 4 5 6 7 8 9 10 tailpad 2 3 4 5 6 7 8 9 10 tail$pad2"
+		},
+		{
+			"template": "$0${@:99}${1:-d}",
+			"args": [],
+			"result": "d"
+		},
+		{
+			"template": "${@:0}${@:1:0}$3",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "pad 2 3 4 5 6 7 8 9 10 tail3"
+		},
+		{
+			"template": "${@:-d}$0$ARGUMENTS:1$ARGUMENTS$1",
+			"args": [
+				"one"
+			],
+			"result": "oneone:1oneone"
+		},
+		{
+			"template": "${@:2}${@:0}$@",
+			"args": [],
+			"result": ""
+		},
+		{
+			"template": "$${2:-}${2:-}$1",
+			"args": [
+				"x",
+				""
+			],
+			"result": "$x"
+		},
+		{
+			"template": "${ARGUMENTS:-d}$10",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "pad 2 3 4 5 6 7 8 9 10 tail10"
+		},
+		{
+			"template": "${2:-}",
+			"args": [
+				"x",
+				""
+			],
+			"result": ""
+		},
+		{
+			"template": "${@:2:99}${1:-d}${@:0}$ARGUMENTS$1",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "2 3 4 5 6 7 8 9 10 tailpadpad 2 3 4 5 6 7 8 9 10 tailpad 2 3 4 5 6 7 8 9 10 tailpad"
+		},
+		{
+			"template": "$ARGUMENTS",
+			"args": [
+				""
+			],
+			"result": ""
+		},
+		{
+			"template": "${@:99}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": ""
+		},
+		{
+			"template": "$1$2",
+			"args": [],
+			"result": ""
+		},
+		{
+			"template": "${ARGUMENTS:-d}a b${1:-d}${@:1}",
+			"args": [
+				""
+			],
+			"result": "da bd"
+		},
+		{
+			"template": "${1:-d}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b"
+		},
+		{
+			"template": "$10é",
+			"args": [
+				""
+			],
+			"result": "é"
+		},
+		{
+			"template": "*",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "*"
+		},
+		{
+			"template": "${@:1}$2",
+			"args": [
+				"x",
+				""
+			],
+			"result": "x "
+		},
+		{
+			"template": "$1$2\"d\"$0${@:2:99}",
+			"args": [
+				"x",
+				""
+			],
+			"result": "x\"d\""
+		},
+		{
+			"template": "${@:2:99}${@:-d}",
+			"args": [
+				""
+			],
+			"result": "d"
+		},
+		{
+			"template": "$0${@:2:99}$1$ARGUMENTS",
+			"args": [
+				""
+			],
+			"result": ""
+		},
+		{
+			"template": "${@:-d}${1:-d}\"d\"*",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "one twoone\"d\"*"
+		},
+		{
+			"template": "${1:-d}${2:-}",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "pad2"
+		},
+		{
+			"template": "*a btext",
+			"args": [],
+			"result": "*a btext"
+		},
+		{
+			"template": "${@:1:0}${@:2:1}${@:2}\n",
+			"args": [
+				"one"
+			],
+			"result": "\n"
+		},
+		{
+			"template": "${ARGUMENTS:-d}${1:-d}${@:0}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b ca ba b c"
+		},
+		{
+			"template": "$ARGUMENTS$1",
+			"args": [
+				""
+			],
+			"result": ""
+		},
+		{
+			"template": "$1$2",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": "12"
+		},
+		{
+			"template": "${@:2:99}",
+			"args": [
+				""
+			],
+			"result": ""
+		},
+		{
+			"template": "$1",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": "1"
+		},
+		{
+			"template": "$0\n$12",
+			"args": [
+				"one"
+			],
+			"result": "\n"
+		},
+		{
+			"template": "$3$3${@:1}$1",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "one twoone"
+		},
+		{
+			"template": " $ARGUMENTS$1$ARGUMENTS\n",
+			"args": [
+				"x",
+				""
+			],
+			"result": " x xx \n"
+		},
+		{
+			"template": "${@:0}${1}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b c${1}"
+		},
+		{
+			"template": "${@:0}$3",
+			"args": [
+				"one"
+			],
+			"result": "one"
+		},
+		{
+			"template": "$1$2",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "pad2"
+		},
+		{
+			"template": "\"d\" \\$1\"d\"",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "\"d\" \\one\"d\""
+		},
+		{
+			"template": "'q'$1$2",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "'q'onetwo"
+		},
+		{
+			"template": "$2\"d\"",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "2\"d\""
+		},
+		{
+			"template": "${@:0}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b c"
+		},
+		{
+			"template": "a b$10${2:-}$1$2",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "a b102pad2"
+		},
+		{
+			"template": "a b${ARGUMENTS:-d}${@:1:0}$1$2",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "a bone twoonetwo"
+		},
+		{
+			"template": "$2$ARGUMENTS:1*",
+			"args": [
+				"one"
+			],
+			"result": "one:1*"
+		},
+		{
+			"template": "$3*",
+			"args": [],
+			"result": "*"
+		},
+		{
+			"template": "\\$1$1$2${@:2:1}",
+			"args": [],
+			"result": "\\"
+		},
+		{
+			"template": "${2:-}${@:0}$ARGUMENTS${2:-}",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "2pad 2 3 4 5 6 7 8 9 10 tailpad 2 3 4 5 6 7 8 9 10 tail2"
+		},
+		{
+			"template": "a b$0$\\$1",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": "a b$\\1"
+		},
+		{
+			"template": "$12$1$2$10${@:2:99}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a bcc"
+		},
+		{
+			"template": "$10",
+			"args": [
+				"one"
+			],
+			"result": ""
+		},
+		{
+			"template": "${@:1:0}\\$1",
+			"args": [
+				"one"
+			],
+			"result": "\\one"
+		},
+		{
+			"template": "$12é*",
+			"args": [],
+			"result": "é*"
+		},
+		{
+			"template": "$1$2\n",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a bc\n"
+		},
+		{
+			"template": "$ARGUMENTS$1$$${@:2}\"d\"",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b ca b$$c\"d\""
+		},
+		{
+			"template": "${@:0}${@:-d}",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "pad 2 3 4 5 6 7 8 9 10 tailpad 2 3 4 5 6 7 8 9 10 tail"
+		},
+		{
+			"template": "${@:1}${@:1:0}",
+			"args": [
+				""
+			],
+			"result": ""
+		},
+		{
+			"template": "$10",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": ""
+		},
+		{
+			"template": "$0$10",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "10"
+		},
+		{
+			"template": " $ARGUMENTS:1$2",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": " one two:1two"
+		},
+		{
+			"template": "\\$1${@:2:1}$0",
+			"args": [
+				""
+			],
+			"result": "\\"
+		},
+		{
+			"template": "${2:-}",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": "2"
+		},
+		{
+			"template": "$10'q'",
+			"args": [],
+			"result": "'q'"
+		},
+		{
+			"template": "$ARGUMENTS$1",
+			"args": [
+				""
+			],
+			"result": ""
+		},
+		{
+			"template": "${@:99}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": ""
+		},
+		{
+			"template": "${@:2}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "two"
+		},
+		{
+			"template": "$$${@:1:0}",
+			"args": [
+				"one"
+			],
+			"result": "$$"
+		},
+		{
+			"template": "$ARGUMENTS$1$2$ARGUMENTS",
+			"args": [
+				""
+			],
+			"result": ""
+		},
+		{
+			"template": "$ARGUMENTS:1${1:-d}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "one two:1one"
+		},
+		{
+			"template": "\n${@:1:2}\\$1\\$1",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "\npad 2\\pad\\pad"
+		},
+		{
+			"template": "text${@:-d}text${@:1:0}",
+			"args": [
+				"one"
+			],
+			"result": "textonetext"
+		},
+		{
+			"template": "$12",
+			"args": [
+				"x",
+				""
+			],
+			"result": ""
+		},
+		{
+			"template": "${ARGUMENTS:-d} $10 ",
+			"args": [
+				"x",
+				""
+			],
+			"result": "x   "
+		},
+		{
+			"template": "*${@:1:2}",
+			"args": [
+				""
+			],
+			"result": "*"
+		},
+		{
+			"template": "${@:1:0}\"d\"${ARGUMENTS:-d}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "\"d\"a b c"
+		},
+		{
+			"template": "${@:2:99}$$${@:1:0}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "c$$"
+		},
+		{
+			"template": "'q'$ARGUMENTS:1${@:2}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "'q'a b c:1c"
+		},
+		{
+			"template": "${@:1:0}$ARGUMENTS:1${@:-d}",
+			"args": [
+				"x",
+				""
+			],
+			"result": "x :1x "
+		},
+		{
+			"template": "${@:-d}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "one two"
+		},
+		{
+			"template": "*",
+			"args": [],
+			"result": "*"
+		},
+		{
+			"template": "${@:-d}\"d\"",
+			"args": [
+				"x",
+				""
+			],
+			"result": "x \"d\""
+		},
+		{
+			"template": "$3",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "3"
+		},
+		{
+			"template": "${ARGUMENTS:-d} \n",
+			"args": [],
+			"result": "d \n"
+		},
+		{
+			"template": "$1$2",
+			"args": [
+				"one"
+			],
+			"result": "one"
+		},
+		{
+			"template": "${1:-d}a b",
+			"args": [
+				"one"
+			],
+			"result": "onea b"
+		},
+		{
+			"template": "$ARGUMENTS$1 ",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b ca b "
+		},
+		{
+			"template": "$0",
+			"args": [
+				"x",
+				""
+			],
+			"result": ""
+		},
+		{
+			"template": " ${1:-d}a b$12",
+			"args": [
+				""
+			],
+			"result": " da b"
+		},
+		{
+			"template": "$ARGUMENTS${1:-d}${@:0}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "one twooneone two"
+		},
+		{
+			"template": "${@:-d}$\"d\"$2",
+			"args": [
+				""
+			],
+			"result": "d$\"d\""
+		},
+		{
+			"template": "${@:-d}$$1$2",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "one two$onetwo"
+		},
+		{
+			"template": "$2$1",
+			"args": [
+				"x",
+				""
+			],
+			"result": "x"
+		},
+		{
+			"template": "a b$1$2",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "a bonetwo"
+		},
+		{
+			"template": "${2:-}${2:-}",
+			"args": [
+				""
+			],
+			"result": ""
+		},
+		{
+			"template": "$1",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "pad"
+		},
+		{
+			"template": "$${2:-}${@:1:2}",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": "$21 2"
+		},
+		{
+			"template": "'q'${@:2}",
+			"args": [
+				""
+			],
+			"result": "'q'"
+		},
+		{
+			"template": "${2:-}",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "2"
+		},
+		{
+			"template": "$ARGUMENTS$$$0",
+			"args": [
+				"one"
+			],
+			"result": "one$$"
+		},
+		{
+			"template": "${@:2}${@:1}",
+			"args": [],
+			"result": ""
+		},
+		{
+			"template": "$3${2:-}",
+			"args": [
+				""
+			],
+			"result": ""
+		},
+		{
+			"template": "\n${ARGUMENTS:-d}",
+			"args": [],
+			"result": "\nd"
+		},
+		{
+			"template": "${@:1}",
+			"args": [],
+			"result": ""
+		},
+		{
+			"template": "$@$3",
+			"args": [
+				""
+			],
+			"result": ""
+		},
+		{
+			"template": "text$1",
+			"args": [],
+			"result": "text"
+		},
+		{
+			"template": "${1:-d}'q'",
+			"args": [
+				"one"
+			],
+			"result": "one'q'"
+		},
+		{
+			"template": "$2\\$1",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "c\\a b"
+		},
+		{
+			"template": "\n",
+			"args": [
+				"x",
+				""
+			],
+			"result": "\n"
+		},
+		{
+			"template": "'q'${1:-d}$3$2",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "'q'onetwo"
+		},
+		{
+			"template": "é$10",
+			"args": [],
+			"result": "é"
+		},
+		{
+			"template": "$1$2$0",
+			"args": [
+				"x",
+				""
+			],
+			"result": "x"
+		},
+		{
+			"template": "$ARGUMENTS$1${2:-}",
+			"args": [
+				"x",
+				""
+			],
+			"result": "x x"
+		},
+		{
+			"template": "$ARGUMENTS${@:0}$ARGUMENTS:1",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "pad 2 3 4 5 6 7 8 9 10 tailpad 2 3 4 5 6 7 8 9 10 tailpad 2 3 4 5 6 7 8 9 10 tail:1"
+		},
+		{
+			"template": "é$$${ARGUMENTS:-d}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "é$$a b c"
+		},
+		{
+			"template": "$$",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "$$"
+		},
+		{
+			"template": "${1}\"d\"$0\\$1",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "${1}\"d\"\\a b"
+		},
+		{
+			"template": "$ARGUMENTS$1'q'$1$2${@:1}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "one twoone'q'onetwoone two"
+		},
+		{
+			"template": "${1:-d}${@:1}",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": "11 2 3 4 5 6 7 8 9 10 11 12"
+		},
+		{
+			"template": " ${2:-}text",
+			"args": [
+				"x",
+				""
+			],
+			"result": " text"
+		},
+		{
+			"template": "\\$1\\$1",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "\\a b\\a b"
+		},
+		{
+			"template": "${@:-d}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b c"
+		},
+		{
+			"template": "$@${1}",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "pad 2 3 4 5 6 7 8 9 10 tail${1}"
+		},
+		{
+			"template": "$2$@$ARGUMENTS:1$0",
+			"args": [
+				"one"
+			],
+			"result": "oneone:1"
+		},
+		{
+			"template": "text",
+			"args": [],
+			"result": "text"
+		},
+		{
+			"template": "*$1$@$12",
+			"args": [
+				""
+			],
+			"result": "*"
+		},
+		{
+			"template": "$1$1$2${@:1:2}",
+			"args": [],
+			"result": ""
+		},
+		{
+			"template": "${@:1}$1$2",
+			"args": [
+				"one"
+			],
+			"result": "oneone"
+		},
+		{
+			"template": "${1}${@:2:1}$$0",
+			"args": [
+				"x",
+				""
+			],
+			"result": "${1}$"
+		},
+		{
+			"template": "$@$ARGUMENTS",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": "1 2 3 4 5 6 7 8 9 10 11 121 2 3 4 5 6 7 8 9 10 11 12"
+		},
+		{
+			"template": "$@$10",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "one two"
+		},
+		{
+			"template": "${@:-d}*$12",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "pad 2 3 4 5 6 7 8 9 10 tail*"
+		},
+		{
+			"template": "$3${ARGUMENTS:-d}text",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b ctext"
+		},
+		{
+			"template": "${@:0}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b c"
+		},
+		{
+			"template": "$ARGUMENTS${@:1:0}$12",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "pad 2 3 4 5 6 7 8 9 10 tail"
+		},
+		{
+			"template": "$0${@:1}a b${@:1:2}",
+			"args": [
+				""
+			],
+			"result": "a b"
+		},
+		{
+			"template": "$3${@:1:2}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b c"
+		},
+		{
+			"template": "${2:-}",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "2"
+		},
+		{
+			"template": "${@:2:99} ${@:1:2}$1",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "2 3 4 5 6 7 8 9 10 tail pad 2pad"
+		},
+		{
+			"template": "$ARGUMENTS",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "pad 2 3 4 5 6 7 8 9 10 tail"
+		},
+		{
+			"template": "$ARGUMENTS:1$ARGUMENTS",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b c:1a b c"
+		},
+		{
+			"template": "'q'${ARGUMENTS:-d}$${ARGUMENTS:-d}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "'q'a b c$a b c"
+		},
+		{
+			"template": "a ba b${@:99}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "a ba b"
+		},
+		{
+			"template": "$12",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": ""
+		},
+		{
+			"template": "a bé${ARGUMENTS:-d}a b",
+			"args": [
+				"x",
+				""
+			],
+			"result": "a béx a b"
+		},
+		{
+			"template": "${2:-}",
+			"args": [
+				"x",
+				""
+			],
+			"result": ""
+		},
+		{
+			"template": "$ARGUMENTS:1texté${1}",
+			"args": [
+				"x",
+				""
+			],
+			"result": "x :1texté${1}"
+		},
+		{
+			"template": "a b",
+			"args": [
+				"x",
+				""
+			],
+			"result": "a b"
+		},
+		{
+			"template": " a b${@:1:0}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": " a b"
+		},
+		{
+			"template": "$0a b ",
+			"args": [
+				"one"
+			],
+			"result": "a b "
+		},
+		{
+			"template": "$10${ARGUMENTS:-d}$1${@:1}",
+			"args": [
+				""
+			],
+			"result": "d"
+		},
+		{
+			"template": "${@:0} ${2:-}${@:1}",
+			"args": [
+				""
+			],
+			"result": " "
+		},
+		{
+			"template": "*\\$1$3",
+			"args": [
+				"x",
+				""
+			],
+			"result": "*\\x"
+		},
+		{
+			"template": "'q'$1$2",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "'q'onetwo"
+		},
+		{
+			"template": "\n${@:-d}",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "\npad 2 3 4 5 6 7 8 9 10 tail"
+		},
+		{
+			"template": "${2:-}${@:2:99}${@:0}",
+			"args": [
+				""
+			],
+			"result": ""
+		},
+		{
+			"template": "\n$ARGUMENTS$1\"d\"",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": "\n1 2 3 4 5 6 7 8 9 10 11 121\"d\""
+		},
+		{
+			"template": "$@",
+			"args": [
+				"x",
+				""
+			],
+			"result": "x "
+		},
+		{
+			"template": "$12'q'${@:2}",
+			"args": [
+				"x",
+				""
+			],
+			"result": "'q'"
+		},
+		{
+			"template": "$10$10text$ARGUMENTS",
+			"args": [
+				"one"
+			],
+			"result": "textone"
+		},
+		{
+			"template": "${@:1:0}${@:-d}é$ARGUMENTS$1",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": "1 2 3 4 5 6 7 8 9 10 11 12é1 2 3 4 5 6 7 8 9 10 11 121"
+		},
+		{
+			"template": "${ARGUMENTS:-d}text$$${1:-d}",
+			"args": [
+				"x",
+				""
+			],
+			"result": "x text$$x"
+		},
+		{
+			"template": "$ARGUMENTS:1${@:0}",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "pad 2 3 4 5 6 7 8 9 10 tail:1pad 2 3 4 5 6 7 8 9 10 tail"
+		},
+		{
+			"template": "$@",
+			"args": [
+				"one"
+			],
+			"result": "one"
+		},
+		{
+			"template": "${@:1:0}",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": ""
+		},
+		{
+			"template": "a b",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "a b"
+		},
+		{
+			"template": "$$${@:2:99}a b",
+			"args": [
+				"one"
+			],
+			"result": "$$a b"
+		},
+		{
+			"template": "\"d\"$12$ARGUMENTS",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "\"d\"pad 2 3 4 5 6 7 8 9 10 tail"
+		},
+		{
+			"template": "*",
+			"args": [],
+			"result": "*"
+		},
+		{
+			"template": "a b${1}'q'",
+			"args": [
+				""
+			],
+			"result": "a b${1}'q'"
+		},
+		{
+			"template": "${1:-d}",
+			"args": [],
+			"result": "d"
+		},
+		{
+			"template": "\"d\"",
+			"args": [
+				""
+			],
+			"result": "\"d\""
+		},
+		{
+			"template": "$$${@:-d}a b",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "$$one twoa b"
+		},
+		{
+			"template": "$\n",
+			"args": [
+				""
+			],
+			"result": "$\n"
+		},
+		{
+			"template": "${@:2}${@:-d}",
+			"args": [],
+			"result": "d"
+		},
+		{
+			"template": "${ARGUMENTS:-d}$ARGUMENTS$1",
+			"args": [
+				"x",
+				""
+			],
+			"result": "x x x"
+		},
+		{
+			"template": "$1${ARGUMENTS:-d}",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "padpad 2 3 4 5 6 7 8 9 10 tail"
+		},
+		{
+			"template": "${1:-d}$\n$2",
+			"args": [],
+			"result": "d$\n"
+		},
+		{
+			"template": "$ARGUMENTS",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": "1 2 3 4 5 6 7 8 9 10 11 12"
+		},
+		{
+			"template": "${ARGUMENTS:-d}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b c"
+		},
+		{
+			"template": "${1}${@:-d}${@:2}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "${1}a b cc"
+		},
+		{
+			"template": "${ARGUMENTS:-d}",
+			"args": [
+				"one"
+			],
+			"result": "one"
+		},
+		{
+			"template": "${@:2:99}$\n",
+			"args": [
+				""
+			],
+			"result": "$\n"
+		},
+		{
+			"template": "${@:0}$1$3",
+			"args": [
+				"one"
+			],
+			"result": "oneone"
+		},
+		{
+			"template": "${@:2:1} $3${ARGUMENTS:-d}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "two one two"
+		},
+		{
+			"template": "a b${@:0}",
+			"args": [
+				"one"
+			],
+			"result": "a bone"
+		},
+		{
+			"template": "$",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "$"
+		},
+		{
+			"template": "$1",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": "1"
+		},
+		{
+			"template": "${@:1}",
+			"args": [],
+			"result": ""
+		},
+		{
+			"template": "$1\n",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b\n"
+		},
+		{
+			"template": "${2:-}${2:-}${1}",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": "22${1}"
+		},
+		{
+			"template": "$ARGUMENTS$1${@:-d}é",
+			"args": [
+				"x",
+				""
+			],
+			"result": "x xx é"
+		},
+		{
+			"template": "$3",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": ""
+		},
+		{
+			"template": "\"d\"",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "\"d\""
+		},
+		{
+			"template": "${@:2:1}$ARGUMENTS$1",
+			"args": [
+				"one"
+			],
+			"result": "oneone"
+		},
+		{
+			"template": "text",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "text"
+		},
+		{
+			"template": "$10$$$",
+			"args": [
+				""
+			],
+			"result": "$$$"
+		},
+		{
+			"template": "$0$2*$ARGUMENTS$1",
+			"args": [
+				"one"
+			],
+			"result": "*oneone"
+		},
+		{
+			"template": "$ARGUMENTS:1",
+			"args": [
+				"one"
+			],
+			"result": "one:1"
+		},
+		{
+			"template": "${@:-d}${@:1:2}$$",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": "1 2 3 4 5 6 7 8 9 10 11 121 2$$"
+		},
+		{
+			"template": "${1:-d}${@:1:0}$10${1}",
+			"args": [
+				""
+			],
+			"result": "d${1}"
+		},
+		{
+			"template": "${@:2}${@:-d}${@:1:0}${@:2}",
+			"args": [],
+			"result": "d"
+		},
+		{
+			"template": "$$${@:1}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "$$a b c"
+		},
+		{
+			"template": "$$1$2${1:-d}",
+			"args": [
+				"x",
+				""
+			],
+			"result": "$xx"
+		},
+		{
+			"template": "$@\"d\"",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b c\"d\""
+		},
+		{
+			"template": "$@étext${ARGUMENTS:-d}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "one twoétextone two"
+		},
+		{
+			"template": "text\"d\"$0$@",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": "text\"d\"1 2 3 4 5 6 7 8 9 10 11 12"
+		},
+		{
+			"template": "${@:99}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": ""
+		},
+		{
+			"template": "${@:1:0}",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": ""
+		},
+		{
+			"template": "*${@:99}${ARGUMENTS:-d}",
+			"args": [
+				"x",
+				""
+			],
+			"result": "*x "
+		},
+		{
+			"template": "text${1}${@:0}",
+			"args": [
+				"x",
+				""
+			],
+			"result": "text${1}x "
+		},
+		{
+			"template": "${@:-d}\"d\"\"d\"${ARGUMENTS:-d}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "one two\"d\"\"d\"one two"
+		},
+		{
+			"template": "${@:1:0}${2:-}${@:1:0}${2:-}",
+			"args": [
+				"one"
+			],
+			"result": ""
+		},
+		{
+			"template": "texta bé",
+			"args": [
+				"x",
+				""
+			],
+			"result": "texta bé"
+		},
+		{
+			"template": "${1:-d}${@:2}",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": "12 3 4 5 6 7 8 9 10 11 12"
+		},
+		{
+			"template": "é$ARGUMENTS:1\n$10",
+			"args": [
+				"one"
+			],
+			"result": "éone:1\n"
+		},
+		{
+			"template": "${@:1}$ARGUMENTS$3",
+			"args": [
+				""
+			],
+			"result": ""
+		},
+		{
+			"template": "$1${1:-d}$$",
+			"args": [
+				"x",
+				""
+			],
+			"result": "xx$$"
+		},
+		{
+			"template": "$1\n$10$1$2",
+			"args": [],
+			"result": "\n"
+		},
+		{
+			"template": "é texttext",
+			"args": [
+				"x",
+				""
+			],
+			"result": "é texttext"
+		},
+		{
+			"template": "$@${@:1:0}${1:-d}",
+			"args": [
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"11",
+				"12"
+			],
+			"result": "1 2 3 4 5 6 7 8 9 10 11 121"
+		},
+		{
+			"template": "${@:1}$ARGUMENTS$10$ARGUMENTS$1",
+			"args": [
+				"one"
+			],
+			"result": "oneoneoneone"
+		},
+		{
+			"template": "${@:1}${1:-d}${@:99}\"d\"",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "one twoone\"d\""
+		},
+		{
+			"template": "\\$1",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "\\pad"
+		},
+		{
+			"template": "${@:1}${@:2:99}",
+			"args": [
+				"x",
+				""
+			],
+			"result": "x "
+		},
+		{
+			"template": "${@:-d}",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a b c"
+		},
+		{
+			"template": "${1:-d}éa b\"d\"",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "a béa b\"d\""
+		},
+		{
+			"template": "${@:1:0}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": ""
+		},
+		{
+			"template": "${@:1}é$12",
+			"args": [
+				""
+			],
+			"result": "é"
+		},
+		{
+			"template": "${@:99}${@:2}\\$1${2:-}",
+			"args": [
+				"x",
+				""
+			],
+			"result": "\\x"
+		},
+		{
+			"template": "${@:0}\"d\"$2",
+			"args": [
+				"pad",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10",
+				"tail"
+			],
+			"result": "pad 2 3 4 5 6 7 8 9 10 tail\"d\"2"
+		},
+		{
+			"template": "text$@${@:99}$ARGUMENTS:1",
+			"args": [
+				"one"
+			],
+			"result": "textoneone:1"
+		},
+		{
+			"template": "${1:-d}$12$1$2",
+			"args": [
+				"x",
+				""
+			],
+			"result": "xx"
+		},
+		{
+			"template": "${2:-}${1:-d}$ARGUMENTS${@:1:0}",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "twooneone two"
+		},
+		{
+			"template": "$$",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "$$"
+		},
+		{
+			"template": "${@:1:0}*",
+			"args": [
+				"a b",
+				"c"
+			],
+			"result": "*"
+		},
+		{
+			"template": "'q'$ARGUMENTS",
+			"args": [
+				"one"
+			],
+			"result": "'q'one"
+		},
+		{
+			"template": "*",
+			"args": [
+				"one",
+				"two"
+			],
+			"result": "*"
+		},
+		{
+			"template": "\\$1text\"d\"",
+			"args": [],
+			"result": "\\text\"d\""
+		},
+		{
+			"template": "\"d\"$$$1$2${@:2:1}",
+			"args": [
+				""
+			],
+			"result": "\"d\"$$"
+		},
+		{
+			"template": "'q'$ARGUMENTS$1",
+			"args": [
+				""
+			],
+			"result": "'q'"
+		},
+		{
+			"template": "${@:2:99}\"d\"${@:99}",
+			"args": [
+				"x",
+				""
+			],
+			"result": "\"d\""
+		},
+		{
+			"template": "$1${@:2:1}$$",
+			"args": [
+				"x",
+				""
+			],
+			"result": "x$$"
+		},
+		{
+			"template": "a b",
+			"args": [
+				"one"
+			],
+			"result": "a b"
+		}
+	],
+	"argumentParsing": [
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": " ",
+			"result": []
+		},
+		{
+			"input": "one",
+			"result": [
+				"one"
+			]
+		},
+		{
+			"input": "one two",
+			"result": [
+				"one",
+				"two"
+			]
+		},
+		{
+			"input": "  one   two  ",
+			"result": [
+				"one",
+				"two"
+			]
+		},
+		{
+			"input": "'one two' three",
+			"result": [
+				"one two",
+				"three"
+			]
+		},
+		{
+			"input": "\"one two\" three",
+			"result": [
+				"one two",
+				"three"
+			]
+		},
+		{
+			"input": "one\\ two",
+			"result": [
+				"one\\",
+				"two"
+			]
+		},
+		{
+			"input": "\\'quoted\\'",
+			"result": [
+				"\\'quoted\\'"
+			]
+		},
+		{
+			"input": "a'b'c",
+			"result": [
+				"a'b'c"
+			]
+		},
+		{
+			"input": "a\"b\"c",
+			"result": [
+				"a\"b\"c"
+			]
+		},
+		{
+			"input": "'unterminated",
+			"result": [
+				"'unterminated"
+			]
+		},
+		{
+			"input": "\"unterminated",
+			"result": [
+				"\"unterminated"
+			]
+		},
+		{
+			"input": "tab\tseparated",
+			"result": [
+				"tab",
+				"separated"
+			]
+		},
+		{
+			"input": "line\nbreak",
+			"result": [
+				"line",
+				"break"
+			]
+		},
+		{
+			"input": "é ü",
+			"result": [
+				"é",
+				"ü"
+			]
+		},
+		{
+			"input": "''",
+			"result": [
+				""
+			]
+		},
+		{
+			"input": "\"\"",
+			"result": [
+				""
+			]
+		},
+		{
+			"input": "a  b",
+			"result": [
+				"a",
+				"b"
+			]
+		},
+		{
+			"input": "-flag value",
+			"result": [
+				"-flag",
+				"value"
+			]
+		},
+		{
+			"input": "one\\",
+			"result": [
+				"one\\"
+			]
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": "'1",
+			"result": [
+				"'1"
+			]
+		},
+		{
+			"input": "'é'\"1\"bé\n",
+			"result": [
+				"é\"1\"bé"
+			]
+		},
+		{
+			"input": "\n1a1\"",
+			"result": [
+				"1a1\""
+			]
+		},
+		{
+			"input": "'1b1\\ 1",
+			"result": [
+				"'1b1\\",
+				"1"
+			]
+		},
+		{
+			"input": " é\n",
+			"result": [
+				"é"
+			]
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": "\t\\\"a\t\n",
+			"result": [
+				"\\\"a"
+			]
+		},
+		{
+			"input": "\tb '",
+			"result": [
+				"b",
+				"'"
+			]
+		},
+		{
+			"input": "'\na\" ",
+			"result": [
+				"'",
+				"a\""
+			]
+		},
+		{
+			"input": "b",
+			"result": [
+				"b"
+			]
+		},
+		{
+			"input": "b \"b",
+			"result": [
+				"b",
+				"\"b"
+			]
+		},
+		{
+			"input": "  \"aé\"\"b",
+			"result": [
+				"aé\"b"
+			]
+		},
+		{
+			"input": "\\'bbb",
+			"result": [
+				"\\'bbb"
+			]
+		},
+		{
+			"input": "é\\\"\"a\n\t\n",
+			"result": [
+				"é\\\"\"a"
+			]
+		},
+		{
+			"input": "1' \"'\\",
+			"result": [
+				"1'",
+				"\"'\\"
+			]
+		},
+		{
+			"input": "\n b'",
+			"result": [
+				"b'"
+			]
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": "'a\t ",
+			"result": [
+				"'a"
+			]
+		},
+		{
+			"input": "a1a b\"",
+			"result": [
+				"a1a",
+				"b\""
+			]
+		},
+		{
+			"input": " éab\n\n11",
+			"result": [
+				"éab",
+				"11"
+			]
+		},
+		{
+			"input": "\ta\n'",
+			"result": [
+				"a",
+				"'"
+			]
+		},
+		{
+			"input": "béb\\é",
+			"result": [
+				"béb\\é"
+			]
+		},
+		{
+			"input": "éb\t1é\t1ba",
+			"result": [
+				"éb",
+				"1é",
+				"1ba"
+			]
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": " \"\né \t",
+			"result": [
+				"\"",
+				"é"
+			]
+		},
+		{
+			"input": "béa'",
+			"result": [
+				"béa'"
+			]
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": "'\n\t\n1\t",
+			"result": [
+				"'",
+				"1"
+			]
+		},
+		{
+			"input": "b\n'abb\"1",
+			"result": [
+				"b",
+				"'abb\"1"
+			]
+		},
+		{
+			"input": "b\tb1\nb\n\t",
+			"result": [
+				"b",
+				"b1",
+				"b"
+			]
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": "\né\té\"\n",
+			"result": [
+				"é",
+				"é\""
+			]
+		},
+		{
+			"input": "1a\\\n",
+			"result": [
+				"1a\\"
+			]
+		},
+		{
+			"input": "é\" \t\taa\"",
+			"result": [
+				"é\"",
+				"aa\""
+			]
+		},
+		{
+			"input": "b1b 1\\\\ba",
+			"result": [
+				"b1b",
+				"1\\\\ba"
+			]
+		},
+		{
+			"input": "\\ a",
+			"result": [
+				"\\",
+				"a"
+			]
+		},
+		{
+			"input": "\\1'\\  \na\"",
+			"result": [
+				"\\1'\\",
+				"a\""
+			]
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": "aa111a",
+			"result": [
+				"aa111a"
+			]
+		},
+		{
+			"input": "\t   \n  ",
+			"result": []
+		},
+		{
+			"input": "é\n\t1aéé1a",
+			"result": [
+				"é",
+				"1aéé1a"
+			]
+		},
+		{
+			"input": "\n\"b\"\\",
+			"result": [
+				"b\\"
+			]
+		},
+		{
+			"input": "\\",
+			"result": [
+				"\\"
+			]
+		},
+		{
+			"input": "é\n\n\\ b",
+			"result": [
+				"é",
+				"\\",
+				"b"
+			]
+		},
+		{
+			"input": "1a'\t1b\\é\"",
+			"result": [
+				"1a'",
+				"1b\\é\""
+			]
+		},
+		{
+			"input": "aa\\a é",
+			"result": [
+				"aa\\a",
+				"é"
+			]
+		},
+		{
+			"input": "\té\tb\\é",
+			"result": [
+				"é",
+				"b\\é"
+			]
+		},
+		{
+			"input": "a\t\t\ta",
+			"result": [
+				"a",
+				"a"
+			]
+		},
+		{
+			"input": "'é\tb é 1",
+			"result": [
+				"'é",
+				"b",
+				"é",
+				"1"
+			]
+		},
+		{
+			"input": "\\\n",
+			"result": [
+				"\\"
+			]
+		},
+		{
+			"input": " \t1a\n",
+			"result": [
+				"1a"
+			]
+		},
+		{
+			"input": "\té\"\nb'a\"",
+			"result": [
+				"é\"",
+				"b'a\""
+			]
+		},
+		{
+			"input": "\"\té",
+			"result": [
+				"\"",
+				"é"
+			]
+		},
+		{
+			"input": "\\é ",
+			"result": [
+				"\\é"
+			]
+		},
+		{
+			"input": "\n'\t\n\"11b\n",
+			"result": [
+				"'",
+				"\"11b"
+			]
+		},
+		{
+			"input": "\\",
+			"result": [
+				"\\"
+			]
+		},
+		{
+			"input": "1é\"",
+			"result": [
+				"1é\""
+			]
+		},
+		{
+			"input": "\\éa\t\"\"",
+			"result": [
+				"\\éa",
+				""
+			]
+		},
+		{
+			"input": "'a",
+			"result": [
+				"'a"
+			]
+		},
+		{
+			"input": "béb\\\\a",
+			"result": [
+				"béb\\\\a"
+			]
+		},
+		{
+			"input": "é é\ta",
+			"result": [
+				"é",
+				"é",
+				"a"
+			]
+		},
+		{
+			"input": "  \"\\",
+			"result": [
+				"\"\\"
+			]
+		},
+		{
+			"input": "\t''é bbé ",
+			"result": [
+				"é",
+				"bbé"
+			]
+		},
+		{
+			"input": "\t\n1\n\"b ",
+			"result": [
+				"1",
+				"\"b"
+			]
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": "\n",
+			"result": []
+		},
+		{
+			"input": "\"'",
+			"result": [
+				"\"'"
+			]
+		},
+		{
+			"input": "'a",
+			"result": [
+				"'a"
+			]
+		},
+		{
+			"input": "\n1\té'\n\"",
+			"result": [
+				"1",
+				"é'",
+				"\""
+			]
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": "b\\é\n ",
+			"result": [
+				"b\\é"
+			]
+		},
+		{
+			"input": "\" \"' a\t1\\",
+			"result": [
+				" '",
+				"a",
+				"1\\"
+			]
+		},
+		{
+			"input": "'\n\"a\"",
+			"result": [
+				"'",
+				"a"
+			]
+		},
+		{
+			"input": "  ééab",
+			"result": [
+				"ééab"
+			]
+		},
+		{
+			"input": "'\\",
+			"result": [
+				"'\\"
+			]
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": "\"\t1 ",
+			"result": [
+				"\"",
+				"1"
+			]
+		},
+		{
+			"input": "'\t1é\t",
+			"result": [
+				"'",
+				"1é"
+			]
+		},
+		{
+			"input": "bb b",
+			"result": [
+				"bb",
+				"b"
+			]
+		},
+		{
+			"input": "\\\t",
+			"result": [
+				"\\"
+			]
+		},
+		{
+			"input": "'\n\tb 1'\"",
+			"result": [
+				"\n\tb 1\""
+			]
+		},
+		{
+			"input": "\"ab\n1\\1\"é",
+			"result": [
+				"ab\n1\\1é"
+			]
+		},
+		{
+			"input": " \n11\\\\",
+			"result": [
+				"11\\\\"
+			]
+		},
+		{
+			"input": " \t\"\"'bé",
+			"result": [
+				"'bé"
+			]
+		},
+		{
+			"input": "1",
+			"result": [
+				"1"
+			]
+		},
+		{
+			"input": "bb\\\né\nb",
+			"result": [
+				"bb\\",
+				"é",
+				"b"
+			]
+		},
+		{
+			"input": "a\"\n",
+			"result": [
+				"a\""
+			]
+		},
+		{
+			"input": "1é1'",
+			"result": [
+				"1é1'"
+			]
+		},
+		{
+			"input": " \"b\t\té\"",
+			"result": [
+				"b\t\té"
+			]
+		},
+		{
+			"input": "b",
+			"result": [
+				"b"
+			]
+		},
+		{
+			"input": "a\\\taba\té",
+			"result": [
+				"a\\",
+				"aba",
+				"é"
+			]
+		},
+		{
+			"input": "é\na\\é",
+			"result": [
+				"é",
+				"a\\é"
+			]
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": "é\"a1",
+			"result": [
+				"é\"a1"
+			]
+		},
+		{
+			"input": "\t",
+			"result": []
+		},
+		{
+			"input": "'\n",
+			"result": [
+				"'"
+			]
+		},
+		{
+			"input": "\\\\ \"\"",
+			"result": [
+				"\\\\",
+				""
+			]
+		},
+		{
+			"input": "ab1béb\\  ",
+			"result": [
+				"ab1béb\\"
+			]
+		},
+		{
+			"input": "\"\"",
+			"result": [
+				""
+			]
+		},
+		{
+			"input": "\t a \nb'\t1",
+			"result": [
+				"a",
+				"b'",
+				"1"
+			]
+		},
+		{
+			"input": "\"\\\t1\\ '",
+			"result": [
+				"\"\\",
+				"1\\",
+				"'"
+			]
+		},
+		{
+			"input": "a\"éééa\néé",
+			"result": [
+				"a\"éééa",
+				"éé"
+			]
+		},
+		{
+			"input": "\n \t",
+			"result": []
+		},
+		{
+			"input": "b\"\t",
+			"result": [
+				"b\""
+			]
+		},
+		{
+			"input": "a' \\a",
+			"result": [
+				"a'",
+				"\\a"
+			]
+		},
+		{
+			"input": "\"é\t'\t",
+			"result": [
+				"\"é",
+				"'"
+			]
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": "\té11 ''b",
+			"result": [
+				"é11",
+				"b"
+			]
+		},
+		{
+			"input": "1 a1\"'b\" ",
+			"result": [
+				"1",
+				"a1\"'b\""
+			]
+		},
+		{
+			"input": "'\nbab\t1\t",
+			"result": [
+				"'",
+				"bab",
+				"1"
+			]
+		},
+		{
+			"input": "\"\t 'aa1\\",
+			"result": [
+				"\"",
+				"'aa1\\"
+			]
+		},
+		{
+			"input": "\n1 \"a",
+			"result": [
+				"1",
+				"\"a"
+			]
+		},
+		{
+			"input": "a",
+			"result": [
+				"a"
+			]
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": "\\\\'",
+			"result": [
+				"\\\\'"
+			]
+		},
+		{
+			"input": " \"\"\"\"\\1",
+			"result": [
+				"\"\"\\1"
+			]
+		},
+		{
+			"input": "\\ a",
+			"result": [
+				"\\",
+				"a"
+			]
+		},
+		{
+			"input": "'éa",
+			"result": [
+				"'éa"
+			]
+		},
+		{
+			"input": " \t ",
+			"result": []
+		},
+		{
+			"input": "\tb11\\'\t",
+			"result": [
+				"b11\\'"
+			]
+		},
+		{
+			"input": "\\\\\néb\" éé",
+			"result": [
+				"\\\\",
+				"éb\"",
+				"éé"
+			]
+		},
+		{
+			"input": " \né'\\a\\b",
+			"result": [
+				"é'\\a\\b"
+			]
+		},
+		{
+			"input": "1'' 1\"",
+			"result": [
+				"1''",
+				"1\""
+			]
+		},
+		{
+			"input": "\\aé\t1\n ",
+			"result": [
+				"\\aé",
+				"1"
+			]
+		},
+		{
+			"input": "''\t\"\tb ",
+			"result": [
+				"",
+				"\"",
+				"b"
+			]
+		},
+		{
+			"input": " \n'\n",
+			"result": [
+				"'"
+			]
+		},
+		{
+			"input": "\\é1\né\t\\b",
+			"result": [
+				"\\é1",
+				"é",
+				"\\b"
+			]
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": "'\t1a",
+			"result": [
+				"'",
+				"1a"
+			]
+		},
+		{
+			"input": "\"aa\ta",
+			"result": [
+				"\"aa",
+				"a"
+			]
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": " aa\" \"é1b",
+			"result": [
+				"aa\"",
+				"\"é1b"
+			]
+		},
+		{
+			"input": "1\"é'",
+			"result": [
+				"1\"é'"
+			]
+		},
+		{
+			"input": "é\\bé\"\t1",
+			"result": [
+				"é\\bé\"",
+				"1"
+			]
+		},
+		{
+			"input": "a\ta",
+			"result": [
+				"a",
+				"a"
+			]
+		},
+		{
+			"input": "'é",
+			"result": [
+				"'é"
+			]
+		},
+		{
+			"input": "é\\é",
+			"result": [
+				"é\\é"
+			]
+		},
+		{
+			"input": "",
+			"result": []
+		},
+		{
+			"input": "a'b",
+			"result": [
+				"a'b"
+			]
+		},
+		{
+			"input": " ab",
+			"result": [
+				"ab"
+			]
+		},
+		{
+			"input": "b\n\ta",
+			"result": [
+				"b",
+				"a"
+			]
+		},
+		{
+			"input": " \n \\\t1'",
+			"result": [
+				"\\",
+				"1'"
+			]
+		},
+		{
+			"input": "\"é\\ \\\\é\"",
+			"result": [
+				"é\\ \\\\é"
+			]
+		},
+		{
+			"input": "\t1",
+			"result": [
+				"1"
+			]
+		},
+		{
+			"input": "\\",
+			"result": [
+				"\\"
+			]
+		},
+		{
+			"input": " 1\n\" é \\a",
+			"result": [
+				"1",
+				"\"",
+				"é",
+				"\\a"
+			]
+		},
+		{
+			"input": "é'b\\1",
+			"result": [
+				"é'b\\1"
+			]
+		},
+		{
+			"input": "\\",
+			"result": [
+				"\\"
+			]
+		},
+		{
+			"input": "\"éb",
+			"result": [
+				"\"éb"
+			]
+		},
+		{
+			"input": "1a\tb1'\t''",
+			"result": [
+				"1a",
+				"b1'",
+				""
+			]
+		},
+		{
+			"input": "\n\"b\"\\\" '",
+			"result": [
+				"b\\\"",
+				"'"
+			]
+		},
+		{
+			"input": "\\\" \t\"\" ",
+			"result": [
+				"\\\"",
+				""
+			]
+		},
+		{
+			"input": "a",
+			"result": [
+				"a"
+			]
+		},
+		{
+			"input": "b\"\\ ",
+			"result": [
+				"b\"\\"
+			]
+		},
+		{
+			"input": "'\t'\t\"ba1",
+			"result": [
+				"\t",
+				"\"ba1"
+			]
+		},
+		{
+			"input": "\n",
+			"result": []
+		},
+		{
+			"input": "'é\ta",
+			"result": [
+				"'é",
+				"a"
+			]
+		}
+	]
+}
