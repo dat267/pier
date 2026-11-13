@@ -1,0 +1,269 @@
+{
+	"cwd": "/tmp/pier_parity",
+	"cases": {
+		"write-simple": {
+			"tool": "write",
+			"args": {
+				"path": "src/a.go",
+				"content": "func f1() int { return 1 }\nfunc f2() int { return 2 }\nfunc f3() int { return 3 }"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "Successfully wrote 90 bytes"
+					}
+				],
+				"isError": false
+			}
+		},
+		"write-expanded": {
+			"tool": "write",
+			"args": {
+				"path": "src/a.go",
+				"content": "func f1() int { return 1 }\nfunc f2() int { return 2 }\nfunc f3() int { return 3 }"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false
+			},
+			"expanded": true
+		},
+		"write-plain": {
+			"tool": "write",
+			"args": {
+				"path": "notes.txt",
+				"content": "plain\ntext"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false
+			}
+		},
+		"write-many": {
+			"tool": "write",
+			"args": {
+				"path": "notes.txt",
+				"content": "line 1 of the file\nline 2 of the file\nline 3 of the file\nline 4 of the file\nline 5 of the file\nline 6 of the file\nline 7 of the file\nline 8 of the file\nline 9 of the file\nline 10 of the file\nline 11 of the file\nline 12 of the file\nline 13 of the file\nline 14 of the file\nline 15 of the file\nline 16 of the file\nline 17 of the file\nline 18 of the file\nline 19 of the file\nline 20 of the file"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false
+			}
+		},
+		"write-many-expanded": {
+			"tool": "write",
+			"args": {
+				"path": "notes.txt",
+				"content": "line 1 of the file\nline 2 of the file\nline 3 of the file\nline 4 of the file\nline 5 of the file\nline 6 of the file\nline 7 of the file\nline 8 of the file\nline 9 of the file\nline 10 of the file\nline 11 of the file\nline 12 of the file\nline 13 of the file\nline 14 of the file\nline 15 of the file\nline 16 of the file\nline 17 of the file\nline 18 of the file\nline 19 of the file\nline 20 of the file"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false
+			},
+			"expanded": true
+		},
+		"write-empty-content": {
+			"tool": "write",
+			"args": {
+				"path": "src/a.go",
+				"content": ""
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false
+			}
+		},
+		"write-missing-content": {
+			"tool": "write",
+			"args": {
+				"path": "src/a.go"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false
+			}
+		},
+		"write-missing-path": {
+			"tool": "write",
+			"args": {
+				"content": "x"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false
+			}
+		},
+		"write-tabs": {
+			"tool": "write",
+			"args": {
+				"path": "notes.txt",
+				"content": "a\tb\nc"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false
+			}
+		},
+		"write-crlf": {
+			"tool": "write",
+			"args": {
+				"path": "notes.txt",
+				"content": "a\r\nb"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false
+			}
+		},
+		"write-error": {
+			"tool": "write",
+			"args": {
+				"path": "src/a.go",
+				"content": "func f1() int { return 1 }\nfunc f2() int { return 2 }\nfunc f3() int { return 3 }"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ENOENT: permission denied"
+					}
+				],
+				"isError": true
+			}
+		},
+		"write-error-empty": {
+			"tool": "write",
+			"args": {
+				"path": "src/a.go",
+				"content": "func f1() int { return 1 }\nfunc f2() int { return 2 }\nfunc f3() int { return 3 }"
+			},
+			"width": 80,
+			"result": {
+				"content": [],
+				"isError": true
+			}
+		},
+		"write-partial": {
+			"tool": "write",
+			"args": {
+				"path": "src/a.go",
+				"content": "func f1() int { return 1 }\nfunc f2() int { return 2 }\nfunc f3() int { return 3 }"
+			},
+			"width": 80,
+			"result": {
+				"content": [],
+				"isError": false
+			},
+			"isPartial": true
+		},
+		"write-duration": {
+			"tool": "write",
+			"args": {
+				"path": "src/a.go",
+				"content": "func f1() int { return 1 }\nfunc f2() int { return 2 }\nfunc f3() int { return 3 }"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false,
+				"durationMs": 1200
+			}
+		},
+		"write-trailing-newlines": {
+			"tool": "write",
+			"args": {
+				"path": "notes.txt",
+				"content": "a\nb\n\n\n"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false
+			}
+		},
+		"write-many-lines-file": {
+			"tool": "write",
+			"args": {
+				"path": "src/a.go",
+				"content": "var v1 = 1\nvar v2 = 2\nvar v3 = 3\nvar v4 = 4\nvar v5 = 5\nvar v6 = 6\nvar v7 = 7\nvar v8 = 8\nvar v9 = 9\nvar v10 = 10\nvar v11 = 11\nvar v12 = 12\nvar v13 = 13\nvar v14 = 14\nvar v15 = 15"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false
+			}
+		}
+	}
+}
