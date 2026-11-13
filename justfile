@@ -212,6 +212,10 @@ goldens:
 			# leave the tree alone (in-place generators) or to print the committed
 			# fixture (stdout generators).
 			dir="$(dirname "$gen")"
+			# Snapshot the tree so a generator that writes a fixture outside its own
+			# directory is checked too, without one dirty file failing every later
+			# generator.
+			before="$(git status --porcelain)"
 			if ! node --experimental-strip-types "$gen" >"$tmp/out" 2>"$tmp/err"; then
 				# Cannot run offline (it needs an npm install of the reference's
 				# own dependencies); name it instead of skipping silently.
@@ -219,12 +223,14 @@ goldens:
 				continue
 			fi
 			checked=$((checked + 1))
-			if [[ -n "$(git status --porcelain -- "$dir")" ]]; then
+			if [[ "$before" != "$(git status --porcelain)" ]]; then
 				echo "drift: $dir changed on regeneration" >&2
 				failed=$((failed + 1))
 				continue
 			fi
-			json="$(ls "$dir"/*.json 2>/dev/null | head -1)"
+			# A generator may keep its fixture elsewhere (the markdown corpus sits
+			# beside the generator's directory), so a missing *.json is not an error.
+			json="$(ls "$dir"/*.json 2>/dev/null | head -1 || true)"
 			# A fixture on stdout starts with "{" or "[", unlike a log line or a
 			# count that a generating run prints.
 			if [[ -n "$json" ]] && head -c 1 "$tmp/out" | grep -q '[{[]' &&
