@@ -32,12 +32,17 @@ type altScreenSpec struct {
 	// alt-screen keeps a clamped line's reset where upstream drops it (D470).
 	// Its copied text is still compared.
 	SkipWrites bool `json:"skipWrites"`
+	// Verbatim renders lines unchanged instead of padding them to the width,
+	// for a line whose raw length carries an escape sequence past the width.
+	Verbatim bool `json:"verbatim"`
 }
 
 type altScreenGolden struct {
 	Spec   altScreenSpec `json:"spec"`
 	Steps  []string      `json:"steps"`
 	Copied [][]string    `json:"copied"`
+	URLs   [][]string    `json:"urls"`
+	Pastes [][]string    `json:"pastes"`
 }
 
 // TestAltScreenAgainstUpstreamGolden replays the upstream write streams and the
@@ -68,6 +73,19 @@ func TestAltScreenAgainstUpstreamGolden(t *testing.T) {
 		}
 		var copiedMu sync.Mutex
 		var copied []string
+		var openedMu sync.Mutex
+		var opened []string
+		var pasted []string
+		options.OpenURL = func(url string) {
+			openedMu.Lock()
+			opened = append(opened, url)
+			openedMu.Unlock()
+		}
+		options.OnRightClickPaste = func() {
+			openedMu.Lock()
+			pasted = append(pasted, "paste")
+			openedMu.Unlock()
+		}
 		if spec.CopySelection {
 			options.CopySelection = func(text string) (bool, bool, string) {
 				copiedMu.Lock()
@@ -83,8 +101,16 @@ func TestAltScreenAgainstUpstreamGolden(t *testing.T) {
 			screen.Stop(TuiStopOptions{})
 		})
 		screen.DisableAutoRender()
-		component := &scriptedComponent{}
-		screen.AddChild(component)
+		var setLines func([]string)
+		if spec.Verbatim {
+			verbatim := &fixedLinesComponent{}
+			screen.AddChild(verbatim)
+			setLines = func(lines []string) { verbatim.lines = lines }
+		} else {
+			component := &scriptedComponent{}
+			screen.AddChild(component)
+			setLines = func(lines []string) { component.lines = lines }
+		}
 
 		terminal.writes = nil
 		inputHandler := func(data string) { screen.HandleTerminalInput(data) }
@@ -126,7 +152,7 @@ func TestAltScreenAgainstUpstreamGolden(t *testing.T) {
 
 		for index, step := range spec.Steps {
 			if step.Lines != nil {
-				component.lines = step.Lines
+				setLines(step.Lines)
 			}
 			if step.Columns != nil {
 				terminal.width = *step.Columns
@@ -145,6 +171,17 @@ func TestAltScreenAgainstUpstreamGolden(t *testing.T) {
 			got, wantCopied := waitCopies(index+1), want.Copied[index+1]
 			if !slices.Equal(got, wantCopied) {
 				t.Fatalf("%s step %d copied:\n got %q\nwant %q", label, index+1, got, wantCopied)
+			}
+			openedMu.Lock()
+			gotURLs, wantURLs := append([]string(nil), opened...), want.URLs[index+1]
+			gotPastes, wantPastes := append([]string(nil), pasted...), want.Pastes[index+1]
+			opened, pasted = nil, nil
+			openedMu.Unlock()
+			if !slices.Equal(gotURLs, wantURLs) {
+				t.Fatalf("%s step %d opened URLs:\n got %q\nwant %q", label, index+1, gotURLs, wantURLs)
+			}
+			if !slices.Equal(gotPastes, wantPastes) {
+				t.Fatalf("%s step %d pastes:\n got %q\nwant %q", label, index+1, gotPastes, wantPastes)
 			}
 			terminal.writes = nil
 			screen.RenderNow(false)

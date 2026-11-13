@@ -56,6 +56,19 @@ class FakeTerminal {
 // ScriptedComponent mirrors tui/mainscreen_test.go's scriptedComponent: it pads
 // each line to the render width by rune count, so the write streams below are
 // the ones pier's replay compares against.
+// VerbatimComponent renders lines unchanged, like tui/fixedLinesComponent, so a
+// case can hand the screen a line whose raw length exceeds the width without
+// the padding truncating an escape sequence.
+class VerbatimComponent {
+	constructor() {
+		this.lines = [];
+	}
+	render() {
+		return this.lines;
+	}
+	invalidate() {}
+}
+
 class ScriptedComponent {
 	constructor() {
 		this.lines = [];
@@ -91,6 +104,67 @@ const cases = {
 	"copy-triple-click": {"steps": [{"lines": ["hello world", "tail"]}, {"inputs": ["\u001b[<0;3;1M", "\u001b[<0;3;1m", "\u001b[<0;3;1M", "\u001b[<0;3;1m", "\u001b[<0;3;1M", "\u001b[<0;3;1m"]}], "copySelection": true},
 	"copy-wide-chars": {"steps": [{"lines": ["\u65e5\u672c\u8a9e\u30c6\u30ad\u30b9\u30c8", "ascii tail"]}, {"inputs": ["\u001b[<0;1;1M", "\u001b[<32;7;1M", "\u001b[<0;7;1m"]}], "copySelection": true, "skipWrites": true},
 	"copy-padded-line": {"steps": [{"lines": ["ab   ", "cd"]}, {"inputs": ["\u001b[<0;1;1M", "\u001b[<32;24;1M", "\u001b[<0;24;1m"]}], "copySelection": true},
+	"wheel-alt": {
+		steps: [
+			{ lines: ["line0", "line1", "line2", "line3", "line4", "line5", "line6", "line7", "line8", "line9", "line10", "line11", "line12", "line13"] },
+			{ inputs: ["\u001b[<72;3;3M"] },
+			{ inputs: ["\u001b[<72;3;3M"] },
+		],
+	},
+	"search-nav": {
+		steps: [
+			{ lines: ["alpha", "beta", "alpha", "gamma", "alpha"] },
+			{ inputs: ["\u001b[102;6u", "a"] },
+			{ inputs: ["\u001b[1;2B"] },
+			{ inputs: ["\u001b[1;2B"] },
+			{ inputs: ["\u001b[1;2A"] },
+			{ inputs: ["\r"] },
+		],
+	},
+	"selection-word-drag": {
+		steps: [
+			{ lines: ["hello world again", "tail"] },
+			{ inputs: ["\u001b[<0;3;1M", "\u001b[<0;3;1m", "\u001b[<0;3;1M", "\u001b[<32;15;1M", "\u001b[<0;15;1m"] },
+		],
+		copySelection: true,
+	},
+	"selection-line-drag": {
+		steps: [
+			{ lines: ["hello world", "second line", "third"] },
+			{ inputs: ["\u001b[<0;3;1M", "\u001b[<0;3;1m", "\u001b[<0;3;1M", "\u001b[<0;3;1m", "\u001b[<0;3;1M", "\u001b[<32;4;2M", "\u001b[<0;4;2m"] },
+		],
+		copySelection: true,
+	},
+	"selection-tabs-emoji": {
+		steps: [
+			{ lines: ["a\tb\tc", "\ud83d\ude00 emoji \ud83c\udf89"] },
+			{ inputs: ["\u001b[<0;1;1M", "\u001b[<32;20;2M", "\u001b[<0;20;2m"] },
+		],
+		copySelection: true,
+	},
+	"url-click": {
+		// The press reads the URL from the last drawn frame, so the link must be
+		// on screen before the click. The raw line is longer than the width, so
+		// the component must not pad it (padding would cut the escape).
+		verbatim: true,
+		steps: [
+			{ lines: ["see \u001b]8;;https://example.com/x\u001b\\the link\u001b]8;;\u001b\\ for more"] },
+			{ inputs: ["\u001b[<0;6;1M"] },
+			{ inputs: ["\u001b[<0;6;1m"] },
+		],
+	},
+	"right-click": {
+		steps: [{ lines: ["hello"] }, { inputs: ["\u001b[<2;3;1M", "\u001b[<2;3;1m"] }],
+	},
+	"resize-during-selection": {
+		steps: [
+			{ lines: ["hello world", "second line"] },
+			{ inputs: ["\u001b[<0;2;1M", "\u001b[<32;8;1M"] },
+			{ columns: 12, rows: 3 },
+			{ inputs: ["\u001b[<0;8;1m"] },
+		],
+		copySelection: true,
+	},
 	"copy-no-drag": {"steps": [{"lines": ["hello world"]}, {"inputs": ["\u001b[<0;3;1M", "\u001b[<0;3;1m"]}], "copySelection": true},
 };
 
@@ -101,14 +175,18 @@ for (const [label, spec] of Object.entries(cases)) {
 	const options = {};
 	if (spec.indicator) options.scrollToEndIndicator = () => " ↓ Jump to latest message ";
 	const copied = [];
+	const urls = [];
+	const pastes = [];
 	if (spec.copySelection) {
 		options.copySelection = async (text) => {
 			copied.push(text);
 			return true;
 		};
 	}
+	options.openUrl = (url) => urls.push(url);
+	options.onRightClickPaste = () => pastes.push("paste");
 	const screen = new TuiAltScreen(terminal, false, undefined, options);
-	const component = new ScriptedComponent();
+	const component = spec.verbatim ? new VerbatimComponent() : new ScriptedComponent();
 	screen.addChild(component);
 	const inputHandler = (data) => terminal.inputHandler(data);
 
@@ -124,8 +202,12 @@ for (const [label, spec] of Object.entries(cases)) {
 	screen.start();
 	const steps = [terminal.writes.join("")];
 	const copies = [[]];
+	const urlSteps = [[]];
+	const pasteSteps = [[]];
 	await settle();
 	copies[0] = copied.splice(0);
+	urlSteps[0] = urls.splice(0);
+	pasteSteps[0] = pastes.splice(0);
 	for (const step of spec.steps) {
 		if (step.lines) component.lines = step.lines;
 		if (step.columns !== undefined) terminal.width = step.columns;
@@ -137,6 +219,8 @@ for (const [label, spec] of Object.entries(cases)) {
 		// manual render.
 		await settle();
 		copies.push(copied.splice(0));
+		urlSteps.push(urls.splice(0));
+		pasteSteps.push(pastes.splice(0));
 		terminal.writes = [];
 		screen.renderNow(false);
 		steps.push(terminal.writes.join(""));
@@ -147,7 +231,9 @@ for (const [label, spec] of Object.entries(cases)) {
 		steps.push(terminal.writes.join(""));
 		await settle();
 		copies.push(copied.splice(0));
+		urlSteps.push(urls.splice(0));
+		pasteSteps.push(pastes.splice(0));
 	}
-	out[label] = { spec, steps, copied: copies };
+	out[label] = { spec, steps, copied: copies, urls: urlSteps, pastes: pasteSteps };
 }
 console.log(JSON.stringify(out, null, 2));
