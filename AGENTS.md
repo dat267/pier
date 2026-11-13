@@ -67,8 +67,9 @@ alone and twice in its process, so none relies on global state such as the
 theme that another test set, or leaves state that breaks its own rerun). Treat race-only failures as bugs, and
 call no func value with a mutex held (`internal/lockcall`). PTY tests use
 `$PIER_TEST_BIN`, then `bin/pier`, then a temporary build. CI also runs
-`just fetch-reference` and `just goldens`, so a fixture that no longer
-regenerates from the pin fails the push and not just a local run.
+`just fetch-reference` and `just goldens` (after `npm ci` and `npm run build` in
+`./pi`, which the generators import), so a fixture that no longer regenerates
+from the pin fails the push and not just a local run.
 
 Do not run the long race suites during local development: skip `just test-race`
 and `just test-stress` and let CI enforce both. `just check` is the local gate.

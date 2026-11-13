@@ -41,8 +41,13 @@ jobs:
       - uses: extractions/setup-just@v2
 
       - name: reference
-        # ./pi is gitignored; the golden generators read the pinned checkout.
-        run: just fetch-reference
+        # ./pi is gitignored; the golden generators import its packages, which
+        # need their dependencies and a build before they can run.
+        run: |
+          just fetch-reference
+          cd pi
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
 
       - name: goldens
         # Every fixture regenerates byte for byte from the pinned ./pi, so a diff
