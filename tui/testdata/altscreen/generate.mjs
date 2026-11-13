@@ -169,6 +169,13 @@ const cases = {
 		copySelection: true,
 	},
 	"copy-no-drag": {"steps": [{"lines": ["hello world"]}, {"inputs": ["\u001b[<0;3;1M", "\u001b[<0;3;1m"]}], "copySelection": true},
+	"stray-cursor-marker": {
+		// Two rows carry the internal cursor marker. The bottom-most one places
+		// the hardware cursor; the other must still never reach the terminal
+		// (v1.5.2 tui.ts strips CURSOR_MARKER in applyLineResets).
+		verbatim: true,
+		steps: [{ lines: ["a\u001b_pi:c\u0007b", "c\u001b_pi:c\u0007d"] }],
+	},
 };
 
 

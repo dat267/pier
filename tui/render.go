@@ -1008,6 +1008,12 @@ func sortOverlaysByFocusOrder(entries []*overlayEntry) {
 // ApplyLineResets removes unsafe OSC controls (D290) and appends the
 // segment reset to every non-image line. In low-bandwidth mode a line with no
 // hyperlink needs only the SGR reset, so the 7-byte OSC 8 close is dropped.
+//
+// The cursor marker is internal render metadata and must never reach the
+// terminal: ExtractCursorPosition consumes the marker that places the hardware
+// cursor, and any other one is a stale sentinel (pi v1.5.2 tui.ts
+// applyLineResets strips CURSOR_MARKER from every line). The strip is a no-op
+// on a line whose marker was already consumed.
 func (t *Renderer) ApplyLineResets(lines []string) []string {
 	for i, line := range lines {
 		line = stripUnsafeOSC(line)
@@ -1016,7 +1022,7 @@ func (t *Renderer) ApplyLineResets(lines []string) []string {
 			if LowBandwidth() && !lineHasHyperlink(line) {
 				reset = "\x1b[0m"
 			}
-			lines[i] = NormalizeTerminalOutput(line) + reset
+			lines[i] = NormalizeTerminalOutput(strings.ReplaceAll(line, CursorMarker, "")) + reset
 		} else {
 			lines[i] = line
 		}
