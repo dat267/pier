@@ -165,7 +165,7 @@ func StartOAuthCallbackServer(expectedState string, port int) (*OAuthCallbackSer
 		writeHTML(http.StatusOK, OAuthSuccessHTML("Anthropic authentication completed. You can close this window."))
 		callback.settle(OAuthAuthorizationInput{Code: code, State: state})
 	})
-	callback.server = &http.Server{Handler: mux}
+	callback.server = newOAuthCallbackHTTPServer(mux)
 	go func() { _ = callback.server.Serve(listener) }()
 	return callback, nil
 }

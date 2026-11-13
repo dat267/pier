@@ -192,7 +192,7 @@ func StartOpenAIChatGPTCallbackServer(expectedState string) (*OpenAIChatGPTCallb
 		writeHTML(http.StatusOK, OAuthSuccessHTML("ChatGPT authentication completed. You can close this window."))
 		callback.settle(result)
 	})
-	callback.server = &http.Server{Handler: mux}
+	callback.server = newOAuthCallbackHTTPServer(mux)
 	go func() { _ = callback.server.Serve(listener) }()
 	return callback, nil
 }

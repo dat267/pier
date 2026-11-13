@@ -606,3 +606,38 @@ func TestCopilotRetryAfterUsesJavaScriptParseFloat(t *testing.T) {
 		t.Fatalf("prefix retry-after delays = %v, want 5s", *delays)
 	}
 }
+
+// The callback servers listen on loopback, but any local process can connect and
+// send nothing; without ReadHeaderTimeout that connection holds a handler
+// goroutine and a file descriptor for as long as it likes (gosec G112).
+func TestOAuthCallbackServerDropsAStalledConnection(t *testing.T) {
+	previous := oauthCallbackReadHeaderTimeout
+	oauthCallbackReadHeaderTimeout = 50 * time.Millisecond
+	t.Cleanup(func() { oauthCallbackReadHeaderTimeout = previous })
+
+	server, err := StartOAuthCallbackServer("state", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+	parsed, err := url.Parse(server.RedirectURI)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn, err := net.Dial("tcp", net.JoinHostPort(AnthropicCallbackHost(), parsed.Port()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	if err := conn.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Read(make([]byte, 1)); err == nil {
+		t.Fatal("the server answered a connection that sent no request")
+	} else {
+		var netErr net.Error
+		if errors.As(err, &netErr) && netErr.Timeout() {
+			t.Fatalf("the server kept a stalled connection open for %v", 2*time.Second)
+		}
+	}
+}

@@ -66,6 +66,10 @@ type OAuthCallbackServer struct {
 
 const maxJavascriptTimeoutMs int64 = 1<<31 - 1
 
+// callbackReadHeaderTimeout bounds how long a redirect connection may take to
+// send its request line and headers.
+var callbackReadHeaderTimeout = 60 * time.Second
+
 func callbackTimerDuration(ms int64) time.Duration {
 	if ms < 1 || ms > maxJavascriptTimeoutMs {
 		ms = 1
@@ -115,7 +119,13 @@ func ListenCallbackServer(ctx context.Context, options OAuthCallbackServerOption
 		pending:    map[string]*pendingCallback{},
 	}
 	instance.RedirectURL = fmt.Sprintf("http://%s:%d%s", bracketHost(redirectHost), listener.Addr().(*net.TCPAddr).Port, path)
-	instance.server = &http.Server{Handler: http.HandlerFunc(instance.handle)}
+	// The redirect listener is loopback-only, but a local process can connect and
+	// send nothing; without a header timeout it holds a handler goroutine and a
+	// descriptor indefinitely (gosec G112). A var so a test can shorten it.
+	instance.server = &http.Server{
+		Handler:           http.HandlerFunc(instance.handle),
+		ReadHeaderTimeout: callbackReadHeaderTimeout,
+	}
 	go func() {
 		_ = instance.server.Serve(listener)
 	}()

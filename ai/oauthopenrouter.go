@@ -261,7 +261,7 @@ func StartOpenRouterCallbackServer(callbackPath, verifier string, ctx context.Co
 		sendHTML(http.StatusOK, OAuthSuccessHTML("Signed in to OpenRouter. You may now close this page."))
 		finish(credential, nil)
 	})
-	callback.server = &http.Server{Handler: mux}
+	callback.server = newOAuthCallbackHTTPServer(mux)
 	go func() { _ = callback.server.Serve(listener) }()
 
 	stop := func() {

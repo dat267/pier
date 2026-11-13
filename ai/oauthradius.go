@@ -254,7 +254,7 @@ func StartRadiusCallbackServer(expectedState string, ctx context.Context) *Radiu
 		sendPage(http.StatusOK, OAuthSuccessHTML("Signed in to Radius. You may now close this page."))
 		callback.finish(code)
 	})
-	callback.server = &http.Server{Handler: mux}
+	callback.server = newOAuthCallbackHTTPServer(mux)
 	go func() { _ = callback.server.Serve(listener) }()
 	return callback
 }

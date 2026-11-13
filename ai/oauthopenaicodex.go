@@ -429,7 +429,7 @@ func StartOpenAICodexCallbackServer(expectedState string) *OpenAICodexCallbackSe
 		writeHTML(http.StatusOK, OAuthSuccessHTML("OpenAI authentication completed. You can close this window."))
 		callback.settle(code)
 	})
-	callback.server = &http.Server{Handler: mux}
+	callback.server = newOAuthCallbackHTTPServer(mux)
 	go func() { _ = callback.server.Serve(listener) }()
 	return callback
 }
