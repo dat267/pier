@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D462)
+# Deliberate divergences from pi (D1–D463)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7359,3 +7359,21 @@ text and stay aligned. Sorting and filtering still use the raw values, so the
 order matches upstream. Ids without control characters render unchanged.
 
 `Test:` `TestListModelsTextSanitizesCatalogIdentifiers`.
+
+### D463
+
+**Print mode sanitizes a failed request's message before printing it.**
+
+`Reference:` `packages/coding-agent/src/modes/print-mode.ts`, pi v1.5.2
+(b4afdddf). Text mode writes the request's failure message to stderr, and that
+message carries the provider's HTTP body verbatim (up to the truncation cap).
+A body containing `ESC]0;title BEL` or `ESC[2J` therefore reaches a terminal
+that is only showing a diagnostic.
+
+The port sanitizes the message with `tui.SanitizeUntrustedText` (D342, D462) on
+the two stderr paths that can carry provider text: the run failure and the
+assistant's error message. stderr is a diagnostic channel; stdout carries the
+model's answer and stays raw, because it is data that users pipe into other
+programs. `--json` mode is unchanged: encoding already escapes the controls.
+
+`Test:` `TestPrintModeProviderErrorKeepsTerminalControlsOut`.

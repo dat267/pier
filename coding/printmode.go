@@ -15,6 +15,7 @@ import (
 	"syscall"
 
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/tui"
 )
 
 // PrintModeOptions configures RunPrintMode.
@@ -162,7 +163,9 @@ func RunPrintMode(session *AgentSession, sessions *SessionManager, options Print
 		return nil
 	}()
 	if runErr != nil {
-		fmt.Fprintln(os.Stderr, runErr)
+		// A failed request's message carries the provider's HTTP body, so it is
+		// remote text (D463). stdout stays raw: it is the model's answer.
+		fmt.Fprintln(os.Stderr, tui.SanitizeUntrustedText(runErr.Error()))
 		return 1
 	}
 
@@ -178,7 +181,7 @@ func RunPrintMode(session *AgentSession, sessions *SessionManager, options Print
 					if message == "" {
 						message = "Request " + string(assistant.StopReason)
 					}
-					fmt.Fprintln(os.Stderr, message)
+					fmt.Fprintln(os.Stderr, tui.SanitizeUntrustedText(message))
 					return 1
 				}
 				for _, block := range assistant.Content {
