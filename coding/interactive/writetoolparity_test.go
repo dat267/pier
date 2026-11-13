@@ -58,10 +58,9 @@ func TestWriteToolRenderUpstreamParity(t *testing.T) {
 
 	for _, label := range sortedKeys(corpus.Cases) {
 		spec := corpus.Cases[label]
-		var args any
-		if err := json.Unmarshal(spec.Args, &args); err != nil {
-			t.Fatalf("%s: parse args: %v", label, err)
-		}
+		// The session hands the renderer the call's JSON (toolCall.Arguments), so
+		// the corpus keeps that shape rather than a decoded map.
+		args := json.RawMessage(spec.Args)
 		component := NewToolExecutionComponent("write", "call-1", args,
 			ToolExecutionOptions{}, &writeRenderers, nil, corpus.Cwd)
 		if spec.Expanded {

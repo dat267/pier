@@ -66,10 +66,9 @@ func TestSearchToolRenderUpstreamParity(t *testing.T) {
 		if !ok {
 			t.Fatalf("%s: unknown tool %q", label, spec.Tool)
 		}
-		var args any
-		if err := json.Unmarshal(spec.Args, &args); err != nil {
-			t.Fatalf("%s: parse args: %v", label, err)
-		}
+		// The session hands the renderer the call's JSON (toolCall.Arguments), so
+		// the corpus keeps that shape rather than a decoded map.
+		args := json.RawMessage(spec.Args)
 		component := NewToolExecutionComponent(spec.Tool, "call-1", args,
 			ToolExecutionOptions{}, definition, nil, corpus.Cwd)
 		if spec.Expanded {

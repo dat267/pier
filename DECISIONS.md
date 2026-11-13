@@ -5589,9 +5589,11 @@ Tests: `TestMcpCallHeaderStaysUnreflowedWhenExpanded`,
 `TestMcpResultExpansionKeepsThePreviewInPlace`,
 `TestMcpResultPreviewWrapsAtTheRenderWidth` (four widths, collapsed rows equal
 expanded rows and never exceed the width),
-`TestMcpResultPreviewHintCountsVisualLines`, and
+`TestMcpResultPreviewHintCountsVisualLines`,
 `TestMcpToolCallFramesCollapseArguments` (the collapsed header still matches the
-reference's output).
+reference's output), and `TestMcpToolRenderUpstreamParity` (every other row of
+an expanded frame matches the reference's, with the one-row-taller reference
+header skipped).
 
 
 ### D398

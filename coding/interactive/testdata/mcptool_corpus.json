@@ -1,0 +1,262 @@
+{
+	"cwd": "/tmp/pier_parity",
+	"cases": {
+		"mcp-simple": {
+			"label": "fs/read_file",
+			"args": {
+				"path": "/tmp/a.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "hello world"
+					}
+				],
+				"isError": false
+			}
+		},
+		"mcp-no-args": {
+			"label": "fs/read_file",
+			"args": {},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false
+			}
+		},
+		"mcp-many-args": {
+			"label": "fs/read_file",
+			"args": {
+				"path": "/tmp/a.txt",
+				"filter": "*.go",
+				"body": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false
+			}
+		},
+		"mcp-nested-args": {
+			"label": "fs/read_file",
+			"args": {
+				"query": {
+					"a": 1,
+					"b": [
+						1,
+						2
+					]
+				},
+				"limit": 5
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false
+			}
+		},
+		"mcp-expanded": {
+			"label": "fs/read_file",
+			"args": {
+				"path": "/tmp/a.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "hello world"
+					}
+				],
+				"isError": false
+			},
+			"expanded": true
+		},
+		"mcp-long-line": {
+			"label": "fs/read_file",
+			"args": {
+				"path": "/tmp/a.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "{\"items\": [{\"id\": 0, \"name\": \"n0\"}, {\"id\": 1, \"name\": \"n1\"}, {\"id\": 2, \"name\": \"n2\"}, {\"id\": 3, \"name\": \"n3\"}, {\"id\": 4, \"name\": \"n4\"}, {\"id\": 5, \"name\": \"n5\"}, {\"id\": 6, \"name\": \"n6\"}, {\"id\": 7, \"name\": \"n7\"}, {\"id\": 8, \"name\": \"n8\"}, {\"id\": 9, \"name\": \"n9\"}, {\"id\": 10, \"name\": \"n10\"}, {\"id\": 11, \"name\": \"n11\"}, {\"id\": 12, \"name\": \"n12\"}, {\"id\": 13, \"name\": \"n13\"}, {\"id\": 14, \"name\": \"n14\"}, {\"id\": 15, \"name\": \"n15\"}, {\"id\": 16, \"name\": \"n16\"}, {\"id\": 17, \"name\": \"n17\"}, {\"id\": 18, \"name\": \"n18\"}, {\"id\": 19, \"name\": \"n19\"}]}"
+					}
+				],
+				"isError": false
+			}
+		},
+		"mcp-long-line-expanded": {
+			"label": "fs/read_file",
+			"args": {
+				"path": "/tmp/a.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "{\"items\": [{\"id\": 0, \"name\": \"n0\"}, {\"id\": 1, \"name\": \"n1\"}, {\"id\": 2, \"name\": \"n2\"}, {\"id\": 3, \"name\": \"n3\"}, {\"id\": 4, \"name\": \"n4\"}, {\"id\": 5, \"name\": \"n5\"}, {\"id\": 6, \"name\": \"n6\"}, {\"id\": 7, \"name\": \"n7\"}, {\"id\": 8, \"name\": \"n8\"}, {\"id\": 9, \"name\": \"n9\"}, {\"id\": 10, \"name\": \"n10\"}, {\"id\": 11, \"name\": \"n11\"}, {\"id\": 12, \"name\": \"n12\"}, {\"id\": 13, \"name\": \"n13\"}, {\"id\": 14, \"name\": \"n14\"}, {\"id\": 15, \"name\": \"n15\"}, {\"id\": 16, \"name\": \"n16\"}, {\"id\": 17, \"name\": \"n17\"}, {\"id\": 18, \"name\": \"n18\"}, {\"id\": 19, \"name\": \"n19\"}]}"
+					}
+				],
+				"isError": false
+			},
+			"expanded": true
+		},
+		"mcp-many-lines": {
+			"label": "fs/read_file",
+			"args": {
+				"path": "/tmp/a.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20"
+					}
+				],
+				"isError": false
+			}
+		},
+		"mcp-many-lines-expanded": {
+			"label": "fs/read_file",
+			"args": {
+				"path": "/tmp/a.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20"
+					}
+				],
+				"isError": false
+			},
+			"expanded": true
+		},
+		"mcp-error": {
+			"label": "fs/read_file",
+			"args": {
+				"path": "/nope"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ENOENT"
+					}
+				],
+				"isError": true
+			}
+		},
+		"mcp-empty": {
+			"label": "fs/read_file",
+			"args": {
+				"path": "/tmp/a.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [],
+				"isError": false
+			}
+		},
+		"mcp-full-output": {
+			"label": "fs/read_file",
+			"args": {
+				"path": "/tmp/a.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a\nb"
+					}
+				],
+				"isError": false,
+				"details": {
+					"server": "fs",
+					"tool": "read_file",
+					"fullOutputPath": "/tmp/pier_parity/full.log"
+				}
+			}
+		},
+		"mcp-full-output-expanded": {
+			"label": "fs/read_file",
+			"args": {
+				"path": "/tmp/a.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a\nb"
+					}
+				],
+				"isError": false,
+				"details": {
+					"server": "fs",
+					"tool": "read_file",
+					"fullOutputPath": "/tmp/pier_parity/full.log"
+				}
+			},
+			"expanded": true
+		},
+		"mcp-tabs": {
+			"label": "fs/read_file",
+			"args": {
+				"path": "/tmp/a.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a\tb\nc"
+					}
+				],
+				"isError": false
+			}
+		},
+		"mcp-duration": {
+			"label": "fs/read_file",
+			"args": {
+				"path": "/tmp/a.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false,
+				"durationMs": 2500
+			}
+		}
+	}
+}

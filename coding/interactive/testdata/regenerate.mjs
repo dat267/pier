@@ -17,6 +17,7 @@ const families = [
 	"edittool-parity",
 	"exec",
 	"message",
+	"mcptool-parity",
 	"modelsel",
 	"readtool-parity",
 	"searchtool-parity",
