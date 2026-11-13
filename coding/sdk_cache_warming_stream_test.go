@@ -88,12 +88,23 @@ func TestSDKCacheWarmingStreamsThroughTheModelRuntime(t *testing.T) {
 		t.Fatalf("warm options = %+v, want a one-token replay that keeps the continuation state", options)
 	}
 	// The refresh bills the provider, so its spend has to reach the session as a
-	// cache_warm usage entry (upstream cache-warmer.ts appendUsage).
+	// cache_warm usage entry (upstream cache-warmer.ts appendUsage). The stream
+	// finishes on its own goroutine, so the entry is the condition to wait for:
+	// reading the branch right after the request arrived lost it under -race and
+	// failed this test intermittently.
 	warmed := 0
-	for _, entry := range sessions.GetBranch("") {
-		if entry.Type == "usage" && entry.Kind == "cache_warm" {
-			warmed++
+	usageDeadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(usageDeadline) {
+		warmed = 0
+		for _, entry := range sessions.GetBranch("") {
+			if entry.Type == "usage" && entry.Kind == "cache_warm" {
+				warmed++
+			}
 		}
+		if warmed > 0 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 	if warmed != 1 {
 		t.Fatalf("cache_warm usage entries = %d, want 1", warmed)
