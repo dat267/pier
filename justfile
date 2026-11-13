@@ -249,6 +249,18 @@ goldens:
 		fi
 	done < <(git ls-files '*/testdata/*/generate.mjs')
 
+	# The interactive families share a loader that takes the reference root and
+	# pier's palette, so they regenerate as one unit instead of through the loop.
+	if [[ -d pi ]]; then
+		if node --experimental-strip-types coding/interactive/testdata/regenerate.mjs ./pi >"$tmp/interactive" 2>&1; then
+			echo "goldens: $(tail -n 1 "$tmp/interactive")"
+		else
+			echo "error: coding/interactive/testdata/regenerate.mjs" >&2
+			sed -n '1,20p' "$tmp/interactive" >&2
+			failed=$((failed + 1))
+		fi
+	fi
+
 	echo "goldens: $((checked - failed))/$checked regenerate from the pin"
 	if [[ -n "$notcovered" ]]; then
 		echo "goldens: not covered by this gate (no golden.json):"

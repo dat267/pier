@@ -13,9 +13,11 @@ node --experimental-strip-types coding/interactive/testdata/regenerate.mjs ./pi
 ```
 
 The second command regenerates 15 golden families. The third checks every byte
-without writing. Individual `gen-*.mjs` files write one family to standard output.
-The loader rejects a reference HEAD other than pi v1.5.2 (`b4afdddf`). No command
-installs dependencies or modifies `./pi`, its packages or its `node_modules`.
+without writing, and `just goldens` runs it, so a family that no longer matches
+the pin fails the gate. Individual `gen-*.mjs` files write one family to standard
+output. The loader rejects a reference HEAD other than pi v1.5.2 (`b4afdddf`).
+No command installs dependencies or modifies `./pi`, its packages or its
+`node_modules`.
 Node must support `registerHooks` and TypeScript stripping.
 
 ## Reference and adaptations
