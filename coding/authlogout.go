@@ -65,7 +65,8 @@ func runAuthLogout(appName string, command *AuthCommand, stdout, stderr io.Write
 		fmt.Fprintln(stderr, FormatCLIError(fmt.Sprintf("Unknown provider %q.", tui.SanitizeUntrustedText(providerRef))))
 		ids := make([]string, 0, len(stored))
 		for _, info := range stored {
-			ids = append(ids, info.ProviderID)
+			// A provider id comes from provider configuration, so it is data (D461).
+			ids = append(ids, tui.SanitizeUntrustedText(info.ProviderID))
 		}
 		sort.Strings(ids)
 		listed := "none"

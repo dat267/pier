@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D460)
+# Deliberate divergences from pi (D1–D461)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7324,3 +7324,21 @@ carries no control characters, so ordinary sign-in output is unchanged.
 
 `Test:` `TestAuthLoginNotifyDropsProviderTerminalControl`,
 `TestLoginDialogDropsProviderTerminalControl`.
+
+### D461
+
+**A stored provider id is sanitized before the logout listing prints it.**
+
+`Reference:` `packages/coding-agent/src/cli/auth-logout.ts`, pi v1.5.2
+(b4afdddf). When the named provider has no stored credential, it lists the
+stored ones as they are in `auth.json`. A provider id comes from provider
+configuration (a `models.json` entry or a pi.dev catalog entry), so an id
+carrying `ESC]0;title BEL` retitles the terminal while the user is only asking
+which credentials exist.
+
+The port passes each id through `tui.SanitizeUntrustedText` (D342, D460) before
+joining the list. Ordinary ids have no control character, so the listing is
+unchanged, and the user's own typed provider name in the same message was
+already sanitized.
+
+`Test:` `TestAuthLogoutSanitizesStoredProviderIDs`.

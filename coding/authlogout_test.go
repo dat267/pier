@@ -106,3 +106,28 @@ func TestAuthLogoutRejectsUnknownProvidersAndMissingArguments(t *testing.T) {
 		t.Fatalf("missing provider = %d, %q", code, stderr)
 	}
 }
+
+// D461: a stored provider id comes from provider configuration (models.json or
+// the pi.dev catalog), so it is data like any other remote string. The
+// unknown-provider listing printed it raw, and an id carrying ESC retitles the
+// terminal while the user is only asking for their credential list.
+func TestAuthLogoutSanitizesStoredProviderIDs(t *testing.T) {
+	agentDir := t.TempDir()
+	t.Setenv("PI_CODING_AGENT_DIR", agentDir)
+	hostile := "key\x1b]0;owned\x07id"
+	storeAuthCredential(t, agentDir, hostile, &ai.Credential{
+		Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "sk-test"},
+	})
+
+	code, stdout, stderr := runLogoutCommand(t, "nosuch")
+	if code != 1 {
+		t.Fatalf("code = %d, want 1", code)
+	}
+	output := stdout + stderr
+	if strings.Contains(output, "\x1b]0;owned") || strings.Contains(output, "\x07") {
+		t.Fatalf("stored provider id reached the terminal: %q", output)
+	}
+	if !strings.Contains(output, "key") || !strings.Contains(output, "id") {
+		t.Fatalf("listing dropped the id text: %q", output)
+	}
+}
