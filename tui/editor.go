@@ -2101,7 +2101,7 @@ func (e *Editor) createAutocompleteListLocked(prefix string, items []Autocomplet
 	}
 	selectItems := make([]SelectItem, 0, len(items))
 	for _, item := range items {
-		selectItems = append(selectItems, SelectItem{Value: item.Value, Label: item.Label, Description: item.Description})
+		selectItems = append(selectItems, SelectItem(item))
 	}
 	list := NewSelectList(selectItems, e.autocompleteMaxVisible, e.theme.SelectList, layout)
 	list.OnSelect = func(selected SelectItem) {
@@ -2124,7 +2124,7 @@ func (e *Editor) createAutocompleteListLocked(prefix string, items []Autocomplet
 }
 
 func autocompleteItemFromSelect(item SelectItem) AutocompleteItem {
-	return AutocompleteItem{Value: item.Value, Label: item.Label, Description: item.Description}
+	return AutocompleteItem(item)
 }
 
 func (e *Editor) tryTriggerAutocompleteLocked(explicitTab bool) {

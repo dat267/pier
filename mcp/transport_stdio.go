@@ -323,7 +323,7 @@ func (t *StdioTransport) handleStderr(chunk []byte) {
 	}
 	t.mu.Lock()
 	t.stderrBuffer = append(t.stderrBuffer, chunk...)
-	if !(maxStderrBytes == 0 && t.options.MaxStderrBytesSet) && int64(len(t.stderrBuffer)) > maxStderrBytes {
+	if (maxStderrBytes != 0 || !t.options.MaxStderrBytesSet) && int64(len(t.stderrBuffer)) > maxStderrBytes {
 		start := int64(len(t.stderrBuffer)) - maxStderrBytes
 		if maxStderrBytes < 0 {
 			if maxStderrBytes < -int64(len(t.stderrBuffer)) {

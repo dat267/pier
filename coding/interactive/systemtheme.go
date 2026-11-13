@@ -600,7 +600,7 @@ func GenerateSystemThemeColors(input SystemThemeInput) SystemThemeColors {
 	colors, ok := solve(0)
 	if !ok {
 		low, high := 0.0, 2.0
-		colors, ok = solve(high)
+		colors, _ = solve(high)
 		for range 20 {
 			middle := (low + high) / 2
 			if attempt, attemptOK := solve(middle); attemptOK {

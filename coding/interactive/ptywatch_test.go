@@ -21,7 +21,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -131,9 +130,6 @@ func startPier(t *testing.T, args ...string) *ptySession {
 // pre-populate (e.g. settings.json) before the child starts.
 func startPierConfigured(t *testing.T, setup func(agentDir string), args ...string) *ptySession {
 	t.Helper()
-	if runtime.GOOS == "windows" {
-		t.Skip("pty watchdog tests require a unix pty")
-	}
 
 	bin := pierBinary(t)
 	agentDir := t.TempDir()
@@ -353,9 +349,6 @@ var mutexBlockedRe = regexp.MustCompile(`sync\.runtime_SemacquireMutex`)
 func TestMutexBlockedDetectorHasTeeth(t *testing.T) {
 	if testing.Short() {
 		t.Skip("short mode")
-	}
-	if runtime.GOOS == "windows" {
-		t.Skip("requires unix signals")
 	}
 	master, slave, err := openPty()
 	if err != nil {

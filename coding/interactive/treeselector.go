@@ -453,12 +453,12 @@ func (t *TreeList) ApplyFilter() {
 		isSettingsEntry := entry.Type == "label" || entry.Type == "context_edit" || entry.Type == "custom" ||
 			entry.Type == "model_change" || entry.Type == "thinking_level_change" || entry.Type == "session_info"
 
-		passesFilter := true
+		var passesFilter bool
 		switch t.filterMode {
 		case FilterUserOnly:
 			passesFilter = entry.Type == "message" && t.nodeMessage(flatNode).Role == "user"
 		case FilterNoTools:
-			passesFilter = !isSettingsEntry && !(entry.Type == "message" && t.nodeMessage(flatNode).Role == "toolResult")
+			passesFilter = !isSettingsEntry && (entry.Type != "message" || t.nodeMessage(flatNode).Role != "toolResult")
 		case FilterLabeledOnly:
 			passesFilter = flatNode.Node.HasLabel
 		case FilterAll:

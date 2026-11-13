@@ -869,7 +869,7 @@ func TestAnthropicMessageThreadsNewThreadWhenRetriedContinueIsInFlight(t *testin
 	h.push(func(threadTestCaptured) threadTestReply {
 		return threadTestErrorReply(http.StatusBadRequest, "in flight", "thread_continue_in_flight", nil)
 	})
-	messages, result := h.say(t, messages, threadTurn{Options: func(options *AnthropicOptions) {
+	_, result := h.say(t, messages, threadTurn{Options: func(options *AnthropicOptions) {
 		options.MaxRetries = new(1)
 	}})
 	if result.StopReason != StopStop {

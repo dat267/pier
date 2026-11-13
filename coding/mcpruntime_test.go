@@ -50,8 +50,8 @@ func newMCPFakeServer(t *testing.T, noTools bool) (*mcpFakeServer, *mcp.InMemory
 		go func() {
 			var result any
 			var failure *protocol.McpError
-			switch {
-			case request.Method == "initialize":
+			switch request.Method {
+			case "initialize":
 				capabilities := map[string]any{"tools": map[string]any{}}
 				if fake.noTools {
 					capabilities = map[string]any{"prompts": map[string]any{}}
@@ -65,7 +65,7 @@ func newMCPFakeServer(t *testing.T, noTools bool) (*mcpFakeServer, *mcp.InMemory
 					"serverInfo":      map[string]any{"name": "fake", "version": "1.0.0"},
 					"instructions":    fake.instructions,
 				}
-			case request.Method == "tools/list":
+			case "tools/list":
 				if fake.noTools {
 					failure = &protocol.McpError{Code: protocol.JSONRPCErrorCode.MethodNotFound, Msg: "Method not found"}
 				} else {
@@ -73,7 +73,7 @@ func newMCPFakeServer(t *testing.T, noTools bool) (*mcpFakeServer, *mcp.InMemory
 						map[string]any{"name": "echo", "description": "Echo", "inputSchema": map[string]any{"type": "object"}},
 					}}
 				}
-			case request.Method == "tools/call":
+			case "tools/call":
 				fake.mu.Lock()
 				fake.calls++
 				onCall := fake.onCall

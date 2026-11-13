@@ -96,7 +96,7 @@ func NewScrollView(component Component, options ScrollViewOptions) *ScrollView {
 		}
 	}
 	view.followingEnd = view.followEnd
-	view.Container.Children = append(view.Container.Children, component)
+	view.Children = append(view.Children, component)
 	return view
 }
 

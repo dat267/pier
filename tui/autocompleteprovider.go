@@ -82,13 +82,10 @@ func buildFdPathQuery(query string) string {
 // findLastDelimiter returns the byte index of the last path delimiter.
 func findLastDelimiter(text string) int {
 	lastDelimiter := -1
-	runes := []rune(text)
-	byteIndex := 0
-	for _, character := range runes {
+	for index, character := range text {
 		if pathDelimiters[character] || isAutocompleteSeparator(character) {
-			lastDelimiter = byteIndex
+			lastDelimiter = index
 		}
-		byteIndex += len(string(character))
 	}
 	return lastDelimiter
 }

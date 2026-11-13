@@ -229,7 +229,7 @@ func buildOpenAIDecisionsPayload(model *Model, context ClassifierContext) (openA
 			wire.Type = "choice"
 			choices := make([]openAIDecisionsChoice, 0, len(question.Choices))
 			for _, choice := range question.Choices {
-				choices = append(choices, openAIDecisionsChoice{Value: choice.Value, Description: choice.Description})
+				choices = append(choices, openAIDecisionsChoice(choice))
 			}
 			wire.Choices = &choices
 		case "score":

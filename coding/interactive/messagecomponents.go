@@ -206,8 +206,8 @@ func (c *CustomEntryComponent) rebuild() {
 		return
 	}
 	c.custom = component
-	c.Container.AddChild(tui.NewSpacer(1))
-	c.Container.AddChild(component)
+	c.AddChild(tui.NewSpacer(1))
+	c.AddChild(component)
 }
 
 func errorMessage(value any) string {

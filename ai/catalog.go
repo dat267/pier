@@ -53,7 +53,7 @@ func (entry *catalogModelEntry) UnmarshalJSON(data []byte) error {
 	entry.Model = Model(model)
 	// Absent or empty parameter maps have no insertion order to retain.
 	if len(model.SamplingParams) > 0 || len(model.SamplingParamsByThinkingLevel) > 0 {
-		entry.Model.captureSamplingParamOrder(data)
+		entry.captureSamplingParamOrder(data)
 	}
 	return nil
 }

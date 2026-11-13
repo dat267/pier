@@ -117,7 +117,7 @@ func TestLazyTranscriptLiveAppendsStayOrdered(t *testing.T) {
 	live := strings.Index(lines, "live-msg")
 	early := strings.Index(lines, "lazy-msg-0000")
 	late := strings.Index(lines, "lazy-msg-0799")
-	if live == -1 || early == -1 || late == -1 || !(early < late && late < live) {
+	if live == -1 || early == -1 || late == -1 || (early >= late || late >= live) {
 		t.Fatalf("order broken: early=%d late=%d live=%d", early, late, live)
 	}
 }

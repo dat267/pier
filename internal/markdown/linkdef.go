@@ -178,15 +178,15 @@ func defTitle(src string, at int) (int, bool) {
 		lastEscaped := -1
 		i := at + 1
 		for i < len(src) {
-			switch {
-			case src[i] == '\\':
+			switch src[i] {
+			case '\\':
 				if i+1 < len(src) && src[i+1] == '"' {
 					lastEscaped = i + 1
 					i += 2
 					continue
 				}
 				i++
-			case src[i] == '"':
+			case '"':
 				return i + 1, true
 			default:
 				i++

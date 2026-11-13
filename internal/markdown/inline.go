@@ -440,7 +440,7 @@ func rejectInlineDollar(inner, after string) bool {
 // looksLikeDollarIdentifier matches upstream's identifier/currency heuristic,
 // an uppercase constant such as `X`, `FOO_BAR` or `X+`.
 func looksLikeDollarIdentifier(s string) bool {
-	if s == "" || !(s[0] == '_' || (s[0] >= 'A' && s[0] <= 'Z')) {
+	if s == "" || (s[0] != '_' && (s[0] < 'A' || s[0] > 'Z')) {
 		return false
 	}
 	i := 0

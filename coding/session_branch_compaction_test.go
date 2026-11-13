@@ -24,9 +24,10 @@ func TestBranchedSessionKeepsCompactionWindow(t *testing.T) {
 				}
 				kept := m.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "keep"}, Timestamp: 2})
 				first := label
-				if target == "message" {
+				switch target {
+				case "message":
 					first = kept
-				} else if target == "self" {
+				case "self":
 					first = ""
 				}
 				compaction := m.AppendCompaction("summary", first, 10, nil, false, nil)

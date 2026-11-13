@@ -69,7 +69,7 @@ func normalizeDotSegments(escapedPath string) string {
 		case 2:
 			// The leading empty segment of an absolute path is the root and
 			// cannot be popped; any other segment, empty or not, can.
-			if len(normalized) > 0 && !(len(normalized) == 1 && normalized[0] == "") {
+			if len(normalized) > 0 && (len(normalized) != 1 || normalized[0] != "") {
 				normalized = normalized[:len(normalized)-1]
 			}
 			if index == len(segments)-1 {

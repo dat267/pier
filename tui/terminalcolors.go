@@ -67,10 +67,10 @@ func ParseOscColorResponse(data string) (OscColorResponse, bool) {
 		return OscColorResponse{}, false
 	}
 	target := OscColorTarget{}
-	switch {
-	case match[1] == "10":
+	switch match[1] {
+	case "10":
 		target.Foreground = true
-	case match[1] == "11":
+	case "11":
 		target.Background = true
 	default:
 		index, _ := strconv.Atoi(match[2])

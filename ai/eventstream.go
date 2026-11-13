@@ -291,9 +291,10 @@ func NewAssistantMessageEventStream() *AssistantMessageEventStream {
 		EventStream: NewEventStream(
 			IsTerminalEvent,
 			func(event AssistantMessageEvent) *AssistantMessage {
-				if event.Type == EventDone {
+				switch event.Type {
+				case EventDone:
 					return event.Message
-				} else if event.Type == EventError {
+				case EventError:
 					return event.Error
 				}
 				return nil
@@ -337,7 +338,7 @@ func (s *AssistantMessageEventStream) Push(event AssistantMessageEvent) {
 func (s *AssistantMessageEventStream) NextSnapshot(ctx context.Context) (AssistantMessageEvent, bool) {
 	if pending := s.pendingArguments; pending != nil {
 		s.pendingArguments = nil
-		event, ok, timedOut := s.EventStream.nextWithin(ctx, time.Duration(sjFrameNanos))
+		event, ok, timedOut := s.nextWithin(ctx, time.Duration(sjFrameNanos))
 		if !timedOut {
 			return s.ownSnapshot(event), ok
 		}
@@ -410,7 +411,7 @@ func roundDurationMS(elapsed time.Duration) int64 {
 // stream: a stream that only forwards a response, such as a deferred result fetched later,
 // must not time it (upstream #10549).
 func (s *AssistantMessageEventStream) timeMessage(message *AssistantMessage) {
-	if message == nil || s.EventStream.isDone() || message.DurationMs != nil {
+	if message == nil || s.isDone() || message.DurationMs != nil {
 		return
 	}
 	if message.Timestamp < s.startedAt {

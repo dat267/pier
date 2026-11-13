@@ -1041,7 +1041,7 @@ func buildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 		}
 	}
 
-	if options.ToolChoice != nil && len(options.ToolChoice) > 0 {
+	if len(options.ToolChoice) > 0 {
 		var strChoice string
 		if err := jsonUnmarshalStrict(options.ToolChoice, &strChoice); err == nil {
 			params.ToolChoice = &AnthropicToolChoice{Type: strChoice}

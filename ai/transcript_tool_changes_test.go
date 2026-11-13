@@ -126,10 +126,10 @@ func TestResponsesAdditionalToolsDeclareEveryToolInPlace(t *testing.T) {
 		t.Fatalf("sequence = %q; want %q", sequence, want)
 	}
 	for i, part := range want {
-		switch {
-		case part == "":
+		switch part {
+		case "":
 			continue
-		case part == "incremental tools update":
+		case "incremental tools update":
 			if !strings.Contains(sequence[i], "This is an incremental tools update.") {
 				t.Fatalf("sequence[%d] = %q; want the incremental notice", i, sequence[i])
 			}

@@ -212,7 +212,7 @@ func TestApplyModelsJSONCustomModels(t *testing.T) {
 	}
 	// The name falls back to the id.
 	config = &ModelsJSONProvider{API: ai.APIOpenAICompletions, BaseURL: "https://x"}
-	models, err = applyModelsJSON("p", nil, config)
+	_, err = applyModelsJSON("p", nil, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -415,7 +415,7 @@ func TestComposeModelOverridePreservesSamplingParamOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := string(encoded)
-	if strings.Index(got, `"top_k"`) < 0 || strings.Index(got, `"seed"`) < 0 || strings.Index(got, `"top_k"`) > strings.Index(got, `"seed"`) {
+	if !strings.Contains(got, `"top_k"`) || !strings.Contains(got, `"seed"`) || strings.Index(got, `"top_k"`) > strings.Index(got, `"seed"`) {
 		t.Fatalf("sampling parameter order = %s, want top_k before seed", got)
 	}
 }
@@ -436,7 +436,7 @@ func TestComposeCustomModelPreservesSamplingParamOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := string(encoded)
-	if strings.Index(got, `"top_k"`) < 0 || strings.Index(got, `"seed"`) < 0 || strings.Index(got, `"top_k"`) > strings.Index(got, `"seed"`) {
+	if !strings.Contains(got, `"top_k"`) || !strings.Contains(got, `"seed"`) || strings.Index(got, `"top_k"`) > strings.Index(got, `"seed"`) {
 		t.Fatalf("sampling parameter order = %s, want top_k before seed", got)
 	}
 }

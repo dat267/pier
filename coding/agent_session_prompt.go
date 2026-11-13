@@ -247,10 +247,8 @@ func (s *AgentSession) Prompt(ctx context.Context, text string, options *PromptO
 
 	if s.CacheWarmer != nil && options.SessionID != "" && options.SessionID == s.SessionID() {
 		requestOptions := &ai.SimpleStreamOptions{SessionID: options.SessionID}
-		if len(options.Images) > 0 {
-			// Images ride in the user message; the warm request replays the same
-			// context without them only when the model accepts it, so keep them.
-		}
+		// Images ride in the user message; the warm request replays the same
+		// context without them only when the model accepts it, so keep them.
 		s.CacheWarmer.Start(CacheWarmRequest{
 			Model: s.Model(), Context: ai.Context{Messages: messages}, Options: requestOptions,
 		}, s.cacheContextIsCurrent())

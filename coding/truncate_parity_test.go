@@ -77,8 +77,8 @@ func TestTruncationMatchesUpstream(t *testing.T) {
 	}
 	for _, test := range cases {
 		t.Run(test.Name, func(t *testing.T) {
-			switch {
-			case test.Kind == "size":
+			switch test.Kind {
+			case "size":
 				var want string
 				if err := json.Unmarshal(test.Expected, &want); err != nil {
 					t.Fatal(err)
@@ -86,7 +86,7 @@ func TestTruncationMatchesUpstream(t *testing.T) {
 				if got := FormatSize(int64(test.Bytes)); got != want {
 					t.Errorf("FormatSize(%d) = %q, want %q", test.Bytes, got, want)
 				}
-			case test.Kind == "line":
+			case "line":
 				var want truncateFixtureLineResult
 				if err := json.Unmarshal(test.Expected, &want); err != nil {
 					t.Fatal(err)
@@ -99,7 +99,7 @@ func TestTruncationMatchesUpstream(t *testing.T) {
 				if got.Text != want.Text || got.WasTruncated != want.WasTruncated {
 					t.Errorf("TruncateLine = %+v, want %+v", got, want)
 				}
-			case test.Kind == "mcp":
+			case "mcp":
 				// Middle truncation moved into the pin's mcp package behind
 				// limitMcpContent, which caps at a fixed budget, so the behavior
 				// is pinned through that entry point.
@@ -120,7 +120,7 @@ func TestTruncationMatchesUpstream(t *testing.T) {
 				if got.String() != want {
 					t.Errorf("LimitMcpContent = %q, want %q", got.String(), want)
 				}
-			case test.Kind == "mcp-blocks":
+			case "mcp-blocks":
 				// The truncated result keeps the text and the images and drops
 				// every other block, and a failing saver only changes the notice.
 				var want string

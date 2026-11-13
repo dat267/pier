@@ -260,18 +260,20 @@ func (decoder *utf8TextDecoder) decode(data []byte, final bool) string {
 			case value >= 0xe0 && value <= 0xef:
 				decoder.bytesNeeded, decoder.codePoint = 2, rune(value&0x0f)
 				decoder.lowerBound, decoder.upperBound = 0x80, 0xbf
-				if value == 0xe0 {
+				switch value {
+				case 0xe0:
 					decoder.lowerBound = 0xa0
-				} else if value == 0xed {
+				case 0xed:
 					decoder.upperBound = 0x9f
 				}
 				i++
 			case value >= 0xf0 && value <= 0xf4:
 				decoder.bytesNeeded, decoder.codePoint = 3, rune(value&0x07)
 				decoder.lowerBound, decoder.upperBound = 0x80, 0xbf
-				if value == 0xf0 {
+				switch value {
+				case 0xf0:
 					decoder.lowerBound = 0x90
-				} else if value == 0xf4 {
+				case 0xf4:
 					decoder.upperBound = 0x8f
 				}
 				i++

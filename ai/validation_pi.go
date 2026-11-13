@@ -354,9 +354,7 @@ func (s *piSchema) parse(v *schemaValue) {
 	s.multipleOf = svFloat(v, "multipleOf")
 	if enum := svProp(v, "enum"); enum != nil && enum.IsArray {
 		s.hasEnum = true
-		for _, item := range enum.Array {
-			s.enum = append(s.enum, item)
-		}
+		s.enum = append(s.enum, enum.Array...)
 	}
 	if c := svProp(v, "const"); c != nil {
 		s.hasConst = true
@@ -1158,7 +1156,7 @@ func validHostname(value string) bool {
 			return false
 		}
 		for _, r := range label {
-			if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-') {
+			if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && r != '-' {
 				return false
 			}
 		}

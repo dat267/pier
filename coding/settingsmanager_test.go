@@ -519,8 +519,8 @@ func TestSettingsQuietStartup(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(raw)
-	if !(strings.Index(text, `"quietStartup"`) < strings.Index(text, `"defaultModel"`) &&
-		strings.Index(text, `"defaultModel"`) < strings.Index(text, `"theme"`)) {
+	if strings.Index(text, `"quietStartup"`) >= strings.Index(text, `"defaultModel"`) ||
+		strings.Index(text, `"defaultModel"`) >= strings.Index(text, `"theme"`) {
 		t.Fatalf("key order changed:\n%s", text)
 	}
 }

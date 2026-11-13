@@ -1401,7 +1401,7 @@ func DecodePrintableKey(data string) (string, bool) {
 }
 
 func isValidCodepoint(codepoint int) bool {
-	return codepoint >= 0 && codepoint <= 0x10FFFF && !(codepoint >= 0xD800 && codepoint <= 0xDFFF)
+	return codepoint >= 0 && codepoint <= 0x10FFFF && (codepoint < 0xD800 || codepoint > 0xDFFF)
 }
 
 func containsAny(data string, needles ...string) bool {

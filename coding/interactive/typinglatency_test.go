@@ -171,14 +171,14 @@ func swapTerminalRender(t *testing.T, app *App, terminal tui.Terminal) func() {
 	switch renderer := app.initialUI.(type) {
 	case *tui.AltScreen:
 		onLoop(t, app, func() {
-			original = renderer.Renderer.Terminal
-			renderer.Renderer.Terminal = terminal
+			original = renderer.Terminal
+			renderer.Terminal = terminal
 		})
 		return func() { onLoop(t, app, func() { renderer.Renderer.Terminal = original }) }
 	case *tui.MainScreen:
 		onLoop(t, app, func() {
-			original = renderer.Renderer.Terminal
-			renderer.Renderer.Terminal = terminal
+			original = renderer.Terminal
+			renderer.Terminal = terminal
 		})
 		return func() { onLoop(t, app, func() { renderer.Renderer.Terminal = original }) }
 	default:

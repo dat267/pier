@@ -226,7 +226,7 @@ func retryVertexRequest(
 		}
 		if resp.StatusCode >= 400 {
 			raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			return nil, &ProviderError{
 				Status: resp.StatusCode, Headers: resp.Header,
 				Message: googleAPIErrorMessage(resp.StatusCode, resp.Status, resp.Header.Get("Content-Type"), raw),
@@ -400,7 +400,7 @@ func refreshAuthorizedUserToken(ctx ctxpkg.Context, cacheKey string, credentials
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
 		// The body is the error message, so a capped read still says something.
 		raw, _ := io.ReadAll(io.LimitReader(resp.Body, vertexTokenBodyLimit))
@@ -471,7 +471,7 @@ func metadataAccessToken(ctx ctxpkg.Context, env ProviderEnv) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("no Google Cloud credentials found: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
 		return "", fmt.Errorf("no Google Cloud credentials found: metadata server returned %d", resp.StatusCode)
 	}

@@ -74,7 +74,7 @@ func TestGoalWrapupPersistsAfterSetGoalResult(t *testing.T) {
 	if callAt < 0 || resultAt < 0 || wrapupAt < 0 {
 		t.Fatalf("call=%d result=%d wrapup=%d", callAt, resultAt, wrapupAt)
 	}
-	if !(callAt < resultAt && resultAt < wrapupAt) {
+	if callAt >= resultAt || resultAt >= wrapupAt {
 		t.Fatalf("order call=%d result=%d wrapup=%d, want the wrap-up after the tool result", callAt, resultAt, wrapupAt)
 	}
 }

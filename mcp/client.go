@@ -748,9 +748,10 @@ func isNullishResult(result any) bool {
 
 // handleNotification dispatches notifications (upstream handleNotification).
 func (c *Client) handleNotification(message *protocol.JsonRpcNotification) {
-	if message.Method == "notifications/progress" {
+	switch message.Method {
+	case "notifications/progress":
 		c.handleProgress(message.Params)
-	} else if message.Method == "notifications/cancelled" {
+	case "notifications/cancelled":
 		c.handleCancelled(message.Params)
 	}
 	c.notificationMu.Lock()

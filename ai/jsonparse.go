@@ -651,7 +651,7 @@ func validJSONEscapeAt(units []uint16, pos, size int) bool {
 		return false
 	}
 	for _, digit := range units[pos+2 : pos+6] {
-		if !((digit >= '0' && digit <= '9') || (digit >= 'a' && digit <= 'f') || (digit >= 'A' && digit <= 'F')) {
+		if (digit < '0' || digit > '9') && (digit < 'a' || digit > 'f') && (digit < 'A' || digit > 'F') {
 			return false
 		}
 	}

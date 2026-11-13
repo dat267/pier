@@ -328,7 +328,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 			fail(err)
 			return
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if options.OnResponse != nil {
 			headers := map[string]string{}
 			for k, v := range resp.Header {
@@ -586,7 +586,7 @@ func requestGoogleStream(ctx context.Context, model *Model, body []byte, options
 		}
 		if hresp.StatusCode >= 400 {
 			raw, _ := io.ReadAll(io.LimitReader(hresp.Body, 1<<20))
-			hresp.Body.Close()
+			_ = hresp.Body.Close()
 			return nil, &ProviderError{
 				Status: hresp.StatusCode, Headers: hresp.Header,
 				Message: googleAPIErrorMessage(hresp.StatusCode, hresp.Status, hresp.Header.Get("Content-Type"), raw),

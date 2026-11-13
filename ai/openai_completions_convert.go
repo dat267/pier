@@ -607,7 +607,7 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 	if cacheControl != nil {
 		applyOpenAIAnthropicCacheControl(messages, params.Tools, cacheControl)
 	}
-	if options.ToolChoice != nil && len(options.ToolChoice) > 0 {
+	if len(options.ToolChoice) > 0 {
 		params.ToolChoice = options.ToolChoice
 	}
 	if compat.VllmPriority != nil {

@@ -331,10 +331,7 @@ func (s *AgentSession) compactionSettings() (CompactionSettings, bool) {
 	if s.control.Settings != nil {
 		resolved, err := s.control.Settings.GetCompactionSettings(s.Model())
 		if err == nil {
-			return CompactionSettings{
-				Enabled: resolved.Enabled, ReserveTokens: resolved.ReserveTokens,
-				KeepRecentTokens: resolved.KeepRecentTokens,
-			}, resolved.Enabled
+			return CompactionSettings(resolved), resolved.Enabled
 		}
 	}
 	settings := s.Settings.Compaction

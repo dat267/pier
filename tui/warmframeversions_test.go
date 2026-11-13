@@ -101,8 +101,8 @@ func TestContainerWarmFrameSkipsTheChildWalk(t *testing.T) {
 	}
 
 	// A change must still reach the frame and take the walk.
-	child.Container.Clear()
-	child.Container.AddChild(NewText("world", 0, 0, nil))
+	child.Clear()
+	child.AddChild(NewText("world", 0, 0, nil))
 	child.MarkDirty()
 	if lines := chat.Render(40); !hasLine(lines, "world") {
 		t.Fatalf("changed frame lines = %q", lines)
@@ -120,8 +120,8 @@ func TestContainerWarmFrameKeepsTheMouseLayout(t *testing.T) {
 	first := &versionCountingChild{Container: &Container{}}
 	first.Container.AddChild(NewText("a", 0, 0, nil))
 	second := &versionCountingChild{Container: &Container{}}
-	second.Container.AddChild(NewText("b", 0, 0, nil))
-	second.Container.AddChild(NewText("c", 0, 0, nil))
+	second.AddChild(NewText("b", 0, 0, nil))
+	second.AddChild(NewText("c", 0, 0, nil))
 	chat.AddChild(first)
 	chat.AddChild(second)
 	chat.Render(40)

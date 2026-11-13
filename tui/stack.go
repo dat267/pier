@@ -343,9 +343,10 @@ func (h *HStack) Render(width int) []string {
 	for index, lines := range rendered {
 		childWidth := widths[index]
 		offset := 0
-		if h.Align == "center" {
+		switch h.Align {
+		case "center":
 			offset = (height - len(lines)) / 2
-		} else if h.Align == "end" {
+		case "end":
 			offset = height - len(lines)
 		}
 		for row, line := range lines {

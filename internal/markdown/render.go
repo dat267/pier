@@ -147,7 +147,7 @@ func (r *Renderer) block(b *Block, width int, next *Block, styleContext *inlineS
 		}
 
 	case BlockLatex:
-		rendered := b.Raw
+		var rendered string
 		if !b.Pending && r.opts.LatexEnabled && r.opts.Latex != nil {
 			if latex, ok := r.opts.Latex(b.Text, true); ok {
 				rendered = latex
@@ -416,10 +416,7 @@ func (r *Renderer) renderInlineTokens(inlines []Inline, styleContext *inlineStyl
 			if r.opts.Hyperlinks {
 				builder.WriteString(r.term.Hyperlink(styledLink, in.Dest) + stylePrefix)
 			} else {
-				hrefForComparison := in.Dest
-				if strings.HasPrefix(hrefForComparison, "mailto:") {
-					hrefForComparison = hrefForComparison[len("mailto:"):]
-				}
+				hrefForComparison := strings.TrimPrefix(in.Dest, "mailto:")
 				if in.Text == in.Dest || in.Text == hrefForComparison {
 					builder.WriteString(styledLink + stylePrefix)
 				} else {

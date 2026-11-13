@@ -458,9 +458,7 @@ func run(appName string, args *coding.Args) error {
 		// Upstream reports startup diagnostics to stderr outside interactive mode
 		// (pi v1.5.0 main.ts reportDiagnostics).
 		for _, diagnostic := range settingsDiagnostics {
-			fmt.Fprintln(os.Stderr, coding.FormatCLIDiagnostic(coding.CLIDiagnostic{
-				Type: diagnostic.Type, Message: diagnostic.Message,
-			}))
+			fmt.Fprintln(os.Stderr, coding.FormatCLIDiagnostic(coding.CLIDiagnostic(diagnostic)))
 		}
 	}
 	for _, diagnostic := range scopeDiagnostics {
@@ -835,9 +833,7 @@ func resolveCliModelFlags(args *coding.Args, runtime coding.ModelRuntimeSource) 
 
 func listModels(runtime *coding.ModelRuntime, settings *coding.SettingsManager, args *coding.Args, ctx context.Context) error {
 	for _, diagnostic := range coding.CollectSettingsDiagnostics(settings) {
-		fmt.Fprintln(os.Stderr, coding.FormatCLIDiagnostic(coding.CLIDiagnostic{
-			Type: diagnostic.Type, Message: diagnostic.Message,
-		}))
+		fmt.Fprintln(os.Stderr, coding.FormatCLIDiagnostic(coding.CLIDiagnostic(diagnostic)))
 	}
 	if loadError := runtime.GetError(); loadError != "" {
 		fmt.Fprintln(os.Stderr, coding.FormatCLIDiagnostic(coding.CLIDiagnostic{

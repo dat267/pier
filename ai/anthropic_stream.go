@@ -58,16 +58,10 @@ func (d *SSEDecoder) decodeLine(line string) *ServerSentEvent {
 		return nil
 	}
 	before, after, ok := strings.Cut(line, ":")
-	fieldName := line
-	value := ""
-	if !ok {
-		fieldName = line
-	} else {
+	fieldName, value := line, ""
+	if ok {
 		fieldName = before
-		value = after
-		if strings.HasPrefix(value, " ") {
-			value = value[1:]
-		}
+		value = strings.TrimPrefix(after, " ")
 	}
 	switch fieldName {
 	case "event":
@@ -567,7 +561,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				}
 				if hresp.StatusCode >= 400 {
 					body, _ := io.ReadAll(io.LimitReader(hresp.Body, 1<<20))
-					hresp.Body.Close()
+					_ = hresp.Body.Close()
 					return nil, &ProviderError{
 						Status: hresp.StatusCode, Headers: hresp.Header,
 						Message: anthropicAPIErrorMessage(hresp.StatusCode, body),
@@ -622,7 +616,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 			fail(requestErr)
 			return
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if options.OnResponse != nil {
 			headers := map[string]string{}
 			for k, v := range resp.Header {

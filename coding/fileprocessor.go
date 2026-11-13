@@ -534,14 +534,14 @@ func ProcessFileArguments(fileArgs []string, options *ProcessFileOptions) (Proce
 			autoResizeFlag := autoResize
 			processed := ProcessImage(content, mimeType, &ProcessImageOptions{AutoResizeImages: &autoResizeFlag})
 			if !processed.OK {
-				text.WriteString(fmt.Sprintf("<file name=\"%s\">%s</file>\n", absolutePath, processed.Message))
+				fmt.Fprintf(&text, "<file name=\"%s\">%s</file>\n", absolutePath, processed.Message)
 				continue
 			}
 			images = append(images, ai.ImageContent{Data: processed.Data, MimeType: processed.MimeType})
 			if len(processed.Hints) > 0 {
-				text.WriteString(fmt.Sprintf("<file name=\"%s\">%s</file>\n", absolutePath, strings.Join(processed.Hints, "\n")))
+				fmt.Fprintf(&text, "<file name=\"%s\">%s</file>\n", absolutePath, strings.Join(processed.Hints, "\n"))
 			} else {
-				text.WriteString(fmt.Sprintf("<file name=\"%s\"></file>\n", absolutePath))
+				fmt.Fprintf(&text, "<file name=\"%s\"></file>\n", absolutePath)
 			}
 			continue
 		}
@@ -550,7 +550,7 @@ func ProcessFileArguments(fileArgs []string, options *ProcessFileOptions) (Proce
 		if err != nil {
 			return ProcessedFiles{}, fmt.Errorf("Could not read file %s: %v", absolutePath, err)
 		}
-		text.WriteString(fmt.Sprintf("<file name=\"%s\">\n%s\n</file>\n", absolutePath, StripBom(DecodeUTF8WithReplacement(content))))
+		fmt.Fprintf(&text, "<file name=\"%s\">\n%s\n</file>\n", absolutePath, StripBom(DecodeUTF8WithReplacement(content)))
 	}
 
 	return ProcessedFiles{Text: text.String(), Images: images}, nil

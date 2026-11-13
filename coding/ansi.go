@@ -46,7 +46,7 @@ func splitIncompleteAnsiSuffix(value string) (complete, pending string) {
 			i = end - 1
 			continue
 		}
-		if value[i] != '\x1b' && !(value[i] == 0xc2 && i+1 < len(value) && value[i+1] == 0x9b) {
+		if value[i] != '\x1b' && (value[i] != 0xc2 || i+1 >= len(value) || value[i+1] != 0x9b) {
 			continue
 		}
 		if incompleteCSIPrefixPattern.MatchString(value[i:]) {

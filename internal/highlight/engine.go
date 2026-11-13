@@ -439,7 +439,7 @@ func (h *highlighter) doEndMatch(m *match) int {
 	if origin.mode.skip {
 		h.modeBuffer += lexeme
 	} else {
-		if !(origin.mode.returnEnd || origin.mode.excludeEnd) {
+		if !origin.mode.returnEnd && !origin.mode.excludeEnd {
 			h.modeBuffer += lexeme
 		}
 		h.processBuffer()

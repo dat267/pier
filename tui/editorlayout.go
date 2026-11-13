@@ -31,7 +31,7 @@ func segmentWithMarkers(text string, mode string, validIDs map[int]bool) []edito
 	var base []editorSegment
 	if mode == "word" {
 		for _, segment := range WordSegments(text) {
-			base = append(base, editorSegment{Segment: segment.Segment, Index: segment.Index, IsWordLike: segment.IsWordLike})
+			base = append(base, editorSegment(segment))
 		}
 	} else {
 		offset := 0

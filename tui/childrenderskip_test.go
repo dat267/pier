@@ -47,8 +47,8 @@ func TestContainerSkipsUnchangedVersionedChildren(t *testing.T) {
 	}
 
 	// A revision change re-renders it and the new content reaches the parent.
-	child.Container.Clear()
-	child.Container.AddChild(NewText("world", 0, 0, nil))
+	child.Clear()
+	child.AddChild(NewText("world", 0, 0, nil))
 	child.MarkDirty()
 	if lines := chat.Render(40); !hasLine(lines, "world") {
 		t.Fatalf("changed child lines = %q", lines)

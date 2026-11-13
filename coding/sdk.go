@@ -254,7 +254,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		thinkingLevel = ai.ClampThinkingLevel(model, thinkingLevel)
 	}
 
-	toolModifiers := options.Tools != nil && len(options.Tools) > 0 && overridesOnlyToolModifiers(options.Tools)
+	toolModifiers := len(options.Tools) > 0 && overridesOnlyToolModifiers(options.Tools)
 	var defaultToolModifiers []string
 	if toolModifiers {
 		defaultToolModifiers = append(defaultToolModifiers, options.Tools...)
@@ -699,10 +699,7 @@ func compactionSettingsOf(settingsManager *SettingsManager, model *ai.Model) Com
 	if err != nil {
 		return DefaultCompactionSettings
 	}
-	return CompactionSettings{
-		Enabled: resolved.Enabled, ReserveTokens: resolved.ReserveTokens,
-		KeepRecentTokens: resolved.KeepRecentTokens,
-	}
+	return CompactionSettings(resolved)
 }
 
 // contentListHasImages reports whether any block is an image.

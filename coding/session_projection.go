@@ -186,7 +186,7 @@ func projectWindow(path []*SessionEntry, cache *messageCache) projectedWindow {
 		// The window may retain an older compaction whose raw ID lies inside the
 		// newest retained range; only the newest compaction (index 0) contributes
 		// a checkpoint and summary (upstream buildSessionProjection).
-		if !(entry.Type == "compaction" && index > 0) {
+		if entry.Type != "compaction" || index <= 0 {
 			messages = projectedMessages(entry, cache)
 			if edit := edits[entry.ID]; edit != nil {
 				messages = applyContextEdit(messages, edit.Replacement)

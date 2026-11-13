@@ -11,7 +11,7 @@ import (
 // Platform helpers for the terminal port (unix build).
 
 func isDarwin() bool  { return runtime.GOOS == "darwin" }
-func isWindows() bool { return runtime.GOOS == "windows" }
+func isWindows() bool { return false }
 
 // nativeShiftPressed is upstream's isNativeModifierPressed("shift"), which
 // needs the native platform helper (C/ObjC). Out of scope; native Shift+Enter

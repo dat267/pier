@@ -71,10 +71,9 @@ func TestAltScreenRestoreOnExitSequence(t *testing.T) {
 	terminal.modifyOtherKeysActive.Store(true)
 
 	screen.RestoreOnExit()
-	written := output.String()
 	screen.SetTerminalColorSchemeNotifications(true)
 	screen.RestoreOnExit()
-	written = output.String()
+	written := output.String()
 	for _, sequence := range []string{
 		"\x1b[?2026l", // end synchronized output
 		disableMouse,

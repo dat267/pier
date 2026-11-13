@@ -33,12 +33,10 @@ func formatGrepCall(args map[string]any, theme *Theme) string {
 	} else {
 		text += theme.Fg("accent", "/"+pattern+"/")
 	}
-	shownPath := path
 	if !pathOK {
-		shownPath = ""
 		text += theme.Fg("toolOutput", " in "+invalidArg)
 	} else {
-		text += theme.Fg("toolOutput", " in "+shownPath)
+		text += theme.Fg("toolOutput", " in "+path)
 	}
 	if glob != "" {
 		text += theme.Fg("toolOutput", " ("+glob+")")

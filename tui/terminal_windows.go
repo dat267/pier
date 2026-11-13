@@ -3,7 +3,6 @@
 package tui
 
 import (
-	"runtime"
 	"sync"
 	"time"
 )
@@ -20,7 +19,7 @@ import (
 const windowsResizePollInterval = 200 * time.Millisecond
 
 func isDarwin() bool  { return false }
-func isWindows() bool { return runtime.GOOS == "windows" }
+func isWindows() bool { return true }
 
 func nativeShiftPressed() bool { return false }
 

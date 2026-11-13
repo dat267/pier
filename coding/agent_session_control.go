@@ -864,7 +864,7 @@ func (s *AgentSession) recordModelSelection(branch []SessionEntry) {
 		return
 	}
 	recordedModel := getModel(recorded.Provider, recorded.ModelID)
-	if !IsVirtualModel(model) && !(recordedModel != nil && IsVirtualModel(recordedModel)) {
+	if !IsVirtualModel(model) && (recordedModel == nil || !IsVirtualModel(recordedModel)) {
 		return
 	}
 	s.Sessions.AppendModelChange(model.Provider, model.ID)
@@ -951,9 +951,7 @@ func (s *AgentSession) GetAvailableThinkingLevels() []ai.ThinkingLevel {
 	}
 	supported := ai.GetSupportedThinkingLevels(model)
 	out := make([]ai.ThinkingLevel, 0, len(supported))
-	for _, level := range supported {
-		out = append(out, level)
-	}
+	out = append(out, supported...)
 	return out
 }
 

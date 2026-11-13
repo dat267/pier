@@ -554,7 +554,7 @@ func isDefaultIgnorable(r rune) bool {
 	// Default_Ignorable excludes White_Space, FFF9..FFFB and the
 	// Prepended_Concatenation_Mark characters.
 	return !unicode.Is(unicode.White_Space, r) &&
-		!(r >= 0xFFF9 && r <= 0xFFFB) &&
+		(r < 0xFFF9 || r > 0xFFFB) &&
 		!unicode.Is(unicode.Prepended_Concatenation_Mark, r)
 }
 

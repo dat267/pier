@@ -457,7 +457,7 @@ func (m *Markdown) Render(width int) []string {
 		// tail changes how the blocks before it resolve reference links;
 		// redo the whole source. canReuseLex required the same width, so the
 		// recomputed match is safe.
-		windowBase, windowOffset = 0, 0
+		windowBase = 0
 		blocks, defs = markdown.LexDefinitions(normalizedText, 0, nil)
 		markdown.TrimPartialClosingFences(blocks)
 		total = len(blocks)

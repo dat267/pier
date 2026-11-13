@@ -56,9 +56,7 @@ func KeybindingsFor(goos string, env func(string) string) (map[string]tui.Keybin
 	definitions := map[string]tui.KeybindingDefinition{}
 	order := make([]string, 0, len(tui.TUIKeybindings)+len(AppKeybindingNames))
 	maps.Copy(definitions, tui.TUIKeybindings)
-	for _, key := range tuiKeybindingOrderForOrdering() {
-		order = append(order, key)
-	}
+	order = append(order, tuiKeybindingOrderForOrdering()...)
 
 	windows := UseWindowsKeybindings(goos, env)
 

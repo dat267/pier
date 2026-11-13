@@ -31,7 +31,7 @@ func TestBuildSystemPromptPreservesCustomSectionOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Index(prompt, "<zeta>") < 0 || strings.Index(prompt, "<zeta>") > strings.Index(prompt, "<alpha>") {
+	if !strings.Contains(prompt, "<zeta>") || strings.Index(prompt, "<zeta>") > strings.Index(prompt, "<alpha>") {
 		t.Fatalf("custom sections not in supplied order: %q", prompt)
 	}
 

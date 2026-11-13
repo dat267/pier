@@ -507,7 +507,8 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 	// The new leaf depends on the target kind.
 	newLeafID := targetID
 	editorText := ""
-	if targetEntry.Type == "message" {
+	switch targetEntry.Type {
+	case "message":
 		message, err := ai.UnmarshalMessage(targetEntry.Message)
 		if err == nil {
 			if user, ok := message.(*ai.UserMessage); ok {
@@ -519,7 +520,7 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 				editorText = contentTextJoinedNoSep(user.Content)
 			}
 		}
-	} else if targetEntry.Type == "custom_message" {
+	case "custom_message":
 		if targetEntry.ParentID != nil {
 			newLeafID = *targetEntry.ParentID
 		} else {

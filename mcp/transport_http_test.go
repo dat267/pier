@@ -1078,8 +1078,7 @@ func TestStreamableHTTPPostsSetContentLength(t *testing.T) {
 }
 
 func TestStreamableHTTPErrorBodyIsSlicedByUTF16Units(t *testing.T) {
-	var fixture *httpFixture
-	fixture = newHTTPFixture(func(w http.ResponseWriter, r *http.Request) {
+	fixture := newHTTPFixture(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = io.WriteString(w, strings.Repeat("界", 9000))
 	})

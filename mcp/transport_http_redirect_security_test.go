@@ -125,8 +125,7 @@ func TestStreamableHTTPRedirectDoesNotForwardAuthorizationAcrossPorts(t *testing
 			}
 			target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { finish(w, r) }))
 			defer target.Close()
-			var origin *httptest.Server
-			origin = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/start" {
 					destination := "/finish"
 					if crossOrigin {

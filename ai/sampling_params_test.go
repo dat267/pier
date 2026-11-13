@@ -55,7 +55,7 @@ func TestBuildOpenAICompletionsParamsPreservesModelSamplingParamOrder(t *testing
 		t.Fatal(err)
 	}
 	got := string(encoded)
-	if strings.Index(got, `"top_k"`) < 0 || strings.Index(got, `"seed"`) < 0 || strings.Index(got, `"top_k"`) > strings.Index(got, `"seed"`) {
+	if !strings.Contains(got, `"top_k"`) || !strings.Contains(got, `"seed"`) || strings.Index(got, `"top_k"`) > strings.Index(got, `"seed"`) {
 		t.Fatalf("sampling parameter order = %s, want top_k before seed", got)
 	}
 }

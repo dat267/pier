@@ -211,7 +211,7 @@ func ExchangeFederationToken(ctx context.Context, config FederationConfig) (Fede
 	if err != nil {
 		return FederationToken{}, &WorkloadIdentityError{Message: fmt.Sprintf("Failed to reach token endpoint %s: %v", endpoint, err)}
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	text, err := readLimitedText(response.Body, MaxTokenResponseBytes)
 	if err != nil {
 		return FederationToken{}, err

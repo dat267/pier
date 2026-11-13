@@ -42,7 +42,7 @@ func TestModelInputLimitsParseAndRoundTrip(t *testing.T) {
 	inputAt := strings.Index(text, `"input":`)
 	limitsAt := strings.Index(text, `"inputLimits":`)
 	costAt := strings.Index(text, `"cost":`)
-	if inputAt < 0 || limitsAt < 0 || costAt < 0 || !(inputAt < limitsAt && limitsAt < costAt) {
+	if inputAt < 0 || limitsAt < 0 || costAt < 0 || (inputAt >= limitsAt || limitsAt >= costAt) {
 		t.Fatalf("inputLimits is not between input and cost: %s", text)
 	}
 	// The encoded form is stable: a second round trip changes nothing.

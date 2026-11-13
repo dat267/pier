@@ -170,7 +170,7 @@ func NewSessionManager(cwd string, options *SessionManagerOptions) *SessionManag
 		m.sessionDir = DefaultSessionDir(cwd, "")
 	}
 	var directoryErr error
-	m.sessionDirManaged = m.sessionDir != "" && !(options != nil && options.SessionDirDerived)
+	m.sessionDirManaged = m.sessionDir != "" && (options == nil || !options.SessionDirDerived)
 	if persist && m.sessionDirManaged {
 		directoryErr = EnsurePrivateSessionDir(m.sessionDir)
 	}

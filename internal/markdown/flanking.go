@@ -28,9 +28,9 @@ func isDelimiterPunctuation(r rune) bool {
 // left reports whether the run can open, right whether it can close.
 func delimiterFlanking(prev rune, hasPrev bool, next rune, hasNext bool, marker byte) (left bool, right bool) {
 	prevSpace := !hasPrev || isDelimiterWhitespace(prev)
-	prevPunct := hasPrev && isDelimiterPunctuation(prev) && !(marker == '*' && prev == '~')
+	prevPunct := hasPrev && isDelimiterPunctuation(prev) && (marker != '*' || prev != '~')
 	nextSpace := !hasNext || isDelimiterWhitespace(next)
-	nextPunct := hasNext && isDelimiterPunctuation(next) && !(marker == '*' && next == '~')
+	nextPunct := hasNext && isDelimiterPunctuation(next) && (marker != '*' || next != '~')
 
 	left = !nextSpace && (!nextPunct || prevSpace || prevPunct)
 	right = !prevSpace && (!prevPunct || nextSpace || nextPunct)

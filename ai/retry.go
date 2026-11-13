@@ -160,7 +160,7 @@ func GetRetryDelayMS(err *ProviderError, retryIndex int, maxRetryDelayMS *int) (
 				return validateServerRetryDelayFloat(seconds*1000, maxRetryDelayMS, err.Message)
 			}
 			if at, parseErr := http.ParseTime(v); parseErr == nil {
-				delay := at.Sub(time.Now()).Milliseconds()
+				delay := time.Until(at).Milliseconds()
 				return validateServerRetryDelayMS(delay, maxRetryDelayMS, err.Message)
 			}
 		}

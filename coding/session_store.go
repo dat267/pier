@@ -691,7 +691,7 @@ func scanJSONStringStrict(s []byte, start int) (int, bool) {
 				}
 				for k := 1; k <= 4; k++ {
 					hex := s[i+k]
-					if !(hex >= '0' && hex <= '9' || hex >= 'a' && hex <= 'f' || hex >= 'A' && hex <= 'F') {
+					if (hex < '0' || hex > '9') && (hex < 'a' || hex > 'f') && (hex < 'A' || hex > 'F') {
 						return 0, false
 					}
 				}
@@ -1133,7 +1133,7 @@ func legacyFirstKeptIndex(raw json.RawMessage) (int, bool) {
 		return 0, false
 	}
 	trimmed := bytes.TrimSpace(value)
-	if len(trimmed) == 0 || !(trimmed[0] == '-' || trimmed[0] >= '0' && trimmed[0] <= '9') {
+	if len(trimmed) == 0 || (trimmed[0] != '-' && (trimmed[0] < '0' || trimmed[0] > '9')) {
 		return 0, false
 	}
 	number, err := strconv.ParseFloat(string(trimmed), 64)
@@ -1466,7 +1466,7 @@ func walkCompactionWindow(path []*SessionEntry, cache *messageCache, visit func(
 		if entry.ID == compaction.FirstKeptEntryID {
 			foundFirstKept = true
 		}
-		if foundFirstKept && !(entry.Type == "message" && projectedRole(entry, cache) == "system") {
+		if foundFirstKept && (entry.Type != "message" || projectedRole(entry, cache) != "system") {
 			visit(entry)
 		}
 	}

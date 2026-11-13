@@ -404,15 +404,10 @@ func (c *compiler) buildModeRegex(mode *compiledMode) *resumableMultiRegex {
 
 func compileKeywords(raw Keywords, caseInsensitive bool) map[string]keywordData {
 	out := map[string]keywordData{}
-	var compileList func(className, words string)
-	compileList = func(className, words string) {
+	var compileList func(className, words string) = func(className, words string) {
 		for keyword := range strings.SplitSeq(words, " ") {
 			if keyword == "" {
 				continue
-			}
-			key := keyword
-			if caseInsensitive {
-				key = strings.ToLower(key)
 			}
 			pair := strings.SplitN(keyword, "|", 2)
 			word := pair[0]

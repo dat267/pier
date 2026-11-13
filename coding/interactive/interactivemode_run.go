@@ -471,7 +471,7 @@ type InitOptions struct {
 func (w *RunWiring) Run(ctx context.Context, options InitOptions, runOptions RunOptions) {
 	w.Init(ctx, options.ScopedModels, options.RegisterSignals, options.Mount, options.QuietStartup)
 
-	if runOptions.Offline != true && w.RefreshModelCatalogs != nil {
+	if !runOptions.Offline && w.RefreshModelCatalogs != nil {
 		refreshCtx, cancel := context.WithCancel(ctx)
 		go func() {
 			defer cancel()

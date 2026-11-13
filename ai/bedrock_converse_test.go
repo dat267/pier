@@ -658,10 +658,7 @@ func TestBedrockStreamFold(t *testing.T) {
 	if message.Usage.CacheWrite1h == nil || *message.Usage.CacheWrite1h != 4 {
 		t.Fatalf("cacheWrite1h = %v", message.Usage.CacheWrite1h)
 	}
-	if message.Usage.Cost.Input != 3*100.0/1e6*1e6/1e6*100 {
-		// Cost is computed from the model rates; only assert it is non-zero and
-		// additive.
-	}
+	// Cost is computed from the model rates; only assert it is additive.
 	if message.Usage.Cost.Total != message.Usage.Cost.Input+message.Usage.Cost.Output+
 		message.Usage.Cost.CacheRead+message.Usage.Cost.CacheWrite {
 		t.Fatalf("cost = %+v", message.Usage.Cost)

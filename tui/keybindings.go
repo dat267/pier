@@ -353,9 +353,7 @@ func canonicalBindingOrder(definitions map[Keybinding]KeybindingDefinition) []Ke
 		keys = append(keys, key)
 	}
 	sortStrings(keys)
-	for _, key := range keys {
-		order = append(order, key)
-	}
+	order = append(order, keys...)
 	return order
 }
 

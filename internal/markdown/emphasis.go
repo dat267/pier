@@ -97,7 +97,7 @@ func parseEmStrong(src, masked string, i int, ch byte, prev rune, hasPrev bool, 
 			k = runEnd
 			continue
 		}
-		if ch == '_' && closeLeft && closeRight && !(closeHasNext && isDelimiterPunctuation(closeNext)) && !cjkAdjacent {
+		if ch == '_' && closeLeft && closeRight && (!closeHasNext || !isDelimiterPunctuation(closeNext)) && !cjkAdjacent {
 			// A both-flanking intraword underscore run is content.
 			k = runEnd
 			continue

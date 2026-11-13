@@ -380,7 +380,7 @@ func TestAutocompleteFuzzyScoring(t *testing.T) {
 	substring := provider.scoreEntry("src/xalpha.txt", "alpha", false)
 	pathOnly := provider.scoreEntry("src/alpha/z.txt", "alpha", false)
 	dirBonus := provider.scoreEntry("src/alpha", "alpha", true)
-	if !(exact > prefix && prefix > substring && substring > pathOnly) {
+	if exact <= prefix || prefix <= substring || substring <= pathOnly {
 		t.Fatalf("scores: %d %d %d %d", exact, prefix, substring, pathOnly)
 	}
 	if dirBonus <= prefix {

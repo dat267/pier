@@ -82,10 +82,10 @@ func BashExecutionToText(msg *bashExecutionFields) string {
 	if msg.Cancelled {
 		text.WriteString("\n\n(command cancelled)")
 	} else if msg.ExitCode != nil && *msg.ExitCode != 0 {
-		text.WriteString(fmt.Sprintf("\n\nCommand exited with code %d", *msg.ExitCode))
+		fmt.Fprintf(&text, "\n\nCommand exited with code %d", *msg.ExitCode)
 	}
 	if msg.Truncated && msg.FullOutputPath != nil {
-		text.WriteString(fmt.Sprintf("\n\n[Output truncated. Full output: %s]", *msg.FullOutputPath))
+		fmt.Fprintf(&text, "\n\n[Output truncated. Full output: %s]", *msg.FullOutputPath)
 	}
 	return text.String()
 }

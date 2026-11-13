@@ -99,7 +99,7 @@ func TestLoadedResourcesListsPromptSources(t *testing.T) {
 	if contextIndex == -1 || systemIndex == -1 || appendIndex == -1 || agentsIndex == -1 {
 		t.Fatalf("Context section is missing a prompt source:\n%s", rendered)
 	}
-	if !(contextIndex < systemIndex && systemIndex < appendIndex && appendIndex < agentsIndex) {
+	if contextIndex >= systemIndex || systemIndex >= appendIndex || appendIndex >= agentsIndex {
 		t.Fatalf("prompt sources must precede the context files:\n%s", rendered)
 	}
 }

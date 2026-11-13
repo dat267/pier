@@ -71,7 +71,7 @@ func isUUID(value string) bool {
 				return false
 			}
 		default:
-			if !((char >= '0' && char <= '9') || (char >= 'a' && char <= 'f') || (char >= 'A' && char <= 'F')) {
+			if (char < '0' || char > '9') && (char < 'a' || char > 'f') && (char < 'A' || char > 'F') {
 				return false
 			}
 		}
@@ -238,9 +238,10 @@ func ParseOpenAIChatGPTAuthorizationInput(input string, expectedState string) (O
 func urlOrigin(u *url.URL) string {
 	scheme := strings.ToLower(u.Scheme)
 	host := strings.ToLower(u.Host)
-	if scheme == "http" {
+	switch scheme {
+	case "http":
 		host = strings.TrimSuffix(host, ":80")
-	} else if scheme == "https" {
+	case "https":
 		host = strings.TrimSuffix(host, ":443")
 	}
 	return scheme + "://" + host

@@ -1790,7 +1790,7 @@ func (s *AltScreen) stopSelectionAutoScrollLocked() {
 
 func (s *AltScreen) handleSelectionMouseEventLocked(event sgrMouseEvent) {
 	button := event.Button & 3
-	if button != 0 && !(event.Release && button == 3) {
+	if button != 0 && (!event.Release || button != 3) {
 		return
 	}
 	var anchorScrollView *ScrollView
@@ -2467,9 +2467,10 @@ func (s *AltScreen) doRender() {
 		}
 		builder.WriteString("\x1b[2J")
 	} else if imagesNeedRedraw {
-		if s.imageProtocol == "iterm2" {
+		switch s.imageProtocol {
+		case "iterm2":
 			builder.WriteString("\x1b[2J")
-		} else if s.imageProtocol == "kitty" {
+		case "kitty":
 			builder.WriteString(deleteAllKittyPlacements())
 		}
 	}

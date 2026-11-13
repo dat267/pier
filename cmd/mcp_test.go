@@ -87,7 +87,7 @@ func TestSetupMCPServersProjectScope(t *testing.T) {
 	}
 	// Trusted: it is loaded (and the server fails to start, which is reported
 	// on the connection once the background connect settles).
-	manager, errors = startMCPServers(context.Background(), nil, agentDir, cwd, true, false)
+	manager, _ = startMCPServers(context.Background(), nil, agentDir, cwd, true, false)
 	if manager == nil {
 		t.Fatal("trusted project config ignored")
 	}

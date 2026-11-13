@@ -344,9 +344,8 @@ func yamlPlainScalarIsString(value string) bool {
 	if strings.HasPrefix(value, "0X") || strings.HasPrefix(value, "0O") {
 		return true
 	}
-	unsigned := value
 	if strings.HasPrefix(value, "+") || strings.HasPrefix(value, "-") {
-		unsigned = value[1:]
+		unsigned := value[1:]
 		lower := strings.ToLower(unsigned)
 		if strings.HasPrefix(lower, "0x") || strings.HasPrefix(lower, "0o") || strings.HasPrefix(lower, "0b") {
 			return true

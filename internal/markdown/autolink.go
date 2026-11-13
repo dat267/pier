@@ -132,20 +132,22 @@ func matchBareEmail(src string, i int) (int, bool) {
 	// The trailing (?![-_]) lookahead backtracks the last label to an earlier
 	// alphanumeric, then drops whole groups; a dropped group leaves the
 	// previous group's end before the group's dot, which always passes.
-	for {
-		last := groups[len(groups)-1]
-		for _, l := range slices.Backward(last) {
-			if l+1 >= len(src) || (src[l+1] != '-' && src[l+1] != '_') {
-				return l + 1, true
-			}
+	last := groups[len(groups)-1]
+	for _, l := range slices.Backward(last) {
+		if l+1 >= len(src) || (src[l+1] != '-' && src[l+1] != '_') {
+			return l + 1, true
 		}
-		groups = groups[:len(groups)-1]
-		if len(groups) == 0 {
-			return 0, false
-		}
-		previous := groups[len(groups)-1]
-		return previous[len(previous)-1] + 1, true
 	}
+	// Every candidate in the last label is followed by '-' or '_', so the rule
+	// cannot end there. One drop is enough: a later group exists only because
+	// the previous label's last alphanumeric was followed by a dot, which passes
+	// the same lookahead. Checked against marked 18 on a 400-case corpus.
+	groups = groups[:len(groups)-1]
+	if len(groups) == 0 {
+		return 0, false
+	}
+	previous := groups[len(groups)-1]
+	return previous[len(previous)-1] + 1, true
 }
 
 // backpedalURL applies the reference's `_backpedal` regex to a URL match until

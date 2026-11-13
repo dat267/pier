@@ -84,9 +84,7 @@ func IsNewerPackageVersion(candidateVersion, currentVersion string) bool {
 // ordinary comparison path.
 func gitDescribeBaseVersion(version string) (string, bool) {
 	value := ai.JSTrim(version)
-	if strings.HasSuffix(value, "-dirty") {
-		value = strings.TrimSuffix(value, "-dirty")
-	}
+	value = strings.TrimSuffix(value, "-dirty")
 	last := strings.LastIndexByte(value, '-')
 	if last < 0 {
 		return "", false
@@ -96,9 +94,9 @@ func gitDescribeBaseVersion(version string) (string, bool) {
 		return "", false
 	}
 	for _, character := range hash[1:] {
-		if !((character >= '0' && character <= '9') ||
-			(character >= 'a' && character <= 'f') ||
-			(character >= 'A' && character <= 'F')) {
+		if (character < '0' || character > '9') &&
+			(character < 'a' || character > 'f') &&
+			(character < 'A' || character > 'F') {
 			return "", false
 		}
 	}
@@ -138,9 +136,7 @@ func parseSemver(value string) (semver, bool) {
 	main := value
 	// npm's semver accepts one leading "v" and strips it (`valid("v1.2.3")` is
 	// "1.2.3"), which matters because Go module versions keep the tag's prefix.
-	if strings.HasPrefix(main, "v") {
-		main = main[1:]
-	}
+	main = strings.TrimPrefix(main, "v")
 	if index := strings.Index(main, "+"); index >= 0 {
 		build := main[index+1:]
 		if build == "" || !validBuildIdentifiers(build) {

@@ -148,9 +148,7 @@ func quoteExtent(src string, start int) (end int, lazy bool) {
 		at = ln.next
 		marker := strings.IndexByte(ln.text, '>') + 1
 		content := ln.text[marker:]
-		if strings.HasPrefix(content, " ") {
-			content = content[1:]
-		}
+		content = strings.TrimPrefix(content, " ")
 		// `[^\n]*` matched an empty line: no paragraph, so no lazy lines.
 		if content == "" {
 			continue

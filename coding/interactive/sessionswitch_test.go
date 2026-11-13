@@ -54,8 +54,8 @@ func TestSwitchSessionSwapsAndRebinds(t *testing.T) {
 	}
 	// The AppSession adapter is shared by every wiring; the embedded agent
 	// session must follow the swap.
-	if app.session.AgentSession.SessionID() != target.GetSessionID() {
-		t.Fatalf("app session id %s, want %s", app.session.AgentSession.SessionID(), target.GetSessionID())
+	if app.session.SessionID() != target.GetSessionID() {
+		t.Fatalf("app session id %s, want %s", app.session.SessionID(), target.GetSessionID())
 	}
 	// The session-info holders must all point at the new manager.
 	for _, info := range []*coding.SessionManager{

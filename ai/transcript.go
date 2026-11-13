@@ -84,9 +84,7 @@ func currentToolsOfSystemMessages(systemMessages []*SystemMessage) []Tool {
 	var order []string
 	for _, s := range systemMessages {
 		for _, ref := range s.ToolsRemoved {
-			if _, ok := tools[ref.Name]; ok {
-				delete(tools, ref.Name)
-			}
+			delete(tools, ref.Name)
 			for i, name := range order {
 				if name == ref.Name {
 					order = append(order[:i], order[i+1:]...)

@@ -306,7 +306,7 @@ func TestLoadEntriesBufferedAllocatesLikeTheFile(t *testing.T) {
 	content := `{"type":"message","id":"m%06d","parentId":null,"timestamp":"t","message":{"role":"user","content":"` +
 		strings.Repeat("x", 1800) + `"}}`
 	for i := range 2000 {
-		b.WriteString(fmt.Sprintf(content, i))
+		fmt.Fprintf(&b, content, i)
 		b.WriteString("\n")
 	}
 	dir := t.TempDir()

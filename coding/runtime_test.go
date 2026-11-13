@@ -241,7 +241,7 @@ func TestResolveHeaders(t *testing.T) {
 		t.Fatal("all-missing headers must be nil")
 	}
 
-	resolved, err := ResolveHeadersOrThrow(headers, "Provider", env)
+	_, err := ResolveHeadersOrThrow(headers, "Provider", env)
 	if err == nil || !strings.Contains(err.Error(), `Failed to resolve Provider header "x-missing"`) {
 		t.Fatalf("err = %v", err)
 	}

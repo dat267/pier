@@ -374,7 +374,7 @@ func ValidateToolArguments(tool Tool, toolCall ToolCall) (json.RawMessage, error
 	for _, validationError := range errors {
 		errorLines = append(errorLines, "  - "+formatValidationPath(validationError.path)+": "+validationError.message)
 	}
-	var received json.RawMessage = toolCall.Arguments
+	var received = toolCall.Arguments
 	if len(toolCall.Arguments) > 0 {
 		if formatted, err := MarshalIndentJSON(toolCall.Arguments); err == nil {
 			received = formatted

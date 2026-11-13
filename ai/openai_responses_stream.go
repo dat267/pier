@@ -118,7 +118,7 @@ func BuildOpenAIResponsesParamsWithProviders(
 	}
 	if model.Reasoning {
 		if reasoningEffort != "" {
-			requestedEffort := "medium"
+			var requestedEffort string
 			if options.ReasoningEffort != "" {
 				if mapped, ok := model.ThinkingLevelMap[options.ReasoningEffort]; ok && mapped != nil {
 					requestedEffort = *mapped

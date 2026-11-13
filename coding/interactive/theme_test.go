@@ -215,7 +215,7 @@ func TestThemeValidation(t *testing.T) {
 	if !strings.Contains(message, "Missing required color tokens:") || !strings.Contains(message, "  - bashMode") {
 		t.Fatalf("unexpected message: %s", message)
 	}
-	if !(strings.Index(message, "  - bashMode") < strings.Index(message, "  - border")) {
+	if strings.Index(message, "  - bashMode") >= strings.Index(message, "  - border") {
 		t.Fatalf("missing colors not sorted: %s", message)
 	}
 

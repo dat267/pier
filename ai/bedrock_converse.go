@@ -978,7 +978,7 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 			fail(providerErr, response.Header.Get("x-amzn-requestid"), response.StatusCode, response.Header)
 			return
 		}
-		defer response.Body.Close()
+		defer func() { _ = response.Body.Close() }()
 		requestID := response.Header.Get("x-amzn-requestid")
 		if options.OnResponse != nil {
 			headers := map[string]string{}
@@ -1469,9 +1469,10 @@ func StreamBedrockConverseSimple(model *Model, context TranscriptContext, option
 	}
 	bedrockOptions := &BedrockOptions{StreamOptions: withSimpleMaxTokens(model, context, options.StreamOptions)}
 	if options.ToolChoice != nil {
-		if *options.ToolChoice == ToolChoiceAuto {
+		switch *options.ToolChoice {
+		case ToolChoiceAuto:
 			bedrockOptions.ToolChoice = "auto"
-		} else if *options.ToolChoice == ToolChoiceNone {
+		case ToolChoiceNone:
 			bedrockOptions.ToolChoice = "none"
 		}
 	}

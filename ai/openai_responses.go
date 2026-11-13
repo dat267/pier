@@ -630,9 +630,7 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 				m.Model == model.ID && m.ProviderThinkingLevel != nil {
 				pushConfigurationUpdate(*m.ProviderThinkingLevel)
 			}
-			for _, item := range items {
-				messages = append(messages, item)
-			}
+			messages = append(messages, items...)
 		case *ToolResultMessage:
 			callID, _, _ := strings.Cut(m.ToolCallID, "|")
 			output := convertResponsesToolResultOutput(model, m.Content)

@@ -727,7 +727,7 @@ func htmlOpenTagAttributesEnd(s string) (int, bool) {
 			return j + 2, true
 		}
 		// Another attribute needs at least one space before its name.
-		if j == i || j >= len(s) || !(isASCIILetter(s[j]) || s[j] == ':' || s[j] == '_') {
+		if j == i || j >= len(s) || (!isASCIILetter(s[j]) && s[j] != ':' && s[j] != '_') {
 			return 0, false
 		}
 		j++

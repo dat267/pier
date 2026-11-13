@@ -450,9 +450,7 @@ func (p *latexParser) parseSequence(endCharacter string, hasEnd bool) string {
 			command := p.parseCommand()
 			if command == latexNegativeSpace {
 				result = strings.TrimRight(result, " \t\n\r\v\f\u00a0")
-				if strings.HasSuffix(result, latexNamedOperatorEnd) {
-					result = result[:len(result)-len(latexNamedOperatorEnd)]
-				}
+				result = strings.TrimSuffix(result, latexNamedOperatorEnd)
 			} else {
 				result += command
 			}

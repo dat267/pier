@@ -95,10 +95,7 @@ func ConsumeSseStream(body io.Reader, options ConsumeSseOptions) error {
 		}
 		field, value := line, ""
 		if before, after, ok := strings.Cut(line, ":"); ok {
-			field, value = before, after
-			if strings.HasPrefix(value, " ") {
-				value = value[1:]
-			}
+			field, value = before, strings.TrimPrefix(after, " ")
 		}
 		switch field {
 		case "data":
@@ -787,7 +784,7 @@ func (t *StreamableHttpTransport) consumeResponseStream(body io.ReadCloser, requ
 			answered = true
 		}
 	}
-	var stream io.ReadCloser = body
+	var stream = body
 	var failure error
 	for attempt := 0; ; {
 		if stream != nil {

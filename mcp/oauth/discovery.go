@@ -387,7 +387,7 @@ func DiscoverOAuthServerInfo(ctx context.Context, serverURL string, options Disc
 		}
 		return &OAuthServerInfo{AuthorizationServerURL: metadata.Issuer, AuthorizationServerMetadata: metadata, ResourceMetadata: resourceMetadata}, nil
 	}
-	authorizationServerURL := serverURL
+	var authorizationServerURL string
 	if resourceMetadata != nil && len(resourceMetadata.AuthorizationServers) > 0 {
 		authorizationServerURL = resourceMetadata.AuthorizationServers[0]
 	} else {
@@ -488,9 +488,10 @@ func ensureSlash(path string) string {
 func originOf(u *url.URL) string {
 	scheme := strings.ToLower(u.Scheme)
 	host := strings.ToLower(u.Host)
-	if scheme == "http" {
+	switch scheme {
+	case "http":
 		host = strings.TrimSuffix(host, ":80")
-	} else if scheme == "https" {
+	case "https":
 		host = strings.TrimSuffix(host, ":443")
 	}
 	return scheme + "://" + host

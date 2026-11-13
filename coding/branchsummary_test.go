@@ -53,10 +53,8 @@ func mustJSONMessage(message ai.Message) json.RawMessage {
 func sessionWithBranch(t *testing.T) *SessionManager {
 	t.Helper()
 	manager := newTestSessionManager(t)
-	parent := "root"
 	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "start"}})
-	rootID := manager.GetEntries()[0].ID
-	parent = rootID
+	parent := manager.GetEntries()[0].ID
 	manager.AppendMessage(&ai.AssistantMessage{
 		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
 		Content: ai.ContentList{

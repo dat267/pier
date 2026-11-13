@@ -2,7 +2,6 @@ package coding
 
 import (
 	"context"
-	ctxpkg "context"
 	"fmt"
 	"io"
 	"net/http"
@@ -125,7 +124,7 @@ func TestOpenRouterRefreshUsesTheKeySpecificModelCatalog(t *testing.T) {
 		t.Fatal(err)
 	}
 	allowNetwork, force := true, true
-	if _, err := runtime.Refresh(ctxpkg.Background(), &ModelsRefreshCallOptions{
+	if _, err := runtime.Refresh(context.Background(), &ModelsRefreshCallOptions{
 		Providers: []string{"openrouter"}, AllowNetwork: &allowNetwork, Force: &force,
 	}); err != nil {
 		t.Fatal(err)
@@ -144,7 +143,7 @@ func TestOpenRouterRefreshUsesTheKeySpecificModelCatalog(t *testing.T) {
 		t.Fatalf("user-model requests = %d authorization = %q", userRequests, userAuthorization)
 	}
 	allowNetwork = false
-	if _, err := runtime.Refresh(ctxpkg.Background(), &ModelsRefreshCallOptions{
+	if _, err := runtime.Refresh(context.Background(), &ModelsRefreshCallOptions{
 		Providers: []string{"openrouter"}, AllowNetwork: &allowNetwork,
 	}); err != nil {
 		t.Fatal(err)
@@ -187,7 +186,7 @@ func TestRemoteCatalogOverlayAndRefresh(t *testing.T) {
 		t.Fatal("refresh must be set")
 	}
 	// Refresh with an empty store: restores nothing, then fetches.
-	ctx := ctxpkg.Background()
+	ctx := context.Background()
 	if err := wrapped.RefreshModels(&ai.RefreshModelsContext{
 		AllowNetwork: true, Ctx: ctx, Publish: func(p ai.ModelsPublication) bool {
 			if p.Update != nil {
@@ -272,7 +271,7 @@ func TestRemoteCatalog404AndError(t *testing.T) {
 	}))
 	defer server.Close()
 	store := NewInMemoryCodingAgentModelsStore()
-	ctx := ctxpkg.Background()
+	ctx := context.Background()
 	// pi v1.4.0 retains the body while invalidating freshness and the validator.
 	lastModified := int64(500)
 	etag := `"old"`
@@ -355,7 +354,7 @@ func TestModelRuntimeRefreshesBuiltinRemoteCatalogs(t *testing.T) {
 		t.Fatal(err)
 	}
 	allowNetwork, force := true, true
-	result, err := runtime.Refresh(ctxpkg.Background(), &ModelsRefreshCallOptions{
+	result, err := runtime.Refresh(context.Background(), &ModelsRefreshCallOptions{
 		Providers: []string{"anthropic"}, AllowNetwork: &allowNetwork, Force: &force,
 	})
 	if err != nil {
@@ -380,7 +379,7 @@ func TestCreateModelRuntimeOfflineCreateLoadsTheStoreWithoutNetwork(t *testing.T
 	}))
 	defer server.Close()
 
-	ctx := ctxpkg.Background()
+	ctx := context.Background()
 	store := NewInMemoryCodingAgentModelsStore()
 	lastModified := int64(9_999_999_999_999) // newer than the embedded generated-at
 	entry := &ai.ModelsStoreEntry{
@@ -417,7 +416,7 @@ func TestRemoteCatalogStaleOverlayIgnored(t *testing.T) {
 		_, _ = writer.Write([]byte(`[{"id":"remote"}]`))
 	}))
 	defer server.Close()
-	ctx := ctxpkg.Background()
+	ctx := context.Background()
 	// A local generated-at newer than the stored overlay ignores the overlay.
 	lastModified := int64(100)
 	generatedAt := int64(200)

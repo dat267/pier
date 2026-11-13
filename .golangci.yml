@@ -1,0 +1,33 @@
+# Static analysis for port checks. `go vet` runs in the gate; this file records
+# the checks that fire on code pier keeps on purpose, so a clean run means the
+# rest is clean rather than that the tool is tuned to pass.
+version: "2"
+
+linters:
+  exclusions:
+    rules:
+      # A test asserts an outcome; a helper's Close, Write or Unmarshal failure
+      # is not that outcome, and requiring it turns assertions into noise.
+      - linters: [errcheck]
+        path: _test\.go$
+      # Error strings pier returns mirror the pin's message text, which the
+      # reference capitalizes and punctuates.
+      - linters: [staticcheck]
+        text: "ST1005"
+      # A nil context is the documented "wait with no deadline" argument of the
+      # event stream and of contextOrBackground; both substitute Background.
+      - linters: [staticcheck]
+        text: "SA1012"
+      # Embedded selectors stay explicit: the shorthand resolves to the outer
+      # method when it has the same name, which turned AltScreen.Render into
+      # infinite recursion.
+      - linters: [staticcheck]
+        text: "QF1008"
+      # A recursive closure needs its explicit signature in the var declaration.
+      - linters: [staticcheck]
+        text: "ST1023"
+      - linters: [staticcheck]
+        text: "QF1011"
+      # Exported time.Duration names carry the unit the upstream option uses.
+      - linters: [staticcheck]
+        text: "ST1011"

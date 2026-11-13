@@ -408,11 +408,9 @@ func TestLoginOpenAICodexCallbackUnblocksManualPrompt(t *testing.T) {
 			Ctx: context.Background(),
 			Prompt: func(prompt AuthPrompt) (string, error) {
 				close(promptStarted)
-				select {
-				case <-prompt.Ctx.Done():
-					close(promptReturned)
-					return "", errors.New("prompt cancelled after callback")
-				}
+				<-prompt.Ctx.Done()
+				close(promptReturned)
+				return "", errors.New("prompt cancelled after callback")
 			},
 			Notify: func(event AuthEvent) {
 				if event.Type == AuthEventAuthURL {

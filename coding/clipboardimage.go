@@ -135,7 +135,7 @@ func readClipboardImageWith(ctx context.Context, goos string, getenv func(string
 			image, failed = readClipboardImageViaWlPaste(ctx, run)
 		}
 		if failed {
-			image, failed = readClipboardImageViaXclip(ctx, run)
+			image, _ = readClipboardImageViaXclip(ctx, run)
 		}
 		// An empty Wayland clipboard is not proof Windows has no image; the
 		// WSL PowerShell read only runs when nothing was found.

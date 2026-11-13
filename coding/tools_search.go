@@ -497,7 +497,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 										if isMatch {
 											matchLimitReached = true
 										}
-										if matchLimitReached && !(inWindow && *lineNumber < trailingContextEnd) {
+										if matchLimitReached && (!inWindow || *lineNumber >= trailingContextEnd) {
 											done = true
 											stopForLimit()
 										}

@@ -415,7 +415,7 @@ func TestNormalizeAnthropicToolCallID(t *testing.T) {
 		t.Fatalf("len = %d", len(got))
 	}
 	for _, c := range got {
-		if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_' || c == '-') {
+		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '_' && c != '-' {
 			t.Fatalf("char %q in %q", c, got)
 		}
 	}
@@ -436,7 +436,7 @@ func TestMapAnthropicStopReason(t *testing.T) {
 	if err != nil || got != StopError || msg != "cannot comply" {
 		t.Fatalf("refusal = %s/%s/%v", got, msg, err)
 	}
-	got, msg, _ = MapAnthropicStopReason("refusal", "")
+	_, msg, _ = MapAnthropicStopReason("refusal", "")
 	if msg != "The model refused to complete the request" {
 		t.Fatalf("default refusal message = %q", msg)
 	}

@@ -179,7 +179,7 @@ func waitCallbackAfterRequest(t *testing.T, callback *oauth.OAuthCallbackServer,
 
 // waitCallbackErrorAfterRequest is the failure-path variant: the callback itself
 // carries the error (a denied authorization).
-func waitCallbackErrorAfterRequest(t *testing.T, callback *oauth.OAuthCallbackServer, state string, request func() (*http.Response, error)) (error, *http.Response) {
+func waitCallbackErrorAfterRequest(t *testing.T, callback *oauth.OAuthCallbackServer, state string, request func() (*http.Response, error)) (*http.Response, error) {
 	t.Helper()
 	waiterErr := make(chan error, 1)
 	go func() { _, err := callback.WaitForCallback(state); waiterErr <- err }()
@@ -190,7 +190,7 @@ func waitCallbackErrorAfterRequest(t *testing.T, callback *oauth.OAuthCallbackSe
 	}
 	select {
 	case err := <-waiterErr:
-		return err, response
+		return response, err
 	case <-time.After(5 * time.Second):
 		t.Fatal("callback never resolved")
 	}
@@ -857,7 +857,7 @@ func TestOAuthCallbackPages(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer callback.Close(context.Background())
-		deniedErr, failure := waitCallbackErrorAfterRequest(t, callback, "s1", func() (*http.Response, error) {
+		failure, deniedErr := waitCallbackErrorAfterRequest(t, callback, "s1", func() (*http.Response, error) {
 			return http.Get(callback.RedirectURL + "?error=access_denied&error_description=Denied&state=s1")
 		})
 		if got := failure.Header.Get("content-type"); got != "text/html; charset=utf-8" {
@@ -874,7 +874,7 @@ func TestOAuthCallbackPages(t *testing.T) {
 			t.Fatalf("page = %+v", last)
 		}
 
-		emptyDescriptionErr, _ := waitCallbackErrorAfterRequest(t, callback, "s3", func() (*http.Response, error) {
+		_, emptyDescriptionErr := waitCallbackErrorAfterRequest(t, callback, "s3", func() (*http.Response, error) {
 			return http.Get(callback.RedirectURL + "?error=access_denied&error_description=&state=s3")
 		})
 		if emptyDescriptionErr == nil || emptyDescriptionErr.Error() != "" {

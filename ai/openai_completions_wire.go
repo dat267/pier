@@ -139,7 +139,7 @@ func DetectOpenAICompletionsCompat(model *Model) ResolvedOpenAICompletionsCompat
 			}
 			return SessionAffinityOpenAI
 		}(),
-		SupportsLongCacheRetention: !(isTogether || isCloudflareWorkersAI || isCloudflareAiGateway || isNvidia || isAntLing),
+		SupportsLongCacheRetention: !isTogether && !isCloudflareWorkersAI && !isCloudflareAiGateway && !isNvidia && !isAntLing,
 		PromptCacheKeyMode:         "auto",
 	}
 }

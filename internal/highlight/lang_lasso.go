@@ -28,7 +28,7 @@ func lassoTitleEnd(s string, pos int) (int, bool) {
 		for i < len(s) && (isWordByte(s[i]) || s[i] == '.') {
 			i++
 		}
-		if i < len(s) && s[i] == '=' && !(i+1 < len(s) && s[i+1] == '>') {
+		if i < len(s) && s[i] == '=' && (i+1 >= len(s) || s[i+1] != '>') {
 			i++
 		}
 		return i, true

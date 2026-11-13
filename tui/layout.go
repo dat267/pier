@@ -246,9 +246,10 @@ func layoutComponent(
 			childHeight = allocatedHeight
 		}
 		childY := y
-		if node.Stack.Align == "center" {
+		switch node.Stack.Align {
+		case "center":
 			childY += (allocatedHeight - childHeight) / 2
-		} else if node.Stack.Align == "end" {
+		case "end":
 			childY += allocatedHeight - childHeight
 		}
 		childWidth := widths[index]

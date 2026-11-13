@@ -364,14 +364,12 @@ func TestStreamGoogleGenerativeAI(t *testing.T) {
 			providerEventCount++
 		}})
 
-	var types []string
 	var thinking, text string
 	for {
 		event, ok := stream.Next(context.Background())
 		if !ok {
 			break
 		}
-		types = append(types, event.Type)
 		if event.Type == EventThinkingDelta {
 			thinking += event.Delta
 		}
