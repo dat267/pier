@@ -74,7 +74,8 @@ func getCompactReadClassification(args map[string]any, cwd string) *compactReadC
 }
 
 func formatCompactReadCall(classification compactReadClassification, args map[string]any, theme *Theme) string {
-	expandHint := theme.Fg("dim", " ("+KeyDisplayText("app.tools.expand")+" to expand)")
+	// Upstream uses keyText here, so the key keeps its configured casing.
+	expandHint := theme.Fg("dim", " ("+KeyText("app.tools.expand")+" to expand)")
 	if classification.kind == "skill" {
 		return theme.Fg("customMessageLabel", "\x1b[1m[skill]\x1b[22m ") +
 			theme.Fg("customMessageText", classification.label) +

@@ -628,3 +628,22 @@ func TestFormatReadResultReadsTheDetailsTheSessionStores(t *testing.T) {
 		t.Fatalf("read truncation = %q; want the line-limit notice", got)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) tools/renderers/read.ts builds the compact row's hint
+// with keyText, not keyDisplayText, so the key keeps its configured casing.
+func TestCompactReadCallKeepsTheConfiguredKeyCasing(t *testing.T) {
+	useBuiltinPierThemeForTest(t)
+	InitTheme("dark", false)
+	theme := ActiveTheme()
+	previous := tui.GetKeybindings()
+	tui.SetKeybindings(NewAppKeybindingsManager(nil, "").KeybindingsManager)
+	defer tui.SetKeybindings(previous)
+
+	got := coding.StripAnsi(formatCompactReadCall(
+		compactReadClassification{kind: "resource", label: "AGENTS.md"},
+		map[string]any{"path": "AGENTS.md"}, theme))
+	want := "(" + KeyText("app.tools.expand") + " to expand)"
+	if !strings.Contains(got, want) {
+		t.Fatalf("compact read hint = %q, want %q", got, want)
+	}
+}
