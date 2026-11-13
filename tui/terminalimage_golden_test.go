@@ -12,6 +12,11 @@ import (
 )
 
 func TestTerminalImageGoldens(t *testing.T) {
+	// The kitty scan goldens register this image first, exactly as the
+	// generator does (gen_terminal_image.mjs). The registry counts
+	// registrations per process, so the goldens omit transmissionGeneration
+	// and a rerun in the same process still compares equal.
+	RegisterKittyImageMetadata(KittyImageMetadata{ImageID: 7, Columns: 4, Rows: 3, WidthPx: 100, HeightPx: 60})
 	data, err := os.ReadFile("testdata/terminal_image_golden.txt")
 	if err != nil {
 		t.Fatal(err)
@@ -108,6 +113,9 @@ func terminalImageGoldenValue(t *testing.T, label string) any {
 		cells := parseDimensions(parts[3])
 		return CalculateImageRows(image, maxWidth, CellDimensions(cells))
 	}
+	if kind, rest, ok := strings.Cut(label, "|"); ok && strings.HasPrefix(label, "kitty") {
+		return kittyScanGolden(t, kind, rest)
+	}
 	if prefix, name, ok := strings.Cut(label, "|"); ok {
 		base64Data := dimensionFixture(t, name)
 		var dims ImageDimensions
@@ -161,6 +169,78 @@ func terminalImageGoldenValue(t *testing.T, label string) any {
 		return DeleteAllKittyPlacements()
 	}
 	t.Fatalf("unknown golden label %q", label)
+	return nil
+}
+
+// kittyScanLine is the fixture line a `kitty...` golden label names; the
+// generator builds the same literals (gen_terminal_image.mjs).
+func kittyScanLine(name string) (string, bool) {
+	switch name {
+	case "basic":
+		return "\x1b_Ga=T,f=100,i=7;AAAA\x1b\\", true
+	case "chunked":
+		return "\x1b_Ga=T,f=100,i=7,m=1;AAAA\x1b\\\x1b_Gm=1;BBBB\x1b\\\x1b_Gm=0;CCCC\x1b\\", true
+	case "truncated":
+		return "\x1b_Ga=T,f=100,i=7;AAAA", true
+	case "no-terminator":
+		return "x\x1b_Ga=p,i=7,x=1,y=2,w=3,h=4\x1b\\z", true
+	}
+	return "", false
+}
+
+func kittyScanGolden(t *testing.T, kind string, rest string) any {
+	t.Helper()
+	if kind == "kittyCrop" {
+		parts := strings.Split(rest, "|")
+		if len(parts) != 3 {
+			t.Fatalf("bad crop label %q", kind+"|"+rest)
+		}
+		line, ok := kittyScanLine(parts[0])
+		if !ok {
+			t.Fatalf("unknown crop fixture %q", parts[0])
+		}
+		hidden, _ := strconv.Atoi(parts[1])
+		visible, _ := strconv.Atoi(parts[2])
+		return CropKittyImageLine(line, hidden, visible)
+	}
+	line, ok := kittyScanLine(rest)
+	if !ok {
+		t.Fatalf("unknown kitty fixture %q", rest)
+	}
+	switch kind {
+	case "kittyMeta":
+		metadata, found := GetKittyImageMetadata(line)
+		if !found {
+			return nil
+		}
+		return map[string]any{
+			"imageId":  metadata.ImageID,
+			"columns":  metadata.Columns,
+			"rows":     metadata.Rows,
+			"widthPx":  metadata.WidthPx,
+			"heightPx": metadata.HeightPx,
+		}
+	case "kittyRows":
+		rows, found := GetKittyImagePlacementRows(line)
+		if !found {
+			return nil
+		}
+		return rows
+	case "kittyPlacement":
+		placement, found := GetKittyImagePlacement(line)
+		if !found {
+			return nil
+		}
+		return map[string]any{
+			"imageId":               placement.ImageID,
+			"transmissionBytes":     placement.TransmissionBytes,
+			"estimatedDecodedBytes": placement.EstimatedDecodedBytes,
+			"rows":                  placement.Rows,
+			"sequence":              placement.Sequence,
+			"replacementLine":       placement.ReplacementLine,
+		}
+	}
+	t.Fatalf("unknown kitty golden kind %q", kind)
 	return nil
 }
 

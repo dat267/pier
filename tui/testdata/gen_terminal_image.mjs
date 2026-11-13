@@ -17,6 +17,11 @@ const {
 	getGifDimensions,
 	getWebpDimensions,
 	isImageLine,
+	registerKittyImageMetadata,
+	getKittyImagePlacement,
+	getKittyImagePlacementRows,
+	getKittyImageMetadata,
+	cropKittyImageLine,
 } = await import(moduleURL.href);
 
 const lines = [];
@@ -106,6 +111,38 @@ const imageLines = {
 };
 for (const [label, value] of Object.entries(imageLines)) {
 	emit(`isImageLine|${label}`, isImageLine(value));
+}
+
+// ---- Kitty placement and crop scans ----
+registerKittyImageMetadata({ imageId: 7, columns: 4, rows: 3, widthPx: 100, heightPx: 60 });
+const kittyScanLines = {
+	basic: "\x1b_Ga=T,f=100,i=7;AAAA\x1b\\",
+	chunked: "\x1b_Ga=T,f=100,i=7,m=1;AAAA\x1b\\\x1b_Gm=1;BBBB\x1b\\\x1b_Gm=0;CCCC\x1b\\",
+	truncated: "\x1b_Ga=T,f=100,i=7;AAAA",
+	"no-terminator": "x\x1b_Ga=p,i=7,x=1,y=2,w=3,h=4\x1b\\z",
+};
+for (const [name, line] of Object.entries(kittyScanLines)) {
+	const placement = getKittyImagePlacement(line);
+	// transmissionGeneration counts registrations in this process, so it is not
+	// comparable across the generator and the Go test's registry.
+	emit(
+		`kittyPlacement|${name}`,
+		placement === undefined
+			? null
+			: {
+					imageId: placement.imageId,
+					transmissionBytes: placement.transmissionBytes,
+					estimatedDecodedBytes: placement.estimatedDecodedBytes,
+					rows: placement.rows,
+					sequence: placement.sequence,
+					replacementLine: placement.replacementLine,
+				},
+	);
+	emit(`kittyRows|${name}`, getKittyImagePlacementRows(line) ?? null);
+	emit(`kittyMeta|${name}`, getKittyImageMetadata(line) ?? null);
+	for (const [hidden, visible] of [[0, 3], [1, 2], [2, 5], [2, 1]]) {
+		emit(`kittyCrop|${name}|${hidden}|${visible}`, cropKittyImageLine(line, hidden, visible));
+	}
 }
 
 process.stdout.write(lines.join("\n") + "\n");

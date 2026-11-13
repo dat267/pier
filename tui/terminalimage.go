@@ -167,7 +167,7 @@ func EncodeITerm2(base64Data string, options Iterm2EncodeOptions) string {
 }
 
 var (
-	kittyControlsPattern = regexp.MustCompile("\x1b_G([^;]*)")
+	kittyControlsPattern = regexp.MustCompile("\x1b_G([^;]*);")
 	kittyImageIDPattern  = regexp.MustCompile(`(?:^|,)i=(\d+)(?:,|$)`)
 	kittyRowsPattern     = regexp.MustCompile(`(?:^|,)r=(\d+)(?:,|$)`)
 	kittyMorePattern     = regexp.MustCompile(`(?:^|,)m=1(?:,|$)`)
