@@ -219,38 +219,47 @@ func (c *ModelSelectorComponent) startRefresh() {
 			if c.closed {
 				return
 			}
-			c.refreshStatusMessage = ""
-			switch {
-			case err != nil:
-				c.refreshStatusMessage = ""
-				if timedOut {
-					c.errorMessage = "Model refresh timed out; showing cached models."
-				} else {
-					c.errorMessage = "Could not refresh model catalogs: " + err.Error()
-				}
-			case result.Aborted && timedOut:
-				c.errorMessage = "Model refresh timed out; showing cached models."
-			case len(result.Errors) == 1:
-				c.errorMessage = "Could not refresh " + errorProviders(result.Errors)[0] + "; showing cached models."
-			case len(result.Errors) > 1:
-				c.errorMessage = "Could not refresh " + itoa(len(result.Errors)) + " model catalogs (" +
-					strings.Join(errorProviders(result.Errors), ", ") + "); showing cached models."
-			default:
-				c.errorMessage = c.runtime.GetError()
-				if c.errorMessage == "" {
-					c.refreshStatusMessage = "Model catalogs refreshed."
-					c.refreshStatusSuccess = true
-				}
-			}
-
-			c.loadModelsFromSnapshot()
-			c.filterModels(c.searchInput.Value())
-			c.updateList()
-			if c.host != nil {
-				c.host.RequestRender(false)
-			}
+			c.applyRefreshResult(err, timedOut, result)
 		})
 	}()
+}
+
+// applyRefreshResult lands a finished refresh on the owner loop.
+func (c *ModelSelectorComponent) applyRefreshResult(err error, timedOut bool, result ai.ModelsRefreshResult) {
+	c.refreshStatusMessage = ""
+	switch {
+	case err != nil:
+		c.refreshStatusMessage = ""
+		if timedOut {
+			c.errorMessage = "Model refresh timed out; showing cached models."
+		} else {
+			c.errorMessage = "Could not refresh model catalogs: " + err.Error()
+		}
+	case result.Aborted && timedOut:
+		c.errorMessage = "Model refresh timed out; showing cached models."
+	case len(result.Errors) == 1:
+		c.errorMessage = "Could not refresh " + errorProviders(result.Errors)[0] + "; showing cached models."
+	case len(result.Errors) > 1:
+		c.errorMessage = "Could not refresh " + itoa(len(result.Errors)) + " model catalogs (" +
+			strings.Join(errorProviders(result.Errors), ", ") + "); showing cached models."
+	default:
+		c.errorMessage = c.runtime.GetError()
+		if c.errorMessage == "" {
+			c.refreshStatusMessage = "Model catalogs refreshed."
+			c.refreshStatusSuccess = true
+		}
+	}
+
+	// The user may have moved while the refresh was in flight, and the
+	// refresh can shift rows, so keep their model selected (pi v1.5.2
+	// b4afdddf components/model-selector.ts).
+	preferred := c.currentSelectionModel()
+	c.loadModelsFromSnapshot()
+	c.filterModels(c.searchInput.Value(), preferred)
+	c.updateList()
+	if c.host != nil {
+		c.host.RequestRender(false)
+	}
 }
 
 // postApply hands a background result to the UI loop through the Post sink.
@@ -378,7 +387,7 @@ func (c *ModelSelectorComponent) Render(width int) []string {
 }
 
 // filterModels is the locked implementation of the filter+list update.
-func (c *ModelSelectorComponent) filterModels(query string) {
+func (c *ModelSelectorComponent) filterModels(query string, preferred ...*ai.Model) {
 	if query != "" {
 		filtered := tui.FuzzyFilter(c.activeModels, query, func(item modelItem) string {
 			defaultText := ""
@@ -411,12 +420,34 @@ func (c *ModelSelectorComponent) filterModels(query string) {
 	} else {
 		c.filteredModels = c.activeModels
 	}
-	if query != "" {
+	// Keep the preferred model selected when it is still listed; otherwise a
+	// query moves to the best match and a cleared query keeps the clamped row
+	// (pi v1.5.2 b4afdddf components/model-selector.ts filterModels).
+	preferredIndex := -1
+	if len(preferred) > 0 && preferred[0] != nil {
+		for index, item := range c.filteredModels {
+			if ai.ModelsAreEqual(preferred[0], item.model) {
+				preferredIndex = index
+				break
+			}
+		}
+	}
+	if preferredIndex >= 0 {
+		c.selectedIndex = preferredIndex
+	} else if query != "" {
 		c.selectedIndex = 0
 	} else {
 		c.selectedIndex = min(c.selectedIndex, max(0, len(c.filteredModels)-1))
 	}
 	c.updateList()
+}
+
+// currentSelectionModel returns the model under the highlighted row, if any.
+func (c *ModelSelectorComponent) currentSelectionModel() *ai.Model {
+	if c.selectedIndex < 0 || c.selectedIndex >= len(c.filteredModels) {
+		return nil
+	}
+	return c.filteredModels[c.selectedIndex].model
 }
 
 func (c *ModelSelectorComponent) updateList() {

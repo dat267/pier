@@ -370,3 +370,35 @@ func TestGetDistinctModelName(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.5.2 (b4afdddf) components/model-selector.ts keeps the model the user
+// moved to selected when a refresh lands, instead of jumping to the first match
+// of the active query.
+func TestModelSelectorRefreshKeepsTheSelectedModel(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+
+	models := testModels()
+	runtime := &fakeModelRuntime{models: models}
+	component := NewModelSelectorComponent(nil, nil, models[0], runtime, nil,
+		func(*ai.Model) {}, func() {}, "", nil, nil)
+	defer component.Dispose()
+
+	// A query whose matches put the wanted model below the first row.
+	component.searchInput.SetValue("gpt")
+	component.filterModels("gpt")
+	if len(component.filteredModels) < 2 {
+		t.Skipf("fixture lists %d matches", len(component.filteredModels))
+	}
+	component.selectedIndex = 1
+	wanted := component.filteredModels[1].model
+
+	component.applyRefreshResult(nil, false, ai.ModelsRefreshResult{})
+
+	if got := component.currentSelectionModel(); got == nil || !ai.ModelsAreEqual(got, wanted) {
+		t.Fatalf("selection = %v, want %s", got, wanted.ID)
+	}
+}
