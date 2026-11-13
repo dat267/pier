@@ -1,0 +1,3524 @@
+[
+	{
+		"status": {
+			"state": "idle",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=idle:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"kind": "",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=idle:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"kind": "permission",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=idle:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"kind": "question",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=idle:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"kind": "auth",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=idle:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"kind": "other",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=idle:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=idle:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "",
+			"kind": "",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=idle:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "",
+			"kind": "permission",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=idle:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "",
+			"kind": "question",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=idle:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "",
+			"kind": "auth",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=idle:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "",
+			"kind": "other",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=idle:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "pier",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=idle:app=pier:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "pier",
+			"kind": "",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=idle:app=pier:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "pier",
+			"kind": "permission",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=idle:app=pier\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "pier",
+			"kind": "question"
+		},
+		"value": "\u001b]7501;state=idle:app=pier\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "pier",
+			"kind": "auth",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=idle:app=pier:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "pier",
+			"kind": "other",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=idle:app=pier:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "a.b_c-d+e",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=idle:app=a.b_c-d+e:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "a.b_c-d+e",
+			"kind": "",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=idle:app=a.b_c-d+e:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "a.b_c-d+e",
+			"kind": "permission",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=idle:app=a.b_c-d+e:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "a.b_c-d+e",
+			"kind": "question",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=idle:app=a.b_c-d+e:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "a.b_c-d+e",
+			"kind": "auth",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=idle:app=a.b_c-d+e\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "a.b_c-d+e",
+			"kind": "other",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=idle:app=a.b_c-d+e\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=idle:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=idle:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "permission",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=idle:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "question",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=idle:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "auth",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=idle:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "other",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=idle:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=idle:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=idle:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "permission",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=idle:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "question",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=idle:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "auth",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=idle:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "other",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=idle:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "bad/name",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=idle:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "bad/name",
+			"kind": "",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=idle:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "bad/name",
+			"kind": "permission",
+			"message": "a\u0000b\u0007c\u001bd"
+		},
+		"value": "\u001b]7501;state=idle:msg=YSBiIGMgZA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "bad/name",
+			"kind": "question",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=idle:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "bad/name",
+			"kind": "auth"
+		},
+		"value": "\u001b]7501;state=idle\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "bad/name",
+			"kind": "other",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=idle\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "Ünï",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=idle:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "Ünï",
+			"kind": "",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=idle:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "Ünï",
+			"kind": "permission",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=idle\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "Ünï",
+			"kind": "question",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=idle:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "Ünï",
+			"kind": "auth",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=idle:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "idle",
+			"app": "Ünï",
+			"kind": "other",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=idle:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=working:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"kind": "",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=working:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"kind": "permission",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=working\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"kind": "question",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=working:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"kind": "auth",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=working:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"kind": "other",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=working:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=working:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "",
+			"kind": "",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=working:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "",
+			"kind": "permission",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=working\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "",
+			"kind": "question",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=working:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "",
+			"kind": "auth",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=working:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "",
+			"kind": "other",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=working:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "pier",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=working:app=pier:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "pier",
+			"kind": "",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=working:app=pier:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "pier",
+			"kind": "permission",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=working:app=pier:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "pier",
+			"kind": "question",
+			"message": "\t\n"
+		},
+		"value": "\u001b]7501;state=working:app=pier\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "pier",
+			"kind": "auth",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=working:app=pier:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "pier",
+			"kind": "other"
+		},
+		"value": "\u001b]7501;state=working:app=pier\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "a.b_c-d+e"
+		},
+		"value": "\u001b]7501;state=working:app=a.b_c-d+e\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "a.b_c-d+e",
+			"kind": ""
+		},
+		"value": "\u001b]7501;state=working:app=a.b_c-d+e\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "a.b_c-d+e",
+			"kind": "permission",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=working:app=a.b_c-d+e:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "a.b_c-d+e",
+			"kind": "question",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=working:app=a.b_c-d+e:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "a.b_c-d+e",
+			"kind": "auth",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=working:app=a.b_c-d+e:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "a.b_c-d+e",
+			"kind": "other",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=working:app=a.b_c-d+e:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=working:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=working:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "permission",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=working:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "question",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=working:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "auth",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=working:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "other",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=working:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=working:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=working:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "permission",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=working\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "question"
+		},
+		"value": "\u001b]7501;state=working\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "auth",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=working:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "other",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=working:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "bad/name",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=working:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "bad/name",
+			"kind": "",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=working:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "bad/name",
+			"kind": "permission",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=working:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "bad/name",
+			"kind": "question",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=working:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "bad/name",
+			"kind": "auth",
+			"message": "\t\n"
+		},
+		"value": "\u001b]7501;state=working\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "bad/name",
+			"kind": "other",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=working:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "Ünï",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=working:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "Ünï",
+			"kind": "",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=working:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "Ünï",
+			"kind": "permission",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=working:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "Ünï",
+			"kind": "question",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=working\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "Ünï",
+			"kind": "auth",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=working:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"app": "Ünï",
+			"kind": "other",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=working:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=blocked:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"kind": "",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=blocked:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"kind": "permission",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=blocked:kind=permission\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"kind": "question",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=blocked:kind=question:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"kind": "auth",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=blocked:kind=auth:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"kind": "other",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=blocked:kind=other:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=blocked:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "",
+			"kind": "",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=blocked:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "",
+			"kind": "permission",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=blocked:kind=permission\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "",
+			"kind": "question",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=blocked:kind=question:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "",
+			"kind": "auth",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=blocked:kind=auth:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "",
+			"kind": "other",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=blocked:kind=other:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "pier",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=blocked:app=pier:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "pier",
+			"kind": "",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=blocked:app=pier:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "pier",
+			"kind": "permission",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=blocked:app=pier:kind=permission:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "pier",
+			"kind": "question",
+			"message": "\t\n"
+		},
+		"value": "\u001b]7501;state=blocked:app=pier:kind=question\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "pier",
+			"kind": "auth",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=blocked:app=pier:kind=auth:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "pier",
+			"kind": "other"
+		},
+		"value": "\u001b]7501;state=blocked:app=pier:kind=other\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "a.b_c-d+e"
+		},
+		"value": "\u001b]7501;state=blocked:app=a.b_c-d+e\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "a.b_c-d+e",
+			"kind": ""
+		},
+		"value": "\u001b]7501;state=blocked:app=a.b_c-d+e\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "a.b_c-d+e",
+			"kind": "permission",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=blocked:app=a.b_c-d+e:kind=permission:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "a.b_c-d+e",
+			"kind": "question",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=blocked:app=a.b_c-d+e:kind=question:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "a.b_c-d+e",
+			"kind": "auth",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=blocked:app=a.b_c-d+e:kind=auth:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "a.b_c-d+e",
+			"kind": "other",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=blocked:app=a.b_c-d+e:kind=other:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=blocked:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=blocked:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "permission",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=blocked:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:kind=permission\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "question",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=blocked:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:kind=question:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "auth",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=blocked:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:kind=auth:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "other",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=blocked:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:kind=other:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=blocked:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=blocked:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "permission",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=blocked:kind=permission\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "question"
+		},
+		"value": "\u001b]7501;state=blocked:kind=question\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "auth",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=blocked:kind=auth:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "other",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=blocked:kind=other:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "bad/name",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=blocked:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "bad/name",
+			"kind": "",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=blocked:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "bad/name",
+			"kind": "permission",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=blocked:kind=permission:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "bad/name",
+			"kind": "question",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=blocked:kind=question:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "bad/name",
+			"kind": "auth",
+			"message": "\t\n"
+		},
+		"value": "\u001b]7501;state=blocked:kind=auth\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "bad/name",
+			"kind": "other",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=blocked:kind=other:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "Ünï",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=blocked:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "Ünï",
+			"kind": "",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=blocked:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "Ünï",
+			"kind": "permission",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=blocked:kind=permission:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "Ünï",
+			"kind": "question",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=blocked:kind=question\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "Ünï",
+			"kind": "auth",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=blocked:kind=auth:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "blocked",
+			"app": "Ünï",
+			"kind": "other",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=blocked:kind=other:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=done:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"kind": "",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=done:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"kind": "permission",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=done:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"kind": "question",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=done:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"kind": "auth",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=done:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"kind": "other",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=done:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=done:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "",
+			"kind": "",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=done:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "",
+			"kind": "permission",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=done:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "",
+			"kind": "question",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=done:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "",
+			"kind": "auth",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=done:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "",
+			"kind": "other",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=done:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "pier",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=done:app=pier:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "pier",
+			"kind": "",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=done:app=pier:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "pier",
+			"kind": "permission",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=done:app=pier\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "pier",
+			"kind": "question"
+		},
+		"value": "\u001b]7501;state=done:app=pier\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "pier",
+			"kind": "auth",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=done:app=pier:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "pier",
+			"kind": "other",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=done:app=pier:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "a.b_c-d+e",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=done:app=a.b_c-d+e:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "a.b_c-d+e",
+			"kind": "",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=done:app=a.b_c-d+e:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "a.b_c-d+e",
+			"kind": "permission",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=done:app=a.b_c-d+e:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "a.b_c-d+e",
+			"kind": "question",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=done:app=a.b_c-d+e:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "a.b_c-d+e",
+			"kind": "auth",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=done:app=a.b_c-d+e\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "a.b_c-d+e",
+			"kind": "other",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=done:app=a.b_c-d+e\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=done:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=done:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "permission",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=done:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "question",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=done:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "auth",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=done:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "other",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=done:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=done:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=done:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "permission",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=done:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "question",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=done:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "auth",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=done:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "other",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=done:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "bad/name",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=done:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "bad/name",
+			"kind": "",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=done:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "bad/name",
+			"kind": "permission",
+			"message": "a\u0000b\u0007c\u001bd"
+		},
+		"value": "\u001b]7501;state=done:msg=YSBiIGMgZA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "bad/name",
+			"kind": "question",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=done:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "bad/name",
+			"kind": "auth"
+		},
+		"value": "\u001b]7501;state=done\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "bad/name",
+			"kind": "other",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=done\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "Ünï",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=done:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "Ünï",
+			"kind": "",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=done:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "Ünï",
+			"kind": "permission",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=done\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "Ünï",
+			"kind": "question",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=done:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "Ünï",
+			"kind": "auth",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=done:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "done",
+			"app": "Ünï",
+			"kind": "other",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=done:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=error:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"kind": "",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=error:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"kind": "permission",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=error:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"kind": "question",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=error:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"kind": "auth",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=error:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"kind": "other",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=error:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=error:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "",
+			"kind": "",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=error:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "",
+			"kind": "permission",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=error:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "",
+			"kind": "question",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=error:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "",
+			"kind": "auth",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=error:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "",
+			"kind": "other",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=error:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "pier",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=error:app=pier:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "pier",
+			"kind": "",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=error:app=pier:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "pier",
+			"kind": "permission",
+			"message": "\t\n"
+		},
+		"value": "\u001b]7501;state=error:app=pier\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "pier",
+			"kind": "question",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=error:app=pier\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "pier",
+			"kind": "auth",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=error:app=pier:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "pier",
+			"kind": "other",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=error:app=pier:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "a.b_c-d+e",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=error:app=a.b_c-d+e:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "a.b_c-d+e",
+			"kind": "",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=error:app=a.b_c-d+e:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "a.b_c-d+e",
+			"kind": "permission",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=error:app=a.b_c-d+e:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "a.b_c-d+e",
+			"kind": "question",
+			"message": "a\u0000b\u0007c\u001bd"
+		},
+		"value": "\u001b]7501;state=error:app=a.b_c-d+e:msg=YSBiIGMgZA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "a.b_c-d+e",
+			"kind": "auth",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=error:app=a.b_c-d+e\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "a.b_c-d+e",
+			"kind": "other",
+			"message": "\t\n"
+		},
+		"value": "\u001b]7501;state=error:app=a.b_c-d+e\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=error:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=error:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "permission",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=error:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "question",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=error:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "auth",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=error:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "other",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=error:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"message": "a\u0000b\u0007c\u001bd"
+		},
+		"value": "\u001b]7501;state=error:msg=YSBiIGMgZA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "",
+			"message": "a\u0000b\u0007c\u001bd"
+		},
+		"value": "\u001b]7501;state=error:msg=YSBiIGMgZA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "permission"
+		},
+		"value": "\u001b]7501;state=error\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "question",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=error:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "auth",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=error:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "other",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=error:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "bad/name",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=error:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "bad/name",
+			"kind": "",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=error:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "bad/name",
+			"kind": "permission",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=error:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "bad/name",
+			"kind": "question",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=error:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "bad/name",
+			"kind": "auth",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=error\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "bad/name",
+			"kind": "other",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=error\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "Ünï",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=error:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "Ünï",
+			"kind": "",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=error:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "Ünï",
+			"kind": "permission",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=error\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "Ünï",
+			"kind": "question"
+		},
+		"value": "\u001b]7501;state=error\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "Ünï",
+			"kind": "auth",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=error:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "error",
+			"app": "Ünï",
+			"kind": "other",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=error:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=clear:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"kind": "",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=clear:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"kind": "permission",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=clear:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"kind": "question",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=clear:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"kind": "auth",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=clear:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"kind": "other",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=clear:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=clear:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "",
+			"kind": "",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=clear:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "",
+			"kind": "permission",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=clear:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "",
+			"kind": "question",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=clear:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "",
+			"kind": "auth",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=clear:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "",
+			"kind": "other",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=clear:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "pier",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=clear:app=pier:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "pier",
+			"kind": "",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=clear:app=pier:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "pier",
+			"kind": "permission",
+			"message": "\t\n"
+		},
+		"value": "\u001b]7501;state=clear:app=pier\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "pier",
+			"kind": "question",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=clear:app=pier\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "pier",
+			"kind": "auth",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=clear:app=pier:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "pier",
+			"kind": "other",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=clear:app=pier:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "a.b_c-d+e",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=clear:app=a.b_c-d+e:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "a.b_c-d+e",
+			"kind": "",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=clear:app=a.b_c-d+e:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "a.b_c-d+e",
+			"kind": "permission",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=clear:app=a.b_c-d+e:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "a.b_c-d+e",
+			"kind": "question",
+			"message": "a\u0000b\u0007c\u001bd"
+		},
+		"value": "\u001b]7501;state=clear:app=a.b_c-d+e:msg=YSBiIGMgZA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "a.b_c-d+e",
+			"kind": "auth",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=clear:app=a.b_c-d+e\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "a.b_c-d+e",
+			"kind": "other",
+			"message": "\t\n"
+		},
+		"value": "\u001b]7501;state=clear:app=a.b_c-d+e\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=clear:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=clear:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "permission",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=clear:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "question",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=clear:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "auth",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=clear:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "other",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=clear:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"message": "a\u0000b\u0007c\u001bd"
+		},
+		"value": "\u001b]7501;state=clear:msg=YSBiIGMgZA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "",
+			"message": "a\u0000b\u0007c\u001bd"
+		},
+		"value": "\u001b]7501;state=clear:msg=YSBiIGMgZA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "permission"
+		},
+		"value": "\u001b]7501;state=clear\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "question",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=clear:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "auth",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=clear:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "other",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=clear:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "bad/name",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=clear:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "bad/name",
+			"kind": "",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=clear:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "bad/name",
+			"kind": "permission",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=clear:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "bad/name",
+			"kind": "question",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=clear:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "bad/name",
+			"kind": "auth",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=clear\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "bad/name",
+			"kind": "other",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=clear\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "Ünï",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=clear:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "Ünï",
+			"kind": "",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=clear:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "Ünï",
+			"kind": "permission",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=clear\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "Ünï",
+			"kind": "question"
+		},
+		"value": "\u001b]7501;state=clear\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "Ünï",
+			"kind": "auth",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=clear:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "clear",
+			"app": "Ünï",
+			"kind": "other",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=clear:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": ""
+		},
+		"value": "\u001b]7501;state=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"kind": ""
+		},
+		"value": "\u001b]7501;state=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"kind": "permission",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"kind": "question",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"kind": "auth",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"kind": "other",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": ""
+		},
+		"value": "\u001b]7501;state=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "",
+			"kind": ""
+		},
+		"value": "\u001b]7501;state=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "",
+			"kind": "permission",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "",
+			"kind": "question",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "",
+			"kind": "auth",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "",
+			"kind": "other",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "pier",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=:app=pier:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "pier",
+			"kind": "",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=:app=pier:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "pier",
+			"kind": "permission",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=:app=pier:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "pier",
+			"kind": "question",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=:app=pier:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "pier",
+			"kind": "auth",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=:app=pier:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "pier",
+			"kind": "other",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=:app=pier:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "a.b_c-d+e",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=:app=a.b_c-d+e:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "a.b_c-d+e",
+			"kind": "",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=:app=a.b_c-d+e:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "a.b_c-d+e",
+			"kind": "permission",
+			"message": "\t\n"
+		},
+		"value": "\u001b]7501;state=:app=a.b_c-d+e\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "a.b_c-d+e",
+			"kind": "question",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=:app=a.b_c-d+e\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "a.b_c-d+e",
+			"kind": "auth",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=:app=a.b_c-d+e:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "a.b_c-d+e",
+			"kind": "other",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=:app=a.b_c-d+e:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+		},
+		"value": "\u001b]7501;state=:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": ""
+		},
+		"value": "\u001b]7501;state=:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "permission",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "question",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "auth",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "other",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "permission",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "question",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "auth",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "other",
+			"message": "a\u0000b\u0007c\u001bd"
+		},
+		"value": "\u001b]7501;state=:msg=YSBiIGMgZA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "bad/name",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "bad/name",
+			"kind": "",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "bad/name",
+			"kind": "permission",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "bad/name",
+			"kind": "question"
+		},
+		"value": "\u001b]7501;state=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "bad/name",
+			"kind": "auth",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "bad/name",
+			"kind": "other",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "Ünï",
+			"message": "\t\n"
+		},
+		"value": "\u001b]7501;state=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "Ünï",
+			"kind": "",
+			"message": "\t\n"
+		},
+		"value": "\u001b]7501;state=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "Ünï",
+			"kind": "permission",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "Ünï",
+			"kind": "question",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "Ünï",
+			"kind": "auth",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "",
+			"app": "Ünï",
+			"kind": "other",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=bogus:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"kind": "",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=bogus:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"kind": "permission",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=bogus:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"kind": "question",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=bogus:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"kind": "auth",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=bogus:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"kind": "other",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=bogus:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=bogus:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "",
+			"kind": "",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=bogus:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "",
+			"kind": "permission",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=bogus:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "",
+			"kind": "question",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=bogus:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "",
+			"kind": "auth",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=bogus:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "",
+			"kind": "other",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=bogus:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "pier",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=bogus:app=pier:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "pier",
+			"kind": "",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=bogus:app=pier:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "pier",
+			"kind": "permission",
+			"message": "\t\n"
+		},
+		"value": "\u001b]7501;state=bogus:app=pier\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "pier",
+			"kind": "question",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=bogus:app=pier\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "pier",
+			"kind": "auth",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=bogus:app=pier:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "pier",
+			"kind": "other",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=bogus:app=pier:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "a.b_c-d+e",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=bogus:app=a.b_c-d+e:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "a.b_c-d+e",
+			"kind": "",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=bogus:app=a.b_c-d+e:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "a.b_c-d+e",
+			"kind": "permission",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=bogus:app=a.b_c-d+e:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "a.b_c-d+e",
+			"kind": "question",
+			"message": "a\u0000b\u0007c\u001bd"
+		},
+		"value": "\u001b]7501;state=bogus:app=a.b_c-d+e:msg=YSBiIGMgZA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "a.b_c-d+e",
+			"kind": "auth",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=bogus:app=a.b_c-d+e\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "a.b_c-d+e",
+			"kind": "other",
+			"message": "\t\n"
+		},
+		"value": "\u001b]7501;state=bogus:app=a.b_c-d+e\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=bogus:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=bogus:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "permission",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=bogus:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "question",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=bogus:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "auth",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=bogus:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "other",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=bogus:app=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"message": "a\u0000b\u0007c\u001bd"
+		},
+		"value": "\u001b]7501;state=bogus:msg=YSBiIGMgZA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "",
+			"message": "a\u0000b\u0007c\u001bd"
+		},
+		"value": "\u001b]7501;state=bogus:msg=YSBiIGMgZA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "permission"
+		},
+		"value": "\u001b]7501;state=bogus\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "question",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=bogus:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "auth",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=bogus:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"kind": "other",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=bogus:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "bad/name",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=bogus:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "bad/name",
+			"kind": "",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=bogus:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "bad/name",
+			"kind": "permission",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=bogus:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "bad/name",
+			"kind": "question",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=bogus:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "bad/name",
+			"kind": "auth",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=bogus\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "bad/name",
+			"kind": "other",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=bogus\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "Ünï",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=bogus:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "Ünï",
+			"kind": "",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=bogus:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "Ünï",
+			"kind": "permission",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=bogus\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "Ünï",
+			"kind": "question"
+		},
+		"value": "\u001b]7501;state=bogus\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "Ünï",
+			"kind": "auth",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=bogus:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "bogus",
+			"app": "Ünï",
+			"kind": "other",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=bogus:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working"
+		},
+		"value": "\u001b]7501;state=working\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": ""
+		},
+		"value": "\u001b]7501;state=working\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": " "
+		},
+		"value": "\u001b]7501;state=working\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "\t\n"
+		},
+		"value": "\u001b]7501;state=working\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "hello"
+		},
+		"value": "\u001b]7501;state=working:msg=aGVsbG8=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": " leading and trailing "
+		},
+		"value": "\u001b]7501;state=working:msg=bGVhZGluZyBhbmQgdHJhaWxpbmc=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "a\u0000b\u0007c\u001bd"
+		},
+		"value": "\u001b]7501;state=working:msg=YSBiIGMgZA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "tab\there"
+		},
+		"value": "\u001b]7501;state=working:msg=dGFiIGhlcmU=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "line\nbreak"
+		},
+		"value": "\u001b]7501;state=working:msg=bGluZSBicmVhaw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "cr\rreturn"
+		},
+		"value": "\u001b]7501;state=working:msg=Y3IgcmV0dXJu\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "c1next"
+		},
+		"value": "\u001b]7501;state=working:msg=YzEgbmV4dA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "unicode é 日本 😀"
+		},
+		"value": "\u001b]7501;state=working:msg=dW5pY29kZSDDqSDml6XmnKwg8J+YgA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": " nbsp "
+		},
+		"value": "\u001b]7501;state=working:msg=bmJzcA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "﻿bom"
+		},
+		"value": "\u001b]7501;state=working:msg=Ym9t\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "　ideo　"
+		},
+		"value": "\u001b]7501;state=working:msg=aWRlbw==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": " line"
+		},
+		"value": "\u001b]7501;state=working:msg=bGluZQ==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+		},
+		"value": "\u001b]7501;state=working:msg=eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+		},
+		"value": "\u001b]7501;state=working:msg=eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+		},
+		"value": "\u001b]7501;state=working:msg=eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+		},
+		"value": "\u001b]7501;state=working:msg=w6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6k=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+		},
+		"value": "\u001b]7501;state=working:msg=w6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6k=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日日"
+		},
+		"value": "\u001b]7501;state=working:msg=5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel5pel\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+		},
+		"value": "\u001b]7501;state=working:msg=8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIA=\u001b\\"
+	},
+	{
+		"status": {
+			"state": "working",
+			"message": "aéééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+		},
+		"value": "\u001b]7501;state=working:msg=YcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqcOpw6nDqQ==\u001b\\"
+	},
+	{
+		"sequence": "",
+		"value": false
+	},
+	{
+		"sequence": "\u001b]7501;?\u001b\\",
+		"value": true
+	},
+	{
+		"sequence": "\u001b]7501;?\u0007",
+		"value": true
+	},
+	{
+		"sequence": "\u001b]7501;?extra\u001b\\",
+		"value": true
+	},
+	{
+		"sequence": "\u001b]7501;?\u001b\\x",
+		"value": false
+	},
+	{
+		"sequence": "x\u001b]7501;?\u001b\\",
+		"value": false
+	},
+	{
+		"sequence": "\u001b]7501;?",
+		"value": false
+	},
+	{
+		"sequence": "\u001b]7501;\u001b\\",
+		"value": false
+	},
+	{
+		"sequence": "\u001b]7501;?\n\u001b\\",
+		"value": true
+	}
+]
