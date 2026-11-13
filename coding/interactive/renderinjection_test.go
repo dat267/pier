@@ -38,7 +38,10 @@ func assertOnlyThemeEscapes(t *testing.T, rendered []string) {
 			switch {
 			case strings.HasPrefix(rest, "[") && strings.HasSuffix(sgrPrefix(rest), "m"):
 				continue
-			case strings.HasPrefix(rest, "]8;"), strings.HasPrefix(rest, "]133;"):
+			case strings.HasPrefix(rest, "]8;"), strings.HasPrefix(rest, "]133;"), strings.HasPrefix(rest, "\\"):
+				// OSC 8 and OSC 133 come from the renderer (tui.Hyperlink and the
+				// shell-integration zones); an ST terminator closes a hyperlink,
+				// which the renderer always emits itself.
 				continue
 			case strings.HasPrefix(rest, "_pi:"):
 				continue
@@ -164,6 +167,18 @@ func TestStoredSessionTextRendersOnlyThemeEscapes(t *testing.T) {
 				assertOnlyThemeEscapes(t, frame.Render(120))
 			})
 		}
+	})
+
+	t.Run("login dialog", func(t *testing.T) {
+		// The authorization server supplies the instructions, the device user code
+		// and an info message (D460).
+		component := NewLoginDialogComponent(nil, nil, "xai", nil, "", "")
+		component.ShowAuth("https://x.ai/authorize", storedPayload)
+		assertOnlyThemeEscapes(t, component.Render(120))
+		component.ShowDeviceCode("https://x.ai/device", storedPayload)
+		assertOnlyThemeEscapes(t, component.Render(120))
+		component.ShowInfo(storedPayload, []ai.AuthInfoLink{{URL: "https://x.ai/help", Label: storedPayload}}, false)
+		assertOnlyThemeEscapes(t, component.Render(120))
 	})
 
 	t.Run("status", func(t *testing.T) {
