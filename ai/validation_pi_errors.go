@@ -479,6 +479,8 @@ func schemaTypeName(value *schemaValue) string {
 	switch {
 	case value.Null:
 		return "null"
+	case value.IsUndefined:
+		return "undefined"
 	case value.IsArray:
 		return "array"
 	case value.Object != nil:
@@ -487,8 +489,19 @@ func schemaTypeName(value *schemaValue) string {
 		return "string"
 	case value.IsBool:
 		return "boolean"
+	case value.IsBigInt:
+		return "bigint"
 	case value.IsNumber:
-		if !math.IsInf(value.Number, 0) && !math.IsNaN(value.Number) && value.Number == math.Trunc(value.Number) {
+		if math.IsNaN(value.Number) {
+			return "NaN"
+		}
+		if math.IsInf(value.Number, 1) {
+			return "Infinity"
+		}
+		if math.IsInf(value.Number, -1) {
+			return "-Infinity"
+		}
+		if value.Number == math.Trunc(value.Number) {
 			return "integer"
 		}
 		return "number"

@@ -2,12 +2,14 @@ package ai
 
 import (
 	"math"
+	"math/big"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
-// Port of pi v1.5.0 packages/schema/src/coerce.ts, including TypeBox 1.3.27's
-// conversion rules. Every pass can mutate the decoded tool arguments: they are
+// Port of pi v1.5.2 (b4afdddf) packages/schema/src/coerce.ts, including
+// TypeBox's conversion rules. Every pass can mutate the decoded tool arguments: they are
 // already a private copy of the tool call.
 
 type piCoerceVisit struct {
@@ -143,6 +145,16 @@ func (s *piSchema) convert(value *schemaValue, active map[piCoerceVisit]bool) *s
 			return value
 		case "null":
 			if converted, ok := tryPiNull(value); ok {
+				return converted
+			}
+			return value
+		case "bigint":
+			if converted, ok := tryPiBigInt(value); ok {
+				return converted
+			}
+			return value
+		case "undefined":
+			if converted, ok := tryPiUndefined(value); ok {
 				return converted
 			}
 			return value
@@ -412,6 +424,86 @@ func tryPiString(value *schemaValue) (*schemaValue, bool) {
 	case value.IsNumber:
 		if isFiniteJSONNumber(value.Number) {
 			return &schemaValue{IsString: true, String: JSNumberToString(value.Number)}, true
+		}
+	}
+	return nil, false
+}
+
+// tryPiBigInt is TypeBox's TryBigInt: booleans to 1n/0n, finite numbers
+// truncated, null to 0n, and bigint-like strings, "true" and "false" (pi v1.5.2
+// b4afdddf packages/schema/src/coerce.ts tryBigInt).
+func tryPiBigInt(value *schemaValue) (*schemaValue, bool) {
+	switch {
+	case value.IsBigInt:
+		return value, true
+	case value.IsBool:
+		if value.Bool {
+			return &schemaValue{IsBigInt: true, BigInt: "1"}, true
+		}
+		return &schemaValue{IsBigInt: true, BigInt: "0"}, true
+	case value.IsNumber:
+		if !isFiniteJSONNumber(value.Number) {
+			return nil, false
+		}
+		return &schemaValue{IsBigInt: true, BigInt: new(big.Int).SetInt64(int64(math.Trunc(value.Number))).String()}, true
+	case value.Null:
+		return &schemaValue{IsBigInt: true, BigInt: "0"}, true
+	case value.IsString:
+		if digits, ok := bigIntDigitsOfString(value.String); ok {
+			return &schemaValue{IsBigInt: true, BigInt: digits}, true
+		}
+		switch strings.ToLower(value.String) {
+		case "false":
+			return &schemaValue{IsBigInt: true, BigInt: "0"}, true
+		case "true":
+			return &schemaValue{IsBigInt: true, BigInt: "1"}, true
+		}
+	}
+	return nil, false
+}
+
+var (
+	bigIntSuffixPattern   = regexp.MustCompile(`^-?(0|[1-9][0-9]*)n$`)
+	bigIntFractionPattern = regexp.MustCompile(`^-?(0|[1-9][0-9]*)\.[0-9]+$`)
+	bigIntPlainPattern    = regexp.MustCompile(`^-?(0|[1-9][0-9]*)$`)
+)
+
+// bigIntDigitsOfString is TypeBox's bigIntOfString: "12n", "12.5" (truncated)
+// and "12", as decimal digits.
+func bigIntDigitsOfString(text string) (string, bool) {
+	switch {
+	case bigIntSuffixPattern.MatchString(text):
+		return text[:len(text)-1], true
+	case bigIntFractionPattern.MatchString(text):
+		return text[:strings.IndexByte(text, '.')], true
+	case bigIntPlainPattern.MatchString(text):
+		return text, true
+	}
+	return "", false
+}
+
+// tryPiUndefined is TypeBox's TryUndefined: 0n, false, 0, null, "undefined",
+// "null", "" and "0" convert to undefined (pi v1.5.2 b4afdddf
+// packages/schema/src/coerce.ts tryUndefined).
+func tryPiUndefined(value *schemaValue) (*schemaValue, bool) {
+	switch {
+	case value.IsUndefined:
+		return value, true
+	case value.Null:
+		return &schemaValue{IsUndefined: true}, true
+	case value.IsBool && !value.Bool:
+		return &schemaValue{IsUndefined: true}, true
+	case value.IsNumber && value.Number == 0:
+		return &schemaValue{IsUndefined: true}, true
+	case value.IsBigInt && value.BigInt == "0":
+		return &schemaValue{IsUndefined: true}, true
+	case value.IsString:
+		switch strings.ToLower(value.String) {
+		case "undefined", "null":
+			return &schemaValue{IsUndefined: true}, true
+		}
+		if value.String == "" || value.String == "0" {
+			return &schemaValue{IsUndefined: true}, true
 		}
 	}
 	return nil, false

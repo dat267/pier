@@ -243,8 +243,8 @@
   "arg": {
    "n": 1
   },
-  "expected": "REJECT - n: expected bigint, got integer",
-  "actual": "REJECT - n: expected bigint, got integer"
+  "expected": "ok {\"n\":\"1n\"}",
+  "actual": "ok {\"n\":\"1n\"}"
  },
  {
   "key": "bigint {\"n\":\"12\"}",
@@ -263,8 +263,8 @@
   "arg": {
    "n": "12"
   },
-  "expected": "REJECT - n: expected bigint, got string",
-  "actual": "REJECT - n: expected bigint, got string"
+  "expected": "ok {\"n\":\"12n\"}",
+  "actual": "ok {\"n\":\"12n\"}"
  },
  {
   "key": "refine {\"n\":5}",

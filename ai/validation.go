@@ -26,6 +26,16 @@ type schemaValue struct {
 	IsArray  bool
 	Array    []*schemaValue
 	Object   *schemaObject
+	// BigInt is a bigint schema's coerced value, kept as decimal digits. The
+	// probes record it the way their JSON replacer renders a JS BigInt
+	// ("1n"), and pi v1.5.2 b4afdddf packages/schema/src/coerce.ts is the rule
+	// that produces it.
+	IsBigInt bool
+	BigInt   string
+	// Undefined is a value a schema converted to undefined: JSON has no such
+	// value, so an object property holding it is dropped and an array slot
+	// becomes null, as JSON.stringify does.
+	IsUndefined bool
 }
 
 type schemaObject struct {
@@ -120,6 +130,11 @@ func encodeSchemaValue(v *schemaValue) json.RawMessage {
 			return json.RawMessage("null")
 		}
 		return json.RawMessage(JSNumberToString(v.Number))
+	case v.IsBigInt:
+		return mustMarshalJSON(v.BigInt + "n")
+	case v.IsUndefined:
+		// JSON.stringify renders an undefined array slot as null.
+		return json.RawMessage("null")
 	case v.IsString:
 		return mustMarshalJSON(v.String)
 	case v.IsArray:
@@ -133,14 +148,20 @@ func encodeSchemaValue(v *schemaValue) json.RawMessage {
 		return append(out, ']')
 	case v.Object != nil:
 		out := []byte{'{'}
-		for i, key := range v.Object.keys {
-			if i > 0 {
+		written := 0
+		for _, key := range v.Object.keys {
+			value := v.Object.values[key]
+			if value.IsUndefined {
+				continue // JSON.stringify drops an undefined property
+			}
+			if written > 0 {
 				out = append(out, ',')
 			}
+			written++
 			keyEnc := mustMarshalJSON(key)
 			out = append(out, keyEnc...)
 			out = append(out, ':')
-			out = append(out, encodeSchemaValue(v.Object.values[key])...)
+			out = append(out, encodeSchemaValue(value)...)
 		}
 		return append(out, '}')
 	default:
@@ -151,7 +172,13 @@ func encodeSchemaValue(v *schemaValue) json.RawMessage {
 func matchesJSONType(value *schemaValue, typ string) bool {
 	switch typ {
 	case "number":
-		return value.IsNumber
+		// pi v1.5.2 b4afdddf matchesType: Number.isFinite(value), so a
+		// non-finite argument is not a number.
+		return value.IsNumber && isFiniteJSONNumber(value.Number)
+	case "bigint":
+		return value.IsBigInt
+	case "undefined":
+		return value.IsUndefined
 	case "integer":
 		return value.IsNumber && !math.IsInf(value.Number, 0) && value.Number == math.Trunc(value.Number)
 	case "boolean":

@@ -1,11 +1,21 @@
 # pi-schema validation probes
 
-`probes.json` is generated from pi v1.5.0 (`f9a26365`)
+`probes.json` is generated from pi v1.5.2 (`b4afdddf`)
 `packages/ai/test/validation-probes.test.ts`. It contains every probe whose
 schema and arguments serialize to JSON, with the upstream outcome in `actual`.
 
-Regenerate by adding this after `expected` in the upstream test and running
-`vitest run packages/ai/test/validation-probes.test.ts`:
+Regenerate inside the pinned checkout, restoring it afterwards:
+
+1. `npm run build --workspace @earendil-works/pi-schema` (the test imports the
+   package's `dist`, which `npm ci` alone does not build).
+2. Add the block below after `expected` in
+   `packages/ai/test/validation-probes.test.ts`, pointing `writeFileSync` at a
+   path outside the checkout, then run
+   `node_modules/.bin/vitest run packages/ai/test/validation-probes.test.ts -t dumps`.
+3. Restore the test file (`git -C . checkout -- packages/ai/test/validation-probes.test.ts`)
+   and confirm `git status --porcelain` is empty.
+
+The block:
 
 ```ts
 import { writeFileSync } from "node:fs";
@@ -28,7 +38,7 @@ describe("dump probes", () => {
 				return [];
 			}
 		});
-		writeFileSync("probes.json", JSON.stringify(rows, null, 1));
+		writeFileSync("/tmp/probes-v152.json", JSON.stringify(rows, null, 1));
 	});
 });
 ```

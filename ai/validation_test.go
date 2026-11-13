@@ -215,7 +215,9 @@ func TestValidateToolArgumentsHandlesOverflowedNumbers(t *testing.T) {
 		typ, want string
 		invalid   bool
 	}{
-		{typ: "number", want: `{"x":null}`}, {typ: "integer", invalid: true}, {typ: "string", want: `{"x":"Infinity"}`}, {want: `{"x":null}`},
+		// pi v1.5.2 (b4afdddf) matchesType uses Number.isFinite, so a number
+		// schema no longer matches an overflowed argument.
+		{typ: "number", invalid: true}, {typ: "integer", invalid: true}, {typ: "string", want: `{"x":"Infinity"}`}, {want: `{"x":null}`},
 	} {
 		t.Run(tc.typ, func(t *testing.T) {
 			schema := `{"type":"object","properties":{}}`
