@@ -154,8 +154,12 @@ func TestSelectSessionLoadsConfiguredApplicationKeybindings(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(agentDir, "keybindings.json"), []byte(`{"app.session.toggleSort":"ctrl+x"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	// The picker must install the app keybindings itself, so the test starts from
+	// a manager without app ids; restore the previous one, not another TUI-only
+	// manager, or every later test in the process renders empty key labels (A543).
+	previousBindings := tui.GetKeybindings()
 	tui.SetKeybindings(tui.NewKeybindingsManager(tui.TUIKeybindings, nil))
-	t.Cleanup(func() { tui.SetKeybindings(tui.NewKeybindingsManager(tui.TUIKeybindings, nil)) })
+	t.Cleanup(func() { tui.SetKeybindings(previousBindings) })
 
 	loader := func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) {
 		return []coding.SessionInfo{{Path: "/s/a.jsonl", FirstMessage: "alpha-first", Modified: time.Now()}}, nil
