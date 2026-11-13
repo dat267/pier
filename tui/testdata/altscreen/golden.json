@@ -1,0 +1,734 @@
+{
+  "first-render": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "a",
+            "b"
+          ]
+        }
+      ]
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Ka                       \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kb                       \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      []
+    ]
+  },
+  "content-change": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "a",
+            "b"
+          ]
+        },
+        {
+          "lines": [
+            "a",
+            "X"
+          ]
+        }
+      ]
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Ka                       \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kb                       \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[2;1H\u001b[2KX                       \u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      []
+    ]
+  },
+  "scroll-keys": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "line0",
+            "line1",
+            "line2",
+            "line3",
+            "line4",
+            "line5",
+            "line6",
+            "line7",
+            "line8",
+            "line9",
+            "line10",
+            "line11",
+            "line12",
+            "line13"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[6~"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[5~"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[1;5H"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[1;5F"
+          ]
+        }
+      ]
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Kline8                   \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kline9                   \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2Kline10                  \u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2Kline11                  \u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2Kline12                  \u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2Kline13                  \u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2Kline6                   \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kline7                   \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2Kline8                   \u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2Kline9                   \u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2Kline10                  \u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2Kline11                  \u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2Kline0                   \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kline1                   \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2Kline2                   \u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2Kline3                   \u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2Kline4                   \u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2Kline5                   \u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2Kline8                   \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kline9                   \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2Kline10                  \u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2Kline11                  \u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2Kline12                  \u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2Kline13                  \u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      [],
+      [],
+      [],
+      []
+    ]
+  },
+  "wheel": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "line0",
+            "line1",
+            "line2",
+            "line3",
+            "line4",
+            "line5",
+            "line6",
+            "line7",
+            "line8",
+            "line9",
+            "line10",
+            "line11",
+            "line12",
+            "line13"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[<64;3;3M",
+            "\u001b[<65;3;3M"
+          ]
+        }
+      ]
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Kline8                   \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kline9                   \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2Kline10                  \u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2Kline11                  \u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2Kline12                  \u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2Kline13                  \u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      []
+    ]
+  },
+  "search": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "alpha",
+            "beta",
+            "alpha"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[102;6u"
+          ]
+        },
+        {
+          "inputs": [
+            "a"
+          ]
+        },
+        {
+          "inputs": [
+            "l"
+          ]
+        },
+        {
+          "inputs": [
+            "\r",
+            "\r"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b"
+          ]
+        }
+      ]
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Kalpha                   \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kbeta                    \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2Kalpha                   \u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[2;1H\u001b[2Kb\u001b[0m\u001b]8;;\u0007┌────────────────────┐\u001b[0m\u001b]8;;\u0007 \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2Ka\u001b[0m\u001b]8;;\u0007│ \u001b[7m\u001b[2mF\u001b[22m\u001b[27m\u001b[2mind in transcript\u001b[22m │\u001b[0m\u001b]8;;\u0007 \u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K \u001b[0m\u001b]8;;\u0007└────────────── ↑ ↓ ─┘\u001b[0m\u001b]8;;\u0007 \u001b[0m\u001b]8;;\u0007\u001b[3;4H\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2K\u001b[1;7ma\u001b[22;27mlph\u001b[4ma\u001b[24m                   \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[4ma\u001b[0m\u001b]8;;\u0007│ a\u001b[7m \u001b[27m            \u001b[2m 1/5 \u001b[22m│\u001b[0m\u001b]8;;\u0007 \u001b[0m\u001b]8;;\u0007\u001b[3;5H\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2K\u001b[1;7mal\u001b[22;27mpha                   \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[4ma\u001b[0m\u001b]8;;\u0007│ al\u001b[7m \u001b[27m           \u001b[2m 1/2 \u001b[22m│\u001b[0m\u001b]8;;\u0007 \u001b[0m\u001b]8;;\u0007\u001b[3;6H\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2K\u001b[4mal\u001b[24mpha                   \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[1;7ma\u001b[0m\u001b]8;;\u0007│ al\u001b[7m \u001b[27m           \u001b[2m 2/2 \u001b[22m│\u001b[0m\u001b]8;;\u0007 \u001b[0m\u001b]8;;\u0007\u001b[3;6H\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2Kalpha                   \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kbeta                    \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2Kalpha                   \u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      []
+    ]
+  },
+  "flash": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "a"
+          ]
+        },
+        {
+          "flashes": [
+            "Copied!"
+          ]
+        }
+      ]
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Ka                       \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2Ka              \u001b[0m\u001b]8;;\u0007\u001b[7m Copied! \u001b[0m\u001b]8;;\u0007\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      []
+    ]
+  },
+  "indicator": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "line0",
+            "line1",
+            "line2",
+            "line3",
+            "line4",
+            "line5",
+            "line6",
+            "line7",
+            "line8",
+            "line9",
+            "line10",
+            "line11",
+            "line12",
+            "line13"
+          ]
+        }
+      ],
+      "indicator": true
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Kline8                   \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kline9                   \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2Kline10                  \u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2Kline11                  \u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2Kline12                  \u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2Kline13                  \u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      []
+    ]
+  },
+  "resize": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "a",
+            "b"
+          ]
+        },
+        {
+          "columns": 12,
+          "rows": 3
+        }
+      ]
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Ka                       \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kb                       \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Ka           \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kb           \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      []
+    ]
+  },
+  "selection-drag": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "hello world",
+            "second line"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[<0;2;1M",
+            "\u001b[<32;8;1M",
+            "\u001b[<0;8;1m"
+          ]
+        }
+      ]
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Khello world             \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Ksecond line             \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2Kh\u001b[7mello wo\u001b[27mrld    \u001b[0m\u001b]8;;\u0007\u001b[7m Copied! \u001b[0m\u001b]8;;\u0007\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      []
+    ]
+  },
+  "double-click": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "hello world"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[<0;3;1M",
+            "\u001b[<0;3;1m",
+            "\u001b[<0;3;1M",
+            "\u001b[<0;3;1m"
+          ]
+        }
+      ]
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Khello world             \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2K\u001b[7mhello\u001b[27m world    \u001b[0m\u001b]8;;\u0007\u001b[7m Copied! \u001b[0m\u001b]8;;\u0007\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      []
+    ]
+  },
+  "scrollbar-drag": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "line0",
+            "line1",
+            "line2",
+            "line3",
+            "line4",
+            "line5",
+            "line6",
+            "line7",
+            "line8",
+            "line9",
+            "line10",
+            "line11",
+            "line12",
+            "line13"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[<0;24;3M",
+            "\u001b[<32;24;4M",
+            "\u001b[<0;24;4m"
+          ]
+        }
+      ]
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Kline8                   \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kline9                   \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2Kline10                  \u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2Kline11                  \u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2Kline12                  \u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2Kline13                  \u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2Kline8          \u001b[0m\u001b]8;;\u0007\u001b[7m Copied! \u001b[0m\u001b]8;;\u0007\u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2Kline10                 \u001b[7m \u001b[27m\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[7mline11                  \u001b[27m\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      []
+    ]
+  },
+  "focus-out": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "a"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[I",
+            "\u001b[O"
+          ]
+        }
+      ]
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Ka                       \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      []
+    ]
+  },
+  "stop": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "a",
+            "b"
+          ]
+        }
+      ],
+      "stop": true
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Ka                       \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kb                       \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[?1006l\u001b[?1004l\u001b[?1003l\u001b[?1002l\u001b[?1000l\u001b[?7h\u001b[?2026l<SHOW>\u001b[?2026h\u001b[?1049l\u001b[?7l\r\u001b[2Ka                       \u001b[0m\u001b]8;;\u0007\r\n\r\u001b[2Kb                       \u001b[0m\u001b]8;;\u0007\u001b[0m\u001b[?7h\r\n\u001b[?25h\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      []
+    ]
+  },
+  "prompt-jump": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "\u001b]133;A\u0007prompt1",
+            "body",
+            "\u001b]133;A\u0007prompt2",
+            "body2",
+            "tail",
+            "x",
+            "y",
+            "z",
+            "w"
+          ],
+          "rows": 3
+        },
+        {
+          "inputs": [
+            "\u001b[1;6A",
+            "\u001b[1;6A"
+          ]
+        }
+      ]
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Ky                       \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kz                       \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2Kw                       \u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2Kprompt1         \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kbody                    \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2Kprompt2         \u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      []
+    ]
+  },
+  "copy-drag-mid": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "hello world",
+            "second line"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[<0;2;1M",
+            "\u001b[<32;8;1M",
+            "\u001b[<0;8;1m"
+          ]
+        }
+      ],
+      "copySelection": true
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Khello world             \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Ksecond line             \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2Kh\u001b[7mello wo\u001b[27mrld    \u001b[0m\u001b]8;;\u0007\u001b[7m Copied! \u001b[0m\u001b]8;;\u0007\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      [
+        "ello wo"
+      ]
+    ]
+  },
+  "copy-drag-multiline": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "hello world",
+            "second line"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[<0;4;1M",
+            "\u001b[<32;3;2M",
+            "\u001b[<0;3;2m"
+          ]
+        }
+      ],
+      "copySelection": true
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Khello world             \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Ksecond line             \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2Khel\u001b[7mlo world    \u001b[0m\u001b]8;;\u0007\u001b[7m Copied! \u001b[0m\u001b]8;;\u0007\u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2K\u001b[7msec\u001b[27mond line             \u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      [
+        "lo world\nsec"
+      ]
+    ]
+  },
+  "copy-drag-backwards": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "hello world",
+            "second line"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[<0;9;2M",
+            "\u001b[<32;2;1M",
+            "\u001b[<0;2;1m"
+          ]
+        }
+      ],
+      "copySelection": true
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Khello world             \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Ksecond line             \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2Kh\u001b[7mello world    \u001b[0m\u001b]8;;\u0007\u001b[7m Copied! \u001b[0m\u001b]8;;\u0007\u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2K\u001b[7msecond li\u001b[27mne             \u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      [
+        "ello world\nsecond li"
+      ]
+    ]
+  },
+  "copy-double-click": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "hello world"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[<0;3;1M",
+            "\u001b[<0;3;1m",
+            "\u001b[<0;3;1M",
+            "\u001b[<0;3;1m"
+          ]
+        }
+      ],
+      "copySelection": true
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Khello world             \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2K\u001b[7mhello\u001b[27m world    \u001b[0m\u001b]8;;\u0007\u001b[7m Copied! \u001b[0m\u001b]8;;\u0007\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      [
+        "hello"
+      ]
+    ]
+  },
+  "copy-triple-click": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "hello world",
+            "tail"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[<0;3;1M",
+            "\u001b[<0;3;1m",
+            "\u001b[<0;3;1M",
+            "\u001b[<0;3;1m",
+            "\u001b[<0;3;1M",
+            "\u001b[<0;3;1m"
+          ]
+        }
+      ],
+      "copySelection": true
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Khello world             \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Ktail                    \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2K\u001b[7mhello world    \u001b[0m\u001b]8;;\u0007\u001b[7m Copied! \u001b[0m\u001b]8;;\u0007\u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Ktail           \u001b[0m\u001b]8;;\u0007\u001b[7m Copied! \u001b[0m\u001b]8;;\u0007\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      [
+        "hello",
+        "hello world"
+      ]
+    ]
+  },
+  "copy-wide-chars": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "日本語テキスト",
+            "ascii tail"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[<0;1;1M",
+            "\u001b[<32;7;1M",
+            "\u001b[<0;7;1m"
+          ]
+        }
+      ],
+      "copySelection": true,
+      "skipWrites": true
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2K日本語テキスト          \u001b[2;1H\u001b[2Kascii tail              \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2K\u001b[7m日本語テ\u001b[27mキスト \u001b[0m\u001b]8;;\u0007\u001b[7m Copied! \u001b[0m\u001b]8;;\u0007\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      [
+        "日本語テ"
+      ]
+    ]
+  },
+  "copy-padded-line": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "ab   ",
+            "cd"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[<0;1;1M",
+            "\u001b[<32;24;1M",
+            "\u001b[<0;24;1m"
+          ]
+        }
+      ],
+      "copySelection": true
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Kab                      \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2Kcd                      \u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[1;1H\u001b[2K\u001b[7mab             \u001b[0m\u001b]8;;\u0007\u001b[7m Copied! \u001b[0m\u001b]8;;\u0007\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      [
+        "ab"
+      ]
+    ]
+  },
+  "copy-no-drag": {
+    "spec": {
+      "steps": [
+        {
+          "lines": [
+            "hello world"
+          ]
+        },
+        {
+          "inputs": [
+            "\u001b[<0;3;1M",
+            "\u001b[<0;3;1m"
+          ]
+        }
+      ],
+      "copySelection": true
+    },
+    "steps": [
+      "\u001b[?1049h\u001b[?7l\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1004h\u001b[?1006h\u001b[2J\u001b[H\u001b[?25l<HIDE>",
+      "\u001b[?2026h\u001b[2J\u001b[1;1H\u001b[2Khello world             \u001b[0m\u001b]8;;\u0007\u001b[2;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[3;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[4;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[5;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[6;1H\u001b[2K\u001b[0m\u001b]8;;\u0007\u001b[?25l\u001b[?2026l",
+      "\u001b[?2026h\u001b[?25l\u001b[?2026l"
+    ],
+    "copied": [
+      [],
+      [],
+      []
+    ]
+  }
+}

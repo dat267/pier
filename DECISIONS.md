@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D469)
+# Deliberate divergences from pi (D1–D470)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7537,3 +7537,20 @@ instead. A settings file that already carries a filter keeps its key order: the
 save path re-uses the file's element order (D468's neighbour, A541).
 
 Test: `TestSettingsPackageFilterKeysAreSorted`.
+
+### D470
+
+**The alt-screen keeps a clamped line's trailing reset; upstream drops it.**
+
+Reference: pi v1.5.2 (b4afdddf) `tui-alt-screen.ts` appends the line reset and
+then clamps an over-wide line, so the clamp discards the reset and any trailing
+style close. The next row is written as `ESC[<row>;1H` + `ESC[2K` + content, and
+`ESC[2K` erases with the current background, so the whole row picked up the
+leaked color: the line above the editor's working-status border turned a frame
+color after a resize. Pier clamps first and applies the resets last, so the
+reset survives. `copy-wide-chars` in `tui/testdata/altscreen/golden.json` records
+the upstream stream and is compared for its copied text only, marked
+`skipWrites`.
+
+Tests: `TestAltScreenOverWideClampKeepsLineReset`,
+`TestAltScreenDeferredReplayClampKeepsLineReset`, `TestAltScreenAgainstUpstreamGolden`.

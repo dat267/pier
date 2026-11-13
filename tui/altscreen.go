@@ -230,6 +230,9 @@ type AltScreen struct {
 	onRightClickPaste           func()
 	copyOnSelect                bool
 	copySelection               func(string) (bool, bool, string)
+	// copyQueue runs clipboard copies off the UI goroutine in trigger order, so
+	// a slow copy cannot land after a later one.
+	copyQueue *copyExecutor
 }
 
 // newAltScreenWheelScroll defaults an unset option to one fixed line per event
@@ -259,6 +262,7 @@ func NewAltScreen(terminal Terminal, showHardwareCursor bool, logDirectory strin
 		altScreenActive:             false,
 		selectionGranularity:        "character",
 	}
+	screen.copyQueue = newCopyExecutor()
 	if options.Mouse != nil {
 		screen.mouseEnabled = *options.Mouse
 	}
@@ -1865,7 +1869,7 @@ func (s *AltScreen) handleSelectionMouseEventLocked(event sgrMouseEvent) {
 					flash := func(message string, durationMS ...int) {
 						s.Post(func() { s.flashes.Flash(message, durationMS...) })
 					}
-					go s.copyTextToClipboard(text, flash)
+					s.copyQueue.Go(func() { s.copyTextToClipboard(text, flash) })
 				} else {
 					s.copyTextToClipboard(text, s.Flash)
 				}

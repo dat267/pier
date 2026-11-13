@@ -12,6 +12,10 @@ type fixedLinesComponent struct{ lines []string }
 func (c *fixedLinesComponent) Render(int) []string { return c.lines }
 func (c *fixedLinesComponent) Invalidate()         {}
 
+// D470: upstream appends the reset before clamping, so a clamped line loses it;
+// pier clamps first and keeps it. TestAltScreenAgainstUpstreamGolden's
+// copy-wide-chars case records that upstream stream and skips the write compare.
+//
 // A line the screen clamps to the terminal width must keep its trailing reset.
 // The clamp used to run after ApplyLineResets, so slicing to the width dropped
 // the reset (and any trailing style close) and the line's own background or
