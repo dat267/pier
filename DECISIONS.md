@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D459)
+# Deliberate divergences from pi (D1–D460)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7301,3 +7301,26 @@ semantically correct answer where the reference's byte hash would treat a
 reordered message as changed.
 
 `Test:` `TestAnthropicMessageThreadsPrefixHashNormalization`.
+
+### D460
+
+**An authorization server's text is sanitized before the login paths print it.**
+
+`Reference:` `packages/coding-agent/src/cli/auth-login.ts` and
+`modes/interactive/components/login-dialog.ts`, pi v1.5.2 (b4afdddf). Both print
+the device flow's `user_code`, the authorization URL's `instructions`, and an
+info event's `message` and link labels exactly as the server sent them, so a
+provider that returns `ESC]0;title BEL` in any of them reaches the terminal and
+can retitle the window, emit an OSC 8 hyperlink over its own text, or erase the
+screen during sign-in.
+
+The port passes those four strings through `tui.SanitizeUntrustedText`, the
+helper every other remote string already uses (D342, D458): escape sequences and
+C0 controls are dropped while newlines and tabs survive, so a multi-line
+instruction keeps its layout. URLs keep their own path (`DisplayURL` normalizes
+web URLs and replaces control runs in the rest), and the dialog's own styling
+and OSC 8 links are unchanged. A legitimate user code, instruction or message
+carries no control characters, so ordinary sign-in output is unchanged.
+
+`Test:` `TestAuthLoginNotifyDropsProviderTerminalControl`,
+`TestLoginDialogDropsProviderTerminalControl`.

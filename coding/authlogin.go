@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/tui"
 )
 
 // Port of pi v1.5.2 (b4afdddf) cli/auth-login.ts: `pier auth login <provider>`
@@ -257,7 +258,7 @@ func (h *loginPromptHandler) notify(event ai.AuthEvent) {
 	case ai.AuthEventAuthURL:
 		h.terminal.Write("Open this URL to sign in:\n  " + DisplayURL(event.URL))
 		if event.Instructions != "" {
-			h.terminal.Write(event.Instructions)
+			h.terminal.Write(tui.SanitizeUntrustedText(event.Instructions))
 		}
 		if target, ok := WebURL(event.URL); ok && h.request.browser {
 			h.terminal.OpenURL(target)
@@ -275,16 +276,16 @@ func (h *loginPromptHandler) notify(event ai.AuthEvent) {
 			h.terminal.Write(fmt.Sprintf("Other sign-in methods: %s. Run %s to choose one.", strings.Join(labels, ", "), rerun))
 		}
 	case ai.AuthEventDeviceCode:
-		h.terminal.Write("Open " + DisplayURL(event.VerificationURI) + " and enter code: " + event.UserCode)
+		h.terminal.Write("Open " + DisplayURL(event.VerificationURI) + " and enter code: " + tui.SanitizeUntrustedText(event.UserCode))
 		if target, ok := WebURL(event.VerificationURI); ok && h.request.browser {
 			h.terminal.OpenURL(target)
 		}
 		h.terminal.Write("Waiting for authentication...")
 	case ai.AuthEventInfo:
-		h.terminal.Write(event.Message)
+		h.terminal.Write(tui.SanitizeUntrustedText(event.Message))
 		for _, link := range event.Links {
 			if link.Label != "" {
-				h.terminal.Write("  " + link.Label + ": " + DisplayURL(link.URL))
+				h.terminal.Write("  " + tui.SanitizeUntrustedText(link.Label) + ": " + DisplayURL(link.URL))
 			} else {
 				h.terminal.Write("  " + DisplayURL(link.URL))
 			}

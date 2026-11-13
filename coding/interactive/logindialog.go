@@ -180,7 +180,7 @@ func (c *LoginDialogComponent) ShowAuth(url string, instructions string) {
 
 		if instructions != "" {
 			c.contentContainer.AddChild(tui.NewSpacer(1))
-			c.contentContainer.AddChild(tui.NewText(theme.Fg("warning", instructions), 1, 0, nil))
+			c.contentContainer.AddChild(tui.NewText(theme.Fg("warning", tui.SanitizeUntrustedText(instructions)), 1, 0, nil))
 		}
 		c.requestRender()
 	})
@@ -212,7 +212,7 @@ func (c *LoginDialogComponent) ShowDeviceCode(verificationURI string, userCode s
 		}
 		c.contentContainer.AddChild(tui.NewText(theme.Fg("dim", loginWebLink(clickHint, verificationURI)), 1, 0, nil))
 		c.contentContainer.AddChild(tui.NewSpacer(1))
-		c.contentContainer.AddChild(tui.NewText(theme.Fg("warning", "Enter code: "+userCode), 1, 0, nil))
+		c.contentContainer.AddChild(tui.NewText(theme.Fg("warning", "Enter code: "+tui.SanitizeUntrustedText(userCode)), 1, 0, nil))
 		hint := tui.NewTruncatedText("("+KeyHint("tui.select.confirm", "to open browser and copy code")+")", 1, 0)
 		c.contentContainer.AddChild(hint)
 		c.deviceCode = &deviceCodeAction{verificationURI: verificationURI, userCode: userCode, hint: hint}
@@ -365,12 +365,12 @@ func (c *LoginDialogComponent) ShowInfo(message string, links []ai.AuthInfoLink,
 	c.runOnUI(func() {
 		theme := ActiveTheme()
 		c.contentContainer.AddChild(tui.NewSpacer(1))
-		c.contentContainer.AddChild(tui.NewText(theme.Fg("text", message), 1, 0, nil))
+		c.contentContainer.AddChild(tui.NewText(theme.Fg("text", tui.SanitizeUntrustedText(message)), 1, 0, nil))
 		for _, link := range links {
 			displayURL := coding.DisplayURL(link.URL)
 			text := displayURL
 			if link.Label != "" {
-				text = link.Label + ": " + displayURL
+				text = tui.SanitizeUntrustedText(link.Label) + ": " + displayURL
 			}
 			c.contentContainer.AddChild(tui.NewText(theme.Fg("accent", loginWebLink(text, link.URL)), 1, 0, nil))
 		}
