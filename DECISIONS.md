@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D467)
+# Deliberate divergences from pi (D1–D468)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7503,3 +7503,21 @@ an achromatic hue only when the chroma is meaningful.
 
 `Test:` `TestSrgbMixingKeepsUnroundedChannels`/
 `TestFractionalChannelsSurviveConversion`/`TestColorGoldensMatchTheReference`.
+
+### D468
+
+**An assistant message read without a usage object is re-serialized with a zero
+one.**
+
+Reference: pi v1.5.2 (b4afdddf) builds every `AssistantMessage` with a `usage`
+object (`ai/types.ts`, `agent-loop.ts`), so the field is always present in a
+message it writes. Pier models usage as a struct field
+(`ai.AssistantMessage.Usage`), which the struct tags always emit, so a message
+read from a hand-edited or foreign session file without `usage` gains
+`{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"totalTokens":0,"cost":{...}}`
+when it is re-serialized (the debug log and any code that marshals context
+messages). Dropping the field would need a custom marshaler over the assistant
+message's field order, which persisted sessions depend on byte for byte, for a
+shape upstream never writes.
+
+Test: `TestAssistantMessageAlwaysCarriesUsage`.

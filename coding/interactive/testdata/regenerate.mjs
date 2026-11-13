@@ -25,6 +25,7 @@ const families = [
 	"session",
 	"settings",
 	"theme",
+	"transcript-parity",
 	"tree",
 	"writetool-parity",
 	"tuirenderer",
