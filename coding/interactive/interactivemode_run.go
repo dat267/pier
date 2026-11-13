@@ -227,6 +227,11 @@ func (w *RunWiring) ShowNewVersionNotification(release LatestRelease, hyperlinks
 	if changelogURL == "" {
 		changelogURL = coding.PortReleasesPage
 	}
+	// The version and page come from the update check's response, so they are
+	// data: the card printed them raw, and a control character in the page ended
+	// the renderer's hyperlink early (D465).
+	version := tui.SanitizeUntrustedText(release.Version)
+	safeURL := tui.SanitizeUntrustedText(changelogURL)
 	// Built through themed text so a theme change after startup (the system
 	// theme receiving the terminal's colors) recolors the card (upstream
 	// showNewVersionNotification).
@@ -236,14 +241,14 @@ func (w *RunWiring) ShowNewVersionNotification(release LatestRelease, hyperlinks
 	w.Chat.AddChild(NewThemedText(func() string {
 		theme := ActiveTheme()
 		action := theme.Fg("accent", upgradeCommand)
-		updateInstruction := theme.Fg("muted", "New version "+release.Version+" is available. Run ") + action
+		updateInstruction := theme.Fg("muted", "New version "+version+" is available. Run ") + action
 		return theme.Bold(theme.Fg("warning", "Update Available")) + "\n" + updateInstruction
 	}, 1, 0))
 	w.Chat.AddChild(NewThemedText(func() string {
 		theme := ActiveTheme()
-		changelogLink := theme.Fg("accent", changelogURL)
+		changelogLink := theme.Fg("accent", safeURL)
 		if hyperlinks {
-			changelogLink = tui.Hyperlink(changelogLink, changelogURL)
+			changelogLink = loginWebLink(theme.Fg("accent", safeURL), safeURL)
 		}
 		return theme.Fg("muted", "Changelog: ") + changelogLink
 	}, 1, 0))

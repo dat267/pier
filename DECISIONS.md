@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D464)
+# Deliberate divergences from pi (D1–D465)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7403,3 +7403,20 @@ the single seam; pier's own messages carry no control character and render
 unchanged.
 
 `Test:` `TestMCPConfigErrorsKeepTerminalControlsOutOfStderr`.
+
+### D465
+
+**The update card sanitizes the release metadata it prints.**
+
+`Reference:` the new-version notification (`showNewVersionNotification`) and the
+update check, pi v1.5.2 (b4afdddf). The card prints the fetched release's version
+as text and its page as an OSC 8 hyperlink target and label, all straight from
+the check's response, so a control character in either one retitles the terminal
+of a user who is only being told an update exists.
+
+The port passes both through `tui.SanitizeUntrustedText` (D342) and frames the
+link through `loginWebLink`, which falls back to plain text when the value is
+not a web URL. A real version and release page carry no control character, so
+the card is unchanged.
+
+`Test:` `TestStoredSessionTextRendersOnlyThemeEscapes/update_notice`.

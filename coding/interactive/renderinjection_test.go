@@ -233,6 +233,17 @@ func TestStoredSessionTextRendersOnlyThemeEscapes(t *testing.T) {
 		assertOnlyThemeEscapes(t, component.Render(120))
 	})
 
+	t.Run("update notice", func(t *testing.T) {
+		// The card prints the release metadata the update check fetched.
+		chat := &tui.Container{}
+		wiring := &RunWiring{Chat: chat, Display: &DisplayOptions{OutputPad: 0}}
+		wiring.ShowNewVersionNotification(LatestRelease{
+			Version: "9.9.9" + storedPayload,
+			URL:     "https://evil.example/" + storedPayload,
+		}, true)
+		assertOnlyThemeEscapes(t, chat.Render(120))
+	})
+
 	t.Run("login dialog", func(t *testing.T) {
 		// The authorization server supplies the instructions, the device user code
 		// and an info message (D460).
