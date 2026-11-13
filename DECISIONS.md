@@ -5753,7 +5753,13 @@ Pier fails those commands with `mode must be all or one-at-a-time` and
 unchanged, so the agent never adopts a value it cannot honor. The rest of the
 command surface validates field types the same way.
 
-Test: `TestRPCRejectsModesAndThinkingLevelsItCannotHonor`.
+The same applies to a command that omits the field: the reference reports
+`success: true` for `{"type":"set_thinking_level"}` with no `level` and leaves
+the level alone, and pier answers `level must be a valid thinking level`. A
+missing value is one it cannot honor, so it takes the same path.
+
+Test: `TestRPCRejectsModesAndThinkingLevelsItCannotHonor`,
+`TestRPCRejectsAnOmittedThinkingLevel`.
 
 ### D405
 

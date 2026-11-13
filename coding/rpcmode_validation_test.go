@@ -42,3 +42,25 @@ func TestRPCRejectsModesAndThinkingLevelsItCannotHonor(t *testing.T) {
 		t.Fatal("the session adopted an invalid thinking level")
 	}
 }
+
+// D404: the reference reports success for a thinking-level command that omits
+// the field (pi v1.5.2 modes/rpc/rpc-mode.ts passes the undefined value on and
+// the level stays as it was). Pier treats a missing value like an invalid one:
+// the command fails and the level is untouched.
+func TestRPCRejectsAnOmittedThinkingLevel(t *testing.T) {
+	session := rpcTestSession(t)
+	session.Agent.SetModel(&ai.Model{ID: "m", Provider: "test", Reasoning: true})
+	records := rpcResponses(runRPCScript(t, session, `{"id":"none","type":"set_thinking_level"}
+{"id":"state","type":"get_state"}
+`))
+	if len(records) != 2 {
+		t.Fatalf("responses = %d, want 2", len(records))
+	}
+	if records[0]["success"] != false || records[0]["error"] != "level must be a valid thinking level" {
+		t.Fatalf("response 0 = %+v; want the invalid-level error", records[0])
+	}
+	state := records[1]["data"].(map[string]any)
+	if level, _ := state["thinkingLevel"].(string); level == "" {
+		t.Fatalf("thinkingLevel = %v; want the unchanged level", state["thinkingLevel"])
+	}
+}
