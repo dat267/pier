@@ -186,6 +186,37 @@
 					"0.0.1"
 				]
 			]
+		},
+		"nested-objects": {
+			"initial": null,
+			"ops": [
+				[
+					"showImages",
+					false
+				],
+				[
+					"clearOnShrink",
+					true
+				],
+				[
+					"showTerminalProgress",
+					false
+				]
+			]
+		},
+		"nested-existing": {
+			"initial": {
+				"terminal": {
+					"showImages": true,
+					"imageWidthCells": 30
+				}
+			},
+			"ops": [
+				[
+					"clearOnShrink",
+					true
+				]
+			]
 		}
 	}
 }

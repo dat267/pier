@@ -737,6 +737,11 @@ type SettingsManager struct {
 	modifiedNestedFields  map[string]map[string]bool
 	modifiedProjectFields map[string]bool
 	modifiedProjectNested map[string]map[string]bool
+	// nestedOrder records the order nested keys were set, per field and scope.
+	// Upstream assigns into the parsed JSON object, so a new nested key lands
+	// after the ones the file already had, in the order it was set.
+	nestedOrder        map[string][]string
+	nestedProjectOrder map[string][]string
 
 	globalSettingsLoadError  error
 	projectSettingsLoadError error
@@ -1225,6 +1230,10 @@ func (o *orderedObject) setAny(key string, value any) {
 	o.set(key, value, true)
 }
 
+// MarshalJSON lets a nested ordered object keep its key order inside a parent
+// object that is marshaled by the standard library.
+func (o *orderedObject) MarshalJSON() ([]byte, error) { return o.marshal() }
+
 func (o *orderedObject) marshal() ([]byte, error) {
 	var buffer bytes.Buffer
 	buffer.WriteByte('{')
@@ -1273,6 +1282,86 @@ func marshalSettingsIndent(settings *Settings) string {
 // the order the reference writes them back: upstream merges into the object
 // JSON.parse produced, whose enumeration puts array-index keys first in numeric
 // order (`"1"`, `"2"`, `"10"`), then the remaining keys in file order.
+// nestedKeyOrder orders each nested object the way the reference's save leaves
+// it: the keys the file already had in file order, then the keys set this
+// session in the order they were set, then any remaining key sorted.
+func nestedKeyOrder(text string, merged map[string]any, setOrder map[string][]string) map[string][]string {
+	orders := map[string][]string{}
+	for field, value := range merged {
+		object, ok := value.(map[string]any)
+		if !ok || len(object) == 0 {
+			continue
+		}
+		keys := make([]string, 0, len(object))
+		seen := map[string]bool{}
+		add := func(key string) {
+			if seen[key] {
+				return
+			}
+			if _, present := object[key]; !present {
+				return
+			}
+			seen[key] = true
+			keys = append(keys, key)
+		}
+		for _, key := range settingsRawNestedKeyOrder(text, field) {
+			add(key)
+		}
+		for _, key := range setOrder[field] {
+			add(key)
+		}
+		remaining := make([]string, 0, len(object)-len(keys))
+		for key := range object {
+			if !seen[key] {
+				remaining = append(remaining, key)
+			}
+		}
+		sort.Strings(remaining)
+		for _, key := range remaining {
+			add(key)
+		}
+		orders[field] = keys
+	}
+	return orders
+}
+
+// settingsRawNestedKeyOrder returns the key order of one nested object in the
+// settings text, or nil when the field is absent or not an object.
+func settingsRawNestedKeyOrder(text string, field string) []string {
+	if text == "" {
+		return nil
+	}
+	decoder := json.NewDecoder(strings.NewReader(text))
+	decoder.UseNumber()
+	token, err := decoder.Token()
+	if err != nil || token != json.Delim('{') {
+		return nil
+	}
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil {
+			return nil
+		}
+		key, ok := keyToken.(string)
+		if !ok {
+			return nil
+		}
+		if key != field {
+			var skip json.RawMessage
+			if err := decoder.Decode(&skip); err != nil {
+				return nil
+			}
+			continue
+		}
+		var raw json.RawMessage
+		if err := decoder.Decode(&raw); err != nil {
+			return nil
+		}
+		return settingsRawKeyOrder(string(raw))
+	}
+	return nil
+}
+
 func settingsRawKeyOrder(text string) []string {
 	decoder := json.NewDecoder(strings.NewReader(text))
 	decoder.UseNumber()
@@ -1313,7 +1402,7 @@ func settingsDeclarationOrder() []string {
 // JSON.stringify(value, null, 2). The file's keys keep their positions, then
 // the remaining known fields follow in declaration order, then any other key
 // (a value the typed settings cannot represent, kept verbatim).
-func marshalSettingsMapIndent(fileKeys []string, merged map[string]any) string {
+func marshalSettingsMapIndent(fileKeys []string, merged map[string]any, nestedOrders map[string][]string) string {
 	ordered := orderedObject{}
 	seen := map[string]bool{}
 	add := func(key string) {
@@ -1325,6 +1414,16 @@ func marshalSettingsMapIndent(fileKeys []string, merged map[string]any) string {
 			return
 		}
 		seen[key] = true
+		if order, isObject := nestedOrders[key]; isObject {
+			if object, ok := value.(map[string]any); ok {
+				nested := orderedObject{}
+				for _, nestedKey := range order {
+					nested.set(nestedKey, object[nestedKey], true)
+				}
+				ordered.set(key, &nested, true)
+				return
+			}
+		}
 		ordered.set(key, value, true)
 	}
 	for _, key := range fileKeys {
@@ -1474,6 +1573,7 @@ func (m *SettingsManager) markModified(field string, nestedKey string) {
 			m.modifiedNestedFields[field] = map[string]bool{}
 		}
 		m.modifiedNestedFields[field][nestedKey] = true
+		m.nestedOrder = recordNestedOrder(m.nestedOrder, field, nestedKey)
 	}
 }
 
@@ -1484,7 +1584,34 @@ func (m *SettingsManager) markProjectModified(field string, nestedKey string) {
 			m.modifiedProjectNested[field] = map[string]bool{}
 		}
 		m.modifiedProjectNested[field][nestedKey] = true
+		m.nestedProjectOrder = recordNestedOrder(m.nestedProjectOrder, field, nestedKey)
 	}
+}
+
+// recordNestedOrder appends a nested key the first time it is set.
+func recordNestedOrder(order map[string][]string, field, nestedKey string) map[string][]string {
+	if order == nil {
+		order = map[string][]string{}
+	}
+	for _, existing := range order[field] {
+		if existing == nestedKey {
+			return order
+		}
+	}
+	order[field] = append(order[field], nestedKey)
+	return order
+}
+
+// copyNestedOrder snapshots the recorded set order for a queued write.
+func copyNestedOrder(order map[string][]string) map[string][]string {
+	if len(order) == 0 {
+		return nil
+	}
+	out := make(map[string][]string, len(order))
+	for field, keys := range order {
+		out[field] = append([]string(nil), keys...)
+	}
+	return out
 }
 
 // clearModifiedScope drops the scope's modified flags; the caller holds m.mu
@@ -1512,7 +1639,7 @@ func (m *SettingsManager) save() {
 	snapshot := cloneSettings(m.globalSettings)
 	modified := copyStringSet(m.modifiedFields)
 	nested := copyNestedSet(m.modifiedNestedFields)
-	m.persistScoped(SettingsScopeGlobal, snapshot, modified, nested)
+	m.persistScoped(SettingsScopeGlobal, snapshot, modified, nested, copyNestedOrder(m.nestedOrder))
 }
 
 // persistScoped runs one scoped storage roundtrip: synchronously under the
@@ -1520,14 +1647,14 @@ func (m *SettingsManager) save() {
 // persists exactly the submitted state and clears the scope's modified flags
 // only on success, so a failed persist keeps its fields marked and the next
 // save retries them. Errors surface through DrainErrors as before.
-func (m *SettingsManager) persistScoped(scope SettingsScope, snapshot *Settings, modified map[string]bool, nested map[string]map[string]bool) {
+func (m *SettingsManager) persistScoped(scope SettingsScope, snapshot *Settings, modified map[string]bool, nested map[string]map[string]bool, order map[string][]string) {
 	// D160: an accepted save belongs to its submission's project binding,
 	// even if RebindProject runs before the worker reaches it.
 	storage := m.storage
 	if m.persistQueue == nil {
 		// The caller holds m.mu (the mutator that called save); use the locked
 		// variants.
-		if err := m.persistScopedSettings(storage, scope, snapshot, modified, nested); err != nil {
+		if err := m.persistScopedSettings(storage, scope, snapshot, modified, nested, order); err != nil {
 			m.recordErrorLocked(scope, err)
 			return
 		}
@@ -1537,7 +1664,7 @@ func (m *SettingsManager) persistScoped(scope SettingsScope, snapshot *Settings,
 	path := m.settingsPaths[scope]
 	binding := m.projectBinding
 	run := func() {
-		if err := m.persistScopedSettings(storage, scope, snapshot, modified, nested); err != nil {
+		if err := m.persistScopedSettings(storage, scope, snapshot, modified, nested, order); err != nil {
 			m.mu.Lock()
 			m.errors = append(m.errors, SettingsError{Scope: scope, Path: path, Error: err})
 			m.mu.Unlock()
@@ -1598,7 +1725,7 @@ func (m *SettingsManager) saveProjectSettings(settings *Settings) {
 	snapshot := cloneSettings(m.projectSettings)
 	modified := copyStringSet(m.modifiedProjectFields)
 	nested := copyNestedSet(m.modifiedProjectNested)
-	m.persistScoped(SettingsScopeProject, snapshot, modified, nested)
+	m.persistScoped(SettingsScopeProject, snapshot, modified, nested, copyNestedOrder(m.nestedProjectOrder))
 }
 
 func (m *SettingsManager) updateProjectSettings(field string, update func(*Settings)) {
@@ -1618,6 +1745,7 @@ func (m *SettingsManager) persistScopedSettings(
 	snapshot *Settings,
 	modified map[string]bool,
 	modifiedNested map[string]map[string]bool,
+	setOrder map[string][]string,
 ) error {
 	var parseErr error
 	err := storage.WithLock(scope, func(current *string) *string {
@@ -1627,8 +1755,9 @@ func (m *SettingsManager) persistScopedSettings(
 		// being rewritten to just the modified field.
 		merged := map[string]any{}
 		var fileKeys []string
+		text := ""
 		if current != nil && *current != "" {
-			text := StripBom(*current)
+			text = StripBom(*current)
 			var raw map[string]any
 			if err := json.Unmarshal([]byte(text), &raw); err != nil {
 				parseErr = err
@@ -1667,7 +1796,7 @@ func (m *SettingsManager) persistScopedSettings(
 			}
 			merged[field] = value
 		}
-		content := marshalSettingsMapIndent(fileKeys, merged)
+		content := marshalSettingsMapIndent(fileKeys, merged, nestedKeyOrder(text, merged, setOrder))
 		return &content
 	})
 	return errors.Join(err, parseErr)
