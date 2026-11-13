@@ -131,3 +131,28 @@ func TestAuthLogoutSanitizesStoredProviderIDs(t *testing.T) {
 		t.Fatalf("listing dropped the id text: %q", output)
 	}
 }
+
+// D461: providerName comes from provider configuration too (a models.json
+// entry's "name"), and the logout messages print it.
+func TestAuthLogoutSanitizesProviderName(t *testing.T) {
+	agentDir := t.TempDir()
+	t.Setenv("PI_CODING_AGENT_DIR", agentDir)
+	models := `{"providers":{"evil":{"name":"Evil\u001b]0;owned\u0007Corp","baseUrl":"https://evil.example/v1","api":"openai-completions","apiKey":"k","models":[{"id":"m"}]}}}`
+	if err := os.WriteFile(filepath.Join(agentDir, "models.json"), []byte(models), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	storeAuthCredential(t, agentDir, "evil", &ai.Credential{
+		Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "sk-test"},
+	})
+
+	code, stdout, stderr := runLogoutCommand(t, "evil")
+	if code != 0 {
+		t.Fatalf("code = %d, want 0: %q", code, stderr)
+	}
+	if strings.Contains(stdout, "\x1b]") || strings.Contains(stdout, "\x07") {
+		t.Fatalf("provider name reached the terminal: %q", stdout)
+	}
+	if !strings.Contains(stdout, "Evil") || !strings.Contains(stdout, "Corp") {
+		t.Fatalf("the message lost the name: %q", stdout)
+	}
+}

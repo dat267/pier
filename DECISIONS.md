@@ -7341,7 +7341,7 @@ joining the list. Ordinary ids have no control character, so the listing is
 unchanged, and the user's own typed provider name in the same message was
 already sanitized.
 
-`Test:` `TestAuthLogoutSanitizesStoredProviderIDs`.
+`Test:` `TestAuthLogoutSanitizesStoredProviderIDs`, `TestAuthLogoutSanitizesProviderName`.
 
 ### D462
 

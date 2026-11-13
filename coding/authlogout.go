@@ -77,9 +77,10 @@ func runAuthLogout(appName string, command *AuthCommand, stdout, stderr io.Write
 		return 1
 	}
 
-	providerName := providerRef
+	// The name comes from provider configuration, like the stored ids above (D461).
+	providerName := tui.SanitizeUntrustedText(providerRef)
 	if provider != nil && provider.Name != "" {
-		providerName = provider.Name
+		providerName = tui.SanitizeUntrustedText(provider.Name)
 	}
 	if credential == nil {
 		fmt.Fprintln(stdout, fmt.Sprintf("No stored credentials for %s. Environment variables and models.json config are unchanged.", providerName))
