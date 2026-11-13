@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D466)
+# Deliberate divergences from pi (D1–D467)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7466,3 +7466,38 @@ composes layout nodes per level; the reference cannot finish that input at all.
 `Test:` `BenchmarkRenderLatexNestedScriptsInline`/
 `BenchmarkRenderLatexDisplayMath`/`TestNormalizeScriptValueMatchesTheRelationRegex`/
 `TestCollapseWhitespaceRunsMatchesTheWhitespaceRegex`.
+
+### D467
+
+**A concrete color keeps fractional channels until it is written.**
+
+`Reference:` `packages/tui/src/colors.ts` (`colorToRgb`, `mixColors`,
+`colorToHex`, `colorAnsi`, `rgbToAnsi256`) and `packages/tui/src/oklab.ts`
+(`linearSrgbToRgb`), pi v1.5.2 (b4afdddf). Upstream's `colorToRgb` returns the
+rounded channels of an OKLCH color but the stored channels of an RGB color, and
+a mix leaves those fractional; `mixColors` interpolates them and only the hex
+formatter and the ANSI writers round.
+
+Pier's `RgbColor` is integer because terminal replies, ANSI codes and image
+metadata are, so `ColorToRgb` rounded every channel before anything else read
+it. A chained sRGB mix therefore used 128 where the reference uses 127.5 and
+reached `#c04040` where the reference reaches `#bf4040`, and the OKLCH/OKHSL
+conversions and the 256-color downgrade read the rounded channel.
+
+`colorToRgbChannels` now mirrors upstream's `colorToRgb` exactly: indexed is the
+palette entry, RGB is the stored channel (possibly fractional), OKLCH is
+gamut-mapped and rounded by `linearSrgbToRgb`. `MixColors` in the sRGB space,
+`ColorToOklch`, `ColorToOkhsl`, `ColorToHex`, `colorAnsi` and `rgbToAnsi256`
+read that form, so a fractional channel survives to the write step, and
+`rgbToAnsi256` compares the fractional channels the way the reference does (a
+channel of exactly 47.5 stays in the cube's first cell). `ColorToRgb` stays the
+integer view.
+
+A side-by-side run over 8700 records (an OKLCH grid, all 256 indexed colors,
+fractional RGB fixtures, three mixes each) matched exactly after the change; the
+8 remaining records are grays whose hue is `atan2` of a ~1e-16 chroma, where the
+last bits of the matrix arithmetic differ between engines, so the tests compare
+an achromatic hue only when the chroma is meaningful.
+
+`Test:` `TestSrgbMixingKeepsUnroundedChannels`/
+`TestFractionalChannelsSurviveConversion`/`TestColorGoldensMatchTheReference`.

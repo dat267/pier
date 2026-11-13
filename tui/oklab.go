@@ -104,20 +104,34 @@ func linearSrgbToOklab(rgb okVector) okVector {
 
 // RgbToOklab converts sRGB channels (0-255) to Oklab [L, a, b].
 func RgbToOklab(color RgbColor) okVector {
+	return rgbToOklabChannels(float64(color.R), float64(color.G), float64(color.B))
+}
+
+// rgbToOklabChannels converts unrounded sRGB channels (0-255) to Oklab.
+func rgbToOklabChannels(r float64, g float64, b float64) okVector {
 	return linearSrgbToOklab(okVector{
-		srgbToLinear(float64(color.R) / 255),
-		srgbToLinear(float64(color.G) / 255),
-		srgbToLinear(float64(color.B) / 255),
+		srgbToLinear(r / 255),
+		srgbToLinear(g / 255),
+		srgbToLinear(b / 255),
 	})
+}
+
+// linearSrgbToRgbChannels converts linear sRGB to sRGB channels (0-255,
+// unrounded), clipping out-of-gamut channels. Upstream keeps these channels
+// fractional and rounds only when writing them, so mixing and the OKHSL/OKLCH
+// conversions read this form (D467).
+func linearSrgbToRgbChannels(linear okVector) [3]float64 {
+	channel := func(value float64) float64 {
+		return math.Min(1, math.Max(0, linearToSrgb(value))) * 255
+	}
+	return [3]float64{channel(linear[0]), channel(linear[1]), channel(linear[2])}
 }
 
 // linearSrgbToRgb converts linear sRGB to sRGB channels (0-255, rounded),
 // clipping out-of-gamut channels.
 func linearSrgbToRgb(linear okVector) RgbColor {
-	channel := func(value float64) int {
-		return int(math.Round(math.Min(1, math.Max(0, linearToSrgb(value))) * 255))
-	}
-	return RgbColor{R: channel(linear[0]), G: channel(linear[1]), B: channel(linear[2])}
+	channels := linearSrgbToRgbChannels(linear)
+	return RgbColor{R: int(math.Round(channels[0])), G: int(math.Round(channels[1])), B: int(math.Round(channels[2]))}
 }
 
 // lmsSlopes is the rate of change of each cube-root LMS component along a chroma
@@ -279,6 +293,12 @@ func colorParseFloat(value string) float64 {
 // OklchToRgb gamut-maps an OKLCH color to sRGB, keeping the hue and reducing
 // chroma until the color fits (upstream oklchToRgb).
 func OklchToRgb(l, c, h float64) RgbColor {
+	channels := oklchToRgbChannels(l, c, h)
+	return RgbColor{R: int(math.Round(channels[0])), G: int(math.Round(channels[1])), B: int(math.Round(channels[2]))}
+}
+
+// oklchToRgbChannels converts OKLCH to unrounded sRGB channels (0-255).
+func oklchToRgbChannels(l, c, h float64) [3]float64 {
 	l = colorClamp01(l)
 	if c < 0 {
 		c = 0
@@ -292,7 +312,7 @@ func OklchToRgb(l, c, h float64) RgbColor {
 	}
 	direct := atChroma(c)
 	if isInSrgbGamut(direct) {
-		return linearSrgbToRgb(direct)
+		return linearSrgbToRgbChannels(direct)
 	}
 	linear := atChroma(0)
 	low, high := 0.0, c
@@ -306,7 +326,7 @@ func OklchToRgb(l, c, h float64) RgbColor {
 			high = chroma
 		}
 	}
-	return linearSrgbToRgb(linear)
+	return linearSrgbToRgbChannels(linear)
 }
 
 func isInSrgbGamut(linear okVector) bool {
@@ -347,7 +367,12 @@ func OkhslToRgb(hue, saturation, lightness float64) RgbColor {
 
 // RgbToOkhsl converts sRGB channels (0-255) to OKHSL.
 func RgbToOkhsl(color RgbColor) OkhslChannels {
-	lab := RgbToOklab(color)
+	return rgbToOkhslChannels(float64(color.R), float64(color.G), float64(color.B))
+}
+
+// rgbToOkhslChannels converts unrounded sRGB channels (0-255) to OKHSL.
+func rgbToOkhslChannels(r float64, g float64, b float64) OkhslChannels {
+	lab := rgbToOklabChannels(r, g, b)
 	L, labA, labB := lab[0], lab[1], lab[2]
 	chroma := math.Hypot(labA, labB)
 	lightness := OklabToOkhslLightness(L)

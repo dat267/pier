@@ -194,10 +194,10 @@ func grayValues() []int {
 	return values
 }
 
-func colorDistance(r1, g1, b1, r2, g2, b2 int) float64 {
-	dr := float64(r1 - r2)
-	dg := float64(g1 - g2)
-	db := float64(b1 - b2)
+func colorDistance(r1, g1, b1, r2, g2, b2 float64) float64 {
+	dr := r1 - r2
+	dg := g1 - g2
+	db := b1 - b2
 	return dr*dr*0.299 + dg*dg*0.587 + db*db*0.114
 }
 
@@ -217,20 +217,29 @@ func indexedToRgb(index int) RgbColor {
 	return RgbColor{R: gray, G: gray, B: gray}
 }
 
-// ColorToRgb converts any concrete color to sRGB channels.
-func ColorToRgb(color Color) RgbColor {
+// colorToRgbChannels converts any concrete color to sRGB channels the way
+// upstream's colorToRgb does (D467): an OKLCH color is gamut-mapped and rounded
+// by linearSrgbToRgb, while an RGB color keeps whatever channels it stores,
+// which a mix can leave fractional. Mixing, the OKLCH/OKHSL conversions, the
+// hex formatter and the ANSI downgrade all read this form, so the fractional
+// ones survive until they are written.
+func colorToRgbChannels(color Color) [3]float64 {
 	switch color.Kind {
 	case ColorKindIndexed:
-		return indexedToRgb(color.Index)
+		rgb := indexedToRgb(color.Index)
+		return [3]float64{float64(rgb.R), float64(rgb.G), float64(rgb.B)}
 	case ColorKindRGB:
-		return RgbColor{
-			R: int(math.Round(color.R)),
-			G: int(math.Round(color.G)),
-			B: int(math.Round(color.B)),
-		}
+		return [3]float64{color.R, color.G, color.B}
 	default:
-		return OklchToRgb(color.L, color.C, color.H)
+		rgb := OklchToRgb(color.L, color.C, color.H)
+		return [3]float64{float64(rgb.R), float64(rgb.G), float64(rgb.B)}
 	}
+}
+
+// ColorToRgb converts any concrete color to sRGB channels.
+func ColorToRgb(color Color) RgbColor {
+	channels := colorToRgbChannels(color)
+	return RgbColor{R: int(math.Round(channels[0])), G: int(math.Round(channels[1])), B: int(math.Round(channels[2]))}
 }
 
 // ColorToOklch converts any concrete color to OKLCH channels.
@@ -238,18 +247,26 @@ func ColorToOklch(color Color) OklchChannels {
 	if color.Kind == ColorKindOklch {
 		return OklchChannels{L: color.L, C: color.C, H: color.H}
 	}
-	return RgbToOklch(ColorToRgb(color))
+	channels := colorToRgbChannels(color)
+	lab := rgbToOklabChannels(channels[0], channels[1], channels[2])
+	return OklchChannels{
+		L: lab[0],
+		C: math.Hypot(lab[1], lab[2]),
+		H: math.Mod(math.Atan2(lab[2], lab[1])*180/math.Pi+360, 360),
+	}
 }
 
 // ColorToOkhsl converts any concrete color to OKHSL channels.
 func ColorToOkhsl(color Color) OkhslChannels {
-	return RgbToOkhsl(ColorToRgb(color))
+	channels := colorToRgbChannels(color)
+	return rgbToOkhslChannels(channels[0], channels[1], channels[2])
 }
 
 // ColorToHex formats a concrete color as #rrggbb.
 func ColorToHex(color Color) string {
-	rgb := ColorToRgb(color)
-	return fmt.Sprintf("#%02x%02x%02x", rgb.R, rgb.G, rgb.B)
+	channels := colorToRgbChannels(color)
+	return fmt.Sprintf("#%02x%02x%02x",
+		int(math.Round(channels[0])), int(math.Round(channels[1])), int(math.Round(channels[2])))
 }
 
 // ColorMixSpace selects the interpolation space for MixColors.
@@ -269,12 +286,12 @@ func MixColors(first, second Color, amount float64, space ColorMixSpace) (Color,
 		return Color{}, fmt.Errorf("amount must be between 0 and 1: %s", jsNumberString(amount))
 	}
 	if space == ColorMixSrgb {
-		a := ColorToRgb(first)
-		b := ColorToRgb(second)
+		a := colorToRgbChannels(first)
+		b := colorToRgbChannels(second)
 		return NewRgbColor(
-			float64(a.R)+float64(b.R-a.R)*amount,
-			float64(a.G)+float64(b.G-a.G)*amount,
-			float64(a.B)+float64(b.B-a.B)*amount,
+			a[0]+(b[0]-a[0])*amount,
+			a[1]+(b[1]-a[1])*amount,
+			a[2]+(b[2]-a[2])*amount,
 		)
 	}
 	a := ColorToOklch(first)
@@ -304,20 +321,23 @@ func findClosestValue(values []int, target float64) int {
 	return closestIndex
 }
 
-func rgbToAnsi256(color RgbColor) int {
-	rIndex := findClosestValue(cubeValues, float64(color.R))
-	gIndex := findClosestValue(cubeValues, float64(color.G))
-	bIndex := findClosestValue(cubeValues, float64(color.B))
-	cubeColor := RgbColor{R: cubeValues[rIndex], G: cubeValues[gIndex], B: cubeValues[bIndex]}
+// rgbToAnsi256 downgrades unrounded channels to an xterm-256 index. Upstream
+// compares the fractional channels, so a channel of exactly 47.5 stays closer to
+// the cube's first level than to its second.
+func rgbToAnsi256(channels [3]float64) int {
+	rIndex := findClosestValue(cubeValues, channels[0])
+	gIndex := findClosestValue(cubeValues, channels[1])
+	bIndex := findClosestValue(cubeValues, channels[2])
+	cubeColor := [3]float64{float64(cubeValues[rIndex]), float64(cubeValues[gIndex]), float64(cubeValues[bIndex])}
 	cubeIndex := 16 + 36*rIndex + 6*gIndex + bIndex
 
 	grays := grayValues()
-	gray := int(math.Round(0.299*float64(color.R) + 0.587*float64(color.G) + 0.114*float64(color.B)))
-	grayOffset := findClosestValue(grays, float64(gray))
-	grayValue := grays[grayOffset]
-	spread := max(color.R, max(color.G, color.B)) - min(color.R, min(color.G, color.B))
-	if spread < 10 && colorDistance(color.R, color.G, color.B, grayValue, grayValue, grayValue) <
-		colorDistance(color.R, color.G, color.B, cubeColor.R, cubeColor.G, cubeColor.B) {
+	gray := math.Round(0.299*channels[0] + 0.587*channels[1] + 0.114*channels[2])
+	grayOffset := findClosestValue(grays, gray)
+	grayValue := float64(grays[grayOffset])
+	spread := max(channels[0], max(channels[1], channels[2])) - min(channels[0], min(channels[1], channels[2]))
+	if spread < 10 && colorDistance(channels[0], channels[1], channels[2], grayValue, grayValue, grayValue) <
+		colorDistance(channels[0], channels[1], channels[2], cubeColor[0], cubeColor[1], cubeColor[2]) {
 		return 232 + grayOffset
 	}
 	return cubeIndex
@@ -331,11 +351,12 @@ func colorAnsi(color Color, mode TerminalColorMode, background bool) string {
 	if color.Kind == ColorKindIndexed {
 		return fmt.Sprintf("\x1b[%d;5;%dm", layer, color.Index)
 	}
-	rgb := ColorToRgb(color)
+	channels := colorToRgbChannels(color)
 	if mode == TerminalColorModeTruecolor {
-		return fmt.Sprintf("\x1b[%d;2;%d;%d;%dm", layer, rgb.R, rgb.G, rgb.B)
+		return fmt.Sprintf("\x1b[%d;2;%d;%d;%dm", layer,
+			int(math.Round(channels[0])), int(math.Round(channels[1])), int(math.Round(channels[2])))
 	}
-	return fmt.Sprintf("\x1b[%d;5;%dm", layer, rgbToAnsi256(rgb))
+	return fmt.Sprintf("\x1b[%d;5;%dm", layer, rgbToAnsi256(channels))
 }
 
 // ForegroundAnsi returns the foreground escape sequence for a concrete color.
