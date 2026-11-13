@@ -4,6 +4,7 @@
 			"initial": null,
 			"ops": [
 				[
+					"global",
 					"hideThinkingBlock",
 					true
 				]
@@ -13,10 +14,12 @@
 			"initial": null,
 			"ops": [
 				[
+					"global",
 					"hideThinkingBlock",
 					true
 				],
 				[
+					"global",
 					"hideThinkingBlock",
 					false
 				]
@@ -26,10 +29,12 @@
 			"initial": null,
 			"ops": [
 				[
+					"global",
 					"theme",
 					"light"
 				],
 				[
+					"global",
 					"shellPath",
 					"/bin/zsh"
 				]
@@ -39,10 +44,12 @@
 			"initial": null,
 			"ops": [
 				[
+					"global",
 					"shellPath",
 					"/bin/zsh"
 				],
 				[
+					"global",
 					"shellPath",
 					null
 				]
@@ -52,6 +59,7 @@
 			"initial": null,
 			"ops": [
 				[
+					"global",
 					"npmCommand",
 					[
 						"npm",
@@ -59,6 +67,7 @@
 					]
 				],
 				[
+					"global",
 					"npmCommand",
 					null
 				]
@@ -68,18 +77,22 @@
 			"initial": null,
 			"ops": [
 				[
+					"global",
 					"outputPad",
 					3
 				],
 				[
+					"global",
 					"editorPaddingX",
 					2
 				],
 				[
+					"global",
 					"imageWidthCells",
 					42
 				],
 				[
+					"global",
 					"autocompleteMaxVisible",
 					9
 				]
@@ -89,34 +102,42 @@
 			"initial": null,
 			"ops": [
 				[
+					"global",
 					"tuiMode",
 					"fullscreen"
 				],
 				[
+					"global",
 					"steeringMode",
 					"all"
 				],
 				[
+					"global",
 					"transport",
 					"websocket"
 				],
 				[
+					"global",
 					"cacheWarmingMode",
 					"always"
 				],
 				[
+					"global",
 					"doubleEscapeAction",
 					"tree"
 				],
 				[
+					"global",
 					"treeFilterMode",
 					"no-tools"
 				],
 				[
+					"global",
 					"fullscreenScrollbar",
 					"always"
 				],
 				[
+					"global",
 					"fullscreenExitOutput",
 					"clear"
 				]
@@ -129,6 +150,7 @@
 			},
 			"ops": [
 				[
+					"global",
 					"outputPad",
 					2
 				]
@@ -138,50 +160,62 @@
 			"initial": null,
 			"ops": [
 				[
+					"global",
 					"showCacheMissNotices",
 					true
 				],
 				[
+					"global",
 					"collapseChangelog",
 					false
 				],
 				[
+					"global",
 					"enableInstallTelemetry",
 					false
 				],
 				[
+					"global",
 					"enableSkillCommands",
 					false
 				],
 				[
+					"global",
 					"defaultProjectTrust",
 					"always"
 				],
 				[
+					"global",
 					"defaultProvider",
 					"openai"
 				],
 				[
+					"global",
 					"defaultModel",
 					"gpt-5"
 				],
 				[
+					"global",
 					"compactionEnabled",
 					false
 				],
 				[
+					"global",
 					"retryEnabled",
 					false
 				],
 				[
+					"global",
 					"fullscreenCopyOnSelect",
 					true
 				],
 				[
+					"global",
 					"mermaidRenderingMode",
 					"none"
 				],
 				[
+					"global",
 					"lastChangelogVersion",
 					"0.0.1"
 				]
@@ -191,14 +225,17 @@
 			"initial": null,
 			"ops": [
 				[
+					"global",
 					"showImages",
 					false
 				],
 				[
+					"global",
 					"clearOnShrink",
 					true
 				],
 				[
+					"global",
 					"showTerminalProgress",
 					false
 				]
@@ -213,7 +250,82 @@
 			},
 			"ops": [
 				[
+					"global",
 					"clearOnShrink",
+					true
+				]
+			]
+		},
+		"project-paths": {
+			"initial": null,
+			"ops": [
+				[
+					"project",
+					"extensionPaths",
+					[
+						"/tmp/pier/ext.ts"
+					]
+				],
+				[
+					"project",
+					"skillPaths",
+					[
+						"/tmp/pier/skills"
+					]
+				],
+				[
+					"project",
+					"promptTemplatePaths",
+					[
+						"/tmp/pier/prompts"
+					]
+				],
+				[
+					"project",
+					"themePaths",
+					[
+						"/tmp/pier/themes"
+					]
+				]
+			]
+		},
+		"project-and-global": {
+			"initial": null,
+			"ops": [
+				[
+					"global",
+					"theme",
+					"light"
+				],
+				[
+					"project",
+					"skillPaths",
+					[
+						"/tmp/pier/skills"
+					]
+				]
+			]
+		},
+		"untouched-nested": {
+			"initial": {
+				"terminal": {
+					"showImages": true,
+					"imageWidthCells": 30
+				},
+				"packages": [
+					"a",
+					{
+						"source": "b",
+						"skills": [
+							"s"
+						]
+					}
+				]
+			},
+			"ops": [
+				[
+					"global",
+					"hideThinkingBlock",
 					true
 				]
 			]

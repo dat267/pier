@@ -1282,6 +1282,67 @@ func marshalSettingsIndent(settings *Settings) string {
 // the order the reference writes them back: upstream merges into the object
 // JSON.parse produced, whose enumeration puts array-index keys first in numeric
 // order (`"1"`, `"2"`, `"10"`), then the remaining keys in file order.
+// orderArrayElements keeps each object element's keys in the order the file had
+// them, then any remaining key sorted; non-object elements pass through.
+func orderArrayElements(elements []any, orders [][]string) []any {
+	out := make([]any, 0, len(elements))
+	for index, element := range elements {
+		object, ok := element.(map[string]any)
+		if !ok {
+			out = append(out, element)
+			continue
+		}
+		keys := make([]string, 0, len(object))
+		seen := map[string]bool{}
+		add := func(key string) {
+			if seen[key] {
+				return
+			}
+			if _, present := object[key]; !present {
+				return
+			}
+			seen[key] = true
+			keys = append(keys, key)
+		}
+		if index < len(orders) {
+			for _, key := range orders[index] {
+				add(key)
+			}
+		}
+		remaining := make([]string, 0, len(object)-len(keys))
+		for key := range object {
+			if !seen[key] {
+				remaining = append(remaining, key)
+			}
+		}
+		sort.Strings(remaining)
+		for _, key := range remaining {
+			add(key)
+		}
+		ordered := orderedObject{}
+		for _, key := range keys {
+			ordered.set(key, object[key], true)
+		}
+		out = append(out, &ordered)
+	}
+	return out
+}
+
+// arrayFieldOrders returns the per-element key order the file recorded for each
+// top-level array field present in merged.
+func arrayFieldOrders(text string, merged map[string]any) map[string][][]string {
+	orders := map[string][][]string{}
+	for field, value := range merged {
+		if _, ok := value.([]any); !ok {
+			continue
+		}
+		if order := settingsRawArrayElementOrders(text, field); order != nil {
+			orders[field] = order
+		}
+	}
+	return orders
+}
+
 // nestedKeyOrder orders each nested object the way the reference's save leaves
 // it: the keys the file already had in file order, then the keys set this
 // session in the order they were set, then any remaining key sorted.
@@ -1323,6 +1384,63 @@ func nestedKeyOrder(text string, merged map[string]any, setOrder map[string][]st
 		orders[field] = keys
 	}
 	return orders
+}
+
+// settingsRawArrayElementOrders returns, for one top-level array field, the key
+// order of each object element in the settings text. A non-object element has an
+// empty order.
+func settingsRawArrayElementOrders(text string, field string) [][]string {
+	raw := settingsRawFieldValue(text, field)
+	if len(raw) == 0 {
+		return nil
+	}
+	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder.UseNumber()
+	token, err := decoder.Token()
+	if err != nil || token != json.Delim('[') {
+		return nil
+	}
+	var orders [][]string
+	for decoder.More() {
+		var element json.RawMessage
+		if err := decoder.Decode(&element); err != nil {
+			return orders
+		}
+		orders = append(orders, settingsRawKeyOrder(string(element)))
+	}
+	return orders
+}
+
+// settingsRawFieldValue returns one top-level field's raw JSON from the settings
+// text, or nil when the field is absent.
+func settingsRawFieldValue(text string, field string) json.RawMessage {
+	if text == "" {
+		return nil
+	}
+	decoder := json.NewDecoder(strings.NewReader(text))
+	decoder.UseNumber()
+	token, err := decoder.Token()
+	if err != nil || token != json.Delim('{') {
+		return nil
+	}
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil {
+			return nil
+		}
+		key, ok := keyToken.(string)
+		if !ok {
+			return nil
+		}
+		var raw json.RawMessage
+		if err := decoder.Decode(&raw); err != nil {
+			return nil
+		}
+		if key == field {
+			return raw
+		}
+	}
+	return nil
 }
 
 // settingsRawNestedKeyOrder returns the key order of one nested object in the
@@ -1402,7 +1520,7 @@ func settingsDeclarationOrder() []string {
 // JSON.stringify(value, null, 2). The file's keys keep their positions, then
 // the remaining known fields follow in declaration order, then any other key
 // (a value the typed settings cannot represent, kept verbatim).
-func marshalSettingsMapIndent(fileKeys []string, merged map[string]any, nestedOrders map[string][]string) string {
+func marshalSettingsMapIndent(fileKeys []string, merged map[string]any, nestedOrders map[string][]string, arrayOrders map[string][][]string) string {
 	ordered := orderedObject{}
 	seen := map[string]bool{}
 	add := func(key string) {
@@ -1421,6 +1539,12 @@ func marshalSettingsMapIndent(fileKeys []string, merged map[string]any, nestedOr
 					nested.set(nestedKey, object[nestedKey], true)
 				}
 				ordered.set(key, &nested, true)
+				return
+			}
+		}
+		if orders, isArray := arrayOrders[key]; isArray {
+			if elements, ok := value.([]any); ok {
+				ordered.set(key, orderArrayElements(elements, orders), true)
 				return
 			}
 		}
@@ -1796,7 +1920,8 @@ func (m *SettingsManager) persistScopedSettings(
 			}
 			merged[field] = value
 		}
-		content := marshalSettingsMapIndent(fileKeys, merged, nestedKeyOrder(text, merged, setOrder))
+		content := marshalSettingsMapIndent(fileKeys, merged,
+			nestedKeyOrder(text, merged, setOrder), arrayFieldOrders(text, merged))
 		return &content
 	})
 	return errors.Join(err, parseErr)

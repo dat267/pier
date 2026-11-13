@@ -33,7 +33,7 @@ func TestSettingsSettersUpstreamParity(t *testing.T) {
 	var corpus struct {
 		Cases map[string]struct {
 			Initial json.RawMessage  `json:"initial"`
-			Ops     [][2]interface{} `json:"ops"`
+			Ops     [][3]interface{} `json:"ops"`
 		} `json:"cases"`
 	}
 	data, err := os.ReadFile("testdata/settingssetters_corpus.json")
@@ -68,34 +68,37 @@ func TestSettingsSettersUpstreamParity(t *testing.T) {
 			ProjectTrusted: &trusted,
 		})
 		for _, op := range spec.Ops {
-			name, ok := op[0].(string)
+			scope, ok := op[0].(string)
 			if !ok {
-				t.Fatalf("%s: op name %v", label, op[0])
+				t.Fatalf("%s: op scope %v", label, op[0])
 			}
-			callSetter(t, label, manager, name, op[1])
+			name, ok := op[1].(string)
+			if !ok {
+				t.Fatalf("%s: op name %v", label, op[1])
+			}
+			callSetter(t, label, manager, scope, name, op[2])
 		}
 		manager.FlushPersists()
 
-		written, err := os.ReadFile(settingsPath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				checkGolden(t, golden, label, nil)
-				continue
-			}
-			t.Fatalf("%s: read settings: %v", label, err)
-		}
-		checkGolden(t, golden, label, string(written))
+		checkGolden(t, golden, label, map[string]any{
+			"global":  readSettingsFile(t, label, settingsPath),
+			"project": readSettingsFile(t, label, filepath.Join(cwd, ".pi", "settings.json")),
+		})
 	}
 }
 
 // callSetter invokes Set<Name> with the corpus value, converting it to the
 // setter's parameter: a JSON null becomes a nil pointer, a number an int, an
 // array a []string.
-func callSetter(t *testing.T, label string, manager *coding.SettingsManager, name string, value any) {
+func callSetter(t *testing.T, label string, manager *coding.SettingsManager, scope, name string, value any) {
 	t.Helper()
-	method := reflect.ValueOf(manager).MethodByName("Set" + upperFirst(name))
+	prefix := "Set"
+	if scope == "project" {
+		prefix = "SetProject"
+	}
+	method := reflect.ValueOf(manager).MethodByName(prefix + upperFirst(name))
 	if !method.IsValid() {
-		t.Fatalf("%s: no setter Set%s", label, upperFirst(name))
+		t.Fatalf("%s: no setter %s%s", label, prefix, upperFirst(name))
 	}
 	param := method.Type().In(0)
 	var argument reflect.Value
@@ -111,11 +114,15 @@ func callSetter(t *testing.T, label string, manager *coding.SettingsManager, nam
 			argument = reflect.Zero(param)
 			break
 		}
-		items := []string{}
-		if list, ok := value.([]any); ok {
-			for _, item := range list {
-				items = append(items, item.(string))
-			}
+		list, _ := value.([]any)
+		if param.Elem().Kind() == reflect.Interface {
+			// Packages are strings or filter objects.
+			argument = reflect.ValueOf(list)
+			break
+		}
+		items := make([]string, 0, len(list))
+		for _, item := range list {
+			items = append(items, item.(string))
 		}
 		argument = reflect.ValueOf(items)
 	case reflect.Pointer:
@@ -137,4 +144,18 @@ func callSetter(t *testing.T, label string, manager *coding.SettingsManager, nam
 		t.Fatalf("%s: unsupported setter parameter %s", label, param)
 	}
 	method.Call([]reflect.Value{argument})
+}
+
+// readSettingsFile returns the settings file's text, or nil when it was never
+// written.
+func readSettingsFile(t *testing.T, label, path string) any {
+	t.Helper()
+	written, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		t.Fatalf("%s: read %s: %v", label, path, err)
+	}
+	return string(written)
 }
