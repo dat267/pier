@@ -23,6 +23,7 @@ const families = [
 	"searchtool-parity",
 	"selector",
 	"session",
+	"settingsgetters-parity",
 	"settings",
 	"theme",
 	"transcript-parity",

@@ -12,7 +12,7 @@ node --experimental-strip-types coding/interactive/testdata/regenerate.mjs ./pi 
 node --experimental-strip-types coding/interactive/testdata/regenerate.mjs ./pi
 ```
 
-The second command regenerates 21 golden families. The third checks every byte
+The second command regenerates 22 golden families. The third checks every byte
 without writing, and `just goldens` runs it, so a family that no longer matches
 the pin fails the gate. Individual `gen-*.mjs` files write one family to standard
 output. The loader rejects a reference HEAD other than pi v1.5.2 (`b4afdddf`).

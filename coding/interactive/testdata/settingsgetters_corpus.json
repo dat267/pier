@@ -1,0 +1,113 @@
+{
+	"cases": {
+		"defaults": {
+			"global": null,
+			"project": null,
+			"projectTrusted": true
+		},
+		"global-overrides": {
+			"global": {
+				"hideThinkingBlock": true,
+				"showCacheMissNotices": true,
+				"collapseChangelog": false,
+				"enableAnalytics": true,
+				"trackingId": "abc-123",
+				"enableInstallTelemetry": false,
+				"enableSkillCommands": false,
+				"npmCommand": [
+					"npm",
+					"--silent"
+				],
+				"shellPath": "/bin/zsh",
+				"shellCommandPrefix": "source ~/.zshrc",
+				"defaultProjectTrust": "always",
+				"theme": "light",
+				"defaultProvider": "openai",
+				"defaultModel": "gpt-5",
+				"defaultThinkingLevel": "high",
+				"steeringMode": "all",
+				"followUpMode": "queue",
+				"transport": "websocket",
+				"compactionEnabled": false,
+				"branchSummarySkipPrompt": true,
+				"retryEnabled": false,
+				"cacheWarmingMode": "always",
+				"externalEditorCommand": "vim",
+				"showImages": false,
+				"imageWidthCells": 42,
+				"clearOnShrink": true,
+				"showTerminalProgress": false,
+				"tuiMode": "fullscreen",
+				"fullscreenExitOutput": "clear",
+				"fullscreenScrollbar": "always",
+				"fullscreenCopyOnSelect": true,
+				"fullscreenWheelScrollLines": 7,
+				"imageAutoResize": false,
+				"blockImages": true,
+				"doubleEscapeAction": "tree",
+				"treeFilterMode": "no-tools",
+				"showHardwareCursor": true,
+				"editorPaddingX": 2,
+				"outputPad": 0,
+				"autocompleteMaxVisible": 3,
+				"codeBlockIndent": "  ",
+				"mermaidRenderingMode": "none",
+				"lastChangelogVersion": "0.0.1",
+				"sessionDir": "/tmp/pier-settings-sessions/../sessions",
+				"httpIdleTimeoutMs": 45000
+			},
+			"project": null,
+			"projectTrusted": true
+		},
+		"project-overrides": {
+			"global": {
+				"theme": "light"
+			},
+			"project": {
+				"hideThinkingBlock": false,
+				"showCacheMissNotices": false,
+				"theme": "dark",
+				"defaultModel": "claude-x",
+				"outputPad": 3,
+				"editorPaddingX": 5
+			},
+			"projectTrusted": true
+		},
+		"project-untrusted": {
+			"global": {
+				"theme": "light"
+			},
+			"project": {
+				"hideThinkingBlock": false,
+				"showCacheMissNotices": false,
+				"theme": "dark",
+				"defaultModel": "claude-x",
+				"outputPad": 3,
+				"editorPaddingX": 5
+			},
+			"projectTrusted": false
+		},
+		"invalid-values": {
+			"global": {
+				"fullscreenWheelScrollLines": 1000000,
+				"editorPaddingX": -5,
+				"autocompleteMaxVisible": 0,
+				"imageWidthCells": 0,
+				"outputPad": -1,
+				"defaultThinkingLevel": "nope",
+				"steeringMode": "nope",
+				"tuiMode": "nope"
+			},
+			"project": null,
+			"projectTrusted": true
+		},
+		"partial-global": {
+			"global": {
+				"hideThinkingBlock": true,
+				"theme": "auto"
+			},
+			"project": null,
+			"projectTrusted": true
+		}
+	}
+}
