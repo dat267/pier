@@ -1493,7 +1493,9 @@ func (s *SearchLine) Render(width int) []string {
 	if query != "" {
 		return []string{tui.TruncateToWidth("  "+theme.Fg("muted", "Type to search:")+" "+theme.Fg("accent", query), width, "", false)}
 	}
-	return []string{tui.TruncateToWidth("  "+theme.Fg("muted", "Type to search:"), width, "", false)}
+	// The reference keeps the space after the label so the empty line has the
+	// width of the typed form (pi v1.5.2 tree-selector.ts).
+	return []string{tui.TruncateToWidth("  "+theme.Fg("muted", "Type to search:")+" ", width, "", false)}
 }
 
 // HandleInput is a no-op.

@@ -498,3 +498,16 @@ func TestTreeSelectorCapturesViewportInput(t *testing.T) {
 		t.Fatal("an open label input must leave viewport keys to the transcript")
 	}
 }
+
+// pi v1.5.2 (b4afdddf) tree-selector.ts renders the empty search line with a
+// trailing space (`  ${theme.fg("muted", "Type to search:")} `), the same width
+// the typed form keeps after the query.
+func TestTreeSearchLineKeepsTheTrailingSpace(t *testing.T) {
+	InitTheme("dark", false)
+	line := NewSearchLine(&TreeList{})
+	got := line.Render(100)
+	want := "  " + ActiveTheme().Fg("muted", "Type to search:") + " "
+	if len(got) != 1 || got[0] != want {
+		t.Fatalf("empty search line = %q, want %q", got, want)
+	}
+}

@@ -1,5 +1,5 @@
 // Shared read-only reference loader for the interactive golden generators.
-// pi v1.5.0 (f9a26365); no installed workspace shims or reference edits.
+// pi v1.5.2 (b4afdddf); no installed workspace shims or reference edits.
 import { registerHooks } from "node:module";
 import { execFileSync } from "node:child_process";
 import { readFileSync, mkdtempSync, rmSync } from "node:fs";
@@ -8,8 +8,8 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 export const here = dirname(fileURLToPath(import.meta.url));
 export const root = resolve(process.argv[2] ?? "./pi");
-if (!execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).startsWith("f9a26365")) {
-	throw new Error("interactive goldens require read-only pi v1.5.0 (f9a26365)");
+if (!execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).startsWith("b4afdddf")) {
+	throw new Error("interactive goldens require read-only pi v1.5.2 (b4afdddf)");
 }
 const home = mkdtempSync(resolve(tmpdir(), "pier-interactive-golden-"));
 process.env.HOME = home;
