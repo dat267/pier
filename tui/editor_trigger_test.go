@@ -29,3 +29,28 @@ func TestEditorRejectsAstralAutocompleteTrigger(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.5.2 (b4afdddf) editor.ts:1253 tests the character with an unanchored
+// regex, `/[a-zA-Z0-9.\-_]/.test(char) || cjkBreakRegex.test(char)`, so a word
+// character anywhere in the string counts. The port looped over the runes but
+// returned on the first one, so only a leading word character or a CJK break
+// anywhere was recognised.
+func TestAutocompleteWordCharChecksEveryRune(t *testing.T) {
+	cases := map[string]bool{
+		"a":  true,
+		"1":  true,
+		".":  true,
+		"-":  true,
+		"_":  true,
+		"漢":  true, // CJK break
+		"!":  false,
+		"":   false,
+		"!a": true, // a word character later in the string
+		" a": true,
+	}
+	for input, want := range cases {
+		if got := isAutocompleteWordChar(input); got != want {
+			t.Errorf("isAutocompleteWordChar(%q) = %v, want %v", input, got, want)
+		}
+	}
+}

@@ -981,15 +981,16 @@ func (e *Editor) insertCharacterLocked(char string, skipUndoCoalescing bool) {
 	}
 }
 
+// isAutocompleteWordChar mirrors editor.ts:1253's unanchored test: a word
+// character anywhere in char counts, and otherwise a CJK break anywhere does.
 func isAutocompleteWordChar(char string) bool {
 	for _, r := range char {
 		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') ||
 			r == '.' || r == '-' || r == '_' {
 			return true
 		}
-		return containsCJKBreak(char)
 	}
-	return false
+	return containsCJKBreak(char)
 }
 
 func containsString(values []string, value string) bool {
