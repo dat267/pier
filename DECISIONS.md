@@ -7548,9 +7548,9 @@ style close. The next row is written as `ESC[<row>;1H` + `ESC[2K` + content, and
 `ESC[2K` erases with the current background, so the whole row picked up the
 leaked color: the line above the editor's working-status border turned a frame
 color after a resize. Pier clamps first and applies the resets last, so the
-reset survives. `copy-wide-chars` in `tui/testdata/altscreen/golden.json` records
-the upstream stream and is compared for its copied text only, marked
-`skipWrites`.
+reset survives. The alt-screen cases whose lines would be clamped (`verbatim`
+cases such as `copy-wide-chars`) keep every line under the width, so the replay
+compares their write streams in full.
 
 Tests: `TestAltScreenOverWideClampKeepsLineReset`,
 `TestAltScreenDeferredReplayClampKeepsLineReset`, `TestAltScreenAgainstUpstreamGolden`.

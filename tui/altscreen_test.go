@@ -28,12 +28,10 @@ type altScreenSpec struct {
 	Indicator     bool            `json:"indicator"`
 	CopySelection bool            `json:"copySelection"`
 	Stop          bool            `json:"stop"`
-	// SkipWrites marks a case whose write stream differs on purpose: the
-	// alt-screen keeps a clamped line's reset where upstream drops it (D470).
-	// Its copied text is still compared.
-	SkipWrites bool `json:"skipWrites"`
 	// Verbatim renders lines unchanged instead of padding them to the width,
-	// for a line whose raw length carries an escape sequence past the width.
+	// for a line whose raw length carries an escape sequence or a wide glyph
+	// past the width (padding by rune count would make the clamp drop the
+	// reset, D470).
 	Verbatim bool `json:"verbatim"`
 }
 
@@ -198,9 +196,6 @@ func TestAltScreenAgainstUpstreamGolden(t *testing.T) {
 		}
 		if len(steps) != len(want.Steps) {
 			t.Fatalf("%s: %d steps, want %d", label, len(steps), len(want.Steps))
-		}
-		if spec.SkipWrites {
-			return
 		}
 		for index := range steps {
 			if steps[index] != want.Steps[index] {

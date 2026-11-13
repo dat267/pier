@@ -102,7 +102,7 @@ const cases = {
 	"copy-drag-backwards": {"steps": [{"lines": ["hello world", "second line"]}, {"inputs": ["\u001b[<0;9;2M", "\u001b[<32;2;1M", "\u001b[<0;2;1m"]}], "copySelection": true},
 	"copy-double-click": {"steps": [{"lines": ["hello world"]}, {"inputs": ["\u001b[<0;3;1M", "\u001b[<0;3;1m", "\u001b[<0;3;1M", "\u001b[<0;3;1m"]}], "copySelection": true},
 	"copy-triple-click": {"steps": [{"lines": ["hello world", "tail"]}, {"inputs": ["\u001b[<0;3;1M", "\u001b[<0;3;1m", "\u001b[<0;3;1M", "\u001b[<0;3;1m", "\u001b[<0;3;1M", "\u001b[<0;3;1m"]}], "copySelection": true},
-	"copy-wide-chars": {"steps": [{"lines": ["\u65e5\u672c\u8a9e\u30c6\u30ad\u30b9\u30c8", "ascii tail"]}, {"inputs": ["\u001b[<0;1;1M", "\u001b[<32;7;1M", "\u001b[<0;7;1m"]}], "copySelection": true, "skipWrites": true},
+	"copy-wide-chars": {"steps": [{"lines": ["\u65e5\u672c\u8a9e", "ascii tail"]}, {"inputs": ["\u001b[<0;1;1M", "\u001b[<32;7;1M", "\u001b[<0;7;1m"]}], "copySelection": true, "verbatim": true},
 	"copy-padded-line": {"steps": [{"lines": ["ab   ", "cd"]}, {"inputs": ["\u001b[<0;1;1M", "\u001b[<32;24;1M", "\u001b[<0;24;1m"]}], "copySelection": true},
 	"wheel-alt": {
 		steps: [
@@ -136,6 +136,9 @@ const cases = {
 		copySelection: true,
 	},
 	"selection-tabs-emoji": {
+		// Verbatim: padding by rune count would widen a tab or emoji line past
+		// the terminal, and the clamp then drops upstream's reset (D470).
+		verbatim: true,
 		steps: [
 			{ lines: ["a\tb\tc", "\ud83d\ude00 emoji \ud83c\udf89"] },
 			{ inputs: ["\u001b[<0;1;1M", "\u001b[<32;20;2M", "\u001b[<0;20;2m"] },
