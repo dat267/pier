@@ -226,6 +226,13 @@ func TestStoredSessionTextRendersOnlyThemeEscapes(t *testing.T) {
 		}
 	})
 
+	t.Run("auth url", func(t *testing.T) {
+		// The sign-in URL block prints the authorization server's URL as both the
+		// link target and its label.
+		component := NewAuthUrlComponent(nil, nil, "https://evil.example/"+storedPayload)
+		assertOnlyThemeEscapes(t, component.Render(120))
+	})
+
 	t.Run("login dialog", func(t *testing.T) {
 		// The authorization server supplies the instructions, the device user code
 		// and an info message (D460).

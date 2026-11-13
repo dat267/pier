@@ -24,8 +24,12 @@ type AuthUrlComponent struct {
 // NewAuthUrlComponent builds the block; post marshals the clipboard result onto
 // the UI loop (nil applies it inline).
 func NewAuthUrlComponent(host tui.RenderRequester, post func(func()), url string) *AuthUrlComponent {
-	component := &AuthUrlComponent{Container: &tui.Container{}, url: url, host: host, post: post}
-	component.AddChild(tui.NewText(ActiveTheme().Fg("accent", tui.Hyperlink(url, url)), 1, 0, nil))
+	// The sign-in URL comes from the authorization server, so its text is data:
+	// a control character in it would end the renderer's hyperlink early and
+	// retitle the terminal (D460).
+	safe := tui.SanitizeUntrustedText(url)
+	component := &AuthUrlComponent{Container: &tui.Container{}, url: safe, host: host, post: post}
+	component.AddChild(tui.NewText(ActiveTheme().Fg("accent", loginWebLink(safe, safe)), 1, 0, nil))
 	component.hint = tui.NewText("", 1, 0, nil)
 	component.AddChild(component.hint)
 	component.setHint(KeyHint("app.message.copy", "to copy"))
@@ -67,7 +71,7 @@ func (c *AuthUrlComponent) setHint(suffix string) {
 	if runtime.GOOS == "darwin" {
 		clickHint = "Cmd+click to open"
 	}
-	c.hint.SetText(theme.Fg("dim", tui.Hyperlink(clickHint, c.url)) + " " + theme.Fg("dim", "•") + " " + suffix)
+	c.hint.SetText(theme.Fg("dim", loginWebLink(clickHint, c.url)) + " " + theme.Fg("dim", "•") + " " + suffix)
 	c.requestRender()
 }
 

@@ -7322,8 +7322,14 @@ web URLs and replaces control runs in the rest), and the dialog's own styling
 and OSC 8 links are unchanged. A legitimate user code, instruction or message
 carries no control characters, so ordinary sign-in output is unchanged.
 
+The sign-in URL block (`components/auth-url.ts`) shows the server's URL as both
+the link target and its label; pier sanitizes it and frames it through
+`loginWebLink`, which falls back to plain text when the value is not a web URL,
+so a control character cannot end the hyperlink early.
+
 `Test:` `TestAuthLoginNotifyDropsProviderTerminalControl`,
-`TestLoginDialogDropsProviderTerminalControl`.
+`TestLoginDialogDropsProviderTerminalControl`,
+`TestStoredSessionTextRendersOnlyThemeEscapes/auth_url`.
 
 ### D461
 
