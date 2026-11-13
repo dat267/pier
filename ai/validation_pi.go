@@ -213,9 +213,6 @@ func (d *piDoc) node(pointer string) *piSchema {
 }
 
 func (s *piSchema) parse(v *schemaValue) {
-	if svBool(v, "type") != nil {
-		// handled below
-	}
 	if typ := svProp(v, "type"); typ != nil {
 		if typ.IsString {
 			s.types = []string{typ.String}
@@ -758,20 +755,6 @@ func (a *piAnnotations) addIndex(index int) {
 	a.indexes[index] = true
 }
 
-func (a *piAnnotations) merge(b piAnnotations) {
-	for key := range b.props {
-		a.addProp(key)
-	}
-	a.allProps = a.allProps || b.allProps
-	if b.items > a.items {
-		a.items = b.items
-	}
-	a.allItems = a.allItems || b.allItems
-	for index := range b.indexes {
-		a.addIndex(index)
-	}
-}
-
 func (s *piSchema) annotations(value *schemaValue) piAnnotations {
 	out := piAnnotations{}
 	s.addAnnotations(value, &out, false)
@@ -986,7 +969,6 @@ var (
 	piUUIDRE            = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 	piTimeRE            = regexp.MustCompile(`^(\d\d):(\d\d):(\d\d)(?:\.\d+)?(?:([Zz])|([+-])(\d\d):(\d\d))?$`)
 	piDateTimeSplitRE   = regexp.MustCompile(`(?i)t`)
-	piURITemplateRE     = regexp.MustCompile(`^(?:(?:[^\x00-\x20"<>%\\^` + "`" + `{|}\x7f]|%[0-9a-f]{2})|\{[+#./;?&=,!@|]?(?:[a-z0-9_]|%[0-9a-f]{2})+(?:\.(?:[a-z0-9_]|%[0-9a-f]{2})+)*(?::[1-9]\d{0,3}|\*)?(?:,(?:[a-z0-9_]|%[0-9a-f]{2})+(?:\.(?:[a-z0-9_]|%[0-9a-f]{2})+)*(?::[1-9]\d{0,3}|\*)?)*\})*$`)
 )
 
 func piFormatValid(name, value string) bool {

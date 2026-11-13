@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -140,8 +141,10 @@ func getGeminiMajorVersion(modelID string) int {
 	if match == nil {
 		return 0
 	}
-	var major int
-	fmt.Sscanf(match[1], "%d", &major)
+	major, err := strconv.Atoi(match[1])
+	if err != nil {
+		return 0
+	}
 	return major
 }
 

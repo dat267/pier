@@ -301,10 +301,6 @@ func ParseTextSignature(signature string) *TextSignatureV1 {
 	return &TextSignatureV1{V: 1, ID: signature}
 }
 
-// responseInputItem is one Responses input item; raw JSON is used because
-// replay items (reasoning, function_call) must survive byte-exact.
-type responseInputItem = json.RawMessage
-
 // ConvertResponsesMessagesOptions tune message conversion.
 type ConvertResponsesMessagesOptions struct {
 	IncludeSystemPrompt *bool
