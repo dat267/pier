@@ -596,13 +596,20 @@ func (c *OAuthSelectorComponent) updateList() {
 		provider := c.filteredProviders[i]
 		isSelected := i == c.selectedIndex
 		statusIndicator := formatAuthSelectorProviderStatus(provider)
+		// U+2726 is single-width in every terminal, unlike star emoji or
+		// ambiguous-width symbols such as U+2605 (pi v1.5.2 b4afdddf
+		// components/oauth-selector.ts).
+		partnerMarker := ""
+		if coding.IsPreferredProvider(provider.ID) {
+			partnerMarker = theme.Fg("muted", " \u2726")
+		}
 		authTypeLabel := ""
 		if c.showAuthTypeLabels {
 			authTypeLabel = theme.Fg("muted", " ["+formatAuthSelectorProviderType(provider.AuthType, provider.Subscription)+"]")
 		}
-		line := "  " + theme.Fg("text", provider.Name) + authTypeLabel + statusIndicator
+		line := "  " + theme.Fg("text", provider.Name) + partnerMarker + authTypeLabel + statusIndicator
 		if isSelected {
-			line = theme.Fg("accent", "→ ") + theme.Fg("accent", provider.Name) + authTypeLabel + statusIndicator
+			line = theme.Fg("accent", "→ ") + theme.Fg("accent", provider.Name) + partnerMarker + authTypeLabel + statusIndicator
 		}
 		c.listContainer.AddChild(tui.NewTruncatedText(line, 1, 0))
 	}

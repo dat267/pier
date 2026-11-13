@@ -16,7 +16,7 @@ func TestAuthLoginSelectorLabelsNonSubscriptionAccounts(t *testing.T) {
 	wiring, _ := newAuthTestWiring(t)
 	providers := wiring.GetLoginProviderOptions("")
 	for _, tc := range []struct{ query, want string }{
-		{"OpenRouter", "OpenRouter [account]"},
+		{"OpenRouter", "OpenRouter \u2726 [account]"},
 		{"Anthropic", "Anthropic [subscription]"},
 	} {
 		t.Run(tc.query, func(t *testing.T) {
@@ -61,7 +61,7 @@ func TestAuthLogoutSelectorLabelsNonSubscriptionAccounts(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct{ query, want string }{
-		{"OpenRouter", "OpenRouter [account]"},
+		{"OpenRouter", "OpenRouter \u2726 [account]"},
 		{"Anthropic", "Anthropic [subscription]"},
 		{"OpenAI", "OpenAI [API key]"},
 	} {
@@ -72,5 +72,34 @@ func TestAuthLogoutSelectorLabelsNonSubscriptionAccounts(t *testing.T) {
 				t.Fatalf("missing %q in logout selector:\n%s", tc.want, text)
 			}
 		})
+	}
+}
+
+// pi v1.5.2 (b4afdddf) components/oauth-selector.ts marks a preferred partner
+// provider with " ✦" (U+2726, single-width in every terminal), on the selected
+// row and the unselected ones alike.
+func TestAuthSelectorMarksPreferredPartners(t *testing.T) {
+	useBuiltinPierThemeForTest(t)
+	InitTheme("dark", false)
+	providers := []AuthSelectorProvider{
+		{ID: "openrouter", Name: "OpenRouter", AuthType: "oauth"},
+		{ID: "anthropic", Name: "Anthropic", AuthType: "oauth"},
+	}
+	selector := NewOAuthSelectorComponent("login", providers, nil, nil, "")
+	text := tui.StripTerminalSequences(strings.Join(selector.Render(120), "\n"))
+	var partnerRow, otherRow string
+	for _, line := range strings.Split(text, "\n") {
+		switch {
+		case strings.Contains(line, "OpenRouter"):
+			partnerRow = line
+		case strings.Contains(line, "Anthropic"):
+			otherRow = line
+		}
+	}
+	if !strings.Contains(partnerRow, "\u2726") {
+		t.Fatalf("preferred partner row has no marker: %q", partnerRow)
+	}
+	if strings.Contains(otherRow, "\u2726") {
+		t.Fatalf("non-partner row carries the marker: %q", otherRow)
 	}
 }
