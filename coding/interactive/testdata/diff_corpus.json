@@ -1,1 +1,140 @@
-{"words":{"identical":["foo bar","foo bar"],"word-change":["foo bar baz","foo qux baz"],"insert-word":["foo baz","foo bar baz"],"delete-word":["foo bar baz","foo baz"],"punct":["a, b. c","a, b! c"],"whitespace":["foo   bar","foo  bar"],"leading-ws":["  foo bar","foo bar"],"trailing-ws":["foo bar  ","foo bar"],"newlines":["foo\nbar","foo\nbaz"],"multiline-insert":["a\nb\nc","a\nb\nnew\nc"],"empty-old":["","foo"],"empty-new":["foo",""],"unicode":["café au lait","café au chocolat"],"cjk":["日本語のテキスト","日本語の文章"],"numbers":["x = 1 + 2","x = 1 + 3"],"long":["the quick brown fox jumps over the lazy dog","the quick red fox jumps over the lazy cat"],"tabs":["a\tb\tc","a\tb\td"],"repeat":["aa bb aa","aa aa bb"],"case":["Foo Bar","foo bar"],"feff-prefix":["a","\uFEFFa"],"feff-word":["word","\uFEFFword"],"feff-inner":["word x","word\uFEFFx"],"nel-prefix":["a","\u0085a"],"nbsp-prefix":["a","\u00A0a"],"punct-run":["- - -","+ + +"],"leading-space":[" a","  a"],"space-punct":["a - b","a = b"],"emoji":["a \ud83d\ude00 b","a \ud83d\ude03 b"],"accent":["caf\u00e9","cafe"],"soft-hyphen":["a\u00ADb","ab"]},"renders":{"context":" 1 a\n 2 b","single-mod":" 1 a\n-2 old\n+2 new\n 3 c","multi":"-1 a\n-2 b\n+1 x\n+2 y","standalone-add":"+5 added","mixed":"--- a\n+++ b\n 1 keep\n-2 old\n+2 new\n+3 extra\n 4 end","no-numbers":"-old\n+new","tabs":"-1 a\tb\n+1 a\tc","empty":"","plain":"just text\nmore text"}}
+{
+  "words": {
+    "identical": [
+      "foo bar",
+      "foo bar"
+    ],
+    "word-change": [
+      "foo bar baz",
+      "foo qux baz"
+    ],
+    "insert-word": [
+      "foo baz",
+      "foo bar baz"
+    ],
+    "delete-word": [
+      "foo bar baz",
+      "foo baz"
+    ],
+    "punct": [
+      "a, b. c",
+      "a, b! c"
+    ],
+    "whitespace": [
+      "foo   bar",
+      "foo  bar"
+    ],
+    "leading-ws": [
+      "  foo bar",
+      "foo bar"
+    ],
+    "trailing-ws": [
+      "foo bar  ",
+      "foo bar"
+    ],
+    "newlines": [
+      "foo\nbar",
+      "foo\nbaz"
+    ],
+    "multiline-insert": [
+      "a\nb\nc",
+      "a\nb\nnew\nc"
+    ],
+    "empty-old": [
+      "",
+      "foo"
+    ],
+    "empty-new": [
+      "foo",
+      ""
+    ],
+    "unicode": [
+      "caf\u00e9 au lait",
+      "caf\u00e9 au chocolat"
+    ],
+    "cjk": [
+      "\u65e5\u672c\u8a9e\u306e\u30c6\u30ad\u30b9\u30c8",
+      "\u65e5\u672c\u8a9e\u306e\u6587\u7ae0"
+    ],
+    "numbers": [
+      "x = 1 + 2",
+      "x = 1 + 3"
+    ],
+    "long": [
+      "the quick brown fox jumps over the lazy dog",
+      "the quick red fox jumps over the lazy cat"
+    ],
+    "tabs": [
+      "a\tb\tc",
+      "a\tb\td"
+    ],
+    "repeat": [
+      "aa bb aa",
+      "aa aa bb"
+    ],
+    "case": [
+      "Foo Bar",
+      "foo bar"
+    ],
+    "feff-prefix": [
+      "a",
+      "\ufeffa"
+    ],
+    "feff-word": [
+      "word",
+      "\ufeffword"
+    ],
+    "feff-inner": [
+      "word x",
+      "word\ufeffx"
+    ],
+    "nel-prefix": [
+      "a",
+      "\u0085a"
+    ],
+    "nbsp-prefix": [
+      "a",
+      "\u00a0a"
+    ],
+    "punct-run": [
+      "- - -",
+      "+ + +"
+    ],
+    "leading-space": [
+      " a",
+      "  a"
+    ],
+    "space-punct": [
+      "a - b",
+      "a = b"
+    ],
+    "emoji": [
+      "a \ud83d\ude00 b",
+      "a \ud83d\ude03 b"
+    ],
+    "accent": [
+      "caf\u00e9",
+      "cafe"
+    ],
+    "soft-hyphen": [
+      "a\u00adb",
+      "ab"
+    ]
+  },
+  "renders": {
+    "context": " 1 a\n 2 b",
+    "single-mod": " 1 a\n-2 old\n+2 new\n 3 c",
+    "multi": "-1 a\n-2 b\n+1 x\n+2 y",
+    "standalone-add": "+5 added",
+    "mixed": "--- a\n+++ b\n 1 keep\n-2 old\n+2 new\n+3 extra\n 4 end",
+    "no-numbers": "-old\n+new",
+    "tabs": "-1 a\tb\n+1 a\tc",
+    "empty": "",
+    "plain": "just text\nmore text",
+    "indent-shift": " 1     foo\n-2     foo\n+2    foo",
+    "indent-leading-insert": " 1   a\n-2   a\n+2 x   a",
+    "indent-tab-replaced": " 1 \tfoo\n-2 \tfoo\n+2   foo",
+    "indent-insert-before": " 1   a\n-2   a\n+2  x a",
+    "indent-swap": " 1  x a\n-2  x a\n+2   a"
+  }
+}

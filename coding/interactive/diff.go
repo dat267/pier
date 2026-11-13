@@ -429,15 +429,35 @@ type RenderDiffOptions struct {
 	FilePath string
 }
 
+// commonIndentPrefix returns the leading whitespace both lines share, in bytes.
+func commonIndentPrefix(a, b string) string {
+	index := 0
+	for index < len(a) && index < len(b) {
+		r, size := decodeRuneAt(a, index)
+		if string(r) != string(b[index:index+size]) || !tui.IsWhitespaceChar(string(r)) {
+			break
+		}
+		index += size
+	}
+	return a[:index]
+}
+
 // RenderIntraLineDiff computes the word-level diff and applies inverse styling
 // to the changed parts (leading whitespace of the first changed part is not
 // highlighted).
 func RenderIntraLineDiff(oldContent string, newContent string) (string, string) {
-	wordDiff := DiffWords(oldContent, newContent)
+	// Separate the shared indentation before diffing, so a change at the start
+	// of the line cannot consume it: without this the removed line can lose its
+	// indent and stop lining up with the added one (pi v1.5.2 b4afdddf
+	// modes/interactive/components/diff.ts).
+	commonIndent := commonIndentPrefix(oldContent, newContent)
+	wordDiff := DiffWords(oldContent[len(commonIndent):], newContent[len(commonIndent):])
 	theme := ActiveTheme()
 
 	var removedLine strings.Builder
 	var addedLine strings.Builder
+	removedLine.WriteString(commonIndent)
+	addedLine.WriteString(commonIndent)
 	isFirstRemoved := true
 	isFirstAdded := true
 
