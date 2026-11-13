@@ -1,0 +1,12232 @@
+[
+	{
+		"query": "",
+		"matches": [
+			{
+				"text": "",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": true,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": true,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		]
+	},
+	{
+		"query": "a",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": true,
+				"score": -115
+			},
+			{
+				"text": "abc",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "a.b.c",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "foo.bar",
+				"matches": true,
+				"score": 0.5
+			},
+			{
+				"text": "readTool",
+				"matches": true,
+				"score": 0.2
+			},
+			{
+				"text": "ReadTool",
+				"matches": true,
+				"score": 0.2
+			},
+			{
+				"text": "read_tool",
+				"matches": true,
+				"score": 0.2
+			},
+			{
+				"text": "read-tool",
+				"matches": true,
+				"score": 0.2
+			},
+			{
+				"text": "READ",
+				"matches": true,
+				"score": 0.2
+			},
+			{
+				"text": "café",
+				"matches": true,
+				"score": 0.1
+			},
+			{
+				"text": "cafe",
+				"matches": true,
+				"score": 0.1
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": true,
+				"score": 0.2
+			},
+			{
+				"text": "a😀b",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "x123a456",
+				"matches": true,
+				"score": 0.4
+			},
+			{
+				"text": "123abc",
+				"matches": true,
+				"score": 0.30000000000000004
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": true,
+				"score": 0.2
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": true,
+				"score": 0.2
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": true,
+				"score": 1.6
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "aA",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "Aa",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "aa",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "a_a",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "a/a",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "a:a",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "/start",
+				"matches": true,
+				"score": 0.30000000000000004
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": true,
+				"score": 0.4
+			},
+			{
+				"text": "tab\there",
+				"matches": true,
+				"score": 0.1
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": true,
+				"score": 0.4
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "ababab",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": true,
+				"score": 0.30000000000000004
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "a.b",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "ab.cd",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "a",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"a",
+			"abc",
+			"a.b.c",
+			"a😀b",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"aaaa",
+			"ababab",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"café",
+			"cafe",
+			"tab\there",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"😀a",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"123abc",
+			"/start",
+			"straße",
+			"x123a456",
+			"  spaced  ",
+			"-kebab-",
+			"foo.bar",
+			"mcp__srv__tool_name"
+		]
+	},
+	{
+		"query": "ab",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": true,
+				"score": -24.9
+			},
+			{
+				"text": "a.b.c",
+				"matches": true,
+				"score": -22.8
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": true,
+				"score": -10.7
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": true,
+				"score": -4.3
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": true,
+				"score": -4.7
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": true,
+				"score": -4.1
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": true,
+				"score": -24.9
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": true,
+				"score": -22.8
+			},
+			{
+				"text": "a.b",
+				"matches": true,
+				"score": -22.8
+			},
+			{
+				"text": "ab.cd",
+				"matches": true,
+				"score": -24.9
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "ab",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"abc",
+			"ababab",
+			"ab.cd",
+			"a.b.c",
+			"a b",
+			"a.b",
+			"a😀b",
+			"tab\there",
+			"123abc",
+			"-kebab-"
+		]
+	},
+	{
+		"query": "abc",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": true,
+				"score": -139.7
+			},
+			{
+				"text": "a.b.c",
+				"matches": true,
+				"score": -30.400000000000002
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": true,
+				"score": -13.8
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": true,
+				"score": -32.6
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "abc",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"abc",
+			"ab.cd",
+			"a.b.c",
+			"123abc"
+		]
+	},
+	{
+		"query": "a_b",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "a_b",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": []
+	},
+	{
+		"query": "a-b",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "a-b",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": []
+	},
+	{
+		"query": "foo",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": true,
+				"score": -39.699999999999996
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "foo",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"foo.bar"
+		]
+	},
+	{
+		"query": "foo.bar",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": true,
+				"score": -257.9
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "foo.bar",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"foo.bar"
+		]
+	},
+	{
+		"query": "readTool",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": true,
+				"score": -287.20000000000005
+			},
+			{
+				"text": "ReadTool",
+				"matches": true,
+				"score": -287.20000000000005
+			},
+			{
+				"text": "read_tool",
+				"matches": true,
+				"score": -94.80000000000001
+			},
+			{
+				"text": "read-tool",
+				"matches": true,
+				"score": -94.80000000000001
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "readTool",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool"
+		]
+	},
+	{
+		"query": "rt",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": true,
+				"score": -8.6
+			},
+			{
+				"text": "ReadTool",
+				"matches": true,
+				"score": -8.6
+			},
+			{
+				"text": "read_tool",
+				"matches": true,
+				"score": -16.5
+			},
+			{
+				"text": "read-tool",
+				"matches": true,
+				"score": -16.5
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": true,
+				"score": -2.4000000000000004
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": true,
+				"score": -4.1
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "rt",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"read_tool",
+			"read-tool",
+			"readTool",
+			"ReadTool",
+			"/start",
+			"mcp__srv__tool_name"
+		]
+	},
+	{
+		"query": "mcp",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": true,
+				"score": -22.900000000000002
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": true,
+				"score": -39.699999999999996
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "mcp",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"mcp__srv__tool_name",
+			"slack-mcp__post_message"
+		]
+	},
+	{
+		"query": "tool",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": true,
+				"score": -27.8
+			},
+			{
+				"text": "ReadTool",
+				"matches": true,
+				"score": -27.8
+			},
+			{
+				"text": "read_tool",
+				"matches": true,
+				"score": -37.400000000000006
+			},
+			{
+				"text": "read-tool",
+				"matches": true,
+				"score": -37.400000000000006
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": true,
+				"score": -35.400000000000006
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "tool",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"read_tool",
+			"read-tool",
+			"mcp__srv__tool_name",
+			"readTool",
+			"ReadTool"
+		]
+	},
+	{
+		"query": "gpt",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": true,
+				"score": -22.900000000000002
+			},
+			{
+				"text": "gpt4o",
+				"matches": true,
+				"score": -39.699999999999996
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "gpt",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"gpt4o",
+			"model/gpt-4o"
+		]
+	},
+	{
+		"query": "4o",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": true,
+				"score": -12.9
+			},
+			{
+				"text": "gpt4o",
+				"matches": true,
+				"score": -4.3
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": true,
+				"score": 7.200000000000001
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "4o",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5"
+		]
+	},
+	{
+		"query": "as",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": true,
+				"score": -1.1000000000000005
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": true,
+				"score": 21.5
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": true,
+				"score": -4.4
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "as",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"ALLCAPS",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message"
+		]
+	},
+	{
+		"query": "bs",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "bs",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": []
+	},
+	{
+		"query": "é",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": true,
+				"score": 0.30000000000000004
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": true,
+				"score": -115
+			},
+			{
+				"text": "É",
+				"matches": true,
+				"score": -115
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "é",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"é",
+			"É",
+			"café"
+		]
+	},
+	{
+		"query": "É",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": true,
+				"score": 0.30000000000000004
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": true,
+				"score": -115
+			},
+			{
+				"text": "É",
+				"matches": true,
+				"score": -115
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "É",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"é",
+			"É",
+			"café"
+		]
+	},
+	{
+		"query": "日",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "日",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"日本語"
+		]
+	},
+	{
+		"query": "😀",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": true,
+				"score": -24.9
+			},
+			{
+				"text": "a😀b",
+				"matches": true,
+				"score": -4.7
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "😀",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"😀a",
+			"a😀b"
+		]
+	},
+	{
+		"query": "aa",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": true,
+				"score": 36.2
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": true,
+				"score": -8.6
+			},
+			{
+				"text": "aA",
+				"matches": true,
+				"score": -124.9
+			},
+			{
+				"text": "Aa",
+				"matches": true,
+				"score": -124.9
+			},
+			{
+				"text": "aa",
+				"matches": true,
+				"score": -124.9
+			},
+			{
+				"text": "a_a",
+				"matches": true,
+				"score": -22.8
+			},
+			{
+				"text": "a/a",
+				"matches": true,
+				"score": -22.8
+			},
+			{
+				"text": "a:a",
+				"matches": true,
+				"score": -22.8
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": true,
+				"score": -24.9
+			},
+			{
+				"text": "ababab",
+				"matches": true,
+				"score": -12.8
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "aa",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"aA",
+			"Aa",
+			"aa",
+			"aaaa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"ababab",
+			"ALLCAPS",
+			"slack-mcp__post_message"
+		]
+	},
+	{
+		"query": "aaa",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": true,
+				"score": -39.699999999999996
+			},
+			{
+				"text": "ababab",
+				"matches": true,
+				"score": -10.4
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "aaa",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"aaaa",
+			"ababab"
+		]
+	},
+	{
+		"query": "zz",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "zz",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": []
+	},
+	{
+		"query": "x",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "x",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"x123a456",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"x_y_z"
+		]
+	},
+	{
+		"query": "s",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": true,
+				"score": -9.3
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": true,
+				"score": -9.5
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": true,
+				"score": 0.6000000000000001
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": true,
+				"score": -9.9
+			},
+			{
+				"text": "ends/",
+				"matches": true,
+				"score": 0.30000000000000004
+			},
+			{
+				"text": "  spaced  ",
+				"matches": true,
+				"score": -9.8
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": true,
+				"score": -9.4
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "s",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"slack-mcp__post_message",
+			"straße",
+			"/start",
+			"  spaced  ",
+			"mcp__srv__tool_name",
+			"under_score_",
+			"claude-sonnet-4-5",
+			"ends/",
+			"ALLCAPS"
+		]
+	},
+	{
+		"query": "1",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": true,
+				"score": 0.1
+			},
+			{
+				"text": "123abc",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "1",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"123abc",
+			"x123a456"
+		]
+	},
+	{
+		"query": "a1",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": true,
+				"score": 9.5
+			},
+			{
+				"text": "123abc",
+				"matches": true,
+				"score": -5.699999999999999
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "a1",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"123abc",
+			"x123a456"
+		]
+	},
+	{
+		"query": "1a",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": true,
+				"score": 4.5
+			},
+			{
+				"text": "123abc",
+				"matches": true,
+				"score": -10.7
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "1a",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"123abc",
+			"x123a456"
+		]
+	},
+	{
+		"query": "READ",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": true,
+				"score": -59.4
+			},
+			{
+				"text": "ReadTool",
+				"matches": true,
+				"score": -59.4
+			},
+			{
+				"text": "read_tool",
+				"matches": true,
+				"score": -59.4
+			},
+			{
+				"text": "read-tool",
+				"matches": true,
+				"score": -59.4
+			},
+			{
+				"text": "READ",
+				"matches": true,
+				"score": -159.4
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "READ",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"READ",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool"
+		]
+	},
+	{
+		"query": "read",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": true,
+				"score": -59.4
+			},
+			{
+				"text": "ReadTool",
+				"matches": true,
+				"score": -59.4
+			},
+			{
+				"text": "read_tool",
+				"matches": true,
+				"score": -59.4
+			},
+			{
+				"text": "read-tool",
+				"matches": true,
+				"score": -59.4
+			},
+			{
+				"text": "READ",
+				"matches": true,
+				"score": -159.4
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "read",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"READ",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool"
+		]
+	},
+	{
+		"query": "/",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": true,
+				"score": 0.5
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": true,
+				"score": 0.1
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "ends/",
+				"matches": true,
+				"score": 0.4
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "/",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		]
+	},
+	{
+		"query": ".",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": true,
+				"score": 0.1
+			},
+			{
+				"text": "foo.bar",
+				"matches": true,
+				"score": 0.30000000000000004
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": true,
+				"score": 0.30000000000000004
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": true,
+				"score": 0.1
+			},
+			{
+				"text": "ab.cd",
+				"matches": true,
+				"score": 0.2
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": ".",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"a.b.c",
+			"a.b",
+			"ab.cd",
+			"foo.bar",
+			"dot.dot.dot"
+		]
+	},
+	{
+		"query": "_",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": true,
+				"score": 0.4
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": true,
+				"score": -9
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": true,
+				"score": -9.6
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": true,
+				"score": 0.1
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": true,
+				"score": 0.5
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": true,
+				"score": 0.1
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "_",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"mcp__srv__tool_name",
+			"slack-mcp__post_message",
+			"a_a",
+			"x_y_z",
+			"read_tool",
+			"under_score_"
+		]
+	},
+	{
+		"query": "-",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": true,
+				"score": 0.4
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": true,
+				"score": 0.9
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": true,
+				"score": 0.6000000000000001
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": true,
+				"score": 0.5
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "-",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"-kebab-",
+			"read-tool",
+			"slack-mcp__post_message",
+			"claude-sonnet-4-5",
+			"model/gpt-4o"
+		]
+	},
+	{
+		"query": ":",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": true,
+				"score": 0.1
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": ":",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"a:a"
+		]
+	},
+	{
+		"query": "  ",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": true,
+				"score": -34.9
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "  ",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		]
+	},
+	{
+		"query": "ﬁ",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": true,
+				"score": -15
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "ﬁ",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"ﬁle"
+		]
+	},
+	{
+		"query": "abcabc",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "abcabc",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": []
+	},
+	{
+		"query": "a/b",
+		"matches": [
+			{
+				"text": "",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b.c",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "foo.bar",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "readTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ReadTool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read_tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "read-tool",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "READ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "café",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "cafe",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "日本語",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "😀a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a😀b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x123a456",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "123abc",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "model/gpt-4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "gpt4o",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "claude-sonnet-4-5",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "slack-mcp__post_message",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "mcp__srv__tool_name",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ALLCAPS",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aA",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a_a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a/a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a:a",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "/start",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ends/",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "  spaced  ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "tab\there",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "dot.dot.dot",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "under_score_",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "-kebab-",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "aaaa",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ababab",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "é",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "É",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ﬁle",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "straße",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ǆ",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "a.b",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "ab.cd",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "x_y_z",
+				"matches": false,
+				"score": 0
+			},
+			{
+				"text": "Ünïcode",
+				"matches": false,
+				"score": 0
+			}
+		]
+	},
+	{
+		"query": "a/b",
+		"candidates": [
+			"",
+			"a",
+			"abc",
+			"a.b.c",
+			"foo.bar",
+			"readTool",
+			"ReadTool",
+			"read_tool",
+			"read-tool",
+			"READ",
+			"café",
+			"cafe",
+			"日本語",
+			"😀a",
+			"a😀b",
+			"x123a456",
+			"123abc",
+			"model/gpt-4o",
+			"gpt4o",
+			"claude-sonnet-4-5",
+			"slack-mcp__post_message",
+			"mcp__srv__tool_name",
+			"ALLCAPS",
+			"aA",
+			"Aa",
+			"aa",
+			"a_a",
+			"a/a",
+			"a:a",
+			"/start",
+			"ends/",
+			"  spaced  ",
+			"tab\there",
+			"dot.dot.dot",
+			"under_score_",
+			"-kebab-",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			"aaaa",
+			"ababab",
+			"é",
+			"É",
+			"ﬁle",
+			"straße",
+			"Ǆ",
+			"a b",
+			"a.b",
+			"ab.cd",
+			"x_y_z",
+			"Ünïcode"
+		],
+		"order": [
+			"a.b.c",
+			"a b",
+			"a.b",
+			"abc",
+			"ababab",
+			"ab.cd",
+			"a😀b",
+			"foo.bar",
+			"tab\there",
+			"123abc",
+			"-kebab-"
+		]
+	}
+]
