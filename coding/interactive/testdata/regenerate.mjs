@@ -25,6 +25,7 @@ const families = [
 	"settings",
 	"theme",
 	"tree",
+	"writetool-parity",
 	"tuirenderer",
 ];
 const write = process.argv.includes("--write");

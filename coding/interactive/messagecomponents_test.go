@@ -90,7 +90,7 @@ func assistantMessageFromSpec(spec assistantSpec) *ai.AssistantMessage {
 
 // TestMessagesAgainstUpstreamGolden replays the upstream transcript components.
 func TestMessagesAgainstUpstreamGolden(t *testing.T) {
-	pinTUIKeybindings(t)
+	pinKeybindings(t)
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	SetTrueColorSupport(true)

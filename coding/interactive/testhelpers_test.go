@@ -12,10 +12,13 @@ import (
 // Test helpers shared by the theme tests (the same JSON normalization used by
 // the tui golden tests).
 
-func pinTUIKeybindings(t *testing.T) {
+// pinKeybindings installs the interactive mode's keybindings for a test. The app
+// manager carries the TUI keys and the app-level ids, so a rendered hint shows
+// the key the reference fixtures were generated with.
+func pinKeybindings(t *testing.T) {
 	t.Helper()
 	previous := tui.GetKeybindings()
-	tui.SetKeybindings(tui.NewKeybindingsManager(tui.TUIKeybindings, nil))
+	tui.SetKeybindings(NewAppKeybindingsManager(nil, "").KeybindingsManager)
 	t.Cleanup(func() { tui.SetKeybindings(previous) })
 }
 

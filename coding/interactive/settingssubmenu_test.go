@@ -38,7 +38,7 @@ func steppedSubmenuSteps(seenTitles *[]string) []SteppedSubmenuStep {
 }
 
 func TestSteppedSubmenuAdvancesWithContext(t *testing.T) {
-	pinTUIKeybindings(t)
+	pinKeybindings(t)
 	InitTheme("dark", false)
 	var titles []string
 	var completed map[string]string
@@ -74,7 +74,7 @@ func TestSteppedSubmenuAdvancesWithContext(t *testing.T) {
 }
 
 func TestSteppedSubmenuLoopReturnsToTheFirstStep(t *testing.T) {
-	pinTUIKeybindings(t)
+	pinKeybindings(t)
 	InitTheme("dark", false)
 	var titles []string
 	completions := 0
@@ -96,7 +96,7 @@ func TestSteppedSubmenuLoopReturnsToTheFirstStep(t *testing.T) {
 }
 
 func TestSteppedSubmenuBackDeletesTheStepKey(t *testing.T) {
-	pinTUIKeybindings(t)
+	pinKeybindings(t)
 	InitTheme("dark", false)
 	var titles []string
 	var completed map[string]string
@@ -128,7 +128,7 @@ func TestSteppedSubmenuBackDeletesTheStepKey(t *testing.T) {
 }
 
 func TestSteppedSubmenuBackAtFirstStepCancels(t *testing.T) {
-	pinTUIKeybindings(t)
+	pinKeybindings(t)
 	InitTheme("dark", false)
 	var titles []string
 	cancels := 0

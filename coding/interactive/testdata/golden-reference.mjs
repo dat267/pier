@@ -100,6 +100,10 @@ export const legacyComponent = (name) => {
 };
 export const tui = await upstream("tui/src/index.ts");
 tui.setCapabilities({ images: null, trueColor: true, hyperlinks: false });
+// The interactive mode installs the default keybindings before anything renders,
+// so hints carry a key label; a family that renders a hint needs them present.
+const keybindings = await upstream("coding-agent/src/core/keybindings.ts");
+tui.setKeybindings(new keybindings.KeybindingsManager());
 export const themeModule = await upstream("coding-agent/src/modes/interactive/theme/theme.ts");
 // interactive-mode.ts loads the remaining syntax grammars after startup, so a
 // row rendered later highlights every language; load them before any family

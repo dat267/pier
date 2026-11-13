@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"github.com/dat267/pier/internal/leakcheck"
+	"github.com/dat267/pier/tui"
 	"os"
 	"path/filepath"
 	"testing"
@@ -40,6 +41,9 @@ func TestMain(m *testing.M) {
 		os.Setenv("HOME", home)
 		os.Setenv("USERPROFILE", home)
 	}
+	// The interactive mode installs the default keybindings before it renders, so
+	// hints carry a key label; the reference fixtures render with them installed.
+	tui.SetKeybindings(NewAppKeybindingsManager(nil, "").KeybindingsManager)
 	code := leakcheck.Run(m)
 	if err == nil {
 		_ = os.RemoveAll(dir)

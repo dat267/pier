@@ -99,7 +99,7 @@ func TestSelectorsAgainstUpstreamGolden(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("the golden embeds Unix paths")
 	}
-	pinTUIKeybindings(t)
+	pinKeybindings(t)
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	SetTrueColorSupport(true)
