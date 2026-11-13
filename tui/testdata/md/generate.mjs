@@ -100,6 +100,9 @@ function projectCell(cell, align) {
 }
 
 function projectBlock(token) {
+	// Link definitions are collected, not rendered: the reference's lexer emits
+	// them and its renderer skips them, so the projection leaves them out too.
+	if (token.type === "def") return null;
 	const fields = BLOCK_FIELDS[token.type];
 	if (!fields) throw new Error(`unmapped block token ${token.type}`);
 	const out = { type: token.type };
@@ -109,10 +112,10 @@ function projectBlock(token) {
 				out.tokens = (token.tokens ?? []).map(projectInline);
 				break;
 			case "blocks":
-				out.tokens = (token.tokens ?? []).map(projectBlock);
+				out.tokens = (token.tokens ?? []).map(projectBlock).filter((child) => child !== null);
 				break;
 			case "items":
-				out.items = (token.items ?? []).map(projectBlock);
+				out.items = (token.items ?? []).map(projectBlock).filter((child) => child !== null);
 				break;
 			case "header":
 				out.header = (token.header ?? []).map((cell, index) => projectCell(cell, token.align?.[index]));
@@ -172,7 +175,8 @@ const lines = [];
 for (const label of Object.keys(corpus)) {
 	const tokens = markdownParser.lexer(corpus[label]);
 	trimPartialClosingFences(tokens);
-	lines.push(`${label} => ${canonical(tokens.map(projectBlock))}`);
+	const projected = tokens.map(projectBlock).filter((token) => token !== null);
+	lines.push(`${label} => ${canonical(projected)}`);
 }
 writeFileSync(resolve(here, "../md_golden.txt"), lines.join("\n") + "\n");
 console.log(`md golden: ${lines.length} cases`);

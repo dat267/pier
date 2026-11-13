@@ -57,12 +57,20 @@ func loadGolden(t *testing.T) map[string]string {
 func projectBlocks(blocks []*Block) []any {
 	out := make([]any, 0, len(blocks))
 	for _, b := range blocks {
+		if b.Kind == BlockLinkDef {
+			continue
+		}
 		out = append(out, projectBlock(b))
 	}
 	return out
 }
 
 func projectBlock(b *Block) any {
+	// A link reference definition renders nothing, and marked's def token is
+	// dropped from the golden for the same reason.
+	if b.Kind == BlockLinkDef {
+		return nil
+	}
 	m := map[string]any{"type": blockTypeName(b.Kind)}
 	switch b.Kind {
 	case BlockParagraph:
@@ -119,7 +127,14 @@ func projectBlock(b *Block) any {
 			m["rows"] = rows
 		}
 	case BlockHTML:
-		m["text"] = b.Raw
+		// marked's comment branch leaves the newline after `-->` out of the token
+		// (its raw ends at the comment), while other HTML blocks keep it. The
+		// renderer trims either way, so the projection matches marked's text.
+		text := b.Raw
+		if strings.HasPrefix(strings.TrimLeft(text, " \t"), "<!--") {
+			text = strings.TrimRight(text, "\n")
+		}
+		m["text"] = text
 	case BlockLatex:
 		m["raw"] = b.Raw
 		m["text"] = b.Text
@@ -141,6 +156,9 @@ func projectListItemTokens(b *Block) []any {
 		out = append(out, map[string]any{"type": "checkbox"})
 	}
 	for _, child := range b.Blocks {
+		if child.Kind == BlockLinkDef {
+			continue
+		}
 		if child.Kind == BlockParagraph && b.Tight {
 			out = append(out, map[string]any{"type": "text", "text": child.Text, "tokens": projectInlines(child.Inlines)})
 			continue
