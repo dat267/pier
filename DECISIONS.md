@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D463)
+# Deliberate divergences from pi (D1–D464)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7377,3 +7377,23 @@ model's answer and stays raw, because it is data that users pipe into other
 programs. `--json` mode is unchanged: encoding already escapes the controls.
 
 `Test:` `TestPrintModeProviderErrorKeepsTerminalControlsOut`.
+
+### D464
+
+**A CLI diagnostic sanitizes its message before printing it.**
+
+`Reference:` `packages/coding-agent/src/cli/` reporting and
+`packages/coding-agent/src/core/mcp/config.ts`, pi v1.5.2 (b4afdddf). The CLI
+prints warnings and errors to stderr before any renderer runs, and some of those
+messages carry text pier did not write: a provider's HTTP body, or a project
+`.pi/mcp.json` entry. An invalid MCP server name keeps its own bytes in the
+validation message (`coding.validateMcpServerConfig` quotes it raw), so a
+repository can put `ESC]0;title BEL` on the user's terminal through a warning.
+
+`FormatCLIDiagnostic` and `FormatCLIError` in `coding/clidiagnostics.go` now run
+the message through `tui.SanitizeUntrustedText` (D342, D463) before adding the
+colors. Every CLI diagnostic goes through one of those two functions, so this is
+the single seam; pier's own messages carry no control character and render
+unchanged.
+
+`Test:` `TestMCPConfigErrorsKeepTerminalControlsOutOfStderr`.

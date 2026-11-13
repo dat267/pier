@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -187,4 +188,36 @@ func TestSetupMCPServersDisabledByFlag(t *testing.T) {
 		t.Fatal("the same config produced no manager with MCP enabled")
 	}
 	manager.Close(context.Background())
+}
+
+// D464: an MCP server name and the other config text reach stderr through the
+// CLI diagnostics before any renderer runs, and a project `.pi/mcp.json` is
+// chosen by whoever wrote the repository. An invalid name keeps its own bytes
+// in the validation message (coding.validateMcpServerConfig), so the message is
+// the sink.
+func TestMCPConfigErrorsKeepTerminalControlsOutOfStderr(t *testing.T) {
+	agentDir := t.TempDir()
+	t.Setenv("PI_CODING_AGENT_DIR", agentDir)
+	writeMCPConfig(t, agentDir, `{"mcpServers":{"evil\u001b]0;owned\u0007":{"command":"/nonexistent/pier-mcp-test"}}}`)
+
+	ctx, cancel := context.WithTimeout(context.Background(), childProcessTimeout)
+	defer cancel()
+	command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestMCPConfigErrorHelper$")
+	command.Env = childAgentEnv("PIER_TEST_MCP_CONFIG_ERROR=1", "PI_SKIP_VERSION_CHECK=1", "TERM=xterm-256color")
+	output, _ := command.CombinedOutput()
+	text := string(output)
+	if strings.Contains(text, "\x1b]") || strings.Contains(text, "\x07") {
+		t.Fatalf("config error text reached the terminal: %q", text)
+	}
+	if !strings.Contains(text, "invalid server name") {
+		t.Fatalf("the config error was not printed: %q", text)
+	}
+}
+
+func TestMCPConfigErrorHelper(t *testing.T) {
+	if os.Getenv("PIER_TEST_MCP_CONFIG_ERROR") != "1" {
+		return
+	}
+	os.Args = []string{"pier", "--offline", "--no-session", "--no-tools", "--approve", "-p", "hi"}
+	Execute()
 }

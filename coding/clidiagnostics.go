@@ -3,6 +3,8 @@ package coding
 import (
 	"slices"
 	"strings"
+
+	"github.com/dat267/pier/tui"
 )
 
 // Port of the CLI's diagnostic reporting: upstream main.ts prints the parse
@@ -23,6 +25,10 @@ const (
 // errors and warnings carry a matching colour and an "Error: "/"Warning: "
 // prefix, and any other type is dimmed with no prefix.
 func FormatCLIDiagnostic(d CLIDiagnostic) string {
+	// Every CLI diagnostic passes through here, and some carry remote text: a
+	// provider's HTTP body (D463), a project's MCP config file (D464). stderr is
+	// a terminal, so the message is data until this point.
+	d.Message = tui.SanitizeUntrustedText(d.Message)
 	color, prefix := ansiDim, ""
 	switch d.Type {
 	case "error":
@@ -85,6 +91,7 @@ func UnknownFlagDiagnostics(args *Args) []CLIDiagnostic {
 // FormatCLIError renders an error without the "Error: " prefix, for callers
 // whose text is already complete (upstream's chalk.red lines in main.ts).
 func FormatCLIError(text string) string {
+	text = tui.SanitizeUntrustedText(text)
 	if !CLIColorsEnabled() {
 		return text
 	}
