@@ -194,3 +194,33 @@ func TestThemeStyleEmptyTokensUseTerminalDefaults(t *testing.T) {
 		t.Errorf("reported userMessageBg = %s", got)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) theme.ts applies bold, italic, underline, inverse and
+// strikethrough with chalk, which closes the style before every newline and
+// reopens it after (chalk's stringEncaseCRLFWithFirstIndex), while fg and bg
+// concatenate their codes by hand and keep the style open across lines.
+func TestThemeStylesSplitAtNewlines(t *testing.T) {
+	SetStyleColorsEnabled(true)
+	defer SetStyleColorsEnabled(true)
+	theme := newRendererTestTheme(t)
+	cases := []struct {
+		name string
+		got  string
+		want string
+	}{
+		{"bold", theme.Bold("a\nb"), "\x1b[1ma\x1b[22m\n\x1b[1mb\x1b[22m"},
+		{"bold-crlf", theme.Bold("a\r\nb"), "\x1b[1ma\x1b[22m\r\n\x1b[1mb\x1b[22m"},
+		{"bold-empty-segments", theme.Bold("\na\n"), "\x1b[1m\x1b[22m\n\x1b[1ma\x1b[22m\n\x1b[1m\x1b[22m"},
+		{"bold-nested-close", theme.Bold("\x1b[1ma\x1b[22mb"), "\x1b[1m\x1b[1ma\x1b[22m\x1b[1mb\x1b[22m"},
+		{"bold-empty", theme.Bold(""), ""},
+		{"italic", theme.Italic("a\nb"), "\x1b[3ma\x1b[23m\n\x1b[3mb\x1b[23m"},
+		{"underline", theme.Underline("a\nb"), "\x1b[4ma\x1b[24m\n\x1b[4mb\x1b[24m"},
+		{"inverse", theme.Inverse("a\nb"), "\x1b[7ma\x1b[27m\n\x1b[7mb\x1b[27m"},
+		{"strikethrough", theme.Strikethrough("a\nb"), "\x1b[9ma\x1b[29m\n\x1b[9mb\x1b[29m"},
+	}
+	for _, tc := range cases {
+		if tc.got != tc.want {
+			t.Errorf("%s = %q, want %q", tc.name, tc.got, tc.want)
+		}
+	}
+}

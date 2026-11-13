@@ -227,43 +227,75 @@ func styleColorsEnabled() bool {
 }
 
 // Bold applies bold (chalk.bold).
-func (t *Theme) Bold(text string) string {
-	if !styleColorsEnabled() {
+// chalkStyle applies a chalk modifier (bold, italic, ...) the way the reference's
+// chalk does: an empty string gets no codes, an inner copy of the close code is
+// reopened, and the style closes before every newline and reopens after it so it
+// cannot bleed across lines (chalk applyStyle and stringEncaseCRLFWithFirstIndex).
+func chalkStyle(open, close, text string) string {
+	if !styleColorsEnabled() || text == "" {
 		return text
 	}
-	return "\x1b[1m" + text + "\x1b[22m"
+	if strings.Contains(text, "\x1b") {
+		text = strings.ReplaceAll(text, close, close+open)
+	}
+	if index := strings.IndexByte(text, '\n'); index != -1 {
+		text = encaseNewlines(text, close, open, index)
+	}
+	return open + text + close
+}
+
+// encaseNewlines puts close before each newline (before the CR of a CRLF) and
+// open after it, the way chalk's stringEncaseCRLFWithFirstIndex does.
+func encaseNewlines(text, close, open string, index int) string {
+	var b strings.Builder
+	b.Grow(len(text) + 8)
+	end := 0
+	for index != -1 {
+		cut := index
+		if index > 0 && text[index-1] == '\r' {
+			cut = index - 1
+		}
+		b.WriteString(text[end:cut])
+		b.WriteString(close)
+		if cut != index {
+			b.WriteString("\r\n")
+		} else {
+			b.WriteString("\n")
+		}
+		b.WriteString(open)
+		end = index + 1
+		next := strings.IndexByte(text[end:], '\n')
+		if next == -1 {
+			break
+		}
+		index = end + next
+	}
+	b.WriteString(text[end:])
+	return b.String()
+}
+
+func (t *Theme) Bold(text string) string {
+	return chalkStyle("\x1b[1m", "\x1b[22m", text)
 }
 
 // Italic applies italic (chalk.italic).
 func (t *Theme) Italic(text string) string {
-	if !styleColorsEnabled() {
-		return text
-	}
-	return "\x1b[3m" + text + "\x1b[23m"
+	return chalkStyle("\x1b[3m", "\x1b[23m", text)
 }
 
 // Underline applies underline (chalk.underline).
 func (t *Theme) Underline(text string) string {
-	if !styleColorsEnabled() {
-		return text
-	}
-	return "\x1b[4m" + text + "\x1b[24m"
+	return chalkStyle("\x1b[4m", "\x1b[24m", text)
 }
 
 // Inverse applies inverse video (chalk.inverse).
 func (t *Theme) Inverse(text string) string {
-	if !styleColorsEnabled() {
-		return text
-	}
-	return "\x1b[7m" + text + "\x1b[27m"
+	return chalkStyle("\x1b[7m", "\x1b[27m", text)
 }
 
 // Strikethrough applies strikethrough (chalk.strikethrough).
 func (t *Theme) Strikethrough(text string) string {
-	if !styleColorsEnabled() {
-		return text
-	}
-	return "\x1b[9m" + text + "\x1b[29m"
+	return chalkStyle("\x1b[9m", "\x1b[29m", text)
 }
 
 // GetFgAnsi returns the raw foreground sequence. Faint tokens include SGR 2,
