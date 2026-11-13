@@ -1,0 +1,328 @@
+{
+	"cwd": "/tmp/pier_parity",
+	"cases": {
+		"read-simple": {
+			"tool": "read",
+			"args": {
+				"path": "src/a.go"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "func f1() int { return 1 }\nfunc f2() int { return 2 }\nfunc f3() int { return 3 }"
+					}
+				],
+				"isError": false
+			}
+		},
+		"read-expanded": {
+			"tool": "read",
+			"args": {
+				"path": "src/a.go"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "func f1() int { return 1 }\nfunc f2() int { return 2 }\nfunc f3() int { return 3 }"
+					}
+				],
+				"isError": false
+			},
+			"expanded": true
+		},
+		"read-plain-expanded": {
+			"tool": "read",
+			"args": {
+				"path": "notes.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "plain\nlines here"
+					}
+				],
+				"isError": false
+			},
+			"expanded": true
+		},
+		"read-offset-limit": {
+			"tool": "read",
+			"args": {
+				"path": "src/a.go",
+				"offset": 10,
+				"limit": 20
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "func f1() int { return 1 }\nfunc f2() int { return 2 }\nfunc f3() int { return 3 }"
+					}
+				],
+				"isError": false
+			}
+		},
+		"read-many": {
+			"tool": "read",
+			"args": {
+				"path": "notes.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "line 1 of the file\nline 2 of the file\nline 3 of the file\nline 4 of the file\nline 5 of the file\nline 6 of the file\nline 7 of the file\nline 8 of the file\nline 9 of the file\nline 10 of the file\nline 11 of the file\nline 12 of the file\nline 13 of the file\nline 14 of the file\nline 15 of the file\nline 16 of the file\nline 17 of the file\nline 18 of the file\nline 19 of the file\nline 20 of the file\nline 21 of the file\nline 22 of the file\nline 23 of the file\nline 24 of the file\nline 25 of the file\nline 26 of the file\nline 27 of the file\nline 28 of the file\nline 29 of the file\nline 30 of the file"
+					}
+				],
+				"isError": false
+			}
+		},
+		"read-many-expanded": {
+			"tool": "read",
+			"args": {
+				"path": "notes.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "line 1 of the file\nline 2 of the file\nline 3 of the file\nline 4 of the file\nline 5 of the file\nline 6 of the file\nline 7 of the file\nline 8 of the file\nline 9 of the file\nline 10 of the file\nline 11 of the file\nline 12 of the file\nline 13 of the file\nline 14 of the file\nline 15 of the file\nline 16 of the file\nline 17 of the file\nline 18 of the file\nline 19 of the file\nline 20 of the file\nline 21 of the file\nline 22 of the file\nline 23 of the file\nline 24 of the file\nline 25 of the file\nline 26 of the file\nline 27 of the file\nline 28 of the file\nline 29 of the file\nline 30 of the file"
+					}
+				],
+				"isError": false
+			},
+			"expanded": true
+		},
+		"read-skill": {
+			"tool": "read",
+			"args": {
+				"path": "skills/foo/SKILL.md"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "# skill"
+					}
+				],
+				"isError": false
+			}
+		},
+		"read-skill-expanded": {
+			"tool": "read",
+			"args": {
+				"path": "skills/foo/SKILL.md"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "# skill"
+					}
+				],
+				"isError": false
+			},
+			"expanded": true
+		},
+		"read-resource": {
+			"tool": "read",
+			"args": {
+				"path": "AGENTS.md"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "# agents"
+					}
+				],
+				"isError": false
+			}
+		},
+		"read-missing-path": {
+			"tool": "read",
+			"args": {},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "x"
+					}
+				],
+				"isError": false
+			},
+			"expanded": true
+		},
+		"read-truncated-lines": {
+			"tool": "read",
+			"args": {
+				"path": "notes.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a\nb"
+					}
+				],
+				"isError": false,
+				"details": {
+					"truncation": {
+						"content": "",
+						"truncated": true,
+						"truncatedBy": "lines",
+						"totalLines": 900,
+						"totalBytes": 90000,
+						"outputLines": 2,
+						"outputBytes": 100,
+						"maxLines": 800
+					}
+				}
+			},
+			"expanded": true
+		},
+		"read-truncated-bytes": {
+			"tool": "read",
+			"args": {
+				"path": "notes.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a\nb"
+					}
+				],
+				"isError": false,
+				"details": {
+					"truncation": {
+						"content": "",
+						"truncated": true,
+						"truncatedBy": "bytes",
+						"totalLines": 9,
+						"totalBytes": 900000,
+						"outputLines": 2,
+						"outputBytes": 51200,
+						"maxBytes": 51200
+					}
+				}
+			},
+			"expanded": true
+		},
+		"read-first-line-exceeds": {
+			"tool": "read",
+			"args": {
+				"path": "notes.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a"
+					}
+				],
+				"isError": false,
+				"details": {
+					"truncation": {
+						"content": "",
+						"truncated": true,
+						"truncatedBy": "bytes",
+						"firstLineExceedsLimit": true,
+						"totalLines": 1,
+						"totalBytes": 900000,
+						"outputLines": 0,
+						"outputBytes": 0,
+						"maxBytes": 51200
+					}
+				}
+			},
+			"expanded": true
+		},
+		"read-error": {
+			"tool": "read",
+			"args": {
+				"path": "nope.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ENOENT: no such file"
+					}
+				],
+				"isError": true
+			}
+		},
+		"read-tabs": {
+			"tool": "read",
+			"args": {
+				"path": "notes.txt"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a\tb\nc"
+					}
+				],
+				"isError": false
+			},
+			"expanded": true
+		},
+		"read-image": {
+			"tool": "read",
+			"args": {
+				"path": "img.png"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "image",
+						"data": "AAAA",
+						"mimeType": "image/png"
+					}
+				],
+				"isError": false
+			},
+			"expanded": true,
+			"showImages": false
+		},
+		"read-duration": {
+			"tool": "read",
+			"args": {
+				"path": "src/a.go"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "func f1() int { return 1 }\nfunc f2() int { return 2 }\nfunc f3() int { return 3 }"
+					}
+				],
+				"isError": false,
+				"durationMs": 800
+			},
+			"expanded": true
+		}
+	}
+}

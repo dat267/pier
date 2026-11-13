@@ -101,6 +101,11 @@ export const legacyComponent = (name) => {
 export const tui = await upstream("tui/src/index.ts");
 tui.setCapabilities({ images: null, trueColor: true, hyperlinks: false });
 export const themeModule = await upstream("coding-agent/src/modes/interactive/theme/theme.ts");
+// interactive-mode.ts loads the remaining syntax grammars after startup, so a
+// row rendered later highlights every language; load them before any family
+// renders, or a fixture captures the pre-load plain-text fallback.
+const syntaxHighlight = await upstream("coding-agent/src/utils/syntax-highlight.ts");
+await syntaxHighlight.loadAllHighlightLanguages();
 themeModule.initTheme("dark");
 export const theme = themeModule.theme;
 export const corpus = (name) => JSON.parse(readFileSync(resolve(here, `${name}_corpus.json`), "utf8"));
