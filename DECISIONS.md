@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D465)
+# Deliberate divergences from pi (D1–D466)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7433,3 +7433,36 @@ web URL. A real version and release page carry no control character, so
 the card is unchanged.
 
 `Test:` `TestStoredSessionTextRendersOnlyThemeEscapes/update_notice`.
+
+### D466
+
+**The LaTeX renderer normalizes without the regexp engine.**
+
+`Reference:` `packages/tui/src/latex.ts` (`renderLatex`,
+`normalizeScriptValue`, the layout-line whitespace collapse), pi v1.5.2
+(b4afdddf). Rendering the same input showed the port five times slower than the
+pin: `x^{^{...y...}}` with 200 nested scripts took 9.51 ms/op against 1.90 ms,
+and depth 1000 took 237 ms against 51.6 ms. Two regexps owned the profile:
+`\s*([=+-])\s*` in `normalizeScriptValue`, which nested scripts re-apply to the
+accumulated value at every level, and `[ 	]+` per layout line, which the
+backtracker made the single largest item in a display render.
+
+Three scans replace them, each pinned to the regexp it replaces:
+`normalizeScriptValue` returns early when the value holds no `=`, `+` or `-` and
+otherwise scans bytes, dropping whitespace runs that touch a relation character
+(Go's `\s` is `[\t\n\f\r ]`, so `\v` stays); the `canUseLayout` scan runs only
+in display mode, matching upstream's `display && canUseLayout` short-circuit;
+`collapseWhitespaceRuns` scans `[ \t]+`. Rendering is unchanged: the golden
+corpus regenerates byte for byte.
+
+Measured on linux/amd64 (Go 1.27.3) against Node 26.10.0 running the pin:
+nested scripts depth 200 fell from 9.51 ms to 0.30 ms (reference 1.90 ms), depth
+1000 from 237 ms to 7.6 ms (reference 51.6 ms, which throws a `RangeError` at
+depth 2000), the aligned display block from 5.15 us to 2.53 us (reference
+3.82 us), and the inline formula from 3.98 us to 2.47 us (reference 6.0 us). The
+display layout path stays superlinear (depth 1000 renders in 79 ms) because it
+composes layout nodes per level; the reference cannot finish that input at all.
+
+`Test:` `BenchmarkRenderLatexNestedScriptsInline`/
+`BenchmarkRenderLatexDisplayMath`/`TestNormalizeScriptValueMatchesTheRelationRegex`/
+`TestCollapseWhitespaceRunsMatchesTheWhitespaceRegex`.

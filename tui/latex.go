@@ -54,8 +54,44 @@ func replaceCharacters(value string, replacements map[string]string) (string, bo
 	return builder.String(), true
 }
 
+// isRelationSpaceByte matches the whitespace the relation regexp's `\s`
+// accepts. Go's `\s` is [\t\n\f\r ] and excludes \v, unlike
+// isWhitespaceByte, so the two cannot share a helper.
+func isRelationSpaceByte(b byte) bool {
+	switch b {
+	case ' ', '\t', '\n', '\f', '\r':
+		return true
+	}
+	return false
+}
+
+// normalizeScriptValue reproduces latex.ts's `value.replace(/\s*([=+-])\s*/g,
+// "$1")`: it trims the value, then drops every whitespace run that touches a
+// relation character. The regexp's backtracker dominated display renders
+// (BenchmarkRenderLatexDisplayMath) and nested scripts re-normalize the whole
+// value at every level, so the transform is a byte scan. Tests compare it
+// against the regexp case by case.
 func normalizeScriptValue(value string) string {
-	return latexScriptRelationRegex.ReplaceAllString(strings.TrimSpace(value), "${1}")
+	trimmed := strings.TrimSpace(value)
+	if !strings.ContainsAny(trimmed, "=+-") {
+		return trimmed
+	}
+	normalized := make([]byte, 0, len(trimmed))
+	for index := 0; index < len(trimmed); index++ {
+		character := trimmed[index]
+		if character != '=' && character != '+' && character != '-' {
+			normalized = append(normalized, character)
+			continue
+		}
+		for len(normalized) > 0 && isRelationSpaceByte(normalized[len(normalized)-1]) {
+			normalized = normalized[:len(normalized)-1]
+		}
+		normalized = append(normalized, character)
+		for index+1 < len(trimmed) && isRelationSpaceByte(trimmed[index+1]) {
+			index++
+		}
+	}
+	return string(normalized)
 }
 
 func formatUnicodeScript(value string, kind string) (string, bool) {
@@ -98,6 +134,33 @@ func formatFraction(numerator string, denominator string) string {
 	return "(" + numerator + ")/(" + denominator + ")"
 }
 
+// collapseWhitespaceRuns reproduces latex.ts's `line.replace(/[ \t]+/g, " ")`.
+// The regexp machinery was 40% of a display render (D466), so runs of space and
+// tab collapse through a byte scan; tests compare the two, and the regexp's
+// replacement keeps non-space whitespace untouched.
+func collapseWhitespaceRuns(value string) string {
+	if !strings.ContainsAny(value, " \t") {
+		return value
+	}
+	var builder strings.Builder
+	builder.Grow(len(value))
+	inRun := false
+	for index := 0; index < len(value); index++ {
+		character := value[index]
+		if character == ' ' || character == '\t' {
+			if inRun {
+				continue
+			}
+			inRun = true
+			builder.WriteByte(' ')
+			continue
+		}
+		inRun = false
+		builder.WriteByte(character)
+	}
+	return builder.String()
+}
+
 func formatRoot(value string, symbol string) string {
 	value = strings.TrimSpace(value)
 	if latexSimpleWordRegex.MatchString(value) {
@@ -134,7 +197,7 @@ func normalizeOutput(value string) string {
 	lines := strings.Split(normalized, "\n")
 	kept := make([]string, 0, len(lines))
 	for index, line := range lines {
-		line = strings.TrimSpace(latexWhitespaceRunRegex.ReplaceAllString(line, " "))
+		line = strings.TrimSpace(collapseWhitespaceRuns(line))
 		if line != "" || (index > 0 && index < len(lines)-1) {
 			kept = append(kept, line)
 		}
@@ -560,19 +623,24 @@ func (p *latexParser) parseScripts(initialMarker string) string {
 		supUnicode, supOK = formatUnicodeScript(supValue, "sup")
 	}
 
+	// The layout decision is only consulted in display mode (upstream's
+	// canUseLayout is read under `display &&`), so inline rendering must not pay
+	// the scans over both script values at every nesting level.
 	canUseLayout := true
-	for _, value := range []struct {
-		value string
-		has   bool
-	}{{subValue, hasSub}, {supValue, hasSup}} {
-		if !value.has {
-			continue
-		}
-		if strings.Contains(value.value, "/") ||
-			(!strings.Contains(value.value, latexLayoutMarkerStart) &&
-				utf8.RuneCountInString(value.value) > 1 && !latexUppercaseOrStarRegex.MatchString(value.value)) {
-			canUseLayout = false
-			break
+	if p.display {
+		for _, value := range []struct {
+			value string
+			has   bool
+		}{{subValue, hasSub}, {supValue, hasSup}} {
+			if !value.has {
+				continue
+			}
+			if strings.Contains(value.value, "/") ||
+				(!strings.Contains(value.value, latexLayoutMarkerStart) &&
+					utf8.RuneCountInString(value.value) > 1 && !latexUppercaseOrStarRegex.MatchString(value.value)) {
+				canUseLayout = false
+				break
+			}
 		}
 	}
 	needsLayout := p.display && canUseLayout &&
