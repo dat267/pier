@@ -126,7 +126,9 @@ func formatReadResult(args map[string]any, result *SortToolResultContent, option
 		text += theme.Fg("muted", fmt.Sprintf("\n... (%d more lines,", remaining)) +
 			" " + KeyHint("app.tools.expand", "to expand") + theme.Fg("muted", ")")
 	}
-	if details, ok := result.Details.(*coding.ReadToolDetails); ok && details.Truncation != nil {
+	// The session stores the tool's details as JSON, so decode the same way the
+	// bash and search renderers do.
+	if details := toolDetailsFrom[coding.ReadToolDetails](result.Details); details != nil && details.Truncation != nil {
 		truncation := details.Truncation
 		if truncation.Truncated {
 			maxBytes := truncation.MaxBytes

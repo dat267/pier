@@ -610,3 +610,21 @@ func TestShortenPathRequiresHomeContainment(t *testing.T) {
 		t.Fatalf("sibling = %q", got)
 	}
 }
+
+// The session stores a tool's details as the JSON the tool returned
+// (sortToolResultFromAgent), so the read renderer must decode that shape the way
+// the other renderers do; pi v1.5.2 (b4afdddf) tools/renderers/read.ts reads
+// details.truncation whatever the carrier is.
+func TestFormatReadResultReadsTheDetailsTheSessionStores(t *testing.T) {
+	useBuiltinPierThemeForTest(t)
+	InitTheme("dark", false)
+	theme := ActiveTheme()
+	result := &SortToolResultContent{
+		Content: []ToolResultContent{{Type: "text", Text: "a\nb"}},
+		Details: json.RawMessage(`{"truncation":{"truncated":true,"truncatedBy":"lines","outputLines":5,"totalLines":100,"maxLines":5}}`),
+	}
+	got := formatReadResult(map[string]any{"path": "x.txt"}, result, ToolRenderResultOptions{Expanded: true}, theme, false, false)
+	if !strings.Contains(got, "5 line limit") {
+		t.Fatalf("read truncation = %q; want the line-limit notice", got)
+	}
+}
