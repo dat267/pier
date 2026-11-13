@@ -401,6 +401,16 @@ func TestGrepToolDoesNotSplitOnLoneCarriageReturn(t *testing.T) {
 // port slices with. pi v1.5.2 find.ts slices with a JavaScript number: it
 // clamps to the collection instead of overflowing.
 func TestFindToolSurvivesALimitWiderThanInt64(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses a POSIX executable stub")
+	}
+	// A stub fd keeps the test independent of an installed binary: CI has none,
+	// and the overflow is in pier's slicing of the lines fd returns.
+	bin := t.TempDir()
+	if err := os.WriteFile(filepath.Join(bin, "fd"), []byte("#!/bin/sh\nprintf 'a.txt\\n'\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin)
 	dir := t.TempDir()
 	writeTestFile(t, dir, "a.txt", "x")
 	tool := CreateFindTool(dir)
