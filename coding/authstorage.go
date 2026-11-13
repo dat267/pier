@@ -80,8 +80,23 @@ func (b *FileAuthStorageBackend) ensureFileExists() error {
 	return writeFileMode(b.authPath, "{}", authFileWriteMode)
 }
 
-// authLockDir is the directory proper-lockfile creates next to the target.
-func authLockDir(path string) string { return path + ".lock" }
+// authLockDir is the directory proper-lockfile creates next to the target. The
+// target is resolved first, so symlinked aliases of auth.json share one lock
+// (pi v1.5.2 b4afdddf core/auth-storage.ts locks the resolved file, #11655).
+func authLockDir(path string) string { return authLockTarget(path) + ".lock" }
+
+// authLockTarget resolves symlinks so every alias of a file maps to one lock
+// path. A file that does not exist yet (pier creates it inside the lock) is
+// resolved through its directory, which covers a symlinked agent directory.
+func authLockTarget(path string) string {
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		return resolved
+	}
+	if dir, err := filepath.EvalSymlinks(filepath.Dir(path)); err == nil {
+		return filepath.Join(dir, filepath.Base(path))
+	}
+	return path
+}
 
 // acquireAuthLockSync retries for a short window, mirroring
 // acquireLockSyncWithRetry (10 attempts, 20ms apart).

@@ -477,3 +477,35 @@ func TestGetFileRevision(t *testing.T) {
 		t.Fatal("missing file must have no revision")
 	}
 }
+
+// pi v1.5.2 (b4afdddf) core/auth-storage.ts dropped `realpath: false` from the
+// lockfile calls, so symlinked aliases of auth.json share one lock (#11655).
+// Locking the alias path next to the symlink instead let two writers hold
+// "the" lock at once.
+func TestAuthLockFollowsSymlinkedAliases(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "real", "auth.json")
+	if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	aliasDir := filepath.Join(dir, "alias")
+	if err := os.MkdirAll(aliasDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(aliasDir, "auth.json")
+	if err := os.Symlink(target, alias); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	release, err := acquireAuthLockDir(target)
+	if err != nil {
+		t.Fatalf("lock target: %v", err)
+	}
+	defer release.release()
+	if _, err := acquireAuthLockDir(alias); !errors.Is(err, errAuthLocked) {
+		t.Fatalf("alias lock err = %v, want errAuthLocked", err)
+	}
+}
