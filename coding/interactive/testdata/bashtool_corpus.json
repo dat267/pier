@@ -1,0 +1,348 @@
+{
+	"cwd": "/tmp/pier_parity",
+	"cases": {
+		"simple": {
+			"args": {
+				"command": "ls -la"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a.txt\nb.txt"
+					}
+				],
+				"isError": false
+			}
+		},
+		"empty-output": {
+			"args": {
+				"command": "true"
+			},
+			"width": 80,
+			"result": {
+				"content": [],
+				"isError": false
+			}
+		},
+		"preview-end": {
+			"args": {
+				"command": "seq 1 20"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "line 1 with enough words to wrap around a narrow width here\nline 2 with enough words to wrap around a narrow width here\nline 3 with enough words to wrap around a narrow width here\nline 4 with enough words to wrap around a narrow width here\nline 5 with enough words to wrap around a narrow width here\nline 6 with enough words to wrap around a narrow width here\nline 7 with enough words to wrap around a narrow width here\nline 8 with enough words to wrap around a narrow width here\nline 9 with enough words to wrap around a narrow width here\nline 10 with enough words to wrap around a narrow width here\nline 11 with enough words to wrap around a narrow width here\nline 12 with enough words to wrap around a narrow width here\nline 13 with enough words to wrap around a narrow width here\nline 14 with enough words to wrap around a narrow width here\nline 15 with enough words to wrap around a narrow width here\nline 16 with enough words to wrap around a narrow width here\nline 17 with enough words to wrap around a narrow width here\nline 18 with enough words to wrap around a narrow width here\nline 19 with enough words to wrap around a narrow width here\nline 20 with enough words to wrap around a narrow width here"
+					}
+				],
+				"isError": false
+			}
+		},
+		"expanded": {
+			"args": {
+				"command": "seq 1 20"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "line 1 with enough words to wrap around a narrow width here\nline 2 with enough words to wrap around a narrow width here\nline 3 with enough words to wrap around a narrow width here\nline 4 with enough words to wrap around a narrow width here\nline 5 with enough words to wrap around a narrow width here\nline 6 with enough words to wrap around a narrow width here\nline 7 with enough words to wrap around a narrow width here\nline 8 with enough words to wrap around a narrow width here\nline 9 with enough words to wrap around a narrow width here\nline 10 with enough words to wrap around a narrow width here\nline 11 with enough words to wrap around a narrow width here\nline 12 with enough words to wrap around a narrow width here\nline 13 with enough words to wrap around a narrow width here\nline 14 with enough words to wrap around a narrow width here\nline 15 with enough words to wrap around a narrow width here\nline 16 with enough words to wrap around a narrow width here\nline 17 with enough words to wrap around a narrow width here\nline 18 with enough words to wrap around a narrow width here\nline 19 with enough words to wrap around a narrow width here\nline 20 with enough words to wrap around a narrow width here"
+					}
+				],
+				"isError": false
+			},
+			"expanded": true
+		},
+		"timeout": {
+			"args": {
+				"command": "sleep 5",
+				"timeout": 30
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "done"
+					}
+				],
+				"isError": false
+			}
+		},
+		"missing-command": {
+			"args": {},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "x"
+					}
+				],
+				"isError": false
+			}
+		},
+		"empty-command": {
+			"args": {
+				"command": ""
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "x"
+					}
+				],
+				"isError": false
+			}
+		},
+		"long-command": {
+			"args": {
+				"command": "echo aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "ok"
+					}
+				],
+				"isError": false
+			}
+		},
+		"multiline-command": {
+			"args": {
+				"command": "echo a\necho b"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a\nb"
+					}
+				],
+				"isError": false
+			}
+		},
+		"duration-seconds": {
+			"args": {
+				"command": "ls"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a"
+					}
+				],
+				"isError": false,
+				"durationMs": 4200
+			}
+		},
+		"duration-minutes": {
+			"args": {
+				"command": "ls"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a"
+					}
+				],
+				"isError": false,
+				"durationMs": 90500
+			}
+		},
+		"partial": {
+			"args": {
+				"command": "ls"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "streaming"
+					}
+				],
+				"isError": false
+			},
+			"isPartial": true
+		},
+		"error": {
+			"args": {
+				"command": "false"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "boom"
+					}
+				],
+				"isError": true
+			}
+		},
+		"tabs": {
+			"args": {
+				"command": "printf"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a\tb\nc"
+					}
+				],
+				"isError": false
+			}
+		},
+		"narrow": {
+			"args": {
+				"command": "echo word word word word word word word word word word word word word word word word word word word word "
+			},
+			"width": 40,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "line 1 with enough words to wrap around a narrow width here\nline 2 with enough words to wrap around a narrow width here\nline 3 with enough words to wrap around a narrow width here\nline 4 with enough words to wrap around a narrow width here\nline 5 with enough words to wrap around a narrow width here\nline 6 with enough words to wrap around a narrow width here\nline 7 with enough words to wrap around a narrow width here\nline 8 with enough words to wrap around a narrow width here\nline 9 with enough words to wrap around a narrow width here\nline 10 with enough words to wrap around a narrow width here\nline 11 with enough words to wrap around a narrow width here\nline 12 with enough words to wrap around a narrow width here\nline 13 with enough words to wrap around a narrow width here\nline 14 with enough words to wrap around a narrow width here\nline 15 with enough words to wrap around a narrow width here\nline 16 with enough words to wrap around a narrow width here\nline 17 with enough words to wrap around a narrow width here\nline 18 with enough words to wrap around a narrow width here\nline 19 with enough words to wrap around a narrow width here\nline 20 with enough words to wrap around a narrow width here"
+					}
+				],
+				"isError": false
+			}
+		},
+		"hidden-images": {
+			"args": {
+				"command": "ls"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a"
+					},
+					{
+						"type": "image",
+						"data": "AAAA",
+						"mimeType": "image/png"
+					}
+				],
+				"isError": false
+			},
+			"showImages": false
+		},
+		"truncated-lines": {
+			"args": {
+				"command": "seq 1 500"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "l1\nl2\n\n[Truncated: showing 12 of 500 lines. Full output: /tmp/pier_parity/full.log]"
+					}
+				],
+				"isError": false,
+				"details": {
+					"truncation": {
+						"content": "",
+						"truncated": true,
+						"truncatedBy": "lines",
+						"totalLines": 500,
+						"totalBytes": 10000,
+						"outputLines": 12,
+						"outputBytes": 900
+					},
+					"fullOutputPath": "/tmp/pier_parity/full.log"
+				}
+			}
+		},
+		"truncated-bytes": {
+			"args": {
+				"command": "seq 1 500"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "l1\nl2"
+					}
+				],
+				"isError": false,
+				"details": {
+					"truncation": {
+						"content": "",
+						"truncated": true,
+						"truncatedBy": "bytes",
+						"totalLines": 500,
+						"totalBytes": 100000,
+						"outputLines": 3,
+						"outputBytes": 51200,
+						"maxBytes": 51200
+					}
+				}
+			}
+		},
+		"full-output-path": {
+			"args": {
+				"command": "seq 1 5"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a"
+					}
+				],
+				"isError": false,
+				"details": {
+					"fullOutputPath": "/tmp/pier_parity/full.log"
+				}
+			}
+		},
+		"truncated-expanded": {
+			"args": {
+				"command": "seq 1 500"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "l1\nl2"
+					}
+				],
+				"isError": false,
+				"details": {
+					"truncation": {
+						"content": "",
+						"truncated": true,
+						"truncatedBy": "lines",
+						"totalLines": 500,
+						"totalBytes": 10000,
+						"outputLines": 2,
+						"outputBytes": 20
+					}
+				}
+			},
+			"expanded": true
+		}
+	}
+}

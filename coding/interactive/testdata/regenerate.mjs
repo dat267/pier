@@ -9,6 +9,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(process.argv[2] ?? "./pi");
 const families = [
 	"auth",
+	"bashtool-parity",
 	"components",
 	"customeditor",
 	"diff",
