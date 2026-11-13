@@ -193,7 +193,10 @@ func CreateFindTool(cwd string) agent.AgentTool {
 				relativized = append(relativized, RelativizeFindResultPath(line, searchPath))
 			}
 			resultLimitReached := float64(len(relativized)) > effectiveLimit
-			if int(effectiveLimit) < len(relativized) {
+			// Compare as a number before converting: a limit above the int range
+			// (fd accepts one) overflows the conversion and slices with a negative
+			// bound. The reference slices with a JavaScript number, which clamps.
+			if effectiveLimit < float64(len(relativized)) {
 				relativized = relativized[:int(effectiveLimit)]
 			}
 			rawOutput2 := strings.Join(relativized, "\n")

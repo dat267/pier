@@ -395,3 +395,23 @@ func TestGrepToolDoesNotSplitOnLoneCarriageReturn(t *testing.T) {
 		t.Fatalf("a lone CR split the file: %q", text)
 	}
 }
+
+// fd accepts --max-results up to the platform's usize, which is wider than
+// int64, so a JSON number from a tool call can be too large for the index the
+// port slices with. pi v1.5.2 find.ts slices with a JavaScript number: it
+// clamps to the collection instead of overflowing.
+func TestFindToolSurvivesALimitWiderThanInt64(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "a.txt", "x")
+	tool := CreateFindTool(dir)
+	for _, limit := range []string{"10000000000000000000", "9223372036854775808"} {
+		params := json.RawMessage(`{"pattern":"*","limit":` + limit + `}`)
+		result, err := tool.Execute("call-1", params, context.Background(), nil)
+		if err != nil {
+			t.Fatalf("limit %s: %v", limit, err)
+		}
+		if len(result.Content) == 0 {
+			t.Fatalf("limit %s: no content", limit)
+		}
+	}
+}
