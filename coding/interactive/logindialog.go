@@ -187,13 +187,15 @@ func (c *LoginDialogComponent) ShowAuth(url string, instructions string) {
 }
 
 // loginWebLink renders text as an ST-terminated terminal hyperlink to url when
-// url is a web URL, else as plain text (upstream webLink).
+// url is a web URL, else as plain text (upstream webLink). The framing is the
+// renderer's own (tui.Hyperlink), so the dialog holds no escape string of its
+// own that untrusted text could end early.
 func loginWebLink(text, url string) string {
 	normalized, ok := coding.WebURL(url)
 	if !ok {
 		return text
 	}
-	return "\x1b]8;;" + normalized + "\x1b\\" + text + "\x1b]8;;\x1b\\"
+	return tui.Hyperlink(text, normalized)
 }
 
 // ShowDeviceCode shows the device-code verification URL and user code.
