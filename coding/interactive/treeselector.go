@@ -1475,9 +1475,12 @@ func (t *TreeList) findBranchSegmentStart(direction string) int {
 	}
 }
 
-// SearchLine renders the current search query.
+// SearchLine renders the current search query. It is focusable so the terminal
+// cursor sits in the search field while the tree selector owns focus
+// (pi v1.5.2 b4afdddf components/tree-selector.ts).
 type SearchLine struct {
 	treeList *TreeList
+	focused  bool
 }
 
 // NewSearchLine creates the search line.
@@ -1486,16 +1489,30 @@ func NewSearchLine(treeList *TreeList) *SearchLine { return &SearchLine{treeList
 // Invalidate is a no-op.
 func (s *SearchLine) Invalidate() {}
 
+// SetFocused records the focus state.
+func (s *SearchLine) SetFocused(focused bool) { s.focused = focused }
+
+// Focused reports the focus state.
+func (s *SearchLine) Focused() bool { return s.focused }
+
 // Render renders the search line.
 func (s *SearchLine) Render(width int) []string {
+	if width <= 0 {
+		return []string{""}
+	}
 	theme := ActiveTheme()
 	query := s.treeList.GetSearchQuery()
-	if query != "" {
-		return []string{tui.TruncateToWidth("  "+theme.Fg("muted", "Type to search:")+" "+theme.Fg("accent", query), width, "", false)}
-	}
 	// The reference keeps the space after the label so the empty line has the
 	// width of the typed form (pi v1.5.2 tree-selector.ts).
-	return []string{tui.TruncateToWidth("  "+theme.Fg("muted", "Type to search:")+" ", width, "", false)}
+	line := "  " + theme.Fg("muted", "Type to search:") + " "
+	if query != "" {
+		line = "  " + theme.Fg("muted", "Type to search:") + " " + theme.Fg("accent", query)
+	}
+	if !s.focused {
+		return []string{tui.TruncateToWidth(line, width, "", false)}
+	}
+	content := tui.TruncateToWidth(line, max(0, width-1), "", false)
+	return []string{content + tui.CursorMarker + "\x1b[7m \x1b[27m"}
 }
 
 // HandleInput is a no-op.
@@ -1747,6 +1764,7 @@ type TreeSelectorComponent struct {
 	*tui.Container
 
 	treeList            *TreeList
+	searchLine          *SearchLine
 	labelInput          *LabelInput
 	labelInputContainer *tui.Container
 	treeContainer       *tui.Container
@@ -1816,7 +1834,8 @@ func NewTreeSelectorComponentWithList(list *TreeList, empty bool, onSelect func(
 	component.AddChild(NewDynamicBorder(nil))
 	component.AddChild(tui.NewText(theme.Bold("  Session Tree"), 1, 0, nil))
 	component.AddChild(&TreeHelp{})
-	component.AddChild(NewSearchLine(component.treeList))
+	component.searchLine = NewSearchLine(component.treeList)
+	component.AddChild(component.searchLine)
 	component.AddChild(NewDynamicBorder(nil))
 	component.AddChild(tui.NewSpacer(1))
 	component.AddChild(component.treeContainer)
@@ -1845,6 +1864,9 @@ func (c *TreeSelectorComponent) showLabelInput(entryID string, currentLabel stri
 	}
 	c.labelInput.OnCancel = func() { c.hideLabelInput() }
 	c.labelInput.SetFocused(c.focused)
+	if c.searchLine != nil {
+		c.searchLine.SetFocused(false)
+	}
 
 	c.treeContainer.Clear()
 	c.labelInputContainer.Clear()
@@ -1853,6 +1875,9 @@ func (c *TreeSelectorComponent) showLabelInput(entryID string, currentLabel stri
 
 func (c *TreeSelectorComponent) hideLabelInput() {
 	c.labelInput = nil
+	if c.searchLine != nil {
+		c.searchLine.SetFocused(c.focused)
+	}
 	c.labelInputContainer.Clear()
 	c.treeContainer.Clear()
 	c.treeContainer.AddChild(c.treeList)
@@ -1875,6 +1900,9 @@ func (c *TreeSelectorComponent) HandleInput(keyData string) {
 // SetFocused focuses the selector.
 func (c *TreeSelectorComponent) SetFocused(focused bool) {
 	c.focused = focused
+	if c.searchLine != nil {
+		c.searchLine.SetFocused(focused && c.labelInput == nil)
+	}
 	if c.labelInput != nil {
 		c.labelInput.SetFocused(focused)
 	}

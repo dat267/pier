@@ -511,3 +511,57 @@ func TestTreeSearchLineKeepsTheTrailingSpace(t *testing.T) {
 		t.Fatalf("empty search line = %q, want %q", got, want)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) components/tree-selector.ts makes the search line
+// focusable: while the tree owns focus and no label input is open, it renders
+// the cursor marker and an inverse block, truncated to leave that block a cell.
+func TestTreeSelectorSearchLineShowsTheCursorWhenFocused(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+	previous := tui.GetKeybindings()
+	tui.SetKeybindings(NewAppKeybindingsManager(nil, "").KeybindingsManager)
+	t.Cleanup(func() { tui.SetKeybindings(previous) })
+
+	manager := coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{Persist: new(false)})
+	selector := NewTreeSelectorComponent(manager.GetTree(), manager.GetLeafID(), 40, func(string) {}, func() {}, TreeSelectorOptions{})
+
+	findSearchLine := func() string {
+		t.Helper()
+		for _, line := range selector.Render(40) {
+			if strings.Contains(line, "Type to search") {
+				return line
+			}
+		}
+		t.Fatal("no search line rendered")
+		return ""
+	}
+
+	if line := findSearchLine(); strings.Contains(line, tui.CursorMarker) {
+		t.Fatalf("unfocused search line carries a cursor marker: %q", line)
+	}
+
+	selector.SetFocused(true)
+	line := findSearchLine()
+	if !strings.Contains(line, tui.CursorMarker) {
+		t.Fatalf("focused search line has no cursor marker: %q", line)
+	}
+	if !strings.HasSuffix(line, "\x1b[7m \x1b[27m") {
+		t.Fatalf("focused search line has no cursor block: %q", line)
+	}
+	if width := tui.VisibleWidth(line); width > 40 {
+		t.Fatalf("focused search line width = %d, want at most 40", width)
+	}
+
+	// A label input takes focus, so the search line gives it up.
+	entryID := ""
+	if leaf := manager.GetLeafID(); leaf != nil {
+		entryID = *leaf
+	}
+	selector.showLabelInput(entryID, "", false)
+	if line := findSearchLine(); strings.Contains(line, tui.CursorMarker) {
+		t.Fatalf("search line kept the cursor while a label input is open: %q", line)
+	}
+}
