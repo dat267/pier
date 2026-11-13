@@ -74,7 +74,7 @@ func oauthPostForm(ctx context.Context, requestURL string, fields map[string]str
 		}
 		return oauthHTTPResponse{}, err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	ok := response.StatusCode < 400
 	if ok && readErr != nil {

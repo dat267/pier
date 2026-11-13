@@ -796,7 +796,7 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 			clearUpdateTimer()
 			emitOutputUpdate()
 			snapshot := output.Snapshot(true)
-			defer output.CloseTempFile()
+			defer func() { _ = output.CloseTempFile() }()
 
 			formatOutput := func(emptyText string) (string, *BashToolDetails) {
 				truncation := snapshot.Truncation

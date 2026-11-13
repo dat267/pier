@@ -1554,7 +1554,7 @@ func buildSessionInfoContext(ctx context.Context, filePath string) *SessionInfo 
 	if err != nil {
 		return nil
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	reader := bufio.NewReaderSize(file, 64*1024)
 
 	var header *SessionHeader

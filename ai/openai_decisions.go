@@ -116,7 +116,7 @@ func (OpenAIDecisions) Classify(model *Model, classifierContext ClassifierContex
 		}
 		return classifierFail(result, openAIDecisionsError(err), options)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	data, err := boundedio.ReadAll(response.Body, classifierResponseBodyLimit)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil && options.TimeoutMs != nil {

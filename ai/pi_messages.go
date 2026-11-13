@@ -471,7 +471,7 @@ func StreamPiMessages(model *Model, context TranscriptContext, options *PiMessag
 			fail(err)
 			return
 		}
-		defer response.Body.Close()
+		defer func() { _ = response.Body.Close() }()
 		if options.OnResponse != nil {
 			headers := map[string]string{}
 			for name, values := range response.Header {

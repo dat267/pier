@@ -274,7 +274,7 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 		if err != nil {
 			return err
 		}
-		defer response.Body.Close()
+		defer func() { _ = response.Body.Close() }()
 		if ctx.Err() != nil {
 			return nil
 		}
@@ -421,7 +421,7 @@ func WithPersonalizedCatalog(
 		if err != nil {
 			return err
 		}
-		defer response.Body.Close()
+		defer func() { _ = response.Body.Close() }()
 		var remote []*ai.Model
 		if response.StatusCode != http.StatusNotFound && response.StatusCode != http.StatusNotImplemented {
 			if response.StatusCode < 200 || response.StatusCode >= 300 {

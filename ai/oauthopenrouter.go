@@ -130,7 +130,7 @@ func ExchangeOpenRouterAuthorizationCode(ctx context.Context, code, verifier str
 		}
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	ok := response.StatusCode < 400
 	if ok && readErr != nil {

@@ -776,6 +776,7 @@ func (r *ModelRuntime) enqueueCredentialOperation(providerID string, ctx context
 	case <-ctx.Done():
 		// Stop waiting while the operation settles in the background.
 		go func() {
+			//nolint:errcheck // the receive only waits for the write to settle
 			<-result
 			r.clearCredentialOp(providerID, done)
 		}()

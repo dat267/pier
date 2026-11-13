@@ -336,7 +336,7 @@ func requestOpenAIChatGPTToken(ctx context.Context, body url.Values) (*openAICha
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode >= 400 {
 		return nil, fmt.Errorf("OpenAI OAuth token request failed (%d): %s", response.StatusCode, strings.TrimSpace(string(raw)))

@@ -215,7 +215,7 @@ func fetchChecksum(ctx context.Context, client *http.Client, url, name string) (
 	if err != nil {
 		return "", err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	switch {
 	case response.StatusCode == http.StatusNotFound:
 		return "", fmt.Errorf("%s: %w", name, errAssetNotFound)
@@ -247,7 +247,7 @@ func downloadTo(ctx context.Context, client *http.Client, url, name string, out 
 	if err != nil {
 		return "", err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	switch {
 	case response.StatusCode == http.StatusNotFound:
 		return "", &UpdateCommandError{Message: fmt.Sprintf("release has no %s asset", name)}
@@ -298,14 +298,14 @@ func runUpdateCommand(appName string, args []string, stdout, stderr io.Writer, o
 	if len(args) > 1 {
 		switch args[1] {
 		case "--help", "-h", "help":
-			fmt.Fprint(stdout, UpdateCommandUsage(appName))
+			_, _ = fmt.Fprint(stdout, UpdateCommandUsage(appName))
 			return true, 0
 		}
 	}
 	if options.Target == "" {
 		target, err := executableTarget()
 		if err != nil {
-			fmt.Fprintf(stderr, "Error: %v\n", err)
+			_, _ = fmt.Fprintf(stderr, "Error: %v\n", err)
 			return true, 1
 		}
 		options.Target = target
@@ -315,13 +315,13 @@ func runUpdateCommand(appName string, args []string, stdout, stderr io.Writer, o
 
 	version, err := RunUpdate(ctx, options)
 	if err != nil {
-		fmt.Fprintf(stderr, "Error: %v\n", err)
+		_, _ = fmt.Fprintf(stderr, "Error: %v\n", err)
 		return true, 1
 	}
 	if version == "" {
-		fmt.Fprintf(stdout, "already up to date (%s)\n", Version)
+		_, _ = fmt.Fprintf(stdout, "already up to date (%s)\n", Version)
 		return true, 0
 	}
-	fmt.Fprintf(stdout, "updated to %s; restart %s to use it\n", version, appName)
+	_, _ = fmt.Fprintf(stdout, "updated to %s; restart %s to use it\n", version, appName)
 	return true, 0
 }

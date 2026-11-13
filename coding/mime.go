@@ -47,7 +47,7 @@ func DetectSupportedImageMimeTypeFromFile(filePath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	buffer := make([]byte, imageTypeSniffBytes)
 	read, err := file.Read(buffer)
 	if err != nil && err != io.EOF {

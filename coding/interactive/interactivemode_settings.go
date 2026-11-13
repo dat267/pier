@@ -231,7 +231,10 @@ func (w *SettingsWiring) BuildSettingsCallbacks(done func(), refresh func()) Set
 			// The value is written here and applied at the next start, where the
 			// dispatcher is configured before any request exists (D254): Go's
 			// transport has no safe way to be reconfigured while in flight.
-			settings.SetHTTPIdleTimeoutMS(timeoutMS)
+			if err := settings.SetHTTPIdleTimeoutMS(timeoutMS); err != nil {
+				w.showStatus("Could not save the HTTP idle timeout: " + err.Error())
+				return
+			}
 			w.showStatus("HTTP idle timeout: " + coding.FormatHTTPIdleTimeoutMS(timeoutMS))
 		},
 		OnCacheWarmingModeChange: func(mode string) {

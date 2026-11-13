@@ -153,14 +153,14 @@ func printTimingGroup(writer io.Writer, title string, timings []timingEntry) {
 	if len(printable) == 0 {
 		return
 	}
-	fmt.Fprintf(writer, "\n--- %s ---\n", title)
+	_, _ = fmt.Fprintf(writer, "\n--- %s ---\n", title)
 	total := int64(0)
 	for _, timing := range printable {
-		fmt.Fprintf(writer, "  %s: %dms\n", timing.Label, timing.Ms)
+		_, _ = fmt.Fprintf(writer, "  %s: %dms\n", timing.Label, timing.Ms)
 		total += timing.Ms
 	}
-	fmt.Fprintf(writer, "  TOTAL: %dms\n", total)
-	fmt.Fprintf(writer, "%s\n\n", repeatDash(len(title)+8))
+	_, _ = fmt.Fprintf(writer, "  TOTAL: %dms\n", total)
+	_, _ = fmt.Fprintf(writer, "%s\n\n", repeatDash(len(title)+8))
 }
 
 func repeatDash(count int) string {

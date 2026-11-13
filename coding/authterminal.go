@@ -57,10 +57,10 @@ func NewProcessLoginTerminal(stdin io.Reader, stdout, stderr io.Writer, interact
 }
 
 // Write prints one line.
-func (t *ProcessLoginTerminal) Write(line string) { fmt.Fprintln(t.Out, line) }
+func (t *ProcessLoginTerminal) Write(line string) { _, _ = fmt.Fprintln(t.Out, line) }
 
 // Error prints one line to the error stream.
-func (t *ProcessLoginTerminal) Error(line string) { fmt.Fprintln(t.Err, line) }
+func (t *ProcessLoginTerminal) Error(line string) { _, _ = fmt.Fprintln(t.Err, line) }
 
 // Interactive reports whether the terminal can prompt.
 func (t *ProcessLoginTerminal) Interactive() bool { return t.InteractiveTerminal }
@@ -70,7 +70,7 @@ func (t *ProcessLoginTerminal) Question(ctx context.Context, message string) (st
 	if err := ctxErrOf(ctx); err != nil {
 		return "", fmt.Errorf("%s", AuthLoginCancelledMessage)
 	}
-	fmt.Fprint(t.Out, message)
+	_, _ = fmt.Fprint(t.Out, message)
 	text, err := t.Reader.ReadString('\n')
 	if err != nil && (text == "" || err != io.EOF) {
 		if ctxErrOf(ctx) != nil || err == io.EOF {
@@ -90,9 +90,9 @@ func (t *ProcessLoginTerminal) Secret(ctx context.Context, message string) (stri
 	if t.SecretFD < 0 || !term.IsTerminal(t.SecretFD) {
 		return t.Question(ctx, message)
 	}
-	fmt.Fprint(t.Out, message)
+	_, _ = fmt.Fprint(t.Out, message)
 	secret, err := term.ReadPassword(t.SecretFD)
-	fmt.Fprintln(t.Out)
+	_, _ = fmt.Fprintln(t.Out)
 	if err != nil {
 		return "", err
 	}

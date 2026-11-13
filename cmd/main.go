@@ -1221,7 +1221,7 @@ func printMCPConnectingStatus(w io.Writer, names []string) {
 		message = fmt.Sprintf("Connecting to %d MCP servers: %s...", len(names), strings.Join(names, ", "))
 	}
 	// An untyped diagnostic renders dim with no prefix: status, not a problem.
-	fmt.Fprintln(w, coding.FormatCLIDiagnostic(coding.CLIDiagnostic{Type: "status", Message: message}))
+	_, _ = fmt.Fprintln(w, coding.FormatCLIDiagnostic(coding.CLIDiagnostic{Type: "status", Message: message}))
 }
 
 // startMCPServers loads mcp.json, names the servers it is about to connect to,

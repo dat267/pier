@@ -325,14 +325,14 @@ func (c *RpcClient) Start(ctx context.Context) error {
 		_ = stdin.Close()
 		return err
 	}
-	defer stdoutWriter.Close()
+	defer func() { _ = stdoutWriter.Close() }()
 	stderr, stderrWriter, err := os.Pipe()
 	if err != nil {
 		_ = stdin.Close()
 		_ = stdout.Close()
 		return err
 	}
-	defer stderrWriter.Close()
+	defer func() { _ = stderrWriter.Close() }()
 	command.Stdout, command.Stderr = stdoutWriter, stderrWriter
 	startCommand := c.startCommand
 	if startCommand == nil {
@@ -358,11 +358,11 @@ func (c *RpcClient) Start(ctx context.Context) error {
 	c.mu.Unlock()
 
 	go func() {
-		defer stderr.Close()
+		defer func() { _ = stderr.Close() }()
 		c.drainStderr(stderr)
 	}()
 	go func() {
-		defer stdout.Close()
+		defer func() { _ = stdout.Close() }()
 		c.readLines(stdout, readStop)
 	}()
 	go func() {

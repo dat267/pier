@@ -303,7 +303,7 @@ func computeEditsPreview(path string, edits []coding.Edit, cwd string) *editPrev
 		return &editPreview{Error: coding.EditFileErrorMessage(path, err)}
 	}
 	rawContent, err := io.ReadAll(file)
-	file.Close()
+	_ = file.Close()
 	if err != nil {
 		return &editPreview{Error: err.Error()}
 	}

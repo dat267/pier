@@ -319,7 +319,7 @@ func getLatestPortReleaseFrom(ctx context.Context, url, currentVersion string, c
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 300 || response.StatusCode >= 400 {
 		return nil, nil
 	}

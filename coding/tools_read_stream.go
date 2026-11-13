@@ -191,7 +191,7 @@ func selectTextLinesFromStream(path string, startLine int, limit *int, ctx conte
 	if err != nil {
 		return readSelection{}, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	stats, err := file.Stat()
 	if err != nil {
 		return readSelection{}, err

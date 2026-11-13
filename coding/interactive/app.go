@@ -567,7 +567,7 @@ func NewApp(options AppOptions) *App {
 			app.runner.StartWork(fn)
 			return
 		}
-		fn(context.Background())
+		_ = fn(context.Background())
 	}
 	// A /goal resume (or set/replace) on an idle session starts a run through
 	// the same work slot as a submitted prompt, so the loop keeps draining.

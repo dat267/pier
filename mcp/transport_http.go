@@ -740,7 +740,7 @@ func (t *StreamableHttpTransport) maxMessageBytes() int64 {
 
 // consumeSse parses one SSE stream, tracking resumption state.
 func (t *StreamableHttpTransport) consumeSse(body io.ReadCloser, cursor *streamCursor, onMessage func(Message)) error {
-	defer body.Close()
+	defer func() { _ = body.Close() }()
 	maxEventBytes := t.maxMessageBytes()
 	return ConsumeSseStream(body, ConsumeSseOptions{
 		MaxEventBytes:    maxEventBytes,

@@ -86,7 +86,7 @@ func metaDo(request *http.Request, loginCtx context.Context) (int, map[string]an
 		}
 		return 0, nil, err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode < 400 && readErr != nil {
 		return 0, nil, readErr

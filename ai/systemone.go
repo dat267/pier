@@ -149,7 +149,7 @@ func classifySystemOne(transport systemOneTransport, model *Model, classifierCon
 		}
 		return classifierFail(result, fmt.Errorf("%s", FormatProviderError(NormalizeProviderError(err), transport.label+" error")), options)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	responseBody, err := boundedio.ReadAll(response.Body, systemOneResponseBodyLimit)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil && options.TimeoutMs != nil {

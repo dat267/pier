@@ -727,7 +727,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 				break
 			}
 			raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
-			response.Body.Close()
+			_ = response.Body.Close()
 			errorText := string(raw)
 			if attempt < maxRetries && IsCodexRetryableError(response.StatusCode, errorText) {
 				delay := time.Duration(codexBaseDelayMS*(1<<attempt)) * time.Millisecond
@@ -761,7 +761,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 			fail(fmt.Errorf("Failed after retries"))
 			return
 		}
-		defer response.Body.Close()
+		defer func() { _ = response.Body.Close() }()
 
 		stream.Push(AssistantMessageEvent{Type: EventStart, Partial: output})
 		normalized, err := mapCodexSSEEvents(response.Body, output, model, options.OnProviderStreamEvent)

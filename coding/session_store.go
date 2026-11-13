@@ -1677,7 +1677,7 @@ func readSessionHeader(filePath string) *SessionHeader {
 	if err != nil {
 		return nil
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	buffer := make([]byte, sessionHeaderReadBufferSize)
 	var line []byte
 	scanned := 0

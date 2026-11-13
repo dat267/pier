@@ -148,7 +148,7 @@ func copyFileExclusive(src string, dst string) (err error) {
 	if err != nil {
 		return err
 	}
-	defer source.Close()
+	defer func() { _ = source.Close() }()
 	destination, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return err
@@ -159,7 +159,7 @@ func copyFileExclusive(src string, dst string) (err error) {
 		}
 	}()
 	if _, err := io.Copy(destination, source); err != nil {
-		destination.Close()
+		_ = destination.Close()
 		return err
 	}
 	return destination.Close()

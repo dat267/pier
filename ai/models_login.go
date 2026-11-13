@@ -99,6 +99,7 @@ func (m *Models) Login(providerID string, authType AuthType, interaction *AuthIn
 	case <-ctx.Done():
 		// Cancellation before the mutation began: abandon the write.
 		go func() {
+			//nolint:errcheck // the receive only waits for the mutation to settle
 			<-mutationDone
 		}()
 		return nil, ctx.Err()

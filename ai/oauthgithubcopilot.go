@@ -300,7 +300,7 @@ func FetchWithCopilotRateLimitRetry(
 			return response, nil
 		}
 		// Cancel an abandoned rate-limit body without waiting for its bytes.
-		response.Body.Close()
+		_ = response.Body.Close()
 		if err := oauthRetrySleep(ctx, delay, "Login cancelled"); err != nil {
 			return nil, err
 		}
@@ -330,7 +330,7 @@ func FetchGitHubCopilotModels(ctx context.Context, copilotToken, enterpriseDomai
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode >= 400 {
 		return nil, fmt.Errorf("%d %s: %s", response.StatusCode, http.StatusText(response.StatusCode), string(raw))
@@ -371,7 +371,7 @@ func StartGitHubDeviceFlow(ctx context.Context, domain string) (*GitHubDeviceCod
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode >= 400 {
 		return nil, fmt.Errorf("%d %s: %s", response.StatusCode, http.StatusText(response.StatusCode), string(raw))
@@ -435,7 +435,7 @@ func PollForGitHubAccessToken(ctx context.Context, domain string, device *GitHub
 			if err != nil {
 				return OAuthDeviceCodePollResult[string]{Status: "failed", Message: err.Error()}, nil
 			}
-			defer response.Body.Close()
+			defer func() { _ = response.Body.Close() }()
 			raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 			if readErr != nil {
 				return OAuthDeviceCodePollResult[string]{Status: "failed", Message: readErr.Error()}, nil
@@ -495,7 +495,7 @@ func RefreshGitHubCopilotAccessToken(ctx context.Context, refreshToken, enterpri
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode >= 400 {
 		return nil, fmt.Errorf("%d %s: %s", response.StatusCode, http.StatusText(response.StatusCode), string(raw))
@@ -563,7 +563,7 @@ func EnableGitHubCopilotModel(ctx context.Context, token, modelID, enterpriseDom
 		}
 		return false, nil
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode == http.StatusTooManyRequests {
 		raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
 		return false, fmt.Errorf("%d %s: %s", response.StatusCode, http.StatusText(response.StatusCode), string(raw))

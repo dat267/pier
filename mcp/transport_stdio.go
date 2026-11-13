@@ -155,7 +155,7 @@ func (t *StdioTransport) Start(ctx context.Context) error {
 		_ = stdinPipe.Close()
 		return err
 	}
-	defer stdoutWriter.Close()
+	defer func() { _ = stdoutWriter.Close() }()
 	cmd.Stdout = stdoutWriter
 	var stderrPipe *os.File
 	spawned := false
@@ -174,7 +174,7 @@ func (t *StdioTransport) Start(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		defer stderrWriter.Close()
+		defer func() { _ = stderrWriter.Close() }()
 		cmd.Stderr = stderrWriter
 	}
 	if err := stdioStartProcess(cmd); err != nil {
@@ -204,7 +204,7 @@ func (t *StdioTransport) Start(ctx context.Context) error {
 
 func (t *StdioTransport) pumpStderr(pipe io.ReadCloser) {
 	defer t.readers.Done()
-	defer pipe.Close()
+	defer func() { _ = pipe.Close() }()
 	buf := make([]byte, 32*1024)
 	for {
 		n, err := pipe.Read(buf)
@@ -219,7 +219,7 @@ func (t *StdioTransport) pumpStderr(pipe io.ReadCloser) {
 
 func (t *StdioTransport) pumpStdout(pipe io.ReadCloser) {
 	defer t.readers.Done()
-	defer pipe.Close()
+	defer func() { _ = pipe.Close() }()
 	buf := make([]byte, 64*1024)
 	for {
 		n, err := pipe.Read(buf)

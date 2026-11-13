@@ -23,7 +23,7 @@ func runAuthLogout(appName string, command *AuthCommand, stdout, stderr io.Write
 		providerRef = command.Args[0]
 	}
 	if providerRef == "" || strings.HasPrefix(providerRef, "-") || len(command.Args) > 1 {
-		fmt.Fprintln(stderr, FormatCLIError(fmt.Sprintf("Usage: %s auth logout <provider>", appName)))
+		_, _ = fmt.Fprintln(stderr, FormatCLIError(fmt.Sprintf("Usage: %s auth logout <provider>", appName)))
 		return 1
 	}
 
@@ -34,13 +34,13 @@ func runAuthLogout(appName string, command *AuthCommand, stdout, stderr io.Write
 		RefreshOnCreate:   &refreshOnCreate,
 	})
 	if err != nil {
-		fmt.Fprintln(stderr, FormatCLIError("Could not read stored credentials: "+err.Error()))
+		_, _ = fmt.Fprintln(stderr, FormatCLIError("Could not read stored credentials: "+err.Error()))
 		return 1
 	}
 	ctx := context.Background()
 	stored, err := runtime.ListCredentials(ctx)
 	if err != nil {
-		fmt.Fprintln(stderr, FormatCLIError("Could not read stored credentials: "+err.Error()))
+		_, _ = fmt.Fprintln(stderr, FormatCLIError("Could not read stored credentials: "+err.Error()))
 		return 1
 	}
 
@@ -62,7 +62,7 @@ func runAuthLogout(appName string, command *AuthCommand, stdout, stderr io.Write
 		}
 	}
 	if provider == nil && credential == nil {
-		fmt.Fprintln(stderr, FormatCLIError(fmt.Sprintf("Unknown provider %q.", tui.SanitizeUntrustedText(providerRef))))
+		_, _ = fmt.Fprintln(stderr, FormatCLIError(fmt.Sprintf("Unknown provider %q.", tui.SanitizeUntrustedText(providerRef))))
 		ids := make([]string, 0, len(stored))
 		for _, info := range stored {
 			// A provider id comes from provider configuration, so it is data (D461).
@@ -73,7 +73,7 @@ func runAuthLogout(appName string, command *AuthCommand, stdout, stderr io.Write
 		if len(ids) > 0 {
 			listed = strings.Join(ids, ", ")
 		}
-		fmt.Fprintln(stderr, FormatCLIError("Stored credentials: "+listed))
+		_, _ = fmt.Fprintln(stderr, FormatCLIError("Stored credentials: "+listed))
 		return 1
 	}
 
@@ -83,23 +83,23 @@ func runAuthLogout(appName string, command *AuthCommand, stdout, stderr io.Write
 		providerName = tui.SanitizeUntrustedText(provider.Name)
 	}
 	if credential == nil {
-		fmt.Fprintln(stdout, fmt.Sprintf("No stored credentials for %s. Environment variables and models.json config are unchanged.", providerName))
+		_, _ = fmt.Fprintf(stdout, "No stored credentials for %s. Environment variables and models.json config are unchanged.\n", providerName)
 		return 0
 	}
 
 	if err := runtime.Logout(credential.ProviderID, ctx); err != nil {
 		var syncErr *CredentialSynchronizationError
 		if errors.As(err, &syncErr) {
-			fmt.Fprintln(stderr, FormatCLIError(fmt.Sprintf("Credentials removed for %s, but local model state could not be synchronized: %s", providerName, err.Error())))
+			_, _ = fmt.Fprintln(stderr, FormatCLIError(fmt.Sprintf("Credentials removed for %s, but local model state could not be synchronized: %s", providerName, err.Error())))
 		} else {
-			fmt.Fprintln(stderr, FormatCLIError("Logout failed: "+err.Error()))
+			_, _ = fmt.Fprintln(stderr, FormatCLIError("Logout failed: "+err.Error()))
 		}
 		return 1
 	}
 	if credential.Type == ai.CredentialOAuth {
-		fmt.Fprintln(stdout, fmt.Sprintf("Logged out of %s.", providerName))
+		_, _ = fmt.Fprintf(stdout, "Logged out of %s.\n", providerName)
 	} else {
-		fmt.Fprintln(stdout, fmt.Sprintf("Removed stored API key for %s. Environment variables and models.json config are unchanged.", providerName))
+		_, _ = fmt.Fprintf(stdout, "Removed stored API key for %s. Environment variables and models.json config are unchanged.\n", providerName)
 	}
 	return 0
 }

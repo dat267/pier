@@ -83,7 +83,7 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 		}
 		if hresp.StatusCode >= 400 {
 			raw, _ := io.ReadAll(io.LimitReader(hresp.Body, 1<<20))
-			hresp.Body.Close()
+			_ = hresp.Body.Close()
 			message, body := openAIAPIError(hresp.StatusCode, raw)
 			return nil, &ProviderError{
 				Status: hresp.StatusCode, Headers: hresp.Header,
@@ -103,7 +103,7 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 		output.ErrorMessage = &message
 		return output
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if options.OnResponse != nil {
 		headers := map[string]string{}
 		for name, values := range response.Header {

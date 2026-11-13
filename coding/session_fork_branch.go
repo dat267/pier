@@ -103,22 +103,22 @@ func writeForkedSession(targetCwd string, sessionDir string, manageDir bool, par
 	}
 	writer := bufio.NewWriter(file)
 	if _, err := writer.WriteString(headerLine); err != nil {
-		file.Close()
+		_ = file.Close()
 		return nil, err
 	}
 	for i := range entries {
 		line, err := MarshalFileEntry(FileEntry{Entry: &entries[i]})
 		if err != nil {
-			file.Close()
+			_ = file.Close()
 			return nil, err
 		}
 		if _, err := writer.WriteString(line); err != nil {
-			file.Close()
+			_ = file.Close()
 			return nil, err
 		}
 	}
 	if err := writer.Flush(); err != nil {
-		file.Close()
+		_ = file.Close()
 		return nil, err
 	}
 	if err := file.Close(); err != nil {

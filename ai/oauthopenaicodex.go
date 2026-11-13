@@ -163,7 +163,7 @@ func ExchangeOpenAICodexAuthorizationCode(ctx context.Context, code, verifier, r
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	return ReadOpenAICodexTokenResponse(response, "exchange")
 }
 
@@ -180,7 +180,7 @@ func RefreshOpenAICodexAccessToken(ctx context.Context, refreshToken string) (*O
 		}
 		return nil, fmt.Errorf("OpenAI Codex token refresh error: %s", err.Error())
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	return ReadOpenAICodexTokenResponse(response, "refresh")
 }
 
@@ -206,7 +206,7 @@ func StartOpenAICodexDeviceAuth(ctx context.Context) (*OpenAICodexDeviceAuthInfo
 		}
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode >= 400 {
 		if response.StatusCode == http.StatusNotFound {
@@ -284,7 +284,7 @@ func PollOpenAICodexDeviceAuth(ctx context.Context, device *OpenAICodexDeviceAut
 				}
 				return OAuthDeviceCodePollResult[*OpenAICodexDeviceTokenSuccess]{Status: "failed", Message: err.Error()}, nil
 			}
-			defer response.Body.Close()
+			defer func() { _ = response.Body.Close() }()
 			raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 			if response.StatusCode < 400 && readErr != nil {
 				return OAuthDeviceCodePollResult[*OpenAICodexDeviceTokenSuccess]{Status: "failed", Message: readErr.Error()}, nil

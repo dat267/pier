@@ -192,7 +192,7 @@ func StreamProxy(model *ai.Model, context ai.TranscriptContext, options ProxyStr
 			fail(ai.StopError, err.Error())
 			return
 		}
-		defer response.Body.Close()
+		defer func() { _ = response.Body.Close() }()
 		if response.StatusCode < 200 || response.StatusCode >= 300 {
 			_, statusText, _ := strings.Cut(response.Status, " ")
 			message := fmt.Sprintf("Proxy error: %d %s", response.StatusCode, statusText)

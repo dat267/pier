@@ -244,7 +244,7 @@ func postOAuthJSON(ctx context.Context, requestURL string, body map[string]any) 
 	if err != nil {
 		return "", err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode >= 400 {
 		return "", fmt.Errorf("HTTP request failed. status=%d; url=%s; body=%s", response.StatusCode, requestURL, string(raw))

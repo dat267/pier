@@ -335,7 +335,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 				}
 				if hresp.StatusCode >= 400 {
 					raw, _ := io.ReadAll(io.LimitReader(hresp.Body, 1<<20))
-					hresp.Body.Close()
+					_ = hresp.Body.Close()
 					message, errorBody := openAIAPIError(hresp.StatusCode, raw)
 					return nil, &ProviderError{
 						Status: hresp.StatusCode, Headers: hresp.Header,
@@ -351,7 +351,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 			fail(requestErr)
 			return
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if options.OnResponse != nil {
 			headers := map[string]string{}
 			for k, v := range resp.Header {
