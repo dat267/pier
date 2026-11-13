@@ -803,3 +803,30 @@ func TestModelsRefreshConfiguredAuthSkipsOAuthRefresh(t *testing.T) {
 		t.Fatalf("network phase got credential %+v, want none", gotCredential)
 	}
 }
+
+// The other half of upstream's resolveNetworkRefresh: a "configured" provider
+// that is not configured at all still skips the network phase.
+func TestModelsRefreshConfiguredAuthSkipsUnconfiguredProvider(t *testing.T) {
+	store := NewInMemoryCredentialStore()
+	refreshCalled := false
+	models := CreateModels(&CreateModelsOptions{Credentials: store, AuthContext: &fakeAuthContext{}})
+	models.SetProvider(&Provider{
+		ID:                "p1",
+		Auth:              ProviderAuth{OAuth: &OAuthAuth{Name: "Test OAuth"}},
+		RefreshModelsAuth: "configured",
+		RefreshModels: func(refresh *RefreshModelsContext) error {
+			if refresh.AllowNetwork {
+				refreshCalled = true
+			}
+			return nil
+		},
+	})
+
+	result := models.Refresh(&ModelsRefreshOptions{Ctx: bgCtx()})
+	if err := result.Errors["p1"]; err != nil {
+		t.Fatalf("refresh error = %v", err)
+	}
+	if refreshCalled {
+		t.Fatal("the network phase ran for an unconfigured provider")
+	}
+}
