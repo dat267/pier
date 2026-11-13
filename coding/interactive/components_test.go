@@ -290,3 +290,19 @@ func TestGetResolvedThemeColorsConvertsOklch(t *testing.T) {
 		t.Fatalf("accent = %q; want %q", colors["accent"], tui.ColorToHex(color))
 	}
 }
+
+// pi v1.5.2 (b4afdddf) modes/interactive/theme/theme.ts added dart, groovy,
+// gradle and nix to getLanguageFromPath's extension map, so those files reach
+// the highlighter instead of rendering as plain text.
+func TestGetLanguageFromPathCoversDartGroovyGradleNix(t *testing.T) {
+	for path, want := range map[string]string{
+		"lib/main.dart":    "dart",
+		"build.gradle":     "groovy",
+		"scripts/x.groovy": "groovy",
+		"flake.nix":        "nix",
+	} {
+		if got, ok := GetLanguageFromPath(path); !ok || got != want {
+			t.Fatalf("%s = %q, %v; want %q", path, got, ok, want)
+		}
+	}
+}

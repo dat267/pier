@@ -195,7 +195,9 @@ func GetLanguageFromPath(filePath string) (string, bool) {
 var extensionToLanguage = map[string]string{
 	"ts": "typescript", "tsx": "typescript", "js": "javascript", "jsx": "javascript",
 	"mjs": "javascript", "cjs": "javascript", "py": "python", "rb": "ruby", "rs": "rust",
-	"go": "go", "java": "java", "kt": "kotlin", "swift": "swift", "c": "c", "h": "c",
+	"go": "go", "java": "java", "kt": "kotlin", "swift": "swift",
+	"dart": "dart", "groovy": "groovy", "gradle": "groovy", "nix": "nix",
+	"c": "c", "h": "c",
 	"cpp": "cpp", "cc": "cpp", "cxx": "cpp", "hpp": "cpp", "cs": "csharp", "php": "php",
 	"sh": "bash", "bash": "bash", "zsh": "bash", "fish": "fish", "ps1": "powershell",
 	"sql": "sql", "html": "html", "htm": "html", "css": "css", "scss": "scss", "sass": "sass",
