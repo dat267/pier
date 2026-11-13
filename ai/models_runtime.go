@@ -67,6 +67,12 @@ type Provider struct {
 	FilterModels func(models []*Model, credential *Credential) []*Model
 	// FilterAllModels applies credential-specific availability across model types.
 	FilterAllModels func(models []*Model, credential *Credential) []*Model
+	// RefreshModelsAuth is how the network refresh phase resolves auth:
+	// "credential" (the default) receives the effective credential, refreshing an
+	// expired OAuth token first; "configured" only requires the provider to be
+	// configured and passes no credential, for a catalog served by another
+	// source (upstream models.ts refreshModelsAuth).
+	RefreshModelsAuth string
 
 	// streamsFor dispatches on model.api (single implementation or per-API map).
 	streamsFor  func(model *Model) ProviderStreams
@@ -198,6 +204,9 @@ type CreateProviderOptions struct {
 	FilterModels func(models []*Model, credential *Credential) []*Model
 	// FilterAllModels applies credential-specific availability across model types.
 	FilterAllModels func(models []*Model, credential *Credential) []*Model
+	// RefreshModelsAuth selects how the network refresh phase resolves auth
+	// ("credential" or "configured", see Provider.RefreshModelsAuth).
+	RefreshModelsAuth string
 	// Single is one API implementation for all models.
 	Single ProviderStreams
 	// ByAPI dispatches on model.api for mixed-API providers.
@@ -247,16 +256,17 @@ func CreateProvider(input CreateProviderOptions) *Provider {
 	}
 
 	p := &Provider{
-		ID:              input.ID,
-		Name:            input.Name,
-		BaseURL:         input.BaseURL,
-		Headers:         input.Headers,
-		Auth:            input.Auth,
-		getModels:       currentModels,
-		FilterModels:    input.FilterModels,
-		FilterAllModels: input.FilterAllModels,
-		streamsFor:      streamsFor,
-		classifiers:     input.Classifiers,
+		ID:                input.ID,
+		Name:              input.Name,
+		BaseURL:           input.BaseURL,
+		Headers:           input.Headers,
+		Auth:              input.Auth,
+		getModels:         currentModels,
+		FilterModels:      input.FilterModels,
+		FilterAllModels:   input.FilterAllModels,
+		RefreshModelsAuth: input.RefreshModelsAuth,
+		streamsFor:        streamsFor,
+		classifiers:       input.Classifiers,
 	}
 	if p.Name == "" {
 		p.Name = input.ID
@@ -793,14 +803,14 @@ func (m *Models) Refresh(options *ModelsRefreshOptions) ModelsRefreshResult {
 					return nil
 				}
 
-				credential, err := m.resolveRefreshCredential(provider, storedCredential, refreshCtx)
+				network, err := m.resolveNetworkRefresh(provider, storedCredential, refreshCtx)
 				if err != nil {
 					return err
 				}
-				if credential == nil {
+				if network == nil {
 					return nil
 				}
-				return m.runProviderRefreshPhase(provider, credential, true, options.forceOrDefault(), generation, refreshCtx)
+				return m.runProviderRefreshPhase(provider, network.credential, true, options.forceOrDefault(), generation, refreshCtx)
 			}
 
 			if err := operation(); err != nil && !ctxDone(refreshCtx) {
@@ -889,6 +899,29 @@ func boolPtrWhen(cond bool, v *bool) *bool {
 		return nil
 	}
 	return v
+}
+
+// resolveNetworkRefresh resolves the auth for the network refresh phase, or nil
+// when the provider is not configured (upstream models.ts resolveNetworkRefresh).
+func (m *Models) resolveNetworkRefresh(provider *Provider, stored *Credential, signal context.Context) (*networkRefresh, error) {
+	if provider.RefreshModelsAuth == "configured" {
+		auth, err := m.checkProviderAuth(provider, stored, signal)
+		if err != nil || auth == nil {
+			return nil, err
+		}
+		return &networkRefresh{}, nil
+	}
+	credential, err := m.resolveRefreshCredential(provider, stored, signal)
+	if err != nil || credential == nil {
+		return nil, err
+	}
+	return &networkRefresh{credential: credential}, nil
+}
+
+// networkRefresh is the auth a network refresh phase runs with: a credential, or
+// none for a provider whose catalog is served elsewhere.
+type networkRefresh struct {
+	credential *Credential
 }
 
 func (m *Models) resolveRefreshCredential(provider *Provider, stored *Credential, signal context.Context) (*Credential, error) {

@@ -756,3 +756,50 @@ func TestModelsStreamSimpleAppliesResolvedAuthAndSimpleOptions(t *testing.T) {
 		t.Fatalf("ThinkingBudgets = %+v, want high 4096", gotSimple.ThinkingBudgets)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) models.ts added `refreshModelsAuth: "configured"`: a
+// provider whose catalog is served elsewhere (the pi.dev overlay) refreshes as
+// long as it is configured, without refreshing a stale OAuth credential, so a
+// dead login cannot block or fail the catalog refresh.
+func TestModelsRefreshConfiguredAuthSkipsOAuthRefresh(t *testing.T) {
+	store := NewInMemoryCredentialStore()
+	if _, err := store.Modify("p1", func(*Credential) (*Credential, error) {
+		return &Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{OAuthCredentials{
+			Refresh: "dead-refresh", Access: "dead", Expires: 0, // expired
+		}}}, nil
+	}, bgCtx()); err != nil {
+		t.Fatal(err)
+	}
+	oauth := &OAuthAuth{
+		Name: "Test OAuth",
+		Refresh: func(*OAuthCredential, context.Context) (*OAuthCredential, error) {
+			return nil, errors.New("refresh failed")
+		},
+	}
+	var gotCredential *Credential
+	refreshCalled := false
+	models := CreateModels(&CreateModelsOptions{Credentials: store, AuthContext: &fakeAuthContext{}})
+	models.SetProvider(&Provider{
+		ID:                "p1",
+		Auth:              ProviderAuth{OAuth: oauth},
+		RefreshModelsAuth: "configured",
+		RefreshModels: func(refresh *RefreshModelsContext) error {
+			if refresh.AllowNetwork {
+				refreshCalled = true
+				gotCredential = refresh.Credential
+			}
+			return nil
+		},
+	})
+
+	result := models.Refresh(&ModelsRefreshOptions{Ctx: bgCtx()})
+	if err := result.Errors["p1"]; err != nil {
+		t.Fatalf("refresh error = %v, want none: a configured catalog must not need the credential", err)
+	}
+	if !refreshCalled {
+		t.Fatal("the network phase did not run")
+	}
+	if gotCredential != nil {
+		t.Fatalf("network phase got credential %+v, want none", gotCredential)
+	}
+}

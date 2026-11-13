@@ -201,6 +201,10 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 		BaseURL: provider.BaseURL,
 		Headers: provider.Headers,
 		Auth:    provider.Auth,
+		// pi.dev serves the catalog, so a stale provider login must not block or
+		// fail its refresh (pi v1.5.2 b4afdddf core/remote-catalog-provider.ts
+		// refreshModelsAuth: "configured").
+		RefreshModelsAuth: "configured",
 		// The baseline is the built-in catalog; the persisted pi.dev overlay
 		// merges over it by model id.
 		ModelsGetter: func() []*ai.Model {
