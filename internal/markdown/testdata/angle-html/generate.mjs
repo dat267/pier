@@ -1,24 +1,39 @@
-// pi v1.4.0 (4a080252), packages/tui/src/components/markdown.ts and its pinned
-// marked 18.0.11 / marked-cjk-friendly 0.1.2 dependencies. Read-only source load.
-// Install those versions in a temporary directory, then regenerate from root:
-// NODE_PATH=<temporary directory>/node_modules node internal/markdown/testdata/angle-html/generate.mjs ./pi > internal/markdown/testdata/angle-html/fixtures.json
+// pi v1.5.2 (b4afdddf), packages/tui/src/components/markdown.ts and its pinned
+// marked 18.0.11 / marked-cjk-friendly 0.1.2 dependencies. Read-only source load:
+// the packages come from the reference checkout, so this runs offline after the
+// `npm ci` that `just goldens` already needs. From the repository root:
+//
+//	node internal/markdown/testdata/angle-html/generate.mjs ./pi > internal/markdown/testdata/angle-html/fixtures.json
 import { readFileSync } from "node:fs";
 import { createRequire, stripTypeScriptTypes } from "node:module";
 import { resolve } from "node:path";
 
-const require = createRequire(import.meta.url);
+const root = resolve(process.argv[2] ?? "./pi");
+// Resolve the reference's own installed dependencies, so this runs offline
+// without a NODE_PATH pointing at a temporary install.
+const require = createRequire(resolve(root, "package.json"));
 for (const [name, version] of [["marked", "18.0.11"], ["marked-cjk-friendly", "0.1.2"]]) {
 	if (require(`${name}/package.json`).version !== version) throw new Error(`Expected ${name} ${version}`);
 }
 const { Marked, Tokenizer } = require("marked");
 const markedCjkFriendly = require("marked-cjk-friendly").default;
-const root = resolve(process.argv[2] ?? "./pi");
 const source = readFileSync(`${root}/packages/tui/src/components/markdown.ts`, "utf8");
 const start = source.indexOf("const STRICT_STRIKETHROUGH_REGEX");
 const end = source.indexOf("/**\n * Default text styling");
 if (start < 0 || end <= start) throw new Error("Cannot locate reference Markdown configuration");
 const setup = stripTypeScriptTypes(source.slice(start, end));
-const parser = new Function("Marked", "Tokenizer", "markedCjkFriendly", `${setup}\nreturn markdownParser;`)(Marked, Tokenizer, markedCjkFriendly);
+// The CJK tokenizer references this regex, which markdown.ts imports from
+// utils.ts; supply it from the reference's own module.
+const { cjkPunctuationRegex } = await import(
+	new URL(`file://${resolve(root, "packages/tui/src/utils.ts")}`).href
+);
+const parser = new Function(
+	"Marked",
+	"Tokenizer",
+	"markedCjkFriendly",
+	"cjkPunctuationRegex",
+	`${setup}\nreturn markdownParser;`,
+)(Marked, Tokenizer, markedCjkFriendly, cjkPunctuationRegex);
 
 // Same token projection as internal/markdown/mdgolden_test.go. Ignore lexer
 // bookkeeping and preserve all render-relevant fields, including child order.

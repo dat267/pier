@@ -133,8 +133,8 @@ value-shaped loops on the UI thread.
   `just goldens` runs every generator with no arguments: one whose fixture is
   named `golden.json` is compared on stdout, one named otherwise is run and
   must leave the tree unchanged, and one that cannot run offline is named as
-  uncovered (`internal/markdown/testdata/angle-html` needs `marked@18.0.11` and
-  `marked-cjk-friendly@0.1.2` installed).
+  uncovered. Generators that need the reference's npm packages resolve them
+  from `./pi/node_modules` (after `npm ci`), not from a temporary install.
 
 ## Out of scope
 
