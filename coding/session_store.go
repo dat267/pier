@@ -1300,7 +1300,7 @@ type customMessagePayload struct {
 	Role       string          `json:"role"`
 	CustomType string          `json:"customType"`
 	Content    json.RawMessage `json:"content"`
-	Display    bool            `json:"display"`
+	Display    *bool           `json:"display,omitempty"`
 	Details    json.RawMessage `json:"details,omitempty"`
 	Timestamp  int64           `json:"timestamp"`
 }
@@ -1322,6 +1322,13 @@ type branchSummaryPayload struct {
 }
 
 func CreateCustomMessage(customType string, content json.RawMessage, display bool, details json.RawMessage, timestamp int64) *ai.CustomMessage {
+	return createCustomMessage(customType, content, &display, details, timestamp)
+}
+
+// createCustomMessage builds the message with the entry's own display value, so
+// an entry written without one yields a message without the field (upstream
+// spreads entry.display, undefined and all).
+func createCustomMessage(customType string, content json.RawMessage, display *bool, details json.RawMessage, timestamp int64) *ai.CustomMessage {
 	if timestamp == 0 {
 		timestamp = time.Now().UnixMilli()
 	}
@@ -1369,7 +1376,7 @@ func SessionEntryToContextMessages(entry *SessionEntry) []ai.Message {
 		if len(content) == 0 || bytes.Equal(bytes.TrimSpace(content), []byte("null")) {
 			content = json.RawMessage(`[]`)
 		}
-		return []ai.Message{CreateCustomMessage(entry.CustomType, content, entry.Display != nil && *entry.Display, entry.Details, entryTimestampMS(entry))}
+		return []ai.Message{createCustomMessage(entry.CustomType, content, entry.Display, entry.Details, entryTimestampMS(entry))}
 	case "branch_summary":
 		if entry.Summary != "" {
 			return []ai.Message{CreateBranchSummaryMessage(entry.Summary, entry.FromID, entryTimestampMS(entry))}

@@ -2,6 +2,7 @@ package coding
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/dat267/pier/ai"
@@ -153,5 +154,28 @@ func TestContextMessagesNormalizeMissingContent(t *testing.T) {
 				t.Fatalf("content=%s want=%s", probe.Content, tc.want)
 			}
 		})
+	}
+}
+
+// pi v1.5.2 (b4afdddf) core/session-manager.ts sessionEntryToContextMessages
+// passes entry.display straight to createCustomMessage, which spreads it, so an
+// entry written without a display field yields a message without one too.
+func TestCustomMessageKeepsAnAbsentDisplayField(t *testing.T) {
+	entry := &SessionEntry{
+		Type:       "custom_message",
+		CustomType: "note",
+		Content:    json.RawMessage(`[{"type":"text","text":"no display"}]`),
+		Timestamp:  "2026-05-01T12:00:00.000Z",
+	}
+	messages := SessionEntryToContextMessages(entry)
+	if len(messages) != 1 {
+		t.Fatalf("messages = %d, want 1", len(messages))
+	}
+	encoded, err := ai.MarshalMessages(messages)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if strings.Contains(string(encoded[0]), `"display"`) {
+		t.Fatalf("message = %s, want no display field", encoded[0])
 	}
 }

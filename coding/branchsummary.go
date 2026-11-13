@@ -113,10 +113,9 @@ func branchMessageFromEntry(entry *SessionEntry) ai.Message {
 		}
 		return message
 	case "custom_message":
-		display := entry.Display != nil && *entry.Display
 		payload, err := ai.MarshalJSON(customMessagePayload{
 			Role: RoleCustom, CustomType: entry.CustomType,
-			Content: decodeCustomMessageContent(entry.Content), Display: display,
+			Content: decodeCustomMessageContent(entry.Content), Display: entry.Display,
 			Timestamp: entryTimestampMS(entry),
 		})
 		if err != nil {
