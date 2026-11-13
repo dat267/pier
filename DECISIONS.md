@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D468)
+# Deliberate divergences from pi (D1–D469)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7521,3 +7521,19 @@ message's field order, which persisted sessions depend on byte for byte, for a
 shape upstream never writes.
 
 Test: `TestAssistantMessageAlwaysCarriesUsage`.
+
+### D469
+
+**A package source filter set through the API is written with its keys sorted.**
+
+Reference: pi v1.5.2 (b4afdddf) `core/settings-manager.ts` stores package sources
+as JavaScript objects, so `setPackages([{source: "pkg-b", skills: ["s"]}])`
+persists the keys in that order. Pier's `SetPackages` and `SetProjectPackages`
+take `[]any`, so by the time the writer sees a filter it is a Go map and the
+encoder sorts its keys. Nothing in pier sets packages (the package manager is out
+of scope), and a faithful fix needs an order-preserving input such as raw JSON or
+an ordered object, which changes the public API, so the current shape is pinned
+instead. A settings file that already carries a filter keeps its key order: the
+save path re-uses the file's element order (D468's neighbour, A541).
+
+Test: `TestSettingsPackageFilterKeysAreSorted`.

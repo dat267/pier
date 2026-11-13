@@ -1129,3 +1129,32 @@ func TestSettingsRetryZeroMaxAgentDelayReachesThePolicy(t *testing.T) {
 		t.Errorf("RetryDelayMS = %d, want 0", got)
 	}
 }
+
+// D469: SetPackages takes []any, so a package source filter reaches the writer
+// as a Go map and its keys are written sorted. pi v1.5.2 (b4afdddf)
+// core/settings-manager.ts stores the caller's JavaScript object, which keeps
+// insertion order. No production caller sets packages (the package manager is
+// out of scope), and a faithful fix needs an order-preserving input type, so
+// this pins the current shape instead of changing the public API.
+func TestSettingsPackageFilterKeysAreSorted(t *testing.T) {
+	dir := t.TempDir()
+	cwd := filepath.Join(dir, "project")
+	agentDir := filepath.Join(dir, "agent")
+	if err := os.MkdirAll(cwd, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(agentDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	trusted := true
+	manager := NewSettingsManagerFromFiles(cwd, agentDir, SettingsManagerCreateOptions{ProjectTrusted: &trusted})
+	manager.SetPackages([]any{map[string]any{"source": "pkg-b", "skills": []any{"s"}}})
+	manager.FlushPersists()
+	written, err := os.ReadFile(filepath.Join(agentDir, "settings.json"))
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	if !strings.Contains(string(written), "\"skills\": [") || strings.Index(string(written), "\"skills\"") > strings.Index(string(written), "\"source\"") {
+		t.Fatalf("settings = %s, want the filter keys sorted", written)
+	}
+}
