@@ -375,3 +375,88 @@ func TestSessionCompactionReplaysPastACustomMessage(t *testing.T) {
 		t.Fatalf("last message is not the summary instruction: %q", instruction)
 	}
 }
+
+// A resumed session restores its history from disk, then sends its first
+// request with it. The capture is per process, so this is the case a restart
+// leaves behind: a compaction after that turn must still replay the prefix
+// instead of reserializing the conversation (D419).
+func TestSessionCompactionReplaysAfterResume(t *testing.T) {
+	dir := t.TempDir()
+	manager := NewSessionManager(dir, nil)
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 8192}
+	answer := func(requestModel *ai.Model, text string) *ai.AssistantMessageEventStream {
+		message := &ai.AssistantMessage{
+			API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
+			Content: ai.ContentList{ai.TextContent{Text: text}}, StopReason: ai.StopStop,
+			Timestamp: time.Now().UnixMilli(), Usage: ai.Usage{Input: 10, TotalTokens: 10},
+		}
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: message.StopReason, Message: message})
+		}()
+		return stream
+	}
+	first, err := NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, Model: model, ConvertToLlm: ConvertToLlm,
+		StreamFn: func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			return answer(requestModel, "done")
+		},
+		Settings: SessionSettings{Compaction: smallCompactionSettings()},
+		Control:  &AgentSessionControl{autoCompaction: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := first.Prompt(context.Background(), "start", &PromptOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	path := manager.GetSessionFile()
+	if path == "" {
+		t.Fatal("no session file was written")
+	}
+	first.Dispose()
+
+	resumed, err := OpenSession(path, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var turnPrefix []ai.Message
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: resumed, Model: model, ConvertToLlm: ConvertToLlm,
+		StreamFn: func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			turnPrefix = append([]ai.Message{}, transcript.Messages...)
+			return answer(requestModel, "next")
+		},
+		Settings: SessionSettings{Compaction: smallCompactionSettings()},
+		Control:  &AgentSessionControl{autoCompaction: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Prompt(context.Background(), "next", &PromptOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if len(turnPrefix) == 0 {
+		t.Fatal("the resumed session sent no request")
+	}
+
+	var summaryRequests []ai.TranscriptContext
+	session.CompactionStreamFn = func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		summaryRequests = append(summaryRequests, transcript)
+		return answer(requestModel, "## Goal\ncontinue")
+	}
+	if _, err := session.CompactSession(context.Background(), ""); err != nil {
+		t.Fatal(err)
+	}
+	if len(summaryRequests) != 1 {
+		t.Fatalf("summary requests = %d", len(summaryRequests))
+	}
+	if isStockSummarizationRequest(summaryRequests[0]) {
+		t.Fatal("a resumed session's compaction must replay its last request, not reserialize the history")
+	}
+	for i, message := range turnPrefix {
+		if summaryRequests[0].Messages[i] != message {
+			t.Fatalf("message %d is not the resumed turn's", i)
+		}
+	}
+}
