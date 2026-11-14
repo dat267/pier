@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D470)
+# Deliberate divergences from pi (D1–D471)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7567,3 +7567,22 @@ compares their write streams in full.
 
 Tests: `TestAltScreenOverWideClampKeepsLineReset`,
 `TestAltScreenDeferredReplayClampKeepsLineReset`, `TestAltScreenAgainstUpstreamGolden`.
+
+### D471
+
+**A single-line input strips escape sequences from a paste; the reference pastes
+what it is given.**
+
+Reference: pi v1.5.2 (b4afdddf) `components/input.ts` `handlePaste` removes the
+newlines and carriage returns and expands tabs, then installs the rest verbatim,
+and `Input.render` draws the value as-is. The value is therefore a terminal sink
+that a paste can reach without a keystroke: copying text out of a transcript or a
+file and pasting it into the rename dialog or a search box delivers whatever
+escape sequences the source held (an OSC 52 clipboard write, a CSI 2J clear).
+Pier runs the pasted text through `tui.SanitizeUntrustedText` after the newline
+and tab handling, the rule the editor already applies on entry (D342, D452);
+typed text is unaffected because a keystroke cannot produce a raw ESC. The cost
+is that a pasted name holding escapes no longer matches its source exactly, which
+the editor's row already accepts.
+
+Test: `TestInputPasteCannotEmitTerminalControls`.

@@ -400,6 +400,10 @@ func (in *Input) handlePaste(pastedText string) {
 	cleanText = strings.ReplaceAll(cleanText, "\r", "")
 	cleanText = strings.ReplaceAll(cleanText, "\n", "")
 	cleanText = strings.ReplaceAll(cleanText, "\t", "    ")
+	// The value is drawn as-is, so a paste cannot carry escape sequences into
+	// the terminal: the reference's input.ts pastes what it is given, and the
+	// editor strips them on entry for the same reason (D452, D471).
+	cleanText = SanitizeUntrustedText(cleanText)
 
 	in.value = in.value[:in.cursor] + cleanText + in.value[in.cursor:]
 	in.cursor += len(cleanText)
