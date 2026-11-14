@@ -146,6 +146,11 @@ type AltScreenOptions struct {
 	// CopySelection returns (handled, ok, message): handled=false falls back to
 	// OSC 52.
 	CopySelection func(text string) (handled bool, ok bool, message string)
+	// KeepSelectionPadding paints a selection over the spaces a row is padded
+	// with, as upstream does. The default stops the highlight at the row's last
+	// non-blank cell (D471); the upstream frame golden turns this on so it still
+	// compares pier against upstream byte for byte.
+	KeepSelectionPadding bool
 }
 
 // AltScreen is the fullscreen renderer.
@@ -189,10 +194,12 @@ type AltScreen struct {
 	// lastSelectionAutoScrollAt paces the clock-driven selection auto-scroll
 	// (stage 4: no ticker goroutine).
 	lastSelectionAutoScrollAt time.Time
-	selectionPressActive      bool
-	scrollbarDrag             *altScrollbarDrag
-	scrollbarHover            *ScrollView
-	scrollToEndRect           *scrollToEndIndicatorRect
+	// keepSelectionPadding paints the selection over row padding (D471).
+	keepSelectionPadding bool
+	selectionPressActive bool
+	scrollbarDrag        *altScrollbarDrag
+	scrollbarHover       *ScrollView
+	scrollToEndRect      *scrollToEndIndicatorRect
 	// scrollToEndCache memoises the truncated indicator and its column: the
 	// label is composited on every scroll-up frame, and re-truncating the styled
 	// label was a per-frame allocation. The key includes the raw label, so a
@@ -259,6 +266,7 @@ func NewAltScreen(terminal Terminal, showHardwareCursor bool, logDirectory strin
 		onRightClickPaste:           options.OnRightClickPaste,
 		copyOnSelect:                true,
 		copySelection:               options.CopySelection,
+		keepSelectionPadding:        options.KeepSelectionPadding,
 		altScreenActive:             false,
 		selectionGranularity:        "character",
 	}
@@ -1990,6 +1998,13 @@ func (s *AltScreen) getSelectionColumnsLocked(line string, row int, selection al
 	return max(minColumn, start), min(maxColumn, end)
 }
 
+// selectionContentWidth is the visible width of a screen line up to its last
+// non-blank cell: the renderer pads lines to the terminal width, so the
+// trailing spaces are padding, not text (D471).
+func selectionContentWidth(line string) int {
+	return VisibleWidth(strings.TrimRight(StripTerminalSequences(line), " \t"))
+}
+
 func (s *AltScreen) getActiveSelectionTextLocked() (string, bool) {
 	selection, ok := s.getSelectionBoundsLocked()
 	if !ok {
@@ -2244,6 +2259,14 @@ func (s *AltScreen) applySelection(screen []string, layout *LayoutFrame) []strin
 		}
 		lineWidth := VisibleWidth(line)
 		start, end := s.getSelectionColumnsLocked(line, row, screenSelection, minColumn, maxColumn)
+		// D471: the screen pads every line to the terminal width, and the
+		// padding is not text. Upstream paints it as selected, which draws a
+		// solid rectangle past the end of every short line.
+		if !s.keepSelectionPadding {
+			if content := selectionContentWidth(line); end > content {
+				end = content
+			}
+		}
 		if end <= start {
 			out = append(out, line)
 			continue

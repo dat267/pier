@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D470)
+# Deliberate divergences from pi (D1–D471)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7564,3 +7564,24 @@ compares their write streams in full.
 
 Tests: `TestAltScreenOverWideClampKeepsLineReset`,
 `TestAltScreenDeferredReplayClampKeepsLineReset`, `TestAltScreenAgainstUpstreamGolden`.
+
+### D471
+
+**The selection highlight stops at a row's last non-blank cell; upstream paints
+the padding to the terminal width.**
+
+Reference: pi v1.5.2 (b4afdddf) `tui-alt-screen.ts` `applySelection` slices each
+row to the column range and paints it, and the renderer pads every row to the
+terminal width, so dragging across the end of a line highlights a solid block of
+spaces with no text under it. Claude Code's selection stops at the text, which
+reads better on a padded transcript. Pier clamps each row's selection end to the
+visible width of the line with its trailing blanks removed, so the highlight and
+the copy both stop at the text; the copy already trimmed, so only the paint
+changes.
+
+`AltScreenOptions.KeepSelectionPadding` restores upstream's paint, and the
+upstream frame golden turns it on so its write streams still compare byte for
+byte. The default renderer trims.
+
+Tests: `TestSelectionHighlightSkipsHorizontalPadding`,
+`TestAltScreenAgainstUpstreamGolden`.

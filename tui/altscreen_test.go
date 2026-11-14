@@ -65,7 +65,13 @@ func TestAltScreenAgainstUpstreamGolden(t *testing.T) {
 		want := golden[label]
 		spec := want.Spec
 		terminal := &recordingTerminal{width: 24, height: 6}
-		options := AltScreenOptions{}
+		options := AltScreenOptions{
+			// D471: upstream paints the selection over the row padding; the
+			// golden holds its frames, so keep that form here. The default
+			// stops the highlight at the last non-blank cell
+			// (TestSelectionHighlightSkipsHorizontalPadding).
+			KeepSelectionPadding: true,
+		}
 		if spec.Indicator {
 			options.ScrollToEndIndicator = func() string { return " ↓ Jump to latest message " }
 		}
