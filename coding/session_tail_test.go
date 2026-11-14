@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/internal/goal"
 )
 
 // /tail is pier-only: upstream has no command that copies the live context
@@ -242,5 +243,38 @@ func TestTailSessionKeepsTheLiveContextOnAReopenedSession(t *testing.T) {
 	}
 	if len(branch) >= beforeBranch || len(tailed.GetEntries()) >= beforeEntries {
 		t.Errorf("tail did not drop the compacted prefix: %d/%d kept of %d/%d", len(branch), len(tailed.GetEntries()), beforeBranch, beforeEntries)
+	}
+}
+
+// A goal's lifecycle can start before the window /tail copies. The window then
+// holds the later operations without the create, and the new session's replay
+// warns that an operation arrived without a goal (FoldGoal). The copy drops those
+// entries: their state cannot be reconstructed, and the goal is not live in the
+// tailed session anyway.
+func TestTailSessionDropsGoalEntriesWithoutTheirCreate(t *testing.T) {
+	persist := true
+	source := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: &persist})
+	model := &ai.Model{ID: "m", Provider: "test", ContextWindow: 1000}
+	source.AppendModelChange(model.Provider, model.ID)
+	source.AppendMessage(&ai.SystemMessage{Content: ai.StringOrBlocks{Text: "system prompt"}, Timestamp: 1})
+	source.AppendCustomEntry(goal.GoalCustomType, json.RawMessage(`{"operation":"create","goal":{"version":1,"id":"g","revision":1,"phase":"active","objective":"cold goal"}}`))
+	source.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "cold question"}, Timestamp: 2})
+	kept := source.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "kept question"}, Timestamp: 3})
+	source.AppendCompaction("summary of the cold prefix", kept, 20, nil, false, nil)
+	source.AppendCustomEntry(goal.GoalCustomType, json.RawMessage(`{"operation":"complete","goal":{"version":1,"id":"g","revision":2,"phase":"complete","objective":"cold goal"}}`))
+	source.AppendCustomEntry(goal.GoalTurnType, json.RawMessage(`{"turn":1}`))
+
+	tailed, err := TailSession(source, model, ai.ThinkHigh, source.GetCwd(), source.GetSessionDir(), source.SessionDirManaged(), nil)
+	if err != nil {
+		t.Fatalf("tail: %v", err)
+	}
+	var goalEntries []string
+	for _, entry := range tailed.GetBranch("") {
+		if entry.Type == "custom" && (entry.CustomType == goal.GoalCustomType || entry.CustomType == goal.GoalTurnType) {
+			goalEntries = append(goalEntries, entry.CustomType)
+		}
+	}
+	if len(goalEntries) != 0 {
+		t.Fatalf("tail kept goal entries without their create: %v", goalEntries)
 	}
 }

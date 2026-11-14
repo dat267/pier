@@ -1,9 +1,11 @@
 package coding
 
 import (
+	"encoding/json"
 	"errors"
 
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/internal/goal"
 )
 
 // TailSession writes a new session that starts from the current live context
@@ -27,7 +29,7 @@ func TailSession(source *SessionManager, model *ai.Model, thinking ai.ThinkingLe
 		return nil, errors.New("Nothing to tail yet")
 	}
 
-	window := tailWindow(branch)
+	window := dropOrphanGoalEntries(tailWindow(branch))
 	hasConversation := false
 	for i := range window {
 		if window[i].Type == "message" && projectedRole(&window[i], nil) != string(ai.RoleSystem) {
@@ -79,6 +81,38 @@ func TailSession(source *SessionManager, model *ai.Model, thinking ai.ThinkingLe
 		parent = &parentSession
 	}
 	return writeForkedSession(targetCwd, sessionDir, manageDir, parent, entries, options)
+}
+
+// dropOrphanGoalEntries removes goal lifecycle entries whose create is not in
+// the window. A goal can start before the newest compaction, so the window then
+// holds its later operations alone; replaying them warns that an operation
+// arrived without a goal, and the goal is not live in the tailed session either
+// way (D378).
+func dropOrphanGoalEntries(entries []SessionEntry) []SessionEntry {
+	created := false
+	kept := entries[:0]
+	for _, entry := range entries {
+		if entry.Type == "custom" && (entry.CustomType == goal.GoalCustomType || entry.CustomType == goal.GoalTurnType) {
+			if entry.CustomType == goal.GoalCustomType && goalOperation(entry.Data) == "create" {
+				created = true
+			} else if !created {
+				continue
+			}
+		}
+		kept = append(kept, entry)
+	}
+	return kept
+}
+
+// goalOperation is the operation a goal state entry records.
+func goalOperation(data json.RawMessage) string {
+	var change struct {
+		Operation string `json:"operation"`
+	}
+	if json.Unmarshal(data, &change) != nil {
+		return ""
+	}
+	return change.Operation
 }
 
 // tailWindow returns the entries the live context keeps, in branch order:
