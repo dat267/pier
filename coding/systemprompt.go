@@ -161,7 +161,7 @@ func buildRules(selectedTools []string, toolGuidelines map[string][]string, prom
 				guidance = fmt.Sprintf("use the %s tool for changes to an existing file and the %s tool for a new file or a full rewrite",
 					ToolNameEdit, ToolNameWrite)
 			}
-			addRule(fmt.Sprintf("Do not write or edit files through %s (redirection, heredocs, sed, perl, python); %s.",
+			addRule(fmt.Sprintf("Do not write or edit files through %s (redirection, heredocs, tee, sed -i, perl, python, or node scripts), even inside a compound command like cd dir && cat > file; %s.",
 				shell, guidance))
 		}
 	}

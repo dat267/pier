@@ -27,7 +27,7 @@ func shellWriteRulePrompt(t *testing.T, tools ...string) string {
 
 func TestSystemPromptForbidsShellFileWrites(t *testing.T) {
 	prompt := shellWriteRulePrompt(t, "read", "bash", "edit", "write")
-	want := "- Do not write or edit files through bash (redirection, heredocs, sed, perl, python); use the edit tool for changes to an existing file and the write tool for a new file or a full rewrite."
+	want := "- Do not write or edit files through bash (redirection, heredocs, tee, sed -i, perl, python, or node scripts), even inside a compound command like cd dir && cat > file; use the edit tool for changes to an existing file and the write tool for a new file or a full rewrite."
 	if !strings.Contains(prompt, want) {
 		t.Fatalf("prompt is missing the shell-write rule %q:\n%s", want, prompt)
 	}
@@ -40,7 +40,7 @@ func TestSystemPromptShellWriteRuleNamesTheAvailableFileTool(t *testing.T) {
 	}{
 		{[]string{"bash", "edit"}, "use the edit tool for every file change."},
 		{[]string{"bash", "write"}, "use the write tool for every file change."},
-		{[]string{"write", "powershell"}, "Do not write or edit files through PowerShell (redirection, heredocs, sed, perl, python); use the write tool for every file change."},
+		{[]string{"write", "powershell"}, "Do not write or edit files through PowerShell (redirection, heredocs, tee, sed -i, perl, python, or node scripts), even inside a compound command like cd dir && cat > file; use the write tool for every file change."},
 	} {
 		prompt := shellWriteRulePrompt(t, test.tools...)
 		if !strings.Contains(prompt, test.want) {
