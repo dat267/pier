@@ -146,11 +146,6 @@ type AltScreenOptions struct {
 	// CopySelection returns (handled, ok, message): handled=false falls back to
 	// OSC 52.
 	CopySelection func(text string) (handled bool, ok bool, message string)
-	// KeepSelectionPadding paints a selection over the spaces a row is padded
-	// with, as upstream does. The default stops the highlight at the row's last
-	// non-blank cell (D471); the upstream frame golden turns this on so it still
-	// compares pier against upstream byte for byte.
-	KeepSelectionPadding bool
 }
 
 // AltScreen is the fullscreen renderer.
@@ -194,12 +189,10 @@ type AltScreen struct {
 	// lastSelectionAutoScrollAt paces the clock-driven selection auto-scroll
 	// (stage 4: no ticker goroutine).
 	lastSelectionAutoScrollAt time.Time
-	// keepSelectionPadding paints the selection over row padding (D471).
-	keepSelectionPadding bool
-	selectionPressActive bool
-	scrollbarDrag        *altScrollbarDrag
-	scrollbarHover       *ScrollView
-	scrollToEndRect      *scrollToEndIndicatorRect
+	selectionPressActive      bool
+	scrollbarDrag             *altScrollbarDrag
+	scrollbarHover            *ScrollView
+	scrollToEndRect           *scrollToEndIndicatorRect
 	// scrollToEndCache memoises the truncated indicator and its column: the
 	// label is composited on every scroll-up frame, and re-truncating the styled
 	// label was a per-frame allocation. The key includes the raw label, so a
@@ -266,7 +259,6 @@ func NewAltScreen(terminal Terminal, showHardwareCursor bool, logDirectory strin
 		onRightClickPaste:           options.OnRightClickPaste,
 		copyOnSelect:                true,
 		copySelection:               options.CopySelection,
-		keepSelectionPadding:        options.KeepSelectionPadding,
 		altScreenActive:             false,
 		selectionGranularity:        "character",
 	}
@@ -1652,24 +1644,10 @@ func (s *AltScreen) getWordSelectionLocked(point altSelectionPoint) (altSelectio
 }
 
 func (s *AltScreen) getLineSelectionLocked(point altSelectionPoint) altSelectionRange {
-	// D472: a line the renderer wrapped spans several rows; a triple click takes
-	// the whole run, from the row that does not continue upward to the row that
-	// does not continue downward.
-	rowWidth := s.selectionRowWidthLocked(point.ScrollView)
-	sourceLine := func(row int) string {
-		return s.getSelectionSourceLineLocked(altSelectionPoint{Row: row, ScrollView: point.ScrollView})
-	}
-	first, last := point.Row, point.Row
-	for first > 0 && selectionWrapsInto(sourceLine(first-1), sourceLine(first), rowWidth) {
-		first--
-	}
-	for selectionWrapsInto(sourceLine(last), sourceLine(last+1), rowWidth) {
-		last++
-	}
 	return altSelectionRange{
-		Start: altSelectionPoint{Row: first, Col: 0, ScrollView: point.ScrollView},
+		Start: altSelectionPoint{Row: point.Row, Col: 0, ScrollView: point.ScrollView},
 		End: altSelectionPoint{
-			Row: last, Col: VisibleWidth(sourceLine(last)),
+			Row: point.Row, Col: VisibleWidth(s.getSelectionSourceLineLocked(point)),
 			ScrollView: point.ScrollView, Boundary: true,
 		},
 	}
@@ -2012,126 +1990,6 @@ func (s *AltScreen) getSelectionColumnsLocked(line string, row int, selection al
 	return max(minColumn, start), min(maxColumn, end)
 }
 
-// selectionRowColumns is the column range a selection covers on one row. The
-// range starts at the margin the selected rows share, so the highlight and the
-// copy skip the transcript's own indentation but keep the indentation that is
-// content, such as a code block or an indented test failure. It ends at the
-// row's last non-blank cell, so a padded row does not paint its padding (D471).
-func (s *AltScreen) selectionRowColumns(line string, row int, selection altSelectionRange, minColumn, maxColumn, margin int) (int, int) {
-	start, end := s.getSelectionColumnsLocked(line, row, selection, minColumn, maxColumn)
-	if s.keepSelectionPadding {
-		return start, end
-	}
-	if content := selectionContentWidth(line); end > content {
-		end = content
-	}
-	if start < margin {
-		start = margin
-	}
-	return start, end
-}
-
-// selectionMargin is the blank prefix every selected row shares: the transcript
-// indents its messages by that much, and the rest of a row's indent is content
-// (D471).
-func selectionMargin(sourceLines []string, selection altSelectionRange) int {
-	margin := -1
-	for row := selection.Start.Row; row <= selection.End.Row; row++ {
-		if row < 0 || row >= len(sourceLines) {
-			continue
-		}
-		if first := selectionFirstContentColumn(sourceLines[row]); margin < 0 || first < margin {
-			margin = first
-		}
-	}
-	return max(0, margin)
-}
-
-// selectionFirstContentColumn is the column of a screen line's first non-blank
-// cell: the renderer indents rows, and the margin is not text (D471).
-func selectionFirstContentColumn(line string) int {
-	plain := StripTerminalSequences(line)
-	return VisibleWidth(plain) - VisibleWidth(strings.TrimLeft(plain, " \t"))
-}
-
-// selectionRowRightEdge is the column just past a screen line's last non-blank
-// cell, indentation included (D472).
-func selectionRowRightEdge(line string) int {
-	return selectionFirstContentColumn(line) + selectionContentWidth(line)
-}
-
-// selectionContentWidth is the visible width of a screen line up to its last
-// non-blank cell: the renderer pads lines to the terminal width, so the
-// trailing spaces are padding, not text (D471).
-func selectionContentWidth(line string) int {
-	return VisibleWidth(strings.TrimRight(StripTerminalSequences(line), " \t"))
-}
-
-// selectionRowWidthLocked is the width the selected rows were rendered at: the
-// scroll view's content width, or the screen width outside one.
-func (s *AltScreen) selectionRowWidthLocked(scrollView *ScrollView) int {
-	if scrollView != nil && s.currentLayout != nil {
-		if box, ok := GetScrollViewBox(*s.currentLayout, scrollView); ok {
-			return scrollView.GetContentWidth(box.Rect.Width)
-		}
-	}
-	return s.previousScreenWidth
-}
-
-// selectionWrapsInto reports whether a row was wrapped into the next one. Word
-// wrapping leaves the row short of the width, so the width alone cannot tell: a
-// row is a wrap when the next row's first word would not have fitted after it
-// (D472).
-func selectionWrapsInto(line, next string, rowWidth int) bool {
-	if rowWidth <= 0 || next == "" {
-		return false
-	}
-	word := strings.TrimLeft(StripTerminalSequences(next), " \t")
-	if index := strings.IndexAny(word, " \t"); index >= 0 {
-		word = word[:index]
-	}
-	if word == "" {
-		return false
-	}
-	return selectionRowRightEdge(line)+1+VisibleWidth(word) > rowWidth
-}
-
-// joinSelectionRows appends a wrapped continuation to the line it continues. The
-// wrapper trims the space at a break, so it goes back unless the two halves are
-// one word: a word wider than the row is broken inside itself, and CJK wraps the
-// same way (D472).
-func joinSelectionRows(left, right, previousText string, rowWidth int) string {
-	if left == "" || right == "" {
-		return left + right
-	}
-	if rowWidth <= 0 {
-		return left + " " + right
-	}
-	if selectionWordWidth(previousText, false)+selectionWordWidth(right, true) > rowWidth {
-		return left + right
-	}
-	return left + " " + right
-}
-
-// selectionWordWidth is the visible width of the first or last whitespace-
-// separated word of a screen line.
-func selectionWordWidth(line string, first bool) int {
-	text := strings.TrimSpace(StripTerminalSequences(line))
-	if text == "" {
-		return 0
-	}
-	if first {
-		if index := strings.IndexAny(text, " \t"); index >= 0 {
-			text = text[:index]
-		}
-		return VisibleWidth(text)
-	}
-	if index := strings.LastIndexAny(text, " \t"); index >= 0 {
-		text = text[index+1:]
-	}
-	return VisibleWidth(text)
-}
-
 func (s *AltScreen) getActiveSelectionTextLocked() (string, bool) {
 	selection, ok := s.getSelectionBoundsLocked()
 	if !ok {
@@ -2149,40 +2007,14 @@ func (s *AltScreen) getActiveSelectionTextLocked() (string, bool) {
 		sourceLines = box.ScrollContentLines
 	}
 	var lines []string
-	// D472: a row whose text runs to the row width is a soft wrap, so the copy
-	// joins it with the next row instead of starting a new line. A row the
-	// content ended with a newline is shorter than the width.
-	rowWidth := s.selectionRowWidthLocked(selection.Start.ScrollView)
-	joinIndent := -1
-	margin := selectionMargin(sourceLines, selection)
-	previousLine := ""
 	for row := selection.Start.Row; row <= selection.End.Row; row++ {
 		line := ""
 		if row >= 0 && row < len(sourceLines) {
 			line = sourceLines[row]
 		}
-		start, end := s.selectionRowColumns(line, row, selection, 0, VisibleWidth(line), margin)
+		start, end := s.getSelectionColumnsLocked(line, row, selection, 0, VisibleWidth(line))
 		selected := SliceByColumn(line, start, max(0, end-start), true)
-		text := strings.TrimRight(StripTerminalSequences(selected), " \t")
-		next := ""
-		if row+1 >= 0 && row+1 < len(sourceLines) && row < selection.End.Row {
-			next = sourceLines[row+1]
-		}
-		wrapped := selectionWrapsInto(line, next, rowWidth)
-		if joinIndent >= 0 && len(lines) > 0 {
-			continuation := strings.TrimPrefix(text, strings.Repeat(" ", min(joinIndent, len(text))))
-			lines[len(lines)-1] = joinSelectionRows(lines[len(lines)-1], continuation, previousLine, rowWidth)
-		} else {
-			lines = append(lines, text)
-		}
-		if wrapped {
-			if joinIndent < 0 {
-				joinIndent = len(text) - len(strings.TrimLeft(text, " \t"))
-			}
-		} else {
-			joinIndent = -1
-		}
-		previousLine = line
+		lines = append(lines, strings.TrimRight(StripTerminalSequences(selected), " \t"))
 	}
 	text := strings.Join(lines, "\n")
 	if text == "" {
@@ -2404,15 +2236,6 @@ func (s *AltScreen) applySelection(screen []string, layout *LayoutFrame) []strin
 		}
 	}
 	out := make([]string, 0, len(screen))
-	// The margin comes from the rows the selection covers, not from the rows on
-	// screen: scrolling must not move the selection (D471).
-	marginSource, marginSelection := screen, screenSelection
-	if selection.Start.ScrollView != nil {
-		if box, ok := GetScrollViewBox(*layout, selection.Start.ScrollView); ok && box.ScrollContentLines != nil {
-			marginSource, marginSelection = box.ScrollContentLines, selection
-		}
-	}
-	margin := selectionMargin(marginSource, marginSelection)
 	for row, line := range screen {
 		if row < minRow || row > maxRow || row < screenSelection.Start.Row || row > screenSelection.End.Row ||
 			IsImageLine(line) {
@@ -2420,7 +2243,7 @@ func (s *AltScreen) applySelection(screen []string, layout *LayoutFrame) []strin
 			continue
 		}
 		lineWidth := VisibleWidth(line)
-		start, end := s.selectionRowColumns(line, row, screenSelection, minColumn, maxColumn, margin)
+		start, end := s.getSelectionColumnsLocked(line, row, screenSelection, minColumn, maxColumn)
 		if end <= start {
 			out = append(out, line)
 			continue

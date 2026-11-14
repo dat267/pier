@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D472)
+# Deliberate divergences from pi (D1–D470)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7564,59 +7564,3 @@ compares their write streams in full.
 
 Tests: `TestAltScreenOverWideClampKeepsLineReset`,
 `TestAltScreenDeferredReplayClampKeepsLineReset`, `TestAltScreenAgainstUpstreamGolden`.
-
-### D471
-
-**The selection covers a row's text; upstream paints its indentation and
-padding too.**
-
-Reference: pi v1.5.2 (b4afdddf) `tui-alt-screen.ts` `applySelection` slices each
-row to the column range and paints it, so a drag from the left edge paints the
-transcript's own indentation, and a padded row paints the spaces past its text.
-Claude Code's selection covers the text. Pier starts each row at the margin every
-selected row shares, which is the transcript's indentation, and leaves the rest
-of a row's indent inside the selection: a test failure's hanging indent or a code
-block keeps it. Each row's range ends at its last non-blank cell, so a code
-block's padded rows do not paint a block of spaces. The copy uses the same range,
-so it matches what the highlight covers.
-
-`AltScreenOptions.KeepSelectionPadding` restores upstream's paint, and the
-upstream frame golden turns it on so its write streams still compare byte for
-byte. The default renderer trims.
-
-Tests: `TestSelectionHighlightSkipsLeadingPadding`,
-`TestSelectionHighlightKeepsLegitimateIndent`,
-`TestSelectionHighlightSkipsHorizontalPadding`, `TestSelectionCopySkipsLeadingPadding`,
-`TestSelectionCopyKeepsLegitimateIndent`,
-`TestSelectionCopyHonorsAStartInsideTheText`, `TestAltScreenAgainstUpstreamGolden`.
-
-### D472
-
-**A copied selection joins rows the renderer soft-wrapped into one line.**
-
-Reference: pi v1.5.2 (b4afdddf) `tui-alt-screen.ts` `getActiveSelectionText`
-joins every selected row with `\n`, so copying a paragraph the terminal wrapped
-pastes it back with a break at every screen edge. Claude Code joins the wrapped
-rows. Pier appends a wrapped row to the one it continues, dropping the
-indentation the continuation repeats; a row the content broke keeps its newline.
-
-Word wrapping leaves a row short of the width, so the width alone cannot say
-whether a row was wrapped: a row is a wrap when the next row's first word would
-not have fitted after it. The wrapper trims the space at a break, so joining puts
-one back, unless the two halves are a single word wider than the row (which the
-wrapper breaks inside itself) or the text is CJK, which wraps without spaces. A
-marker on the wrapped rows would be exact, but the component goldens compare
-`WrapTextWithAnsi` output against upstream byte for byte, so the join reads the
-rendered geometry instead.
-
-A triple click takes the whole run: it extends up while the row above wraps into
-the current one and down while the current row wraps into the next, so the
-selection is the line the content wrote rather than the rows the terminal shows.
-
-Tests: `TestSelectionJoinsSoftWrappedRows`,
-`TestSelectionJoinsSoftWrappedRowsInAScrollView`,
-`TestSelectionJoinsWrappedProseWithSpaces`,
-`TestSelectionJoinsWrappedRowsWithOutputPadding`,
-`TestSelectionJoinsWrappedRowsWithoutTheirIndent`, `TestSelectionKeepsHardLineBreaks`,
-`TestSelectionKeepsProseLineBreaks`, `TestTripleClickSelectsAWrappedLine`,
-`TestTripleClickSelectsOneHardLine`.
