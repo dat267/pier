@@ -5059,7 +5059,9 @@ Tests: `TestSummaryFileListsCapToTheMostRecentPaths`,
 Reference: pi v1.5.0 (`f9a26365`) `utils/frontmatter.ts` parses frontmatter with
 the `yaml` package. Pier parses the subset the Agent Skills spec's frontmatter
 uses: flat `key: value` pairs, quoted and plain scalars with the common boolean,
-numeric and null values, and literal (`|`) and folded (`>`) block scalars with
+numeric and null values, a plain scalar continued on more-indented lines (folded
+with single spaces, as the package folds it, stopping at a nested mapping or
+sequence), and literal (`|`) and folded (`>`) block scalars with
 either chomping indicator (`-`, `+`) and an indentation digit. Block scalars are
 loaded from the same lines the reference passes to the parser, so the
 frontmatter's closing delimiter drops its own final newline before chomping; that
@@ -5092,8 +5094,9 @@ wording.
 
 Tests: `TestParseFrontmatterBlockScalars`,
 `TestParseFrontmatterBlockScalarKeepsStringTypes`,
-`TestLoadSkillWithBlockScalarDescription`, and
-`TestParseFrontmatterBlockScalarsMatchUpstream`.
+`TestLoadSkillWithBlockScalarDescription`,
+`TestParseFrontmatterBlockScalarsMatchUpstream`, and
+`TestFrontmatterFoldsAPlainScalarContinuation`.
 
 ### D381
 

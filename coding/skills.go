@@ -19,9 +19,10 @@ import (
 
 // D380: upstream parses YAML with the `yaml` package; the Go port implements
 // the subset the Agent Skills spec's frontmatter uses. It tracks quoted versus
-// plain scalar types and common boolean, numeric and null values, and reads
-// literal and folded block scalars, but it does not parse nested YAML
-// structures or report the package's syntax errors.
+// plain scalar types and common boolean, numeric and null values, folds a plain
+// scalar that continues on more-indented lines, and reads literal and folded
+// block scalars, but it does not parse nested YAML structures or report the
+// package's syntax errors.
 
 // ParsedFrontmatter is the parse outcome.
 type ParsedFrontmatter struct {
@@ -85,6 +86,14 @@ func ParseFrontmatter(content string) ParsedFrontmatter {
 		quoted := len(value) >= 2 && (value[0] == '"' && value[len(value)-1] == '"' || value[0] == '\'' && value[len(value)-1] == '\'')
 		if quoted {
 			value = yamlQuotedScalar(value)
+		} else if value != "" {
+			// YAML folds a plain scalar that continues on more-indented lines
+			// with single spaces (yaml's parse, which utils/frontmatter.ts
+			// reads the block with), so a wrapped description keeps its text.
+			if parts, next := yamlPlainScalarContinuation(lines, index+1, yamlIndentWidth(rawLine)); len(parts) > 0 {
+				value += " " + strings.Join(parts, " ")
+				index = next
+			}
 		}
 		result.Frontmatter[key] = value
 		if !quoted && !yamlPlainScalarIsString(value) {
@@ -145,6 +154,45 @@ func yamlIndentWidth(line string) int {
 		width++
 	}
 	return width
+}
+
+// yamlPlainScalarContinuation folds the more-indented lines that continue a
+// plain scalar started on the key's line, the way YAML folds a multi-line plain
+// scalar with single spaces. It stops at a blank line, a less-or-equally
+// indented line, and a line that opens a nested mapping or sequence, where the
+// key's own block starts instead of a continuation. It reports the last line it
+// consumed so the caller's loop skips it.
+func yamlPlainScalarContinuation(lines []string, start int, keyIndent int) ([]string, int) {
+	var parts []string
+	last := start - 1
+	for index := start; index < len(lines); index++ {
+		line := lines[index]
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || yamlIndentWidth(line) <= keyIndent {
+			break
+		}
+		if strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "- ") || trimmed == "-" || yamlMappingStart(trimmed) {
+			break
+		}
+		parts = append(parts, trimmed)
+		last = index
+	}
+	return parts, last
+}
+
+// yamlMappingStart reports a line that begins a mapping entry, `key:` followed
+// by a space or the end of the line. A colon inside a plain value (a URL's
+// scheme, a time) is not one.
+func yamlMappingStart(line string) bool {
+	colon := strings.Index(line, ":")
+	if colon <= 0 {
+		return false
+	}
+	rest := line[colon+1:]
+	return rest == "" || strings.HasPrefix(rest, " ") || strings.HasPrefix(rest, "\t")
 }
 
 // yamlBlockScalarLines collects the indented lines after a block scalar header,
