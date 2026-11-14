@@ -101,7 +101,7 @@ var shellWriteRuleCases = map[string]bool{
 }
 
 // shellWriteRulePrefix identifies the D286 rule line.
-const shellWriteRulePrefix = "- Do not write or edit files through "
+const shellWriteRulePrefix = "- Change files with "
 
 // stripShellWriteRules removes the D286 rule line from a rules section.
 func stripShellWriteRules(rules string) string {

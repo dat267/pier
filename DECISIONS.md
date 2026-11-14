@@ -3169,16 +3169,13 @@ rewriting files with redirection, `sed`, or an inline script — edits that bypa
 the tool's diff preview and byte-exact replacement. Pier adds one rule when a
 shell tool and at least one file tool are selected:
 
-- `Do not write or edit files through bash (redirection, heredocs, tee, sed
-  -i, perl, python, or node scripts), even inside a compound command like cd
-  dir && cat > file; use the edit tool for changes to an existing file and the
-  write tool for a new file or a full rewrite.`
+- `Change files with the edit and write tools, never the shell.`
 
-The list names the write paths a model reaches for, and the compound-command
-clause closes the `cd dir && cat > file <<EOF` shape that reads as setup rather
-than an edit. It names `PowerShell` instead of `bash` when only that shell is
-selected, and when just one file tool is selected it asks for that tool on every
-change (`use the edit tool for every file change`). The rule is omitted when
+One short sentence: a longer version that listed the write paths (redirection,
+heredocs, `tee`, `sed -i`, `perl`, `python`, inline `node` scripts) and named
+the compound-command case did not stop a model from writing a file with
+`cat > file <<EOF`. With one file tool selected the rule names only that tool
+(`Change files with the edit tool, never the shell.`), and it is omitted when
 neither `edit` nor `write` is present, since the instruction would then point at
 a missing tool.
 This follows jcode, whose system prompt carries the same instruction ("Edit

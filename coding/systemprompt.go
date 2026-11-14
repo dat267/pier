@@ -150,19 +150,14 @@ func buildRules(selectedTools []string, toolGuidelines map[string][]string, prom
 			fileTools = append(fileTools, ToolNameWrite)
 		}
 		if len(fileTools) > 0 {
-			shell := "bash"
-			if !hasBash {
-				shell = "PowerShell"
-			}
-			// Name each file tool's job: a bare "use edit or write" leaves the
-			// model to guess which one a change wants (D286).
-			guidance := fmt.Sprintf("use the %s tool for every file change", fileTools[0])
+			// One short sentence: the long version listed write paths and a
+			// compound-command exception, and models still reached for a
+			// heredoc (D286).
 			if len(fileTools) == 2 {
-				guidance = fmt.Sprintf("use the %s tool for changes to an existing file and the %s tool for a new file or a full rewrite",
-					ToolNameEdit, ToolNameWrite)
+				addRule(fmt.Sprintf("Change files with the %s and %s tools, never the shell.", ToolNameEdit, ToolNameWrite))
+			} else {
+				addRule(fmt.Sprintf("Change files with the %s tool, never the shell.", fileTools[0]))
 			}
-			addRule(fmt.Sprintf("Do not write or edit files through %s (redirection, heredocs, tee, sed -i, perl, python, or node scripts), even inside a compound command like cd dir && cat > file; %s.",
-				shell, guidance))
 		}
 	}
 

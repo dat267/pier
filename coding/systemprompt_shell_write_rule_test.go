@@ -27,7 +27,7 @@ func shellWriteRulePrompt(t *testing.T, tools ...string) string {
 
 func TestSystemPromptForbidsShellFileWrites(t *testing.T) {
 	prompt := shellWriteRulePrompt(t, "read", "bash", "edit", "write")
-	want := "- Do not write or edit files through bash (redirection, heredocs, tee, sed -i, perl, python, or node scripts), even inside a compound command like cd dir && cat > file; use the edit tool for changes to an existing file and the write tool for a new file or a full rewrite."
+	want := "- Change files with the edit and write tools, never the shell."
 	if !strings.Contains(prompt, want) {
 		t.Fatalf("prompt is missing the shell-write rule %q:\n%s", want, prompt)
 	}
@@ -38,9 +38,9 @@ func TestSystemPromptShellWriteRuleNamesTheAvailableFileTool(t *testing.T) {
 		tools []string
 		want  string
 	}{
-		{[]string{"bash", "edit"}, "use the edit tool for every file change."},
-		{[]string{"bash", "write"}, "use the write tool for every file change."},
-		{[]string{"write", "powershell"}, "Do not write or edit files through PowerShell (redirection, heredocs, tee, sed -i, perl, python, or node scripts), even inside a compound command like cd dir && cat > file; use the write tool for every file change."},
+		{[]string{"bash", "edit"}, "Change files with the edit tool, never the shell."},
+		{[]string{"bash", "write"}, "Change files with the write tool, never the shell."},
+		{[]string{"write", "powershell"}, "Change files with the write tool, never the shell."},
 	} {
 		prompt := shellWriteRulePrompt(t, test.tools...)
 		if !strings.Contains(prompt, test.want) {
@@ -53,7 +53,7 @@ func TestSystemPromptShellWriteRuleNamesTheAvailableFileTool(t *testing.T) {
 func TestSystemPromptShellWriteRuleNeedsAFileTool(t *testing.T) {
 	for _, tools := range [][]string{{"read", "bash"}, {"read", "bash", "grep", "find", "ls"}} {
 		prompt := shellWriteRulePrompt(t, tools...)
-		if strings.Contains(prompt, "Do not write or edit files through") {
+		if strings.Contains(prompt, "Change files with") {
 			t.Fatalf("tools %v: rule must not appear without edit/write:\n%s", tools, prompt)
 		}
 	}
