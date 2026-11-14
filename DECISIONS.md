@@ -3170,11 +3170,14 @@ the tool's diff preview and byte-exact replacement. Pier adds one rule when a
 shell tool and at least one file tool are selected:
 
 - `Do not write or edit files through bash (redirection, heredocs, sed, perl,
-  python); use edit or write.`
+  python); use the edit tool for changes to an existing file and the write tool
+  for a new file or a full rewrite.`
 
-It names `PowerShell` instead of `bash` when only that shell is selected, names
-only the file tools actually available, and is omitted when neither `edit` nor
-`write` is present, since the instruction would then point at a missing tool.
+It names `PowerShell` instead of `bash` when only that shell is selected, and
+when just one file tool is selected it asks for that tool on every change
+(`use the edit tool for every file change`). The rule is omitted when neither
+`edit` nor `write` is present, since the instruction would then point at a
+missing tool.
 This follows jcode, whose system prompt carries the same instruction ("Edit
 files with `edit`, `replace`, `apply_patch`, or `write`, not sed, perl, or Python
 scripts in bash").

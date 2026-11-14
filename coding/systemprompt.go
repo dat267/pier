@@ -154,8 +154,15 @@ func buildRules(selectedTools []string, toolGuidelines map[string][]string, prom
 			if !hasBash {
 				shell = "PowerShell"
 			}
-			addRule(fmt.Sprintf("Do not write or edit files through %s (redirection, heredocs, sed, perl, python); use %s.",
-				shell, strings.Join(fileTools, " or ")))
+			// Name each file tool's job: a bare "use edit or write" leaves the
+			// model to guess which one a change wants (D286).
+			guidance := fmt.Sprintf("use the %s tool for every file change", fileTools[0])
+			if len(fileTools) == 2 {
+				guidance = fmt.Sprintf("use the %s tool for changes to an existing file and the %s tool for a new file or a full rewrite",
+					ToolNameEdit, ToolNameWrite)
+			}
+			addRule(fmt.Sprintf("Do not write or edit files through %s (redirection, heredocs, sed, perl, python); %s.",
+				shell, guidance))
 		}
 	}
 
