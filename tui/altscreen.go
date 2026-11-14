@@ -1998,22 +1998,34 @@ func (s *AltScreen) getSelectionColumnsLocked(line string, row int, selection al
 	return max(minColumn, start), min(maxColumn, end)
 }
 
-// selectionRowColumns is the column range a selection covers on one row, with
-// the D471 clamp applied unless the caller asked for upstream's paint: the
-// range starts at the row's first non-blank cell and ends at its last, so the
-// highlight and the copy both skip the row's margin and padding.
-func (s *AltScreen) selectionRowColumns(line string, row int, selection altSelectionRange, minColumn, maxColumn int) (int, int) {
+// selectionRowColumns is the column range a selection covers on one row. The
+// range starts at the margin the selected rows share, so the highlight and the
+// copy skip the transcript's own indentation but keep the indentation that is
+// content, such as a code block or an indented test failure (D471). The right
+// side keeps the row's padding, as upstream paints it.
+func (s *AltScreen) selectionRowColumns(line string, row int, selection altSelectionRange, minColumn, maxColumn, margin int) (int, int) {
 	start, end := s.getSelectionColumnsLocked(line, row, selection, minColumn, maxColumn)
-	if s.keepSelectionPadding {
-		return start, end
-	}
-	if content := selectionContentWidth(line); end > content {
-		end = content
-	}
-	if first := selectionFirstContentColumn(line); start < first {
-		start = first
+	if !s.keepSelectionPadding && start < margin {
+		start = margin
 	}
 	return start, end
+}
+
+// selectionMargin is the blank prefix every selected row shares: the transcript
+// indents its messages by that much, and the rest of a row's indent is content
+// (D471).
+func selectionMargin(sourceLines []string, selection altSelectionRange) int {
+	margin := -1
+	for row := selection.Start.Row; row <= selection.End.Row; row++ {
+		line := ""
+		if row >= 0 && row < len(sourceLines) {
+			line = sourceLines[row]
+		}
+		if first := selectionFirstContentColumn(line); margin < 0 || first < margin {
+			margin = first
+		}
+	}
+	return max(0, margin)
 }
 
 // selectionFirstContentColumn is the column of a screen line's first non-blank
@@ -2077,12 +2089,13 @@ func (s *AltScreen) getActiveSelectionTextLocked() (string, bool) {
 		wrapEdge = 0
 	}
 	joinIndent := -1
+	margin := selectionMargin(sourceLines, selection)
 	for row := selection.Start.Row; row <= selection.End.Row; row++ {
 		line := ""
 		if row >= 0 && row < len(sourceLines) {
 			line = sourceLines[row]
 		}
-		start, end := s.selectionRowColumns(line, row, selection, 0, VisibleWidth(line))
+		start, end := s.selectionRowColumns(line, row, selection, 0, VisibleWidth(line), margin)
 		selected := SliceByColumn(line, start, max(0, end-start), true)
 		text := strings.TrimRight(StripTerminalSequences(selected), " \t")
 		if joinIndent >= 0 && len(lines) > 0 {
@@ -2318,6 +2331,7 @@ func (s *AltScreen) applySelection(screen []string, layout *LayoutFrame) []strin
 		}
 	}
 	out := make([]string, 0, len(screen))
+	margin := selectionMargin(screen, screenSelection)
 	for row, line := range screen {
 		if row < minRow || row > maxRow || row < screenSelection.Start.Row || row > screenSelection.End.Row ||
 			IsImageLine(line) {
@@ -2325,7 +2339,7 @@ func (s *AltScreen) applySelection(screen []string, layout *LayoutFrame) []strin
 			continue
 		}
 		lineWidth := VisibleWidth(line)
-		start, end := s.selectionRowColumns(line, row, screenSelection, minColumn, maxColumn)
+		start, end := s.selectionRowColumns(line, row, screenSelection, minColumn, maxColumn, margin)
 		if end <= start {
 			out = append(out, line)
 			continue

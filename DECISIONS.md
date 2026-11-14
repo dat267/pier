@@ -7567,24 +7567,26 @@ Tests: `TestAltScreenOverWideClampKeepsLineReset`,
 
 ### D471
 
-**The selection highlight covers only a row's text; upstream paints the row's
-padding and indentation too.**
+**The selection starts at the margin its rows share; upstream paints the
+indentation too.**
 
 Reference: pi v1.5.2 (b4afdddf) `tui-alt-screen.ts` `applySelection` slices each
-row to the column range and paints it, while the renderer pads every row to the
-terminal width and indents it, so a drag paints a solid block of spaces past the
-end of the line and over the left margin. Claude Code's selection stops at the
-text, which reads better on a padded transcript. Pier clamps each row's range to
-the line's text: the highlight and the copy both start at the first non-blank
-cell and end at the last one, so a copy matches what the highlight covers. The
-cost is that a selection over an indented block pastes without its indentation.
+row to the column range and paints it, so a drag from the left edge paints the
+transcript's own indentation as part of the selection. Claude Code's selection
+starts at the text. Pier starts each row at the margin every selected row shares,
+which is the transcript's indentation, and leaves the rest of a row's indent
+inside the selection: a test failure's hanging indent or a code block keeps it.
+The copy uses the same range, so it matches what the highlight covers. The right
+side keeps the row's padding, as upstream paints it.
 
 `AltScreenOptions.KeepSelectionPadding` restores upstream's paint, and the
 upstream frame golden turns it on so its write streams still compare byte for
 byte. The default renderer trims.
 
-Tests: `TestSelectionHighlightSkipsHorizontalPadding`,
-`TestSelectionHighlightSkipsLeadingPadding`, `TestSelectionCopySkipsLeadingPadding`,
+Tests: `TestSelectionHighlightSkipsLeadingPadding`,
+`TestSelectionHighlightKeepsLegitimateIndent`,
+`TestSelectionHighlightKeepsTheRightPadding`, `TestSelectionCopySkipsLeadingPadding`,
+`TestSelectionCopyKeepsLegitimateIndent`,
 `TestSelectionCopyHonorsAStartInsideTheText`, `TestAltScreenAgainstUpstreamGolden`.
 
 ### D472

@@ -150,3 +150,11 @@ func TestSelectionJoinsWrappedRowsWithOutputPadding(t *testing.T) {
 		t.Fatalf("padded wrapped copy = %q, want %q", got, want)
 	}
 }
+
+// Indentation beyond the shared margin is content and stays in the copy.
+func TestSelectionCopyKeepsLegitimateIndent(t *testing.T) {
+	got := selectionText(t, 20, []string{"FAIL: x", "     y"})
+	if want := "FAIL: x\n     y"; got != want {
+		t.Fatalf("copy = %q, want %q", got, want)
+	}
+}
