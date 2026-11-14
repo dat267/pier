@@ -1998,6 +1998,13 @@ func (s *AltScreen) getSelectionColumnsLocked(line string, row int, selection al
 	return max(minColumn, start), min(maxColumn, end)
 }
 
+// selectionFirstContentColumn is the column of a screen line's first non-blank
+// cell: the renderer indents rows, and the margin is not text (D471).
+func selectionFirstContentColumn(line string) int {
+	plain := StripTerminalSequences(line)
+	return VisibleWidth(plain) - VisibleWidth(strings.TrimLeft(plain, " \t"))
+}
+
 // selectionContentWidth is the visible width of a screen line up to its last
 // non-blank cell: the renderer pads lines to the terminal width, so the
 // trailing spaces are padding, not text (D471).
@@ -2265,6 +2272,9 @@ func (s *AltScreen) applySelection(screen []string, layout *LayoutFrame) []strin
 		if !s.keepSelectionPadding {
 			if content := selectionContentWidth(line); end > content {
 				end = content
+			}
+			if first := selectionFirstContentColumn(line); start < first {
+				start = first
 			}
 		}
 		if end <= start {

@@ -7567,21 +7567,21 @@ Tests: `TestAltScreenOverWideClampKeepsLineReset`,
 
 ### D471
 
-**The selection highlight stops at a row's last non-blank cell; upstream paints
-the padding to the terminal width.**
+**The selection highlight covers only a row's text; upstream paints the row's
+padding and indentation too.**
 
 Reference: pi v1.5.2 (b4afdddf) `tui-alt-screen.ts` `applySelection` slices each
-row to the column range and paints it, and the renderer pads every row to the
-terminal width, so dragging across the end of a line highlights a solid block of
-spaces with no text under it. Claude Code's selection stops at the text, which
-reads better on a padded transcript. Pier clamps each row's selection end to the
-visible width of the line with its trailing blanks removed, so the highlight and
-the copy both stop at the text; the copy already trimmed, so only the paint
-changes.
+row to the column range and paints it, while the renderer pads every row to the
+terminal width and indents it, so a drag paints a solid block of spaces past the
+end of the line and over the left margin. Claude Code's selection stops at the
+text, which reads better on a padded transcript. Pier clamps each row's range to
+the line's text: the highlight starts at the first non-blank cell and ends at the
+last one. Only the paint changes; the copy keeps its indentation and already
+trimmed its trailing blanks.
 
 `AltScreenOptions.KeepSelectionPadding` restores upstream's paint, and the
 upstream frame golden turns it on so its write streams still compare byte for
 byte. The default renderer trims.
 
 Tests: `TestSelectionHighlightSkipsHorizontalPadding`,
-`TestAltScreenAgainstUpstreamGolden`.
+`TestSelectionHighlightSkipsLeadingPadding`, `TestAltScreenAgainstUpstreamGolden`.
