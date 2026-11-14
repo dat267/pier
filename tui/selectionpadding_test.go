@@ -49,12 +49,15 @@ func selectionFrame(t *testing.T, width int, lines []string) []string {
 	return screen.applySelection(screen.previousScreen, screen.currentLayout)
 }
 
-// The right side keeps the row's padding: the renderer pads every row to the
-// terminal width, and upstream paints the padding as selected.
-func TestSelectionHighlightKeepsTheRightPadding(t *testing.T) {
+// The right side stops at the row's text: the renderer pads a code block's rows
+// to the width, and painting that padding draws a block of spaces past the text.
+func TestSelectionHighlightSkipsHorizontalPadding(t *testing.T) {
 	out := selectionFrame(t, 20, []string{"hello world", "b", "gamma"})
-	if got := selectionHighlightWidth(t, out[0]); got != 20 {
-		t.Fatalf("first row highlight = %d cells, want the full row", got)
+	if got := selectionHighlightWidth(t, out[0]); got != len("hello world") {
+		t.Fatalf("first row highlight = %d cells, want %d", got, len("hello world"))
+	}
+	if got := selectionHighlightWidth(t, out[1]); got != len("b") {
+		t.Fatalf("middle row highlight = %d cells, want %d", got, len("b"))
 	}
 }
 

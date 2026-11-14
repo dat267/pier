@@ -7567,17 +7567,18 @@ Tests: `TestAltScreenOverWideClampKeepsLineReset`,
 
 ### D471
 
-**The selection starts at the margin its rows share; upstream paints the
-indentation too.**
+**The selection covers a row's text; upstream paints its indentation and
+padding too.**
 
 Reference: pi v1.5.2 (b4afdddf) `tui-alt-screen.ts` `applySelection` slices each
 row to the column range and paints it, so a drag from the left edge paints the
-transcript's own indentation as part of the selection. Claude Code's selection
-starts at the text. Pier starts each row at the margin every selected row shares,
-which is the transcript's indentation, and leaves the rest of a row's indent
-inside the selection: a test failure's hanging indent or a code block keeps it.
-The copy uses the same range, so it matches what the highlight covers. The right
-side keeps the row's padding, as upstream paints it.
+transcript's own indentation, and a padded row paints the spaces past its text.
+Claude Code's selection covers the text. Pier starts each row at the margin every
+selected row shares, which is the transcript's indentation, and leaves the rest
+of a row's indent inside the selection: a test failure's hanging indent or a code
+block keeps it. Each row's range ends at its last non-blank cell, so a code
+block's padded rows do not paint a block of spaces. The copy uses the same range,
+so it matches what the highlight covers.
 
 `AltScreenOptions.KeepSelectionPadding` restores upstream's paint, and the
 upstream frame golden turns it on so its write streams still compare byte for
@@ -7585,7 +7586,7 @@ byte. The default renderer trims.
 
 Tests: `TestSelectionHighlightSkipsLeadingPadding`,
 `TestSelectionHighlightKeepsLegitimateIndent`,
-`TestSelectionHighlightKeepsTheRightPadding`, `TestSelectionCopySkipsLeadingPadding`,
+`TestSelectionHighlightSkipsHorizontalPadding`, `TestSelectionCopySkipsLeadingPadding`,
 `TestSelectionCopyKeepsLegitimateIndent`,
 `TestSelectionCopyHonorsAStartInsideTheText`, `TestAltScreenAgainstUpstreamGolden`.
 

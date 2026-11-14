@@ -2015,11 +2015,17 @@ func (s *AltScreen) getSelectionColumnsLocked(line string, row int, selection al
 // selectionRowColumns is the column range a selection covers on one row. The
 // range starts at the margin the selected rows share, so the highlight and the
 // copy skip the transcript's own indentation but keep the indentation that is
-// content, such as a code block or an indented test failure (D471). The right
-// side keeps the row's padding, as upstream paints it.
+// content, such as a code block or an indented test failure. It ends at the
+// row's last non-blank cell, so a padded row does not paint its padding (D471).
 func (s *AltScreen) selectionRowColumns(line string, row int, selection altSelectionRange, minColumn, maxColumn, margin int) (int, int) {
 	start, end := s.getSelectionColumnsLocked(line, row, selection, minColumn, maxColumn)
-	if !s.keepSelectionPadding && start < margin {
+	if s.keepSelectionPadding {
+		return start, end
+	}
+	if content := selectionContentWidth(line); end > content {
+		end = content
+	}
+	if start < margin {
 		start = margin
 	}
 	return start, end
