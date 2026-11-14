@@ -2037,11 +2037,10 @@ func (s *AltScreen) selectionRowColumns(line string, row int, selection altSelec
 func selectionMargin(sourceLines []string, selection altSelectionRange) int {
 	margin := -1
 	for row := selection.Start.Row; row <= selection.End.Row; row++ {
-		line := ""
-		if row >= 0 && row < len(sourceLines) {
-			line = sourceLines[row]
+		if row < 0 || row >= len(sourceLines) {
+			continue
 		}
-		if first := selectionFirstContentColumn(line); margin < 0 || first < margin {
+		if first := selectionFirstContentColumn(sourceLines[row]); margin < 0 || first < margin {
 			margin = first
 		}
 	}
@@ -2405,7 +2404,15 @@ func (s *AltScreen) applySelection(screen []string, layout *LayoutFrame) []strin
 		}
 	}
 	out := make([]string, 0, len(screen))
-	margin := selectionMargin(screen, screenSelection)
+	// The margin comes from the rows the selection covers, not from the rows on
+	// screen: scrolling must not move the selection (D471).
+	marginSource, marginSelection := screen, screenSelection
+	if selection.Start.ScrollView != nil {
+		if box, ok := GetScrollViewBox(*layout, selection.Start.ScrollView); ok && box.ScrollContentLines != nil {
+			marginSource, marginSelection = box.ScrollContentLines, selection
+		}
+	}
+	margin := selectionMargin(marginSource, marginSelection)
 	for row, line := range screen {
 		if row < minRow || row > maxRow || row < screenSelection.Start.Row || row > screenSelection.End.Row ||
 			IsImageLine(line) {

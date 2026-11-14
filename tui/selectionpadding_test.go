@@ -83,3 +83,76 @@ func TestSelectionHighlightKeepsLegitimateIndent(t *testing.T) {
 		t.Fatalf("the indent left the frame: %q", out[1])
 	}
 }
+
+// indentedRowsComponent renders lines padded to the width, so the screen rows
+// are as wide as the viewport.
+type indentedRowsComponent struct{ lines []string }
+
+func (c *indentedRowsComponent) Render(width int) []string {
+	out := make([]string, 0, len(c.lines))
+	for _, line := range c.lines {
+		for VisibleWidth(line) < width {
+			line += " "
+		}
+		out = append(out, line)
+	}
+	return out
+}
+
+func (c *indentedRowsComponent) Invalidate() {}
+
+// Scrolling must not move the selection: the margin is measured over the rows the
+// selection covers, not over the rows that happen to be on screen.
+func TestSelectionKeepsItsMarginWhileScrolling(t *testing.T) {
+	terminal := &recordingTerminal{width: 20, height: 3}
+	screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
+	screen.DisableAutoRender()
+	lines := make([]string, 0, 10)
+	for index := range 10 {
+		if index == 4 {
+			lines = append(lines, "  alpha")
+			continue
+		}
+		lines = append(lines, "      row"+itoa(index))
+	}
+	screen.AddChild(NewScrollView(&indentedRowsComponent{lines: lines}, ScrollViewOptions{Primary: true}))
+	screen.Start()
+	screen.RenderNow(false)
+	screen.SetCopyOnSelect(false)
+
+	// The view the layout reports is the one the selection must name.
+	var view *ScrollView
+	var find func(box *LayoutBox)
+	find = func(box *LayoutBox) {
+		if box.ScrollView != nil {
+			view = box.ScrollView
+		}
+		for _, child := range box.Children {
+			find(child)
+		}
+	}
+	find(screen.currentLayout.Root)
+	if view == nil {
+		t.Fatal("no scroll view in the layout")
+	}
+
+	// The selection covers rows 4 to 9, so its shared margin is alpha's two
+	// spaces; only the last three rows are on screen.
+	anchor := altSelectionPoint{Row: 4, Col: 0, ScrollView: view}
+	focus := altSelectionPoint{Row: 9, Col: 20, ScrollView: view, Boundary: true}
+	screen.selectionAnchor = &anchor
+	screen.selectionFocus = &focus
+
+	out := screen.applySelection(screen.previousScreen, screen.currentLayout)
+	if got := selectionHighlightStart(t, out[0]); got != 2 {
+		t.Fatalf("the highlight starts at %d, want the shared margin 2", got)
+	}
+
+	// Scrolling does not move it.
+	view.ScrollTo(view.ScrollTop() - 1)
+	screen.RenderNow(false)
+	out = screen.applySelection(screen.previousScreen, screen.currentLayout)
+	if got := selectionHighlightStart(t, out[1]); got != 2 {
+		t.Fatalf("after scrolling the highlight starts at %d, want the shared margin 2", got)
+	}
+}
