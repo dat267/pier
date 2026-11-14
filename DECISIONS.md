@@ -7575,16 +7575,17 @@ row to the column range and paints it, while the renderer pads every row to the
 terminal width and indents it, so a drag paints a solid block of spaces past the
 end of the line and over the left margin. Claude Code's selection stops at the
 text, which reads better on a padded transcript. Pier clamps each row's range to
-the line's text: the highlight starts at the first non-blank cell and ends at the
-last one. Only the paint changes; the copy keeps its indentation and already
-trimmed its trailing blanks.
+the line's text: the highlight and the copy both start at the first non-blank
+cell and end at the last one, so a copy matches what the highlight covers. The
+cost is that a selection over an indented block pastes without its indentation.
 
 `AltScreenOptions.KeepSelectionPadding` restores upstream's paint, and the
 upstream frame golden turns it on so its write streams still compare byte for
 byte. The default renderer trims.
 
 Tests: `TestSelectionHighlightSkipsHorizontalPadding`,
-`TestSelectionHighlightSkipsLeadingPadding`, `TestAltScreenAgainstUpstreamGolden`.
+`TestSelectionHighlightSkipsLeadingPadding`, `TestSelectionCopySkipsLeadingPadding`,
+`TestSelectionCopyHonorsAStartInsideTheText`, `TestAltScreenAgainstUpstreamGolden`.
 
 ### D472
 

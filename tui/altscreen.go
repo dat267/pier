@@ -1998,6 +1998,24 @@ func (s *AltScreen) getSelectionColumnsLocked(line string, row int, selection al
 	return max(minColumn, start), min(maxColumn, end)
 }
 
+// selectionRowColumns is the column range a selection covers on one row, with
+// the D471 clamp applied unless the caller asked for upstream's paint: the
+// range starts at the row's first non-blank cell and ends at its last, so the
+// highlight and the copy both skip the row's margin and padding.
+func (s *AltScreen) selectionRowColumns(line string, row int, selection altSelectionRange, minColumn, maxColumn int) (int, int) {
+	start, end := s.getSelectionColumnsLocked(line, row, selection, minColumn, maxColumn)
+	if s.keepSelectionPadding {
+		return start, end
+	}
+	if content := selectionContentWidth(line); end > content {
+		end = content
+	}
+	if first := selectionFirstContentColumn(line); start < first {
+		start = first
+	}
+	return start, end
+}
+
 // selectionFirstContentColumn is the column of a screen line's first non-blank
 // cell: the renderer indents rows, and the margin is not text (D471).
 func selectionFirstContentColumn(line string) int {
@@ -2044,7 +2062,7 @@ func (s *AltScreen) getActiveSelectionTextLocked() (string, bool) {
 		if row >= 0 && row < len(sourceLines) {
 			line = sourceLines[row]
 		}
-		start, end := s.getSelectionColumnsLocked(line, row, selection, 0, VisibleWidth(line))
+		start, end := s.selectionRowColumns(line, row, selection, 0, VisibleWidth(line))
 		selected := SliceByColumn(line, start, max(0, end-start), true)
 		text := strings.TrimRight(StripTerminalSequences(selected), " \t")
 		if joinIndent >= 0 && len(lines) > 0 {
@@ -2287,18 +2305,7 @@ func (s *AltScreen) applySelection(screen []string, layout *LayoutFrame) []strin
 			continue
 		}
 		lineWidth := VisibleWidth(line)
-		start, end := s.getSelectionColumnsLocked(line, row, screenSelection, minColumn, maxColumn)
-		// D471: the screen pads every line to the terminal width, and the
-		// padding is not text. Upstream paints it as selected, which draws a
-		// solid rectangle past the end of every short line.
-		if !s.keepSelectionPadding {
-			if content := selectionContentWidth(line); end > content {
-				end = content
-			}
-			if first := selectionFirstContentColumn(line); start < first {
-				start = first
-			}
-		}
+		start, end := s.selectionRowColumns(line, row, screenSelection, minColumn, maxColumn)
 		if end <= start {
 			out = append(out, line)
 			continue
