@@ -6208,7 +6208,13 @@ ends in an unanswered tool call (which cannot be the last message of a request),
 the model or provider changed (a wire format and its cache are per
 model), the replay plus instruction would not fit the context window (overflow
 recovery is where the window is the problem), or the answer cannot become a
-checkpoint: a length stop, a tool call, an error. A captured request speaks only
+checkpoint: a length stop, a tool call, an error. A length stop retries the same
+replay once without thinking before stepping aside: the budget it hit is the
+reasoning share, the replay is the only request that reads the conversation from
+the cache, and the stock path pays a cold prefill of the same conversation. A
+session log with a 485k-token conversation showed each compaction paying the
+cached replay plus 357k to 421k cold input tokens when it fell back, four times
+in one day. A captured request speaks only
 for the branch that was current when it was sent, so the capture is released
 when a compaction spends it, when the session is disposed, and when the session
 replaces its context wholesale (`NavigateTree`, which also carries `/clear`):
@@ -6220,6 +6226,7 @@ the instruction, it produces one conversation checkpoint and no separate
 split-turn section; a stock compaction keeps that structure (D264).
 
 Tests: `TestCompactSummarizesFromTheCapturedPrefix`,
+`TestCompactRetriesThePrefixWithoutThinkingOnALengthStop`,
 `TestSessionCompactionReplaysTheLastTurnPrefix`,
 `TestCompactFallsBackWhenThePrefixModelDiffers`,
 `TestCompactFallsBackWhenThePrefixSummaryDoesNotFit`,

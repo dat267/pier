@@ -1426,7 +1426,11 @@ func Compact(preparation *CompactionPreparation, options CompactionOptions) (*Co
 // It reports ok=false, with any usage it spent, when the replay cannot stand in
 // for the serialized prompt: no capture, a capture from another model (its wire
 // format and cache are per model), or an answer that cannot become a checkpoint
-// (a length stop, a tool call, an error). The caller then runs the stock path.
+// (a length stop, a tool call, an error). A length stop first retries the same
+// replay without thinking: the budget it hit is the reasoning share, and this is
+// the only request that reads the conversation from the cache, so a cold prefill
+// of the same conversation is the cost of stepping aside. The caller then runs
+// the stock path.
 //
 // It covers a split turn too: the capture ends with that turn, so "summarize
 // everything above" covers the turn prefix the split path would summarize
@@ -1474,9 +1478,16 @@ func summarizeFromPrefix(preparation *CompactionPreparation, options CompactionO
 	// The turn left the choice to the provider environment unless it named one,
 	// and the marker that choice produces is part of the prefix the provider
 	// cached, so replay it resolved exactly as the turn's own request did.
+	retention := ai.ResolveCacheRetention(prefix.CacheRetention, ai.ProviderEnv(options.Env))
 	response, err := requestSummarization(options.Model, ai.TranscriptContext{Messages: messages}, options,
-		summarizationReasoningEnabled(options.Model, reasoning), reasoning,
-		ai.ResolveCacheRetention(prefix.CacheRetention, ai.ProviderEnv(options.Env)), escalation)
+		summarizationReasoningEnabled(options.Model, reasoning), reasoning, retention, escalation)
+	if err == nil && response.StopReason == ai.StopLength && summarizationReasoningEnabled(options.Model, reasoning) {
+		// Same prefix, without the thinking tokens competing for the answer: the
+		// stock path's own escalation does this, and here it keeps the replay's
+		// cache read instead of paying for a serialized copy of the conversation.
+		response, err = requestSummarization(options.Model, ai.TranscriptContext{Messages: messages}, options,
+			false, ai.ThinkOff, retention, escalation)
+	}
 	usage := escalation.usage
 	if err != nil {
 		return "", &usage, false

@@ -266,3 +266,47 @@ func TestCompactReplaysTheCapturedCacheRetention(t *testing.T) {
 		})
 	}
 }
+
+// A length stop on the replayed prefix is usually reasoning tokens spending the
+// answer budget. The replay is the only request that reads the conversation from
+// the cache, so freeing that budget there beats paying a cold prefill of the
+// whole conversation for the same summary: retry the identical prefix without
+// thinking before stepping aside.
+func TestCompactRetriesThePrefixWithoutThinkingOnALengthStop(t *testing.T) {
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, Reasoning: true}
+	turn := prefixUserTurns("first", "second", "third")
+	var requests []summaryRequest
+	options := CompactionOptions{
+		Model: model, Ctx: context.Background(), SessionID: "sess-1",
+		ThinkingLevel: ai.ThinkHigh,
+		StreamFn:      summaryStreamFn(&requests, map[int]bool{1: true}),
+		Prefix:        &CompactionPrefix{Model: model, Messages: turn, Reasoning: ai.ThinkHigh},
+	}
+
+	result, err := Compact(prefixTestPreparation(t), options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Summary != "## Goal\nship it" {
+		t.Fatalf("summary = %q", result.Summary)
+	}
+	if len(requests) != 2 {
+		t.Fatalf("requests = %d, want the capped replay and its retry", len(requests))
+	}
+	retry := requests[1]
+	if isStockSummarizationRequest(retry.context) {
+		t.Fatal("the retry must replay the cached prefix, not re-serialize the conversation")
+	}
+	if len(retry.context.Messages) != len(turn)+1 {
+		t.Fatalf("retry sent %d messages, want the same %d captured plus the instruction", len(retry.context.Messages), len(turn))
+	}
+	if retry.options.Reasoning != "" && retry.options.Reasoning != ai.ThinkOff {
+		t.Fatalf("retry reasoning = %q, want off", retry.options.Reasoning)
+	}
+	if retry.options.CacheRetention == ai.CacheRetentionNone {
+		t.Fatal("the retry must still read the conversation from the prompt cache")
+	}
+	if result.Usage == nil || result.Usage.CacheRead != 180 {
+		t.Fatalf("usage = %+v, want both requests' cache reads", result.Usage)
+	}
+}
