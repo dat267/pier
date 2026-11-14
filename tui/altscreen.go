@@ -2048,6 +2048,60 @@ func selectionContentWidth(line string) int {
 	return VisibleWidth(strings.TrimRight(StripTerminalSequences(line), " \t"))
 }
 
+// selectionWrapsInto reports whether a row was wrapped into the next one. Word
+// wrapping leaves the row short of the width, so the width alone cannot tell: a
+// row is a wrap when the next row's first word would not have fitted after it
+// (D472).
+func selectionWrapsInto(line, next string, rowWidth int) bool {
+	if rowWidth <= 0 || next == "" {
+		return false
+	}
+	word := strings.TrimLeft(StripTerminalSequences(next), " \t")
+	if index := strings.IndexAny(word, " \t"); index >= 0 {
+		word = word[:index]
+	}
+	if word == "" {
+		return false
+	}
+	return selectionRowRightEdge(line)+1+VisibleWidth(word) > rowWidth
+}
+
+// joinSelectionRows appends a wrapped continuation to the line it continues. The
+// wrapper trims the space at a break, so it goes back unless the two halves are
+// one word: a word wider than the row is broken inside itself, and CJK wraps the
+// same way (D472).
+func joinSelectionRows(left, right, previousText string, rowWidth int) string {
+	if left == "" || right == "" {
+		return left + right
+	}
+	if rowWidth <= 0 {
+		return left + " " + right
+	}
+	if selectionWordWidth(previousText, false)+selectionWordWidth(right, true) > rowWidth {
+		return left + right
+	}
+	return left + " " + right
+}
+
+// selectionWordWidth is the visible width of the first or last whitespace-
+// separated word of a screen line.
+func selectionWordWidth(line string, first bool) int {
+	text := strings.TrimSpace(StripTerminalSequences(line))
+	if text == "" {
+		return 0
+	}
+	if first {
+		if index := strings.IndexAny(text, " \t"); index >= 0 {
+			text = text[:index]
+		}
+		return VisibleWidth(text)
+	}
+	if index := strings.LastIndexAny(text, " \t"); index >= 0 {
+		text = text[index+1:]
+	}
+	return VisibleWidth(text)
+}
+
 func (s *AltScreen) getActiveSelectionTextLocked() (string, bool) {
 	selection, ok := s.getSelectionBoundsLocked()
 	if !ok {
@@ -2074,22 +2128,9 @@ func (s *AltScreen) getActiveSelectionTextLocked() (string, bool) {
 			rowWidth = selection.Start.ScrollView.GetContentWidth(box.Rect.Width)
 		}
 	}
-	// The wrap width is the widest right edge in the selection, and only counts
-	// when the text reaches most of the row: the transcript pads its messages,
-	// so a wrapped row stops short of the row width by that padding.
-	wrapEdge := 0
-	for row := selection.Start.Row; row <= selection.End.Row; row++ {
-		if row >= 0 && row < len(sourceLines) {
-			if edge := selectionRowRightEdge(sourceLines[row]); edge > wrapEdge {
-				wrapEdge = edge
-			}
-		}
-	}
-	if rowWidth == 0 || wrapEdge*5 < rowWidth*4 {
-		wrapEdge = 0
-	}
 	joinIndent := -1
 	margin := selectionMargin(sourceLines, selection)
+	previousLine := ""
 	for row := selection.Start.Row; row <= selection.End.Row; row++ {
 		line := ""
 		if row >= 0 && row < len(sourceLines) {
@@ -2098,18 +2139,25 @@ func (s *AltScreen) getActiveSelectionTextLocked() (string, bool) {
 		start, end := s.selectionRowColumns(line, row, selection, 0, VisibleWidth(line), margin)
 		selected := SliceByColumn(line, start, max(0, end-start), true)
 		text := strings.TrimRight(StripTerminalSequences(selected), " \t")
+		next := ""
+		if row+1 >= 0 && row+1 < len(sourceLines) && row < selection.End.Row {
+			next = sourceLines[row+1]
+		}
+		wrapped := selectionWrapsInto(line, next, rowWidth)
 		if joinIndent >= 0 && len(lines) > 0 {
-			lines[len(lines)-1] += strings.TrimPrefix(text, strings.Repeat(" ", min(joinIndent, len(text))))
+			continuation := strings.TrimPrefix(text, strings.Repeat(" ", min(joinIndent, len(text))))
+			lines[len(lines)-1] = joinSelectionRows(lines[len(lines)-1], continuation, previousLine, rowWidth)
 		} else {
 			lines = append(lines, text)
 		}
-		if wrapEdge > 0 && selectionRowRightEdge(line) >= wrapEdge {
+		if wrapped {
 			if joinIndent < 0 {
 				joinIndent = len(text) - len(strings.TrimLeft(text, " \t"))
 			}
 		} else {
 			joinIndent = -1
 		}
+		previousLine = line
 	}
 	text := strings.Join(lines, "\n")
 	if text == "" {

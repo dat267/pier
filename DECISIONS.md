@@ -7596,21 +7596,21 @@ Tests: `TestSelectionHighlightSkipsLeadingPadding`,
 Reference: pi v1.5.2 (b4afdddf) `tui-alt-screen.ts` `getActiveSelectionText`
 joins every selected row with `\n`, so copying a paragraph the terminal wrapped
 pastes it back with a break at every screen edge. Claude Code joins the wrapped
-rows. Pier treats a row whose text runs to the row width as a soft wrap and
-appends the next row to it without a newline, dropping the indentation the
-continuation repeats; a shorter row ended with a newline and keeps it.
+rows. Pier appends a wrapped row to the one it continues, dropping the
+indentation the continuation repeats; a row the content broke keeps its newline.
 
-The wrap width is the widest right edge in the selection, which is the width the
-renderer wrapped at, and it counts only when the text reaches four fifths of the
-row: the transcript pads its messages, so a wrapped row stops short of the row
-width by that padding, and a selection of short lines has no wrapped row at all.
-A hard line break whose text exactly fills the width is indistinguishable from a
-wrap at that point and is joined too. A marker on the wrapped rows would be
-exact, but the component goldens compare `WrapTextWithAnsi` output against
-upstream byte for byte, so the join reads the rendered geometry instead.
+Word wrapping leaves a row short of the width, so the width alone cannot say
+whether a row was wrapped: a row is a wrap when the next row's first word would
+not have fitted after it. The wrapper trims the space at a break, so joining puts
+one back, unless the two halves are a single word wider than the row (which the
+wrapper breaks inside itself) or the text is CJK, which wraps without spaces. A
+marker on the wrapped rows would be exact, but the component goldens compare
+`WrapTextWithAnsi` output against upstream byte for byte, so the join reads the
+rendered geometry instead.
 
 Tests: `TestSelectionJoinsSoftWrappedRows`,
 `TestSelectionJoinsSoftWrappedRowsInAScrollView`,
+`TestSelectionJoinsWrappedProseWithSpaces`,
 `TestSelectionJoinsWrappedRowsWithOutputPadding`,
-`TestSelectionJoinsWrappedRowsWithoutTheirIndent`,
-`TestSelectionKeepsHardLineBreaks`.
+`TestSelectionJoinsWrappedRowsWithoutTheirIndent`, `TestSelectionKeepsHardLineBreaks`,
+`TestSelectionKeepsProseLineBreaks`.
