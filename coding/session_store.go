@@ -888,7 +888,9 @@ func LoadEntriesFromFileBuffered(filePath string) ([]FileEntry, []byte, bool, er
 		return nil, data, fast, nil
 	}
 	if !bytes.HasSuffix(data, []byte("\n")) && len(data) > 0 {
-		_ = writeSessionLine(resolved, "\n")
+		if err := sessionLineWriter(resolved, "\n"); err != nil {
+			return nil, nil, fast, err
+		}
 	}
 	return entries, data, fast, nil
 }
@@ -1602,7 +1604,9 @@ func LoadEntriesFromFile(filePath string) ([]FileEntry, error) {
 		return nil, nil
 	}
 	if !strings.HasSuffix(text, "\n") && text != "" {
-		_ = writeSessionLine(resolved, "\n")
+		if err := sessionLineWriter(resolved, "\n"); err != nil {
+			return nil, err
+		}
 	}
 	return entries, nil
 }
