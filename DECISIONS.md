@@ -7608,9 +7608,14 @@ marker on the wrapped rows would be exact, but the component goldens compare
 `WrapTextWithAnsi` output against upstream byte for byte, so the join reads the
 rendered geometry instead.
 
+A triple click takes the whole run: it extends up while the row above wraps into
+the current one and down while the current row wraps into the next, so the
+selection is the line the content wrote rather than the rows the terminal shows.
+
 Tests: `TestSelectionJoinsSoftWrappedRows`,
 `TestSelectionJoinsSoftWrappedRowsInAScrollView`,
 `TestSelectionJoinsWrappedProseWithSpaces`,
 `TestSelectionJoinsWrappedRowsWithOutputPadding`,
 `TestSelectionJoinsWrappedRowsWithoutTheirIndent`, `TestSelectionKeepsHardLineBreaks`,
-`TestSelectionKeepsProseLineBreaks`.
+`TestSelectionKeepsProseLineBreaks`, `TestTripleClickSelectsAWrappedLine`,
+`TestTripleClickSelectsOneHardLine`.

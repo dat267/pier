@@ -1652,10 +1652,24 @@ func (s *AltScreen) getWordSelectionLocked(point altSelectionPoint) (altSelectio
 }
 
 func (s *AltScreen) getLineSelectionLocked(point altSelectionPoint) altSelectionRange {
+	// D472: a line the renderer wrapped spans several rows; a triple click takes
+	// the whole run, from the row that does not continue upward to the row that
+	// does not continue downward.
+	rowWidth := s.selectionRowWidthLocked(point.ScrollView)
+	sourceLine := func(row int) string {
+		return s.getSelectionSourceLineLocked(altSelectionPoint{Row: row, ScrollView: point.ScrollView})
+	}
+	first, last := point.Row, point.Row
+	for first > 0 && selectionWrapsInto(sourceLine(first-1), sourceLine(first), rowWidth) {
+		first--
+	}
+	for selectionWrapsInto(sourceLine(last), sourceLine(last+1), rowWidth) {
+		last++
+	}
 	return altSelectionRange{
-		Start: altSelectionPoint{Row: point.Row, Col: 0, ScrollView: point.ScrollView},
+		Start: altSelectionPoint{Row: first, Col: 0, ScrollView: point.ScrollView},
 		End: altSelectionPoint{
-			Row: point.Row, Col: VisibleWidth(s.getSelectionSourceLineLocked(point)),
+			Row: last, Col: VisibleWidth(sourceLine(last)),
 			ScrollView: point.ScrollView, Boundary: true,
 		},
 	}
@@ -2048,6 +2062,17 @@ func selectionContentWidth(line string) int {
 	return VisibleWidth(strings.TrimRight(StripTerminalSequences(line), " \t"))
 }
 
+// selectionRowWidthLocked is the width the selected rows were rendered at: the
+// scroll view's content width, or the screen width outside one.
+func (s *AltScreen) selectionRowWidthLocked(scrollView *ScrollView) int {
+	if scrollView != nil && s.currentLayout != nil {
+		if box, ok := GetScrollViewBox(*s.currentLayout, scrollView); ok {
+			return scrollView.GetContentWidth(box.Rect.Width)
+		}
+	}
+	return s.previousScreenWidth
+}
+
 // selectionWrapsInto reports whether a row was wrapped into the next one. Word
 // wrapping leaves the row short of the width, so the width alone cannot tell: a
 // row is a wrap when the next row's first word would not have fitted after it
@@ -2122,12 +2147,7 @@ func (s *AltScreen) getActiveSelectionTextLocked() (string, bool) {
 	// D472: a row whose text runs to the row width is a soft wrap, so the copy
 	// joins it with the next row instead of starting a new line. A row the
 	// content ended with a newline is shorter than the width.
-	rowWidth := s.previousScreenWidth
-	if selection.Start.ScrollView != nil {
-		if box, ok := GetScrollViewBox(*s.currentLayout, selection.Start.ScrollView); ok {
-			rowWidth = selection.Start.ScrollView.GetContentWidth(box.Rect.Width)
-		}
-	}
+	rowWidth := s.selectionRowWidthLocked(selection.Start.ScrollView)
 	joinIndent := -1
 	margin := selectionMargin(sourceLines, selection)
 	previousLine := ""

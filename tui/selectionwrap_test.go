@@ -199,3 +199,58 @@ func TestSelectionKeepsProseLineBreaks(t *testing.T) {
 		t.Fatalf("copy = %q, want the hard break kept", got)
 	}
 }
+
+// tripleClick presses and releases on a cell three times, which the click
+// counter turns into a line selection.
+func tripleClick(screen *AltScreen, column, row int) {
+	press := "\x1b[<0;" + itoa(column) + ";" + itoa(row) + "M"
+	release := "\x1b[<0;" + itoa(column) + ";" + itoa(row) + "m"
+	for range 3 {
+		screen.HandleTerminalInput(press)
+		screen.HandleTerminalInput(release)
+	}
+}
+
+// A triple click selects the whole line the content wrote, including the rows
+// the renderer wrapped it into (D472).
+func TestTripleClickSelectsAWrappedLine(t *testing.T) {
+	text := "the quick brown fox jumps over the lazy dog"
+	terminal := &recordingTerminal{width: 20, height: 6}
+	screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
+	screen.DisableAutoRender()
+	screen.AddChild(NewScrollView(NewText(text, 0, 0, nil), ScrollViewOptions{Primary: true}))
+	screen.Start()
+	screen.RenderNow(false)
+	screen.SetCopyOnSelect(false)
+
+	tripleClick(screen, 3, 1)
+
+	got, ok := screen.getActiveSelectionTextLocked()
+	if !ok {
+		t.Fatal("no selection text")
+	}
+	if got != text {
+		t.Fatalf("triple click copied %q, want %q", got, text)
+	}
+}
+
+// A line the content broke is one row, so a triple click stays on it.
+func TestTripleClickSelectsOneHardLine(t *testing.T) {
+	terminal := &recordingTerminal{width: 20, height: 6}
+	screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
+	screen.DisableAutoRender()
+	screen.AddChild(NewScrollView(NewText("abc\ndefgh", 0, 0, nil), ScrollViewOptions{Primary: true}))
+	screen.Start()
+	screen.RenderNow(false)
+	screen.SetCopyOnSelect(false)
+
+	tripleClick(screen, 1, 1)
+
+	got, ok := screen.getActiveSelectionTextLocked()
+	if !ok {
+		t.Fatal("no selection text")
+	}
+	if got != "abc" {
+		t.Fatalf("triple click copied %q, want %q", got, "abc")
+	}
+}
