@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D471)
+# Deliberate divergences from pi (D1–D472)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7585,3 +7585,25 @@ byte. The default renderer trims.
 
 Tests: `TestSelectionHighlightSkipsHorizontalPadding`,
 `TestSelectionHighlightSkipsLeadingPadding`, `TestAltScreenAgainstUpstreamGolden`.
+
+### D472
+
+**A copied selection joins rows the renderer soft-wrapped into one line.**
+
+Reference: pi v1.5.2 (b4afdddf) `tui-alt-screen.ts` `getActiveSelectionText`
+joins every selected row with `\n`, so copying a paragraph the terminal wrapped
+pastes it back with a break at every screen edge. Claude Code joins the wrapped
+rows. Pier treats a row whose text runs to the row width as a soft wrap and
+appends the next row to it without a newline, dropping the indentation the
+continuation repeats; a shorter row ended with a newline and keeps it.
+
+The width is the scroll view's content width, or the screen width for a
+selection outside one. A hard line break whose text exactly fills the width is
+indistinguishable from a wrap at that point and is joined too. A marker on the
+wrapped rows would be exact, but the component goldens compare `WrapTextWithAnsi`
+output against upstream byte for byte, so the join reads the rendered geometry
+instead.
+
+Tests: `TestSelectionJoinsSoftWrappedRows`,
+`TestSelectionJoinsWrappedRowsWithoutTheirIndent`,
+`TestSelectionKeepsHardLineBreaks`.

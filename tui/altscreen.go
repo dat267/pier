@@ -2029,6 +2029,16 @@ func (s *AltScreen) getActiveSelectionTextLocked() (string, bool) {
 		sourceLines = box.ScrollContentLines
 	}
 	var lines []string
+	// D472: a row whose text runs to the row width is a soft wrap, so the copy
+	// joins it with the next row instead of starting a new line. A row the
+	// content ended with a newline is shorter than the width.
+	rowWidth := s.previousScreenWidth
+	if selection.Start.ScrollView != nil {
+		if box, ok := GetScrollViewBox(*s.currentLayout, selection.Start.ScrollView); ok {
+			rowWidth = box.Rect.Width
+		}
+	}
+	joinIndent := -1
 	for row := selection.Start.Row; row <= selection.End.Row; row++ {
 		line := ""
 		if row >= 0 && row < len(sourceLines) {
@@ -2036,7 +2046,19 @@ func (s *AltScreen) getActiveSelectionTextLocked() (string, bool) {
 		}
 		start, end := s.getSelectionColumnsLocked(line, row, selection, 0, VisibleWidth(line))
 		selected := SliceByColumn(line, start, max(0, end-start), true)
-		lines = append(lines, strings.TrimRight(StripTerminalSequences(selected), " \t"))
+		text := strings.TrimRight(StripTerminalSequences(selected), " \t")
+		if joinIndent >= 0 && len(lines) > 0 {
+			lines[len(lines)-1] += strings.TrimPrefix(text, strings.Repeat(" ", min(joinIndent, len(text))))
+		} else {
+			lines = append(lines, text)
+		}
+		if rowWidth > 0 && selectionContentWidth(line) >= rowWidth {
+			if joinIndent < 0 {
+				joinIndent = len(text) - len(strings.TrimLeft(text, " \t"))
+			}
+		} else {
+			joinIndent = -1
+		}
 	}
 	text := strings.Join(lines, "\n")
 	if text == "" {
