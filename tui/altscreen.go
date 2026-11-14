@@ -2023,6 +2023,12 @@ func selectionFirstContentColumn(line string) int {
 	return VisibleWidth(plain) - VisibleWidth(strings.TrimLeft(plain, " \t"))
 }
 
+// selectionRowRightEdge is the column just past a screen line's last non-blank
+// cell, indentation included (D472).
+func selectionRowRightEdge(line string) int {
+	return selectionFirstContentColumn(line) + selectionContentWidth(line)
+}
+
 // selectionContentWidth is the visible width of a screen line up to its last
 // non-blank cell: the renderer pads lines to the terminal width, so the
 // trailing spaces are padding, not text (D471).
@@ -2053,8 +2059,22 @@ func (s *AltScreen) getActiveSelectionTextLocked() (string, bool) {
 	rowWidth := s.previousScreenWidth
 	if selection.Start.ScrollView != nil {
 		if box, ok := GetScrollViewBox(*s.currentLayout, selection.Start.ScrollView); ok {
-			rowWidth = box.Rect.Width
+			rowWidth = selection.Start.ScrollView.GetContentWidth(box.Rect.Width)
 		}
+	}
+	// The wrap width is the widest right edge in the selection, and only counts
+	// when the text reaches most of the row: the transcript pads its messages,
+	// so a wrapped row stops short of the row width by that padding.
+	wrapEdge := 0
+	for row := selection.Start.Row; row <= selection.End.Row; row++ {
+		if row >= 0 && row < len(sourceLines) {
+			if edge := selectionRowRightEdge(sourceLines[row]); edge > wrapEdge {
+				wrapEdge = edge
+			}
+		}
+	}
+	if rowWidth == 0 || wrapEdge*5 < rowWidth*4 {
+		wrapEdge = 0
 	}
 	joinIndent := -1
 	for row := selection.Start.Row; row <= selection.End.Row; row++ {
@@ -2070,7 +2090,7 @@ func (s *AltScreen) getActiveSelectionTextLocked() (string, bool) {
 		} else {
 			lines = append(lines, text)
 		}
-		if rowWidth > 0 && selectionContentWidth(line) >= rowWidth {
+		if wrapEdge > 0 && selectionRowRightEdge(line) >= wrapEdge {
 			if joinIndent < 0 {
 				joinIndent = len(text) - len(strings.TrimLeft(text, " \t"))
 			}

@@ -83,3 +83,70 @@ func TestSelectionCopyHonorsAStartInsideTheText(t *testing.T) {
 		t.Fatalf("copy = %q, want %q", got, want)
 	}
 }
+
+// The transcript lives in a scroll view: the wrap width there is the content
+// width the view rendered its child at.
+func TestSelectionJoinsSoftWrappedRowsInAScrollView(t *testing.T) {
+	terminal := &recordingTerminal{width: 10, height: 6}
+	screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
+	screen.DisableAutoRender()
+	view := NewScrollView(NewText("abcdefghijklm", 0, 0, nil), ScrollViewOptions{Primary: true})
+	screen.AddChild(view)
+	screen.Start()
+	screen.RenderNow(false)
+	screen.SetCopyOnSelect(false)
+
+	screen.HandleTerminalInput("\x1b[<0;1;1M")
+	screen.HandleTerminalInput("\x1b[<32;10;2M")
+	screen.HandleTerminalInput("\x1b[<0;10;2m")
+
+	got, ok := screen.getActiveSelectionTextLocked()
+	if !ok {
+		t.Fatal("no selection text")
+	}
+	if want := "abcdefghijklm"; got != want {
+		t.Fatalf("scroll view copy = %q, want %q", got, want)
+	}
+}
+
+// narrowComponent renders every line padded to one column less than it is
+// given, the way the transcript's output padding does.
+type narrowComponent struct{ lines []string }
+
+func (c *narrowComponent) Render(width int) []string {
+	out := make([]string, 0, len(c.lines))
+	for _, line := range c.lines {
+		for VisibleWidth(line) < width-1 {
+			line += " "
+		}
+		out = append(out, line)
+	}
+	return out
+}
+
+func (c *narrowComponent) Invalidate() {}
+
+// The transcript pads its messages, so a wrapped row stops a column short of
+// the row width. The wrap width is the selection's widest right edge.
+func TestSelectionJoinsWrappedRowsWithOutputPadding(t *testing.T) {
+	terminal := &recordingTerminal{width: 10, height: 6}
+	screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
+	screen.DisableAutoRender()
+	view := NewScrollView(&narrowComponent{lines: []string{"abcdefghi", "klm"}}, ScrollViewOptions{Primary: true})
+	screen.AddChild(view)
+	screen.Start()
+	screen.RenderNow(false)
+	screen.SetCopyOnSelect(false)
+
+	screen.HandleTerminalInput("\x1b[<0;1;1M")
+	screen.HandleTerminalInput("\x1b[<32;10;2M")
+	screen.HandleTerminalInput("\x1b[<0;10;2m")
+
+	got, ok := screen.getActiveSelectionTextLocked()
+	if !ok {
+		t.Fatal("no selection text")
+	}
+	if want := "abcdefghiklm"; got != want {
+		t.Fatalf("padded wrapped copy = %q, want %q", got, want)
+	}
+}

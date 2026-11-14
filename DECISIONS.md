@@ -7598,13 +7598,17 @@ rows. Pier treats a row whose text runs to the row width as a soft wrap and
 appends the next row to it without a newline, dropping the indentation the
 continuation repeats; a shorter row ended with a newline and keeps it.
 
-The width is the scroll view's content width, or the screen width for a
-selection outside one. A hard line break whose text exactly fills the width is
-indistinguishable from a wrap at that point and is joined too. A marker on the
-wrapped rows would be exact, but the component goldens compare `WrapTextWithAnsi`
-output against upstream byte for byte, so the join reads the rendered geometry
-instead.
+The wrap width is the widest right edge in the selection, which is the width the
+renderer wrapped at, and it counts only when the text reaches four fifths of the
+row: the transcript pads its messages, so a wrapped row stops short of the row
+width by that padding, and a selection of short lines has no wrapped row at all.
+A hard line break whose text exactly fills the width is indistinguishable from a
+wrap at that point and is joined too. A marker on the wrapped rows would be
+exact, but the component goldens compare `WrapTextWithAnsi` output against
+upstream byte for byte, so the join reads the rendered geometry instead.
 
 Tests: `TestSelectionJoinsSoftWrappedRows`,
+`TestSelectionJoinsSoftWrappedRowsInAScrollView`,
+`TestSelectionJoinsWrappedRowsWithOutputPadding`,
 `TestSelectionJoinsWrappedRowsWithoutTheirIndent`,
 `TestSelectionKeepsHardLineBreaks`.
