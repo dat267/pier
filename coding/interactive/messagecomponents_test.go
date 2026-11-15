@@ -29,8 +29,9 @@ type assistantSpec struct {
 }
 
 type summarySpec struct {
-	Summary string `json:"summary"`
-	Width   int    `json:"width"`
+	Summary      string `json:"summary"`
+	TokensBefore int64  `json:"tokensBefore"`
+	Width        int    `json:"width"`
 }
 
 type messageCorpus struct {
@@ -170,7 +171,11 @@ func TestMessagesAgainstUpstreamGolden(t *testing.T) {
 	sortStrings(compactionLabels)
 	for _, label := range compactionLabels {
 		spec := corpus.Compaction[label]
-		component := NewCompactionSummaryMessageComponent(spec.Summary, 1234, nil, 1)
+		tokensBefore := spec.TokensBefore
+		if tokensBefore == 0 {
+			tokensBefore = 1234
+		}
+		component := NewCompactionSummaryMessageComponent(spec.Summary, tokensBefore, nil, 1)
 		checkGolden(t, golden, "compaction "+label+"@"+itoa(spec.Width), component.Render(spec.Width))
 		component.SetExpanded(true)
 		checkGolden(t, golden, "compaction "+label+"-expanded@"+itoa(spec.Width), component.Render(spec.Width))

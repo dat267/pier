@@ -31,7 +31,7 @@ for (const [kind, Class] of [
 	["compaction", CompactionSummaryMessageComponent],
 ]) {
 	for (const [label, s] of entries(c[kind])) {
-		const v = new Class({ role: kind + "Summary", summary: s.summary, tokensBefore: 1234 });
+		const v = new Class({ role: kind + "Summary", summary: s.summary, tokensBefore: s.tokensBefore ?? 1234 });
 		emit(`m ${kind} ${label}@${s.width}`, v.render(s.width));
 		v.setExpanded(true);
 		emit(`m ${kind} ${label}-expanded@${s.width}`, v.render(s.width));
