@@ -155,6 +155,12 @@ func TestTerminalDetectsTrueColor(t *testing.T) {
 		// TERM_PROGRAM nor always a truecolor COLORTERM.
 		{"Alacritty by term", map[string]string{"TERM": "alacritty"}, true},
 		{"Alacritty by window id", map[string]string{"ALACRITTY_WINDOW_ID": "1"}, true},
+		// pi v1.5.2 (b4afdddf) terminal-image.ts: Orca advertises truecolor only
+		// through ORCA_IMAGE_PROTOCOL, and JetBrains Jediterm always has it.
+		{"Orca with the image protocol", map[string]string{"TERM_PROGRAM": "Orca", "ORCA_IMAGE_PROTOCOL": "kitty"}, true},
+		{"Orca without the image protocol", map[string]string{"TERM_PROGRAM": "Orca"}, false},
+		{"JetBrains Jediterm", map[string]string{"TERMINAL_EMULATOR": "JetBrains-JediTerm"}, true},
+		{"Herdr without a hint", map[string]string{"TERM_PROGRAM": "Herdr"}, false},
 		{"TERM 256color", map[string]string{"TERM": "xterm-256color"}, false},
 		{"nothing", map[string]string{}, false},
 	}

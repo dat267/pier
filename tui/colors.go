@@ -390,6 +390,10 @@ type TextStyle struct {
 // detectCapabilitiesFromEnvironment. Explicit terminal families win unless a
 // multiplexer/proxy is detected first; otherwise COLORTERM and TERM provide the
 // truecolor hint. The caller applies explicit environment and settings overrides.
+//
+// coding/terminalcaps.go carries the whole switch for the renderer, because tui
+// cannot import it; the two walk the same chains and their truecolor results must
+// agree (a missing branch here sent Orca and Jediterm to 256 colors).
 func TerminalDetectsTrueColor(env func(string) string) bool {
 	return terminalDetectsTrueColor(env, runtime.GOOS == "windows")
 }
@@ -413,6 +417,12 @@ func terminalDetectsTrueColor(env func(string) string, windowsConsole bool) bool
 	if termProgram == "rex" {
 		// Rex supports OSC 8 and enough of the Kitty graphics protocol for pi
 		// (upstream 0ed1b0431/396ecd7b8, #11131).
+		return true
+	}
+	if termProgram == "orca" && env("ORCA_IMAGE_PROTOCOL") == "kitty" {
+		// Orca advertises its Kitty graphics support only through
+		// ORCA_IMAGE_PROTOCOL; both signals are required so older releases keep
+		// the text fallback (pi v1.5.2 terminal-image.ts).
 		return true
 	}
 	if env("KITTY_WINDOW_ID") != "" || termProgram == "kitty" {
@@ -441,7 +451,9 @@ func terminalDetectsTrueColor(env func(string) string, windowsConsole bool) bool
 		return true
 	}
 	if terminalEmulator == "jetbrains-jediterm" {
-		return hint
+		// Jediterm has truecolor but does not forward OSC 8
+		// (pi v1.5.2 terminal-image.ts).
+		return true
 	}
 	if windowsConsole {
 		return true
