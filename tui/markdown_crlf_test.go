@@ -23,6 +23,9 @@ func TestMarkdownNormalizesCarriageReturns(t *testing.T) {
 		"para\r\n\r\nafter",
 		"```js\r\nx\r\n```",
 		"a  \r\nb",
+		// A reference definition must reach the lexer LF-only, or the href
+		// keeps a carriage return and the definition is not registered.
+		"[a]: /u\r\n\r\n[a]",
 	}
 	for _, src := range cases {
 		want := NewMarkdown(strings.ReplaceAll(src, "\r\n", "\n"), 0, 0, theme, nil, MarkdownOptions{}).Render(24)
