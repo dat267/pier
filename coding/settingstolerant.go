@@ -268,16 +268,13 @@ func decodeTolerantStruct(raw []byte, target reflect.Value) bool {
 		return false
 	}
 	// An object counts as accepted even when it carries no known member, so a
-	// present-but-empty object keeps its pointer (the reference keeps `{}`).
-	acceptedObject := true
-	accepted := false
+	// present-but-empty object keeps its pointer (the reference keeps `{}`);
+	// each member decodes only if its field can hold the value.
 	typ := target.Type()
 	eachSettingsMember(typ, members, func(index int, _ reflect.StructField, _ string, member json.RawMessage) {
-		if decodeTolerantValue(member, target.Field(index)) {
-			accepted = true
-		}
+		decodeTolerantValue(member, target.Field(index))
 	})
-	return accepted || acceptedObject
+	return true
 }
 
 // decodeTolerantMap decodes a JSON object into a Go map, skipping entries the
