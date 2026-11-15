@@ -57,8 +57,9 @@ const (
 type ModelSelectorComponent struct {
 	*tui.Container
 
-	// mu serializes rendering, input handling, and the background refresh
-	// application (the Go port has no single-threaded event loop: D143).
+	// Rendering, input handling and the applied refresh result all run on the
+	// owner loop: the background refresh is a pure producer that hands its
+	// result over through Post (D143).
 
 	searchInput *tui.Input
 	focused     bool
@@ -298,8 +299,7 @@ func (c *ModelSelectorComponent) Dispose() {
 	c.dispose()
 }
 
-// disposeLocked stops the background refresh for callers that already hold the
-// state mutex (the input handler).
+// dispose stops the background refresh.
 func (c *ModelSelectorComponent) dispose() {
 	if c.closed {
 		return
@@ -358,7 +358,7 @@ func (c *ModelSelectorComponent) isDefaultSearch(query string) bool {
 	return normalized != "" && strings.HasPrefix("default", normalized)
 }
 
-// setScope is only called with the lock held.
+// setScope switches the listed models between all and scoped.
 func (c *ModelSelectorComponent) setScope(scope modelScopeKind) {
 	if c.scope == scope {
 		return
@@ -381,12 +381,12 @@ func (c *ModelSelectorComponent) setScope(scope modelScopeKind) {
 	}
 }
 
-// Render renders the selector under the state lock.
+// Render renders the selector.
 func (c *ModelSelectorComponent) Render(width int) []string {
 	return c.Container.Render(width)
 }
 
-// filterModels is the locked implementation of the filter+list update.
+// filterModels filters the active list and rebuilds the rendered rows.
 func (c *ModelSelectorComponent) filterModels(query string, preferred ...*ai.Model) {
 	if query != "" {
 		filtered := tui.FuzzyFilter(c.activeModels, query, func(item modelItem) string {
@@ -583,8 +583,8 @@ func (c *ModelSelectorComponent) HandleInput(data string) {
 		c.filterModels(c.searchInput.Value())
 	}
 
-	// Invoke callbacks outside the state mutex: they mutate the session
-	// and request renders, which can otherwise invert with the renderer lock.
+	// Invoke the callbacks after the list update: they mutate the session and
+	// request renders, so they run off this component's own state changes.
 	if selectModel != nil && c.onSelect != nil {
 		c.onSelect(selectModel)
 	}
@@ -596,8 +596,7 @@ func (c *ModelSelectorComponent) HandleInput(data string) {
 	}
 }
 
-// selectModel disposes the selector and reports the selection (callers must
-// not hold the state mutex).
+// selectModel disposes the selector and reports the selection.
 func (c *ModelSelectorComponent) selectModel(model *ai.Model) {
 	c.dispose()
 	if c.onSelect != nil {

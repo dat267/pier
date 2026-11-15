@@ -222,9 +222,6 @@ type ScopedModelsSelectorComponent struct {
 	maxVisible    int
 	isDirty       bool
 	refreshStatus *tui.Text
-
-	// mu serializes rendering/input against the background catalog refresh
-	// (the Go port has no single-threaded event loop: D143).
 }
 
 // NewScopedModelsSelectorComponent creates the selector.
