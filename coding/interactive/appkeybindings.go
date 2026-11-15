@@ -121,7 +121,7 @@ func KeybindingsFor(goos string, env func(string) string) (map[string]tui.Keybin
 		"app.message.copy":              {DefaultKeys: []string{"ctrl+x"}, Description: "Copy selection or last assistant message"},
 		"app.message.followUp":          {DefaultKeys: followUpKeys(windows), Description: "Queue follow-up message"},
 		"app.message.dequeue":           {DefaultKeys: dequeueKeys(windows), Description: "Restore queued messages"},
-		"app.clipboard.pasteImage":      {DefaultKeys: pasteImageKeys(windows), Description: "Paste image from clipboard (text fallback)"},
+		"app.clipboard.pasteImage":      {DefaultKeys: pasteImageKeys(windows), Description: "Paste files on macOS, images, or text from clipboard"},
 		"app.session.new":               {DefaultKeys: nil, Description: "Start a new session"},
 		"app.session.tree":              {DefaultKeys: nil, Description: "Open session tree"},
 		"app.session.fork":              {DefaultKeys: nil, Description: "Fork current session"},
@@ -139,13 +139,13 @@ func KeybindingsFor(goos string, env func(string) string) (map[string]tui.Keybin
 		"app.models.enableAll":          {DefaultKeys: []string{"ctrl+a"}, Description: "Enable all models"},
 		"app.models.clearAll":           {DefaultKeys: []string{"ctrl+x"}, Description: "Clear all models"},
 		"app.models.toggleProvider":     {DefaultKeys: []string{"ctrl+p"}, Description: "Toggle all models for provider"},
-		"app.models.reorderUp":          {DefaultKeys: []string{"alt+up"}, Description: "Move model up in priority order"},
-		"app.models.reorderDown":        {DefaultKeys: []string{"alt+down"}, Description: "Move model down in priority order"},
-		"app.tree.filter.default":       {DefaultKeys: []string{"ctrl+d"}, Description: "Tree filter: default"},
-		"app.tree.filter.noTools":       {DefaultKeys: []string{"ctrl+t"}, Description: "Tree filter: hide tool calls"},
+		"app.models.reorderUp":          {DefaultKeys: []string{"alt+up"}, Description: "Move model up in order"},
+		"app.models.reorderDown":        {DefaultKeys: []string{"alt+down"}, Description: "Move model down in order"},
+		"app.tree.filter.default":       {DefaultKeys: []string{"ctrl+d"}, Description: "Tree filter: default view"},
+		"app.tree.filter.noTools":       {DefaultKeys: []string{"ctrl+t"}, Description: "Tree filter: hide tool results"},
 		"app.tree.filter.userOnly":      {DefaultKeys: []string{"ctrl+u"}, Description: "Tree filter: user messages only"},
-		"app.tree.filter.labeledOnly":   {DefaultKeys: []string{"ctrl+l"}, Description: "Tree filter: labeled only"},
-		"app.tree.filter.all":           {DefaultKeys: []string{"ctrl+a"}, Description: "Tree filter: show all"},
+		"app.tree.filter.labeledOnly":   {DefaultKeys: []string{"ctrl+l"}, Description: "Tree filter: labeled entries only"},
+		"app.tree.filter.all":           {DefaultKeys: []string{"ctrl+a"}, Description: "Tree filter: show all entries"},
 		"app.tree.filter.cycleForward":  {DefaultKeys: []string{"ctrl+o"}, Description: "Tree filter: cycle forward"},
 		"app.tree.filter.cycleBackward": {DefaultKeys: []string{"shift+ctrl+o"}, Description: "Tree filter: cycle backward"},
 	}
@@ -171,9 +171,11 @@ func dequeueKeys(windows bool) []string {
 	return []string{"alt+up"}
 }
 
+// pasteImageKeys keeps both keys on Windows/WSL, as the reference does: its
+// `app.clipboard.pasteImage` default is `["alt+v", "ctrl+v"]` there.
 func pasteImageKeys(windows bool) []string {
 	if windows {
-		return []string{"alt+v"}
+		return []string{"alt+v", "ctrl+v"}
 	}
 	return []string{"ctrl+v"}
 }

@@ -16,6 +16,7 @@ const families = [
 	"easter",
 	"edittool-parity",
 	"exec",
+	"keybindings",
 	"message",
 	"mcptool-parity",
 	"modelsel",
