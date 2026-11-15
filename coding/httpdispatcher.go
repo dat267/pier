@@ -1,9 +1,10 @@
 package coding
 
 import (
-	"fmt"
 	"os"
 	"strings"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of core/http-dispatcher.ts. The undici-specific dispatcher (connection
@@ -51,7 +52,8 @@ func FormatHTTPIdleTimeoutMS(timeoutMS int64) string {
 			return choice.Label
 		}
 	}
-	return fmt.Sprintf("%d sec", timeoutMS/1000)
+	// Upstream: `${timeoutMs / 1000} sec`, which keeps a fractional value.
+	return ai.JSNumberToString(float64(timeoutMS)/1000) + " sec"
 }
 
 // ApplyHTTPProxySettings seeds the proxy environment from a configured value.

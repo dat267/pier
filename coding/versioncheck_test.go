@@ -236,6 +236,12 @@ func TestHTTPDispatcherHelpers(t *testing.T) {
 	if got := FormatHTTPIdleTimeoutMS(45_000); got != "45 sec" {
 		t.Fatalf("label = %q", got)
 	}
+	// pi v1.5.2 core/http-dispatcher.ts formatHttpIdleTimeoutMs formats a value
+	// outside the choices as `${timeoutMs / 1000} sec`, so a fractional value
+	// keeps its fraction.
+	if got := FormatHTTPIdleTimeoutMS(1_500); got != "1.5 sec" {
+		t.Fatalf("fractional label = %q", got)
+	}
 	if len(HTTPIdleTimeoutChoices) != 5 || HTTPIdleTimeoutChoices[4].TimeoutMS != 0 {
 		t.Fatalf("choices = %+v", HTTPIdleTimeoutChoices)
 	}
