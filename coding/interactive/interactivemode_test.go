@@ -91,6 +91,29 @@ func TestInteractiveModeHelpers(t *testing.T) {
 		t.Fatalf("same-name description = %q", got)
 	}
 
+	// pi v1.5.2 getLoginProviderCompletionOptions sorts with compareProviders,
+	// so a preferred partner stays ahead of a non-preferred provider whose name
+	// sorts first.
+	preferred := GetLoginProviderCompletionOptions([]AuthSelectorProvider{
+		{ID: "alpha", Name: "Alpha", AuthType: "api_key"},
+		{ID: "openrouter", Name: "OpenRouter", AuthType: "api_key"},
+	})
+	if len(preferred) != 2 || preferred[0].ID != "openrouter" {
+		t.Fatalf("preferred order = %+v", preferred)
+	}
+	// The option carries the provider's subscription flag, which decides the
+	// oauth label ("account" when false).
+	notSubscription := false
+	account := GetLoginProviderCompletionOptions([]AuthSelectorProvider{
+		{ID: "radius", Name: "Radius", AuthType: "oauth", Subscription: &notSubscription},
+	})
+	if got := FormatLoginProviderCompletionDescription(account[0]); got != "Radius · account" {
+		t.Fatalf("account description = %q", got)
+	}
+	if got := GetLoginProviderSearchText(account[0]); got != "radius Radius oauth account" {
+		t.Fatalf("account search text = %q", got)
+	}
+
 	items := []string{"alpha", "beta", "gamma"}
 	mapped := CreateFuzzyAutocompleteItems(items, "ga", func(item string) string { return item },
 		func(item string) tui.AutocompleteItem { return tui.AutocompleteItem{Value: item} })

@@ -197,6 +197,9 @@ type LoginProviderCompletionOption struct {
 	ID        string
 	Name      string
 	AuthTypes []string
+	// Subscription is the first option's flag; it decides the oauth label
+	// ("account" when false).
+	Subscription *bool
 }
 
 // AuthTypeOrder is the ordering of the auth-type labels.
@@ -239,6 +242,7 @@ func GetLoginProviderCompletionOptions(providerOptions []AuthSelectorProvider) [
 		}
 		byID[provider.ID] = &LoginProviderCompletionOption{
 			ID: provider.ID, Name: provider.Name, AuthTypes: []string{provider.AuthType},
+			Subscription: provider.Subscription,
 		}
 		order = append(order, provider.ID)
 	}
@@ -246,7 +250,11 @@ func GetLoginProviderCompletionOptions(providerOptions []AuthSelectorProvider) [
 	for _, id := range order {
 		result = append(result, *byID[id])
 	}
-	sort.SliceStable(result, func(i int, j int) bool { return result[i].Name < result[j].Name })
+	// upstream sorts the deduplicated entries with compareProviders: preferred
+	// partners first, then by name.
+	sort.SliceStable(result, func(i int, j int) bool {
+		return coding.ComparePreferredProviders(result[i].ID, result[i].Name, result[j].ID, result[j].Name) < 0
+	})
 	return result
 }
 
@@ -254,7 +262,7 @@ func GetLoginProviderCompletionOptions(providerOptions []AuthSelectorProvider) [
 func GetLoginProviderSearchText(provider LoginProviderCompletionOption) string {
 	parts := make([]string, 0, len(provider.AuthTypes))
 	for _, authType := range provider.AuthTypes {
-		parts = append(parts, authType+" "+FormatAuthSelectorProviderType(authType))
+		parts = append(parts, authType+" "+formatAuthSelectorProviderType(authType, provider.Subscription))
 	}
 	return provider.ID + " " + provider.Name + " " + strings.Join(parts, " ")
 }
@@ -263,7 +271,7 @@ func GetLoginProviderSearchText(provider LoginProviderCompletionOption) string {
 func FormatLoginProviderCompletionDescription(provider LoginProviderCompletionOption) string {
 	authTypes := make([]string, 0, len(provider.AuthTypes))
 	for _, authType := range provider.AuthTypes {
-		authTypes = append(authTypes, FormatAuthSelectorProviderType(authType))
+		authTypes = append(authTypes, formatAuthSelectorProviderType(authType, provider.Subscription))
 	}
 	joined := strings.Join(authTypes, "/")
 	if provider.Name == provider.ID {
