@@ -316,7 +316,6 @@ func containsPhase(phases []GoalPhase, phase GoalPhase) bool {
 // an error on corruption.
 func FoldGoal(entries []CustomEntry) (FoldedGoal, error) {
 	var current *GoalSnapshot
-	turnsStarted := 0
 	turnNo := 0
 	var usedTokens int64
 	var usedCostUsd float64
@@ -338,7 +337,6 @@ func FoldGoal(entries []CustomEntry) (FoldedGoal, error) {
 			}
 			current = next
 			if current == nil || current.ID != previousID {
-				turnsStarted = 0
 				turnNo = 0
 				usedTokens = 0
 				usedCostUsd = 0
@@ -355,7 +353,6 @@ func FoldGoal(entries []CustomEntry) (FoldedGoal, error) {
 				return FoldedGoal{}, fmt.Errorf("non-sequential goal turn: expected %d, got %d", turnNo+1, turn.Turn)
 			}
 			turnNo = turn.Turn
-			turnsStarted = turn.Turn
 			if turn.Usage != nil {
 				usedTokens = addGoalUsageTokens(usedTokens, turn.Usage.Tokens)
 				usedCostUsd += math.Max(0, turn.Usage.CostUsd)
@@ -369,7 +366,7 @@ func FoldGoal(entries []CustomEntry) (FoldedGoal, error) {
 	view := GoalView{
 		GoalSnapshot: *current,
 		Armed:        false,
-		TurnsStarted: turnsStarted,
+		TurnsStarted: turnNo,
 		UsedTokens:   usedTokens,
 		UsedCostUsd:  usedCostUsd,
 	}
@@ -379,18 +376,11 @@ func FoldGoal(entries []CustomEntry) (FoldedGoal, error) {
 // addGoalUsageTokens ignores negative reports and saturates the goal's int64
 // usage representation instead of wrapping positive cumulative usage (D368).
 func addGoalUsageTokens(total, tokens int64) int64 {
-	tokens = maxInt64(0, tokens)
+	tokens = max(0, tokens)
 	if total > math.MaxInt64-tokens {
 		return math.MaxInt64
 	}
 	return total + tokens
-}
-
-func maxInt64(a, b int64) int64 {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 var goalWhitespace = regexp.MustCompile(`[\t\n\v\f\r \x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]+`)
@@ -507,7 +497,7 @@ func FormatBudget(budget *GoalBudget, usedTokens int64, usedCostUsd float64, ela
 	}
 	parts := []string{}
 	if budget.TimeLimitMs != nil {
-		parts = append(parts, fmt.Sprintf("time %d/%dm", floorDiv(maxInt64(0, elapsedMs), 60_000), floorDiv(*budget.TimeLimitMs, 60_000)))
+		parts = append(parts, fmt.Sprintf("time %d/%dm", floorDiv(max(0, elapsedMs), 60_000), floorDiv(*budget.TimeLimitMs, 60_000)))
 	}
 	if budget.TokenLimit != nil {
 		parts = append(parts, fmt.Sprintf("tokens %d/%d", usedTokens, *budget.TokenLimit))
