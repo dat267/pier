@@ -27,10 +27,9 @@ import (
 //
 // Divergences (D185): upstream reads a provider token and persists OAuth
 // credentials in auth.json; the port keeps OAuth credentials in a per-process
-// store (a later `/mcp` sign-in can add file backing), the tool definition
+// store (a later `/mcp` sign-in can add file backing), and the tool definition
 // carries no renderers (the interactive layer's generic fallback draws MCP
-// calls) and no output schema/annotations, and an `isError` result is returned
-// as a Go error since agent.AgentToolResult has no error flag.
+// calls) and no output schema/annotations.
 
 // McpDefaultTimeoutSeconds is the per-request timeout (upstream
 // DEFAULT_TIMEOUT_SECONDS).
@@ -892,15 +891,14 @@ func CreateMcpToolDefinition(options McpToolDefinitionOptions) agent.AgentTool {
 			if err != nil {
 				return agent.AgentToolResult{}, err
 			}
-			converted, isError, err := ConvertMcpResult(options.Server, options.Tool.Name, result, ConvertMcpResultOptions{
+			// An isError result is already flagged on the converted result, so the
+			// loop keeps its content and details and reports the failure.
+			converted, _, err := ConvertMcpResult(options.Server, options.Tool.Name, result, ConvertMcpResultOptions{
 				ReadableResources: options.ReadableResources != nil && options.ReadableResources(),
 			})
 			if err != nil {
 				return agent.AgentToolResult{}, err
 			}
-			// An isError result is returned as a flagged result: the loop keeps its
-			// content and details (upstream convertMcpResult sets isError).
-			_ = isError
 			return converted, nil
 		},
 	}
