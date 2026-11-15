@@ -3,6 +3,7 @@ package coding
 import (
 	"regexp"
 	"strings"
+	"unicode/utf8"
 )
 
 // Port of utils/ansi.ts: stripAnsi, derived upstream from ansi-regex /
@@ -36,7 +37,7 @@ var ansiStripPattern = regexp.MustCompile(
 // splitIncompleteAnsiSuffix separates text safe to strip now from a trailing
 // incomplete ANSI sequence that may continue in the next output chunk.
 func splitIncompleteAnsiSuffix(value string) (complete, pending string) {
-	windowStart := max(0, len(value)-maxPendingAnsiBytes)
+	windowStart := pendingAnsiWindowStart(value)
 	for i := windowStart; i < len(value); i++ {
 		if value[i] == '\x1b' && i+1 < len(value) && value[i+1] == ']' {
 			end := ansiStringTerminatorEnd(value, i+2)
@@ -57,6 +58,25 @@ func splitIncompleteAnsiSuffix(value string) (complete, pending string) {
 		}
 	}
 	return value, ""
+}
+
+// pendingAnsiWindowStart returns the first byte of the last
+// maxPendingAnsiBytes code units. The reference slices the string in UTF-16
+// units; a byte window would miss an unfinished escape whose non-ASCII payload
+// is longer than 256 bytes but shorter than 256 units.
+func pendingAnsiWindowStart(value string) int {
+	start := len(value)
+	units := 0
+	for start > 0 && units < maxPendingAnsiBytes {
+		r, size := utf8.DecodeLastRuneInString(value[:start])
+		if r > 0xFFFF {
+			units += 2
+		} else {
+			units++
+		}
+		start -= size
+	}
+	return start
 }
 
 func ansiStringTerminatorEnd(value string, start int) int {

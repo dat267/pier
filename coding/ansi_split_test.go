@@ -64,3 +64,31 @@ func FuzzSplitIncompleteAnsiSuffixPreservesBytes(f *testing.F) {
 		}
 	})
 }
+
+// Reference: pi v1.5.2 utils/ansi.ts splitIncompleteAnsiSuffix slices the last
+// MAX_PENDING_ANSI_LENGTH (256) UTF-16 code units, not bytes: an unfinished OSC
+// whose non-ASCII payload is longer than 256 bytes but shorter than 256 units
+// is still held back for the next chunk. A byte window emitted it instead, so a
+// later chunk completes an OSC the terminal never saw start.
+func TestSplitIncompleteAnsiSuffixWindowCountsCodeUnits(t *testing.T) {
+	for _, testCase := range []struct {
+		name  string
+		value string
+	}{
+		{"cjk 200", "\x1b]0;" + strings.Repeat("日", 200)},
+		{"cjk 100", "\x1b]0;" + strings.Repeat("日", 100)},
+		{"emoji title", "\x1b]0;title" + strings.Repeat("😀", 100)},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			complete, pending := splitIncompleteAnsiSuffix(testCase.value)
+			if complete != "" || pending != testCase.value {
+				t.Fatalf("complete = %q, pending = %q; want the whole value pending", complete, pending)
+			}
+		})
+	}
+	// An ASCII OSC beyond the window is processed as-is, like the reference.
+	ascii := "\x1b]0;" + strings.Repeat("a", 300)
+	if complete, pending := splitIncompleteAnsiSuffix(ascii); complete != ascii || pending != "" {
+		t.Fatalf("complete = %q, pending = %q; want no split", complete, pending)
+	}
+}
