@@ -47,9 +47,7 @@ func TestSweepTempOutputFiles(t *testing.T) {
 	}
 
 	// Under budget: nothing is touched.
-	if removed, freed := sweepTempOutputFiles(dir, fresh, 300); removed != 0 || freed != 0 {
-		t.Fatalf("under budget: removed=%d freed=%d, want 0/0", removed, freed)
-	}
+	sweepTempOutputFiles(dir, fresh, 300)
 	for _, path := range []string{oldest, older, newer, fresh} {
 		if !exists(path) {
 			t.Fatalf("%s was removed while under budget", filepath.Base(path))
@@ -57,10 +55,7 @@ func TestSweepTempOutputFiles(t *testing.T) {
 	}
 
 	// Budget 200 of 300 bytes: the oldest goes, the rest stay.
-	removed, freed := sweepTempOutputFiles(dir, fresh, 200)
-	if removed != 1 || freed != 100 {
-		t.Fatalf("sweep = %d files / %d bytes, want 1/100", removed, freed)
-	}
+	sweepTempOutputFiles(dir, fresh, 200)
 	if exists(oldest) {
 		t.Error("the oldest file survived")
 	}
@@ -71,10 +66,7 @@ func TestSweepTempOutputFiles(t *testing.T) {
 	}
 
 	// Budget 0: everything of this port's goes, except the file being written.
-	removed, freed = sweepTempOutputFiles(dir, fresh, 0)
-	if removed != 2 || freed != 200 {
-		t.Fatalf("sweep to zero = %d files / %d bytes, want 2/200", removed, freed)
-	}
+	sweepTempOutputFiles(dir, fresh, 0)
 	for _, path := range []string{older, newer} {
 		if exists(path) {
 			t.Errorf("%s survived a zero budget", filepath.Base(path))

@@ -54,14 +54,13 @@ var tempOutputPrefixes = []string{"pi-bash-", "pi-output-", "pi-powershell-"}
 // size is known only when the command ends.
 //
 // Best effort: a failure to remove scratch must never fail a tool call, so every
-// error here is ignored. Returns how many files were removed and the bytes they
-// held.
-func sweepTempOutputFiles(dir, keep string, budget int64) (int, int64) {
+// error here is ignored.
+func sweepTempOutputFiles(dir, keep string, budget int64) {
 	activeTempOutputMu.Lock()
 	defer activeTempOutputMu.Unlock()
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return 0, 0
+		return
 	}
 	type scratchFile struct {
 		path    string
@@ -91,11 +90,9 @@ func sweepTempOutputFiles(dir, keep string, budget int64) (int, int64) {
 		total += info.Size()
 	}
 	if total <= budget {
-		return 0, 0
+		return
 	}
 	sort.Slice(files, func(i, j int) bool { return files[i].modTime.Before(files[j].modTime) })
-	var removed int
-	var freed int64
 	for _, file := range files {
 		if total <= budget {
 			break
@@ -104,10 +101,7 @@ func sweepTempOutputFiles(dir, keep string, budget int64) (int, int64) {
 			continue
 		}
 		total -= file.size
-		freed += file.size
-		removed++
 	}
-	return removed, freed
 }
 
 // isTempOutputName reports whether a directory entry is one of this port's temp

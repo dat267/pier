@@ -147,7 +147,7 @@ func readClipboardImageWith(ctx context.Context, goos string, getenv func(string
 	case "windows":
 		image, _ = readClipboardImageViaPowerShell(ctx, run, false)
 	case "darwin":
-		image, _ = readClipboardImageViaPngpaste(ctx, run)
+		image = readClipboardImageViaPngpaste(ctx, run)
 	}
 	if image == nil {
 		return nil, nil
@@ -238,12 +238,12 @@ func readClipboardImageViaPowerShell(ctx context.Context, run clipboardImageRunn
 
 // readClipboardImageViaPngpaste is the macOS substitute for the native
 // clipboard: pngpaste writes the clipboard image to stdout.
-func readClipboardImageViaPngpaste(ctx context.Context, run clipboardImageRunner) (*ClipboardImage, bool) {
+func readClipboardImageViaPngpaste(ctx context.Context, run clipboardImageRunner) *ClipboardImage {
 	data := run(ctx, "pngpaste", []string{"-"}, 0)
 	if len(data) == 0 {
-		return nil, false
+		return nil
 	}
-	return &ClipboardImage{Bytes: data, MimeType: "image/png"}, false
+	return &ClipboardImage{Bytes: data, MimeType: "image/png"}
 }
 
 func encodeBytesAsPNG(data []byte, mimeType string) ([]byte, bool) {
