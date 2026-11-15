@@ -112,6 +112,16 @@ func TestIsCacheWarmingReplayable(t *testing.T) {
 	if !IsCacheWarmingReplayable(adaptive, reasoning) {
 		t.Fatal("adaptive thinking must replay")
 	}
+	// "off" is a truthy reasoning level for the reference (cache-warming.ts
+	// checks `!options?.reasoning`), so a budget-based model refuses the replay
+	// even with thinking off.
+	off := &ai.SimpleStreamOptions{Reasoning: ai.ThinkOff}
+	if IsCacheWarmingReplayable(model, off) {
+		t.Fatal(`the reference does not treat "off" as an absent reasoning level`)
+	}
+	if !IsCacheWarmingReplayable(adaptive, off) {
+		t.Fatal("adaptive thinking must replay with thinking off")
+	}
 }
 
 func newTestWarmer(t *testing.T, model *ai.Model, mode CacheWarmingMode) (*CacheWarmer, *SessionManager, *atomic.Int64) {

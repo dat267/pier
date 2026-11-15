@@ -90,7 +90,9 @@ func envOf(options *ai.SimpleStreamOptions) ai.ProviderEnv {
 // budget-based thinking derives budget_tokens from max_tokens; the replay would
 // get a different budget, which Anthropic keys the message cache on.
 func IsCacheWarmingReplayable(model *ai.Model, options *ai.SimpleStreamOptions) bool {
-	if options == nil || options.Reasoning == "" || options.Reasoning == ai.ThinkOff || model.API != ai.APIAnthropicMessages {
+	// The reference tests `!options?.reasoning`, so only an absent level skips the
+	// check; "off" is a level like any other and still keys the message cache.
+	if options == nil || options.Reasoning == "" || model.API != ai.APIAnthropicMessages {
 		return true
 	}
 	if model.Compat == nil || model.Compat.AnthropicMessages == nil {
