@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -550,5 +551,45 @@ func TestExportSessionToHTMLPackageFunction(t *testing.T) {
 	}
 	if _, err := os.Stat(output); err != nil {
 		t.Fatalf("stat: %v", err)
+	}
+}
+
+// TestExportThemeVarsAreSorted pins D482. core/export-html/index.ts
+// generateThemeVars walks Object.entries(getResolvedThemeColors(...)), so the
+// reference writes the theme's own key order into the document: "customMessageLabel"
+// comes before "customMessageBg" and "mdCode" before "dim". A Go map has no
+// order, so the port sorts the names; the declarations are the same set and the
+// order of CSS custom properties does not change the rendering.
+func TestExportThemeVarsAreSorted(t *testing.T) {
+	useBuiltinPierThemeForTest(t)
+
+	vars := generateThemeVars("dark")
+	declarations := strings.Split(vars, "\n      ")
+	if len(declarations) < 4 {
+		t.Fatalf("theme vars = %q", vars)
+	}
+	colors, err := GetResolvedThemeColors("dark")
+	if err != nil {
+		t.Fatalf("theme colors: %v", err)
+	}
+
+	names := make([]string, 0, len(declarations))
+	for _, declaration := range declarations[:len(declarations)-3] {
+		name, _, ok := strings.Cut(strings.TrimPrefix(declaration, "--"), ": ")
+		if !ok {
+			t.Fatalf("bad declaration %q", declaration)
+		}
+		names = append(names, name)
+	}
+	if !sort.StringsAreSorted(names) {
+		t.Errorf("theme vars are not sorted: %v", names)
+	}
+	if len(names) != len(colors) {
+		t.Errorf("%d declarations for %d resolved colors", len(names), len(colors))
+	}
+	tail := declarations[len(declarations)-3:]
+	if !strings.HasPrefix(tail[0], "--exportPageBg: ") || !strings.HasPrefix(tail[1], "--exportCardBg: ") ||
+		!strings.HasPrefix(tail[2], "--exportInfoBg: ") {
+		t.Errorf("export vars do not end the block: %v", tail)
 	}
 }

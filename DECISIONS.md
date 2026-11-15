@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D481)
+# Deliberate divergences from pi (D1–D482)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7795,3 +7795,24 @@ coloured as removed or added. The rendering is the only difference; the marker
 column is unchanged.
 
 Test: `TestRenderDiffKeepsMarkersOnUnicodeLineTerminatorContent`.
+
+### D482
+
+**The exported document sorts its theme variables.**
+
+Reference: pi v1.5.2 (b4afdddf)
+`packages/coding-agent/src/core/export-html/index.ts` `generateThemeVars` walks
+`Object.entries(getResolvedThemeColors(themeName))`, so the CSS custom properties
+follow the theme colour record's insertion order: `customMessageLabel` before
+`customMessageBg`, `mdCode` before `dim`. Pier keeps the resolved colours in a Go
+map, which has no order, so it sorts the names. The declaration set is the same
+and CSS does not care about the order of custom properties; only the exported
+text differs, and sorting keeps the document deterministic between runs.
+
+The same function treats an empty theme export colour as absent
+(`themeExport.pageBg ?? derived.pageBg` upstream, `if themeExport.pageBg != ""`
+here), because `GetThemeExportColors` returns empties for "not set"; a theme that
+sets `"export": {"pageBg": ""}` therefore gets the derived colour rather than a
+blank declaration.
+
+Test: `TestExportThemeVarsAreSorted`.
