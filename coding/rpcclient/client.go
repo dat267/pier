@@ -654,8 +654,6 @@ func (c *RpcClient) send(command map[string]any) (*response, error) {
 	}
 }
 
-func processSignalName(signal syscall.Signal) string { return coding.ProcessSignalName(signal) }
-
 func (c *RpcClient) processExitError(waitErr error) error {
 	code := "null"
 	signal := "null"
@@ -667,7 +665,7 @@ func (c *RpcClient) processExitError(waitErr error) error {
 			code = strconv.Itoa(exit.ExitCode())
 		}
 		if status, ok := exit.Sys().(syscall.WaitStatus); ok && status.Signaled() {
-			signal = processSignalName(status.Signal())
+			signal = coding.ProcessSignalName(status.Signal())
 		}
 	}
 	return fmt.Errorf("Agent process exited (code=%s signal=%s). Stderr: %s", code, signal, c.Stderr())
