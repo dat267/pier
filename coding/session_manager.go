@@ -1155,9 +1155,16 @@ func (m *SessionManager) BranchWithSummary(branchFromID string, summary string, 
 	if m.leafID != nil {
 		fromID = *m.leafID
 	}
-	m.leafID = &branchFromID
+	// Upstream takes `branchFromId: string | null` and assigns it straight to
+	// `this.leafId` and the entry's `parentId`, so branching to the root stores
+	// null; "" is this port's spelling of that null.
+	var branchFrom *string
+	if branchFromID != "" {
+		branchFrom = &branchFromID
+	}
+	m.leafID = branchFrom
 	entry := m.nextEntry("branch_summary")
-	entry.ParentID = &branchFromID
+	entry.ParentID = branchFrom
 	entry.FromID = fromID
 	entry.Summary = summary
 	entry.Details = details
