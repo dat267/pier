@@ -1,5 +1,10 @@
 package coding
 
+import (
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
+)
+
 // Port of pi v1.5.2 (b4afdddf) core/preferred-providers.ts: the preferred
 // partner providers and the order provider lists show them in.
 
@@ -31,11 +36,13 @@ func ComparePreferredProviders(aID, aName, bID, bName string) int {
 	if rankA != rankB {
 		return rankA - rankB
 	}
-	switch {
-	case aName < bName:
-		return -1
-	case aName > bName:
-		return 1
-	}
-	return 0
+	// D257: follow localeCompare rather than byte ordering, so an accented
+	// name sorts next to its base letter instead of after every ASCII name.
+	return preferredProviderCollator.CompareString(aName, bName)
 }
+
+// preferredProviderCollator is the root collation `localeCompare` uses for the
+// names of providers a models.json declares.
+var preferredProviderCollator = func() *collate.Collator {
+	return collate.New(language.Und)
+}()

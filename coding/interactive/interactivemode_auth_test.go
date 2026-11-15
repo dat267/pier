@@ -365,14 +365,15 @@ func TestAuthProviderOptionsPreferPartners(t *testing.T) {
 	if len(seen) < 2 || seen[0] != "radius" || seen[1] != "openrouter" {
 		t.Fatalf("login order starts with %v, want radius and openrouter first", seen[:min(len(seen), 5)])
 	}
-	last := ""
+	var last *string
 	for _, option := range options {
 		if coding.IsPreferredProvider(option.ID) {
 			continue
 		}
-		if last > option.Name {
-			t.Fatalf("remaining providers are not sorted by name: %q > %q", last, option.Name)
+		name := option.Name
+		if last != nil && coding.ComparePreferredProviders("", *last, "", name) > 0 {
+			t.Fatalf("remaining providers are not sorted by name: %q > %q", *last, name)
 		}
-		last = option.Name
+		last = &name
 	}
 }
