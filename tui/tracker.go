@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strconv"
 	"strings"
 )
 
@@ -128,12 +129,16 @@ func (t *ansiCodeTracker) process(ansiCode string) {
 		if !ok {
 			break
 		}
+		afterCurrent := pos
 		code, ok := parseSGRNumber(part)
 		if !ok {
 			continue
 		}
 		// 256-color (38;5;N / 48;5;N) and RGB (38;2;R;G;B / 48;2;R;G;B)
-		// sequences consume multiple parameters.
+		// sequences consume multiple parameters. An incomplete sequence must
+		// not consume them: the reference falls through to the switch for the
+		// current code, so a truncated "38;5" still applies the blink the
+		// trailing field means.
 		if code == 38 || code == 48 {
 			if p1, ok1 := peek(); ok1 && p1 == "5" {
 				next()
@@ -144,10 +149,10 @@ func (t *ansiCodeTracker) process(ansiCode string) {
 					} else {
 						t.bgColor = colorCode
 					}
+					continue
 				}
-				continue
-			}
-			if p1, ok1 := peek(); ok1 && p1 == "2" {
+				pos = afterCurrent
+			} else if p1, ok1 := peek(); ok1 && p1 == "2" {
 				next()
 				p2, ok2 := next()
 				p3, ok3 := next()
@@ -159,8 +164,9 @@ func (t *ansiCodeTracker) process(ansiCode string) {
 					} else {
 						t.bgColor = colorCode
 					}
+					continue
 				}
-				continue
+				pos = afterCurrent
 			}
 		}
 		switch code {
@@ -204,10 +210,12 @@ func (t *ansiCodeTracker) process(ansiCode string) {
 		case 49:
 			t.bgColor = ""
 		default:
+			// The reference stores String(Number.parseInt(field)), so a
+			// zero-padded code re-emits without the padding.
 			if (code >= 30 && code <= 37) || (code >= 90 && code <= 97) {
-				t.fgColor = part
+				t.fgColor = strconv.Itoa(code)
 			} else if (code >= 40 && code <= 47) || (code >= 100 && code <= 107) {
-				t.bgColor = part
+				t.bgColor = strconv.Itoa(code)
 			}
 		}
 	}
