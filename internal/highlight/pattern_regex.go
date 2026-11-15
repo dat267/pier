@@ -57,14 +57,31 @@ func (re *patternRegexp) compileJS() {
 }
 
 func (re *patternRegexp) findSubmatchWS(s string, jsLines bool, ws *jsWorkspace) []int {
+	return re.findSubmatchWSFrom(s, 0, jsLines, ws)
+}
+
+// findSubmatchWSFrom starts the search at start while keeping the text before
+// it as assertion context: an anchor at start must see the real preceding
+// character, not a fresh string boundary (JS's ^ would otherwise match at every
+// restart position).
+func (re *patternRegexp) findSubmatchWSFrom(s string, start int, jsLines bool, ws *jsWorkspace) []int {
 	if !jsLines || !re.lineSensitive {
-		return re.Regexp.FindStringSubmatchIndex(s)
+		match := re.Regexp.FindStringSubmatchIndex(s[start:])
+		if match == nil {
+			return nil
+		}
+		for i, index := range match {
+			if index >= 0 {
+				match[i] = index + start
+			}
+		}
+		return match
 	}
 	re.once.Do(re.compileJS)
 	if re.program == nil {
-		return re.Regexp.FindStringSubmatchIndex(s)
+		return re.findSubmatchWSFrom(s, start, false, ws)
 	}
-	return runJSProgram(re.program, s, ws)
+	return runJSProgram(re.program, s, start, ws)
 }
 
 func (re *patternRegexp) findSubmatch(s string, jsLines bool) []int {
@@ -76,10 +93,17 @@ func (re *patternRegexp) FindStringSubmatchIndex(s string) []int {
 }
 
 func (re *patternRegexp) findIndexWS(s string, jsLines bool, ws *jsWorkspace) []int {
+	return re.findIndexWSFrom(s, 0, jsLines, ws)
+}
+
+func (re *patternRegexp) findIndexWSFrom(s string, start int, jsLines bool, ws *jsWorkspace) []int {
 	if !jsLines || !re.lineSensitive {
-		return re.Regexp.FindStringIndex(s)
+		if match := re.Regexp.FindStringIndex(s[start:]); match != nil {
+			return []int{match[0] + start, match[1] + start}
+		}
+		return nil
 	}
-	if match := re.findSubmatchWS(s, true, ws); match != nil {
+	if match := re.findSubmatchWSFrom(s, start, true, ws); match != nil {
 		return match[:2]
 	}
 	return nil
@@ -108,11 +132,12 @@ func (re *patternRegexp) FindAllStringIndex(s string, n int) [][]int {
 	var matches [][]int
 	previousEnd := -1
 	for pos := 0; pos <= len(s) && (n < 0 || len(matches) < n); {
-		match := re.findIndex(s[pos:], true)
+		match := re.findIndexWSFrom(s, pos, true, nil)
 		if match == nil {
 			break
 		}
-		start, end := pos+match[0], pos+match[1]
+		// The search already reports absolute offsets into s.
+		start, end := match[0], match[1]
 		if start != end || start != previousEnd {
 			matches = append(matches, []int{start, end})
 		}
@@ -207,7 +232,7 @@ func jsEmptyContext(before, after rune) syntax.EmptyOp {
 	return context
 }
 
-func runJSProgram(prog *syntax.Prog, s string, ws *jsWorkspace) []int {
+func runJSProgram(prog *syntax.Prog, s string, start int, ws *jsWorkspace) []int {
 	var local jsWorkspace
 	if ws == nil {
 		ws = &local
@@ -226,7 +251,10 @@ func runJSProgram(prog *syntax.Prog, s string, ws *jsWorkspace) []int {
 	}
 	ws.best = ws.best[:0]
 	before := rune(-1)
-	for pos := 0; ; {
+	if start > 0 {
+		before, _ = utf8.DecodeLastRuneInString(s[:start])
+	}
+	for pos := start; ; {
 		after, width := rune(-1), 0
 		if pos < len(s) {
 			after, width = utf8.DecodeRuneInString(s[pos:])
