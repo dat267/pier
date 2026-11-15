@@ -57,11 +57,16 @@ func isBlankLine(s string) bool {
 	return true
 }
 
-// skipIndent advances past up to max columns of spaces/tabs and reports the
-// index reached and the width consumed (stops early when the width is met).
-func skipIndent(s string, max int) (int, int) {
+// indentBudget is the column budget an indented block may use before it stops
+// being a paragraph or list continuation.
+const indentBudget = 4
+
+// skipIndent advances past up to indentBudget columns of spaces/tabs and
+// reports the index reached and the width consumed (stops early when the width
+// is met).
+func skipIndent(s string) (int, int) {
 	i, width := 0, 0
-	for i < len(s) && width < max {
+	for i < len(s) && width < indentBudget {
 		switch s[i] {
 		case ' ':
 			width++
@@ -256,7 +261,7 @@ func (l *blockLexer) lexBlock(start int, raw string, ln line) (*Block, int, bool
 		return b, next, true
 	}
 	// List.
-	if _, _, ok := listItemStart(raw); ok {
+	if _, ok := listItemStart(raw); ok {
 		b, next, ok := l.lexList(start)
 		return b, next, ok
 	}
@@ -293,7 +298,7 @@ func (l *blockLexer) lexBlock(start int, raw string, ln line) (*Block, int, bool
 func atxHeading(line string) (level int, text string, ok bool) {
 	// marked's heading rule is /^ {0,3}(#{1,6})(?=\s|$)/: four spaces of
 	// indent make indented code instead.
-	i, width := skipIndent(line, 4)
+	i, width := skipIndent(line)
 	if width >= 4 || i >= len(line) {
 		return 0, "", false
 	}
@@ -326,7 +331,7 @@ func atxHeading(line string) (level int, text string, ok bool) {
 // fenceStart reports a fenced code opening: up to three leading spaces and a
 // run of three or more backticks or tildes, then an info string.
 func fenceStart(line string) (marker, info string, ok bool) {
-	i, width := skipIndent(line, 4)
+	i, width := skipIndent(line)
 	if width >= 4 || i >= len(line) {
 		return "", "", false
 	}
@@ -355,7 +360,7 @@ func fenceStart(line string) (marker, info string, ok bool) {
 // tildes, then spaces only. So "```~~~" closes a "```" fence and "```\t" does
 // not.
 func isFenceEnd(line, marker string) bool {
-	i, width := skipIndent(line, 4)
+	i, width := skipIndent(line)
 	if width >= 4 || i >= len(line) || line[i] != marker[0] {
 		return false
 	}
@@ -446,7 +451,7 @@ func (l *blockLexer) lexFence(start int, marker, info string) (*Block, int, bool
 // the end of the preceding paragraph, so `a $$x^2$$ b` splits; reproducing it
 // would also import the quadratic scan that hook costs. See DECISIONS.md.
 func isLatexBlockStart(line string) bool {
-	i, width := skipIndent(line, 4)
+	i, width := skipIndent(line)
 	if width >= 4 || i >= len(line) {
 		return false
 	}
@@ -541,7 +546,7 @@ func absorbBlankLine(src string, end int) int {
 }
 
 func isThematicBreak(line string) bool {
-	i, width := skipIndent(line, 4)
+	i, width := skipIndent(line)
 	if width >= 4 || i >= len(line) {
 		return false
 	}
@@ -563,19 +568,19 @@ func isThematicBreak(line string) bool {
 }
 
 func isBlockquoteStart(line string) bool {
-	i, width := skipIndent(line, 4)
+	i, width := skipIndent(line)
 	if width >= 4 || i >= len(line) {
 		return false
 	}
 	return line[i] == '>'
 }
 
-// listItemStart reports a bullet or ordered list marker: the marker width, the
-// content indent (marker plus following spaces), and whether it is ordered.
-func listItemStart(line string) (contentIndent int, ordered bool, ok bool) {
-	i, width := skipIndent(line, 4)
+// listItemStart reports a bullet or ordered list marker and whether it is
+// ordered.
+func listItemStart(line string) (ordered bool, ok bool) {
+	i, width := skipIndent(line)
 	if width >= 4 || i >= len(line) {
-		return 0, false, false
+		return false, false
 	}
 	c := line[i]
 	if c == '-' || c == '+' || c == '*' {
@@ -586,43 +591,16 @@ func listItemStart(line string) (contentIndent int, ordered bool, ok bool) {
 			j++
 		}
 		if j >= len(line) || (line[j] != '.' && line[j] != ')') {
-			return 0, false, false
+			return false, false
 		}
 		i = j + 1
 		ordered = true
 	} else {
-		return 0, false, false
+		return false, false
 	}
 	// The marker must be followed by a space/tab or end the line.
 	if i < len(line) && line[i] != ' ' && line[i] != '\t' {
-		return 0, false, false
+		return false, false
 	}
-	// Content indent: the visual column where the item's content starts.
-	spaces := 0
-	for i < len(line) && (line[i] == ' ' || line[i] == '\t') {
-		if line[i] == '\t' {
-			spaces += 4
-		} else {
-			spaces++
-		}
-		i++
-		if spaces >= 5 {
-			break
-		}
-	}
-	contentIndent = min(columnAt(line, i), 24)
-	return contentIndent, ordered, true
-}
-
-// columnAt returns the visual column reached at index i (a tab counts as four).
-func columnAt(line string, i int) int {
-	col := 0
-	for j := 0; j < i && j < len(line); j++ {
-		if line[j] == '\t' {
-			col += 4
-		} else {
-			col++
-		}
-	}
-	return col
+	return ordered, true
 }

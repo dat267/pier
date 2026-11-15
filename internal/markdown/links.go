@@ -155,9 +155,9 @@ func mayHoldDefinition(src string) bool {
 }
 
 // matchRefLink matches marked's reflink `^!?\[(label)\]\[(ref)\]`, then its
-// nolink `^!?\[(ref)\](?:\[\])?`, at open (the `[`; start is open or the `!`
-// before it). It returns the label text, the lookup string and the match end.
-func matchRefLink(src string, start, open int) (label, ref string, end int, ok bool) {
+// nolink `^!?\[(ref)\](?:\[\])?`, at open (the `[`). It returns the label
+// text, the lookup string and the match end.
+func matchRefLink(src string, open int) (label, ref string, end int, ok bool) {
 	if labelEnd, refStart, ok := matchInlineLabel(src, open+1); ok {
 		if refEnd, ok := matchBlockLabel(src, refStart); ok {
 			return src[open+1 : labelEnd], src[refStart:refEnd], refEnd + 1, true
@@ -276,7 +276,7 @@ func parseRefLink(src string, i int, image bool, state *inlineState) (Inline, in
 	if image {
 		open = i + 1
 	}
-	label, ref, end, ok := matchRefLink(src, i, open)
+	label, ref, end, ok := matchRefLink(src, open)
 	if !ok {
 		return Inline{}, 0, false
 	}

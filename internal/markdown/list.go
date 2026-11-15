@@ -256,7 +256,7 @@ func (l *blockLexer) lexList(start int) (*Block, int, bool) {
 			}
 		}
 
-		markerStart, _ := skipIndent(ln.text, 4)
+		markerStart, _ := skipIndent(ln.text)
 		list.Blocks = append(list.Blocks, &Block{
 			Kind: BlockListItem, Start: itemStart, End: at,
 			Text: contents.String(), Marker: ln.text[markerStart:capLen],

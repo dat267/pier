@@ -40,14 +40,14 @@ func interruptsParagraph(line string) bool {
 // counts, and the marker must be followed by a non-space character: `text\n2. x`
 // and `text\n1.` stay one paragraph, `text\n1. x` does not.
 func listMarkerInterrupts(line string) bool {
-	_, ordered, ok := listItemStart(line)
+	ordered, ok := listItemStart(line)
 	if !ok {
 		return false
 	}
 	if ordered {
 		// The reference's pattern is `1[.)]`: the literal digit one, so `0. x`
 		// does not interrupt a paragraph.
-		markerStart, _ := skipIndent(line, 4)
+		markerStart, _ := skipIndent(line)
 		markerEnd := markerStart
 		for markerEnd < len(line) && line[markerEnd] >= '0' && line[markerEnd] <= '9' {
 			markerEnd++
@@ -371,7 +371,7 @@ func tableStartRows(delimiter string) bool {
 }
 
 func setextLevel(line string) (int, bool) {
-	i, width := skipIndent(line, 4)
+	i, width := skipIndent(line)
 	if width >= 4 || i >= len(line) {
 		return 0, false
 	}
@@ -427,7 +427,7 @@ func (l *blockLexer) lexHTML(start int) (*Block, int) {
 // declaration and a CDATA section. The reference's html rule carries the `i`
 // flag, so the element names match case-insensitively.
 func htmlBlockCloser(line string) string {
-	i, width := skipIndent(line, 4)
+	i, width := skipIndent(line)
 	if width >= 4 || i >= len(line) || line[i] != '<' {
 		return ""
 	}
@@ -598,7 +598,7 @@ func stripTaskMarker(content string) (checked bool, rest string, ok bool) {
 // markerEndIndex returns the index just past a list marker and its following
 // spaces.
 func markerEndIndex(line string) int {
-	i, _ := skipIndent(line, 4)
+	i, _ := skipIndent(line)
 	c := line[i]
 	if c == '-' || c == '+' || c == '*' {
 		i++
@@ -628,7 +628,7 @@ func markerEndIndex(line string) int {
 // so `0. a` starts at zero. The renderer picks 1 only for a list with no
 // number at all (A440).
 func orderedStart(line string) int {
-	i, _ := skipIndent(line, 4)
+	i, _ := skipIndent(line)
 	n := 0
 	for i < len(line) && line[i] >= '0' && line[i] <= '9' {
 		n = n*10 + int(line[i]-'0')
@@ -652,7 +652,7 @@ func lexBlocksIn(src string) []*Block {
 // An inline tag followed by text on its line (`<span>x</span>`, `<kbd>a</kbd>
 // b`) is not a block start: the line is paragraph text with inline HTML.
 func isHTMLBlockStart(line string) bool {
-	i, width := skipIndent(line, 4)
+	i, width := skipIndent(line)
 	if width >= 4 || i+1 >= len(line) || line[i] != '<' {
 		return false
 	}
@@ -787,7 +787,7 @@ var markedBlockTagSet = func() map[string]struct{} {
 
 // startsHTMLLine is the broad tag-at-line-start check a table body ends at.
 func startsHTMLLine(line string) bool {
-	i, width := skipIndent(line, 4)
+	i, width := skipIndent(line)
 	if width >= 4 || i >= len(line) || line[i] != '<' {
 		return false
 	}
