@@ -81,7 +81,13 @@ func (c countdownHostAdapter) Post(fn func()) { c.ui.Post(fn) }
 func (c *ExtensionSelectorComponent) updateList() {
 	theme := ActiveTheme()
 	c.listContainer.Clear()
-	for index, option := range c.options {
+	// At most ten rows are visible. The window centers on the selection and
+	// clamps to the list, which is long enough to scroll in the auth flows.
+	const maxVisible = 10
+	start := max(0, min(c.selectedIndex-maxVisible/2, len(c.options)-maxVisible))
+	end := min(start+maxVisible, len(c.options))
+	for index := start; index < end; index++ {
+		option := c.options[index]
 		var text string
 		if index == c.selectedIndex {
 			text = theme.Fg("accent", "→ ") + theme.Fg("accent", option)
@@ -89,6 +95,10 @@ func (c *ExtensionSelectorComponent) updateList() {
 			text = "  " + theme.Fg("text", option)
 		}
 		c.listContainer.AddChild(tui.NewText(text, 1, 0, nil))
+	}
+	if start > 0 || end < len(c.options) {
+		info := theme.Fg("muted", "  ("+itoa(c.selectedIndex+1)+"/"+itoa(len(c.options))+")")
+		c.listContainer.AddChild(tui.NewText(info, 0, 0, nil))
 	}
 }
 
@@ -108,7 +118,8 @@ func (c *ExtensionSelectorComponent) HandleInput(keyData string) {
 		}
 		c.updateList()
 	case kb.Matches(keyData, "tui.select.confirm") || keyData == "\n":
-		if c.selectedIndex >= 0 && c.selectedIndex < len(c.options) {
+		// Upstream confirms only a truthy option label.
+		if c.selectedIndex >= 0 && c.selectedIndex < len(c.options) && c.options[c.selectedIndex] != "" {
 			c.onSelectCallback(c.options[c.selectedIndex])
 		}
 	case kb.Matches(keyData, "tui.select.cancel"):
