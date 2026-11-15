@@ -1022,5 +1022,1565 @@
     "prompt"
    ]
   }
+ },
+ {
+  "argv": [
+   "-a"
+  ],
+  "result": {
+   "projectTrustOverride": true
+  }
+ },
+ {
+  "argv": [],
+  "result": {}
+ },
+ {
+  "argv": [
+   "s"
+  ],
+  "result": {
+   "messages": [
+    "s"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "-x"
+  ],
+  "result": {
+   "diagnostics": [
+    "error:Unknown option: -x"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--verbose",
+   "--no-session",
+   "-x",
+   "-a",
+   "-p",
+   "hi"
+  ],
+  "result": {
+   "noSession": true,
+   "print": true,
+   "verbose": true,
+   "messages": [
+    "hi"
+   ],
+   "projectTrustOverride": true,
+   "diagnostics": [
+    "error:Unknown option: -x"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--verbose"
+  ],
+  "result": {
+   "verbose": true
+  }
+ },
+ {
+  "argv": [
+   "--export"
+  ],
+  "result": {
+   "unknownFlags": {
+    "export": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "-nt",
+   "hi",
+   "text",
+   "--mode"
+  ],
+  "result": {
+   "noTools": true,
+   "messages": [
+    "hi",
+    "text"
+   ],
+   "diagnostics": [
+    "error:--mode requires text, json, or rpc"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "rpc",
+   "--api-key",
+   "json",
+   "-r",
+   "high",
+   "--session"
+  ],
+  "result": {
+   "apiKey": "json",
+   "resume": true,
+   "messages": [
+    "rpc",
+    "high"
+   ],
+   "unknownFlags": {
+    "session": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "-ne",
+   "-ne",
+   "json",
+   "--fork",
+   "hi"
+  ],
+  "result": {
+   "fork": "hi",
+   "noExtensions": true,
+   "messages": [
+    "json"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--models",
+   "--foo=bar",
+   "s"
+  ],
+  "result": {
+   "models": [
+    "--foo=bar"
+   ],
+   "messages": [
+    "s"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "-x"
+  ],
+  "result": {
+   "diagnostics": [
+    "error:Unknown option: -x"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "high",
+   "--use-theme",
+   "hi"
+  ],
+  "result": {
+   "useTheme": "hi",
+   "messages": [
+    "high"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--model",
+   "a,b",
+   "--thinking",
+   "--skill",
+   "-ne"
+  ],
+  "result": {
+   "model": "a,b",
+   "noExtensions": true,
+   "diagnostics": [
+    "warning:Invalid thinking level \"--skill\". Valid values: off, minimal, low, medium, high, xhigh, max"
+   ]
+  }
+ },
+ {
+  "argv": [],
+  "result": {}
+ },
+ {
+  "argv": [
+   "--list-models",
+   "--session-id",
+   "-a"
+  ],
+  "result": {
+   "sessionId": "-a",
+   "listModels": true
+  }
+ },
+ {
+  "argv": [
+   "-t",
+   "--skill",
+   "--verbose",
+   "@f",
+   "high"
+  ],
+  "result": {
+   "verbose": true,
+   "tools": [
+    "--skill"
+   ],
+   "messages": [
+    "high"
+   ],
+   "fileArgs": [
+    "f"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--foo",
+   "-e",
+   "json",
+   "--foo=bar",
+   "--verbose"
+  ],
+  "result": {
+   "verbose": true,
+   "extensions": [
+    "json"
+   ],
+   "unknownFlags": {
+    "foo": "bar"
+   }
+  }
+ },
+ {
+  "argv": [
+   "@f",
+   "--export",
+   "-a",
+   "--fork",
+   "json"
+  ],
+  "result": {
+   "fork": "json",
+   "export": "-a",
+   "fileArgs": [
+    "f"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "rpc",
+   "-a",
+   "--thinking"
+  ],
+  "result": {
+   "messages": [
+    "rpc"
+   ],
+   "projectTrustOverride": true,
+   "unknownFlags": {
+    "thinking": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--tui-mode",
+   "text",
+   "-xt",
+   "--offline"
+  ],
+  "result": {
+   "excludeTools": [
+    "--offline"
+   ],
+   "diagnostics": [
+    "error:Invalid TUI mode \"text\". Valid values: regular, fullscreen"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--foo=bar"
+  ],
+  "result": {
+   "unknownFlags": {
+    "foo": "bar"
+   }
+  }
+ },
+ {
+  "argv": [
+   "--export",
+   "--models"
+  ],
+  "result": {
+   "export": "--models"
+  }
+ },
+ {
+  "argv": [
+   "--no-mcp",
+   "--api-key",
+   "--export",
+   "--skill"
+  ],
+  "result": {
+   "apiKey": "--export",
+   "noMcp": true,
+   "unknownFlags": {
+    "skill": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "-nt",
+   "--",
+   "m",
+   "--thinking",
+   "--use-theme"
+  ],
+  "result": {
+   "noTools": true,
+   "messages": [
+    "m",
+    "--thinking",
+    "--use-theme"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--fork",
+   "rpc",
+   "-x",
+   "--session",
+   "--export",
+   "--provider"
+  ],
+  "result": {
+   "session": "--export",
+   "fork": "rpc",
+   "unknownFlags": {
+    "provider": true
+   },
+   "diagnostics": [
+    "error:Unknown option: -x"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "hi",
+   "-r",
+   "-xt",
+   "--api-key",
+   "--provider",
+   "m"
+  ],
+  "result": {
+   "provider": "m",
+   "resume": true,
+   "excludeTools": [
+    "--api-key"
+   ],
+   "messages": [
+    "hi"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--mode",
+   "-a"
+  ],
+  "result": {
+   "projectTrustOverride": true,
+   "diagnostics": [
+    "error:--mode requires text, json, or rpc"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--models",
+   "-xt",
+   "--offline"
+  ],
+  "result": {
+   "offline": true,
+   "models": [
+    "-xt"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--mode",
+   "--export"
+  ],
+  "result": {
+   "unknownFlags": {
+    "export": true
+   },
+   "diagnostics": [
+    "error:--mode requires text, json, or rpc"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--provider",
+   "--session",
+   "-a",
+   "-e",
+   "text",
+   "-t"
+  ],
+  "result": {
+   "provider": "--session",
+   "extensions": [
+    "text"
+   ],
+   "projectTrustOverride": true,
+   "diagnostics": [
+    "error:Unknown option: -t"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--provider"
+  ],
+  "result": {
+   "unknownFlags": {
+    "provider": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "-nt",
+   "hi",
+   "--mode"
+  ],
+  "result": {
+   "noTools": true,
+   "messages": [
+    "hi"
+   ],
+   "diagnostics": [
+    "error:--mode requires text, json, or rpc"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--api-key"
+  ],
+  "result": {
+   "unknownFlags": {
+    "api-key": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "-c",
+   "rpc",
+   "-x",
+   "--mode",
+   "s"
+  ],
+  "result": {
+   "continue": true,
+   "messages": [
+    "rpc"
+   ],
+   "diagnostics": [
+    "error:Unknown option: -x",
+    "error:Invalid mode \"s\". Valid values: text, json, rpc"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--skill",
+   "hi",
+   "--api-key"
+  ],
+  "result": {
+   "skills": [
+    "hi"
+   ],
+   "unknownFlags": {
+    "api-key": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--",
+   "--api-key",
+   "-ne",
+   "--provider",
+   "@f"
+  ],
+  "result": {
+   "messages": [
+    "--api-key",
+    "-ne",
+    "--provider"
+   ],
+   "fileArgs": [
+    "f"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--model"
+  ],
+  "result": {
+   "unknownFlags": {
+    "model": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--session",
+   "-t"
+  ],
+  "result": {
+   "session": "-t"
+  }
+ },
+ {
+  "argv": [
+   "-c",
+   "-ne",
+   "-r",
+   "-c",
+   "-x"
+  ],
+  "result": {
+   "continue": true,
+   "resume": true,
+   "noExtensions": true,
+   "diagnostics": [
+    "error:Unknown option: -x"
+   ]
+  }
+ },
+ {
+  "argv": [],
+  "result": {}
+ },
+ {
+  "argv": [
+   "-nt",
+   "--skill",
+   "a,b",
+   "--verbose",
+   "-r"
+  ],
+  "result": {
+   "resume": true,
+   "noTools": true,
+   "verbose": true,
+   "skills": [
+    "a,b"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "-p"
+  ],
+  "result": {
+   "print": true
+  }
+ },
+ {
+  "argv": [
+   "--mode",
+   "m"
+  ],
+  "result": {
+   "diagnostics": [
+    "error:Invalid mode \"m\". Valid values: text, json, rpc"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--model"
+  ],
+  "result": {
+   "unknownFlags": {
+    "model": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--list-models"
+  ],
+  "result": {
+   "listModels": true
+  }
+ },
+ {
+  "argv": [
+   "--fork",
+   "--session",
+   "-c"
+  ],
+  "result": {
+   "fork": "--session",
+   "continue": true
+  }
+ },
+ {
+  "argv": [
+   "--theme"
+  ],
+  "result": {
+   "unknownFlags": {
+    "theme": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "high",
+   "--list-models",
+   "-na"
+  ],
+  "result": {
+   "messages": [
+    "high"
+   ],
+   "listModels": true,
+   "projectTrustOverride": false
+  }
+ },
+ {
+  "argv": [
+   "-t",
+   "--mode",
+   "--foo",
+   "--session"
+  ],
+  "result": {
+   "tools": [
+    "--mode"
+   ],
+   "unknownFlags": {
+    "foo": true,
+    "session": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--no-mcp",
+   "-xt",
+   "--session-id",
+   "a,b",
+   "-c"
+  ],
+  "result": {
+   "continue": true,
+   "noMcp": true,
+   "excludeTools": [
+    "--session-id"
+   ],
+   "messages": [
+    "a,b"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "s"
+  ],
+  "result": {
+   "messages": [
+    "s"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--",
+   "--",
+   "--api-key",
+   "--offline",
+   "-r",
+   "--no-mcp"
+  ],
+  "result": {
+   "messages": [
+    "--",
+    "--api-key",
+    "--offline",
+    "-r",
+    "--no-mcp"
+   ]
+  }
+ },
+ {
+  "argv": [],
+  "result": {}
+ },
+ {
+  "argv": [
+   "-ne",
+   "-p"
+  ],
+  "result": {
+   "noExtensions": true,
+   "print": true
+  }
+ },
+ {
+  "argv": [
+   "json",
+   "--session",
+   "--",
+   "-p",
+   "--verbose"
+  ],
+  "result": {
+   "session": "--",
+   "print": true,
+   "verbose": true,
+   "messages": [
+    "json"
+   ]
+  }
+ },
+ {
+  "argv": [],
+  "result": {}
+ },
+ {
+  "argv": [
+   "--mode",
+   "--no-session",
+   "a,b",
+   "-nt",
+   "json"
+  ],
+  "result": {
+   "noSession": true,
+   "noTools": true,
+   "messages": [
+    "a,b",
+    "json"
+   ],
+   "diagnostics": [
+    "error:--mode requires text, json, or rpc"
+   ]
+  }
+ },
+ {
+  "argv": [],
+  "result": {}
+ },
+ {
+  "argv": [
+   "-xt",
+   "--use-theme",
+   "--tui-mode",
+   "--model"
+  ],
+  "result": {
+   "excludeTools": [
+    "--use-theme"
+   ],
+   "unknownFlags": {
+    "model": true
+   },
+   "diagnostics": [
+    "error:--tui-mode requires regular or fullscreen"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--list-models",
+   "json",
+   "-e"
+  ],
+  "result": {
+   "listModels": "json",
+   "diagnostics": [
+    "error:Unknown option: -e"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--use-theme",
+   "--mode",
+   "-x"
+  ],
+  "result": {
+   "diagnostics": [
+    "error:--use-theme requires a theme name",
+    "error:--mode requires text, json, or rpc",
+    "error:Unknown option: -x"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--skill",
+   "--offline",
+   "--model",
+   "json"
+  ],
+  "result": {
+   "model": "json",
+   "skills": [
+    "--offline"
+   ]
+  }
+ },
+ {
+  "argv": [],
+  "result": {}
+ },
+ {
+  "argv": [
+   "--model",
+   "--skill"
+  ],
+  "result": {
+   "model": "--skill"
+  }
+ },
+ {
+  "argv": [
+   "--no-session",
+   "--no-session",
+   "-a"
+  ],
+  "result": {
+   "noSession": true,
+   "projectTrustOverride": true
+  }
+ },
+ {
+  "argv": [
+   "hi",
+   "high",
+   "-r",
+   "--no-mcp",
+   "--foo",
+   "-xt"
+  ],
+  "result": {
+   "resume": true,
+   "noMcp": true,
+   "messages": [
+    "hi",
+    "high"
+   ],
+   "unknownFlags": {
+    "foo": true
+   },
+   "diagnostics": [
+    "error:Unknown option: -xt"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "text",
+   "-c",
+   "--mode"
+  ],
+  "result": {
+   "continue": true,
+   "messages": [
+    "text"
+   ],
+   "diagnostics": [
+    "error:--mode requires text, json, or rpc"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--api-key",
+   "--tui-mode",
+   "s",
+   "s",
+   "-a",
+   "-c"
+  ],
+  "result": {
+   "apiKey": "--tui-mode",
+   "continue": true,
+   "messages": [
+    "s",
+    "s"
+   ],
+   "projectTrustOverride": true
+  }
+ },
+ {
+  "argv": [
+   "high",
+   "-t",
+   "-x"
+  ],
+  "result": {
+   "tools": [
+    "-x"
+   ],
+   "messages": [
+    "high"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--session-id",
+   "--fork",
+   "--session",
+   "--model"
+  ],
+  "result": {
+   "session": "--model",
+   "sessionId": "--fork"
+  }
+ },
+ {
+  "argv": [
+   "--skill",
+   "--no-session",
+   "hi",
+   "--session"
+  ],
+  "result": {
+   "skills": [
+    "--no-session"
+   ],
+   "messages": [
+    "hi"
+   ],
+   "unknownFlags": {
+    "session": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--skill",
+   "--no-mcp",
+   "--theme"
+  ],
+  "result": {
+   "skills": [
+    "--no-mcp"
+   ],
+   "unknownFlags": {
+    "theme": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "high"
+  ],
+  "result": {
+   "messages": [
+    "high"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--mode",
+   "-ne",
+   "--api-key",
+   "a,b",
+   "-xt"
+  ],
+  "result": {
+   "apiKey": "a,b",
+   "noExtensions": true,
+   "diagnostics": [
+    "error:--mode requires text, json, or rpc",
+    "error:Unknown option: -xt"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--models"
+  ],
+  "result": {
+   "unknownFlags": {
+    "models": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "json"
+  ],
+  "result": {
+   "messages": [
+    "json"
+   ]
+  }
+ },
+ {
+  "argv": [],
+  "result": {}
+ },
+ {
+  "argv": [
+   "--",
+   "--no-session",
+   "--model",
+   "--list-models",
+   "--offline",
+   "--session-id"
+  ],
+  "result": {
+   "messages": [
+    "--no-session",
+    "--model",
+    "--list-models",
+    "--offline",
+    "--session-id"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "-a"
+  ],
+  "result": {
+   "projectTrustOverride": true
+  }
+ },
+ {
+  "argv": [],
+  "result": {}
+ },
+ {
+  "argv": [],
+  "result": {}
+ },
+ {
+  "argv": [
+   "--list-models",
+   "a,b",
+   "--export"
+  ],
+  "result": {
+   "listModels": "a,b",
+   "unknownFlags": {
+    "export": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "-a",
+   "-r"
+  ],
+  "result": {
+   "resume": true,
+   "projectTrustOverride": true
+  }
+ },
+ {
+  "argv": [
+   "-p",
+   "--skill",
+   "--no-mcp"
+  ],
+  "result": {
+   "print": true,
+   "skills": [
+    "--no-mcp"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "@f",
+   "--offline",
+   "--export",
+   "--offline"
+  ],
+  "result": {
+   "export": "--offline",
+   "offline": true,
+   "fileArgs": [
+    "f"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--list-models",
+   "-ne",
+   "s"
+  ],
+  "result": {
+   "noExtensions": true,
+   "messages": [
+    "s"
+   ],
+   "listModels": true
+  }
+ },
+ {
+  "argv": [
+   "-p",
+   "rpc",
+   "--foo"
+  ],
+  "result": {
+   "print": true,
+   "messages": [
+    "rpc"
+   ],
+   "unknownFlags": {
+    "foo": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "-a",
+   "--no-mcp",
+   "--tui-mode",
+   "m",
+   "-ne",
+   "--thinking"
+  ],
+  "result": {
+   "noExtensions": true,
+   "noMcp": true,
+   "projectTrustOverride": true,
+   "unknownFlags": {
+    "thinking": true
+   },
+   "diagnostics": [
+    "error:Invalid TUI mode \"m\". Valid values: regular, fullscreen"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--mode",
+   "--foo",
+   "-xt",
+   "-nt",
+   "--offline",
+   "--foo"
+  ],
+  "result": {
+   "offline": true,
+   "excludeTools": [
+    "-nt"
+   ],
+   "unknownFlags": {
+    "foo": true
+   },
+   "diagnostics": [
+    "error:--mode requires text, json, or rpc"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "high"
+  ],
+  "result": {
+   "messages": [
+    "high"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--foo",
+   "--",
+   "-c",
+   "--use-theme",
+   "--no-session",
+   "a,b"
+  ],
+  "result": {
+   "messages": [
+    "-c",
+    "--use-theme",
+    "--no-session",
+    "a,b"
+   ],
+   "unknownFlags": {
+    "foo": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "-c"
+  ],
+  "result": {
+   "continue": true
+  }
+ },
+ {
+  "argv": [
+   "--session",
+   "high",
+   "-x",
+   "-c"
+  ],
+  "result": {
+   "session": "high",
+   "continue": true,
+   "diagnostics": [
+    "error:Unknown option: -x"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "@f",
+   "--session",
+   "-nt",
+   "a,b"
+  ],
+  "result": {
+   "session": "-nt",
+   "messages": [
+    "a,b"
+   ],
+   "fileArgs": [
+    "f"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "-t",
+   "--verbose",
+   "--theme",
+   "--use-theme",
+   "--list-models"
+  ],
+  "result": {
+   "tools": [
+    "--verbose"
+   ],
+   "themes": [
+    "--use-theme"
+   ],
+   "listModels": true
+  }
+ },
+ {
+  "argv": [],
+  "result": {}
+ },
+ {
+  "argv": [
+   "text",
+   "-p",
+   "--"
+  ],
+  "result": {
+   "print": true,
+   "messages": [
+    "text"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--session"
+  ],
+  "result": {
+   "unknownFlags": {
+    "session": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--model",
+   "--models",
+   "m"
+  ],
+  "result": {
+   "model": "--models",
+   "messages": [
+    "m"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "-na",
+   "s",
+   "--offline"
+  ],
+  "result": {
+   "offline": true,
+   "messages": [
+    "s"
+   ],
+   "projectTrustOverride": false
+  }
+ },
+ {
+  "argv": [
+   "-c"
+  ],
+  "result": {
+   "continue": true
+  }
+ },
+ {
+  "argv": [
+   "a,b",
+   "-t",
+   "--thinking",
+   "--verbose",
+   "--",
+   "rpc"
+  ],
+  "result": {
+   "verbose": true,
+   "tools": [
+    "--thinking"
+   ],
+   "messages": [
+    "a,b",
+    "rpc"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--model",
+   "-xt",
+   "-a",
+   "-nt",
+   "--session"
+  ],
+  "result": {
+   "model": "-xt",
+   "noTools": true,
+   "projectTrustOverride": true,
+   "unknownFlags": {
+    "session": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "m",
+   "-t"
+  ],
+  "result": {
+   "messages": [
+    "m"
+   ],
+   "diagnostics": [
+    "error:Unknown option: -t"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--use-theme"
+  ],
+  "result": {
+   "diagnostics": [
+    "error:--use-theme requires a theme name"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "m",
+   "--"
+  ],
+  "result": {
+   "messages": [
+    "m"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--skill",
+   "--export",
+   "--mode",
+   "--export",
+   "-p"
+  ],
+  "result": {
+   "export": "-p",
+   "skills": [
+    "--export"
+   ],
+   "diagnostics": [
+    "error:--mode requires text, json, or rpc"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "-a",
+   "-na"
+  ],
+  "result": {
+   "projectTrustOverride": false
+  }
+ },
+ {
+  "argv": [
+   "--fork",
+   "high",
+   "--verbose"
+  ],
+  "result": {
+   "fork": "high",
+   "verbose": true
+  }
+ },
+ {
+  "argv": [
+   "-a",
+   "high",
+   "-t",
+   "--api-key"
+  ],
+  "result": {
+   "tools": [
+    "--api-key"
+   ],
+   "messages": [
+    "high"
+   ],
+   "projectTrustOverride": true
+  }
+ },
+ {
+  "argv": [
+   "--session-id"
+  ],
+  "result": {
+   "unknownFlags": {
+    "session-id": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--mode"
+  ],
+  "result": {
+   "diagnostics": [
+    "error:--mode requires text, json, or rpc"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "-ne",
+   "text",
+   "-e",
+   "high"
+  ],
+  "result": {
+   "noExtensions": true,
+   "extensions": [
+    "high"
+   ],
+   "messages": [
+    "text"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--model",
+   "text"
+  ],
+  "result": {
+   "model": "text"
+  }
+ },
+ {
+  "argv": [],
+  "result": {}
+ },
+ {
+  "argv": [
+   "-na",
+   "--fork",
+   "--use-theme"
+  ],
+  "result": {
+   "fork": "--use-theme",
+   "projectTrustOverride": false
+  }
+ },
+ {
+  "argv": [
+   "--session-id",
+   "-p",
+   "-nt",
+   "-nt"
+  ],
+  "result": {
+   "sessionId": "-p",
+   "noTools": true
+  }
+ },
+ {
+  "argv": [
+   "--export"
+  ],
+  "result": {
+   "unknownFlags": {
+    "export": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--session-id"
+  ],
+  "result": {
+   "unknownFlags": {
+    "session-id": true
+   }
+  }
  }
 ]

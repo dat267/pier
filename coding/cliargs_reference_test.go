@@ -29,10 +29,36 @@ func TestParseArgsMatchesReference(t *testing.T) {
 	}
 	for _, fixture := range fixtures {
 		got := projectCLIArgs(ParseArgs(fixture.Argv))
-		if !reflect.DeepEqual(got, fixture.Result) {
-			t.Errorf("ParseArgs(%q) =\n %#v\nwant\n %#v", fixture.Argv, got, fixture.Result)
+		want := withoutDocumentedExtensionDiagnostics(fixture.Result)
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("ParseArgs(%q) =\n %#v\nwant\n %#v", fixture.Argv, got, want)
 		}
 	}
+}
+
+// withoutDocumentedExtensionDiagnostics drops the diagnostics of the D472
+// difference from both sides: the reference treats a missing -e value as an
+// unknown option, and pier names the flag and warns that it is ignored. The
+// rest of the parse for those vectors stays under the oracle.
+func withoutDocumentedExtensionDiagnostics(result map[string]any) map[string]any {
+	raw, ok := result["diagnostics"].([]any)
+	if !ok {
+		return result
+	}
+	kept := make([]any, 0, len(raw))
+	for _, entry := range raw {
+		message, _ := entry.(string)
+		if message == "error:Unknown option: -e" || message == "error:Unknown option: --extension" {
+			continue
+		}
+		kept = append(kept, entry)
+	}
+	if len(kept) == 0 {
+		delete(result, "diagnostics")
+		return result
+	}
+	result["diagnostics"] = kept
+	return result
 }
 
 // projectCLIArgs renders the parsed arguments in the fixture's shape.
@@ -123,10 +149,14 @@ func projectCLIArgs(args *Args) map[string]any {
 	if len(args.Diagnostics) > 0 {
 		diagnostics := make([]any, 0, len(args.Diagnostics))
 		for _, diagnostic := range args.Diagnostics {
-			// D472: pier adds one warning per -e value; the reference accepts the
-			// flag silently. The documented difference is dropped so the rest of
+			// D472: pier adds one warning per -e value and names the flag for a
+			// missing value; the reference accepts the flag silently or calls it an
+			// unknown option. The documented difference is dropped so the rest of
 			// the parse stays under the oracle.
 			if strings.HasPrefix(diagnostic.Message, "Ignoring ") && strings.HasSuffix(diagnostic.Message, "this build loads no extensions.") {
+				continue
+			}
+			if diagnostic.Message == "--extension requires a value" {
 				continue
 			}
 			diagnostics = append(diagnostics, diagnostic.Type+":"+diagnostic.Message)

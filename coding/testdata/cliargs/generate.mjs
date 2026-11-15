@@ -121,6 +121,74 @@ const corpus = [
 	["--mode", "rpc", "--offline", "--verbose", "prompt"],
 ];
 
+// Seeded random argv vectors: combinations of the same tokens, so flag
+// interactions the curated list does not spell out (a repeated flag, a value
+// that is itself a flag, -- in the middle) are covered too. The seed is fixed
+// so the golden stays byte for byte.
+const tokens = [
+	"--mode",
+	"text",
+	"json",
+	"rpc",
+	"--model",
+	"m",
+	"--provider",
+	"--api-key",
+	"-c",
+	"-r",
+	"--no-session",
+	"--session",
+	"s",
+	"--session-id",
+	"--fork",
+	"--models",
+	"a,b",
+	"-t",
+	"-xt",
+	"-nt",
+	"--thinking",
+	"high",
+	"-p",
+	"--export",
+	"-e",
+	"-ne",
+	"--no-mcp",
+	"--skill",
+	"--theme",
+	"--use-theme",
+	"--list-models",
+	"--tui-mode",
+	"--verbose",
+	"-a",
+	"-na",
+	"--offline",
+	"--",
+	"@f",
+	"hi",
+	"--foo",
+	"--foo=bar",
+	"-x",
+];
+
+let seed = 20261115;
+function random() {
+	// mulberry32: deterministic and good enough to mix token positions.
+	seed = (seed + 0x6d2b79f5) | 0;
+	let t = seed;
+	t = Math.imul(t ^ (t >>> 15), t | 1);
+	t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+	return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+for (let index = 0; index < 120; index++) {
+	const length = Math.floor(random() * 7);
+	const argv = [];
+	for (let token = 0; token < length; token++) {
+		argv.push(tokens[Math.floor(random() * tokens.length)]);
+	}
+	corpus.push(argv);
+}
+
 // Only the fields pier ports, and only when set: JS undefined and an absent Go
 // nil/empty value must compare equal.
 function project(args) {
