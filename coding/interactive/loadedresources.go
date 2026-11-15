@@ -6,9 +6,6 @@ import (
 	"sort"
 	"strings"
 
-	"golang.org/x/text/collate"
-	"golang.org/x/text/language"
-
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
@@ -172,8 +169,7 @@ func formatScopeGroups(groups []scopeGroup, formatPath func(scopeGroupItem) stri
 
 		// D257/D434: the reference sorts with localeCompare, so use
 		// locale-neutral collation rather than byte order.
-		collator := collate.New(language.Und)
-		byPath := func(a, b string) bool { return collator.CompareString(a, b) < 0 }
+		byPath := func(a, b string) bool { return compareLocaleNeutral(a, b) < 0 }
 		sortedPaths := append([]scopeGroupItem{}, group.paths...)
 		sort.SliceStable(sortedPaths, func(i, j int) bool {
 			return byPath(sortedPaths[i].path, sortedPaths[j].path)
@@ -216,9 +212,8 @@ func formatCompactListSorted(labels []string, sorted bool) string {
 	}
 	if sorted {
 		// D257/D434: the reference sorts labels with localeCompare.
-		collator := collate.New(language.Und)
 		sort.SliceStable(trimmed, func(i, j int) bool {
-			return collator.CompareString(trimmed[i], trimmed[j]) < 0
+			return compareLocaleNeutral(trimmed[i], trimmed[j]) < 0
 		})
 	}
 	return ActiveTheme().Fg("dim", "  "+strings.Join(trimmed, ", "))
