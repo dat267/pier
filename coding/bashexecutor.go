@@ -513,15 +513,14 @@ type killGate struct {
 	finished bool
 }
 
-// runKill runs kill unless the wait already finished, reporting whether it ran.
-func (g *killGate) runKill(kill func()) bool {
+// runKill runs kill unless the wait already finished.
+func (g *killGate) runKill(kill func()) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	if g.finished {
-		return false
+		return
 	}
 	kill()
-	return true
 }
 
 // finish closes the gate and waits for a kill already in flight.

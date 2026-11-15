@@ -1843,7 +1843,7 @@ func withReplacedContent(message ai.Message, content json.RawMessage) ai.Message
 	object["content"] = content
 	ordered := orderedObject{}
 	for _, key := range keys {
-		ordered.set(key, object[key], true)
+		ordered.set(key, object[key])
 	}
 	rebuilt, err := ordered.marshal()
 	if err != nil {

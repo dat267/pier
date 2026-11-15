@@ -238,10 +238,10 @@ func (s *FileModelsStore) updateReadState(data storedModels, order []string, rev
 	s.readState.mu.Unlock()
 }
 
-func (s *FileModelsStore) snapshot() (storedModels, []string) {
+func (s *FileModelsStore) snapshot() storedModels {
 	s.readState.mu.Lock()
 	defer s.readState.mu.Unlock()
-	return s.readState.data, s.readState.order
+	return s.readState.data
 }
 
 func (s *FileModelsStore) reloadFromStorage(ctx context.Context) (storedModels, error) {
@@ -278,8 +278,7 @@ func (s *FileModelsStore) readLatest(ctx context.Context) (storedModels, error) 
 	revision := s.readState.revision
 	s.readState.mu.Unlock()
 	if current, ok := GetFileRevision(s.path); ok && revision != nil && current == *revision {
-		data, _ := s.snapshot()
-		return data, nil
+		return s.snapshot(), nil
 	}
 
 	s.readState.mu.Lock()
@@ -310,8 +309,7 @@ func (s *FileModelsStore) readLatest(ctx context.Context) (storedModels, error) 
 		return reload.result, reload.err
 	case <-ctx.Done():
 		s.releaseReload(reload)
-		data, _ := s.snapshot()
-		return data, ctx.Err()
+		return s.snapshot(), ctx.Err()
 	}
 }
 

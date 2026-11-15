@@ -287,11 +287,11 @@ func (w *CacheWarmer) Start(request CacheWarmRequest, isCurrent func() bool) {
 	w.mu.Unlock()
 	mode := w.GetMode()
 	if mode == CacheWarmingOff {
-		w.stop("cache warming disabled", nil)
+		w.stop("cache warming disabled")
 		return
 	}
 	if !IsCacheWarmingReplayable(request.Model, request.Options) {
-		w.stop("request cannot be replayed safely", nil)
+		w.stop("request cannot be replayed safely")
 		return
 	}
 	ttlMS, ok := GetPromptCacheTTLMs(request.Model, request.Options)
@@ -300,12 +300,12 @@ func (w *CacheWarmer) Start(request CacheWarmRequest, isCurrent func() bool) {
 		if request.Options != nil && request.Options.CacheRetention == ai.CacheRetentionNone {
 			reason = "request disabled prompt caching"
 		}
-		w.stop(reason, nil)
+		w.stop(reason)
 		return
 	}
 	delayMS, ok := GetCacheWarmingDelayMS(ttlMS)
 	if !ok {
-		w.stop("cache lifetime unavailable", nil)
+		w.stop("cache lifetime unavailable")
 		return
 	}
 	runCtx, cancel := context.WithCancel(context.Background())
@@ -360,7 +360,7 @@ func (w *CacheWarmer) OnModeChanged() {
 
 // Cancel stops warming.
 func (w *CacheWarmer) Cancel() {
-	w.stop("inactive", nil)
+	w.stop("inactive")
 }
 
 // dispose releases the run and its owning session's callback together. A host
@@ -385,15 +385,10 @@ func (w *CacheWarmer) clearRunLocked() {
 	run.cancel()
 }
 
-func (w *CacheWarmer) stop(reason string, stopped *CacheWarmingStatus) {
+func (w *CacheWarmer) stop(reason string) {
 	w.mu.Lock()
 	w.clearRunLocked()
-	inactive := CacheWarmingStatus{State: "inactive", Reason: reason}
-	if stopped != nil {
-		inactive.Decision = stopped.Decision
-		inactive.ExtensionOverride = stopped.ExtensionOverride
-	}
-	w.inactive = inactive
+	w.inactive = CacheWarmingStatus{State: "inactive", Reason: reason}
 	w.mu.Unlock()
 }
 
@@ -570,11 +565,11 @@ func (w *CacheWarmer) validateRun(run *cacheWarmingRun) bool {
 
 // stopRun stops a run only while it is still the current one. The reference's
 // check and stop are one synchronous step; Go callbacks run between them.
-func (w *CacheWarmer) stopRun(run *cacheWarmingRun, reason string, stopped *CacheWarmingStatus) bool {
+func (w *CacheWarmer) stopRun(run *cacheWarmingRun, reason string, stopped *CacheWarmingStatus) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.run != run {
-		return false
+		return
 	}
 	w.clearRunLocked()
 	inactive := CacheWarmingStatus{State: "inactive", Reason: reason}
@@ -583,7 +578,6 @@ func (w *CacheWarmer) stopRun(run *cacheWarmingRun, reason string, stopped *Cach
 		inactive.ExtensionOverride = stopped.ExtensionOverride
 	}
 	w.inactive = inactive
-	return true
 }
 
 func (w *CacheWarmer) modeStopReason(run *cacheWarmingRun) string {

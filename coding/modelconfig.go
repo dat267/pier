@@ -454,10 +454,10 @@ func validateProvider(value any, path string, errors *[]validationError) {
 		*errors = append(*errors, validationError{path: path, message: expectedMessage("object")})
 		return
 	}
-	validateOptionalString(provider, "name", path, true, errors)
-	validateOptionalString(provider, "baseUrl", path, true, errors)
-	validateOptionalString(provider, "apiKey", path, true, errors)
-	validateOptionalString(provider, "api", path, true, errors)
+	validateOptionalString(provider, "name", path, errors)
+	validateOptionalString(provider, "baseUrl", path, errors)
+	validateOptionalString(provider, "apiKey", path, errors)
+	validateOptionalString(provider, "api", path, errors)
 	validateLiteral(provider, "oauth", []string{"radius"}, path, errors)
 	validateStringRecord(provider, "headers", path, errors)
 	if compat, ok := provider["compat"]; ok {
@@ -499,9 +499,9 @@ func validateModelDefinition(value any, path string, errors *[]validationError) 
 	} else if text == "" {
 		*errors = append(*errors, validationError{path: path + ".id", message: minLengthMessage(1)})
 	}
-	validateOptionalString(model, "name", path, true, errors)
-	validateOptionalString(model, "api", path, true, errors)
-	validateOptionalString(model, "baseUrl", path, true, errors)
+	validateOptionalString(model, "name", path, errors)
+	validateOptionalString(model, "api", path, errors)
+	validateOptionalString(model, "baseUrl", path, errors)
 	validateModelFields(model, path, true, errors)
 }
 
@@ -511,7 +511,7 @@ func validateModelOverride(value any, path string, errors *[]validationError) {
 		*errors = append(*errors, validationError{path: path, message: expectedMessage("object")})
 		return
 	}
-	validateOptionalString(model, "name", path, true, errors)
+	validateOptionalString(model, "name", path, errors)
 	validateModelFields(model, path, false, errors)
 }
 
@@ -548,7 +548,7 @@ func validateInputLimits(record map[string]any, path string, errors *[]validatio
 		*errors = append(*errors, validationError{path: path + ".inputLimits", message: expectedMessage("object")})
 		return
 	}
-	validateIntegerRange(limits, "maxRequestBytes", path+".inputLimits", 1, 0, errors)
+	validateIntegerRange(limits, "maxRequestBytes", path+".inputLimits", 0, errors)
 	imagesValue, ok := limits["images"]
 	if !ok || imagesValue == nil {
 		return
@@ -558,8 +558,8 @@ func validateInputLimits(record map[string]any, path string, errors *[]validatio
 		*errors = append(*errors, validationError{path: path + ".inputLimits.images", message: expectedMessage("object")})
 		return
 	}
-	validateIntegerRange(images, "maxPerMessage", path+".inputLimits.images", 1, 0, errors)
-	validateIntegerRange(images, "maxPerRequest", path+".inputLimits.images", 1, 0, errors)
+	validateIntegerRange(images, "maxPerMessage", path+".inputLimits.images", 0, errors)
+	validateIntegerRange(images, "maxPerRequest", path+".inputLimits.images", 0, errors)
 	resizeValue, ok := images["resize"]
 	if !ok || resizeValue == nil {
 		return
@@ -570,10 +570,10 @@ func validateInputLimits(record map[string]any, path string, errors *[]validatio
 		return
 	}
 	resizePath := path + ".inputLimits.images.resize"
-	validateIntegerRange(resize, "maxWidth", resizePath, 1, 0, errors)
-	validateIntegerRange(resize, "maxHeight", resizePath, 1, 0, errors)
-	validateIntegerRange(resize, "maxBytes", resizePath, 1, 0, errors)
-	validateIntegerRange(resize, "jpegQuality", resizePath, 1, 100, errors)
+	validateIntegerRange(resize, "maxWidth", resizePath, 0, errors)
+	validateIntegerRange(resize, "maxHeight", resizePath, 0, errors)
+	validateIntegerRange(resize, "maxBytes", resizePath, 0, errors)
+	validateIntegerRange(resize, "jpegQuality", resizePath, 100, errors)
 }
 
 // validatePromptCache checks the promptCache block: an object whose tier values
@@ -990,7 +990,7 @@ func validateVercelGatewayRouting(value any, path string, errors *[]validationEr
 	validateStringArrayMembers(routing, []string{"only", "order"}, path, errors)
 }
 
-func validateOptionalString(record map[string]any, name, path string, minLength bool, errors *[]validationError) {
+func validateOptionalString(record map[string]any, name, path string, errors *[]validationError) {
 	entry, ok := record[name]
 	if !ok {
 		return
@@ -1000,7 +1000,7 @@ func validateOptionalString(record map[string]any, name, path string, minLength 
 		*errors = append(*errors, validationError{path: path + "." + name, message: expectedMessage("string")})
 		return
 	}
-	if minLength && text == "" {
+	if text == "" {
 		*errors = append(*errors, validationError{path: path + "." + name, message: minLengthMessage(1)})
 	}
 }
@@ -1034,7 +1034,7 @@ func validatePositiveNumber(record map[string]any, name, path string, errors *[]
 
 // validateIntegerRange checks an optional integer member within [minimum,
 // maximum]; a zero maximum means the schema has no upper bound.
-func validateIntegerRange(record map[string]any, name, path string, minimum, maximum float64, errors *[]validationError) {
+func validateIntegerRange(record map[string]any, name, path string, maximum float64, errors *[]validationError) {
 	entry, ok := record[name]
 	if !ok {
 		return
@@ -1044,10 +1044,10 @@ func validateIntegerRange(record map[string]any, name, path string, minimum, max
 		*errors = append(*errors, validationError{path: path + "." + name, message: expectedMessage("integer")})
 		return
 	}
-	if value < minimum {
+	if value < 1 {
 		*errors = append(*errors, validationError{
 			path:    path + "." + name,
-			message: fmt.Sprintf("Expected number to be greater or equal to %d", int(minimum)),
+			message: "Expected number to be greater or equal to 1",
 		})
 		return
 	}

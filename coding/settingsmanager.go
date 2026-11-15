@@ -1204,10 +1204,7 @@ type orderedObject struct {
 	values []any
 }
 
-func (o *orderedObject) set(key string, value any, set bool) {
-	if !set {
-		return
-	}
+func (o *orderedObject) set(key string, value any) {
 	o.keys = append(o.keys, key)
 	o.values = append(o.values, value)
 }
@@ -1227,7 +1224,7 @@ func (o *orderedObject) setAny(key string, value any) {
 			return
 		}
 	}
-	o.set(key, value, true)
+	o.set(key, value)
 }
 
 // MarshalJSON lets a nested ordered object keep its key order inside a parent
@@ -1321,7 +1318,7 @@ func orderArrayElements(elements []any, orders [][]string) []any {
 		}
 		ordered := orderedObject{}
 		for _, key := range keys {
-			ordered.set(key, object[key], true)
+			ordered.set(key, object[key])
 		}
 		out = append(out, &ordered)
 	}
@@ -1536,19 +1533,19 @@ func marshalSettingsMapIndent(fileKeys []string, merged map[string]any, nestedOr
 			if object, ok := value.(map[string]any); ok {
 				nested := orderedObject{}
 				for _, nestedKey := range order {
-					nested.set(nestedKey, object[nestedKey], true)
+					nested.set(nestedKey, object[nestedKey])
 				}
-				ordered.set(key, &nested, true)
+				ordered.set(key, &nested)
 				return
 			}
 		}
 		if orders, isArray := arrayOrders[key]; isArray {
 			if elements, ok := value.([]any); ok {
-				ordered.set(key, orderArrayElements(elements, orders), true)
+				ordered.set(key, orderArrayElements(elements, orders))
 				return
 			}
 		}
-		ordered.set(key, value, true)
+		ordered.set(key, value)
 	}
 	for _, key := range fileKeys {
 		add(key)

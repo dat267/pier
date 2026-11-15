@@ -12,13 +12,9 @@ import (
 func TestKillGateRunsOnlyBeforeFinish(t *testing.T) {
 	var gate killGate
 	killed := 0
-	if !gate.runKill(func() { killed++ }) {
-		t.Fatal("kill before finish did not run")
-	}
+	gate.runKill(func() { killed++ })
 	gate.finish()
-	if gate.runKill(func() { killed++ }) {
-		t.Fatal("kill after finish ran")
-	}
+	gate.runKill(func() { killed++ })
 	if killed != 1 {
 		t.Fatalf("kills = %d, want 1", killed)
 	}
@@ -60,9 +56,7 @@ func TestKillGateSerializesWithFinish(t *testing.T) {
 	close(release)
 	killWG.Wait()
 	<-finished
-	if gate.runKill(func() { killed++ }) {
-		t.Fatal("kill after finish ran")
-	}
+	gate.runKill(func() { killed++ })
 	if killed != 1 {
 		t.Fatalf("kills = %d, want 1", killed)
 	}

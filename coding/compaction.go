@@ -338,7 +338,7 @@ func EstimateAgentMessageTokens(message ai.Message) int {
 				}
 			}
 		}
-		return ceilDiv(chars, 4)
+		return tokensFromChars(chars)
 	case *ai.AssistantMessage:
 		for _, block := range m.Content {
 			switch b := block.(type) {
@@ -350,7 +350,7 @@ func EstimateAgentMessageTokens(message ai.Message) int {
 				chars += JSLength(b.Name) + JSLength(string(mustMarshalJSON(json.RawMessage(b.Arguments))))
 			}
 		}
-		return ceilDiv(chars, 4)
+		return tokensFromChars(chars)
 	case *ai.ToolResultMessage:
 		for _, block := range m.Content {
 			switch b := block.(type) {
@@ -360,9 +360,9 @@ func EstimateAgentMessageTokens(message ai.Message) int {
 				chars += estimatedImageChars
 			}
 		}
-		return ceilDiv(chars, 4)
+		return tokensFromChars(chars)
 	case *ai.CustomMessage:
-		return ceilDiv(customMessageChars(m), 4)
+		return tokensFromChars(customMessageChars(m))
 	case *ai.SystemMessage:
 		// Upstream sums the content chars, each section's length, and
 		// JSON.stringify(toolsAdded).length; it does not use the rendered prompt
@@ -376,7 +376,7 @@ func EstimateAgentMessageTokens(message ai.Message) int {
 		if m.ToolsAdded != nil {
 			chars += JSLength(string(mustMarshalJSON(m.ToolsAdded)))
 		}
-		return ceilDiv(chars, 4)
+		return tokensFromChars(chars)
 	default:
 		return 0
 	}
@@ -1893,4 +1893,6 @@ func JSLength(s string) int { return ai.JSLength(s) }
 
 func JSSlice(s string, start, end int) string { return ai.JSSlice(s, start, end) }
 
-func ceilDiv(a, b int) int { return (a + b - 1) / b }
+// tokensFromChars converts the reference's character estimate to tokens
+// (4 characters per token, rounded up).
+func tokensFromChars(chars int) int { return (chars + 3) / 4 }
