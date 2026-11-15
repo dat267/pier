@@ -156,14 +156,17 @@ func (q *terminalQueries) RequestBackground(writer terminalQueryWriter) {
 // QueryBackground queries the terminal's background color with OSC 11. It returns
 // ok=false on timeout or an unparsable reply.
 func (q *terminalQueries) QueryBackground(writer terminalQueryWriter, timeoutMS int) (RgbColor, bool) {
+	if writer == nil {
+		// Nothing to write to, so no reply can arrive. The pending list pairs
+		// replies with waiters in order, so registering here would leave a
+		// phantom waiter that takes the next real OSC 11 reply.
+		return RgbColor{}, false
+	}
 	query := &pendingOSC11Query{result: make(chan osc11Result, 1)}
 	q.colorMu.Lock()
 	q.pendingOSC11Queries = append(q.pendingOSC11Queries, query)
 	q.pendingOSC11Replies++
 	q.colorMu.Unlock()
-	if writer == nil {
-		return RgbColor{}, false
-	}
 	writer.Write("\x1b]11;?\x07")
 
 	timer := time.NewTimer(javascriptTimerDuration(int64(timeoutMS)))

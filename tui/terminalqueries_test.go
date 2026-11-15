@@ -223,3 +223,38 @@ func TestTerminalQueriesRequestBackgroundIsFireAndForget(t *testing.T) {
 		t.Fatalf("probed a stopped terminal: %q", terminal.joinedWrites())
 	}
 }
+
+// TestTerminalQueriesNilWriterRegistersNoWaiter pins the pairing rule: a query
+// with no writer has no reply to wait for, and the pending list pairs replies
+// with waiters in order, so a phantom waiter would take the next real OSC 11
+// reply (upstream creates the query together with the write, tui.ts
+// queryTerminalColors).
+func TestTerminalQueriesNilWriterRegistersNoWaiter(t *testing.T) {
+	q := &terminalQueries{}
+	if _, ok := q.QueryBackground(nil, 1); ok {
+		t.Fatal("a query with no writer resolved")
+	}
+	if q.pendingOSC11Replies != 0 || len(q.pendingOSC11Queries) != 0 {
+		t.Fatalf("nil writer left %d replies and %d waiters", q.pendingOSC11Replies, len(q.pendingOSC11Queries))
+	}
+
+	terminal := &fakeTerminal{width: 80, height: 24}
+	results := make(chan RgbColor, 1)
+	go func() {
+		if color, ok := q.QueryBackground(terminal, 2000); ok {
+			results <- color
+		}
+	}()
+	waitForWrite(t, terminal, "\x1b]11;?")
+	if !q.ConsumeInput("\x1b]11;#0d0e0f\x07") {
+		t.Fatal("reply was not consumed")
+	}
+	select {
+	case color := <-results:
+		if color.R != 13 || color.G != 14 || color.B != 15 {
+			t.Fatalf("color = %+v", color)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("the reply went to a phantom waiter")
+	}
+}
