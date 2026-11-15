@@ -336,6 +336,17 @@ func replaceAll(input, from, to string) string {
 	return string(builder)
 }
 
+// randomValue returns 32 random bytes as unpadded base64url, matching
+// randomBytes(32).toString("base64url") (upstream randomValue, the ChatGPT
+// flow's state and nonce).
+func randomValue() (string, error) {
+	buffer := make([]byte, 32)
+	if _, err := rand.Read(buffer); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(buffer), nil
+}
+
 // randomHex returns n random bytes as a hex string (upstream createState).
 func randomHex(n int) (string, error) {
 	bytes := make([]byte, n)

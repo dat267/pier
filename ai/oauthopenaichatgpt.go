@@ -101,11 +101,11 @@ func CreateOpenAIChatGPTAuthorizationFlow(deviceID string, agentName ...string) 
 	if err != nil {
 		return nil, err
 	}
-	state, err := randomHexState()
+	state, err := randomValue()
 	if err != nil {
 		return nil, err
 	}
-	nonce, err := randomHexState()
+	nonce, err := randomValue()
 	if err != nil {
 		return nil, err
 	}
