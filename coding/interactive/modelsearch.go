@@ -59,8 +59,9 @@ func GetDistinctModelName(id, name string) (string, bool) {
 		if tokens[word] {
 			return true
 		}
-		// Single-character words must match a whole id token.
-		return len([]rune(word)) > 1 && strings.Contains(compactID, word)
+		// Single-character words must match a whole id token. The length is in
+		// JavaScript code units, so a single astral letter counts as two.
+		return ai.JSLength(word) > 1 && strings.Contains(compactID, word)
 	}
 	for _, word := range splitModelLabel(trimmed) {
 		if !covered(word) {
