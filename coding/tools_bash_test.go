@@ -409,6 +409,47 @@ func TestBashTimeout(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.5.2 (b4afdddf) core/tools/bash.ts: the timer callback sets
+// timedOut and the awaited exec throws ShellTimeoutError whenever it fired,
+// even when the shell itself exited first; the error then carries the shell's
+// exit code and elapsed time because only its background processes kept the
+// pipes open (#11613). The port consulted timedOut only on a failed wait, so an
+// exited-zero shell reported success after its background process was killed,
+// and the non-zero case dropped the shell-exit detail.
+func TestBashTimeoutAfterTheShellExited(t *testing.T) {
+	requirePosixShell(t)
+	tool := CreateBashTool(t.TempDir(), nil)
+	// The background loop writes within the 100 ms post-exit idle grace, so the
+	// tool is still draining when the deadline fires. Both exit codes pin that
+	// the timeout is reported and the shell's real result survives.
+	for _, exit := range []string{"0", "7"} {
+		command := "(for i in 1 2 3 4 5 6 7 8 9 10; do sleep 0.05; echo tick; done) & exit " + exit
+		encoded, marshalErr := json.Marshal(command)
+		if marshalErr != nil {
+			t.Fatal(marshalErr)
+		}
+		_, err := tool.Execute("c", json.RawMessage(fmt.Sprintf(`{"command":%s,"timeout":0.3}`, encoded)), context.Background(), nil)
+		if err == nil || !strings.Contains(err.Error(), "Command timed out after 0.3 seconds") {
+			t.Fatalf("exit %s: err = %v", exit, err)
+		}
+		if !strings.Contains(err.Error(), "The shell exited with code "+exit+" after ") ||
+			!strings.Contains(err.Error(), "seconds, but background processes it started kept writing output until the timeout.") {
+			t.Fatalf("exit %s: shell-exit detail missing: %v", exit, err)
+		}
+	}
+	// A shell the deadline killed has no earlier exit to report.
+	_, err := tool.Execute("c", json.RawMessage(`{"command":"sleep 30","timeout":0.2}`), context.Background(), nil)
+	if err == nil || strings.Contains(err.Error(), "The shell exited with code") {
+		t.Fatalf("running shell timeout = %v", err)
+	}
+	// A command that exits in time still reports its exit code.
+	result, err := tool.Execute("c", json.RawMessage(`{"command":"exit 7","timeout":5}`), context.Background(), nil)
+	if err != nil || !result.IsError || len(result.Content) == 0 ||
+		!strings.Contains(result.Content[0].(ai.TextContent).Text, "Command exited with code 7") {
+		t.Fatalf("in-time exit = %#v, %v", result, err)
+	}
+}
+
 // D407: a call that names no timeout still ends, after the default one, with
 // the output so far and a note that names the default. pi v1.5.0
 // core/tools/bash.ts sets no timer when timeout is undefined.

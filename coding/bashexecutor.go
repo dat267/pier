@@ -456,7 +456,7 @@ func (o *localShellOperations) Exec(ctx context.Context, command, cwd string, ex
 	// Observe direct-child exit before starting the output idle grace. This
 	// preserves late writes from descendants while cancellation still closes
 	// the readers to release a detached writer promptly.
-	waitErr := waitForProcessAndPipeDrain(cmd, streamWG, activity, started, closeOutput)
+	waitErr := waitForProcessAndPipeDrain(cmd, streamWG, activity, started, closeOutput, nil)
 	// The child is reaped here: a kill that fires later must not run, and a
 	// timeout recorded before this point is what the result reports.
 	gate.finish()
@@ -576,16 +576,22 @@ const exitStdioGraceMS = 100
 // short idle grace so an inherited handle held open by a detached descendant
 // cannot hang the caller (port of waitForChildProcess). The idle window only
 // starts once both readers have actually read, so a slow schedule cannot
-// discard output that is already buffered.
+// discard output that is already buffered. onExit, when set, observes the
+// direct child's exit before the drain starts; the timeout path uses it to tell
+// a shell that exited before the deadline from one the deadline killed.
 func waitForProcessAndPipeDrain(
 	cmd *exec.Cmd,
 	streams *sync.WaitGroup,
 	activity <-chan struct{},
 	started <-chan struct{},
 	closeOutput func(),
+	onExit func(time.Time),
 ) error {
 	state, err := cmd.Process.Wait()
 	cmd.ProcessState = state
+	if onExit != nil {
+		onExit(time.Now())
+	}
 	if err == nil && state != nil && !state.Success() {
 		err = &exec.ExitError{ProcessState: state}
 	}

@@ -714,6 +714,7 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 			if err := cmd.Start(); err != nil {
 				return agent.AgentToolResult{}, err
 			}
+			startedAt := time.Now()
 			pgid := cmd.Process.Pid
 			// The guard owns the tree's kill handle: a Windows job object, the
 			// process group identity on unix (D178).
@@ -721,6 +722,21 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 			defer guard.Release()
 			procDone := make(chan struct{})
 			defer close(procDone)
+
+			// The timeout message distinguishes a shell that exited before the
+			// deadline from one the deadline killed (bash.ts ShellTimeoutError).
+			// The exit is recorded before the idle drain, and the timer captures
+			// the recorded time when it fires.
+			var shellExitMu sync.Mutex
+			var shellExitedAt time.Time
+			var shellExitBeforeDeadline time.Time
+			recordShellExit := func(at time.Time) {
+				shellExitMu.Lock()
+				if shellExitedAt.IsZero() {
+					shellExitedAt = at
+				}
+				shellExitMu.Unlock()
+			}
 
 			// closeOutput releases the readers when the tree is killed. The shell
 			// and everything it started hold the write ends, so a descendant that
@@ -753,6 +769,9 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 			// command hands control back to the agent instead of blocking the turn
 			// until the user aborts it. Upstream has no default.
 			timed := time.AfterFunc(timeoutDur, func() {
+				shellExitMu.Lock()
+				shellExitBeforeDeadline = shellExitedAt
+				shellExitMu.Unlock()
 				timedOut.Store(true)
 				killTree()
 			})
@@ -788,7 +807,7 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 			// Observe direct-child exit before starting the output idle grace, as
 			// upstream waitForChildProcess does. Cancellation still closes the
 			// readers to release a detached writer promptly.
-			waitErr := waitForProcessAndPipeDrain(cmd, streams, activity, started, closeOutput)
+			waitErr := waitForProcessAndPipeDrain(cmd, streams, activity, started, closeOutput, recordShellExit)
 
 			// Upstream finishOutput: stop the pending update, flush one last
 			// streamed state, then take the final snapshot.
@@ -836,17 +855,27 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 				outputText, _ := formatOutput("")
 				return agent.AgentToolResult{}, fmt.Errorf("%s", appendStatus(outputText, "Command aborted"))
 			}
-			if waitErr != nil {
-				// The timeout flag is authoritative, so it is checked first, and a
-				// timeout or abort throws with empty text (upstream's catch path).
-				if timedOut.Load() {
-					outputText, _ := formatOutput("")
-					message := bashTimeoutMessage(timeoutSeconds)
-					if input.Timeout == nil {
-						message += " (the default timeout; pass a larger timeout if the command needs longer)"
-					}
-					return agent.AgentToolResult{}, fmt.Errorf("%s", appendStatus(outputText, message))
+			// The timeout flag is authoritative, so it is checked first, and a
+			// timeout or abort throws with empty text (upstream's catch path).
+			// Upstream throws whenever the timer fired, including when the shell
+			// itself exited first and only its background processes kept the pipes
+			// open; the ShellTimeoutError then carries the shell's exit.
+			if timedOut.Load() {
+				outputText, _ := formatOutput("")
+				message := bashTimeoutMessage(timeoutSeconds)
+				shellExitMu.Lock()
+				deadlineExit := shellExitBeforeDeadline
+				shellExitMu.Unlock()
+				if !deadlineExit.IsZero() {
+					elapsed := math.Round(float64(deadlineExit.Sub(startedAt))/float64(100*time.Millisecond)) / 10
+					message += bashShellExitTimeoutMessage(processExitCode(cmd.ProcessState), elapsed)
 				}
+				if input.Timeout == nil {
+					message += " (the default timeout; pass a larger timeout if the command needs longer)"
+				}
+				return agent.AgentToolResult{}, fmt.Errorf("%s", appendStatus(outputText, message))
+			}
+			if waitErr != nil {
 				if ws, ok := waitErr.(*exec.ExitError); ok {
 					// A non-zero exit is an isError result, not a thrown error:
 					// formatOutput keeps the truncation details and defaults the empty
@@ -920,4 +949,28 @@ var defaultBashTimeoutSeconds = 600.0
 // "timeout:" error, so a large timeout is never written in exponent form.
 func bashTimeoutMessage(timeout float64) string {
 	return "Command timed out after " + ai.JSNumberToString(timeout) + " seconds"
+}
+
+// bashShellExitTimeoutMessage is bash.ts ShellTimeoutError's shell-exit detail:
+// the command's real result when only its background processes were still
+// writing output at the deadline (#11613). afterSeconds is rounded to tenths
+// with Math.round(ms / 100) / 10 in the reference.
+func bashShellExitTimeoutMessage(exitCode int, afterSeconds float64) string {
+	return fmt.Sprintf(". The shell exited with code %d after %s seconds, but background processes it started kept writing output until the timeout.",
+		exitCode, ai.JSNumberToString(afterSeconds))
+}
+
+// processExitCode is the reference's resolvedExitCode: a shell killed by a
+// signal reports 128+N, an ordinary exit reports its code, and an unknown state
+// reports the reference's 1.
+func processExitCode(state *os.ProcessState) int {
+	if state != nil {
+		if status, ok := state.Sys().(syscall.WaitStatus); ok && status.Signaled() {
+			return 128 + int(status.Signal())
+		}
+		if state.Exited() {
+			return state.ExitCode()
+		}
+	}
+	return 1
 }
