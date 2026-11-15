@@ -278,7 +278,7 @@ func (p *McpOAuthProvider) State(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if state.OAuthState != nil {
+	if state.OAuthState != nil && *state.OAuthState != "" {
 		return *state.OAuthState, nil
 	}
 	bytes := make([]byte, 32)

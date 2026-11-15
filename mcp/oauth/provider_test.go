@@ -133,3 +133,48 @@ func TestMcpOAuthProviderBindsStateToCanonicalServerURL(t *testing.T) {
 		t.Fatalf("tokens = %+v, err = %v; want canonical URL to share stored state", tokens, err)
 	}
 }
+
+// seedingStore hands out one prepared state and records what the provider saves.
+type seedingStore struct {
+	state *McpOAuthState
+}
+
+func (s *seedingStore) Load(context.Context) (*McpOAuthState, error) { return s.state, nil }
+
+func (s *seedingStore) Save(_ context.Context, state *McpOAuthState) error {
+	s.state = state
+	return nil
+}
+
+// pi v1.5.2 packages/mcp/src/oauth/provider.ts state() tests the stored value
+// for truthiness (`if (existing)`), so a stored empty oauthState is replaced by
+// a fresh one; returning "" leaves the authorization request without its CSRF
+// state.
+func TestStateReplacesAnEmptyStoredState(t *testing.T) {
+	const serverURL = "https://mcp.example.invalid/"
+	empty := ""
+	store := &seedingStore{state: &McpOAuthState{ServerURL: serverURL, OAuthState: &empty}}
+	provider := NewMcpOAuthProvider(McpOAuthProviderOptions{
+		ServerURL:   serverURL,
+		RedirectURL: "http://127.0.0.1:33418/callback",
+		Store:       store,
+	})
+	state, err := provider.State(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(state) != 64 {
+		t.Fatalf("state = %q, want a generated 64-character value", state)
+	}
+	if store.state.OAuthState == nil || *store.state.OAuthState != state {
+		t.Fatalf("saved state = %v, want %q", store.state.OAuthState, state)
+	}
+	// Control: a stored non-empty state is reused rather than regenerated.
+	again, err := provider.State(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again != state {
+		t.Fatalf("second state = %q, want the stored %q", again, state)
+	}
+}
