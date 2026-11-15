@@ -477,3 +477,28 @@ func TestGitDescribeBuildIsNotOlderThanItsBaseTag(t *testing.T) {
 		t.Fatal("ordinary semver comparison changed")
 	}
 }
+
+// pi v1.5.2 (b4afdddf), core/http-dispatcher.ts applyHttpProxySettings fills
+// with `process.env.HTTP_PROXY ??= proxy`, so a variable that is present but
+// empty keeps its empty value. Go's os.Getenv cannot tell that from an absent
+// variable, which made the port overwrite an explicit empty HTTP_PROXY.
+func TestApplyHTTPProxySettingsKeepsPresentEmptyVariables(t *testing.T) {
+	t.Setenv("HTTP_PROXY", "")
+	previous, had := os.LookupEnv("HTTPS_PROXY")
+	defer func() {
+		if had {
+			_ = os.Setenv("HTTPS_PROXY", previous)
+			return
+		}
+		_ = os.Unsetenv("HTTPS_PROXY")
+	}()
+	_ = os.Unsetenv("HTTPS_PROXY")
+
+	ApplyHTTPProxySettings("http://proxy.example.com:8080")
+	if value, present := os.LookupEnv("HTTP_PROXY"); !present || value != "" {
+		t.Fatalf("HTTP_PROXY = %q (present %v), want the present empty value kept", value, present)
+	}
+	if got := os.Getenv("HTTPS_PROXY"); got != "http://proxy.example.com:8080" {
+		t.Fatalf("HTTPS_PROXY = %q, want the configured proxy", got)
+	}
+}

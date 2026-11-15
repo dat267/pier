@@ -66,10 +66,10 @@ func ApplyHTTPProxySettings(httpProxy string) {
 	if proxy == "" {
 		return
 	}
-	if os.Getenv("HTTP_PROXY") == "" {
+	if _, present := os.LookupEnv("HTTP_PROXY"); !present {
 		_ = os.Setenv("HTTP_PROXY", proxy)
 	}
-	if os.Getenv("HTTPS_PROXY") == "" {
+	if _, present := os.LookupEnv("HTTPS_PROXY"); !present {
 		_ = os.Setenv("HTTPS_PROXY", proxy)
 	}
 }
