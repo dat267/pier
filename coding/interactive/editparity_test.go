@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -123,4 +124,100 @@ func joinQuoted(lines []string) string {
 		out += l + "\n"
 	}
 	return out
+}
+
+// Reference: pi v1.5.2 renderers/edit.ts buildEditCallComponent applies the
+// transcript padding to its self shell with setPaddingX(context.outputPad), and
+// renderResult pads the result text with the same value.
+func TestEditToolAppliesOutputPad(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	InitTheme("dark", false)
+	dir := t.TempDir()
+	file := filepath.Join(dir, "f.txt")
+	if err := os.WriteFile(file, []byte("old\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	component := NewToolExecutionComponent("edit", "call-1", map[string]any{
+		"path":  file,
+		"edits": []any{map[string]any{"oldText": "old", "newText": "new"}},
+	}, ToolExecutionOptions{}, &editRenderers, nil, dir)
+	component.SetOutputPad(3)
+	component.SetArgsComplete()
+	component.UpdateResult(&SortToolResultContent{
+		Content: []ToolResultContent{{Type: "text", Text: "Edit failed"}},
+		IsError: true,
+	}, false)
+
+	lines := component.Render(80)
+	var call, result string
+	for _, line := range lines {
+		visible := coding.StripAnsi(line)
+		if strings.Contains(visible, "edit ") && call == "" {
+			call = visible
+		}
+		if strings.Contains(visible, "Edit failed") && result == "" {
+			result = visible
+		}
+	}
+	if call == "" || !strings.HasPrefix(call, "   edit ") {
+		t.Fatalf("call line = %q, want three spaces of padding", call)
+	}
+	if result == "" || !strings.HasPrefix(result, "   Edit failed") {
+		t.Fatalf("result line = %q, want three spaces of padding", result)
+	}
+}
+
+// Reference: pi v1.5.2 renderers/edit.ts getRenderablePreviewInput falls back to
+// the legacy oldText/newText pair when the edits array is unusable.
+func TestEditPreviewFallsBackToLegacyFields(t *testing.T) {
+	args := map[string]any{
+		"path":    "/tmp/a.txt",
+		"edits":   []any{map[string]any{"oldText": "only-old"}},
+		"oldText": "a",
+		"newText": "b",
+	}
+	preview := getRenderablePreviewInput(args)
+	if preview == nil || len(preview.Edits) != 1 || preview.Edits[0].OldText != "a" || preview.Edits[0].NewText != "b" {
+		t.Fatalf("preview = %+v, want the legacy pair", preview)
+	}
+	// A usable edits array still wins over the legacy fields.
+	both := map[string]any{
+		"path":    "/tmp/a.txt",
+		"edits":   []any{map[string]any{"oldText": "c", "newText": "d"}},
+		"oldText": "a",
+		"newText": "b",
+	}
+	if preview := getRenderablePreviewInput(both); preview == nil || preview.Edits[0].OldText != "c" {
+		t.Fatalf("preview = %+v, want the edits array", preview)
+	}
+}
+
+// Reference: pi v1.5.2 renderers/edit.ts renderResult publishes details.diff
+// whenever it is a string, so an empty diff clears a stale preview error.
+func TestEditResultEmptyDiffClearsPreviewError(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	InitTheme("dark", false)
+	file := "/tmp/pier_empty_diff/f.txt"
+	component := NewToolExecutionComponent("edit", "call-1", map[string]any{
+		"path":  file,
+		"edits": []any{map[string]any{"oldText": "old", "newText": "new"}},
+	}, ToolExecutionOptions{}, &editRenderers, nil, "/tmp/pier_empty_diff")
+	state, ok := component.rendererState.(*editCallComponent)
+	if !ok {
+		t.Fatalf("state = %T", component.rendererState)
+	}
+	key := argsKeyFor(&editRenderArgs{
+		Path: file, HasPath: true,
+		Edits: []coding.Edit{{OldText: "old", NewText: "new"}},
+	})
+	state.preview.Store(&editPreviewState{argsKey: key, preview: &editPreview{Error: "preview failed"}})
+	component.UpdateResult(&SortToolResultContent{
+		Content: []ToolResultContent{{Type: "text", Text: "Edited " + file}},
+		Details: &coding.EditToolDetails{Diff: ""},
+	}, false)
+	if rendered := coding.StripAnsi(strings.Join(component.Render(80), "\n")); strings.Contains(rendered, "preview failed") {
+		t.Fatalf("rendered kept the stale preview error:\n%s", rendered)
+	}
 }

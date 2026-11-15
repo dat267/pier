@@ -42,21 +42,28 @@ func getRenderablePreviewInput(args any) *editRenderArgs {
 }
 
 func parseEditArgs(decoded map[string]any) []coding.Edit {
-	var edits []coding.Edit
+	// A usable edits array wins; an unusable one falls through to the legacy
+	// oldText/newText pair, like the reference's every() check.
 	if rawList, ok := decoded["edits"].([]any); ok && len(rawList) > 0 {
+		edits := make([]coding.Edit, 0, len(rawList))
+		usable := true
 		for _, entry := range rawList {
 			editMap, ok := entry.(map[string]any)
 			if !ok {
-				return nil
+				usable = false
+				break
 			}
 			oldText, oldOK := editMap["oldText"].(string)
 			newText, newOK := editMap["newText"].(string)
 			if !oldOK || !newOK {
-				return nil
+				usable = false
+				break
 			}
 			edits = append(edits, coding.Edit{OldText: oldText, NewText: newText})
 		}
-		return edits
+		if usable {
+			return edits
+		}
 	}
 	oldText, oldOK := decoded["oldText"].(string)
 	newText, newOK := decoded["newText"].(string)
@@ -134,8 +141,10 @@ func (c *editCallComponent) snapshotPreview() *editPreview {
 	return &snapshot
 }
 
-func (c *editCallComponent) build(args *editRenderArgs, theme *Theme, cwd string) {
+func (c *editCallComponent) build(args *editRenderArgs, theme *Theme, cwd string, outputPad int) {
 	c.SetBgFn(getEditHeaderBg(c.snapshotPreview(), c.settledError, theme))
+	// The reference's self shell applies the transcript padding on every build.
+	c.SetPaddingX(outputPad)
 	c.Clear()
 	c.AddChild(tui.NewText(formatEditCall(args, theme, cwd), 0, 0, nil))
 	preview := c.snapshotPreview()
@@ -208,7 +217,7 @@ var editRenderers = ToolRenderers{
 				component.setPreviewResult(requestKey, preview)
 			}()
 		}
-		component.build(previewInput, theme, context.Cwd)
+		component.build(previewInput, theme, context.Cwd, context.OutputPad)
 		return component
 	},
 	RenderResult: func(result *SortToolResultContent, options ToolRenderResultOptions, theme *Theme, context *ToolRenderContext) tui.Component {
@@ -217,15 +226,19 @@ var editRenderers = ToolRenderers{
 		argsKey := argsKeyFor(previewInput)
 		var resultDiff string
 		var firstChangedLine *int
+		hasResultDiff := false
 		if !context.IsError {
 			if details := toolDetailsFrom[coding.EditToolDetails](result.Details); details != nil {
 				resultDiff = details.Diff
 				firstChangedLine = details.FirstChangedLine
+				// The reference publishes the diff whenever details carry a
+				// string, so an empty diff still clears a stale preview error.
+				hasResultDiff = true
 			}
 		}
 		if callComponent != nil {
 			changed := false
-			if resultDiff != "" {
+			if hasResultDiff {
 				callComponent.preview.Store(&editPreviewState{
 					argsKey: argsKey,
 					preview: &editPreview{Diff: resultDiff, FirstChangedLine: firstChangedLine},
@@ -238,7 +251,7 @@ var editRenderers = ToolRenderers{
 				changed = true
 			}
 			if changed {
-				callComponent.build(previewInput, theme, context.Cwd)
+				callComponent.build(previewInput, theme, context.Cwd, context.OutputPad)
 			}
 		}
 		output := formatEditResult(previewInput, callComponent, result, theme, context.IsError)
@@ -248,7 +261,7 @@ var editRenderers = ToolRenderers{
 			return component
 		}
 		component.AddChild(tui.NewSpacer(1))
-		component.AddChild(tui.NewText(output, 1, 0, nil))
+		component.AddChild(tui.NewText(output, context.OutputPad, 0, nil))
 		return component
 	},
 }

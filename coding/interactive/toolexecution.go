@@ -130,10 +130,13 @@ func NewToolExecutionComponent(toolName string, toolCallID string, args any, opt
 		showImages:      showImages,
 		imageWidthCells: imageWidthCells,
 		isPartial:       true,
-		definition:      definition,
-		host:            host,
-		post:            toolPostFor(host),
-		cwd:             cwd,
+		// The content box and the self shell start at one cell, like the
+		// reference's Box(1, 1); SetOutputPad replaces it with the setting.
+		outputPad:  1,
+		definition: definition,
+		host:       host,
+		post:       toolPostFor(host),
+		cwd:        cwd,
 	}
 
 	theme := ActiveTheme()
