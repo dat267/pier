@@ -931,13 +931,9 @@ func (s *AgentSession) CycleThinkingLevel(options ModelMutationOptions) (ai.Thin
 		return "", false
 	}
 	current := s.ThinkingLevel()
-	index := 0
-	for position, level := range levels {
-		if level == current {
-			index = position
-			break
-		}
-	}
+	// Upstream computes (indexOf(level) + 1) % length, so a level that is not
+	// in the list (index -1) advances to the first one.
+	index := slices.Index(levels, current)
 	next := levels[(index+1)%len(levels)]
 	s.SetThinkingLevel(next, options)
 	return next, true
