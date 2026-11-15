@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -327,5 +328,72 @@ func TestStartupRebuildUpdatesFooter(t *testing.T) {
 	wiring.RebuildChatFromMessages()
 	if borderUpdates != 1 {
 		t.Fatalf("editor border updates = %d", borderUpdates)
+	}
+}
+
+// postRecordUI records owner posts instead of applying them.
+type postRecordUI struct {
+	tui.TUI
+	posts chan func()
+}
+
+func (u *postRecordUI) Post(fn func())     { u.posts <- fn }
+func (u *postRecordUI) RequestRender(bool) {}
+
+// The startup subscription-auth check runs on its own goroutine (Run starts it
+// with `go w.WarnAnthropic(ctx)`), so the warning must reach the transcript
+// through the owner post: appending to the chat from that worker mutates the
+// tree the loop renders and routes input through (AGENTS.md "UI ownership").
+func TestStartupAuthWarningLandsOnTheOwnerLoop(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	capture := &postRecordUI{posts: make(chan func(), 1)}
+	app.ui = capture
+
+	app.startup.ShowWarning("subscription auth is active")
+	if children := len(app.chat.Children); children != 0 {
+		t.Fatalf("the warning mutated the chat on the caller's goroutine: %d children", children)
+	}
+	select {
+	case fn := <-capture.posts:
+		fn()
+	case <-time.After(5 * time.Second):
+		t.Fatal("the warning never reached the owner loop")
+	}
+	if len(app.chat.Children) == 0 {
+		t.Fatal("the warning did not land on the owner loop")
+	}
+}
+
+// A single worker still warns: the claim must not suppress the first warning.
+func TestStartupAnthropicWarningWarnsOnceForRealAuth(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	InitTheme("dark", false)
+	credentials := ai.NewInMemoryCredentialStore()
+	if _, err := credentials.Modify("anthropic", func(*ai.Credential) (*ai.Credential, error) {
+		return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "sk-ant-oat01-test"}}, nil
+	}, context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	runtime, err := coding.CreateModelRuntime(coding.CreateModelRuntimeOptions{
+		Credentials: credentials, DisableModelsJSON: true,
+	})
+	if err != nil {
+		t.Fatalf("create runtime: %v", err)
+	}
+	settings := coding.NewInMemorySettingsManager(nil, coding.SettingsManagerCreateOptions{})
+	var warnings atomic.Int64
+	wiring := &StartupWiring{
+		Session:  &startupTestSession{runtime: runtime},
+		Settings: settings,
+		ShowWarning: func(string) {
+			warnings.Add(1)
+		},
+	}
+	model := &ai.Model{Provider: "anthropic", ID: "m"}
+	wiring.MaybeWarnAboutAnthropicSubscriptionAuth(context.Background(), model)
+	wiring.MaybeWarnAboutAnthropicSubscriptionAuth(context.Background(), model)
+	if got := warnings.Load(); got != 1 {
+		t.Fatalf("warnings = %d, want exactly one", got)
 	}
 }

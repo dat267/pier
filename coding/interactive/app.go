@@ -1364,6 +1364,17 @@ func (a *App) showWarning(message string) {
 	a.transcript.ShowStatus(message)
 }
 
+// showWarningFromWorker delivers a warning raised on a worker goroutine (the
+// startup subscription-auth check, the model cycle) through the owner loop: the
+// transcript tree has one writer, and app.showWarning appends to it.
+func (a *App) showWarningFromWorker(message string) {
+	if a.ui == nil {
+		a.showWarning(message)
+		return
+	}
+	a.ui.Post(func() { a.showWarning(message) })
+}
+
 // wireMcpManager installs the live wiring of one manager into the session:
 // rebuilds attach the tools (posted to the loop), the first turn waits bounded
 // for the direct-tool servers then attaches and reports, and the early tool

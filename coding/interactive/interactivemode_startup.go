@@ -84,8 +84,10 @@ type StartupWiring struct {
 	// ctx is the run context; submission sends also unblock on its cancellation
 	// (stage 4 gap).
 	ctx atomic.Pointer[context.Context]
-	// anthropicSubscriptionWarningShown dedupes the warning.
-	anthropicSubscriptionWarningShown bool
+	// anthropicSubscriptionWarningShown dedupes the warning. The check runs on
+	// several detached workers (startup, model select, model cycle), so the
+	// claim is atomic.
+	anthropicSubscriptionWarningShown atomic.Bool
 }
 
 func (w *StartupWiring) showWarning(message string) {
@@ -334,6 +336,12 @@ func (w *StartupWiring) UpdateAvailableProviderCount() {
 	w.FooterData.SetAvailableProviderCount(len(providers))
 }
 
+// claimAnthropicWarning claims the one warning. The check runs on several
+// detached workers, so a read-then-set would let two of them both warn.
+func (w *StartupWiring) claimAnthropicWarning() bool {
+	return w.anthropicSubscriptionWarningShown.CompareAndSwap(false, true)
+}
+
 // MaybeWarnAboutAnthropicSubscriptionAuth warns once about Anthropic
 // subscription auth.
 func (w *StartupWiring) MaybeWarnAboutAnthropicSubscriptionAuth(ctx context.Context, model *ai.Model) {
@@ -343,7 +351,7 @@ func (w *StartupWiring) MaybeWarnAboutAnthropicSubscriptionAuth(ctx context.Cont
 			return
 		}
 	}
-	if w.anthropicSubscriptionWarningShown {
+	if w.anthropicSubscriptionWarningShown.Load() {
 		return
 	}
 	if model == nil {
@@ -357,8 +365,9 @@ func (w *StartupWiring) MaybeWarnAboutAnthropicSubscriptionAuth(ctx context.Cont
 	runtime := w.Session.ModelRuntime()
 	check, err := runtime.CheckAuth("anthropic", ctx)
 	if err == nil && check != nil && check.Type == "oauth" {
-		w.anthropicSubscriptionWarningShown = true
-		w.showWarning(AnthropicSubscriptionAuthWarning)
+		if w.claimAnthropicWarning() {
+			w.showWarning(AnthropicSubscriptionAuthWarning)
+		}
 		return
 	}
 	auth, err := runtime.GetAuth(model.Provider, nil)
@@ -368,7 +377,9 @@ func (w *StartupWiring) MaybeWarnAboutAnthropicSubscriptionAuth(ctx context.Cont
 	if !IsAnthropicSubscriptionAuthKey(auth.Auth.APIKey) {
 		return
 	}
-	w.anthropicSubscriptionWarningShown = true
+	if !w.claimAnthropicWarning() {
+		return
+	}
 	w.showWarning(AnthropicSubscriptionAuthWarning)
 }
 
@@ -386,7 +397,7 @@ func newStartupWiring(app *App) *StartupWiring {
 		FooterData:      app.footerData,
 		SessionInfo:     app.sessionMgr,
 		Version:         app.options.Version,
-		ShowWarning:     func(message string) { app.showWarning(message) },
+		ShowWarning:     func(message string) { app.showWarningFromWorker(message) },
 		ShowError:       func(message string) { app.showError(message) },
 		ShowStatus:      func(message string) { app.transcript.ShowStatus(message) },
 		RequestRender:   func() { app.ui.RequestRender(false) },
