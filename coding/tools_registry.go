@@ -122,18 +122,26 @@ func CreateAllTools(cwd string, options *ToolsOptions) map[ToolName]agent.AgentT
 	if options == nil {
 		options = &ToolsOptions{}
 	}
-	powerShellOptions := options.PowerShell
-	if powerShellOptions == nil {
-		powerShellOptions = options.Bash
-	}
 	return map[ToolName]agent.AgentTool{
 		ToolNameRead:       CreateReadTool(cwd, options.Read),
 		ToolNameBash:       CreateBashTool(cwd, options.Bash),
-		ToolNamePowerShell: CreatePowerShellTool(cwd, powerShellOptions),
+		ToolNamePowerShell: CreatePowerShellTool(cwd, allToolsPowerShellOptions(options)),
 		ToolNameEdit:       CreateEditTool(cwd),
 		ToolNameWrite:      CreateWriteTool(cwd),
 		ToolNameGrep:       CreateGrepTool(cwd),
 		ToolNameFind:       CreateFindTool(cwd),
 		ToolNameLS:         CreateLsTool(cwd),
 	}
+}
+
+// allToolsPowerShellOptions is the option set createAllTools gives the
+// PowerShell tool: only `options.powershell`. Upstream passes
+// `options?.powershell` and nothing else, so a caller that configured bash
+// alone gets the default PowerShell tool rather than the bash shell prefix,
+// session-environment flags or environment map.
+func allToolsPowerShellOptions(options *ToolsOptions) *BashToolOptions {
+	if options == nil {
+		return nil
+	}
+	return options.PowerShell
 }
