@@ -46,6 +46,27 @@ func TestImageResizeOptionsForModel(t *testing.T) {
 	}
 }
 
+// TestImageResizeOptionsIgnoresExplicitZeros pins D474: a resize field set to 0
+// keeps the default. Reference: pi v1.5.2 (b4afdddf)
+// utils/image-resize-core.ts spreads `{ ...DEFAULT_OPTIONS, ...options }`, so an
+// explicit 0 there wins and a 0 width or quality degrades the resize; the port's
+// `ModelImageResize` fields are plain integers, where 0 reads as unset, and the
+// default is the useful answer for both.
+func TestImageResizeOptionsIgnoresExplicitZeros(t *testing.T) {
+	model := &ai.Model{Input: []string{"image"}, InputLimits: &ai.ModelInputLimits{
+		Images: &ai.ModelImageLimits{Resize: &ai.ModelImageResize{MaxWidth: 0, MaxHeight: 0, MaxBytes: 0, JPEGQuality: 0}},
+	}}
+	if got, want := imageResizeOptionsFor(model), DefaultImageResizeOptions; got != want {
+		t.Errorf("all-zero block: got %+v, want %+v", got, want)
+	}
+	model.InputLimits.Images.Resize.JPEGQuality = 60
+	want := DefaultImageResizeOptions
+	want.JPEGQuality = 60
+	if got := imageResizeOptionsFor(model); got != want {
+		t.Errorf("explicit quality with zero sizes: got %+v, want %+v", got, want)
+	}
+}
+
 // TestNonVisionImageNote pins upstream getNonVisionImageNote: the note appears
 // only when the model's input modes exclude "image".
 func TestNonVisionImageNote(t *testing.T) {

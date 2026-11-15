@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D473)
+# Deliberate divergences from pi (D1–D474)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7634,3 +7634,19 @@ prefixes, NULs, mixed scripts); the benchmark is
 `BenchmarkCapFileListsLongSession`.
 
 Test: `BenchmarkCapFileListsLongSession`.
+
+### D474
+
+**A model resize field set to 0 keeps the default.**
+
+Reference: pi v1.5.2 (b4afdddf) `utils/image-resize-core.ts`
+`resizeImageInProcess` merges its options as `{ ...DEFAULT_OPTIONS, ...options }`,
+so a model config with `inputLimits.images.resize.maxWidth: 0` (or
+`jpegQuality: 0`) passes 0 into the resize and encode steps: a 0 width collapses
+the image and a 0 quality re-encodes at the worst setting. `ai.ModelImageResize`
+holds plain integers with `omitempty`, so 0 and an absent field decode alike, and
+pier's `imageResizeOptionsFor` keeps the default for both. Omitting the key is
+the reference's own way to ask for the default, so the only loss is a config that
+asked for a degenerate image on purpose.
+
+Test: `TestImageResizeOptionsIgnoresExplicitZeros`.

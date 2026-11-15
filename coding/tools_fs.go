@@ -198,7 +198,9 @@ func nonVisionImageNote(model *ai.Model) string {
 
 // imageResizeOptionsFor resolves the model's resize limits over the defaults, the
 // way upstream spreads model.inputLimits.images.resize over DEFAULT_OPTIONS: a
-// partially specified block keeps the default for every key it leaves out.
+// partially specified block keeps the default for every key it leaves out, and
+// so does a key set to 0, which the integer fields cannot tell from an absent
+// one (D474).
 func imageResizeOptionsFor(model *ai.Model) ImageResizeOptions {
 	options := DefaultImageResizeOptions
 	if model == nil || model.InputLimits == nil || model.InputLimits.Images == nil {

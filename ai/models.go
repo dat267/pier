@@ -278,7 +278,8 @@ type ModelImageLimits struct {
 
 // ModelImageResize is the per-model inline-image resize contract (upstream
 // ImageResizeSchema). Unset fields fall back to the caller's defaults, the way
-// upstream spreads the object over DEFAULT_OPTIONS.
+// upstream spreads the object over DEFAULT_OPTIONS; so does a field set to 0,
+// because the integer type cannot tell it from an absent field (D474).
 type ModelImageResize struct {
 	MaxWidth    int64 `json:"maxWidth,omitempty"`
 	MaxHeight   int64 `json:"maxHeight,omitempty"`
