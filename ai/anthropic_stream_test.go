@@ -634,3 +634,80 @@ func TestStreamAnthropicOpenBlocksFollowBlockIndex(t *testing.T) {
 		t.Fatalf("content = %s\nwant %s", content, want)
 	}
 }
+
+// Upstream builds Copilot's per-request headers inside stream()
+// (packages/ai/src/api/anthropic-messages.ts, buildCopilotDynamicHeaders):
+// X-Initiator marks the request user- or agent-initiated, Openai-Intent is
+// always sent, and Copilot-Vision-Request is added when the transcript carries
+// images. The port had the helper and the DynamicHeaders merge, but nothing
+// filled it in, so a Copilot messages request went out without them.
+func TestStreamAnthropicCopilotDynamicHeaders(t *testing.T) {
+	events := []string{
+		"event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_1\",\"model\":\"claude-opus-4-5\",\"usage\":{\"input_tokens\":10,\"output_tokens\":1}}}\n\n",
+		"event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\n",
+		"event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"ok\"}}\n\n",
+		"event: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\n",
+		"event: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"},\"usage\":{\"output_tokens\":5}}\n\n",
+		"event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n",
+	}
+	tests := []struct {
+		name          string
+		messages      []Message
+		wantInitiator string
+		wantVision    string
+	}{
+		{
+			name: "agent initiated",
+			messages: []Message{
+				&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+				&AssistantMessage{Content: []Content{TextContent{Text: "hello"}}, Timestamp: 2},
+			},
+			wantInitiator: "agent",
+		},
+		{
+			name: "user initiated with image",
+			messages: []Message{
+				&UserMessage{Content: StringOrBlocks{Blocks: []Content{
+					TextContent{Text: "look"},
+					ImageContent{MimeType: "image/png", Data: "AAAA"},
+				}}, Timestamp: 1},
+			},
+			wantInitiator: "user",
+			wantVision:    "true",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := map[string]string{}
+			server := sseServer(t, events, func(r *http.Request, _ []byte) {
+				for _, name := range []string{"X-Initiator", "Openai-Intent", "Copilot-Vision-Request"} {
+					got[name] = r.Header.Get(name)
+				}
+			})
+			defer server.Close()
+
+			model := testAnthropicModel()
+			model.Provider = "github-copilot"
+			model.BaseURL = server.URL
+			stream := StreamAnthropic(model, NormalizeContext(Context{Messages: tt.messages}),
+				&AnthropicOptions{APIKey: "copilot-token"})
+			for {
+				if _, ok := stream.Next(context.Background()); !ok {
+					break
+				}
+			}
+			if _, err := stream.Result(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			if got["X-Initiator"] != tt.wantInitiator {
+				t.Fatalf("X-Initiator = %q, want %q", got["X-Initiator"], tt.wantInitiator)
+			}
+			if got["Openai-Intent"] != "conversation-edits" {
+				t.Fatalf("Openai-Intent = %q, want conversation-edits", got["Openai-Intent"])
+			}
+			if got["Copilot-Vision-Request"] != tt.wantVision {
+				t.Fatalf("Copilot-Vision-Request = %q, want %q", got["Copilot-Vision-Request"], tt.wantVision)
+			}
+		})
+	}
+}

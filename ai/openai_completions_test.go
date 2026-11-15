@@ -739,3 +739,80 @@ func TestStreamOpenAICompletionsToolCallKeepsFirstID(t *testing.T) {
 		t.Fatalf("tool call id = %q, want call_1", call.ID)
 	}
 }
+
+// Upstream builds Copilot's per-request headers inside stream()
+// (packages/ai/src/api/openai-completions.ts createClient): X-Initiator marks
+// the request user- or agent-initiated, Openai-Intent is always sent, and
+// Copilot-Vision-Request is added when the transcript carries images. The port
+// only applied them on the responses path.
+func TestStreamOpenAICompletionsCopilotDynamicHeaders(t *testing.T) {
+	chunks := "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":null}]}\n\n" +
+		"data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n" +
+		"data: [DONE]\n\n"
+	tests := []struct {
+		name          string
+		messages      []Message
+		wantInitiator string
+		wantVision    string
+	}{
+		{
+			name: "agent initiated",
+			messages: []Message{
+				&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+				&AssistantMessage{Content: []Content{TextContent{Text: "hello"}}, Timestamp: 2},
+			},
+			wantInitiator: "agent",
+		},
+		{
+			name: "user initiated with image",
+			messages: []Message{
+				&UserMessage{Content: StringOrBlocks{Blocks: []Content{
+					TextContent{Text: "look"},
+					ImageContent{MimeType: "image/png", Data: "AAAA"},
+				}}, Timestamp: 1},
+			},
+			wantInitiator: "user",
+			wantVision:    "true",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := map[string]string{}
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				for _, name := range []string{"X-Initiator", "Openai-Intent", "Copilot-Vision-Request"} {
+					got[name] = r.Header.Get(name)
+				}
+				w.Header().Set("Content-Type", "text/event-stream")
+				_, _ = w.Write([]byte(chunks))
+			}))
+			defer server.Close()
+
+			model := testOpenAIModel()
+			model.Provider = "github-copilot"
+			model.BaseURL = server.URL
+			stream := StreamOpenAICompletions(model, NormalizeContext(Context{Messages: tt.messages}),
+				&OpenAICompletionsOptions{StreamOptions: StreamOptions{APIKey: "copilot-token"}})
+			for {
+				if _, ok := stream.Next(context.Background()); !ok {
+					break
+				}
+			}
+			msg, err := stream.Result(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if msg.StopReason != StopStop {
+				t.Fatalf("stopReason = %s", msg.StopReason)
+			}
+			if got["X-Initiator"] != tt.wantInitiator {
+				t.Fatalf("X-Initiator = %q, want %q", got["X-Initiator"], tt.wantInitiator)
+			}
+			if got["Openai-Intent"] != "conversation-edits" {
+				t.Fatalf("Openai-Intent = %q, want conversation-edits", got["Openai-Intent"])
+			}
+			if got["Copilot-Vision-Request"] != tt.wantVision {
+				t.Fatalf("Copilot-Vision-Request = %q, want %q", got["Copilot-Vision-Request"], tt.wantVision)
+			}
+		})
+	}
+}

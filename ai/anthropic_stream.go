@@ -547,6 +547,14 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 			Identity:         options.Identity,
 			FederationBearer: federationBearer,
 		}
+		if model.Provider == "github-copilot" {
+			// Copilot's per-request headers come from the transcript:
+			// X-Initiator marks agent-initiated follow-ups and the vision
+			// flag is set when images are present (upstream
+			// api/anthropic-messages.ts createClient).
+			clientOpts.DynamicHeaders = BuildCopilotDynamicHeaders(
+				normalizedContext.Messages, HasCopilotVisionInput(normalizedContext.Messages))
+		}
 
 		// Each request gets a fresh body so a strict-tool fallback can retry once.
 		sendRequest := func(params json.RawMessage) (*http.Response, error) {

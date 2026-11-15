@@ -315,6 +315,16 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 				for name, value := range model.Headers {
 					req.Header.Set(name, value)
 				}
+				if model.Provider == "github-copilot" {
+					// Copilot's per-request headers come from the transcript:
+					// X-Initiator marks agent-initiated follow-ups and the
+					// vision flag is set when images are present (upstream
+					// api/openai-completions.ts createClient).
+					hasImages := HasCopilotVisionInput(normalizedContext.Messages)
+					for name, value := range BuildCopilotDynamicHeaders(normalizedContext.Messages, hasImages) {
+						req.Header.Set(name, value)
+					}
+				}
 				// Session affinity headers.
 				if cacheSessionID != "" && compat.SendSessionAffinityHeaders {
 					switch compat.SessionAffinityFormat {
