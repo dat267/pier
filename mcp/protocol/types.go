@@ -108,7 +108,7 @@ type Resource struct {
 	Title       *string             `json:"title,omitempty"`
 	Description *string             `json:"description,omitempty"`
 	MimeType    *string             `json:"mimeType,omitempty"`
-	Size        *int64              `json:"size,omitempty"`
+	Size        *float64            `json:"size,omitempty"`
 	Annotations *ContentAnnotations `json:"annotations,omitempty"`
 	Meta        json.RawMessage     `json:"_meta,omitempty"`
 }

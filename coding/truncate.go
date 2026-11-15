@@ -190,19 +190,20 @@ func resolveSubarrayIndex(index, length int) int {
 	return index
 }
 
-func FormatSize(bytes int64) string {
-	if bytes < 1024 {
-		return fmt.Sprintf("%dB", bytes)
-	} else if bytes < 1024*1024 {
-		return formatToFixed1(bytes, 1024) + "KB"
-	}
-	return formatToFixed1(bytes, 1024*1024) + "MB"
-}
+func FormatSize(bytes int64) string { return FormatSizeNumber(float64(bytes)) }
 
-// formatToFixed1 renders bytes/divisor with one decimal like JS
-// Number.toFixed(1), without multiplying the byte count in an integer type.
-func formatToFixed1(bytes, divisor int64) string {
-	return ai.JSNumberToFixed(float64(bytes)/float64(divisor), 1)
+// FormatSizeNumber renders a byte count the way upstream's formatSize(number)
+// does: a JavaScript number can be fractional or exceed the int64 range (an MCP
+// server reports resource sizes as `number`), and the decimal rules are those
+// of Number.toFixed(1), not Go's
+// %.1f.
+func FormatSizeNumber(bytes float64) string {
+	if bytes < 1024 {
+		return ai.JSNumberToString(bytes) + "B"
+	} else if bytes < 1024*1024 {
+		return ai.JSNumberToFixed(bytes/1024, 1) + "KB"
+	}
+	return ai.JSNumberToFixed(bytes/(1024*1024), 1) + "MB"
 }
 
 // TruncateHead keeps the first N lines/bytes (file reads). Never returns

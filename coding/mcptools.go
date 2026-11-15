@@ -205,7 +205,7 @@ func mcpBlockToContent(server string, block protocol.ContentBlock, options Conve
 			details = append(details, block.MimeType)
 		}
 		if block.Size != nil {
-			details = append(details, FormatSize(*block.Size))
+			details = append(details, FormatSizeNumber(*block.Size))
 		}
 		title := block.Name
 		if block.Title != nil {

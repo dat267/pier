@@ -157,7 +157,7 @@ func TestConvertMcpResultResourceLinksAndBinaries(t *testing.T) {
 		saved = append(saved, savedEntry{data, extension})
 		return "/tmp/saved" + extension, nil
 	}
-	size := int64(2048)
+	size := 2048.0
 	description := "How to use it"
 	result, _, err := ConvertMcpResult("docs", "t", &protocol.CallToolResult{
 		Content: []protocol.ContentBlock{

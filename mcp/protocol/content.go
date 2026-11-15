@@ -114,11 +114,11 @@ type ContentBlock struct {
 	Data     string `json:"data,omitempty"`
 	MimeType string `json:"mimeType,omitempty"`
 	// resource_link
-	URI         string  `json:"uri,omitempty"`
-	Name        string  `json:"name,omitempty"`
-	Title       *string `json:"title,omitempty"`
-	Description *string `json:"description,omitempty"`
-	Size        *int64  `json:"size,omitempty"`
+	URI         string   `json:"uri,omitempty"`
+	Name        string   `json:"name,omitempty"`
+	Title       *string  `json:"title,omitempty"`
+	Description *string  `json:"description,omitempty"`
+	Size        *float64 `json:"size,omitempty"`
 	// resource
 	Resource *ResourceContents `json:"resource,omitempty"`
 
