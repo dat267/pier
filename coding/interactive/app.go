@@ -136,9 +136,9 @@ type App struct {
 
 	// AutoTrustOnReloadCwd is the cwd /reload may implicitly trust
 	// (main.ts:706): captured at startup when the project has no
-	// trust-requiring resources, so a later reload can save trust for a
-	// project that gained them mid-session. Upstream also gates on the
-	// --trust CLI override, which the port does not have.
+	// trust-requiring resources and no --approve/--no-approve override is in
+	// force, so a later reload can save trust for a project that gained them
+	// mid-session without persisting a run-only override.
 	autoTrustOnReloadCwd string
 	options              AppOptions
 
@@ -435,7 +435,8 @@ func NewApp(options AppOptions) *App {
 		app.projectTrustByCwd[coding.CanonicalizePath(coding.ResolvePath(options.Cwd, "", coding.PathInputOptions{}))] = *options.InitialProjectTrust
 	}
 	app.autoTrustOnReloadCwd = ""
-	if app.sessionMgr != nil && !coding.HasTrustRequiringProjectResources(app.sessionMgr.GetCwd()) {
+	if options.ProjectTrustOverride == nil && app.sessionMgr != nil &&
+		!coding.HasTrustRequiringProjectResources(app.sessionMgr.GetCwd()) {
 		app.autoTrustOnReloadCwd = app.sessionMgr.GetCwd()
 	}
 
