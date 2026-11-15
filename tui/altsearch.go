@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"unicode/utf8"
 )
 
 // Port of src/alt-screen-search.ts: the fullscreen transcript search index and
@@ -252,6 +253,29 @@ func FindAltScreenSearchMatches(lines []string, query string) []AltScreenSearchM
 	return findSearchCorpusMatches(buildSearchCorpus(lines), normalizedQuery)
 }
 
+// formatAltScreenSearchKey capitalizes one keybinding name for the overlay's
+// buttons ("alt+v" becomes "Option+V" on darwin which spells Alt that way). The
+// first rune is decoded, not sliced: a key name may start with a multi-byte
+// character, and upcasing half of one writes replacement bytes
+// (alt-screen-search.ts formatKey uses charAt(0)).
+func formatAltScreenSearchKey(key string, hasKey bool) string {
+	if !hasKey || key == "" {
+		return "Unbound"
+	}
+	parts := strings.Split(key, "+")
+	for index, part := range parts {
+		if runtime.GOOS == "darwin" && strings.ToLower(part) == "alt" {
+			parts[index] = "Option"
+			continue
+		}
+		if part != "" {
+			first, size := utf8.DecodeRuneInString(part)
+			parts[index] = strings.ToUpper(string(first)) + part[size:]
+		}
+	}
+	return strings.Join(parts, "+")
+}
+
 // GetAltScreenSearchMatchKey returns a stable key for a match.
 func GetAltScreenSearchMatchKey(match AltScreenSearchMatch) string {
 	if len(match.Segments) == 0 {
@@ -274,9 +298,10 @@ type AltScreenSearchComponent struct {
 	previousButtonEnd   int
 	nextButtonStart     int
 	nextButtonEnd       int
-	hoveredDirection    int // 0 = none, -1 = previous, 1 = next
+	// hoveredDirection is 0 for "no hover", which is also the initial state:
+	// the reference field starts as undefined and compares equal to it.
+	hoveredDirection    int
 	hasHoveredDirection bool
-	hasHovered          bool
 	focused             bool
 }
 
@@ -336,12 +361,11 @@ func (c *AltScreenSearchComponent) SetHoveredNavigationDirection(direction int, 
 	if !hasDirection {
 		next = 0
 	}
-	if c.hasHovered && c.hoveredDirection == next && c.hasHoveredDirection == hasDirection {
+	if c.hoveredDirection == next && c.hasHoveredDirection == hasDirection {
 		return false
 	}
 	c.hoveredDirection = next
 	c.hasHoveredDirection = hasDirection
-	c.hasHovered = true
 	return true
 }
 
@@ -362,22 +386,7 @@ func (c *AltScreenSearchComponent) Invalidate() { c.input.Invalidate() }
 func (c *AltScreenSearchComponent) Render(width int) []string {
 	safeWidth := max(1, width)
 	innerWidth := max(0, safeWidth-2)
-	formatKey := func(key string, hasKey bool) string {
-		if !hasKey || key == "" {
-			return "Unbound"
-		}
-		parts := strings.Split(key, "+")
-		for index, part := range parts {
-			if runtime.GOOS == "darwin" && strings.ToLower(part) == "alt" {
-				parts[index] = "Option"
-				continue
-			}
-			if part != "" {
-				parts[index] = strings.ToUpper(part[:1]) + part[1:]
-			}
-		}
-		return strings.Join(parts, "+")
-	}
+	formatKey := formatAltScreenSearchKey
 	keybindings := GetKeybindings()
 	previousKeys := keybindings.GetKeys("tui.altScreen.searchPrevious")
 	nextKeys := keybindings.GetKeys("tui.altScreen.searchNext")

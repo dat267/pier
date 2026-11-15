@@ -144,3 +144,49 @@ func TestNormalizeSearchQueryUnicodeWhitespace(t *testing.T) {
 		t.Fatalf("ideographic normalize = %q; want %q", got, "a")
 	}
 }
+
+// TestAltScreenSearchHoverStartsWithoutADirection pins the initial state: the
+// reference's hoveredNavigationDirection starts as undefined, so the first
+// "no hover" update changes nothing and requests no render
+// (alt-screen-search.ts setHoveredNavigationDirection).
+func TestAltScreenSearchHoverStartsWithoutADirection(t *testing.T) {
+	component := NewAltScreenSearchComponent(nil, nil)
+	if component.SetHoveredNavigationDirection(0, false) {
+		t.Fatal("the initial no-hover state reported a change")
+	}
+	if !component.SetHoveredNavigationDirection(-1, true) {
+		t.Fatal("hovering the previous button reported no change")
+	}
+	if component.SetHoveredNavigationDirection(-1, true) {
+		t.Fatal("re-hovering the same button reported a change")
+	}
+	if !component.SetHoveredNavigationDirection(0, false) {
+		t.Fatal("leaving the button reported no change")
+	}
+	if component.SetHoveredNavigationDirection(0, false) {
+		t.Fatal("a repeated no-hover reported a change")
+	}
+}
+
+// TestAltScreenSearchKeyLabelCapitalizesTheFirstRune pins the button labels: the
+// reference capitalizes with charAt(0), and a multi-byte first character must
+// survive (upstream alt-screen-search.ts formatKey).
+func TestAltScreenSearchKeyLabelCapitalizesTheFirstRune(t *testing.T) {
+	for _, test := range []struct {
+		key    string
+		hasKey bool
+		want   string
+	}{
+		{"alt+v", true, "Alt+V"},
+		{"ctrl+o", true, "Ctrl+O"},
+		{"öst", true, "Öst"},
+		{"😀x", true, "😀x"},
+		{"v", true, "V"},
+		{"", true, "Unbound"},
+		{"", false, "Unbound"},
+	} {
+		if got := formatAltScreenSearchKey(test.key, test.hasKey); got != test.want {
+			t.Errorf("formatAltScreenSearchKey(%q, %v) = %q, want %q", test.key, test.hasKey, got, test.want)
+		}
+	}
+}
