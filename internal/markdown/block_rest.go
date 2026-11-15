@@ -263,32 +263,37 @@ func lheadingHTMLOpen(line string) bool {
 }
 
 // delimiterRowShape is the lookahead's delimiter-row alternative
-// ` {0,3}\|?(?:[:\- ]*\|)+[\:\- ]*(?:\n|$)`, which a leading pipe (or none),
-// units of colons/dashes/spaces ending in a pipe, and any trailing
-// colon/dash/space run compose into.
+// ` {0,3}\|?(?:[:\- ]*\|)+[\:\- ]*(?:\n|$)`: a leading pipe (or none), then
+// units of colons/dashes/spaces ending in a pipe, then a trailing
+// colon/dash/space run. The leading pipe is optional and backtracks, so ` |`
+// matches by ending its one unit on that pipe, while a line of colons, dashes
+// and spaces alone does not (it holds no pipe at all).
 func delimiterRowShape(line string) bool {
 	i := 0
 	for i < len(line) && i < 3 && line[i] == ' ' {
 		i++
 	}
-	if i < len(line) && line[i] == '|' {
-		i++
+	if delimiterUnitsTail(line, i) {
+		return true
 	}
+	return i < len(line) && line[i] == '|' && delimiterUnitsTail(line, i+1)
+}
+
+// delimiterUnitsTail matches `(?:[:\- ]*\|)+[\:\- ]*` from i.
+func delimiterUnitsTail(line string, i int) bool {
 	units := 0
 	for {
-		if tailColonDashSpace(line[i:]) {
-			return units > 0 || (units == 0 && i < len(line))
-		}
 		j := i
 		for j < len(line) && strings.IndexByte(":- ", line[j]) >= 0 {
 			j++
 		}
 		if j >= len(line) || line[j] != '|' {
-			return false
+			break
 		}
 		i = j + 1
 		units++
 	}
+	return units > 0 && tailColonDashSpace(line[i:])
 }
 
 func tailColonDashSpace(s string) bool {

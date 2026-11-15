@@ -42,3 +42,30 @@ func TestSetextUnderlineFollowsTheLHeadingLookahead(t *testing.T) {
 		}
 	}
 }
+
+// Reference: pi v1.5.2 (b4afdddf) marked 18.0.11, whose lheading lookahead's
+// delimiter-row alternative is ` {0,3}\|?(?:[:\- ]*\|)+[\:\- ]*(?:\n|$)`: every
+// unit ends in a pipe, so a line of colons, dashes and spaces alone does not
+// veto the heading. The port used to treat any such tail as delimiter shaped,
+// which dropped the heading: `a\n: \n---` stayed three blocks.
+func TestSetextHeadingSurvivesAPipeLessDelimiterLikeLine(t *testing.T) {
+	for _, testCase := range []struct {
+		src  string
+		want string
+	}{
+		{"a\n: \n---\n", `h2:"a\n:"`},
+		{"a\n::\n---\n", `h2:"a\n::"`},
+		{"a\n - \n---\n", `h2:"a" | hr`},
+		// A pipe anywhere in the tail keeps the veto.
+		{"a\n| |\n---\n", `p:"a" | p:"| |" | hr`},
+		{"a\n:|\n---\n", `p:"a" | p:":|" | hr`},
+		{"a\n |\n---\n", `p:"a" | p:" |" | hr`},
+		{"a\n-|-\n---\n", `p:"a" | p:"-|-" | hr`},
+		// A delimiter-shaped first line still blocks the conversion.
+		{"| - |\n===\n", `p:"| - |\n==="`},
+	} {
+		if got := referenceShape(Lex(testCase.src)); got != testCase.want {
+			t.Errorf("%q:\n got %s\nwant %s", testCase.src, got, testCase.want)
+		}
+	}
+}
