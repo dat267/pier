@@ -729,3 +729,29 @@ func TestLoadSkillIgnoresNestedFrontmatterKeys(t *testing.T) {
 		t.Fatalf("diagnostics = %+v", diagnostics)
 	}
 }
+
+// pi v1.5.2 b4afdddf core/skills.ts loadSkills passes a single-file skill's
+// diagnostics through addSkills (`addSkills({ skills: [result.skill],
+// diagnostics: result.diagnostics })`), so the name-validation warnings of an
+// explicit skill path are reported. The port dropped them when the skill loaded.
+func TestLoadSkillsKeepsAnExplicitSkillFilesDiagnostics(t *testing.T) {
+	root := t.TempDir()
+	setHomeDir(t, filepath.Join(root, "home"))
+	skillPath := filepath.Join(root, "inline.md")
+	content := "---\nname: Bad_Name\ndescription: d\n---\nBody\n"
+	if err := os.WriteFile(skillPath, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	result := LoadSkills(LoadSkillsOptions{
+		Cwd: root, AgentDir: filepath.Join(root, "agent"), SkillPaths: []string{skillPath},
+	}, false)
+	if len(result.Skills) != 1 || result.Skills[0].Name != "Bad_Name" {
+		t.Fatalf("skills = %+v", result.Skills)
+	}
+	for _, diagnostic := range result.Diagnostics {
+		if diagnostic.Message == "name contains invalid characters (must be lowercase a-z, 0-9, hyphens only)" {
+			return
+		}
+	}
+	t.Fatalf("diagnostics = %+v, want the name warning", result.Diagnostics)
+}

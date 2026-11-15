@@ -1307,7 +1307,8 @@ func LoadSkills(options LoadSkillsOptions, trustProject bool) LoadSkillsResult {
 		if info.Mode().IsRegular() && strings.HasSuffix(resolvedPath, ".md") {
 			skill, diag := loadSkillFromFile(resolvedPath, source)
 			if skill != nil {
-				addSkills(LoadSkillsResult{Skills: []Skill{*skill}})
+				// Upstream keeps the file's warnings next to the loaded skill.
+				addSkills(LoadSkillsResult{Skills: []Skill{*skill}, Diagnostics: diag})
 			} else {
 				allDiagnostics = append(allDiagnostics, diag...)
 			}
