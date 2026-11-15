@@ -59,3 +59,46 @@ func TestReferenceLanguageOrderMatchesThePin(t *testing.T) {
 		}
 	}
 }
+
+// TestCSSKeywordListsMatchThePin compares the CSS keyword tables with the
+// reference's own lists. A missing or extra tag, media feature, pseudo-class,
+// pseudo-element or property changes which tokens the CSS grammar can highlight,
+// and nothing else checks those five tables.
+func TestCSSKeywordListsMatchThePin(t *testing.T) {
+	data, err := os.ReadFile("testdata/css-lists/golden.json")
+	if err != nil {
+		t.Fatalf("read golden: %v", err)
+	}
+	var want struct {
+		Tags           []string `json:"tags"`
+		MediaFeatures  []string `json:"mediaFeatures"`
+		PseudoClasses  []string `json:"pseudoClasses"`
+		PseudoElements []string `json:"pseudoElements"`
+		Attributes     []string `json:"attributes"`
+	}
+	if err := json.Unmarshal(data, &want); err != nil {
+		t.Fatalf("golden json: %v", err)
+	}
+	for _, list := range []struct {
+		name string
+		got  []string
+		want []string
+	}{
+		{"tags", cssTags, want.Tags},
+		{"media features", cssMediaFeatures, want.MediaFeatures},
+		{"pseudo-classes", cssPseudoClasses, want.PseudoClasses},
+		{"pseudo-elements", cssPseudoElements, want.PseudoElements},
+		{"attributes", cssAttributes, want.Attributes},
+	} {
+		if len(list.got) != len(list.want) {
+			t.Errorf("%s: %d entries, golden has %d", list.name, len(list.got), len(list.want))
+			continue
+		}
+		for index := range list.want {
+			if list.got[index] != list.want[index] {
+				t.Errorf("%s[%d] = %q, golden %q", list.name, index, list.got[index], list.want[index])
+				break
+			}
+		}
+	}
+}
