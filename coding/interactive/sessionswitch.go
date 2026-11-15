@@ -89,26 +89,30 @@ func (e *SessionImportFileNotFoundError) Error() string { return "File not found
 // AgentSessionRuntime.importFromJsonl).
 func (a *App) importFromJSONLAsync(_ context.Context, inputPath string, cwdOverride string, done func(*SessionSwitchResult, error)) {
 	runSessionFileWork(a.sessionQueue, a.postToOwnerLoop, sessionFileWorkKey,
-		a.importSessionWork(inputPath, cwdOverride), func(opened *coding.SessionManager, openErr error) {
+		a.importSessionWork(a.sessionMgr, inputPath, cwdOverride), func(opened *coding.SessionManager, openErr error) {
 			done(a.applyOpenedSession(opened, openErr))
 		})
 }
 
 // importSessionWork copies the file into the session directory and opens it.
-func (a *App) importSessionWork(inputPath string, cwdOverride string) func(context.Context) (*coding.SessionManager, error) {
+// The session wiring is read here, on the owner loop, because the worker can
+// start after the loop replaced the session (see forkWork).
+func (a *App) importSessionWork(manager *coding.SessionManager, inputPath string, cwdOverride string) func(context.Context) (*coding.SessionManager, error) {
+	sessionDir := manager.GetSessionDir()
+	managed := manager.SessionDirManaged()
+	cwd := manager.GetCwd()
 	return func(context.Context) (*coding.SessionManager, error) {
 		resolved := coding.ResolvePath(inputPath, "", coding.PathInputOptions{})
 		if _, err := os.Stat(resolved); err != nil {
 			return nil, &SessionImportFileNotFoundError{FilePath: resolved}
 		}
 
-		sessionDir := a.sessionMgr.GetSessionDir()
-		if sessionDir == "" || !a.sessionMgr.SessionDirManaged() {
+		if sessionDir == "" || !managed {
 			// An in-memory session (--no-session) has no directory of its own yet,
 			// and a session opened by path only inherits its file's directory:
 			// an import lands in the default store, never in a directory pier does
 			// not own (M73).
-			sessionDir = coding.DefaultSessionDir(a.sessionMgr.GetCwd(), "")
+			sessionDir = coding.DefaultSessionDir(cwd, "")
 		}
 		if err := coding.EnsurePrivateSessionDir(sessionDir); err != nil {
 			return nil, err
@@ -424,7 +428,8 @@ func (a *App) applyProjectSettings(cwd string, trusted bool) {
 func (a *App) forkAtEntry(_ context.Context, entryID string, atPosition bool) (*SelectorForkResult, error) {
 	var result *SelectorForkResult
 	var err error
-	runSessionFileWork(nil, nil, sessionFileWorkKey, a.forkWork(entryID, atPosition), func(outcome *forkOutcome, workErr error) {
+	work := a.forkWork(a.sessionMgr, entryID, atPosition)
+	runSessionFileWork(nil, nil, sessionFileWorkKey, work, func(outcome *forkOutcome, workErr error) {
 		result, err = a.applyFork(outcome, workErr)
 	})
 	return result, err
@@ -434,10 +439,10 @@ func (a *App) forkAtEntry(_ context.Context, entryID string, atPosition bool) (*
 // it. Writing a fork serializes the whole branch: 519ms on a 25,583-entry
 // session.
 func (a *App) forkAtEntryAsync(_ context.Context, entryID string, atPosition bool, done func(*SelectorForkResult, error)) {
-	runSessionFileWork(a.sessionQueue, a.postToOwnerLoop, sessionFileWorkKey,
-		a.forkWork(entryID, atPosition), func(outcome *forkOutcome, workErr error) {
-			done(a.applyFork(outcome, workErr))
-		})
+	work := a.forkWork(a.sessionMgr, entryID, atPosition)
+	runSessionFileWork(a.sessionQueue, a.postToOwnerLoop, sessionFileWorkKey, work, func(outcome *forkOutcome, workErr error) {
+		done(a.applyFork(outcome, workErr))
+	})
 }
 
 // forkOutcome is what the worker produces: a forked manager for a persisted
@@ -449,9 +454,16 @@ type forkOutcome struct {
 	targetLeafID string
 }
 
-func (a *App) forkWork(entryID string, atPosition bool) func(context.Context) (*forkOutcome, error) {
+// forkWork snapshots the session wiring on the owner loop: the queued worker can
+// start after the loop already replaced the session, so reading a.sessionMgr
+// there forked the wrong session or reported an unknown entry for a valid one.
+func (a *App) forkWork(manager *coding.SessionManager, entryID string, atPosition bool) func(context.Context) (*forkOutcome, error) {
+	persisted := manager.IsPersisted()
+	managed := manager.SessionDirManaged()
+	cwd := manager.GetCwd()
+	sessionDir := manager.GetSessionDir()
 	return func(context.Context) (*forkOutcome, error) {
-		entry := a.sessionMgr.GetEntry(entryID)
+		entry := manager.GetEntry(entryID)
 		if entry == nil {
 			return nil, errors.New("Invalid entry ID for forking")
 		}
@@ -470,14 +482,14 @@ func (a *App) forkWork(entryID string, atPosition bool) func(context.Context) (*
 			}
 		}
 
-		if !a.sessionMgr.IsPersisted() {
+		if !persisted {
 			return &forkOutcome{inMemory: true, targetLeafID: targetLeafID, selectedText: selectedText}, nil
 		}
 		fork := coding.ForkSessionAtEntryDerived
-		if a.sessionMgr.SessionDirManaged() {
+		if managed {
 			fork = coding.ForkSessionAtEntry
 		}
-		forked, err := fork(a.sessionMgr, targetLeafID, a.sessionMgr.GetCwd(), a.sessionMgr.GetSessionDir(), nil)
+		forked, err := fork(manager, targetLeafID, cwd, sessionDir, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -522,19 +534,24 @@ func (a *App) applyFork(outcome *forkOutcome, workErr error) (*SelectorForkResul
 // persist has no file to tail from, so the command reports instead of silently
 // starting an empty one.
 func (a *App) tailSessionAsync(_ context.Context, done func(*SessionSwitchResult, error)) {
-	runSessionFileWork(a.sessionQueue, a.postToOwnerLoop, sessionFileWorkKey, a.tailWork(),
+	runSessionFileWork(a.sessionQueue, a.postToOwnerLoop, sessionFileWorkKey,
+		a.tailWork(a.sessionMgr, a.session.Model(), a.session.ThinkingLevel()),
 		func(tailed *coding.SessionManager, workErr error) {
 			done(a.applyOpenedSession(tailed, workErr))
 		})
 }
 
-func (a *App) tailWork() func(context.Context) (*coding.SessionManager, error) {
+func (a *App) tailWork(manager *coding.SessionManager, model *ai.Model, thinkingLevel ai.ThinkingLevel) func(context.Context) (*coding.SessionManager, error) {
+	cwd := manager.GetCwd()
+	sessionDir := manager.GetSessionDir()
+	managed := manager.SessionDirManaged()
+	persisted := manager.IsPersisted()
 	return func(context.Context) (*coding.SessionManager, error) {
-		if !a.sessionMgr.IsPersisted() {
+		if !persisted {
 			return nil, errors.New("Tail needs a saved session")
 		}
-		tailed, err := coding.TailSession(a.sessionMgr, a.session.Model(), a.session.ThinkingLevel(),
-			a.sessionMgr.GetCwd(), a.sessionMgr.GetSessionDir(), a.sessionMgr.SessionDirManaged(), nil)
+		tailed, err := coding.TailSession(manager, model, thinkingLevel,
+			cwd, sessionDir, managed, nil)
 		if err != nil {
 			return nil, err
 		}

@@ -202,3 +202,46 @@ func TestPickerRenameWaitsForItsReport(t *testing.T) {
 		t.Fatal("the picker stayed in rename mode after the rename reported")
 	}
 }
+
+// Session-file work must describe the session the command was issued on: the
+// worker can start only after the owner loop has already replaced the session
+// (a /new while a fork is queued), so it must read the manager the command
+// captured, not a.sessionMgr. Reading the live field forked the fresh, empty
+// session and reported "Invalid entry ID for forking" for a fork the user asked
+// for on the session that was still current when they asked.
+//
+// The ownership rule is AGENTS.md "UI ownership": workers run blocking work
+// off-loop and never touch attached UI state; the owner loop is the only writer
+// of the session wiring.
+func TestForkWorkUsesTheDispatchedSession(t *testing.T) {
+	app, cleanup := newTestAppPersisted(t)
+	defer cleanup()
+	appendTurn(t, app, "hello")
+	leaf := app.sessionMgr.GetLeafID()
+	if leaf == nil {
+		t.Fatal("no leaf after appending a turn")
+	}
+	pump := wireOffLoopSessionWork(t, app)
+
+	done := make(chan error, 1)
+	app.forkAtEntryAsync(context.Background(), *leaf, true, func(_ *SelectorForkResult, err error) {
+		done <- err
+	})
+	// The owner loop starts a new session while the fork is still queued.
+	if _, err := app.sessionNew(); err != nil {
+		t.Fatalf("new session: %v", err)
+	}
+	fresh := app.sessionMgr.GetSessionID()
+	pump()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("fork of the dispatched session: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the fork never completed")
+	}
+	if applied := app.sessionMgr.GetSessionID(); applied == fresh {
+		t.Fatal("the fork was not applied over the new session")
+	}
+}
