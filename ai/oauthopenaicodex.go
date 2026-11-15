@@ -387,15 +387,18 @@ type OpenAICodexCallbackServer struct {
 
 	mu      sync.Mutex
 	settled bool
+	lastErr error
 	result  chan string
+	failure chan error
 	done    chan struct{}
 }
 
 // StartOpenAICodexCallbackServer serves /auth/callback on the fixed port.
 func StartOpenAICodexCallbackServer(expectedState string) *OpenAICodexCallbackServer {
 	callback := &OpenAICodexCallbackServer{
-		result: make(chan string, 1),
-		done:   make(chan struct{}),
+		result:  make(chan string, 1),
+		failure: make(chan error, 1),
+		done:    make(chan struct{}),
 	}
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", oauthCallbackHost(), OpenAICodexCallbackPort))
 	if err != nil {
@@ -410,28 +413,51 @@ func StartOpenAICodexCallbackServer(expectedState string) *OpenAICodexCallbackSe
 	mux.HandleFunc("/auth/callback", func(writer http.ResponseWriter, request *http.Request) {
 		writeHTML := func(status int, body string) {
 			writer.Header().Set("Content-Type", "text/html; charset=utf-8")
+			writer.Header().Set("cache-control", "no-store")
 			writer.WriteHeader(status)
 			_, _ = writer.Write([]byte(body))
 		}
-		if request.URL.Path != "/auth/callback" {
+		query := request.URL.Query()
+		if request.Method != http.MethodGet || request.URL.Path != "/auth/callback" {
 			writeHTML(http.StatusNotFound, OAuthErrorHTML("Callback route not found.", ""))
 			return
 		}
-		if request.URL.Query().Get("state") != expectedState {
+		if query.Get("state") != expectedState {
 			writeHTML(http.StatusBadRequest, OAuthErrorHTML("State mismatch.", ""))
 			return
 		}
-		code := request.URL.Query().Get("code")
+		if callback.isSettled() {
+			writeHTML(http.StatusConflict, OAuthErrorHTML("This sign-in has already been handled.", ""))
+			return
+		}
+		// A denied authorization ends the wait with a failure (shared
+		// callback-server.ts), instead of leaving the login on the manual path.
+		if errorCode := query.Get("error"); errorCode != "" {
+			description := query.Get("error_description")
+			if description == "" {
+				description = errorCode
+			}
+			writeHTML(http.StatusBadRequest, OAuthErrorHTML("OpenAI authorization failed.", description))
+			callback.fail(fmt.Errorf("OpenAI authorization failed: %s", description))
+			return
+		}
+		code := query.Get("code")
 		if code == "" {
 			writeHTML(http.StatusBadRequest, OAuthErrorHTML("Missing authorization code.", ""))
 			return
 		}
-		writeHTML(http.StatusOK, OAuthSuccessHTML("OpenAI authentication completed. You can close this window."))
+		writeHTML(http.StatusOK, OAuthSuccessHTML("Signed in to OpenAI. You may now close this page."))
 		callback.settle(code)
 	})
 	callback.server = newOAuthCallbackHTTPServer(mux)
 	go func() { _ = callback.server.Serve(listener) }()
 	return callback
+}
+
+func (s *OpenAICodexCallbackServer) isSettled() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.settled
 }
 
 func (s *OpenAICodexCallbackServer) settle(code string) {
@@ -444,6 +470,25 @@ func (s *OpenAICodexCallbackServer) settle(code string) {
 	s.mu.Unlock()
 	s.result <- code
 	close(s.done)
+}
+
+func (s *OpenAICodexCallbackServer) fail(err error) {
+	s.mu.Lock()
+	if s.settled {
+		s.mu.Unlock()
+		return
+	}
+	s.settled = true
+	s.mu.Unlock()
+	s.failure <- err
+	close(s.done)
+}
+
+// LastError returns the callback failure, when the wait ended because of one.
+func (s *OpenAICodexCallbackServer) LastError() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.lastErr
 }
 
 // CancelWait hands the login over to manual code entry.
@@ -468,6 +513,11 @@ func (s *OpenAICodexCallbackServer) WaitForCode() (string, bool) {
 	select {
 	case code := <-s.result:
 		return code, true
+	case err := <-s.failure:
+		s.mu.Lock()
+		s.lastErr = err
+		s.mu.Unlock()
+		return "", false
 	default:
 		return "", false
 	}
@@ -572,6 +622,8 @@ func LoginOpenAICodex(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if ok && callbackCode != "" {
 		cancelManual()
 		code = callbackCode
+	} else if lastErr := server.LastError(); lastErr != nil {
+		return nil, lastErr
 	} else {
 		manual := <-manualCh
 		if manual.err != nil {

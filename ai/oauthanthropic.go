@@ -151,6 +151,7 @@ func StartOAuthCallbackServer(expectedState string, port int) (*OAuthCallbackSer
 		query := request.URL.Query()
 		writeHTML := func(status int, body string) {
 			writer.Header().Set("Content-Type", "text/html; charset=utf-8")
+			writer.Header().Set("cache-control", "no-store")
 			writer.WriteHeader(status)
 			_, _ = writer.Write([]byte(body))
 		}
@@ -172,7 +173,7 @@ func StartOAuthCallbackServer(expectedState string, port int) (*OAuthCallbackSer
 			writeHTML(http.StatusBadRequest, OAuthErrorHTML("State mismatch.", ""))
 			return
 		}
-		writeHTML(http.StatusOK, OAuthSuccessHTML("Anthropic authentication completed. You can close this window."))
+		writeHTML(http.StatusOK, OAuthSuccessHTML("Signed in to Anthropic. You may now close this page."))
 		callback.settle(OAuthAuthorizationInput{Code: code, State: state})
 	})
 	callback.server = newOAuthCallbackHTTPServer(mux)

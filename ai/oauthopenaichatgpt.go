@@ -174,6 +174,7 @@ func StartOpenAIChatGPTCallbackServer(expectedState string) (*OpenAIChatGPTCallb
 	mux.HandleFunc(OpenAIChatGPTCallbackPath, func(writer http.ResponseWriter, request *http.Request) {
 		writeHTML := func(status int, body string) {
 			writer.Header().Set("Content-Type", "text/html; charset=utf-8")
+			writer.Header().Set("cache-control", "no-store")
 			writer.WriteHeader(status)
 			_, _ = writer.Write([]byte(body))
 		}
@@ -192,7 +193,7 @@ func StartOpenAIChatGPTCallbackServer(expectedState string) (*OpenAIChatGPTCallb
 			writeHTML(http.StatusBadRequest, OAuthErrorHTML(err.Error(), ""))
 			return
 		}
-		writeHTML(http.StatusOK, OAuthSuccessHTML("ChatGPT authentication completed. You can close this window."))
+		writeHTML(http.StatusOK, OAuthSuccessHTML("Signed in to OpenAI. You may now close this page."))
 		callback.settle(result)
 	})
 	callback.server = newOAuthCallbackHTTPServer(mux)
