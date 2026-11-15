@@ -137,13 +137,17 @@ func TestCommandExportImport(t *testing.T) {
 		t.Fatalf("exported = %v statuses = %v", session.exported, statuses)
 	}
 	// HTML export.
-	wiring.ExportToHTML = func(outputPath string) (string, error) { return "out.html", nil }
+	wiring.Exporters = func() SessionExporters {
+		return SessionExporters{HTML: func(outputPath string) (string, error) { return "out.html", nil }}
+	}
 	wiring.HandleExportCommand(context.Background(), "/export out.html")
 	if statuses[len(statuses)-1] != "Session exported to: out.html" {
 		t.Fatalf("statuses = %v", statuses)
 	}
 	// A failing export reports the error.
-	wiring.ExportToHTML = func(string) (string, error) { return "", errors.New("nope") }
+	wiring.Exporters = func() SessionExporters {
+		return SessionExporters{HTML: func(string) (string, error) { return "", errors.New("nope") }}
+	}
 	wiring.HandleExportCommand(context.Background(), "/export bad.html")
 	if !strings.Contains(errorsShown[len(errorsShown)-1], "Failed to export session: nope") {
 		t.Fatalf("errors = %v", errorsShown)

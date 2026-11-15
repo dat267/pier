@@ -59,8 +59,10 @@ type CommandWiring struct {
 	// ClearStatusIndicator clears the active indicator.
 	ClearStatusIndicator func()
 
-	// ExportToHTML exports the session as an HTML file.
-	ExportToHTML func(outputPath string) (string, error)
+	// Exporters resolves the current session's exporters. The command calls it
+	// on the owner loop, so the queued worker exports the session the command
+	// was issued on instead of reading the wiring after a switch.
+	Exporters func() SessionExporters
 	// ExportQueue runs the export off the owner loop; ExportQueue or PostToUI
 	// nil exports synchronously (tests and embedders).
 	ExportQueue *offloop.Queue
@@ -177,6 +179,27 @@ func GetPathCommandArgument(text string, command string) (string, bool) {
 	return args, true
 }
 
+// SessionExporters are one session's exporters, bound to that session and
+// resolved on the owner loop.
+type SessionExporters struct {
+	JSONL func(outputPath string) (string, error)
+	HTML  func(outputPath string) (string, error)
+}
+
+// resolveExporters binds the exporters to the session the command runs on. A
+// CommandSession export falls back to JSONL when the wiring supplies no
+// exporters (tests and embedders).
+func (w *CommandWiring) resolveExporters() SessionExporters {
+	var exporters SessionExporters
+	if w.Exporters != nil {
+		exporters = w.Exporters()
+	}
+	if exporters.JSONL == nil && w.Session != nil {
+		exporters.JSONL = w.Session.ExportToJsonl
+	}
+	return exporters
+}
+
 // HandleExportCommand exports the session as JSONL or HTML.
 //
 // Serializing a long session re-chains and re-marshals every entry, which froze
@@ -185,14 +208,15 @@ func GetPathCommandArgument(text string, command string) (string, bool) {
 // synchronous path is what tests and embedders use.
 func (w *CommandWiring) HandleExportCommand(ctx context.Context, text string) {
 	outputPath, hasPath := GetPathCommandArgument(text, "/export")
+	exporters := w.resolveExporters()
 	run := func() (string, error) {
 		if hasPath && strings.HasSuffix(outputPath, ".jsonl") {
-			return w.Session.ExportToJsonl(outputPath)
+			return exporters.JSONL(outputPath)
 		}
-		if w.ExportToHTML == nil {
+		if exporters.HTML == nil {
 			return "", errExportHTMLUnavailable
 		}
-		return w.ExportToHTML(outputPath)
+		return exporters.HTML(outputPath)
 	}
 	report := func(filePath string, err error) {
 		if err != nil {
@@ -916,13 +940,20 @@ func newCommandWiring(app *App) *CommandWiring {
 		},
 		ExportQueue: app.offloopGroup.Queue(),
 		PostToUI:    func(fn func()) { app.ui.Post(fn) },
-		ExportToHTML: func(outputPath string) (string, error) {
-			themeSetting := app.settings.GetThemeSetting()
+		// Bound here, on the owner loop: the export worker must not read the
+		// session wiring, which the loop rewrites on a session switch.
+		Exporters: func() SessionExporters {
+			session := app.session.AgentSession
 			themeName := ""
-			if themeSetting != nil {
+			if themeSetting := app.settings.GetThemeSetting(); themeSetting != nil {
 				themeName = *themeSetting
 			}
-			return app.session.ExportSessionToHTML(outputPath, themeName)
+			return SessionExporters{
+				JSONL: session.ExportToJsonl,
+				HTML: func(outputPath string) (string, error) {
+					return ExportSessionToHTML(session, outputPath, themeName)
+				},
+			}
 		},
 
 		CopyToClipboard: app.copyToClipboardOffLoop,

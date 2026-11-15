@@ -3,6 +3,9 @@ package interactive
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -72,5 +75,50 @@ func TestExportCommandWithoutAQueueStaysSynchronous(t *testing.T) {
 	wiring.HandleExportCommand(context.Background(), "/export out.jsonl")
 	if len(errors) != 1 || errors[0] != "Failed to export session: "+errTestExport.Error() {
 		t.Fatalf("errors = %v", errors)
+	}
+}
+
+// The export must describe the session the command was issued on: it runs on the
+// export queue, and the owner loop can replace the session before the worker runs
+// (/new, /resume), the same reason forkWork snapshots its manager. Reading
+// w.Session from the worker exported the replacement under the old command, and
+// the promoted method read the loop-written embedded pointer off the loop.
+//
+// The ownership rule is AGENTS.md "UI ownership": a worker never touches
+// attached UI state, and the owner loop is the only writer of the session wiring.
+func TestExportCommandUsesTheDispatchedSession(t *testing.T) {
+	app, cleanup := newTestAppPersisted(t)
+	defer cleanup()
+	appendTurn(t, app, "hello")
+
+	queue := offloop.New()
+	t.Cleanup(queue.Stop)
+	gate := make(chan struct{})
+	queue.Go(func() { <-gate })
+	posted := make(chan func(), 1)
+	app.commands.ExportQueue = queue
+	app.commands.PostToUI = func(fn func()) { posted <- fn }
+
+	outputPath := filepath.Join(t.TempDir(), "export.jsonl")
+	app.commands.HandleExportCommand(context.Background(), "/export "+outputPath)
+	// The owner loop replaces the session before the queued export runs.
+	if _, err := app.sessionNew(); err != nil {
+		t.Fatalf("new session: %v", err)
+	}
+	close(gate)
+	queue.Flush()
+	select {
+	case fn := <-posted:
+		fn()
+	case <-time.After(10 * time.Second):
+		t.Fatal("the export never reached the owner loop")
+	}
+
+	content, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("read export: %v", err)
+	}
+	if !strings.Contains(string(content), "hello") {
+		t.Fatalf("the export does not hold the dispatched session's message: %s", content)
 	}
 }

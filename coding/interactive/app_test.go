@@ -280,7 +280,7 @@ func TestAppWiringCompleteness(t *testing.T) {
 		{"Commands.CopyToClipboard", app.commands.CopyToClipboard != nil},
 		{"Commands.ReloadNow", app.commands.ReloadNow != nil},
 		{"Commands.ApplyReloadedSettings", app.commands.ApplyReloadedSettings != nil},
-		{"Commands.ExportToHTML", app.commands.ExportToHTML != nil},
+		{"Commands.Exporters", app.commands.Exporters != nil},
 		{"Commands.MarkdownTheme", app.commands.MarkdownTheme != nil},
 		{"Commands.RunDetached", app.commands.RunDetached != nil},
 		{"Autocomplete.Skills", app.autocomplete.Skills != nil},
