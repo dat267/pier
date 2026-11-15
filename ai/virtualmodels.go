@@ -61,6 +61,12 @@ func WrapProviderWithVirtualModels(providerID string, provider *Provider, virtua
 		}
 		return append(real, virtual(models)...)
 	}
+	// upstream: filterAllModels && ((models, credential) => [...filterAllModels(physical(models), credential), ...virtual(models)])
+	if originalAll := provider.FilterAllModels; originalAll != nil {
+		clone.FilterAllModels = func(models []*Model, credential *Credential) []*Model {
+			return append(originalAll(physical(models), credential), virtual(models)...)
+		}
+	}
 	originalStreams := provider.streamsFor
 	clone.streamsFor = func(model *Model) ProviderStreams {
 		if model.API == virtualAPI {

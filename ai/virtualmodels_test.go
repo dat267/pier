@@ -57,3 +57,24 @@ func TestWrapProviderWithVirtualModels(t *testing.T) {
 		t.Fatalf("models = %+v", models)
 	}
 }
+
+// Reference: pi v1.5.2 core/virtual-models.ts withVirtualModels also wraps
+// filterAllModels as `[...filterAllModels(physical(models), credential),
+// ...virtual(models)]`. Leaving it unwrapped in the clone kept a hidden
+// physical model and dropped the virtual one.
+func TestWrapProviderWithVirtualModelsWrapsFilterAllModels(t *testing.T) {
+	const virtualAPI = "pi-virtual"
+	physical := &Model{ID: "sonnet", Provider: "p", API: "messages"}
+	hidden := &Model{ID: "auto", Provider: "p", API: "messages"}
+	virtual := &Model{ID: "auto", Name: "Auto", Provider: "p", API: virtualAPI}
+	provider := CreateProvider(CreateProviderOptions{
+		ID: "p", Auth: ProviderAuth{APIKey: &ApiKeyAuth{Name: "p"}},
+		Models: []*Model{physical, hidden}, Single: fakeProviderStreams{},
+		FilterAllModels: func(models []*Model, _ *Credential) []*Model { return models },
+	})
+	wrapped := WrapProviderWithVirtualModels("p", provider, virtualAPI, []*Model{virtual})
+	filtered := wrapped.FilterAllModels([]*Model{physical, hidden, virtual}, nil)
+	if len(filtered) != 2 || filtered[0].ID != "sonnet" || filtered[1].API != virtualAPI {
+		t.Fatalf("filtered = %+v, want the physical model and the virtual model", filtered)
+	}
+}
