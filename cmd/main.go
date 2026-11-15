@@ -73,7 +73,7 @@ func Execute() {
 	// chalk: stdout's terminal state plus the FORCE_COLOR/CI/TERM fallbacks, so
 	// a redirected or CI run carries no escape codes (coding/clicolor.go).
 	coding.SetCLIColorsEnabled(coding.ResolveCLIColors(
-		term.IsTerminal(int(os.Stdout.Fd())), os.LookupEnv, goruntime.GOOS))
+		term.IsTerminal(int(os.Stdout.Fd())), os.LookupEnv, os.Args[1:], goruntime.GOOS))
 	// Before anything can reach the network: android has no /etc/resolv.conf, so
 	// the pure-Go resolver needs a fallback there.
 	configureResolver()

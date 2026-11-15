@@ -1,59 +1,49 @@
 package coding
 
-import "testing"
+import (
+	"encoding/json"
+	"os"
+	"testing"
+)
 
 // The pinned pi prints diagnostics with chalk, whose supports-color decision
-// this ports (see coding/clicolor.go). Each case is a value observed from the
-// reference 1.5.0 binary: a piped stderr is plain, a pty colors, TERM=dumb and
-// an unnamed CI are plain, a named CI and FORCE_COLOR color, and NO_COLOR is
-// ignored because the pinned supports-color does not read it.
+// this ports (see coding/clicolor.go). The fixture is generated from the pinned
+// supports-color itself, over environments, argv searches, stream states and
+// both platform branches.
+// Regenerate with node coding/testdata/clicolor/generate.mjs ./pi.
 func TestResolveCLIColorsMatchesTheReference(t *testing.T) {
-	envOf := func(values map[string]string) func(string) (string, bool) {
-		return func(name string) (string, bool) {
-			value, ok := values[name]
+	data, err := os.ReadFile("testdata/clicolor/golden.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []struct {
+		Env     map[string]string `json:"env"`
+		IsTTY   bool              `json:"isTTY"`
+		Args    []string          `json:"args"`
+		Goos    string            `json:"goos"`
+		Level   any               `json:"level"`
+		Colored bool              `json:"colored"`
+	}
+	if err := json.Unmarshal(data, &cases); err != nil {
+		t.Fatal(err)
+	}
+	if len(cases) == 0 {
+		t.Fatal("empty color fixture")
+	}
+	for index, testCase := range cases {
+		env := func(name string) (string, bool) {
+			value, ok := testCase.Env[name]
 			return value, ok
 		}
-	}
-	cases := []struct {
-		name  string
-		isTTY bool
-		env   map[string]string
-		goos  string
-		want  bool
-	}{
-		{name: "pipe", env: map[string]string{"TERM": "xterm-256color"}},
-		{name: "pty", isTTY: true, env: map[string]string{"TERM": "xterm-256color"}, want: true},
-		{name: "pty dumb", isTTY: true, env: map[string]string{"TERM": "dumb"}},
-		{name: "pty no term", isTTY: true},
-		{name: "pty unknown term", isTTY: true, env: map[string]string{"TERM": "weird"}},
-		{name: "pty no color ignored", isTTY: true, env: map[string]string{"TERM": "xterm", "NO_COLOR": "1"}, want: true},
-		{name: "pipe forced", env: map[string]string{"FORCE_COLOR": "1"}, want: true},
-		{name: "pipe forced empty", env: map[string]string{"FORCE_COLOR": ""}, want: true},
-		{name: "pipe forced true", env: map[string]string{"FORCE_COLOR": "true"}, want: true},
-		{name: "pty forced off", isTTY: true, env: map[string]string{"TERM": "xterm", "FORCE_COLOR": "0"}},
-		{name: "pty forced false", isTTY: true, env: map[string]string{"TERM": "xterm", "FORCE_COLOR": "false"}},
-		{name: "forced off beats dumb", isTTY: true, env: map[string]string{"TERM": "dumb", "FORCE_COLOR": "2"}, want: true},
-		{name: "pty named ci", isTTY: true, env: map[string]string{"TERM": "xterm", "CI": "1", "GITHUB_ACTIONS": "1"}, want: true},
-		{name: "pty unnamed ci", isTTY: true, env: map[string]string{"TERM": "xterm", "CI": "1"}},
-		{name: "pipe named ci", env: map[string]string{"CI": "1", "GITHUB_ACTIONS": "1"}},
-		{name: "pty colorterm", isTTY: true, env: map[string]string{"COLORTERM": "truecolor"}, want: true},
-		{name: "pty apple terminal", isTTY: true, env: map[string]string{"TERM_PROGRAM": "Apple_Terminal"}, want: true},
-		{name: "pty screen", isTTY: true, env: map[string]string{"TERM": "screen-256color"}, want: true},
-		// supports-color returns 0 for a non-tty stream before the platform
-		// branch, so Windows colors only a terminal.
-		{name: "windows pipe", goos: "windows"},
-		{name: "windows pty", isTTY: true, goos: "windows", want: true},
-	}
-	for _, testCase := range cases {
-		t.Run(testCase.name, func(t *testing.T) {
-			goos := testCase.goos
-			if goos == "" {
-				goos = "linux"
-			}
-			if got := ResolveCLIColors(testCase.isTTY, envOf(testCase.env), goos); got != testCase.want {
-				t.Fatalf("ResolveCLIColors = %t, want %t", got, testCase.want)
-			}
-		})
+		// The fixture records Node's platform names; the decision takes Go's.
+		goos := testCase.Goos
+		if goos == "win32" {
+			goos = "windows"
+		}
+		if got := ResolveCLIColors(testCase.IsTTY, env, testCase.Args, goos); got != testCase.Colored {
+			t.Fatalf("case %d %v tty=%v args=%v goos=%s: got %v, want %v (level %v)",
+				index, testCase.Env, testCase.IsTTY, testCase.Args, testCase.Goos, got, testCase.Colored, testCase.Level)
+		}
 	}
 }
 

@@ -1,0 +1,3269 @@
+[
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "dumb"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "dumb"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "dumb"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "dumb"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "dumb",
+			"FORCE_COLOR": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "dumb",
+			"FORCE_COLOR": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "dumb",
+			"FORCE_COLOR": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "dumb",
+			"FORCE_COLOR": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"GITHUB_ACTIONS": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"GITHUB_ACTIONS": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"GITHUB_ACTIONS": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"GITHUB_ACTIONS": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"GITEA_ACTIONS": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"GITEA_ACTIONS": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"GITEA_ACTIONS": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"GITEA_ACTIONS": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"CIRCLECI": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"CIRCLECI": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"CIRCLECI": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"CIRCLECI": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"TRAVIS": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"TRAVIS": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"TRAVIS": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"TRAVIS": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"APPVEYOR": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"APPVEYOR": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"APPVEYOR": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"APPVEYOR": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"GITLAB_CI": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"GITLAB_CI": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"GITLAB_CI": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"GITLAB_CI": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"BUILDKITE": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"BUILDKITE": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"BUILDKITE": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"BUILDKITE": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"DRONE": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"DRONE": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"DRONE": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"DRONE": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"CI_NAME": "codeship"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"CI_NAME": "codeship"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"CI_NAME": "codeship"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"CI_NAME": "codeship"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true",
+			"FORCE_COLOR": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"FORCE_COLOR": "1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"FORCE_COLOR": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true",
+			"FORCE_COLOR": "1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TF_BUILD": "True",
+			"AGENT_NAME": "hosted"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TF_BUILD": "True",
+			"AGENT_NAME": "hosted"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TF_BUILD": "True",
+			"AGENT_NAME": "hosted"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TF_BUILD": "True",
+			"AGENT_NAME": "hosted"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TF_BUILD": "True"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TF_BUILD": "True"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TF_BUILD": "True"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TF_BUILD": "True"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9.0"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9.0"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9.0"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9.0"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9.00"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9.00"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9.00"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9.00"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9.1.2"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9.1.2"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9.1.2"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9.1.2"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9.01."
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9.01."
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9.01."
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9.01."
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "9"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "10."
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "10."
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "10."
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "10."
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "8.1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "8.1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "8.1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "8.1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "100"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "100"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "100"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TEAMCITY_VERSION": "100"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm-256color"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 2,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm-256color"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm-256color"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm-256color"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm-256"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 2,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm-256"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm-256"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm-256"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "weird-256"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 2,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "weird-256"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "weird-256"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "weird-256"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "myscreen"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "myscreen"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "myscreen"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "myscreen"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "screen"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "screen"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "screen"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "screen"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "screen-256color"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 2,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "screen-256color"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "screen-256color"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "screen-256color"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "XTERM"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "XTERM"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "XTERM"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "XTERM"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "vt100"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "vt100"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "vt100"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "vt100"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "vt220"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "vt220"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "vt220"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "vt220"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "rxvt-unicode"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "rxvt-unicode"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "rxvt-unicode"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "rxvt-unicode"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "cygwin"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "cygwin"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "cygwin"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "cygwin"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "linux"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "linux"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "linux"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "linux"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "ansi"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "ansi"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "ansi"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "ansi"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "foo-color"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "foo-color"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "foo-color"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "foo-color"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "foo"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "foo"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "foo"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "foo"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm-kitty"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm-kitty"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm-kitty"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm-kitty"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm-ghostty"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm-ghostty"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm-ghostty"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm-ghostty"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "wezterm"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "wezterm"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "wezterm"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "wezterm"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"COLORTERM": "truecolor"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"COLORTERM": "truecolor"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"COLORTERM": "truecolor"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"COLORTERM": "truecolor"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"COLORTERM": ""
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"COLORTERM": ""
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"COLORTERM": ""
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"COLORTERM": ""
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"COLORTERM": "yes"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"COLORTERM": "yes"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"COLORTERM": "yes"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"COLORTERM": "yes"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM_PROGRAM": "iTerm.app",
+			"TERM_PROGRAM_VERSION": "3.4.0"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM_PROGRAM": "iTerm.app",
+			"TERM_PROGRAM_VERSION": "3.4.0"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM_PROGRAM": "iTerm.app",
+			"TERM_PROGRAM_VERSION": "3.4.0"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM_PROGRAM": "iTerm.app",
+			"TERM_PROGRAM_VERSION": "3.4.0"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM_PROGRAM": "iTerm.app",
+			"TERM_PROGRAM_VERSION": "2.9"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 2,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM_PROGRAM": "iTerm.app",
+			"TERM_PROGRAM_VERSION": "2.9"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM_PROGRAM": "iTerm.app",
+			"TERM_PROGRAM_VERSION": "2.9"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM_PROGRAM": "iTerm.app",
+			"TERM_PROGRAM_VERSION": "2.9"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM_PROGRAM": "Apple_Terminal"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 2,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM_PROGRAM": "Apple_Terminal"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM_PROGRAM": "Apple_Terminal"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM_PROGRAM": "Apple_Terminal"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM_PROGRAM": "vscode"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM_PROGRAM": "vscode"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM_PROGRAM": "vscode"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM_PROGRAM": "vscode"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "false"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "false"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "false"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "false"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": ""
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": ""
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": ""
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": ""
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "2abc"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 2,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "2abc"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "2abc"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": 2,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "2abc"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "abc"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "abc"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "abc"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "abc"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "-1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "-1"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "-1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "-1"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "9"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "9"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "9"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "9"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "3"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "3"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "3"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "3"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "1",
+			"TERM": "dumb"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "1",
+			"TERM": "dumb"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "1",
+			"TERM": "dumb"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "1",
+			"TERM": "dumb"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"NO_COLOR": "1",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"NO_COLOR": "1",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "win32",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"NO_COLOR": "1",
+			"TERM": "xterm"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"NO_COLOR": "1",
+			"TERM": "xterm"
+		},
+		"isTTY": false,
+		"args": [],
+		"goos": "win32",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--no-color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--no-colors"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=false"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=never"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color"
+		],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--colors"
+		],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=true"
+		],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=always"
+		],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=16m"
+		],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=full"
+		],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=truecolor"
+		],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=256"
+		],
+		"goos": "linux",
+		"level": 2,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color",
+			"--no-color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--no-color",
+			"--color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--",
+			"--color"
+		],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color",
+			"--",
+			"--no-color"
+		],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [
+			"--no-color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [
+			"--no-colors"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [
+			"--color=false"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [
+			"--color=never"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [
+			"--color"
+		],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [
+			"--colors"
+		],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [
+			"--color=true"
+		],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [
+			"--color=always"
+		],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [
+			"--color=16m"
+		],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [
+			"--color=full"
+		],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [
+			"--color=truecolor"
+		],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [
+			"--color=256"
+		],
+		"goos": "linux",
+		"level": 2,
+		"colored": true
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [
+			"--color",
+			"--no-color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [
+			"--no-color",
+			"--color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [
+			"--",
+			"--color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {},
+		"isTTY": true,
+		"args": [
+			"--color",
+			"--",
+			"--no-color"
+		],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [
+			"--no-color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [
+			"--no-colors"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=false"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=never"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [
+			"--color"
+		],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [
+			"--colors"
+		],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=true"
+		],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=always"
+		],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=16m"
+		],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=full"
+		],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=truecolor"
+		],
+		"goos": "linux",
+		"level": 3,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=256"
+		],
+		"goos": "linux",
+		"level": 2,
+		"colored": true
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [
+			"--color",
+			"--no-color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [
+			"--no-color",
+			"--color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [
+			"--",
+			"--color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"CI": "true"
+		},
+		"isTTY": true,
+		"args": [
+			"--color",
+			"--",
+			"--no-color"
+		],
+		"goos": "linux",
+		"level": 1,
+		"colored": true
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--no-color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--no-colors"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=false"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=never"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--colors"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=true"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=always"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=16m"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=full"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=truecolor"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color=256"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color",
+			"--no-color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--no-color",
+			"--color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--",
+			"--color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	},
+	{
+		"env": {
+			"FORCE_COLOR": "0",
+			"TERM": "xterm"
+		},
+		"isTTY": true,
+		"args": [
+			"--color",
+			"--",
+			"--no-color"
+		],
+		"goos": "linux",
+		"level": false,
+		"colored": false
+	}
+]
