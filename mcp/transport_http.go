@@ -84,8 +84,7 @@ func ConsumeSseStream(body io.Reader, options ConsumeSseOptions) error {
 		dataLines = nil
 		dataBytes = 0
 	}
-	processLine := func(rawLine string) error {
-		line := strings.TrimSuffix(rawLine, "\r")
+	processLine := func(line string) error {
 		if line == "" {
 			dispatch()
 			return nil
@@ -130,7 +129,11 @@ func ConsumeSseStream(body io.Reader, options ConsumeSseOptions) error {
 	}
 
 	var buffered strings.Builder
+	// lineStart bounds the text not yet consumed, searchAt where the next
+	// terminator search starts: a read does not rescan what it already scanned.
 	searchAt := 0
+	// skipLeadingLF drops the LF of a CRLF whose CR ended the previous read.
+	skipLeadingLF := false
 	// Read decoded chunks. The UTF-8 decoder retains incomplete sequences
 	// across reads, while the line search works on the decoded UTF-8 bytes.
 	chunk := make([]byte, 32*1024)
@@ -141,16 +144,33 @@ func ConsumeSseStream(body io.Reader, options ConsumeSseOptions) error {
 		}
 		pending := buffered.String()
 		lineStart := 0
+		if skipLeadingLF {
+			skipLeadingLF = false
+			if len(pending) > 0 && pending[0] == '\n' {
+				lineStart = 1
+			}
+			searchAt = lineStart
+		}
 		for {
-			newline := strings.IndexByte(pending[searchAt:], '\n')
-			if newline < 0 {
+			// SSE lines end with CRLF, LF, or a lone CR.
+			end := strings.IndexAny(pending[searchAt:], "\r\n")
+			if end < 0 {
 				break
 			}
-			newline += searchAt
-			if err := processLine(pending[lineStart:newline]); err != nil {
+			end += searchAt
+			if err := processLine(pending[lineStart:end]); err != nil {
 				return err
 			}
-			lineStart = newline + 1
+			lineStart = end + 1
+			if pending[end] == '\r' {
+				if lineStart < len(pending) {
+					if pending[lineStart] == '\n' {
+						lineStart++
+					}
+				} else {
+					skipLeadingLF = true
+				}
+			}
 			searchAt = lineStart
 		}
 		remaining := pending[lineStart:]
@@ -158,7 +178,7 @@ func ConsumeSseStream(body io.Reader, options ConsumeSseOptions) error {
 			buffered.Reset()
 			buffered.WriteString(remaining)
 		}
-		// Only newly appended bytes can contain the next newline. Retain the
+		// Only newly appended bytes can contain the next terminator. Retain the
 		// old prefix without copying or scanning it again on every read.
 		searchAt = len(remaining)
 		if int64(len(remaining)) > maxEventBytes {
