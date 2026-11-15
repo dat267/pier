@@ -1,8 +1,10 @@
 package interactive
 
 import (
+	"cmp"
 	"context"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -411,12 +413,15 @@ func buildSessionTree(sessions []coding.SessionInfo) []*sessionTreeNode {
 	return roots
 }
 
+// sortNodesByActivity orders nodes newest first, as the reference's
+// `nodes.sort((a, b) => b.latestActivity - a.latestActivity)` does. The port's
+// insertion sort was quadratic and every loader progress update rebuilds the
+// tree: 125 ms at 10,000 sessions against 18 ms with the stable comparison sort
+// (`BenchmarkBuildSessionTreeAllSessions`).
 func sortNodesByActivity(nodes []*sessionTreeNode) {
-	for i := 1; i < len(nodes); i++ {
-		for j := i; j > 0 && nodes[j-1].LatestActivity < nodes[j].LatestActivity; j-- {
-			nodes[j-1], nodes[j] = nodes[j], nodes[j-1]
-		}
-	}
+	slices.SortStableFunc(nodes, func(a, b *sessionTreeNode) int {
+		return cmp.Compare(b.LatestActivity, a.LatestActivity)
+	})
 }
 
 // flattenSessionTree flattens the tree with tree-drawing metadata.
