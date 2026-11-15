@@ -736,3 +736,32 @@ func TestContinueRecentSessionCreatesWhenEmpty(t *testing.T) {
 		t.Fatalf("new session has %d entries", len(started))
 	}
 }
+
+// pi v1.5.2 (b4afdddf) core/session-manager.ts parseSessionHeaderCandidate
+// accepts a session header whose id is a string, and "" is a string;
+// loadEntriesFromFile uses the same predicate. Requiring a non-empty id made
+// discovery skip a file the loader would open.
+func TestFindMostRecentSessionAcceptsAnEmptyStringHeaderID(t *testing.T) {
+	dir := t.TempDir()
+	sessions := filepath.Join(dir, "sessions")
+	if err := os.MkdirAll(sessions, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	header, err := ai.MarshalJSON(map[string]any{
+		"type": "session", "version": 3, "id": "", "timestamp": "2026-09-19T00:00:00.000Z", "cwd": "/project",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(sessions, "empty-id.jsonl")
+	if err := os.WriteFile(path, append(header, '\n'), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// The loader path already accepts the same header; discovery must agree.
+	if entries, err := LoadEntriesFromFile(path); err != nil || len(entries) != 1 || entries[0].Header == nil {
+		t.Fatalf("loader = %d entries, err=%v", len(entries), err)
+	}
+	if got := FindMostRecentSession(sessions, ""); got == nil || *got != path {
+		t.Fatalf("most recent = %v, want %s", got, path)
+	}
+}

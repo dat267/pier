@@ -1740,7 +1740,9 @@ func readSessionHeader(filePath string) *SessionHeader {
 }
 
 // parseSessionHeaderCandidate inspects one scanned line. decided is true when
-// the line is a parsable entry, with a nil header for a non-session entry.
+// the line is a parsable entry, with a nil header for a non-session entry. A
+// header qualifies when its `id` member is any JSON string, including "", as in
+// loadEntriesFromFile (upstream checks `typeof id === "string"`).
 func parseSessionHeaderCandidate(line []byte) (*SessionHeader, bool) {
 	if len(bytes.TrimSpace(line)) == 0 {
 		return nil, false
@@ -1749,7 +1751,7 @@ func parseSessionHeaderCandidate(line []byte) (*SessionHeader, bool) {
 	if err != nil {
 		return nil, false
 	}
-	if entry.Header != nil && entry.Header.ID != "" {
+	if entry.Header != nil && sessionHeaderHasStringID(entry.Header) {
 		return entry.Header, true
 	}
 	return nil, true
