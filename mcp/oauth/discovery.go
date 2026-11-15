@@ -11,9 +11,9 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/dat267/pier/internal/boundedio"
+	"github.com/dat267/pier/internal/jsnum"
 	"github.com/dat267/pier/mcp/protocol"
 )
 
@@ -60,12 +60,8 @@ func defaultFetch(ctx context.Context, request *http.Request) (*http.Response, e
 // LatestProtocolVersion re-exports the MCP version for metadata requests.
 const LatestProtocolVersion = protocol.LatestProtocolVersion
 
-func isJSWhitespace(r rune) bool {
-	return r == '\uFEFF' || (r != '\u0085' && unicode.IsSpace(r))
-}
-
 func splitJSScope(value string) []string {
-	return strings.FieldsFunc(value, isJSWhitespace)
+	return strings.FieldsFunc(value, jsnum.Whitespace)
 }
 
 func discard(response *http.Response) {
@@ -134,8 +130,8 @@ func ParseWwwAuthenticate(header string) OAuthChallenge {
 	if header == "" {
 		return OAuthChallenge{}
 	}
-	scheme := strings.TrimLeftFunc(header, isJSWhitespace)
-	if end := strings.IndexFunc(scheme, isJSWhitespace); end >= 0 {
+	scheme := strings.TrimLeftFunc(header, jsnum.Whitespace)
+	if end := strings.IndexFunc(scheme, jsnum.Whitespace); end >= 0 {
 		scheme = scheme[:end]
 	}
 	if scheme == "" {

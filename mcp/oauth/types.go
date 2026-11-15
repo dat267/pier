@@ -9,9 +9,9 @@ package oauth
 import (
 	"encoding/json"
 	"fmt"
-	"math"
-	"strconv"
 	"strings"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // OAuthProtectedResourceMetadata is RFC 9728 (upstream
@@ -321,7 +321,7 @@ func ParseOAuthTokens(value any) (*OAuthTokens, error) {
 	}
 	result := &OAuthTokens{AccessToken: accessToken, TokenType: tokenType}
 	if !absent(input["expires_in"]) {
-		number, ok := jsNumberToFloat64(input["expires_in"])
+		number, ok := jsnum.Number(input["expires_in"])
 		if !ok {
 			return nil, fmt.Errorf("Invalid expires_in")
 		}
@@ -435,89 +435,13 @@ func copyStringsMember(input map[string]any, key string, target *[]string) {
 func numberValue(value any) (float64, bool) {
 	switch v := value.(type) {
 	case float64:
-		return finiteNumber(v)
+		return jsnum.Finite(v)
 	case json.Number:
 		n, err := v.Float64()
 		if err != nil {
 			return 0, false
 		}
-		return finiteNumber(n)
+		return jsnum.Finite(n)
 	}
 	return 0, false
-}
-
-// jsNumberToFloat64 coerces like Number(), which expires_in uses upstream.
-// Arrays coerce through their single element, as Number([5]) is 5 and
-// Number([]) is 0.
-func jsNumberToFloat64(value any) (float64, bool) {
-	switch v := value.(type) {
-	case float64:
-		return finiteNumber(v)
-	case json.Number:
-		n, err := v.Float64()
-		if err != nil {
-			return 0, false
-		}
-		if math.IsNaN(n) || math.IsInf(n, 0) {
-			return 0, false
-		}
-		return n, true
-	case string:
-		// Number("") is 0, Number("0x10") is 16, and Number trims JavaScript
-		// whitespace (including a BOM).
-		text := strings.TrimFunc(v, isJSWhitespace)
-		if text == "" {
-			return 0, true
-		}
-		// Number() has no numeric separators, but Go's ParseFloat accepts them:
-		// "1_0" is NaN upstream and 10 here.
-		if strings.ContainsRune(text, '_') {
-			return 0, false
-		}
-		if len(text) > 2 && text[0] == '0' {
-			base := 0
-			switch text[1] {
-			case 'x', 'X':
-				base = 16
-			case 'b', 'B':
-				base = 2
-			case 'o', 'O':
-				base = 8
-			}
-			if base != 0 {
-				integer, err := strconv.ParseUint(text[2:], base, 64)
-				if err != nil {
-					return 0, false
-				}
-				return float64(integer), true
-			}
-		}
-		number, err := strconv.ParseFloat(text, 64)
-		if err != nil {
-			return 0, false
-		}
-		return finiteNumber(number)
-	case bool:
-		if v {
-			return 1, true
-		}
-		return 0, true
-	case []any:
-		switch len(v) {
-		case 0:
-			return 0, true
-		case 1:
-			return jsNumberToFloat64(v[0])
-		}
-		return 0, false
-	}
-	return 0, false
-}
-
-// finiteNumber mirrors the `Number.isFinite` check.
-func finiteNumber(value float64) (float64, bool) {
-	if math.IsNaN(value) || math.IsInf(value, 0) {
-		return 0, false
-	}
-	return value, true
 }

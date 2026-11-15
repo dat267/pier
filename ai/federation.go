@@ -10,10 +10,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of the Anthropic SDK's OIDC workload identity federation token
@@ -268,8 +269,8 @@ func ExchangeFederationToken(ctx context.Context, config FederationConfig) (Fede
 			RequestID: requestID,
 		}
 	}
-	expiresIn, err := strconv.ParseFloat(strings.TrimSpace(string(decoded.ExpiresIn)), 64)
-	if err != nil || decoded.ExpiresIn == nil {
+	expiresIn, ok := federationExpiresIn(decoded.ExpiresIn)
+	if !ok {
 		return FederationToken{}, &WorkloadIdentityError{
 			Message:   fmt.Sprintf("Token endpoint response missing required fields: %s", RedactSensitive(text)),
 			Status:    response.StatusCode,
@@ -282,6 +283,21 @@ func ExchangeFederationToken(ctx context.Context, config FederationConfig) (Fede
 		now = config.Now
 	}
 	return FederationToken{Token: decoded.AccessToken, ExpiresAtUnix: federationExpiryUnixSeconds(now().Unix(), expiresIn)}, nil
+}
+
+// federationExpiresIn coerces expires_in like the SDK's Number(data.expires_in):
+// a numeric string, bool, array or null is accepted, an absent key and a
+// non-numeric value are not (oidc-federation.ts turns a non-finite Number into
+// the missing-fields error).
+func federationExpiresIn(raw json.RawMessage) (float64, bool) {
+	if raw == nil {
+		return 0, false
+	}
+	var value any
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return 0, false
+	}
+	return jsnum.Number(value)
 }
 
 // federationExpiryUnixSeconds preserves expiry direction without overflowing

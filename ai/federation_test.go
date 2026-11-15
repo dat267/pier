@@ -142,6 +142,57 @@ func TestExchangeFederationTokenErrors(t *testing.T) {
 	}
 }
 
+// v1.5.2 delegates the exchange to @anthropic-ai/sdk
+// lib/credentials/oidc-federation.ts, which reads the response through
+// parseTokenResponse and then applies `Number(data.expires_in)`
+// (lib/credentials/types.ts). A numeric string, a bool, a one-element array
+// and null therefore coerce to a finite expiry, while an absent key or a
+// non-numeric value becomes the missing-fields error.
+func TestExchangeFederationTokenCoercesExpiresIn(t *testing.T) {
+	const nowUnix = int64(1_000_000)
+	cases := []struct {
+		label  string
+		body   string
+		expiry int64
+		fails  bool
+	}{
+		{"number", `{"access_token":"t","expires_in":3600}`, nowUnix + 3600, false},
+		{"numeric string", `{"access_token":"t","expires_in":"3600"}`, nowUnix + 3600, false},
+		{"bool", `{"access_token":"t","expires_in":true}`, nowUnix + 1, false},
+		{"single-element array", `{"access_token":"t","expires_in":[7]}`, nowUnix + 7, false},
+		{"null", `{"access_token":"t","expires_in":null}`, nowUnix, false},
+		{"absent", `{"access_token":"t"}`, 0, true},
+		{"non-numeric string", `{"access_token":"t","expires_in":"soon"}`, 0, true},
+		{"object", `{"access_token":"t","expires_in":{}}`, 0, true},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.label, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, _ = w.Write([]byte(testCase.body))
+			}))
+			defer server.Close()
+			config := FederationConfig{
+				IdentityTokenFile: writeIdentityToken(t, "jwt"),
+				FederationRuleID:  "r", OrganizationID: "o", BaseURL: server.URL,
+				Now: func() time.Time { return time.Unix(nowUnix, 0) },
+			}
+			token, err := ExchangeFederationToken(context.Background(), config)
+			if testCase.fails {
+				if err == nil || !strings.Contains(err.Error(), "missing required fields") {
+					t.Fatalf("err = %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if token.ExpiresAtUnix != testCase.expiry {
+				t.Fatalf("expiry = %d, want %d", token.ExpiresAtUnix, testCase.expiry)
+			}
+		})
+	}
+}
+
 func TestResolveFederationConfig(t *testing.T) {
 	env := ProviderEnv{
 		AnthropicFederationRuleIDEnv: "fdr", AnthropicOrganizationIDEnv: "org",
