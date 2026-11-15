@@ -33,6 +33,9 @@ type CustomEditor struct {
 	EmbedWorkingStatus bool
 	// ActionHandlers maps app keybindings to handlers.
 	ActionHandlers map[tui.Keybinding]func()
+	// actionOrderKeys is the registration order, which the reference keeps
+	// through its Map; the first registered action wins a shared key.
+	actionOrderKeys []tui.Keybinding
 
 	OnEscape            func()
 	OnCtrlD             func()
@@ -86,12 +89,24 @@ func (c *CustomEditor) AnimationFrame(now time.Time) (bool, time.Duration) {
 
 // OnAction registers a handler for an app action.
 func (c *CustomEditor) OnAction(action tui.Keybinding, handler func()) {
+	if _, exists := c.ActionHandlers[action]; !exists {
+		c.actionOrderKeys = append(c.actionOrderKeys, action)
+	}
 	c.ActionHandlers[action] = handler
 }
 
 // HandleInput processes the editor input with the app keybindings.
 func (c *CustomEditor) HandleInput(data string) {
 	if c.OnExtensionShortcut != nil && c.OnExtensionShortcut(data) {
+		return
+	}
+
+	// Selection page keys move an open autocomplete menu before app actions
+	// run (upstream custom-editor.ts), so a page key bound to an app action
+	// still pages the menu while it is open.
+	if c.Editor.IsShowingAutocomplete() && c.keybindings != nil &&
+		(c.keybindings.Matches(data, "tui.select.pageUp") || c.keybindings.Matches(data, "tui.select.pageDown")) {
+		c.Editor.HandleInput(data)
 		return
 	}
 
@@ -138,7 +153,7 @@ func (c *CustomEditor) HandleInput(data string) {
 		return
 	}
 
-	// Iterate in a stable order: upstream iterates the Map insertion order.
+	// Iterate in registration order, as the reference iterates its Map.
 	for _, action := range c.actionOrder() {
 		if action == "app.interrupt" || action == "app.exit" {
 			continue
@@ -152,19 +167,10 @@ func (c *CustomEditor) HandleInput(data string) {
 	c.Editor.HandleInput(data)
 }
 
-// actionOrder returns the registered actions (upstream Map insertion order,
-// which the Go map does not preserve; sorted for determinism).
+// actionOrder returns the registered actions in registration order (the
+// reference's Map insertion order, which a Go map does not preserve).
 func (c *CustomEditor) actionOrder() []tui.Keybinding {
-	actions := make([]tui.Keybinding, 0, len(c.ActionHandlers))
-	for action := range c.ActionHandlers {
-		actions = append(actions, action)
-	}
-	for i := 1; i < len(actions); i++ {
-		for j := i; j > 0 && actions[j-1] > actions[j]; j-- {
-			actions[j-1], actions[j] = actions[j], actions[j-1]
-		}
-	}
-	return actions
+	return c.actionOrderKeys
 }
 
 // renderTopBorder renders the top border with the embedded working status.

@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"runtime"
@@ -157,5 +158,61 @@ func TestWorkingStatusInBorderElidesOnNarrowScreens(t *testing.T) {
 	// Where upstream keeps only the spinner, so does pier.
 	if got := render(5); strings.Contains(got, "…") || strings.Contains(got, "W") {
 		t.Fatalf("width 5 = %q", got)
+	}
+}
+
+// staticAutocompleteProvider offers a fixed list, so the editor can open its
+// autocomplete menu without a file system.
+type staticAutocompleteProvider struct{ items []tui.AutocompleteItem }
+
+func (staticAutocompleteProvider) TriggerCharacters() []string { return []string{"@"} }
+
+func (p staticAutocompleteProvider) GetSuggestions(context.Context, []string, int, int, bool) *tui.AutocompleteSuggestions {
+	return &tui.AutocompleteSuggestions{Prefix: "", Items: p.items}
+}
+
+func (staticAutocompleteProvider) ApplyCompletion(lines []string, cursorLine int, cursorCol int, _ tui.AutocompleteItem, _ string) tui.CompletionResult {
+	return tui.CompletionResult{Lines: lines, CursorLine: cursorLine, CursorCol: cursorCol}
+}
+
+// Reference: pi v1.5.2 custom-editor.ts routes the selection page keys to the
+// editor before any app action while the autocomplete menu is open, so a page
+// key bound to an app action still pages the menu.
+func TestCustomEditorPagesOpenAutocompleteBeforeAppActions(t *testing.T) {
+	InitTheme("dark", false)
+	keybindings := NewAppKeybindingsManager(map[string][]string{"app.suspend": {"pageDown"}}, "")
+	editor := NewCustomEditor(editorTestHost{}, tui.EditorTheme{}, keybindings, CustomEditorOptions{})
+	editor.SetAutocompleteProvider(staticAutocompleteProvider{items: []tui.AutocompleteItem{
+		{Value: "alpha", Label: "alpha"},
+		{Value: "beta", Label: "beta"},
+	}})
+	editor.HandleInput("@")
+	if !editor.IsShowingAutocomplete() {
+		t.Fatal("autocomplete did not open")
+	}
+	called := 0
+	editor.OnAction("app.suspend", func() { called++ })
+	editor.HandleInput("\x1b[6~") // pageDown
+	if called != 0 {
+		t.Fatalf("app action ran while the autocomplete was open")
+	}
+}
+
+// Reference: pi v1.5.2 custom-editor.ts iterates actionHandlers in Map
+// insertion order, so the first registered action wins when two are bound to
+// the same key. The Go map has no order; the port must record it.
+func TestCustomEditorRunsTheFirstRegisteredAction(t *testing.T) {
+	InitTheme("dark", false)
+	keybindings := NewAppKeybindingsManager(map[string][]string{
+		"app.suspend": {"ctrl+y"},
+		"app.clear":   {"ctrl+y"},
+	}, "")
+	editor := NewCustomEditor(editorTestHost{}, tui.EditorTheme{}, keybindings, CustomEditorOptions{})
+	var ran []string
+	editor.OnAction("app.suspend", func() { ran = append(ran, "suspend") })
+	editor.OnAction("app.clear", func() { ran = append(ran, "clear") })
+	editor.HandleInput("\x19")
+	if len(ran) != 1 || ran[0] != "suspend" {
+		t.Fatalf("handlers = %v, want the first registered action", ran)
 	}
 }
