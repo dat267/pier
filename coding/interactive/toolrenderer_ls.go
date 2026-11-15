@@ -7,12 +7,13 @@ import (
 )
 
 func formatLsCall(args map[string]any, theme *Theme, cwd string) string {
-	limit, hasLimit := argNumber(args, "limit")
 	rawPath, _ := argString(args, "path")
 	pathDisplay := RenderToolPath(&rawPath, theme, cwd, ".")
 	text := theme.Fg("toolTitle", theme.Bold("ls")) + " " + pathDisplay
-	if hasLimit {
-		text += theme.Fg("toolOutput", " (limit "+formatToolLimit(limit)+")")
+	// Upstream tests `limit !== undefined` and interpolates the raw value, so a
+	// string or null limit is labelled too.
+	if limit, ok := args["limit"]; ok {
+		text += theme.Fg("toolOutput", " (limit "+jsArgText(limit)+")")
 	}
 	return text
 }

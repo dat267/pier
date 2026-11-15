@@ -37,8 +37,10 @@ func TestBashToolRenderUpstreamParity(t *testing.T) {
 		Cwd   string `json:"cwd"`
 		Cases map[string]struct {
 			Args struct {
-				Command *string  `json:"command"`
-				Timeout *float64 `json:"timeout"`
+				Command *string `json:"command"`
+				// Timeout stays untyped: upstream interpolates whatever the
+				// model sent, so the corpus covers a string and a bool too.
+				Timeout any `json:"timeout"`
 			} `json:"args"`
 			Width      int   `json:"width"`
 			IsPartial  bool  `json:"isPartial"`
@@ -74,7 +76,7 @@ func TestBashToolRenderUpstreamParity(t *testing.T) {
 			args["command"] = *spec.Args.Command
 		}
 		if spec.Args.Timeout != nil {
-			args["timeout"] = *spec.Args.Timeout
+			args["timeout"] = spec.Args.Timeout
 		}
 		component := NewToolExecutionComponent("bash", "call-1", args,
 			ToolExecutionOptions{ShowImages: spec.ShowImages}, &bashRenderers, nil, corpus.Cwd)

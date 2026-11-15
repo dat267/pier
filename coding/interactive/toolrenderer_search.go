@@ -19,7 +19,6 @@ func formatGrepCall(args map[string]any, theme *Theme) string {
 	pattern, patternOK := argString(args, "pattern")
 	rawPath, pathOK := argString(args, "path")
 	glob, _ := argString(args, "glob")
-	limit, hasLimit := argNumber(args, "limit")
 	invalidArg := invalidArgText(theme)
 	path := "."
 	if !pathOK {
@@ -41,8 +40,10 @@ func formatGrepCall(args map[string]any, theme *Theme) string {
 	if glob != "" {
 		text += theme.Fg("toolOutput", " ("+glob+")")
 	}
-	if hasLimit {
-		text += theme.Fg("toolOutput", " limit "+formatToolLimit(limit))
+	// Upstream tests `limit !== undefined` and interpolates the raw value, so a
+	// string or null limit is labelled too.
+	if limit, ok := args["limit"]; ok {
+		text += theme.Fg("toolOutput", " limit "+jsArgText(limit))
 	}
 	return text
 }
@@ -63,7 +64,6 @@ var grepRenderers = ToolRenderers{
 func formatFindCall(args map[string]any, theme *Theme) string {
 	pattern, patternOK := argString(args, "pattern")
 	rawPath, pathOK := argString(args, "path")
-	limit, hasLimit := argNumber(args, "limit")
 	invalidArg := invalidArgText(theme)
 	text := theme.Fg("toolTitle", theme.Bold("find")) + " "
 	if !patternOK {
@@ -80,8 +80,8 @@ func formatFindCall(args map[string]any, theme *Theme) string {
 		}
 		text += theme.Fg("toolOutput", " in "+shown)
 	}
-	if hasLimit {
-		text += theme.Fg("toolOutput", " (limit "+formatToolLimit(limit)+")")
+	if limit, ok := args["limit"]; ok {
+		text += theme.Fg("toolOutput", " (limit "+jsArgText(limit)+")")
 	}
 	return text
 }

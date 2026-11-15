@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -229,6 +230,56 @@ func appendTruncatedLines(text string, output string, maxLines int, theme *Theme
 			" " + KeyHint("app.tools.expand", "to expand") + theme.Fg("muted", ")")
 	}
 	return text
+}
+
+// jsTruthy mirrors JavaScript's truthiness, which upstream applies to a raw
+// tool argument before interpolating it into a label (`timeout ? ...`).
+func jsTruthy(value any) bool {
+	switch typed := value.(type) {
+	case nil:
+		return false
+	case bool:
+		return typed
+	case string:
+		return typed != ""
+	case float64:
+		return typed != 0 && !math.IsNaN(typed)
+	}
+	return true
+}
+
+// jsArgText interpolates a raw JSON argument the way a template literal's
+// String(value) does: numbers through JSNumberToString, arrays joined by
+// commas, an object as "[object Object]".
+func jsArgText(value any) string {
+	switch typed := value.(type) {
+	case nil:
+		// A decoded JSON null; an absent field never reaches here.
+		return "null"
+	case bool:
+		if typed {
+			return "true"
+		}
+		return "false"
+	case string:
+		return typed
+	case float64:
+		return ai.JSNumberToString(typed)
+	case int:
+		return strconv.Itoa(typed)
+	case int64:
+		return strconv.FormatInt(typed, 10)
+	case []any:
+		parts := make([]string, len(typed))
+		for index, item := range typed {
+			// Array.prototype.join renders null and undefined as empty.
+			if item != nil {
+				parts[index] = jsArgText(item)
+			}
+		}
+		return strings.Join(parts, ",")
+	}
+	return "[object Object]"
 }
 
 func formatToolLimit(value float64) string {

@@ -424,6 +424,77 @@
 				}
 			}
 		},
+		"grep-limit-string": {
+			"tool": "grep",
+			"args": {
+				"pattern": "foo",
+				"path": "",
+				"limit": "20"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "src/a.go:1: foo"
+					}
+				],
+				"isError": false
+			}
+		},
+		"grep-limit-null": {
+			"tool": "grep",
+			"args": {
+				"pattern": "foo",
+				"path": "",
+				"limit": null
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "src/a.go:1: foo"
+					}
+				],
+				"isError": false
+			}
+		},
+		"find-limit-string": {
+			"tool": "find",
+			"args": {
+				"pattern": "*.go",
+				"path": "",
+				"limit": "10"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "src/a.go"
+					}
+				],
+				"isError": false
+			}
+		},
+		"ls-limit-string": {
+			"tool": "ls",
+			"args": {
+				"path": "src",
+				"limit": "5"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "a.go"
+					}
+				],
+				"isError": false
+			}
+		},
 		"ls-error": {
 			"tool": "ls",
 			"args": {

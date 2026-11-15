@@ -14,11 +14,11 @@ const bashPreviewLines = 5
 
 func formatShellCall(args map[string]any, prompt string, theme *Theme) string {
 	command, commandOK := argString(args, "command")
-	timeout, hasTimeout := argNumber(args, "timeout")
 	timeoutSuffix := ""
-	// Upstream uses a truthy timeout and interpolates the number verbatim.
-	if hasTimeout && timeout != 0 {
-		timeoutSuffix = theme.Fg("muted", " (timeout "+formatToolLimit(timeout)+"s)")
+	// Upstream tests the raw argument for truthiness and interpolates it
+	// verbatim, so a string or a bool timeout is labelled too.
+	if timeout, ok := args["timeout"]; ok && jsTruthy(timeout) {
+		timeoutSuffix = theme.Fg("muted", " (timeout "+jsArgText(timeout)+"s)")
 	}
 	commandDisplay := ""
 	if !commandOK {

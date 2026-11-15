@@ -73,6 +73,38 @@
 				"isError": false
 			}
 		},
+		"timeout-string": {
+			"args": {
+				"command": "sleep 5",
+				"timeout": "30"
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "done"
+					}
+				],
+				"isError": false
+			}
+		},
+		"timeout-bool": {
+			"args": {
+				"command": "sleep 5",
+				"timeout": true
+			},
+			"width": 80,
+			"result": {
+				"content": [
+					{
+						"type": "text",
+						"text": "done"
+					}
+				],
+				"isError": false
+			}
+		},
 		"missing-command": {
 			"args": {},
 			"width": 80,
