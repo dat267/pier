@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D477)
+# Deliberate divergences from pi (D1–D479)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7715,3 +7715,34 @@ Pier compiles the schema like any other, so `true` accepts every value and
 tool behavior changes.
 
 Test: `TestValidateToolArgumentsAcceptsBooleanRootSchemas`.
+
+### D478
+
+**The announcement card omits its bundled image.**
+
+Reference: pi v1.5.2 (b4afdddf)
+`packages/coding-agent/src/modes/interactive/components/earendil-announcement.ts`
+builds the card with an `Image` component over a bundled asset file. The port
+ships no image assets, so the card keeps the surrounding spacers and renders no
+image lines; upstream's `Image` component also renders nothing when the
+terminal has no inline-image capabilities, so the text shape is the same. The
+golden harness removes the reference's `Image` child for the same reason.
+
+Test: `TestEasterComponentsAgainstUpstreamGolden`.
+
+### D479
+
+**The Armin rain effect ends once every column has settled.**
+
+Reference: pi v1.5.2 (b4afdddf)
+`packages/coding-agent/src/modes/interactive/components/armin.ts` `tickRain`
+clears `allSettled` for every column that is not fully settled and only then
+searches for that column's target row. A column whose lowest non-space pixel is
+already inside the settled region finds no target, draws nothing, and never
+increments `settled`, so the effect reports not-done forever and upstream's
+`setInterval` keeps requesting renders at 30 fps for the rest of the session.
+Pier treats such a column as complete, so the effect finishes and the owner
+loop stops arming frames. The rendered grid is identical, because that column
+has nothing left to draw.
+
+Test: `TestArminAnimationCompletes`.

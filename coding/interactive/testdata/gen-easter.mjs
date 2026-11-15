@@ -17,7 +17,7 @@ for (const [label, s] of entries(c.setup)) {
 	emit(`x setup ${label}@${s.width}`, v.render(s.width));
 	emit(`x setup ${label}-previews`, previews);
 }
-// D94 omits the bundled announcement image, but retains its surrounding spacers.
+// D478 omits the bundled announcement image, but retains its surrounding spacers.
 const announcement = new EarendilAnnouncementComponent();
 const removeImages = (container) => {
 	if (!container.children) return;

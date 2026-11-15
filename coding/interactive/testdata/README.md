@@ -46,7 +46,7 @@ fixtures. This color migration deliberately does not change those behaviors:
 - The settings fixture uses v1.4.0's renderer but excludes the session-share
   destination row and retains the existing `Automatic` display casing. The
   transformation is explicit in the loader, not a post-render golden rewrite.
-- D94 omits the announcement image; the harness removes the Image component,
+- D478 omits the announcement image; the harness removes the Image component,
   leaving its surrounding spacers. D263's thinking-italic difference is still
   normalized only by its existing Go test, with its separate regression intact.
 - The fullscreen-renderer fixture evaluates the pinned style expressions rather

@@ -2,7 +2,7 @@
 // Regenerate from the repository root:
 //   node internal/jsdiff/testdata/parity/generate.mjs ./pi > internal/jsdiff/testdata/parity/cases.json
 // Reference: pi v1.4.0 (4a080252) node_modules/diff (jsdiff 8.x), the library
-// packages/coding-agent/src/core/tools/edit-diff.ts calls (D87). Deterministic:
+// packages/coding-agent/src/core/tools/edit-diff.ts calls. Deterministic:
 // the pseudo-random stream is seeded in this file.
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
