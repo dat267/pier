@@ -114,6 +114,14 @@ func newTestAppPersisted(t *testing.T) (*App, func()) {
 }
 
 func newTestAppWithPersist(t *testing.T, persist bool) (*App, func()) {
+	t.Helper()
+	return newTestAppConfigured(t, persist, nil)
+}
+
+// newTestAppConfigured is newTestAppWithPersist with a hook that adjusts the
+// settings and app options before NewApp composes the object graph.
+func newTestAppConfigured(t *testing.T, persist bool, configure func(*coding.SettingsManager, *AppOptions)) (*App, func()) {
+	t.Helper()
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	SetTrueColorSupport(true)
@@ -165,7 +173,7 @@ func newTestAppWithPersist(t *testing.T, persist bool) (*App, func()) {
 		t.Fatalf("create session: %v", err)
 	}
 
-	app := NewApp(AppOptions{
+	appOptions := AppOptions{
 		Cwd:                 dir,
 		AgentDir:            dir,
 		Terminal:            &fakeRendererTerminal{width: 80, height: 24},
@@ -181,7 +189,11 @@ func newTestAppWithPersist(t *testing.T, persist bool) (*App, func()) {
 		InitialThemeSetting: &dark,
 		Exit:                func(int) {},
 		RegisterSignal:      func(os.Signal, func()) func() { return func() {} },
-	})
+	}
+	if configure != nil {
+		configure(settings, &appOptions)
+	}
+	app := NewApp(appOptions)
 
 	// Disable the render timer so the test's direct component access cannot race
 	// with a background render. app.UI is a TuiReference (D105), so resolve the

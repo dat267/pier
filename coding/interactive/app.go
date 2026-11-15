@@ -495,7 +495,6 @@ func NewApp(options AppOptions) *App {
 	app.transcript.Footer = app.footer
 	app.transcript.Editor = app.defaultEditor
 	app.transcript.Display = app.display
-	app.transcript.MarkdownTheme = app.markdownTheme()
 	// Durable goal lifecycle and round entries render as cards. Controller
 	// callbacks are wired below with the idle-round launcher on every bind.
 	app.transcript.EntryRenderer = GoalEntryRenderer
@@ -543,7 +542,6 @@ func NewApp(options AppOptions) *App {
 	app.events.UpdateTerminalTitle = func() { app.lifecycle.UpdateTerminalTitle() }
 	app.events.UpdateEditorBorderColor = func() { app.updateEditorBorderColor() }
 	app.events.Display = app.display
-	app.events.MarkdownTheme = app.markdownTheme()
 	app.events.TerminalProgress = func(active bool) { terminal.SetProgress(active) }
 	app.events.FlushCompactionQueue = func(willRetry bool) {
 		queued := app.queue.TakeCompactionQueue()
@@ -643,6 +641,11 @@ func NewApp(options AppOptions) *App {
 	})
 
 	app.startup = newStartupWiring(app)
+	// markdownTheme reads markdown.codeBlockIndent through the startup wiring
+	// (upstream getMarkdownThemeWithSettings), so both wirings take their theme
+	// once it exists rather than from a settings-less copy.
+	app.transcript.MarkdownTheme = app.markdownTheme()
+	app.events.MarkdownTheme = app.markdownTheme()
 	// The submission channel exists from composition so the run loop always
 	// has a consumer side to select on.
 	app.startup.InitInputs()
@@ -861,6 +864,14 @@ func (a *App) applySettingsDependentUI() bool {
 	// path only re-reads the values, so a reload or session switch never writes
 	// the setting back and both paths converge on the same UI state.
 	w := a.settingsW
+	// Upstream reads the markdown theme at every render site; the transcript and
+	// event dispatcher hold one, so re-read it before reload's rebuild.
+	if a.transcript != nil && a.transcript.MarkdownTheme != nil {
+		*a.transcript.MarkdownTheme = *a.markdownTheme()
+	}
+	if a.events != nil && a.events.MarkdownTheme != nil {
+		*a.events.MarkdownTheme = *a.markdownTheme()
+	}
 	w.applyThinkingBlockVisibility(a.settings.GetHideThinkingBlock())
 	rebuilt := w.applyOutputPad(a.settings.GetOutputPad())
 	a.applyFullscreenScrollbarSetting()
