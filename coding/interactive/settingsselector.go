@@ -322,7 +322,9 @@ func NewThemeSubmenu(currentThemeSetting string, terminalTheme TerminalTheme, av
 		preferred = submenu.activeAutomaticTheme()
 		hasPreferred = true
 	}
-	submenu.singleTheme = preferredTheme(availableThemes, preferred, hasPreferred, "dark")
+	// Upstream (pi v1.5.2 settings-selector.ts ThemeSubmenu) falls back to the
+	// system theme when the configured theme is not available.
+	submenu.singleTheme = preferredTheme(availableThemes, preferred, hasPreferred, SystemThemeName)
 
 	if submenu.mode == "automatic" {
 		submenu.showAutomaticMenu()

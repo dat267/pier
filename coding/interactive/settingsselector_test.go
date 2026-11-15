@@ -460,6 +460,28 @@ func TestThemeSubmenuGolden(t *testing.T) {
 	}
 }
 
+// Upstream (pi v1.5.2 settings-selector.ts ThemeSubmenu) falls back to the
+// system theme when the configured theme is gone (the fallback argument is
+// SYSTEM_THEME_NAME), not to the dark theme.
+func TestThemeSubmenuFallsBackToTheSystemTheme(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+
+	callbacks := SettingsCallbacks{}
+	submenu := NewThemeSubmenu("removed-theme", TerminalThemeDark, []string{SystemThemeName, "dark", "light"}, &callbacks,
+		func(tui.SubmenuResult) {})
+	if submenu.singleTheme != SystemThemeName {
+		t.Fatalf("single theme = %q, want %q", submenu.singleTheme, SystemThemeName)
+	}
+	rendered := coding.StripAnsi(strings.Join(submenu.Render(80), "\n"))
+	if !strings.Contains(rendered, "✓ "+SystemThemeName) {
+		t.Fatalf("system theme not preselected:\n%s", rendered)
+	}
+}
+
 // TestWarningSettingsSubmenuToggles checks the warning toggle callbacks.
 func TestWarningSettingsSubmenuToggles(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
