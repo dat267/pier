@@ -191,29 +191,23 @@ func DecodeMessage(data []byte) (any, error) {
 	}
 	if IsJsonRpcRequest(value) {
 		var request JsonRpcRequest
-		if err := jsonUnmarshalOrdered(data, &request); err != nil {
+		if err := json.Unmarshal(data, &request); err != nil {
 			return nil, err
 		}
 		return &request, nil
 	}
 	if IsJsonRpcNotification(value) {
 		var notification JsonRpcNotification
-		if err := jsonUnmarshalOrdered(data, &notification); err != nil {
+		if err := json.Unmarshal(data, &notification); err != nil {
 			return nil, err
 		}
 		return &notification, nil
 	}
 	var response JsonRpcResponse
-	if err := jsonUnmarshalOrdered(data, &response); err != nil {
+	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, err
 	}
 	return &response, nil
-}
-
-// jsonUnmarshalOrdered decodes a message while preserving the raw params and
-// result bytes (json.RawMessage handles that natively).
-func jsonUnmarshalOrdered(data []byte, target any) error {
-	return json.Unmarshal(data, target)
 }
 
 // decodeJSONValue decodes one JSON value with numbers preserved, rejecting
