@@ -52,6 +52,10 @@ type FooterDataProvider struct {
 
 	stopWatch chan struct{}
 	watchDone chan struct{}
+	// notifyingFromWatch is true while the poll goroutine delivers branch-change
+	// callbacks, so a callback that disposes the provider does not wait for the
+	// goroutine it is running on (upstream dispose only clears state).
+	notifyingFromWatch bool
 }
 
 // NewFooterDataProvider creates the provider for a working directory.
@@ -190,13 +194,19 @@ func (f *FooterDataProvider) Dispose() {
 	f.disposed = true
 	stopWatch := f.stopWatch
 	watchDone := f.watchDone
+	fromWatch := f.notifyingFromWatch
 	f.stopWatch = nil
 	f.watchDone = nil
 	f.callbacks = map[int]func(){}
 	f.mu.Unlock()
 	if stopWatch != nil {
 		close(stopWatch)
-		<-watchDone
+		// A callback running on the poll goroutine cannot wait for that
+		// goroutine to join itself; it exits on its own after the callback
+		// returns, because the stop channel is already closed.
+		if !fromWatch {
+			<-watchDone
+		}
 	}
 }
 
@@ -259,9 +269,24 @@ func (f *FooterDataProvider) watchLoop(stopWatch, watchDone chan struct{}, inter
 				continue
 			}
 			lastState = current
-			f.Refresh()
+			f.refreshFromWatch()
 		}
 	}
+}
+
+// refreshFromWatch marks the poll goroutine as the callback dispatcher for the
+// duration of a refresh, so a disposing callback does not join its own
+// goroutine.
+func (f *FooterDataProvider) refreshFromWatch() {
+	f.mu.Lock()
+	f.notifyingFromWatch = true
+	f.mu.Unlock()
+	defer func() {
+		f.mu.Lock()
+		f.notifyingFromWatch = false
+		f.mu.Unlock()
+	}()
+	f.Refresh()
 }
 
 // footerWatchStartHook runs when a watcher goroutine starts, before it does

@@ -108,3 +108,38 @@ func waitForBranch(t *testing.T, provider *FooterDataProvider, want string) {
 		time.Sleep(10 * time.Millisecond)
 	}
 }
+
+// Reference: pi v1.5.2 core/footer-data-provider.ts dispose() only clears the
+// timers and listeners, so a branch-change callback may dispose the provider.
+// The port waits for its poll goroutine, which is the goroutine delivering the
+// callback, so that call deadlocked the process.
+func TestFooterDataProviderDisposeFromBranchCallbackDoesNotDeadlock(t *testing.T) {
+	dir, run := newGitRepo(t, "files")
+	provider := NewFooterDataProvider(dir, FooterDataProviderOptions{PollIntervalMS: 20})
+	// Resolving first makes the switch a change rather than the initial read.
+	if branch, ok := provider.GetGitBranch(); !ok || branch == "" {
+		t.Fatalf("initial branch = %q, %v; want a name", branch, ok)
+	}
+	disposed := make(chan struct{})
+	provider.OnBranchChange(func() {
+		select {
+		case <-disposed:
+			return
+		default:
+		}
+		close(disposed)
+		provider.Dispose()
+	})
+
+	run("switch", "-q", "-c", "feature")
+	select {
+	case <-disposed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the branch callback never returned")
+	}
+	// The watcher must still be stopped and joined.
+	select {
+	case <-time.After(100 * time.Millisecond):
+	}
+	provider.Dispose()
+}
