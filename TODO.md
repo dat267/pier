@@ -10,6 +10,7 @@ Whole-tree sweep for dead code, bad logic and over-engineered artifacts, stopped
 - `cd5887e3` `coding`: timing namespaces printed alphabetically instead of in insertion order.
 - `d722cde2` `coding`: the ParseArgs oracle found one undocumented intentional difference (`-e` warns), now D472; the parse itself matched the reference.
 - `547135c9` `coding`: a bash command whose output was truncated only by the tail limits reported a full-output path to an empty file; `ensureTempFile` now writes the buffered chunks as the reference does.
+- `4da39274` `docs`: six functions carried a stale summary line above their real doc paragraph, and `UpdateArgs` carried the paragraph twice.
 
 ### Dead code removed
 
@@ -34,6 +35,6 @@ Whole-tree sweep for dead code, bad logic and over-engineered artifacts, stopped
 
 The mechanical layers are clean: `unparam` reports nothing, `staticcheck -checks all` (minus the documented exclusions) reports nothing, `golangci-lint` reports nothing, and `deadcode`'s actionable subset is empty (every remaining unreachable function is referenced by a test or a same-file chain, i.e. the ported SDK surface). Duplication is confined to generated language tables, model-catalog literals and test files.
 
-What remains is semantic reading of the large files no oracle covers, in this order: `coding/sdk.go` `CreateAgentSession` (551 lines), `coding/tools_bash.go` `CreateShellTool` (360), `coding/tools_search.go` `find` (the `grep` half was read clean), `coding/rpcmode.go` `handle` (261, read clean through `clone`), `coding/interactive/app.go` `NewApp` (430) and `settingsselector.go` (415), and `mcp/oauth` `discovery.go`/`flow.go` (`provider.go` expiry read clean, D328). Areas read without a finding so far: `agent` loop, `ai` stream parsing, `mcp` transports, `tui` markdown, `coding/interactive` event runtime, `internal/offloop`, `internal/jsdiff`, `internal/goal`, `coding/rpcclient`, `coding/truncate`, `coding/compaction` cut, `coding/modelconfig`, `coding/cliargs`, `coding/tools_search` `grep`, `coding/bashexecutor`.
+What remains is semantic reading of the large files no oracle covers, in this order: `coding/sdk.go` `CreateAgentSession` (551 lines), `coding/interactive/app.go` `NewApp` (430) and `settingsselector.go` (415), and `mcp/oauth` `discovery.go`/`flow.go`. `coding/tools_bash.go` `CreateShellTool` was read clean (timeout ordering, tree kill, throttle, truncation notices, exit-code mapping). Areas read without a finding so far: `agent` loop, `ai` stream parsing, `mcp` transports, `tui` markdown, `coding/interactive` event runtime, `internal/offloop`, `internal/jsdiff`, `internal/goal`, `coding/rpcclient`, `coding/truncate`, `coding/compaction` cut, `coding/modelconfig`, `coding/cliargs`, `coding/tools_search`, `coding/rpcmode`, `coding/bashexecutor`, `mcp/oauth/provider`.
 
 Documented dead chains that stay: `NestedCallRecorder` (D308), the MCP `OAuthCallbackServer`, and `tui.ParseKey` with its key-parsing corpus.
