@@ -140,9 +140,9 @@ type Editor struct {
 
 	OnSubmit func(text string)
 	OnChange func(text string)
-	// pendingSubmit defers OnSubmit until after the editor lock is released
-	// the submit handler calls back into the editor (SetText,
-	// AddToHistory), which would deadlock a non-reentrant mutex.
+	// pendingSubmit defers OnSubmit until the input chunk is fully handled: the
+	// submit handler calls back into the editor (SetText, AddToHistory), which
+	// must not run in the middle of the chunk that submitted.
 	pendingSubmit *string
 	// TopBorder overrides the top border rendering (see renderTopBorder).
 	TopBorder     func(width int, hiddenLineCount int) string
@@ -849,11 +849,25 @@ func (e *Editor) GetText() string {
 
 func (e *Editor) expandPasteMarkersLocked(text string) string {
 	result := text
-	for pasteID, pasteContent := range e.pastes {
+	for _, pasteID := range e.pasteExpansionOrder() {
+		pasteContent := e.pastes[pasteID]
 		markerRegex := mustCompileRegex(`\[paste #` + itoa(pasteID) + `( (\+\d+ lines|\d+ chars))?\]`)
 		result = markerRegex.ReplaceAllLiteralString(result, pasteContent)
 	}
 	return result
+}
+
+// pasteExpansionOrder returns the paste IDs in insertion order. Upstream expands
+// its paste Map, whose iteration order is insertion order; Go's is random. The
+// order decides the result when one paste body carries a later paste's marker:
+// expanding the higher ID first would leave that marker in the text.
+func (e *Editor) pasteExpansionOrder() []int {
+	ids := make([]int, 0, len(e.pastes))
+	for id := range e.pastes {
+		ids = append(ids, id)
+	}
+	slices.Sort(ids)
+	return ids
 }
 
 // GetExpandedText returns the text with paste markers expanded.
