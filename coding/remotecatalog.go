@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/internal/boundedio"
 )
 
 // Port of core/remote-catalog-provider.ts: a persisted pi.dev catalog overlay
@@ -27,6 +27,11 @@ const RemoteCatalogAttemptTimeoutMS int64 = 4_000
 const RemoteCatalogRefreshIntervalMS int64 = 4 * 60 * 60 * 1000
 
 const remoteCatalogModelTypes = "chat,image,classifier"
+
+// remoteCatalogBodyLimit bounds the catalog document before it is parsed. The
+// reference hands whatever the server sent to response.json(), so a compromised
+// or misconfigured pi.dev could exhaust process memory (D341).
+const remoteCatalogBodyLimit = 16 << 20
 
 // mergeCatalogModels merges dynamic models over a baseline by model type and id.
 // The lookup is one map pass: upstream mergeModels ran a findIndex per remote
@@ -301,7 +306,7 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 			refresh.Publish(ai.ModelsPublication{Persist: storedWithCheckedAt(stored, checkedAt)})
 			return fmt.Errorf("Model catalog request failed for %s: %d", provider.ID, response.StatusCode)
 		}
-		raw, err := io.ReadAll(io.LimitReader(response.Body, 16<<20))
+		raw, err := boundedio.ReadAll(response.Body, remoteCatalogBodyLimit)
 		if err != nil {
 			return err
 		}
@@ -431,7 +436,7 @@ func WithPersonalizedCatalog(
 			if response.StatusCode < 200 || response.StatusCode >= 300 {
 				return fmt.Errorf("Model catalog request failed for %s: %d", provider.ID, response.StatusCode)
 			}
-			raw, err := io.ReadAll(io.LimitReader(response.Body, 16<<20))
+			raw, err := boundedio.ReadAll(response.Body, remoteCatalogBodyLimit)
 			if err != nil {
 				return err
 			}

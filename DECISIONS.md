@@ -4062,7 +4062,7 @@ before validating, so an endpoint could exhaust process memory. Pier reads them
 through `internal/boundedio` and fails as a protocol error once the body exceeds
 the limit: 1 MiB for classifier, OAuth, Vertex token and Radius gateway
 config documents, 8 MiB for an OpenRouter image response, and 16 MiB for the
-OpenRouter catalog and MCP JSON-RPC responses (the existing
+OpenRouter catalog, the pi.dev catalog and MCP JSON-RPC responses (the existing
 `MaxMessageBytes` default, shared with the SSE and stdio paths). Error bodies and
 SSE frames already had their own caps.
 
@@ -4078,6 +4078,7 @@ Tests: `TestOpenAIDecisionsRejectsOversizedResponseBody`,
 `TestRegisterClientRejectsOversizedBody`,
 `TestOAuthDocumentOverTheCapIsAProtocolError`,
 `TestOAuthDocumentCutOffSurfacesTheReadError`,
+`TestRemoteCatalogRejectsOversizedBody`,
 `TestRadiusGatewayConfigOverTheCapIsAProtocolError`,
 `TestOpenRouterImagesResponseOverTheCapIsAProtocolError`, plus the
 `internal/boundedio` unit controls.
