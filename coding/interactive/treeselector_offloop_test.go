@@ -101,3 +101,45 @@ func TestTreeSelectorOpenWithoutAQueueStaysSynchronous(t *testing.T) {
 		t.Fatalf("status = %q", statuses)
 	}
 }
+
+// The tree must describe the session the command was issued on: build reads
+// w.SessionInfo, which the owner loop rewrites on a session switch, and a queued
+// build starts only after the switch. Reading it there opened the replacement
+// session's empty tree and reported "No entries in session" for /tree on the
+// session that was still current when the user asked.
+//
+// AGENTS.md "UI ownership": workers run blocking work off-loop and never touch
+// attached UI state; the owner loop is the only writer of the session wiring.
+func TestTreeSelectorUsesTheDispatchedSession(t *testing.T) {
+	InitTheme("dark", false)
+	wiring, _, _, _ := newSelectorTestWiring(t)
+	wiring.SessionInfo = openTreeTestSession(t, 3)
+
+	queue := offloop.New()
+	t.Cleanup(queue.Stop)
+	gate := make(chan struct{})
+	queue.Go(func() { <-gate })
+	posted := make(chan func(), 1)
+	wiring.TreeQueue = queue
+	wiring.PostToUI = func(fn func()) { posted <- fn }
+	statuses := ""
+	wiring.ShowStatus = func(message string) { statuses += message }
+
+	wiring.ShowTreeSelector(context.Background(), "", false)
+	// The owner loop switches sessions before the queued build runs.
+	wiring.SessionInfo = openTreeTestSession(t, 0)
+	close(gate)
+	queue.Flush()
+	select {
+	case fn := <-posted:
+		fn()
+	case <-time.After(5 * time.Second):
+		t.Fatal("the tree build never reached the owner loop")
+	}
+	if statuses != "" {
+		t.Fatalf("the tree of the dispatched session did not open: %q", statuses)
+	}
+	if !wiring.Slot.HasActiveSelector() {
+		t.Fatal("no selector opened for the dispatched session")
+	}
+}

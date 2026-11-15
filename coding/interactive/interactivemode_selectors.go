@@ -376,7 +376,11 @@ func (w *SelectorWiring) ShowTreeSelector(ctx context.Context, initialSelectedID
 	if w.SessionInfo == nil {
 		return
 	}
-	realLeafID := w.SessionInfo.GetLeafID()
+	// Snapshot the session on the owner loop: the queued build must describe the
+	// session /tree was issued on, not whatever the loop has switched to by the
+	// time the worker runs.
+	sessionInfo := w.SessionInfo
+	realLeafID := sessionInfo.GetLeafID()
 	terminalHeight := 40
 	if w.TerminalRows != nil {
 		terminalHeight = w.TerminalRows()
@@ -385,7 +389,7 @@ func (w *SelectorWiring) ShowTreeSelector(ctx context.Context, initialSelectedID
 
 	// build returns nil when the session has no entries.
 	build := func() *TreeList {
-		tree := w.SessionInfo.GetTree()
+		tree := sessionInfo.GetTree()
 		if len(tree) == 0 {
 			return nil
 		}
