@@ -760,6 +760,10 @@ for exposure, namespaces, codemode, `tool_search`, resources, `/mcp` UI, and
   persistence is unported. Accordingly, `oauth.clientRegistration: "cimd"` is
   not carried through config/runtime: upstream's Client ID Metadata Document
   selection is wired by `extensions/mcp/oauth.ts` for the unported sign-in flow.
+  `validateMcpOAuth` still refuses what the reference's validation refuses: an
+  unknown value, `"cimd"` next to `clientId`/`clientName`, and `"cimd"` with a
+  `callbackUrl` the documents would not list
+  (`TestValidateMcpOAuthClientRegistration`).
   `read_mcp_resource` is absent, so resource links do not advertise it.
 - Radius OAuth login offers the upstream global provider-auth MCP setup.
   It preserves unrelated config and indentation, replaces MCP OAuth with

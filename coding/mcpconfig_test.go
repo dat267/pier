@@ -351,6 +351,50 @@ func TestValidateMcpOAuthNormalizesSpecialLoopbackCallbackURL(t *testing.T) {
 	}
 }
 
+// TestValidateMcpOAuthClientRegistration pins the clientRegistration checks of
+// pi v1.5.2 b4afdddf packages/mcp/src/config.ts validateOAuth and
+// packages/coding-agent/src/core/mcp-servers.ts isClientMetadataDocumentCallback
+// (the check core/mcp-servers.ts supplies as checkMetadataDocumentCallback).
+// Pier does not implement Client ID Metadata Documents (D185), but a config the
+// reference refuses must not load here either.
+func TestValidateMcpOAuthClientRegistration(t *testing.T) {
+	cases := []struct {
+		raw     string
+		wantErr string
+	}{
+		{`{"clientRegistration":"nope"}`, `oauth.clientRegistration must be "auto", "dcr", or "cimd"`},
+		{`{"clientRegistration":42}`, `oauth.clientRegistration must be "auto", "dcr", or "cimd"`},
+		{`{"clientRegistration":"cimd","clientId":"abc"}`, `oauth.clientRegistration "cimd" cannot be combined with oauth.clientId or oauth.clientName`},
+		{`{"clientRegistration":"cimd","clientName":"Pier"}`, `oauth.clientRegistration "cimd" cannot be combined with oauth.clientId or oauth.clientName`},
+		{`{"clientRegistration":"cimd","callbackUrl":"http://localhost:8080/other"}`, `oauth.clientRegistration "cimd" requires oauth.callbackUrl on localhost or 127.0.0.1 with path /callback`},
+		{`{"clientRegistration":"cimd","callbackUrl":"http://[::1]:8080/callback"}`, `oauth.clientRegistration "cimd" requires oauth.callbackUrl on localhost or 127.0.0.1 with path /callback`},
+		{`{"clientRegistration":"cimd"}`, ``},
+		{`{"clientRegistration":"cimd","callbackUrl":"http://127.0.0.1:8080/callback"}`, ``},
+		{`{"clientRegistration":"dcr"}`, ``},
+		{`{"clientRegistration":"auto"}`, ``},
+	}
+	for _, testCase := range cases {
+		var oauthValue any
+		if err := json.Unmarshal([]byte(testCase.raw), &oauthValue); err != nil {
+			t.Fatal(err)
+		}
+		var raw any
+		if err := json.Unmarshal([]byte(`{"url":"https://a.example/mcp","oauth":`+testCase.raw+`}`), &raw); err != nil {
+			t.Fatal(err)
+		}
+		_, err := ValidateMcpServerConfig("x", raw)
+		if testCase.wantErr == "" {
+			if err != nil {
+				t.Fatalf("%s: unexpected error %v", testCase.raw, err)
+			}
+			continue
+		}
+		if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
+			t.Fatalf("%s: err = %v, want %q", testCase.raw, err, testCase.wantErr)
+		}
+	}
+}
+
 // TestValidateMcpServerConfigReportsTheFirstUpstreamError pins the order of the
 // checks: pi v1.5.2 b4afdddf packages/mcp/src/config.ts validates the base
 // fields and then the transport fields, and packages/coding-agent/src/core/

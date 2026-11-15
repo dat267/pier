@@ -479,6 +479,7 @@ func validateMcpOAuth(value any, present bool) (*McpOAuthConfig, string) {
 		port = &converted
 		config.CallbackPort = port
 	}
+	var callbackURLParsed *url.URL
 	if callbackURL, ok := record["callbackUrl"]; ok {
 		text, isString := callbackURL.(string)
 		var parsed *url.URL
@@ -495,6 +496,7 @@ func validateMcpOAuth(value any, present bool) (*McpOAuthConfig, string) {
 				return nil, "oauth.callbackUrl and oauth.callbackPort name different ports"
 			}
 		}
+		callbackURLParsed = parsed
 		config.CallbackURL = &effectiveURL
 	}
 	if scope, ok := record["scope"]; ok {
@@ -510,6 +512,28 @@ func validateMcpOAuth(value any, present bool) (*McpOAuthConfig, string) {
 			return nil, "oauth.clientName must be a non-empty string"
 		}
 		config.ClientName = &text
+	}
+	// Upstream checks clientRegistration after clientName and before
+	// authServerMetadataUrl. Pier implements no Client ID Metadata Documents
+	// (D185), but refuses the configurations the reference's check refuses.
+	if registration, ok := record["clientRegistration"]; ok {
+		text, isString := registration.(string)
+		if !isString || (text != "auto" && text != "dcr" && text != "cimd") {
+			return nil, `oauth.clientRegistration must be "auto", "dcr", or "cimd"`
+		}
+		if text == "cimd" {
+			_, hasClientID := record["clientId"]
+			_, hasClientName := record["clientName"]
+			if hasClientID || hasClientName {
+				return nil, `oauth.clientRegistration "cimd" cannot be combined with oauth.clientId or oauth.clientName`
+			}
+			// isClientMetadataDocumentCallback: an absent callbackUrl passes;
+			// otherwise the document lists `/callback` on localhost and
+			// 127.0.0.1 only, on any port.
+			if callbackURLParsed != nil && (strings.Trim(callbackURLParsed.Hostname(), "[]") == "::1" || callbackURLParsed.Path != "/callback") {
+				return nil, `oauth.clientRegistration "cimd" requires oauth.callbackUrl on localhost or 127.0.0.1 with path /callback`
+			}
+		}
 	}
 	if metadataURL, ok := record["authServerMetadataUrl"]; ok {
 		text, isString := metadataURL.(string)
