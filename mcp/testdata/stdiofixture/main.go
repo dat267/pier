@@ -48,10 +48,8 @@ func main() {
 		}
 		var message message
 		if err := json.Unmarshal([]byte(line), &message); err != nil {
-			if err != nil {
-				return
-			}
-			continue
+			// The reference's JSON.parse throws, which ends its readline loop.
+			return
 		}
 		if message.ID == nil {
 			if message.Method == "notifications/initialized" && os.Getenv("PIER_MCP_CANCEL_REQUEST_FIXTURE") == "1" {
