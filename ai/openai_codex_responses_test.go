@@ -419,16 +419,19 @@ func TestStreamCodexResponsesErrors(t *testing.T) {
 		t.Fatalf("message = %+v", message)
 	}
 
-	// An explicit websocket transport is rejected.
-	stream = StreamOpenAICodexResponses(model, TranscriptContext{Messages: []Message{
-		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
-	}}, &OpenAICodexResponsesOptions{
-		APIKey:    codexToken(t, "acct"),
-		Transport: "websocket",
-	})
-	message, _ = stream.Result(ctxpkg.Background())
-	if message.ErrorMessage == nil || !strings.Contains(*message.ErrorMessage, "WebSocket transport is not supported") {
-		t.Fatalf("message = %+v", message)
+	// Both websocket transports are rejected: upstream selects a WebSocket
+	// path for either, so the port must not fall back to SSE silently.
+	for _, transport := range []Transport{TransportWebsocket, TransportWebsocketCached} {
+		stream = StreamOpenAICodexResponses(model, TranscriptContext{Messages: []Message{
+			&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+		}}, &OpenAICodexResponsesOptions{
+			APIKey:    codexToken(t, "acct"),
+			Transport: transport,
+		})
+		message, _ = stream.Result(ctxpkg.Background())
+		if message.ErrorMessage == nil || !strings.Contains(*message.ErrorMessage, "WebSocket transport is not supported") {
+			t.Fatalf("%s message = %+v", transport, message)
+		}
 	}
 
 	// A codex error event surfaces with the provider text alone.

@@ -636,7 +636,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 			}
 		}()
 
-		if options.Transport == "websocket" {
+		if options.Transport == TransportWebsocket || options.Transport == TransportWebsocketCached {
 			fail(fmt.Errorf("The openai-codex WebSocket transport is not supported by the Go port; use transport \"sse\""))
 			return
 		}

@@ -87,8 +87,12 @@ type Transport = string
 
 const (
 	TransportSSE Transport = "sse"
-
-	TransportAuto Transport = "auto"
+	// TransportWebsocket and TransportWebsocketCached are WebSocket transports
+	// upstream offers where a provider supports them; the port rejects them with
+	// the adapter's documented error (see openai_codex_responses.go).
+	TransportWebsocket       Transport = "websocket"
+	TransportWebsocketCached Transport = "websocket-cached"
+	TransportAuto            Transport = "auto"
 )
 
 // ProviderEnv is provider-scoped environment overrides. Values take
@@ -104,6 +108,9 @@ type SessionAffinityFormat = string
 
 const (
 	SessionAffinityOpenAI SessionAffinityFormat = "openai"
+	// SessionAffinityOpenAINoSession keeps the request-id and affinity headers
+	// but omits session_id; any other format behaves the same way.
+	SessionAffinityOpenAINoSession SessionAffinityFormat = "openai-nosession"
 
 	SessionAffinityOpenRouter SessionAffinityFormat = "openrouter"
 )
@@ -119,7 +126,9 @@ type ProviderResponse struct {
 type ThinkingTokenBudgetField = string
 
 const (
-	ThinkingTokenBudgetVLLM ThinkingTokenBudgetField = "thinking_token_budget"
+	ThinkingTokenBudgetVLLM     ThinkingTokenBudgetField = "thinking_token_budget"
+	ThinkingTokenBudgetQwen     ThinkingTokenBudgetField = "thinking_budget"
+	ThinkingTokenBudgetLlamaCPP ThinkingTokenBudgetField = "thinking_budget_tokens"
 )
 
 // ThinkingBudgets holds token budgets for each thinking level
