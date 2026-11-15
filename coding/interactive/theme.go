@@ -18,6 +18,8 @@ import (
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
 )
 
 // Port of src/modes/interactive/theme/theme.ts: the color palettes, the Theme
@@ -941,22 +943,13 @@ func AvailableThemes() []string {
 	return names
 }
 
+// localeCompareTheme orders theme names the way upstream's
+// `a.name.localeCompare(b.name)` does: root collation rather than byte order,
+// so an accented name sorts with its base letter (D257 uses the same collator
+// for provider names).
 func localeCompareTheme(a string, b string) int {
-	lowerA := strings.ToLower(a)
-	lowerB := strings.ToLower(b)
-	if lowerA != lowerB {
-		if lowerA < lowerB {
-			return -1
-		}
-		return 1
-	}
-	if a == b {
-		return 0
-	}
-	if a < b {
-		return -1
-	}
-	return 1
+	collator := collate.New(language.Und)
+	return collator.CompareString(a, b)
 }
 
 func customThemeInfos() []ThemeInfo {
