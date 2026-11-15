@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"encoding/json"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -129,6 +131,29 @@ func TestRGIEmojiWidth(t *testing.T) {
 	} {
 		if got := VisibleWidth(text); got != 2 {
 			t.Errorf("VisibleWidth(%q) = %d; want 2", text, got)
+		}
+	}
+}
+
+// TestCJKBreakRangesMatchThePin compares the hand-enumerated break ranges with
+// the reference's cjkBreakRegex, scanned over every code point. A missing or
+// extra range changes where CJK text may break a line.
+func TestCJKBreakRangesMatchThePin(t *testing.T) {
+	data, err := os.ReadFile("testdata/cjk-break/golden.json")
+	if err != nil {
+		t.Fatalf("read golden: %v", err)
+	}
+	var want [][2]int32
+	if err := json.Unmarshal(data, &want); err != nil {
+		t.Fatalf("golden json: %v", err)
+	}
+	if len(want) != len(cjkBreakRanges) {
+		t.Fatalf("%d ranges, golden has %d", len(cjkBreakRanges), len(want))
+	}
+	for index, bounds := range want {
+		if cjkBreakRanges[index].lo != rune(bounds[0]) || cjkBreakRanges[index].hi != rune(bounds[1]) {
+			t.Fatalf("range[%d] = %#x..%#x, golden %#x..%#x", index,
+				cjkBreakRanges[index].lo, cjkBreakRanges[index].hi, bounds[0], bounds[1])
 		}
 	}
 }
