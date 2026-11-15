@@ -88,10 +88,12 @@ var convertImageBytesToPNG imageBytesConverter = func(bytes []byte) ([]byte, boo
 //
 // D408: oversize images are resized with a pure-Go bilinear resampler rather than
 // Photon's Lanczos3 (Rust/WASM, which the port does not have), and re-encoding
-// produces PNG or JPEG. Formats the standard library cannot decode at all —
-// webp, and bmp outside the sniffing path — still report the upstream omission
-// message, since converting them also goes through Photon. Images that already
-// fit within the limits pass through byte-identically, which is the common case.
+// produces PNG or JPEG. Formats the standard library cannot decode at all (webp,
+// and bmp outside the sniffing path) report the same omission message, because
+// the auto-resize path must decode to measure them; with auto-resize off a webp
+// passes through unchanged. TODO.md records that upstream embeds a webp that
+// already fits. Images that already fit within the limits pass through
+// byte-identically, which is the common case.
 func ProcessImage(bytes []byte, mimeType string, options *ProcessImageOptions) ProcessImageResult {
 	autoResize := true
 	if options != nil && options.AutoResizeImages != nil {
