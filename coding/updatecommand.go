@@ -32,6 +32,11 @@ import (
 // check allows itself.
 const DefaultUpdateTimeoutMS int64 = 5 * 60 * 1000
 
+// maxUpdateAssetBytes bounds one release download. The asset is ~16 MB, so a
+// 64 MiB ceiling leaves room to grow while a broken or hostile endpoint cannot
+// fill the disk: the checksum is only verified after the whole file is written.
+var maxUpdateAssetBytes int64 = 64 << 20
+
 // errAssetNotFound marks a release asset that is not there. A platform with no build
 // is detected through it, so it is not a failure to report on its own.
 var errAssetNotFound = errors.New("asset not found")
@@ -94,7 +99,7 @@ func (o *UpdateOptions) resolve() {
 func updateAssetCandidates(goos, goarch string) []string {
 	name := updateAssetName(goos, goarch)
 	if goos == "windows" {
-		return []string{name, name + ".exe"}
+		return []string{name + ".exe", name}
 	}
 	return []string{name}
 }
@@ -136,7 +141,7 @@ func RunUpdate(ctx context.Context, options UpdateOptions) (string, error) {
 		break
 	}
 	if assetName == "" {
-		return "", &UpdateCommandError{Message: fmt.Sprintf("release %s has no %s asset", release.Version, candidates[len(candidates)-1])}
+		return "", &UpdateCommandError{Message: fmt.Sprintf("release %s has no %s asset", release.Version, candidates[0])}
 	}
 
 	if options.Target == "" {
@@ -255,8 +260,13 @@ func downloadTo(ctx context.Context, client *http.Client, url, name string, out 
 		return "", &UpdateCommandError{Message: fmt.Sprintf("the download of %s failed (HTTP %d)", name, response.StatusCode)}
 	}
 	digest := sha256.New()
-	if _, err := io.Copy(io.MultiWriter(out, digest), response.Body); err != nil {
+	written, err := io.Copy(io.MultiWriter(out, digest), io.LimitReader(response.Body, maxUpdateAssetBytes+1))
+	if err != nil {
 		return "", err
+	}
+	if written > maxUpdateAssetBytes {
+		return "", &UpdateCommandError{Message: fmt.Sprintf(
+			"the download of %s is larger than the %d MiB asset limit", name, maxUpdateAssetBytes>>20)}
 	}
 	return hex.EncodeToString(digest.Sum(nil)), nil
 }

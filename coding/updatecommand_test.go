@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -428,5 +429,59 @@ func TestRunUpdateFindsTheWindowsExeAsset(t *testing.T) {
 	}
 	if server.assetHits("pier-windows-amd64.exe") != 1 {
 		t.Fatal("the .exe asset was not fetched")
+	}
+}
+
+// The release workflow appends .exe on Windows (release.yml), so that name is
+// the expected asset and is tried first; the bare name stays as a fallback.
+func TestUpdateAssetCandidatesTryTheExpectedNameFirst(t *testing.T) {
+	if got, want := updateAssetCandidates("windows", "amd64"), []string{"pier-windows-amd64.exe", "pier-windows-amd64"}; !slices.Equal(got, want) {
+		t.Fatalf("windows candidates = %v, want %v", got, want)
+	}
+	if got, want := updateAssetCandidates("linux", "arm64"), []string{"pier-linux-arm64"}; !slices.Equal(got, want) {
+		t.Fatalf("linux candidates = %v, want %v", got, want)
+	}
+}
+
+// A platform with no build reports the expected asset name, the .exe one on
+// Windows.
+func TestRunUpdateNamesTheExpectedWindowsAsset(t *testing.T) {
+	withVersion(t, "v0.0.1")
+	server := newUpdateServer(t, "v9.9.9", []byte("new binary\n"))
+	target := tempTarget(t)
+	_, err := RunUpdate(context.Background(), UpdateOptions{
+		RepoURL: server.URL,
+		Client:  server.Client(),
+		Target:  target,
+		GOOS:    "windows",
+		GOARCH:  "amd64",
+	})
+	if err == nil || !strings.Contains(err.Error(), "pier-windows-amd64.exe") {
+		t.Fatalf("err = %v, want the expected .exe asset name", err)
+	}
+}
+
+// A release download is bounded: the checksum is verified only after the whole
+// asset is written, so a broken or hostile endpoint must not fill the disk.
+func TestRunUpdateBoundsTheDownload(t *testing.T) {
+	withVersion(t, "v0.0.1")
+	previous := maxUpdateAssetBytes
+	maxUpdateAssetBytes = 1 << 20
+	t.Cleanup(func() { maxUpdateAssetBytes = previous })
+	payload := make([]byte, maxUpdateAssetBytes+1)
+	server := newUpdateServer(t, "v9.9.9", payload)
+	target := tempTarget(t)
+	_, err := RunUpdate(context.Background(), UpdateOptions{
+		RepoURL: server.URL,
+		Client:  server.Client(),
+		Target:  target,
+		GOOS:    "linux",
+		GOARCH:  "amd64",
+	})
+	if err == nil || !strings.Contains(err.Error(), "larger than") {
+		t.Fatalf("err = %v, want the asset size limit", err)
+	}
+	if got := readFile(t, target); got != "old binary" {
+		t.Fatalf("target = %q; the oversized download must not replace it", got)
 	}
 }
