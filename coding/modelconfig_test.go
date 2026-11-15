@@ -287,14 +287,14 @@ func TestModelConfigErrors(t *testing.T) {
 
 	// The port preserves deterministic lexical paths with local messages for
 	// pi 4a080252 core/model-config.ts's schema errors, including nested records.
+	// The promptCache tiers are open in the schema, so unknown tier names are
+	// skipped (TestLoadModelConfigIgnoresUnknownPromptCacheKeys).
 	path := write(t, `{"providers":{"z":false,"a":{"headers":{"z":1,"a":1},"compat":{"chatTemplateKwargs":{"z":{"$var":"bad"},"a":{"$var":"bad"}}},"models":[{"id":"m","promptCache":{"z":0,"a":0}}],"modelOverrides":{"z":1,"a":1}}}}`)
 	want := "Invalid models.json schema:\n" +
 		"  - providers.a.headers.a: Expected string\n" +
 		"  - providers.a.headers.z: Expected string\n" +
 		"  - providers.a.compat.chatTemplateKwargs.a.$var: Expected union value\n" +
 		"  - providers.a.compat.chatTemplateKwargs.z.$var: Expected union value\n" +
-		"  - providers.a.models.0.promptCache.a: Expected number to be greater than 0\n" +
-		"  - providers.a.models.0.promptCache.z: Expected number to be greater than 0\n" +
 		"  - providers.a.modelOverrides.a: Expected object\n" +
 		"  - providers.a.modelOverrides.z: Expected object\n" +
 		"  - providers.z: Expected object\n\nFile: " + path

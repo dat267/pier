@@ -588,8 +588,14 @@ func validatePromptCache(record map[string]any, path string, errors *[]validatio
 		*errors = append(*errors, validationError{path: path + ".promptCache", message: expectedMessage("object")})
 		return
 	}
-	for _, name := range slices.Sorted(maps.Keys(cache)) {
-		seconds, ok := cache[name].(float64)
+	// The schema is open: only the two retention tiers are checked, and an
+	// unknown key is left alone (upstream openObject).
+	for _, name := range []string{"short", "long"} {
+		entry, ok := cache[name]
+		if !ok {
+			continue
+		}
+		seconds, ok := entry.(float64)
 		if !ok {
 			*errors = append(*errors, validationError{path: path + ".promptCache." + name, message: expectedMessage("number")})
 			continue
@@ -751,6 +757,9 @@ var compatFields = []compatField{
 	{name: "promptCacheKeyMode", kind: compatLiteral, literals: []string{"auto", "enabled", "disabled"}},
 	{name: "zaiToolStream", kind: compatBool},
 	{name: "supportsThinkingTokenBudget", kind: compatBool},
+	{name: "thinkingTokenBudgetField", kind: compatLiteral, literals: []string{
+		"thinking_token_budget", "thinking_budget", "thinking_budget_tokens",
+	}},
 	{name: "supportsMidConvoSystemMessages", kind: compatBool},
 	{name: "supportsMidConvoToolAdditions", kind: compatBool},
 	{name: "supportsMidConvoToolChanges", kind: compatBool},

@@ -49,3 +49,25 @@ func TestLoadModelConfigValidatesPromptCache(t *testing.T) {
 		})
 	}
 }
+
+// pi v1.5.2 b4afdddf packages/ai/src/providers/model-schema.ts builds
+// ModelPromptCacheSchema with openObject, so it lists `short` and `long` and
+// allows other properties without checking them. Only those two keys may fail
+// validation.
+func TestLoadModelConfigIgnoresUnknownPromptCacheKeys(t *testing.T) {
+	for _, member := range []string{
+		`"promptCache": {"bogus": "x"}`,
+		`"promptCache": {"bogus": {}}`,
+		`"promptCache": {"bogus": null}`,
+		`"promptCache": {"short": 60, "bogus": "x"}`,
+	} {
+		path := filepath.Join(t.TempDir(), "models.json")
+		content := `{"providers": {"custom": {"models": [{"id": "m", ` + member + `}]}}}`
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if message := LoadModelConfig(path).GetError(); message != "" {
+			t.Fatalf("%s: unexpected error %q", member, message)
+		}
+	}
+}
