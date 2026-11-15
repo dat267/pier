@@ -397,7 +397,12 @@ func repeatSpaces(count int) string {
 	if count <= 0 {
 		return ""
 	}
-	return spaces[0:count]
+	if count <= len(spaces) {
+		return spaces[0:count]
+	}
+	// Upstream's " ".repeat(count) has no upper bound; the table only exists to
+	// keep the common padding allocation-free.
+	return spaces + strings.Repeat(" ", count-len(spaces))
 }
 
 // GetScrollbarGeometry resolves the scrollbar rectangle for a scroll box.
