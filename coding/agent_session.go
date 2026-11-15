@@ -406,6 +406,10 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 			return inner(model, transcript, options)
 		}
 	}
+	// The tool-result image hook needs the session (current model, settings), and
+	// the session needs the agent, so it reads the pointer assigned below; runs
+	// only start after the constructor returns.
+	var created *AgentSession
 	a, err := agent.NewAgent(&agent.AgentOptions{
 		InitialState:    initialState,
 		StreamFn:        agentStreamFn,
@@ -416,6 +420,14 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		Transport:       config.Transport,
 		ThinkingBudgets: config.ThinkingBudgets,
 		MaxRetryDelayMS: config.MaxRetryDelayMS,
+		// Every tool result's images run through the inline limits before they
+		// enter history (pi v1.5.2 core/agent-session.ts _toolResultMessage).
+		AfterToolCall: func(call *agent.AfterToolCallContext, ctx context.Context) (*agent.AfterToolCallResult, error) {
+			if created == nil {
+				return nil, nil
+			}
+			return created.normalizeToolResultContent(call.Result.Content), nil
+		},
 		// Installed here only so the session's own refresh can chain it below;
 		// assigning it directly would drop that refresh.
 		PrepareNextTurnWithContext: config.PrepareNextTurnWithContext,
@@ -471,6 +483,7 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		excludedToolNames:    excludedToolNameSet(config.ExcludedToolNames),
 		beforeFirstTurn:      config.BeforeFirstTurn,
 	}
+	created = s
 	// A default-tools session restores the loadout its transcript records, once
 	// the registry holds it, with modifier-only --tools entries applied
 	// (upstream 6f2f164ab: the constructor restored only when the caller passed

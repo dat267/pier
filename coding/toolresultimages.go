@@ -3,6 +3,7 @@ package coding
 import (
 	"strings"
 
+	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
 )
 
@@ -26,6 +27,8 @@ type NormalizeToolResultImagesOptions struct {
 	// AutoResizeImages resizes oversized images to the inline provider limits
 	// (default true).
 	AutoResizeImages *bool
+	// ResizeOptions is the model's resize profile; the defaults apply when nil.
+	ResizeOptions *ImageResizeOptions
 }
 
 // NormalizeToolResultImages normalizes image blocks in a tool result's content.
@@ -44,8 +47,12 @@ func NormalizeToolResultImages(content ai.UserContentList, options *NormalizeToo
 	}
 
 	autoResize := true
-	if options != nil && options.AutoResizeImages != nil {
-		autoResize = *options.AutoResizeImages
+	var resizeOptions *ImageResizeOptions
+	if options != nil {
+		if options.AutoResizeImages != nil {
+			autoResize = *options.AutoResizeImages
+		}
+		resizeOptions = options.ResizeOptions
 	}
 
 	normalized := make(ai.UserContentList, 0, len(content))
@@ -64,7 +71,10 @@ func NormalizeToolResultImages(content ai.UserContentList, options *NormalizeToo
 			normalized = append(normalized, block)
 			continue
 		}
-		processed := ProcessImage(data, image.MimeType, &ProcessImageOptions{AutoResizeImages: &autoResize})
+		processed := ProcessImage(data, image.MimeType, &ProcessImageOptions{
+			AutoResizeImages: &autoResize,
+			ResizeOptions:    resizeOptions,
+		})
 		if !processed.OK {
 			// Unlike `read`, keep the original block: the tool already produced
 			// this image and the failure may just be an unavailable image
@@ -94,4 +104,50 @@ func NormalizeToolResultImages(content ai.UserContentList, options *NormalizeToo
 		return content, false
 	}
 	return normalized, true
+}
+
+// normalizeToolResultContent applies the inline image limits to one tool
+// result's content and reports whether it changed (upstream agent-session.ts
+// _toolResultMessage runs every result through normalizeToolResultImages with
+// the session model's resize profile and the imageAutoResize setting). A result
+// without images, or one whose images are already within the limits, returns
+// nil so the agent keeps the tool's own result.
+func (s *AgentSession) normalizeToolResultContent(content []ai.Content) *agent.AfterToolCallResult {
+	hasImage := false
+	for _, block := range content {
+		if _, ok := block.(ai.ImageContent); ok {
+			hasImage = true
+			break
+		}
+	}
+	if !hasImage {
+		return nil
+	}
+	userContent := make(ai.UserContentList, 0, len(content))
+	for _, block := range content {
+		typed, ok := block.(ai.UserContent)
+		if !ok {
+			// A block kind the normalizer cannot carry through (upstream's tool
+			// result is text or image only): leave the result untouched.
+			return nil
+		}
+		userContent = append(userContent, typed)
+	}
+	autoResize := true
+	if s.control != nil && s.control.Settings != nil {
+		autoResize = s.control.Settings.GetImageAutoResize()
+	}
+	resizeOptions := imageResizeOptionsFor(s.Model())
+	normalized, changed := NormalizeToolResultImages(userContent, &NormalizeToolResultImagesOptions{
+		AutoResizeImages: &autoResize,
+		ResizeOptions:    &resizeOptions,
+	})
+	if !changed {
+		return nil
+	}
+	normalizedContent := make([]ai.Content, 0, len(normalized))
+	for _, block := range normalized {
+		normalizedContent = append(normalizedContent, block)
+	}
+	return &agent.AfterToolCallResult{Content: normalizedContent, HasContent: true}
 }
