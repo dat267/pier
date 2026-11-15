@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 )
@@ -73,7 +74,16 @@ func decodeCatalog(data []byte) (catalogShape, map[string]map[string]*Model, err
 	modelsByProvider := make(map[string]map[string]*Model, len(decoded.Providers))
 	for providerID, apis := range decoded.Providers {
 		models := make(map[string]*Model)
-		for api, byID := range apis {
+		// Visit the API groups in sorted order so a model id listed under two
+		// apis is resolved by the later group, as the reference's flattened
+		// catalog does, instead of by map iteration order.
+		apiNames := make([]string, 0, len(apis))
+		for api := range apis {
+			apiNames = append(apiNames, api)
+		}
+		sortStrings(apiNames)
+		for _, api := range apiNames {
+			byID := apis[api]
 			for modelID, entry := range byID {
 				compat, err := DecodeModelCompat(Api(api), entry.Compat)
 				if err != nil {
@@ -131,6 +141,15 @@ func GetBuiltinModels(provider string) []*Model {
 	for _, model := range catalogModels[provider] {
 		out = append(out, model)
 	}
+	// The generated catalog is written with sorted keys (api, then model id),
+	// and the reference's flattened catalog keeps that order. Sorting here
+	// reproduces it; map iteration alone would return a random order.
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].API != out[j].API {
+			return out[i].API < out[j].API
+		}
+		return out[i].ID < out[j].ID
+	})
 	return out
 }
 
