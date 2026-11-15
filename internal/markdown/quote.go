@@ -264,7 +264,12 @@ func lexQuoteChunks(lines []string) ([]*Block, string, int) {
 				sb.WriteByte('\n')
 				sb.WriteString(stripMarkedQuoteMarker(line))
 			}
+			oldText := last.Text
 			blocks[len(blocks)-1], _ = lexBlocksInQuote(sb.String())
+			// marked replaces the nested quote's text with the re-lexed one
+			// (`r.substring(0, r.length - O.text.length) + E.text`).
+			text.cut(len(oldText))
+			text.raw(blocks[len(blocks)-1].Text)
 			return blocks, text.String(), len(lines)
 		case BlockList:
 			// The continuation re-lexes with the list; its leftover lines go on
@@ -275,11 +280,20 @@ func lexQuoteChunks(lines []string) ([]*Block, string, int) {
 				return blocks, text.String(), kept()
 			}
 			list := relexed[0]
+			// marked replaces the chunk's list with the re-lexed list's raw
+			// (`r.substring(0, r.length - O.raw.length) + w.raw`).
+			oldRaw := blockSource(last, chunk)
 			blocks[len(blocks)-1] = list
+			listRaw := blockSource(list, newText)
+			text.cut(len(oldRaw))
+			text.raw(listRaw)
 			// marked splits what follows the list's trimmed raw, so a leftover
 			// starts with the rest of the list's last line (usually empty).
-			leftover := newText[len(blockSource(list, newText)):]
+			leftover := newText[len(listRaw):]
 			if leftover == "" {
+				// `"".split("\n")` is one empty line, whose chunk adds a
+				// separator before contributing nothing.
+				text.addChunk("")
 				return blocks, text.String(), len(lines)
 			}
 			rest = strings.Split(leftover, "\n")
@@ -326,6 +340,22 @@ func (t *quoteText) addChunk(chunk string) {
 }
 
 func (t *quoteText) String() string { return t.sb.String() }
+
+// cut drops the last n bytes, as marked's `r.substring(0, r.length - n)` does
+// (JavaScript clamps a negative length to zero).
+func (t *quoteText) cut(n int) {
+	value := t.sb.String()
+	if n > len(value) {
+		n = len(value)
+	}
+	t.sb.Reset()
+	t.sb.WriteString(value[:len(value)-n])
+}
+
+// raw appends text without a chunk separator.
+func (t *quoteText) raw(value string) {
+	t.sb.WriteString(value)
+}
 
 // lexBlocksInQuote lexes src, which starts with a `>` line, as one quote.
 func lexBlocksInQuote(src string) (*Block, int) {

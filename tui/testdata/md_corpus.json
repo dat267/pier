@@ -72,6 +72,8 @@
 	"ol-nested-ul": "1. a\n   - b\n2. c\n",
 	"code-then-text": "```\nx\n```\ntext\n",
 	"quote-code": "> ```\n> x\n> ```\n",
+	"quote-lazy-list": "> - a\nb\n",
+	"quote-lazy-nested": "> > > a\n> b\n",
 	"entity-amp": "a &amp; b &lt; c\n",
 	"latex-block-mid": "text\n\n$$\ny=2\n$$\n\nmore\n",
 	"image-in-link": "[![alt](i.png)](http://x)\n",
