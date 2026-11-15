@@ -1174,6 +1174,63 @@
     "body": "Body"
   },
   {
+    "name": "plain dash continuation",
+    "content": "---\ndescription: one\n  - two\n---\nBody\n",
+    "strings": {
+      "description": "one - two"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "plain dash comment continuation",
+    "content": "---\ndescription: one\n  - two # note\n---\nBody\n",
+    "strings": {
+      "description": "one - two"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "plain inline comment continuation",
+    "content": "---\ndescription: one\n  two # note\n---\nBody\n",
+    "strings": {
+      "description": "one two"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "plain blank continuation",
+    "content": "---\ndescription: one\n\n  two\n---\nBody\n",
+    "strings": {
+      "description": "one\ntwo"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "plain two blank continuation",
+    "content": "---\ndescription: one\n\n\n  two\n---\nBody\n",
+    "strings": {
+      "description": "one\n\ntwo"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "plain trailing blank then key",
+    "content": "---\ndescription: one\n  two\n\nname: n\n---\nBody\n",
+    "strings": {
+      "description": "one two",
+      "name": "n"
+    },
+    "body": "Body"
+  },
+  {
+    "name": "plain url continuation",
+    "content": "---\ndescription: see\n  https://example.com/x\n---\nBody\n",
+    "strings": {
+      "description": "see https://example.com/x"
+    },
+    "body": "Body"
+  },
+  {
     "name": "no frontmatter",
     "content": "Body\n",
     "strings": {},

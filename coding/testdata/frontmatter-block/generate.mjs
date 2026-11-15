@@ -68,6 +68,16 @@ add("plain scalar with pipe", `---\ndescription: a | b\n---\n${body}`);
 add("quoted pipe", `---\ndescription: "|"\n---\n${body}`);
 add("quoted greater", `---\ndescription: ">"\n---\n${body}`);
 add("empty value", `---\ndescription:\n---\n${body}`);
+// Plain scalars continued on more-indented lines: yaml folds a dash line into a
+// scalar that already has an inline value, strips an inline comment from a
+// continuation line, and keeps a blank line as a newline.
+add("plain dash continuation", `---\ndescription: one\n  - two\n---\n${body}`);
+add("plain dash comment continuation", `---\ndescription: one\n  - two # note\n---\n${body}`);
+add("plain inline comment continuation", `---\ndescription: one\n  two # note\n---\n${body}`);
+add("plain blank continuation", `---\ndescription: one\n\n  two\n---\n${body}`);
+add("plain two blank continuation", `---\ndescription: one\n\n\n  two\n---\n${body}`);
+add("plain trailing blank then key", `---\ndescription: one\n  two\n\nname: n\n---\n${body}`);
+add("plain url continuation", `---\ndescription: see\n  https://example.com/x\n---\n${body}`);
 add("no frontmatter", body);
 const report = [];
 for (const testCase of cases) {

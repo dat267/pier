@@ -88,10 +88,10 @@ func ParseFrontmatter(content string) ParsedFrontmatter {
 			value = yamlQuotedScalar(value)
 		} else if value != "" {
 			// YAML folds a plain scalar that continues on more-indented lines
-			// with single spaces (yaml's parse, which utils/frontmatter.ts
-			// reads the block with), so a wrapped description keeps its text.
-			if parts, next := yamlPlainScalarContinuation(lines, index+1, yamlIndentWidth(rawLine)); len(parts) > 0 {
-				value += " " + strings.Join(parts, " ")
+			// (yaml's parse, which utils/frontmatter.ts reads the block with),
+			// so a wrapped description keeps its text.
+			if tail, next := yamlPlainScalarContinuation(lines, index+1, yamlIndentWidth(rawLine)); tail != "" {
+				value += tail
 				index = next
 			}
 		}
@@ -158,29 +158,54 @@ func yamlIndentWidth(line string) int {
 
 // yamlPlainScalarContinuation folds the more-indented lines that continue a
 // plain scalar started on the key's line, the way YAML folds a multi-line plain
-// scalar with single spaces. It stops at a blank line, a less-or-equally
-// indented line, and a line that opens a nested mapping or sequence, where the
-// key's own block starts instead of a continuation. It reports the last line it
-// consumed so the caller's loop skips it.
-func yamlPlainScalarContinuation(lines []string, start int, keyIndent int) ([]string, int) {
-	var parts []string
+// scalar: a single line break becomes a space, N blank lines become N newlines,
+// an inline comment is not scalar content, and a dash starts scalar text rather
+// than a nested sequence because the key already has an inline value. It stops
+// at a less-or-equally indented line and at a mapping-looking line, where the
+// key's own block starts instead of a continuation. It returns the folded tail
+// with its leading separator, and the last content line it consumed so the
+// caller's loop skips it.
+func yamlPlainScalarContinuation(lines []string, start int, keyIndent int) (string, int) {
+	var folded strings.Builder
 	last := start - 1
+	blanks := 0
 	for index := start; index < len(lines); index++ {
 		line := lines[index]
 		trimmed := strings.TrimSpace(line)
-		if trimmed == "" || yamlIndentWidth(line) <= keyIndent {
+		if trimmed == "" {
+			// N blank lines fold to N newlines. They are only emitted when a
+			// continuation follows, so trailing blanks are dropped.
+			blanks++
+			continue
+		}
+		if yamlIndentWidth(line) <= keyIndent {
 			break
 		}
 		if strings.HasPrefix(trimmed, "#") {
+			// A comment line carries no text; yaml rejects a continuation after
+			// one, which stays an unparsed difference (D380).
 			continue
 		}
-		if strings.HasPrefix(trimmed, "- ") || trimmed == "-" || yamlMappingStart(trimmed) {
+		content := trimmed
+		if commentIndex := yamlInlineCommentIndex(content); commentIndex >= 0 {
+			content = strings.TrimSpace(content[:commentIndex])
+		}
+		if content == "" {
+			continue
+		}
+		if yamlMappingStart(content) {
 			break
 		}
-		parts = append(parts, trimmed)
+		if blanks == 0 {
+			folded.WriteByte(' ')
+		} else {
+			folded.WriteString(strings.Repeat("\n", blanks))
+		}
+		folded.WriteString(content)
+		blanks = 0
 		last = index
 	}
-	return parts, last
+	return folded.String(), last
 }
 
 // yamlMappingStart reports a line that begins a mapping entry, `key:` followed
