@@ -627,7 +627,7 @@ func OpenAICodexOAuth() *OAuthAuth {
 			switch method {
 			case OpenAICodexDeviceCodeLogin:
 				return LoginOpenAICodexDeviceCode(interaction)
-			case OpenAICodexBrowserLogin, "":
+			case OpenAICodexBrowserLogin:
 				return LoginOpenAICodex(interaction)
 			default:
 				return nil, fmt.Errorf("Unknown OpenAI Codex login method: %s", method)

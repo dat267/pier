@@ -322,6 +322,17 @@ func TestOpenAICodexLoginMethods(t *testing.T) {
 		if err == nil || err.Error() != "Unknown OpenAI Codex login method: nope" {
 			t.Fatalf("err = %v", err)
 		}
+
+		// An empty select answer is unknown too: openai-codex.ts (b4afdddf)
+		// routes to the browser only when method === "browser", so "" falls to
+		// the throw rather than becoming the default.
+		_, err = OpenAICodexOAuth().Login(&AuthInteraction{
+			Ctx:    context.Background(),
+			Prompt: func(AuthPrompt) (string, error) { return "", nil },
+		})
+		if err == nil || err.Error() != "Unknown OpenAI Codex login method: " {
+			t.Fatalf("empty method err = %v", err)
+		}
 	})
 }
 
