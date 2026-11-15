@@ -6,8 +6,7 @@ Project rules for coding agents. Where things live:
 - [ARCHITECTURE.md](ARCHITECTURE.md): design, the stdio RPC contract and the
   lock inventory.
 - [DECISIONS.md](DECISIONS.md): D-rows, the deliberate differences from upstream.
-- `TODO.md`: reproduced, unresolved findings, and the position a whole-tree sweep
-  stopped at.
+- `TODO.md`: reproduced, unresolved findings; empty when none are open.
 - `git log`: release and change history.
 
 ## Upstream parity

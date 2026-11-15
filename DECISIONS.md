@@ -7130,10 +7130,9 @@ an OSC 52 clipboard write executes without the user selecting anything. Other
 providers fill the same list with project skill and command text.
 
 Only the display is sanitized, following D342/D422: `item.Value` stays exact,
-because callers insert it as a path. The editor's own rendering of an inserted
-name is a separate, still-open path recorded in `TODO.md`: its layout and cursor
-arithmetic run over the raw buffer and its output is pinned by goldens, so
-sanitizing there needs a design decision rather than a one-line fix.
+because callers insert it as a path. D452 closes the editor's own path by
+sanitizing on entry: layout and cursor arithmetic run over the buffer and 76
+goldens pin its bytes, so the sanitizing happens where the text enters.
 
 Tests: `TestSelectListSanitizesItemText`.
 
