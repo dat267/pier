@@ -28,7 +28,7 @@ func hyperModels() []*ai.Model {
 			Cost:             ai.ModelCost{ModelCostRates: ai.ModelCostRates{Input: 0.2, Output: 0.4, CacheRead: 0.04, CacheWrite: 0.0}},
 			ContextWindow:    1000000, MaxTokens: 384000,
 			Compat: &ai.ModelCompat{
-				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
+				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false),
 					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
 			},
 		},
@@ -41,7 +41,7 @@ func hyperModels() []*ai.Model {
 			Cost:             ai.ModelCost{ModelCostRates: ai.ModelCostRates{Input: 2.4, Output: 4.8, CacheRead: 0.2, CacheWrite: 0.0}},
 			ContextWindow:    1000000, MaxTokens: 384000,
 			Compat: &ai.ModelCompat{
-				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
+				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false),
 					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
 			},
 		},
@@ -54,7 +54,7 @@ func hyperModels() []*ai.Model {
 			Cost:             ai.ModelCost{ModelCostRates: ai.ModelCostRates{Input: 0.3, Output: 1.2, CacheRead: 0.03, CacheWrite: 0.0}},
 			ContextWindow:    1000000, MaxTokens: 32768,
 			Compat: &ai.ModelCompat{
-				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
+				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false),
 					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
 			},
 		},
@@ -67,7 +67,7 @@ func hyperModels() []*ai.Model {
 			Cost:             ai.ModelCost{ModelCostRates: ai.ModelCostRates{Input: 1.52432, Output: 4.79072, CacheRead: 0.283088, CacheWrite: 0.0}},
 			ContextWindow:    1000000, MaxTokens: 128000,
 			Compat: &ai.ModelCompat{
-				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
+				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false),
 					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
 			},
 		},
@@ -80,7 +80,7 @@ func hyperModels() []*ai.Model {
 			Cost:             ai.ModelCost{ModelCostRates: ai.ModelCostRates{Input: 0.16332, Output: 0.5444, CacheRead: 0.031575, CacheWrite: 0.0}},
 			ContextWindow:    1048576, MaxTokens: 131072,
 			Compat: &ai.ModelCompat{
-				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
+				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false),
 					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
 			},
 		},
@@ -93,7 +93,7 @@ func hyperModels() []*ai.Model {
 			Cost:             ai.ModelCost{ModelCostRates: ai.ModelCostRates{Input: 3.2664, Output: 16.332, CacheRead: 0.32664, CacheWrite: 0.0}},
 			ContextWindow:    1048576, MaxTokens: 16000,
 			Compat: &ai.ModelCompat{
-				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
+				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false),
 					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
 			},
 		},
@@ -106,7 +106,7 @@ func hyperModels() []*ai.Model {
 			Cost:             ai.ModelCost{ModelCostRates: ai.ModelCostRates{Input: 0.32664, Output: 1.30656, CacheRead: 0.064239, CacheWrite: 0.0}},
 			ContextWindow:    512000, MaxTokens: 512000,
 			Compat: &ai.ModelCompat{
-				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
+				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false),
 					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
 			},
 		},
@@ -119,7 +119,7 @@ func hyperModels() []*ai.Model {
 			Cost:             ai.ModelCost{ModelCostRates: ai.ModelCostRates{Input: 2.5, Output: 7.5, CacheRead: 0.5, CacheWrite: 0.0}},
 			ContextWindow:    1000000, MaxTokens: 64000,
 			Compat: &ai.ModelCompat{
-				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
+				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false),
 					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
 			},
 		},
@@ -132,7 +132,7 @@ func hyperModels() []*ai.Model {
 			Cost:             ai.ModelCost{ModelCostRates: ai.ModelCostRates{Input: 1.2, Output: 4.8, CacheRead: 0.24, CacheWrite: 0.0}},
 			ContextWindow:    1000000, MaxTokens: 64000,
 			Compat: &ai.ModelCompat{
-				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
+				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false),
 					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
 			},
 		},
@@ -145,7 +145,7 @@ func hyperModels() []*ai.Model {
 			Cost:             ai.ModelCost{ModelCostRates: ai.ModelCostRates{Input: 0.15, Output: 0.47, CacheRead: 0.016, CacheWrite: 0.0}},
 			ContextWindow:    1000000, MaxTokens: 128000,
 			Compat: &ai.ModelCompat{
-				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
+				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false),
 					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
 			},
 		},
@@ -158,7 +158,7 @@ func hyperModels() []*ai.Model {
 			Cost:             ai.ModelCost{ModelCostRates: ai.ModelCostRates{Input: 2.0, Output: 6.0, CacheRead: 0.25, CacheWrite: 0.0}},
 			ContextWindow:    1000000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
-				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
+				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false),
 					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
 			},
 		},
@@ -179,7 +179,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1050000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -192,7 +192,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1000000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -205,7 +205,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1000000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -218,7 +218,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1000000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -231,7 +231,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1000000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -244,7 +244,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1000000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -257,7 +257,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1000000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -270,7 +270,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1048576, MaxTokens: 131072,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -283,7 +283,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1000000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -296,7 +296,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1000000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -309,7 +309,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1000000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -322,7 +322,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1000000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -335,7 +335,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    262144, MaxTokens: 32768,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -348,7 +348,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1000000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -361,7 +361,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1048576, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -374,7 +374,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    256000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -387,7 +387,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1048576, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -400,7 +400,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1000000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -413,7 +413,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1048576, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -426,7 +426,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1000000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -439,7 +439,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    256000, MaxTokens: 32768,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -451,7 +451,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow: 262144, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(false), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(false), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -464,7 +464,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1048576, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -477,7 +477,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    1048576, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 		{
@@ -490,7 +490,7 @@ func commandCodeModels() []*ai.Model {
 			ContextWindow:    500000, MaxTokens: 65536,
 			Compat: &ai.ModelCompat{
 				OpenAICompletions: &ai.OpenAICompletionsCompat{SupportsStore: new(false), SupportsDeveloperRole: new(false),
-					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens"), ThinkingFormat: new("deepseek")},
+					SupportsReasoningEffort: new(true), MaxTokensField: new("max_tokens")},
 			},
 		},
 	}
