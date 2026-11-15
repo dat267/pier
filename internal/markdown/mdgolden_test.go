@@ -147,15 +147,32 @@ func projectBlock(b *Block) any {
 // becomes Marked's `text` token instead of a `paragraph`.
 func projectListItemTokens(b *Block) []any {
 	out := make([]any, 0, len(b.Blocks)+1)
-	if b.Task {
+	// A tight task item carries the checkbox token itself; a loose one keeps it
+	// inside its first paragraph (marked 18.0.11 Tokenizer.list).
+	if b.Task && b.Tight {
 		out = append(out, map[string]any{"type": "checkbox"})
 	}
-	for _, child := range b.Blocks {
+	for index, child := range b.Blocks {
 		if child.Kind == BlockLinkDef {
 			continue
 		}
 		if child.Kind == BlockParagraph && b.Tight {
 			out = append(out, map[string]any{"type": "text", "text": child.Text, "tokens": projectInlines(child.Inlines)})
+			continue
+		}
+		if child.Kind == BlockParagraph && b.Task && index == 0 {
+			// A loose task item keeps the box in its first paragraph's text and
+			// gets the checkbox token prepended to it (marked 18.0.11
+			// Tokenizer.list); a tight one has the box only as a token.
+			checkbox := "[ ] "
+			if b.Checked {
+				checkbox = "[x] "
+			}
+			projected := projectBlock(child).(map[string]any)
+			projected["text"] = checkbox + child.Text
+			tokens := []any{map[string]any{"type": "checkbox"}}
+			projected["tokens"] = append(tokens, projected["tokens"].([]any)...)
+			out = append(out, projected)
 			continue
 		}
 		out = append(out, projectBlock(child))

@@ -291,12 +291,14 @@ func (l *blockLexer) lexList(start int) (*Block, int, bool) {
 			block.Text = rest
 		}
 	}
-	// Pier's tight/loose reading is unchanged: a blank line inside the list
-	// makes it loose. That covers marked's two rules (an item ending in a blank
-	// line before the next item, and a multi-line spacer inside an item) except
-	// where marked's heading, code or table token swallows the blank line.
+	// Pier's tight/loose reading follows marked's two rules: an item before the
+	// last that ends with a blank line makes the list loose, and so does an
+	// item whose own tokens hold a space token of two or more newlines. A blank
+	// line a nested list swallows is not in the outer item's tokens, so the
+	// outer list stays tight (`- a\n  - b\n\n    c`) while the nested one does
+	// not.
 	list.End = last.End
-	list.Tight = !containsBlankLine(src[start:list.End])
+	list.Tight = listTight(src, list.Blocks)
 	for _, b := range list.Blocks {
 		b.Tight = list.Tight
 	}
@@ -328,17 +330,33 @@ func (t *itemText) String() string {
 	return t.first
 }
 
-// containsBlankLine reports a whitespace-only line strictly inside s.
-func containsBlankLine(s string) bool {
-	s = strings.TrimRight(s, " \t\n")
-	for at := 0; at < len(s); {
-		ln := nextLine(s, at)
-		if at > 0 && isBlankLine(ln.text) {
-			return true
+// listTight is marked 18.0.11 Tokenizer.list's tight/loose rule. The tokenizer
+// trips on an item whose raw ends with a blank line once a later item is
+// pushed, and on an item whose space token matches `anyLine` (`/\n.*\n/`). The
+// port's text and paragraph tokens keep the newline the reference's space token
+// takes, so a space token after another token is what that test matches.
+func listTight(src string, items []*Block) bool {
+	for index, item := range items {
+		if index < len(items)-1 && endsWithBlankLine(src[item.Start:item.End]) {
+			return false
 		}
-		at = ln.next
+		for tokenIndex, child := range item.Blocks {
+			if child.Kind == BlockSpace && tokenIndex > 0 {
+				return false
+			}
+		}
 	}
-	return false
+	return true
+}
+
+// endsWithBlankLine matches marked's doubleBlankLine `/\n[ \t]*\n[ \t]*$/`.
+func endsWithBlankLine(s string) bool {
+	s = strings.TrimRight(s, " \t")
+	if !strings.HasSuffix(s, "\n") {
+		return false
+	}
+	s = strings.TrimRight(strings.TrimSuffix(s, "\n"), " \t")
+	return strings.HasSuffix(s, "\n")
 }
 
 // markedSpacePrefixLen is the length of marked's space rule match,
