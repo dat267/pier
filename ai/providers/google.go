@@ -28,7 +28,7 @@ func GoogleProvider() *ai.Provider {
 		ID:      "google",
 		Name:    "Google",
 		BaseURL: googleBaseURL,
-		Auth: ai.ProviderAuth{APIKey: ai.EnvApiKeyAuth("Google API key",
+		Auth: ai.ProviderAuth{APIKey: ai.EnvApiKeyAuth("Gemini API key",
 			[]string{"GEMINI_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"})},
 		Models: ai.GetBuiltinModels("google"),
 		Single: googleStreams{},
