@@ -141,3 +141,52 @@ func TestHTMLBlockClosingTokenIsCaseInsensitive(t *testing.T) {
 		t.Fatalf("html raw = %q, want %q", blocks[0].Raw, want)
 	}
 }
+
+// TestHTMLBlockRawTrimsTrailingBlankLines: marked 18.0.11's html tokenizer
+// stores `te(match)`, which drops the trailing blank pieces when two or more
+// follow the last content line, and advances by the trimmed raw's length, so
+// the dropped newlines lex again as a space token. The port kept every
+// newline in the raw: `<!-- c -->\n\nx` gave a raw ending in "\n" where the
+// reference's ends at `-->`.
+func TestHTMLBlockRawTrimsTrailingBlankLines(t *testing.T) {
+	for _, testCase := range []struct {
+		src  string
+		raw  string
+		next []BlockKind
+	}{
+		// Type 6: the blank line that ends the block is dropped, so its
+		// newlines become the space token.
+		{"<div>\na\n\nb\n", "<div>\na", []BlockKind{BlockSpace, BlockParagraph}},
+		{"<div>\na\n\t\nb\n", "<div>\na", []BlockKind{BlockSpace, BlockParagraph}},
+		{"<div>\na\n", "<div>\na\n", nil},
+		// Type 2: the comment's `(\n+|$)` tail is trimmed the same way.
+		{"<!-- c -->\n\nx\n", "<!-- c -->", []BlockKind{BlockSpace, BlockParagraph}},
+		{"<!-- c -->\nx\n", "<!-- c -->\n", []BlockKind{BlockParagraph}},
+		{"<!-- c -->\n  \nx\n", "<!-- c -->\n", []BlockKind{BlockSpace, BlockParagraph}},
+		// An unclosed type 1 block runs to the end and trims there too.
+		{"<pre>\nx\n\n", "<pre>\nx", []BlockKind{BlockSpace}},
+	} {
+		blocks := Lex(testCase.src)
+		if len(blocks) == 0 || blocks[0].Kind != BlockHTML {
+			t.Fatalf("%q: blocks = %v, want html first", testCase.src, blockKinds(blocks))
+		}
+		if blocks[0].Raw != testCase.raw {
+			t.Errorf("%q: html raw = %q, want %q", testCase.src, blocks[0].Raw, testCase.raw)
+		}
+		if testCase.next == nil {
+			if len(blocks) != 1 {
+				t.Errorf("%q: blocks = %v, want only the html block", testCase.src, blockKinds(blocks))
+			}
+			continue
+		}
+		if got := blockKinds(blocks[1:]); len(got) != len(testCase.next) {
+			t.Errorf("%q: blocks after html = %v, want %v", testCase.src, got, testCase.next)
+			continue
+		}
+		for index, want := range testCase.next {
+			if got := blockKinds(blocks[1:])[index]; got != want {
+				t.Errorf("%q: block %d after html = %v, want %v", testCase.src, index, got, want)
+			}
+		}
+	}
+}

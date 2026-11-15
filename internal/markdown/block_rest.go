@@ -402,28 +402,59 @@ func setextLevel(line string) (int, bool) {
 
 func (l *blockLexer) lexHTML(start int) (*Block, int) {
 	src := l.src
+	end := len(src)
 	if closer := htmlBlockCloser(nextLine(src, start).text); closer != "" {
 		// Types 1-5 end at their own closing token, which takes the rest of
 		// its line with it; an unclosed block runs to the end of the source.
-		end := len(src)
 		if index := closingTokenIndex(src, closer, start); index >= 0 {
 			end = nextLine(src, index).next
+			// The rule's tail is `\n*` (type 1) or `(\n+|$)` (types 2-5), so
+			// the empty lines after the closer belong to the match.
+			for end < len(src) && src[end] == '\n' {
+				end++
+			}
 		}
-		return &Block{Kind: BlockHTML, Start: start, End: end, Raw: src[start:end]}, end
-	}
-	at := start
-	for at < len(src) {
-		ln := nextLine(src, at)
-		// The html rule ends types 6 and 7 at `(?:\n[ \t]*)+\n|$` (marked
-		// 18.0.11): a blank line ends the block only when a newline follows
-		// it, so a whitespace-only last line stays in it, and
-		// trimTrailingBlankLines keeps that one line.
-		if isBlankLine(ln.text) && at > start && at+len(ln.text) < len(src) {
-			break
+	} else {
+		end = start
+		for end < len(src) {
+			ln := nextLine(src, end)
+			// The html rule ends types 6 and 7 at `(?:\n[ \t]*)+\n|$` (marked
+			// 18.0.11): a blank line ends the block only when a newline
+			// follows it, so a whitespace-only last line stays in it.
+			if isBlankLine(ln.text) && end > start && end+len(ln.text) < len(src) {
+				break
+			}
+			end = ln.next
 		}
-		at = ln.next
+		// The terminator's blank run is part of the match.
+		for end < len(src) {
+			ln := nextLine(src, end)
+			if !isBlankLine(ln.text) {
+				break
+			}
+			end = ln.next
+		}
 	}
-	return &Block{Kind: BlockHTML, Start: start, End: at, Raw: src[start:at]}, at
+	// The html tokenizer trims the match's trailing blank lines and advances
+	// by the trimmed raw's length (marked 18.0.11 Tokenizer.html and its
+	// `te` helper), so those newlines lex again as a space token. Without the
+	// trim the token text kept a newline the reference's does not.
+	raw := trimTrailingBlankLines(src[start:end])
+	return &Block{Kind: BlockHTML, Start: start, End: start + len(raw), Raw: raw}, start + len(raw)
+}
+
+// trimTrailingBlankLines is marked's `te`: a raw whose last content line is
+// followed by two or more blank pieces loses all of them; one blank piece stays.
+func trimTrailingBlankLines(raw string) string {
+	parts := strings.Split(raw, "\n")
+	last := len(parts) - 1
+	for last >= 0 && isBlankLine(parts[last]) {
+		last--
+	}
+	if len(parts)-last <= 2 {
+		return raw
+	}
+	return strings.Join(parts[:last+1], "\n")
 }
 
 // htmlBlockCloser returns the token that ends a CommonMark HTML block of types

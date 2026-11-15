@@ -127,14 +127,9 @@ func projectBlock(b *Block) any {
 			m["rows"] = rows
 		}
 	case BlockHTML:
-		// marked's comment branch leaves the newline after `-->` out of the token
-		// (its raw ends at the comment), while other HTML blocks keep it. The
-		// renderer trims either way, so the projection matches marked's text.
-		text := b.Raw
-		if strings.HasPrefix(strings.TrimLeft(text, " \t"), "<!--") {
-			text = strings.TrimRight(text, "\n")
-		}
-		m["text"] = text
+		// marked's html tokenizer trims the match's trailing blank lines, so
+		// lexHTML already produces the token text here (block_rest.go).
+		m["text"] = b.Raw
 	case BlockLatex:
 		m["raw"] = b.Raw
 		m["text"] = b.Text
