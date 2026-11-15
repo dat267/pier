@@ -309,19 +309,6 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 			initialActiveToolNames = append(initialActiveToolNames, ToolName(name))
 		}
 	}
-	if len(options.ExcludeTools) > 0 {
-		excluded := map[ToolName]bool{}
-		for _, name := range options.ExcludeTools {
-			excluded[name] = true
-		}
-		filtered := make([]ToolName, 0, len(initialActiveToolNames))
-		for _, name := range initialActiveToolNames {
-			if !excluded[name] {
-				filtered = append(filtered, name)
-			}
-		}
-		initialActiveToolNames = filtered
-	}
 
 	// The registry holds every built-in tool (upstream createAllToolDefinitions);
 	// the active selection is filtered by name.
