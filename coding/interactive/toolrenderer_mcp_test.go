@@ -8,6 +8,7 @@ import (
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/mcp/protocol"
+	"github.com/dat267/pier/tui"
 )
 
 // Reference: pi v1.5.0 (f9a26365) extensions/mcp/tools.ts createMcpToolRenderers
@@ -356,5 +357,25 @@ func TestMcpResultExpansionKeepsThePreviewInPlace(t *testing.T) {
 		if expanded[index] != collapsed[index] {
 			t.Errorf("row %d moved: collapsed %q, expanded %q", index, collapsed[index], expanded[index])
 		}
+	}
+}
+
+// Reference: pi v1.5.2 VisualLinePreview truncates the expand hint with
+// truncateToWidth(hint, width, "..."), so a narrow frame keeps the hint on one
+// line instead of overflowing.
+func TestMcpToolHintTruncatesToTheFrameWidth(t *testing.T) {
+	theme := newRendererTestTheme(t)
+	lines := make([]string, 40)
+	for index := range lines {
+		lines[index] = "line " + itoa(index)
+	}
+	const width = 24
+	rendered := renderMcpResultAt(t, textResult(strings.Join(lines, "\n")), false, theme, width)
+	hint := rendered[len(rendered)-1]
+	if got := tui.VisibleWidth(hint); got > width {
+		t.Fatalf("hint = %q (%d columns), want at most %d", hint, got, width)
+	}
+	if !strings.HasSuffix(hint, "...") {
+		t.Fatalf("hint = %q, want a trailing ellipsis", hint)
 	}
 }

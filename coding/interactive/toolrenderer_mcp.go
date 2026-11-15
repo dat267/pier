@@ -218,8 +218,11 @@ func (c *mcpResultComponent) Render(width int) []string {
 	if !c.expanded && len(visual) > mcpOutputPreviewLines {
 		lines = make([]string, 0, mcpOutputPreviewLines+1)
 		lines = append(lines, visual[:mcpOutputPreviewLines]...)
-		lines = append(lines, c.theme.Fg("muted", "... ("+itoa(len(visual)-mcpOutputPreviewLines)+" more lines,")+
-			" "+KeyHint("app.tools.expand", "to expand")+c.theme.Fg("muted", ")"))
+		// The reference truncates the hint to the frame width, so a narrow
+		// terminal keeps it on one line instead of overflowing.
+		hint := c.theme.Fg("muted", "... ("+itoa(len(visual)-mcpOutputPreviewLines)+" more lines,") +
+			" " + KeyHint("app.tools.expand", "to expand") + c.theme.Fg("muted", ")")
+		lines = append(lines, tui.TruncateToWidth(hint, width, "...", false))
 	}
 	c.cachedWidth, c.cachedExpand, c.cachedLines, c.hasCache = width, c.expanded, lines, true
 	return lines
