@@ -1,0 +1,1026 @@
+[
+ {
+  "argv": [],
+  "result": {}
+ },
+ {
+  "argv": [
+   "hi"
+  ],
+  "result": {
+   "messages": [
+    "hi"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "@file.txt"
+  ],
+  "result": {
+   "fileArgs": [
+    "file.txt"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "hi",
+   "@a",
+   "there"
+  ],
+  "result": {
+   "messages": [
+    "hi",
+    "there"
+   ],
+   "fileArgs": [
+    "a"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--"
+  ],
+  "result": {}
+ },
+ {
+  "argv": [
+   "--",
+   "hi"
+  ],
+  "result": {
+   "messages": [
+    "hi"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--",
+   "--model",
+   "x"
+  ],
+  "result": {
+   "messages": [
+    "--model",
+    "x"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--",
+   "@a"
+  ],
+  "result": {
+   "fileArgs": [
+    "a"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--help"
+  ],
+  "result": {
+   "help": true
+  }
+ },
+ {
+  "argv": [
+   "-h"
+  ],
+  "result": {
+   "help": true
+  }
+ },
+ {
+  "argv": [
+   "--version"
+  ],
+  "result": {
+   "version": true
+  }
+ },
+ {
+  "argv": [
+   "-v"
+  ],
+  "result": {
+   "version": true
+  }
+ },
+ {
+  "argv": [
+   "--mode",
+   "text"
+  ],
+  "result": {
+   "mode": "text"
+  }
+ },
+ {
+  "argv": [
+   "--mode",
+   "json"
+  ],
+  "result": {
+   "mode": "json"
+  }
+ },
+ {
+  "argv": [
+   "--mode",
+   "rpc"
+  ],
+  "result": {
+   "mode": "rpc"
+  }
+ },
+ {
+  "argv": [
+   "--mode",
+   "xml"
+  ],
+  "result": {
+   "diagnostics": [
+    "error:Invalid mode \"xml\". Valid values: text, json, rpc"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--mode"
+  ],
+  "result": {
+   "diagnostics": [
+    "error:--mode requires text, json, or rpc"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--mode",
+   "-c"
+  ],
+  "result": {
+   "continue": true,
+   "diagnostics": [
+    "error:--mode requires text, json, or rpc"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--continue"
+  ],
+  "result": {
+   "continue": true
+  }
+ },
+ {
+  "argv": [
+   "-c"
+  ],
+  "result": {
+   "continue": true
+  }
+ },
+ {
+  "argv": [
+   "--resume"
+  ],
+  "result": {
+   "resume": true
+  }
+ },
+ {
+  "argv": [
+   "-r"
+  ],
+  "result": {
+   "resume": true
+  }
+ },
+ {
+  "argv": [
+   "--provider",
+   "p"
+  ],
+  "result": {
+   "provider": "p"
+  }
+ },
+ {
+  "argv": [
+   "--provider"
+  ],
+  "result": {
+   "unknownFlags": {
+    "provider": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--provider",
+   "-x"
+  ],
+  "result": {
+   "provider": "-x"
+  }
+ },
+ {
+  "argv": [
+   "--provider",
+   "@f"
+  ],
+  "result": {
+   "provider": "@f"
+  }
+ },
+ {
+  "argv": [
+   "--model",
+   "m"
+  ],
+  "result": {
+   "model": "m"
+  }
+ },
+ {
+  "argv": [
+   "--model"
+  ],
+  "result": {
+   "unknownFlags": {
+    "model": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--model",
+   "@f"
+  ],
+  "result": {
+   "model": "@f"
+  }
+ },
+ {
+  "argv": [
+   "--api-key",
+   "k"
+  ],
+  "result": {
+   "apiKey": "k"
+  }
+ },
+ {
+  "argv": [
+   "--api-key"
+  ],
+  "result": {
+   "unknownFlags": {
+    "api-key": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--system-prompt",
+   "s"
+  ],
+  "result": {
+   "systemPrompt": "s"
+  }
+ },
+ {
+  "argv": [
+   "--system-prompt"
+  ],
+  "result": {
+   "unknownFlags": {
+    "system-prompt": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--append-system-prompt",
+   "a"
+  ],
+  "result": {
+   "appendSystemPrompt": [
+    "a"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--append-system-prompt",
+   "a",
+   "--append-system-prompt",
+   "b"
+  ],
+  "result": {
+   "appendSystemPrompt": [
+    "a",
+    "b"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--append-system-prompt"
+  ],
+  "result": {
+   "unknownFlags": {
+    "append-system-prompt": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--name",
+   "n"
+  ],
+  "result": {
+   "name": "n"
+  }
+ },
+ {
+  "argv": [
+   "-n",
+   "n"
+  ],
+  "result": {
+   "name": "n"
+  }
+ },
+ {
+  "argv": [
+   "--name"
+  ],
+  "result": {
+   "diagnostics": [
+    "error:--name requires a value"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--no-session"
+  ],
+  "result": {
+   "noSession": true
+  }
+ },
+ {
+  "argv": [
+   "--session",
+   "s"
+  ],
+  "result": {
+   "session": "s"
+  }
+ },
+ {
+  "argv": [
+   "--session"
+  ],
+  "result": {
+   "unknownFlags": {
+    "session": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--session-id",
+   "i"
+  ],
+  "result": {
+   "sessionId": "i"
+  }
+ },
+ {
+  "argv": [
+   "--session-id"
+  ],
+  "result": {
+   "unknownFlags": {
+    "session-id": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--fork",
+   "f"
+  ],
+  "result": {
+   "fork": "f"
+  }
+ },
+ {
+  "argv": [
+   "--fork"
+  ],
+  "result": {
+   "unknownFlags": {
+    "fork": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--session-dir",
+   "d"
+  ],
+  "result": {
+   "sessionDir": "d"
+  }
+ },
+ {
+  "argv": [
+   "--session-dir"
+  ],
+  "result": {
+   "unknownFlags": {
+    "session-dir": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--models",
+   "a,b"
+  ],
+  "result": {
+   "models": [
+    "a",
+    "b"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--models",
+   "a,,b,"
+  ],
+  "result": {
+   "models": [
+    "a",
+    "b"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--models",
+   "-x"
+  ],
+  "result": {
+   "models": [
+    "-x"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--models",
+   "---x"
+  ],
+  "result": {
+   "models": [
+    "---x"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--models",
+   "@f"
+  ],
+  "result": {
+   "models": [
+    "@f"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--models"
+  ],
+  "result": {
+   "unknownFlags": {
+    "models": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "-nt"
+  ],
+  "result": {
+   "noTools": true
+  }
+ },
+ {
+  "argv": [
+   "-nbt"
+  ],
+  "result": {
+   "noBuiltinTools": true
+  }
+ },
+ {
+  "argv": [
+   "-t",
+   "a,b"
+  ],
+  "result": {
+   "tools": [
+    "a",
+    "b"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "-t"
+  ],
+  "result": {
+   "diagnostics": [
+    "error:Unknown option: -t"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "-xt",
+   "a"
+  ],
+  "result": {
+   "excludeTools": [
+    "a"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "-xt"
+  ],
+  "result": {
+   "diagnostics": [
+    "error:Unknown option: -xt"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--thinking",
+   "high"
+  ],
+  "result": {
+   "thinking": "high"
+  }
+ },
+ {
+  "argv": [
+   "--thinking",
+   "bogus"
+  ],
+  "result": {
+   "diagnostics": [
+    "warning:Invalid thinking level \"bogus\". Valid values: off, minimal, low, medium, high, xhigh, max"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--thinking"
+  ],
+  "result": {
+   "unknownFlags": {
+    "thinking": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "-p"
+  ],
+  "result": {
+   "print": true
+  }
+ },
+ {
+  "argv": [
+   "--export",
+   "f"
+  ],
+  "result": {
+   "export": "f"
+  }
+ },
+ {
+  "argv": [
+   "--export"
+  ],
+  "result": {
+   "unknownFlags": {
+    "export": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "-e",
+   "x"
+  ],
+  "result": {
+   "extensions": [
+    "x"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "-ne"
+  ],
+  "result": {
+   "noExtensions": true
+  }
+ },
+ {
+  "argv": [
+   "--no-mcp"
+  ],
+  "result": {
+   "noMcp": true
+  }
+ },
+ {
+  "argv": [
+   "--skill",
+   "s"
+  ],
+  "result": {
+   "skills": [
+    "s"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--prompt-template",
+   "p"
+  ],
+  "result": {
+   "promptTemplates": [
+    "p"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--theme",
+   "t"
+  ],
+  "result": {
+   "themes": [
+    "t"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--use-theme",
+   "u"
+  ],
+  "result": {
+   "useTheme": "u"
+  }
+ },
+ {
+  "argv": [
+   "--use-theme"
+  ],
+  "result": {
+   "diagnostics": [
+    "error:--use-theme requires a theme name"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "-ns"
+  ],
+  "result": {
+   "noSkills": true
+  }
+ },
+ {
+  "argv": [
+   "-np"
+  ],
+  "result": {
+   "noPromptTemplates": true
+  }
+ },
+ {
+  "argv": [
+   "--no-themes"
+  ],
+  "result": {
+   "noThemes": true
+  }
+ },
+ {
+  "argv": [
+   "-nc"
+  ],
+  "result": {
+   "noContextFiles": true
+  }
+ },
+ {
+  "argv": [
+   "--list-models"
+  ],
+  "result": {
+   "listModels": true
+  }
+ },
+ {
+  "argv": [
+   "--list-models",
+   "all"
+  ],
+  "result": {
+   "listModels": "all"
+  }
+ },
+ {
+  "argv": [
+   "--list-models",
+   "@f"
+  ],
+  "result": {
+   "fileArgs": [
+    "f"
+   ],
+   "listModels": true
+  }
+ },
+ {
+  "argv": [
+   "--list-models",
+   "-x"
+  ],
+  "result": {
+   "listModels": true,
+   "diagnostics": [
+    "error:Unknown option: -x"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--tui-mode",
+   "fullscreen"
+  ],
+  "result": {
+   "tuiMode": "fullscreen"
+  }
+ },
+ {
+  "argv": [
+   "--tui-mode"
+  ],
+  "result": {
+   "diagnostics": [
+    "error:--tui-mode requires regular or fullscreen"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--tui-mode",
+   "-x"
+  ],
+  "result": {
+   "diagnostics": [
+    "error:--tui-mode requires regular or fullscreen",
+    "error:Unknown option: -x"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--verbose"
+  ],
+  "result": {
+   "verbose": true
+  }
+ },
+ {
+  "argv": [
+   "-a"
+  ],
+  "result": {
+   "projectTrustOverride": true
+  }
+ },
+ {
+  "argv": [
+   "-na"
+  ],
+  "result": {
+   "projectTrustOverride": false
+  }
+ },
+ {
+  "argv": [
+   "--offline"
+  ],
+  "result": {
+   "offline": true
+  }
+ },
+ {
+  "argv": [
+   "--foo"
+  ],
+  "result": {
+   "unknownFlags": {
+    "foo": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--foo",
+   "bar"
+  ],
+  "result": {
+   "unknownFlags": {
+    "foo": "bar"
+   }
+  }
+ },
+ {
+  "argv": [
+   "--foo",
+   "-x"
+  ],
+  "result": {
+   "unknownFlags": {
+    "foo": true
+   },
+   "diagnostics": [
+    "error:Unknown option: -x"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "--foo",
+   "@f"
+  ],
+  "result": {
+   "fileArgs": [
+    "f"
+   ],
+   "unknownFlags": {
+    "foo": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--foo=bar"
+  ],
+  "result": {
+   "unknownFlags": {
+    "foo": "bar"
+   }
+  }
+ },
+ {
+  "argv": [
+   "--foo="
+  ],
+  "result": {
+   "unknownFlags": {
+    "foo": ""
+   }
+  }
+ },
+ {
+  "argv": [
+   "-x"
+  ],
+  "result": {
+   "diagnostics": [
+    "error:Unknown option: -x"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "-xyz"
+  ],
+  "result": {
+   "diagnostics": [
+    "error:Unknown option: -xyz"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "---x"
+  ],
+  "result": {
+   "unknownFlags": {
+    "-x": true
+   }
+  }
+ },
+ {
+  "argv": [
+   "--foo",
+   "bar",
+   "--baz",
+   "qux"
+  ],
+  "result": {
+   "unknownFlags": {
+    "foo": "bar",
+    "baz": "qux"
+   }
+  }
+ },
+ {
+  "argv": [
+   "--model",
+   "m",
+   "--provider",
+   "p",
+   "hi",
+   "@f"
+  ],
+  "result": {
+   "provider": "p",
+   "model": "m",
+   "messages": [
+    "hi"
+   ],
+   "fileArgs": [
+    "f"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "-c",
+   "-r"
+  ],
+  "result": {
+   "continue": true,
+   "resume": true
+  }
+ },
+ {
+  "argv": [
+   "--session-id",
+   "i",
+   "--continue"
+  ],
+  "result": {
+   "sessionId": "i",
+   "continue": true
+  }
+ },
+ {
+  "argv": [
+   "--mode",
+   "rpc",
+   "--offline",
+   "--verbose",
+   "prompt"
+  ],
+  "result": {
+   "mode": "rpc",
+   "offline": true,
+   "verbose": true,
+   "messages": [
+    "prompt"
+   ]
+  }
+ }
+]

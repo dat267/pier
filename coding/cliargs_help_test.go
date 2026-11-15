@@ -36,10 +36,10 @@ func TestHelpAdvertisesOnlyImplementedSubcommands(t *testing.T) {
 	}
 }
 
-// -e/--extension and -ne/--no-extensions stay parsed — an -e path must not become
-// the first message to the model — but this build loads no extensions, so -e says
-// so instead of silently doing nothing. --no-extensions asks for less of
-// something that does not exist, so it stays quiet.
+// D472: -e/--extension and -ne/--no-extensions stay parsed — an -e path must
+// not become the first message to the model — but this build loads no
+// extensions, so -e says so instead of silently doing nothing. --no-extensions
+// asks for less of something that does not exist, so it stays quiet.
 func TestExtensionFlagsAreReported(t *testing.T) {
 	parsed := ParseArgs([]string{"-e", "my-extension.ts"})
 	if len(parsed.Extensions) != 1 || parsed.Extensions[0] != "my-extension.ts" {

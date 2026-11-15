@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D471)
+# Deliberate divergences from pi (D1–D472)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7588,3 +7588,22 @@ is that a pasted name holding escapes no longer matches its source exactly, whic
 the editor's row already accepts.
 
 Test: `TestInputPasteCannotEmitTerminalControls`.
+
+### D472
+
+**`-e`/`--extension` is parsed and then reported as ignored, because this build
+loads no extensions.**
+
+Reference: pi v1.5.2 (b4afdddf) `cli/args.ts` `parseArgs` collects `-e`,
+`--extension`, `-ne` and `--no-extensions` into `extensions`/`noExtensions` and
+the session loads the named extensions. Extension mechanics are out of scope in
+`AGENTS.md`, so pier accepts the flags (an `-e` path must never fall through to
+`unknownFlags` and become the first message to the model, and `-ne` asks for
+fewer of something that does not exist, so it stays quiet) and adds one warning
+diagnostic for each `-e` value: `Ignoring -e <value>: this build loads no
+extensions.` A missing `-e` value is an error rather than upstream's
+`unknownFlags` fall-through. The warning is a deliberate difference from the
+reference's silent acceptance, and it is the only diagnostic pier adds during
+parsing.
+
+Test: `TestExtensionFlagsAreReported` and `TestParseArgsMatchesReference`.
