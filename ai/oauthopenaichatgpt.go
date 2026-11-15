@@ -371,13 +371,13 @@ func requestOpenAIChatGPTToken(ctx context.Context, body url.Values) (*openAICha
 // openAIChatGPTCredentialFromToken validates the token response and builds the
 // credential, storing the issued client id and scopes.
 func openAIChatGPTCredentialFromToken(token *openAIChatGPTTokenResponse, clientID string) (*OAuthCredential, error) {
-	if token.AccessToken == "" {
+	if JSTrim(token.AccessToken) == "" {
 		return nil, fmt.Errorf("OpenAI OAuth token response has invalid access_token")
 	}
-	if token.RefreshToken == "" {
+	if JSTrim(token.RefreshToken) == "" {
 		return nil, fmt.Errorf("OpenAI OAuth token response has invalid refresh_token")
 	}
-	if token.Scope == "" {
+	if JSTrim(token.Scope) == "" {
 		return nil, fmt.Errorf("OpenAI OAuth token response has invalid scope")
 	}
 	if !token.HasExpiresInFlag || token.ExpiresIn <= 0 {
@@ -417,7 +417,7 @@ func ExchangeOpenAIChatGPTAuthorizationCode(ctx context.Context, code, verifier,
 	}
 	// Pi does not use the ID token to identify the user, but its presence is
 	// part of the token-response contract.
-	if token.IDToken == "" {
+	if JSTrim(token.IDToken) == "" {
 		return nil, fmt.Errorf("OpenAI OAuth token response did not contain an ID token")
 	}
 	return openAIChatGPTCredentialFromToken(token, clientID)
