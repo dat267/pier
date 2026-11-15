@@ -74,7 +74,7 @@ func (c *radiusLoginMenuComponent) AnimationFrame(time.Time) (bool, time.Duratio
 	if c.disposed || !c.animating {
 		return false, 0
 	}
-	return true, 50 * time.Millisecond
+	return true, brandAnimationFrame
 }
 
 func (c *radiusLoginMenuComponent) Dispose() {
