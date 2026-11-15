@@ -149,9 +149,6 @@ func (w *KeyWiring) HandleEscape(nowMS func() int64) {
 	}
 }
 
-// LastEscapeTimeMS returns the last escape timestamp (test helper).
-func (w *KeyWiring) LastEscapeTimeMS() int64 { return w.lastEscapeTimeMS }
-
 // SubmitSession is the session surface the submit handler needs.
 type SubmitSession interface {
 	IsStreaming() bool

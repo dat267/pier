@@ -227,25 +227,6 @@ func (c *mcpResultComponent) Render(width int) []string {
 
 func (c *mcpResultComponent) Invalidate() { c.hasCache = false }
 
-// TruncateToVisualLinesStart keeps the first maxVisualLines wrapped lines.
-// TruncateToVisualLines keeps the last ones (bash's tail preview).
-func TruncateToVisualLinesStart(text string, maxVisualLines int, width int, paddingX int) VisualTruncateResult {
-	if text == "" {
-		return VisualTruncateResult{}
-	}
-	tempText := tui.NewText(text, paddingX, 0, nil)
-	allVisualLines := tempText.Render(width)
-	if len(allVisualLines) <= maxVisualLines {
-		return VisualTruncateResult{VisualLines: allVisualLines, SkippedCount: 0}
-	}
-	// JS's slice(0, 0) returns nothing, so a zero limit keeps no line while
-	// still reporting how many were hidden (upstream quirk).
-	return VisualTruncateResult{
-		VisualLines:  allVisualLines[:maxVisualLines],
-		SkippedCount: len(allVisualLines) - maxVisualLines,
-	}
-}
-
 // mcpFullOutputPath reads the saved full-output path from an MCP result's
 // details ({server, tool, fullOutputPath}).
 func mcpFullOutputPath(result *SortToolResultContent) string {

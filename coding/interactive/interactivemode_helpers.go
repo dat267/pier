@@ -198,8 +198,6 @@ type AutocompleteWiring struct {
 
 	// skillCommands maps command names to skill paths.
 	skillCommands map[string]string
-	// wrappers wrap the base provider (extension autocomplete factories).
-	wrappers []func(tui.AutocompleteProvider) tui.AutocompleteProvider
 	// provider is the installed provider.
 	provider tui.AutocompleteProvider
 }
@@ -513,34 +511,11 @@ func modelCompletionToAutocompleteItem(item modelCompletionItem) tui.Autocomplet
 	return tui.AutocompleteItem{Value: item.label, Label: item.id, Description: item.provider}
 }
 
-// SetAutocompleteWrappers installs the provider wrappers.
-func (w *AutocompleteWiring) SetAutocompleteWrappers(wrappers []func(tui.AutocompleteProvider) tui.AutocompleteProvider) {
-	w.wrappers = wrappers
-}
-
-// SetupAutocompleteProvider builds and installs the provider.
+// SetupAutocompleteProvider builds and installs the provider. Upstream wraps it
+// with the extension-provided autocomplete wrappers; extensions are out of scope
+// (D41), so there is no wrapper list to apply.
 func (w *AutocompleteWiring) SetupAutocompleteProvider() {
 	provider := w.CreateBaseAutocompleteProvider()
-	triggerCharacters := []string{}
-	for _, wrapper := range w.wrappers {
-		provider = wrapper(provider)
-		if extended, ok := provider.(interface{ TriggerCharacters() []string }); ok {
-			triggerCharacters = append(triggerCharacters, extended.TriggerCharacters()...)
-		}
-	}
-	if len(triggerCharacters) > 0 {
-		unique := make([]string, 0, len(triggerCharacters))
-		seen := map[string]bool{}
-		for _, character := range triggerCharacters {
-			if !seen[character] {
-				seen[character] = true
-				unique = append(unique, character)
-			}
-		}
-		if configurable, ok := provider.(interface{ SetTriggerCharacters([]string) }); ok {
-			configurable.SetTriggerCharacters(unique)
-		}
-	}
 
 	w.provider = provider
 	if w.DefaultEditor != nil {
