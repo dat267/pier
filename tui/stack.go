@@ -133,18 +133,6 @@ func VisibleStackEntries(entries []StackLayoutEntry, viewport LayoutViewport) []
 	return result
 }
 
-// visibleStackEntryList filters the Stack's entries.
-func visibleStackEntryList(entries []StackLayoutEntry, viewport LayoutViewport) []StackLayoutEntry {
-	result := make([]StackEntry, 0, len(entries))
-	for _, entry := range entries {
-		if entry.Visible != nil && !entry.Visible(viewport) {
-			continue
-		}
-		result = append(result, entry)
-	}
-	return result
-}
-
 func clampStackSize(size int, entry StackLayoutEntry) int {
 	minSize := max(entry.MinSize, 0)
 	maxSize := max(entry.MaxSize, minSize)
@@ -262,7 +250,7 @@ func NewVStack(children []Component, options StackOptions) *VStack {
 // Render renders the children with the allocated heights and gaps.
 func (v *VStack) Render(width int) []string {
 	viewport := LayoutViewport{Width: max(1, width), Height: math.MaxInt}
-	entries := visibleStackEntryList(v.Entries, viewport)
+	entries := VisibleStackEntries(v.Entries, viewport)
 	rendered := make([][]string, len(entries))
 	for index, entry := range entries {
 		rendered[index] = entry.Component.Render(viewport.Width)
@@ -306,7 +294,7 @@ func NewHStack(children []Component, options StackOptions) *HStack {
 func (h *HStack) Render(width int) []string {
 	safeWidth := max(1, width)
 	viewport := LayoutViewport{Width: safeWidth, Height: math.MaxInt}
-	entries := visibleStackEntryList(h.Entries, viewport)
+	entries := VisibleStackEntries(h.Entries, viewport)
 	if len(entries) == 0 {
 		return []string{}
 	}
