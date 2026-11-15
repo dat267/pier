@@ -23,7 +23,6 @@ const (
 	OpenAIChatGPTDynamicClientID  = "dynamic_agent_client"
 	OpenAIChatGPTAgentNameHint    = "Pi"
 	OpenAIChatGPTAuthorizeURL     = "https://auth.openai.com/api/accounts/authorize"
-	OpenAIChatGPTTokenURL         = "https://auth.openai.com/api/accounts/oauth/token"
 	OpenAIChatGPTResource         = "https://api.openai.com/v1"
 	OpenAIChatGPTCallbackPort     = 1455
 	OpenAIChatGPTCallbackPath     = "/auth/callback"
@@ -34,6 +33,10 @@ const (
 	OpenAIChatGPTDirectTokenScope = "chatgpt.tokens.use.direct"
 	OpenAIChatGPTScope            = "openid profile email offline_access resource.invoke " + OpenAIChatGPTDirectTokenScope
 )
+
+// OpenAIChatGPTTokenURL is the token endpoint; a variable so tests can point it
+// at a local server (upstream keeps the constant and mocks fetch).
+var OpenAIChatGPTTokenURL = "https://auth.openai.com/api/accounts/oauth/token"
 
 // OpenAIChatGPTUsageURL is where a subscription-limit error points
 // (upstream CHATGPT_USAGE_URL).
@@ -477,10 +480,16 @@ func LoginOpenAIChatGPT(interaction *AuthInteraction) (*OAuthCredential, error) 
 		result OpenAIChatGPTAuthorizationResult
 		err    error
 	}
+	// The manual prompt races the callback and is cancelled when the login ends,
+	// as upstream aborts it in finally: otherwise a browser login leaves the
+	// prompt (and its goroutine) waiting forever.
+	manualCtx, cancelManual := context.WithCancel(ctx)
+	defer cancelManual()
 	manualCh := make(chan manualResult, 1)
 	go func() {
 		input, perr := interaction.Prompt(AuthPrompt{
 			Type:        AuthPromptManualCode,
+			Ctx:         manualCtx,
 			Message:     "Complete login in your browser, or paste the final redirect URL here:",
 			Placeholder: OpenAIChatGPTRedirectURI(),
 		})
