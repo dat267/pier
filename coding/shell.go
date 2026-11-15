@@ -137,11 +137,20 @@ func firstOutputLine(output []byte) string {
 	return strings.Split(trimmed, "\n")[0]
 }
 
+// shellLookupCommand builds the PATH lookup command (where on Windows) and keeps
+// its console window hidden, like the reference's `windowsHide: true` spawnSync
+// (utils/shell.ts). GetShellConfig runs it once per shell command.
+func shellLookupCommand(ctx context.Context, tool, executable string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, tool, executable)
+	hideHelperWindow(cmd)
+	return cmd
+}
+
 func findExecutableOnPath(executable string) string {
 	ctx, cancel := context.WithTimeout(context.Background(), shellLookupTimeout)
 	defer cancel()
 	if runtime.GOOS == "windows" {
-		output, err := exec.CommandContext(ctx, "where", executable).Output()
+		output, err := shellLookupCommand(ctx, "where", executable).Output()
 		if err != nil {
 			return ""
 		}
@@ -155,7 +164,7 @@ func findExecutableOnPath(executable string) string {
 		}
 		return ""
 	}
-	output, err := exec.CommandContext(ctx, "which", executable).Output()
+	output, err := shellLookupCommand(ctx, "which", executable).Output()
 	if err != nil {
 		return ""
 	}

@@ -21,6 +21,13 @@
 - Evidence: read of both files; the reference option list contains `windowsHide: true`, while `grep HideWindow` finds only `mcp/processgroup_windows.go`, which sets `cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}` for the same reason.
 - Repair plan: add a build-tagged `hideConfigCommandWindow(cmd *exec.Cmd)` beside the existing platform files, set `HideWindow` on Windows in that path only (the default-shell path mirrors `execSync`, which does not pass the option), and pin it with a Windows-tagged test like `mcp/processgroup_windows_test.go`. It is not run locally because the test can only execute on Windows.
 
+## The shell environment omits the reference's agent bin-dir PATH entry
+
+- Severity: low. Visible only when something places an executable in `<agentDir>/bin` and a bash command calls it by bare name; pier itself writes nothing there, and the package manager that populates it upstream is out of scope (D41).
+- Failure: `shellEnv` (`coding/tools_bash.go`) ports `getShellEnv`'s env copy and the `PI_*` filtering but not its PATH edit. Upstream prepends `getBinDir()`, `<agentDir>/bin`, when the current PATH (under whichever key spells it, `Path` on Windows) lacks that directory, so a command can invoke a tool installed there by name. Pier passes PATH through unchanged.
+- Evidence: read of both. `getShellEnv` and `getBinDir` are in `pi/packages/coding-agent/src/config.ts` and `utils/shell.ts`; `grep -rn GetBinDir` finds nothing in the port and no code creates `<agentDir>/bin`.
+- Repair plan: thread the session's agent dir into `shellEnv`, compute the bin dir once, find the PATH entry case-insensitively (upstream keeps the existing key's spelling), prepend the bin dir when absent, and pin the three spellings with a table test. The plumbing from `AgentSession` to the bash tool options is what keeps it out of a small change.
+
 ## The keybinding manager's introspection API differs in shape and order
 
 - Severity: low. Nothing in the tree serializes the result: `AppKeybindingsManager.GetEffectiveConfig` forwards `GetResolvedBindings` and only tests read it, and `GetConflicts` feeds an on-screen conflict warning whose order carries no meaning.
