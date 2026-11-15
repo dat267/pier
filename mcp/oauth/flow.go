@@ -259,6 +259,11 @@ func StartAuthorization(authorizationServerURL string, options StartAuthorizatio
 	if err != nil {
 		return nil, err
 	}
+	// Callers open this URL with the platform URL handler, which also launches
+	// files and custom protocols (upstream isHttpUrl).
+	if scheme := strings.ToLower(parsed.Scheme); scheme != "http" && scheme != "https" {
+		return nil, fmt.Errorf("Invalid authorization endpoint %s", parsed.String())
+	}
 	// URLSearchParams keeps the endpoint's query entries in place and appends
 	// new names in assignment order; url.Values would sort and escape
 	// differently.

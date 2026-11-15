@@ -198,3 +198,50 @@ func TestOAuthTokenRequestMatchesUpstream(t *testing.T) {
 }
 
 var _ = fmt.Sprintf
+
+// pi v1.5.2 (9ffd27cf) packages/mcp/src/oauth/flow.ts startAuthorization
+// rejects an authorization endpoint that is not http(s): callers open the URL
+// with the platform handler, which also launches files and custom protocols.
+// parseAuthorizationServerMetadata already filters those endpoints, but the
+// exported StartAuthorization also takes hand-built metadata.
+func TestStartAuthorizationRejectsNonHTTPEndpoint(t *testing.T) {
+	for _, endpoint := range []string{"file://attacker.example/share/x.exe", "search-ms:query=x", "ms-msdt:/id"} {
+		t.Run(endpoint, func(t *testing.T) {
+			metadata := &AuthorizationServerMetadata{
+				Issuer:                 "https://auth.example.com",
+				AuthorizationEndpoint:  endpoint,
+				TokenEndpoint:          "https://auth.example.com/token",
+				ResponseTypesSupported: []string{"code"},
+			}
+			_, err := StartAuthorization("https://auth.example.com", StartAuthorizationOptions{
+				Metadata:          metadata,
+				ClientInformation: &OAuthClientInformation{ClientID: "client"},
+				RedirectURL:       "http://127.0.0.1:33418/callback",
+			})
+			if err == nil {
+				t.Fatalf("StartAuthorization accepted %q", endpoint)
+			}
+			if !strings.Contains(err.Error(), "Invalid authorization endpoint") {
+				t.Fatalf("error = %v, want an invalid authorization endpoint error", err)
+			}
+		})
+	}
+	// Control: plain HTTP is allowed, as upstream's isHttpUrl accepts it.
+	metadata := &AuthorizationServerMetadata{
+		Issuer:                 "https://auth.example.com",
+		AuthorizationEndpoint:  "http://auth.example.com/authorize",
+		TokenEndpoint:          "https://auth.example.com/token",
+		ResponseTypesSupported: []string{"code"},
+	}
+	draft, err := StartAuthorization("https://auth.example.com", StartAuthorizationOptions{
+		Metadata:          metadata,
+		ClientInformation: &OAuthClientInformation{ClientID: "client"},
+		RedirectURL:       "http://127.0.0.1:33418/callback",
+	})
+	if err != nil {
+		t.Fatalf("http endpoint rejected: %v", err)
+	}
+	if !strings.HasPrefix(draft.AuthorizationURL, "http://auth.example.com/authorize?") {
+		t.Fatalf("authorization URL = %q", draft.AuthorizationURL)
+	}
+}
