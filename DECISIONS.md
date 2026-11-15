@@ -6371,10 +6371,9 @@ reachable from the tool path, but a panicking helper reached from rendering is
 not a contract worth keeping.
 
 `truncateTail` had the same class of gap on the other side of the window: it
-pre-sized its slice with `make([]string, 0, min(maxLines, totalLines))` (in both
-`TruncateTail` and `TruncateTailLines`) and panicked with `makeslice: cap out of
-range` for a negative `maxLines`, where the reference's loop condition simply
-never holds. Its partial-line branch then reached
+pre-sized its slice with `make([]string, 0, min(maxLines, totalLines))` and
+panicked with `makeslice: cap out of range` for a negative `maxLines`, where the
+reference's loop condition simply never holds. Its partial-line branch then reached
 `truncateStringToBytesFromEnd` with a negative length, which sliced out of
 range, where `Buffer.prototype.slice` clamps and returns "". A negative
 `maxLines` or `maxBytes` now returns the reference's defined empty window.
