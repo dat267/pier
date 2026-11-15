@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -1835,13 +1836,11 @@ func contentTextOf(content ai.ContentList) string {
 // sortStrings orders strings by UTF-16 code units (JavaScript's default string
 // ordering, upstream computeFileLists' Array.prototype.sort). The surrogate
 // range sits below the last BMP scalars, so a supplementary scalar sorts
-// before scalars like U+E000, unlike Go's UTF-8 byte comparison.
+// before scalars like U+E000, unlike Go's UTF-8 byte comparison. D473: the
+// reference sorts in O(n log n); an insertion sort here cost 78 ms per
+// compaction on a session with 6,667 tracked paths, against Node's 2 ms.
 func sortStrings(list []string) {
-	for i := 1; i < len(list); i++ {
-		for j := i; j > 0 && compareUTF16(list[j], list[j-1]) < 0; j-- {
-			list[j], list[j-1] = list[j-1], list[j]
-		}
-	}
+	sort.Slice(list, func(i, j int) bool { return compareUTF16(list[i], list[j]) < 0 })
 }
 
 // compareUTF16 compares two strings by their UTF-16 code-unit sequences.

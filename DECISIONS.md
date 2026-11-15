@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D472)
+# Deliberate divergences from pi (D1–D473)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7606,3 +7606,27 @@ reference's silent acceptance, and it is the only diagnostic pier adds during
 parsing.
 
 Test: `TestExtensionFlagsAreReported` and `TestParseArgsMatchesReference`.
+
+### D473
+
+**The compaction summary sorts its file lists with a comparison sort.**
+
+Reference: pi v1.5.2 (b4afdddf) `core/compaction/compaction.ts`
+`computeFileLists` orders the read-only and modified paths with
+`Array.prototype.sort`, and V8's sort is O(n log n). The port's `sortStrings`
+was an insertion sort, which is O(n²) on the thousands of paths a long session
+tracks. D379 caps the lists a summary prints, but the cap runs after the sort,
+so every compaction and branch summary paid for the full list.
+
+Measured on the same workload (5,000 distinct paths, a third of them edited,
+6,667 entries after the modified set grows): `CapFileLists` took 78.3 ms per
+finalize before the change, against 2.0 ms for the reference's
+`Array.prototype.sort` on the same strings in Node. After replacing the
+insertion sort with `sort.Slice` and the same `compareUTF16` comparator the
+finalize takes 3.4 ms, including the set building and capping the benchmark
+also measures. The output order is unchanged and pinned by
+`TestCompareUTF16MatchesEncodedUnits` (supplementary scalar before U+E000,
+prefixes, NULs, mixed scripts); the benchmark is
+`BenchmarkCapFileListsLongSession`.
+
+Test: `BenchmarkCapFileListsLongSession`.
