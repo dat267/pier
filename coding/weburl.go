@@ -5,10 +5,17 @@ import (
 	"strings"
 )
 
-// WebURL normalizes an http(s) URL the way the reference's webUrl does
-// (`new URL(value).href`): the empty path becomes "/", so the displayed and
-// linked forms match. A non-web value reports false (pi v1.5.2
-// utils/web-url.ts; the login dialog had the same helper locally).
+// WebURL reports the http(s) URL value names, normalized for display and for a
+// terminal hyperlink (pi v1.5.2 utils/web-url.ts webUrl; the login dialog had
+// the same helper locally). The empty path becomes "/", so the displayed and
+// linked forms match.
+//
+// This is a display normalizer, not a WHATWG URL parser: a value with no host
+// is rejected (`http:example.com` links in the reference), and the host keeps
+// its case and its Unicode spelling where the reference lowercases it and
+// converts it to punycode. Every accepted value is a real http(s) URL, so a
+// link still reaches the same site; only its bytes can differ from the
+// reference's `href`.
 func WebURL(value string) (string, bool) {
 	parsed, err := url.Parse(value)
 	if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") {
