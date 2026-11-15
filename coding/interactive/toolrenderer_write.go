@@ -11,8 +11,12 @@ import (
 const writePartialFullHighlightLines = 50
 
 type writeHighlightCache struct {
-	rawPath          string
-	lang             string
+	rawPath string
+	lang    string
+	// theme is the concrete theme the lines were colored for; ActiveTheme is a
+	// stable live handle (D166), so the concrete pointer is what changes on a
+	// switch, as the reference's CodeHighlighter theme check does.
+	theme            *Theme
 	rawContent       string
 	normalizedLines  []string
 	highlightedLines []string
@@ -36,7 +40,7 @@ func rebuildWriteHighlightCacheFull(rawPath string, hasRawPath bool, fileContent
 	}
 	normalized := replaceTabs(normalizeDisplayText(fileContent))
 	return &writeHighlightCache{
-		rawPath: rawPath, lang: lang, rawContent: fileContent,
+		rawPath: rawPath, lang: lang, theme: CurrentTheme(), rawContent: fileContent,
 		normalizedLines:  strings.Split(normalized, "\n"),
 		highlightedLines: highlightCode(normalized, lang, ActiveTheme()),
 	}
@@ -159,7 +163,7 @@ var writeRenderers = ToolRenderers{
 			// the component's CodeHighlighter memo serve repeated renders, so
 			// an unchanged complete call is highlighted once.
 			if cache := component.cache; context.ArgsComplete && cache != nil &&
-				cache.rawPath == rawPath && cache.rawContent == fileContent {
+				cache.rawPath == rawPath && cache.rawContent == fileContent && cache.theme == CurrentTheme() {
 				// Reuse the highlighting of the same complete content.
 			} else if context.ArgsComplete {
 				component.cache = rebuildWriteHighlightCacheFull(rawPath, hasRawPath, fileContent)

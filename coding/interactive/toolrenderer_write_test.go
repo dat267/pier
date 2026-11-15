@@ -30,6 +30,26 @@ func TestWriteCallReusesTheHighlightCacheForCompleteArgs(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.5.2 theme.ts CodeHighlighter compares the global theme before
+// reusing a result, so a theme switch re-highlights. The reuse added for the
+// complete-args path must check the theme for the same reason.
+func TestWriteCallRebuildsHighlightAfterAThemeChange(t *testing.T) {
+	InitTheme("dark", false)
+	args := map[string]any{"file_path": "/tmp/proj/a.go", "content": "package a\n"}
+	context := &ToolRenderContext{Cwd: "/tmp/proj", ArgsComplete: true}
+	component, ok := writeRenderers.RenderCall(args, ActiveTheme().concrete(), context).(*writeCallComponent)
+	if !ok {
+		t.Fatal("render call did not return a write component")
+	}
+	cache := component.cache
+	InitTheme("light", false)
+	context.LastComponent = component
+	writeRenderers.RenderCall(args, ActiveTheme().concrete(), context)
+	if component.cache == cache {
+		t.Fatal("theme change reused highlighting from the previous theme")
+	}
+}
+
 // BenchmarkWriteCallCompleteArgs renders an unchanged 2000-line complete write
 // call through the same component, the way the transcript re-renders it for a
 // result delta or an expand toggle.
