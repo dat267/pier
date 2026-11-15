@@ -1116,14 +1116,6 @@ func (a *App) loopBeats() uint64 {
 	return a.runner.LoopBeats()
 }
 
-// LoopInputs/LoopResizes expose the producer channels to the run loop.
-
-// runOffLoop dispatches blocking work to the loop's work goroutine when the
-// loop is running; it reports whether the work was dispatched. Callers use the
-// non-dispatched path for direct/test invocation.
-// runDetached runs event-only work in its own goroutine without occupying
-// RunWork's single work slot, so it cannot queue behind the active turn. Both
-// mode teardown and run-context cancellation reach the child context.
 // handleRightClickPaste reads the clipboard and feeds it to the focused
 // component as a bracketed paste, mirroring upstream's onRightClickPaste
 // (interactive-mode.ts handleRightClickPaste). The renderer only invokes it on
@@ -1216,6 +1208,9 @@ func (a *App) readClipboardImagePath(ctx context.Context) (string, bool) {
 	return path, true
 }
 
+// runDetached runs event-only work in its own goroutine without occupying
+// RunWork's single work slot, so it cannot queue behind the active turn. Both
+// mode teardown and run-context cancellation reach the child context.
 func (a *App) runDetached(fn func(ctx context.Context) error) bool {
 	if a.optionalContext.Err() != nil {
 		return false
