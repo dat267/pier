@@ -119,6 +119,62 @@
     {
       "input": "1.2.3-rc.1.0",
       "valid": "1.2.3-rc.1.0"
+    },
+    {
+      "input": "1.02.3",
+      "valid": null
+    },
+    {
+      "input": "1.2.03",
+      "valid": null
+    },
+    {
+      "input": "1.2.3-01",
+      "valid": null
+    },
+    {
+      "input": "1.2.3-0.0.0",
+      "valid": "1.2.3-0.0.0"
+    },
+    {
+      "input": "1.2.3+21AF26D3---117B344092BD",
+      "valid": "1.2.3"
+    },
+    {
+      "input": "1.2.3+0.0",
+      "valid": "1.2.3"
+    },
+    {
+      "input": "1.2.3+00",
+      "valid": "1.2.3"
+    },
+    {
+      "input": "1.2.3-α",
+      "valid": null
+    },
+    {
+      "input": "1.2.3-a.1.B",
+      "valid": "1.2.3-a.1.B"
+    },
+    {
+      "input": "1.2.3 4",
+      "valid": null
+    },
+    {
+      "input": "vv1.2.3",
+      "valid": null
+    },
+    {
+      "input": "9007199254740991.0.0",
+      "valid": "9007199254740991.0.0"
+    },
+    {
+      "input": "9007199254740992.0.0",
+      "valid": null
+    },
+    {
+      "input": "18446744073709551616.0.0",
+      "valid": null
     }
   ],
   "pairs": [
@@ -201,6 +257,36 @@
       "left": "1.2.3-alpha.beta",
       "right": "1.2.3-alpha.1",
       "comparison": 1
+    },
+    {
+      "left": "1.2.3-0.0.0",
+      "right": "1.2.3-0",
+      "comparison": 1
+    },
+    {
+      "left": "1.2.3+0.0",
+      "right": "1.2.3+build",
+      "comparison": 0
+    },
+    {
+      "left": "9007199254740991.0.0",
+      "right": "9007199254740992.0.0",
+      "comparison": null
+    },
+    {
+      "left": "1.2.3-ALPHA",
+      "right": "1.2.3-alpha",
+      "comparison": -1
+    },
+    {
+      "left": "1.02.3",
+      "right": "1.2.3",
+      "comparison": null
+    },
+    {
+      "left": "1.2.3-01",
+      "right": "1.2.3-1",
+      "comparison": null
     }
   ]
 }
