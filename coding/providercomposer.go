@@ -503,8 +503,12 @@ func findModelDefaults(models []*ai.Model, modelID, api string) *ai.Model {
 			return model
 		}
 	}
-	if len(models) > 0 {
-		return models[0]
+	// Upstream's last fallback is the first chat model, so a provider whose
+	// models are all classifiers contributes no defaults.
+	for _, model := range models {
+		if ai.GetModelType(model) == "chat" {
+			return model
+		}
 	}
 	return nil
 }

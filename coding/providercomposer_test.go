@@ -607,3 +607,20 @@ func TestConfiguredHeadersAndStatus(t *testing.T) {
 		t.Fatalf("status = %+v", status)
 	}
 }
+
+// pi v1.5.2 b4afdddf core/provider-composer.ts findModelDefaults only considers
+// chat models: a provider whose models are all classifiers gives a custom model
+// no defaults, so a definition without "api" is an error instead of silently
+// borrowing the classifier's API.
+func TestComposeModelProviderCustomModelDefaultsStayChatOnly(t *testing.T) {
+	classifier := &ai.Model{ID: "decision", API: ai.APIOpenAIDecisions, Provider: "openai", Type: "classifier"}
+	base := ai.CreateProvider(ai.CreateProviderOptions{
+		ID: "openai", Auth: ai.ProviderAuth{APIKey: &ai.ApiKeyAuth{Name: "OpenAI"}},
+		Models: []*ai.Model{classifier},
+	})
+	config := &ModelsJSONProvider{Models: []ModelsJSONModel{{ID: "custom"}}}
+	_, err := applyModelsJSON("openai", baseModels(base), config)
+	if err == nil || !strings.Contains(err.Error(), `no "api" specified`) {
+		t.Fatalf("err = %v, want the missing-api error", err)
+	}
+}
