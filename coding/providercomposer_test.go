@@ -624,3 +624,25 @@ func TestComposeModelProviderCustomModelDefaultsStayChatOnly(t *testing.T) {
 		t.Fatalf("err = %v, want the missing-api error", err)
 	}
 }
+
+// pi v1.5.2 b4afdddf core/provider-composer.ts rawModelHeaders picks the model
+// definition with `config.models.find(entry => entry.id === model.id)`, so the
+// first definition of a duplicated id supplies the headers. The port merged
+// every definition with that id, letting a later duplicate win.
+func TestResolveConfiguredModelHeadersUsesTheFirstDefinition(t *testing.T) {
+	model := &ai.Model{ID: "shared", API: ai.APIOpenAICompletions, Provider: "custom"}
+	config := &ModelsJSONProvider{Models: []ModelsJSONModel{
+		{ID: "shared", Headers: map[string]string{"X-Trace": "first"}},
+		{ID: "shared", Headers: map[string]string{"X-Trace": "second", "X-Extra": "second"}},
+	}}
+	headers, err := ResolveConfiguredModelHeaders(model, config, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if headers["X-Trace"] != "first" {
+		t.Fatalf("X-Trace = %q, want the first definition's value", headers["X-Trace"])
+	}
+	if _, ok := headers["X-Extra"]; ok {
+		t.Fatalf("headers = %v, want only the first definition's headers", headers)
+	}
+}

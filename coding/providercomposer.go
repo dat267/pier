@@ -826,7 +826,10 @@ func rawModelHeaders(model *ai.Model, config *ModelsJSONProvider) map[string]str
 	}
 	for _, definition := range config.Models {
 		if definition.ID == model.ID {
+			// Upstream takes the first definition of the id; a later duplicate
+			// does not contribute headers.
 			maps.Copy(headers, definition.Headers)
+			break
 		}
 	}
 	if len(headers) == 0 {
