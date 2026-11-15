@@ -77,7 +77,6 @@ type EventDispatcher struct {
 	sessionGeneration  uint64
 	messageGeneration  uint64
 	streamingComponent *AssistantMessageComponent
-	streamingMessage   *ai.AssistantMessage
 	pendingTools       map[string]*ToolExecutionComponent
 
 	retryEscapeHandler          func()
@@ -286,7 +285,6 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 		if d.streamingComponent != nil && d.Transcript != nil {
 			d.Transcript.Chat.RemoveChild(d.streamingComponent)
 			d.streamingComponent = nil
-			d.streamingMessage = nil
 		}
 
 		d.pendingTools = map[string]*ToolExecutionComponent{}
@@ -420,10 +418,9 @@ func (d *EventDispatcher) handleMessageStart(event *coding.SessionEvent) {
 		d.streamingComponent = NewAssistantMessageComponent(nil, d.Display.HideThinkingBlock, d.MarkdownTheme,
 			d.Display.HiddenThinkingLabel, d.Display.OutputPad, d.Transformers)
 		d.streamingComponent.SetMarkdownPreparation(d.MarkdownPreparation)
-		d.streamingMessage = typed
 		d.Transcript.Chat.AddChild(d.streamingComponent)
 		d.Transcript.StreamingComponent = d.streamingComponent
-		d.streamingComponent.UpdateContent(d.streamingMessage, true)
+		d.streamingComponent.UpdateContent(typed, true)
 		d.requestRender()
 	}
 }
@@ -434,8 +431,7 @@ func (d *EventDispatcher) handleMessageUpdate(event *coding.SessionEvent) {
 	if !ok || d.streamingComponent == nil {
 		return
 	}
-	d.streamingMessage = assistant
-	d.streamingComponent.UpdateContent(d.streamingMessage, true)
+	d.streamingComponent.UpdateContent(assistant, true)
 	d.syncToolCallComponents(assistant)
 	d.requestRender()
 }
@@ -508,7 +504,6 @@ func (d *EventDispatcher) handleMessageEnd(event *coding.SessionEvent) {
 		copied.ErrorMessage = &errorMessage
 		display = &copied
 	}
-	d.streamingMessage = display
 	d.streamingComponent.UpdateContent(display, false)
 
 	if assistant.StopReason == ai.StopAborted || assistant.StopReason == ai.StopError {
@@ -539,7 +534,6 @@ func (d *EventDispatcher) handleMessageEnd(event *coding.SessionEvent) {
 		}
 	}
 	d.streamingComponent = nil
-	d.streamingMessage = nil
 	if d.Transcript != nil {
 		d.Transcript.StreamingComponent = nil
 	}
