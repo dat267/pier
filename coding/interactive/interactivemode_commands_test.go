@@ -582,3 +582,38 @@ func TestCommandChangelogDisplaysOldestFirst(t *testing.T) {
 		t.Fatalf("changelog order: old=%d new=%d\n%s", oldIndex, newIndex, lines)
 	}
 }
+
+// The session panel must describe the session /session was issued on. The panel
+// worker reads w.SessionInfo and w.Session, which the owner loop rewrites on a
+// switch, so building the panel from the live wiring mixed the dispatched
+// session's stats with the replacement's name.
+//
+// AGENTS.md "UI ownership": workers run blocking work off-loop and never touch
+// attached UI state; the owner loop is the only writer of the session wiring.
+func TestSessionPanelUsesTheDispatchedSession(t *testing.T) {
+	wiring, session, _ := newCommandTestWiring(t)
+	wiring.SessionInfo.AppendSessionInfo("dispatched session")
+	capture := &authStatusPostCapture{posts: make(chan func(), 1)}
+	wiring.UI = capture
+	wiring.RequestRender = func() {}
+	session.statsBlock = make(chan struct{})
+
+	wiring.HandleSessionCommand(0)
+	// The owner loop switches sessions while the panel worker is parked in
+	// GetSessionStats.
+	replacement := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
+	wiring.SessionInfo = replacement
+	close(session.statsBlock)
+
+	var apply func()
+	select {
+	case apply = <-capture.posts:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the panel never reached the owner loop")
+	}
+	apply()
+	lines := coding.StripAnsi(strings.Join(wiring.Chat.Render(120), "\n"))
+	if !strings.Contains(lines, "Name: dispatched session") {
+		t.Fatalf("the panel does not describe the dispatched session:\n%s", lines)
+	}
+}

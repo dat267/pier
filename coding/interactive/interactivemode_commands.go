@@ -550,8 +550,12 @@ func (w *CommandWiring) HandleSessionCommand(now int64) {
 		w.addSessionInfoPanel(w.SessionInfoPanel(now))
 		return
 	}
+	// Resolve the session on the owner loop: the worker must describe the
+	// session /session was issued on, and the loop rewrites the wiring on every
+	// rebind, so reading it there mixed the old stats with the new name.
+	session, sessionInfo := w.Session, w.SessionInfo
 	go func() {
-		text := w.SessionInfoPanel(now)
+		text := w.sessionInfoPanel(session, sessionInfo, now)
 		w.UI.Post(func() { w.addSessionInfoPanel(text) })
 	}()
 }
@@ -569,13 +573,19 @@ func (w *CommandWiring) addSessionInfoPanel(text string) {
 // SessionInfoPanel formats the session info panel. It only reads mutex-guarded
 // session state, so it is safe to run off the UI loop.
 func (w *CommandWiring) SessionInfoPanel(now int64) string {
+	return w.sessionInfoPanel(w.Session, w.SessionInfo, now)
+}
+
+// sessionInfoPanel formats the panel from the session the caller resolved, so a
+// worker never reads the live wiring.
+func (w *CommandWiring) sessionInfoPanel(session CommandSession, sessionInfo *coding.SessionManager, now int64) string {
 	theme := ActiveTheme()
-	stats := w.Session.GetSessionStats()
-	sessionName := w.SessionInfo.GetSessionName()
+	stats := session.GetSessionStats()
+	sessionName := sessionInfo.GetSessionName()
 	// These three walks read through the session's message memo; re-parsing the
 	// session for a panel cost about 1.5s on a 19k-entry session and froze the UI.
-	cacheWaste := w.SessionInfo.ComputeCacheWaste(w.Session.ModelRuntime())
-	usageBreakdown := w.SessionInfo.UsageCostBreakdown()
+	cacheWaste := sessionInfo.ComputeCacheWaste(session.ModelRuntime())
+	usageBreakdown := sessionInfo.UsageCostBreakdown()
 
 	var info strings.Builder
 	info.WriteString(theme.Bold("Session Info") + "\n\n")
@@ -619,7 +629,7 @@ func (w *CommandWiring) SessionInfoPanel(now int64) string {
 		cacheWarmingMode = w.Settings.GetCacheWarmingMode()
 	}
 	info.WriteString(theme.Fg("dim", "Mode:") + " " + cacheWarmingMode + "\n")
-	status := w.Session.GetCacheWarmingStatus()
+	status := session.GetCacheWarmingStatus()
 	statusText := "Inactive (cache warming unavailable)"
 	if status != nil {
 		statusText = coding.FormatCacheWarmingStatus(*status, now)
@@ -636,7 +646,7 @@ func (w *CommandWiring) SessionInfoPanel(now int64) string {
 		// Upstream shows the per-model breakdown unless the only entry names the
 		// selected model (a single entry repeats the total).
 		selectedModelKey := "undefined/undefined"
-		if model := w.Session.Model(); model != nil {
+		if model := session.Model(); model != nil {
 			selectedModelKey = string(model.Provider) + "/" + model.ID
 		}
 		if len(usageBreakdown) != 1 || usageBreakdown[0].Key != selectedModelKey {
