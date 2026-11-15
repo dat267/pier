@@ -485,15 +485,16 @@ type ToolResultMessage struct {
 	Details json.RawMessage `json:"details,omitempty"`
 	// Usage from the tool execution itself, if available. Not part of main
 	// LLM context accounting.
-	Usage *Usage `json:"usage,omitempty"`
-	// NestedCalls are the calls this tool made to other tools; kept for the
-	// session record, not sent to the model.
-	NestedCalls *NestedToolCalls `json:"nestedCalls,omitempty"`
-	IsError     bool             `json:"isError"`
+	Usage   *Usage `json:"usage,omitempty"`
+	IsError bool   `json:"isError"`
 	// DurationMs is how long the tool call took, measured with a monotonic clock, excluding
 	// hooks and the update drain. Absent for a call that never ran (upstream #10549).
 	DurationMs *int64 `json:"durationMs,omitempty"`
 	Timestamp  int64  `json:"timestamp"`
+	// NestedCalls are the calls this tool made to other tools; kept for the
+	// session record, not sent to the model. Upstream assigns it on the built
+	// message, so it is the last key.
+	NestedCalls *NestedToolCalls `json:"nestedCalls,omitempty"`
 }
 
 func (*ToolResultMessage) messageRole() Role { return RoleToolResult }
