@@ -88,5 +88,22 @@
       "cwd": "<cwd>\n/work\n</cwd>",
       "extra": "<extra>\nextra text\n</extra>"
     }
+  },
+  "hidden-tools": {
+    "sections": {
+      "preamble": "You are a coding assistant running inside pi, a coding agent harness. Help users inspect files, run commands, and modify code.",
+      "tools": "<tools>\n- read: Read files\n- edit: Edit files\n\nAdditional tools may be available.\n</tools>",
+      "rules": "<rules>\n- Read first\n- Edit third\n- Be concise in your responses\n- Show file paths clearly when working with files\n</rules>",
+      "cwd": "<cwd>\n/work\n</cwd>"
+    }
+  },
+  "hidden-reader-with-skills": {
+    "sections": {
+      "preamble": "You are a coding assistant running inside pi, a coding agent harness. Help users inspect files, run commands, and modify code.",
+      "tools": "<tools>\n(none)\n\nAdditional tools may be available.\n</tools>",
+      "rules": "<rules>\n- Be concise in your responses\n- Show file paths clearly when working with files\n</rules>",
+      "skills": "<skills>\nThe following skills provide specialized instructions for specific tasks.\nLoad a skill's file when the task matches its description.\nResolve relative paths against the skill's directory (parent of SKILL.md). Use absolute paths in tool calls.\n\n<available_skills>\n  <skill>\n    <name>deploy</name>\n    <description>Deploy &lt;prod&gt; &amp; more</description>\n    <location>/work/.pi/skills/deploy/SKILL.md</location>\n  </skill>\n</available_skills>\n</skills>",
+      "cwd": "<cwd>\n/work\n</cwd>"
+    }
   }
 }

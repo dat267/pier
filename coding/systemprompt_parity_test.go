@@ -58,6 +58,15 @@ func TestSystemPromptSectionsMatchUpstream(t *testing.T) {
 		}},
 		"cwd-windows":    {BuildSystemPromptOptions{Cwd: `C:\work\proj`}},
 		"custom-section": {BuildSystemPromptOptions{Cwd: "/work", Sections: map[string]string{"extra": "extra text"}}},
+		"hidden-tools": {BuildSystemPromptOptions{
+			SelectedTools: []string{"read", "bash", "edit"}, HiddenTools: []string{"bash"}, Cwd: "/work",
+			ToolSnippets:   map[string]string{"read": "Read files", "bash": "Run commands", "edit": "Edit files"},
+			ToolGuidelines: map[string][]string{"read": {"Read first"}, "bash": {"Run second"}, "edit": {"Edit third"}},
+		}},
+		"hidden-reader-with-skills": {BuildSystemPromptOptions{
+			SelectedTools: []string{"read", "bash"}, HiddenTools: []string{"read", "bash"}, Cwd: "/work",
+			Skills: []Skill{{Name: "deploy", Description: "Deploy <prod> & more", FilePath: "/work/.pi/skills/deploy/SKILL.md"}},
+		}},
 	}
 	if len(fixture) != len(cases) {
 		t.Fatalf("fixture cases = %d, table = %d", len(fixture), len(cases))

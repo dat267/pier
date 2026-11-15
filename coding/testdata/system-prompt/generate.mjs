@@ -38,6 +38,14 @@ const cases = {
 	},
 	"cwd-windows": { cwd: "C:\\work\\proj" },
 	"custom-section": { cwd: "/work", sections: { extra: "extra text" } },
+	"hidden-tools": {
+		selectedTools: ["read", "bash", "edit"], hiddenTools: ["bash"], cwd: "/work",
+		toolSnippets: { read: "Read files", bash: "Run commands", edit: "Edit files" },
+		toolGuidelines: { read: ["Read first"], bash: ["Run second"], edit: ["Edit third"] },
+	},
+	"hidden-reader-with-skills": {
+		selectedTools: ["read", "bash"], hiddenTools: ["read", "bash"], skills: [skill], cwd: "/work",
+	},
 };
 const out = {};
 for (const [name, input] of Object.entries(cases)) {
