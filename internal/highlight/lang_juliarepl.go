@@ -16,8 +16,9 @@ func JuliaRepl() *Language {
 		}
 	}
 	return &Language{
-		Name:    "Julia REPL",
-		Aliases: []string{"jldoctest"},
+		// The reference puts `aliases: ['jldoctest']` on the `^julia>` mode, where
+		// the compiler ignores it, so the language registers no alias.
+		Name: "Julia REPL",
 		Contains: []*Mode{
 			{ClassName: "meta", Begin: `^julia>`, HasRelevance: true, Relevance: 10, Starts: starts},
 		},
