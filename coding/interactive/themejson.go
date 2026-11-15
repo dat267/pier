@@ -99,6 +99,18 @@ var optionalThemeColors = []string{
 
 // ValidateThemeJSON validates a theme document and returns it.
 func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
+	// Upstream checks the name before the schema, so a document with both a "/"
+	// in its name and missing colors reports the name.
+	var nameProbe struct {
+		Name json.RawMessage `json:"name"`
+	}
+	if err := json.Unmarshal(raw, &nameProbe); err == nil && len(nameProbe.Name) > 0 {
+		var name string
+		if json.Unmarshal(nameProbe.Name, &name) == nil && strings.Contains(name, "/") {
+			return nil, invalidThemeName(name)
+		}
+	}
+
 	var theme ThemeJSON
 	if err := json.Unmarshal(raw, &theme); err != nil {
 		return nil, fmt.Errorf("Invalid theme \"%s\": expected an object with a \"colors\" map.", label)
@@ -149,6 +161,30 @@ func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 	for name, color := range theme.Vars {
 		checkColor("/vars/"+name, color)
 	}
+	// The schema sets additionalProperties: false at the top level and in the
+	// export object, so a mistyped key is an error rather than ignored.
+	var document map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &document); err == nil {
+		for _, key := range sortedKeysOf(document) {
+			switch key {
+			case "$schema", "name", "appearance", "vars", "colors", "export":
+			default:
+				otherErrors = append(otherErrors, "  - /"+key+": additional properties are not allowed")
+			}
+		}
+		if rawExport, ok := document["export"]; ok {
+			var exportKeys map[string]json.RawMessage
+			if err := json.Unmarshal(rawExport, &exportKeys); err == nil {
+				for _, key := range sortedKeysOf(exportKeys) {
+					switch key {
+					case "pageBg", "cardBg", "infoBg":
+					default:
+						otherErrors = append(otherErrors, "  - /export/"+key+": additional properties are not allowed")
+					}
+				}
+			}
+		}
+	}
 	if theme.Export != nil {
 		if theme.Export.PageBg != nil {
 			checkColor("/export/pageBg", *theme.Export.PageBg)
@@ -172,9 +208,22 @@ func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 		return nil, fmt.Errorf("%s", builder.String())
 	}
 	if strings.Contains(theme.Name, "/") {
-		return nil, fmt.Errorf("Invalid theme name \"%s\": theme names cannot contain \"/\" because it is reserved for automatic light/dark theme settings.", theme.Name)
+		return nil, invalidThemeName(theme.Name)
 	}
 	return &theme, nil
+}
+
+func invalidThemeName(name string) error {
+	return fmt.Errorf("Invalid theme name \"%s\": theme names cannot contain \"/\" because it is reserved for automatic light/dark theme settings.", name)
+}
+
+func sortedKeysOf[value any](document map[string]value) []string {
+	keys := make([]string, 0, len(document))
+	for key := range document {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // ParseThemeJSON validates a document, or accepts it as-is when no validator is
