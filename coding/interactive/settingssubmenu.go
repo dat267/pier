@@ -124,6 +124,7 @@ func (c *SelectSubmenu) HandleInput(data string) {
 	}
 	kb := tui.GetKeybindings()
 	isNav := kb.Matches(data, "tui.select.up") || kb.Matches(data, "tui.select.down") ||
+		kb.Matches(data, "tui.select.pageUp") || kb.Matches(data, "tui.select.pageDown") ||
 		kb.Matches(data, "tui.select.confirm") || kb.Matches(data, "tui.select.cancel")
 	if isNav {
 		c.selectList.HandleInput(data)
