@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D476)
+# Deliberate divergences from pi (D1–D477)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7696,3 +7696,19 @@ The option labels are the reference's verbatim.
 
 Test: `TestMissingSessionCwdPromptExplainsTheFallback` and
 `TestMissingSessionCwdOptionsMatchTheReference`.
+
+### D477
+
+**A boolean root schema validates instead of crashing.**
+
+Reference: pi v1.5.2 (b4afdddf) `packages/ai/src/utils/validation.ts` `getValidator`
+caches compiled validators in a `WeakMap` keyed by the tool's `parameters`
+object. A boolean schema (`true` or `false`, both legal JSON Schema) is not an
+object, so `validatorCache.set(true, validator)` throws `TypeError: Invalid
+value used as weak map key` before any value is validated: every call of a tool
+declared that way fails with that TypeError instead of a validation decision.
+Pier compiles the schema like any other, so `true` accepts every value and
+`false` rejects every value with `root: no value is allowed here`, and no other
+tool behavior changes.
+
+Test: `TestValidateToolArgumentsAcceptsBooleanRootSchemas`.
