@@ -53,6 +53,18 @@ const patterns = [
 	"[\\d-z]",
 	"[a-\\d]",
 	"[\\w-]",
+	// Class complements: JavaScript's \\S excludes the whole ECMAScript whitespace
+	// set, while Go's class \\S excludes only ASCII (patternclass.go).
+	"[\\S]",
+	"[^\\S]",
+	"[a\\S]",
+	"[^a\\S]",
+	"[\\S ]",
+	"[\\s\\S]",
+	"[^\\s\\S]",
+	"[\\s]",
+	"[^\\s]",
+	"[a\\s]",
 ];
 const flags = ["", "i", "s"];
 const inputs = [
@@ -83,6 +95,11 @@ const inputs = [
 	"u",
 	"x",
 	"aaa",
+	"\u00a0",
+	"\u3000",
+	"a\u00a0b",
+	"\ufeff",
+	"\u200b",
 ];
 
 const cases = [];

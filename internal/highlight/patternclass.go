@@ -182,10 +182,22 @@ func classRanges(content string) ([]rune, bool) {
 		return nil, true
 	}
 	parsed, err := syntax.Parse("["+content+"]", syntax.Perl)
-	if err != nil || parsed.Op != syntax.OpCharClass {
+	if err != nil {
 		return nil, false
 	}
-	return parsed.Rune, true
+	switch parsed.Op {
+	case syntax.OpCharClass:
+		return parsed.Rune, true
+	case syntax.OpLiteral:
+		// Go's parser simplifies a class of one rune to a literal, which is
+		// what a body such as `[^a\S]` with the `\S` removed leaves behind.
+		ranges := make([]rune, 0, 2*len(parsed.Rune))
+		for _, unit := range parsed.Rune {
+			ranges = append(ranges, unit, unit)
+		}
+		return ranges, true
+	}
+	return nil, false
 }
 
 func containsRune(ranges []rune, value rune) bool {
