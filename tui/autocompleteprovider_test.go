@@ -465,3 +465,33 @@ func TestAutocompleteTrimsLeadingJSSpace(t *testing.T) {
 		t.Fatalf("U+FEFF-prefixed command not completed: %+v", result)
 	}
 }
+
+// Upstream's fuzzy sort breaks an equal score and depth tie with
+// `a.path.length - b.path.length` (src/autocomplete.ts, pi v1.5.2 b4afdddf),
+// which counts UTF-16 code units; comparing Go byte lengths instead leaves
+// "éé" and "abcd" tied and hands the tie to localeCompare, which puts "abcd"
+// first. Two files of equal byte length and different unit length pin it.
+func TestFuzzySuggestionsOrderByJavaScriptStringLength(t *testing.T) {
+	fdPath, err := exec.LookPath("fd")
+	if err != nil {
+		t.Skip("fd is not installed")
+	}
+	root := t.TempDir()
+	for _, name := range []string{"abcd", "éé"} {
+		if err := os.WriteFile(filepath.Join(root, name), []byte("x"), 0o644); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+	}
+	provider := NewCombinedAutocompleteProvider(nil, root, fdPath)
+	suggestions := provider.GetSuggestions(context.Background(), []string{"@"}, 0, 1, false)
+	if suggestions == nil {
+		t.Fatal("no suggestions")
+	}
+	var labels []string
+	for _, item := range suggestions.Items {
+		labels = append(labels, item.Label)
+	}
+	if got := strings.Join(labels, ","); got != "éé,abcd" {
+		t.Fatalf("order = %q, want %q (two UTF-16 units before four)", got, "éé,abcd")
+	}
+}

@@ -453,13 +453,8 @@ func (p *CombinedAutocompleteProvider) ApplyCompletion(lines []string, cursorLin
 		cursorOffset = len(item.Value) - 1
 	}
 
-	textBeforeCursor := currentLine[:cursorCol]
-	if strings.Contains(textBeforeCursor, "/") && strings.Contains(textBeforeCursor, " ") {
-		newLines := append([]string(nil), lines...)
-		newLines[cursorLine] = beforePrefix + item.Value + adjustedAfterCursor
-		return CompletionResult{Lines: newLines, CursorLine: cursorLine, CursorCol: len(beforePrefix) + cursorOffset}
-	}
-
+	// Upstream splits a command-argument case from the file-path case here, but
+	// both build the same line and cursor, so one branch covers both.
 	newLines := append([]string(nil), lines...)
 	newLines[cursorLine] = beforePrefix + item.Value + adjustedAfterCursor
 	return CompletionResult{Lines: newLines, CursorLine: cursorLine, CursorCol: len(beforePrefix) + cursorOffset}
@@ -806,8 +801,9 @@ func (p *CombinedAutocompleteProvider) getFuzzyFileSuggestions(ctx context.Conte
 		if aDepth != bDepth {
 			return aDepth < bDepth
 		}
-		if len(scored[a].path) != len(scored[b].path) {
-			return len(scored[a].path) < len(scored[b].path)
+		// Upstream compares `path.length`, which counts UTF-16 code units.
+		if lengthA, lengthB := jsLength(scored[a].path), jsLength(scored[b].path); lengthA != lengthB {
+			return lengthA < lengthB
 		}
 		return localeCompareLike(scored[a].path, scored[b].path) < 0
 	})
