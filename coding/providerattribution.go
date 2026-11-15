@@ -24,16 +24,18 @@ func ClientIdentity(settingsManager *SettingsManager) *ai.ClientIdentity {
 	return identity
 }
 
-// IsInstallTelemetryEnabled reports whether install telemetry is on: the
-// PI_TELEMETRY environment variable wins over the settings toggle.
+// IsInstallTelemetryEnabled reports whether install telemetry is on: a set
+// PI_TELEMETRY environment variable wins over the settings toggle, including an
+// empty value, which is false (upstream distinguishes undefined from "").
 func IsInstallTelemetryEnabled(settingsManager *SettingsManager) bool {
-	return IsInstallTelemetryEnabledWithEnv(settingsManager, telemetryEnvValue())
+	value, set := os.LookupEnv("PI_TELEMETRY")
+	return IsInstallTelemetryEnabledWithEnv(settingsManager, value, set)
 }
 
 // IsInstallTelemetryEnabledWithEnv is IsInstallTelemetryEnabled with an
-// explicit PI_TELEMETRY value; empty means unset.
-func IsInstallTelemetryEnabledWithEnv(settingsManager *SettingsManager, telemetryEnv string) bool {
-	if telemetryEnv != "" {
+// explicit PI_TELEMETRY value and whether the variable is set.
+func IsInstallTelemetryEnabledWithEnv(settingsManager *SettingsManager, telemetryEnv string, telemetryEnvSet bool) bool {
+	if telemetryEnvSet {
 		return IsTruthyEnvFlag(telemetryEnv)
 	}
 	if settingsManager == nil {
@@ -163,9 +165,4 @@ func IsTruthyEnvFlag(value string) bool {
 	}
 	lower := strings.ToLower(value)
 	return lower == "true" || lower == "yes"
-}
-
-// telemetryEnvValue reads PI_TELEMETRY.
-func telemetryEnvValue() string {
-	return os.Getenv("PI_TELEMETRY")
 }

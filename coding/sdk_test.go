@@ -794,7 +794,17 @@ func TestCreateAgentSessionBlockImagesKeepsMessageFields(t *testing.T) {
 }
 
 func TestCreateAgentSessionRequestOptions(t *testing.T) {
-	t.Setenv("PI_TELEMETRY", "")
+	// A set PI_TELEMETRY wins over the settings toggle, so unset it to exercise
+	// the toggle the second prompt flips (upstream core/telemetry.ts).
+	previousTelemetry, hadTelemetry := os.LookupEnv("PI_TELEMETRY")
+	if err := os.Unsetenv("PI_TELEMETRY"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if hadTelemetry {
+			_ = os.Setenv("PI_TELEMETRY", previousTelemetry)
+		}
+	})
 	tempAgentDir(t)
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
 		AuthPath:        filepath.Join(GetAgentDir(), "auth.json"),

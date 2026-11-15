@@ -301,7 +301,6 @@ func TestClientIdentityJSON(t *testing.T) {
 // telemetry (upstream getClientIdentity, v1.4.0 adc5fa9f8).
 func TestClientIdentity(t *testing.T) {
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
-	t.Setenv("PI_TELEMETRY", "")
 	identity := ClientIdentity(settings)
 	if identity.Version != Version || identity.Attribution != ai.PIAttribution {
 		t.Fatalf("identity = %+v", identity)
@@ -310,11 +309,14 @@ func TestClientIdentity(t *testing.T) {
 	if identity := ClientIdentity(settings); identity.Version != Version || identity.Attribution != nil {
 		t.Fatalf("telemetry-off identity = %+v", identity)
 	}
-	if !IsInstallTelemetryEnabledWithEnv(settings, "1") || IsInstallTelemetryEnabledWithEnv(settings, "0") {
+	if !IsInstallTelemetryEnabledWithEnv(settings, "1", true) || IsInstallTelemetryEnabledWithEnv(settings, "0", true) {
 		t.Fatal("env flag")
 	}
-	if IsInstallTelemetryEnabledWithEnv(settings, "no") {
+	if IsInstallTelemetryEnabledWithEnv(settings, "no", true) {
 		t.Fatal("no is false")
+	}
+	if !IsInstallTelemetryEnabledWithEnv(settings, "", false) {
+		t.Fatal("an unset PI_TELEMETRY falls back to the settings toggle")
 	}
 }
 
@@ -593,4 +595,25 @@ func TestRuntimeCredentialsConcurrentOverrideAccess(t *testing.T) {
 		}
 	}()
 	wait.Wait()
+}
+
+// pi v1.5.2 b4afdddf core/telemetry.ts isInstallTelemetryEnabled treats a set
+// PI_TELEMETRY as authoritative (`telemetryEnv !== undefined ? isTruthyEnvFlag
+// (telemetryEnv) : settingsManager.getEnableInstallTelemetry()`), and
+// isTruthyEnvFlag("") is false. An empty PI_TELEMETRY therefore suppresses
+// attribution even when the settings toggle is on; only an unset variable
+// falls back to the toggle.
+func TestClientIdentityTreatsAnEmptyTelemetryEnvAsOff(t *testing.T) {
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	if !settings.GetEnableInstallTelemetry() {
+		t.Fatal("the settings default is telemetry on")
+	}
+	t.Setenv("PI_TELEMETRY", "")
+	if identity := ClientIdentity(settings); identity.Attribution != nil {
+		t.Fatalf("empty PI_TELEMETRY still attributed: %+v", identity)
+	}
+	t.Setenv("PI_TELEMETRY", "1")
+	if identity := ClientIdentity(settings); identity.Attribution == nil {
+		t.Fatal("PI_TELEMETRY=1 must attribute")
+	}
 }
