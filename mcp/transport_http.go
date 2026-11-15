@@ -516,17 +516,15 @@ func (t *StreamableHttpTransport) Close(ctx context.Context) error {
 		deleteCtx, cancel := context.WithTimeout(context.Background(), sessionDeleteTimeoutMs*time.Millisecond)
 		// Reuse the token of the last request: asking the auth provider here may refresh over
 		// the network before the session DELETE, delaying a close for no benefit (#10565).
-		headers, _, err := t.lastRequestHeaders()
-		if err == nil {
-			request, buildErr := http.NewRequestWithContext(deleteCtx, http.MethodDelete, t.parsedURL.String(), nil)
-			if buildErr == nil {
-				for key, value := range headers {
-					request.Header.Set(key, value)
-				}
-				response, err := t.doFetch(deleteCtx, request)
-				if err == nil {
-					discardBody(response)
-				}
+		headers, _ := t.lastRequestHeaders()
+		request, buildErr := http.NewRequestWithContext(deleteCtx, http.MethodDelete, t.parsedURL.String(), nil)
+		if buildErr == nil {
+			for key, value := range headers {
+				request.Header.Set(key, value)
+			}
+			response, err := t.doFetch(deleteCtx, request)
+			if err == nil {
+				discardBody(response)
 			}
 		}
 		cancel()
@@ -645,11 +643,11 @@ func setHeader(headers map[string]string, name, value string) {
 // lastRequestHeaders builds the session DELETE headers from the token of the last request.
 // Close uses it instead of headers(), whose Token() call may refresh over the network and
 // delay closing a session that is going away anyway (upstream #10565).
-func (t *StreamableHttpTransport) lastRequestHeaders() (map[string]string, string, error) {
+func (t *StreamableHttpTransport) lastRequestHeaders() (map[string]string, string) {
 	t.mu.Lock()
 	token := t.lastToken
 	t.mu.Unlock()
-	return t.buildHeaders(nil, token), token, nil
+	return t.buildHeaders(nil, token), token
 }
 
 func (t *StreamableHttpTransport) doFetch(ctx context.Context, request *http.Request) (*http.Response, error) {

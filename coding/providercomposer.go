@@ -606,7 +606,7 @@ func configContextEnv(values []string, ctx ai.AuthContext, explicit map[string]s
 
 // composeAPIKeyAuth composes the api-key auth method for a provider from the
 // base provider and models.json config.
-func composeAPIKeyAuth(providerID string, base *ai.Provider, config *ModelsJSONProvider) (*ai.ApiKeyAuth, error) {
+func composeAPIKeyAuth(providerID string, base *ai.Provider, config *ModelsJSONProvider) *ai.ApiKeyAuth {
 	var inherited *ai.ApiKeyAuth
 	var baseOAuth *ai.OAuthAuth
 	if base != nil {
@@ -616,7 +616,7 @@ func composeAPIKeyAuth(providerID string, base *ai.Provider, config *ModelsJSONP
 	rawKey := configuredAPIKey(config)
 	// OAuth-only providers get no fabricated API-key login method.
 	if inherited == nil && rawKey == "" && baseOAuth != nil {
-		return nil, nil
+		return nil
 	}
 	rawHeaders := configuredHeaders(config)
 	authHeader := config != nil && config.AuthHeader != nil && *config.AuthHeader
@@ -747,7 +747,7 @@ func composeAPIKeyAuth(providerID string, base *ai.Provider, config *ModelsJSONP
 		}
 		return &ai.AuthResult{Auth: withAuth, Env: result.Env, Source: result.Source}, nil
 	}
-	return auth, nil
+	return auth
 }
 
 // withConfiguredAuth merges configured headers into resolved request auth and
@@ -862,10 +862,7 @@ func ComposeModelProvider(providerID string, base *ai.Provider, modelConfig *Mod
 		return out
 	}
 
-	apiKey, err := composeAPIKeyAuth(providerID, base, config)
-	if err != nil {
-		return nil, err
-	}
+	apiKey := composeAPIKeyAuth(providerID, base, config)
 	oauth := composeOAuthAuth(providerID, base, config)
 	if apiKey == nil && oauth == nil {
 		return nil, fmt.Errorf("Provider %s: no authentication method configured.", providerID)
