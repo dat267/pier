@@ -1,0 +1,428 @@
+[
+	{
+		"label": "both variants prefer lark",
+		"tool": {
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"q": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"q"
+				]
+			},
+			"variants": {
+				"openai_lark": "start: /.+/",
+				"openai_regex": "^.+$"
+			},
+			"configType": "grammar",
+			"noConfig": false,
+			"supports": true
+		},
+		"grammar": {
+			"format": "lark",
+			"definition": "start: /.+/",
+			"inputProperty": "q"
+		}
+	},
+	{
+		"label": "regex only",
+		"tool": {
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"q": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"q"
+				]
+			},
+			"variants": {
+				"openai_regex": "^.+$"
+			},
+			"configType": "grammar",
+			"noConfig": false,
+			"supports": true
+		},
+		"grammar": {
+			"format": "regex",
+			"definition": "^.+$",
+			"inputProperty": "q"
+		}
+	},
+	{
+		"label": "lark padded",
+		"tool": {
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"q": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"q"
+				]
+			},
+			"variants": {
+				"openai_lark": "  start: /.+/  "
+			},
+			"configType": "grammar",
+			"noConfig": false,
+			"supports": true
+		},
+		"grammar": {
+			"format": "lark",
+			"definition": "  start: /.+/  ",
+			"inputProperty": "q"
+		}
+	},
+	{
+		"label": "regex blank falls through",
+		"tool": {
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"q": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"q"
+				]
+			},
+			"variants": {
+				"openai_lark": "",
+				"openai_regex": "^.+$"
+			},
+			"configType": "grammar",
+			"noConfig": false,
+			"supports": true
+		},
+		"grammar": {
+			"format": "regex",
+			"definition": "^.+$",
+			"inputProperty": "q"
+		}
+	},
+	{
+		"label": "no variants",
+		"tool": {
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"q": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"q"
+				]
+			},
+			"variants": {
+				"openai_lark": "  ",
+				"openai_regex": ""
+			},
+			"configType": "grammar",
+			"noConfig": false,
+			"supports": true
+		},
+		"error": "Tool \"echo\" cannot use grammar constrained sampling: no supported grammar variant was provided."
+	},
+	{
+		"label": "unsupported provider",
+		"tool": {
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"q": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"q"
+				]
+			},
+			"variants": {
+				"openai_lark": "start: /.+/",
+				"openai_regex": "^.+$"
+			},
+			"configType": "grammar",
+			"noConfig": false,
+			"supports": false
+		},
+		"grammar": null
+	},
+	{
+		"label": "json_schema config",
+		"tool": {
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"q": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"q"
+				]
+			},
+			"variants": null,
+			"configType": "json_schema",
+			"noConfig": false,
+			"supports": true
+		},
+		"grammar": null
+	},
+	{
+		"label": "no config",
+		"tool": {
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"q": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"q"
+				]
+			},
+			"variants": null,
+			"configType": null,
+			"noConfig": true,
+			"supports": true
+		},
+		"grammar": null
+	},
+	{
+		"label": "two required",
+		"tool": {
+			"parameters": {
+				"type": "object",
+				"required": [
+					"a",
+					"b"
+				],
+				"properties": {
+					"a": {
+						"type": "string"
+					},
+					"b": {
+						"type": "string"
+					}
+				}
+			},
+			"variants": {
+				"openai_lark": "start: /.+/",
+				"openai_regex": "^.+$"
+			},
+			"configType": "grammar",
+			"noConfig": false,
+			"supports": true
+		},
+		"error": "Tool \"echo\" cannot use grammar constrained sampling: grammar constrained sampling requires exactly one required string property."
+	},
+	{
+		"label": "no required",
+		"tool": {
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"q": {
+						"type": "string"
+					}
+				}
+			},
+			"variants": {
+				"openai_lark": "start: /.+/",
+				"openai_regex": "^.+$"
+			},
+			"configType": "grammar",
+			"noConfig": false,
+			"supports": true
+		},
+		"error": "Tool \"echo\" cannot use grammar constrained sampling: grammar constrained sampling requires exactly one required string property."
+	},
+	{
+		"label": "non-string required member",
+		"tool": {
+			"parameters": {
+				"type": "object",
+				"required": [
+					"q",
+					5
+				],
+				"properties": {
+					"q": {
+						"type": "string"
+					}
+				}
+			},
+			"variants": {
+				"openai_lark": "start: /.+/",
+				"openai_regex": "^.+$"
+			},
+			"configType": "grammar",
+			"noConfig": false,
+			"supports": true
+		},
+		"error": "Tool \"echo\" cannot use grammar constrained sampling: grammar constrained sampling requires exactly one required string property."
+	},
+	{
+		"label": "required not an array",
+		"tool": {
+			"parameters": {
+				"type": "object",
+				"required": "q",
+				"properties": {
+					"q": {
+						"type": "string"
+					}
+				}
+			},
+			"variants": {
+				"openai_lark": "start: /.+/",
+				"openai_regex": "^.+$"
+			},
+			"configType": "grammar",
+			"noConfig": false,
+			"supports": true
+		},
+		"error": "Tool \"echo\" cannot use grammar constrained sampling: grammar constrained sampling requires exactly one required string property."
+	},
+	{
+		"label": "type not object",
+		"tool": {
+			"parameters": {
+				"type": "number",
+				"required": [
+					"q"
+				],
+				"properties": {
+					"q": {
+						"type": "string"
+					}
+				}
+			},
+			"variants": {
+				"openai_lark": "start: /.+/",
+				"openai_regex": "^.+$"
+			},
+			"configType": "grammar",
+			"noConfig": false,
+			"supports": true
+		},
+		"error": "Tool \"echo\" cannot use grammar constrained sampling: grammar constrained sampling requires an object parameter schema."
+	},
+	{
+		"label": "boolean parameters",
+		"tool": {
+			"parameters": true,
+			"variants": {
+				"openai_lark": "start: /.+/",
+				"openai_regex": "^.+$"
+			},
+			"configType": "grammar",
+			"noConfig": false,
+			"supports": true
+		},
+		"error": "Tool \"echo\" cannot use grammar constrained sampling: grammar constrained sampling requires an object parameter schema."
+	},
+	{
+		"label": "missing property entry",
+		"tool": {
+			"parameters": {
+				"type": "object",
+				"required": [
+					"q"
+				],
+				"properties": {}
+			},
+			"variants": {
+				"openai_lark": "start: /.+/",
+				"openai_regex": "^.+$"
+			},
+			"configType": "grammar",
+			"noConfig": false,
+			"supports": true
+		},
+		"error": "Tool \"echo\" cannot use grammar constrained sampling: grammar constrained sampling requires a properties entry for q."
+	},
+	{
+		"label": "null property entry",
+		"tool": {
+			"parameters": {
+				"type": "object",
+				"required": [
+					"q"
+				],
+				"properties": {
+					"q": null
+				}
+			},
+			"variants": {
+				"openai_lark": "start: /.+/",
+				"openai_regex": "^.+$"
+			},
+			"configType": "grammar",
+			"noConfig": false,
+			"supports": true
+		},
+		"error": "Tool \"echo\" cannot use grammar constrained sampling: grammar constrained sampling requires a properties entry for q."
+	},
+	{
+		"label": "property not a string",
+		"tool": {
+			"parameters": {
+				"type": "object",
+				"required": [
+					"q"
+				],
+				"properties": {
+					"q": {
+						"type": "number"
+					}
+				}
+			},
+			"variants": {
+				"openai_lark": "start: /.+/",
+				"openai_regex": "^.+$"
+			},
+			"configType": "grammar",
+			"noConfig": false,
+			"supports": true
+		},
+		"error": "Tool \"echo\" cannot use grammar constrained sampling: grammar constrained sampling property q must have type string."
+	},
+	{
+		"label": "property type union",
+		"tool": {
+			"parameters": {
+				"type": "object",
+				"required": [
+					"q"
+				],
+				"properties": {
+					"q": {
+						"type": [
+							"string"
+						]
+					}
+				}
+			},
+			"variants": {
+				"openai_lark": "start: /.+/",
+				"openai_regex": "^.+$"
+			},
+			"configType": "grammar",
+			"noConfig": false,
+			"supports": true
+		},
+		"error": "Tool \"echo\" cannot use grammar constrained sampling: grammar constrained sampling property q must have type string."
+	}
+]

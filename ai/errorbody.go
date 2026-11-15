@@ -211,30 +211,48 @@ type GrammarConstrainedSampling struct {
 }
 
 // InferGrammarInputProperty requires exactly one required string property.
+// Each member keeps the reference's own rejection message, so a wrong-typed
+// member must not fail a whole-schema decode first (v1.5.2
+// constrained-sampling.ts inferGrammarInputProperty reads them one at a time).
 func inferGrammarInputProperty(tool Tool) (string, error) {
-	var schema struct {
-		Type       string                     `json:"type"`
-		Required   []string                   `json:"required"`
-		Properties map[string]json.RawMessage `json:"properties"`
-	}
-	if err := jsonUnmarshalStrict(tool.Parameters, &schema); err != nil {
+	var schema map[string]json.RawMessage
+	if err := jsonUnmarshalStrict(tool.Parameters, &schema); err != nil || schema == nil {
 		return "", fmt.Errorf("grammar constrained sampling requires an object parameter schema")
 	}
-	if schema.Type != "object" {
+	var schemaType any
+	if raw, ok := schema["type"]; ok {
+		_ = json.Unmarshal(raw, &schemaType)
+	}
+	if text, ok := schemaType.(string); !ok || text != "object" {
 		return "", fmt.Errorf("grammar constrained sampling requires an object parameter schema")
 	}
-	if len(schema.Required) != 1 {
+	var required any
+	if raw, ok := schema["required"]; ok {
+		_ = json.Unmarshal(raw, &required)
+	}
+	requiredList, isList := required.([]any)
+	if !isList || len(requiredList) != 1 {
 		return "", fmt.Errorf("grammar constrained sampling requires exactly one required string property")
 	}
-	inputProperty := schema.Required[0]
-	prop, ok := schema.Properties[inputProperty]
-	if !ok {
+	inputProperty, isName := requiredList[0].(string)
+	if !isName {
+		return "", fmt.Errorf("grammar constrained sampling requires exactly one required string property")
+	}
+	var properties map[string]json.RawMessage
+	if raw, ok := schema["properties"]; ok {
+		_ = json.Unmarshal(raw, &properties)
+	}
+	property, ok := properties[inputProperty]
+	// The reference tests the entry for truthiness, so a null or false property
+	// is a missing entry rather than a wrong-typed one.
+	if !ok || string(property) == "null" || string(property) == "false" {
 		return "", fmt.Errorf("grammar constrained sampling requires a properties entry for %s", inputProperty)
 	}
-	var propSchema struct {
-		Type string `json:"type"`
+	var propertySchema struct {
+		Type any `json:"type"`
 	}
-	if err := jsonUnmarshalStrict(prop, &propSchema); err != nil || propSchema.Type != "string" {
+	_ = json.Unmarshal(property, &propertySchema)
+	if text, ok := propertySchema.Type.(string); !ok || text != "string" {
 		return "", fmt.Errorf("grammar constrained sampling property %s must have type string", inputProperty)
 	}
 	return inputProperty, nil
