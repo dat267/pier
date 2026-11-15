@@ -691,3 +691,35 @@ func TestAnthropicOAuthClaudeCodeVersion(t *testing.T) {
 		t.Fatalf("claudeCodeVersion = %q, want 2.1.322", claudeCodeVersion)
 	}
 }
+
+// Upstream blocks temperature whenever the model's compat marks managed effort
+// (supportsMidConvoEffort === true), even with thinking disabled and no effort
+// markers sent: api/anthropic-messages.ts buildParams tests the compat flag, not
+// whether effort messages are emitted. The port tested the marker decision, so a
+// managed-effort model with thinking off carried a temperature the reference
+// never sends.
+func TestAnthropicManagedEffortNeverSendsTemperature(t *testing.T) {
+	off := "none"
+	model := &Model{
+		ID: "claude-opus-5", API: APIAnthropicMessages, Provider: "anthropic",
+		Reasoning: true, ContextWindow: 200000, MaxTokens: 64000,
+		ThinkingLevelMap: ThinkingLevelMap{ThinkOff: &off},
+		Compat: &ModelCompat{AnthropicMessages: &AnthropicMessagesCompat{
+			SupportsMidConvoEffort: new(true), SupportsTemperature: new(true),
+		}},
+	}
+	disabled := false
+	temperature := 0.3
+	params := build(t, model, []Message{
+		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+	}, &AnthropicOptions{
+		StreamOptions:   StreamOptions{Temperature: &temperature},
+		ThinkingEnabled: &disabled,
+	})
+	if params.Thinking == nil || params.Thinking.Type != "disabled" {
+		t.Fatalf("thinking = %+v, want disabled", params.Thinking)
+	}
+	if params.Temperature != nil {
+		t.Fatalf("temperature = %v, want none for a managed-effort model", *params.Temperature)
+	}
+}

@@ -961,9 +961,11 @@ func buildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 	}
 
 	// Temperature is incompatible with extended thinking and unsupported on
-	// Claude Opus 4.7+.
+	// Claude Opus 4.7+. A managed-effort model never carries it, even when
+	// thinking is disabled and no effort markers are sent: upstream tests the
+	// compat flag, not whether effort messages are emitted.
 	if options.Temperature != nil && (options.ThinkingEnabled == nil || !*options.ThinkingEnabled) &&
-		managedProvider == "" && compat.SupportsTemperature {
+		!supportsMidConvoEffort && compat.SupportsTemperature {
 		params.Temperature = options.Temperature
 	}
 
