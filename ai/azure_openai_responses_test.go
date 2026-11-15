@@ -267,3 +267,41 @@ func TestAzureResponsesReasoningEffort(t *testing.T) {
 		t.Fatalf("include = %#v", body["include"])
 	}
 }
+
+// Upstream's Azure client sets only identity, model and caller headers plus the
+// SDK's api-key (packages/ai/src/api/azure-openai-responses.ts createClient);
+// the Azure dialect has no session-affinity concept, so it sends none of the
+// OpenAI affinity headers even when a session id reaches the stream. The port
+// reused the OpenAI responses builder's affinity block, which put session_id,
+// x-client-request-id and x-session-id on every Azure request.
+func TestAzureResponsesOmitsSessionAffinityHeaders(t *testing.T) {
+	var captured *http.Request
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		captured = request
+		writer.Header().Set("Content-Type", "text/event-stream")
+		_, _ = writer.Write([]byte("data: {\"type\":\"response.completed\",\"response\":{\"id\":\"r1\",\"status\":\"completed\",\"output\":[]}}\n\n"))
+	}))
+	defer server.Close()
+
+	model := &Model{
+		ID: "gpt-4o-mini", API: APIAzureOpenAIResponses, Provider: "azure-openai-responses",
+		BaseURL: server.URL + "/openai/v1", ContextWindow: 128000, MaxTokens: 4096,
+	}
+	t.Setenv("AZURE_OPENAI_BASE_URL", "")
+	t.Setenv("AZURE_OPENAI_RESOURCE_NAME", "")
+	t.Setenv("AZURE_OPENAI_API_VERSION", "")
+	stream := StreamAzureOpenAIResponses(model, TranscriptContext{Messages: []Message{
+		&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
+	}}, &AzureOpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "test-api-key", SessionID: "sess-1"}})
+	if _, err := stream.Result(ctxpkg.Background()); err != nil {
+		t.Fatalf("err = %v", err)
+	}
+	if captured == nil {
+		t.Fatal("no request captured")
+	}
+	for _, name := range []string{"session_id", "session-id", "x-client-request-id", "x-session-affinity", "x-session-id"} {
+		if value := captured.Header.Get(name); value != "" {
+			t.Fatalf("%s = %q, want no session affinity header on Azure", name, value)
+		}
+	}
+}

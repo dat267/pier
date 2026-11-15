@@ -195,16 +195,9 @@ func StreamAzureOpenAIResponses(model *Model, context TranscriptContext, options
 			if apiKey != "" {
 				req.Header.Set("api-key", apiKey)
 			}
-			if cacheSessionID != "" {
-				if compat.SessionAffinityFormat == SessionAffinityOpenRouter {
-					req.Header.Set("x-session-id", cacheSessionID)
-				} else {
-					if compat.SessionAffinityFormat == SessionAffinityOpenAI {
-						req.Header.Set("session_id", cacheSessionID)
-					}
-					req.Header.Set("x-client-request-id", cacheSessionID)
-				}
-			}
+			// No session-affinity headers: the Azure dialect has no such
+			// concept, and upstream's client sets only identity, model and
+			// caller headers (api/azure-openai-responses.ts createClient).
 			for name, value := range model.Headers {
 				req.Header.Set(name, value)
 			}
