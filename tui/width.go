@@ -276,6 +276,14 @@ func isGraphemeControl(r rune) bool { return isInTable(r, graphemeControlRanges)
 
 // isGraphemeExtend reports the UAX #29 Extend class: marks, variation
 // selectors, emoji modifiers, ZWNJ and tag characters.
+//
+// Go exposes no Grapheme_Cluster_Break property, so the class is approximated
+// with unicode.IsMark, which also covers Mc (SpacingMark). That is the same
+// cluster for every mark up to Unicode 16, because rule GB9a joins a SpacingMark
+// as well; it differs only for a mark a later UCD reclassifies to Other, which
+// is U+102B/U+102C from Unicode 17 on. Intl.Segmenter in the reference uses
+// whichever ICU the running Node ships, so its boundary follows that version
+// and cannot be pinned to the Unicode version Go's tables carry.
 func isGraphemeExtend(r rune) bool {
 	if unicode.IsMark(r) {
 		return true
@@ -306,7 +314,7 @@ var prependRanges = [][2]rune{
 
 // isGraphemeSpacingMark reports the two spacing marks that are letters rather
 // than Marks (rule GB9a): the Thai and Lao AM vowels. Every other spacing mark
-// is a Mark, which rule GB9 already joins.
+// is a Mark, which isGraphemeExtend already joins.
 func isGraphemeSpacingMark(r rune) bool { return r == 0x0E33 || r == 0x0EB3 }
 
 // isPrepend reports the UAX #29 Prepend class.
