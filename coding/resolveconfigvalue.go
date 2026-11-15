@@ -302,7 +302,7 @@ var configCommandTimeout = 10 * time.Second
 // executeWithConfiguredShell runs the command through the resolved shell.
 // executed reports whether the shell could be spawned at all (upstream
 // distinguishes ENOENT, which falls back to the default shell).
-func executeWithConfiguredShell(command string, env map[string]string) (value string, executed bool) {
+func executeWithConfiguredShell(command string) (value string, executed bool) {
 	config, err := GetShellConfig("")
 	if err != nil {
 		return "", false
@@ -319,9 +319,6 @@ func executeWithConfiguredShell(command string, env map[string]string) (value st
 	if commandFromStdin {
 		cmd.Stdin = strings.NewReader(command)
 	}
-	if env != nil {
-		cmd.Env = mergeEnvMap(os.Environ(), env)
-	}
 	output, err := cmd.Output()
 	if err != nil {
 		var exitError *exec.ExitError
@@ -336,7 +333,7 @@ func executeWithConfiguredShell(command string, env map[string]string) (value st
 
 // executeWithDefaultShell runs the command through the platform default shell
 // (upstream execSync).
-func executeWithDefaultShell(command string, env map[string]string) (string, bool) {
+func executeWithDefaultShell(command string) (string, bool) {
 	shell := "/bin/sh"
 	args := []string{"-c", command}
 	if runtime.GOOS == "windows" {
@@ -347,9 +344,6 @@ func executeWithDefaultShell(command string, env map[string]string) (string, boo
 	defer cancel()
 	cmd := exec.CommandContext(ctx, shell, args...)
 	limitConfigCommandPipeWaitAfterCancel(cmd)
-	if env != nil {
-		cmd.Env = mergeEnvMap(os.Environ(), env)
-	}
 	output, err := cmd.Output()
 	if err != nil {
 		return "", false
@@ -374,12 +368,12 @@ func executeConfigCommandUncached(commandConfig string) (string, bool) {
 	if runtime.GOOS == "windows" {
 		// Only Windows falls back to the default shell when the configured
 		// shell cannot be spawned.
-		if value, executed := executeWithConfiguredShell(command, nil); executed {
+		if value, executed := executeWithConfiguredShell(command); executed {
 			return value, value != ""
 		}
-		return executeWithDefaultShell(command, nil)
+		return executeWithDefaultShell(command)
 	}
-	return executeWithDefaultShell(command, nil)
+	return executeWithDefaultShell(command)
 }
 
 func executeConfigCommand(commandConfig string, cached bool) (string, bool) {
@@ -417,20 +411,4 @@ func executeConfigCommand(commandConfig string, cached bool) (string, bool) {
 	close(call.done)
 	configCommandCacheMu.Unlock()
 	return value, ok
-}
-
-// mergeEnvMap overlays extra variables on a base environment.
-func mergeEnvMap(base []string, extra map[string]string) []string {
-	out := make([]string, 0, len(base)+len(extra))
-	for _, entry := range base {
-		name, _, _ := strings.Cut(entry, "=")
-		if _, overridden := extra[name]; overridden {
-			continue
-		}
-		out = append(out, entry)
-	}
-	for name, value := range extra {
-		out = append(out, name+"="+value)
-	}
-	return out
 }

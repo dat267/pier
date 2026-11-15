@@ -23,7 +23,7 @@ func TestConfigCommandTimeoutDoesNotWaitForDescendantPipeEOF(t *testing.T) {
 
 func TestConfiguredShellTimeoutDoesNotWaitForDescendantPipeEOF(t *testing.T) {
 	assertConfigCommandPipeTimeout(t, func(command string) bool {
-		value, _ := executeWithConfiguredShell(command, nil)
+		value, _ := executeWithConfiguredShell(command)
 		return value != ""
 	})
 }
