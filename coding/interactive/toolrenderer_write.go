@@ -155,7 +155,13 @@ var writeRenderers = ToolRenderers{
 			component = &writeCallComponent{Text: tui.NewText("", 0, 0, nil)}
 		}
 		if hasContent {
-			if context.ArgsComplete {
+			// upstream clears the streaming cache for a complete call and lets
+			// the component's CodeHighlighter memo serve repeated renders, so
+			// an unchanged complete call is highlighted once.
+			if cache := component.cache; context.ArgsComplete && cache != nil &&
+				cache.rawPath == rawPath && cache.rawContent == fileContent {
+				// Reuse the highlighting of the same complete content.
+			} else if context.ArgsComplete {
 				component.cache = rebuildWriteHighlightCacheFull(rawPath, hasRawPath, fileContent)
 			} else {
 				component.cache = updateWriteHighlightCacheIncremental(component.cache, rawPath, hasRawPath, fileContent)
