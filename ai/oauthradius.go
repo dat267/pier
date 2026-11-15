@@ -201,14 +201,20 @@ type RadiusCallbackServer struct {
 	server      *http.Server
 	unavailable bool
 
-	mu      sync.Mutex
-	settled bool
-	done    chan struct{}
-	code    string
+	mu          sync.Mutex
+	settled     bool
+	done        chan struct{}
+	code        string
+	credential  *OAuthCredential
+	waitErr     error
+	stopAbort   func() bool
+	stopAbortMu sync.Once
 }
 
-// StartRadiusCallbackServer serves the fixed-port OAuth callback.
-func StartRadiusCallbackServer(expectedState string, ctx context.Context) *RadiusCallbackServer {
+// StartRadiusCallbackServer serves the fixed-port OAuth callback. complete runs
+// the code exchange before the browser page is sent, as upstream's callback
+// server does, so a failure shows on the page and ends the wait with it.
+func StartRadiusCallbackServer(expectedState string, ctx context.Context, complete func(code string) (*OAuthCredential, error)) *RadiusCallbackServer {
 	callback := &RadiusCallbackServer{done: make(chan struct{})}
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", radiusCallbackHost, RadiusCallbackPort))
 	if err != nil {
@@ -219,7 +225,7 @@ func StartRadiusCallbackServer(expectedState string, ctx context.Context) *Radiu
 		return callback
 	}
 	if ctx != nil {
-		context.AfterFunc(ctx, func() { callback.finish("") })
+		callback.stopAbort = context.AfterFunc(ctx, func() { callback.finish("") })
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc(RadiusCallbackPath, func(writer http.ResponseWriter, request *http.Request) {
@@ -251,8 +257,18 @@ func StartRadiusCallbackServer(expectedState string, ctx context.Context) *Radiu
 			sendPage(http.StatusBadRequest, OAuthErrorHTML("Missing authorization code.", ""))
 			return
 		}
+		var credential *OAuthCredential
+		var exchangeErr error
+		if complete != nil {
+			credential, exchangeErr = complete(code)
+		}
+		if exchangeErr != nil {
+			sendPage(http.StatusBadGateway, OAuthErrorHTML("Radius sign-in failed.", exchangeErr.Error()))
+			callback.settle(code, nil, exchangeErr)
+			return
+		}
 		sendPage(http.StatusOK, OAuthSuccessHTML("Signed in to Radius. You may now close this page."))
-		callback.finish(code)
+		callback.settle(code, credential, nil)
 	})
 	callback.server = newOAuthCallbackHTTPServer(mux)
 	go func() { _ = callback.server.Serve(listener) }()
@@ -260,6 +276,10 @@ func StartRadiusCallbackServer(expectedState string, ctx context.Context) *Radiu
 }
 
 func (s *RadiusCallbackServer) finish(code string) {
+	s.settle(code, nil, nil)
+}
+
+func (s *RadiusCallbackServer) settle(code string, credential *OAuthCredential, waitErr error) {
 	s.mu.Lock()
 	if s.settled {
 		s.mu.Unlock()
@@ -267,8 +287,22 @@ func (s *RadiusCallbackServer) finish(code string) {
 	}
 	s.settled = true
 	s.code = code
+	s.credential = credential
+	s.waitErr = waitErr
 	s.mu.Unlock()
 	close(s.done)
+}
+
+// Wait returns the exchange result, the exchange error, or nil when the wait
+// was cancelled or the listener was unavailable.
+func (s *RadiusCallbackServer) Wait() (*OAuthCredential, error) {
+	if s.unavailable {
+		return nil, nil
+	}
+	<-s.done
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.credential, s.waitErr
 }
 
 // WaitForCode waits for the callback; ok is false when unavailable or
@@ -286,9 +320,12 @@ func (s *RadiusCallbackServer) WaitForCode() (string, bool) {
 	return s.code, true
 }
 
-// Close releases the server.
+// Close releases the server and its context registration.
 func (s *RadiusCallbackServer) Close() {
 	s.finish("")
+	if s.stopAbort != nil {
+		s.stopAbortMu.Do(func() { _ = s.stopAbort() })
+	}
 	if s.server != nil {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
@@ -325,7 +362,15 @@ func LoginRadiusWithBrowser(interaction *AuthInteraction, gateway, authorization
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	callbackServer := StartRadiusCallbackServer(state, ctx)
+	callbackServer := StartRadiusCallbackServer(state, ctx, func(code string) (*OAuthCredential, error) {
+		return RequestRadiusOAuthToken(ctx, gateway, map[string]string{
+			"grant_type":    "authorization_code",
+			"client_id":     RadiusOAuthClientID,
+			"redirect_uri":  RadiusRedirectURI,
+			"code":          code,
+			"code_verifier": pkce.Verifier,
+		})
+	})
 	if interaction.Notify != nil {
 		interaction.Notify(AuthEvent{
 			Type:    AuthEventProgress,
@@ -339,20 +384,17 @@ func LoginRadiusWithBrowser(interaction *AuthInteraction, gateway, authorization
 	}
 	defer callbackServer.Close()
 
-	code, ok := callbackServer.WaitForCode()
-	if !ok {
+	credential, waitErr := callbackServer.Wait()
+	if waitErr != nil {
+		return nil, waitErr
+	}
+	if credential == nil {
 		if ctx.Err() != nil {
 			return nil, fmt.Errorf("Login cancelled")
 		}
 		return nil, fmt.Errorf("OAuth callback did not complete.")
 	}
-	return RequestRadiusOAuthToken(ctx, gateway, map[string]string{
-		"grant_type":    "authorization_code",
-		"client_id":     RadiusOAuthClientID,
-		"redirect_uri":  RadiusRedirectURI,
-		"code":          code,
-		"code_verifier": pkce.Verifier,
-	})
+	return credential, nil
 }
 
 // RadiusDeviceAuthorization is one device authorization response.

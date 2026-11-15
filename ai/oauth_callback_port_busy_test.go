@@ -38,7 +38,7 @@ func TestCodexCallbackServerWithItsPortTakenSettlesOnce(t *testing.T) {
 // port is taken; its deferred Close must not panic on the way out.
 func TestRadiusCallbackServerWithItsPortTakenSettlesOnce(t *testing.T) {
 	holdPort(t, radiusCallbackHost, RadiusCallbackPort)
-	server := StartRadiusCallbackServer("state", nil)
+	server := StartRadiusCallbackServer("state", nil, nil)
 	if !server.unavailable {
 		t.Skip("the callback port could not be made unavailable")
 	}
