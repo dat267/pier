@@ -4,7 +4,7 @@ No reproduced finding is open. Resolved ones live in `git log`; the sweep positi
 
 ## Sweep position
 
-Open: semantic reading of the large files no oracle covers, in this order: the tail of `coding/sdk.go` `CreateAgentSession` (tool selection, wildcard expansion, the single exclusion pass, the block-images transcript filter, the per-request options wiring, the four concurrent resource-discovery passes and the session construction up to line 600 are read clean), `coding/interactive/app.go` `NewApp` (430) and `settingsselector.go` (415).
+The whole-tree sweep is complete: every named semantic read is done, and the last three (`coding/sdk.go` `CreateAgentSession`'s tail, `coding/interactive/app.go` `NewApp`, `coding/interactive/settingsselector.go`) are closed by the fixes in `git log`.
 
 Clean mechanical layers: `go run mvdan.cc/unparam@latest -exported=false ./...` reports nothing, `staticcheck -checks all` (minus the documented exclusions in `.golangci.yml`) reports nothing, `golangci-lint` reports nothing, and `deadcode`'s actionable subset is empty (every remaining unreachable function is referenced by a test or a same-file chain, i.e. the ported SDK surface). Duplication is confined to generated language tables, model-catalog literals and test files.
 
