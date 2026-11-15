@@ -12,6 +12,8 @@ import (
 	"os"
 	"strings"
 
+	_ "golang.org/x/image/webp"
+
 	"github.com/dat267/pier/ai"
 )
 
@@ -75,8 +77,9 @@ type ProcessImageResult struct {
 // whether the conversion succeeded.
 //
 // D408: upstream converts through Photon (Rust/WASM), which also handles formats
-// the Go standard library cannot decode (notably BMP). The Go port decodes what
-// image/png, image/jpeg, and image/gif provide and reports failure otherwise.
+// the Go port cannot decode (notably BMP). The Go port decodes what image/png,
+// image/jpeg, image/gif, and golang.org/x/image/webp provide and reports failure
+// otherwise.
 type imageBytesConverter func(bytes []byte) ([]byte, bool)
 
 var convertImageBytesToPNG imageBytesConverter = func(bytes []byte) ([]byte, bool) {
@@ -88,12 +91,11 @@ var convertImageBytesToPNG imageBytesConverter = func(bytes []byte) ([]byte, boo
 //
 // D408: oversize images are resized with a pure-Go bilinear resampler rather than
 // Photon's Lanczos3 (Rust/WASM, which the port does not have), and re-encoding
-// produces PNG or JPEG. Formats the standard library cannot decode at all (webp,
-// and bmp outside the sniffing path) report the same omission message, because
-// the auto-resize path must decode to measure them; with auto-resize off a webp
-// passes through unchanged. TODO.md records that upstream embeds a webp that
-// already fits. Images that already fit within the limits pass through
-// byte-identically, which is the common case.
+// produces PNG or JPEG. Formats the port cannot decode at all (bmp outside the
+// sniffing path) report the same omission message, because the auto-resize path
+// must decode to measure them; with auto-resize off such an image passes through
+// unchanged. Every inline type the sniffer accepts, image/webp included, decodes,
+// so an image that already fits passes through byte-identically.
 func ProcessImage(bytes []byte, mimeType string, options *ProcessImageOptions) ProcessImageResult {
 	autoResize := true
 	if options != nil && options.AutoResizeImages != nil {

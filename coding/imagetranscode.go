@@ -2,9 +2,10 @@ package coding
 
 // PNG transcoding for the inline-image path. The kitty graphics protocol only
 // accepts PNG (f=100), so a non-PNG image shown in a kitty terminal must be
-// re-encoded first (upstream #10292, ensurePngTranscoder). Go's standard
-// decoders cover PNG, JPEG and GIF; formats the port cannot decode (WebP, BMP)
-// fall back to the text placeholder.
+// re-encoded first (upstream #10292, ensurePngTranscoder). The decoders
+// registered in fileprocessor.go cover every inline type the sniffer accepts
+// (PNG, JPEG, GIF, WebP); a payload none of them decodes falls back to the text
+// placeholder.
 
 import (
 	"bytes"

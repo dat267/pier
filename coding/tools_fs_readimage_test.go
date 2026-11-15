@@ -73,8 +73,8 @@ func TestReadToolNotesNonVisionModels(t *testing.T) {
 // the model cannot read.
 func TestReadToolReportsUndecodableImages(t *testing.T) {
 	dir := t.TempDir()
-	// A WebP header is enough for the sniffer; image/webp has no standard-library
-	// decoder, which is exactly the case being pinned.
+	// A WebP header is enough for the sniffer, but the payload is truncated, so
+	// the registered WebP decoder rejects it: exactly the case being pinned.
 	webp := append([]byte("RIFF"), make([]byte, 4)...)
 	webp = append(webp, []byte("WEBPVP8 ")...)
 	webp = append(webp, make([]byte, 32)...)
