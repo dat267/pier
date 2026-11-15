@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D483)
+# Deliberate divergences from pi (D1–D484)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7836,3 +7836,21 @@ wherever registration order is not already alphabetical.
 
 Tests: `TestModelsGetProvidersSortedByID`,
 `TestImagesModelsGetProvidersSortedByID`.
+
+### D484
+
+**A missing or mismatched API implementation streams an error instead of throwing.**
+
+Reference: pi v1.5.2 (b4afdddf)
+`packages/ai/src/compat.ts` `resolveApiProvider` throws
+`No API provider registered for api: <api>`, and `wrapStream` and
+`wrapStreamSimple` throw `Mismatched api: <model api> expected <api>`, both
+synchronously inside `stream()` and `streamSimple()`. Go cannot throw across a
+function that returns a stream, so the port returns an error stream carrying the
+same message and an error stop reason instead: `apiMismatchStream` in
+`ai/apiregistry.go`, and the nil branch of the `GetAPIProvider` lookup in
+`coding/providercomposer.go`. Every caller already handles an error event, so no
+call site needs a separate failure path.
+
+Tests: `TestAPIRegistryBuiltins`,
+`TestComposeModelProviderMissingAPIProviderStreamsError`.

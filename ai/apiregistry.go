@@ -44,7 +44,7 @@ var (
 )
 
 // apiMismatchStream builds the error stream upstream throws when a stream
-// function is called with a model of the wrong api.
+// function is called with a model of the wrong api (D484).
 func apiMismatchStream(model *Model, api Api) *AssistantMessageEventStream {
 	stream := NewAssistantMessageEventStream()
 	go func() {

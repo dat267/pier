@@ -910,6 +910,8 @@ func ComposeModelProvider(providerID string, base *ai.Provider, modelConfig *Mod
 		}
 		api := ai.GetAPIProvider(model.API)
 		if api == nil {
+			// upstream resolveApiProvider throws here; the port streams an
+			// error with the same message (D484).
 			return ai.ErrorStreamForModel(model, ai.ErrCodeProvider, fmt.Sprintf("No API provider registered for api: %s", model.API))
 		}
 		if simple {

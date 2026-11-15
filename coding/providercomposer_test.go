@@ -646,3 +646,22 @@ func TestResolveConfiguredModelHeadersUsesTheFirstDefinition(t *testing.T) {
 		t.Fatalf("headers = %v, want only the first definition's headers", headers)
 	}
 }
+
+// D484: upstream compat.ts throws when no implementation is registered for a
+// model's api; the port returns an error stream with the same message.
+func TestComposeModelProviderMissingAPIProviderStreamsError(t *testing.T) {
+	config := loadConfig(t, `{"providers":{"custom":{"baseUrl":"https://x","apiKey":"k","models":[{"id":"m","name":"M","api":"pi-virtual-nope"}]}}}`)
+	provider, err := ComposeModelProvider("custom", nil, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	model := provider.GetModels()[0]
+	stream := provider.Stream(model, ai.TranscriptContext{}, nil)
+	message, err := stream.Result(nil)
+	if err != nil || message == nil || message.StopReason != ai.StopError || message.ErrorMessage == nil {
+		t.Fatalf("message = %+v, err = %v", message, err)
+	}
+	if *message.ErrorMessage != "No API provider registered for api: pi-virtual-nope" {
+		t.Fatalf("error = %q", *message.ErrorMessage)
+	}
+}
