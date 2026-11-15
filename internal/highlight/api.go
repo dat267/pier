@@ -139,12 +139,18 @@ func HighlightWith(code, language string, ignoreIllegals bool) (*Result, error) 
 	return result, nil
 }
 
-// Languages returns the sorted names of every registered language.
+// Languages returns the sorted canonical names of every registered language,
+// as core.js listLanguages does; an alias is not a language of its own.
 func Languages() []string {
 	registryMu.RLock()
 	defer registryMu.RUnlock()
+	seen := make(map[string]bool, len(registry))
 	names := make([]string, 0, len(registry))
-	for name := range registry {
+	for name, language := range registry {
+		if language.Name != name || seen[name] {
+			continue
+		}
+		seen[name] = true
 		names = append(names, name)
 	}
 	sort.Strings(names)
