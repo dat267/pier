@@ -404,18 +404,18 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 					out = append(out, message)
 					continue
 				}
-				filtered := filterContentListBlocks(typed.Content.Blocks, disabledText)
-				out = append(out, &ai.UserMessage{Content: ai.StringOrBlocks{Blocks: filtered}, Timestamp: typed.Timestamp})
+				// Upstream keeps every other field (`{ ...msg, content }`).
+				copied := *typed
+				copied.Content = ai.StringOrBlocks{Blocks: filterContentListBlocks(typed.Content.Blocks, disabledText)}
+				out = append(out, &copied)
 			case *ai.ToolResultMessage:
 				if !userContentHasImages(typed.Content) {
 					out = append(out, message)
 					continue
 				}
-				filtered := filterUserContentBlocks(typed.Content, disabledText)
-				out = append(out, &ai.ToolResultMessage{
-					ToolCallID: typed.ToolCallID, ToolName: typed.ToolName, Content: filtered,
-					Details: typed.Details, Usage: typed.Usage, IsError: typed.IsError, Timestamp: typed.Timestamp,
-				})
+				copied := *typed
+				copied.Content = filterUserContentBlocks(typed.Content, disabledText)
+				out = append(out, &copied)
 			default:
 				out = append(out, message)
 			}

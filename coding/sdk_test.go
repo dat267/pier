@@ -737,6 +737,62 @@ func TestCreateAgentSessionBlockImages(t *testing.T) {
 	}
 }
 
+// Upstream (pi v1.5.2 core/sdk.ts convertToLlmWithBlockImages) replaces only the
+// content of a filtered message (`{ ...msg, content }`), so every other field
+// survives the block-images pass.
+func TestCreateAgentSessionBlockImagesKeepsMessageFields(t *testing.T) {
+	tempAgentDir(t)
+	runtime := testSessionRuntime(t)
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
+		Model: &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 1000, MaxTokens: 100},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings.SetBlockImages(true)
+	duration := int64(42)
+	nested := &ai.NestedToolCalls{Complete: true}
+	details := []byte(`{"nested":true}`)
+	messages := []ai.Message{
+		&ai.UserMessage{Content: ai.StringOrBlocks{Blocks: ai.ContentList{
+			ai.ImageContent{Data: "AAAA", MimeType: "image/png"},
+		}}, Timestamp: 7},
+		&ai.ToolResultMessage{
+			ToolCallID: "t", ToolName: "read", Content: ai.UserContentList{
+				ai.ImageContent{Data: "CCCC", MimeType: "image/png"},
+			},
+			Details: details, Usage: &ai.Usage{Input: 3}, NestedCalls: nested,
+			IsError: true, DurationMs: &duration, Timestamp: 9,
+		},
+	}
+	converted := session.Session.Agent.ConvertToLlm(messages)
+	user := converted[0].(*ai.UserMessage)
+	if user.Timestamp != 7 {
+		t.Fatalf("user timestamp = %d, want 7", user.Timestamp)
+	}
+	toolResult := converted[1].(*ai.ToolResultMessage)
+	if toolResult.ToolCallID != "t" || toolResult.ToolName != "read" || !toolResult.IsError {
+		t.Fatalf("tool result identity = %+v", toolResult)
+	}
+	if toolResult.Timestamp != 9 {
+		t.Fatalf("timestamp = %d, want 9", toolResult.Timestamp)
+	}
+	if toolResult.DurationMs == nil || *toolResult.DurationMs != duration {
+		t.Fatalf("duration = %v, want %d", toolResult.DurationMs, duration)
+	}
+	if toolResult.NestedCalls != nested {
+		t.Fatalf("nested calls = %+v, want the original record", toolResult.NestedCalls)
+	}
+	if string(toolResult.Details) != string(details) {
+		t.Fatalf("details = %s", toolResult.Details)
+	}
+	if toolResult.Usage == nil || toolResult.Usage.Input != 3 {
+		t.Fatalf("usage = %+v", toolResult.Usage)
+	}
+}
+
 func TestCreateAgentSessionRequestOptions(t *testing.T) {
 	t.Setenv("PI_TELEMETRY", "")
 	tempAgentDir(t)
