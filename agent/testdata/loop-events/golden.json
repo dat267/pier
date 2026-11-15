@@ -1,0 +1,3241 @@
+[
+ {
+  "name": "text-turn",
+  "events": [
+   {
+    "type": "agent_start"
+   },
+   {
+    "type": "turn_start"
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "hi"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "hi"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "assistant",
+     "content": [],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_update",
+    "update": "text_delta",
+    "delta": "he",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "he"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_update",
+    "update": "text_delta",
+    "delta": "llo",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "hello"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "hello"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "turn_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "hello"
+      }
+     ],
+     "stopReason": "stop"
+    },
+    "toolResults": []
+   },
+   {
+    "type": "agent_end",
+    "messages": [
+     {
+      "role": "user",
+      "content": [
+       {
+        "type": "text",
+        "text": "hi"
+       }
+      ]
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "hello"
+       }
+      ],
+      "stopReason": "stop"
+     }
+    ]
+   }
+  ],
+  "messages": [
+   {
+    "role": "user",
+    "content": [
+     {
+      "type": "text",
+      "text": "hi"
+     }
+    ]
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "text",
+      "text": "hello"
+     }
+    ],
+    "stopReason": "stop"
+   }
+  ]
+ },
+ {
+  "name": "parallel-batch",
+  "events": [
+   {
+    "type": "agent_start"
+   },
+   {
+    "type": "turn_start"
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "system",
+     "content": [
+      {
+       "type": "text",
+       "text": ""
+      }
+     ],
+     "toolsAdded": [
+      "a",
+      "b"
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "system",
+     "content": [
+      {
+       "type": "text",
+       "text": ""
+      }
+     ],
+     "toolsAdded": [
+      "a",
+      "b"
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "run"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "run"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "assistant",
+     "content": [],
+     "stopReason": "toolUse"
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "toolCall",
+       "id": "c1",
+       "name": "a",
+       "arguments": {
+        "v": 1
+       }
+      },
+      {
+       "type": "toolCall",
+       "id": "c2",
+       "name": "b",
+       "arguments": {
+        "v": 2
+       }
+      }
+     ],
+     "stopReason": "toolUse"
+    }
+   },
+   {
+    "type": "tool_execution_start",
+    "toolCallId": "c1",
+    "toolName": "a",
+    "args": {
+     "v": 1
+    }
+   },
+   {
+    "type": "tool_execution_start",
+    "toolCallId": "c2",
+    "toolName": "b",
+    "args": {
+     "v": 2
+    }
+   },
+   {
+    "type": "tool_execution_end",
+    "toolCallId": "c1",
+    "toolName": "a",
+    "isError": false,
+    "content": [
+     {
+      "type": "text",
+      "text": "a:1"
+     }
+    ],
+    "details": {
+     "by": "a"
+    },
+    "terminate": false,
+    "hasDuration": true
+   },
+   {
+    "type": "tool_execution_end",
+    "toolCallId": "c2",
+    "toolName": "b",
+    "isError": false,
+    "content": [
+     {
+      "type": "text",
+      "text": "b:2"
+     }
+    ],
+    "details": {
+     "by": "b"
+    },
+    "terminate": false,
+    "hasDuration": true
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "a:1"
+      }
+     ],
+     "toolCallId": "c1",
+     "toolName": "a",
+     "isError": false
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "a:1"
+      }
+     ],
+     "toolCallId": "c1",
+     "toolName": "a",
+     "isError": false
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "b:2"
+      }
+     ],
+     "toolCallId": "c2",
+     "toolName": "b",
+     "isError": false
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "b:2"
+      }
+     ],
+     "toolCallId": "c2",
+     "toolName": "b",
+     "isError": false
+    }
+   },
+   {
+    "type": "turn_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "toolCall",
+       "id": "c1",
+       "name": "a",
+       "arguments": {
+        "v": 1
+       }
+      },
+      {
+       "type": "toolCall",
+       "id": "c2",
+       "name": "b",
+       "arguments": {
+        "v": 2
+       }
+      }
+     ],
+     "stopReason": "toolUse"
+    },
+    "toolResults": [
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "a:1"
+       }
+      ],
+      "toolCallId": "c1",
+      "toolName": "a",
+      "isError": false
+     },
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "b:2"
+       }
+      ],
+      "toolCallId": "c2",
+      "toolName": "b",
+      "isError": false
+     }
+    ]
+   },
+   {
+    "type": "turn_start"
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "assistant",
+     "content": [],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_update",
+    "update": "text_delta",
+    "delta": "done",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "done"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "done"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "turn_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "done"
+      }
+     ],
+     "stopReason": "stop"
+    },
+    "toolResults": []
+   },
+   {
+    "type": "agent_end",
+    "messages": [
+     {
+      "role": "system",
+      "content": [
+       {
+        "type": "text",
+        "text": ""
+       }
+      ],
+      "toolsAdded": [
+       "a",
+       "b"
+      ]
+     },
+     {
+      "role": "user",
+      "content": [
+       {
+        "type": "text",
+        "text": "run"
+       }
+      ]
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "toolCall",
+        "id": "c1",
+        "name": "a",
+        "arguments": {
+         "v": 1
+        }
+       },
+       {
+        "type": "toolCall",
+        "id": "c2",
+        "name": "b",
+        "arguments": {
+         "v": 2
+        }
+       }
+      ],
+      "stopReason": "toolUse"
+     },
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "a:1"
+       }
+      ],
+      "toolCallId": "c1",
+      "toolName": "a",
+      "isError": false
+     },
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "b:2"
+       }
+      ],
+      "toolCallId": "c2",
+      "toolName": "b",
+      "isError": false
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "done"
+       }
+      ],
+      "stopReason": "stop"
+     }
+    ]
+   }
+  ],
+  "messages": [
+   {
+    "role": "system",
+    "content": [
+     {
+      "type": "text",
+      "text": ""
+     }
+    ],
+    "toolsAdded": [
+     "a",
+     "b"
+    ]
+   },
+   {
+    "role": "user",
+    "content": [
+     {
+      "type": "text",
+      "text": "run"
+     }
+    ]
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "toolCall",
+      "id": "c1",
+      "name": "a",
+      "arguments": {
+       "v": 1
+      }
+     },
+     {
+      "type": "toolCall",
+      "id": "c2",
+      "name": "b",
+      "arguments": {
+       "v": 2
+      }
+     }
+    ],
+    "stopReason": "toolUse"
+   },
+   {
+    "role": "toolResult",
+    "content": [
+     {
+      "type": "text",
+      "text": "a:1"
+     }
+    ],
+    "toolCallId": "c1",
+    "toolName": "a",
+    "isError": false
+   },
+   {
+    "role": "toolResult",
+    "content": [
+     {
+      "type": "text",
+      "text": "b:2"
+     }
+    ],
+    "toolCallId": "c2",
+    "toolName": "b",
+    "isError": false
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "text",
+      "text": "done"
+     }
+    ],
+    "stopReason": "stop"
+   }
+  ]
+ },
+ {
+  "name": "sequential-batch",
+  "events": [
+   {
+    "type": "agent_start"
+   },
+   {
+    "type": "turn_start"
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "system",
+     "content": [
+      {
+       "type": "text",
+       "text": ""
+      }
+     ],
+     "toolsAdded": [
+      "a",
+      "b"
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "system",
+     "content": [
+      {
+       "type": "text",
+       "text": ""
+      }
+     ],
+     "toolsAdded": [
+      "a",
+      "b"
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "run"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "run"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "assistant",
+     "content": [],
+     "stopReason": "toolUse"
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "toolCall",
+       "id": "c1",
+       "name": "a",
+       "arguments": {
+        "v": 1
+       }
+      },
+      {
+       "type": "toolCall",
+       "id": "c2",
+       "name": "b",
+       "arguments": {
+        "v": 2
+       }
+      }
+     ],
+     "stopReason": "toolUse"
+    }
+   },
+   {
+    "type": "tool_execution_start",
+    "toolCallId": "c1",
+    "toolName": "a",
+    "args": {
+     "v": 1
+    }
+   },
+   {
+    "type": "tool_execution_end",
+    "toolCallId": "c1",
+    "toolName": "a",
+    "isError": false,
+    "content": [
+     {
+      "type": "text",
+      "text": "a:1"
+     }
+    ],
+    "details": {
+     "by": "a"
+    },
+    "terminate": false,
+    "hasDuration": true
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "a:1"
+      }
+     ],
+     "toolCallId": "c1",
+     "toolName": "a",
+     "isError": false
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "a:1"
+      }
+     ],
+     "toolCallId": "c1",
+     "toolName": "a",
+     "isError": false
+    }
+   },
+   {
+    "type": "tool_execution_start",
+    "toolCallId": "c2",
+    "toolName": "b",
+    "args": {
+     "v": 2
+    }
+   },
+   {
+    "type": "tool_execution_end",
+    "toolCallId": "c2",
+    "toolName": "b",
+    "isError": false,
+    "content": [
+     {
+      "type": "text",
+      "text": "b:2"
+     }
+    ],
+    "details": {
+     "by": "b"
+    },
+    "terminate": false,
+    "hasDuration": true
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "b:2"
+      }
+     ],
+     "toolCallId": "c2",
+     "toolName": "b",
+     "isError": false
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "b:2"
+      }
+     ],
+     "toolCallId": "c2",
+     "toolName": "b",
+     "isError": false
+    }
+   },
+   {
+    "type": "turn_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "toolCall",
+       "id": "c1",
+       "name": "a",
+       "arguments": {
+        "v": 1
+       }
+      },
+      {
+       "type": "toolCall",
+       "id": "c2",
+       "name": "b",
+       "arguments": {
+        "v": 2
+       }
+      }
+     ],
+     "stopReason": "toolUse"
+    },
+    "toolResults": [
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "a:1"
+       }
+      ],
+      "toolCallId": "c1",
+      "toolName": "a",
+      "isError": false
+     },
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "b:2"
+       }
+      ],
+      "toolCallId": "c2",
+      "toolName": "b",
+      "isError": false
+     }
+    ]
+   },
+   {
+    "type": "turn_start"
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "assistant",
+     "content": [],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_update",
+    "update": "text_delta",
+    "delta": "done",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "done"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "done"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "turn_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "done"
+      }
+     ],
+     "stopReason": "stop"
+    },
+    "toolResults": []
+   },
+   {
+    "type": "agent_end",
+    "messages": [
+     {
+      "role": "system",
+      "content": [
+       {
+        "type": "text",
+        "text": ""
+       }
+      ],
+      "toolsAdded": [
+       "a",
+       "b"
+      ]
+     },
+     {
+      "role": "user",
+      "content": [
+       {
+        "type": "text",
+        "text": "run"
+       }
+      ]
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "toolCall",
+        "id": "c1",
+        "name": "a",
+        "arguments": {
+         "v": 1
+        }
+       },
+       {
+        "type": "toolCall",
+        "id": "c2",
+        "name": "b",
+        "arguments": {
+         "v": 2
+        }
+       }
+      ],
+      "stopReason": "toolUse"
+     },
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "a:1"
+       }
+      ],
+      "toolCallId": "c1",
+      "toolName": "a",
+      "isError": false
+     },
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "b:2"
+       }
+      ],
+      "toolCallId": "c2",
+      "toolName": "b",
+      "isError": false
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "done"
+       }
+      ],
+      "stopReason": "stop"
+     }
+    ]
+   }
+  ],
+  "messages": [
+   {
+    "role": "system",
+    "content": [
+     {
+      "type": "text",
+      "text": ""
+     }
+    ],
+    "toolsAdded": [
+     "a",
+     "b"
+    ]
+   },
+   {
+    "role": "user",
+    "content": [
+     {
+      "type": "text",
+      "text": "run"
+     }
+    ]
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "toolCall",
+      "id": "c1",
+      "name": "a",
+      "arguments": {
+       "v": 1
+      }
+     },
+     {
+      "type": "toolCall",
+      "id": "c2",
+      "name": "b",
+      "arguments": {
+       "v": 2
+      }
+     }
+    ],
+    "stopReason": "toolUse"
+   },
+   {
+    "role": "toolResult",
+    "content": [
+     {
+      "type": "text",
+      "text": "a:1"
+     }
+    ],
+    "toolCallId": "c1",
+    "toolName": "a",
+    "isError": false
+   },
+   {
+    "role": "toolResult",
+    "content": [
+     {
+      "type": "text",
+      "text": "b:2"
+     }
+    ],
+    "toolCallId": "c2",
+    "toolName": "b",
+    "isError": false
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "text",
+      "text": "done"
+     }
+    ],
+    "stopReason": "stop"
+   }
+  ]
+ },
+ {
+  "name": "terminate-batch",
+  "events": [
+   {
+    "type": "agent_start"
+   },
+   {
+    "type": "turn_start"
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "system",
+     "content": [
+      {
+       "type": "text",
+       "text": ""
+      }
+     ],
+     "toolsAdded": [
+      "stop"
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "system",
+     "content": [
+      {
+       "type": "text",
+       "text": ""
+      }
+     ],
+     "toolsAdded": [
+      "stop"
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "stop"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "stop"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "assistant",
+     "content": [],
+     "stopReason": "toolUse"
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "toolCall",
+       "id": "c1",
+       "name": "stop",
+       "arguments": {
+        "v": 1
+       }
+      },
+      {
+       "type": "toolCall",
+       "id": "c2",
+       "name": "stop",
+       "arguments": {
+        "v": 2
+       }
+      }
+     ],
+     "stopReason": "toolUse"
+    }
+   },
+   {
+    "type": "tool_execution_start",
+    "toolCallId": "c1",
+    "toolName": "stop",
+    "args": {
+     "v": 1
+    }
+   },
+   {
+    "type": "tool_execution_start",
+    "toolCallId": "c2",
+    "toolName": "stop",
+    "args": {
+     "v": 2
+    }
+   },
+   {
+    "type": "tool_execution_end",
+    "toolCallId": "c1",
+    "toolName": "stop",
+    "isError": false,
+    "content": [
+     {
+      "type": "text",
+      "text": "stop:1"
+     }
+    ],
+    "details": {
+     "by": "stop"
+    },
+    "terminate": true,
+    "hasDuration": true
+   },
+   {
+    "type": "tool_execution_end",
+    "toolCallId": "c2",
+    "toolName": "stop",
+    "isError": false,
+    "content": [
+     {
+      "type": "text",
+      "text": "stop:2"
+     }
+    ],
+    "details": {
+     "by": "stop"
+    },
+    "terminate": true,
+    "hasDuration": true
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "stop:1"
+      }
+     ],
+     "toolCallId": "c1",
+     "toolName": "stop",
+     "isError": false
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "stop:1"
+      }
+     ],
+     "toolCallId": "c1",
+     "toolName": "stop",
+     "isError": false
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "stop:2"
+      }
+     ],
+     "toolCallId": "c2",
+     "toolName": "stop",
+     "isError": false
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "stop:2"
+      }
+     ],
+     "toolCallId": "c2",
+     "toolName": "stop",
+     "isError": false
+    }
+   },
+   {
+    "type": "turn_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "toolCall",
+       "id": "c1",
+       "name": "stop",
+       "arguments": {
+        "v": 1
+       }
+      },
+      {
+       "type": "toolCall",
+       "id": "c2",
+       "name": "stop",
+       "arguments": {
+        "v": 2
+       }
+      }
+     ],
+     "stopReason": "toolUse"
+    },
+    "toolResults": [
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "stop:1"
+       }
+      ],
+      "toolCallId": "c1",
+      "toolName": "stop",
+      "isError": false
+     },
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "stop:2"
+       }
+      ],
+      "toolCallId": "c2",
+      "toolName": "stop",
+      "isError": false
+     }
+    ]
+   },
+   {
+    "type": "agent_end",
+    "messages": [
+     {
+      "role": "system",
+      "content": [
+       {
+        "type": "text",
+        "text": ""
+       }
+      ],
+      "toolsAdded": [
+       "stop"
+      ]
+     },
+     {
+      "role": "user",
+      "content": [
+       {
+        "type": "text",
+        "text": "stop"
+       }
+      ]
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "toolCall",
+        "id": "c1",
+        "name": "stop",
+        "arguments": {
+         "v": 1
+        }
+       },
+       {
+        "type": "toolCall",
+        "id": "c2",
+        "name": "stop",
+        "arguments": {
+         "v": 2
+        }
+       }
+      ],
+      "stopReason": "toolUse"
+     },
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "stop:1"
+       }
+      ],
+      "toolCallId": "c1",
+      "toolName": "stop",
+      "isError": false
+     },
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "stop:2"
+       }
+      ],
+      "toolCallId": "c2",
+      "toolName": "stop",
+      "isError": false
+     }
+    ]
+   }
+  ],
+  "messages": [
+   {
+    "role": "system",
+    "content": [
+     {
+      "type": "text",
+      "text": ""
+     }
+    ],
+    "toolsAdded": [
+     "stop"
+    ]
+   },
+   {
+    "role": "user",
+    "content": [
+     {
+      "type": "text",
+      "text": "stop"
+     }
+    ]
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "toolCall",
+      "id": "c1",
+      "name": "stop",
+      "arguments": {
+       "v": 1
+      }
+     },
+     {
+      "type": "toolCall",
+      "id": "c2",
+      "name": "stop",
+      "arguments": {
+       "v": 2
+      }
+     }
+    ],
+    "stopReason": "toolUse"
+   },
+   {
+    "role": "toolResult",
+    "content": [
+     {
+      "type": "text",
+      "text": "stop:1"
+     }
+    ],
+    "toolCallId": "c1",
+    "toolName": "stop",
+    "isError": false
+   },
+   {
+    "role": "toolResult",
+    "content": [
+     {
+      "type": "text",
+      "text": "stop:2"
+     }
+    ],
+    "toolCallId": "c2",
+    "toolName": "stop",
+    "isError": false
+   }
+  ]
+ },
+ {
+  "name": "length-stop",
+  "events": [
+   {
+    "type": "agent_start"
+   },
+   {
+    "type": "turn_start"
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "system",
+     "content": [
+      {
+       "type": "text",
+       "text": ""
+      }
+     ],
+     "toolsAdded": [
+      "a"
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "system",
+     "content": [
+      {
+       "type": "text",
+       "text": ""
+      }
+     ],
+     "toolsAdded": [
+      "a"
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "long"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "long"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "assistant",
+     "content": [],
+     "stopReason": "length"
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "toolCall",
+       "id": "c1",
+       "name": "a",
+       "arguments": {
+        "v": 1
+       }
+      }
+     ],
+     "stopReason": "length"
+    }
+   },
+   {
+    "type": "tool_execution_start",
+    "toolCallId": "c1",
+    "toolName": "a",
+    "args": {
+     "v": 1
+    }
+   },
+   {
+    "type": "tool_execution_end",
+    "toolCallId": "c1",
+    "toolName": "a",
+    "isError": true,
+    "content": [
+     {
+      "type": "text",
+      "text": "Tool call \"a\" was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments."
+     }
+    ],
+    "details": {},
+    "terminate": false,
+    "hasDuration": false
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "Tool call \"a\" was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments."
+      }
+     ],
+     "toolCallId": "c1",
+     "toolName": "a",
+     "isError": true
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "Tool call \"a\" was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments."
+      }
+     ],
+     "toolCallId": "c1",
+     "toolName": "a",
+     "isError": true
+    }
+   },
+   {
+    "type": "turn_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "toolCall",
+       "id": "c1",
+       "name": "a",
+       "arguments": {
+        "v": 1
+       }
+      }
+     ],
+     "stopReason": "length"
+    },
+    "toolResults": [
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "Tool call \"a\" was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments."
+       }
+      ],
+      "toolCallId": "c1",
+      "toolName": "a",
+      "isError": true
+     }
+    ]
+   },
+   {
+    "type": "turn_start"
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "assistant",
+     "content": [],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_update",
+    "update": "text_delta",
+    "delta": "fallback",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "fallback"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "fallback"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "turn_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "fallback"
+      }
+     ],
+     "stopReason": "stop"
+    },
+    "toolResults": []
+   },
+   {
+    "type": "agent_end",
+    "messages": [
+     {
+      "role": "system",
+      "content": [
+       {
+        "type": "text",
+        "text": ""
+       }
+      ],
+      "toolsAdded": [
+       "a"
+      ]
+     },
+     {
+      "role": "user",
+      "content": [
+       {
+        "type": "text",
+        "text": "long"
+       }
+      ]
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "toolCall",
+        "id": "c1",
+        "name": "a",
+        "arguments": {
+         "v": 1
+        }
+       }
+      ],
+      "stopReason": "length"
+     },
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "Tool call \"a\" was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments."
+       }
+      ],
+      "toolCallId": "c1",
+      "toolName": "a",
+      "isError": true
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "fallback"
+       }
+      ],
+      "stopReason": "stop"
+     }
+    ]
+   }
+  ],
+  "messages": [
+   {
+    "role": "system",
+    "content": [
+     {
+      "type": "text",
+      "text": ""
+     }
+    ],
+    "toolsAdded": [
+     "a"
+    ]
+   },
+   {
+    "role": "user",
+    "content": [
+     {
+      "type": "text",
+      "text": "long"
+     }
+    ]
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "toolCall",
+      "id": "c1",
+      "name": "a",
+      "arguments": {
+       "v": 1
+      }
+     }
+    ],
+    "stopReason": "length"
+   },
+   {
+    "role": "toolResult",
+    "content": [
+     {
+      "type": "text",
+      "text": "Tool call \"a\" was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments."
+     }
+    ],
+    "toolCallId": "c1",
+    "toolName": "a",
+    "isError": true
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "text",
+      "text": "fallback"
+     }
+    ],
+    "stopReason": "stop"
+   }
+  ]
+ },
+ {
+  "name": "unknown-tool-and-throw",
+  "events": [
+   {
+    "type": "agent_start"
+   },
+   {
+    "type": "turn_start"
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "system",
+     "content": [
+      {
+       "type": "text",
+       "text": ""
+      }
+     ],
+     "toolsAdded": [
+      "boom"
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "system",
+     "content": [
+      {
+       "type": "text",
+       "text": ""
+      }
+     ],
+     "toolsAdded": [
+      "boom"
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "mixed"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "mixed"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "assistant",
+     "content": [],
+     "stopReason": "toolUse"
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "toolCall",
+       "id": "c1",
+       "name": "missing",
+       "arguments": {}
+      },
+      {
+       "type": "toolCall",
+       "id": "c2",
+       "name": "boom",
+       "arguments": {}
+      }
+     ],
+     "stopReason": "toolUse"
+    }
+   },
+   {
+    "type": "tool_execution_start",
+    "toolCallId": "c1",
+    "toolName": "missing",
+    "args": {}
+   },
+   {
+    "type": "tool_execution_end",
+    "toolCallId": "c1",
+    "toolName": "missing",
+    "isError": true,
+    "content": [
+     {
+      "type": "text",
+      "text": "Tool missing not found"
+     }
+    ],
+    "details": {},
+    "terminate": false,
+    "hasDuration": false
+   },
+   {
+    "type": "tool_execution_start",
+    "toolCallId": "c2",
+    "toolName": "boom",
+    "args": {}
+   },
+   {
+    "type": "tool_execution_end",
+    "toolCallId": "c2",
+    "toolName": "boom",
+    "isError": true,
+    "content": [
+     {
+      "type": "text",
+      "text": "boom"
+     }
+    ],
+    "details": {},
+    "terminate": false,
+    "hasDuration": true
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "Tool missing not found"
+      }
+     ],
+     "toolCallId": "c1",
+     "toolName": "missing",
+     "isError": true
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "Tool missing not found"
+      }
+     ],
+     "toolCallId": "c1",
+     "toolName": "missing",
+     "isError": true
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "boom"
+      }
+     ],
+     "toolCallId": "c2",
+     "toolName": "boom",
+     "isError": true
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "boom"
+      }
+     ],
+     "toolCallId": "c2",
+     "toolName": "boom",
+     "isError": true
+    }
+   },
+   {
+    "type": "turn_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "toolCall",
+       "id": "c1",
+       "name": "missing",
+       "arguments": {}
+      },
+      {
+       "type": "toolCall",
+       "id": "c2",
+       "name": "boom",
+       "arguments": {}
+      }
+     ],
+     "stopReason": "toolUse"
+    },
+    "toolResults": [
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "Tool missing not found"
+       }
+      ],
+      "toolCallId": "c1",
+      "toolName": "missing",
+      "isError": true
+     },
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "boom"
+       }
+      ],
+      "toolCallId": "c2",
+      "toolName": "boom",
+      "isError": true
+     }
+    ]
+   },
+   {
+    "type": "turn_start"
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "assistant",
+     "content": [],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_update",
+    "update": "text_delta",
+    "delta": "after",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "after"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "after"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "turn_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "after"
+      }
+     ],
+     "stopReason": "stop"
+    },
+    "toolResults": []
+   },
+   {
+    "type": "agent_end",
+    "messages": [
+     {
+      "role": "system",
+      "content": [
+       {
+        "type": "text",
+        "text": ""
+       }
+      ],
+      "toolsAdded": [
+       "boom"
+      ]
+     },
+     {
+      "role": "user",
+      "content": [
+       {
+        "type": "text",
+        "text": "mixed"
+       }
+      ]
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "toolCall",
+        "id": "c1",
+        "name": "missing",
+        "arguments": {}
+       },
+       {
+        "type": "toolCall",
+        "id": "c2",
+        "name": "boom",
+        "arguments": {}
+       }
+      ],
+      "stopReason": "toolUse"
+     },
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "Tool missing not found"
+       }
+      ],
+      "toolCallId": "c1",
+      "toolName": "missing",
+      "isError": true
+     },
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "boom"
+       }
+      ],
+      "toolCallId": "c2",
+      "toolName": "boom",
+      "isError": true
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "after"
+       }
+      ],
+      "stopReason": "stop"
+     }
+    ]
+   }
+  ],
+  "messages": [
+   {
+    "role": "system",
+    "content": [
+     {
+      "type": "text",
+      "text": ""
+     }
+    ],
+    "toolsAdded": [
+     "boom"
+    ]
+   },
+   {
+    "role": "user",
+    "content": [
+     {
+      "type": "text",
+      "text": "mixed"
+     }
+    ]
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "toolCall",
+      "id": "c1",
+      "name": "missing",
+      "arguments": {}
+     },
+     {
+      "type": "toolCall",
+      "id": "c2",
+      "name": "boom",
+      "arguments": {}
+     }
+    ],
+    "stopReason": "toolUse"
+   },
+   {
+    "role": "toolResult",
+    "content": [
+     {
+      "type": "text",
+      "text": "Tool missing not found"
+     }
+    ],
+    "toolCallId": "c1",
+    "toolName": "missing",
+    "isError": true
+   },
+   {
+    "role": "toolResult",
+    "content": [
+     {
+      "type": "text",
+      "text": "boom"
+     }
+    ],
+    "toolCallId": "c2",
+    "toolName": "boom",
+    "isError": true
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "text",
+      "text": "after"
+     }
+    ],
+    "stopReason": "stop"
+   }
+  ]
+ },
+ {
+  "name": "blocked-call",
+  "events": [
+   {
+    "type": "agent_start"
+   },
+   {
+    "type": "turn_start"
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "system",
+     "content": [
+      {
+       "type": "text",
+       "text": ""
+      }
+     ],
+     "toolsAdded": [
+      "a"
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "system",
+     "content": [
+      {
+       "type": "text",
+       "text": ""
+      }
+     ],
+     "toolsAdded": [
+      "a"
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "block"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "block"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "assistant",
+     "content": [],
+     "stopReason": "toolUse"
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "toolCall",
+       "id": "c1",
+       "name": "a",
+       "arguments": {
+        "v": 1
+       }
+      }
+     ],
+     "stopReason": "toolUse"
+    }
+   },
+   {
+    "type": "tool_execution_start",
+    "toolCallId": "c1",
+    "toolName": "a",
+    "args": {
+     "v": 1
+    }
+   },
+   {
+    "type": "tool_execution_end",
+    "toolCallId": "c1",
+    "toolName": "a",
+    "isError": true,
+    "content": [
+     {
+      "type": "text",
+      "text": "blocked a"
+     }
+    ],
+    "details": {},
+    "terminate": false,
+    "hasDuration": false
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "blocked a"
+      }
+     ],
+     "toolCallId": "c1",
+     "toolName": "a",
+     "isError": true
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "blocked a"
+      }
+     ],
+     "toolCallId": "c1",
+     "toolName": "a",
+     "isError": true
+    }
+   },
+   {
+    "type": "turn_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "toolCall",
+       "id": "c1",
+       "name": "a",
+       "arguments": {
+        "v": 1
+       }
+      }
+     ],
+     "stopReason": "toolUse"
+    },
+    "toolResults": [
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "blocked a"
+       }
+      ],
+      "toolCallId": "c1",
+      "toolName": "a",
+      "isError": true
+     }
+    ]
+   },
+   {
+    "type": "turn_start"
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "assistant",
+     "content": [],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_update",
+    "update": "text_delta",
+    "delta": "after",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "after"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "after"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "turn_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "after"
+      }
+     ],
+     "stopReason": "stop"
+    },
+    "toolResults": []
+   },
+   {
+    "type": "agent_end",
+    "messages": [
+     {
+      "role": "system",
+      "content": [
+       {
+        "type": "text",
+        "text": ""
+       }
+      ],
+      "toolsAdded": [
+       "a"
+      ]
+     },
+     {
+      "role": "user",
+      "content": [
+       {
+        "type": "text",
+        "text": "block"
+       }
+      ]
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "toolCall",
+        "id": "c1",
+        "name": "a",
+        "arguments": {
+         "v": 1
+        }
+       }
+      ],
+      "stopReason": "toolUse"
+     },
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "blocked a"
+       }
+      ],
+      "toolCallId": "c1",
+      "toolName": "a",
+      "isError": true
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "after"
+       }
+      ],
+      "stopReason": "stop"
+     }
+    ]
+   }
+  ],
+  "messages": [
+   {
+    "role": "system",
+    "content": [
+     {
+      "type": "text",
+      "text": ""
+     }
+    ],
+    "toolsAdded": [
+     "a"
+    ]
+   },
+   {
+    "role": "user",
+    "content": [
+     {
+      "type": "text",
+      "text": "block"
+     }
+    ]
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "toolCall",
+      "id": "c1",
+      "name": "a",
+      "arguments": {
+       "v": 1
+      }
+     }
+    ],
+    "stopReason": "toolUse"
+   },
+   {
+    "role": "toolResult",
+    "content": [
+     {
+      "type": "text",
+      "text": "blocked a"
+     }
+    ],
+    "toolCallId": "c1",
+    "toolName": "a",
+    "isError": true
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "text",
+      "text": "after"
+     }
+    ],
+    "stopReason": "stop"
+   }
+  ]
+ },
+ {
+  "name": "after-rewrite",
+  "events": [
+   {
+    "type": "agent_start"
+   },
+   {
+    "type": "turn_start"
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "system",
+     "content": [
+      {
+       "type": "text",
+       "text": ""
+      }
+     ],
+     "toolsAdded": [
+      "a"
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "system",
+     "content": [
+      {
+       "type": "text",
+       "text": ""
+      }
+     ],
+     "toolsAdded": [
+      "a"
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "rewrite"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "rewrite"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "assistant",
+     "content": [],
+     "stopReason": "toolUse"
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "toolCall",
+       "id": "c1",
+       "name": "a",
+       "arguments": {
+        "v": 1
+       }
+      }
+     ],
+     "stopReason": "toolUse"
+    }
+   },
+   {
+    "type": "tool_execution_start",
+    "toolCallId": "c1",
+    "toolName": "a",
+    "args": {
+     "v": 1
+    }
+   },
+   {
+    "type": "tool_execution_end",
+    "toolCallId": "c1",
+    "toolName": "a",
+    "isError": true,
+    "content": [
+     {
+      "type": "text",
+      "text": "rewritten"
+     }
+    ],
+    "details": {
+     "rewritten": true
+    },
+    "terminate": false,
+    "hasDuration": true
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "rewritten"
+      }
+     ],
+     "toolCallId": "c1",
+     "toolName": "a",
+     "isError": true
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "toolResult",
+     "content": [
+      {
+       "type": "text",
+       "text": "rewritten"
+      }
+     ],
+     "toolCallId": "c1",
+     "toolName": "a",
+     "isError": true
+    }
+   },
+   {
+    "type": "turn_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "toolCall",
+       "id": "c1",
+       "name": "a",
+       "arguments": {
+        "v": 1
+       }
+      }
+     ],
+     "stopReason": "toolUse"
+    },
+    "toolResults": [
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "rewritten"
+       }
+      ],
+      "toolCallId": "c1",
+      "toolName": "a",
+      "isError": true
+     }
+    ]
+   },
+   {
+    "type": "turn_start"
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "assistant",
+     "content": [],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_update",
+    "update": "text_delta",
+    "delta": "after",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "after"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "after"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "turn_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "after"
+      }
+     ],
+     "stopReason": "stop"
+    },
+    "toolResults": []
+   },
+   {
+    "type": "agent_end",
+    "messages": [
+     {
+      "role": "system",
+      "content": [
+       {
+        "type": "text",
+        "text": ""
+       }
+      ],
+      "toolsAdded": [
+       "a"
+      ]
+     },
+     {
+      "role": "user",
+      "content": [
+       {
+        "type": "text",
+        "text": "rewrite"
+       }
+      ]
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "toolCall",
+        "id": "c1",
+        "name": "a",
+        "arguments": {
+         "v": 1
+        }
+       }
+      ],
+      "stopReason": "toolUse"
+     },
+     {
+      "role": "toolResult",
+      "content": [
+       {
+        "type": "text",
+        "text": "rewritten"
+       }
+      ],
+      "toolCallId": "c1",
+      "toolName": "a",
+      "isError": true
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "after"
+       }
+      ],
+      "stopReason": "stop"
+     }
+    ]
+   }
+  ],
+  "messages": [
+   {
+    "role": "system",
+    "content": [
+     {
+      "type": "text",
+      "text": ""
+     }
+    ],
+    "toolsAdded": [
+     "a"
+    ]
+   },
+   {
+    "role": "user",
+    "content": [
+     {
+      "type": "text",
+      "text": "rewrite"
+     }
+    ]
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "toolCall",
+      "id": "c1",
+      "name": "a",
+      "arguments": {
+       "v": 1
+      }
+     }
+    ],
+    "stopReason": "toolUse"
+   },
+   {
+    "role": "toolResult",
+    "content": [
+     {
+      "type": "text",
+      "text": "rewritten"
+     }
+    ],
+    "toolCallId": "c1",
+    "toolName": "a",
+    "isError": true
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "text",
+      "text": "after"
+     }
+    ],
+    "stopReason": "stop"
+   }
+  ]
+ },
+ {
+  "name": "steering",
+  "events": [
+   {
+    "type": "agent_start"
+   },
+   {
+    "type": "turn_start"
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "first"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "first"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "assistant",
+     "content": [],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_update",
+    "update": "text_delta",
+    "delta": "one",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "one"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "one"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "turn_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "one"
+      }
+     ],
+     "stopReason": "stop"
+    },
+    "toolResults": []
+   },
+   {
+    "type": "turn_start"
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "typed while waiting"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "user",
+     "content": [
+      {
+       "type": "text",
+       "text": "typed while waiting"
+      }
+     ]
+    }
+   },
+   {
+    "type": "message_start",
+    "message": {
+     "role": "assistant",
+     "content": [],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_update",
+    "update": "text_delta",
+    "delta": "two",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "two"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "message_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "two"
+      }
+     ],
+     "stopReason": "stop"
+    }
+   },
+   {
+    "type": "turn_end",
+    "message": {
+     "role": "assistant",
+     "content": [
+      {
+       "type": "text",
+       "text": "two"
+      }
+     ],
+     "stopReason": "stop"
+    },
+    "toolResults": []
+   },
+   {
+    "type": "agent_end",
+    "messages": [
+     {
+      "role": "user",
+      "content": [
+       {
+        "type": "text",
+        "text": "first"
+       }
+      ]
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "one"
+       }
+      ],
+      "stopReason": "stop"
+     },
+     {
+      "role": "user",
+      "content": [
+       {
+        "type": "text",
+        "text": "typed while waiting"
+       }
+      ]
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "two"
+       }
+      ],
+      "stopReason": "stop"
+     }
+    ]
+   }
+  ],
+  "messages": [
+   {
+    "role": "user",
+    "content": [
+     {
+      "type": "text",
+      "text": "first"
+     }
+    ]
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "text",
+      "text": "one"
+     }
+    ],
+    "stopReason": "stop"
+   },
+   {
+    "role": "user",
+    "content": [
+     {
+      "type": "text",
+      "text": "typed while waiting"
+     }
+    ]
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "text",
+      "text": "two"
+     }
+    ],
+    "stopReason": "stop"
+   }
+  ]
+ }
+]
