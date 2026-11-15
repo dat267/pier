@@ -536,15 +536,14 @@ func streamAssistantResponse(
 		}
 	}
 
-	finalMessage := result()
-	if addedPartial {
-		context.Messages[len(context.Messages)-1] = finalMessage
-	} else {
-		context.Messages = append(context.Messages, finalMessage)
-		mustEmit(emit, AgentEvent{Type: MessageStart, Message: finalMessage})
-	}
-	mustEmit(emit, AgentEvent{Type: MessageEnd, Message: finalMessage})
-	return finalMessage
+	// Reaching this point means the stream ended without a done or error event,
+	// so it has no result to await: upstream's `await response.result()`
+	// resolves undefined and `Object.assign(undefined, ...)` throws. Waiting on
+	// the result instead blocks the loop forever (the settlement context ignores
+	// cancellation by design), so fail the run the way the providers describe
+	// this case.
+	failStreamAssistant(fmt.Errorf("%s stream ended without a terminal event", config.Model.Provider))
+	return nil
 }
 
 // failStreamAssistant propagates stream result errors through the loop's
@@ -680,6 +679,18 @@ func executeToolCallsParallel(
 	ctx context.Context,
 	emit AgentEventSink,
 ) executedToolCallBatch {
+	// Deferred calls run concurrently and each reports its tool_execution_end
+	// when it finishes, but the sink is single-writer (AGENTS.md) and upstream's
+	// synchronous emit never overlaps: every emission a worker makes goes through
+	// one mutex, or two finishing tools call the caller's listener at the same
+	// time.
+	var emitMu sync.Mutex
+	serializedEmit := func(event AgentEvent) error {
+		emitMu.Lock()
+		defer emitMu.Unlock()
+		return emit(event)
+	}
+
 	var entries []finalizedEntry
 
 	for _, toolCall := range toolCalls {
@@ -708,12 +719,12 @@ func executeToolCallsParallel(
 					result:   createErrorToolResult("Operation aborted"),
 					isError:  true,
 				}
-				emitToolExecutionEnd(finalized, emit)
+				emitToolExecutionEnd(finalized, serializedEmit)
 				return finalized
 			}
-			executed := executePreparedToolCall(prepared, ctx, emit)
+			executed := executePreparedToolCall(prepared, ctx, serializedEmit)
 			finalized := finalizeExecutedToolCall(currentContext, assistantMessage, prepared, executed, config, ctx)
-			emitToolExecutionEnd(finalized, emit)
+			emitToolExecutionEnd(finalized, serializedEmit)
 			return finalized
 		}})
 		if ctxDone(ctx) {
@@ -721,8 +732,6 @@ func executeToolCallsParallel(
 		}
 	}
 
-	// Concurrent execution of deferred entries; tool_execution_end is
-	// emitted in completion order (inside each goroutine).
 	var wg sync.WaitGroup
 	results := make([]finalizedToolCallOutcome, len(entries))
 	// A worker panic is re-raised on the loop goroutine after the workers settle:

@@ -3605,7 +3605,9 @@ invocation order follows the tool's updates. Go's `AgentEventSink` is
 synchronous; `toolUpdateDispatcher` drains one invocation's updates serially to
 preserve the single-writer callback contract in `AGENTS.md`. This can add
 latency when listeners block, but tool duration is captured before the update
-drain. This is an intentional concurrency difference, not timing parity.
+drain. This is an intentional concurrency difference, not timing parity. A
+parallel batch also shares one emission mutex, so no two workers call the sink at
+the same time and the single-writer contract holds across the batch.
 
 Reproducer: `TestToolUpdatesAreSerializedInCallOrder` in
 `agent/tool_prepare_panic_test.go` covers Go serialization; a pinned Bun probe
