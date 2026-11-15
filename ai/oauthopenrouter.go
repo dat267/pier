@@ -178,6 +178,12 @@ type OpenRouterCallbackServer struct {
 	credential *OAuthCredential
 	waitErr    error
 	done       chan struct{}
+
+	// stopAbort releases the context registration made at start, which upstream
+	// removes in finish(); without it a login on a long-lived context (the CLI
+	// passes context.Background()) parks a goroutine for the process's life.
+	stopAbort     func() bool
+	stopAbortOnce sync.Once
 }
 
 // StartOpenRouterCallbackServer starts the server on an ephemeral port.
@@ -278,7 +284,7 @@ func StartOpenRouterCallbackServer(callbackPath, verifier string, ctx context.Co
 		finish(nil, fmt.Errorf("OpenRouter OAuth login timed out"))
 	})
 	if ctx != nil {
-		context.AfterFunc(ctx, stop)
+		callback.stopAbort = context.AfterFunc(ctx, stop)
 	}
 	return callback, nil
 }
@@ -317,6 +323,9 @@ func (s *OpenRouterCallbackServer) WaitForCredential() (*OAuthCredential, error)
 }
 
 func (s *OpenRouterCallbackServer) stopListening() {
+	if s.stopAbort != nil {
+		s.stopAbortOnce.Do(func() { _ = s.stopAbort() })
+	}
 	if s.timeout != nil {
 		s.timeout.Stop()
 	}
