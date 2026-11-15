@@ -119,6 +119,8 @@
 	"link-reference": "[x][ref]\n\n[ref]: https://e.com \"T\"\n",
 	"image-inline": "![alt](https://e.com/i.png \"T\")\n",
 	"autolink-www": "see www.example.com now\n",
+	"autolink-cjk-punctuation": "見https://example.com/テスト。次\n",
+	"autolink-fullwidth-stop": "https://example.com/test，next\n",
 	"escape-all": "\\\\ \\` \\* \\_ \\{ \\} \\[ \\] \\( \\) \\# \\+ \\- \\. \\!\n",
 	"hardbreak-two-spaces": "a  \nb\n",
 	"hardbreak-backslash": "a\\\nb\n",
