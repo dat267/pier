@@ -36,7 +36,8 @@ type timingState struct {
 
 var (
 	timingsMu               sync.Mutex
-	timingNamespaces                  = map[TimingNamespace]*timingState{}
+	timingNamespaces        = map[TimingNamespace]*timingState{}
+	timingOrder             []TimingNamespace
 	timingOut               io.Writer = os.Stderr
 	timingNow                         = time.Now
 	timingsEnabledVar                 = ""
@@ -80,6 +81,12 @@ func ResetTimings(namespace TimingNamespace) {
 		return
 	}
 	timingsMu.Lock()
+	// A Map.set on an existing key keeps its insertion position, so only a
+	// first reset appends to the print order (upstream printTimings iterates
+	// the namespace Map).
+	if _, exists := timingNamespaces[namespace]; !exists {
+		timingOrder = append(timingOrder, namespace)
+	}
 	timingNamespaces[namespace] = &timingState{lastTime: timingNow()}
 	timingsMu.Unlock()
 }
@@ -95,6 +102,7 @@ func Time(label string, namespace TimingNamespace) {
 	if !ok {
 		state = &timingState{lastTime: now}
 		timingNamespaces[namespace] = state
+		timingOrder = append(timingOrder, namespace)
 	}
 	state.timings = append(state.timings, timingEntry{Label: label, Ms: now.Sub(state.lastTime).Milliseconds()})
 	state.lastTime = now
@@ -107,12 +115,9 @@ func PrintTimings() {
 		return
 	}
 	timingsMu.Lock()
-	namespaces := make([]TimingNamespace, 0, len(timingNamespaces))
-	for namespace := range timingNamespaces {
-		namespaces = append(namespaces, namespace)
-	}
-	// Stable namespace order: main before extensions, then alphabetical.
-	sortTimingNamespaces(namespaces)
+	// Insertion order, as the reference's Map iteration: main is reset first at
+	// startup, so it prints before extensions.
+	namespaces := append([]TimingNamespace{}, timingOrder...)
 	snapshots := make([]timingState, 0, len(namespaces))
 	for _, namespace := range namespaces {
 		state := timingNamespaces[namespace]
@@ -124,22 +129,6 @@ func PrintTimings() {
 	for index, namespace := range namespaces {
 		printTimingGroup(writer, fmt.Sprintf("Startup Timings: %s", namespace), snapshots[index].timings)
 	}
-}
-
-func sortTimingNamespaces(namespaces []TimingNamespace) {
-	for outer := 1; outer < len(namespaces); outer++ {
-		for inner := outer; inner > 0; inner-- {
-			left, right := namespaces[inner-1], namespaces[inner]
-			if timingNamespaceOrder(left) <= timingNamespaceOrder(right) {
-				break
-			}
-			namespaces[inner-1], namespaces[inner] = namespaces[inner], namespaces[inner-1]
-		}
-	}
-}
-
-func timingNamespaceOrder(namespace TimingNamespace) string {
-	return string(namespace)
 }
 
 // printTimingGroup renders one namespace exactly as upstream does.
