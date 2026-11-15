@@ -109,8 +109,14 @@ func newIdleBody(parent context.Context, cancel context.CancelFunc, timeout time
 
 func newIdleBodyWithTimeouts(parent context.Context, cancel context.CancelFunc, headerTimeout, bodyTimeout time.Duration) *idleStreamBody {
 	body := &idleStreamBody{parent: parent, cancel: cancel, headerTimeout: headerTimeout, timeout: bodyTimeout}
-	if headerTimeout > 0 {
-		body.timer = time.AfterFunc(headerTimeout, body.fire)
+	// Undici arms headersTimeout and bodyTimeout independently, so a body-only
+	// deadline still needs a timer to fire from.
+	initial := headerTimeout
+	if initial <= 0 {
+		initial = bodyTimeout
+	}
+	if initial > 0 {
+		body.timer = time.AfterFunc(initial, body.fire)
 	}
 	return body
 }
@@ -315,7 +321,9 @@ func doProviderRequestWithTimeouts(req *http.Request, headerTimeout, bodyTimeout
 	body := newIdleBodyWithTimeouts(parent, cancel, headerTimeout, bodyTimeout)
 	resp, err := doFetchRequest(req.WithContext(ctx))
 	if err != nil {
-		body.timer.Stop()
+		if body.timer != nil {
+			body.timer.Stop()
+		}
 		cancel()
 		if body.fired.Load() && ctxErr(parent) == nil {
 			return nil, body.idleError()

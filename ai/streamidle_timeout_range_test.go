@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -239,5 +240,47 @@ func TestGuardIdleBodyPreservesFastTimerDelayAndSaturatesDuration(t *testing.T) 
 				t.Fatalf("body timeout = %v; want %v", guarded.timeout, test.want)
 			}
 		})
+	}
+}
+
+// Reference: pi v1.5.2 core/http-dispatcher.ts keeps the dispatcher idle
+// timeout separate from the fetch deadline, so a classifier request with no
+// idle setting must report a connection failure rather than touch an absent
+// idle timer (D254).
+func TestClassifierRequestWithoutIdleTimeoutReportsFailure(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	address := server.URL
+	server.Close()
+	request, err := http.NewRequest(http.MethodPost, address, strings.NewReader("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	timeoutMS := 5000
+	response, err := doClassifierRequest(request, &timeoutMS, nil)
+	if response != nil || err == nil {
+		t.Fatalf("response = %+v, err = %v; want a request failure", response, err)
+	}
+}
+
+// Reference: pi v1.5.2 core/http-dispatcher.ts arms bodyTimeout independently
+// of headersTimeout, so a body-only idle timeout still fires.
+func TestIdleBodyArmsABodyOnlyTimeout(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	body := newIdleBodyWithTimeouts(ctx, cancel, 0, 20*time.Millisecond)
+	body.gotHeaders.Store(true)
+	// A read is in flight, so the timer counts the wait for bytes.
+	body.blocked.Store(true)
+	body.rc = io.NopCloser(strings.NewReader(""))
+	defer body.Close()
+	if body.timer == nil {
+		t.Fatal("body-only idle timeout armed no timer")
+	}
+	deadline := time.Now().Add(time.Second)
+	for !body.fired.Load() {
+		if time.Now().After(deadline) {
+			t.Fatal("body-only idle timeout never fired")
+		}
+		time.Sleep(2 * time.Millisecond)
 	}
 }
