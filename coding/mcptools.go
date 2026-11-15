@@ -237,9 +237,11 @@ func mcpBlockToContent(server string, block protocol.ContentBlock, options Conve
 		if isTextMimeType(mcpStringValue(resource.MimeType)) {
 			return []ai.Content{ai.TextContent{Text: DecodeUTF8WithReplacement(data)}}
 		}
-		kind := mcpStringValue(resource.MimeType)
-		if kind == "" {
-			kind = "unknown type"
+		// Upstream `${mimeType ?? "unknown type"}`: only an absent mimeType is
+		// unknown, an empty string stays empty.
+		kind := "unknown type"
+		if resource.MimeType != nil {
+			kind = *resource.MimeType
 		}
 		kind = kind + ", " + FormatSize(int64(len(data)))
 		saveOutput := options.SaveOutput

@@ -314,3 +314,32 @@ func TestMcpBase64ResourceToleratesWhitespaceAndMissingPadding(t *testing.T) {
 		t.Fatalf("resource text = %+v; want hello", content[0])
 	}
 }
+
+// TestConvertMcpResultBinaryResourceWithoutMimeType pins the kind text of a
+// saved binary resource: pi v1.5.2 b4afdddf extensions/mcp/tools.ts builds it
+// from `${mimeType ?? "unknown type"}`, so only an absent mimeType says
+// "unknown type" and an empty string stays empty.
+func TestConvertMcpResultBinaryResourceWithoutMimeType(t *testing.T) {
+	empty := ""
+	cases := []struct {
+		name string
+		body *protocol.ResourceContents
+		want string
+	}{
+		{"absent", &protocol.ResourceContents{URI: "file:///a.bin", Blob: "AAEC", BlobArm: true}, "[Binary resource file:///a.bin (unknown type, 3B) saved to /tmp/saved.bin]"},
+		{"empty", &protocol.ResourceContents{URI: "file:///a.bin", MimeType: &empty, Blob: "AAEC", BlobArm: true}, "[Binary resource file:///a.bin (, 3B) saved to /tmp/saved.bin]"},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			result, _, err := ConvertMcpResult("docs", "t", &protocol.CallToolResult{
+				Content: []protocol.ContentBlock{{Type: protocol.ContentTypeResource, Resource: testCase.body}},
+			}, ConvertMcpResultOptions{SaveOutput: func([]byte, string) (string, error) { return "/tmp/saved.bin", nil }})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(result.Content) != 1 || result.Content[0].(ai.TextContent).Text != testCase.want {
+				t.Fatalf("content = %+v, want %q", result.Content, testCase.want)
+			}
+		})
+	}
+}
