@@ -501,15 +501,17 @@ func (w *SessionWiring) renameSessionFile(sessionPath string, currentName string
 		onDone(nil)
 		return
 	}
+	// The active session's write queue is loop state: capture it here, so a
+	// switch before the worker runs cannot hand the opened file the replacement
+	// session's queue.
+	writeQueue := w.SessionInfo.GetWriteQueue()
 	runSessionFileWork(w.RenameQueue, w.PostToUI, sessionFileWorkKey+":rename",
 		func(context.Context) (struct{}, error) {
 			manager, err := coding.OpenSession(sessionPath, "", "")
 			if err != nil {
 				return struct{}{}, err
 			}
-			if w.SessionInfo != nil {
-				manager.SetWriteQueue(w.SessionInfo.GetWriteQueue())
-			}
+			manager.SetWriteQueue(writeQueue)
 			manager.AppendSessionInfo(next)
 			return struct{}{}, nil
 		},

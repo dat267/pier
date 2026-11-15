@@ -245,3 +245,44 @@ func TestForkWorkUsesTheDispatchedSession(t *testing.T) {
 		t.Fatal("the fork was not applied over the new session")
 	}
 }
+
+// Renaming another session opens its file off the owner loop and gives the
+// opened manager the active session's write queue. The worker read
+// w.SessionInfo for it, so a switch before the worker ran handed the file the
+// replacement session's queue, and that read raced the loop's rebind (AGENTS.md
+// "UI ownership"). The queue is loop state, so it is captured before dispatch.
+func TestRenameOtherSessionUsesTheDispatchedWriteQueue(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	target := writeImportableSession(t, t.TempDir())
+	queue := offloop.New()
+	t.Cleanup(queue.Stop)
+	gate := make(chan struct{})
+	queue.Go(func() { <-gate })
+	posted := make(chan func(), 1)
+	app.sessions.RenameQueue = queue
+	app.sessions.PostToUI = func(fn func()) { posted <- fn }
+
+	errs := make(chan error, 1)
+	app.sessions.renameSessionFile(target, "renamed", func(err error) { errs <- err })
+	// Let the worker start, then replace the session on the owner loop.
+	close(gate)
+	if _, err := app.sessionNew(); err != nil {
+		t.Fatalf("new session: %v", err)
+	}
+	queue.Flush()
+	select {
+	case fn := <-posted:
+		fn()
+	case <-time.After(5 * time.Second):
+		t.Fatal("the rename never reached the owner loop")
+	}
+	select {
+	case err := <-errs:
+		if err != nil {
+			t.Fatalf("rename: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the rename never reported")
+	}
+}
