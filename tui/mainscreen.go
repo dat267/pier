@@ -231,8 +231,8 @@ func (s *MainScreen) resetRenderState() {
 }
 
 func (s *MainScreen) beforeTerminalStop(options TuiStopOptions) {
-	// The transcript-replay reads render-mutated state; serialize against an
-	// in-flight timer render, which writes the same fields under s.mu.
+	// Render state is owner-goroutine-only (there is no render timer and no
+	// render lock), so a caller on that goroutine sees the last frame.
 	if options.PreserveScreen || len(s.previousLines) == 0 {
 		return
 	}
@@ -437,8 +437,8 @@ func (s *MainScreen) doRender() {
 			s.maxLinesRendered = max(s.maxLinesRendered, len(newLines))
 		}
 		bufferLength := max(height, len(newLines))
-		// Commit the render state under s.mu: the stop path reads it
-		// concurrently with in-flight timer renders.
+		// Commit the render state before positioning the cursor: the stop path
+		// reads it and runs on this same owner goroutine.
 		s.previousViewportTop = max(0, bufferLength-height)
 		s.positionHardwareCursor(cursorPos.Row, cursorPos.Col, cursorPos.Has, len(newLines))
 		s.previousLines = newLines
@@ -765,7 +765,8 @@ func (s *MainScreen) positionHardwareCursor(row int, col int, hasCursor bool, to
 	}
 }
 
-// renderLocked renders the component tree under the renderer lock.
+// renderLocked renders the component tree on the owner goroutine (the name
+// marks that the caller owns the loop; there is no render mutex).
 func (s *MainScreen) renderLocked(width int) []string {
 	return s.Container.Render(width)
 }
