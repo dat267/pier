@@ -222,7 +222,8 @@ func LoadRadiusGatewayConfig(ctx context.Context, gateway, apiKey string) (*Radi
 	}
 	defer func() { _ = response.Body.Close() }()
 	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
-	if response.StatusCode >= 400 {
+	// The reference rejects `!response.ok`, which also covers 1xx and 3xx.
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return nil, fmt.Errorf("Could not load Radius config from %s: %d: %s",
 			gateway, response.StatusCode, truncateHTTPBody(string(raw)))
 	}

@@ -194,6 +194,21 @@ func TestLoadRadiusGatewayConfig(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.5.2 radius-config.ts loadRadiusGatewayConfig rejects
+// `!response.ok`, so a 3xx is the load error with its body, not a config parse.
+func TestLoadRadiusGatewayConfigRejectsNonOKStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.WriteHeader(http.StatusMultipleChoices)
+		_, _ = writer.Write([]byte("choose"))
+	}))
+	defer server.Close()
+	_, err := LoadRadiusGatewayConfig(context.Background(), server.URL, "")
+	if err == nil || !strings.Contains(err.Error(), "Could not load Radius config from") ||
+		!strings.Contains(err.Error(), "300") || !strings.Contains(err.Error(), "choose") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
 // radius-config.ts truncateHttpBody uses JavaScript String.trim, length and slice.
 func TestTruncateRadiusHTTPBodyUsesJavaScriptStringUnits(t *testing.T) {
 	body := strings.Repeat("😀", 257)
