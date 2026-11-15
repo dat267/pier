@@ -236,10 +236,13 @@ func isOfflineDisabled() bool {
 func lookupEnv(name string) (string, bool) { return os.LookupEnv(name) }
 
 // configureRadiusProviders replaces built-in providers with gateway-configured
-// Radius providers from models.json.
+// Radius providers from models.json. A refresh publishes a new config and the
+// built-in set under the same lock, so readers see one or the other.
 func (r *ModelRuntime) configureRadiusProviders() {
-	r.builtins = map[string]*ai.Provider{}
-	maps.Copy(r.builtins, r.defaults)
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	builtins := map[string]*ai.Provider{}
+	maps.Copy(builtins, r.defaults)
 	for _, providerID := range r.config.GetProviderIDs() {
 		config := r.config.GetProvider(providerID)
 		if config == nil || config.OAuth != "radius" || config.BaseURL == "" {
@@ -249,12 +252,21 @@ func (r *ModelRuntime) configureRadiusProviders() {
 		if name == "" {
 			name = providerID
 		}
-		r.builtins[providerID] = ai.RadiusProvider(ai.RadiusProviderOptions{
+		builtins[providerID] = ai.RadiusProvider(ai.RadiusProviderOptions{
 			ID:      providerID,
 			Name:    name,
 			Gateway: radiusGatewayFromBaseURL(config.BaseURL),
 		})
 	}
+	r.builtins = builtins
+}
+
+// providerConfig returns one models.json entry. Refresh replaces the config, so
+// the read takes the lock that publishes it.
+func (r *ModelRuntime) providerConfig(providerID string) *ModelsJSONProvider {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.config.GetProvider(providerID)
 }
 
 var radiusVersionSuffix = regexp.MustCompile(`/v1/?$`)
@@ -266,15 +278,19 @@ func radiusGatewayFromBaseURL(baseURL string) string {
 
 // providerIDs lists every known provider id.
 func (r *ModelRuntime) providerIDs() []string {
+	r.mu.Lock()
+	builtins := r.builtins
+	configured := r.config.GetProviderIDs()
+	r.mu.Unlock()
 	seen := map[string]bool{}
 	var out []string
-	for id := range r.builtins {
+	for id := range builtins {
 		if !seen[id] {
 			seen[id] = true
 			out = append(out, id)
 		}
 	}
-	for _, id := range r.config.GetProviderIDs() {
+	for _, id := range configured {
 		if !seen[id] {
 			seen[id] = true
 			out = append(out, id)
@@ -288,17 +304,22 @@ func (r *ModelRuntime) providerIDs() []string {
 // provider means no layer defines it any more. A non-empty failure is the composition
 // error to record, in which case the provider is the builtin fallback.
 func (r *ModelRuntime) composeProvider(providerID string) (*ai.Provider, string) {
+	// A refresh publishes the config and the built-in set under the lock; the
+	// captured config pointer is immutable once published.
+	r.mu.Lock()
 	base := r.builtins[providerID]
-	config := r.config.GetProvider(providerID)
-	if base == nil && config == nil {
+	config := r.config
+	r.mu.Unlock()
+	providerConfig := config.GetProvider(providerID)
+	if base == nil && providerConfig == nil {
 		return nil, ""
 	}
-	if base != nil && config == nil {
+	if base != nil && providerConfig == nil {
 		// No overlays: use the builtin untouched so its auth/login/stream
 		// behavior is exact.
 		return base, ""
 	}
-	provider, err := ComposeModelProvider(providerID, base, r.config)
+	provider, err := ComposeModelProvider(providerID, base, config)
 	if err != nil {
 		return base, err.Error()
 	}
@@ -314,6 +335,8 @@ func (r *ModelRuntime) recomposeProvider(providerID string) {
 	} else {
 		r.models.SetProvider(provider)
 	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if failure != "" {
 		r.compositionErrors[providerID] = failure
 		return
@@ -608,10 +631,11 @@ func (r *ModelRuntime) GetAvailableSnapshot() []*ai.Model {
 // GetError reports config, composition, and availability errors.
 func (r *ModelRuntime) GetError() string {
 	errors := []string{}
-	if configError := r.config.GetError(); configError != "" {
+	r.mu.Lock()
+	configError := r.config.GetError()
+	if configError != "" {
 		errors = append(errors, configError)
 	}
-	r.mu.Lock()
 	for providerID, err := range r.compositionErrors {
 		errors = append(errors, fmt.Sprintf("Provider \"%s\": %s", providerID, err))
 	}
@@ -628,7 +652,7 @@ func (r *ModelRuntime) GetError() string {
 // GetCompatibilityRequestConfig is the compatibility fallback used when a
 // provider's auth is unconfigured.
 func (r *ModelRuntime) GetCompatibilityRequestConfig(model *ai.Model) (CompatibilityRequestConfig, error) {
-	return ResolveCompatibilityRequestConfig(model, r.config.GetProvider(model.Provider))
+	return ResolveCompatibilityRequestConfig(model, r.providerConfig(model.Provider))
 }
 
 // IsUsingOAuth reports whether the provider's resolved auth is OAuth.
@@ -673,7 +697,7 @@ func (r *ModelRuntime) GetAuthForModel(model *ai.Model, overrides *ModelRuntimeA
 	if overrides != nil {
 		maps.Copy(env, overrides.Env)
 	}
-	configuredHeaders, err := ResolveConfiguredModelHeaders(model, r.config.GetProvider(model.Provider), env)
+	configuredHeaders, err := ResolveConfiguredModelHeaders(model, r.providerConfig(model.Provider), env)
 	if err != nil {
 		return nil, err
 	}
@@ -864,7 +888,7 @@ func (r *ModelRuntime) GetProviderAuthStatus(providerID string) AuthStatus {
 	if stored {
 		return AuthStatus{Configured: true, Source: "stored"}
 	}
-	if configured := ConfiguredRequestAuthStatus(r.config.GetProvider(providerID)); configured != nil {
+	if configured := ConfiguredRequestAuthStatus(r.providerConfig(providerID)); configured != nil {
 		return *configured
 	}
 	if check != nil {
@@ -1120,7 +1144,9 @@ func (r *ModelRuntime) Refresh(ctx context.Context, options *ModelsRefreshCallOp
 		options = &ModelsRefreshCallOptions{}
 	}
 	config := LoadModelConfig(r.modelsPath)
+	r.mu.Lock()
 	r.config = config
+	r.mu.Unlock()
 	r.configureRadiusProviders()
 	if len(options.Providers) > 0 {
 		for _, providerID := range uniqueStrings(options.Providers) {
