@@ -878,6 +878,9 @@ func (c *FauxCore) FetchDeferred(requestModel *ai.Model, handle *ai.DeferredHand
 		}
 		c.mu.Lock()
 		entry, ok := c.deferredResponses[handle.ID]
+		// The cancel flag is written under the same mutex (CancelDeferred), so
+		// read it here: a read after the unlock is unordered against that write.
+		cancelled := ok && entry.cancelled
 		c.mu.Unlock()
 		if !ok ||
 			entry.handle.Provider != handle.Provider ||
@@ -888,7 +891,7 @@ func (c *FauxCore) FetchDeferred(requestModel *ai.Model, handle *ai.DeferredHand
 			outer.End(&msg)
 			return
 		}
-		if entry.cancelled {
+		if cancelled {
 			msg := fauxCreateErrorMessage(fmt.Errorf("Faux deferred response was cancelled: %s", handle.ID), c.api, c.provider, requestModel.ID)
 			outer.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopError, Error: msg})
 			outer.End(&msg)
