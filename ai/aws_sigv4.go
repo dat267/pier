@@ -83,7 +83,7 @@ func SignAWSRequest(request *http.Request, body []byte, credentials AWSCredentia
 	for _, name := range names {
 		canonicalHeaders.WriteString(name)
 		canonicalHeaders.WriteString(":")
-		canonicalHeaders.WriteString(strings.TrimSpace(headerValues[name]))
+		canonicalHeaders.WriteString(canonicalAWSHeaderValue(headerValues[name]))
 		canonicalHeaders.WriteString("\n")
 	}
 	signedHeaders := strings.Join(names, ";")
@@ -126,6 +126,13 @@ func SignAWSRequest(request *http.Request, body []byte, credentials AWSCredentia
 		StringToSign:  stringToSign,
 		Signature:     signature,
 	}, nil
+}
+
+// canonicalAWSHeaderValue trims a header value and collapses each run of
+// whitespace to one space, as the AWS SDK does before signing
+// (@smithy/signature-v4: `value.trim().replace(/\s+/g, " ")`).
+func canonicalAWSHeaderValue(value string) string {
+	return strings.Join(strings.Fields(value), " ")
 }
 
 // deriveAWSSigningKey derives the SigV4 signing key.

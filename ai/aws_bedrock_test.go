@@ -83,6 +83,26 @@ func TestSigV4IncludesBodyHashSessionTokenAndContentType(t *testing.T) {
 	}
 }
 
+// The AWS SDK (which upstream uses for Bedrock) canonicalizes a header value as
+// `value.trim().replace(/\s+/g, " ")` (@smithy/signature-v4) before signing, so
+// a signed header with repeated whitespace must collapse the same way.
+func TestSigV4CollapsesHeaderWhitespace(t *testing.T) {
+	request, err := http.NewRequest(http.MethodPost, "https://example.amazonaws.com/", bytes.NewReader([]byte("x")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Header.Set("Content-Type", "application/json;  charset=utf-8")
+	credentials := AWSCredentials{AccessKeyID: "AKIDEXAMPLE", SecretAccessKey: "secret"}
+	result, err := SignAWSRequest(request, []byte("x"), credentials, "service", "us-east-1",
+		time.Date(2015, 8, 30, 12, 36, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result.Canonical, "content-type:application/json; charset=utf-8\n") {
+		t.Fatalf("canonical request kept repeated whitespace:\n%s", result.Canonical)
+	}
+}
+
 func TestCanonicalizeAWSQuery(t *testing.T) {
 	request, err := http.NewRequest(http.MethodGet, "https://example.com/path?b=2&a=1&a=0&c=x%20y", nil)
 	if err != nil {
@@ -91,6 +111,33 @@ func TestCanonicalizeAWSQuery(t *testing.T) {
 	got := canonicalizeAWSQuery(request.URL)
 	if got != "a=0&a=1&b=2&c=x%20y" {
 		t.Fatalf("canonical query = %q", got)
+	}
+
+	// The remaining cases were checked against @smithy/signature-v4's
+	// getCanonicalQuery, the SDK upstream signs Bedrock requests with.
+	cases := []struct{ raw, want string }{
+		{"", ""},
+		{"a", "a="},
+		{"a=", "a="},
+		{"a=%7E", "a=~"},
+		{"a=~", "a=~"},
+		{"a=*", "a=%2A"},
+		{"a=a+b", "a=a%20b"},
+		{"a=%2B", "a=%2B"},
+		{"k=%E6%97%A5", "k=%E6%97%A5"},
+		{"A=1&a=2", "A=1&a=2"},
+		{"x=1&x=", "x=&x=1"},
+		{"path=a/b", "path=a%2Fb"},
+		{"é=1", "%C3%A9=1"},
+	}
+	for _, test := range cases {
+		parsed, err := http.NewRequest(http.MethodGet, "https://example.com/path?"+test.raw, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := canonicalizeAWSQuery(parsed.URL); got != test.want {
+			t.Errorf("canonical query of %q = %q, want %q", test.raw, got, test.want)
+		}
 	}
 }
 
