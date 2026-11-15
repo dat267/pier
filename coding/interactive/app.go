@@ -1414,23 +1414,32 @@ func (a *App) wireMcpManager(manager *coding.McpManager) {
 
 // reloadMCP exchanges the session's MCP manager for one built from the re-read
 // config (upstream reload(): the extension's session_start re-runs loadConfig
-// and reconnects). Called off the loop; the wiring posts the rebuilt tools onto
-// the loop through the callbacks registered here.
+// and reconnects). It runs on the owner loop; only the build when a /reload
+// detaches it (see reloadMCPPlan) leaves the loop.
 func (a *App) reloadMCP(ctx context.Context, cwd string) []string {
 	trusted := false
 	if a.settings != nil {
 		trusted = a.settings.IsProjectTrusted()
 	}
-	// Upstream's defaultLoadConfig reads ctx.isProjectTrusted(); the reload's
-	// implicit trust save runs after session_start, so an untrusted project's
-	// .pi/mcp.json stays out of the reload.
+	next, messages := a.buildReloadedMCPManager(ctx, cwd, trusted, a.mcpManager != nil)
+	a.applyReloadedMCPManager(next)
+	return messages
+}
+
+// buildReloadedMCPManager loads mcp.json and starts a new manager without
+// writing app state, so a detached /reload can run it off the loop. hadManager
+// mirrors a.mcpManager at snapshot time: without a manager, an empty config
+// starts nothing. Upstream's defaultLoadConfig reads project trust, and the
+// reload's implicit trust save runs after session_start, so an untrusted
+// project's .pi/mcp.json stays out of the reload.
+func (a *App) buildReloadedMCPManager(ctx context.Context, cwd string, trusted, hadManager bool) (*coding.McpManager, []string) {
 	config := coding.LoadMcpConfig(coding.McpConfigLoadOptions{AgentDir: a.mcpAgentDir, Cwd: cwd, ProjectTrusted: trusted})
 	buildOptions := a.mcpOptions
 	if a.mcpOptionsOverride != nil {
 		buildOptions = a.mcpOptionsOverride
 	}
 	var next *coding.McpManager
-	if a.mcpManager == nil {
+	if !hadManager {
 		enabled := 0
 		for _, server := range config.Servers {
 			if server.Config.Enabled == nil || *server.Config.Enabled {
@@ -1438,25 +1447,31 @@ func (a *App) reloadMCP(ctx context.Context, cwd string) []string {
 			}
 		}
 		if enabled == 0 {
-			return config.Errors
+			return nil, config.Errors
 		}
-		next = coding.NewMcpManagerAsync(ctx, buildOptions(config))
-	} else {
+	}
+	next = coding.NewMcpManagerAsync(ctx, buildOptions(config))
+	messages := config.Errors
+	if warning := coding.McpUnreachableToolsWarning(config); warning != "" {
+		messages = append(slices.Clip(config.Errors), warning)
+	}
+	return next, messages
+}
+
+// applyReloadedMCPManager installs a built manager on the owner loop.
+func (a *App) applyReloadedMCPManager(next *coding.McpManager) {
+	if next == nil {
+		return
+	}
+	if a.mcpManager != nil {
 		// D444: the retired manager closes on the session queue. ReloadMCPExchange
 		// would do it inline, and its Close blocks for a transport's whole
 		// grace-and-kill sequence (2.50 s for a server that ignores stdin close and
 		// SIGTERM, A492) while this rebind runs on the owner loop.
 		a.retireMCPManager(a.mcpManager)
-		next = coding.NewMcpManagerAsync(ctx, buildOptions(config))
 	}
 	a.mcpManager = next
-	if next != nil {
-		a.wireMcpManager(next)
-	}
-	if warning := coding.McpUnreachableToolsWarning(config); warning != "" {
-		return append(slices.Clip(config.Errors), warning)
-	}
-	return config.Errors
+	a.wireMcpManager(next)
 }
 
 // retireMCPManager closes the manager a session replacement left behind. Its

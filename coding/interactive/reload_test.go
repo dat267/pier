@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
@@ -64,11 +65,21 @@ func TestHandleReloadCommand(t *testing.T) {
 		return modelsJSONError, savedTrust, reloadErr
 	}
 	detached := 0
-	wiring.RunDetached = func(fn func()) bool { detached++; fn(); return true }
+	mcpApplied := 0
+	wiring.ReloadMCP = func() ReloadMCPPlan {
+		return ReloadMCPPlan{
+			Build: func(context.Context) (*coding.McpManager, []string) {
+				detached++
+				return &coding.McpManager{}, nil
+			},
+			Apply: func(*coding.McpManager) { mcpApplied++ },
+		}
+	}
+	wiring.RunDetached = func(fn func()) bool { fn(); return true }
 	wiring.HandleReloadCommand()
 
-	if !reloaded || detached != 1 {
-		t.Fatalf("reloaded = %v, detached = %d", reloaded, detached)
+	if !reloaded || detached != 1 || mcpApplied != 1 {
+		t.Fatalf("reloaded = %v, detached = %d, mcpApplied = %d", reloaded, detached, mcpApplied)
 	}
 	if applied != 1 {
 		t.Fatalf("ApplyReloadedSettings calls = %d", applied)
@@ -132,16 +143,22 @@ func TestReloadLoadsSettingsBeforeMCP(t *testing.T) {
 				calls = append(calls, "settings")
 				return "", false, nil
 			}
-			wiring.ReloadMCP = func(context.Context) (*coding.McpManager, []string) {
-				calls = append(calls, "mcp")
-				return nil, nil
+			wiring.ReloadMCP = func() ReloadMCPPlan {
+				calls = append(calls, "plan")
+				return ReloadMCPPlan{
+					Build: func(context.Context) (*coding.McpManager, []string) {
+						calls = append(calls, "build")
+						return &coding.McpManager{}, nil
+					},
+					Apply: func(*coding.McpManager) { calls = append(calls, "apply") },
+				}
 			}
 			if detached {
 				wiring.RunDetached = func(fn func()) bool { fn(); return true }
 			}
 			wiring.HandleReloadCommand()
-			if got := strings.Join(calls, ","); got != "settings,mcp" {
-				t.Fatalf("reload order = %q, want settings,mcp", got)
+			if got := strings.Join(calls, ","); got != "settings,plan,build,apply" {
+				t.Fatalf("reload order = %q, want settings,plan,build,apply", got)
 			}
 		})
 	}
@@ -163,4 +180,35 @@ func TestReloadNoticeListsWhatIsReloaded(t *testing.T) {
 			t.Errorf("the /reload notice no longer mentions %q: %q", item, reloadedItems)
 		}
 	}
+}
+
+// The MCP half of a /reload builds off the loop but applies on it: the build
+// must not touch app state, and the apply must run on the loop after it lands.
+func TestReloadMCPBuildsOffLoopAndAppliesOnTheLoop(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+
+	writeMCPReloadConfig(t, app.mcpAgentDir, `{"mcpServers":{"docs":{"command":"unused","exposure":"direct"}}}`)
+	plan := app.commands.ReloadMCP()
+
+	// Hold the detached worker, then check that no manager was installed yet.
+	gate := make(chan struct{})
+	app.detachedStartGate = func() { <-gate }
+	var built *coding.McpManager
+	if !app.runDetached(func(context.Context) error {
+		manager, _ := plan.Build(context.Background())
+		built = manager
+		app.ui.Post(func() { plan.Apply(manager) })
+		return nil
+	}) {
+		t.Fatal("the detached worker was not admitted")
+	}
+	if app.mcpManager != nil {
+		t.Fatal("a manager was installed before the build result landed")
+	}
+	close(gate)
+	waitForConditionWithin(t, func() bool {
+		app.ui.RenderNow(true)
+		return app.mcpManager != nil && app.mcpManager == built
+	}, 5*time.Second)
 }

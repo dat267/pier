@@ -103,18 +103,19 @@ type CommandWiring struct {
 	// reload (D151): the notice text, and whether it is a warning. A reload
 	// that moved the model must say so rather than change it silently.
 	DefaultSyncNotice func() (string, bool)
-	// ReloadNow re-reads settings-dependent state off the UI loop (settings
+	// ReloadNow re-reads settings-dependent state on the UI loop (settings
 	// file, session queue modes, keybindings, implicit project trust). It
 	// returns the models.json error ("" = none) and whether implicit project
-	// trust was saved.
+	// trust was saved. Everything it writes is owner-loop state, so the loop
+	// runs it; only the MCP rebuild below is detached.
 	ReloadNow func() (modelsJSONError string, savedTrust bool, err error)
-	// ReloadMCP re-reads mcp.json and exchanges the session's MCP manager
-	// (upstream reload(): session_shutdown invalidates the extension's
-	// connections and session_start reconnects them). Nil manager = none was
-	// configured; nil func = no MCP wiring. The rebuilt manager attaches to
-	// the session itself (AttachSession), and its connection failures are the
-	// second return.
-	ReloadMCP func(ctx context.Context) (*coding.McpManager, []string)
+	// ReloadMCP resolves the MCP half of a reload on the loop. Build re-reads
+	// mcp.json and starts a new manager off the loop and writes no app state;
+	// Apply installs it on the loop (upstream reload(): session_shutdown
+	// invalidates the extension's connections and session_start reconnects
+	// them). A nil plan means no MCP wiring; a nil built manager means none is
+	// configured, and its connection failures are the second return.
+	ReloadMCP func() ReloadMCPPlan
 	// ApplyReloadedSettings re-applies settings-dependent UI state on the
 	// loop (runtime settings, chat rebuild, themes, autocomplete).
 	ApplyReloadedSettings func()
@@ -342,6 +343,17 @@ func (w *CommandWiring) forkImportIntoSession(ctx context.Context, sourcePath st
 	})
 }
 
+// ReloadMCPPlan is the MCP half of a /reload, resolved on the owner loop so the
+// detached build sees the loop's snapshot instead of reading its state.
+type ReloadMCPPlan struct {
+	// Build re-reads mcp.json and starts a new manager. It must not write app
+	// or session state; the caller runs it off the loop.
+	Build func(ctx context.Context) (*coding.McpManager, []string)
+	// Apply installs the built manager on the loop. It drops a manager built
+	// for a cwd the session has left.
+	Apply func(manager *coding.McpManager)
+}
+
 // reloadedItems names what a reload re-reads, for the /reload notice. The MCP
 // manager re-reads mcp.json and reconnects (ReloadMCP), so the text now names
 // what the port actually re-reads: upstream's text leads with "extensions", and
@@ -426,39 +438,52 @@ func (w *CommandWiring) HandleReloadCommand() {
 		}
 	}
 
+	// Settings, session resources, keybindings and trust are owner-loop state,
+	// so the loop reloads them first: upstream's order, and the MCP config read
+	// then sees the reloaded project trust.
+	modelsJSONError, savedTrust, err := w.ReloadNow()
+	if err != nil {
+		restore()
+		w.showError("Reload failed: " + err.Error())
+		return
+	}
+	var plan ReloadMCPPlan
+	if w.ReloadMCP != nil {
+		plan = w.ReloadMCP()
+	}
+	deliver := func(manager *coding.McpManager, built bool, connectionErrors []string) {
+		if !built {
+			connectionErrors = nil
+		} else if plan.Apply != nil {
+			plan.Apply(manager)
+		}
+		finish(modelsJSONError, savedTrust, nil, connectionErrors)
+	}
+	if plan.Build == nil {
+		deliver(nil, false, nil)
+		return
+	}
 	if w.RunDetached != nil {
 		accepted := w.RunDetached(func() {
-			modelsJSONError, savedTrust, err := w.ReloadNow()
-			// The MCP exchange re-reads the config and reconnects; failures are
-			// the rebuilt manager's connection errors (reported below, like the
-			// boot's startup warnings).
-			var connectionErrors []string
-			if w.ReloadMCP != nil {
-				if manager, errors := w.ReloadMCP(context.Background()); manager != nil {
-					connectionErrors = errors
-				}
-			}
+			// Only the rebuild runs detached; it writes no app state, so the
+			// loop installs the result when it lands. Its connection failures
+			// are reported below, like the boot's startup warnings.
+			manager, connectionErrors := plan.Build(context.Background())
+			built := manager != nil
 			if w.UI != nil {
-				w.UI.Post(func() { finish(modelsJSONError, savedTrust, err, connectionErrors) })
+				w.UI.Post(func() { deliver(manager, built, connectionErrors) })
 				return
 			}
-			finish(modelsJSONError, savedTrust, err, connectionErrors)
+			deliver(manager, built, connectionErrors)
 		})
 		if !accepted {
 			restore()
+			w.showWarning("MCP servers were not reloaded: background work is busy.")
 		}
 		return
 	}
-	// Same order as the detached path and upstream: settings reload first, so
-	// the MCP config read sees the reloaded project trust.
-	onlyModelsJSONError, savedTrust, err := w.ReloadNow()
-	var connectionErrors []string
-	if w.ReloadMCP != nil {
-		if _, errors := w.ReloadMCP(context.Background()); errors != nil {
-			connectionErrors = errors
-		}
-	}
-	finish(onlyModelsJSONError, savedTrust, err, connectionErrors)
+	manager, connectionErrors := plan.Build(context.Background())
+	deliver(manager, manager != nil, connectionErrors)
 }
 
 // HandleCopyCommand copies the selection or the last assistant message.
@@ -1014,10 +1039,29 @@ func newCommandWiring(app *App) *CommandWiring {
 		},
 		// The MCP half of the reload: re-read mcp.json, close and restart the
 		// manager's connections, wire the fresh manager (upstream session_start
-		// reason "reload"). The connection failures land in the wiring's error
-		// report; the tools attach through the rebuilt manager's callbacks.
-		ReloadMCP: func(ctx context.Context) (*coding.McpManager, []string) {
-			return app.mcpManager, app.reloadMCP(ctx, app.sessionMgr.GetCwd())
+		// reason "reload"). The loop resolves the cwd, trust and current-manager
+		// snapshot here; the rebuild itself runs detached, and the result is
+		// installed on the loop. The connection failures land in the wiring's
+		// error report; the tools attach through the rebuilt manager's callbacks.
+		ReloadMCP: func() ReloadMCPPlan {
+			cwd := app.sessionMgr.GetCwd()
+			trusted := app.settings != nil && app.settings.IsProjectTrusted()
+			hadManager := app.mcpManager != nil
+			return ReloadMCPPlan{
+				Build: func(ctx context.Context) (*coding.McpManager, []string) {
+					return app.buildReloadedMCPManager(ctx, cwd, trusted, hadManager)
+				},
+				Apply: func(manager *coding.McpManager) {
+					// A switch while the build ran already installed the new
+					// cwd's manager (upstream's session_start re-reads the
+					// config for that session), so this result is stale.
+					if manager != nil && app.sessionMgr.GetCwd() != cwd {
+						app.retireMCPManager(manager)
+						return
+					}
+					app.applyReloadedMCPManager(manager)
+				},
+			}
 		},
 		ApplyReloadedSettings: app.applyReloadedSettings}
 }

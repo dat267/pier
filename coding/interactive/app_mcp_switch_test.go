@@ -79,7 +79,9 @@ func TestReloadLoadsServerAddedAtRuntime(t *testing.T) {
 		return coding.McpManagerOptions{Config: loaded, Cwd: app.sessionMgr.GetCwd(), CreateTransport: transport}
 	}
 	writeMCPReloadConfig(t, app.mcpAgentDir, `{"mcpServers":{"added":{"command":"unused","exposure":"direct"}}}`)
-	manager, errors := app.commands.ReloadMCP(context.Background())
+	plan := app.commands.ReloadMCP()
+	manager, errors := plan.Build(context.Background())
+	plan.Apply(manager)
 	if manager == nil || manager != app.mcpManager {
 		t.Fatal("reload did not return the new manager")
 	}
@@ -137,5 +139,49 @@ func TestReloadMCPHonorsProjectTrust(t *testing.T) {
 	app.ui.RenderNow(true)
 	if app.session.GetToolDefinition("mcp__projectserver__echo") == nil {
 		t.Fatal("trusted project server is missing after reload")
+	}
+}
+
+// A /reload that lands after a session switch must not install the manager it
+// built for the old cwd: the switch's bind already re-read the config for the
+// new session (upstream's session_start), and installing the stale manager
+// would put the old cwd's servers on the new session. The reload's MCP half is
+// built off the loop and applied on it, so the plan resolves the cwd once and
+// the apply drops a manager whose cwd the session left.
+func TestReloadMCPDropsAManagerBuiltForAReplacedCwd(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+
+	transport := func(entry coding.McpServerEntry, _ string, _ mcp.AuthProvider) (mcp.Transport, error) {
+		return newMCPReloadFakeServer(t, entry.Name, []protocol.Tool{{Name: "echo"}}), nil
+	}
+	app.mcpOptionsOverride = func(loaded coding.LoadedMcpConfig) coding.McpManagerOptions {
+		return coding.McpManagerOptions{Config: loaded, Cwd: app.sessionMgr.GetCwd(), CreateTransport: transport}
+	}
+	writeMCPReloadConfig(t, app.mcpAgentDir, `{"mcpServers":{"docs":{"command":"unused","exposure":"direct"}}}`)
+
+	plan := app.commands.ReloadMCP()
+	built, errors := plan.Build(context.Background())
+	if built == nil {
+		t.Fatalf("build did not start a manager (errors %v)", errors)
+	}
+	if app.mcpManager != nil {
+		t.Fatal("the detached build installed app state")
+	}
+
+	// A switch to another project lands before the build result is applied.
+	other := t.TempDir()
+	if _, err := app.applySessionReplacement(coding.NewSessionManager(other, &coding.SessionManagerOptions{
+		Persist: new(bool),
+	})); err != nil {
+		t.Fatalf("switch: %v", err)
+	}
+	installed := app.mcpManager
+	plan.Apply(built)
+	if app.mcpManager != installed {
+		t.Fatal("the reload installed a manager built for the replaced cwd")
+	}
+	if installed == built {
+		t.Fatal("the stale manager is still installed")
 	}
 }
