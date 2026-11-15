@@ -10,8 +10,10 @@ import (
 // characters are represented internally as their two surrogate units, each
 // mapped to a distinct rune in Unicode plane 15. BMP characters, invalid bytes
 // and every line terminator keep their identity, so ASCII classes, anchors and
-// case folding behave as before. The mapping is injective: every astral
-// character is encoded, so no literal input rune can equal a mapped unit.
+// case folding behave as before. The mapping is injective over input that
+// stays out of that plane-15 window: a literal private-use rune in
+// U+F0000..U+FDFFF would read back as an astral character (or U+FFFD), which no
+// real source file or model reply contains.
 const codeUnitBase = 0xF0000
 
 // encodeCodeUnits maps astral runes to their UTF-16 surrogate units.
