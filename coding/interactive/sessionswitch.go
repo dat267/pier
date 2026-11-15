@@ -321,6 +321,9 @@ func (a *App) bindSessionManager(sessionManager *coding.SessionManager) (*Sessio
 	a.events.SessionInfo = sessionManager
 	a.startup.SessionInfo = sessionManager
 	a.sessions.SessionInfo = sessionManager
+	// The command session holds the concrete AgentSession (see
+	// commandSession), so a bind must refresh it along with the wiring.
+	a.commands.Session = a.commandSession()
 	a.commands.SessionInfo = sessionManager
 	a.selectors.SessionInfo = sessionManager
 	a.trust.SessionInfo = sessionManager

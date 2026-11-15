@@ -465,3 +465,117 @@ func TestEscapeCancelsTheManualCommandWithTheTurn(t *testing.T) {
 		return !app.session.IsBashRunning() && !app.session.IsStreaming()
 	}, 5*time.Second)
 }
+
+// A `!` command belongs to the session that submitted it. bindSessionManager
+// swaps the embedded AgentSession on a switch, so the detached worker must use
+// a session snapshot taken on the loop: otherwise a switch that lands before
+// the worker starts runs the command in the new session's cwd and records it
+// there.
+func TestDetachedBashUsesTheSubmittedSession(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+
+	original := app.session.AgentSession
+	// Hold the worker before it reads any session pointer.
+	gate := make(chan struct{})
+	app.detachedStartGate = func() { <-gate }
+
+	if err := newSubmitWiring(app).Handlers.HandleBashCommand("echo switched-away", false); err != nil {
+		t.Fatal(err)
+	}
+
+	// A switch replaces the embedded session, as bindSessionManager does.
+	dir := t.TempDir()
+	replacementManager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: new(bool)})
+	replacement, err := coding.CreateAgentSession(context.Background(), &coding.CreateAgentSessionOptions{
+		Cwd: dir, AgentDir: dir, SessionManager: replacementManager,
+		Model:           app.session.Model(),
+		SettingsManager: app.settings, ModelRuntime: app.runtime,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	app.session.AgentSession = replacement.Session
+	close(gate)
+
+	// Drain the loop until the command records its result in the original session.
+	waitForConditionWithin(t, func() bool {
+		app.ui.RenderNow(true)
+		for _, message := range original.Agent.State().Messages {
+			if custom, ok := message.(*ai.CustomMessage); ok && custom.Role == coding.RoleBashExecution {
+				return true
+			}
+		}
+		return false
+	}, 15*time.Second)
+	for _, message := range replacement.Session.Agent.State().Messages {
+		if custom, ok := message.(*ai.CustomMessage); ok && custom.Role == coding.RoleBashExecution {
+			t.Fatal("the bash command ran in the session that replaced the one it was submitted for")
+		}
+	}
+	for _, entry := range replacementManager.GetEntries() {
+		if entry.Type == "message" && strings.Contains(string(entry.Message), `"role":"bashExecution"`) {
+			t.Fatal("the replacement session file recorded the bash result")
+		}
+	}
+}
+
+// A /compact command belongs to the session that submitted it. The command
+// session used to be a wrapper around the shared *AppSession, so
+// bindSessionManager's swap redirected a worker that started after the switch
+// and compacted the new session instead.
+func TestDetachedCompactionUsesTheSubmittedSession(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+
+	// Small compaction windows, so a two-message session has something to
+	// summarize (the defaults keep the whole session as "recent").
+	app.settings.ApplyOverrides(&coding.Settings{Compaction: &coding.SettingsCompaction{
+		Enabled: new(true), ReserveTokens: new(int64(100)), KeepRecentTokens: new(int64(1)),
+	}})
+	// Give the session something to summarize.
+	app.session.Sessions.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "first question"}})
+	app.session.Sessions.AppendMessage(&ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: app.session.Model().Provider, Model: app.session.Model().ID,
+		Content: ai.ContentList{ai.TextContent{Text: "first answer"}}, StopReason: ai.StopStop,
+	})
+	app.session.Agent.SetMessages(app.session.Sessions.Projection().Messages)
+	original := app.session.AgentSession
+
+	gate := make(chan struct{})
+	app.detachedStartGate = func() { <-gate }
+	if err := newSubmitWiring(app).Handlers.HandleCompactCommand(""); err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	replacementManager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: new(bool)})
+	replacement, err := coding.CreateAgentSession(context.Background(), &coding.CreateAgentSessionOptions{
+		Cwd: dir, AgentDir: dir, SessionManager: replacementManager,
+		Model: app.session.Model(), SettingsManager: app.settings, ModelRuntime: app.runtime,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// bindSessionManager swaps the embedded session and refreshes the command
+	// wiring on the loop.
+	app.session.AgentSession = replacement.Session
+	app.commands.Session = app.commandSession()
+	close(gate)
+
+	hasCompaction := func(entries []coding.SessionEntry) bool {
+		for _, entry := range entries {
+			if entry.Type == "compaction" {
+				return true
+			}
+		}
+		return false
+	}
+	waitForConditionWithin(t, func() bool {
+		app.ui.RenderNow(true)
+		return hasCompaction(original.Sessions.GetEntries())
+	}, 15*time.Second)
+	if hasCompaction(replacementManager.GetEntries()) {
+		t.Fatal("the compaction ran in the session that replaced the one it was submitted for")
+	}
+}

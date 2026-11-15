@@ -625,6 +625,11 @@ func newSubmitWiring(app *App) *SubmitWiring {
 			// mutation is posted back, because the renderer paints concurrently with
 			// this goroutine.
 			HandleBashCommand: func(command string, excludeFromContext bool) error {
+				// The command belongs to the session that submitted it: a
+				// switch can land before the worker starts, and
+				// bindSessionManager swaps the embedded AgentSession pointer,
+				// so snapshot the concrete session rather than the wrapper.
+				session := app.session.AgentSession
 				app.runDetached(func(ctx context.Context) error {
 					// A `!` command is a manual shell tool call: it renders through
 					// the shell tool's frame (D246) and joins the transcript before it
@@ -635,7 +640,7 @@ func newSubmitWiring(app *App) *SubmitWiring {
 							map[string]any{"command": command}, toolFrameOptions{
 								Session: app.session, Settings: app.settings, Display: app.display,
 								Prep: app.transcript.MarkdownPreparation, UI: app.ui,
-								Cwd: app.session.Sessions.GetCwd(), Manual: true,
+								Cwd: session.Sessions.GetCwd(), Manual: true,
 							})
 						component.MarkExecutionStarted()
 						component.SetArgsComplete()
@@ -656,7 +661,7 @@ func newSubmitWiring(app *App) *SubmitWiring {
 					}
 
 					accumulator := coding.NewOutputAccumulator(0, 0, "")
-					result, err := app.session.ExecuteBash(ctx, command, func(chunk string) {
+					result, err := session.ExecuteBash(ctx, command, func(chunk string) {
 						_ = accumulator.Append([]byte(chunk))
 						snapshot := accumulator.Snapshot(false)
 						app.ui.Post(func() {
@@ -764,8 +769,14 @@ func newSubmitWiring(app *App) *SubmitWiring {
 				// would leave a mid-run /compact inert until the turn finished
 				// on its own.
 				app.commands.ClearCompactionStatus()
+				// As with `!`, resolve the session on the loop: the worker must
+				// compact the session the command was submitted for.
+				// As with `!`, resolve the command session on the loop: the
+				// worker must compact the session the command was submitted
+				// for, and bindSessionManager rewrites the wiring on a switch.
+				session := app.commands.Session
 				app.runDetached(func(ctx context.Context) error {
-					app.commands.CompactSession(ctx, instructions)
+					_ = session.CompactSession(ctx, instructions)
 					return nil
 				})
 				return nil

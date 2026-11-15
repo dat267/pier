@@ -251,6 +251,10 @@ type App struct {
 	// D201: no pending detached list, at most four running jobs.
 	detachedSlots       chan struct{}
 	detachedBusyPending atomic.Bool
+	// detachedStartGate runs inside each detached goroutine before its work.
+	// Tests hold a worker here to prove that a command uses the session it was
+	// submitted for even when a switch lands before the worker starts.
+	detachedStartGate func()
 }
 
 // NewApp builds the interactive-mode object graph.
@@ -1241,6 +1245,9 @@ func (a *App) runDetached(fn func(ctx context.Context) error) bool {
 		defer func() { <-a.detachedSlots }()
 		defer cancel()
 		defer stopLoop()
+		if a.detachedStartGate != nil {
+			a.detachedStartGate()
+		}
 		if ctx.Err() == nil {
 			_ = fn(ctx)
 		}
@@ -1572,8 +1579,10 @@ func (a *App) applyFullscreenScrollbarSetting() {
 // selector-runtime interface).
 func (a *App) modelSession() ModelSession { return appModelSession{a.session} }
 
-// commandSession returns the CommandSession adapter.
-func (a *App) commandSession() CommandSession { return appCommandSession{a.session} }
+// commandSession returns the CommandSession adapter for the session bound at
+// call time. It holds the concrete AgentSession: a command resolved on the loop
+// must keep that session even when bindSessionManager swaps the wiring later.
+func (a *App) commandSession() CommandSession { return appCommandSession{a.session.AgentSession} }
 
 // appModelSession overrides ModelRuntime to return ModelSelectorRuntime.
 type appModelSession struct{ *AppSession }
@@ -1581,7 +1590,7 @@ type appModelSession struct{ *AppSession }
 func (m appModelSession) ModelRuntime() ModelSelectorRuntime { return m.AgentSession.ModelRuntime() }
 
 // appCommandSession adapts CompactSession to the error-only signature.
-type appCommandSession struct{ *AppSession }
+type appCommandSession struct{ *coding.AgentSession }
 
 func (c appCommandSession) CompactSession(ctx context.Context, customInstructions string) error {
 	_, err := c.AgentSession.CompactSession(ctx, customInstructions)
