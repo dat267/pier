@@ -644,10 +644,9 @@ func NewApp(options AppOptions) *App {
 
 	app.startup = newStartupWiring(app)
 	// markdownTheme reads markdown.codeBlockIndent through the startup wiring
-	// (upstream getMarkdownThemeWithSettings), so both wirings take their theme
+	// (upstream getMarkdownThemeWithSettings), so the wirings take their theme
 	// once it exists rather than from a settings-less copy.
-	app.transcript.MarkdownTheme = app.markdownTheme()
-	app.events.MarkdownTheme = app.markdownTheme()
+	app.applyMarkdownTheme()
 	// The submission channel exists from composition so the run loop always
 	// has a consumer side to select on.
 	app.startup.InitInputs()
@@ -868,12 +867,7 @@ func (a *App) applySettingsDependentUI() bool {
 	w := a.settingsW
 	// Upstream reads the markdown theme at every render site; the transcript and
 	// event dispatcher hold one, so re-read it before reload's rebuild.
-	if a.transcript != nil && a.transcript.MarkdownTheme != nil {
-		*a.transcript.MarkdownTheme = *a.markdownTheme()
-	}
-	if a.events != nil && a.events.MarkdownTheme != nil {
-		*a.events.MarkdownTheme = *a.markdownTheme()
-	}
+	a.applyMarkdownTheme()
 	w.applyThinkingBlockVisibility(a.settings.GetHideThinkingBlock())
 	rebuilt := w.applyOutputPad(a.settings.GetOutputPad())
 	a.applyFullscreenScrollbarSetting()
@@ -1538,6 +1532,21 @@ func (a *App) markdownTheme() *tui.MarkdownTheme {
 		theme = a.startup.GetMarkdownThemeWithSettings(theme)
 	}
 	return &theme
+}
+
+// applyMarkdownTheme hands the current settings-derived markdown theme to the
+// transcript and the event dispatcher, the two wirings that hold one; every
+// component copies the value when it is built. Upstream
+// (interactive-mode.ts getMarkdownThemeWithSettings) rebuilds the theme at each
+// render site instead, so composition and a reload both re-read it here.
+func (a *App) applyMarkdownTheme() {
+	theme := a.markdownTheme()
+	if a.transcript != nil {
+		a.transcript.MarkdownTheme = theme
+	}
+	if a.events != nil {
+		a.events.MarkdownTheme = theme
+	}
 }
 
 // applyFullscreenScrollbarSetting applies the fullscreen scrollbar setting to the
