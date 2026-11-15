@@ -206,65 +206,6 @@ func TruncateToVisualLines(text string, maxVisualLines int, width int, paddingX 
 // reason about it.
 func newSecondTicker() *time.Ticker { return time.NewTicker(time.Second) }
 
-// BorderedLoader is a loader wrapped in borders.
-type BorderedLoader struct {
-	*tui.Container
-
-	cancellable  bool
-	loader       *tui.Loader
-	cancelLoader *tui.CancellableLoader
-}
-
-// NewBorderedLoader creates the bordered loader.
-// Cancellable defaults to true.
-func NewBorderedLoader(host tui.RenderRequester, theme *Theme, message string, cancellable *bool) *BorderedLoader {
-	isCancellable := true
-	if cancellable != nil {
-		isCancellable = *cancellable
-	}
-	borderColor := func(s string) string { return theme.Fg("border", s) }
-	loader := &BorderedLoader{
-		Container:   &tui.Container{},
-		cancellable: isCancellable,
-	}
-	loader.AddChild(NewDynamicBorder(borderColor))
-	if isCancellable {
-		loader.cancelLoader = tui.NewCancellableLoader(host,
-			func(s string) string { return theme.Fg("accent", s) },
-			func(s string) string { return theme.Fg("muted", s) },
-			message)
-	} else {
-		loader.loader = tui.NewLoader(host,
-			func(s string) string { return theme.Fg("accent", s) },
-			func(s string) string { return theme.Fg("muted", s) },
-			message, nil)
-	}
-	loader.AddChild(loader.loaderComponent())
-	if isCancellable {
-		loader.AddChild(tui.NewSpacer(1))
-		loader.AddChild(tui.NewText(KeyHint("tui.select.cancel", "cancel"), 1, 0, nil))
-	}
-	loader.AddChild(tui.NewSpacer(1))
-	loader.AddChild(NewDynamicBorder(borderColor))
-	return loader
-}
-
-func (b *BorderedLoader) loaderComponent() tui.Component {
-	if b.cancellable {
-		return b.cancelLoader.Loader
-	}
-	return b.loader
-}
-
-// Dispose stops the loader.
-func (b *BorderedLoader) Dispose() {
-	if b.cancellable {
-		b.cancelLoader.Dispose()
-		return
-	}
-	b.loader.Stop()
-}
-
 // MarkdownTransformContext is the transformer context.
 type MarkdownTransformContext struct {
 	MessageType    string

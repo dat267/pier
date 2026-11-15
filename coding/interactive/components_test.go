@@ -158,13 +158,6 @@ func TestComponentsAgainstUpstreamGolden(t *testing.T) {
 	})
 	checkGolden(t, golden, "custom-empty", []any{empty.HasContent(), normalizeRender(empty.Render(20))})
 
-	loader := NewBorderedLoader(nil, ActiveTheme(), "Working...", nil)
-	loader.Dispose()
-	checkGolden(t, golden, "loader@30", normalizeRender(loader.Render(30)))
-	plain := false
-	plainLoader := NewBorderedLoader(nil, ActiveTheme(), "Plain", &plain)
-	plainLoader.Dispose()
-	checkGolden(t, golden, "loader-plain@30", normalizeRender(plainLoader.Render(30)))
 }
 
 func normalizeRender(lines []string) []string {
