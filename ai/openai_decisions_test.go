@@ -532,3 +532,39 @@ func TestOpenAIDecisionsTimeoutCoversResponseBody(t *testing.T) {
 		t.Fatalf("timeout took %v; want prompt cancellation", elapsed)
 	}
 }
+
+// TestOpenAIDecisionsOmitsInputWithoutState pins wireInput's absent-state rule:
+// the reference sends JSON.stringify(context.state), and JSON.stringify drops an
+// undefined field, so a context with no state sends no input at all
+// (openai-decisions.ts wireInput). An image part keeps its input_text item,
+// whose text is likewise absent.
+func TestOpenAIDecisionsOmitsInputWithoutState(t *testing.T) {
+	model := &Model{ID: "classifier", API: APIOpenAIDecisions}
+	payload, err := buildOpenAIDecisionsPayload(model, ClassifierContext{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := MarshalJSON(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"model":"classifier","questions":[]}`; string(encoded) != want {
+		t.Fatalf("payload without state = %s, want %s", encoded, want)
+	}
+
+	payload, err = buildOpenAIDecisionsPayload(model, ClassifierContext{
+		Images: []ImageContent{{MimeType: "image/png", Data: "AA=="}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err = MarshalJSON(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"model":"classifier","input":[{"role":"user","content":[{"type":"input_text"},` +
+		`{"type":"input_image","image_url":"data:image/png;base64,AA=="}]}],"questions":[]}`
+	if string(encoded) != want {
+		t.Fatalf("image payload without state = %s, want %s", encoded, want)
+	}
+}

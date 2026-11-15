@@ -165,8 +165,10 @@ func openAIDecisionsError(err error) error {
 }
 
 type openAIDecisionsPayload struct {
-	Model     string                    `json:"model"`
-	Input     any                       `json:"input"`
+	Model string `json:"model"`
+	// Input is absent when the caller has no state: JSON.stringify drops an
+	// undefined field, and the reference builds it as JSON.stringify(state).
+	Input     any                       `json:"input,omitempty"`
 	Questions []openAIDecisionsQuestion `json:"questions"`
 }
 
@@ -203,17 +205,21 @@ func buildOpenAIDecisionsPayload(model *Model, context ClassifierContext) (openA
 		return openAIDecisionsPayload{}, fmt.Errorf("%s accepts at most %d images, got %d", openAIDecisionsLabel, openAIDecisionsMaxImages, len(context.Images))
 	}
 	state := context.State
-	if len(state) == 0 {
-		state = json.RawMessage("{}")
+	stateText := ""
+	if len(state) > 0 {
+		stateJSON, err := MarshalJSON(state)
+		if err != nil {
+			return openAIDecisionsPayload{}, fmt.Errorf("%s state must be valid JSON", openAIDecisionsLabel)
+		}
+		stateText = string(stateJSON)
 	}
-	stateJSON, err := MarshalJSON(state)
-	if err != nil {
-		return openAIDecisionsPayload{}, fmt.Errorf("%s state must be valid JSON", openAIDecisionsLabel)
+	var input any
+	if stateText != "" {
+		input = stateText
 	}
-	input := any(string(stateJSON))
 	if len(context.Images) > 0 {
 		content := make([]openAIDecisionsInputContent, 0, len(context.Images)+1)
-		content = append(content, openAIDecisionsInputContent{Type: "input_text", Text: string(stateJSON)})
+		content = append(content, openAIDecisionsInputContent{Type: "input_text", Text: stateText})
 		for _, image := range context.Images {
 			content = append(content, openAIDecisionsInputContent{
 				Type: "input_image", ImageURL: "data:" + image.MimeType + ";base64," + image.Data,
