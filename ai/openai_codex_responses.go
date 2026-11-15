@@ -425,6 +425,10 @@ func BuildCodexRequestBody(model *Model, context TranscriptContext, options *Ope
 					return body, nil
 				}
 				effort = *mapped
+			} else {
+				// An unmapped off level is Codex's "none", not the port's
+				// "off" level name.
+				effort = "none"
 			}
 		} else if mapped, ok := model.ThinkingLevelMap[options.ReasoningEffort]; ok && mapped != nil {
 			effort = *mapped

@@ -559,3 +559,27 @@ func TestCodexRequestBodyOrderAndNullStrict(t *testing.T) {
 		t.Fatalf("payload =\n%s\nwant\n%s", payload, want)
 	}
 }
+
+// Upstream's Codex buildRequestBody maps an explicit "none" level through
+// thinkingLevelMap.off and falls back to "none" when the model has no off
+// mapping (packages/ai/src/api/openai-codex-responses.ts:
+// `options.reasoningEffort === "none" ? (model.thinkingLevelMap?.off ===
+// undefined ? "none" : model.thinkingLevelMap.off) : ...`). The port kept the
+// port-level name, so a model whose map has no off key sent
+// `"effort":"off"`, an enum value the Codex backend rejects.
+func TestCodexExplicitOffSendsNone(t *testing.T) {
+	model := &Model{
+		ID: "gpt-5.6-sol", API: APIOpenAICodexResponses, Provider: "openai-codex", Reasoning: true,
+		ThinkingLevelMap: ThinkingLevelMap{ThinkMinimal: new("low"), ThinkXHigh: new("xhigh"), ThinkMax: new("max")},
+	}
+	body, err := BuildCodexRequestBody(model, TranscriptContext{Messages: []Message{
+		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+	}}, &OpenAICodexResponsesOptions{ReasoningEffort: ThinkOff}, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reasoning, _ := body["reasoning"].(map[string]any)
+	if reasoning["effort"] != "none" {
+		t.Fatalf("reasoning = %#v, want effort \"none\"", reasoning)
+	}
+}
