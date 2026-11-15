@@ -765,3 +765,23 @@ func TestFindMostRecentSessionAcceptsAnEmptyStringHeaderID(t *testing.T) {
 		t.Fatalf("most recent = %v, want %s", got, path)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) core/session-manager.ts buildSessionPath resolves a
+// falsy leafId other than null to the last entry (`if (leafId) ...; leaf ??=
+// entries[last]`), so "" walks the whole session. The port returned no path.
+func TestBuildSessionPathEmptyLeafUsesTheLastEntry(t *testing.T) {
+	entries := []SessionEntry{
+		{Type: "message", SessionEntryBase: SessionEntryBase{ID: "a", Timestamp: "t"}},
+		{Type: "message", SessionEntryBase: SessionEntryBase{ID: "b", ParentID: new("a"), Timestamp: "t"}},
+	}
+	empty := ""
+	path := buildSessionPath(entries, &empty, nil)
+	if len(path) != 2 || path[0].ID != "a" || path[1].ID != "b" {
+		t.Fatalf("empty-leaf path = %+v, want the last entry's full path", path)
+	}
+	// Control: a nil leaf (absent) also uses the last entry.
+	nilPath := buildSessionPath(entries, nil, nil)
+	if len(nilPath) != 2 || nilPath[1].ID != "b" {
+		t.Fatalf("absent-leaf path = %+v, want the last entry's full path", nilPath)
+	}
+}

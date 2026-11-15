@@ -1198,7 +1198,11 @@ func buildSessionPath(entries []SessionEntry, leafID *string, byID map[string]*S
 		}
 	}
 	if leafID != nil && *leafID == "" {
-		return nil
+		// Upstream treats a falsy leafId that is not null as absent and walks
+		// from the last entry; only null yields no path, and Go cannot tell a
+		// null pointer's target from an absent one, so nil already means the
+		// last entry.
+		leafID = nil
 	}
 	var leaf *SessionEntry
 	if leafID != nil {
