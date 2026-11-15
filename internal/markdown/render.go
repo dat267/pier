@@ -582,9 +582,19 @@ func (r *Renderer) renderTable(table *Block, availableWidth int, next *Block, st
 	availableForCells := availableWidth - borderOverhead
 	if availableForCells < numCols {
 		// Too narrow for a stable table: fall back to the raw markdown.
+		// marked's table token raw stops at the last row, so the port's trailing
+		// newline is dropped before wrapping: otherwise the wrap ends with an
+		// empty line and the following space token adds a second one.
 		var fallbackLines []string
-		if table.Raw != "" {
-			fallbackLines = r.term.Wrap(table.Raw, availableWidth)
+		if raw := table.Raw; raw != "" {
+			// marked's table token raw keeps the last row's newline unless a
+			// space token follows, and the wrap turns that newline into an empty
+			// line. Wrapping the source's trailing newline there added a second
+			// blank line next to the space token's own.
+			if next != nil && next.Kind == BlockSpace {
+				raw = strings.TrimSuffix(raw, "\n")
+			}
+			fallbackLines = r.term.Wrap(raw, availableWidth)
 		}
 		if next != nil && next.Kind != BlockSpace {
 			fallbackLines = append(fallbackLines, "")
