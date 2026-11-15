@@ -47,7 +47,7 @@ func TestSessionReplacementRejectsAnAlreadyAdmittedOldListener(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("old event did not reach its admitted listener")
 	}
-	if _, err := app.sessionNew(context.Background()); err != nil {
+	if _, err := app.sessionNew(); err != nil {
 		t.Fatal(err)
 	}
 	unblock()

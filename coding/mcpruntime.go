@@ -238,7 +238,7 @@ func (c *McpServerConnection) oauthSettings() McpOAuthSettings {
 		settings.ClientID = *oauthConfig.ClientID
 	}
 	if oauthConfig.ClientSecret != nil {
-		settings.ClientSecret = resolveMcpConfigValue(*oauthConfig.ClientSecret, "MCP server \""+c.Entry.Name+"\" oauth.clientSecret")
+		settings.ClientSecret = resolveMcpConfigValue(*oauthConfig.ClientSecret)
 	}
 	if oauthConfig.CallbackPort != nil {
 		settings.CallbackPort = oauthConfig.CallbackPort
@@ -733,7 +733,7 @@ type McpOAuthSettings struct {
 
 // resolveMcpConfigValue expands a config value: `${NAME}` reads an environment
 // variable, `!cmd` runs a command (upstream resolveConfigValue).
-func resolveMcpConfigValue(value string, what string) string {
+func resolveMcpConfigValue(value string) string {
 	resolved, err := ResolveMcpConfigValue(value)
 	if err != nil {
 		return ""

@@ -51,7 +51,7 @@ func TestSessionReplacementReattachesMcpTools(t *testing.T) {
 	// old manager's tools.
 	writeMCPReloadConfig(t, app.mcpAgentDir, `{"mcpServers":{"newdocs":{"command":"unused","exposure":"direct"}}}`)
 	target := makePersistedSession(t, t.TempDir(), "from the other session")
-	if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
+	if _, err := app.switchSession(target.GetSessionFile(), ""); err != nil {
 		t.Fatalf("switchSession: %v", err)
 	}
 	if app.mcpManager == nil || !app.mcpManager.WaitForDirectTools(context.Background(), 5*time.Second) {

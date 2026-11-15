@@ -723,12 +723,12 @@ func nextCycleIndex(currentIndex, length int, direction string) (int, bool) {
 // CycleModel advances to the next (or previous) model in scope or availability.
 func (s *AgentSession) CycleModel(ctx context.Context, direction string, options ModelMutationOptions) (*ModelCycleResult, error) {
 	if len(s.ScopedModels()) > 0 {
-		return s.cycleScopedModel(ctx, direction, options)
+		return s.cycleScopedModel(direction, options)
 	}
-	return s.cycleAvailableModel(ctx, direction, options)
+	return s.cycleAvailableModel(direction, options)
 }
 
-func (s *AgentSession) cycleScopedModel(ctx context.Context, direction string, options ModelMutationOptions) (*ModelCycleResult, error) {
+func (s *AgentSession) cycleScopedModel(direction string, options ModelMutationOptions) (*ModelCycleResult, error) {
 	available := s.availableModelKeys()
 	scoped := make([]ScopedModel, 0, len(s.ScopedModels()))
 	for _, candidate := range s.ScopedModels() {
@@ -749,10 +749,10 @@ func (s *AgentSession) cycleScopedModel(ctx context.Context, direction string, o
 		return nil, nil
 	}
 	next := scoped[nextIndex]
-	return s.applyModelCycle(ctx, next.Model, next.ThinkingLevel, options, true)
+	return s.applyModelCycle(next.Model, next.ThinkingLevel, options, true)
 }
 
-func (s *AgentSession) cycleAvailableModel(ctx context.Context, direction string, options ModelMutationOptions) (*ModelCycleResult, error) {
+func (s *AgentSession) cycleAvailableModel(direction string, options ModelMutationOptions) (*ModelCycleResult, error) {
 	var models []*ai.Model
 	if s.control.ModelRuntime != nil {
 		models = s.control.ModelRuntime.GetAvailableSnapshot()
@@ -770,10 +770,10 @@ func (s *AgentSession) cycleAvailableModel(ctx context.Context, direction string
 		return nil, nil
 	}
 	next := models[nextIndex]
-	return s.applyModelCycle(ctx, next, "", options, false)
+	return s.applyModelCycle(next, "", options, false)
 }
 
-func (s *AgentSession) applyModelCycle(ctx context.Context, model *ai.Model, explicitLevel ai.ThinkingLevel, options ModelMutationOptions, isScoped bool) (*ModelCycleResult, error) {
+func (s *AgentSession) applyModelCycle(model *ai.Model, explicitLevel ai.ThinkingLevel, options ModelMutationOptions, isScoped bool) (*ModelCycleResult, error) {
 	if s.control.ModelRuntime != nil && !s.control.ModelRuntime.HasConfiguredAuth(model.Provider) {
 		return nil, fmt.Errorf("No API key for %s/%s", model.Provider, model.ID)
 	}

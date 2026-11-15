@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"context"
 	"testing"
 
 	"github.com/dat267/pier/internal/offloop"
@@ -19,7 +18,7 @@ func TestSessionNewKeepsTheWriteQueue(t *testing.T) {
 	queue := group.Queue()
 	app.sessionMgr.SetWriteQueue(queue)
 
-	if _, err := app.sessionNew(context.Background()); err != nil {
+	if _, err := app.sessionNew(); err != nil {
 		t.Fatalf("sessionNew: %v", err)
 	}
 	if got := app.sessionMgr.GetWriteQueue(); got != queue {

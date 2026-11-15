@@ -928,7 +928,7 @@ func NewSettingsSelectorComponent(config SettingsConfig, callbacks SettingsCallb
 	component := &SettingsSelectorComponent{Container: &tui.Container{}}
 	component.AddChild(NewDynamicBorder(nil))
 	component.settingsList = tui.NewSettingsList(items, 10, GetSettingsListTheme(),
-		func(id string, newValue string) { applySettingChange(id, newValue, callbacks, defaultModelByValue) },
+		func(id string, newValue string) { applySettingChange(id, newValue, callbacks) },
 		callbacks.OnCancel, tui.SettingsListOptions{EnableSearch: true})
 	component.AddChild(component.settingsList)
 	component.AddChild(NewDynamicBorder(nil))
@@ -969,7 +969,7 @@ func sortModelsForPicker(models []*ai.Model, currentModelKey string, currentDefa
 	}
 }
 
-func applySettingChange(id string, newValue string, callbacks SettingsCallbacks, defaultModelByValue map[string]*ai.Model) {
+func applySettingChange(id string, newValue string, callbacks SettingsCallbacks) {
 	boolValue := newValue == "true"
 	call := func(fn func(bool)) {
 		if fn != nil {

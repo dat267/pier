@@ -99,7 +99,7 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
 			}
 			if mimeType != "" {
-				return readImageFile(ctx, absolutePath, mimeType, input.Path, autoResize, modelFor)
+				return readImageFile(ctx, absolutePath, mimeType, autoResize, modelFor)
 			}
 
 			startLine := 0.0
@@ -225,11 +225,10 @@ func imageResizeOptionsFor(model *ai.Model) ImageResizeOptions {
 
 // readImageFile prepares an image the way upstream's read tool does. The bytes go
 // through ProcessImage, which resizes within the limits (D408: bilinear resampling
-// rather than Photon's Lanczos3) or reports an omission message,
-// which resizes within the limits or reports an omission message; the processing
+// rather than Photon's Lanczos3) or reports an omission message; the processing
 // hints and the non-vision note are folded into the text, and the image content
 // is attached only when the processing succeeded.
-func readImageFile(ctx context.Context, absolutePath, mimeType, originalPath string, autoResize bool, modelFor func() *ai.Model) (agent.AgentToolResult, error) {
+func readImageFile(ctx context.Context, absolutePath, mimeType string, autoResize bool, modelFor func() *ai.Model) (agent.AgentToolResult, error) {
 	data, err := os.ReadFile(absolutePath)
 	if err != nil {
 		return agent.AgentToolResult{}, err

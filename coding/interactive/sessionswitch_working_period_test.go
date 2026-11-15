@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"context"
 	"strings"
 	"testing"
 	"time"
@@ -59,7 +58,7 @@ func TestSessionSwitchDiscardsTheOldWorkingPeriod(t *testing.T) {
 				t.Fatal("the replaced session was not being timed")
 			}
 
-			if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
+			if _, err := app.switchSession(target.GetSessionFile(), ""); err != nil {
 				t.Fatalf("switch: %v", err)
 			}
 			if app.uiState.WorkingClockRunning() {

@@ -19,12 +19,12 @@ func TestSessionReplacementStillQueuesEventsForTheUIOwner(t *testing.T) {
 			app.Init(context.Background())
 			switch mode {
 			case "new session":
-				if _, err := app.sessionNew(context.Background()); err != nil {
+				if _, err := app.sessionNew(); err != nil {
 					t.Fatal(err)
 				}
 			case "switched session":
 				target := makePersistedSession(t, t.TempDir(), "incoming session")
-				if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
+				if _, err := app.switchSession(target.GetSessionFile(), ""); err != nil {
 					t.Fatal(err)
 				}
 			}

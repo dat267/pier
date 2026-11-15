@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"context"
 	"errors"
 	"os"
 	"testing"
@@ -42,7 +41,7 @@ func TestSwitchSessionSwapsAndRebinds(t *testing.T) {
 	targetCwd := t.TempDir()
 	target := makePersistedSession(t, targetCwd, "from the other session")
 
-	result, err := app.switchSession(context.Background(), target.GetSessionFile(), "")
+	result, err := app.switchSession(target.GetSessionFile(), "")
 	if err != nil {
 		t.Fatalf("SwitchSession: %v", err)
 	}
@@ -88,7 +87,7 @@ func TestSwitchSessionMissingCwdIsPromptable(t *testing.T) {
 		t.Fatalf("remove cwd: %v", err)
 	}
 
-	_, err := app.switchSession(context.Background(), target.GetSessionFile(), "")
+	_, err := app.switchSession(target.GetSessionFile(), "")
 	if err == nil {
 		t.Fatal("expected an error for a missing session cwd")
 	}
@@ -115,7 +114,7 @@ func TestSessionNewStartsFreshSession(t *testing.T) {
 	defer cleanup()
 
 	previous := app.sessionMgr.GetSessionID()
-	result, err := app.sessionNew(context.Background())
+	result, err := app.sessionNew()
 	if err != nil {
 		t.Fatalf("SessionNew: %v", err)
 	}
@@ -143,7 +142,7 @@ func TestSwitchSessionUpdatesFooterCwd(t *testing.T) {
 	targetCwd := t.TempDir()
 	target := makePersistedSession(t, targetCwd, "other project")
 
-	if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
+	if _, err := app.switchSession(target.GetSessionFile(), ""); err != nil {
 		t.Fatalf("SwitchSession: %v", err)
 	}
 	if app.footerData.Cwd() != targetCwd {
@@ -162,7 +161,7 @@ func TestSwitchSessionRewiresGoalStartWork(t *testing.T) {
 		t.Fatal("goal launcher not wired at construction")
 	}
 	target := makePersistedSession(t, t.TempDir(), "from the other session")
-	if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
+	if _, err := app.switchSession(target.GetSessionFile(), ""); err != nil {
 		t.Fatalf("switchSession: %v", err)
 	}
 	controller := app.session.Goal

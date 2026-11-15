@@ -441,7 +441,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 	cacheWarmer := NewCacheWarmer(cacheWarmingStreamFn(modelRuntime), sessionManager, func() CacheWarmingMode {
 		return settingsManager.GetCacheWarmingMode()
 	})
-	buildRequestOptions := func(requestModel *ai.Model, requestOptions *ai.SimpleStreamOptions) *ai.SimpleStreamOptions {
+	buildRequestOptions := func(requestOptions *ai.SimpleStreamOptions) *ai.SimpleStreamOptions {
 		merged := ai.SimpleStreamOptions{}
 		if requestOptions != nil {
 			merged = *requestOptions
@@ -500,7 +500,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		}
 	}
 	streamFn := func(requestModel *ai.Model, requestContext ai.TranscriptContext, requestOptions *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
-		merged := buildRequestOptions(requestModel, requestOptions)
+		merged := buildRequestOptions(requestOptions)
 		// Compaction and summaries use their own routing ids; only session
 		// requests replace the cache entry, so warming restarts from them.
 		if merged.SessionID == sessionManager.GetSessionID() {

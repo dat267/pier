@@ -17,12 +17,12 @@ func TestSessionReplacementKeepsGoalCommandNoticesVisible(t *testing.T) {
 			app.Init(context.Background())
 			switch kind {
 			case "new":
-				if _, err := app.sessionNew(context.Background()); err != nil {
+				if _, err := app.sessionNew(); err != nil {
 					t.Fatal(err)
 				}
 			case "switch":
 				target := makePersistedSession(t, t.TempDir(), "another session")
-				if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
+				if _, err := app.switchSession(target.GetSessionFile(), ""); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -54,7 +54,7 @@ func TestSessionReplacementRejectsRetiredGoalNotices(t *testing.T) {
 			if when == "already posted" {
 				old.HandleCommand("resume")
 			}
-			if _, err := app.sessionNew(context.Background()); err != nil {
+			if _, err := app.sessionNew(); err != nil {
 				t.Fatal(err)
 			}
 			if when == "delivered late" {

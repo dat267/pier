@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -65,7 +64,7 @@ func TestSwitchResolvesProjectTrustForTheNewCwd(t *testing.T) {
 				app.options.ProjectTrustOverride = &approved
 			}
 
-			if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
+			if _, err := app.switchSession(target.GetSessionFile(), ""); err != nil {
 				t.Fatalf("SwitchSession: %v", err)
 			}
 			wantTrusted := name == "store says trust" || name == "override"
@@ -107,7 +106,7 @@ func TestSwitchWithinTheSameCwdKeepsTheTrustDecision(t *testing.T) {
 	if err := store.Set(cwd, new(false)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
+	if _, err := app.switchSession(target.GetSessionFile(), ""); err != nil {
 		t.Fatalf("SwitchSession: %v", err)
 	}
 	if !app.settings.IsProjectTrusted() {
@@ -128,7 +127,7 @@ func TestSwitchWithoutCachedDecisionHonorsTheStore(t *testing.T) {
 	if err := store.Set(cwd, new(false)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
+	if _, err := app.switchSession(target.GetSessionFile(), ""); err != nil {
 		t.Fatalf("SwitchSession: %v", err)
 	}
 	if app.settings.IsProjectTrusted() {
@@ -146,7 +145,7 @@ func TestSwitchReusesTheTrustDecisionPerProject(t *testing.T) {
 
 	first := makeTrustRequiringProject(t, "alpha-theme")
 	firstSession := makePersistedSession(t, first, "first")
-	if _, err := app.switchSession(context.Background(), firstSession.GetSessionFile(), ""); err != nil {
+	if _, err := app.switchSession(firstSession.GetSessionFile(), ""); err != nil {
 		t.Fatal(err)
 	}
 	if app.settings.IsProjectTrusted() {
@@ -161,10 +160,10 @@ func TestSwitchReusesTheTrustDecisionPerProject(t *testing.T) {
 	// remembered for the run.
 	elsewhere := makeTrustRequiringProject(t, "beta-theme")
 	elsewhereSession := makePersistedSession(t, elsewhere, "elsewhere")
-	if _, err := app.switchSession(context.Background(), elsewhereSession.GetSessionFile(), ""); err != nil {
+	if _, err := app.switchSession(elsewhereSession.GetSessionFile(), ""); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := app.switchSession(context.Background(), firstSession.GetSessionFile(), ""); err != nil {
+	if _, err := app.switchSession(firstSession.GetSessionFile(), ""); err != nil {
 		t.Fatal(err)
 	}
 	if app.settings.IsProjectTrusted() {

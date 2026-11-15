@@ -949,7 +949,7 @@ func newCommandWiring(app *App) *CommandWiring {
 			})
 		},
 		NewSession: func(ctx context.Context) (bool, error) {
-			result, err := app.sessionNew(ctx)
+			result, err := app.sessionNew()
 			if err != nil {
 				return false, err
 			}

@@ -45,7 +45,7 @@ func TestSessionReplacementSettlesAProducerParkedOnTheFullEventQueue(t *testing.
 
 			replaced := make(chan error, 1)
 			go func() {
-				_, err := app.sessionNew(context.Background())
+				_, err := app.sessionNew()
 				replaced <- err
 			}()
 			stalled := false

@@ -16,7 +16,7 @@ import (
 // SwitchSession replaces the running session with the one at sessionPath
 // (upstream AgentSessionRuntime.switchSession plus the interactive-mode
 // rebind).
-func (a *App) switchSession(ctx context.Context, sessionPath string, cwdOverride string) (*SessionSwitchResult, error) {
+func (a *App) switchSession(sessionPath string, cwdOverride string) (*SessionSwitchResult, error) {
 	var result *SessionSwitchResult
 	var err error
 	runSessionFileWork(nil, nil, sessionFileWorkKey, a.openSessionWork(sessionPath, cwdOverride), func(opened *coding.SessionManager, openErr error) {
@@ -222,7 +222,7 @@ func (a *App) forkIntoSessionAsync(ctx context.Context, sourcePath string, cwd s
 
 // SessionNew starts a fresh session in the current session directory (upstream
 // AgentSessionRuntime.newSession).
-func (a *App) sessionNew(ctx context.Context) (*SessionSwitchResult, error) {
+func (a *App) sessionNew() (*SessionSwitchResult, error) {
 	sessionDir := a.sessionMgr.GetSessionDir()
 	persist := a.sessionMgr.IsPersisted()
 	sessionManager := coding.NewSessionManager(a.sessionMgr.GetCwd(), &coding.SessionManagerOptions{

@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"context"
 	"testing"
 
 	"github.com/dat267/pier/internal/offloop"
@@ -30,7 +29,7 @@ func TestSwitchSessionKeepsTheWriteQueue(t *testing.T) {
 	}
 
 	target := makePersistedSession(t, t.TempDir(), "other session")
-	if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
+	if _, err := app.switchSession(target.GetSessionFile(), ""); err != nil {
 		t.Fatalf("switchSession: %v", err)
 	}
 	if got := app.sessionMgr.GetWriteQueue(); got != queue {

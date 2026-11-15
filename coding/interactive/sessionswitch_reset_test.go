@@ -33,7 +33,7 @@ func TestSwitchSessionResetsTheTranscriptState(t *testing.T) {
 	project := makeTrustRequiringProject(t, "alpha-theme")
 	target := makePersistedSession(t, project, "from the other project")
 
-	if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
+	if _, err := app.switchSession(target.GetSessionFile(), ""); err != nil {
 		t.Fatalf("SwitchSession: %v", err)
 	}
 
@@ -82,7 +82,7 @@ func TestSessionSwitchDropsQueuedEventsFromPreviousSession(t *testing.T) {
 	})
 
 	target := makePersistedSession(t, t.TempDir(), "new session prompt")
-	if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
+	if _, err := app.switchSession(target.GetSessionFile(), ""); err != nil {
 		t.Fatalf("SwitchSession: %v", err)
 	}
 
@@ -130,7 +130,7 @@ func TestSessionReplacementReshowsLoadedResources(t *testing.T) {
 	// The previous session's listing is on screen when the replacement starts.
 	app.loadedResourcesContainer.AddChild(tui.NewText("stale resources", 0, 0, nil))
 
-	if _, err := app.sessionNew(context.Background()); err != nil {
+	if _, err := app.sessionNew(); err != nil {
 		t.Fatalf("sessionNew: %v", err)
 	}
 
