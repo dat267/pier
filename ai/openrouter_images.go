@@ -37,9 +37,11 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 		return output
 	}
 
-	// Upstream passes the image model itself to both hooks.
+	// Upstream passes the image model itself to both hooks, so the fields a hook
+	// can read (input modalities, cost, per-model headers) are carried over.
 	hookModel := &Model{
 		ID: model.ID, Name: model.Name, API: model.API, Provider: model.Provider, BaseURL: model.BaseURL,
+		Input: model.Input, Cost: model.Cost, Headers: model.Headers,
 	}
 	var params any = buildOpenRouterImagesParams(model, context)
 	if options.OnPayload != nil {
@@ -120,7 +122,10 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 		return output
 	}
 	var payload struct {
-		ID      string `json:"id"`
+		// ID is read raw so an absent id leaves ResponseID unset: upstream
+		// assigns imageResponse.id, which is undefined when the key is missing
+		// and an empty string when it is present but empty.
+		ID      json.RawMessage `json:"id"`
 		Choices []struct {
 			Message struct {
 				Content json.RawMessage `json:"content"`
@@ -137,7 +142,12 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 		output.ErrorMessage = &message
 		return output
 	}
-	output.ResponseID = &payload.ID
+	if len(payload.ID) > 0 {
+		var responseID string
+		if err := json.Unmarshal(payload.ID, &responseID); err == nil {
+			output.ResponseID = &responseID
+		}
+	}
 	if len(payload.Usage) > 0 {
 		var usage struct {
 			PromptTokens        float64 `json:"prompt_tokens"`

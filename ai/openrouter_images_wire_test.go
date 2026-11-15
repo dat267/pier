@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -39,6 +41,7 @@ func TestOpenRouterImagesWireMatchesUpstream(t *testing.T) {
 			Status int    `json:"status"`
 			Body   string `json:"body"`
 		} `json:"fail"`
+		Response json.RawMessage `json:"response"`
 	}
 	if err := json.Unmarshal(data, &fixtures); err != nil {
 		t.Fatal(err)
@@ -55,6 +58,10 @@ func TestOpenRouterImagesWireMatchesUpstream(t *testing.T) {
 				if fixture.Fail != nil {
 					w.WriteHeader(fixture.Fail.Status)
 					io.WriteString(w, fixture.Fail.Body)
+					return
+				}
+				if len(fixture.Response) > 0 {
+					w.Write(fixture.Response)
 					return
 				}
 				io.WriteString(w, `{"id":"r","choices":[{"message":{"content":"ok","images":[{"image_url":"data:image/png;base64,QUJD"}]}}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}`)
@@ -106,6 +113,12 @@ func TestOpenRouterImagesWireMatchesUpstream(t *testing.T) {
 				if hooked.ID != model.ID || hooked.Name != model.Name || hooked.API != model.API ||
 					hooked.Provider != model.Provider || hooked.BaseURL != model.BaseURL {
 					t.Errorf("%s model = %+v, want %+v", name, hooked, model)
+				}
+				// The reference hands the image model itself to the hook, so the
+				// fields it can read beyond identity must match too.
+				if !reflect.DeepEqual(hooked.Cost, model.Cost) || !slices.Equal(hooked.Input, model.Input) {
+					t.Errorf("%s model input/cost = %+v/%+v, want %+v/%+v",
+						name, hooked.Input, hooked.Cost, model.Input, model.Cost)
 				}
 			}
 			if got := <-paths; got != fixture.Path {
