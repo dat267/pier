@@ -93,20 +93,21 @@ func createPiMessagesResponseError(model *Model, requestURL *url.URL, response *
 	errorBody := parsePiMessagesErrorBody(body)
 	code := ""
 	message := ""
+	hasMessage := false
 	var errorDetails any
 	hasError := false
 	if errorBody != nil {
 		if errorRecord, ok := errorBody["error"].(map[string]any); ok {
 			hasError = true
 			errorDetails = errorRecord
-			if text, ok := errorRecord["message"].(string); ok {
-				message = text
-			}
+			// Upstream uses `message ?? body`: an empty message string is kept
+			// (a string is not nullish), only an absent one falls back to the body.
+			message, hasMessage = errorRecord["message"].(string)
 			code, _ = errorRecord["code"].(string)
 		}
 	}
 	suffix := message
-	if suffix == "" {
+	if !hasMessage {
 		suffix = body
 	}
 	codeSuffix := ""
