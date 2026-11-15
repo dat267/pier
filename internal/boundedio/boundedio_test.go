@@ -3,6 +3,7 @@ package boundedio
 import (
 	"errors"
 	"io"
+	"math"
 	"strings"
 	"testing"
 )
@@ -52,4 +53,14 @@ func (r *countingReader) Read(p []byte) (int, error) {
 	n := copy(p, r.data[r.read:])
 	r.read += n
 	return n, nil
+}
+
+// The largest limit means "no bound", not "read nothing": limit+1 overflows to
+// a negative count, and io.LimitReader with a negative count reports EOF at once.
+func TestReadAllAcceptsTheMaximumLimit(t *testing.T) {
+	body := strings.Repeat("x", 1024)
+	data, err := ReadAll(strings.NewReader(body), math.MaxInt64)
+	if err != nil || string(data) != body {
+		t.Fatalf("data=%d bytes err=%v, want the whole body", len(data), err)
+	}
 }

@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 )
 
 // ErrTooLarge reports a body larger than the caller's limit. Callers surface it
@@ -21,7 +22,9 @@ var ErrTooLarge = errors.New("response body exceeds the size limit")
 // bytes. A non-positive limit means no bound, which is only for callers that
 // already know the size.
 func ReadAll(r io.Reader, limit int64) ([]byte, error) {
-	if limit <= 0 {
+	// The maximum limit cannot grow by one: limit+1 would overflow and
+	// LimitReader would report EOF at once.
+	if limit <= 0 || limit == math.MaxInt64 {
 		return io.ReadAll(r)
 	}
 	data, err := io.ReadAll(io.LimitReader(r, limit+1))
