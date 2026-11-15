@@ -511,10 +511,11 @@ func TestLocalShellOperationsTimeout(t *testing.T) {
 		t.Fatal("cancelled context must error")
 	}
 
-	// A timeout reports the upstream timeout:<ms> error.
+	// A timeout reports the upstream timeout:<seconds> error, which carries the
+	// caller's seconds value (core/tools/bash.ts ShellTimeoutError).
 	start := time.Now()
 	_, err := ops.Exec(ctxpkg.Background(), "sleep 5", t.TempDir(), BashExecOptions{Timeout: &timeout})
-	if err == nil || !strings.HasPrefix(err.Error(), "timeout:50") {
+	if err == nil || !strings.HasPrefix(err.Error(), "timeout:0.05") {
 		t.Fatalf("err = %v", err)
 	}
 	if elapsed := time.Since(start); elapsed > 3*time.Second {
@@ -741,5 +742,25 @@ func TestManagerUsageBreakdownMatchesTheReference(t *testing.T) {
 		if got[i] != want[i] {
 			t.Errorf("entry %d = %+v, want %+v", i, got[i], want[i])
 		}
+	}
+}
+
+// pi v1.5.2 b4afdddf core/tools/bash.ts createLocalShellOperations.exec calls
+// resolveTimeoutMs first, so a non-positive or too large timeout fails before
+// the shell runs, with the same messages the bash tool reports.
+func TestLocalShellOperationsRejectsInvalidTimeout(t *testing.T) {
+	if _, err := os.Stat("/bin/sh"); err != nil {
+		t.Skip("no shell available")
+	}
+	ops := CreateLocalBashOperations("", nil)
+	zero := time.Duration(0)
+	_, err := ops.Exec(ctxpkg.Background(), "true", t.TempDir(), BashExecOptions{Timeout: &zero})
+	if err == nil || err.Error() != "Invalid timeout: must be a finite number of seconds" {
+		t.Fatalf("zero timeout err = %v", err)
+	}
+	huge := time.Duration(maxTimeoutMS+1000) * time.Millisecond
+	_, err = ops.Exec(ctxpkg.Background(), "true", t.TempDir(), BashExecOptions{Timeout: &huge})
+	if err == nil || !strings.Contains(err.Error(), "Invalid timeout: maximum is") {
+		t.Fatalf("huge timeout err = %v", err)
 	}
 }

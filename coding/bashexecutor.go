@@ -13,6 +13,8 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of core/bash-executor.ts: bash command execution with streaming output,
@@ -332,6 +334,13 @@ func (o *localShellOperations) Exec(ctx context.Context, command, cwd string, ex
 	if shellName == "" {
 		shellName = "bash"
 	}
+	// Upstream resolves the timeout before anything else, so an invalid value
+	// never runs the command and never depends on cancellation order.
+	if execOptions.Timeout != nil {
+		if _, err := ResolveTimeoutSeconds(execOptions.Timeout.Seconds()); err != nil {
+			return nil, err
+		}
+	}
 	if signalClosed(execOptions.Signal) {
 		return nil, errors.New("aborted")
 	}
@@ -509,11 +518,14 @@ func signalNumber(exitError *exec.ExitError) int {
 	return 15
 }
 
+// formatTimeout renders the "timeout:<seconds>" suffix of the timeout error.
+// The reference carries the caller's seconds value through the error
+// (`timeout:${timeout}`), so the unit is seconds, not milliseconds.
 func formatTimeout(timeout *time.Duration) string {
 	if timeout == nil {
 		return ""
 	}
-	return fmt.Sprintf("%d", timeout.Milliseconds())
+	return ai.JSNumberToString(timeout.Seconds())
 }
 
 // killGate serializes timeout and abort kills with the wait's completion. A
