@@ -226,7 +226,7 @@ func TestSessionSelectorHelpers(t *testing.T) {
 		{Path: "/s/other.jsonl", Modified: now.Add(-3 * time.Hour)},
 		{Path: "/s/orphan.jsonl", ParentSessionPath: "/s/missing.jsonl", Modified: now.Add(-4 * time.Hour)},
 	}
-	roots := buildSessionTree(sessions)
+	roots := buildSessionTree(sessions, sessionPathKey)
 	if len(roots) != 3 {
 		t.Fatalf("roots = %d", len(roots))
 	}
@@ -608,5 +608,79 @@ func TestSessionPathKeyNormalizes(t *testing.T) {
 	}
 	if sessionPathKey("") != "" {
 		t.Fatal("empty path must stay empty")
+	}
+}
+
+// The session picker canonicalizes session paths (following symlinks) to compare
+// the current session and to build the parent/child tree. Upstream calls
+// canonicalizePath from render() and from its tree build, so pier copied a
+// syscall per visible row per frame and two per session per keystroke. D480
+// caches the key per path instead; this test holds the cache: once the list has
+// its sessions, removing the symlink must not drop the current-session marker,
+// which a fresh canonicalization would.
+func TestSessionListKeepsPathKeysAcrossRenders(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	InitTheme("dark", false)
+	dir := t.TempDir()
+	real := filepath.Join(dir, "real.jsonl")
+	other := filepath.Join(dir, "other.jsonl")
+	link := filepath.Join(dir, "link.jsonl")
+	for _, path := range []string{real, other} {
+		if err := os.WriteFile(path, []byte("{}\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink(real, link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	// A parent session reached through the symlink, a child whose parent is the
+	// same spelling, and the current session named by the link's target.
+	sessions := []coding.SessionInfo{
+		{Path: link, FirstMessage: "parent", Modified: time.Now()},
+		{Path: other, FirstMessage: "child", ParentSessionPath: link, Modified: time.Now().Add(-time.Minute)},
+	}
+	list := NewSessionList(sessions, false, SortThreaded, NameFilterAll, nil, real)
+	before := list.Render(120)
+	if err := os.Remove(link); err != nil {
+		t.Fatal(err)
+	}
+	after := list.Render(120)
+	if len(before) != len(after) {
+		t.Fatalf("lines changed after the symlink was removed: %d -> %d", len(before), len(after))
+	}
+	for index := range before {
+		if before[index] != after[index] {
+			t.Fatalf("line %d changed after the symlink was removed:\n before %q\n after  %q", index, before[index], after[index])
+		}
+	}
+	if !list.isCurrentSessionPath(link) {
+		t.Fatal("the current session is no longer recognized through the removed symlink")
+	}
+	list.FilterSessions("")
+	if len(list.filtered) != 2 || list.filtered[1].Depth != 1 {
+		t.Fatalf("filtered tree = %+v, want a depth-1 child", list.filtered)
+	}
+}
+
+// A session whose parent path canonicalizes to itself is not a parent link:
+// appending the node to its own children made the latest-activity walk recurse
+// until the process died with a stack overflow.
+func TestSessionTreeIgnoresSelfParent(t *testing.T) {
+	dir := t.TempDir()
+	real := filepath.Join(dir, "real.jsonl")
+	link := filepath.Join(dir, "link.jsonl")
+	if err := os.WriteFile(real, []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(real, link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	sessions := []coding.SessionInfo{
+		{Path: link, ParentSessionPath: real, FirstMessage: "self", Modified: time.Now()},
+	}
+	roots := buildSessionTree(sessions, sessionPathKey)
+	if len(roots) != 1 || len(roots[0].Children) != 0 {
+		t.Fatalf("roots = %d (children %d), want one childless root", len(roots), len(roots[0].Children))
 	}
 }

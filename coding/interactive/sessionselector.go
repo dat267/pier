@@ -106,6 +106,34 @@ func sessionPathKey(path string) string {
 	return coding.PathComparisonKey(coding.CanonicalizePath(path))
 }
 
+// pathKey is sessionPathKey with a per-path cache. The picker calls it for every
+// visible row of every frame and twice per session of every filter, and
+// canonicalization is a filesystem walk (D480).
+func (l *SessionList) pathKey(path string) string {
+	if path == "" {
+		return ""
+	}
+	if key, ok := l.pathKeys[path]; ok {
+		return key
+	}
+	key := sessionPathKey(path)
+	if l.pathKeys == nil {
+		l.pathKeys = map[string]string{}
+	}
+	l.pathKeys[path] = key
+	return key
+}
+
+// seedPathKeys resolves every session's path and parent path once, so a later
+// filter or render only reads the map.
+func (l *SessionList) seedPathKeys(sessions []coding.SessionInfo) {
+	l.pathKeys = make(map[string]string, 2*len(sessions)+1)
+	for _, session := range sessions {
+		l.pathKey(session.Path)
+		l.pathKey(session.ParentSessionPath)
+	}
+}
+
 type sessionStatusMessage struct {
 	Type    string // "info" | "error"
 	Message string
@@ -366,19 +394,21 @@ type flatSessionNode struct {
 }
 
 // buildSessionTree builds a tree from the sessions' parent paths.
-func buildSessionTree(sessions []coding.SessionInfo) []*sessionTreeNode {
+func buildSessionTree(sessions []coding.SessionInfo, pathKey func(string) string) []*sessionTreeNode {
 	byPath := map[string]*sessionTreeNode{}
 	for _, session := range sessions {
-		sessionPath := sessionPathKey(session.Path)
+		sessionPath := pathKey(session.Path)
 		byPath[sessionPath] = &sessionTreeNode{Session: session, LatestActivity: session.Modified.UnixMilli()}
 	}
 
 	var roots []*sessionTreeNode
 	for _, session := range sessions {
-		sessionPath := sessionPathKey(session.Path)
+		sessionPath := pathKey(session.Path)
 		node := byPath[sessionPath]
-		parentPath := sessionPathKey(session.ParentSessionPath)
-		if parentPath != "" {
+		parentPath := pathKey(session.ParentSessionPath)
+		// A path that canonicalizes to its own session is not a parent link:
+		// appending it to itself would make the activity walk recurse forever.
+		if parentPath != "" && parentPath != sessionPath {
 			if parent, ok := byPath[parentPath]; ok {
 				parent.Children = append(parent.Children, node)
 				continue
@@ -447,7 +477,11 @@ func flattenSessionTree(roots []*sessionTreeNode) []flatSessionNode {
 
 // SessionList is the focusable session list.
 type SessionList struct {
-	allSessions                 []coding.SessionInfo
+	allSessions []coding.SessionInfo
+	// pathKeys caches sessionPathKey per session path: canonicalizing follows
+	// symlinks with a syscall per component, and the picker filters on every
+	// keystroke and renders the tree on every frame (D480).
+	pathKeys                    map[string]string
 	filtered                    []flatSessionNode
 	selectedIndex               int
 	selectionTouched            bool
@@ -498,6 +532,7 @@ func NewSessionList(sessions []coding.SessionInfo, showCwd bool, sortMode SortMo
 		now:                         time.Now,
 		searchCache:                 newSessionSearchCache(),
 	}
+	list.seedPathKeys(sessions)
 	list.searchInput.OnSubmit = func(string) {
 		if list.selectedIndex >= 0 && list.selectedIndex < len(list.filtered) {
 			if list.OnSelect != nil {
@@ -546,6 +581,7 @@ func (l *SessionList) SetSessions(sessions []coding.SessionInfo, showCwd bool) {
 	}
 	l.allSessions = sessions
 	l.showCwd = showCwd
+	l.seedPathKeys(sessions)
 	l.FilterSessions(l.searchInput.Value())
 	if !l.selectionTouched {
 		l.selectedIndex = 0
@@ -573,7 +609,7 @@ func (l *SessionList) FilterSessions(query string) {
 	}
 
 	if l.sortMode == SortThreaded && trimmed == "" {
-		roots := buildSessionTree(nameFiltered)
+		roots := buildSessionTree(nameFiltered, l.pathKey)
 		l.filtered = flattenSessionTree(roots)
 	} else {
 		filtered := FilterAndSortSessionsCached(nameFiltered, query, l.sortMode, NameFilterAll, l.searchCache)
@@ -619,7 +655,7 @@ func (l *SessionList) isCurrentSessionPath(path string) bool {
 	if l.currentSessionCanonicalPath == "" {
 		return false
 	}
-	return sessionPathKey(path) == l.currentSessionCanonicalPath
+	return l.pathKey(path) == l.currentSessionCanonicalPath
 }
 
 // Invalidate is a no-op.

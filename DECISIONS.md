@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D479)
+# Deliberate divergences from pi (D1–D480)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7746,3 +7746,33 @@ loop stops arming frames. The rendered grid is identical, because that column
 has nothing left to draw.
 
 Test: `TestArminAnimationCompletes`.
+
+### D480
+
+**The session picker canonicalizes session paths once, not per frame and per keystroke.**
+
+Reference: pi v1.5.2 (b4afdddf)
+`modes/interactive/components/session-selector.ts` `getSessionPathKey` calls
+`canonicalizePath`, a `realpathSync` walk, from `render` for every visible row
+and twice per session from its tree build. The reference therefore resolves the
+filesystem on every frame of the picker and on every keystroke of its search
+filter.
+
+Pier keeps the same comparison key but caches it per path: `SessionList.pathKey`
+reads a map seeded by `SetSessions`, and `buildSessionTree` takes the lookup as
+a function. Measured on this tree (Intel N150, `-benchtime 50x`): with 100
+sessions and ten visible rows, one `Render` took 69.3 µs and 338 allocations
+before and 23.9 µs and 188 after; with 1,000 sessions and the threaded sort, one
+`FilterSessions` took 9.02 ms and 31,043 allocations before and 0.78 ms and 1,043
+after. The reference's own cost is the per-row `realpathSync` the port removed,
+so it pays at least the before figure.
+
+The guard was extended with the same round: `internal/uiblock` now classifies
+`filepath.Abs`, `filepath.EvalSymlinks`, `time.LoadLocation` and
+`crypto/rand.Read` as blocking, which is how the per-frame canonicalization was
+found. The tree build also ignores a parent link whose canonical path is the
+session's own, which upstream accepts and then recurses on forever.
+
+Tests: `TestSessionListKeepsPathKeysAcrossRenders`,
+`TestSessionTreeIgnoresSelfParent`, `BenchmarkSessionListRender`,
+`BenchmarkSessionListFilterSessions`.

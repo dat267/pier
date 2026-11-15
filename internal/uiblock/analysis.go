@@ -101,6 +101,10 @@ var namedBlockers = map[string]Kind{
 	"encoding/json.(*Decoder).Decode": CPU,
 	"encoding/json.MarshalIndent":     CPU,
 	"path/filepath.Walk":              Syscall,
+	"path/filepath.Abs":               Syscall,
+	"path/filepath.EvalSymlinks":      Syscall,
+	"time.LoadLocation":               Syscall,
+	"crypto/rand.Read":                Syscall,
 	"path/filepath.WalkDir":           Syscall,
 	"path/filepath.Glob":              Syscall,
 	"io.Copy":                         Syscall,
@@ -295,6 +299,13 @@ func Find(dir string) ([]Finding, error) {
 		fn    *ssa.Function
 		chain []string
 	}
+	// visited is keyed by function: each function is walked once, from the first
+	// root that reaches it, so a position reachable from two surfaces reports the
+	// shorter chain only. Walking every (function, surface) pair instead found
+	// hundreds of extra chains through over-approximated interface methods
+	// (every `Stop` implementation, for instance), which the allowlist would
+	// have to accept one by one; keep the single chain and check a second
+	// surface's claim with its own test or benchmark instead.
 	visited := map[*ssa.Function][]string{}
 	queue := []node{}
 	for _, seed := range m.rootSeeds() {

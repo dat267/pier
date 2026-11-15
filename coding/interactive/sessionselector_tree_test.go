@@ -32,7 +32,7 @@ func TestSessionTreeSortsByLatestActivityDescending(t *testing.T) {
 	// A child older than its parent, and two roots with the same activity.
 	sessions[4].ParentSessionPath = sessions[1].Path
 	sessions[2].Modified = sessions[0].Modified
-	roots := buildSessionTree(sessions)
+	roots := buildSessionTree(sessions, sessionPathKey)
 	var order []string
 	for _, root := range roots {
 		order = append(order, root.Session.Path)
@@ -74,7 +74,7 @@ func BenchmarkBuildSessionTreeAllSessions(b *testing.B) {
 		sessions := sessionTreeFixture(count)
 		b.Run(fmt.Sprintf("sessions-%d", count), func(b *testing.B) {
 			for b.Loop() {
-				if roots := buildSessionTree(sessions); len(roots) != count {
+				if roots := buildSessionTree(sessions, sessionPathKey); len(roots) != count {
 					b.Fatalf("roots = %d, want %d", len(roots), count)
 				}
 			}
