@@ -210,9 +210,6 @@ func retryVertexRequest(
 		ApplyIdentityHeaders(req.Header, model, options.Identity)
 		if accessToken != "" {
 			req.Header.Set("Authorization", "Bearer "+accessToken)
-			if project := GetProviderEnvValueOr("GOOGLE_CLOUD_PROJECT", options.Env); project != "" {
-				req.Header.Set("x-goog-user-project", project)
-			}
 		} else {
 			req.Header.Set("x-goog-api-key", options.APIKey)
 		}

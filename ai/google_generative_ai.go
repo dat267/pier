@@ -355,7 +355,9 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 				if candidate.Content != nil {
 					for i := range candidate.Content.Parts {
 						part := &candidate.Content.Parts[i]
-						if part.HasText() || part.Thought != nil {
+						// Upstream keys the block on `part.text !== undefined`;
+						// a lone `thought: true` marker starts nothing.
+						if part.HasText() {
 							isThinking := IsThinkingPart(part)
 							if currentBlock == nil ||
 								(isThinking && currentBlock.contentKind() != KindThinking) ||

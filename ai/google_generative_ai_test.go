@@ -488,3 +488,50 @@ func TestConvertGoogleMessagesWhitespaceToolResultHasNoText(t *testing.T) {
 		t.Fatalf("function response = %s; want the text verbatim", got)
 	}
 }
+
+// Upstream gates a streamed part on `part.text !== undefined`
+// (packages/ai/src/api/google-generative-ai.ts), so a part that carries only
+// `thought: true` starts no block and emits no delta. The port also entered on
+// the thought flag, which created an empty thinking block and a zero-length
+// thinking_delta for such a part.
+func TestStreamGoogleIgnoresThoughtOnlyPart(t *testing.T) {
+	chunks := []string{
+		`{"candidates":[{"content":{"role":"model","parts":[{"thought":true}]}}]}`,
+		`{"candidates":[{"content":{"role":"model","parts":[{"text":"hi"}]},"finishReason":"STOP"}]}`,
+		`[DONE]`,
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for _, chunk := range chunks {
+			_, _ = w.Write([]byte("data: " + chunk + "\n\n"))
+		}
+	}))
+	defer server.Close()
+
+	model := testGoogleModel()
+	model.BaseURL = server.URL
+	stream := StreamGoogleGenerativeAI(model, NormalizeContext(Context{
+		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
+	}), &GoogleOptions{APIKey: "k"})
+
+	var types []string
+	for {
+		event, ok := stream.Next(context.Background())
+		if !ok {
+			break
+		}
+		types = append(types, event.Type)
+	}
+	msg, err := stream.Result(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, block := range msg.Content {
+		if _, ok := block.(ThinkingContent); ok {
+			t.Fatalf("content = %+v, want no thinking block", msg.Content)
+		}
+	}
+	want := []string{"start", "text_start", "text_delta", "text_end", "done"}
+	if strings.Join(types, ",") != strings.Join(want, ",") {
+		t.Fatalf("events = %v, want %v", types, want)
+	}
+}

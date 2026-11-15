@@ -475,3 +475,53 @@ func TestVertexFlashLiteMinimalBudgetUsesFlashLiteTable(t *testing.T) {
 		}
 	}
 }
+
+// Upstream's Vertex client authenticates with the ADC bearer token and sets no
+// extra quota header (packages/ai/src/api/google-vertex.ts buildHttpOptions
+// carries only identity, model and caller headers; the SDK adds the bearer).
+// The port added `x-goog-user-project` from GOOGLE_CLOUD_PROJECT on the ADC
+// path, a header the reference never sends.
+func TestVertexADCRequestSendsNoUserProjectHeader(t *testing.T) {
+	tokenServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"access_token":"adc-token","expires_in":3600}`))
+	}))
+	defer tokenServer.Close()
+
+	credentialsPath := filepath.Join(t.TempDir(), "adc.json")
+	encoded, _ := json.Marshal(map[string]any{
+		"type": "authorized_user", "client_id": "client-id", "client_secret": "client-secret",
+		"refresh_token": "refresh-token", "token_uri": tokenServer.URL,
+	})
+	if err := os.WriteFile(credentialsPath, encoded, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GOOGLE_APPLICATION_CREDENTIALS", credentialsPath)
+	t.Setenv("GOOGLE_CLOUD_PROJECT", "env-project")
+	vertexTokenCache.mu.Lock()
+	vertexTokenCache.entries = map[string]cachedVertexToken{}
+	vertexTokenCache.mu.Unlock()
+
+	var captured http.Request
+	modelServer := vertexSSEServer(t, &captured, vertexStreamBody)
+	model := &Model{
+		ID: "gemini-3-flash-preview", API: APIGoogleVertex, Provider: "google-vertex",
+		BaseURL: modelServer.URL, ContextWindow: 1000, MaxTokens: 100,
+	}
+	stream := StreamGoogleVertex(model, TranscriptContext{Messages: []Message{
+		&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
+	}}, &GoogleVertexOptions{
+		APIKey:   GCPVertexCredentialsMarker,
+		Project:  "test-project",
+		Location: "us-central1",
+	})
+	if _, err := stream.Result(ctxpkg.Background()); err != nil {
+		t.Fatalf("err = %v", err)
+	}
+	if captured.Header.Get("Authorization") != "Bearer adc-token" {
+		t.Fatalf("authorization = %q", captured.Header.Get("Authorization"))
+	}
+	if value := captured.Header.Get("x-goog-user-project"); value != "" {
+		t.Fatalf("x-goog-user-project = %q, want no such header", value)
+	}
+}
