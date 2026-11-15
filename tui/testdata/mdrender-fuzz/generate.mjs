@@ -31,7 +31,7 @@ const theme = {
 	underline: tag("u"),
 };
 
-let seed = 987654321;
+let seed = Number(process.env.MD_FUZZ_SEED ?? "987654321");
 const rand = () => {
 	seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
 	return seed / 0x80000000;
