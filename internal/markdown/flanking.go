@@ -43,9 +43,6 @@ func runeBefore(src string, i int) (rune, bool) {
 		return 0, false
 	}
 	r, _ := utf8.DecodeLastRuneInString(src[:i])
-	if r == utf8.RuneError {
-		return utf8.RuneError, true
-	}
 	return r, true
 }
 
