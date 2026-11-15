@@ -142,15 +142,11 @@ type Iterm2EncodeOptions struct {
 
 // EncodeITerm2 builds an iTerm2 OSC 1337 inline-image sequence.
 func EncodeITerm2(base64Data string, options Iterm2EncodeOptions) string {
-	decoded, err := base64.StdEncoding.DecodeString(base64Data)
-	if err != nil {
-		decoded = nil
-	}
 	inline := "1"
 	if options.Inline != nil && !*options.Inline {
 		inline = "0"
 	}
-	params := []string{"inline=" + inline, "size=" + strconv.Itoa(len(decoded))}
+	params := []string{"inline=" + inline, "size=" + strconv.Itoa(nodeBase64Length(base64Data))}
 	if options.HasWidth {
 		params = append(params, "width="+options.Width)
 	}
@@ -641,6 +637,26 @@ func ParseCellSizeResponse(data string) (CellDimensions, bool) {
 	return CellDimensions{WidthPx: widthPx, HeightPx: heightPx}, true
 }
 
+// nodeBase64Length is the size `size=` reports: Node's `Buffer.byteLength(data,
+// "base64")` (base64_decoded_size), which counts six bits per character and
+// only the last one or two `=` as padding. It reads no data, so an unpadded or
+// line-wrapped payload keeps the reference's length where decoding failed.
+func nodeBase64Length(data string) int {
+	if len(data) < 2 {
+		return 0
+	}
+	padding := 0
+	if data[len(data)-1] == '=' {
+		padding = 1
+		if data[len(data)-2] == '=' {
+			padding = 2
+		}
+	}
+	actual := len(data) - padding
+	return (actual+3)/4*3 - (4-actual%4)%4
+}
+
+// shortenImagePath replaces the home directory with `~`.
 func shortenImagePath(filename string) string {
 	home, err := os.UserHomeDir()
 	if err != nil || home == "" {

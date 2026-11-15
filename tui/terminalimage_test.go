@@ -547,3 +547,37 @@ func TestMaxKittyImageRows(t *testing.T) {
 		t.Fatalf("a shorter image lowered the maximum to %d", got)
 	}
 }
+
+// Reference: pi v1.5.2 (b4afdddf) tui/src/terminal-image.ts encodeITerm2 writes
+// `size=${Buffer.byteLength(base64Data, "base64")}`. Node's base64_decoded_size
+// counts six bits per character and only the last one or two `=` as padding, so
+// an unpadded, line-wrapped or even invalid payload still reports a length; the
+// port decoded the data instead, which failed on all of those and wrote
+// `size=0`.
+func TestIterm2SizeMatchesNodeBase64ByteLength(t *testing.T) {
+	for _, testCase := range []struct {
+		data string
+		size int
+	}{
+		{"", 0},
+		{"=", 0},
+		{"A", 0},
+		{"AB", 1},
+		{"ABC", 2},
+		{"YWJj", 3},
+		{"YWJjZA", 4},
+		{"YWJjZA==", 4},
+		{"YWJj\nZA", 5},
+		{"YW Jj", 3},
+		{"YWJj-_", 4},
+		{"!!!!", 3},
+		{"YQ===", 2},
+		{"YWJj====", 4},
+	} {
+		sequence := EncodeITerm2(testCase.data, Iterm2EncodeOptions{})
+		want := "\x1b]1337;File=inline=1;size=" + strconv.Itoa(testCase.size) + ":" + testCase.data + "\x07"
+		if sequence != want {
+			t.Errorf("%q: got %q, want %q", testCase.data, sequence, want)
+		}
+	}
+}
