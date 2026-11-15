@@ -37,6 +37,11 @@ type MutableModelRegistry interface {
 // WithClientIdentity adds request defaults above the registry's defaults.
 // Request fields win. Other operations are delegated to the same registry.
 // The result implements MutableModelRegistry only when the source does.
+//
+// Upstream's single wrapper also covers generateImages and classify, which this
+// port splits: image requests go through WithImagesClientIdentity, and a
+// classification call takes its identity in ClassifierOptions (through
+// StreamOptions.Identity), because neither method is part of ModelRegistry.
 func WithClientIdentity(models ModelRegistry, identity *ClientIdentity) ModelRegistry {
 	wrapped := &identityModels{ModelRegistry: models, identity: identity}
 	if mutable, ok := models.(MutableModelRegistry); ok {
