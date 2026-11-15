@@ -8,6 +8,10 @@ import (
 	"syscall"
 )
 
+// processGroupsSupported mirrors upstream's USE_PROCESS_GROUPS: closing a
+// transport can signal the server's whole process group here.
+const processGroupsSupported = true
+
 // configureProcessGroup puts the server in a session of its own, and with it a
 // process group (upstream detached: USE_PROCESS_GROUPS, which libuv implements
 // with setsid()). The server has no controlling terminal, so it cannot read

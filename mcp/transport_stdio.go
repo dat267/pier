@@ -386,12 +386,18 @@ func (t *StdioTransport) Close(ctx context.Context) error {
 		t.finishClose()
 		return nil
 	}
+	// A server that already exited can still have children holding its pipes,
+	// so the group cleanup below has to run for them (upstream stdio.ts close():
+	// the early return is Windows-only, where there are no process groups).
+	exited := false
 	select {
 	case <-t.exitCh:
-		// Already exited; the exit watcher finalized the close path.
+		exited = true
+	default:
+	}
+	if exited && !processGroupsSupported {
 		_ = t.closeStdin()
 		return nil
-	default:
 	}
 	closeTimeoutMs := t.options.CloseTimeoutMs
 	if closeTimeoutMs == 0 && !t.options.CloseTimeoutMsSet {

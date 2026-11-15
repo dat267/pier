@@ -9,6 +9,10 @@ import (
 	"syscall"
 )
 
+// processGroupsSupported mirrors upstream's USE_PROCESS_GROUPS: Windows has no
+// process groups, so termination goes through taskkill instead.
+const processGroupsSupported = false
+
 // configureProcessGroup leaves the child in this process group; Windows
 // termination goes through taskkill /T /F. HideWindow matches the upstream
 // spawn's windowsHide: true, so no console window flashes for stdio servers.
