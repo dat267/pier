@@ -105,11 +105,13 @@ func ExchangeOpenRouterAuthorizationCode(ctx context.Context, code, verifier str
 		defer stop()
 	}
 
-	body, err := MarshalJSON(map[string]string{
-		"code":                  code,
-		"code_verifier":         verifier,
-		"code_challenge_method": "S256",
-	})
+	// Field order follows the reference's object literal, so the request body
+	// matches its bytes (oauth/openrouter.ts exchangeAuthorizationCode).
+	body, err := MarshalJSON(struct {
+		Code                string `json:"code"`
+		CodeVerifier        string `json:"code_verifier"`
+		CodeChallengeMethod string `json:"code_challenge_method"`
+	}{Code: code, CodeVerifier: verifier, CodeChallengeMethod: "S256"})
 	if err != nil {
 		return nil, err
 	}

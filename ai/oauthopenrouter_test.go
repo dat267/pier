@@ -62,8 +62,10 @@ func TestOpenRouterErrorDetail(t *testing.T) {
 
 func TestExchangeOpenRouterAuthorizationCode(t *testing.T) {
 	var captured map[string]string
+	var capturedBody []byte
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		raw, _ := io.ReadAll(request.Body)
+		capturedBody = raw
 		_ = json.Unmarshal(raw, &captured)
 		writer.Header().Set("Content-Type", "application/json")
 		_, _ = writer.Write([]byte(`{"key":"sk-or-permanent"}`))
@@ -85,6 +87,11 @@ func TestExchangeOpenRouterAuthorizationCode(t *testing.T) {
 		if captured["code"] != "code-1" || captured["code_verifier"] != "verifier-1" ||
 			captured["code_challenge_method"] != "S256" {
 			t.Fatalf("body = %#v", captured)
+		}
+		// The reference sends the keys in object-literal order
+		// (oauth/openrouter.ts: `{ code, code_verifier, code_challenge_method }`).
+		if want := `{"code":"code-1","code_verifier":"verifier-1","code_challenge_method":"S256"}`; string(capturedBody) != want {
+			t.Fatalf("body bytes = %s, want %s", capturedBody, want)
 		}
 	})
 
