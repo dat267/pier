@@ -306,6 +306,10 @@ func TestAssistantStreamDurationRoundsToNearestMillisecond(t *testing.T) {
 		{1499 * time.Microsecond, 1},
 		{1500 * time.Microsecond, 2},
 		{2500 * time.Microsecond, 3},
+		// A clock that steps backwards never writes a negative duration.
+		{-400 * time.Microsecond, 0},
+		{-1500 * time.Microsecond, 0},
+		{-5 * time.Millisecond, 0},
 	} {
 		if got := roundDurationMS(testCase.elapsed); got != testCase.want {
 			t.Fatalf("roundDurationMS(%v) = %d, want %d", testCase.elapsed, got, testCase.want)

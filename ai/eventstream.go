@@ -401,9 +401,11 @@ func (s *AssistantMessageEventStream) End(result **AssistantMessage) {
 	s.EventStream.End(result)
 }
 
-// roundDurationMS reproduces upstream's Math.round of the elapsed milliseconds.
+// roundDurationMS reproduces upstream's Math.max(0, Math.round(elapsed
+// milliseconds)): the duration is persisted with the message, and a wall clock
+// that steps backwards must not write a negative one.
 func roundDurationMS(elapsed time.Duration) int64 {
-	return int64(math.Round(float64(elapsed) / float64(time.Millisecond)))
+	return max(int64(math.Round(float64(elapsed)/float64(time.Millisecond))), 0)
 }
 
 // timeMessage stamps durationMs with the monotonic time since the stream was created. A
