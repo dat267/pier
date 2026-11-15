@@ -414,7 +414,6 @@ func scanCacheEntries(entries []SessionEntry, models ModelPriceSource, cache *me
 	return result
 }
 
-// reset drops the state, for a fresh session or a load that reseeds it.
 // SessionStats aggregates the session's entries from the recorded candidates:
 // the counts, tool calls and token totals, without walking (and decoding) the
 // session. The context usage stays with the caller, from the live agent state.
@@ -555,7 +554,6 @@ func (m *SessionManager) cacheScanResult(models ModelPriceSource) cacheScanResul
 	result := cacheScanResult{}
 	for _, candidate := range candidates {
 		if candidate.reset {
-			result.prev = nil
 			continue
 		}
 		if candidate.assistant == nil {
