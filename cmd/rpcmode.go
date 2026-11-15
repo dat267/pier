@@ -23,20 +23,8 @@ func runRPCSession(parent context.Context, session *coding.AgentSession, replace
 	} else {
 		signal.Notify(signals, syscall.SIGTERM, syscall.SIGHUP)
 	}
-	done := make(chan struct{})
-	code := 0
-	go func() {
-		defer close(done)
-		select {
-		case sig := <-signals:
-			code = 143
-			if sig == syscall.SIGHUP {
-				code = 129
-			}
-			cancel()
-		case <-ctx.Done():
-		}
-	}()
+	stop := make(chan struct{})
+	done, exitCode := watchRPCSignals(signals, cancel, func(code int) { os.Exit(code) }, stop)
 	err := coding.RunRPCMode(ctx, session, coding.RPCModeOptions{
 		Input: os.Stdin, Output: os.Stdout, ReplaceSession: replace,
 		ExportToHtml: func(exported *coding.AgentSession, outputPath string) (string, error) {
@@ -44,12 +32,47 @@ func runRPCSession(parent context.Context, session *coding.AgentSession, replace
 		},
 	})
 	signal.Stop(signals)
+	close(stop)
 	cancel()
 	<-done
-	if code != 0 {
+	if code := exitCode(); code != 0 {
 		return reportedExitCode(code)
 	}
 	return err
+}
+
+// watchRPCSignals runs the RPC mode's signal protocol (pi v1.5.2 b4afdddf
+// modes/rpc/rpc-mode.ts registerSignalHandlers). The first signal starts the
+// shutdown by cancelling the session; a repeated one takes upstream's
+// `signalCount > 1` branch and exits immediately, because a shutdown can wait on
+// work such as an MCP token refresh. Handlers stay registered until stop closes,
+// so a signal during the shutdown is still seen.
+func watchRPCSignals(signals <-chan os.Signal, cancel func(), forceExit func(int), stop <-chan struct{}) (<-chan struct{}, func() int) {
+	done := make(chan struct{})
+	code := 0
+	go func() {
+		defer close(done)
+		shuttingDown := false
+		for {
+			select {
+			case sig := <-signals:
+				requested := 143
+				if sig == syscall.SIGHUP {
+					requested = 129
+				}
+				if shuttingDown {
+					forceExit(requested)
+					continue
+				}
+				shuttingDown = true
+				code = requested
+				cancel()
+			case <-stop:
+				return
+			}
+		}
+	}()
+	return done, func() int { return code }
 }
 
 // rpcSessionReplacer builds the session factory for the RPC session-replacement
