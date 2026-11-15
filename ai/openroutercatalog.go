@@ -192,6 +192,8 @@ func openRouterPerMillion(raw json.RawMessage, fallback float64) float64 {
 	} else if err := json.Unmarshal(raw, &value); err != nil {
 		return fallback
 	}
+	// A non-finite price would poison every cost sum and JSON writes it as null
+	// (D485); keep the fallback instead.
 	if math.IsNaN(value) || math.IsInf(value, 0) || value < 0 {
 		return fallback
 	}

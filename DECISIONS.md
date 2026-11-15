@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D484)
+# Deliberate divergences from pi (D1–D485)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7854,3 +7854,20 @@ call site needs a separate failure path.
 
 Tests: `TestAPIRegistryBuiltins`,
 `TestComposeModelProviderMissingAPIProviderStreamsError`.
+
+### D485
+
+**An overflowing OpenRouter price keeps the fallback rate.**
+
+Reference: pi v1.5.2 (b4afdddf)
+`packages/ai/src/providers/openrouter-api.ts` `perMillion` returns
+`Number((Number.parseFloat(value ?? "") * 1_000_000).toFixed(6))` whenever the
+parsed value is non-negative. A price string that overflows a double
+(`"1e999"`, `"Infinity"`) therefore becomes `+Infinity`, which a later cost sum
+turns into `NaN` and which `JSON.stringify` writes as `null`, so a session would
+lose the accounting it wrote. Pier keeps the fallback rate (`0` for a base price,
+the base rate for a tier) when the parsed value is not finite, as it already
+does for `NaN`. Every finite price, including the invalid-text prefixes
+`parseFloat` accepts, converts identically.
+
+Test: `TestOpenRouterPriceOverflowKeepsTheFallback`.
