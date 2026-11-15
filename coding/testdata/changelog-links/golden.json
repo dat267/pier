@@ -1,0 +1,146 @@
+[
+	{
+		"label": "relative-file",
+		"markdown": "See [docs](docs/guide.md) and [code](../coding-agent/src/x.ts).",
+		"version": "1.2.3",
+		"normalized": "See [docs](https://github.com/earendil-works/pi/blob/v1.2.3/packages/coding-agent/docs/guide.md) and [code](https://github.com/earendil-works/pi/blob/v1.2.3/packages/coding-agent/src/x.ts)."
+	},
+	{
+		"label": "dir-target",
+		"markdown": "See [dir](src/modes) and [trail](src/modes/).",
+		"version": "1.2.3",
+		"normalized": "See [dir](https://github.com/earendil-works/pi/tree/v1.2.3/packages/coding-agent/src/modes) and [trail](https://github.com/earendil-works/pi/tree/v1.2.3/packages/coding-agent/src/modes/)."
+	},
+	{
+		"label": "absolute",
+		"markdown": "[abs](/packages/coding-agent/src/a.ts)",
+		"version": "1.2.3",
+		"normalized": "[abs](https://github.com/earendil-works/pi/blob/v1.2.3/packages/coding-agent/src/a.ts)"
+	},
+	{
+		"label": "floating-ref",
+		"markdown": "[m](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/src/a.ts)",
+		"version": "2.0.0",
+		"normalized": "[m](https://github.com/earendil-works/pi/blob/v2.0.0/packages/coding-agent/src/a.ts)"
+	},
+	{
+		"label": "legacy-repo",
+		"markdown": "[m](https://github.com/badlogic/pi-mono/blob/master/x.md)",
+		"version": "2.0.0",
+		"normalized": "[m](https://github.com/earendil-works/pi/blob/v2.0.0/x.md)"
+	},
+	{
+		"label": "external",
+		"markdown": "[e](https://example.com/a) [h](#section) [p](//cdn/x.js) [m](mailto:a@b.c)",
+		"version": "1.0.0",
+		"normalized": "[e](https://example.com/a) [h](#section) [p](//cdn/x.js) [m](mailto:a@b.c)"
+	},
+	{
+		"label": "escape",
+		"markdown": "[e](docs/a b.md) and [i](img/a.png)",
+		"version": "1.0.0",
+		"normalized": "[e](https://github.com/earendil-works/pi/tree/v1.0.0/packages/coding-agent/docs/a b.md) and [i](https://github.com/earendil-works/pi/blob/v1.0.0/packages/coding-agent/img/a.png)"
+	},
+	{
+		"label": "traversal",
+		"markdown": "[t](../../outside.md)",
+		"version": "1.0.0",
+		"normalized": "[t](https://github.com/earendil-works/pi/blob/v1.0.0/outside.md)"
+	},
+	{
+		"label": "v-prefix",
+		"markdown": "[x](docs/a.md)",
+		"version": "v9.9.9",
+		"normalized": "[x](https://github.com/earendil-works/pi/blob/v9.9.9/packages/coding-agent/docs/a.md)"
+	},
+	{
+		"label": "query-fragment",
+		"markdown": "[q](docs/a.md?x=1#frag)",
+		"version": "1.2.3",
+		"normalized": "[q](https://github.com/earendil-works/pi/blob/v1.2.3/packages/coding-agent/docs/a.md?x=1#frag)"
+	},
+	{
+		"label": "non-ascii",
+		"markdown": "[u](docs/é.md)",
+		"version": "1.2.3",
+		"normalized": "[u](https://github.com/earendil-works/pi/blob/v1.2.3/packages/coding-agent/docs/%C3%A9.md)"
+	},
+	{
+		"label": "dir-fragment",
+		"markdown": "[t](src/modes/#anchor)",
+		"version": "1.2.3",
+		"normalized": "[t](https://github.com/earendil-works/pi/tree/v1.2.3/packages/coding-agent/src/modes/#anchor)"
+	},
+	{
+		"label": "normalize",
+		"markdown": "[n](docs/./a/../b.md)",
+		"version": "1.2.3",
+		"normalized": "[n](https://github.com/earendil-works/pi/blob/v1.2.3/packages/coding-agent/docs/b.md)"
+	},
+	{
+		"label": "escaped-percent",
+		"markdown": "[s](docs/a%20b.md)",
+		"version": "1.2.3",
+		"normalized": "[s](https://github.com/earendil-works/pi/blob/v1.2.3/packages/coding-agent/docs/a%2520b.md)"
+	},
+	{
+		"label": "title",
+		"markdown": "[b](docs/a.md \"title\")",
+		"version": "1.2.3",
+		"normalized": "[b](https://github.com/earendil-works/pi/blob/v1.2.3/packages/coding-agent/docs/a.md \"title\")"
+	},
+	{
+		"label": "traversal-fragment",
+		"markdown": "[h](../CHANGELOG.md#v1)",
+		"version": "1.2.3",
+		"normalized": "[h](https://github.com/earendil-works/pi/blob/v1.2.3/packages/CHANGELOG.md#v1)"
+	},
+	{
+		"label": "at-sign",
+		"markdown": "[at](user@host:path)",
+		"version": "1.2.3",
+		"normalized": "[at](https://github.com/earendil-works/pi/tree/v1.2.3/packages/coding-agent/user@host:path)"
+	},
+	{
+		"label": "glob",
+		"markdown": "[st](docs/*.md)",
+		"version": "1.2.3",
+		"normalized": "[st](https://github.com/earendil-works/pi/blob/v1.2.3/packages/coding-agent/docs/*.md)"
+	},
+	{
+		"label": "emoji",
+		"markdown": "[e](✨/x.md)",
+		"version": "1.2.3",
+		"normalized": "[e](https://github.com/earendil-works/pi/blob/v1.2.3/packages/coding-agent/%E2%9C%A8/x.md)"
+	},
+	{
+		"label": "plus",
+		"markdown": "[p](a+b/c.md)",
+		"version": "1.2.3",
+		"normalized": "[p](https://github.com/earendil-works/pi/blob/v1.2.3/packages/coding-agent/a+b/c.md)"
+	},
+	{
+		"label": "hash-only",
+		"markdown": "[h](#)",
+		"version": "1.2.3",
+		"normalized": "[h](#)"
+	},
+	{
+		"label": "dot-dot-root",
+		"markdown": "[d](/../x.md)",
+		"version": "1.2.3",
+		"normalized": "[d](/../x.md)"
+	},
+	{
+		"label": "drive",
+		"markdown": "[w](C:\\\\x\\\\y.md)",
+		"version": "1.2.3",
+		"normalized": "[w](C:\\\\x\\\\y.md)"
+	},
+	{
+		"label": "opaque-scheme",
+		"markdown": "[o](javascript:alert(1))",
+		"version": "1.2.3",
+		"normalized": "[o](javascript:alert(1))"
+	}
+]
