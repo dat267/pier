@@ -574,3 +574,40 @@ func TestMistralUserTextChunkKeepsEmptyText(t *testing.T) {
 		t.Fatalf("messages = %s\nwant %s", body, want)
 	}
 }
+
+// Upstream strips each data line with `line.slice(5).trimStart()`
+// (packages/ai/src/api/mistral-conversations.ts parseMistralEvent), and
+// JavaScript's trimStart removes every WhiteSpace character, including U+00A0.
+// The port trimmed only spaces and tabs, so a data line indented with a
+// non-breaking space failed to parse and aborted the stream.
+func TestMistralEventDataLinesTrimJSWhitespace(t *testing.T) {
+	sse := "data: {\"choices\":[{\r\n" +
+		"data:\u00a0\"delta\":{\"content\":\"hi\"},\"finish_reason\":null}]}\r\n\r\n" +
+		"data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\r\n\r\n" +
+		"data: [DONE]\r\n\r\n"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte(sse))
+	}))
+	defer server.Close()
+
+	stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(),
+		&MistralOptions{APIKey: "test-key"})
+	var text string
+	for {
+		event, ok := stream.Next(ctxpkg.Background())
+		if !ok {
+			break
+		}
+		if event.Type == EventTextDelta {
+			text += event.Delta
+		}
+	}
+	message, err := stream.Result(ctxpkg.Background())
+	if err != nil {
+		t.Fatalf("err = %v (message %+v)", err, message)
+	}
+	if message.StopReason != StopStop || text != "hi" {
+		t.Fatalf("stopReason = %s text = %q", message.StopReason, text)
+	}
+}

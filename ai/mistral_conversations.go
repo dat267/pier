@@ -593,7 +593,9 @@ func parseMistralEvent(raw string) (*mistralCompletionEvent, bool, error) {
 		if !strings.HasPrefix(line, "data:") {
 			continue
 		}
-		dataLines = append(dataLines, strings.TrimLeft(line[5:], " \t"))
+		// Upstream uses `line.slice(5).trimStart()`, which removes every
+		// JavaScript whitespace character, not just spaces and tabs.
+		dataLines = append(dataLines, JSTrimLeft(line[5:]))
 	}
 	data := JSTrim(strings.Join(dataLines, "\n"))
 	if data == "" {
