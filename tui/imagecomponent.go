@@ -20,6 +20,10 @@ type ImageTheme struct {
 	FallbackColor func(string) string
 }
 
+// defaultImageMaxWidthCells is the cell width an unconfigured image uses
+// (upstream ImageOptions.maxWidthCells ?? 60).
+const defaultImageMaxWidthCells = 60
+
 // ImageOptions configure an ImageComponent.
 type ImageOptions struct {
 	MaxWidthCells  *int
@@ -83,9 +87,14 @@ func (c *ImageComponent) Render(width int) []string {
 	if c.hasCache && c.cachedWidth == width {
 		return c.cachedLines
 	}
+	// upstream: Math.max(1, Math.min(width - 2, options.maxWidthCells ?? 60))
 	maxWidth := width - 2
-	if configured := c.options.MaxWidthCells; configured != nil && *configured < maxWidth {
-		maxWidth = *configured
+	configured := defaultImageMaxWidthCells
+	if c.options.MaxWidthCells != nil {
+		configured = *c.options.MaxWidthCells
+	}
+	if configured < maxWidth {
+		maxWidth = configured
 	}
 	if maxWidth < 1 {
 		maxWidth = 1

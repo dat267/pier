@@ -581,3 +581,18 @@ func TestIterm2SizeMatchesNodeBase64ByteLength(t *testing.T) {
 		}
 	}
 }
+
+// Reference: pi v1.5.2 components/image.ts renders an unconfigured image with
+// `Math.max(1, Math.min(width - 2, this.options.maxWidthCells ?? 60))`, so the
+// component's own default caps it at 60 cells. Only the app passes a width,
+// but the component API must match.
+func TestImageComponentDefaultsToSixtyCells(t *testing.T) {
+	withImageCapabilities(t, ImageProtocolKitty, true)
+	SetCellDimensions(CellDimensions{WidthPx: 10, HeightPx: 10})
+	image := NewImageComponent("AAAA", "image/png", ImageTheme{FallbackColor: func(value string) string { return value }},
+		ImageOptions{}, &ImageDimensions{WidthPx: 1000, HeightPx: 1000})
+	lines := image.Render(200)
+	if len(lines) != 60 || !strings.Contains(lines[0], ",c=60,r=60") {
+		t.Fatalf("lines = %d %q, want the 60-cell default", len(lines), lines[0])
+	}
+}
