@@ -42,6 +42,16 @@ const (
 // AnthropicRedirectURI is the OAuth redirect URI.
 const AnthropicRedirectURI = "http://localhost:53692" + anthropicCallbackPath
 
+// Anthropic login methods and the headless redirect (upstream
+// ANTHROPIC_*_LOGIN_METHOD and COPY_CODE_REDIRECT_URI): the copy-code flow sends
+// the browser to a redirect the CLI never serves, so the user pastes the code
+// Anthropic shows.
+const (
+	AnthropicBrowserLogin        = "browser"
+	AnthropicCopyCodeLogin       = "copy_code"
+	AnthropicCopyCodeRedirectURI = "https://platform.claude.com/oauth/code/callback"
+)
+
 // AnthropicCallbackHost returns the loopback host to bind; PI_OAUTH_CALLBACK_HOST
 // overrides it (upstream CALLBACK_HOST).
 func AnthropicCallbackHost() string {
@@ -382,8 +392,13 @@ func LoginAnthropic(interaction *AuthInteraction) (*OAuthCredential, error) {
 			Message:     "Complete login in your browser, or paste the authorization code / redirect URL here:",
 			Placeholder: redirectURI,
 		})
+		// The callback wait races this prompt (upstream waitForCallbackOrManualInput
+		// calls callback.cancel() when the prompt settles), so a pasted code
+		// completes the login instead of waiting for a browser that never comes.
+		if server != nil {
+			server.CancelWait()
+		}
 		manualCh <- manualResult{input: input, err: perr}
-		manualCtxCancelFor(manualCtx, cancelManual)
 	}()
 
 	if interaction.Notify != nil {
@@ -433,17 +448,87 @@ func LoginAnthropic(interaction *AuthInteraction) (*OAuthCredential, error) {
 	return ExchangeAnthropicAuthorizationCode(ctx, code, state, pkce.Verifier, redirectURI)
 }
 
-// manualCtxCancelFor cancels the manual wait once the prompt settled.
-func manualCtxCancelFor(_ context.Context, cancel context.CancelFunc) { cancel() }
+// LoginAnthropicCopyCode runs the headless Anthropic login (upstream
+// loginAnthropicCopyCode): the authorize URL redirects to a page Anthropic
+// serves instead of the loopback callback server, and the user pastes the
+// `code#state` it shows.
+func LoginAnthropicCopyCode(interaction *AuthInteraction) (*OAuthCredential, error) {
+	if interaction == nil {
+		return nil, fmt.Errorf("auth interaction is required")
+	}
+	pkce, err := GeneratePKCE()
+	if err != nil {
+		return nil, err
+	}
+	ctx := interaction.Ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if interaction.Notify != nil {
+		interaction.Notify(AuthEvent{
+			Type: AuthEventAuthURL,
+			URL:  AnthropicAuthorizeURL(pkce.Challenge, pkce.Verifier, AnthropicCopyCodeRedirectURI),
+			Instructions: "Complete login in your browser, then copy the code Anthropic shows and " +
+				"paste it here.",
+		})
+	}
+	input, err := interaction.Prompt(AuthPrompt{
+		Type:        AuthPromptManualCode,
+		Ctx:         ctx,
+		Message:     "Paste the code Anthropic shows after you sign in:",
+		Placeholder: "code#state",
+	})
+	if err != nil {
+		return nil, err
+	}
+	parsed := ParseAuthorizationInput(input)
+	if parsed.State != "" && parsed.State != pkce.Verifier {
+		return nil, fmt.Errorf("OAuth state mismatch")
+	}
+	if parsed.Code == "" {
+		return nil, fmt.Errorf("Missing authorization code")
+	}
+	if interaction.Notify != nil {
+		interaction.Notify(AuthEvent{Type: AuthEventProgress, Message: "Exchanging authorization code for tokens..."})
+	}
+	state := parsed.State
+	if state == "" {
+		state = pkce.Verifier
+	}
+	return ExchangeAnthropicAuthorizationCode(ctx, parsed.Code, state, pkce.Verifier, AnthropicCopyCodeRedirectURI)
+}
 
 // AnthropicOAuth is the Anthropic OAuth auth definition (upstream
-// anthropicOAuth).
+// anthropicOAuth): a login-method select that routes to the browser flow or the
+// headless copy-code flow.
 func AnthropicOAuth() *OAuthAuth {
 	return &OAuthAuth{
 		Name:           "Anthropic (Claude Pro/Max)",
 		IsSubscription: true,
-		LoginLabel:     "Sign in with Claude Pro/Max",
-		Login:          LoginAnthropic,
+		Login: func(interaction *AuthInteraction) (*OAuthCredential, error) {
+			if interaction == nil {
+				return nil, fmt.Errorf("auth interaction is required")
+			}
+			method, err := interaction.Prompt(AuthPrompt{
+				Type:    AuthPromptSelect,
+				Message: "Select Anthropic login method:",
+				SelectOptions: []AuthSelectOption{
+					{ID: AnthropicBrowserLogin, Label: "Browser login (default)"},
+					{ID: AnthropicCopyCodeLogin, Label: "Copy code login (headless)"},
+				},
+			})
+			if err != nil {
+				return nil, err
+			}
+			switch method {
+			case AnthropicCopyCodeLogin:
+				return LoginAnthropicCopyCode(interaction)
+			case AnthropicBrowserLogin:
+				return LoginAnthropic(interaction)
+			default:
+				return nil, fmt.Errorf("Unknown Anthropic login method: %s", method)
+			}
+		},
 		Refresh: func(credential *OAuthCredential, ctx context.Context) (*OAuthCredential, error) {
 			if credential == nil {
 				return nil, fmt.Errorf("credential is required")
