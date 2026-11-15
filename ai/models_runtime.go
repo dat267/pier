@@ -607,7 +607,8 @@ func (m *Models) ReplaceProviders(providers []*Provider) {
 	m.providers = next
 }
 
-// GetProviders returns all providers.
+// GetProviders returns all providers, sorted by id (D483). The reference keeps
+// registration order; a Go map has none, so the order is canonical instead.
 func (m *Models) GetProviders() []*Provider {
 	m.mu.Lock()
 	defer m.mu.Unlock()

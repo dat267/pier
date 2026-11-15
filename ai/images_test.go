@@ -336,3 +336,61 @@ func TestImageCatalogCarriesTheV150Refresh(t *testing.T) {
 		}
 	}
 }
+
+// D483: the image registry lists providers sorted by id, like the chat
+// registry, because a Go map has no insertion order. The reference returns
+// Array.from(this.providers.values()), i.e. registration order
+// (image-models.ts getProviders).
+func TestImagesModelsGetProvidersSortedByID(t *testing.T) {
+	registry := CreateImagesModels(nil)
+	ids := []string{"zhipu", "openai", "anthropic", "openrouter", "google", "qwen", "xai", "mistral",
+		"deepseek", "moonshot", "alibaba", "baidu", "tencent", "nvidia", "cohere", "perplexity"}
+	for _, id := range ids {
+		registry.SetProvider(CreateImagesProvider(ImageProviderOptions{ID: id}))
+	}
+	providers := registry.GetProviders()
+	if len(providers) != len(ids) {
+		t.Fatalf("providers = %d, want %d", len(providers), len(ids))
+	}
+	for index := 1; index < len(providers); index++ {
+		if providers[index-1].ID > providers[index].ID {
+			t.Fatalf("providers out of order at %d: %q before %q", index, providers[index-1].ID, providers[index].ID)
+		}
+	}
+}
+
+// pi v1.5.2 (b4afdddf) utils/model-operations.ts imageErrorResult builds its
+// result as a fresh literal with errorMessage before timestamp, while
+// api/openrouter-images.ts mutates output.errorMessage after the literal that
+// already carries timestamp. The wrapper's synthetic errors therefore order
+// errorMessage before timestamp; a provider error keeps it last.
+func TestImagesErrorResultKeyOrder(t *testing.T) {
+	registry := CreateImagesModels(nil)
+	result := registry.GenerateImages(&ImagesModel{ID: "image-1", Provider: "ghost", API: KnownImagesApiOpenRouter}, ImagesContext{}, nil)
+	if result.StopReason != ImagesStopError || result.ErrorMessage == nil {
+		t.Fatalf("result = %+v", result)
+	}
+	encoded, err := MarshalJSON(result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prefix := `{"api":"openrouter-images","provider":"ghost","model":"image-1","output":[],"stopReason":"error","errorMessage":"Unknown provider: ghost","timestamp":`
+	if !strings.HasPrefix(string(encoded), prefix) {
+		t.Fatalf("wrapper error order = %s", encoded)
+	}
+
+	// A provider error keeps timestamp before errorMessage.
+	message := "boom"
+	failed := &AssistantImages{
+		API: KnownImagesApiOpenRouter, Provider: "ghost", Model: "image-1",
+		Output: []ImagesOutputContent{}, StopReason: ImagesStopError,
+		ErrorMessage: &message, Timestamp: 1,
+	}
+	encoded, err = MarshalJSON(failed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `"stopReason":"error","timestamp":1,"errorMessage":"boom"}`; !strings.HasSuffix(string(encoded), want) {
+		t.Fatalf("provider error order = %s", encoded)
+	}
+}

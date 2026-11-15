@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"sort"
 	"sync"
 	"time"
 )
@@ -117,6 +118,11 @@ func (a AssistantImages) MarshalJSON() ([]byte, error) {
 	if err := set("stopReason", a.StopReason); err != nil {
 		return nil, err
 	}
+	if a.errorMessageFirst && a.ErrorMessage != nil {
+		if err := set("errorMessage", *a.ErrorMessage); err != nil {
+			return nil, err
+		}
+	}
 	if err := set("timestamp", a.Timestamp); err != nil {
 		return nil, err
 	}
@@ -132,7 +138,7 @@ func (a AssistantImages) MarshalJSON() ([]byte, error) {
 			return nil, err
 		}
 	}
-	if a.ErrorMessage != nil {
+	if !a.errorMessageFirst && a.ErrorMessage != nil {
 		if err := set("errorMessage", *a.ErrorMessage); err != nil {
 			return nil, err
 		}
@@ -166,6 +172,13 @@ type AssistantImages struct {
 	StopReason   ImagesStopReason      `json:"stopReason"`
 	ErrorMessage *string               `json:"errorMessage,omitempty"`
 	Timestamp    int64                 `json:"timestamp"`
+
+	// errorMessageFirst records which upstream path built the value. A
+	// provider's error mutates `output.errorMessage` after the literal that
+	// carries stopReason and timestamp (api/openrouter-images.ts), while the
+	// wrapper's imageErrorResult builds a fresh literal with errorMessage
+	// before timestamp (utils/model-operations.ts), so the two orders differ.
+	errorMessageFirst bool
 }
 
 // ProviderImages is the uniform image API implementation (upstream
@@ -314,7 +327,9 @@ func (m *ImagesModels) ClearProviders() {
 	m.mu.Unlock()
 }
 
-// GetProviders lists the registered providers.
+// GetProviders lists the registered providers, sorted by id like the chat
+// registry (D483). A Go map has no insertion order, and the reference's
+// registration order is not recoverable from one.
 func (m *ImagesModels) GetProviders() []*ImagesProvider {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -322,6 +337,7 @@ func (m *ImagesModels) GetProviders() []*ImagesProvider {
 	for _, provider := range m.providers {
 		out = append(out, provider)
 	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
 
@@ -452,6 +468,7 @@ func imagesError(model *ImagesModel, message string, options *ImagesOptions) *As
 		API: model.API, Provider: model.Provider, Model: model.ID,
 		Output: []ImagesOutputContent{}, StopReason: stopReason,
 		ErrorMessage: &message, Timestamp: time.Now().UnixMilli(),
+		errorMessageFirst: true,
 	}
 }
 
@@ -528,8 +545,7 @@ func GetBuiltinImageModels(provider string) []*ImagesModel {
 
 // GetBuiltinImageModel looks one generated image model up.
 func GetBuiltinImageModel(provider, id string) *ImagesModel {
-	loadBuiltinImage := GetBuiltinImageModels(provider)
-	for _, model := range loadBuiltinImage {
+	for _, model := range GetBuiltinImageModels(provider) {
 		if model.ID == id {
 			return model
 		}

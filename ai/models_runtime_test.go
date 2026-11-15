@@ -830,3 +830,24 @@ func TestModelsRefreshConfiguredAuthSkipsUnconfiguredProvider(t *testing.T) {
 		t.Fatal("the network phase ran for an unconfigured provider")
 	}
 }
+
+// D483: the chat registry lists providers sorted by id. The reference returns
+// Array.from(this.providers.values()), i.e. registration order (models.ts
+// getProviders); a Go map has no order, so the port canonicalizes it.
+func TestModelsGetProvidersSortedByID(t *testing.T) {
+	registry := CreateModels(nil)
+	ids := []string{"zhipu", "openai", "anthropic", "openrouter", "google", "qwen", "xai", "mistral",
+		"deepseek", "moonshot", "alibaba", "baidu", "tencent", "nvidia", "cohere", "perplexity"}
+	for _, id := range ids {
+		registry.SetProvider(CreateProvider(CreateProviderOptions{ID: id}))
+	}
+	providers := registry.GetProviders()
+	if len(providers) != len(ids) {
+		t.Fatalf("providers = %d, want %d", len(providers), len(ids))
+	}
+	for index := 1; index < len(providers); index++ {
+		if providers[index-1].ID > providers[index].ID {
+			t.Fatalf("providers out of order at %d: %q before %q", index, providers[index-1].ID, providers[index].ID)
+		}
+	}
+}

@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D482)
+# Deliberate divergences from pi (D1–D483)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7817,3 +7817,22 @@ sets `"export": {"pageBg": ""}` therefore gets the derived colour rather than a
 blank declaration.
 
 Test: `TestExportThemeVarsAreSorted`.
+
+### D483
+
+**The provider registries list providers sorted by id.**
+
+Reference: pi v1.5.2 (b4afdddf)
+`packages/ai/src/models.ts` and `packages/ai/src/image-models.ts` keep providers
+in a `Map`, so `getProviders()` returns `Array.from(this.providers.values())` in
+registration order, and `getModels()` concatenates the providers' models in that
+order. A Go map has no insertion order, and the order is not recoverable from
+one, so both registries sort by provider id instead: the chat registry already
+did, the image registry now does the same.
+
+The result is stable between runs and processes, which registration order cannot
+be once the providers come from a map; it differs from the reference's order
+wherever registration order is not already alphabetical.
+
+Tests: `TestModelsGetProvidersSortedByID`,
+`TestImagesModelsGetProvidersSortedByID`.
