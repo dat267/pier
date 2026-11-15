@@ -357,9 +357,12 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 			if input.Context != nil && *input.Context > 0 {
 				contextValue = int64(math.Floor(*input.Context))
 			}
-			effectiveLimit := int64(grepDefaultLimit)
+			// A JavaScript number, not an integer: upstream compares matchCount
+			// against it, and a limit past the int64 range must simply never fire
+			// instead of overflowing to a negative one.
+			effectiveLimit := float64(grepDefaultLimit)
 			if input.Limit != nil {
-				effectiveLimit = int64(math.Max(1, math.Floor(*input.Limit)))
+				effectiveLimit = math.Max(1, math.Floor(*input.Limit))
 			}
 			// rg runs inside the search path for a directory search, so it reports
 			// paths relative to it; resolve before relativizing (pi v1.5.2 grep.ts).
@@ -484,7 +487,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 										pushLine(filePath, *lineNumber, lineText, isMatch)
 										if isMatch {
 											matchCount++
-											if int64(matchCount) >= effectiveLimit {
+											if float64(matchCount) >= effectiveLimit {
 												limitHit = true
 												trailingContextEnd = *lineNumber + contextValue
 											}
@@ -551,14 +554,18 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 
 			rawOutput := strings.Join(outputLines, "\n")
 			truncation := TruncateHead(rawOutput, TruncationOptions{MaxLines: uncappedLines})
+			// Only the lines up to the byte cap are stored, so the totals come from
+			// the streaming counts: upstream grep.ts sets totalLines/totalBytes from
+			// every line ripgrep sent, stored or not, and the detail is persisted.
+			truncation.TotalLines = outputLineCount
+			truncation.TotalBytes = outputBytes - 1
 			output := truncation.Content
 			details := GrepToolDetails{}
 			var notices []string
 			if matchLimitReached {
 				notices = append(notices, fmt.Sprintf("%s matches limit reached. Use limit=%s for more, or refine pattern",
-					formatToolNumber(float64(effectiveLimit)), formatToolNumber(float64(effectiveLimit*2))))
-				limitForDetails := float64(effectiveLimit)
-				details.MatchLimitReached = &limitForDetails
+					formatToolNumber(effectiveLimit), formatToolNumber(effectiveLimit*2)))
+				details.MatchLimitReached = &effectiveLimit
 			}
 			if truncation.Truncated {
 				notices = append(notices, fmt.Sprintf("%s limit reached", FormatSize(DefaultMaxBytes)))

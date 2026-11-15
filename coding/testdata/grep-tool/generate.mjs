@@ -54,6 +54,9 @@ const cases = [
 	// A per-case file, so the directory-wide "match" cases are unchanged.
 	{ name: "limit-equals-match-count", pattern: "row", path: "rows.txt", limit: 2, extra: { "rows.txt": "row 1\nrow 2\n" } },
 	{ name: "limit-one-below-match-count", pattern: "row", path: "rows.txt", limit: 1, extra: { "rows.txt": "row 1\nrow 2\n" } },
+	// A limit past the int64 range: upstream compares JavaScript numbers, so one
+	// that large simply never fires, and a fractional limit is floored first.
+	{ name: "limit-past-int64", pattern: "row", path: "rows2.txt", limit: 1e19, extra: { "rows2.txt": "row 1\nrow 2\n" } },
 	{ name: "context-fraction-below-one", pattern: "beta two", context: 0.99 },
 	{ name: "context-beyond-file", pattern: "beta two", context: 50 },
 	{ name: "context-at-first-line", pattern: "alpha one", context: 2 },
@@ -75,6 +78,16 @@ const cases = [
 	// keeps it and the terminator is trimmed once.
 	{ name: "crlf-lines", pattern: "crlf", extra: { "crlf.txt": "before\r\ncrlf one\r\nafter\r\n" } },
 	{ name: "crlf-context", pattern: "crlf one", context: 1, extra: { "crlf.txt": "before\r\ncrlf one\r\nafter\r\n" } },
+	// Output past the 50KB cap: only the first lines are stored, but the
+	// truncation totals still describe the whole output, because grep.ts counts
+	// every line it reads (totalLines/totalBytes from the stream).
+	{
+		name: "byte-truncation",
+		pattern: "row",
+		path: "big.txt",
+		limit: 2000,
+		extra: { "big.txt": Array.from({ length: 2000 }, (_, i) => `row ${i + 1} ${"y".repeat(20)}`).join("\n") + "\n" },
+	},
 ];
 const tool = createGrepToolDefinition(dir);
 const fixtures = [];
