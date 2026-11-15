@@ -122,8 +122,23 @@ func GetResolvedThemeColors(themeName string) (map[string]string, error) {
 	return cssColors, nil
 }
 
-// IsLightTheme reports whether a theme name is the light theme.
-func IsLightTheme(themeName string) bool { return themeName == "light" }
+// IsLightTheme reports whether a theme is a light theme, by its resolved
+// appearance (upstream isLightTheme): a declared or detected light background,
+// not the name. An unknown name reports false where upstream throws.
+func IsLightTheme(themeName string) bool {
+	name := themeName
+	if name == "" {
+		name = CurrentThemeName()
+	}
+	if name == "" {
+		name = SystemThemeName
+	}
+	theme, err := loadTheme(name, "")
+	if err != nil {
+		return false
+	}
+	return theme.Appearance() == "light"
+}
 
 // GetThemeExportColors returns the explicit export colors of a theme
 // (upstream getThemeExportColors: var references resolved, palette indexes
