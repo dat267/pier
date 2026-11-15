@@ -530,8 +530,14 @@ func (t *Renderer) EnableLoopInput(onInput func(string), onResize func()) {
 }
 
 // RequestRender requests a paint. With a tick channel the request coalesces
-// onto it and the owner paints (no internal timer, no throttling).
+// onto it and the owner paints (no internal timer, no throttling). A forced
+// request first resets the screen's differential state (upstream
+// requestRender(force), tui.ts:1033), so a caller that returns to a terminal
+// whose frame baseline is stale repaints the whole screen.
 func (t *Renderer) RequestRender(force bool) {
+	if force {
+		t.resetRenderState()
+	}
 	t.signalRender()
 }
 
