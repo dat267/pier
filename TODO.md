@@ -1,0 +1,15 @@
+# Reproduced, unresolved findings
+
+## `/reload` applies its results to the session wiring from the detached worker
+
+- Severity: medium. `CommandWiring.HandleReloadCommand` runs `ReloadNow` and `ReloadMCP` inside `RunDetached` (`coding/interactive/interactivemode_commands.go`, wired by `app.go` `RunDetached`), and those closures write owner-loop state: `app.mcpManager` plus `wireMcpManager` in `reloadMCP`, `app.session.Reload()`, `app.keybindings.Reload()` and `app.trust.MaybeSaveImplicitProjectTrustAfterReload`, and they read `app.sessionMgr.GetCwd()` for the MCP config read.
+- Failure: a `/reload` followed by a switch (`/new`, `/resume`, `/fork`) before the worker finishes lets the loop's `bindSessionManager` and the worker both call `reloadMCP`. Each assigns `a.mcpManager` and wires tools into the other's session, and the reload can install the old cwd's servers over the new cwd's, with no lock ordering the two writes. AGENTS.md "UI ownership" makes the loop the only writer of this state.
+- Evidence: `coding/interactive/app.go` `reloadMCP` assigns `a.mcpManager = next` and calls `a.wireMcpManager(next)` unconditionally, and `bindSessionManager` (`sessionswitch.go`) calls it on the loop while the detached reload can be in flight. `a.mcpManager` has no mutex, atomic or owner assertion.
+- Repair plan: split the seam. Build the config and the new manager off-loop (`coding.LoadMcpConfig`, `NewMcpManagerAsync`), return it from `ReloadMCP`, and apply it (retire the old manager, assign, wire, then report errors) in the loop-side `finish` callback through a new wiring field. Give `ReloadNow` the same treatment for the session, keybindings and trust writes, or keep those steps on the loop and leave only the file reads detached. Add a test that detaches a reload with a blocked config read, switches sessions, then releases it and requires the new session's cwd to own the installed manager. A D-row is needed only if the stall of the loop-side step is kept measurable.
+
+## Detached bash and compaction commands read the session wiring from their worker
+
+- Severity: low. `coding/interactive/interactivemode_handlers.go` `HandleBashCommand` and `HandleCompactCommand` call `app.runDetached` and then use `app.session` (and `app.commands`, whose `Session` is `appCommandSession{a.session}`) inside the worker.
+- Failure: the same unsynchronized read of the loop-written embedded `AgentSession` pointer as the fixed session-switch, export and tree paths. A switch while the command runs reads the replacement session.
+- Evidence: `appCommandSession{a.session}` promotes `ExportToJsonl`/`CompactSession` through `AppSession`'s embedded pointer, and `bindSessionManager` rewrites `a.session.AgentSession` on the loop. The bash worker also reads `app.session.Sessions.GetCwd()` and `app.transcript` (posted, so loop-side).
+- Repair plan: resolve the session (and the cwd, settings and display it needs) on the loop before `runDetached`, as the export and tree fixes now do, and pass the snapshot into the worker. Queue for the handlers slice, where the rest of that file is read.
