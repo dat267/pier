@@ -46,6 +46,17 @@ func resolveStartupProjectTrust(options startupTrustOptions) (bool, error) {
 	})
 }
 
+// trustPromptAvailable reports whether the startup trust question may be asked.
+// Upstream asks it only for an interactive run, and never for a metadata command:
+// --help and --list-models take the "print" prompt mode, so the trust answer
+// comes from the override, the store or the default alone.
+func trustPromptAvailable(headlessMode bool, args coding.Args) bool {
+	if headlessMode || args.Help {
+		return false
+	}
+	return args.ListModels == nil && !args.ListModelsAll
+}
+
 // startupTrustPrompt asks the trust question on the startup screen, before the
 // app's TUI owns the terminal.
 func startupTrustPrompt(bootstrap *coding.SettingsManager) func(string, []string) (string, error) {

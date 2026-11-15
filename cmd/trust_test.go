@@ -174,3 +174,27 @@ func TestStartupTrustWithoutUI(t *testing.T) {
 		t.Fatalf("trusted = %v, err = %v, want untrusted without a UI", trusted, err)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) main.ts resolves the startup trust prompt as
+// hasUI: isInitialRuntime && trustPromptMode === "interactive", and
+// trustPromptMode is "print" for a metadata command, so --list-models never
+// asks the trust question. Asking there blocks a listing run on the terminal.
+func TestTrustPromptIsNotOfferedForMetadataCommands(t *testing.T) {
+	pattern := "sonnet"
+	for _, testCase := range []struct {
+		name      string
+		headless  bool
+		args      coding.Args
+		wantAskUI bool
+	}{
+		{name: "interactive", wantAskUI: true},
+		{name: "print or rpc", headless: true, wantAskUI: false},
+		{name: "help", args: coding.Args{Help: true}, wantAskUI: false},
+		{name: "list all models", args: coding.Args{ListModelsAll: true}, wantAskUI: false},
+		{name: "list models with a pattern", args: coding.Args{ListModels: &pattern}, wantAskUI: false},
+	} {
+		if got := trustPromptAvailable(testCase.headless, testCase.args); got != testCase.wantAskUI {
+			t.Errorf("%s: prompt offered = %v, want %v", testCase.name, got, testCase.wantAskUI)
+		}
+	}
+}

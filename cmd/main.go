@@ -404,7 +404,7 @@ func run(appName string, args *coding.Args) error {
 		agentDir:  agentDir,
 		override:  args.ProjectTrustOverride,
 		bootstrap: settings,
-		hasUI:     !headlessMode,
+		hasUI:     trustPromptAvailable(headlessMode, *args),
 		prompt:    startupTrustPrompt(settings),
 	})
 	if trustErr != nil {
