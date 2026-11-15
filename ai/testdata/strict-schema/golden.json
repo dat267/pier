@@ -1,0 +1,432 @@
+[
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"a": {
+					"type": "string"
+				}
+			},
+			"required": [
+				"a"
+			]
+		},
+		"strictJson": "{\"type\":\"object\",\"properties\":{\"a\":{\"type\":\"string\"}},\"required\":[\"a\"],\"additionalProperties\":false}"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"a": {
+					"type": "string"
+				}
+			}
+		},
+		"strictJson": "{\"type\":\"object\",\"properties\":{\"a\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}]}},\"required\":[\"a\"],\"additionalProperties\":false}"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"a": {
+					"type": [
+						"string",
+						"null"
+					]
+				}
+			}
+		},
+		"strictJson": "{\"type\":\"object\",\"properties\":{\"a\":{\"type\":[\"string\",\"null\"]}},\"required\":[\"a\"],\"additionalProperties\":false}"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"a": {
+					"const": null
+				}
+			}
+		},
+		"strictJson": "{\"type\":\"object\",\"properties\":{\"a\":{\"const\":null}},\"required\":[\"a\"],\"additionalProperties\":false}"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"a": {
+					"enum": [
+						"x",
+						null
+					]
+				}
+			}
+		},
+		"strictJson": "{\"type\":\"object\",\"properties\":{\"a\":{\"enum\":[\"x\",null]}},\"required\":[\"a\"],\"additionalProperties\":false}"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"a": {
+					"anyOf": [
+						{
+							"type": "string"
+						},
+						{
+							"type": null
+						}
+					]
+				}
+			}
+		},
+		"strictJson": "{\"type\":\"object\",\"properties\":{\"a\":{\"anyOf\":[{\"anyOf\":[{\"type\":\"string\"},{\"type\":null}]},{\"type\":\"null\"}]}},\"required\":[\"a\"],\"additionalProperties\":false}"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"nested": {
+					"type": "object",
+					"properties": {
+						"b": {
+							"type": "number"
+						}
+					}
+				}
+			}
+		},
+		"strictJson": "{\"type\":\"object\",\"properties\":{\"nested\":{\"anyOf\":[{\"type\":\"object\",\"properties\":{\"b\":{\"anyOf\":[{\"type\":\"number\"},{\"type\":\"null\"}]}},\"required\":[\"b\"],\"additionalProperties\":false},{\"type\":\"null\"}]}},\"required\":[\"nested\"],\"additionalProperties\":false}"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"list": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"c": {}
+						}
+					}
+				}
+			}
+		},
+		"strictJson": "{\"type\":\"object\",\"properties\":{\"list\":{\"anyOf\":[{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"c\":{\"anyOf\":[{},{\"type\":\"null\"}]}},\"required\":[\"c\"],\"additionalProperties\":false}},{\"type\":\"null\"}]}},\"required\":[\"list\"],\"additionalProperties\":false}"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"deep": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"d": {
+								"type": "object",
+								"properties": {
+									"e": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"strictJson": "{\"type\":\"object\",\"properties\":{\"deep\":{\"anyOf\":[{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"d\":{\"anyOf\":[{\"type\":\"object\",\"properties\":{\"e\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}]}},\"required\":[\"e\"],\"additionalProperties\":false},{\"type\":\"null\"}]}},\"required\":[\"d\"],\"additionalProperties\":false}},{\"type\":\"null\"}]}},\"required\":[\"deep\"],\"additionalProperties\":false}"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"1": {
+					"type": "string"
+				},
+				"2": {
+					"type": "string"
+				},
+				"b": {
+					"type": "string"
+				}
+			}
+		},
+		"strictJson": "{\"type\":\"object\",\"properties\":{\"1\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}]},\"2\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}]},\"b\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}]}},\"required\":[\"1\",\"2\",\"b\"],\"additionalProperties\":false}"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"x": {
+					"type": "object",
+					"properties": {
+						"9": {},
+						"10": {},
+						"a": {}
+					}
+				}
+			}
+		},
+		"strictJson": "{\"type\":\"object\",\"properties\":{\"x\":{\"anyOf\":[{\"type\":\"object\",\"properties\":{\"9\":{\"anyOf\":[{},{\"type\":\"null\"}]},\"10\":{\"anyOf\":[{},{\"type\":\"null\"}]},\"a\":{\"anyOf\":[{},{\"type\":\"null\"}]}},\"required\":[\"9\",\"10\",\"a\"],\"additionalProperties\":false},{\"type\":\"null\"}]}},\"required\":[\"x\"],\"additionalProperties\":false}"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"required": [
+				"b",
+				"a"
+			],
+			"properties": {
+				"a": {
+					"type": "string"
+				},
+				"b": {
+					"type": "string"
+				}
+			}
+		},
+		"strictJson": "{\"type\":\"object\",\"required\":[\"a\",\"b\"],\"properties\":{\"a\":{\"type\":\"string\"},\"b\":{\"type\":\"string\"}},\"additionalProperties\":false}"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"a"
+			],
+			"description": "d",
+			"properties": {
+				"a": {
+					"type": "string"
+				}
+			}
+		},
+		"strictJson": "{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"a\"],\"description\":\"d\",\"properties\":{\"a\":{\"type\":\"string\"}}}"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {}
+		},
+		"strictJson": "{\"type\":\"object\",\"properties\":{},\"required\":[],\"additionalProperties\":false}"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {},
+			"required": []
+		},
+		"strictJson": "{\"type\":\"object\",\"properties\":{},\"required\":[],\"additionalProperties\":false}"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"a": {
+					"anyOf": [
+						{
+							"type": "string"
+						},
+						{
+							"type": "number",
+							"minimum": 0
+						}
+					]
+				}
+			}
+		},
+		"strictJson": "{\"type\":\"object\",\"properties\":{\"a\":{\"anyOf\":[{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"number\",\"minimum\":0}]},{\"type\":\"null\"}]}},\"required\":[\"a\"],\"additionalProperties\":false}"
+	},
+	{
+		"schema": {
+			"anyOf": [
+				{
+					"type": "string"
+				},
+				{
+					"type": "null"
+				}
+			],
+			"title": "t"
+		},
+		"error": "root schema must have type object"
+	},
+	{
+		"schema": true,
+		"error": "root schema must have type object"
+	},
+	{
+		"schema": {
+			"$ref": "#/$defs/x"
+		},
+		"error": "$ref schemas are unsupported"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"a": {
+					"allOf": [
+						{
+							"type": "string"
+						}
+					]
+				}
+			}
+		},
+		"error": "allOf schemas are unsupported"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"a": {
+					"type": "array",
+					"items": [
+						{
+							"type": "string"
+						}
+					]
+				}
+			}
+		},
+		"error": "tuple schemas are unsupported"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"anyOf": []
+		},
+		"error": "anyOf must contain at least one schema"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"a": {
+					"anyOf": [
+						{
+							"type": "object",
+							"properties": {}
+						}
+					]
+				}
+			}
+		},
+		"error": "object and array unions are unsupported"
+	},
+	{
+		"schema": {
+			"properties": {
+				"a": {
+					"type": "string"
+				}
+			}
+		},
+		"error": "properties require type object"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"additionalProperties": true,
+			"properties": {
+				"a": {
+					"type": "string"
+				}
+			}
+		},
+		"error": "schema-valued or true additionalProperties is unsupported"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"additionalProperties": {
+				"type": "string"
+			},
+			"properties": {
+				"a": {
+					"type": "string"
+				}
+			}
+		},
+		"error": "schema-valued or true additionalProperties is unsupported"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"a": {
+					"type": "string"
+				}
+			},
+			"required": [
+				"b"
+			]
+		},
+		"error": "required contains an unknown property"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"a": {
+					"type": "string"
+				}
+			},
+			"required": "a"
+		},
+		"error": "object required must be a string array"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": {
+				"a": {
+					"type": "string"
+				}
+			},
+			"required": [
+				1
+			]
+		},
+		"error": "object required must be a string array"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": []
+		},
+		"error": "object properties must be a schema map"
+	},
+	{
+		"schema": {
+			"type": "object",
+			"properties": null
+		},
+		"error": "object properties must be a schema map"
+	},
+	{
+		"schema": {
+			"type": "array",
+			"items": {
+				"type": "string"
+			}
+		},
+		"error": "root schema must have type object"
+	},
+	{
+		"schema": {
+			"type": [
+				"object"
+			],
+			"properties": {
+				"a": {
+					"type": "string"
+				}
+			}
+		},
+		"error": "properties require type object"
+	}
+]

@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"slices"
@@ -266,6 +267,19 @@ func makeSchemaNodeStrict(node *orderedJSONFields, check UnsupportedStrictSchema
 	return nil
 }
 
+// compactSchemaJSON strips insignificant whitespace without reordering keys or
+// rewriting tokens; already-compact input is returned as is.
+func compactSchemaJSON(data json.RawMessage) (json.RawMessage, error) {
+	if !bytes.ContainsAny(data, " \t\r\n") {
+		return data, nil
+	}
+	var buf bytes.Buffer
+	if err := json.Compact(&buf, data); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
 // orderedKeys recovers JavaScript Object.keys order from a JSON object.
 func orderedKeys(data json.RawMessage) []string {
 	dec := json.NewDecoder(strings.NewReader(string(data)))
@@ -299,6 +313,13 @@ func orderedKeys(data json.RawMessage) []string {
 // through makeJsonSchemaNodeStrict directly, and only the tool's root schema
 // must be an object.
 func makeStrictSubSchemaValue(data json.RawMessage, check UnsupportedStrictSchemaKeywordCheck) (json.RawMessage, error) {
+	// The reference clones the parsed schema and returns it to a JSON.stringify
+	// that never emits insignificant whitespace, so an untouched member copied
+	// from a pretty-printed schema file must be compacted here: the ordered
+	// decoder otherwise copies each value's raw bytes through to the wire.
+	if compacted, err := compactSchemaJSON(data); err == nil {
+		data = compacted
+	}
 	node, err := decodeOrderedJSONFields(data)
 	if err != nil {
 		return nil, &strictSchemaError{msg: "boolean schemas are unsupported"}
@@ -313,15 +334,23 @@ func makeStrictSubSchemaValue(data json.RawMessage, check UnsupportedStrictSchem
 	return enc, nil
 }
 
-// makeStrictSubSchema returns the strict encoding of a sub-schema.
+// makeStrictSubSchema returns the strict encoding of a tool's root schema. A
+// non-object root is the root error rather than the nested boolean-schema
+// error (makeStrictJsonSchema checks the clone before transforming it).
 func makeStrictSubSchema(data json.RawMessage, check UnsupportedStrictSchemaKeywordCheck) (json.RawMessage, error) {
-	strict, err := makeStrictSubSchemaValue(data, check)
-	if err != nil {
-		return nil, err
+	if compacted, err := compactSchemaJSON(data); err == nil {
+		data = compacted
 	}
-	node, err := decodeOrderedJSONFields(strict)
+	node, err := decodeOrderedJSONFields(data)
 	if err != nil {
 		return nil, &strictSchemaError{msg: "root schema must have type object"}
+	}
+	if err := makeSchemaNodeStrict(node, check); err != nil {
+		return nil, err
+	}
+	strict, err := node.marshal()
+	if err != nil {
+		return nil, err
 	}
 	t, _ := node.raw("type")
 	var objectType string
