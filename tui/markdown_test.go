@@ -134,6 +134,14 @@ func TestMarkdownAgainstUpstreamGolden(t *testing.T) {
 		{label: "preserve-markers", text: "- a\n1. b", widths: []int{20}, options: MarkdownOptions{PreserveOrderedListMarkers: true}},
 		{label: "preserve-escapes", text: "a \\* b", widths: []int{20}, options: MarkdownOptions{PreserveBackslashEscapes: true}},
 		{label: "no-latex", text: "math $x$ here", widths: []int{20}, options: MarkdownOptions{RenderLatex: new(false)}},
+		// Degenerate sources: the reference returns no lines for empty or
+		// whitespace-only text and one line for a definition-only source.
+		{label: "empty", text: "", widths: []int{20}},
+		{label: "whitespace", text: "  \n ", widths: []int{20}},
+		{label: "definition-only", text: "[a]: /u\n", widths: []int{20}},
+		{label: "definition-then-blank", text: "[a]: /u\n\n", widths: []int{20}},
+		{label: "definition-only-padding", text: "[a]: /u\n", widths: []int{20}, paddingX: 1, paddingY: 1},
+		{label: "comment-only", text: "<!-- x -->\n", widths: []int{20}},
 	}
 
 	for _, tc := range cases {

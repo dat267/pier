@@ -77,6 +77,14 @@ const cases = [
 	{ label: "preserve-markers", text: "- a\n1. b", widths: [20], options: { preserveOrderedListMarkers: true } },
 	{ label: "preserve-escapes", text: "a \\* b", widths: [20], options: { preserveBackslashEscapes: true } },
 	{ label: "no-latex", text: "math $x$ here", widths: [20], options: { renderLatex: false } },
+	// Degenerate sources: the reference returns no lines for empty or
+	// whitespace-only text and one line for a definition-only source.
+	{ label: "empty", text: "", widths: [20] },
+	{ label: "whitespace", text: "  \n ", widths: [20] },
+	{ label: "definition-only", text: "[a]: /u\n", widths: [20] },
+	{ label: "definition-then-blank", text: "[a]: /u\n\n", widths: [20] },
+	{ label: "definition-only-padding", text: "[a]: /u\n", widths: [20], paddingX: 1, paddingY: 1 },
+	{ label: "comment-only", text: "<!-- x -->\n", widths: [20] },
 	// Appended after the first generation, so they stay at the end of the file.
 	{ label: "default-style-full", text: "plain **bold** text", widths: [24], defaultStyle: { color: tag("col"), bgColor: tag("bg"), bold: true, italic: true } },
 	{ label: "transform-upper", text: "abc", widths: [20], options: { transform: upper } },
