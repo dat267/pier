@@ -17,6 +17,8 @@ for (const [label, s] of entries(c.assistant)) {
 			errorMessage: s.errorMessage,
 		},
 		s.hideThinking ?? false,
+		undefined,
+		s.hiddenThinkingLabel ?? "Thinking...",
 	);
 	emit(`m assistant ${label}@${s.width}`, v.render(s.width));
 	if (s.expandThinking != null) {

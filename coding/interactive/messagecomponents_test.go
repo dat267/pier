@@ -23,6 +23,7 @@ type assistantSpec struct {
 	StopReason     string           `json:"stopReason"`
 	ErrorMessage   *string          `json:"errorMessage"`
 	HideThinking   bool             `json:"hideThinking"`
+	ThinkingLabel  *string          `json:"hiddenThinkingLabel"`
 	ExpandThinking *bool            `json:"expandThinking"`
 	Width          int              `json:"width"`
 }
@@ -115,6 +116,11 @@ func TestMessagesAgainstUpstreamGolden(t *testing.T) {
 	for _, label := range assistantLabels {
 		spec := corpus.Assistant[label]
 		component := NewAssistantMessageComponent(assistantMessageFromSpec(spec), spec.HideThinking, nil, "", 1, nil)
+		if spec.ThinkingLabel != nil {
+			// The constructor maps "" to the default label, as the app's nil
+			// settings value does; SetHiddenThinkingLabel keeps a blank one.
+			component.SetHiddenThinkingLabel(*spec.ThinkingLabel)
+		}
 		checkAssistant := func(key string) {
 			got := append([]string{}, normalizeRender(component.Render(spec.Width))...)
 			if !component.hideThinkingBlock && len(component.thinkingMarkdowns) > 0 {

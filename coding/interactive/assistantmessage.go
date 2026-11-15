@@ -303,21 +303,17 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 	}
 
 	blocks := message.Content
-	hasVisibleContent := false
-	for _, block := range blocks {
-		switch content := block.(type) {
-		case ai.TextContent:
-			if trimmedNonEmpty(content.Text) {
-				hasVisibleContent = true
-			}
-		case ai.ThinkingContent:
-			if trimmedNonEmpty(content.Thinking) {
-				hasVisibleContent = true
-			}
+	// Spacers are added lazily, right before the next visible child: a leading
+	// blank line for the first one and another after each visible thinking run,
+	// while a run that renders nothing contributes neither (assistant-message.ts
+	// addVisibleChild).
+	needsSpacer := true
+	addVisibleChild := func(child tui.Component) {
+		if needsSpacer {
+			c.contentContainer.AddChild(tui.NewSpacer(1))
+			needsSpacer = false
 		}
-	}
-	if hasVisibleContent {
-		c.contentContainer.AddChild(tui.NewSpacer(1))
+		c.contentContainer.AddChild(child)
 	}
 
 	theme := ActiveTheme()
@@ -348,7 +344,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 			}
 			markdown.SetTextIfChanged(c.sanitizeBlock(i, "text", content.Text))
 			c.blockComponents[key] = markdown
-			c.contentContainer.AddChild(markdown)
+			addVisibleChild(markdown)
 		case ai.ThinkingContent:
 			runStart := i
 			var thinkingBlocks []string
@@ -368,28 +364,16 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 				continue
 			}
 
-			hasVisibleContentAfter := false
-			for _, block := range blocks[i+1:] {
-				switch later := block.(type) {
-				case ai.TextContent:
-					if trimmedNonEmpty(later.Text) {
-						hasVisibleContentAfter = true
-					}
-				case ai.ThinkingContent:
-					if trimmedNonEmpty(later.Thinking) {
-						hasVisibleContentAfter = true
-					}
-				}
-				if hasVisibleContentAfter {
-					break
-				}
-			}
-
 			runIndex := thinkingRunIndex
 			thinkingRunIndex++
 			hidden := c.hideThinkingBlock
 			if override, ok := c.thinkingVisibilityOverrides[runIndex]; ok {
 				hidden = override
+			}
+			// A hidden run with a blank label renders nothing, including no
+			// spacing; a settings file can set the label to "".
+			if hidden && !trimmedNonEmpty(c.hiddenThinkingLabel) {
+				continue
 			}
 
 			key := assistantBlockKey{index: i, kind: "thinking", hidden: hidden}
@@ -420,7 +404,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 				thinkingComponent = markdown
 			}
 			c.blockComponents[key] = thinkingComponent
-			c.contentContainer.AddChild(tui.NewMouseRegion(thinkingComponent, func(event tui.TuiMouseEvent) *tui.TuiMouseDispatchResult {
+			addVisibleChild(tui.NewMouseRegion(thinkingComponent, func(event tui.TuiMouseEvent) *tui.TuiMouseDispatchResult {
 				if event.Type != tui.MouseClick || event.Button != tui.MouseButtonLeft {
 					return nil
 				}
@@ -430,9 +414,9 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 				}
 				return &tui.TuiMouseDispatchResult{Handled: true}
 			}))
-			if hasVisibleContentAfter {
-				c.contentContainer.AddChild(tui.NewSpacer(1))
-			}
+			// A visible run re-arms the spacer, which the next visible child
+			// takes; nothing follows it only when it is the last block.
+			needsSpacer = true
 		}
 	}
 
