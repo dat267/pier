@@ -1,6 +1,9 @@
 package coding
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestFormatCLIDiagnostic(t *testing.T) {
 	cases := []struct {
@@ -91,5 +94,22 @@ func TestUnknownFlagDiagnosticsMatchTheReference(t *testing.T) {
 				t.Fatalf("rendered = %q", got)
 			}
 		})
+	}
+}
+
+// D464: the CLI never prints a stored path's control characters. A session file
+// records its cwd and the resume warning prints it; upstream main.ts prints it
+// raw through chalk.yellow, so a crafted session can retitle the terminal.
+func TestFormatCLIWarningSanitizesTerminalControls(t *testing.T) {
+	previous := CLIColorsEnabled()
+	SetCLIColorsEnabled(false)
+	defer SetCLIColorsEnabled(previous)
+
+	got := FormatCLIWarning("Session found in different project: /tmp/\x1b]0;title\x07dir")
+	if strings.ContainsAny(got, "\x1b\x07") {
+		t.Fatalf("warning kept terminal controls: %q", got)
+	}
+	if !strings.Contains(got, "dir") {
+		t.Fatalf("warning lost its text: %q", got)
 	}
 }

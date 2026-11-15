@@ -99,8 +99,11 @@ func FormatCLIError(text string) string {
 }
 
 // FormatCLIWarning renders a bare warning line the way upstream's chalk.yellow
-// calls do: colored only where the CLI supports color.
+// calls do: colored only where the CLI supports color. Like D464's diagnostics,
+// the text is sanitized first: the resume warning prints a session file's stored
+// cwd, which upstream writes raw.
 func FormatCLIWarning(text string) string {
+	text = tui.SanitizeUntrustedText(text)
 	if !CLIColorsEnabled() {
 		return text
 	}

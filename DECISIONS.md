@@ -7435,13 +7435,16 @@ messages carry text pier did not write: a provider's HTTP body, or a project
 validation message (`coding.validateMcpServerConfig` quotes it raw), so a
 repository can put `ESC]0;title BEL` on the user's terminal through a warning.
 
-`FormatCLIDiagnostic` and `FormatCLIError` in `coding/clidiagnostics.go` now run
-the message through `tui.SanitizeUntrustedText` (D342, D463) before adding the
-colors. Every CLI diagnostic goes through one of those two functions, so this is
-the single seam; pier's own messages carry no control character and render
-unchanged.
+`FormatCLIDiagnostic`, `FormatCLIError` and `FormatCLIWarning` in
+`coding/clidiagnostics.go` run the message through `tui.SanitizeUntrustedText`
+(D342, D463) before adding the colors. Every CLI line goes through one of those
+three functions, so this is the single seam; pier's own messages carry no control
+character and render unchanged. The warning matters for the same reason: the
+resume warning prints a session file's stored cwd, which upstream writes raw
+through `chalk.yellow`, so a crafted session file could retitle the terminal.
 
-`Test:` `TestMCPConfigErrorsKeepTerminalControlsOutOfStderr`.
+Tests: `TestMCPConfigErrorsKeepTerminalControlsOutOfStderr`,
+`TestFormatCLIWarningSanitizesTerminalControls`.
 
 ### D465
 
