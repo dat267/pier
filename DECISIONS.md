@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D474)
+# Deliberate divergences from pi (D1–D475)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7650,3 +7650,28 @@ the reference's own way to ask for the default, so the only loss is a config tha
 asked for a degenerate image on purpose.
 
 Test: `TestImageResizeOptionsIgnoresExplicitZeros`.
+
+### D475
+
+**The edit tool diffs only the window around its replacements.**
+
+Reference: pi v1.5.2 (b4afdddf) `core/tools/edit-diff.ts` `generateEditDiff`
+walks `getDiffWindows` (a `DIFF_WINDOW_MARGIN_LINES` of 32 around each
+replacement, overlapping windows merged) and diffs one window at a time, so the
+cost of an edit follows the size of the change. Pier computed
+`generateDiffString` and `generateUnifiedPatch` over the whole base and new
+content for every edit, a jsdiff Myers diff of both files.
+
+Measured on the same fixture (numbered lines, one 80-byte line changed in the
+middle, display diff plus patch): the whole-file path took 0.51 ms at 2,000
+lines, 7.43 ms at 20,000 and 36.06 ms at 100,000, against 0.5/0.83/3.7 ms for the
+reference's `generateEditDiff` driven from the pinned module. The ported windowed
+path takes 0.051/0.171/1.13 ms, including the two whole-text line counts the
+reference also does, so it now beats the reference at every size. The display
+formatter was extracted from `GenerateDiffString` so both paths share it, and the
+edit-tool goldens gained a fixture with two edits far enough apart to split into
+two windows and join with one skip marker.
+
+Test: `TestGenerateEditDiffMatchesWholeFileDiff`,
+`TestGenerateEditDiffMergesAndSplitsWindows`,
+`TestGetDiffWindowsCoversWholeLines` and `BenchmarkEditDiffLargeFile`.

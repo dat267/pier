@@ -299,10 +299,12 @@ func CreateEditTool(cwd string) agent.AgentTool {
 					return resultErr
 				}
 
-				diff, firstChangedLine, _ := GenerateDiffString(applied.BaseContent, applied.NewContent, 4)
-				patch := GenerateUnifiedPatch(input.Path, applied.BaseContent, applied.NewContent, 4)
-				details := EditToolDetails{Diff: diff, Patch: patch}
-				if firstChangedLine >= 0 {
+				// Diff only the window around the replacements: the cost follows
+				// the edit, not the file (D475).
+				editDiff := GenerateEditDiff(input.Path, applied.BaseContent, applied.NewContent, applied.Replacements, 4)
+				details := EditToolDetails{Diff: editDiff.Diff, Patch: editDiff.Patch}
+				if editDiff.FirstChangedLine >= 0 {
+					firstChangedLine := editDiff.FirstChangedLine
 					details.FirstChangedLine = &firstChangedLine
 				}
 				detailsJSON, _ := ai.MarshalJSON(details)

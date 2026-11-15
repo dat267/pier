@@ -80,6 +80,29 @@
     }
   },
   {
+    "name": "distant-edits",
+    "file": "long.txt",
+    "edits": [
+      {
+        "oldText": "line 3\n",
+        "newText": "LINE 3\n"
+      },
+      {
+        "oldText": "line 97\n",
+        "newText": "LINE 97\n"
+      }
+    ],
+    "expected": {
+      "text": "Successfully replaced 2 block(s) in long.txt.",
+      "details": {
+        "diff": "   1 line 1\n   2 line 2\n-  3 line 3\n+  3 LINE 3\n   4 line 4\n   5 line 5\n   6 line 6\n   7 line 7\n     ...\n  93 line 93\n  94 line 94\n  95 line 95\n  96 line 96\n- 97 line 97\n+ 97 LINE 97\n  98 line 98\n  99 line 99\n 100 line 100",
+        "patch": "--- long.txt\n+++ long.txt\n@@ -1,7 +1,7 @@\n line 1\n line 2\n-line 3\n+LINE 3\n line 4\n line 5\n line 6\n line 7\n@@ -93,8 +93,8 @@\n line 93\n line 94\n line 95\n line 96\n-line 97\n+LINE 97\n line 98\n line 99\n line 100\n",
+        "firstChangedLine": 3
+      },
+      "file": "line 1\nline 2\nLINE 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\nline 21\nline 22\nline 23\nline 24\nline 25\nline 26\nline 27\nline 28\nline 29\nline 30\nline 31\nline 32\nline 33\nline 34\nline 35\nline 36\nline 37\nline 38\nline 39\nline 40\nline 41\nline 42\nline 43\nline 44\nline 45\nline 46\nline 47\nline 48\nline 49\nline 50\nline 51\nline 52\nline 53\nline 54\nline 55\nline 56\nline 57\nline 58\nline 59\nline 60\nline 61\nline 62\nline 63\nline 64\nline 65\nline 66\nline 67\nline 68\nline 69\nline 70\nline 71\nline 72\nline 73\nline 74\nline 75\nline 76\nline 77\nline 78\nline 79\nline 80\nline 81\nline 82\nline 83\nline 84\nline 85\nline 86\nline 87\nline 88\nline 89\nline 90\nline 91\nline 92\nline 93\nline 94\nline 95\nline 96\nLINE 97\nline 98\nline 99\nline 100\n"
+    }
+  },
+  {
     "name": "fuzzy-indent",
     "file": "fuzzy.txt",
     "edits": [

@@ -30,6 +30,7 @@ const seed = {
 	"duplicate.txt": "a\na\n",
 	"fuzzy.txt": "  alpha   \n  beta\n",
 	"no-trailing.txt": "alpha\nbeta",
+	"long.txt": Array.from({ length: 100 }, (_, i) => `line ${i + 1}`).join("\n") + "\n",
 };
 for (const [name, content] of Object.entries(seed)) await writeFile(resolve(dir, name), content);
 const cases = [
@@ -37,6 +38,17 @@ const cases = [
 	{ name: "crlf-restored", file: "crlf.txt", edits: [{ oldText: "beta", newText: "BETA" }] },
 	{ name: "bom-preserved", file: "bom.txt", edits: [{ oldText: "beta", newText: "BETA" }] },
 	{ name: "multiple-edits", file: "multi.txt", edits: [{ oldText: "one", newText: "1" }, { oldText: "five", newText: "5" }] },
+	// Two edits far enough apart that the 32-line margins leave a gap between
+	// their windows: each window marks the gap as skipped and the joined diff
+	// keeps one marker.
+	{
+		name: "distant-edits",
+		file: "long.txt",
+		edits: [
+			{ oldText: "line 3\n", newText: "LINE 3\n" },
+			{ oldText: "line 97\n", newText: "LINE 97\n" },
+		],
+	},
 	{ name: "fuzzy-indent", file: "fuzzy.txt", edits: [{ oldText: "alpha\nbeta", newText: "alpha\nBETA" }] },
 	{ name: "append-trailing-newline", file: "no-trailing.txt", edits: [{ oldText: "beta", newText: "beta\n" }] },
 	{ name: "duplicate-error", file: "duplicate.txt", edits: [{ oldText: "a", newText: "b" }] },

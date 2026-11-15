@@ -469,8 +469,12 @@ func GenerateUnifiedPatch(path, oldContent, newContent string, contextLines int)
 	// jsdiff diffs newline-carrying tokens with its Myers search; the LCS used by
 	// the display diff picks different alignments for repeated lines.
 	ops := patchOpsFromComponents(jsdiff.DiffComponents(oldTokens, newTokens, func(a, b string) bool { return a == b }))
-	hunks := buildPatchHunks(oldTokens, newTokens, ops, contextLines)
+	return formatPatchHunks(path, buildPatchHunks(oldTokens, newTokens, ops, contextLines))
+}
 
+// formatPatchHunks renders structured hunks as a unified patch with the file
+// headers jsdiff's FILE_HEADERS_ONLY keeps (`--- path`, `+++ path`).
+func formatPatchHunks(path string, hunks []patchHunk) string {
 	var out strings.Builder
 	out.WriteString("--- " + path + "\n")
 	out.WriteString("+++ " + path + "\n")
@@ -660,15 +664,15 @@ type diffOp struct {
 	newIndex int
 }
 
-// GenerateDiffString builds the display-oriented diff with line numbers and
-// context collapsing (port of generateDiffString).
-func GenerateDiffString(oldContent, newContent string, contextLines int) (diff string, firstChangedLine int, ok bool) {
-	if contextLines < 0 {
-		// jsdiff has no default for a negative context; the port keeps the
-		// display default rather than reproducing its slice quirks. Zero is
-		// meaningful: no context lines, only the skipped-run markers.
-		contextLines = 4
-	}
+// displayPart is one run of the diff by kind, split into lines the way
+// upstream renders `part.value.split("\n")`.
+type displayPart struct {
+	kind  opKind
+	lines []string
+}
+
+// displayParts diffs two texts and groups the components into line runs.
+func displayParts(oldContent, newContent string) []displayPart {
 	// diffLines() diffs newline-carrying tokens, so a line without its trailing
 	// newline differs from one with it. Stripping the newline first would hide a
 	// final-newline-only edit.
@@ -676,30 +680,7 @@ func GenerateDiffString(oldContent, newContent string, contextLines int) (diff s
 	newTokens := splitPatchTokens(newContent)
 	components := jsdiff.DiffComponents(oldTokens, newTokens, func(a, b string) bool { return a == b })
 
-	// Upstream sizes the line-number column from `oldContent.split("\n")`, which
-	// keeps the empty element after a trailing newline.
-	maxLineNum := max(len(strings.Split(oldContent, "\n")), len(strings.Split(newContent, "\n")))
-	lineNumWidth := len(fmt.Sprintf("%d", maxLineNum))
-	pad := func(n int) string {
-		s := fmt.Sprintf("%d", n)
-		for len(s) < lineNumWidth {
-			s = " " + s
-		}
-		return s
-	}
-
-	var output []string
-	oldLineNum, newLineNum := 1, 1
-	lastWasChange := false
-	firstChanged := -1
-
-	// Group the components into runs of text by kind, then split each run into
-	// its lines the way upstream renders `part.value.split("\n")`.
-	type part struct {
-		kind  opKind
-		lines []string
-	}
-	var parts []part
+	var parts []displayPart
 	appendRun := func(kind opKind, tokens []string) {
 		value := strings.Join(tokens, "")
 		lines := strings.Split(value, "\n")
@@ -713,7 +694,7 @@ func GenerateDiffString(oldContent, newContent string, contextLines int) (diff s
 			parts[len(parts)-1].lines = append(parts[len(parts)-1].lines, lines...)
 			return
 		}
-		parts = append(parts, part{kind: kind, lines: lines})
+		parts = append(parts, displayPart{kind: kind, lines: lines})
 	}
 	oldIndex, newIndex := 0, 0
 	for _, component := range components {
@@ -730,6 +711,45 @@ func GenerateDiffString(oldContent, newContent string, contextLines int) (diff s
 			newIndex += component.Count
 		}
 	}
+	return parts
+}
+
+// displayLineNumWidth sizes the line-number column from `text.split("\n")`,
+// which keeps the empty element after a trailing newline.
+func displayLineNumWidth(text string) int {
+	return len(fmt.Sprintf("%d", strings.Count(text, "\n")+1))
+}
+
+// GenerateDiffString builds the display-oriented diff with line numbers and
+// context collapsing (port of generateDiffString).
+func GenerateDiffString(oldContent, newContent string, contextLines int) (diff string, firstChangedLine int, ok bool) {
+	if contextLines < 0 {
+		// jsdiff has no default for a negative context; the port keeps the
+		// display default rather than reproducing its slice quirks. Zero is
+		// meaningful: no context lines, only the skipped-run markers.
+		contextLines = 4
+	}
+	lineNumWidth := max(displayLineNumWidth(oldContent), displayLineNumWidth(newContent))
+	lines, firstChanged, ok := formatDisplayDiff(displayParts(oldContent, newContent), 1, 1, lineNumWidth, contextLines)
+	return strings.Join(lines, "\n"), firstChanged, ok
+}
+
+// formatDisplayDiff renders line parts with numbers starting at the given 1-based
+// old and new lines, dropping context further than contextLines from a change
+// (port of upstream's formatDisplayDiff).
+func formatDisplayDiff(parts []displayPart, oldStartLine, newStartLine, lineNumWidth, contextLines int) (lines []string, firstChangedLine int, ok bool) {
+	pad := func(n int) string {
+		s := fmt.Sprintf("%d", n)
+		for len(s) < lineNumWidth {
+			s = " " + s
+		}
+		return s
+	}
+
+	output := lines[:0]
+	oldLineNum, newLineNum := oldStartLine, newStartLine
+	lastWasChange := false
+	firstChanged := -1
 
 	for i := 0; i < len(parts); i++ {
 		part := parts[i]
@@ -818,5 +838,147 @@ func GenerateDiffString(oldContent, newContent string, contextLines int) (diff s
 
 	// ok reports whether anything changed (upstream returns an undefined
 	// firstChangedLine for identical content).
-	return strings.Join(output, "\n"), firstChanged, firstChanged >= 0
+	return output, firstChanged, firstChanged >= 0
+}
+
+// diffWindowMarginLines is how many unchanged lines each side of a replacement
+// a diff window keeps: well above the 4 context lines shown, so jsdiff aligns a
+// change within its window as it would over the whole file (upstream
+// DIFF_WINDOW_MARGIN_LINES).
+const diffWindowMarginLines = 32
+
+// EditDiff is the edit tool's display diff and unified patch.
+type EditDiff struct {
+	Diff  string
+	Patch string
+	// FirstChangedLine is 1-based in the new file; -1 when nothing changed.
+	FirstChangedLine int
+}
+
+// diffWindow is a matching range of the old and new contents around one or more
+// replacements: byte offsets and 0-based first lines.
+type diffWindow struct {
+	oldStart, oldEnd int
+	oldLine          int
+	newStart, newEnd int
+	newLine          int
+}
+
+// lineStartBefore is the start of the line that contains offset; offset 0 is the
+// start of the text (JS lastIndexOf treats a negative position as 0).
+func lineStartBefore(text string, offset int) int {
+	if offset <= 0 {
+		return 0
+	}
+	return strings.LastIndex(text[:offset], "\n") + 1
+}
+
+// countLineFeeds counts the "\n" before end, starting the search at start.
+func countLineFeeds(text string, start, end int) int {
+	if start < 0 {
+		start = 0
+	}
+	if end > len(text) {
+		end = len(text)
+	}
+	if start >= end {
+		return 0
+	}
+	return strings.Count(text[start:end], "\n")
+}
+
+// getDiffWindows groups the replacements (sorted and disjoint) into whole-line
+// windows with a margin, merging windows that overlap (upstream getDiffWindows).
+func getDiffWindows(baseContent string, replacements []textReplacement) []diffWindow {
+	var windows []diffWindow
+	offsetDelta, lineDelta := 0, 0
+	cursorOffset, cursorLine := 0, 0
+	for _, replacement := range replacements {
+		matchEnd := replacement.matchIndex + replacement.matchLength
+		start := lineStartBefore(baseContent, replacement.matchIndex)
+		for margin := 0; margin < diffWindowMarginLines && start > 0; margin++ {
+			start = lineStartBefore(baseContent, start-1)
+		}
+		end := matchEnd
+		for margin := 0; margin <= diffWindowMarginLines && end < len(baseContent); margin++ {
+			from := end
+			if margin == 0 {
+				from = max(matchEnd-1, replacement.matchIndex)
+			}
+			lineFeed := -1
+			if from < len(baseContent) {
+				lineFeed = strings.IndexByte(baseContent[from:], '\n')
+				if lineFeed != -1 {
+					lineFeed += from
+				}
+			}
+			if lineFeed == -1 {
+				end = len(baseContent)
+			} else {
+				end = lineFeed + 1
+			}
+		}
+		replacementOffsetDelta := len(replacement.newText) - replacement.matchLength
+		replacementLineDelta := countLineFeeds(replacement.newText, 0, len(replacement.newText)) -
+			countLineFeeds(baseContent, replacement.matchIndex, matchEnd)
+		if current := len(windows) - 1; current >= 0 && start <= windows[current].oldEnd {
+			windows[current].oldEnd = max(windows[current].oldEnd, end)
+			windows[current].newEnd = windows[current].oldEnd + offsetDelta + replacementOffsetDelta
+		} else {
+			cursorLine += countLineFeeds(baseContent, cursorOffset, start)
+			cursorOffset = start
+			windows = append(windows, diffWindow{
+				oldStart: start, oldEnd: end, oldLine: cursorLine,
+				newStart: start + offsetDelta, newEnd: end + offsetDelta + replacementOffsetDelta,
+				newLine: cursorLine + lineDelta,
+			})
+		}
+		offsetDelta += replacementOffsetDelta
+		lineDelta += replacementLineDelta
+	}
+	return windows
+}
+
+// GenerateEditDiff diffs an edit only around its replacements, so the cost
+// follows the size of the change instead of the file (pi v1.5.2
+// core/tools/edit-diff.ts generateEditDiff). The result matches
+// GenerateDiffString and GenerateUnifiedPatch over the whole contents, except
+// that jsdiff may align runs of repeated lines differently within a window.
+func GenerateEditDiff(path, baseContent, newContent string, replacements []textReplacement, contextLines int) EditDiff {
+	if contextLines < 0 {
+		contextLines = 4
+	}
+	lineNumWidth := max(displayLineNumWidth(baseContent), displayLineNumWidth(newContent))
+	skipMarker := " " + strings.Repeat(" ", lineNumWidth) + " ..."
+	var output []string
+	var hunks []patchHunk
+	firstChanged := -1
+	for _, window := range getDiffWindows(baseContent, replacements) {
+		oldText := baseContent[window.oldStart:window.oldEnd]
+		newText := newContent[window.newStart:window.newEnd]
+		lines, first, ok := formatDisplayDiff(displayParts(oldText, newText), window.oldLine+1, window.newLine+1, lineNumWidth, contextLines)
+		if firstChanged == -1 && ok {
+			firstChanged = first
+		}
+		// Both windows around a run of unchanged lines mark it as skipped; the
+		// whole-file diff shows one marker.
+		if len(output) > 0 && len(lines) > 0 && output[len(output)-1] == skipMarker && lines[0] == skipMarker {
+			lines = lines[1:]
+		}
+		output = append(output, lines...)
+
+		oldTokens := splitPatchTokens(oldText)
+		newTokens := splitPatchTokens(newText)
+		ops := patchOpsFromComponents(jsdiff.DiffComponents(oldTokens, newTokens, func(a, b string) bool { return a == b }))
+		for _, hunk := range buildPatchHunks(oldTokens, newTokens, ops, contextLines) {
+			hunk.oldStart += window.oldLine
+			hunk.newStart += window.newLine
+			hunks = append(hunks, hunk)
+		}
+	}
+	return EditDiff{
+		Diff:             strings.Join(output, "\n"),
+		Patch:            formatPatchHunks(path, hunks),
+		FirstChangedLine: firstChanged,
+	}
 }
