@@ -251,6 +251,19 @@ func validateAuthCommandArgs(args *Args, kind AuthCommandKind) (string, string, 
 	return provider, model, nil
 }
 
+// withoutOfflineFlag drops --offline: the flag is applied from the raw argv
+// before the auth commands run, as main.ts does.
+func withoutOfflineFlag(args []string) []string {
+	filtered := make([]string, 0, len(args))
+	for _, arg := range args {
+		if arg == "--offline" {
+			continue
+		}
+		filtered = append(filtered, arg)
+	}
+	return filtered
+}
+
 // bearerTokenPattern is the reference's /^Bearer\s+(.+)$/iu. ai.JSWhitespaceClass
 // replaces the ASCII-only RE2 \s so a credential separated by a Unicode space
 // still parses (CR-069).
@@ -524,6 +537,9 @@ func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer
 		return false, 0
 	}
 	if command.Kind == AuthCommandLogin {
+		// main already applied --offline from the raw argv; upstream drops the
+		// flag from the login arguments for the same reason.
+		command.Args = withoutOfflineFlag(command.Args)
 		// The login flags differ from the credential commands', so it parses its
 		// own arguments (upstream parseLoginRequest).
 		cwd, _ := os.Getwd()
@@ -553,6 +569,7 @@ func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer
 	}
 
 	if command.Kind == AuthCommandLogout {
+		command.Args = withoutOfflineFlag(command.Args)
 		return true, runAuthLogout(appName, command, stdout, stderr)
 	}
 
