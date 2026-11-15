@@ -24,6 +24,10 @@ var npmPackagePathPattern = regexp.MustCompile(`node_modules/(@?[^/]+(?:/[^/]+)?
 
 var gitPackagePathPattern = regexp.MustCompile(`git/[^/]+/[^/]+/(.*)`)
 
+// npmPackageRootPattern matches a package root: <root>/node_modules/<name> or
+// <root>/node_modules/@scope/<name>.
+var npmPackageRootPattern = regexp.MustCompile(`^(.*/node_modules)/(@?[^/]+(?:/[^/]+)?)$`)
+
 // formatDisplayPath replaces the home directory with "~" (upstream
 // formatDisplayPath).
 func formatDisplayPath(p string) string {
@@ -59,10 +63,22 @@ func getScopeGroup(sourceInfo coding.SourceInfo) string {
 }
 
 // getShortPath strips the package root for package resources (upstream
-// getShortPath); everything else falls back to the display path.
+// getShortPath). A package source carrying a baseDir is shown relative to that
+// directory first: a skill's baseDir is the skill's own directory, so its entry
+// is "SKILL.md" rather than the path below the package root.
 func getShortPath(fullPath string, sourceInfo coding.SourceInfo) string {
 	normalized := strings.ReplaceAll(fullPath, "\\", "/")
 	source := sourceInfo.Source
+	if sourceInfo.BaseDir != "" && isPackageSource(sourceInfo) {
+		baseDir := strings.ReplaceAll(sourceInfo.BaseDir, "\\", "/")
+		if match := npmPackageRootPattern.FindStringSubmatch(baseDir); match != nil &&
+			strings.HasPrefix(normalized, match[1]+"/") {
+			return posixRelative(match[0], normalized)
+		}
+		if relative, ok := relativeUnderBaseDir(sourceInfo.BaseDir, fullPath); ok {
+			return relative
+		}
+	}
 	if match := npmPackagePathPattern.FindStringSubmatch(normalized); match != nil && strings.HasPrefix(source, "npm:") {
 		return match[2]
 	}
@@ -70,6 +86,36 @@ func getShortPath(fullPath string, sourceInfo coding.SourceInfo) string {
 		return match[1]
 	}
 	return formatDisplayPath(fullPath)
+}
+
+// posixRelative returns path.posix.relative for two slash-separated paths.
+func posixRelative(from, to string) string {
+	fromParts := strings.Split(strings.Trim(from, "/"), "/")
+	toParts := strings.Split(strings.Trim(to, "/"), "/")
+	common := 0
+	for common < len(fromParts) && common < len(toParts) && fromParts[common] == toParts[common] {
+		common++
+	}
+	parts := make([]string, 0, len(fromParts)-common+len(toParts)-common)
+	for range fromParts[common:] {
+		parts = append(parts, "..")
+	}
+	parts = append(parts, toParts[common:]...)
+	return strings.Join(parts, "/")
+}
+
+// relativeUnderBaseDir returns the path relative to baseDir when the result
+// stays inside it, like the reference's path.relative guard.
+func relativeUnderBaseDir(baseDir, fullPath string) (string, bool) {
+	relative, err := filepath.Rel(baseDir, fullPath)
+	if err != nil {
+		return "", false
+	}
+	relative = strings.ReplaceAll(relative, "\\", "/")
+	if relative == "" || relative == "." || strings.HasPrefix(relative, "..") || filepath.IsAbs(relative) {
+		return "", false
+	}
+	return relative, true
 }
 
 // scopeGroupItem is one path with its source info.
@@ -194,18 +240,52 @@ func formatSkillDiagnostics(diagnostics []coding.ResourceDiagnostic) string {
 	return formatResourceDiagnostics(diagnostics, nil)
 }
 
+// displaySourceLabel mirrors the reference's getDisplaySourceInfo: a local
+// source shows its scope, any other source shows its own name with the scope
+// appended, and an absent scope counts as project.
+func displaySourceLabel(info coding.SourceInfo) (label string, scopeLabel string) {
+	source := info.Source
+	if source == "" {
+		source = "local"
+	}
+	scope := info.Scope
+	if scope == "" {
+		scope = coding.SourceScopeProject
+	}
+	if source == "local" {
+		switch scope {
+		case coding.SourceScopeUser:
+			return "user", ""
+		case coding.SourceScopeProject:
+			return "project", ""
+		case coding.SourceScopeTemporary:
+			return "path", "temp"
+		}
+		return "path", ""
+	}
+	if source == "cli" {
+		if scope == coding.SourceScopeTemporary {
+			return "path", "temp"
+		}
+		return "path", ""
+	}
+	switch scope {
+	case coding.SourceScopeUser:
+		scopeLabel = "user"
+	case coding.SourceScopeProject:
+		scopeLabel = "project"
+	case coding.SourceScopeTemporary:
+		scopeLabel = "temp"
+	}
+	return source, scopeLabel
+}
+
 func formatPathWithSource(path string, sourceInfos map[string]coding.SourceInfo) string {
 	for current := path; current != ""; current = filepath.Dir(current) {
 		if info, ok := sourceInfos[current]; ok {
-			label := getScopeGroup(info)
-			if info.Source != "" && info.Source != "local" && info.Source != "cli" {
-				label = info.Source
-				if info.Scope == coding.SourceScopeUser || info.Scope == coding.SourceScopeProject {
-					label += " (" + info.Scope + ")"
-				}
-			}
-			if info.Scope == coding.SourceScopeTemporary {
-				label += " (temp)"
+			label, scopeLabel := displaySourceLabel(info)
+			if scopeLabel != "" {
+				label += " (" + scopeLabel + ")"
 			}
 			return label + " " + getShortPath(path, info)
 		}
@@ -305,8 +385,17 @@ func (a *App) showLoadedResources(force bool) {
 			for _, file := range contextFiles {
 				paths = append(paths, formatContextPath(file.Path, cwd))
 			}
-			expandedPaths := make([]string, 0, len(paths))
-			for _, path := range paths {
+			// The expanded body keeps upstream's formatDisplayPath (home-relative)
+			// while the collapsed list stays cwd-relative.
+			displayPaths := make([]string, 0, len(promptSources)+len(contextFiles))
+			for _, source := range promptSources {
+				displayPaths = append(displayPaths, formatDisplayPath(source))
+			}
+			for _, file := range contextFiles {
+				displayPaths = append(displayPaths, formatDisplayPath(file.Path))
+			}
+			expandedPaths := make([]string, 0, len(displayPaths))
+			for _, path := range displayPaths {
 				expandedPaths = append(expandedPaths, theme.Fg("dim", "  "+path))
 			}
 			// Context is the first section and keeps discovery order (upstream

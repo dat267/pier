@@ -35,6 +35,66 @@ func TestLoadedPromptConflictsFollowsQuietStartup(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.5.2 interactive-mode.ts getShortPath: a package source with
+// a baseDir is shown relative to that directory before the node_modules regex
+// fallback, and a skill's baseDir is the skill's own directory.
+func TestShortPathUsesPackageBaseDir(t *testing.T) {
+	skillDir := "/repo/node_modules/@scope/pkg/skills/tdd"
+	skillInfo := coding.SourceInfo{Source: "npm:@scope/pkg", Scope: coding.SourceScopeUser, BaseDir: skillDir}
+	cases := []struct {
+		label string
+		path  string
+		info  coding.SourceInfo
+		want  string
+	}{
+		{"skill file", skillDir + "/SKILL.md", skillInfo, "SKILL.md"},
+		{"skill reference", skillDir + "/references/a.md", skillInfo, "references/a.md"},
+		{"package root", "/repo/node_modules/pkg/dist/x.js",
+			coding.SourceInfo{Source: "npm:pkg", BaseDir: "/repo/node_modules/pkg"}, "dist/x.js"},
+		// Outside the base dir the relative guard skips, so the reference's
+		// node_modules regex fallback strips through the first two segments.
+		{"outside the base dir", "/other/node_modules/pkg/lib/y.js",
+			coding.SourceInfo{Source: "npm:pkg", BaseDir: "/repo/node_modules/pkg"}, "y.js"},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.label, func(t *testing.T) {
+			if got := getShortPath(testCase.path, testCase.info); got != testCase.want {
+				t.Fatalf("getShortPath = %q, want %q", got, testCase.want)
+			}
+		})
+	}
+}
+
+// Reference: pi v1.5.2 getDisplaySourceInfo defaults an absent scope to
+// project for a non-local source, so the label carries " (project)".
+func TestPathWithSourceDefaultsMissingScopeToProject(t *testing.T) {
+	path := "/repo/node_modules/pkg/skills/tdd/SKILL.md"
+	infos := map[string]coding.SourceInfo{
+		path: {Source: "npm:pkg", BaseDir: "/repo/node_modules/pkg/skills/tdd"},
+	}
+	if got, want := formatPathWithSource(path, infos), "npm:pkg (project) SKILL.md"; got != want {
+		t.Fatalf("formatPathWithSource = %q, want %q", got, want)
+	}
+}
+
+// Reference: pi v1.5.2 showLoadedResources renders the expanded Context body
+// with formatDisplayPath while the collapsed list keeps formatContextPath.
+func TestLoadedContextExpandedUsesDisplayPath(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	path := filepath.Join(app.options.Cwd, "AGENTS.md")
+	if err := os.WriteFile(path, []byte("# instructions\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	app.session.Reload()
+	app.options.Verbose = true
+	app.showLoadedResources(false)
+	output := coding.StripAnsi(strings.Join(app.loadedResourcesContainer.Render(200), "\n"))
+	if !strings.Contains(output, formatDisplayPath(path)) {
+		t.Fatalf("expanded Context body = %q, want the display path %q", output, formatDisplayPath(path))
+	}
+}
+
 // TestLoadedSkillDiagnosticsUseWarningsHeading follows pi v1.5.0 (f9a26365)
 // interactive-mode.ts showLoadedResources, from f14813e96 (#11566): skill
 // diagnostics are mostly validation warnings for skills that still load, so
