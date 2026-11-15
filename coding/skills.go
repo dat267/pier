@@ -61,10 +61,27 @@ func ParseFrontmatter(content string) ParsedFrontmatter {
 	// newline is the delimiter's own and not a content line.
 	yamlString = strings.TrimSuffix(yamlString, "\n")
 	lines := strings.Split(yamlString, "\n")
+	// A nested mapping is content of its parent key, not a top-level entry: the
+	// reference parses the block with yaml, so `metadata:` followed by an
+	// indented `description:` yields frontmatter.metadata.description and leaves
+	// frontmatter.description unset. The first mapping line sets the block's
+	// top-level indent; deeper mapping lines are skipped (a block scalar or a
+	// plain-scalar continuation consumes its own lines first).
+	topLevelIndent := -1
 	for index := 0; index < len(lines); index++ {
 		rawLine := lines[index]
 		line := strings.TrimSpace(rawLine)
 		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		indent := yamlIndentWidth(rawLine)
+		if topLevelIndent < 0 {
+			if !yamlMappingStart(line) {
+				continue
+			}
+			topLevelIndent = indent
+		}
+		if indent > topLevelIndent {
 			continue
 		}
 		colon := strings.Index(line, ":")

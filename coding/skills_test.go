@@ -706,3 +706,26 @@ func TestLoadSkillsUserAgentsDirLoadsOnceUnderHome(t *testing.T) {
 		t.Fatalf("user-agents loaded %d times, want 1: %v", count, result.Skills)
 	}
 }
+
+// pi v1.5.2 b4afdddf utils/frontmatter.ts parses the block with the yaml
+// package, so a key indented under another key belongs to that nested mapping.
+// core/skills.ts reads only top-level frontmatter, so a nested description (or
+// name, or disable-model-invocation) must not reach the skill: a SKILL.md whose
+// only description is nested is dropped with "description is required".
+func TestLoadSkillIgnoresNestedFrontmatterKeys(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tools", "SKILL.md")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	content := "---\nmetadata:\n  description: nested text\n  name: other\n  disable-model-invocation: true\n---\nbody\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	skill, diagnostics := loadSkillFromFile(path, "user")
+	if skill != nil {
+		t.Fatalf("skill = %+v, want the nested description ignored", skill)
+	}
+	if len(diagnostics) != 1 || diagnostics[0].Message != "description is required" {
+		t.Fatalf("diagnostics = %+v", diagnostics)
+	}
+}
