@@ -503,6 +503,10 @@ func mapCodexSSEEvents(
 		}
 		switch event.Type {
 		case "error":
+			// Upstream throws a CodexApiError carrying this text alone; it has
+			// no status or body, so the surfaced message is unprefixed. The
+			// shared processor's `error` event keeps that text verbatim, while
+			// a synthesized `response.failed` would gain a `<code>: ` prefix.
 			code, message := extractCodexEventError(event.Raw)
 			text := message
 			if text == "" {
@@ -512,28 +516,22 @@ func mapCodexSSEEvents(
 				text = string(event.Raw)
 			}
 			writeEvent(map[string]any{
-				"type": "response.failed",
-				"response": map[string]any{
-					"status": "failed",
-					"error":  map[string]any{"code": code, "message": "Codex error: " + text},
-				},
+				"type":  "error",
+				"error": map[string]any{"message": "Codex error: " + text},
 			})
 		case "response.failed":
 			response, _ := decoded["response"].(map[string]any)
-			code, message := "", ""
+			message := ""
 			if errorValue, ok := response["error"].(map[string]any); ok {
-				code, _ = errorValue["code"].(string)
 				message, _ = errorValue["message"].(string)
 			}
 			if message == "" {
 				message = "Codex response failed"
 			}
+			// Same rule as above: upstream surfaces the provider message alone.
 			writeEvent(map[string]any{
-				"type": "response.failed",
-				"response": map[string]any{
-					"status": "failed",
-					"error":  map[string]any{"code": code, "message": message},
-				},
+				"type":  "error",
+				"error": map[string]any{"message": message},
 			})
 		case "response.done", "response.completed", "response.incomplete":
 			response, _ := decoded["response"].(map[string]any)

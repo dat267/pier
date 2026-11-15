@@ -431,7 +431,7 @@ func TestStreamCodexResponsesErrors(t *testing.T) {
 		t.Fatalf("message = %+v", message)
 	}
 
-	// A codex error event surfaces as a failed response.
+	// A codex error event surfaces with the provider text alone.
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "text/event-stream")
 		writer.WriteHeader(http.StatusOK)
@@ -581,5 +581,52 @@ func TestCodexExplicitOffSendsNone(t *testing.T) {
 	reasoning, _ := body["reasoning"].(map[string]any)
 	if reasoning["effort"] != "none" {
 		t.Fatalf("reasoning = %#v, want effort \"none\"", reasoning)
+	}
+}
+
+// Upstream's Codex event mapper throws a CodexApiError carrying the provider
+// text alone: `Codex error: ${message || code || JSON}` for an `error` event and
+// `message || "Codex response failed"` for `response.failed`
+// (packages/ai/src/api/openai-codex-responses.ts mapCodexEvents). That error has
+// no status or body, so formatProviderError returns the message unchanged. The
+// port rewrote both events into a `response.failed` whose shared processor
+// prefixes `<code>: `, so users saw "invalid_request: Codex error: bad input".
+func TestCodexStreamErrorsKeepUpstreamText(t *testing.T) {
+	tests := []struct {
+		name  string
+		event string
+		want  string
+	}{
+		{
+			name:  "error event",
+			event: `{"type":"error","code":"invalid_request","message":"bad input"}`,
+			want:  "Codex error: bad input",
+		},
+		{
+			name:  "failed response",
+			event: `{"type":"response.failed","response":{"status":"failed","error":{"code":"server_error","message":"boom"}}}`,
+			want:  "boom",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				writer.Header().Set("Content-Type", "text/event-stream")
+				writer.WriteHeader(http.StatusOK)
+				_, _ = writer.Write([]byte("data: " + tt.event + "\n\n"))
+				_, _ = writer.Write([]byte("data: [DONE]\n\n"))
+			}))
+			defer server.Close()
+			stream := StreamOpenAICodexResponses(codexModel(server.URL), TranscriptContext{Messages: []Message{
+				&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+			}}, &OpenAICodexResponsesOptions{APIKey: codexToken(t, "acct")})
+			message, _ := stream.Result(ctxpkg.Background())
+			if message.StopReason != StopError || message.ErrorMessage == nil {
+				t.Fatalf("message = %+v", message)
+			}
+			if *message.ErrorMessage != tt.want {
+				t.Fatalf("errorMessage = %q, want %q", *message.ErrorMessage, tt.want)
+			}
+		})
 	}
 }
