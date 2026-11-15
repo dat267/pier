@@ -63,7 +63,7 @@ func QML() *Language {
 	}
 
 	valueContainer := &Mode{
-		Begin:        `(` + arcadeReStartersRe + `|\b(case|return|throw)\b)\s*`,
+		Begin:        `(` + REStartersRe + `|\b(case|return|throw)\b)\s*`,
 		Keywords:     Keywords{"keyword": "return throw case"},
 		HasRelevance: true,
 		Relevance:    0,

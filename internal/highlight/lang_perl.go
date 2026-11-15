@@ -123,7 +123,7 @@ func Perl() *Language {
 		},
 	}
 	regexpContainer := Zero(Mode{
-		Begin:    `(\/\/|` + reStartersRe + `|\b(split|return|print|reverse|grep)\b)\s*`,
+		Begin:    `(\/\/|` + REStartersRe + `|\b(split|return|print|reverse|grep)\b)\s*`,
 		Keywords: Keywords{"keyword": "split return print reverse grep"},
 		Contains: []*Mode{HashCommentMode, sRegexp, mRegexp},
 	})

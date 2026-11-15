@@ -2,9 +2,6 @@ package highlight
 
 func init() { RegisterLanguage("arcade", Arcade()) }
 
-// arcadeReStartersRe is core.js's RE_STARTERS_RE.
-const arcadeReStartersRe = `!|!=|!==|%|%=|&|&&|&=|\*|\*=|\+|\+=|,|-|-=|/=|/|:|;|<<|<<=|<=|<|===|==|=|>>>=|>>=|>=|>>>|>>|>|\?|\[|\{|\(|\^|\^=|\||\|=|\|\||~`
-
 // Arcade returns the ArcGIS Arcade language definition (a port of
 // languages/arcade.js).
 func Arcade() *Language {
@@ -96,7 +93,7 @@ func Arcade() *Language {
 		},
 	}
 	valueContainer := &Mode{
-		Begin:    `(` + arcadeReStartersRe + `|\b(return)\b)\s*`,
+		Begin:    `(` + REStartersRe + `|\b(return)\b)\s*`,
 		Keywords: Keywords{"keyword": "return"},
 		Contains: []*Mode{
 			CLineCommentMode,

@@ -118,9 +118,8 @@ func Elixir() *Language {
 		Variant(regexpBase, func(m *Mode) { m.Begin = `%r\[`; m.End = `\][a-z]*` }),
 	}
 
-	const reStarters = `!|!=|!==|%|%=|&|&&|&=|\*|\*=|\+|\+=|,|-|-=|/=|/|:|;|<<|<<=|<=|<|===|==|=|>>>=|>>=|>=|>>>|>>|>|\?|\[|\{|\(|\^|\^=|\||\|=|\|\||~`
 	regexpContainer := &Mode{
-		Begin:        `(` + reStarters + `)\s*`,
+		Begin:        `(` + REStartersRe + `)\s*`,
 		HasRelevance: true,
 		Relevance:    0,
 		Contains: []*Mode{

@@ -16,6 +16,11 @@ const (
 	BinaryNumberRe = `\b(0b[01]+)`
 	// MatchNothingRe never matches.
 	MatchNothingRe = `\b\B`
+	// REStartersRe is core.js's RE_STARTERS_RE, the operators that can precede a
+	// regular-expression literal. highlight.js stores it as a JS string literal
+	// in which `\\+` is the two characters `\+`; the Go raw string holds the
+	// regex source directly.
+	REStartersRe = `!|!=|!==|%|%=|&|&&|&=|\*|\*=|\+|\+=|,|-|-=|/=|/|:|;|<<|<<=|<=|<|===|==|=|>>>=|>>=|>=|>>>|>>|>|\?|\[|\{|\(|\^|\^=|\||\|=|\|\||~`
 )
 
 // BackslashEscape matches a backslash escape.

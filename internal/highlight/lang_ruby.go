@@ -217,7 +217,7 @@ func Ruby() *Language {
 		Variant(regexpBase, func(m *Mode) { m.Begin = `%r\[`; m.End = `\][a-z]*` }),
 	}
 	regexpContainer := Zero(Mode{
-		Begin:    `(` + reStartersRe + `|unless)\s*`,
+		Begin:    `(` + REStartersRe + `|unless)\s*`,
 		Keywords: Keywords{"keyword": "unless"},
 		Contains: []*Mode{regexpBase},
 	})

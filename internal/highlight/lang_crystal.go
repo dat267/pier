@@ -68,7 +68,7 @@ func Crystal() *Language {
 		slashVariant,
 	}
 	regexpMode := &Mode{
-		Begin:        `(\n|\b(case|if|select|unless|until|when|while)\b` + `|` + arcadeReStartersRe + `)\s*`,
+		Begin:        `(\n|\b(case|if|select|unless|until|when|while)\b` + `|` + REStartersRe + `)\s*`,
 		Keywords:     Keywords{"keyword": "case if select unless until when while"},
 		Contains:     []*Mode{regexpInner},
 		HasRelevance: true,

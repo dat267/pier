@@ -251,7 +251,7 @@ func buildJS(typescript bool) *Language {
 	jsx := jsxBase
 
 	valueContainer := Zero(Mode{
-		Begin:    `(` + reStartersRe + `|\b(case|return|throw)\b)\s*`,
+		Begin:    `(` + REStartersRe + `|\b(case|return|throw)\b)\s*`,
 		Keywords: Keywords{"keyword": "return throw case"},
 		Contains: []*Mode{
 			comment,
@@ -389,8 +389,3 @@ func buildJS(typescript bool) *Language {
 		Contains: contains,
 	}
 }
-
-// reStartersRe mirrors core.js RE_STARTERS_RE. The reference stores it as a JS
-// string literal, where `\\+` is the two characters `\+`; a Go raw string needs
-// the regex source directly (`\+`), not the JS escaping.
-const reStartersRe = `!|!=|!==|%|%=|&|&&|&=|\*|\*=|\+|\+=|,|-|-=|/=|/|:|;|<<|<<=|<=|<|===|==|=|>>>=|>>=|>=|>>>|>>|>|\?|\[|\{|\(|\^|\^=|\||\|=|\|\||~`
