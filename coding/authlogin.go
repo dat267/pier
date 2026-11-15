@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -245,12 +246,33 @@ func selectInTerminal(ctx context.Context, message string, options []ai.AuthSele
 			return "", err
 		}
 		answer = strings.TrimSpace(answer)
-		index := 0
-		if _, scanErr := fmt.Sscanf(answer, "%d", &index); scanErr == nil && index >= 1 && index <= len(options) {
+		// Upstream tests the whole line with /^\d+$/u before indexing, so
+		// "1 2" or "1abc" re-prompts instead of selecting the first option.
+		index, ok := parseWholeDigits(answer)
+		if ok && index >= 1 && index <= len(options) {
 			return options[index-1].ID, nil
 		}
 		terminal.Write(fmt.Sprintf("Enter a number from 1 to %d.", len(options)))
 	}
+}
+
+// parseWholeDigits parses a line of decimal digits only, the Go equivalent of
+// /^\d+$/u.
+func parseWholeDigits(value string) (int, bool) {
+	if value == "" {
+		return 0, false
+	}
+	digits := []byte(value)
+	for _, char := range digits {
+		if char < '0' || char > '9' {
+			return 0, false
+		}
+	}
+	index, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, false
+	}
+	return index, true
 }
 
 func (h *loginPromptHandler) notify(event ai.AuthEvent) {
