@@ -1008,3 +1008,35 @@ func TestBedrockHaiku5IsAClaude5Model(t *testing.T) {
 		}
 	}
 }
+
+// Upstream sets cacheWrite1h from `usage.cacheDetails?.reduce(...)`
+// (packages/ai/src/api/bedrock-converse-stream.ts handleMetadata), so the member
+// stays undefined when the metadata carries no cacheDetails, and
+// JSON.stringify drops it. The port always wrote the pointer, persisting
+// "cacheWrite1h":0 for every model that reports no cache details.
+func TestBedrockMetadataWithoutCacheDetailsOmitsCacheWrite1h(t *testing.T) {
+	frames := [][]byte{
+		bedrockEventFrame("messageStart", map[string]any{"role": "assistant"}),
+		bedrockEventFrame("contentBlockDelta", map[string]any{"contentBlockIndex": 0, "delta": map[string]any{"text": "hi"}}),
+		bedrockEventFrame("contentBlockStop", map[string]any{"contentBlockIndex": 0}),
+		bedrockEventFrame("messageStop", map[string]any{"stopReason": "end_turn"}),
+		bedrockEventFrame("metadata", map[string]any{"usage": map[string]any{
+			"inputTokens": 10, "outputTokens": 5, "totalTokens": 15,
+		}}),
+	}
+	var captured http.Request
+	server := bedrockTestServer(t, frames, &captured, nil)
+	model := bedrockTestModel(server.URL)
+	stream := StreamBedrockConverse(model, TranscriptContext{Messages: []Message{
+		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+	}}, &BedrockOptions{Env: ProviderEnv{
+		"AWS_ACCESS_KEY_ID": "AKID", "AWS_SECRET_ACCESS_KEY": "SECRET",
+	}})
+	message, err := stream.Result(context.Background())
+	if err != nil {
+		t.Fatalf("err = %v", err)
+	}
+	if message.Usage.CacheWrite1h != nil {
+		t.Fatalf("cacheWrite1h = %v, want the member absent", *message.Usage.CacheWrite1h)
+	}
+}

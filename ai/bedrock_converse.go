@@ -1348,7 +1348,10 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 				CacheReadInputTokens  *int64 `json:"cacheReadInputTokens"`
 				CacheWriteInputTokens *int64 `json:"cacheWriteInputTokens"`
 				TotalTokens           *int64 `json:"totalTokens"`
-				CacheDetails          []struct {
+				// A pointer keeps "no cacheDetails" distinct from an empty
+				// list: upstream leaves cacheWrite1h undefined in the first
+				// case and writes 0 in the second.
+				CacheDetails *[]struct {
 					TTL         string `json:"ttl"`
 					InputTokens *int64 `json:"inputTokens"`
 				} `json:"cacheDetails"`
@@ -1363,14 +1366,16 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 			output.Usage.Output = derefInt64(usage.OutputTokens)
 			output.Usage.CacheRead = derefInt64(usage.CacheReadInputTokens)
 			output.Usage.CacheWrite = derefInt64(usage.CacheWriteInputTokens)
-			var oneHourNumber float64
-			for _, detail := range usage.CacheDetails {
-				if detail.TTL == "1h" {
-					oneHourNumber += float64(derefInt64(detail.InputTokens))
+			if usage.CacheDetails != nil {
+				var oneHourNumber float64
+				for _, detail := range *usage.CacheDetails {
+					if detail.TTL == "1h" {
+						oneHourNumber += float64(derefInt64(detail.InputTokens))
+					}
 				}
+				oneHour := jsNumberToInt64(oneHourNumber)
+				output.Usage.CacheWrite1h = &oneHour
 			}
-			oneHour := jsNumberToInt64(oneHourNumber)
-			output.Usage.CacheWrite1h = &oneHour
 			output.Usage.TotalTokens = derefInt64(usage.TotalTokens)
 			if output.Usage.TotalTokens == 0 {
 				output.Usage.TotalTokens = jsNumberToInt64(float64(output.Usage.Input) + float64(output.Usage.Output))
