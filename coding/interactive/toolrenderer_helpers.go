@@ -123,8 +123,6 @@ func decodeToolArgs(args any) map[string]any {
 	}
 }
 
-// argString reads a string field (`str` upstream): a non-string JSON value is
-// "invalid", a missing/null field is "".
 // argString reads the first present string field (upstream's
 // `str(args?.a ?? args?.b)`): a present non-string value is invalid, all-missing
 // is "".
@@ -140,18 +138,6 @@ func argString(args map[string]any, keys ...string) (string, bool) {
 		return "", false
 	}
 	return "", true
-}
-
-// argNumber reads a numeric field.
-func argNumber(args map[string]any, key string) (float64, bool) {
-	value, ok := args[key]
-	if !ok || value == nil {
-		return 0, false
-	}
-	if number, ok := value.(float64); ok {
-		return number, true
-	}
-	return 0, false
 }
 
 func invalidArgText(theme *Theme) string { return theme.Fg("error", "[invalid arg]") }
