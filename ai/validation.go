@@ -235,29 +235,20 @@ func ParseJSNumberString(value string) (float64, bool) {
 }
 
 // coercePrimitiveByType ports upstream's primitive coercions.
+// coercePrimitiveByType is pass 3 of the reference coercion (coerce.ts
+// coercePrimitive), which runs only for a type the value does not already
+// match. Pass 2 (convertNode) is the TypeBox conversion and is stricter
+// elsewhere: it truncates an integer and reads boolean words as numbers, while
+// this pass leaves a number alone for "integer" and turns null into "" rather
+// than "null".
 func coercePrimitiveByType(value *schemaValue, typ string) *schemaValue {
 	switch typ {
 	case "number", "integer":
 		if value.Null {
 			return &schemaValue{IsNumber: true, Number: 0}
 		}
-		if value.IsNumber && typ == "integer" {
-			return &schemaValue{IsNumber: true, Number: math.Trunc(value.Number)}
-		}
-		if value.IsString {
-			parsed, ok := ParseJSNumberString(value.String)
-			if !ok {
-				switch strings.ToLower(value.String) {
-				case "true":
-					parsed, ok = 1, true
-				case "false":
-					parsed, ok = 0, true
-				}
-			}
-			if ok {
-				if typ == "integer" {
-					parsed = math.Trunc(parsed)
-				}
+		if value.IsString && JSTrim(value.String) != "" {
+			if parsed, ok := ParseJSNumberString(value.String); ok && (typ == "number" || isIntegerFloat(parsed)) {
 				return &schemaValue{IsNumber: true, Number: parsed}
 			}
 		}
@@ -292,7 +283,8 @@ func coercePrimitiveByType(value *schemaValue, typ string) *schemaValue {
 		return value
 	case "string":
 		if value.Null {
-			return &schemaValue{IsString: true, String: "null"}
+			// Pass 3 reads null as ""; pass 2's tryString reads it as "null".
+			return &schemaValue{IsString: true, String: ""}
 		}
 		if value.IsNumber {
 			return &schemaValue{IsString: true, String: trimFloat(value.Number)}
@@ -316,6 +308,11 @@ func coercePrimitiveByType(value *schemaValue, typ string) *schemaValue {
 
 // trimFloat formats a number like JS String(number).
 func trimFloat(f float64) string { return JSNumberToString(f) }
+
+// isIntegerFloat is Number.isInteger: finite and without a fractional part.
+func isIntegerFloat(f float64) bool {
+	return !math.IsInf(f, 0) && !math.IsNaN(f) && math.Trunc(f) == f
+}
 
 func schemaValueEqual(a, b *schemaValue) bool {
 	if a == b {
