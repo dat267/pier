@@ -1960,8 +1960,8 @@ const (
 // CacheWarmingModes are the offered modes.
 var CacheWarmingModes = []CacheWarmingMode{CacheWarmingOff, CacheWarmingStreaming, CacheWarmingIdle}
 
-// GetCacheWarmingMode returns the warming mode (default "streaming"). A stored
-// value outside CacheWarmingModes falls back to the default, like upstream's
+// GetCacheWarmingMode returns the warming mode (default "idle"). A stored value
+// outside CacheWarmingModes falls back to that default, like upstream's
 // getCacheWarmingMode: an unrecognized mode must not reach the warmer, which
 // stops idle-phase warming only for "streaming".
 func (m *SettingsManager) GetCacheWarmingMode() CacheWarmingMode {
