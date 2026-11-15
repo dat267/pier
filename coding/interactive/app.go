@@ -623,7 +623,8 @@ func NewApp(options AppOptions) *App {
 			app.uiState.RebindExtensionTerminalInputListeners()
 		},
 		RecordCrash:             func(kind string, err error) bool { return app.trust.RecordCrash(kind, err) },
-		CrashReportInstructions: func() string { return app.trust.CrashReportInstructions() }, // Upstream prints "To resume this session: pi --session …" after the
+		CrashReportInstructions: func() string { return app.trust.CrashReportInstructions() },
+		// Upstream prints "To resume this session: pi --session …" after the
 		// interactive shutdown (interactive-mode.ts shutdown(), chalk.dim
 		// prefix).
 		ResumeCommand: func() string {
