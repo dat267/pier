@@ -31,7 +31,6 @@ type mcpToolsFixture struct {
 			Bytes     int    `json:"bytes"`
 			Extension string `json:"extension"`
 		} `json:"saveCalls"`
-		Error string `json:"error"`
 	} `json:"content"`
 }
 
@@ -79,7 +78,7 @@ func TestMcpToolContentMatchesUpstream(t *testing.T) {
 				t.Fatal(err)
 			}
 			var saveCalls []map[string]any
-			content, err := ToModelContent("srv", blocks, ConvertMcpResultOptions{
+			content := ToModelContent("srv", blocks, ConvertMcpResultOptions{
 				ReadableResources: true,
 				SaveOutput: func(data []byte, extension string) (string, error) {
 					saveCalls = append(saveCalls, map[string]any{"bytes": len(data), "extension": extension})
@@ -89,15 +88,6 @@ func TestMcpToolContentMatchesUpstream(t *testing.T) {
 					return "/tmp/full" + extension, nil
 				},
 			})
-			if test.Error != "" {
-				if err == nil {
-					t.Fatalf("want error %q, got %+v", test.Error, content)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
 			got := make([]map[string]any, 0, len(content))
 			for _, block := range content {
 				switch typed := block.(type) {

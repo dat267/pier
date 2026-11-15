@@ -67,13 +67,10 @@ func TestSaveMcpToTempFileDoesNotOverwriteCollision(t *testing.T) {
 func TestMcpTextResourceReplacesMalformedUTF8(t *testing.T) {
 	blob := base64.StdEncoding.EncodeToString([]byte{0xff, 'x'})
 	mimeType := "text/plain"
-	content, err := ToModelContent("docs", []protocol.ContentBlock{{
+	content := ToModelContent("docs", []protocol.ContentBlock{{
 		Type:     protocol.ContentTypeResource,
 		Resource: &protocol.ResourceContents{URI: "docs://invalid", MimeType: &mimeType, Blob: blob, BlobArm: true},
 	}}, ConvertMcpResultOptions{})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if len(content) != 1 {
 		t.Fatalf("content = %+v", content)
 	}
@@ -305,13 +302,10 @@ func TestTruncateMiddleMultiByte(t *testing.T) {
 // resource.
 func TestMcpBase64ResourceToleratesWhitespaceAndMissingPadding(t *testing.T) {
 	mimeType := "text/plain"
-	content, err := ToModelContent("docs", []protocol.ContentBlock{{
+	content := ToModelContent("docs", []protocol.ContentBlock{{
 		Type:     protocol.ContentTypeResource,
 		Resource: &protocol.ResourceContents{URI: "docs://wrapped", MimeType: &mimeType, Blob: "aGVs\nbG8", BlobArm: true},
 	}}, ConvertMcpResultOptions{})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if len(content) != 1 {
 		t.Fatalf("content = %+v", content)
 	}

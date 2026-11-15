@@ -344,9 +344,7 @@ func validateMcpServerConfig(name string, raw any, toolExposureOrder []string) (
 	}
 
 	config := &McpServerConfig{}
-	if err := applyMcpServerConfigBase(config, value); err != nil {
-		return nil, fmt.Errorf("server \"%s\": %w", name, err)
-	}
+	applyMcpServerConfigBase(config, value)
 
 	if serverURL, ok := value["url"].(string); ok && urlTransport {
 		parsed, effectiveURL, err := parseMcpHTTPURL(serverURL)
@@ -409,7 +407,7 @@ func validateMcpServerConfig(name string, raw any, toolExposureOrder []string) (
 }
 
 // applyMcpServerConfigBase copies the shared fields.
-func applyMcpServerConfigBase(config *McpServerConfig, value map[string]any) error {
+func applyMcpServerConfigBase(config *McpServerConfig, value map[string]any) {
 	if exposure, ok := value["exposure"].(string); ok {
 		resolved := McpExposure(exposure)
 		config.Exposure = &resolved
@@ -433,7 +431,6 @@ func applyMcpServerConfigBase(config *McpServerConfig, value map[string]any) err
 	if timeout, ok := mcpNumber(value["timeout"]); ok {
 		config.TimeoutSeconds = &timeout
 	}
-	return nil
 }
 
 // validateMcpOAuth validates the oauth object (upstream validateOAuth). An

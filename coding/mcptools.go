@@ -163,11 +163,7 @@ func ConvertMcpResult(server string, tool string, result *protocol.CallToolResul
 	}
 	var converted []ai.Content
 	if len(result.Content) > 0 {
-		blocks, err := ToModelContent(server, result.Content, options)
-		if err != nil {
-			return agent.AgentToolResult{}, false, err
-		}
-		converted = blocks
+		converted = ToModelContent(server, result.Content, options)
 	} else {
 		converted = userContentToContent(protocol.Content(result))
 	}
@@ -193,20 +189,16 @@ type mcpToolDetails struct {
 
 // ToModelContent converts the content blocks of one server result (upstream
 // toModelContent).
-func ToModelContent(server string, blocks []protocol.ContentBlock, options ConvertMcpResultOptions) ([]ai.Content, error) {
+func ToModelContent(server string, blocks []protocol.ContentBlock, options ConvertMcpResultOptions) []ai.Content {
 	out := make([]ai.Content, 0, len(blocks))
 	for _, block := range blocks {
-		converted, err := mcpBlockToContent(server, block, options)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, converted...)
+		out = append(out, mcpBlockToContent(server, block, options)...)
 	}
-	return out, nil
+	return out
 }
 
 // mcpBlockToContent is upstream blockToContent.
-func mcpBlockToContent(server string, block protocol.ContentBlock, options ConvertMcpResultOptions) ([]ai.Content, error) {
+func mcpBlockToContent(server string, block protocol.ContentBlock, options ConvertMcpResultOptions) []ai.Content {
 	if block.Type == protocol.ContentTypeResourceLink {
 		details := make([]string, 0, 2)
 		if block.MimeType != "" {
@@ -231,7 +223,7 @@ func mcpBlockToContent(server string, block protocol.ContentBlock, options Conve
 		if len(details) > 0 {
 			detailText = " (" + strings.Join(details, ", ") + ")"
 		}
-		return []ai.Content{ai.TextContent{Text: "[Resource " + block.URI + " \"" + title + "\"" + detailText + description + read + "]"}}, nil
+		return []ai.Content{ai.TextContent{Text: "[Resource " + block.URI + " \"" + title + "\"" + detailText + description + read + "]"}}
 	}
 	// Upstream checks `"blob" in resource`, so a resource with neither member
 	// falls through to the shared block converter and its omission note.
@@ -240,10 +232,10 @@ func mcpBlockToContent(server string, block protocol.ContentBlock, options Conve
 		resource := block.Resource
 		data, err := decodeMcpBase64(resource.Blob)
 		if err != nil {
-			return []ai.Content{ai.TextContent{Text: "[binary resource " + resource.URI + " (invalid base64) omitted]"}}, nil
+			return []ai.Content{ai.TextContent{Text: "[binary resource " + resource.URI + " (invalid base64) omitted]"}}
 		}
 		if isTextMimeType(mcpStringValue(resource.MimeType)) {
-			return []ai.Content{ai.TextContent{Text: DecodeUTF8WithReplacement(data)}}, nil
+			return []ai.Content{ai.TextContent{Text: DecodeUTF8WithReplacement(data)}}
 		}
 		kind := mcpStringValue(resource.MimeType)
 		if kind == "" {
@@ -256,11 +248,11 @@ func mcpBlockToContent(server string, block protocol.ContentBlock, options Conve
 		}
 		path, saveErr := saveOutput(data, mcpExtensionOf(resource.URI))
 		if saveErr != nil {
-			return []ai.Content{ai.TextContent{Text: "[Binary resource " + resource.URI + " (" + kind + ") could not be saved: " + saveErr.Error() + "]"}}, nil
+			return []ai.Content{ai.TextContent{Text: "[Binary resource " + resource.URI + " (" + kind + ") could not be saved: " + saveErr.Error() + "]"}}
 		}
-		return []ai.Content{ai.TextContent{Text: "[Binary resource " + resource.URI + " (" + kind + ") saved to " + path + "]"}}, nil
+		return []ai.Content{ai.TextContent{Text: "[Binary resource " + resource.URI + " (" + kind + ") saved to " + path + "]"}}
 	}
-	return userContentToContent(protocol.Content(&protocol.CallToolResult{Content: []protocol.ContentBlock{block}})), nil
+	return userContentToContent(protocol.Content(&protocol.CallToolResult{Content: []protocol.ContentBlock{block}}))
 }
 
 // decodeMcpBase64 decodes a resource blob like Node's
