@@ -8,14 +8,19 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"syscall"
 
 	"golang.org/x/sys/windows"
 )
 
-// configureDetachedCommand is a no-op on Windows: there is no process group to
-// join, so the tree identity comes from the job object in
-// newProcessTreeGuard (upstream detaches the shell only off win32).
-func configureDetachedCommand(cmd *exec.Cmd) {}
+// configureDetachedCommand hides the console window on Windows: there is no
+// process group to join, so the tree identity comes from the job object in
+// newProcessTreeGuard (upstream detaches the shell only off win32). The window
+// flag mirrors the reference's `windowsHide: true` on the bash and shell spawns
+// (v1.5.2 core/tools/bash.ts, utils/shell.ts).
+func configureDetachedCommand(cmd *exec.Cmd) {
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+}
 
 // killProcessTreePlatform kills the process and its children with taskkill,
 // resolved under System32 so cleanup does not depend on PATH (upstream
