@@ -596,7 +596,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				response, err := sendRequest(payload)
 				return response, nil, err
 			}
-			response, sent, err := sendAnthropicThreadRequest(model, thread, sendRequest, output, ctx)
+			response, sent, err := sendAnthropicThreadRequest(thread, sendRequest, output, ctx)
 			return response, sent, err
 		}
 		resp, thread, requestErr := buildAndSend(buildContext)

@@ -112,10 +112,10 @@ type XaiDeviceCode struct {
 	ExpiresInSeconds        int
 }
 
-func oauthRequiredString(body map[string]any, field, prefix string) (string, error) {
+func oauthRequiredString(body map[string]any, field string) (string, error) {
 	value, ok := body[field].(string)
 	if !ok || value == "" {
-		return "", fmt.Errorf("Invalid %s OAuth response field: %s", prefix, field)
+		return "", fmt.Errorf("Invalid xAI OAuth response field: %s", field)
 	}
 	return value, nil
 }
@@ -187,13 +187,13 @@ func xaiRequestFailure(action string, response oauthHTTPResponse) error {
 func parseXaiDeviceCode(body map[string]any) (*XaiDeviceCode, error) {
 	device := &XaiDeviceCode{}
 	var err error
-	if device.DeviceCode, err = oauthRequiredString(body, "device_code", "xAI"); err != nil {
+	if device.DeviceCode, err = oauthRequiredString(body, "device_code"); err != nil {
 		return nil, err
 	}
-	if device.UserCode, err = oauthRequiredString(body, "user_code", "xAI"); err != nil {
+	if device.UserCode, err = oauthRequiredString(body, "user_code"); err != nil {
 		return nil, err
 	}
-	verificationURI, err := oauthRequiredString(body, "verification_uri", "xAI")
+	verificationURI, err := oauthRequiredString(body, "verification_uri")
 	if err != nil {
 		return nil, err
 	}
@@ -220,14 +220,14 @@ func parseXaiDeviceCode(body map[string]any) (*XaiDeviceCode, error) {
 }
 
 func xaiCredentialsFromTokenResponse(body map[string]any, previousRefreshToken string) (*OAuthCredential, error) {
-	access, err := oauthRequiredString(body, "access_token", "xAI")
+	access, err := oauthRequiredString(body, "access_token")
 	if err != nil {
 		return nil, err
 	}
 	// xAI may omit refresh_token on refresh when the token is not rotated.
 	refresh := previousRefreshToken
 	if _, present := body["refresh_token"]; present || refresh == "" {
-		if refresh, err = oauthRequiredString(body, "refresh_token", "xAI"); err != nil {
+		if refresh, err = oauthRequiredString(body, "refresh_token"); err != nil {
 			return nil, err
 		}
 	}

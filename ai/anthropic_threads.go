@@ -319,7 +319,6 @@ func getAnthropicThreadErrorCode(providerErr *ProviderError) string {
 // passed on. The returned thread request is the one that produced the response,
 // if any.
 func sendAnthropicThreadRequest(
-	model *Model,
 	thread *anthropicPreparedThread,
 	send func(json.RawMessage) (*http.Response, error),
 	output *AssistantMessage,
