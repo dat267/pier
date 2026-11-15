@@ -331,9 +331,12 @@ func (t *TreeList) flattenTree(roots []*coding.SessionTreeNode) []*flatNode {
 	}
 
 	multipleRoots := len(roots) > 1
+	// The root holding the current leaf comes first, as the reference's
+	// `Number(containsActive.get(b)) - Number(containsActive.get(a))` orders it,
+	// so the branch being read is at the top of the view.
 	orderedRoots := append([]*coding.SessionTreeNode{}, roots...)
 	sort.SliceStable(orderedRoots, func(i int, j int) bool {
-		return !containsActive[orderedRoots[i]] && containsActive[orderedRoots[j]]
+		return containsActive[orderedRoots[i]] && !containsActive[orderedRoots[j]]
 	})
 
 	var stack []treeStackItem
