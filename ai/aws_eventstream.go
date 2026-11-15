@@ -85,16 +85,16 @@ func parseAWSEventStreamHeaders(raw []byte) (map[string]any, error) {
 	headers := map[string]any{}
 	offset := 0
 	for offset < len(raw) {
-		nameLength, next, err := readAWSVarint(raw, offset)
-		if err != nil {
-			return nil, err
-		}
-		offset = next
-		if offset+int(nameLength) > len(raw) {
+		// The header name length is one byte and a string or byte-array value
+		// length is two, big-endian (AWS event-stream spec; the AWS SDK's
+		// HeaderMarshaller.parse reads getUint8 and getUint16).
+		nameLength := int(raw[offset])
+		offset++
+		if offset+nameLength > len(raw) {
 			return nil, &AWSEventStreamError{Message: "AWS event stream header name is truncated"}
 		}
-		name := string(raw[offset : offset+int(nameLength)])
-		offset += int(nameLength)
+		name := string(raw[offset : offset+nameLength])
+		offset += nameLength
 		if offset >= len(raw) {
 			return nil, &AWSEventStreamError{Message: "AWS event stream header type is truncated"}
 		}
@@ -143,18 +143,19 @@ func parseAWSEventStreamHeaderValue(raw []byte, offset int, valueType byte) (any
 		}
 		return int64(binary.BigEndian.Uint64(raw[offset:])), offset + 8, nil
 	case awsHeaderByteArray, awsHeaderString:
-		length, next, err := readAWSVarint(raw, offset)
-		if err != nil {
+		if err := need(2); err != nil {
 			return nil, 0, err
 		}
-		if next+int(length) > len(raw) {
+		length := int(binary.BigEndian.Uint16(raw[offset:]))
+		offset += 2
+		if offset+length > len(raw) {
 			return nil, 0, &AWSEventStreamError{Message: "AWS event stream header value is truncated"}
 		}
-		bytes := raw[next : next+int(length)]
+		bytes := raw[offset : offset+length]
 		if valueType == awsHeaderString {
-			return string(bytes), next + int(length), nil
+			return string(bytes), offset + length, nil
 		}
-		return append([]byte{}, bytes...), next + int(length), nil
+		return append([]byte{}, bytes...), offset + length, nil
 	case awsHeaderUUID:
 		if err := need(16); err != nil {
 			return nil, 0, err
@@ -163,21 +164,4 @@ func parseAWSEventStreamHeaderValue(raw []byte, offset int, valueType byte) (any
 	default:
 		return nil, 0, &AWSEventStreamError{Message: fmt.Sprintf("AWS event stream header type %d is unknown", valueType)}
 	}
-}
-
-// readAWSVarint decodes the event-stream variable-length integer (a big-endian
-// varint with the high bit of the last byte as the terminator).
-func readAWSVarint(raw []byte, offset int) (uint64, int, error) {
-	var value uint64
-	for index := range 4 {
-		if offset+index >= len(raw) {
-			return 0, 0, &AWSEventStreamError{Message: "AWS event stream varint is truncated"}
-		}
-		current := raw[offset+index]
-		value = value<<7 | uint64(current&0x7f)
-		if current&0x80 != 0 {
-			return value, offset + index + 1, nil
-		}
-	}
-	return 0, 0, &AWSEventStreamError{Message: "AWS event stream varint is too long"}
 }

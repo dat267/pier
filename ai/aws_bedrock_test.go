@@ -427,12 +427,14 @@ func buildAWSEventStreamMessage(t *testing.T, headers map[string]any, payload []
 func buildAWSEventStreamMessageFor(t *testing.T, headers map[string]any, payload []byte) []byte {
 	var headerBlock []byte
 	for name, value := range headers {
-		headerBlock = append(headerBlock, awsVarint(uint64(len(name)))...)
+		headerBlock = append(headerBlock, byte(len(name)))
 		headerBlock = append(headerBlock, name...)
 		switch typed := value.(type) {
 		case string:
 			headerBlock = append(headerBlock, awsHeaderString)
-			headerBlock = append(headerBlock, awsVarint(uint64(len(typed)))...)
+			length := make([]byte, 2)
+			binary.BigEndian.PutUint16(length, uint16(len(typed)))
+			headerBlock = append(headerBlock, length...)
 			headerBlock = append(headerBlock, typed...)
 		case int:
 			headerBlock = append(headerBlock, awsHeaderInt)
@@ -463,23 +465,6 @@ func buildAWSEventStreamMessageFor(t *testing.T, headers map[string]any, payload
 	crc := make([]byte, 4)
 	binary.BigEndian.PutUint32(crc, crc32.ChecksumIEEE(message))
 	return append(message, crc...)
-}
-
-// awsVarint encodes the event-stream variable-length integer.
-func awsVarint(value uint64) []byte {
-	var buffer []byte
-	for {
-		buffer = append([]byte{byte(value & 0x7f)}, buffer...)
-		value >>= 7
-		if value == 0 {
-			break
-		}
-	}
-	for index := 0; index < len(buffer)-1; index++ {
-		buffer[index] &= 0x7f
-	}
-	buffer[len(buffer)-1] |= 0x80
-	return buffer
 }
 
 func TestAWSEventStreamDecoding(t *testing.T) {

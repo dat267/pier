@@ -1,0 +1,121 @@
+[
+	{
+		"name": "bedrock-event",
+		"frame": "AAAAlwAAAHBWAVVVDTptZXNzYWdlLXR5cGUHAAVldmVudAs6ZXZlbnQtdHlwZQcAEWNvbnRlbnRCbG9ja0RlbHRhDTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uEDpldmVudC1zaWduYXR1cmUGAAUAAQIDBHsiZGVsdGEiOnsidGV4dCI6ImhpIn19/5GexA==",
+		"headers": [
+			{
+				"name": ":message-type",
+				"type": "string",
+				"value": "event"
+			},
+			{
+				"name": ":event-type",
+				"type": "string",
+				"value": "contentBlockDelta"
+			},
+			{
+				"name": ":content-type",
+				"type": "string",
+				"value": "application/json"
+			},
+			{
+				"name": ":event-signature",
+				"type": "binary",
+				"value": "AAECAwQ="
+			}
+		],
+		"payload": "eyJkZWx0YSI6eyJ0ZXh0IjoiaGkifX0="
+	},
+	{
+		"name": "all-header-types",
+		"frame": "AAAA1AAAAL2sh8nBCGJvb2xUcnVlAAlib29sRmFsc2UBCWJ5dGVWYWx1ZQL5CnNob3J0VmFsdWUD/tQIaW50VmFsdWUEAAHiQAlsb25nVmFsdWUFAAABAAAAAAAOdGltZXN0YW1wVmFsdWUIAAABi8/laAAKYnl0ZXNWYWx1ZQYAA/8AgAtzdHJpbmdWYWx1ZQcAGumcgOimgSBlc2NhcGluZzogw7xuw69jb2RlCXV1aWRWYWx1ZQmPTSw7Gg9OXZyLemlYRzYleyJhIjoxfX/Cdos=",
+		"headers": [
+			{
+				"name": "boolTrue",
+				"type": "boolean",
+				"value": true
+			},
+			{
+				"name": "boolFalse",
+				"type": "boolean",
+				"value": false
+			},
+			{
+				"name": "byteValue",
+				"type": "byte",
+				"value": -7
+			},
+			{
+				"name": "shortValue",
+				"type": "short",
+				"value": -300
+			},
+			{
+				"name": "intValue",
+				"type": "integer",
+				"value": 123456
+			},
+			{
+				"name": "longValue",
+				"type": "long",
+				"value": 1099511627776
+			},
+			{
+				"name": "timestampValue",
+				"type": "timestamp",
+				"value": 1700000000000
+			},
+			{
+				"name": "bytesValue",
+				"type": "binary",
+				"value": "/wCA"
+			},
+			{
+				"name": "stringValue",
+				"type": "string",
+				"value": "需要 escaping: ünïcode"
+			},
+			{
+				"name": "uuidValue",
+				"type": "uuid",
+				"value": "j00sOxoPTl2ci3ppWEc2JQ=="
+			}
+		],
+		"payload": "eyJhIjoxfQ=="
+	},
+	{
+		"name": "empty-headers",
+		"frame": "AAAAFQAAAADNIsebcGxhaW54PPDf",
+		"headers": [],
+		"payload": "cGxhaW4="
+	},
+	{
+		"name": "empty-payload",
+		"frame": "AAAAUAAAAEAr7VEyDTptZXNzYWdlLXR5cGUHAAlleGNlcHRpb24POmV4Y2VwdGlvbi10eXBlBwATVGhyb3R0bGluZ0V4Y2VwdGlvbn1R/Sc=",
+		"headers": [
+			{
+				"name": ":message-type",
+				"type": "string",
+				"value": "exception"
+			},
+			{
+				"name": ":exception-type",
+				"type": "string",
+				"value": "ThrottlingException"
+			}
+		],
+		"payload": ""
+	},
+	{
+		"name": "long-header-name",
+		"frame": "AAAAkQAAAH9J/r1kengtYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhBwABdnt9Trp+Ww==",
+		"headers": [
+			{
+				"name": "x-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				"type": "string",
+				"value": "v"
+			}
+		],
+		"payload": "e30="
+	}
+]
