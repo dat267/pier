@@ -351,6 +351,39 @@ func TestValidateMcpOAuthNormalizesSpecialLoopbackCallbackURL(t *testing.T) {
 	}
 }
 
+// TestValidateMcpServerConfigReportsTheFirstUpstreamError pins the order of the
+// checks: pi v1.5.2 b4afdddf packages/mcp/src/config.ts validates the base
+// fields and then the transport fields, and packages/coding-agent/src/core/
+// mcp-servers.ts checks exposures only after validateMcpServerConfig returned,
+// so an entry with an exposure error and an earlier field error reports the
+// field error. Exposures still come before `auth` (checkExposures runs before
+// checkAuth).
+func TestValidateMcpServerConfigReportsTheFirstUpstreamError(t *testing.T) {
+	cases := []struct {
+		raw     string
+		wantErr string
+	}{
+		{`{"command":"c","enabled":"yes","exposure":"bogus"}`, `enabled must be a boolean`},
+		{`{"command":"c","description":1,"exposure":"bogus"}`, `description must be a string`},
+		{`{"command":"c","args":1,"exposure":"bogus"}`, `args must be an array of strings`},
+		{`{"url":"https:","exposure":"bogus"}`, `url must be an http or https URL`},
+		{`{"url":"https://a.example/mcp","toolExposure":["a"],"oauth":"none"}`, `oauth must be an object`},
+		{`{"exposure":"bogus"}`, `server "x" needs either "command" (stdio) or "url" (streamable HTTP)`},
+		// Exposures precede the auth check.
+		{`{"url":"https://a.example/mcp","auth":{"provider":""},"exposure":"bogus"}`, `exposure must be one of`},
+	}
+	for _, testCase := range cases {
+		var raw any
+		if err := json.Unmarshal([]byte(testCase.raw), &raw); err != nil {
+			t.Fatal(err)
+		}
+		_, err := ValidateMcpServerConfig("x", raw)
+		if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
+			t.Fatalf("%s: err = %v, want %q", testCase.raw, err, testCase.wantErr)
+		}
+	}
+}
+
 // TestValidateMcpServerConfigMessages pins the remaining validation messages
 // (upstream validateMcpServerConfig).
 func TestValidateMcpServerConfigMessages(t *testing.T) {

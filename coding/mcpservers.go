@@ -313,19 +313,24 @@ func validateMcpServerConfig(name string, raw any, toolExposureOrder []string) (
 	}
 	exposures := strings.Join(exposureNames, ", ")
 
-	if exposure, ok := value["exposure"]; ok && !isMcpExposure(exposure) {
-		return nil, fmt.Errorf("server \"%s\": exposure must be one of %s", name, exposures)
-	}
-	if toolExposure, ok := value["toolExposure"]; ok {
-		record, isRecord := mcpRecord(toolExposure)
-		if !isRecord {
-			return nil, fmt.Errorf("server \"%s\": toolExposure must map tool names to exposures", name)
+	// Upstream runs checkExposures after validateMcpServerConfig returned, so
+	// the base and transport field errors below come first and `auth` comes last.
+	checkExposures := func() error {
+		if exposure, ok := value["exposure"]; ok && !isMcpExposure(exposure) {
+			return fmt.Errorf("server \"%s\": exposure must be one of %s", name, exposures)
 		}
-		for _, tool := range orderedKeys(record, toolExposureOrder) {
-			if !isMcpExposure(record[tool]) {
-				return nil, fmt.Errorf("server \"%s\": toolExposure \"%s\" must be one of %s", name, tool, exposures)
+		if toolExposure, ok := value["toolExposure"]; ok {
+			record, isRecord := mcpRecord(toolExposure)
+			if !isRecord {
+				return fmt.Errorf("server \"%s\": toolExposure must map tool names to exposures", name)
+			}
+			for _, tool := range orderedKeys(record, toolExposureOrder) {
+				if !isMcpExposure(record[tool]) {
+					return fmt.Errorf("server \"%s\": toolExposure \"%s\" must be one of %s", name, tool, exposures)
+				}
 			}
 		}
+		return nil
 	}
 	if enabled, ok := value["enabled"]; ok && !isBool(enabled) {
 		return nil, fmt.Errorf("server \"%s\": enabled must be a boolean", name)
@@ -364,6 +369,9 @@ func validateMcpServerConfig(name string, raw any, toolExposureOrder []string) (
 			return nil, fmt.Errorf("server \"%s\": %s", name, oauthError)
 		}
 		config.OAuth = oauth
+		if err := checkExposures(); err != nil {
+			return nil, err
+		}
 		if authValue, ok := value["auth"]; ok {
 			record, isRecord := mcpRecord(authValue)
 			provider, isString := record["provider"].(string)
@@ -399,6 +407,9 @@ func validateMcpServerConfig(name string, raw any, toolExposureOrder []string) (
 		}
 		if cwd, ok := value["cwd"].(string); ok {
 			config.Cwd = cwd
+		}
+		if err := checkExposures(); err != nil {
+			return nil, err
 		}
 		config.Command = command
 		return config, nil
