@@ -252,8 +252,11 @@ const (
 	daxnutsWidth  = 32
 	daxnutsHeight = 32
 
-	// daxnutsTickInterval is the scanline reveal frame interval.
-	daxnutsTickInterval = 50 * time.Millisecond
+	// daxnutsTickInterval is the scanline reveal frame interval: the reference
+	// arms `setInterval(..., 80)` with `maxTicks = 25`, about two seconds. Its
+	// TypeScript source is not in the pinned checkout, so the compiled
+	// dist/modes/interactive/components/daxnuts.js is the reference.
+	daxnutsTickInterval = 80 * time.Millisecond
 )
 
 // DaxnutsComponent renders the daxnuts easter egg with a scanline reveal.
@@ -687,7 +690,7 @@ func (c *ArminComponent) tickRain() bool {
 			// Nothing is left above the settled region, so the column is
 			// visually complete. Upstream leaves the interval running here; the
 			// port treats the column as settled so the owner loop stops arming
-			// animation frames.
+			// animation frames (D479).
 			continue
 		}
 		allSettled = false

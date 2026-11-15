@@ -185,7 +185,8 @@ func TestEasterDeterministicParts(t *testing.T) {
 // seam and requires the final grid to be the deterministic image. Upstream
 // arms a setInterval per effect; the port ticks on the owner loop instead, so
 // every effect must report done (otherwise the loop would keep a frame timer
-// armed forever).
+// armed forever). D479: the rain effect also ends a column whose target row is
+// already settled, which upstream leaves unsettled and so never finishes.
 func TestArminAnimationCompletes(t *testing.T) {
 	for _, effect := range ArminEffects {
 		t.Run(effect, func(t *testing.T) {
@@ -270,4 +271,27 @@ func findNonSpace(grid [][]string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// Reference: pi v1.5.2 (b4afdddf) coding-agent
+// dist/modes/interactive/components/daxnuts.js, whose TypeScript source is not
+// in the pinned checkout: `maxTicks = 25; // ~2 seconds at 80ms` with
+// `setInterval(..., 80)`. The port ticked every 50 ms, so the reveal finished
+// in 1.25 s instead of 2 s.
+func TestDaxnutsRevealRunsTwoSeconds(t *testing.T) {
+	component := NewDaxnutsComponent(nil)
+	needs, delay := component.AnimationFrame(time.Now())
+	if !needs {
+		t.Fatal("a fresh component must ask for a frame")
+	}
+	if delay != 80*time.Millisecond {
+		t.Fatalf("frame interval = %v, want 80ms", delay)
+	}
+	if total := time.Duration(component.maxTicks) * delay; total != 2*time.Second {
+		t.Fatalf("reveal lasts %v over %d ticks, want 2s", total, component.maxTicks)
+	}
+	component.SetTick(component.maxTicks)
+	if needs, _ := component.AnimationFrame(time.Now()); needs {
+		t.Fatal("a finished reveal must stop asking for frames")
+	}
 }
