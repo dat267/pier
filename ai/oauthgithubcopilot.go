@@ -204,6 +204,11 @@ func ParseGitHubCopilotModelCatalog(raw map[string]any, allowPolicyFallback bool
 		}
 	}
 
+	// Upstream always yields an array, so an account with no picker models
+	// stores [] and not null.
+	if available == nil {
+		available = []string{}
+	}
 	var policyModelIDs []string
 	for _, model := range accountModels {
 		if model.policyState != "unconfigured" {
@@ -512,7 +517,12 @@ func RefreshGitHubCopilotAccessToken(ctx context.Context, refreshToken, enterpri
 	if token == "" || !hasExpiry {
 		return nil, fmt.Errorf("Invalid Copilot token response fields")
 	}
-	extra := map[string]json.RawMessage{CopilotEnterpriseURLKey: jsonRawString(enterpriseDomain)}
+	extra := map[string]json.RawMessage{}
+	// Upstream stores enterpriseUrl only when a domain was given; JSON.stringify
+	// drops the key for github.com, so an empty value is not written.
+	if enterpriseDomain != "" {
+		extra[CopilotEnterpriseURLKey] = jsonRawString(enterpriseDomain)
+	}
 	return &OAuthCredential{
 		Refresh: refreshToken,
 		Access:  token,
