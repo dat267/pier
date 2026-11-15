@@ -135,6 +135,7 @@
     "indent-leading-insert": " 1   a\n-2   a\n+2 x   a",
     "indent-tab-replaced": " 1 \tfoo\n-2 \tfoo\n+2   foo",
     "indent-insert-before": " 1   a\n-2   a\n+2  x a",
+    "nbsp-separator": "-\u00a01\u00a0foo\n+\u00a02\u00a0bar",
     "indent-swap": " 1  x a\n-2  x a\n+2   a"
   }
 }

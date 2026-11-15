@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D480)
+# Deliberate divergences from pi (D1–D481)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7776,3 +7776,22 @@ session's own, which upstream accepts and then recurses on forever.
 Tests: `TestSessionListKeepsPathKeysAcrossRenders`,
 `TestSessionTreeIgnoresSelfParent`, `BenchmarkSessionListRender`,
 `BenchmarkSessionListFilterSessions`.
+
+### D481
+
+**A diff line whose content holds a JavaScript line terminator keeps its marker.**
+
+Reference: pi v1.5.2 (b4afdddf)
+`packages/coding-agent/src/modes/interactive/components/diff.ts` `parseDiffLine`
+matches `/^([+-\s])(\s*\d*)\s(.*)$/`. A JavaScript `.` cannot match U+2028,
+U+2029 or CR, so the whole match fails on a line whose content contains one and
+the reference falls into the context branch: the line loses its `-`/`+` colour
+and renders dim, with no intra-line highlight. A file can hold U+2028 inside a
+line; the edit tool's own diffs never contain CR, because it normalizes line
+endings before diffing.
+
+Pier keeps Go's `.`, which matches those runes, so the line still parses and is
+coloured as removed or added. The rendering is the only difference; the marker
+column is unchanged.
+
+Test: `TestRenderDiffKeepsMarkersOnUnicodeLineTerminatorContent`.

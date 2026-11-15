@@ -147,3 +147,29 @@ func TestDiffJoinStripsUnicodeWhitespace(t *testing.T) {
 		t.Fatalf("diffJoin = %q; want %q", got, "ab")
 	}
 }
+
+// TestRenderDiffKeepsMarkersOnUnicodeLineTerminatorContent pins D481: a diff
+// line whose content holds a JS line terminator (U+2028, U+2029 or CR) still
+// parses here. diff.ts matches `/^([+-\s])(\s*\d*)\s(.*)$/`, and its `(.*)`
+// cannot match a line terminator, so the reference fails the whole match and
+// renders the line as a context line.
+//
+// Reference (pi v1.5.2 b4afdddf components/diff.ts, through the Node harness):
+// renderDiff("-1 foo\u2028bar") is one context line,
+// "\x1b[38;2;159;159;159m-1 foo\u2028bar\x1b[39m".
+func TestRenderDiffKeepsMarkersOnUnicodeLineTerminatorContent(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+
+	for _, separator := range []string{"\u2028", "\u2029", "\r"} {
+		text := "-1 foo" + separator + "bar"
+		got := RenderDiff(text, RenderDiffOptions{})
+		want := ActiveTheme().Fg("toolDiffRemoved", text)
+		if got != want {
+			t.Errorf("renderDiff(%q) = %q, want the removed line %q", text, got, want)
+		}
+	}
+}

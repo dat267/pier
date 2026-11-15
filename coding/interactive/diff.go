@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/internal/jsdiff"
 	"github.com/dat267/pier/tui"
 )
@@ -406,7 +407,11 @@ func overlapCount(a string, b string) int {
 
 // ---- renderDiff ----
 
-var diffLineRegex = regexp.MustCompile(`^([-+\t\n\f\r ])([\t\n\f\r ]*\d*)[\t\n\f\r ](.*)$`)
+// diffLineRegex is diff.ts's `/^([+-\s])(\s*\d*)\s(.*)$/` with the JS `\s`
+// class spelled out: a non-breaking space separates a line number from its
+// content upstream.
+var diffLineRegex = regexp.MustCompile("^([-+" + ai.JSWhitespaceClass + "])([" + ai.JSWhitespaceClass +
+	"]*\\d*)[" + ai.JSWhitespaceClass + "](.*)$")
 
 type parsedDiffLine struct {
 	prefix  string
