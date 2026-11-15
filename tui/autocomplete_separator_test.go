@@ -1,6 +1,10 @@
 package tui
 
-import "testing"
+import (
+	"encoding/json"
+	"os"
+	"testing"
+)
 
 // Upstream's cjkPunctuationRegex matches punctuation that is itself a
 // CJK-script character, or one of the explicit list; the lookahead does not
@@ -113,5 +117,50 @@ func TestExtractPrefixStripsWrappers(t *testing.T) {
 	}
 	if got, ok := provider.extractPathPrefix("(group)/pa", false); !ok || got != "(group)/pa" {
 		t.Errorf("extractPathPrefix(%q) = (%q, %v); want (%q, true)", "(group)/pa", got, ok, "(group)/pa")
+	}
+}
+
+// The hand-enumerated cjkPunctuationRanges table claims to be the reference's
+// (punctuation ∩ CJK-script) set. This replays the reference's own answer for
+// every code point, generated from the pinned utils.ts by
+// tui/testdata/autocomplete-separator/generate.mjs, so a Unicode table shift in
+// Go or a typo in the enumeration fails here instead of in a user's completion.
+func TestAutocompleteSeparatorMatchesTheReference(t *testing.T) {
+	data, err := os.ReadFile("testdata/autocomplete-separator/golden.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixture struct {
+		Count  int       `json:"count"`
+		Ranges [][2]rune `json:"ranges"`
+	}
+	if err := json.Unmarshal(data, &fixture); err != nil {
+		t.Fatal(err)
+	}
+	want := make(map[rune]bool, fixture.Count)
+	for _, pair := range fixture.Ranges {
+		for codePoint := pair[0]; codePoint <= pair[1]; codePoint++ {
+			want[codePoint] = true
+		}
+	}
+	if len(want) != fixture.Count {
+		t.Fatalf("fixture holds %d code points, count says %d", len(want), fixture.Count)
+	}
+	var extra, missing []rune
+	for codePoint := rune(0); codePoint <= 0x10ffff; codePoint++ {
+		if codePoint >= 0xd800 && codePoint <= 0xdfff {
+			continue
+		}
+		got := isAutocompleteSeparator(codePoint)
+		if got && !want[codePoint] {
+			extra = append(extra, codePoint)
+		}
+		if !got && want[codePoint] {
+			missing = append(missing, codePoint)
+		}
+	}
+	if len(extra) > 0 || len(missing) > 0 {
+		t.Fatalf("separator mismatch: extra %v, missing %v (regenerate the fixture or fix cjkPunctuationRanges)",
+			extra, missing)
 	}
 }
