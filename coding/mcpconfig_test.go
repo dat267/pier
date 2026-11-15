@@ -597,3 +597,24 @@ func TestMcpConfigAcceptsUTF8BOM(t *testing.T) {
 		t.Fatal("project config was not recorded")
 	}
 }
+
+// TestMcpConfigNonObjectDocument pins the message of a document whose root is
+// not a JSON object: pi v1.5.2 b4afdddf extensions/mcp/config.ts reports
+// `!isRecord(parsed)` (and a non-object `mcpServers`) with "expected an object
+// with an \"mcpServers\" object", on read and on write.
+func TestMcpConfigNonObjectDocument(t *testing.T) {
+	agentDir, projectDir := writeMCPFile(t, `[]`, "")
+	loaded := LoadMcpConfig(McpConfigLoadOptions{AgentDir: agentDir, Cwd: projectDir})
+	path := filepath.Join(agentDir, "mcp.json")
+	if len(loaded.Errors) != 1 || loaded.Errors[0] != path+`: expected an object with an "mcpServers" object` {
+		t.Fatalf("errors = %q", loaded.Errors)
+	}
+	if len(loaded.Servers) != 0 {
+		t.Fatalf("servers = %+v", loaded.Servers)
+	}
+
+	if _, err := AddMcpServerConfig(path, "added", json.RawMessage(`{"command":"c"}`)); err == nil ||
+		err.Error() != path+`: expected an object with an "mcpServers" object` {
+		t.Fatalf("write error = %v", err)
+	}
+}

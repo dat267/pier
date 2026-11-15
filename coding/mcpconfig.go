@@ -116,7 +116,13 @@ func readMcpConfigFile(path string, scope McpServerScope, state *mcpConfigState)
 	data = []byte(strings.TrimPrefix(string(data), "\uFEFF"))
 	_, values, err := readJSONObjectOrdered(data)
 	if err != nil {
-		state.errors = append(state.errors, fmt.Sprintf("%s: %s", path, err.Error()))
+		// A document that parses as JSON but is not an object reports
+		// upstream's message; malformed JSON keeps the decoder's text.
+		message := err.Error()
+		if json.Valid(data) {
+			message = `expected an object with an "mcpServers" object`
+		}
+		state.errors = append(state.errors, fmt.Sprintf("%s: %s", path, message))
 		return
 	}
 	serversValue, hasServers := values["mcpServers"]

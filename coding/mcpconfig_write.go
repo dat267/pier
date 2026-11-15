@@ -32,7 +32,8 @@ func AddMcpServerConfig(path, name string, config json.RawMessage) (bool, error)
 	}
 	keys, values, err := readJSONObjectOrdered(text)
 	if err != nil {
-		return false, fmt.Errorf("%s: %w", path, err)
+		// Valid JSON whose root is not an object (upstream !isRecord(parsed)).
+		return false, fmt.Errorf("%s: expected an object with an \"mcpServers\" object", path)
 	}
 	// The reference re-parses the document and stringifies it, so JSON.parse's
 	// enumeration order applies: array-index keys first, in numeric order.
