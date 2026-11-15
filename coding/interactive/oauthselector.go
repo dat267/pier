@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
@@ -507,6 +508,8 @@ type OAuthSelectorComponent struct {
 	onSelect           func(providerID string, authType string)
 	onCancel           func()
 	showAuthTypeLabels bool
+	animationStart     time.Time
+	disposed           bool
 }
 
 // NewOAuthSelectorComponent creates the selector.
@@ -519,6 +522,7 @@ func NewOAuthSelectorComponent(mode string, providers []AuthSelectorProvider, on
 		filteredProviders: providers,
 		onSelect:          onSelect,
 		onCancel:          onCancel,
+		animationStart:    time.Now(),
 	}
 	authTypes := map[string]bool{}
 	for _, provider := range providers {
@@ -609,7 +613,10 @@ func (c *OAuthSelectorComponent) updateList() {
 		}
 		line := "  " + theme.Fg("text", provider.Name) + partnerMarker + authTypeLabel + statusIndicator
 		if isSelected {
-			line = theme.Fg("accent", "→ ") + theme.Fg("accent", provider.Name) + partnerMarker + authTypeLabel + statusIndicator
+			// A preferred partner's selected name shimmers in its brand colors
+			// (components/provider-brand.ts); other names stay accent-colored.
+			name := brandText(provider.ID, provider.Name, time.Since(c.animationStart))
+			line = theme.Fg("accent", "→ ") + name + partnerMarker + authTypeLabel + statusIndicator
 		}
 		c.listContainer.AddChild(tui.NewTruncatedText(line, 1, 0))
 	}
@@ -711,10 +718,33 @@ func (c *OAuthSelectorComponent) SelectedProvider() (AuthSelectorProvider, bool)
 	return c.filteredProviders[c.selectedIndex], true
 }
 
+// brandAnimating reports whether the selected row has a brand animation.
+func (c *OAuthSelectorComponent) brandAnimating() bool {
+	if c.disposed {
+		return false
+	}
+	selected, ok := c.SelectedProvider()
+	return ok && getProviderBrandStyle(selected.ID) != nil
+}
+
+// AnimationFrame rebuilds the list so the selected partner name advances
+// (components/provider-brand.ts startBrandAnimation, on the owner loop).
+func (c *OAuthSelectorComponent) AnimationFrame(time.Time) (bool, time.Duration) {
+	if !c.brandAnimating() {
+		return false, 0
+	}
+	c.updateList()
+	return true, brandAnimationFrame
+}
+
+// Dispose stops the brand animation.
+func (c *OAuthSelectorComponent) Dispose() { c.disposed = true }
+
 // CapturesViewportInput reports that the open selector owns page keys.
 func (c *OAuthSelectorComponent) CapturesViewportInput() bool { return true }
 
 var (
 	_ tui.Component = (*OAuthSelectorComponent)(nil)
 	_ tui.Focusable = (*OAuthSelectorComponent)(nil)
+	_ tui.Animator  = (*OAuthSelectorComponent)(nil)
 )

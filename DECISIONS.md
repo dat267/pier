@@ -355,13 +355,16 @@ renders, and routes input on one loop, failing with
 
 The Radius login menu likewise uses the owner-loop animation scheduler instead
 of `radius-login-selector.ts`'s 50ms interval: the selected row shimmers on idle
-frames without a timer mutating attached UI state. Its auth-method selector
+frames without a timer mutating attached UI state. The auth selector's
+preferred-partner brand animation (`components/provider-brand.ts`) uses the same
+scheduler instead of `startBrandAnimation`'s interval timer. Its auth-method selector
 shows the upstream intro and posts responses back to the waiting login worker.
 The post-login MCP offer reads/writes global config on an app-owned mandatory
 queue, posts the dialog/result on the owner loop, and reloads only after a
 consented write succeeds; shutdown drains accepted writes.
 Tests: `TestRadiusLoginMenuShimmersOnlyWhileSelected`,
-`TestRadiusLoginSelectIntro`, `TestRadiusMcpOfferMatchesUpstream`.
+`TestRadiusLoginSelectIntro`, `TestRadiusMcpOfferMatchesUpstream`,
+`TestOAuthSelectorAnimatesPreferredPartnerNames`.
 
 ### D157
 
