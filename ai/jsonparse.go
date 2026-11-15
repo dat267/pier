@@ -475,11 +475,7 @@ func (p *partialParser) parseValue() (*schemaValue, error) {
 	case '[':
 		return p.parseArray()
 	case '"':
-		s, err := p.parsePartialString()
-		if err != nil {
-			return nil, err
-		}
-		return &schemaValue{String: s, IsString: true}, nil
+		return &schemaValue{String: p.parsePartialString(), IsString: true}, nil
 	default:
 		return p.parseLiteral()
 	}
@@ -569,13 +565,12 @@ func (p *partialParser) parseArray() (*schemaValue, error) {
 	}
 }
 
-// parsePartialString parses a possibly-truncated JSON string; an
+// parsePartialString parses a (possibly unterminated) JSON string; an
 // unterminated string yields the complete prefix (partial-json semantics).
-// parsePartialString parses a (possibly unterminated) JSON string. Escape
-// sequences are decoded by the standard JSON decoder, so every escape behaves
-// the same here as in a complete document (including surrogate pairs); an
-// invalid or truncated escape ends the string, like partial-json.
-func (p *partialParser) parsePartialString() (string, error) {
+// Escape sequences are decoded by the standard JSON decoder, so every escape
+// behaves the same here as in a complete document (including surrogate pairs);
+// an invalid or truncated escape ends the string, like partial-json.
+func (p *partialParser) parsePartialString() string {
 	p.pos++ // opening quote
 	var builder strings.Builder
 	pending := p.pos // start of the literal span not yet emitted
@@ -584,7 +579,7 @@ func (p *partialParser) parsePartialString() (string, error) {
 		if u == '"' {
 			builder.WriteString(p.sliceUnits(pending, p.pos))
 			p.pos++
-			return builder.String(), nil
+			return builder.String()
 		}
 		if u != '\\' {
 			p.pos++
@@ -607,18 +602,18 @@ func (p *partialParser) parsePartialString() (string, error) {
 		if end == runStart {
 			// The first escape is invalid or truncated: stop the string here
 			// (everything from the backslash on is dropped).
-			return builder.String(), nil
+			return builder.String()
 		}
 		var decoded string
 		if err := json.Unmarshal([]byte(`"`+p.sliceUnits(runStart, end)+`"`), &decoded); err != nil {
-			return builder.String(), nil
+			return builder.String()
 		}
 		builder.WriteString(decoded)
 		p.pos = end
 		pending = end
 	}
 	builder.WriteString(p.sliceUnits(pending, p.pos))
-	return builder.String(), nil
+	return builder.String()
 }
 
 // sliceUnits converts a UTF-16 code-unit span to a string (the parser indexes
@@ -660,10 +655,7 @@ func validJSONEscapeAt(units []uint16, pos, size int) bool {
 
 // tryParseFullString parses a complete string; ok is false when truncated.
 func (p *partialParser) tryParseFullString() (string, bool) {
-	s, err := p.parsePartialString()
-	if err != nil {
-		return "", false
-	}
+	s := p.parsePartialString()
 	// Distinguish complete from truncated: parsePartialString returns on
 	// closing quote (pos past it) or end of input. Check the last consumed
 	// unit was a quote by re-examining: if pos <= len(units) and the
