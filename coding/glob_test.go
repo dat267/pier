@@ -9,6 +9,9 @@ import (
 // { nocase: true }. Every expectation was read off minimatch 10.x with the same
 // pattern, so `**` is a globstar only as a whole path segment, a wildcard never
 // matches a leading dot, and a trailing globstar consumes at least one segment.
+// The pinned v1.5.2 resolves minimatch 11.0.3; a differential run of ~15k
+// pattern/path pairs over the supported subset (no extglobs, no "!" negation, no
+// POSIX classes) against that version found no divergence.
 func TestMatchGlobAgainstMinimatch(t *testing.T) {
 	cases := []struct {
 		pattern string
