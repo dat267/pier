@@ -151,6 +151,9 @@ type BedrockFailureDetails struct {
 // when any detail is known (upstream appendBedrockFailureDiagnostic).
 func AppendBedrockFailureDiagnostic(output *AssistantMessage, err error, fallbackRequestID string) {
 	details := BedrockFailureDetails{}
+	// A modeled stream exception carries the SDK's `$metadata`, httpStatusCode
+	// 200 included, so the status is recorded as observed
+	// (ai/testdata/bedrock-errors pins the reference's own output).
 	if providerErr, ok := errAsProviderError(err); ok && providerErr.Status != 0 {
 		status := providerErr.Status
 		details.Status = &status
@@ -238,13 +241,16 @@ func GetStandardBedrockEndpointRegion(baseURL string) string {
 		return ""
 	}
 	rest = strings.TrimPrefix(rest, ".")
-	// Strip the trailing .amazonaws.com[.cn]
-	const suffix = ".amazonaws.com"
-	index := strings.Index(rest, suffix)
-	if index <= 0 {
-		return ""
+	// The host must end with the runtime suffix: upstream's regex is anchored
+	// (`\.amazonaws\.com(?:\.cn)?$`), so a proxy host that merely contains
+	// ".amazonaws.com" is a custom endpoint, not a standard one.
+	var region string
+	switch {
+	case strings.HasSuffix(rest, ".amazonaws.com.cn"):
+		region = strings.TrimSuffix(rest, ".amazonaws.com.cn")
+	case strings.HasSuffix(rest, ".amazonaws.com"):
+		region = strings.TrimSuffix(rest, ".amazonaws.com")
 	}
-	region := rest[:index]
 	if !isLowerAlnumDash(region) {
 		return ""
 	}

@@ -127,6 +127,21 @@ func TestShouldUseExplicitBedrockEndpoint(t *testing.T) {
 	if ShouldUseExplicitBedrockEndpoint("https://bedrock-runtime.us-west-2.amazonaws.com", "", true) {
 		t.Fatal("an ambient AWS_PROFILE must win over the catalog endpoint")
 	}
+	// The standard endpoint test is anchored: a proxy host that only contains
+	// ".amazonaws.com" is a custom endpoint, so a configured region must not
+	// replace it with the AWS one (bedrock-converse-stream.ts
+	// getStandardBedrockEndpointRegion's `$`-anchored regex).
+	for _, proxy := range []string{
+		"https://bedrock-runtime.us-east-1.amazonaws.com.proxy.example",
+		"https://bedrock-runtime.us-east-1.amazonaws.com.proxy.example/v1",
+	} {
+		if region := GetStandardBedrockEndpointRegion(proxy); region != "" {
+			t.Errorf("%s resolved region %q", proxy, region)
+		}
+		if !ShouldUseExplicitBedrockEndpoint(proxy, "us-east-1", false) {
+			t.Errorf("%s was treated as the standard endpoint", proxy)
+		}
+	}
 }
 
 func TestResolveBedrockRegion(t *testing.T) {
