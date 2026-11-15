@@ -1610,13 +1610,11 @@ func stopThemeWatcher() { StopThemeWatcher() }
 // the capability flag (injectable capabilities).
 var trueColorState struct {
 	enabled atomic.Bool
-	known   atomic.Bool
 }
 
 // SetTrueColorSupport installs the terminal truecolor capability.
 func SetTrueColorSupport(enabled bool) {
 	trueColorState.enabled.Store(enabled)
-	trueColorState.known.Store(true)
 }
 
 func terminalCapabilitiesTrueColor() bool {
