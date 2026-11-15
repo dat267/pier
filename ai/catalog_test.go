@@ -285,6 +285,14 @@ func TestGetEnvApiKey(t *testing.T) {
 		t.Fatalf("qwen-token-plan-individual = %q", got)
 	}
 
+	// TypeSafe resolves from TYPESAFE_API_KEY (pi v1.5.2 env-api-keys.ts).
+	if got := GetEnvApiKey("typesafe", ProviderEnv{"TYPESAFE_API_KEY": "t"}); got != "t" {
+		t.Fatalf("typesafe = %q", got)
+	}
+	if got := FindEnvKeys("typesafe", ProviderEnv{"TYPESAFE_API_KEY": "t"}); len(got) != 1 || got[0] != "TYPESAFE_API_KEY" {
+		t.Fatalf("typesafe keys = %v", got)
+	}
+
 	// Meta resolves from META_API_KEY.
 	if got := GetEnvApiKey("meta", ProviderEnv{"META_API_KEY": "m"}); got != "m" {
 		t.Fatalf("meta = %q", got)
