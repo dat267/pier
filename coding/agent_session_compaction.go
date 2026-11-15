@@ -36,15 +36,19 @@ func (s *AgentSession) CheckCompaction(ctx context.Context, assistant *ai.Assist
 		return false, nil
 	}
 
+	// Overflow from a different model must not trigger compaction for the
+	// current one (for example after switching to a larger-context model). The
+	// model that produced the message supplies the limits: a virtual selection
+	// routes to a physical model, so the message names that model.
 	model := s.Model()
+	messageModel := s.modelForMessage(assistant)
+	sameModel := messageModel != nil
 	contextWindow := int64(0)
-	if model != nil {
+	if messageModel != nil {
+		contextWindow = messageModel.ContextWindow
+	} else if model != nil {
 		contextWindow = model.ContextWindow
 	}
-
-	// Overflow from a different model must not trigger compaction for the
-	// current one (for example after switching to a larger-context model).
-	sameModel := model != nil && string(assistant.Provider) == string(model.Provider) && assistant.Model == model.ID
 
 	// Stale pre-compaction usage or errors must not retrigger compaction right
 	// after one finished.
@@ -106,7 +110,7 @@ func (s *AgentSession) CheckCompaction(ctx context.Context, assistant *ai.Assist
 	contextOverflow := sameModel &&
 		((explicitOverflow && assistantRetained) ||
 			(assistantUsageMatchesProjection && ai.IsContextOverflow(assistant, contextWindow)))
-	recoverableLength := sameModel && assistantIsProjected && ai.IsRecoverableLength(assistant, maxTokensOf(model))
+	recoverableLength := sameModel && assistantIsProjected && ai.IsRecoverableLength(assistant, maxTokensOf(messageModel))
 	if contextOverflow || recoverableLength {
 		willRetry := assistant.StopReason != ai.StopStop
 
@@ -314,6 +318,30 @@ func (s *AgentSession) omissionToolResults(assistant *ai.AssistantMessage) []ai.
 		}
 	}
 	return results
+}
+
+// modelForMessage returns the model that produced an assistant message
+// (upstream _modelForMessage). A virtual selection is routed per request, so the
+// message names the physical model, whose limits come from the runtime's
+// catalog; otherwise only a message from the selected model resolves.
+func (s *AgentSession) modelForMessage(message *ai.AssistantMessage) *ai.Model {
+	if message == nil {
+		return nil
+	}
+	model := s.Model()
+	if model == nil {
+		return nil
+	}
+	if IsVirtualModel(model) {
+		if s.control == nil || s.control.ModelRuntime == nil {
+			return nil
+		}
+		return s.control.ModelRuntime.GetModel(string(message.Provider), message.Model)
+	}
+	if string(model.Provider) == string(message.Provider) && model.ID == message.Model {
+		return model
+	}
+	return nil
 }
 
 func maxTokensOf(model *ai.Model) int64 {

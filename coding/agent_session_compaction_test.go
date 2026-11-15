@@ -709,3 +709,48 @@ func TestAutoCompactionFailureNamesTheCompaction(t *testing.T) {
 		}
 	}
 }
+
+// Upstream resolves the model that produced the message, not the selected one:
+// `_modelForMessage` maps a virtual selection to the physical model the message
+// names and uses that model's context window and maxTokens
+// (core/agent-session.ts _checkCompaction). The port compared the message's
+// provider and id against the selected (virtual) model, so under a virtual
+// selection every message counted as a different model and the recoverable
+// length recovery never ran.
+func TestCheckCompactionResolvesPhysicalModelForVirtualSelection(t *testing.T) {
+	var runs atomic.Int64
+	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
+		Credentials: ai.NewInMemoryCredentialStore(), DisableModelsJSON: true,
+	})
+	if err != nil {
+		t.Fatalf("create runtime: %v", err)
+	}
+	physical := runtime.GetModel("anthropic", "claude-haiku-4-5")
+	if physical == nil || physical.MaxTokens == 0 {
+		t.Fatal("catalog is missing the physical model")
+	}
+	virtual := &ai.Model{
+		ID: "router", Name: "Router", API: VirtualModelAPI, Provider: "anthropic",
+		ContextWindow: 1000000, MaxTokens: 128000, Reasoning: true,
+	}
+	session := compactionTestSession(t, virtual, summarizingStreamFn(t, &runs, "summary text that is long enough to pass the usability check"), smallCompactionSettings())
+	session.control.ModelRuntime = runtime
+	seedBranch(t, session)
+
+	// A length stop below the physical model's output cap is recoverable.
+	length := &ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: physical.ID,
+		Timestamp: timeNowMS(), StopReason: ai.StopLength,
+		Usage: ai.Usage{Input: 500, Output: 10, TotalTokens: 510},
+	}
+	compacted, err := session.CheckCompaction(ctxpkg.Background(), length, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !compacted {
+		t.Fatal("a recoverable length stop under a virtual selection must continue")
+	}
+	if runs.Load() != 1 {
+		t.Fatalf("runs = %d", runs.Load())
+	}
+}
