@@ -13,7 +13,9 @@ import (
 //     is an identity escape for "u".
 //   - `\xHH` is a two-digit escape; otherwise \x is an identity escape for "x".
 //   - a brace group is a quantifier only where a quantifier is allowed and its
-//     bounds are valid; otherwise `{` and `}` are literal.
+//     bounds are valid; otherwise `{` and `}` are literal. V8 rejects a few of
+//     those forms (`{2}` at a pattern start, `a*{2}`), but a grammar pattern is
+//     valid JavaScript, so a literal is the permissive equivalent here.
 //   - an empty class `[]` never matches and `[^]` matches any code unit.
 //   - a `-` next to a class escape is literal rather than a range operator.
 func normalizeJSEscapes(src string) string {

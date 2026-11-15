@@ -7,12 +7,15 @@ import (
 	"testing"
 )
 
-// Replays the JavaScript line-semantics fixture generated from Node's RegExp:
+// Replays the JavaScript semantics fixture generated from Node's RegExp:
 // highlight.js compiles every grammar pattern with the m flag, so ^ and $ match
-// at \r, \u2028 and \u2029 as line terminators too and . excludes all four. The
-// corpus records matched substrings, not offsets, so the port's byte indices and
-// JavaScript's UTF-16 indices cannot disguise a semantic difference.
-func TestPatternRegexpMatchesJavaScriptLineSemantics(t *testing.T) {
+// at \r, \u2028 and \u2029 as line terminators too and . excludes all four, and
+// the corpus also carries the Annex B escapes (\uXXXX, \xHH, bare \u/\x),
+// brace quantifiers, empty classes and class-escape hyphens patternjs.go
+// normalizes. The corpus records matched substrings, not offsets, so the port's
+// byte indices and JavaScript's UTF-16 indices cannot disguise a semantic
+// difference.
+func TestPatternRegexpMatchesJavaScriptSemantics(t *testing.T) {
 	data, err := os.ReadFile("testdata/regex-lines/golden.json")
 	if err != nil {
 		t.Fatal(err)

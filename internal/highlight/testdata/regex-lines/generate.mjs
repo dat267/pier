@@ -32,6 +32,27 @@ const patterns = [
 	"a\\r?$",
 	"^(a|b)",
 	"日+",
+	// Annex B escapes, braces and classes (patternjs.go).
+	"\\x41",
+	"\\x4",
+	"\\x",
+	"\\u0041",
+	"\\u041",
+	"\\u",
+	"\\u{2}",
+	"a{2}",
+	"a{2,}",
+	"a{2,3}",
+	"}",
+	"a{",
+	"a{2",
+	"a{,2}",
+	"(a){2}",
+	"[]",
+	"[^]",
+	"[\\d-z]",
+	"[a-\\d]",
+	"[\\w-]",
 ];
 const flags = ["", "i", "s"];
 const inputs = [
@@ -50,6 +71,18 @@ const inputs = [
 	"\r",
 	"\n",
 	"a\r\nb\r\nc",
+	"A",
+	"aa",
+	"aA",
+	"{}",
+	"-",
+	"z",
+	"1",
+	"a{2}",
+	"}",
+	"u",
+	"x",
+	"aaa",
 ];
 
 const cases = [];
