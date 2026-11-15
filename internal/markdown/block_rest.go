@@ -885,8 +885,9 @@ func startsOtherBlock(line string) bool {
 	if isThematicBreak(line) || isBlockquoteStart(line) || startsHTMLLine(line) || indentWidth(line) >= 4 {
 		return true
 	}
-	_, _, ok := listItemStart(line)
-	return ok
+	// The row rule is marked's paragraph-interrupt test, so an ordered marker
+	// other than `1.` does not end the body: `5. x` becomes a row.
+	return listMarkerInterrupts(line)
 }
 
 // tableRowCells splits a table row and fits it to the table's column count the
