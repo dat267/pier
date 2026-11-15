@@ -565,6 +565,20 @@ func TestCreateRadiusOAuthDefinition(t *testing.T) {
 	if err == nil || err.Error() != "Unknown Radius sign-in method: other" {
 		t.Fatalf("err = %v", err)
 	}
+	// An empty answer is unknown too: radius.ts (b4afdddf) routes to the browser
+	// only when loginMethod === "browser", so "" reaches the throw instead of
+	// starting the discovery request and the loopback server.
+	offline := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.WriteHeader(http.StatusNotFound)
+	}))
+	defer offline.Close()
+	_, err = CreateRadiusOAuth(RadiusOAuthOptions{Name: "Radius", Gateway: offline.URL}).Login(&AuthInteraction{
+		Ctx:    context.Background(),
+		Prompt: func(AuthPrompt) (string, error) { return "", nil },
+	})
+	if err == nil || err.Error() != "Unknown Radius sign-in method: " {
+		t.Fatalf("empty method err = %v", err)
+	}
 	modelAuth, err := auth.ToAuth(&OAuthCredential{Access: "access"})
 	if err != nil || modelAuth.APIKey != "access" {
 		t.Fatalf("model auth = %+v err = %v", modelAuth, err)

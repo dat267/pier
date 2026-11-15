@@ -503,7 +503,7 @@ func CreateRadiusOAuth(options RadiusOAuthOptions) *OAuthAuth {
 			switch method {
 			case RadiusLoginDevice:
 				return LoginRadiusWithDeviceCode(interaction, gateway)
-			case RadiusLoginBrowser, "":
+			case RadiusLoginBrowser:
 				ctx := interaction.Ctx
 				if ctx == nil {
 					ctx = context.Background()
