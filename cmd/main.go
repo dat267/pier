@@ -1102,7 +1102,8 @@ func resumeSession(args *coding.Args, cwd string, settings *coding.SettingsManag
 		if args.SessionID != nil {
 			for _, info := range coding.ListSessions(cwd, sessionDir) {
 				if info.ID == *args.SessionID {
-					return nil, fmt.Errorf("Session already exists with id '%s'", *args.SessionID)
+					// main.ts prints this one red without the "Error: " prefix.
+					return nil, bareErrorLine{text: fmt.Sprintf("Session already exists with id '%s'", *args.SessionID)}
 				}
 			}
 			forkID = *args.SessionID
@@ -1177,11 +1178,7 @@ func resumeSession(args *coding.Args, cwd string, settings *coding.SettingsManag
 		sm.NewSession(&coding.NewSessionOptions{ID: *args.SessionID})
 		return sm, nil
 	}
-	listed := coding.ListSessions(cwd, sessionDir)
-	if len(listed) == 0 {
-		return nil, fmt.Errorf("no sessions to resume")
-	}
-	return coding.OpenSession(listed[0].Path, sessionDir, "")
+	return nil, fmt.Errorf("no sessions to resume")
 }
 
 // ensure syscall is used on platforms where the signal set is empty.
