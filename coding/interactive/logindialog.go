@@ -339,6 +339,9 @@ const loginSelectVisibleRows = 8
 
 // ShowDetails replaces the content with informational lines.
 func (c *LoginDialogComponent) ShowDetails(lines []string) {
+	// Upstream clears the device-code action with the panel it belonged to, so
+	// Enter cannot fire it once the details replaced the content.
+	c.clearDeviceCodeAction()
 	c.runOnUI(func() {
 		c.authUrl = nil
 		c.contentContainer.Clear()
