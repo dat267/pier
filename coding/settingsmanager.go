@@ -933,7 +933,6 @@ func MigrateSettings(settings *Settings) *Settings {
 	return MigrateSettingsRaw(raw)
 }
 
-// MigrateSettingsRaw applies the migrations to a raw settings object.
 // MigrateSettingsRaw parses a raw settings object after the legacy-key
 // migrations (upstream migrateSettings). Decoding is member by member, so a
 // value the typed struct cannot hold (for example `"enabled": "yes"`) only

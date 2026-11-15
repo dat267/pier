@@ -549,8 +549,6 @@ func KillProcessTree(pid int) {
 	killProcessTreePlatform(pid)
 }
 
-// CreateBashTool builds the bash tool (port of createShellToolDefinition
-// with the bash config).
 // CreateBashTool builds the bash tool (upstream createBashTool).
 func CreateBashTool(cwd string, options *BashToolOptions) agent.AgentTool {
 	return CreateShellTool(cwd, BashShellToolConfig, options)

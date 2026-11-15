@@ -600,7 +600,6 @@ func requestGoogleStream(ctx context.Context, model *Model, body []byte, options
 	return resp, nil
 }
 
-// iterateGoogleChunks decodes the Gemini SSE stream.
 // iterateGoogleChunks decodes the SSE body and hands each chunk to emit; an
 // error from emit stops the stream, as a throw inside upstream's loop does.
 func iterateGoogleChunks(ctx context.Context, body io.Reader, emit func(chunk *googleChunk) error) error {

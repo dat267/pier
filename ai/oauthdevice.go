@@ -52,7 +52,6 @@ type oauthHTTPResponse struct {
 	Text string
 }
 
-// oauthPostForm posts urlencoded fields and decodes a JSON object body.
 // oauthPostForm posts urlencoded fields and decodes a JSON object body. When
 // failOnInvalidJSON is false a non-JSON body is kept in Text for callers that
 // check the status first (Kimi reports the raw text on failures).

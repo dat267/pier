@@ -378,8 +378,6 @@ func (s *ScrollView) childComponents() []Component {
 	return []Component{s.child}
 }
 
-// Render renders the child at the content width, padding a trailing column
-// when the scrollbar takes one.
 // Render renders the scrolled view, lazily expiring the transient scrollbar's
 // hide deadline (the deadline is driven by the consumer's animation
 // walk; the next render after it passes hides the scrollbar).
