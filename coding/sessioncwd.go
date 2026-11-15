@@ -48,7 +48,10 @@ func FormatMissingSessionCwdError(issue SessionCwdIssue) string {
 		issue.SessionCwd, sessionFile, issue.FallbackCwd)
 }
 
-// FormatMissingSessionCwdPrompt renders the interactive confirmation prompt.
+// FormatMissingSessionCwdPrompt renders the missing-cwd prompt body. D476: it
+// names both directories where the reference's one-line
+// "Session cwd does not exist: <cwd>" is the selector label, because the app's
+// fallback confirm has only Yes/No labels to explain the choice.
 func FormatMissingSessionCwdPrompt(issue SessionCwdIssue) string {
 	return fmt.Sprintf("cwd from session file does not exist\n%s\n\ncontinue in current cwd\n%s",
 		issue.SessionCwd, issue.FallbackCwd)

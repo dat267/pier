@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D475)
+# Deliberate divergences from pi (D1–D476)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7675,3 +7675,22 @@ two windows and join with one skip marker.
 Test: `TestGenerateEditDiffMatchesWholeFileDiff`,
 `TestGenerateEditDiffMergesAndSplitsWindows`,
 `TestGetDiffWindowsCoversWholeLines` and `BenchmarkEditDiffLargeFile`.
+
+### D476
+
+**The missing-cwd prompt names both directories.**
+
+Reference: pi v1.5.2 (b4afdddf) `core/session-cwd.ts`
+`formatMissingSessionCwdPrompt` renders one line, `Session cwd does not exist:
+<cwd>`, and both of its callers pass that line as the *label* of a selector whose
+options carry the fallback directory ("Continue in <cwd> (asks again next
+time)", "Fork into <cwd> (new session ID, original kept)", "Cancel"). Pier's
+fallback path (`TrustCrashWiring.PromptForMissingSessionCwd`) is a yes/no
+confirm, where the labels say only Yes and No, so the body has to name the
+current directory and what continuing means by itself. The interactive selector
+path shares the text, so both ask the same question.
+
+The option labels are the reference's verbatim.
+
+Test: `TestMissingSessionCwdPromptExplainsTheFallback` and
+`TestMissingSessionCwdOptionsMatchTheReference`.
