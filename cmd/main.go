@@ -321,7 +321,7 @@ func run(appName string, args *coding.Args) error {
 	listingModels := args.ListModels != nil || args.ListModelsAll
 	var sessions *coding.SessionManager
 	if !listingModels && (args.Resume || args.Continue || args.Fork != nil || args.Session != nil || args.SessionID != nil) {
-		sessions, err = resumeSession(args, cwd, agentDir, settings)
+		sessions, err = resumeSession(args, cwd, settings)
 		if err != nil {
 			if errors.Is(err, errNoSessionSelected) {
 				fmt.Println("\x1b[2mNo session selected\x1b[0m")
@@ -1046,7 +1046,7 @@ func resolveSessionDirectory(args *coding.Args, settings *coding.SettingsManager
 
 // resumeSession opens the session requested by the CLI flags (upstream
 // createSessionManager's session selection).
-func resumeSession(args *coding.Args, cwd string, agentDir string, settings *coding.SettingsManager) (*coding.SessionManager, error) {
+func resumeSession(args *coding.Args, cwd string, settings *coding.SettingsManager) (*coding.SessionManager, error) {
 	sessionDir := resolveSessionDirectory(args, settings)
 	// Upstream validateSessionIdFlags: --session-id rejects conflicting flags
 	// and invalid id formats before any session is opened.

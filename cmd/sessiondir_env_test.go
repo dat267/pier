@@ -73,7 +73,7 @@ func TestResumeSessionIDUsesTheConfiguredSessionDir(t *testing.T) {
 	settings := coding.NewSettingsManagerFromFiles(cwd, agentDir, coding.SettingsManagerCreateOptions{})
 	id := "019463a7-2222-7222-8222-222222222222"
 	args := &coding.Args{SessionID: &id}
-	manager, err := resumeSession(args, cwd, agentDir, settings)
+	manager, err := resumeSession(args, cwd, settings)
 	if err != nil {
 		t.Fatal(err)
 	}

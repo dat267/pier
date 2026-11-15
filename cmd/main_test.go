@@ -92,7 +92,7 @@ func TestResumeSessionByExactID(t *testing.T) {
 	source := makeSessionFile(t, cwd)
 
 	args := &coding.Args{Session: new(source.GetSessionID())}
-	sm, err := resumeSession(args, cwd, t.TempDir(), nil)
+	sm, err := resumeSession(args, cwd, nil)
 	if err != nil {
 		t.Fatalf("resumeSession: %v", err)
 	}
@@ -110,7 +110,7 @@ func TestResumeSessionByIDPrefix(t *testing.T) {
 	source := makeSessionFile(t, cwd)
 
 	args := &coding.Args{Session: new(source.GetSessionID()[:8])}
-	sm, err := resumeSession(args, cwd, t.TempDir(), nil)
+	sm, err := resumeSession(args, cwd, nil)
 	if err != nil {
 		t.Fatalf("resumeSession: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestResumeSessionByPathStillWorks(t *testing.T) {
 	source := makeSessionFile(t, cwd)
 
 	args := &coding.Args{Session: new(source.GetSessionFile())}
-	sm, err := resumeSession(args, cwd, t.TempDir(), nil)
+	sm, err := resumeSession(args, cwd, nil)
 	if err != nil {
 		t.Fatalf("resumeSession: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestResumeSessionNotFound(t *testing.T) {
 	cwd := t.TempDir()
 
 	args := &coding.Args{Session: new("does-not-exist-anywhere")}
-	_, err := resumeSession(args, cwd, t.TempDir(), nil)
+	_, err := resumeSession(args, cwd, nil)
 	if err == nil {
 		t.Fatal("expected an error for an unmatched --session argument")
 	}
@@ -153,7 +153,7 @@ func TestResumeSessionIDCreatesNewSessionWithID(t *testing.T) {
 	cwd := t.TempDir()
 
 	args := &coding.Args{SessionID: new("019463a7-1111-7111-8111-111111111111")}
-	sm, err := resumeSession(args, cwd, t.TempDir(), nil)
+	sm, err := resumeSession(args, cwd, nil)
 	if err != nil {
 		t.Fatalf("resumeSession: %v", err)
 	}
@@ -170,7 +170,7 @@ func TestResumeSessionIDConflict(t *testing.T) {
 	cwd := t.TempDir()
 
 	args := &coding.Args{SessionID: new("019463a7-1111-7111-8111-111111111111"), Continue: true}
-	if _, err := resumeSession(args, cwd, t.TempDir(), nil); err == nil {
+	if _, err := resumeSession(args, cwd, nil); err == nil {
 		t.Fatal("expected an error when --session-id is combined with --continue")
 	}
 }
@@ -180,7 +180,7 @@ func TestResumeSessionIDInvalidFormat(t *testing.T) {
 	cwd := t.TempDir()
 
 	args := &coding.Args{SessionID: new("bad id!")}
-	if _, err := resumeSession(args, cwd, t.TempDir(), nil); err == nil {
+	if _, err := resumeSession(args, cwd, nil); err == nil {
 		t.Fatal("expected an error for an invalid --session-id format")
 	}
 }
@@ -219,7 +219,7 @@ func TestResumeSessionIDWarningGoesToStderr(t *testing.T) {
 			args := &coding.Args{SessionID: new("019463a7-1111-7111-8111-111111111111"), Mode: mode}
 			var err error
 			stdout, stderr := captureStdio(t, func() {
-				_, err = resumeSession(args, cwd, t.TempDir(), nil)
+				_, err = resumeSession(args, cwd, nil)
 			})
 			if err != nil {
 				t.Fatalf("resumeSession: %v", err)
@@ -240,7 +240,7 @@ func TestResumeSessionFork(t *testing.T) {
 	source := makeSessionFile(t, cwd)
 
 	args := &coding.Args{Fork: new(source.GetSessionFile())}
-	sm, err := resumeSession(args, cwd, t.TempDir(), nil)
+	sm, err := resumeSession(args, cwd, nil)
 	if err != nil {
 		t.Fatalf("resumeSession: %v", err)
 	}
@@ -259,7 +259,7 @@ func TestResumeSessionForkByID(t *testing.T) {
 	source := makeSessionFile(t, cwd)
 
 	args := &coding.Args{Fork: new(source.GetSessionID())}
-	sm, err := resumeSession(args, cwd, t.TempDir(), nil)
+	sm, err := resumeSession(args, cwd, nil)
 	if err != nil {
 		t.Fatalf("resumeSession: %v", err)
 	}
@@ -273,12 +273,12 @@ func TestResumeSessionForkConflict(t *testing.T) {
 	cwd := t.TempDir()
 
 	args := &coding.Args{Fork: new("x"), Continue: true}
-	if _, err := resumeSession(args, cwd, t.TempDir(), nil); err == nil {
+	if _, err := resumeSession(args, cwd, nil); err == nil {
 		t.Fatal("expected an error when --fork is combined with --continue")
 	}
 
 	args2 := &coding.Args{Fork: new("x"), NoSession: true}
-	if _, err := resumeSession(args2, cwd, t.TempDir(), nil); err == nil {
+	if _, err := resumeSession(args2, cwd, nil); err == nil {
 		t.Fatal("expected an error when --fork is combined with --no-session")
 	}
 }
@@ -289,7 +289,7 @@ func TestResumeSessionForkExistingSessionID(t *testing.T) {
 	source := makeSessionFile(t, cwd)
 
 	args := &coding.Args{Fork: new(source.GetSessionFile()), SessionID: new(source.GetSessionID())}
-	if _, err := resumeSession(args, cwd, t.TempDir(), nil); err == nil {
+	if _, err := resumeSession(args, cwd, nil); err == nil {
 		t.Fatal("expected an error forking with an id that already exists")
 	}
 }
@@ -299,7 +299,7 @@ func TestResumeSessionForkNotFound(t *testing.T) {
 	cwd := t.TempDir()
 
 	args := &coding.Args{Fork: new("does-not-exist-anywhere")}
-	if _, err := resumeSession(args, cwd, t.TempDir(), nil); err == nil {
+	if _, err := resumeSession(args, cwd, nil); err == nil {
 		t.Fatal("expected an error for an unmatched --fork argument")
 	}
 }
@@ -314,7 +314,7 @@ func TestResumeSessionPickerCancelled(t *testing.T) {
 	defer func() { selectResumeSession = previous }()
 
 	args := &coding.Args{Resume: true}
-	if _, err := resumeSession(args, cwd, t.TempDir(), nil); !errors.Is(err, errNoSessionSelected) {
+	if _, err := resumeSession(args, cwd, nil); !errors.Is(err, errNoSessionSelected) {
 		t.Fatalf("error %v, want errNoSessionSelected", err)
 	}
 }
@@ -330,7 +330,7 @@ func TestResumeSessionPickerSelection(t *testing.T) {
 	defer func() { selectResumeSession = previous }()
 
 	args := &coding.Args{Resume: true}
-	sm, err := resumeSession(args, cwd, t.TempDir(), nil)
+	sm, err := resumeSession(args, cwd, nil)
 	if err != nil {
 		t.Fatalf("resumeSession: %v", err)
 	}
@@ -349,7 +349,7 @@ func TestResumeSessionGlobalPromptsForkOnConfirm(t *testing.T) {
 	defer func() { promptConfirm = previous }()
 
 	args := &coding.Args{Session: new(source.GetSessionID())}
-	sm, err := resumeSession(args, cwd, t.TempDir(), nil)
+	sm, err := resumeSession(args, cwd, nil)
 	if err != nil {
 		t.Fatalf("resumeSession: %v", err)
 	}
@@ -375,7 +375,7 @@ func TestResumeSessionGlobalPromptsForkOnDecline(t *testing.T) {
 	defer func() { promptConfirm = previous }()
 
 	args := &coding.Args{Session: new(source.GetSessionID())}
-	if _, err := resumeSession(args, cwd, t.TempDir(), nil); !errors.Is(err, errSessionAborted) {
+	if _, err := resumeSession(args, cwd, nil); !errors.Is(err, errSessionAborted) {
 		t.Fatalf("error %v, want errSessionAborted", err)
 	}
 }
@@ -415,7 +415,7 @@ func TestResumePickerKeepsStdoutCleanInHeadlessModes(t *testing.T) {
 		{&coding.Args{Resume: true, Print: true}, true},
 	} {
 		sawHeadless = false
-		_, _ = resumeSession(tc.args, cwd, t.TempDir(), nil)
+		_, _ = resumeSession(tc.args, cwd, nil)
 		if sawHeadless != tc.want {
 			t.Fatalf("picker headless = %v for %+v, want %v", sawHeadless, tc.args, tc.want)
 		}
@@ -450,7 +450,7 @@ func TestResumePickerUsesStderrWhenPrintModeIsInferred(t *testing.T) {
 	}
 	defer func() { selectResumeSession = previous }()
 
-	_, _ = resumeSession(&coding.Args{Resume: true}, t.TempDir(), t.TempDir(), nil)
+	_, _ = resumeSession(&coding.Args{Resume: true}, t.TempDir(), nil)
 	if !sawHeadless {
 		t.Fatal("resume picker used stdout although the non-TTY stream selects print mode")
 	}
@@ -473,7 +473,7 @@ func TestResumeSessionPrefersSessionOverContinue(t *testing.T) {
 	}
 
 	args := &coding.Args{Continue: true, Session: new(older.GetSessionID())}
-	sm, err := resumeSession(args, cwd, t.TempDir(), nil)
+	sm, err := resumeSession(args, cwd, nil)
 	if err != nil {
 		t.Fatalf("resumeSession: %v", err)
 	}
@@ -505,7 +505,7 @@ func TestResumeSessionPrefersResumePickerOverContinue(t *testing.T) {
 	defer func() { selectResumeSession = previous }()
 
 	args := &coding.Args{Continue: true, Resume: true}
-	sm, err := resumeSession(args, cwd, t.TempDir(), nil)
+	sm, err := resumeSession(args, cwd, nil)
 	if err != nil {
 		t.Fatalf("resumeSession: %v", err)
 	}
@@ -527,7 +527,7 @@ func TestResumeSessionHonorsNoSessionOverContinue(t *testing.T) {
 	}
 
 	args := &coding.Args{NoSession: true, Continue: true}
-	sm, err := resumeSession(args, cwd, t.TempDir(), nil)
+	sm, err := resumeSession(args, cwd, nil)
 	if err != nil {
 		t.Fatalf("resumeSession: %v", err)
 	}
@@ -549,7 +549,7 @@ func TestResumeSessionNoSessionKeepsRequestedID(t *testing.T) {
 	isolatedAgentDir(t)
 	cwd := t.TempDir()
 	args := &coding.Args{NoSession: true, SessionID: new("ephemeral-id")}
-	sm, err := resumeSession(args, cwd, t.TempDir(), nil)
+	sm, err := resumeSession(args, cwd, nil)
 	if err != nil {
 		t.Fatalf("resumeSession: %v", err)
 	}

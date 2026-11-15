@@ -128,7 +128,7 @@ func TestRPCGlobalSessionDoesNotPrompt(t *testing.T) {
 	called := false
 	promptConfirm = func(message string) bool { called = true; return false }
 	defer func() { promptConfirm = previous }()
-	_, err := resumeSession(&coding.Args{Mode: coding.CLIModeRPC, Session: new(source.GetSessionID())}, t.TempDir(), coding.GetAgentDir(), nil)
+	_, err := resumeSession(&coding.Args{Mode: coding.CLIModeRPC, Session: new(source.GetSessionID())}, t.TempDir(), nil)
 	if called || err == nil || !strings.Contains(err.Error(), "use --fork or a session file path") {
 		t.Fatalf("prompted = %v, error = %v", called, err)
 	}
