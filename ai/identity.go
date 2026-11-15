@@ -50,6 +50,9 @@ type ClientIdentity struct {
 	jsonFields      []identityJSONField
 	userAgentSet    bool
 	userAgentFields []identityJSONField
+	// userAgentObject records that the stored mode is a JSON object, so it
+	// round-trips as one even when it carries no custom member.
+	userAgentObject bool
 }
 
 // MergeClientIdentity merges defined fields left to right without changing
@@ -68,6 +71,7 @@ func MergeClientIdentity(sources ...*ClientIdentity) *ClientIdentity {
 			merged.UserAgent, merged.CustomUserAgent = source.UserAgent, source.CustomUserAgent
 			merged.userAgentSet = true
 			merged.userAgentFields = source.userAgentFields
+			merged.userAgentObject = source.userAgentObject
 			merged.rememberJSONKey("userAgent")
 		}
 		if source.Attribution != nil || source.AttributionSet {

@@ -4,6 +4,7 @@
     "{\"userAgent\":\"short\"}",
     "{\"version\":\"\",\"attribution\":null}",
     "{\"version\":\"9.9.9\",\"userAgent\":\"detailed\"}",
+    "{\"userAgent\":{}}",
     "{\"userAgent\":{\"custom\":\"\"}}",
     "{\"userAgent\":{\"custom\":\"short\"}}",
     "{\"userAgent\":{\"extension\":true,\"custom\":\"acme\"}}",
@@ -100,6 +101,17 @@
         }
       ],
       "want": "{\"userAgent\":\"short\"}"
+    },
+    {
+      "sources": [
+        {
+          "userAgent": {}
+        },
+        {
+          "version": "2"
+        }
+      ],
+      "want": "{\"userAgent\":{},\"version\":\"2\"}"
     },
     {
       "sources": [

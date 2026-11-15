@@ -106,6 +106,14 @@ func (i ClientIdentity) MarshalJSON() ([]byte, error) {
 			return nil, err
 		}
 		userAgent = json.RawMessage(encoded)
+	} else if i.userAgentObject {
+		// A loaded object mode without a custom member round-trips as the
+		// object it was.
+		encoded, err := marshalIdentityJSON(i.userAgentFields)
+		if err != nil {
+			return nil, err
+		}
+		userAgent = json.RawMessage(encoded)
 	}
 	return marshalIdentityJSON(i.jsonFields,
 		identityJSONValue{"userAgent", userAgent, i.UserAgent != "" || custom != nil || i.userAgentSet},
@@ -130,16 +138,23 @@ func (i *ClientIdentity) UnmarshalJSON(data []byte) error {
 		case "userAgent":
 			decoded.userAgentSet = true
 			if bytes.HasPrefix(bytes.TrimSpace(field.raw), []byte("{")) {
+				decoded.userAgentObject = true
 				decoded.userAgentFields, err = decodeIdentityJSON(field.raw)
-				var custom string
 				if err == nil {
+					// An object without a custom member keeps its presence (the
+					// members round-trip) but is not a custom user agent; the
+					// reference's mode stays the object, whose `custom` is
+					// undefined.
 					for _, modeField := range decoded.userAgentFields {
-						if modeField.key == "custom" {
-							err = json.Unmarshal(modeField.raw, &custom)
+						if modeField.key != "custom" {
+							continue
+						}
+						var custom string
+						if err = json.Unmarshal(modeField.raw, &custom); err == nil {
+							decoded.CustomUserAgent = &custom
 						}
 					}
 				}
-				decoded.CustomUserAgent = &custom
 			} else {
 				err = json.Unmarshal(field.raw, &decoded.UserAgent)
 			}
