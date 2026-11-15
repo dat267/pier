@@ -99,24 +99,6 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 	var callbackQueue []string
 	callbackDraining := false
 
-	ensureTempFile := func() error {
-		if tempFilePath != "" {
-			return nil
-		}
-		id := tempFileID()
-		tempFilePath = filepath.Join(os.TempDir(), fmt.Sprintf("pi-bash-%s.log", id))
-		file, err := createActiveTempOutput(tempFilePath)
-		if err != nil {
-			tempFilePath = ""
-			return err
-		}
-		tempFile = file
-		flushedChunks = 0
-		// D161: bound the scratch this leaves behind (tempoutput.go).
-		sweepTempOutputFiles(filepath.Dir(tempFilePath), tempFilePath, tempOutputBudgetBytes)
-		return nil
-	}
-
 	// abandonTempFile discards a spill file that could not be written and
 	// latches the failure, so the result names no path and a later attempt does
 	// not leave an empty file in its place (A505).
@@ -133,6 +115,36 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 			_ = os.Remove(tempFilePath)
 			tempFilePath = ""
 		}
+	}
+
+	ensureTempFile := func() error {
+		if tempFilePath != "" {
+			return nil
+		}
+		id := tempFileID()
+		tempFilePath = filepath.Join(os.TempDir(), fmt.Sprintf("pi-bash-%s.log", id))
+		file, err := createActiveTempOutput(tempFilePath)
+		if err != nil {
+			tempFilePath = ""
+			return err
+		}
+		tempFile = file
+		flushedChunks = 0
+		// The buffered output is written here, as upstream's ensureTempFile does
+		// (bash-executor.ts: the chunk loop after createOutputFileStream). The
+		// tail truncation at the end of the run is the first reason to spill for a
+		// command whose raw bytes never crossed the threshold, and a file created
+		// without this write held nothing.
+		for _, chunk := range outputChunks {
+			if _, err := tempOutputWriteString(tempFile, chunk); err != nil {
+				abandonTempFile(err)
+				return err
+			}
+			flushedChunks++
+		}
+		// D161: bound the scratch this leaves behind (tempoutput.go).
+		sweepTempOutputFiles(filepath.Dir(tempFilePath), tempFilePath, tempOutputBudgetBytes)
+		return nil
 	}
 
 	appendOutput := func(rawText string) {
