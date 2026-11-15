@@ -218,7 +218,7 @@ func (t *Renderer) SetShowHardwareCursor(enabled bool) {
 	if !enabled {
 		t.Terminal.HideCursor()
 	}
-	t.requestRender(false)
+	t.requestRender()
 }
 
 // GetClearOnShrink reports whether empty rows are cleared when content shrinks.
@@ -545,9 +545,9 @@ func (t *Renderer) RequestRender(force bool) {
 // always owner-driven (the internal timer the seam used to disable is gone).
 func (t *Renderer) DisableAutoRender() {}
 
-// requestRender is RequestRender for internal callers.
-func (t *Renderer) requestRender(force bool) {
-	t.RequestRender(force)
+// requestRender is RequestRender for internal callers, which never force.
+func (t *Renderer) requestRender() {
+	t.RequestRender(false)
 }
 
 // resetRenderState invokes the screen's reset hook.
@@ -587,7 +587,7 @@ func (t *Renderer) Post(fn func()) {
 	t.postMu.Lock()
 	t.posted = append(t.posted, fn)
 	t.postMu.Unlock()
-	t.requestRender(false)
+	t.requestRender()
 }
 
 // drainPosted runs queued callbacks. Looping
@@ -781,7 +781,7 @@ func (t *Renderer) ShowOverlay(component Component, options *OverlayOptions) Ove
 		t.overlays.SetFocus(component)
 	}
 	t.Terminal.HideCursor()
-	t.requestRender(false)
+	t.requestRender()
 
 	return &overlayHandle{renderer: t, entry: entry, component: component, nonCapturing: nonCapturing}
 }
@@ -801,7 +801,7 @@ func (h *overlayHandle) Hide() {
 	if !t.overlays.HasEntries() {
 		t.Terminal.HideCursor()
 	}
-	t.requestRender(false)
+	t.requestRender()
 }
 
 func (h *overlayHandle) SetHidden(hidden bool) {
@@ -809,7 +809,7 @@ func (h *overlayHandle) SetHidden(hidden bool) {
 	if !t.overlays.SetHidden(h.entry, hidden, h.nonCapturing) {
 		return
 	}
-	t.requestRender(false)
+	t.requestRender()
 }
 
 func (h *overlayHandle) IsHidden() bool {
@@ -821,7 +821,7 @@ func (h *overlayHandle) Focus() {
 	if !t.overlays.FocusEntry(h.entry) {
 		return
 	}
-	t.requestRender(false)
+	t.requestRender()
 }
 
 func (h *overlayHandle) Unfocus(target Component, hasTarget bool) {
@@ -829,7 +829,7 @@ func (h *overlayHandle) Unfocus(target Component, hasTarget bool) {
 	if !t.overlays.Unfocus(h.entry, target, hasTarget) {
 		return
 	}
-	t.requestRender(false)
+	t.requestRender()
 }
 
 func (h *overlayHandle) IsFocused() bool {
@@ -852,7 +852,7 @@ func (t *Renderer) HideOverlay() {
 	if !t.overlays.HasEntries() {
 		t.Terminal.HideCursor()
 	}
-	t.requestRender(false)
+	t.requestRender()
 }
 
 // HasOverlay reports whether any overlay is visible.

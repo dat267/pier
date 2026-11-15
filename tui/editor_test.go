@@ -287,7 +287,7 @@ func TestFindWordBackwardPunctuationRunDoesNotCopySegments(t *testing.T) {
 
 	var before, after runtime.MemStats
 	runtime.ReadMemStats(&before)
-	got := findWordBackwardSegments(text, len(text), segments)
+	got := findWordBackwardSegments(len(text), segments)
 	runtime.ReadMemStats(&after)
 
 	if got != 0 {
@@ -330,7 +330,7 @@ func TestFindWordBackwardAfterPunctuationAvoidsRuneSlice(t *testing.T) {
 
 	var before, after runtime.MemStats
 	runtime.ReadMemStats(&before)
-	got := findWordBackwardSegments(text, len(text), segments)
+	got := findWordBackwardSegments(len(text), segments)
 	runtime.ReadMemStats(&after)
 
 	if got != len("word.") {
@@ -338,7 +338,7 @@ func TestFindWordBackwardAfterPunctuationAvoidsRuneSlice(t *testing.T) {
 	}
 	unicodeText := "word.漢字"
 	unicodeSegments := []editorSegment{{Segment: unicodeText, IsWordLike: true}}
-	if got, want := findWordBackwardSegments(unicodeText, len(unicodeText), unicodeSegments), len("word."); got != want {
+	if got, want := findWordBackwardSegments(len(unicodeText), unicodeSegments), len("word."); got != want {
 		t.Fatalf("Unicode cursor = %d, want %d", got, want)
 	}
 	allocated := after.TotalAlloc - before.TotalAlloc

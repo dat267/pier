@@ -183,7 +183,7 @@ type McpOAuthProvider struct {
 }
 
 func canonicalMcpServerURL(raw string) string {
-	parsed, _, err := parseHTTPURL(raw)
+	parsed, err := parseHTTPURL(raw)
 	if err != nil {
 		return raw
 	}

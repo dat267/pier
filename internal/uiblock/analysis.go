@@ -219,7 +219,7 @@ func loadModule(dir string) (*module, error) {
 	// marshaling discipline: the loop or loop-driven UI invokes them directly
 	// (OnBeat, settings callbacks, key handlers). Their bodies are rooted here
 	// because func-value calls are not followed during traversal.
-	wiringClosures(prog, all, roots)
+	wiringClosures(all, roots)
 	loopCallbackClosures(all, roots)
 
 	// Closures marshaled onto the loop via Post/runOnUI run on the UI goroutine.
@@ -402,7 +402,7 @@ func pos(prog *ssa.Program, ins ssa.Instruction) string {
 
 // wiringClosures roots every closure stored into a func-typed field of a
 // pier wiring struct (types named *Wiring in the module).
-func wiringClosures(prog *ssa.Program, all map[*ssa.Function]bool, roots map[*ssa.Function]string) {
+func wiringClosures(all map[*ssa.Function]bool, roots map[*ssa.Function]string) {
 	isWiring := func(t types.Type) bool {
 		named, ok := t.(*types.Named)
 		if !ok {

@@ -203,7 +203,7 @@ func parsePathPrefix(prefix string) parsedPathPrefix {
 	return parsedPathPrefix{rawPrefix: prefix}
 }
 
-func buildCompletionValue(path string, isDirectory bool, isAtPrefix bool, isQuotedPrefix bool) string {
+func buildCompletionValue(path string, isAtPrefix bool, isQuotedPrefix bool) string {
 	needsQuotes := isQuotedPrefix || autocompleteSeparatorCharIn(path)
 	prefix := ""
 	if isAtPrefix {
@@ -699,7 +699,7 @@ func (p *CombinedAutocompleteProvider) getFileSuggestions(prefix string) []Autoc
 			label += "/"
 		}
 		suggestions = append(suggestions, AutocompleteItem{
-			Value: buildCompletionValue(pathValue, isDirectory, parsed.isAtPrefix, parsed.isQuotedPrefix),
+			Value: buildCompletionValue(pathValue, parsed.isAtPrefix, parsed.isQuotedPrefix),
 			Label: label,
 		})
 	}
@@ -836,7 +836,7 @@ func (p *CombinedAutocompleteProvider) getFuzzyFileSuggestions(ctx context.Conte
 			label += "/"
 		}
 		suggestions = append(suggestions, AutocompleteItem{
-			Value:       buildCompletionValue(completionPath, entry.isDirectory, true, isQuotedPrefix),
+			Value:       buildCompletionValue(completionPath, true, isQuotedPrefix),
 			Label:       label,
 			Description: displayPath,
 		})

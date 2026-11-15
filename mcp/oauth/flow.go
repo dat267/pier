@@ -112,37 +112,37 @@ func loopback(hostname string) bool {
 
 // deriveApplicationType applies MCP SEP-837 to OAuth redirect URIs: custom
 // schemes and loopback HTTP(S) URLs identify native clients; other URLs are web.
-func parseHTTPURL(value string) (*url.URL, string, error) {
+func parseHTTPURL(value string) (*url.URL, error) {
 	value = stripWHATWGURLWhitespace(value)
 	parsed, err := url.Parse(value)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		return nil, "", fmt.Errorf("not an HTTP URL")
+		return nil, fmt.Errorf("not an HTTP URL")
 	}
 	if parsed.Host == "" {
 		colon := strings.IndexByte(value, ':')
 		if colon < 0 {
-			return nil, "", fmt.Errorf("not an absolute HTTP URL")
+			return nil, fmt.Errorf("not an absolute HTTP URL")
 		}
 		remainder := strings.ReplaceAll(value[colon+1:], string('\\'), "/")
 		remainder = strings.TrimLeft(remainder, "/")
 		if remainder == "" {
-			return nil, "", fmt.Errorf("HTTP URL has no host")
+			return nil, fmt.Errorf("HTTP URL has no host")
 		}
 		parsed, err = url.Parse(parsed.Scheme + "://" + remainder)
 		if err != nil || parsed.Host == "" {
-			return nil, "", fmt.Errorf("HTTP URL has no host")
+			return nil, fmt.Errorf("HTTP URL has no host")
 		}
 	}
 	if parsed.Hostname() == "" {
-		return nil, "", fmt.Errorf("HTTP URL has no host")
+		return nil, fmt.Errorf("HTTP URL has no host")
 	}
 	if port := parsed.Port(); port != "" {
 		number, portErr := strconv.Atoi(port)
 		if portErr != nil || number < 0 || number > 65535 {
-			return nil, "", fmt.Errorf("HTTP URL has an invalid port")
+			return nil, fmt.Errorf("HTTP URL has an invalid port")
 		}
 	}
-	return parsed, parsed.String(), nil
+	return parsed, nil
 }
 
 func deriveApplicationType(redirectURIs []string) string {
@@ -153,7 +153,7 @@ func deriveApplicationType(redirectURIs []string) string {
 		}
 		scheme := strings.ToLower(parsed.Scheme)
 		if (scheme == "http" || scheme == "https") && parsed.Host == "" {
-			parsed, _, err = parseHTTPURL(redirectURI)
+			parsed, err = parseHTTPURL(redirectURI)
 			if err != nil {
 				continue
 			}
@@ -168,7 +168,7 @@ func deriveApplicationType(redirectURIs []string) string {
 // secureEndpoint refuses to send credentials over plain HTTP (upstream
 // secureEndpoint).
 func secureEndpoint(value string) (*url.URL, error) {
-	parsed, _, err := parseHTTPURL(value)
+	parsed, err := parseHTTPURL(value)
 	if err != nil {
 		return nil, err
 	}
@@ -661,7 +661,7 @@ func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOpti
 		clientDocument = provider.ClientMetadataDocument(metadata)
 	}
 	if clientDocument != nil {
-		documentURL, _, err := parseHTTPURL(clientDocument.URL)
+		documentURL, err := parseHTTPURL(clientDocument.URL)
 		if err != nil || documentURL.Scheme != "https" || documentURL.Path == "" || documentURL.Path == "/" {
 			return "", fmt.Errorf("Invalid OAuth client metadata URL")
 		}

@@ -962,18 +962,18 @@ func (e *Editor) insertCharacterLocked(char string, skipUndoCoalescing bool) {
 
 	if e.autocompleteState == "" {
 		if char == "/" && e.isAtStartOfMessage() {
-			e.tryTriggerAutocompleteLocked(false)
+			e.tryTriggerAutocompleteLocked()
 		} else if containsString(e.autocompleteTriggers, char) {
 			textBeforeCursor := e.textBeforeCursor()
 			if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers) {
-				e.tryTriggerAutocompleteLocked(false)
+				e.tryTriggerAutocompleteLocked()
 			}
 		} else if isAutocompleteWordChar(char) {
 			textBeforeCursor := e.textBeforeCursor()
 			if e.isInSlashCommandContext(textBeforeCursor) {
-				e.tryTriggerAutocompleteLocked(false)
+				e.tryTriggerAutocompleteLocked()
 			} else if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers) {
-				e.tryTriggerAutocompleteLocked(false)
+				e.tryTriggerAutocompleteLocked()
 			}
 		}
 	} else {
@@ -1234,9 +1234,9 @@ func (e *Editor) handleBackspaceLocked() {
 	} else {
 		textBeforeCursor := e.textBeforeCursor()
 		if e.isInSlashCommandContext(textBeforeCursor) {
-			e.tryTriggerAutocompleteLocked(false)
+			e.tryTriggerAutocompleteLocked()
 		} else if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers) {
-			e.tryTriggerAutocompleteLocked(false)
+			e.tryTriggerAutocompleteLocked()
 		}
 	}
 }
@@ -1582,9 +1582,9 @@ func (e *Editor) handleForwardDeleteLocked() {
 	} else {
 		textBeforeCursor := e.textBeforeCursor()
 		if e.isInSlashCommandContext(textBeforeCursor) {
-			e.tryTriggerAutocompleteLocked(false)
+			e.tryTriggerAutocompleteLocked()
 		} else if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers) {
-			e.tryTriggerAutocompleteLocked(false)
+			e.tryTriggerAutocompleteLocked()
 		}
 	}
 }
@@ -1745,7 +1745,7 @@ func findWordWithSegmentation(text string, cursor int, e *Editor, backward bool)
 	cursor = clampEditorCursor(text, cursor)
 	if backward {
 		prefix := text[:cursor]
-		return findWordBackwardSegments(prefix, cursor, e.segmentLocked(prefix, "word"))
+		return findWordBackwardSegments(cursor, e.segmentLocked(prefix, "word"))
 	}
 	suffix := text[cursor:]
 	return cursor + findWordForwardSegments(suffix, 0, e.segmentLocked(suffix, "word"))
@@ -1762,7 +1762,7 @@ func clampEditorCursor(text string, cursor int) int {
 	return cursor
 }
 
-func findWordBackwardSegments(text string, cursor int, segments []editorSegment) int {
+func findWordBackwardSegments(cursor int, segments []editorSegment) int {
 	if cursor <= 0 {
 		return 0
 	}
@@ -2127,8 +2127,8 @@ func autocompleteItemFromSelect(item SelectItem) AutocompleteItem {
 	return AutocompleteItem(item)
 }
 
-func (e *Editor) tryTriggerAutocompleteLocked(explicitTab bool) {
-	e.requestAutocompleteLocked(false, explicitTab)
+func (e *Editor) tryTriggerAutocompleteLocked() {
+	e.requestAutocompleteLocked(false, false)
 }
 
 func (e *Editor) handleTabCompletionLocked() {

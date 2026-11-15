@@ -340,10 +340,10 @@ func TestAutocompleteHelpers(t *testing.T) {
 		t.Fatalf("parsed = %+v", parsed)
 	}
 
-	if got := buildCompletionValue("with space.txt", false, true, false); got != `@"with space.txt"` {
+	if got := buildCompletionValue("with space.txt", true, false); got != `@"with space.txt"` {
 		t.Fatalf("buildCompletionValue = %q", got)
 	}
-	if got := buildCompletionValue("plain.txt", false, true, false); got != "@plain.txt" {
+	if got := buildCompletionValue("plain.txt", true, false); got != "@plain.txt" {
 		t.Fatalf("buildCompletionValue = %q", got)
 	}
 
