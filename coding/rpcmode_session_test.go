@@ -4,6 +4,9 @@ package coding
 // bash execution (pi v1.4.0 modes/rpc/rpc-mode.ts).
 
 import (
+	"bytes"
+	"context"
+	"io"
 	"os"
 	"reflect"
 	"strings"
@@ -230,6 +233,37 @@ func TestRPCGetCommands(t *testing.T) {
 	second := commands[1].(map[string]any)
 	if second["name"] != "skill:summarize" || second["source"] != "skill" {
 		t.Fatalf("skill command = %+v", second)
+	}
+}
+
+// pi v1.5.2 b4afdddf rpc-mode.ts get_commands pushes `description:
+// template.description` for every prompt template. The field is a plain string
+// that prompt-templates.ts loadTemplateFromFile leaves empty when neither the
+// frontmatter nor the body supplies one, and JSON.stringify keeps the empty
+// string, so the record carries `"description":""` between name and source.
+func TestRPCGetCommandsKeepsAnEmptyDescription(t *testing.T) {
+	persist := false
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: t.TempDir(), StreamFn: stubStreamFn,
+		Sessions: NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: &persist}),
+		Control: &AgentSessionControl{PromptTemplates: []PromptTemplate{{
+			Name:       "empty",
+			SourceInfo: SourceInfo{Path: "/tmp/empty.md", Source: "prompt", Scope: SourceScopeProject, Origin: SourceOriginTopLevel},
+		}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	if err := RunRPCMode(context.Background(), session, RPCModeOptions{
+		Input: io.NopCloser(strings.NewReader(`{"id":"c","type":"get_commands"}` + "\n")), Output: &output,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	want := `{"name":"empty","description":"","source":"prompt","sourceInfo":`
+	if !strings.Contains(output.String(), want) {
+		t.Fatalf("record = %s", output.String())
 	}
 }
 

@@ -791,10 +791,9 @@ func (r *rpcRuntime) handle(command rpcCommand) (any, bool, error) {
 	case "get_commands":
 		commands := make([]any, 0)
 		for _, template := range session.PromptTemplates() {
-			value := jsonEventObject{{"name", template.Name}}
-			if template.Description != "" {
-				value.add("description", template.Description)
-			}
+			// Upstream always sets description from a plain string, which the
+			// loader can leave empty.
+			value := jsonEventObject{{"name", template.Name}, {"description", template.Description}}
 			value.add("source", "prompt")
 			value.add("sourceInfo", rpcSourceInfoValue(template.SourceInfo))
 			commands = append(commands, value)
