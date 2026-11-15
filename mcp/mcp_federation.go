@@ -114,12 +114,12 @@ func tokenScope(tokens *oauth.OAuthTokens) *string {
 	return tokens.Scope
 }
 
-// wrapTransportFetch converts the transport's fetch into the oauth fetch.
+// wrapTransportFetch converts the transport's fetch into the oauth fetch. Both
+// have the same underlying type, so the conversion is enough; a nil fetch stays
+// nil, which makes the oauth package use its default.
 func wrapTransportFetch(fetch func(ctx context.Context, request *http.Request) (*http.Response, error)) oauth.McpFetch {
 	if fetch == nil {
 		return nil
 	}
-	return func(ctx context.Context, request *http.Request) (*http.Response, error) {
-		return fetch(ctx, request)
-	}
+	return oauth.McpFetch(fetch)
 }
