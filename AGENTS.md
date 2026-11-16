@@ -48,7 +48,7 @@ Packages mirror upstream: `ai`, `agent`, `coding` (including `interactive`),
 ```sh
 just check                                  # gofmt, go mod tidy, vet, tests
 just cross                                  # cross-build and vet CI targets
-just fetch-reference                        # clone the pinned ./pi (gitignored)
+just fetch-reference                        # clone the pinned ./pi plus the pre-pin commit the easter fixtures render (gitignored)
 just goldens                                # every node golden regenerates from ./pi
 go test -count=1 ./coding -run TestName
 go test -short ./...                       # skips slower real-binary PTY tests

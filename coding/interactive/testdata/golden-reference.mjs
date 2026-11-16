@@ -66,6 +66,10 @@ registerHooks({
 });
 export const upstream = (path) => import(pathToFileURL(resolve(root, "packages", path)).href);
 export const component = (name) => upstream(`coding-agent/src/modes/interactive/components/${name}.ts`);
+// The pre-pin commit these fixtures render. `just fetch-reference` reads it from
+// this line: the reference clone is shallow, and a short id is not a ref that can
+// be fetched, so the full id is what the recipe asks the server for.
+export const LEGACY_COMMIT = "d1230ea2000d876b479a69b8b061f9d670f262f5";
 // These existing fixtures predate v1.4.0's setup choices and call-fallback
 // arguments. Keep their original contracts rather than bless unrelated
 // behavior changes in a palette cleanup. Settings also retains its existing menu
@@ -73,7 +77,7 @@ export const component = (name) => upstream(`coding-agent/src/modes/interactive/
 // v1.4.0. The original port commits cite d1230ea.
 export const legacyComponent = (name) => {
 	const path = `packages/coding-agent/src/modes/interactive/components/${name}.ts`;
-	const original = execFileSync("git", ["-C", root, "show", `d1230ea:${path}`], { encoding: "utf8" });
+	const original = execFileSync("git", ["-C", root, "show", `${LEGACY_COMMIT}:${path}`], { encoding: "utf8" });
 	const url = pathToFileURL(resolve(root, path)).href;
 	if (name === "tool-execution") {
 		const fallback = /private createCallFallback\(\): Component \{[\s\S]*?\n\t\}/;

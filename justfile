@@ -130,11 +130,26 @@ fetch-reference:
 	line="$(grep -m1 'upstream implementation (v' AGENTS.md)"
 	tag="$(sed -n 's/.*upstream implementation (\(v[0-9.]*\),.*/\1/p' <<<"$line")"
 	pin="$(sed -n 's/.*`\([0-9a-f]*\)`.*/\1/p' <<<"$line")"
-	if [[ -z $tag || -z $pin ]]; then
-		echo "fetch-reference: no pin line in AGENTS.md" >&2
+	legacy="$(sed -n 's/.*LEGACY_COMMIT = "\([0-9a-f]\{40\}\)".*/\1/p' coding/interactive/testdata/golden-reference.mjs)"
+	if [[ -z $tag || -z $pin || -z $legacy ]]; then
+		echo "fetch-reference: no pin line in AGENTS.md or no LEGACY_COMMIT in the golden reference" >&2
 		exit 1
 	fi
+	# The interactive easter fixtures render a component from before the pin, so the
+	# clone needs that commit too. A shallow clone holds only the pin, and a short
+	# id is not a ref the server fetches: ask for the full id, which GitHub serves
+	# for a reachable commit.
+	fetch_legacy() {
+		if git -C pi cat-file -e "$legacy^{commit}" 2>/dev/null; then
+			return 0
+		fi
+		git -C pi fetch --quiet --depth 1 origin "$legacy" || {
+			echo "fetch-reference: cannot fetch legacy commit $legacy; the interactive goldens need it" >&2
+			exit 1
+		}
+	}
 	if [[ -d pi/.git ]] && [[ "$(git -C pi rev-parse HEAD)" == "$pin"* ]]; then
+		fetch_legacy
 		echo "fetch-reference: ./pi is at $tag"
 		exit 0
 	fi
@@ -144,6 +159,7 @@ fetch-reference:
 		echo "fetch-reference: cloned $tag is not $pin" >&2
 		exit 1
 	fi
+	fetch_legacy
 	echo "fetch-reference: cloned $tag"
 
 # Reads local state only, so it works offline; `just reference-fetch` refreshes the
