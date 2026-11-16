@@ -217,6 +217,7 @@ func runLoop(
 			}
 			pendingMessages = nil
 
+			var update *AgentRequestUpdate
 			if config.PrepareRequest != nil {
 				thinkingLevel := config.Reasoning
 				if thinkingLevel == "" {
@@ -225,10 +226,11 @@ func runLoop(
 				request := &PrepareRequestContext{
 					Context: currentContext, Model: config.Model, ThinkingLevel: thinkingLevel,
 				}
-				update, err := config.PrepareRequest(request, ctx)
+				prepared, err := config.PrepareRequest(request, ctx)
 				if err != nil {
 					panic(err)
 				}
+				update = prepared
 				if update != nil {
 					if update.Context != nil {
 						currentContext = *update.Context
@@ -246,8 +248,22 @@ func runLoop(
 				}
 			}
 
+			// A request-scoped override applies to this request only, so the run
+			// keeps its own selection and the next request is prepared again.
+			requestConfig := config
+			if update != nil {
+				if update.RequestModel != nil {
+					requestConfig.Model = update.RequestModel
+				}
+				if update.HasRequestThinkingLevel {
+					requestConfig.Reasoning = update.RequestThinkingLevel
+					if requestConfig.Reasoning == ai.ThinkOff {
+						requestConfig.Reasoning = ""
+					}
+				}
+			}
 			// Stream assistant response.
-			message := streamAssistantResponse(&currentContext, &config, ctx, emit, streamFunction)
+			message := streamAssistantResponse(&currentContext, &requestConfig, ctx, emit, streamFunction)
 			*newMessages = append(*newMessages, message)
 
 			if message.StopReason == ai.StopError || message.StopReason == ai.StopAborted {

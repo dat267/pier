@@ -189,6 +189,15 @@ type AgentRequestUpdate struct {
 	Model            *ai.Model
 	ThinkingLevel    ai.ThinkingLevel
 	HasThinkingLevel bool
+	// RequestModel, when set, is used only for the request that follows: the run's
+	// selection stays as it is, so the next request is prepared again. Virtual
+	// model routing needs that shape, because the selection names the virtual
+	// model for the whole run and every request is routed separately.
+	RequestModel *ai.Model
+	// RequestThinkingLevel and HasRequestThinkingLevel do the same for the level
+	// this one request records and sends.
+	RequestThinkingLevel    ai.ThinkingLevel
+	HasRequestThinkingLevel bool
 }
 
 // AgentTurnContext is passed to FinishTurn and legacy ShouldStopAfterTurn callbacks.
