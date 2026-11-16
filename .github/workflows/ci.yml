@@ -10,10 +10,14 @@ env:
   # deadlock helper used to test the SIGQUIT stack parser.
   GOTRACEBACK: all
 
+# Four jobs, balanced so the workflow finishes in about six minutes instead of
+# the seventeen a single job took: the checks and the golden fixtures (which need
+# node and the reference) run beside the three Go suites, and each Go suite gets
+# its own four-core runner instead of sharing one. Every gate and its command is
+# unchanged; a seven-target matrix was tried before and lost jobs to runner
+# acquisition, which four jobs has not shown.
 jobs:
-  test:
-    # Keep all gates on one runner. Matrix fan-out previously required seven
-    # hosted runners; acquisition failures cancelled jobs before they started.
+  checks:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -54,6 +58,21 @@ jobs:
         # here means the port drifted from the reference.
         run: just goldens
 
+      # Each test alone in a fresh process, twice: shuffling rarely runs a
+      # test first, so it misses one that relies on an earlier test's global
+      # state, and a second run catches one that leaves state behind.
+      - name: isolated tests
+        run: COUNT=2 scripts/test_isolated.sh
+
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27"
+
       - name: build pier (used by the real-binary PTY tests)
         run: go build -o pier .
 
@@ -64,6 +83,18 @@ jobs:
         # guard, not a performance budget; measure suite duration separately.
         run: go test -race -count=2 -timeout 300s ./...
 
+  stress:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27"
+
+      - name: build pier (used by the real-binary PTY tests)
+        run: go build -o pier .
+
       # The packages with the most shared state again, shuffled, on one CPU and
       # on four: GOMAXPROCS=1 starves goroutines the way a busy machine does,
       # and shuffling catches a test that depends on another's leftovers.
@@ -72,14 +103,17 @@ jobs:
           PIER_TEST_BIN: ${{ github.workspace }}/pier
         run: go test -race -count=2 -cpu=1,4 -shuffle=on -timeout 900s ./agent ./coding ./coding/interactive ./mcp
 
-      # Each test alone in a fresh process, twice: shuffling rarely runs a
-      # test first, so it misses one that relies on an earlier test's global
-      # state, and a second run catches one that leaves state behind.
-      - name: isolated tests
-        run: COUNT=2 scripts/test_isolated.sh
+  cross:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27"
 
       # vet also compiles every _test.go, catching platform-specific syscall
-      # use. Keep every former matrix target, without acquiring more runners.
+      # use. Keep every former matrix target.
       - name: cross-build and vet
         env:
           CGO_ENABLED: "0"
