@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D486)
+# Deliberate divergences from pi (D1–D487)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7892,3 +7892,27 @@ bindings do keep definition order, which is the order upstream's
 `getResolvedBindings` writes.
 
 Test: `TestKeybindingConflictsAreSorted`.
+
+### D487
+
+**`ParseStreamingJSONText` keeps the streaming preview's tolerance.**
+
+Reference: pi v1.5.2 (b4afdddf) `packages/ai/src/utils/json-parse.ts`
+`parseStreamingJson`, which parses strictly, then repairs, then falls back to
+`partial-json`. Pier's exported helper is the same three steps with its own
+partial parser, the one the streaming adapters use to keep a tool call's argument
+preview moving. On 458 adversarial inputs (43 documents and every prefix) 42
+differ, all malformed: a missing comma is tolerated (`{"a":1 "b":2}` gives
+`{"a":1}` where the reference gives `{}`), an invalid escape keeps its text, a
+loose number (`{"p":.5}`, `{"plus":+1}`) parses, `NaN` and `Infinity` prefixes
+yield `{}` rather than `null`, and an unterminated string keeps its trailing
+spaces.
+
+The difference is deliberate. The reference has no caller of `parseStreamingJson`
+(grep of `packages/ai/src` finds it in comments only), while the port's adapters
+need the tolerant preview, and one function cannot match both references. Matching
+it exactly would mean porting the remaining `partial-json` rules and keeping a
+second Node-generated corpus for an exported helper nothing in the reference
+calls.
+
+Test: `TestParseStreamingJSONTextKeepsItsTolerance`.

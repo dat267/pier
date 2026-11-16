@@ -1,12 +1,5 @@
 # Reproduced, unresolved findings
 
-## A tolerant JSON fallback differs from `parseStreamingJson` on malformed text
-
-- Severity: low. Only malformed text differs, and the pinned reference has no caller of `parseStreamingJson` (grep of `pi/packages/ai/src` finds it only in comments), so no reference code path reaches the difference. `ai.ParseStreamingJSONText` is exported, though, and its doc claims parity with that function.
-- Failure: `parseStreamingJSONObject` (`ai/jsonparse.go`) is `parseStreamingJson`'s three-step fallback (strict parse, repair, partial parse) with the port's own partial parser. On 458 adversarial inputs (43 documents plus every prefix), 439 of which the reference parses to an object, 42 differ, all malformed: a missing comma or colon is tolerated (`{"a":1 "b":2}` gives `{"a":1}` where the reference gives `{}`), raw control characters and invalid escapes stay visible (`{"bad":"\d"` gives `{"bad":""}`, the reference `{}`), a loose number is accepted (`{"p":.5}` and `{"plus":+1}` parse where the reference gives `{}`), `NaN`/`Infinity` prefixes give `{}` where `partial-json` gives `null`, a lone surrogate decodes to U+FFFD where the reference keeps the code unit (D253), and trailing whitespace of an unterminated string is kept where `parseStreamingJson` trims it.
-- Evidence: the differential is `parseStreamingJson` from the pinned `pi/packages/ai/dist/utils/json-parse.js` against `parseStreamingJSONObject`, one JSONL dump each, compared field by field; every well-formed prefix agrees, the case the 15,679 generated prefixes recorded in `ai/jsonparse.go`'s comment cover (D325 adds the nesting bound).
-- Why it is not simply fixed: the port calls the helper where upstream uses `ToolCallArgumentsStream` (the abort-time finalization in `anthropic_stream.go` and the four sibling adapters), and there the tolerated missing comma, kept control character and kept trailing space are exactly the preview `streaming_json.go` produces. One function cannot match both references. Splitting it (streaming rules for the adapters, `partial-json` rules for the exported helper) is the repair, and it needs the extra `partial-json` rules above plus a Node-generated golden corpus; it is not worth new dependencies for a helper nothing in the reference calls.
-
 ## `go test ./coding ./cmd` failed once and did not reproduce
 
 - Severity: low until it repeats; it may be a resource-limited environment effect rather than a test bug.

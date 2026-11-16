@@ -881,8 +881,10 @@ func parseStreamingArgs(args json.RawMessage) json.RawMessage {
 }
 
 // ParseStreamingJSONText parses a partially streamed JSON object, repairing an
-// incomplete tail; an empty or unparseable input yields {} (upstream
-// parseStreamingJson with the `|| {}` default). Streaming previews use
+// incomplete tail; an empty or unparseable input yields {}. It keeps the preview
+// rules the streaming adapters need, which are more tolerant than the reference's
+// parseStreamingJson on malformed text (D487, pinned by
+// TestParseStreamingJSONTextKeepsItsTolerance). Streaming previews use
 // ToolCallArgumentsStream instead.
 func ParseStreamingJSONText(text string) json.RawMessage {
 	return parseStreamingJSONObject(text)
