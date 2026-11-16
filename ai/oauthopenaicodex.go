@@ -25,6 +25,8 @@ const (
 	OpenAICodexJWTPath      = "https://api.openai.com/auth"
 	OpenAICodexDeviceTTLSec = 15 * 60
 	// OpenAICodexCallbackPort is the fixed loopback port of the browser flow.
+	// PI_OAUTH_CALLBACK_PORT overrides it for a caller that needs its own port
+	// (oauthCallbackPort).
 	OpenAICodexCallbackPort = 1455
 	// Login method ids for the select prompt.
 	OpenAICodexBrowserLogin    = "browser"
@@ -366,7 +368,7 @@ func CreateOpenAICodexAuthorizationFlow(originator string) (*OpenAICodexAuthoriz
 	query := parsed.Query()
 	query.Set("response_type", "code")
 	query.Set("client_id", OpenAICodexClientID)
-	query.Set("redirect_uri", OpenAICodexRedirectURI)
+	query.Set("redirect_uri", openAICodexRedirectURI())
 	query.Set("scope", OpenAICodexScope)
 	query.Set("code_challenge", pkce.Challenge)
 	query.Set("code_challenge_method", "S256")
@@ -400,7 +402,7 @@ func StartOpenAICodexCallbackServer(expectedState string) *OpenAICodexCallbackSe
 		failure: make(chan error, 1),
 		done:    make(chan struct{}),
 	}
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", oauthCallbackHost(), OpenAICodexCallbackPort))
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", oauthCallbackHost(), oauthCallbackPort(OpenAICodexCallbackPort)))
 	if err != nil {
 		// Settled already: CancelWait (the manual-entry handoff) must not
 		// close done a second time.
@@ -603,7 +605,7 @@ func LoginOpenAICodex(interaction *AuthInteraction) (*OAuthCredential, error) {
 			Type:        AuthPromptManualCode,
 			Ctx:         manualCtx,
 			Message:     "Complete login in your browser, or paste the authorization code / redirect URL here:",
-			Placeholder: OpenAICodexRedirectURI,
+			Placeholder: openAICodexRedirectURI(),
 		})
 		manualCh <- manualResult{input: input, err: perr}
 		server.CancelWait()
@@ -638,7 +640,7 @@ func LoginOpenAICodex(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if code == "" {
 		return nil, fmt.Errorf("Missing authorization code")
 	}
-	token, err := ExchangeOpenAICodexAuthorizationCode(ctx, code, flow.Verifier, OpenAICodexRedirectURI)
+	token, err := ExchangeOpenAICodexAuthorizationCode(ctx, code, flow.Verifier, openAICodexRedirectURI())
 	if err != nil {
 		return nil, err
 	}
@@ -703,4 +705,10 @@ func OpenAICodexOAuth() *OAuthAuth {
 // randomHexState returns 16 random bytes as hex (upstream createState).
 func randomHexState() (string, error) {
 	return randomHex(16)
+}
+
+// openAICodexRedirectURI is the loopback redirect the flow advertises, on the
+// effective callback port (oauthCallbackPort).
+func openAICodexRedirectURI() string {
+	return fmt.Sprintf("http://localhost:%d/auth/callback", oauthCallbackPort(OpenAICodexCallbackPort))
 }

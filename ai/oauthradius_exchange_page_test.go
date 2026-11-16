@@ -17,6 +17,7 @@ import (
 // fails. Pier exchanged after the wait and had already answered the browser
 // with the success page.
 func TestRadiusBrowserLoginReportsAFailedExchangeOnTheBrowserPage(t *testing.T) {
+	useFreeOAuthCallbackPort(t)
 	gateway := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 		switch request.URL.Path {
@@ -61,7 +62,7 @@ func TestRadiusBrowserLoginReportsAFailedExchangeOnTheBrowserPage(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	response, err := http.Get(RadiusRedirectURI + "?code=the-code&state=" + url.QueryEscape(parsed.Query().Get("state")))
+	response, err := http.Get(radiusRedirectURI() + "?code=the-code&state=" + url.QueryEscape(parsed.Query().Get("state")))
 	if err != nil {
 		t.Fatalf("callback: %v", err)
 	}

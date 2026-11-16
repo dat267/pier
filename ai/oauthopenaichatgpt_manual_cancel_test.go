@@ -17,6 +17,7 @@ import (
 // the prompt, which kept a goroutine blocked forever and left a stale prompt
 // on the terminal.
 func TestOpenAIChatGPTLoginCancelsTheManualPromptWhenTheCallbackWins(t *testing.T) {
+	useFreeOAuthCallbackPort(t)
 	token := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		_, _ = io.Copy(io.Discard, request.Body)
 		_, _ = writer.Write([]byte(`{"access_token":"a","refresh_token":"r","id_token":"i",` +

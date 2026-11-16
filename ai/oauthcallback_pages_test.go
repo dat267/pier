@@ -28,9 +28,10 @@ func TestOAuthCallbackPagesMatchTheSharedServer(t *testing.T) {
 	}
 
 	t.Run("codex success", func(t *testing.T) {
+		useFreeOAuthCallbackPort(t)
 		server := StartOpenAICodexCallbackServer("st-success")
 		defer server.Close()
-		response, body := fetch(t, OpenAICodexRedirectURI+"?code=the-code&state=st-success")
+		response, body := fetch(t, openAICodexRedirectURI()+"?code=the-code&state=st-success")
 		if response.StatusCode != http.StatusOK ||
 			!strings.Contains(body, "Signed in to OpenAI. You may now close this page.") {
 			t.Fatalf("status %d body %q", response.StatusCode, body)
@@ -44,9 +45,10 @@ func TestOAuthCallbackPagesMatchTheSharedServer(t *testing.T) {
 	})
 
 	t.Run("codex denied authorization", func(t *testing.T) {
+		useFreeOAuthCallbackPort(t)
 		server := StartOpenAICodexCallbackServer("st-denied")
 		defer server.Close()
-		response, body := fetch(t, OpenAICodexRedirectURI+
+		response, body := fetch(t, openAICodexRedirectURI()+
 			"?error=access_denied&error_description=The+user+denied+the+request&state=st-denied")
 		if response.StatusCode != http.StatusBadRequest ||
 			!strings.Contains(body, "OpenAI authorization failed.") ||
@@ -62,13 +64,14 @@ func TestOAuthCallbackPagesMatchTheSharedServer(t *testing.T) {
 		if err := server.LastError(); err == nil || err.Error() != "OpenAI authorization failed: The user denied the request" {
 			t.Fatalf("lastErr = %v", err)
 		}
-		replay, _ := fetch(t, OpenAICodexRedirectURI+"?code=other&state=st-denied")
+		replay, _ := fetch(t, openAICodexRedirectURI()+"?code=other&state=st-denied")
 		if replay.StatusCode != http.StatusConflict {
 			t.Fatalf("replay status = %d", replay.StatusCode)
 		}
 	})
 
 	t.Run("chatgpt success", func(t *testing.T) {
+		useFreeOAuthCallbackPort(t)
 		server, err := StartOpenAIChatGPTCallbackServer("st-chatgpt")
 		if err != nil {
 			t.Skipf("the fixed callback port is unavailable: %v", err)
@@ -89,6 +92,7 @@ func TestOAuthCallbackPagesMatchTheSharedServer(t *testing.T) {
 // rejection the login rethrows, so a denied authorization fails the login. The
 // port fell through to the paste prompt and waited for input instead.
 func TestLoginOpenAICodexFailsWhenTheBrowserDeniesAuthorization(t *testing.T) {
+	useFreeOAuthCallbackPort(t)
 	authorize := make(chan string, 1)
 	promptStarted := make(chan struct{})
 	done := make(chan error, 1)
@@ -123,7 +127,7 @@ func TestLoginOpenAICodexFailsWhenTheBrowserDeniesAuthorization(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := OpenAICodexRedirectURI + "?error=access_denied&error_description=Denied&state=" +
+	target := openAICodexRedirectURI() + "?error=access_denied&error_description=Denied&state=" +
 		url.QueryEscape(parsed.Query().Get("state"))
 	response, getErr := http.Get(target)
 	if getErr != nil {

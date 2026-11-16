@@ -50,7 +50,7 @@ const OpenAIChatGPTWorkspaceLimitHint = "You've reached your ChatGPT workspace's
 // OpenAIChatGPTRedirectURI is the loopback redirect the dynamic client is
 // registered against.
 func OpenAIChatGPTRedirectURI() string {
-	return fmt.Sprintf("http://%s:%d%s", OpenAIChatGPTCallbackHost, OpenAIChatGPTCallbackPort, OpenAIChatGPTCallbackPath)
+	return fmt.Sprintf("http://%s:%d%s", OpenAIChatGPTCallbackHost, oauthCallbackPort(OpenAIChatGPTCallbackPort), OpenAIChatGPTCallbackPath)
 }
 
 // openAIChatGPTAgentHostID maps an installation UUID to OpenAI's agent host
@@ -163,10 +163,11 @@ func StartOpenAIChatGPTCallbackServer(expectedState string) (*OpenAIChatGPTCallb
 		failure: make(chan error, 1),
 		done:    make(chan struct{}),
 	}
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", oauthCallbackHost(), OpenAIChatGPTCallbackPort))
+	callbackPort := oauthCallbackPort(OpenAIChatGPTCallbackPort)
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", oauthCallbackHost(), callbackPort))
 	if err != nil {
 		if isAddressInUseError(err) {
-			return nil, fmt.Errorf("Port %d is in use, probably by an unfinished login in another pi session or by the Codex CLI. Cancel that login and try again.", OpenAIChatGPTCallbackPort)
+			return nil, fmt.Errorf("Port %d is in use, probably by an unfinished login in another pi session or by the Codex CLI. Cancel that login and try again.", callbackPort)
 		}
 		return nil, err
 	}

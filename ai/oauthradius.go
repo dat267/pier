@@ -28,8 +28,15 @@ const (
 	radiusDeviceGrant   = "urn:ietf:params:oauth:grant-type:device_code"
 )
 
-// RadiusRedirectURI is the OAuth redirect URI.
+// RadiusRedirectURI is the OAuth redirect URI on the default callback port.
+// The flow advertises radiusRedirectURI(), which follows
+// PI_OAUTH_CALLBACK_PORT when a caller needs its own port.
 const RadiusRedirectURI = "http://" + radiusCallbackHost + ":1456" + RadiusCallbackPath
+
+// radiusRedirectURI is RadiusRedirectURI on the effective callback port.
+func radiusRedirectURI() string {
+	return fmt.Sprintf("http://%s:%d%s", radiusCallbackHost, oauthCallbackPort(RadiusCallbackPort), RadiusCallbackPath)
+}
 
 // radiusGatewayEndpointURL mirrors new URL(endpoint, gateway): API endpoints
 // are rooted at the gateway origin even when its configured URL has a path.
@@ -216,7 +223,7 @@ type RadiusCallbackServer struct {
 // server does, so a failure shows on the page and ends the wait with it.
 func StartRadiusCallbackServer(expectedState string, ctx context.Context, complete func(code string) (*OAuthCredential, error)) *RadiusCallbackServer {
 	callback := &RadiusCallbackServer{done: make(chan struct{})}
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", radiusCallbackHost, RadiusCallbackPort))
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", radiusCallbackHost, oauthCallbackPort(RadiusCallbackPort)))
 	if err != nil {
 		// Settled already: the deferred Close must not close done again.
 		callback.unavailable = true
@@ -350,7 +357,7 @@ func LoginRadiusWithBrowser(interaction *AuthInteraction, gateway, authorization
 	query := parsed.Query()
 	query.Set("response_type", "code")
 	query.Set("client_id", RadiusOAuthClientID)
-	query.Set("redirect_uri", RadiusRedirectURI)
+	query.Set("redirect_uri", radiusRedirectURI())
 	query.Set("scope", RadiusOAuthScope)
 	query.Set("code_challenge", pkce.Challenge)
 	query.Set("code_challenge_method", "S256")
@@ -366,7 +373,7 @@ func LoginRadiusWithBrowser(interaction *AuthInteraction, gateway, authorization
 		return RequestRadiusOAuthToken(ctx, gateway, map[string]string{
 			"grant_type":    "authorization_code",
 			"client_id":     RadiusOAuthClientID,
-			"redirect_uri":  RadiusRedirectURI,
+			"redirect_uri":  radiusRedirectURI(),
 			"code":          code,
 			"code_verifier": pkce.Verifier,
 		})
@@ -374,7 +381,7 @@ func LoginRadiusWithBrowser(interaction *AuthInteraction, gateway, authorization
 	if interaction.Notify != nil {
 		interaction.Notify(AuthEvent{
 			Type:    AuthEventProgress,
-			Message: "Listening for OAuth callback on " + RadiusRedirectURI,
+			Message: "Listening for OAuth callback on " + radiusRedirectURI(),
 		})
 		interaction.Notify(AuthEvent{
 			Type:         AuthEventAuthURL,

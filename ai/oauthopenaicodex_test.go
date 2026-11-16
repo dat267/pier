@@ -458,10 +458,12 @@ func TestLoginOpenAICodexCallbackUnblocksManualPrompt(t *testing.T) {
 }
 
 func TestOpenAICodexCallbackPortInUse(t *testing.T) {
+	useFreeOAuthCallbackPort(t)
 	host := oauthCallbackHost()
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, OpenAICodexCallbackPort))
+	port := oauthCallbackPort(OpenAICodexCallbackPort)
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
-		t.Skipf("port %d is not free: %v", OpenAICodexCallbackPort, err)
+		t.Skipf("port %d is not free: %v", port, err)
 	}
 	defer listener.Close()
 	server := StartOpenAICodexCallbackServer("state")

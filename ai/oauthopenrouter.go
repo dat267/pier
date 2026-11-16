@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -39,6 +40,23 @@ func oauthCallbackHost() string {
 		return host
 	}
 	return "127.0.0.1"
+}
+
+// oauthCallbackPort returns the loopback port a fixed-port callback server binds,
+// and the port the flow advertises in redirect_uri. PI_OAUTH_CALLBACK_PORT lets a
+// caller give the flow its own port: the isolated test gate runs each test in its
+// own process, and two processes cannot share the fixed port the providers
+// expect. Production leaves it unset and gets the fixed port.
+func oauthCallbackPort(fixed int) int {
+	value := strings.TrimSpace(os.Getenv("PI_OAUTH_CALLBACK_PORT"))
+	if value == "" {
+		return fixed
+	}
+	port, err := strconv.Atoi(value)
+	if err != nil || port <= 0 || port > 65535 {
+		return fixed
+	}
+	return port
 }
 
 // ParseOpenRouterAuthorizationInput extracts a code from a pasted redirect URL,

@@ -22,7 +22,8 @@ func holdPort(t *testing.T, host string, port int) {
 // f9a26365) reports a null wait and falls back to manual entry. Handing over
 // to manual entry and closing must not settle the server a second time.
 func TestCodexCallbackServerWithItsPortTakenSettlesOnce(t *testing.T) {
-	holdPort(t, oauthCallbackHost(), OpenAICodexCallbackPort)
+	useFreeOAuthCallbackPort(t)
+	holdPort(t, oauthCallbackHost(), oauthCallbackPort(OpenAICodexCallbackPort))
 	server := StartOpenAICodexCallbackServer("state")
 	if !server.unavailable {
 		t.Skip("the callback port could not be made unavailable")
@@ -37,7 +38,8 @@ func TestCodexCallbackServerWithItsPortTakenSettlesOnce(t *testing.T) {
 // Radius's browser login (radius.ts, v1.5.0 f9a26365) errors when its fixed
 // port is taken; its deferred Close must not panic on the way out.
 func TestRadiusCallbackServerWithItsPortTakenSettlesOnce(t *testing.T) {
-	holdPort(t, radiusCallbackHost, RadiusCallbackPort)
+	useFreeOAuthCallbackPort(t)
+	holdPort(t, radiusCallbackHost, oauthCallbackPort(RadiusCallbackPort))
 	server := StartRadiusCallbackServer("state", nil, nil)
 	if !server.unavailable {
 		t.Skip("the callback port could not be made unavailable")
