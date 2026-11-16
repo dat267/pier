@@ -17,7 +17,14 @@ import (
 // prepareVirtualRequest routes one request of a virtual selection. It returns
 // nil for a physical selection, which leaves the request untouched.
 func (s *AgentSession) prepareVirtualRequest(request *agent.PrepareRequestContext, ctx context.Context) (*agent.AgentRequestUpdate, error) {
-	if s == nil || request == nil || !IsVirtualModel(request.Model) {
+	if s == nil || request == nil {
+		return nil, nil
+	}
+	// The recorded retry failure belongs to the request that follows the retry
+	// preparation, whatever kind of selection it uses: a physical request consumes
+	// it, so a later virtual selection cannot report a stale retry.
+	failure := s.takeRouteFailure()
+	if !IsVirtualModel(request.Model) {
 		return nil, nil
 	}
 	runtime := s.modelRuntime()
@@ -26,7 +33,6 @@ func (s *AgentSession) prepareVirtualRequest(request *agent.PrepareRequestContex
 	}
 	model := request.Model
 	messages := s.convertToLlm(request.Context.Messages)
-	failure := s.takeRouteFailure()
 	reason := "continuation"
 	switch {
 	case failure != nil:

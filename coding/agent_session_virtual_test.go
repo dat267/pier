@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
 )
 
@@ -99,5 +100,71 @@ func TestSessionRoutesAVirtualSelection(t *testing.T) {
 	state, ok := GetVirtualModelState(session.Sessions.GetBranch(""), "anthropic", "session-router")
 	if !ok || string(state) != string(stateJSON) {
 		t.Fatalf("branch state = %s (found %v), want the router state", state, ok)
+	}
+}
+
+// A retry records the response it replaces so the next routed request reports
+// reason "retry". The failure belongs to that request, not to a later virtual
+// selection: a request of a physical selection consumes it.
+func TestVirtualRouteFailureDoesNotOutliveItsRequest(t *testing.T) {
+	tempAgentDir(t)
+	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
+		AuthPath:        filepath.Join(GetAgentDir(), "auth.json"),
+		ModelsPath:      filepath.Join(GetAgentDir(), "models.json"),
+		Credentials:     newMemoryCredentialStore(),
+		RefreshOnCreate: new(false),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	physical := runtime.GetModels("anthropic")[0]
+	if err := runtime.SetRuntimeAPIKey(physical.Provider, "synthetic-key", ctx); err != nil {
+		t.Fatal(err)
+	}
+	var reasons []string
+	if err := runtime.RegisterVirtualModel(VirtualModelDefinition{
+		Provider: "anthropic", ID: "retry-router", Name: "Retry router",
+		Route: func(request ModelRouteRequest) (ModelRoute, error) {
+			reasons = append(reasons, request.Reason)
+			return ModelRoute{Model: &ai.Model{Provider: physical.Provider, ID: physical.ID}, ThinkingLevel: "off"}, nil
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	virtual := runtime.GetModel("anthropic", "retry-router")
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	created, err := CreateAgentSession(ctx, &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings, Model: virtual,
+		StreamFn: func(*ai.Model, ai.TranscriptContext, *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			return ai.NewAssistantMessageEventStream()
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	session := created.Session
+	defer session.Dispose()
+
+	messages := []ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "go"}}}
+	virtualRequest := &agent.PrepareRequestContext{Model: virtual, Context: agent.AgentContext{Messages: messages}}
+	// The request right after a retry is the one that reports it.
+	session.setRouteFailure(&ai.AssistantMessage{Provider: physical.Provider, Model: physical.ID, StopReason: ai.StopError})
+	if update, err := session.prepareVirtualRequest(virtualRequest, ctx); err != nil || update == nil {
+		t.Fatalf("retry request = %+v, %v; want routing", update, err)
+	}
+	if len(reasons) != 1 || reasons[0] != "retry" {
+		t.Fatalf("router reasons = %v, want the retry marked", reasons)
+	}
+	session.setRouteFailure(&ai.AssistantMessage{Provider: physical.Provider, Model: physical.ID, StopReason: ai.StopError})
+	physicalRequest := &agent.PrepareRequestContext{Model: physical, Context: agent.AgentContext{Messages: messages}}
+	if update, err := session.prepareVirtualRequest(physicalRequest, ctx); err != nil || update != nil {
+		t.Fatalf("physical request = %+v, %v; want no routing", update, err)
+	}
+	if update, err := session.prepareVirtualRequest(virtualRequest, ctx); err != nil || update == nil {
+		t.Fatalf("virtual request = %+v, %v; want routing", update, err)
+	}
+	if len(reasons) != 2 || reasons[1] != "user" {
+		t.Fatalf("router reasons = %v, want the consumed failure to leave a user request", reasons)
 	}
 }
