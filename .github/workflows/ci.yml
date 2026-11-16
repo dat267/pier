@@ -10,12 +10,13 @@ env:
   # deadlock helper used to test the SIGQUIT stack parser.
   GOTRACEBACK: all
 
-# Four jobs, balanced so the workflow finishes in about six minutes instead of
+# Four jobs, balanced so the workflow finishes in about four minutes instead of
 # the seventeen a single job took: the checks and the golden fixtures (which need
 # node and the reference) run beside the three Go suites, and each Go suite gets
 # its own four-core runner instead of sharing one. Every gate and its command is
 # unchanged; a seven-target matrix was tried before and lost jobs to runner
-# acquisition, which four jobs has not shown.
+# acquisition, which four jobs has not shown. Measured on run 43837386780:
+# 4m03s wall clock, with test 3m02s, stress 3m58s, checks 3m13s and cross 30s.
 jobs:
   checks:
     runs-on: ubuntu-24.04
