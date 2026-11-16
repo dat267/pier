@@ -1,9 +1,10 @@
 # Reproduced, unresolved findings
 
-None. The whole-tree audit is complete: every finding it reproduced has been
-repaired, and the differences kept on purpose are recorded as D-rows in
-`DECISIONS.md`.
+## A stress-gate run failed the RPC chaos test on a session write
 
-Add a section here for a new reproduced finding, with its severity, the failure,
-the evidence and a repair plan. An unreproduced one-off failure does not belong
-here; record what the next occurrence needs instead, and reproduce it first.
+- Severity: low until it is understood; it is a test failure in CI, not a confirmed product bug.
+- Failure: in CI run 43827491162, the `race stress` step (`go test -race -count=2 -cpu=1,4 -shuffle=on -timeout 900s ./agent ./coding ./coding/interactive ./mcp`, shuffle seed 1794816114167051316) failed in `./coding`: `TestRPCAnswersEveryCommandOnceUnderAnInterleavedLoad` reported `the server stopped with session append failed (/tmp/TestRPCAnswersEveryCommandOnceUnderAnInterleavedLoad1767583622/003/other.jsonl): open .../other.jsonl: file exists`. A session manager whose file is missing records an uninitialized write state, so its first save claims the file with `O_EXCL`; the message means a claim found the file already there.
+- Evidence: the CI log above. Not reproduced locally: one full `go test -race -count=2 -cpu=1,4 -shuffle=on ./coding` (green), one with the same seed (green), and six focused `-count=2 -shuffle=on` runs of the test (green). The test switches to one fixed path from a random 200-command stream, so the collision needs a particular interleaving.
+- Repair plan: reproduce first. Run the stress command in a loop with `PIER_DEBUG_WRITE=1` and a temporary stack print in `SessionManager.recordWriteResult` (the message is built there), so the failing caller is known before anything is changed. Two candidates to check once reproduced: two managers opened on the same path before either writes it, or a queued write from the previous session landing after `switch_session` installed the new manager. `writeSessionState.rewrite` should then skip the exclusive claim when the file already exists, with a unit test that drives the reproducing sequence.
+
+An unreproduced one-off failure does not belong here; record what the next occurrence needs instead, and reproduce it first.
