@@ -14,13 +14,6 @@
 - Evidence: one row of the 758-case differential of `ValidateToolArguments` against `packages/ai/src/utils/validation.ts`; the other 757 match exactly.
 - Repair plan: make the check's re-entry answer `false`/unknown for the coercion probe (as the reference's throwing `passes` does) while keeping `true` for the plain check, or port the reference's `entered`/`cuts` stack. It needs care: flipping the guard to `false` would make a genuinely recursive schema reject deep values, so the two callers need separate answers.
 
-## A config shell command spawns a visible console window on Windows
-
-- Severity: low. Windows only, and only when the process has no console of its own (a GUI host embedding pier, or a service). A terminal session inherits the console, so nothing appears and the output is identical.
-- Failure: `executeWithConfiguredShell` (`coding/resolveconfigvalue.go`) spawns the configured shell with `exec.CommandContext` and no `SysProcAttr`, so Windows creates a console window for it when the parent has none. The reference passes `windowsHide: true` to its `spawnSync` call (`core/resolve-config-value.ts`), which suppresses that window.
-- Evidence: read of both files; the reference option list contains `windowsHide: true`, while `grep HideWindow` finds only `mcp/processgroup_windows.go`, which sets `cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}` for the same reason.
-- Repair plan: add a build-tagged `hideConfigCommandWindow(cmd *exec.Cmd)` beside the existing platform files, set `HideWindow` on Windows in that path only (the default-shell path mirrors `execSync`, which does not pass the option), and pin it with a Windows-tagged test like `mcp/processgroup_windows_test.go`. It is not run locally because the test can only execute on Windows.
-
 ## The shell environment omits the reference's agent bin-dir PATH entry
 
 - Severity: low. Visible only when something places an executable in `<agentDir>/bin` and a bash command calls it by bare name; pier itself writes nothing there, and the package manager that populates it upstream is out of scope (D41).

@@ -315,6 +315,7 @@ func executeWithConfiguredShell(command string) (value string, executed bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), configCommandTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, config.Shell, args...)
+	hideConfigCommandWindow(cmd)
 	limitConfigCommandPipeWaitAfterCancel(cmd)
 	if commandFromStdin {
 		cmd.Stdin = strings.NewReader(command)
