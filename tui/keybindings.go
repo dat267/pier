@@ -314,15 +314,22 @@ func (m *KeybindingsManager) GetUserBindings() map[string][]string {
 	return out
 }
 
-// GetResolvedBindings returns every keybinding's resolved keys.
-func (m *KeybindingsManager) GetResolvedBindings() map[string][]string {
+// GetResolvedBindings returns every keybinding's resolved keys, shaped like
+// upstream's getResolvedBindings: a bare string when exactly one key is bound,
+// otherwise a copy of the key list (empty for a keybinding with no keys).
+func (m *KeybindingsManager) GetResolvedBindings() map[string]any {
 	snapshot := m.snapshot()
-	resolved := map[string][]string{}
+	resolved := map[string]any{}
 	if snapshot == nil {
 		return resolved
 	}
 	for _, id := range snapshot.order {
-		resolved[id] = append([]string(nil), snapshot.keysByID[id]...)
+		keys := snapshot.keysByID[id]
+		if len(keys) == 1 {
+			resolved[id] = keys[0]
+			continue
+		}
+		resolved[id] = append([]string(nil), keys...)
 	}
 	return resolved
 }

@@ -490,8 +490,9 @@ func (m *AppKeybindingsManager) Reload() {
 	m.SetUserBindings(loadKeybindingsFile(m.configPath))
 }
 
-// GetEffectiveConfig returns the resolved bindings.
-func (m *AppKeybindingsManager) GetEffectiveConfig() map[string][]string {
+// GetEffectiveConfig returns the resolved bindings, shaped like upstream's
+// getResolvedBindings: a bare string for a single key, otherwise a key list.
+func (m *AppKeybindingsManager) GetEffectiveConfig() map[string]any {
 	return m.GetResolvedBindings()
 }
 

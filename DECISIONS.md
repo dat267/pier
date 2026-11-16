@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D485)
+# Deliberate divergences from pi (D1–D486)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7874,3 +7874,21 @@ does for `NaN`. Every finite price, including the invalid-text prefixes
 `parseFloat` accepts, converts identically.
 
 Test: `TestOpenRouterPriceOverflowKeepsTheFallback`.
+
+### D486
+
+**Keybinding conflicts are reported sorted.**
+
+Reference: pi v1.5.2 (b4afdddf) `packages/tui/src/keybindings.ts` `rebuild()`
+walks `Object.entries(this.userBindings)` and emits each conflict with its
+claimants in that insertion order, so a keybindings file that declares `zzz`
+before `aaa` reports `zzz` first.
+
+A Go map has no insertion order to reproduce, and the port reads the file into one
+(`map[string][]string`), so both the claimed key and its claimant names are
+sorted. Nothing in the tree consumes `GetConflicts` today, so the order is a
+diagnostic convenience rather than behaviour a user can observe; the resolved
+bindings do keep definition order, which is the order upstream's
+`getResolvedBindings` writes.
+
+Test: `TestKeybindingConflictsAreSorted`.

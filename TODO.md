@@ -14,13 +14,6 @@
 - Evidence: one row of the 758-case differential of `ValidateToolArguments` against `packages/ai/src/utils/validation.ts`; the other 757 match exactly.
 - Repair plan: make the check's re-entry answer `false`/unknown for the coercion probe (as the reference's throwing `passes` does) while keeping `true` for the plain check, or port the reference's `entered`/`cuts` stack. It needs care: flipping the guard to `false` would make a genuinely recursive schema reject deep values, so the two callers need separate answers.
 
-## The keybinding manager's introspection API differs in shape and order
-
-- Severity: low. Nothing in the tree serializes the result: `AppKeybindingsManager.GetEffectiveConfig` forwards `GetResolvedBindings` and only tests read it, and `GetConflicts` feeds an on-screen conflict warning whose order carries no meaning.
-- Failure: `KeybindingsManager.GetResolvedBindings` returns `map[string][]string`, so a binding with one key is `["ctrl+x"]`; the reference's `keybindings.ts` `getResolvedBindings` returns `keys.length === 1 ? keys[0] : [...keys]`, i.e. the bare string `"ctrl+x"`. `GetConflicts` also sorts its keys and claimant names, while the reference emits conflicts and claimants in `Object.entries` insertion order.
-- Evidence: read of both files; the reference's return expression and `for (const [key, keybindings] of userClaims)` loop, against the port's `map[string][]string` result and `sortStrings` calls. The Go map has no insertion order to reproduce, which is why the port sorts.
-- Repair plan: if something ever persists or compares the resolved bindings, give the manager a `map[string]any`-style result (string for one key, slice otherwise) and record the sorted conflict order as a D-row next to the other map-order substitutions. Until then the Go shape is the more usable one and the difference is invisible.
-
 ## Virtual models can be listed but never routed
 
 - Severity: medium. Nothing in the CLI registers one, but `coding.WithVirtualModels`, `coding.CreateVirtualModel` and `coding.VirtualModelDefinition.Route` are exported for SDK callers, and a registered router is never invoked: its model streams `Virtual model <provider>/<id> must be routed before streaming` from `unroutedStream`.

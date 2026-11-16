@@ -290,8 +290,8 @@ func TestAppKeybindings(t *testing.T) {
 		t.Fatal("default binding still active")
 	}
 	effective := manager.GetEffectiveConfig()
-	if keys := effective["app.clear"]; len(keys) != 1 || keys[0] != "ctrl+c" {
-		t.Fatalf("effective = %v", keys)
+	if key, ok := effective["app.clear"].(string); !ok || key != "ctrl+c" {
+		t.Fatalf("effective = %v", effective["app.clear"])
 	}
 
 	// Config file loading.
@@ -304,8 +304,8 @@ func TestAppKeybindings(t *testing.T) {
 	if !fileManager.Matches("\x1bq", "app.interrupt") {
 		t.Fatal("file binding not applied")
 	}
-	if keys := fileManager.GetEffectiveConfig()["app.clear"]; len(keys) != 1 || keys[0] != "ctrl+x" {
-		t.Fatalf("file clear = %v", keys)
+	if key, ok := fileManager.GetEffectiveConfig()["app.clear"].(string); !ok || key != "ctrl+x" {
+		t.Fatalf("file clear = %v", fileManager.GetEffectiveConfig()["app.clear"])
 	}
 }
 
