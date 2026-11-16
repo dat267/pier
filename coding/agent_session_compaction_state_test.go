@@ -4,7 +4,6 @@ import (
 	ctxpkg "context"
 	"runtime"
 	"sync"
-	"sync/atomic"
 	"testing"
 
 	"github.com/dat267/pier/ai"
@@ -12,8 +11,11 @@ import (
 
 // gatedSummarizer blocks every summarization stream call until the test releases
 // that call by its ordinal, so two compactions can be interleaved on purpose.
+//
+// The ordinal is the gate map's length, read and written under one mutex: a
+// separate counter could report a call whose gate was not published yet, and
+// release() then failed with "no stream call N" on a slow runner.
 type gatedSummarizer struct {
-	calls atomic.Int64
 	mu    sync.Mutex
 	gates map[int64]chan struct{}
 }
@@ -22,10 +24,16 @@ func newGatedSummarizer() *gatedSummarizer {
 	return &gatedSummarizer{gates: map[int64]chan struct{}{}}
 }
 
+func (g *gatedSummarizer) started() int64 {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return int64(len(g.gates))
+}
+
 func (g *gatedSummarizer) streamFn(model *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
-	ordinal := g.calls.Add(1)
 	gate := make(chan struct{})
 	g.mu.Lock()
+	ordinal := int64(len(g.gates) + 1)
 	g.gates[ordinal] = gate
 	g.mu.Unlock()
 	stream := ai.NewAssistantMessageEventStream()
@@ -44,7 +52,7 @@ func (g *gatedSummarizer) streamFn(model *ai.Model, _ ai.TranscriptContext, _ *a
 // waitForCall blocks until the summarizer has started its ordinal-th call.
 func (g *gatedSummarizer) waitForCall(t *testing.T, ordinal int64) {
 	t.Helper()
-	for g.calls.Load() < ordinal {
+	for g.started() < ordinal {
 		runtime.Gosched()
 	}
 }
