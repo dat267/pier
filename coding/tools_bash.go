@@ -930,12 +930,54 @@ func shellEnv(sessionEnv map[string]string, expose bool) []string {
 		}
 		filtered = append(filtered, entry)
 	}
+	filtered = prependAgentBinDir(filtered)
 	if expose {
 		for key, value := range sessionEnv {
 			filtered = append(filtered, key+"="+value)
 		}
 	}
 	return filtered
+}
+
+// prependAgentBinDir ports the PATH edit in getShellEnv: <agentDir>/bin goes in
+// front of the path when it is not listed, so a command can run a tool installed
+// there by bare name. The key keeps the spelling the environment uses (`Path` on
+// Windows, both spellings appear) and a listed directory is left alone, including
+// an empty or delimiter-only value.
+func prependAgentBinDir(env []string) []string {
+	binDir := filepath.Join(GetAgentDir(), "bin")
+	delimiter := string(os.PathListSeparator)
+	pathKey := "PATH"
+	pathIndex := -1
+	for index, entry := range env {
+		key, _, ok := strings.Cut(entry, "=")
+		if !ok || !strings.EqualFold(key, "path") {
+			continue
+		}
+		pathKey = key
+		pathIndex = index
+		break
+	}
+	current := ""
+	if pathIndex >= 0 {
+		_, current, _ = strings.Cut(env[pathIndex], "=")
+	}
+	for _, entry := range strings.Split(current, delimiter) {
+		if entry == binDir {
+			return env
+		}
+	}
+	if current == "" {
+		current = binDir
+	} else {
+		current = binDir + delimiter + current
+	}
+	updated := pathKey + "=" + current
+	if pathIndex >= 0 {
+		env[pathIndex] = updated
+		return env
+	}
+	return append(env, updated)
 }
 
 // defaultBashTimeoutSeconds is the timeout of a shell call that names none
