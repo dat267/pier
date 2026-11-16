@@ -176,15 +176,18 @@ func (s *piSchema) convert(value *schemaValue, active map[piCoerceVisit]bool) *s
 }
 
 func (s *piSchema) convertUnion(branches []*piSchema, value *schemaValue, active map[piCoerceVisit]bool) *schemaValue {
+	// The probes use checkUnion: the reference's passes() reports undefined when
+	// the check throws, and a self-referential branch is what makes it throw, so
+	// such a branch reads as "does not pass" and the union tries the next one.
 	for _, branch := range branches {
-		if branch.check(value) {
+		if branch.checkUnion(value) {
 			return s.convertMembers(value, active)
 		}
 	}
 	for _, branch := range branches {
 		candidate := branch.convert(cloneSchemaValue(value), active)
 		candidate = s.convertMembers(candidate, active)
-		if s.check(candidate) {
+		if s.checkUnion(candidate) {
 			return candidate
 		}
 	}

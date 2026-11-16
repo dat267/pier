@@ -442,12 +442,26 @@ func (s *piSchema) check(value *schemaValue) bool {
 	return s.checkActive(value, map[piCheckVisit]bool{})
 }
 
+// checkUnion is the union probe. The reference's passes() answers undefined when
+// the check throws, and a re-entered (schema, value) pair is exactly what makes it
+// throw, so a re-entry here reads as not passing while the plain check keeps
+// answering that the pair it already accepted passes.
+func (s *piSchema) checkUnion(value *schemaValue) bool {
+	return s.checkVisit(value, map[piCheckVisit]bool{}, false)
+}
+
 type piCheckVisit struct {
 	schema *piSchema
 	value  *schemaValue
 }
 
 func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool) bool {
+	return s.checkVisit(value, active, true)
+}
+
+// checkVisit walks the schema; reentry is the answer a pair already on the stack
+// gets, which only a union probe answers false.
+func (s *piSchema) checkVisit(value *schemaValue, active map[piCheckVisit]bool, reentry bool) bool {
 	if s == nil || value == nil {
 		return true
 	}
@@ -456,7 +470,7 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 	}
 	visit := piCheckVisit{s, value}
 	if active[visit] {
-		return true
+		return reentry
 	}
 	active[visit] = true
 	defer delete(active, visit)
@@ -466,13 +480,13 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 		if !ok {
 			return false
 		}
-		if target == nil || !target.checkActive(value, active) {
+		if target == nil || !target.checkVisit(value, active, reentry) {
 			return false
 		}
 	}
 	if s.dynamicRef != "" {
 		target, ok := s.resolveRef(s.dynamicRef)
-		if !ok || target == nil || !target.checkActive(value, active) {
+		if !ok || target == nil || !target.checkVisit(value, active, reentry) {
 			return false
 		}
 	}
@@ -541,7 +555,7 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 		}
 		for _, key := range s.propertyOrder {
 			if field, ok := value.Object.get(key); ok {
-				if !s.properties[key].checkActive(field, active) {
+				if !s.properties[key].checkVisit(field, active, reentry) {
 					return false
 				}
 			}
@@ -556,7 +570,7 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 				re := s.patternRes[pattern]
 				if re != nil && re.MatchString(key) {
 					matched = true
-					if !s.patternProps[pattern].checkActive(field, active) {
+					if !s.patternProps[pattern].checkVisit(field, active, reentry) {
 						return false
 					}
 				}
@@ -565,13 +579,13 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 				if s.additionalFalse {
 					return false
 				}
-				if s.additionalProps != nil && !s.additionalProps.checkActive(field, active) {
+				if s.additionalProps != nil && !s.additionalProps.checkVisit(field, active, reentry) {
 					return false
 				}
 			}
 			if s.propertyNames != nil {
 				name := &schemaValue{IsString: true, String: key}
-				if !s.propertyNames.checkActive(name, active) {
+				if !s.propertyNames.checkVisit(name, active, reentry) {
 					return false
 				}
 			}
@@ -599,7 +613,7 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 			}
 		}
 		for key, dep := range s.dependentSchemas {
-			if _, ok := value.Object.get(key); ok && !dep.checkActive(value, active) {
+			if _, ok := value.Object.get(key); ok && !dep.checkVisit(value, active, reentry) {
 				return false
 			}
 		}
@@ -614,7 +628,7 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 			}
 		}
 		for key, dep := range s.dependencies {
-			if _, ok := value.Object.get(key); ok && !dep.checkActive(value, active) {
+			if _, ok := value.Object.get(key); ok && !dep.checkVisit(value, active, reentry) {
 				return false
 			}
 		}
@@ -622,7 +636,7 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 	if value.IsArray && s.hasArrayKeywords() {
 		for i, item := range value.Array {
 			schema := s.itemAt(i)
-			if schema != nil && !schema.checkActive(item, active) {
+			if schema != nil && !schema.checkVisit(item, active, reentry) {
 				return false
 			}
 		}
@@ -638,7 +652,7 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 		if s.contains != nil {
 			count := 0
 			for _, item := range value.Array {
-				if s.contains.checkActive(item, active) {
+				if s.contains.checkVisit(item, active, reentry) {
 					count++
 				}
 			}
@@ -666,7 +680,7 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 					return false
 				}
 				field, _ := value.Object.get(key)
-				if !s.unevaluatedProperties.checkActive(field, active) {
+				if !s.unevaluatedProperties.checkVisit(field, active, reentry) {
 					return false
 				}
 			}
@@ -682,21 +696,21 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 				if s.unevaluatedItemsFalse {
 					return false
 				}
-				if !s.unevaluatedItems.checkActive(value.Array[index], active) {
+				if !s.unevaluatedItems.checkVisit(value.Array[index], active, reentry) {
 					return false
 				}
 			}
 		}
 	}
 	for _, sub := range s.allOf {
-		if !sub.checkActive(value, active) {
+		if !sub.checkVisit(value, active, reentry) {
 			return false
 		}
 	}
 	if s.anyOf != nil {
 		matched := false
 		for _, sub := range s.anyOf {
-			if sub.checkActive(value, active) {
+			if sub.checkVisit(value, active, reentry) {
 				matched = true
 				break
 			}
@@ -708,7 +722,7 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 	if s.oneOf != nil {
 		matches := 0
 		for _, sub := range s.oneOf {
-			if sub.checkActive(value, active) {
+			if sub.checkVisit(value, active, reentry) {
 				matches++
 			}
 		}
@@ -716,15 +730,15 @@ func (s *piSchema) checkActive(value *schemaValue, active map[piCheckVisit]bool)
 			return false
 		}
 	}
-	if s.not != nil && s.not.checkActive(value, active) {
+	if s.not != nil && s.not.checkVisit(value, active, reentry) {
 		return false
 	}
 	if s.ifS != nil {
-		if s.ifS.checkActive(value, active) {
-			if s.thenS != nil && !s.thenS.checkActive(value, active) {
+		if s.ifS.checkVisit(value, active, reentry) {
+			if s.thenS != nil && !s.thenS.checkVisit(value, active, reentry) {
 				return false
 			}
-		} else if s.elseS != nil && !s.elseS.checkActive(value, active) {
+		} else if s.elseS != nil && !s.elseS.checkVisit(value, active, reentry) {
 			return false
 		}
 	}

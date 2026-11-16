@@ -7,13 +7,6 @@
 - Evidence: the differential is `parseStreamingJson` from the pinned `pi/packages/ai/dist/utils/json-parse.js` against `parseStreamingJSONObject`, one JSONL dump each, compared field by field; every well-formed prefix agrees, the case the 15,679 generated prefixes recorded in `ai/jsonparse.go`'s comment cover (D325 adds the nesting bound).
 - Why it is not simply fixed: the port calls the helper where upstream uses `ToolCallArgumentsStream` (the abort-time finalization in `anthropic_stream.go` and the four sibling adapters), and there the tolerated missing comma, kept control character and kept trailing space are exactly the preview `streaming_json.go` produces. One function cannot match both references. Splitting it (streaming rules for the adapters, `partial-json` rules for the exported helper) is the repair, and it needs the extra `partial-json` rules above plus a Node-generated golden corpus; it is not worth new dependencies for a helper nothing in the reference calls.
 
-## A self-referential union skips coercion the reference applies
-
-- Severity: low. The value accepted differs, not whether the call is accepted, and only for a schema that reaches itself without consuming any of the value (a `$ref` cycle through `anyOf`, `allOf`, `not` or `if`), which no real tool schema writes.
-- Failure: with `{"$defs":{"loop":{"anyOf":[{"type":"string"},{"$ref":"#/$defs/loop"}]}},"properties":{"a":{"$ref":"#/$defs/loop"}}}`, arguments `{"a":1}` come back as `{"a":1}`, where pi v1.5.2 `b4afdddf` `packages/schema/src/coerce.ts` `convertUnion` returns `{"a":"1"}`: its `passes()` on the recursive branch throws and is caught as `undefined`, so the union tries the string branch and converts. Pier's cycle guard reports the re-entered `(schema, value)` pair as accepted, so `convertUnion` sees a branch that "passes" and keeps the value.
-- Evidence: one row of the 758-case differential of `ValidateToolArguments` against `packages/ai/src/utils/validation.ts`; the other 757 match exactly.
-- Repair plan: make the check's re-entry answer `false`/unknown for the coercion probe (as the reference's throwing `passes` does) while keeping `true` for the plain check, or port the reference's `entered`/`cuts` stack. It needs care: flipping the guard to `false` would make a genuinely recursive schema reject deep values, so the two callers need separate answers.
-
 ## Virtual models can be listed but never routed
 
 - Severity: medium. Nothing in the CLI registers one, but `coding.WithVirtualModels`, `coding.CreateVirtualModel` and `coding.VirtualModelDefinition.Route` are exported for SDK callers, and a registered router is never invoked: its model streams `Virtual model <provider>/<id> must be routed before streaming` from `unroutedStream`.
