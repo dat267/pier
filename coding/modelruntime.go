@@ -115,6 +115,7 @@ type ModelRuntime struct {
 	availabilityError  string
 	credentialOps      map[string]chan struct{}
 	compositionErrors  map[string]string
+	virtualModels      map[string]map[string]*registeredVirtualModel
 }
 
 // CreateModelRuntime builds the runtime.
@@ -311,17 +312,28 @@ func (r *ModelRuntime) composeProvider(providerID string) (*ai.Provider, string)
 	config := r.config
 	r.mu.Unlock()
 	providerConfig := config.GetProvider(providerID)
-	if base == nil && providerConfig == nil {
+	virtuals := r.virtualModelsFor(providerID)
+	if base == nil && providerConfig == nil && len(virtuals) == 0 {
 		return nil, ""
+	}
+	if base == nil && providerConfig == nil {
+		// A provider of only virtual models needs no credentials.
+		return WithVirtualModels(providerID, nil, virtuals), ""
 	}
 	if base != nil && providerConfig == nil {
 		// No overlays: use the builtin untouched so its auth/login/stream
 		// behavior is exact.
-		return base, ""
+		if len(virtuals) == 0 {
+			return base, ""
+		}
+		return WithVirtualModels(providerID, base, virtuals), ""
 	}
 	provider, err := ComposeModelProvider(providerID, base, config)
 	if err != nil {
 		return base, err.Error()
+	}
+	if len(virtuals) > 0 {
+		provider = WithVirtualModels(providerID, provider, virtuals)
 	}
 	return provider, ""
 }

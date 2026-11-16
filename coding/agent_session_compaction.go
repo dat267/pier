@@ -376,6 +376,14 @@ func (s *AgentSession) RunAutoCompaction(ctx context.Context, reason CompactionR
 	if !s.HasModel() || model == nil {
 		return false, nil
 	}
+	// A virtual selection is routed for the summary too: the summary sizes its
+	// input and output from the physical model it gets (upstream
+	// _getSummarizationRequestAuth, reason "direct").
+	summaryLevel := s.ThinkingLevel()
+	model, summaryLevel, err := s.routeSummaryModel(ctx, model, summaryLevel)
+	if err != nil {
+		return false, err
+	}
 	settings, _ := s.compactionSettings()
 	pathEntries := s.Sessions.GetBranch("")
 	preparation := PrepareCompaction(pathEntries, settings)
@@ -405,7 +413,7 @@ func (s *AgentSession) RunAutoCompaction(ctx context.Context, reason CompactionR
 	options := CompactionOptions{
 		Model: model, Ctx: compactionCtx, StreamFn: s.compactionStreamFn(),
 		Retry: s.retrySettings(), SessionID: s.Sessions.GetSessionID(),
-		ThinkingLevel: s.ThinkingLevel(),
+		ThinkingLevel: summaryLevel,
 		Callbacks:     s.summarizationRetryCallbacksForCompaction(reason),
 		Prefix:        s.replayPrefix(),
 	}

@@ -166,6 +166,10 @@ type AgentSession struct {
 	// promptState buffers custom and next-turn messages across a run.
 	promptState *promptState
 
+	// routeFailure is the response a retry replaces, passed to the virtual
+	// model router as reason "retry" (upstream's prepareRequest failed input).
+	routeFailure *ai.AssistantMessage
+
 	// CacheWarmer keeps the prompt cache entry of session requests warm.
 	CacheWarmer *CacheWarmer
 
@@ -427,6 +431,14 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 				return nil, nil
 			}
 			return created.normalizeToolResultContent(call.Result.Content), nil
+		},
+		// A virtual model selection is routed per request (upstream
+		// prepareRequest); a physical one is left alone.
+		PrepareRequest: func(request *agent.PrepareRequestContext, ctx context.Context) (*agent.AgentRequestUpdate, error) {
+			if created == nil {
+				return nil, nil
+			}
+			return created.prepareVirtualRequest(request, ctx)
 		},
 		// Installed here only so the session's own refresh can chain it below;
 		// assigning it directly would drop that refresh.

@@ -733,6 +733,19 @@ func TestCheckCompactionResolvesPhysicalModelForVirtualSelection(t *testing.T) {
 		ID: "router", Name: "Router", API: VirtualModelAPI, Provider: "anthropic",
 		ContextWindow: 1000000, MaxTokens: 128000, Reasoning: true,
 	}
+	// The summary is routed through the virtual model too, so the runtime needs a
+	// registered router: an unregistered selection fails like the reference.
+	if err := runtime.SetRuntimeAPIKey("anthropic", "synthetic-key", ctxpkg.Background()); err != nil {
+		t.Fatalf("set key: %v", err)
+	}
+	if err := runtime.RegisterVirtualModel(VirtualModelDefinition{
+		Provider: "anthropic", ID: "router", Name: "Router",
+		Route: func(ModelRouteRequest) (ModelRoute, error) {
+			return ModelRoute{Model: &ai.Model{Provider: physical.Provider, ID: physical.ID}, ThinkingLevel: "off"}, nil
+		},
+	}); err != nil {
+		t.Fatalf("register router: %v", err)
+	}
 	session := compactionTestSession(t, virtual, summarizingStreamFn(t, &runs, "summary text that is long enough to pass the usability check"), smallCompactionSettings())
 	session.control.ModelRuntime = runtime
 	seedBranch(t, session)

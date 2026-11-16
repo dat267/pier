@@ -90,6 +90,10 @@ func (s *AgentSession) PrepareRetry(ctx context.Context, message *ai.AssistantMe
 		DelayMS: delayMS, ErrorMessage: errorMessage,
 	})
 
+	// A routed selection reports this failure as reason "retry" with the model
+	// that produced it (upstream prepareRequest's failed input).
+	s.setRouteFailure(message)
+
 	// Persist an omission of the failed response and its tool results, so a
 	// resumed session does not replay them to the model (upstream
 	// _prepareRetry -> _omitRecoveryAttempt). They stay in session history; the
