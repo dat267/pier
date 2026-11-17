@@ -199,6 +199,8 @@ type NewSessionOptions struct {
 func (m *SessionManager) NewSession(options *NewSessionOptions) string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	// The entries being replaced are the only thing the payload reader serves.
+	m.closePayloadsLocked()
 	idSet := options != nil && (options.IDSet || options.ID != "")
 	if idSet {
 		if err := AssertValidSessionID(options.ID); err != nil {
@@ -1331,6 +1333,7 @@ func (m *SessionManager) CreateBranchedSession(leafID string) (string, error) {
 	}
 
 	m.fileEntries = append([]FileEntry{{Header: &header}}, newEntries...)
+	m.closePayloadsLocked()
 	m.sessionID = newSessionID
 	m.writeState = &sessionWriteState{}
 	// In-memory sessions branch with no file, as upstream does.

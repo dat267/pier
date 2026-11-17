@@ -146,6 +146,22 @@ func (m *SessionManager) resolveMessages(entry *SessionEntry) []ai.Message {
 	return SessionEntryToContextMessages(entry)
 }
 
+// Close releases the payload reader's descriptor. A later read reopens the
+// file, so closing is only about not holding it open across a replacement.
+func (m *SessionManager) Close() {
+	if m == nil {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.closePayloadsLocked()
+}
+
+// closePayloadsLocked closes the reader under m.mu.
+func (m *SessionManager) closePayloadsLocked() {
+	m.payloads.close()
+}
+
 // EntryMessage returns one entry's message bytes, reading a lazily loaded
 // entry's line from the file. Callers that need bytes for a handful of entries
 // (a replay scan, a notice) use this instead of hydrating a whole branch.

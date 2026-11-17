@@ -121,9 +121,6 @@ type SessionEntry struct {
 	roleKnown bool
 }
 
-// IsLazy reports whether the entry's payload was left in the session file.
-func (e *SessionEntry) IsLazy() bool { return e != nil && e.lazy }
-
 // Raw returns the entry's decoded raw JSON.
 func (e *SessionEntry) Raw() json.RawMessage { return e.raw }
 

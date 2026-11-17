@@ -111,3 +111,31 @@ func TestLazyPayloadProjectsTheSameMessages(t *testing.T) {
 		t.Fatalf("projection differs:\n got %s\nwant %s", got, want)
 	}
 }
+
+// Closing the payload reader releases the descriptor without losing the
+// session: a later read reopens the file (Dispose, or a replaced file, must not
+// turn a live session's history empty).
+func TestPayloadReaderReopensAfterClose(t *testing.T) {
+	persist := true
+	source := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: &persist})
+	source.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "kept"}})
+	reopened, err := OpenSession(source.GetSessionFile(), "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	branch := reopened.GetBranch("")
+	if len(branch) != 1 {
+		t.Fatalf("branch entries = %d, want 1", len(branch))
+	}
+	if len(reopened.EntryMessage(&branch[0])) == 0 {
+		t.Fatal("no payload before Close")
+	}
+	reopened.Close()
+	reopened.Close() // idempotent
+	if len(reopened.EntryMessage(&branch[0])) == 0 {
+		t.Fatal("payload unreadable after Close; the reader must reopen")
+	}
+	if entry := reopened.GetEntry(branch[0].ID); entry == nil || len(entry.Message) == 0 {
+		t.Fatal("GetEntry lost its payload after Close")
+	}
+}
