@@ -997,7 +997,11 @@ func piFormatValid(name, value string) bool {
 	case "uri":
 		return validURIText(value, false) && absoluteURI(value)
 	case "url":
-		return validURIText(value, false) && absoluteURL(value)
+		// URL.canParse follows the WHATWG parser, not RFC 3986: a non-special
+		// scheme needs no host, a space in the path is encoded rather than
+		// rejected, and an IDN host is punycoded. validURIText would reject all
+		// three, so the url check is absoluteURL alone.
+		return absoluteURL(value)
 	case "uri-reference":
 		return validURIText(value, false)
 	case "iri":
@@ -1069,15 +1073,24 @@ func absoluteURI(value string) bool {
 	return err == nil && u.Scheme != ""
 }
 
+// absoluteURL mirrors URL.canParse for the cases the reference format accepts:
+// an absolute URL with a scheme, where the WHATWG special schemes (http, https,
+// ws, wss, ftp) require a host and the rest (mailto, urn, file, any custom
+// scheme) do not.
 func absoluteURL(value string) bool {
 	u, err := url.Parse(value)
-	return err == nil && u.Scheme != "" && u.Host != ""
+	if err != nil || u.Scheme == "" {
+		return false
+	}
+	switch strings.ToLower(u.Scheme) {
+	case "http", "https", "ws", "wss", "ftp":
+		return u.Host != ""
+	}
+	return true
 }
 
 func validIDNLabel(value string) bool {
-	if value == "" || strings.HasSuffix(value, ".") {
-		value = strings.TrimSuffix(value, ".")
-	}
+	// The reference rejects a trailing dot (an empty final label).
 	if value == "" || len(value) > 253 {
 		return false
 	}
@@ -1102,6 +1115,15 @@ func validDate(value string) bool {
 	parts := strings.Split(value, "-")
 	if len(parts) != 3 || len(parts[0]) != 4 || len(parts[1]) != 2 || len(parts[2]) != 2 {
 		return false
+	}
+	// The reference matches ^(\d\d\d\d)-(\d\d)-(\d\d)$ before parsing, so a
+	// sign (which Atoi would accept) is not part of any field.
+	for _, part := range parts {
+		for index := 0; index < len(part); index++ {
+			if part[index] < '0' || part[index] > '9' {
+				return false
+			}
+		}
 	}
 	year, e1 := strconv.Atoi(parts[0])
 	month, e2 := strconv.Atoi(parts[1])
@@ -1165,7 +1187,7 @@ func validHostname(value string) bool {
 	if len(value) == 0 || len(value) > 253 {
 		return false
 	}
-	for _, label := range strings.Split(strings.TrimSuffix(value, "."), ".") {
+	for _, label := range strings.Split(value, ".") {
 		if len(label) == 0 || len(label) > 63 || label[0] == '-' || label[len(label)-1] == '-' {
 			return false
 		}
