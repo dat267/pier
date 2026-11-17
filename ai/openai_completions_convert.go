@@ -1050,12 +1050,17 @@ func buildChatTemplateValues(model *Model, options *OpenAICompletionsOptions, va
 				resolved[key] = *thinkingBudget
 			}
 		default:
+			// `map?.[level] === undefined ? reasoningEffort : ...`: a missing
+			// mapping falls back to the requested level name, but when the
+			// request is off there is no level name (upstream's value is
+			// undefined), so an absent or null off mapping omits the key
+			// instead of sending the literal "off".
 			var effort string
 			if reasoningEffort != "" {
 				if mapped := resolveLevelMapValue(model, reasoningEffort, true); mapped != nil {
 					effort = *mapped
 				}
-			} else if mapped := resolveLevelMapValue(model, ThinkOff, true); mapped != nil {
+			} else if mapped := resolveLevelMapValue(model, ThinkOff, false); mapped != nil {
 				effort = *mapped
 			}
 			if effort != "" {
