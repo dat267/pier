@@ -363,6 +363,12 @@ func (r *rpcRuntime) installSession(ctx context.Context, manager *SessionManager
 		r.unsubscribe = nil
 	}
 	r.settleWorkers()
+	// The replacement manager shares this write queue (newSessionManager,
+	// forkManager), so drain it while the outgoing session is still bound. A
+	// write that ran after the replacement would target a session that is gone,
+	// and when the two paths coincide its exclusive claim failed with "file
+	// exists" (the stress-gate finding in TODO.md).
+	_ = r.session.Sessions.FlushWrites()
 	created, err := r.replaceSession(ctx, manager)
 	if err != nil {
 		// Creation failed: keep the (settled) old session bound so the client

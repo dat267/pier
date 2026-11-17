@@ -265,6 +265,11 @@ func (a *App) teardownCurrentSession() {
 		a.unsubscribe = nil
 	}
 	a.session.Abort(context.Background())
+	// The replacement inherits this write queue (D485), so drain it before the
+	// session goes away: a queued write must land in the file it belongs to, not
+	// after the replacement is bound (the RPC path does the same in
+	// installSession).
+	_ = a.session.Sessions.FlushWrites()
 	a.session.Dispose()
 	// The working period and the indicator that showed it belonged to the
 	// session going away: drop both, so nothing works, spins or adds the old
