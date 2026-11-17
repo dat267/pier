@@ -7943,17 +7943,25 @@ window, the `role`/conversation checks (`roleKnown`, captured by the scanner) an
 the cache-statistics scan therefore never need a message payload in memory.
 
 Measured on the 248MB session
-`--home-dat-repos-pier--/2026-10-19T20-31-53-750357137Z_01a155dd-…` (72,092
-entries, 788 projected messages; heap from `runtime.MemStats` after `GC`, RSS
+`--home-dat-repos-pier--/2026-10-19T20-31-53-750357137Z_01a155dd-…` (72,114
+entries, 811 projected messages; heap from `runtime.MemStats` after `GC`, RSS
 from a PTY TUI run and an RPC `--session` run):
 
 | metric | reference layout | index-only |
 | --- | --- | --- |
-| heap retained after load + projection | 335.3MB | 93.6MB |
+| heap retained after load + projection | 336MB | 95MB |
 | RPC resident (steady / peak) | 626MB / 626MB | 330MB / 415MB |
 | TUI resident (peak) | 690MB | 415MB |
-| `--export` resident | 2,114MB | unchanged (export still builds the document) |
-| load / projection | 236ms / 50ms | 186ms / 56ms |
+| load, median of 5 runs on an idle machine | 340ms | 346ms |
+| projection, median of 5 runs | 83ms | 92ms |
+| `GetEntries` snapshot (72,114 entries) | 10ms | 650ms |
+| `--export` resident / time | 2,132MB / 7.1s | 415MB / 3.8s |
+
+The first numbers taken for this row came from one noisy run, and claimed a
+faster load (236ms → 186ms). Re-measuring five times per build shows the load is
+unchanged: the extra shell bookkeeping and the `debug.FreeOSMemory` call cost what
+they cost. The projection pays for 811 payload reads instead of finding the bytes
+in memory.
 
 The projected context is byte-identical before and after (`sha256` of the
 marshalled messages, `b50ff1d6f4c7a…`): the file bytes, prompts and export output
