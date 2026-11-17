@@ -215,6 +215,21 @@ func TestProjectedWindowMatchesSessionContext(t *testing.T) {
 	}
 }
 
+// A branch without a context edit reports none: the flag switches compaction
+// accounting away from provider usage, so a session that always answered true
+// would estimate every compaction from the projection.
+func TestHasContextEditsIsFalseWithoutAnEdit(t *testing.T) {
+	manager, dir := newTestSession(t)
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}})
+	manager.AppendMessage(&ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "test", Model: "m", StopReason: ai.StopStop,
+		Content: ai.ContentList{ai.TextContent{Text: "hi"}}, Timestamp: 2,
+	})
+	if manager.HasContextEdits() {
+		t.Fatalf("HasContextEdits = true for a session without edits (cwd %s)", dir)
+	}
+}
+
 // Reference: pi v1.4.0 core/session-manager.ts projectContextEntry replaces
 // content only for user, assistant, toolResult and the literal "custom" role.
 func TestContextEditIgnoresOtherCustomAgentRoles(t *testing.T) {
