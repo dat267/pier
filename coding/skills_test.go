@@ -51,6 +51,23 @@ func setHomeDir(t *testing.T, dir string) {
 }
 
 // utils/frontmatter.ts trims the extracted body with JavaScript String.trim.
+// yaml parses the frontmatter block upstream, so a comment line is not a key
+// and does not become frontmatter content.
+func TestParseFrontmatterSkipsCommentLines(t *testing.T) {
+	parsed := ParseFrontmatter("---\n# a comment\nname: skill\n# another: not a key\ndescription: d\n---\nbody")
+	if parsed.Frontmatter["name"] != "skill" || parsed.Frontmatter["description"] != "d" {
+		t.Fatalf("frontmatter = %v", parsed.Frontmatter)
+	}
+	if _, ok := parsed.Frontmatter["# a comment"]; ok {
+		t.Fatalf("a comment line became a key: %v", parsed.Frontmatter)
+	}
+	for key := range parsed.Frontmatter {
+		if strings.HasPrefix(key, "#") {
+			t.Fatalf("comment line %q became frontmatter", key)
+		}
+	}
+}
+
 func TestParseFrontmatterTrimsJavaScriptWhitespaceFromBody(t *testing.T) {
 	got := ParseFrontmatter("---\nname: test\n---\n" + "\uFEFF" + "body" + "\uFEFF").Body
 	if got != "body" {

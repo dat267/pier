@@ -25,6 +25,14 @@ func TestListTightnessFollowsMarkedRules(t *testing.T) {
 		// Here it is in the outer item's own token stream, before the list.
 		{"- a\n\n  - b\n- c\n", false, true},
 		{"- a\n  - b\n\n  - c\n- d\n", true, false},
+		// A blank line after the last item has no later item to loosen, so the
+		// list stays tight (marked pushes the item before applying the rule).
+		{"- a\n- b\n\nparagraph\n", true, false},
+		// The blank line may carry spaces or tabs and still count.
+		{"- a\n \n- b\n", false, false},
+		{"- a\n\t\n- b\n", false, false},
+		// A tab-indented continuation belongs to the item.
+		{"- a\n\tb\n", true, false},
 	} {
 		blocks := Lex(testCase.src)
 		if len(blocks) == 0 || blocks[0].Kind != BlockList {
