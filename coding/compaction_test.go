@@ -54,6 +54,17 @@ func TestShouldCompact(t *testing.T) {
 	if ShouldCompact(190000, 200000, disabled) {
 		t.Fatal("disabled never compacts")
 	}
+	// The trigger is strictly greater than window minus reserve (upstream
+	// contextTokens > contextWindow - reserveTokens), so a context exactly at
+	// the threshold must not compact.
+	tight := CompactionSettings{Enabled: true, ReserveTokens: 16384, KeepRecentTokens: 20000}
+	threshold := int64(200000) - tight.ReserveTokens
+	if ShouldCompact(threshold, 200000, tight) {
+		t.Fatalf("a context exactly at the threshold (%d) compacted", threshold)
+	}
+	if !ShouldCompact(threshold+1, 200000, tight) {
+		t.Fatal("a context one token above the threshold did not compact")
+	}
 }
 
 func TestEstimateContextTokensPrefersUsage(t *testing.T) {

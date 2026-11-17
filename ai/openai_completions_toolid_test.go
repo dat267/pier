@@ -71,4 +71,25 @@ func TestConvertOpenAICompletionsMessagesNormalizesPipeToolCallIDs(t *testing.T)
 			}
 		})
 	}
+
+	// A plain id replayed into an openai provider is cut to 40 characters
+	// without the pipe branch (openai-completions.ts `id.length > 40 ?
+	// id.slice(0, 40) : id`). A 41-character id is the boundary case.
+	longID := strings.Repeat("i", 41)
+	params := ConvertOpenAICompletionsMessages(model, TranscriptContext{Messages: []Message{
+		&AssistantMessage{
+			Content: ContentList{ToolCall{ID: longID, Name: "bash", Arguments: json.RawMessage(`{}`)}},
+			API:     APIOpenAICompletions, Provider: "openai", Model: "gpt-4o", StopReason: StopToolUse, Timestamp: 1,
+		},
+		&ToolResultMessage{ToolCallID: longID, ToolName: "bash", Content: UserContentList{TextContent{Text: "out"}}, Timestamp: 2},
+	}}, compat, nil)
+	if len(params[0].ToolCalls) != 1 {
+		t.Fatalf("params = %+v", params)
+	}
+	if got := params[0].ToolCalls[0].ID; JSLength(got) != 40 {
+		t.Fatalf("openai tool call id = %q (%d chars), want 40", got, JSLength(got))
+	}
+	if params[1].ToolCallID != params[0].ToolCalls[0].ID {
+		t.Fatalf("tool result id = %q, want the call's %q", params[1].ToolCallID, params[0].ToolCalls[0].ID)
+	}
 }
