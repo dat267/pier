@@ -44,4 +44,11 @@ func TestSessionReplacementDoesNotRebuildTheProjectionOnTheLoop(t *testing.T) {
 	if after := opened.ProjectionBuilds(); after != before {
 		t.Fatalf("the rebind rebuilt the projection %d time(s) on the loop; the worker must warm it", after-before)
 	}
+
+	// A wiring without a status reporter still rebinds: the reset is a nil
+	// check, and inverting it calls Reset on a nil reporter.
+	app.programStatus = nil
+	if _, err := app.applyOpenedSession(opened, nil); err != nil {
+		t.Fatalf("applyOpenedSession without a status reporter: %v", err)
+	}
 }
