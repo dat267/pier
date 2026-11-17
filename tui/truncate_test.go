@@ -272,3 +272,35 @@ func TestWrapTextSplitsLoneCR(t *testing.T) {
 		t.Fatalf("lines = %q; want [a b]", lines)
 	}
 }
+
+// truncateFragmentToWidth is the ellipsis clipper: ANSI codes pass through
+// uncounted and a tab costs three columns (src/utils.ts truncateFragmentToWidth).
+// Its callers pass an ellipsis string, which may be styled, so both arms are
+// reachable.
+func TestTruncateFragmentToWidth(t *testing.T) {
+	for _, testCase := range []struct {
+		name  string
+		text  string
+		width int
+		want  string
+		wantW int
+	}{
+		{"zero width", "abc", 0, "", 0},
+		{"empty", "", 5, "", 0},
+		{"ascii fits", "ab", 5, "ab", 2},
+		{"ascii clips", "abcdef", 2, "ab", 2},
+		{"ansi passes through", "\x1b[31mab", 1, "\x1b[31ma", 1},
+		{"tab clips", "a\tb", 3, "a", 1},
+		{"tab fits", "a\tb", 4, "a\t", 4},
+		{"ansi before a tab is flushed first", "\x1b[31m\t", 3, "\x1b[31m\t", 3},
+		{"wide rune clips", "日", 1, "", 0},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			got, width := truncateFragmentToWidth(testCase.text, testCase.width)
+			if got != testCase.want || width != testCase.wantW {
+				t.Fatalf("truncateFragmentToWidth(%q, %d) = %q/%d, want %q/%d",
+					testCase.text, testCase.width, got, width, testCase.want, testCase.wantW)
+			}
+		})
+	}
+}
