@@ -654,7 +654,10 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 			if requested != "" {
 				effort = resolveLevelMapValue(model, requested, true)
 			} else {
-				effort = resolveLevelMapValue(model, ThinkOff, true)
+				// `mappedEffort === undefined ? requestedEffort : ...` with an
+				// undefined requested effort at off: an absent off mapping
+				// sends nothing, not the literal "off".
+				effort = resolveLevelMapValue(model, ThinkOff, false)
 			}
 			if effort != nil {
 				params.ReasoningEffort = effort
