@@ -224,3 +224,20 @@ func TestCapFileListsMixesRecencyAndUnrecordedPaths(t *testing.T) {
 		}
 	}
 }
+
+// With no read paths the loop never takes the both-lists-full break, so the
+// modified list's own bound decides the cap: one more edit than the cap must
+// still yield exactly cap entries and one omitted.
+func TestSummaryFileListsCapModifiedOnlyAtTheBoundary(t *testing.T) {
+	fileOps := CreateFileOps()
+	for i := 0; i < maxSummaryFileListEntries+1; i++ {
+		fileOps.markEdited(fmt.Sprintf("edit-%03d", i))
+	}
+	readFiles, modifiedFiles, readOmitted, modifiedOmitted := CapFileLists(fileOps)
+	if len(readFiles) != 0 || readOmitted != 0 {
+		t.Fatalf("read = %v/%d, want empty", readFiles, readOmitted)
+	}
+	if len(modifiedFiles) != maxSummaryFileListEntries || modifiedOmitted != 1 {
+		t.Fatalf("modified = %d files, %d omitted; want %d and 1", len(modifiedFiles), modifiedOmitted, maxSummaryFileListEntries)
+	}
+}
