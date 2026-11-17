@@ -174,3 +174,73 @@ func TestSetModelDecodesModel(t *testing.T) {
 		t.Fatalf("command = %+v", got)
 	}
 }
+
+// The typed command methods that had no test: each must send its wire command
+// and hand back the decoded data (a flipped success check returns nil data
+// with a nil error).
+func TestCommandMappingForUntestedMethods(t *testing.T) {
+	client, sent := stubClient(t, map[string]any{
+		"cycle_model":                   map[string]any{"model": map[string]any{"id": "m", "provider": "p"}},
+		"get_available_models":          map[string]any{"models": []any{map[string]any{"provider": "p", "id": "m"}}},
+		"get_available_thinking_levels": map[string]any{"levels": []any{"off", "high"}},
+		"get_session_stats":             map[string]any{"userMessages": 1},
+		"compact":                       map[string]any{"summary": "s"},
+		"new_session":                   map[string]any{"sessionId": "new", "cancelled": false},
+	})
+
+	model, err := client.CycleModel()
+	if err != nil || model == nil || model.Model == nil || model.Model.ID != "m" {
+		t.Fatalf("CycleModel = %+v, %v", model, err)
+	}
+	models, err := client.AvailableModels()
+	if err != nil || len(models) != 1 || models[0].ID != "m" {
+		t.Fatalf("AvailableModels = %+v, %v", models, err)
+	}
+	levels, err := client.AvailableThinkingLevels()
+	if err != nil || !reflect.DeepEqual(levels, []string{"off", "high"}) {
+		t.Fatalf("AvailableThinkingLevels = %v, %v", levels, err)
+	}
+	stats, err := client.SessionStats()
+	if err != nil || stats == nil || stats.UserMessages != 1 {
+		t.Fatalf("SessionStats = %+v, %v", stats, err)
+	}
+	result, err := client.Compact("keep the docs")
+	if err != nil || result == nil || result.Summary != "s" {
+		t.Fatalf("Compact = %+v, %v", result, err)
+	}
+	if _, err := client.Compact(""); err != nil {
+		t.Fatal(err)
+	}
+
+	want := []string{"cycle_model", "get_available_models", "get_available_thinking_levels", "get_session_stats", "compact", "compact"}
+	if len(*sent) != len(want) {
+		t.Fatalf("commands = %v", *sent)
+	}
+	for i, name := range want {
+		if (*sent)[i]["type"] != name {
+			t.Fatalf("command %d = %v, want %s", i, (*sent)[i], name)
+		}
+	}
+	if (*sent)[4]["customInstructions"] != "keep the docs" {
+		t.Fatalf("compact command = %v, want customInstructions", (*sent)[4])
+	}
+	if _, present := (*sent)[5]["customInstructions"]; present {
+		t.Fatalf("empty instructions must be omitted: %v", (*sent)[5])
+	}
+
+	// NewSession returns the decoded result and records a parent only when one
+	// is given.
+	created, err := client.NewSession("")
+	if err != nil || created == nil || created.Cancelled {
+		t.Fatalf("NewSession = %+v, %v", created, err)
+	}
+	if _, present := (*sent)[6]["parentSession"]; present {
+		t.Fatalf("empty parent recorded: %v", (*sent)[6])
+	}
+	if _, err := client.NewSession("/parent.jsonl"); err != nil {
+		t.Fatal(err)
+	}
+	if (*sent)[7]["parentSession"] != "/parent.jsonl" {
+		t.Fatalf("parent = %v", (*sent)[7])
+	}
+}
