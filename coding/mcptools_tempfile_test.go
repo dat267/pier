@@ -48,6 +48,22 @@ func TestCreateMcpToolNameShortening(t *testing.T) {
 	if name == "" || !strings.HasPrefix(name, "mcp__") {
 		t.Fatalf("name = %q", name)
 	}
+	// The length boundary: a 64-character name keeps its text, one more is
+	// shortened to exactly 64 with a hash suffix.
+	notTaken := func(string) bool { return false }
+	server := strings.Repeat("s", 55)
+	fits := CreateMcpToolName(server, "tx", notTaken)
+	if want := "mcp__" + server + "__tx"; fits != want {
+		t.Fatalf("fits = %q, want the unshortened %q", fits, want)
+	}
+	over := CreateMcpToolName(strings.Repeat("s", 56), "tx", notTaken)
+	if len(over) != 64 {
+		t.Fatalf("over = %q (%d characters), want exactly the 64-character limit", over, len(over))
+	}
+	if over == "mcp__"+strings.Repeat("s", 56)+"__tx" {
+		t.Fatalf("over = %q was not shortened", over)
+	}
+
 	taken := CreateMcpToolName("s", "t", func(string) bool { return true })
 	if taken == CreateMcpToolName("s", "t", func(string) bool { return false }) {
 		t.Fatalf("a taken name was not hashed: %q", taken)
