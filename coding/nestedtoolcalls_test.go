@@ -54,13 +54,25 @@ func TestNestedCallRecorderRoundsDurationLikeJavascript(t *testing.T) {
 	}
 }
 
-// TestNestedCallRecorderErrorTruncated covers the truncated error text.
+// TestNestedCallRecorderErrorTruncated covers the truncated error text. The
+// expected length is the reference's literal 500 (nested-tool-calls.ts
+// NESTED_CALL_LIMITS.maxErrorChars), not the port's constant: asserting the
+// constant would keep passing if the limit itself changed.
 func TestNestedCallRecorderErrorTruncated(t *testing.T) {
 	recorder := NewNestedCallRecorder()
 	record := recorder.Start(nestedCall("c/1", "bash"))
-	recorder.Finish(record, true, strings.Repeat("x", NestedCallLimits.MaxErrorChars+50))
-	if record.Status != "error" || record.Error == nil || len(*record.Error) != NestedCallLimits.MaxErrorChars {
+	recorder.Finish(record, true, strings.Repeat("x", 550))
+	if record.Status != "error" || record.Error == nil || len(*record.Error) != 500 {
 		t.Fatalf("record = %+v", record)
+	}
+}
+
+// The limits themselves are the reference's: 256 calls, 8 KiB per argument,
+// 32 KiB total, 500 error characters (nested-tool-calls.ts).
+func TestNestedCallLimitsMatchTheReference(t *testing.T) {
+	if NestedCallLimits.MaxCalls != 256 || NestedCallLimits.MaxArgumentBytesPerCall != 8*1024 ||
+		NestedCallLimits.MaxArgumentBytesTotal != 32*1024 || NestedCallLimits.MaxErrorChars != 500 {
+		t.Fatalf("limits = %+v, want 256 / 8KiB / 32KiB / 500", NestedCallLimits)
 	}
 }
 
