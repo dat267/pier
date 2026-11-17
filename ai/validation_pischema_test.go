@@ -40,6 +40,14 @@ func TestValidateToolArgumentsCoercesPiSchemaValues(t *testing.T) {
 		{`{"type":"object","properties":{"value":{"const":1}}}`, `{"value":"1"}`, `{"value":1}`},
 		{`{"type":"object","properties":{"value":{"enum":[1,"x"]}}}`, `{"value":"1"}`, `{"value":1}`},
 		{`{"type":"object","properties":{"value":{"type":["boolean","number"]}}}`, `{"value":"1"}`, `{"value":1}`},
+		// A schema with properties but no declared type is still an object to
+		// coerce (the len(types)==0 branch of coerce.ts).
+		{`{"properties":{"value":{"type":"integer"}}}`, `{"value":"7"}`, `{"value":7}`},
+		// Union members go through convertMembers, which also treats declared
+		// properties as an object.
+		{`{"anyOf":[{"type":"object","properties":{"value":{"type":"integer"}}}]}`, `{"value":"7"}`, `{"value":7}`},
+		// A union that also declares properties coerces its members as an object.
+		{`{"anyOf":[{"type":"object"},{"type":"string"}],"properties":{"value":{"type":"integer"}}}`, `{"value":"7"}`, `{"value":7}`},
 	} {
 		if got := mustValidate(t, tc.schema, tc.args); got != tc.want {
 			t.Errorf("schema=%s args=%s got %s want %s", tc.schema, tc.args, got, tc.want)
