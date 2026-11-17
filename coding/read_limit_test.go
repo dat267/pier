@@ -56,3 +56,26 @@ func TestReadToolFractionalOffsetReportsOversizedLine(t *testing.T) {
 		t.Fatalf("got %q, %v; want %q", got, err, want)
 	}
 }
+
+// read.ts rejects an offset past the last line and shows the remaining-lines
+// notice only when lines actually remain. Both are boundary conditions: the
+// check is `startLine >= totalLines` and the notice needs
+// `startLine + userLimitedLines < totalLines`.
+func TestReadToolOffsetAndNoticeBoundaries(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "two.txt"), []byte("a\nb"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Offset 3 in a two-line file starts past the end.
+	if _, err := readToolText(t, dir, `{"path":"two.txt","offset":3}`); err == nil || !strings.Contains(err.Error(), "beyond end of file") {
+		t.Fatalf("offset 3 on a two-line file: err = %v, want beyond end of file", err)
+	}
+	// Reading exactly to the last line leaves nothing to continue.
+	got, err := readToolText(t, dir, `{"path":"two.txt","offset":1,"limit":2}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "a\nb" {
+		t.Fatalf("read to EOF = %q, want the two lines with no remaining-lines notice", got)
+	}
+}
