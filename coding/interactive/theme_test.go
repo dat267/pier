@@ -571,3 +571,27 @@ func TestColorFgBgThemeClassifiesByIndex(t *testing.T) {
 		t.Fatalf("index 8 = %s; want dark", got)
 	}
 }
+
+// Dim tokens are blended 40% toward the theme background (upstream theme.ts
+// `dimTokens`); a token that is not dim keeps its declared color.
+func TestDimTokensAreBlendedTowardTheBackground(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+	theme := NewTheme(
+		map[string]ColorValue{"text": {Value: "#ff0000"}, "muted": {Value: "#00ff00"}},
+		nil, ColorModeTruecolor, "probe", "", "muted")
+	colors := theme.Colors()
+	if colors["muted"] == colors["text"] {
+		t.Fatalf("dim token and body token resolved identically: %+v", colors)
+	}
+	declared := mustParseThemeColor("#00ff00")
+	if colors["muted"] == declared {
+		t.Fatalf("dim token kept its declared color %v; want a background blend", declared)
+	}
+	if colors["text"] != mustParseThemeColor("#ff0000") {
+		t.Fatalf("body token = %v, want its declared color", colors["text"])
+	}
+}
