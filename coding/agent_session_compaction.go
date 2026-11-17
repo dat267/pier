@@ -173,6 +173,14 @@ func (s *AgentSession) CheckCompaction(ctx context.Context, assistant *ai.Assist
 		contextTokens = directContextTokens
 	}
 
+	// An unknown window (a selection that declares none, with a message whose
+	// model the catalog no longer has) cannot size a threshold. Upstream
+	// compares against `undefined - reserveTokens`, which is NaN and therefore
+	// false, so nothing compacts; a zero window here makes the threshold
+	// negative and compacts at every boundary.
+	if contextWindow <= 0 {
+		return false, nil
+	}
 	if ShouldCompact(contextTokens, contextWindow, settings) {
 		return s.RunAutoCompaction(ctx, CompactionThreshold, false)
 	}
