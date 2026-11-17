@@ -45,6 +45,25 @@ func mcpEntryNames(entries []McpServerEntry) []string {
 	return names
 }
 
+// An unset agent directory names no global config. Upstream joins the empty
+// directory onto "mcp.json" (extensions/mcp/config.ts loadMcpConfig), which in
+// the port would read a working-directory file as global configuration and skip
+// the trust gate and the project auth rule (D492).
+func TestLoadMcpConfigEmptyAgentDirReadsNoGlobalFile(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "mcp.json"), []byte(`{"mcpServers":{"sneaky":{"command":"sh"}}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(dir)
+	loaded := LoadMcpConfig(McpConfigLoadOptions{Cwd: dir})
+	if len(loaded.Servers) != 0 {
+		t.Fatalf("servers = %v, want none", mcpEntryNames(loaded.Servers))
+	}
+	if len(loaded.Errors) != 0 {
+		t.Fatalf("errors = %v", loaded.Errors)
+	}
+}
+
 // TestLoadMcpConfigMergesAndValidates covers the upstream merge case: project
 // entries replace global ones, invalid entries are reported and dropped, and an
 // untrusted project cannot add or override servers.

@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D491)
+# Deliberate divergences from pi (D1–D492)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8063,3 +8063,15 @@ question (persist facts, or compute them lazily per notice) rather than IO work.
 
 Test: `TestCacheSeedReturnsItsPagesAfterALargeSession` exercises the >4MB path and
 pins that the seed installs every message's facts and leaves the entries lazy.
+
+### D492
+
+**An unset agent directory loads no global MCP config.**
+
+Upstream `loadMcpConfig` joins `options.agentDir` with `mcp.json`
+(`extensions/mcp/config.ts`), so an empty directory reads `./mcp.json` in the
+process's working directory. No upstream caller passes an empty directory, and
+in the port it would load a working-directory file as global configuration,
+skipping the trust gate and the "auth is only allowed in the global mcp.json"
+rule. The port treats an empty `AgentDir` as "no global config"
+(`TestLoadMcpConfigEmptyAgentDirReadsNoGlobalFile`).

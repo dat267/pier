@@ -72,12 +72,17 @@ type McpConfigLoadOptions struct {
 // configuration (upstream loadMcpConfig).
 func LoadMcpConfig(options McpConfigLoadOptions) LoadedMcpConfig {
 	state := &mcpConfigState{servers: map[string]McpServerEntry{}, order: []string{}}
-	if options.AgentDir == "" {
-		readMcpConfigFile(filepath.Join(options.AgentDir, "mcp.json"), McpScopeGlobal, state)
-	} else if err := ensurePrivateDirectory(options.AgentDir); err != nil {
-		state.errors = append(state.errors, fmt.Sprintf("Could not secure agent directory %s: %v", options.AgentDir, err))
-	} else {
-		readMcpConfigFile(filepath.Join(options.AgentDir, "mcp.json"), McpScopeGlobal, state)
+	// An unset agent directory has no global config to read. Upstream would join
+	// an empty directory onto "mcp.json" and read the process's working
+	// directory, which for a caller that means "no agent state" would load a
+	// project's file as global configuration, skipping the trust gate and the
+	// project auth rule (D492).
+	if options.AgentDir != "" {
+		if err := ensurePrivateDirectory(options.AgentDir); err != nil {
+			state.errors = append(state.errors, fmt.Sprintf("Could not secure agent directory %s: %v", options.AgentDir, err))
+		} else {
+			readMcpConfigFile(filepath.Join(options.AgentDir, "mcp.json"), McpScopeGlobal, state)
+		}
 	}
 	projectConfig := ""
 	if options.ProjectTrusted {
