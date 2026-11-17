@@ -723,3 +723,45 @@ func TestAnthropicManagedEffortNeverSendsTemperature(t *testing.T) {
 		t.Fatalf("temperature = %v, want none for a managed-effort model", *params.Temperature)
 	}
 }
+
+// A short id is returned unchanged: the 64-character cut is the only
+// transformation, so an id below it must not be sliced (upstream
+// anthropic-messages.ts normalizes ids without truncating short ones).
+func TestNormalizeAnthropicToolCallIDKeepsShortIDs(t *testing.T) {
+	for _, id := range []string{"abc", "call_1", "a-b_c"} {
+		if got := NormalizeAnthropicToolCallID(id); got != id {
+			t.Fatalf("NormalizeAnthropicToolCallID(%q) = %q, want it unchanged", id, got)
+		}
+	}
+}
+
+// A system message that renders to no text and carries no tool change produces
+// no wire message, and certainly no empty text block: anthropic-messages.ts
+// appends the content only when it is non-empty and the message only when it has
+// blocks.
+func TestAnthropicEmptySystemMessageProducesNoBlocks(t *testing.T) {
+	model := &Model{Provider: "anthropic", ID: "claude-sonnet-4", API: APIAnthropicMessages, BaseURL: "https://api.anthropic.com", MaxTokens: 1024}
+	context := TranscriptContext{Messages: []Message{
+		&SystemMessage{Content: StringOrBlocks{Text: "base"}, Timestamp: 1},
+		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 2},
+		// A later system message with nothing to say renders empty: no text
+		// block and no wire message at all.
+		&SystemMessage{Content: StringOrBlocks{Text: ""}, Timestamp: 3},
+		&UserMessage{Content: StringOrBlocks{Text: "again"}, Timestamp: 4},
+	}}
+	params, err := BuildAnthropicParams(model, context, false, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := MarshalJSON(params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The whole request is pinned: an empty text block or an empty system
+	// entry changes these bytes (the base prompt carries cache_control because
+	// it is the leading system block).
+	want := `{"model":"claude-sonnet-4","messages":[{"role":"user","content":"hi"},{"role":"user","content":[{"type":"text","text":"again","cache_control":{"type":"ephemeral"}}]}],"max_tokens":1024,"stream":true,"system":[{"type":"text","text":"base","cache_control":{"type":"ephemeral"}}]}`
+	if string(encoded) != want {
+		t.Fatalf("request bytes differ\n got: %s\nwant: %s", encoded, want)
+	}
+}
