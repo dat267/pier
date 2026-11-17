@@ -79,6 +79,9 @@ type SessionManager struct {
 	// the scan state is reset underneath it.
 	lazySeedPending  bool
 	cacheScanSeeding bool
+	// seedFreedBytes is the session file size when the seeding scan should return
+	// its freed pages afterwards (0 for a small or unreadable file).
+	seedFreedBytes   int64
 	cacheScanPending []*SessionEntry
 	cacheSeedGen     int
 	cacheSeedDone    chan struct{}
@@ -427,6 +430,12 @@ func (m *SessionManager) loadEntries(entries []FileEntry, options *NewSessionOpt
 func (m *SessionManager) seedCacheScanInBackground() {
 	m.cacheScanSeeding = true
 	m.cacheSeedDone = make(chan struct{})
+	m.seedFreedBytes = 0
+	if m.payloads != nil {
+		if info, err := os.Stat(m.payloads.path); err == nil && info.Size() > 4<<20 {
+			m.seedFreedBytes = info.Size()
+		}
+	}
 	gen := m.cacheSeedGen
 	shells := make([]FileEntry, len(m.fileEntries))
 	copy(shells, m.fileEntries)
@@ -453,6 +462,14 @@ func (m *SessionManager) seedCacheScanInBackground() {
 			m.cacheScan.consume(entry)
 		}
 		m.mu.Unlock()
+		// The scan is the last large allocation a load makes, and the runtime
+		// keeps the freed pages resident; returning them here is what makes the
+		// seeded session cost its index rather than its file (D491). Background
+		// goroutine, one collection, not on the owner loop.
+		if m.seedFreedBytes > 0 {
+			runtime.GC()
+			debug.FreeOSMemory()
+		}
 		close(m.cacheSeedDone)
 	}()
 }

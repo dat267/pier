@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D490)
+# Deliberate divergences from pi (D1–D491)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8023,3 +8023,35 @@ starts and is cleared when the selector is on screen; an empty session replaces 
 with "No entries in session".
 
 Test: `TestTreeSelectorOpenAnnouncesTheOpen`.
+
+### D491
+
+**The cache-statistics seed returns its pages when it finishes.**
+
+Reference: pi v1.5.2 (b4afdddf) `packages/coding-agent/src/core/cache-stats.ts`
+walks the session's entry objects, whose message bytes are already in memory
+because the reference keeps the whole file resident.
+
+Pier's seed parses every message's JSON off the index shells, off the owner loop,
+to keep the per-turn facts the cache-miss accounting needs. Those parses allocate
+tens of megabytes on a long session, and Go keeps the freed pages resident: the
+seeded session then costs its file twice over even though the facts are small.
+The seed now returns the pages once, in its own goroutine, for session files above
+4MB. Nothing it installs changes; the entries stay shells.
+
+Measured as the resident size of a TUI run on the same sessions, seed with and
+without the return:
+
+| session | before | after |
+| --- | --- | --- |
+| 28.9MB | 115MB | 97MB |
+| 248MB | 357MB | 229MB |
+
+A streamed walk was implemented first and dropped: reading the entries through
+one forward cursor instead of a hydrated copy per entry cut the walk's allocation
+by only 4% (4.0MB against 4.2MB on a 1.6MB fixture, because the facts parse, not
+the line copy, dominates), and it did not move resident size (343MB against 357MB
+without the page return). The page return is the whole win and is a few lines.
+
+Test: `TestCacheSeedReturnsItsPagesAfterALargeSession` exercises the >4MB path and
+pins that the seed installs every message's facts and leaves the entries lazy.
