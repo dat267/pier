@@ -255,3 +255,21 @@ func BenchmarkVisibleWidthStyledLineGraphemeWalk(b *testing.B) {
 		}
 	}
 }
+
+// Hangul cluster rules GB7/GB8: LV joins a following V or T, while LVT joins
+// only T. hangulTypeOf tells LV from LVT by the LVT syllable's (r-0xAC00)%28.
+func TestGraphemeGroupsFollowTheHangulRules(t *testing.T) {
+	for _, testCase := range []struct {
+		text string
+		want int
+	}{
+		{"\uAC00\u1161", 1}, // LV + V joins (GB7)
+		{"\uAC00\u11A8", 1}, // LV + T joins (GB7)
+		{"\uAC01\u11A8", 1}, // LVT + T joins (GB8)
+		{"\uAC01\u1161", 2}, // LVT + V does not join
+	} {
+		if got := len(segmentGraphemes(testCase.text)); got != testCase.want {
+			t.Fatalf("%+q clusters = %d, want %d", testCase.text, got, testCase.want)
+		}
+	}
+}
