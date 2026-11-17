@@ -95,3 +95,21 @@ func TestTransformKeepsThinkingOnlyFromTheTargetModel(t *testing.T) {
 		`[{"type":"thinking","thinking":"kimi 2","thinkingSignature":"reasoning_content"},{"type":"text","text":"c"}]`,
 		`[{"type":"text","text":"d"}]`)
 }
+
+// transform-messages.ts treats a different provider as a different model even
+// when the api and model id match: thinking and text signatures belong to the
+// provider that issued them, so a second provider serving the same model id
+// must not receive them.
+func TestTransformTreatsAnotherProviderAsAnotherModel(t *testing.T) {
+	signature := "resp_sig_1"
+	assistant := &AssistantMessage{
+		API: APIOpenAIResponses, Provider: "azure", Model: "gpt-5", StopReason: StopStop, Timestamp: 2,
+		Content: ContentList{
+			ThinkingContent{Thinking: "azure thought", ThinkingSignature: &signature},
+			TextContent{Text: "answer", TextSignature: &signature},
+		},
+	}
+	target := &Model{ID: "gpt-5", API: APIOpenAIResponses, Provider: "openai"}
+	got := assistantContentJSON(t, TransformMessages([]Message{assistant}, target, nil))
+	assertAssistants(t, got, `[{"type":"text","text":"answer"}]`)
+}
