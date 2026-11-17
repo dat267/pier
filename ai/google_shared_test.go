@@ -96,3 +96,30 @@ func TestGoogleLegacyParametersKeepSchemaKeyOrder(t *testing.T) {
 		t.Fatalf("parameters = %s, want the array untouched: %s", got, schema)
 	}
 }
+
+// RetainThoughtSignature keeps the last non-empty signature for the current
+// streamed block (backends may send it only on the first delta, and a later
+// delta can carry an empty string). An empty value must not clear it.
+func TestRetainThoughtSignature(t *testing.T) {
+	first := "sig-one"
+	second := "sig-two"
+	empty := ""
+	for _, testCase := range []struct {
+		name     string
+		existing string
+		incoming *string
+		want     string
+	}{
+		{"absent keeps", "sig-one", nil, "sig-one"},
+		{"empty keeps", "sig-one", &empty, "sig-one"},
+		{"value replaces", "sig-one", &second, "sig-two"},
+		{"empty with nothing keeps", "", &empty, ""},
+		{"value from nothing", "", &first, "sig-one"},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := RetainThoughtSignature(testCase.existing, testCase.incoming); got != testCase.want {
+				t.Fatalf("RetainThoughtSignature(%q, %v) = %q, want %q", testCase.existing, testCase.incoming, got, testCase.want)
+			}
+		})
+	}
+}

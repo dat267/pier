@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"hash/crc32"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -55,5 +56,18 @@ func TestDecodeInlineImageKeepsNormalImages(t *testing.T) {
 		if bounds := source.Bounds(); bounds.Dx() != size[0] || bounds.Dy() != size[1] {
 			t.Errorf("%dx%d decoded as %v", size[0], size[1], bounds)
 		}
+	}
+}
+
+// The canvas bound itself is the constant 100_000_000 pixels (D408), and the
+// rejection names it: a canvas above the bound is refused before decoding, and
+// the error states the bound, so raising the constant is a visible change.
+func TestDecodeInlineImageRejectsACanvasAboveTheBoundItNames(t *testing.T) {
+	source, err := decodeInlineImage(oversizeCanvasPNG(t, 10001, 10000))
+	if err == nil || source != nil {
+		t.Fatalf("10001x10000 decoded (source %v, err %v); want the canvas limit to reject it", source, err)
+	}
+	if !strings.Contains(err.Error(), "exceeds the 100000000-pixel inline limit") {
+		t.Fatalf("error = %v, want it to name the 100000000-pixel bound", err)
 	}
 }
