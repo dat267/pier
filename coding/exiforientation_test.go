@@ -75,6 +75,15 @@ func TestApplyExifOrientation(t *testing.T) {
 		t.Fatalf("orientation 3 mapping wrong: %v", flipped.At(1, 0))
 	}
 
+	// Orientations 5 and 7 transpose the axes as well (5 is the transposed
+	// view, 7 the transverse one), so a 2x1 becomes 1x2.
+	if transposed := ApplyExifOrientation(img, 5); transposed.Bounds().Dx() != 1 || transposed.Bounds().Dy() != 2 {
+		t.Fatalf("orientation 5 bounds = %v, want 1x2", transposed.Bounds())
+	}
+	if transverse := ApplyExifOrientation(img, 7); transverse.Bounds().Dx() != 1 || transverse.Bounds().Dy() != 2 {
+		t.Fatalf("orientation 7 bounds = %v, want 1x2", transverse.Bounds())
+	}
+
 	// Orientation 1 and out-of-range values are unchanged.
 	if ApplyExifOrientation(img, 1) != image.Image(img) || ApplyExifOrientation(img, 99) != image.Image(img) {
 		t.Fatal("orientation 1/unknown must return the image unchanged")

@@ -47,3 +47,28 @@ func TestAnthropicBudgetThinkingKeyOrder(t *testing.T) {
 		t.Fatalf("adaptive thinking bytes differ: %s", encoded)
 	}
 }
+
+// anthropic-messages.ts emits `budget_tokens: options.thinkingBudgetTokens ||
+// 1024`, so an enabled thinking config without an explicit budget sends the
+// default 1024. Every existing test passed a budget, so the default was
+// unpinned.
+func TestAnthropicBudgetThinkingDefaultBudget(t *testing.T) {
+	model := &Model{
+		Provider: "anthropic", ID: "claude-sonnet-4", API: "anthropic-messages",
+		BaseURL: "https://api.anthropic.com", Reasoning: true,
+	}
+	context := TranscriptContext{Messages: []Message{
+		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+	}}
+	params, err := BuildAnthropicParams(model, context, false, &AnthropicOptions{ThinkingEnabled: new(true)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := MarshalJSON(params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(encoded, []byte(`"budget_tokens":1024`)) {
+		t.Fatalf("thinking bytes = %s, want the default budget 1024", encoded)
+	}
+}
