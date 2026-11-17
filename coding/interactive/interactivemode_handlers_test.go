@@ -469,3 +469,25 @@ func TestBashModeTrimsLeadingJSSpace(t *testing.T) {
 		t.Fatal("bash mode not detected through a U+FEFF prefix")
 	}
 }
+
+// SetupKeyHandlers installs the editor's Ctrl-D and paste-image hooks only when
+// the wiring supplies them; inverting either nil check leaves the editor's hook
+// unset, so the action silently does nothing.
+func TestKeyWiringInstallsCtrlDAndPasteImage(t *testing.T) {
+	keys, _, _, editor := newHandlerTestWiring(t)
+	exits, pastes := 0, 0
+	keys.OnExit = func() { exits++ }
+	keys.OnPasteImage = func() { pastes++ }
+	keys.SetupKeyHandlers(func() int64 { return 0 })
+	if editor.OnCtrlD == nil {
+		t.Fatal("OnCtrlD was not installed from OnExit")
+	}
+	if editor.OnPasteImage == nil {
+		t.Fatal("OnPasteImage was not installed")
+	}
+	editor.OnCtrlD()
+	editor.OnPasteImage()
+	if exits != 1 || pastes != 1 {
+		t.Fatalf("exits=%d pastes=%d, want each hook called once", exits, pastes)
+	}
+}
