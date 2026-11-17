@@ -28,7 +28,7 @@ func TestMouseMotionBurstDoesNotRepaint(t *testing.T) {
 
 	// Let the startup paints settle so the burst is what gets measured.
 	waitForConditionWithin(t, func() bool { return app.ui.RenderCount() > 0 }, 6*time.Second)
-	time.Sleep(50 * time.Millisecond)
+	waitForRenderQuiet(t, app.ui, 50*time.Millisecond, 6*time.Second)
 
 	beforeText := editorText(app)
 	before := app.ui.RenderCount()

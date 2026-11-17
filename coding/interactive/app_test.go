@@ -241,6 +241,30 @@ func waitForConditionWithin(t *testing.T, condition func() bool, timeout time.Du
 	t.Fatal("condition not met before timeout")
 }
 
+// waitForRenderQuiet waits until no paint has landed for quiet, then returns.
+// Startup paints are not bounded by a fixed sleep: under load they can arrive
+// later than any guess, and a test that measures paint counts afterwards would
+// count them.
+func waitForRenderQuiet(t *testing.T, ui tui.TUI, quiet time.Duration, timeout time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	last := ui.RenderCount()
+	stableSince := time.Now()
+	for time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+		current := ui.RenderCount()
+		if current != last {
+			last = current
+			stableSince = time.Now()
+			continue
+		}
+		if time.Since(stableSince) >= quiet {
+			return
+		}
+	}
+	t.Fatalf("paints never settled for %s", quiet)
+}
+
 // renderAppChat renders the chat without racing the app's loop: when the loop
 // is running it executes the render on the loop goroutine (the containers are
 // loop-owned since the container lock was removed); otherwise nothing else
