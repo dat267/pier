@@ -69,3 +69,33 @@ func TestEntryIDsAreShortAndRandom(t *testing.T) {
 		seen[entry.ID] = true
 	}
 }
+
+// The session scanner's entry points must reject input that ends before a value
+// starts: the depth/offset guard is what keeps scanJSONValueAt from indexing
+// past the slice.
+func TestSessionScanRejectsAnEmptyValue(t *testing.T) {
+	for _, input := range [][]byte{nil, {}, []byte(""), []byte(" ")} {
+		if _, ok := skipJSONValue(input); ok {
+			t.Fatalf("skipJSONValue(%q) accepted an empty value", input)
+		}
+	}
+	if _, ok := skipJSONValue([]byte(`"unterminated`)[:1]); ok {
+		t.Fatal("a lone quote was accepted")
+	}
+	if _, ok := skipJSONValue([]byte("\"\x01\"")); ok {
+		t.Fatal("a raw control character was accepted inside a string")
+	}
+}
+
+// A session with no entries has no path, and buildSessionPath must say so
+// without indexing the empty slice (the leaf fallback only applies when there
+// is an entry to fall back to).
+func TestBuildSessionPathOnAnEmptySession(t *testing.T) {
+	if path := buildSessionPath(nil, nil, nil); path != nil {
+		t.Fatalf("path = %v, want none", path)
+	}
+	missing := "not-there"
+	if path := buildSessionPath(nil, &missing, nil); path != nil {
+		t.Fatalf("path for a missing leaf = %v, want none", path)
+	}
+}
