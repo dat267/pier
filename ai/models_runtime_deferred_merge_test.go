@@ -43,9 +43,11 @@ func TestProviderRefreshReplacesTheFirstModel(t *testing.T) {
 			{ID: "second", API: APIOpenAICompletions, Provider: "p", Name: "base-second"},
 		},
 		Single: funcStreams{},
+		// A fetch is never called here: the context disallows the network.
+		FetchModels: func(*RefreshModelsContext) ([]*Model, error) { return nil, nil },
 	})
 	if provider.RefreshModels == nil {
-		t.Skip("provider has no refresh path")
+		t.Fatal("provider has no refresh path")
 	}
 	err := provider.RefreshModels(&RefreshModelsContext{
 		Stored: &ModelsStoreEntry{Models: []*Model{
