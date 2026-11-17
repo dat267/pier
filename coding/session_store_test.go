@@ -99,3 +99,26 @@ func TestBuildSessionPathOnAnEmptySession(t *testing.T) {
 		t.Fatalf("path for a missing leaf = %v, want none", path)
 	}
 }
+
+// Every truncated prefix of a session line must be rejected, not panic: the
+// scanner reads bytes at the cursor, so a line that ends mid-structure has to
+// stop at the bounds check (a hand-edited or half-written file is reachable).
+func TestScanSessionLineToleratesTruncatedLines(t *testing.T) {
+	line := []byte(`{"type":"message","id":"a","parentId":null,"timestamp":"t","message":{"role":"user","content":[]}}`)
+	if _, ok := scanSessionLine(line); !ok {
+		t.Fatal("the complete line was rejected")
+	}
+	for n := 0; n < len(line); n++ {
+		prefix := string(line[:n])
+		func() {
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					t.Fatalf("prefix %q panicked: %v", prefix, recovered)
+				}
+			}()
+			if _, ok := scanSessionLine(line[:n]); ok {
+				t.Fatalf("prefix %q was accepted", prefix)
+			}
+		}()
+	}
+}
