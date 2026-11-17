@@ -702,3 +702,24 @@ func TestBashStreamedUpdatesAreSerializedInOrder(t *testing.T) {
 		}
 	}
 }
+
+// The streaming update carries fullOutputPath only when truncation spilled the
+// output to a file (tools/bash.ts checks `snapshot.fullOutputPath`). A command
+// whose output fits keeps the field out of the details entirely.
+func TestBashStreamingUpdateOmitsAnEmptyFullOutputPath(t *testing.T) {
+	dir := t.TempDir()
+	var updates []string
+	if _, err := CreateBashTool(dir, nil).Execute("id", json.RawMessage(`{"command":"echo hi"}`), context.Background(), func(update agent.AgentToolResult) {
+		updates = append(updates, string(update.Details))
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(updates) == 0 {
+		t.Fatal("no streaming update")
+	}
+	for _, raw := range updates {
+		if strings.Contains(raw, "fullOutputPath") {
+			t.Fatalf("details = %s, want no fullOutputPath for an untruncated command", raw)
+		}
+	}
+}
