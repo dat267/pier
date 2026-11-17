@@ -1,5 +1,12 @@
 # Reproduced, unresolved findings
 
+## golang.org/x/image v0.30.0 carries three reachable WebP vulnerabilities
+
+- Severity: low-medium. The crafted image must reach an image attachment path, so the attacker is whoever supplies the image (the user, or the model writing a file and reading it back).
+- Affected: `coding/fileprocessor.go` `decodeInlineImage` (via `ProcessImage` -> `resizeInlineImage`) and `coding/imagetranscode.go`; the `webp` decoder is registered by the blank import at `coding/fileprocessor.go:15`.
+- Failure: `govulncheck ./...` reports GO-2026-4961 (panic decoding a large WEBP on 32-bit), GO-2026-5061 (panic on a VP8 alpha-channel size mismatch) and GO-2026-6222 (excessive memory allocation during VP8L decoding, from many unused Huffman tree groups). The first two are contained: `decodeInlineImage` recovers panics and reports an error. The third is not recoverable: it exhausts memory before the `maxInlineImagePixels` canvas cap applies, because the allocation is in Huffman tables read from the header.
+- Evidence: `govulncheck` output above; the vulnerability database lists fixes in v0.42.0, v0.43.0 and v0.45.0 respectively. The other six findings are in stdlib decoders pier never registers (TIFF, BMP, SFNT fonts), so they are unreachable.
+- Repair plan: raise `golang.org/x/image` to v0.45.0 or later in `go.mod` and run `go mod tidy`; no code change is expected. Needs the user's decision because it installs a dependency.
 ## Auto-compaction uses a virtual model's window, not the routed model's
 
 - Severity: low; no in-tree virtual model exists, so this only affects selections registered through the SDK.
