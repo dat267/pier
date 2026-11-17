@@ -142,3 +142,27 @@ func TestCopilotRetryOverallBudgetBoundsRequestsAndBodies(t *testing.T) {
 		}
 	}
 }
+
+// The bound is inclusive (upstream: "must be >= 0 && <= 4294967295"), so the
+// exact maximum must be accepted and the request attempted.
+func TestCopilotRetryAcceptsTheExactBudgetBound(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		attempts := 0
+		previous := http.DefaultClient
+		defer func() { http.DefaultClient = previous }()
+		http.DefaultClient = &http.Client{Transport: copilotBodyTransport(func(request *http.Request) (*http.Response, error) {
+			attempts++
+			return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody}, nil
+		})}
+		const endpoint = "https://fixture.invalid/models"
+		response, err := ai.FetchWithCopilotRateLimitRetry(context.Background(), endpoint, func(ctx context.Context) (*http.Request, error) {
+			return http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+		}, ai.CopilotRetryPolicy{MaxRetries: 1, MaxElapsedMS: 4_294_967_295})
+		if response != nil {
+			response.Body.Close()
+		}
+		if err != nil || attempts != 1 {
+			t.Fatalf("error=%v attempts=%d; want the budget at the bound accepted", err, attempts)
+		}
+	})
+}
