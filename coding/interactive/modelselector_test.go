@@ -226,6 +226,17 @@ func TestEnabledIDHelpers(t *testing.T) {
 	if got := moveEnabled(EnabledIds{IDs: []string{"a", "b", "c"}}, "a", -1); strings.Join(got.IDs, ",") != "a,b,c" {
 		t.Fatalf("move out of range = %+v", got)
 	}
+	// The first entry moves down and the last moves up: the bounds are strict,
+	// so only a move past the ends is a no-op.
+	if got := moveEnabled(EnabledIds{IDs: []string{"a", "b", "c"}}, "a", 1); strings.Join(got.IDs, ",") != "b,a,c" {
+		t.Fatalf("move first down = %+v", got)
+	}
+	if got := moveEnabled(EnabledIds{IDs: []string{"a", "b", "c"}}, "c", 1); strings.Join(got.IDs, ",") != "a,b,c" {
+		t.Fatalf("move last past the end = %+v", got)
+	}
+	if got := moveEnabled(EnabledIds{IDs: []string{"a", "b", "c"}}, "c", -1); strings.Join(got.IDs, ",") != "a,c,b" {
+		t.Fatalf("move last up = %+v", got)
+	}
 	if got := moveEnabled(EnabledIds{All: true}, "a", 1); !got.All {
 		t.Fatalf("move from all = %+v", got)
 	}
@@ -400,5 +411,31 @@ func TestModelSelectorRefreshKeepsTheSelectedModel(t *testing.T) {
 
 	if got := component.currentSelectionModel(); got == nil || !ai.ModelsAreEqual(got, wanted) {
 		t.Fatalf("selection = %v, want %s", got, wanted.ID)
+	}
+}
+
+// UpdateModels keeps the previous selection by id and applies a new enabled set:
+// a refresh must not reset the highlight to the first row or drop the user's
+// scope.
+func TestUpdateModelsKeepsTheSelectionAndEnabledSet(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+	models := []*ai.Model{
+		{Provider: "p", ID: "a"}, {Provider: "p", ID: "b"}, {Provider: "p", ID: "c"},
+	}
+	component := NewScopedModelsSelectorComponent(ModelsConfig{AllModels: models}, ModelsCallbacks{})
+	component.selectedIndex = 0
+	component.updateList()
+	selectedBefore := component.filteredItems[component.selectedIndex].fullID
+
+	component.UpdateModels(models, &EnabledIds{IDs: []string{"p/b"}})
+	if got := component.filteredItems[component.selectedIndex].fullID; got != selectedBefore {
+		t.Fatalf("selection = %q after UpdateModels, want %q", got, selectedBefore)
+	}
+	if strings.Join(component.enabledIDs.IDs, ",") != "p/b" {
+		t.Fatalf("enabled = %+v, want the supplied set", component.enabledIDs)
 	}
 }
