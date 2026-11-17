@@ -44,9 +44,20 @@ func TestContainerPrepareRecursesToMarkdown(t *testing.T) {
 	}
 }
 
+// renderCounter counts renders so the test can pin that Prepare skips a child
+// with no cacheable subtree instead of rendering it.
+type renderCounter struct{ renders int }
+
+func (c *renderCounter) Render(int) []string { c.renders++; return nil }
+
+func (*renderCounter) Invalidate() {}
+
 func TestPrepareSkipsNonPreparers(t *testing.T) {
-	// A component with no cacheable subtree is skipped, not rendered twice.
+	child := &renderCounter{}
 	container := &Container{}
-	container.AddChild(NewText("plain", 0, 0, nil))
-	container.Prepare(80) // must not panic
+	container.AddChild(child)
+	container.Prepare(80)
+	if child.renders != 0 {
+		t.Fatalf("Prepare rendered a non-preparer %d times", child.renders)
+	}
 }

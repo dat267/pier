@@ -48,16 +48,22 @@ func TestPostRunsSerializedWithRenders(t *testing.T) {
 		})
 	}
 	wg.Wait()
+	pendingPosts := func() int {
+		// Post appends and drainPosted swaps under postMu; the pump goroutine
+		// drains while this test goroutine polls, so the read takes the lock.
+		screen.postMu.Lock()
+		defer screen.postMu.Unlock()
+		return len(screen.posted)
+	}
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		screen.RenderNow(true)
-		pending := len(screen.posted)
-		if pending == 0 {
+		if pendingPosts() == 0 {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	pending := len(screen.posted)
+	pending := pendingPosts()
 	if pending != 0 {
 		t.Fatalf("%d posted callbacks never ran", pending)
 	}
