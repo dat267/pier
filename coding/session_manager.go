@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
+	"runtime/debug"
 	"slices"
 	"sort"
 	"strconv"
@@ -63,6 +65,10 @@ type SessionManager struct {
 	writeErrorsReady chan struct{}
 
 	fileEntries []FileEntry
+
+	// payloads reads lazily loaded entries' lines back from the session file
+	// (nil for in-memory sessions and for fully decoded loads).
+	payloads *payloadReader
 
 	// cacheScan seeding: the loaded prefix is consumed by a background
 	// goroutine (it parses every message's JSON, ~250ms on a 55MB session),
@@ -276,9 +282,22 @@ func OpenSession(path string, sessionDir string, cwdOverride string) (*SessionMa
 		labelsByID:      map[string]string{},
 		labelTimestamps: map[string]string{},
 	}
-	entries, _, _, err := LoadEntriesFromFileBuffered(resolvedPath)
+	entries, _, fast, err := LoadEntriesFromFileBuffered(resolvedPath)
 	if err != nil {
 		return nil, err
+	}
+	if fast {
+		// The buffered loader kept no bytes: entries carry the range of their
+		// own line and the manager reads it back on demand (D488).
+		m.payloads = newPayloadReader(resolvedPath)
+		// The scan read the file to find its line boundaries; on a session of
+		// hundreds of megabytes that transient buffer is the largest thing the
+		// layout keeps alive, and returning it now keeps the resident size
+		// near the index instead of near twice the file.
+		if info, statErr := os.Stat(resolvedPath); statErr == nil && info.Size() > 64<<20 {
+			runtime.GC()
+			debug.FreeOSMemory()
+		}
 	}
 	cwd := cwdOverride
 	if cwd == "" {
@@ -411,6 +430,7 @@ func (m *SessionManager) seedCacheScanInBackground() {
 	copy(shells, m.fileEntries)
 	go func() {
 		var state cacheScanState
+		state.resolve = m.resolveForScan
 		for i := range shells {
 			if entry := shells[i].Entry; entry != nil {
 				state.consume(entry)
@@ -481,6 +501,12 @@ func (m *SessionManager) buildIndex() {
 		}
 	}
 	m.messages = m.messages.retained(m.byID)
+	if m.payloads != nil {
+		// Entries loaded from a file are index shells: the memo reads their
+		// lines back from the file instead of expecting retained bytes (D488).
+		m.messages.decode = m.resolveMessages
+		m.messages.resolve = m.resolveForScan
+	}
 }
 
 func (m *SessionManager) rewriteFile() {
@@ -556,6 +582,9 @@ func (m *SessionManager) hasConversation() bool {
 func entryStartsConversation(entry *SessionEntry) bool {
 	if entry.Type != "message" {
 		return false
+	}
+	if entry.roleKnown {
+		return entry.role == "user" || entry.role == "assistant"
 	}
 	var msg struct {
 		Role string `json:"role"`
@@ -882,11 +911,25 @@ func (m *SessionManager) GetLeafID() *string {
 	return m.leafID
 }
 
-// GetEntry returns one entry by id.
+// GetEntry returns one entry by id. A lazily loaded entry is hydrated into a
+// copy so its message bytes are available without touching the canonical shell
+// the manager and the projection share.
 func (m *SessionManager) GetEntry(id string) *SessionEntry {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.byID[id]
+	entry := m.byID[id]
+	payloads := m.payloads
+	m.mu.Unlock()
+	if entry == nil || !entry.lazy {
+		return entry
+	}
+	if payloads == nil {
+		return entry
+	}
+	copy, err := payloads.hydrateCopy(entry)
+	if err != nil {
+		return entry
+	}
+	return &copy
 }
 
 // GetLabel returns an entry's label.
@@ -1006,6 +1049,10 @@ func (m *SessionManager) branchLocked(fromID string) []SessionEntry {
 		m.branchCacheHasValues = true
 		return values
 	}
+	// The cache keeps index shells: hydrating here would retain every message
+	// on a long branch for the life of the session. Callers that need an
+	// entry's bytes read them one at a time (EntryMessage) or hydrate a private
+	// copy (HydrateEntry).
 	return materializeEntries(m.branchPointersLocked(fromID))
 }
 
@@ -1078,7 +1125,12 @@ func (m *SessionManager) BuildContextEntriesForLeaf() []SessionEntry {
 // buildContextEntriesForLeafLocked is BuildContextEntriesForLeaf for callers
 // already holding m.mu.
 func (m *SessionManager) buildContextEntriesForLeafLocked() []SessionEntry {
-	return compactionWindowFromPointers(m.branchPointersLocked(""), m.messages)
+	entries := compactionWindowFromPointers(m.branchPointersLocked(""), m.messages)
+	// This is the replay/display snapshot: hydrate it so a caller that decodes
+	// an entry itself (the transcript renderer) sees its bytes. The projection
+	// path stays lazy and decodes through the session's cache instead (D488).
+	m.hydrateValuesLocked(entries)
+	return entries
 }
 
 // GetHeader returns the session header.
@@ -1210,7 +1262,9 @@ func (m *SessionManager) CreateBranchedSession(leafID string) (string, error) {
 	var pendingLabelIDs []string
 	pathParentID := ""
 	for i := range path {
-		entry := path[i]
+		// The new file is written from each retained entry, so a lazily loaded
+		// entry must be read before it is re-chained.
+		entry := m.hydrateEntryLocked(path[i])
 		if entry.Type == "label" {
 			pendingLabelIDs = append(pendingLabelIDs, entry.ID)
 			continue
@@ -1864,7 +1918,39 @@ func (m *SessionManager) getEntriesLocked() []SessionEntry {
 			out = append(out, *entry.Entry)
 		}
 	}
+	m.hydrateValuesLocked(out)
 	return out
+}
+
+// hydrateValuesLocked fills lazily loaded copies for a caller-owned snapshot.
+// Hydrating never touches the canonical shells the projection reads, so the
+// bytes live exactly as long as the snapshot that asked for them.
+func (m *SessionManager) hydrateValuesLocked(entries []SessionEntry) {
+	if m.payloads == nil {
+		return
+	}
+	_ = m.payloads.hydrateEntries(entries)
+}
+
+// HydrateEntry returns a hydrated copy of one entry, reading a lazily loaded
+// entry's line from the session file.
+func (m *SessionManager) HydrateEntry(entry SessionEntry) SessionEntry {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.hydrateEntryLocked(entry)
+}
+
+// hydrateEntryLocked is HydrateEntry for callers already holding m.mu (the
+// branch rewrite hydrates its path while it holds the lock).
+func (m *SessionManager) hydrateEntryLocked(entry SessionEntry) SessionEntry {
+	if !entry.lazy || m.payloads == nil {
+		return entry
+	}
+	copy, err := m.payloads.hydrateCopy(&entry)
+	if err != nil {
+		return entry
+	}
+	return copy
 }
 
 // UsesDefaultSessionDir reports whether the session uses the default per-cwd

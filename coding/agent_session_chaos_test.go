@@ -386,8 +386,8 @@ func runSessionChaosGoal(t *testing.T, extra func(*AgentSession) []func(int), di
 		}
 	}
 	if leaf := manager.GetLeafID(); leaf != nil {
-		got, _ := ai.MarshalJSON(reopened.GetBranch(*leaf))
-		want, _ := ai.MarshalJSON(manager.GetBranch(*leaf))
+		got, _ := ai.MarshalJSON(hydratedBranch(reopened, *leaf))
+		want, _ := ai.MarshalJSON(hydratedBranch(manager, *leaf))
 		if string(got) != string(want) {
 			t.Fatalf("the reopened branch to %s differs\n got %s\nwant %s", *leaf, got, want)
 		}
@@ -412,4 +412,15 @@ func runSessionChaosGoal(t *testing.T, extra func(*AgentSession) []func(int), di
 		}
 	}
 	session.Dispose()
+}
+
+// hydratedBranch returns a branch with every entry's retained line, so its
+// marshalled form can be compared: entries loaded from a file are index shells
+// until they are read back (D488).
+func hydratedBranch(manager *SessionManager, leaf string) []SessionEntry {
+	branch := manager.GetBranch(leaf)
+	for i := range branch {
+		branch[i] = manager.HydrateEntry(branch[i])
+	}
+	return branch
 }

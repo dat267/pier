@@ -36,7 +36,9 @@ func serializeSessionBranch(sessionManager *SessionManager, createTrailingEntrie
 	}
 	lines := []string{strings.TrimRight(headerLine, "\n")}
 	var parentID *string
-	for _, entry := range sessionManager.GetBranch("") {
+	for _, branchEntry := range sessionManager.GetBranch("") {
+		// A lazily loaded entry carries no line: read it before re-chaining.
+		entry := sessionManager.HydrateEntry(branchEntry)
 		// A fresh pointer per entry: they all re-chain to the previous entry.
 		current := parentID
 		// Re-chaining parses and rebuilds the entry's stored line. On a linear

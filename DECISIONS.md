@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D487)
+# Deliberate divergences from pi (D1–D488)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7916,3 +7916,58 @@ second Node-generated corpus for an exported helper nothing in the reference
 calls.
 
 Test: `TestParseStreamingJSONTextKeepsItsTolerance`.
+
+### D488
+
+**A loaded session keeps an index, not its payloads.**
+
+Reference: pi v1.5.2 (b4afdddf) `packages/coding-agent/src/core/session-manager.ts`
+reads the whole file and keeps every entry object, message bytes included, for
+the life of the process. A real session holds one message per turn, so a long one
+reaches hundreds of megabytes while only the entries inside the newest
+compaction window are ever used.
+
+Pier has loaded entries in a fast path for a while (`sessionLineMeta`, raw
+message captured without a structural decode), but every entry still referenced
+the file buffer, so the buffer stayed alive and the retained heap was the file
+size plus the entry structs.
+
+Now the fast path records each message entry's line range and drops the bytes.
+`SessionEntry.raw`/`Message` stay empty for a loaded entry; `payloadReader` reads
+the recorded range back with `ReadAt` and `SessionManager.resolveMessages` decodes
+it for the projection through the existing per-entry memo. The canonical entries
+stay immutable shells: `GetEntry` and the full snapshots (`GetBranch` for a
+render/export caller, `GetEntries`) hydrate caller-owned copies, and the branch,
+fork and export paths hydrate one entry at a time as they write. The compaction
+window, the `role`/conversation checks (`roleKnown`, captured by the scanner) and
+the cache-statistics scan therefore never need a message payload in memory.
+
+Measured on the 248MB session
+`--home-dat-repos-pier--/2026-10-19T20-31-53-750357137Z_01a155dd-…` (72,092
+entries, 788 projected messages; heap from `runtime.MemStats` after `GC`, RSS
+from a PTY TUI run and an RPC `--session` run):
+
+| metric | reference layout | index-only |
+| --- | --- | --- |
+| heap retained after load + projection | 335.3MB | 93.6MB |
+| RPC resident (steady / peak) | 626MB / 626MB | 330MB / 415MB |
+| TUI resident (peak) | 690MB | 415MB |
+| `--export` resident | 2,114MB | unchanged (export still builds the document) |
+| load / projection | 236ms / 50ms | 186ms / 56ms |
+
+The projected context is byte-identical before and after (`sha256` of the
+marshalled messages, `b50ff1d6f4c7a…`): the file bytes, prompts and export output
+do not change. A full snapshot (`GetEntries`, an export, a fork) still costs what
+it always did, because that caller asked for every entry; what changed is that
+resident sessions no longer pay it.
+
+Two residuals are deliberate. The loader still reads the file once to find its
+line boundaries (peak, not steady: streaming the scan is the next step if the
+transient matters). And a payload that cannot be read (the session file deleted
+under a running session) projects nothing for that entry instead of resurrecting
+it, because the bytes are the file.
+
+Tests: `TestLoadEntriesBufferedAllocatesLikeTheFile` bounds what a load retains,
+`TestLoadEntriesBufferedParallelMatchesEager` hydrates the shells and compares
+them with the eager decode, and `TestLoadEntriesBufferedRejectsInvalidMessageJSON`
+pins that the shell path still rejects what the decoder rejects.

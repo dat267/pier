@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"bytes"
 	"encoding/json"
 	"sync"
 
@@ -31,6 +32,9 @@ type messageCache struct {
 	byID map[string]*cachedEntry
 	// decode is the entry-to-messages step, injectable for tests.
 	decode func(*SessionEntry) []ai.Message
+	// resolve hydrates a lazily loaded entry for the role read (nil when every
+	// entry carries its payload). See payloadReader.
+	resolve func(*SessionEntry) *SessionEntry
 }
 
 // cachedEntry is one entry's memoized projection facts. The halves are filled
@@ -73,7 +77,20 @@ func (c *messageCache) messages(entry *SessionEntry) []ai.Message {
 // role returns the entry's JSON role ("" for non-message entries), decoding it
 // once. It is what applyCompactionWindow matches "system" against.
 func (c *messageCache) role(entry *SessionEntry) string {
-	if entry.Type != "message" || len(entry.Message) == 0 {
+	if entry.Type != "message" {
+		return ""
+	}
+	// A lazily loaded entry records its role at scan time, so the compaction
+	// window never reads a payload to answer this.
+	if entry.roleKnown {
+		return entry.role
+	}
+	if c.resolve != nil {
+		if resolved := c.resolve(entry); resolved != entry {
+			entry = resolved
+		}
+	}
+	if len(entry.Message) == 0 {
 		return ""
 	}
 	if entry.ID == "" {
@@ -180,8 +197,21 @@ func (m *SessionManager) EntryMessages(entry *SessionEntry) []ai.Message {
 	m.mu.Lock()
 	canonical := m.byID[entry.ID]
 	cache := m.messages
+	payloads := m.payloads
 	m.mu.Unlock()
-	if canonical == nil || canonical.Type != "message" || len(canonical.Message) != len(entry.Message) {
+	if canonical == nil || canonical.Type != "message" {
+		return SessionEntryToContextMessages(entry)
+	}
+	if canonical.lazy {
+		// The canonical entry is an index shell, so the caller's copy can only
+		// be recognized by its bytes, not by a shared allocation.
+		hydrated, err := payloads.hydrateCopy(canonical)
+		if err != nil || !bytes.Equal(hydrated.Message, entry.Message) {
+			return SessionEntryToContextMessages(entry)
+		}
+		return cache.messages(canonical)
+	}
+	if len(canonical.Message) != len(entry.Message) {
 		return SessionEntryToContextMessages(entry)
 	}
 	if len(entry.Message) > 0 && &canonical.Message[0] != &entry.Message[0] {
@@ -202,7 +232,15 @@ func projectedMessages(entry *SessionEntry, cache *messageCache) []ai.Message {
 
 // projectedRole reads the role a compaction window matches "system" against.
 func projectedRole(entry *SessionEntry, cache *messageCache) string {
-	if entry.Type != "message" || len(entry.Message) == 0 {
+	if entry.Type != "message" {
+		return ""
+	}
+	// A lazily loaded entry records its role at scan time; its payload is not
+	// in memory, so length checks must not stand in for "has a role".
+	if entry.roleKnown {
+		return entry.role
+	}
+	if len(entry.Message) == 0 {
 		return ""
 	}
 	if cache != nil {

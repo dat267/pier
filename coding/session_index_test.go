@@ -244,6 +244,20 @@ func assertBufferedMatchesEager(t *testing.T, path string) {
 	if !fast {
 		t.Fatalf("current-version file should take the scanner fast path")
 	}
+	if data != nil {
+		t.Fatal("the fast path must not retain the file buffer")
+	}
+	// The fast path keeps only index shells with a line range; hydrating them
+	// must reproduce the eager decode exactly (D488).
+	reader := newPayloadReader(path)
+	for i := range lazy {
+		if lazy[i].Entry == nil {
+			continue
+		}
+		if err := reader.hydrate(lazy[i].Entry); err != nil {
+			t.Fatalf("line %d: hydrate: %v", i, err)
+		}
+	}
 	if len(eager) != len(lazy) {
 		t.Fatalf("entry count differs: eager=%d lazy=%d", len(eager), len(lazy))
 	}
@@ -275,31 +289,12 @@ func assertBufferedMatchesEager(t *testing.T, path string) {
 			t.Fatalf("line %d: raw line differs", i)
 		}
 	}
-	// The buffer backs every subslice: it must outlive the entries and the
-	// subslices must alias it (otherwise the zero-copy claim is false).
-	if data == nil {
-		t.Fatal("no buffer returned")
-	}
-	found := false
-	for _, e := range lazy {
-		if e.Entry != nil && len(e.Entry.Message) > 0 {
-			idx := strings.Index(string(data), string(e.Entry.Message))
-			if idx < 0 {
-				t.Fatal("message raw is not a subslice of the file buffer")
-			}
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Fatal("no message entry to check")
-	}
 }
 
-// TestLoadEntriesBufferedAllocatesLikeTheFile bounds the load cost: the eager
-// decode allocated ~7x the file size (structural decode of every line plus a
-// full-line raw copy each); the buffered scanner keeps the file once and
-// decodes only the tiny non-message lines.
+// TestLoadEntriesBufferedAllocatesLikeTheFile bounds what a load keeps: the
+// eager decode retained a structural decode of every line plus a full-line copy
+// each, multi-megabyte sessions included. The scanner keeps index shells only,
+// and the file bytes it read to scan are released when it returns (D488).
 func TestLoadEntriesBufferedAllocatesLikeTheFile(t *testing.T) {
 	var b strings.Builder
 	b.WriteString(`{"type":"session","version":3,"id":"s1","timestamp":"t0","cwd":"/tmp"}` + "\n")
@@ -315,18 +310,30 @@ func TestLoadEntriesBufferedAllocatesLikeTheFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var before, after runtime.MemStats
+	runtime.GC()
 	runtime.ReadMemStats(&before)
 	entries, data, fast, err := LoadEntriesFromFileBuffered(path)
-	runtime.ReadMemStats(&after)
 	if err != nil || !fast || len(entries) != 2001 {
 		t.Fatalf("load: err=%v fast=%v entries=%d", err, fast, len(entries))
 	}
-	allocated := after.TotalAlloc - before.TotalAlloc
-	fileSize := len(data)
-	if allocated > uint64(3*fileSize) {
-		t.Fatalf("loading %d KB allocated %d MB, want under 3x the file size (%d MB)",
-			fileSize>>10, allocated>>20, (3*fileSize)>>20)
+	if data != nil {
+		t.Fatal("the fast path must not retain the file buffer")
+	}
+	runtime.GC()
+	runtime.ReadMemStats(&after)
+	runtime.KeepAlive(entries)
+	retained := int64(after.HeapAlloc) - int64(before.HeapAlloc)
+	// The shells cost one struct per entry, not the message bytes: on this
+	// 1.8KB-per-message fixture that is about a sixth of the file, and the
+	// share falls as messages grow.
+	if retained > info.Size()/2 {
+		t.Fatalf("a %d KB session retains %d KB after load, want index shells only (under half the file)",
+			info.Size()>>10, retained>>10)
 	}
 }
 

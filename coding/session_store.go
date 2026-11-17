@@ -106,7 +106,23 @@ type SessionEntry struct {
 	Note  *string `json:"note,omitempty"`
 
 	raw json.RawMessage
+
+	// A message entry loaded from a session file keeps only its index fields.
+	// Its line stays on disk and is read back on demand: a 250MB session would
+	// otherwise hold its whole self in the heap for the life of the process,
+	// though only the entries in the compaction window are ever used (D488).
+	lazy       bool
+	lineOffset int64
+	lineLength int32
+	// role is the message's JSON role, captured by the loader so the
+	// conversation and compaction checks never need the payload. roleKnown
+	// distinguishes "no role member" from "not read yet".
+	role      string
+	roleKnown bool
 }
+
+// IsLazy reports whether the entry's payload was left in the session file.
+func (e *SessionEntry) IsLazy() bool { return e != nil && e.lazy }
 
 // Raw returns the entry's decoded raw JSON.
 func (e *SessionEntry) Raw() json.RawMessage { return e.raw }
@@ -158,6 +174,12 @@ func (h *SessionHeader) MarshalJSON() ([]byte, error) {
 func (e *SessionEntry) MarshalJSON() ([]byte, error) {
 	if len(e.raw) > 0 {
 		return e.raw, nil
+	}
+	// A lazily loaded line is only ever re-emitted from its retained bytes, so
+	// reaching this with no bytes means a caller skipped hydration and would
+	// otherwise write a re-encoded line that loses unknown members and order.
+	if e.lazy {
+		return nil, fmt.Errorf("session entry %s: lazily loaded line marshalled without its file bytes", e.ID)
 	}
 	// The reference builds each entry as an object literal that spreads the
 	// base members (id, parentId, timestamp) over the type's own, so these four
@@ -754,8 +776,10 @@ const parallelSessionScanBytes = 4 << 20
 
 // scanSessionRange scans one line-aligned slice of a session buffer and is the
 // body of the buffered loader, extracted so disjoint slices can run in
-// parallel. The returned entries reference chunk's bytes.
-func scanSessionRange(chunk []byte, fast bool) []FileEntry {
+// parallel. base is the slice's offset in the file, so a lazily loaded entry
+// records where its own line sits. The fast path keeps no bytes: every message
+// entry becomes an index shell whose payload is read from the file on demand.
+func scanSessionRange(chunk []byte, base int64, fast bool) []FileEntry {
 	var entries []FileEntry
 	for len(chunk) > 0 {
 		end := bytes.IndexByte(chunk, '\n')
@@ -767,19 +791,25 @@ func scanSessionRange(chunk []byte, fast bool) []FileEntry {
 			line = chunk[:end]
 			chunk = chunk[end+1:]
 		}
+		lineOffset := base
+		base += int64(len(line)) + 1
 		if len(bytes.TrimSpace(line)) == 0 {
 			continue
 		}
 		if fast {
 			if meta, ok := scanSessionLine(line); ok && meta.typ == "message" && meta.id != "" {
+				role, roleKnown := roleOfMessageSpan(meta.message)
 				entry := &SessionEntry{
-					Type:      meta.typ,
-					ID:        meta.id,
-					ParentID:  meta.parentID,
-					Timestamp: meta.timestamp,
-					Message:   json.RawMessage(meta.message),
+					Type:       meta.typ,
+					ID:         meta.id,
+					ParentID:   meta.parentID,
+					Timestamp:  meta.timestamp,
+					lazy:       true,
+					lineOffset: lineOffset,
+					lineLength: int32(len(line)),
+					role:       role,
+					roleKnown:  roleKnown,
 				}
-				entry.raw = json.RawMessage(line)
 				entries = append(entries, FileEntry{Entry: entry})
 				continue
 			}
@@ -790,6 +820,69 @@ func scanSessionRange(chunk []byte, fast bool) []FileEntry {
 		}
 	}
 	return entries
+}
+
+// roleOfMessageSpan reads the message object's top-level role without decoding
+// the value. ok is false when the span is not an object the scanner can take at
+// face value (escapes, unexpected shapes), so the caller falls back to the full
+// decode instead of guessing.
+func roleOfMessageSpan(span []byte) (role string, ok bool) {
+	if len(span) < 2 || span[0] != '{' {
+		return "", false
+	}
+	i := 1
+	for {
+		for i < len(span) && (span[i] == ' ' || span[i] == '\t' || span[i] == '\r' || span[i] == '\n') {
+			i++
+		}
+		if i >= len(span) {
+			return "", false
+		}
+		if span[i] == '}' {
+			return "", i+1 == len(span)
+		}
+		key, n, keyOK := scanPlainStringBytes(span[i:])
+		if !keyOK {
+			return "", false
+		}
+		i += n
+		for i < len(span) && (span[i] == ' ' || span[i] == '\t') {
+			i++
+		}
+		if i >= len(span) || span[i] != ':' {
+			return "", false
+		}
+		i++
+		for i < len(span) && (span[i] == ' ' || span[i] == '\t') {
+			i++
+		}
+		if string(key) == "role" {
+			value, _, valueOK := scanPlainStringBytes(span[i:])
+			if !valueOK {
+				return "", false
+			}
+			return string(value), true
+		}
+		n, valueOK := skipJSONValue(span[i:])
+		if !valueOK {
+			return "", false
+		}
+		i += n
+		for i < len(span) && (span[i] == ' ' || span[i] == '\t') {
+			i++
+		}
+		if i >= len(span) {
+			return "", false
+		}
+		switch span[i] {
+		case ',':
+			i++
+		case '}':
+			return "", i+1 == len(span)
+		default:
+			return "", false
+		}
+	}
 }
 
 // scanSessionRanges splits a session buffer into workers contiguous ranges,
@@ -856,7 +949,7 @@ func LoadEntriesFromFileBuffered(filePath string) ([]FileEntry, []byte, bool, er
 	}
 	var entries []FileEntry
 	if workers <= 1 {
-		entries = scanSessionRange(data, fast)
+		entries = scanSessionRange(data, 0, fast)
 	} else {
 		ranges := scanSessionRanges(data, workers)
 		results := make([][]FileEntry, len(ranges))
@@ -868,7 +961,7 @@ func LoadEntriesFromFileBuffered(filePath string) ([]FileEntry, []byte, bool, er
 			wait.Add(1)
 			go func(index, start, end int) {
 				defer wait.Done()
-				results[index] = scanSessionRange(data[start:end], fast)
+				results[index] = scanSessionRange(data[start:end], int64(start), fast)
 			}(index, lineRange[0], lineRange[1])
 		}
 		wait.Wait()
@@ -891,6 +984,11 @@ func LoadEntriesFromFileBuffered(filePath string) ([]FileEntry, []byte, bool, er
 		if err := sessionLineWriter(resolved, "\n"); err != nil {
 			return nil, nil, fast, err
 		}
+	}
+	if fast {
+		// Every fast-path entry is an index shell whose bytes stay in the file,
+		// so the file buffer must not outlive this load (D488).
+		return entries, nil, true, nil
 	}
 	return entries, data, fast, nil
 }

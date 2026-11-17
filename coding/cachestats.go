@@ -208,6 +208,9 @@ type cacheScanState struct {
 	// entryIndex counts every entry consumed, so a candidate reports the index
 	// the full scan would have (CacheMissEntry.EntryIndex).
 	entryIndex int
+	// resolve hydrates a lazily loaded entry's payload (nil when the entries
+	// carry their own bytes). Only the seeding scan needs it.
+	resolve func(*SessionEntry) *SessionEntry
 }
 
 // cacheCandidate is one entry's contribution to the session-wide accounting, as
@@ -273,6 +276,13 @@ func (s *cacheScanState) consume(entry *SessionEntry) {
 		s.candidates = append(s.candidates, record)
 		return
 	case "message":
+		// A lazily loaded entry carries no bytes: read its line before the
+		// scan reads the message.
+		if s.resolve != nil {
+			if resolved := s.resolve(entry); resolved != entry {
+				entry = resolved
+			}
+		}
 	default:
 		return
 	}

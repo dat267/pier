@@ -45,10 +45,12 @@ func TestRenamingCurrentSessionKeepsItsLatestLeaf(t *testing.T) {
 		t.Fatalf("session name = %q", name)
 	}
 	for _, entry := range reopened.GetBranch("") {
-		if entry.Message == nil {
+		// A branch entry loaded from a file carries no bytes until asked.
+		payload := reopened.EntryMessage(&entry)
+		if payload == nil {
 			continue
 		}
-		message, err := ai.UnmarshalMessage(entry.Message)
+		message, err := ai.UnmarshalMessage(payload)
 		if err != nil {
 			t.Fatal(err)
 		}

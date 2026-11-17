@@ -29,6 +29,11 @@ func TailSession(source *SessionManager, model *ai.Model, thinking ai.ThinkingLe
 		return nil, errors.New("Nothing to tail yet")
 	}
 
+	// The re-chained chain is written from each entry's retained line, so a
+	// lazily loaded branch entry must be read before it is mutated.
+	for i := range branch {
+		branch[i] = source.HydrateEntry(branch[i])
+	}
 	window := dropOrphanGoalEntries(tailWindow(branch))
 	hasConversation := false
 	for i := range window {

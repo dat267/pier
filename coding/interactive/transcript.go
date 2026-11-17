@@ -1053,10 +1053,11 @@ func (r *TranscriptRenderer) MaybeShowThinkingDropNotice(message *ai.AssistantMe
 	branch := r.SessionInfo.GetBranch("")
 	for _, entry := range slices.Backward(branch) {
 
-		if entry.Type != "message" || len(entry.Message) == 0 {
+		payload := r.SessionInfo.EntryMessage(&entry)
+		if entry.Type != "message" || len(payload) == 0 {
 			continue
 		}
-		decoded, err := ai.UnmarshalMessage(entry.Message)
+		decoded, err := ai.UnmarshalMessage(payload)
 		if err != nil {
 			continue
 		}

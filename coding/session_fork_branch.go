@@ -44,6 +44,11 @@ func forkSessionAtEntry(source *SessionManager, targetLeafID string, targetCwd s
 		if len(entries) == 0 {
 			return nil, fmt.Errorf("Invalid entry ID for forking")
 		}
+		// The fork writes each entry's retained line, so read lazily loaded
+		// entries first.
+		for i := range entries {
+			entries[i] = source.HydrateEntry(entries[i])
+		}
 	}
 	parentSession := source.GetSessionFile()
 	var parent *string
