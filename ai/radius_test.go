@@ -650,3 +650,55 @@ func TestRadiusOAuthRejectsUntrustedURLs(t *testing.T) {
 		t.Fatalf("http verification = %+v err = %v", device, err)
 	}
 }
+
+// A 400 is an error even when the body parses: the status check comes first
+// (radius.ts loadOAuthDiscovery).
+func TestRadiusDiscoveryRejectsABadRequestWithAValidBody(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"issuer":"https://x"}`))
+	}))
+	defer server.Close()
+	discovery, err := LoadRadiusOAuthDiscovery(context.Background(), server.URL+"/")
+	if err == nil || discovery != nil {
+		t.Fatalf("discovery = %+v, err = %v; want the status error", discovery, err)
+	}
+	if !strings.Contains(err.Error(), "400") {
+		t.Fatalf("error = %v, want the status", err)
+	}
+}
+
+// A cancelled context during the token request reports the cancellation, not a
+// transport error (radius.ts requestOAuthToken's ctx check).
+func TestRadiusTokenRequestReportsCancellation(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	defer server.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := RequestRadiusOAuthToken(ctx, server.URL+"/", map[string]string{"grant_type": "device_code"})
+	if err == nil || !strings.Contains(err.Error(), "Login cancelled") {
+		t.Fatalf("err = %v, want Login cancelled", err)
+	}
+}
+
+// A token response without a scope yields no scope entry in the credential
+// (radius.ts requestOAuthToken's `if (payload.scope)`).
+func TestRadiusTokenWithoutScopeKeepsNoScopeEntry(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"access_token":"a","refresh_token":"r","expires_in":3600}`))
+	}))
+	defer server.Close()
+	credential, err := RequestRadiusOAuthToken(context.Background(), server.URL+"/", map[string]string{"grant_type": "device_code"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if credential == nil || credential.Access != "a" {
+		t.Fatalf("credential = %+v", credential)
+	}
+	if _, present := credential.Extra["scope"]; present {
+		t.Fatalf("credential carries an empty scope: %+v", credential.Extra)
+	}
+}
