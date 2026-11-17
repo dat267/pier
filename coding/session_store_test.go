@@ -122,3 +122,17 @@ func TestScanSessionLineToleratesTruncatedLines(t *testing.T) {
 		}()
 	}
 }
+
+// A branch summary without a summary projects nothing (session-manager.ts
+// sessionEntryToContextMessages returns [] for a falsy summary), so a crafted
+// entry cannot inject an empty message into the resumed transcript.
+func TestSessionEntryToContextMessagesSkipsEmptyBranchSummary(t *testing.T) {
+	entry := &SessionEntry{Type: "branch_summary", Summary: "", FromID: "root"}
+	if messages := SessionEntryToContextMessages(entry); len(messages) != 0 {
+		t.Fatalf("messages = %+v, want none for an empty summary", messages)
+	}
+	withText := &SessionEntry{Type: "branch_summary", Summary: "done", FromID: "root"}
+	if messages := SessionEntryToContextMessages(withText); len(messages) != 1 {
+		t.Fatalf("messages = %+v, want one summary message", messages)
+	}
+}
