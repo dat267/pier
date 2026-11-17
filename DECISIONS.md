@@ -8047,11 +8047,14 @@ without the return:
 | 28.9MB | 115MB | 97MB |
 | 248MB | 357MB | 229MB |
 
-A streamed walk was implemented first and dropped: reading the entries through
-one forward cursor instead of a hydrated copy per entry cut the walk's allocation
-by only 4% (4.0MB against 4.2MB on a 1.6MB fixture, because the facts parse, not
-the line copy, dominates), and it did not move resident size (343MB against 357MB
-without the page return). The page return is the whole win and is a few lines.
+A streamed walk ("one forward cursor over the file instead of a pread per entry")
+was implemented twice and dropped both times. For memory it cut the walk's
+allocation by 4% (4.0MB against 4.2MB on a 1.6MB fixture) and moved resident size
+not at all. For IO it turned 72,114 reads into about 70, and the seed's wall time
+on the 248MB session did not move either (1.7s before, 1.7s after): the cost is
+parsing every message's JSON for its facts, not reading it. The page return is the
+whole win and is a few lines; the remaining lever is that parse, which is a design
+question (persist facts, or compute them lazily per notice) rather than IO work.
 
 Test: `TestCacheSeedReturnsItsPagesAfterALargeSession` exercises the >4MB path and
 pins that the seed installs every message's facts and leaves the entries lazy.
