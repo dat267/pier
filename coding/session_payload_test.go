@@ -133,6 +133,14 @@ func TestPayloadReaderReopensAfterClose(t *testing.T) {
 		t.Fatal("no payload before Close")
 	}
 	reopened.Close()
+	// The descriptor must actually be released, not just abandoned: a no-op
+	// close leaks one per session replacement while every read still works.
+	reopened.payloads.mu.Lock()
+	stillOpen := reopened.payloads.file != nil
+	reopened.payloads.mu.Unlock()
+	if stillOpen {
+		t.Fatal("Close kept the payload descriptor open")
+	}
 	reopened.Close() // idempotent
 	if len(reopened.EntryMessage(&branch[0])) == 0 {
 		t.Fatal("payload unreadable after Close; the reader must reopen")
