@@ -7995,3 +7995,19 @@ each entry through its pointer receiver instead of a value.
 
 Tests: `TestStreamedExportPayloadMatchesTheDocument` and
 `TestExportFromFileMatchesTheInMemoryDocument`.
+
+### D490
+
+**`/tree` says it is opening the tree.**
+
+Reference: pi v1.5.2 (b4afdddf) `packages/coding-agent/src/modes/interactive/interactive-mode.ts`
+builds the tree synchronously inside the keypress, so `showTreeSelector` has
+nothing to announce: the selector appears before another frame can render.
+
+Pier builds the list off the owner loop (`SelectorWiring.TreeQueue`), which on a
+long session takes hundreds of milliseconds, so a silent `/tree` looks like a
+dropped keystroke. The status line shows "Opening session tree…" before the work
+starts and is cleared when the selector is on screen; an empty session replaces it
+with "No entries in session".
+
+Test: `TestTreeSelectorOpenAnnouncesTheOpen`.

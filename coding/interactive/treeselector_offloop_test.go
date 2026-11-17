@@ -91,14 +91,15 @@ func TestTreeSelectorOpenWithoutAQueueStaysSynchronous(t *testing.T) {
 
 	wiring, _, _, _ = newSelectorTestWiring(t)
 	wiring.SessionInfo = openTreeTestSession(t, 0)
-	statuses := ""
-	wiring.ShowStatus = func(message string) { statuses += message }
+	var statuses []string
+	wiring.ShowStatus = func(message string) { statuses = append(statuses, message) }
 	wiring.ShowTreeSelector(context.Background(), "", false)
 	if wiring.Slot.HasActiveSelector() {
 		t.Fatal("an empty session must not open a selector")
 	}
-	if statuses != "No entries in session" {
-		t.Fatalf("status = %q", statuses)
+	// The last status replaces the open notice with the reason there is no tree.
+	if len(statuses) < 2 || statuses[len(statuses)-1] != "No entries in session" {
+		t.Fatalf("statuses = %q", statuses)
 	}
 }
 
@@ -122,8 +123,8 @@ func TestTreeSelectorUsesTheDispatchedSession(t *testing.T) {
 	posted := make(chan func(), 1)
 	wiring.TreeQueue = queue
 	wiring.PostToUI = func(fn func()) { posted <- fn }
-	statuses := ""
-	wiring.ShowStatus = func(message string) { statuses += message }
+	var statuses []string
+	wiring.ShowStatus = func(message string) { statuses = append(statuses, message) }
 
 	wiring.ShowTreeSelector(context.Background(), "", false)
 	// The owner loop switches sessions before the queued build runs.
@@ -136,10 +137,34 @@ func TestTreeSelectorUsesTheDispatchedSession(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("the tree build never reached the owner loop")
 	}
-	if statuses != "" {
-		t.Fatalf("the tree of the dispatched session did not open: %q", statuses)
+	// The open notice is expected; an empty tree report for the dispatched
+	// session is not.
+	for _, status := range statuses {
+		if status == "No entries in session" {
+			t.Fatalf("the tree of the dispatched session did not open: %q", statuses)
+		}
 	}
 	if !wiring.Slot.HasActiveSelector() {
 		t.Fatal("no selector opened for the dispatched session")
+	}
+}
+
+// /tree announces that it is opening the tree before it builds the list, and
+// clears the notice once the selector is on screen. Upstream has no notice: its
+// build is synchronous, so there is nothing to explain.
+func TestTreeSelectorOpenAnnouncesTheOpen(t *testing.T) {
+	InitTheme("dark", false)
+	wiring, _, _, _ := newSelectorTestWiring(t)
+	wiring.SessionInfo = openTreeTestSession(t, 3)
+	var statuses []string
+	wiring.ShowStatus = func(message string) { statuses = append(statuses, message) }
+
+	wiring.ShowTreeSelector(context.Background(), "", false)
+
+	if len(statuses) == 0 || statuses[0] != SessionTreeOpeningNotice {
+		t.Fatalf("statuses = %q, want the first to announce the open", statuses)
+	}
+	if last := statuses[len(statuses)-1]; last != "" {
+		t.Fatalf("last status = %q, want the notice cleared once the selector shows", last)
 	}
 }

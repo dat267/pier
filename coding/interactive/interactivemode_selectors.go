@@ -366,6 +366,10 @@ func (w *SelectorWiring) ShowTrustSelector() {
 	})
 }
 
+// SessionTreeOpeningNotice is the status line /tree shows while the tree is
+// being built (upstream has no equivalent: its build is synchronous).
+const SessionTreeOpeningNotice = "Opening session tree…"
+
 // ShowTreeSelector opens the session tree selector and handles navigation.
 //
 // Building the list decodes every entry's message, which on a long session is
@@ -376,6 +380,10 @@ func (w *SelectorWiring) ShowTreeSelector(ctx context.Context, initialSelectedID
 	if w.SessionInfo == nil {
 		return
 	}
+	// Building the list decodes every entry, so the notice comes first: on a
+	// long session the selector opens a moment later, and a silent /tree looks
+	// like a dropped keystroke. It is cleared once the selector is on screen.
+	w.showStatus(SessionTreeOpeningNotice)
 	// Snapshot the session on the owner loop: the queued build must describe the
 	// session /tree was issued on, not whatever the loop has switched to by the
 	// time the worker runs.
@@ -396,6 +404,7 @@ func (w *SelectorWiring) ShowTreeSelector(ctx context.Context, initialSelectedID
 		return NewTreeList(tree, realLeafID, maxVisibleLines, nil, FilterDefault)
 	}
 	show := func(list *TreeList, empty bool) {
+		w.showStatus("")
 		w.Slot.Show(func(done func()) CreatedSelector {
 			selector := NewTreeSelectorComponentWithList(list, empty,
 				func(entryID string) {
@@ -429,8 +438,6 @@ func (w *SelectorWiring) ShowTreeSelector(ctx context.Context, initialSelectedID
 		report(build())
 		return
 	}
-	// No status line: a status replaces the last one in the transcript, and this
-	// one has no result to replace it with. The selector opening is the signal.
 	w.TreeQueue.GoLatestContext("session-tree", func(ctx context.Context) {
 		list := build()
 		if ctx.Err() != nil {
