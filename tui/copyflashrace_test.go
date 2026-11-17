@@ -49,7 +49,22 @@ func TestReleaseCopyFlashMarshalsThroughPost(t *testing.T) {
 		time.Sleep(time.Millisecond)
 	}
 	close(release)
-	time.Sleep(200 * time.Millisecond)
+	// Wait for the copy goroutine's post instead of a fixed delay: the post is
+	// the event this test needs, and a loaded runner can miss 200ms.
+	deadline := time.Now().Add(2 * time.Second)
+	posted := 0
+	for time.Now().Before(deadline) {
+		screen.postMu.Lock()
+		posted = len(screen.posted)
+		screen.postMu.Unlock()
+		if posted > 0 {
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if posted == 0 {
+		t.Fatal("the copy's flash was never posted")
+	}
 	// A final frame drains the posted flash and paints it.
 	terminal.writes = nil
 	screen.RenderNow(false)
