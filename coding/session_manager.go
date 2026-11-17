@@ -1954,7 +1954,7 @@ func (m *SessionManager) hydrateValuesLocked(entries []SessionEntry) {
 	if m.payloads == nil {
 		return
 	}
-	_ = m.payloads.hydrateEntries(entries)
+	_ = m.payloads.hydrateEntriesSeq(entries)
 }
 
 // HydrateEntry returns a hydrated copy of one entry, reading a lazily loaded

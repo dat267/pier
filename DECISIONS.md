@@ -7957,9 +7957,13 @@ from a PTY TUI run and an RPC `--session` run):
 
 The projected context is byte-identical before and after (`sha256` of the
 marshalled messages, `b50ff1d6f4c7a…`): the file bytes, prompts and export output
-do not change. A full snapshot (`GetEntries`, an export, a fork) still costs what
-it always did, because that caller asked for every entry; what changed is that
-resident sessions no longer pay it.
+do not change. A full snapshot is the one place the trade is visible:
+`GetEntries` copies every entry's line out of the file (10ms → 650ms on the
+session above), because each entry is read from disk instead of keeping the file
+resident. The per-entry `pread` version this started as took about 1s; one
+sequential pass in aligned chunks brought it down, and the copied lines are what
+that caller asked for. The export and fork paths read one entry at a time and do
+not build a snapshot.
 
 Two residuals are deliberate. The loader still reads the file once to find its
 line boundaries (peak, not steady: streaming the scan is the next step if the

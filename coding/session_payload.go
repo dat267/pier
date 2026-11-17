@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"sync"
 
 	"github.com/dat267/pier/ai"
@@ -20,6 +21,10 @@ import (
 //
 // The shells are immutable: hydration always produces a copy, so a projection,
 // a footer read, or a replay cannot race with another reader over the bytes.
+
+// payloadChunkBytes is the read size of a snapshot's sequential hydration pass.
+// A variable so a test can force several chunks over a small file.
+var payloadChunkBytes int64 = 8 << 20
 
 // payloadReader reads lazy entries' lines back from their session file. The
 // file is opened on first use and kept open: resolutions are clustered (a
@@ -44,15 +49,8 @@ func (r *payloadReader) line(entry *SessionEntry) ([]byte, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
-	if r.file == nil {
-		file, err := os.Open(r.path)
-		if err != nil {
-			// Remember the failure: a session whose file disappeared cannot
-			// resolve anything, and every caller would retry the open.
-			r.err = fmt.Errorf("read session payload: %w", err)
-			return nil, r.err
-		}
-		r.file = file
+	if _, err := r.openLocked(); err != nil {
+		return nil, err
 	}
 	if entry.lineLength <= 0 {
 		return nil, fmt.Errorf("session entry %s has no stored line range", entry.ID)
@@ -62,6 +60,23 @@ func (r *payloadReader) line(entry *SessionEntry) ([]byte, error) {
 		return nil, fmt.Errorf("read session entry %s: %w", entry.ID, err)
 	}
 	return line, nil
+}
+
+// openLocked opens the file once and remembers a failure, so a session whose
+// file disappeared does not retry the open on every read.
+func (r *payloadReader) openLocked() (*os.File, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if r.file == nil {
+		file, err := os.Open(r.path)
+		if err != nil {
+			r.err = fmt.Errorf("read session payload: %w", err)
+			return nil, r.err
+		}
+		r.file = file
+	}
+	return r.file, nil
 }
 
 // close releases the descriptor. A closed reader reopens on the next
@@ -90,11 +105,35 @@ func (r *payloadReader) hydrate(entry *SessionEntry) error {
 	if err != nil {
 		return err
 	}
+	if err := r.fill(entry, line); err != nil {
+		return err
+	}
+	return nil
+}
+
+// fill decodes one retained line into a lazy entry. The line was scanned when
+// the file was loaded, so the message member is read again with the same
+// scanner instead of a structural JSON decode: a full snapshot hydrates every
+// entry, and 72k structural decodes cost far more than the byte copy. A line
+// the scanner rejects falls back to the decoder.
+func (r *payloadReader) fill(entry *SessionEntry, line []byte) error {
+	entry.raw = json.RawMessage(line)
+	entry.lazy = false
+	if meta, ok := scanSessionLine(line); ok && meta.typ == "message" && len(meta.message) > 0 {
+		// meta.message is a subslice of line, so the message bytes are stored
+		// once and borrowed by both members.
+		entry.Message = json.RawMessage(meta.message)
+		if !entry.roleKnown {
+			entry.role, entry.roleKnown = roleOfMessageSpan(meta.message)
+		}
+		return nil
+	}
 	var decoded SessionEntry
 	if err := decodeSessionLine(line, &decoded); err != nil {
+		entry.raw = nil
+		entry.lazy = true
 		return fmt.Errorf("decode session entry %s: %w", entry.ID, err)
 	}
-	entry.raw = json.RawMessage(line)
 	entry.Message = decoded.Message
 	if len(entry.Message) == 0 {
 		entry.Message = nil
@@ -103,7 +142,86 @@ func (r *payloadReader) hydrate(entry *SessionEntry) error {
 		entry.role = decoded.role
 		entry.roleKnown = decoded.roleKnown
 	}
-	entry.lazy = false
+	return nil
+}
+
+// hydrateEntriesSeq fills every lazy entry of a snapshot with one sequential
+// pass over the file, in aligned chunks, instead of one pread per entry. A
+// full snapshot hydrates tens of thousands of entries; per-entry reads spent
+// about a second on the 248MB session, a whole-file pass costs a fraction of
+// that (D488).
+func (r *payloadReader) hydrateEntriesSeq(entries []SessionEntry) error {
+	type want struct {
+		index  int
+		offset int64
+		length int32
+	}
+	var wants []want
+	for i := range entries {
+		if entries[i].lazy {
+			if entries[i].lineLength <= 0 {
+				return fmt.Errorf("session entry %s has no stored line range", entries[i].ID)
+			}
+			wants = append(wants, want{i, entries[i].lineOffset, entries[i].lineLength})
+		}
+	}
+	if len(wants) == 0 {
+		return nil
+	}
+	// Entries are usually already in file order (a snapshot keeps the file's
+	// order, a branch follows its parents); sort only when they are not.
+	ordered := true
+	for i := 1; i < len(wants); i++ {
+		if wants[i].offset < wants[i-1].offset {
+			ordered = false
+			break
+		}
+	}
+	if !ordered {
+		sort.Slice(wants, func(a, b int) bool { return wants[a].offset < wants[b].offset })
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	file, err := r.openLocked()
+	if err != nil {
+		return err
+	}
+	chunkSize := payloadChunkBytes
+	chunk := make([]byte, chunkSize)
+	var chunkStart int64 = -1
+	var chunkLen int
+	for _, w := range wants {
+		end := w.offset + int64(w.length)
+		for chunkStart < 0 || w.offset < chunkStart || end > chunkStart+int64(chunkLen) {
+			chunkStart = w.offset / chunkSize * chunkSize
+			n, readErr := file.ReadAt(chunk, chunkStart)
+			chunkLen = n
+			if readErr != nil && n == 0 {
+				return fmt.Errorf("read session entry %s: %w", entries[w.index].ID, readErr)
+			}
+			if int64(len(chunk)) < end-chunkStart {
+				// A line larger than the chunk: read it on its own.
+				line := make([]byte, w.length)
+				if _, readErr := file.ReadAt(line, w.offset); readErr != nil {
+					return fmt.Errorf("read session entry %s: %w", entries[w.index].ID, readErr)
+				}
+				if err := r.fill(&entries[w.index], line); err != nil {
+					return err
+				}
+				chunkStart = -1
+				break
+			}
+		}
+		if !entries[w.index].lazy {
+			continue
+		}
+		// The chunk buffer is reused, so the entry gets its own copy of the line.
+		line := append([]byte(nil), chunk[w.offset-chunkStart:end-chunkStart]...)
+		if err := r.fill(&entries[w.index], line); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -114,20 +232,6 @@ func (r *payloadReader) hydrateCopy(entry *SessionEntry) (SessionEntry, error) {
 		return copy, err
 	}
 	return copy, nil
-}
-
-// hydrateEntries fills every lazy entry of a materialized slice in place. The
-// slice holds copies, so the manager's canonical entries stay shells.
-func (r *payloadReader) hydrateEntries(entries []SessionEntry) error {
-	if r == nil {
-		return nil
-	}
-	for i := range entries {
-		if err := r.hydrate(&entries[i]); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // resolveMessages decodes an entry for the session's message memo, reading a

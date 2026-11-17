@@ -3,6 +3,8 @@ package coding
 import (
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/dat267/pier/ai"
@@ -137,5 +139,56 @@ func TestPayloadReaderReopensAfterClose(t *testing.T) {
 	}
 	if entry := reopened.GetEntry(branch[0].ID); entry == nil || len(entry.Message) == 0 {
 		t.Fatal("GetEntry lost its payload after Close")
+	}
+}
+
+// A snapshot reads its payloads in aligned chunks. Each entry must still get its
+// own bytes: the chunk buffer is reused, so a line that aliased it would show the
+// last chunk's content (D488).
+func TestSnapshotHydrationCopiesEachLine(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "session.jsonl")
+	lines := []string{`{"type":"session","version":3,"id":"s1","timestamp":"t0","cwd":"/tmp"}`}
+	parent := ""
+	for i := 0; i < 40; i++ {
+		id := "m" + strconv.Itoa(i)
+		content := strings.Repeat(string(rune('a'+i%26)), 300+i)
+		parentField := ""
+		if parent != "" {
+			parentField = `,"parentId":"` + parent + `"`
+		}
+		lines = append(lines, `{"type":"message","id":"`+id+`","timestamp":"t"`+parentField+
+			`,"message":{"role":"user","content":"`+content+`"}}`)
+		parent = id
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	previousChunk := payloadChunkBytes
+	payloadChunkBytes = 512 // force many chunks and re-reads
+	t.Cleanup(func() { payloadChunkBytes = previousChunk })
+
+	manager, err := OpenSession(path, dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries := manager.GetEntries()
+	if len(entries) != len(lines)-1 {
+		t.Fatalf("entries = %d, want %d", len(entries), len(lines)-1)
+	}
+	for i, entry := range entries {
+		want := ""
+		for _, line := range lines[1:] {
+			if strings.Contains(line, `"id":"`+entry.ID+`"`) {
+				want = line
+			}
+		}
+		if got := string(entry.Raw()); got != want {
+			t.Fatalf("entry %d raw differs:\n got %s\nwant %s", i, got, want)
+		}
+		if !strings.Contains(string(entry.Message), strings.Repeat(string(rune('a'+i%26)), 300+i)) {
+			t.Fatalf("entry %d message lost its content: %s", i, entry.Message)
+		}
 	}
 }
