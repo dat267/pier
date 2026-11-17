@@ -135,8 +135,13 @@ counterpart. Text copy/read, clipboard file-path read and clipboard image read
 use the platform commands (`clipboard.ts`, `clipboard-image.ts`):
 wl-paste/xclip under Wayland/X11, the WSL `Set-Clipboard` PowerShell fallback
 and the Windows Terminal headless OSC 52 path for copy, PowerShell
-`Get-Clipboard` for Windows, and `pngpaste` on macOS. Clipboard file paths and
-images are pasted as text, so the `@file` attachment path handles them.
+`Get-Clipboard` for Windows, and `pngpaste` on macOS. Plain text needs its own
+substitute for the same reason: upstream reads it only from the native
+clipboard on macOS and Windows, so the port adds `pbpaste` and PowerShell
+`Get-Clipboard -Raw` with UTF-8 output (`TestClipboardDarwinPasteCommands`,
+`TestClipboardWindowsPasteCommands`), where it previously pasted nothing.
+Clipboard file paths and images are pasted as text, so the `@file` attachment
+path handles them.
 Upstream reads file paths only from the native clipboard; the URI-list and
 PowerShell forms are port-local substitutes. App-owned clipboard lifetime and
 admission are covered by D200/D201.

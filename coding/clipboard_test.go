@@ -128,6 +128,30 @@ func TestClipboardLinuxPasteCommands(t *testing.T) {
 	}
 }
 
+// Upstream reads darwin and windows through the native clipboard, which the
+// port does not have (D106); plain-text paste there must fall back to a command
+// instead of returning nothing.
+func TestClipboardDarwinPasteCommands(t *testing.T) {
+	commands := pasteCommandsFor("darwin", func(string) string { return "" })
+	if len(commands) != 1 || commands[0][0] != "pbpaste" {
+		t.Fatalf("darwin paste commands = %v, want pbpaste", commands)
+	}
+}
+
+func TestClipboardWindowsPasteCommands(t *testing.T) {
+	commands := pasteCommandsFor("windows", func(string) string { return "" })
+	if len(commands) != 1 || commands[0][0] != "powershell.exe" {
+		t.Fatalf("windows paste commands = %v, want powershell.exe", commands)
+	}
+	args := commands[0]
+	script := args[len(args)-1]
+	for _, want := range []string{"Get-Clipboard", "-Raw", "[Console]::OutputEncoding"} {
+		if !strings.Contains(script, want) {
+			t.Fatalf("windows paste script = %q, want %q", script, want)
+		}
+	}
+}
+
 // A Termux copy on android takes the env-based branch (copyCommands has no
 // platform gate), which the pre-fix code already did.
 func TestClipboardTermuxCopyOnAndroid(t *testing.T) {
@@ -232,6 +256,20 @@ func TestCopyTextUnavailableOnDesktop(t *testing.T) {
 		run, plainLinuxFile, func(context.Context, string) error { return nil }, "hello")
 	if err == nil || !strings.Contains(err.Error(), "install `xclip` or `xsel`") {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+// An absent OSC 52 sink (headless wiring) is not a size problem: the error must
+// not claim the text exceeded the cap when the caller supplied no sink.
+func TestCopyTextWithoutASinkIsNotOversized(t *testing.T) {
+	empty := func(string) string { return "" }
+	run := func(context.Context, string, []string, clipboardCommandOptions) []byte { return nil }
+	err := copyTextToClipboardWith(context.Background(), "linux", empty, run, plainLinuxFile, nil, "hello")
+	if err == nil || strings.Contains(err.Error(), "exceeds the OSC 52 size limit") {
+		t.Fatalf("err = %v, want the headless message", err)
+	}
+	if !strings.Contains(err.Error(), "no Wayland or X11 display") {
+		t.Fatalf("err = %v, want the headless hint", err)
 	}
 }
 

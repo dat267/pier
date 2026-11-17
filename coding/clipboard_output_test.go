@@ -16,7 +16,7 @@ func TestClipboardOSC52RejectsOversizedPayload(t *testing.T) {
 	t.Setenv("WAYLAND_DISPLAY", "")
 	t.Setenv("DISPLAY", "")
 	writes := 0
-	err := CopyTextToClipboardWithOSC52(context.Background(), strings.Repeat("x", MaxOSC52EncodedLength+1), func(context.Context, string) error {
+	err := CopyTextToClipboardWithOSC52(context.Background(), strings.Repeat("x", maxOSC52EncodedLength+1), func(context.Context, string) error {
 		writes++
 		return nil
 	})

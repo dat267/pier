@@ -4,7 +4,8 @@ package coding
 // clipboard-command.ts: system clipboard copy/read via platform commands,
 // with OSC 52 fallback for remote sessions. Upstream also tries a native
 // (Bun FFI) clipboard first; the Go port has no native clipboard and relies
-// on the platform commands (divergence D106).
+// on the platform commands, adding command substitutes for the platforms
+// upstream reads natively (divergence D106).
 
 import (
 	"context"
@@ -21,8 +22,14 @@ import (
 	"github.com/dat267/pier/internal/offloop"
 )
 
-// MaxOSC52EncodedLength matches upstream's OSC 52 payload cap.
-const MaxOSC52EncodedLength = 100_000
+// maxOSC52EncodedLength matches upstream's OSC 52 payload cap.
+const maxOSC52EncodedLength = 100_000
+
+// windowsPasteScript reads the clipboard as one string, without the trailing
+// newline Get-Clipboard adds per line. PowerShell writes redirected stdout in
+// the console code page unless told otherwise, which would mangle non-ASCII
+// text.
+const windowsPasteScript = "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; Get-Clipboard -Raw"
 
 // clipboardMaxBufferBytes is the reference's default maxBufferBytes for a
 // clipboard command's collected stdout (50 MiB). A reader that produces more
@@ -153,6 +160,15 @@ func pasteCommandsFor(goos string, getenv func(string) string) [][]string {
 	if getenv("TERMUX_VERSION") != "" {
 		commands = append(commands, []string{"termux-clipboard-get"})
 	}
+	// Upstream reads these two platforms through the native clipboard only, so
+	// without a command substitute plain-text paste silently did nothing there
+	// (D106).
+	switch goos {
+	case "darwin":
+		return append(commands, []string{"pbpaste"})
+	case "windows":
+		return append(commands, []string{"powershell.exe", "-NoProfile", "-Command", windowsPasteScript})
+	}
 	if goos != "linux" {
 		return commands
 	}
@@ -235,15 +251,21 @@ func copyTextToClipboardWith(ctx context.Context, goos string, getenv func(strin
 		return err
 	}
 
-	emit := func() (bool, error) {
+	// oversized reports a packet past the cap; a sink that is absent (headless
+	// wiring) is neither emitted nor oversized, so the caller's error does not
+	// claim a size problem that is not there.
+	emit := func() (emitted, tooLarge bool, err error) {
+		if write == nil {
+			return false, false, nil
+		}
 		encoded := base64.StdEncoding.EncodeToString([]byte(text))
-		if len(encoded) > MaxOSC52EncodedLength || write == nil {
-			return false, nil
+		if len(encoded) > maxOSC52EncodedLength {
+			return false, true, nil
 		}
 		if err := write(ctx, "\x1b]52;c;"+encoded+"\x07"); err != nil {
-			return false, err
+			return false, false, err
 		}
-		return true, nil
+		return true, false, nil
 	}
 
 	osc52Emitted := false
@@ -251,7 +273,7 @@ func copyTextToClipboardWith(ctx context.Context, goos string, getenv func(strin
 		// WSL without WSLg writes through the Windows clipboard; Windows
 		// Terminal prefers OSC 52 over the slower PowerShell round trip.
 		if getenv("WT_SESSION") != "" {
-			emitted, err := emit()
+			emitted, _, err := emit()
 			if err != nil {
 				return err
 			}
@@ -267,13 +289,13 @@ func copyTextToClipboardWith(ctx context.Context, goos string, getenv func(strin
 	headless := goos == "linux" && getenv("DISPLAY") == "" && getenv("WAYLAND_DISPLAY") == "" && getenv("TERMUX_VERSION") == ""
 	oversized := false
 	if !osc52Emitted && (isRemoteSessionFor(getenv) || (!copied && headless)) {
-		emitted, err := emit()
+		emitted, tooLarge, err := emit()
 		if err != nil {
 			return err
 		}
 		if emitted {
 			copied = true
-		} else {
+		} else if tooLarge {
 			oversized = true
 		}
 	}
