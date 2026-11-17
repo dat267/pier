@@ -764,3 +764,17 @@ func TestLocalShellOperationsRejectsInvalidTimeout(t *testing.T) {
 		t.Fatalf("huge timeout err = %v", err)
 	}
 }
+
+// InMemorySession falls back to NewSession when there are no preloaded entries
+// (SessionManager.inMemory -> newSession(newSessionOptions)), so an explicit id
+// still applies. Without that fallback an in-memory session ignores the id the
+// caller asked for.
+func TestInMemorySessionAppliesAnExplicitIDWithoutEntries(t *testing.T) {
+	manager := InMemorySession("/tmp", &NewSessionOptions{ID: "explicit-id", IDSet: true}, nil)
+	if got := manager.GetSessionID(); got != "explicit-id" {
+		t.Fatalf("session id = %q, want explicit-id", got)
+	}
+	if manager.GetSessionFile() != "" {
+		t.Fatalf("in-memory session opened a file: %q", manager.GetSessionFile())
+	}
+}
