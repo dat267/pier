@@ -15,6 +15,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -404,6 +405,130 @@ type exportSessionData struct {
 
 // GenerateSessionHTML renders the export document (upstream generateHtml).
 func GenerateSessionHTML(data *exportSessionData, themeName string) string {
+	prefix, suffix := sessionHTMLParts(themeName)
+	payload, err := ai.MarshalJSON(data)
+	if err != nil {
+		payload = []byte("{}")
+	}
+	// One buffer, sized for the finished document: the payload is the largest
+	// member of a real export, and growing a builder into it copies the page
+	// again.
+	var builder strings.Builder
+	builder.Grow(len(prefix) + base64.StdEncoding.EncodedLen(len(payload)) + len(suffix))
+	builder.WriteString(prefix)
+	encoder := base64.NewEncoder(base64.StdEncoding, &builder)
+	_, _ = encoder.Write(payload)
+	_ = encoder.Close()
+	builder.WriteString(suffix)
+	return builder.String()
+}
+
+// WriteSessionHTML streams the export document to w: the payload is base64
+// encoded straight into the file, and the entries arrive one at a time, so a
+// large export never holds its own document or the whole session beside itself
+// (D489). entries may be nil, which uses data's slice.
+func WriteSessionHTML(w io.Writer, data *exportSessionData, entries func(yield func(coding.SessionEntry) error) error, themeName string) error {
+	prefix, suffix := sessionHTMLParts(themeName)
+	if _, err := io.WriteString(w, prefix); err != nil {
+		return err
+	}
+	encoder := base64.NewEncoder(base64.StdEncoding, w)
+	if err := writeExportPayload(encoder, data, entries); err != nil {
+		return err
+	}
+	if err := encoder.Close(); err != nil {
+		return err
+	}
+	_, err := io.WriteString(w, suffix)
+	return err
+}
+
+// writeExportPayload writes data's JSON members in the struct's order, yielding
+// entries instead of marshalling the slice: on a real session the entries are
+// nearly the whole document, so one slice marshal would hold the entries and
+// their encoded copy at the same time.
+func writeExportPayload(w io.Writer, data *exportSessionData, entries func(yield func(coding.SessionEntry) error) error) error {
+	writeJSON := func(value any) error {
+		encoded, err := ai.MarshalJSON(value)
+		if err != nil {
+			return err
+		}
+		_, err = w.Write(encoded)
+		return err
+	}
+	if _, err := io.WriteString(w, `{"header":`); err != nil {
+		return err
+	}
+	header := data.Header
+	if len(header) == 0 {
+		header = json.RawMessage("null")
+	}
+	if _, err := w.Write(header); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, `,"entries":[`); err != nil {
+		return err
+	}
+	first := true
+	emit := func(entry coding.SessionEntry) error {
+		if !first {
+			if _, err := io.WriteString(w, ","); err != nil {
+				return err
+			}
+		}
+		first = false
+		// A value would skip SessionEntry's pointer-receiver MarshalJSON and
+		// lose the entry's retained line (its member order included).
+		return writeJSON(&entry)
+	}
+	if entries != nil {
+		if err := entries(emit); err != nil {
+			return err
+		}
+	} else {
+		for _, entry := range data.Entries {
+			if err := emit(entry); err != nil {
+				return err
+			}
+		}
+	}
+	if _, err := io.WriteString(w, `],"leafId":`); err != nil {
+		return err
+	}
+	if err := writeJSON(data.LeafID); err != nil {
+		return err
+	}
+	if data.SystemPrompt != nil {
+		if _, err := io.WriteString(w, `,"systemPrompt":`); err != nil {
+			return err
+		}
+		if err := writeJSON(*data.SystemPrompt); err != nil {
+			return err
+		}
+	}
+	if data.Tools != nil {
+		if _, err := io.WriteString(w, `,"tools":`); err != nil {
+			return err
+		}
+		if err := writeJSON(*data.Tools); err != nil {
+			return err
+		}
+	}
+	if data.RenderedTools != nil {
+		if _, err := io.WriteString(w, `,"renderedTools":`); err != nil {
+			return err
+		}
+		if err := writeJSON(data.RenderedTools); err != nil {
+			return err
+		}
+	}
+	_, err := io.WriteString(w, "}")
+	return err
+}
+
+// sessionHTMLParts renders the template with every asset substituted and splits
+// it at the session payload, the one placeholder left for the streaming write.
+func sessionHTMLParts(themeName string) (string, string) {
 	themeVars := generateThemeVars(themeName)
 	colors, _ := GetResolvedThemeColors(themeName)
 	exportPageBg, exportCardBg, exportInfoBg, _ := GetThemeExportColors(themeName)
@@ -424,13 +549,6 @@ func GenerateSessionHTML(data *exportSessionData, themeName string) string {
 		infoBg = themeExport.infoBg
 	}
 
-	// Base64 encode session data to avoid escaping issues.
-	payload, err := ai.MarshalJSON(data)
-	if err != nil {
-		payload = []byte("{}")
-	}
-	sessionDataBase64 := base64.StdEncoding.EncodeToString(payload)
-
 	css := strings.Replace(exportTemplateCSS, "{{THEME_VARS}}", themeVars, 1)
 	css = strings.Replace(css, "{{BODY_BG}}", bodyBg, 1)
 	css = strings.Replace(css, "{{CONTAINER_BG}}", containerBg, 1)
@@ -441,9 +559,13 @@ func GenerateSessionHTML(data *exportSessionData, themeName string) string {
 	html = strings.Replace(html, "{{MARKED_JS}}", exportMarkedJS, 1)
 	html = strings.Replace(html, "{{MARKED_CJK_FRIENDLY_JS}}", exportMarkedCJKFriendlyJS, 1)
 	html = strings.Replace(html, "{{HIGHLIGHT_JS}}", exportHighlightJS, 1)
-	// Insert the large payload last so asset substitutions do not copy it.
-	html = strings.Replace(html, "{{SESSION_DATA}}", sessionDataBase64, 1)
-	return html
+	// The payload placeholder is the split point: the base64 data is streamed
+	// between the halves instead of being substituted into a copy of the page.
+	prefix, suffix, found := strings.Cut(html, "{{SESSION_DATA}}")
+	if !found {
+		return html, ""
+	}
+	return prefix, suffix
 }
 
 // ExportFromFile exports a session file to HTML (upstream exportFromFile). An
@@ -463,22 +585,21 @@ func ExportFromFile(inputPath string, outputPath string, themeName string) (stri
 		return "", err
 	}
 
-	data := &exportSessionData{
-		Entries: sessionManager.GetEntries(),
-		LeafID:  sessionManager.GetLeafID(),
-	}
+	// The entries stream from the manager as the document is written; keeping a
+	// snapshot here would hold the session's whole payload for the export.
+	data := &exportSessionData{LeafID: sessionManager.GetLeafID()}
 	if header := sessionManager.GetHeader(); header != nil {
 		data.Header = exportHeaderJSON(header)
 	}
-
-	html := GenerateSessionHTML(data, themeName)
 
 	outputPath = coding.NormalizePath(outputPath, coding.PathInputOptions{})
 	if outputPath == "" {
 		base := strings.TrimSuffix(filepath.Base(resolvedInput), ".jsonl")
 		outputPath = coding.AppName + "-session-" + base + ".html"
 	}
-	if err := writePrivateFile(outputPath, []byte(html)); err != nil {
+	if err := writePrivateFileStream(outputPath, func(w io.Writer) error {
+		return WriteSessionHTML(w, data, sessionManager.EachEntry, themeName)
+	}); err != nil {
 		return "", err
 	}
 	return outputPath, nil
@@ -512,7 +633,6 @@ func ExportSessionToHTML(session *coding.AgentSession, outputPath string, themeN
 		return "", fmt.Errorf("Nothing to export yet - start a conversation first")
 	}
 
-	entries := sessionManager.GetEntries()
 	state := session.Agent.State()
 	tools := make([]exportTool, 0, len(state.Tools))
 	for _, tool := range state.Tools {
@@ -522,7 +642,6 @@ func ExportSessionToHTML(session *coding.AgentSession, outputPath string, themeN
 	}
 
 	data := &exportSessionData{
-		Entries:      entries,
 		LeafID:       sessionManager.GetLeafID(),
 		SystemPrompt: &state.SystemPrompt,
 		Tools:        &tools,
@@ -534,24 +653,30 @@ func ExportSessionToHTML(session *coding.AgentSession, outputPath string, themeN
 		themeName = CurrentThemeName()
 	}
 
-	html := GenerateSessionHTML(data, themeName)
-
 	outputPath = coding.NormalizePath(outputPath, coding.PathInputOptions{})
 	if outputPath == "" {
 		base := filepath.Base(sessionFile)
 		base = strings.TrimSuffix(base, ".jsonl")
 		outputPath = coding.AppName + "-session-" + base + ".html"
 	}
-	if err := writePrivateFile(outputPath, []byte(html)); err != nil {
+	if err := writePrivateFileStream(outputPath, func(w io.Writer) error {
+		return WriteSessionHTML(w, data, sessionManager.EachEntry, themeName)
+	}); err != nil {
 		return "", err
 	}
 	return outputPath, nil
 }
 
-// writePrivateFile publishes the export through the shared atomic replace, so a
-// failed export cannot truncate a file the user already had (A506, D454).
+// writePrivateFileStream publishes the export through the shared atomic
+// replace, so a failed export cannot truncate a file the user already had, and
+// the document is written as it is produced instead of being held whole (A506,
+// D454, D489).
 func writePrivateFile(path string, data []byte) error {
 	return coding.WritePrivateFile(path, data)
+}
+
+func writePrivateFileStream(path string, write func(io.Writer) error) error {
+	return coding.WritePrivateFileStream(path, write)
 }
 
 // ExportSessionToHTML exports the current session branch to an HTML file

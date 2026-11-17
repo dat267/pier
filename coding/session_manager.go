@@ -1170,6 +1170,28 @@ func (m *SessionManager) GetCompactionCount() int {
 	return count
 }
 
+// EachEntry yields the session's entries in file order, hydrating one at a
+// time. A caller that only streams the entries (an export) never holds the
+// whole snapshot, which on a long session is the file's own payload (D488).
+func (m *SessionManager) EachEntry(yield func(SessionEntry) error) error {
+	m.mu.Lock()
+	pointers := make([]*SessionEntry, 0, len(m.fileEntries))
+	for _, fileEntry := range m.fileEntries {
+		if fileEntry.Entry != nil {
+			pointers = append(pointers, fileEntry.Entry)
+		}
+	}
+	m.mu.Unlock()
+	// Entries are immutable after they are appended, and hydration reads the
+	// file under the manager lock, so no lock is held while yield runs.
+	for _, entry := range pointers {
+		if err := yield(m.HydrateEntry(*entry)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // GetEntries returns all entries (excluding the header).
 func (m *SessionManager) GetEntries() []SessionEntry {
 	m.mu.Lock()

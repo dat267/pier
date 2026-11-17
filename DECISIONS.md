@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D488)
+# Deliberate divergences from pi (D1–D490)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -7971,3 +7971,27 @@ Tests: `TestLoadEntriesBufferedAllocatesLikeTheFile` bounds what a load retains,
 `TestLoadEntriesBufferedParallelMatchesEager` hydrates the shells and compares
 them with the eager decode, and `TestLoadEntriesBufferedRejectsInvalidMessageJSON`
 pins that the shell path still rejects what the decoder rejects.
+
+### D489
+
+**The HTML export is written as it is produced.**
+
+Reference: pi v1.5.2 (b4afdddf) `packages/coding-agent/src/core/export-html/index.ts`
+builds the document as one string: the session payload becomes a base64 string,
+`{{SESSION_DATA}}` is replaced inside a copy of the page, and the result is
+written in one call. The entries are also taken as one decoded array.
+
+Pier writes the template's two halves around a base64 encoder that streams the
+payload, and the payload itself is emitted member by member in the encoded
+struct's order, with entries arriving one at a time from
+`SessionManager.EachEntry`. Nothing holds the document, and the entries the
+export has already written are not kept.
+
+Measured on the 248MB session (72,114 entries, `--export` to HTML, max RSS of the
+process): 2,132MB and 7.1s before, 415MB and 3.8s after. The written file is
+byte-identical to the previous build's on the same session, including the
+member order of a `custom` entry (CR-073), which is why the payload writer marshals
+each entry through its pointer receiver instead of a value.
+
+Tests: `TestStreamedExportPayloadMatchesTheDocument` and
+`TestExportFromFileMatchesTheInMemoryDocument`.

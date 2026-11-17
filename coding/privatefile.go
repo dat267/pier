@@ -63,6 +63,26 @@ func ReplaceFileAtomically(path string, data []byte, mode os.FileMode) error {
 // overwrite: the caller can retry once there is room, but the previous content
 // cannot be recovered.
 func replaceFileAtomically(path string, data []byte, mode os.FileMode) error {
+	return replaceFileAtomicallyWith(path, mode, func(w io.Writer) error {
+		written, err := w.Write(data)
+		if err == nil && written != len(data) {
+			err = io.ErrShortWrite
+		}
+		return err
+	})
+}
+
+// WritePrivateFileStream creates or replaces private user data with
+// owner-only mode, streaming the content instead of taking it as one slice. A
+// large export must not hold its document in memory just to rename it into place
+// (D489).
+func WritePrivateFileStream(path string, write func(io.Writer) error) error {
+	return replaceFileAtomicallyWith(path, 0o600, write)
+}
+
+// replaceFileAtomicallyWith is replaceFileAtomically for content produced by a
+// callback, so the bytes go from the producer to the temp file.
+func replaceFileAtomicallyWith(path string, mode os.FileMode, write func(io.Writer) error) error {
 	dir := filepath.Dir(path)
 	var temp *os.File
 	var err error
@@ -81,10 +101,7 @@ func replaceFileAtomically(path string, data []byte, mode os.FileMode) error {
 		}
 	}
 	tempPath := temp.Name()
-	written, writeErr := temp.Write(data)
-	if writeErr == nil && written != len(data) {
-		writeErr = io.ErrShortWrite
-	}
+	writeErr := write(temp)
 	if writeErr == nil {
 		// Without this a power loss can publish the rename while the data is
 		// still only in the page cache, leaving an empty file.
