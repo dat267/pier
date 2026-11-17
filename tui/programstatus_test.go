@@ -82,8 +82,10 @@ func TestFormatProgramStatusTruncatesTheMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(decoded) > programStatusMaxMessageBytes {
-		t.Fatalf("decoded message = %d bytes, want at most %d", len(decoded), programStatusMaxMessageBytes)
+	// program-status.ts MAX_MESSAGE_BYTES is 2048; the literal keeps the bound
+	// pinned when the port's constant changes.
+	if len(decoded) > 2048 {
+		t.Fatalf("decoded message = %d bytes, want at most 2048", len(decoded))
 	}
 	// The spec's 2732-byte limit applies to the encoded message: 2048 decoded bytes encode
 	// to exactly 2732 base64 characters.

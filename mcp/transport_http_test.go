@@ -1093,8 +1093,11 @@ func TestStreamableHTTPErrorBodyIsSlicedByUTF16Units(t *testing.T) {
 	if !errors.As(err, &httpErr) {
 		t.Fatalf("err = %v; want *McpHttpError", err)
 	}
-	if got := jsLength(httpErr.Body); got != maxErrorBodyChars {
-		t.Fatalf("body units = %d; want %d", got, maxErrorBodyChars)
+	// The expected cap is the reference's literal (streamable-http.ts
+	// MAX_ERROR_BODY_BYTES = 8 * 1024), not the port's constant: comparing with
+	// the constant would keep passing if the cap itself changed.
+	if got := jsLength(httpErr.Body); got != 8*1024 {
+		t.Fatalf("body units = %d; want %d", got, 8*1024)
 	}
 }
 
