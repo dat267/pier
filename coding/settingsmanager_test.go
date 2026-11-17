@@ -798,6 +798,22 @@ func TestSettingsCompactionTokenResolution(t *testing.T) {
 	}
 }
 
+// settings-defaults.ts autocompleteMaxVisible is 5, and
+// settings-manager.ts clamps a stored value to [3, 20] (Math.max(3, Math.min
+// (20, ...))). Neither the default nor the clamp was pinned.
+func TestAutocompleteMaxVisibleDefaultAndClamp(t *testing.T) {
+	manager := NewInMemorySettingsManager(&Settings{}, SettingsManagerCreateOptions{})
+	if got := manager.GetAutocompleteMaxVisible(); got != 5 {
+		t.Fatalf("default autocomplete items = %d, want 5", got)
+	}
+	for _, testCase := range []struct{ set, want int }{{1, 3}, {3, 3}, {7, 7}, {20, 20}, {99, 20}} {
+		manager.SetAutocompleteMaxVisible(testCase.set)
+		if got := manager.GetAutocompleteMaxVisible(); got != testCase.want {
+			t.Fatalf("SetAutocompleteMaxVisible(%d) reads %d, want %d", testCase.set, got, testCase.want)
+		}
+	}
+}
+
 func TestSettingsManagerInMemoryRoundTrip(t *testing.T) {
 	manager := NewInMemorySettingsManager(&Settings{Theme: new("dark")}, SettingsManagerCreateOptions{})
 	manager.SetDefaultModelAndProvider("anthropic", "claude-opus-4-8")
