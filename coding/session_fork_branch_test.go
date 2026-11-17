@@ -1,6 +1,9 @@
 package coding
 
 import (
+	"encoding/json"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -38,6 +41,20 @@ func TestForkSessionAtEntryKeepsTheChosenLeaf(t *testing.T) {
 		}
 		if got := len(forked.GetEntries()); got != 1 {
 			t.Errorf("entries = %d, want the single entry at the fork point", got)
+		}
+		// The fork records the source file it came from (parentSession), which
+		// the session picker's tree and resume lineage read.
+		forkedData, readErr := os.ReadFile(forked.GetSessionFile())
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		firstLine, _, _ := strings.Cut(string(forkedData), "\n")
+		var forkedHeader SessionHeader
+		if err := json.Unmarshal([]byte(firstLine), &forkedHeader); err != nil {
+			t.Fatalf("forked header %q: %v", firstLine, err)
+		}
+		if forkedHeader.ParentSession == nil || *forkedHeader.ParentSession != source.GetSessionFile() {
+			t.Errorf("forked parentSession = %v, want %q", forkedHeader.ParentSession, source.GetSessionFile())
 		}
 		if forked.GetSessionID() == source.GetSessionID() {
 			t.Error("the fork kept the source session id")
@@ -121,5 +138,34 @@ func TestCreateBranchedSessionBranchesInPlace(t *testing.T) {
 	}
 	if leaf := source.GetLeafID(); leaf == nil || *leaf != entries[0].ID {
 		t.Fatalf("branch leaf = %v, want %q", leaf, entries[0].ID)
+	}
+}
+
+// A branched session records the file it came from in its header, which is what
+// the session picker's tree and the resume lineage read. The condition is
+// `parentSession != ""`, so a source that has a file must always carry it.
+func TestCreateBranchedSessionRecordsTheParentFile(t *testing.T) {
+	source := NewSessionManager(t.TempDir(), &SessionManagerOptions{SessionDir: t.TempDir()})
+	source.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "first"}})
+	original := source.GetSessionFile()
+	if original == "" {
+		t.Fatal("source session has no file")
+	}
+	entry := source.GetEntries()[0]
+	path, err := source.CreateBranchedSession(entry.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstLine, _, _ := strings.Cut(string(data), "\n")
+	var header SessionHeader
+	if err := json.Unmarshal([]byte(firstLine), &header); err != nil {
+		t.Fatalf("header line %q: %v", firstLine, err)
+	}
+	if header.ParentSession == nil || *header.ParentSession != original {
+		t.Fatalf("parentSession = %v, want %q", header.ParentSession, original)
 	}
 }
