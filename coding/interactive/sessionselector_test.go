@@ -684,3 +684,27 @@ func TestSessionTreeIgnoresSelfParent(t *testing.T) {
 		t.Fatalf("roots = %d (children %d), want one childless root", len(roots), len(roots[0].Children))
 	}
 }
+
+// Filtering to fewer sessions must keep the selection inside the result: the
+// render highlights SelectedIndex and the Enter/rename handlers bounds-check
+// it, so an index left past the end is a list where nothing is selected and
+// Enter does nothing until the user moves.
+func TestSessionListClampsTheSelectionAfterFiltering(t *testing.T) {
+	sessions := []coding.SessionInfo{
+		{Path: "/s/alpha.jsonl", ID: "a", Name: "alpha", FirstMessage: "alpha", AllMessagesText: "alpha"},
+		{Path: "/s/beta.jsonl", ID: "b", Name: "beta", FirstMessage: "beta", AllMessagesText: "beta"},
+		{Path: "/s/gamma.jsonl", ID: "g", Name: "gamma", FirstMessage: "gamma", AllMessagesText: "gamma"},
+	}
+	list := NewSessionList(sessions, false, SortThreaded, NameFilterAll, nil, "")
+	list.selectedIndex = 2
+	list.FilterSessions("alpha")
+	if len(list.filtered) != 1 {
+		t.Fatalf("filtered = %d, want 1", len(list.filtered))
+	}
+	if got := list.SelectedIndex(); got != 0 {
+		t.Fatalf("selected index = %d after filtering to one row, want 0", got)
+	}
+	if path := list.GetSelectedSessionPath(); path != "/s/alpha.jsonl" {
+		t.Fatalf("selected path = %q, want the filtered session", path)
+	}
+}
