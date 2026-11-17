@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -81,5 +82,54 @@ func TestTypeSafeSystemOneTimeoutCoversResponseBody(t *testing.T) {
 	}
 	if elapsed := time.Since(start); elapsed > time.Second {
 		t.Fatalf("timeout took %v; want prompt cancellation", elapsed)
+	}
+}
+
+// The OnPayload hook may replace the serialized payload, and returning nil
+// keeps the original: system-one-shared.ts only assigns when the hook returns a
+// value.
+func TestTypeSafeSystemOneOnPayloadHook(t *testing.T) {
+	var bodies []string
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		body, _ := io.ReadAll(request.Body)
+		bodies = append(bodies, string(body))
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(writer, `{"answers":{"approved":{"type":"noul","noul":0.95}}}`)
+	}))
+	defer server.Close()
+	model := &Model{
+		ID: "typesafe/jev-1.13", Name: "Jev", API: APITypeSafeSystemOne,
+		Provider: "openrouter", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"},
+	}
+	context := ClassifierContext{
+		State: []byte(`{"text":"hello"}`),
+		Questions: []ClassifierQuestion{{
+			Name: "approved", Type: "bool", Instructions: "Approve?",
+			BoolCriteria: ClassifierBoolCriteria{True: "yes", False: "no"},
+		}},
+	}
+	// nil keeps the original payload.
+	result := (TypeSafeSystemOne{}).Classify(model, context, &ClassifierOptions{
+		StreamOptions: StreamOptions{
+			APIKey:    "secret",
+			OnPayload: func(json.RawMessage, *Model) json.RawMessage { return nil },
+		},
+	})
+	if result.StopReason != ClassifierStopStop {
+		t.Fatalf("nil hook result = %+v", result)
+	}
+	if len(bodies) != 1 || !strings.Contains(bodies[0], `"model":"typesafe/jev-1.13"`) {
+		t.Fatalf("nil hook body = %v, want the original payload", bodies)
+	}
+	// A returned payload replaces it.
+	replacement := json.RawMessage(`{"replaced":true}`)
+	(TypeSafeSystemOne{}).Classify(model, context, &ClassifierOptions{
+		StreamOptions: StreamOptions{
+			APIKey:    "secret",
+			OnPayload: func(json.RawMessage, *Model) json.RawMessage { return replacement },
+		},
+	})
+	if len(bodies) != 2 || strings.TrimSpace(bodies[1]) != `{"replaced":true}` {
+		t.Fatalf("replacement body = %v", bodies[1:])
 	}
 }
