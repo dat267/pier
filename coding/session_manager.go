@@ -430,6 +430,7 @@ func (m *SessionManager) loadEntries(entries []FileEntry, options *NewSessionOpt
 func (m *SessionManager) seedCacheScanInBackground() {
 	m.cacheScanSeeding = true
 	m.cacheSeedDone = make(chan struct{})
+	done := m.cacheSeedDone
 	m.seedFreedBytes = 0
 	if m.payloads != nil {
 		if info, err := os.Stat(m.payloads.path); err == nil && info.Size() > 4<<20 {
@@ -440,6 +441,10 @@ func (m *SessionManager) seedCacheScanInBackground() {
 	shells := make([]FileEntry, len(m.fileEntries))
 	copy(shells, m.fileEntries)
 	go func() {
+		// A cancelled seed (a rebuild replaced its entry list) must still
+		// release waiters; the channel belongs to this scan, not the field a
+		// newer scan may have replaced.
+		defer close(done)
 		var state cacheScanState
 		state.resolve = m.resolveForScan
 		for i := range shells {
@@ -470,8 +475,18 @@ func (m *SessionManager) seedCacheScanInBackground() {
 			runtime.GC()
 			debug.FreeOSMemory()
 		}
-		close(m.cacheSeedDone)
 	}()
+}
+
+// waitForCacheSeed blocks until the background cache scan started by the load
+// has finished, or the load was replaced by a newer one.
+func (m *SessionManager) waitForCacheSeed() {
+	m.mu.Lock()
+	done := m.cacheSeedDone
+	m.mu.Unlock()
+	if done != nil {
+		<-done
+	}
 }
 
 func (m *SessionManager) buildIndex() {

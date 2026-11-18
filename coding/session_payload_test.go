@@ -132,6 +132,10 @@ func TestPayloadReaderReopensAfterClose(t *testing.T) {
 	if len(reopened.EntryMessage(&branch[0])) == 0 {
 		t.Fatal("no payload before Close")
 	}
+	// The load seeds cache statistics on a background goroutine that hydrates
+	// the same entries; let it finish, or its read reopens the descriptor after
+	// Close (the stress gate's failure in this test).
+	reopened.waitForCacheSeed()
 	reopened.Close()
 	// The descriptor must actually be released, not just abandoned: a no-op
 	// close leaks one per session replacement while every read still works.
