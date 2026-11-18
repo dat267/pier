@@ -1,11 +1,14 @@
 package coding
 
 import (
+	"context"
+	"github.com/dat267/pier/ai"
 	"regexp"
 	"runtime"
+	"sync"
 	"testing"
-
-	"github.com/dat267/pier/ai"
+	"time"
+	"weak"
 )
 
 // newProjectionTestSession builds a session with enough messages that resolving
@@ -380,5 +383,123 @@ func TestLatestCompactionIsCachedPerVersion(t *testing.T) {
 	manager.AppendCompaction("summary two", rootID, 200, nil, false, nil)
 	if next := manager.LatestCompaction(); next == first || next.Summary != "summary two" {
 		t.Fatalf("new compaction not picked up: %+v", next)
+	}
+}
+
+// Reference: pi v1.5.0 (f9a26365), core/session-manager.ts newSession
+// drops the old entries. The Go memo must not let an already-admitted
+// projection repopulate manager-owned storage after that retirement.
+func TestConcurrentProjectionCannotRepopulateDiscardedSessionMemo(t *testing.T) {
+	manager := InMemorySession(t.TempDir(), nil, nil)
+	manager.AppendMessage(createUserMessage("old first"))
+	manager.AppendMessage(createUserMessage("old second"))
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	var decodeOnce, releaseOnce sync.Once
+	unblock := func() { releaseOnce.Do(func() { close(release) }) }
+	defer unblock()
+	manager.SetMessageDecodeForTest(func(entry *SessionEntry) []ai.Message {
+		decodeOnce.Do(func() {
+			close(entered)
+			<-release
+		})
+		return SessionEntryToContextMessages(entry)
+	})
+	result := make(chan []weak.Pointer[ai.UserMessage], 1)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		projection := manager.Projection()
+		var pointers []weak.Pointer[ai.UserMessage]
+		for _, message := range projection.Messages {
+			if user, ok := message.(*ai.UserMessage); ok {
+				pointers = append(pointers, weak.Make(user))
+			}
+		}
+		result <- pointers
+	}()
+	select {
+	case <-entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("projection did not reach the decoder barrier")
+	}
+	manager.NewSession(nil)
+	unblock()
+	var pointers []weak.Pointer[ai.UserMessage]
+	select {
+	case pointers = <-result:
+	case <-time.After(5 * time.Second):
+		t.Fatal("old projection did not finish")
+	}
+	<-done
+	if len(pointers) != 2 {
+		t.Fatalf("old snapshot returned %d user messages, want 2", len(pointers))
+	}
+	runtime.GC()
+	for i, pointer := range pointers {
+		if pointer.Value() != nil {
+			t.Errorf("discarded decoded message %d is retained by a late projection", i)
+		}
+	}
+	runtime.KeepAlive(manager)
+}
+
+func recordSelectionSession(t *testing.T) *AgentSession {
+	t.Helper()
+	dir := t.TempDir()
+	settings := NewSettingsManagerFromFiles(dir, dir, SettingsManagerCreateOptions{})
+	model := &ai.Model{
+		ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic",
+		Reasoning: true, ContextWindow: 100000, MaxTokens: 100,
+		ThinkingLevelMap: ai.ThinkingLevelMap{ai.ThinkMax: nil},
+	}
+	return newControlSession(t, model, settings)
+}
+
+func thinkingLevelEntries(session *AgentSession) []ai.ThinkingLevel {
+	var levels []ai.ThinkingLevel
+	for _, entry := range session.Sessions.GetEntries() {
+		if entry.Type == "thinking_level_change" {
+			levels = append(levels, ai.ThinkingLevel(entry.ThinkingLevel))
+		}
+	}
+	return levels
+}
+
+// pi v1.5.2 (b4afdddf) agent-session.ts _recordThinkingLevel (#11451): a prompt
+// records the live thinking level on the current branch when the latest recorded
+// one belongs to another branch, so a resume restores what the session runs. The
+// comparison uses the level clamped to the current model.
+func TestPromptRecordsTheLiveThinkingLevel(t *testing.T) {
+	session := recordSelectionSession(t)
+	defer session.Dispose()
+
+	// A level left on the branch by tree navigation, while the session runs low.
+	session.Sessions.AppendThinkingLevelChange(ai.ThinkHigh)
+	session.Agent.SetThinkingLevel(ai.ThinkLow)
+
+	if err := session.Prompt(context.Background(), "hello", nil); err != nil {
+		t.Fatal(err)
+	}
+	levels := thinkingLevelEntries(session)
+	if len(levels) == 0 || levels[len(levels)-1] != ai.ThinkLow {
+		t.Fatalf("recorded levels = %v; want the live level last", levels)
+	}
+}
+
+// A branch that already records the live level gets no new entry, so a prompt
+// does not grow the transcript every turn.
+func TestPromptDoesNotRerecordTheSameThinkingLevel(t *testing.T) {
+	session := recordSelectionSession(t)
+	defer session.Dispose()
+
+	session.Sessions.AppendThinkingLevelChange(ai.ThinkLow)
+	session.Agent.SetThinkingLevel(ai.ThinkLow)
+
+	if err := session.Prompt(context.Background(), "hello", nil); err != nil {
+		t.Fatal(err)
+	}
+	if levels := thinkingLevelEntries(session); len(levels) != 1 || levels[0] != ai.ThinkLow {
+		t.Fatalf("recorded levels = %v; want the single existing entry", levels)
 	}
 }

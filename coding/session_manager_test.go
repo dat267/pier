@@ -2,14 +2,20 @@ package coding
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
-
-	"github.com/dat267/pier/ai"
+	"weak"
 )
 
 // Session manager tests keyed to upstream session-manager.ts semantics.
@@ -783,5 +789,735 @@ func TestBuildSessionPathEmptyLeafUsesTheLastEntry(t *testing.T) {
 	nilPath := buildSessionPath(entries, nil, nil)
 	if len(nilPath) != 2 || nilPath[1].ID != "b" {
 		t.Fatalf("absent-leaf path = %+v, want the last entry's full path", nilPath)
+	}
+}
+
+// TestSessionManagerCachesBranch pins that GetBranch("") reuses one walk: the
+// footer asks for context usage on every paint, and rebuilding the branch of a
+// long session is O(entries) (12.6 ms on a 15.5k-entry session).
+func TestSessionManagerCachesBranch(t *testing.T) {
+	m, _ := newTestSession(t)
+	m.AppendMessage(createUserMessage("one"))
+	m.AppendMessage(createUserMessage("two"))
+
+	first := m.GetBranch("")
+	second := m.GetBranch("")
+	if len(first) == 0 {
+		t.Fatal("empty branch")
+	}
+	if &first[0] != &second[0] {
+		t.Fatal("GetBranch rebuilt the branch instead of reusing the cached walk")
+	}
+	// The shared result must not have spare capacity: a caller appending to it
+	// would write into the cache's backing array.
+	if cap(first) != len(first) {
+		t.Fatalf("cached branch cap = %d, want %d", cap(first), len(first))
+	}
+
+	// A new entry invalidates the cache.
+	m.AppendMessage(createUserMessage("three"))
+	third := m.GetBranch("")
+	if len(third) != len(first)+1 {
+		t.Fatalf("branch after append = %d entries, want %d", len(third), len(first)+1)
+	}
+	if &third[0] == &first[0] {
+		t.Fatal("append did not invalidate the cached branch")
+	}
+
+	// A leaf move invalidates the cache too.
+	tree := m.GetEntries()
+	if len(tree) >= 2 {
+		target := tree[0].ID
+		path := m.GetBranch(target)
+		if len(path) == 0 {
+			t.Fatal("explicit branch is empty")
+		}
+	}
+}
+
+// TestSessionManagerBranchCacheSurvivesFromID checks the cached branch is the
+// current leaf's, not an explicitly requested one.
+func TestSessionManagerBranchCacheSurvivesFromID(t *testing.T) {
+	m, _ := newTestSession(t)
+	m.AppendMessage(createUserMessage("one"))
+	m.AppendMessage(createUserMessage("two"))
+	entries := m.GetEntries()
+	firstID := entries[0].ID
+
+	cachedLeaf := m.GetBranch("")
+	explicit := m.GetBranch(firstID)
+	if len(explicit) >= len(cachedLeaf) {
+		t.Fatalf("explicit branch %d entries, leaf branch %d", len(explicit), len(cachedLeaf))
+	}
+	// The explicit walk must not have replaced the leaf cache.
+	again := m.GetBranch("")
+	if &again[0] != &cachedLeaf[0] {
+		t.Fatal("explicit GetBranch(fromID) clobbered the leaf cache")
+	}
+}
+
+// Reference: pi v1.4.0 core/session-manager.ts getTree compares Date.getTime,
+// not timestamp strings. Equal millisecond values retain insertion order.
+func TestSessionTreeOrdersChildrenByJavaScriptTime(t *testing.T) {
+	for _, tc := range []struct {
+		name, first, second string
+		firstWins           bool
+	}{
+		{"timezone offset", "2026-10-20T01:00:00Z", "2026-10-20T02:00:00+02:00", false},
+		{"omitted fractional seconds", "2026-10-20T00:00:00.100Z", "2026-10-20T00:00:00Z", false},
+		{"same millisecond", "2026-10-20T00:00:00.0009Z", "2026-10-20T00:00:00.0001Z", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: new(false)})
+			root := manager.AppendMessage(createUserMessage("root"))
+			first := manager.AppendMessage(createUserMessage("first"))
+			if err := manager.Branch(root); err != nil {
+				t.Fatal(err)
+			}
+			second := manager.AppendMessage(createUserMessage("second"))
+			manager.byID[first].Timestamp = tc.first
+			manager.byID[second].Timestamp = tc.second
+			roots := manager.GetTree()
+			if len(roots) != 1 || len(roots[0].Children) != 2 {
+				t.Fatalf("invalid fixture tree=%v", roots)
+			}
+			want := second
+			if tc.firstWins {
+				want = first
+			}
+			if got := roots[0].Children[0].Entry.ID; got != want {
+				t.Fatalf("first child=%s want=%s", got, want)
+			}
+		})
+	}
+}
+
+// sessionFileRoles returns the `type` of each line in a session file.
+func sessionFileRoles(t *testing.T, path string) []string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var roles []string
+	for line := range strings.SplitSeq(strings.TrimSpace(string(data)), "\n") {
+		if line == "" {
+			continue
+		}
+		var probe struct {
+			Type    string `json:"type"`
+			Message struct {
+				Role string `json:"role"`
+			} `json:"message"`
+		}
+		if err := json.Unmarshal([]byte(line), &probe); err != nil {
+			t.Fatal(err)
+		}
+		role := probe.Type
+		if probe.Type == "message" {
+			role = probe.Message.Role
+		}
+		roles = append(roles, role)
+	}
+	return roles
+}
+
+// TestSessionFileCreationFollowsTheFirstMessage ports the "session file
+// creation" cases of session-manager/file-operations.test.ts (ff72faba2).
+func TestSessionFileCreationFollowsTheFirstMessage(t *testing.T) {
+	t.Run("only setup entries stay in memory", func(t *testing.T) {
+		m, _ := newTestSession(t)
+		m.AppendModelChange("anthropic", "claude-sonnet-4-5")
+		m.AppendThinkingLevelChange("off")
+		if _, err := os.Stat(m.GetSessionFile()); err == nil {
+			t.Fatal("file must not exist for setup entries alone")
+		}
+	})
+	t.Run("the first user message creates the file", func(t *testing.T) {
+		m, _ := newTestSession(t)
+		m.AppendModelChange("anthropic", "claude-sonnet-4-5")
+		m.AppendMessage(createUserMessage("first question"))
+		if got := strings.Join(sessionFileRoles(t, m.GetSessionFile()), ","); got != "session,model_change,user" {
+			t.Fatalf("roles = %q", got)
+		}
+		reloaded, err := OpenSession(m.GetSessionFile(), "", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n := len(reloaded.Projection().Messages); n != 1 {
+			t.Fatalf("reloaded messages = %d", n)
+		}
+	})
+	t.Run("later entries append without rewriting", func(t *testing.T) {
+		m, _ := newTestSession(t)
+		m.AppendMessage(createUserMessage("first question"))
+		m.AppendCustomEntry("preset-state", json.RawMessage(`{"name":"plan"}`))
+		m.AppendMessage(createAssistantMessageT("first answer"))
+		if got := strings.Join(sessionFileRoles(t, m.GetSessionFile()), ","); got != "session,user,custom,assistant" {
+			t.Fatalf("roles = %q", got)
+		}
+	})
+}
+
+func assistantTestMessage() *ai.AssistantMessage {
+	return &ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "p", Model: "m", StopReason: ai.StopStop,
+		Content: ai.ContentList{ai.TextContent{Text: "hello"}},
+	}
+}
+
+// TestSessionManagerPersistStopsAtAssistant pins the flush-on-first-conversation
+// check to upstream's `fileEntries.some(...)`: once a user or assistant message
+// is known to exist the scan must stop, otherwise every append on a long session
+// re-unmarshals every entry (2.6 ms/append at 5k entries, 8 ms at 15.5k).
+func TestSessionManagerPersistStopsAtAssistant(t *testing.T) {
+	build := func(filler int) *SessionManager {
+		m, _ := newTestSession(t)
+		m.AppendMessage(createUserMessage("one"))
+		m.AppendMessage(assistantTestMessage())
+		for range filler {
+			m.AppendMessage(createUserMessage("filler"))
+		}
+		return m
+	}
+
+	small, large := build(0), build(2000)
+	smallAllocs := testing.AllocsPerRun(10, func() { small.AppendMessage(createUserMessage("x")) })
+	largeAllocs := testing.AllocsPerRun(10, func() { large.AppendMessage(createUserMessage("x")) })
+
+	// Appending must not get more expensive as the session grows.
+	if largeAllocs > smallAllocs+200 {
+		t.Fatalf("append allocated %.0f times on a 2k-entry session vs %.0f on a fresh one; "+
+			"the assistant scan did not short-circuit", largeAllocs, smallAllocs)
+	}
+}
+
+// An existing 0-byte session file is initialized like upstream's
+// _setSessionFile empty-file branch: the header is written, later turns append,
+// and no write error is recorded (M74).
+func TestOpeningEmptySessionFileInitializesIt(t *testing.T) {
+	dir := t.TempDir()
+	path := dir + "/empty.jsonl"
+	if err := os.WriteFile(path, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manager, err := OpenSession(path, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hi"}})
+	if err := manager.FlushWrites(); err != nil {
+		t.Fatal(err)
+	}
+	if failures := manager.DrainWriteErrors(); len(failures) != 0 {
+		t.Fatalf("write errors: %v", failures)
+	}
+
+	lines := strings.Split(strings.TrimSpace(readFileString(t, path)), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("session file has %d lines, want header plus one message:\n%s", len(lines), strings.Join(lines, "\n"))
+	}
+	header, err := UnmarshalFileEntry(lines[0])
+	if err != nil || header.Header == nil || header.Header.ID != manager.GetSessionID() {
+		t.Fatalf("first line is not the session header: %s", lines[0])
+	}
+	if !strings.Contains(lines[1], `"role":"user"`) || !strings.Contains(lines[1], "hi") {
+		t.Fatalf("second line is not the user message: %s", lines[1])
+	}
+	if info, err := os.Stat(path); err != nil || info.Mode().Perm() != 0o600 {
+		t.Fatalf("session file mode = %v, want 0600", info.Mode().Perm())
+	}
+}
+
+func readFileString(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+// parseSessionLines decodes JSONL lines through the same entry decoder the
+// session loader uses.
+func parseSessionLines(t *testing.T, lines ...string) []FileEntry {
+	t.Helper()
+	out := make([]FileEntry, 0, len(lines))
+	for _, line := range lines {
+		entry, err := UnmarshalFileEntry(line)
+		if err != nil {
+			t.Fatalf("parse %q: %v", line, err)
+		}
+		out = append(out, *entry)
+	}
+	return out
+}
+
+// Reference: pi v1.4.0 coding-agent/test/session-manager/migration.test.ts
+// "should add id/parentId to v1 entries" and session-manager.ts migrateV1ToV2.
+// A v1 entry gains an 8-character id and a parentId chain, and the header ends
+// at the current version.
+func TestSessionMigrationV1AddsTreeIDs(t *testing.T) {
+	entries := parseSessionLines(t,
+		`{"type":"session","id":"sess-1","timestamp":"2025-01-01T00:00:00Z","cwd":"/tmp"}`,
+		`{"type":"message","timestamp":"2025-01-01T00:00:01Z","message":{"role":"user","content":"hi","timestamp":1}}`,
+		`{"type":"message","timestamp":"2025-01-01T00:00:02Z","message":{"role":"assistant","content":[{"type":"text","text":"hello"}],"api":"test","provider":"test","model":"test","usage":{"input":1,"output":1,"cacheRead":0,"cacheWrite":0},"stopReason":"stop","timestamp":2}}`,
+	)
+	if !migrateToCurrentVersion(entries) {
+		t.Fatal("v1 entries must migrate")
+	}
+	if version := entries[0].Header.Version; version == nil || *version != CurrentSessionVersion {
+		t.Fatalf("header version = %v, want %d", version, CurrentSessionVersion)
+	}
+	first, second := entries[1].Entry, entries[2].Entry
+	for _, entry := range []*SessionEntry{first, second} {
+		if len(entry.ID) != 8 || !regexp.MustCompile(`^[0-9a-f]{8}$`).MatchString(entry.ID) {
+			t.Fatalf("id = %q, want 8 hex characters", entry.ID)
+		}
+	}
+	if first.ParentID != nil {
+		t.Fatalf("first parentId = %v, want null", *first.ParentID)
+	}
+	if second.ParentID == nil || *second.ParentID != first.ID {
+		t.Fatalf("second parentId = %v, want %q", second.ParentID, first.ID)
+	}
+
+	// The header had no version, so the assignment appends it last.
+	header, err := MarshalFileEntry(entries[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"type":"session","id":"sess-1","timestamp":"2025-01-01T00:00:00Z","cwd":"/tmp","version":3}` + "\n"; header != want {
+		t.Fatalf("rewritten v1 header = %s", header)
+	}
+
+	// Upstream assigns id/parentId on the parsed object, so they follow the
+	// members the v1 file already had instead of being inserted after "type".
+	rewritten := mustMarshalSessionEntry(t, entries[1].Entry)
+	want := regexp.MustCompile(`^\{"type":"message","timestamp":"2025-01-01T00:00:01Z","message":\{"role":"user","content":"hi","timestamp":1\},"id":"[0-9a-f]{8}","parentId":null\}$`)
+	if !want.MatchString(rewritten) {
+		t.Fatalf("rewritten v1 entry = %s", rewritten)
+	}
+}
+
+// Reference: migration.test.ts "should be idempotent (skip already migrated)".
+func TestSessionMigrationIsIdempotent(t *testing.T) {
+	entries := parseSessionLines(t,
+		`{"type":"session","version":2,"id":"sess-1","timestamp":"2025-01-01T00:00:00Z","cwd":"/tmp"}`,
+		`{"type":"message","id":"abc12345","parentId":null,"timestamp":"2025-01-01T00:00:01Z","message":{"role":"user","content":"hi","timestamp":1}}`,
+		`{"type":"message","id":"def67890","parentId":"abc12345","timestamp":"2025-01-01T00:00:02Z","message":{"role":"assistant","content":[{"type":"text","text":"hello"}],"api":"test","provider":"test","model":"test","usage":{"input":1,"output":1,"cacheRead":0,"cacheWrite":0},"stopReason":"stop","timestamp":2}}`,
+	)
+	migrateToCurrentVersion(entries)
+	if entries[1].Entry.ID != "abc12345" || entries[2].Entry.ID != "def67890" {
+		t.Fatalf("ids changed: %q, %q", entries[1].Entry.ID, entries[2].Entry.ID)
+	}
+	if parent := entries[2].Entry.ParentID; parent == nil || *parent != "abc12345" {
+		t.Fatalf("parentId = %v, want abc12345", parent)
+	}
+
+	before := mustMarshalSessionEntry(t, entries[2].Entry)
+	if migrateToCurrentVersion(entries) {
+		t.Fatal("a current-version file must not migrate again")
+	}
+	if after := mustMarshalSessionEntry(t, entries[2].Entry); after != before {
+		t.Fatalf("re-migration changed the entry:\nbefore %s\nafter  %s", before, after)
+	}
+}
+
+// Reference: load-entries.test.ts "migrates entries restored with an older
+// header" and "adopts headerless entries as current-version without migrating
+// them", via migrateV2ToV3.
+func TestSessionMigrationHookMessageRole(t *testing.T) {
+	restored := InMemorySession("/project", nil, parseSessionLines(t,
+		`{"type":"session","version":2,"id":"v2-session","timestamp":"2026-01-01T00:00:00Z","cwd":"/project"}`,
+		`{"type":"message","id":"abc12345","parentId":null,"timestamp":"2026-01-01T00:00:01Z","message":{"role":"hookMessage","content":"from a hook","timestamp":1}}`,
+	))
+	entry := restored.GetEntries()[0]
+	if version := restored.GetHeader().Version; version == nil || *version != CurrentSessionVersion {
+		t.Fatalf("header version = %v, want %d", version, CurrentSessionVersion)
+	}
+	if !strings.Contains(string(entry.Message), `"role":"custom"`) || entry.ID != "abc12345" {
+		t.Fatalf("migrated entry = %s", mustMarshalSessionEntry(t, &entry))
+	}
+
+	headerless := InMemorySession("/project", nil, parseSessionLines(t,
+		`{"type":"message","id":"abc12345","parentId":null,"timestamp":"2026-01-01T00:00:01Z","message":{"role":"hookMessage","content":"from a hook","timestamp":1}}`,
+	))
+	if got := string(headerless.GetEntries()[0].Message); !strings.Contains(got, `"role":"hookMessage"`) {
+		t.Fatalf("headerless entry was migrated: %s", got)
+	}
+}
+
+// Reference: session-manager.ts _loadEntries/_rewriteFile. A migrated file is
+// re-stringified from the parsed objects, so untouched members keep their
+// order, unknown members survive, and only the migration's own changes appear.
+func TestSessionMigrationRewritePreservesMemberOrder(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "legacy.jsonl")
+	original := `{"type":"session","version":2,"id":"v2-session","timestamp":"2026-01-01T00:00:00Z","cwd":"/project"}
+{"type":"message","id":"abc12345","parentId":null,"timestamp":"2026-01-01T00:00:01Z","message":{"role":"hookMessage","content":"from a hook","timestamp":1},"customField":{"b":1,"a":2}}
+`
+	if err := os.WriteFile(path, []byte(original), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := OpenSession(path, dir, ""); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"type":"session","version":3,"id":"v2-session","timestamp":"2026-01-01T00:00:00Z","cwd":"/project"}
+{"type":"message","id":"abc12345","parentId":null,"timestamp":"2026-01-01T00:00:01Z","message":{"role":"custom","content":"from a hook","timestamp":1},"customField":{"b":1,"a":2}}
+`
+	if string(data) != want {
+		t.Fatalf("rewritten file:\n got %s\nwant %s", data, want)
+	}
+}
+
+func mustMarshalSessionEntry(t *testing.T, entry *SessionEntry) string {
+	t.Helper()
+	line, err := MarshalFileEntry(FileEntry{Entry: entry})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.TrimSuffix(line, "\n")
+}
+
+// Reference: session-manager.ts createBranchedSession drops label entries and
+// re-chains the retained path. Because a loaded entry is re-stringified from
+// its parsed object, the rewritten parentId replaces the stored one; emitting
+// the retained line unchanged would keep pointing at the dropped label.
+func TestBranchedSessionRechainsRetainedLines(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "tree.jsonl")
+	original := `{"type":"session","version":3,"id":"sess","timestamp":"2026-01-01T00:00:00Z","cwd":"/project"}
+{"type":"message","id":"m1","parentId":null,"timestamp":"2026-01-01T00:00:01Z","message":{"role":"user","content":"hi","timestamp":1}}
+{"type":"label","id":"lbl","parentId":"m1","timestamp":"2026-01-01T00:00:02Z","targetId":"m1","label":"bookmark"}
+{"type":"message","id":"m2","parentId":"lbl","timestamp":"2026-01-01T00:00:03Z","message":{"role":"assistant","content":[{"type":"text","text":"hello"}],"api":"test","provider":"test","model":"test","usage":{"input":1,"output":1,"cacheRead":0,"cacheWrite":0},"stopReason":"stop","timestamp":2}}
+`
+	if err := os.WriteFile(path, []byte(original), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manager, err := OpenSession(path, dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	branched, err := manager.CreateBranchedSession("m2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(branched)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimRight(string(data), "\n"), "\n")
+	if len(lines) != 4 {
+		t.Fatalf("branched file = %s", data)
+	}
+	var label SessionEntry
+	if err := json.Unmarshal([]byte(lines[3]), &label); err != nil {
+		t.Fatal(err)
+	}
+	if label.Type != "label" || label.TargetID != "m1" || label.Label == nil || *label.Label != "bookmark" || label.ParentID == nil || *label.ParentID != "m2" {
+		t.Fatalf("recreated label = %+v", label)
+	}
+	if want := `{"type":"message","id":"m2","parentId":"m1","timestamp":"2026-01-01T00:00:03Z","message":{"role":"assistant","content":[{"type":"text","text":"hello"}],"api":"test","provider":"test","model":"test","usage":{"input":1,"output":1,"cacheRead":0,"cacheWrite":0},"stopReason":"stop","timestamp":2}}`; lines[2] != want {
+		t.Fatalf("branched entry:\n got %s\nwant %s", lines[2], want)
+	}
+}
+
+// Reference: session-export.ts pushes `{ ...entry, parentId }`, so members the
+// port does not model survive an export of a loaded branch.
+func TestSessionExportPreservesLoadedMembers(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "loaded.jsonl")
+	original := `{"type":"session","version":3,"id":"sess","timestamp":"2026-01-01T00:00:00Z","cwd":"/project"}
+{"type":"message","id":"m1","parentId":null,"timestamp":"2026-01-01T00:00:01Z","message":{"role":"user","content":"hi","timestamp":1},"extensionField":{"z":1,"a":2}}
+`
+	if err := os.WriteFile(path, []byte(original), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manager, err := OpenSession(path, dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimRight(SerializeSessionBranch(manager, nil), "\n"), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("export = %q", lines)
+	}
+	if !strings.Contains(lines[1], `"extensionField":{"z":1,"a":2}`) {
+		t.Fatalf("exported entry dropped a loaded member: %s", lines[1])
+	}
+	if !strings.Contains(lines[1], `"parentId":null`) {
+		t.Fatalf("exported entry lost its parentId: %s", lines[1])
+	}
+}
+
+// Reference: session-manager.ts migrateV1ToV2 converts a compaction entry's
+// firstKeptEntryIndex to firstKeptEntryId, deletes the legacy member, and only
+// resolves targets that already carry an id (a forward reference becomes an
+// omitted member, like a JavaScript undefined value).
+func TestSessionMigrationV1CompactionTarget(t *testing.T) {
+	backward := parseSessionLines(t,
+		`{"type":"session","id":"s","timestamp":"2025-01-01T00:00:00Z","cwd":"/tmp"}`,
+		`{"type":"message","timestamp":"2025-01-01T00:00:01Z","message":{"role":"user","content":"hi","timestamp":1},"extra":true}`,
+		`{"type":"compaction","timestamp":"2025-01-01T00:00:02Z","summary":"s","tokensBefore":5,"firstKeptEntryIndex":1}`,
+	)
+	migrateToCurrentVersion(backward)
+	target := backward[1].Entry.ID
+	rewritten := mustMarshalSessionEntry(t, backward[2].Entry)
+	wantBackward := regexp.MustCompile(`^\{"type":"compaction","timestamp":"2025-01-01T00:00:02Z","summary":"s","tokensBefore":5,"id":"[0-9a-f]{8}","parentId":"` + target + `","firstKeptEntryId":"` + target + `"\}$`)
+	if !wantBackward.MatchString(rewritten) {
+		t.Fatalf("backward compaction = %s", rewritten)
+	}
+	// The unknown message member keeps its position ahead of the added tree ids.
+	targetLine := mustMarshalSessionEntry(t, backward[1].Entry)
+	if !strings.Contains(targetLine, `"extra":true,"id":"`+target+`","parentId":null}`) {
+		t.Fatalf("migrated message = %s", targetLine)
+	}
+
+	forward := parseSessionLines(t,
+		`{"type":"session","id":"s","timestamp":"2025-01-01T00:00:00Z","cwd":"/tmp"}`,
+		`{"type":"compaction","timestamp":"2025-01-01T00:00:01Z","summary":"s","tokensBefore":5,"firstKeptEntryIndex":2}`,
+		`{"type":"message","timestamp":"2025-01-01T00:00:02Z","message":{"role":"user","content":"hi","timestamp":1}}`,
+	)
+	migrateToCurrentVersion(forward)
+	if got := mustMarshalSessionEntry(t, forward[1].Entry); strings.Contains(got, "firstKeptEntryId") || strings.Contains(got, "firstKeptEntryIndex") {
+		t.Fatalf("forward compaction = %s", got)
+	}
+}
+
+// pi v1.4.0 (4a080252), core/session-manager.ts SessionManager.newSession
+// replaces fileEntries and clears byId. Port-local read caches must not keep
+// the discarded session's payload alive when the manager starts a new one.
+func TestNewSessionReleasesPreviousPayload(t *testing.T) {
+	for _, reader := range []string{"none", "signature", "branch", "projection", "retained snapshot"} {
+		t.Run(reader, func(t *testing.T) {
+			manager := InMemorySession(t.TempDir(), nil, nil)
+			payload, snapshot := cachePreviousSessionPayload(manager, reader)
+			manager.NewSession(nil)
+			runtime.GC()
+			if reader == "retained snapshot" {
+				if payload.Value() == nil {
+					t.Fatal("new session invalidated a caller-owned branch snapshot")
+				}
+			} else if payload.Value() != nil {
+				t.Fatal("new session retains the previous session's message payload")
+			}
+			runtime.KeepAlive(snapshot)
+			runtime.KeepAlive(manager)
+		})
+	}
+}
+
+func cachePreviousSessionPayload(manager *SessionManager, reader string) (weak.Pointer[byte], []SessionEntry) {
+	id := manager.AppendMessage(createUserMessage(strings.Repeat("payload", 1024)))
+	payload := weak.Make(&manager.GetEntry(id).Message[0])
+	switch reader {
+	case "signature":
+		manager.ContextSignature()
+	case "branch":
+		manager.GetBranch("")
+	case "projection":
+		manager.Projection()
+	case "retained snapshot":
+		return payload, manager.GetBranch("")
+	}
+	return payload, nil
+}
+
+// Reference: pi f9a26365 core/session-manager.ts _setSessionFile checks
+// existsSync, loads the entries, and for an empty parse calls statSync, whose
+// ENOENT is thrown. A session file deleted while it is being opened must
+// surface an error, never a nil dereference.
+func TestOpenSessionSurvivesAFileDeletedWhileOpening(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "session.jsonl")
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	var stop atomic.Bool
+	var writer sync.WaitGroup
+	writer.Add(1)
+	go func() {
+		defer writer.Done()
+		for !stop.Load() {
+			_ = os.Remove(path)
+			_ = os.WriteFile(path, nil, 0o600)
+		}
+	}()
+
+	var panics atomic.Int64
+	for range 20000 {
+		func() {
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					panics.Add(1)
+				}
+			}()
+			// Either outcome is valid while another goroutine removes the file:
+			// a fresh manager for the empty file, or the vanished-file error.
+			_, _ = OpenSession(path, "", "")
+		}()
+		if panics.Load() > 0 {
+			break
+		}
+	}
+	stop.Store(true)
+	writer.Wait()
+	if panics.Load() > 0 {
+		t.Fatal("opening a session file deleted mid-open panicked")
+	}
+
+	// Controls: a stable empty file opens as a new session; stable invalid
+	// content is rejected.
+	stable := filepath.Join(dir, "stable.jsonl")
+	if err := os.WriteFile(stable, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := OpenSession(stable, "", ""); err != nil {
+		t.Fatalf("empty session file: %v", err)
+	}
+	invalid := filepath.Join(dir, "invalid.jsonl")
+	if err := os.WriteFile(invalid, []byte("not a session\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := OpenSession(invalid, "", ""); err == nil {
+		t.Fatal("invalid non-empty session file opened")
+	}
+}
+
+// pi v1.4.0 (4a080252), core/agent-session.ts dispose aborts manual and
+// automatic compaction before disconnecting the session. A host may dispose
+// from compaction_start; no summary may commit after that cancellation.
+func TestDisposeCancelsActiveCompaction(t *testing.T) {
+	for _, manual := range []bool{false, true} {
+		name := "automatic"
+		if manual {
+			name = "manual"
+		}
+		t.Run(name, func(t *testing.T) {
+			var runs atomic.Int64
+			session := compactionTestSession(t, &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 8192}, summarizingStreamFn(t, &runs, "summary text long enough to pass the usability check"), smallCompactionSettings())
+			seedBranch(t, session)
+			session.Subscribe(func(event *SessionEvent) {
+				if event.Type == SessionCompactionStart {
+					session.Dispose()
+				}
+			})
+			var err error
+			if manual {
+				_, err = session.CompactSession(context.Background(), "")
+			} else {
+				_, err = session.RunAutoCompaction(context.Background(), CompactionThreshold, false)
+			}
+			if err == nil {
+				t.Fatal("disposed session completed compaction instead of canceling it")
+			}
+			for _, entry := range session.Sessions.GetEntries() {
+				if entry.Type == "compaction" {
+					t.Fatal("disposed session persisted a compaction")
+				}
+			}
+		})
+	}
+}
+
+// The same dispose boundary owns branch-summary cancellation, not just the
+// low-level agent run (core/agent-session.ts dispose -> abortBranchSummary).
+func TestDisposeCancelsActiveBranchSummary(t *testing.T) {
+	manager := sessionWithBranch(t)
+	rootID := manager.GetEntries()[0].ID
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: t.TempDir(), Sessions: manager, StreamFn: stubStreamFn,
+		Model: &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 8192},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	session.CompactionStreamFn = func(_ *ai.Model, _ ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		session.Dispose()
+		if options.Ctx == nil || options.Ctx.Err() != context.Canceled {
+			t.Fatal("disposal did not cancel the forwarded branch-summary context")
+		}
+		// Model a cancellation-aware provider. A fake that completes with
+		// success after ignoring Ctx races EventStream.Result's ready-result
+		// path and tests scheduling rather than disposal (CR-074).
+		stream := ai.NewAssistantMessageEventStream()
+		stream.Push(ai.AssistantMessageEvent{
+			Type: ai.EventError, Reason: ai.StopAborted,
+			Error: &ai.AssistantMessage{StopReason: ai.StopAborted},
+		})
+		return stream
+	}
+	result, err := session.NavigateTree(context.Background(), rootID, NavigateTreeOptions{Summarize: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result == nil || !result.Aborted || !result.Cancelled {
+		t.Fatalf("disposed branch summarization = %+v, want aborted and cancelled", result)
+	}
+	for _, entry := range manager.GetEntries() {
+		if entry.Type == "branch_summary" {
+			t.Fatal("disposed session persisted a branch summary")
+		}
+	}
+}
+
+// pi v1.4.0 (4a080252), core/agent-session.ts dispose clears onWarmed and
+// cancels its cache warmer. A disposed session must not issue future paid
+// refreshes or retain its session event callback. The clock is virtual.
+func TestDisposeStopsSessionCacheWarming(t *testing.T) {
+	for _, dispose := range []bool{false, true} {
+		name := "live-control"
+		if dispose {
+			name = "disposed"
+		}
+		t.Run(name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				model := warmerModel()
+				warmer, manager, runs := newTestWarmer(t, model, CacheWarmingIdle)
+				defer warmer.Cancel()
+				manager.AppendMessage(&ai.AssistantMessage{
+					API: model.API, Provider: model.Provider, Model: model.ID, StopReason: ai.StopStop,
+					Content: ai.ContentList{ai.TextContent{Text: "reply"}}, Usage: ai.Usage{Input: 1000, TotalTokens: 1000},
+				})
+				session, err := NewAgentSession(&SessionConfig{Cwd: manager.GetCwd(), Sessions: manager, Model: model, StreamFn: stubStreamFn})
+				if err != nil {
+					t.Fatal(err)
+				}
+				session.CacheWarmer = warmer
+				var notifications atomic.Int64
+				warmer.OnWarmed = func(*SessionEntry) { notifications.Add(1) }
+				warmer.Decide = func(CacheWarmingDecisionEvent) CacheWarmingAction { return CacheWarmingActionWarm }
+				warmer.Start(CacheWarmRequest{Model: model, Options: &ai.SimpleStreamOptions{Ctx: context.Background()}}, func() bool { return true })
+				if status := warmer.Status(); status.State != "scheduled" {
+					t.Fatalf("warm run was not scheduled: %+v", status)
+				}
+				if dispose {
+					session.Dispose()
+					if status := warmer.Status(); status.State != "inactive" {
+						t.Errorf("disposed warmer = %+v, want inactive", status)
+					}
+				}
+				time.Sleep(1500 * time.Millisecond)
+				synctest.Wait()
+				want := int64(1)
+				if dispose {
+					want = 0
+				}
+				if got := runs.Load(); got != want {
+					t.Errorf("cache refresh requests = %d, want %d", got, want)
+				}
+				if got := notifications.Load(); got != want {
+					t.Errorf("warm notifications = %d, want %d", got, want)
+				}
+				if dispose && warmer.OnWarmed != nil {
+					t.Error("disposed warmer retained its session callback")
+				}
+			})
+		})
 	}
 }
