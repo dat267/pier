@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"runtime"
 	"strings"
 	"testing"
@@ -460,5 +461,64 @@ func TestStreamPiMessagesRecordsResponseModel(t *testing.T) {
 	}
 	if message.ResponseModel == nil || *message.ResponseModel != "served-model" {
 		t.Fatalf("response model = %v", message.ResponseModel)
+	}
+}
+
+// Reference: pi v1.5.2 (b4afdddf) api/pi-messages.ts formatPiMessagesResponseError
+// uses `error.message ?? body`, which keeps an empty message string (a string is
+// not nullish) and drops the body. Pier fell back to the body whenever the
+// message was empty.
+func TestPiMessagesErrorKeepsAnEmptyMessageInsteadOfTheBody(t *testing.T) {
+	model := &Model{Provider: "pi", ID: "m", BaseURL: "https://example.test"}
+	requestURL, err := url.Parse("https://example.test/messages")
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := &http.Response{StatusCode: http.StatusBadRequest, Status: "400 Bad Request"}
+	body := `{"error":{"message":"","code":"invalid_request"}}`
+	created := createPiMessagesResponseError(model, requestURL, response, body)
+	want := "400 Bad Request:  (invalid_request)"
+	if created.Message != want {
+		t.Fatalf("message = %q, want %q", created.Message, want)
+	}
+	if strings.Contains(created.Message, "error") {
+		t.Fatalf("message leaked the body: %q", created.Message)
+	}
+}
+
+// Reference: pi f9a26365 api/pi-messages.ts toolcall_end does
+// `Object.assign(partial.content[i], event.toolCall)`, which copies only the
+// members the wire object carries. A toolCall that omits arguments (or is
+// null) keeps the arguments accumulated from toolcall_delta.
+func TestPiMessagesToolCallEndKeepsStreamedArguments(t *testing.T) {
+	cases := map[string]json.RawMessage{
+		"arguments omitted": json.RawMessage(`{"type":"toolCall","id":"call-1","name":"read"}`),
+		"toolCall null":     json.RawMessage(`null`),
+	}
+	for name, endToolCall := range cases {
+		t.Run(name, func(t *testing.T) {
+			converter := newPiMessagesConverter(&Model{API: APIPiMessages, Provider: "p", ID: "m"})
+			events := []PiMessagesEvent{
+				{Type: "toolcall_start", ContentIndex: 0, ID: "call-1", ToolName: "read"},
+				{Type: "toolcall_delta", ContentIndex: 0, Delta: `{"path":"a"}`},
+				{Type: "toolcall_end", ContentIndex: 0, ToolCall: endToolCall},
+			}
+			for index := range events {
+				converter.convert(&events[index])
+			}
+			if len(converter.partial.Content) != 1 {
+				t.Fatalf("content = %+v", converter.partial.Content)
+			}
+			call, ok := converter.partial.Content[0].(ToolCall)
+			if !ok {
+				t.Fatalf("content = %T", converter.partial.Content[0])
+			}
+			if string(call.Arguments) != `{"path":"a"}` {
+				t.Fatalf("arguments = %s; want the streamed object", call.Arguments)
+			}
+			if call.ID != "call-1" || call.Name != "read" {
+				t.Fatalf("identity = %q/%q", call.ID, call.Name)
+			}
+		})
 	}
 }
