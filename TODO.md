@@ -1,12 +1,5 @@
 # Reproduced, unresolved findings
 
-## Auto-compaction for a virtual selection (reassessed)
-
-- Severity: low. Nothing was double-compacting in the shipped path; the remaining case needs a selection without a declared window and an assistant message whose model left the catalog.
-- Reassessed (audit round 15): the original claim, that a virtual selection never uses the routed model's window, is wrong. `CheckCompaction` sizes the threshold from `modelForMessage(assistant)`, which resolves the physical model a virtual request recorded, so the routed window is honoured wherever an assistant message names it. A threshold check added inside `prepareVirtualRequest` therefore compacted a second time per boundary (measured: two compaction entries where the port had one), and was reverted.
-- Fixed instead (`87793422`): when no model supplies a window, `CheckCompaction` now skips. Upstream compares against `undefined - reserveTokens` (NaN, false); the port used a zero window, making the threshold negative and compacting at every boundary. Reachable with a windowless selection once the assistant's model is gone from the catalog. `TestCheckCompactionSkipsAnUnknownContextWindow` pins it: two summarization streams before, none after.
-- Open, if ever pursued: `maybeAutoCompact` and `CheckCompaction` disagree for a zero window (`maybeAutoCompact` skips, which now matches upstream). No reachable divergence is known beyond the fixed one.
-
 ## A stress-gate run failed the RPC chaos test on a session write
 
 - Severity: low until it is understood; it is a test failure in CI, not a confirmed product bug.
