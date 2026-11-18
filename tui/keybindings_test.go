@@ -26,3 +26,58 @@ func TestFullscreenHomeEndBindingsMatchUpstream(t *testing.T) {
 		})
 	}
 }
+
+// pi v1.5.2 (b4afdddf), packages/tui/src/keybindings.ts getResolvedBindings
+// returns `keys.length === 1 ? keys[0] : [...keys]`, so a single-key binding is a
+// bare string and a multi-key or unset binding is an array.
+func TestResolvedBindingsShape(t *testing.T) {
+	manager := NewKeybindingsManager(TUIKeybindings, nil)
+	resolved := manager.GetResolvedBindings()
+
+	single, ok := resolved["tui.editor.cursorUp"].(string)
+	if !ok || single != "up" {
+		t.Fatalf("cursorUp = %#v, want the bare string \"up\"", resolved["tui.editor.cursorUp"])
+	}
+	multiple, ok := resolved["tui.editor.cursorLeft"].([]string)
+	if !ok || len(multiple) != 2 || multiple[0] != "left" || multiple[1] != "ctrl+b" {
+		t.Fatalf("cursorLeft = %#v, want the two keys", resolved["tui.editor.cursorLeft"])
+	}
+	unset, ok := resolved["tui.editor.historyPrevious"].([]string)
+	if !ok || len(unset) != 0 {
+		t.Fatalf("historyPrevious = %#v, want an empty array", resolved["tui.editor.historyPrevious"])
+	}
+	if len(resolved) != len(TUIKeybindings) {
+		t.Fatalf("resolved %d bindings, want %d", len(resolved), len(TUIKeybindings))
+	}
+}
+
+// D486: the reference reports keybinding conflicts in the order the user config
+// declared them; a Go map has no insertion order, so the port sorts both the
+// claimed key and the claimant names. The order is a diagnostic detail with no
+// consumer that depends on it.
+func TestKeybindingConflictsAreSorted(t *testing.T) {
+	definitions := map[Keybinding]KeybindingDefinition{
+		"zzz.second": {DefaultKeys: []string{"ctrl+y"}},
+		"aaa.first":  {DefaultKeys: []string{"ctrl+y"}},
+		"mmm.third":  {DefaultKeys: []string{"ctrl+z"}},
+	}
+	manager := NewKeybindingsManager(definitions, map[string][]string{
+		"zzz.second": {"ctrl+x"},
+		"aaa.first":  {"ctrl+x"},
+		"mmm.third":  {"ctrl+x"},
+	})
+	conflicts := manager.GetConflicts()
+	if len(conflicts) != 1 {
+		t.Fatalf("conflicts = %+v, want one", conflicts)
+	}
+	names := conflicts[0].Keybindings
+	want := []string{"aaa.first", "mmm.third", "zzz.second"}
+	if len(names) != len(want) {
+		t.Fatalf("claimants = %v, want %v", names, want)
+	}
+	for index, name := range want {
+		if names[index] != name {
+			t.Fatalf("claimants = %v, want the sorted %v", names, want)
+		}
+	}
+}

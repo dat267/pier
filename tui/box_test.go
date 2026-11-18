@@ -1,6 +1,8 @@
 package tui
 
-import "testing"
+import (
+	"testing"
+)
 
 // Pinned pi v1.4.0 packages/tui/src/components/box.ts removes Box children
 // with Array.splice and replaces the render mouse layout on the next successful

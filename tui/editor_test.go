@@ -2,9 +2,12 @@ package tui
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"testing"
@@ -393,4 +396,257 @@ func TestEditorUsesJSTrim(t *testing.T) {
 	if submitted != "" {
 		t.Fatalf("submit of U+FEFF = %q; want empty", submitted)
 	}
+}
+
+// TestEditorSanitizesTextOnEntry pins the editor against terminal control
+// injection through its buffer (D452). The editor draws its buffer,
+// and text can arrive from a paste or a completion rather than a keystroke, which
+// never carries a raw escape byte. Reference: pi v1.5.0 f9a26365 editor.ts
+// inserts the text it is given, as the port did.
+func TestEditorSanitizesTextOnEntry(t *testing.T) {
+	payload := "hi \x1b[2J\x1b]52;c;cGF3bmVk\x07 there"
+
+	// A completion is the path that carried a file name from disk into the
+	// buffer: the provider returns whole lines, so the result is installed by the
+	// same guard the Tab and list paths use.
+	completion := CompletionResult{Lines: []string{payload}, CursorLine: 0, CursorCol: len(payload)}
+	cases := map[string]func(*Editor){
+		"SetText":            func(e *Editor) { e.SetText(payload) },
+		"InsertTextAtCursor": func(e *Editor) { e.InsertTextAtCursor(payload) },
+		"paste":              func(e *Editor) { e.handlePasteLocked(payload) },
+		"completion":         func(e *Editor) { e.applyCompletionResultLocked(completion) },
+	}
+	for name, fill := range cases {
+		t.Run(name, func(t *testing.T) {
+			editor := NewEditor(&editorHost{rows: 10}, editorTestTheme(), EditorOptions{})
+			fill(editor)
+			for _, line := range editor.Render(100) {
+				if strings.Contains(line, "\x1b[2J") || strings.Contains(line, "\x1b]52") {
+					t.Fatalf("the editor drew a stored sequence: %q", line)
+				}
+			}
+		})
+	}
+}
+
+// D281: pi v1.4.0 (4a080252), components/editor.ts wordWrapLine recurses on
+// one over-wide grapheme without reducing it. A two-column editor leaves one
+// layout column, so a CJK glyph crashes rendering. Re-exec contains Go's fatal
+// stack overflow; the small child-only stack limit makes the regression fast.
+func TestEditorRendersWideGraphemeInNarrowTerminal(t *testing.T) {
+	const probeEnv = "PIER_TEST_EDITOR_NARROW_GRAPHEME"
+	if mode := os.Getenv(probeEnv); mode != "" {
+		debug.SetMaxStack(128 * 1024)
+		editor := NewEditor(nil, EditorTheme{}, EditorOptions{})
+		editor.SetText("界")
+		width := 20
+		if mode == "narrow" {
+			width = 2
+		}
+		if lines := editor.Render(width); len(lines) < 3 {
+			t.Fatalf("editor render returned no content: %q", lines)
+		}
+		if editor.GetText() != "界" {
+			t.Fatal("narrow rendering changed the editor text")
+		}
+		return
+	}
+	for _, mode := range []string{"control", "narrow"} {
+		t.Run(mode, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestEditorRendersWideGraphemeInNarrowTerminal$", "-test.timeout=4s")
+			command.Env = append(os.Environ(), probeEnv+"="+mode)
+			if output, err := command.CombinedOutput(); err != nil {
+				if len(output) > 2000 {
+					output = output[:2000]
+				}
+				t.Fatalf("editor render did not complete: %v\n%s", err, output)
+			}
+		})
+	}
+}
+
+// pi v1.4.0 (4a080252), components/editor.ts expandPasteMarkers passes a
+// replacement function to String.replace, so dollar sequences remain literal.
+func TestEditorLargePastePreservesDollarTextOnSubmit(t *testing.T) {
+	previous := GetKeybindings()
+	SetKeybindings(NewKeybindingsManager(TUIKeybindings, nil))
+	t.Cleanup(func() { SetKeybindings(previous) })
+	editor := NewEditor(nil, EditorTheme{}, EditorOptions{})
+	paste := strings.Repeat("line\n", 10) + `echo "$HOME" "$1" "${name}" "$$"`
+	editor.HandleInput("\x1b[200~" + paste + "\x1b[201~")
+	if got := editor.GetExpandedText(); got != paste {
+		t.Errorf("expanded paste changed dollar sequences: got %q, want %q", got, paste)
+	}
+	var submitted string
+	editor.OnSubmit = func(text string) { submitted = text }
+	editor.HandleInput("\r")
+	if submitted != paste {
+		t.Errorf("submitted paste changed dollar sequences: got %q, want %q", submitted, paste)
+	}
+}
+
+// Upstream expands pastes by iterating its paste Map, whose order is insertion
+// order; Go's map order is random. The order matters because a paste body can
+// itself carry a later paste's marker: expanding the higher ID first leaves
+// that marker sitting in the text while its replacement is a no-op.
+func TestPasteExpansionOrderIsInsertionOrder(t *testing.T) {
+	editor := NewEditor(nil, EditorTheme{}, EditorOptions{})
+	editor.pastes[3] = "third"
+	editor.pastes[1] = "first contains [paste #2 6 chars]"
+	editor.pastes[2] = "second"
+	editor.pasteCounter = 3
+
+	got := editor.pasteExpansionOrder()
+	want := []int{1, 2, 3}
+	if len(got) != len(want) {
+		t.Fatalf("order = %v, want %v", got, want)
+	}
+	for index := range want {
+		if got[index] != want[index] {
+			t.Fatalf("order = %v, want %v", got, want)
+		}
+	}
+}
+
+type undoStepHost struct{}
+
+func (undoStepHost) Rows() int          { return 24 }
+func (undoStepHost) RequestRender(bool) {}
+
+// isWhitespaceChar in pi v1.5.0 (f9a26365) packages/tui/src/utils.ts is
+// `/\s/.test(char)`: any string that contains a whitespace character counts.
+// The editor's undo coalescing uses it, so an insertion whose text contains a
+// space starts a new undo unit, while one without whitespace coalesces into the
+// current typing unit. Pier tested "every rune is whitespace", which is only
+// true for a lone space, so a multi-character insertion could join the previous
+// unit and one undo removed an extra typing step. Reference behaviour, with the
+// input string inserted through HandleInput and then ctrl+- (undo):
+//
+//	["a", "first message", undo] -> "a" (the insert is its own unit)
+//	["a", "bc", undo]            -> ""  (coalesced with "a")
+//	["a", " b", undo]            -> "a"
+func TestEditorMultiCharacterInsertHasItsOwnUndoUnit(t *testing.T) {
+	for _, test := range []struct {
+		keys []string
+		want string
+	}{
+		{[]string{"a", "first message", "\x1f"}, "a"},
+		{[]string{"a", "bc", "\x1f"}, ""},
+		{[]string{"a", " b", "\x1f"}, "a"},
+		{[]string{"漢", "first message", "\x1f"}, "漢"},
+	} {
+		editor := NewEditor(undoStepHost{}, EditorTheme{}, EditorOptions{})
+		for _, key := range test.keys {
+			editor.HandleInput(key)
+		}
+		if got := editor.GetText(); got != test.want {
+			t.Errorf("keys %q: text %q, want %q", test.keys, got, test.want)
+		}
+	}
+}
+
+// Upstream's sticky column is cursorCol - startCol over JavaScript strings, a
+// UTF-16 offset, so vertical moves keep the code-unit column rather than the
+// byte offset Go stores (pi v1.5.0 packages/tui/src/components/editor.ts
+// moveToVisualLine). Expected cursors come from the upstream Editor and are
+// translated to byte offsets.
+func TestEditorVerticalMovesKeepTheUTF16Column(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		text      string
+		inputs    []string
+		line, col int
+	}{
+		// "c😀" ends at unit 3 (byte 5); PageUp lands at "a  |  b".
+		{"page up from emoji", "", []string{"\x1b[200~a\tb\r\nc\x1b[201~", "😀", "\x1b[5~"}, 0, 3},
+		{"up from emoji", "abcdef\nc😀", []string{"\x1b[A"}, 0, 3},
+		// Unit 3 is inside the two-unit "é́", which snaps to its start (byte 4).
+		{"up into combining marks", "é́é́é́é́\nxyz", []string{"\x1b[A"}, 0, 4},
+		// "é́é́" ends at unit 4 (byte 8).
+		{"up from combining marks", "abcdef\né́é́", []string{"\x1b[A"}, 0, 4},
+	} {
+		editor := NewEditor(&editorHost{rows: 10}, editorTestTheme(), EditorOptions{})
+		editor.SetFocused(true)
+		if tc.text != "" {
+			editor.SetText(tc.text)
+		}
+		for _, input := range tc.inputs {
+			editor.HandleInput(input)
+		}
+		editor.Render(30)
+		if line, col := editor.Cursor(); line != tc.line || col != tc.col {
+			t.Errorf("%s: cursor %d,%d; want %d,%d", tc.name, line, col, tc.line, tc.col)
+		}
+	}
+}
+
+// pi v1.4.0 (4a080252), packages/tui/src/word-navigation.ts: findWordBackward
+// and findWordForward segment only the text before or after the cursor, so a
+// cursor inside a word moves to that word's edge. Segmenting the whole line
+// made the backward move land before the word start (a negative column, which
+// the next edit or forward delete sliced with) and left the forward move with
+// nothing to advance over (CR-210).
+func TestEditorWordNavigationInsideWord(t *testing.T) {
+	newEditor := func(text string) *Editor {
+		editor := NewEditor(&editorHost{rows: 10}, editorTestTheme(), EditorOptions{})
+		editor.SetFocused(true)
+		editor.SetText(text)
+		return editor
+	}
+	// press sends inputs and then types X so the cursor position is observable
+	// through the text.
+	press := func(editor *Editor, inputs ...string) string {
+		for _, input := range inputs {
+			editor.HandleInput(input)
+		}
+		return editor.GetText()
+	}
+
+	t.Run("backward stops at word start", func(t *testing.T) {
+		editor := newEditor("ab")
+		if got := press(editor, "\x1b[D", "\x1b[1;5D", "X"); got != "Xab" {
+			t.Fatalf("text = %q, want %q", got, "Xab")
+		}
+	})
+
+	t.Run("backward then forward delete", func(t *testing.T) {
+		editor := newEditor("ab")
+		if got := press(editor, "\x1b[D", "\x1b[1;5D", "\x1b[3~"); got != "b" {
+			t.Fatalf("text = %q, want %q", got, "b")
+		}
+	})
+
+	t.Run("forward stops at word end", func(t *testing.T) {
+		editor := newEditor("abcd")
+		// Home, then right once: the cursor sits inside the word.
+		if got := press(editor, "\x1b[H", "\x1b[C", "\x1b[1;5C", "X"); got != "abcdX" {
+			t.Fatalf("text = %q, want %q", got, "abcdX")
+		}
+	})
+
+	t.Run("forward from punctuation boundary", func(t *testing.T) {
+		editor := newEditor("a.b")
+		if got := press(editor, "\x1b[D", "\x1b[D", "\x1b[1;5C", "X"); got != "a.Xb" {
+			t.Fatalf("text = %q, want %q", got, "a.Xb")
+		}
+	})
+
+	t.Run("backward inside a later word", func(t *testing.T) {
+		editor := newEditor("foo bar")
+		if got := press(editor, "\x1b[D", "\x1b[D", "\x1b[1;5D", "X"); got != "foo Xbar" {
+			t.Fatalf("text = %q, want %q", got, "foo Xbar")
+		}
+	})
+
+	t.Run("cursor never goes negative on multibyte lines", func(t *testing.T) {
+		editor := newEditor("a\u0301b")
+		editor.HandleInput("\x1b[H")
+		editor.HandleInput("\x1b[1;5C")
+		editor.HandleInput("X")
+		if got := editor.GetText(); got != "a\u0301bX" {
+			t.Fatalf("text = %q, want %q", got, "a\u0301bX")
+		}
+	})
 }

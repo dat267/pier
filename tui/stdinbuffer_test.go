@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"reflect"
 	"runtime"
 	"strings"
 	"sync"
@@ -626,5 +627,86 @@ func TestStdinBufferCallbackReentrancy(t *testing.T) {
 	case <-done:
 	case <-time.After(2 * time.Second):
 		t.Fatal("OnData deadlocked while destroying the buffer")
+	}
+}
+
+// pi v1.4.0 stdin-buffer.ts uses setTimeout for incomplete-sequence deadlines,
+// which clamps delays above 2^31-1 to 1ms.
+func TestStdinBufferTimeoutUsesJavaScriptTimerClamp(t *testing.T) {
+	cases := []struct {
+		name    string
+		options StdinBufferOptions
+		input   string
+	}{
+		{name: "sequence", options: StdinBufferOptions{Timeout: 1 << 31}, input: "\x1b["},
+		{name: "escape", options: StdinBufferOptions{EscapeTimeout: 1 << 31}, input: "\x1b"},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			buffer := NewStdinBuffer(test.options)
+			started := time.Now()
+			buffer.ProcessString(test.input)
+			deadline, ok := buffer.PendingTimeout()
+			if !ok {
+				t.Fatal("incomplete sequence has no pending timeout")
+			}
+			if remaining := deadline.Sub(started); remaining <= 0 || remaining > 2*time.Millisecond {
+				t.Fatalf("pending deadline is %s from start; want at most 2ms", remaining)
+			}
+		})
+	}
+}
+
+// pi v1.4.0 stdin-buffer.ts uses ?? for both timeouts; explicit zero reaches
+// setTimeout and clamps to 1ms instead of selecting the defaults.
+func TestStdinBufferExplicitZeroTimeoutUsesTimerMinimum(t *testing.T) {
+	cases := []struct {
+		name    string
+		options StdinBufferOptions
+		input   string
+	}{
+		{name: "sequence", options: StdinBufferOptions{Timeout: 0, TimeoutSet: true}, input: "\x1b["},
+		{name: "escape", options: StdinBufferOptions{EscapeTimeout: 0, EscapeTimeoutSet: true}, input: "\x1b"},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			buffer := NewStdinBuffer(test.options)
+			started := time.Now()
+			buffer.ProcessString(test.input)
+			deadline, ok := buffer.PendingTimeout()
+			if !ok {
+				t.Fatal("incomplete sequence has no pending timeout")
+			}
+			if remaining := deadline.Sub(started); remaining <= 0 || remaining > 2*time.Millisecond {
+				t.Fatalf("pending deadline is %s from start; want 1ms timer minimum", remaining)
+			}
+		})
+	}
+}
+
+// pi v1.4.0 (4a080252), packages/tui/src/stdin-buffer.ts advances sequence
+// candidates in UTF-16 characters. A BMP character after ESC/SS3 must not be
+// split into UTF-8 bytes. D49 separately keeps astral Go runes whole.
+func TestStdinBufferPreservesUnicodeEscapeCharacters(t *testing.T) {
+	for _, c := range []struct {
+		name, input string
+		want        []string
+	}{
+		{"meta Latin", "\x1bé", []string{"\x1bé"}},
+		{"meta CJK with tail", "\x1b中x", []string{"\x1b中", "x"}},
+		{"SS3 with tail", "\x1bOéx", []string{"\x1bOé", "x"}},
+		{"meta combining", "\x1b\u0301x", []string{"\x1b\u0301", "x"}},
+		{"ASCII control", "\x1bax", []string{"\x1ba", "x"}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			buffer := NewStdinBuffer(StdinBufferOptions{})
+			defer buffer.Destroy()
+			var got []string
+			buffer.OnData = func(sequence string) { got = append(got, sequence) }
+			buffer.ProcessString(c.input)
+			if !reflect.DeepEqual(got, c.want) {
+				t.Fatalf("sequences = %q, want %q", got, c.want)
+			}
+		})
 	}
 }

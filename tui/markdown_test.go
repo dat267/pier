@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -230,5 +231,233 @@ func TestHyperlinkKeepsControlCharactersOutOfTheFraming(t *testing.T) {
 	}
 	if got, want := Hyperlink("label", "https://ok.example/a?b=c"), "\x1b]8;;https://ok.example/a?b=c\x1b\\label\x1b]8;;\x1b\\"; got != want {
 		t.Fatalf("ordinary URL changed: %q", got)
+	}
+}
+
+// A fenced code block's info string is unescaped, not shown verbatim: pi
+// v1.5.0 (f9a26365) packages/tui/src/components/markdown.ts renders
+// “ ```${token.lang}“, and marked's fences tokenizer produces
+// `lang: text.trim().replace(anyPunctuation, "$1")`. A backslash-escaped
+// punctuation byte therefore reaches the fence header and the highlighter
+// without its backslash (A441).
+func TestMarkdownFenceInfoUnescapesPunctuation(t *testing.T) {
+	theme := mdTestTheme()
+	got := mdTrimmedLines(NewMarkdown("```js\\/ts\nx\n```", 0, 0, theme, nil, MarkdownOptions{}), 20)
+	want := []string{"<cbb>```js/ts</cbb>", "  <cb>x</cb>", "<cbb>```</cbb>"}
+	if len(got) != len(want) {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("line %d: got %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+// A GFM table followed by a whitespace-only final line must not gain a blank
+// line. pi v1.5.0 (f9a26365) `packages/tui/src/components/markdown.ts` lexes
+// with marked, whose `table` rule takes a trailing whitespace-only line that
+// has no newline after it, as long as it does not begin an indented code line
+// (`(?: {4}| {0,3}\t)[^\n]`); `tableRowBlankLine` then drops it from the rows.
+// The line renders as nothing, and pier rendered it as an empty line (A439).
+func TestMarkdownTableSwallowsTrailingWhitespaceLine(t *testing.T) {
+	theme := mdTestTheme()
+	table := "| a |\n| - |\n| 1 |"
+	base := NewMarkdown(table, 0, 0, theme, nil, MarkdownOptions{}).Render(24)
+	for _, suffix := range []string{"\n", "\n ", "\n  ", "\n   ", "\n    "} {
+		got := NewMarkdown(table+suffix, 0, 0, theme, nil, MarkdownOptions{}).Render(24)
+		if len(got) != len(base) {
+			t.Errorf("suffix %q: got %d lines %q, want %d", suffix, len(got), got, len(base))
+		}
+	}
+	// A line that does begin an indented code line still ends the table, so it
+	// keeps its own blank line.
+	for _, suffix := range []string{"\n     ", "\n \t ", "\n  \n", "\n\n"} {
+		got := NewMarkdown(table+suffix, 0, 0, theme, nil, MarkdownOptions{}).Render(24)
+		if len(got) != len(base)+1 {
+			t.Errorf("suffix %q: got %d lines %q, want %d", suffix, len(got), got, len(base)+1)
+		}
+	}
+}
+
+// The OSC 8 branch is reachable only when the installed capabilities say the terminal
+// forwards hyperlinks, so this covers both sides of it. Before the setter existed
+// nothing wrote the state, which left the branch unreachable and always rendered the
+// legacy `text (url)` form (upstream markdown.ts link handling).
+func TestMarkdownLinksFollowInstalledCapabilities(t *testing.T) {
+	previous := GetTerminalCapabilities()
+	t.Cleanup(func() { SetTerminalCapabilities(previous) })
+
+	render := func(capabilities TerminalCapabilities) string {
+		SetTerminalCapabilities(capabilities)
+		markdown := NewMarkdown("[text](http://x)", 0, 0, mdTestTheme(), nil, MarkdownOptions{})
+		return strings.Join(markdown.Render(40), "\n")
+	}
+
+	plain := render(TerminalCapabilities{})
+	if strings.Contains(plain, "\x1b]8;;") {
+		t.Fatalf("a terminal without hyperlink support got an OSC 8 link: %q", plain)
+	}
+	if !strings.Contains(plain, "http://x") {
+		t.Fatalf("the legacy form dropped the URL: %q", plain)
+	}
+
+	linked := render(TerminalCapabilities{Hyperlinks: true})
+	if !strings.Contains(linked, "\x1b]8;;http://x\x1b\\") {
+		t.Fatalf("a hyperlink terminal got no OSC 8 link: %q", linked)
+	}
+	if !strings.Contains(linked, "\x1b]8;;\x1b\\") {
+		t.Fatalf("the OSC 8 link was not closed: %q", linked)
+	}
+	if strings.Contains(linked, "(http://x)") {
+		t.Fatalf("the OSC 8 form still printed the URL twice: %q", linked)
+	}
+}
+
+// Carriage returns are line terminators, not text: pi v1.5.0 (f9a26365)
+// `packages/tui/src/components/markdown.ts` lexes the source with marked, whose
+// `Lexer.lex` begins with `src.replace(/\r\n|\r/g, "\n")` (marked 18.0.11
+// `carriageReturn`), before any block or inline rule runs. Pier rendered the
+// raw CR instead, which put the character inside heading and list text and
+// stopped a CRLF table from being recognized.
+func TestMarkdownNormalizesCarriageReturns(t *testing.T) {
+	theme := mdTestTheme()
+	cases := []string{
+		"# h\r\nx",
+		"# h\rx",
+		"- a\r\n- b",
+		"1. a\r\n2. b",
+		"> q\r\n> r",
+		"| a |\r\n| - |\r\n| 1 |",
+		"para\r\n\r\nafter",
+		"```js\r\nx\r\n```",
+		"a  \r\nb",
+		// A reference definition must reach the lexer LF-only, or the href
+		// keeps a carriage return and the definition is not registered.
+		"[a]: /u\r\n\r\n[a]",
+	}
+	for _, src := range cases {
+		want := NewMarkdown(strings.ReplaceAll(src, "\r\n", "\n"), 0, 0, theme, nil, MarkdownOptions{}).Render(24)
+		lfOnly := NewMarkdown(strings.ReplaceAll(src, "\r", "\n"), 0, 0, theme, nil, MarkdownOptions{}).Render(24)
+		_ = lfOnly
+		got := NewMarkdown(src, 0, 0, theme, nil, MarkdownOptions{}).Render(24)
+		if len(got) != len(want) {
+			t.Errorf("%q: got %d lines %q, want %d lines %q", src, len(got), got, len(want), want)
+			continue
+		}
+		for i := range got {
+			if got[i] != want[i] {
+				t.Errorf("%q: line %d got %q, want %q", src, i, got[i], want[i])
+				break
+			}
+		}
+	}
+}
+
+// A blockquote border is two columns, so a narrow view cannot hold one per
+// nesting level. pi v1.5.2 (b4afdddf) components/markdown.ts renders the nested
+// content without a border when `width < 3`, because each level that re-wraps
+// its children at width 1 grows the output exponentially with nesting depth.
+func TestNestedBlockquotesStopAtTheBorderThatFits(t *testing.T) {
+	identity := func(text string) string { return text }
+	theme := MarkdownTheme{
+		Heading: identity, Link: identity, LinkURL: identity, Code: identity,
+		CodeBlock: identity, CodeBlockBorder: identity, Quote: identity, QuoteBorder: identity,
+		Hr: identity, ListBullet: identity, Bold: identity, Italic: identity,
+		Strikethrough: identity, Underline: identity,
+	}
+	cases := []struct {
+		depth, width int
+		want         []string
+	}{
+		{1, 1, []string{"x"}},
+		{4, 1, []string{"x"}},
+		{1, 2, []string{"x "}},
+		{4, 2, []string{"x "}},
+		{1, 3, []string{"│ x"}},
+		{2, 3, []string{"│ x"}},
+		{10, 8, []string{"│ │ │ x "}},
+		{12, 20, []string{"│ │ │ │ │ │ │ │ │ x "}},
+		{12, 40, []string{"│ │ │ │ │ │ │ │ │ │ │ │ x               "}},
+	}
+	for _, tc := range cases {
+		source := strings.Repeat("> ", tc.depth) + "x"
+		got := NewMarkdown(source, 0, 0, theme, nil, MarkdownOptions{}).Render(tc.width)
+		if len(got) != len(tc.want) {
+			t.Fatalf("depth %d width %d: %d lines, want %d\ngot %q", tc.depth, tc.width, len(got), len(tc.want), got)
+		}
+		for i := range got {
+			if got[i] != tc.want[i] {
+				t.Fatalf("depth %d width %d line %d: %q, want %q", tc.depth, tc.width, i, got[i], tc.want[i])
+			}
+		}
+	}
+}
+
+// The renderer keeps lexed blocks and rendered lines across updates, keyed by
+// the source, the width and the link definitions. A reuse that does not hold
+// shows up as a frame that differs from a cold render of the same text, which
+// is what streaming deltas, width changes and appended definitions exercise.
+func TestIncrementalRenderMatchesAColdRender(t *testing.T) {
+	documents := []string{
+		"# Title\n\nA [link][ref] and `code`.\n\n[ref]: https://example.com/1\n",
+		"para one\n\n```go\ncode\n```\n\n- a\n- b\n",
+		"| a | b |\n| - | - |\n| 1 | 2 |\n",
+		"[ref]: https://example.com/2\n\nLate definition then [ref].\n",
+		"## 漢字 heading\n\n漢字テキスト with 👨‍👩‍👧.\n\n> quote\n",
+		"text\n\n```\nunclosed fence\n",
+	}
+	for _, document := range documents {
+		label := strings.SplitN(document, "\n", 2)[0]
+		for _, width := range []int{20, 40, 80} {
+			streamed := NewMarkdown("", 0, 0, MarkdownTheme{}, nil, MarkdownOptions{})
+			for cut := 1; cut <= len(document); cut += 7 {
+				streamed.SetText(document[:cut])
+				streamed.Render(width)
+			}
+			streamed.SetText(document)
+			if got, want := streamed.Render(width), NewMarkdown(document, 0, 0, MarkdownTheme{}, nil, MarkdownOptions{}).Render(width); !reflect.DeepEqual(got, want) {
+				t.Fatalf("%q at width %d: streamed render differs from a cold render", label, width)
+			}
+			// A width change and a later append must not reuse the previous frame.
+			grown := document + "\nappended after a width change\n"
+			streamed.Render(120)
+			streamed.SetText(grown)
+			if got, want := streamed.Render(width), NewMarkdown(grown, 0, 0, MarkdownTheme{}, nil, MarkdownOptions{}).Render(width); !reflect.DeepEqual(got, want) {
+				t.Fatalf("%q at width %d after a width change: render differs from a cold render", label, width)
+			}
+		}
+	}
+}
+
+// Streaming renders must reuse the cached block-key and line backing arrays;
+// reallocating them per delta made long messages quadratic (M143 streaming
+// follow-up).
+func TestMarkdownStreamRenderReusesCacheSlices(t *testing.T) {
+	var text strings.Builder
+	for range 10 {
+		text.WriteString("Paragraph with **bold** and `code`.\n\n")
+	}
+	m := NewMarkdown(text.String(), 1, 0, mdTestTheme(), nil, MarkdownOptions{})
+	_ = m.Render(80)
+	// One append crosses the initial exact-size capacity and doubles it.
+	text.WriteString("Growth paragraph.\n\n")
+	m.SetText(text.String())
+	_ = m.Render(80)
+	if len(m.cacheTokenKeys) == 0 || len(m.cacheTokenLines) == 0 {
+		t.Fatal("cache not populated")
+	}
+	keyBacking := &m.cacheTokenKeys[0]
+	lineBacking := &m.cacheTokenLines[0]
+	for range 5 {
+		text.WriteString("Another paragraph.\n\n")
+		m.SetText(text.String())
+		_ = m.Render(80)
+		if &m.cacheTokenKeys[0] != keyBacking {
+			t.Fatal("block-key slice backing was reallocated within capacity")
+		}
+		if &m.cacheTokenLines[0] != lineBacking {
+			t.Fatal("block-line slice backing was reallocated within capacity")
+		}
 	}
 }
