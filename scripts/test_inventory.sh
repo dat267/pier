@@ -15,10 +15,16 @@ cd "$(dirname "$0")/.."
 manifest=internal/docscheck/testfiles.txt
 
 # Match what docscheck walks: tracked and new files, skipping the ignored
-# scratch trees (the pinned ./pi checkout, tmp/, bin/).
+# scratch trees (the pinned ./pi checkout, tmp/, bin/) and any tracked path the
+# working tree has already deleted, which the index still lists until the
+# deletion is staged.
 test_files() {
 	git ls-files --cached --others --exclude-standard '*.go' |
-		grep '_test\.go$' | LC_ALL=C sort
+		grep '_test\.go$' |
+		while read -r file; do
+			[[ -e $file ]] && printf '%s\n' "$file"
+		done |
+		LC_ALL=C sort
 }
 
 if [[ ${1:-} == "--write" ]]; then
