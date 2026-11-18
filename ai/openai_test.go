@@ -1,7 +1,12 @@
 package ai
 
 import (
+	"context"
 	"encoding/json"
+	"math"
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
@@ -189,6 +194,130 @@ func TestOpenAIResponsesPromptCacheKeyModeDisabled(t *testing.T) {
 			}
 			if got := params.PromptCacheKey != nil; got != test.want {
 				t.Fatalf("prompt_cache_key present = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+// pi v1.4.0 api/openai-completions.ts stream transitions, executed by the
+// pinned module. Regenerate:
+//
+//	node --experimental-strip-types ai/testdata/openai-stream/generate.mjs ./pi \
+//	  > ai/testdata/openai-stream/golden.json
+//
+// Only the event's own scalars and the terminal message are compared; see
+// anthropic_stream_events_parity_test.go for why `partial` is excluded.
+func TestOpenAIStreamEventsMatchUpstream(t *testing.T) {
+	raw, err := os.ReadFile("testdata/openai-stream/golden.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixtures []struct {
+		Name   string            `json:"name"`
+		SSE    string            `json:"sse"`
+		Events []json.RawMessage `json:"events"`
+	}
+	if err := json.Unmarshal(raw, &fixtures); err != nil {
+		t.Fatal(err)
+	}
+	if len(fixtures) == 0 {
+		t.Fatal("empty openai stream corpus")
+	}
+	for _, fixture := range fixtures {
+		t.Run(fixture.Name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "text/event-stream")
+				_, _ = w.Write([]byte(fixture.SSE))
+			}))
+			defer server.Close()
+
+			model := testOpenAIModel()
+			model.ID = "gpt-5"
+			model.Name = "GPT-5"
+			model.BaseURL = server.URL + "/v1"
+			model.Cost = ModelCost{Input: 1.25, Output: 10, CacheRead: 0.125}
+
+			stream := StreamOpenAICompletions(model, NormalizeContext(Context{
+				Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
+			}), &OpenAICompletionsOptions{APIKey: "test-key"})
+
+			checkProjectedEvents(t, stream, fixture.Events)
+		})
+	}
+}
+
+// Reference: pi v1.5.0 (f9a26365), api/openai-completions.ts
+// ensureToolCallBlock/getContentIndex retain block identity when an indexed
+// delta fills in the id or name after another call has already started.
+func TestOpenAICompletionsKeepsInterleavedCallsWithLateIdentity(t *testing.T) {
+	for _, first := range []struct {
+		name string
+		call string
+	}{
+		{name: "late id", call: `{"index":0,"function":{"name":"read","arguments":"{\"path\":"}}`},
+		{name: "late name", call: `{"index":0,"id":"call_a","function":{"arguments":"{\"path\":"}}`},
+		{name: "known identity", call: `{"index":0,"id":"call_a","function":{"name":"read","arguments":"{\"path\":"}}`},
+	} {
+		t.Run(first.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				writer.Header().Set("Content-Type", "text/event-stream")
+				_, _ = writer.Write([]byte("data: {\"choices\":[{\"delta\":{\"tool_calls\":[" + first.call + `,{"index":1,"id":"call_b","function":{"name":"read","arguments":"{\"path\":\"b\"}"}}]}}]}` + "\n\n"))
+				_, _ = writer.Write([]byte("data: " + `{"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_a","function":{"name":"read","arguments":"\"a\"}"}}]}}]}` + "\n\n"))
+				_, _ = writer.Write([]byte("data: " + `{"choices":[{"delta":{},"finish_reason":"tool_calls"}]}` + "\n\ndata: [DONE]\n\n"))
+			}))
+			defer server.Close()
+			model := testOpenAIModel()
+			model.BaseURL = server.URL
+			stream := StreamOpenAICompletions(model, NormalizeContext(Context{}), &OpenAICompletionsOptions{APIKey: "test-key"})
+			message, err := stream.Result(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if message.StopReason != StopToolUse || len(message.Content) != 2 {
+				t.Fatalf("message = %+v, want two finished calls", message)
+			}
+			for i, want := range []struct{ id, args string }{
+				{id: "call_a", args: `{"path":"a"}`},
+				{id: "call_b", args: `{"path":"b"}`},
+			} {
+				call, ok := message.Content[i].(ToolCall)
+				if !ok || call.ID != want.id || call.Name != "read" || string(call.Arguments) != want.args || call.ArgumentsError != "" {
+					t.Errorf("content[%d] = %+v, want %s read(%s)", i, message.Content[i], want.id, want.args)
+				}
+			}
+		})
+	}
+}
+
+// Reference: pi v1.5.0 (f9a26365), api/openai-completions.ts
+// parseChunkUsage subtracts cache counts and sums totals as JavaScript Numbers.
+// D367 saturates results beyond the port's int64 usage representation.
+func TestParseChunkUsageDoesNotWrapHugeCacheOrTotalCounts(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		raw  string
+		want Usage
+	}{
+		{
+			name: "large total",
+			raw:  `{"prompt_tokens":6000000000000000000,"completion_tokens":6000000000000000000}`,
+			want: Usage{Input: 6000000000000000000, Output: 6000000000000000000, TotalTokens: math.MaxInt64},
+		},
+		{
+			name: "large cache subtraction",
+			raw:  `{"prompt_tokens":100,"prompt_tokens_details":{"cached_tokens":9223372036854775807,"cache_write_tokens":9223372036854775807}}`,
+			want: Usage{CacheRead: math.MaxInt64, CacheWrite: math.MaxInt64, TotalTokens: math.MaxInt64},
+		},
+		{
+			name: "ordinary cached usage",
+			raw:  `{"prompt_tokens":100,"completion_tokens":4,"prompt_tokens_details":{"cached_tokens":20,"cache_write_tokens":10}}`,
+			want: Usage{Input: 70, Output: 4, CacheRead: 20, CacheWrite: 10, TotalTokens: 104},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got := ParseChunkUsage([]byte(test.raw), testOpenAIModel())
+			if got.Input != test.want.Input || got.Output != test.want.Output || got.CacheRead != test.want.CacheRead || got.CacheWrite != test.want.CacheWrite || got.TotalTokens != test.want.TotalTokens {
+				t.Fatalf("usage = %+v, want token fields %+v", got, test.want)
 			}
 		})
 	}
