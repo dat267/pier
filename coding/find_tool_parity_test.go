@@ -3,14 +3,14 @@ package coding
 import (
 	"context"
 	"encoding/json"
+	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
-
-	"github.com/dat267/pier/ai"
 )
 
 // pi v1.4.0 (4a080252), core/tools/find.ts with the default fd implementation.
@@ -178,4 +178,76 @@ func normalizeFdQuotedPath(message string) string {
 		})
 	}
 	return message
+}
+
+// pi v1.4.0 (4a080252), core/tools/find.ts calls ensureTool("fd");
+// utils/tools-manager.ts getToolPath tries systemBinaryNames ["fd", "fdfind"].
+// Debian/Ubuntu install the same tool as fdfind, without an fd executable.
+func TestFindToolUsesFdfindWhenFDUnavailable(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses POSIX executable stubs")
+	}
+	for _, hasFD := range []bool{false, true} {
+		name := "fdfind-only"
+		if hasFD {
+			name = "fd-preferred-control"
+		}
+		t.Run(name, func(t *testing.T) {
+			bin := t.TempDir()
+			if err := os.WriteFile(filepath.Join(bin, "fdfind"), []byte("#!/bin/sh\nprintf 'from-fdfind.txt\\n'\n"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			want := "from-fdfind.txt"
+			if hasFD {
+				if err := os.WriteFile(filepath.Join(bin, "fd"), []byte("#!/bin/sh\nprintf 'from-fd.txt\\n'\n"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				want = "from-fd.txt"
+			}
+			t.Setenv("PATH", bin)
+			result, err := CreateFindTool(t.TempDir()).Execute("call", json.RawMessage(`{"pattern":"*.txt"}`), context.Background(), nil)
+			if err != nil {
+				t.Fatalf("find with available system binary: %v", err)
+			}
+			if len(result.Content) != 1 {
+				t.Fatalf("content = %+v", result.Content)
+			}
+			text, ok := result.Content[0].(ai.TextContent)
+			if !ok || text.Text != want {
+				t.Fatalf("content = %+v, want %q", result.Content, want)
+			}
+		})
+	}
+}
+
+// pi v1.4.0 (4a080252), core/tools/find.ts resolves ensureTool("fd") before
+// spawning and never stats the search path, so fd's own error (or the
+// unavailable-tool error) is what the caller sees.
+func TestFindToolDefersMissingPathToFD(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses a POSIX PATH without fd")
+	}
+	t.Run("unavailable", func(t *testing.T) {
+		t.Setenv("PATH", t.TempDir())
+		_, err := CreateFindTool(t.TempDir()).Execute("call",
+			json.RawMessage(`{"pattern":"*.txt","path":"missing"}`), context.Background(), nil)
+		if err == nil || !strings.Contains(err.Error(), "fd is not available and could not be downloaded") {
+			t.Fatalf("missing path without fd = %v, want the unavailable-tool error", err)
+		}
+	})
+	t.Run("installed", func(t *testing.T) {
+		requireBinary(t, "fd")
+		dir := t.TempDir()
+		_, err := CreateFindTool(dir).Execute("call",
+			json.RawMessage(`{"pattern":"*.txt","path":"missing"}`), context.Background(), nil)
+		if err == nil {
+			t.Fatal("missing search path succeeded")
+		}
+		if strings.Contains(err.Error(), "Path not found:") {
+			t.Fatalf("precheck still wins over fd: %v", err)
+		}
+		if !strings.Contains(err.Error(), "missing") {
+			t.Fatalf("fd error lost the path: %v", err)
+		}
+	})
 }

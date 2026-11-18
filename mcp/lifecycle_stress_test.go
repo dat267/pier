@@ -2,12 +2,12 @@ package mcp
 
 import (
 	"context"
+	"github.com/dat267/pier/mcp/protocol"
+	"net/http"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/dat267/pier/mcp/protocol"
 )
 
 // Closing a client while calls are in flight, from several goroutines at once,
@@ -88,5 +88,26 @@ func TestClientRequestSettledFromThreeSidesAtOnceReturnsOnce(t *testing.T) {
 	client.mu.Unlock()
 	if pending != 0 || progress != 0 {
 		t.Fatalf("left pending=%d progress=%d after every call returned", pending, progress)
+	}
+}
+
+// wrapTransportFetch keeps a transport's fetch (the OAuth flow must reuse the
+// transport's HTTP behaviour) and leaves a nil one nil so the oauth package
+// installs its default.
+func TestWrapTransportFetch(t *testing.T) {
+	if got := wrapTransportFetch(nil); got != nil {
+		t.Fatalf("nil fetch became %v", got)
+	}
+	called := false
+	original := func(context.Context, *http.Request) (*http.Response, error) {
+		called = true
+		return &http.Response{StatusCode: http.StatusOK}, nil
+	}
+	wrapped := wrapTransportFetch(original)
+	if wrapped == nil {
+		t.Fatal("a transport fetch was dropped")
+	}
+	if _, err := wrapped(context.Background(), &http.Request{}); err != nil || !called {
+		t.Fatalf("wrapped fetch = %v, called %v", err, called)
 	}
 }

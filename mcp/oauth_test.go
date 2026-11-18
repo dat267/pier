@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/mcp/oauth"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -15,8 +16,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/dat267/pier/mcp/oauth"
 )
 
 // Port of packages/mcp/test/oauth.test.ts: the full PKCE flow over the
@@ -1073,5 +1072,33 @@ func TestOAuthCallbackExtraPath(t *testing.T) {
 	result, err := drive("/callback/abc", "state-right", "/callback/abc")
 	if err != nil || result.Code != "abc" {
 		t.Fatalf("result = %+v, %v", result, err)
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252), packages/mcp/src/oauth/flow.ts runFlow:
+// `options.authorizationServerMetadataUrl && secureEndpoint(...)` makes an empty
+// string mean "not configured", so cached discovery applies.
+func TestOAuthEmptyConfiguredMetadataURLUsesDiscovery(t *testing.T) {
+	provider := newTestProvider("http://127.0.0.1/callback")
+	provider.client = &oauth.OAuthClientInformationFull{
+		ClientID: "client",
+	}
+	provider.discovery = &oauth.OAuthDiscoveryState{
+		AuthorizationServerURL: "https://idp.example",
+		AuthorizationServerMetadata: &oauth.AuthorizationServerMetadata{
+			Issuer: "https://idp.example", AuthorizationEndpoint: "https://idp.example/authorize",
+			TokenEndpoint: "https://idp.example/token", ResponseTypesSupported: []string{"code"},
+			CodeChallengeMethodsSupported: []string{"S256"},
+		},
+	}
+	empty := ""
+	result, err := oauth.AuthorizeMcp(context.Background(), provider, oauth.FlowOptions{
+		ServerURL: "https://mcp.example/mcp", AuthorizationServerMetadataURL: &empty,
+	})
+	if err != nil || result != oauth.ResultRedirect {
+		t.Fatalf("authorize = %q, %v; want redirect from cached discovery", result, err)
+	}
+	if provider.authorizationURL == "" {
+		t.Fatal("no authorization URL")
 	}
 }

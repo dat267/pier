@@ -1,8 +1,11 @@
 package coding
 
 import (
+	"context"
 	ctxpkg "context"
 	"fmt"
+	"github.com/dat267/pier/agent"
+	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"sort"
@@ -10,9 +13,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
-
-	"github.com/dat267/pier/agent"
-	"github.com/dat267/pier/ai"
 )
 
 // Round 120 tests: the CreateAgentSession assembly (model restore/fallback,
@@ -1087,5 +1087,30 @@ func TestReloadKeepsToolsAttachedWhileItRuns(t *testing.T) {
 	}
 	if active != attaches {
 		t.Fatalf("%d of %d attached MCP tools are active after the reloads", active, attaches)
+	}
+}
+
+// Upstream core/sdk.ts assembles the built-in tools without a filesystem
+// sandbox. Confinement belongs to extensions, not the session system prompt.
+func TestCreateAgentSessionDoesNotInjectSandboxPolicy(t *testing.T) {
+	tempAgentDir(t)
+	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
+		Credentials: newMemoryCredentialStore(), RefreshOnCreate: new(false),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cwd := t.TempDir()
+	result, err := CreateAgentSession(context.Background(), &CreateAgentSessionOptions{
+		Cwd: cwd, ModelRuntime: runtime,
+		SessionManager:  NewSessionManager(cwd, nil),
+		SettingsManager: NewSettingsManagerFromFiles(cwd, filepath.Join(t.TempDir(), "agent"), SettingsManagerCreateOptions{}),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prompt := result.Session.SystemPrompt()
+	if strings.Contains(prompt, "<sandbox>") {
+		t.Fatal("built-in session injected a sandbox policy absent from pi")
 	}
 }

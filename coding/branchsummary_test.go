@@ -3,11 +3,14 @@ package coding
 import (
 	ctxpkg "context"
 	"encoding/json"
-	"strings"
-	"testing"
-
+	"fmt"
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
 )
 
 // Round 106 tests: branch summarization and session tree navigation.
@@ -850,5 +853,89 @@ func TestBranchSummarySendsNoOutputLimit(t *testing.T) {
 	}
 	if limit != nil {
 		t.Fatalf("branch summary sent maxTokens %d; want none", *limit)
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252), core/compaction/branch-summarization.ts
+// prepareBranchEntries admits newest first but returns chronological messages.
+// Compare allocation growth to catch Go prepends copying the growing slice.
+// Decoder and race-instrumentation costs can differ, so an absolute per-message
+// ceiling tests the environment rather than the collection's scaling (CR-075).
+func TestBranchPreparationAllocationsStayLinear(t *testing.T) {
+	const smallCount, largeCount = 512, 2048
+	entries := make([]SessionEntry, largeCount)
+	for i := range entries {
+		entries[i] = SessionEntry{Type: "message", Message: json.RawMessage(fmt.Sprintf(`{"role":"user","content":"message-%d","timestamp":1}`, i))}
+	}
+	// Keep every message: the test measures allocation growth, not truncation.
+	const tokenBudget = 1_000_000
+	PrepareBranchEntries(entries[:1], tokenBudget)
+	measure := func(input []SessionEntry) uint64 {
+		t.Helper()
+		var before, after runtime.MemStats
+		runtime.ReadMemStats(&before)
+		preparation := PrepareBranchEntries(input, tokenBudget)
+		runtime.ReadMemStats(&after)
+		if len(preparation.Messages) != len(input) {
+			t.Fatalf("retained %d messages, want %d", len(preparation.Messages), len(input))
+		}
+		for i, message := range preparation.Messages {
+			user, ok := message.(*ai.UserMessage)
+			if !ok || user.Content.Text != fmt.Sprintf("message-%d", i) {
+				t.Fatalf("message %d out of chronological order: %#v", i, message)
+			}
+		}
+		return after.TotalAlloc - before.TotalAlloc
+	}
+	small := measure(entries[:smallCount])
+	large := measure(entries)
+	// Four times the input may use up to six times the allocations, leaving
+	// headroom for decoder/runtime variance. The former quadratic prepends
+	// grow much faster at these sizes, even with linear decoding overhead.
+	if small == 0 || large > small*6 {
+		t.Fatalf("allocation growth: %d messages = %d bytes, %d messages = %d bytes; want at most 6x growth for 4x input", smallCount, small, largeCount, large)
+	}
+	t.Logf("allocation growth: %d messages = %d bytes, %d messages = %d bytes", smallCount, small, largeCount, large)
+}
+
+// pi v1.5.2 (b4afdddf) core/session-manager.ts branchWithSummary takes
+// `branchFromId: string | null` and writes it straight into `parentId` and
+// `this.leafId`, so branching to the root persists `"parentId":null`, not "".
+// A "" parent also stayed the leaf, so every later append inherited it.
+func TestBranchSummaryToRootPersistsNullParent(t *testing.T) {
+	dir := t.TempDir()
+	manager := NewSessionManager(dir, &SessionManagerOptions{SessionDir: dir})
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hi"}})
+	summaryID := manager.BranchWithSummary("", "summary", nil, false, nil)
+	if summaryID == "" {
+		t.Fatal("branch summary not appended")
+	}
+	if entry := manager.GetEntry(summaryID); entry == nil || entry.ParentID != nil {
+		t.Fatalf("summary parent = %v, want nil", entry)
+	}
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "after"}})
+
+	raw, err := os.ReadFile(filepath.Join(manager.GetSessionDir(), filepath.Base(manager.GetSessionFile())))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Only the summary itself is a root: appendEntry makes it the new leaf, so
+	// the next message is its child (upstream does the same).
+	found := false
+	for _, line := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
+		var entry map[string]json.RawMessage
+		if err := json.Unmarshal([]byte(line), &entry); err != nil {
+			t.Fatalf("line %q: %v", line, err)
+		}
+		if string(entry["type"]) != `"branch_summary"` {
+			continue
+		}
+		found = true
+		if string(entry["parentId"]) != "null" {
+			t.Fatalf("persisted parentId = %s in %q, want null", entry["parentId"], line)
+		}
+	}
+	if !found {
+		t.Fatal("branch_summary line not persisted")
 	}
 }

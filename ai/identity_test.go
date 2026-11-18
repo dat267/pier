@@ -1,6 +1,9 @@
 package ai
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"runtime"
 	"strings"
 	"testing"
@@ -154,5 +157,138 @@ func TestImagesModelsDefaultIdentity(t *testing.T) {
 		if defaults.Attribution != PIAttribution || request.UserAgent != "" {
 			t.Fatal("image request changed caller-owned identities")
 		}
+	}
+}
+
+// Reference: pi v1.4.0 models.ts applyAuth (04a93bad8). Auth may change
+// the target host; session defaults precede auth and request headers, and
+// TransformHeaders sees the result exactly once.
+func TestResolvedAuthOpenCodeSessionHeaders(t *testing.T) {
+	model := &Model{Provider: "custom", BaseURL: "https://example.com"}
+	auth := ModelAuth{BaseURL: "https://opencode.ai/zen/v1"}
+	for _, tc := range []struct {
+		name           string
+		authHeaders    ProviderHeaders
+		requestHeaders ProviderHeaders
+		want           *string
+	}{
+		{"session default", nil, nil, new("session-1")},
+		{"auth override", ProviderHeaders{"X-OpenCode-Session": new("auth")}, nil, new("auth")},
+		{"caller override", ProviderHeaders{"X-OpenCode-Session": new("auth")}, ProviderHeaders{"x-opencode-session": new("caller")}, new("caller")},
+		{"caller removal", nil, ProviderHeaders{"X-OpenCode-Session": nil}, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			auth.Headers = tc.authHeaders
+			calls := 0
+			requestModel, options := ApplyResolvedAuth(model, auth, nil, StreamOptions{
+				SessionID: "session-1", Headers: tc.requestHeaders,
+				TransformHeaders: func(headers ProviderHeaders) ProviderHeaders {
+					calls++
+					found := false
+					for name, value := range headers {
+						if lowerName(name) != "x-opencode-session" {
+							continue
+						}
+						if found {
+							t.Fatal("duplicate session header")
+						}
+						found = true
+						if (value == nil) != (tc.want == nil) || value != nil && *value != *tc.want {
+							t.Fatalf("session header = %v; want %v", value, tc.want)
+						}
+					}
+					if !found {
+						t.Fatal("session header missing")
+					}
+					return headers
+				},
+			})
+			if requestModel.BaseURL != auth.BaseURL || model.BaseURL != "https://example.com" || calls != 1 || options.TransformHeaders != nil {
+				t.Fatalf("model = %+v, transform calls = %d", requestModel, calls)
+			}
+		})
+	}
+}
+
+// Reference: pi v1.4.0 api/openrouter-images.ts applies identity defaults
+// beneath model and caller headers, including null removals.
+func TestImageRequestIdentityHeaders(t *testing.T) {
+	for _, mode := range []string{"identity", "model override", "request override", "remove"} {
+		t.Run(mode, func(t *testing.T) {
+			captured := make(chan http.Header, 1)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				captured <- r.Header.Clone()
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"error":{"message":"header probe"}}`))
+			}))
+			defer server.Close()
+			model := &ImagesModel{ID: "image-model", API: KnownImagesApiOpenRouter, Provider: "openrouter", BaseURL: server.URL}
+			options := &ImagesOptions{
+				APIKey: "token", Identity: &ClientIdentity{UserAgent: "image-agent", Attribution: PIAttribution}}
+			wantAgent, wantTitle := "image-agent", "pi"
+			if mode != "identity" {
+				model.Headers = map[string]string{"User-Agent": "model-agent", "X-OpenRouter-Title": "model-title"}
+				wantAgent, wantTitle = "model-agent", "model-title"
+			}
+			if mode == "request override" {
+				options.Headers = ProviderHeaders{"user-agent": new("request-agent"), "x-openrouter-title": new("request-title")}
+				wantAgent, wantTitle = "request-agent", "request-title"
+			}
+			if mode == "remove" {
+				options.Headers = ProviderHeaders{"user-agent": nil, "x-openrouter-title": nil}
+				wantAgent, wantTitle = "", ""
+			}
+			output := (OpenRouterImages{}).GenerateImages(model, ImagesContext{Input: []Content{TextContent{Text: "cat"}}}, options)
+			if output.StopReason != ImagesStopError {
+				t.Fatalf("probe result = %+v", output)
+			}
+			select {
+			case headers := <-captured:
+				if headers.Get("User-Agent") != wantAgent || headers.Get("X-OpenRouter-Title") != wantTitle {
+					t.Fatalf("headers = %v; want agent %q, title %q", headers, wantAgent, wantTitle)
+				}
+			default:
+				t.Fatalf("no HTTP request; output = %+v", output)
+			}
+		})
+	}
+}
+
+// The reference resolves the identity version with `identity?.version ??
+// PI_AI_VERSION` (pi v1.5.0 f9a26365 utils/identity.ts:63), so a JSON null
+// reads as absent and the default version is used. The port's decoder marked
+// any present member as explicit, including null, and rendered "pi/ (..." with
+// no version at all (D431).
+func TestIdentityNullVersionUsesTheDefault(t *testing.T) {
+	var nullVersion ClientIdentity
+	if err := json.Unmarshal([]byte(`{"version":null}`), &nullVersion); err != nil {
+		t.Fatal(err)
+	}
+	if nullVersion.VersionSet {
+		t.Fatal(`{"version":null} must not read as an explicit version`)
+	}
+	if got := FormatUserAgent(&nullVersion); got != FormatUserAgent(&ClientIdentity{}) {
+		t.Fatalf(`null version rendered %q, want the default identity's header`, got)
+	}
+
+	// An empty string is still explicit, as it is upstream.
+	var emptyVersion ClientIdentity
+	if err := json.Unmarshal([]byte(`{"version":""}`), &emptyVersion); err != nil {
+		t.Fatal(err)
+	}
+	if !emptyVersion.VersionSet {
+		t.Fatal(`{"version":""} must stay an explicit empty version`)
+	}
+	if ua := FormatUserAgent(&emptyVersion); !strings.HasPrefix(ua, "pi/ (") {
+		t.Fatalf(`empty version rendered %q`, ua)
+	}
+
+	// A real version still wins.
+	var setVersion ClientIdentity
+	if err := json.Unmarshal([]byte(`{"version":"9.9.9"}`), &setVersion); err != nil {
+		t.Fatal(err)
+	}
+	if ua := FormatUserAgent(&setVersion); !strings.HasPrefix(ua, "pi/9.9.9 (") {
+		t.Fatalf("set version rendered %q", ua)
 	}
 }

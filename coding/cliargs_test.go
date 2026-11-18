@@ -2,11 +2,10 @@ package coding
 
 import (
 	"encoding/json"
-	"strings"
-	"testing"
-
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
+	"strings"
+	"testing"
 )
 
 // Tests ported from packages/coding-agent/test/args.test.ts, plus the
@@ -726,5 +725,23 @@ func TestParseArgsDiagnosticQuotesValuesVerbatim(t *testing.T) {
 	want = `Invalid TUI mode "a"b". Valid values: regular, fullscreen`
 	if len(result.Diagnostics) != 1 || result.Diagnostics[0].Message != want {
 		t.Fatalf("tui-mode diagnostic = %v; want %s", result.Diagnostics, want)
+	}
+}
+
+// pi v1.4.0 cli/args.ts stores listModels as a string-or-true value: each
+// occurrence replaces the preceding one. A final bare flag clears filtering.
+func TestParseArgsRepeatedListModelsUsesLastOccurrence(t *testing.T) {
+	for _, item := range []struct {
+		args []string
+		all  bool
+		want string
+	}{
+		{[]string{"--list-models", "sonnet", "--list-models"}, true, ""},
+		{[]string{"--list-models", "--list-models", "sonnet"}, false, "sonnet"},
+	} {
+		got := ParseArgs(item.args)
+		if got.ListModelsAll != item.all || item.all && got.ListModels != nil || !item.all && (got.ListModels == nil || *got.ListModels != item.want) {
+			t.Errorf("%q: listModels=%v all=%v, want pattern=%q all=%v", item.args, got.ListModels, got.ListModelsAll, item.want, item.all)
+		}
 	}
 }

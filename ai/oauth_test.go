@@ -7,10 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -639,5 +641,143 @@ func TestOAuthCallbackServerDropsAStalledConnection(t *testing.T) {
 		if errors.As(err, &netErr) && netErr.Timeout() {
 			t.Fatalf("the server kept a stalled connection open for %v", 2*time.Second)
 		}
+	}
+}
+
+// useFreeOAuthCallbackPort gives one test its own loopback port through
+// PI_OAUTH_CALLBACK_PORT. The isolated gate runs each test in its own process,
+// several at a time, and the providers' fixed port (1455, shared by the Codex and
+// ChatGPT flows) cannot be bound twice: without an override those processes open
+// the port, take each other's callbacks and fail as if the flow had hung.
+func useFreeOAuthCallbackPort(t *testing.T) {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("find a free callback port: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	if err := listener.Close(); err != nil {
+		t.Fatalf("release the callback port: %v", err)
+	}
+	t.Setenv("PI_OAUTH_CALLBACK_PORT", strconv.Itoa(port))
+}
+
+// The override changes both the bound port and the advertised redirect URI, which
+// the provider echoes back.
+func TestOAuthCallbackPortOverride(t *testing.T) {
+	t.Setenv("PI_OAUTH_CALLBACK_PORT", "23456")
+	if got := oauthCallbackPort(OpenAICodexCallbackPort); got != 23456 {
+		t.Fatalf("port = %d, want the override", got)
+	}
+	if got := openAICodexRedirectURI(); got != "http://localhost:23456/auth/callback" {
+		t.Fatalf("codex redirect = %q", got)
+	}
+	if got := OpenAIChatGPTRedirectURI(); got != "http://"+OpenAIChatGPTCallbackHost+":23456"+OpenAIChatGPTCallbackPath {
+		t.Fatalf("chatgpt redirect = %q", got)
+	}
+	t.Setenv("PI_OAUTH_CALLBACK_PORT", "not-a-port")
+	if got := oauthCallbackPort(OpenAICodexCallbackPort); got != OpenAICodexCallbackPort {
+		t.Fatalf("port = %d, want the fixed port for an invalid override", got)
+	}
+	t.Setenv("PI_OAUTH_CALLBACK_PORT", "")
+	if got := oauthCallbackPort(OpenAICodexCallbackPort); got != OpenAICodexCallbackPort {
+		t.Fatalf("port = %d, want the fixed port when unset", got)
+	}
+}
+
+// Reference: pi v1.5.2 (b4afdddf) auth/oauth/github-copilot.ts builds the
+// credential as { ..., enterpriseUrl: enterpriseDomain }: for github.com the
+// domain is undefined and JSON.stringify drops the key. parseGitHubCopilotModelCatalog
+// returns availableModelIds as an array, so an account without picker models
+// stores [] rather than null. Pier wrote "enterpriseUrl": "" and stored null.
+func TestGitHubCopilotCredentialExtraFieldsMatchTheReference(t *testing.T) {
+	fastDeviceCodeFlows(t)
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		switch request.URL.Path {
+		case "/login/device/code":
+			_, _ = writer.Write([]byte(`{"device_code":"dev","user_code":"CODE","verification_uri":"https://github.com/login/device","interval":0,"expires_in":900}`))
+		case "/login/oauth/access_token":
+			_, _ = writer.Write([]byte(`{"access_token":"gho_token"}`))
+		case "/copilot_internal/v2/token":
+			_, _ = writer.Write([]byte(`{"token":"tid=1;proxy-ep=proxy.individual.githubcopilot.com;","expires_at":1000000}`))
+		case "/models":
+			_, _ = writer.Write([]byte(`{"data":[]}`))
+		default:
+			writer.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	withGitHubDomain(t, server.URL, func(domain string) {
+		credential, err := LoginGitHubCopilot(&AuthInteraction{
+			Ctx:    context.Background(),
+			Prompt: func(AuthPrompt) (string, error) { return "", nil },
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if raw, ok := credential.Extra[CopilotEnterpriseURLKey]; ok {
+			t.Fatalf("github.com login stored enterpriseUrl %s", raw)
+		}
+		if got := string(credential.Extra[CopilotAvailableModelKey]); got != "[]" {
+			t.Fatalf("login availableModelIds = %s", got)
+		}
+
+		refreshed, err := RefreshGitHubCopilotToken(context.Background(), "gho_token", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if raw, ok := refreshed.Extra[CopilotEnterpriseURLKey]; ok {
+			t.Fatalf("github.com refresh stored enterpriseUrl %s", raw)
+		}
+		if got := string(refreshed.Extra[CopilotAvailableModelKey]); got != "[]" {
+			t.Fatalf("refresh availableModelIds = %s", got)
+		}
+	})
+}
+
+// Reference: pi v1.5.2 (b4afdddf) auth/oauth/openai-chatgpt.ts requireTokenString
+// rejects a value whose trim() is empty, and exchangeAuthorizationCode does the
+// same for id_token. Pierce only compared against "", so a token endpoint that
+// answered " " passed validation and was stored.
+func TestOpenAIChatGPTTokenValidationRejectsBlankStrings(t *testing.T) {
+	valid := func() *openAIChatGPTTokenResponse {
+		return &openAIChatGPTTokenResponse{
+			AccessToken: "a", RefreshToken: "r", IDToken: "i",
+			Scope: "openid " + OpenAIChatGPTDirectTokenScope, ExpiresIn: 3600, HasExpiresInFlag: true,
+		}
+	}
+	for _, test := range []struct {
+		name   string
+		mutate func(*openAIChatGPTTokenResponse)
+		want   string
+	}{
+		{"access_token", func(token *openAIChatGPTTokenResponse) { token.AccessToken = " \t" }, "invalid access_token"},
+		{"refresh_token", func(token *openAIChatGPTTokenResponse) { token.RefreshToken = " " }, "invalid refresh_token"},
+		{"scope", func(token *openAIChatGPTTokenResponse) { token.Scope = "  " }, "invalid scope"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			token := valid()
+			test.mutate(token)
+			_, err := openAIChatGPTCredentialFromToken(token, "oaiapp_x")
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("err = %v, want %q", err, test.want)
+			}
+		})
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		_, _ = io.Copy(io.Discard, request.Body)
+		_, _ = writer.Write([]byte(`{"access_token":"a","refresh_token":"r","id_token":"  ",` +
+			`"scope":"openid chatgpt.tokens.use.direct","expires_in":3600}`))
+	}))
+	defer server.Close()
+	previous := OpenAIChatGPTTokenURL
+	OpenAIChatGPTTokenURL = server.URL
+	defer func() { OpenAIChatGPTTokenURL = previous }()
+	_, err := ExchangeOpenAIChatGPTAuthorizationCode(context.Background(), "code", "verifier", "oaiapp_x")
+	if err == nil || !strings.Contains(err.Error(), "did not contain an ID token") {
+		t.Fatalf("err = %v, want the ID token error", err)
 	}
 }

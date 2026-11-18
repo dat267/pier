@@ -2,8 +2,13 @@ package ai
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
+	"reflect"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -362,5 +367,103 @@ func TestCloudflareGatewayClaudeIDsAreDashed(t *testing.T) {
 		if model := GetBuiltinModel("cloudflare-ai-gateway", id); model != nil {
 			t.Errorf("dotted Cloudflare gateway model %q must not exist", id)
 		}
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252), src/model-catalog.ts and
+// src/providers/openai.models.ts import the generated JSON and flatten it
+// without serializing every model again. Most generated descriptors have no
+// sampling parameters. Count allocations, not elapsed time, to prevent repeated
+// JSON passes from returning to the interactive startup path.
+func TestCatalogDecodeAllocationBudget(t *testing.T) {
+	const count = 64
+	var input strings.Builder
+	input.WriteString(`{"providers":{"test":{"openai-completions":{`)
+	for i := range count {
+		if i > 0 {
+			input.WriteByte(',')
+		}
+		fmt.Fprintf(&input, `"model-%d":{"id":"model-%d","name":"Test model","provider":"test","baseUrl":"https://example.invalid/v1","reasoning":false,"input":["text","image"],"cost":{"input":1,"output":2,"cacheRead":0,"cacheWrite":0},"contextWindow":128000,"maxTokens":8192,"compat":{"supportsStore":false}}`, i, i)
+	}
+	input.WriteString(`}}}}`)
+	data := []byte(input.String())
+	// Warm JSON type metadata before measuring a single decode.
+	if _, _, err := decodeCatalog(data); err != nil {
+		t.Fatal(err)
+	}
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	_, models, err := decodeCatalog(data)
+	runtime.ReadMemStats(&after)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(models["test"]) != count {
+		t.Fatalf("decoded %d models, want %d", len(models["test"]), count)
+	}
+	allocations := after.Mallocs - before.Mallocs
+	// Leave headroom above direct decoding for runtime variance, but exclude
+	// the former raw-map round trip and unconditional sampling-order scans.
+	if allocations > count*40 {
+		t.Fatalf("decoding %d models allocated %d objects, want at most %d", count, allocations, count*40)
+	}
+}
+
+// Reference: pi v1.5.0 (f9a26365) parses the generated catalog into plain
+// objects and `JSON.stringify`s a model back to RPC clients (modes/rpc), so a
+// model's `compat` object survives a round trip member for member and in
+// catalog order. Pier decodes `compat` into per-API structs, which can drop a
+// member it does not model; this test walks the generated catalog so a missing
+// field fails loudly instead of vanishing from `get_state`/`set_model` output.
+// The comparison is by member and value, not bytes: the catalog stores its
+// object keys sorted, while pier emits the compat struct's field order.
+func TestEveryCatalogModelCompatRoundTrips(t *testing.T) {
+	raw, err := os.ReadFile("models_catalog.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var catalog struct {
+		Providers map[string]map[string]map[string]json.RawMessage `json:"providers"`
+	}
+	if err := json.Unmarshal(raw, &catalog); err != nil {
+		t.Fatal(err)
+	}
+	checked := 0
+	for provider, apis := range catalog.Providers {
+		for api, models := range apis {
+			for id, modelRaw := range models {
+				var probe struct {
+					Compat json.RawMessage `json:"compat"`
+				}
+				if err := json.Unmarshal(modelRaw, &probe); err != nil {
+					t.Fatalf("%s/%s/%s: %v", provider, api, id, err)
+				}
+				if len(probe.Compat) == 0 || string(probe.Compat) == "null" {
+					continue
+				}
+				var model Model
+				if err := json.Unmarshal(modelRaw, &model); err != nil {
+					t.Fatalf("%s/%s/%s: %v", provider, api, id, err)
+				}
+				encoded, err := MarshalJSON(model.Compat)
+				if err != nil {
+					t.Fatalf("%s/%s/%s: %v", provider, api, id, err)
+				}
+				var catalogCompat, encodedCompat map[string]any
+				if err := json.Unmarshal(probe.Compat, &catalogCompat); err != nil {
+					t.Fatalf("%s/%s/%s: %v", provider, api, id, err)
+				}
+				if err := json.Unmarshal(encoded, &encodedCompat); err != nil {
+					t.Fatalf("%s/%s/%s: %v", provider, api, id, err)
+				}
+				if !reflect.DeepEqual(catalogCompat, encodedCompat) {
+					t.Errorf("%s/%s/%s compat = %s; catalog has %s", provider, api, id, encoded, probe.Compat)
+				}
+				checked++
+			}
+		}
+	}
+	if checked < 1000 {
+		t.Fatalf("checked %d compat objects; the catalog should hold more", checked)
 	}
 }

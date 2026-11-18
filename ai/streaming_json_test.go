@@ -1,7 +1,9 @@
 package ai
 
 import (
+	"encoding/json"
 	"math/rand/v2"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -227,6 +229,99 @@ func TestParseStreamingJSONTextKeepsItsTolerance(t *testing.T) {
 	for _, testCase := range cases {
 		if got := string(ParseStreamingJSONText(testCase.input)); got != testCase.want {
 			t.Errorf("ParseStreamingJSONText(%q) = %s, want %s", testCase.input, got, testCase.want)
+		}
+	}
+}
+
+// Reference: pi v1.5.2 (b4afdddf), packages/ai/src/utils/streaming-json.ts
+// ToolCallArgumentsStream. The corpus in testdata/streaming-json is produced by
+// running the reference over each text one code point at a time, so this test
+// compares the port's incremental parser against the reference rather than
+// against expectations written by hand: every preview after every prefix, then
+// the final arguments. Only whether a malformed text failed is compared; D221
+// records that its message is the Go decoder's.
+func TestToolCallArgumentsStreamMatchesReference(t *testing.T) {
+	data, err := os.ReadFile("testdata/streaming-json/golden.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixtures []struct {
+		Text     string   `json:"text"`
+		Previews []string `json:"previews"`
+		Final    string   `json:"final"`
+		HasError bool     `json:"hasError"`
+	}
+	if err := json.Unmarshal(data, &fixtures); err != nil {
+		t.Fatal(err)
+	}
+	if len(fixtures) == 0 {
+		t.Fatal("the streaming-json corpus is empty")
+	}
+	for _, fixture := range fixtures {
+		var args streamingArguments
+		previews := fixture.Previews
+		if got := string(args.Append("")); got != previews[0] {
+			t.Fatalf("%q: empty preview %q, want %q", fixture.Text, got, previews[0])
+		}
+		for cut, character := range []rune(fixture.Text) {
+			want := previews[cut+1]
+			if got := string(args.Append(string(character))); got != want {
+				t.Fatalf("%q: preview after %d code points is %q, want %q", fixture.Text, cut+1, got, want)
+			}
+		}
+		final, message := args.Finish()
+		if string(final) != fixture.Final {
+			t.Fatalf("%q: final arguments %q, want %q", fixture.Text, final, fixture.Final)
+		}
+		if (message != "") != fixture.HasError {
+			t.Fatalf("%q: error %q, want hasError %t", fixture.Text, message, fixture.HasError)
+		}
+	}
+}
+
+// While tool-call arguments stream, the UI shows the partial value
+// ParseStreamingJSONText produces for the bytes received so far, so every
+// prefix has to decode: an unparsable partial would render as broken JSON and
+// could reach a caller as arguments. The corpus covers the shapes that break
+// hand-written repairs (deep nesting, strings with raw NUL and malformed UTF-8,
+// lone surrogate escapes, duplicate keys, huge numbers and a large string).
+func TestStreamingJSONPartialIsAlwaysValidJSON(t *testing.T) {
+	documents := []string{
+		`{"a":1,"b":[1,2,{"c":"x"}],"d":{"e":null}}`,
+		`{"path":"/tmp/x","content":"line\nline","n":-1.5e10}`,
+		`[1,2,3,{"k":"v"}]`,
+		`{"s":"\ud83d\ude00 \u00e9 \t \\ \" end"}`,
+		`{"nested":{"deep":{"deeper":[true,false,null,{"x":1}]}}}`,
+		`{"":"","k":"","arr":[[],{},[[]]]}`,
+		`{"big":1e308,"tiny":1e-308,"zero":0,"neg":-0}`,
+		`{"unicode":"漢字👨‍👩‍👧","esc":"\u0000\u001f"}`,
+		`{}`,
+		`[]`,
+		`{"incomplete":`,
+		`{"trailing":1,`,
+		strings.Repeat(`{"a":`, 500) + `1` + strings.Repeat(`}`, 500),
+		"{\"k\":\"\x00\"}",
+		"{\"k\":\"\xff\xfe\"}",
+		`{"dup":1,"dup":2}`,
+		`{"k":"` + strings.Repeat("x", 20000) + `"}`,
+	}
+	for _, document := range documents {
+		step := 1
+		if len(document) > 2000 {
+			step = 97
+		}
+		for cut := 0; cut <= len(document); cut += step {
+			partial := ParseStreamingJSONText(document[:cut])
+			if len(partial) == 0 {
+				continue
+			}
+			if !json.Valid(partial) {
+				t.Fatalf("prefix %d of %q emitted invalid JSON %q", cut, document, partial)
+			}
+			var value any
+			if err := json.Unmarshal(partial, &value); err != nil {
+				t.Fatalf("prefix %d of %q: %v", cut, document, err)
+			}
 		}
 	}
 }

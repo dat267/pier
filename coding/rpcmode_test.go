@@ -984,3 +984,101 @@ func TestRPCUnavailableForkPreservesInMemorySession(t *testing.T) {
 		})
 	}
 }
+
+// D382: pi v1.5.0 (f9a26365) core/sdk.ts builds the agent with `tools: []` and
+// core/agent-session.ts installs the loadout per prompt, so an untouched RPC
+// session reports `messageCount: 0`, `get_messages` returns `[]`, and `compact`
+// reaches "Nothing to compact (session too small)". Pier installs the tools at
+// construction, which places the leading system declaration message, and treats
+// the placeholder model as absent, so `compact` fails with "No model selected".
+func TestRPCFreshSessionHoldsTheToolDeclaration(t *testing.T) {
+	persist := false
+	cwd := t.TempDir()
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: cwd, StreamFn: stubStreamFn, Tools: CreateCodingTools(cwd, nil),
+		Sessions: NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: &persist}),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := startRPCTest(t, session)
+	client.send(t, `{"id":"state","type":"get_state"}`)
+	state := client.until(t, func(record map[string]any) bool { return record["id"] == "state" })
+	data := state["data"].(map[string]any)
+	if data["messageCount"] != float64(1) {
+		t.Errorf("messageCount = %v, want 1 (upstream 0)", data["messageCount"])
+	}
+	if _, ok := data["model"]; ok {
+		t.Errorf("get_state sent the placeholder model: %v", data["model"])
+	}
+
+	client.send(t, `{"id":"messages","type":"get_messages"}`)
+	messages := client.until(t, func(record map[string]any) bool { return record["id"] == "messages" })
+	list := messages["data"].(map[string]any)["messages"].([]any)
+	if len(list) != 1 {
+		t.Fatalf("get_messages = %d messages, want the declaration only (upstream [])", len(list))
+	}
+	declaration := list[0].(map[string]any)
+	if declaration["role"] != "system" || declaration["content"] != "" || len(declaration["toolsAdded"].([]any)) == 0 {
+		t.Errorf("first message = %v, want the empty system tool declaration", declaration)
+	}
+
+	client.send(t, `{"id":"compact","type":"compact"}`)
+	compact := client.until(t, func(record map[string]any) bool { return record["id"] == "compact" })
+	if compact["success"] != false || !strings.Contains(compact["error"].(string), "No model selected") {
+		t.Errorf("compact = %v, want No model selected (upstream: Nothing to compact)", compact)
+	}
+}
+
+// D185: pier has no codemode or tool_search tool, so `codemode` and `deferred`
+// MCP tools register but can never be called.
+//
+// Reference: pi v1.5.0 extensions/mcp/index.ts `ensureDiscoveryActive` warns
+// from the config, before any server connects, when an enabled server's
+// `configuredExposures` (its exposure, default codemode, plus its
+// toolExposure values) include `codemode` or `deferred` and no tool reaches
+// them. Pier's warning keeps that condition and names the servers and the fix.
+func TestMcpUnreachableToolsWarningFollowsConfiguredExposures(t *testing.T) {
+	load := func(t *testing.T, body string) LoadedMcpConfig {
+		t.Helper()
+		agentDir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(agentDir, "mcp.json"), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		config := LoadMcpConfig(McpConfigLoadOptions{AgentDir: agentDir, Cwd: t.TempDir()})
+		if len(config.Errors) != 0 {
+			t.Fatalf("config errors: %v", config.Errors)
+		}
+		return config
+	}
+	cases := []struct {
+		name string
+		body string
+		want string // a fragment of the warning, or "" for none
+	}{
+		{"default exposure is codemode", `{"mcpServers":{"gopls":{"command":"gopls"}}}`, `MCP server "gopls" has tools`},
+		{"explicit codemode", `{"mcpServers":{"a":{"command":"x","exposure":"codemode"}}}`, `MCP server "a" has`},
+		{"deferred", `{"mcpServers":{"a":{"command":"x","exposure":"deferred"}}}`, `MCP server "a" has`},
+		{"direct", `{"mcpServers":{"a":{"command":"x","exposure":"direct"}}}`, ""},
+		{"hidden is intentional", `{"mcpServers":{"a":{"command":"x","exposure":"hidden"}}}`, ""},
+		{"direct with one hidden tool", `{"mcpServers":{"a":{"command":"x","exposure":"direct","toolExposure":{"t":"hidden"}}}}`, ""},
+		{"direct with one codemode tool", `{"mcpServers":{"a":{"command":"x","exposure":"direct","toolExposure":{"t":"codemode"}}}}`, `MCP server "a" has`},
+		{"disabled server", `{"mcpServers":{"a":{"command":"x","enabled":false}}}`, ""},
+		{"no servers", `{"mcpServers":{}}`, ""},
+		{"servers listed in config order", `{"mcpServers":{"b":{"command":"x"},"ok":{"command":"x","exposure":"direct"},"a":{"command":"x","exposure":"deferred"}}}`, `MCP servers "b", "a" have tools`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := McpUnreachableToolsWarning(load(t, tc.body))
+			if tc.want == "" {
+				if got != "" {
+					t.Fatalf("warning = %q, want none", got)
+				}
+				return
+			}
+			if !strings.HasPrefix(got, tc.want) || !strings.Contains(got, `"exposure": "direct"`) {
+				t.Fatalf("warning = %q, want prefix %q and the direct-exposure fix", got, tc.want)
+			}
+		})
+	}
+}

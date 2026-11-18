@@ -5,11 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/ai"
 	"os"
 	"reflect"
 	"strings"
-
-	"github.com/dat267/pier/ai"
 	"testing"
 )
 
@@ -240,4 +239,17 @@ func summarizeTruncation(result TruncationResult) truncateSummary {
 func shortSHA(value string) string {
 	sum := sha256.Sum256([]byte(value))
 	return fmt.Sprintf("%x/%d", sum[:6], len(value))
+}
+
+// Reference: pi v1.4.0 core/tools/truncate.ts, `truncateLine(line, maxChars)`:
+// the default applies to an omitted argument only, so an explicit 0 truncates
+// everything and keeps the suffix. The port treated 0 as "use the default".
+func TestTruncateLineZeroLimit(t *testing.T) {
+	result := TruncateLine("abcdef", 0)
+	if !result.WasTruncated || result.Text != "... [truncated]" {
+		t.Fatalf("TruncateLine(abcdef, 0) = %+v", result)
+	}
+	if got := TruncateLine("abc", 3); got.WasTruncated || got.Text != "abc" {
+		t.Fatalf("TruncateLine(abc, 3) = %+v", got)
+	}
 }

@@ -3,7 +3,9 @@ package coding
 import (
 	"context"
 	"fmt"
+	"github.com/dat267/pier/ai"
 	"io"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,8 +13,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/dat267/pier/ai"
 )
 
 // Round 114 tests: the remote catalog overlay, the bug-report zip archive, and
@@ -563,4 +563,92 @@ func TestRemoteCatalogRefreshToleratesMissingContext(t *testing.T) {
 			t.Fatalf("personalized refresh: %v", err)
 		}
 	}()
+}
+
+// pi v1.4.0 remote-catalog-provider.ts evaluates Date.now() - checkedAt with
+// JavaScript Number arithmetic; an int64 underflow must not make stale data fresh.
+func TestRemoteCatalogMinimumCheckedAtTriggersRefresh(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		w.Header().Set("Last-Modified", "Mon, 02 Jan 2006 15:04:05 GMT")
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer server.Close()
+
+	checkedAt, lastModified := int64(math.MinInt64), int64(1)
+	stored := &ai.ModelsStoreEntry{
+		Models:       []*ai.Model{{ID: "cached", Provider: "anthropic"}},
+		CheckedAt:    &checkedAt,
+		LastModified: &lastModified,
+	}
+	provider := WithRemoteCatalog(catalogProvider(t), server.URL, 0, false, nil)
+	if err := provider.RefreshModels(&ai.RefreshModelsContext{
+		AllowNetwork: true,
+		Ctx:          context.Background(),
+		Stored:       stored,
+		Publish:      func(ai.ModelsPublication) bool { return true },
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if requests != 1 {
+		t.Fatalf("requests = %d, want one revalidation for stale minimum checkedAt", requests)
+	}
+}
+
+// pi v1.4.0 (4a080252), core/remote-catalog-provider.ts publishes an overlay
+// through context.publish's update callback. Go model readers and refresh
+// workers run concurrently, so wrapper overlays need the same synchronization
+// as ai.CreateProvider's dynamic catalog. Publication callbacks may read models.
+func TestCatalogWrapperRefreshSynchronizesReads(t *testing.T) {
+	for _, personalized := range []bool{false, true} {
+		t.Run(fmt.Sprintf("personalized=%t", personalized), func(t *testing.T) {
+			started, release := make(chan struct{}), make(chan struct{})
+			fetch := func(context.Context, *http.Request) (*http.Response, error) {
+				close(started)
+				<-release
+				return &http.Response{
+					StatusCode: http.StatusOK, Header: make(http.Header),
+					Body: io.NopCloser(strings.NewReader(`[{"id":"fresh","type":"image"}]`)),
+				}, nil
+			}
+			base := ai.CreateProvider(ai.CreateProviderOptions{ID: "p"})
+			provider := WithRemoteCatalog(base, "https://catalog.invalid", 0, false, fetch)
+			if personalized {
+				provider = WithPersonalizedCatalog(base, func(models []*ai.Model, _ *ai.RefreshModelsContext) ([]*ai.Model, error) {
+					return models, nil
+				}, "https://catalog.invalid", 0, false, fetch)
+			}
+			refreshDone := make(chan error, 1)
+			go func() {
+				refreshDone <- provider.RefreshModels(&ai.RefreshModelsContext{
+					Ctx: context.Background(), AllowNetwork: true,
+					Stored: &ai.ModelsStoreEntry{Models: []*ai.Model{{ID: "restored", Provider: "p"}}},
+					Publish: func(publication ai.ModelsPublication) bool {
+						if publication.Update != nil {
+							publication.Update()
+						}
+						provider.GetAllModels() // reentrant publication control
+						return true
+					},
+				})
+			}()
+			<-started
+			readDone := make(chan struct{})
+			go func() {
+				provider.GetAllModels()
+				close(readDone)
+			}()
+			close(release)
+			err := <-refreshDone
+			<-readDone
+			if err != nil {
+				t.Fatal(err)
+			}
+			models := provider.GetAllModels()
+			if len(models) != 1 || models[0].ID != "fresh" || models[0].Type != "image" {
+				t.Fatalf("refreshed models = %+v, want fresh image model", models)
+			}
+		})
+	}
 }

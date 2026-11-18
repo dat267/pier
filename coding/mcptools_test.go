@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/mcp/protocol"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,9 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/mcp/protocol"
 )
 
 // Port of the "MCP tools" cases of upstream
@@ -341,5 +340,68 @@ func TestConvertMcpResultBinaryResourceWithoutMimeType(t *testing.T) {
 				t.Fatalf("content = %+v, want %q", result.Content, testCase.want)
 			}
 		})
+	}
+}
+
+// Reference: pi v1.5.0 f9a26365 extensions/mcp/tools.ts blockToContent
+// decodes with Buffer.from(blob, "base64"). A lone final alphabet character
+// is ignored whether or not an '=' padding marker follows it.
+func TestMcpResourceIgnoresLoneBase64TailBeforePadding(t *testing.T) {
+	for _, blob := range []string{"YWJjZ=", "YWJjZ", "YWJj"} {
+		content := ToModelContent("docs", []protocol.ContentBlock{{
+			Type: protocol.ContentTypeResource,
+			Resource: &protocol.ResourceContents{
+				URI: "docs://tail", MimeType: new("text/plain"), Blob: blob, BlobArm: true,
+			},
+		}}, ConvertMcpResultOptions{})
+		if len(content) != 1 {
+			t.Fatalf("blob %q: content=%+v", blob, content)
+		}
+		if text, ok := content[0].(ai.TextContent); !ok || text.Text != "abc" {
+			t.Errorf("blob %q: content=%+v, want abc", blob, content)
+		}
+	}
+}
+
+// pi v1.5.2 (b4afdddf) packages/mcp/src/input-schema.ts normalizeMcpInputSchema:
+// a server's tool schema is completed to an object schema, so a provider that
+// validates the shape still accepts a zero-argument tool. Pier marshals the
+// completed schema through a Go map, so its keys come out sorted instead of
+// server order followed by type and properties (D458).
+func TestMcpToolParametersCompleteTheSchema(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "missing-type", input: `{"properties":{"q":{"type":"string"}}}`,
+			want: `{"properties":{"q":{"type":"string"}},"type":"object"}`},
+		{name: "missing-properties", input: `{"type":"object"}`,
+			want: `{"properties":{},"type":"object"}`},
+		{name: "complete-schema-unchanged", input: `{"type":"object","properties":{},"required":["q"]}`,
+			want: `{"properties":{},"required":["q"],"type":"object"}`},
+		{name: "empty-object", input: `{}`, want: `{"properties":{},"type":"object"}`},
+		{name: "empty-input", input: ``, want: `{"properties":{},"type":"object"}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := string(mcpToolParameters(json.RawMessage(tc.input)))
+			if got != tc.want {
+				t.Fatalf("parameters = %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+// pi v1.4.0 packages/coding-agent/src/core/mcp-servers.ts validateOAuth
+// rejects a present `oauth: null` because only undefined is treated as absent.
+func TestValidateMcpServerConfigRejectsNullOAuth(t *testing.T) {
+	var raw any
+	if err := json.Unmarshal([]byte(`{"url":"https://example.com/mcp","oauth":null}`), &raw); err != nil {
+		t.Fatal(err)
+	}
+	_, err := ValidateMcpServerConfig("srv", raw)
+	if err == nil || err.Error() != `server "srv": oauth must be an object` {
+		t.Fatalf("ValidateMcpServerConfig() error = %v, want oauth object validation error", err)
 	}
 }
