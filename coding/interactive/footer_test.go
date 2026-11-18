@@ -137,6 +137,13 @@ func TestFooterTruncate(t *testing.T) {
 	if got := FooterTruncate("abcdef", 0); got != "" {
 		t.Errorf("max 0 = %q", got)
 	}
+	// A value that fits exactly keeps its text instead of dots (D433).
+	if got := FooterTruncate("abcde", 5); got != "abcde" {
+		t.Errorf("exact fit = %q, want the text unchanged", got)
+	}
+	if got := FooterTruncate("日本", 4); got != "日本" {
+		t.Errorf("exact wide fit = %q, want the text unchanged", got)
+	}
 }
 
 // TestFooterTruncateLeft ports format.test.ts truncateLeft cases.
@@ -152,6 +159,9 @@ func TestFooterTruncateLeft(t *testing.T) {
 	}
 	if got := FooterTruncateLeft("abcdef", 0); got != "" {
 		t.Errorf("max 0 = %q", got)
+	}
+	if got := FooterTruncateLeft("abcde", 5); got != "abcde" {
+		t.Errorf("exact fit = %q, want the text unchanged", got)
 	}
 }
 
