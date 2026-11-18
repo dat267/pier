@@ -15,8 +15,7 @@ import (
 // The write queue is shared with the replacement manager, so a write queued for
 // the outgoing session must land before switch_session answers: otherwise it
 // runs against a session that is already gone, and if the replacement wrote the
-// same path the claim fails with "file exists" (the stress-gate failure in
-// TODO.md).
+// same path the claim fails with "file exists" (D493).
 func TestRPCSwitchSessionDrainsTheOutgoingWriteQueue(t *testing.T) {
 	queue := offloop.New()
 	t.Cleanup(queue.Stop)

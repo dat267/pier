@@ -245,7 +245,7 @@ func (m *SessionManager) NewSession(options *NewSessionOptions) string {
 	m.cacheScanSeeding = false
 	m.cacheScanPending = nil
 	m.writeStarted = false
-	m.writeState = &sessionWriteState{}
+	m.writeState = unwrittenWriteState()
 	m.invalidateConversationMemo()
 
 	if m.persist {
@@ -548,6 +548,22 @@ func (m *SessionManager) rewriteFile() {
 
 // GetWriteQueue returns the wired write queue, or nil for synchronous writes.
 func (m *SessionManager) GetWriteQueue() *offloop.Queue { return m.writeQueue }
+
+// SessionFileAppeared reports whether this manager was opened while its session
+// file was absent and the file exists now. A replacement manager opened before
+// the outgoing session settles can see this: the outgoing run's last append
+// creates the path after the open. It must be reopened, or its first write
+// takes the exclusive-claim path against a file that is already there
+// (upstream agent-session-runtime.ts teardownCurrent finishes before
+// createRuntime opens the file).
+func (m *SessionManager) SessionFileAppeared() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.sessionFile == "" || m.writeState == nil || !m.writeState.absent.Load() {
+		return false
+	}
+	return fileExists(m.sessionFile)
+}
 
 // SetWriteQueue wires (or replaces) the write queue; used by the interactive
 // wiring for managers it opens ad hoc (session rename, model list).
@@ -1374,7 +1390,7 @@ func (m *SessionManager) CreateBranchedSession(leafID string) (string, error) {
 	m.fileEntries = append([]FileEntry{{Header: &header}}, newEntries...)
 	m.closePayloadsLocked()
 	m.sessionID = newSessionID
-	m.writeState = &sessionWriteState{}
+	m.writeState = unwrittenWriteState()
 	// In-memory sessions branch with no file, as upstream does.
 	if m.persist {
 		m.sessionFile = newSessionFile

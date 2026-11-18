@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync/atomic"
 )
 
 // SessionWriteError identifies a failed session persistence operation.
@@ -95,9 +96,23 @@ func (m *SessionManager) FlushWrites() error {
 type sessionWriteState struct {
 	initialized bool
 	claimed     bool
+	// absent records that this state has not attempted a write and the manager
+	// opened it for a path that did not exist. SessionFileAppeared reads it from
+	// the replacement path after the queue drains, so it is atomic; initialized
+	// and claimed stay owned by the FIFO worker (or the synchronous caller).
+	absent atomic.Bool
+}
+
+// unwrittenWriteState is the state of a manager whose session file does not
+// exist yet: its first write claims the path exclusively.
+func unwrittenWriteState() *sessionWriteState {
+	state := &sessionWriteState{}
+	state.absent.Store(true)
+	return state
 }
 
 func (s *sessionWriteState) rewrite(path string, entries []FileEntry) error {
+	s.absent.Store(false)
 	if s.initialized || s.claimed {
 		err := writeSessionEntries(path, entries)
 		s.initialized = err == nil

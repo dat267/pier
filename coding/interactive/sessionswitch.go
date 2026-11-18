@@ -254,6 +254,19 @@ func (a *App) applySessionReplacement(sessionManager *coding.SessionManager) (*S
 		}
 	}
 	a.teardownCurrentSession()
+	// The target was opened off the owner loop before the teardown settled the
+	// outgoing run, whose last append can create the path after that open.
+	// Reopening loads the file it left; upstream teardownCurrent is awaited
+	// before createRuntime opens the file (D493; the RPC path does the same in
+	// installSession).
+	if sessionManager != nil && sessionManager.SessionFileAppeared() {
+		if reopened, err := coding.OpenSession(sessionManager.GetSessionFile(), "", sessionManager.GetCwd()); err == nil {
+			if queue := sessionManager.GetWriteQueue(); queue != nil {
+				reopened.SetWriteQueue(queue)
+			}
+			sessionManager = reopened
+		}
+	}
 	return a.bindSessionManager(sessionManager)
 }
 

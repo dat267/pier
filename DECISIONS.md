@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D492)
+# Deliberate divergences from pi (D1–D493)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8075,3 +8075,22 @@ in the port it would load a working-directory file as global configuration,
 skipping the trust gate and the "auth is only allowed in the global mcp.json"
 rule. The port treats an empty `AgentDir` as "no global config"
 (`TestLoadMcpConfigEmptyAgentDirReadsNoGlobalFile`).
+
+### D493
+
+**A replacement session reopens a target that appeared while the outgoing one settled.**
+
+Upstream `agent-session-runtime.ts` awaits `teardownCurrent` before
+`createRuntime` opens the replacement's file. The port opens it first, so the
+interactive switch can do that file I/O off the owner loop, and the RPC switch
+opens it before `installSession` waits. Either way the outgoing run's last
+append can create the target after that open. The opened manager then believes
+the file is absent, and its first write takes the exclusive claim upstream's
+`_persist` uses (`openSync(sessionFile, "wx")`) against a file that is already
+there, failing the session with `file exists` (CI run 44230627195).
+`SessionFileAppeared` detects that state and the replacement is reopened once
+the outgoing session has settled, which also loads the run's settled tail.
+Observable behavior matches upstream; only the order of the open changes.
+
+Tests: `TestRPCSwitchReopensATargetCreatedWhileTheOutgoingRunSettles`,
+`TestSwitchReopensATargetCreatedWhileTheOutgoingRunSettles`.
