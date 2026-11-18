@@ -387,3 +387,15 @@ func TestSpacer(t *testing.T) {
 		t.Fatalf("render = %q", got)
 	}
 }
+
+// A caller may pass fewer intrinsic sizes than entries (a stack whose newest
+// entry was not measured yet); the missing ones default to zero instead of
+// indexing past the slice.
+func TestAllocateStackSizesToleratesMissingIntrinsicSizes(t *testing.T) {
+	entries := []StackLayoutEntry{{}, {}}
+	available := 10
+	got := AllocateStackSizes(entries, []int{5}, &available, 0)
+	if len(got) != 2 {
+		t.Fatalf("sizes = %v, want one per entry", got)
+	}
+}
