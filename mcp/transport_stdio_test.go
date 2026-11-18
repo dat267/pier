@@ -1,9 +1,12 @@
 package mcp
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/dat267/pier/internal/leakcheck"
+	"github.com/dat267/pier/mcp/protocol"
 	"io"
 	"os"
 	"os/exec"
@@ -11,10 +14,9 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
-
-	"github.com/dat267/pier/mcp/protocol"
 )
 
 // Port of packages/mcp/test/stdio.test.ts against Go ports of the upstream
@@ -338,5 +340,364 @@ func TestStdioTransportStderrStringReplacesMalformedUTF8(t *testing.T) {
 	transport.handleStderr([]byte("bad \xff byte"))
 	if got := transport.Stderr(); got != "bad \uFFFD byte" {
 		t.Fatalf("stderr = %q; want the replacement character", got)
+	}
+}
+
+// pi v1.4.0 stdio.ts uses ?? for maxStderrBytes; subarray(-0) retains the full
+// buffer rather than applying the default 64 KiB cap.
+func TestStdioTransportExplicitZeroStderrLimitRetainsAllBytes(t *testing.T) {
+	transport := NewStdioTransport(StdioTransportOptions{MaxStderrBytes: 0, MaxStderrBytesSet: true})
+	chunk := strings.Repeat("x", defaultMaxStderrBytes+1)
+	transport.handleStderr([]byte(chunk))
+	if got := len(transport.Stderr()); got != len(chunk) {
+		t.Fatalf("stderr bytes = %d, want %d with explicit zero limit", got, len(chunk))
+	}
+}
+
+// pi v1.4.0 stdio.ts uses ?? for maxMessageBytes, so an explicit zero rejects
+// every nonempty frame instead of selecting the default limit.
+func TestStdioTransportExplicitZeroMessageLimit(t *testing.T) {
+	transport := NewStdioTransport(StdioTransportOptions{MaxMessageBytes: 0, MaxMessageBytesSet: true})
+	var messages []Message
+	var errors []error
+	transport.OnMessage(func(message Message) { messages = append(messages, message) })
+	transport.OnError(func(err error) { errors = append(errors, err) })
+
+	transport.handleStdout([]byte("{\"jsonrpc\":\"2.0\",\"method\":\"ping\"}\n"))
+	if len(messages) != 0 {
+		t.Fatalf("decoded %d messages despite a zero-byte limit", len(messages))
+	}
+	if len(errors) != 1 || !strings.Contains(errors[0].Error(), "exceeds 0 bytes") {
+		t.Fatalf("errors = %v, want one zero-limit error", errors)
+	}
+}
+
+// pi v1.4.0 (4a080252), packages/mcp/src/transports/stdio.ts send checks
+// this.child?.stdin and throws McpConnectionClosedError after the child's close
+// handler clears this.child, even if close() was never explicitly requested.
+func TestStdioSendAfterServerExitReportsConnectionClosed(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	transport := NewStdioTransport(StdioTransportOptions{
+		Command: os.Args[0], Env: map[string]string{"PIER_MCP_UTF8_HELPER": "exit"},
+	})
+	t.Cleanup(func() { _ = transport.Close(context.Background()) })
+	closed := make(chan struct{})
+	transport.OnClose(func() { close(closed) })
+	if err := transport.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-closed:
+	case <-ctx.Done():
+		t.Fatal("server did not exit:", ctx.Err())
+	}
+
+	message := &protocol.JsonRpcNotification{JSONRPC: "2.0", Method: "notifications/initialized"}
+	var connectionClosed *protocol.McpConnectionClosedError
+	if err := transport.Send(ctx, message); !errors.As(err, &connectionClosed) {
+		t.Errorf("Send after server exit = %T: %v, want McpConnectionClosedError", err, err)
+	}
+	// Explicit shutdown is the matching control and must report the same error.
+	if err := transport.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := transport.Send(ctx, message); !errors.As(err, &connectionClosed) {
+		t.Fatalf("Send after explicit close = %T: %v, want McpConnectionClosedError", err, err)
+	}
+}
+
+// pi v1.4.0 stdio.ts uses ?? for closeTimeoutMs, so zero is explicit and its
+// setTimeout delays clamp to 1ms rather than selecting the 2s default.
+func TestStdioTransportExplicitZeroCloseTimeout(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the stubborn fixture relies on POSIX signals")
+	}
+	transport := NewStdioTransport(StdioTransportOptions{Command: stubbornFixtureBin, CloseTimeoutMs: 0, CloseTimeoutMsSet: true})
+	if err := transport.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	pid := transport.PID()
+	var grandchild int
+	deadline := time.Now().Add(5 * time.Second)
+	for grandchild == 0 {
+		fmt.Sscanf(transport.Stderr(), "grandchild %d", &grandchild)
+		if time.Now().After(deadline) {
+			t.Fatalf("grandchild pid never appeared; stderr = %q", transport.Stderr())
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	closed := make(chan error, 1)
+	go func() { closed <- transport.Close(context.Background()) }()
+	select {
+	case err := <-closed:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(300 * time.Millisecond):
+		killProcessTree(pid, syscall.SIGKILL)
+		select {
+		case <-closed:
+		case <-time.After(2 * time.Second):
+			t.Fatal("transport close remained blocked after cleanup kill")
+		}
+		t.Fatal("explicit zero close timeout selected the default delay")
+	}
+	for range 100 {
+		alive, err := processAlive(grandchild)
+		if err != nil {
+			t.Fatalf("probe grandchild: %v", err)
+		}
+		if !alive {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("grandchild %d survived zero-timeout close", grandchild)
+}
+
+// pi v1.4.0 transports/stdio.ts decodes each stdout line/stderr chunk and the
+// stderr snapshot with Buffer.toString("utf8"). Distinct bad bytes are distinct
+// replacement characters; unlike TextDecoder, Buffer preserves a leading BOM.
+func TestStdioUTF8DecodingMatchesBuffer(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	chunks := make(chan string, 8)
+	transport := NewStdioTransport(StdioTransportOptions{
+		Command: os.Args[0], Env: map[string]string{"PIER_MCP_UTF8_HELPER": "wait"},
+		OnStderr: func(chunk string) { chunks <- chunk },
+	})
+	t.Cleanup(func() { _ = transport.Close(context.Background()) })
+	closed := make(chan struct{})
+	transport.OnClose(func() { close(closed) })
+	messages := make(chan string, 1)
+	transport.OnMessage(func(message Message) { messages <- message.(*protocol.JsonRpcNotification).Method })
+	if err := transport.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case method := <-messages:
+		if method != "\ufffd\ufffd" {
+			t.Errorf("notification method=%q, want two replacement characters", method)
+		}
+	case <-ctx.Done():
+		t.Fatal("stdout notification was not decoded:", ctx.Err())
+	}
+	var reported strings.Builder
+	select {
+	case chunk := <-chunks:
+		reported.WriteString(chunk)
+	case <-ctx.Done():
+		t.Fatal("stderr chunk was not decoded:", ctx.Err())
+	}
+	if err := transport.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-closed:
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+	if got := transport.Stderr(); got != "\ufeff\ufffd\ufffd" {
+		t.Errorf("stderr=%q, want preserved BOM and two replacement characters", got)
+	}
+	for len(chunks) > 0 {
+		reported.WriteString(<-chunks)
+	}
+	if got := reported.String(); got != "\ufeff\ufffd\ufffd" {
+		t.Errorf("onStderr=%q, want preserved BOM and two replacement characters", got)
+	}
+}
+
+// pi v1.4.0 stdio.ts schedules SIGKILL with setTimeout(grace+closeTimeoutMs),
+// whose runtime clamps a delay above 2^31-1 to 1ms.
+func TestStdioTransportCloseTimeoutOverflowKillsPromptly(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the stubborn fixture relies on POSIX signals")
+	}
+	transport := NewStdioTransport(StdioTransportOptions{
+		Command: stubbornFixtureBin, CloseTimeoutMs: 1 << 31,
+	})
+	if err := transport.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	pid := transport.PID()
+	if pid <= 0 {
+		t.Fatalf("server pid = %d after start", pid)
+	}
+	var grandchild int
+	deadline := time.Now().Add(5 * time.Second)
+	for grandchild == 0 {
+		fmt.Sscanf(transport.Stderr(), "grandchild %d", &grandchild)
+		if time.Now().After(deadline) {
+			t.Fatalf("grandchild pid never appeared; stderr = %q", transport.Stderr())
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	if alive, err := processAlive(pid); err != nil || !alive {
+		t.Fatalf("stubborn server is not alive before close: alive=%v err=%v", alive, err)
+	}
+	select {
+	case <-transport.exitCh:
+		t.Fatal("server exit channel closed before close")
+	default:
+	}
+	closed := make(chan error, 1)
+	go func() { closed <- transport.Close(context.Background()) }()
+	select {
+	case err := <-closed:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(300 * time.Millisecond):
+		killProcessTree(pid, syscall.SIGKILL)
+		select {
+		case <-closed:
+		case <-time.After(2 * time.Second):
+			t.Fatal("transport close remained blocked after cleanup kill")
+		}
+		t.Fatal("SIGKILL timer overflow left the stubborn server running")
+	}
+	for range 100 {
+		alive, err := processAlive(grandchild)
+		if err != nil {
+			t.Fatalf("probe grandchild: %v", err)
+		}
+		if !alive {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("grandchild %d survived close", grandchild)
+}
+
+// pi v1.5.2 (b4afdddf), transports/lines.ts readStdout: messages are assembled
+// from stdout chunks that may split anywhere, including inside a rune, a CRLF
+// termination is accepted, and blank lines are skipped.
+func TestStdioTransportFramesSplitAndTerminatedLines(t *testing.T) {
+	newTransport := func() (*StdioTransport, *[]Message) {
+		transport := NewStdioTransport(StdioTransportOptions{})
+		var messages []Message
+		transport.OnMessage(func(message Message) { messages = append(messages, message) })
+		transport.OnError(func(err error) { t.Errorf("unexpected error: %v", err) })
+		return transport, &messages
+	}
+
+	t.Run("message split across reads", func(t *testing.T) {
+		transport, messages := newTransport()
+		full := []byte("{\"jsonrpc\":\"2.0\",\"method\":\"m\",\"params\":{\"text\":\"héllo\"}}\n")
+		for index := range full {
+			transport.handleStdout(full[index : index+1])
+		}
+		if len(*messages) != 1 {
+			t.Fatalf("messages = %d, want the frame split at every byte", len(*messages))
+		}
+	})
+
+	t.Run("utf8 sequence split across reads", func(t *testing.T) {
+		transport, messages := newTransport()
+		full := []byte("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"m\",\"params\":{\"text\":\"日本\"}}\n")
+		// Split inside the first multi-byte rune so a per-chunk decode would
+		// replace half of it.
+		cut := bytes.IndexByte(full, 0xe6) + 1
+		transport.handleStdout(full[:cut])
+		transport.handleStdout(full[cut:])
+		if len(*messages) != 1 {
+			t.Fatalf("messages = %d, want 1", len(*messages))
+		}
+		request, ok := (*messages)[0].(*protocol.JsonRpcRequest)
+		if !ok || !strings.Contains(string(request.Params), "日本") {
+			t.Fatalf("message = %#v, want the decoded rune", (*messages)[0])
+		}
+	})
+
+	t.Run("carriage return and blank lines", func(t *testing.T) {
+		transport, messages := newTransport()
+		transport.handleStdout([]byte("{\"jsonrpc\":\"2.0\",\"method\":\"ping\"}\r\n\n   \n"))
+		if len(*messages) != 1 {
+			t.Fatalf("messages = %d, want the CRLF frame only", len(*messages))
+		}
+	})
+
+	t.Run("large message in many chunks", func(t *testing.T) {
+		transport, messages := newTransport()
+		payload := strings.Repeat("a", 1<<20)
+		full := []byte("{\"jsonrpc\":\"2.0\",\"method\":\"m\",\"params\":{\"text\":\"" + payload + "\"}}\n")
+		for start := 0; start < len(full); start += 64 * 1024 {
+			end := start + 64*1024
+			if end > len(full) {
+				end = len(full)
+			}
+			transport.handleStdout(full[start:end])
+		}
+		if len(*messages) != 1 {
+			t.Fatalf("messages = %d, want one 1 MiB frame", len(*messages))
+		}
+	})
+}
+
+// pi v1.4.0 transports/stdio.ts reports a non-whitespace stdout tail as an
+// incomplete JSON-RPC message before emitting the child-close notification.
+func TestStdioExitReportsUnterminatedOutputBeforeClose(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	transport := NewStdioTransport(StdioTransportOptions{Command: os.Args[0], Env: map[string]string{"PIER_MCP_UTF8_HELPER": "partial"}})
+	t.Cleanup(func() { _ = transport.Close(context.Background()) })
+	events := make(chan string, 2)
+	transport.OnError(func(err error) { events <- err.Error() })
+	transport.OnClose(func() { events <- "close" })
+	if err := transport.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"MCP stdio server closed with an incomplete JSON-RPC message",
+		"close",
+	} {
+		select {
+		case got := <-events:
+			if got != want {
+				t.Fatalf("event = %q, want %q", got, want)
+			}
+		case <-ctx.Done():
+			t.Fatalf("did not receive event %q: %v", want, ctx.Err())
+		}
+	}
+}
+
+func TestStdioExitDrainsOutputBeforeCloseEvent(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	transport := NewStdioTransport(StdioTransportOptions{Command: os.Args[0], Env: map[string]string{"PIER_MCP_UTF8_HELPER": "exit"}})
+	t.Cleanup(func() { _ = transport.Close(context.Background()) })
+	messages := make(chan string, 1)
+	transport.OnMessage(func(message Message) {
+		if err := transport.Close(ctx); err != nil {
+			messages <- "close error: " + err.Error()
+			return
+		}
+		messages <- message.(*protocol.JsonRpcNotification).Method
+	})
+	closed := make(chan struct{})
+	transport.OnClose(func() { close(closed) })
+	if err := transport.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-closed:
+	case <-ctx.Done():
+		t.Fatal("close notification did not arrive after reentrant Close:", ctx.Err())
+	}
+	select {
+	case method := <-messages:
+		if method != "\ufffd\ufffd" {
+			t.Errorf("method=%q, want the complete final notification", method)
+		}
+	default:
+		t.Error("OnClose fired before the final notification completed")
+	}
+	if got := transport.Stderr(); got != "\ufeff\ufffd\ufffd" {
+		t.Errorf("OnClose stderr=%q, want complete final stderr", got)
 	}
 }

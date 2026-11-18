@@ -5,15 +5,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/mcp/protocol"
 	"io"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
-
-	"github.com/dat267/pier/mcp/protocol"
 )
 
 // Port of packages/mcp/test/streamable-http.test.ts: httptest servers play
@@ -1185,4 +1187,666 @@ func TestStreamableHTTPDoesNotHTMLEscapePayloads(t *testing.T) {
 		t.Fatalf("payload = %s", body)
 	}
 	_ = client.Close(context.Background())
+}
+
+// pi v1.4.0 (4a080252), transports/streamable-http.ts constructs
+// `this.url = new URL(options.url)` in the constructor, so a malformed URL is a
+// caller-visible error before any request. Start is the constructor's
+// validating half in Go; a malformed URL must never reach a nil dereference.
+func TestStreamableHTTPRejectsMalformedURLAtStart(t *testing.T) {
+	transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{URL: "http://[::1"})
+	err := transport.Start(context.Background())
+	if err == nil {
+		t.Fatal("Start accepted a malformed URL")
+	}
+	if errors.Is(err, context.Canceled) {
+		t.Fatalf("Start reported a cancellation for a malformed URL: %v", err)
+	}
+	sendErr := transport.Send(context.Background(), &protocol.JsonRpcNotification{JSONRPC: protocol.JSONRPCVersion, Method: "notifications/initialized"})
+	if sendErr == nil {
+		t.Fatal("Send after a rejected Start succeeded")
+	}
+}
+
+// pi v1.4.0 streamable-http.ts uses ?? for both maxEventBytes and
+// maxMessageBytes, so explicit zero rejects any nonempty SSE data.
+func TestConsumeSseStreamExplicitZeroEventLimit(t *testing.T) {
+	err := ConsumeSseStream(strings.NewReader("data: x\n\n"), ConsumeSseOptions{
+		MaxEventBytes:    0,
+		MaxEventBytesSet: true,
+		OnEvent:          func(SseEvent) {},
+	})
+	if err == nil || !strings.Contains(err.Error(), "exceeds 0 bytes") {
+		t.Fatalf("SSE parse error = %v, want zero-byte limit", err)
+	}
+}
+
+func TestHttpTransportExplicitZeroMessageLimit(t *testing.T) {
+	transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{URL: "http://example.test/mcp", MaxMessageBytes: 0, MaxMessageBytesSet: true})
+	err := transport.consumeSse(io.NopCloser(strings.NewReader("data: x\n\n")), &streamCursor{}, func(Message) {})
+	if err == nil || !strings.Contains(err.Error(), "exceeds 0 bytes") {
+		t.Fatalf("SSE transport error = %v, want zero-byte limit", err)
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252),
+// packages/mcp/src/transports/streamable-http.ts needsAuthorization:
+// /(?:^|[\s,])error="?insufficient_scope"?/i. JavaScript's \s includes the
+// Unicode space separators, so a challenge separated by one is still a
+// step-up authorization request.
+func TestNeedsAuthorizationAcceptsJavaScriptWhitespace(t *testing.T) {
+	for _, separator := range []struct {
+		name  string
+		value string
+	}{
+		{"ASCII space", " "},
+		{"tab", "\t"},
+		{"no-break space", "\u00a0"},
+		{"ideographic space", "\u3000"},
+		{"comma", ","},
+	} {
+		response := &http.Response{
+			StatusCode: http.StatusForbidden,
+			Header: http.Header{"Www-Authenticate": []string{
+				`Bearer realm="mcp"` + separator.value + `error="insufficient_scope"`,
+			}},
+		}
+		if !needsAuthorization(response) {
+			t.Errorf("%s: needsAuthorization = false, want true", separator.name)
+		}
+	}
+	// An unrelated 403 challenge is not a step-up request.
+	other := &http.Response{
+		StatusCode: http.StatusForbidden,
+		Header:     http.Header{"Www-Authenticate": []string{`Bearer realm="mcp"`}},
+	}
+	if needsAuthorization(other) {
+		t.Error("needsAuthorization(unrelated 403) = true, want false")
+	}
+}
+
+// pi v1.4.0 transports/streamable-http.ts dispatches POSTs with its lifetime
+// controller.signal. close() aborts that controller, not just the GET stream.
+func TestStreamableHTTPCloseCancelsInFlightPost(t *testing.T) {
+	started, release := make(chan struct{}), make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		close(started)
+		select {
+		case <-request.Context().Done():
+		case <-release:
+		}
+	}))
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(func() { cancel(); close(release); server.Close() })
+	transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{URL: server.URL})
+	if err := transport.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() {
+		done <- transport.Send(ctx, &protocol.JsonRpcRequest{
+			JSONRPC: protocol.JSONRPCVersion, ID: protocol.NumberId(1), Method: "fixture/held",
+		})
+	}()
+	select {
+	case <-started:
+	case <-time.After(3 * time.Second):
+		t.Fatal("POST did not reach the fixture")
+	}
+	if err := transport.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("closed transport POST unexpectedly succeeded")
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("Close did not cancel the in-flight POST")
+	}
+}
+
+type trackedSseBody struct {
+	io.Reader
+	closed chan struct{}
+}
+
+func (b *trackedSseBody) Close() error {
+	close(b.closed)
+	return nil
+}
+
+// Reference: pi v1.4.0 packages/mcp/src/transports/streamable-http.ts releases
+// its SSE reader in finally. The Go HTTP body must likewise be closed when
+// consumption finishes, so its connection and request resources are released.
+func TestHttpResponseStreamClosesBodyAfterEOF(t *testing.T) {
+	body := &trackedSseBody{
+		Reader: strings.NewReader("data: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n\n"),
+		closed: make(chan struct{}),
+	}
+	transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{
+		URL: "https://mcp.example.test",
+		Fetch: func(context.Context, *http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": {"text/event-stream"}}, Body: body}, nil
+		},
+	})
+	defer transport.Close(context.Background())
+	if err := transport.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := transport.Send(context.Background(), &protocol.JsonRpcRequest{
+		JSONRPC: protocol.JSONRPCVersion, ID: protocol.NumberId(1), Method: "ping",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-body.closed:
+	case <-time.After(2 * time.Second):
+		t.Fatal("completed SSE response body was never closed")
+	}
+}
+
+// pi v1.4.0 streamable-http.ts sleeps with setTimeout(ms), whose runtime clamps
+// delays above 2^31-1 to 1ms. An SSE retry value just above that range must not
+// become a multi-day wait in the Go transport.
+func TestStreamableHTTPRetryDelayOverflowDoesNotBlockReconnect(t *testing.T) {
+	var fixture *httpFixture
+	var gets atomic.Int64
+	fixture = newHTTPFixture(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			gets.Add(1)
+			w.Header().Set("content-type", "text/event-stream")
+			_, _ = io.WriteString(w, "retry: 2147483648\n\n")
+			return
+		}
+		fixture.protocolHandler(w, r, nil)
+	})
+	defer fixture.close(t)
+
+	transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{URL: fixture.url})
+	t.Cleanup(func() { _ = transport.Close(context.Background()) })
+	ctx := context.Background()
+	if err := transport.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := transport.Send(ctx, &protocol.JsonRpcNotification{
+		JSONRPC: protocol.JSONRPCVersion,
+		Method:  "notifications/initialized",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	deadline := time.NewTimer(500 * time.Millisecond)
+	defer deadline.Stop()
+	tick := time.NewTicker(time.Millisecond)
+	defer tick.Stop()
+	for gets.Load() < 2 {
+		select {
+		case <-deadline.C:
+			t.Fatalf("GET stream did not reconnect after overflowing retry delay; requests=%d", gets.Load())
+		case <-tick.C:
+		}
+	}
+}
+
+type stalledAcknowledgmentBody struct {
+	ctx    context.Context
+	closed bool
+}
+
+func (b *stalledAcknowledgmentBody) Read([]byte) (int, error) {
+	<-b.ctx.Done()
+	return 0, b.ctx.Err()
+}
+
+func (b *stalledAcknowledgmentBody) Close() error {
+	b.closed = true
+	return nil
+}
+
+// pi v1.4.0 (4a080252), transports/streamable-http.ts send/discard:
+// notification acknowledgments ignore and cancel any response body.
+func TestStreamableHTTPDoesNotDrainNotificationAcknowledgment(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		var body *stalledAcknowledgmentBody
+		openGetStream := false
+		transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{
+			URL: "https://fixture.invalid/mcp", OpenGetStream: &openGetStream,
+			Fetch: func(ctx context.Context, _ *http.Request) (*http.Response, error) {
+				body = &stalledAcknowledgmentBody{ctx: ctx}
+				return &http.Response{StatusCode: http.StatusAccepted, Body: body}, nil
+			},
+		})
+		if err := transport.Start(ctx); err != nil {
+			t.Fatal(err)
+		}
+		defer transport.Close(context.Background())
+		if err := transport.Send(ctx, &protocol.JsonRpcNotification{JSONRPC: "2.0", Method: "probe"}); err != nil {
+			t.Fatal(err)
+		}
+		if ctx.Err() != nil {
+			t.Fatalf("ignored 202 body exhausted sender budget: %v", ctx.Err())
+		}
+		if body == nil || !body.closed {
+			t.Fatal("acknowledgment body not closed")
+		}
+	})
+}
+
+// pi v1.5.0 streamable-http.ts runGetStream compares elapsed milliseconds with
+// maxDelayMs. A huge maxDelay must keep the retry budget intact, not overflow a
+// time.Duration into a negative "healthy" threshold.
+func TestStreamableHTTPLargeMaxDelayDoesNotResetRetryBudget(t *testing.T) {
+	var mu sync.Mutex
+	gets := 0
+	var fixture *httpFixture
+	fixture = newHTTPFixture(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			fixture.protocolHandler(w, r, nil)
+			return
+		}
+		mu.Lock()
+		gets++
+		mu.Unlock()
+		w.Header().Set("content-type", "text/event-stream")
+	})
+	defer fixture.close(t)
+
+	client := NewClient(ClientOptions{Name: "http-test", Version: "1.0.0"})
+	dropped := make(chan error, 1)
+	client.OnError(func(err error) { dropped <- err })
+	if _, err := client.Connect(context.Background(), NewStreamableHttpTransport(StreamableHttpTransportOptions{
+		URL: fixture.url,
+		Reconnect: &StreamableHttpReconnectOptions{
+			InitialDelayMs: 1, MaxDelayMs: math.MaxInt64, MaxDelayMsSet: true, MaxRetries: 2,
+		},
+	})); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-dropped:
+		if err.Error() != "MCP server-to-client stream dropped and could not be reopened" {
+			t.Fatalf("error = %v", err)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("large maxDelay prevented retry exhaustion")
+	}
+	mu.Lock()
+	attempts := gets
+	mu.Unlock()
+	if attempts != 3 {
+		t.Fatalf("GET attempts = %d, want 3", attempts)
+	}
+	if err := client.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// pi v1.4.0 (4a080252), packages/mcp/src/transports/streamable-http.ts
+// runGetStream: the "stayed up for a while counts as healthy" reset runs only
+// after consumeSse resolves. A stream that breaks mid-flight skips it, so the
+// attempt counter reaches maxRetries and the drop is reported instead of
+// reconnecting forever.
+func TestStreamableHTTPAbortedGetStreamsExhaustRetries(t *testing.T) {
+	var mu sync.Mutex
+	gets := 0
+	var fixture *httpFixture
+	fixture = newHTTPFixture(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			fixture.protocolHandler(w, r, nil)
+			return
+		}
+		mu.Lock()
+		gets++
+		mu.Unlock()
+		w.Header().Set("content-type", "text/event-stream")
+		fmt.Fprint(w, "id: g1\ndata: {\"jsonrpc\":\"2.0\",\"method\":\"notifications/tools/list_changed\"}\n\n")
+		w.(http.Flusher).Flush()
+		// Stay open past maxDelayMs so a completed stream would count as
+		// healthy, then abort mid-chunk: the reader sees an error, not EOF.
+		time.Sleep(25 * time.Millisecond)
+		panic(http.ErrAbortHandler)
+	})
+	defer fixture.close(t)
+
+	client := NewClient(ClientOptions{Name: "http-test", Version: "1.0.0"})
+	dropped := make(chan error, 16)
+	client.OnError(func(err error) { dropped <- err })
+	if _, err := client.Connect(context.Background(), NewStreamableHttpTransport(StreamableHttpTransportOptions{
+		URL: fixture.url,
+		Reconnect: &StreamableHttpReconnectOptions{
+			InitialDelayMs: 1, MaxDelayMs: 10, MaxDelayMsSet: true, MaxRetries: 2,
+		},
+	})); err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case err := <-dropped:
+		if err.Error() != "MCP server-to-client stream dropped and could not be reopened" {
+			t.Fatalf("error = %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("aborted GET streams never exhausted their retries")
+	}
+	mu.Lock()
+	attempts := gets
+	mu.Unlock()
+	// Three failed attempts (the initial one plus MaxRetries) then give up.
+	if attempts != 3 {
+		t.Fatalf("GET attempts = %d, want 3", attempts)
+	}
+	time.Sleep(50 * time.Millisecond)
+	mu.Lock()
+	after := gets
+	mu.Unlock()
+	if after != attempts {
+		t.Fatalf("GET attempts kept growing after the drop was reported: %d -> %d", attempts, after)
+	}
+	if err := client.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+type recoveryBody struct {
+	io.Reader
+	closes int
+}
+
+func (b *recoveryBody) Close() error { b.closes++; return nil }
+
+type recoveryAuthProvider struct{ err error }
+
+func (*recoveryAuthProvider) Token(context.Context) (string, error)                    { return "synthetic-token", nil }
+func (p *recoveryAuthProvider) OnUnauthorized(context.Context, UnauthorizedInfo) error { return p.err }
+
+// pi v1.4.0 (4a080252), transports/streamable-http.ts authorizedFetch discards
+// the unauthorized response in finally, before retrying, even when recovery
+// succeeds. AuthProvider does not own the transport's response-body cleanup.
+func TestStreamableHTTPClosesUnauthorizedBodyBeforeRetry(t *testing.T) {
+	for _, recoveryFails := range []bool{false, true} {
+		name := "recovered"
+		if recoveryFails {
+			name = "failed-control"
+		}
+		t.Run(name, func(t *testing.T) {
+			authErr := errors.New("auth failed")
+			auth := &recoveryAuthProvider{}
+			if recoveryFails {
+				auth.err = authErr
+			}
+			body := &recoveryBody{Reader: strings.NewReader("authentication required")}
+			calls := 0
+			closedBeforeRetry := false
+			transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{
+				URL: "https://invalid.test", AuthProvider: auth, OpenGetStream: new(false),
+				Fetch: func(context.Context, *http.Request) (*http.Response, error) {
+					calls++
+					if calls == 1 {
+						return &http.Response{StatusCode: http.StatusUnauthorized, Header: http.Header{}, Body: body}, nil
+					}
+					closedBeforeRetry = body.closes > 0
+					return &http.Response{StatusCode: http.StatusAccepted, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(""))}, nil
+				},
+			})
+			if err := transport.Start(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			defer transport.Close(context.Background())
+			err := transport.Send(context.Background(), &protocol.JsonRpcNotification{JSONRPC: protocol.JSONRPCVersion, Method: "notifications/fixture"})
+			if recoveryFails {
+				if !errors.Is(err, authErr) || calls != 1 {
+					t.Fatalf("failed recovery = %v, calls = %d", err, calls)
+				}
+			} else {
+				if err != nil || calls != 2 {
+					t.Fatalf("recovered Send = %v, calls = %d", err, calls)
+				}
+				if !closedBeforeRetry {
+					t.Error("unauthorized response body remained open when retry dispatched")
+				}
+			}
+			if body.closes != 1 {
+				t.Fatalf("unauthorized body closes = %d, want 1", body.closes)
+			}
+		})
+	}
+}
+
+type heldTokenProvider struct {
+	entered chan struct{}
+	release chan struct{}
+}
+
+func (p *heldTokenProvider) Token(context.Context) (string, error) {
+	close(p.entered)
+	<-p.release
+	return "synthetic-token", nil
+}
+
+func (*heldTokenProvider) OnUnauthorized(context.Context, UnauthorizedInfo) error { return nil }
+
+// pi v1.4.0 (4a080252), transports/streamable-http.ts authorizedFetch checks
+// the sender's signal after token acquisition and before calling fetch. Shared
+// token acquisition is not canceled, but an abandoned call must not dispatch.
+func TestStreamableHTTPCanceledTokenWaitDoesNotDispatch(t *testing.T) {
+	for _, cancelRequest := range []bool{false, true} {
+		name := "control"
+		if cancelRequest {
+			name = "canceled"
+		}
+		t.Run(name, func(t *testing.T) {
+			auth := &heldTokenProvider{entered: make(chan struct{}), release: make(chan struct{})}
+			calls := 0
+			transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{
+				URL: "https://invalid.test", AuthProvider: auth, OpenGetStream: new(false),
+				Fetch: func(context.Context, *http.Request) (*http.Response, error) {
+					calls++
+					return &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": {"application/json"}}, Body: io.NopCloser(strings.NewReader(`{"jsonrpc":"2.0","id":1,"result":{}}`))}, nil
+				},
+			})
+			if err := transport.Start(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = transport.Close(context.Background()) })
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			done := make(chan error, 1)
+			go func() {
+				done <- transport.Send(ctx, &protocol.JsonRpcRequest{JSONRPC: protocol.JSONRPCVersion, ID: protocol.NumberId(1), Method: "tools/call"})
+			}()
+			select {
+			case <-auth.entered:
+			case <-time.After(3 * time.Second):
+				close(auth.release)
+				t.Fatal("token lookup did not start")
+			}
+			if cancelRequest {
+				cancel()
+			}
+			close(auth.release)
+			select {
+			case err := <-done:
+				if cancelRequest && !errors.Is(err, context.Canceled) {
+					t.Fatalf("canceled Send = %v", err)
+				}
+				if !cancelRequest && err != nil {
+					t.Fatalf("control Send = %v", err)
+				}
+			case <-time.After(3 * time.Second):
+				t.Fatal("Send did not settle after token release")
+			}
+			wantCalls := 1
+			if cancelRequest {
+				wantCalls = 0
+			}
+			if calls != wantCalls {
+				t.Fatalf("fetch dispatches = %d, want %d", calls, wantCalls)
+			}
+		})
+	}
+}
+
+// Fetch keeps credentials removed for the entire redirect chain. Reference:
+// pi f9a26365 packages/mcp/src/transports/streamable-http.ts uses Fetch.
+func TestStreamableHTTPRedirectChainCannotRestoreCredentials(t *testing.T) {
+	for _, route := range []string{"cross-port-chain", "origin-roundtrip", "same-origin-chain"} {
+		t.Run(route, func(t *testing.T) {
+			received := make(chan http.Header, 2)
+			finish := func(w http.ResponseWriter, r *http.Request) {
+				received <- r.Header.Clone()
+				w.Header().Set("Content-Type", "application/json")
+				fmt.Fprint(w, `{"jsonrpc":"2.0","id":1,"result":{}}`)
+			}
+			var origin, target *httptest.Server
+			target = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/finish" {
+					finish(w, r)
+					return
+				}
+				destination := "/finish"
+				if route == "origin-roundtrip" {
+					destination = origin.URL + "/finish"
+				}
+				http.Redirect(w, r, destination, http.StatusTemporaryRedirect)
+			}))
+			defer target.Close()
+			origin = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/finish" {
+					finish(w, r)
+					return
+				}
+				if r.URL.Path == "/middle" {
+					http.Redirect(w, r, "/finish", http.StatusTemporaryRedirect)
+					return
+				}
+				if r.Header.Get("Authorization") != "Bearer synthetic-token" {
+					t.Error("initial request lost its authorization")
+				}
+				destination := target.URL + "/middle"
+				if route == "same-origin-chain" {
+					destination = "/middle"
+				}
+				http.Redirect(w, r, destination, http.StatusTemporaryRedirect)
+			}))
+			defer origin.Close()
+			transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{
+				URL: origin.URL,
+				Headers: map[string]string{
+					"Authorization": "Bearer synthetic-token", "Proxy-Authorization": "Basic synthetic-proxy",
+					"Cookie": "synthetic-cookie=value", "Cookie2": "synthetic-cookie2=value", "X-Trace": "keep",
+				},
+			})
+			if err := transport.Start(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			defer transport.Close(context.Background())
+			for range 2 { // Credential stripping belongs to one request, not the transport.
+				if err := transport.Send(context.Background(), &protocol.JsonRpcRequest{
+					JSONRPC: protocol.JSONRPCVersion, ID: protocol.NumberId(1), Method: "test",
+				}); err != nil {
+					t.Fatal(err)
+				}
+				got := <-received
+				for _, name := range []string{"Authorization", "Proxy-Authorization", "Cookie", "Cookie2"} {
+					if present, want := got.Get(name) != "", route == "same-origin-chain"; present != want {
+						t.Errorf("final %s present=%v, want %v", name, present, want)
+					}
+				}
+				if got.Get("X-Trace") != "keep" {
+					t.Error("redirect lost nonsensitive header")
+				}
+			}
+		})
+	}
+}
+
+func TestStreamableHTTPRedirectLimitRemainsTen(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		http.Redirect(w, r, r.URL.String(), http.StatusTemporaryRedirect)
+	}))
+	defer server.Close()
+	transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{URL: server.URL})
+	if err := transport.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	err := transport.Send(context.Background(), &protocol.JsonRpcRequest{
+		JSONRPC: protocol.JSONRPCVersion, ID: protocol.NumberId(1), Method: "test",
+	})
+	if err == nil || !strings.Contains(err.Error(), "stopped after 10 redirects") {
+		t.Fatalf("redirect limit error = %v", err)
+	}
+	if got := requests.Load(); got != 10 {
+		t.Fatalf("redirect requests = %d, want 10", got)
+	}
+}
+
+// pi v1.4.0 (4a080252), packages/mcp/src/transports/streamable-http.ts uses
+// Fetch, which removes sensitive authentication headers on an origin change.
+func TestStreamableHTTPRedirectDoesNotForwardAuthorizationAcrossPorts(t *testing.T) {
+	for _, crossOrigin := range []bool{false, true} {
+		name := "same-origin"
+		if crossOrigin {
+			name = "different-port"
+		}
+		t.Run(name, func(t *testing.T) {
+			received := make(chan http.Header, 1)
+			finish := func(w http.ResponseWriter, r *http.Request) {
+				received <- r.Header.Clone()
+				w.Header().Set("Content-Type", "application/json")
+				fmt.Fprint(w, `{"jsonrpc":"2.0","id":1,"result":{}}`)
+			}
+			target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { finish(w, r) }))
+			defer target.Close()
+			origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/start" {
+					destination := "/finish"
+					if crossOrigin {
+						destination = target.URL
+					}
+					http.Redirect(w, r, destination, http.StatusTemporaryRedirect)
+					return
+				}
+				finish(w, r)
+			}))
+			defer origin.Close()
+			transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{
+				URL: origin.URL + "/start",
+				Headers: map[string]string{
+					"Authorization":       "Bearer synthetic-secret",
+					"Proxy-Authorization": "Basic synthetic-secret",
+					"Cookie":              "synthetic-cookie=value",
+					"Cookie2":             "synthetic-cookie2=value",
+				},
+			})
+			if err := transport.Start(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = transport.Close(context.Background()) })
+			err := transport.Send(context.Background(), &protocol.JsonRpcRequest{
+				JSONRPC: protocol.JSONRPCVersion, ID: protocol.NumberId(1), Method: "test",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := <-received
+			for name, want := range map[string]string{
+				"Authorization":       "Bearer synthetic-secret",
+				"Proxy-Authorization": "Basic synthetic-secret",
+				"Cookie":              "synthetic-cookie=value",
+				"Cookie2":             "synthetic-cookie2=value",
+			} {
+				if crossOrigin {
+					want = ""
+				}
+				if value := got.Get(name); value != want {
+					t.Errorf("redirect destination %s = %q, want %q", name, value, want)
+				}
+			}
+		})
+	}
 }

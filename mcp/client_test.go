@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/mcp/protocol"
 	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/dat267/pier/mcp/protocol"
 )
 
 // Port of packages/mcp/test/client.test.ts: the in-memory pair plays the
@@ -911,4 +910,559 @@ func blockUntilCleanup(t *testing.T) <-chan struct{} {
 	release := make(chan struct{})
 	t.Cleanup(func() { close(release) })
 	return release
+}
+
+// D312: pi v1.4.0 packages/mcp/src/client.ts iterates its live Set, so a
+// listener removed by an earlier callback is skipped for the current message.
+// Go's lock-safe snapshot intentionally keeps already-admitted listeners.
+func TestClientNotificationUnsubscribeDuringDispatchUsesSnapshot(t *testing.T) {
+	client := NewClient(ClientOptions{})
+	var got []string
+	var removeSecond func()
+	client.OnNotification("test/event", func(json.RawMessage) {
+		got = append(got, "first")
+		removeSecond()
+	})
+	removeSecond = client.OnNotification("test/event", func(json.RawMessage) {
+		got = append(got, "second")
+	})
+
+	client.handleNotification(&protocol.JsonRpcNotification{Method: "test/event"})
+	if len(got) != 2 || got[0] != "first" || got[1] != "second" {
+		t.Fatalf("listeners called = %v, want [first second] for the admitted snapshot", got)
+	}
+}
+
+// Reference: pi v1.4.0 packages/mcp/src/client.ts validateListPage returns the
+// original parsed tool objects, preserving inputSchema property enumeration
+// order rather than rebuilding the object through an unordered map.
+func TestClientListToolsPreservesInputSchemaPropertyOrder(t *testing.T) {
+	client, server := connectTestClient(t)
+	defer func() {
+		if err := client.Close(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}()
+	server.setHandler("tools/list", func(*protocol.JsonRpcRequest) (any, error) {
+		return json.RawMessage(`{"tools":[{"name":"ordered","inputSchema":{"type":"object","properties":{"z":{"type":"string"},"a":{"type":"integer"}}}}]}`), nil
+	})
+
+	tools, err := client.ListTools(context.Background(), RequestOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	const want = `{"type":"object","properties":{"z":{"type":"string"},"a":{"type":"integer"}}}`
+	if len(tools) != 1 || string(tools[0].InputSchema) != want {
+		if len(tools) == 1 {
+			t.Fatalf("input schema = %s, want %s", tools[0].InputSchema, want)
+		}
+		t.Fatalf("tools = %+v, want one ordered tool", tools)
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252), packages/mcp/src/client.ts
+// requestInternal and stdio.ts/streamable-http.ts propagate JSON serialization
+// failures even when requestInternal adds a progress token.
+func TestClientRejectsCyclicArgumentsWithProgress(t *testing.T) {
+	for _, progress := range []bool{false, true} {
+		name := "plain"
+		if progress {
+			name = "progress"
+		}
+		t.Run(name, func(t *testing.T) {
+			client, server := connectTestClient(t)
+			defer client.Close(context.Background())
+			server.setHandler("tools/call", func(*protocol.JsonRpcRequest) (any, error) { return map[string]any{"content": []any{}}, nil })
+			args := map[string]any{}
+			args["self"] = args
+			options := RequestOptions{}
+			if progress {
+				options.OnProgress = func(*protocol.ProgressNotification) {}
+			}
+			_, err := client.CallTool(context.Background(), "echo", args, options)
+			if err == nil || !strings.Contains(err.Error(), "encountered a cycle") {
+				t.Fatalf("cyclic arguments error = %v, want serialization failure", err)
+			}
+			for _, message := range server.recordedMessages() {
+				if request, ok := message.(*protocol.JsonRpcRequest); ok && request.Method == "tools/call" {
+					t.Fatalf("unserializable tool call reached server: %+v", request)
+				}
+			}
+		})
+	}
+}
+
+// Reference: pi v1.4.0 packages/mcp/src/client.ts handleRequest catches an
+// exception from the registered handler and sends a JSON-RPC error response.
+func TestClientServerRequestHandlerPanicBecomesRPCError(t *testing.T) {
+	client, server := connectTestClient(t)
+	defer client.Close(context.Background())
+	client.SetRequestHandler("explode", func(context.Context, json.RawMessage) (any, error) {
+		panic(errors.New("handler failed"))
+	})
+	response := make(chan *protocol.JsonRpcResponse, 1)
+	server.transport.OnMessage(func(message Message) {
+		if reply, ok := message.(*protocol.JsonRpcResponse); ok && reply.ID == protocol.StringId("panic-request") {
+			response <- reply
+		}
+	})
+	if err := server.transport.Send(context.Background(), protocol.JsonRpcRequest{
+		JSONRPC: protocol.JSONRPCVersion, ID: protocol.StringId("panic-request"), Method: "explode",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case reply := <-response:
+		if reply.Error == nil || reply.Error.Code != protocol.JSONRPCErrorCode.InternalError || reply.Error.Message != "handler failed" {
+			t.Fatalf("panic response = %+v, want internal error handler failed", reply)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("handler panic produced no JSON-RPC error response")
+	}
+}
+
+// Reference: pi v1.4.0 packages/mcp/src/client.ts handleMessage starts the async
+// handleRequest without awaiting it. A handler awaiting cancellation must not
+// block the stdio reader from dispatching notifications/cancelled.
+func TestClientStdioHandlerCanReceiveCancellation(t *testing.T) {
+	transport := NewStdioTransport(StdioTransportOptions{
+		Command: stdioFixtureBin,
+		Env:     map[string]string{"PIER_MCP_CANCEL_REQUEST_FIXTURE": "1"},
+	})
+	client := NewClient(ClientOptions{Name: "cancel-test", Version: "1"})
+	defer client.Close(context.Background())
+	entered, cancelled := make(chan struct{}), make(chan struct{})
+	client.SetRequestHandler("wait", func(ctx context.Context, _ json.RawMessage) (any, error) {
+		close(entered)
+		<-ctx.Done()
+		close(cancelled)
+		return nil, ctx.Err()
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := client.Connect(ctx, transport); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-entered:
+	case <-ctx.Done():
+		t.Fatal("server request handler did not start")
+	}
+	select {
+	case <-cancelled:
+	case <-ctx.Done():
+		t.Fatal("request handler blocked the stdio reader from dispatching cancellation")
+	}
+}
+
+// pi v1.4.0 client.ts uses nullish fallback for request timeoutMs, so an
+// explicit zero overrides the client default and disables the request timer.
+func TestClientExplicitZeroTimeoutOverridesClientDefault(t *testing.T) {
+	server, clientTransport := newTestServer()
+	server.setHandler("initialize", func(*protocol.JsonRpcRequest) (any, error) {
+		return map[string]any{
+			"protocolVersion": protocol.LatestProtocolVersion,
+			"capabilities":    map[string]any{},
+			"serverInfo":      map[string]any{"name": "test-server", "version": "1.0.0"},
+		}, nil
+	})
+	release := make(chan struct{})
+	server.setHandler("tools/call", func(*protocol.JsonRpcRequest) (any, error) {
+		<-release
+		return map[string]any{"content": []any{}}, nil
+	})
+	// Keep initialize's default timeout generous under the race detector; the
+	// later caller deadline still distinguishes zero from this client default.
+	client := NewClient(ClientOptions{Name: "test-client", Version: "1.0.0", RequestTimeoutMs: 100})
+	if _, err := client.Connect(context.Background(), clientTransport); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		close(release)
+		_ = client.Close(context.Background())
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	_, err := client.CallTool(ctx, "wait", nil, RequestOptions{TimeoutMs: 0, TimeoutMsSet: true})
+	if _, ok := errors.AsType[*protocol.McpAbortError](err); !ok {
+		t.Fatalf("explicit zero returned %v (%T), want caller-context abort", err, err)
+	}
+}
+
+// Reference: pi v1.4.0 packages/mcp/src/client.ts listResourcesPage maps
+// zero validated entries to a non-nil empty resources array.
+func TestClientEmptyResourcePageReturnsEmptySlice(t *testing.T) {
+	client, server := connectTestClient(t)
+	defer func() {
+		if err := client.Close(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}()
+	server.setHandler("resources/list", func(*protocol.JsonRpcRequest) (any, error) {
+		return map[string]any{"resources": []any{}}, nil
+	})
+
+	page, err := client.ListResourcesPage(context.Background(), nil, RequestOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.Resources == nil || len(page.Resources) != 0 {
+		t.Fatalf("resources = %#v, want non-nil empty slice", page.Resources)
+	}
+}
+
+// Reference: pi v1.4.0 packages/mcp/src/client.ts listResourceTemplatesPage
+// maps zero validated entries to a non-nil empty resourceTemplates array.
+func TestClientEmptyResourceTemplatePageReturnsEmptySlice(t *testing.T) {
+	client, server := connectTestClient(t)
+	defer func() {
+		if err := client.Close(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}()
+	server.setHandler("resources/templates/list", func(*protocol.JsonRpcRequest) (any, error) {
+		return map[string]any{"resourceTemplates": []any{}}, nil
+	})
+
+	page, err := client.ListResourceTemplatesPage(context.Background(), nil, RequestOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.ResourceTemplates == nil || len(page.ResourceTemplates) != 0 {
+		t.Fatalf("resourceTemplates = %#v, want non-nil empty slice", page.ResourceTemplates)
+	}
+}
+
+// pi v1.4.0 client.ts arms request timers with setTimeout for every finite,
+// positive timeout, which clamps delays above 2^31-1 to 1ms.
+func TestClientLargeRequestTimeoutUsesJavaScriptTimerClamp(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		timeoutMs int64
+	}{
+		{name: "over_timer_range", timeoutMs: 1 << 31},
+		{name: "over_safe_integer", timeoutMs: 1 << 54},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			timeoutMs := test.timeoutMs
+			server, clientTransport := newTestServer()
+			server.setHandler("initialize", func(*protocol.JsonRpcRequest) (any, error) {
+				return map[string]any{
+					"protocolVersion": protocol.LatestProtocolVersion,
+					"capabilities":    map[string]any{},
+					"serverInfo":      map[string]any{"name": "test-server", "version": "1.0.0"},
+				}, nil
+			})
+			release := make(chan struct{})
+			server.setHandler("tools/call", func(*protocol.JsonRpcRequest) (any, error) {
+				<-release
+				return map[string]any{"content": []any{}}, nil
+			})
+			client := NewClient(ClientOptions{Name: "test-client", Version: "1.0.0"})
+			if _, err := client.Connect(context.Background(), clientTransport); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				close(release)
+				_ = client.Close(context.Background())
+			})
+
+			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+			_, err := client.CallTool(ctx, "wait", nil, RequestOptions{TimeoutMs: timeoutMs})
+			cancel()
+			if _, ok := errors.AsType[*protocol.McpTimeoutError](err); !ok {
+				t.Fatalf("timeout %d returned %v (%T), want MCP timeout", timeoutMs, err, err)
+			}
+			if err := client.Close(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+// pi v1.4.0 client.ts uses ?? for requestTimeoutMs, so an explicit client-level
+// zero disables the inherited request timer instead of selecting 30 seconds.
+func TestClientExplicitZeroDefaultTimeoutDisablesTimer(t *testing.T) {
+	server, clientTransport := newTestServer()
+	server.setHandler("initialize", func(*protocol.JsonRpcRequest) (any, error) {
+		return map[string]any{
+			"protocolVersion": protocol.LatestProtocolVersion,
+			"capabilities":    map[string]any{},
+			"serverInfo":      map[string]any{"name": "test-server", "version": "1.0.0"},
+		}, nil
+	})
+	release := make(chan struct{})
+	server.setHandler("tools/call", func(*protocol.JsonRpcRequest) (any, error) {
+		<-release
+		return map[string]any{"content": []any{}}, nil
+	})
+	client := NewClient(ClientOptions{Name: "test-client", Version: "1.0.0", RequestTimeoutMs: 0, RequestTimeoutMsSet: true})
+	if _, err := client.Connect(context.Background(), clientTransport); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		close(release)
+		_ = client.Close(context.Background())
+	})
+	go func() { _, _ = client.CallTool(context.Background(), "wait", nil, RequestOptions{}) }()
+
+	deadline := time.Now().Add(time.Second)
+	for {
+		client.mu.Lock()
+		var timeoutMs int64
+		for _, pending := range client.pending {
+			timeoutMs = pending.timeoutMs
+			break
+		}
+		pending := len(client.pending) > 0
+		client.mu.Unlock()
+		if pending {
+			if timeoutMs != 0 {
+				t.Fatalf("pending request timeout = %dms, want explicit zero", timeoutMs)
+			}
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("request was never pending")
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+type blockedUnknownReplyTransport struct {
+	Transport
+	entered, release chan struct{}
+}
+
+func (b *blockedUnknownReplyTransport) Send(ctx context.Context, message Message) error {
+	if reply, ok := message.(protocol.JsonRpcResponse); ok && reply.Error != nil && reply.Error.Code == protocol.JSONRPCErrorCode.MethodNotFound {
+		close(b.entered)
+		select {
+		case <-b.release:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return b.Transport.Send(ctx, message)
+}
+
+// pi v1.4.0 (4a080252), mcp/src/client.ts handleMessage launches the async
+// handleRequest without awaiting it, including an unknown method's error reply.
+// A blocked stdio write must not stall the reader's unrelated responses.
+func TestClientUnknownRequestReplyDoesNotBlockResponses(t *testing.T) {
+	server, transport := newTestServer()
+	server.setHandler("initialize", func(*protocol.JsonRpcRequest) (any, error) {
+		return map[string]any{
+			"protocolVersion": protocol.LatestProtocolVersion,
+			"capabilities":    map[string]any{},
+			"serverInfo":      map[string]any{"name": "test", "version": "1"},
+		}, nil
+	})
+	server.setHandler("ping", func(*protocol.JsonRpcRequest) (any, error) { return map[string]any{}, nil })
+	blocked := &blockedUnknownReplyTransport{Transport: transport, entered: make(chan struct{}), release: make(chan struct{})}
+	client := NewClient(ClientOptions{Name: "test", Version: "1"})
+	defer client.Close(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if _, err := client.Connect(ctx, blocked); err != nil {
+		t.Fatal(err)
+	}
+	unblock := sync.OnceFunc(func() { close(blocked.release) })
+	defer unblock()
+	replies := make(chan *protocol.JsonRpcResponse, 1)
+	server.transport.OnMessage(func(message Message) {
+		if reply, ok := message.(*protocol.JsonRpcResponse); ok && reply.ID == protocol.StringId("unknown") {
+			replies <- reply
+		}
+	})
+	if err := server.transport.Send(ctx, protocol.JsonRpcRequest{
+		JSONRPC: protocol.JSONRPCVersion, ID: protocol.StringId("unknown"), Method: "unregistered",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-blocked.entered:
+	case <-ctx.Done():
+		t.Fatal("unknown request reply did not reach the blocked writer")
+	}
+	if err := client.Ping(ctx, RequestOptions{}); err != nil {
+		t.Fatalf("blocked unknown-method reply stalled an unrelated response: %v", err)
+	}
+	unblock()
+	select {
+	case reply := <-replies:
+		if reply.Error == nil || reply.Error.Code != protocol.JSONRPCErrorCode.MethodNotFound || reply.Error.Message != "Method not found: unregistered" {
+			t.Fatalf("unknown-method reply = %+v", reply)
+		}
+	case <-ctx.Done():
+		t.Fatal("unknown-method reply was not delivered after output recovered")
+	}
+}
+
+type initializedSendBarrier struct {
+	Transport
+	entered chan struct{}
+	release chan struct{}
+}
+
+func (b *initializedSendBarrier) Send(ctx context.Context, message Message) error {
+	err := b.Transport.Send(ctx, message)
+	if notification, ok := message.(*protocol.JsonRpcNotification); ok && notification.Method == "notifications/initialized" && err == nil {
+		close(b.entered)
+		<-b.release // Dispatch already succeeded; hold only its completion.
+	}
+	return err
+}
+
+// D302: pi v1.4.0 (4a080252), packages/mcp/src/client.ts connect() also
+// assigns connected unconditionally after await notifyInternal. Pier preserves
+// the terminal closed state if Close or a transport drop won in that interval.
+func TestClientConnectDoesNotResurrectClosedConnection(t *testing.T) {
+	for _, mode := range []string{"control", "client close", "peer drop"} {
+		t.Run(mode, func(t *testing.T) {
+			server, transport := newTestServer()
+			server.setHandler("initialize", func(*protocol.JsonRpcRequest) (any, error) {
+				return map[string]any{
+					"protocolVersion": protocol.LatestProtocolVersion,
+					"capabilities":    map[string]any{},
+					"serverInfo":      map[string]any{"name": "fixture", "version": "1"},
+				}, nil
+			})
+			barrier := &initializedSendBarrier{Transport: transport, entered: make(chan struct{}), release: make(chan struct{})}
+			var releaseOnce sync.Once
+			release := func() { releaseOnce.Do(func() { close(barrier.release) }) }
+			defer release()
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			client := NewClient(ClientOptions{Name: "fixture", Version: "1"})
+			defer client.Close(context.Background())
+			done := make(chan error, 1)
+			go func() { _, err := client.Connect(ctx, barrier); done <- err }()
+			select {
+			case <-barrier.entered:
+			case <-ctx.Done():
+				t.Fatal(ctx.Err())
+			}
+			switch mode {
+			case "client close":
+				if err := client.Close(ctx); err != nil {
+					t.Fatal(err)
+				}
+			case "peer drop":
+				if err := server.transport.Close(ctx); err != nil {
+					t.Fatal(err)
+				}
+			}
+			release()
+			var err error
+			select {
+			case err = <-done:
+			case <-ctx.Done():
+				t.Fatal(ctx.Err())
+			}
+			if mode == "control" {
+				if err != nil || client.ConnectionState() != StateConnected {
+					t.Fatalf("control connect err=%v state=%s", err, client.ConnectionState())
+				}
+				return
+			}
+			var closed *protocol.McpConnectionClosedError
+			if !errors.As(err, &closed) || client.ConnectionState() != StateClosed {
+				t.Fatalf("closed client resurrected: connect err=%v state=%s", err, client.ConnectionState())
+			}
+		})
+	}
+}
+
+// Reference: pi v1.4.0 packages/mcp/src/client.ts handleRequest copies
+// McpError.data into the JSON-RPC error response without restricting its type.
+func TestClientServedRequestPreservesStructuredErrorData(t *testing.T) {
+	client, server := connectTestClient(t)
+	defer func() {
+		if err := client.Close(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	client.SetRequestHandler("test/structured-error", func(context.Context, json.RawMessage) (any, error) {
+		return nil, &protocol.McpError{
+			Code: 1234,
+			Msg:  "structured failure",
+			Data: map[string]any{"retryable": false, "attempt": 2},
+		}
+	})
+	responses := make(chan *protocol.JsonRpcResponse, 1)
+	server.transport.OnMessage(func(message Message) {
+		if response, ok := message.(*protocol.JsonRpcResponse); ok && response.ID == protocol.StringId("incoming") {
+			responses <- response
+		}
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err := server.transport.Send(ctx, protocol.JsonRpcRequest{
+		JSONRPC: protocol.JSONRPCVersion,
+		ID:      protocol.StringId("incoming"),
+		Method:  "test/structured-error",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case response := <-responses:
+		if response.Error == nil {
+			t.Fatalf("response = %+v, want an error", response)
+		}
+		var data map[string]any
+		if err := json.Unmarshal(response.Error.Data, &data); err != nil {
+			t.Fatalf("error data = %s, %v", response.Error.Data, err)
+		}
+		if data["retryable"] != false || data["attempt"] != float64(2) {
+			t.Fatalf("error data = %#v", data)
+		}
+	case <-ctx.Done():
+		t.Fatal("no response to served request")
+	}
+}
+
+// Reference: pi v1.4.0 packages/mcp/src/client.ts handleRequest normalizes a
+// null handler result to an empty object with `result ?? {}`.
+func TestClientServedRequestNormalizesTypedNilResult(t *testing.T) {
+	client, server := connectTestClient(t)
+	defer func() {
+		if err := client.Close(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	client.SetRequestHandler("test/empty-result", func(context.Context, json.RawMessage) (any, error) {
+		var result map[string]any
+		return result, nil
+	})
+	responses := make(chan *protocol.JsonRpcResponse, 1)
+	server.transport.OnMessage(func(message Message) {
+		if response, ok := message.(*protocol.JsonRpcResponse); ok && response.ID == protocol.StringId("empty") {
+			responses <- response
+		}
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err := server.transport.Send(ctx, protocol.JsonRpcRequest{
+		JSONRPC: protocol.JSONRPCVersion,
+		ID:      protocol.StringId("empty"),
+		Method:  "test/empty-result",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case response := <-responses:
+		if string(response.Result) != `{}` {
+			t.Fatalf("result = %s, want {}", response.Result)
+		}
+	case <-ctx.Done():
+		t.Fatal("no response to served request")
+	}
 }

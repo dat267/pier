@@ -3,11 +3,11 @@ package mcp
 import (
 	"context"
 	"errors"
+	"github.com/dat267/pier/mcp/protocol"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
-
-	"github.com/dat267/pier/mcp/protocol"
 )
 
 // Reference: pi v1.4.0 packages/mcp/src/transports/transport.ts keeps listeners
@@ -93,5 +93,37 @@ func TestClientErrorUnsubscribeSurvivesListenerRegistration(t *testing.T) {
 	server.transport.peer.EmitError(errors.New("probe"))
 	if first != 0 || second != 1 {
 		t.Fatalf("error listener calls = (%d, %d), want (0, 1)", first, second)
+	}
+}
+
+// pi v1.4.0 transports/in-memory.ts queues one microtask per send. The event
+// loop delivers sequential sends in FIFO order, never concurrently.
+func TestInMemoryTransportPreservesSendOrder(t *testing.T) {
+	client, server := CreateInMemoryTransportPair()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	t.Cleanup(func() { _ = client.Close(context.Background()) })
+	for _, transport := range []*InMemoryTransport{client, server} {
+		if err := transport.Start(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const count = 64
+	received := make(chan string, count)
+	server.OnMessage(func(message Message) { received <- message.(*protocol.JsonRpcNotification).Method })
+	for index := range count {
+		if err := client.Send(ctx, &protocol.JsonRpcNotification{JSONRPC: "2.0", Method: strconv.Itoa(index)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for index := range count {
+		select {
+		case method := <-received:
+			if want := strconv.Itoa(index); method != want {
+				t.Fatalf("notification %d = %s, want %s (FIFO)", index, method, want)
+			}
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		}
 	}
 }
