@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -61,7 +62,7 @@ func TestAltSearchAgainstUpstreamGolden(t *testing.T) {
 	for label := range corpus {
 		labels = append(labels, label)
 	}
-	sortStrings(labels)
+	slices.Sort(labels)
 
 	for _, label := range labels {
 		spec := corpus[label]

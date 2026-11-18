@@ -1,7 +1,5 @@
 package highlight
 
-import ()
-
 func init() { RegisterLanguage("lua", Lua()) }
 
 var luaLongBracketStart = mustCompileJS(`\A\[=*\[`)

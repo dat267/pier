@@ -35,9 +35,6 @@ func CLIColorsEnabled() bool {
 	return cliColorsState.enabled.Load()
 }
 
-// knownCINames are the CI providers supports-color colors without a terminal.
-var knownCINames = []string{"TRAVIS", "CIRCLECI", "APPVEYOR", "GITLAB_CI", "GITHUB_ACTIONS", "BUILDKITE"}
-
 // ResolveCLIColors is supports-color's boolean answer for one process: true
 // when diagnostics may be colored. isTTY is stdout's terminal state (chalk
 // detects on stdout, not stderr, so a colored error still appears when only

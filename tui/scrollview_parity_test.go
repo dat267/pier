@@ -65,7 +65,7 @@ func TestScrollViewAgainstUpstreamGolden(t *testing.T) {
 	for label := range golden {
 		labels = append(labels, label)
 	}
-	sortStrings(labels)
+	slices.Sort(labels)
 
 	for _, label := range labels {
 		spec := golden[label].Spec

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -140,7 +141,7 @@ func TestMainScreenAgainstUpstreamGolden(t *testing.T) {
 	for label := range corpus {
 		labels = append(labels, label)
 	}
-	sortStrings(labels)
+	slices.Sort(labels)
 
 	for _, label := range labels {
 		spec := corpus[label]

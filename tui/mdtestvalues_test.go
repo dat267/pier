@@ -2,6 +2,7 @@ package tui
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 )
 
@@ -30,7 +31,7 @@ func stableMDValue(value any) string {
 		for key := range typed {
 			keys = append(keys, key)
 		}
-		sortStrings(keys)
+		slices.Sort(keys)
 		parts := make([]string, 0, len(keys))
 		for _, key := range keys {
 			parts = append(parts, mustJSON(key)+":"+stableMDValue(typed[key]))

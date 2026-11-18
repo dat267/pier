@@ -1,6 +1,9 @@
 package tui
 
-import "sync/atomic"
+import (
+	"slices"
+	"sync/atomic"
+)
 
 // Port of src/keybindings.ts: the keybinding definitions, the manager with
 // user overrides and conflict detection, and the global accessor.
@@ -216,7 +219,7 @@ func buildKeybindingsSnapshot(definitions map[Keybinding]KeybindingDefinition, o
 	for key := range userClaims {
 		claimedKeys = append(claimedKeys, key)
 	}
-	sortStrings(claimedKeys)
+	slices.Sort(claimedKeys)
 	for _, key := range claimedKeys {
 		claimants := userClaims[key]
 		if len(claimants) > 1 {
@@ -224,7 +227,7 @@ func buildKeybindingsSnapshot(definitions map[Keybinding]KeybindingDefinition, o
 			for name := range claimants {
 				names = append(names, name)
 			}
-			sortStrings(names)
+			slices.Sort(names)
 			snapshot.conflicts = append(snapshot.conflicts, KeybindingConflict{Key: key, Keybindings: names})
 		}
 	}
@@ -359,17 +362,9 @@ func canonicalBindingOrder(definitions map[Keybinding]KeybindingDefinition) []Ke
 	for key := range definitions {
 		keys = append(keys, key)
 	}
-	sortStrings(keys)
+	slices.Sort(keys)
 	order = append(order, keys...)
 	return order
-}
-
-func sortStrings(values []string) {
-	for i := 1; i < len(values); i++ {
-		for j := i; j > 0 && values[j] < values[j-1]; j-- {
-			values[j], values[j-1] = values[j-1], values[j]
-		}
-	}
 }
 
 var globalKeybindingsState struct {

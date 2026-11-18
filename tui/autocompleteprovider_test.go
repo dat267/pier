@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -214,7 +215,7 @@ func TestAutocompleteAgainstUpstreamGolden(t *testing.T) {
 	for label := range corpus {
 		labels = append(labels, label)
 	}
-	sortStrings(labels)
+	slices.Sort(labels)
 
 	for _, label := range labels {
 		spec := corpus[label]

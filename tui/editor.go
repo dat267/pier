@@ -1206,7 +1206,7 @@ func (e *Editor) handleBackspaceLocked() {
 					higherIDs = append(higherIDs, id)
 				}
 			}
-			sortInts(higherIDs)
+			slices.Sort(higherIDs)
 			for _, id := range higherIDs {
 				e.pastes[id-1] = e.pastes[id]
 				delete(e.pastes, id)
@@ -1251,14 +1251,6 @@ func (e *Editor) handleBackspaceLocked() {
 			e.tryTriggerAutocompleteLocked()
 		} else if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers) {
 			e.tryTriggerAutocompleteLocked()
-		}
-	}
-}
-
-func sortInts(values []int) {
-	for i := 1; i < len(values); i++ {
-		for j := i; j > 0 && values[j] < values[j-1]; j-- {
-			values[j], values[j-1] = values[j-1], values[j]
 		}
 	}
 }

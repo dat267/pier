@@ -543,7 +543,7 @@ func TestDisposeStopsSessionCacheWarming(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				model := warmerModel()
-				warmer, manager, runs := newTestWarmer(t, model, CacheWarmingIdle)
+				warmer, manager, runs := newTestWarmer(t, CacheWarmingIdle)
 				defer warmer.Cancel()
 				manager.AppendMessage(&ai.AssistantMessage{
 					API: model.API, Provider: model.Provider, Model: model.ID, StopReason: ai.StopStop,

@@ -79,7 +79,7 @@ func TestGetPromptCacheTTLMs(t *testing.T) {
 func TestCacheWarmerStopsWhenTTLMillisecondsWouldOverflow(t *testing.T) {
 	model := warmerModel()
 	model.PromptCache[ai.CacheRetentionShort] = 18_446_744_073_709_602
-	warmer, manager, _ := newTestWarmer(t, model, CacheWarmingStreaming)
+	warmer, manager, _ := newTestWarmer(t, CacheWarmingStreaming)
 	manager.AppendMessage(&ai.AssistantMessage{
 		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
 		Usage: ai.Usage{Input: 1000, TotalTokens: 1000},
@@ -125,7 +125,7 @@ func TestIsCacheWarmingReplayable(t *testing.T) {
 	}
 }
 
-func newTestWarmer(t *testing.T, model *ai.Model, mode CacheWarmingMode) (*CacheWarmer, *SessionManager, *atomic.Int64) {
+func newTestWarmer(t *testing.T, mode CacheWarmingMode) (*CacheWarmer, *SessionManager, *atomic.Int64) {
 	t.Helper()
 	manager := newTestSessionManager(t)
 	var runs atomic.Int64
@@ -155,7 +155,7 @@ func newTestWarmer(t *testing.T, model *ai.Model, mode CacheWarmingMode) (*Cache
 
 func TestCacheWarmerStartStopReasons(t *testing.T) {
 	model := warmerModel()
-	warmer, _, runs := newTestWarmer(t, model, CacheWarmingIdle)
+	warmer, _, runs := newTestWarmer(t, CacheWarmingIdle)
 
 	// Waiting for the first request.
 	if status := warmer.Status(); status.State != "inactive" || status.Reason != "waiting for first request" {
@@ -202,7 +202,7 @@ func TestCacheWarmerStartStopReasons(t *testing.T) {
 
 func TestCacheWarmerEconomicsAndWarm(t *testing.T) {
 	model := warmerModel()
-	warmer, manager, runs := newTestWarmer(t, model, CacheWarmingIdle)
+	warmer, manager, runs := newTestWarmer(t, CacheWarmingIdle)
 
 	// Seed usage so the economics are available: 1000 prompt tokens.
 	manager.AppendMessage(&ai.AssistantMessage{
@@ -290,7 +290,7 @@ func TestCacheWarmerEconomicsAndWarm(t *testing.T) {
 func TestCacheWarmerStatusConcurrentWithAgentSettle(t *testing.T) {
 	model := warmerModel()
 	model.PromptCache[ai.CacheRetentionShort] = 3600
-	warmer, manager, _ := newTestWarmer(t, model, CacheWarmingIdle)
+	warmer, manager, _ := newTestWarmer(t, CacheWarmingIdle)
 	defer warmer.Cancel()
 	manager.AppendMessage(&ai.AssistantMessage{
 		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
@@ -324,7 +324,7 @@ func TestCacheWarmerStatusConcurrentWithAgentSettle(t *testing.T) {
 
 func TestCacheWarmerStreamingModeStopsAtSettle(t *testing.T) {
 	model := warmerModel()
-	warmer, manager, runs := newTestWarmer(t, model, CacheWarmingStreaming)
+	warmer, manager, runs := newTestWarmer(t, CacheWarmingStreaming)
 	manager.AppendMessage(&ai.AssistantMessage{
 		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
 		Content: ai.ContentList{ai.TextContent{Text: "reply"}}, StopReason: ai.StopStop,
@@ -347,7 +347,7 @@ func TestCacheWarmerStreamingModeStopsAtSettle(t *testing.T) {
 
 func TestCacheWarmerStaleContext(t *testing.T) {
 	model := warmerModel()
-	warmer, manager, _ := newTestWarmer(t, model, CacheWarmingIdle)
+	warmer, manager, _ := newTestWarmer(t, CacheWarmingIdle)
 	manager.AppendMessage(&ai.AssistantMessage{
 		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
 		Content: ai.ContentList{ai.TextContent{Text: "reply"}}, StopReason: ai.StopStop,
@@ -420,7 +420,7 @@ func TestSessionCacheWarmingWiring(t *testing.T) {
 	model := warmerModel()
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	session := newControlSession(t, model, settings)
-	warmer, manager, runs := newTestWarmer(t, model, session.control.Settings.GetCacheWarmingMode())
+	warmer, manager, runs := newTestWarmer(t, session.control.Settings.GetCacheWarmingMode())
 	session.CacheWarmer = warmer
 	settings.SetCacheWarmingMode(CacheWarmingIdle)
 	// The test warmer reads its mode from the holder; keep it in sync with the
@@ -552,7 +552,7 @@ func TestCacheWarmerSkipsRefreshPastDispatchDeadline(t *testing.T) {
 		t.Run(fixture.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				model := warmerModel()
-				warmer, manager, requests := newTestWarmer(t, model, CacheWarmingIdle)
+				warmer, manager, requests := newTestWarmer(t, CacheWarmingIdle)
 				defer warmer.Cancel()
 				manager.AppendMessage(&ai.AssistantMessage{
 					API: model.API, Provider: model.Provider, Model: model.ID, StopReason: ai.StopStop,

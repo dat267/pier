@@ -13,10 +13,9 @@ import (
 // buffers its response before validation, so an oversized body must be rejected
 // as a protocol error instead of being held in memory.
 const (
-	oversizedClassifierBody  = 2 << 20
-	oversizedCatalogBody     = 17 << 20
-	oversizedMetadataToken   = 2 << 20
-	oversizedClassifierLimit = 1 << 20
+	oversizedClassifierBody = 2 << 20
+	oversizedCatalogBody    = 17 << 20
+	oversizedMetadataToken  = 2 << 20
 )
 
 func TestOpenAIDecisionsRejectsOversizedResponseBody(t *testing.T) {

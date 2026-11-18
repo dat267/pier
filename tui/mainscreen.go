@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -263,7 +264,7 @@ func (s *MainScreen) deleteKittyImages(ids map[int]bool) string {
 	for id := range ids {
 		ordered = append(ordered, id)
 	}
-	sortInts(ordered)
+	slices.Sort(ordered)
 	for _, id := range ordered {
 		builder.WriteString(DeleteKittyImage(id))
 	}

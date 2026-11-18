@@ -22,7 +22,7 @@ func TestCacheWarmerCallbackFailuresAreBestEffort(t *testing.T) {
 	if mode := os.Getenv(probeEnv); mode != "" {
 		synctest.Test(t, func(t *testing.T) {
 			model := warmerModel()
-			warmer, manager, _ := newTestWarmer(t, model, CacheWarmingIdle)
+			warmer, manager, _ := newTestWarmer(t, CacheWarmingIdle)
 			defer warmer.Cancel()
 			promptTokens := int64(100000)
 			if mode == "decision-stop" {

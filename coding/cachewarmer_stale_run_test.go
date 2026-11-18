@@ -24,7 +24,7 @@ func TestCacheWarmerStaleLifecycleEventCannotStopReplacement(t *testing.T) {
 		t.Run(fixture.name, func(t *testing.T) {
 			model := warmerModel()
 			model.PromptCache[ai.CacheRetentionShort] = 3600
-			warmer, manager, _ := newTestWarmer(t, model, CacheWarmingIdle)
+			warmer, manager, _ := newTestWarmer(t, CacheWarmingIdle)
 			defer warmer.Cancel()
 			manager.AppendMessage(&ai.AssistantMessage{
 				API: model.API, Provider: model.Provider, Model: model.ID, StopReason: ai.StopStop,
@@ -68,7 +68,7 @@ func TestCacheWarmerStaleLifecycleEventCannotStopReplacement(t *testing.T) {
 func TestCacheWarmerStaleRunCannotStopReplacement(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		model := warmerModel()
-		warmer, manager, _ := newTestWarmer(t, model, CacheWarmingIdle)
+		warmer, manager, _ := newTestWarmer(t, CacheWarmingIdle)
 		defer warmer.Cancel()
 		manager.AppendMessage(&ai.AssistantMessage{
 			API: model.API, Provider: model.Provider, Model: model.ID, StopReason: ai.StopStop,
