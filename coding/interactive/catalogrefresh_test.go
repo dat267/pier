@@ -3,14 +3,14 @@ package interactive
 import (
 	"context"
 	"errors"
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
 	"slices"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/coding"
 )
 
 // D456: the reference registers a failed provider in a Map as each concurrent
@@ -104,3 +104,103 @@ func (f *sharingCatalogRuntime) Refresh(ctx context.Context, _ *coding.ModelsRef
 		return ai.ModelsRefreshResult{}, ctx.Err()
 	}
 }
+
+// ---- Chat viewport ----
+
+type fakeCatalogRuntime struct {
+	mu      sync.Mutex
+	calls   int
+	started chan struct{}
+	release chan struct{}
+}
+
+func (f *fakeCatalogRuntime) Refresh(ctx context.Context, options *coding.ModelsRefreshCallOptions) (ai.ModelsRefreshResult, error) {
+	f.mu.Lock()
+	f.calls++
+	f.mu.Unlock()
+	if f.started != nil {
+		select {
+		case f.started <- struct{}{}:
+		default:
+		}
+	}
+	if f.release != nil {
+		select {
+		case <-f.release:
+		case <-ctx.Done():
+			return ai.ModelsRefreshResult{Aborted: true}, ctx.Err()
+		}
+	}
+	return ai.ModelsRefreshResult{}, nil
+}
+
+// TestCatalogRefreshSharing verifies that concurrent refreshes share one call.
+func TestCatalogRefreshSharing(t *testing.T) {
+	runtime := &fakeCatalogRuntime{started: make(chan struct{}, 4), release: make(chan struct{})}
+	coordinator := &ModelCatalogRefreshCoordinator{}
+
+	var wg sync.WaitGroup
+	results := make([]error, 3)
+	for i := range 3 {
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+			_, err := coordinator.Refresh(context.Background(), runtime)
+			results[index] = err
+		}(i)
+	}
+
+	// Wait until all three callers share the in-flight refresh before
+	// releasing it (a late caller would legitimately start a new refresh).
+	deadline := time.Now().Add(2 * time.Second)
+	for coordinator.activeWaiters(runtime) < 3 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if waiters := coordinator.activeWaiters(runtime); waiters != 3 {
+		t.Fatalf("waiters = %d", waiters)
+	}
+	close(runtime.release)
+	wg.Wait()
+
+	for _, err := range results {
+		if err != nil {
+			t.Fatalf("refresh error: %v", err)
+		}
+	}
+	runtime.mu.Lock()
+	calls := runtime.calls
+	runtime.mu.Unlock()
+	if calls != 1 {
+		t.Fatalf("refresh calls = %d", calls)
+	}
+}
+
+// TestCatalogRefreshCancellation verifies per-caller cancellation.
+func TestCatalogRefreshCancellation(t *testing.T) {
+	runtime := &fakeCatalogRuntime{started: make(chan struct{}, 4), release: make(chan struct{})}
+	coordinator := &ModelCatalogRefreshCoordinator{}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		_, err := coordinator.Refresh(ctx, runtime)
+		done <- err
+	}()
+	select {
+	case <-runtime.started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("refresh did not start")
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("expected cancellation error")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("refresh did not return on cancellation")
+	}
+	close(runtime.release)
+}
+
+// ---- Theme controller ----

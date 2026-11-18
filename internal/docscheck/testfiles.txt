@@ -107,6 +107,7 @@ ai/mistral_conversations_test.go
 ai/mistral_test.go
 ai/modeloperations_test.go
 ai/models_refresh_generation_test.go
+ai/models_runtime_auth_test.go
 ai/models_runtime_deferred_merge_test.go
 ai/models_runtime_test.go
 ai/models_test.go
@@ -129,6 +130,7 @@ ai/oauthopenrouter_test.go
 ai/oauthradius_exchange_page_test.go
 ai/openai_codex_responses_test.go
 ai/openai_completions_misc_test.go
+ai/openai_completions_stream_test.go
 ai/openai_completions_test.go
 ai/openai_decisions_test.go
 ai/openai_responses_misc_test.go
@@ -255,6 +257,7 @@ coding/bashkillgate_test.go
 coding/branchprep_parity_test.go
 coding/branchsummary_auth_cancel_test.go
 coding/branchsummary_lifecycle_test.go
+coding/branchsummary_navigate_test.go
 coding/branchsummary_test.go
 coding/cache_usage_boundary_test.go
 coding/cachestats_parity_test.go
@@ -347,7 +350,9 @@ coding/goal_scheduled_round_test.go
 coding/goal_tool_schema_test.go
 coding/goal_toolset_stable_test.go
 coding/goal_wrapup_order_test.go
+coding/goalcontroller_events_test.go
 coding/goalcontroller_test.go
+coding/goalcontroller_tools_test.go
 coding/grep_tool_parity_test.go
 coding/htmlentity_test.go
 coding/image_base64_decoding_test.go
@@ -395,6 +400,7 @@ coding/interactive/exporthtml_stream_test.go
 coding/interactive/exporthtml_test.go
 coding/interactive/extensionsselector_test.go
 coding/interactive/externaleditor_modes_linux_test.go
+coding/interactive/externaleditor_test.go
 coding/interactive/footer_render_bench_test.go
 coding/interactive/footer_test.go
 coding/interactive/forkentry_test.go
@@ -479,6 +485,7 @@ coding/interactive/sessionopen_bench_test.go
 coding/interactive/sessionpicker_test.go
 coding/interactive/sessionprojection_warm_test.go
 coding/interactive/sessionsearch_fuzz_test.go
+coding/interactive/sessionselector_mobile_test.go
 coding/interactive/sessionselector_test.go
 coding/interactive/sessionselector_tree_test.go
 coding/interactive/sessionswitch_backpressure_test.go
@@ -511,11 +518,13 @@ coding/interactive/theme_broken_test.go
 coding/interactive/theme_contrast_test.go
 coding/interactive/theme_document_validation_test.go
 coding/interactive/theme_highlight_test.go
+coding/interactive/theme_selection_test.go
 coding/interactive/theme_style_test.go
 coding/interactive/theme_test.go
 coding/interactive/theme_utf8_linux_test.go
 coding/interactive/themeboot_test.go
 coding/interactive/themecontroller_parity_test.go
+coding/interactive/themecontroller_test.go
 coding/interactive/themedtext_test.go
 coding/interactive/themejson_fuzz_test.go
 coding/interactive/themesubmenu_guards_test.go
@@ -547,6 +556,7 @@ coding/interactive/toolresult_stale_test.go
 coding/interactive/toolresult_test.go
 coding/interactive/toolretained_bench_test.go
 coding/interactive/toolretained_test.go
+coding/interactive/transcript_notices_test.go
 coding/interactive/transcript_replay_cache_test.go
 coding/interactive/transcript_test.go
 coding/interactive/transcriptparity_test.go
@@ -579,7 +589,9 @@ coding/mcpmanager_async_test.go
 coding/mcpmanager_rebuild_race_test.go
 coding/mcpmanager_reload_test.go
 coding/mcpmanager_test.go
+coding/mcpruntime_config_test.go
 coding/mcpruntime_test.go
+coding/mcpruntime_tools_test.go
 coding/mcptools_parity_test.go
 coding/mcptools_tempfile_test.go
 coding/mcptools_test.go
@@ -594,6 +606,7 @@ coding/modelcycle_index_test.go
 coding/modelregistry_test.go
 coding/modelresolver_corpus_parity_test.go
 coding/modelresolver_test.go
+coding/modelruntime_compose_test.go
 coding/modelruntime_prepare_cancel_test.go
 coding/modelruntime_refresh_race_test.go
 coding/modelruntime_settle_test.go
@@ -644,7 +657,9 @@ coding/rpcclient/start_stop_race_test.go
 coding/rpcclient/stdin_error_pending_test.go
 coding/rpcclient/write_timeout_test.go
 coding/rpcmode_chaos_test.go
+coding/rpcmode_export_test.go
 coding/rpcmode_fieldtype_test.go
+coding/rpcmode_protocol_test.go
 coding/rpcmode_replace_test.go
 coding/rpcmode_session_test.go
 coding/rpcmode_switch_reopen_test.go
@@ -657,7 +672,9 @@ coding/sdk_cache_prefix_test.go
 coding/sdk_cache_warming_stream_test.go
 coding/sdk_model_fallback_reopen_test.go
 coding/sdk_promptfiles_test.go
+coding/sdk_request_test.go
 coding/sdk_test.go
+coding/sdk_tools_test.go
 coding/sdkresources_test.go
 coding/semver_parity_test.go
 coding/serialize_conversation_parity_test.go
@@ -719,6 +736,7 @@ coding/shell_window_windows_test.go
 coding/size_number_test.go
 coding/skills_ignore_bracket_test.go
 coding/skills_ignore_parity_test.go
+coding/skills_scan_test.go
 coding/skills_test.go
 coding/systemprompt_builtin_order_test.go
 coding/systemprompt_empty_section_test.go
@@ -768,7 +786,9 @@ internal/docscheck/testfiles_test.go
 internal/goal/command_test.go
 internal/goal/format_whitespace_test.go
 internal/goal/leakcheck_main_test.go
+internal/goal/machine_commands_test.go
 internal/goal/machine_fold_fuzz_test.go
+internal/goal/machine_rebuild_test.go
 internal/goal/machine_test.go
 internal/goal/machine_unbounded_action_test.go
 internal/goal/render_lines_test.go
@@ -872,6 +892,7 @@ mcp/oauth/provider_test.go
 mcp/oauth/response_limit_test.go
 mcp/oauth/token_auth_parity_test.go
 mcp/oauth/types_test.go
+mcp/oauth_metadata_test.go
 mcp/oauth_reentrant_tokens_test.go
 mcp/oauth_test.go
 mcp/process_alive_other_test.go
