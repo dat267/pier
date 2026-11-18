@@ -2,13 +2,18 @@ package interactive
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
+	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/internal/offloop"
+	"github.com/dat267/pier/tui"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
-
-	"github.com/dat267/pier/tui"
+	"testing/synctest"
+	"time"
 )
 
 // Regenerate with pier's palette (D154); source revisions: testdata/README.md.
@@ -593,5 +598,284 @@ func TestDimTokensAreBlendedTowardTheBackground(t *testing.T) {
 	}
 	if colors["text"] != mustParseThemeColor("#ff0000") {
 		t.Fatalf("body token = %v, want its declared color", colors["text"])
+	}
+}
+
+// Two custom theme files can declare the same name. The reference lists
+// readdirSync entries (libuv sorts file names) and keeps the first one, so the
+// alphabetically first file wins; the native directory order decided it here.
+func TestCustomThemeCollisionResolvesByFileName(t *testing.T) {
+	dir := t.TempDir()
+	SetCustomThemesDir(dir)
+	t.Cleanup(func() { SetCustomThemesDir("") })
+	writeTheme := func(fileName string) {
+		colors := map[string]any{}
+		for _, key := range requiredThemeColors {
+			colors[key] = "#000000"
+		}
+		data, err := json.Marshal(map[string]any{"name": "duplicate", "colors": colors})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, fileName), data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// The loser is written first so native directory order picks it.
+	writeTheme("b-theme.json")
+	writeTheme("a-theme.json")
+
+	var winner string
+	for _, info := range customThemeInfos() {
+		if info.Name == "duplicate" {
+			winner = info.Path
+		}
+	}
+	if !strings.HasSuffix(winner, "a-theme.json") {
+		t.Fatalf("duplicate theme winner = %q, want a-theme.json", winner)
+	}
+}
+
+// pi v1.4.0 theme/theme.ts initTheme/setTheme and theme-controller.ts
+// applyThemeName fall back to system, not dark, if a selected theme is missing.
+func TestInvalidThemeFallsBackToSystem(t *testing.T) {
+	for _, entry := range []string{"initial", "switch", "controller", "queued-controller"} {
+		t.Run(entry, func(t *testing.T) {
+			SetCustomThemesDir(t.TempDir())
+			SetRegisteredThemes(nil)
+			InitTheme("light", false)
+			const missing = "missing-parity-theme"
+			switch entry {
+			case "initial":
+				InitTheme(missing, false)
+			case "switch":
+				if success, _ := SetTheme(missing, false); success {
+					t.Fatal("missing theme was accepted")
+				}
+			default:
+				var message string
+				options := ThemeControllerOptions{
+					UI:        &fakeThemeUI{},
+					ShowError: func(value string) { message = value },
+				}
+				if entry == "queued-controller" {
+					options.ThemeQueue = offloop.New()
+					defer options.ThemeQueue.Stop()
+				}
+				controller := NewInteractiveThemeController(options)
+				defer controller.Dispose()
+				controller.SetThemeSetting(missing)
+				controller.ThemeQueueFlushForTest()
+				if got := controller.ActiveThemeName(); got != SystemThemeName {
+					t.Errorf("controller fallback = %q, want system", got)
+				}
+				if !strings.Contains(message, "Fell back to the system theme.") {
+					t.Errorf("missing system fallback diagnostic: %q", message)
+				}
+			}
+			if got := CurrentThemeName(); got != SystemThemeName {
+				t.Fatalf("fallback = %q, want system", got)
+			}
+		})
+	}
+}
+
+// v1.2.0 moved the published theme schema to https://pi.dev/schemas/theme.schema.json.
+func TestBuiltinThemesReferencePublishedSchema(t *testing.T) {
+	for _, name := range []string{"dark", "light"} {
+		data, err := builtinThemeFS.ReadFile("themes/" + name + ".json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var doc map[string]any
+		if err := json.Unmarshal(data, &doc); err != nil {
+			t.Fatal(err)
+		}
+		if doc["$schema"] != "https://pi.dev/schemas/theme.schema.json" {
+			t.Fatalf("%s $schema = %v", name, doc["$schema"])
+		}
+	}
+}
+
+// Reference: pi v1.5.2 (b4afdddf) modes/interactive/theme/theme.ts sorts theme
+// infos with `a.name.localeCompare(b.name)` (the system theme first). Pier
+// compared lowercased bytes, so an accented name sorted after every ASCII name
+// instead of with its base letter.
+func TestAvailableThemesSortsWithLocaleCollation(t *testing.T) {
+	previous := registeredThemesSnapshot()
+	SetRegisteredThemes([]*Theme{
+		{Name: "zeta"},
+		{Name: "ecru"},
+		{Name: "Éclair"},
+		{Name: "apple"},
+	})
+	t.Cleanup(func() {
+		restore := make([]*Theme, 0, len(previous))
+		for _, theme := range previous {
+			restore = append(restore, theme)
+		}
+		SetRegisteredThemes(restore)
+	})
+
+	var custom []string
+	for _, name := range AvailableThemes() {
+		switch name {
+		case "zeta", "ecru", "Éclair", "apple":
+			custom = append(custom, name)
+		}
+	}
+	want := []string{"apple", "Éclair", "ecru", "zeta"}
+	if !slices.Equal(custom, want) {
+		t.Fatalf("order = %v, want %v", custom, want)
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252), theme/theme.ts startThemeWatcher excludes
+// SYSTEM_THEME_NAME. A file named system.json must never replace the generated
+// system theme when it changes.
+func TestSystemThemeDoesNotWatchAFileNamedSystem(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		StopThemeWatcher()
+		SetRegisteredThemes(nil)
+		SetCustomThemesDir(t.TempDir())
+		OnThemeChange(func() {})
+		defer func() {
+			StopThemeWatcher()
+			SetRegisteredThemes(nil)
+			SetCustomThemesDir("")
+		}()
+
+		dir := CustomThemesDir()
+		file := filepath.Join(dir, "system.json")
+		writeThemeFile(t, dir, "system.json", SystemThemeName, "#123456")
+		old := time.Now().Add(-time.Minute)
+		if err := os.Chtimes(file, old, old); err != nil {
+			t.Fatal(err)
+		}
+		if ok, message := SetTheme(SystemThemeName, true); !ok {
+			t.Fatalf("SetTheme(system) failed: %s", message)
+		}
+		// Let the watcher take its initial mtime snapshot before changing the file.
+		time.Sleep(300 * time.Millisecond)
+		writeThemeFile(t, dir, "system.json", SystemThemeName, "#abcdef")
+
+		deadline := time.Now().Add(750 * time.Millisecond)
+		for time.Now().Before(deadline) {
+			if got := CurrentTheme().SourcePath; got != "" {
+				t.Fatalf("system theme was replaced by watched file %q", got)
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	})
+}
+
+// Reference: pi v1.5.2 (b4afdddf) theme-schema.ts validateThemeJson checks the
+// name before the schema, so a document with a "/" in its name reports the name
+// even when colors are missing. Its schema sets additionalProperties: false, so
+// an unknown top-level field (or export field) is an error; pier ignored them
+// and reported the missing colors instead.
+func TestThemeValidationMatchesTheReferenceOrderAndExtraKeys(t *testing.T) {
+	// A name with a slash wins over missing colors.
+	if _, err := ValidateThemeJSON("slash", json.RawMessage(`{"name":"a/b","colors":{}}`)); err == nil ||
+		!strings.Contains(err.Error(), `Invalid theme name "a/b"`) {
+		t.Fatalf("slash-name err = %v", err)
+	}
+
+	valid := func(extra string) json.RawMessage {
+		colors := map[string]any{}
+		for _, name := range requiredThemeColors {
+			colors[name] = "#333333"
+		}
+		document := `{"name":"custom","colors":` + mustJSON(colors) + extra + `}`
+		return json.RawMessage(document)
+	}
+	if _, err := ValidateThemeJSON("valid", valid("")); err != nil {
+		t.Fatalf("valid theme err = %v", err)
+	}
+	_, err := ValidateThemeJSON("extra", valid(`,"color":"#000000"`))
+	if err == nil || !strings.Contains(err.Error(), "  - /color: additional properties are not allowed") {
+		t.Fatalf("extra top-level key err = %v", err)
+	}
+	_, err = ValidateThemeJSON("export", json.RawMessage(strings.TrimSuffix(string(valid("")), "}")+
+		`,"export":{"pageBg":"#000000","page":"#ffffff"}}`))
+	if err == nil || !strings.Contains(err.Error(), "  - /export/page: additional properties are not allowed") {
+		t.Fatalf("extra export key err = %v", err)
+	}
+}
+
+// Reference: pi v1.5.2 (b4afdddf) modes/interactive/theme/theme.ts isLightTheme
+// loads the named theme (or the current one) and reports whether its appearance
+// is light. Pier compared the name against "light", so a custom light theme,
+// the current theme, and the system theme all read as dark.
+func TestIsLightThemeResolvesTheThemeAppearance(t *testing.T) {
+	dir := t.TempDir()
+	SetCustomThemesDir(dir)
+	SetRegisteredThemes(nil)
+	t.Cleanup(func() {
+		SetCustomThemesDir("")
+		SetRegisteredThemes(nil)
+		StopThemeWatcher()
+	})
+	colors := map[string]any{}
+	for _, key := range requiredThemeColors {
+		colors[key] = "#101010"
+	}
+	document := map[string]any{"name": "paperlight", "appearance": "light", "colors": colors}
+	encoded, err := json.Marshal(document)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "paperlight.json"), encoded, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if !IsLightTheme("light") {
+		t.Fatal("the light theme must be light")
+	}
+	if IsLightTheme("dark") {
+		t.Fatal("the dark theme must not be light")
+	}
+	if !IsLightTheme("paperlight") {
+		t.Fatal("a custom theme declaring a light appearance must be light")
+	}
+
+	// The empty name resolves the current theme.
+	InitTheme("light", false)
+	if !IsLightTheme("") {
+		t.Fatal("the current light theme must be light when the name is empty")
+	}
+	InitTheme("dark", false)
+	if IsLightTheme("") {
+		t.Fatal("the current dark theme must not be light when the name is empty")
+	}
+}
+
+// Upstream (pi v1.5.2 modes/interactive/interactive-mode.ts
+// getMarkdownThemeWithSettings) applies markdown.codeBlockIndent at every render
+// site, so the setting reaches the transcript from the first frame and again
+// after /reload.
+func TestMarkdownThemeAppliesCodeBlockIndent(t *testing.T) {
+	indent := "    "
+	app, cleanup := newTestAppConfigured(t, false, func(settings *coding.SettingsManager, _ *AppOptions) {
+		settings.ApplyOverrides(&coding.Settings{Markdown: &coding.SettingsMarkdown{CodeBlockIndent: &indent}})
+	})
+	defer cleanup()
+	if app.transcript.MarkdownTheme == nil || app.transcript.MarkdownTheme.CodeBlockIndent != indent {
+		t.Fatalf("transcript code block indent = %v, want %q", app.transcript.MarkdownTheme, indent)
+	}
+	if app.events.MarkdownTheme == nil || app.events.MarkdownTheme.CodeBlockIndent != indent {
+		t.Fatalf("events code block indent = %v, want %q", app.events.MarkdownTheme, indent)
+	}
+
+	// /reload re-reads the setting, as the per-render read does.
+	changed := "\t"
+	app.settings.ApplyOverrides(&coding.Settings{Markdown: &coding.SettingsMarkdown{CodeBlockIndent: &changed}})
+	app.Init(context.Background())
+	app.applySettingsDependentUI()
+	if got := app.transcript.MarkdownTheme.CodeBlockIndent; got != changed {
+		t.Fatalf("code block indent after reload = %q, want %q", got, changed)
+	}
+	if got := app.events.MarkdownTheme.CodeBlockIndent; got != changed {
+		t.Fatalf("events code block indent after reload = %q, want %q", got, changed)
 	}
 }

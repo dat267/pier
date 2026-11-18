@@ -2,17 +2,22 @@ package interactive
 
 import (
 	"context"
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/mcp"
+	"github.com/dat267/pier/mcp/protocol"
+	"github.com/dat267/pier/tui"
+	"go/ast"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
-
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/coding"
-	"github.com/dat267/pier/tui"
 )
 
 // TestAppComposition covers the interactive-mode object graph: construction,
@@ -552,4 +557,244 @@ func TestKeyWiringCopyBound(t *testing.T) {
 	if app.key.OnCopy == nil {
 		t.Fatal("app.message.copy has no handler")
 	}
+}
+
+// TestKeybindingMigrationKeepsTheFileOnFailure pins A507 for keybindings.json:
+// the migration wrote the file with os.WriteFile, so a failed migration could
+// leave the user's bindings truncated.
+func TestKeybindingMigrationKeepsTheFileOnFailure(t *testing.T) {
+	dir := t.TempDir()
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+	path := filepath.Join(dir, "keybindings.json")
+
+	// A legacy name the migration rewrites.
+	previous := []byte("{\n  \"submit\": \"ctrl+enter\"\n}\n")
+	if err := os.WriteFile(path, previous, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	if MigrateKeybindingsFile(path) {
+		t.Fatalf("a migration that cannot publish reported success")
+	}
+	got, readErr := os.ReadFile(path)
+	if readErr != nil {
+		t.Fatalf("the failed migration removed keybindings.json: %v", readErr)
+	}
+	if string(got) != string(previous) {
+		t.Errorf("the failed migration left %q, want the previous bindings", got)
+	}
+}
+
+// D185: /reload and session replacement re-read mcp.json (upstream
+// session_start runs ensureDiscoveryActive again), so the warning for tools
+// pier cannot expose comes back with the reload's MCP messages, after the
+// config's own load errors, and only while such a server is configured.
+func TestReloadMCPWarnsAboutUnreachableTools(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	transport := func(entry coding.McpServerEntry, _ string, _ mcp.AuthProvider) (mcp.Transport, error) {
+		return newMCPReloadFakeServer(t, entry.Name, []protocol.Tool{{Name: "echo"}}), nil
+	}
+	app.mcpOptionsOverride = func(loaded coding.LoadedMcpConfig) coding.McpManagerOptions {
+		return coding.McpManagerOptions{Config: loaded, Cwd: app.sessionMgr.GetCwd(), CreateTransport: transport}
+	}
+	defer func() {
+		if app.mcpManager != nil {
+			_ = app.mcpManager.Close(context.Background())
+		}
+	}()
+
+	writeMCPReloadConfig(t, app.mcpAgentDir, `{"mcpServers":{"gopls":{"command":"unused"}}}`)
+	messages := app.reloadMCP(context.Background(), app.sessionMgr.GetCwd())
+	if !slices.ContainsFunc(messages, func(message string) bool {
+		return strings.HasPrefix(message, `MCP server "gopls" has tools with codemode`)
+	}) {
+		t.Fatalf("reload messages = %q, want the unreachable-tools warning", messages)
+	}
+
+	writeMCPReloadConfig(t, app.mcpAgentDir, `{"mcpServers":{"gopls":{"command":"unused","exposure":"direct"}}}`)
+	if messages := app.reloadMCP(context.Background(), app.sessionMgr.GetCwd()); len(messages) != 0 {
+		t.Fatalf("direct-exposure reload messages = %q, want none", messages)
+	}
+}
+
+// TestAppExportedSurface pins App's cross-package surface. cmd is the only
+// consumer outside this package, and it calls Run and StopMode on the app it
+// built with NewApp, plus Init and Close. Everything else App offers is
+// in-package state: the wirings and the interactive tests are all in this
+// package, so an exported member buys nothing and misleads a reader into
+// treating it as API.
+//
+// This file exists because app.go is the most frequently changed file in the
+// repository — and its surface was the largest. The guard is the point: the
+// surface cannot quietly grow back one field at a time.
+func TestAppExportedSurface(t *testing.T) {
+	allowed := map[string]bool{"Init": true, "Run": true, "Close": true, "StopMode": true}
+
+	// The pointer type for methods: every App method has a pointer receiver, and
+	// the value type's method set is empty here — a guard that cannot fail.
+	methodSet := reflect.TypeFor[*App]()
+	for method := range methodSet.Methods() {
+		if name := method.Name; !allowed[name] {
+			t.Errorf("App.%s is exported; the cross-package surface is exactly Init, Run, Close and StopMode", name)
+		}
+	}
+	appType := reflect.TypeFor[App]()
+	for field := range appType.Fields() {
+		// An embedded type's name is its type's, not App's own surface.
+		if !field.Anonymous && ast.IsExported(field.Name) {
+			t.Errorf("App.%s is exported; App's fields are in-package state", field.Name)
+		}
+	}
+}
+
+// D371: a failed manual Go copy must not leave its newly created session file.
+// Reference: pi v1.5.0 (f9a26365), coding-agent/src/core/agent-session-runtime.ts
+// importFromJsonl delegates to Node's copyFileSync/COPYFILE_EXCL. This pins the
+// Go error path, not a claim that Node rejects this directory input.
+func TestImportCopyFailureDoesNotLeaveAPartialSession(t *testing.T) {
+	for _, existing := range []bool{false, true} {
+		name := "fresh destination"
+		if existing {
+			name = "existing name preserved"
+		}
+		t.Run(name, func(t *testing.T) {
+			app, cleanup := newTestApp(t)
+			defer cleanup()
+			sessionDir := withSessionDir(t, app)
+			previousID := app.sessionMgr.GetSessionID()
+			source := filepath.Join(t.TempDir(), "broken.jsonl")
+			if err := os.Mkdir(source, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			original := filepath.Join(sessionDir, filepath.Base(source))
+			if existing {
+				if err := os.WriteFile(original, []byte("keep this session"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			newCommandWiring(app).HandleImportCommand(context.Background(), "/import "+source)
+			answerConfirm(t, app, 0)
+			if !transcriptContains(app, "Failed to import session:") {
+				t.Fatal("copy failure was not reported")
+			}
+			if app.sessionMgr.GetSessionID() != previousID {
+				t.Fatal("failed copy replaced the active session")
+			}
+			entries, err := os.ReadDir(sessionDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := 0
+			if existing {
+				want = 1
+				data, err := os.ReadFile(original)
+				if err != nil || string(data) != "keep this session" {
+					t.Fatalf("existing session changed: %q, err=%v", data, err)
+				}
+			}
+			if len(entries) != want {
+				t.Fatalf("session files after failed copy = %v, want %d existing files only", entries, want)
+			}
+		})
+	}
+}
+
+type inputDeadlineHost struct {
+	fakeLoopHost
+	buffer *tui.StdinBuffer
+	input  []string
+}
+
+func (h *inputDeadlineHost) NextInputFlushDeadline() (time.Time, bool) {
+	return h.buffer.PendingTimeout()
+}
+
+func (h *inputDeadlineHost) FlushPendingInput() {
+	h.input = append(h.input, h.buffer.FlushExpired(time.Now())...)
+}
+
+// pi v1.4.0 packages/tui/src/stdin-buffer.ts gives a lone Escape its own
+// timeout. D143/D145 move that deadline onto the Go UI loop; an unrelated
+// idle beat must not discard it just because no component animates.
+func TestSchedulePreservesPendingEscapeAcrossIdleBeats(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		host := &inputDeadlineHost{buffer: tui.NewStdinBuffer(tui.StdinBufferOptions{EscapeTimeout: 10})}
+		schedule := newLoopSchedule(host, func() {})
+		defer schedule.close()
+		host.buffer.ProcessString("\x1b")
+		if schedule.arm() == nil {
+			t.Fatal("Escape did not arm its input deadline")
+		}
+		// A session/render/resize event can wake the idle loop before Escape's
+		// deadline. This is a second scheduling decision at the same fake time.
+		wake := schedule.arm()
+		if wake == nil {
+			t.Fatal("idle beat discarded a still-pending Escape deadline")
+		}
+		select {
+		case <-wake:
+			schedule.animationFired()
+			schedule.flushExpiredInput()
+		case <-time.After(time.Second):
+			t.Fatal("Escape deadline did not wake the loop")
+		}
+		if !reflect.DeepEqual(host.input, []string{"\x1b"}) {
+			t.Fatalf("flushed input = %q, want one Escape", host.input)
+		}
+	})
+}
+
+// fdExecutableName is the fixture's file name. exec.LookPath only finds an
+// executable extension on Windows (PATHEXT) and returns the path it resolved,
+// so the fixture and the expectation both carry ".exe" there.
+func fdExecutableName(name string) string {
+	if runtime.GOOS == "windows" {
+		return name + ".exe"
+	}
+	return name
+}
+
+// writeExecutable drops a runnable file so exec.LookPath can find it.
+func writeExecutable(t *testing.T, path string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// fd is the preferred binary; fdfind is Debian's name for the same thing, and
+// accepting it is the difference between @-file completion working and being
+// silently unavailable there.
+func TestResolveAutocompleteFdPath(t *testing.T) {
+	t.Run("fdfind alone", func(t *testing.T) {
+		dir := t.TempDir()
+		want := filepath.Join(dir, fdExecutableName("fdfind"))
+		writeExecutable(t, want)
+		t.Setenv("PATH", dir)
+		if got := ResolveAutocompleteFdPath(); got != want {
+			t.Errorf("resolved %q, want the fdfind fallback", got)
+		}
+	})
+
+	t.Run("fd wins", func(t *testing.T) {
+		dir := t.TempDir()
+		want := filepath.Join(dir, fdExecutableName("fd"))
+		writeExecutable(t, want)
+		writeExecutable(t, filepath.Join(dir, fdExecutableName("fdfind")))
+		t.Setenv("PATH", dir)
+		if got := ResolveAutocompleteFdPath(); got != want {
+			t.Errorf("resolved %q, want fd to take precedence", got)
+		}
+	})
+
+	t.Run("neither", func(t *testing.T) {
+		t.Setenv("PATH", t.TempDir())
+		if got := ResolveAutocompleteFdPath(); got != "" {
+			t.Errorf("resolved %q, want none", got)
+		}
+	})
 }

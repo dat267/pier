@@ -2,13 +2,13 @@ package interactive
 
 import (
 	"encoding/json"
-	"strings"
-	"testing"
-	"time"
-
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
+	"runtime"
+	"strings"
+	"testing"
+	"time"
 )
 
 func newTranscriptTestRenderer(t *testing.T, showCacheMiss bool) (*TranscriptRenderer, *coding.SettingsManager) {
@@ -666,5 +666,89 @@ func TestTranscriptRestoresBashCommandHistory(t *testing.T) {
 		if got := editor.GetText(); got != want {
 			t.Fatalf("history entry %d = %q, want %q", index, got, want)
 		}
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252), interactive-mode.ts renderInitialMessages
+// counts all persisted compactions, not just the active branch. The Go port
+// need not materialize a full descriptor snapshot to compute that number.
+func TestTranscriptCompactionNoticeDoesNotCopyHistory(t *testing.T) {
+	renderer, _ := newTranscriptTestRenderer(t, false)
+	manager := coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{Persist: new(false)})
+	last := ""
+	for range 512 {
+		last = manager.AppendCustomEntry("hidden", nil)
+	}
+	manager.AppendCompaction("old branch", last, 100, nil, false, nil)
+	if err := manager.Branch(last); err != nil {
+		t.Fatal(err)
+	}
+	manager.AppendCompaction("current branch", last, 100, nil, false, nil)
+	manager.Projection()
+	renderer.SessionInfo = manager
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	renderer.RenderInitialMessages()
+	runtime.ReadMemStats(&after)
+	// The active window is tiny. Allow component construction, but not a
+	// roughly 225 KiB full-history snapshot just to count two compactions.
+	if allocated := after.TotalAlloc - before.TotalAlloc; allocated > 64*1024 {
+		t.Fatalf("replaying a compacted window allocated %d bytes, want at most 65536", allocated)
+	}
+	lines := strings.Join(renderChat(t, renderer.Chat), "\n")
+	if !strings.Contains(lines, "Session compacted 2 times") {
+		t.Fatalf("off-branch compaction was not counted: %s", lines)
+	}
+}
+
+// The reference's custom-message component accepts string or block content and
+// joins the text blocks (pi v1.5.0 f9a26365
+// modes/interactive/components/custom-message.ts rebuild, which the port's
+// CustomMessagePayload.Blocks already models):
+//
+//	text = typeof this.message.content === "string"
+//		? this.message.content
+//		: this.message.content.filter((c) => c.type === "text").map((c) => c.text).join("\n");
+//
+// A block-array message is the same message the model reads through
+// convertCustomMessage's customContentToBlocks, so the transcript must show
+// that text instead of an empty box.
+func TestTranscriptCustomMessageRendersTextBlocks(t *testing.T) {
+	renderer, _ := newTranscriptTestRenderer(t, false)
+	renderer.MarkdownTheme = nil
+	message := coding.CreateCustomMessage("notice",
+		[]byte(`[{"type":"text","text":"first block"},{"type":"text","text":"second block"}]`), true, nil, 1000)
+	renderer.AddMessageToChat(message, false)
+	rendered := strings.Join(renderChat(t, renderer.Chat), "\n")
+	for _, want := range []string{"first block", "second block"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("transcript lost %q; rendered:\n%s", want, rendered)
+		}
+	}
+}
+
+// The custom message box writes the label, then the body. The body goes through
+// tui.SanitizeUntrustedText (D342: model- and extension-generated session text
+// renders as data), but the label was interpolated raw:
+//
+//	label := theme.Fg("customMessageLabel", "\x1b[1m["+c.message.CustomType+"]\x1b[22m")
+//
+// customType comes from an extension's sendMessage call and is persisted in the
+// session file, so a value carrying an escape sequence executed a terminal
+// control function (an OSC 0 title set, a mode change) in the middle of the
+// frame, and the reference does the same. Treat the label as data like the body.
+func TestTranscriptCustomMessageLabelIsSanitized(t *testing.T) {
+	renderer, _ := newTranscriptTestRenderer(t, false)
+	renderer.MarkdownTheme = nil
+	message := coding.CreateCustomMessage("notice\x1b]0;pwned\x07", []byte(`"body"`), true, nil, 1000)
+	renderer.AddMessageToChat(message, false)
+	rendered := strings.Join(renderChat(t, renderer.Chat), "\n")
+
+	if strings.Contains(rendered, "\x1b]0;pwned") {
+		t.Fatalf("the customType control sequence reached the terminal: %q", rendered)
+	}
+	// The label itself is still visible, just without the sequence.
+	if !strings.Contains(rendered, "[notice") {
+		t.Fatalf("the label disappeared; rendered:\n%s", rendered)
 	}
 }

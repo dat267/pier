@@ -3,15 +3,17 @@ package interactive
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/tui"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/dat267/pier/coding"
-	"github.com/dat267/pier/tui"
 )
 
 // Regenerate with pier's palette (D154); source revisions: testdata/README.md.
@@ -563,5 +565,108 @@ func TestTreeSelectorSearchLineShowsTheCursorWhenFocused(t *testing.T) {
 	selector.showLabelInput(entryID, "", false)
 	if line := findSearchLine(); strings.Contains(line, tui.CursorMarker) {
 		t.Fatalf("search line kept the cursor while a label input is open: %q", line)
+	}
+}
+
+// TestTreeRenderSanitizesStoredRowFields pins the tree against terminal control
+// injection from a session file (D446). Reference: pi v1.5.0 f9a26365
+// modes/interactive/components/tree-selector.ts:747 renders a label verbatim,
+// while the port sanitizes untrusted terminal text (D342, D422). A label is
+// stored in the JSONL, so a shared or planted session file controls it.
+func TestTreeRenderSanitizesStoredRowFields(t *testing.T) {
+	InitTheme("dark", false)
+	payload := "\x1b[2J\x1b]52;c;cGF3bmVk\x07"
+	session := coding.NewSessionManager(t.TempDir(), nil)
+	session.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}})
+	branch := session.GetBranch("")
+	if len(branch) == 0 {
+		t.Fatal("no entry to label")
+	}
+	label := payload + "labelled"
+	if _, err := session.AppendLabelChange(branch[0].ID, &label); err != nil {
+		t.Fatal(err)
+	}
+
+	selector := NewTreeSelectorComponent(session.GetTree(), session.GetLeafID(), 40, func(string) {}, func() {}, TreeSelectorOptions{})
+	for _, line := range selector.Render(120) {
+		if strings.Contains(line, "\x1b[2J") || strings.Contains(line, "\x1b]52") {
+			t.Fatalf("the tree rendered a stored label unsanitized: %q", line)
+		}
+	}
+}
+
+// TestTreeRenderDoesNotDecodeRowsAgain pins A496: a row displays a 200-character
+// preview, so a render must not decode the whole message again. With 20 visible
+// rows of 400 KB content the decode allocated 16.2 MB and took 21 ms per frame,
+// once per keystroke and animation tick.
+func TestTreeRenderDoesNotDecodeRowsAgain(t *testing.T) {
+	InitTheme("dark", false)
+	dir := t.TempDir()
+	path := filepath.Join(dir, "s.jsonl")
+	var body strings.Builder
+	body.WriteString(`{"type":"session","version":3,"id":"big","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/tmp"}` + "\n")
+	content := strings.Repeat("x", 400_000)
+	for turn := 0; turn < 20; turn++ {
+		message, err := json.Marshal(map[string]any{"role": "user", "content": content})
+		if err != nil {
+			t.Fatal(err)
+		}
+		entry, err := json.Marshal(map[string]any{
+			"type": "message", "id": fmt.Sprintf("m%d", turn),
+			"timestamp": "2026-01-01T00:00:00.000Z", "message": json.RawMessage(message),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		body.Write(entry)
+		body.WriteString("\n")
+	}
+	if err := os.WriteFile(path, []byte(body.String()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	session, err := coding.OpenSession(path, dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	selector := NewTreeSelectorComponent(session.GetTree(), session.GetLeafID(), 40, func(string) {}, func() {}, TreeSelectorOptions{})
+	_ = selector.Render(100) // warm the previews
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	_ = selector.Render(100)
+	runtime.ReadMemStats(&after)
+	if allocated := after.TotalAlloc - before.TotalAlloc; allocated > 2<<20 {
+		t.Fatalf("one render allocated %d bytes; the row previews are being decoded again", allocated)
+	}
+}
+
+func treeRoot(id, text string) *coding.SessionTreeNode {
+	return &coding.SessionTreeNode{Entry: coding.SessionEntry{
+		ID: id, Type: "message", Message: json.RawMessage(`{"role":"user","content":"` + text + `"}`),
+	}}
+}
+
+// TestTreeSelectorPutsTheActiveRootFirst pins pi v1.5.2 (b4afdddf)
+// modes/interactive/components/tree-selector.ts flattenTree: `orderedRoots =
+// [...roots].sort((a, b) => Number(containsActive.get(b)) -
+// Number(containsActive.get(a)))` places the root holding the current leaf
+// first, so the branch being read is at the top of the tree view. The port's
+// comparator was inverted, so the active root was displayed last.
+func TestTreeSelectorPutsTheActiveRootFirst(t *testing.T) {
+	roots := []*coding.SessionTreeNode{treeRoot("a", "root a"), treeRoot("b", "root b"), treeRoot("c", "root c")}
+	leaf := "c"
+	list := NewTreeList(roots, &leaf, 20, nil, FilterAll)
+	var ids []string
+	for _, node := range list.flatNodes {
+		ids = append(ids, node.Node.Entry.ID)
+	}
+	want := []string{"c", "a", "b"}
+	if len(ids) != len(want) {
+		t.Fatalf("flattened roots = %v, want %v", ids, want)
+	}
+	for index := range want {
+		if ids[index] != want[index] {
+			t.Fatalf("flattened roots = %v, want %v", ids, want)
+		}
 	}
 }

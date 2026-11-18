@@ -3,14 +3,14 @@ package interactive
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/tui"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/dat267/pier/coding"
-	"github.com/dat267/pier/tui"
 )
 
 func TestToolTruncationWarningsFormatFractionalLimits(t *testing.T) {
@@ -645,5 +645,73 @@ func TestCompactReadCallKeepsTheConfiguredKeyCasing(t *testing.T) {
 	want := "(" + KeyText("app.tools.expand") + " to expand)"
 	if !strings.Contains(got, want) {
 		t.Fatalf("compact read hint = %q, want %q", got, want)
+	}
+}
+
+func TestEditToolHeaderPrefersFilePathOverPath(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	InitTheme("dark", false)
+
+	component := NewToolExecutionComponent("edit", "call-1", map[string]any{
+		"path":      "/tmp/fallback.txt",
+		"file_path": "/tmp/preferred.txt",
+		"edits": []any{map[string]any{
+			"oldText": "old",
+			"newText": "new",
+		}},
+	}, ToolExecutionOptions{}, &editRenderers, nil, "/tmp")
+
+	got := strings.Join(component.Render(80), "\n")
+	if !strings.Contains(got, "preferred.txt") {
+		t.Fatalf("edit header %q does not show file_path", got)
+	}
+	if strings.Contains(got, "fallback.txt") {
+		t.Fatalf("edit header %q shows path instead of file_path", got)
+	}
+}
+
+// TestStreamingBashCommandTabRendersEarly covers the reported symptom: a tab in
+// a streamed command only rendered once the call finished. The decode side is
+// pinned in ai.TestParseStreamingEscapes; here the arguments arrive as the ai
+// layer delivers them after that decode (a repaired document whose command
+// holds a real tab), and the header must render it expanded and stay stable.
+func TestStreamingBashCommandTabRendersEarly(t *testing.T) {
+	dispatcher, _, transcript, _ := newEventTestDispatcher(t)
+	transcript.Session = builtinRendererSession{}
+
+	bashCall := func(arguments string) *ai.AssistantMessage {
+		return &ai.AssistantMessage{
+			API: ai.APIAnthropicMessages, Provider: "test", Model: "m", StopReason: ai.StopToolUse,
+			Content: ai.ContentList{ai.ToolCall{ID: "t1", Name: "bash", Arguments: json.RawMessage(arguments)}},
+		}
+	}
+	dispatcher.HandleEvent(&coding.SessionEvent{
+		Type: coding.SessionMessageStart, Agent: agentEvent("message_start", &ai.AssistantMessage{StopReason: ai.StopToolUse}),
+	})
+
+	// Mid-stream: the ai layer has decoded the partial JSON (the command holds
+	// a real tab) and re-encoded it.
+	dispatcher.HandleEvent(&coding.SessionEvent{
+		Type: coding.SessionMessageUpdate, Agent: agentEvent("message_update", bashCall(`{"command":"echo\tfoo"}`)),
+	})
+	streaming := coding.StripAnsi(strings.Join(renderChat(t, transcript.Chat), "\n"))
+	if !strings.Contains(streaming, "echo   foo") {
+		t.Fatalf("streaming header = %q, want the tab expanded to three spaces", streaming)
+	}
+	if strings.Contains(streaming, `echo\tfoo`) {
+		t.Fatalf("streaming header kept the escape verbatim: %q", streaming)
+	}
+
+	// Completed: the header must not change.
+	dispatcher.HandleEvent(&coding.SessionEvent{
+		Type: coding.SessionMessageUpdate, Agent: agentEvent("message_update", bashCall(`{"command":"echo\tfoo"}`)),
+	})
+	completed := coding.StripAnsi(strings.Join(renderChat(t, transcript.Chat), "\n"))
+	if !strings.Contains(completed, "echo   foo") {
+		t.Fatalf("completed header = %q", completed)
+	}
+	if streaming != completed {
+		t.Fatalf("header changed on completion:\n streaming %q\n completed %q", streaming, completed)
 	}
 }

@@ -3,15 +3,15 @@ package interactive
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/tui"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/dat267/pier/coding"
-	"github.com/dat267/pier/tui"
 )
 
 // Regenerate with pier's palette (D154); source revisions: testdata/README.md.
@@ -707,4 +707,131 @@ func TestSessionListClampsTheSelectionAfterFiltering(t *testing.T) {
 	if path := list.GetSelectedSessionPath(); path != "/s/alpha.jsonl" {
 		t.Fatalf("selected path = %q, want the filtered session", path)
 	}
+}
+
+// pi 4a080252 components/session-selector.ts loadScope checks isActive before
+// applying progress or completion. D143 moves those applies onto the Go UI
+// queue, so cancellation must also be checked when a posted callback executes.
+func TestSessionSelectorRejectsPostedResultsAfterCancel(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	InitTheme("dark", false)
+	for _, cancel := range []bool{true, false} {
+		name := "canceled"
+		if !cancel {
+			name = "active-control"
+		}
+		t.Run(name, func(t *testing.T) {
+			queue := &postQueue{}
+			renders, cancels := 0, 0
+			loader := func(progress SessionListProgress, _ context.Context) ([]coding.SessionInfo, error) {
+				sessions := []coding.SessionInfo{{ID: "old", Path: "/fixture/old.jsonl", FirstMessage: "old"}}
+				progress(1, 2, sessions)
+				return sessions, nil
+			}
+			component := NewSessionSelectorComponent(loader, loader, nil,
+				func() { cancels++ }, nil, func() { renders++ },
+				SessionSelectorOptions{Post: queue.Post, ScheduleTimer: func(int, func()) {}})
+			component.WaitForPendingLoads()
+			if cancel {
+				component.HandleInput("\x1b")
+				if cancels != 1 {
+					t.Fatal("cancel input did not close the selector")
+				}
+			}
+			before := renders
+			queue.drain()
+			selected := component.GetSessionList().GetSelectedSessionPath()
+			if cancel {
+				if selected != "" || renders != before {
+					t.Fatalf("canceled load applied queued results: selected=%q, extra renders=%d", selected, renders-before)
+				}
+			} else if selected != "/fixture/old.jsonl" || renders == before {
+				t.Fatalf("active load did not apply: selected=%q, extra renders=%d", selected, renders-before)
+			}
+		})
+	}
+}
+
+// TestSessionListSanitizesStoredCwd pins the picker against terminal control
+// injection from a session file (D445). Reference: pi v1.5.0 f9a26365
+// modes/interactive/components/session-selector.ts:466 renders
+// `shortenHomePath(session.cwd)` verbatim, while the port sanitizes untrusted
+// terminal text (D342, D422). SessionInfo.Cwd is the header's cwd
+// (coding/session_manager.go), so a shared or imported session file controls it,
+// and the all-projects scope renders it in every row.
+func TestSessionListSanitizesStoredCwd(t *testing.T) {
+	InitTheme("dark", false)
+	sessions := []coding.SessionInfo{{
+		Path:         "/tmp/attacker/s1.jsonl",
+		ID:           "s1",
+		Cwd:          "/tmp/\x1b[2J\x1b]52;c;cGF3bmVk\x07project",
+		Name:         "named",
+		FirstMessage: "hi",
+		Modified:     time.Unix(1700000000, 0),
+	}}
+	list := NewSessionList(sessions, true, SortRecent, NameFilterAll, nil, "")
+	lines := list.Render(120)
+	for _, line := range lines {
+		if strings.Contains(line, "\x1b[2J") || strings.Contains(line, "\x1b]52") {
+			t.Fatalf("the picker rendered a stored cwd unsanitized: %q", line)
+		}
+	}
+}
+
+// pi 4a080252 components/session-selector.ts status timeouts run on the JS
+// event loop. D143's Go selector must post timer mutations to its UI owner.
+func TestSessionSelectorStatusTimerAppliesOnOwner(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	InitTheme("dark", false)
+	queue := &postQueue{}
+	var fire func()
+	loader := func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) {
+		return nil, errors.New("fixture offline")
+	}
+	component := NewSessionSelectorComponent(loader, loader, nil, nil, nil, nil,
+		SessionSelectorOptions{Post: queue.Post, ScheduleTimer: func(_ int, fn func()) { fire = fn }})
+	component.WaitForPendingLoads()
+	queue.drain()
+	statusShown := func() bool { return strings.Contains(strings.Join(component.Render(100), "\n"), "fixture offline") }
+	if fire == nil || !statusShown() {
+		t.Fatal("loader error did not publish a timed status")
+	}
+	done := make(chan struct{})
+	go func() {
+		fire()
+		close(done)
+	}()
+	<-done
+	if !statusShown() {
+		t.Fatal("status timer mutated the selector before its owner drained the post")
+	}
+	queue.drain()
+	if statusShown() {
+		t.Fatal("status timer did not clear the status on its owner")
+	}
+}
+
+// D303: session search compiles `re:` patterns with Go's RE2 engine, not
+// JavaScript RegExp. Constructs RE2 lacks are parse errors (no matches);
+// supported patterns stay case-insensitive like upstream's "i" flag.
+func TestSessionSearchRegexUsesRE2Syntax(t *testing.T) {
+	for _, query := range []string{"re:(?=alpha)", `re:(alpha)\1`, "re:[a-"} {
+		if parsed := ParseSearchQuery(query); parsed.Error == "" {
+			t.Fatalf("%q compiled, want a parse error for a pattern RE2 does not support", query)
+		}
+	}
+	parsed := ParseSearchQuery("re:ALPHA")
+	if parsed.Error != "" || parsed.Mode != "regex" || parsed.Regex == nil {
+		t.Fatalf("plain pattern did not compile: %+v", parsed)
+	}
+	result := MatchSession(sessionInfoForSearch("alpha"), parsed)
+	if !result.Matches {
+		t.Fatal("case-insensitive regex did not match")
+	}
+}
+
+func sessionInfoForSearch(text string) coding.SessionInfo {
+	return coding.SessionInfo{ID: "id", AllMessagesText: text, Cwd: "/tmp"}
 }

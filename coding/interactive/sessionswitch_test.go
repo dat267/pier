@@ -1,12 +1,14 @@
 package interactive
 
 import (
+	"context"
 	"errors"
-	"os"
-	"testing"
-
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/internal/offloop"
+	"os"
+	"sync/atomic"
+	"testing"
 )
 
 // makePersistedSession creates a persisted session with one full turn so the
@@ -170,5 +172,104 @@ func TestSwitchSessionRewiresGoalStartWork(t *testing.T) {
 	}
 	if !controller.StartWorkWired() {
 		t.Fatal("goal launcher not rewired after a session switch")
+	}
+}
+
+// Reference: pi v1.5.0 (f9a26365), interactive-mode.ts
+// rebindCurrentSession/subscribeToAgent keep UI events on the same JS owner.
+// D143 requires the Go replacement subscription to enqueue like initial Init.
+func TestSessionReplacementStillQueuesEventsForTheUIOwner(t *testing.T) {
+	for _, mode := range []string{"initial session", "new session", "switched session"} {
+		t.Run(mode, func(t *testing.T) {
+			app, cleanup := newTestApp(t)
+			defer cleanup()
+			app.Init(context.Background())
+			switch mode {
+			case "new session":
+				if _, err := app.sessionNew(); err != nil {
+					t.Fatal(err)
+				}
+			case "switched session":
+				target := makePersistedSession(t, t.TempDir(), "incoming session")
+				if _, err := app.switchSession(target.GetSessionFile(), ""); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			var titleUpdates atomic.Int64
+			app.events.UpdateTerminalTitle = func() { titleUpdates.Add(1) }
+			produced := make(chan struct{})
+			go func() {
+				defer close(produced)
+				app.session.SetSessionName("named by a worker")
+			}()
+			<-produced
+			if got := titleUpdates.Load(); got != 0 {
+				t.Fatalf("worker applied %d title updates before the UI owner drained events", got)
+			}
+			select {
+			case event := <-app.sessionEvents.Events():
+				if event.Type != coding.SessionInfoChanged {
+					t.Fatalf("queued event = %s, want session_info_changed", event.Type)
+				}
+				app.events.handleQueuedEvent(event)
+			default:
+				t.Fatal("session event was not queued for the UI owner")
+			}
+			if got := titleUpdates.Load(); got != 1 {
+				t.Fatalf("owner applied %d title updates, want 1", got)
+			}
+		})
+	}
+}
+
+// A485: a session switch must keep the write queue. OpenSession builds a
+// manager with no queue, so without forwarding it the new session writes its
+// file synchronously on the calling goroutine — for the interactive path the
+// owner loop. cmd/main.go:343-351 wires the queue for exactly this reason and
+// sessionNew forwards it explicitly; switchSession did not.
+//
+// Invariant: ARCHITECTURE.md, "nothing on the main event loop may block", and
+// SessionManagerOptions.WriteQueue, which documents nil as "one-shot
+// consumers" only.
+func TestSwitchSessionKeepsTheWriteQueue(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	t.Setenv("PI_CODING_AGENT_DIR", t.TempDir())
+
+	group := offloop.NewGroup()
+	defer group.StopAll()
+	queue := group.Queue()
+	app.sessionMgr.SetWriteQueue(queue)
+	if app.sessionMgr.GetWriteQueue() != queue {
+		t.Fatal("fixture did not install the queue on the starting manager")
+	}
+
+	target := makePersistedSession(t, t.TempDir(), "other session")
+	if _, err := app.switchSession(target.GetSessionFile(), ""); err != nil {
+		t.Fatalf("switchSession: %v", err)
+	}
+	if got := app.sessionMgr.GetWriteQueue(); got != queue {
+		t.Fatalf("after switching, the session manager's write queue is %v, want the previous queue %v (nil means synchronous writes on the owner loop)", got, queue)
+	}
+}
+
+// A485 covers every replacement path, not only switchSession: sessionNew and
+// import also build a manager through OpenSession/NewSessionManager.
+func TestSessionNewKeepsTheWriteQueue(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	t.Setenv("PI_CODING_AGENT_DIR", t.TempDir())
+
+	group := offloop.NewGroup()
+	defer group.StopAll()
+	queue := group.Queue()
+	app.sessionMgr.SetWriteQueue(queue)
+
+	if _, err := app.sessionNew(); err != nil {
+		t.Fatalf("sessionNew: %v", err)
+	}
+	if got := app.sessionMgr.GetWriteQueue(); got != queue {
+		t.Fatalf("after sessionNew the write queue is %v, want %v", got, queue)
 	}
 }
