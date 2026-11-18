@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -472,5 +473,105 @@ func TestParseCommandArgsQuotesAndEscapes(t *testing.T) {
 		if got := ParseCommandArgs(testCase.input); !reflect.DeepEqual(got, testCase.want) {
 			t.Errorf("ParseCommandArgs(%q) = %#v, want %#v", testCase.input, got, testCase.want)
 		}
+	}
+}
+
+// Replays the upstream-generated prompt-template goldens. The generator
+// (coding/testdata/prompt-args/generate.mjs) runs the pin's substituteArgs and
+// parseCommandArgs over a hand-written grammar corpus plus a seeded random one;
+// regenerate with that file's header command.
+
+type promptArgsGolden struct {
+	Substitutions []struct {
+		Template string   `json:"template"`
+		Args     []string `json:"args"`
+		Result   string   `json:"result"`
+	} `json:"substitutions"`
+	ArgumentParsing []struct {
+		Input  string   `json:"input"`
+		Result []string `json:"result"`
+	} `json:"argumentParsing"`
+}
+
+func TestPromptTemplateArgsMatchTheReference(t *testing.T) {
+	data, err := os.ReadFile("testdata/prompt-args/golden.json")
+	if err != nil {
+		t.Fatalf("read golden: %v", err)
+	}
+	var golden promptArgsGolden
+	if err := json.Unmarshal(data, &golden); err != nil {
+		t.Fatalf("decode golden: %v", err)
+	}
+	if len(golden.Substitutions) == 0 || len(golden.ArgumentParsing) == 0 {
+		t.Fatalf("golden is empty: %d substitutions, %d parses", len(golden.Substitutions), len(golden.ArgumentParsing))
+	}
+	for _, testCase := range golden.Substitutions {
+		if got := SubstituteArgs(testCase.Template, testCase.Args); got != testCase.Result {
+			t.Errorf("SubstituteArgs(%q, %q) = %q, reference gives %q", testCase.Template, testCase.Args, got, testCase.Result)
+		}
+	}
+	for _, testCase := range golden.ArgumentParsing {
+		// The reference returns [] where pier returns nil for no arguments; the
+		// slice's contents are what callers use.
+		got := ParseCommandArgs(testCase.Input)
+		if len(got) != len(testCase.Result) {
+			t.Errorf("ParseCommandArgs(%q) = %q, reference gives %q", testCase.Input, got, testCase.Result)
+			continue
+		}
+		for index := range got {
+			if got[index] != testCase.Result[index] {
+				t.Errorf("ParseCommandArgs(%q) = %q, reference gives %q", testCase.Input, got, testCase.Result)
+				break
+			}
+		}
+	}
+}
+
+// Reference: pi v1.5.0 (f9a26365) core/package-manager.ts resolves project
+// resources inside `if (projectTrusted)`, and prompts are one of them
+// (`addResources("prompts", collectAutoPromptEntries(projectDirs.prompts), ...)`).
+// `prompts` is also in TRUST_REQUIRING_PROJECT_CONFIG_RESOURCES, which is what
+// raises the question. A487: the port gated skills, themes, MCP config and the
+// system/append prompt files but loaded the project's prompts in both states.
+func promptTemplateNames(templates []PromptTemplate) []string {
+	names := make([]string, 0, len(templates))
+	for _, template := range templates {
+		names = append(names, template.Name)
+	}
+	return names
+}
+
+func writePromptTemplate(t *testing.T, dir, name string) {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := "# " + name + "\n\nDo the thing.\n"
+	if err := os.WriteFile(filepath.Join(dir, name+".md"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestProjectPromptsRequireTrust(t *testing.T) {
+	cwd := t.TempDir()
+	agentDir := t.TempDir()
+	writePromptTemplate(t, filepath.Join(cwd, ConfigDirName, "prompts"), "project-command")
+	writePromptTemplate(t, filepath.Join(agentDir, "prompts"), "user-command")
+
+	options := LoadPromptTemplatesOptions{Cwd: cwd, AgentDir: agentDir, IncludeDefaults: true}
+
+	options.ProjectTrusted = false
+	untrusted := promptTemplateNames(LoadPromptTemplatesWithDiagnostics(options).Templates)
+	if strings.Contains(strings.Join(untrusted, ","), "project-command") {
+		t.Errorf("untrusted project prompts loaded: %v, want only the user's", untrusted)
+	}
+	if !strings.Contains(strings.Join(untrusted, ","), "user-command") {
+		t.Errorf("the user's own prompts stopped loading when untrusted: %v", untrusted)
+	}
+
+	options.ProjectTrusted = true
+	trusted := promptTemplateNames(LoadPromptTemplatesWithDiagnostics(options).Templates)
+	if !strings.Contains(strings.Join(trusted, ","), "project-command") {
+		t.Errorf("a trusted project's prompts did not load: %v", trusted)
 	}
 }

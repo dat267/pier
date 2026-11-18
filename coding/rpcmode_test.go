@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/internal/offloop"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,10 +16,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
-
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/internal/offloop"
 )
 
 func rpcTestSession(t *testing.T) *AgentSession {
@@ -820,5 +820,167 @@ func TestRPCExportHTMLWithoutRenderer(t *testing.T) {
 	record := client.until(t, func(record map[string]any) bool { return record["id"] == "e" })
 	if record["success"] != false || record["error"] != "HTML export is not available in this build" {
 		t.Fatalf("response = %+v", record)
+	}
+}
+
+// Reference: pi v1.5.0 (f9a26365), modes/rpc/rpc-mode.ts awaits
+// session.abort. D235 also includes admitted auth-preflight workers in the Go
+// abort contract, without waiting for independently running user bash.
+func TestRPCAbortWaitsForCanceledPreflightToSettle(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		provider := stubProvider("gate")
+		var enabled atomic.Bool
+		started, canceled, release := make(chan struct{}), make(chan struct{}), make(chan struct{})
+		var startedOnce, canceledOnce, releaseOnce sync.Once
+		unblock := func() { releaseOnce.Do(func() { close(release) }) }
+		defer unblock()
+		provider.Auth.APIKey.Resolve = func(input ai.AuthResolveInput) (*ai.AuthResult, error) {
+			if enabled.Load() {
+				startedOnce.Do(func() { close(started) })
+				<-input.Ctx2.Done()
+				canceledOnce.Do(func() { close(canceled) })
+				<-release // Cancellation was observed, but cleanup is not done.
+				return nil, input.Ctx2.Err()
+			}
+			return nil, nil
+		}
+		runtime := runtimeWithProviders(t, provider)
+		session := rpcTestSession(t)
+		session.control.ModelRuntime = runtime
+		session.Agent.SetModel(runtime.GetModel("gate", "gate-model"))
+		enabled.Store(true)
+		client := startRPCTest(t, session)
+		client.send(t, `{"id":"prompt","type":"prompt","message":"hello"}`)
+		<-started
+		client.send(t, `{"id":"abort","type":"abort"}`)
+		<-canceled
+		synctest.Wait()
+		select {
+		case record := <-client.output:
+			if record["id"] == "abort" {
+				t.Errorf("abort acknowledged before canceled prompt preflight settled: %+v", record)
+			}
+			client.output <- record
+		default:
+		}
+		unblock()
+		responses := client.untilResponses(t, "prompt", "abort")
+		if responses["abort"]["success"] != true || responses["prompt"]["success"] != false {
+			t.Fatalf("responses after preflight settlement = %+v", responses)
+		}
+	})
+}
+
+// pi v1.4.0 core/agent-session-runtime.ts fork settles the old turn before
+// mutating an in-memory manager in place. Its aborted tail must not be written
+// into the newly selected branch. This exercises the JSONL RPC boundary.
+func TestRPCInMemoryForkSettlesBeforeChangingBranch(t *testing.T) {
+	session := blockingRPCSession(t)
+	firstID := session.Sessions.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "original"}})
+	session.Agent.SetMessages(session.Sessions.Projection().Messages)
+	entered := make(chan struct{})
+	stream := session.Agent.StreamFunction
+	session.Agent.StreamFunction = func(model *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		close(entered)
+		return stream(model, transcript, options)
+	}
+	client := startRPCTestWith(t, session, RPCModeOptions{ReplaceSession: rpcReplaceFactory()})
+	client.send(t, `{"id":"prompt","type":"prompt","message":"still running"}`)
+	if response := client.until(t, byResponseID("prompt")); response["success"] != true {
+		t.Fatalf("prompt response = %+v", response)
+	}
+	select {
+	case <-entered:
+	case <-time.After(3 * time.Second):
+		t.Fatal("turn did not enter provider stream")
+	}
+	client.send(t, `{"id":"fork","type":"fork","entryId":"`+firstID+`"}`)
+	if response := client.until(t, byResponseID("fork")); response["success"] != true {
+		t.Fatalf("fork response = %+v", response)
+	}
+	client.send(t, `{"id":"messages","type":"get_messages"}`)
+	messages := client.until(t, byResponseID("messages"))["data"].(map[string]any)["messages"].([]any)
+	if len(messages) != 0 {
+		t.Fatalf("fork before the first message retained the outgoing turn: %+v", messages)
+	}
+}
+
+// Reference: pi v1.4.0 core/agent-session-runtime.ts extractUserMessageText
+// joins text blocks without a separator for a "before" fork.
+func TestRPCUserMessageEntryTextJoinsBlockContent(t *testing.T) {
+	raw, err := ai.MarshalMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Blocks: ai.ContentList{
+		ai.TextContent{Text: "first "}, ai.TextContent{Text: "question"},
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	text, ok := rpcUserMessageEntryText(&SessionEntry{Type: "message", Message: raw})
+	if !ok || text != "first question" {
+		t.Errorf("text = %q, ok = %v; want the joined block text", text, ok)
+	}
+}
+
+// TestRPCResponseEchoesTheIdOnlyWhenPresent pins the documented correlation
+// contract in ARCHITECTURE.md's "Supported commands": "Every command accepts an
+// optional string `id`. Responses repeat it when present, including an empty
+// string. Omitted ids remain omitted." The distinction matters to a client that
+// matches responses to requests: a response must never invent an id, and an
+// empty one is still a value the client chose.
+func TestRPCResponseEchoesTheIdOnlyWhenPresent(t *testing.T) {
+	session := rpcTestSession(t)
+	defer session.Dispose()
+	records := runRPCScript(t, session, `{"id":"","type":"get_state"}
+{"type":"get_state"}
+{"id":"abc","type":"get_state"}
+`)
+
+	var responses []map[string]any
+	for _, record := range records {
+		if record["type"] == "response" && record["command"] == "get_state" {
+			responses = append(responses, record)
+		}
+	}
+	if len(responses) != 3 {
+		t.Fatalf("got %d responses, want 3: %v", len(responses), records)
+	}
+
+	id, present := responses[0]["id"]
+	if !present || id != "" {
+		t.Errorf(`the response to {"id":""} has id %v (present %v), want the empty string`, id, present)
+	}
+	if _, present := responses[1]["id"]; present {
+		t.Errorf("the response to a command without an id carries id %v, want the property omitted", responses[1]["id"])
+	}
+	if id := responses[2]["id"]; id != "abc" {
+		t.Errorf(`the response to {"id":"abc"} has id %v, want "abc"`, id)
+	}
+}
+
+// D235 exposes a Go host with no replacement factory, unlike pi v1.4.0's
+// modes/rpc/rpc-mode.ts runtime. Its explicit unavailable error must not mutate
+// the current manager or create a branch before discovering the missing host.
+func TestRPCUnavailableForkPreservesInMemorySession(t *testing.T) {
+	for _, kind := range []string{"fork", "clone"} {
+		t.Run(kind, func(t *testing.T) {
+			session := rpcTestSession(t)
+			firstID := session.Sessions.AppendMessage(createUserMessage("original"))
+			session.Agent.SetMessages(session.Sessions.Projection().Messages)
+			originalID := session.SessionID()
+			command := `{"id":"change","type":"` + kind + `","entryId":"` + firstID + `"}`
+			responses := rpcResponses(runRPCScript(t, session, command+"\n"+
+				`{"id":"state","type":"get_state"}`+"\n"+
+				`{"id":"entries","type":"get_entries"}`+"\n"))
+			if len(responses) != 3 || responses[0]["success"] != false || responses[0]["error"] != "Session replacement is not available in this build" {
+				t.Fatalf("replacement responses = %+v", responses)
+			}
+			state := responses[1]["data"].(map[string]any)
+			if state["sessionId"] != originalID {
+				t.Errorf("unavailable replacement changed session id: %v, want %s", state["sessionId"], originalID)
+			}
+			entries := responses[2]["data"].(map[string]any)["entries"].([]any)
+			if len(entries) != 1 || entries[0].(map[string]any)["id"] != firstID {
+				t.Errorf("unavailable replacement changed entries: %+v", entries)
+			}
+		})
 	}
 }

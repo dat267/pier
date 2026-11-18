@@ -3,6 +3,8 @@ package coding
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/dat267/pier/ai"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -189,5 +191,148 @@ func TestParseAuthMinExpiryRejectsWhitespace(t *testing.T) {
 	// "30M" falls through to the hours branch (upstream quirk).
 	if ms, ok := parseAuthMinExpiry("30M"); !ok || ms != 108000000 {
 		t.Fatalf("30M = %d, %v; want 108000000, true", ms, ok)
+	}
+}
+
+// Reference: pi v1.5.0 cli/auth-check.ts createAuthCheckModelRuntime calls
+// ModelRuntime.create with no modelsPath, so the default models.json is loaded;
+// a provider declared there is found and its literal, $ENV or !command key
+// resolves. Pier passed DisableModelsJSON, so `pi auth check` reported
+// provider_not_found for every models.json-only provider that `pi auth
+// print-api-key` could resolve.
+func TestAuthCheckSeesModelsJSONProviders(t *testing.T) {
+	agentDir := t.TempDir()
+	t.Setenv("PI_CODING_AGENT_DIR", agentDir)
+	t.Setenv("PIER_AUTH_TEST_KEY", "env-secret")
+	models := `{"providers":{
+		"lit":{"baseUrl":"http://127.0.0.1:1/v1","api":"openai-completions","apiKey":"dummy","models":[{"id":"l1","name":"L","contextWindow":1000,"maxTokens":100}]},
+		"envprov":{"baseUrl":"http://127.0.0.1:1/v1","api":"openai-completions","apiKey":"$PIER_AUTH_TEST_KEY","models":[{"id":"e1","name":"E","contextWindow":1000,"maxTokens":100}]},
+		"nokey":{"baseUrl":"http://127.0.0.1:1/v1","api":"openai-completions","models":[{"id":"n1","name":"N","contextWindow":1000,"maxTokens":100}]}
+	}}`
+	if err := os.WriteFile(filepath.Join(agentDir, "models.json"), []byte(models), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		args     []string
+		status   string
+		reason   string
+		authType string
+		exit     int
+	}{
+		{[]string{"auth", "check", "--provider", "lit", "--json"}, "ready", "", "api_key", 0},
+		{[]string{"auth", "check", "--provider", "envprov", "--json"}, "ready", "", "api_key", 0},
+		{[]string{"auth", "check", "--provider", "nokey", "--json"}, "not_ready", "credentials_not_configured", "", 1},
+		{[]string{"auth", "check", "--model", "lit/l1", "--json"}, "ready", "", "api_key", 0},
+	}
+	for _, testCase := range cases {
+		var stdout, stderr bytes.Buffer
+		handled, code := RunAuthCommandNamed("pier", testCase.args, &stdout, &stderr)
+		if !handled {
+			t.Fatalf("%v was not handled", testCase.args)
+		}
+		if code != testCase.exit {
+			t.Errorf("%v exit = %d, want %d (stdout %q stderr %q)", testCase.args, code, testCase.exit, stdout.String(), stderr.String())
+		}
+		var result struct {
+			Status   string `json:"status"`
+			Provider string `json:"provider"`
+			Reason   string `json:"reason"`
+			AuthType string `json:"authType"`
+		}
+		if err := json.Unmarshal(bytes.TrimSpace(stdout.Bytes()), &result); err != nil {
+			t.Fatalf("%v output %q: %v (stderr %q)", testCase.args, stdout.String(), err, stderr.String())
+		}
+		if result.Status != testCase.status || result.Reason != testCase.reason || result.AuthType != testCase.authType {
+			t.Errorf("%v = %+v, want status %q reason %q authType %q",
+				testCase.args, result, testCase.status, testCase.reason, testCase.authType)
+		}
+		if strings.Contains(stdout.String(), "provider_not_found") {
+			t.Errorf("%v reported provider_not_found for a models.json provider", testCase.args)
+		}
+	}
+}
+
+// Reference: pi v1.5.2 (b4afdddf) cli/auth-command.ts printAuthCommandHelp
+// prints the usage block, a description, and the Commands / login / other
+// option sections. The port printed the usage block and one sentence, so
+// `pi auth --help` lost the per-command and per-option documentation.
+func TestPrintAuthCommandHelpMatchesTheReference(t *testing.T) {
+	help := PrintAuthCommandHelp("pier")
+	for _, want := range []string{
+		"pier auth login <provider> [--api-key] [--no-browser]",
+		"Log in to and out of model providers, print their credentials for external clients, or check that they are ready.",
+		"Credentials are stored in ~/.pi/agent/auth.json.",
+		"Commands:",
+		"login <provider>        Sign in with an account in the browser, or save an API key, then exit",
+		"logout <provider>       Remove the stored credentials; environment variables and models.json stay",
+		"check                   Print ready, not_ready, or invalid; exit with 0, 1, or 2",
+		"Options for print-api-key, print-bearer-token, and check (at least one is required):",
+		"Options for login:",
+		"--no-browser            Do not open a browser; use another sign-in method, e.g. device code",
+		"Other options:",
+		"--min-expiry <duration> Minimum remaining token lifetime for print-bearer-token, e.g. 30m or 1h",
+		"--credentials           Emit the credential from check, or include it in JSON output",
+	} {
+		if !strings.Contains(help, want) {
+			t.Fatalf("auth help is missing %q:\n%s", want, help)
+		}
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252), packages/coding-agent/src/cli/auth-command.ts
+// `/^Bearer\s+(.+)$/iu`: JavaScript's \s is wider than RE2's, so a credential
+// header separated by a non-ASCII space is still a Bearer token there.
+func TestGetAuthCredentialAcceptsJavaScriptWhitespace(t *testing.T) {
+	for _, separator := range []struct {
+		name  string
+		value string
+	}{
+		{"ASCII space", " "},
+		{"tab", "\t"},
+		{"no-break space", "\u00a0"},
+		{"ideographic space", "\u3000"},
+		{"byte order mark", "\ufeff"},
+	} {
+		header := "Bearer" + separator.value + "tok-123"
+		auth := &ai.AuthResult{Auth: ai.ModelAuth{Headers: ai.ProviderHeaders{
+			"Authorization": &header,
+		}}}
+		if got := GetAuthCredential(auth); got != "tok-123" {
+			t.Errorf("%s: GetAuthCredential = %q, want %q", separator.name, got, "tok-123")
+		}
+	}
+	// A non-whitespace separator is not a Bearer token.
+	header := "Bearer-tok"
+	auth := &ai.AuthResult{Auth: ai.ModelAuth{Headers: ai.ProviderHeaders{"Authorization": &header}}}
+	if got := GetAuthCredential(auth); got != "" {
+		t.Errorf("GetAuthCredential(non-Bearer) = %q, want empty", got)
+	}
+}
+
+// Reference: pi v1.5.2 (b4afdddf) main.ts runAuthCommand passes
+// args.slice(2).filter((arg) => arg !== "--offline") to the login and logout
+// commands, because main already applied offline mode from the raw argv. Pier
+// forwarded the flag, so `pi --offline auth login <provider>` and
+// `pi auth logout --offline <provider>` failed on it as an extra argument.
+func TestAuthLoginAndLogoutIgnoreTheOfflineFlag(t *testing.T) {
+	t.Setenv("PI_CODING_AGENT_DIR", t.TempDir())
+
+	var out, errOut bytes.Buffer
+	handled, code := RunAuthCommandNamed("pier", []string{"auth", "logout", "--offline", "definitely-not-a-provider"}, &out, &errOut)
+	if !handled || code != 1 {
+		t.Fatalf("handled = %v code = %d", handled, code)
+	}
+	if strings.Contains(errOut.String(), "Usage:") || !strings.Contains(errOut.String(), `Unknown provider "definitely-not-a-provider".`) {
+		t.Fatalf("logout stderr = %q", errOut.String())
+	}
+
+	out.Reset()
+	errOut.Reset()
+	handled, code = RunAuthCommandNamed("pier", []string{"auth", "login", "--offline", "anthropic"}, &out, &errOut)
+	if !handled || code != 1 {
+		t.Fatalf("handled = %v code = %d", handled, code)
+	}
+	if strings.Contains(errOut.String(), "Usage:") || !strings.Contains(errOut.String(), "requires an interactive terminal") {
+		t.Fatalf("login stderr = %q", errOut.String())
 	}
 }

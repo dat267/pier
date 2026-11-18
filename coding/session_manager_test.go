@@ -1521,3 +1521,108 @@ func TestDisposeStopsSessionCacheWarming(t *testing.T) {
 		})
 	}
 }
+
+// Reference: pi v1.5.0 (f9a26365), core/agent-session.ts getContextUsage:
+// percent is estimateProjectedContextTokens / model.contextWindow, so the
+// denominator follows the active model. Switching models must not change the
+// token estimate, only the reported percentage (the footer shows both).
+func TestContextUsagePercentFollowsTheActiveModelWindow(t *testing.T) {
+	session := newControlSession(t, &ai.Model{ID: "small", Provider: "test", ContextWindow: 1000}, nil)
+	session.Sessions.AppendMessage(&ai.AssistantMessage{
+		API: ai.APIOpenAICompletions, Provider: "test", Model: "small",
+		Content: ai.ContentList{ai.TextContent{Text: "answer"}}, StopReason: ai.StopStop,
+		Usage: ai.Usage{Input: 400, Output: 100, TotalTokens: 500}, Timestamp: 2,
+	})
+	before := session.GetContextUsage()
+	if before == nil || before.Tokens == nil || before.Percent == nil {
+		t.Fatalf("control usage = %+v, want tokens and percent", before)
+	}
+	if *before.Tokens != 500 || *before.Percent != 50 || before.ContextWindow != 1000 {
+		t.Fatalf("control usage = %d tokens, %v%% of %d; want 500, 50%%, 1000", *before.Tokens, *before.Percent, before.ContextWindow)
+	}
+
+	if err := session.SetModel(t.Context(), &ai.Model{ID: "large", Provider: "test", ContextWindow: 4000}, ModelMutationOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	after := session.GetContextUsage()
+	if after == nil || after.Tokens == nil || after.Percent == nil {
+		t.Fatalf("usage after switch = %+v, want tokens and percent", after)
+	}
+	if *after.Tokens != 500 {
+		t.Fatalf("token estimate changed across a model switch: %d, want 500", *after.Tokens)
+	}
+	if after.ContextWindow != 4000 || *after.Percent != 12.5 {
+		t.Fatalf("usage after switch = %v%% of %d; want 12.5%% of 4000", *after.Percent, after.ContextWindow)
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252), core/agent-session.ts getContextUsage
+// counts only projected assistants as post-compaction usage evidence.
+func TestContextUsageUnknownAfterOmittingPostCompactionResponse(t *testing.T) {
+	session := newControlSession(t, &ai.Model{ID: "m", Provider: "test", ContextWindow: 1000}, nil)
+	session.Sessions.AppendCompaction("summary", "", 10, nil, false, nil)
+	assistant := &ai.AssistantMessage{API: ai.APIOpenAICompletions, Provider: "test", Model: "m", Content: ai.ContentList{ai.TextContent{Text: "answer"}}, StopReason: ai.StopStop, Usage: ai.Usage{Input: 100, Output: 5, TotalTokens: 105}, Timestamp: 2}
+	id := session.Sessions.AppendMessage(assistant)
+	if usage := session.GetContextUsage(); usage == nil || usage.Tokens == nil || *usage.Tokens != 105 {
+		t.Fatalf("control usage = %+v, want 105 tokens", usage)
+	}
+	if _, err := session.Sessions.AppendContextEdit(id, json.RawMessage("null")); err != nil {
+		t.Fatal(err)
+	}
+	usage := session.GetContextUsage()
+	if usage == nil || usage.ContextWindow != 1000 || usage.Tokens != nil || usage.Percent != nil {
+		t.Fatalf("omitted response establishes usage: %+v, want unknown tokens and percent", usage)
+	}
+	session.Sessions.AppendMessage(assistant)
+	if usage := session.GetContextUsage(); usage == nil || usage.Tokens == nil || usage.Percent == nil {
+		t.Fatalf("new projected response did not restore usage: %+v", usage)
+	}
+}
+
+// Reference: pi v1.5.0 core/agent-session.ts getSessionStats reads
+// `assistantMsg.usage` unconditionally and core/usage-totals.ts
+// addUsageToTotals dereferences usage.input/output/cacheRead/cacheWrite and
+// usage.cost.total, so a persisted assistant message without a complete usage
+// record makes the whole call throw. Pier decodes usage into a value type, so
+// the projection reads zeros and returns a result.
+//
+// Every message both sides write carries a complete usage record, so this only
+// reaches the boundary through a hand-edited or foreign session file. The port
+// keeps the tolerant read deliberately (a damaged transcript still reports its
+// counts); this test pins that choice so it cannot change silently.
+func TestSessionStatsToleratesAnIncompleteAssistantUsage(t *testing.T) {
+	cases := []struct {
+		name  string
+		usage string
+		input int64
+	}{
+		{"absent usage", ``, 0},
+		{"null usage", `"usage":null,`, 0},
+		{"partial usage", `"usage":{"input":5},`, 5},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "s.jsonl")
+			body := `{"type":"session","version":3,"id":"s","timestamp":"2026-01-01T00:00:00.000Z","cwd":"` + dir + `"}` + "\n" +
+				`{"type":"message","id":"m1","parentId":null,"timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"hi"}],"timestamp":1}}` + "\n" +
+				`{"type":"message","id":"x","parentId":"m1","timestamp":"2026-01-01T00:00:02.000Z","message":{"role":"assistant","content":[{"type":"text","text":"a"}],"api":"openai-completions","provider":"fake","model":"m",` + testCase.usage + `"stopReason":"stop","timestamp":2}}` + "\n"
+			if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			manager, err := OpenSession(path, dir, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			// The load path seeds the statistics scan off the caller's goroutine.
+			waitForSeed(t, manager)
+			stats := manager.SessionStats()
+			if stats.AssistantMessages != 1 {
+				t.Fatalf("assistant messages = %d, want 1", stats.AssistantMessages)
+			}
+			if stats.Tokens.Input != testCase.input {
+				t.Fatalf("input tokens = %d, want %d", stats.Tokens.Input, testCase.input)
+			}
+		})
+	}
+}

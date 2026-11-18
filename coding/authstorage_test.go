@@ -1,9 +1,11 @@
 package coding
 
 import (
+	"context"
 	ctxpkg "context"
 	"encoding/json"
 	"errors"
+	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -12,8 +14,6 @@ import (
 	"syscall"
 	"testing"
 	"time"
-
-	"github.com/dat267/pier/ai"
 )
 
 // Round 96 tests: the auth.json credential storage (file/in-memory backends,
@@ -507,5 +507,238 @@ func TestAuthLockFollowsSymlinkedAliases(t *testing.T) {
 	defer release.release()
 	if _, err := acquireAuthLockDir(alias); !errors.Is(err, errAuthLocked) {
 		t.Fatalf("alias lock err = %v, want errAuthLocked", err)
+	}
+}
+
+// pi v1.4.0 (4a080252), core/auth-storage.ts spreads the parsed document
+// during modify. For a valid JSON array this retains its enumerable entries
+// ("0", "1", ...) instead of silently replacing the whole document.
+func TestAuthStorageArrayRootIsNotDiscardedByMutation(t *testing.T) {
+	const initial = `["preserve-me"]`
+	path := filepath.Join(t.TempDir(), "auth.json")
+	writeAuthFile(t, path, initial)
+	storage := NewAuthStorage(path)
+	_, err := storage.Modify("openai", func(*ai.Credential) (*ai.Credential, error) {
+		return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "synthetic-key"}}, nil
+	}, context.Background())
+	if err != nil {
+		got, readErr := os.ReadFile(path)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		if string(got) != initial {
+			t.Fatalf("rejected mutation changed auth.json: %s", got)
+		}
+		return
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document map[string]json.RawMessage
+	if err := json.Unmarshal(got, &document); err != nil {
+		t.Fatalf("mutated auth.json is invalid: %v", err)
+	}
+	var preserved string
+	if err := json.Unmarshal(document["0"], &preserved); err != nil || preserved != "preserve-me" {
+		t.Fatalf("array entry was lost: document=%s entry=%q err=%v", got, preserved, err)
+	}
+	if len(document["openai"]) == 0 {
+		t.Fatalf("new credential was not written: %s", got)
+	}
+}
+
+// pi v1.4.0 (4a080252), auth-storage.ts InMemoryAuthStorageBackend.withLockAsync
+// checks signal.throwIfAborted after the callback and before committing next.
+func TestMemoryAuthBackendDoesNotCommitCancelledCallback(t *testing.T) {
+	backend := NewInMemoryAuthStorageBackend()
+	original := "old"
+	if _, err := backend.WithLock(func(*string) (LockResult, error) {
+		return LockResult{Next: &original}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	_, err := backend.WithLockAsync(ctx, func(*string) (LockResult, error) {
+		cancel()
+		next := "new"
+		return LockResult{Next: &next}, nil
+	})
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("callback cancellation = %v, want context.Canceled", err)
+	}
+	// The synchronous read also waits until the worker releases its data lock,
+	// so the check observes the settled operation even if cancellation won early.
+	value, err := backend.WithLock(func(current *string) (LockResult, error) {
+		if current == nil {
+			return LockResult{}, nil
+		}
+		return LockResult{Result: *current}, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value != "old" {
+		t.Fatalf("cancelled callback committed %v, want old state", value)
+	}
+}
+
+// pi v1.4.0 (4a080252), core/auth-storage.ts withLockAsync checks
+// onCompromised before committing; proper-lockfile owns its lock lease. A
+// suspended process may resume after another process reclaimed its stale lock.
+// The old operation must neither commit nor remove the successor's live lock.
+func TestAuthStorageLostLeaseDoesNotCommitOrReleaseSuccessor(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "auth.json")
+	const original = `{"original":{"type":"api_key","key":"synthetic-original"}}`
+	writeAuthFile(t, path, original)
+	backend := NewFileAuthStorageBackend(path)
+	entered, finishFirst := make(chan struct{}), make(chan struct{})
+	firstDone := make(chan error, 1)
+	go func() {
+		_, err := backend.WithLockAsync(context.Background(), func(*string) (LockResult, error) {
+			close(entered)
+			<-finishFirst
+			stale := `{"stale":{"type":"api_key","key":"synthetic-stale"}}`
+			return LockResult{Next: &stale}, nil
+		})
+		firstDone <- err
+	}()
+	<-entered
+	// Model stale recovery without waiting 30 seconds. Retain the old inode
+	// so an immediately recreated directory cannot reuse its identity.
+	lockPath := path + ".lock"
+	if err := os.Rename(lockPath, lockPath+".expired"); err != nil {
+		close(finishFirst)
+		<-firstDone
+		t.Fatal(err)
+	}
+	secondEntered, finishSecond := make(chan struct{}), make(chan struct{})
+	secondDone := make(chan error, 1)
+	go func() {
+		_, err := NewFileAuthStorageBackend(path).WithLockAsync(context.Background(), func(*string) (LockResult, error) {
+			close(secondEntered)
+			<-finishSecond
+			current := `{"current":{"type":"api_key","key":"synthetic-current"}}`
+			return LockResult{Next: &current}, nil
+		})
+		secondDone <- err
+	}()
+	<-secondEntered
+	close(finishFirst)
+	firstErr := <-firstDone
+	raw, readErr := os.ReadFile(path)
+	_, lockErr := os.Stat(lockPath)
+	close(finishSecond)
+	if err := <-secondDone; err != nil {
+		t.Fatal(err)
+	}
+	if firstErr == nil {
+		t.Error("operation committed after losing its lock lease")
+	}
+	if readErr != nil || string(raw) != original {
+		t.Errorf("old holder changed auth.json while successor owned the lock: %q, %v", raw, readErr)
+	}
+	if lockErr != nil {
+		t.Errorf("old holder removed successor's lock: %v", lockErr)
+	}
+}
+
+// Reference: pi v1.5.0 f9a26365 core/auth-storage.ts ReadOnlyAuthStorage.load.
+// Missing key/env fields are allowed, but present null values are not strings
+// or environment objects and must fail a no-refresh auth-state check.
+func TestReadOnlyAuthStorageRejectsExplicitNullFields(t *testing.T) {
+	for _, tc := range []struct {
+		name, credential string
+		valid            bool
+	}{
+		{"null key", `{"type":"api_key","key":null}`, false},
+		{"null env", `{"type":"api_key","key":"synthetic","env":null}`, false},
+		{"missing key", `{"type":"api_key"}`, true},
+		{"missing env", `{"type":"api_key","key":"synthetic"}`, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "auth.json")
+			writeAuthFile(t, path, `{"p":`+tc.credential+`}`)
+			_, err := NewReadOnlyAuthStorage(path).List(context.Background())
+			if tc.valid {
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else if err == nil || err.Error() != `Invalid auth.json credential for provider "p"` {
+				t.Fatalf("invalid credential error = %v", err)
+			}
+		})
+	}
+}
+
+// Reference: pi v1.5.0 f9a26365 core/auth-storage.ts ReadOnlyAuthStorage.read
+// uses structuredClone. Returned environment maps and OAuth extra JSON belong
+// to the caller, not to the cached file snapshot.
+func TestReadOnlyAuthStorageReturnsOwnedCredentialData(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "auth.json")
+	writeAuthFile(t, path, `{"api":{"type":"api_key","key":"synthetic","env":{"ACCOUNT":"original"}},"oauth":{"type":"oauth","access":"synthetic","refresh":"synthetic","expires":123,"tenant":"original"}}`)
+	storage := NewReadOnlyAuthStorage(path)
+	ctx := context.Background()
+	api, err := storage.Read("api", ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	api.APIKey.Env["ACCOUNT"] = "changed"
+	again, err := storage.Read("api", ctx)
+	if err != nil || again.APIKey.Env["ACCOUNT"] != "original" {
+		t.Errorf("environment mutation reached cached credential: %v, %v", again.APIKey.Env, err)
+	}
+	oauth, err := storage.Read("oauth", ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oauth.OAuth.Extra["tenant"][1] = 'X'
+	oauth.OAuth.Extra["added"] = []byte(`true`)
+	again, err = storage.Read("oauth", ctx)
+	if err != nil || string(again.OAuth.Extra["tenant"]) != `"original"` || again.OAuth.Extra["added"] != nil {
+		t.Errorf("OAuth mutation reached cached credential: %v, %v", again.OAuth.Extra, err)
+	}
+}
+
+// pi v1.4.0 (4a080252), core/auth-storage.ts modify spreads the parsed
+// document and delete removes only its target. Untouched entries and unknown
+// credential members survive, even when our typed view cannot decode them.
+func TestAuthStorageMutationsPreserveUntouchedEntries(t *testing.T) {
+	data, err := os.ReadFile("testdata/auth-preservation/golden.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []struct{ Name, Initial, Op, Expected string }
+	if err := json.Unmarshal(data, &cases); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range cases {
+		t.Run(tc.Name+"/"+tc.Op, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "auth.json")
+			writeAuthFile(t, path, tc.Initial)
+			storage := NewAuthStorage(path)
+			known, err := storage.Read("known", context.Background())
+			if err != nil || known == nil || known.APIKey == nil || known.APIKey.Key != "synthetic-known" {
+				t.Fatalf("readable sibling was lost: %+v, %v", known, err)
+			}
+			if tc.Op == "modify" {
+				_, err = storage.Modify("added", func(*ai.Credential) (*ai.Credential, error) {
+					return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "synthetic-added"}}, nil
+				}, context.Background())
+			} else {
+				err = storage.Delete("known", context.Background())
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.Expected {
+				t.Fatalf("auth.json = %s; want %s", got, tc.Expected)
+			}
+		})
 	}
 }

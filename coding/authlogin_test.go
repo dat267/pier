@@ -5,12 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/dat267/pier/ai"
 )
 
 // scriptedLoginTerminal answers prompts from a list and records the output.
@@ -190,5 +189,47 @@ func TestAuthLoginIsARecognizedSubcommand(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "--no-browser only applies to account sign-in") {
 		t.Fatalf("stderr = %q", stderr.String())
+	}
+}
+
+// D460: text an authorization server supplies is data, not terminal control.
+// The reference prints the device user code, the instructions and an info
+// message as they arrive, so an ESC sequence in any of them reaches the
+// terminal; pier treats remote text like every other provider string (D342).
+func TestAuthLoginNotifyDropsProviderTerminalControl(t *testing.T) {
+	terminal := newLoginTestTerminal(false)
+	handle := newLoginPromptHandler("pier", authLoginRequest{providerRef: "xai"}, ai.CredentialOAuth, "xai", terminal)
+
+	handle.notify(ai.AuthEvent{Type: ai.AuthEventDeviceCode, VerificationURI: "https://x.ai/device", UserCode: "\x1b]0;owned\x07ABCD-1234"})
+	handle.notify(ai.AuthEvent{Type: ai.AuthEventAuthURL, URL: "https://x.ai/authorize", Instructions: "line one\n\x1b[2Jline two"})
+	handle.notify(ai.AuthEvent{Type: ai.AuthEventInfo, Message: "\x1b]8;;https://evil\x07click", Links: []ai.AuthInfoLink{{URL: "https://x.ai/help", Label: "\x1b[31mhelp\x1b[0m"}}})
+
+	output := terminal.output()
+	if strings.ContainsAny(output, "\x1b\x07") {
+		t.Fatalf("provider control characters reached the terminal: %q", output)
+	}
+	for _, want := range []string{"ABCD-1234", "line one", "line two", "click", "help"} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("output dropped %q: %q", want, output)
+		}
+	}
+}
+
+// Reference: pi v1.5.2 (b4afdddf) cli/auth-login.ts selectInTerminal accepts an
+// answer only when /^\d+$/u matches the whole trimmed line; pier scanned a
+// leading integer, so "1 2" or "1abc" selected the first option instead of
+// re-prompting.
+func TestSelectInTerminalRequiresTheWholeLineToBeADigits(t *testing.T) {
+	terminal := &scriptedLoginTerminal{answers: []string{"1 2", "2"}}
+	options := []ai.AuthSelectOption{{ID: "first", Label: "First"}, {ID: "second", Label: "Second"}}
+	choice, err := selectInTerminal(context.Background(), "Pick:", options, terminal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if choice != "second" {
+		t.Fatalf("choice = %q, want the second option after re-prompting", choice)
+	}
+	if !strings.Contains(terminal.output(), "Enter a number from 1 to 2.") {
+		t.Fatalf("output = %q", terminal.output())
 	}
 }

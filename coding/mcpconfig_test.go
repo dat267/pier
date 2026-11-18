@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -635,5 +636,79 @@ func TestMcpConfigNonObjectDocument(t *testing.T) {
 	if _, err := AddMcpServerConfig(path, "added", json.RawMessage(`{"command":"c"}`)); err == nil ||
 		err.Error() != path+`: expected an object with an "mcpServers" object` {
 		t.Fatalf("write error = %v", err)
+	}
+}
+
+// pi v1.4.0 packages/coding-agent/src/extensions/mcp/config.ts readConfigFile
+// parses JSON before iterating Object.entries, so duplicate object keys are
+// collapsed to one final value and produce at most one entry error.
+func TestLoadMcpConfigCollapsesDuplicateServerKeys(t *testing.T) {
+	agentDir := t.TempDir()
+	config := `{"mcpServers":{"srv":{"command":"first"},"srv":{"timeout":0}}}`
+	if err := os.WriteFile(filepath.Join(agentDir, "mcp.json"), []byte(config), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded := LoadMcpConfig(McpConfigLoadOptions{AgentDir: agentDir})
+	if len(loaded.Errors) != 1 {
+		t.Fatalf("errors = %v, want one error for the final duplicate value", loaded.Errors)
+	}
+	if len(loaded.Servers) != 0 {
+		t.Fatalf("servers = %v, want invalid final value to be rejected", loaded.Servers)
+	}
+}
+
+// pi v1.4.0 packages/coding-agent/src/extensions/mcp/config.ts iterates
+// mcpServers with Object.entries, which enumerates integer-index keys first.
+func TestLoadMcpConfigOrdersIntegerServerKeysLikeJavaScript(t *testing.T) {
+	agentDir := t.TempDir()
+	config := `{"mcpServers":{"10":{"command":"ten"},"2":{"command":"two"},"1":{"command":"one"},"01":{"command":"leading-zero"},"4294967295":{"command":"max-uint32"},"4294967294":{"command":"last-index"},"0":{"command":"zero"}}}`
+	if err := os.WriteFile(filepath.Join(agentDir, "mcp.json"), []byte(config), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded := LoadMcpConfig(McpConfigLoadOptions{AgentDir: agentDir})
+	if len(loaded.Errors) != 0 {
+		t.Fatalf("errors = %v", loaded.Errors)
+	}
+	var names []string
+	for _, server := range loaded.Servers {
+		names = append(names, server.Name)
+	}
+	if want := []string{"0", "1", "2", "10", "4294967294", "01", "4294967295"}; !reflect.DeepEqual(names, want) {
+		t.Fatalf("server names = %v, want JavaScript property order %v", names, want)
+	}
+}
+
+// Reference: pi v1.4.0 packages/coding-agent/src/extensions/mcp/config.ts
+// readConfigFile records read failures in LoadedMcpConfig.errors.
+func TestLoadMcpConfigReportsUnreadableFile(t *testing.T) {
+	agentDir := t.TempDir()
+	path := filepath.Join(agentDir, "mcp.json")
+	if err := os.Mkdir(path, 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded := LoadMcpConfig(McpConfigLoadOptions{AgentDir: agentDir})
+	if len(loaded.Errors) != 1 || !strings.HasPrefix(loaded.Errors[0], path+":") {
+		t.Fatalf("errors = %q, want a read diagnostic for %s", loaded.Errors, path)
+	}
+}
+
+// pi v1.4.0 packages/coding-agent/src/extensions/mcp/config.ts readConfigFile
+// calls JSON.parse, which rejects any non-whitespace bytes after the root value.
+func TestLoadMcpConfigRejectsTrailingJSON(t *testing.T) {
+	agentDir := t.TempDir()
+	config := `{"mcpServers":{"srv":{"command":"server"}}} trailing`
+	if err := os.WriteFile(filepath.Join(agentDir, "mcp.json"), []byte(config), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded := LoadMcpConfig(McpConfigLoadOptions{AgentDir: agentDir})
+	if len(loaded.Errors) != 1 {
+		t.Fatalf("errors = %v, want one JSON parse error", loaded.Errors)
+	}
+	if len(loaded.Servers) != 0 {
+		t.Fatalf("servers = %v, want malformed file to be rejected", loaded.Servers)
 	}
 }

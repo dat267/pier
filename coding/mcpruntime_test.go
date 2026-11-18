@@ -4,18 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"net/url"
-	"path/filepath"
-	"strings"
-	"sync"
-	"testing"
-	"time"
-	"unicode/utf8"
-
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/mcp"
 	"github.com/dat267/pier/mcp/protocol"
+	"math"
+	"net/url"
+	"path/filepath"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"testing/synctest"
+	"time"
+	"unicode/utf8"
 )
 
 // Port of the "MCP connections" cases of upstream
@@ -863,5 +865,147 @@ func TestExpandMcpHomeHandlesWindowsSeparator(t *testing.T) {
 	}
 	if got, want := expandMcpHomeOn("~/work", home, "windows"), filepath.Join(home, "work"); got != want {
 		t.Fatalf("~/ on windows = %q, want %q", got, want)
+	}
+}
+
+// pi v1.4.0 (4a080252), extensions/mcp/runtime.ts getClient returns the shared
+// open promise's result, not whatever client remains attached when a waiter
+// resumes. A server can drop after publication but before open returns.
+func TestMcpConnectRetainsItsResultAfterTransportDrop(t *testing.T) {
+	server, transport := newMCPFakeServer(t, false)
+	defer server.transport.Close(context.Background())
+	connection := NewMcpServerConnection(McpServerConnectionOptions{
+		Entry: McpServerEntry{Name: "fake", Config: &McpServerConfig{Command: "unused"}},
+		CreateTransport: func(McpServerEntry, string, mcp.AuthProvider) (mcp.Transport, error) {
+			return transport, nil
+		},
+		OnTools: func(*McpServerConnection) {
+			// Drop the actual transport at this publication boundary; do not
+			// mutate private connection fields to manufacture the interleaving.
+			_ = server.transport.Close(context.Background())
+		},
+	})
+	defer connection.Close(context.Background())
+	client, err := connection.GetClient(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client == nil {
+		t.Fatal("a completed connect returned (nil, nil) after the transport dropped")
+	}
+	if client.ConnectionState() != mcp.StateClosed {
+		t.Fatalf("dropped client state = %s, want closed", client.ConnectionState())
+	}
+}
+
+// pi v1.4.0 (4a080252), extensions/mcp/runtime.ts connectOnce registers
+// refreshTools without an opening-request signal. A completed connect must not
+// cancel later notifications/tools/list_changed discovery on its live client.
+func TestMcpToolRefreshSurvivesInitialConnectCompletion(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		server, transport := newMCPFakeServer(t, false)
+		defer server.transport.Close(context.Background())
+		published := make(chan struct{}, 2)
+		connection := NewMcpServerConnection(McpServerConnectionOptions{
+			Entry: McpServerEntry{Name: "fake", Config: &McpServerConfig{Command: "unused"}},
+			CreateTransport: func(McpServerEntry, string, mcp.AuthProvider) (mcp.Transport, error) {
+				return transport, nil
+			},
+			OnTools: func(*McpServerConnection) { published <- struct{}{} },
+		})
+		defer connection.Close(context.Background())
+		if _, err := connection.GetClient(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+		<-published // Initial tool discovery has been published.
+		if err := server.transport.Send(context.Background(), &protocol.JsonRpcNotification{
+			JSONRPC: protocol.JSONRPCVersion,
+			Method:  "notifications/tools/list_changed",
+		}); err != nil {
+			t.Fatal(err)
+		}
+		synctest.Wait()
+		select {
+		case <-published:
+		default:
+			connection.mu.Lock()
+			err := connection.Error
+			connection.mu.Unlock()
+			t.Fatalf("live connection did not publish refreshed tools: %s", err)
+		}
+	})
+}
+
+// pi v1.4.0 (4a080252), extensions/mcp/runtime.ts starts refreshTools with
+// `void`: awaiting tools/list inside the notification handler would prevent
+// that same transport reader from delivering the response. Hold initial
+// publication open so its context is still live, isolating reader reentrancy
+// from the separate post-connect context-lifetime regression.
+func TestMcpToolRefreshDoesNotBlockNotificationDelivery(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		server, transport := newMCPFakeServer(t, false)
+		defer server.transport.Close(context.Background())
+		initial := make(chan struct{})
+		releaseInitial := make(chan struct{})
+		refreshed := make(chan struct{}, 1)
+		var publications atomic.Int32
+		connection := NewMcpServerConnection(McpServerConnectionOptions{
+			Entry: McpServerEntry{Name: "fake", Config: &McpServerConfig{Command: "unused"}},
+			CreateTransport: func(McpServerEntry, string, mcp.AuthProvider) (mcp.Transport, error) {
+				return transport, nil
+			},
+			OnTools: func(*McpServerConnection) {
+				if publications.Add(1) == 1 {
+					close(initial)
+					<-releaseInitial
+				} else {
+					refreshed <- struct{}{}
+				}
+			},
+		})
+		defer connection.Close(context.Background())
+		defer close(releaseInitial)
+		go func() { _, _ = connection.GetClient(context.Background()) }()
+		<-initial
+		if err := server.transport.Send(context.Background(), &protocol.JsonRpcNotification{
+			JSONRPC: protocol.JSONRPCVersion,
+			Method:  "notifications/tools/list_changed",
+		}); err != nil {
+			t.Fatal(err)
+		}
+		synctest.Wait()
+		select {
+		case <-refreshed:
+		default:
+			t.Fatal("tool refresh blocked the reader that must deliver its response")
+		}
+	})
+}
+
+// pi v1.4.0 coding-agent/extensions/mcp/runtime.ts converts timeout seconds to
+// milliseconds; mcp/client.ts keeps positive deadlines and the timer clamps
+// sub-millisecond or oversized delays rather than disabling them.
+func TestMcpServerTimeoutMsClampsConfiguredSeconds(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		seconds float64
+		want    int64
+	}{
+		{name: "sub-millisecond", seconds: 0.000001, want: 1},
+		{name: "ordinary fractional", seconds: 1.5, want: 1500},
+		{name: "above int64 range", seconds: 1e16, want: math.MaxInt64},
+		{name: "non-finite milliseconds from finite seconds", seconds: 1e308, want: 0},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			connection := NewMcpServerConnection(McpServerConnectionOptions{Entry: McpServerEntry{
+				Name: "test",
+				Config: &McpServerConfig{
+					McpServerConfigBase: McpServerConfigBase{TimeoutSeconds: &test.seconds},
+				},
+			}})
+			if got := connection.TimeoutMs(); got != test.want {
+				t.Fatalf("TimeoutMs() = %d, want %d", got, test.want)
+			}
+		})
 	}
 }

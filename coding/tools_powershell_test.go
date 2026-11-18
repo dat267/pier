@@ -3,12 +3,11 @@ package coding
 import (
 	"context"
 	"encoding/json"
+	"github.com/dat267/pier/ai"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
-
-	"github.com/dat267/pier/ai"
 )
 
 // Tests keyed to upstream utils/shell.ts, core/tools/powershell.ts, and
@@ -345,5 +344,69 @@ func TestIsLegacyWslBashPathHonorsSystemRoot(t *testing.T) {
 		if !isLegacyWslBashPath(path) {
 			t.Fatalf("%q should normalize to the legacy WSL launcher", path)
 		}
+	}
+}
+
+// pi v1.5.2 (b4afdddf) core/tools/powershell.ts WINDOWS_POWERSHELL_EXIT_SUFFIX:
+// Windows PowerShell 5.1 reports a failed exit code for a native command whose
+// redirected stderr became an error record (#8842), so the suffix retries the
+// rule with $LASTEXITCODE and the error id. PowerShell 7 needs no suffix, and a
+// command ending in a backtick must not continue into it.
+//
+// The suffix cannot be reached from a test on other platforms: the shell tool
+// refuses to resolve PowerShell off Windows before a command runs. This pins the
+// reference's exact text and the conditions instead.
+func TestWindowsPowerShellExitSuffix(t *testing.T) {
+	if !strings.Contains(windowsPowerShellExitSuffix, "if ($?) { exit 0 }") ||
+		!strings.Contains(windowsPowerShellExitSuffix, `"NativeCommandError*"`) ||
+		!strings.HasSuffix(windowsPowerShellExitSuffix, "\nexit 1") {
+		t.Fatalf("suffix = %q", windowsPowerShellExitSuffix)
+	}
+
+	cases := []struct {
+		name     string
+		shell    string
+		command  string
+		wantSame bool
+	}{
+		{name: "windows-powershell", shell: `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`, command: "git push 2>&1 | Select-Object -Last 3"},
+		{name: "relative", shell: "powershell.exe", command: "Get-Date"},
+		{name: "mixed-case", shell: `C:\Windows\System32\WindowsPowerShell\v1.0\PowerShell.EXE`, command: "Get-Date"},
+		{name: "powershell-7", shell: `C:\Program Files\PowerShell\7\pwsh.exe`, command: "Get-Date", wantSame: true},
+		{name: "other-shell", shell: "/bin/bash", command: "Get-Date", wantSame: true},
+		{name: "trailing-backtick", shell: `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`, command: "Write-Output `", wantSame: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			suffix := windowsPowerShellExitSuffixFor(tc.shell, tc.command)
+			if tc.wantSame {
+				if suffix != "" {
+					t.Fatalf("suffix = %q, want none", suffix)
+				}
+				return
+			}
+			if suffix != windowsPowerShellExitSuffix {
+				t.Fatalf("suffix = %q, want the Windows PowerShell suffix", suffix)
+			}
+		})
+	}
+}
+
+// TestAllToolsPowerShellOptionsIgnoreBashOptions pins pi v1.5.2 (b4afdddf)
+// core/tools/index.ts createAllTools: the PowerShell tool gets
+// `options?.powershell` and nothing else. Pier fell back to the bash options,
+// so a caller who configured bash alone had its shell prefix and
+// session-environment flags applied to PowerShell too.
+func TestAllToolsPowerShellOptionsIgnoreBashOptions(t *testing.T) {
+	bashOnly := &ToolsOptions{Bash: &BashToolOptions{CommandPrefix: "leak", ExposeSessionEnvironment: new(false)}}
+	if got := allToolsPowerShellOptions(bashOnly); got != nil {
+		t.Fatalf("bash-only options reached PowerShell: %+v", got)
+	}
+	if got := allToolsPowerShellOptions(nil); got != nil {
+		t.Fatalf("nil options gave %+v", got)
+	}
+	powerShell := &BashToolOptions{CommandPrefix: "ps"}
+	if got := allToolsPowerShellOptions(&ToolsOptions{Bash: &BashToolOptions{CommandPrefix: "bash"}, PowerShell: powerShell}); got != powerShell {
+		t.Fatalf("PowerShell options = %+v, want the powershell entry", got)
 	}
 }

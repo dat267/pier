@@ -1,6 +1,8 @@
 package coding
 
 import (
+	"encoding/json"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -154,5 +156,73 @@ func TestGenerateUnifiedPatchTrailingRunKeepsContextLimit(t *testing.T) {
 				t.Fatalf("patch = %q; want %q", got, test.want)
 			}
 		})
+	}
+}
+
+// pi v1.4.0 core/tools/edit-diff.ts generateUnifiedPatch and
+// generateDiffString over jsdiff 8.0.4, executed by the pinned module.
+// Regenerate:
+// node coding/testdata/edit-diff-patch/generate.mjs ./pi > coding/testdata/edit-diff-patch/golden.json
+func TestEditDiffPatchCorpusMatchesUpstream(t *testing.T) {
+	raw, err := os.ReadFile("testdata/edit-diff-patch/golden.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []struct {
+		Name                     string `json:"name"`
+		OldContent               string `json:"oldContent"`
+		NewContent               string `json:"newContent"`
+		ExpectedPatch            string `json:"expectedPatch"`
+		ExpectedDiff             string `json:"expectedDiff"`
+		ExpectedFirstChangedLine int    `json:"expectedFirstChangedLine"`
+	}
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	if len(cases) == 0 {
+		t.Fatal("empty edit-diff patch corpus")
+	}
+	for _, test := range cases {
+		t.Run(test.Name, func(t *testing.T) {
+			if got := GenerateUnifiedPatch("f.txt", test.OldContent, test.NewContent, 4); got != test.ExpectedPatch {
+				t.Errorf("patch =\n%s\nwant\n%s", got, test.ExpectedPatch)
+			}
+			diff, first, ok := GenerateDiffString(test.OldContent, test.NewContent, 4)
+			if diff != test.ExpectedDiff {
+				t.Errorf("diff =\n%s\nwant\n%s", diff, test.ExpectedDiff)
+			}
+			wantPresent := test.ExpectedFirstChangedLine >= 0
+			if ok != wantPresent || (wantPresent && first != test.ExpectedFirstChangedLine) {
+				t.Errorf("firstChangedLine = (%d, %v), want (%d, %v)", first, ok, test.ExpectedFirstChangedLine, wantPresent)
+			}
+		})
+	}
+}
+
+// splitLinesWithEndings mirrors JS `content.match(/[^\n]*\n|[^\n]+/g)`: a
+// trailing newline terminates the last line instead of producing an extra empty
+// one.
+func TestSplitLinesWithEndings(t *testing.T) {
+	for _, testCase := range []struct {
+		content string
+		want    []string
+	}{
+		{"", nil},
+		{"a", []string{"a"}},
+		{"a\n", []string{"a\n"}},
+		{"a\nb", []string{"a\n", "b"}},
+		{"a\n\nb", []string{"a\n", "\n", "b"}},
+		{"\n", []string{"\n"}},
+		{"a\r\nb", []string{"a\r\n", "b"}},
+	} {
+		got := splitLinesWithEndings(testCase.content)
+		if len(got) != len(testCase.want) {
+			t.Fatalf("%q: %q, want %q", testCase.content, got, testCase.want)
+		}
+		for index := range got {
+			if got[index] != testCase.want[index] {
+				t.Fatalf("%q: %q, want %q", testCase.content, got, testCase.want)
+			}
+		}
 	}
 }

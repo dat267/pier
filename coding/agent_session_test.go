@@ -3,12 +3,16 @@ package coding
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"github.com/dat267/pier/agent"
+	"github.com/dat267/pier/ai"
+	"os"
+	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
-
-	"github.com/dat267/pier/agent"
-	"github.com/dat267/pier/ai"
+	"time"
 )
 
 // AgentSession tests keyed to upstream agent-session.ts semantics.
@@ -208,5 +212,247 @@ func makeTool(name string) agent.AgentTool {
 		Execute: func(string, json.RawMessage, context.Context, func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			return agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: name}}, Details: json.RawMessage(`{}`)}, nil
 		},
+	}
+}
+
+// Upstream agent-session.ts (pi v1.5.0 f9a26365) abort() aborts retry,
+// compaction, branch summary and the agent run, not a user bash command; only
+// dispose (and the dedicated abortBash) stop that. So Escape during a turn and
+// /compact leave a running `!command` alone, while AbortAsync, used for
+// teardown, still stops it.
+func TestAbortLeavesAUserBashCommandRunning(t *testing.T) {
+	if _, err := os.Stat("/bin/sh"); err != nil {
+		t.Skip("no shell available")
+	}
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic"}
+	session, err := NewAgentSession(&SessionConfig{Cwd: t.TempDir(), Model: model, StreamFn: stubStreamFn})
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, _ = session.ExecuteBash(context.Background(), "sleep 30", nil, nil)
+	}()
+	deadline := time.Now().Add(5 * time.Second)
+	for !session.IsBashRunning() {
+		if time.Now().After(deadline) {
+			t.Fatal("the bash command never started")
+		}
+		time.Sleep(time.Millisecond)
+	}
+
+	session.Abort(context.Background())
+	session.AbortTurnAsync()
+	// The kill is asynchronous: give a wrongly stopped command time to end.
+	select {
+	case <-done:
+		t.Fatal("aborting the turn stopped the user's bash command")
+	case <-time.After(300 * time.Millisecond):
+	}
+
+	session.AbortAsync()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("AbortAsync did not stop the bash command")
+	}
+}
+
+// Bash results recorded at once on an idle session (SDK and RPC callers can
+// run several commands) all reach the transcript: each append is one step on
+// the agent's messages, not a read followed by a later replace that drops
+// whatever another append added in between. Upstream recordBashResult
+// (agent-session.ts, v1.5.0 f9a26365) appends synchronously on one event loop.
+func TestConcurrentBashResultsAreAllRecorded(t *testing.T) {
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 8192}
+	session := newPromptSession(t, model, unusedSessionStreamFn)
+	manager, _ := newTestSession(t)
+	session.Sessions = manager
+	const commands = 32
+	var group sync.WaitGroup
+	start := make(chan struct{})
+	for index := range commands {
+		group.Add(1)
+		go func() {
+			defer group.Done()
+			<-start
+			session.RecordBashResult("echo "+strconv.Itoa(index), BashResult{Output: "ok", ExitCode: new(0)}, false)
+		}()
+	}
+	close(start)
+	group.Wait()
+	got := 0
+	for _, message := range session.Agent.State().Messages {
+		if ai.RoleOf(message) == RoleBashExecution {
+			got++
+		}
+	}
+	if got != commands {
+		t.Fatalf("transcript has %d of %d bash results", got, commands)
+	}
+}
+
+// TestNewAgentSessionHasCollaborators pins the constructor contract: a session
+// always carries its collaborator block, so no method has to ask whether the
+// session was half-built, and the accessors keep their documented empty answers
+// for a session built without a runtime, settings, or tools.
+func TestNewAgentSessionHasCollaborators(t *testing.T) {
+	manager, _ := newTestSession(t)
+	session, err := NewAgentSession(&SessionConfig{Cwd: t.TempDir(), Sessions: manager, StreamFn: stubStreamFn})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if session.control == nil {
+		t.Fatal("NewAgentSession returned a session without its collaborator block")
+	}
+	if runtime := session.ModelRuntime(); runtime != nil {
+		t.Fatalf("model runtime = %v; want nil without one", runtime)
+	}
+	if models := session.ScopedModels(); models != nil {
+		t.Fatalf("scoped models = %#v; want nil", models)
+	}
+	if templates := session.PromptTemplates(); templates != nil {
+		t.Fatalf("prompt templates = %#v; want nil", templates)
+	}
+	if tools := session.GetAllTools(); tools != nil {
+		t.Fatalf("tools = %#v; want nil", tools)
+	}
+	if tool := session.GetToolDefinition("read"); tool != nil {
+		t.Fatalf("tool = %v; want nil", tool)
+	}
+	// These are no-ops on an empty registry instead of returning early.
+	session.SetActiveToolsByName([]string{"read"})
+	session.SetScopedModels([]ScopedModel{{Model: &ai.Model{Provider: "anthropic", ID: "claude-opus-4-5"}}})
+	if models := session.ScopedModels(); len(models) != 1 {
+		t.Fatalf("scoped models = %#v", models)
+	}
+	session.SetScopedModels(nil)
+	if models := session.ScopedModels(); models != nil {
+		t.Fatalf("scoped models = %#v after clearing; want nil", models)
+	}
+	session.SetAutoRetryEnabled(true)
+	if !session.AutoRetryEnabled() {
+		t.Fatal("the auto-retry toggle is not stored")
+	}
+	session.SetAutoCompactionEnabled(true)
+	if !session.AutoCompactionEnabled() {
+		t.Fatal("the auto-compaction toggle is not stored")
+	}
+}
+
+// An image-only steer carries no text, so its display entry is "". The
+// reference guards the dequeue with `if (messageText)` (agent-session.ts:1141,
+// pi v1.5.0 f9a26365), so an empty entry is never removed and the pending
+// count never returns to zero. pier removes it.
+//
+// D437: remove the empty entry, so the dock banner clears when the message is
+// pushed into the transcript.
+func TestQueueDisplayRemovalHandlesEmptyText(t *testing.T) {
+	session := &AgentSession{steeringMessages: []string{""}}
+	session.handleAgentEvent(&agent.AgentEvent{
+		Type: agent.MessageStart,
+		Message: &ai.UserMessage{
+			Content: ai.StringOrBlocks{Blocks: ai.ContentList{
+				ai.ImageContent{Data: "abc", MimeType: "image/png"},
+			}},
+		},
+	})
+	if len(session.steeringMessages) != 0 {
+		t.Fatalf("steering display queue = %q, want empty", session.steeringMessages)
+	}
+}
+
+// Reference: pi v1.5.0 f9a26365 core/agent-session.ts waitForIdle registers
+// its promise synchronously in the single-threaded reference. In Go a run can
+// finish between the idle check and waiter registration; registering first and
+// rechecking keeps that completion from being lost.
+func TestIdleWaitRegistrationAfterCompletionDoesNotBlock(t *testing.T) {
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000}
+	session := newPromptSession(t, model, unreachableStreamFn)
+
+	// A completion that already happened before registration must report idle
+	// instead of returning a channel no completion will ever close.
+	if wait := session.registerIdleWait(); wait != nil {
+		t.Fatal("idle registration returned a wait channel")
+	}
+
+	// While a run is active the same registration returns the channel that
+	// completion resolves.
+	state := session.prompt()
+	state.mu.Lock()
+	state.runActive = true
+	state.mu.Unlock()
+	wait := session.registerIdleWait()
+	if wait == nil {
+		t.Fatal("active registration reported idle")
+	}
+	state.mu.Lock()
+	state.runActive = false
+	state.mu.Unlock()
+	session.resolveIdleWaitIfIdle()
+	select {
+	case <-wait:
+	default:
+		t.Fatal("completion did not resolve the registered waiter")
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252), core/session-manager.ts getEntryCount()
+// uses the existing ID index rather than copying the entry array. D237's
+// initial-tool declaration only needs to know whether a prior entry exists.
+func TestAgentSessionInitializationDoesNotCopyHistory(t *testing.T) {
+	const count = 512
+	version := CurrentSessionVersion
+	cwd := t.TempDir()
+	entries := make([]FileEntry, count+1)
+	entries[0].Header = &SessionHeader{Version: &version, ID: "session", Cwd: cwd}
+	for i := range count {
+		entries[i+1].Entry = &SessionEntry{Type: "custom", ID: fmt.Sprint(i), CustomType: "test"}
+	}
+	manager := InMemorySession(cwd, nil, entries)
+	config := &SessionConfig{Cwd: cwd, Sessions: manager, StreamFn: mockSessionStreamFn()}
+	warm, err := NewAgentSession(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	warm.Dispose()
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	session, err := NewAgentSession(config)
+	runtime.ReadMemStats(&after)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Dispose()
+	// Allow ordinary agent/control allocation, but not a 225 KiB snapshot
+	// of history just to test whether it is empty.
+	if allocated := after.TotalAlloc - before.TotalAlloc; allocated > 64*1024 {
+		t.Fatalf("initializing over %d entries allocated %d bytes, want at most 65536", count, allocated)
+	}
+	if len(manager.GetEntries()) != count {
+		t.Fatal("initialization appended an initial declaration to a nonempty session")
+	}
+}
+
+// pi v1.4.0 coding-agent/src/utils/sleep.ts uses setTimeout(ms), whose runtime
+// clamps values above 2^31-1 to 1ms instead of sleeping for days.
+func TestPrepareRetryDelayOverflowMatchesJavaScriptTimeout(t *testing.T) {
+	policy := &ai.RetryPolicy{
+		Enabled: true, MaxRetries: 1, BaseDelayMS: 1 << 31, MaxAgentDelayMS: 1 << 31,
+	}
+	session := retrySession(t, policy, erroringStreamFn(0, ""))
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	message := &ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
+		StopReason: ai.StopError, ErrorMessage: new("overloaded_error"),
+	}
+	retry, err := session.PrepareRetry(ctx, message)
+	if err != nil {
+		t.Fatalf("prepare retry: %v", err)
+	}
+	if !retry {
+		t.Fatal("retry did not run after the overflowing delay")
 	}
 }

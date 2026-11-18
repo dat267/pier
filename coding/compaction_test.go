@@ -3,12 +3,11 @@ package coding
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/dat267/pier/ai"
 	"math"
 	"reflect"
 	"strings"
 	"testing"
-
-	"github.com/dat267/pier/ai"
 )
 
 // Compaction tests keyed to upstream compaction.ts semantics.
@@ -1188,5 +1187,227 @@ func TestTruncateForSummaryKeepsSurrogatePairsWhole(t *testing.T) {
 	}
 	if strings.Contains(got, "😀") {
 		t.Fatalf("the cut kept the whole emoji: %q", got[len(got)-80:])
+	}
+}
+
+// compaction.ts cutPointMessage: user, assistant, bash-execution, custom,
+// branch-summary and compaction-summary messages are boundaries a summary may
+// cut at; a tool result is not, so a call and its result never straddle one.
+func TestIsCutPointMessage(t *testing.T) {
+	custom, err := json.Marshal(map[string]any{"customType": "note", "content": "hello"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, testCase := range []struct {
+		name    string
+		message ai.Message
+		want    bool
+	}{
+		{"user", &ai.UserMessage{Content: ai.StringOrBlocks{Text: "hi"}}, true},
+		{"assistant", &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{Text: "hi"}}}, true},
+		{"tool result", &ai.ToolResultMessage{ToolCallID: "c", ToolName: "read"}, false},
+		{"bash execution", &ai.CustomMessage{Role: RoleBashExecution, Content: json.RawMessage(`{}`)}, true},
+		{"custom", &ai.CustomMessage{Role: RoleCustom, Content: custom}, true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := isCutPointMessage(testCase.message); got != testCase.want {
+				t.Fatalf("isCutPointMessage(%T) = %v, want %v", testCase.message, got, testCase.want)
+			}
+		})
+	}
+}
+
+// Reference: pi v1.5.0 (f9a26365), core/compaction/compaction.ts:298
+// `estimateTokens`. Every want below is that function's own output, obtained by
+// running its body (types stripped) against the same message JSON under node
+// --experimental-strip-types. Only the user, assistant, toolResult and system
+// branches are pinned here; the custom-message roles are covered by
+// custom_message_test.go.
+//
+// The shapes are the ones the estimator treats differently: a string versus
+// block content, image blocks (a fixed chars estimate each), empty content and
+// an absent one, assistant text/thinking/toolCall blocks (a tool call counts its
+// name plus its serialized arguments), and a system message whose sections and
+// toolsAdded count toward the prompt.
+func TestTokenEstimateMatchesReference(t *testing.T) {
+	cases := []struct {
+		name    string
+		message string
+		want    int
+	}{
+		{"user-ascii", `{"role":"user","content":"plain ascii"}`, 3},
+		{"user-wide-chars", `{"role":"user","content":"日本語のテキストです 😀🚀 astral 𝒜"}`, 7},
+		{"user-blocks-with-image", `{"role":"user","content":[{"type":"text","text":"look"},{"type":"image","data":"QQ==","mimeType":"image/png"},{"type":"text","text":"again"}]}`, 1203},
+		{"user-image-only", `{"role":"user","content":[{"type":"image","data":"QQ==","mimeType":"image/png"}]}`, 1200},
+		{"user-empty-blocks", `{"role":"user","content":[]}`, 0},
+		{"user-empty-string", `{"role":"user","content":""}`, 0},
+		{"assistant-text-and-thinking", `{"role":"assistant","content":[{"type":"text","text":"answer"},{"type":"thinking","thinking":"pondering"}],"usage":{"promptTokens":1,"completionTokens":1}}`, 4},
+		{"assistant-tool-call", `{"role":"assistant","content":[{"type":"toolCall","id":"c|fc","name":"lookup","arguments":{"z":"<&>","a":1,"é":"ü"}}]}`, 8},
+		{"assistant-empty-arguments", `{"role":"assistant","content":[{"type":"toolCall","id":"c","name":"empty","arguments":{}}]}`, 2},
+		{"assistant-empty", `{"role":"assistant","content":[]}`, 0},
+		{"tool-result-with-image", `{"role":"toolResult","toolCallId":"c","toolName":"t","content":[{"type":"text","text":"out"},{"type":"image","data":"QQ==","mimeType":"image/png"}],"isError":false}`, 1201},
+		{"tool-result-empty-text", `{"role":"toolResult","toolCallId":"c","toolName":"t","content":[{"type":"text","text":""}],"isError":true}`, 0},
+		{"system-plain", `{"role":"system","content":"system prompt"}`, 4},
+		{"system-sections-and-tools", `{"role":"system","content":"","sections":{"a":"xx","b":null},"toolsAdded":[{"name":"t","description":"d","parameters":{"type":"object"}}]}`, 17},
+		{"assistant-arguments-with-wide-escape", `{"role":"assistant","content":[{"type":"toolCall","id":"c","name":"lookup","arguments":{"q":"é"}}]}`, 4},
+		{"assistant-arguments-with-control-escape", `{"role":"assistant","content":[{"type":"toolCall","id":"c","name":"lookup","arguments":{"q":"a\u0001b"}}]}`, 6},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			message, err := ai.UnmarshalMessage(json.RawMessage(testCase.message))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := EstimateAgentMessageTokens(message); got != testCase.want {
+				t.Fatalf("estimate = %d, want %d (upstream estimateTokens)", got, testCase.want)
+			}
+		})
+	}
+}
+
+// D264 keeps the pinned compaction prompts but escalates length stops by
+// splitting. When every boundary separates a call/result pair, its documented
+// fallback still needs two nonempty chunks, even if the result dominates weight.
+// Reference: pi v1.4.0 (4a080252), core/compaction/compaction.ts compact.
+func TestCompactionSplitsResultHeavyToolPairAtLastResort(t *testing.T) {
+	model := &ai.Model{ID: "m", API: ai.APIOpenAICompletions, Provider: "test", ContextWindow: 100000}
+	var prompts []string
+	streamFn := func(model *ai.Model, transcript ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		prompt := ""
+		for _, message := range transcript.Messages {
+			if user, ok := message.(*ai.UserMessage); ok {
+				prompt = ai.ContentText(user.Content, "")
+			}
+		}
+		prompts = append(prompts, prompt)
+		reason := ai.StopStop
+		text := "checkpoint"
+		// A provider with room for one source message can summarize either chunk,
+		// but returns an incomplete answer when both are sent at once.
+		if strings.Contains(prompt, "[Assistant tool calls]:") && strings.Contains(prompt, "[Tool result]:") {
+			reason = ai.StopLength
+			text = "partial"
+		}
+		stream := ai.NewAssistantMessageEventStream()
+		stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: reason, Message: &ai.AssistantMessage{API: model.API, Provider: model.Provider, Model: model.ID, StopReason: reason, Content: ai.ContentList{ai.TextContent{Text: text}}, Usage: ai.Usage{Input: 1, TotalTokens: 1}}})
+		return stream
+	}
+	preparation := &CompactionPreparation{
+		FirstKeptEntryID: "kept", FileOps: CreateFileOps(),
+		MessagesToSummarize: []ai.Message{
+			&ai.AssistantMessage{Content: ai.ContentList{ai.ToolCall{ID: "call", Name: "read", Arguments: json.RawMessage(`{"path":"file"}`)}}, StopReason: ai.StopToolUse},
+			&ai.ToolResultMessage{ToolCallID: "call", ToolName: "read", Content: ai.UserContentList{ai.TextContent{Text: strings.Repeat("x", 4000)}}},
+		},
+	}
+	result, err := Compact(preparation, CompactionOptions{Model: model, StreamFn: streamFn})
+	if err != nil {
+		t.Fatalf("result-heavy pair could be summarized as two chunks: %v (requests=%d)", err, len(prompts))
+	}
+	if len(prompts) != 3 {
+		t.Fatalf("requests = %d, want whole input then two chunks", len(prompts))
+	}
+	if !strings.Contains(prompts[2], "<previous-summary>\ncheckpoint\n</previous-summary>") {
+		t.Fatal("last chunk lost the first checkpoint")
+	}
+	if result.Usage == nil || result.Usage.Input != 3 {
+		t.Fatalf("usage = %+v, want all three requests", result.Usage)
+	}
+}
+
+// TestPrepareCompactionProjectsTheContextOnce pins the manual-compaction freeze:
+// the context entries were re-derived inside the loop that walks them
+// (BuildContextEntries called once per entry), so preparing a manual compaction
+// on a 15.5k-entry session burned ~20 s and ~50 GB of allocations before the
+// summarization request was even built.
+//
+// Bytes allocated, not wall time: the redundant rebuilds of a path slice are
+// quadratic in bytes but barely visible in allocation *count* (the projection is
+// a view, not a copy), and a ratio keeps the test machine-independent.
+func TestPrepareCompactionProjectsTheContextOnce(t *testing.T) {
+	build := func(rounds int) []SessionEntry {
+		m, _ := newTestSession(t)
+		for range rounds {
+			m.AppendMessage(createUserMessage(strings.Repeat("u", 400)))
+			m.AppendMessage(assistantTestMessage())
+		}
+		return m.GetBranch("")
+	}
+	// A small keep budget so every size still cuts: the loop then walks the
+	// whole context on each iteration.
+	settings := CompactionSettings{Enabled: true, ReserveTokens: 100, KeepRecentTokens: 100}
+	if prep := PrepareCompaction(build(20), settings); prep == nil {
+		t.Fatal("preparation must not be empty for the scaling test to mean anything")
+	}
+
+	measure := func(entries []SessionEntry) int64 {
+		return allocatedBytesPerRun(t, 5, func() { PrepareCompaction(entries, settings) })
+	}
+	small, large := build(80), build(160)
+	smallBytes, largeBytes := measure(small), measure(large)
+
+	// Twice the entries is twice the bytes when the projection is built once;
+	// the per-entry rebuild measured 4.0x.
+	if largeBytes > smallBytes*3 {
+		t.Fatalf("preparing a compaction allocated %d bytes on a %d-entry path vs %d on a %d-entry one; "+
+			"the context projection is being rebuilt per entry", largeBytes, len(large), smallBytes, len(small))
+	}
+}
+
+// TestCompactUsesStockSummarizer follows v1.2.0
+// core/compaction/compaction.ts compact: the built-in compaction extension is
+// not run, so the stock prompt is sent and the caller's auth
+// headers reach the summarizer request.
+func TestCompactUsesStockSummarizer(t *testing.T) {
+	var prompt string
+	var seenHeaders ai.ProviderHeaders
+	options := CompactionOptions{
+		Model:   &ai.Model{ID: "mock", API: "openai-responses", Provider: "openai", MaxTokens: 8192},
+		Headers: map[string]string{"x-test-auth": "1"},
+		StreamFn: func(model *ai.Model, context ai.TranscriptContext, opts *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			seenHeaders = opts.Headers
+			for _, message := range context.Messages {
+				user, ok := message.(*ai.UserMessage)
+				if !ok {
+					continue
+				}
+				for _, block := range user.Content.Blocks {
+					if text, ok := block.(ai.TextContent); ok {
+						prompt += text.Text
+					}
+				}
+			}
+			stream := ai.NewAssistantMessageEventStream()
+			msg := &ai.AssistantMessage{
+				Content: ai.ContentList{ai.TextContent{Text: "## Goal\nstock summary"}},
+				API:     model.API, Provider: model.Provider, Model: model.ID,
+				StopReason: ai.StopStop, Timestamp: 1,
+			}
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: msg})
+			return stream
+		},
+	}
+	preparation := &CompactionPreparation{
+		FirstKeptEntryID:    "entry-1",
+		MessagesToSummarize: []ai.Message{createUserMessage(strings.Repeat("u", 200))},
+		TokensBefore:        1000,
+		FileOps:             CreateFileOps(),
+		Settings:            CompactionSettings{ReserveTokens: 16384, KeepRecentTokens: 20000},
+	}
+
+	result, err := Compact(preparation, options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result == nil || !strings.HasPrefix(result.Summary, "## Goal") {
+		t.Fatalf("result = %+v", result)
+	}
+	if !strings.Contains(prompt, summarizationPrompt) {
+		t.Fatal("the stock summarization prompt was not sent")
+	}
+	if strings.Contains(prompt, "HARD BUDGET") {
+		t.Fatal("the built-in better-compact prompt was sent")
+	}
+	if seenHeaders["x-test-auth"] == nil || *seenHeaders["x-test-auth"] != "1" {
+		t.Fatalf("auth headers did not reach the summarizer: %v", seenHeaders)
 	}
 }
