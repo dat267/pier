@@ -1,10 +1,9 @@
 package goal
 
 import (
+	"github.com/dat267/pier/tui"
 	"strings"
 	"testing"
-
-	"github.com/dat267/pier/tui"
 )
 
 // Mirrors ~/.pi/agent/extensions/goal/render.test.ts.
@@ -291,5 +290,95 @@ func TestClickToExpandTogglesOnLeftClick(t *testing.T) {
 	expanded := renderLines(frame, 300)
 	if !strings.Contains(strings.Join(strings.Fields(expanded), " "), strings.Join(strings.Fields(objective), " ")) {
 		t.Fatalf("expected expanded frame: %q", expanded)
+	}
+}
+
+// joinTrimmed renders a card and drops the per-line padding Text adds, so a
+// test can compare the text's own line structure.
+func joinTrimmed(component interface{ Render(int) []string }, width int) string {
+	lines := component.Render(width)
+	for index := range lines {
+		lines[index] = strings.TrimRight(lines[index], " ")
+	}
+	return strings.Join(lines, "\n")
+}
+
+// Expanding a goal card must show the stored text as written: the collapsed
+// preview flattens whitespace so it fits on a summary line, but an expanded
+// objective keeps its own line structure (D223; the entry card and the /goal
+// status message both preserve it).
+func TestExpandedGoalCardsKeepLineBreaks(t *testing.T) {
+	objective := "Ship the renderer\nwith two acceptance lines\nand a verification step"
+	create := joinTrimmed(RenderSetGoalRenderCall(objective, stubTheme{}, true), 200)
+	if !strings.Contains(create, objective) {
+		t.Fatalf("expanded create card flattened the objective lines: %q", create)
+	}
+
+	reason := "First blocker line\nsecond blocker line"
+	status := joinTrimmed(RenderSetGoalStatusRenderCall("blocked", reason, stubTheme{}, true), 200)
+	if !strings.Contains(status, reason) {
+		t.Fatalf("expanded status card flattened the reason lines: %q", status)
+	}
+
+	view := GoalView{GoalSnapshot: GoalSnapshot{Revision: 1, Objective: objective, Phase: PhaseActive}, Armed: true}
+	get := joinTrimmed(RenderGetGoalRenderResult(&view, stubTheme{}, true), 200)
+	if !strings.Contains(get, objective) {
+		t.Fatalf("expanded get_goal card flattened the objective lines: %q", get)
+	}
+
+	// A collapsed card keeps its first lines as written; only past the line cap
+	// does it hide the rest behind the expansion hint (D223).
+	collapsed := joinTrimmed(RenderSetGoalRenderCall(objective, stubTheme{}, false), 200)
+	if !strings.Contains(collapsed, objective) || strings.Contains(collapsed, "click or expand") {
+		t.Fatalf("collapsed create card = %q", collapsed)
+	}
+}
+
+// D223, user-requested layout: the collapsed preview counts lines, so a card
+// with several lines offers the hint whether its content is ASCII or astral.
+// One long line is never cut, matching the shell preview's line-based cap.
+func TestGoalCardsCapPreviewByLines(t *testing.T) {
+	objective := strings.Join([]string{
+		strings.Repeat("😀", 30), "second", "third", "fourth", "fifth", "sixth", "seventh",
+	}, "\n")
+	for _, item := range []struct {
+		name string
+		card tui.Component
+	}{
+		{"objective", RenderSetGoalRenderCall(objective, stubTheme{}, false)},
+		{"reason", RenderSetGoalStatusRenderCall("blocked", objective, stubTheme{}, false)},
+		{"body", RenderGoalCard(stubTheme{}, GoalCard{Label: "Goal", Body: objective}, false)},
+	} {
+		got := strings.Join(item.card.Render(500), "\n")
+		if !strings.Contains(got, "(2 more lines") || !strings.Contains(got, "click or expand") {
+			t.Errorf("%s: missing line-count expansion hint in %q", item.name, got)
+		}
+		if strings.Contains(got, "seventh") {
+			t.Errorf("%s: showed a line past the cap: %q", item.name, got)
+		}
+	}
+	// D427: a line past the character budget is clipped and counted as hidden;
+	// a short single line still needs no expansion.
+	short := RenderSetGoalRenderCall("one short line", stubTheme{}, false)
+	if got := strings.Join(short.Render(500), "\n"); strings.Contains(got, "click or expand") {
+		t.Errorf("a short single line must not offer expansion: %q", got)
+	}
+	wide := RenderSetGoalRenderCall(strings.Repeat("😀", 400), stubTheme{}, false)
+	if got := strings.Join(wide.Render(500), "\n"); !strings.Contains(got, "click or expand") {
+		t.Errorf("an over-wide single line must offer expansion: %q", got)
+	}
+}
+
+// D223 reference: installed goal/render.ts normalizes call-card text with JS
+// trim and /\s+/. NEXT LINE must remain visible and count toward truncation.
+func TestGoalCallCardsPreserveNonJSWhitespace(t *testing.T) {
+	text := RenderSetGoalStatusRenderCall("blocked", "\u0085reason\u0085", stubTheme{}, true).Text()
+	if want := "Set goal → blocked\n\n\u0085reason\u0085"; text != want {
+		t.Errorf("expanded reason=%q, want %q", text, want)
+	}
+	objective := strings.TrimSpace(strings.Repeat("line\n", 7))
+	text = RenderSetGoalRenderCall(objective, stubTheme{}, false).Text()
+	if !strings.Contains(text, "(2 more lines") || !strings.Contains(text, "click or expand") {
+		t.Errorf("missing line-count expansion hint: %q", text)
 	}
 }

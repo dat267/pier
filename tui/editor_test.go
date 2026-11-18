@@ -650,3 +650,86 @@ func TestEditorWordNavigationInsideWord(t *testing.T) {
 		}
 	})
 }
+
+// Upstream's UndoStack.pop() in packages/tui/src/undo-stack.ts removes the
+// popped element from the array. The Go stack must likewise release references
+// after undo, so large snapshots do not stay live in unused slice capacity.
+func TestUndoStackPopReleasesPoppedSnapshot(t *testing.T) {
+	value := "large editor snapshot"
+	var stack UndoStack[*string]
+	stack.Push(&value)
+
+	popped, ok := stack.Pop()
+	if !ok || popped != &value {
+		t.Fatalf("Pop() = (%p, %v), want (%p, true)", popped, ok, &value)
+	}
+	if retained := stack.stack[:cap(stack.stack)]; retained[0] != nil {
+		t.Fatalf("popped snapshot remains retained in stack capacity: %p", retained[0])
+	}
+}
+
+// D471: a single-line input draws its value directly, and a paste is the one
+// path that can carry escape sequences into it. The reference's input.ts pastes
+// what it is given; pier strips them on entry, as the editor does (D452), so a
+// pasted string cannot write the clipboard, retitle the window or move the
+// cursor.
+func TestInputPasteCannotEmitTerminalControls(t *testing.T) {
+	input := NewInput(InputOptions{})
+	input.HandleInput("\x1b[200~" + "\x1b]52;c;aGk=\x07title\x1b[2J" + "hello" + "\x1b[201~")
+	value := input.Value()
+	if strings.ContainsAny(value, "\x1b\x07") {
+		t.Fatalf("value = %q, want no control characters", value)
+	}
+	if !strings.Contains(value, "hello") {
+		t.Fatalf("value = %q, want the pasted text kept", value)
+	}
+
+	// Typed text still reaches the value, so the paste path is the only change.
+	input = NewInput(InputOptions{})
+	input.HandleInput("abc")
+	if got := input.Value(); got != "abc" {
+		t.Fatalf("value = %q, want typed text", got)
+	}
+}
+
+// TestWordNavigationNormalizesItsCursor pins A509. The functions take UTF-16
+// code-unit offsets; a cursor inside a surrogate pair is not a boundary, and
+// the pin would answer from a lone surrogate, which Go cannot represent. Pier
+// normalizes such a cursor to the pair's end and always returns a valid offset.
+// Reference: pi v1.5.0 (f9a26365) packages/tui/src/word-navigation.ts.
+func TestWordNavigationNormalizesItsCursor(t *testing.T) {
+	texts := []string{
+		"🇯🇵 flag",
+		"👨‍👩‍👧‍👦 fam",
+		"日本語 テキスト",
+		"a🇯🇵b",
+		"😀",
+		"plain ascii words",
+	}
+	for _, text := range texts {
+		limit := jsLength(text)
+		for cursor := 0; cursor <= limit; cursor++ {
+			backward := FindWordBackward(text, cursor)
+			if backward < 0 || backward > cursor {
+				t.Errorf("FindWordBackward(%q, %d) = %d, want in [0,%d]", text, cursor, backward, cursor)
+			}
+			forward := FindWordForward(text, cursor)
+			if forward < cursor || forward > limit {
+				t.Errorf("FindWordForward(%q, %d) = %d, want in [%d,%d]", text, cursor, forward, cursor, limit)
+			}
+		}
+	}
+
+	// A cursor inside either pair answers like the pair's end; offsets 5 and up
+	// are ordinary boundaries of the words that follow.
+	for _, cursor := range []int{1, 3} {
+		backward := FindWordBackward("🇯🇵 flag", cursor)
+		if backward != FindWordBackward("🇯🇵 flag", 2) {
+			t.Errorf("FindWordBackward at mid-pair cursor %d = %d, want the normalized value %d",
+				cursor, backward, FindWordBackward("🇯🇵 flag", 2))
+		}
+	}
+	if got := FindWordBackward("🇯🇵 flag", 1); got != 0 {
+		t.Errorf("FindWordBackward(\"🇯🇵 flag\", 1) = %d, want 0", got)
+	}
+}

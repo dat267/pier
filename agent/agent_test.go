@@ -3,13 +3,15 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/dat267/pier/ai"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/dat267/pier/ai"
+	"weak"
 )
 
 // Port of the core subset of packages/agent/test/agent.test.ts.
@@ -523,5 +525,270 @@ func TestHandleRunFailureMapsCanceledContextToAbortMessage(t *testing.T) {
 			}
 			t.Fatalf("%v: errorMessage = %q, want %q", runErr, got, ai.RequestAbortedMessage)
 		}
+	}
+}
+
+// Concurrent appenders each land in the transcript, and a State snapshot has
+// no spare capacity, so appending to it cannot write into slots the agent's
+// own transcript will reuse. Upstream mutates agent.state.messages on one
+// event loop (packages/agent/src/agent.ts, v1.5.0 f9a26365).
+func TestAppendMessagesKeepsEveryConcurrentAppend(t *testing.T) {
+	a, err := NewAgent(&AgentOptions{StreamFn: unusedStreamFn()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	const appenders = 32
+	var group sync.WaitGroup
+	start := make(chan struct{})
+	for range appenders {
+		group.Add(1)
+		go func() {
+			defer group.Done()
+			<-start
+			a.AppendMessages(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "x"}})
+		}()
+	}
+	close(start)
+	group.Wait()
+	messages := a.State().Messages
+	if len(messages) != appenders {
+		t.Fatalf("transcript has %d of %d appends", len(messages), appenders)
+	}
+	if cap(messages) != len(messages) {
+		t.Fatalf("snapshot cap = %d, len = %d: appending to it would share the agent's array", cap(messages), len(messages))
+	}
+	_ = append(messages, &ai.UserMessage{Content: ai.StringOrBlocks{Text: "snapshot only"}})
+	a.AppendMessages(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "agent"}})
+	if last := a.State().Messages[appenders]; ai.RoleOf(last) != ai.RoleUser || last.(*ai.UserMessage).Content.Text != "agent" {
+		t.Fatalf("the snapshot's append leaked into the transcript: %+v", last)
+	}
+}
+
+// pi v1.4.0 (4a080252), core/sdk.ts cacheContextIsCurrent checks object
+// identity for every warmed-prefix message, not a mutation epoch or count.
+func TestMessagePrefixCurrencyMatchesUpstream(t *testing.T) {
+	for _, fixture := range []struct {
+		operation string
+		want      bool
+	}{
+		{"unchanged", true}, {"append", true}, {"replace", false},
+		{"restore", true}, {"truncate", false}, {"model-change", false},
+		{"replace-unwarmed-tail", true},
+	} {
+		t.Run(fixture.operation, func(t *testing.T) {
+			model := &ai.Model{ID: "model", Provider: "fixture"}
+			original := []ai.Message{
+				&ai.SystemMessage{Content: ai.StringOrBlocks{Text: "system"}},
+				&ai.UserMessage{Content: ai.StringOrBlocks{Text: "original"}},
+			}
+			a, err := NewAgent(&AgentOptions{InitialState: &AgentInitialState{Model: model, Messages: original}, StreamFn: unusedStreamFn()})
+			if err != nil {
+				t.Fatal(err)
+			}
+			current := a.MessagePrefixIsCurrent(model)
+			replacement := []ai.Message{original[0], &ai.UserMessage{Content: ai.StringOrBlocks{Text: "replaced"}}}
+			switch fixture.operation {
+			case "append":
+				a.SetMessages(append(append([]ai.Message(nil), original...), &ai.AssistantMessage{}))
+			case "replace":
+				a.SetMessages(replacement)
+			case "restore":
+				a.SetMessages(replacement)
+				a.SetMessages(original)
+			case "truncate":
+				a.SetMessages(original[:1])
+			case "model-change":
+				a.SetModel(&ai.Model{ID: "other", Provider: "fixture"})
+			case "replace-unwarmed-tail":
+				a.SetMessages(append(append([]ai.Message(nil), original...), &ai.AssistantMessage{}))
+				a.SetMessages(append(append([]ai.Message(nil), original...), &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{Text: "changed tail"}}}))
+			}
+			if got := current(); got != fixture.want {
+				t.Fatalf("currency after %s = %v, want %v", fixture.operation, got, fixture.want)
+			}
+		})
+	}
+}
+
+// TestDefaultStreamFn covers stream-fn.ts: the fallback is unset by default,
+// round-trips a configured function, and clears back to unset.
+func TestDefaultStreamFn(t *testing.T) {
+	previous, hadPrevious := defaultStreamFn, defaultStreamFn != nil
+	t.Cleanup(func() {
+		if hadPrevious {
+			SetDefaultStreamFn(previous)
+		} else {
+			SetDefaultStreamFn(nil)
+		}
+	})
+	SetDefaultStreamFn(nil)
+	if _, err := GetDefaultStreamFn(); err == nil || !strings.Contains(err.Error(), "No default stream function configured") {
+		t.Fatalf("unset err = %v", err)
+	}
+
+	called := false
+	streamFn := func(model *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		called = true
+		return ai.NewAssistantMessageEventStream()
+	}
+	SetDefaultStreamFn(streamFn)
+	got, err := GetDefaultStreamFn()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == nil {
+		t.Fatal("default stream function is nil after being set")
+	}
+	_ = got(nil, ai.TranscriptContext{}, nil)
+	if !called {
+		t.Fatal("the configured stream function was not returned")
+	}
+
+	SetDefaultStreamFn(nil)
+	if _, err := GetDefaultStreamFn(); err == nil {
+		t.Fatal("clearing the default must leave it unset")
+	}
+}
+
+// Upstream agent-loop.ts:409 wraps the stream result as
+// Object.assign(result, { thinkingLevel: config.reasoning ?? "off" }), so every
+// loop-produced assistant message records the requested Pi thinking level.
+func TestAssistantMessageRecordsRequestedThinkingLevel(t *testing.T) {
+	for _, level := range []ai.ThinkingLevel{"", ai.ThinkHigh} {
+		streamFn, _ := mockStreamFn(createAssistantMessage(ai.ContentList{ai.TextContent{Text: "ok"}}, ai.StopStop))
+		messages := RunAgentLoop(
+			[]ai.Message{createUserMessage("hi")},
+			AgentContext{},
+			&AgentLoopConfig{
+				Model:        createModel(),
+				ConvertToLlm: identityConverter,
+				Reasoning:    level,
+			},
+			context.Background(),
+			func(AgentEvent) error { return nil },
+			streamFn,
+		)
+		final, ok := messages[len(messages)-1].(*ai.AssistantMessage)
+		if !ok {
+			t.Fatalf("reasoning %q: last message = %T, want assistant", level, messages[len(messages)-1])
+		}
+		want := level
+		if want == "" {
+			want = ai.ThinkOff
+		}
+		if final.ThinkingLevel == nil || *final.ThinkingLevel != want {
+			t.Fatalf("reasoning %q: thinkingLevel = %v, want %q", level, final.ThinkingLevel, want)
+		}
+		encoded, err := ai.MarshalMessage(final)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(encoded), `"thinkingLevel":"`+want+`"`) {
+			t.Fatalf("reasoning %q: persisted message lacks thinkingLevel: %s", level, encoded)
+		}
+	}
+}
+
+// Upstream agent-loop.ts rounds performance.now() deltas with Math.round.
+func TestDurationMillisecondsRoundsToNearestMillisecond(t *testing.T) {
+	for _, test := range []struct {
+		elapsed time.Duration
+		want    int64
+	}{
+		{elapsed: 1499 * time.Microsecond, want: 1},
+		{elapsed: 1500 * time.Microsecond, want: 2},
+		{elapsed: 2499 * time.Microsecond, want: 2},
+		{elapsed: 2500 * time.Microsecond, want: 3},
+	} {
+		if got := roundDurationMilliseconds(test.elapsed); got != test.want {
+			t.Errorf("roundDurationMilliseconds(%s) = %d, want %d", test.elapsed, got, test.want)
+		}
+	}
+}
+
+// Reference: pi v1.4.0 agent.ts runWithLifecycle awaits handleRunFailure;
+// an error from failure-event listeners rejects the prompt.
+func TestFailureLifecycleListenerErrorReachesCaller(t *testing.T) {
+	a, err := NewAgent(&AgentOptions{StreamFn: unusedStreamFn()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := errors.New("listener failed")
+	a.Subscribe(func(AgentEvent, context.Context) error { return want })
+	if err := a.PromptText(context.Background(), "x"); !errors.Is(err, want) {
+		t.Fatalf("error=%v; want %v", err, want)
+	}
+	if a.State().IsStreaming {
+		t.Fatal("run not settled")
+	}
+}
+
+// pi v1.4.0 (4a080252), agent.ts PendingMessageQueue.drain replaces the
+// queue with messages.slice(drained.length), releasing consumed slots. Once
+// the transcript is replaced too, the delivered message must be collectible.
+func TestDrainedAgentQueuesReleaseDeliveredMessages(t *testing.T) {
+	for _, followUp := range []bool{false, true} {
+		for _, mode := range []QueueMode{QueueModeOneAtATime, QueueModeAll} {
+			t.Run(fmt.Sprintf("followUp=%t/mode=%s", followUp, mode), func(t *testing.T) {
+				a, err := NewAgent(&AgentOptions{StreamFn: unusedStreamFn(), SteeringMode: mode, FollowUpMode: mode})
+				if err != nil {
+					t.Fatal(err)
+				}
+				message := enqueueAgentRetentionMessage(a, followUp)
+				if err := a.PromptText(context.Background(), "start"); err != nil {
+					t.Fatal(err)
+				}
+				if a.HasQueuedMessages() {
+					t.Fatal("run did not consume the queued message")
+				}
+				// Keeping it in the active transcript is legitimate. Replacing
+				// that transcript must not leave an empty queue owning it.
+				a.SetMessages(nil)
+				runtime.GC()
+				if message.Value() != nil {
+					t.Fatal("empty queue retains a delivered message after transcript replacement")
+				}
+				runtime.KeepAlive(a)
+			})
+		}
+	}
+}
+
+func enqueueAgentRetentionMessage(a *Agent, followUp bool) weak.Pointer[ai.UserMessage] {
+	message := createUserMessage(strings.Repeat("queued", 1024))
+	if followUp {
+		a.FollowUp(message)
+	} else {
+		a.Steer(message)
+	}
+	return weak.Make(message)
+}
+
+// Reference: pi v1.4.0 agent.ts state/processEvents run on one JS thread.
+// A Go snapshot must not expose the map that later tool events mutate.
+func TestStatePendingCallsSnapshotIsIndependent(t *testing.T) {
+	a, err := NewAgent(&AgentOptions{StreamFn: unusedStreamFn()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var snapshot AgentState
+	a.Subscribe(func(e AgentEvent, _ context.Context) error {
+		if e.Type == ToolExecutionStart {
+			snapshot = a.State()
+		}
+		return nil
+	})
+	if err := a.processEvents(AgentEvent{Type: ToolExecutionStart, ToolCallID: "call"}, context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.processEvents(AgentEvent{Type: ToolExecutionEnd, ToolCallID: "call"}, context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if !snapshot.PendingToolCalls["call"] {
+		t.Fatal("tool end mutated the earlier snapshot")
+	}
+	delete(snapshot.PendingToolCalls, "call")
+	if len(a.State().PendingToolCalls) != 0 {
+		t.Fatal("unexpected active calls")
 	}
 }

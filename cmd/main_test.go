@@ -1,16 +1,18 @@
 package cmd
 
 import (
+	"context"
 	"errors"
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/coding/interactive"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/coding"
 )
 
 // isolatedAgentDir points PI_CODING_AGENT_DIR at a temp dir so the default
@@ -587,5 +589,81 @@ func TestDescribeGetwdError(t *testing.T) {
 	}
 	if err := describeGetwdError(os.ErrPermission); !errors.Is(err, os.ErrPermission) {
 		t.Fatalf("permission error changed: %v", err)
+	}
+}
+
+// AGENTS.md: tests use temporary agent state, never the real agent directory.
+// These child processes build their environment from scratch, so the agent dir
+// must be passed explicitly; without it the child reads the developer's real
+// ~/.pi/agent, whose session directory can be hundreds of megabytes.
+func TestChildProcessesUseTheIsolatedAgentDir(t *testing.T) {
+	agentDir := t.TempDir()
+	t.Setenv("PI_CODING_AGENT_DIR", agentDir)
+	want := filepath.Clean(agentDir)
+
+	cases := []struct {
+		name   string
+		helper string
+		env    []string
+	}{
+		{"run failure", "TestRunFailureCLIHelper", []string{"PIER_TEST_RUN_FAILURE_ARGS=--offline -p hi", "TERM=xterm-256color"}},
+		{"unknown flag", "TestUnknownFlagCLIHelper", []string{"PIER_TEST_UNKNOWN_FLAG_ARGS=--offline --bogus"}},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), childProcessTimeout)
+			defer cancel()
+			command := exec.CommandContext(ctx, os.Args[0], "-test.run=^"+testCase.helper+"$")
+			command.Env = childAgentEnv(append(append([]string{}, testCase.env...), "PIER_TEST_PRINT_AGENT_DIR=1")...)
+			output, err := command.CombinedOutput()
+			if err != nil {
+				t.Fatalf("child failed: %v: %s", err, output)
+			}
+			var got string
+			for line := range strings.SplitSeq(string(output), "\n") {
+				if value, ok := strings.CutPrefix(line, "AGENTDIR="); ok {
+					got = filepath.Clean(value)
+				}
+			}
+			if got != want {
+				t.Fatalf("child agent dir = %q, want the isolated %q (it reads the developer's real agent directory otherwise)", got, want)
+			}
+		})
+	}
+}
+
+// Reference: pi v1.5.2 (b4afdddf) main.ts prints
+// `Session already exists with id '...'` with console.error and no "Error: "
+// prefix, like the "No session found matching ..." line. Pier returned a plain
+// error, so Execute added the prefix.
+func TestForkSessionIDCollisionIsABareLine(t *testing.T) {
+	isolatedAgentDir(t)
+	cwd := t.TempDir()
+	existing := makeSessionFile(t, cwd)
+	id := existing.GetSessionID()
+
+	args := &coding.Args{Fork: new(existing.GetSessionFile()), SessionID: &id}
+	_, err := resumeSession(args, cwd, nil)
+	if err == nil {
+		t.Fatal("expected the id collision")
+	}
+	var bare bareErrorLine
+	if !errors.As(err, &bare) {
+		t.Fatalf("err %v is not a bare line", err)
+	}
+	if err.Error() != "Session already exists with id '"+id+"'" {
+		t.Fatalf("err = %q", err.Error())
+	}
+}
+
+// TestInstallBrowserOpener checks the CLI wires a browser opener, so the OAuth
+// login flow opens the authorization URL (upstream utils/open-browser.ts).
+func TestInstallBrowserOpener(t *testing.T) {
+	previous := interactive.BrowserOpener()
+	t.Cleanup(func() { interactive.SetBrowserOpener(previous) })
+	interactive.SetBrowserOpener(nil)
+	installBrowserOpener()
+	if interactive.BrowserOpener() == nil {
+		t.Fatal("the browser opener must be installed")
 	}
 }

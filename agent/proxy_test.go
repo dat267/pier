@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/dat267/pier/ai"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -11,8 +12,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/dat267/pier/ai"
 )
 
 func TestProxyTextDeltaAssemblyStaysLinearInAllocatedBytes(t *testing.T) {
@@ -441,5 +440,63 @@ func TestProxyForwardsDisableContinuation(t *testing.T) {
 	}
 	if strings.Contains(string(body), "disableContinuation") {
 		t.Fatalf("body = %s", body)
+	}
+}
+
+// D353: the proxy previews tool arguments with the provider adapters' stream
+// (upstream proxy.ts uses ToolCallArgumentsStream): a small call updates at
+// every delta, and a large one ends with its exact value.
+func TestProxyToolArgumentsPreviewIsThrottled(t *testing.T) {
+	var small ai.ToolCallArgumentsStream
+	small.Append(`{"command":"l`)
+	if got := string(small.Append(`s"}`)); got != `{"command":"ls"}` {
+		t.Fatalf("small preview = %s", got)
+	}
+	payload := `{"path":"a.txt","content":"` + strings.Repeat("x", 100*1024) + `"}`
+	var args ai.ToolCallArgumentsStream
+	var last []byte
+	for i := 0; i < len(payload); i += 16 {
+		last = args.Append(payload[i:min(i+16, len(payload))])
+	}
+	if string(last) != payload || args.Text() != payload {
+		t.Fatalf("final preview is %d bytes, want the %d-byte text", len(last), len(payload))
+	}
+}
+
+// pi v1.4.0 packages/agent/src/proxy.ts buildProxyRequestOptions forwards
+// ProviderHeaders unchanged, including null values that suppress defaults at
+// the remote provider. Dropping a null header silently restores that default.
+func TestStreamProxyPreservesNullHeaderOverrides(t *testing.T) {
+	bodies := make(chan []byte, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		body, _ := io.ReadAll(request.Body)
+		bodies <- body
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, "data: {\"type\":\"done\",\"reason\":\"stop\"}\n\n")
+	}))
+	defer server.Close()
+	value := "fixture"
+	model := &ai.Model{ID: "m", Provider: "p", API: ai.APIOpenAIResponses}
+	_, err := StreamProxy(model, proxyContext(), ProxyStreamOptions{
+		ProxyURL: server.URL,
+
+		Headers: ai.ProviderHeaders{"X-Remove": nil, "X-Send": &value},
+	}).Result(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var request struct {
+		Options struct {
+			Headers map[string]json.RawMessage
+		}
+	}
+	if err := json.Unmarshal(<-bodies, &request); err != nil {
+		t.Fatal(err)
+	}
+	if got := string(request.Options.Headers["X-Remove"]); got != "null" {
+		t.Fatalf("suppressed header = %q, want explicit JSON null", got)
+	}
+	if got := string(request.Options.Headers["X-Send"]); got != `"fixture"` {
+		t.Fatalf("ordinary header = %q, want fixture", got)
 	}
 }

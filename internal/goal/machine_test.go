@@ -959,3 +959,92 @@ func TestGoalUpdateRejectsInexactRevision(t *testing.T) {
 		t.Fatalf("exact integer revision rejected: %+v", result)
 	}
 }
+
+// blocked against a goal that already finished reported "Cannot block before 3
+// consecutive goal rounds (current: 0)": the round-count guard answers first
+// and sends the model back to work it has already finished. The reference
+// extension reaches neither guard usefully; the port's own refusals name the
+// state (D420).
+func TestSetGoalBlockedOnAFinishedGoal(t *testing.T) {
+	m := NewGoalMachine()
+	m.Dispatch(SessionStartEvent{})
+	m.Dispatch(GoalSetEvent{Objective: "ship it"})
+	view := m.Snapshot().Goal
+	m.Dispatch(GoalUpdateEvent{GoalID: view.ID, Revision: view.Revision, Action: "complete"})
+
+	view = m.Snapshot().Goal
+	result := m.Dispatch(GoalUpdateEvent{GoalID: view.ID, Revision: view.Revision, Action: "blocked", BlockedReason: "stuck"})
+	if !result.IsError {
+		t.Fatal("blocking a finished goal must be rejected")
+	}
+	reply := derefString(result.Reply)
+	if strings.Contains(reply, "consecutive goal rounds") {
+		t.Fatalf("reply sends the model back to work on a finished goal: %q", reply)
+	}
+	if !strings.Contains(reply, "already complete") {
+		t.Fatalf("reply %q does not name the state", reply)
+	}
+}
+
+// A second complete on a finished goal reported the phase graph's own
+// transition error ("illegal transition complete -> complete"). Every sibling
+// refusal in the set_goal status path names the current state and what the
+// model can do instead, and this one is reachable: a real session called
+// set_goal status=complete on a goal that was already complete. The reply is
+// the tool result the model reads, so it must say that the goal has finished
+// and that setting an objective starts a new one.
+func TestSetGoalCompleteOnAFinishedGoal(t *testing.T) {
+	m := NewGoalMachine()
+	m.Dispatch(SessionStartEvent{})
+	m.Dispatch(GoalSetEvent{Objective: "ship it"})
+	view := m.Snapshot().Goal
+	first := m.Dispatch(GoalUpdateEvent{GoalID: view.ID, Revision: view.Revision, Action: "complete"})
+	if first.IsError {
+		t.Fatalf("first complete rejected: %v", derefString(first.Reply))
+	}
+
+	view = m.Snapshot().Goal
+	second := m.Dispatch(GoalUpdateEvent{GoalID: view.ID, Revision: view.Revision, Action: "complete"})
+	if !second.IsError {
+		t.Fatal("completing a finished goal must be reported, not silently accepted")
+	}
+	reply := derefString(second.Reply)
+	if strings.Contains(reply, "illegal transition") {
+		t.Fatalf("reply leaks the phase graph: %q", reply)
+	}
+	for _, want := range []string{"already complete", "objective"} {
+		if !strings.Contains(reply, want) {
+			t.Fatalf("reply %q does not mention %q", reply, want)
+		}
+	}
+}
+
+func derefString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+// /goal resume on a finished goal reached the state validator and reported
+// "illegal transition complete -> active", the phase graph's wording (D420).
+// A finished goal is not a stopped goal, so the guard above says so instead.
+func TestGoalResumeOnAFinishedGoal(t *testing.T) {
+	m := NewGoalMachine()
+	m.Dispatch(SessionStartEvent{})
+	m.Dispatch(GoalSetEvent{Objective: "ship it"})
+	view := m.Snapshot().Goal
+	m.Dispatch(GoalUpdateEvent{GoalID: view.ID, Revision: view.Revision, Action: "complete"})
+
+	result := m.Dispatch(GoalResumeEvent{})
+	if !result.IsError {
+		t.Fatal("resuming a finished goal must be rejected")
+	}
+	reply := derefString(result.Reply)
+	if strings.Contains(reply, "illegal transition") {
+		t.Fatalf("reply leaks the phase graph: %q", reply)
+	}
+	if !strings.Contains(reply, "complete") {
+		t.Fatalf("reply %q does not name the state", reply)
+	}
+}

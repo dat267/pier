@@ -1,11 +1,77 @@
 package tui
 
 import (
+	"encoding/base64"
+	"fmt"
 	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
 )
+
+// pi v1.4.0 (4a080252), components/image.ts toPng keeps successes and
+// failures in the same 32-entry cache. Recreated image components must retry
+// an evicted failure rather than retaining every failed source indefinitely.
+func TestImageTranscodeCacheBoundsFailedConversions(t *testing.T) {
+	withImageCapabilities(t, ImageProtocolKitty, true)
+	t.Cleanup(func() { SetImageTranscoder(nil) })
+	for _, success := range []bool{false, true} {
+		t.Run(fmt.Sprintf("success=%t", success), func(t *testing.T) {
+			calls := 0
+			SetImageTranscoder(func(string, string) (string, bool) {
+				calls++
+				return "iVBORw0KGgoAAAANSUhEUgAAACgAAAAK", success
+			})
+			render := func(index int) {
+				data := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("input-%d", index)))
+				NewImageComponent(data, "image/jpeg", ImageTheme{}, ImageOptions{}, &ImageDimensions{WidthPx: 1, HeightPx: 1}).Render(20)
+			}
+			for index := range 33 {
+				render(index)
+			}
+			if calls != 33 {
+				t.Fatalf("initial conversion calls = %d, want 33", calls)
+			}
+			render(0)
+			if calls != 34 {
+				t.Fatalf("conversion calls after revisiting evicted source = %d, want 34", calls)
+			}
+		})
+	}
+}
+
+// pi v1.4.0 (4a080252), components/image.ts toPng refreshes a cache hit
+// (delete then set), so the 32-entry bound evicts the least recently used
+// source, not the oldest inserted one. A frequently rendered image must not be
+// re-converted just because it was inserted first.
+func TestImageTranscodeCacheKeepsRecentlyUsedSources(t *testing.T) {
+	withImageCapabilities(t, ImageProtocolKitty, true)
+	t.Cleanup(func() { SetImageTranscoder(nil) })
+	calls := map[string]int{}
+	SetImageTranscoder(func(data, _ string) (string, bool) {
+		calls[data]++
+		return "iVBORw0KGgoAAAANSUhEUgAAACgAAAAK", true
+	})
+	render := func(name string) {
+		data := base64.StdEncoding.EncodeToString([]byte(name))
+		NewImageComponent(data, "image/jpeg", ImageTheme{}, ImageOptions{}, &ImageDimensions{WidthPx: 1, HeightPx: 1}).Render(20)
+	}
+	key := func(name string) string { return base64.StdEncoding.EncodeToString([]byte(name)) }
+	render("frequent")
+	for index := range 31 {
+		render(fmt.Sprintf("spare-%d", index))
+	}
+	// Fill the bound, then touch the first source so it becomes most recent.
+	render("frequent")
+	if calls[key("frequent")] != 1 {
+		t.Fatalf("cache-miss conversions for the frequent source = %d", calls[key("frequent")])
+	}
+	render("newcomer")
+	render("frequent")
+	if got := calls[key("frequent")]; got != 1 {
+		t.Fatalf("recently used source was re-converted: %d calls, want 1 (oldest inserted entry should be evicted)", got)
+	}
+}
 
 // pi v1.4.0 (4a080252), components/image.ts toPng invokes the configured
 // callback without a lock; setImageTranscoder may replace it and clear cached
