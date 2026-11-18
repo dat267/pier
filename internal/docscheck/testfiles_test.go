@@ -20,27 +20,10 @@ const testFilesManifest = "internal/docscheck/testfiles.txt"
 // same change. `scripts/test_inventory.sh --write` rewrites it, and the report
 // mode prints the per-package file, test and line counts.
 func TestTestFilesMatchTheBaseline(t *testing.T) {
-	raw, err := os.ReadFile(filepath.Join(root, testFilesManifest))
-	if err != nil {
-		t.Fatalf("read %s: %v", testFilesManifest, err)
-	}
-	var manifest []string
-	for line := range strings.SplitSeq(string(raw), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		manifest = append(manifest, line)
-	}
-	if len(manifest) == 0 {
-		t.Fatalf("%s is empty; run scripts/test_inventory.sh --write", testFilesManifest)
-	}
-	if !slices.IsSorted(manifest) {
-		t.Error("the manifest is not sorted; run scripts/test_inventory.sh --write")
-	}
+	manifest := readTestFilesManifest(t)
 
 	present := map[string]bool{}
-	err = filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -100,4 +83,52 @@ func TestTestFilesMatchTheBaseline(t *testing.T) {
 		t.Errorf("%d test files are missing from %s (%s); run scripts/test_inventory.sh --write",
 			unlisted, testFilesManifest, strings.Join(names, ", "))
 	}
+}
+
+// testFileSizeCeiling is the hard limit for a single test file. AGENTS.md asks
+// for a unit test file near 700 lines; the ceiling only stops a file that has
+// doubled that from growing further, so a split lands under 800 without forcing
+// a mechanically balanced cut.
+const testFileSizeCeiling = 800
+
+// TestTestFilesStayUnderTheSizeCeiling keeps a grown unit test file from turning
+// back into a catch-all. A file at the ceiling is split by production unit, so
+// the fix is a new file named after the unit it covers, not a trimmed test.
+func TestTestFilesStayUnderTheSizeCeiling(t *testing.T) {
+	for _, file := range readTestFilesManifest(t) {
+		raw, err := os.ReadFile(filepath.Join(root, file))
+		if err != nil {
+			// A missing file is TestTestFilesMatchTheBaseline's report.
+			continue
+		}
+		lines := strings.Count(string(raw), "\n")
+		if lines > testFileSizeCeiling {
+			t.Errorf("%s has %d lines, over the %d-line ceiling; split it by production unit",
+				file, lines, testFileSizeCeiling)
+		}
+	}
+}
+
+// readTestFilesManifest returns the checked-in test file manifest.
+func readTestFilesManifest(t *testing.T) []string {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join(root, testFilesManifest))
+	if err != nil {
+		t.Fatalf("read %s: %v", testFilesManifest, err)
+	}
+	var manifest []string
+	for line := range strings.SplitSeq(string(raw), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		manifest = append(manifest, line)
+	}
+	if len(manifest) == 0 {
+		t.Fatalf("%s is empty; run scripts/test_inventory.sh --write", testFilesManifest)
+	}
+	if !slices.IsSorted(manifest) {
+		t.Error("the manifest is not sorted; run scripts/test_inventory.sh --write")
+	}
+	return manifest
 }
