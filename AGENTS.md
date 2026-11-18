@@ -43,11 +43,29 @@ Packages mirror upstream: `ai`, `agent`, `coding` (including `interactive`),
 `tui`; `tui` must not import `coding`. The root `main.go` only calls
 `cmd.Execute`; helpers live in `internal/`.
 
+## Tests
+
+- One unit test file per production unit, named after it: `read.go` gets
+  `read_test.go`, and a sibling scenario or parity case becomes a table entry or
+  a subtest there instead of a new `_test.go` file. Fuzz targets, benchmarks,
+  build-tagged tests and `testdata/` keep their own files, and a package keeps
+  one `TestMain`.
+- `internal/docscheck/testfiles.txt` lists every `*_test.go` file; the docs
+  check compares it exactly, so adding a file needs its line and a merge or
+  deletion drops one. A new file is therefore a reviewed decision, not a
+  byproduct. `scripts/test_inventory.sh` reports files, tests and lines per
+  package, and `just testfiles` rewrites the manifest.
+- Keep a unit test file near 700 lines and split a grown one by production unit,
+  not at an arbitrary offset. No file-count target outranks a parity pin: fold
+  cases, never delete a pin to reach a number. Keep test names stable, because
+  `DECISIONS.md` rows cite them.
+
 ## Build and verification
 
 ```sh
 just check                                  # gofmt, go mod tidy, vet, tests
 just cross                                  # cross-build and vet CI targets
+just testfiles                              # rewrite the test-file manifest
 just fetch-reference                        # clone the pinned ./pi plus the pre-pin commit the easter fixtures render (gitignored)
 just goldens                                # every node golden regenerates from ./pi
 go test -count=1 ./coding -run TestName
@@ -57,7 +75,8 @@ go test -short ./...                       # skips slower real-binary PTY tests
 `internal/docscheck` tests the root documents: D-rows unique, ascending and
 inside the title range, each row naming an existing test or cited by number from
 Go source, every named test defined, `FILE.md#anchor` links resolving, and the
-pin matching. Fix the document, not the check.
+pin matching. It also holds the test-file manifest to the tree. Fix the
+document, not the check.
 
 Go 1.27 is required. Builds and releases set `CGO_ENABLED=0`; the race gate
 needs cgo enabled (CI runs `just test-race`). CI runs the race gate on linux/amd64

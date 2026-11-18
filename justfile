@@ -80,6 +80,11 @@ test-stress:
 test-isolated:
 	COUNT=2 scripts/test_isolated.sh
 
+# Rewrite the test-file manifest (internal/docscheck/testfiles.txt) after adding,
+# merging or deleting a *_test.go file. Run it with no argument for the inventory.
+testfiles:
+	scripts/test_inventory.sh --write
+
 # Report formatting differences.
 fmt:
 	#!/usr/bin/env bash
