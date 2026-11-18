@@ -27,9 +27,11 @@ agent/tool_abort_text_test.go
 agent/tool_hook_test.go
 agent/tool_prepare_panic_test.go
 agent/tool_update_failure_alignment_test.go
+ai/anthropic_convert_test.go
 ai/anthropic_effort_test.go
 ai/anthropic_inlinetools_test.go
 ai/anthropic_stream_events_parity_test.go
+ai/anthropic_stream_retry_test.go
 ai/anthropic_stream_test.go
 ai/anthropic_thinking_order_test.go
 ai/anthropic_threads_compat_test.go
@@ -120,6 +122,7 @@ ai/oauth_timer_overflow_test.go
 ai/oauthanthropic_copycode_test.go
 ai/oauthbody_test.go
 ai/oauthcallback_pages_test.go
+ai/oauthcallback_test.go
 ai/oauthdevice_test.go
 ai/oauthgithubcopilot_test.go
 ai/oauthmeta_test.go
@@ -135,6 +138,7 @@ ai/openai_completions_test.go
 ai/openai_decisions_test.go
 ai/openai_responses_misc_test.go
 ai/openai_responses_perf_test.go
+ai/openai_responses_stream_test.go
 ai/openai_responses_test.go
 ai/openai_test.go
 ai/openrouter_cost_test.go
@@ -220,6 +224,7 @@ cmd/unknownflag_test.go
 coding/agent_session_bash_test.go
 coding/agent_session_chaos_test.go
 coding/agent_session_compaction_lifecycle_test.go
+coding/agent_session_compaction_run_test.go
 coding/agent_session_compaction_state_test.go
 coding/agent_session_compaction_test.go
 coding/agent_session_compaction_window_test.go
@@ -328,6 +333,7 @@ coding/find_limit_test.go
 coding/find_tool_parity_test.go
 coding/footerdata_reftable_test.go
 coding/footerdata_stress_test.go
+coding/foundation_bash_test.go
 coding/foundation_test.go
 coding/frontmatter_fuzz_test.go
 coding/frontmatter_test.go
@@ -539,6 +545,7 @@ coding/interactive/toolclock_bench_test.go
 coding/interactive/toolclock_test.go
 coding/interactive/toolexecution_skip_test.go
 coding/interactive/toolexecution_test.go
+coding/interactive/toolformatters_test.go
 coding/interactive/toolframe_bench_test.go
 coding/interactive/toolframe_test.go
 coding/interactive/toolframes_test.go
