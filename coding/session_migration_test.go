@@ -165,10 +165,7 @@ func TestSessionMigrationRewritePreservesMemberOrder(t *testing.T) {
 	if _, err := OpenSession(path, dir, ""); err != nil {
 		t.Fatal(err)
 	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	data := readFileBytes(t, path)
 	want := `{"type":"session","version":3,"id":"v2-session","timestamp":"2026-01-01T00:00:00Z","cwd":"/project"}
 {"type":"message","id":"abc12345","parentId":null,"timestamp":"2026-01-01T00:00:01Z","message":{"role":"custom","content":"from a hook","timestamp":1},"customField":{"b":1,"a":2}}
 `

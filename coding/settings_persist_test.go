@@ -204,10 +204,7 @@ func TestSettingsSaveReportsExternalMalformedJSONAndRetries(t *testing.T) {
 	if len(failures) != 1 || failures[0].Scope != SettingsScopeGlobal || failures[0].Path != path {
 		t.Errorf("malformed external settings must report a save error: %+v", failures)
 	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	data := readFileBytes(t, path)
 	if string(data) != malformed {
 		t.Fatalf("malformed external settings were overwritten: %s", data)
 	}

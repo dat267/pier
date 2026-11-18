@@ -496,7 +496,7 @@ type promptArgsGolden struct {
 func TestPromptTemplateArgsMatchTheReference(t *testing.T) {
 	data, err := os.ReadFile("testdata/prompt-args/golden.json")
 	if err != nil {
-		t.Fatalf("read golden: %v", err)
+		t.Fatal(err)
 	}
 	var golden promptArgsGolden
 	if err := json.Unmarshal(data, &golden); err != nil {

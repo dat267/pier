@@ -732,10 +732,7 @@ func TestAuthStorageMutationsPreserveUntouchedEntries(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			got, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatal(err)
-			}
+			got := readFileBytes(t, path)
 			if string(got) != tc.Expected {
 				t.Fatalf("auth.json = %s; want %s", got, tc.Expected)
 			}

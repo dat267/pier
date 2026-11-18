@@ -36,10 +36,7 @@ func TestSessionManagerDoesNotClobberExistingNewSessionPath(t *testing.T) {
 	if err := manager.FlushWrites(); err == nil {
 		t.Fatal("persisting a new session over an existing path should fail")
 	}
-	got, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	got := readFileBytes(t, path)
 	if string(got) != string(sentinel) {
 		t.Fatalf("existing session was overwritten: %q", got)
 	}

@@ -2,7 +2,6 @@ package coding
 
 import (
 	"encoding/json"
-	"os"
 	"strings"
 	"testing"
 
@@ -28,10 +27,7 @@ func TestAppendCompactionPersistsTheReferenceEntryShape(t *testing.T) {
 	if err := manager.FlushWrites(); err != nil {
 		t.Fatal(err)
 	}
-	encoded, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	encoded := readFileBytes(t, path)
 	var compaction map[string]any
 	for line := range strings.SplitSeq(strings.TrimSpace(string(encoded)), "\n") {
 		var entry map[string]any
@@ -72,10 +68,7 @@ func TestBranchSummaryPersistsFromHookFalse(t *testing.T) {
 	if err := manager.FlushWrites(); err != nil {
 		t.Fatal(err)
 	}
-	encoded, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	encoded := readFileBytes(t, path)
 	for line := range strings.SplitSeq(strings.TrimSpace(string(encoded)), "\n") {
 		var entry map[string]any
 		if json.Unmarshal([]byte(line), &entry) != nil || entry["type"] != "branch_summary" {

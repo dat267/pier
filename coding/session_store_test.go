@@ -259,10 +259,7 @@ func TestAppendedEntryKeyOrderMatchesReference(t *testing.T) {
 	if err := manager.FlushWrites(); err != nil {
 		t.Fatal(err)
 	}
-	data, err := os.ReadFile(manager.GetSessionFile())
-	if err != nil {
-		t.Fatal(err)
-	}
+	data := readFileBytes(t, manager.GetSessionFile())
 
 	byType := map[string][]string{}
 	for line := range strings.SplitSeq(strings.TrimRight(string(data), "\n"), "\n") {
@@ -511,10 +508,7 @@ func TestLoneSurrogateEntrySurvivesMigration(t *testing.T) {
 		t.Errorf("loaded %d entries, want 2: the lone-surrogate entry was dropped", got)
 	}
 	// The migration rewrites the file; the entry must still be there.
-	after, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	after := readFileBytes(t, path)
 	if !strings.Contains(string(after), `"id":"surr"`) {
 		t.Errorf("the migration deleted the lone-surrogate entry from the session file:\n%s", after)
 	}

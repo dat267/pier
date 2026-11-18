@@ -143,10 +143,7 @@ func TestForkSessionWritesExactlyOneNewlinePerEntry(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			data, err := os.ReadFile(fork.GetSessionFile())
-			if err != nil {
-				t.Fatal(err)
-			}
+			data := readFileBytes(t, fork.GetSessionFile())
 			if got, want := strings.Count(string(data), "\n"), len(fork.GetEntries())+1; got != want {
 				t.Fatalf("JSONL newlines=%d want=%d", got, want)
 			}

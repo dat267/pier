@@ -199,10 +199,7 @@ func TestResolveConfigValueCommandCacheDeduplicatesConcurrentCalls(t *testing.T)
 		t.Error(err)
 	}
 
-	contents, err := os.ReadFile(marker)
-	if err != nil {
-		t.Fatal(err)
-	}
+	contents := readFileBytes(t, marker)
 	if got := len(contents); got != 1 {
 		t.Fatalf("shell command executions = %d; want 1", got)
 	}

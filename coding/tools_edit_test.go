@@ -30,10 +30,7 @@ func TestEditReplacesMalformedUTF8WhenRewritingFile(t *testing.T) {
 	if _, err := tool.Execute("c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"target","newText":"changed"}]}`), nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	got, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	got := readFileBytes(t, path)
 	if string(got) != "\uFFFD\nchanged\n" {
 		t.Fatalf("rewritten file = %q; want replacement-decoded content", got)
 	}

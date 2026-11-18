@@ -2,7 +2,6 @@ package coding
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -91,10 +90,7 @@ func TestRPCSwitchReopensATargetCreatedWhileTheOutgoingRunSettles(t *testing.T) 
 		t.Fatalf("write after the switch: %v", err)
 	}
 	// The replacement loaded the settled file, so both turns are in it.
-	data, err := os.ReadFile(targetPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	data := readFileBytes(t, targetPath)
 	for _, want := range []string{"hello", "after"} {
 		if !strings.Contains(string(data), want) {
 			t.Fatalf("session file is missing %q:\n%s", want, data)

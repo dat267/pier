@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"image"
-	"os"
 	"strings"
 	"testing"
 )
@@ -13,10 +12,7 @@ import (
 // `magick -size 2x2 xc:'#336699' -define webp:lossless=true`.
 func tinyWebP(t *testing.T) []byte {
 	t.Helper()
-	data, err := os.ReadFile("testdata/images/tiny.webp")
-	if err != nil {
-		t.Fatal(err)
-	}
+	data := readFileBytes(t, "testdata/images/tiny.webp")
 	return data
 }
 

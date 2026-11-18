@@ -76,10 +76,7 @@ func TestBashExecutorRollingOutputMatchesUpstream(t *testing.T) {
 				ExitCode: result.ExitCode, HasFile: result.FullOutputPath != "",
 			}
 			if got.HasFile {
-				full, err := os.ReadFile(result.FullOutputPath)
-				if err != nil {
-					t.Fatal(err)
-				}
+				full := readFileBytes(t, result.FullOutputPath)
 				got.FileSHA256 = fmt.Sprintf("%x", sha256.Sum256(full))
 			}
 			if !reflect.DeepEqual(got, test.Expected) {
@@ -215,10 +212,7 @@ func TestExecuteBashWritesTheFullOutputWhenOnlyTheTailTruncates(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Remove(result.FullOutputPath) })
 
-	saved, err := os.ReadFile(result.FullOutputPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	saved := readFileBytes(t, result.FullOutputPath)
 	if len(saved) == 0 {
 		t.Fatal("full-output file is empty")
 	}

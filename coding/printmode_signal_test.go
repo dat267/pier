@@ -151,10 +151,7 @@ func TestPrintModeSignalDrainsAcceptedSaves(t *testing.T) {
 				if err != nil || len(files) != 1 {
 					t.Fatalf("accepted session not persisted: files=%v err=%v", files, err)
 				}
-				data, err := os.ReadFile(files[0])
-				if err != nil {
-					t.Fatal(err)
-				}
+				data := readFileBytes(t, files[0])
 				if !strings.Contains(string(data), "keep accepted prompt") {
 					t.Fatalf("accepted prompt was lost: %s", data)
 				}

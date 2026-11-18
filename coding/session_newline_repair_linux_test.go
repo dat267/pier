@@ -93,10 +93,7 @@ func TestSessionNewlineRepairKeepsAConcurrentAppend(t *testing.T) {
 			if err := <-done; err != nil {
 				t.Fatalf("load: %v", err)
 			}
-			after, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatal(err)
-			}
+			after := readFileBytes(t, path)
 			if !bytes.Contains(after, []byte(`"id":"marker"`)) {
 				t.Fatal("newline repair discarded a concurrent append")
 			}

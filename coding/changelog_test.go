@@ -13,10 +13,7 @@ import (
 
 func loadCoreGolden(t *testing.T) map[string]string {
 	t.Helper()
-	data, err := os.ReadFile("testdata/core_golden.txt")
-	if err != nil {
-		t.Fatalf("read golden: %v", err)
-	}
+	data := readFileBytes(t, "testdata/core_golden.txt")
 	values := map[string]string{}
 	for _, line := range splitGoldenLines(string(data)) {
 		key, value, ok := splitGoldenLine(line)
@@ -90,7 +87,7 @@ func TestChangelogAgainstUpstreamGolden(t *testing.T) {
 	golden := loadCoreGolden(t)
 	data, err := os.ReadFile("testdata/core_corpus.json")
 	if err != nil {
-		t.Fatalf("read corpus: %v", err)
+		t.Fatal(err)
 	}
 	var corpus struct {
 		Links map[string]struct {

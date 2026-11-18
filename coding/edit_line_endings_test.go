@@ -73,10 +73,7 @@ func TestEditKeepsUnchangedLineEndings(t *testing.T) {
 				t.Fatal(err)
 			}
 			runEdit(t, dir, "f.txt", tc.oldText, tc.newText)
-			got, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatal(err)
-			}
+			got := readFileBytes(t, path)
 			if string(got) != tc.expected {
 				t.Fatalf("file = %q; want %q", got, tc.expected)
 			}

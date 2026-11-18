@@ -2,7 +2,6 @@ package coding
 
 import (
 	"encoding/json"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -15,10 +14,7 @@ import (
 // the inner partial. Wire size must not depend on the accumulated response.
 func jsonEventGoldens(t *testing.T) map[string]string {
 	t.Helper()
-	data, err := os.ReadFile("testdata/json_events_golden.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
+	data := readFileBytes(t, "testdata/json_events_golden.txt")
 	out := map[string]string{}
 	for line := range strings.SplitSeq(strings.TrimSpace(string(data)), "\n") {
 		label, wire, ok := strings.Cut(line, " => ")

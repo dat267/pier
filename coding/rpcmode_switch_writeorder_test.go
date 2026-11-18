@@ -1,7 +1,6 @@
 package coding
 
 import (
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -62,10 +61,7 @@ func TestRPCSwitchSessionDrainsTheOutgoingWriteQueue(t *testing.T) {
 	if response["success"] != true {
 		t.Fatalf("switch_session response = %+v", response)
 	}
-	data, err := os.ReadFile(oldPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	data := readFileBytes(t, oldPath)
 	if !strings.Contains(string(data), `"outgoing"`) {
 		t.Fatalf("the outgoing write never reached its file: %s", data)
 	}

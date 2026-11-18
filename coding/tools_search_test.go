@@ -43,10 +43,7 @@ func TestFindToolFloorsFractionalLimitForFD(t *testing.T) {
 	if _, err := tool.Execute("c", json.RawMessage(`{"pattern":"*.txt","limit":1.5}`), context.Background(), nil); err != nil {
 		t.Fatalf("fractional find limit error = %v", err)
 	}
-	recorded, err := os.ReadFile(argsFile)
-	if err != nil {
-		t.Fatal(err)
-	}
+	recorded := readFileBytes(t, argsFile)
 	if !strings.Contains(string(recorded), "--max-results 2 ") {
 		t.Fatalf("fd args = %q; want the floored limit plus one", recorded)
 	}

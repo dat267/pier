@@ -362,10 +362,7 @@ func TestBashTruncationKeepsTail(t *testing.T) {
 		t.Fatalf("details = %s", result.Details)
 	}
 	// The temp file holds the FULL output.
-	full, err := os.ReadFile(*details.FullOutputPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	full := readFileBytes(t, *details.FullOutputPath)
 	if !strings.Contains(string(full), "\n1\n") && !strings.HasPrefix(string(full), "1\n") {
 		t.Fatalf("full output missing head: %q", string(full)[:20])
 	}

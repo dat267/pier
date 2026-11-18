@@ -63,10 +63,7 @@ func TestEditToolMatchesUpstream(t *testing.T) {
 			if !checkParityToolResult(t, result, execErr, fixture.Expected.Error, fixture.Expected.Text, fixture.Expected.Details) {
 				return
 			}
-			written, err := os.ReadFile(filepath.Join(dir, fixture.File))
-			if err != nil {
-				t.Fatal(err)
-			}
+			written := readFileBytes(t, filepath.Join(dir, fixture.File))
 			if string(written) != fixture.Expected.File {
 				t.Fatalf("file = %q, want %q", string(written), fixture.Expected.File)
 			}

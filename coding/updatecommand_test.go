@@ -105,11 +105,18 @@ func tempTarget(t *testing.T) string {
 
 func readFile(t *testing.T, path string) string {
 	t.Helper()
+	return string(readFileBytes(t, path))
+}
+
+// readFileBytes reads a fixture a test needs as raw bytes, such as a persisted
+// JSON payload it compares byte for byte.
+func readFileBytes(t *testing.T, path string) []byte {
+	t.Helper()
 	body, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return string(body)
+	return body
 }
 
 // onlyFileIn reports the single file in a directory, so a leftover download shows

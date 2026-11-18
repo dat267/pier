@@ -358,7 +358,7 @@ func TestOpeningEmptySessionFileInitializesIt(t *testing.T) {
 		t.Fatalf("write errors: %v", failures)
 	}
 
-	lines := strings.Split(strings.TrimSpace(readFileString(t, path)), "\n")
+	lines := strings.Split(strings.TrimSpace(readFile(t, path)), "\n")
 	if len(lines) != 2 {
 		t.Fatalf("session file has %d lines, want header plus one message:\n%s", len(lines), strings.Join(lines, "\n"))
 	}
@@ -372,15 +372,6 @@ func TestOpeningEmptySessionFileInitializesIt(t *testing.T) {
 	if info, err := os.Stat(path); err != nil || info.Mode().Perm() != 0o600 {
 		t.Fatalf("session file mode = %v, want 0600", info.Mode().Perm())
 	}
-}
-
-func readFileString(t *testing.T, path string) string {
-	t.Helper()
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(data)
 }
 
 // Reference: pi f9a26365 core/session-manager.ts _setSessionFile checks

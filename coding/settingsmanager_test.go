@@ -298,10 +298,7 @@ func TestSettingsQuietStartup(t *testing.T) {
 	}
 	// The file's key order survives the write (upstream merges into the parsed
 	// object).
-	raw, err := os.ReadFile(settingsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	raw := readFileBytes(t, settingsPath)
 	text := string(raw)
 	if strings.Index(text, `"quietStartup"`) >= strings.Index(text, `"defaultModel"`) ||
 		strings.Index(text, `"defaultModel"`) >= strings.Index(text, `"theme"`) {
@@ -677,10 +674,7 @@ func TestSettingsPackageFilterKeysAreSorted(t *testing.T) {
 	manager := NewSettingsManagerFromFiles(cwd, agentDir, SettingsManagerCreateOptions{ProjectTrusted: &trusted})
 	manager.SetPackages([]any{map[string]any{"source": "pkg-b", "skills": []any{"s"}}})
 	manager.FlushPersists()
-	written, err := os.ReadFile(filepath.Join(agentDir, "settings.json"))
-	if err != nil {
-		t.Fatalf("read settings: %v", err)
-	}
+	written := readFileBytes(t, filepath.Join(agentDir, "settings.json"))
 	if !strings.Contains(string(written), "\"skills\": [") || strings.Index(string(written), "\"skills\"") > strings.Index(string(written), "\"source\"") {
 		t.Fatalf("settings = %s, want the filter keys sorted", written)
 	}

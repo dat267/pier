@@ -37,10 +37,7 @@ func TestAuthStorageDeleteDoesNotOverwriteMalformedJSON(t *testing.T) {
 	if err := storage.Delete("p", context.Background()); err == nil {
 		t.Error("delete acknowledged malformed auth.json")
 	}
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	raw := readFileBytes(t, path)
 	if string(raw) != malformed {
 		t.Error("delete overwrote malformed auth.json")
 	}

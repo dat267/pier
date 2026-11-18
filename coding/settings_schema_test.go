@@ -1,7 +1,6 @@
 package coding
 
 import (
-	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -16,10 +15,7 @@ func TestSettingsNewKeysFollowDeclarationOrder(t *testing.T) {
 	writeSettingsFile(t, path, `{"custom":"<keep>&","theme":"dark"}`)
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	manager.SetDefaultModelAndProvider("openai", "test-model")
-	content, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	content := readFileBytes(t, path)
 	want := "{\n  \"custom\": \"<keep>&\",\n  \"theme\": \"dark\",\n  \"defaultProvider\": \"openai\",\n  \"defaultModel\": \"test-model\"\n}"
 	if got := strings.TrimSpace(string(content)); got != want {
 		t.Fatalf("settings = %s, want %s", got, want)

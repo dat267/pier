@@ -110,10 +110,7 @@ func TestOutputAccumulatorSnapshotMatchesUpstream(t *testing.T) {
 			}
 			if snapshot.FullOutputPath != "" {
 				got.FullOutputPath = "present"
-				full, err := os.ReadFile(snapshot.FullOutputPath)
-				if err != nil {
-					t.Fatal(err)
-				}
+				full := readFileBytes(t, snapshot.FullOutputPath)
 				got.FileSHA256 = fmt.Sprintf("%x", sha256.Sum256(full))
 			}
 			if !reflect.DeepEqual(got, test.Expected) {

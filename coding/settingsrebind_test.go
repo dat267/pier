@@ -238,10 +238,7 @@ func TestSettingsManagerRebindProject(t *testing.T) {
 	empty := t.TempDir()
 	manager.RebindProject(empty, true)
 	manager.SetProjectThemePaths([]string{"written-theme-path"})
-	raw, err := os.ReadFile(filepath.Join(empty, ConfigDirName, "settings.json"))
-	if err != nil {
-		t.Fatalf("write went to the wrong project: %v", err)
-	}
+	raw := readFileBytes(t, filepath.Join(empty, ConfigDirName, "settings.json"))
 	if !strings.Contains(string(raw), "written-theme-path") {
 		t.Fatalf("settings file = %s", raw)
 	}

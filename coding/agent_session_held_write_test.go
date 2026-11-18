@@ -1,7 +1,6 @@
 package coding
 
 import (
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -142,9 +141,6 @@ func TestDeferredFlushPanicStillWritesAcceptedEntries(t *testing.T) {
 
 func readSessionFileText(t *testing.T, manager *SessionManager) string {
 	t.Helper()
-	data, err := os.ReadFile(manager.GetSessionFile())
-	if err != nil {
-		t.Fatal(err)
-	}
+	data := readFileBytes(t, manager.GetSessionFile())
 	return string(data)
 }

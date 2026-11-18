@@ -51,10 +51,7 @@ func TestRecordAndReadCrashLog(t *testing.T) {
 	}
 
 	// The file is JSON with a trailing newline.
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	raw := readFileBytes(t, path)
 	if !json.Valid(raw) || !trailingNewline(raw) {
 		t.Fatalf("file = %q", raw)
 	}
@@ -70,10 +67,7 @@ func trailingNewline(raw []byte) bool {
 func TestCrashLogDoesNotHTMLEscape(t *testing.T) {
 	path := GetCrashLogPath(t.TempDir())
 	RecordCrash(CrashInput{Kind: CrashKindFatalError, Error: errors.New("a < b & c > d"), Cwd: "/"}, path)
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	raw := readFileBytes(t, path)
 	if strings.Contains(string(raw), `\u003c`) || strings.Contains(string(raw), `\u0026`) || strings.Contains(string(raw), `\u003e`) {
 		t.Fatalf("crash log HTML-escaped: %s", raw)
 	}

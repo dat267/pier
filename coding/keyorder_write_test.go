@@ -61,10 +61,7 @@ func TestPersistedJSONWritersUseJavaScriptKeyOrder(t *testing.T) {
 	if err := store.Write("prov", &ai.ModelsStoreEntry{}, context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	models, err := os.ReadFile(modelsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	models := readFileBytes(t, modelsPath)
 	modelsWanted := "{\n  \"1\": {\n    \"models\": []\n  },\n  \"2\": {\n    \"models\": []\n  },\n  \"10\": {\n    \"models\": []\n  },\n  \"b\": {\n    \"models\": []\n  },\n  \"prov\": {\n    \"models\": []\n  }\n}"
 	if string(models) != modelsWanted {
 		t.Errorf("models-store bytes:\ngot  %q\nwant %q", models, modelsWanted)

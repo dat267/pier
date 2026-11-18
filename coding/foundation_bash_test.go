@@ -179,10 +179,7 @@ func TestExecuteBashTruncationAndTempFile(t *testing.T) {
 		t.Fatalf("result = %+v", result)
 	}
 	defer os.Remove(result.FullOutputPath)
-	written, err := os.ReadFile(result.FullOutputPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	written := readFileBytes(t, result.FullOutputPath)
 	if string(written) != big {
 		t.Fatalf("temp file length = %d want %d", len(written), len(big))
 	}

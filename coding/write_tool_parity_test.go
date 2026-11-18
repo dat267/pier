@@ -75,10 +75,7 @@ func TestWriteToolMatchesUpstream(t *testing.T) {
 				t.Fatalf("text = %q, want %q", text.String(), fixture.Expected.Text)
 			}
 			if fixture.Expected.Written != nil {
-				written, err := os.ReadFile(filepath.Join(dir, fixture.Path))
-				if err != nil {
-					t.Fatal(err)
-				}
+				written := readFileBytes(t, filepath.Join(dir, fixture.Path))
 				if string(written) != *fixture.Expected.Written {
 					t.Fatalf("file = %q, want %q", string(written), *fixture.Expected.Written)
 				}
