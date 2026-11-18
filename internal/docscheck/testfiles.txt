@@ -32,6 +32,7 @@ ai/anthropic_inlinetools_test.go
 ai/anthropic_stream_events_parity_test.go
 ai/anthropic_stream_test.go
 ai/anthropic_thinking_order_test.go
+ai/anthropic_threads_compat_test.go
 ai/anthropic_threads_test.go
 ai/anthropic_wire_golden_test.go
 ai/anthropic_wire_order_test.go
@@ -43,11 +44,13 @@ ai/authstore_reentrancy_test.go
 ai/aws_bedrock_test.go
 ai/azure_openai_responses_test.go
 ai/azure_wire_parity_test.go
+ai/bedrock_config_test.go
 ai/bedrock_converse_perf_test.go
 ai/bedrock_converse_test.go
 ai/bedrock_error_parity_test.go
 ai/bedrock_eventstream_golden_test.go
 ai/bedrock_identity_test.go
+ai/bedrock_stream_test.go
 ai/bedrock_thinking_payload_reference_test.go
 ai/bedrock_wire_parity_test.go
 ai/cappedbody_test.go
@@ -277,13 +280,17 @@ coding/clipboard_test.go
 coding/clipboard_utf8_linux_test.go
 coding/clipboard_window_windows_test.go
 coding/clipboardimage_test.go
+coding/compaction_cut_test.go
 coding/compaction_entry_shape_test.go
+coding/compaction_estimate_test.go
 coding/compaction_filelist_cap_test.go
 coding/compaction_filelists_bench_test.go
 coding/compaction_findings_test.go
 coding/compaction_prefix_auto_test.go
 coding/compaction_prefix_session_test.go
 coding/compaction_prefix_test.go
+coding/compaction_serialize_test.go
+coding/compaction_split_test.go
 coding/compaction_test.go
 coding/compaction_upstream_fixture_test.go
 coding/config_command_timeout_unix_test.go
@@ -659,6 +666,7 @@ coding/session_context_signature_test.go
 coding/session_contextedit_test.go
 coding/session_contextmessages_test.go
 coding/session_conversation_memo_test.go
+coding/session_discovery_test.go
 coding/session_fork_branch_test.go
 coding/session_fork_test.go
 coding/session_index_test.go
@@ -668,6 +676,7 @@ coding/session_listing_fuzz_test.go
 coding/session_load_bench_test.go
 coding/session_manager_test.go
 coding/session_messagecache_test.go
+coding/session_migration_test.go
 coding/session_modes_linux_test.go
 coding/session_newline_repair_linux_test.go
 coding/session_payload_test.go
@@ -694,6 +703,8 @@ coding/sessionresources_threads_test.go
 coding/sessionstore_fuzz_test.go
 coding/settings_clear_test.go
 coding/settings_fuzz_test.go
+coding/settings_merge_test.go
+coding/settings_persist_test.go
 coding/settings_schema_test.go
 coding/settings_stale_lock_test.go
 coding/settingsload_parity_test.go
@@ -840,7 +851,10 @@ internal/offloop/panic_report_test.go
 internal/offloop/retention_test.go
 internal/uiblock/analysis_test.go
 internal/uiblock/uiblock_test.go
+mcp/client_notify_test.go
+mcp/client_serve_test.go
 mcp/client_test.go
+mcp/client_timeout_test.go
 mcp/lifecycle_stress_test.go
 mcp/listener_retention_test.go
 mcp/oauth/callback_parity_test.go
@@ -870,6 +884,9 @@ mcp/protocol/jsonrpc_fuzz_test.go
 mcp/protocol/jsonrpc_test.go
 mcp/protocol/leakcheck_main_test.go
 mcp/transport_events_test.go
+mcp/transport_http_auth_test.go
+mcp/transport_http_redirect_test.go
+mcp/transport_http_stream_test.go
 mcp/transport_http_test.go
 mcp/transport_sse_test.go
 mcp/transport_stdio_group_test.go

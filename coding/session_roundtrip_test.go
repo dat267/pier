@@ -2,10 +2,9 @@ package coding
 
 import (
 	"context"
+	"github.com/dat267/pier/ai"
 	"strings"
 	"testing"
-
-	"github.com/dat267/pier/ai"
 )
 
 // TestSessionFileRoundTripPreservesInvariants pins the resume contract end to
@@ -110,4 +109,22 @@ func userMessagesContain(messages []ai.Message, want string) bool {
 		}
 	}
 	return false
+}
+
+// Session manager tests keyed to upstream session-manager.ts semantics.
+
+func TestSessionRoundTripByteParity(t *testing.T) {
+	// Entry JSON must round-trip through Marshal/Unmarshal identically.
+	line := `{"type":"message","id":"abc123","parentId":null,"timestamp":"2026-09-19T03:00:00.000Z","message":{"role":"user","content":"hello","timestamp":1}}`
+	entry, err := UnmarshalFileEntry(line)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := MarshalFileEntry(*entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(out) != line {
+		t.Fatalf("round trip:\n got %s\nwant %s", out, line)
+	}
 }
