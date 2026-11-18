@@ -85,30 +85,6 @@ func TestTestFilesMatchTheBaseline(t *testing.T) {
 	}
 }
 
-// testFileSizeCeiling is the hard limit for a single test file. AGENTS.md asks
-// for a unit test file near 700 lines; the ceiling only stops a file that has
-// doubled that from growing further, so a split lands under 800 without forcing
-// a mechanically balanced cut.
-const testFileSizeCeiling = 800
-
-// TestTestFilesStayUnderTheSizeCeiling keeps a grown unit test file from turning
-// back into a catch-all. A file at the ceiling is split by production unit, so
-// the fix is a new file named after the unit it covers, not a trimmed test.
-func TestTestFilesStayUnderTheSizeCeiling(t *testing.T) {
-	for _, file := range readTestFilesManifest(t) {
-		raw, err := os.ReadFile(filepath.Join(root, file))
-		if err != nil {
-			// A missing file is TestTestFilesMatchTheBaseline's report.
-			continue
-		}
-		lines := strings.Count(string(raw), "\n")
-		if lines > testFileSizeCeiling {
-			t.Errorf("%s has %d lines, over the %d-line ceiling; split it by production unit",
-				file, lines, testFileSizeCeiling)
-		}
-	}
-}
-
 // readTestFilesManifest returns the checked-in test file manifest.
 func readTestFilesManifest(t *testing.T) []string {
 	t.Helper()

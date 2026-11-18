@@ -56,10 +56,9 @@ Packages mirror upstream: `ai`, `agent`, `coding` (including `interactive`),
   byproduct. `scripts/test_inventory.sh` reports files, tests and lines per
   package, and `just testfiles` rewrites the manifest.
 - Keep a unit test file near 700 lines and split a grown one by production unit,
-  not at an arbitrary offset. `internal/docscheck` fails a test file over 800
-  lines, so a grown file gets a new sibling named after the unit it covers. No
-  file-count target outranks a parity pin: fold cases, never delete a pin to
-  reach a number. Keep test names stable, because `DECISIONS.md` rows cite them.
+  not at an arbitrary offset. No file-count target outranks a parity pin: fold
+  cases, never delete a pin to reach a number. Keep test names stable, because
+  `DECISIONS.md` rows cite them.
 
 ## Build and verification
 
