@@ -23,6 +23,8 @@ var BuiltinSlashCommands = []BuiltinSlashCommand{
 	{Name: "session", Description: "Show session info and stats"},
 	{Name: "changelog", Description: "Show changelog entries"},
 	{Name: "goal", Description: "Show current goal status or manage goal lifecycle", ArgumentHint: "set|status|pause|resume|clear"},
+	// D496: the pier-only feature toggles, which stay out of /settings.
+	{Name: "features", Description: "Turn " + AppName + "-only features on or off"},
 	{Name: "hotkeys", Description: "Show all keyboard shortcuts"},
 	{Name: "fork", Description: "Create a new fork from a previous user message"},
 	{Name: "clone", Description: "Duplicate the current session at the current position"},
