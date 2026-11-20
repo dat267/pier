@@ -41,12 +41,11 @@ func TestMcpToolCallFramesCollapseArguments(t *testing.T) {
 		t.Errorf("collapsed call kept the raw pretty JSON:\n%s", collapsed)
 	}
 
-	// D397: the header keeps its shape when the frame expands. The reference
-	// reflows it (see the differential below), but a click anywhere in the frame
-	// toggles expansion, so reflowing moved the row under the pointer.
+	// The expanded state reflows the header instead (see
+	// TestMcpCallHeaderShowsEveryArgumentWhenExpanded).
 	expanded := renderMcpCall(t, args, theme, true)
-	if expanded != collapsed {
-		t.Errorf("expanded call =\n%s\nwant the collapsed header unchanged:\n%s", expanded, collapsed)
+	if expanded == collapsed {
+		t.Errorf("expanded call = %q, want the reflowed header", expanded)
 	}
 
 	// Argument keys follow Object.entries order: array-index names first,
@@ -208,24 +207,41 @@ func TestMcpCallFrameUsesTheServerToolLabelFromARegisteredTool(t *testing.T) {
 	}
 }
 
-// TestMcpCallHeaderStaysUnreflowedWhenExpanded is the D397 differential: the
-// reference rebuilds the header through formatToolCallWithArgs with
-// expanded=true, so the one-line `label key=value ...` becomes `label` plus one
-// `key: value` line per argument. Pier keeps the one-line form in both states
-// (see the row for why), which is the only difference from the reference here.
-func TestMcpCallHeaderStaysUnreflowedWhenExpanded(t *testing.T) {
+// TestMcpCallHeaderShowsEveryArgumentWhenExpanded pins the expanded header:
+// reference pi v1.5.0 (f9a26365) core/tools/render-utils.ts
+// `formatToolCallWithArgs` with expanded=true returns the label plus one
+// `  key: value` line per argument, the value uncut, a string unquoted, any
+// other value as JSON.stringify(value, null, 2), tabs replaced and every
+// following line indented by four spaces.
+func TestMcpCallHeaderShowsEveryArgumentWhenExpanded(t *testing.T) {
 	theme := newRendererTestTheme(t)
-	args := json.RawMessage(`{"path":"/tmp/notes.txt","offset":10,"limit":5}`)
-	collapsed := renderMcpCall(t, args, theme, false)
-	expanded := renderMcpCall(t, args, theme, true)
-	if collapsed != expanded {
-		t.Fatalf("collapsed = %q, expanded = %q; the header must not reflow", collapsed, expanded)
+	// The case that prompted the change: a long argument (a query, a filter)
+	// was cut at the collapsed budget and could not be read whole.
+	args := json.RawMessage(`{"target":"example-table","query":"SELECT a,\n       b FROM t"}`)
+	want := "docs/search\n  target: example-table\n  query: SELECT a,\n           b FROM t"
+	if got := renderMcpCall(t, args, theme, true); got != want {
+		t.Errorf("expanded call =\n%q\nwant\n%q", got, want)
 	}
-	if strings.Contains(expanded, "\n") {
-		t.Fatalf("expanded header = %q, want one line", expanded)
+
+	// A long value is not truncated in the expanded state.
+	long := renderMcpCall(t, json.RawMessage(`{"q":"`+strings.Repeat("x", 400)+`"}`), theme, true)
+	if strings.Count(long, "x") != 400 {
+		t.Errorf("expanded call kept %d of 400 characters: %q", strings.Count(long, "x"), long)
 	}
-	if want := `docs/search path="/tmp/notes.txt" offset=10 limit=5`; expanded != want {
-		t.Errorf("header = %q, want %q", expanded, want)
+
+	// A non-string value is JSON.stringify(value, null, 2) with the value's own
+	// lines indented by four spaces.
+	nested := renderMcpCall(t, json.RawMessage(`{"deep":{"k":"v","j":1}}`), theme, true)
+	wantNested := "docs/search\n  deep: {\n      \"k\": \"v\",\n      \"j\": 1\n    }"
+	if nested != wantNested {
+		t.Errorf("expanded call =\n%q\nwant\n%q", nested, wantNested)
+	}
+
+	// A multi-line string keeps its line breaks, indented past the key.
+	multiline := renderMcpCall(t, json.RawMessage(`{"body":"a\tb\rc\nd"}`), theme, true)
+	wantMultiline := "docs/search\n  body: a   bc\n    d"
+	if multiline != wantMultiline {
+		t.Errorf("expanded call =\n%q\nwant\n%q", multiline, wantMultiline)
 	}
 }
 

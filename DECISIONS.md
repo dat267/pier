@@ -5582,24 +5582,29 @@ adapter resolves the renderers from the tool label).
 
 ### D397
 
-**An expanded MCP frame keeps every row above the body in place.**
+**An expanded MCP frame shows every argument and keeps the result preview in place.**
 
 Reference: pi v1.5.0 (f9a26365) `extensions/mcp/tools.ts`
-`createMcpToolRenderers` rebuilds the call header on every display update
-through `core/tools/render-utils.ts` `formatToolCallWithArgs(label, args,
-theme, context.expanded)`: collapsed, one line of `key=value` pairs; expanded,
-the label plus one indented `key: value` line per argument.
-`ToolExecutionComponent` wraps the header and the result in
-`createResultRegion` (`modes/interactive/components/tool-execution.ts`), whose
-handler toggles expansion on any left click in the region, without a position
-check. Clicking the `... (N more lines, ctrl+o to expand)` hint therefore also
-reflowed the header, moving the row under the pointer.
+`createMcpToolRenderers` rebuilds the call header through
+`core/tools/render-utils.ts` `formatToolCallWithArgs(label, args, theme,
+context.expanded)`: collapsed, one line of `key=value` pairs cut to 100 units;
+expanded, the label plus one indented `key: value` line per argument with the
+value whole. `TestMcpCallHeaderShowsEveryArgumentWhenExpanded` pins both states,
+its expected strings produced by the pinned reference's function.
 
-Pier keeps the header as one line in both states and previews the body at the
-render width the preview receives, so expanding only appends rows below the
-preview and collapsing restores the frame exactly.
+The port first kept the collapsed one-line header in both states, because a
+click anywhere in the frame toggles expansion (`createResultRegion`,
+`modes/interactive/components/tool-execution.ts`) and reflowing moved the row
+under the pointer. That made a long argument, an MCP call's SQL above all,
+unreadable at any size: the reason to expand a call frame is to read its
+parameters, so the reference's expanded shape came back. The one-line collapsed
+form is still byte-identical to the reference's.
 
-This row also records the bug the first version of the port had. The collapsed
+What pier keeps is the result half: expanding appends rows below the collapsed
+preview instead of replacing it, so the preview rows already on screen stay
+where they were (`TestMcpResultExpansionKeepsThePreviewInPlace`).
+
+This row also records a bug the first version of the port had. The collapsed
 preview measured visual lines at a fixed 80 columns while the expanded body
 wrapped at the real width, so on a wide terminal a row broken in the collapsed
 view stayed whole in the expanded one, and the hint's count was wrong. Both
@@ -5609,15 +5614,14 @@ states now wrap once at the width `Render` receives, matching upstream's
 Collapsed arguments keep the reference's `Object.entries` order and 100-unit
 budget, so a collapsed header is identical to the reference's.
 
-Tests: `TestMcpCallHeaderStaysUnreflowedWhenExpanded`,
+Tests: `TestMcpCallHeaderShowsEveryArgumentWhenExpanded`,
 `TestMcpResultExpansionKeepsThePreviewInPlace`,
 `TestMcpResultPreviewWrapsAtTheRenderWidth` (four widths, collapsed rows equal
 expanded rows and never exceed the width),
 `TestMcpResultPreviewHintCountsVisualLines`,
 `TestMcpToolCallFramesCollapseArguments` (the collapsed header still matches the
-reference's output), and `TestMcpToolRenderUpstreamParity` (every other row of
-an expanded frame matches the reference's, with the one-row-taller reference
-header skipped).
+reference's output), and `TestMcpToolRenderUpstreamParity` (every row of an
+expanded frame, header included, matches the reference's).
 
 
 ### D398

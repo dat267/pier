@@ -3,7 +3,6 @@ package interactive
 import (
 	"encoding/json"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/dat267/pier/tui"
@@ -87,27 +86,6 @@ func TestMcpToolRenderUpstreamParity(t *testing.T) {
 
 		key := label + "@" + itoa(spec.Width)
 		got := normalizeRender(component.Render(spec.Width))
-		if !spec.Expanded {
-			checkGolden(t, golden, key, got)
-			continue
-		}
-		// D397: pier keeps the call header on one line in both states, so an
-		// expanded frame shows the collapsed `key=value` header where the
-		// reference reflows it into one `key: value` line per argument. Compare
-		// every other row, and check the header really is the collapsed form.
-		var want []string
-		if err := json.Unmarshal([]byte(golden[key]), &want); err != nil {
-			t.Fatalf("%s: parse golden: %v", label, err)
-		}
-		if len(want) != len(got)+1 {
-			t.Fatalf("%s: %d rows, want %d (the reference's expanded header is one row taller)", label, len(got), len(want))
-		}
-		// Rows 0 and 1 are the frame's leading blank row and border; row 2 is the
-		// header (one row here, two there); the rest is the body.
-		checkGolden(t, map[string]string{key: mustJSON(append(want[:2], want[4:]...))}, key,
-			append(append([]string{}, got[:2]...), got[3:]...))
-		if !strings.Contains(got[2], "=") || strings.Contains(got[2], ": ") {
-			t.Fatalf("%s: expanded header is not the collapsed form: %q", label, got[2])
-		}
+		checkGolden(t, golden, key, got)
 	}
 }
