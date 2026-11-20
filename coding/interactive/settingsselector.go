@@ -73,7 +73,6 @@ type SettingsConfig struct {
 	AutoResizeImages           bool
 	BlockImages                bool
 	EnableSkillCommands        bool
-	GoalFeature                bool
 	SteeringMode               string
 	FollowUpMode               string
 	Transport                  ai.Transport
@@ -149,10 +148,6 @@ type SettingsCallbacks struct {
 	OnWarningsChange                   func(WarningSettings)
 	OnCancel                           func()
 }
-
-// pierOnlySettings are the settings rows the reference has no counterpart for.
-// A golden comparison against the reference's selector drops their rows.
-var pierOnlySettings = map[string]bool{"goal-feature": true}
 
 // warningSettingsSubmenu edits the warning toggles.
 type warningSettingsSubmenu struct {
@@ -932,15 +927,6 @@ func NewSettingsSelectorComponent(config SettingsConfig, callbacks SettingsCallb
 		CurrentValue: boolStr(config.ShowTerminalProgress),
 		Values:       []string{"true", "false"},
 	})
-	// Pier-only rows go last: the reference's rows keep their positions and the
-	// upstream golden comparisons drop these by ID (D496).
-	items = append(items, tui.SettingItem{
-		ID:           "goal-feature",
-		Label:        "Goal feature",
-		Description:  "Enable /goal and the get_goal and set_goal tools",
-		CurrentValue: boolStr(config.GoalFeature),
-		Values:       []string{"true", "false"},
-	})
 
 	component := &SettingsSelectorComponent{Container: &tui.Container{}}
 	component.AddChild(NewDynamicBorder(nil))
@@ -1009,8 +995,6 @@ func applySettingChange(id string, newValue string, callbacks SettingsCallbacks)
 		call(callbacks.OnBlockImagesChange)
 	case "skill-commands":
 		call(callbacks.OnEnableSkillCommandsChange)
-	case "goal-feature":
-		call(callbacks.OnGoalFeatureChange)
 	case "steering-mode":
 		if callbacks.OnSteeringModeChange != nil {
 			callbacks.OnSteeringModeChange(newValue)
@@ -1141,3 +1125,65 @@ func wheelScrollLinesChoices(current tui.WheelScrollLines) []string {
 	}
 	return choices
 }
+
+// FeatureToggle is one pier-only feature and its current state.
+type FeatureToggle struct {
+	// ID is the settings row id, also the key the change callback receives.
+	ID          string
+	Label       string
+	Description string
+	Enabled     bool
+}
+
+// FeatureSettingsSelector is the /features selector: the pier-only feature
+// toggles, kept out of /settings so that list stays the reference's (D496).
+type FeatureSettingsSelector struct {
+	*tui.Container
+
+	settingsList *tui.SettingsList
+	toggles      []FeatureToggle
+	onChange     func(id string, enabled bool)
+}
+
+// NewFeatureSettingsSelector builds the selector from the feature toggles.
+func NewFeatureSettingsSelector(toggles []FeatureToggle, onChange func(string, bool), onCancel func()) *FeatureSettingsSelector {
+	copied := append([]FeatureToggle{}, toggles...)
+	items := make([]tui.SettingItem, 0, len(copied))
+	for _, toggle := range copied {
+		items = append(items, tui.SettingItem{
+			ID:           toggle.ID,
+			Label:        toggle.Label,
+			Description:  toggle.Description,
+			CurrentValue: boolStr(toggle.Enabled),
+			Values:       []string{"true", "false"},
+		})
+	}
+	selector := &FeatureSettingsSelector{
+		Container: &tui.Container{}, toggles: copied, onChange: onChange,
+	}
+	selector.settingsList = tui.NewSettingsList(items, min(len(items), 10), GetSettingsListTheme(),
+		func(id string, newValue string) {
+			enabled := newValue == "true"
+			for index := range selector.toggles {
+				if selector.toggles[index].ID != id {
+					continue
+				}
+				selector.toggles[index].Enabled = enabled
+				selector.settingsList.UpdateValue(id, newValue)
+				if selector.onChange != nil {
+					selector.onChange(id, enabled)
+				}
+				return
+			}
+		}, onCancel, tui.SettingsListOptions{})
+	selector.AddChild(NewDynamicBorder(nil))
+	selector.AddChild(selector.settingsList)
+	selector.AddChild(NewDynamicBorder(nil))
+	return selector
+}
+
+// GetSettingsList exposes the list (focus, selection, mouse).
+func (s *FeatureSettingsSelector) GetSettingsList() *tui.SettingsList { return s.settingsList }
+
+// HandleInput forwards input to the list.
+func (s *FeatureSettingsSelector) HandleInput(data string) { s.settingsList.HandleInput(data) }

@@ -38,8 +38,8 @@ A shell call the agent starts without a `timeout` stops after 10 minutes, so a
 hung command hands control back to the agent with its output so far.
 
 `/goal` tracks multi-round objectives in session history. The agent can manage
-them with `get_goal` and `set_goal`. Turn the feature off in `/settings` (Goal
-feature) or from `/features`, which opens the pier-only toggles. Stdio RPC (`pier --mode rpc`) is documented
+them with `get_goal` and `set_goal`. `/features` lists the pier-only feature
+toggles and turns the goal feature off. Stdio RPC (`pier --mode rpc`) is documented
 in [the RPC contract](ARCHITECTURE.md#stdio-rpc).
 
 ## Development

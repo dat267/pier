@@ -4,7 +4,6 @@ import (
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
-	"sort"
 )
 
 // Port of showSettingsSelector from
@@ -84,7 +83,7 @@ type SettingsWiring struct {
 	OutputPad *int
 	// UpdateStatusContainer clears the status container when idle.
 	ClearStatusContainerIfIdle func()
-	// WireGoalController rebinds the goal controller's UI hooks and work
+	// WireGoalController rebinds the goal controller's UI hooks and idle-round
 	// scheduler after the feature is re-enabled (D496).
 	WireGoalController func()
 }
@@ -124,7 +123,6 @@ func (w *SettingsWiring) BuildSettingsConfig() SettingsConfig {
 		AutoResizeImages:       settings.GetImageAutoResize(),
 		BlockImages:            settings.GetBlockImages(),
 		EnableSkillCommands:    settings.GetEnableSkillCommands(),
-		GoalFeature:            settings.GetGoalFeatureEnabled(),
 		SteeringMode:           string(session.SteeringMode()),
 		FollowUpMode:           string(session.FollowUpMode()),
 		Transport:              settings.GetTransport(),
@@ -226,14 +224,6 @@ func (w *SettingsWiring) BuildSettingsCallbacks(done func(), refresh func()) Set
 			settings.SetEnableSkillCommands(enabled)
 			if w.SetupAutocompleteProvider != nil {
 				w.SetupAutocompleteProvider()
-			}
-		},
-		// D496: the goal feature turns its tools and /goal on or off mid-session.
-		OnGoalFeatureChange: func(enabled bool) {
-			settings.SetGoalFeatureEnabled(enabled)
-			session.SetGoalFeatureEnabled(enabled)
-			if w.WireGoalController != nil {
-				w.WireGoalController()
 			}
 		},
 		OnSteeringModeChange: func(mode string) { session.SetSteeringMode(mode) },
@@ -379,26 +369,7 @@ func (w *SettingsWiring) BuildSettingsCallbacks(done func(), refresh func()) Set
 }
 
 // ShowSettingsSelector opens the settings selector.
-func (w *SettingsWiring) ShowSettingsSelector() { w.showSettingsSelectorOn("") }
-
-// ShowFeatureSettingsSelector opens the settings selector on the pier-only
-// feature rows (D496), so /features reaches them without scanning the list.
-func (w *SettingsWiring) ShowFeatureSettingsSelector() {
-	ids := make([]string, 0, len(pierOnlySettings))
-	for id := range pierOnlySettings {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-	if len(ids) == 0 {
-		w.ShowSettingsSelector()
-		return
-	}
-	w.showSettingsSelectorOn(ids[0])
-}
-
-// showSettingsSelectorOn opens the selector with the row named by id
-// preselected (no row when id is empty).
-func (w *SettingsWiring) showSettingsSelectorOn(id string) {
+func (w *SettingsWiring) ShowSettingsSelector() {
 	w.Slot.Show(func(done func()) CreatedSelector {
 		var selector *SettingsSelectorComponent
 		callbacks := w.BuildSettingsCallbacks(done, func() {
@@ -413,9 +384,6 @@ func (w *SettingsWiring) showSettingsSelectorOn(id string) {
 			selector.GetSettingsList().UpdateValue("tui-mode", mode)
 		})
 		selector = NewSettingsSelectorComponent(w.BuildSettingsConfig(), callbacks)
-		if id != "" {
-			selector.GetSettingsList().SelectItem(id)
-		}
 		return CreatedSelector{Component: selector, Focus: selector.GetSettingsList()}
 	})
 }
@@ -572,4 +540,58 @@ func (w *SettingsWiring) applyOutputPad(padding int) bool {
 		return true
 	}
 	return false
+}
+
+// featureToggles lists the pier-only feature toggles for /features (D496). It is
+// the only place a new pier-only feature is declared.
+func (w *SettingsWiring) featureToggles() []FeatureToggle {
+	return []FeatureToggle{{
+		ID:          "goal-feature",
+		Label:       "Goal feature",
+		Description: "Enable /goal and the get_goal and set_goal tools",
+		Enabled:     w.Settings.GetGoalFeatureEnabled(),
+	}}
+}
+
+// ShowFeatureSettingsSelector opens the /features selector: the pier-only
+// feature toggles, which are kept out of /settings so that list stays the
+// reference's.
+func (w *SettingsWiring) ShowFeatureSettingsSelector() {
+	w.Slot.Show(func(done func()) CreatedSelector {
+		selector := NewFeatureSettingsSelector(w.featureToggles(), func(id string, enabled bool) {
+			if !w.ApplyFeatureToggle(id, enabled) {
+				return
+			}
+			w.showStatus(featureToggleStatus(id, enabled))
+		}, done)
+		return CreatedSelector{Component: selector, Focus: selector.GetSettingsList()}
+	})
+}
+
+// ApplyFeatureToggle stores one pier-only feature toggle and applies it to the
+// live session; it reports whether the id is a known feature.
+func (w *SettingsWiring) ApplyFeatureToggle(id string, enabled bool) bool {
+	switch id {
+	case "goal-feature":
+		w.Settings.SetGoalFeatureEnabled(enabled)
+		w.Session.SetGoalFeatureEnabled(enabled)
+		if w.WireGoalController != nil {
+			w.WireGoalController()
+		}
+		return true
+	}
+	return false
+}
+
+// featureToggleStatus names the new state of a feature toggle.
+func featureToggleStatus(id string, enabled bool) string {
+	state := "off"
+	if enabled {
+		state = "on"
+	}
+	switch id {
+	case "goal-feature":
+		return "Goal feature " + state + "."
+	}
+	return state
 }

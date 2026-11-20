@@ -408,35 +408,41 @@ func TestApplyOutputPadUpdatesPendingMessages(t *testing.T) {
 	}
 }
 
-// TestSettingsGoalFeatureRowAppliesAndPersists pins D496's /settings row: the
-// change is stored and reaches the live session, so the goal tools and /goal
-// follow the toggle without a restart.
-func TestSettingsGoalFeatureRowAppliesAndPersists(t *testing.T) {
+// TestFeatureToggleAppliesAndPersists pins D496's /features row: the change is
+// stored, reaches the live session and rewires the controller, so the goal tools
+// and /goal follow the toggle without a restart.
+func TestFeatureToggleAppliesAndPersists(t *testing.T) {
 	wiring, session, _, settings := newSettingsTestWiring(t)
 	wired := 0
 	wiring.WireGoalController = func() { wired++ }
-	if !wiring.BuildSettingsConfig().GoalFeature {
-		t.Fatal("config reports the goal feature off by default, want on")
+
+	toggles := wiring.featureToggles()
+	if len(toggles) == 0 || toggles[0].ID != "goal-feature" || !toggles[0].Enabled {
+		t.Fatalf("feature toggles = %+v, want the goal feature on", toggles)
 	}
-	callbacks := wiring.BuildSettingsCallbacks(func() {}, nil)
-	if callbacks.OnGoalFeatureChange == nil {
-		t.Fatal("no goal-feature callback")
+	if unknown := wiring.ApplyFeatureToggle("not-a-feature", true); unknown {
+		t.Fatal("an unknown feature id was applied")
 	}
-	callbacks.OnGoalFeatureChange(false)
+
+	selector := NewFeatureSettingsSelector(toggles, func(id string, enabled bool) {
+		if !wiring.ApplyFeatureToggle(id, enabled) {
+			t.Fatalf("selector sent unknown id %q", id)
+		}
+	}, func() {})
+	selector.GetSettingsList().HandleInput("\r")
 	if settings.GetGoalFeatureEnabled() {
-		t.Fatal("disabling the row did not persist")
+		t.Fatal("toggling the row did not persist")
 	}
 	if session.goalFeature {
-		t.Fatal("disabling the row did not reach the session")
+		t.Fatal("toggling the row did not reach the session")
 	}
 	if wired != 1 {
 		t.Fatalf("controller wiring ran %d times, want once", wired)
 	}
-	if wiring.BuildSettingsConfig().GoalFeature {
-		t.Fatal("config still reports the goal feature on")
+	if wiring.featureToggles()[0].Enabled {
+		t.Fatal("the toggle list still reports the goal feature on")
 	}
-	callbacks.OnGoalFeatureChange(true)
-	if !settings.GetGoalFeatureEnabled() || !session.goalFeature {
-		t.Fatal("enabling the row did not persist or apply")
+	if got := selector.GetSettingsList().Items()[0].CurrentValue; got != "false" {
+		t.Fatalf("row value = %q, want false", got)
 	}
 }

@@ -3,8 +3,6 @@ package interactive
 import (
 	"encoding/json"
 	"os"
-	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -269,48 +267,6 @@ func recordingCallbacks(events *[]string) SettingsCallbacks {
 	}
 }
 
-// withoutUpstreamItems drops the render rows of settings the reference has no
-// row for: each pier-only row is located through the list's own items, so no
-// label or count is spelled out here.
-func withoutUpstreamItems(rows []string, items []tui.SettingItem) []string {
-	extra := map[string]bool{}
-	for _, item := range items {
-		if pierOnlySettings[item.ID] {
-			extra[ai.JSTrim(item.Label)] = true
-		}
-	}
-	if len(extra) == 0 {
-		return rows
-	}
-	out := make([]string, 0, len(rows))
-	for _, row := range rows {
-		plain := ai.JSTrim(coding.StripAnsi(row))
-		isExtra := false
-		for label := range extra {
-			if strings.HasPrefix(plain, label) {
-				isExtra = true
-				break
-			}
-		}
-		if isExtra {
-			continue
-		}
-		// The position counter counts every row, so it is one short per dropped
-		// row once they are gone.
-		if match := positionCounter.FindStringSubmatch(row); match != nil {
-			total, err := strconv.Atoi(match[2])
-			if err == nil {
-				row = positionCounter.ReplaceAllString(row, "${1}"+itoa(total-len(extra))+")${3}")
-			}
-		}
-		out = append(out, row)
-	}
-	return out
-}
-
-// positionCounter matches the settings list's "(index/total)" counter.
-var positionCounter = regexp.MustCompile(`^(.*\(\d+/)(\d+)\)(.*)$`)
-
 // TestSettingsSelectorAgainstUpstreamGolden replays the settings selector
 // renders and callback traces.
 func TestSettingsSelectorAgainstUpstreamGolden(t *testing.T) {
@@ -340,9 +296,7 @@ func TestSettingsSelectorAgainstUpstreamGolden(t *testing.T) {
 		for _, input := range spec.Inputs {
 			list.HandleInput(input)
 		}
-		render := normalizeRender(component.Render(spec.Width))
-		rows := withoutUpstreamItems(render, component.GetSettingsList().Items())
-		checkGolden(t, golden, label+"@"+itoa(spec.Width), rows)
+		checkGolden(t, golden, label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		if events == nil {
 			events = []string{}
 		}
@@ -591,24 +545,30 @@ func TestSettingsSelectorImageRows(t *testing.T) {
 	}
 }
 
-// TestFeaturesCommandOpensTheFeatureRows covers /features: it opens the settings
-// selector on the pier-only rows (D496) instead of the top of the list, and the
-// upstream golden comparison only stays readable because those rows are declared
-// pier-only in one place.
-func TestFeaturesCommandOpensTheFeatureRows(t *testing.T) {
+// TestFeatureSelectorHoldsOnlyPierOnlyToggles pins the /features selector as the
+// home of the pier-only toggles: /settings stays the reference's list (its golden
+// is compared unchanged) and this selector lists exactly the features in
+// featureToggles.
+func TestFeatureSelectorHoldsOnlyPierOnlyToggles(t *testing.T) {
 	wiring, _, _, _ := newSettingsTestWiring(t)
-	wiring.ShowFeatureSettingsSelector()
-	active := wiring.Slot.ActiveSelectorComponent()
-	if active == nil {
-		t.Fatal("no selector opened")
-	}
-	selector, ok := active.(*SettingsSelectorComponent)
-	if !ok {
-		t.Fatalf("opened %T, want the settings selector", active)
-	}
+	selector := NewFeatureSettingsSelector(wiring.featureToggles(), func(string, bool) {}, func() {})
 	items := selector.GetSettingsList().Items()
-	index := selector.GetSettingsList().SelectedIndex()
-	if index < 0 || index >= len(items) || !pierOnlySettings[items[index].ID] {
-		t.Fatalf("selected item %d = %+v, want a pier-only row", index, items[index])
+	if len(items) == 0 {
+		t.Fatal("the feature selector has no rows")
 	}
+	settingsIDs := map[string]bool{}
+	for _, item := range NewSettingsSelectorComponent(wiring.BuildSettingsConfig(),
+		recordingCallbacks(&[]string{})).GetSettingsList().Items() {
+		settingsIDs[item.ID] = true
+	}
+	for _, item := range items {
+		if settingsIDs[item.ID] {
+			t.Fatalf("row %q appears in both /settings and /features", item.ID)
+		}
+	}
+	rendered := strings.Join(selector.Render(60), "\n")
+	if !strings.Contains(coding.StripAnsi(rendered), items[0].Label) {
+		t.Fatalf("selector render is missing its row:\n%s", rendered)
+	}
+	selector.HandleInput("\x1b")
 }
