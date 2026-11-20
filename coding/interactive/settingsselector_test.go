@@ -640,3 +640,22 @@ func TestFeatureSelectorTogglesSessionTools(t *testing.T) {
 		t.Fatal("tab did not switch back to the features list")
 	}
 }
+
+// TestFeatureSelectorHintsTheTabKey pins the discoverability of the second list:
+// the selector's hint names the tab key, so the tools list is not hidden behind
+// an unadvertised binding.
+func TestFeatureSelectorHintsTheTabKey(t *testing.T) {
+	wiring, _, _, _ := newSettingsTestWiring(t)
+	selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
+		Toggles: wiring.featureToggles(), OnCancel: func() {},
+	})
+	for _, showTools := range []bool{false, true} {
+		if showTools {
+			selector.HandleInput("\t")
+		}
+		rendered := strings.Join(selector.Render(80), "\n")
+		if !strings.Contains(rendered, "Tab switches") {
+			t.Fatalf("showTools=%v hint does not name the tab key:\n%s", showTools, rendered)
+		}
+	}
+}

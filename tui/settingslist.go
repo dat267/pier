@@ -35,6 +35,9 @@ type SettingsListTheme struct {
 // SettingsListOptions configure the list.
 type SettingsListOptions struct {
 	EnableSearch bool
+	// ExtraHint is appended to the key hint, for a list that has more keys than
+	// the reference's (the /features tab switch, D496).
+	ExtraHint string
 }
 
 // SettingsList renders configurable settings rows.
@@ -53,6 +56,7 @@ type SettingsList struct {
 	onCancel          func()
 	searchInput       *Input
 	searchEnabled     bool
+	extraHint         string
 
 	submenuComponent    Component
 	submenuItemIndex    int
@@ -70,6 +74,7 @@ func NewSettingsList(items []SettingItem, maxVisible int, theme SettingsListThem
 		onChange:      onChange,
 		onCancel:      onCancel,
 		searchEnabled: options.EnableSearch,
+		extraHint:     options.ExtraHint,
 	}
 	if list.theme.Label == nil {
 		list.theme.Label = func(text string, selected bool) string { return text }
@@ -135,7 +140,7 @@ func (s *SettingsList) renderMainList(width int) []string {
 
 	if len(s.items) == 0 {
 		lines = append(lines, s.theme.Hint("  No settings available"))
-		if s.searchEnabled {
+		if s.searchEnabled || s.extraHint != "" {
 			s.addHintLine(&lines, width)
 		}
 		return lines
@@ -443,6 +448,9 @@ func (s *SettingsList) addHintLine(lines *[]string, width int) {
 	hint := "  Enter/Space to change · Esc to cancel"
 	if s.searchEnabled {
 		hint = "  Type to search · Enter/Space to change · Esc to cancel"
+	}
+	if s.extraHint != "" {
+		hint += " · " + s.extraHint
 	}
 	*lines = append(*lines, TruncateToWidth(s.theme.Hint(hint), width, "...", false))
 }

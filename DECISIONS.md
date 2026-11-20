@@ -8166,7 +8166,9 @@ comes back disarmed instead of vanishing; the toggle applies to a live session,
 not only at startup.
 
 The selector also lists the session's registered tools (`ToolNames`, active or
-not) under a second list that tab switches to, so the agent's tool set can be
+not) under a second list that tab switches to (both lists' key hint names the tab
+key, through `SettingsListOptions.ExtraHint`, so the second list is not hidden
+behind an unadvertised binding), so the agent's tool set can be
 narrowed without editing `defaultTools` and without a restart:
 `AgentSession.SetToolEnabled` rebuilds the active set through
 `setActiveToolsByNameLocked`, so the system prompt's tool section, an explicit
@@ -8185,6 +8187,7 @@ Tests: `TestSettingsGoalFeatureDefaultsOn` (default, global scope, reload),
 `TestSessionToolToggle` (a tool leaves and rejoins the active set and the prompt,
 an unknown name errors), `TestFeatureSelectorTogglesSessionTools` (tab, the rows'
 state, and the change reaching the session),
+`TestFeatureSelectorHintsTheTabKey` (the hint names the tab key in both lists),
 `TestGoalFeatureToggleEnablesAndDisablesTheController` (live toggle, tool set,
 registry, branch state restored),
 `TestCreateAgentSessionHonoursTheGoalFeatureSetting` (startup),

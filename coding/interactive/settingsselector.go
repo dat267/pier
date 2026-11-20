@@ -1156,6 +1156,9 @@ type FeatureSelectorOptions struct {
 	OnCancel func()
 }
 
+// featuresTabHint names the key that switches the /features lists.
+const featuresTabHint = "Tab switches by feature/tools"
+
 // FeatureSettingsSelector is the /features selector: the pier-only feature
 // toggles and the session's tools, kept out of /settings so that list stays the
 // reference's (D496). Tab switches between the two lists.
@@ -1208,7 +1211,7 @@ func NewFeatureSettingsSelector(options FeatureSelectorOptions) *FeatureSettings
 				}
 				return
 			}
-		}, options.OnCancel, tui.SettingsListOptions{})
+		}, options.OnCancel, tui.SettingsListOptions{ExtraHint: featuresTabHint})
 	selector.rebuildToolList(options.OnCancel)
 	selector.AddChild(NewDynamicBorder(nil))
 	selector.AddChild(selector.view)
@@ -1243,7 +1246,7 @@ func (s *FeatureSettingsSelector) rebuildToolList(onCancel func()) {
 				}
 				return
 			}
-		}, onCancel, tui.SettingsListOptions{})
+		}, onCancel, tui.SettingsListOptions{ExtraHint: featuresTabHint})
 }
 
 // showFeatures puts the feature list on screen.
