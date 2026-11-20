@@ -194,12 +194,13 @@ func TestStoredSessionTextRendersOnlyThemeEscapes(t *testing.T) {
 		// An argument key is decoded from the call's JSON, so an escape sequence in
 		// it is a real escape byte; the value is re-serialized and therefore
 		// JSON-escaped. Both are rendered into the same line.
-		line := formatMcpCall("server/tool", json.RawMessage(`{"\u001b[2Jkey":"\u001b[2Jvalue"}`), ActiveTheme(), false)
+		line := formatMcpCall("server/tool", json.RawMessage(`{"\u001b[2Jkey":"\u001b[2Jvalue"}`), ActiveTheme())
 		assertOnlyThemeEscapes(t, []string{line})
-		// The expanded header renders the same key and value on their own lines.
-		expanded := formatMcpCall("server/tool",
-			json.RawMessage(`{"\u001b[2Jkey":"line\u001b[2Jone\nline\u001b[31mtwo"}`), ActiveTheme(), true)
-		assertOnlyThemeEscapes(t, strings.Split(expanded, "\n"))
+		// A value that carries a newline is still one script: the header shows the
+		// re-serialized value, so the second line cannot carry its own escapes.
+		multi := formatMcpCall("server/tool",
+			json.RawMessage(`{"\u001b[2Jkey":"line\u001b[2Jone\nline\u001b[31mtwo"}`), ActiveTheme())
+		assertOnlyThemeEscapes(t, []string{multi})
 	})
 
 	t.Run("built-in tool frames", func(t *testing.T) {

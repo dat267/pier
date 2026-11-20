@@ -3,6 +3,8 @@ package interactive
 import (
 	"encoding/json"
 	"os"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/dat267/pier/tui"
@@ -86,6 +88,68 @@ func TestMcpToolRenderUpstreamParity(t *testing.T) {
 
 		key := label + "@" + itoa(spec.Width)
 		got := normalizeRender(component.Render(spec.Width))
-		checkGolden(t, golden, key, got)
+		var want []string
+		if err := json.Unmarshal([]byte(golden[key]), &want); err != nil {
+			t.Fatalf("%s: parse golden: %v", label, err)
+		}
+		// D397: pier renders one uncut pairs header in both states. The reference
+		// cuts the collapsed pairs at 100 units and, expanded, writes one
+		// `key: value` row per argument, so the header differs in shape and can be
+		// a different number of rows. Everything from the result's first text row
+		// on must match; the header is checked by its own shape below.
+		anchor := ""
+		for _, block := range spec.Result.Content {
+			if block.Type == "text" && block.Text != "" {
+				anchor = strings.Split(block.Text, "\n")[0]
+				break
+			}
+		}
+		wantStart := indexOfRow(want, anchor, 2)
+		gotStart := indexOfRow(got, anchor, 2)
+		if anchor == "" || wantStart < 0 || gotStart < 0 {
+			checkGolden(t, golden, key, got)
+			continue
+		}
+		// D493: pier appends the call's elapsed/took row, which the reference's MCP
+		// renderer omits, so the shared rows come first and any extra rows at the
+		// end must be that line.
+		shared := len(want) - wantStart
+		if len(got)-gotStart < shared {
+			t.Fatalf("%s: %d result rows, want at least %d", label, len(got)-gotStart, shared)
+		}
+		checkGolden(t, map[string]string{key: mustJSON(want[wantStart:])}, key, got[gotStart:gotStart+shared])
+		for _, extra := range got[gotStart+shared:] {
+			row := paritySGR.ReplaceAllString(extra, "")
+			if strings.TrimSpace(row) != "" && !strings.Contains(row, "Took ") && !strings.Contains(row, "Elapsed ") {
+				t.Fatalf("%s: unexpected row after the result: %q", label, row)
+			}
+		}
+		header := paritySGR.ReplaceAllString(got[2], "")
+		hasArgs := len(spec.Args) > 0 && string(spec.Args) != "null" && string(spec.Args) != "{}"
+		if !strings.Contains(header, spec.Label) || (hasArgs && !strings.Contains(header, "=")) {
+			t.Fatalf("%s: header is not the uncut pairs line: %q", label, got[2])
+		}
 	}
 }
+
+// indexOfRow returns the first row at or after from whose text is exactly the
+// given line, or -1.
+func indexOfRow(rows []string, text string, from int) int {
+	want := strings.TrimSpace(text)
+	if want == "" {
+		return -1
+	}
+	exact := len(want) < 8
+	if !exact && len(want) > 24 {
+		want = want[:24]
+	}
+	for index := from; index < len(rows); index++ {
+		row := strings.TrimSpace(paritySGR.ReplaceAllString(rows[index], ""))
+		if (exact && row == want) || (!exact && strings.Contains(row, want)) {
+			return index
+		}
+	}
+	return -1
+}
+
+var paritySGR = regexp.MustCompile("\x1b\\[[0-9;]*m")

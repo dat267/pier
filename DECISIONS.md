@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D493)
+# Deliberate divergences from pi (D1–D494)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -5550,7 +5550,7 @@ Test: `TestSessionStatsToleratesAnIncompleteAssistantUsage` covers the absent,
 
 ### D396
 
-**MCP tool frames collapse arguments and preview results like the reference.**
+**MCP tool frames preview results like the reference.**
 
 Reference: pi v1.5.0 (f9a26365) `extensions/mcp/tools.ts`
 `createMcpToolRenderers` renders a call through
@@ -5569,59 +5569,53 @@ screen. `coding/interactive/toolrenderer_mcp.go` ports both halves, and the
 app's session adapter resolves them for an `mcp__` tool from its registered
 `server/tool` label.
 
-Collapsed arguments count UTF-16 code units through `ai.JSSlice`, and the key
-order follows `Object.entries` (array-index names first, then file order), so
-the header is byte-identical to the reference's for the same arguments.
+The key order follows `Object.entries` (array-index names first, then file
+order), and each value is the parsed value re-serialized the way the reference's
+`JSON.stringify` does it. The pairs are not cut, so the header is the
+reference's collapsed pairs uncut (D397).
 
-Tests: `TestMcpToolCallFramesCollapseArguments` (collapsed pairs, the 100-unit
-budget, `Object.entries` order against the reference's own output, and the
-expanded indented form) and `TestMcpToolResultFramesLimitVisualLines` (5 wrapped
-lines with the hint, one long line bounded, expanded shows everything, and the
-saved full-output path) and `TestMcpToolFramesReachTheTranscript` (the app's
-adapter resolves the renderers from the tool label).
+Tests: `TestMcpToolCallShowsEveryArgument` (pairs, value serialization,
+`Object.entries` order against the reference's own output, uncut) and
+`TestMcpToolResultFramesLimitVisualLines` (5 wrapped lines with the hint, one
+long line bounded, expanded shows everything, and the saved full-output path)
+and `TestMcpToolFramesReachTheTranscript` (the app's adapter resolves the
+renderers from the tool label).
 
 ### D397
 
-**An expanded MCP frame shows every argument and keeps the result preview in place.**
+**An MCP call frame shows every argument, uncut, and never reflows when it expands.**
 
 Reference: pi v1.5.0 (f9a26365) `extensions/mcp/tools.ts`
-`createMcpToolRenderers` rebuilds the call header through
+`createMcpToolRenderers` renders the call through
 `core/tools/render-utils.ts` `formatToolCallWithArgs(label, args, theme,
-context.expanded)`: collapsed, one line of `key=value` pairs cut to 100 units;
-expanded, the label plus one indented `key: value` line per argument with the
-value whole. `TestMcpCallHeaderShowsEveryArgumentWhenExpanded` pins both states,
-its expected strings produced by the pinned reference's function.
+context.expanded)`: collapsed, the label and its `key=value` pairs cut to 100
+units on one line; expanded, the label plus one indented `key: value` line per
+argument and no pairs line at all.
 
-The port first kept the collapsed one-line header in both states, because a
-click anywhere in the frame toggles expansion (`createResultRegion`,
-`modes/interactive/components/tool-execution.ts`) and reflowing moved the row
-under the pointer. That made a long argument, an MCP call's SQL above all,
-unreadable at any size: the reason to expand a call frame is to read its
-parameters, so the reference's expanded shape came back. The one-line collapsed
-form is still byte-identical to the reference's.
+Pier renders the reference's collapsed pair line uncut, in both states: the
+label, then every `key=value` pair in `Object.entries` order, wrapped by the text
+component. A cut argument, an MCP call's query above all, could not be read at
+any frame size, and the reference's reflow also moved the row under the pointer,
+because a click anywhere in the frame toggles expansion (`createResultRegion`,
+`modes/interactive/components/tool-execution.ts`). Showing the pairs whole is how
+`formatShellCall` (`core/tools/renderers/bash.ts`) shows a command, and the
+frame's expanded state changes only the result body.
+`TestMcpToolCallShowsEveryArgument` pins the header,
+`TestMcpToolRenderUpstreamParity` compares every other row of an expanded frame
+with the reference's output (its header rows are skipped, its body must match),
+and `TestMcpCallFrameUsesTheServerToolLabelFromARegisteredTool` covers the label.
 
-What pier keeps is the result half: expanding appends rows below the collapsed
-preview instead of replacing it, so the preview rows already on screen stay
-where they were (`TestMcpResultExpansionKeepsThePreviewInPlace`).
+What pier keeps from the reference is the result half: expanding appends rows
+below the collapsed preview instead of replacing it, so the preview rows already
+on screen stay where they were (`TestMcpResultExpansionKeepsThePreviewInPlace`).
 
 This row also records a bug the first version of the port had. The collapsed
 preview measured visual lines at a fixed 80 columns while the expanded body
 wrapped at the real width, so on a wide terminal a row broken in the collapsed
 view stayed whole in the expanded one, and the hint's count was wrong. Both
 states now wrap once at the width `Render` receives, matching upstream's
-`VisualLinePreview` and `Text` pair.
-
-Collapsed arguments keep the reference's `Object.entries` order and 100-unit
-budget, so a collapsed header is identical to the reference's.
-
-Tests: `TestMcpCallHeaderShowsEveryArgumentWhenExpanded`,
-`TestMcpResultExpansionKeepsThePreviewInPlace`,
-`TestMcpResultPreviewWrapsAtTheRenderWidth` (four widths, collapsed rows equal
-expanded rows and never exceed the width),
-`TestMcpResultPreviewHintCountsVisualLines`,
-`TestMcpToolCallFramesCollapseArguments` (the collapsed header still matches the
-reference's output), and `TestMcpToolRenderUpstreamParity` (every row of an
-expanded frame, header included, matches the reference's).
+`VisualLinePreview` and `Text` pair (`TestMcpResultPreviewWrapsAtTheRenderWidth`,
+`TestMcpResultPreviewHintCountsVisualLines`).
 
 
 ### D398
@@ -8098,3 +8092,20 @@ Observable behavior matches upstream; only the order of the open changes.
 
 Tests: `TestRPCSwitchReopensATargetCreatedWhileTheOutgoingRunSettles`,
 `TestSwitchReopensATargetCreatedWhileTheOutgoingRunSettles`.
+
+### D494
+
+**An MCP call frame shows its elapsed/took time at the bottom.**
+
+The shell renderers (`core/tools/renderers/bash.ts`) and the codemode renderer
+print `Elapsed <time>` while a call runs and `Took <time>` once it finishes,
+through `core/tools/render-utils.ts` `toolTimerText`. The reference's MCP
+renderer (`extensions/mcp/tools.ts` `createMcpToolRenderers`) prints neither, so
+a long MCP call, a query that runs for a minute, gave no sign of how long it had
+been running. Pier appends the same muted line at the bottom of an MCP call
+frame, from the same clock the shell keeps (start on execution, stop on the final
+or error result, the tool's recorded `durationMs` winning over the clock for a
+replayed frame).
+
+Tests: `TestMcpResultShowsElapsedAndTook` (running, final and replayed),
+`TestMcpToolRenderUpstreamParity` (the extra rows are that line and nothing else).

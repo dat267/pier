@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/coding"
@@ -12,58 +13,45 @@ import (
 )
 
 // Reference: pi v1.5.0 (f9a26365) extensions/mcp/tools.ts createMcpToolRenderers
-// renders an MCP call through core/tools/render-utils.ts formatToolCallWithArgs:
-// collapsed, the label and its arguments as `key=value` pairs cut to 100
-// characters on the header line; expanded, one `key: value` line per argument.
-// Pier had no MCP renderers, so the frame fell back to the generic
-// formatToolExecution, which dumps the arguments as pretty-printed JSON and
-// grows without bound.
-func TestMcpToolCallFramesCollapseArguments(t *testing.T) {
+// renders a call through core/tools/render-utils.ts formatToolCallWithArgs:
+// collapsed, the label and its arguments as `key=value` pairs cut to 100 units;
+// expanded, the label plus one `key: value` line per argument. Pier shows every
+// pair uncut and identical in both states, the way formatShellCall shows a whole
+// command (D397), because a cut argument (an MCP call's query above all) cannot
+// be read at any frame size.
+func TestMcpToolCallShowsEveryArgument(t *testing.T) {
 	theme := newRendererTestTheme(t)
 	args := json.RawMessage(`{"uri":"file:///tmp/x","server":"docs","query":"a","deep":{"k":"v","j":1}}`)
 
-	collapsed := renderMcpCall(t, args, theme, false)
-	lines := strings.Split(collapsed, "\n")
+	header := renderMcpCall(t, args, theme)
+	lines := strings.Split(header, "\n")
 	if len(lines) != 1 {
-		t.Fatalf("collapsed call = %q, want one header line", collapsed)
+		t.Fatalf("call header = %q, want one line", header)
 	}
 	if !strings.HasPrefix(lines[0], "docs/search") {
-		t.Errorf("collapsed call = %q, want the server/tool label", lines[0])
+		t.Errorf("call header = %q, want the server/tool label", lines[0])
 	}
-	// Upstream's collapsed pairs interpolate JSON.stringify(value): a string
-	// value keeps its quotes, an object its compact JSON.
+	// Each pair interpolates JSON.stringify(value): a string value keeps its
+	// quotes, an object its compact JSON.
 	for _, pair := range []string{`uri="file:///tmp/x"`, `server="docs"`, `query="a"`, `deep={"k":"v","j":1}`} {
 		if !strings.Contains(lines[0], pair) {
-			t.Errorf("collapsed call = %q, want %s", lines[0], pair)
+			t.Errorf("call header = %q, want %s", lines[0], pair)
 		}
 	}
-	if strings.Contains(collapsed, "\n  ") {
-		t.Errorf("collapsed call kept the raw pretty JSON:\n%s", collapsed)
-	}
 
-	// The expanded state reflows the header instead (see
-	// TestMcpCallHeaderShowsEveryArgumentWhenExpanded).
-	expanded := renderMcpCall(t, args, theme, true)
-	if expanded == collapsed {
-		t.Errorf("expanded call = %q, want the reflowed header", expanded)
+	// A long value is never cut; the header wraps instead.
+	long := renderMcpCall(t, json.RawMessage(`{"q":"`+strings.Repeat("x", 400)+`"}`), theme)
+	if strings.Count(long, "x") != 400 {
+		t.Errorf("header kept %d of 400 characters: %q", strings.Count(long, "x"), long)
 	}
 
 	// Argument keys follow Object.entries order: array-index names first,
 	// numerically, then the rest in file order. The expected line was produced
 	// by the pinned reference implementation of formatToolCallWithArgs.
 	ordered := renderMcpCall(t,
-		json.RawMessage(`{"uri":"file:///tmp/x","server":"docs","2":"two","10":"ten","query":"a","deep":{"k":"v","j":1}}`),
-		theme, false)
+		json.RawMessage(`{"uri":"file:///tmp/x","server":"docs","2":"two","10":"ten","query":"a","deep":{"k":"v","j":1}}`), theme)
 	if want := `docs/search 2="two" 10="ten" uri="file:///tmp/x" server="docs" query="a" deep={"k":"v","j":1}`; ordered != want {
-		t.Errorf("collapsed call =\n%s\nwant\n%s", ordered, want)
-	}
-
-	// A long argument list is cut to 100 characters plus the ellipsis.
-	long := renderMcpCall(t, json.RawMessage(`{"q":"`+strings.Repeat("x", 400)+`"}`), theme, false)
-	if body := strings.TrimPrefix(strings.SplitN(long, "\n", 2)[0], "docs/search "); len(body) != 100 {
-		t.Errorf("collapsed preview = %d characters (%q), want 100 including the ellipsis", len(body), body)
-	} else if !strings.HasSuffix(body, "...") {
-		t.Errorf("collapsed preview = %q, want a trailing ellipsis", body)
+		t.Errorf("call header =\n%s\nwant\n%s", ordered, want)
 	}
 }
 
@@ -130,10 +118,12 @@ func TestMcpToolResultFramesLimitVisualLines(t *testing.T) {
 	}
 }
 
-func renderMcpCall(t *testing.T, args any, theme *Theme, expanded bool) string {
+func renderMcpCall(t *testing.T, args any, theme *Theme) string {
 	t.Helper()
 	renderers := mcpRenderers("docs/search")
-	component := renderers.RenderCall(args, theme, &ToolRenderContext{Cwd: "/tmp/proj", Expanded: expanded})
+	// Both states render the same header; the expanded flag is set so the test
+	// would catch a reflow coming back.
+	component := renderers.RenderCall(args, theme, &ToolRenderContext{Cwd: "/tmp/proj", Expanded: true})
 	return trimRenderedRight(component.Render(120))
 }
 
@@ -207,44 +197,6 @@ func TestMcpCallFrameUsesTheServerToolLabelFromARegisteredTool(t *testing.T) {
 	}
 }
 
-// TestMcpCallHeaderShowsEveryArgumentWhenExpanded pins the expanded header:
-// reference pi v1.5.0 (f9a26365) core/tools/render-utils.ts
-// `formatToolCallWithArgs` with expanded=true returns the label plus one
-// `  key: value` line per argument, the value uncut, a string unquoted, any
-// other value as JSON.stringify(value, null, 2), tabs replaced and every
-// following line indented by four spaces.
-func TestMcpCallHeaderShowsEveryArgumentWhenExpanded(t *testing.T) {
-	theme := newRendererTestTheme(t)
-	// The case that prompted the change: a long argument (a query, a filter)
-	// was cut at the collapsed budget and could not be read whole.
-	args := json.RawMessage(`{"target":"example-table","query":"SELECT a,\n       b FROM t"}`)
-	want := "docs/search\n  target: example-table\n  query: SELECT a,\n           b FROM t"
-	if got := renderMcpCall(t, args, theme, true); got != want {
-		t.Errorf("expanded call =\n%q\nwant\n%q", got, want)
-	}
-
-	// A long value is not truncated in the expanded state.
-	long := renderMcpCall(t, json.RawMessage(`{"q":"`+strings.Repeat("x", 400)+`"}`), theme, true)
-	if strings.Count(long, "x") != 400 {
-		t.Errorf("expanded call kept %d of 400 characters: %q", strings.Count(long, "x"), long)
-	}
-
-	// A non-string value is JSON.stringify(value, null, 2) with the value's own
-	// lines indented by four spaces.
-	nested := renderMcpCall(t, json.RawMessage(`{"deep":{"k":"v","j":1}}`), theme, true)
-	wantNested := "docs/search\n  deep: {\n      \"k\": \"v\",\n      \"j\": 1\n    }"
-	if nested != wantNested {
-		t.Errorf("expanded call =\n%q\nwant\n%q", nested, wantNested)
-	}
-
-	// A multi-line string keeps its line breaks, indented past the key.
-	multiline := renderMcpCall(t, json.RawMessage(`{"body":"a\tb\rc\nd"}`), theme, true)
-	wantMultiline := "docs/search\n  body: a   bc\n    d"
-	if multiline != wantMultiline {
-		t.Errorf("expanded call =\n%q\nwant\n%q", multiline, wantMultiline)
-	}
-}
-
 // TestMcpCallHeaderSerializesValuesLikeJSONStringify pins the value text of the
 // call header. Reference: pi v1.5.0 (f9a26365) core/tools/render-utils.ts
 // formatToolCallWithArgs builds each pair as `${key}=${JSON.stringify(value)}`,
@@ -265,7 +217,7 @@ func TestMcpCallHeaderSerializesValuesLikeJSONStringify(t *testing.T) {
 		{`{"neg":-0}`, `docs/search neg=0`},
 	}
 	for _, testCase := range cases {
-		if got := renderMcpCall(t, json.RawMessage(testCase.args), theme, false); got != testCase.want {
+		if got := renderMcpCall(t, json.RawMessage(testCase.args), theme); got != testCase.want {
 			t.Errorf("header for %s = %q, want %q", testCase.args, got, testCase.want)
 		}
 	}
@@ -393,5 +345,56 @@ func TestMcpToolHintTruncatesToTheFrameWidth(t *testing.T) {
 	}
 	if !strings.HasSuffix(hint, "...") {
 		t.Fatalf("hint = %q, want a trailing ellipsis", hint)
+	}
+}
+
+// lastNonBlankRow returns the last row that has text after its padding.
+func lastNonBlankRow(rows []string) string {
+	for index := len(rows) - 1; index >= 0; index-- {
+		if row := strings.TrimSpace(rows[index]); row != "" {
+			return row
+		}
+	}
+	return ""
+}
+
+// TestMcpResultShowsElapsedAndTook pins D493: an MCP call frame carries the
+// call's clock at the bottom, a muted `Elapsed <time>` while it runs and
+// `Took <time>` once the result is final (the shell and codemode renderers'
+// toolTimerText). The reference's MCP renderer shows neither, so a long call
+// gave no sign of how long it had been running.
+func TestMcpResultShowsElapsedAndTook(t *testing.T) {
+	theme := newRendererTestTheme(t)
+	now := int64(1_700_000_000_000)
+	previous := shellNow
+	shellNow = func() time.Time { return time.UnixMilli(now) }
+	t.Cleanup(func() { shellNow = previous })
+
+	renderers := mcpRenderers("docs/search")
+	context := &ToolRenderContext{Cwd: "/tmp/proj", ExecutionStarted: true}
+	renderers.RenderCall(json.RawMessage(`{"path":"/tmp/a"}`), theme, context)
+
+	partial := renderers.RenderResult(textResult("ok"),
+		ToolRenderResultOptions{IsPartial: true}, theme, &ToolRenderContext{Cwd: "/tmp/proj",
+			ExecutionStarted: true, State: context.State, IsPartial: true})
+	last := strings.TrimSpace(lastNonBlankRow(partial.Render(80)))
+	if !strings.Contains(last, "Elapsed 0.0s") {
+		t.Fatalf("running call's last row = %q, want an elapsed label", last)
+	}
+
+	now += 2500
+	final := renderers.RenderResult(textResult("ok"), ToolRenderResultOptions{}, theme,
+		&ToolRenderContext{Cwd: "/tmp/proj", ExecutionStarted: true, State: context.State})
+	last = strings.TrimSpace(lastNonBlankRow(final.Render(80)))
+	if !strings.Contains(last, "Took 2.5s") {
+		t.Fatalf("final call's last row = %q, want the took label", last)
+	}
+
+	// A replayed result carries the tool's recorded time instead of the clock.
+	recorded := int64(1200)
+	replayed := renderers.RenderResult(textResult("ok"), ToolRenderResultOptions{}, theme,
+		&ToolRenderContext{Cwd: "/tmp/proj", DurationMs: &recorded})
+	if last := strings.TrimSpace(lastNonBlankRow(replayed.Render(80))); !strings.Contains(last, "Took 1.2s") {
+		t.Fatalf("replayed call's last row = %q, want the recorded time", last)
 	}
 }

@@ -12,7 +12,6 @@ package interactive
 // long minified JSON line, so the frame grew without bound.
 
 import (
-	"bytes"
 	"encoding/json"
 	"strings"
 
@@ -25,20 +24,30 @@ import (
 // shows (upstream OUTPUT_PREVIEW_LINES).
 const mcpOutputPreviewLines = 5
 
-// mcpCollapsedArgsChars is the collapsed header budget (upstream
-// COLLAPSED_ARGS_CHARS).
-const mcpCollapsedArgsChars = 100
-
 // mcpRenderers builds the renderers for a call labeled `server/tool` (upstream
 // createMcpToolRenderers).
 func mcpRenderers(label string) ToolRenderers {
 	return ToolRenderers{
 		RenderCall: func(args any, theme *Theme, context *ToolRenderContext) tui.Component {
+			// The clock the result's elapsed label runs on (D493); the shell
+			// renderers keep theirs the same way.
+			state := shellCallStateFor(context)
+			if context != nil && context.ExecutionStarted && state.startedAtMS == 0 {
+				state.startedAtMS = shellNow().UnixMilli()
+				state.endedAtMS = 0
+			}
 			text := toolTextComponent(context)
-			text.SetText(formatMcpCall(label, args, theme, context != nil && context.Expanded))
+			text.SetText(formatMcpCall(label, args, theme))
 			return text
 		},
 		RenderResult: func(result *SortToolResultContent, options ToolRenderResultOptions, theme *Theme, context *ToolRenderContext) tui.Component {
+			state := shellCallStateFor(context)
+			if context != nil && context.DurationMs != nil {
+				state.recordedMS = context.DurationMs
+			}
+			if state.startedAtMS != 0 && state.endedAtMS == 0 && (!options.IsPartial || (context != nil && context.IsError)) {
+				state.endedAtMS = shellNow().UnixMilli()
+			}
 			container := toolContainerComponent(context)
 			container.Clear()
 			showImages := context != nil && context.ShowImages
@@ -55,6 +64,12 @@ func mcpRenderers(label string) ToolRenderers {
 				if path := mcpFullOutputPath(result); path != "" {
 					container.AddChild(tui.NewText(theme.Fg("muted", "Full output: "+path), 0, 0, nil))
 				}
+			}
+			// D493: the call's elapsed/took line, as the shell and codemode
+			// renderers show it; the reference's MCP renderer omits it, so a long
+			// call gave no sign of how long it had been running.
+			if state.startedAtMS != 0 || state.recordedMS != nil {
+				container.AddChild(&shellElapsedComponent{state: state, theme: theme, partial: options.IsPartial})
 			}
 			return container
 		},
@@ -76,54 +91,36 @@ func mcpToolRenderersFor(toolName string, label string) *ToolRenderers {
 	return &renderers
 }
 
-// formatMcpCall renders the call header (upstream createMcpToolRenderers passes
-// context.expanded into formatToolCallWithArgs). Collapsed it is one line: the
-// label and its `key=value` pairs cut to the budget. Expanded it is the label
-// plus one `  key: value` line per argument with the value whole, so a long
-// argument (an MCP call's SQL, a filter object) can be read after expanding.
-// D397 recorded keeping the one-line form in both states; the full parameters
-// matter more, and the reference's shape is what a reader expects.
-func formatMcpCall(label string, args any, theme *Theme, expanded bool) string {
+// formatMcpCall renders the call header: the label and every argument as a
+// `key=value` pair, uncut and in both states, the way formatShellCall shows a
+// whole command. The reference cuts the pairs at 100 units and reflows them into
+// one `key: value` line per argument when the frame expands
+// (core/tools/render-utils.ts formatToolCallWithArgs); a cut argument, an MCP
+// call's query above all, could not be read at any frame size, so pier shows it
+// whole and never reflows the header (D397).
+func formatMcpCall(label string, args any, theme *Theme) string {
 	header := theme.Fg("toolTitle", theme.Bold(tui.SanitizeUntrustedText(label)))
 	entries := mcpArgumentEntries(args)
 	if len(entries) == 0 {
 		return header
 	}
-	if expanded {
-		lines := make([]string, 0, len(entries))
-		for _, entry := range entries {
-			// The key is decoded from the call's JSON, so an escape sequence in
-			// it is a real escape byte; the value is untrusted too (D342, D449).
-			text := tui.SanitizeUntrustedText(replaceTabs(entry.expanded))
-			if strings.ContainsRune(text, '\r') {
-				text = strings.ReplaceAll(text, "\r", "")
-			}
-			lines = append(lines, "  "+tui.SanitizeUntrustedText(entry.key)+": "+strings.Join(strings.Split(text, "\n"), "\n    "))
-		}
-		return header + "\n" + theme.Fg("muted", strings.Join(lines, "\n"))
-	}
 	pairs := make([]string, 0, len(entries))
 	for _, entry := range entries {
-		// Both are untrusted text for the terminal (D342, D449).
+		// The key is decoded from the call's JSON, so an escape sequence in it
+		// is a real escape byte; the value is re-serialized and JSON-escaped. Both
+		// are untrusted text for the terminal (D342, D449).
 		pairs = append(pairs, tui.SanitizeUntrustedText(entry.key)+"="+tui.SanitizeUntrustedText(entry.value))
 	}
-	preview := strings.Join(pairs, " ")
-	if ai.JSLength(preview) > mcpCollapsedArgsChars {
-		preview = ai.JSSlice(preview, 0, mcpCollapsedArgsChars-3) + "..."
-	}
-	return header + " " + theme.Fg("muted", preview)
+	return header + " " + theme.Fg("muted", strings.Join(pairs, " "))
 }
 
 // mcpArgumentEntries lists the call's arguments in JavaScript enumeration
 // order (Object.entries: array-index keys first, then file order).
 type mcpArgumentEntry struct {
 	key string
-	// value is the collapsed form: JSON.stringify(value), so a string keeps its
-	// quotes and an object its compact JSON.
+	// value is JSON.stringify(value), so a string keeps its quotes and an object
+	// its compact JSON.
 	value string
-	// expanded is the expanded form: a string as its own text, anything else as
-	// JSON.stringify(value, null, 2).
-	expanded string
 }
 
 func mcpArgumentEntries(args any) []mcpArgumentEntry {
@@ -152,7 +149,7 @@ func mcpArgumentEntries(args any) []mcpArgumentEntry {
 			return entries
 		}
 		keys = append(keys, key)
-		values[key] = mcpArgumentEntry{key: key, value: mcpJSONStringify(value), expanded: mcpExpandedArgText(value)}
+		values[key] = mcpArgumentEntry{key: key, value: mcpJSONStringify(value)}
 	}
 	for _, key := range coding.JavaScriptObjectKeyOrder(keys) {
 		entries = append(entries, values[key])
@@ -174,23 +171,6 @@ func mcpJSONStringify(raw json.RawMessage) string {
 		return string(raw)
 	}
 	return string(encoded)
-}
-
-// mcpExpandedArgText renders one argument value the way the reference's expanded
-// header does: `typeof value === "string" ? value : JSON.stringify(value, null,
-// 2) ?? String(value)`. The indented form comes from re-indenting the ordered
-// compact encoding, so a nested object keeps the order JSON.parse preserved.
-func mcpExpandedArgText(raw json.RawMessage) string {
-	var text string
-	if err := json.Unmarshal(raw, &text); err == nil {
-		return text
-	}
-	compact := mcpJSONStringify(raw)
-	var out bytes.Buffer
-	if err := json.Indent(&out, []byte(compact), "", "  "); err != nil {
-		return compact
-	}
-	return out.String()
 }
 
 // mcpArgumentsJSON returns the call arguments as a JSON object, or ok=false
