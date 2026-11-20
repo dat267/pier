@@ -8165,15 +8165,15 @@ tools and replays the goal stored on the branch, so a goal set before disabling
 comes back disarmed instead of vanishing; the toggle applies to a live session,
 not only at startup.
 
-The selector also lists the session's registered tools (`ToolNames`, active or
-not) under a second list that tab switches to (both lists' key hint names the tab
-key, through `SettingsListOptions.ExtraHint`, so the second list is not hidden
-behind an unadvertised binding), so the agent's tool set can be
-narrowed without editing `defaultTools` and without a restart:
-`AgentSession.SetToolEnabled` rebuilds the active set through
-`setActiveToolsByNameLocked`, so the system prompt's tool section, an explicit
-`--tools` allowlist and `--exclude-tools` all still apply, and an unknown name
-is an error rather than a new tool.
+The agent's tools have their own `/tools` selector, not a second list inside
+`/features`: a `SettingsList` focuses the list itself, so a tab bound on the
+selector never saw the key and the second list was unreachable. `/tools` lists
+every registered tool (`ToolNames`, active or not), and a row calls the new
+`AgentSession.SetToolEnabled`, which rebuilds the active set through
+`setActiveToolsByNameLocked`, so the system prompt's tool section follows, an
+explicit `--tools` allowlist and `--exclude-tools` still bound the result, and an
+unknown name is an error instead of a new tool. `defaultTools` stays the startup
+selection; no settings file is edited and no restart is needed.
 
 The toggles live in their own `/features` selector, not in `/settings`. `/settings`
 is the reference's list, compared row for row against its golden, and a pier-only
@@ -8185,9 +8185,8 @@ its `featureToggles` entry, an `ApplyFeatureToggle` case and nothing else.
 
 Tests: `TestSettingsGoalFeatureDefaultsOn` (default, global scope, reload),
 `TestSessionToolToggle` (a tool leaves and rejoins the active set and the prompt,
-an unknown name errors), `TestFeatureSelectorTogglesSessionTools` (tab, the rows'
-state, and the change reaching the session),
-`TestFeatureSelectorHintsTheTabKey` (the hint names the tab key in both lists),
+an unknown name errors), `TestToolsSelectorTogglesSessionTools` (`/tools` lists
+every tool with its state and a toggle reaches the session),
 `TestGoalFeatureToggleEnablesAndDisablesTheController` (live toggle, tool set,
 registry, branch state restored),
 `TestCreateAgentSessionHonoursTheGoalFeatureSetting` (startup),

@@ -547,8 +547,7 @@ func TestSettingsSelectorImageRows(t *testing.T) {
 
 // TestFeatureSelectorHoldsOnlyPierOnlyToggles pins the /features selector as the
 // home of the pier-only toggles: /settings stays the reference's list (its golden
-// is compared unchanged) and this selector lists exactly the features in
-// featureToggles.
+// is compared unchanged) and the agent's tools live in /tools instead.
 func TestFeatureSelectorHoldsOnlyPierOnlyToggles(t *testing.T) {
 	wiring, _, _, _ := newSettingsTestWiring(t)
 	selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
@@ -568,57 +567,35 @@ func TestFeatureSelectorHoldsOnlyPierOnlyToggles(t *testing.T) {
 			t.Fatalf("row %q appears in both /settings and /features", item.ID)
 		}
 	}
-	rendered := strings.Join(selector.Render(60), "\n")
-	if !strings.Contains(coding.StripAnsi(rendered), items[0].Label) {
-		t.Fatalf("selector render is missing its row:\n%s", rendered)
-	}
-	selector.HandleInput("\x1b")
 }
 
-// TestFeatureSelectorTogglesSessionTools covers the /features tools list (D496):
-// tab switches lists, the tool rows reflect the active set, and toggling a row
-// reaches the session so the tool leaves (or rejoins) the agent's tool set.
-func TestFeatureSelectorTogglesSessionTools(t *testing.T) {
+// TestToolsSelectorTogglesSessionTools covers /tools (D496): every registered
+// tool is a row reporting whether the agent may call it, and toggling a row
+// reaches the session so the tool leaves or rejoins the agent's tool set.
+func TestToolsSelectorTogglesSessionTools(t *testing.T) {
 	wiring, session, _, _ := newSettingsTestWiring(t)
 	session.tools = []string{"bash", "edit", "read"}
 	session.activeTools = []string{"read", "bash"}
 	applied := []string{}
-	selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
-		Toggles: wiring.featureToggles(),
-		Tools:   wiring.toolToggles(),
-		OnToolChange: func(name string, enabled bool) {
-			applied = append(applied, name+":"+boolStr(enabled))
-			if err := session.SetToolEnabled(name, enabled); err != nil {
-				t.Fatalf("toggle %q: %v", name, err)
-			}
-		},
-		OnCancel: func() {},
-	})
-	if selector.ShowTools() {
-		t.Fatal("the selector opened on the tools list")
-	}
+	selector := NewToolSettingsSelector(wiring.toolToggles(), func(name string, enabled bool) {
+		applied = append(applied, name+":"+boolStr(enabled))
+		if err := session.SetToolEnabled(name, enabled); err != nil {
+			t.Fatalf("toggle %q: %v", name, err)
+		}
+	}, func() {})
+
 	rows := selector.GetSettingsList().Items()
-	if len(rows) != 1 || rows[0].ID != "goal-feature" {
-		t.Fatalf("features rows = %+v", rows)
+	if len(rows) != 3 {
+		t.Fatalf("tool rows = %+v, want every registered tool", rows)
+	}
+	if rows[0].ID != "bash" || rows[0].CurrentValue != "true" {
+		t.Fatalf("bash row = %+v, want it listed active", rows[0])
+	}
+	if rows[1].ID != "edit" || rows[1].CurrentValue != "false" {
+		t.Fatalf("edit row = %+v, want it listed inactive", rows[1])
 	}
 
-	selector.HandleInput("\t")
-	if !selector.ShowTools() {
-		t.Fatal("tab did not switch to the tools list")
-	}
-	toolRows := selector.GetSettingsList().Items()
-	if len(toolRows) != 3 {
-		t.Fatalf("tool rows = %+v, want every registered tool", toolRows)
-	}
-	if toolRows[0].ID != "bash" || toolRows[0].CurrentValue != "true" {
-		t.Fatalf("bash row = %+v, want it listed active", toolRows[0])
-	}
-	if toolRows[1].ID != "edit" || toolRows[1].CurrentValue != "false" {
-		t.Fatalf("edit row = %+v, want it listed inactive", toolRows[1])
-	}
-
-	// Disable the first row (bash), then enable the third (read is active; edit
-	// sits at index 1).
+	// Toggle the selected row (bash) off, then move down to edit and enable it.
 	selector.HandleInput("\r")
 	if len(applied) != 1 || applied[0] != "bash:false" {
 		t.Fatalf("applied = %v", applied)
@@ -633,29 +610,5 @@ func TestFeatureSelectorTogglesSessionTools(t *testing.T) {
 	}
 	if strings.Join(session.activeTools, ",") != "read,edit" {
 		t.Fatalf("active tools = %v", session.activeTools)
-	}
-
-	selector.HandleInput("\t")
-	if selector.ShowTools() {
-		t.Fatal("tab did not switch back to the features list")
-	}
-}
-
-// TestFeatureSelectorHintsTheTabKey pins the discoverability of the second list:
-// the selector's hint names the tab key, so the tools list is not hidden behind
-// an unadvertised binding.
-func TestFeatureSelectorHintsTheTabKey(t *testing.T) {
-	wiring, _, _, _ := newSettingsTestWiring(t)
-	selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
-		Toggles: wiring.featureToggles(), OnCancel: func() {},
-	})
-	for _, showTools := range []bool{false, true} {
-		if showTools {
-			selector.HandleInput("\t")
-		}
-		rendered := strings.Join(selector.Render(80), "\n")
-		if !strings.Contains(rendered, "Tab switches") {
-			t.Fatalf("showTools=%v hint does not name the tab key:\n%s", showTools, rendered)
-		}
 	}
 }

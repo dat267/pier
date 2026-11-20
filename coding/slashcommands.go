@@ -25,6 +25,7 @@ var BuiltinSlashCommands = []BuiltinSlashCommand{
 	{Name: "goal", Description: "Show current goal status or manage goal lifecycle", ArgumentHint: "set|status|pause|resume|clear"},
 	// D496: the pier-only feature toggles, which stay out of /settings.
 	{Name: "features", Description: "Turn " + AppName + "-only features on or off"},
+	{Name: "tools", Description: "Enable or disable the agent's tools for this session"},
 	{Name: "hotkeys", Description: "Show all keyboard shortcuts"},
 	{Name: "fork", Description: "Create a new fork from a previous user message"},
 	{Name: "clone", Description: "Duplicate the current session at the current position"},

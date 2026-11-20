@@ -559,26 +559,17 @@ func (w *SettingsWiring) featureToggles() []FeatureToggle {
 	}}
 }
 
-// ShowFeatureSettingsSelector opens the /features selector: the pier-only
-// feature toggles and the session's tools, kept out of /settings so that list
-// stays the reference's (D496).
+// ShowFeatureSettingsSelector opens the /features selector: the pier-only feature
+// toggles, kept out of /settings so that list stays the reference's (D496).
 func (w *SettingsWiring) ShowFeatureSettingsSelector() {
 	w.Slot.Show(func(done func()) CreatedSelector {
 		selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
 			Toggles: w.featureToggles(),
-			Tools:   w.toolToggles(),
 			OnFeatureChange: func(id string, enabled bool) {
 				if !w.ApplyFeatureToggle(id, enabled) {
 					return
 				}
 				w.showStatus(featureToggleStatus(id, enabled))
-			},
-			OnToolChange: func(name string, enabled bool) {
-				if err := w.Session.SetToolEnabled(name, enabled); err != nil {
-					w.showStatus(err.Error())
-					return
-				}
-				w.showStatus(toolToggleStatus(name, enabled))
 			},
 			OnCancel: done,
 		})
@@ -586,8 +577,23 @@ func (w *SettingsWiring) ShowFeatureSettingsSelector() {
 	})
 }
 
-// toolToggles lists the session's registered tools with their active state
-// (D496), so /features shows what the agent may call.
+// ShowToolsSelector opens the /tools selector: every registered tool with its
+// active state (D496), so the agent's tool set can be narrowed without editing
+// defaultTools and without a restart.
+func (w *SettingsWiring) ShowToolsSelector() {
+	w.Slot.Show(func(done func()) CreatedSelector {
+		selector := NewToolSettingsSelector(w.toolToggles(), func(name string, enabled bool) {
+			if err := w.Session.SetToolEnabled(name, enabled); err != nil {
+				w.showStatus(err.Error())
+				return
+			}
+			w.showStatus(toolToggleStatus(name, enabled))
+		}, done)
+		return CreatedSelector{Component: selector, Focus: selector.GetSettingsList()}
+	})
+}
+
+// toolToggles lists the session's registered tools with their active state.
 func (w *SettingsWiring) toolToggles() []ToolToggle {
 	active := map[string]bool{}
 	for _, name := range w.Session.GetActiveToolNames() {

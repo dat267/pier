@@ -161,6 +161,7 @@ type SubmitSession interface {
 type SubmitHandlers struct {
 	ShowSettingsSelector        func()
 	ShowFeatureSettingsSelector func()
+	ShowToolsSelector           func()
 	ShowModelsSelector          func() error
 	HandleModelCommand          func(searchTerm string) error
 	HandleThinkingCommand       func(searchTerm string)
@@ -318,6 +319,13 @@ func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 		// D496: the pier-only feature toggles, without scanning /settings.
 		if w.Handlers.ShowFeatureSettingsSelector != nil {
 			w.Handlers.ShowFeatureSettingsSelector()
+		}
+		clearEditor()
+		return
+	case text == "/tools":
+		// D496: the agent's tool set, toggled per tool.
+		if w.Handlers.ShowToolsSelector != nil {
+			w.Handlers.ShowToolsSelector()
 		}
 		clearEditor()
 		return
@@ -618,6 +626,7 @@ func newSubmitWiring(app *App) *SubmitWiring {
 		Handlers: SubmitHandlers{
 			ShowSettingsSelector:        app.settingsW.ShowSettingsSelector,
 			ShowFeatureSettingsSelector: app.settingsW.ShowFeatureSettingsSelector,
+			ShowToolsSelector:           app.settingsW.ShowToolsSelector,
 			ShowModelsSelector:          func() error { app.models.ShowModelsSelector(context.Background()); return nil },
 			HandleModelCommand: func(searchTerm string) error {
 				return app.models.HandleModelCommand(context.Background(), searchTerm)

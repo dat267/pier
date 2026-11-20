@@ -265,6 +265,7 @@ func TestSubmitCommandDispatch(t *testing.T) {
 	calls := []string{}
 	submit.Handlers.ShowSettingsSelector = func() { calls = append(calls, "settings") }
 	submit.Handlers.ShowFeatureSettingsSelector = func() { calls = append(calls, "features") }
+	submit.Handlers.ShowToolsSelector = func() { calls = append(calls, "tools") }
 	submit.Handlers.HandleModelCommand = func(search string) error { calls = append(calls, "model:"+search); return nil }
 	submit.Handlers.HandleThinkingCommand = func(search string) { calls = append(calls, "thinking:"+search) }
 	submit.Handlers.HandleNameCommand = func(text string) { calls = append(calls, "name") }
@@ -275,7 +276,7 @@ func TestSubmitCommandDispatch(t *testing.T) {
 	submit.Handlers.Shutdown = func() error { calls = append(calls, "quit"); return nil }
 
 	inputs := []string{
-		"/settings", "/features", "/model", "/model gpt", "/thinking high",
+		"/settings", "/features", "/tools", "/model", "/model gpt", "/thinking high",
 		"/name", "/tree", "/login", "/login anthropic", "/logout", "/compact", "/compact now", "/quit",
 	}
 	for _, input := range inputs {
@@ -283,7 +284,7 @@ func TestSubmitCommandDispatch(t *testing.T) {
 		submit.HandleSubmit(context.Background(), input)
 	}
 	want := []string{
-		"settings", "features", "model:", "model:gpt", "thinking:high",
+		"settings", "features", "tools", "model:", "model:gpt", "thinking:high",
 		"name", "tree", "login:", "login:anthropic", "oauth:logout", "compact:", "compact:now", "quit",
 	}
 	if strings.Join(calls, ",") != strings.Join(want, ",") {
