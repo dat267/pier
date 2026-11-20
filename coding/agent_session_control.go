@@ -505,6 +505,60 @@ func (s *AgentSession) AttachExtraTools(tools []agent.AgentTool) []string {
 	return added
 }
 
+// GoalController returns the session's goal controller, or nil when the goal
+// feature is off (D496). Callers that act on /goal and the render hooks go
+// through it, so a disabled feature is one nil check away.
+func (s *AgentSession) GoalController() *GoalController { return s.Goal }
+
+// SetGoalFeatureEnabled turns the builtin goal feature on or off mid-session
+// (D496, the /settings row). Disabling stops the controller and removes its two
+// tools from the registry and the active set; enabling installs a fresh
+// controller, registers the tools and replays the goal stored on the branch, so
+// a goal set before disabling comes back disarmed instead of vanishing.
+func (s *AgentSession) SetGoalFeatureEnabled(enabled bool) {
+	if !enabled {
+		s.toolsMu.Lock()
+		s.Goal = nil
+		removed := false
+		s.control.stateMu.Lock()
+		for _, name := range goalToolNames {
+			if _, ok := s.control.Tools[name]; ok {
+				delete(s.control.Tools, name)
+				removed = true
+			}
+		}
+		s.control.stateMu.Unlock()
+		if removed {
+			active := make([]string, 0, len(s.GetActiveToolNames()))
+			for _, name := range s.GetActiveToolNames() {
+				if name != "get_goal" && name != "set_goal" {
+					active = append(active, name)
+				}
+			}
+			s.setActiveToolsByNameLocked(active)
+		}
+		s.toolsMu.Unlock()
+		return
+	}
+	s.toolsMu.Lock()
+	if s.Goal != nil {
+		s.toolsMu.Unlock()
+		return
+	}
+	controller := newGoalController(nil, newSessionGoalSink(s))
+	s.Goal = controller
+	s.registerGoalTools()
+	s.setActiveToolsByNameLocked(goal.DesiredToolNames(s.GetActiveToolNames()))
+	s.toolsMu.Unlock()
+	// Start replays the branch and syncs the tool set, so it runs after the
+	// registry lock is released: its sink calls back into syncGoalTools.
+	controller.SetHoldFollowUps(s.goalHoldsFollowUps)
+	controller.Start("startup")
+}
+
+// goalToolNames are the registry names the goal feature owns.
+var goalToolNames = []string{"get_goal", "set_goal"}
+
 // registerGoalTools adds the goal tools to the session's registry with their
 // prompt guidelines. They are registered once; exposure is gated by the goal
 // controller's SyncTools.

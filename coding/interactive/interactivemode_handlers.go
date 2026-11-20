@@ -159,34 +159,35 @@ type SubmitSession interface {
 
 // SubmitHandlers are the slash-command handlers (injected; D90).
 type SubmitHandlers struct {
-	ShowSettingsSelector    func()
-	ShowModelsSelector      func() error
-	HandleModelCommand      func(searchTerm string) error
-	HandleThinkingCommand   func(searchTerm string)
-	HandleExportCommand     func(text string) error
-	HandleImportCommand     func(text string) error
-	HandleCopyCommand       func() error
-	HandleNameCommand       func(text string)
-	HandleSessionCommand    func()
-	HandleChangelogCommand  func()
-	HandleGoalCommand       func(args string)
-	HandleHotkeysCommand    func()
-	ShowUserMessageSelector func()
-	HandleCloneCommand      func() error
-	HandleTailCommand       func() error
-	ShowTreeSelector        func()
-	ShowTrustSelector       func()
-	HandleLoginCommand      func(providerRef string) error
-	ShowOAuthSelector       func(mode string)
-	HandleClearCommand      func() error
-	HandleCompactCommand    func(customInstructions string) error
-	HandleReloadCommand     func() error
-	HandleDebugCommand      func()
-	HandleArminSaysHi       func()
-	HandleDementedDelves    func()
-	ShowSessionSelector     func()
-	Shutdown                func() error
-	HandleBashCommand       func(command string, excludeFromContext bool) error
+	ShowSettingsSelector        func()
+	ShowFeatureSettingsSelector func()
+	ShowModelsSelector          func() error
+	HandleModelCommand          func(searchTerm string) error
+	HandleThinkingCommand       func(searchTerm string)
+	HandleExportCommand         func(text string) error
+	HandleImportCommand         func(text string) error
+	HandleCopyCommand           func() error
+	HandleNameCommand           func(text string)
+	HandleSessionCommand        func()
+	HandleChangelogCommand      func()
+	HandleGoalCommand           func(args string)
+	HandleHotkeysCommand        func()
+	ShowUserMessageSelector     func()
+	HandleCloneCommand          func() error
+	HandleTailCommand           func() error
+	ShowTreeSelector            func()
+	ShowTrustSelector           func()
+	HandleLoginCommand          func(providerRef string) error
+	ShowOAuthSelector           func(mode string)
+	HandleClearCommand          func() error
+	HandleCompactCommand        func(customInstructions string) error
+	HandleReloadCommand         func() error
+	HandleDebugCommand          func()
+	HandleArminSaysHi           func()
+	HandleDementedDelves        func()
+	ShowSessionSelector         func()
+	Shutdown                    func() error
+	HandleBashCommand           func(command string, excludeFromContext bool) error
 }
 
 // SubmitWiring handles editor submissions.
@@ -310,6 +311,13 @@ func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 	case text == "/goal" || strings.HasPrefix(text, "/goal "):
 		if w.Handlers.HandleGoalCommand != nil {
 			w.Handlers.HandleGoalCommand(strings.TrimSpace(strings.TrimPrefix(text, "/goal")))
+		}
+		clearEditor()
+		return
+	case text == "/features":
+		// D496: the pier-only feature toggles, without scanning /settings.
+		if w.Handlers.ShowFeatureSettingsSelector != nil {
+			w.Handlers.ShowFeatureSettingsSelector()
 		}
 		clearEditor()
 		return
@@ -608,8 +616,9 @@ func newSubmitWiring(app *App) *SubmitWiring {
 		ShowWarning:   func(message string) { app.showWarning(message) },
 		RequestRender: func() { app.ui.RequestRender(false) },
 		Handlers: SubmitHandlers{
-			ShowSettingsSelector: app.settingsW.ShowSettingsSelector,
-			ShowModelsSelector:   func() error { app.models.ShowModelsSelector(context.Background()); return nil },
+			ShowSettingsSelector:        app.settingsW.ShowSettingsSelector,
+			ShowFeatureSettingsSelector: app.settingsW.ShowFeatureSettingsSelector,
+			ShowModelsSelector:          func() error { app.models.ShowModelsSelector(context.Background()); return nil },
 			HandleModelCommand: func(searchTerm string) error {
 				return app.models.HandleModelCommand(context.Background(), searchTerm)
 			},

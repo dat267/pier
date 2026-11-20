@@ -4,6 +4,7 @@ import (
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
+	"sort"
 )
 
 // Port of showSettingsSelector from
@@ -27,6 +28,8 @@ type SettingsSession interface {
 	SetCacheWarmingMode(mode coding.CacheWarmingMode)
 	SetThinkingLevel(level ai.ThinkingLevel, options ...coding.ModelMutationOptions)
 	IsStreaming() bool
+	// SetGoalFeatureEnabled turns the builtin goal feature on or off (D496).
+	SetGoalFeatureEnabled(enabled bool)
 }
 
 // SettingsThemeController is the theme-controller surface.
@@ -81,6 +84,9 @@ type SettingsWiring struct {
 	OutputPad *int
 	// UpdateStatusContainer clears the status container when idle.
 	ClearStatusContainerIfIdle func()
+	// WireGoalController rebinds the goal controller's UI hooks and work
+	// scheduler after the feature is re-enabled (D496).
+	WireGoalController func()
 }
 
 func (w *SettingsWiring) showStatus(message string) {
@@ -118,6 +124,7 @@ func (w *SettingsWiring) BuildSettingsConfig() SettingsConfig {
 		AutoResizeImages:       settings.GetImageAutoResize(),
 		BlockImages:            settings.GetBlockImages(),
 		EnableSkillCommands:    settings.GetEnableSkillCommands(),
+		GoalFeature:            settings.GetGoalFeatureEnabled(),
 		SteeringMode:           string(session.SteeringMode()),
 		FollowUpMode:           string(session.FollowUpMode()),
 		Transport:              settings.GetTransport(),
@@ -219,6 +226,14 @@ func (w *SettingsWiring) BuildSettingsCallbacks(done func(), refresh func()) Set
 			settings.SetEnableSkillCommands(enabled)
 			if w.SetupAutocompleteProvider != nil {
 				w.SetupAutocompleteProvider()
+			}
+		},
+		// D496: the goal feature turns its tools and /goal on or off mid-session.
+		OnGoalFeatureChange: func(enabled bool) {
+			settings.SetGoalFeatureEnabled(enabled)
+			session.SetGoalFeatureEnabled(enabled)
+			if w.WireGoalController != nil {
+				w.WireGoalController()
 			}
 		},
 		OnSteeringModeChange: func(mode string) { session.SetSteeringMode(mode) },
@@ -364,7 +379,26 @@ func (w *SettingsWiring) BuildSettingsCallbacks(done func(), refresh func()) Set
 }
 
 // ShowSettingsSelector opens the settings selector.
-func (w *SettingsWiring) ShowSettingsSelector() {
+func (w *SettingsWiring) ShowSettingsSelector() { w.showSettingsSelectorOn("") }
+
+// ShowFeatureSettingsSelector opens the settings selector on the pier-only
+// feature rows (D496), so /features reaches them without scanning the list.
+func (w *SettingsWiring) ShowFeatureSettingsSelector() {
+	ids := make([]string, 0, len(pierOnlySettings))
+	for id := range pierOnlySettings {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	if len(ids) == 0 {
+		w.ShowSettingsSelector()
+		return
+	}
+	w.showSettingsSelectorOn(ids[0])
+}
+
+// showSettingsSelectorOn opens the selector with the row named by id
+// preselected (no row when id is empty).
+func (w *SettingsWiring) showSettingsSelectorOn(id string) {
 	w.Slot.Show(func(done func()) CreatedSelector {
 		var selector *SettingsSelectorComponent
 		callbacks := w.BuildSettingsCallbacks(done, func() {
@@ -379,6 +413,9 @@ func (w *SettingsWiring) ShowSettingsSelector() {
 			selector.GetSettingsList().UpdateValue("tui-mode", mode)
 		})
 		selector = NewSettingsSelectorComponent(w.BuildSettingsConfig(), callbacks)
+		if id != "" {
+			selector.GetSettingsList().SelectItem(id)
+		}
 		return CreatedSelector{Component: selector, Focus: selector.GetSettingsList()}
 	})
 }
@@ -403,6 +440,7 @@ func newSettingsWiring(app *App) *SettingsWiring {
 		// The scrollbar row's side effect: the transcript's scroll view follows the
 		// setting, the same way a reload applies it.
 		ApplyFullscreenScrollbarSetting: func() { app.applyFullscreenScrollbarSetting() },
+		WireGoalController:              func() { app.wireGoalController() },
 		Slot:                            app.slot,
 		Settings:                        app.settings,
 		Session:                         app.session,

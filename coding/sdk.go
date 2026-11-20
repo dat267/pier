@@ -560,9 +560,10 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		Sessions:             sessionManager,
 		Settings:             SessionSettings{Retry: retryPolicy, Compaction: compactionSettingsOf(settingsManager, model)},
 		ThinkingLevel:        thinkingLevel,
-		// The builtin goal features are disabled by --no-tools and
-		// --no-builtin-tools (upstream always has the extension host available).
-		Goal:               options.NoTools == "" && len(activeTools) > 0,
+		// The builtin goal features are disabled by --no-tools,
+		// --no-builtin-tools and the goal-feature setting (upstream always has the
+		// extension host available; the setting is pier-only, D496).
+		Goal:               options.NoTools == "" && len(activeTools) > 0 && settingsManager.GetGoalFeatureEnabled(),
 		Skills:             skillsResult.Skills,
 		ContextFiles:       contextFiles,
 		SkillDiagnostics:   skillsResult.Diagnostics,

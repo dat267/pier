@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D495)
+# Deliberate divergences from pi (D1–D496)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8149,3 +8149,33 @@ Tests: `TestMcpTruncatedResultShowsTheShellWarningCard` (header and path line
 removed, the count, one path, the warning color, both states, each kept line
 still shown) and `TestMcpToolRenderUpstreamParity` (the card's rows are the only
 ones skipped).
+
+### D496
+
+**A /settings row and /features command turn pier-only features on and off, starting with the goal feature.**
+
+pi has no goal feature, so pier's controller, `/goal` and its `get_goal`/`set_goal`
+tools are added behavior with no switch: a user who does not want the agent
+setting objectives had to accept the tools in every request. The `goalFeature`
+setting (global, default `true`, so an existing setup keeps working) gates it.
+Off, a new session installs no controller, the two tools leave the registry and
+the active set, and `/goal`, the renderer hooks and the idle-round scheduler all
+see a nil controller. On, a session installs the controller, registers the tools
+and replays the goal stored on the branch, so a goal set before disabling comes
+back disarmed instead of vanishing; the setting applies to a live session from
+the row, not only at startup.
+
+The row is `goal-feature` ("Goal feature") in `/settings`, appended after the
+reference's rows so their positions and the upstream settings golden stay valid;
+`pierOnlySettings` names the pier-only rows in one place and the golden
+comparison drops exactly those by ID. `/features` opens the same selector on the
+first pier-only row, so the toggles are reachable without scanning the list; a
+later pier-only feature joins that map and the command follows it without
+another change.
+
+Tests: `TestSettingsGoalFeatureDefaultsOn` (default, global scope, reload),
+`TestGoalFeatureToggleEnablesAndDisablesTheController` (live toggle, tool set,
+registry, branch state restored), `TestCreateAgentSessionHonoursTheGoalFeatureSetting`
+(startup), `TestSettingsGoalFeatureRowAppliesAndPersists` (row stores, applies
+and rewires) and `TestFeaturesCommandOpensTheFeatureRows` (the command opens the
+selector on a pier-only row).

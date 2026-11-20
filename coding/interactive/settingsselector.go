@@ -73,6 +73,7 @@ type SettingsConfig struct {
 	AutoResizeImages           bool
 	BlockImages                bool
 	EnableSkillCommands        bool
+	GoalFeature                bool
 	SteeringMode               string
 	FollowUpMode               string
 	Transport                  ai.Transport
@@ -115,6 +116,7 @@ type SettingsCallbacks struct {
 	OnAutoResizeImagesChange           func(bool)
 	OnBlockImagesChange                func(bool)
 	OnEnableSkillCommandsChange        func(bool)
+	OnGoalFeatureChange                func(bool)
 	OnSteeringModeChange               func(string)
 	OnFollowUpModeChange               func(string)
 	OnTransportChange                  func(ai.Transport)
@@ -147,6 +149,10 @@ type SettingsCallbacks struct {
 	OnWarningsChange                   func(WarningSettings)
 	OnCancel                           func()
 }
+
+// pierOnlySettings are the settings rows the reference has no counterpart for.
+// A golden comparison against the reference's selector drops their rows.
+var pierOnlySettings = map[string]bool{"goal-feature": true}
 
 // warningSettingsSubmenu edits the warning toggles.
 type warningSettingsSubmenu struct {
@@ -926,6 +932,15 @@ func NewSettingsSelectorComponent(config SettingsConfig, callbacks SettingsCallb
 		CurrentValue: boolStr(config.ShowTerminalProgress),
 		Values:       []string{"true", "false"},
 	})
+	// Pier-only rows go last: the reference's rows keep their positions and the
+	// upstream golden comparisons drop these by ID (D496).
+	items = append(items, tui.SettingItem{
+		ID:           "goal-feature",
+		Label:        "Goal feature",
+		Description:  "Enable /goal and the get_goal and set_goal tools",
+		CurrentValue: boolStr(config.GoalFeature),
+		Values:       []string{"true", "false"},
+	})
 
 	component := &SettingsSelectorComponent{Container: &tui.Container{}}
 	component.AddChild(NewDynamicBorder(nil))
@@ -994,6 +1009,8 @@ func applySettingChange(id string, newValue string, callbacks SettingsCallbacks)
 		call(callbacks.OnBlockImagesChange)
 	case "skill-commands":
 		call(callbacks.OnEnableSkillCommandsChange)
+	case "goal-feature":
+		call(callbacks.OnGoalFeatureChange)
 	case "steering-mode":
 		if callbacks.OnSteeringModeChange != nil {
 			callbacks.OnSteeringModeChange(newValue)

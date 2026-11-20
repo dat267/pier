@@ -457,12 +457,16 @@ type Settings struct {
 	// project settings file cannot pin every clone to the same id.
 	DeviceID *string `json:"deviceId,omitempty"`
 	// Packages is an array of strings or package source filter objects.
-	Packages                   []any                    `json:"packages,omitempty"`
-	Extensions                 []string                 `json:"extensions,omitempty"`
-	Skills                     []string                 `json:"skills,omitempty"`
-	Prompts                    []string                 `json:"prompts,omitempty"`
-	Themes                     []string                 `json:"themes,omitempty"`
-	EnableSkillCommands        *bool                    `json:"enableSkillCommands,omitempty"`
+	Packages            []any    `json:"packages,omitempty"`
+	Extensions          []string `json:"extensions,omitempty"`
+	Skills              []string `json:"skills,omitempty"`
+	Prompts             []string `json:"prompts,omitempty"`
+	Themes              []string `json:"themes,omitempty"`
+	EnableSkillCommands *bool    `json:"enableSkillCommands,omitempty"`
+	// GoalFeature enables the builtin session-goal controller and its tools
+	// (get_goal, set_goal); pier-only, on by default (D496). Global only, so a
+	// committed project file cannot turn a clone's agent goal work on or off.
+	GoalFeature                *bool                    `json:"goalFeature,omitempty"`
 	Terminal                   *SettingsTerminal        `json:"terminal,omitempty"`
 	Images                     *SettingsImages          `json:"images,omitempty"`
 	EnabledModels              []string                 `json:"enabledModels,omitempty"`
@@ -2796,6 +2800,25 @@ func (m *SettingsManager) SetEnableSkillCommands(enabled bool) {
 	defer m.mu.Unlock()
 	m.globalSettings.EnableSkillCommands = &enabled
 	m.markModified("enableSkillCommands", "")
+	m.save()
+}
+
+// GetGoalFeatureEnabled reports whether the builtin goal feature is on
+// (default true).
+func (m *SettingsManager) GetGoalFeatureEnabled() bool {
+	settings := m.merged.Load()
+	if settings.GoalFeature == nil {
+		return true
+	}
+	return *settings.GoalFeature
+}
+
+// SetGoalFeatureEnabled stores the goal-feature toggle.
+func (m *SettingsManager) SetGoalFeatureEnabled(enabled bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.globalSettings.GoalFeature = &enabled
+	m.markModified("goalFeature", "")
 	m.save()
 }
 

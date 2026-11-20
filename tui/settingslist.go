@@ -324,6 +324,11 @@ func (s *SettingsList) HandleInput(data string) {
 // SelectedIndex returns the current selection index.
 func (s *SettingsList) SelectedIndex() int { return s.selectedIndex }
 
+// Items returns the rows this list was built with, in display order and before
+// filtering. A caller that adds rows the reference has no counterpart for uses it
+// to locate them.
+func (s *SettingsList) Items() []SettingItem { return s.items }
+
 // SearchInput exposes the search input, if enabled.
 func (s *SettingsList) SearchInput() *Input { return s.searchInput }
 

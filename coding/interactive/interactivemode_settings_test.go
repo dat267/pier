@@ -19,6 +19,7 @@ type settingsTestSession struct {
 	transport    ai.Transport
 	thinking     ai.ThinkingLevel
 	streaming    bool
+	goalFeature  bool
 }
 
 func (s *settingsTestSession) AutoCompactionEnabled() bool           { return s.autoCompact }
@@ -36,7 +37,8 @@ func (s *settingsTestSession) SetCacheWarmingMode(mode coding.CacheWarmingMode) 
 func (s *settingsTestSession) SetThinkingLevel(level ai.ThinkingLevel, _ ...coding.ModelMutationOptions) {
 	s.thinking = level
 }
-func (s *settingsTestSession) IsStreaming() bool { return s.streaming }
+func (s *settingsTestSession) IsStreaming() bool                  { return s.streaming }
+func (s *settingsTestSession) SetGoalFeatureEnabled(enabled bool) { s.goalFeature = enabled }
 
 // settingsTestTheme implements SettingsThemeController.
 type settingsTestTheme struct {
@@ -403,5 +405,38 @@ func TestApplyOutputPadUpdatesPendingMessages(t *testing.T) {
 	wiring.applyOutputPad(3)
 	if queued.outputPad != 3 {
 		t.Fatalf("pending message outputPad = %d; want 3", queued.outputPad)
+	}
+}
+
+// TestSettingsGoalFeatureRowAppliesAndPersists pins D496's /settings row: the
+// change is stored and reaches the live session, so the goal tools and /goal
+// follow the toggle without a restart.
+func TestSettingsGoalFeatureRowAppliesAndPersists(t *testing.T) {
+	wiring, session, _, settings := newSettingsTestWiring(t)
+	wired := 0
+	wiring.WireGoalController = func() { wired++ }
+	if !wiring.BuildSettingsConfig().GoalFeature {
+		t.Fatal("config reports the goal feature off by default, want on")
+	}
+	callbacks := wiring.BuildSettingsCallbacks(func() {}, nil)
+	if callbacks.OnGoalFeatureChange == nil {
+		t.Fatal("no goal-feature callback")
+	}
+	callbacks.OnGoalFeatureChange(false)
+	if settings.GetGoalFeatureEnabled() {
+		t.Fatal("disabling the row did not persist")
+	}
+	if session.goalFeature {
+		t.Fatal("disabling the row did not reach the session")
+	}
+	if wired != 1 {
+		t.Fatalf("controller wiring ran %d times, want once", wired)
+	}
+	if wiring.BuildSettingsConfig().GoalFeature {
+		t.Fatal("config still reports the goal feature on")
+	}
+	callbacks.OnGoalFeatureChange(true)
+	if !settings.GetGoalFeatureEnabled() || !session.goalFeature {
+		t.Fatal("enabling the row did not persist or apply")
 	}
 }

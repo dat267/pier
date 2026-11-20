@@ -347,6 +347,7 @@ coding/goal_concurrent_replay_test.go
 coding/goal_dispose_round_test.go
 coding/goal_entry_event_test.go
 coding/goal_entry_order_test.go
+coding/goal_feature_toggle_test.go
 coding/goal_followup_hold_test.go
 coding/goal_followup_one_at_a_time_test.go
 coding/goal_prompt_test.go
@@ -678,6 +679,7 @@ coding/runtime_test.go
 coding/scopedmodel_test.go
 coding/sdk_cache_prefix_test.go
 coding/sdk_cache_warming_stream_test.go
+coding/sdk_goal_feature_test.go
 coding/sdk_model_fallback_reopen_test.go
 coding/sdk_promptfiles_test.go
 coding/sdk_request_test.go
