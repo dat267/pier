@@ -88,10 +88,17 @@ func TestMcpToolRenderUpstreamParity(t *testing.T) {
 
 		key := label + "@" + itoa(spec.Width)
 		got := normalizeRender(component.Render(spec.Width))
+		// D397: the expand hint leads the preview, right under the arguments,
+		// where the reference puts it below the preview. Drop hint rows from both
+		// sides so the preview rows line up; the hint's own rows are pinned by
+		// TestMcpResultPreviewHintCountsVisualLines and
+		// TestMcpToolHintTruncatesToTheFrameWidth.
+		got = withoutHintRows(got)
 		var want []string
 		if err := json.Unmarshal([]byte(golden[key]), &want); err != nil {
 			t.Fatalf("%s: parse golden: %v", label, err)
 		}
+		want = withoutHintRows(want)
 		// D397: pier renders one uncut pairs header in both states. The reference
 		// cuts the collapsed pairs at 100 units and, expanded, writes one
 		// `key: value` row per argument, so the header differs in shape and can be
@@ -130,6 +137,18 @@ func TestMcpToolRenderUpstreamParity(t *testing.T) {
 			t.Fatalf("%s: header is not the uncut pairs line: %q", label, got[2])
 		}
 	}
+}
+
+// withoutHintRows drops the expand-hint rows, which D397 moves above the preview.
+func withoutHintRows(rows []string) []string {
+	out := make([]string, 0, len(rows))
+	for _, row := range rows {
+		if strings.Contains(paritySGR.ReplaceAllString(row, ""), "more lines,") {
+			continue
+		}
+		out = append(out, row)
+	}
+	return out
 }
 
 // indexOfRow returns the first row at or after from whose text is exactly the

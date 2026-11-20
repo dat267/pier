@@ -5605,9 +5605,13 @@ frame's expanded state changes only the result body.
 with the reference's output (its header rows are skipped, its body must match),
 and `TestMcpCallFrameUsesTheServerToolLabelFromARegisteredTool` covers the label.
 
-What pier keeps from the reference is the result half: expanding appends rows
-below the collapsed preview instead of replacing it, so the preview rows already
-on screen stay where they were (`TestMcpResultExpansionKeepsThePreviewInPlace`).
+The result half differs too: the `... (N more lines, ctrl+o to expand)` hint
+leads the preview, right under the arguments, where the reference puts it below
+the five preview rows and a long frame buries it. Expanding drops the hint and
+appends the rows past the preview, so the preview keeps its text and order
+(`TestMcpResultExpansionKeepsThePreviewInPlace`,
+`TestMcpResultPreviewHintCountsVisualLines`,
+`TestMcpToolHintTruncatesToTheFrameWidth`).
 
 This row also records a bug the first version of the port had. The collapsed
 preview measured visual lines at a fixed 80 columns while the expanded body
