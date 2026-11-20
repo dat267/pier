@@ -29,6 +29,12 @@ type SettingsSession interface {
 	IsStreaming() bool
 	// SetGoalFeatureEnabled turns the builtin goal feature on or off (D496).
 	SetGoalFeatureEnabled(enabled bool)
+	// SetToolEnabled turns one registered tool on or off (D496).
+	SetToolEnabled(name string, enabled bool) error
+	// ToolNames lists the registered tools.
+	ToolNames() []string
+	// GetActiveToolNames lists the tools the agent may call.
+	GetActiveToolNames() []string
 }
 
 // SettingsThemeController is the theme-controller surface.
@@ -554,18 +560,53 @@ func (w *SettingsWiring) featureToggles() []FeatureToggle {
 }
 
 // ShowFeatureSettingsSelector opens the /features selector: the pier-only
-// feature toggles, which are kept out of /settings so that list stays the
-// reference's.
+// feature toggles and the session's tools, kept out of /settings so that list
+// stays the reference's (D496).
 func (w *SettingsWiring) ShowFeatureSettingsSelector() {
 	w.Slot.Show(func(done func()) CreatedSelector {
-		selector := NewFeatureSettingsSelector(w.featureToggles(), func(id string, enabled bool) {
-			if !w.ApplyFeatureToggle(id, enabled) {
-				return
-			}
-			w.showStatus(featureToggleStatus(id, enabled))
-		}, done)
+		selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
+			Toggles: w.featureToggles(),
+			Tools:   w.toolToggles(),
+			OnFeatureChange: func(id string, enabled bool) {
+				if !w.ApplyFeatureToggle(id, enabled) {
+					return
+				}
+				w.showStatus(featureToggleStatus(id, enabled))
+			},
+			OnToolChange: func(name string, enabled bool) {
+				if err := w.Session.SetToolEnabled(name, enabled); err != nil {
+					w.showStatus(err.Error())
+					return
+				}
+				w.showStatus(toolToggleStatus(name, enabled))
+			},
+			OnCancel: done,
+		})
 		return CreatedSelector{Component: selector, Focus: selector.GetSettingsList()}
 	})
+}
+
+// toolToggles lists the session's registered tools with their active state
+// (D496), so /features shows what the agent may call.
+func (w *SettingsWiring) toolToggles() []ToolToggle {
+	active := map[string]bool{}
+	for _, name := range w.Session.GetActiveToolNames() {
+		active[name] = true
+	}
+	names := w.Session.ToolNames()
+	rows := make([]ToolToggle, 0, len(names))
+	for _, name := range names {
+		rows = append(rows, ToolToggle{Name: name, Label: name, Enabled: active[name]})
+	}
+	return rows
+}
+
+// toolToggleStatus names the new state of a tool toggle.
+func toolToggleStatus(name string, enabled bool) string {
+	if enabled {
+		return "Tool " + name + " enabled."
+	}
+	return "Tool " + name + " disabled."
 }
 
 // ApplyFeatureToggle stores one pier-only feature toggle and applies it to the

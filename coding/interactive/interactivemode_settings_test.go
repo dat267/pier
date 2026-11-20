@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/dat267/pier/ai"
@@ -20,6 +21,8 @@ type settingsTestSession struct {
 	thinking     ai.ThinkingLevel
 	streaming    bool
 	goalFeature  bool
+	tools        []string
+	activeTools  []string
 }
 
 func (s *settingsTestSession) AutoCompactionEnabled() bool           { return s.autoCompact }
@@ -39,6 +42,37 @@ func (s *settingsTestSession) SetThinkingLevel(level ai.ThinkingLevel, _ ...codi
 }
 func (s *settingsTestSession) IsStreaming() bool                  { return s.streaming }
 func (s *settingsTestSession) SetGoalFeatureEnabled(enabled bool) { s.goalFeature = enabled }
+func (s *settingsTestSession) ToolNames() []string                { return append([]string{}, s.tools...) }
+func (s *settingsTestSession) GetActiveToolNames() []string {
+	return append([]string{}, s.activeTools...)
+}
+func (s *settingsTestSession) SetToolEnabled(name string, enabled bool) error {
+	next := make([]string, 0, len(s.activeTools)+1)
+	found := false
+	known := false
+	for _, registered := range s.tools {
+		if registered == name {
+			known = true
+		}
+	}
+	if !known {
+		return fmt.Errorf("Unknown tool: %s", name)
+	}
+	for _, active := range s.activeTools {
+		if active == name {
+			found = true
+			if !enabled {
+				continue
+			}
+		}
+		next = append(next, active)
+	}
+	if enabled && !found {
+		next = append(next, name)
+	}
+	s.activeTools = next
+	return nil
+}
 
 // settingsTestTheme implements SettingsThemeController.
 type settingsTestTheme struct {
@@ -424,11 +458,15 @@ func TestFeatureToggleAppliesAndPersists(t *testing.T) {
 		t.Fatal("an unknown feature id was applied")
 	}
 
-	selector := NewFeatureSettingsSelector(toggles, func(id string, enabled bool) {
-		if !wiring.ApplyFeatureToggle(id, enabled) {
-			t.Fatalf("selector sent unknown id %q", id)
-		}
-	}, func() {})
+	selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
+		Toggles: toggles,
+		OnFeatureChange: func(id string, enabled bool) {
+			if !wiring.ApplyFeatureToggle(id, enabled) {
+				t.Fatalf("selector sent unknown id %q", id)
+			}
+		},
+		OnCancel: func() {},
+	})
 	selector.GetSettingsList().HandleInput("\r")
 	if settings.GetGoalFeatureEnabled() {
 		t.Fatal("toggling the row did not persist")

@@ -505,6 +505,52 @@ func (s *AgentSession) AttachExtraTools(tools []agent.AgentTool) []string {
 	return added
 }
 
+// SetToolEnabled turns one registered tool on or off for the live session
+// (D496, the /features tools section). It reports an error for a name the
+// session has no definition for, so a typo never becomes a tool. An explicit
+// allowlist or exclusion still bounds what can be enabled, because the active
+// set is rebuilt through setActiveToolsByNameLocked.
+func (s *AgentSession) SetToolEnabled(name string, enabled bool) error {
+	s.toolsMu.Lock()
+	defer s.toolsMu.Unlock()
+	s.control.stateMu.Lock()
+	_, registered := s.control.Tools[name]
+	s.control.stateMu.Unlock()
+	if !registered {
+		return fmt.Errorf("Unknown tool: %s", name)
+	}
+	current := s.GetActiveToolNames()
+	next := make([]string, 0, len(current)+1)
+	present := false
+	for _, active := range current {
+		if active == name {
+			present = true
+			if !enabled {
+				continue
+			}
+		}
+		next = append(next, active)
+	}
+	if enabled && !present {
+		next = append(next, name)
+	}
+	s.setActiveToolsByNameLocked(next)
+	return nil
+}
+
+// ToolNames lists every registered tool's name, in sorted order (the /features
+// tools section).
+func (s *AgentSession) ToolNames() []string {
+	s.control.stateMu.Lock()
+	defer s.control.stateMu.Unlock()
+	names := make([]string, 0, len(s.control.Tools))
+	for name := range s.control.Tools {
+		names = append(names, name)
+	}
+	sortStrings(names)
+	return names
+}
+
 // GoalController returns the session's goal controller, or nil when the goal
 // feature is off (D496). Callers that act on /goal and the render hooks go
 // through it, so a disabled feature is one nil check away.

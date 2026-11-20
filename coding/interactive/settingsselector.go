@@ -1135,22 +1135,58 @@ type FeatureToggle struct {
 	Enabled     bool
 }
 
+// ToolToggle is one registered tool and whether it is active.
+type ToolToggle struct {
+	Name    string
+	Label   string
+	Enabled bool
+}
+
+// FeatureSelectorOptions configure the /features selector.
+type FeatureSelectorOptions struct {
+	// Toggles are the pier-only feature rows.
+	Toggles []FeatureToggle
+	// Tools are the session's registered tools, shown in a second list.
+	Tools []ToolToggle
+	// OnFeatureChange applies a feature toggle.
+	OnFeatureChange func(id string, enabled bool)
+	// OnToolChange enables or disables one tool.
+	OnToolChange func(name string, enabled bool)
+	// OnCancel closes the selector.
+	OnCancel func()
+}
+
 // FeatureSettingsSelector is the /features selector: the pier-only feature
-// toggles, kept out of /settings so that list stays the reference's (D496).
+// toggles and the session's tools, kept out of /settings so that list stays the
+// reference's (D496). Tab switches between the two lists.
 type FeatureSettingsSelector struct {
 	*tui.Container
 
-	settingsList *tui.SettingsList
-	toggles      []FeatureToggle
-	onChange     func(id string, enabled bool)
+	features  *tui.SettingsList
+	tools     *tui.SettingsList
+	toggles   []FeatureToggle
+	toolRows  []ToolToggle
+	showTools bool
+	view      *tui.Container
+
+	onFeatureChange func(string, bool)
+	onToolChange    func(string, bool)
+	onCancel        func()
 }
 
-// NewFeatureSettingsSelector builds the selector from the feature toggles.
-func NewFeatureSettingsSelector(toggles []FeatureToggle, onChange func(string, bool), onCancel func()) *FeatureSettingsSelector {
-	copied := append([]FeatureToggle{}, toggles...)
-	items := make([]tui.SettingItem, 0, len(copied))
-	for _, toggle := range copied {
-		items = append(items, tui.SettingItem{
+// NewFeatureSettingsSelector builds the selector.
+func NewFeatureSettingsSelector(options FeatureSelectorOptions) *FeatureSettingsSelector {
+	selector := &FeatureSettingsSelector{
+		Container: &tui.Container{}, view: &tui.Container{},
+		toggles:         append([]FeatureToggle{}, options.Toggles...),
+		toolRows:        append([]ToolToggle{}, options.Tools...),
+		onFeatureChange: options.OnFeatureChange,
+		onToolChange:    options.OnToolChange,
+		onCancel:        options.OnCancel,
+	}
+	featureItems := make([]tui.SettingItem, 0, len(selector.toggles))
+	for _, toggle := range selector.toggles {
+		featureItems = append(featureItems, tui.SettingItem{
 			ID:           toggle.ID,
 			Label:        toggle.Label,
 			Description:  toggle.Description,
@@ -1158,10 +1194,7 @@ func NewFeatureSettingsSelector(toggles []FeatureToggle, onChange func(string, b
 			Values:       []string{"true", "false"},
 		})
 	}
-	selector := &FeatureSettingsSelector{
-		Container: &tui.Container{}, toggles: copied, onChange: onChange,
-	}
-	selector.settingsList = tui.NewSettingsList(items, min(len(items), 10), GetSettingsListTheme(),
+	selector.features = tui.NewSettingsList(featureItems, max(1, min(len(featureItems), 10)), GetSettingsListTheme(),
 		func(id string, newValue string) {
 			enabled := newValue == "true"
 			for index := range selector.toggles {
@@ -1169,21 +1202,87 @@ func NewFeatureSettingsSelector(toggles []FeatureToggle, onChange func(string, b
 					continue
 				}
 				selector.toggles[index].Enabled = enabled
-				selector.settingsList.UpdateValue(id, newValue)
-				if selector.onChange != nil {
-					selector.onChange(id, enabled)
+				selector.features.UpdateValue(id, newValue)
+				if selector.onFeatureChange != nil {
+					selector.onFeatureChange(id, enabled)
+				}
+				return
+			}
+		}, options.OnCancel, tui.SettingsListOptions{})
+	selector.rebuildToolList(options.OnCancel)
+	selector.AddChild(NewDynamicBorder(nil))
+	selector.AddChild(selector.view)
+	selector.AddChild(NewDynamicBorder(nil))
+	selector.showFeatures()
+	return selector
+}
+
+// rebuildToolList builds the tools list from the current rows.
+func (s *FeatureSettingsSelector) rebuildToolList(onCancel func()) {
+	items := make([]tui.SettingItem, 0, len(s.toolRows))
+	for _, tool := range s.toolRows {
+		items = append(items, tui.SettingItem{
+			ID:           tool.Name,
+			Label:        tool.Label,
+			Description:  "Active in the agent's tool set",
+			CurrentValue: boolStr(tool.Enabled),
+			Values:       []string{"true", "false"},
+		})
+	}
+	s.tools = tui.NewSettingsList(items, max(1, min(len(items), 12)), GetSettingsListTheme(),
+		func(name string, newValue string) {
+			enabled := newValue == "true"
+			for index := range s.toolRows {
+				if s.toolRows[index].Name != name {
+					continue
+				}
+				s.toolRows[index].Enabled = enabled
+				s.tools.UpdateValue(name, newValue)
+				if s.onToolChange != nil {
+					s.onToolChange(name, enabled)
 				}
 				return
 			}
 		}, onCancel, tui.SettingsListOptions{})
-	selector.AddChild(NewDynamicBorder(nil))
-	selector.AddChild(selector.settingsList)
-	selector.AddChild(NewDynamicBorder(nil))
-	return selector
 }
 
-// GetSettingsList exposes the list (focus, selection, mouse).
-func (s *FeatureSettingsSelector) GetSettingsList() *tui.SettingsList { return s.settingsList }
+// showFeatures puts the feature list on screen.
+func (s *FeatureSettingsSelector) showFeatures() {
+	s.showTools = false
+	s.view.Clear()
+	s.view.AddChild(s.features)
+}
 
-// HandleInput forwards input to the list.
-func (s *FeatureSettingsSelector) HandleInput(data string) { s.settingsList.HandleInput(data) }
+// showToolList puts the tools list on screen.
+func (s *FeatureSettingsSelector) showToolList() {
+	s.showTools = true
+	s.view.Clear()
+	s.view.AddChild(s.tools)
+}
+
+// ActiveList is the list on screen.
+func (s *FeatureSettingsSelector) ActiveList() *tui.SettingsList {
+	if s.showTools {
+		return s.tools
+	}
+	return s.features
+}
+
+// ShowTools reports whether the tools list is on screen.
+func (s *FeatureSettingsSelector) ShowTools() bool { return s.showTools }
+
+// GetSettingsList exposes the list on screen (focus, selection, mouse).
+func (s *FeatureSettingsSelector) GetSettingsList() *tui.SettingsList { return s.ActiveList() }
+
+// HandleInput switches lists on tab and forwards everything else.
+func (s *FeatureSettingsSelector) HandleInput(data string) {
+	if data == "\t" || data == "\x1b[Z" {
+		if s.showTools {
+			s.showFeatures()
+		} else {
+			s.showToolList()
+		}
+		return
+	}
+	s.ActiveList().HandleInput(data)
+}

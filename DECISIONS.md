@@ -8165,6 +8165,14 @@ tools and replays the goal stored on the branch, so a goal set before disabling
 comes back disarmed instead of vanishing; the toggle applies to a live session,
 not only at startup.
 
+The selector also lists the session's registered tools (`ToolNames`, active or
+not) under a second list that tab switches to, so the agent's tool set can be
+narrowed without editing `defaultTools` and without a restart:
+`AgentSession.SetToolEnabled` rebuilds the active set through
+`setActiveToolsByNameLocked`, so the system prompt's tool section, an explicit
+`--tools` allowlist and `--exclude-tools` all still apply, and an unknown name
+is an error rather than a new tool.
+
 The toggles live in their own `/features` selector, not in `/settings`. `/settings`
 is the reference's list, compared row for row against its golden, and a pier-only
 row there would either break that comparison or need a filter over the reference's
@@ -8174,6 +8182,9 @@ current state), and `NewFeatureSettingsSelector` renders it, so a new feature ne
 its `featureToggles` entry, an `ApplyFeatureToggle` case and nothing else.
 
 Tests: `TestSettingsGoalFeatureDefaultsOn` (default, global scope, reload),
+`TestSessionToolToggle` (a tool leaves and rejoins the active set and the prompt,
+an unknown name errors), `TestFeatureSelectorTogglesSessionTools` (tab, the rows'
+state, and the change reaching the session),
 `TestGoalFeatureToggleEnablesAndDisablesTheController` (live toggle, tool set,
 registry, branch state restored),
 `TestCreateAgentSessionHonoursTheGoalFeatureSetting` (startup),

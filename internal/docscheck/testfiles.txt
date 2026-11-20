@@ -716,6 +716,7 @@ coding/session_store_test.go
 coding/session_tail_test.go
 coding/session_tail_window_test.go
 coding/session_timestamp_precision_test.go
+coding/session_tool_toggle_test.go
 coding/session_usage_bench_test.go
 coding/session_writequeue_test.go
 coding/sessioncwd_test.go

@@ -551,7 +551,9 @@ func TestSettingsSelectorImageRows(t *testing.T) {
 // featureToggles.
 func TestFeatureSelectorHoldsOnlyPierOnlyToggles(t *testing.T) {
 	wiring, _, _, _ := newSettingsTestWiring(t)
-	selector := NewFeatureSettingsSelector(wiring.featureToggles(), func(string, bool) {}, func() {})
+	selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
+		Toggles: wiring.featureToggles(), OnFeatureChange: func(string, bool) {}, OnCancel: func() {},
+	})
 	items := selector.GetSettingsList().Items()
 	if len(items) == 0 {
 		t.Fatal("the feature selector has no rows")
@@ -571,4 +573,70 @@ func TestFeatureSelectorHoldsOnlyPierOnlyToggles(t *testing.T) {
 		t.Fatalf("selector render is missing its row:\n%s", rendered)
 	}
 	selector.HandleInput("\x1b")
+}
+
+// TestFeatureSelectorTogglesSessionTools covers the /features tools list (D496):
+// tab switches lists, the tool rows reflect the active set, and toggling a row
+// reaches the session so the tool leaves (or rejoins) the agent's tool set.
+func TestFeatureSelectorTogglesSessionTools(t *testing.T) {
+	wiring, session, _, _ := newSettingsTestWiring(t)
+	session.tools = []string{"bash", "edit", "read"}
+	session.activeTools = []string{"read", "bash"}
+	applied := []string{}
+	selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
+		Toggles: wiring.featureToggles(),
+		Tools:   wiring.toolToggles(),
+		OnToolChange: func(name string, enabled bool) {
+			applied = append(applied, name+":"+boolStr(enabled))
+			if err := session.SetToolEnabled(name, enabled); err != nil {
+				t.Fatalf("toggle %q: %v", name, err)
+			}
+		},
+		OnCancel: func() {},
+	})
+	if selector.ShowTools() {
+		t.Fatal("the selector opened on the tools list")
+	}
+	rows := selector.GetSettingsList().Items()
+	if len(rows) != 1 || rows[0].ID != "goal-feature" {
+		t.Fatalf("features rows = %+v", rows)
+	}
+
+	selector.HandleInput("\t")
+	if !selector.ShowTools() {
+		t.Fatal("tab did not switch to the tools list")
+	}
+	toolRows := selector.GetSettingsList().Items()
+	if len(toolRows) != 3 {
+		t.Fatalf("tool rows = %+v, want every registered tool", toolRows)
+	}
+	if toolRows[0].ID != "bash" || toolRows[0].CurrentValue != "true" {
+		t.Fatalf("bash row = %+v, want it listed active", toolRows[0])
+	}
+	if toolRows[1].ID != "edit" || toolRows[1].CurrentValue != "false" {
+		t.Fatalf("edit row = %+v, want it listed inactive", toolRows[1])
+	}
+
+	// Disable the first row (bash), then enable the third (read is active; edit
+	// sits at index 1).
+	selector.HandleInput("\r")
+	if len(applied) != 1 || applied[0] != "bash:false" {
+		t.Fatalf("applied = %v", applied)
+	}
+	if strings.Join(session.activeTools, ",") != "read" {
+		t.Fatalf("active tools = %v", session.activeTools)
+	}
+	selector.HandleInput("\x1b[B")
+	selector.HandleInput("\r")
+	if len(applied) != 2 || applied[1] != "edit:true" {
+		t.Fatalf("applied = %v", applied)
+	}
+	if strings.Join(session.activeTools, ",") != "read,edit" {
+		t.Fatalf("active tools = %v", session.activeTools)
+	}
+
+	selector.HandleInput("\t")
+	if selector.ShowTools() {
+		t.Fatal("tab did not switch back to the features list")
+	}
 }
