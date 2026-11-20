@@ -77,13 +77,13 @@ func TestMcpToolResultFramesLimitVisualLines(t *testing.T) {
 			len(rendered), mcpOutputPreviewLines, collapsed)
 	}
 	// The shell's spacer, then the hint (D397: it leads the preview, right under
-	// the arguments), then the first preview lines.
-	if !strings.Contains(rendered[1], "... (35 more lines,") ||
+	// the arguments), then the newest preview lines.
+	if !strings.Contains(rendered[1], "... (35 earlier lines,") ||
 		!strings.Contains(rendered[1], "to expand") {
-		t.Errorf("hint = %q, want 35 more lines and the expand hint", rendered[1])
+		t.Errorf("hint = %q, want 35 earlier lines and the expand hint", rendered[1])
 	}
-	if rendered[2] != "line 0" {
-		t.Errorf("collapsed preview starts at %q, want the first line", rendered[2])
+	if rendered[2] != "line 35" {
+		t.Errorf("collapsed preview starts at %q, want the first of the last five lines", rendered[2])
 	}
 
 	// One long JSON line fills the screen when logical lines are counted.
@@ -249,14 +249,14 @@ func TestMcpResultPreviewWrapsAtTheRenderWidth(t *testing.T) {
 		collapsed := renderMcpResultAt(t, result, false, theme, width)
 		expanded := renderMcpResultAt(t, result, true, theme, width)
 		// The preview wraps identically in both states: collapsing adds the hint
-		// row above it and drops the rows past the preview.
-		if !strings.Contains(collapsed[1], "more lines,") {
+		// row above it and drops everything before the last preview lines.
+		if !strings.Contains(collapsed[1], "earlier lines,") {
 			t.Fatalf("width %d: row 1 = %q, want the hint above the preview", width, collapsed[1])
 		}
-		for index := 0; index < mcpOutputPreviewLines && 2+index < len(collapsed); index++ {
-			if collapsed[2+index] != expanded[1+index] {
-				t.Fatalf("width %d row %d: collapsed %q, expanded %q; the preview must wrap at the render width",
-					width, index, collapsed[2+index], expanded[1+index])
+		for back := 1; back <= mcpOutputPreviewLines; back++ {
+			if collapsed[len(collapsed)-back] != expanded[len(expanded)-back] {
+				t.Fatalf("width %d row -%d: collapsed %q, expanded %q; the preview must wrap at the render width",
+					width, back, collapsed[len(collapsed)-back], expanded[len(expanded)-back])
 			}
 		}
 		// And a collapsed preview never exceeds the width.
@@ -279,8 +279,8 @@ func TestMcpResultPreviewHintCountsVisualLines(t *testing.T) {
 	result := textResult(strings.Join(lines, "\n"))
 	narrow := renderMcpResultAt(t, result, false, theme, 40)
 	hint := narrow[1]
-	if !strings.Contains(hint, "15 more lines") {
-		t.Errorf("hint at width 40 = %q, want 15 more lines (20 lines minus the 5 shown)", hint)
+	if !strings.Contains(hint, "15 earlier lines") {
+		t.Errorf("hint at width 40 = %q, want 15 earlier lines (20 lines minus the 5 shown)", hint)
 	}
 }
 
@@ -327,12 +327,14 @@ func TestMcpResultExpansionKeepsThePreviewInPlace(t *testing.T) {
 	if expanded[0] != collapsed[0] {
 		t.Fatalf("first row moved: collapsed %q, expanded %q", collapsed[0], expanded[0])
 	}
-	if !strings.Contains(collapsed[1], "more lines,") {
+	if !strings.Contains(collapsed[1], "earlier lines,") {
 		t.Fatalf("collapsed row 1 = %q, want the hint above the preview", collapsed[1])
 	}
+	// The preview is the tail of the expanded body.
+	tailStart := len(expanded) - mcpOutputPreviewLines
 	for index := 0; index < mcpOutputPreviewLines; index++ {
-		if expanded[1+index] != collapsed[2+index] {
-			t.Errorf("preview row %d: collapsed %q, expanded %q", index, collapsed[2+index], expanded[1+index])
+		if expanded[tailStart+index] != collapsed[2+index] {
+			t.Errorf("preview row %d: collapsed %q, expanded %q", index, collapsed[2+index], expanded[tailStart+index])
 		}
 	}
 }

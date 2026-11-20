@@ -98,7 +98,21 @@ func TestMcpToolRenderUpstreamParity(t *testing.T) {
 		if err := json.Unmarshal([]byte(golden[key]), &want); err != nil {
 			t.Fatalf("%s: parse golden: %v", label, err)
 		}
+		// A truncated collapsed preview is the one place the frames cannot line up:
+		// the reference keeps the first rows and pier keeps the last (D397), so the
+		// shared rows are only the header and whatever follows the preview. The
+		// preview itself is pinned by TestMcpResultPreviewWrapsAtTheRenderWidth and
+		// TestMcpToolResultFramesLimitVisualLines.
+		collapsedPreview := !spec.Expanded && len(want) != len(withoutHintRows(want))
 		want = withoutHintRows(want)
+		if collapsedPreview {
+			header := paritySGR.ReplaceAllString(got[2], "")
+			hasArgs := len(spec.Args) > 0 && string(spec.Args) != "null" && string(spec.Args) != "{}"
+			if !strings.Contains(header, spec.Label) || (hasArgs && !strings.Contains(header, "=")) {
+				t.Fatalf("%s: header is not the uncut pairs line: %q", label, header)
+			}
+			continue
+		}
 		// D397: pier renders one uncut pairs header in both states. The reference
 		// cuts the collapsed pairs at 100 units and, expanded, writes one
 		// `key: value` row per argument, so the header differs in shape and can be

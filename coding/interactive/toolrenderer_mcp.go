@@ -222,7 +222,7 @@ func mcpArgumentsJSON(args any) (string, bool) {
 }
 
 // mcpResultComponent renders an MCP result: its styled text, or, while
-// collapsed, the expand hint and then the first mcpOutputPreviewLines visual
+// collapsed, the expand hint and then the last mcpOutputPreviewLines visual
 // lines.
 // Both states wrap at the width Render receives (upstream's VisualLinePreview
 // measures the same way), so expanding only adds the rows below the preview and
@@ -260,14 +260,16 @@ func (c *mcpResultComponent) Render(width int) []string {
 	lines := visual
 	if !c.expanded && len(visual) > mcpOutputPreviewLines {
 		lines = make([]string, 0, mcpOutputPreviewLines+1)
-		// The hint leads the preview so it sits right under the arguments, where
-		// it is read, instead of below five rows of output. The reference
-		// truncates it to the frame width, so a narrow terminal keeps it on one
-		// line instead of overflowing.
-		hint := c.theme.Fg("muted", "... ("+itoa(len(visual)-mcpOutputPreviewLines)+" more lines,") +
+		// The preview keeps the newest rows and the hint leads it, so the frame
+		// reads top to bottom: how much earlier output is hidden, then the tail
+		// itself, as a shell call's preview does (the reference's
+		// VisualLinePreview keeps the start for an MCP result, which left the
+		// hint above rows it did not describe). The reference truncates the hint
+		// to the frame width, so a narrow terminal keeps it on one line.
+		hint := c.theme.Fg("muted", "... ("+itoa(len(visual)-mcpOutputPreviewLines)+" earlier lines,") +
 			" " + KeyHint("app.tools.expand", "to expand") + c.theme.Fg("muted", ")")
 		lines = append(lines, tui.TruncateToWidth(hint, width, "...", false))
-		lines = append(lines, visual[:mcpOutputPreviewLines]...)
+		lines = append(lines, visual[len(visual)-mcpOutputPreviewLines:]...)
 	}
 	c.cachedWidth, c.cachedExpand, c.cachedLines, c.hasCache = width, c.expanded, lines, true
 	return lines

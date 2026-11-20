@@ -5605,11 +5605,13 @@ frame's expanded state changes only the result body.
 with the reference's output (its header rows are skipped, its body must match),
 and `TestMcpCallFrameUsesTheServerToolLabelFromARegisteredTool` covers the label.
 
-The result half differs too: the `... (N more lines, ctrl+o to expand)` hint
-leads the preview, right under the arguments, where the reference puts it below
-the five preview rows and a long frame buries it. Expanding drops the hint and
-appends the rows past the preview, so the preview keeps its text and order
-(`TestMcpResultExpansionKeepsThePreviewInPlace`,
+The result half differs too, and reads like a shell call's preview: the
+`... (N earlier lines, ctrl+o to expand)` hint leads the preview, right under the
+arguments, and the preview keeps the last five rows. The reference puts the hint
+below a preview of the first five rows (`VisualLinePreview` with `keep: "start"`),
+so a long frame buried the hint and the hint then described rows above the ones
+it sat under. Expanding drops the hint and shows every row, so the preview keeps
+its text and order (`TestMcpResultExpansionKeepsThePreviewInPlace`,
 `TestMcpResultPreviewHintCountsVisualLines`,
 `TestMcpToolHintTruncatesToTheFrameWidth`).
 
