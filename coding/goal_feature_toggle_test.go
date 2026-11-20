@@ -32,8 +32,8 @@ func TestGoalFeatureToggleEnablesAndDisablesTheController(t *testing.T) {
 		}
 		return false
 	}
-	if session.Goal == nil || !hasTool("set_goal") || !hasTool("get_goal") {
-		t.Fatalf("goal feature off at construction: Goal=%v tools=%v", session.Goal != nil, session.GetActiveToolNames())
+	if session.GoalController() == nil || !hasTool("set_goal") || !hasTool("get_goal") {
+		t.Fatalf("goal feature off at construction: Goal=%v tools=%v", session.GoalController() != nil, session.GetActiveToolNames())
 	}
 	if _, err := session.control.Tools["set_goal"].Tool.Execute("create",
 		json.RawMessage(`{"objective":"keep this objective"}`), context.Background(),
@@ -42,7 +42,7 @@ func TestGoalFeatureToggleEnablesAndDisablesTheController(t *testing.T) {
 	}
 
 	session.SetGoalFeatureEnabled(false)
-	if session.Goal != nil {
+	if session.GoalController() != nil {
 		t.Fatal("controller still installed after disabling the goal feature")
 	}
 	if hasTool("set_goal") || hasTool("get_goal") {
@@ -57,11 +57,11 @@ func TestGoalFeatureToggleEnablesAndDisablesTheController(t *testing.T) {
 	}
 
 	session.SetGoalFeatureEnabled(true)
-	if session.Goal == nil || !hasTool("set_goal") || !hasTool("get_goal") {
-		t.Fatalf("goal feature off after enabling: Goal=%v tools=%v", session.Goal != nil, session.GetActiveToolNames())
+	if session.GoalController() == nil || !hasTool("set_goal") || !hasTool("get_goal") {
+		t.Fatalf("goal feature off after enabling: Goal=%v tools=%v", session.GoalController() != nil, session.GetActiveToolNames())
 	}
 	// The goal stored on the branch comes back, disarmed, rather than vanishing.
-	snapshot := session.Goal.Snapshot()
+	snapshot := session.GoalController().Snapshot()
 	if snapshot.Goal == nil || snapshot.Goal.Objective != "keep this objective" {
 		t.Fatalf("goal after re-enabling = %+v, want the stored objective", snapshot.Goal)
 	}

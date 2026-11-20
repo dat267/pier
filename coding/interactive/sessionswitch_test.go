@@ -163,14 +163,14 @@ func TestSwitchSessionRewiresGoalStartWork(t *testing.T) {
 	app, cleanup := newTestApp(t)
 	defer cleanup()
 
-	if controller := app.session.Goal; controller != nil && !controller.StartWorkWired() {
+	if controller := app.session.GoalController(); controller != nil && !controller.StartWorkWired() {
 		t.Fatal("goal launcher not wired at construction")
 	}
 	target := makePersistedSession(t, t.TempDir(), "from the other session")
 	if _, err := app.switchSession(target.GetSessionFile(), ""); err != nil {
 		t.Fatalf("switchSession: %v", err)
 	}
-	controller := app.session.Goal
+	controller := app.session.GoalController()
 	if controller == nil {
 		t.Skip("goals are disabled for this session")
 	}

@@ -31,8 +31,8 @@ func TestDisposedSessionDoesNotStartAReservedGoalRound(t *testing.T) {
 		t.Fatal(err)
 	}
 	var pending []func(context.Context) error
-	session.Goal.SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
-	session.Goal.HandleCommand("set queued before teardown")
+	session.GoalController().SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
+	session.GoalController().HandleCommand("set queued before teardown")
 	if len(pending) != 1 {
 		t.Fatalf("reserved rounds = %d, want 1", len(pending))
 	}
@@ -75,8 +75,8 @@ func TestReservedGoalRoundRacingDisposeLeavesNoUnabortableRun(t *testing.T) {
 			t.Fatal(err)
 		}
 		var pending []func(context.Context) error
-		session.Goal.SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
-		session.Goal.HandleCommand("set raced by teardown")
+		session.GoalController().SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
+		session.GoalController().HandleCommand("set raced by teardown")
 		if len(pending) != 1 {
 			t.Fatalf("reserved rounds = %d, want 1", len(pending))
 		}

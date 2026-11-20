@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D496)
+# Deliberate divergences from pi (D1–D497)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8193,3 +8193,31 @@ registry, branch state restored),
 `TestFeatureToggleAppliesAndPersists` (the selector's row stores, applies and
 rewires) and `TestFeatureSelectorHoldsOnlyPierOnlyToggles` (`/features` holds the
 pier-only rows and `/settings` none of them, whose golden still matches).
+
+### D497
+
+**The goal controller is swapped at runtime, so it is reached through a guarded pointer.**
+
+`SetGoalFeatureEnabled` (D496) writes the controller while the session runs, and
+the agent worker reads it in four places: the event handler (`handleAgentEvent`,
+which latches the follow-up hold), the turn refresh
+(`prepareNextTurnWithContext`, the round reminder), the settle emit
+(`GoalPursuing`) and `releaseGoalHeldFollowUps`, plus the branch-move hooks. As a
+plain pointer that is a data race the moment a toggle overlaps a run;
+`TestGoalFeatureToggleRacesWithAgentEvents` reproduced it under `-race` with the
+writer at `SetGoalFeatureEnabled` and readers on the worker.
+
+`AgentSession.goal` is an `atomic.Pointer[GoalController]` now and
+`GoalController()` is the only way in, so a caller gets a controller or nil and
+never a half-written value. The registry write in the enable path takes
+`control.stateMu` too, because `ToolNames`, `GetAllTools` and the prompt
+contributions read that map under it and a concurrent map write panics.
+
+`/tools` can also disable `get_goal`/`set_goal`, but the goal feature re-adds
+both names on every transition (`goal.DesiredToolNames`, called from
+`SyncGoalTools`, `Start` and `finishBranchMove`), which silently undid the
+toggle. `AgentSession.disabledTools` records an explicit disable and
+`syncGoalTools` filters it out, so a tool turned off in `/tools` stays off;
+re-enabling it clears the record. `TestDisabledGoalToolStaysDisabled` drives the
+transition; `TestSessionToolToggle` and `TestToolsSelectorTogglesSessionTools`
+pin the toggles themselves.

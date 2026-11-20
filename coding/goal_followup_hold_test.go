@@ -55,9 +55,9 @@ func TestGoalHoldsFollowUpsUntilItsFinalAnswer(t *testing.T) {
 		}
 	})
 	var pending []func(context.Context) error
-	session.Goal.SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
+	session.GoalController().SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
 	session.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "after the goal"}})
-	session.Goal.HandleCommand("set objective")
+	session.GoalController().HandleCommand("set objective")
 	if len(pending) != 1 {
 		t.Fatalf("round reservations = %d, want 1", len(pending))
 	}
@@ -67,7 +67,7 @@ func TestGoalHoldsFollowUpsUntilItsFinalAnswer(t *testing.T) {
 	if err := pending[0](context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if goalState := session.Goal.Snapshot().Goal; goalState == nil || goalState.Phase != goal.PhaseComplete {
+	if goalState := session.GoalController().Snapshot().Goal; goalState == nil || goalState.Phase != goal.PhaseComplete {
 		t.Fatalf("goal = %+v, want complete", goalState)
 	}
 	if len(prompts) != 2 {
@@ -144,7 +144,7 @@ func TestGoalReleasedFollowUpsRunWithoutAHost(t *testing.T) {
 	})
 	session.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "after the goal"}})
 	// No SetStartWork: the release has to wait for the run to settle itself.
-	session.Goal.HandleCommand("set objective")
+	session.GoalController().HandleCommand("set objective")
 	deadline := time.After(5 * time.Second)
 	for count := 0; count < 2; count++ {
 		select {
@@ -190,9 +190,9 @@ func TestGoalReleaseSkipsDisposedSession(t *testing.T) {
 		t.Fatal(err)
 	}
 	var pending []func(context.Context) error
-	session.Goal.SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
+	session.GoalController().SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
 	session.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "after the goal"}})
-	session.Goal.HandleCommand("set objective")
+	session.GoalController().HandleCommand("set objective")
 	if err := pending[0](context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -240,9 +240,9 @@ func TestGoalReleaseDuringDisposeCleanupSkipsTheRun(t *testing.T) {
 		t.Fatal(err)
 	}
 	var pending []func(context.Context) error
-	session.Goal.SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
+	session.GoalController().SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
 	session.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "after the goal"}})
-	session.Goal.HandleCommand("set objective")
+	session.GoalController().HandleCommand("set objective")
 	if err := pending[0](context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -319,9 +319,9 @@ func TestGoalReleaseRacingDisposeLeavesNoUnabortableRun(t *testing.T) {
 			t.Fatal(err)
 		}
 		var pending []func(context.Context) error
-		session.Goal.SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
+		session.GoalController().SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
 		session.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "after the goal"}})
-		session.Goal.HandleCommand("set objective")
+		session.GoalController().HandleCommand("set objective")
 		if err := pending[0](context.Background()); err != nil {
 			t.Fatal(err)
 		}
@@ -391,9 +391,9 @@ func TestGoalReleasedFollowUpsQueueBehindARunThatStartedFirst(t *testing.T) {
 	}
 	defer session.Dispose()
 	var pending []func(context.Context) error
-	session.Goal.SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
+	session.GoalController().SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
 	session.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "after the goal"}})
-	session.Goal.HandleCommand("set objective")
+	session.GoalController().HandleCommand("set objective")
 	if err := pending[0](context.Background()); err != nil {
 		t.Fatal(err)
 	}

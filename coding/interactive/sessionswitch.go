@@ -377,11 +377,11 @@ func (a *App) bindSessionManager(sessionManager *coding.SessionManager) (*Sessio
 // every bind (construction, /new, /resume, /fork). Agent-end effects run on a
 // worker, so UI notifications are always posted to the owner (D143/D223).
 func (a *App) wireGoalController() {
-	if controller := a.session.Goal; controller != nil {
+	if controller := a.session.GoalController(); controller != nil {
 		controller.SetStartWork(a.events.StartWork)
 		controller.SetUIHooks(func(message string, level string) {
 			a.ui.Post(func() {
-				if a.session.Goal != controller {
+				if a.session.GoalController() != controller {
 					return
 				}
 				if level == "warning" {

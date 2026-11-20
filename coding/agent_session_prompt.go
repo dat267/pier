@@ -413,7 +413,7 @@ func (s *AgentSession) startAgentPrompt(ctx context.Context, messages []ai.Messa
 	// Upstream _emitAgentSettled uses the run abort flag, including backoff.
 	s.emit(&SessionEvent{
 		Type: SessionAgentSettled, Aborted: aborted,
-		GoalPursuing:     s.Goal != nil && s.Goal.Pursuing(),
+		GoalPursuing:     goalPursuing(s.GoalController()),
 		FollowUpsPending: s.followUpReleasePending.Load(),
 	})
 	s.resolveIdleWaitIfIdle()
@@ -842,4 +842,10 @@ func (s *AgentSession) expandSkillCommand(text string) string {
 		return block + "\n\n" + args
 	}
 	return block
+}
+
+// goalPursuing reports whether the session's goal feature is holding a run; nil
+// is not pursuing (D497).
+func goalPursuing(controller *GoalController) bool {
+	return controller != nil && controller.Pursuing()
 }

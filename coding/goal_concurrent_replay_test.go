@@ -56,18 +56,18 @@ func TestConcurrentGoalToolsPreserveReplayableTransitions(t *testing.T) {
 			for err := range failures {
 				t.Error(err)
 			}
-			before := session.Goal.Snapshot().Goal
+			before := session.GoalController().Snapshot().Goal
 			if before == nil {
 				t.Fatal("no goal after successful writes")
 			}
 			var warnings []string
-			session.Goal.SetUIHooks(func(message, level string) {
+			session.GoalController().SetUIHooks(func(message, level string) {
 				if level == "warning" {
 					warnings = append(warnings, message)
 				}
 			})
-			session.Goal.Start("startup")
-			after := session.Goal.Snapshot().Goal
+			session.GoalController().Start("startup")
+			after := session.GoalController().Snapshot().Goal
 			if after == nil || after.ID != before.ID {
 				t.Fatalf("goal could not replay accepted transitions: before=%+v after=%+v warnings=%v", before, after, warnings)
 			}
@@ -87,12 +87,12 @@ func TestGoalTransitionNotificationCanReadState(t *testing.T) {
 		t.Fatal(err)
 	}
 	observed := false
-	session.Goal.SetUIHooks(func(string, string) {
-		observed = session.Goal.Snapshot().Goal != nil
+	session.GoalController().SetUIHooks(func(string, string) {
+		observed = session.GoalController().Snapshot().Goal != nil
 	})
 	done := make(chan struct{})
 	go func() {
-		session.Goal.Start("reload")
+		session.GoalController().Start("reload")
 		close(done)
 	}()
 	select {

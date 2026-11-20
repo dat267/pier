@@ -347,6 +347,7 @@ coding/goal_concurrent_replay_test.go
 coding/goal_dispose_round_test.go
 coding/goal_entry_event_test.go
 coding/goal_entry_order_test.go
+coding/goal_feature_race_test.go
 coding/goal_feature_toggle_test.go
 coding/goal_followup_hold_test.go
 coding/goal_followup_one_at_a_time_test.go
@@ -355,6 +356,7 @@ coding/goal_resume_test.go
 coding/goal_retry_test.go
 coding/goal_scheduled_round_test.go
 coding/goal_tool_schema_test.go
+coding/goal_tool_toggle_test.go
 coding/goal_toolset_stable_test.go
 coding/goal_wrapup_order_test.go
 coding/goalcontroller_events_test.go

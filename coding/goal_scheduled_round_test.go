@@ -32,7 +32,7 @@ func TestGoalScheduledRoundSkipsInvalidatedReservation(t *testing.T) {
 				calls++
 				// A valid reserved round completes its goal, preventing another
 				// round from hiding an unexpected extra admission in this test.
-				if snapshot := session.Goal.Snapshot(); snapshot.Goal != nil && snapshot.Armed {
+				if snapshot := session.GoalController().Snapshot(); snapshot.Goal != nil && snapshot.Armed {
 					_, _ = session.GetToolDefinition("set_goal").Execute("complete", json.RawMessage(`{"status":"complete"}`), context.Background(), nil)
 				}
 				stream := ai.NewAssistantMessageEventStream()
@@ -50,13 +50,13 @@ func TestGoalScheduledRoundSkipsInvalidatedReservation(t *testing.T) {
 				t.Fatal(err)
 			}
 			var pending []func(context.Context) error
-			session.Goal.SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
-			session.Goal.HandleCommand("set old objective")
+			session.GoalController().SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
+			session.GoalController().HandleCommand("set old objective")
 			if len(pending) != 1 {
 				t.Fatalf("initial round reservations = %d, want 1", len(pending))
 			}
 			for _, command := range fixture.commands {
-				session.Goal.HandleCommand(command)
+				session.GoalController().HandleCommand(command)
 			}
 			for _, work := range pending {
 				if err := work(context.Background()); err != nil {

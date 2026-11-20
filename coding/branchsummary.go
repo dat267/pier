@@ -543,10 +543,10 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 	// replay it (D419).
 	s.requestPrefix.clear()
 	s.RestoreToolsFromTranscript()
-	if s.Goal != nil {
+	if controller := s.GoalController(); controller != nil {
 		// The goal was re-folded with the move; expose its tools again over
 		// the loadout the transcript restored.
-		s.Goal.SyncTools()
+		controller.SyncTools()
 	}
 
 	return &NavigateTreeResult{EditorText: editorText, SummaryEntry: summaryEntry}, nil
@@ -559,9 +559,9 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 // abandoned branch is not kept, and no command persists against it once the
 // leaf has moved.
 func (s *AgentSession) moveLeafForNavigation(targetID, newLeafID, summaryText string, summaryDetails json.RawMessage, summaryUsage *ai.Usage, label string) (*SessionEntry, error) {
-	if s.Goal != nil {
-		s.Goal.beginBranchMove()
-		defer s.Goal.finishBranchMove("tree")
+	if controller := s.GoalController(); controller != nil {
+		controller.beginBranchMove()
+		defer controller.finishBranchMove("tree")
 	}
 	var summaryEntry *SessionEntry
 	if summaryText != "" {

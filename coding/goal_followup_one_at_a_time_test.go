@@ -48,11 +48,11 @@ func TestGoalReleasedFollowUpsAreDeliveredOneAtATime(t *testing.T) {
 		t.Fatal(err)
 	}
 	var pending []func(context.Context) error
-	session.Goal.SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
+	session.GoalController().SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
 	for _, text := range followUps {
 		session.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Text: text}})
 	}
-	session.Goal.HandleCommand("set objective")
+	session.GoalController().HandleCommand("set objective")
 	// Run every released piece of work, including work it queues while running.
 	for index := 0; index < len(pending); index++ {
 		if err := pending[index](context.Background()); err != nil {

@@ -45,9 +45,9 @@ func TestSessionFileRoundTripPreservesInvariants(t *testing.T) {
 	// Set the goal after the turn, with the scheduler paused, so it appends its
 	// durable state without starting a round the stub stream would have to
 	// serve (an active goal keeps asking for another round).
-	session.Goal.SetStartWork(func(func(context.Context) error) {})
-	session.Goal.HandleCommand("set round-trip objective")
-	goal := session.Goal.Snapshot().Goal
+	session.GoalController().SetStartWork(func(func(context.Context) error) {})
+	session.GoalController().HandleCommand("set round-trip objective")
+	goal := session.GoalController().Snapshot().Goal
 	if goal == nil {
 		t.Fatal("goal not set")
 	}
@@ -93,10 +93,10 @@ func TestSessionFileRoundTripPreservesInvariants(t *testing.T) {
 	if !userMessagesContain(r.Messages(), "remember 41") {
 		t.Fatal("resumed transcript lost the user prompt")
 	}
-	if r.Goal == nil {
+	if r.GoalController() == nil {
 		t.Fatal("resumed session has no goal controller")
 	}
-	if resumedGoal := r.Goal.Snapshot().Goal; resumedGoal == nil || resumedGoal.Objective != wantGoal {
+	if resumedGoal := r.GoalController().Snapshot().Goal; resumedGoal == nil || resumedGoal.Objective != wantGoal {
 		t.Fatalf("resumed goal = %+v; want objective %q", resumedGoal, wantGoal)
 	}
 }

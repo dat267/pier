@@ -28,8 +28,9 @@ type SettingsSession interface {
 	SetThinkingLevel(level ai.ThinkingLevel, options ...coding.ModelMutationOptions)
 	IsStreaming() bool
 	// SetGoalFeatureEnabled turns the builtin goal feature on or off (D496).
+	// D497 covers the tool toggles and the guarded controller accessor.
 	SetGoalFeatureEnabled(enabled bool)
-	// SetToolEnabled turns one registered tool on or off (D496).
+	// SetToolEnabled turns one registered tool on or off (D497).
 	SetToolEnabled(name string, enabled bool) error
 	// ToolNames lists the registered tools.
 	ToolNames() []string

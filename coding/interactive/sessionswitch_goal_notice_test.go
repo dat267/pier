@@ -26,7 +26,7 @@ func TestSessionReplacementKeepsGoalCommandNoticesVisible(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			if app.session.Goal == nil {
+			if app.session.GoalController() == nil {
 				t.Fatal("goal controller is missing")
 			}
 			app.submit.HandleSubmit(context.Background(), "/goal status")
@@ -47,7 +47,7 @@ func TestSessionReplacementRejectsRetiredGoalNotices(t *testing.T) {
 			app, cleanup := newTestApp(t)
 			defer cleanup()
 			app.Init(context.Background())
-			old := app.session.Goal
+			old := app.session.GoalController()
 			if old == nil {
 				t.Fatal("goal controller is missing")
 			}

@@ -7,7 +7,7 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
-// The /features tools section (D496) turns one registered tool on or off for the
+// The /tools selector (D497) turns one registered tool on or off for the
 // live session. Disabling removes it from the active set and the system prompt's
 // tool section; enabling puts it back in its registry order. A tool that does not
 // exist is reported, not silently added, and an explicit --tools allowlist still

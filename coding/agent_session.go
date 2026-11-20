@@ -183,8 +183,14 @@ type AgentSession struct {
 	// follow-up run that is still coming (D402).
 	followUpReleasePending atomic.Bool
 
-	// Goal is the builtin session-goal controller (nil when disabled).
-	Goal *GoalController
+	// disabledTools records the tools the user turned off with /tools, which the
+	// goal feature's sync must not re-add (D497). Guarded by toolsMu.
+	disabledTools map[string]bool
+
+	// goal is the builtin session-goal controller (nil when disabled). It is read
+	// by the agent worker and written by the owner loop's feature toggle, so it is
+	// only reached through GoalController/goalLocked (D497).
+	goal atomic.Pointer[GoalController]
 
 	// requestPrefix remembers the last request the agent sent, so compaction can
 	// summarize from it instead of reserializing the conversation (D419).
@@ -525,14 +531,15 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 	// replay the durable goal state from the current branch. The controller is
 	// bound to this session, so its effects reach it directly.
 	if config.Goal {
-		s.Goal = newGoalController(nil, newSessionGoalSink(s))
+		controller := newGoalController(nil, newSessionGoalSink(s))
+		s.goal.Store(controller)
 		s.registerGoalTools()
-		s.Goal.Start("startup")
+		controller.Start("startup")
 	}
 	// An active goal holds user follow-ups to the end of its run.
 	a.DeferFollowUp = s.deferGoalFollowUp
-	if s.Goal != nil {
-		s.Goal.SetHoldFollowUps(s.goalHoldsFollowUps)
+	if controller := s.GoalController(); controller != nil {
+		controller.SetHoldFollowUps(s.goalHoldsFollowUps)
 	}
 	// Always subscribed: session persistence, queue tracking, compaction,
 	// retry logic.
@@ -576,8 +583,8 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 			prepared = append(prepared, update)
 		}
 		state := s.Agent.State()
-		if s.Goal != nil {
-			if reminder := s.Goal.roundPromptIfMissing(state.Messages); reminder != nil {
+		if controller := s.GoalController(); controller != nil {
+			if reminder := controller.roundPromptIfMissing(state.Messages); reminder != nil {
 				prepared = append(prepared, reminder)
 			}
 		}
@@ -628,7 +635,7 @@ func (s *AgentSession) emit(event *SessionEvent) {
 
 // handleAgentEvent ports the persistence/queue/compaction event handling.
 func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
-	if s.Goal != nil && s.Goal.Pursuing() {
+	if controller := s.GoalController(); controller != nil && controller.Pursuing() {
 		s.goalHeldThisRun.Store(true)
 	}
 	// Queue display tracking: user message starts remove queued entries
@@ -668,8 +675,8 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 		// The goal controller's agent_end and agent_before_settle hooks run before
 		// listeners. A completed settle may queue the next round; a retryable
 		// failure keeps the current round active for runPostRunLoop to retry.
-		if s.Goal != nil {
-			s.Goal.AgentEnd(event)
+		if controller := s.GoalController(); controller != nil {
+			controller.AgentEnd(event)
 		}
 		s.emit(&SessionEvent{Type: SessionAgentEnd, Agent: event, WillRetry: s.willRetry})
 		s.releaseGoalHeldFollowUps(event)
@@ -742,7 +749,8 @@ func (s *AgentSession) deferGoalFollowUp(message ai.Message) bool {
 // final answer. An aborted run leaves its queue to the caller (interactive
 // restores it to the editor).
 func (s *AgentSession) releaseGoalHeldFollowUps(event *agent.AgentEvent) {
-	if s.Goal == nil || !s.goalHeldThisRun.Load() || s.Goal.Pursuing() || goalAgentAborted(event) {
+	controller := s.GoalController()
+	if controller == nil || !s.goalHeldThisRun.Load() || controller.Pursuing() || goalAgentAborted(event) {
 		return
 	}
 	// Release with the queue's own granularity: in one-at-a-time mode the
@@ -763,7 +771,7 @@ func (s *AgentSession) releaseGoalHeldFollowUps(event *agent.AgentEvent) {
 	// The released run starts after this run settles, so the settle reports it:
 	// the working period stays open across the release (D402).
 	s.followUpReleasePending.Store(true)
-	if s.Goal.RunAfterSettle(run) {
+	if controller.RunAfterSettle(run) {
 		return
 	}
 	// No host work slot (SDK and print sessions): the current run is still

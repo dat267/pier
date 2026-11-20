@@ -115,7 +115,6 @@ type SettingsCallbacks struct {
 	OnAutoResizeImagesChange           func(bool)
 	OnBlockImagesChange                func(bool)
 	OnEnableSkillCommandsChange        func(bool)
-	OnGoalFeatureChange                func(bool)
 	OnSteeringModeChange               func(string)
 	OnFollowUpModeChange               func(string)
 	OnTransportChange                  func(ai.Transport)

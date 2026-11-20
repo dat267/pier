@@ -56,7 +56,7 @@ func TestNewAgentSessionReplaysGoalAndExposesTools(t *testing.T) {
 	if names != "set_goal,get_goal" {
 		t.Fatalf("active tools = %q", names)
 	}
-	snapshot := session.Goal.Snapshot()
+	snapshot := session.GoalController().Snapshot()
 	if snapshot.Goal == nil || snapshot.Goal.Objective != "obj" || snapshot.Armed {
 		t.Fatalf("goal = %+v", snapshot.Goal)
 	}
@@ -81,7 +81,7 @@ func TestGoalContinuationReachesTheModel(t *testing.T) {
 			secondContext = append([]ai.Message{}, transcript.Messages...)
 			// Complete the goal through its real tool path so the unbudgeted
 			// round loop ends here.
-			if snapshot := session.Goal.Snapshot().Goal; snapshot != nil {
+			if snapshot := session.GoalController().Snapshot().Goal; snapshot != nil {
 				_ = snapshot
 				params := json.RawMessage(`{"status":"complete"}`)
 				tool := session.control.Tools["set_goal"].Tool
@@ -130,7 +130,7 @@ func TestGoalContinuationReachesTheModel(t *testing.T) {
 	if !found {
 		t.Fatalf("round prompt missing from the continuation context: %d messages", len(secondContext))
 	}
-	if phase := session.Goal.Snapshot().Goal.Phase; phase != goal.PhaseComplete {
+	if phase := session.GoalController().Snapshot().Goal.Phase; phase != goal.PhaseComplete {
 		t.Fatalf("goal phase = %s", phase)
 	}
 }
@@ -171,9 +171,9 @@ func TestGoalSettleReportsThePendingFollowUpRun(t *testing.T) {
 		}
 	})
 	var pending []func(context.Context) error
-	session.Goal.SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
+	session.GoalController().SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
 	session.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "after the goal"}})
-	session.Goal.HandleCommand("set objective")
+	session.GoalController().HandleCommand("set objective")
 	for index := 0; index < len(pending); index++ {
 		if err := pending[index](context.Background()); err != nil {
 			t.Fatal(err)
@@ -228,7 +228,7 @@ func TestIdleGoalRoundReceivesActiveGoalTools(t *testing.T) {
 				t.Fatal(err)
 			}
 			if commandStartsRound {
-				session.Goal.HandleCommand("set finish the objective")
+				session.GoalController().HandleCommand("set finish the objective")
 			} else {
 				if _, err := session.GetToolDefinition("set_goal").Execute("create", json.RawMessage(`{"objective":"finish the objective"}`), context.Background(), nil); err != nil {
 					t.Fatal(err)
@@ -283,7 +283,7 @@ func TestSessionGoalObjectiveUsesJavaScriptTrim(t *testing.T) {
 			if result.IsError != fixture.reject {
 				t.Fatalf("IsError = %v, want %v: %+v", result.IsError, fixture.reject, result.Content)
 			}
-			snapshot := session.Goal.Snapshot().Goal
+			snapshot := session.GoalController().Snapshot().Goal
 			if fixture.reject {
 				if snapshot != nil {
 					t.Fatalf("blank objective created a goal: %+v", snapshot)
@@ -308,7 +308,7 @@ func TestGoalFollowsTheBranchAcrossTreeNavigation(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer session.Dispose()
-	session.Goal.SetStartWork(func(func(context.Context) error) {})
+	session.GoalController().SetStartWork(func(func(context.Context) error) {})
 
 	if err := session.Prompt(context.Background(), "before the goal", nil); err != nil {
 		t.Fatal(err)
@@ -317,8 +317,8 @@ func TestGoalFollowsTheBranchAcrossTreeNavigation(t *testing.T) {
 	if len(forks) != 1 {
 		t.Fatalf("fork targets = %+v", forks)
 	}
-	session.Goal.HandleCommand("set ship the release")
-	if session.Goal.Snapshot().Goal == nil {
+	session.GoalController().HandleCommand("set ship the release")
+	if session.GoalController().Snapshot().Goal == nil {
 		t.Fatal("the goal was not set")
 	}
 
@@ -326,24 +326,24 @@ func TestGoalFollowsTheBranchAcrossTreeNavigation(t *testing.T) {
 	if _, err := session.NavigateTree(context.Background(), forks[0].EntryID, NavigateTreeOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	if goal := session.Goal.Snapshot().Goal; goal != nil {
+	if goal := session.GoalController().Snapshot().Goal; goal != nil {
 		t.Fatalf("after navigating to before the goal, the controller still holds %q", goal.Objective)
 	}
 
 	// A command now must persist against the branch's goal state, and the
 	// branch must replay without a corruption warning.
-	session.Goal.HandleCommand("set a different objective")
+	session.GoalController().HandleCommand("set a different objective")
 	var warnings []string
-	session.Goal.SetUIHooks(func(message, level string) {
+	session.GoalController().SetUIHooks(func(message, level string) {
 		if level == "warning" && strings.Contains(message, "corrupt") {
 			warnings = append(warnings, message)
 		}
 	})
-	session.Goal.Start("startup")
+	session.GoalController().Start("startup")
 	if len(warnings) > 0 {
 		t.Fatalf("the branch does not replay after navigating: %v", warnings)
 	}
-	if goal := session.Goal.Snapshot().Goal; goal == nil || goal.Objective != "a different objective" {
+	if goal := session.GoalController().Snapshot().Goal; goal == nil || goal.Objective != "a different objective" {
 		t.Fatalf("replayed goal = %+v", goal)
 	}
 }

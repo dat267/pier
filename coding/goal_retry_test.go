@@ -88,7 +88,7 @@ func TestAgentSessionRetryableFailureRecoveryKeepsGoalActive(t *testing.T) {
 			assistant, ok := message.(*ai.AssistantMessage)
 			if ok && assistant.StopReason == ai.StopError && assistant.ErrorMessage != nil && strings.Contains(*assistant.ErrorMessage, "PROTOCOL_ERROR") {
 				sawRetryableFailure = true
-				if snapshot := session.Goal.Snapshot(); snapshot.Goal == nil || snapshot.Goal.Phase != goal.PhaseActive {
+				if snapshot := session.GoalController().Snapshot(); snapshot.Goal == nil || snapshot.Goal.Phase != goal.PhaseActive {
 					t.Errorf("retryable failure paused the goal: %+v", snapshot.Goal)
 				}
 			}
@@ -104,7 +104,7 @@ func TestAgentSessionRetryableFailureRecoveryKeepsGoalActive(t *testing.T) {
 	if !sawRetryableFailure {
 		t.Fatal("did not observe the HTTP/2 failure being scheduled for retry")
 	}
-	if snapshot := session.Goal.Snapshot(); snapshot.Goal == nil || snapshot.Goal.Phase != goal.PhaseComplete {
+	if snapshot := session.GoalController().Snapshot(); snapshot.Goal == nil || snapshot.Goal.Phase != goal.PhaseComplete {
 		t.Fatalf("recovered round did not complete the goal: %+v", snapshot.Goal)
 	}
 }

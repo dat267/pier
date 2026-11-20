@@ -506,7 +506,7 @@ func (s *AgentSession) AttachExtraTools(tools []agent.AgentTool) []string {
 }
 
 // SetToolEnabled turns one registered tool on or off for the live session
-// (D496, the /features tools section). It reports an error for a name the
+// (D497, the /tools selector). It reports an error for a name the
 // session has no definition for, so a typo never becomes a tool. An explicit
 // allowlist or exclusion still bounds what can be enabled, because the active
 // set is rebuilt through setActiveToolsByNameLocked.
@@ -535,11 +535,21 @@ func (s *AgentSession) SetToolEnabled(name string, enabled bool) error {
 		next = append(next, name)
 	}
 	s.setActiveToolsByNameLocked(next)
+	// The goal feature re-adds its own tools on every transition, so an explicit
+	// disable is remembered for the sync to honour (D497).
+	if s.disabledTools == nil {
+		s.disabledTools = map[string]bool{}
+	}
+	if enabled {
+		delete(s.disabledTools, name)
+	} else {
+		s.disabledTools[name] = true
+	}
 	return nil
 }
 
-// ToolNames lists every registered tool's name, in sorted order (the /features
-// tools section).
+// ToolNames lists every registered tool's name, in sorted order (the /tools
+// selector).
 func (s *AgentSession) ToolNames() []string {
 	s.control.stateMu.Lock()
 	defer s.control.stateMu.Unlock()
@@ -554,7 +564,7 @@ func (s *AgentSession) ToolNames() []string {
 // GoalController returns the session's goal controller, or nil when the goal
 // feature is off (D496). Callers that act on /goal and the render hooks go
 // through it, so a disabled feature is one nil check away.
-func (s *AgentSession) GoalController() *GoalController { return s.Goal }
+func (s *AgentSession) GoalController() *GoalController { return s.goal.Load() }
 
 // SetGoalFeatureEnabled turns the builtin goal feature on or off mid-session
 // (D496, the /settings row). Disabling stops the controller and removes its two
@@ -564,7 +574,7 @@ func (s *AgentSession) GoalController() *GoalController { return s.Goal }
 func (s *AgentSession) SetGoalFeatureEnabled(enabled bool) {
 	if !enabled {
 		s.toolsMu.Lock()
-		s.Goal = nil
+		s.goal.Store(nil)
 		removed := false
 		s.control.stateMu.Lock()
 		for _, name := range goalToolNames {
@@ -587,13 +597,18 @@ func (s *AgentSession) SetGoalFeatureEnabled(enabled bool) {
 		return
 	}
 	s.toolsMu.Lock()
-	if s.Goal != nil {
+	if s.goal.Load() != nil {
 		s.toolsMu.Unlock()
 		return
 	}
 	controller := newGoalController(nil, newSessionGoalSink(s))
-	s.Goal = controller
-	s.registerGoalTools()
+	s.goal.Store(controller)
+	// The registry is written under control.stateMu: ToolNames, GetAllTools and
+	// the prompt contributions read the same map under it, and a concurrent map
+	// write is a panic, not just a race (D497).
+	s.control.stateMu.Lock()
+	registerGoalToolsLocked(s, controller)
+	s.control.stateMu.Unlock()
 	s.setActiveToolsByNameLocked(goal.DesiredToolNames(s.GetActiveToolNames()))
 	s.toolsMu.Unlock()
 	// Start replays the branch and syncs the tool set, so it runs after the
@@ -609,10 +624,19 @@ var goalToolNames = []string{"get_goal", "set_goal"}
 // prompt guidelines. They are registered once; exposure is gated by the goal
 // controller's SyncTools.
 func (s *AgentSession) registerGoalTools() {
-	if s.Goal == nil || s.control == nil {
+	controller := s.goal.Load()
+	if controller == nil || s.control == nil {
 		return
 	}
-	for _, tool := range s.Goal.Tools() {
+	s.control.stateMu.Lock()
+	defer s.control.stateMu.Unlock()
+	registerGoalToolsLocked(s, controller)
+}
+
+// registerGoalToolsLocked is registerGoalTools for a caller holding
+// control.stateMu.
+func registerGoalToolsLocked(s *AgentSession, controller *GoalController) {
+	for _, tool := range controller.Tools() {
 		if _, ok := s.control.Tools[tool.Name]; !ok {
 			s.control.Tools[tool.Name] = AgentToolDefinition{
 				Tool:             tool,
@@ -638,8 +662,15 @@ func (s *AgentSession) syncGoalTools() {
 	defer s.toolsMu.Unlock()
 	current := s.ActiveToolNames()
 	next := goal.DesiredToolNames(current)
-	if !sameToolSet(next, current) {
-		s.setActiveToolsByNameLocked(next)
+	// A tool the user turned off in /tools stays off across the sync.
+	filtered := make([]string, 0, len(next))
+	for _, name := range next {
+		if !s.disabledTools[name] {
+			filtered = append(filtered, name)
+		}
+	}
+	if !sameToolSet(filtered, current) {
+		s.setActiveToolsByNameLocked(filtered)
 	}
 }
 

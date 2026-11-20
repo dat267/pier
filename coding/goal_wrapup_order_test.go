@@ -39,15 +39,15 @@ func TestGoalWrapupPersistsAfterSetGoalResult(t *testing.T) {
 		t.Fatal(err)
 	}
 	var pending []func(context.Context) error
-	session.Goal.SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
-	session.Goal.HandleCommand("set objective")
+	session.GoalController().SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
+	session.GoalController().HandleCommand("set objective")
 	if len(pending) != 1 {
 		t.Fatalf("round reservations = %d, want 1", len(pending))
 	}
 	if err := pending[0](context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if state := session.Goal.Snapshot().Goal; state == nil || state.Phase != goal.PhaseComplete {
+	if state := session.GoalController().Snapshot().Goal; state == nil || state.Phase != goal.PhaseComplete {
 		t.Fatalf("goal = %+v, want complete", state)
 	}
 

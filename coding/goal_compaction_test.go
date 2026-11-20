@@ -68,7 +68,7 @@ func TestGoalRoundPromptSurvivesCompactionWithinRound(t *testing.T) {
 			}
 		case 4:
 			subsequentContext = append([]ai.Message{}, transcript.Messages...)
-			snapshot := session.Goal.Snapshot().Goal
+			snapshot := session.GoalController().Snapshot().Goal
 			if snapshot == nil {
 				t.Error("goal disappeared during compaction")
 			} else {

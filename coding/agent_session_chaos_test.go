@@ -62,13 +62,13 @@ func TestAgentSessionConcurrentGoalCommandsKeepTranscriptAndGoalReplayable(t *te
 
 func goalCommandOps(session *AgentSession) []func(int) {
 	return []func(int){
-		func(i int) { session.Goal.HandleCommand(fmt.Sprintf("set objective %d", i)) },
-		func(int) { session.Goal.HandleCommand("pause") },
-		func(int) { session.Goal.HandleCommand("resume") },
-		func(int) { session.Goal.HandleCommand("clear") },
-		func(int) { _ = session.Goal.Snapshot(); _ = session.Goal.Pursuing() },
+		func(i int) { session.GoalController().HandleCommand(fmt.Sprintf("set objective %d", i)) },
+		func(int) { session.GoalController().HandleCommand("pause") },
+		func(int) { session.GoalController().HandleCommand("resume") },
+		func(int) { session.GoalController().HandleCommand("clear") },
+		func(int) { _ = session.GoalController().Snapshot(); _ = session.GoalController().Pursuing() },
 		// /reload replays the branch and durably pauses a live goal.
-		func(int) { session.Goal.Start("reload") },
+		func(int) { session.GoalController().Start("reload") },
 	}
 }
 
@@ -197,7 +197,7 @@ func runSessionChaosGoal(t *testing.T, extra func(*AgentSession) []func(int), di
 	roundCtx, stopRounds := context.WithCancel(context.Background())
 	defer stopRounds()
 	if withGoal {
-		session.Goal.SetStartWork(func(work func(context.Context) error) {
+		session.GoalController().SetStartWork(func(work func(context.Context) error) {
 			goalRounds.Go(func() {
 				if roundCtx.Err() == nil {
 					_ = work(roundCtx)
@@ -266,7 +266,7 @@ func runSessionChaosGoal(t *testing.T, extra func(*AgentSession) []func(int), di
 				}
 			}
 			for {
-				session.Goal.HandleCommand("clear")
+				session.GoalController().HandleCommand("clear")
 				select {
 				case <-done:
 					return
@@ -293,7 +293,7 @@ func runSessionChaosGoal(t *testing.T, extra func(*AgentSession) []func(int), di
 	defer cancel()
 	if withGoal {
 		// Stop pursuing the goal, so the session can settle.
-		session.Goal.HandleCommand("clear")
+		session.GoalController().HandleCommand("clear")
 		stopRounds()
 		roundsDone := make(chan struct{})
 		go func() { goalRounds.Wait(); close(roundsDone) }()
@@ -397,14 +397,14 @@ func runSessionChaosGoal(t *testing.T, extra func(*AgentSession) []func(int), di
 		// in the order the file holds them.
 		var warnings []string
 		var warningsMu sync.Mutex
-		session.Goal.SetUIHooks(func(message, level string) {
+		session.GoalController().SetUIHooks(func(message, level string) {
 			if level == "warning" && strings.Contains(message, "corrupt") {
 				warningsMu.Lock()
 				warnings = append(warnings, message)
 				warningsMu.Unlock()
 			}
 		})
-		session.Goal.Start("startup")
+		session.GoalController().Start("startup")
 		warningsMu.Lock()
 		defer warningsMu.Unlock()
 		if len(warnings) > 0 {

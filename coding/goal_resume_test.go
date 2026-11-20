@@ -29,7 +29,7 @@ func TestGoalResumeFromIdleStartsARun(t *testing.T) {
 			}
 		}
 		// Stop the round loop: complete the goal from this round, then answer.
-		if session.Goal.Snapshot().Goal != nil {
+		if session.GoalController().Snapshot().Goal != nil {
 			_, _ = session.control.Tools["set_goal"].Tool.Execute("complete",
 				json.RawMessage(`{"status":"complete"}`),
 				context.Background(), func(agent.AgentToolResult) {})
@@ -55,19 +55,19 @@ func TestGoalResumeFromIdleStartsARun(t *testing.T) {
 		json.RawMessage(`{"objective":"finish it"}`), context.Background(), func(agent.AgentToolResult) {}); err != nil {
 		t.Fatal(err)
 	}
-	session.Goal.HandleCommand("pause")
+	session.GoalController().HandleCommand("pause")
 	if !session.IsIdle() {
 		t.Fatal("expected an idle session after pause")
 	}
 
-	session.Goal.HandleCommand("resume")
+	session.GoalController().HandleCommand("resume")
 	if prompts.Load() == 0 {
 		t.Fatal("resume did not start a run")
 	}
 	if !roundSeen.Load() {
 		t.Fatal("the round prompt did not reach the model context")
 	}
-	if phase := session.Goal.Snapshot().Goal.Phase; phase != goal.PhaseComplete {
+	if phase := session.GoalController().Snapshot().Goal.Phase; phase != goal.PhaseComplete {
 		t.Fatalf("phase = %q, want complete", phase)
 	}
 }
@@ -112,8 +112,8 @@ func TestGoalAgentClearStopsTheRoundLoop(t *testing.T) {
 	if calls := prompts.Load(); calls != 2 {
 		t.Fatalf("model calls = %d, want 2 (clearing must stop the loop)", calls)
 	}
-	if session.Goal.Snapshot().Goal != nil {
-		t.Fatalf("goal still present: %+v", session.Goal.Snapshot().Goal)
+	if session.GoalController().Snapshot().Goal != nil {
+		t.Fatalf("goal still present: %+v", session.GoalController().Snapshot().Goal)
 	}
 }
 
@@ -159,7 +159,7 @@ func TestGoalRoundTransitionAdmitsEachRoundOnce(t *testing.T) {
 	if calls := prompts.Load(); calls != 3 {
 		t.Fatalf("model calls = %d, want 3", calls)
 	}
-	snapshot := session.Goal.Snapshot()
+	snapshot := session.GoalController().Snapshot()
 	if snapshot.Goal.Phase != goal.PhaseComplete {
 		t.Fatalf("phase = %q, want complete", snapshot.Goal.Phase)
 	}

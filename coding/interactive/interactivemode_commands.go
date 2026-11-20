@@ -962,7 +962,7 @@ func newCommandWiring(app *App) *CommandWiring {
 		ShowError:   func(message string) { app.showError(message) },
 		ShowWarning: func(message string) { app.showWarning(message) },
 		ReloadGoal: func() {
-			if controller := app.session.Goal; controller != nil {
+			if controller := app.session.GoalController(); controller != nil {
 				controller.Start("reload")
 			}
 		},
