@@ -366,42 +366,57 @@ func lastNonBlankRow(rows []string) string {
 }
 
 // TestMcpResultShowsElapsedAndTook pins D493: an MCP call frame carries the
-// call's clock at the bottom, a muted `Elapsed <time>` while it runs and
+// call's clock, a muted `Elapsed <time>` under the arguments while it runs and
 // `Took <time>` once the result is final (the shell and codemode renderers'
 // toolTimerText). The reference's MCP renderer shows neither, so a long call
 // gave no sign of how long it had been running.
 func TestMcpResultShowsElapsedAndTook(t *testing.T) {
-	theme := newRendererTestTheme(t)
+	InitTheme("dark", false)
 	now := int64(1_700_000_000_000)
 	previous := shellNow
 	shellNow = func() time.Time { return time.UnixMilli(now) }
 	t.Cleanup(func() { shellNow = previous })
 
 	renderers := mcpRenderers("docs/search")
-	context := &ToolRenderContext{Cwd: "/tmp/proj", ExecutionStarted: true}
-	renderers.RenderCall(json.RawMessage(`{"path":"/tmp/a"}`), theme, context)
+	tool := NewToolExecutionComponent("mcp__docs__search", "call-1",
+		map[string]any{"path": "/tmp/a"}, ToolExecutionOptions{}, &renderers, nil, "/tmp")
+	tool.MarkExecutionStarted()
+	tool.SetArgsComplete()
 
-	partial := renderers.RenderResult(textResult("ok"),
-		ToolRenderResultOptions{IsPartial: true}, theme, &ToolRenderContext{Cwd: "/tmp/proj",
-			ExecutionStarted: true, State: context.State, IsPartial: true})
-	last := strings.TrimSpace(lastNonBlankRow(partial.Render(80)))
-	if !strings.Contains(last, "Elapsed 0.0s") {
-		t.Fatalf("running call's last row = %q, want an elapsed label", last)
+	// Running, with no partial result: the clock sits under the arguments, so a
+	// server that streams nothing still shows how long the call has run.
+	running := strings.Join(tool.Render(80), "\n")
+	if !strings.Contains(running, "Elapsed 0.0s") {
+		t.Fatalf("running frame has no elapsed label:\n%s", running)
+	}
+	if strings.Contains(running, "Took ") {
+		t.Fatalf("running frame already shows a final time:\n%s", running)
 	}
 
+	// A partial result must not add a second clock row.
+	tool.UpdateResult(textResult("ok"), true)
+	partial := strings.Join(tool.Render(80), "\n")
+	if strings.Count(partial, "Elapsed ") != 1 {
+		t.Fatalf("partial frame shows %d elapsed labels, want one:\n%s",
+			strings.Count(partial, "Elapsed "), partial)
+	}
+
+	// The final result closes with the took line and drops the running clock.
 	now += 2500
-	final := renderers.RenderResult(textResult("ok"), ToolRenderResultOptions{}, theme,
-		&ToolRenderContext{Cwd: "/tmp/proj", ExecutionStarted: true, State: context.State})
-	last = strings.TrimSpace(lastNonBlankRow(final.Render(80)))
-	if !strings.Contains(last, "Took 2.5s") {
-		t.Fatalf("final call's last row = %q, want the took label", last)
+	tool.UpdateResult(textResult("ok"), false)
+	final := strings.Join(tool.Render(80), "\n")
+	if !strings.Contains(final, "Took 2.5s") {
+		t.Fatalf("final frame has no took label:\n%s", final)
+	}
+	if strings.Contains(final, "Elapsed ") {
+		t.Fatalf("final frame still shows the running clock:\n%s", final)
 	}
 
 	// A replayed result carries the tool's recorded time instead of the clock.
 	recorded := int64(1200)
-	replayed := renderers.RenderResult(textResult("ok"), ToolRenderResultOptions{}, theme,
+	replayed := renderers.RenderResult(textResult("ok"), ToolRenderResultOptions{}, ActiveTheme(),
 		&ToolRenderContext{Cwd: "/tmp/proj", DurationMs: &recorded})
 	if last := strings.TrimSpace(lastNonBlankRow(replayed.Render(80))); !strings.Contains(last, "Took 1.2s") {
-		t.Fatalf("replayed call's last row = %q, want the recorded time", last)
+		t.Fatalf("replayed last row = %q, want the recorded time", last)
 	}
 }

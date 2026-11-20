@@ -8111,5 +8111,16 @@ frame, from the same clock the shell keeps (start on execution, stop on the fina
 or error result, the tool's recorded `durationMs` winning over the clock for a
 replayed frame).
 
-Tests: `TestMcpResultShowsElapsedAndTook` (running, final and replayed),
+The clock lives under the arguments while the call runs and in the result once
+one arrives, so exactly one row shows it, and it repaints at the shell's cadence
+(`shellElapsedTick`, 100ms, D238) rather than the upstream one-second tick: the
+label prints tenths, so a one-second tick made the number jump a whole second at
+a time. An MCP server need not stream a partial result either, so the tool asks
+for animation frames from execution start to the final result instead of only
+while a partial result is present.
+
+Tests: `TestMcpResultShowsElapsedAndTook` (running without a result, a partial
+result keeping one clock row, final and replayed),
+`TestMcpRunningCallWithoutPartialsKeepsTicking` (no-result tick, no tick after
+the final result), `TestMcpToolTicksTheElapsedLabelAtTenths` and
 `TestMcpToolRenderUpstreamParity` (the extra rows are that line and nothing else).

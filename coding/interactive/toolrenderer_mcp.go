@@ -38,7 +38,18 @@ func mcpRenderers(label string) ToolRenderers {
 			}
 			text := toolTextComponent(context)
 			text.SetText(formatMcpCall(label, args, theme))
-			return text
+			// A running call shows its clock under the header: an MCP server need
+			// not stream partial results, so the result renderer (which carries the
+			// final `Took` line) may not run until the call ends, and the frame
+			// would sit without a time. The label recomputes at render time, so the
+			// animation tick moves it (D493).
+			if context == nil || !context.ExecutionStarted || context.HasResult {
+				return text
+			}
+			box := &tui.Container{}
+			box.AddChild(text)
+			box.AddChild(&shellElapsedComponent{state: state, theme: theme, partial: true})
+			return box
 		},
 		RenderResult: func(result *SortToolResultContent, options ToolRenderResultOptions, theme *Theme, context *ToolRenderContext) tui.Component {
 			state := shellCallStateFor(context)
@@ -68,6 +79,9 @@ func mcpRenderers(label string) ToolRenderers {
 			// D493: the call's elapsed/took line, as the shell and codemode
 			// renderers show it; the reference's MCP renderer omits it, so a long
 			// call gave no sign of how long it had been running.
+			// A result carries the clock while the call runs (a partial result, or the
+			// final one); a call with no result yet shows it under the header instead
+			// (see RenderCall), so exactly one clock row is on screen.
 			if state.startedAtMS != 0 || state.recordedMS != nil {
 				container.AddChild(&shellElapsedComponent{state: state, theme: theme, partial: options.IsPartial})
 			}

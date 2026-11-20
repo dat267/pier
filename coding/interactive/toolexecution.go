@@ -48,6 +48,10 @@ type ToolRenderContext struct {
 	Expanded     bool
 	ShowImages   bool
 	IsError      bool
+	// HasResult reports that the tool has produced a result, so a call renderer
+	// can tell a running call from a finished one without a duration (a running
+	// tool's clock lives in the call renderer, D493).
+	HasResult bool
 }
 
 // ToolRenderResultOptions configure a result renderer.
@@ -203,6 +207,7 @@ func (c *ToolExecutionComponent) renderContext(lastComponent tui.Component) *Too
 		IsPartial:        c.isPartial,
 		Expanded:         c.expanded,
 		ShowImages:       c.showImages,
+		HasResult:        c.result != nil,
 		IsError:          c.result != nil && c.result.IsError,
 	}
 }
@@ -380,18 +385,27 @@ func (c *ToolExecutionComponent) RenderVersion() (uint64, bool) {
 
 func (c *ToolExecutionComponent) ChangedFrom() (int, bool) { return c.frames.ChangedFrom() }
 
-// AnimationFrame keeps a running tool repainting, so the shell elapsed label
-// ticks. It is reported at the tool level: the animation walk finds the tool as
-// a direct chat child, so it does not depend on descending through the result
-// wrappers (content box, mouse region) to reach the elapsed component. A shell
-// tool ticks at shellElapsedTick (100ms, D238); every other running tool keeps
-// the upstream 1s tick.
+// AnimationFrame keeps a running tool repainting, so the elapsed label ticks.
+// It is reported at the tool level: the animation walk finds the tool as a
+// direct chat child, so it does not depend on descending through the result
+// wrappers (content box, mouse region) to reach the elapsed component. A tool
+// whose frame prints tenths (shell and MCP, D238, D493) ticks at
+// shellElapsedTick (100ms); every other running tool keeps the upstream 1s tick.
 func (c *ToolExecutionComponent) AnimationFrame(now time.Time) (bool, time.Duration) {
-	if !c.executionStarted || !c.isPartial {
+	if !c.executionStarted {
 		return false, 0
 	}
-	if isShellTool(c.toolName) {
-		return true, shellElapsedTick
+	// A tool whose frame prints the clock ticks until its final result, even
+	// without a partial update: an MCP server need not stream one, and the label
+	// must keep moving anyway.
+	if usesElapsedTenths(c.toolName) {
+		if c.result == nil || c.isPartial {
+			return true, shellElapsedTick
+		}
+		return false, 0
+	}
+	if !c.isPartial {
+		return false, 0
 	}
 	return true, time.Second
 }

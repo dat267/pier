@@ -91,3 +91,50 @@ func TestRunningBashToolElapsedLabelUpdatesAcrossPaints(t *testing.T) {
 		t.Fatalf("REPRODUCED: the elapsed label is byte-identical across repaints, so a silent call's label stays frozen while the loop keeps painting:\n%s", second)
 	}
 }
+
+// TestMcpToolTicksTheElapsedLabelAtTenths pins the MCP frame's clock to the
+// shell's cadence (D238): its elapsed label prints tenths via formatDuration, so
+// a one-second tick made the number jump a whole second at a time and the call
+// looked frozen between them.
+func TestMcpToolTicksTheElapsedLabelAtTenths(t *testing.T) {
+	InitTheme("dark", false)
+	mcp := mcpRenderers("fs/read_file")
+	tool := NewToolExecutionComponent("mcp__fs__read_file", "call-1",
+		map[string]any{"path": "/tmp/a"}, ToolExecutionOptions{}, &mcp, nil, "/tmp")
+	tool.MarkExecutionStarted()
+	tool.SetArgsComplete()
+	tool.UpdateResult(textResult("ok"), true)
+	if needs, delay := tool.AnimationFrame(time.Now()); !needs || delay != shellElapsedTick {
+		t.Fatalf("MCP running tick = (%v, %s), want (true, %s)", needs, delay, shellElapsedTick)
+	}
+
+	// A running tool without the tenths label keeps the upstream one-second tick.
+	read := WithBuiltInRenderers("read", nil)
+	other := NewToolExecutionComponent("read", "call-2",
+		map[string]any{"path": "/tmp/a"}, ToolExecutionOptions{}, read, nil, "/tmp")
+	other.MarkExecutionStarted()
+	other.UpdateResult(textResult("ok"), true)
+	if needs, delay := other.AnimationFrame(time.Now()); !needs || delay != time.Second {
+		t.Fatalf("read running tick = (%v, %s), want (true, 1s)", needs, delay)
+	}
+}
+
+// TestMcpRunningCallWithoutPartialsKeepsTicking is the reported case: an MCP
+// server that streams no partial results still has to show a moving clock, so
+// the tool asks for animation frames from execution start to the final result,
+// not only while a partial result is present.
+func TestMcpRunningCallWithoutPartialsKeepsTicking(t *testing.T) {
+	InitTheme("dark", false)
+	renderers := mcpRenderers("fs/read_file")
+	tool := NewToolExecutionComponent("mcp__fs__read_file", "call-1",
+		map[string]any{"path": "/tmp/a"}, ToolExecutionOptions{}, &renderers, nil, "/tmp")
+	tool.MarkExecutionStarted()
+	tool.SetArgsComplete()
+	if needs, delay := tool.AnimationFrame(time.Now()); !needs || delay != shellElapsedTick {
+		t.Fatalf("no-result tick = (%v, %s), want (true, %s)", needs, delay, shellElapsedTick)
+	}
+	tool.UpdateResult(textResult("ok"), false)
+	if needs, _ := tool.AnimationFrame(time.Now()); needs {
+		t.Fatal("a finished MCP call still asks for animation frames")
+	}
+}

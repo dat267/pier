@@ -510,8 +510,14 @@ var powershellRenderers = CreateShellRenderers("PS>")
 // (D251). The rest of the frame is the shell tool's.
 var manualShellRenderers = CreateShellRenderers("!")
 
-// isShellTool reports whether a tool name uses the shell renderers, whose
-// elapsed label ticks at shellElapsedTick (D238).
+// isShellTool reports whether a tool name uses the shell renderers.
 func isShellTool(name string) bool { return name == "bash" || name == "powershell" }
+
+// usesElapsedTenths reports whether a tool's frame prints the elapsed label with
+// tenths of a second, so the loop must repaint it at shellElapsedTick (D238). The
+// shell renderers and the MCP frame (D493) both do.
+func usesElapsedTenths(name string) bool {
+	return isShellTool(name) || strings.HasPrefix(name, "mcp__")
+}
 
 // --- write ------------------------------------------------------------------
