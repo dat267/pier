@@ -105,8 +105,10 @@ func TestMcpToolResultFramesLimitVisualLines(t *testing.T) {
 	if got := renderMcpResult(t, full, false, theme); !strings.Contains(got, "Full output: /tmp/pi-mcp-abc.txt") {
 		t.Errorf("collapsed result without the saved path:\n%s", got)
 	}
-	if got := renderMcpResult(t, full, true, theme); strings.Contains(got, "Full output:") {
-		t.Errorf("expanded result repeated the saved path:\n%s", got)
+	// The card stays in both states, as the shell renderer's does: the kept text
+	// is still truncated when it is expanded.
+	if got := renderMcpResult(t, full, true, theme); !strings.Contains(got, "[Full output: /tmp/pi-mcp-abc.txt]") {
+		t.Errorf("expanded result dropped the saved path:\n%s", got)
 	}
 
 	// An error keeps the error color and an empty result adds nothing.
@@ -418,5 +420,49 @@ func TestMcpResultShowsElapsedAndTook(t *testing.T) {
 		&ToolRenderContext{Cwd: "/tmp/proj", DurationMs: &recorded})
 	if last := strings.TrimSpace(lastNonBlankRow(replayed.Render(80))); !strings.Contains(last, "Took 1.2s") {
 		t.Fatalf("replayed last row = %q, want the recorded time", last)
+	}
+}
+
+// TestMcpTruncatedResultShowsTheShellWarningCard pins the truncation notice:
+// the model-facing text opens with Codex's prose header ("Warning: truncated
+// output ...", `limitMcpContent`), which the frame printed as ordinary output.
+// The shell renderer shows the same facts as one bracketed warning line
+// (core/tools/renderers/bash.ts:70-86), and an MCP frame now reads the same way.
+func TestMcpTruncatedResultShowsTheShellWarningCard(t *testing.T) {
+	theme := newRendererTestTheme(t)
+	text := "Warning: truncated output (original token count: 5000)\n" +
+		"Total output lines: 120\n\nfirst\nsecond\nthird\n\n[Full output: /tmp/pier/full.txt (read it with offset/limit)]"
+	result := &SortToolResultContent{
+		Content: []ToolResultContent{{Type: "text", Text: text}},
+		Details: json.RawMessage(`{"server":"fs","tool":"read","fullOutputPath":"/tmp/pier/full.txt"}`),
+	}
+	for _, expanded := range []bool{false, true} {
+		got := renderMcpResult(t, result, expanded, theme)
+		if strings.Contains(got, "Warning: truncated output") || strings.Contains(got, "read it with offset/limit") {
+			t.Errorf("expanded=%v kept the prose header:\n%s", expanded, got)
+		}
+		if !strings.Contains(got, "[Full output: /tmp/pier/full.txt") {
+			t.Errorf("expanded=%v missing the full-output warning:\n%s", expanded, got)
+		}
+		if !strings.Contains(got, "Truncated: showing 3 of 120 lines") {
+			t.Errorf("expanded=%v missing the truncation count:\n%s", expanded, got)
+		}
+		if strings.Count(got, "Full output:") != 1 {
+			t.Errorf("expanded=%v repeats the path:\n%s", expanded, got)
+		}
+		for _, body := range []string{"first", "second", "third"} {
+			if !strings.Contains(got, body) {
+				t.Errorf("expanded=%v dropped %q:\n%s", expanded, body, got)
+			}
+		}
+	}
+	// The card is the shell's: one bracketed line in the warning color.
+	renderers := mcpRenderers("docs/search")
+	lines := renderers.RenderResult(result, ToolRenderResultOptions{}, theme,
+		&ToolRenderContext{Cwd: "/tmp/proj"}).Render(120)
+	joined := strings.Join(lines, "\n")
+	want := theme.Fg("warning", "[Full output: /tmp/pier/full.txt. Truncated: showing 3 of 120 lines]")
+	if !strings.Contains(joined, want) {
+		t.Errorf("warning card is not one line in the warning color:\n%q", joined)
 	}
 }

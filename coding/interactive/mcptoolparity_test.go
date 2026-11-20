@@ -139,11 +139,14 @@ func TestMcpToolRenderUpstreamParity(t *testing.T) {
 	}
 }
 
-// withoutHintRows drops the expand-hint rows, which D397 moves above the preview.
+// withoutHintRows drops the rows that deliberately differ from the reference: the
+// expand hint, which D397 moves above the preview, and the full-output row, which
+// D495 renders as the shell's warning card instead of a muted line.
 func withoutHintRows(rows []string) []string {
 	out := make([]string, 0, len(rows))
 	for _, row := range rows {
-		if strings.Contains(paritySGR.ReplaceAllString(row, ""), "more lines,") {
+		plain := paritySGR.ReplaceAllString(row, "")
+		if strings.Contains(plain, "more lines,") || strings.Contains(plain, "Full output: ") {
 			continue
 		}
 		out = append(out, row)

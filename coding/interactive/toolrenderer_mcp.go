@@ -13,6 +13,7 @@ package interactive
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -67,14 +68,27 @@ func mcpRenderers(label string) ToolRenderers {
 				return container
 			}
 			isError := context != nil && context.IsError
+			// A truncated result opens with Codex's prose header
+			// (`coding.LimitMcpContent`), which reads as tool output. The shell
+			// renderer reports the same facts as one bracketed warning line
+			// (core/tools/renderers/bash.ts), so an MCP frame does too: the body
+			// loses the header and the path, and the card carries both.
+			warnings := []string{}
+			if path := mcpFullOutputPath(result); path != "" {
+				warnings = append(warnings, "Full output: "+path)
+			}
+			if body, totalLines, shownLines, ok := mcpTruncationHeader(output); ok {
+				output = body
+				warnings = append(warnings, "Truncated: showing "+itoa(shownLines)+" of "+itoa(totalLines)+" lines")
+			}
 			container.AddChild(tui.NewSpacer(1))
-			container.AddChild(&mcpResultComponent{
-				text: output, isError: isError, theme: theme, expanded: options.Expanded,
-			})
-			if !options.Expanded {
-				if path := mcpFullOutputPath(result); path != "" {
-					container.AddChild(tui.NewText(theme.Fg("muted", "Full output: "+path), 0, 0, nil))
-				}
+			if output != "" {
+				container.AddChild(&mcpResultComponent{
+					text: output, isError: isError, theme: theme, expanded: options.Expanded,
+				})
+			}
+			if len(warnings) > 0 {
+				container.AddChild(tui.NewText("\n"+theme.Fg("warning", "["+strings.Join(warnings, ". ")+"]"), 0, 0, nil))
 			}
 			// D493: the call's elapsed/took line, as the shell and codemode
 			// renderers show it; the reference's MCP renderer omits it, so a long
@@ -260,6 +274,46 @@ func (c *mcpResultComponent) Render(width int) []string {
 }
 
 func (c *mcpResultComponent) Invalidate() { c.hasCache = false }
+
+// mcpTruncationHeader splits the header `coding.LimitMcpContent` writes in front
+// of a truncated result: the prose warning, the original token count and the
+// total line count, then a blank line, then the kept text and the bracketed path
+// line. It returns the body, the total line count of the original output, how
+// many lines the body kept, and ok=false when the text carries no header.
+func mcpTruncationHeader(output string) (body string, totalLines int, shownLines int, ok bool) {
+	const prefix = "Warning: truncated output (original token count: "
+	if !strings.HasPrefix(output, prefix) {
+		return output, 0, 0, false
+	}
+	rest := output[len(prefix):]
+	firstBreak := strings.IndexByte(rest, '\n')
+	if firstBreak < 0 {
+		return output, 0, 0, false
+	}
+	linesLine, afterLines, found := strings.Cut(rest[firstBreak+1:], "\n")
+	if !found || !strings.HasPrefix(linesLine, "Total output lines: ") {
+		return output, 0, 0, false
+	}
+	total, err := strconv.Atoi(strings.TrimSpace(strings.TrimPrefix(linesLine, "Total output lines: ")))
+	if err != nil {
+		return output, 0, 0, false
+	}
+	body = strings.TrimLeft(afterLines, "\n")
+	// The trailing `[Full output: path ...]` line belongs to the card.
+	if index := strings.LastIndex(body, "\n\n[Full output: "); index >= 0 &&
+		strings.HasSuffix(body, "]") {
+		body = body[:index]
+	} else if index := strings.LastIndex(body, "[Could not save the full output: "); index >= 0 &&
+		strings.HasPrefix(body[index:], "[Could not save") {
+		body = strings.TrimRight(body[:index], "\n")
+	}
+	body = strings.TrimSpace(body)
+	shown := 0
+	if body != "" {
+		shown = len(strings.Split(body, "\n"))
+	}
+	return body, total, shown, true
+}
 
 // mcpFullOutputPath reads the saved full-output path from an MCP result's
 // details ({server, tool, fullOutputPath}).

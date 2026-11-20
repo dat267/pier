@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D494)
+# Deliberate divergences from pi (D1–D495)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8124,3 +8124,26 @@ result keeping one clock row, final and replayed),
 `TestMcpRunningCallWithoutPartialsKeepsTicking` (no-result tick, no tick after
 the final result), `TestMcpToolTicksTheElapsedLabelAtTenths` and
 `TestMcpToolRenderUpstreamParity` (the extra rows are that line and nothing else).
+
+### D495
+
+**A truncated MCP result reports it in the shell's warning card.**
+
+`coding.LimitMcpContent` cuts a long MCP result the way Codex does: the text
+starts with `Warning: truncated output (original token count: N)`, then
+`Total output lines: M`, then the kept text, and ends with a
+`[Full output: <path> (read it with offset/limit)]` line. The reference's MCP
+renderer (`extensions/mcp/tools.ts` `createMcpToolRenderers`) prints that text as
+ordinary tool output and, while collapsed, a muted `Full output: <path>` row
+below it, so the frame read as a wall of prose rather than a warning.
+
+Pier prints the shell's card instead (`core/tools/renderers/bash.ts:70-86`): the
+header and the trailing path line leave the body, and one blank line then a
+warning-colored `[Full output: <path>. Truncated: showing N of M lines]` closes
+the frame, in both states, since the kept text is still truncated when expanded.
+A result whose text carries no header keeps the card's path-only form.
+
+Tests: `TestMcpTruncatedResultShowsTheShellWarningCard` (header and path line
+removed, the count, one path, the warning color, both states, each kept line
+still shown) and `TestMcpToolRenderUpstreamParity` (the card's rows are the only
+ones skipped).
