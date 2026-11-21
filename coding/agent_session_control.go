@@ -1201,26 +1201,26 @@ type UserMessageFork struct {
 	Text    string
 }
 
-// GetUserMessagesForForking lists the user messages with their entry ids.
+// GetUserMessagesForForking lists the user messages with their entry ids
+// (upstream agent-session.ts getUserMessagesForForking). Only the user entries
+// are read: an index-only load would otherwise hydrate the whole session for a
+// selector that shows a handful of turns.
 func (s *AgentSession) GetUserMessagesForForking() []UserMessageFork {
 	var out []UserMessageFork
-	for _, entry := range s.Sessions.GetEntries() {
-		if entry.Type != "message" {
-			continue
-		}
+	_ = s.Sessions.eachMessageEntryWithRole(string(ai.RoleUser), func(entry SessionEntry) error {
 		message, err := ai.UnmarshalMessage(entry.Message)
 		if err != nil {
-			continue
+			return nil
 		}
 		user, ok := message.(*ai.UserMessage)
 		if !ok {
-			continue
+			return nil
 		}
-		text := contentTextJoinedNoSep(user.Content)
-		if text != "" {
+		if text := contentTextJoinedNoSep(user.Content); text != "" {
 			out = append(out, UserMessageFork{EntryID: entry.ID, Text: text})
 		}
-	}
+		return nil
+	})
 	return out
 }
 

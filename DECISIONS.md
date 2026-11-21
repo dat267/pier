@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D499)
+# Deliberate divergences from pi (D1–D500)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8249,3 +8249,29 @@ unpaired surrogate, so the rune conversion yields U+FFFD and the export keeps
 going, which is also what the JSON paths do with a lone surrogate escape (D253).
 
 Test: `TestDecodeHtmlEntityMatchesParseInt`.
+
+### D500
+
+**The fork selector reads the user entries instead of the whole session.**
+
+`getUserMessagesForForking` (`packages/coding-agent/src/core/agent-session.ts`)
+calls `sessionManager.getEntries()` and then keeps the entries whose role is
+`user`. Upstream can afford that: every entry object holds its parsed message for
+the life of the process. Pier loads a session index-only (D488), so `GetEntries`
+hydrates every entry's line back from the file, and the fork selector paid a full
+session read plus a structural decode of every message to list a handful of
+turns.
+
+`SessionManager.eachMessageEntryWithRole` filters on the role the loader recorded
+while scanning (`role`/`roleKnown`) and hydrates only the entries that can match,
+falling back to a hydration when the scanner could not read the role. On the
+248MB session (72,114 entries, 529 user messages) the call drops from a 630ms
+`GetEntries` plus a 3.7s decode to 73ms; a 400-message synthetic session with
+8KB bodies allocates 13MB before and a few KB after.
+
+The same shape applies to any reader that wants one entry type; this row covers
+the one the fork selector calls, and `EachEntry` remains the streaming path for
+callers that really need every entry.
+
+Test: `TestUserMessagesForForkingReadsOnlyUserEntries` (the list and its texts,
+then a second call's allocation budget).

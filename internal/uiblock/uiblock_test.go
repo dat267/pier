@@ -59,7 +59,8 @@ var acceptedFindings = map[string]string{
 	"wiring field ShowStatusIndicator":     "the status indicator disposes the previous footer data provider, which only closes a channel",
 	"wiring field RenderInitialMessages":   "the transcript build runs on the loop after a rebind by ownership (D442); A494 measured the whole rebind at 63.6 ms for 12,500 turns after the projection moved to the worker, and this walk is part of that remainder",
 	"(*github.com/dat267/pier/coding/interactive.ToolExecutionComponent).Render|cpu-bound": "Render only rebuilds while arguments are still streaming (argsPending), so this decode runs per streamed delta, not per frame",
-	"wiring field OnThinkingToggle": "a settings toggle clones the settings map before the queued write; the write itself runs on the settings persist queue, and the clone is one small struct",
+	"wiring field OnThinkingToggle":        "a settings toggle clones the settings map before the queued write; the write itself runs on the settings persist queue, and the clone is one small struct",
+	"wiring field OnSessionFork|cpu-bound": "the fork selector lists user turns synchronously by ownership (upstream getUserMessagesForForking is synchronous too); D500 made it decode only the entries the loader marked as user turns, so the walk is proportional to the 529 user messages of the 248MB session (73ms) instead of a 630ms GetEntries plus a 3.7s decode of all 72k entries",
 }
 
 // TestNothingBlockingReachableFromTheUIGoroutine holds the invariant that no

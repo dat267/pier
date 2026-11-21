@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -694,5 +696,72 @@ func TestGetLastAssistantTextSkipsUnfinishedTurns(t *testing.T) {
 	session.replaceAgentMessagesFromSession()
 	if got := session.GetLastAssistantText(); got != "" {
 		t.Fatalf("last assistant text = %q, want empty for a normally-ended empty reply", got)
+	}
+}
+
+// D500: the reference builds the list from getEntries and keeps the user
+// entries; an index-only load (D488) makes that hydrate the whole session, so
+// pier filters on the scanned role and hydrates only the matches.
+//
+// Reference: pi v1.6.0 core/agent-session.ts getUserMessagesForForking builds its
+// list from `this.sessionManager.getEntries()` and calls `contentText` only for
+// the entries whose role is user. pier's index-only load (D488) makes
+// getEntries hydrate every entry's line, so the fork selector read the whole
+// session file and decoded every message just to find a handful of user turns.
+func TestUserMessagesForForkingReadsOnlyUserEntries(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "session.jsonl")
+	// 400 non-user messages with 8KB bodies, so a full hydration is measurable,
+	// and 20 user messages among them.
+	lines := []string{`{"type":"session","version":3,"id":"s1","timestamp":"t0","cwd":"/tmp"}`}
+	parent := ""
+	body := strings.Repeat("x", 8000)
+	var want []string
+	for i := 0; i < 400; i++ {
+		id := "m" + strconv.Itoa(i)
+		parentField := ""
+		if parent != "" {
+			parentField = `,"parentId":"` + parent + `"`
+		}
+		role, content := "toolResult", `[{"type":"text","text":"`+body+`"}]`
+		if i%20 == 0 {
+			role = "user"
+			content = `"hello ` + strconv.Itoa(i) + `"`
+			want = append(want, "hello "+strconv.Itoa(i))
+		}
+		lines = append(lines, `{"type":"message","id":"`+id+`","timestamp":"t"`+parentField+
+			`,"message":{"role":"`+role+`","content":`+content+`}}`)
+		parent = id
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manager, err := OpenSession(path, dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer manager.Close()
+	session := &AgentSession{Sessions: manager}
+
+	forks := session.GetUserMessagesForForking()
+	if len(forks) != len(want) {
+		t.Fatalf("forks = %d, want %d", len(forks), len(want))
+	}
+	for i, fork := range forks {
+		if fork.Text != want[i] {
+			t.Fatalf("fork %d = %q, want %q", i, fork.Text, want[i])
+		}
+	}
+
+	// A second call reads no bodies at all: the entries it ignores are never
+	// hydrated. The load's background cache scan is still allocating, so drain
+	// it first rather than measuring its churn.
+	manager.waitForCacheSeed()
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	_ = session.GetUserMessagesForForking()
+	runtime.ReadMemStats(&after)
+	if allocated := after.TotalAlloc - before.TotalAlloc; allocated > 256*1024 {
+		t.Fatalf("second call allocated %d bytes, want the user messages only", allocated)
 	}
 }

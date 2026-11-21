@@ -1240,6 +1240,42 @@ func (m *SessionManager) EachEntry(yield func(SessionEntry) error) error {
 	return nil
 }
 
+// eachMessageEntryWithRole yields the message entries whose JSON role is role,
+// in file order, hydrating only those. A caller that wants one role must not
+// pay for every other entry's line: on an index-only load (D488) a full
+// snapshot reads the whole session file back from disk.
+func (m *SessionManager) eachMessageEntryWithRole(role string, yield func(SessionEntry) error) error {
+	m.mu.Lock()
+	pointers := make([]*SessionEntry, 0, 8)
+	for _, fileEntry := range m.fileEntries {
+		entry := fileEntry.Entry
+		if entry == nil || entry.Type != "message" {
+			continue
+		}
+		// The scanner records the role while loading, so the common case needs
+		// no payload. An entry it could not read is hydrated to answer, which is
+		// still one entry rather than the session.
+		if entry.roleKnown && entry.role != role {
+			continue
+		}
+		pointers = append(pointers, entry)
+	}
+	// The memo is captured with the entry list: a reset or fork replaces it,
+	// and a retired memo only answers for the entries it was captured with.
+	cache := m.messages
+	m.mu.Unlock()
+	for _, pointer := range pointers {
+		entry := m.HydrateEntry(*pointer)
+		if projectedRole(&entry, cache) != role {
+			continue
+		}
+		if err := yield(entry); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // GetEntries returns all entries (excluding the header).
 func (m *SessionManager) GetEntries() []SessionEntry {
 	m.mu.Lock()
