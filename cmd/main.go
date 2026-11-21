@@ -88,9 +88,6 @@ func Execute() {
 	}
 	applyOfflineMode(&coding.Args{Offline: offlineFlag})
 	appName := executableName()
-	// The default system prompt introduces the harness under the invoked name
-	// (the sentence is the reference's, with this binary's name).
-	coding.AgentName = appName
 	// `pi auth check|print-api-key|print-bearer-token` runs before anything
 	// else, off the raw argv (upstream runAuthCommand at the top of main).
 	if handled, code := coding.RunAuthCommandNamed(appName, os.Args[1:], os.Stdout, os.Stderr); handled {

@@ -18,11 +18,6 @@ import (
 var systemPromptSectionName = regexp.MustCompile(`^[a-z][a-z0-9_-]*$`)
 
 // BuildSystemPromptOptions are the prompt inputs.
-// AgentName is the harness name the default preamble announces: the reference's
-// sentence with this binary's name in place of "pi". main sets it from the
-// invoked executable, so a renamed binary introduces itself under its own name.
-var AgentName = "pier"
-
 type BuildSystemPromptOptions struct {
 	// CustomPrompt replaces the default prefix.
 	CustomPrompt string
@@ -207,8 +202,7 @@ func buildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 	if input.CustomPrompt != "" {
 		promptSections["preamble"] = input.CustomPrompt
 	} else {
-		promptSections["preamble"] = "You are a coding assistant running inside " + AgentName +
-			", a coding agent harness. Help users inspect files, run commands, and modify code."
+		promptSections["preamble"] = "You are a coding assistant running inside pi, a coding agent harness. Help users inspect files, run commands, and modify code."
 		var visibleTools []string
 		for _, name := range declaredTools {
 			if toolSnippets[name] != "" {

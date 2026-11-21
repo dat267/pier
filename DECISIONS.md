@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D499)
+# Deliberate divergences from pi (D1–D498)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -3184,9 +3184,10 @@ the tools whose diff preview and byte-exact replacement it can show.
 
 It did not change behaviour: models still wrote files with `cat > file <<EOF`
 (the longer version that listed redirection, heredocs, `tee`, `sed -i`, `perl`,
-`python` and inline `node` scripts did no better), so D499 removed it and the
-rules are the reference's again. `TestSystemPromptHasNoShellWriteRule` keeps any
-such line from creeping back.
+`python` and inline `node` scripts did no better), so the rule is gone and the
+prompt is the reference's own text, preamble and rules included.
+`TestSystemPromptHasNoShellWriteRule` keeps any such line from creeping back and
+`TestSystemPromptPreambleMatchesTheReference` pins the preamble word for word.
 
 ### D287
 
@@ -8235,29 +8236,3 @@ session toggle.
 Tests: `TestToolToggleWithoutATurnSurvivesResume` (disable, dispose, resume, then
 re-enable and resume again), `TestSessionToolToggle` (the toggle and the prompt's
 tool section).
-
-### D499
-
-**The system prompt is the reference's, word for word, except the harness name.**
-
-`core/system-prompt.ts` composes the default prompt: the preamble "You are a
-coding assistant running inside pi, a coding agent harness. Help users inspect
-files, run commands, and modify code.", the tools list, `buildRules`, and the
-`project_context`, `skills` and `cwd` sections. The port had drifted in two
-places: it announced `pi` in a binary called `pier`, and it added a file-write
-rule upstream does not have (D286). Both are gone.
-
-The preamble is now the reference's sentence with `AgentName` in place of `pi`;
-`main` sets `AgentName` from the invoked executable, so a renamed or copied
-binary introduces itself under its own name and nothing else in the sentence
-changes. The rules are `buildRules` exactly: the shell-usage line upstream
-derives from the selected tools, the per-tool contributions, "Be concise in your
-responses" and "Show file paths clearly when working with files", in that order,
-with duplicates dropped.
-
-`TestSystemPromptPreambleNamesTheHarness` pins the sentence and rejects the
-reference's name in it; `TestSystemPromptHasNoShellWriteRule` rejects a port-only
-file-write rule for six tool sets; `TestSystemPromptSectionsMatchUpstream`
-compares every section against the generated golden after substituting the name.
-The `docs` section stays omitted for D176's reason (the paths it names do not
-exist in a pier install).

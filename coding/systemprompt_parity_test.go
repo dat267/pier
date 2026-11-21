@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -83,18 +82,6 @@ func TestSystemPromptSectionsMatchUpstream(t *testing.T) {
 			}
 			// D176: the port omits upstream's docs section.
 			delete(sections, "docs")
-			// D499: the only difference left is the harness name the preamble
-			// announces, so check this port's sentence and then substitute the
-			// reference's name for the comparison.
-			// A custom prompt replaces the preamble, so only the default one
-			// carries the name.
-			if test.options.CustomPrompt == "" {
-				preamble, ok := sections["preamble"]
-				if !ok || !strings.HasPrefix(preamble, "You are a coding assistant running inside "+AgentName+",") {
-					t.Errorf("preamble = %q, want the reference sentence with %q", preamble, AgentName)
-				}
-				sections["preamble"] = strings.Replace(preamble, "running inside "+AgentName, "running inside pi", 1)
-			}
 			if !reflect.DeepEqual(map[string]string(sections), want.Sections) {
 				t.Errorf("sections = %#v, want %#v", sections, want.Sections)
 			}

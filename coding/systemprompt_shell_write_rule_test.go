@@ -1,6 +1,6 @@
 package coding
 
-// D499: the rules are the reference's, with no port-only instruction. The port
+// D286 (retired): the rules are the reference's, with no port-only instruction. The port
 // used to add "Change files with the edit and write tools, never the shell."
 // (D286); it did not change model behavior and it broke byte parity with
 // `core/system-prompt.ts` `buildRules`, so the prompt now carries only upstream's
@@ -44,18 +44,12 @@ func TestSystemPromptHasNoShellWriteRule(t *testing.T) {
 	}
 }
 
-// TestSystemPromptPreambleNamesTheHarness pins the one deliberate difference from
-// the reference's sentence: the harness name it announces.
-func TestSystemPromptPreambleNamesTheHarness(t *testing.T) {
-	previous := AgentName
-	AgentName = "pier"
-	t.Cleanup(func() { AgentName = previous })
+// TestSystemPromptPreambleMatchesTheReference pins the preamble: the reference's
+// sentence, verbatim, including the harness name it announces.
+func TestSystemPromptPreambleMatchesTheReference(t *testing.T) {
 	prompt := shellWriteRulePrompt(t, "read", "bash")
-	want := "You are a coding assistant running inside pier, a coding agent harness. Help users inspect files, run commands, and modify code."
+	want := "You are a coding assistant running inside pi, a coding agent harness. Help users inspect files, run commands, and modify code."
 	if !strings.Contains(prompt, want) {
-		t.Fatalf("preamble is not the reference sentence with the harness name:\n%s", prompt)
-	}
-	if strings.Contains(prompt, "running inside pi,") {
-		t.Fatalf("preamble still announces the reference's name:\n%s", prompt)
+		t.Fatalf("preamble is not the reference's sentence:\n%s", prompt)
 	}
 }

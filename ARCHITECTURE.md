@@ -1,6 +1,6 @@
 # Architecture and performance
 
-The design reference for `pier`, a Go port of pi v1.5.2 (`b4afdddf`): runtime
+The design reference for `pier`, a Go port of pi v1.6.0 (`faac5858`): runtime
 structure, performance evidence, the stdio RPC contract, and the lock inventory,
 which is the source of truth for retained and retired UI locks. Deliberate
 differences from pi are D-rows in [DECISIONS.md](DECISIONS.md), contributor
