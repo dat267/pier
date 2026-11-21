@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D504)
+# Deliberate divergences from pi (D1–D505)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8337,3 +8337,19 @@ through its caller, which is the same contract as its other failure branches
 The file's header comment recorded the difference; no D-row and no test did.
 
 Test: `TestExternalEditorReportsADeletedPromptFile`.
+
+### D505
+
+**A first append into an empty document re-lexes instead of indexing the tail.**
+
+`Document.Update` (pier-only: upstream re-renders the whole message on every
+delta) reuses the stable prefix and re-lexes the tail from the first unstable
+block's byte offset. `FirstUnstable` clamps its start to 0, so a previous source
+that lexed to *no* block (the empty string, or only blank lines) made `Update`
+read `d.blocks[0].Start` on an empty slice: the first non-empty delta of a
+streamed message panicked. A document with no blocks now takes the full-lex path,
+which is what the `d.blocks == nil` branch above it already did for a fresh
+document.
+
+Test: `TestDocumentUpdateFromAnEmptyLexDoesNotPanic` (empty then `"a"`, asserting
+the result equals a fresh lex).

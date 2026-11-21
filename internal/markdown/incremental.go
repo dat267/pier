@@ -37,6 +37,15 @@ func (d *Document) Update(src string) []*Block {
 	if src == d.src {
 		return d.blocks
 	}
+	if len(d.blocks) == 0 {
+		// The previous source lexed to nothing (it was empty or only blank
+		// space), so there is no block to reuse or offset from. FirstUnstable
+		// clamps to 0, which would index an empty slice.
+		d.src = src
+		d.blocks, d.defs = LexDefinitions(src, 0, nil)
+		d.parsed = len(d.blocks)
+		return d.blocks
+	}
 	start := FirstUnstable(d.blocks, d.src)
 	offset := d.blocks[start].Start
 	reused := append([]*Block(nil), d.blocks[:start]...)

@@ -302,3 +302,24 @@ func raws(blocks []*Block) []string {
 	}
 	return out
 }
+
+// D505: Update on a document whose previous source lexed to no block panicked.
+// `FirstUnstable` starts at len(blocks)-1, so an empty block list yields start 0
+// (it clamps negatives), and Update then read `d.blocks[start].Start` on an empty
+// slice. Reachable the moment a stream starts: the first non-empty delta after an
+// already-empty update hits it.
+func TestDocumentUpdateFromAnEmptyLexDoesNotPanic(t *testing.T) {
+	doc := NewDocument()
+	if blocks := doc.Update(""); len(blocks) != 0 {
+		t.Fatalf("empty source lexed to %d blocks", len(blocks))
+	}
+	blocks := doc.Update("a")
+	if len(blocks) != 1 {
+		t.Fatalf("blocks = %d, want 1", len(blocks))
+	}
+	// And the result equals a fresh lex of the same source.
+	fresh := NewDocument().Update("a")
+	if len(fresh) != 1 || fresh[0].Kind != blocks[0].Kind || fresh[0].Raw != blocks[0].Raw {
+		t.Fatalf("incremental %+v != fresh %+v", blocks[0], fresh[0])
+	}
+}
