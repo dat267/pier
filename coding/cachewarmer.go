@@ -105,12 +105,26 @@ func IsCacheWarmingReplayable(model *ai.Model, options *ai.SimpleStreamOptions) 
 // lastCacheWarmingPromptTokens is the prompt size of the most recent real
 // request on the branch, as reported by the provider.
 func lastCacheWarmingPromptTokens(entries []SessionEntry) int64 {
+	return lastCacheWarmingPromptTokensWith(entries, nil)
+}
+
+// lastCacheWarmingPromptTokensWith is the same walk with a payload reader, so a
+// lazily loaded entry's usage is read from its line.
+func lastCacheWarmingPromptTokensWith(entries []SessionEntry, payloads *payloadReader) int64 {
 	for index := len(entries) - 1; index >= 0; index-- {
-		entry := &entries[index]
+		entry := entries[index]
 		if entry.Type != "message" {
 			continue
 		}
-		message, err := ai.UnmarshalMessage(entry.Message)
+		// An index-only load carries no bytes (D488), so the usage of the last
+		// assistant message is read from its line into a private copy.
+		raw := entry.Message
+		if entry.lazy && payloads != nil {
+			if hydrated, err := payloads.hydrateCopy(&entry); err == nil {
+				raw = hydrated.Message
+			}
+		}
+		message, err := ai.UnmarshalMessage(raw)
 		if err != nil {
 			continue
 		}
@@ -601,7 +615,7 @@ func (w *CacheWarmer) evaluate(run *cacheWarmingRun) CacheWarmingDecision {
 	phase := run.phase
 	w.mu.Unlock()
 	model := run.request.Model
-	promptTokens := lastCacheWarmingPromptTokens(w.SessionManager.GetBranch(""))
+	promptTokens := w.SessionManager.lastCacheWarmingPromptTokensOnBranch()
 	cacheHitCost := cacheWarmingPrice(model, 0, 0, promptTokens, 0)
 	cacheMissCost := cacheWarmingPrice(model, promptTokens, 0, 0, 0)
 	if model.Cost.CacheWrite > 0 {

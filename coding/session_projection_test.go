@@ -541,3 +541,31 @@ func TestResumedSessionKeepsTheAssistantModel(t *testing.T) {
 		t.Fatalf("ContextSignature = %+v, want acme/m1", signature)
 	}
 }
+
+// Reference: pi v1.6.0 core/cache-warmer.ts lastPromptTokens reads the last
+// assistant message's usage from the branch, and upstream keeps parsed messages
+// in memory. `GetBranch` hands out index-only shells after a file load (D488),
+// so an assistant entry's Message is empty: the walk skipped every message and
+// returned 0, which makes `evaluate` report no economics and stops cache warming
+// on a resumed session.
+func TestCacheWarmingPromptTokensReadsTheLoadedBranch(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "session.jsonl")
+	lines := []string{
+		`{"type":"session","version":3,"id":"s1","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/tmp"}`,
+		`{"type":"message","id":"m1","parentId":null,"timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"user","content":"hi","timestamp":1}}`,
+		`{"type":"message","id":"m2","parentId":"m1","timestamp":"2026-01-01T00:00:02.000Z","message":{"role":"assistant","content":[{"type":"text","text":"yo"}],"api":"openai-completions","provider":"acme","model":"m1","usage":{"input":900,"output":10,"cacheRead":100,"cacheWrite":0,"totalTokens":1010},"stopReason":"stop","timestamp":2}}`,
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manager, err := OpenSession(path, dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(manager.Close)
+	// 900 input + 100 cacheRead + 0 cacheWrite
+	if got := manager.lastCacheWarmingPromptTokensOnBranch(); got != 1000 {
+		t.Fatalf("lastCacheWarmingPromptTokensOnBranch = %d, want 1000", got)
+	}
+}

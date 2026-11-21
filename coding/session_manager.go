@@ -1218,6 +1218,17 @@ func (m *SessionManager) GetCompactionCount() int {
 	return count
 }
 
+// lastCacheWarmingPromptTokensOnBranch is lastCacheWarmingPromptTokens over the
+// current branch, with the session's payload reader so a loaded entry's usage is
+// read from its line.
+func (m *SessionManager) lastCacheWarmingPromptTokensOnBranch() int64 {
+	branch := m.GetBranch("")
+	m.mu.Lock()
+	payloads := m.payloads
+	m.mu.Unlock()
+	return lastCacheWarmingPromptTokensWith(branch, payloads)
+}
+
 // EachEntry yields the session's entries in file order, hydrating one at a
 // time. A caller that only streams the entries (an export) never holds the
 // whole snapshot, which on a long session is the file's own payload (D488).
