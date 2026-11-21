@@ -1009,6 +1009,12 @@ func (t *Renderer) CompositeOverlays(lines []string, termWidth int, termHeight i
 			if VisibleWidth(overlayLine) > item.w {
 				overlayLine = SliceByColumn(overlayLine, 0, item.w, true)
 			}
+			// A terminal image cannot be composited into: its row would be a hole or
+			// a corrupted escape. Hide the image under the overlay and let the frame
+			// restore it once the overlay closes (tui-alt-screen.ts, v1.6.0, #11584).
+			if IsImageLine(result[idx]) {
+				result[idx] = strings.Repeat(" ", termWidth)
+			}
 			result[idx] = CompositeTuiLine(result[idx], overlayLine, item.col, item.w, termWidth)
 		}
 	}

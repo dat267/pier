@@ -743,3 +743,30 @@ func TestLaidOutTranscriptRepaintsThroughTheStack(t *testing.T) {
 		t.Fatalf("the laid-out frame kept the stale line, so the tick never painted:\n%s", second)
 	}
 }
+
+// An overlay drawn over a terminal image hides that row and shows its own text:
+// compositing into the escape sequence left a hole where the image was
+// (tui-alt-screen.ts overlay drawing, v1.6.0, #11584). The row is restored when
+// the overlay closes, because the frame then carries the image line again.
+func TestCompositeOverlaysHidesImagesUnderneath(t *testing.T) {
+	terminal := &fakeTerminal{width: 20, height: 6}
+	renderer := NewRenderer(terminal)
+	image := EncodeKitty("AAAA", KittyEncodeOptions{Columns: 4, Rows: 4, ImageID: 99})
+	renderer.ShowOverlay(&staticComponent{lines: []string{"OVR1"}},
+		&OverlayOptions{Width: new(8), Anchor: OverlayAnchorTopLeft})
+
+	out := renderer.CompositeOverlays([]string{image}, 20, 6)
+	if IsImageLine(out[0]) {
+		t.Fatalf("row 0 still carries the image under the overlay: %q", out[0])
+	}
+	if !strings.Contains(out[0], "OVR1") {
+		t.Fatalf("row 0 = %q, want the overlay text", out[0])
+	}
+
+	// Without the overlay the frame renders the image again.
+	renderer.HideOverlay()
+	restored := renderer.CompositeOverlays([]string{image}, 20, 6)
+	if !IsImageLine(restored[0]) {
+		t.Fatalf("row 0 = %q, want the image restored", restored[0])
+	}
+}
