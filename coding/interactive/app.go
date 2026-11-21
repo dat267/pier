@@ -628,9 +628,9 @@ func NewApp(options AppOptions) *App {
 		},
 		RecordCrash:             func(kind string, err error) bool { return app.trust.RecordCrash(kind, err) },
 		CrashReportInstructions: func() string { return app.trust.CrashReportInstructions() },
-		// Upstream prints "To resume this session: pi --session …" after the
-		// interactive shutdown (interactive-mode.ts shutdown(), chalk.dim
-		// prefix).
+		// Upstream prints "To resume this session:" and the command on its own
+		// line after the interactive shutdown (interactive-mode.ts shutdown(),
+		// chalk.dim prefix), so a triple-click selects the command (#12237).
 		ResumeCommand: func() string {
 			stdoutIsTTY := options.StdoutIsTTY
 			if stdoutIsTTY == nil {
@@ -640,7 +640,7 @@ func NewApp(options AppOptions) *App {
 			return FormatResumeCommand(app.sessionMgr, options.AppName, *stdoutIsTTY)
 		},
 		FormatResumeMessage: func(command string) string {
-			return "\x1b[2mTo resume this session:\x1b[22m " + command
+			return "\x1b[2mTo resume this session:\x1b[22m\n" + command
 		},
 		FullscreenExitOutput: func() string { return options.Settings.GetFullscreenExitOutput() },
 		StopMode:             func(output string) { app.StopMode(output) },

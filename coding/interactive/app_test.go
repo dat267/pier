@@ -292,3 +292,13 @@ func (h *inputDeadlineHost) NextInputFlushDeadline() (time.Time, bool) {
 func (h *inputDeadlineHost) FlushPendingInput() {
 	h.input = append(h.input, h.buffer.FlushExpired(time.Now())...)
 }
+
+// The composed app's resume message is the reference's two-line shape.
+func TestAppResumeMessageIsTwoLines(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	message := app.lifecycle.options.FormatResumeMessage("pier --session abc")
+	if !strings.HasSuffix(message, "\npier --session abc") {
+		t.Fatalf("resume message = %q, want the command on its own line", message)
+	}
+}

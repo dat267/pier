@@ -813,64 +813,6 @@ var DefaultProviderOrder = []ai.ProviderId{
 	"xiaomi-token-plan-cn", "xiaomi-token-plan-ams", "xiaomi-token-plan-sgp",
 }
 
-// RestoreModelResult is the session model restore result.
-type RestoreModelResult struct {
-	Model           *ai.Model
-	FallbackMessage string
-}
-
-// RestoreModelFromSession restores a session's model, falling back to available
-// models (upstream restoreModelFromSession).
-func RestoreModelFromSession(
-	savedProvider, savedModelID string,
-	currentModel *ai.Model,
-	modelRuntime ModelRuntimeSource,
-) RestoreModelResult {
-	restoredModel := modelRuntime.GetModel(savedProvider, savedModelID)
-	hasAuth := restoredModel != nil && modelRuntime.HasConfiguredAuth(restoredModel.Provider)
-	if restoredModel != nil && hasAuth {
-		return RestoreModelResult{Model: restoredModel}
-	}
-
-	reason := "model no longer exists"
-	if restoredModel != nil {
-		reason = "no auth configured"
-	}
-	if currentModel != nil {
-		return RestoreModelResult{
-			Model: currentModel,
-			FallbackMessage: fmt.Sprintf("Could not restore model %s/%s (%s). Using %s/%s.",
-				savedProvider, savedModelID, reason, currentModel.Provider, currentModel.ID),
-		}
-	}
-
-	availableModels := modelRuntime.GetAvailableSnapshot()
-	if len(availableModels) > 0 {
-		var fallbackModel *ai.Model
-		for _, providerID := range DefaultProviderOrder {
-			defaultID := DefaultModelPerProvider[providerID]
-			for _, candidate := range availableModels {
-				if candidate.Provider == providerID && candidate.ID == defaultID {
-					fallbackModel = candidate
-					break
-				}
-			}
-			if fallbackModel != nil {
-				break
-			}
-		}
-		if fallbackModel == nil {
-			fallbackModel = availableModels[0]
-		}
-		return RestoreModelResult{
-			Model: fallbackModel,
-			FallbackMessage: fmt.Sprintf("Could not restore model %s/%s (%s). Using %s/%s.",
-				savedProvider, savedModelID, reason, fallbackModel.Provider, fallbackModel.ID),
-		}
-	}
-	return RestoreModelResult{}
-}
-
 // ModelRuntimeSource is the model-runtime surface the resolver needs (the Go
 // subset of upstream ModelRuntime, satisfied by *ModelRuntime).
 type ModelRuntimeSource interface {

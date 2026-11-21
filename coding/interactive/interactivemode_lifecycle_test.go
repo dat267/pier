@@ -172,7 +172,7 @@ func TestLifecycleShutdown(t *testing.T) {
 	writes := []string{}
 	lifecycle.options.WriteOut = func(text string) { writes = append(writes, text) }
 	lifecycle.options.ResumeCommand = func() string { return "pi --session abc" }
-	lifecycle.options.FormatResumeMessage = func(command string) string { return "To resume this session: " + command }
+	lifecycle.options.FormatResumeMessage = func(command string) string { return "To resume this session:\n" + command }
 	disposed := 0
 	lifecycle.options.DisposeRuntime = func() { disposed++ }
 	synced := 0
@@ -182,7 +182,8 @@ func TestLifecycleShutdown(t *testing.T) {
 	if len(*exits) != 1 || (*exits)[0] != 0 {
 		t.Fatalf("exits = %v", *exits)
 	}
-	if len(writes) != 1 || !strings.Contains(writes[0], "To resume this session: pi --session abc") {
+	// The command sits on its own line, so a triple-click selects it (#12237).
+	if len(writes) != 1 || !strings.Contains(writes[0], "To resume this session:\npi --session abc") {
 		t.Fatalf("writes = %v", writes)
 	}
 	if disposed != 1 || synced != 1 {

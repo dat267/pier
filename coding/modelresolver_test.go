@@ -558,44 +558,6 @@ func TestFindInitialModelSelection(t *testing.T) {
 	}
 }
 
-func TestRestoreModelFromSession(t *testing.T) {
-	saved := testModel("claude-sonnet-4-5", "Claude Sonnet 4.5", "anthropic", true)
-	runtime := &fakeRuntime{models: []*ai.Model{saved}, configuredProviders: map[string]bool{"anthropic": true}}
-	result := RestoreModelFromSession("anthropic", "claude-sonnet-4-5", nil, runtime)
-	if result.Model == nil || result.FallbackMessage != "" {
-		t.Fatalf("restored = %+v", result)
-	}
-
-	// A missing model falls back to the current model with a message.
-	missing := &fakeRuntime{configuredProviders: map[string]bool{"anthropic": true}}
-	current := testModel("gpt-4o", "GPT-4o", "openai", false)
-	result = RestoreModelFromSession("anthropic", "gone", current, missing)
-	if result.Model != current ||
-		result.FallbackMessage != "Could not restore model anthropic/gone (model no longer exists). Using openai/gpt-4o." {
-		t.Fatalf("fallback to current = %+v", result)
-	}
-
-	// Without a current model the first available model is used.
-	result = RestoreModelFromSession("anthropic", "gone", nil, &fakeRuntime{available: []*ai.Model{current}})
-	if result.Model != current ||
-		result.FallbackMessage != "Could not restore model anthropic/gone (model no longer exists). Using openai/gpt-4o." {
-		t.Fatalf("fallback to available = %+v", result)
-	}
-
-	// An unauthenticated restored model reports the auth reason.
-	noAuth := &fakeRuntime{models: []*ai.Model{saved}}
-	result = RestoreModelFromSession("anthropic", "claude-sonnet-4-5", current, noAuth)
-	if result.Model != current || !strings.Contains(result.FallbackMessage, "(no auth configured)") {
-		t.Fatalf("no auth = %+v", result)
-	}
-
-	// Nothing available at all.
-	result = RestoreModelFromSession("anthropic", "gone", nil, &fakeRuntime{available: []*ai.Model{}})
-	if result.Model != nil || result.FallbackMessage != "" {
-		t.Fatalf("nothing = %+v", result)
-	}
-}
-
 func TestMatchGlobSemantics(t *testing.T) {
 	cases := []struct {
 		pattern string
