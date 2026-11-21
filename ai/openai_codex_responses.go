@@ -333,6 +333,22 @@ func ResolveCodexServiceTier(responseTier *string, requestTier string) string {
 	return requestTier
 }
 
+// codexConfigurationUpdateEffort returns the effort to send in
+// configuration_update items for a Codex request, or "" when the level goes in
+// reasoning.effort (getConfigurationUpdateEffort, v1.6.0).
+func codexConfigurationUpdateEffort(model *Model, options *OpenAICodexResponsesOptions, compat ResolvedOpenAIResponsesCompat) string {
+	if !compat.SupportsMidConvoEffort || options == nil || options.ReasoningEffort == "" {
+		return ""
+	}
+	if mapped, ok := model.ThinkingLevelMap[options.ReasoningEffort]; ok {
+		if mapped == nil {
+			return ""
+		}
+		return *mapped
+	}
+	return string(options.ReasoningEffort)
+}
+
 // BuildCodexRequestBody renders the Codex request body (upstream
 // buildRequestBody).
 func BuildCodexRequestBody(model *Model, context TranscriptContext, options *OpenAICodexResponsesOptions, cacheSessionID string, grammarToolInputProperties map[string]string) (map[string]any, error) {
@@ -354,12 +370,12 @@ func BuildCodexRequestBody(model *Model, context TranscriptContext, options *Ope
 			GetDeclaredTools(context.Messages), compat.SupportsOpenAIGrammarTools)
 	}
 	messages, err := ConvertResponsesMessages(model, context, &ConvertResponsesMessagesOptions{
-		IncludeSystemPrompt:            boolPtrFalse(),
 		GrammarToolInputProperties:     grammarToolInputProperties,
 		SupportsMidConvoSystemMessages: compat.SupportsMidConvoSystemMessages,
 		SupportsAdditionalTools:        supportsAdditionalTools,
 		SupportsToolSearch:             supportsToolSearch,
 		ToolCallProviders:              codexToolCallProviders,
+		ConfigurationUpdateEffort:      codexConfigurationUpdateEffort(model, options, compat),
 		ToolOptions: &ConvertResponsesToolsOptions{
 			StrictNull:                 true,
 			SupportsStrictMode:         supportsStrictMode,
@@ -370,12 +386,6 @@ func BuildCodexRequestBody(model *Model, context TranscriptContext, options *Ope
 		return nil, err
 	}
 
-	instructions := "You are a helpful assistant."
-	if initialSystemMessage := GetInitialSystemMessage(context.Messages); initialSystemMessage != nil {
-		if text := GetSystemMessageText(initialSystemMessage); text != "" {
-			instructions = text
-		}
-	}
 	verbosity := options.TextVerbosity
 	if verbosity == "" {
 		verbosity = "low"
@@ -388,12 +398,17 @@ func BuildCodexRequestBody(model *Model, context TranscriptContext, options *Ope
 		"model":               model.ID,
 		"store":               false,
 		"stream":              true,
-		"instructions":        instructions,
 		"input":               messages,
 		"text":                map[string]any{"verbosity": verbosity},
 		"include":             []any{"reasoning.encrypted_content"},
 		"tool_choice":         toolChoice,
 		"parallel_tool_calls": true,
+	}
+	// The Responses API rejects max_output_tokens below 16
+	// (openai-codex-responses.ts, v1.6.0, #6265).
+	const minOutputTokens = 16
+	if options.MaxTokens != nil && compat.SupportsMaxOutputTokens {
+		body["max_output_tokens"] = max(*options.MaxTokens, minOutputTokens)
 	}
 	if cacheSessionID != "" {
 		body["prompt_cache_key"] = cacheSessionID
@@ -417,6 +432,17 @@ func BuildCodexRequestBody(model *Model, context TranscriptContext, options *Ope
 	}
 
 	if options.ReasoningEffort != "" {
+		// A level that travels in configuration_update items keeps the request
+		// effort fixed, so the earlier input never changes and the prompt cache
+		// survives a thinking-level switch (v1.6.0, fcc33744b).
+		if codexConfigurationUpdateEffort(model, options, compat) != "" {
+			summary := options.ReasoningSummary
+			if summary == "" {
+				summary = "auto"
+			}
+			body["reasoning"] = map[string]any{"effort": configurationUpdateRequestEffort, "summary": summary}
+			return body, nil
+		}
 		effort := string(options.ReasoningEffort)
 		if options.ReasoningEffort == ThinkOff {
 			if mapped, ok := model.ThinkingLevelMap[ThinkOff]; ok {
@@ -453,8 +479,8 @@ func BuildCodexRequestBody(model *Model, context TranscriptContext, options *Ope
 // codexRequestBodyOrder is the member order of upstream buildRequestBody's
 // object literal followed by its later assignments.
 var codexRequestBodyOrder = []string{
-	"model", "store", "stream", "instructions", "input", "text", "include", "prompt_cache_key",
-	"tool_choice", "parallel_tool_calls", "temperature", "service_tier", "tools", "reasoning",
+	"model", "store", "stream", "input", "text", "include", "prompt_cache_key",
+	"max_output_tokens", "tool_choice", "parallel_tool_calls", "temperature", "service_tier", "tools", "reasoning",
 }
 
 // marshalCodexRequestBody writes the body in upstream's member order; a Go
@@ -610,6 +636,12 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 			API: APIOpenAICodexResponses, Provider: model.Provider, Model: model.ID,
 			Usage: Usage{Cost: UsageCost{}}, StopReason: StopPending,
 			Timestamp: time.Now().UnixMilli(),
+		}
+		// The level that travels in configuration_update items is recorded on the
+		// message, so the next request can replay the change instead of rewriting
+		// reasoning.effort (v1.6.0, fcc33744b).
+		if effort := codexConfigurationUpdateEffort(model, options, compat); effort != "" {
+			output.ProviderThinkingLevel = &effort
 		}
 		fail := func(err error) {
 			for index, block := range output.Content {

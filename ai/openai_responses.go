@@ -303,7 +303,6 @@ func ParseTextSignature(signature string) *TextSignatureV1 {
 
 // ConvertResponsesMessagesOptions tune message conversion.
 type ConvertResponsesMessagesOptions struct {
-	IncludeSystemPrompt *bool
 	// ToolCallProviders overrides the dialects that accept the
 	// `call_id|item_id` tool-call id form.
 	ToolCallProviders              map[string]bool
@@ -525,8 +524,6 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 		return nil
 	}
 
-	includeInitialSystemMessage := options.IncludeSystemPrompt == nil || *options.IncludeSystemPrompt
-
 	pushConfigurationUpdate := func(effort string) {
 		messages = append(messages, orderKeys(map[string]any{
 			"type":      "configuration_update",
@@ -552,7 +549,12 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 					return nil, err
 				}
 			}
-			if !isLeadingSystemMessage || includeInitialSystemMessage {
+			{
+				// The leading system message is an input item too: from GPT-6.2 on
+				// the backend appends a top-level `instructions` after `input`, so
+				// every new turn changed the prompt before the system prompt and it
+				// was never served from the prompt cache (openai-codex-responses.ts,
+				// v1.6.0, #12273).
 				parts := []string{RenderSystemMessageUpdate(m)}
 				if isLeadingSystemMessage {
 					parts[0] = GetSystemMessageText(m)

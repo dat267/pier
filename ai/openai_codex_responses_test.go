@@ -278,16 +278,22 @@ func TestBuildCodexRequestBody(t *testing.T) {
 	if body["model"] != "gpt-5.5" || body["store"] != false || body["stream"] != true {
 		t.Fatalf("body = %#v", body)
 	}
-	// The system message becomes instructions rather than an input message.
-	if body["instructions"] != "be brief" {
-		t.Fatalf("instructions = %#v", body["instructions"])
+	// The system message is a leading developer item, not top-level instructions:
+	// from GPT-6.2 on the backend appends `instructions` after `input`, so every
+	// new turn changed the prompt before the system prompt and it was never served
+	// from the prompt cache (v1.6.0, #12273).
+	if _, ok := body["instructions"]; ok {
+		t.Fatalf("body still carries instructions: %#v", body["instructions"])
 	}
 	rawInput, _ := body["input"].(json.RawMessage)
 	var messages []map[string]any
 	if err := json.Unmarshal(rawInput, &messages); err != nil {
 		t.Fatalf("input = %#v err = %v", body["input"], err)
 	}
-	if len(messages) != 1 || messages[0]["role"] != "user" {
+	if len(messages) != 2 || messages[0]["role"] != "developer" || messages[0]["content"] != "be brief" {
+		t.Fatalf("input = %#v", messages)
+	}
+	if messages[1]["role"] != "user" {
 		t.Fatalf("input = %#v", messages)
 	}
 	if text, _ := body["text"].(map[string]any); text["verbosity"] != "low" {
@@ -312,8 +318,8 @@ func TestBuildCodexRequestBody(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if body["instructions"] != "You are a helpful assistant." {
-		t.Fatalf("instructions = %#v", body["instructions"])
+	if _, ok := body["instructions"]; ok {
+		t.Fatalf("body without a system message still carries instructions")
 	}
 	if body["prompt_cache_key"] != nil {
 		t.Fatalf("body = %#v", body["prompt_cache_key"])
@@ -557,7 +563,9 @@ func TestCodexRequestBodyOrderAndNullStrict(t *testing.T) {
 	options.Env = ProviderEnv{}
 	options.OnPayload = func(p json.RawMessage, _ *Model) json.RawMessage { payload = string(p); return nil }
 	_, _ = StreamOpenAICodexResponsesSimple(model, TranscriptContext{Messages: messages}, options).Result(ctxpkg.Background())
-	want := `{"model":"gpt-5.5","store":false,"stream":true,"instructions":"You are a helpful assistant.","input":[{"role":"user","content":[{"type":"input_text","text":"hi"}]},{"type":"additional_tools","role":"developer","tools":[{"type":"function","name":"lookup","description":"Look up","parameters":{"type":"object","properties":{"z":{"type":"string"}},"required":["z"]},"strict":null}]}],"text":{"verbosity":"low"},"include":["reasoning.encrypted_content"],"prompt_cache_key":"s1","tool_choice":"auto","parallel_tool_calls":true,"temperature":0,"reasoning":{"effort":"none"}}`
+	// The system prompt is a leading developer item, not top-level instructions
+	// (v1.6.0, #12273).
+	want := `{"model":"gpt-5.5","store":false,"stream":true,"input":[{"role":"user","content":[{"type":"input_text","text":"hi"}]},{"type":"additional_tools","role":"developer","tools":[{"type":"function","name":"lookup","description":"Look up","parameters":{"type":"object","properties":{"z":{"type":"string"}},"required":["z"]},"strict":null}]}],"text":{"verbosity":"low"},"include":["reasoning.encrypted_content"],"prompt_cache_key":"s1","tool_choice":"auto","parallel_tool_calls":true,"temperature":0,"reasoning":{"effort":"none"}}`
 	if payload != want {
 		t.Fatalf("payload =\n%s\nwant\n%s", payload, want)
 	}
@@ -647,5 +655,63 @@ func TestCodexRetryDelayZeroMaxDisablesTheCap(t *testing.T) {
 	}
 	if got, err := ValidateCodexRetryDelay(time.Second, &OpenAICodexResponsesOptions{MaxRetryDelayMs: &limit}); err != nil || got != time.Second {
 		t.Fatalf("delay at the cap = %v, %v; want accepted", got, err)
+	}
+}
+
+// With mid-conversation effort support, a thinking level travels in
+// configuration_update items and the request keeps a fixed effort, so a level
+// change no longer rewrites reasoning.effort and the prompt cache survives
+// (openai-codex-responses.ts getConfigurationUpdateEffort, v1.6.0, fcc33744b).
+func TestCodexSendsMidConvoEffortAsConfigurationUpdates(t *testing.T) {
+	model := codexModel("")
+	on := true
+	model.Compat = &ModelCompat{OpenAIResponses: &OpenAIResponsesCompat{SupportsMidConvoEffort: &on}}
+	context := TranscriptContext{Messages: []Message{
+		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+		&AssistantMessage{API: APIOpenAICodexResponses, Provider: model.Provider, Model: model.ID,
+			Content: ContentList{TextContent{Text: "hello"}}, StopReason: StopStop, Timestamp: 2,
+			ProviderThinkingLevel: new(string("/high"))},
+		&UserMessage{Content: StringOrBlocks{Text: "again"}, Timestamp: 3},
+	}}
+	body, err := BuildCodexRequestBody(model, context, &OpenAICodexResponsesOptions{ReasoningEffort: ThinkHigh}, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reasoning, _ := body["reasoning"].(map[string]any)
+	if reasoning["effort"] != configurationUpdateRequestEffort {
+		t.Fatalf("reasoning = %#v, want the fixed request effort", reasoning)
+	}
+	rawInput, _ := body["input"].(json.RawMessage)
+	if !strings.Contains(string(rawInput), `"configuration_update"`) {
+		t.Fatalf("input has no configuration_update item: %s", rawInput)
+	}
+
+	// Without the compat flag the level goes back into reasoning.effort.
+	plain := codexModel("")
+	body, err = BuildCodexRequestBody(plain, context, &OpenAICodexResponsesOptions{ReasoningEffort: ThinkHigh}, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reasoning, _ = body["reasoning"].(map[string]any)
+	if reasoning["effort"] != "high" {
+		t.Fatalf("reasoning = %#v, want the requested level", reasoning)
+	}
+}
+
+// The Responses API rejects max_output_tokens below 16, so a smaller request is
+// clamped (openai-codex-responses.ts, v1.6.0, #6265).
+func TestCodexClampsMaxOutputTokens(t *testing.T) {
+	model := codexModel("")
+	context := TranscriptContext{Messages: []Message{
+		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+	}}
+	body, err := BuildCodexRequestBody(model, context, &OpenAICodexResponsesOptions{
+		StreamOptions: StreamOptions{MaxTokens: new(4)},
+	}, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if body["max_output_tokens"] != 16 {
+		t.Fatalf("max_output_tokens = %#v, want the 16 floor", body["max_output_tokens"])
 	}
 }

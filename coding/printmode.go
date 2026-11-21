@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"runtime"
@@ -72,6 +73,23 @@ func (p *printStdout) flush() error {
 	return p.err
 }
 
+// reportPrintDiagnostics writes the session's prompt, skill and model-fallback
+// diagnostics to w in the CLI format.
+func reportPrintDiagnostics(session *AgentSession, w io.Writer) {
+	diagnostics := append(session.PromptDiagnostics(), session.SkillDiagnostics()...)
+	if fallback := session.ModelFallbackMessage(); fallback != "" {
+		diagnostics = append(diagnostics, ResourceDiagnostic{Type: "warning", Message: fallback})
+	}
+	seen := map[string]bool{}
+	for _, diagnostic := range diagnostics {
+		if diagnostic.Message == "" || seen[diagnostic.Message] {
+			continue
+		}
+		seen[diagnostic.Message] = true
+		_, _ = fmt.Fprintln(w, FormatCLIDiagnostic(CLIDiagnostic{Type: diagnostic.Type, Message: diagnostic.Message}))
+	}
+}
+
 // RunPrintMode returns 0 on success, 1 on prompt/persistence failure,
 // or 129/143 on SIGHUP/SIGTERM. The caller exits only after its queues drain.
 func RunPrintMode(session *AgentSession, sessions *SessionManager, options PrintModeOptions) (exitCode int) {
@@ -124,6 +142,11 @@ func RunPrintMode(session *AgentSession, sessions *SessionManager, options Print
 			exitCode = signalCode
 		}
 	}()
+
+	// Diagnostics go to stderr in every mode, before the first turn: the model
+	// fallback and the resource warnings belong to the user's log, never to
+	// stdout, which carries the answer (print-mode.ts, v1.6.0, #12115/#12234).
+	reportPrintDiagnostics(session, os.Stderr)
 
 	if options.Mode == CLIModeJSON {
 		if header := sessions.GetHeader(); header != nil {

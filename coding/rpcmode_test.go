@@ -451,3 +451,20 @@ func TestRPCReportsTheModelFallbackOnStderr(t *testing.T) {
 		t.Fatalf("stderr = %q, want the model fallback", stderr.String())
 	}
 }
+
+// Print mode reports the same diagnostics as RPC: the model fallback and the
+// resource warnings go to stderr, so stdout stays the answer
+// (print-mode.ts, v1.6.0, #12234).
+func TestPrintModeReportsDiagnosticsOnStderr(t *testing.T) {
+	var buffer bytes.Buffer
+	session := &AgentSession{
+		promptDiagnostics:    []ResourceDiagnostic{{Type: "warning", Message: "prompt conflict"}},
+		modelFallbackMessage: "Could not restore model nope/nope.",
+	}
+	reportPrintDiagnostics(session, &buffer)
+	for _, want := range []string{"prompt conflict", "Could not restore model nope/nope."} {
+		if !strings.Contains(buffer.String(), want) {
+			t.Fatalf("stderr = %q, want %q", buffer.String(), want)
+		}
+	}
+}
