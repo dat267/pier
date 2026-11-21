@@ -1,10 +1,10 @@
 package coding
 
-// D286: pier asks the model not to modify files through the shell. Upstream
-// pi v1.4.0 (4a080252) tool contributions never say this; jcode's system prompt
-// carries the same instruction ("Edit files with `edit`, `replace`,
-// `apply_patch`, or `write`, not sed, perl, or Python scripts in bash",
-// crates/jcode-base/src/prompt/system_prompt.md).
+// D499: the rules are the reference's, with no port-only instruction. The port
+// used to add "Change files with the edit and write tools, never the shell."
+// (D286); it did not change model behavior and it broke byte parity with
+// `core/system-prompt.ts` `buildRules`, so the prompt now carries only upstream's
+// lines. These tests keep the rule from creeping back.
 
 import (
 	"strings"
@@ -25,36 +25,37 @@ func shellWriteRulePrompt(t *testing.T, tools ...string) string {
 	return prompt
 }
 
-func TestSystemPromptForbidsShellFileWrites(t *testing.T) {
-	prompt := shellWriteRulePrompt(t, "read", "bash", "edit", "write")
-	want := "- Change files with the edit and write tools, never the shell."
-	if !strings.Contains(prompt, want) {
-		t.Fatalf("prompt is missing the shell-write rule %q:\n%s", want, prompt)
-	}
-}
-
-func TestSystemPromptShellWriteRuleNamesTheAvailableFileTool(t *testing.T) {
-	for _, test := range []struct {
-		tools []string
-		want  string
-	}{
-		{[]string{"bash", "edit"}, "Change files with the edit tool, never the shell."},
-		{[]string{"bash", "write"}, "Change files with the write tool, never the shell."},
-		{[]string{"write", "powershell"}, "Change files with the write tool, never the shell."},
+// TestSystemPromptHasNoShellWriteRule pins the alignment: with any tool set, the
+// rules are the reference's lines, and no port-only instruction about the shell
+// appears.
+func TestSystemPromptHasNoShellWriteRule(t *testing.T) {
+	for _, tools := range [][]string{
+		{"read", "bash", "edit", "write"},
+		{"bash", "edit"},
+		{"bash", "write"},
+		{"write", "powershell"},
+		{"read", "bash"},
+		{"read", "bash", "grep", "find", "ls"},
 	} {
-		prompt := shellWriteRulePrompt(t, test.tools...)
-		if !strings.Contains(prompt, test.want) {
-			t.Fatalf("tools %v: prompt is missing %q:\n%s", test.tools, test.want, prompt)
+		prompt := shellWriteRulePrompt(t, tools...)
+		if strings.Contains(prompt, "never the shell") || strings.Contains(prompt, "Change files with") {
+			t.Fatalf("tools %v: the prompt carries a port-only file-write rule:\n%s", tools, prompt)
 		}
 	}
 }
 
-// Without edit or write the rule would name a tool the model does not have.
-func TestSystemPromptShellWriteRuleNeedsAFileTool(t *testing.T) {
-	for _, tools := range [][]string{{"read", "bash"}, {"read", "bash", "grep", "find", "ls"}} {
-		prompt := shellWriteRulePrompt(t, tools...)
-		if strings.Contains(prompt, "Change files with") {
-			t.Fatalf("tools %v: rule must not appear without edit/write:\n%s", tools, prompt)
-		}
+// TestSystemPromptPreambleNamesTheHarness pins the one deliberate difference from
+// the reference's sentence: the harness name it announces.
+func TestSystemPromptPreambleNamesTheHarness(t *testing.T) {
+	previous := AgentName
+	AgentName = "pier"
+	t.Cleanup(func() { AgentName = previous })
+	prompt := shellWriteRulePrompt(t, "read", "bash")
+	want := "You are a coding assistant running inside pier, a coding agent harness. Help users inspect files, run commands, and modify code."
+	if !strings.Contains(prompt, want) {
+		t.Fatalf("preamble is not the reference sentence with the harness name:\n%s", prompt)
+	}
+	if strings.Contains(prompt, "running inside pi,") {
+		t.Fatalf("preamble still announces the reference's name:\n%s", prompt)
 	}
 }

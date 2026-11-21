@@ -153,9 +153,9 @@ func PrepareEditArguments(input json.RawMessage) json.RawMessage {
 		NewText *string `json:"newText"`
 	}{}
 
-	// Some models (Opus 4.6, GLM-5.1) send edits as a JSON string instead of
-	// an array; others send a single edit object instead of a one-element
-	// array.
+	// A provider may send edits as a JSON string instead of an array, or a
+	// single edit object instead of a one-element array; both shapes are
+	// normalized so the call is not rejected for spelling.
 	if raw, ok := args["edits"]; ok {
 		var asString string
 		if jsonUnmarshalStrictTool(raw, &asString) == nil {
