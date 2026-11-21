@@ -3,6 +3,7 @@ package interactive
 import (
 	"encoding/base64"
 	"encoding/json"
+	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"os"
@@ -735,5 +736,77 @@ func TestExportTemplateDoesNotToggleOnLinkClicks(t *testing.T) {
 	}
 	if guarded := strings.Count(script, "event.target.closest('a')"); guarded < count {
 		t.Fatalf("%d of %d toggles ignore a link click", count-guarded, count)
+	}
+}
+
+// An MCP tool card is pre-rendered into the export: the page's template has no
+// branch for a custom tool, so without this it showed the raw arguments as JSON
+// (export-html/tool-renderer.ts createToolHtmlRenderer). The built-in tools still
+// stay with the template, which renders them itself.
+func TestExportPrerendersMcpToolCards(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+
+	dir := t.TempDir()
+	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: new(true)})
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic"}
+	agentSession, err := coding.NewAgentSession(&coding.SessionConfig{
+		Cwd: dir, Model: model,
+		StreamFn: func(*ai.Model, ai.TranscriptContext, *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatalf("session: %v", err)
+	}
+	agentSession.Sessions = manager
+	agentSession.AttachExtraTools([]agent.AgentTool{{
+		Name: "mcp__docs__search", Label: "docs/search", Description: "search",
+		Parameters: json.RawMessage(`{"type":"object"}`),
+	}})
+	manager.AppendMessage(&ai.AssistantMessage{Content: ai.ContentList{
+		ai.ToolCall{ID: "call-1", Name: "mcp__docs__search", Arguments: json.RawMessage(`{"uri":"file:///tmp/x"}`)},
+	}, StopReason: ai.StopToolUse})
+	manager.AppendMessage(&ai.ToolResultMessage{ToolCallID: "call-1", ToolName: "mcp__docs__search",
+		Content: ai.UserContentList{ai.TextContent{Text: "line one\nline two"}}})
+
+	session := &AppSession{AgentSession: agentSession}
+	output := filepath.Join(dir, "export.html")
+	if _, err := session.ExportSessionToHTML(output, "dark"); err != nil {
+		t.Fatalf("export: %v", err)
+	}
+	document, err := os.ReadFile(output)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	start := strings.Index(string(document), `<script id="session-data" type="application/json">`)
+	start += len(`<script id="session-data" type="application/json">`)
+	end := strings.Index(string(document[start:]), "</script>")
+	payload, err := base64.StdEncoding.DecodeString(string(document)[start : start+end])
+	if err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	var data struct {
+		RenderedTools map[string]struct {
+			CallHTML            string `json:"callHtml"`
+			ResultHTMLCollapsed string `json:"resultHtmlCollapsed"`
+			ResultHTMLExpanded  string `json:"resultHtmlExpanded"`
+		} `json:"renderedTools"`
+	}
+	if err := json.Unmarshal(payload, &data); err != nil {
+		t.Fatalf("payload json: %v", err)
+	}
+	tool, ok := data.RenderedTools["call-1"]
+	if !ok {
+		t.Fatalf("renderedTools = %v, want the MCP call", data.RenderedTools)
+	}
+	if !strings.Contains(tool.CallHTML, "docs/search") || !strings.Contains(tool.CallHTML, "file:///tmp/x") {
+		t.Fatalf("callHtml = %q, want the MCP header", tool.CallHTML)
+	}
+	if !strings.Contains(tool.ResultHTMLExpanded, "line one") {
+		t.Fatalf("resultHtmlExpanded = %q, want the rendered result", tool.ResultHTMLExpanded)
 	}
 }

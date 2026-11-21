@@ -712,6 +712,12 @@ func ExportSessionToHTML(session *coding.AgentSession, outputPath string, themeN
 	if themeName == "" {
 		themeName = CurrentThemeName()
 	}
+	// A tool whose card the page's template cannot draw (an MCP tool) is
+	// pre-rendered from the transcript's own renderer
+	// (export-html/tool-renderer.ts).
+	if theme := exportRenderTheme(); theme != nil {
+		data.RenderedTools = renderToolHTMLForExport(session, theme, session.Cwd)
+	}
 
 	outputPath = coding.NormalizePath(outputPath, coding.PathInputOptions{})
 	if outputPath == "" {
