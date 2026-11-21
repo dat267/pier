@@ -56,12 +56,13 @@ func (m *SessionManager) Projection() SessionContext {
 	// lock is released.
 	path := m.branchPointersLocked("")
 	cache := m.messages
+	payloads := m.payloads
 	m.mu.Unlock()
 
 	// Project outside the lock: decoding a large session takes tens of
 	// milliseconds, and holding m.mu for it parks every other reader (the
 	// footer reads the session per frame).
-	context := buildSessionContextFromPointers(path, cache)
+	context := buildSessionContextFromPointers(path, cache, payloads)
 	context.Messages = context.Messages[:len(context.Messages):len(context.Messages)]
 	context.Entries = context.Entries[:len(context.Entries):len(context.Entries)]
 
@@ -310,20 +311,21 @@ type ContextSignature struct {
 func (m *SessionManager) ContextSignature() ContextSignature {
 	m.mu.Lock()
 	branch := m.branchPointersLocked("")
+	payloads := m.payloads
 	m.mu.Unlock()
-	return contextSignatureFrom(branch)
+	return contextSignatureFrom(branch, payloads)
 }
 
 // contextSignatureFrom resolves the signature from an already-resolved path of
 // pointers, walking the compaction window without materializing it.
-func contextSignatureFrom(path []*SessionEntry) ContextSignature {
+func contextSignatureFrom(path []*SessionEntry, payloads *payloadReader) ContextSignature {
 	count := 0
 	walkCompactionWindow(path, nil, func(entry *SessionEntry) {
 		if contextEntryYieldsMessage(entry) {
 			count++
 		}
 	})
-	provider, modelID := contextModelRef(path)
+	provider, modelID := contextModelRef(path, payloads)
 	return ContextSignature{Provider: provider, ModelID: modelID, MessageCount: count}
 }
 
@@ -343,20 +345,31 @@ func contextEntryYieldsMessage(entry *SessionEntry) bool {
 // contextModelRef returns the model the context uses. getSessionContextSettings
 // scans the path forward and lets later entries win, so the answer is the last
 // model_change entry or assistant message.
-func contextModelRef(path []*SessionEntry) (provider string, modelID string) {
+func contextModelRef(path []*SessionEntry, payloads *payloadReader) (provider string, modelID string) {
 	for _, entry := range slices.Backward(path) {
 
 		switch entry.Type {
 		case "model_change":
 			return entry.Provider, entry.ModelID
 		case "message":
-			var message struct {
+			// An index-only load carries no bytes (D488); the assistant's model
+			// lives in its line, so it is read from there.
+			if entry.roleKnown && entry.role != "assistant" {
+				continue
+			}
+			message := entry.Message
+			if entry.lazy && payloads != nil {
+				if hydrated, err := payloads.hydrateCopy(entry); err == nil {
+					message = hydrated.Message
+				}
+			}
+			var decoded struct {
 				Role     string `json:"role"`
 				Provider string `json:"provider"`
 				Model    string `json:"model"`
 			}
-			if json.Unmarshal(entry.Message, &message) == nil && message.Role == "assistant" {
-				return message.Provider, message.Model
+			if json.Unmarshal(message, &decoded) == nil && decoded.Role == "assistant" {
+				return decoded.Provider, decoded.Model
 			}
 		}
 	}

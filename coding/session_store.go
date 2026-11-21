@@ -1333,7 +1333,12 @@ func buildSessionPath(entries []SessionEntry, leafID *string, byID map[string]*S
 
 // getSessionContextSettingsFromPointers resolves thinking level and model from
 // a path of pointers.
-func getSessionContextSettingsFromPointers(path []*SessionEntry) (thinkingLevel string, model *SessionModelRef) {
+//
+// A lazily loaded entry carries no message bytes (D488), so the assistant's
+// provider and model are read from its line here rather than from the empty
+// member: the model this context was written under is what /resume restores and
+// the footer prints, and an index-only load used to report none.
+func getSessionContextSettingsFromPointers(path []*SessionEntry, payloads *payloadReader) (thinkingLevel string, model *SessionModelRef) {
 	// Later entries win, so resolve both by scanning from the end and stopping
 	// at the first hit for each. Decoding every message entry to look for the
 	// last assistant (as the forward scan did) made a projection of a large
@@ -1352,12 +1357,23 @@ func getSessionContextSettingsFromPointers(path []*SessionEntry) (thinkingLevel 
 			case "model_change":
 				model = &SessionModelRef{Provider: entry.Provider, ModelID: entry.ModelID}
 			case "message":
+				// Only an assistant message names a model; the loader recorded the
+				// role while scanning, so the other roles skip the read.
+				if entry.roleKnown && entry.role != "assistant" {
+					continue
+				}
+				message := entry.Message
+				if entry.lazy && payloads != nil {
+					if hydrated, err := payloads.hydrateCopy(entry); err == nil {
+						message = hydrated.Message
+					}
+				}
 				var msg struct {
 					Role     string `json:"role"`
 					Provider string `json:"provider"`
 					Model    string `json:"model"`
 				}
-				if json.Unmarshal(entry.Message, &msg) == nil && msg.Role == "assistant" {
+				if json.Unmarshal(message, &msg) == nil && msg.Role == "assistant" {
 					model = &SessionModelRef{Provider: msg.Provider, ModelID: msg.Model}
 				}
 			}
@@ -1617,14 +1633,14 @@ func BuildSessionContext(entries []SessionEntry, leafID *string, byID map[string
 func buildSessionContext(entries []SessionEntry, leafID *string, byID map[string]*SessionEntry, cache *messageCache) SessionContext {
 	// One path walk: the settings scan and the compaction window both work on
 	// the resolved path instead of walking the tree again.
-	return buildSessionContextFromPointers(materializePointers(buildSessionPath(entries, leafID, byID)), cache)
+	return buildSessionContextFromPointers(materializePointers(buildSessionPath(entries, leafID, byID)), cache, nil)
 }
 
 // buildSessionContextFromPointers is buildSessionContext for a path of
 // pointers: it resolves settings and the window without copying the path, and
 // copies only the entries the projection hands out.
-func buildSessionContextFromPointers(path []*SessionEntry, cache *messageCache) SessionContext {
-	thinkingLevel, model := getSessionContextSettingsFromPointers(path)
+func buildSessionContextFromPointers(path []*SessionEntry, cache *messageCache, payloads *payloadReader) SessionContext {
+	thinkingLevel, model := getSessionContextSettingsFromPointers(path, payloads)
 	contextEntries := compactionWindowFromPointers(path, cache)
 	edits := contextEditsFromEntries(contextEntries)
 	messages := make([]ai.Message, 0, len(contextEntries))

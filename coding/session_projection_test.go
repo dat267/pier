@@ -3,8 +3,11 @@ package coding
 import (
 	"context"
 	"github.com/dat267/pier/ai"
+	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -501,5 +504,40 @@ func TestPromptDoesNotRerecordTheSameThinkingLevel(t *testing.T) {
 	}
 	if levels := thinkingLevelEntries(session); len(levels) != 1 || levels[0] != ai.ThinkLow {
 		t.Fatalf("recorded levels = %v; want the single existing entry", levels)
+	}
+}
+
+// Reference: pi v1.6.0 core/session-manager.ts getSessionContextSettings reads
+// `entry.message.provider`/`entry.message.model` off an assistant message, and
+// upstream keeps every entry's parsed message in memory. pier loads a session
+// index-only (D488), so an assistant entry's Message is empty until it is
+// hydrated; the settings scan read the empty member, found no assistant, and a
+// resumed session reported no model at all. That is what restores the model on
+// /resume and what the footer prints, so a resumed session silently lost it.
+func TestResumedSessionKeepsTheAssistantModel(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "session.jsonl")
+	lines := []string{
+		`{"type":"session","version":3,"id":"s1","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/tmp"}`,
+		`{"type":"message","id":"m1","parentId":null,"timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"user","content":"hi","timestamp":1}}`,
+		`{"type":"message","id":"m2","parentId":"m1","timestamp":"2026-01-01T00:00:02.000Z","message":{"role":"assistant","content":[{"type":"text","text":"yo"}],"api":"openai-completions","provider":"acme","model":"m1","usage":{},"stopReason":"stop","timestamp":2}}`,
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manager, err := OpenSession(path, dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(manager.Close)
+	context := manager.Projection()
+	if context.Model == nil {
+		t.Fatal("the resumed projection has no model; the assistant message was never read")
+	}
+	if context.Model.Provider != "acme" || context.Model.ModelID != "m1" {
+		t.Fatalf("model = %+v, want acme/m1", *context.Model)
+	}
+	if signature := manager.ContextSignature(); signature.Provider != "acme" || signature.ModelID != "m1" {
+		t.Fatalf("ContextSignature = %+v, want acme/m1", signature)
 	}
 }
