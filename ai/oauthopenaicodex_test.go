@@ -472,3 +472,47 @@ func TestOpenAICodexCallbackPortInUse(t *testing.T) {
 		t.Fatalf("a held port must fall back to manual input: %q, %v", code, ok)
 	}
 }
+
+// Reference: pi v1.6.0 auth/oauth/openai-codex.ts reads the device-code interval
+// as `typeof json?.interval === "string" ? Number(json.interval.trim()) : json?.interval`
+// and then rejects anything that is not a finite number >= 0. Number() accepts a
+// radix prefix (`Number("0x10") === 16`) and rejects a numeric separator, while
+// strconv.ParseFloat does the opposite: pier rejected "0x10" and accepted "1_0".
+func TestOpenAICodexDeviceIntervalUsesNumber(t *testing.T) {
+	for _, tc := range []struct {
+		raw      string
+		want     int
+		rejected bool
+	}{
+		{`"5"`, 5, false},
+		{`" 5 "`, 5, false},
+		{`"0x10"`, 16, false},
+		{`"1e1"`, 10, false},
+		{`5`, 5, false},
+		{`1.9`, 1, false},
+		{`"1_0"`, 0, true}, // Number("1_0") is NaN
+		{`"abc"`, 0, true},
+		{`-1`, 0, true},
+	} {
+		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+			writer.Header().Set("Content-Type", "application/json")
+			_, _ = writer.Write([]byte(`{"device_auth_id":"id","user_code":"CODE","interval":` + tc.raw + `}`))
+		}))
+		defer server.Close()
+		withCodexURLs(t, server.URL, func() {
+			device, err := StartOpenAICodexDeviceAuth(context.Background())
+			if tc.rejected {
+				if err == nil {
+					t.Fatalf("interval %s accepted as %d, want rejected", tc.raw, device.IntervalSeconds)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("interval %s: %v", tc.raw, err)
+			}
+			if device.IntervalSeconds != tc.want {
+				t.Fatalf("interval %s = %d, want %d", tc.raw, device.IntervalSeconds, tc.want)
+			}
+		})
+	}
+}

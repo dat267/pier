@@ -8,10 +8,11 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of auth/oauth/openai-codex.ts: the OpenAI Codex (ChatGPT) OAuth flow,
@@ -240,7 +241,9 @@ func StartOpenAICodexDeviceAuth(ctx context.Context) (*OpenAICodexDeviceAuthInfo
 	case float64:
 		intervalSeconds, hasInterval = typed, true
 	case string:
-		if parsed, err := strconv.ParseFloat(JSTrim(typed), 64); err == nil {
+		// The reference uses Number(value.trim()), which accepts a radix prefix
+		// and rejects a numeric separator; strconv.ParseFloat is the reverse.
+		if parsed, ok := jsnum.Number(JSTrim(typed)); ok {
 			intervalSeconds, hasInterval = parsed, true
 		}
 	}
