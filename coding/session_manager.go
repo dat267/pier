@@ -1218,6 +1218,15 @@ func (m *SessionManager) GetCompactionCount() int {
 	return count
 }
 
+// payloadsForRead returns the manager's payload reader for a caller that holds
+// entries from GetBranch and must read a loaded message's bytes (D488). It is
+// nil for an in-memory session.
+func (m *SessionManager) payloadsForRead() *payloadReader {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.payloads
+}
+
 // lastCacheWarmingPromptTokensOnBranch is lastCacheWarmingPromptTokens over the
 // current branch, with the session's payload reader so a loaded entry's usage is
 // read from its line.

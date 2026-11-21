@@ -470,3 +470,66 @@ func TestBranchSummaryToRootPersistsNullParent(t *testing.T) {
 		t.Fatal("branch_summary line not persisted")
 	}
 }
+
+// Reference: pi v1.6.0 core/branch-summary.ts prepareBranchEntries reads
+// `entry.message` for every message entry on the branch, and upstream keeps
+// parsed messages in memory. `GetBranch` hands out index-only shells after a
+// file load (D488), so `branchMessageFromEntry` unmarshalled an empty member,
+// returned nil for every message, and a /tree summarize over a resumed session
+// saw no conversation at all: on the 248MB session, 69,868 message entries
+// produced zero summary messages and only the 13 compaction/branch summaries
+// remained.
+func TestPrepareBranchEntriesReadsLoadedMessages(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "session.jsonl")
+	lines := []string{
+		`{"type":"session","version":3,"id":"s1","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/tmp"}`,
+		`{"type":"message","id":"m1","parentId":null,"timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"user","content":"first question","timestamp":1}}`,
+		`{"type":"message","id":"m2","parentId":"m1","timestamp":"2026-01-01T00:00:02.000Z","message":{"role":"assistant","content":[{"type":"text","text":"an answer"}],"api":"openai-completions","provider":"acme","model":"m1","usage":{},"stopReason":"stop","timestamp":2}}`,
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manager, err := OpenSession(path, dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(manager.Close)
+
+	branch := manager.GetBranch("")
+	if prepared := PrepareBranchEntries(branch, 100000); len(prepared.Messages) != 0 {
+		t.Fatalf("the unhydrated branch prepared %d messages; the shells carry no bytes", len(prepared.Messages))
+	}
+	prepared := manager.PrepareBranchEntries(100000)
+	if len(prepared.Messages) != 2 {
+		t.Fatalf("prepared messages = %d, want the two entries", len(prepared.Messages))
+	}
+}
+
+// GenerateBranchSummary prepares its input through prepareBranchEntriesWith, so
+// the collected entries of a resumed session reach the summary. That step is
+// pinned by TestPrepareBranchEntriesReadsLoadedMessages; assert here that the
+// option the real caller fills is the one the preparation uses.
+func TestGenerateBranchSummaryOptionsCarryThePayloadReader(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "session.jsonl")
+	lines := []string{
+		`{"type":"session","version":3,"id":"s1","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/tmp"}`,
+		`{"type":"message","id":"m1","parentId":null,"timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"user","content":"first question","timestamp":1}}`,
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manager, err := OpenSession(path, dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(manager.Close)
+	if manager.payloadsForRead() == nil {
+		t.Fatal("a loaded session has no payload reader to hand to the summary")
+	}
+	prepared := prepareBranchEntriesWith(manager.GetBranch(""), 100000, manager.payloadsForRead())
+	if len(prepared.Messages) != 1 {
+		t.Fatalf("prepared messages = %d, want 1", len(prepared.Messages))
+	}
+}

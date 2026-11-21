@@ -93,11 +93,34 @@ func CollectEntriesForBranchSummary(session *SessionManager, oldLeafID, targetID
 	return CollectEntriesResult{Entries: entries, CommonAncestorID: commonAncestorID, HasAncestor: hasAncestor}
 }
 
+// PrepareBranchEntries is PrepareBranchEntries over the current branch with the
+// session's payload reader, so a message entry loaded index-only (D488) is read
+// from its line instead of contributing nothing to the summary.
+func (m *SessionManager) PrepareBranchEntries(tokenBudget int) BranchPreparation {
+	branch := m.GetBranch("")
+	m.mu.Lock()
+	payloads := m.payloads
+	m.mu.Unlock()
+	return prepareBranchEntriesWith(branch, tokenBudget, payloads)
+}
+
 // branchMessageFromEntry extracts the agent message an entry contributes.
 func branchMessageFromEntry(entry *SessionEntry) ai.Message {
+	return branchMessageFromEntryWith(entry, nil)
+}
+
+// branchMessageFromEntryWith is branchMessageFromEntry with a payload reader, so
+// an index-only entry's message is read from its line.
+func branchMessageFromEntryWith(entry *SessionEntry, payloads *payloadReader) ai.Message {
 	switch entry.Type {
 	case "message":
-		message, err := ai.UnmarshalMessage(entry.Message)
+		raw := entry.Message
+		if entry.lazy && payloads != nil {
+			if hydrated, err := payloads.hydrateCopy(entry); err == nil {
+				raw = hydrated.Message
+			}
+		}
+		message, err := ai.UnmarshalMessage(raw)
 		if err != nil {
 			return nil
 		}
@@ -167,6 +190,12 @@ func entryTimestampMS(entry *SessionEntry) int64 {
 // walking newest to oldest, and collects file operations (including cumulative
 // tracking from nested branch summaries).
 func PrepareBranchEntries(entries []SessionEntry, tokenBudget int) BranchPreparation {
+	return prepareBranchEntriesWith(entries, tokenBudget, nil)
+}
+
+// prepareBranchEntriesWith is PrepareBranchEntries with a payload reader for
+// entries loaded index-only.
+func prepareBranchEntriesWith(entries []SessionEntry, tokenBudget int, payloads *payloadReader) BranchPreparation {
 	var messages []ai.Message
 	fileOps := CreateFileOps()
 	totalTokens := 0
@@ -202,7 +231,7 @@ func PrepareBranchEntries(entries []SessionEntry, tokenBudget int) BranchPrepara
 	// Second pass: newest to oldest until the budget is exhausted.
 	for index := len(entries) - 1; index >= 0; index-- {
 		entry := &entries[index]
-		message := branchMessageFromEntry(entry)
+		message := branchMessageFromEntryWith(entry, payloads)
 		if message == nil {
 			continue
 		}
@@ -285,6 +314,9 @@ type GenerateBranchSummaryOptions struct {
 	StreamFn      StreamFnFn
 	Retry         *ai.RetryPolicy
 	Callbacks     *SummarizationCallbacks
+	// Payloads reads an index-only entry's line (D488); nil for in-memory
+	// callers whose entries carry their bytes.
+	Payloads *payloadReader
 }
 
 // GenerateBranchSummary summarizes the abandoned branch entries.
@@ -299,7 +331,7 @@ func GenerateBranchSummary(entries []SessionEntry, options GenerateBranchSummary
 	}
 	tokenBudget := int(contextWindow) - reserveTokens
 
-	preparation := PrepareBranchEntries(entries, tokenBudget)
+	preparation := prepareBranchEntriesWith(entries, tokenBudget, options.Payloads)
 	if len(preparation.Messages) == 0 {
 		return &BranchSummaryResult{Summary: "No content to summarize"}, nil
 	}
@@ -481,8 +513,11 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 			ReplaceInstructions: options.ReplaceInstructions, ReserveTokens: &reserveTokens,
 			ThinkingLevel: s.ThinkingLevel(),
 			StreamFn:      s.compactionStreamFn(),
-			Retry:         s.retrySettings(),
-			Callbacks:     s.summarizationRetryCallbacks("branchSummary"),
+			// The collected entries come from GetBranch, which hands out
+			// index-only shells after a file load (D488).
+			Payloads:  s.Sessions.payloadsForRead(),
+			Retry:     s.retrySettings(),
+			Callbacks: s.summarizationRetryCallbacks("branchSummary"),
 		})
 		if err != nil {
 			return nil, err
