@@ -37,7 +37,7 @@ var findSchemaJSON = mustMarshalJSON(json.RawMessage(`{
 	"type": "object",
 	"required": ["pattern"],
 	"properties": {
-		"pattern": {"type": "string", "description": "Glob pattern to match files, e.g. '*.ts', '**/*.json', or 'src/**/*.spec.ts'"},
+		"pattern": {"type": "string", "description": "Glob pattern relative to the search directory, e.g. 'src/**/*.ts'. Without '/', e.g. '*.ts', it matches file names at any depth"},
 		"path": {"type": "string", "description": "Directory to search in (default: current directory)"},
 		"limit": {"type": "number", "description": "Maximum number of results (default: 1000)"}
 	}
@@ -62,22 +62,70 @@ func RelativizeFindResultPath(resultPath string, searchPath string) string {
 	return posixPath
 }
 
-// findFullPathVariable returns the fd pattern and whether --full-path applies
-// (port of find.ts's pattern handling). fd --glob matches basenames unless
-// --full-path is set; there it matches the absolute candidate path with native
-// separators, so on Windows each '/' becomes a [/\\] class.
-func findFullPathVariable(pattern, goos string) (effectivePattern string, fullPath bool) {
+// findFullPathVariable prepares the fd pattern (port of find.ts v1.6.0):
+//   - fd matches the basename unless --full-path, which a pattern containing "/"
+//     needs;
+//   - a relative path pattern is anchored at the search directory, so "src/*.ts"
+//     finds "src/a.ts" but not "pkg/src/b.ts" (an unanchored search is written
+//     "**/src/*.ts"), which means prefixing the glob-escaped search path because
+//     fd matches the absolute candidate path;
+//   - a leading "./" is dropped, since fd's full paths never contain "/./";
+//   - smart case follows the user's pattern, so it is decided here and passed as
+//     --ignore-case instead of by the search path's own letters;
+//   - on Windows each "/" becomes a [/\\] class, because fd matches native
+//     separators against the absolute path.
+func findFullPathVariable(pattern, searchPath, goos string) (effectivePattern string, fullPath bool, ignoreCase bool) {
 	effectivePattern = pattern
-	if !strings.Contains(pattern, "/") {
-		return effectivePattern, false
+	if goos == "windows" {
+		effectivePattern = strings.ReplaceAll(effectivePattern, `\`, "/")
 	}
-	if !strings.HasPrefix(pattern, "/") && !strings.HasPrefix(pattern, "**/") && pattern != "**" {
-		effectivePattern = "**/" + effectivePattern
+	for strings.HasPrefix(effectivePattern, "./") {
+		effectivePattern = effectivePattern[2:]
+	}
+	if !strings.Contains(effectivePattern, "/") {
+		return effectivePattern, false, false
+	}
+	ignoreCase = effectivePattern == strings.ToLower(effectivePattern)
+	if !isAbsoluteGlobPattern(effectivePattern) {
+		// The escape is upstream's non-Windows branch; on Windows the search path
+		// keeps its native separators and each "/" becomes a separator class below.
+		root := searchPath
+		if goos != "windows" {
+			root = escapeGlobMeta(root)
+		}
+		effectivePattern = strings.TrimRight(root, "/") + "/" + effectivePattern
 	}
 	if goos == "windows" {
-		effectivePattern = strings.ReplaceAll(effectivePattern, "/", "[/\\\\]")
+		effectivePattern = strings.ReplaceAll(effectivePattern, "/", `[/\\]`)
 	}
-	return effectivePattern, true
+	return effectivePattern, true, ignoreCase
+}
+
+// isAbsoluteGlobPattern reports whether a pattern is absolute on this platform:
+// a leading "/" on POSIX, a drive letter or UNC prefix on Windows.
+func isAbsoluteGlobPattern(pattern string) bool {
+	if strings.HasPrefix(pattern, "/") {
+		return true
+	}
+	if len(pattern) >= 3 && pattern[1] == ':' && pattern[2] == '/' {
+		return true
+	}
+	return len(pattern) >= 2 && pattern[0] == '/' && pattern[1] == '/'
+}
+
+// escapeGlobMeta escapes the characters a glob treats specially, so a search
+// path is matched literally: upstream's `/[\\*?[\]{}]/g` replacement.
+func escapeGlobMeta(path string) string {
+	var escaped strings.Builder
+	escaped.Grow(len(path))
+	for _, char := range path {
+		switch char {
+		case '\\', '*', '?', '[', ']', '{', '}':
+			escaped.WriteByte('\\')
+		}
+		escaped.WriteRune(char)
+	}
+	return escaped.String()
 }
 
 // CreateFindTool builds the find tool.
@@ -146,11 +194,15 @@ func CreateFindTool(cwd string) agent.AgentTool {
 			// "more than N".
 			args = append(args, "--max-results", formatToolNumber(effectiveLimit+1))
 
-			// fd --glob matches basenames unless --full-path; a path-
-			// containing pattern needs a leading **/ to match anything.
-			effectivePattern, fullPath := findFullPathVariable(input.Pattern, runtime.GOOS)
+			// fd --glob matches basenames unless --full-path; a path pattern is
+			// anchored at the search directory and matched case-insensitively when
+			// the user's pattern is all lowercase (pi v1.6.0 find.ts).
+			effectivePattern, fullPath, ignoreCase := findFullPathVariable(input.Pattern, searchPath, runtime.GOOS)
 			if fullPath {
 				args = append(args, "--full-path")
+			}
+			if ignoreCase {
+				args = append(args, "--ignore-case")
 			}
 			args = append(args, "--", effectivePattern, searchPath)
 
@@ -248,7 +300,7 @@ var grepSchemaJSON = mustMarshalJSON(json.RawMessage(`{
 	"properties": {
 		"pattern": {"type": "string", "description": "Search pattern (regex or literal string)"},
 		"path": {"type": "string", "description": "Directory or file to search (default: current directory)"},
-		"glob": {"type": "string", "description": "Filter files by glob pattern, relative to path, e.g. '*.ts', 'src/**/*.ts' or '**/*.spec.ts'. A pattern without '/' matches file names at any depth"},
+		"glob": {"type": "string", "description": "Filter files by glob pattern relative to path, e.g. 'src/**/*.ts'. Without '/', e.g. '*.ts', it matches file names at any depth"},
 		"ignoreCase": {"type": "boolean", "description": "Case-insensitive search (default: false)"},
 		"literal": {"type": "boolean", "description": "Treat pattern as literal string instead of regex (default: false)"},
 		"context": {"type": "number", "description": "Number of lines to show before and after each match (default: 0)"},

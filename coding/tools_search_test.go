@@ -321,25 +321,35 @@ func TestFindToolReportsSpawnFailure(t *testing.T) {
 	}
 }
 
-// Upstream find.ts rewrites '/' to a [/\\] class on win32 so fd --full-path
-// patterns match native separators in the absolute candidate path.
+// sepClass is the separator class fd patterns use on Windows.
+const sepClass = `[/\\]`
+
+// TestFindFullPathVariable pins the v1.6.0 pattern handling (core/tools/find.ts):
+// a path pattern is anchored at the search directory instead of being prefixed
+// with "**/", a leading "./" is dropped because fd's full paths never contain
+// "/./", and smart case follows the user's pattern, so the search path's own
+// letters cannot decide it.
 func TestFindFullPathVariable(t *testing.T) {
 	cases := []struct {
-		name, pattern, goos, want string
-		fullPath                  bool
+		name, pattern, searchPath, goos, want string
+		fullPath, ignoreCase                  bool
 	}{
-		{"basename", "*.ts", "linux", "*.ts", false},
-		{"basename windows", "*.ts", "windows", "*.ts", false},
-		{"prefixed", "src/**/*.ts", "linux", "**/src/**/*.ts", true},
-		{"prefixed windows", "src/**/*.ts", "windows", `**[/\\]src[/\\]**[/\\]*.ts`, true},
-		{"leading slash windows", "/src/*.ts", "windows", `[/\\]src[/\\]*.ts`, true},
-		{"globstar prefix windows", "**/x.ts", "windows", `**[/\\]x.ts`, true},
+		{"basename", "*.ts", "/w", "linux", "*.ts", false, false},
+		{"basename windows", "*.ts", `/w`, "windows", "*.ts", false, false},
+		{"relative anchors at the search path", "src/*.ts", "/w", "linux", "/w/src/*.ts", true, true},
+		{"leading dot slash dropped", "./src/*.ts", "/w", "linux", "/w/src/*.ts", true, true},
+		{"globstar stays unanchored", "**/x.ts", "/w", "linux", "/w/**/x.ts", true, true},
+		{"absolute pattern as given", "/src/*.ts", "/w", "linux", "/src/*.ts", true, true},
+		{"smart case off for an uppercase pattern", "Src/*.TS", "/w", "linux", "/w/Src/*.TS", true, false},
+		{"search path metacharacters are escaped", "src/*.ts", "/w/a[1]/{b}", "linux", `/w/a\[1\]/\{b\}/src/*.ts`, true, true},
+		{"windows separators become classes", `src\**\*.ts`, `C:\w`, "windows", `C:\w` + sepClass + "src" + sepClass + "**" + sepClass + "*.ts", true, true},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
-			got, fullPath := findFullPathVariable(test.pattern, test.goos)
-			if got != test.want || fullPath != test.fullPath {
-				t.Fatalf("findFullPathVariable(%q, %q) = (%q, %v); want (%q, %v)", test.pattern, test.goos, got, fullPath, test.want, test.fullPath)
+			got, fullPath, ignoreCase := findFullPathVariable(test.pattern, test.searchPath, test.goos)
+			if got != test.want || fullPath != test.fullPath || ignoreCase != test.ignoreCase {
+				t.Fatalf("findFullPathVariable(%q, %q, %q) = (%q, %v, %v); want (%q, %v, %v)",
+					test.pattern, test.searchPath, test.goos, got, fullPath, ignoreCase, test.want, test.fullPath, test.ignoreCase)
 			}
 		})
 	}
