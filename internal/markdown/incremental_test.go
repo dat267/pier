@@ -119,6 +119,13 @@ func FuzzIncrementalMatchesFull(f *testing.F) {
 	}
 	f.Fuzz(func(t *testing.T, source string) {
 		doc := NewDocument()
+		// The empty source is a real step: it lexes to no block, and the first
+		// append after that is the case that used to index an empty slice. The
+		// loop below starts at a one-byte prefix, so without this the fuzzer
+		// never reaches it.
+		if got := doc.Update(""); len(got) != 0 {
+			t.Fatalf("empty source lexed to %d blocks", len(got))
+		}
 		for pos := 0; pos < len(source); {
 			step := 1 + pos%5
 			if pos+step > len(source) {
@@ -229,6 +236,9 @@ func TestIncrementalPendingLatexBlockMatchesFullLex(t *testing.T) {
 		"$$\n\\alpha\n\n*a*",
 	} {
 		doc := NewDocument()
+		if got := doc.Update(""); len(got) != 0 {
+			t.Fatalf("empty source lexed to %d blocks", len(got))
+		}
 		for n := 1; n <= len(source); n++ {
 			if got, want := doc.Update(source[:n]), Lex(source[:n]); !reflect.DeepEqual(got, want) {
 				t.Fatalf("%q prefix %d:\n got %v\nwant %v", source, n, blockKinds(got), blockKinds(want))
@@ -250,6 +260,9 @@ func TestIncrementalSetextHeadingAbsorbsAnInterruptingLine(t *testing.T) {
 		"z\n$$x$$\n- ",
 	} {
 		doc := NewDocument()
+		if got := doc.Update(""); len(got) != 0 {
+			t.Fatalf("empty source lexed to %d blocks", len(got))
+		}
 		for n := 1; n <= len(source); n++ {
 			if got, want := doc.Update(source[:n]), Lex(source[:n]); !reflect.DeepEqual(got, want) {
 				t.Fatalf("%q prefix %d:\n got %v\nwant %v", source, n, blockKinds(got), blockKinds(want))

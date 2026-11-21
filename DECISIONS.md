@@ -8352,4 +8352,7 @@ which is what the `d.blocks == nil` branch above it already did for a fresh
 document.
 
 Test: `TestDocumentUpdateFromAnEmptyLexDoesNotPanic` (empty then `"a"`, asserting
-the result equals a fresh lex).
+the result equals a fresh lex). `FuzzIncrementalMatchesFull` and the two prefix
+tests in that file now call `Update("")` first: their loops start at a one-byte
+prefix, so none of them ever reached the zero-block state and the panic survived
+a fuzz target that should have caught it.
