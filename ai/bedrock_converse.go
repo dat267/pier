@@ -188,13 +188,12 @@ func ResolveBedrockCacheRetention(cacheRetention CacheRetention, env ProviderEnv
 func IsAnthropicClaudeModel(model *Model) bool {
 	id := strings.ToLower(model.ID)
 	name := strings.ToLower(model.Name)
-	for _, value := range []string{id, name} {
-		if strings.Contains(value, "anthropic.claude") || strings.Contains(value, "anthropic/claude") ||
-			strings.Contains(value, "claude") {
-			return true
-		}
-	}
-	return false
+	// The reference tests the id only for the anthropic-prefixed forms and
+	// looks for a bare "claude" in the name alone, so a Bedrock id that merely
+	// contains "claude" is not a Claude model.
+	return strings.Contains(id, "anthropic.claude") || strings.Contains(id, "anthropic/claude") ||
+		strings.Contains(name, "anthropic.claude") || strings.Contains(name, "anthropic/claude") ||
+		strings.Contains(name, "claude")
 }
 
 // SupportsBedrockPromptCaching reports whether cache points are supported.

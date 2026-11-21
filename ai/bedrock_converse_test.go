@@ -491,3 +491,34 @@ func TestNormalizeBedrockToolCallIDAstral(t *testing.T) {
 		t.Fatalf("astral id = %q; want id__", got)
 	}
 }
+
+// Reference: pi v1.6.0 api/bedrock-converse-stream.ts isAnthropicClaudeModel
+// checks the id only for "anthropic.claude" and "anthropic/claude", and checks
+// "claude" in the *name* alone:
+//
+//	return id.includes("anthropic.claude") || id.includes("anthropic/claude") ||
+//		name.includes("anthropic.claude") || name.includes("anthropic/claude") || name.includes("claude");
+//
+// pier folded all five tests over one value list, so it also accepted a bare
+// "claude" inside the id. That widened SupportsBedrockThinkingSignature and
+// SupportsBedrockPromptCaching for any Bedrock model id containing "claude"
+// without the anthropic prefix, which the reference rejects.
+func TestBedrockClaudeDetectionMatchesTheReferencePredicate(t *testing.T) {
+	for _, tc := range []struct {
+		id, name string
+		want     bool
+	}{
+		{"anthropic.claude-sonnet-4-5", "Claude Sonnet 4.5", true},
+		{"anthropic/claude-sonnet-4-5", "", true},
+		{"arn:aws:bedrock:us-east-1:1:application-inference-profile/abc", "my claude proxy", true},
+		// A bare "claude" in the id is not the reference's test.
+		{"claude-sonnet-4-5", "Sonnet", false},
+		{"claude-3-5-haiku", "", false},
+		{"amazon.nova-pro-v1:0", "Nova Pro", false},
+	} {
+		got := IsAnthropicClaudeModel(&Model{ID: tc.id, Name: tc.name})
+		if got != tc.want {
+			t.Errorf("IsAnthropicClaudeModel(%q, %q) = %v, want %v", tc.id, tc.name, got, tc.want)
+		}
+	}
+}
