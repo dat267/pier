@@ -27,3 +27,31 @@ func TestWwwAuthenticateParametersUseJSWhitespace(t *testing.T) {
 		t.Fatalf("quoted scope did not retain its whitespace: %+v", got)
 	}
 }
+
+// Reference: pi v1.6.0 oauth/discovery.ts parseWwwAuthenticate resolves the
+// parameter with `new URL(resourceMetadata)`, so the stored value is the WHATWG
+// serialization: the host lowercased and the path percent-encoded. pier kept the
+// header's raw spelling, so a server advertising `HTTP://X.TEST/md` or a path
+// with a space reached the follow-up discovery request as a different URL string
+// than the reference used.
+func TestWwwAuthenticateResourceMetadataIsWHATWGSerialized(t *testing.T) {
+	for _, tc := range []struct{ header, want string }{
+		{`Bearer resource_metadata="https://x.test/md"`, "https://x.test/md"},
+		{`Bearer resource_metadata="HTTP://X.TEST/md"`, "http://x.test/md"},
+		{`Bearer resource_metadata="https://x.test/a b"`, "https://x.test/a%20b"},
+		// Not resolvable against no base: both sides drop these.
+		{`Bearer resource_metadata="x.test/md"`, ""},
+		{`Bearer resource_metadata="/relative/md"`, ""},
+	} {
+		got := ParseWwwAuthenticate(tc.header).ResourceMetadataURL
+		if tc.want == "" {
+			if got != nil {
+				t.Fatalf("%q: kept %q, want none", tc.header, *got)
+			}
+			continue
+		}
+		if got == nil || *got != tc.want {
+			t.Fatalf("%q: got %v, want %q", tc.header, got, tc.want)
+		}
+	}
+}

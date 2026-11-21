@@ -148,7 +148,10 @@ func ParseWwwAuthenticate(header string) OAuthChallenge {
 	}
 	if resourceMetadata := field(header, "resource_metadata"); resourceMetadata != nil {
 		if parsed, err := parseWHATWGURL(*resourceMetadata); err == nil && parsed.Scheme != "" {
-			challenge.ResourceMetadataURL = resourceMetadata
+			// `new URL(value)` stores the WHATWG serialization, not the header's
+			// spelling: the host is lowercased and the path percent-encoded.
+			normalized := lowercaseHost(parsed).String()
+			challenge.ResourceMetadataURL = &normalized
 		}
 	}
 	return challenge

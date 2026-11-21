@@ -31,6 +31,9 @@ func parseWHATWGURL(value string) (*url.URL, error) {
 	if err != nil {
 		return nil, err
 	}
+	// `new URL` lowercases the hostname while parsing; Go's url.Parse keeps the
+	// spelling. The per-call normalization (lowercaseHost) applies it only where
+	// the string itself is compared, so D276's spelling stays as it was.
 	// `new URL` removes dot segments while it parses the path; every consumer
 	// (well-known candidates, resource matching) reads that normalized pathname.
 	if escaped := parsed.EscapedPath(); escaped != "" {
@@ -39,6 +42,23 @@ func parseWHATWGURL(value string) (*url.URL, error) {
 		}
 	}
 	return parsed, nil
+}
+
+// lowercaseHost turns url into its WHATWG serialization as far as the host goes:
+// `new URL` lowercases it while parsing. Callers that compare or report the URL
+// string use this; callers that read only its components do not need it (D276
+// records the port keeping the spelling elsewhere).
+func lowercaseHost(url *url.URL) *url.URL {
+	if url == nil || url.Host == "" {
+		return url
+	}
+	copied := *url
+	host := strings.ToLower(copied.Hostname())
+	if port := copied.Port(); port != "" {
+		host = host + ":" + port
+	}
+	copied.Host = host
+	return &copied
 }
 
 // normalizeDotSegments applies the WHATWG path normalization `new URL`
