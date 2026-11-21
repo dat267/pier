@@ -14,9 +14,13 @@ import (
 // must say why the surface is safe. `lookedUp` also tries the surface with its
 // kind and with its immediate callee, for a surface that is accepted for some
 // kinds or some callees only.
+//
+// Both directions are checked: every finding must match a key, and every key must
+// name a surface some finding has. Seventeen entries had gone stale (the surface
+// no longer reaches the loop at all, so the key accepted nothing) because only
+// the first direction was tested; `assertNoStaleAllowlistEntries` now fails one.
 var acceptedFindings = map[string]string{
 	"wiring field OnExternalEditor": "the external editor takes over the terminal synchronously, by design (upstream identical)",
-	"wiring field ShowAuthSelect":   "the auth flow invokes it on its own goroutine; it blocks waiting for the dialog, which renders on the loop",
 	"wiring field TakeCrash":        "runs during Init, before the loop starts",
 	"wiring field CheckVersion":     "invoked only from the notifyNewVersion goroutine (go w.notifyNewVersion)",
 	"wiring field WriteDebugLog":    "user-invoked /debug; MkdirAll, one WriteFile and agent-dir path resolution, sub-millisecond",
@@ -24,18 +28,10 @@ var acceptedFindings = map[string]string{
 
 	// Surfaces the gate only saw once it descended into pointer-receiver
 	// methods (A493). Each reason names what was checked.
-	"wiring field ReloadNow":            "off the loop in production: every call site is inside the closure handed to RunDetached (interactivemode_commands.go:374-397); the inline branch runs only when RunDetached is nil, which is the test-app composition",
-	"wiring field ReloadMCP":            "off the loop in production, in the same RunDetached closure as ReloadNow; the inline branch is the test-app path",
-	"wiring field ExportToHTML":         "off the loop: /export runs on the export queue (D441)",
-	"wiring field WarnAnthropic":        "off the loop: interactivemode_run.go:523 calls it as `go w.WarnAnthropic(ctx)`, so its auth-storage reads and any `!command` credential run on that goroutine",
-	"wiring field Stop":                 "shutdown: the crash/trust wiring invokes it as the app exits, after the loop stops",
-	"wiring field ReloadGoal":           "goal status card: one text update, no I/O",
-	"wiring field SwitchTuiMode":        "tui-mode switch: terminal-mode escape sequences and one render",
-	"wiring field FlushCompactionQueue": "compaction queue flush: channel signals to workers, no I/O",
-	"wiring field ClearStatusIndicator": "status clear: resets the indicator and posts a render",
-	"wiring field RefreshModelCatalogs": "catalog refresh: schedules the existing background refresh and posts its result",
-	"(*github.com/dat267/pier/coding/interactive.LoginDialogComponent).HandleTerminalInput": "login dialog keys: cancels a context and closes a channel",
-	"(*github.com/dat267/pier/coding/interactive.RunWiring).Run":                            "the loop itself: its select is the idle wait (isLoopIdle) and its channel ops are the loop's own wiring",
+	"wiring field ReloadNow":                                     "off the loop in production: every call site is inside the closure handed to RunDetached (interactivemode_commands.go:374-397); the inline branch runs only when RunDetached is nil, which is the test-app composition",
+	"wiring field WarnAnthropic":                                 "off the loop: interactivemode_run.go:523 calls it as `go w.WarnAnthropic(ctx)`, so its auth-storage reads and any `!command` credential run on that goroutine",
+	"wiring field RefreshModelCatalogs":                          "catalog refresh: schedules the existing background refresh and posts its result",
+	"(*github.com/dat267/pier/coding/interactive.RunWiring).Run": "the loop itself: its select is the idle wait (isLoopIdle) and its channel ops are the loop's own wiring",
 
 	// Loop-side work with a measured or bounded cost.
 	"via github.com/dat267/pier/coding/interactive.runSessionFileWork":                         "the post-back rebind runs on the loop by ownership (D442), and A494 moved its largest part off it: the projection decode now happens in the worker, 203.9 ms -> 63.6 ms at 12,500 turns, with the remainder transcript construction. The in-memory fork branch cannot reach the file write it lists, because a non-persisted session has no file",
@@ -51,14 +47,6 @@ var acceptedFindings = map[string]string{
 	"(*github.com/dat267/pier/tui.Renderer).HandleTerminalInput -> (*github.com/dat267/pier/coding/interactive.LoginDialogComponent).HandleInput (interface HandleInput)": "escape in the login dialog closes its cancel channel; a close cannot block",
 	"(*github.com/dat267/pier/coding/interactive.Lifecycle).HandleSignal":                                                                                                 "signal handling: Shutdown drains buffered terminal input with a bounded wait before stopping the screens",
 	"(*github.com/dat267/pier/tui.Editor).Render|syscall/io":                                                                                                              "Rows queries the terminal only while the stored height is still zero, which is before Start sets it, so this is a once-only ioctl rather than a per-frame one",
-	"wiring field OnFollowUp -> (*github.com/dat267/pier/coding/interactive.QueueController).HandleFollowUp":                                                              "the same interface over-approximation as OnModelCycleBackward: the rpcclient Prompt is never wired in the TUI",
-	"wiring field Shutdown":                "shutdown: drains buffered terminal input with a bounded wait before the screens stop (the same drain as Lifecycle.HandleSignal)",
-	"wiring field OnExit":                  "shutdown: the same bounded terminal-input drain as Shutdown",
-	"wiring field TerminalRows":            "the same once-only size query as the editor: Rows falls back to a syscall only before Start stores the size",
-	"wiring field RebuildChatFromMessages": "the startup chat rebuild walks the compaction window per message, on the loop by ownership; bounded by the transcript the app was just given",
-	"wiring field ShowStatusIndicator":     "the status indicator disposes the previous footer data provider, which only closes a channel",
-	"wiring field RenderInitialMessages":   "the transcript build runs on the loop after a rebind by ownership (D442); A494 measured the whole rebind at 63.6 ms for 12,500 turns after the projection moved to the worker, and this walk is part of that remainder",
-	"(*github.com/dat267/pier/coding/interactive.ToolExecutionComponent).Render|cpu-bound": "Render only rebuilds while arguments are still streaming (argsPending), so this decode runs per streamed delta, not per frame",
 	"wiring field OnThinkingToggle":        "a settings toggle clones the settings map before the queued write; the write itself runs on the settings persist queue, and the clone is one small struct",
 	"wiring field OnSessionFork|cpu-bound": "the fork selector lists user turns synchronously by ownership (upstream getUserMessagesForForking is synchronous too); D500 made it decode only the entries the loader marked as user turns, so the walk is proportional to the 529 user messages of the 248MB session (73ms) instead of a 630ms GetEntries plus a 3.7s decode of all 72k entries",
 }
@@ -80,35 +68,68 @@ func TestNothingBlockingReachableFromTheUIGoroutine(t *testing.T) {
 	}
 	allowlist := acceptedFindings
 	for _, f := range findings {
-		if reason, ok := lookedUp(allowlist, f); ok {
+		if reason, _, ok := lookedUp(allowlist, f); ok {
 			t.Logf("allowed: %s %s (%s)", f.Kind, f.Pos, reason)
 			continue
 		}
 		t.Errorf("%s %s\n  chain: %s", f.Kind, f.Pos, strings.Join(f.Chain, " -> "))
 	}
+	assertNoStaleAllowlistEntries(t, allowlist, findings)
+}
+
+// assertNoStaleAllowlistEntries fails an entry whose deletion changes no
+// outcome. A stale key silently widens the gate: it accepts a surface it was not
+// written for, so the next finding under that surface passes unchecked.
+func assertNoStaleAllowlistEntries(t *testing.T, allowlist map[string]string, findings []Finding) {
+	t.Helper()
+	// A key is live when it names a surface or kind some finding has, even if a
+	// more specific key wins for that finding: the general key is the fallback
+	// for the other kinds. Only a key no finding can name is stale.
+	live := map[string]bool{}
+	for _, f := range findings {
+		for _, key := range candidateKeys(allowlist, f) {
+			live[key] = true
+		}
+	}
+	for key := range allowlist {
+		if !live[key] {
+			t.Errorf("stale allowlist entry %q names no surface or kind any finding has; delete it", key)
+		}
+	}
+}
+
+// candidateKeys lists the allowlist keys a finding can match, most specific
+// first: the surface and kind, the surface and its immediate callee, the
+// surface, and any prefix of the surface (a generic instantiation carries a type
+// argument).
+func candidateKeys(allowlist map[string]string, finding Finding) []string {
+	if len(finding.Chain) == 0 {
+		return nil
+	}
+	surface := finding.Chain[0]
+	keys := []string{surface + "|" + finding.Kind.String()}
+	if len(finding.Chain) > 1 {
+		keys = append(keys, surface+" -> "+finding.Chain[1])
+	}
+	keys = append(keys, surface)
+	for key, reason := range allowlist {
+		if reason != "" && strings.HasPrefix(surface, key+"[") {
+			keys = append(keys, key)
+		}
+	}
+	return keys
 }
 
 // lookedUp finds an allowlist entry for a finding. Keys, most specific first: the
 // surface and kind, the surface and its immediate callee, the surface, and any
 // prefix of the surface (a generic instantiation carries a type argument).
-func lookedUp(allowlist map[string]string, finding Finding) (string, bool) {
-	surface := finding.Chain[0]
-	candidates := []string{surface + "|" + finding.Kind.String()}
-	if len(finding.Chain) > 1 {
-		candidates = append(candidates, surface+" -> "+finding.Chain[1])
-	}
-	candidates = append(candidates, surface)
-	for key, reason := range allowlist {
-		if reason != "" && strings.HasPrefix(surface, key+"[") {
-			candidates = append(candidates, key)
-		}
-	}
-	for _, key := range candidates {
+func lookedUp(allowlist map[string]string, finding Finding) (string, string, bool) {
+	for _, key := range candidateKeys(allowlist, finding) {
 		if reason, ok := allowlist[key]; ok {
-			return reason, true
+			return reason, key, true
 		}
 	}
-	return "", false
+	return "", "", false
 }
 
 // goroutineKey names a goroutine finding by its file and the goroutine's own
@@ -169,13 +190,20 @@ func TestBareBlockingGoroutinesAreAllowlisted(t *testing.T) {
 		"transport_stdio.go (*github.com/dat267/pier/mcp.StdioTransport).watchExit":                                                    "the stdio transport's exit watcher, which ends the connection when the server exits",
 		"transport_stdio.go github.com/dat267/pier/mcp.installExitHook$1":                                                              "the process exit hook's goroutine, which runs when the process exits",
 	}
+	used := map[string]bool{}
 	for _, f := range findings {
 		if reason, ok := allowlist[goroutineKey(f)]; ok {
+			used[goroutineKey(f)] = true
 			t.Logf("allowed: %s %s (%s)", f.Kind, f.Pos, reason)
 			continue
 		}
 		t.Errorf("%s %s: blocking work on a bare goroutine reachable from the UI loop; use internal/offloop\n  chain: %s",
 			f.Kind, f.Pos, strings.Join(f.Chain, " -> "))
+	}
+	for key := range allowlist {
+		if !used[key] {
+			t.Errorf("stale allowlist entry %q matches no goroutine finding; delete it", key)
+		}
 	}
 }
 
