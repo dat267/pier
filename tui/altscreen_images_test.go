@@ -116,3 +116,38 @@ func testAltScreenDrawsKittyImagesLast(t *testing.T) {
 		t.Fatalf("image written before a text row: %q", out)
 	}
 }
+
+// A full redraw (a resize) clears the screen, which frees Kitty's cached image
+// data, so the image has to be transmitted again. The frame deletes the placed
+// images first and re-emits them (pi-tui v1.6.0, #12010: "fullscreen Kitty images
+// disappearing after a full redraw").
+func TestAltScreenRedrawsKittyImagesAfterAResize(t *testing.T) {
+	previous := GetTerminalCapabilities()
+	previousCells := GetCellDimensions()
+	t.Cleanup(func() {
+		SetTerminalCapabilities(previous)
+		SetCellDimensions(previousCells)
+	})
+	SetTerminalCapabilities(TerminalCapabilities{Images: ImageProtocolKitty, TrueColor: true})
+	SetCellDimensions(CellDimensions{WidthPx: 10, HeightPx: 10})
+
+	imageLine := kittyImageLine(t, 401, "BBBB")
+	terminal := &recordingTerminal{width: 40, height: 6}
+	screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
+	screen.DisableAutoRender()
+	screen.AddChild(&scriptedComponent{lines: []string{"alpha", imageLine}})
+	screen.Start()
+	screen.RenderNow(false)
+	_ = terminal.takeWrites()
+
+	// A resize forces a full redraw.
+	terminal.width = 50
+	screen.RenderNow(true)
+	out := terminal.takeWrites()
+	if !strings.Contains(out, "\x1b_Ga=d") {
+		t.Fatalf("the redraw did not delete the placed image:\n%q", out)
+	}
+	if !strings.Contains(out, "\x1b_Ga=T,f=100") {
+		t.Fatalf("the redraw did not re-emit the image:\n%q", out)
+	}
+}
