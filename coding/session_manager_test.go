@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -690,4 +691,81 @@ func TestSessionStatsToleratesAnIncompleteAssistantUsage(t *testing.T) {
 			}
 		})
 	}
+}
+
+// D501: a full snapshot used to hydrate every lazy entry under m.mu, so a
+// footer's per-frame read (GetSessionName) waited for the whole disk pass. On
+// the 248MB session that was a 1.4s stall of the owner loop; the snapshot now
+// copies the shells under the lock and hydrates them outside it, like EachEntry
+// already did.
+func TestGetEntriesDoesNotHoldTheManagerLockWhileHydrating(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "session.jsonl")
+	lines := []string{`{"type":"session","version":3,"id":"s1","timestamp":"t0","cwd":"/tmp"}`}
+	parent := ""
+	for i := 0; i < 4; i++ {
+		id := "m" + strconv.Itoa(i)
+		parentField := ""
+		if parent != "" {
+			parentField = `,"parentId":"` + parent + `"`
+		}
+		lines = append(lines, `{"type":"message","id":"`+id+`","timestamp":"t"`+parentField+
+			`,"message":{"role":"user","content":"body"}}`)
+		parent = id
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manager, err := OpenSession(path, dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer manager.Close()
+	manager.waitForCacheSeed()
+
+	// Hold the payload reader, so the hydration pass cannot finish. The
+	// snapshot goroutine therefore stops after copying its shells, which is
+	// exactly the point this test separates.
+	manager.mu.Lock()
+	reader := manager.payloads
+	manager.mu.Unlock()
+	if reader == nil {
+		t.Fatal("the session did not load index-only")
+	}
+	reader.mu.Lock()
+
+	snapshotDone := make(chan struct{})
+	go func() {
+		defer close(snapshotDone)
+		_ = manager.GetEntries()
+	}()
+
+	// Once the manager lock is free, the snapshot is in its hydration pass. A
+	// snapshot that hydrates under m.mu still holds it here and this never
+	// succeeds; the timeout keeps the failure a report instead of a hang.
+	locked := make(chan struct{})
+	lockAttemptStarted := make(chan struct{})
+	go func() {
+		close(lockAttemptStarted)
+		manager.mu.Lock()
+		manager.mu.Unlock()
+		close(locked)
+	}()
+	<-lockAttemptStarted
+	select {
+	case <-locked:
+	case <-time.After(5 * time.Second):
+		reader.mu.Unlock()
+		t.Fatal("the snapshot held the manager lock while it was blocked hydrating")
+	}
+
+	// A per-frame reader returns while the snapshot is still hydrating.
+	_ = manager.GetSessionName()
+	select {
+	case <-snapshotDone:
+		t.Fatal("the snapshot finished hydrating while its payload reader was held")
+	default:
+	}
+	reader.mu.Unlock()
+	<-snapshotDone
 }

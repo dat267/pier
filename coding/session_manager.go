@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -1168,18 +1169,17 @@ func (m *SessionManager) SetMessageDecodeForTest(decode func(*SessionEntry) []ai
 // from the current leaf.
 func (m *SessionManager) BuildContextEntriesForLeaf() []SessionEntry {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.buildContextEntriesForLeafLocked()
-}
-
-// buildContextEntriesForLeafLocked is BuildContextEntriesForLeaf for callers
-// already holding m.mu.
-func (m *SessionManager) buildContextEntriesForLeafLocked() []SessionEntry {
 	entries := compactionWindowFromPointers(m.branchPointersLocked(""), m.messages)
+	payloads := m.payloads
+	m.mu.Unlock()
 	// This is the replay/display snapshot: hydrate it so a caller that decodes
 	// an entry itself (the transcript renderer) sees its bytes. The projection
 	// path stays lazy and decodes through the session's cache instead (D488).
-	m.hydrateValuesLocked(entries)
+	// Hydration runs outside the lock for the same reason as GetEntries (D501):
+	// the window's lines come from the file, and a footer read must not wait.
+	if payloads != nil {
+		_ = payloads.hydrateEntriesSeq(entries)
+	}
 	return entries
 }
 
@@ -1277,10 +1277,21 @@ func (m *SessionManager) eachMessageEntryWithRole(role string, yield func(Sessio
 }
 
 // GetEntries returns all entries (excluding the header).
+//
+// The shells are copied under the lock and hydrated outside it: a lazy entry's
+// line comes back from the session file, and on a long session that pass is
+// seconds of disk reads. Holding m.mu across it stalled every per-frame reader
+// (the footer's GetSessionName waited 1.4s on the 248MB session) for data the
+// snapshot caller owns anyway (D501).
 func (m *SessionManager) GetEntries() []SessionEntry {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.getEntriesLocked()
+	out := m.copyEntriesLocked()
+	payloads := m.payloads
+	m.mu.Unlock()
+	if payloads != nil {
+		_ = payloads.hydrateEntriesSeq(out)
+	}
+	return out
 }
 
 // Branch starts a new branch from an earlier entry.
@@ -1968,17 +1979,27 @@ type SessionTreeNode struct {
 // GetTree builds the session entry tree with resolved labels.
 func (m *SessionManager) GetTree() []*SessionTreeNode {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-	entries := m.getEntriesLocked()
+	entries := m.copyEntriesLocked()
+	labels := make(map[string]string, len(m.labelsByID))
+	maps.Copy(labels, m.labelsByID)
+	labelTimestamps := make(map[string]string, len(m.labelTimestamps))
+	maps.Copy(labelTimestamps, m.labelTimestamps)
+	payloads := m.payloads
+	m.mu.Unlock()
+	// The tree's own builders decode each node's message, so the bytes are
+	// needed; read them outside the lock so the footer keeps painting (D501).
+	if payloads != nil {
+		_ = payloads.hydrateEntriesSeq(entries)
+	}
 
 	nodeMap := map[string]*SessionTreeNode{}
 	var roots []*SessionTreeNode
 	for _, entry := range entries {
 		node := &SessionTreeNode{Entry: entry}
-		if label, ok := m.labelsByID[entry.ID]; ok {
+		if label, ok := labels[entry.ID]; ok {
 			node.Label = label
 			node.HasLabel = true
-			node.LabelTimestamp = m.labelTimestamps[entry.ID]
+			node.LabelTimestamp = labelTimestamps[entry.ID]
 		}
 		nodeMap[entry.ID] = node
 	}
@@ -2015,7 +2036,10 @@ func (m *SessionManager) GetTree() []*SessionTreeNode {
 	return roots
 }
 
-func (m *SessionManager) getEntriesLocked() []SessionEntry {
+// copyEntriesLocked copies every entry shell into a caller-owned snapshot. The
+// bytes of a lazily loaded entry are filled afterwards, outside the lock, by
+// hydrateEntriesSeq.
+func (m *SessionManager) copyEntriesLocked() []SessionEntry {
 	var out []SessionEntry
 	for _, entry := range m.fileEntries {
 		if entry.Entry != nil {
@@ -2027,18 +2051,7 @@ func (m *SessionManager) getEntriesLocked() []SessionEntry {
 			out = append(out, *entry.Entry)
 		}
 	}
-	m.hydrateValuesLocked(out)
 	return out
-}
-
-// hydrateValuesLocked fills lazily loaded copies for a caller-owned snapshot.
-// Hydrating never touches the canonical shells the projection reads, so the
-// bytes live exactly as long as the snapshot that asked for them.
-func (m *SessionManager) hydrateValuesLocked(entries []SessionEntry) {
-	if m.payloads == nil {
-		return
-	}
-	_ = m.payloads.hydrateEntriesSeq(entries)
 }
 
 // HydrateEntry returns a hydrated copy of one entry, reading a lazily loaded

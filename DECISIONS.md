@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D500)
+# Deliberate divergences from pi (D1–D501)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8275,3 +8275,13 @@ callers that really need every entry.
 
 Test: `TestUserMessagesForForkingReadsOnlyUserEntries` (the list and its texts,
 then a second call's allocation budget).
+
+### D501
+
+**A full session snapshot hydrates outside the manager lock.**
+
+Three readers hand a caller every entry: `GetEntries`, `BuildContextEntriesForLeaf` and `GetTree`. All three ran their disk pass under `SessionManager.mu`, and because pier loads sessions index-only (D488) that pass is a `ReadAt` per entry's line. On the 248MB session (72,114 entries) `GetEntries` took 650ms and `GetTree` 585ms, and during it every per-frame reader queued behind the lock: the footer's `GetSessionName` waited 1.4s, which is exactly the owner-loop stall the lock inventory exists to prevent.
+
+Each reader now copies the entry shells (and, for the tree, the label maps) under the lock and hydrates the copy outside it, which is the shape `EachEntry` already had. Measured on the same session: the footer's read during a snapshot drops from 1.4s to 1ms, and the snapshot itself keeps its cost, since it was always the caller's own disk pass.
+
+`TestGetEntriesDoesNotHoldTheManagerLockWhileHydrating` pins it with a controlled handshake: it holds the payload reader so the hydration pass cannot finish, then requires another goroutine to take the manager lock and a per-frame read to return while the snapshot is still blocked. Before the change the lock was never released and the test failed with "the snapshot held the manager lock while it was blocked hydrating".
