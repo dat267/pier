@@ -123,6 +123,10 @@ type BedrockCompat struct {
 // chat API.
 type MistralConversationsCompat struct {
 	SupportsMidConvoSystemMessages *bool `json:"supportsMidConvoSystemMessages,omitempty"`
+	// SupportsStrictMode opts in to strict (schema-constrained) function tools.
+	// Off by default: Mistral Large 4 can go silent for minutes before a strict
+	// tool call (mistral-conversations.ts v1.6.0, #12148).
+	SupportsStrictMode *bool `json:"supportsStrictMode,omitempty"`
 }
 
 // OpenRouterRouting is OpenRouter provider routing preferences, sent as the

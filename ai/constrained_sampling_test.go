@@ -3,6 +3,7 @@ package ai
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -117,5 +118,35 @@ func TestStrictSamplingErrorIncludesTheRejectedValue(t *testing.T) {
 		if err == nil || err.Error() != testCase.want {
 			t.Fatalf("schema %s err = %v; want %q", testCase.schema, err, testCase.want)
 		}
+	}
+}
+
+// A node with no type, no anyOf and no enum is rejected in strict mode: OpenAI
+// rejects it, and a bare enum counts as typed while a bare const does not
+// (packages/ai/src/api/constrained-sampling.ts, v1.6.0).
+func TestStrictSchemaRejectsAnUntypedNode(t *testing.T) {
+	cases := []struct {
+		name    string
+		schema  string
+		wantErr bool
+	}{
+		{"bare const", `{"type":"object","properties":{"a":{"const":null}},"required":["a"],"additionalProperties":false}`, true},
+		{"bare enum is typed", `{"type":"object","properties":{"a":{"enum":["x","y"]}},"required":["a"],"additionalProperties":false}`, false},
+		{"typed property", `{"type":"object","properties":{"a":{"type":"string"}},"required":["a"],"additionalProperties":false}`, false},
+		{"untyped root", `{"properties":{"a":{"type":"string"}}}`, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := MakeStrictJSONSchema(json.RawMessage(tc.schema))
+			if tc.wantErr {
+				if err == nil || !strings.Contains(err.Error(), "schemas without a type are unsupported") {
+					t.Fatalf("err = %v, want the untyped-node rejection", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("err = %v, want a converted schema", err)
+			}
+		})
 	}
 }

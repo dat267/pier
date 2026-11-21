@@ -47,7 +47,7 @@
 				}
 			}
 		},
-		"strictJson": "{\"type\":\"object\",\"properties\":{\"a\":{\"const\":null}},\"required\":[\"a\"],\"additionalProperties\":false}"
+		"error": "schemas without a type are unsupported"
 	},
 	{
 		"schema": {
@@ -112,7 +112,7 @@
 				}
 			}
 		},
-		"strictJson": "{\"type\":\"object\",\"properties\":{\"list\":{\"anyOf\":[{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"c\":{\"anyOf\":[{},{\"type\":\"null\"}]}},\"required\":[\"c\"],\"additionalProperties\":false}},{\"type\":\"null\"}]}},\"required\":[\"list\"],\"additionalProperties\":false}"
+		"error": "schemas without a type are unsupported"
 	},
 	{
 		"schema": {
@@ -169,7 +169,7 @@
 				}
 			}
 		},
-		"strictJson": "{\"type\":\"object\",\"properties\":{\"x\":{\"anyOf\":[{\"type\":\"object\",\"properties\":{\"9\":{\"anyOf\":[{},{\"type\":\"null\"}]},\"10\":{\"anyOf\":[{},{\"type\":\"null\"}]},\"a\":{\"anyOf\":[{},{\"type\":\"null\"}]}},\"required\":[\"9\",\"10\",\"a\"],\"additionalProperties\":false},{\"type\":\"null\"}]}},\"required\":[\"x\"],\"additionalProperties\":false}"
+		"error": "schemas without a type are unsupported"
 	},
 	{
 		"schema": {
@@ -325,7 +325,7 @@
 				}
 			}
 		},
-		"error": "properties require type object"
+		"error": "schemas without a type are unsupported"
 	},
 	{
 		"schema": {

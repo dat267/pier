@@ -1058,7 +1058,11 @@ func buildMistralChatPayload(model *Model, context TranscriptContext, messages [
 	}
 	currentTools := GetCurrentTools(context.Messages)
 	if len(currentTools) > 0 {
-		tools, err := toMistralFunctionTools(currentTools)
+		// Strict tools are opt-in per model (mistral-conversations.ts v1.6.0).
+		supportsStrictMode := model.Compat != nil && model.Compat.MistralConversations != nil &&
+			model.Compat.MistralConversations.SupportsStrictMode != nil &&
+			*model.Compat.MistralConversations.SupportsStrictMode
+		tools, err := toMistralFunctionTools(currentTools, supportsStrictMode)
 		if err != nil {
 			return nil, err
 		}
@@ -1111,10 +1115,10 @@ func containsString(values []string, target string) bool {
 	return slices.Contains(values, target)
 }
 
-func toMistralFunctionTools(tools []Tool) ([]mistralFunctionTool, error) {
+func toMistralFunctionTools(tools []Tool, supportsStrictMode bool) ([]mistralFunctionTool, error) {
 	out := make([]mistralFunctionTool, 0, len(tools))
 	for _, tool := range tools {
-		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, true, nil)
+		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, supportsStrictMode, nil)
 		if err != nil {
 			return nil, err
 		}

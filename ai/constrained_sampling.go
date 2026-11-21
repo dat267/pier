@@ -169,6 +169,16 @@ func makeSchemaNodeStrict(node *orderedJSONFields, check UnsupportedStrictSchema
 		}
 	}
 
+	// OpenAI strict mode rejects nodes without a type; a bare enum counts as typed,
+	// a bare const does not (constrained-sampling.ts, v1.6.0).
+	if _, hasType := node.raw("type"); !hasType {
+		_, hasAnyOf := node.raw("anyOf")
+		_, hasEnum := node.raw("enum")
+		if !hasAnyOf && !hasEnum {
+			return &strictSchemaError{msg: "schemas without a type are unsupported"}
+		}
+	}
+
 	if anyOfData, ok := node.raw("anyOf"); ok {
 		var list []json.RawMessage
 		if err := jsonUnmarshalStrict(anyOfData, &list); err != nil || len(list) == 0 {

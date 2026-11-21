@@ -426,3 +426,38 @@ func TestMistralRequestsMatchUpstreamWire(t *testing.T) {
 		})
 	}
 }
+
+// Mistral's strict tools are opt-in per model: `toFunctionTools` passes
+// `model.compat.supportsStrictMode ?? false`, because Mistral Large 4 can go
+// silent for minutes before a strict tool call (mistral-conversations.ts,
+// v1.6.0, #12148). Without the compat flag a "prefer" tool is sent non-strict.
+func TestMistralStrictToolsAreOptIn(t *testing.T) {
+	strictPreference := ConstrainedSamplingValue{Set: true, Config: &ConstrainedSamplingConfig{Type: "json_schema", Strict: "prefer"}}
+	declared := SystemMessage{Content: StringOrBlocks{Text: "system"}, Timestamp: 1}
+	declared.ToolsAdded = []Tool{{
+		Name: "lookup", Description: "Look up",
+		Parameters:          json.RawMessage(`{"type":"object","properties":{"a":{"type":"string"}},"required":["a"]}`),
+		ConstrainedSampling: strictPreference,
+	}}
+	build := func(compat *MistralConversationsCompat) mistralFunctionTool {
+		model := &Model{ID: "mistral-large-latest", API: APIMistralConversations, Provider: "mistral", Compat: &ModelCompat{MistralConversations: compat}}
+		payload, err := buildMistralChatPayload(model, TranscriptContext{Messages: []Message{
+			&declared,
+			&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 2},
+		}}, nil, &MistralOptions{})
+		if err != nil {
+			t.Fatalf("build payload: %v", err)
+		}
+		if len(payload.Tools) == 0 {
+			t.Fatal("no tools in the payload")
+		}
+		return payload.Tools[0]
+	}
+	if got := build(nil); got.Function.Strict {
+		t.Fatalf("strict = true without the compat flag, want the tool sent non-strict")
+	}
+	on := true
+	if got := build(&MistralConversationsCompat{SupportsStrictMode: &on}); !got.Function.Strict {
+		t.Fatalf("strict = false with supportsStrictMode, want a strict tool")
+	}
+}
