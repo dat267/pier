@@ -600,7 +600,17 @@ func run(appName string, args *coding.Args) error {
 	}
 
 	if rpcMode {
-		replacer := rpcSessionReplacer(sessionOptions, settings, agentDir, args.ProjectTrustOverride, setMCPSession)
+		// A settings-derived scope is resolved again for every replacement, after
+		// the project rebind, so /resume or /fork into another project takes that
+		// project's enabledModels (v1.6.0, model-scope-session-replacement).
+		var recomputeScope func(context.Context) ([]coding.ScopedModel, []coding.ModelScopeDiagnostic, error)
+		if len(args.Models) == 0 {
+			recomputeScope = func(ctx context.Context) ([]coding.ScopedModel, []coding.ModelScopeDiagnostic, error) {
+				return scopedModelsFor(args, settings, runtime, ctx)
+			}
+		}
+		replacer := rpcSessionReplacer(sessionOptions, settings, agentDir, args.ProjectTrustOverride, setMCPSession,
+			recomputeScope, map[string]bool{}, os.Stderr)
 		themeName := ""
 		if theme := settings.GetThemeSetting(); theme != nil {
 			themeName = *theme

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -246,5 +247,33 @@ func TestSessionNameFor(t *testing.T) {
 				t.Fatalf("name = %v, want %q", name, tc.want)
 			}
 		})
+	}
+}
+
+// A replacement session resolves a settings-derived model scope again after the
+// project rebind, so /resume or /fork into another project takes that project's
+// enabledModels; --models names the scope itself and is left alone. A scope
+// warning is written once (v1.6.0, model-scope-session-replacement).
+func TestRPCReplacerResolvesTheScopePerReplacement(t *testing.T) {
+	base := &coding.CreateAgentSessionOptions{}
+	reported := map[string]bool{}
+	var stderr bytes.Buffer
+	calls := 0
+	recompute := func(context.Context) ([]coding.ScopedModel, []coding.ModelScopeDiagnostic, error) {
+		calls++
+		return []coding.ScopedModel{{Model: &ai.Model{ID: "m2", Provider: "p2"}}},
+			[]coding.ModelScopeDiagnostic{{Type: "warning", Message: `No models match pattern "p/x"`}}, nil
+	}
+	replacer := rpcSessionReplacer(base, coding.NewInMemorySettingsManager(nil, coding.SettingsManagerCreateOptions{}),
+		t.TempDir(), nil, func(*coding.AgentSession) {}, recompute, reported, &stderr)
+	// The factory fails later (no session can be built here); what this test
+	// observes is the scope resolution and its diagnostic output before that.
+	_, _ = replacer(context.Background(), coding.NewSessionManager(t.TempDir(), nil))
+	_, _ = replacer(context.Background(), coding.NewSessionManager(t.TempDir(), nil))
+	if calls != 2 {
+		t.Fatalf("scope resolved %d times, want once per replacement", calls)
+	}
+	if got := strings.Count(stderr.String(), "No models match pattern"); got != 1 {
+		t.Fatalf("warning written %d times, want once:\n%s", got, stderr.String())
 	}
 }

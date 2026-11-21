@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"runtime"
@@ -81,7 +83,17 @@ func watchRPCSignals(signals <-chan os.Signal, cancel func(), forceExit func(int
 // come from the target. A cross-project switch resolves that project's trust
 // without a prompt (upstream reports hasUI false) and rebinds the one settings
 // manager (D160).
-func rpcSessionReplacer(base *coding.CreateAgentSessionOptions, settings *coding.SettingsManager, agentDir string, trustOverride *bool, setMCPSession func(*coding.AgentSession)) func(context.Context, *coding.SessionManager) (*coding.AgentSession, error) {
+// rpcSessionReplacer builds the factory for a session-replacement command.
+// recomputeScope re-resolves a settings-derived model scope after the project
+// rebind (nil when --models named the scope), and reported collects the scope
+// diagnostics already written, so a repeated warning is not printed again.
+func rpcSessionReplacer(base *coding.CreateAgentSessionOptions, settings *coding.SettingsManager, agentDir string, trustOverride *bool, setMCPSession func(*coding.AgentSession), recomputeScope func(context.Context) ([]coding.ScopedModel, []coding.ModelScopeDiagnostic, error), reported map[string]bool, stderr io.Writer) func(context.Context, *coding.SessionManager) (*coding.AgentSession, error) {
+	if reported == nil {
+		reported = map[string]bool{}
+	}
+	if stderr == nil {
+		stderr = os.Stderr
+	}
 	return func(ctx context.Context, manager *coding.SessionManager) (*coding.AgentSession, error) {
 		cwd := manager.GetCwd()
 		if cwd != "" && cwd != settings.Cwd() {
@@ -99,6 +111,22 @@ func rpcSessionReplacer(base *coding.CreateAgentSessionOptions, settings *coding
 		options := *base
 		options.Cwd = cwd
 		options.SessionManager = manager
+		if recomputeScope != nil {
+			scoped, diagnostics, scopeErr := recomputeScope(ctx)
+			if scopeErr != nil {
+				return nil, scopeErr
+			}
+			options.ScopedModels = scoped
+			for _, diagnostic := range diagnostics {
+				if reported[diagnostic.Message] {
+					continue
+				}
+				reported[diagnostic.Message] = true
+				_, _ = fmt.Fprintln(stderr, coding.FormatCLIDiagnostic(coding.CLIDiagnostic{
+					Type: diagnostic.Type, Message: diagnostic.Message,
+				}))
+			}
+		}
 		created, err := coding.CreateAgentSession(ctx, &options)
 		if err != nil {
 			return nil, err
