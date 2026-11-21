@@ -393,8 +393,7 @@ func (s *AgentSession) RunAutoCompaction(ctx context.Context, reason CompactionR
 		return false, err
 	}
 	settings, _ := s.compactionSettings()
-	pathEntries := s.Sessions.GetBranch("")
-	preparation := PrepareCompaction(pathEntries, settings)
+	preparation := s.Sessions.PrepareCompaction(settings)
 	if preparation == nil {
 		return false, nil
 	}

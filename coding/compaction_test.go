@@ -3,7 +3,10 @@ package coding
 import (
 	"encoding/json"
 	"github.com/dat267/pier/ai"
+	"os"
+	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -632,5 +635,52 @@ func TestCompactUsesStockSummarizer(t *testing.T) {
 	}
 	if seenHeaders["x-test-auth"] == nil || *seenHeaders["x-test-auth"] != "1" {
 		t.Fatalf("auth headers did not reach the summarizer: %v", seenHeaders)
+	}
+}
+
+// Reference: pi v1.6.0 core/compaction/compaction.ts prepareCompaction projects
+// the branch's entries, and upstream keeps parsed messages in memory.
+// `GetBranch` hands out index-only shells after a file load (D488), so the
+// projection saw no messages and prepareCompaction returned nil: /compact on a
+// resumed 72k-entry session reported "Nothing to compact (session too small)".
+func TestPrepareCompactionReadsALoadedBranch(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "session.jsonl")
+	lines := []string{
+		`{"type":"session","version":3,"id":"s1","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/tmp"}`,
+	}
+	parent := ""
+	for i := 0; i < 40; i++ {
+		id := "m" + strconv.Itoa(i)
+		parentField := ""
+		if parent != "" {
+			parentField = `,"parentId":"` + parent + `"`
+		}
+		role, content := "assistant", `[{"type":"text","text":"`+strings.Repeat("a", 2000)+`"}]`
+		if i%2 == 0 {
+			role, content = "user", `"`+strings.Repeat("q", 2000)+`"`
+		}
+		lines = append(lines, `{"type":"message","id":"`+id+`","timestamp":"t"`+parentField+
+			`,"message":{"role":"`+role+`","api":"openai-completions","provider":"p","model":"m","usage":{},"stopReason":"stop","content":`+content+`,"timestamp":1}}`)
+		parent = id
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manager, err := OpenSession(path, dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(manager.Close)
+	settings := CompactionSettings{Enabled: true, ReserveTokens: 0, KeepRecentTokens: 1}
+	if unhydrated := PrepareCompaction(manager.GetBranch(""), settings); unhydrated != nil {
+		t.Fatalf("the unhydrated branch prepared a compaction with %d messages", len(unhydrated.MessagesToSummarize))
+	}
+	prepared := manager.PrepareCompaction(settings)
+	if prepared == nil {
+		t.Fatal("a loaded branch with a conversation has nothing to compact")
+	}
+	if len(prepared.MessagesToSummarize)+len(prepared.TurnPrefixMessages) == 0 {
+		t.Fatalf("prepared no messages")
 	}
 }

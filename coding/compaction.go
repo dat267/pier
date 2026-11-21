@@ -1181,7 +1181,23 @@ type CompactionPreparation struct {
 // The cut runs over the session projection, not the raw entries: a context edit
 // removes or rewrites what the model saw, omitted entries must not cost budget,
 // and only projected messages can be summarized.
+// PrepareCompaction is PrepareCompaction over the current branch with the
+// session's payload reader, so a message entry loaded index-only (D488) reaches
+// the projection instead of contributing nothing.
+func (m *SessionManager) PrepareCompaction(settings CompactionSettings) *CompactionPreparation {
+	branch := m.GetBranch("")
+	m.mu.Lock()
+	payloads := m.payloads
+	m.mu.Unlock()
+	return prepareCompactionWith(branch, settings, payloads)
+}
+
 func PrepareCompaction(pathEntries []SessionEntry, settings CompactionSettings) *CompactionPreparation {
+	return prepareCompactionWith(pathEntries, settings, nil)
+}
+
+// prepareCompactionWith is PrepareCompaction with a payload reader.
+func prepareCompactionWith(pathEntries []SessionEntry, settings CompactionSettings, payloads *payloadReader) *CompactionPreparation {
 	// Nothing to compact without entries (upstream returns nil).
 	if len(pathEntries) == 0 {
 		return nil
@@ -1190,6 +1206,11 @@ func PrepareCompaction(pathEntries []SessionEntry, settings CompactionSettings) 
 		return nil
 	}
 
+	if payloads != nil {
+		if err := payloads.hydrateEntriesSeq(pathEntries); err != nil {
+			return nil
+		}
+	}
 	window := projectWindow(materializePointers(pathEntries), nil)
 	projectedEntries := window.Entries
 	sourceEntries := make([]SessionEntry, len(projectedEntries))

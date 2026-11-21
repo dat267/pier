@@ -999,7 +999,7 @@ func (s *AgentSession) runManualCompaction(ctx context.Context, customInstructio
 	settings, _ := s.compactionSettings()
 
 	pathEntries := s.Sessions.GetBranch("")
-	preparation := PrepareCompaction(pathEntries, settings)
+	preparation := s.Sessions.PrepareCompaction(settings)
 	if preparation == nil {
 		// Distinguish why compaction is impossible (upstream uses optional
 		// chaining: an empty branch reports Nothing-to-compact, not a panic).
