@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dat267/pier/agent"
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/mcp/protocol"
 	"github.com/dat267/pier/tui"
@@ -446,8 +447,14 @@ func TestMcpTruncatedResultShowsTheShellWarningCard(t *testing.T) {
 		if !strings.Contains(got, "[Full output: /tmp/pier/full.txt") {
 			t.Errorf("expanded=%v missing the full-output warning:\n%s", expanded, got)
 		}
-		if !strings.Contains(got, "Truncated: showing 3 of 120 lines") {
-			t.Errorf("expanded=%v missing the truncation count:\n%s", expanded, got)
+		// The cut is reported by size, like the shell card's byte branch: an MCP
+		// result is often one very long line, where a line count says nothing
+		// (D495).
+		if !strings.Contains(got, "Truncated: 20.0KB limit") {
+			t.Errorf("expanded=%v missing the size limit:\n%s", expanded, got)
+		}
+		if strings.Contains(got, "of 120 lines") {
+			t.Errorf("expanded=%v reports a line count for a size cut:\n%s", expanded, got)
 		}
 		if strings.Count(got, "Full output:") != 1 {
 			t.Errorf("expanded=%v repeats the path:\n%s", expanded, got)
@@ -463,8 +470,40 @@ func TestMcpTruncatedResultShowsTheShellWarningCard(t *testing.T) {
 	lines := renderers.RenderResult(result, ToolRenderResultOptions{}, theme,
 		&ToolRenderContext{Cwd: "/tmp/proj"}).Render(120)
 	joined := strings.Join(lines, "\n")
-	want := theme.Fg("warning", "[Full output: /tmp/pier/full.txt. Truncated: showing 3 of 120 lines]")
+	want := theme.Fg("warning", "[Full output: /tmp/pier/full.txt. Truncated: 20.0KB limit]")
 	if !strings.Contains(joined, want) {
 		t.Errorf("warning card is not one line in the warning color:\n%q", joined)
+	}
+}
+
+// TestMcpTruncatedOneLongLineReportsTheSizeLimit is the reported case: an MCP
+// result that is one very long line. The cut keeps McpOutputMaxBytes, so the card
+// must name that size rather than count lines, which the shell card does for a
+// byte cut (D495).
+func TestMcpTruncatedOneLongLineReportsTheSizeLimit(t *testing.T) {
+	theme := newRendererTestTheme(t)
+	long := strings.Repeat("x", 40*1024)
+	limited, path := coding.LimitMcpContent([]ai.Content{
+		ai.TextContent{Text: long},
+	}, func(data []byte, extension string) (string, error) { return "/tmp/pier/full.txt", nil })
+	if path == nil {
+		t.Fatal("the long result was not truncated")
+	}
+	text := ""
+	for _, block := range limited {
+		if block, ok := block.(ai.TextContent); ok {
+			text = block.Text
+		}
+	}
+	result := &SortToolResultContent{
+		Content: []ToolResultContent{{Type: "text", Text: text}},
+		Details: json.RawMessage(`{"server":"fs","tool":"read","fullOutputPath":"/tmp/pier/full.txt"}`),
+	}
+	got := renderMcpResult(t, result, false, theme)
+	if !strings.Contains(got, "Truncated: 20.0KB limit") {
+		t.Errorf("card does not name the size limit:\n%s", got)
+	}
+	if strings.Contains(got, "Total output lines:") || strings.Contains(got, "Warning: truncated output") {
+		t.Errorf("card kept the prose header:\n%s", got)
 	}
 }

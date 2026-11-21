@@ -8141,13 +8141,17 @@ below it, so the frame read as a wall of prose rather than a warning.
 
 Pier prints the shell's card instead (`core/tools/renderers/bash.ts:70-86`): the
 header and the trailing path line leave the body, and one blank line then a
-warning-colored `[Full output: <path>. Truncated: showing N of M lines]` closes
-the frame, in both states, since the kept text is still truncated when expanded.
-A result whose text carries no header keeps the card's path-only form.
+warning-colored `[Full output: <path>. Truncated: 20.0KB limit]` closes the
+frame, in both states, since the kept text is still truncated when expanded. The
+cut is by bytes (`McpOutputMaxBytes`), and an MCP result is often one very long
+JSON line, where a line count says nothing, so the card names the size the way
+the shell card's byte branch does. A result whose text carries no header keeps
+the card's path-only form.
 
 Tests: `TestMcpTruncatedResultShowsTheShellWarningCard` (header and path line
-removed, the count, one path, the warning color, both states, each kept line
-still shown) and `TestMcpToolRenderUpstreamParity` (the card's rows are the only
+removed, the size limit, one path, the warning color, both states, each kept line
+still shown) and `TestMcpTruncatedOneLongLineReportsTheSizeLimit` (a 40KB
+single-line result through `coding.LimitMcpContent`) and `TestMcpToolRenderUpstreamParity` (the card's rows are the only
 ones skipped).
 
 ### D496

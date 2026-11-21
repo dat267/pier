@@ -13,7 +13,6 @@ package interactive
 
 import (
 	"encoding/json"
-	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -77,9 +76,13 @@ func mcpRenderers(label string) ToolRenderers {
 			if path := mcpFullOutputPath(result); path != "" {
 				warnings = append(warnings, "Full output: "+path)
 			}
-			if body, totalLines, shownLines, ok := mcpTruncationHeader(output); ok {
+			if body, ok := mcpTruncationBody(output); ok {
 				output = body
-				warnings = append(warnings, "Truncated: showing "+itoa(shownLines)+" of "+itoa(totalLines)+" lines")
+				// The cut is by bytes (`coding.LimitMcpContent` keeps
+				// McpOutputMaxBytes), and an MCP result is often one very long line,
+				// so the size is what reads as a limit; the shell card's byte branch
+				// words it the same way (D495).
+				warnings = append(warnings, "Truncated: "+coding.FormatSize(coding.McpOutputMaxBytes)+" limit")
 			}
 			container.AddChild(tui.NewSpacer(1))
 			if output != "" {
@@ -277,28 +280,22 @@ func (c *mcpResultComponent) Render(width int) []string {
 
 func (c *mcpResultComponent) Invalidate() { c.hasCache = false }
 
-// mcpTruncationHeader splits the header `coding.LimitMcpContent` writes in front
-// of a truncated result: the prose warning, the original token count and the
-// total line count, then a blank line, then the kept text and the bracketed path
-// line. It returns the body, the total line count of the original output, how
-// many lines the body kept, and ok=false when the text carries no header.
-func mcpTruncationHeader(output string) (body string, totalLines int, shownLines int, ok bool) {
+// mcpTruncationBody strips the header `coding.LimitMcpContent` writes in front of
+// a truncated result, and the bracketed path line it appends, leaving the kept
+// text. ok is false when the text carries no header.
+func mcpTruncationBody(output string) (body string, ok bool) {
 	const prefix = "Warning: truncated output (original token count: "
 	if !strings.HasPrefix(output, prefix) {
-		return output, 0, 0, false
+		return output, false
 	}
 	rest := output[len(prefix):]
 	firstBreak := strings.IndexByte(rest, '\n')
 	if firstBreak < 0 {
-		return output, 0, 0, false
+		return output, false
 	}
 	linesLine, afterLines, found := strings.Cut(rest[firstBreak+1:], "\n")
 	if !found || !strings.HasPrefix(linesLine, "Total output lines: ") {
-		return output, 0, 0, false
-	}
-	total, err := strconv.Atoi(strings.TrimSpace(strings.TrimPrefix(linesLine, "Total output lines: ")))
-	if err != nil {
-		return output, 0, 0, false
+		return output, false
 	}
 	body = strings.TrimLeft(afterLines, "\n")
 	// The trailing `[Full output: path ...]` line belongs to the card.
@@ -309,12 +306,7 @@ func mcpTruncationHeader(output string) (body string, totalLines int, shownLines
 		strings.HasPrefix(body[index:], "[Could not save") {
 		body = strings.TrimRight(body[:index], "\n")
 	}
-	body = strings.TrimSpace(body)
-	shown := 0
-	if body != "" {
-		shown = len(strings.Split(body, "\n"))
-	}
-	return body, total, shown, true
+	return strings.TrimSpace(body), true
 }
 
 // mcpFullOutputPath reads the saved full-output path from an MCP result's
