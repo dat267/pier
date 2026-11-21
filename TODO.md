@@ -50,3 +50,28 @@ go test -count=1 ./coding 2>&1 | grep -B2 -A15 -- '--- FAIL'
 If it names a test this repository shares with `./coding/interactive`, check
 first whether it depends on wall-clock timing or on process-global state
 (`leakcheck` and `just test-isolated` both hunt for the second class).
+
+## The daxnuts easter egg has no production caller (open)
+
+The legacy commit the interactive fixtures pin (`d1230ea2`) hides a daxnuts easter
+egg for the OpenCode Kimi K2.5 model: `checkDaxnutsEasterEgg(model)` runs after
+`session.setModel`, after the selector's `selectModel`, and after a login that
+selected a model (three call sites). pier ported the component and the predicate
+(`CommandWiring.CheckDaxnutsEasterEgg`) but wired it into nothing:
+`ModelWiring.OnModelSelected`, which is where the model-selection hook now lives
+(`coding/interactive/interactivemode_models.go:607`), runs only
+`MaybeWarnAboutAnthropicSubscriptionAuth`. So the egg is dead except in
+`interactivemode_commands_test.go`.
+
+Repair is one call in each of the two hooks the legacy sites funnel into:
+`newModelWiring`'s `OnModelSelected` and the login's `OnAuthenticated` (which is
+wired to an empty function at `interactivemode_auth.go:894`). Both would call
+`app.commands.CheckDaxnutsEasterEgg(model.Provider, model.ID, app.ui)`.
+
+Both hooks are where the three legacy call sites converge: the selector and the
+`/model` command reach `OnModelSelected`, and a login that selected a model
+reaches `OnAuthenticated`.
+
+Note that the pin (`faac5858`) removed the easter egg entirely, so this is
+completing a legacy surface rather than keeping parity with the pin; leave it
+unwired if the legacy easter eggs are being retired instead.
