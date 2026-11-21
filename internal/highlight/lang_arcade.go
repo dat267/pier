@@ -106,8 +106,11 @@ func Arcade() *Language {
 	}
 
 	return &Language{
-		// Note: the reference also sets `illegal: /#(?!!)/`; RE2 has no negative
-		// lookahead, so a stray `#` is not rejected here.
+		// D502: the reference also sets `illegal: /#(?!!)/`. RE2 has no lookahead,
+		// so a stray `#` is not rejected: pier keeps highlighting the rest of the
+		// line where the reference returns the whole input as plain text. A test
+		// pins the difference in
+		// TestArcadeIllegalHashKeepsHighlighting.
 		Name:     "ArcGIS Arcade",
 		Keywords: keywords,
 		Contains: []*Mode{

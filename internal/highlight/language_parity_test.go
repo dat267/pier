@@ -455,3 +455,24 @@ func TestLatexVerbatimDelimitsTheString(t *testing.T) {
 		})
 	}
 }
+
+// D502: `languages/arcade.js` ends with `illegal: /#(?!!)/`, and highlight.js
+// aborts the whole highlight and returns the input as plain text when it meets
+// an illegal lexeme (ignoreIllegals is false by default). RE2 has no negative
+// lookahead, so pier cannot express `#` not followed by `!` and highlights the
+// rest of the line instead. This pins the difference so a later change to the
+// illegal handling does not silently travel without noticing it.
+func TestArcadeIllegalHashKeepsHighlighting(t *testing.T) {
+	code := "// c\n/* c */\n# h\n"
+	result, err := Highlight(code, "arcade")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Illegal {
+		t.Fatalf("the reference rejects the stray `#`; the port cannot (D502)")
+	}
+	if got, want := RenderHTML(result.Nodes), "<span class=\"hljs-comment\">// c</span>\n"+
+		"<span class=\"hljs-comment\">/* c */</span>\n# h\n"; got != want {
+		t.Fatalf("HTML = %q; want %q", got, want)
+	}
+}

@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D501)
+# Deliberate divergences from pi (D1–D502)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8285,3 +8285,20 @@ Three readers hand a caller every entry: `GetEntries`, `BuildContextEntriesForLe
 Each reader now copies the entry shells (and, for the tree, the label maps) under the lock and hydrates the copy outside it, which is the shape `EachEntry` already had. Measured on the same session: the footer's read during a snapshot drops from 1.4s to 1ms, and the snapshot itself keeps its cost, since it was always the caller's own disk pass.
 
 `TestGetEntriesDoesNotHoldTheManagerLockWhileHydrating` pins it with a controlled handshake: it holds the payload reader so the hydration pass cannot finish, then requires another goroutine to take the manager lock and a per-frame read to return while the snapshot is still blocked. Before the change the lock was never released and the test failed with "the snapshot held the manager lock while it was blocked hydrating".
+
+### D502
+
+**Arcade keeps highlighting past a stray `#`.**
+
+`languages/arcade.js` ends with `illegal: /#(?!!)/`, and highlight.js aborts the
+whole highlight when it meets an illegal lexeme, returning the input as plain
+text (`ignoreIllegals` is false by default). RE2 has no negative lookahead, so
+pier cannot express "`#` not followed by `!`" and never rejects the lexeme: for
+`// c\n/* c */\n# h\n` the reference emits the input unchanged while pier
+highlights the two earlier comments.
+
+The difference only shows on input the reference refuses, so pier's output is
+never less correct than plain text for the lines it does not touch; it merely
+keeps the earlier spans. The grammar entry records it inline.
+
+Test: `TestArcadeIllegalHashKeepsHighlighting`.
