@@ -127,8 +127,10 @@ func writeHighlightedText(out *strings.Builder, value string, theme *Theme, scop
 	}
 	f, ok := activeHighlightFormatter(scopes)
 	if !ok {
-		out.WriteString(value)
-		return
+		// Text with no scope keeps the theme's default foreground: v1.6.0's
+		// highlighter paints it instead of leaving it bare, so the row carries a
+		// reset pair around the unstyled run.
+		f = highlightFormatter{color: "text"}
 	}
 	start := 0
 	for {

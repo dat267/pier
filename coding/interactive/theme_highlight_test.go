@@ -50,7 +50,8 @@ func TestHighlightCodeStylesEveryLine(t *testing.T) {
 	}
 }
 
-// The renderer maps a scope to its formatter and leaves surrounding text alone.
+// The renderer maps a scope to its formatter; text with no scope keeps the
+// theme's default foreground, which is what v1.6.0's highlighter emits.
 func TestRenderHighlightedNodesAppliesScopeFormatters(t *testing.T) {
 	theme := highlightThemeFixture(t)
 
@@ -58,7 +59,7 @@ func TestRenderHighlightedNodesAppliesScopeFormatters(t *testing.T) {
 		scopeNode("keyword", textNode("const")),
 		textNode(" value"),
 	}, theme)
-	want := theme.Fg("syntaxKeyword", "const") + " value"
+	want := theme.Fg("syntaxKeyword", "const") + theme.Fg("text", " value")
 	if got != want {
 		t.Fatalf("rendered = %q, want %q", got, want)
 	}
@@ -132,7 +133,7 @@ func TestHighlightCodeColorsPythonDocstringLinesIndependently(t *testing.T) {
 		"",
 		ansi + "line two\x1b[39m",
 		ansi + "\"\"\"\x1b[39m",
-		"after",
+		theme.Fg("text", "after"),
 	}
 	got := HighlightCode(code, "python")
 	if !slices.Equal(got, want) {
