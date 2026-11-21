@@ -397,3 +397,32 @@ func TestRPCAbortWaitsForCanceledPreflightToSettle(t *testing.T) {
 		}
 	})
 }
+
+// RPC reports the session's prompt and skill diagnostics on stderr, never on
+// stdout, which carries the protocol; a replacement session reports the ones it
+// adds and repeats none (upstream writes the diagnostics it takes from the
+// runtime after a rebind, v1.6.0, #12115).
+func TestRPCReportsSessionDiagnosticsOnStderr(t *testing.T) {
+	manager, dir := newTestSession(t)
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, StreamFn: stubStreamFn,
+		Model: &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	session.promptDiagnostics = []ResourceDiagnostic{{Type: "warning", Message: "prompt conflict: two files"}}
+	var stderr bytes.Buffer
+	startRPCTestWith(t, session, RPCModeOptions{Stderr: &stderr})
+	// The boot reports it before any command arrives.
+	deadline := time.Now().Add(2 * time.Second)
+	for stderr.Len() == 0 && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if !strings.Contains(stderr.String(), "prompt conflict: two files") {
+		t.Fatalf("stderr = %q, want the prompt diagnostic", stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "Warning: prompt conflict") {
+		t.Fatalf("stderr = %q, want the CLI warning shape", stderr.String())
+	}
+}

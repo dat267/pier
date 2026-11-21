@@ -112,8 +112,9 @@ byte-parity regressions.
 JSONL on stdin. Responses and session events share stdout; diagnostics use
 stderr. The command and event shapes were verified against **pi v1.3.0** for
 the supported subset below; the command set of upstream `modes/rpc` is
-unchanged through the v1.5.2 pin, and the changes since v1.5.0 are extension and
-shutdown mechanics outside this subset. This is not the framed-CBOR chord transport (removed from the
+unchanged through the v1.6.0 pin, and the changes since v1.5.0 are extension,
+shutdown and rebind mechanics outside this subset. Session diagnostics are
+written to stderr, never to the protocol stream. This is not the framed-CBOR chord transport (removed from the
 tree; D236), and it is not an MCP server.
 
 RPC runs the enabled agent tools with the same permissions as the CLI. It is

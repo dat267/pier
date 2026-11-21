@@ -31,6 +31,9 @@ type RPCModeOptions struct {
 	// package owns the renderer, so the host injects it. When nil, export_html
 	// fails explicitly.
 	ExportToHtml func(session *AgentSession, outputPath string) (string, error)
+	// Stderr receives diagnostics (never stdout, which carries the protocol).
+	// Nil writes to os.Stderr.
+	Stderr io.Writer
 }
 
 type rpcCommand struct {
@@ -83,15 +86,19 @@ type rpcRuntime struct {
 	replaceSession func(context.Context, *SessionManager) (*AgentSession, error)
 	exportToHtml   func(*AgentSession, string) (string, error)
 	unsubscribe    func()
-	packets        chan rpcPacket
-	outputMu       sync.Mutex
-	outputErr      error
-	workers        sync.WaitGroup
-	promptWorkers  sync.WaitGroup
-	runCtx         context.Context
-	runCancel      context.CancelFunc
-	admission      <-chan struct{}
-	promptSlots    chan struct{}
+	stderr         io.Writer
+	// reportedDiagnostics are the diagnostic messages already written to stderr,
+	// so a replacement session repeats none of them.
+	reportedDiagnostics map[string]bool
+	packets             chan rpcPacket
+	outputMu            sync.Mutex
+	outputErr           error
+	workers             sync.WaitGroup
+	promptWorkers       sync.WaitGroup
+	runCtx              context.Context
+	runCancel           context.CancelFunc
+	admission           <-chan struct{}
+	promptSlots         chan struct{}
 }
 
 // RunRPCMode processes LF-delimited commands until EOF. It owns session
@@ -101,12 +108,17 @@ func RunRPCMode(ctx context.Context, session *AgentSession, options RPCModeOptio
 	// share the session; its pointer is then stable for state queries.
 	session.prompt()
 	ctx, cancel := context.WithCancel(ctx)
+	stderr := options.Stderr
+	if stderr == nil {
+		stderr = os.Stderr
+	}
 	runtime := &rpcRuntime{
 		ctx: ctx, cancel: cancel, session: session, replaceSession: options.ReplaceSession,
-		exportToHtml: options.ExportToHtml,
-		packets:      make(chan rpcPacket), promptSlots: make(chan struct{}, 4),
+		exportToHtml: options.ExportToHtml, stderr: stderr, reportedDiagnostics: map[string]bool{},
+		packets: make(chan rpcPacket), promptSlots: make(chan struct{}, 4),
 	}
 	runtime.bindSession()
+	runtime.reportDiagnostics()
 	go runtime.writePackets(options.Output)
 	// A standard-input file can be in a blocking OS read that Close cannot
 	// interrupt on every platform. D235: cancellation releases the owner
@@ -313,6 +325,24 @@ func (r *rpcRuntime) outputError() error {
 }
 
 // bindSession subscribes the runtime's event forwarder to the current session.
+// reportDiagnostics writes the session's prompt and skill diagnostics to stderr,
+// skipping the ones already reported. Upstream reports them for every session it
+// binds, including a replacement (diagnostics-stderr.ts, v1.6.0, #12115).
+func (r *rpcRuntime) reportDiagnostics() {
+	if r.stderr == nil || r.session == nil {
+		return
+	}
+	for _, diagnostic := range append(r.session.PromptDiagnostics(), r.session.SkillDiagnostics()...) {
+		if diagnostic.Message == "" || r.reportedDiagnostics[diagnostic.Message] {
+			continue
+		}
+		r.reportedDiagnostics[diagnostic.Message] = true
+		_, _ = fmt.Fprintln(r.stderr, FormatCLIDiagnostic(CLIDiagnostic{
+			Type: diagnostic.Type, Message: diagnostic.Message,
+		}))
+	}
+}
+
 func (r *rpcRuntime) bindSession() {
 	r.unsubscribe = r.session.Subscribe(func(event *SessionEvent) {
 		encoded, encodeErr := MarshalJSONSessionEvent(event)
@@ -389,6 +419,9 @@ func (r *rpcRuntime) installSession(ctx context.Context, manager *SessionManager
 	created.prompt()
 	r.session = created
 	r.bindSession()
+	// Diagnostics that appeared with the replacement belong to the client's log,
+	// not the protocol stream.
+	r.reportDiagnostics()
 	return nil
 }
 

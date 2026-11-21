@@ -26,7 +26,7 @@ func runRPCSession(parent context.Context, session *coding.AgentSession, replace
 	stop := make(chan struct{})
 	done, exitCode := watchRPCSignals(signals, cancel, func(code int) { os.Exit(code) }, stop)
 	err := coding.RunRPCMode(ctx, session, coding.RPCModeOptions{
-		Input: os.Stdin, Output: os.Stdout, ReplaceSession: replace,
+		Input: os.Stdin, Output: os.Stdout, Stderr: os.Stderr, ReplaceSession: replace,
 		ExportToHtml: func(exported *coding.AgentSession, outputPath string) (string, error) {
 			return interactive.ExportSessionToHTML(exported, outputPath, themeName)
 		},
