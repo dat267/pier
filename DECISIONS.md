@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D506)
+# Deliberate divergences from pi (D1–D507)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8373,3 +8373,22 @@ one. `checkSliceInvariants` therefore skips the equality assertion only for a
 slice of invalid UTF-8 containing an escape, and
 `TestSliceWidthOfSplitInvalidUTF8IsNotPinned` pins the divergence: it fails if the
 two ever agree, which is the signal to delete this row.
+
+### D507
+
+**The dynamic `endSameAsBegin` end-pattern override stays, unreachable.**
+
+`doBeginMatch` recompiles the matched lexeme as the mode's end pattern when the
+compiled mode sets `endSameAsBegin`, which is highlight.js `core.js:1808`'s
+`if (newMode && newMode.endSameAsBegin) newMode.endRe = escape(lexeme)`. No
+language in the pin sets that field: the `END_SAME_AS_BEGIN` helper
+(`core.js:600`) installs only the begin/end callbacks that compare capture 1, and
+the port installs the same callbacks in `EndSameAsBegin` (`modes.go:105`). So the
+field, `escapeLiteral` and the `endMode.mode.starts.endSameAsBegin` arm are all
+dead in both implementations.
+
+The port keeps them for fidelity and pins the state:
+`TestNoCompiledModeReliesOnEndSameAsBegin` walks eight compiled languages and
+fails if any mode sets the field, which is the signal that the code became live.
+`escapeLiteral` was verified to produce the same pattern source as the reference's
+`escape` on 18 inputs including every special character and a non-ASCII string.

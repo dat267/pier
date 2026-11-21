@@ -238,3 +238,33 @@ func TestIgnoredIllegalScannerMatchesReference(t *testing.T) {
 		})
 	}
 }
+
+// D507: escapeLiteral and both endSameAsBegin branches are unreachable. No pin
+// language sets the compiled field (the END_SAME_AS_BEGIN helper upstream only
+// installs the begin/end callbacks, which the port installs too), so the dynamic
+// end-pattern override never runs. Kept because the reference keeps the same dead
+// switch; this test fails if that changes, which is when the code becomes live.
+func TestNoCompiledModeReliesOnEndSameAsBegin(t *testing.T) {
+	for _, name := range []string{"c", "cpp", "ruby", "php", "bash", "latex", "javascript", "go"} {
+		lang, err := getCompiledLanguage(name)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		seen := map[*compiledMode]bool{}
+		var walk func(m *compiledMode)
+		walk = func(m *compiledMode) {
+			if m == nil || seen[m] {
+				return
+			}
+			seen[m] = true
+			if m.endSameAsBegin {
+				t.Errorf("%s: a mode sets endSameAsBegin, so escapeLiteral is live again", name)
+			}
+			for _, c := range m.contains {
+				walk(c)
+			}
+			walk(m.starts)
+		}
+		walk(lang.root)
+	}
+}
