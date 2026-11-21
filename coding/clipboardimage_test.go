@@ -220,3 +220,153 @@ func TestReadClipboardFilePathsNone(t *testing.T) {
 		t.Fatalf("darwin paths = %v err = %v", paths, err)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) utils/clipboard-image.ts readClipboardImageViaPowerShell:
+// the WSL path is translated with wslpath, a nil result or an empty translation
+// aborts before PowerShell runs, and a translation containing a quote is
+// doubled inside the single-quoted PowerShell string.
+func TestReadClipboardImageViaPowerShellTranslatesThePathForWSL(t *testing.T) {
+	var scripts []string
+	run := func(_ context.Context, command string, args []string, _ int) []byte {
+		switch command {
+		case "wslpath":
+			return []byte("  C:\\Temp\\it's.png \r\n")
+		case "powershell.exe":
+			script := args[len(args)-1]
+			scripts = append(scripts, script)
+			return []byte("empty")
+		}
+		return nil
+	}
+	if image, failed := readClipboardImageViaPowerShell(context.Background(), run, true); image != nil || failed {
+		t.Fatalf("image = %+v failed = %v", image, failed)
+	}
+	if len(scripts) != 1 {
+		t.Fatalf("powershell ran %d times", len(scripts))
+	}
+	// The translated path is trimmed and its single quote doubled.
+	if !strings.Contains(scripts[0], `$path = 'C:\Temp\it''s.png'`) {
+		t.Fatalf("script did not carry the translated path:\n%s", scripts[0])
+	}
+}
+
+// A failed wslpath translation must abort before PowerShell runs, so Windows is
+// never asked to save into a Linux path it cannot resolve.
+func TestReadClipboardImageViaPowerShellStopsWhenWslpathFails(t *testing.T) {
+	for _, translation := range [][]byte{nil, []byte("   \r\n")} {
+		var ranPowerShell bool
+		run := func(_ context.Context, command string, _ []string, _ int) []byte {
+			if command == "powershell.exe" {
+				ranPowerShell = true
+			}
+			return translation
+		}
+		if image, failed := readClipboardImageViaPowerShell(context.Background(), run, true); image != nil || failed {
+			t.Fatalf("image = %+v failed = %v for translation %q", image, failed, translation)
+		}
+		if ranPowerShell {
+			t.Fatalf("powershell ran after a failed wslpath (%q)", translation)
+		}
+	}
+}
+
+// Without wsl there is no wslpath step at all: the temp path is passed through.
+func TestReadClipboardImageViaPowerShellWithoutWSLSkipsWslpath(t *testing.T) {
+	var calls []string
+	run := func(_ context.Context, command string, _ []string, _ int) []byte {
+		calls = append(calls, command)
+		return []byte("empty")
+	}
+	readClipboardImageViaPowerShell(context.Background(), run, false)
+	if len(calls) != 1 || calls[0] != "powershell.exe" {
+		t.Fatalf("calls = %v, want only powershell.exe", calls)
+	}
+}
+
+// On Windows the platform read is the PowerShell one.
+func TestReadClipboardImageOnWindowsUsesPowerShell(t *testing.T) {
+	var ranPowerShell bool
+	run := func(_ context.Context, command string, _ []string, _ int) []byte {
+		if command == "powershell.exe" {
+			ranPowerShell = true
+		}
+		return []byte("empty")
+	}
+	image, err := readClipboardImageWith(context.Background(), "windows", func(string) string { return "" }, run, noWSL)
+	if err != nil || image != nil {
+		t.Fatalf("image = %+v err = %v", image, err)
+	}
+	if !ranPowerShell {
+		t.Fatal("the windows path did not use PowerShell")
+	}
+}
+
+// On darwin the read is pngpaste, which writes the image to stdout; an empty
+// read is no image.
+func TestReadClipboardImageOnDarwinUsesPngpaste(t *testing.T) {
+	stub := &clipboardImageRunnerStub{output: map[string][]byte{"pngpaste -": []byte("PNGDATA")}}
+	image, err := readClipboardImageWith(context.Background(), "darwin", func(string) string { return "" }, stub.run, noWSL)
+	if err != nil || image == nil || string(image.Bytes) != "PNGDATA" || image.MimeType != "image/png" {
+		t.Fatalf("image = %+v err = %v", image, err)
+	}
+	empty := &clipboardImageRunnerStub{output: map[string][]byte{}}
+	if image, err := readClipboardImageWith(context.Background(), "darwin", func(string) string { return "" }, empty.run, noWSL); err != nil || image != nil {
+		t.Fatalf("empty read: image = %+v err = %v", image, err)
+	}
+}
+
+// pi v1.5.2 (b4afdddf) utils/clipboard-image.ts readClipboardImage: on WSL an
+// empty Linux clipboard is not proof Windows has no image, so the PowerShell
+// read runs and its answer is kept. A non-empty Linux image skips it.
+func TestReadClipboardImageOnWSLFallsBackToPowerShellOnlyWhenEmpty(t *testing.T) {
+	wslEnv := func(key string) string {
+		switch key {
+		case "WSL_DISTRO_NAME":
+			return "Ubuntu"
+		case "WAYLAND_DISPLAY":
+			return "wayland-0"
+		}
+		return ""
+	}
+	// Nothing on the Linux side: PowerShell answers with an empty clipboard, and
+	// the fallback must have been attempted.
+	var calls []string
+	emptyRun := func(_ context.Context, command string, _ []string, _ int) []byte {
+		calls = append(calls, command)
+		if command == "wl-paste" {
+			return []byte("text/plain\n") // list-types: no image type
+		}
+		return []byte("empty") // powershell: an empty Windows clipboard
+	}
+	if image, err := readClipboardImageWith(context.Background(), "linux", wslEnv, emptyRun, noWSLHint); err != nil || image != nil {
+		t.Fatalf("image = %+v err = %v", image, err)
+	}
+	sawPowerShell := false
+	for _, call := range calls {
+		if call == "powershell.exe" {
+			sawPowerShell = true
+		}
+	}
+	if !sawPowerShell {
+		t.Fatalf("the WSL fallback never ran PowerShell: %v", calls)
+	}
+
+	// A Linux image skips the fallback entirely.
+	nonEmpty := &clipboardImageRunnerStub{output: map[string][]byte{
+		"wl-paste --list-types":                  []byte("image/png\n"),
+		"wl-paste --type image/png --no-newline": []byte("PNGBYTES"),
+	}}
+	image, err := readClipboardImageWith(context.Background(), "linux", wslEnv, nonEmpty.run, noWSLHint)
+	if err != nil || image == nil || string(image.Bytes) != "PNGBYTES" {
+		t.Fatalf("image = %+v err = %v", image, err)
+	}
+	for _, call := range nonEmpty.calls {
+		if strings.HasPrefix(call, "powershell.exe") {
+			t.Fatalf("the WSL fallback ran despite a Linux image: %v", nonEmpty.calls)
+		}
+	}
+}
+
+// noWSLHint reports a WSL environment from the kernel-release hint that
+// IsWSL reads when the environment carries no WSL_DISTRO_NAME.
+func noWSLHint(string) ([]byte, error) { return []byte("5.15.0-microsoft-standard-WSL2"), nil }
