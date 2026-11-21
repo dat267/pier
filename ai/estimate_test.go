@@ -81,3 +81,33 @@ func TestToolCallTokenEstimateMeasuresJSStringLength(t *testing.T) {
 		t.Fatalf("EstimateMessageTokens = %d, want 5", got)
 	}
 }
+
+// Reference: pi v1.6.0 utils/estimate.ts getLastAssistantUsageInfo tracks
+// `latestPrefixTimestamp = Math.max(latestPrefixTimestamp, message.timestamp)`
+// for every message, custom ones included. A compaction or branch summary that
+// was created after an assistant response invalidates that response's usage, so
+// the estimate stops reporting a total that no longer describes the prefix.
+// pier read the timestamp only from the four built-in message types, so a custom
+// message contributed 0 and the stale usage kept winning.
+func TestStaleUsageAfterACustomMessageRecomputesTheWholeEstimate(t *testing.T) {
+	// The summary sits before the response it followed: it was inserted at the
+	// front of the prefix, so the response is older than the prefix it would
+	// otherwise describe.
+	messages := []Message{
+		&CustomMessage{Role: "compactionSummary", Timestamp: 5000},
+		&AssistantMessage{
+			Content: ContentList{TextContent{Text: "old reply"}},
+			Usage:   Usage{TotalTokens: 1000}, StopReason: StopStop, Timestamp: 1000,
+		},
+	}
+	got := EstimateContextTokens(messages)
+	if got.LastUsageIndex != -1 {
+		t.Fatalf("LastUsageIndex = %d; usage from before the compaction still applies", got.LastUsageIndex)
+	}
+	if got.UsageTokens != 0 {
+		t.Fatalf("UsageTokens = %d; want 0", got.UsageTokens)
+	}
+	if want := EstimateMessageTokens(messages[0]) + EstimateMessageTokens(messages[1]); got.Tokens != want {
+		t.Fatalf("Tokens = %d, want the full estimate %d", got.Tokens, want)
+	}
+}

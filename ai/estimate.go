@@ -189,6 +189,10 @@ func getLastAssistantUsageInfo(messages []Message) (Usage, int) {
 	return usage, index
 }
 
+// messageTimestamp is the message's timestamp for the prefix check. Custom
+// messages count too: upstream reads `message.timestamp` off every member of
+// AgentMessage, and a compaction or branch summary created after a response is
+// exactly what must invalidate that response's usage.
 func messageTimestamp(m Message) int64 {
 	switch v := m.(type) {
 	case *SystemMessage:
@@ -198,6 +202,8 @@ func messageTimestamp(m Message) int64 {
 	case *AssistantMessage:
 		return v.Timestamp
 	case *ToolResultMessage:
+		return v.Timestamp
+	case *CustomMessage:
 		return v.Timestamp
 	default:
 		return 0
