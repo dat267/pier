@@ -20,6 +20,11 @@ func TestSanitizeUntrustedTextRemovesTerminalControls(t *testing.T) {
 		{"dcs payload", "a\x1bP1;2|payload\x1b\\b", "ab"},
 		{"apc image", "a\x1b_Gpayload\x1b\\b", "ab"},
 		{"charset", "a\x1b(Bb", "ab"},
+		// An intermediate byte may be a space (0x20), and ordinary spaces next
+		// to a sequence are text, not controls to drop.
+		{"esc with space intermediate", "a\x1b Bb", "ab"},
+		{"spaces around a sequence", "hello\x1b[2J the world", "hello the world"},
+		{"spaces around an osc", "a\x1b]0;t\x07 b", "a b"},
 		{"truncated escape", "a\x1bb", "a"},
 		{"unterminated osc", "a\x1b]52;c;secret", "a"},
 		{"bare bel", "a\x07b", "ab"},
@@ -29,6 +34,11 @@ func TestSanitizeUntrustedTextRemovesTerminalControls(t *testing.T) {
 		{"keeps unicode", "héllo ✓", "héllo ✓"},
 		{"drops c1 controls", "a\u009bb", "a\u009bb"},
 		{"multiple sequences", "\x1b[2J\x1b[31mx\x1b]0;t\x07", "x"},
+		{"escape then a letter keeps the letter", "a\x1bbc", "ac"},
+		// Invalid UTF-8 is kept byte for byte, as the renderer does, and a
+		// literal U+FFFD round-trips through the escape path.
+		{"invalid utf8 is kept", "a\xffb\x1b[2Jc", "a\xffbc"},
+		{"encoded replacement character", "a\xef\xbf\xbdb\x1b[2Jc", "a\ufffdbc"},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
