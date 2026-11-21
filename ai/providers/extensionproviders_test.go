@@ -127,9 +127,9 @@ func TestCommandCodeCatalog(t *testing.T) {
 //
 //   - hyper's COMPAT_REASONING/COMPAT_NOREASON set supportsStore,
 //     supportsReasoningEffort, thinkingFormat "deepseek" and maxTokensField,
-//     and omit supportsDeveloperRole, so upstream's detectCompat applies. The
-//     provider is not one of its non-standard ones and is not OpenRouter, so
-//     detection turns the developer role on.
+//     and omit supportsDeveloperRole, so upstream's detectCompat applies. Since
+//     v1.6.0 detection turns the developer role on only for OpenAI's own API
+//     (#10741), and this provider's base URL is not it, the role stays off.
 //   - commandcode's COMPAT_OPENAI_* set supportsStore, supportsDeveloperRole,
 //     supportsReasoningEffort and maxTokensField, and omit thinkingFormat, so
 //     detection applies: its base URL matches none of the special cases and
@@ -141,8 +141,8 @@ func TestExtensionProviderCompatMatchesTheExtensionCatalog(t *testing.T) {
 	hyper := HyperProvider()
 	for _, model := range hyper.GetModels() {
 		compat := ai.GetOpenAICompletionsCompat(model)
-		if !compat.SupportsDeveloperRole {
-			t.Errorf("%s: supportsDeveloperRole = false; the extension omits it and detection enables it", model.ID)
+		if compat.SupportsDeveloperRole {
+			t.Errorf("%s: supportsDeveloperRole = true; the extension omits it and detection keeps it off outside api.openai.com", model.ID)
 		}
 		if compat.ThinkingFormat != "deepseek" {
 			t.Errorf("%s: thinkingFormat = %q; the extension sets deepseek", model.ID, compat.ThinkingFormat)

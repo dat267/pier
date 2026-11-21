@@ -293,3 +293,13 @@ func TestRetryableProviderErrorMatchesBareSocketCodes(t *testing.T) {
 		}
 	}
 }
+
+// A gateway mid-stream drop relayed as an Anthropic-style `api_error` event is
+// retryable: {"type":"error","error":{"type":"api_error","message":"Connection
+// closed."}} (retry.ts, v1.6.0, #12064).
+func TestRetryableProviderErrorMatchesConnectionClosed(t *testing.T) {
+	message := "Connection closed."
+	if !IsRetryableAssistantError(&AssistantMessage{StopReason: StopError, ErrorMessage: &message}) {
+		t.Fatalf("%q is not retryable", message)
+	}
+}

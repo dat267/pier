@@ -55,7 +55,23 @@ var ansiColors = [16]string{
 	"#0000ff", "#ff00ff", "#00ffff", "#ffffff",
 }
 
-var ansiSequenceRegex = regexp.MustCompile(`\x1b\[([\d;]*)m`)
+var ansiSequenceRegex = regexp.MustCompile(
+	"\x1b\\[([0-9;]*)m" + // SGR
+		"|\x1b\\[[0-?]*[ -/]*[@-~]" + // other CSI
+		"|\x1b\\]([^\x07\x1b]*)(?:\x07|\x1b\\\\)" + // OSC, BEL or ST terminated
+		"|\x1b_[^\x07\x1b]*(?:\x07|\x1b\\\\)") // APC
+
+// osc8SequenceRegex matches an OSC 8 payload: "8;params;url".
+var osc8SequenceRegex = regexp.MustCompile(`^8;[^;]*;(?s:(.*))$`)
+
+// safeLinkRegex is the URL scheme an exported link may carry.
+var safeLinkRegex = regexp.MustCompile(`(?i)^(?:https?:|mailto:)`)
+
+// stripAnsiEscapes removes every escape sequence the converter drops, plus stray
+// ESC characters (ansi-to-html.ts stripAnsiEscapes).
+func stripAnsiEscapes(text string) string {
+	return strings.ReplaceAll(ansiSequenceRegex.ReplaceAllString(text, ""), "\x1b", "")
+}
 
 func color256ToHex(index int) string {
 	if index < 16 {
@@ -205,38 +221,82 @@ func AnsiToHTML(text string) string {
 	var result strings.Builder
 	lastIndex := 0
 	inSpan := false
-
-	for _, loc := range ansiSequenceRegex.FindAllStringSubmatchIndex(text, -1) {
-		before := text[lastIndex:loc[0]]
-		if before != "" {
-			result.WriteString(escapeHTMLText(before))
-		}
-		paramStr := text[loc[2]:loc[3]]
-		params := []int{0}
-		if paramStr != "" {
-			params = params[:0]
-			for part := range strings.SplitSeq(paramStr, ";") {
-				params = append(params, ansiSGRParameter(part))
-			}
-		}
+	inLink := false
+	closeSpan := func() {
 		if inSpan {
 			result.WriteString("</span>")
 			inSpan = false
 		}
-		applySGRCode(params, style)
+	}
+	openSpan := func() {
 		if hasHTMLStyle(style) {
 			result.WriteString(`<span style="` + styleToInlineCSS(style) + `">`)
 			inSpan = true
 		}
+	}
+
+	for _, loc := range ansiSequenceRegex.FindAllStringSubmatchIndex(text, -1) {
+		if before := text[lastIndex:loc[0]]; before != "" {
+			result.WriteString(escapeHTMLText(stripStrayEscapes(before)))
+		}
+		switch {
+		case loc[2] >= 0:
+			// SGR: re-style the following text.
+			paramStr := text[loc[2]:loc[3]]
+			params := []int{0}
+			if paramStr != "" {
+				params = params[:0]
+				for part := range strings.SplitSeq(paramStr, ";") {
+					params = append(params, ansiSGRParameter(part))
+				}
+			}
+			closeSpan()
+			applySGRCode(params, style)
+			openSpan()
+		case loc[4] >= 0:
+			// OSC: only an OSC 8 hyperlink survives, and only with a safe scheme.
+			if hyperlink := osc8SequenceRegex.FindStringSubmatch(text[loc[4]:loc[5]]); hyperlink != nil {
+				url := stripControlBytes(strings.TrimSpace(hyperlink[1]))
+				closeSpan()
+				if inLink {
+					result.WriteString("</a>")
+					inLink = false
+				}
+				if url != "" && safeLinkRegex.MatchString(url) {
+					result.WriteString(`<a href="` + escapeHTMLText(url) + `">`)
+					inLink = true
+				}
+				openSpan()
+			}
+		}
+		// Other CSI and APC sequences are dropped.
 		lastIndex = loc[1]
 	}
 	if remaining := text[lastIndex:]; remaining != "" {
-		result.WriteString(escapeHTMLText(remaining))
+		result.WriteString(escapeHTMLText(stripStrayEscapes(remaining)))
 	}
-	if inSpan {
-		result.WriteString("</span>")
+	closeSpan()
+	if inLink {
+		result.WriteString("</a>")
 	}
 	return result.String()
+}
+
+// stripStrayEscapes drops ESC bytes the sequence regex did not consume.
+func stripStrayEscapes(text string) string { return strings.ReplaceAll(text, "\x1b", "") }
+
+// stripControlBytes removes the C0 controls and DEL a browser would drop from a
+// URL anyway, so the scheme check sees what the browser will use.
+func stripControlBytes(url string) string {
+	var cleaned strings.Builder
+	cleaned.Grow(len(url))
+	for _, r := range url {
+		if r < 0x20 || r == 0x7f {
+			continue
+		}
+		cleaned.WriteRune(r)
+	}
+	return cleaned.String()
 }
 
 // AnsiLinesToHTML converts ANSI lines to wrapped div elements

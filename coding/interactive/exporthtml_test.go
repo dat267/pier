@@ -692,3 +692,30 @@ func TestGenerateSessionHTMLBoundsLargePayloadAllocations(t *testing.T) {
 		t.Fatal("large export changed document or session payload bytes")
 	}
 }
+
+// OSC 8 hyperlinks become real links in the exported HTML when the URL is http,
+// https or mailto; other OSC/CSI/APC sequences and stray ESC characters are
+// dropped (ansi-to-html.ts, v1.6.0, #12052).
+func TestAnsiToHTMLConvertsOSC8Hyperlinks(t *testing.T) {
+	link := "\x1b]8;;https://example.test/a?b=1&c=2\x07label\x1b]8;;\x07"
+	if got := AnsiToHTML(link); got != `<a href="https://example.test/a?b=1&amp;c=2">label</a>` {
+		t.Fatalf("osc8 link = %q", got)
+	}
+	// mailto keeps its URL, other schemes lose the link but keep the text.
+	if got := AnsiToHTML("\x1b]8;;mailto:dev@example.test\x1b\\post\x1b]8;;\x1b\\"); got != `<a href="mailto:dev@example.test">post</a>` {
+		t.Fatalf("mailto link = %q", got)
+	}
+	if got := AnsiToHTML("\x1b]8;;javascript:alert(1)\x07bad\x1b]8;;\x07"); got != "bad" {
+		t.Fatalf("unsafe link = %q, want the text only", got)
+	}
+	// Other escape sequences and stray ESC bytes do not reach the HTML.
+	got := AnsiToHTML("a\x1b[2Kb\x1b]0;title\x07c\x1b_Payload\x1b\\d\x1be")
+	if got != "abcde" {
+		t.Fatalf("other sequences = %q, want them dropped", got)
+	}
+	// Style spans nest inside a link.
+	styled := AnsiToHTML("\x1b]8;;https://example.test\x07\x1b[31mred\x1b[0m\x1b]8;;\x07")
+	if !strings.Contains(styled, `<a href="https://example.test">`) || !strings.Contains(styled, ">red</span>") {
+		t.Fatalf("styled link = %q", styled)
+	}
+}

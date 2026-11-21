@@ -579,8 +579,14 @@ func (c *ModelSelectorComponent) HandleInput(data string) {
 			selectDefault = c.filteredModels[c.selectedIndex].model
 		}
 	default:
+		// Cursor keys move the search cursor without changing the query; filtering
+		// then would reset the selection, so only a changed query refilters
+		// (model-selector.ts, v1.6.0, #12334).
+		previousQuery := c.searchInput.Value()
 		c.searchInput.HandleInput(data)
-		c.filterModels(c.searchInput.Value())
+		if query := c.searchInput.Value(); query != previousQuery {
+			c.filterModels(query)
+		}
 	}
 
 	// Invoke the callbacks after the list update: they mutate the session and

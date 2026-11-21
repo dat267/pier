@@ -84,7 +84,11 @@ func DetectOpenAICompletionsCompat(model *Model) ResolvedOpenAICompletionsCompat
 		isTogether || isNvidia || isAntLing || isZai
 
 	isGrok := provider == "xai" || contains(baseURL, "api.x.ai")
-	isOpenRouterDeveloperRoleModel := isOpenRouter && (strings.HasPrefix(model.ID, "anthropic/") || strings.HasPrefix(model.ID, "openai/"))
+	// Every host accepts `system`; only OpenAI's own API gets the `developer`
+	// role by default, because many OpenAI-compatible hosts reject it
+	// (openai-completions.ts detectCompat, v1.6.0, #10741).
+	isOpenAIEndpoint := model.Provider == "openai" ||
+		strings.Contains(model.BaseURL, "api.openai.com")
 	cacheControlFormat := ""
 	if provider == "openrouter" && strings.HasPrefix(model.ID, "anthropic/") {
 		cacheControlFormat = "anthropic"
@@ -110,7 +114,7 @@ func DetectOpenAICompletionsCompat(model *Model) ResolvedOpenAICompletionsCompat
 
 	return ResolvedOpenAICompletionsCompat{
 		SupportsStore:                               !isNonStandard,
-		SupportsDeveloperRole:                       isOpenRouterDeveloperRoleModel || (!isNonStandard && !isOpenRouter),
+		SupportsDeveloperRole:                       isOpenAIEndpoint,
 		SupportsReasoningEffort:                     !isGrok && !isZai && !isMoonshot && !isTogether && !isCloudflareAiGateway && !isNvidia && !isAntLing,
 		SupportsUsageInStreaming:                    true,
 		SupportsFinishReason:                        true,

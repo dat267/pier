@@ -42,9 +42,11 @@ func TestDetectOpenAICompletionsCompat(t *testing.T) {
 		t.Fatalf("moonshot compat = %+v", ms)
 	}
 
-	// OpenRouter anthropic models: anthropic cache-control format, developer role.
+	// OpenRouter anthropic models: anthropic cache-control format. The developer
+	// role stays off there: only OpenAI's own API gets it by default (v1.6.0,
+	// #10741).
 	or := DetectOpenAICompletionsCompat(&Model{ID: "anthropic/claude-opus-4-5", Provider: "openrouter", BaseURL: "https://openrouter.ai/api/v1"})
-	if or.CacheControlFormat != "anthropic" || !or.SupportsDeveloperRole || or.SessionAffinityFormat != SessionAffinityOpenRouter {
+	if or.CacheControlFormat != "anthropic" || or.SupportsDeveloperRole || or.SessionAffinityFormat != SessionAffinityOpenRouter {
 		t.Fatalf("openrouter compat = %+v", or)
 	}
 
@@ -400,5 +402,30 @@ func TestConvertOpenAICompletionsWhitespaceToolResultUsesPlaceholder(t *testing.
 		if toolText != "(no tool output)" {
 			t.Fatalf("tool content for %q = %q; want the empty-output placeholder", text, toolText)
 		}
+	}
+}
+
+// A provider may report reasoning tokens at the top of `usage` instead of inside
+// `completion_tokens_details`; the count is read from either place
+// (openai-completions.ts convertUsage, v1.6.0, #12110).
+func TestOpenAICompletionsReadsTopLevelReasoningTokens(t *testing.T) {
+	model := testOpenAIModel()
+	cases := []struct {
+		name string
+		raw  string
+		want int64
+	}{
+		{"details", `{"prompt_tokens":10,"completion_tokens":20,"completion_tokens_details":{"reasoning_tokens":7}}`, 7},
+		{"top level", `{"prompt_tokens":10,"completion_tokens":20,"reasoning_tokens":5}`, 5},
+		{"details wins", `{"prompt_tokens":10,"completion_tokens":20,"reasoning_tokens":5,"completion_tokens_details":{"reasoning_tokens":7}}`, 7},
+		{"neither", `{"prompt_tokens":10,"completion_tokens":20}`, 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			usage := ParseChunkUsage([]byte(tc.raw), model)
+			if usage.Reasoning == nil || *usage.Reasoning != tc.want {
+				t.Fatalf("reasoning = %v, want %d", usage.Reasoning, tc.want)
+			}
+		})
 	}
 }

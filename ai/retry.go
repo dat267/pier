@@ -444,6 +444,10 @@ var retryableProviderErrorPattern = buildProviderErrorPattern([]string{
 	`upstream.?request.?failed`, `upstream_stream_read_error`, `stream was interrupted`, `http/?2 stream failed`,
 	`network.?error`, `connection.?error`, `connection.?refused`, `connection.?lost`,
 	`other side closed`, `fetch failed`,
+	// A gateway mid-stream drop relayed as an Anthropic-style `api_error` event,
+	// e.g. {"type":"error","error":{"type":"api_error","message":"Connection
+	// closed."}} (retry.ts, v1.6.0, #12064).
+	`connection.?closed`,
 	// node-fetch system errors, e.g. the Google ADC OAuth token refresh used by
 	// google-vertex. The reason is often empty (upstream v1.4.0 0fbdbd3f8, #10996).
 	`request to \S+ failed, reason:`,

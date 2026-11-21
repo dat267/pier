@@ -449,6 +449,9 @@ func ParseChunkUsage(raw []byte, model *Model) Usage {
 		CompletionTokensDetails *struct {
 			ReasoningTokens *int64 `json:"reasoning_tokens"`
 		} `json:"completion_tokens_details"`
+		// Some providers report the reasoning count at the top of usage instead of
+		// inside completion_tokens_details (v1.6.0, #12110).
+		ReasoningTokens *int64 `json:"reasoning_tokens"`
 	}
 	_ = jsonUnmarshalStrict(raw, &u)
 
@@ -479,8 +482,11 @@ func ParseChunkUsage(raw []byte, model *Model) Usage {
 	// (`completion_tokens_details?.reasoning_tokens || 0`), so an absent block
 	// still serializes "reasoning":0 in the assistant message.
 	reasoning := int64(0)
-	if u.CompletionTokensDetails != nil && u.CompletionTokensDetails.ReasoningTokens != nil {
+	switch {
+	case u.CompletionTokensDetails != nil && u.CompletionTokensDetails.ReasoningTokens != nil:
 		reasoning = *u.CompletionTokensDetails.ReasoningTokens
+	case u.ReasoningTokens != nil:
+		reasoning = *u.ReasoningTokens
 	}
 	usage.Reasoning = &reasoning
 	CalculateCost(model, &usage)

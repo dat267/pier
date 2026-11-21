@@ -709,3 +709,26 @@ func TestOAuthSelectorSearchSelectsTheBestMatch(t *testing.T) {
 		t.Fatalf("selected index after deleting a character = %d, want the clamp", got)
 	}
 }
+
+// Cursor keys move the search cursor without changing the query, so they must not
+// refilter: a refilter moves the selection to the top row, which would throw away
+// the cursor position the user is editing (select-list/model-selector cursor
+// handling, v1.6.0, #12334).
+func TestOAuthSelectorCursorKeysKeepTheSelection(t *testing.T) {
+	wiring, _ := newAuthTestWiring(t)
+	providers := wiring.GetLoginProviderOptions("")
+	selector := NewOAuthSelectorComponent("login", providers,
+		func(id, authType string) {}, nil, "")
+	for range 3 {
+		selector.HandleInput("\x1b[B")
+	}
+	before := selector.selectedIndex
+	if before == 0 {
+		t.Fatal("the test needs a non-zero selection")
+	}
+	selector.HandleInput("\x1b[D")
+	selector.HandleInput("\x1b[C")
+	if after := selector.selectedIndex; after != before {
+		t.Fatalf("selection = %d after cursor keys, want %d kept", after, before)
+	}
+}

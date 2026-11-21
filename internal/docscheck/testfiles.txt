@@ -135,6 +135,7 @@ ai/openai_codex_responses_test.go
 ai/openai_completions_misc_test.go
 ai/openai_completions_stream_test.go
 ai/openai_completions_test.go
+ai/openai_completions_wire_test.go
 ai/openai_decisions_test.go
 ai/openai_responses_misc_test.go
 ai/openai_responses_perf_test.go
