@@ -1159,6 +1159,11 @@ func (s *AgentSession) emitModelSelect(model, previous *ai.Model, source string)
 	// and thinking-level event are emitted here.
 }
 
+// ModelFallbackMessage explains a model restore or resolution fallback, or "" when
+// the session's model was found (main.ts reports it as a diagnostic, v1.6.0,
+// #12234).
+func (s *AgentSession) ModelFallbackMessage() string { return s.modelFallbackMessage }
+
 // GetLastAssistantText returns the last assistant message's trimmed text, or ""
 // when there is none (port of getLastAssistantText).
 func (s *AgentSession) GetLastAssistantText() string {

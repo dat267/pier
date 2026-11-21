@@ -7,6 +7,7 @@ import (
 	"slices"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -1014,29 +1015,68 @@ func (r *TranscriptRenderer) AddCompactionCostNotice(notice CompactionCostNotice
 	r.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg("warning", line) }, 1, 0))
 }
 
-// CountDroppedThinkingBlocks counts the dropped-thinking diagnostics.
-func CountDroppedThinkingBlocks(message *ai.AssistantMessage) int {
-	count := 0
+// droppedReasoningDiagnostics maps a provider's input-transformation diagnostic
+// to what it withheld: the provider name, the transformation type and the singular
+// and plural noun (interactive-mode.ts REASONING_DROP_DIAGNOSTICS, v1.6.0).
+var droppedReasoningDiagnostics = map[string]struct {
+	provider string
+	kind     string
+	noun     [2]string
+}{
+	"anthropic_input_transformations": {"Anthropic", "thinking_dropped", [2]string{"thinking block", "thinking blocks"}},
+	"openai_input_transformations":    {"OpenAI", "reasoning", [2]string{"reasoning item", "reasoning items"}},
+}
+
+// DroppedReasoning is what a provider withheld from the request that produced a
+// message: the diagnostic kind, the count and the reasons it gave.
+type DroppedReasoning struct {
+	Provider string
+	Singular string
+	Plural   string
+	Count    int
+	Reasons  []string
+}
+
+// GetDroppedReasoning counts the reasoning blocks a provider reported as withheld.
+func GetDroppedReasoning(message *ai.AssistantMessage) *DroppedReasoning {
 	for _, diagnostic := range message.Diagnostics {
-		if diagnostic.Type != "anthropic_input_transformations" {
+		kind, ok := droppedReasoningDiagnostics[diagnostic.Type]
+		if !ok || len(diagnostic.Details) == 0 {
 			continue
 		}
 		var details struct {
 			Transformations []map[string]any `json:"transformations"`
 		}
-		if len(diagnostic.Details) == 0 {
+		if json.Unmarshal(diagnostic.Details, &details) != nil {
 			continue
 		}
-		if err := json.Unmarshal(diagnostic.Details, &details); err != nil {
-			continue
-		}
+		count := 0
+		seenReason := map[string]bool{}
+		var reasons []string
 		for _, transformation := range details.Transformations {
-			if transformation["type"] == "thinking_dropped" {
-				count++
+			if transformation["type"] != kind.kind {
+				continue
+			}
+			count++
+			if reason, ok := transformation["reason"].(string); ok && reason != "" && !seenReason[reason] {
+				seenReason[reason] = true
+				reasons = append(reasons, reason)
 			}
 		}
+		if count == 0 {
+			continue
+		}
+		return &DroppedReasoning{Provider: kind.provider, Singular: kind.noun[0], Plural: kind.noun[1], Count: count, Reasons: reasons}
 	}
-	return count
+	return nil
+}
+
+// CountDroppedThinkingBlocks counts the dropped-thinking diagnostics.
+func CountDroppedThinkingBlocks(message *ai.AssistantMessage) int {
+	if dropped := GetDroppedReasoning(message); dropped != nil {
+		return dropped.Count
+	}
+	return 0
 }
 
 // MaybeShowThinkingDropNotice shows a notice when new thinking blocks dropped.
@@ -1069,12 +1109,19 @@ func (r *TranscriptRenderer) MaybeShowThinkingDropNotice(message *ai.AssistantMe
 	if droppedCount <= previousDroppedCount {
 		return
 	}
-
-	noun := "thinking blocks"
-	if droppedCount == 1 {
-		noun = "thinking block"
+	current := GetDroppedReasoning(message)
+	if current == nil {
+		return
 	}
-	dropped := "Anthropic dropped " + itoa(droppedCount) + " " + noun + " (details in session)"
+	noun := current.Plural
+	if current.Count == 1 {
+		noun = current.Singular
+	}
+	reasonText := ""
+	if len(current.Reasons) > 0 {
+		reasonText = ": " + strings.Join(current.Reasons, ", ")
+	}
+	dropped := current.Provider + " dropped " + itoa(current.Count) + " " + noun + reasonText + " (details in session)"
 	r.Chat.AddChild(tui.NewSpacer(1))
 	r.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg("warning", dropped) }, 1, 0))
 }

@@ -332,7 +332,11 @@ func (r *rpcRuntime) reportDiagnostics() {
 	if r.stderr == nil || r.session == nil {
 		return
 	}
-	for _, diagnostic := range append(r.session.PromptDiagnostics(), r.session.SkillDiagnostics()...) {
+	diagnostics := append(r.session.PromptDiagnostics(), r.session.SkillDiagnostics()...)
+	if fallback := r.session.ModelFallbackMessage(); fallback != "" {
+		diagnostics = append(diagnostics, ResourceDiagnostic{Type: "warning", Message: fallback})
+	}
+	for _, diagnostic := range diagnostics {
 		if diagnostic.Message == "" || r.reportedDiagnostics[diagnostic.Message] {
 			continue
 		}

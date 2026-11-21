@@ -68,6 +68,7 @@ ai/copilot_response_body_test.go
 ai/copilot_retry_budget_test.go
 ai/cost_usage_boundary_test.go
 ai/diagnostics_test.go
+ai/envkeys_test.go
 ai/errorbody_test.go
 ai/estimate_test.go
 ai/eventstream_snapshot_test.go

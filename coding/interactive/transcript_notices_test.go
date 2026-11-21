@@ -433,3 +433,36 @@ func TestReplayedIdleBashFrameStaysInPlace(t *testing.T) {
 			bashRow, askRow, strings.Join(lines, "\n"))
 	}
 }
+
+// The drop notice names the provider and the noun for each diagnostic kind, and
+// includes the reasons the API gave: OpenAI reports withheld reasoning items as
+// `reasoning`/`removed`, Anthropic withheld thinking blocks
+// (interactive-mode.ts getDroppedReasoning, v1.6.0).
+func TestDroppedReasoningCoversBothProviders(t *testing.T) {
+	anthropic := &ai.AssistantMessage{Diagnostics: []ai.AssistantMessageDiagnostic{{
+		Type:    "anthropic_input_transformations",
+		Details: []byte(`{"transformations":[{"type":"thinking_dropped","reason":"signature"}]}`),
+	}}}
+	dropped := GetDroppedReasoning(anthropic)
+	if dropped == nil || dropped.Provider != "Anthropic" || dropped.Count != 1 ||
+		dropped.Singular != "thinking block" || len(dropped.Reasons) != 1 {
+		t.Fatalf("anthropic = %+v", dropped)
+	}
+
+	openai := &ai.AssistantMessage{Diagnostics: []ai.AssistantMessageDiagnostic{{
+		Type:    "openai_input_transformations",
+		Details: []byte(`{"transformations":[{"type":"reasoning","reason":"prefix_mismatch"},{"type":"reasoning","reason":"org"}]}`),
+	}}}
+	dropped = GetDroppedReasoning(openai)
+	if dropped == nil || dropped.Provider != "OpenAI" || dropped.Count != 2 ||
+		dropped.Plural != "reasoning items" || len(dropped.Reasons) != 2 {
+		t.Fatalf("openai = %+v", dropped)
+	}
+
+	// An unrelated diagnostic reports nothing.
+	if got := GetDroppedReasoning(&ai.AssistantMessage{Diagnostics: []ai.AssistantMessageDiagnostic{{
+		Type: "other", Details: []byte(`{"transformations":[{"type":"reasoning"}]}`),
+	}}}); got != nil {
+		t.Fatalf("unrelated diagnostic = %+v", got)
+	}
+}

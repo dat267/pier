@@ -260,8 +260,13 @@ func (c *ThinkingSelectorComponent) HandleInput(data string) {
 		c.selectList.HandleInput(data)
 		return
 	}
+	// Cursor keys leave the query as it is and must not move the selection
+	// (thinking-selector.ts, v1.6.0, #12334).
+	previousQuery := c.searchInput.Value()
 	c.searchInput.HandleInput(data)
-	c.applyFilter(c.searchInput.Value())
+	if query := c.searchInput.Value(); query != previousQuery {
+		c.applyFilter(query)
+	}
 }
 
 // GetSelectList returns the underlying list.

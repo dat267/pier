@@ -312,3 +312,27 @@ func settingsListDisplayIDs(list *SettingsList) []string {
 	}
 	return ids
 }
+
+// Cursor keys in the settings search box leave the query unchanged, so they must
+// not refilter: a refilter moves the selection to the top row
+// (components/settings-list.ts, v1.6.0, #12334).
+func TestSettingsListCursorKeysKeepTheSelection(t *testing.T) {
+	items := []SettingItem{
+		{ID: "a", Label: "Alpha", CurrentValue: "1", Values: []string{"1", "2"}},
+		{ID: "b", Label: "Bravo", CurrentValue: "1", Values: []string{"1", "2"}},
+		{ID: "c", Label: "Charlie", CurrentValue: "1", Values: []string{"1", "2"}},
+	}
+	list := NewSettingsList(items, 5, SettingsListTheme{}, func(string, string) {}, func() {},
+		SettingsListOptions{EnableSearch: true})
+	list.HandleInput("\x1b[B")
+	list.HandleInput("\x1b[B")
+	before := list.SelectedIndex()
+	if before == 0 {
+		t.Fatal("the test needs a non-zero selection")
+	}
+	list.HandleInput("\x1b[D")
+	list.HandleInput("\x1b[C")
+	if after := list.SelectedIndex(); after != before {
+		t.Fatalf("selection = %d after cursor keys, want %d kept", after, before)
+	}
+}

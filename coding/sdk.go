@@ -634,6 +634,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		}
 	}
 
+	session.modelFallbackMessage = modelFallbackMessage
 	return &CreateAgentSessionResult{
 		Session:              session,
 		ModelFallbackMessage: modelFallbackMessage,

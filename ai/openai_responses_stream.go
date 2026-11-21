@@ -300,6 +300,43 @@ type responsesItem struct {
 }
 
 // responsesTerminalResponse is the parsed terminal response payload.
+// responsesInputTransformation is one entry of a response's
+// `input_transformations`: what the API changed in the replayed input.
+type responsesInputTransformation struct {
+	Type   string `json:"type"`
+	ID     string `json:"id,omitempty"`
+	Action string `json:"action,omitempty"`
+	Reason string `json:"reason,omitempty"`
+}
+
+// recordReasoningRemovals stores the replayed reasoning items the API withheld,
+// with the reason for each: from GPT-6.2 on, OpenAI removes reasoning that follows
+// an edit of earlier input (`prefix_mismatch`) and reasoning created under another
+// organization, end user or model. `turn_boundary` removals are left out, because
+// a model that uses only current-turn reasoning reports every earlier turn's items
+// on every request, which would grow the session quadratically
+// (openai-responses-shared.ts appendReasoningRemovals, v1.6.0).
+func recordReasoningRemovals(output *AssistantMessage, transformations []responsesInputTransformation) {
+	var removals []map[string]any
+	for _, transformation := range transformations {
+		if transformation.Type != "reasoning" || transformation.Action != "removed" ||
+			transformation.Reason == "turn_boundary" {
+			continue
+		}
+		entry := map[string]any{"type": transformation.Type, "id": transformation.ID,
+			"action": transformation.Action, "reason": transformation.Reason}
+		removals = append(removals, entry)
+	}
+	if len(removals) == 0 {
+		return
+	}
+	details, err := MarshalJSON(map[string]any{"transformations": removals})
+	if err != nil {
+		return
+	}
+	AppendAssistantMessageDiagnostic(output, CreateAssistantMessageDiagnostic("openai_input_transformations", nil, details))
+}
+
 type responsesTerminalResponse struct {
 	ID          string  `json:"id"`
 	Status      string  `json:"status"`
@@ -319,7 +356,10 @@ type responsesTerminalResponse struct {
 	IncompleteDetails *struct {
 		Reason string `json:"reason"`
 	} `json:"incomplete_details"`
-	Error *struct {
+	// InputTransformations lists what the API changed in the replayed input, such
+	// as reasoning items it withheld; see recordReasoningRemovals.
+	InputTransformations []responsesInputTransformation `json:"input_transformations,omitempty"`
+	Error                *struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
 	} `json:"error"`
@@ -641,6 +681,7 @@ func ProcessResponsesStream(
 		if hasToolCall && output.StopReason == StopStop {
 			output.StopReason = StopToolUse
 		}
+		recordReasoningRemovals(output, response.InputTransformations)
 	}
 
 	iterErr := iterateResponsesEvents(ctx, body, func(event *responsesStreamEvent) {

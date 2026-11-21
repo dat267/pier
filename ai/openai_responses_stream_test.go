@@ -336,3 +336,42 @@ func TestProcessResponsesStreamFunctionCallAndErrors(t *testing.T) {
 		}
 	})
 }
+
+// Reasoning the API withheld from the replayed input is recorded as an
+// openai_input_transformations diagnostic, with each removal's reason;
+// turn_boundary removals are dropped because a current-turn model reports every
+// earlier item on every request (openai-responses-shared.ts
+// appendReasoningRemovals, v1.6.0).
+func TestResponsesRecordsReasoningRemovals(t *testing.T) {
+	output := &AssistantMessage{}
+	recordReasoningRemovals(output, []responsesInputTransformation{
+		{Type: "reasoning", ID: "rs_1", Action: "removed", Reason: "prefix_mismatch"},
+		{Type: "reasoning", ID: "rs_2", Action: "removed", Reason: "turn_boundary"},
+		{Type: "reasoning", ID: "rs_3", Action: "kept", Reason: "prefix_mismatch"},
+		{Type: "message", ID: "msg_1", Action: "removed", Reason: "prefix_mismatch"},
+	})
+	if len(output.Diagnostics) != 1 {
+		t.Fatalf("diagnostics = %+v, want one", output.Diagnostics)
+	}
+	diagnostic := output.Diagnostics[0]
+	if diagnostic.Type != "openai_input_transformations" {
+		t.Fatalf("type = %q", diagnostic.Type)
+	}
+	if !strings.Contains(string(diagnostic.Details), `"id":"rs_1"`) ||
+		!strings.Contains(string(diagnostic.Details), `"reason":"prefix_mismatch"`) {
+		t.Fatalf("details = %s", diagnostic.Details)
+	}
+	if strings.Contains(string(diagnostic.Details), "rs_2") || strings.Contains(string(diagnostic.Details), "rs_3") ||
+		strings.Contains(string(diagnostic.Details), "msg_1") {
+		t.Fatalf("details kept a filtered entry: %s", diagnostic.Details)
+	}
+
+	// Nothing to report leaves no diagnostic.
+	clean := &AssistantMessage{}
+	recordReasoningRemovals(clean, []responsesInputTransformation{
+		{Type: "reasoning", ID: "rs_9", Action: "removed", Reason: "turn_boundary"},
+	})
+	if len(clean.Diagnostics) != 0 {
+		t.Fatalf("diagnostics = %+v, want none", clean.Diagnostics)
+	}
+}

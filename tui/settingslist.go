@@ -315,8 +315,13 @@ func (s *SettingsList) HandleInput(data string) {
 		s.onCancel()
 	default:
 		if s.searchEnabled && s.searchInput != nil {
+			// Cursor keys leave the query as it is and must not move the selection
+			// (settings-list.ts, v1.6.0, #12334).
+			previousQuery := s.searchInput.Value()
 			s.searchInput.HandleInput(data)
-			s.applyFilter(s.searchInput.Value())
+			if query := s.searchInput.Value(); query != previousQuery {
+				s.applyFilter(query)
+			}
 		}
 	}
 }

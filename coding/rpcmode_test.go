@@ -426,3 +426,28 @@ func TestRPCReportsSessionDiagnosticsOnStderr(t *testing.T) {
 		t.Fatalf("stderr = %q, want the CLI warning shape", stderr.String())
 	}
 }
+
+// A session whose stored model could not be restored reports the fallback on
+// stderr in RPC mode too, not only in interactive mode: every mode reports the
+// fallback as a diagnostic at startup and after a replacement (main.ts, v1.6.0,
+// #12234).
+func TestRPCReportsTheModelFallbackOnStderr(t *testing.T) {
+	manager, dir := newTestSession(t)
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, StreamFn: stubStreamFn,
+		Model: &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	session.modelFallbackMessage = "Could not restore model nope/nope. Using anthropic/m."
+	var stderr bytes.Buffer
+	startRPCTestWith(t, session, RPCModeOptions{Stderr: &stderr})
+	deadline := time.Now().Add(2 * time.Second)
+	for stderr.Len() == 0 && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if !strings.Contains(stderr.String(), "Could not restore model nope/nope. Using anthropic/m.") {
+		t.Fatalf("stderr = %q, want the model fallback", stderr.String())
+	}
+}

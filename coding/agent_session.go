@@ -192,6 +192,11 @@ type AgentSession struct {
 	// only reached through GoalController/goalLocked (D497).
 	goal atomic.Pointer[GoalController]
 
+	// modelFallbackMessage explains a model restore or resolution fallback. Every
+	// mode reports it as a startup diagnostic, and after a session replacement
+	// (main.ts, v1.6.0, #12234).
+	modelFallbackMessage string
+
 	// requestPrefix remembers the last request the agent sent, so compaction can
 	// summarize from it instead of reserializing the conversation (D419).
 	requestPrefix *requestPrefixCapture
