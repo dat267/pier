@@ -618,7 +618,12 @@ func (l *SessionList) FilterSessions(query string) {
 			l.filtered = append(l.filtered, flatSessionNode{Session: session, Depth: 0, IsLast: true})
 		}
 	}
-	if l.selectedIndex > len(l.filtered)-1 {
+	// A query selects the top row, the best match; clearing it keeps the clamp
+	// (session-selector.ts handleSearchInput, v1.6.0, #12245).
+	if trimmed != "" {
+		l.selectedIndex = 0
+		l.selectionTouched = false
+	} else if l.selectedIndex > len(l.filtered)-1 {
 		l.selectedIndex = max(0, len(l.filtered)-1)
 	}
 }

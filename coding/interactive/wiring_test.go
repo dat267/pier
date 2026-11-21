@@ -680,3 +680,32 @@ func TestResolveAutocompleteFdPath(t *testing.T) {
 		}
 	})
 }
+
+// A search query moves the selection to the top row, the best match: after
+// scrolling down in /login, typing a query used to leave the highlight on a row
+// that only happened to survive the clamp, so Enter opened the wrong provider
+// (oauth-selector.ts filterProviders, v1.6.0, #12245).
+func TestOAuthSelectorSearchSelectsTheBestMatch(t *testing.T) {
+	wiring, _ := newAuthTestWiring(t)
+	providers := wiring.GetLoginProviderOptions("")
+	selector := NewOAuthSelectorComponent("login", providers,
+		func(id, authType string) {}, nil, "")
+	// Scroll down a few rows, then search.
+	for range 5 {
+		selector.HandleInput("\x1b[B")
+	}
+	if selector.selectedIndex == 0 {
+		t.Fatal("the test needs a non-zero selection before searching")
+	}
+	for _, char := range "openai" {
+		selector.HandleInput(string(char))
+	}
+	if got := selector.selectedIndex; got != 0 {
+		t.Fatalf("selected index after a query = %d, want the top row", got)
+	}
+	// Clearing the query keeps the clamp instead of resetting the row.
+	selector.HandleInput("\x7f")
+	if got := selector.selectedIndex; got != 0 {
+		t.Fatalf("selected index after deleting a character = %d, want the clamp", got)
+	}
+}

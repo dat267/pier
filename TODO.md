@@ -1,7 +1,6 @@
 # Reproduced, unresolved findings
 
-The port matches the v1.6.0 pin for everything the goldens cover. These v1.6.0
-fixes are in packages pier ports but are not ported yet; each names its commit.
+The port matches the v1.6.0 pin for everything the goldens and tests cover.
 
 ## GitHub Copilot Responses tools go out without `strict` (#12286, `e5c01ca6c`)
 
@@ -11,10 +10,5 @@ fixes are in packages pier ports but are not ported yet; each names its commit.
 
 ## Markdown rows after an inline image are drawn over (#12045, `5b4d7d3df`)
 
-- Severity: low. A paragraph holding a multi-row terminal image (Kitty/iTerm2) plus spacer rows joined by hard breaks renders as one row, so following content is drawn over the image.
-- Fix shape: split a rendered line that contains an image on `\n` before the image check, so only the piece holding the image skips wrapping.
-
-## `/login` and `/logout` search picks the first match, not the best (#12246, `37b74c546`)
-
-- Severity: low. The OAuth, scoped-model and session selectors keep the first fuzzy match where the reference picks the best-scoring one.
-- Fix shape: rank candidates with the reference's scoring instead of returning the first hit.
+- Severity: low, and not reachable in pier today: a markdown image escape can only enter a message through an extension markdown transformer, which is out of scope (D41). Tool-result images render through their own component, not the markdown renderer.
+- Revisit if a markdown transformer, or a LaTeX renderer that emits a terminal image, is ever supported: split a rendered line that contains an image on `\n` before the image check, so only the piece holding the image skips wrapping.

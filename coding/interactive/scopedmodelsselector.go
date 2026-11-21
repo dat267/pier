@@ -380,7 +380,13 @@ func (c *ScopedModelsSelectorComponent) refreshList() {
 	} else {
 		c.filteredItems = items
 	}
-	c.selectedIndex = min(c.selectedIndex, max(0, len(c.filteredItems)-1))
+	// A query selects the top row, the best match (same rule as /login and
+	// /model; scoped-models-selector.ts, v1.6.0, #12245).
+	if query != "" {
+		c.selectedIndex = 0
+	} else {
+		c.selectedIndex = min(c.selectedIndex, max(0, len(c.filteredItems)-1))
+	}
 	c.updateList()
 	c.footerText.SetText(c.getFooterText())
 }

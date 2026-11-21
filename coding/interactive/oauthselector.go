@@ -585,7 +585,13 @@ func (c *OAuthSelectorComponent) FilterProviders(query string) {
 	} else {
 		c.filteredProviders = c.allProviders
 	}
-	c.selectedIndex = max(0, min(c.selectedIndex, max(0, len(c.filteredProviders)-1)))
+	// A query moves the selection to the top row, so the best match is
+	// highlighted; clearing it keeps the clamp (oauth-selector.ts, v1.6.0, #12245).
+	if query != "" {
+		c.selectedIndex = 0
+	} else {
+		c.selectedIndex = max(0, min(c.selectedIndex, max(0, len(c.filteredProviders)-1)))
+	}
 	c.updateList()
 }
 
