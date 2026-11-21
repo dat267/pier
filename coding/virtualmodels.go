@@ -120,6 +120,22 @@ func probeMessage(raw json.RawMessage) messageProbe {
 // model_change holds until the next model_change; otherwise the latest physical
 // response wins. A virtual model that is no longer registered does not hold.
 func GetBranchSelection(branch []SessionEntry, getModel func(provider, modelID string) *ai.Model) *ModelRouteSelection {
+	return branchSelection(branch, nil, getModel)
+}
+
+// BranchSelection is GetBranchSelection over the current branch with the
+// session's payload reader, so an assistant message loaded index-only (D488) is
+// read from its line instead of contributing an empty role.
+func (m *SessionManager) BranchSelection(getModel func(provider, modelID string) *ai.Model) *ModelRouteSelection {
+	branch := m.GetBranch("")
+	m.mu.Lock()
+	payloads := m.payloads
+	m.mu.Unlock()
+	return branchSelection(branch, payloads, getModel)
+}
+
+// branchSelection is GetBranchSelection with an optional payload reader.
+func branchSelection(branch []SessionEntry, payloads *payloadReader, getModel func(provider, modelID string) *ai.Model) *ModelRouteSelection {
 	for index, entry := range slices.Backward(branch) {
 
 		if entry.Type == "model_change" {
@@ -128,7 +144,18 @@ func GetBranchSelection(branch []SessionEntry, getModel func(provider, modelID s
 		if entry.Type != "message" {
 			continue
 		}
-		probe := probeMessage(entry.Message)
+		if entry.roleKnown && entry.role != "assistant" {
+			// The loader recorded the role while scanning, so a non-assistant
+			// entry needs no read (D488).
+			continue
+		}
+		raw := entry.Message
+		if entry.lazy && payloads != nil {
+			if hydrated, err := payloads.hydrateCopy(&entry); err == nil {
+				raw = hydrated.Message
+			}
+		}
+		probe := probeMessage(raw)
 		if probe.Role != "assistant" || probe.API == VirtualModelAPI {
 			continue
 		}

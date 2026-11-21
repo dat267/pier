@@ -1006,14 +1006,14 @@ func (s *AgentSession) addPersistedDefaultToNonEmptyScope(model *ai.Model) {
 // on another branch.
 func (s *AgentSession) recordSelection() {
 	branch := s.Sessions.GetBranch("")
-	s.recordModelSelection(branch)
+	s.recordModelSelection()
 	s.recordThinkingLevel(branch)
 }
 
 // recordModelSelection records the model the branch implies when it differs. A
 // response cannot record a virtual selection because it names a physical model,
 // so a physical record is replaced only when a virtual model runs.
-func (s *AgentSession) recordModelSelection(branch []SessionEntry) {
+func (s *AgentSession) recordModelSelection() {
 	model := s.Model()
 	if model == nil {
 		return
@@ -1024,7 +1024,7 @@ func (s *AgentSession) recordModelSelection(branch []SessionEntry) {
 		}
 		return s.control.ModelRuntime.GetModel(provider, modelID)
 	}
-	recorded := GetBranchSelection(branch, getModel)
+	recorded := s.Sessions.BranchSelection(getModel)
 	if recorded == nil || (recorded.Provider == model.Provider && recorded.ModelID == model.ID) {
 		return
 	}

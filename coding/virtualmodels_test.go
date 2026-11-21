@@ -2,6 +2,9 @@ package coding
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/dat267/pier/ai"
@@ -127,5 +130,42 @@ func TestWithVirtualModels(t *testing.T) {
 	models := provider.GetModels()
 	if len(models) != 1 || models[0].ID != "auto" || models[0].API != VirtualModelAPI {
 		t.Fatalf("models = %+v", models)
+	}
+}
+
+// Reference: pi v1.6.0 core/virtual-models.ts getBranchSelection reads
+// `entry.message` off the branch, and upstream keeps parsed messages in memory.
+// `GetBranch` hands out index-only shells after a file load (D488), so
+// `probeMessage` saw an empty role and skipped every assistant message: a
+// resumed session that recorded its selection only by responding (no
+// model_change) fell through to whatever model_change was left, or to nil, which
+// is what /model routing and the recorded-selection comparison read.
+func TestBranchSelectionReadsALoadedBranch(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "session.jsonl")
+	lines := []string{
+		`{"type":"session","version":3,"id":"s1","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/tmp"}`,
+		`{"type":"message","id":"m1","parentId":null,"timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"user","content":"hi","timestamp":1}}`,
+		`{"type":"message","id":"m2","parentId":"m1","timestamp":"2026-01-01T00:00:02.000Z","message":{"role":"assistant","content":[{"type":"text","text":"yo"}],"api":"openai-completions","provider":"acme","model":"m1","usage":{},"stopReason":"stop","timestamp":2}}`,
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manager, err := OpenSession(path, dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(manager.Close)
+	selection := manager.BranchSelection(func(string, string) *ai.Model { return nil })
+	if selection == nil {
+		t.Fatal("a loaded branch records no selection; the assistant message was never read")
+	}
+	if selection.Provider != "acme" || selection.ModelID != "m1" {
+		t.Fatalf("selection = %+v, want acme/m1", *selection)
+	}
+	// The same branch through the pure helper, which has no payload reader,
+	// still sees only the shells: this is the behaviour the accessor fixes.
+	if unhydrated := GetBranchSelection(manager.GetBranch(""), nil); unhydrated != nil {
+		t.Fatalf("GetBranchSelection on unhydrated entries = %+v; want nil", *unhydrated)
 	}
 }
