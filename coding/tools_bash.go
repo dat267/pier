@@ -177,7 +177,14 @@ type OutputSnapshot struct {
 func (o *OutputAccumulator) Snapshot(persistIfTruncated bool) OutputSnapshot {
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	tailTruncation := TruncateTail(o.getSnapshotText(), TruncationOptions{MaxLines: o.maxLines, MaxBytes: o.maxBytes})
+	// Clipping drops the partial first line of the retained tail. When the tail is
+	// only the end of one over-long line, that is everything, so show the end of
+	// that line instead (output-accumulator.ts snapshot, v1.6.0, #12092).
+	snapshotText := o.getSnapshotText()
+	if snapshotText == "" {
+		snapshotText = o.tailText
+	}
+	tailTruncation := TruncateTail(snapshotText, TruncationOptions{MaxLines: o.maxLines, MaxBytes: o.maxBytes})
 	truncated := o.totalLines > o.maxLines || o.totalDecodedBytes > o.maxBytes
 	truncatedBy := TruncatedBy("")
 	if truncated {

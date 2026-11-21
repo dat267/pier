@@ -641,3 +641,58 @@ func TestSessionStatsContextUsageMatchesGetContextUsage(t *testing.T) {
 		t.Fatalf("stats diverged from GetContextUsage: stats %+v usage %+v", stats.ContextUsage, usage)
 	}
 }
+
+// /copy skips a turn that ended without an answer: after Esc during a tool call
+// or a provider error the last assistant message has no text, and the previous
+// answer is what the user wants to copy. A normally-ended reply stays last even
+// when empty (agent-session.ts getLastAssistantText, v1.6.0, #12119).
+func TestGetLastAssistantTextSkipsUnfinishedTurns(t *testing.T) {
+	build := func() *AgentSession {
+		tempAgentDir(t)
+		session, err := NewAgentSession(&SessionConfig{
+			Cwd: t.TempDir(), Sessions: NewSessionManager(t.TempDir(), nil),
+			StreamFn: stubStreamFn, Model: &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(session.Dispose)
+		return session
+	}
+	answer := &ai.AssistantMessage{API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
+		Content: ai.ContentList{ai.TextContent{Text: "the answer"}}, StopReason: ai.StopStop}
+
+	for _, ending := range []struct {
+		name    string
+		message *ai.AssistantMessage
+	}{
+		{"aborted tool call", &ai.AssistantMessage{API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
+			Content: ai.ContentList{ai.ToolCall{ID: "c", Name: "read", Arguments: json.RawMessage(`{}`)}}, StopReason: ai.StopToolUse}},
+		{"aborted empty", &ai.AssistantMessage{API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
+			Content: ai.ContentList{}, StopReason: ai.StopAborted}},
+		{"error empty", &ai.AssistantMessage{API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
+			Content: ai.ContentList{}, StopReason: ai.StopError}},
+		{"length", &ai.AssistantMessage{API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
+			Content: ai.ContentList{}, StopReason: ai.StopLength}},
+	} {
+		t.Run(ending.name, func(t *testing.T) {
+			session := build()
+			session.Sessions.AppendMessage(answer)
+			session.Sessions.AppendMessage(ending.message)
+			session.replaceAgentMessagesFromSession()
+			if got := session.GetLastAssistantText(); got != "the answer" {
+				t.Fatalf("last assistant text = %q, want the previous answer", got)
+			}
+		})
+	}
+
+	// A reply that ended normally stays the last reply, even without text.
+	session := build()
+	session.Sessions.AppendMessage(answer)
+	session.Sessions.AppendMessage(&ai.AssistantMessage{API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
+		Content: ai.ContentList{}, StopReason: ai.StopStop})
+	session.replaceAgentMessagesFromSession()
+	if got := session.GetLastAssistantText(); got != "" {
+		t.Fatalf("last assistant text = %q, want empty for a normally-ended empty reply", got)
+	}
+}

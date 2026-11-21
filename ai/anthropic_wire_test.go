@@ -592,3 +592,39 @@ func TestAnthropicEmptySystemMessageProducesNoBlocks(t *testing.T) {
 		t.Fatalf("request bytes differ\n got: %s\nwant: %s", encoded, want)
 	}
 }
+
+// A non-strict tool schema keeps the root members that carry meaning: 1.6.0's
+// convertTools copies `additionalProperties` (whatever its value) so the model
+// learns whether extra arguments are allowed, plus `$defs` and `definitions` so
+// property $refs still resolve (anthropic-messages.ts, #12100).
+func TestAnthropicNonStrictSchemaKeepsRootMembers(t *testing.T) {
+	params := json.RawMessage(`{"type":"object","properties":{"t":{"$ref":"#/$defs/T"}},"required":["t"],"additionalProperties":false,"$defs":{"T":{"type":"object","properties":{"path":{"type":"string"}}}}}`)
+	legacy, err := legacyInputSchema(params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded struct {
+		Type                 string          `json:"type"`
+		Properties           json.RawMessage `json:"properties"`
+		Required             []string        `json:"required"`
+		AdditionalProperties *bool           `json:"additionalProperties"`
+		Defs                 json.RawMessage `json:"$defs"`
+	}
+	if err := json.Unmarshal(legacy, &decoded); err != nil {
+		t.Fatalf("legacy schema: %v\n%s", err, legacy)
+	}
+	if decoded.AdditionalProperties == nil || *decoded.AdditionalProperties {
+		t.Fatalf("additionalProperties = %v, want false kept:\n%s", decoded.AdditionalProperties, legacy)
+	}
+	if len(decoded.Defs) == 0 {
+		t.Fatalf("$defs dropped:\n%s", legacy)
+	}
+	// A schema without the members omits them.
+	plain, err := legacyInputSchema(json.RawMessage(`{"type":"object","properties":{},"required":[]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(plain), "additionalProperties") || strings.Contains(string(plain), "$defs") {
+		t.Fatalf("plain schema carries an unused member:\n%s", plain)
+	}
+}

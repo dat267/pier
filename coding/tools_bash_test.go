@@ -720,3 +720,28 @@ func TestBashStreamingUpdateOmitsAnEmptyFullOutputPath(t *testing.T) {
 		}
 	}
 }
+
+// A short line followed by one over-long line must still show output: clipping
+// the rolling tail leaves only the end of that line, getSnapshotText drops the
+// partial first line and returns "", so snapshot falls back to the unclipped tail
+// and truncateTail takes its partial-line path
+// (core/tools/output-accumulator.ts snapshot, v1.6.0, #12092).
+func TestBashSnapshotKeepsAnOverLongTailLine(t *testing.T) {
+	accumulator := NewOutputAccumulator(DefaultMaxLines, DefaultMaxBytes, "pier-bash")
+	accumulator.Append([]byte("first line\n"))
+	long := strings.Repeat("x", 219*1024)
+	accumulator.Append([]byte(long + "\n"))
+	snapshot := accumulator.Snapshot(false)
+	if snapshot.Content == "" {
+		t.Fatalf("snapshot content is empty; truncation=%+v", snapshot.Truncation)
+	}
+	if !snapshot.Truncation.Truncated {
+		t.Fatal("the over-long output is not reported as truncated")
+	}
+	if !strings.HasSuffix(snapshot.Content, long[len(long)-1000:]) {
+		t.Fatalf("snapshot does not keep the end of the long line: %d bytes", len(snapshot.Content))
+	}
+	if snapshot.Truncation.OutputLines == 0 {
+		t.Fatal("snapshot reports zero output lines")
+	}
+}

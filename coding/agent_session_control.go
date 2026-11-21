@@ -1168,18 +1168,22 @@ func (s *AgentSession) GetLastAssistantText() string {
 		if !ok {
 			continue
 		}
-		// Skip aborted messages with no content.
-		if assistant.StopReason == ai.StopAborted && len(assistant.Content) == 0 {
-			continue
-		}
 		var builder strings.Builder
 		for _, block := range assistant.Content {
 			if text, ok := block.(ai.TextContent); ok {
 				builder.WriteString(text.Text)
 			}
 		}
-		if trimmed := ai.JSTrim(builder.String()); trimmed != "" {
+		trimmed := ai.JSTrim(builder.String())
+		if trimmed != "" {
 			return trimmed
+		}
+		// A turn that ended without a normal stop leaves no answer to copy (Esc
+		// during a tool call, a provider error, a length stop); keep walking back to
+		// the previous reply. A normally-ended reply stays last even when empty
+		// (agent-session.ts getLastAssistantText, v1.6.0, #12119).
+		if assistant.StopReason != ai.StopStop {
+			continue
 		}
 		return ""
 	}

@@ -668,10 +668,6 @@ func executeToolCallsSequential(
 		emitToolResultMessage(toolResultMessage, emit)
 		finalizedCalls = append(finalizedCalls, finalized)
 		messages = append(messages, toolResultMessage)
-
-		if ctxDone(ctx) {
-			break
-		}
 	}
 
 	return executedToolCallBatch{
@@ -721,9 +717,6 @@ func executeToolCallsParallel(
 			}
 			emitToolExecutionEnd(finalized, emit)
 			entries = append(entries, finalizedEntry{settled: &finalized})
-			if ctxDone(ctx) {
-				break
-			}
 			continue
 		}
 
@@ -743,9 +736,6 @@ func executeToolCallsParallel(
 			emitToolExecutionEnd(finalized, serializedEmit)
 			return finalized
 		}})
-		if ctxDone(ctx) {
-			break
-		}
 	}
 
 	var wg sync.WaitGroup
@@ -889,6 +879,13 @@ func prepareToolCallUnprotected(
 	config *AgentLoopConfig,
 	ctx context.Context,
 ) prepareOutcome {
+	// Once aborted, skip validation and the hooks: the caller still records this
+	// result, so no call in the batch is left without one (#9986).
+	if ctxDone(ctx) {
+		return prepareOutcome{immediate: &immediateToolCallOutcome{
+			result: createErrorToolResult("Operation aborted"), isError: true,
+		}}
+	}
 	preparedCall := prepareToolCallArguments(tool, toolCall)
 	validatedArgs, err := ai.ValidateToolArguments(ai.Tool{
 		Name: tool.Name, Description: tool.Description, Parameters: tool.Parameters,

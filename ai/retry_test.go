@@ -266,3 +266,30 @@ func TestRetryClassificationMatchesReference(t *testing.T) {
 		}
 	}
 }
+
+// A transport that reports only a Node socket error code is retryable:
+// "read ECONNRESET", "write EPIPE", "connect ETIMEDOUT 1.2.3.4:443"
+// (utils/retry.ts, v1.6.0, #12128). ETIMEDOUT has no space, so the "timed out"
+// phrasing cannot match it.
+func TestRetryableProviderErrorMatchesBareSocketCodes(t *testing.T) {
+	retryable := func(message string) bool {
+		return IsRetryableAssistantError(&AssistantMessage{StopReason: StopError, ErrorMessage: &message})
+	}
+	for _, message := range []string{
+		"read ECONNRESET",
+		"write EPIPE",
+		"connect ETIMEDOUT 140.82.113.3:443",
+		"connect ECONNREFUSED 127.0.0.1:443",
+		"read ECONNABORTED",
+	} {
+		if !retryable(message) {
+			t.Errorf("%q is not retryable", message)
+		}
+	}
+	// The code must stand alone: a word that merely contains it is not a code.
+	for _, message := range []string{"ECONNRESETTING the pool", "not_ECONNRESET"} {
+		if retryable(message) {
+			t.Errorf("%q must not be retryable", message)
+		}
+	}
+}

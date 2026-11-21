@@ -732,12 +732,20 @@ func ConvertAnthropicTools(
 	return out, nil
 }
 
-// legacyInputSchema reduces a schema to {type: object, properties, required}.
+// legacyInputSchema reduces a schema to the root members a non-strict Anthropic
+// tool needs: type, properties and required, plus the members that carry
+// meaning, `additionalProperties` (whatever its value, so the model learns
+// whether extra arguments are allowed), `$defs` and `definitions` (so property
+// $refs resolve). Other root keywords stay out: Anthropic rejects root
+// anyOf/oneOf/allOf with a 400 (anthropic-messages.ts convertTools, #12100).
 func legacyInputSchema(parameters json.RawMessage) (json.RawMessage, error) {
 	var schema struct {
-		Properties json.RawMessage            `json:"properties"`
-		Required   []string                   `json:"required"`
-		Extra      map[string]json.RawMessage `json:"-"`
+		Properties           json.RawMessage            `json:"properties"`
+		Required             []string                   `json:"required"`
+		AdditionalProperties json.RawMessage            `json:"additionalProperties"`
+		Defs                 json.RawMessage            `json:"$defs"`
+		Definitions          json.RawMessage            `json:"definitions"`
+		Extra                map[string]json.RawMessage `json:"-"`
 	}
 	if err := jsonUnmarshalStrict(parameters, &schema); err != nil {
 		return nil, err
@@ -750,11 +758,28 @@ func legacyInputSchema(parameters json.RawMessage) (json.RawMessage, error) {
 	if required == nil {
 		required = []string{}
 	}
-	return mustMarshalJSON(struct {
-		Type       string   `json:"type"`
-		Properties any      `json:"properties"`
-		Required   []string `json:"required"`
-	}{"object", json.RawMessage(props), required}), nil
+	var out orderedJSONFields
+	out.set("type", mustMarshalJSON("object"))
+	out.set("properties", json.RawMessage(props))
+	out.set("required", mustMarshalJSON(required))
+	for _, member := range []struct {
+		name  string
+		value json.RawMessage
+	}{
+		{"additionalProperties", schema.AdditionalProperties},
+		{"$defs", schema.Defs},
+		{"definitions", schema.Definitions},
+	} {
+		if len(member.value) == 0 || string(member.value) == "null" {
+			continue
+		}
+		out.set(member.name, member.value)
+	}
+	encoded, err := out.marshal()
+	if err != nil {
+		return nil, err
+	}
+	return encoded, nil
 }
 
 // overlaySchema merges a strict parameters object with the legacy fields,

@@ -454,6 +454,12 @@ var retryableProviderErrorPattern = buildProviderErrorPattern([]string{
 	// (ECONNRESET), "broken pipe" (EPIPE) and "unexpected EOF" all mean what the
 	// fetch and websocket phrasings above mean. Upstream's list omits them.
 	`connection.?abort`, `connection.?reset`, `broken.?pipe`, `unexpected.?eof`,
+	// Bare Node socket error codes, e.g. "read ECONNRESET", "write EPIPE" or
+	// "connect ETIMEDOUT 1.2.3.4:443", which a transport can report without any
+	// other wording (retry.ts, v1.6.0, #12128). ETIMEDOUT has no space, so the
+	// `timed? out` phrasing above cannot match it. The RE2 form of upstream's
+	// lookarounds consumes the boundary.
+	`(?:^|[^a-z0-9_])(?:ECONNRESET|ECONNABORTED|ECONNREFUSED|ETIMEDOUT|EPIPE)(?:[^a-z0-9_]|$)`,
 	`timed? out`, `timeout`, `terminated`,
 	`websocket.?closed`, `websocket.?error`,
 	`ended without`, `stream ended before message_stop`,

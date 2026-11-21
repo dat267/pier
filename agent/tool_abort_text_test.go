@@ -63,3 +63,60 @@ func TestToolFailureKeepsItsMessageWhileTheRunIsCanceled(t *testing.T) {
 		t.Fatalf("tool result = %q", got)
 	}
 }
+
+// Aborting during a tool batch still answers every call: the loops no longer
+// stop early, and prepareToolCall returns "Operation aborted" before validation
+// and the hooks once the run is aborted, so each call gets a start event, an end
+// event and a result (agent-loop.ts, v1.6.0, #9986). Whether a call that already
+// started finishes or reports the abort depends on where the cancel lands.
+func TestAbortedToolBatchAnswersEveryCall(t *testing.T) {
+	for _, mode := range []ToolExecutionMode{ToolExecutionSequential, ToolExecutionParallel} {
+		t.Run(string(mode), func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			calls := []ai.ToolCall{
+				{ID: "a", Name: "tool", Arguments: json.RawMessage(`{}`)},
+				{ID: "b", Name: "tool", Arguments: json.RawMessage(`{}`)},
+				{ID: "c", Name: "tool", Arguments: json.RawMessage(`{}`)},
+			}
+			tool := &AgentTool{
+				Name:       "tool",
+				Parameters: json.RawMessage(`{"type":"object","properties":{}}`),
+				Execute: func(id string, _ json.RawMessage, _ context.Context, _ func(AgentToolResult)) (AgentToolResult, error) {
+					cancel()
+					return AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "ran " + id}}}, nil
+				},
+			}
+			config := &AgentLoopConfig{ToolExecution: mode}
+			message := &ai.AssistantMessage{API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m"}
+			for _, call := range calls {
+				message.Content = append(message.Content, call)
+			}
+			agentContext := &AgentContext{Tools: []AgentTool{*tool}, Messages: []ai.Message{message}}
+			batch := executeToolCalls(agentContext, message, config, ctx, func(AgentEvent) error { return nil })
+			if len(batch.messages) != len(calls) {
+				t.Fatalf("tool results = %d, want one per call (%d)", len(batch.messages), len(calls))
+			}
+			seen := map[string]bool{}
+			for _, result := range batch.messages {
+				toolResult, ok := result.(*ai.ToolResultMessage)
+				if !ok {
+					t.Fatalf("result %T is not a tool result", result)
+				}
+				if seen[toolResult.ToolCallID] {
+					t.Fatalf("duplicate result for %q", toolResult.ToolCallID)
+				}
+				seen[toolResult.ToolCallID] = true
+				if toolResult.IsError && (len(toolResult.Content) == 0 ||
+					toolResult.Content[0].(ai.TextContent).Text != "Operation aborted") {
+					t.Fatalf("result for %q = %+v, want the abort error", toolResult.ToolCallID, toolResult)
+				}
+			}
+			for _, call := range calls {
+				if !seen[call.ID] {
+					t.Fatalf("call %q has no tool result", call.ID)
+				}
+			}
+		})
+	}
+}
