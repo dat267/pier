@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D497)
+# Deliberate divergences from pi (D1–D498)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8225,3 +8225,26 @@ toggle. `AgentSession.disabledTools` records an explicit disable and
 re-enabling it clears the record. `TestDisabledGoalToolStaysDisabled` drives the
 transition; `TestSessionToolToggle` and `TestToolsSelectorTogglesSessionTools`
 pin the toggles themselves.
+
+### D498
+
+**A /tools change is recorded in the session transcript, so it survives a relaunch without a turn.**
+
+The agent loop writes a tool-state diff as a system message, but only when a
+request runs (`agent/loop.go`, `withToolChanges`). A `/tools` toggle followed by
+closing pier therefore changed nothing on disk: the next launch started from
+`defaultTools` again. The toggle writes the same form itself,
+`AgentSession.recordToolStateChange`, which diffs the branch's declared tools
+(`SessionManager.CurrentTools`) against the new set and appends a system message
+with `toolsAdded`/`toolsRemoved`, appending nothing when the branch already
+declares that set. A resume reads it through `GetCurrentTools`, which
+`RestoreToolsFromTranscript` already used, so a re-enable is recorded the same
+way and survives too.
+
+This keeps `defaultTools` untouched, so a fresh session in the same directory
+still starts from the setting, and a settings file is never rewritten by a
+session toggle.
+
+Tests: `TestToolToggleWithoutATurnSurvivesResume` (disable, dispose, resume, then
+re-enable and resume again), `TestSessionToolToggle` (the toggle and the prompt's
+tool section).

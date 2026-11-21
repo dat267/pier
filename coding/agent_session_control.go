@@ -545,7 +545,41 @@ func (s *AgentSession) SetToolEnabled(name string, enabled bool) error {
 	} else {
 		s.disabledTools[name] = true
 	}
+	// The agent loop records a tool-state diff only when a request runs, so a
+	// toggle with no turn after it was lost on relaunch. The session records the
+	// change itself, in the same system-message form the loop uses, so a resume
+	// reads it through GetCurrentTools (D498).
+	s.recordToolStateChange(next)
 	return nil
+}
+
+// recordToolStateChange appends a system message carrying the tool-state diff
+// from the tools the branch declares to names, the form the agent loop writes
+// (agent/loop.go withToolChanges). It appends nothing when the branch already
+// declares exactly that set.
+func (s *AgentSession) recordToolStateChange(names []string) {
+	if s.Sessions == nil || s.control == nil {
+		return
+	}
+	s.control.stateMu.Lock()
+	declared := make([]ai.Tool, 0, len(names))
+	for _, name := range names {
+		entry, ok := s.control.Tools[name]
+		if !ok {
+			continue
+		}
+		declared = append(declared, entry.Tool.ToolDeclaration())
+	}
+	s.control.stateMu.Unlock()
+	previous := s.Sessions.CurrentTools()
+	changes := ai.GetToolStateChanges(previous, declared)
+	if len(changes.ToolsAdded) == 0 && len(changes.ToolsRemoved) == 0 {
+		return
+	}
+	message := &ai.SystemMessage{Content: ai.StringOrBlocks{Text: ""}, Timestamp: time.Now().UnixMilli()}
+	message.ToolsAdded = changes.ToolsAdded
+	message.ToolsRemoved = changes.ToolsRemoved
+	s.Sessions.AppendMessage(message)
 }
 
 // ToolNames lists every registered tool's name, in sorted order (the /tools

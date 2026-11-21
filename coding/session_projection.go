@@ -102,6 +102,12 @@ func (m *SessionManager) CurrentSystemMessage() *ai.SystemMessage {
 	return ai.GetCurrentSystemMessage(m.Projection().Messages)
 }
 
+// CurrentTools returns the tool set the projection's transcript declares, after
+// replaying every tool-state system message on the branch.
+func (m *SessionManager) CurrentTools() []ai.Tool {
+	return ai.GetCurrentTools(m.Projection().Messages)
+}
+
 // LatestCompaction returns the newest compaction entry on the current branch.
 func (m *SessionManager) LatestCompaction() *SessionEntry {
 	// The footer reads this on every session event; the branch copy GetBranch
