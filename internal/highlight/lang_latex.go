@@ -15,14 +15,18 @@ func Latex() *Language {
 				HasRelevance:       true, Relevance: 0,
 				Keywords: Keywords{"$pattern": "\\\\[a-zA-Z]+", "keyword": "\\verb"},
 				Starts: &Mode{
-					Contains: []*Mode{&Mode{
+					// VERBATIM_DELIMITED_EQUAL: the text between the delimiters is
+					// the string and the delimiters themselves are plain. Both
+					// delimiters are the same single character, so EndSameAsBegin
+					// ignores an end match that is not the opening delimiter.
+					Contains: []*Mode{EndSameAsBegin(&Mode{
 						ClassName:    "string",
 						Begin:        "(.|\\r?\\n)",
 						End:          "(.|\\r?\\n)",
 						ExcludeBegin: true,
 						ExcludeEnd:   true,
 						EndsParent:   true,
-					}},
+					})},
 				},
 				Contains: []*Mode{&Mode{
 					Begin:        "\\s+",
@@ -35,14 +39,18 @@ func Latex() *Language {
 				HasRelevance:       true, Relevance: 0,
 				Keywords: Keywords{"$pattern": "\\\\[a-zA-Z]+", "keyword": "\\lstinline"},
 				Starts: &Mode{
-					Contains: []*Mode{&Mode{
+					// VERBATIM_DELIMITED_EQUAL: the text between the delimiters is
+					// the string and the delimiters themselves are plain. Both
+					// delimiters are the same single character, so EndSameAsBegin
+					// ignores an end match that is not the opening delimiter.
+					Contains: []*Mode{EndSameAsBegin(&Mode{
 						ClassName:    "string",
 						Begin:        "(.|\\r?\\n)",
 						End:          "(.|\\r?\\n)",
 						ExcludeBegin: true,
 						ExcludeEnd:   true,
 						EndsParent:   true,
-					}},
+					})},
 				},
 				Contains: []*Mode{&Mode{
 					Begin:        "\\s+",

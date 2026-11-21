@@ -424,3 +424,34 @@ func TestRelevanceMatchesUpstream(t *testing.T) {
 		})
 	}
 }
+
+// Reference: highlight.js 11 `languages/latex.js` VERBATIM_DELIMITED_EQUAL:
+//
+//	hljs.END_SAME_AS_BEGIN({ className: innerName, begin: /(.|\r?\n)/,
+//	  end: /(.|\r?\n)/, excludeBegin: true, excludeEnd: true, endsParent: true })
+//
+// The delimited text is the string; the delimiter characters are plain. pier
+// expanded the same mode by hand and emitted an empty string node at the
+// delimiter, then swallowed the rest of the input into it, so `\verb|a b c|`
+// rendered `|\x3cspan class="hljs-string">\x3c/span>a b c|` instead of
+// `|<span class="hljs-string">a b c</span>|`.
+func TestLatexVerbatimDelimitsTheString(t *testing.T) {
+	for _, tc := range []struct{ name, code, html string }{
+		{"verb", "\\verb|a b c|\n",
+			`<span class="hljs-keyword">\verb</span>|<span class="hljs-string">a b c</span>|` + "\n"},
+		{"verb one char", "\\verb|a|\n",
+			`<span class="hljs-keyword">\verb</span>|<span class="hljs-string">a</span>|` + "\n"},
+		{"lstinline", "\\lstinline|a b|\n",
+			`<span class="hljs-keyword">\lstinline</span>|<span class="hljs-string">a b</span>|` + "\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := Highlight(tc.code, "latex")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := RenderHTML(result.Nodes); got != tc.html {
+				t.Fatalf("HTML = %q; want %q", got, tc.html)
+			}
+		})
+	}
+}
