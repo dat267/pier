@@ -458,3 +458,27 @@ func TestSessionSelectorStatusTimerAppliesOnOwner(t *testing.T) {
 		t.Fatal("status timer did not clear the status on its owner")
 	}
 }
+
+// A progressive reload calls SetSessions repeatedly; the selected path stays
+// pending until it appears, instead of the highlight falling back to row 0 on
+// each partial list (session-selector.ts setSessions, v1.6.0, #12111).
+func TestSessionListKeepsTheSelectionAcrossPartialLoads(t *testing.T) {
+	kb := NewAppKeybindingsManager(nil, "").KeybindingsManager
+	session := func(id string) coding.SessionInfo {
+		return coding.SessionInfo{Path: "/sessions/" + id + ".jsonl", ID: id, Cwd: "/w", Modified: time.Now()}
+	}
+	first := []coding.SessionInfo{session("a"), session("b"), session("c")}
+	list := NewSessionList(first, false, SortThreaded, NameFilterAll, kb, "")
+	list.HandleInput("\x1b[B") // select row 1
+	selected := list.GetSelectedSessionPath()
+	if selected == "" || selected != first[1].Path {
+		t.Fatalf("selected = %q, want %q", selected, first[1].Path)
+	}
+	// A partial list without the selected session keeps it pending.
+	list.SetSessions([]coding.SessionInfo{session("a")}, false, true)
+	// The next partial list carries it: the selection returns to it.
+	list.SetSessions([]coding.SessionInfo{session("a"), session("b")}, false, true)
+	if got := list.GetSelectedSessionPath(); got != selected {
+		t.Fatalf("selected after the partial load = %q, want %q", got, selected)
+	}
+}

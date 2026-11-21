@@ -481,10 +481,13 @@ type SessionList struct {
 	// pathKeys caches sessionPathKey per session path: canonicalizing follows
 	// symlinks with a syscall per component, and the picker filters on every
 	// keystroke and renders the tree on every frame (D480).
-	pathKeys                    map[string]string
-	filtered                    []flatSessionNode
-	selectedIndex               int
-	selectionTouched            bool
+	pathKeys         map[string]string
+	filtered         []flatSessionNode
+	selectedIndex    int
+	selectionTouched bool
+	// pendingSelectedPath is the selected path a partial load has not delivered
+	// yet; it is restored when the path arrives.
+	pendingSelectedPath         string
 	searchInput                 *tui.Input
 	showCwd                     bool
 	sortMode                    SortMode
@@ -573,24 +576,44 @@ func (l *SessionList) SetNameFilter(nameFilter NameFilter) {
 	l.FilterSessions(l.searchInput.Value())
 }
 
-// SetSessions replaces the sessions and restores the selection.
-func (l *SessionList) SetSessions(sessions []coding.SessionInfo, showCwd bool) {
+// SetSessions replaces the sessions and restores the selection. A partial list
+// (a progressive load) keeps the selected path pending until the path arrives, so
+// the highlight does not jump to row 0 while the list fills
+// (session-selector.ts setSessions, v1.6.0, #12111).
+func (l *SessionList) SetSessions(sessions []coding.SessionInfo, showCwd bool, partial bool) {
+	pendingPath := ""
+	if l.selectionTouched {
+		pendingPath = l.pendingSelectedPath
+	}
 	selectedPath := ""
 	if l.selectionTouched {
-		selectedPath = l.GetSelectedSessionPath()
+		selectedPath = pendingPath
+		if selectedPath == "" {
+			selectedPath = l.GetSelectedSessionPath()
+		}
 	}
 	l.allSessions = sessions
 	l.showCwd = showCwd
 	l.seedPathKeys(sessions)
 	l.FilterSessions(l.searchInput.Value())
-	if !l.selectionTouched {
+	switch {
+	case !l.selectionTouched:
 		l.selectedIndex = 0
-	} else if selectedPath != "" {
+	case selectedPath != "":
+		restored := -1
 		for index, node := range l.filtered {
 			if node.Session.Path == selectedPath {
-				l.selectedIndex = index
+				restored = index
 				break
 			}
+		}
+		if restored >= 0 {
+			l.selectedIndex = restored
+			l.pendingSelectedPath = ""
+		} else if partial {
+			l.pendingSelectedPath = selectedPath
+		} else {
+			l.pendingSelectedPath = ""
 		}
 	}
 }
@@ -623,6 +646,7 @@ func (l *SessionList) FilterSessions(query string) {
 	if trimmed != "" {
 		l.selectedIndex = 0
 		l.selectionTouched = false
+		l.pendingSelectedPath = ""
 	} else if l.selectedIndex > len(l.filtered)-1 {
 		l.selectedIndex = max(0, len(l.filtered)-1)
 	}
@@ -1252,7 +1276,7 @@ func (c *SessionSelectorComponent) deleteSessionAndRefresh(sessionPath string) {
 			sessions = c.allSessions
 		}
 
-		c.sessionList.SetSessions(sessions, c.scope == SessionScopeAll)
+		c.sessionList.SetSessions(sessions, c.scope == SessionScopeAll, false)
 		message := "Session deleted"
 		if result.Method == "trash" {
 			message = "Session moved to trash"
@@ -1327,7 +1351,7 @@ func (c *SessionSelectorComponent) loadScope(scope SessionScope) {
 						c.allSessions = sessions
 					}
 					if scope == c.scope {
-						c.sessionList.SetSessions(sessions, showCwd)
+						c.sessionList.SetSessions(sessions, showCwd, true)
 					}
 				})
 			}
@@ -1367,10 +1391,10 @@ func (c *SessionSelectorComponent) loadScope(scope SessionScope) {
 			if message != "" {
 				c.header.SetLoading(false)
 				c.header.SetStatusMessage(&sessionStatusMessage{Type: "error", Message: "Failed to load sessions: " + message}, 4000)
-				c.sessionList.SetSessions(nil, showCwd)
+				c.sessionList.SetSessions(nil, showCwd, false)
 			} else {
 				c.header.SetLoading(false)
-				c.sessionList.SetSessions(sessions, showCwd)
+				c.sessionList.SetSessions(sessions, showCwd, true)
 			}
 			c.requestRenderNow()
 		})
@@ -1437,7 +1461,7 @@ func (c *SessionSelectorComponent) toggleScope() {
 
 	c.header.SetScope(c.scope)
 	c.header.SetLoading(loading)
-	c.sessionList.SetSessions(sessions, c.scope == SessionScopeAll)
+	c.sessionList.SetSessions(sessions, c.scope == SessionScopeAll, false)
 	c.requestRenderNow()
 	if sessions == nil && !loading {
 		c.loadScope(c.scope)
