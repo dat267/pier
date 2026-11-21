@@ -626,12 +626,18 @@ func (e *Editor) handleInputLocked(data string) {
 		if kb.Matches(data, "tui.input.tab") || kb.Matches(data, "tui.select.confirm") {
 			selected, ok := e.autocompleteList.GetSelectedItem()
 			if ok && e.autocompleteProvider != nil {
+				// Enter runs a slash command only from the command-name menu. A path
+				// or argument menu can also have a "/" prefix ("look at /tm"), so the
+				// prefix alone does not identify it: read the context before applying
+				// the completion, whose result already carries a space
+				// (editor.ts, v1.6.0, #12312).
+				beforeCursor := e.textBeforeCursor()
 				e.pushUndoSnapshot()
 				e.lastAction = ""
 				result := e.autocompleteProvider.ApplyCompletion(
 					e.state.lines, e.state.cursorLine, e.state.cursorCol, autocompleteItemFromSelect(selected), e.autocompletePrefix)
 				e.applyCompletionResultLocked(result)
-				if strings.HasPrefix(e.autocompletePrefix, "/") && kb.Matches(data, "tui.select.confirm") {
+				if kb.Matches(data, "tui.select.confirm") && e.isInSlashCommandNameContext(beforeCursor) {
 					e.cancelAutocompleteLocked()
 					// Fall through to submit.
 				} else {
@@ -2080,6 +2086,13 @@ func (e *Editor) isAtStartOfMessage() bool {
 	return trimmed == "" || trimmed == "/"
 }
 
+// isInSlashCommandNameContext reports whether the cursor sits in a slash command
+// name ("/mo"), not in an argument ("/model cla") or a path ("/open /tm").
+func (e *Editor) isInSlashCommandNameContext(textBeforeCursor string) bool {
+	return e.isInSlashCommandContext(textBeforeCursor) &&
+		!strings.Contains(strings.TrimLeftFunc(textBeforeCursor, isWhitespaceRune), " ")
+}
+
 func (e *Editor) isInSlashCommandContext(textBeforeCursor string) bool {
 	return e.isSlashMenuAllowed() && strings.HasPrefix(strings.TrimLeftFunc(textBeforeCursor, isWhitespaceRune), "/")
 }
@@ -2142,7 +2155,7 @@ func (e *Editor) handleTabCompletionLocked() {
 		return
 	}
 	beforeCursor := e.textBeforeCursor()
-	if e.isInSlashCommandContext(beforeCursor) && !strings.Contains(strings.TrimLeftFunc(beforeCursor, isWhitespaceRune), " ") {
+	if e.isInSlashCommandNameContext(beforeCursor) {
 		e.requestAutocompleteLocked(false, true)
 		return
 	}

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -354,4 +355,69 @@ func TestEditorAutocompleteDropsStaleResults(t *testing.T) {
 	// request's post and the replacement's can both be drained by the wait
 	// above, so counting posts races with the owner loop.
 	waitForAutocompletePrefix(t, host, editor, "@ab")
+}
+
+// applyingProvider applies a completion by replacing the token before the cursor,
+// so a test can see whether Enter completed or submitted.
+type applyingProvider struct {
+	suggestions *AutocompleteSuggestions
+}
+
+func (p *applyingProvider) TriggerCharacters() []string { return nil }
+
+func (p *applyingProvider) GetSuggestions(context.Context, []string, int, int, bool) *AutocompleteSuggestions {
+	return p.suggestions
+}
+
+func (p *applyingProvider) ApplyCompletion(lines []string, cursorLine int, cursorCol int,
+	item AutocompleteItem, prefix string) CompletionResult {
+	line := lines[cursorLine]
+	start := max(0, cursorCol-len(prefix))
+	replaced := line[:start] + item.Value + line[cursorCol:]
+	out := append([]string{}, lines...)
+	out[cursorLine] = replaced
+	return CompletionResult{Lines: out, CursorLine: cursorLine, CursorCol: start + len(item.Value)}
+}
+
+// Enter submits only from a slash-command-name menu. A path menu can also have a
+// "/" prefix ("look at /tm"), so the prefix alone does not identify it: pressing
+// Enter there completes the path instead of submitting the line
+// (editor.ts Tab-menu submit guard, v1.6.0, #12312).
+func TestEditorEnterCompletesAPathMenuInsteadOfSubmitting(t *testing.T) {
+	open := func(prefix string, items []AutocompleteItem, text string) (*Editor, *string) {
+		host := newLoopHost()
+		editor := NewEditor(host, editorTestTheme(), EditorOptions{})
+		submitted := new(string)
+		editor.OnSubmit = func(value string) { *submitted = value }
+		editor.SetAutocompleteProvider(&applyingProvider{suggestions: &AutocompleteSuggestions{Prefix: prefix, Items: items}})
+		editor.SetText(text)
+		editor.HandleInput("\t")
+		host.waitPost(t)
+		host.drain()
+		if !editor.IsShowingAutocomplete() {
+			t.Fatal("the menu did not open")
+		}
+		return editor, submitted
+	}
+
+	pathItems := []AutocompleteItem{
+		{Value: "/tmp/file.txt", Label: "/tmp/file.txt"},
+		{Value: "/tmp/file2.txt", Label: "/tmp/file2.txt"},
+	}
+	editor, submitted := open("/tm", pathItems, "look at /tm")
+	editor.HandleInput("\r")
+	if *submitted != "" {
+		t.Fatalf("Enter submitted the line instead of completing the path: %q", *submitted)
+	}
+	if text := editor.GetText(); !strings.Contains(text, "/tmp/file.txt") {
+		t.Fatalf("text = %q, want the completion applied", text)
+	}
+
+	// A slash-command name menu still submits on Enter.
+	commandItems := []AutocompleteItem{{Value: "/model", Label: "/model"}, {Value: "/models", Label: "/models"}}
+	commandEditor, commandSubmitted := open("/mo", commandItems, "/mo")
+	commandEditor.HandleInput("\r")
+	if *commandSubmitted == "" {
+		t.Fatal("a slash command menu did not submit on Enter")
+	}
 }
