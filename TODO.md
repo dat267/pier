@@ -16,11 +16,6 @@ changed between the tags, so each can be ported or dropped on purpose.
 - Evidence: the generator aborts with `expected an error`: its `developer-rejects-*` and `vertex-rejects-*` cases no longer error.
 - Reproduce: `node --experimental-strip-types ai/testdata/google-wire/generate.mjs ./pi`.
 
-## AI: identity version and stop-reason mapping (`ai/testdata/bedrock-identity`)
-
-- Severity: low. The client identity string reports `pi/1.6.0` (was `1.5.2`), and `google-shared.ts` maps the `CONTINUATION` finish reason to `length` (`mapStopReasonString` was removed).
-- Reproduce: `just goldens`.
-
 ## Tools: grep and find parameter wording changed (`coding/testdata/tool-schemas`)
 
 - Severity: low. `grep`'s `glob` description now reads "Filter files by glob pattern, relative to path, e.g. '*.ts', 'src/**/*.ts' or '**/*.spec.ts'. A pattern without '/' matches file names at any depth", and `find`'s `pattern` reads "Glob pattern to match files, e.g. '*.ts', '**/*.json', or 'src/**/*.spec.ts'".

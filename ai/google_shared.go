@@ -620,7 +620,9 @@ func MapGoogleStopReason(reason string) (StopReason, error) {
 	switch reason {
 	case "STOP":
 		return StopStop, nil
-	case "MAX_TOKENS":
+	case "MAX_TOKENS", "CONTINUATION":
+		// 1.6.0: a per-request token limit reaches pi as "length"; pi does not
+		// resume with the continuation token (google-shared.ts mapStopReason).
 		return StopLength, nil
 	case "BLOCKLIST", "PROHIBITED_CONTENT", "SPII", "SAFETY", "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT",
 		"IMAGE_RECITATION", "IMAGE_OTHER", "RECITATION", "FINISH_REASON_UNSPECIFIED", "OTHER", "LANGUAGE",
