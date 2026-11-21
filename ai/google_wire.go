@@ -56,10 +56,12 @@ func (p googleDeveloperPart) MarshalJSON() ([]byte, error) {
 		}{p.FunctionCall.Args, p.FunctionCall.ID, p.FunctionCall.Name}
 	}
 	if p.InlineData != nil {
+		// The Developer serializer writes mimeType before data (@google/genai
+		// 2.32); the Vertex one keeps the declaration order.
 		image = struct {
-			Data     string `json:"data"`
 			MimeType string `json:"mimeType"`
-		}{p.InlineData.Data, p.InlineData.MimeType}
+			Data     string `json:"data"`
+		}{p.InlineData.MimeType, p.InlineData.Data}
 	}
 	return MarshalJSON(struct {
 		FunctionCall     any                     `json:"functionCall,omitempty"`
@@ -69,4 +71,68 @@ func (p googleDeveloperPart) MarshalJSON() ([]byte, error) {
 		Thought          *bool                   `json:"thought,omitempty"`
 		ThoughtSignature *string                 `json:"thoughtSignature,omitempty"`
 	}{call, p.FunctionResponse, image, text, p.Thought, p.ThoughtSignature})
+}
+
+// marshalGoogleVertexRequest serializes the Vertex request body. The SDK's
+// Vertex serializer (generateContentConfigToVertex, @google/genai 2.32) writes a
+// function response's members as id, name, parts, response, while the hook
+// payload keeps the SDK type's declaration order.
+func marshalGoogleVertexRequest(params *GoogleGenerateContentParams) ([]byte, error) {
+	type content struct {
+		Parts []googleVertexPart `json:"parts"`
+		Role  string             `json:"role"`
+	}
+	contents := make([]content, len(params.Contents))
+	for i, original := range params.Contents {
+		parts := make([]googleVertexPart, len(original.Parts))
+		for j, part := range original.Parts {
+			parts[j] = googleVertexPart(part)
+		}
+		contents[i] = content{Parts: parts, Role: original.Role}
+	}
+	type plainParams GoogleGenerateContentParams
+	return MarshalJSON(struct {
+		Contents []content `json:"contents"`
+		*plainParams
+	}{contents, (*plainParams)(params)})
+}
+
+// googleVertexPart is a GooglePart with the Vertex member order.
+type googleVertexPart GooglePart
+
+// vertexFunctionResponse is a function response in the Vertex member order.
+type vertexFunctionResponse struct {
+	ID       string          `json:"id,omitempty"`
+	Name     string          `json:"name"`
+	Parts    []GooglePart    `json:"parts,omitempty"`
+	Response json.RawMessage `json:"response,omitempty"`
+}
+
+func (p googleVertexPart) MarshalJSON() ([]byte, error) {
+	var text *string
+	if p.Text != "" || (p.FunctionCall == nil && p.FunctionResponse == nil && p.InlineData == nil) {
+		text = &p.Text
+	}
+	var call any
+	if p.FunctionCall != nil {
+		call = p.FunctionCall
+	}
+	var response *vertexFunctionResponse
+	if p.FunctionResponse != nil {
+		response = &vertexFunctionResponse{
+			ID: p.FunctionResponse.ID, Name: p.FunctionResponse.Name,
+			Parts: p.FunctionResponse.Parts, Response: p.FunctionResponse.Response,
+		}
+	}
+	return MarshalJSON(struct {
+		FunctionCall     any                     `json:"functionCall,omitempty"`
+		FunctionResponse *vertexFunctionResponse `json:"functionResponse,omitempty"`
+		InlineData       *GoogleInlineData       `json:"inlineData,omitempty"`
+		Text             *string                 `json:"text,omitempty"`
+		Thought          *bool                   `json:"thought,omitempty"`
+		ThoughtSignature *string                 `json:"thoughtSignature,omitempty"`
+	}{
+		FunctionCall: call, FunctionResponse: response, InlineData: p.InlineData,
+		Text: text, Thought: p.Thought, ThoughtSignature: p.ThoughtSignature,
+	})
 }

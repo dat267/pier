@@ -513,3 +513,36 @@ func TestGoogleRequestsMatchSDKWire(t *testing.T) {
 		})
 	}
 }
+
+// Since the SDK 2.32 upgrade (@google/genai, v1.6.0) the Developer API accepts
+// `labels` and sends them as a top-level body member before generationConfig;
+// `labels: null` is omitted, and modelArmorConfig stays Vertex-only. The
+// expectation was produced by the pinned reference's stream with an onPayload
+// replacement.
+func TestGoogleDeveloperRequestCarriesLabels(t *testing.T) {
+	replacement := json.RawMessage(`{"model":"gemini-3-pro","contents":[{"role":"user","parts":[{"text":"hello"}]}],"config":{"labels":{"audit":"enabled"},"temperature":0.5}}`)
+	_, body, err := googleSDKRequest(replacement, APIGoogleGenerativeAI)
+	if err != nil {
+		t.Fatalf("labels rejected: %v", err)
+	}
+	want := `{"contents":[{"parts":[{"text":"hello"}],"role":"user"}],"labels":{"audit":"enabled"},"generationConfig":{"temperature":0.5}}`
+	if string(body) != want {
+		t.Fatalf("body = %s\nwant %s", body, want)
+	}
+
+	nullLabels := json.RawMessage(`{"model":"gemini-3-pro","contents":[{"role":"user","parts":[{"text":"hello"}]}],"config":{"labels":null}}`)
+	_, body, err = googleSDKRequest(nullLabels, APIGoogleGenerativeAI)
+	if err != nil {
+		t.Fatalf("null labels rejected: %v", err)
+	}
+	if strings.Contains(string(body), "labels") {
+		t.Fatalf("null labels were sent: %s", body)
+	}
+
+	// modelArmorConfig is still Vertex-only.
+	armor := json.RawMessage(`{"model":"gemini-3-pro","contents":[{"role":"user","parts":[{"text":"hello"}]}],"config":{"modelArmorConfig":{}}}`)
+	if _, _, err := googleSDKRequest(armor, APIGoogleGenerativeAI); err == nil ||
+		!strings.Contains(err.Error(), "modelArmorConfig parameter is only supported in Gemini Enterprise Agent Platform mode") {
+		t.Fatalf("modelArmorConfig err = %v, want the Developer API rejection", err)
+	}
+}

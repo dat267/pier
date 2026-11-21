@@ -39,6 +39,13 @@ func googleSDKPayload(model *Model, params *GoogleGenerateContentParams) ([]byte
 			return nil, err
 		}
 	}
+	// pi turns Gemini's automatic continuation off explicitly, so a per-request
+	// token limit reports "length" instead of resuming (google-generative-ai.ts
+	// and google-vertex.ts, v1.6.0). The hook payload carries it; the SDK drops it
+	// when it serializes the REST body.
+	if err := set("automaticContinuation", false); err != nil {
+		return nil, err
+	}
 	if generation := params.GenerationConfig; generation != nil && generation.ThinkingConfig != nil {
 		if err := set("thinkingConfig", generation.ThinkingConfig); err != nil {
 			return nil, err
@@ -86,8 +93,9 @@ func (p googleSDKPart) MarshalJSON() ([]byte, error) {
 
 // googleVertexOnlyReplacements are the config members the Developer API
 // serializer rejects before it reaches modelArmorConfig (SDK
-// generateContentConfigToMldev; imageConfig sits between the two).
-var googleVertexOnlyReplacements = []string{"routingConfig", "modelSelectionConfig", "labels", "audioTimestamp"}
+// generateContentConfigToMldev; imageConfig sits between the two). `labels` is
+// not one of them since SDK 2.32 (v1.6.0): the Developer API accepts it.
+var googleVertexOnlyReplacements = []string{"routingConfig", "modelSelectionConfig", "audioTimestamp"}
 
 const (
 	// googleModelArmorReplacement is rejected last by the Developer serializer.
@@ -209,11 +217,14 @@ func googleSDKRequest(raw json.RawMessage, api Api) (string, []byte, error) {
 			body.set(key, value)
 		}
 	}
+	// Both APIs accept labels; the SDK writes them after the tools block and
+	// before generationConfig. modelArmorConfig stays Vertex-only.
+	if value, ok := payload.Config["labels"]; ok && strings.TrimSpace(string(value)) != "null" {
+		body.set("labels", value)
+	}
 	if api == APIGoogleVertex {
-		for _, key := range []string{"labels", "modelArmorConfig"} {
-			if value, ok := payload.Config[key]; ok && strings.TrimSpace(string(value)) != "null" {
-				body.set(key, value)
-			}
+		if value, ok := payload.Config[googleModelArmorReplacement]; ok && strings.TrimSpace(string(value)) != "null" {
+			body.set(googleModelArmorReplacement, value)
 		}
 	}
 	if payload.Config != nil {

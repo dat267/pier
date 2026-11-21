@@ -133,9 +133,9 @@ const cases = [{
 		},
 	},
 }, {
-	name: "developer-rejects-vertex-labels",
+	// Since SDK 2.32 (v1.6.0) the Developer API accepts labels.
+	name: "developer-sends-labels",
 	apis: ["google-generative-ai"],
-	expectError: true,
 	messages: [{ role: "user", content: "hello", timestamp: 1 }],
 	options: {},
 	replacement: {
@@ -143,9 +143,9 @@ const cases = [{
 		config: { labels: { audit: "enabled" } },
 	},
 }, {
-	name: "developer-rejects-null-vertex-labels",
+	// A null labels member is omitted rather than rejected.
+	name: "developer-omits-null-labels",
 	apis: ["google-generative-ai"],
-	expectError: true,
 	messages: [{ role: "user", content: "hello", timestamp: 1 }],
 	options: {},
 	replacement: {

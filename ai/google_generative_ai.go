@@ -298,7 +298,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 		if config.api == APIGoogleGenerativeAI {
 			body, err = marshalGoogleDeveloperRequest(params)
 		} else {
-			body, err = MarshalJSON(params)
+			body, err = marshalGoogleVertexRequest(params)
 		}
 		if err != nil {
 			fail(err)
