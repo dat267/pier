@@ -3,8 +3,11 @@ package oauth
 import (
 	"context"
 	"errors"
+	"io"
 	"net"
+	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 )
@@ -136,5 +139,118 @@ func TestCallbackExplicitZeroTimeoutIsImmediate(t *testing.T) {
 			t.Fatal("callback waiter remained blocked after server close")
 		}
 		t.Fatal("explicit zero selected the callback default timeout")
+	}
+}
+
+// pi v1.6.0 callback.ts plainText (line 29): an ok page is always the fixed
+// completion sentence, and a failed page is `message` plus `details` when the
+// server reported a description. Nothing asserted the page before.
+func TestCallbackPagePlainText(t *testing.T) {
+	const state = "page-state"
+	server, err := ListenCallbackServer(context.Background(), OAuthCallbackServerOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = server.Close(context.Background()) })
+	cases := []struct {
+		name   string
+		query  string
+		path   string
+		status int
+		body   string
+		// register starts a waiter for the shared state, and waitErr says the
+		// redirect carries a failure the waiter must report.
+		register bool
+		waitErr  bool
+	}{
+		{
+			name:     "ok",
+			query:    "code=abc&state=" + state,
+			status:   http.StatusOK,
+			body:     "Authorization complete. You may close this window.",
+			register: true,
+		},
+		{
+			name:     "error with description",
+			query:    "error=access_denied&error_description=User+denied+the+request&state=" + state,
+			status:   http.StatusOK,
+			body:     "Authorization failed. You may close this window.\n\nUser denied the request",
+			register: true,
+			waitErr:  true,
+		},
+		{
+			name:     "error without description",
+			query:    "error=access_denied&state=" + state,
+			status:   http.StatusOK,
+			body:     "Authorization failed. You may close this window.\n\naccess_denied",
+			register: true,
+			waitErr:  true,
+		},
+		{
+			name:   "unknown state",
+			query:  "code=abc&state=never-registered",
+			status: http.StatusBadRequest,
+			body:   "Invalid or expired OAuth state",
+		},
+		{
+			name:   "wrong path",
+			query:  "code=abc&state=" + state,
+			path:   "/other",
+			status: http.StatusNotFound,
+			body:   "Not found",
+		},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			if testCase.register {
+				waited := make(chan error, 1)
+				go func() {
+					_, err := server.WaitForCallback(state)
+					waited <- err
+				}()
+				deadline := time.Now().Add(2 * time.Second)
+				for !server.Pending(state) {
+					if time.Now().After(deadline) {
+						t.Fatal("waiter did not register")
+					}
+					time.Sleep(time.Millisecond)
+				}
+				defer func() {
+					select {
+					case err := <-waited:
+						if !testCase.waitErr && err != nil {
+							t.Errorf("callback result error = %v", err)
+						}
+						if testCase.waitErr && err == nil {
+							t.Error("callback reported success for a failed authorization")
+						}
+					case <-time.After(2 * time.Second):
+						t.Error("callback waiter did not receive the redirect")
+					}
+				}()
+			}
+			target := server.RedirectURL
+			if testCase.path != "" {
+				target = strings.TrimSuffix(target, "/callback") + testCase.path
+			}
+			response, err := http.Get(target + "?" + testCase.query)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer response.Body.Close()
+			body, err := io.ReadAll(response.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if response.StatusCode != testCase.status {
+				t.Fatalf("status = %d, want %d", response.StatusCode, testCase.status)
+			}
+			if got := string(body); got != testCase.body {
+				t.Fatalf("body = %q, want %q", got, testCase.body)
+			}
+			if got := response.Header.Get("content-type"); got != "text/plain; charset=utf-8" {
+				t.Fatalf("content-type = %q", got)
+			}
+		})
 	}
 }

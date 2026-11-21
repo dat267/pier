@@ -219,21 +219,16 @@ func (s *OAuthCallbackServer) reply(w http.ResponseWriter, status int, page OAut
 		_, _ = w.Write([]byte(s.renderPage(page)))
 		return
 	}
-	message := page.Message
 	details := ""
 	if page.Details != nil {
 		details = *page.Details
 	}
-	text := page.Message
+	text := "Authorization complete. You may close this window."
 	if !page.OK {
+		text = page.Message
 		if details != "" {
 			text = page.Message + "\n\n" + details
 		}
-	} else {
-		text = "Authorization complete. You may close this window."
-	}
-	if message == "" && page.OK {
-		text = "Authorization complete. You may close this window."
 	}
 	w.Header().Set("content-type", "text/plain; charset=utf-8")
 	w.WriteHeader(status)
