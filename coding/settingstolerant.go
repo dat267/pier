@@ -54,7 +54,7 @@ func decodeSettingsTolerantWithRejects(encoded []byte, target any) []string {
 			rejected = append(rejected, encodeSettingsPath(path))
 			return
 		}
-		if !decodeTolerantValue(member, value.Elem().Field(index)) {
+		if !decodeTolerantValueForMember(name, member, value.Elem().Field(index)) {
 			rejected = append(rejected, encodeSettingsPath(path))
 			return
 		}
@@ -188,6 +188,37 @@ func clearSettingsPath(value reflect.Value, path []string) {
 	}
 }
 
+// decodeTolerantValueForMember is decodeTolerantValue for one named settings
+// member. defaultTools keeps its string entries and drops everything else,
+// because upstream's getDefaultTools reads the stored value with
+// `Array.isArray(tools) ? tools.filter((tool) => typeof tool === "string") : []`:
+// a malformed entry narrows the selection instead of discarding the member,
+// which would fall through to every built-in tool.
+func decodeTolerantValueForMember(name string, member json.RawMessage, target reflect.Value) bool {
+	if name == "defaultTools" && target.Kind() == reflect.Slice && target.Type().Elem().Kind() == reflect.String {
+		return decodeTolerantStringSlice(member, target)
+	}
+	return decodeTolerantValue(member, target)
+}
+
+// decodeTolerantStringSlice keeps the string elements of a JSON array; a value
+// that is not an array becomes an empty list, as upstream's Array.isArray check
+// does.
+func decodeTolerantStringSlice(raw json.RawMessage, target reflect.Value) bool {
+	var values []any
+	if json.Unmarshal(raw, &values) != nil {
+		values = nil
+	}
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		if text, ok := value.(string); ok {
+			out = append(out, text)
+		}
+	}
+	target.Set(reflect.ValueOf(out))
+	return true
+}
+
 // decodeTolerantValue decodes one JSON value into target, reporting whether the
 // target accepted anything.
 func decodeTolerantValue(raw []byte, target reflect.Value) bool {
@@ -271,8 +302,8 @@ func decodeTolerantStruct(raw []byte, target reflect.Value) bool {
 	// present-but-empty object keeps its pointer (the reference keeps `{}`);
 	// each member decodes only if its field can hold the value.
 	typ := target.Type()
-	eachSettingsMember(typ, members, func(index int, _ reflect.StructField, _ string, member json.RawMessage) {
-		decodeTolerantValue(member, target.Field(index))
+	eachSettingsMember(typ, members, func(index int, _ reflect.StructField, name string, member json.RawMessage) {
+		decodeTolerantValueForMember(name, member, target.Field(index))
 	})
 	return true
 }

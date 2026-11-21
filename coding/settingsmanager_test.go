@@ -731,3 +731,30 @@ func TestCompactionTokenSettingsRejectUnsafeIntegers(t *testing.T) {
 		})
 	}
 }
+
+// Reference: pi v1.6.0 core/settings-manager.ts getDefaultTools filters the
+// stored list to its string entries (`tools.filter((tool) => typeof tool ===
+// "string")`) and only reports undefined when the key is absent. pier decoded
+// the whole member strictly, so one non-string entry (or a member that is not
+// an array at all) dropped defaultTools entirely and the caller fell back to
+// every built-in tool: a malformed setting silently widened the tool set.
+func TestSettingsDefaultToolsIgnoresNonStringEntries(t *testing.T) {
+	for _, testCase := range []struct{ name, stored, want string }{
+		{"mixed", `{"defaultTools":["read",5]}`, "read"},
+		{"not an array", `{"defaultTools":"read"}`, ""},
+		{"objects", `{"defaultTools":[{"name":"read"},"bash"]}`, "bash"},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			agentDir, projectDir := settingsDirs(t)
+			writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), testCase.stored)
+			manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+			tools := manager.GetDefaultTools()
+			if tools == nil {
+				t.Fatalf("GetDefaultTools = nil; the malformed member must still resolve to a selection")
+			}
+			if got := strings.Join(tools, ","); got != testCase.want {
+				t.Fatalf("GetDefaultTools = %q, want %q", got, testCase.want)
+			}
+		})
+	}
+}
