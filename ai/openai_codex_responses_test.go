@@ -715,3 +715,48 @@ func TestCodexClampsMaxOutputTokens(t *testing.T) {
 		t.Fatalf("max_output_tokens = %#v, want the 16 floor", body["max_output_tokens"])
 	}
 }
+
+// Reference: pi v1.6.0 api/openai-codex-responses.ts getRetryAfterDelayMs parses
+// both headers with `Number(value)`, which accepts a hex, binary or octal prefix
+// (`Number("0x10") === 16`). codexRetryHeaderNumber used strconv.ParseFloat,
+// which rejects every radix prefix, so a `retry-after: 0x10` header was treated
+// as absent and the retry fell back to the caller's delay instead of the
+// server's 16 seconds.
+func TestCodexRetryAfterAcceptsJavaScriptNumberForms(t *testing.T) {
+	for _, tc := range []struct {
+		header, value string
+		wantMS        int64
+	}{
+		{"retry-after", "0x10", 16000},
+		{"retry-after", "0X1f", 31000},
+		{"retry-after", "0b101", 5000},
+		{"retry-after", "0o17", 15000},
+		{"retry-after", "1e3", 1000000},
+		{"retry-after", " 2 ", 2000},
+		{"retry-after-ms", "0x10", 16},
+		// Number("") is 0 but an absent header is not 0; the empty case is below.
+		{"retry-after", "1_0", -1}, // Number rejects numeric separators
+	} {
+		headers := http.Header{}
+		headers.Set(tc.header, tc.value)
+		delay, ok := GetCodexRetryAfterDelayMS(headers)
+		if tc.wantMS < 0 {
+			if ok {
+				t.Fatalf("%s: %q accepted, want absent", tc.header, tc.value)
+			}
+			continue
+		}
+		if !ok {
+			t.Fatalf("%s: %q not parsed", tc.header, tc.value)
+		}
+		if got := delay.Milliseconds(); got != tc.wantMS {
+			t.Fatalf("%s: %q = %d ms, want %d", tc.header, tc.value, got, tc.wantMS)
+		}
+	}
+	// Control: a non-numeric value is still absent.
+	headers := http.Header{}
+	headers.Set("retry-after", "soon")
+	if _, ok := GetCodexRetryAfterDelayMS(headers); ok {
+		t.Fatal("a non-numeric retry-after was accepted")
+	}
+}

@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of api/openai-codex-responses.ts (the SSE transport). The WebSocket
@@ -103,16 +105,11 @@ func IsCodexRetryableError(status int, errorText string) bool {
 // JavaScript whitespace is trimmed, and non-finite values or Go-only numeric
 // separators count as absent. Hexadecimal integer forms are not used by retry
 // headers and fall back like any other unparseable value.
+// codexRetryHeaderNumber parses a Retry-After value the way the reference does,
+// with `Number(value)`: hex, binary and octal prefixes count, JavaScript
+// whitespace is trimmed, numeric separators and trailing text are rejected.
 func codexRetryHeaderNumber(value string) (float64, bool) {
-	text := JSTrim(value)
-	if text == "" || strings.ContainsRune(text, '_') {
-		return 0, false
-	}
-	number, err := strconv.ParseFloat(text, 64)
-	if err != nil || math.IsNaN(number) || math.IsInf(number, 0) {
-		return 0, false
-	}
-	return number, true
+	return jsnum.Number(value)
 }
 
 // retryHeaderDelay converts milliseconds to a duration, saturating instead of
