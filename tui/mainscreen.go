@@ -15,8 +15,8 @@ import (
 //
 // Divergences: the surrogate-pair-aware 1 MiB chunking becomes rune-aware (Go
 // strings are UTF-8); the over-wide-line path writes the crash log and reports
-// through OnRenderError instead of throwing; the debug render dumps gated on
-// PI_TUI_DEBUG are omitted.
+// through OnRenderError instead of throwing (D503); the debug render dumps gated
+// on PI_TUI_DEBUG are omitted.
 
 const maxRenderWriteChars = 1024 * 1024
 

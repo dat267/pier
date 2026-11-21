@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -421,4 +422,37 @@ func TestScreensStripStaleCursorMarkers(t *testing.T) {
 			t.Fatalf("marker reached the terminal: %q", out)
 		}
 	})
+}
+
+// Upstream `tui-main-screen.ts` writes the crash log, stops the screen and
+// `throw new Error(errorMsg)` out of the render path. Go cannot throw through a
+// render caller usefully: the UI loop owns the lifecycle shutdown, and a panic
+// there would kill the process with the terminal still in raw mode. pier writes
+// the same log, stops the screen and reports through OnRenderError, which
+// `App.installRenderErrorHandler` turns into the lifecycle's UncaughtCrash. D503 records it.
+func TestMainScreenReportsAnOverwideLineInsteadOfThrowing(t *testing.T) {
+	terminal := &recordingTerminal{width: 10, height: 24}
+	screen := NewMainScreen(terminal, false, t.TempDir())
+	var reported []error
+	screen.OnRenderError = func(err error) { reported = append(reported, err) }
+
+	err := screen.reportOverwideLine([]string{"0123456789ABCDEF"}, 0, 10)
+	if err == nil {
+		t.Fatal("an over-wide line must report an error")
+	}
+	if len(reported) != 1 {
+		t.Fatalf("OnRenderError calls = %d, want exactly one", len(reported))
+	}
+	if reported[0] != err {
+		t.Fatalf("reported %v, returned %v; the same error must reach both", reported[0], err)
+	}
+	if !strings.Contains(err.Error(), "exceeds terminal width") {
+		t.Fatalf("error = %q", err.Error())
+	}
+	if !strings.Contains(err.Error(), "pi-tui-crash.log") {
+		t.Fatalf("the message must name the crash log it wrote: %q", err.Error())
+	}
+	if _, statErr := os.Stat(filepath.Join(screen.LogDirectory, "pi-tui-crash.log")); statErr != nil {
+		t.Fatalf("crash log not written: %v", statErr)
+	}
 }

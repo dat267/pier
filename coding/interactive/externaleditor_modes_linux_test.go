@@ -5,6 +5,7 @@ package interactive
 import (
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 	"testing"
 )
@@ -71,5 +72,27 @@ func TestExternalEditorSignalMessage(t *testing.T) {
 	result := EditInExternalEditor(ExternalEditorOptions{Command: "my-editor", Content: "prompt"})
 	if result.Status != "failed" || result.Message != "External editor exited with SIGTERM; prompt unchanged" {
 		t.Fatalf("result = %+v", result)
+	}
+}
+
+// Reference: pi v1.6.0 modes/interactive/external-editor.ts reads the temp file
+// with `stripBom(readFileSync(filePath, "utf-8"))` inside a `finally` that only
+// cleans up, so an editor that deletes the file makes the synchronous readthrow
+// out of `editInExternalEditor`. The Go port cannot return that as a panic to
+// its caller, so it reports a failed result whose message names the read; D504
+// records the difference.
+func TestExternalEditorReportsADeletedPromptFile(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+	previous := externalEditorRunner
+	defer func() { externalEditorRunner = previous }()
+	externalEditorRunner = func(command *exec.Cmd) error {
+		return os.Remove(command.Args[len(command.Args)-1])
+	}
+	result := EditInExternalEditor(ExternalEditorOptions{Command: "editor", Content: "prompt"})
+	if result.Status != "failed" {
+		t.Fatalf("editor result = %+v; want a failed result", result)
+	}
+	if !strings.Contains(result.Message, "Failed to read the edited prompt") {
+		t.Fatalf("message = %q", result.Message)
 	}
 }

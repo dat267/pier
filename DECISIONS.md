@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D502)
+# Deliberate divergences from pi (D1–D504)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8302,3 +8302,38 @@ never less correct than plain text for the lines it does not touch; it merely
 keeps the earlier spans. The grammar entry records it inline.
 
 Test: `TestArcadeIllegalHashKeepsHighlighting`.
+
+### D503
+
+**An over-wide rendered line is reported, not thrown.**
+
+`tui-main-screen.ts` writes the crash log, stops the screen and
+`throw new Error(errorMsg)` out of the render path. A Go renderer cannot throw
+through a render caller usefully: the render runs on the owner loop, which owns
+the lifecycle shutdown, and a panic there ends the process with the terminal
+still in raw mode. pier writes the same crash log, stops the screen and passes
+the error to `MainScreen.OnRenderError`; `App.installRenderErrorHandler` wires
+that to `lifecycle.UncaughtCrash`, which is the handler the reference's
+`uncaughtException` path also ends in. The crash log text and location are
+unchanged.
+
+The divergence was already in the code and in the file's header comment, but no
+D-row recorded it and no test covered the path.
+
+Test: `TestMainScreenReportsAnOverwideLineInsteadOfThrowing`.
+
+### D504
+
+**A deleted external-editor prompt file is a failed result, not a throw.**
+
+Reference: pi v1.6.0 `packages/coding-agent/src/modes/interactive/external-editor.ts`
+reads the temp file with `stripBom(readFileSync(filePath, "utf-8"))`; the `finally`
+only removes the directory, so an editor that deletes the prompt file makes the
+synchronous read throw out of `editInExternalEditor`. The Go port returns a failed
+result whose message is `Failed to read the edited prompt: …` instead of panicking
+through its caller, which is the same contract as its other failure branches
+(launch failure, non-zero exit).
+
+The file's header comment recorded the difference; no D-row and no test did.
+
+Test: `TestExternalEditorReportsADeletedPromptFile`.
