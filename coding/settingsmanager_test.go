@@ -758,3 +758,27 @@ func TestSettingsDefaultToolsIgnoresNonStringEntries(t *testing.T) {
 		})
 	}
 }
+
+// Reference: pi v1.6.0 core/settings-manager.ts stores these numeric settings as
+// JavaScript Numbers and consumes them as counts: getImageWidthCells floors on
+// read (Math.max(1, Math.floor(width))), and an editor padding or autocomplete
+// limit reaches String.repeat or a slice bound, which truncate the same way. A
+// stored 2.7 is therefore 2 usable spaces and 5.9 is 5 visible cells. pier
+// decoded the members into Go ints, which rejects every non-integral number, so
+// the whole member was discarded as unrepresentable and the getter returned its
+// default instead: the setting silently had no effect.
+func TestSettingsNumericSettingsFloorLikeJavaScript(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"),
+		`{"terminal":{"imageWidthCells":5.9},"editorPaddingX":2.7,"autocompleteMaxVisible":7.5}`)
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	if got := manager.GetImageWidthCells(); got != 5 {
+		t.Fatalf("GetImageWidthCells = %d, want 5", got)
+	}
+	if got := manager.GetEditorPaddingX(); got != 2 {
+		t.Fatalf("GetEditorPaddingX = %d, want 2", got)
+	}
+	if got := manager.GetAutocompleteMaxVisible(); got != 7 {
+		t.Fatalf("GetAutocompleteMaxVisible = %d, want 7", got)
+	}
+}

@@ -3,6 +3,7 @@ package coding
 import (
 	"bytes"
 	"encoding/json"
+	"math"
 	"reflect"
 	"strings"
 )
@@ -198,6 +199,11 @@ func decodeTolerantValueForMember(name string, member json.RawMessage, target re
 	if name == "defaultTools" && target.Kind() == reflect.Slice && target.Type().Elem().Kind() == reflect.String {
 		return decodeTolerantStringSlice(member, target)
 	}
+	if floorsSettingsNumber(name) {
+		if decoded, ok := floorSettingsNumber(member, target); ok {
+			return decoded
+		}
+	}
 	return decodeTolerantValue(member, target)
 }
 
@@ -217,6 +223,51 @@ func decodeTolerantStringSlice(raw json.RawMessage, target reflect.Value) bool {
 	}
 	target.Set(reflect.ValueOf(out))
 	return true
+}
+
+// floorsSettingsNumber reports the numeric members upstream keeps as JavaScript
+// Numbers and consumes as counts: getImageWidthCells floors on read, and a
+// fractional editor padding or autocomplete limit truncates in String.repeat or
+// as a slice bound. Decoding them into an int would reject a stored 2.7 and
+// discard the setting entirely.
+func floorsSettingsNumber(name string) bool {
+	switch name {
+	case "editorPaddingX", "imageWidthCells", "autocompleteMaxVisible":
+		return true
+	}
+	return false
+}
+
+// floorSettingsNumber decodes a fractional JSON number into an int field (or
+// an optional int pointer) by flooring it, the way Math.floor(padding) does;
+// non-numbers and values a JavaScript Number cannot hold fall back to the strict
+// decoder.
+func floorSettingsNumber(raw json.RawMessage, target reflect.Value) (bool, bool) {
+	element := target
+	pointer := target.Kind() == reflect.Pointer
+	if pointer {
+		element = reflect.New(target.Type().Elem()).Elem()
+	}
+	switch element.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+	default:
+		return false, false
+	}
+	var number float64
+	if json.Unmarshal(raw, &number) != nil || math.IsNaN(number) || math.IsInf(number, 0) {
+		return false, false
+	}
+	floored := math.Floor(number)
+	if floored > float64(math.MaxInt64) || floored < float64(math.MinInt64) {
+		return false, false
+	}
+	element.SetInt(int64(floored))
+	if pointer {
+		holder := reflect.New(target.Type().Elem())
+		holder.Elem().Set(element)
+		target.Set(holder)
+	}
+	return true, true
 }
 
 // decodeTolerantValue decodes one JSON value into target, reporting whether the
