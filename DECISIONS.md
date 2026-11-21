@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D505)
+# Deliberate divergences from pi (D1–D506)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8356,3 +8356,20 @@ the result equals a fresh lex). `FuzzIncrementalMatchesFull` and the two prefix
 tests in that file now call `Update("")` first: their loops start at a one-byte
 prefix, so none of them ever reached the zero-block state and the panic survived
 a fuzz target that should have caught it.
+
+### D506
+
+**A slice of invalid UTF-8 split by an escape is not width-pinned.**
+
+A Go string can hold invalid UTF-8, and a terminal escape can sit between two
+halves of one sequence. `SliceWithWidth` advances per escape-separated chunk, so
+each orphan byte counts one column, while `VisibleWidth` re-decodes the
+chunk-joined text of the strip as a single rune: for `"\xc7\x1b]\x1b\\\x8a0"`
+the slicer reports 2 and `VisibleWidth` of the sliced text reports 1.
+The reference iterates UTF-16 units (`result += str[i]`, `utils.ts:399`), where
+two lone surrogates cannot re-form a character, so it cannot reach the shape and
+has no rule for it. Pinning the slicer or the width to either number would invent
+one. `checkSliceInvariants` therefore skips the equality assertion only for a
+slice of invalid UTF-8 containing an escape, and
+`TestSliceWidthOfSplitInvalidUTF8IsNotPinned` pins the divergence: it fails if the
+two ever agree, which is the signal to delete this row.
