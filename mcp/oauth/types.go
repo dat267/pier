@@ -207,6 +207,31 @@ func optionalUrl(input map[string]any, key, name string) (*string, error) {
 	return &value, nil
 }
 
+// unknownMembers lists the document members the typed view does not model, so
+// the parsers can keep them: the reference builds `compact({ ...input, ...known })`
+// and every member it does not name survives.
+func unknownMembers(input map[string]any, known ...string) map[string]json.RawMessage {
+	seen := make(map[string]bool, len(known))
+	for _, name := range known {
+		seen[name] = true
+	}
+	var extra map[string]json.RawMessage
+	for key, value := range input {
+		if seen[key] || value == nil {
+			continue
+		}
+		encoded, err := json.Marshal(value)
+		if err != nil {
+			continue
+		}
+		if extra == nil {
+			extra = map[string]json.RawMessage{}
+		}
+		extra[key] = encoded
+	}
+	return extra
+}
+
 // ParseProtectedResourceMetadata validates a resource-metadata document.
 func ParseProtectedResourceMetadata(value any) (*OAuthProtectedResourceMetadata, error) {
 	input, err := object(value, "OAuth protected resource metadata")
@@ -234,6 +259,7 @@ func ParseProtectedResourceMetadata(value any) (*OAuthProtectedResourceMetadata,
 		return nil, err
 	}
 	result.ScopesSupported = scopes
+	result.Extra = unknownMembers(input, "resource", "authorization_servers", "scopes_supported")
 	return result, nil
 }
 
@@ -300,6 +326,11 @@ func ParseAuthorizationServerMetadata(value any) (*AuthorizationServerMetadata, 
 	if flag, ok := input["authorization_response_iss_parameter_supported"].(bool); ok {
 		result.AuthorizationResponseIssParameterSupported = &flag
 	}
+	result.Extra = unknownMembers(input,
+		"issuer", "authorization_endpoint", "token_endpoint", "registration_endpoint",
+		"scopes_supported", "response_types_supported", "grant_types_supported",
+		"token_endpoint_auth_methods_supported", "code_challenge_methods_supported",
+		"client_id_metadata_document_supported", "authorization_response_iss_parameter_supported")
 	return result, nil
 }
 

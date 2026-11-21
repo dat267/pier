@@ -203,3 +203,44 @@ func TestOAuthStepUpScopeMatchesUpstream(t *testing.T) {
 		})
 	}
 }
+
+// Reference: pi v1.6.0 oauth/types.ts parseProtectedResourceMetadata and
+// parseAuthorizationServerMetadata both build `compact({ ...input, ...known })`,
+// so every member the typed view does not model survives into the result;
+// `OAuthProtectedResourceMetadata.Extra` exists for exactly that. Neither parser
+// filled it, so a server extension member (a `userinfo_endpoint`, an
+// `x_organization`) was dropped silently.
+func TestOAuthDocumentsKeepUnknownMembers(t *testing.T) {
+	protected, err := ParseProtectedResourceMetadata(map[string]any{
+		"resource":    "https://example.test/mcp",
+		"x_extension": "kept",
+		"num":         float64(7),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := string(protected.Extra["x_extension"]); got != `"kept"` {
+		t.Fatalf("protected x_extension = %s, want %q", got, `"kept"`)
+	}
+	if got := string(protected.Extra["num"]); got != "7" {
+		t.Fatalf("protected num = %s, want 7", got)
+	}
+
+	servers, err := ParseAuthorizationServerMetadata(map[string]any{
+		"issuer":                   "https://example.test",
+		"authorization_endpoint":   "https://example.test/authorize",
+		"token_endpoint":           "https://example.test/token",
+		"response_types_supported": []any{"code"},
+		"userinfo_endpoint":        "https://example.test/userinfo",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := string(servers.Extra["userinfo_endpoint"]); got != `"https://example.test/userinfo"` {
+		t.Fatalf("servers userinfo_endpoint = %s", got)
+	}
+	// A known member is not repeated in Extra.
+	if _, ok := servers.Extra["issuer"]; ok {
+		t.Fatalf("known member duplicated in Extra: %v", servers.Extra)
+	}
+}
