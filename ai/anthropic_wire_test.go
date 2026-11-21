@@ -628,3 +628,39 @@ func TestAnthropicNonStrictSchemaKeepsRootMembers(t *testing.T) {
 		t.Fatalf("plain schema carries an unused member:\n%s", plain)
 	}
 }
+
+// Message threads are decided by the endpoint, not the provider id: a custom
+// provider pointing at api.anthropic.com supports them, and the Anthropic
+// provider pointed elsewhere does not (anthropic-messages.ts, v1.6.0, #12091).
+func TestAnthropicMessageThreadsDefaultByEndpoint(t *testing.T) {
+	cases := []struct {
+		name     string
+		provider string
+		baseURL  string
+		want     bool
+	}{
+		{"anthropic host", "anthropic", "https://api.anthropic.com", true},
+		{"custom provider on the anthropic host", "my-gateway", "https://api.anthropic.com", true},
+		{"anthropic provider elsewhere", "anthropic", "https://gateway.example.test", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			compat := GetAnthropicCompat(&Model{
+				ID: "claude", Provider: tc.provider, API: APIAnthropicMessages, BaseURL: tc.baseURL,
+			})
+			if compat.SupportsMessageThreads != tc.want {
+				t.Fatalf("supportsMessageThreads = %v, want %v", compat.SupportsMessageThreads, tc.want)
+			}
+		})
+	}
+	// An explicit compat value still wins.
+	off := false
+	compat := GetAnthropicCompat(&Model{
+		ID: "claude", Provider: "anthropic", API: APIAnthropicMessages,
+		BaseURL: "https://api.anthropic.com",
+		Compat:  &ModelCompat{AnthropicMessages: &AnthropicMessagesCompat{SupportsMessageThreads: &off}},
+	})
+	if compat.SupportsMessageThreads {
+		t.Fatal("an explicit false was ignored")
+	}
+}

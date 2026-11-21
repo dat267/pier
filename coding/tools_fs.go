@@ -37,6 +37,11 @@ type ReadToolOptions struct {
 // ReadToolDetails carries the truncation info.
 type ReadToolDetails struct {
 	Truncation *TruncationResult `json:"truncation,omitempty"`
+	// ImageUnsupportedByModel names the model that was selected when an image was
+	// read while it had no image input. Shown to the user only: the model gets
+	// pi-ai's placeholder per request, so the stored result stays right after a
+	// model switch (read.ts, v1.6.0, #12139).
+	ImageUnsupportedByModel *string `json:"imageUnsupportedByModel,omitempty"`
 }
 
 // readSchemaJSON mirrors the TypeBox schema.
@@ -250,28 +255,35 @@ func readImageFile(ctx context.Context, absolutePath, mimeType string, autoResiz
 	if ctxErrOf(ctx) != nil {
 		return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
 	}
-	note := nonVisionImageNote(model)
+	// The note that the model cannot take images is display state, not model
+	// content: the provider already adds its own placeholder per request, so the
+	// stored result stays correct after a model switch (read.ts, v1.6.0, #12139).
+	details := ReadToolDetails{}
+	if nonVisionImageNote(model) != "" {
+		id := model.ID
+		details.ImageUnsupportedByModel = &id
+	}
+	var detailsJSON json.RawMessage
+	if details.ImageUnsupportedByModel != nil {
+		detailsJSON, _ = ai.MarshalJSON(details)
+	}
 	if !processed.OK {
 		text := fmt.Sprintf("Read image file [%s]\n%s", mimeType, processed.Message)
-		if note != "" {
-			text += "\n" + note
-		}
 		return agent.AgentToolResult{
 			Content: []ai.Content{ai.TextContent{Text: text}},
+			Details: detailsJSON,
 		}, nil
 	}
 	text := fmt.Sprintf("Read image file [%s]", processed.MimeType)
 	if len(processed.Hints) > 0 {
 		text += "\n" + strings.Join(processed.Hints, "\n")
 	}
-	if note != "" {
-		text += "\n" + note
-	}
 	return agent.AgentToolResult{
 		Content: []ai.Content{
 			ai.TextContent{Text: text},
 			ai.ImageContent{Data: processed.Data, MimeType: processed.MimeType},
 		},
+		Details: detailsJSON,
 	}, nil
 }
 

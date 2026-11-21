@@ -88,8 +88,17 @@ func formatCompactReadCall(classification compactReadClassification, args map[st
 
 func formatReadResult(args map[string]any, result *SortToolResultContent, options ToolRenderResultOptions,
 	theme *Theme, showImages bool, isError bool) string {
+	// A model without image input saw pi-ai's placeholder, not the image; the
+	// stored result names that model so the card can say so (read.ts's renderer,
+	// v1.6.0, #12139).
+	imageWarning := ""
+	if details := toolDetailsFrom[coding.ReadToolDetails](result.Details); details != nil &&
+		details.ImageUnsupportedByModel != nil {
+		imageWarning = "\n" + theme.Fg("warning",
+			"["+*details.ImageUnsupportedByModel+" does not support images; it saw a placeholder instead]")
+	}
 	if !options.Expanded && !isError {
-		return ""
+		return imageWarning
 	}
 	rawPath, _ := argString(args, "file_path", "path")
 	output := GetTextOutput(result, showImages)
@@ -154,7 +163,7 @@ func formatReadResult(args map[string]any, result *SortToolResultContent, option
 			}
 		}
 	}
-	return text
+	return text + imageWarning
 }
 
 var readRenderers = ToolRenderers{

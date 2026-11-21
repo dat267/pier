@@ -151,7 +151,10 @@ func GetAnthropicCompat(model *Model) AnthropicCompat {
 	// into a request without the earlier conversation, so the default is
 	// limited to Anthropic's own endpoint. Widen or remove this restriction
 	// once proxies generally forward the thread field.
-	supportsMessageThreads := model.Provider == "anthropic" && strings.Contains(model.BaseURL, "api.anthropic.com")
+	// The endpoint decides, not the provider id: a gateway on api.anthropic.com
+	// forwards threads, and a custom provider pointed elsewhere does not
+	// (anthropic-messages.ts, v1.6.0, #12091).
+	supportsMessageThreads := strings.Contains(model.BaseURL, "api.anthropic.com")
 	compat := AnthropicCompat{
 		SupportsEagerToolInputStreaming: true,
 		SupportsLongCacheRetention:      true,

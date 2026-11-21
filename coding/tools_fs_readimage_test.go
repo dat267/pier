@@ -47,10 +47,11 @@ func TestReadToolResizesWideImages(t *testing.T) {
 	}
 }
 
-// A model that cannot accept images gets the note saying so, and still receives
-// the image content: the note tells the provider-facing truth, it does not strip
-// the attachment (upstream getNonVisionImageNote).
-func TestReadToolNotesNonVisionModels(t *testing.T) {
+// A model that cannot accept images still receives the image content, and the
+// fact that the model cannot take it travels in the result details, not in the
+// text the model reads: the provider adds its own placeholder per request, so the
+// stored result stays right after a model switch (read.ts, v1.6.0, #12139).
+func TestReadToolNotesNonVisionModelsInDetails(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "small.png"), solidPNG(t, 20, 20), 0o644); err != nil {
 		t.Fatal(err)
@@ -63,8 +64,11 @@ func TestReadToolNotesNonVisionModels(t *testing.T) {
 		t.Fatalf("content = %#v", result.Content)
 	}
 	text := result.Content[0].(ai.TextContent).Text
-	if !strings.Contains(text, "[Current model does not support images. The image will be omitted from this request.]") {
-		t.Errorf("the non-vision note is missing from %q", text)
+	if strings.Contains(text, "does not support images") {
+		t.Errorf("the non-vision note reached the model content: %q", text)
+	}
+	if !strings.Contains(string(result.Details), `"imageUnsupportedByModel":`) {
+		t.Errorf("details = %s, want the model id", result.Details)
 	}
 }
 
@@ -105,14 +109,14 @@ func TestReadToolReadsTheModelPerCall(t *testing.T) {
 	current := &ai.Model{Input: []string{"image"}}
 	tool := CreateReadTool(dir, &ReadToolOptions{Model: func() *ai.Model { return current }})
 
-	text := execTool(t, tool, `{"path":"small.png"}`).Content[0].(ai.TextContent).Text
-	if strings.Contains(text, "does not support images") {
-		t.Fatalf("a vision model got the non-vision note: %q", text)
+	first := execTool(t, tool, `{"path":"small.png"}`)
+	if strings.Contains(string(first.Details), "imageUnsupportedByModel") {
+		t.Fatalf("a vision model got the non-vision note: %s", first.Details)
 	}
-	current = &ai.Model{Input: []string{"text"}}
-	text = execTool(t, tool, `{"path":"small.png"}`).Content[0].(ai.TextContent).Text
-	if !strings.Contains(text, "does not support images") {
-		t.Fatalf("the switched-to model did not take effect: %q", text)
+	current = &ai.Model{ID: "text-only", Input: []string{"text"}}
+	switched := execTool(t, tool, `{"path":"small.png"}`)
+	if !strings.Contains(string(switched.Details), `"imageUnsupportedByModel":"text-only"`) {
+		t.Fatalf("the switched-to model did not take effect: %s", switched.Details)
 	}
 }
 

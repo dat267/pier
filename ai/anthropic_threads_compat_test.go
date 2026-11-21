@@ -332,7 +332,9 @@ func TestAnthropicMessageThreadsCompatDefault(t *testing.T) {
 	}{
 		{"anthropic endpoint", "anthropic", "https://api.anthropic.com", nil, true},
 		{"anthropic proxy", "anthropic", "https://proxy.example.com", nil, false},
-		{"other provider on the anthropic endpoint", "openrouter", "https://api.anthropic.com", nil, false},
+		// v1.6.0 decides by endpoint, not provider id, so a gateway on
+		// api.anthropic.com keeps threads (#12091).
+		{"other provider on the anthropic endpoint", "openrouter", "https://api.anthropic.com", nil, true},
 		{"compat enables a proxy", "anthropic", "https://proxy.example.com", new(true), true},
 		{"compat disables the anthropic endpoint", "anthropic", "https://api.anthropic.com", new(false), false},
 	}

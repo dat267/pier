@@ -64,9 +64,15 @@ func TestSessionReadToolResolvesItsModelPerCall(t *testing.T) {
 	readTool := sessionTool(t, session, "read")
 
 	params := `{"path":` + quoteJSONForTest(t, imagePath) + `}`
-	text := execTool(t, readTool, params).Content[0].(ai.TextContent).Text
-	if !strings.Contains(text, "does not support images") {
-		t.Fatalf("a text-only session got no non-vision note: %q", text)
+	// The note is display state now, so the text is the same for both models and
+	// the details name the model that could not take the image.
+	read := execTool(t, readTool, params)
+	text := read.Content[0].(ai.TextContent).Text
+	if strings.Contains(text, "does not support images") {
+		t.Fatalf("a text-only session got the note in its model content: %q", text)
+	}
+	if !strings.Contains(string(read.Details), "imageUnsupportedByModel") {
+		t.Fatalf("details = %s, want the text-only model named", read.Details)
 	}
 
 	// Replacing the model is visible to the next call. This goes through the
@@ -77,9 +83,10 @@ func TestSessionReadToolResolvesItsModelPerCall(t *testing.T) {
 		Input: []string{"text", "image"}, ContextWindow: 100000, MaxTokens: 4096,
 	}
 	session.Agent.SetModel(vision)
-	text = execTool(t, readTool, params).Content[0].(ai.TextContent).Text
-	if strings.Contains(text, "does not support images") {
-		t.Fatalf("the tool kept the old model's capability: %q", text)
+	read = execTool(t, readTool, params)
+	text = read.Content[0].(ai.TextContent).Text
+	if strings.Contains(string(read.Details), "imageUnsupportedByModel") {
+		t.Fatalf("the tool kept the old model's capability: %s", read.Details)
 	}
 	if !strings.Contains(text, "Read image file [image/png]") {
 		t.Fatalf("text = %q", text)

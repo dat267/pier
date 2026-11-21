@@ -558,6 +558,7 @@ coding/interactive/toolrenderer_bash_expanded_test.go
 coding/interactive/toolrenderer_bash_preview_test.go
 coding/interactive/toolrenderer_goal_test.go
 coding/interactive/toolrenderer_mcp_test.go
+coding/interactive/toolrenderer_read_test.go
 coding/interactive/toolrenderer_write_test.go
 coding/interactive/toolrenderers_test.go
 coding/interactive/toolrenderers_transcript_test.go
