@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), packages/tui/src/components/select-list.ts
+// Reference: pi v1.6.0 (faac5858), packages/tui/src/components/select-list.ts
 // (SelectList.render, renderItem, getPrimaryColumnWidth, getVisibleRange). Every
 // picker renders through it, so the selected prefix, the description column
 // threshold (width > 40), the primary-column clamp, the scroll counter and the

@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), packages/tui/src/fuzzy.ts (fuzzyMatch,
+// Reference: pi v1.6.0 (faac5858), packages/tui/src/fuzzy.ts (fuzzyMatch,
 // fuzzyFilter): subsequence matching with a lower-is-better score, plus the
 // swapped alphanumeric retry and the filter's ordering. The port also has an
 // ASCII fast path that reports the same scores, so this corpus covers case,

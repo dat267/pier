@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), core/settings-manager.ts getters: the default
+// Reference: pi v1.6.0 (faac5858), core/settings-manager.ts getters: the default
 // each setting falls back to, and the value each document produces.
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

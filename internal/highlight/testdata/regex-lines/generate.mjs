@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf) highlighted with JavaScript RegExp semantics
+// Reference: pi v1.6.0 (faac5858) highlighted with JavaScript RegExp semantics
 // (highlight.js langRe compiles with "m"), against pier's JS-line engine in
 // internal/highlight/pattern_regex.go. Run from the repository root:
 //   node --experimental-strip-types internal/highlight/testdata/regex-lines/generate.mjs > internal/highlight/testdata/regex-lines/golden.json

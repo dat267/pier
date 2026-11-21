@@ -1,6 +1,6 @@
 // Regenerate: node --experimental-strip-types ai/testdata/retry-classify/generate.mjs ./pi > ai/testdata/retry-classify/golden.json
 //
-// Each expectation is pi v1.5.2 (b4afdddf) utils/retry.ts
+// Each expectation is pi v1.6.0 (faac5858) utils/retry.ts
 // `isRetryableAssistantError` for that error message. The corpus holds every
 // needle its two pattern lists document, the texts that must stay
 // non-retryable (subscription, quota and billing exhaustion), the status-code

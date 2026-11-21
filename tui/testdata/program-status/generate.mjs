@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), packages/tui/src/program-status.ts
+// Reference: pi v1.6.0 (faac5858), packages/tui/src/program-status.ts
 // (`formatProgramStatus`, `isProgramStatusReply`). The report is an OSC 7501
 // sequence the terminal renders as a status indicator, so its pairs, control-
 // character replacement, whitespace trimming, byte-limit truncation and base64

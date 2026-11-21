@@ -54,7 +54,7 @@ for (const path of ["/home/tester/x", "/home/tester", "/home/testerx", "rel", "/
 }
 
 const fixture = {
-	// upstream: pi v1.5.2 (b4afdddf) packages/coding-agent/src/utils/paths.ts
+	// upstream: pi v1.6.0 (faac5858) packages/coding-agent/src/utils/paths.ts
 	source: "utils/paths.ts",
 	home: HOME,
 	base: BASE,

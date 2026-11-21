@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), packages/ai/src/utils/streaming-json.ts
+// Reference: pi v1.6.0 (faac5858), packages/ai/src/utils/streaming-json.ts
 // ToolCallArgumentsStream. For every text below, records the preview after each
 // code point and the final arguments, so the port's incremental parser is
 // compared against the reference instead of against expectations written by

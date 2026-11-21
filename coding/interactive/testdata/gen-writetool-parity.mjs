@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), tool-execution.ts and tools/renderers/write.ts.
+// Reference: pi v1.6.0 (faac5858), tool-execution.ts and tools/renderers/write.ts.
 // Renders the write tool's call and result rows for the shared corpus.
 import { component, corpus, entries, emit, upstream, ui } from "./golden-reference.mjs";
 const { ToolExecutionComponent } = await component("tool-execution");

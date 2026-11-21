@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), core/settings-manager.ts setters and the files
+// Reference: pi v1.6.0 (faac5858), core/settings-manager.ts setters and the files
 // they persist, global and project scope: field order, dropped values and
 // untouched initial keys.
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";

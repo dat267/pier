@@ -1,4 +1,4 @@
-// pi v1.5.2 (b4afdddf), packages/tui/src/components/markdown.ts and its pinned
+// pi v1.6.0 (faac5858), packages/tui/src/components/markdown.ts and its pinned
 // marked 18.0.11 / marked-cjk-friendly 0.1.2 dependencies. Read-only source load:
 // the packages come from the reference checkout, so this runs offline after the
 // `npm ci` that `just goldens` already needs. From the repository root:

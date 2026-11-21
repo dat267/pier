@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), packages/agent/src/agent-loop.ts
+// Reference: pi v1.6.0 (faac5858), packages/agent/src/agent-loop.ts
 // runAgentLoop. Each scenario drives the reference loop with a scripted stream
 // function and plain tools, and records the event sequence it emits plus the
 // messages it appends, so the port's loop is compared against the reference

@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), tool-execution.ts and
+// Reference: pi v1.6.0 (faac5858), tool-execution.ts and
 // extensions/mcp/tools.ts createMcpToolRenderers.
 import { component, corpus, entries, emit, upstream, ui } from "./golden-reference.mjs";
 const { ToolExecutionComponent } = await component("tool-execution");

@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), packages/tui/src/utils.ts (`sliceWithWidth`,
+// Reference: pi v1.6.0 (faac5858), packages/tui/src/utils.ts (`sliceWithWidth`,
 // `getOsc8LinkAtColumn`, `getGraphemeCellRange`, `visibleWidth`). Slices feed
 // selection, overlay compositing and row clipping, so a boundary rule that
 // drifts moves text, styles or one-shot commands to the wrong column.

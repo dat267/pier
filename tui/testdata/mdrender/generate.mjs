@@ -1,5 +1,5 @@
 // Regenerates tui/testdata/md_render_golden.txt from the pinned reference's
-// Markdown component: pi v1.5.2 (b4afdddf) tui/src/components/markdown.ts,
+// Markdown component: pi v1.6.0 (faac5858) tui/src/components/markdown.ts,
 // constructed exactly as tui/markdown_test.go constructs the port (padding,
 // default style, options) and rendered with the tagging theme that test uses, so
 // each line records which theme function styled which run of text.

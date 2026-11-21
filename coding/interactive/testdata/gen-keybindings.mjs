@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf) coding-agent/src/core/keybindings.ts
+// Reference: pi v1.6.0 (faac5858) coding-agent/src/core/keybindings.ts
 // KEYBINDINGS, on the linux non-WSL platform the harness runs with (the
 // reference computes the Windows and WSL variants at module load from
 // process.platform, which a golden cannot vary).

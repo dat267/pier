@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf) packages/coding-agent/src/utils/changelog.ts
+// Reference: pi v1.6.0 (faac5858) packages/coding-agent/src/utils/changelog.ts
 // normalizeChangelogLinks. Run from the repository root:
 //   node --experimental-strip-types coding/testdata/changelog-links/generate.mjs ./pi > coding/testdata/changelog-links/golden.json
 import { resolve } from "node:path";

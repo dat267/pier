@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), packages/coding-agent/src/core/prompt-templates.ts
+// Reference: pi v1.6.0 (faac5858), packages/coding-agent/src/core/prompt-templates.ts
 // (`substituteArgs`, `parseCommandArgs`). A prompt template's text is user data;
 // substitution decides what reaches the model, so the cases pin the placeholder
 // grammar, the slice forms, the defaults, the missing-argument rules and the

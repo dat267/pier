@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf) packages/ai/src/api/constrained-sampling.ts
+// Reference: pi v1.6.0 (faac5858) packages/ai/src/api/constrained-sampling.ts
 // makeStrictJsonSchema. Run from the repository root:
 //   node --experimental-strip-types ai/testdata/strict-schema/generate.mjs ./pi > ai/testdata/strict-schema/golden.json
 // Each case records the strict schema JSON exactly as the reference stringifies

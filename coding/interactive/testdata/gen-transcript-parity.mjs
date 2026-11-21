@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), core/session-manager.ts
+// Reference: pi v1.6.0 (faac5858), core/session-manager.ts
 // sessionEntryToContextMessages and buildContextEntries: the entries a transcript
 // turns into messages, and the compaction-aware list it renders.
 import { corpus, entries, emit, upstream } from "./golden-reference.mjs";

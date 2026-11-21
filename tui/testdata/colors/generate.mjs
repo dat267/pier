@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), packages/tui/src/colors.ts (colorToHex,
+// Reference: pi v1.6.0 (faac5858), packages/tui/src/colors.ts (colorToHex,
 // colorToOklch, colorToOkhsl, foregroundAnsi, mixColors). A concrete color keeps
 // fractional channels until it is written, so a mix reads the stored channels of
 // an RGB color and the rounded channels of an OKLCH one; this corpus pins both

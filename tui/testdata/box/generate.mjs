@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), packages/tui/src/components/text.ts and
+// Reference: pi v1.6.0 (faac5858), packages/tui/src/components/text.ts and
 // components/box.ts (Text.render, Box.render). Panels, tool output and message
 // blocks are a box around text, so padding, wrapping width, background fill and
 // the interaction between the two paddings are compared here. The background

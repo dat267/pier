@@ -5,7 +5,7 @@ import {execFileSync} from 'node:child_process';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 const root=resolve(process.argv[2] ?? './pi');
-if (!execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}).startsWith('b4afdddf')) throw Error('requires pi v1.5.2 (b4afdddf)');
+if (!execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}).startsWith('faac5858')) throw Error('requires pi v1.6.0 (faac5858)');
 const {AuthStorage,InMemoryAuthStorageBackend}=await import(pathToFileURL(resolve(root,'packages/coding-agent/src/core/auth-storage.ts')));
 const cases=[
  {name:'future-type',initial:'{"known":{"type":"api_key","key":"synthetic-known","vendor":{"z":1,"a":"<keep>"}},"future":{"type":"future","opaque":"synthetic-future"}}'},

@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf) persists transcripts and sends wire payloads
+// Reference: pi v1.6.0 (faac5858) persists transcripts and sends wire payloads
 // through JSON.stringify. This generator records Node's output for a corpus of
 // documents, compact and two-space indented, so pier's MarshalJSON and
 // MarshalIndentJSON are compared against it. Run from the repository root:

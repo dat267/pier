@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), packages/tui/src/components/settings-list.ts
+// Reference: pi v1.6.0 (faac5858), packages/tui/src/components/settings-list.ts
 // (SettingsList.render, renderMainList). The settings submenus render through
 // it: label column alignment capped at 36 cells, the value column, the scroll
 // counter, the wrapped description of the selected item and the keybinding hint

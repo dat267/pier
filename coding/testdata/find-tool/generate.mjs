@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), core/tools/find.ts with default (fd) operations.
+// Reference: pi v1.6.0 (faac5858), core/tools/find.ts with default (fd) operations.
 // Regenerate from the repository root:
 // node --experimental-strip-types coding/testdata/find-tool/generate.mjs ./pi > coding/testdata/find-tool/golden.json
 import { registerHooks } from "node:module";

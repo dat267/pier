@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf) reads Bedrock ConverseStream through the AWS
+// Reference: pi v1.6.0 (faac5858) reads Bedrock ConverseStream through the AWS
 // SDK's event-stream codec (@smithy/core eventstream-codec). This generator
 // encodes frames with that codec, one per header type, so the port's decoder in
 // ai/aws_eventstream.go is compared against the library the reference uses.

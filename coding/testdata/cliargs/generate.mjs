@@ -2,7 +2,7 @@
 //
 // Usage: node --experimental-strip-types generate.mjs <path-to-pi-checkout>
 //
-// Reference: pi v1.5.2 (b4afdddf) packages/coding-agent/src/cli/args.ts
+// Reference: pi v1.6.0 (faac5858) packages/coding-agent/src/cli/args.ts
 // parseArgs. The corpus is hand-written to cover every branch: value flags with
 // and without a value, a value that starts with - or @, -- handling, repeated
 // flags, the list flags' comma splitting, and unknown-flag forms (--f, --f=v,

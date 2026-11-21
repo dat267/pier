@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf) tui/src/components/markdown.ts, the Markdown
+// Reference: pi v1.6.0 (faac5858) tui/src/components/markdown.ts, the Markdown
 // component constructed exactly as tui/markdown_test.go constructs the port
 // (no padding, no default style, default options) and rendered with the same
 // tagging theme. The documents are a seeded mix of markdown constructs, so the

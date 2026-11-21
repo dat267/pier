@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf) packages/tui/src/utils.ts AnsiCodeTracker, as
+// Reference: pi v1.6.0 (faac5858) packages/tui/src/utils.ts AnsiCodeTracker, as
 // observed through wrapTextWithAnsi (which re-emits the active codes at the
 // next line) and getActiveBackgroundAnsi. Run from the repository root:
 //   node --experimental-strip-types tui/testdata/ansi-tracker/generate.mjs ./pi > tui/testdata/ansi-tracker/golden.json

@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf) prints CLI diagnostics with chalk, whose
+// Reference: pi v1.6.0 (faac5858) prints CLI diagnostics with chalk, whose
 // color decision is the pinned supports-color's createSupportsColor. This
 // generator records that library's answer for a corpus of environments, argv
 // searches and stream states, so coding/clicolor.go is compared with the

@@ -11,8 +11,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync
 import { tmpdir } from "node:os";
 
 const root = path.resolve(process.argv[2] ?? "./pi");
-if (!execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).startsWith("b4afdddf")) {
-  throw new Error("requires pinned pi v1.5.2 (b4afdddf)");
+if (!execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).startsWith("faac5858")) {
+  throw new Error("requires pinned pi v1.6.0 (faac5858)");
 }
 // Load the pin's sources: the installed workspace packages are published
 // bundles, and the installed pi-mcp lacks exports its own source has.

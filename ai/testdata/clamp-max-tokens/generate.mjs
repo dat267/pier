@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf), api/simple-options.ts clampMaxTokensToContext.
+// Reference: pi v1.6.0 (faac5858), api/simple-options.ts clampMaxTokensToContext.
 // Regenerate from the repository root:
 // node --experimental-strip-types ai/testdata/clamp-max-tokens/generate.mjs ./pi > ai/testdata/clamp-max-tokens/golden.json
 import { registerHooks } from "node:module";

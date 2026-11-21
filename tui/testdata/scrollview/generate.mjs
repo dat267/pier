@@ -1,4 +1,4 @@
-// pi v1.5.2 (b4afdddf), packages/tui/src/components/scroll-view.ts. Drives the
+// pi v1.6.0 (faac5858), packages/tui/src/components/scroll-view.ts. Drives the
 // reference ScrollView through a scripted layout/scroll sequence and prints the
 // observable state after each step: scrollTop, follow-end, viewport height,
 // scrollbar visibility and activity, render requests, and the rendered lines.

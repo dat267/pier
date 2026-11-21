@@ -1,5 +1,5 @@
 // Regenerates tui/testdata/md_golden.txt from the pinned reference's markdown
-// pipeline: pi v1.5.2 (b4afdddf) tui/src/components/markdown.ts (marked 18.0.11
+// pipeline: pi v1.6.0 (faac5858) tui/src/components/markdown.ts (marked 18.0.11
 // with the marked-cjk-friendly emStrong tokenizer) lexed over md_corpus.json.
 // The projection drops marked's bookkeeping fields and keeps the ones the Go
 // test's projectBlock/projectInline read, in canonical (sorted-key) JSON.

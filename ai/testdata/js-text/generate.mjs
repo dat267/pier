@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf) utils/text.ts, which formats strings and
+// Reference: pi v1.6.0 (faac5858) utils/text.ts, which formats strings and
 // numbers through JavaScript itself. This generator records Node's results for
 // the helpers in ai/jstext.go; it needs no reference checkout. Run from the
 // repository root:

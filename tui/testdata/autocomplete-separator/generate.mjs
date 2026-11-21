@@ -1,4 +1,4 @@
-// Reference: pi v1.5.2 (b4afdddf) packages/tui/src/utils.ts autocompleteSeparatorRegex,
+// Reference: pi v1.6.0 (faac5858) packages/tui/src/utils.ts autocompleteSeparatorRegex,
 // applied the way autocomplete.ts does it: `.test(character)` for one code point.
 // tui/autocomplete.go enumerates the (punctuation ∩ CJK-script) part by hand
 // because Go's regexp has no Script_Extensions class, so this generator records

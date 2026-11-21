@@ -1,4 +1,4 @@
-// pi v1.5.2 (b4afdddf), packages/tui/src/tui-alt-screen.ts. Drives the
+// pi v1.6.0 (faac5858), packages/tui/src/tui-alt-screen.ts. Drives the
 // reference TuiAltScreen with a fake recording terminal and scripted
 // content/input steps, and prints, per case, the concatenated writes of every
 // step plus the text its copySelection hook received. Read-only source load; run
