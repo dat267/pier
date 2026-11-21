@@ -945,8 +945,16 @@ func (l *SessionList) HandleInput(keyData string) {
 			l.OnCancel()
 		}
 	default:
+		// A cursor key leaves the query as it is; re-filtering anyway would run
+		// FilterSessions, whose non-empty-query branch resets the selection to
+		// the top row (session-selector.ts handleSearchInput, v1.6.0, #12245).
+		previous := l.searchInput.Value()
 		l.searchInput.HandleInput(keyData)
-		l.FilterSessions(l.searchInput.Value())
+		query := l.searchInput.Value()
+		if query == previous {
+			return
+		}
+		l.FilterSessions(query)
 	}
 }
 

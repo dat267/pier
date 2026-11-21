@@ -7,6 +7,8 @@ import (
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -480,5 +482,36 @@ func TestSessionListKeepsTheSelectionAcrossPartialLoads(t *testing.T) {
 	list.SetSessions([]coding.SessionInfo{session("a"), session("b")}, false, true)
 	if got := list.GetSelectedSessionPath(); got != selected {
 		t.Fatalf("selected after the partial load = %q, want %q", got, selected)
+	}
+}
+
+// Reference: pi v1.6.0 components/session-selector.ts handleSearchInput applies a
+// key to the query, re-filters only when the query changed, and returns before
+// touching the selection when a cursor key leaves it as it was. pier's
+// HandleInput re-filtered unconditionally, so a left/right arrow inside the
+// search box ran FilterSessions, whose non-empty-query branch resets
+// selectedIndex to 0: the cursor keys moved the user's highlight back to the top
+// row (#12245).
+func TestSessionListCursorKeysKeepTheSelection(t *testing.T) {
+	sessions := make([]coding.SessionInfo, 0, 5)
+	for i := 0; i < 5; i++ {
+		sessions = append(sessions, coding.SessionInfo{
+			Path: filepath.Join("/tmp", "s"+strconv.Itoa(i)+".jsonl"), ID: "s" + strconv.Itoa(i),
+			Cwd: "/tmp", Modified: time.Unix(int64(100-i), 0),
+		})
+	}
+	list := NewSessionList(sessions, false, SortRecent, NameFilterAll, nil, "")
+	list.SetFocused(true)
+	// Type a query: the best match (row 0) is selected.
+	list.searchInput.SetValue("s")
+	list.FilterSessions("s")
+	list.HandleInput("\x1b[B") // down
+	if list.SelectedIndex() != 1 {
+		t.Fatalf("after down: index = %d, want 1", list.SelectedIndex())
+	}
+	// A cursor key inside the query changes no text, so the selection must stay.
+	list.HandleInput("\x1b[C")
+	if got := list.SelectedIndex(); got != 1 {
+		t.Fatalf("after a cursor key: index = %d, want 1 (the query did not change)", got)
 	}
 }
