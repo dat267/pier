@@ -276,6 +276,27 @@ goldens:
 		fi
 	done < <(git ls-files '*/testdata/*/generate.mjs')
 
+	# Generated Go sources written outside a testdata directory are not covered by
+	# the loop above, and a hand-edited table there would silently disagree with
+	# its generator. Each generator's committed output must be byte-identical.
+	while IFS= read -r pair; do
+		gen="${pair%% *}"
+		target="${pair##* }"
+		checked=$((checked + 1))
+		if ! node "$gen" ./pi 2>"$tmp/err" | gofmt >"$tmp/gen.go"; then
+			echo "error: $gen" >&2
+			sed -n '1,5p' "$tmp/err" >&2
+			failed=$((failed + 1))
+			continue
+		fi
+		if ! cmp -s "$tmp/gen.go" "$target"; then
+			echo "drift: $target does not match $gen" >&2
+			failed=$((failed + 1))
+		fi
+	done < <(printf '%s\n' \
+		"scripts/gen_bedrock_wire.mjs ai/bedrock_wire_schema.go" \
+		"scripts/gen_language_order.mjs internal/highlight/lang_order.go")
+
 	# The interactive families share a loader that takes the reference root and
 	# pier's palette, so they regenerate as one unit instead of through the loop.
 	if [[ -d pi ]]; then
