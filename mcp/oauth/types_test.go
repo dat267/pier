@@ -61,3 +61,37 @@ func TestParseAuthorizationServerMetadataTrustsOnlyHTTPURLs(t *testing.T) {
 		}
 	}
 }
+
+// The reference formats both issuers with JSON.stringify (errors.ts:20), so a
+// quote or control character in a server-supplied `iss` cannot break up the
+// message. Plain concatenation printed `expected "a"b"`.
+func TestOAuthIssuerMismatchErrorQuotesLikeJSON(t *testing.T) {
+	cases := []struct {
+		name string
+		err  *OAuthIssuerMismatchError
+		want string
+	}{
+		{
+			name: "quote in expected",
+			err:  &OAuthIssuerMismatchError{Expected: "a\"b"},
+			want: `OAuth issuer mismatch: expected "a\"b", received none`,
+		},
+		{
+			name: "both sides, newline",
+			err:  &OAuthIssuerMismatchError{Expected: "x\ny", Received: ptr("z\"w")},
+			want: `OAuth issuer mismatch: expected "x\ny", received "z\"w"`,
+		},
+		{
+			name: "explicit message wins",
+			err:  &OAuthIssuerMismatchError{Expected: "a", Msg: "custom"},
+			want: "custom",
+		},
+	}
+	for _, tc := range cases {
+		if got := tc.err.Error(); got != tc.want {
+			t.Fatalf("%s: got %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
+func ptr(value string) *string { return &value }

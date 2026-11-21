@@ -1,6 +1,10 @@
 package oauth
 
-import "fmt"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+)
 
 // OAuthError is a protocol-level OAuth failure with a code (upstream
 // OAuthError).
@@ -37,8 +41,17 @@ func (e *OAuthIssuerMismatchError) Error() string {
 	return fmt.Sprintf("OAuth issuer mismatch: expected %s, received %s", quote(e.Expected), received)
 }
 
+// quote encodes a string like the reference's JSON.stringify (errors.ts:20), so
+// a quote, backslash or control character in a server-supplied issuer cannot
+// break up the message.
 func quote(value string) string {
-	return "\"" + value + "\""
+	var buffer bytes.Buffer
+	encoder := json.NewEncoder(&buffer)
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(value); err != nil {
+		return `""`
+	}
+	return string(bytes.TrimSuffix(buffer.Bytes(), []byte("\n")))
 }
 
 // OAuthInsecureEndpointError refuses to send credentials over plain HTTP
