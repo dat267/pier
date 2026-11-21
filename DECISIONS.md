@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D498)
+# Deliberate divergences from pi (D1–D499)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8236,3 +8236,16 @@ session toggle.
 Tests: `TestToolToggleWithoutATurnSurvivesResume` (disable, dispose, resume, then
 re-enable and resume again), `TestSessionToolToggle` (the toggle and the prompt's
 tool section).
+
+### D499
+
+**A surrogate numeric entity decodes to U+FFFD instead of failing the export.**
+
+`decodeHtmlEntity` (`packages/coding-agent/src/utils/html.ts`) turns a numeric
+entity into a character with `String.fromCodePoint`, which throws `RangeError`
+for a surrogate code point. A tool result containing `&#xD800;` therefore breaks
+the HTML export upstream instead of rendering it. A Go string cannot hold an
+unpaired surrogate, so the rune conversion yields U+FFFD and the export keeps
+going, which is also what the JSON paths do with a lone surrogate escape (D253).
+
+Test: `TestDecodeHtmlEntityMatchesParseInt`.

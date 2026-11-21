@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// Reference: pi v1.4.0 utils/html.ts decodes a numeric entity with
+// Reference: pi v1.6.0 utils/html.ts decodes a numeric entity with
 // Number.parseInt and String.fromCodePoint. parseInt skips leading whitespace,
 // accepts a sign and a 0x prefix in base 16, and ignores the trailing text after
 // the last valid digit; the port used strconv.ParseInt, which requires every
@@ -44,6 +44,11 @@ func TestDecodeHtmlEntityMatchesParseInt(t *testing.T) {
 		{"#xffffffff", "", false},
 		{"#1114111", "\U0010FFFF", true},
 		{"#1114112", "", false},
+		// D499: String.fromCodePoint throws RangeError for a surrogate, so the
+		// reference's export fails on this input; a Go string cannot hold an
+		// unpaired surrogate and the rune conversion yields U+FFFD instead.
+		{"#xD800", "\uFFFD", true},
+		{"#xDFFF", "\uFFFD", true},
 		{"unknown", "", false},
 	}
 	for _, testCase := range cases {
