@@ -30,3 +30,29 @@ func suspendProcess(ui tui.TUI) {
 		signal.Stop(resumed)
 	}
 }
+
+// installSIGTSTPHandler installs handler for SIGTSTP and returns the cleanup.
+// The suspend raises SIGTSTP again, and that one has to reach the default action
+// so the process really stops; the channel is armed again once it is resumed. A
+// test seam, because the real handler stops the process.
+var installSuspendSignalHandler = func(handler func()) func() {
+	channel := make(chan os.Signal, 1)
+	signal.Notify(channel, syscall.SIGTSTP)
+	done := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-channel:
+				signal.Reset(syscall.SIGTSTP)
+				handler()
+				signal.Notify(channel, syscall.SIGTSTP)
+			}
+		}
+	}()
+	return func() {
+		signal.Stop(channel)
+		close(done)
+	}
+}

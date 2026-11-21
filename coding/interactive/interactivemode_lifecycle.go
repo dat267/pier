@@ -490,7 +490,8 @@ func (l *Lifecycle) CheckShutdownRequested() {
 	l.Shutdown(false)
 }
 
-// RegisterSignalHandlers installs the SIGTERM/SIGHUP and process-error hooks.
+// RegisterSignalHandlers installs the SIGTERM/SIGHUP, SIGTSTP and process-error
+// hooks.
 func (l *Lifecycle) RegisterSignalHandlers() {
 	l.UnregisterSignalHandlers()
 	signals := []os.Signal{syscall.SIGTERM}
@@ -527,6 +528,13 @@ func (l *Lifecycle) RegisterSignalHandlers() {
 			}
 			l.HandleSignal(sig)
 		})
+		l.addSignalCleanup(cleanup)
+	}
+	// An external SIGTSTP (`kill -TSTP`) restores the terminal and stops the
+	// process like Ctrl+Z, instead of leaving the UI drawn on a suspended
+	// terminal (interactive-mode.ts, v1.6.0, #12272).
+	if l.options.Platform != "win32" {
+		cleanup := installSuspendSignalHandler(func() { l.HandleCtrlZ(nil, nil) })
 		l.addSignalCleanup(cleanup)
 	}
 

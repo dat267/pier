@@ -319,9 +319,10 @@ func TestLifecycleCrashPaths(t *testing.T) {
 func TestLifecycleSignalHandlers(t *testing.T) {
 	lifecycle, _, exits, _ := newLifecycleTest(t)
 
-	// The real registration installs SIGTERM and SIGHUP on Linux.
+	// The real registration installs SIGTERM, SIGHUP and — so an external
+	// `kill -TSTP` restores the terminal like Ctrl+Z — SIGTSTP (v1.6.0, #12272).
 	lifecycle.RegisterSignalHandlers()
-	if got := lifecycle.SignalHandlerCount(); got != 2 {
+	if got := lifecycle.SignalHandlerCount(); got != 3 {
 		t.Fatalf("handlers = %d", got)
 	}
 	lifecycle.UnregisterSignalHandlers()
@@ -561,5 +562,42 @@ func TestAppRestoreTerminalOnExit(t *testing.T) {
 	app.restoreTerminalOnExit()
 	if terminal.restores != 1 {
 		t.Fatalf("restores = %d; want 1", terminal.restores)
+	}
+}
+
+// An external SIGTSTP restores the terminal and suspends like Ctrl+Z instead of
+// leaving the UI drawn on a stopped terminal (interactive-mode.ts, v1.6.0,
+// #12272). The suspend itself is stubbed: the test asserts the UI was stopped
+// first and the suspend ran.
+func TestExternalSIGTSTPRestoresTheTerminalThenSuspends(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("no SIGTSTP on Windows")
+	}
+	lifecycle, _, _, _ := newLifecycleTest(t)
+	previous := suspendProcessFn
+	suspended := 0
+	suspendProcessFn = func(tui.TUI) { suspended++ }
+	t.Cleanup(func() { suspendProcessFn = previous })
+
+	screen := tui.NewMainScreen(&fakeRendererTerminal{width: 80, height: 24}, false, "")
+	screen.DisableAutoRender()
+	lifecycle.options.UI = screen
+	previousInstall := installSuspendSignalHandler
+	trigger := func() {}
+	cleaned := 0
+	installSuspendSignalHandler = func(handler func()) func() {
+		trigger = handler
+		return func() { cleaned++ }
+	}
+	t.Cleanup(func() { installSuspendSignalHandler = previousInstall })
+	lifecycle.RegisterSignalHandlers()
+
+	trigger()
+	lifecycle.UnregisterSignalHandlers()
+	if cleaned != 1 {
+		t.Fatalf("cleanup ran %d times, want the unregister to reach it", cleaned)
+	}
+	if suspended != 1 {
+		t.Fatalf("suspend ran %d times, want once", suspended)
 	}
 }
