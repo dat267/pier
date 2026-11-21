@@ -256,7 +256,11 @@ func AnsiToHTML(text string) string {
 		case loc[4] >= 0:
 			// OSC: only an OSC 8 hyperlink survives, and only with a safe scheme.
 			if hyperlink := osc8SequenceRegex.FindStringSubmatch(text[loc[4]:loc[5]]); hyperlink != nil {
-				url := stripControlBytes(strings.TrimSpace(hyperlink[1]))
+				// Browsers strip C0 controls from URLs, so strip them before
+				// trimming; the other order leaves a control-then-spaces URL
+				// with leading spaces and fails the scheme check
+				// (ansi-to-html.ts).
+				url := strings.TrimSpace(stripControlBytes(hyperlink[1]))
 				closeSpan()
 				if inLink {
 					result.WriteString("</a>")
@@ -286,7 +290,9 @@ func AnsiToHTML(text string) string {
 func stripStrayEscapes(text string) string { return strings.ReplaceAll(text, "\x1b", "") }
 
 // stripControlBytes removes the C0 controls and DEL a browser would drop from a
-// URL anyway, so the scheme check sees what the browser will use.
+// URL anyway, so the scheme check sees what the browser will use. It must run
+// before the URL is trimmed: a control byte followed by spaces would otherwise
+// keep those spaces and fail the scheme check.
 func stripControlBytes(url string) string {
 	var cleaned strings.Builder
 	cleaned.Grow(len(url))

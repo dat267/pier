@@ -810,3 +810,28 @@ func TestExportPrerendersMcpToolCards(t *testing.T) {
 		t.Fatalf("resultHtmlExpanded = %q, want the rendered result", tool.ResultHTMLExpanded)
 	}
 }
+
+// Reference: pi v1.6.0 core/export-html/ansi-to-html.ts strips the C0 controls
+// a browser drops from a URL *before* trimming it:
+// `hyperlink[1].trim().replace(/[\x00-\x1f\x7f]/g, "")`. pier trimmed first and
+// stripped afterwards, so a URL with a leading control byte followed by spaces
+// (`"\x01  https://…"`) was left with its leading spaces, failed the scheme
+// check, and the exported link was lost even though the browser would have
+// opened it.
+func TestAnsiToHTMLStripsUrlControlsBeforeTrimming(t *testing.T) {
+	cases := []struct{ name, input, want string }{
+		{"control then spaces", "l\x1b]8;;\x01  https://example.test\x1b\\x",
+			`l<a href="https://example.test">x</a>`},
+		{"spaces only", "l\x1b]8;;  https://example.test\x1b\\x",
+			`l<a href="https://example.test">x</a>`},
+		{"trailing control", "l\x1b]8;;https://example.test\x7f\x1b\\x",
+			`l<a href="https://example.test">x</a>`},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := AnsiToHTML(testCase.input); got != testCase.want {
+				t.Fatalf("AnsiToHTML(%q) = %q, want %q", testCase.input, got, testCase.want)
+			}
+		})
+	}
+}
