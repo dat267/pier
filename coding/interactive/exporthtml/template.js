@@ -970,7 +970,7 @@
               previewHighlighted = escapeHtml(previewCode);
             }
 
-            return `<div class="tool-output expandable" onclick="if(window.getSelection().toString())return;this.classList.toggle('expanded')">
+            return `<div class="tool-output expandable" onclick="if(window.getSelection().toString()||event.target.closest('a'))return;this.classList.toggle('expanded')">
               <div class="output-preview"><pre><code class="hljs">${previewHighlighted}</code></pre>
               <div class="expand-hint">... (${remaining} more lines)</div></div>
               <div class="output-full"><pre><code class="hljs">${highlighted}</code></pre></div></div>`;
@@ -981,7 +981,7 @@
 
         // Plain text output
         if (remaining > 0) {
-          let out = '<div class="tool-output expandable" onclick="if(window.getSelection().toString())return;this.classList.toggle(\'expanded\')">';
+          let out = '<div class="tool-output expandable" onclick="if(window.getSelection().toString()||event.target.closest('a'))return;this.classList.toggle(\'expanded\')">';
           out += '<div class="output-preview">';
           for (const line of displayLines) {
             out += `<div>${escapeHtml(replaceTabs(line))}</div>`;
@@ -1147,7 +1147,7 @@
 
               if (rendered.resultHtmlCollapsed && rendered.resultHtmlExpanded && rendered.resultHtmlCollapsed !== rendered.resultHtmlExpanded) {
                 // Both collapsed and expanded differ - render expandable section
-                html += `<div class="tool-output expandable ansi-rendered" onclick="if(window.getSelection().toString())return;this.classList.toggle('expanded')">
+                html += `<div class="tool-output expandable ansi-rendered" onclick="if(window.getSelection().toString()||event.target.closest('a'))return;this.classList.toggle('expanded')">
                   <div class="output-preview">${rendered.resultHtmlCollapsed}</div>
                   <div class="output-full">${rendered.resultHtmlExpanded}</div>
                 </div>`;
@@ -1307,7 +1307,7 @@
               let html = `<div class="skill-user-entry" id="${entryDomId}">${copyBtnHtml}${tsHtml}`;
 
               // Skill invocation (collapsed by default, click to expand)
-              html += `<div class="skill-invocation" onclick="if(window.getSelection().toString())return;this.classList.toggle('expanded')">
+              html += `<div class="skill-invocation" onclick="if(window.getSelection().toString()||event.target.closest('a'))return;this.classList.toggle('expanded')">
                 <div class="skill-invocation-label">[skill] ${escapeHtml(skillBlock.name)}</div>
                 <div class="skill-invocation-collapsed">${escapeHtml(skillBlock.name)} (click to expand)</div>
                 <div class="skill-invocation-content markdown-content">${safeMarkedParse(skillBlock.content)}</div>
@@ -1424,7 +1424,7 @@
         }
 
         if (entry.type === 'compaction') {
-          return `<div class="compaction" id="${entryDomId}" onclick="if(window.getSelection().toString())return;this.classList.toggle('expanded')">
+          return `<div class="compaction" id="${entryDomId}" onclick="if(window.getSelection().toString()||event.target.closest('a'))return;this.classList.toggle('expanded')">
             <div class="compaction-label">[compaction]</div>
             <div class="compaction-collapsed">Compacted from ${entry.tokensBefore.toLocaleString()} tokens</div>
             <div class="compaction-content"><strong>Compacted from ${entry.tokensBefore.toLocaleString()} tokens</strong>\n\n${escapeHtml(entry.summary)}</div>
@@ -1559,7 +1559,7 @@
         if (lines.length > previewLines) {
           const preview = lines.slice(0, previewLines).join('\n');
           const remaining = lines.length - previewLines;
-          return `<div class="system-prompt expandable" onclick="if(window.getSelection().toString())return;this.classList.toggle('expanded')">
+          return `<div class="system-prompt expandable" onclick="if(window.getSelection().toString()||event.target.closest('a'))return;this.classList.toggle('expanded')">
             <div class="system-prompt-header">${escapeHtml(title)}</div>
             <div class="system-prompt-preview">${escapeHtml(preview)}</div>
             <div class="system-prompt-expand-hint">... (${remaining} more lines, click to expand)</div>

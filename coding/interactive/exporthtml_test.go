@@ -719,3 +719,21 @@ func TestAnsiToHTMLConvertsOSC8Hyperlinks(t *testing.T) {
 		t.Fatalf("styled link = %q", styled)
 	}
 }
+
+// A click on a link inside an expandable tool result must not toggle the card:
+// the reader is following the link, not collapsing the output
+// (export-html/tool-renderer.ts and template.js, v1.6.0, #12052).
+func TestExportTemplateDoesNotToggleOnLinkClicks(t *testing.T) {
+	data, err := os.ReadFile("exporthtml/template.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := string(data)
+	count := strings.Count(script, "classList.toggle('expanded')") + strings.Count(script, `classList.toggle(\'expanded\')`)
+	if count == 0 {
+		t.Fatal("the template has no expandable toggle to guard")
+	}
+	if guarded := strings.Count(script, "event.target.closest('a')"); guarded < count {
+		t.Fatalf("%d of %d toggles ignore a link click", count-guarded, count)
+	}
+}
