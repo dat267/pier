@@ -19,11 +19,14 @@ import (
 	"github.com/dat267/pier/internal/boundedio"
 	"github.com/dat267/pier/mcp/protocol"
 	"golang.org/x/text/encoding/unicode"
+	"unicode/utf8"
 )
 
 // Streamable-HTTP tuning (upstream streamable-http.ts).
 const (
-	maxErrorBodyChars          = 8 * 1024
+	// maxErrorBodyBytes is MAX_ERROR_BODY_BYTES: a failed response's kept prefix
+	// is a byte budget, decoded to text, not a character count.
+	maxErrorBodyBytes          = 8 * 1024
 	errorMessageBodyChars      = 500
 	defaultReconnectInitialMs  = 1000
 	defaultReconnectMaxMs      = 30000
@@ -670,14 +673,16 @@ func (t *StreamableHttpTransport) checkResponse(response *http.Response) error {
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		return nil
 	}
-	body, err := io.ReadAll(io.LimitReader(response.Body, maxErrorBodyChars*4))
+	body, err := io.ReadAll(io.LimitReader(response.Body, maxErrorBodyBytes))
 	_ = response.Body.Close()
 	if err != nil {
 		body = nil
 	}
-	// streamable-http.ts keeps the first MAX_ERROR_BODY_BYTES UTF-16 units of
-	// the decoded text; a byte count would split multi-byte characters.
-	text := jsSlice(string(body), 0, maxErrorBodyChars)
+	// streamable-http.ts keeps the first MAX_ERROR_BODY_BYTES of the response and
+	// decodes only those, so a multi-byte body keeps far fewer characters than
+	// the byte cap suggests. A sequence split by the cut is one U+FFFD there;
+	// Go's string conversion would turn each leftover byte into its own.
+	text := decodeErrorBodyPrefix(body)
 	if response.StatusCode == http.StatusUnauthorized {
 		return &McpAuthRequiredError{
 			Status: 401, Body: text, Msg: "MCP server requires authentication",
@@ -691,6 +696,23 @@ func (t *StreamableHttpTransport) checkResponse(response *http.Response) error {
 		return &McpSessionExpiredError{Status: 404, Body: text, Msg: "MCP session expired"}
 	}
 	return &McpHttpError{Status: response.StatusCode, Body: text, Msg: describeHttpFailure(response.StatusCode, text)}
+}
+
+// decodeErrorBodyPrefix decodes a byte-capped response prefix the way
+// TextDecoder does: an incomplete trailing UTF-8 sequence becomes one U+FFFD
+// rather than one per leftover byte.
+func decodeErrorBodyPrefix(body []byte) string {
+	for trim := 0; trim < utf8.UTFMax && trim < len(body); trim++ {
+		sequence := body[len(body)-1-trim:]
+		if !utf8.RuneStart(sequence[0]) {
+			continue
+		}
+		if r, size := utf8.DecodeRune(sequence); r != utf8.RuneError || size == len(sequence) {
+			return string(body)
+		}
+		return string(body[:len(body)-1-trim]) + string(utf8.RuneError)
+	}
+	return string(body)
 }
 
 func describeHttpFailure(status int, body string) string {

@@ -434,11 +434,13 @@ func TestStreamableHTTPErrorBodyIsSlicedByUTF16Units(t *testing.T) {
 	if !errors.As(err, &httpErr) {
 		t.Fatalf("err = %v; want *McpHttpError", err)
 	}
-	// The expected cap is the reference's literal (streamable-http.ts
-	// MAX_ERROR_BODY_BYTES = 8 * 1024), not the port's constant: comparing with
-	// the constant would keep passing if the cap itself changed.
-	if got := jsLength(httpErr.Body); got != 8*1024 {
-		t.Fatalf("body units = %d; want %d", got, 8*1024)
+	// The cap is a byte budget (streamable-http.ts MAX_ERROR_BODY_BYTES = 8 * 1024)
+	// applied before decoding, so 9000 three-byte characters keep only the 2731
+	// units that the first 8192 bytes decode to: 2730 whole characters plus one
+	// U+FFFD for the split sequence. The earlier expectation of 8192 units pinned
+	// a character-budget reading of the same constant.
+	if got := jsLength(httpErr.Body); got != 2731 {
+		t.Fatalf("body units = %d; want %d", got, 2731)
 	}
 }
 
@@ -621,5 +623,38 @@ func TestStreamableHTTPRejectsOversizedJSONResponse(t *testing.T) {
 	client := NewClient(ClientOptions{Name: "http-test", Version: "1.0.0"})
 	if _, err := client.Connect(context.Background(), NewStreamableHttpTransport(StreamableHttpTransportOptions{URL: fixture.url})); err == nil || !strings.Contains(err.Error(), "size limit") {
 		t.Fatalf("oversized JSON response accepted: err=%v", err)
+	}
+}
+
+// Reference: pi v1.6.0 transports/streamable-http.ts checkResponse reads a failed
+// response with `readBodyText(response, MAX_ERROR_BODY_BYTES)`, which keeps the
+// first 8192 **bytes** and decodes only those. pier read up to four times that and
+// sliced 8192 UTF-16 units after decoding, so a multi-byte body kept far more
+// text than the reference: 4000 CJK characters are 12000 bytes, and upstream
+// keeps 2731 units where the port kept all 4000.
+func TestMcpErrorBodyKeepsTheBytePrefix(t *testing.T) {
+	transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{URL: "https://example.test"})
+	for _, tc := range []struct {
+		name, body string
+		wantKept   int
+	}{
+		{"ascii under the cap", strings.Repeat("a", 100), 100},
+		{"ascii over the cap", strings.Repeat("a", 9000), 8192},
+		// 12000 bytes: the first 8192 bytes decode to 2731 whole characters
+		// (8192/3 = 2730.67, so 2730 full characters plus one split rune).
+		{"cjk over the cap", "日" + strings.Repeat("本", 3999), 2731},
+	} {
+		response := &http.Response{
+			StatusCode: 500, Header: http.Header{},
+			Body: io.NopCloser(strings.NewReader(tc.body)),
+		}
+		err := transport.checkResponse(response)
+		httpErr, ok := err.(*McpHttpError)
+		if !ok {
+			t.Fatalf("%s: err = %T", tc.name, err)
+		}
+		if got := jsLength(httpErr.Body); got != tc.wantKept {
+			t.Fatalf("%s: kept %d units, want %d", tc.name, got, tc.wantKept)
+		}
 	}
 }
