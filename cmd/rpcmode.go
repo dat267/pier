@@ -82,11 +82,10 @@ func watchRPCSignals(signals <-chan os.Signal, cancel func(), forceExit func(int
 // the model runtime, settings and tool selection; the cwd and session manager
 // come from the target. A cross-project switch resolves that project's trust
 // without a prompt (upstream reports hasUI false) and rebinds the one settings
-// manager (D160).
-// rpcSessionReplacer builds the factory for a session-replacement command.
-// recomputeScope re-resolves a settings-derived model scope after the project
-// rebind (nil when --models named the scope), and reported collects the scope
-// diagnostics already written, so a repeated warning is not printed again.
+// manager (D160). recomputeScope re-resolves a settings-derived model scope
+// after the rebind (nil when --models named the scope), and reported collects
+// the scope diagnostics already written, so a repeated warning is not printed
+// again.
 func rpcSessionReplacer(base *coding.CreateAgentSessionOptions, settings *coding.SettingsManager, agentDir string, trustOverride *bool, setMCPSession func(*coding.AgentSession), recomputeScope func(context.Context) ([]coding.ScopedModel, []coding.ModelScopeDiagnostic, error), reported map[string]bool, stderr io.Writer) func(context.Context, *coding.SessionManager) (*coding.AgentSession, error) {
 	if reported == nil {
 		reported = map[string]bool{}
