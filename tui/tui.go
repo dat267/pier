@@ -123,10 +123,10 @@ func (r *TuiReference) Start() { r.get().Start() }
 // Stop stops the active renderer.
 func (r *TuiReference) Stop(options TuiStopOptions) { r.get().Stop(options) }
 
-// AddInputListener registers an input listener.
 // Post forwards to the active renderer's post queue.
 func (r *TuiReference) Post(fn func()) { r.get().Post(fn) }
 
+// AddInputListener registers an input listener through the active renderer.
 func (r *TuiReference) AddInputListener(listener TuiInputListener) func() {
 	return r.get().AddInputListener(listener)
 }
@@ -243,8 +243,6 @@ func (r *TuiReference) RemoveChild(component Component) { r.get().RemoveChild(co
 
 // Clear clears the children.
 func (r *TuiReference) Clear() { r.get().Clear() }
-
-var _ TUI = (*TuiReference)(nil)
 
 var _ TUI = (*TuiReference)(nil)
 
