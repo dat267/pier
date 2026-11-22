@@ -336,3 +336,32 @@ func TestGoalResumeLeavesCompletedGoalDisarmed(t *testing.T) {
 		t.Fatalf("rejected resume delivered work: entries=%d messages=%d runs=%d", len(sink.entries)-entries, len(sink.messages)-messages, sink.runs)
 	}
 }
+
+// TestGoalReservationIsRefusedAfterTheGoalIsReplaced covers the reservation
+// guard in deliverGoalMessage. The host may queue an idle round behind other
+// work, and the user can replace or stop the goal before it runs; only the same
+// live reservation may start a run, so a stale one must do nothing.
+func TestGoalReservationIsRefusedAfterTheGoalIsReplaced(t *testing.T) {
+	sink := &fakeGoalSink{}
+	controller := goalControllerForSink(sink)
+	var queued func(context.Context) error
+	controller.SetStartWork(func(fn func(context.Context) error) { queued = fn })
+
+	goalToolText(t, controller, "set_goal", `{"objective":"first"}`)
+	controller.HandleCommand("pause")
+	sink.runs = 0
+	controller.HandleCommand("resume")
+	if queued == nil {
+		t.Fatal("resuming did not queue idle work")
+	}
+
+	// Replace the goal before the queued work runs.
+	goalToolText(t, controller, "set_goal", `{"objective":"second"}`)
+	runs := sink.runs
+	if err := queued(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if sink.runs != runs {
+		t.Fatalf("a stale reservation started a run: %d -> %d", runs, sink.runs)
+	}
+}
