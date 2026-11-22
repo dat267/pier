@@ -174,6 +174,11 @@ func TestValidateToolArgumentsMatchesPiSchemaProbes(t *testing.T) {
 		{`{"type":"object","properties":{"e":{"type":"string","enum":["v0","v1","v2","v3","v4","v5","v6","v7","v8","v9","v10","v11","v12","v13","v14","v15","v16","v17","v18","v19","v20"]}}}`, `{"e":"v21"}`, "REJECT\n  - e: expected one of [\"v0\",\"v1\",\"v2\",\"v3\",\"v4\",\"v5\",\"v6\",\"v7\",\"v8\",\"v9\",\"v10\",\"v11\",\"v12\",\"v13\",\"v14\",\"v15\",\"v16\",\"v17\",\"v18\",\"v19\", ... and 1 more]"},
 		{`{"type":"object","properties":{"l":{"type":"array","contains":{"type":"number"},"minContains":2}}}`, `{"l":["a",1]}`, "REJECT\n  - l: expected at least 2 matching items"},
 		{`{"type":"object","properties":{"l":{"type":"array","contains":{"type":"number"},"maxContains":1}}}`, `{"l":[1,2]}`, "REJECT\n  - l: expected between 1 and 1 matching items"},
+		// A maxContains at int64 max is a float64 that rounds to 2^63, and a direct
+		// int conversion of that overflowed to MinInt64, so the message named a
+		// negative bound. It saturates to unbounded, which accepts the same arrays
+		// because the cap can never be reached.
+		{`{"type":"object","properties":{"l":{"type":"array","contains":{"type":"number"},"minContains":1,"maxContains":9223372036854775807}}}`, `{"l":[]}`, "REJECT\n  - l: expected at least 1 matching item"},
 		{`{"type":"object","properties":{"l":{"type":"array","uniqueItems":true}}}`, `{"l":[{"x":1,"y":2},{"y":2,"x":1}]}`, "REJECT\n  - l: expected unique items"},
 		{`{"type":"object","properties":{"s":{"type":"string","minLength":2}}}`, `{"s":"😀"}`, "REJECT\n  - s: expected at least 2 characters"},
 		{`{"type":"object","properties":{"s":{"type":"string","maxLength":1}}}`, `{"s":"😀"}`, `ok {"s":"😀"}`},

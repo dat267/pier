@@ -1282,7 +1282,17 @@ func svInt(v *schemaValue, key string) *int {
 	if got == nil || !got.IsNumber || !isFiniteJSONNumber(got.Number) || got.Number != math.Trunc(got.Number) {
 		return nil
 	}
-	value := int(got.Number)
+	// A JSON integer above int64 max is a float64 that rounds to 2^63, and a
+	// direct int conversion of that overflows to MinInt64: a schema with
+	// maxContains 9223372036854775807 reported "between 1 and
+	// -9223372036854775808". Saturate at the bounds instead, the coercion the
+	// rest of the module uses for a JavaScript number.
+	saturated := jsNumberToInt64(got.Number)
+	if int64(int(saturated)) != saturated {
+		// A 32-bit int target cannot hold the value either.
+		return nil
+	}
+	value := int(saturated)
 	return &value
 }
 
