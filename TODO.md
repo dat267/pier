@@ -101,53 +101,44 @@ Wiring it needs the pre-request half of the reference:
 3. A test that an expired token with no stored client redirects instead of
    registering, and one that a pending sign-in keeps its state and verifier.
 
-## Two IDN label rules are still approximate (open)
+## IDN validation is still approximate in four places (open)
 
-`validIDNLabel` (`ai/validation_pi.go`) ports the reference's IDN hostname check
-more coarsely than it should. Two divergences remain after the ACE-prefix and
-normalization fix:
+A 1,200-cell fuzz corpus diffed against the reference's `Is*` functions leaves 13
+differences, and every one of them is the same root cause: the port hand-rolls the
+IDN checks where the reference calls the shared `packages/schema/src/formats/typebox/idna`
+implementation. Grouped by rule:
 
-1. **A-label length.** `label/unicode.ts:48` rejects a non-ASCII label whose
-   punycode encoding plus the 4-byte `xn--` prefix exceeds 63 octets
-   (`ExceedsMaxALabelLength`). The port counts the label's own runes, so it
-   accepts `strings.Repeat("あ", 63)` where the reference rejects it (the
-   punycode form is far longer).
-2. **CONTEXTO neighbors.** `label/unicode.ts:87` rejects U+00B7 (middle dot)
-   unless both neighbours are `l`, U+0375 unless followed by a Greek script
-   character, U+05F3/U+05F4 unless preceded by Hebrew, and U+200C/U+200D unless
-   preceded by a virama. The port has none of these, so it rejects `l·l` which
-   the reference accepts (its `unicode.IsLetter` test fails the middle dot).
+1. **A-label length** (`label/unicode.ts:48`): a non-ASCII label whose punycode form
+   plus `xn--` exceeds 63 octets is rejected. The port counts the label's own runes,
+   so `strings.Repeat("あ", 63)` and `xn--123e4567123e456759` pass as `idn-hostname`
+   and as `hostname` (which delegates to the same check, `hostname.ts:37`).
+2. **CONTEXTO neighbours** (`label/unicode.ts:87`): U+00B7 needs `l` on both sides,
+   U+0375 a following Greek character, U+05F3/U+05F4 a preceding Hebrew one, and
+   U+200C/U+200D a preceding virama. The port has none, so `l·l` is rejected.
+3. **PVALID categories** (`label/unicode.ts:84`): the reference enforces the RFC 5892
+   permitted categories and the DISALLOWED exceptions. The port accepts any
+   `unicode.IsLetter`/`IsNumber` rune, so `idn-hostname` accepts `::1`, `:`,
+   `Zzé+59` and `:ａff60`, which the reference rejects.
 
-Both need the real RFC 5892 tables. `golang.org/x/net` is already an indirect
-dependency at v0.61.0, and its `idna` package has the mappings, but the module has
-no go.sum entry for it, so adding it is a dependency change. With it:
+`idn-email` is *not* in this group: it has its own regex and now matches exactly.
 
-1. `go mod download golang.org/x/net` and add the go.sum entries.
-2. Replace the hand-rolled body of `validIDNLabel` with
-   `idna.New(idna.ValidateForRegistration(), idna.StrictDomainName(true)).ToASCII`
-   and accept only when it succeeds, then diff against the reference over a
-   corpus of IDN labels before trusting it.
+All three need the RFC 5892 tables. `golang.org/x/net` is an indirect dependency at
+v0.61.0 and its `idna` package has them, but the module has no go.sum entry for it,
+so adding it is a dependency change. With it:
 
-Until then the two cases above are the known difference.
+1. `go mod download golang.org/x/net`, add the go.sum entries.
+2. Replace `validHostname` and `validIDNLabel` with
+   `idna.New(idna.ValidateForRegistration(), idna.StrictDomainName(true)).ToASCII`,
+   accepting only on success. This closes all three rules at once, and fixes both
+   formats because `hostname` delegates to the same check upstream.
+3. Diff a corpus of a few hundred labels against the reference before trusting it,
+   because `ValidateForRegistration` is stricter than the reference in places (it
+   rejects labels the reference accepts, such as underscore-containing ones) and the
+   two must be compared, not assumed equivalent.
 
-## A `just check` run can report a spurious `[build failed]` (resolved)
-
-Reported three times this session: `FAIL .../coding [build failed]` (sometimes also
-`coding/interactive` and `mcp/oauth`) while `go build ./...`, `go vet ./coding` on
-three platforms and `go test -count=1 ./...` all passed immediately afterwards.
-
-Cause found: `/tmp` is a tmpfs and had reached 78% (1.8 GB free of 7.7 GB), almost
-all of it this session's own scratch (a 973 MB catalog checkout, a 332 MB session
-export, a 32 MB windows test binary). Go links test binaries through `/tmp`, so a
-link failed under pressure and the package line is all `just test` prints. After
-removing those files (3.4 GB free) three consecutive `just check` runs were clean,
-and a deliberate overlap of two `go test` runs did not reproduce it, so it was
-never contention.
-
-Keeping scratch under a few hundred MB avoids it. The capture command, if it ever
-recurs for another reason:
-
-```sh
-go test -count=1 ./coding 2>&1 | tee /tmp/coding-build.log
-grep -A10 'build failed\|cannot\|undefined' /tmp/coding-build.log
-```
+`iri-reference` is a separate, smaller item: the reference is
+`!InvalidIriChars && !MalformedScheme && URL.canParse(value, "http://example.com")`
+(`iri_reference.ts:41`), which is the WHATWG parser. The port applies a stricter
+character rule, so it rejects `.@12Z|`, `}` and `{` which the reference accepts.
+Porting it means deciding how much of `URL.canParse` to reproduce; `ai/absoluteURL`
+already ports the `url` format's call, so the same approach applies here.

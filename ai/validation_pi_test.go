@@ -324,3 +324,31 @@ func TestPiFormatValidIdnEmailUsesTheAddressRegexNotTheHostnameRules(t *testing.
 		}
 	}
 }
+
+// pi v1.5.2 (b4afdddf) packages/schema/src/formats/typebox/uri_reference.ts
+// IsUriReference tests the whole value against the RFC 3986 grammar. The port's
+// character-class check accepted anything without a forbidden byte, so a bare
+// quote, semicolon or comma passed and the reference rejects it.
+func TestPiFormatValidURIReferenceUsesTheRFC3986Grammar(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		want  bool
+	}{
+		{`W"`, false},
+		{";z=2001:db8:", false},
+		{"2001:db8.01+123e4567", false},
+		{`,Z01;"`, false},
+		{"a b", false},
+		{"a%2", false},
+		{"/a", true},
+		{"a/b", true},
+		{"#frag", true},
+		{"", true},
+		{"a%20b", true},
+		{"https://x/y?a=1#f", true},
+	} {
+		if got := piFormatValid("uri-reference", tc.value); got != tc.want {
+			t.Errorf(`piFormatValid("uri-reference", %q) = %v, want %v`, tc.value, got, tc.want)
+		}
+	}
+}
