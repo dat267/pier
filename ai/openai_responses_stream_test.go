@@ -375,3 +375,61 @@ func TestResponsesRecordsReasoningRemovals(t *testing.T) {
 		t.Fatalf("diagnostics = %+v, want none", clean.Diagnostics)
 	}
 }
+
+// TestProcessResponsesStreamKeepsAFinalItemWithAWrongTypedMember drives the
+// final `response.output_item.done`. The reference reads the SDK-parsed
+// `event.item`, so a wrong-typed member is harmless; failing the decode dropped
+// the completed item and its content.
+func TestProcessResponsesStreamKeepsAFinalItemWithAWrongTypedMember(t *testing.T) {
+	events := []string{
+		`{"type":"response.created","response":{"id":"resp_1"}}`,
+		`{"type":"response.output_item.added","output_index":0,"item":{"type":"message","id":"msg_1","role":"assistant"}}`,
+		`{"type":"response.output_text.delta","output_index":0,"delta":"Hel"}`,
+		`{"type":"response.output_text.delta","output_index":0,"delta":"lo"}`,
+		// A numeric id on the completed item: the content must still apply.
+		`{"type":"response.output_item.done","output_index":0,"item":{"type":"message","id":1,"role":"assistant","phase":"final_answer","content":[{"type":"output_text","text":"Hello"}]}}`,
+		`{"type":"response.completed","response":{"id":"resp_1","status":"completed","usage":{"input_tokens":10,"output_tokens":2,"total_tokens":12}}}`,
+	}
+	var chunks []string
+	for _, event := range events {
+		chunks = append(chunks, "data: "+event+"\n\n")
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for _, chunk := range chunks {
+			_, _ = w.Write([]byte(chunk))
+		}
+	}))
+	defer server.Close()
+
+	model := testResponsesModel()
+	model.BaseURL = server.URL
+	stream := StreamOpenAIResponses(model, NormalizeContext(Context{
+		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
+	}), &OpenAIResponsesOptions{APIKey: "k"})
+	var text string
+	sawTextEnd := false
+	for {
+		event, ok := stream.Next(context.Background())
+		if !ok {
+			break
+		}
+		switch event.Type {
+		case EventTextDelta:
+			text += event.Delta
+		case EventTextEnd:
+			// Only the completed item emits this, so a dropped item means the
+			// turn never closes its text block.
+			sawTextEnd = true
+		}
+	}
+	if text != "Hello" || !sawTextEnd {
+		t.Fatalf("text = %q, text_end = %v; the completed item must still apply", text, sawTextEnd)
+	}
+	message, err := stream.Result(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if message.StopReason != StopStop {
+		t.Fatalf("stop reason = %q, want stop from the final_answer phase", message.StopReason)
+	}
+}
