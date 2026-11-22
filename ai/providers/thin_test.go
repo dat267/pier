@@ -388,3 +388,52 @@ func TestBuiltinModelsRegistration(t *testing.T) {
 		t.Fatalf("model = %+v, want %s", model, want.ID)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) providers/qwen-token-plan.ts:12-15 and its CN and Individual
+// siblings each list two env vars, a plan-specific one before the shared one:
+// ["QWEN_TOKEN_PLAN_TEAM_API_KEY", "QWEN_TOKEN_PLAN_API_KEY"] and so on. The thin spec
+// passed only the shared name, so a user whose key sat in the team-specific variable was
+// not authenticated.
+func TestQwenThinProvidersReadBothEnvVars(t *testing.T) {
+	for _, tc := range []struct {
+		id      string
+		spec    string
+		shared  string
+		teamVar string
+	}{
+		{"qwen-token-plan", "QWEN_TOKEN_PLAN_TEAM_API_KEY", "QWEN_TOKEN_PLAN_API_KEY", "QWEN_TOKEN_PLAN_TEAM_API_KEY"},
+		{"qwen-token-plan-cn", "QWEN_TOKEN_PLAN_TEAM_CN_API_KEY", "QWEN_TOKEN_PLAN_CN_API_KEY", "QWEN_TOKEN_PLAN_TEAM_CN_API_KEY"},
+		{"qwen-token-plan-individual", "QWEN_TOKEN_PLAN_INDIVIDUAL_API_KEY", "QWEN_TOKEN_PLAN_API_KEY", "QWEN_TOKEN_PLAN_INDIVIDUAL_API_KEY"},
+		{"qwen-token-plan-individual-cn", "QWEN_TOKEN_PLAN_INDIVIDUAL_CN_API_KEY", "QWEN_TOKEN_PLAN_CN_API_KEY", "QWEN_TOKEN_PLAN_INDIVIDUAL_CN_API_KEY"},
+	} {
+		var spec EnvAPIKeyProviderSpec
+		for _, candidate := range ThinProviderSpecs {
+			if candidate.ID == tc.id {
+				spec = candidate
+				break
+			}
+		}
+		if spec.ID == "" {
+			t.Fatalf("%s: no spec", tc.id)
+		}
+		provider := EnvAPIKeyProvider(spec)
+		if provider.Auth.APIKey == nil {
+			t.Fatalf("%s: no api-key auth", tc.id)
+		}
+		// The plan-specific name resolves first.
+		resolved, err := provider.Auth.APIKey.Resolve(ai.AuthResolveInput{Ctx: thinAuthCtx{tc.spec: "k"}})
+		if err != nil || resolved == nil || resolved.Source != tc.spec {
+			t.Errorf("%s: %s -> %v, want that as the source", tc.id, tc.spec, resolved)
+		}
+		// And the shared name still resolves when the plan one is unset.
+		shared, err := provider.Auth.APIKey.Resolve(ai.AuthResolveInput{Ctx: thinAuthCtx{tc.shared: "k"}})
+		if err != nil || shared == nil || shared.Source != tc.shared {
+			t.Errorf("%s: %s -> %v, want that as the source", tc.id, tc.shared, shared)
+		}
+	}
+}
+
+type thinAuthCtx map[string]string
+
+func (c thinAuthCtx) Env(name string) (string, bool) { v, ok := c[name]; return v, ok }
+func (c thinAuthCtx) FileExists(string) bool         { return false }
