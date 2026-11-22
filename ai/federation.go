@@ -127,10 +127,17 @@ func RedactSensitive(body string) string {
 	}
 	var parsed any
 	if err := json.Unmarshal([]byte(body), &parsed); err != nil {
-		if len(body) <= maxErrorBodyChars {
+		// The limit is a JavaScript string length, so it counts UTF-16 code units
+		// and the cut uses String.prototype.slice: a surrogate pair counts as two
+		// and is never split. Counting bytes split a rune and left invalid UTF-8,
+		// which MarshalJSON then turned into U+FFFD; counting runes kept 1500
+		// astral characters that the reference truncates (3000 units).
+		length := JSLength(body)
+		if length <= maxErrorBodyChars {
 			return body
 		}
-		return body[:maxErrorBodyChars] + fmt.Sprintf("... <%d more chars>", len(body)-maxErrorBodyChars)
+		return JSSlice(body, 0, maxErrorBodyChars) +
+			fmt.Sprintf("... <%d more chars>", length-maxErrorBodyChars)
 	}
 	redacted := redactValue(parsed)
 	encoded, err := MarshalJSON(redacted)

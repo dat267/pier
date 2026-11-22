@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 // Port of the Anthropic SDK's OIDC federation exchange (pi a9424cd43).
@@ -46,6 +47,33 @@ func TestRedactSensitive(t *testing.T) {
 	truncated := RedactSensitive(long)
 	if !strings.Contains(truncated, "more chars>") || len(truncated) > 2050 {
 		t.Fatalf("truncated = %q", truncated)
+	}
+	// The limit counts characters, as String.prototype.slice does, so a
+	// multi-byte body must not be cut inside a rune: a byte cut leaves invalid
+	// UTF-8 that MarshalJSON turns into U+FFFD.
+	multiByte := strings.Repeat("\u4e2d", 2500)
+	truncatedMulti := RedactSensitive(multiByte)
+	if !utf8.ValidString(truncatedMulti) {
+		t.Fatalf("truncated multi-byte body is not valid UTF-8: %q", truncatedMulti)
+	}
+	if want := strings.Repeat("\u4e2d", maxErrorBodyChars) + "... <500 more chars>"; truncatedMulti != want {
+		t.Fatalf("truncated multi-byte body = %q, want the first %d characters then the marker", truncatedMulti, maxErrorBodyChars)
+	}
+	// The unit is the UTF-16 code unit, so an astral character counts as two:
+	// 1500 of them are 3000 units and must be truncated, which a rune count of
+	// 1500 would not do.
+	astral := strings.Repeat("\U0001F600", 1500)
+	truncatedAstral := RedactSensitive(astral)
+	if !strings.Contains(truncatedAstral, "<1000 more chars>") {
+		t.Fatalf("truncated astral body = %q, want 3000 units seen as 2000 kept and 1000 removed", truncatedAstral)
+	}
+	if !utf8.ValidString(truncatedAstral) {
+		t.Fatalf("truncated astral body is not valid UTF-8: %q", truncatedAstral)
+	}
+	// A mix keeps the byte-independent count too.
+	mixed := strings.Repeat("a\u4e2d", 1200)
+	if got, want := RedactSensitive(mixed), strings.Repeat("a\u4e2d", 1000)+"... <400 more chars>"; got != want {
+		t.Fatalf("truncated mixed body = %q, want %q", got, want)
 	}
 }
 
