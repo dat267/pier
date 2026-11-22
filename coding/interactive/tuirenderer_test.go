@@ -186,3 +186,37 @@ type staticRendererComponent struct {
 
 func (s *staticRendererComponent) Render(width int) []string { return s.lines }
 func (s *staticRendererComponent) Invalidate()               {}
+
+// TestClipboardFailureCallbackSurvivesRendererSwap covers the seam's purpose: a
+// copy finishes after the renderer was replaced, and the failure must flash on
+// the current screen rather than a stale one or none. clipboardScreen is written
+// by every CreateInteractiveTui and read from the copier's goroutine, so this
+// also runs the unsynchronised access under -race.
+func TestClipboardFailureCallbackSurvivesRendererSwap(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+
+	terminal := &fakeRendererTerminal{width: 40, height: 12}
+	first := CreateInteractiveTui(InteractiveTuiOptions{TuiMode: "regular", Terminal: terminal})
+	if currentClipboardScreen() != first {
+		t.Fatal("initial screen not recorded")
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		// What the copier's callback does: read, then read again on the loop.
+		_ = currentClipboardScreen()
+	}()
+	second := CreateInteractiveTui(InteractiveTuiOptions{TuiMode: "fullscreen", Terminal: terminal})
+	<-done
+
+	if currentClipboardScreen() != second {
+		t.Fatal("swapped screen not recorded")
+	}
+	second.Stop(tui.TuiStopOptions{PreserveScreen: true})
+	first.Stop(tui.TuiStopOptions{PreserveScreen: true})
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
+	"sync/atomic"
 )
 
 // Port of src/modes/interactive/tui-renderer.ts: the composition root that
@@ -43,9 +44,32 @@ type CopySelectionFn func(text string) (bool, string)
 var clipboardCopier CopySelectionFn
 
 // clipboardScreen holds the screen created by createInteractiveTui so the
-// async clipboard failure can flash through Post. Written once during startup,
-// before any copy goroutine can read it (the go statement orders it).
-var clipboardScreen tui.TUI
+// async clipboard failure can flash through Post. A mode switch creates a new
+// renderer, so this is written on the loop while the copier's goroutine reads
+// it: an atomic pointer rather than a plain var, which the race detector
+// flagged as an unsynchronised pair.
+var clipboardScreen atomic.Pointer[tuiScreenHolder]
+
+// tuiScreenHolder boxes the interface so atomic.Pointer can carry it.
+type tuiScreenHolder struct{ screen tui.TUI }
+
+// setClipboardScreen records the screen a clipboard failure should flash on.
+func setClipboardScreen(screen tui.TUI) {
+	if screen == nil {
+		clipboardScreen.Store(nil)
+		return
+	}
+	clipboardScreen.Store(&tuiScreenHolder{screen: screen})
+}
+
+// currentClipboardScreen returns the recorded screen, or nil.
+func currentClipboardScreen() tui.TUI {
+	holder := clipboardScreen.Load()
+	if holder == nil {
+		return nil
+	}
+	return holder.screen
+}
 
 // SetClipboardCopier installs the clipboard copier (D106).
 func SetClipboardCopier(copier CopySelectionFn) { clipboardCopier = copier }
@@ -120,12 +144,16 @@ func CreateInteractiveTui(options InteractiveTuiOptions) tui.TUI {
 	// place of the error message the synchronous form would have shown.
 	SetClipboardCopier(func(text string) (bool, string) {
 		coding.CopyTextToClipboardAsync(text, func(err error) {
-			if err == nil || clipboardScreen == nil {
+			screen := currentClipboardScreen()
+			if err == nil || screen == nil {
 				return
 			}
-			clipboardScreen.Post(func() {
-				if altscreen, isAlt := clipboardScreen.(*tui.AltScreen); isAlt {
-					altscreen.Flash(err.Error())
+			screen.Post(func() {
+				// Re-read on the loop: the screen may have been replaced since.
+				if current := currentClipboardScreen(); current != nil {
+					if altscreen, isAlt := current.(*tui.AltScreen); isAlt {
+						altscreen.Flash(err.Error())
+					}
 				}
 			})
 		})
@@ -200,12 +228,12 @@ func createInteractiveTui(options InteractiveTuiOptions) tui.TUI {
 			},
 		})
 		installDebugKey(screen.Renderer, options.OnDebug)
-		clipboardScreen = screen
+		setClipboardScreen(screen)
 		return screen
 	}
 	screen := tui.NewMainScreen(terminal, options.ShowHardwareCursor, options.LogDirectory)
 	installDebugKey(screen.Renderer, options.OnDebug)
-	clipboardScreen = screen
+	setClipboardScreen(screen)
 	return screen
 }
 
