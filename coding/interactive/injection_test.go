@@ -92,3 +92,39 @@ func assertNoStoredSequence(t *testing.T, rendered string) {
 		t.Fatalf("rendered a stored session name raw: %q", rendered)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) modes/interactive/components/custom-entry.ts renders the
+// fallback message with `error instanceof Error ? error.message : String(error)`,
+// so a renderer that throws an object reports "[object Object]" and one that
+// throws an array joins its items with commas. The port's errorMessage returned
+// the text only for a string and "unknown error" otherwise.
+func TestCustomEntryFallbackRendersNonErrorPanics(t *testing.T) {
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+
+	cases := []struct {
+		name      string
+		recovered any
+		want      string
+	}{
+		{"object", map[string]any{"reason": "bad"}, "[object Object]"},
+		{"slice", []any{"a", "b"}, "a,b"},
+		{"number", 42, "42"},
+		{"string", "plain", "plain"},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			renderer := func(CustomEntry, EntryRenderOptions, *Theme) tui.Component { panic(test.recovered) }
+			component := NewCustomEntryComponent(CustomEntry{CustomType: "note"}, renderer)
+			rendered := strings.Join(component.Render(100), "\n")
+			if !strings.Contains(rendered, "renderer failed: "+test.want) {
+				t.Fatalf("fallback = %q, want it to contain %q", rendered, "renderer failed: "+test.want)
+			}
+			if strings.Contains(rendered, "unknown error") {
+				t.Fatalf("fallback reported unknown error for %#v", test.recovered)
+			}
+		})
+	}
+}

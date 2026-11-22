@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
 )
 
@@ -210,12 +211,13 @@ func (c *CustomEntryComponent) rebuild() {
 	c.AddChild(component)
 }
 
+// errorMessage renders a renderer's thrown value the way the reference's
+// `error instanceof Error ? error.message : String(error)` does: an object
+// reports "[object Object]", an array joins its items with commas. It used to
+// return "unknown error" for anything but an error or a string.
 func errorMessage(value any) string {
 	if err, ok := value.(error); ok {
 		return err.Error()
 	}
-	if text, ok := value.(string); ok {
-		return text
-	}
-	return "unknown error"
+	return ai.JSValueToString(value)
 }
