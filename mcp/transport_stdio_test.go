@@ -771,3 +771,83 @@ func TestStdioFixtureMatchesReferenceBytes(t *testing.T) {
 		}
 	}
 }
+
+// TestStubbornFixtureMatchesReferenceBytes pins the stubborn fixture against
+// packages/mcp/test/fixtures/stubborn-server.mjs. The reference answers every
+// `initialize`, including one with no id (writing no id member), and emits
+// `{jsonrpc, id, result}` in that order. The port required an id and serialized
+// a Go map, which dropped the no-id answer and sorted the keys.
+//
+// The fixture ignores EOF and SIGTERM and spawns a grandchild, so the test
+// configures the process group the way the transport does and kills the group.
+func TestStubbornFixtureMatchesReferenceBytes(t *testing.T) {
+	for _, testCase := range []struct {
+		name     string
+		requests []string
+		want     []string
+	}{
+		{
+			name: "id then no id",
+			requests: []string{
+				`{"jsonrpc":"2.0","id":1,"method":"initialize"}`,
+				`{"jsonrpc":"2.0","method":"initialize"}`,
+			},
+			want: []string{
+				`{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{},"serverInfo":{"name":"stubborn-fixture","version":"1.0.0"}}}`,
+				`{"jsonrpc":"2.0","result":{"protocolVersion":"2025-06-18","capabilities":{},"serverInfo":{"name":"stubborn-fixture","version":"1.0.0"}}}`,
+			},
+		},
+		{
+			name: "string id and an ignored method",
+			requests: []string{
+				`{"jsonrpc":"2.0","id":"s","method":"initialize"}`,
+				`{"jsonrpc":"2.0","id":99,"method":"tools/list"}`,
+			},
+			want: []string{
+				`{"jsonrpc":"2.0","id":"s","result":{"protocolVersion":"2025-06-18","capabilities":{},"serverInfo":{"name":"stubborn-fixture","version":"1.0.0"}}}`,
+			},
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			command := exec.Command(stubbornFixtureBin)
+			configureProcessGroup(command)
+			stdin, err := command.StdinPipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			stdout, err := command.StdoutPipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := command.Start(); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				_ = stdin.Close()
+				if command.Process != nil {
+					_ = killProcessGroup(command.Process.Pid, syscall.SIGKILL)
+				}
+				_ = command.Wait()
+			})
+			for _, request := range testCase.requests {
+				if _, err := io.WriteString(stdin, request+"\n"); err != nil {
+					t.Fatal(err)
+				}
+			}
+			scanner := bufio.NewScanner(stdout)
+			scanner.Buffer(make([]byte, 1<<20), 1<<20)
+			var got []string
+			for len(got) < len(testCase.want) && scanner.Scan() {
+				got = append(got, scanner.Text())
+			}
+			if len(got) != len(testCase.want) {
+				t.Fatalf("got %d lines, want %d:\n%s", len(got), len(testCase.want), strings.Join(got, "\n"))
+			}
+			for index := range testCase.want {
+				if got[index] != testCase.want[index] {
+					t.Errorf("line %d:\n got %s\nwant %s", index+1, got[index], testCase.want[index])
+				}
+			}
+		})
+	}
+}

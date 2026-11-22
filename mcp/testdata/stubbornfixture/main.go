@@ -5,6 +5,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -35,7 +36,6 @@ func main() {
 	fmt.Fprintf(os.Stderr, "grandchild %d\n", grandchild.Process.Pid)
 
 	reader := bufio.NewReader(os.Stdin)
-	encoder := json.NewEncoder(os.Stdout)
 	for {
 		line, err := reader.ReadString('\n')
 		if line == "" && err != nil {
@@ -53,21 +53,29 @@ func main() {
 			ID     json.RawMessage `json:"id"`
 			Method string          `json:"method"`
 		}
-		if json.Unmarshal([]byte(line), &message) != nil || message.ID == nil {
+		if json.Unmarshal([]byte(line), &message) != nil || message.Method != "initialize" {
 			continue
 		}
-		if message.Method != "initialize" {
-			continue
-		}
-		_ = encoder.Encode(map[string]any{
-			"jsonrpc": "2.0", "id": message.ID,
-			"result": map[string]any{
-				"protocolVersion": "2025-06-18",
-				"capabilities":    map[string]any{},
-				"serverInfo":      map[string]any{"name": "stubborn-fixture", "version": "1.0.0"},
-			},
-		})
+		// The reference answers every initialize, with or without an id, and
+		// writes `{jsonrpc, id, result}` in that order with the id omitted when
+		// the request had none. A Go map cannot carry that order, so the line is
+		// built explicitly.
+		writeLine(message.ID)
 	}
+}
+
+// writeLine emits one initialize response exactly as the reference's
+// `JSON.stringify({ jsonrpc: "2.0", id: message.id, result })` does: id omitted
+// when the request had none, then the reference's key order.
+func writeLine(id json.RawMessage) {
+	var buffer bytes.Buffer
+	buffer.WriteString(`{"jsonrpc":"2.0"`)
+	if len(id) > 0 {
+		buffer.WriteString(`,"id":`)
+		buffer.Write(id)
+	}
+	buffer.WriteString(`,"result":{"protocolVersion":"2025-06-18","capabilities":{},"serverInfo":{"name":"stubborn-fixture","version":"1.0.0"}}}` + "\n")
+	_, _ = os.Stdout.Write(buffer.Bytes())
 }
 
 func trimLine(line string) string {
