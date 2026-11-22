@@ -583,6 +583,18 @@ func parseLink(src string, i int, image bool, state *inlineState) (Inline, int, 
 		switch src[j] {
 		case '\\':
 			j++
+		case '`':
+			// marked's link label skips a code span, so a `]` inside backticks
+			// does not close the label: `[a` + "`" + `]` + "`" + `](b)` is a link
+			// to b. Counting it split the label and lost the link.
+			run := 1
+			for j+run < len(src) && src[j+run] == '`' {
+				run++
+			}
+			if close := findRun(src, j+run, '`', run); close >= 0 {
+				j = close + run - 1
+				continue
+			}
 		case '[':
 			depth++
 		case ']':

@@ -94,3 +94,40 @@ func TestInlineLinkParenthesesMatchUpstream(t *testing.T) {
 		}
 	}
 }
+
+// TestLinkLabelSkipsCodeSpans covers the label scan. Marked's `link` rule skips a
+// code span while looking for the closing `]`, so a bracket inside backticks does
+// not end the label: `[a` + "`" + `]` + "`" + `](b)` links to b. The port counted
+// every bracket, so the label closed early, the link was lost and the pieces were
+// emitted as text. Expectations captured from the pinned Marked 18.0.11 through
+// the markdown.ts parser setup.
+func TestLinkLabelSkipsCodeSpans(t *testing.T) {
+	for _, testCase := range []struct{ source, href string }{
+		{"[a`]`](b)", "b"},
+		{"[a`b]c`d](e)", "e"},
+		{"[`](`](x)", "x"},
+		{"[a`[`](b)", "b"},
+		{"[a`(`](b)", "b"},
+		{"[a`]`b](c)", "c"},
+		// A real bracket still closes the label, and a doubled run is one span.
+		{"[a[b]c](d)", "d"},
+		{"[a``]``b](c)", "c"},
+		// An unclosed backtick run is text, so its bracket still counts.
+		{"[a`b](c)", "c"},
+	} {
+		inlines := ParseInline(testCase.source)
+		var link *Inline
+		for index := range inlines {
+			if inlines[index].Kind == InlineLink {
+				link = &inlines[index]
+				break
+			}
+		}
+		if link == nil {
+			t.Fatalf("%q produced no link: %+v", testCase.source, inlines)
+		}
+		if link.Dest != testCase.href {
+			t.Errorf("%q linked to %q, want %q", testCase.source, link.Dest, testCase.href)
+		}
+	}
+}
