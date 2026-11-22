@@ -63,13 +63,13 @@ Packages mirror upstream: `ai`, `agent`, `coding` (including `interactive`),
 ## Build and verification
 
 ```sh
-just check                                  # gofmt, go mod tidy, vet, tests
-just cross                                  # cross-build and vet CI targets
+go test -count=1 ./coding -run TestName     # targeted: the local default
 just testfiles                              # rewrite the test-file manifest
+go test -short ./...                        # skips slower real-binary PTY tests
+just check                                  # CI: gofmt, go mod tidy, vet, whole-tree tests
+just cross                                  # CI: cross-build and vet every CI target
 just fetch-reference                        # clone the pinned ./pi plus the pre-pin commit the easter fixtures render (gitignored)
 just goldens                                # every node golden regenerates from ./pi
-go test -count=1 ./coding -run TestName
-go test -short ./...                       # skips slower real-binary PTY tests
 ```
 
 `internal/docscheck` tests the root documents: D-rows unique, ascending and
@@ -101,10 +101,14 @@ the compiler and by any non-`windows` twin of the same predicate, not by
 execution. Keep the shared half of such a predicate in a build-tag-free file when
 both platforms can be exercised on linux (as `ai/netaddr_other.go` is).
 
-Do not run the long race suites during local development: skip `just test-race`
-and `just test-stress` and let CI enforce both. `just check` is the local gate.
-Add `-race` to a focused `-run` when the change touches concurrency,
-cancellation, or shutdown, because those take seconds rather than minutes.
+Do not run the long suites during local development: skip `just check`,
+`just cross`, `just test-race` and `just test-stress` and let CI enforce them.
+Verify a change with the targeted package only —
+`go test -count=1 ./<pkg> [-run TestName]` — and run `just testfiles` when a
+`*_test.go` file is added or removed. Add `-race` to a focused `-run` when the
+change touches concurrency, cancellation, or shutdown, because those take
+seconds rather than minutes. Run the full gate yourself only when CI cannot see
+the change, or when a failure needs the whole-tree context to reproduce.
 
 Keep tests quick: small fixtures, allocation checks instead of loops, fake
 sleeps, and never launch the developer's editor. Tests must use temporary agent
