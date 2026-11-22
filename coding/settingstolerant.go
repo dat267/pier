@@ -306,7 +306,15 @@ func decodeTolerantValue(raw []byte, target reflect.Value) bool {
 		}
 		fresh := reflect.New(element)
 		if json.Unmarshal(raw, fresh.Interface()) != nil {
-			return false
+			// A JSON number in exponent form (1e6) or with a fraction (1000.9)
+			// is a number to the reference, which validates it in the getter
+			// (Number.isSafeInteger). Rejecting it here dropped the member, so
+			// the getter saw no setting and fell back to the default instead of
+			// reporting an invalid value. Read it as a float and truncate like
+			// the reference's integer comparison does for an in-range value.
+			if !decodeIntegerAsFloat(raw, element, fresh) {
+				return false
+			}
 		}
 		target.Set(fresh)
 		return true
@@ -333,6 +341,34 @@ func decodeTolerantValue(raw []byte, target reflect.Value) bool {
 		target.Set(fresh.Elem())
 		return true
 	}
+}
+
+// decodeIntegerAsFloat reads a JSON number into an int or int64 field through
+// float64, which accepts exponent notation and a fraction. A value outside the
+// target's range, or not a number, reports false so the caller keeps the member
+// rejected.
+func decodeIntegerAsFloat(raw []byte, element reflect.Type, target reflect.Value) bool {
+	switch element.Kind() {
+	case reflect.Int, reflect.Int64:
+	default:
+		return false
+	}
+	var number float64
+	if json.Unmarshal(raw, &number) != nil {
+		return false
+	}
+	if math.IsNaN(number) || math.IsInf(number, 0) {
+		return false
+	}
+	// Bound by the target's own width: platform int is 64-bit on most targets,
+	// so a fixed int32 range would reject values it can hold.
+	bits := element.Bits()
+	limit := math.Ldexp(1, bits-1)
+	if number >= limit || number < -limit {
+		return false
+	}
+	target.Elem().SetInt(int64(number))
+	return true
 }
 
 // decodeTolerantStruct decodes a JSON object member by member, skipping members

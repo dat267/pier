@@ -782,3 +782,39 @@ func TestSettingsNumericSettingsFloorLikeJavaScript(t *testing.T) {
 		t.Fatalf("GetAutocompleteMaxVisible = %d, want 7", got)
 	}
 }
+
+// TestCompactionTokenCountAcceptsJSONNumbers covers what a token-count member
+// may be. The reference parses the setting as a JSON number, so `1e6` is
+// 1000000, and validates it with Number.isSafeInteger in
+// getCompactionTokenSetting: a fraction, an out-of-range number or an unsafe
+// integer is reported with its String(value) form. Decoding straight into int64
+// dropped `1e6` entirely, so the getter fell back to the default and the user's
+// compaction reserve silently became 16384.
+func TestCompactionTokenCountAcceptsJSONNumbers(t *testing.T) {
+	for _, testCase := range []struct {
+		member string
+		value  int64
+		err    string
+	}{
+		{"1000", 1000, ""},
+		{"1e6", 1000000, ""},
+		{"1000.9", 0, "Invalid compaction.reserveTokens setting: 1000.9. Expected a non-negative safe integer."},
+		{"1e19", 0, "Invalid compaction.reserveTokens setting: 10000000000000000000. Expected a non-negative safe integer."},
+		{"9007199254740993", 0, "Invalid compaction.reserveTokens setting: 9007199254740992. Expected a non-negative safe integer."},
+		{"null", 0, "Invalid compaction.reserveTokens setting: null. Expected a non-negative safe integer."},
+	} {
+		var settings Settings
+		decodeSettingsTolerantWithRejects([]byte(`{"compaction":{"reserveTokens":`+testCase.member+`}}`), &settings)
+		manager := NewInMemorySettingsManager(&settings, SettingsManagerCreateOptions{})
+		value, err := manager.GetCompactionReserveTokens(nil)
+		if testCase.err == "" {
+			if err != nil || value != testCase.value {
+				t.Errorf("reserveTokens %s: value = %d, err = %v, want %d", testCase.member, value, err, testCase.value)
+			}
+			continue
+		}
+		if err == nil || err.Error() != testCase.err {
+			t.Errorf("reserveTokens %s: err = %v, want %q", testCase.member, err, testCase.err)
+		}
+	}
+}

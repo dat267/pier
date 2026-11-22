@@ -120,24 +120,25 @@ func (override *SettingsCompactionOverride) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("invalid compaction model override")
 	}
 	var parsed SettingsCompactionOverride
+	// A token count is a JSON number; 1e6 must not be dropped.
 	if raw, ok := fields["reserveTokens"]; ok {
 		if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
 			parsed.reserveTokensNull = true
-		} else {
-			var value int64
-			if json.Unmarshal(raw, &value) == nil {
-				parsed.ReserveTokens = &value
-			}
+		} else if value, ok := decodeSettingsTokenCount(raw); ok {
+			parsed.ReserveTokens = &value
+		} else if isJSONNumber(raw) {
+			// Present but unusable, like an explicit null: the getter must report
+			// the invalid value rather than fall back to the default.
+			parsed.reserveTokensNull = true
 		}
 	}
 	if raw, ok := fields["keepRecentTokens"]; ok {
 		if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
 			parsed.keepRecentTokensNull = true
-		} else {
-			var value int64
-			if json.Unmarshal(raw, &value) == nil {
-				parsed.KeepRecentTokens = &value
-			}
+		} else if value, ok := decodeSettingsTokenCount(raw); ok {
+			parsed.KeepRecentTokens = &value
+		} else if isJSONNumber(raw) {
+			parsed.keepRecentTokensNull = true
 		}
 	}
 	*override = parsed
@@ -183,6 +184,54 @@ type SettingsCompaction struct {
 	reserveTokensNull    bool
 	keepRecentTokensNull bool
 	modelOverridesNull   bool
+	// reserveTokensText and keepRecentTokensText hold a numeric value the field
+	// cannot store (a fraction or an out-of-range number) so the getter can name
+	// it in the invalid-setting error, as the reference does.
+	reserveTokensText    string
+	keepRecentTokensText string
+}
+
+// decodeSettingsTokenCount reads a token-count member the way the reference's
+// JSON.parse does: any JSON number is a number, and 1e6 is 1000000. A value that
+// is not a number, is not finite, or does not fit an int64 reports false; a
+// fractional value reports false too, because the reference rejects it as a
+// non-safe integer and the port must not silently truncate it.
+func decodeSettingsTokenCount(raw []byte) (int64, bool) {
+	var number float64
+	if json.Unmarshal(raw, &number) != nil {
+		return 0, false
+	}
+	if math.IsNaN(number) || math.IsInf(number, 0) {
+		return 0, false
+	}
+	if number >= 9223372036854775808.0 || number < -9223372036854775808.0 {
+		return 0, false
+	}
+	if number != math.Trunc(number) {
+		return 0, false
+	}
+	return int64(number), true
+}
+
+// isJSONNumber reports whether a raw member is a JSON number, which is what the
+// reference's typeof check accepts for a token count.
+func isJSONNumber(raw []byte) bool {
+	_, ok := jsonNumberText(raw)
+	return ok
+}
+
+// jsonNumberText reports a JSON number member and its JavaScript string form,
+// which is what the reference interpolates into the invalid-setting error
+// (String(1000.9) is "1000.9", String(1e19) is "10000000000000000000").
+func jsonNumberText(raw []byte) (string, bool) {
+	var number float64
+	if json.Unmarshal(raw, &number) != nil {
+		return "", false
+	}
+	if math.IsNaN(number) || math.IsInf(number, 0) {
+		return string(bytes.TrimSpace(raw)), true
+	}
+	return ai.JSNumberToString(number), true
 }
 
 func (settings *SettingsCompaction) UnmarshalJSON(data []byte) error {
@@ -205,24 +254,27 @@ func (settings *SettingsCompaction) UnmarshalJSON(data []byte) error {
 			}
 		}
 	}
+	// A token count is a JSON number, so 1e6 is 1000000; json.Unmarshal into
+	// int64 rejects exponent notation and dropped the member, which made the
+	// getter fall back to the default. A fraction or an out-of-range number is
+	// kept as text so the getter can report it, as the reference's
+	// Number.isSafeInteger check does.
 	if raw, ok := fields["reserveTokens"]; ok {
 		if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
 			parsed.reserveTokensNull = true
-		} else {
-			var value int64
-			if json.Unmarshal(raw, &value) == nil {
-				parsed.ReserveTokens = &value
-			}
+		} else if value, ok := decodeSettingsTokenCount(raw); ok {
+			parsed.ReserveTokens = &value
+		} else if text, ok := jsonNumberText(raw); ok {
+			parsed.reserveTokensText = text
 		}
 	}
 	if raw, ok := fields["keepRecentTokens"]; ok {
 		if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
 			parsed.keepRecentTokensNull = true
-		} else {
-			var value int64
-			if json.Unmarshal(raw, &value) == nil {
-				parsed.KeepRecentTokens = &value
-			}
+		} else if value, ok := decodeSettingsTokenCount(raw); ok {
+			parsed.KeepRecentTokens = &value
+		} else if text, ok := jsonNumberText(raw); ok {
+			parsed.keepRecentTokensText = text
 		}
 	}
 	if raw, ok := fields["modelOverrides"]; ok {
@@ -243,14 +295,25 @@ func (settings SettingsCompaction) MarshalJSON() ([]byte, error) {
 	var builder strings.Builder
 	builder.WriteByte('{')
 	first := true
+	// A numeric value the field could not store is written back verbatim, so a
+	// save round-trip keeps reporting the invalid setting the reference would
+	// keep re-reading from its own file.
+	reserveTokens := any(settings.ReserveTokens)
+	if settings.reserveTokensText != "" {
+		reserveTokens = json.RawMessage(settings.reserveTokensText)
+	}
+	keepRecentTokens := any(settings.KeepRecentTokens)
+	if settings.keepRecentTokensText != "" {
+		keepRecentTokens = json.RawMessage(settings.keepRecentTokensText)
+	}
 	for _, field := range []struct {
 		name  string
 		value any
 		null  bool
 	}{
 		{"enabled", settings.Enabled, settings.enabledNull},
-		{"reserveTokens", settings.ReserveTokens, settings.reserveTokensNull},
-		{"keepRecentTokens", settings.KeepRecentTokens, settings.keepRecentTokensNull},
+		{"reserveTokens", reserveTokens, settings.reserveTokensNull},
+		{"keepRecentTokens", keepRecentTokens, settings.keepRecentTokensNull},
 		{"modelOverrides", settings.ModelOverrides, settings.modelOverridesNull},
 	} {
 		if !field.null && isNilSettingsValue(field.value) {
@@ -2220,11 +2283,17 @@ func (m *SettingsManager) compactionTokenSetting(field string, model *ai.Model) 
 	var ordinary *int64
 	if compaction != nil {
 		if field == "reserveTokens" {
+			if compaction.reserveTokensText != "" {
+				return 0, fmt.Errorf("Invalid compaction.%s setting: %s. Expected a non-negative safe integer.", field, compaction.reserveTokensText)
+			}
 			if compaction.reserveTokensNull {
 				return 0, fmt.Errorf("Invalid compaction.%s setting: null. Expected a non-negative safe integer.", field)
 			}
 			ordinary = compaction.ReserveTokens
 		} else {
+			if compaction.keepRecentTokensText != "" {
+				return 0, fmt.Errorf("Invalid compaction.%s setting: %s. Expected a non-negative safe integer.", field, compaction.keepRecentTokensText)
+			}
 			if compaction.keepRecentTokensNull {
 				return 0, fmt.Errorf("Invalid compaction.%s setting: null. Expected a non-negative safe integer.", field)
 			}
