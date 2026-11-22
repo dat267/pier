@@ -16,8 +16,13 @@ import (
 func suspendProcess(ui tui.TUI) {
 	resumed := make(chan os.Signal, 1)
 	signal.Notify(resumed, syscall.SIGCONT)
+	done := make(chan struct{})
 	go func() {
-		<-resumed
+		select {
+		case <-done:
+			return
+		case <-resumed:
+		}
 		signal.Stop(resumed)
 		if ui != nil {
 			ui.Start()
@@ -26,10 +31,18 @@ func suspendProcess(ui tui.TUI) {
 	}()
 	// pid 0 addresses the whole process group, matching upstream's
 	// process.kill(0, "SIGTSTP").
-	if err := syscall.Kill(0, syscall.SIGTSTP); err != nil {
+	if err := suspendProcessGroup(); err != nil {
+		// Upstream's catch clears its keep-alive timer and removes the SIGINT
+		// listener; the waiter must be released the same way, or it blocks on a
+		// channel that will never receive once the subscription is stopped.
 		signal.Stop(resumed)
+		close(done)
 	}
 }
+
+// suspendProcessGroup sends SIGTSTP to the process group (a seam: the real one
+// stops the process, which a test must not do).
+var suspendProcessGroup = func() error { return syscall.Kill(0, syscall.SIGTSTP) }
 
 // installSIGTSTPHandler installs handler for SIGTSTP and returns the cleanup.
 // The suspend raises SIGTSTP again, and that one has to reach the default action

@@ -524,6 +524,7 @@ coding/interactive/startuploop_shutdown_test.go
 coding/interactive/startupui_test.go
 coding/interactive/stopmode_test.go
 coding/interactive/streaming_bench_test.go
+coding/interactive/suspend_test.go
 coding/interactive/systemtheme_test.go
 coding/interactive/tail_command_test.go
 coding/interactive/testhelpers_test.go
