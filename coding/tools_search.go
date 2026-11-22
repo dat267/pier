@@ -52,6 +52,13 @@ func RelativizeFindResultPath(resultPath string, searchPath string) string {
 	relativePath := resultPath
 	if filepath.IsAbs(resultPath) {
 		if rel, err := filepath.Rel(searchPath, resultPath); err == nil {
+			// filepath.Rel returns "." for an equal path where Node's
+			// path.relative returns "" (AGENTS.md). Node then appends the
+			// separator only when the relative path does not already end in one,
+			// so an equal path with a trailing separator becomes "/", not "./".
+			if rel == "." {
+				rel = ""
+			}
 			relativePath = rel
 		}
 	}

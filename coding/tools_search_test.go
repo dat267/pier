@@ -432,3 +432,29 @@ func TestFindToolSurvivesALimitWiderThanInt64(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.5.2 (b4afdddf) packages/coding-agent/src/core/tools/find.ts
+// relativizeFindResultPath uses path.relative, which returns "" for equal paths and
+// for a path equal to the base plus a trailing separator, so the function yields ""
+// and "/" respectively (the separator is re-appended only when the relative path
+// does not already end in one). Go's filepath.Rel returns "." for both, and the port
+// passed it through, yielding "." and "./". The reachable shapes (a file or directory
+// under the search root, with or without a trailing separator) already agree; these
+// two are the exported function's remaining edges.
+func TestRelativizeFindResultPathMatchesNodeForEqualPaths(t *testing.T) {
+	for _, tc := range []struct {
+		result, search, want string
+	}{
+		{"/a/b", "/a/b", ""},
+		{"/a/b/", "/a/b", "/"},
+		{"/a/b/c.txt", "/a/b", "c.txt"},
+		{"/a/b/sub", "/a/b", "sub"},
+		{"/a/b/sub/", "/a/b", "sub/"},
+		{"/other/x", "/a/b", "../../other/x"},
+		{"rel/p", "/a/b", "rel/p"},
+	} {
+		if got := RelativizeFindResultPath(tc.result, tc.search); got != tc.want {
+			t.Errorf("RelativizeFindResultPath(%q, %q) = %q, want %q", tc.result, tc.search, got, tc.want)
+		}
+	}
+}
