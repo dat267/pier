@@ -112,3 +112,39 @@ func writeHeadAtomically(t *testing.T, repo, branch string) {
 		t.Error(err)
 	}
 }
+
+// TestFooterDisposeFromBranchCallbackDoesNotJoinItself covers the self-join
+// the notifyingFromWatch flag exists for: a branch-change listener disposes the
+// provider, which runs on the poll goroutine. Dispose must not wait for that
+// goroutine to finish, because it is the one running the callback. Before the
+// flag, this deadlocked; the stress test only disposes from other goroutines,
+// so it never reached this path.
+func TestFooterDisposeFromBranchCallbackDoesNotJoinItself(t *testing.T) {
+	repo := fakeGitRepo(t, "self-join")
+	provider := NewFooterDataProvider(repo, FooterDataProviderOptions{PollIntervalMS: 1})
+	disposed := make(chan struct{})
+	var once sync.Once
+	provider.OnBranchChange(func() {
+		once.Do(func() {
+			provider.Dispose()
+			close(disposed)
+		})
+	})
+	// Resolve first, the way a footer render does. The reference records the
+	// first refresh without notifying (`cachedBranch !== undefined`), and the
+	// port mirrors that with `f.resolved`, so a change is only announced once a
+	// branch has been read.
+	if _, ok := provider.GetGitBranch(); !ok {
+		t.Fatal("fake repo has no branch")
+	}
+	// Now a different HEAD is a change, delivered on the next poll tick.
+	writeHeadAtomically(t, repo, "feature")
+	select {
+	case <-disposed:
+	case <-time.After(10 * time.Second):
+		t.Fatal("Dispose from a branch callback did not return: the poll goroutine joined itself")
+	}
+	// The provider is disposed: later refreshes notify no one and must not panic.
+	provider.Refresh()
+	provider.Dispose()
+}

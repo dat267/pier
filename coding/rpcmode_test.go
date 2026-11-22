@@ -334,6 +334,32 @@ func TestRPCEmptyQueuedMessageIsRetained(t *testing.T) {
 
 // pi v1.4.0 uses null for unavailable cycles, but empty arrays for
 // collection-valued responses; neither optional data shape may disappear.
+// syncBuffer is a bytes.Buffer safe to read while RunRPCMode writes it from its
+// own goroutine. The stderr diagnostics tests poll for the boot report, so a
+// plain buffer raced under -race.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) Len() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Len()
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
 func TestRPCUnavailableSelections(t *testing.T) {
 	var output bytes.Buffer
 	err := RunRPCMode(context.Background(), rpcTestSession(t), RPCModeOptions{
@@ -412,7 +438,7 @@ func TestRPCReportsSessionDiagnosticsOnStderr(t *testing.T) {
 		t.Fatal(err)
 	}
 	session.promptDiagnostics = []ResourceDiagnostic{{Type: "warning", Message: "prompt conflict: two files"}}
-	var stderr bytes.Buffer
+	var stderr syncBuffer
 	startRPCTestWith(t, session, RPCModeOptions{Stderr: &stderr})
 	// The boot reports it before any command arrives.
 	deadline := time.Now().Add(2 * time.Second)
@@ -441,7 +467,7 @@ func TestRPCReportsTheModelFallbackOnStderr(t *testing.T) {
 		t.Fatal(err)
 	}
 	session.modelFallbackMessage = "Could not restore model nope/nope. Using anthropic/m."
-	var stderr bytes.Buffer
+	var stderr syncBuffer
 	startRPCTestWith(t, session, RPCModeOptions{Stderr: &stderr})
 	deadline := time.Now().Add(2 * time.Second)
 	for stderr.Len() == 0 && time.Now().Before(deadline) {
