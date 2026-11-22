@@ -555,7 +555,11 @@ type RefreshOptions struct {
 // 6749 §5.1).
 func withScope(tokens *OAuthTokens, scope *string) *OAuthTokens {
 	if tokens.Scope == nil && scope != nil && *scope != "" {
-		tokens.Scope = scope
+		// The reference returns a copy (`{ ...tokens, scope }`, flow.ts:319), so
+		// a provider that still owns the pointer it handed back keeps its copy.
+		copied := *tokens
+		copied.Scope = scope
+		return &copied
 	}
 	return tokens
 }

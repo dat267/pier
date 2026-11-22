@@ -185,3 +185,34 @@ func TestDeriveApplicationTypeFollowsSEP837(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.5.2 (b4afdddf) packages/mcp/src/oauth/flow.ts withScope returns a new
+// object when it sets the scope (`{ ...tokens, scope }`, flow.ts:319) and the
+// input otherwise. The port mutated its argument, so a provider that hands back a
+// pointer it still owns (as `own` does for a matching server URL) would see the
+// stored token changed behind its back.
+func TestWithScopeReturnsANewTokenRatherThanMutatingTheInput(t *testing.T) {
+	requested := "read"
+	input := &OAuthTokens{AccessToken: "a"}
+	got := withScope(input, &requested)
+	if input.Scope != nil {
+		t.Fatalf("withScope mutated its argument: scope = %q", *input.Scope)
+	}
+	if got == input {
+		t.Fatal("withScope returned the same pointer; the reference copies when it sets a scope")
+	}
+	if got.Scope == nil || *got.Scope != "read" {
+		t.Fatalf("scope = %v, want read", got.Scope)
+	}
+	if got.AccessToken != "a" {
+		t.Fatalf("access token = %q, want the copied value", got.AccessToken)
+	}
+	// Without a scope to set it returns the input unchanged, as the reference does.
+	if again := withScope(input, nil); again != input {
+		t.Fatal("withScope with no scope should return the input")
+	}
+	empty := ""
+	if again := withScope(input, &empty); again != input {
+		t.Fatal("withScope with an empty scope should return the input")
+	}
+}
