@@ -2,6 +2,7 @@ package ai
 
 import (
 	"encoding/json"
+	"math"
 	"os"
 	"regexp"
 	"slices"
@@ -353,5 +354,44 @@ func TestJSWhitespaceClassBoundaries(t *testing.T) {
 		if !IsJSSpace(code) {
 			t.Errorf("U+%04X: IsJSSpace = false, want true", code)
 		}
+	}
+}
+
+// JS String(value), captured from node: `String(v)` for each row. The reference
+// wraps a thrown non-Error with `new Error(String(value))` in
+// packages/mcp/src/protocol/jsonrpc.ts, so an object reports "[object Object]",
+// an array joins with commas leaving null empty, and -0 reports "0".
+func TestJSValueToString(t *testing.T) {
+	cases := []struct {
+		name  string
+		value any
+		want  string
+	}{
+		{"null", nil, "null"},
+		{"true", true, "true"},
+		{"false", false, "false"},
+		{"string", "s", "s"},
+		{"empty string", "", ""},
+		{"zero", float64(0), "0"},
+		{"negative zero", math.Copysign(0, -1), "0"},
+		{"fraction", 1.5, "1.5"},
+		{"large", 1e21, "1e+21"},
+		{"small", 1e-7, "1e-7"},
+		{"int", 42, "42"},
+		{"int64", int64(-7), "-7"},
+		{"uint", uint(9), "9"},
+		{"json number", json.Number("2.50"), "2.50"},
+		{"empty array", []any{}, ""},
+		{"null element", []any{nil}, ""},
+		{"nested", []any{float64(1), []any{float64(2), "a"}, nil}, "1,2,a,"},
+		{"empty object", map[string]any{}, "[object Object]"},
+		{"object", map[string]any{"a": float64(1)}, "[object Object]"},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			if got := JSValueToString(test.value); got != test.want {
+				t.Fatalf("JSValueToString(%#v) = %q, want %q", test.value, got, test.want)
+			}
+		})
 	}
 }

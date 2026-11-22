@@ -1,6 +1,11 @@
 package protocol
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/dat267/pier/ai"
+)
 
 // JSONRPCVersion is the required jsonrpc member value.
 const JSONRPCVersion = "2.0"
@@ -60,10 +65,12 @@ func (e *McpAbortError) Error() string {
 }
 
 // ToError mirrors upstream's toError: pass the value through when it is
-// already an error, wrap anything else.
+// already an error, wrap anything else with `new Error(String(value))`, so a
+// thrown object reports "[object Object]" and an array joins its items with
+// commas rather than taking Go's %v formatting.
 func ToError(value any) error {
 	if err, ok := value.(error); ok {
 		return err
 	}
-	return fmt.Errorf("%v", value)
+	return errors.New(ai.JSValueToString(value))
 }

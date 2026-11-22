@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"encoding/json"
 	"math"
 	"math/big"
 	"strconv"
@@ -259,4 +260,60 @@ func GetPiUserAgent() string {
 		release = "unknown"
 	}
 	return "pi (" + runtimeGOOS() + " " + release + "; " + runtimeGOARCH() + ")"
+}
+
+// JSValueToString renders a decoded value the way JavaScript's String(value)
+// does: a string as itself, a number through JSNumberToString, a bool as
+// "true"/"false", nil as "null", an array as its items joined by commas with
+// null and undefined empty, and anything else (including a map) as
+// "[object Object]". Callers use it where the reference interpolates a value
+// with a template literal or passes it to String().
+func JSValueToString(value any) string {
+	switch typed := value.(type) {
+	case nil:
+		return "null"
+	case string:
+		return typed
+	case bool:
+		if typed {
+			return "true"
+		}
+		return "false"
+	case float64:
+		return JSNumberToString(typed)
+	case float32:
+		return JSNumberToString(float64(typed))
+	case int:
+		return strconv.Itoa(typed)
+	case int8:
+		return strconv.FormatInt(int64(typed), 10)
+	case int16:
+		return strconv.FormatInt(int64(typed), 10)
+	case int32:
+		return strconv.FormatInt(int64(typed), 10)
+	case int64:
+		return strconv.FormatInt(typed, 10)
+	case uint:
+		return strconv.FormatUint(uint64(typed), 10)
+	case uint8:
+		return strconv.FormatUint(uint64(typed), 10)
+	case uint16:
+		return strconv.FormatUint(uint64(typed), 10)
+	case uint32:
+		return strconv.FormatUint(uint64(typed), 10)
+	case uint64:
+		return strconv.FormatUint(typed, 10)
+	case json.Number:
+		return typed.String()
+	case []any:
+		parts := make([]string, len(typed))
+		for index, item := range typed {
+			// Array.prototype.join renders null and undefined as empty.
+			if item != nil {
+				parts[index] = JSValueToString(item)
+			}
+		}
+		return strings.Join(parts, ",")
+	}
+	return "[object Object]"
 }

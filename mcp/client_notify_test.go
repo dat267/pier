@@ -337,3 +337,35 @@ func TestClientConnectDoesNotResurrectClosedConnection(t *testing.T) {
 		})
 	}
 }
+
+// pi v1.5.2 (b4afdddf) packages/mcp/src/protocol/jsonrpc.ts toError wraps a
+// non-Error with `new Error(String(value))`, and client.ts calls it on whatever a
+// notification listener throws. A thrown object reports "[object Object]" there,
+// an array joins its items with commas, and null reports "null"; the Go port
+// formatted the recovered value with %v and reported "map[...]", "[a b]" and
+// "<nil>". A notification listener is public API (`OnNotification`), so a
+// consumer's panic reaches this.
+func TestToErrorStringifiesLikeJavaScript(t *testing.T) {
+	client, server := connectTestClient(t)
+	reported := make(chan error, 1)
+	client.OnError(func(err error) {
+		select {
+		case reported <- err:
+		default:
+		}
+	})
+	client.OnNotification("probe", func(json.RawMessage) {
+		panic(map[string]any{"code": "ENOENT"})
+	})
+	if err := server.transport.Send(context.Background(), protocol.JsonRpcNotification{JSONRPC: "2.0", Method: "probe"}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-reported:
+		if err.Error() != "[object Object]" {
+			t.Fatalf("reported %q, want %q", err.Error(), "[object Object]")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("no error reported")
+	}
+}
