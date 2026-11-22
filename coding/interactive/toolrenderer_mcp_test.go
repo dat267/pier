@@ -507,3 +507,32 @@ func TestMcpTruncatedOneLongLineReportsTheSizeLimit(t *testing.T) {
 		t.Errorf("card kept the prose header:\n%s", got)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) extensions/mcp/tools.ts renders each argument with
+// `JSON.stringify(value)` on the decoded arguments object, so the displayed text is
+// the re-serialized value: a number loses its source spelling, -0 becomes 0, an
+// integer past 2^53 rounds, and nested object key order survives because the value
+// was decoded with order preserved rather than into a map. A value that is not JSON
+// is shown as its raw text, which is what JSON.stringify receives from a decoded
+// body anyway. Each expectation below was measured from Node.
+func TestMcpJSONStringifyMatchesJSONStringify(t *testing.T) {
+	for _, tc := range []struct{ raw, want string }{
+		{`{"k":"v","j":1}`, `{"k":"v","j":1}`},
+		{`{"a":{"b":1,"a":2}}`, `{"a":{"b":1,"a":2}}`},
+		{`1.0`, `1`},
+		{`1e3`, `1000`},
+		{`9007199254740993`, `9007199254740992`},
+		{`-0`, `0`},
+		{`1.5e-7`, `1.5e-7`},
+		{`"s"`, `"s"`},
+		{`null`, `null`},
+		{`[1,2]`, `[1,2]`},
+		{`true`, `true`},
+		{`not json`, `not json`},
+		{``, ``},
+	} {
+		if got := mcpJSONStringify(json.RawMessage(tc.raw)); got != tc.want {
+			t.Errorf("mcpJSONStringify(%q) = %q, want %q", tc.raw, got, tc.want)
+		}
+	}
+}
