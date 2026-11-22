@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D513)
+# Deliberate divergences from pi (D1–D514)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8529,3 +8529,27 @@ before, and the `1000M` / `1000B` rollover at each unit boundary is kept, becaus
 upstream has the same `1000k` shape at its own boundary.
 
 Test: `TestFormatTokensExtendsPastAMillion`. Cited at `coding/interactive/footer.go`.
+
+### D514
+
+**A statusless "request was rejected" is retried.**
+
+Reference: pi v1.6.0 (`faac5858`) `utils/retry.ts` classifies a failed assistant
+message by matching its text against `RETRYABLE_PROVIDER_ERROR_PATTERN`. The list
+covers gateway wording such as `provider returned error`, `server error` and
+`you can retry your request`, but not a bare "The request was rejected.", so a
+gateway that relays that phrasing as an Anthropic `api_error` event with no HTTP
+status ends the run.
+
+Nothing in "The request was rejected." says the request is malformed: no status,
+no parameter name, no validation wording. It is the same shape as the phrasings
+the list already retries. The port adds `request was rejected` and
+`request has been rejected` to the retryable list. A persistent rejection still
+exhausts the attempt budget, so the cost of being wrong is one wasted retry, not
+a loop.
+
+The transport layer is unchanged: when the rejection carries a status,
+`isRetryableProviderError` reads it, and a stated 4xx is still declined because
+it would repeat. Only a statusless text classification changes.
+
+Test: `TestRejectedRequestIsRetryableWithoutAStatus`. Cited at `ai/retry.go`.

@@ -483,6 +483,12 @@ var retryableProviderErrorPattern = buildProviderErrorPattern([]string{
 	`pending stream has been canceled`,
 	`retry delay`,
 	`you can retry your request`, `try your request again`, `please retry your request`,
+	// A gateway that rejects a request without a status or a retry hint, for
+	// example "The request was rejected." relayed as an Anthropic api_error
+	// event with no HTTP code. Nothing in the wording says the request is
+	// malformed, so the port treats it like the retryable phrasings above; a
+	// persistent rejection still exhausts the attempt budget.
+	`request was rejected`, `request has been rejected`,
 	`ResourceExhausted`,
 	// Sign in with ChatGPT: usage or user data temporarily unavailable. Usage
 	// failures can arrive mid-stream without an HTTP 503 in the message.

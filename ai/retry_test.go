@@ -182,6 +182,34 @@ func TestRetryableProviderErrorsMatchRelayedGatewayWording(t *testing.T) {
 	}
 }
 
+// A gateway can reject a request without a status or a retry hint, relaying
+// "The request was rejected." as an Anthropic api_error event. Nothing in that
+// wording says the request is malformed, so it is retried like the other
+// retryable phrasings; a persistent rejection exhausts the attempt budget.
+// When the rejection does carry a 4xx, the transport classifier still declines
+// it, because a stated status is authoritative.
+func TestRejectedRequestIsRetryableWithoutAStatus(t *testing.T) {
+	for _, message := range []string{
+		"The request was rejected.",
+		"Error: The request was rejected.",
+		"The request has been rejected",
+	} {
+		if !IsRetryableAssistantError(errorAssistant(message)) {
+			t.Fatalf("%q should be retryable", message)
+		}
+	}
+	// A limit that happens to mention rejection is still a limit.
+	if IsRetryableAssistantError(errorAssistant("insufficient_quota: the request was rejected")) {
+		t.Fatal("a quota limit must not become retryable")
+	}
+	// A stated 4xx is authoritative and is not retried.
+	for _, status := range []int{400, 401, 403, 404} {
+		if isRetryableProviderError(&ProviderError{Status: status, Message: "The request was rejected."}) {
+			t.Fatalf("status %d must not be retryable", status)
+		}
+	}
+}
+
 // A ChatGPT Business workspace limit is set by the workspace admin, so retrying
 // it cannot succeed. Upstream v1.4.0 cedefc532 lists it with the subscription
 // limits instead of leaving it to the retry policy.
