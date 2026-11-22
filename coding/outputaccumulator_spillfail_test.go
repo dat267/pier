@@ -116,3 +116,30 @@ func TestBashExecutorDropsAFailedSpill(t *testing.T) {
 		}
 	}
 }
+
+// TestBashExecutorReportsADiscardedRollingChunk covers `truncated` for output
+// the rolling buffer dropped. The reference sets `discardedOutput` inside the
+// rolling loop and returns `truncated: discardedOutput ||
+// truncationResult.truncated`; the port reported only the tail truncation, so a
+// run that dropped early chunks and kept a short suffix said it was complete.
+// A custom BashOperations backend (the interface exists for remote execution)
+// can emit chunks larger than the local 32 KiB read buffer.
+func TestBashExecutorReportsADiscardedRollingChunk(t *testing.T) {
+	big := make([]byte, 150*1024)
+	for index := range big {
+		big[index] = 'x'
+	}
+	zero := 0
+	result, err := ExecuteBashWithOperations(context.Background(), "cmd", "/tmp",
+		&scriptedOps{chunks: []string{string(big), "hi"}, exitCode: &zero},
+		&BashExecutorOptions{})
+	if err != nil {
+		t.Fatalf("ExecuteBashWithOperations: %v", err)
+	}
+	if result.Output != "hi" {
+		t.Fatalf("output = %q, want the survivor of the rolling buffer", result.Output)
+	}
+	if !result.Truncated {
+		t.Error("150 KiB was discarded, so the result must report truncation")
+	}
+}

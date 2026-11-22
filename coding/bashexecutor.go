@@ -82,6 +82,10 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 	// bash-executor.ts compares `text.length` with DEFAULT_MAX_BYTES * 2, so
 	// multibyte text must not consume two to four units per character.
 	outputUnits := 0
+	// discardedOutput records that the rolling buffer dropped a chunk, so the
+	// result reports truncation even when the survivors fit the tail limit
+	// (bash-executor.ts sets it in the same loop and ORs it into `truncated`).
+	discardedOutput := false
 	maxOutputBytes := DefaultMaxBytes * 2
 
 	// rawBytes counts the bytes received from the child before sanitizing, the
@@ -182,6 +186,7 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 			removed := outputChunks[0]
 			outputChunks = outputChunks[1:]
 			outputUnits -= JSLength(removed)
+			discardedOutput = true
 			if flushedChunks > 0 {
 				flushedChunks--
 			}
@@ -273,7 +278,7 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 			Output:         output,
 			ExitCode:       code,
 			Cancelled:      cancelled,
-			Truncated:      truncation.Truncated,
+			Truncated:      discardedOutput || truncation.Truncated,
 			FullOutputPath: tempFilePath,
 		}
 	}
