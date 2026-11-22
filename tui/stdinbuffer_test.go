@@ -573,6 +573,45 @@ func TestResolveEscapeTimeoutMs(t *testing.T) {
 	}
 }
 
+// TestResolveEscapeTimeoutMsUsesJSNumberParsing covers the value parse. The
+// reference is `Number(env.PI_TUI_ESC_TIMEOUT)` with `Number.isFinite` and > 0,
+// so exponent, hexadecimal, binary, octal, fractional and space-padded forms all
+// configure a timeout. strconv.Atoi accepted none of them and silently used the
+// fallback.
+func TestResolveEscapeTimeoutMsUsesJSNumberParsing(t *testing.T) {
+	for _, testCase := range []struct {
+		value string
+		want  int
+	}{
+		{"10", 10},
+		{" 5 ", 5},
+		{"  12  ", 12},
+		{"1e1", 10},
+		{"0x10", 16},
+		{"0b101", 5},
+		{"0o17", 15},
+		{"+10", 10},
+		{"10.5", 10}, // truncated to the int the signature returns
+		// Not finite numbers, so the fallback applies.
+		{"1_0", defaultEscapeTimeoutMSValue},
+		{"Infinity", defaultEscapeTimeoutMSValue},
+		{"abc", defaultEscapeTimeoutMSValue},
+		{"", defaultEscapeTimeoutMSValue},
+		{"0", defaultEscapeTimeoutMSValue},
+		{"-5", defaultEscapeTimeoutMSValue},
+	} {
+		got := ResolveEscapeTimeoutMs(func(key string) string {
+			if key == "PI_TUI_ESC_TIMEOUT" {
+				return testCase.value
+			}
+			return ""
+		})
+		if got != testCase.want {
+			t.Errorf("PI_TUI_ESC_TIMEOUT=%q -> %d, want %d", testCase.value, got, testCase.want)
+		}
+	}
+}
+
 func TestNormalizeNativeShiftEnterInput(t *testing.T) {
 	// Some Apple Terminal setups send ESC+CR for Shift+Enter (pi v1.5.0
 	// terminal.ts #11559).

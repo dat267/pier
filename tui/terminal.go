@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"errors"
+	"math"
 	"os"
 	"regexp"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/dat267/pier/ai"
 	"golang.org/x/term"
 )
 
@@ -119,8 +121,11 @@ func isNativeShiftEnterCandidate(data string) bool {
 // reassembly window.
 func ResolveEscapeTimeoutMs(env func(string) string) int {
 	if env != nil {
-		if configured, err := strconv.Atoi(env("PI_TUI_ESC_TIMEOUT")); err == nil && configured > 0 {
-			return configured
+		// The reference is `Number(env.PI_TUI_ESC_TIMEOUT)` with Number.isFinite
+		// and > 0, so "1e1", "0x10", "10.5" and a padded " 5 " all configure a
+		// timeout. strconv.Atoi rejected every one of those.
+		if configured, ok := ai.ParseJSNumberString(env("PI_TUI_ESC_TIMEOUT")); ok && configured > 0 && !math.IsInf(configured, 0) {
+			return int(configured)
 		}
 		if env("SSH_CONNECTION") != "" || env("SSH_TTY") != "" {
 			return defaultSSHEscapeTimeoutMS
