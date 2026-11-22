@@ -122,7 +122,11 @@ func TestCanonicalizeAWSQuery(t *testing.T) {
 		{"a=%7E", "a=~"},
 		{"a=~", "a=~"},
 		{"a=*", "a=%2A"},
-		{"a=a+b", "a=a%20b"},
+		// AWS SigV4 URI-encodes each raw name and value, so a literal '+' is a plus
+		// and encodes to %2B. The HTML-form reading ('+' as a space) would give
+		// %20 and change the signature; TestCanonicalizeAWSQueryTreatsPlusAsALiteral
+		// pins that distinction directly.
+		{"a=a+b", "a=a%2Bb"},
 		{"a=%2B", "a=%2B"},
 		{"k=%E6%97%A5", "k=%E6%97%A5"},
 		{"A=1&a=2", "A=1&a=2"},

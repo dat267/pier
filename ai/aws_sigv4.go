@@ -160,16 +160,25 @@ func canonicalizeAWSQuery(requestURL *url.URL) string {
 	if requestURL == nil || requestURL.RawQuery == "" {
 		return ""
 	}
-	values, err := url.ParseQuery(requestURL.RawQuery)
-	if err != nil {
-		return ""
-	}
+	// The raw query is split and decoded with the URI rule, not the HTML form rule:
+	// url.ParseQuery decodes '+' as a space, which re-encodes to %20 and would
+	// change the signature. AWS treats a literal '+' in the query as a plus.
 	type pair struct{ name, value string }
 	var pairs []pair
-	for name, entries := range values {
-		for _, value := range entries {
-			pairs = append(pairs, pair{name, value})
+	for _, segment := range strings.Split(requestURL.RawQuery, "&") {
+		if segment == "" {
+			continue
 		}
+		rawName, rawValue, _ := strings.Cut(segment, "=")
+		name, err := url.PathUnescape(rawName)
+		if err != nil {
+			return ""
+		}
+		value, err := url.PathUnescape(rawValue)
+		if err != nil {
+			return ""
+		}
+		pairs = append(pairs, pair{name: name, value: value})
 	}
 	sort.Slice(pairs, func(i, j int) bool {
 		if pairs[i].name != pairs[j].name {
