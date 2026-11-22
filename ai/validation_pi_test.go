@@ -270,3 +270,28 @@ func TestIDNLabelAppliesTheACEPrefixAndNormalization(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.5.2 (b4afdddf) packages/schema/src/formats/typebox/ipv6.ts IsIPv6 matches an
+// RFC 2373 text form, which includes a trailing embedded IPv4 address, so
+// "::ffff:1.2.3.4" is a valid IPv6 value. The port rejected every IPv4-mapped form
+// because net.ParseIP reports To4() != nil for it, the same signal it uses to
+// recognize a bare IPv4 address.
+func TestPiFormatValidIPv6AcceptsAnEmbeddedIPv4Tail(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		want  bool
+	}{
+		{"::ffff:1.2.3.4", true},
+		{"::1.2.3.4", true},
+		{"64:ff9b::1.2.3.4", true},
+		{"2001:db8::1", true},
+		{"::1", true},
+		{"1.2.3.4", false},
+		{":::", false},
+		{"", false},
+	} {
+		if got := piFormatValid("ipv6", tc.value); got != tc.want {
+			t.Errorf(`piFormatValid("ipv6", %q) = %v, want %v`, tc.value, got, tc.want)
+		}
+	}
+}

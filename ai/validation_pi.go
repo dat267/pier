@@ -1018,8 +1018,11 @@ func piFormatValid(name, value string) bool {
 		ip := net.ParseIP(value)
 		return ip != nil && ip.To4() != nil && !strings.Contains(value, ":")
 	case "ipv6":
-		ip := net.ParseIP(value)
-		return ip != nil && ip.To4() == nil && strings.Contains(value, ":")
+		// The reference matches an RFC 2373 text form (typebox/ipv6.ts), which
+		// includes a trailing embedded IPv4 address, so "::ffff:1.2.3.4" is IPv6.
+		// net.ParseIP reports To4() != nil for that form, which is why it cannot
+		// stand in for the reference's regex.
+		return piIPv6RE.MatchString(value)
 	case "uuid":
 		return piUUIDRE.MatchString(value)
 	case "date":
@@ -1325,3 +1328,6 @@ func valueAtPointer(root *schemaValue, pointer string) *schemaValue {
 func escapeJSONPointer(key string) string {
 	return strings.ReplaceAll(strings.ReplaceAll(key, "~", "~0"), "/", "~1")
 }
+
+// piIPv6RE is typebox/ipv6.ts IsIPv6's regex, verbatim.
+var piIPv6RE = regexp.MustCompile(`(?i)^(?:(?:(?:[0-9a-f]{1,4}:){6}|::(?:[0-9a-f]{1,4}:){5}|(?:[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){4}|(?:(?:[0-9a-f]{1,4}:)?[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){3}|(?:(?:[0-9a-f]{1,4}:){0,2}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){2}|(?:(?:[0-9a-f]{1,4}:){0,3}[0-9a-f]{1,4})?::[0-9a-f]{1,4}:|(?:(?:[0-9a-f]{1,4}:){0,4}[0-9a-f]{1,4})?::)(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d))|(?:(?:[0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})?::[0-9a-f]{1,4}|(?:(?:[0-9a-f]{1,4}:){0,6}[0-9a-f]{1,4})?::)$`)

@@ -129,3 +129,28 @@ no go.sum entry for it, so adding it is a dependency change. With it:
    corpus of IDN labels before trusting it.
 
 Until then the two cases above are the known difference.
+
+## A `just check` run can report a spurious `[build failed]` under load (open)
+
+Three times this session `just check` reported `FAIL github.com/dat267/pier/coding
+[build failed]` (twice also `coding/interactive`) while, immediately afterwards,
+`go test -count=1 ./coding`, `go build ./...`, `go vet ./coding` (including
+`GOOS=windows` and `GOOS=darwin`) and `go test -count=1 ./...` all passed. A later
+`just check` in the same tree, with no other Go process running, was clean.
+
+The failure is not reproducible on demand and leaves no compile error to capture:
+`just test` prints only the package line. The likely cause is build-cache or
+executable contention when another `go test` is still finishing, since the failure
+appeared each time right after a long `go test ./coding` or `./...` of mine.
+
+Measure first: the next occurrence needs the compiler output, which `just test` discards.
+
+```sh
+just fmt tidy vet
+go test -count=1 ./coding 2>&1 | tee /tmp/coding-build.log
+grep -A10 'build failed\|cannot\|undefined' /tmp/coding-build.log
+```
+
+If it shows `open ...: permission denied` on a `_test` binary or an `os.Exit` in a
+linked object, it is cache contention and harmless; if it names a symbol or a type,
+there is a real build-tag problem to fix.
