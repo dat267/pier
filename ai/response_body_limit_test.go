@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 // M35: successful JSON bodies are untrusted network data. Each endpoint below
@@ -104,5 +105,27 @@ func TestVertexMetadataTokenRejectsOversizedResponseBody(t *testing.T) {
 	env := ProviderEnv{"GCE_METADATA_HOST": strings.TrimPrefix(server.URL, "http://")}
 	if token, err := metadataAccessToken(context.Background(), env); err == nil || token != "" {
 		t.Fatalf("oversized metadata token accepted: token=%d bytes err=%v", len(token), err)
+	}
+}
+
+// TestVertexTokenExpiryKeepsShortLifetimesUsable pins the refresh margin. The
+// cache gate reuses a token only while `now` is before its expiry, so a
+// one-minute margin applied to a lifetime of a minute or less put the expiry in
+// the past and every request refreshed. Google ADC reports 3599 seconds, so the
+// short case needs a proxy or a malformed document, but the failure mode is a
+// refresh per request rather than a slow token.
+func TestVertexTokenExpiryKeepsShortLifetimesUsable(t *testing.T) {
+	for _, expiresIn := range []int64{1, 30, 59, 60, 61, 119, 120, 121} {
+		if expiry := vertexTokenExpiry(expiresIn); !time.Now().Before(expiry) {
+			t.Errorf("expires_in %d produced an already-expired token", expiresIn)
+		}
+	}
+	// A normal lifetime keeps the full one-minute margin.
+	if remaining := time.Until(vertexTokenExpiry(3599)); remaining > 59*time.Minute || remaining < 58*time.Minute {
+		t.Fatalf("3599-second lifetime left %v, want the full minute of margin", remaining)
+	}
+	// A very large lifetime stays inside the time.Duration range.
+	if expiry := vertexTokenExpiry(1 << 61); expiry.IsZero() {
+		t.Fatal("a huge lifetime produced a zero expiry")
 	}
 }

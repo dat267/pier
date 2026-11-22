@@ -438,11 +438,17 @@ func refreshAuthorizedUserToken(ctx ctxpkg.Context, cacheKey string, credentials
 }
 
 func vertexTokenExpiry(expiresIn int64) time.Time {
+	// Refresh a minute early to avoid using an expired token, but never more
+	// than half the lifetime: a token that lives less than two minutes (a
+	// proxy or a malformed document; Google ADC reports 3599) would otherwise
+	// expire before it was cached, so every request would refresh.
 	maxSeconds := int64(math.MaxInt64 / int64(time.Second))
 	if expiresIn > maxSeconds {
 		return time.Now().Add(time.Duration(math.MaxInt64) - time.Minute)
 	}
-	return time.Now().Add(time.Duration(expiresIn)*time.Second - time.Minute)
+	lifetime := time.Duration(expiresIn) * time.Second
+	margin := min(time.Minute, lifetime/2)
+	return time.Now().Add(lifetime - margin)
 }
 
 func metadataAccessToken(ctx ctxpkg.Context, env ProviderEnv) (string, error) {
