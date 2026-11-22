@@ -129,6 +129,25 @@ func blockingCallee(fn *ssa.Function) (Kind, bool) {
 	return 0, false
 }
 
+// interfaceType unwraps a value's type to the interface it holds, or nil when
+// the type is not an interface.
+func interfaceType(t types.Type) *types.Interface {
+	if ptr, ok := t.(*types.Pointer); ok {
+		t = ptr.Elem()
+	}
+	iface, _ := t.Underlying().(*types.Interface)
+	return iface
+}
+
+// implementsInterface reports whether fn's receiver implements iface.
+func implementsInterface(fn *ssa.Function, iface *types.Interface) bool {
+	sig := fn.Signature
+	if sig == nil || sig.Recv() == nil {
+		return false
+	}
+	return types.Implements(sig.Recv().Type(), iface)
+}
+
 var pierRootRE = regexp.MustCompile(`^\(\*?github\.com/dat267/pier/[^()]+\)\.(HandleEvent|HandleTerminalInput|RenderNow|Render|Invalidate|HandleSignal)$`)
 
 var pierNamedRoots = []string{
@@ -352,13 +371,20 @@ func Find(dir string) ([]Finding, error) {
 						}
 						continue
 					}
-					// Dynamic dispatch. Interface-method invocations resolve to
-					// pier implementations by method name; other dynamic calls
-					// (func values) are not followed.
+					// Dynamic dispatch. An interface-method invocation resolves to the
+					// pier methods that implement that interface. Resolving by name
+					// alone reaches every same-named method in the module (every
+					// `Start`, every `Stop`), which reports blocking work in types
+					// the invoked interface cannot hold; check the receiver against
+					// the interface so only real implementations are walked.
 					if com.IsInvoke() && com.Method != nil {
 						name := com.Method.Name()
+						iface := interfaceType(com.Value.Type())
 						for _, impl := range pierMethods[name] {
 							if !isPier(impl) {
+								continue
+							}
+							if iface != nil && !implementsInterface(impl, iface) {
 								continue
 							}
 							// coding/rpcclient is the client side of the RPC

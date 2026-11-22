@@ -28,8 +28,10 @@ var acceptedFindings = map[string]string{
 
 	// Surfaces the gate only saw once it descended into pointer-receiver
 	// methods (A493). Each reason names what was checked.
-	"wiring field ReloadNow":                                     "off the loop in production: every call site is inside the closure handed to RunDetached (interactivemode_commands.go:374-397); the inline branch runs only when RunDetached is nil, which is the test-app composition",
-	"wiring field WarnAnthropic":                                 "off the loop: interactivemode_run.go:523 calls it as `go w.WarnAnthropic(ctx)`, so its auth-storage reads and any `!command` credential run on that goroutine",
+	"wiring field ReloadNow":     "a user-issued reload runs inline on the loop, matching upstream: interactive-mode.ts awaits session.reload() after a nextTick paints the reload box, so the read is bounded work with the box on screen rather than a hidden stall. The three callees are that same reload: session.reload() (context files, trust lock), keybindings.reload(), and the implicit-project-trust save. Only the MCP rebuild is detached (RunDetached, interactivemode_commands.go:466)",
+	"wiring field WarnAnthropic": "off the loop: interactivemode_run.go:523 calls it as `go w.WarnAnthropic(ctx)`, so its auth-storage reads and any `!command` credential run on that goroutine",
+	"wiring field TerminalRows -> (*github.com/dat267/pier/tui.ProcessTerminal).Rows (interface Rows)": "Rows queries the terminal only while the stored height is still zero, which is before Start sets it, so this is a once-only ioctl rather than a per-frame one",
+	"wiring field ReloadGoal -> (*github.com/dat267/pier/coding.GoalController).Start":                 "a user-issued reload folds the goal journal once; measured at 5µs for 2000 entries, and the fold is a linear scan of custom entries, not a rescan per frame",
 	"wiring field RefreshModelCatalogs":                          "catalog refresh: schedules the existing background refresh and posts its result",
 	"(*github.com/dat267/pier/coding/interactive.RunWiring).Run": "the loop itself: its select is the idle wait (isLoopIdle) and its channel ops are the loop's own wiring",
 
@@ -46,7 +48,6 @@ var acceptedFindings = map[string]string{
 	"(*github.com/dat267/pier/tui.Renderer).HandleTerminalInput -> (*github.com/dat267/pier/tui.terminalQueries).ConsumeInput":                                            "terminal query parser: consumes buffered bytes already read from the terminal, no I/O",
 	"(*github.com/dat267/pier/tui.Renderer).HandleTerminalInput -> (*github.com/dat267/pier/coding/interactive.LoginDialogComponent).HandleInput (interface HandleInput)": "escape in the login dialog closes its cancel channel; a close cannot block",
 	"(*github.com/dat267/pier/coding/interactive.Lifecycle).HandleSignal":                                                                                                 "signal handling: Shutdown drains buffered terminal input with a bounded wait before stopping the screens",
-	"(*github.com/dat267/pier/tui.Editor).Render|syscall/io":                                                                                                              "Rows queries the terminal only while the stored height is still zero, which is before Start sets it, so this is a once-only ioctl rather than a per-frame one",
 	"wiring field OnThinkingToggle":        "a settings toggle clones the settings map before the queued write; the write itself runs on the settings persist queue, and the clone is one small struct",
 	"wiring field OnSessionFork|cpu-bound": "the fork selector lists user turns synchronously by ownership (upstream getUserMessagesForForking is synchronous too); D500 made it decode only the entries the loader marked as user turns, so the walk is proportional to the 529 user messages of the 248MB session (73ms) instead of a 630ms GetEntries plus a 3.7s decode of all 72k entries",
 }

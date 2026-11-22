@@ -74,6 +74,19 @@ func runSessionFileWork[T any](work func() T, done func(T)) { done(work()) }
 func registerLoopCallback() {
  runSessionFileWork(func() int { return 1 }, func(int) { os.Remove("loop callback") })
 }
+// Dynamic dispatch resolves an interface invoke by method name across the whole
+// module, which reaches every same-named method and not just an implementor.
+// Widget is the interface the loop holds; Bystander.Start is never assigned to
+// it, so its blocking read is not a loop path and must not be reported.
+type Widget interface { Start() }
+type Implementor struct{}
+func (Implementor) Start() { os.Stat("implementor") }
+// Bystander has Start too, but its Stop method means its Start has a different
+// signature, so it does not implement Widget and is not reachable here.
+type Bystander struct{}
+func (Bystander) Start(int) { os.ReadFile("bystander") }
+type WidgetHost struct{}
+func (WidgetHost) HandleEvent(w Widget) { w.Start() }
 `,
 	}
 	for name, content := range files {
@@ -105,6 +118,7 @@ func TestAnalysisFindsBlockingPaths(t *testing.T) {
 		"PointerSurface":            Syscall,
 		".MethodSurface).TouchFile": Syscall,
 		"runSessionFileWork":        Syscall,
+		".Implementor).Start":       Syscall,
 	}
 	if len(findings) != len(want) {
 		t.Fatalf("findings = %+v, want %d distinct blocking paths", findings, len(want))
