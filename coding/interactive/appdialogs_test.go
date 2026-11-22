@@ -58,8 +58,8 @@ func TestAskConfirmWithEmptyMessageKeepsTheJoinedTitle(t *testing.T) {
 	defer cleanup()
 	var component *ExtensionSelectorComponent
 	app.slot.Show(func(done func()) CreatedSelector {
-		component = NewExtensionSelectorComponent("Allow?\n", []string{"Yes", "No"}, nil, nil,
-			ExtensionSelectorOptions{})
+		component = NewExtensionSelectorComponent("Allow?\n", []string{"Yes", "No"},
+			func(string) {}, func() {}, ExtensionSelectorOptions{})
 		return CreatedSelector{Component: component}
 	})
 	if component == nil {
