@@ -232,7 +232,7 @@ func (w *CommandWiring) HandleExportCommand(ctx context.Context, text string) {
 		return
 	}
 	w.showStatus("Exporting session…")
-	w.ExportQueue.GoLatestContext("session-export", func(ctx context.Context) {
+	if !w.ExportQueue.GoLatestContext("session-export", func(ctx context.Context) {
 		filePath, err := run()
 		if ctx.Err() != nil {
 			return
@@ -243,7 +243,11 @@ func (w *CommandWiring) HandleExportCommand(ctx context.Context, text string) {
 			}
 			report(filePath, err)
 		})
-	})
+	}) {
+		// The queue is stopped (shutdown), so the export will never run and the
+		// notice would stay on screen.
+		w.showStatus("")
+	}
 }
 
 // errExportHTMLUnavailable reports a missing HTML exporter.

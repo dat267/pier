@@ -11,6 +11,7 @@ import (
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/internal/offloop"
 	"github.com/dat267/pier/tui"
 )
 
@@ -615,5 +616,28 @@ func TestSessionPanelUsesTheDispatchedSession(t *testing.T) {
 	lines := coding.StripAnsi(strings.Join(wiring.Chat.Render(120), "\n"))
 	if !strings.Contains(lines, "Name: dispatched session") {
 		t.Fatalf("the panel does not describe the dispatched session:\n%s", lines)
+	}
+}
+
+// TestExportClearsItsNoticeWhenTheQueueIsStopped covers the queued export's
+// rejected submission: `GoLatestContext` reports false when the queue is
+// stopped, and the "Exporting session…" notice would otherwise stay on the
+// status line with no export ever written.
+func TestExportClearsItsNoticeWhenTheQueueIsStopped(t *testing.T) {
+	wiring, _, _ := newCommandTestWiring(t)
+	statuses := []string{}
+	wiring.ShowStatus = func(message string) { statuses = append(statuses, message) }
+	wiring.Exporters = func() SessionExporters {
+		return SessionExporters{HTML: func(string) (string, error) { return "out.html", nil }}
+	}
+	queue := offloop.New()
+	queue.Stop()
+	wiring.ExportQueue = queue
+	wiring.PostToUI = func(fn func()) { fn() }
+
+	wiring.HandleExportCommand(context.Background(), "/export out.html")
+
+	if len(statuses) != 2 || statuses[0] != "Exporting session…" || statuses[1] != "" {
+		t.Fatalf("statuses = %q, want the notice then a clear", statuses)
 	}
 }

@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"context"
+	"errors"
 
 	"github.com/dat267/pier/internal/offloop"
 )
@@ -24,13 +25,16 @@ const sessionFileWorkKey = "session-file"
 //
 // A nil queue or nil post keeps the work synchronous, which is the path tests
 // and embedders without a loop use.
+// errSessionFileWorkStopped reports work a stopped queue rejected.
+var errSessionFileWorkStopped = errors.New("session work was rejected: the work queue is stopped")
+
 func runSessionFileWork[T any](queue *offloop.Queue, post func(func()), key string, work func(context.Context) (T, error), done func(T, error)) {
 	if queue == nil || post == nil {
 		value, err := work(context.Background())
 		done(value, err)
 		return
 	}
-	queue.GoLatestContext(key, func(ctx context.Context) {
+	if !queue.GoLatestContext(key, func(ctx context.Context) {
 		value, err := work(ctx)
 		if ctx.Err() != nil {
 			return
@@ -43,7 +47,12 @@ func runSessionFileWork[T any](queue *offloop.Queue, post func(func()), key stri
 			}
 			done(value, err)
 		})
-	})
+	}) {
+		// The queue is stopped (shutdown), so the work will never run. Report it
+		// rather than leaving the caller waiting for a callback that cannot
+		// arrive; every caller treats an error as a failed switch or fork.
+		done(*new(T), errSessionFileWorkStopped)
+	}
 }
 
 // postToOwnerLoop delivers fn to the owner loop. It runs inline when the app has

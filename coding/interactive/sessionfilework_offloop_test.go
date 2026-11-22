@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"sync"
@@ -284,5 +285,27 @@ func TestRenameOtherSessionUsesTheDispatchedWriteQueue(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("the rename never reported")
+	}
+}
+
+// TestSessionFileWorkReportsAStoppedQueue covers the rejected submission.
+// `GoLatestContext` reports false when the queue is stopped, and the port
+// ignored that, so a switch, fork or import issued during shutdown never got its
+// done callback: the caller waited for a result that could not arrive.
+func TestSessionFileWorkReportsAStoppedQueue(t *testing.T) {
+	queue := offloop.New()
+	queue.Stop()
+
+	called := false
+	runSessionFileWork(queue, func(fn func()) { fn() }, "test-key",
+		func(context.Context) (int, error) { return 42, nil },
+		func(value int, err error) {
+			called = true
+			if !errors.Is(err, errSessionFileWorkStopped) {
+				t.Fatalf("err = %v, want the stopped-queue error", err)
+			}
+		})
+	if !called {
+		t.Fatal("the done callback never ran, so the caller waits forever")
 	}
 }
