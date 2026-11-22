@@ -47,3 +47,35 @@ func TestRubyHeredocClosedStillMatches(t *testing.T) {
 		t.Fatalf("closed heredoc without trailing newline = (%d, %v)", end, ok)
 	}
 }
+
+// TestRubyVariableFirstAlternativeTakesNoLookahead pins the precedence of the
+// reference's variable rule: `(\$\W)|((\$|@@?)(\w+))(?=[^@$?])(?![A-Za-z])(?![@$?'])`.
+// Concatenation binds tighter than `|`, so the three lookaheads qualify only the
+// second alternative. A `$` followed by a non-word byte matches through the first
+// alternative with no lookahead at all, so `$ `, `$$`, `$/` and `$?` colour even
+// at the end of the input. The port applied the guard to both alternatives and
+// declined all of them.
+func TestRubyVariableFirstAlternativeTakesNoLookahead(t *testing.T) {
+	for _, test := range []struct{ code, want string }{
+		{"$ ", `<span class="hljs-variable">$ </span>`},
+		{"$$", `<span class="hljs-variable">$$</span>`},
+		{"$@", `<span class="hljs-variable">$@</span>`},
+		{"$?", `<span class="hljs-variable">$?</span>`},
+		{"/$/", `/<span class="hljs-variable">$/</span>`},
+		{"a $ b", `a <span class="hljs-variable">$ </span>b`},
+		// The second alternative still takes the lookaheads: a name that ends the
+		// input stays uncolored (D413), and one followed by a word byte or `$`
+		// does not match.
+		{"$x", "$x"},
+		{"$x$", "$x$"},
+		{"$x ", `<span class="hljs-variable">$x</span> `},
+	} {
+		result, err := Highlight(test.code, "ruby")
+		if err != nil {
+			t.Fatalf("%q: %v", test.code, err)
+		}
+		if got := RenderHTML(result.Nodes); got != test.want {
+			t.Errorf("%q:\n got %s\nwant %s", test.code, got, test.want)
+		}
+	}
+}

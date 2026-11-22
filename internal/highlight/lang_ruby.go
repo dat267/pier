@@ -192,7 +192,18 @@ func Ruby() *Language {
 		ClassName: "variable",
 		Begin:     `(\$\W)|((\$|@@?)(\w+))`,
 	}
+	// The reference's trailing lookaheads bind only to the second alternative,
+	// because `|` has lower precedence than concatenation:
+	// `(\$\W)|((\$|@@?)(\w+))(?=[^@$?])(?![A-Za-z])(?![@$?'])`. A `$` followed
+	// by a non-word byte (`$ `, `$$`, `$/`) therefore matches in the reference
+	// with no lookahead at all, while the first alternative's own match is what
+	// the guard must leave alone.
 	variable.beforeBegin = func(m *match, resp *Response) {
+		// Alternative 1 matched: `$` plus one non-word byte. The reference applies
+		// no lookahead here, so accept unconditionally.
+		if len(m.lexeme) == 2 && m.lexeme[0] == '$' && !isWordByte(m.lexeme[1]) {
+			return
+		}
 		next := m.index + len(m.lexeme)
 		if next >= len(m.input) {
 			resp.IgnoreMatch()

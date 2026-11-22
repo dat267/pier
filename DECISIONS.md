@@ -6041,6 +6041,15 @@ match instead, leaving the text uncolored; a variable followed by anything else
 matches in both. Reproducing the reference exactly would color a truncated name,
 so the port keeps declining.
 
+The three lookaheads qualify only the rule's *second* alternative, because
+concatenation binds tighter than `|`: `(\$\W)|((\$|@@?)(\w+))(?=...)...`. A `$`
+followed by a non-word byte therefore matches through `(\$\W)` with no lookahead
+at all, and colours even at end of input. An earlier port applied the before-begin
+guard to both alternatives and declined `$ `, `$$`, `$@`, `$?`, `$/` and `a $ b`,
+which the reference colours. The guard now returns early when the first
+alternative's own two-byte match (`$` plus one non-word byte) is what matched, so
+only the second alternative keeps the D413 behaviour.
+
 Neither difference is deliberate in the sense of a design choice the port made
 first: both were found by a differential run of 4,584 documents over the 191
 registered languages, where they are the only mismatches. They are recorded here
