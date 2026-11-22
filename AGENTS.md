@@ -93,6 +93,14 @@ generators import the reference's packages, so `just goldens` needs `npm ci` and
 `./pi`, which the generators import), so a fixture that no longer regenerates
 from the pin fails the push and not just a local run.
 
+Windows-only files (`//go:build windows`) are cross-built and cross-vetted by
+`just cross`, but CI never runs their tests: no runner and no wine. A change to
+`coding/process_windows.go`, `coding/clipboard_window_windows.go`,
+`mcp/processgroup_windows.go` or another `windows` file is therefore verified by
+the compiler and by any non-`windows` twin of the same predicate, not by
+execution. Keep the shared half of such a predicate in a build-tag-free file when
+both platforms can be exercised on linux (as `ai/netaddr_other.go` is).
+
 Do not run the long race suites during local development: skip `just test-race`
 and `just test-stress` and let CI enforce both. `just check` is the local gate.
 Add `-race` to a focused `-run` when the change touches concurrency,

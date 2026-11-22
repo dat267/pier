@@ -3,6 +3,8 @@ package ai
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"net"
 	"net/url"
 	"strings"
 	"testing"
@@ -201,5 +203,32 @@ func TestOpenAIChatGPTStateAndNonceAreBase64URLOf32Bytes(t *testing.T) {
 	}
 	if parsed.Query().Get("state") != flow.State {
 		t.Fatal("the flow's state does not match the authorize URL")
+	}
+}
+
+// pi v1.5.2 (b4afdddf) auth/oauth/openai-chatgpt.ts startCallbackServer: a bind
+// failure for an address already in use is reported as the port being taken by
+// an unfinished login, not as a raw listen error, because the port is fixed. The
+// predicate must recognize the real error rather than any bind failure.
+func TestIsAddressInUseErrorRecognizesOnlyAnAddressInUse(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Skipf("cannot bind a loopback listener: %v", err)
+	}
+	address := listener.Addr().String()
+	defer listener.Close()
+
+	_, busyErr := net.Listen("tcp", address)
+	if busyErr == nil {
+		t.Fatalf("second bind of %s unexpectedly succeeded", address)
+	}
+	if !isAddressInUseError(busyErr) {
+		t.Fatalf("isAddressInUseError(%v) = false, want true for %s", busyErr, address)
+	}
+	if isAddressInUseError(nil) {
+		t.Fatal("isAddressInUseError(nil) = true")
+	}
+	if isAddressInUseError(errors.New("some other bind failure")) {
+		t.Fatal("a plain error is not an address-in-use failure")
 	}
 }
