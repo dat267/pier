@@ -74,24 +74,38 @@ func ParseAuthorizationInput(input string) OAuthAuthorizationInput {
 	if value == "" {
 		return OAuthAuthorizationInput{}
 	}
+	// The reference parses any absolute URL, not just http(s): the query is read
+	// off the parsed URL whatever its scheme, so "anything?code=abc" yields the
+	// code. An http(s) URL without a host is normalized first, as the rest of the
+	// port does, so "localhost:1234/cb?code=abc" still parses.
 	if parsed, err := url.Parse(value); err == nil && parsed.Scheme != "" {
 		if parsed.Host == "" {
 			if normalized, _, ok := normalizeOAuthHTTPURL(value); ok {
 				parsed = normalized
 			}
 		}
-		if parsed.Host != "" {
-			return OAuthAuthorizationInput{
-				Code:  parsed.Query().Get("code"),
-				State: parsed.Query().Get("state"),
-			}
+		return OAuthAuthorizationInput{
+			Code:  parsed.Query().Get("code"),
+			State: parsed.Query().Get("state"),
 		}
 	}
-	if before, after, ok := strings.Cut(value, "#"); ok {
-		return OAuthAuthorizationInput{Code: before, State: after}
+	// JS `value.split("#", 2)` stops after the second part, so "a#b#c" is state
+	// "b" and the rest is dropped; strings.Cut would return "b#c".
+	if index := strings.Index(value, "#"); index >= 0 {
+		state := value[index+1:]
+		if next := strings.Index(state, "#"); next >= 0 {
+			state = state[:next]
+		}
+		return OAuthAuthorizationInput{Code: value[:index], State: state}
 	}
+	// URLSearchParams tolerates a leading "?", which url.ParseQuery does not strip
+	// (it keeps the "?" in the key), so a bare "?code=abc" needs it removed.
 	if strings.Contains(value, "code=") {
-		if values, err := url.ParseQuery(value); err == nil {
+		query := value
+		if strings.HasPrefix(query, "?") {
+			query = query[1:]
+		}
+		if values, err := url.ParseQuery(query); err == nil {
 			return OAuthAuthorizationInput{Code: values.Get("code"), State: values.Get("state")}
 		}
 	}

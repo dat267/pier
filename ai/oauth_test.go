@@ -149,6 +149,17 @@ func TestParseAuthorizationInput(t *testing.T) {
 		{"code=abc&state=verifier", "abc", "verifier"},
 		{"raw-code", "raw-code", ""},
 		{"  http://localhost:53692/callback?code=abc  ", "abc", ""},
+		// The reference parses any absolute URL, not only http(s), and reads the
+		// query off it whatever the scheme.
+		{"localhost:53692/callback?code=abc", "abc", ""},
+		{"ftp://example.com/cb?code=abc", "abc", ""},
+		{"javascript:alert(1)", "", ""},
+		{"mailto:x@y.z", "", ""},
+		// JS `split("#", 2)` stops after the second part, so the rest is dropped.
+		{"a#b#c", "a", "b"},
+		// URLSearchParams tolerates a leading "?", which url.ParseQuery does not.
+		{"?code=abc", "abc", ""},
+		{"?code=abc&state=v", "abc", "v"},
 	}
 	for _, testCase := range cases {
 		parsed := ParseAuthorizationInput(testCase.input)
