@@ -31,6 +31,20 @@ type PrintModeOptions struct {
 	Messages []string
 }
 
+// printSignalNotify and printSignalStop are the signal primitives, replaceable in
+// tests so the handler can be driven without a real process signal.
+var (
+	printSignalNotify = func(ch chan os.Signal) func() {
+		if runtime.GOOS == "windows" {
+			signal.Notify(ch, syscall.SIGTERM)
+		} else {
+			signal.Notify(ch, syscall.SIGTERM, syscall.SIGHUP)
+		}
+		return func() { signal.Stop(ch) }
+	}
+	printSignalStop = func(ch chan os.Signal) { signal.Stop(ch) }
+)
+
 // printStdout serializes writes from the agent and caller. Each JSONL record
 // flushes immediately; a slow consumer backpressures the producer.
 //
@@ -96,12 +110,12 @@ func RunPrintMode(session *AgentSession, sessions *SessionManager, options Print
 	ctx, cancel := context.WithCancel(context.Background())
 	out := &printStdout{w: bufio.NewWriter(os.Stdout)}
 	signals := make(chan os.Signal, 1)
-	if runtime.GOOS == "windows" {
-		signal.Notify(signals, syscall.SIGTERM)
-	} else {
-		signal.Notify(signals, syscall.SIGTERM, syscall.SIGHUP)
-	}
+	unsubscribeSignals := printSignalNotify(signals)
 	signalDone := make(chan struct{})
+	// drainDone closes when the deferred shutdown finishes; cancelDrain closes
+	// when a repeated signal should cut it short.
+	cancelDrain := make(chan struct{})
+	drainDone := make(chan struct{})
 	signalCode := 0 // Read only after signalDone, including ordinary returns.
 	go func() {
 		defer close(signalDone)
@@ -112,29 +126,54 @@ func RunPrintMode(session *AgentSession, sessions *SessionManager, options Print
 				signalCode = 129
 			}
 			cancel()
+			// print-mode.ts exits at once on `signalCount > 1`: a repeated signal
+			// says the shutdown itself is stuck, so cut the drain short.
+			// ctx.Done() is already closed by the cancel() above, so it cannot be
+			// an arm here: the handler waits for a second signal or for the drain.
+			select {
+			case <-signals:
+				close(cancelDrain)
+			case <-drainDone:
+			}
 		case <-ctx.Done():
 		}
 	}()
 	var unsubscribe func()
 	defer func() {
-		signal.Stop(signals)
+		printSignalStop(signals)
 		cancel()
-		<-signalDone
+		if unsubscribeSignals != nil {
+			unsubscribeSignals()
+		}
 		// Do not exit from a signal goroutine: cancellation must reap tool children
 		// and finish event producers before accepted saves and output are drained.
-		session.Abort(context.Background())
-		if unsubscribe != nil {
-			unsubscribe()
+		// A repeated signal closes cancelDrain and cuts that work short.
+		drain := func() {
+			session.Abort(context.Background())
+			if unsubscribe != nil {
+				unsubscribe()
+			}
+			session.Dispose()
+			// D210: queue completion alone does not prove that the transcript was saved.
+			writeErr := sessions.FlushWrites()
+			for _, failure := range sessions.DrainWriteErrors() {
+				fmt.Fprintln(os.Stderr, failure.String())
+			}
+			if writeErr != nil {
+				exitCode = 1
+			}
 		}
-		session.Dispose()
-		// D210: queue completion alone does not prove that the transcript was saved.
-		writeErr := sessions.FlushWrites()
-		for _, failure := range sessions.DrainWriteErrors() {
-			fmt.Fprintln(os.Stderr, failure.String())
+		finished := make(chan struct{})
+		go func() {
+			defer close(finished)
+			drain()
+		}()
+		select {
+		case <-finished:
+		case <-cancelDrain:
 		}
-		if writeErr != nil {
-			exitCode = 1
-		}
+		close(drainDone)
+		<-signalDone
 		if out.flush() != nil {
 			exitCode = 1
 		}

@@ -159,3 +159,77 @@ func TestPrintModeSignalDrainsAcceptedSaves(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.5.2 (b4afdddf) modes/print-mode.ts counts signals and calls
+// process.exit(exitCode) on `signalCount > 1`, so a second SIGTERM does not
+// wait for disposal. The port's handler read exactly one signal, so a repeated
+// one sat in the buffered channel and a stuck drain kept the process alive.
+func TestPrintModeRepeatedSignalSkipsTheDrain(t *testing.T) {
+	// A stuck write stands in for a drain that never finishes.
+	release := make(chan struct{})
+	queue := offloop.New()
+	queue.Go(func() { <-release })
+	defer func() { close(release); queue.Stop() }()
+
+	dir := t.TempDir()
+	sessions := NewSessionManager(dir, &SessionManagerOptions{SessionDir: dir})
+	sessions.SetWriteQueue(queue)
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: sessions, Model: &ai.Model{ID: "mock", API: ai.APIOpenAIResponses, Provider: "openai", ContextWindow: 200000},
+		StreamFn: func(model *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			stream := ai.NewAssistantMessageEventStream()
+			go func() {
+				<-options.Ctx.Done()
+				message := createAssistantMessageT("")
+				message.StopReason = ai.StopAborted
+				stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopAborted, Error: message})
+			}()
+			return stream
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Drive the handler through the seam rather than a real signal.
+	watchedCh := make(chan chan os.Signal, 1)
+	previousNotify := printSignalNotify
+	previousStop := printSignalStop
+	printSignalNotify = func(ch chan os.Signal) func() {
+		watchedCh <- ch
+		return func() {}
+	}
+	printSignalStop = func(chan os.Signal) {}
+	t.Cleanup(func() { printSignalNotify, printSignalStop = previousNotify, previousStop })
+
+	// Send the two signals once the handler is subscribed.
+	go func() {
+		watched := <-watchedCh
+		select {
+		case watched <- syscall.SIGTERM:
+		case <-time.After(time.Second):
+			t.Error("first signal not received")
+			return
+		}
+		time.Sleep(200 * time.Millisecond)
+		select {
+		case watched <- syscall.SIGTERM:
+		case <-time.After(time.Second):
+			t.Error("second signal not received")
+		}
+	}()
+	codes := make(chan int, 1)
+	go func() {
+		codes <- RunPrintMode(session, sessions, PrintModeOptions{Mode: CLIModeText, InitialMessage: "prompt"})
+	}()
+	select {
+	case code := <-codes:
+		if code != 143 {
+			t.Fatalf("exit = %d, want 143", code)
+		}
+	case <-time.After(5 * time.Second):
+		buf := make([]byte, 1<<20)
+		buf = buf[:runtime.Stack(buf, true)]
+		t.Fatalf("a repeated signal did not end the run:\n%s", buf)
+	}
+}
