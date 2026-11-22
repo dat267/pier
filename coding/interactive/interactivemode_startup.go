@@ -17,12 +17,14 @@ import (
 // Port of the startup/orchestration helpers of
 // src/modes/interactive/interactive-mode.ts (getUserInput,
 // rebuildChatFromMessages, renderCurrentSessionState,
-// checkTmuxKeyboardSetup, getChangelogForDisplay, reportInstallTelemetry,
+// checkTmuxKeyboardSetup, getChangelogForDisplay,
 // getMarkdownThemeWithSettings, updateAvailableProviderCount,
 // maybeWarnAboutAnthropicSubscriptionAuth).
 //
 // Divergences: the terminal/process collaborators are injected; the
-// extension/resource seams stay out of scope (D41).
+// extension/resource seams stay out of scope (D41). GetChangelogForDisplay skips
+// upstream's reportInstallTelemetry call at both of its sites: the telemetry
+// package is gone from the tree (D236).
 
 // StartupSession is the session surface the startup helpers need.
 type StartupSession interface {
