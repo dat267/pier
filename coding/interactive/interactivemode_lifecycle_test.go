@@ -2,9 +2,11 @@ package interactive
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -312,6 +314,39 @@ func TestLifecycleCrashPaths(t *testing.T) {
 	dead.UncaughtCrash(errorsNew("write |1: EIO"))
 	if len(*exits4) != 1 || (*exits4)[0] != 129 || recorded != 0 {
 		t.Fatalf("dead-terminal: exits = %v, recorded = %d", *exits4, recorded)
+	}
+}
+
+// TestLifecycleDeadTerminalDetection covers the classification itself. The
+// reference reads `error.code` and tests it against
+// DEAD_TERMINAL_ERROR_CODES, so a message that merely mentions one of them is
+// not a dead terminal. Grepping the message made "myEPIPEx" and prose that says
+// "EIO" take the emergency exit, losing the crash record.
+func TestLifecycleDeadTerminalDetection(t *testing.T) {
+	for _, testCase := range []struct {
+		name string
+		err  error
+		dead bool
+	}{
+		{"EIO errno", syscall.EIO, true},
+		{"EPIPE errno", syscall.EPIPE, true},
+		{"ENOTCONN errno", syscall.ENOTCONN, true},
+		{"ENOTTY errno", syscall.ENOTTY, true},
+		{"ENOENT errno", syscall.ENOENT, false},
+		{"plain code", errorsNew("write EPIPE"), true},
+		{"bracketed code", errorsNew("write |1: EIO"), true},
+		{"no code", errorsNew("write failed"), false},
+		{"embedded substring", errorsNew("myEPIPEx"), false},
+		{"nil", nil, false},
+	} {
+		if got := isDeadTerminalError(testCase.err); got != testCase.dead {
+			t.Errorf("%s: isDeadTerminalError = %v, want %v", testCase.name, got, testCase.dead)
+		}
+	}
+	// A wrapped syscall error keeps its code.
+	wrapped := fmt.Errorf("outer: %w", &os.PathError{Op: "write", Path: "stdout", Err: syscall.EPIPE})
+	if !isDeadTerminalError(wrapped) {
+		t.Error("a wrapped EPIPE must still be a dead terminal")
 	}
 }
 

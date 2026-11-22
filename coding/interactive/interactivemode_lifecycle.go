@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -454,7 +455,7 @@ func (l *Lifecycle) EmergencyTerminalExit() {
 func (l *Lifecycle) UncaughtCrash(err error) {
 	// A dead terminal is not a crash: do not try to restore it or record it
 	// (upstream uncaughtCrash).
-	if isDeadTerminalErrorText(err.Error()) {
+	if isDeadTerminalError(err) {
 		l.EmergencyTerminalExit()
 		return
 	}
@@ -540,7 +541,7 @@ func (l *Lifecycle) RegisterSignalHandlers() {
 
 	if l.options.OnTerminalError != nil {
 		cleanup := l.options.OnTerminalError(func(err error) {
-			if isDeadTerminalErrorText(err.Error()) {
+			if isDeadTerminalError(err) {
 				l.EmergencyTerminalExit()
 			}
 			panic(err)
@@ -600,11 +601,58 @@ func (l *Lifecycle) SignalHandlerCount() int {
 	return len(*cleanups)
 }
 
-func isDeadTerminalErrorText(message string) bool {
-	for _, code := range []string{"EIO", "EPIPE", "ENOTCONN", "ENOTTY"} {
-		if strings.Contains(message, code) {
+// deadTerminalErrnos is DEAD_TERMINAL_ERROR_CODES as syscall values.
+var deadTerminalErrnos = []syscall.Errno{syscall.EIO, syscall.EPIPE, syscall.ENOTCONN, syscall.ENOTTY}
+
+// deadTerminalCodes are DEAD_TERMINAL_ERROR_CODES as Node spells them.
+var deadTerminalCodes = []string{"EIO", "EPIPE", "ENOTCONN", "ENOTTY"}
+
+// isDeadTerminalError reports whether err is a dead terminal. The reference reads
+// `error.code` and tests it against DEAD_TERMINAL_ERROR_CODES, so a message that
+// merely mentions one of them is not a dead terminal. Prefer the structured
+// errno; fall back to a whole-word match on the message, because the write error
+// reaches the uncaught handler wrapped and its unwrapped cause is not always a
+// syscall.Errno here.
+func isDeadTerminalError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errno, ok := errors.AsType[syscall.Errno](err); ok {
+		for _, dead := range deadTerminalErrnos {
+			if errno == dead {
+				return true
+			}
+		}
+		return false
+	}
+	message := err.Error()
+	for _, code := range deadTerminalCodes {
+		if containsWholeWord(message, code) {
 			return true
 		}
 	}
 	return false
+}
+
+// containsWholeWord reports whether message contains code not embedded in a
+// longer identifier, so "myEPIPEx" and prose stay non-codes while "write EPIPE"
+// and "[EPIPE]" match.
+func containsWholeWord(message, code string) bool {
+	for start := 0; ; {
+		index := strings.Index(message[start:], code)
+		if index < 0 {
+			return false
+		}
+		at := start + index
+		before := at == 0 || !isIdentifierByte(message[at-1])
+		after := at+len(code) == len(message) || !isIdentifierByte(message[at+len(code)])
+		if before && after {
+			return true
+		}
+		start = at + 1
+	}
+}
+
+func isIdentifierByte(b byte) bool {
+	return b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b >= '0' && b <= '9' || b == '_'
 }
