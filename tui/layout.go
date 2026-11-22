@@ -1,6 +1,9 @@
 package tui
 
-import "strings"
+import (
+	"reflect"
+	"strings"
+)
 
 // Port of src/layout.ts: the box-tree layout engine, the screen painter, and
 // the hit-testing helpers.
@@ -64,8 +67,25 @@ func intersectRect(a LayoutRect, b LayoutRect) LayoutRect {
 	return LayoutRect{X: x, Y: y, Width: max(0, right-x), Height: max(0, bottom-y)}
 }
 
+// componentComparable reports whether a component can key a Go map. The
+// reference keys its caches and visited sets by the component object, where
+// JavaScript compares by identity; a Go map panics on a dynamic type that is not
+// comparable, and a slice-backed component is one.
+func componentComparable(component Component) bool {
+	typ := reflect.TypeOf(component)
+	return typ == nil || typ.Comparable()
+}
+
 func renderCached(context *layoutContext, component Component, width int) []string {
 	safeWidth := max(1, width)
+	// The reference caches by a Map keyed on the component object, where
+	// JavaScript compares by identity. A Go map keyed by the interface panics
+	// when the dynamic type is not comparable (a slice-backed component such as
+	// the transcript's preparedFrameLines); render those uncached instead of
+	// crashing the frame.
+	if !componentComparable(component) {
+		return component.Render(safeWidth)
+	}
 	widths, ok := context.renderCache[component]
 	if !ok {
 		widths = map[int][]string{}

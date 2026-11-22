@@ -1171,8 +1171,23 @@ func (s *AltScreen) dispatchMouseToLayoutLocked(event TuiMouseEvent) *TuiMouseDi
 		return nil
 	}
 	visited := map[Component]bool{}
+	// A non-comparable component cannot key the map (see componentComparable);
+	// dedupe those through a list so the same box cannot be dispatched twice.
+	var visitedUncomparable []Component
+	seen := func(component Component) bool {
+		if componentComparable(component) {
+			return visited[component]
+		}
+		for _, seenComponent := range visitedUncomparable {
+			if seenComponent == component {
+				return true
+			}
+		}
+		visitedUncomparable = append(visitedUncomparable, component)
+		return false
+	}
 	for _, box := range GetLayoutBoxesAt(*s.currentLayout, event.ScreenX, event.ScreenY) {
-		if visited[box.Component] {
+		if seen(box.Component) {
 			continue
 		}
 		if _, isProvider := box.Component.(LayoutNodeProvider); isProvider {
@@ -1180,7 +1195,9 @@ func (s *AltScreen) dispatchMouseToLayoutLocked(event TuiMouseEvent) *TuiMouseDi
 				continue
 			}
 		}
-		visited[box.Component] = true
+		if componentComparable(box.Component) {
+			visited[box.Component] = true
+		}
 		childEvent := event
 		childEvent.X = event.ScreenX - box.Rect.X
 		childEvent.Y = event.ScreenY - box.Rect.Y

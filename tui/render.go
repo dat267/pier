@@ -352,7 +352,13 @@ func evaluateAnimators(animators []Component, now time.Time, ticks map[Component
 		if delay <= 0 {
 			delay = time.Millisecond
 		}
-		ticked, hasTicked := ticks[component]
+		// A non-comparable component cannot key the tick map (see
+		// componentComparable); it animates without the delay bookkeeping.
+		comparable := componentComparable(component)
+		ticked, hasTicked := time.Time{}, false
+		if comparable {
+			ticked, hasTicked = ticks[component]
+		}
 		if !hasTicked || now.Sub(ticked) >= delay {
 			// A ticker can narrow the tick to its own revision; a plain
 			// animator is invalidated (its descendants re-render).
@@ -361,7 +367,7 @@ func evaluateAnimators(animators []Component, now time.Time, ticks map[Component
 			} else {
 				component.Invalidate()
 			}
-			if ticks != nil {
+			if ticks != nil && comparable {
 				ticks[component] = now
 			}
 		}
@@ -374,7 +380,9 @@ func evaluateAnimators(animators []Component, now time.Time, ticks map[Component
 	if ticks != nil {
 		present := make(map[Component]bool, len(animators))
 		for _, animator := range animators {
-			present[animator] = true
+			if componentComparable(animator) {
+				present[animator] = true
+			}
 		}
 		for component := range ticks {
 			if !present[component] {
