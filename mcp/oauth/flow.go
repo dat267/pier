@@ -84,6 +84,12 @@ type FlowOptions struct {
 	// refreshing stored tokens, for example when the server asks for scopes
 	// the current grant lacks (a refresh keeps the old scope).
 	SkipRefresh bool
+	// RefreshOnly limits the flow to refreshing the stored tokens: with no
+	// stored client information it returns ResultRedirect instead of
+	// registering a client or preparing an authorization request, so a pending
+	// sign-in keeps its client, state and code verifier (upstream refreshOnly,
+	// flow.ts:396 and auth-provider.ts:128).
+	RefreshOnly bool
 }
 
 // FlowResult is the flow outcome (upstream OAuthFlowResult).
@@ -675,6 +681,9 @@ func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOpti
 		client = &OAuthClientInformationFull{ClientID: clientDocument.URL}
 	}
 	if client == nil {
+		if options.RefreshOnly {
+			return ResultRedirect, nil
+		}
 		if options.AuthorizationCode != "" {
 			return "", fmt.Errorf("OAuth client information is missing during code exchange")
 		}
@@ -763,6 +772,11 @@ func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOpti
 		if oauthErr, ok := refreshErr.(*OAuthError); ok && oauthErr.Code != "server_error" {
 			return "", refreshErr
 		}
+	}
+	if options.RefreshOnly {
+		// A refresh-only flow never prepares an authorization request, so a
+		// pending sign-in keeps its state and code verifier (flow.ts:453).
+		return ResultRedirect, nil
 	}
 	var state *string
 	if value, err := provider.State(ctx); err == nil {

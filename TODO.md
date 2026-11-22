@@ -75,3 +75,28 @@ reaches `OnAuthenticated`.
 Note that the pin (`faac5858`) removed the easter egg entirely, so this is
 completing a legacy surface rather than keeping parity with the pin; leave it
 unwired if the legacy easter eggs are being retired instead.
+
+## The proactive token refresh has no caller (open)
+
+Upstream `packages/mcp/src/oauth/auth-provider.ts` has two paths: `onUnauthorized`
+(the reactive 401 path, which pier ports as `oauthAdapter.runRefresh`) and
+`refreshStoredTokens` (`auth-provider.ts:107-130`), a proactive refresh that runs
+before a request when the stored access token is expired. Only the second passes
+`refreshOnly: true`, which makes `runFlow` return `REDIRECT` instead of
+registering a client (`flow.ts:396`) or preparing an authorization (`flow.ts:453`).
+
+pier ports the option (`FlowOptions.RefreshOnly`, with both early returns, pinned by
+`TestOAuthRefreshOnlyRedirectsWithoutRegisteringWhenNoClientIsStored` and
+`TestOAuthRefreshOnlyDoesNotStartAnAuthorization`) but has no caller for it: there
+is no proactive refresh, so an expired access token is discovered only by the 401.
+That is a deliberate difference in shape, not a bug in the ported option.
+
+Wiring it needs the pre-request half of the reference:
+
+1. A check of `state.TokensExpireAt` (already stored by `SaveTokens`) before a
+   request in `StreamableHttpTransport`, calling `AuthorizeMcp` with
+   `RefreshOnly: true` under the store's refresh lock.
+2. Treating `ResultRedirect` from that call as `McpOAuthAuthorizationRequiredError`,
+   which `runRefresh` already does for the 401 path.
+3. A test that an expired token with no stored client redirects instead of
+   registering, and one that a pending sign-in keeps its state and verifier.

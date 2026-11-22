@@ -535,3 +535,83 @@ func TestOAuthEmptyConfiguredMetadataURLUsesDiscovery(t *testing.T) {
 		t.Fatal("no authorization URL")
 	}
 }
+
+// pi v1.5.2 (b4afdddf) packages/mcp/src/oauth/flow.ts: a 401 refresh passes
+// `refreshOnly: true` (auth-provider.ts:128), and runFlow then returns REDIRECT
+// instead of registering a client or preparing an authorization when none is
+// stored (`if (!client) { if (options.refreshOnly) return "REDIRECT"; ... }`,
+// flow.ts:396). Registering there would replace the client of a sign-in that is
+// still pending.
+func TestOAuthRefreshOnlyRedirectsWithoutRegisteringWhenNoClientIsStored(t *testing.T) {
+	provider := newTestProvider("http://127.0.0.1/callback")
+	provider.discovery = &oauth.OAuthDiscoveryState{
+		AuthorizationServerURL: "https://idp.example",
+		AuthorizationServerMetadata: &oauth.AuthorizationServerMetadata{
+			Issuer: "https://idp.example", AuthorizationEndpoint: "https://idp.example/authorize",
+			TokenEndpoint: "https://idp.example/token", ResponseTypesSupported: []string{"code"},
+			CodeChallengeMethodsSupported: []string{"S256"},
+			RegistrationEndpoint:          new("https://idp.example/register"),
+		},
+	}
+	var fetched []string
+	fetch := func(_ context.Context, request *http.Request) (*http.Response, error) {
+		fetched = append(fetched, request.URL.String())
+		return nil, fmt.Errorf("no network in this test")
+	}
+	result, err := oauth.AuthorizeMcp(context.Background(), provider, oauth.FlowOptions{
+		ServerURL:   "https://mcp.example/mcp",
+		Fetch:       fetch,
+		RefreshOnly: true,
+	})
+	if err != nil {
+		t.Fatalf("authorize: %v", err)
+	}
+	if result != oauth.ResultRedirect {
+		t.Fatalf("result = %q, want REDIRECT", result)
+	}
+	for _, url := range fetched {
+		if strings.Contains(url, "/register") {
+			t.Fatalf("a refresh-only flow registered a client: %v", fetched)
+		}
+	}
+	if provider.client != nil {
+		t.Fatalf("a refresh-only flow stored client information: %+v", provider.client)
+	}
+}
+
+// A refresh-only flow never moves on to an authorization request: with a stored
+// client and an expired refresh token the reference returns REDIRECT
+// (flow.ts:453) instead of starting one, so the pending sign-in's state and code
+// verifier stay usable.
+func TestOAuthRefreshOnlyDoesNotStartAnAuthorization(t *testing.T) {
+	provider := newTestProvider("http://127.0.0.1/callback")
+	provider.client = &oauth.OAuthClientInformationFull{ClientID: "client"}
+	provider.discovery = &oauth.OAuthDiscoveryState{
+		AuthorizationServerURL: "https://idp.example",
+		AuthorizationServerMetadata: &oauth.AuthorizationServerMetadata{
+			Issuer: "https://idp.example", AuthorizationEndpoint: "https://idp.example/authorize",
+			TokenEndpoint: "https://idp.example/token", ResponseTypesSupported: []string{"code"},
+			CodeChallengeMethodsSupported: []string{"S256"},
+		},
+	}
+	provider.tokenSet = &oauth.OAuthTokens{AccessToken: "old", RefreshToken: new("expired")}
+	fetch := func(_ context.Context, request *http.Request) (*http.Response, error) {
+		// The refresh fails with a non-retryable OAuth error, so the flow would
+		// otherwise fall through to an authorization.
+		return &http.Response{
+			StatusCode: 400,
+			Body:       io.NopCloser(strings.NewReader(`{"error":"invalid_grant","error_description":"expired"}`)),
+		}, nil
+	}
+	result, err := oauth.AuthorizeMcp(context.Background(), provider, oauth.FlowOptions{
+		ServerURL:   "https://mcp.example/mcp",
+		Fetch:       fetch,
+		RefreshOnly: true,
+	})
+	if result != oauth.ResultRedirect {
+		t.Fatalf("result = %q (%v), want REDIRECT", result, err)
+	}
+	if provider.authorizationURL != "" {
+		t.Fatalf("a refresh-only flow started an authorization: %s", provider.authorizationURL)
+	}
+}
