@@ -51,30 +51,36 @@ If it names a test this repository shares with `./coding/interactive`, check
 first whether it depends on wall-clock timing or on process-global state
 (`leakcheck` and `just test-isolated` both hunt for the second class).
 
-## The proactive token refresh has no caller (open)
+## The interactive MCP sign-in has no caller (open)
 
-Upstream `packages/mcp/src/oauth/auth-provider.ts` has two paths: `onUnauthorized`
-(the reactive 401 path, which pier ports as `oauthAdapter.runRefresh`) and
-`refreshStoredTokens` (`auth-provider.ts:107-130`), a proactive refresh that runs
-before a request when the stored access token is expired. Only the second passes
-`refreshOnly: true`, which makes `runFlow` return `REDIRECT` instead of
-registering a client (`flow.ts:396`) or preparing an authorization (`flow.ts:453`).
+Upstream `packages/mcp/src/oauth/sign-in.ts` `startMcpSignIn` first runs
+`refreshBeforeSignIn` under the store's refresh lock and only starts the browser
+step when that returns `REDIRECT`. pier has the browser step's building blocks
+(`AuthorizeMcp`, `McpOAuthProvider`) but no sign-in entry point: the only call
+into the flow is `oauthAdapter.runRefresh` on a 401, and
+`coding/mcpruntime.go` installs `OnRedirect` as a no-op with the comment that
+"Sign-in is driven by the caller (`/mcp` in a later slice)".
 
-pier ports the option (`FlowOptions.RefreshOnly`, with both early returns, pinned by
-`TestOAuthRefreshOnlyRedirectsWithoutRegisteringWhenNoClientIsStored` and
-`TestOAuthRefreshOnlyDoesNotStartAnAuthorization`) but has no caller for it: there
-is no proactive refresh, so an expired access token is discovered only by the 401.
-That is a deliberate difference in shape, not a bug in the ported option.
+What is now ported (`mcp/mcp_federation.go`): the proactive half.
+`oauthAdapter.Token` refreshes a stored access token that is within
+`mcpRefreshSkewMS` (30 s, the reference's `REFRESH_SKEW_MS`) of its expiry,
+before the request goes out, through `AuthorizeMcp` with `RefreshOnly: true`. A
+failure or a redirect falls through to the old token, which the 401 path then
+handles, exactly as `auth-provider.ts token()` does. Pinned by
+`TestOAuthAdapterTokenRefreshesAnExpiredTokenProactively`.
 
-Wiring it needs the pre-request half of the reference:
+What a caller still needs, if the interactive sign-in is wanted:
 
-1. A check of `state.TokensExpireAt` (already stored by `SaveTokens`) before a
-   request in `StreamableHttpTransport`, calling `AuthorizeMcp` with
-   `RefreshOnly: true` under the store's refresh lock.
-2. Treating `ResultRedirect` from that call as `McpOAuthAuthorizationRequiredError`,
-   which `runRefresh` already does for the 401 path.
-3. A test that an expired token with no stored client redirects instead of
-   registering, and one that a pending sign-in keeps its state and verifier.
+1. A `StartMcpSignIn` that reads the state, returns `AUTHORIZED` when the
+   refresh alone settles it, and otherwise runs the browser step — keeping the
+   pending `OAuthState` and code verifier the refresh left alone
+   (`TestOAuthRefreshOnlyDoesNotStartAnAuthorization` already pins that half).
+2. Real `OnRedirect` wiring in `coding/mcpruntime.go` so the browser step has
+   somewhere to send the URL, plus an `/mcp` command to drive it.
+3. A cross-process refresh lock. The reference's is a file lock that raises
+   `McpRefreshLockBusyError` when another process is refreshing; pier's
+   `writesMu` serializes writes inside one process only, which is why the
+   adapter's `inFlight` sharing is process-local.
 
 ## IDN validation is still approximate in four places (open)
 

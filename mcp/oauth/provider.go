@@ -317,6 +317,19 @@ func (p *McpOAuthProvider) SaveClientInformation(ctx context.Context, informatio
 	return p.update(ctx, func(next *McpOAuthState) { next.ClientInformation = information })
 }
 
+// TokenExpiry returns the stored access token and when it expires, if the state
+// records an expiry. It is the read the proactive refresh needs, which the
+// OAuthClientProvider surface does not expose because upstream reaches
+// `state.tokensExpireAt` directly.
+func (p *McpOAuthProvider) TokenExpiry(ctx context.Context) (*int64, string, bool) {
+	state, err := p.load(ctx)
+	if err != nil || state == nil || state.Tokens == nil || state.TokensExpireAt == nil {
+		return nil, "", false
+	}
+	expire := *state.TokensExpireAt
+	return &expire, state.Tokens.AccessToken, true
+}
+
 // Tokens returns the stored tokens (upstream tokens).
 func (p *McpOAuthProvider) Tokens(ctx context.Context) (*OAuthTokens, error) {
 	state, err := p.load(ctx)
