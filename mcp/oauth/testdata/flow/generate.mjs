@@ -42,6 +42,20 @@ const registrationCases = {
 		},
 		scope: "read write",
 	},
+	// A metadata scope replaced in place by the option's scope: the member keeps
+	// its position instead of being appended (flow.ts:423-426).
+	"scope-replaced-in-place": {
+		clientMetadata: {
+			client_name: "pi",
+			redirect_uris: ["http://127.0.0.1:33418/callback"],
+			grant_types: ["authorization_code", "refresh_token"],
+			response_types: ["code"],
+			token_endpoint_auth_method: "none",
+			scope: "read",
+			contacts: ["mailto:dev@example.com"],
+		},
+		scope: "read write",
+	},
 	"empty-scope": {
 		clientMetadata: {
 			client_name: "pi",

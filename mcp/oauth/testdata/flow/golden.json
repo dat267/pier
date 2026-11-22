@@ -78,6 +78,36 @@
         "body": "{\"client_name\":\"pi\",\"redirect_uris\":[\"http://127.0.0.1:33418/callback\"],\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"response_types\":[\"code\"],\"token_endpoint_auth_method\":\"none\",\"client_uri\":\"https://example.com\",\"application_type\":\"native\",\"scope\":\"read write\"}"
       }
     },
+    "scope-replaced-in-place": {
+      "input": {
+        "clientMetadata": {
+          "client_name": "pi",
+          "redirect_uris": [
+            "http://127.0.0.1:33418/callback"
+          ],
+          "grant_types": [
+            "authorization_code",
+            "refresh_token"
+          ],
+          "response_types": [
+            "code"
+          ],
+          "token_endpoint_auth_method": "none",
+          "scope": "read",
+          "contacts": [
+            "mailto:dev@example.com"
+          ]
+        },
+        "scope": "read write"
+      },
+      "request": {
+        "url": "https://auth.example.com/register",
+        "method": "POST",
+        "contentType": "application/json",
+        "authorization": "",
+        "body": "{\"client_name\":\"pi\",\"redirect_uris\":[\"http://127.0.0.1:33418/callback\"],\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"response_types\":[\"code\"],\"token_endpoint_auth_method\":\"none\",\"scope\":\"read write\",\"contacts\":[\"mailto:dev@example.com\"],\"application_type\":\"native\"}"
+      }
+    },
     "empty-scope": {
       "input": {
         "clientMetadata": {
