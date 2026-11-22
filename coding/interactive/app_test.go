@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"context"
+	"errors"
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
@@ -301,4 +302,32 @@ func TestAppResumeMessageIsTwoLines(t *testing.T) {
 	if !strings.HasSuffix(message, "\npier --session abc") {
 		t.Fatalf("resume message = %q, want the command on its own line", message)
 	}
+}
+
+// pi v1.5.2 (b4afdddf) extensions/mcp/cli.ts:159-164 reads an `auth.provider` token
+// through the model runtime and catches a missing or unrefreshable credential,
+// returning undefined so the request goes out without an Authorization header and the
+// server's 401 reports that sign-in is needed. The port returned the error, which failed
+// the MCP connection before any request was sent.
+func TestProviderTokenFailureSendsNoToken(t *testing.T) {
+	failing := providerTokenStub{resolution: nil, err: errors.New("no credential")}
+	if got, err := providerTokenFromRuntime(context.Background(), failing, "openai"); err != nil || got != "" {
+		t.Fatalf("failed credential = %q err = %v, want an empty token and no error", got, err)
+	}
+	if got, err := providerTokenFromRuntime(context.Background(), providerTokenStub{}, "openai"); err != nil || got != "" {
+		t.Fatalf("nil resolution = %q err = %v, want an empty token and no error", got, err)
+	}
+	ok := providerTokenStub{resolution: &ai.AuthResult{Auth: ai.ModelAuth{APIKey: "sk-1"}}}
+	if got, err := providerTokenFromRuntime(context.Background(), ok, "openai"); err != nil || got != "sk-1" {
+		t.Fatalf("resolved credential = %q err = %v, want sk-1", got, err)
+	}
+}
+
+type providerTokenStub struct {
+	resolution *ai.AuthResult
+	err        error
+}
+
+func (s providerTokenStub) GetAuth(string, *coding.ModelRuntimeAuthOverrides) (*ai.AuthResult, error) {
+	return s.resolution, s.err
 }

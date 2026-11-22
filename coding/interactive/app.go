@@ -1495,17 +1495,32 @@ func (a *App) mcpOptions(config coding.LoadedMcpConfig) coding.McpManagerOptions
 	return coding.McpManagerOptions{
 		Config: config,
 		Cwd:    a.sessionMgr.GetCwd(),
-		ProviderToken: func(_ context.Context, provider string) (string, error) {
+		ProviderToken: func(ctx context.Context, provider string) (string, error) {
 			if runtime == nil {
 				return "", nil
 			}
-			resolution, err := runtime.GetAuth(provider, nil)
-			if err != nil || resolution == nil {
-				return "", err
-			}
-			return resolution.Auth.APIKey, nil
+			return providerTokenFromRuntime(ctx, runtime, provider)
 		},
 	}
+}
+
+// providerTokenFromRuntime resolves an `auth.provider` token through the CLI's model
+// runtime. A missing or unrefreshable credential yields an empty token rather than an
+// error: the reference's reader catches it and returns undefined
+// (`extensions/mcp/cli.ts:159-164`), so the request goes out without an Authorization
+// header and the server's 401 reports that sign-in is needed. Returning the error
+// instead failed the connection before any request was sent.
+func providerTokenFromRuntime(_ context.Context, runtime providerTokenSource, provider string) (string, error) {
+	resolution, err := runtime.GetAuth(provider, nil)
+	if err != nil || resolution == nil {
+		return "", nil
+	}
+	return resolution.Auth.APIKey, nil
+}
+
+// providerTokenSource is the part of the model runtime the token seam needs.
+type providerTokenSource interface {
+	GetAuth(providerID string, overrides *coding.ModelRuntimeAuthOverrides) (*ai.AuthResult, error)
 }
 
 func (a *App) updateEditorBorderColor() {
