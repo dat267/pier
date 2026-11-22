@@ -646,6 +646,7 @@ coding/process_test.go
 coding/process_unix_test.go
 coding/process_windows_hide_test.go
 coding/process_windows_test.go
+coding/processsignal_test.go
 coding/projecttrust_parity_test.go
 coding/projecttrust_test.go
 coding/promptfiles_test.go

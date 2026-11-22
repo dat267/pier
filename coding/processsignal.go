@@ -8,34 +8,13 @@ import "syscall"
 // ("terminated"), so the common signals are mapped explicitly; anything else
 // falls back to Go's name.
 func ProcessSignalName(signal syscall.Signal) string {
-	switch signal {
-	case syscall.SIGHUP:
-		return "SIGHUP"
-	case syscall.SIGINT:
-		return "SIGINT"
-	case syscall.SIGQUIT:
-		return "SIGQUIT"
-	case syscall.SIGILL:
-		return "SIGILL"
-	case syscall.SIGTRAP:
-		return "SIGTRAP"
-	case syscall.SIGABRT:
-		return "SIGABRT"
-	case syscall.SIGBUS:
-		return "SIGBUS"
-	case syscall.SIGFPE:
-		return "SIGFPE"
-	case syscall.SIGKILL:
-		return "SIGKILL"
-	case syscall.SIGSEGV:
-		return "SIGSEGV"
-	case syscall.SIGPIPE:
-		return "SIGPIPE"
-	case syscall.SIGALRM:
-		return "SIGALRM"
-	case syscall.SIGTERM:
-		return "SIGTERM"
-	default:
-		return signal.String()
+	// Node names every signal SIG<NAME>. Go's Signal.String is prose ("terminated",
+	// "user defined signal 1"), so the name is assembled from the platform's own
+	// constants; the per-platform sets live in processsignal_unix.go and
+	// processsignal_other.go because several (SIGUSR1, SIGCHLD, SIGPWR) do not exist
+	// everywhere the port cross-builds for.
+	if name, ok := platformSignalNames[signal]; ok {
+		return name
 	}
+	return signal.String()
 }
