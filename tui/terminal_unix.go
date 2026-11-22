@@ -35,14 +35,22 @@ var resizeWatcher struct {
 var resizeWatcherMu sync.Mutex
 
 func startResizeWatcher(onResize func()) {
-	stopResizeWatcher()
 	quit := make(chan struct{})
 	done := make(chan struct{})
 	generation := nextResizeGeneration()
+	// Replace the predecessor under the same lock acquisition that stores the
+	// new channels: stopping and then storing in two steps let an interleaved
+	// pair overwrite a quit channel that was never closed, leaking that
+	// watcher for the life of the process.
+	var previous chan struct{}
 	resizeWatcherMu.Lock()
+	previous = resizeWatcher.quit
 	resizeWatcher.quit = quit
 	resizeWatcher.done = done
 	resizeWatcherMu.Unlock()
+	if previous != nil {
+		close(previous)
+	}
 	sig := make(chan os.Signal, 1)
 	signalNotifySIGWINCH(sig)
 	go func() {

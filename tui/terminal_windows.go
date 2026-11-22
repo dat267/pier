@@ -33,15 +33,22 @@ var (
 // onChange; the ProcessTerminal wrapper repaints only when the size actually
 // changed.
 func startResizeWatcher(onChange func()) {
-	stopResizeWatcher()
-
 	stop := make(chan struct{})
 	done := make(chan struct{})
 	generation := nextResizeGeneration()
+	// Replace the predecessor under the same lock acquisition that stores the
+	// new channels: stopping and then storing in two steps let an interleaved
+	// pair overwrite a stop channel that was never closed, leaking that
+	// watcher for the life of the process.
+	var previous chan struct{}
 	resizeWatcherMu.Lock()
+	previous = resizeWatcherStop
 	resizeWatcherStop = stop
 	resizeWatcherDone = done
 	resizeWatcherMu.Unlock()
+	if previous != nil {
+		close(previous)
+	}
 
 	go func() {
 		defer close(done)

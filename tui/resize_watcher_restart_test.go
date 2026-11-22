@@ -4,6 +4,9 @@ package tui
 
 import (
 	"os"
+	"runtime"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"testing"
@@ -79,6 +82,60 @@ func TestResizeWatcherRestartDeliversOnce(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 	}
 	stopResizeWatcher()
+}
+
+// pi v1.5.2 (b4afdddf) packages/tui/src/terminal.ts start() installs one resize
+// listener per call, and ProcessTerminal.Start is reachable from several places
+// (the SIGCONT resume handler runs on its own goroutine), so two starts can
+// overlap. startResizeWatcher used to stop the predecessor and then store its own
+// quit channel under separate lock acquisitions: an interleaved pair overwrote
+// the first quit channel, which was never closed, and that watcher goroutine
+// leaked for the life of the process.
+func TestConcurrentResizeWatcherStartsDoNotLeak(t *testing.T) {
+	stopResizeWatcher()
+	var wg sync.WaitGroup
+	for i := 0; i < 64; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			startResizeWatcher(func() {})
+		}()
+	}
+	wg.Wait()
+	// Every superseded watcher must exit once it is stopped or superseded.
+	done := resizeWatcherDone()
+	stopResizeWatcher()
+	if done != nil {
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Fatal("the admitted watcher did not exit")
+		}
+	}
+	// A superseded goroutine leaks until the process exits, which the package's
+	// leak checker reports only at the end of the run; count them here so the
+	// failure names this test.
+	deadline := time.Now().Add(5 * time.Second)
+	for liveResizeWatcherGoroutines() > 0 && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if live := liveResizeWatcherGoroutines(); live > 0 {
+		t.Fatalf("%d superseded resize watcher goroutines still running", live)
+	}
+}
+
+// liveResizeWatcherGoroutines counts goroutines blocked in the resize watcher's
+// select loop.
+func liveResizeWatcherGoroutines() int {
+	buf := make([]byte, 1<<20)
+	buf = buf[:runtime.Stack(buf, true)]
+	count := 0
+	for _, goroutine := range strings.Split(string(buf), "\n\n") {
+		if strings.Contains(goroutine, "startResizeWatcher.func1") {
+			count++
+		}
+	}
+	return count
 }
 
 func raiseSIGWINCH(t *testing.T) {
