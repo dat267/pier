@@ -174,6 +174,11 @@ func formatRoot(value string, symbol string) string {
 func normalizeOutput(value string) string {
 	// The left-spacing and right-spacing patterns use lookaround upstream;
 	// RE2 cannot, so the markers are scanned manually.
+	// The reference's three rewrites run in order: left spacing, strip the start
+	// marker, right spacing, strip the end marker. The right-spacing lookahead
+	// therefore sees the rune after the stripped form, which is how consecutive
+	// named operators ("\sin\sin") get a space: the end marker's successor is the
+	// next operator's first letter, not its start marker.
 	var builder strings.Builder
 	runes := []rune(value)
 	for index, character := range runes {
@@ -183,7 +188,7 @@ func normalizeOutput(value string) string {
 				builder.WriteString(" ")
 			}
 		case latexNamedOperatorEnd:
-			if index+1 < len(runes) && isLatexSpacingRightNeighbor(runes[index+1]) {
+			if right, ok := nextNonMarkerRune(runes, index+1); ok && isLatexSpacingRightNeighbor(right) {
 				builder.WriteString(" ")
 			}
 		default:
@@ -214,6 +219,18 @@ func isLatexSpacingLeftNeighbor(r rune) bool {
 		return true
 	}
 	return false
+}
+
+// nextNonMarkerRune returns the first rune at or after index that is not a named
+// operator start marker, which the reference has already stripped by the time its
+// right-spacing lookahead runs.
+func nextNonMarkerRune(runes []rune, index int) (rune, bool) {
+	for ; index < len(runes); index++ {
+		if string(runes[index]) != latexNamedOperatorStart {
+			return runes[index], true
+		}
+	}
+	return 0, false
 }
 
 func isLatexSpacingRightNeighbor(r rune) bool {

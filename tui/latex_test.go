@@ -127,3 +127,25 @@ func TestLatexCasesConditionIsCaseInsensitive(t *testing.T) {
 		t.Fatalf("capitalized cases = %q, %v; want %q", got, ok, want)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) packages/tui/src/latex.ts normalizeOutput runs its rewrites
+// in a fixed order: left spacing, strip NAMED_OPERATOR_START, right spacing (so the
+// lookahead sees the rune after the *stripped* form), strip NAMED_OPERATOR_END.
+// Consecutive named operators are therefore separated: the end marker's successor is
+// the next operator's first letter, not its start marker.
+func TestLatexSeparatesConsecutiveNamedOperators(t *testing.T) {
+	for _, tc := range []struct{ source, want string }{
+		{`=\sin\sin`, `= sin sin`},
+		{`\sin\sin`, `sin sin`},
+		{`\sin\sin\sin`, `sin sin sin`},
+		{`\sin \sin`, `sin sin`},
+		{`\sin x`, `sin x`},
+		{`x \sin`, `x sin`},
+		{`a \sin \cos b`, `a sin cos b`},
+	} {
+		got, ok := renderLatexImpl(tc.source, RenderLatexOptions{})
+		if !ok || got != tc.want {
+			t.Errorf("renderLatexImpl(%q) = %q, %v; want %q", tc.source, got, ok, tc.want)
+		}
+	}
+}
