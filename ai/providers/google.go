@@ -20,16 +20,17 @@ func (googleStreams) StreamSimple(model *ai.Model, context ai.TranscriptContext,
 	return ai.StreamGoogleGenerativeAISimple(model, context, options)
 }
 
-// GoogleProvider builds the built-in Google provider (port of
-// googleProvider). API keys resolve from GEMINI_API_KEY (or
-// GOOGLE_GENERATIVE_AI_API_KEY via the env table).
+// GoogleProvider builds the built-in Google provider (port of googleProvider).
+// API keys resolve from GEMINI_API_KEY only, which is the single name
+// google.ts:11 lists and env-api-keys.ts:95 maps; the port also accepted
+// GOOGLE_GENERATIVE_AI_API_KEY, which the reference never reads.
 func GoogleProvider() *ai.Provider {
 	return ai.CreateProvider(ai.CreateProviderOptions{
 		ID:      "google",
 		Name:    "Google",
 		BaseURL: googleBaseURL,
 		Auth: ai.ProviderAuth{APIKey: ai.EnvApiKeyAuth("Gemini API key",
-			[]string{"GEMINI_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"})},
+			[]string{"GEMINI_API_KEY"})},
 		Models: ai.GetBuiltinModels("google"),
 		Single: googleStreams{},
 	})

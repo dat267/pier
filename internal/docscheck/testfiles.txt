@@ -163,6 +163,7 @@ ai/providers/copilot_classifier_test.go
 ai/providers/extensionproviders_test.go
 ai/providers/faux_deferred_test.go
 ai/providers/faux_test.go
+ai/providers/google_test.go
 ai/providers/leakcheck_main_test.go
 ai/providers/meta_test.go
 ai/providers/models_integration_test.go
