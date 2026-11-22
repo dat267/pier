@@ -45,11 +45,43 @@ func (o *BedrockOptions) UnmarshalJSON(data []byte) error {
 	type optionsAlias BedrockOptions
 	var decoded optionsAlias
 	if err := json.Unmarshal(data, &decoded); err != nil {
-		return err
+		// A member of the wrong type (a numeric requestMetadata value, say) took
+		// the whole option set with it, so the region and bearer token were lost
+		// and the request went out unpinned and unauthenticated. The reference
+		// passes requestMetadata through unvalidated and lets the service reject
+		// it, so one bad member must not cost the others: decode what fits and
+		// skip the rest.
+		decoded = optionsAlias{}
+		if tolerant, ok := decodeBedrockOptionsMemberWise(data); ok {
+			decoded = optionsAlias(tolerant)
+		} else {
+			return err
+		}
 	}
 	*o = BedrockOptions(decoded)
 	o.RequestMetadataOrder = jsonObjectPropertyKeys(data, "requestMetadata")
 	return nil
+}
+
+// decodeBedrockOptionsMemberWise decodes each top-level member on its own,
+// skipping the ones the typed struct cannot hold.
+func decodeBedrockOptionsMemberWise(data []byte) (BedrockOptions, bool) {
+	type optionsAlias BedrockOptions
+	var out optionsAlias
+	var members map[string]json.RawMessage
+	if json.Unmarshal(data, &members) != nil || members == nil {
+		return BedrockOptions{}, false
+	}
+	for name, raw := range members {
+		wrapped, err := MarshalJSON(map[string]json.RawMessage{name: raw})
+		if err != nil {
+			continue
+		}
+		// Decode into the alias, which has no UnmarshalJSON, so this cannot
+		// re-enter the method.
+		_ = json.Unmarshal(wrapped, &out)
+	}
+	return BedrockOptions(out), true
 }
 
 // BEDROCK_ERROR_PREFIXES maps AWS SDK exception names to their human-readable

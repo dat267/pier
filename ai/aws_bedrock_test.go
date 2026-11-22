@@ -3,11 +3,13 @@ package ai
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"hash/crc32"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -553,5 +555,32 @@ func TestAWSEventStreamMessageDoesNotPreallocateTheAnnouncedLength(t *testing.T)
 	runtime.ReadMemStats(&after)
 	if grew := after.TotalAlloc - before.TotalAlloc; grew > 1<<20 {
 		t.Fatalf("a truncated 16 MiB frame allocated %d bytes, want under 1 MiB", grew)
+	}
+}
+
+// TestBedrockOptionsKeepTheOtherMembersOnAWrongTypedOne pins the tolerance the
+// reference gets by not validating: it spreads options.requestMetadata into the
+// request and lets the service reject a non-string value, so one bad member
+// never costs the rest. The typed Go decode failed the whole struct, losing the
+// region and the bearer token, which sent the request to the default region and
+// unauthenticated.
+func TestBedrockOptionsKeepTheOtherMembersOnAWrongTypedOne(t *testing.T) {
+	var options BedrockOptions
+	err := json.Unmarshal([]byte(`{"requestMetadata":{"c":2},"region":"us-west-2","bearerToken":"tok"}`), &options)
+	if err != nil {
+		t.Fatalf("a numeric requestMetadata value must not fail the decode: %v", err)
+	}
+	if options.Region != "us-west-2" || options.BearerToken != "tok" {
+		t.Fatalf("region = %q, token = %q; the other members must survive", options.Region, options.BearerToken)
+	}
+	// A well-formed option set decodes exactly, including the metadata order.
+	options = BedrockOptions{}
+	if err := json.Unmarshal([]byte(`{"region":"eu-west-1","bearerToken":"t","requestMetadata":{"a":"b","c":"d"}}`), &options); err != nil {
+		t.Fatal(err)
+	}
+	if options.Region != "eu-west-1" || options.BearerToken != "t" ||
+		len(options.RequestMetadata) != 2 || options.RequestMetadata["c"] != "d" ||
+		!reflect.DeepEqual(options.RequestMetadataOrder, []string{"a", "c"}) {
+		t.Fatalf("well-formed decode changed: %+v", options)
 	}
 }
