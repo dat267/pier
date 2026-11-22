@@ -665,3 +665,29 @@ func TestComposeModelProviderMissingAPIProviderStreamsError(t *testing.T) {
 		t.Fatalf("error = %q", *message.ErrorMessage)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) packages/coding-agent/src/core/provider-matching.ts trims with
+// String.prototype.trim, whose set differs from Go's strings.TrimSpace in two
+// directions: JavaScript trims a leading BOM (U+FEFF) and does not trim U+0085
+// (NEL). `FindMatchingProviders` used TrimSpace, so "/ login" with a BOM-prefixed
+// provider failed to match and a NEL-prefixed one matched when it should not.
+func TestFindMatchingProvidersTrimsLikeJavaScript(t *testing.T) {
+	provider := &ai.Provider{ID: "openai", Name: "OpenAI"}
+	providers := []*ai.Provider{provider}
+	for _, tc := range []struct {
+		ref  string
+		want int
+	}{
+		{"openai", 1},
+		{" openai ", 1},
+		{"OPENAI", 1},
+		{"\ufeffopenai", 1},
+		{"\u0085openai", 0},
+		{"", 0},
+		{"   ", 0},
+	} {
+		if got := len(FindMatchingProviders(providers, tc.ref)); got != tc.want {
+			t.Errorf("FindMatchingProviders(%q) = %d matches, want %d", tc.ref, got, tc.want)
+		}
+	}
+}

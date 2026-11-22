@@ -291,3 +291,29 @@ func TestChangelogLinksMatchThePin(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.5.2 (b4afdddf) packages/coding-agent/src/utils/changelog.ts guards the saved
+// version with `lastVersion.trim()`, whose whitespace set differs from Go's
+// TrimSpace in both directions: JavaScript trims a leading BOM and leaves U+0085
+// alone. A settings file that hand-edits the saved version with a BOM therefore
+// compared in the reference and came back "not comparable" here, which shows no
+// notes and overwrites the saved value.
+func TestGetNewChangelogEntriesTrimsLikeJavaScript(t *testing.T) {
+	entries := []ChangelogEntry{{Major: 1, Minor: 2, Patch: 3}}
+	for _, tc := range []struct {
+		version    string
+		comparable bool
+	}{
+		{"1.2.3", true},
+		{" 1.2.3 ", true},
+		{"\ufeff1.2.3", true},
+		{"\u00851.2.3", false},
+		{"v1.2.3", true},
+		{"", false},
+	} {
+		_, comparable := GetNewChangelogEntries(entries, tc.version)
+		if comparable != tc.comparable {
+			t.Errorf("GetNewChangelogEntries(_, %q) comparable = %v, want %v", tc.version, comparable, tc.comparable)
+		}
+	}
+}

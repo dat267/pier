@@ -10,7 +10,9 @@ import (
 // case and surrounding whitespace in the reference (pi v1.5.2
 // core/provider-matching.ts findMatchingProviders).
 func FindMatchingProviders(providers []*ai.Provider, providerRef string) []*ai.Provider {
-	normalized := strings.ToLower(strings.TrimSpace(providerRef))
+	// String.prototype.trim's whitespace set, not Go's: it trims a leading BOM
+	// and leaves U+0085 alone, and the two disagree in both directions.
+	normalized := strings.ToLower(ai.JSTrim(providerRef))
 	if normalized == "" {
 		return nil
 	}

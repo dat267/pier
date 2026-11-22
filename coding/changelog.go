@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of src/utils/changelog.ts: changelog parsing and link normalization.
@@ -247,7 +249,9 @@ var leadingVersionPattern = regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)`)
 // major.minor.patch counts, so a prerelease such as 0.1.5-20261020.7 is 0.1.5
 // and its notes are not shown again on every launch (#11703).
 func GetNewChangelogEntries(entries []ChangelogEntry, lastVersion string) ([]ChangelogEntry, bool) {
-	parts := leadingVersionPattern.FindStringSubmatch(strings.TrimSpace(lastVersion))
+	// String.prototype.trim's whitespace set, not Go's: the saved version can carry
+	// a leading BOM, which JavaScript trims and Go's TrimSpace does not.
+	parts := leadingVersionPattern.FindStringSubmatch(ai.JSTrim(lastVersion))
 	if parts == nil {
 		return nil, false
 	}
