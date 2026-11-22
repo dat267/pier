@@ -6,6 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"github.com/dat267/pier/tui"
 )
@@ -24,7 +25,12 @@ func formatKeyPart(part string, options KeyTextFormatOptions) string {
 		displayPart = "option"
 	}
 	if options.Capitalize && displayPart != "" {
-		displayPart = strings.ToUpper(displayPart[:1]) + displayPart[1:]
+		// The reference is `displayPart.charAt(0).toUpperCase() + slice(1)`,
+		// one UTF-16 unit then the rest. Slicing the first byte split a
+		// multi-byte character and produced invalid UTF-8 for any non-ASCII key
+		// name (a user binding such as "é" rendered as "\xa9").
+		first, size := utf8.DecodeRuneInString(displayPart)
+		displayPart = strings.ToUpper(string(first)) + displayPart[size:]
 	}
 	return displayPart
 }
