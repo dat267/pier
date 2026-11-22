@@ -36,3 +36,48 @@ func TestLinkLabelsUnescapeSquareBrackets(t *testing.T) {
 		}
 	}
 }
+
+// TestLinkLabelUsesFullUnicodeCaseMapping pins normalizeLinkLabel against the
+// reference's `toLowerCase().replace(/\s+/g, ' ')`. JavaScript lowercases with
+// full Unicode case mapping, which expands U+0130 "İ" to "i" plus a combining
+// dot (two code points); Go's unicode.ToLower applies the simple mapping and
+// yields a single "i". With the simple mapping `[x][i]` resolved against a
+// `[İ]:` definition here, and the reference leaves it as text. Latin-1 and
+// Greek match under both mappings, so only the expansion shows the difference.
+func TestLinkLabelUsesFullUnicodeCaseMapping(t *testing.T) {
+	if got := normalizeLinkLabel("İ"); got != "i\u0307" {
+		t.Fatalf("normalizeLinkLabel(İ) = %q, want %q (full case mapping)", got, "i\u0307")
+	}
+	if got := normalizeLinkLabel("i"); got != "i" {
+		t.Fatalf("normalizeLinkLabel(i) = %q, want %q", got, "i")
+	}
+	// Whitespace still collapses to one space, and is not trimmed, as the
+	// reference's replace does.
+	if got := normalizeLinkLabel("  A \t B  "); got != " a b " {
+		t.Fatalf("normalizeLinkLabel whitespace = %q, want %q", got, " a b ")
+	}
+	// The resolution the mapping decides: a plain "i" reference must not match
+	// an "İ" definition, while "İ" itself must.
+	blocks, defs := collectDefinitions(Lex("[x][i]\n\n[İ]: /u"), nil)
+	parseInlines(blocks, &inlineState{links: linksFor(defs)})
+	for _, block := range blocks {
+		for _, inline := range block.Inlines {
+			if inline.Kind == InlineLink {
+				t.Fatal("[x][i] resolved against an [İ]: definition")
+			}
+		}
+	}
+	blocks, defs = collectDefinitions(Lex("[x][İ]\n\n[İ]: /u"), nil)
+	parseInlines(blocks, &inlineState{links: linksFor(defs)})
+	linked := false
+	for _, block := range blocks {
+		for _, inline := range block.Inlines {
+			if inline.Kind == InlineLink {
+				linked = true
+			}
+		}
+	}
+	if !linked {
+		t.Fatal("[x][İ] did not resolve against its own definition")
+	}
+}

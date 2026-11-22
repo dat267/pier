@@ -1,6 +1,8 @@
 package markdown
 
 import (
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -94,6 +96,13 @@ func registerDefinition(b *Block, offset int, links linkMap, defs []Definition) 
 // normalizeLinkLabel is Tokenizer.def's tag and Tokenizer.reflink's lookup key:
 // `toLowerCase().replace(/\s+/g, ' ')`.
 func normalizeLinkLabel(label string) string {
+	// `toLowerCase().replace(/\s+/g, ' ')`: JavaScript lowercases with full
+	// Unicode case mapping, which expands some characters to several code
+	// points (U+0130 "İ" becomes "i" plus a combining dot), while Go's
+	// unicode.ToLower applies the simple mapping and yields one. That made
+	// `[x][i]` resolve against a `[İ]:` definition here and not in the
+	// reference. Collapse whitespace first, then lowercase, so an expansion
+	// cannot introduce a space.
 	var b strings.Builder
 	space := false
 	for _, r := range label {
@@ -105,12 +114,12 @@ func normalizeLinkLabel(label string) string {
 			b.WriteByte(' ')
 			space = false
 		}
-		b.WriteRune(unicode.ToLower(r))
+		b.WriteRune(r)
 	}
 	if space {
 		b.WriteByte(' ')
 	}
-	return b.String()
+	return cases.Lower(language.Und).String(b.String())
 }
 
 // unescapePunctuation is `replace(anyPunctuation, '$1')`: a backslash before
