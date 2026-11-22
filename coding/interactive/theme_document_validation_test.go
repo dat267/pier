@@ -72,3 +72,37 @@ func TestThemeValidationRejectsTrailingJSONData(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.5.2 (b4afdddf) modes/interactive/theme/theme-schema.ts bounds the
+// integer arm of ColorValueSchema: `Type.Integer({ minimum: 0, maximum: 255 })`,
+// because it is a 256-color palette index. ValidateThemeJSON enforces that bound;
+// this pins it at the edges, where an accepted value would reach the escape writer.
+func TestThemeValidationBoundsPaletteIndices(t *testing.T) {
+	valid, err := os.ReadFile("themes/dark.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	build := func(index int) json.RawMessage {
+		t.Helper()
+		var document map[string]any
+		if err := json.Unmarshal(valid, &document); err != nil {
+			t.Fatal(err)
+		}
+		document["colors"].(map[string]any)["accent"] = index
+		encoded, err := ai.MarshalJSON(document)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return encoded
+	}
+	for _, index := range []int{-1, 256, 1000} {
+		if _, err := ValidateThemeJSON("probe", build(index)); err == nil {
+			t.Fatalf("index %d was accepted; the schema bounds it to 0-255", index)
+		}
+	}
+	for _, index := range []int{0, 255} {
+		if _, err := ValidateThemeJSON("probe", build(index)); err != nil {
+			t.Fatalf("index %d was rejected: %v", index, err)
+		}
+	}
+}
