@@ -294,3 +294,32 @@ func TestOverlayStackQuerySurface(t *testing.T) {
 		t.Fatal("FocusEntry focused a removed entry")
 	}
 }
+
+// TestOverlayFocusAncestorDoesNotPanicOnUncomparableComponents pins the port's
+// cycle guard. The reference walks its pre-focus chain with a `Set<Component>`,
+// and JavaScript compares by identity; a Go map keyed by the Component
+// interface panics when the dynamic type is not comparable. A slice-backed
+// component (the transcript's preparedFrameLines is one) would crash the walk,
+// so the port bounds the walk by the stack depth instead of remembering
+// components. The chain here is also self-referential, which the bound has to
+// terminate.
+func TestOverlayFocusAncestorDoesNotPanicOnUncomparableComponents(t *testing.T) {
+	stack := newOverlayStack(&fakeOverlayHost{})
+	target := &Text{}
+	entry := &overlayEntry{component: target, preFocus: overlaySliceComponent{"line"}}
+	if stack.IsFocusAncestor(entry, &Text{}) {
+		t.Fatal("unrelated component reported as an ancestor")
+	}
+	selfReferential := &overlayEntry{component: target}
+	selfReferential.preFocus = selfReferential.component
+	if stack.IsFocusAncestor(selfReferential, &Text{}) {
+		t.Fatal("unrelated component reported through a self-referential chain")
+	}
+}
+
+// overlaySliceComponent is a non-comparable Component, which the ancestor walk
+// must tolerate.
+type overlaySliceComponent []string
+
+func (c overlaySliceComponent) Render(int) []string { return c }
+func (overlaySliceComponent) Invalidate()           {}

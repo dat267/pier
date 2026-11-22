@@ -267,10 +267,13 @@ func (s *overlayStack) resolveBlockedResume(overlay *overlayEntry, resumeTo bool
 // IsFocusAncestor reports whether a component is an ancestor of an overlay's
 // pre-focus chain, following the overlays that were focused before it.
 func (s *overlayStack) IsFocusAncestor(entry *overlayEntry, component Component) bool {
-	visited := map[Component]bool{}
-	current := entry.preFocus
-	for current != nil && !visited[current] {
-		visited[current] = true
+	// The reference guards its walk with a Set of Components. A Go map keyed by
+	// the interface panics when a component's dynamic type is not comparable (a
+	// slice-backed component such as preparedFrameLines), and a cycle guard that
+	// panics is worse than none. The chain can be no longer than the stack, and
+	// each step follows a preFocus that is either nil or an earlier entry, so
+	// bounding the walk by the stack depth both terminates and drops the map.
+	for current, steps := entry.preFocus, 0; current != nil && steps <= len(s.entries); steps++ {
 		if current == component {
 			return true
 		}
