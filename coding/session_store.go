@@ -1234,7 +1234,12 @@ func legacyFirstKeptIndex(raw json.RawMessage) (int, bool) {
 		return 0, false
 	}
 	number, err := strconv.ParseFloat(string(trimmed), 64)
-	if err != nil || math.IsNaN(number) || number != math.Trunc(number) || number < 0 {
+	// A value above int64 max is a float64 that rounds to 2^63, and converting
+	// it to int wrapped to MinInt64 rather than the -1 sentinel this promises.
+	// Indexing past the end resolves no target in the reference either, so any
+	// unusable value reports the sentinel.
+	if err != nil || math.IsNaN(number) || number != math.Trunc(number) ||
+		number < 0 || number >= 9223372036854775808.0 {
 		return -1, true
 	}
 	return int(number), true

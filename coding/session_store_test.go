@@ -591,3 +591,37 @@ func TestAppendCostDoesNotGrowBeforeFirstConversation(t *testing.T) {
 	}
 	t.Logf("first 200 = %v, last 200 = %v", early, late)
 }
+
+// TestLegacyFirstKeptIndexReportsTheSentinel pins the migration's v1 cut index.
+// The function promises -1 for a number that is not a usable array index, and a
+// value at or above int64 max is a float64 that rounds to 2^63: converting that
+// to int wrapped to MinInt64 instead of the sentinel. The migration outcome was
+// the same either way, because firstKeptTargetID rejects every negative index,
+// but a wrapped value is a trap for the next caller.
+func TestLegacyFirstKeptIndexReportsTheSentinel(t *testing.T) {
+	for _, testCase := range []struct {
+		member string
+		want   int
+	}{
+		{"0", 0},
+		{"5", 5},
+		{"-1", -1},
+		{"1.5", -1},
+		{"9223372036854775807", -1},
+		{"9223372036854775808", -1},
+		{"1e19", -1},
+		{"1e300", -1},
+	} {
+		got, ok := legacyFirstKeptIndex(json.RawMessage(`{"firstKeptEntryIndex":` + testCase.member + `}`))
+		if !ok {
+			t.Fatalf("%s: reported no number, want the legacy key deleted", testCase.member)
+		}
+		if got != testCase.want {
+			t.Errorf("firstKeptEntryIndex %s = %d, want %d", testCase.member, got, testCase.want)
+		}
+	}
+	// A non-number member is not a number, so the legacy key survives.
+	if _, ok := legacyFirstKeptIndex(json.RawMessage(`{"firstKeptEntryIndex":"3"}`)); ok {
+		t.Fatal(`a string member must not be treated as a number`)
+	}
+}
