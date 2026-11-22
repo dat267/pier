@@ -73,3 +73,22 @@ func TestRendererPendingBlockLatexRendersRaw(t *testing.T) {
 		t.Fatalf("pending block latex = %q, want the raw source", got)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) packages/tui/src/utils.ts wrapSingleLine breaks a token
+// wider than the width character by character (`breakLongWord`), styled or not.
+// This package's styled path only broke before a token, so a styled word longer
+// than the width overflowed the line, while the escape-free path (wrapPlain) did
+// break it. RenderSource is a public entry point, so the overflow is reachable.
+func TestStyledWrapBreaksAWordWiderThanTheWidth(t *testing.T) {
+	for _, line := range []string{"\x1b[31mabcdefghij\x1b[39m", "abcdefghij"} {
+		got := wrapStyled(line, 4)
+		for _, l := range got {
+			if w := visibleWidth(l); w > 4 {
+				t.Fatalf("wrapStyled(%q, 4) produced a %d-wide line %q from %q", line, w, l, got)
+			}
+		}
+		if len(got) != 3 {
+			t.Fatalf("wrapStyled(%q, 4) = %q, want three lines like [abcd efgh ij]", line, got)
+		}
+	}
+}

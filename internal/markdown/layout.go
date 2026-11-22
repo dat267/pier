@@ -141,19 +141,35 @@ func wrapStyledLine(line string, width int) []string {
 	var out []string
 	var cur strings.Builder
 	col := 0
+	flush := func() {
+		out = append(out, strings.TrimRight(cur.String(), " "))
+		cur.Reset()
+		col = 0
+	}
 	for _, tok := range tokens {
 		if !tok.space && col > 0 && col+tok.w > width {
-			out = append(out, strings.TrimRight(cur.String(), " "))
-			cur.Reset()
-			col = 0
+			flush()
 		}
 		if tok.space && col == 0 {
+			continue
+		}
+		// A token wider than the whole width has to break character by
+		// character, as tui's wrapSingleLine does with breakLongWord; otherwise
+		// it overflows every line it lands on.
+		if !tok.space && tok.w > width {
+			for _, part := range breakStyledToken(tok.s, width) {
+				if col > 0 && col+visibleWidth(part) > width {
+					flush()
+				}
+				cur.WriteString(part)
+				col += visibleWidth(part)
+			}
 			continue
 		}
 		cur.WriteString(tok.s)
 		col += tok.w
 	}
-	out = append(out, strings.TrimRight(cur.String(), " "))
+	flush()
 	return out
 }
 
@@ -292,4 +308,43 @@ func runeWidth(r rune) int {
 		return 2
 	}
 	return 1
+}
+
+// breakStyledToken splits a self-contained styled token (prefix, body, reset)
+// into parts no wider than width, re-applying the prefix and a reset around each
+// part so no line leaves a colour active. Escapes inside the body are dropped:
+// the token's prefix already carries the state they produce, and tokenizeStyled
+// appends its own reset.
+func breakStyledToken(token string, width int) []string {
+	prefix := ""
+	i := 0
+	for i < len(token) && token[i] == 0x1b {
+		_, n := extractANSI(token[i:])
+		prefix += token[i : i+n]
+		i += n
+	}
+	var parts []string
+	var cur strings.Builder
+	col := 0
+	for j := i; j < len(token); {
+		if token[j] == 0x1b {
+			_, n := extractANSI(token[j:])
+			j += n
+			continue
+		}
+		r, size := utf8.DecodeRuneInString(token[j:])
+		w := runeWidth(r)
+		if col > 0 && col+w > width {
+			parts = append(parts, prefix+cur.String()+"\x1b[0m")
+			cur.Reset()
+			col = 0
+		}
+		cur.WriteString(token[j : j+size])
+		col += w
+		j += size
+	}
+	if cur.Len() > 0 {
+		parts = append(parts, prefix+cur.String()+"\x1b[0m")
+	}
+	return parts
 }
