@@ -975,6 +975,7 @@ tui/keys_fuzz_test.go
 tui/keys_test.go
 tui/latex_bench_test.go
 tui/latex_scripts_test.go
+tui/latex_tables_test.go
 tui/latex_test.go
 tui/layout_bench_test.go
 tui/layout_test.go
