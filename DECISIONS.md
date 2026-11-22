@@ -7902,8 +7902,11 @@ preview moving. On 458 adversarial inputs (43 documents and every prefix) 42
 differ, all malformed: a missing comma is tolerated (`{"a":1 "b":2}` gives
 `{"a":1}` where the reference gives `{}`), an invalid escape keeps its text, a
 loose number (`{"p":.5}`, `{"plus":+1}`) parses, `NaN` and `Infinity` prefixes
-yield `{}` rather than `null`, and an unterminated string keeps its trailing
-spaces.
+yield `{}` rather than `null`, an unterminated string keeps its trailing
+spaces, and an unterminated key drops the member where partial-json keeps the empty
+key it read (`{""k"'` gives `{"":"'"}` there and `{}` here). A fuzz corpus of 519
+inputs found 154 differences, all in these categories; only two are object-shaped,
+and both are named here.
 
 The difference is deliberate. The reference has no caller of `parseStreamingJson`
 (grep of `packages/ai/src` finds it in comments only), while the port's adapters

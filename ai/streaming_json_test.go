@@ -223,6 +223,10 @@ func TestParseStreamingJSONTextKeepsItsTolerance(t *testing.T) {
 		{`{"s":"abc   `, `{"s":"abc   "}`},
 		// NaN and Infinity prefixes yield {}, where partial-json yields null.
 		{`{"n":NaN}`, `{}`},
+		// An unterminated key drops the member entirely, where partial-json keeps
+		// the empty key it read: `{""k"'` gives `{"":"'"}` there and `{}` here.
+		{`{""k"'`, `{}`},
+		{`{""}`, `{}`},
 		// A complete object is returned as written.
 		{`{"ok":1}`, `{"ok":1}`},
 	}
