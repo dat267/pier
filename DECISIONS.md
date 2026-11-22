@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D511)
+# Deliberate divergences from pi (D1–D512)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8486,3 +8486,27 @@ the `URL` constructor throwing.
 
 Test: `TestNormalizeAzureBaseURL` (`ai/azure_openai_responses_test.go`). Cited at
 `ai/azure_openai_responses.go`.
+
+### D512
+
+**A catalog limit above int64 max saturates instead of failing the store.**
+
+Reference: pi v1.6.0 (`faac5858`) parses `models-store.json` with `JSON.parse`,
+where every number is a float64, so a provider that reports a `contextWindow` or
+`maxTokens` above int64 max (a nonsense value, or a mistyped literal) is still a
+loadable model and the number is kept as-is.
+
+The port stores those ten members as `int64`, and the standard decoder fails the
+whole entry on such a number, so `models.json` did not load at all and startup
+showed `models.json error: json: cannot unmarshal number 1e19 into Go struct
+field .contextWindow of type int64`. Losing the entire catalog, including every
+other provider, is worse than losing the exponent of one abnormal limit.
+
+`Model.UnmarshalJSON` now retries once on that failure with the offending members
+rewritten to the int64 bounds, the same coercion `jsNumberToInt64` already
+applies on the Radius and usage paths. Ordinary values (at or below int64 max)
+are unchanged and go through the single decode, so byte parity holds for every
+catalog that fits. A saturated value differs from the reference only for a
+number no real provider sends.
+
+Test: `TestModelToleratesOversizedCatalogLimits`. Cited at `ai/models.go`.

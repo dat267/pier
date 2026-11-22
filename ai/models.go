@@ -3,6 +3,9 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
+	"math"
+	"math/big"
+	"slices"
 	"sort"
 	"strconv"
 )
@@ -411,6 +414,84 @@ func marshalModelSamplingParams(params SamplingParams, order []string) ([]byte, 
 	return fields.marshal()
 }
 
+// modelNumberFields are the Model members the port stores as int64 but the
+// reference keeps as JavaScript numbers.
+var modelNumberFields = []string{
+	"contextWindow", "maxTokens", "maxRequestBytes", "maxPerMessage",
+	"maxPerRequest", "maxWidth", "maxHeight", "maxBytes", "jpegQuality",
+}
+
+// saturateModelNumbers rewrites a model object's overflowing numeric members to
+// the int64 bounds so the standard decoder can read it. It reports false when
+// there is nothing to change, leaving the caller's original error in place.
+func saturateModelNumbers(data []byte) ([]byte, bool) {
+	if bytes.TrimSpace(data) == nil || len(bytes.TrimSpace(data)) == 0 || bytes.TrimSpace(data)[0] != '{' {
+		return nil, false
+	}
+	changed := false
+	out := make([]byte, 0, len(data))
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	if _, err := dec.Token(); err != nil {
+		return nil, false
+	}
+	out = append(out, '{')
+	first := true
+	for dec.More() {
+		keyToken, err := dec.Token()
+		if err != nil {
+			return nil, false
+		}
+		key, ok := keyToken.(string)
+		if !ok {
+			return nil, false
+		}
+		var raw json.RawMessage
+		if err := dec.Decode(&raw); err != nil {
+			return nil, false
+		}
+		value := raw
+		if slices.Contains(modelNumberFields, key) {
+			if number, ok := new(big.Float).SetString(string(raw)); ok {
+				asFloat, _ := number.Float64()
+				if math.IsInf(asFloat, 1) || number.IsInt() && !fitsInt64(number) {
+					clamped := strconv.FormatInt(jsNumberToInt64(asFloat), 10)
+					value = json.RawMessage(clamped)
+					changed = true
+				}
+			}
+		}
+		encodedKey, err := MarshalJSON(key)
+		if err != nil {
+			return nil, false
+		}
+		if !first {
+			out = append(out, ',')
+		}
+		first = false
+		out = append(out, encodedKey...)
+		out = append(out, ':')
+		out = append(out, value...)
+	}
+	if _, err := dec.Token(); err != nil {
+		return nil, false
+	}
+	out = append(out, '}')
+	if !changed {
+		return nil, false
+	}
+	return out, true
+}
+
+// fitsInt64 reports whether an integer-valued float is inside the int64 range.
+func fitsInt64(value *big.Float) bool {
+	asFloat, _ := value.Float64()
+	if math.IsInf(asFloat, 0) {
+		return false
+	}
+	return asFloat < 9223372036854775808.0 && asFloat >= -9223372036854775808.0
+}
+
 func (m *Model) UnmarshalJSON(data []byte) error {
 	type modelAlias Model
 	var decoded modelAlias
@@ -419,7 +500,19 @@ func (m *Model) UnmarshalJSON(data []byte) error {
 		Compat json.RawMessage `json:"compat"`
 	}{modelAlias: &decoded}
 	if err := json.Unmarshal(data, &wire); err != nil {
-		return err
+		// A catalog is JSON parsed by the reference, where every number is a
+		// float64, so a limit above int64 max is a valid model there and the
+		// port failed the whole store instead. Retry with those fields saturated
+		// at the int64 bounds, the same coercion jsNumberToInt64 applies on the
+		// other catalog paths.
+		saturated, ok := saturateModelNumbers(data)
+		if !ok {
+			return err
+		}
+		if err := json.Unmarshal(saturated, &wire); err != nil {
+			return err
+		}
+		data = saturated
 	}
 	compat, err := DecodeModelCompat(decoded.API, wire.Compat)
 	if err != nil {

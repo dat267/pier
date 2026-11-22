@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -229,5 +230,43 @@ func TestStoredProviderPublicationCanReadModels(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("publication callback deadlocked reading the provider's catalog")
+	}
+}
+
+// TestModelToleratesOversizedCatalogLimits covers D512: the reference parses a
+// catalog with JSON.parse, where every number is a float64, so a contextWindow
+// above int64 max is still a loadable model. The port stores the field as int64
+// and the standard decoder failed the whole entry, which loses every other
+// provider in the file. The port saturates that one member instead.
+func TestModelToleratesOversizedCatalogLimits(t *testing.T) {
+	for _, testCase := range []struct {
+		name   string
+		number string
+		want   int64
+	}{
+		{"ordinary", "200000", 200000},
+		{"exactly int64 max", "9223372036854775807", math.MaxInt64},
+		{"one above max", "9223372036854775808", math.MaxInt64},
+		{"scientific", "1e19", math.MaxInt64},
+		{"huge", "1e300", math.MaxInt64},
+		{"huge negative", "-1e300", math.MinInt64},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			var model Model
+			data := []byte(`{"id":"m","contextWindow":` + testCase.number + `,"maxTokens":4096}`)
+			if err := json.Unmarshal(data, &model); err != nil {
+				t.Fatalf("Unmarshal(%s): %v", testCase.number, err)
+			}
+			if model.ContextWindow != testCase.want {
+				t.Fatalf("ContextWindow = %d, want %d", model.ContextWindow, testCase.want)
+			}
+			// The neighbouring member is untouched by the retry.
+			if model.MaxTokens != 4096 {
+				t.Fatalf("MaxTokens = %d, want 4096", model.MaxTokens)
+			}
+			if model.ID != "m" {
+				t.Fatalf("ID = %q", model.ID)
+			}
+		})
 	}
 }
