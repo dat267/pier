@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -530,5 +531,27 @@ func TestAWSEventStreamDecoding(t *testing.T) {
 	// A short read is an error.
 	if _, err := ReadAWSEventStreamMessage(bytes.NewReader([]byte{0, 0, 0})); err == nil {
 		t.Fatal("truncated frames must error")
+	}
+}
+
+// A frame's length comes from the peer, so a twelve-byte prelude that announces the
+// 16 MiB maximum must not allocate that size before any body byte arrives: a
+// malformed or hostile endpoint could otherwise force 16 MiB per connection attempt
+// for twelve bytes sent. The reader now grows the buffer as bytes actually arrive.
+func TestAWSEventStreamMessageDoesNotPreallocateTheAnnouncedLength(t *testing.T) {
+	prelude := make([]byte, awsEventStreamPreludeLength)
+	binary.BigEndian.PutUint32(prelude[0:4], 16<<20)
+	binary.BigEndian.PutUint32(prelude[4:8], 0)
+	binary.BigEndian.PutUint32(prelude[8:12], crc32.ChecksumIEEE(prelude[0:8]))
+
+	var before, after runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&before)
+	if _, err := ReadAWSEventStreamMessage(bytes.NewReader(prelude)); err == nil {
+		t.Fatal("a truncated frame must fail")
+	}
+	runtime.ReadMemStats(&after)
+	if grew := after.TotalAlloc - before.TotalAlloc; grew > 1<<20 {
+		t.Fatalf("a truncated 16 MiB frame allocated %d bytes, want under 1 MiB", grew)
 	}
 }

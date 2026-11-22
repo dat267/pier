@@ -13,6 +13,9 @@ import (
 
 const (
 	awsEventStreamPreludeLength = 12
+	// awsEventStreamReadChunk is how much of a frame's body is allocated per read,
+	// so a truncated frame costs what it actually delivered.
+	awsEventStreamReadChunk     = 64 << 10
 	awsEventStreamMinMessageLen = 16
 
 	// Header value type ids.
@@ -60,12 +63,24 @@ func ReadAWSEventStreamMessage(reader io.Reader) (*AWSEventStreamMessage, error)
 		return nil, &AWSEventStreamError{Message: "AWS event stream headers length is invalid"}
 	}
 
-	rest := make([]byte, totalLength-awsEventStreamPreludeLength)
-	if _, err := io.ReadFull(reader, rest); err != nil {
-		if err == io.ErrUnexpectedEOF {
-			return nil, io.ErrUnexpectedEOF
+	// The announced length comes from the peer, so grow the buffer as bytes arrive
+	// rather than allocating the full maximum up front: a twelve-byte prelude
+	// claiming 16 MiB must not cost 16 MiB before the body does.
+	remaining := int(totalLength - awsEventStreamPreludeLength)
+	rest := make([]byte, 0, min(remaining, awsEventStreamReadChunk))
+	for remaining > 0 {
+		chunk := min(remaining, awsEventStreamReadChunk)
+		at := len(rest)
+		rest = append(rest, make([]byte, chunk)...)
+		n, err := io.ReadFull(reader, rest[at:])
+		if err != nil {
+			if err == io.ErrUnexpectedEOF {
+				return nil, io.ErrUnexpectedEOF
+			}
+			return nil, err
 		}
-		return nil, err
+		rest = rest[:at+n]
+		remaining -= n
 	}
 	messageCRC := binary.BigEndian.Uint32(rest[len(rest)-4:])
 	if actual := crc32.ChecksumIEEE(append(append([]byte{}, prelude...), rest[:len(rest)-4]...)); actual != messageCRC {
