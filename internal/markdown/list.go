@@ -34,7 +34,15 @@ func listLineBreaks(line string, n int) int {
 	if i > n || i >= len(line) {
 		return 0
 	}
-	rest := line[i:]
+	// marked's item-loop patterns end in `(?:\n+|$)`, so a trailing newline is
+	// part of the line those regexes test. Production always passes nextLine's
+	// text, which has none, so this only matters for a direct caller, but the
+	// hand scan claims to port those six patterns and did not: `-\n` matched
+	// the bullet rule there and `---\n` the thematic-break rule.
+	rest := strings.TrimSuffix(line[i:], "\n")
+	if rest == "" {
+		return 0
+	}
 	switch c := rest[0]; {
 	case c == '`' || c == '~':
 		if strings.HasPrefix(rest, "```") || strings.HasPrefix(rest, "~~~") {

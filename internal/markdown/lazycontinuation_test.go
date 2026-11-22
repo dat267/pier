@@ -112,3 +112,37 @@ func TestLazyContinuationJoinsTheLastParagraph(t *testing.T) {
 		}
 	}
 }
+
+// TestListItemBreakRulesIncludeTrailingNewline pins the six indent-bounded
+// patterns marked's item loop reads (`other.*Regex(indent)`) against a line that
+// carries its terminator. Each pattern ends in `(?:\n+|$)`, so `-\n` matches the
+// bullet rule and `---\n` the thematic-break rule; the hand scan tested the line
+// with the newline still attached and reported neither. Production passes
+// nextLine's text, which has no newline, so this only guards a direct caller.
+func TestListItemBreakRulesIncludeTrailingNewline(t *testing.T) {
+	for _, testCase := range []struct {
+		line string
+		bits int
+	}{
+		{"-", listBreakBullet},
+		{"-\n", listBreakBullet},
+		{"- \n", listBreakBullet},
+		{"+\n", listBreakBullet},
+		{"1.\n", listBreakBullet},
+		{"---", listBreakHR},
+		{"---\n", listBreakHR},
+		{"___\n", listBreakHR},
+		{"- - -\n", listBreakBullet | listBreakHR},
+		{"_\n", 0},
+		{"\n", 0},
+		{"", 0},
+		{"#\n", listBreakHeading},
+		{">\n", listBreakBlockquote},
+		{"```\n", listBreakFence},
+		{"---\n", listBreakHR},
+	} {
+		if got := listLineBreaks(testCase.line, 0); got != testCase.bits {
+			t.Errorf("listLineBreaks(%q) = %d, want %d", testCase.line, got, testCase.bits)
+		}
+	}
+}
