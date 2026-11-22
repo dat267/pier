@@ -78,8 +78,12 @@ func runAuthLogout(appName string, command *AuthCommand, stdout, stderr io.Write
 	}
 
 	// The name comes from provider configuration, like the stored ids above (D461).
+	// The reference takes `provider?.name ?? providerRef`, which falls back only
+	// when the name is undefined; Go has no undefined, so a provider's name is
+	// used whenever there is one. CreateProvider defaults an empty name to the id,
+	// so an empty name cannot reach here anyway.
 	providerName := tui.SanitizeUntrustedText(providerRef)
-	if provider != nil && provider.Name != "" {
+	if provider != nil {
 		providerName = tui.SanitizeUntrustedText(provider.Name)
 	}
 	if credential == nil {
