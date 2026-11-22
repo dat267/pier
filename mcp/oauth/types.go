@@ -217,7 +217,10 @@ func unknownMembers(input map[string]any, known ...string) map[string]json.RawMe
 	}
 	var extra map[string]json.RawMessage
 	for key, value := range input {
-		if seen[key] || value == nil {
+		// A `null` member is kept: the reference's compact filters only
+		// `undefined` (types.ts:102), so a server that sends an explicit null
+		// must see it survive the round trip. Only a known member is skipped.
+		if seen[key] {
 			continue
 		}
 		encoded, err := json.Marshal(value)

@@ -221,3 +221,90 @@ func TestDiscoveryDoesNotDrainStalledMissingDocument(t *testing.T) {
 		}
 	})
 }
+
+// pi v1.5.2 (b4afdddf) packages/mcp/src/oauth/discovery.ts isDiscoveryMiss: 4xx
+// and 502 mean "not here", so discovery tries the next candidate. The boundaries
+// matter: 400 is a miss (the port must not fall through on it) and 500 is not.
+func TestIsDiscoveryMissBoundaries(t *testing.T) {
+	for _, tc := range []struct {
+		status int
+		want   bool
+	}{
+		{399, false}, {400, true}, {401, true}, {404, true}, {499, true},
+		{500, false}, {501, false}, {502, true}, {503, false}, {200, false},
+	} {
+		if got := isDiscoveryMiss(tc.status); got != tc.want {
+			t.Errorf("isDiscoveryMiss(%d) = %v, want %v", tc.status, got, tc.want)
+		}
+	}
+}
+
+// field matches the auth-param name case-insensitively, as the reference's regex
+// does with /i (discovery.ts:34), so both an ASCII lowercase letter and its upper
+// counterpart must be in the generated character class.
+func TestFieldMatchesTheAuthParamNameCaseInsensitively(t *testing.T) {
+	for _, tc := range []struct {
+		header string
+		want   string
+	}{
+		{`Bearer resource_metadata="https://a.example/m"`, "https://a.example/m"},
+		{`Bearer RESOURCE_METADATA="https://a.example/m"`, "https://a.example/m"},
+		{`Bearer Resource_Metadata="https://a.example/m"`, "https://a.example/m"},
+		{`Bearer resource_metadata=a.example/m, scope="x"`, "a.example/m"},
+		{`Bearer resource_metadata=""`, ""},
+		{`Bearer scope="x"`, ""},
+	} {
+		got := ""
+		if value := field(tc.header, "resource_metadata"); value != nil {
+			got = *value
+		}
+		if got != tc.want {
+			t.Errorf("%q: got %q, want %q", tc.header, got, tc.want)
+		}
+	}
+}
+
+// pi v1.5.2 (b4afdddf) packages/mcp/src/oauth/discovery.ts readMetadata: only a
+// 2xx body is parsed, so 299 is accepted and 300 is an HTTP error. The upper
+// boundary is off by one in the obvious mutant and would accept a redirect body.
+func TestProtectedResourceMetadataAcceptsOnly2xx(t *testing.T) {
+	body := `{"resource":"https://a.example/m","authorization_servers":["https://a.example/s"]}`
+	for _, tc := range []struct {
+		status  int
+		wantErr bool
+	}{
+		{200, false}, {204, false}, {299, false}, {300, true}, {301, true}, {404, true},
+	} {
+		fetch := func(context.Context, *http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: tc.status, Body: io.NopCloser(strings.NewReader(body))}, nil
+		}
+		_, err := DiscoverProtectedResourceMetadata(context.Background(), "https://a.example/mcp", DiscoveryOptions{Fetch: fetch})
+		if (err != nil) != tc.wantErr {
+			t.Errorf("status %d: err = %v, want error = %v", tc.status, err, tc.wantErr)
+		}
+	}
+}
+
+// pi v1.5.2 (b4afdddf) packages/mcp/src/oauth/discovery.ts: a caller that names no
+// protocol version gets the latest one on the metadata request, and an explicit
+// one is sent verbatim.
+func TestDiscoverySendsTheRequestedOrLatestProtocolVersion(t *testing.T) {
+	for _, tc := range []struct{ given, want string }{
+		{"", LatestProtocolVersion},
+		{"2025-06-18", "2025-06-18"},
+	} {
+		var sent string
+		fetch := func(_ context.Context, request *http.Request) (*http.Response, error) {
+			sent = request.Header.Get("MCP-Protocol-Version")
+			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(
+				`{"resource":"https://a.example/m","authorization_servers":["https://a.example/s"]}`))}, nil
+		}
+		if _, err := DiscoverProtectedResourceMetadata(context.Background(), "https://a.example/mcp",
+			DiscoveryOptions{Fetch: fetch, ProtocolVersion: tc.given}); err != nil {
+			t.Fatalf("%q: %v", tc.given, err)
+		}
+		if sent != tc.want {
+			t.Errorf("version %q sent %q, want %q", tc.given, sent, tc.want)
+		}
+	}
+}

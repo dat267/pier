@@ -95,3 +95,33 @@ func TestOAuthIssuerMismatchErrorQuotesLikeJSON(t *testing.T) {
 }
 
 func ptr(value string) *string { return &value }
+
+// pi v1.5.2 (b4afdddf) packages/mcp/src/oauth/types.ts compact keeps every member
+// that is not undefined, so a `null` unknown member survives the round trip:
+// `Object.entries(value).filter(([, item]) => item !== undefined)`. The port
+// dropped `nil` too, losing a member the server sent and the reference preserved
+// (the value is persisted in the stored credential's Extra).
+func TestUnknownMembersPreserveNullLikeCompact(t *testing.T) {
+	input := map[string]any{
+		"resource":    "https://a.example/m",
+		"extra_null":  nil,
+		"extra_value": "v",
+		"extra_false": false,
+	}
+	parsed, err := ParseProtectedResourceMetadata(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := parsed.Extra["extra_null"]; !ok {
+		t.Fatal("a null unknown member was dropped; compact keeps it")
+	}
+	if string(parsed.Extra["extra_null"]) != "null" {
+		t.Fatalf("extra_null = %q, want null", parsed.Extra["extra_null"])
+	}
+	if _, ok := parsed.Extra["extra_value"]; !ok {
+		t.Fatal("a string unknown member was dropped")
+	}
+	if _, ok := parsed.Extra["resource"]; ok {
+		t.Fatal("a known member leaked into Extra")
+	}
+}
