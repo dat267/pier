@@ -16,6 +16,17 @@ func TestLanguageParityRegressions(t *testing.T) {
 		{"crmsh property", "crmsh", "property x[a{\n", `<span class="hljs-keyword">property</span><span class="hljs-title"> </span>x[a{` + "\n"},
 		{"crmsh attributes", "crmsh", "property stonith-enabled=false*[a{\n",
 			`<span class="hljs-keyword">property</span><span class="hljs-title"> </span><span class="hljs-attr">stonith-enabled=</span><span class="hljs-literal">false</span>*[a{` + "\n"},
+		// groovy.js and haxe.js both declare `illegal: /<\//`, the close-tag
+		// pattern. The port wrote `#|<\//` and `<//`, which compile to a literal
+		// `</` followed by `/` and to `<//`, so neither ever matched and a string
+		// inside a tag-like span was still colored. An illegal match aborts the
+		// whole highlight, so the reference escapes everything.
+		{"groovy close tag", "groovy", `<a href="x">y</a>`, `&lt;a href=&quot;x&quot;&gt;y&lt;/a&gt;`},
+		{"haxe close tag", "haxe", `<a href="x">y</a>`, `&lt;a href=&quot;x&quot;&gt;y&lt;/a&gt;`},
+		// Without the close tag the same text still highlights, so the fix did not
+		// disable the string mode.
+		{"groovy no close tag", "groovy", `<a b="x">`, `&lt;a b=<span class="hljs-string">&quot;x&quot;</span>&gt;`},
+		{"haxe no close tag", "haxe", `<a b="x">`, `&lt;a b=<span class="hljs-string">&quot;x&quot;</span>&gt;`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			result, err := Highlight(tc.code, tc.language)

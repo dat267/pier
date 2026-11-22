@@ -79,7 +79,7 @@ func Groovy() *Language {
 				"class interface enum if else for while switch case break default continue " +
 				"throw throws try catch finally implements extends new import package return instanceof",
 		},
-		Illegal: `#|<\//`,
+		Illegal: `#|<\/`, // the reference is /#|<\// (close-tag), not a literal "<//"
 		Contains: []*Mode{
 			Shebang("groovy", 10),
 			comment,

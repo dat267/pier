@@ -54,7 +54,7 @@ func Haxe() *Language {
 			"built_in": "trace this",
 			"literal":  "true false null _",
 		},
-		Illegal: `<//`,
+		Illegal: `<\/`, // the reference is /<\// (close-tag), not a literal "<//"
 		Contains: []*Mode{
 			singleString,
 			QuoteStringMode,
