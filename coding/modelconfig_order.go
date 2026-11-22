@@ -66,5 +66,8 @@ func modelConfigObjectKeys(raw []byte) []string {
 	if err != nil {
 		return nil
 	}
-	return keys
+	// samplingParams is a free-form Record the reference serializes with
+	// JSON.stringify, whose enumeration puts array-index keys first in numeric order
+	// and then the file's own order. Reuse the rule the settings writer already has.
+	return mcpJavaScriptObjectKeyOrder(keys)
 }

@@ -412,3 +412,23 @@ func TestLoadModelConfigEnforcesNumericRange(t *testing.T) {
 		})
 	}
 }
+
+// pi v1.5.2 (b4afdddf) reads samplingParams as a free-form Record and serializes it
+// with JSON.stringify, whose enumeration puts array-index keys first in numeric order
+// before the file's own key order (`Object.keys(JSON.parse('{"a":1,"2":2,"1":0}'))` is
+// ["1","2","a"]). SamplingParamsOrder is pier-only but feeds the request body's key
+// order, so it must use the same enumeration; it returned file order, which put a
+// numeric-looking parameter last instead of first.
+func TestModelConfigKeyOrderMatchesJavaScriptEnumeration(t *testing.T) {
+	raw := `{"temperature":0.5,"top_p":0.9,"z":1,"a":2,"2":1,"1":0}`
+	got := modelConfigObjectKeys([]byte(raw))
+	want := []string{"1", "2", "temperature", "top_p", "z", "a"}
+	if len(got) != len(want) {
+		t.Fatalf("keys = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("keys = %v, want %v", got, want)
+		}
+	}
+}
