@@ -2,9 +2,11 @@ package protocol
 
 import (
 	"encoding/json"
-	"github.com/dat267/pier/ai"
+	"math"
 	"os"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // TestParseMessageBytesRejectsTrailingData pins upstream's JSON.parse
@@ -134,5 +136,87 @@ func TestContentSizesAcceptJavaScriptNumbers(t *testing.T) {
 	// Control: an integer size still decodes to the same number.
 	if err := json.Unmarshal([]byte(`{"uri":"file:///x","name":"x","size":2048}`), &resource); err != nil || *resource.Size != 2048 {
 		t.Fatalf("integer size = %v err=%v", resource.Size, err)
+	}
+}
+
+// pi v1.5.2 (b4afdddf) packages/mcp/src/protocol/jsonrpc.ts isJsonRpcId:
+// `typeof value === "string" || (typeof value === "number" &&
+// Number.isFinite(value))`. Number.isFinite is false for NaN and both
+// infinities, so the float64 arm needs the conjunction: a caller that builds the
+// map itself (rather than decoding it) can put a non-finite number in `id`.
+func TestIsJsonRpcIdAcceptsStringsAndFiniteNumbersOnly(t *testing.T) {
+	for _, tc := range []struct {
+		value any
+		want  bool
+	}{
+		{"abc", true},
+		{"", true},
+		{1.5, true},
+		{0.0, true},
+		{json.Number("2"), true},
+		{json.Number("not-a-number"), false},
+		{math.NaN(), false},
+		{math.Inf(1), false},
+		{math.Inf(-1), false},
+		{nil, false},
+		{true, false},
+		{map[string]any{}, false},
+	} {
+		if got := IsJsonRpcId(tc.value); got != tc.want {
+			t.Errorf("IsJsonRpcId(%#v) = %v, want %v", tc.value, got, tc.want)
+		}
+	}
+}
+
+// A request needs an id, so a message without one is neither a request nor a
+// response; it is a notification only when it also has no id key at all.
+func TestJSONRPCShapeClassification(t *testing.T) {
+	request := map[string]any{"jsonrpc": "2.0", "id": "1", "method": "ping"}
+	notification := map[string]any{"jsonrpc": "2.0", "method": "ping"}
+	response := map[string]any{"jsonrpc": "2.0", "id": "1", "result": map[string]any{}}
+	noID := map[string]any{"jsonrpc": "2.0", "method": "ping"}
+	both := map[string]any{"jsonrpc": "2.0", "id": "1", "result": nil, "error": map[string]any{"code": 1.0, "message": "m"}}
+	badID := map[string]any{"jsonrpc": "2.0", "id": math.Inf(1), "method": "ping"}
+
+	if !IsJsonRpcRequest(request) || IsJsonRpcNotification(request) {
+		t.Error("a request with an id is a request and not a notification")
+	}
+	if !IsJsonRpcNotification(notification) || IsJsonRpcRequest(notification) {
+		t.Error("a message without an id is a notification and not a request")
+	}
+	if !IsJsonRpcResponse(response) {
+		t.Error("a result message is a response")
+	}
+	if IsJsonRpcRequest(noID) || IsJsonRpcResponse(noID) {
+		t.Error("a message with no id is neither a request nor a response")
+	}
+	if IsJsonRpcResponse(both) {
+		t.Error("a message with both result and error is not a response")
+	}
+	if IsJsonRpcRequest(badID) || IsJsonRpcNotification(badID) {
+		t.Error("a non-finite id is not a valid id")
+	}
+}
+
+// pi v1.5.2 (b4afdddf) packages/mcp/src/protocol/jsonrpc.ts isJsonRpcResponse
+// accepts any `typeof message.error.code === "number"`, and JSON numbers are
+// doubles there, so a fractional code is a valid response. `DecodeMessage` on the
+// port reported a raw Go unmarshal error instead, which escapes the McpError
+// contract every other rejection follows.
+func TestDecodeMessageAcceptsAFractionalErrorCode(t *testing.T) {
+	message, err := DecodeMessage([]byte(`{"jsonrpc":"2.0","id":1,"error":{"code":1.5,"message":"m"}}`))
+	if err != nil {
+		t.Fatalf("DecodeMessage: %v", err)
+	}
+	response, ok := message.(*JsonRpcResponse)
+	if !ok || response.Error == nil {
+		t.Fatalf("message = %#v", message)
+	}
+	// The port models the code as an int (McpError.Code is an int too), so a
+	// fractional code truncates. What matters is that it reaches this point: the
+	// reference rejects nothing here, and the port must not leak a raw Go
+	// unmarshal error out of DecodeMessage.
+	if response.Error.Code != 1 {
+		t.Fatalf("code = %v, want 1 (truncated)", response.Error.Code)
 	}
 }

@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D507)
+# Deliberate divergences from pi (D1–D508)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8392,3 +8392,19 @@ The port keeps them for fidelity and pins the state:
 fails if any mode sets the field, which is the signal that the code became live.
 `escapeLiteral` was verified to produce the same pattern source as the reference's
 `escape` on 18 inputs including every special character and a non-ASCII string.
+
+### D508
+
+**A JSON-RPC error code that cannot be an `int` still fails to decode.**
+
+`isJsonRpcResponse` accepts any number as `error.code` (`jsonrpc.ts:107`), and JS
+numbers are doubles, so the reference accepts `1.5` and even `1e300`. The port
+models the code as `int` in both `JsonRpcErrorObject.Code` and `McpError.Code`,
+which every construction site and comparison uses. A fractional code is truncated
+toward zero before the typed decode, so the realistic case (a server sending a
+number with a fractional part) now decodes instead of leaking a raw Go unmarshal
+error out of `DecodeMessage`. A code outside the int range still fails that way.
+Widening two struct fields to `float64` for a value no server sends was not worth
+the churn.
+
+Test: `TestDecodeMessageAcceptsAFractionalErrorCode`.

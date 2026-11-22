@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"strconv"
 )
 
 // JsonRpcId is upstream's `string | number` request id. The zero value is
@@ -205,9 +206,61 @@ func DecodeMessage(data []byte) (any, error) {
 	}
 	var response JsonRpcResponse
 	if err := json.Unmarshal(data, &response); err != nil {
+		// The reference's error code is a JSON number, which is a double, so a
+		// fractional code is a valid response there (jsonrpc.ts:107). The port
+		// models the code as an int, so truncate it the way JS would coerce it
+		// rather than leaking a raw unmarshal error out of DecodeMessage.
+		if rewritten, ok := truncateErrorCode(data); ok {
+			response = JsonRpcResponse{}
+			if retryErr := json.Unmarshal(rewritten, &response); retryErr != nil {
+				return nil, retryErr
+			}
+			return &response, nil
+		}
 		return nil, err
 	}
 	return &response, nil
+}
+
+// truncateErrorCode rewrites a fractional `error.code` to its integer part so the
+// typed decode accepts it. Numbers that already fit are left to the caller.
+//
+// D508: the reference keeps the code as a double (jsonrpc.ts:107), so it accepts
+// a code the port's int cannot hold at all (1e300). Those still fail here with the
+// unmarshal error; widening McpError.Code would touch every construction site and
+// comparison for a value no server sends.
+func truncateErrorCode(data []byte) ([]byte, bool) {
+	var raw struct {
+		Error *struct {
+			Code json.RawMessage `json:"code"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil || raw.Error == nil || len(raw.Error.Code) == 0 {
+		return nil, false
+	}
+	number, err := strconv.ParseFloat(string(raw.Error.Code), 64)
+	if err != nil || math.IsNaN(number) || math.IsInf(number, 0) || number == math.Trunc(number) {
+		return nil, false
+	}
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
+		return nil, false
+	}
+	var errorObject map[string]json.RawMessage
+	if err := json.Unmarshal(object["error"], &errorObject); err != nil {
+		return nil, false
+	}
+	errorObject["code"] = json.RawMessage(strconv.FormatInt(int64(math.Trunc(number)), 10))
+	encoded, err := json.Marshal(errorObject)
+	if err != nil {
+		return nil, false
+	}
+	object["error"] = encoded
+	rewritten, err := json.Marshal(object)
+	if err != nil {
+		return nil, false
+	}
+	return rewritten, true
 }
 
 // decodeJSONValue decodes one JSON value with numbers preserved, rejecting
