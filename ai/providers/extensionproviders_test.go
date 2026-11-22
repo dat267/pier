@@ -1,8 +1,11 @@
 package providers
 
 import (
-	"github.com/dat267/pier/ai"
+	"encoding/json"
+	"os"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // TestExtensionProvidersRegistered covers the two user provider extensions:
@@ -165,6 +168,129 @@ func TestExtensionProviderCompatMatchesTheExtensionCatalog(t *testing.T) {
 		}
 		if compat.SupportsDeveloperRole {
 			t.Errorf("%s: supportsDeveloperRole = true; the extension sets false", model.ID)
+		}
+	}
+}
+
+// extensionCatalogEntry is one record of the extension's compact catalogue
+// (~/.pi/agent/extensions/providers/{hyper,commandcode}/catalog.ts).
+type extensionCatalogEntry struct {
+	ID            string         `json:"id"`
+	Name          string         `json:"name"`
+	Reasoning     bool           `json:"reasoning"`
+	Vision        bool           `json:"vision"`
+	Efforts       []string       `json:"efforts"`
+	Cost          map[string]any `json:"cost"`
+	ContextWindow int64          `json:"contextWindow"`
+	MaxTokens     int64          `json:"maxTokens"`
+}
+
+func extensionCatalogRate(cost map[string]any, key string) float64 {
+	if value, ok := cost[key].(float64); ok {
+		return value
+	}
+	return -1
+}
+
+// TestExtensionCatalogMatchesTheSources pins both ported extension catalogues
+// against the extension sources they were translated from, rather than against
+// the pinned ./pi. The fixture holds the extracted CATALOG arrays and the
+// UNAVAILABLE_IDS/DOMINATED_IDS union; the generators are recorded in
+// testdata/extensions/README.md.
+func TestExtensionCatalogMatchesTheSources(t *testing.T) {
+	raw, err := os.ReadFile("testdata/extensions/catalog.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixture struct {
+		Catalogs map[string][]extensionCatalogEntry `json:"catalogs"`
+		Excluded []string                           `json:"excluded"`
+	}
+	if err := json.Unmarshal(raw, &fixture); err != nil {
+		t.Fatal(err)
+	}
+	excluded := map[string]bool{}
+	for _, id := range fixture.Excluded {
+		excluded[id] = true
+	}
+
+	check := func(label string, want []extensionCatalogEntry, got []*ai.Model, skipExcluded bool) {
+		wantByID := map[string]extensionCatalogEntry{}
+		for _, entry := range want {
+			if skipExcluded && excluded[entry.ID] {
+				continue
+			}
+			wantByID[entry.ID] = entry
+		}
+		gotByID := map[string]*ai.Model{}
+		for _, model := range got {
+			gotByID[model.ID] = model
+		}
+		for id, entry := range wantByID {
+			model := gotByID[id]
+			if model == nil {
+				t.Errorf("%s: model %q missing", label, id)
+				continue
+			}
+			if model.Name != entry.Name || model.Reasoning != entry.Reasoning {
+				t.Errorf("%s %q: name/reasoning = %q/%v, want %q/%v",
+					label, id, model.Name, model.Reasoning, entry.Name, entry.Reasoning)
+			}
+			wantVision := 1
+			if entry.Vision {
+				wantVision = 2
+			}
+			if model.ContextWindow != entry.ContextWindow || model.MaxTokens != entry.MaxTokens || len(model.Input) != wantVision {
+				t.Errorf("%s %q: window=%d maxTokens=%d input=%v, want %d/%d/%d modalities",
+					label, id, model.ContextWindow, model.MaxTokens, model.Input,
+					entry.ContextWindow, entry.MaxTokens, wantVision)
+			}
+			rates := model.Cost.ModelCostRates
+			for _, pair := range []struct {
+				name string
+				got  float64
+			}{{"input", rates.Input}, {"output", rates.Output}, {"cacheRead", rates.CacheRead}, {"cacheWrite", rates.CacheWrite}} {
+				if want := extensionCatalogRate(entry.Cost, pair.name); pair.got != want {
+					t.Errorf("%s %q: cost.%s = %v, want %v", label, id, pair.name, pair.got, want)
+				}
+			}
+			if !entry.Reasoning {
+				continue
+			}
+			// toModel maps each supported effort to itself and every other level
+			// to null.
+			for _, level := range []ai.ThinkingLevel{ai.ThinkOff, ai.ThinkMinimal, ai.ThinkLow, ai.ThinkMedium, ai.ThinkHigh, ai.ThinkXHigh, ai.ThinkMax} {
+				var want *string
+				for _, effort := range entry.Efforts {
+					if effort == string(level) {
+						value := string(level)
+						want = &value
+					}
+				}
+				got := model.ThinkingLevelMap[level]
+				if (got == nil) != (want == nil) || (got != nil && want != nil && *got != *want) {
+					t.Errorf("%s %q: thinkingLevelMap.%s = %v, want %v", label, id, level, got, want)
+				}
+			}
+		}
+		for id := range gotByID {
+			if _, ok := wantByID[id]; !ok {
+				t.Errorf("%s: model %q has no source entry", label, id)
+			}
+		}
+	}
+	check("hyper", fixture.Catalogs["hyper"], hyperModels(), false)
+	check("commandcode", fixture.Catalogs["commandcode"], commandCodeModels(), true)
+
+	// EXCLUDED_IDS is UNAVAILABLE_IDS plus DOMINATED_IDS, and nothing else.
+	for id := range commandCodeExcludedIDs {
+		if !excluded[id] {
+			t.Errorf("commandCodeExcludedIDs lists %q, absent from the sources", id)
+		}
+	}
+	for _, id := range fixture.Excluded {
+		if !commandCodeExcludedIDs[id] {
+			t.Errorf("the sources exclude %q, missing from commandCodeExcludedIDs", id)
 		}
 	}
 }
