@@ -806,7 +806,10 @@ func (t *TreeList) UpdateNodeLabel(entryID string, label *string, labelTimestamp
 			if labelTimestamp != "" {
 				flatNode.Node.LabelTimestamp = labelTimestamp
 			} else {
-				flatNode.Node.LabelTimestamp = t.now().UTC().Format(time.RFC3339Nano)
+				// Upstream stamps new Date().toISOString(): three fractional
+				// digits, which RFC3339Nano (nine, or none) does not produce.
+				// The session's own entries use the same layout.
+				flatNode.Node.LabelTimestamp = t.now().UTC().Format(coding.SessionTimestampLayout)
 			}
 		} else {
 			flatNode.Node.Label = ""

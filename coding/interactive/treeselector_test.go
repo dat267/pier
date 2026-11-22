@@ -670,3 +670,33 @@ func TestTreeSelectorPutsTheActiveRootFirst(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.5.2 (b4afdddf) components/tree-selector.ts updateNodeLabel stamps a new
+// label with `new Date().toISOString()` when no timestamp is supplied, which
+// always carries exactly three fractional digits. The port used
+// time.RFC3339Nano (nine), and the value is shown in the tree and exposed as
+// `labelTimestamp` over RPC mode.
+func TestTreeLabelTimestampMatchesISOString(t *testing.T) {
+	tree := []*coding.SessionTreeNode{{
+		Entry: coding.SessionEntry{ID: "e1", Type: "message", Timestamp: "2026-01-01T00:00:00.000Z"},
+	}}
+	list := NewTreeList(tree, nil, 10, nil, FilterDefault)
+	label := "my label"
+	list.UpdateNodeLabel("e1", &label, "")
+	var stamp string
+	for _, node := range list.flatNodes {
+		if node.Node.Entry.ID == "e1" {
+			stamp = node.Node.LabelTimestamp
+		}
+	}
+	if stamp == "" {
+		t.Fatal("the label got no timestamp")
+	}
+	parsed, err := time.Parse(time.RFC3339Nano, stamp)
+	if err != nil {
+		t.Fatalf("timestamp %q does not parse: %v", stamp, err)
+	}
+	if want := parsed.UTC().Format("2006-01-02T15:04:05.000Z"); stamp != want {
+		t.Fatalf("timestamp = %q, want the toISOString form %q", stamp, want)
+	}
+}
