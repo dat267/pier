@@ -32,6 +32,12 @@ func TestNumberMatchesJavaScriptCoercion(t *testing.T) {
 		{"null", nil, 0, true},
 		{"true", true, 1, true},
 		{"false", false, 0, true},
+		// A radix prefix with no digits is NaN upstream ("0x" is not 0), which is
+		// the boundary the `len(text) > 2` guard before the prefix switch exists for.
+		{"hex prefix only", "0x", 0, false},
+		{"binary prefix only", "0b", 0, false},
+		{"octal prefix only", "0o", 0, false},
+		{"hex zero", "0x0", 0, true},
 		{"empty array", []any{}, 0, true},
 		{"single element array", []any{float64(7)}, 7, true},
 		{"nested array", []any{[]any{"8"}}, 8, true},
