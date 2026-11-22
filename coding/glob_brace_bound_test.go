@@ -142,6 +142,20 @@ func TestExpandBracesIsBounded(t *testing.T) {
 	if got := strings.Join(expandBraces("a{b,c}d{e,f}"), ","); got != "abde,abdf,acde,acdf" {
 		t.Fatalf("ordinary expansion = %q", got)
 	}
+
+	// EXPANSION_MAX_LENGTH counts characters, not bytes: it is JavaScript's
+	// `.length`, which is UTF-16 code units. 9000 members of 200 CJK characters
+	// are 1,800,000 units but 5,400,000 bytes, so a byte count cut the list short
+	// at 6666 results while the reference (brace-expansion 5.0.12) expands all
+	// 9000.
+	wide := strings.Repeat("\u4e2d", 200)
+	members := make([]string, 9000)
+	for index := range members {
+		members[index] = wide
+	}
+	if got := len(expandBraces("{" + strings.Join(members, ",") + "}")); got != 9000 {
+		t.Fatalf("multibyte expansion produced %d results, want 9000: the length cap counts characters", got)
+	}
 }
 
 // TestMatchGlobEscapedBraces covers brace-expansion's escapes: a backslash

@@ -143,11 +143,16 @@ func expandBracesWithin(pattern string, top bool, depth int) []string {
 						if dropEmptyValues && expanded == "" {
 							continue
 						}
-						if len(values) >= globBraceExpansionMax || length+len(expanded) > globBraceExpansionMaxLength {
+						// The limit is brace-expansion's EXPANSION_MAX_LENGTH, which
+						// bounds characters: JavaScript's `.length`, so UTF-16 code
+						// units. Counting bytes cut a multibyte pattern short (a CJK
+						// brace list of 9000 two-hundred-character members expanded
+						// 6666 where the reference expands all 9000).
+						if len(values) >= globBraceExpansionMax || length+ai.JSLength(expanded) > globBraceExpansionMaxLength {
 							break alternatives
 						}
 						values = append(values, expanded)
-						length += len(expanded)
+						length += ai.JSLength(expanded)
 					}
 				}
 			}
@@ -176,10 +181,12 @@ func combineExpansions(acc []string, pre string, values []string, dropEmpties bo
 			if dropEmpties && expansion == "" {
 				continue
 			}
-			if length+len(expansion) > globBraceExpansionMaxLength {
+			// EXPANSION_MAX_LENGTH counts characters, as combine() does with
+			// expansion.length.
+			if length+ai.JSLength(expansion) > globBraceExpansionMaxLength {
 				return out
 			}
-			length += len(expansion)
+			length += ai.JSLength(expansion)
 			out = append(out, expansion)
 		}
 	}
@@ -250,10 +257,10 @@ func expandBraceSequence(body string, isAlpha bool) (values []string) {
 		} else {
 			text = ai.JSNumberToString(value)
 		}
-		if total+len(text) > globBraceExpansionMaxLength {
+		if total+ai.JSLength(text) > globBraceExpansionMaxLength {
 			return values
 		}
-		total += len(text)
+		total += ai.JSLength(text)
 		values = append(values, text)
 	}
 	return values
