@@ -464,3 +464,52 @@ func TestMessageComponentsDoNotStackZoneMarkers(t *testing.T) {
 		t.Fatalf("assistant zone-start markers = %d, want 1:\n%q", got, secondA)
 	}
 }
+
+// TestFormatTokensExtendsPastAMillion covers D513: upstream footer.ts
+// formatTokens stops at M, so a session that has burned billions of tokens
+// renders "4295M" or "1250000M" and the number grows without bound. The port
+// continues the same band pattern with B and T.
+func TestFormatTokensExtendsPastAMillion(t *testing.T) {
+	for _, testCase := range []struct {
+		count int64
+		want  string
+	}{
+		// The upstream range is unchanged.
+		{999, "999"},
+		{1000, "1.0k"},
+		{9999, "10.0k"},
+		{10000, "10k"},
+		{999999, "1000k"},
+		{1000000, "1.0M"},
+		{9999999, "10.0M"},
+		{10000000, "10M"},
+		// Past a million the units continue.
+		{999999999, "1000M"},
+		{1000000000, "1.0B"},
+		{1234567890, "1.2B"},
+		{4295000000, "4.3B"},
+		{9999999999, "10.0B"},
+		{10000000000, "10B"},
+		{999999999999, "1000B"},
+		{1000000000000, "1.0T"},
+		{1234567890123, "1.2T"},
+	} {
+		if got := FormatTokens(testCase.count); got != testCase.want {
+			t.Errorf("FormatTokens(%d) = %q, want %q", testCase.count, got, testCase.want)
+		}
+	}
+	// The simple form keeps whole units, so it truncates the same bands.
+	for _, testCase := range []struct {
+		count int64
+		want  string
+	}{
+		{999999999, "1000M"},
+		{1000000000, "1B"},
+		{1234567890, "1B"},
+		{1000000000000, "1T"},
+	} {
+		if got := FormatTokensSimple(testCase.count); got != testCase.want {
+			t.Errorf("FormatTokensSimple(%d) = %q, want %q", testCase.count, got, testCase.want)
+		}
+	}
+}

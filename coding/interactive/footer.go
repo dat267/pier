@@ -57,7 +57,7 @@ type FooterSession interface {
 }
 
 // FormatTokens formats token counts for the compact footer display (upstream
-// footer.ts formatTokens).
+// footer.ts formatTokens, extended past a million: D513).
 func FormatTokens(count int64) string {
 	switch {
 	case count < 1000:
@@ -68,13 +68,22 @@ func FormatTokens(count int64) string {
 		return strconv.FormatInt(int64(math.Round(float64(count)/1000)), 10) + "k"
 	case count < 10000000:
 		return formatFixed(float64(count)/1000000, 1) + "M"
-	default:
+	case count < 1000000000:
 		return strconv.FormatInt(int64(math.Round(float64(count)/1000000)), 10) + "M"
+	case count < 10000000000:
+		return formatFixed(float64(count)/1000000000, 1) + "B"
+	case count < 1000000000000:
+		return strconv.FormatInt(int64(math.Round(float64(count)/1000000000)), 10) + "B"
+	case count < 10000000000000:
+		return formatFixed(float64(count)/1000000000000, 1) + "T"
+	default:
+		return strconv.FormatInt(int64(math.Round(float64(count)/1000000000000)), 10) + "T"
 	}
 }
 
 // FormatTokensSimple is the footer extension's token format
-// (format.ts formatTokens): no fractional megabytes.
+// (format.ts formatTokens): no fractional megabytes, and the same B/T extension
+// past a million as FormatTokens (D513).
 func FormatTokensSimple(count int64) string {
 	switch {
 	case count < 1000:
@@ -83,8 +92,12 @@ func FormatTokensSimple(count int64) string {
 		return formatFixed(float64(count)/1000, 1) + "k"
 	case count < 1000000:
 		return strconv.FormatInt(int64(math.Round(float64(count)/1000)), 10) + "k"
-	default:
+	case count < 1000000000:
 		return strconv.FormatInt(int64(math.Round(float64(count)/1000000)), 10) + "M"
+	case count < 1000000000000:
+		return strconv.FormatInt(int64(math.Round(float64(count)/1000000000)), 10) + "B"
+	default:
+		return strconv.FormatInt(int64(math.Round(float64(count)/1000000000000)), 10) + "T"
 	}
 }
 

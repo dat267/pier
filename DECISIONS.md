@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D512)
+# Deliberate divergences from pi (D1–D513)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8510,3 +8510,22 @@ catalog that fits. A saturated value differs from the reference only for a
 number no real provider sends.
 
 Test: `TestModelToleratesOversizedCatalogLimits`. Cited at `ai/models.go`.
+
+### D513
+
+**Token counts render in billions and trillions.**
+
+Reference: pi v1.6.0 (`faac5858`) `modes/interactive/components/footer.ts`
+`formatTokens` stops at megabytes: `< 10_000_000` renders `(count/1e6).toFixed(1) + "M"`,
+anything larger `Math.round(count/1e6) + "M"`. A long session therefore renders a
+running total as `4295M`, and one that reaches a trillion as `1000000M`, with the
+digits growing without bound in a line that sits inside the status indicator's
+fixed border. The footer extension's `formatTokens` has the same shape.
+
+The port continues the same band pattern with `B` and `T`: the fractional band for
+`< 10×` then a rounded whole unit, so `4295000000` renders `4.3B` and
+`1234567890123` renders `1.2T`. Every count below a million renders exactly as
+before, and the `1000M` / `1000B` rollover at each unit boundary is kept, because
+upstream has the same `1000k` shape at its own boundary.
+
+Test: `TestFormatTokensExtendsPastAMillion`. Cited at `coding/interactive/footer.go`.
