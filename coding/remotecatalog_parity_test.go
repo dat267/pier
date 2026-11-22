@@ -326,3 +326,51 @@ func catalogModelIDs(models []*ai.Model) []string {
 	}
 	return ids
 }
+
+// TestParseRemoteCatalogKeepsAModelWithWrongTypedMembers pins the tolerance the
+// reference gets for free: parseCatalog spreads each entry into its model
+// object (`{ ...model, provider }`), so a field of the wrong type is kept and
+// degrades quietly downstream (a string contextWindow compares false against a
+// number, so the model simply shows no context size). The port decodes into the
+// typed ai.Model, which rejected the whole entry and removed the model from the
+// picker. The rest of the entry must survive.
+func TestParseRemoteCatalogKeepsAModelWithWrongTypedMembers(t *testing.T) {
+	for _, testCase := range []struct {
+		name   string
+		entry  string
+		fields func(*testing.T, *ai.Model)
+	}{
+		{"string contextWindow", `{"id":"a","name":"A","maxTokens":100,"contextWindow":"big"}`,
+			func(t *testing.T, model *ai.Model) {
+				if model.Name != "A" || model.MaxTokens != 100 {
+					t.Fatalf("good members lost: %+v", model)
+				}
+			}},
+		{"string input", `{"id":"a","name":"A","input":"text"}`,
+			func(t *testing.T, model *ai.Model) {
+				if model.Name != "A" {
+					t.Fatalf("good member lost: %+v", model)
+				}
+			}},
+		{"string cost", `{"id":"a","name":"A","cost":"free"}`,
+			func(t *testing.T, model *ai.Model) {
+				if model.Name != "A" {
+					t.Fatalf("good member lost: %+v", model)
+				}
+			}},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			models, err := ParseRemoteCatalog("p", json.RawMessage(`[`+testCase.entry+`]`))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(models) != 1 {
+				t.Fatalf("models = %d, want the entry kept", len(models))
+			}
+			if models[0].ID != "a" {
+				t.Fatalf("ID = %q", models[0].ID)
+			}
+			testCase.fields(t, models[0])
+		})
+	}
+}

@@ -122,12 +122,62 @@ func ParseRemoteCatalog(providerID string, value any) ([]*ai.Model, error) {
 		}
 		var model ai.Model
 		if err := json.Unmarshal(entry, &model); err != nil {
-			continue
+			// The reference spreads the entry into its model object
+			// (`{ ...model, provider }`), so a field of the wrong type is kept
+			// as-is and degrades quietly downstream (a string contextWindow
+			// compares false against a number and the model simply shows no
+			// context size). Dropping the whole model removed it from the picker
+			// instead, so retry without the members the port's typed fields
+			// cannot hold.
+			tolerant, ok := dropUndecodableModelMembers(entry)
+			if !ok {
+				continue
+			}
+			if err := json.Unmarshal(tolerant, &model); err != nil {
+				continue
+			}
 		}
 		model.Provider = ai.ProviderId(providerID)
 		models = append(models, &model)
 	}
 	return models, nil
+}
+
+// dropUndecodableModelMembers removes the model members whose values the typed
+// Model cannot hold, so the rest of the entry still decodes. A member is dropped
+// only when doing so shortens the failure, so a good member is never discarded
+// for a bad one elsewhere. It reports false when nothing can be salvaged.
+func dropUndecodableModelMembers(entry json.RawMessage) (json.RawMessage, bool) {
+	keys, values, err := readJSONObjectOrdered(entry)
+	if err != nil {
+		return nil, false
+	}
+	kept := append([]string{}, keys...)
+	decodes := func(keys []string) bool {
+		var probe ai.Model
+		return json.Unmarshal(marshalOrderedObject(keys, values), &probe) == nil
+	}
+	for !decodes(kept) {
+		dropped := false
+		for index := len(kept) - 1; index >= 0; index-- {
+			without := append(append([]string{}, kept[:index]...), kept[index+1:]...)
+			if len(without) == 0 {
+				continue
+			}
+			if decodes(without) {
+				kept = without
+				dropped = true
+				break
+			}
+		}
+		if !dropped {
+			return nil, false
+		}
+	}
+	if len(kept) == len(keys) {
+		return nil, false
+	}
+	return marshalOrderedObject(kept, values), true
 }
 
 // remoteCatalogModels decides which stored models are usable: a stored overlay

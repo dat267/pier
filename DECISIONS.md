@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D514)
+# Deliberate divergences from pi (D1–D515)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8553,3 +8553,28 @@ The transport layer is unchanged: when the rejection carries a status,
 it would repeat. Only a statusless text classification changes.
 
 Test: `TestRejectedRequestIsRetryableWithoutAStatus`. Cited at `ai/retry.go`.
+
+### D515
+
+**A remote-catalog model with one undecodable member is kept.**
+
+Reference: pi v1.6.0 (`faac5858`) `core/remote-catalog-provider.ts` `parseCatalog`
+filters entries by shape and then spreads each one into its model object
+(`{ ...model, provider: providerId }`). No field is type-checked, so an entry
+whose `contextWindow` is the string `"big"` is still a model: it reaches the
+picker and degrades quietly, because a string compares false against a number
+and the model simply shows no context size.
+
+The port decodes each entry into the typed `ai.Model`, where one wrong-typed
+member fails the whole struct, so the entry was skipped and the model vanished
+from the picker. Keeping the model with its good members is closer to the
+reference than removing it. `dropUndecodableModelMembers` retries the decode with
+the offending member removed, dropping only what the failure requires, so `name`
+and `maxTokens` survive. This runs only after a decode failure, so a
+well-formed catalog is unchanged and byte parity holds for every real one.
+
+The remaining difference is unavoidable and narrower than it was: a field the
+port cannot represent is absent rather than carried as the wrong type, where the
+reference would pass the raw value through. Tests:
+`TestParseRemoteCatalogKeepsAModelWithWrongTypedMembers`. Cited at
+`coding/remotecatalog.go`.
