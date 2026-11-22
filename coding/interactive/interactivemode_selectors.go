@@ -438,7 +438,7 @@ func (w *SelectorWiring) ShowTreeSelector(ctx context.Context, initialSelectedID
 		report(build())
 		return
 	}
-	w.TreeQueue.GoLatestContext("session-tree", func(ctx context.Context) {
+	if !w.TreeQueue.GoLatestContext("session-tree", func(ctx context.Context) {
 		list := build()
 		if ctx.Err() != nil {
 			return
@@ -449,7 +449,11 @@ func (w *SelectorWiring) ShowTreeSelector(ctx context.Context, initialSelectedID
 			}
 			report(list)
 		})
-	})
+	}) {
+		// The queue is stopped (shutdown), so the build will never run and the
+		// notice would stay on screen. Clear it and say so.
+		w.showStatus("")
+	}
 }
 
 // handleTreeCopy copies the selected tree entry's text (upstream

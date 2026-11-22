@@ -9,6 +9,7 @@ import (
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/internal/offloop"
 	"github.com/dat267/pier/tui"
 )
 
@@ -715,4 +716,25 @@ func TestTreeNavigationAvailability(t *testing.T) {
 			t.Errorf("navigation ran after aborting into a compaction: %v", session.navigateCalls)
 		}
 	})
+}
+
+// TestTreeSelectorClearsItsNoticeWhenTheQueueIsStopped covers the queued build's
+// rejected submission. `GoLatestContext` reports false when the queue is stopped,
+// and the port ignored that, so /tree during shutdown left "Opening session
+// tree…" on the status line forever: the build never ran and nothing cleared it.
+func TestTreeSelectorClearsItsNoticeWhenTheQueueIsStopped(t *testing.T) {
+	wiring, _, _, _ := newSelectorTestWiring(t)
+	statuses := []string{}
+	wiring.ShowStatus = func(message string) { statuses = append(statuses, message) }
+	wiring.SessionInfo = coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(bool)})
+	queue := offloop.New()
+	queue.Stop()
+	wiring.TreeQueue = queue
+	wiring.PostToUI = func(fn func()) { fn() }
+
+	wiring.ShowTreeSelector(context.Background(), "", false)
+
+	if len(statuses) != 2 || statuses[0] != SessionTreeOpeningNotice || statuses[1] != "" {
+		t.Fatalf("statuses = %q, want the notice then a clear", statuses)
+	}
 }
