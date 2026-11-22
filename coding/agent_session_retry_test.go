@@ -424,3 +424,51 @@ func TestAbortDuringRetryBackoffReportsAborted(t *testing.T) {
 		}
 	})
 }
+
+// pi v1.5.2 (b4afdddf) agent-session.ts resets the retry counter on
+// `stopReason !== "error"`, so a "length" stop counts as success and emits
+// auto_retry_end with success true. The overflow-recovery flag has a separate,
+// stricter guard (`!== "error" && !== "length"`). The two are adjacent in the
+// port and easy to conflate, so this pins them apart: a truncating retry counts
+// as a successful retry.
+func TestRetrySuccessAfterLengthStop(t *testing.T) {
+	var calls atomic.Int64
+	streamFn := func(model *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		call := calls.Add(1)
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			if call == 1 {
+				message := &ai.AssistantMessage{
+					API: ai.APIAnthropicMessages, Provider: model.Provider, Model: model.ID,
+					StopReason: ai.StopError, ErrorMessage: ptrTo("overloaded"),
+				}
+				stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopError, Error: message})
+				return
+			}
+			message := &ai.AssistantMessage{
+				API: ai.APIAnthropicMessages, Provider: model.Provider, Model: model.ID,
+				Content: ai.ContentList{ai.TextContent{Text: "truncated"}}, StopReason: ai.StopLength,
+			}
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopLength, Message: message})
+		}()
+		return stream
+	}
+	session := retrySession(t, &ai.RetryPolicy{Enabled: true, MaxRetries: 3, BaseDelayMS: 1}, streamFn)
+	var success *SessionEvent
+	session.Subscribe(func(event *SessionEvent) {
+		if event.Type == SessionAutoRetryEnd && event.Success {
+			success = event
+		}
+	})
+	if err := session.Prompt(ctxpkg.Background(), "hello", nil); err != nil {
+		t.Fatal(err)
+	}
+	if success == nil || success.Attempt != 1 {
+		t.Fatalf("a length stop after a retry must report success: %+v", success)
+	}
+	if session.RetryAttempt() != 0 {
+		t.Fatalf("attempt = %d, want the counter reset", session.RetryAttempt())
+	}
+}
+
+func ptrTo(s string) *string { return &s }
