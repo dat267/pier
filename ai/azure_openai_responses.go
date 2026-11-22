@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -79,8 +80,22 @@ func NormalizeAzureBaseURL(baseURL string) (string, error) {
 		strings.HasSuffix(hostname, ".ai.azure.com")
 	host := hostname
 	port := parsed.Port()
-	if (parsed.Scheme == "http" && port == "80") || (parsed.Scheme == "https" && port == "443") {
-		port = ""
+	// The WHATWG URL parser reads a port as a number, so leading zeros are not
+	// part of it: :0443 on https is the default 443 and is dropped, while :0080
+	// on https is port 80 and survives as ":80". Compare and rewrite the
+	// numeric value instead of the literal text.
+	if port != "" {
+		numeric, err := strconv.Atoi(port)
+		// The WHATWG URL parser rejects a port above 65535; url.Parse keeps the
+		// text, so check it here rather than pass an unusable port through.
+		if err != nil || numeric > 65535 {
+			return "", fmt.Errorf("Invalid Azure OpenAI base URL: %s", baseURL)
+		}
+		if (parsed.Scheme == "http" && numeric == 80) || (parsed.Scheme == "https" && numeric == 443) {
+			port = ""
+		} else {
+			port = strconv.Itoa(numeric)
+		}
 	}
 	if strings.Contains(host, ":") {
 		host = "[" + host + "]"
@@ -89,6 +104,21 @@ func NormalizeAzureBaseURL(baseURL string) (string, error) {
 		host += ":" + port
 	}
 	parsed.Host = host
+	// A WHATWG URL always has a path: with no path but a query or fragment the
+	// serialization is `host/?q`, so record `/` rather than leave Path empty and
+	// emit `host?q`.
+	if parsed.Path == "" && parsed.RawPath == "" {
+		parsed.Path = "/"
+	}
+	// The WHATWG parser resolves "." and ".." path segments while parsing, so
+	// `/a/../v1` is `/v1` and a trailing `/v1/..` ends at the root. Go keeps the
+	// segments as written, which would send the request to a different path.
+	if resolved := resolveDotSegments(parsed.EscapedPath()); resolved != parsed.EscapedPath() {
+		if unescaped, err := url.PathUnescape(resolved); err == nil {
+			parsed.Path = unescaped
+			parsed.RawPath = ""
+		}
+	}
 	normalizedPath := strings.TrimRight(parsed.EscapedPath(), "/")
 
 	// Azure hosts get /openai/v1 as the base path so the SDK-style request
@@ -100,6 +130,39 @@ func NormalizeAzureBaseURL(baseURL string) (string, error) {
 		parsed.RawQuery = ""
 	}
 	return strings.TrimRight(parsed.String(), "/"), nil
+}
+
+// resolveDotSegments applies the WHATWG path-segment rules: a "." segment is
+// dropped and a ".." segment removes the segment before it. A trailing "." or
+// ".." leaves a trailing slash, and ".." at the root stays at the root.
+func resolveDotSegments(p string) string {
+	if p == "" || (!strings.Contains(p, "/.") && !strings.HasSuffix(p, ".")) {
+		return p
+	}
+	leadingSlash := strings.HasPrefix(p, "/")
+	trailingSlash := strings.HasSuffix(p, "/") || strings.HasSuffix(p, "/.") || strings.HasSuffix(p, "/..")
+	segments := strings.Split(p, "/")
+	stack := make([]string, 0, len(segments))
+	for _, segment := range segments {
+		switch segment {
+		case "", ".":
+			continue
+		case "..":
+			if len(stack) > 0 {
+				stack = stack[:len(stack)-1]
+			}
+		default:
+			stack = append(stack, segment)
+		}
+	}
+	result := strings.Join(stack, "/")
+	if leadingSlash {
+		result = "/" + result
+	}
+	if trailingSlash && !strings.HasSuffix(result, "/") {
+		result += "/"
+	}
+	return result
 }
 
 // BuildDefaultAzureBaseURL builds the resource-name base URL.

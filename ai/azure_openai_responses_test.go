@@ -26,12 +26,26 @@ func TestNormalizeAzureBaseURL(t *testing.T) {
 		{"https://my-resource.cognitiveservices.azure.com/openai/v1", "https://my-resource.cognitiveservices.azure.com/openai/v1"},
 		{"https://my-resource.services.ai.azure.com/openai/v1/responses", "https://my-resource.services.ai.azure.com/openai/v1"},
 		{"https://my-proxy.example.com/v1", "https://my-proxy.example.com/v1"},
+		// A port with leading zeros is the same port: the WHATWG URL parser
+		// reads it as a number, so :0443 on https is the default 443 and is
+		// dropped, while :0080 on https is port 80 and is kept.
+		{"https://my-proxy.example.com:0443/v1", "https://my-proxy.example.com/v1"},
+		{"https://my-resource.openai.azure.com:0443", "https://my-resource.openai.azure.com/openai/v1"},
+		{"https://my-proxy.example.com:0080/v1", "https://my-proxy.example.com:80/v1"},
 		{"HTTPS://MY-PROXY.EXAMPLE.COM:443/v1", "https://my-proxy.example.com/v1"},
 		{"HTTP://MY-PROXY.EXAMPLE.COM:80/v1", "http://my-proxy.example.com/v1"},
 		{"https://my-resource.openai.azure.com/openai?api-version=2024-12-01", "https://my-resource.openai.azure.com/openai/v1"},
 		{"https://my-resource.openai.azure.com/%6fpenai", "https://my-resource.openai.azure.com/%6fpenai"},
 		// Query parameters on non-Azure hosts are preserved.
 		{"https://my-proxy.example.com/v1?custom=true", "https://my-proxy.example.com/v1?custom=true"},
+		// A WHATWG URL always serializes a path, so an empty path with a query is
+		// `host/?q`, not `host?q`.
+		{"https://my-proxy.example.com?x=1", "https://my-proxy.example.com/?x=1"},
+		// The WHATWG parser resolves dot segments while parsing.
+		{"https://my-proxy.example.com/a/../v1", "https://my-proxy.example.com/v1"},
+		{"https://my-proxy.example.com/./v1", "https://my-proxy.example.com/v1"},
+		{"https://my-proxy.example.com/v1/..", "https://my-proxy.example.com"},
+		{"https://my-proxy.example.com/v1/./x", "https://my-proxy.example.com/v1/x"},
 		{"\uFEFFhttps://my-proxy.example.com/v1\uFEFF", "https://my-proxy.example.com/v1"},
 	}
 	for _, testCase := range cases {
@@ -46,6 +60,18 @@ func TestNormalizeAzureBaseURL(t *testing.T) {
 	}
 	if _, err := NormalizeAzureBaseURL("not-a-url"); err == nil {
 		t.Fatal("invalid URLs must be rejected")
+	}
+	// The WHATWG parser rejects a port above 65535.
+	for _, outOfRange := range []string{"https://my-proxy.example.com:65536/v1", "https://my-proxy.example.com:99999999999999999999/v1"} {
+		if _, err := NormalizeAzureBaseURL(outOfRange); err == nil {
+			t.Errorf("NormalizeAzureBaseURL(%q) must be rejected: the WHATWG parser refuses a port above 65535", outOfRange)
+		}
+	}
+	// D511: the reference's WHATWG URL accepts any scheme it knows, so
+	// `ftp://host/` parses there; the port requires http(s) because a base URL
+	// dialed over ftp cannot serve a Responses request.
+	if _, err := NormalizeAzureBaseURL("ftp://my-resource.openai.azure.com"); err == nil {
+		t.Fatal("D511: a non-http(s) scheme must be rejected")
 	}
 }
 

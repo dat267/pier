@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D510)
+# Deliberate divergences from pi (D1–D511)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8455,3 +8455,25 @@ delta, while `bufio.Scanner`'s doubling growth peaks near 207 MiB rather than th
 a 256 MiB cap produced (measured, which is why the larger cap was rejected).
 
 Test: `TestSSEScannerBoundsOneLine`. Cited at `ai/sse_lines.go`.
+
+### D511
+
+**An Azure OpenAI base URL must be http(s).**
+
+Reference: pi v1.6.0 (`faac5858`) parses the base URL with the WHATWG `URL`
+constructor (`ai/src/api/azure-openai-config.ts:39`), which accepts any scheme it
+knows: `ftp://host/` and `ws://host/` parse, and `normalizeAzureBaseUrl` then
+rewrites their path like any other. The port rejects a scheme other than http or
+https.
+
+The scheme is the only accepted difference. Every other part of the parse matched
+the reference byte for byte once the port was corrected, checked by an 11,340-case
+differential against Node's `URL` over scheme, host, port, path and query
+combinations: zero differences. A base URL the SDK would dial over ftp cannot serve
+a Responses request, and failing at resolve time gives the user the configured
+value instead of a connection error from inside the request. This is the same
+trade as the existing relative-URL rejection, which the reference gets free from
+the `URL` constructor throwing.
+
+Test: `TestNormalizeAzureBaseURL` (`ai/azure_openai_responses_test.go`). Cited at
+`ai/azure_openai_responses.go`.
