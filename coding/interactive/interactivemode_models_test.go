@@ -385,3 +385,47 @@ func TestHandleModelCommandSelectsExactMatch(t *testing.T) {
 		t.Fatal("a non-match should open the selector")
 	}
 }
+
+// TestHandleModelCommandReportsATimeout covers the refresh that /model runs when
+// no cached model matches. The refresh coordinator returns ctx.Err(), so a
+// 15-second deadline arrives as "context deadline exceeded"; the reference's
+// findExactModelMatch catch reports `timedOut ? "Model refresh timed out..."
+// : "Could not refresh model catalogs: ..."`, and the port tested err != nil
+// first with no deadline check, so the user saw the raw error text.
+func TestHandleModelCommandReportsATimeout(t *testing.T) {
+	runtime := &modelTestRuntime{
+		models: []*ai.Model{{ID: "a", Provider: "p"}},
+		refresh: func() (ai.ModelsRefreshResult, error) {
+			return ai.ModelsRefreshResult{}, nil
+		},
+	}
+	wiring, _, _ := newModelTestWiring(t, runtime)
+	warnings := []string{}
+	wiring.ShowWarning = func(message string) { warnings = append(warnings, message) }
+
+	expired, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+	if err := wiring.HandleModelCommand(expired, "zzz"); err != nil {
+		t.Fatal(err)
+	}
+	if len(warnings) != 1 || warnings[0] != "Model refresh timed out; searching cached models." {
+		t.Fatalf("warnings = %q, want the timeout message", warnings)
+	}
+
+	// A real failure that is not a deadline still reports the error's text.
+	failing := &modelTestRuntime{
+		models: []*ai.Model{{ID: "a", Provider: "p"}},
+		refresh: func() (ai.ModelsRefreshResult, error) {
+			return ai.ModelsRefreshResult{}, errors.New("catalog offline")
+		},
+	}
+	failingWiring, _, _ := newModelTestWiring(t, failing)
+	var got []string
+	failingWiring.ShowWarning = func(message string) { got = append(got, message) }
+	if err := failingWiring.HandleModelCommand(context.Background(), "zzz"); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0] != "Could not refresh model catalogs: catalog offline" {
+		t.Fatalf("warnings = %q, want the error text", got)
+	}
+}

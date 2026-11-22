@@ -124,8 +124,14 @@ func (w *ModelWiring) HandleModelCommand(ctx context.Context, searchTerm string)
 		w.showStatus("Refreshing model catalogs…")
 		refreshCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 		result, err := RefreshModelCatalogs(refreshCtx, w.Session.ModelRuntime())
+		// Snapshot the deadline before cancel(): a 15-second timeout surfaces as
+		// ctx.Err(), and the reference reports it as a timeout rather than as the
+		// error's text (interactive-mode.ts findExactModelMatch's catch).
+		timedOut := refreshCtx.Err() == context.DeadlineExceeded || result.Aborted
 		cancel()
 		switch {
+		case err != nil && timedOut:
+			w.showWarning("Model refresh timed out; searching cached models.")
 		case err != nil:
 			w.showWarning("Could not refresh model catalogs: " + err.Error())
 		case result.Aborted:
