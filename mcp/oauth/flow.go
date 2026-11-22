@@ -587,8 +587,20 @@ func StepUpScope(granted, challenged *string) *string {
 	return &joined
 }
 
+// flowUse records what one run consumed, so the retry in AuthorizeMcp can tell
+// whether the stored client is still the one the server rejected (upstream
+// FlowUse).
+type flowUse struct {
+	storedClientID *string
+}
+
 // runFlow is the authorization flow (upstream runFlow).
 func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOptions) (FlowResult, error) {
+	return runFlowWith(ctx, provider, options, &flowUse{})
+}
+
+// runFlowWith is runFlow recording what it used.
+func runFlowWith(ctx context.Context, provider OAuthClientProvider, options FlowOptions, use *flowUse) (FlowResult, error) {
 	fetch := options.Fetch
 	var metadataURL *string
 	if options.AuthorizationServerMetadataURL != nil && *options.AuthorizationServerMetadataURL != "" {
@@ -666,6 +678,10 @@ func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOpti
 	client, err := provider.ClientInformation(ctx)
 	if err != nil {
 		return "", err
+	}
+	if client != nil {
+		id := client.ClientID
+		use.storedClientID = &id
 	}
 	var clientDocument *OAuthClientMetadataDocument
 	if client == nil {
@@ -803,22 +819,39 @@ func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOpti
 // AuthorizeMcp runs the OAuth flow, retrying once after invalidating
 // credentials on the recoverable OAuth errors (upstream authorizeMcp).
 func AuthorizeMcp(ctx context.Context, provider OAuthClientProvider, options FlowOptions) (FlowResult, error) {
-	result, err := runFlow(ctx, provider, options)
+	use := &flowUse{}
+	result, err := runFlowWith(ctx, provider, options, use)
 	if err == nil {
 		return result, nil
 	}
 	if oauthErr, ok := err.(*OAuthError); ok {
 		if oauthErr.Code == "invalid_client" || oauthErr.Code == "unauthorized_client" {
-			if err := provider.InvalidateCredentials(ctx, "all"); err != nil {
+			// A refresh keeps a pending authorization's state and verifier: they
+			// are the user's sign-in. A client stored meanwhile (by a sign-in
+			// that completed) is not the one the server rejected, so it stays
+			// only when it is still the client the flow read (flow.ts:476-480).
+			if options.RefreshOnly {
+				current, lookupErr := provider.ClientInformation(ctx)
+				if lookupErr != nil {
+					return "", lookupErr
+				}
+				if current != nil && use.storedClientID != nil && current.ClientID == *use.storedClientID {
+					for _, kind := range []string{"client", "tokens", "discovery"} {
+						if err := provider.InvalidateCredentials(ctx, kind); err != nil {
+							return "", err
+						}
+					}
+				}
+			} else if err := provider.InvalidateCredentials(ctx, "all"); err != nil {
 				return "", err
 			}
-			return runFlow(ctx, provider, options)
+			return runFlowWith(ctx, provider, options, &flowUse{})
 		}
 		if oauthErr.Code == "invalid_grant" {
 			if err := provider.InvalidateCredentials(ctx, "tokens"); err != nil {
 				return "", err
 			}
-			return runFlow(ctx, provider, options)
+			return runFlowWith(ctx, provider, options, &flowUse{})
 		}
 	}
 	return "", err

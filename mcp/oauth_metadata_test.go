@@ -615,3 +615,47 @@ func TestOAuthRefreshOnlyDoesNotStartAnAuthorization(t *testing.T) {
 		t.Fatalf("a refresh-only flow started an authorization: %s", provider.authorizationURL)
 	}
 }
+
+// Port of packages/mcp/test/oauth.test.ts "shares one refresh between concurrent
+// 401s when refresh tokens rotate", reduced to the invalid_client guard: a
+// refresh-only flow compares the *currently* stored client id with the one the
+// flow read, and preserves a client a completed sign-in stored meanwhile
+// (flow.ts:476-480). Invalidating "all" would discard that sign-in's work.
+func TestOAuthRefreshOnlyKeepsAClientStoredByACompletedSignIn(t *testing.T) {
+	provider := newTestProvider("http://127.0.0.1/callback")
+	provider.client = &oauth.OAuthClientInformationFull{ClientID: "rejected"}
+	provider.discovery = &oauth.OAuthDiscoveryState{
+		AuthorizationServerURL: "https://idp.example",
+		AuthorizationServerMetadata: &oauth.AuthorizationServerMetadata{
+			Issuer: "https://idp.example", AuthorizationEndpoint: "https://idp.example/authorize",
+			TokenEndpoint: "https://idp.example/token", ResponseTypesSupported: []string{"code"},
+			CodeChallengeMethodsSupported: []string{"S256"},
+		},
+	}
+	provider.verifier = "verifier"
+	var calls int
+	fetch := func(_ context.Context, request *http.Request) (*http.Response, error) {
+		if !strings.HasSuffix(request.URL.Path, "/token") {
+			return nil, fmt.Errorf("unexpected request %s", request.URL)
+		}
+		calls++
+		// The first attempt rejects the client; meanwhile a sign-in stored a new
+		// one, so the retry must not wipe it.
+		if calls == 1 {
+			provider.client = &oauth.OAuthClientInformationFull{ClientID: "signed-in"}
+		}
+		return &http.Response{
+			StatusCode: 400,
+			Body:       io.NopCloser(strings.NewReader(`{"error":"invalid_client"}`)),
+		}, nil
+	}
+	_, _ = oauth.AuthorizeMcp(context.Background(), provider, oauth.FlowOptions{
+		ServerURL:         "https://mcp.example/mcp",
+		Fetch:             fetch,
+		RefreshOnly:       true,
+		AuthorizationCode: "code",
+	})
+	if provider.client == nil || provider.client.ClientID != "signed-in" {
+		t.Fatalf("the client stored by the completed sign-in was discarded: %+v", provider.client)
+	}
+}
