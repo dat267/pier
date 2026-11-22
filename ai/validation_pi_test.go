@@ -295,3 +295,32 @@ func TestPiFormatValidIPv6AcceptsAnEmbeddedIPv4Tail(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.5.2 (b4afdddf) packages/schema/src/formats/typebox/idn_email.ts IsIdnEmail
+// is a single regex over the whole address: the domain part is
+// `[\p{L}\p{N}](?:[\p{L}\p{N}-]{0,62})(?<!-)` per dot-separated label. So the
+// domain is NOT checked with the idn-hostname rules: the xn-- reservation does not
+// apply, and "a@xn--abc" and "a@ab--c" are valid idn-email values. The port reused
+// validIDNLabel, which now enforces that reservation, and rejected both.
+func TestPiFormatValidIdnEmailUsesTheAddressRegexNotTheHostnameRules(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		want  bool
+	}{
+		{"a@xn--abc", true},
+		{"a@ab--c", true},
+		{"a@a--b", true},
+		{"a@-b", false},
+		{"a@b-", false},
+		{"a@" + strings.Repeat("a", 63), true},
+		{"a@" + strings.Repeat("a", 64), false},
+		{`"quoted"@b.co`, true},
+		{`"a\"b"@c.co`, true},
+		{"a@b..c", false},
+		{"a b@c.co", false},
+	} {
+		if got := piFormatValid("idn-email", tc.value); got != tc.want {
+			t.Errorf(`piFormatValid("idn-email", %q) = %v, want %v`, tc.value, got, tc.want)
+		}
+	}
+}

@@ -130,27 +130,24 @@ no go.sum entry for it, so adding it is a dependency change. With it:
 
 Until then the two cases above are the known difference.
 
-## A `just check` run can report a spurious `[build failed]` under load (open)
+## A `just check` run can report a spurious `[build failed]` (resolved)
 
-Three times this session `just check` reported `FAIL github.com/dat267/pier/coding
-[build failed]` (twice also `coding/interactive`) while, immediately afterwards,
-`go test -count=1 ./coding`, `go build ./...`, `go vet ./coding` (including
-`GOOS=windows` and `GOOS=darwin`) and `go test -count=1 ./...` all passed. A later
-`just check` in the same tree, with no other Go process running, was clean.
+Reported three times this session: `FAIL .../coding [build failed]` (sometimes also
+`coding/interactive` and `mcp/oauth`) while `go build ./...`, `go vet ./coding` on
+three platforms and `go test -count=1 ./...` all passed immediately afterwards.
 
-The failure is not reproducible on demand and leaves no compile error to capture:
-`just test` prints only the package line. The likely cause is build-cache or
-executable contention when another `go test` is still finishing, since the failure
-appeared each time right after a long `go test ./coding` or `./...` of mine.
+Cause found: `/tmp` is a tmpfs and had reached 78% (1.8 GB free of 7.7 GB), almost
+all of it this session's own scratch (a 973 MB catalog checkout, a 332 MB session
+export, a 32 MB windows test binary). Go links test binaries through `/tmp`, so a
+link failed under pressure and the package line is all `just test` prints. After
+removing those files (3.4 GB free) three consecutive `just check` runs were clean,
+and a deliberate overlap of two `go test` runs did not reproduce it, so it was
+never contention.
 
-Measure first: the next occurrence needs the compiler output, which `just test` discards.
+Keeping scratch under a few hundred MB avoids it. The capture command, if it ever
+recurs for another reason:
 
 ```sh
-just fmt tidy vet
 go test -count=1 ./coding 2>&1 | tee /tmp/coding-build.log
 grep -A10 'build failed\|cannot\|undefined' /tmp/coding-build.log
 ```
-
-If it shows `open ...: permission denied` on a `_test` binary or an `os.Exit` in a
-linked object, it is cache contention and harmless; if it names a symbol or a type,
-there is a real build-tag problem to fix.

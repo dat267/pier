@@ -991,11 +991,12 @@ func piFormatValid(name, value string) bool {
 		addr, err := mail.ParseAddress(value)
 		return err == nil && addr.Address == value && strings.Contains(value, "@")
 	case "idn-email":
-		at := strings.LastIndexByte(value, '@')
-		if at <= 0 || at == len(value)-1 || strings.ContainsAny(value, " <>") {
-			return false
-		}
-		return validIDNLabel(value[at+1:])
+		// The reference tests the whole address with one regex
+		// (typebox/idn_email.ts), whose domain part is a per-label length and
+		// hyphen rule. It is NOT validIDNLabel: the xn-- reservation does not
+		// apply there, so "a@xn--abc" is valid. Go has no lookbehind, so the
+		// label's trailing-hyphen guard is spelled as a required last character.
+		return piIDNEmailRE.MatchString(norm.NFC.String(value))
 	case "uri":
 		return validURIText(value, false) && absoluteURI(value)
 	case "url":
@@ -1331,3 +1332,7 @@ func escapeJSONPointer(key string) string {
 
 // piIPv6RE is typebox/ipv6.ts IsIPv6's regex, verbatim.
 var piIPv6RE = regexp.MustCompile(`(?i)^(?:(?:(?:[0-9a-f]{1,4}:){6}|::(?:[0-9a-f]{1,4}:){5}|(?:[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){4}|(?:(?:[0-9a-f]{1,4}:)?[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){3}|(?:(?:[0-9a-f]{1,4}:){0,2}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){2}|(?:(?:[0-9a-f]{1,4}:){0,3}[0-9a-f]{1,4})?::[0-9a-f]{1,4}:|(?:(?:[0-9a-f]{1,4}:){0,4}[0-9a-f]{1,4})?::)(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d))|(?:(?:[0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})?::[0-9a-f]{1,4}|(?:(?:[0-9a-f]{1,4}:){0,6}[0-9a-f]{1,4})?::)$`)
+
+// piIDNEmailRE is typebox/idn_email.ts IsIdnEmail's regex, with \u{...} written
+// as \x{...} and the `(?<!-)` label guard spelled as a final character class.
+var piIDNEmailRE = regexp.MustCompile("^(?:[A-Za-z0-9!#$%&'*+/=?^_`{|}~\\x{0080}-\\x{10FFFF}-]+(?:\\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~\\x{0080}-\\x{10FFFF}-]+)*|\"(?:[^\"\\\\]|\\\\.)*\")@[\\p{L}\\p{N}](?:[\\p{L}\\p{N}-]{0,61}[\\p{L}\\p{N}])?(?:\\.[\\p{L}\\p{N}](?:[\\p{L}\\p{N}-]{0,61}[\\p{L}\\p{N}])?)*$")
