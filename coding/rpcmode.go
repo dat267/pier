@@ -932,9 +932,9 @@ func rpcCompactionResultValue(result *CompactionResult) jsonEventObject {
 		{"firstKeptEntryId", result.FirstKeptEntryID},
 		{"tokensBefore", result.TokensBefore},
 	}
-	if result.EstimatedTokensAfter != 0 {
-		value.add("estimatedTokensAfter", result.EstimatedTokensAfter)
-	}
+	// The reference always sets estimatedTokensAfter before emitting, so it is
+	// always present, including a genuine 0.
+	value.add("estimatedTokensAfter", result.EstimatedTokensAfter)
 	if result.Usage != nil {
 		value.add("usage", *result.Usage)
 	}

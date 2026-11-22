@@ -174,6 +174,33 @@ func TestJSONEventMapPreservesOptionalUsage(t *testing.T) {
 	}
 }
 
+func TestJSONCompactionEndEmitsZeroEstimatedTokensAfter(t *testing.T) {
+	// v1.4.0 agent-session.ts always assigns estimatedTokensAfter before emitting
+	// the compaction_end event (the estimate covers the retained messages), so the
+	// field is always present. JSON.stringify drops only an `undefined` value, and
+	// a genuine 0 is kept, so the port must emit it too.
+	event := &SessionEvent{Type: SessionCompactionEnd, Reason: "manual"}
+	event.Result = &CompactionResult{Summary: "s", FirstKeptEntryID: "e", TokensBefore: 10, EstimatedTokensAfter: 0}
+	wire, err := MarshalJSONSessionEvent(event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"type":"compaction_end","reason":"manual","result":{"summary":"s","firstKeptEntryId":"e","tokensBefore":10,"estimatedTokensAfter":0},"aborted":false,"willRetry":false}`
+	if string(wire) != want {
+		t.Fatalf("wire = %s\nwant    %s", wire, want)
+	}
+	// The RPC command result uses the same shape.
+	rpc := rpcCompactionResultValue(event.Result)
+	encoded, err := ai.MarshalJSON(rpc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantRPC := `{"summary":"s","firstKeptEntryId":"e","tokensBefore":10,"estimatedTokensAfter":0}`
+	if string(encoded) != wantRPC {
+		t.Fatalf("rpc result = %s\nwant       %s", encoded, wantRPC)
+	}
+}
+
 func TestPrintModeJSONPreservesTerminalPayloads(t *testing.T) {
 	// v1.4.0 print-mode.ts serializes toJsonEvent directly. Check actual stdout,
 	// not only the exported mapper, so the two paths cannot drift again.

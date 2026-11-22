@@ -144,9 +144,11 @@ func jsonEventValue(event *SessionEvent) (jsonEventObject, error) {
 		if event.Result != nil {
 			result := event.Result
 			payload := jsonEventObject{{"summary", result.Summary}, {"firstKeptEntryId", result.FirstKeptEntryID}, {"tokensBefore", result.TokensBefore}}
-			if result.EstimatedTokensAfter != 0 {
-				payload.add("estimatedTokensAfter", result.EstimatedTokensAfter)
-			}
+			// The reference always sets estimatedTokensAfter before emitting, so it
+			// is always present, including a genuine 0; only an `undefined`
+			// field is omitted, which JSON.stringify does, and a Go int64 has no
+			// such state.
+			payload.add("estimatedTokensAfter", result.EstimatedTokensAfter)
 			if result.Usage != nil {
 				payload.add("usage", *result.Usage)
 			}
