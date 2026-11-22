@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -33,13 +34,13 @@ func parseSystemOneResponse(data []byte, transport systemOneTransport) (*ordered
 		return result, nil
 	}
 	stateRaw, hasState := result.raw("state")
+	// The reference interpolates `${String(result.state)}`, so a non-string
+	// state follows JavaScript's rendering: an object is "[object Object]", an
+	// array joins with commas. Embedding the raw JSON member would print Go's
+	// view of it instead.
 	state := "undefined"
 	if hasState {
-		if decoded, ok := classifierString(stateRaw); ok {
-			state = decoded
-		} else {
-			state = string(stateRaw)
-		}
+		state = rawJavaScriptStateText(stateRaw)
 	}
 	if state != "Completed" {
 		return nil, fmt.Errorf("%s run did not complete (state: %s)", transport.label, state)
@@ -69,4 +70,21 @@ func cloudflareSystemOneError(raw json.RawMessage) string {
 		}
 	}
 	return cloudflareLabel + " request failed"
+}
+
+// rawJavaScriptStateText renders a state member the way `${String(value)}` does,
+// decoding it first so an object reports "[object Object]" and an array joins
+// with commas. A member that is not valid JSON keeps its raw text, which is what
+// the previous rendering did and the only thing left to report.
+func rawJavaScriptStateText(raw json.RawMessage) string {
+	var value any
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.UseNumber()
+	if err := decoder.Decode(&value); err != nil {
+		return string(raw)
+	}
+	if number, ok := value.(json.Number); ok {
+		return number.String()
+	}
+	return JSValueToString(value)
 }

@@ -192,6 +192,7 @@ ai/streaming_json_test.go
 ai/streaming_refresh_test.go
 ai/strict_tool_limits_session_test.go
 ai/system_prompt_parity_test.go
+ai/systemone_cloudflare_test.go
 ai/systemone_test.go
 ai/text_test.go
 ai/thinking_level_null_test.go
