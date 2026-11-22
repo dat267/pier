@@ -431,3 +431,40 @@ func TestImagesProviderSharesRefreshFailure(t *testing.T) {
 		}
 	})
 }
+
+// TestDecodeImagesModelKeepsTheMembersThatFit covers a corrupt catalogue entry.
+// The reference spreads a parsed JSON object into its model, so a member of the
+// wrong type is carried along and only its own reader fails. The port decoded
+// into a typed struct, so one bad member failed the whole entry, and
+// loadImageCatalog then returned before setting its models, which dropped the
+// entire image catalogue rather than one model.
+func TestDecodeImagesModelKeepsTheMembersThatFit(t *testing.T) {
+	for _, testCase := range []struct {
+		name   string
+		raw    string
+		input  int
+		output int
+	}{
+		{"well formed", `{"id":"m1","input":["text"],"output":["image"]}`, 1, 1},
+		{"string input", `{"id":"m1","input":"text","output":["image"]}`, 0, 1},
+		{"string output", `{"id":"m1","input":["text"],"output":"image"}`, 1, 0},
+		{"numeric input", `{"id":"m1","input":5,"output":["image"]}`, 0, 1},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			model, err := decodeImagesModel(json.RawMessage(testCase.raw))
+			if err != nil {
+				t.Fatalf("decodeImagesModel = %v", err)
+			}
+			if model.ID != "m1" {
+				t.Fatalf("id = %q, want the sibling to survive", model.ID)
+			}
+			if len(model.Input) != testCase.input || len(model.Output) != testCase.output {
+				t.Fatalf("input=%v output=%v, want %d and %d members", model.Input, model.Output, testCase.input, testCase.output)
+			}
+		})
+	}
+	// A non-object entry is still an error, not an empty model.
+	if _, err := decodeImagesModel(json.RawMessage(`[1,2]`)); err == nil {
+		t.Fatal("a non-object entry must report an error")
+	}
+}

@@ -512,16 +512,70 @@ func loadImageCatalog() {
 		for provider, entries := range payload.Providers {
 			models[provider] = map[string]*ImagesModel{}
 			for id, raw := range entries {
-				var model ImagesModel
-				if err := json.Unmarshal(raw, &model); err != nil {
+				model, err := decodeImagesModel(raw)
+				if err != nil {
 					imageCatalog.err = err
 					return
 				}
-				models[provider][id] = &model
+				models[provider][id] = model
 			}
 		}
 		imageCatalog.models = models
 	})
+}
+
+// decodeImagesModel decodes one catalogue entry. The reference spreads a parsed
+// JSON object into its model, so a member of the wrong type is carried along and
+// only its own reader fails; the port decoded into a typed struct and failed the
+// whole entry, and loadImageCatalog then dropped the entire catalogue. Keep the
+// members that fit and skip the rest, the way dropUndecodableModelMembers does
+// for the chat catalogue.
+func decodeImagesModel(raw json.RawMessage) (*ImagesModel, error) {
+	var model ImagesModel
+	if err := json.Unmarshal(raw, &model); err == nil {
+		return &model, nil
+	}
+	var members map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &members); err != nil || members == nil {
+		return nil, fmt.Errorf("image catalogue entry is not an object: %w", err)
+	}
+	model = ImagesModel{}
+	for name, member := range members {
+		wrapped, err := MarshalJSON(map[string]json.RawMessage{name: member})
+		if err != nil {
+			continue
+		}
+		var hold ImagesModel
+		if json.Unmarshal(wrapped, &hold) != nil {
+			continue
+		}
+		mergeImagesModelMember(&model, &hold, name)
+	}
+	return &model, nil
+}
+
+// mergeImagesModelMember copies the one member that decoded.
+func mergeImagesModelMember(dst, src *ImagesModel, name string) {
+	switch name {
+	case "id":
+		dst.ID = src.ID
+	case "name":
+		dst.Name = src.Name
+	case "api":
+		dst.API = src.API
+	case "provider":
+		dst.Provider = src.Provider
+	case "baseUrl":
+		dst.BaseURL = src.BaseURL
+	case "input":
+		dst.Input = src.Input
+	case "output":
+		dst.Output = src.Output
+	case "cost":
+		dst.Cost = src.Cost
+	case "headers":
+		dst.Headers = src.Headers
+	}
 }
 
 // GetBuiltinImageModels returns the generated image models for a provider.
