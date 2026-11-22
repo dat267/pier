@@ -562,9 +562,10 @@ func TestIsTruthyEnvFlag(t *testing.T) {
 		}
 	}
 	// pi v1.5.2 (b4afdddf) main.ts isTruthyEnvFlag compares `value.toLowerCase()`.
-	// JavaScript lowercases U+0130 to "i" plus a combining dot where Go yields a
-	// plain "i", so the intermediate strings differ, but neither spelling reaches
-	// "true" or "yes" and the result agrees.
+	// `strings.ToLower` is Go's simple mapping, which differs from JavaScript for
+	// U+0130 (İ) and the Greek final sigma, but no string containing either reaches
+	// "true" or "yes", so the result agrees. `ai.JSLower` is the full-mapping
+	// equivalent and is what a caller comparing identifiers should use.
 	for _, value := range []string{"", "0", "false", "no", "on", "TRU\u0130", "YE\u0130", "TRU\u0131"} {
 		if IsTruthyEnvFlag(value) {
 			t.Errorf("%q must be falsy", value)
