@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"slices"
 	"sort"
 	"time"
 
@@ -71,8 +72,13 @@ type InteractiveUIState struct {
 	hiddenThinkingLabel   string
 	extensionWidgetsAbove map[string]tui.Component
 	extensionWidgetsBelow map[string]tui.Component
-	customFooter          tui.Component
-	customHeader          tui.Component
+	// widgetOrderAbove/Below are the registration order, which the reference
+	// keeps because its Maps render in insertion order. A Go map has none, and
+	// sorting put an extension's widgets in the wrong visual order.
+	widgetOrderAbove []string
+	widgetOrderBelow []string
+	customFooter     tui.Component
+	customHeader     tui.Component
 
 	inputSubscriptions map[int]inputSubscription // subscription id -> handler + unsubscribe
 	nextSubscription   int
@@ -397,6 +403,8 @@ func (s *InteractiveUIState) prepareExtensionWidget(key string, options Extensio
 		if existing, ok := widgets[key]; ok {
 			disposeComponent(existing)
 			delete(widgets, key)
+			s.widgetOrderAbove = removeKey(s.widgetOrderAbove, key)
+			s.widgetOrderBelow = removeKey(s.widgetOrderBelow, key)
 		}
 	}
 	if options.Placement == "belowEditor" {
@@ -423,6 +431,7 @@ func (s *InteractiveUIState) SetExtensionWidget(key string, content []string, ha
 	}
 
 	target[key] = container
+	s.recordWidgetOrder(key, options)
 	s.RenderWidgets()
 }
 
@@ -434,6 +443,7 @@ func (s *InteractiveUIState) SetExtensionWidgetComponent(key string, component t
 		return
 	}
 	target[key] = component
+	s.recordWidgetOrder(key, options)
 	s.RenderWidgets()
 }
 
@@ -454,18 +464,63 @@ func (s *InteractiveUIState) ClearExtensionWidgets() {
 	}
 	s.extensionWidgetsAbove = map[string]tui.Component{}
 	s.extensionWidgetsBelow = map[string]tui.Component{}
+	s.widgetOrderAbove = nil
+	s.widgetOrderBelow = nil
 	s.RenderWidgets()
 }
 
-// WidgetKeysAbove returns the above-editor widget keys in insertion order
-// (sorted for determinism; upstream preserves Map insertion order).
+// recordWidgetOrder appends a newly registered widget to its placement's order.
+func (s *InteractiveUIState) recordWidgetOrder(key string, options ExtensionWidgetOptions) {
+	if options.Placement == "belowEditor" {
+		if !slices.Contains(s.widgetOrderBelow, key) {
+			s.widgetOrderBelow = append(s.widgetOrderBelow, key)
+		}
+		return
+	}
+	if !slices.Contains(s.widgetOrderAbove, key) {
+		s.widgetOrderAbove = append(s.widgetOrderAbove, key)
+	}
+}
+
+// removeKey drops one occurrence of key from order.
+func removeKey(order []string, key string) []string {
+	for index, existing := range order {
+		if existing == key {
+			return append(order[:index:index], order[index+1:]...)
+		}
+	}
+	return order
+}
+
+// WidgetKeysAbove returns the above-editor widget keys in registration order
+// (upstream renders a Map in insertion order).
 func (s *InteractiveUIState) WidgetKeysAbove() []string {
-	return sortedMapKeys(s.extensionWidgetsAbove)
+	return orderKeys(s.extensionWidgetsAbove, s.widgetOrderAbove)
 }
 
 // WidgetKeysBelow returns the below-editor widget keys.
 func (s *InteractiveUIState) WidgetKeysBelow() []string {
-	return sortedMapKeys(s.extensionWidgetsBelow)
+	return orderKeys(s.extensionWidgetsBelow, s.widgetOrderBelow)
+}
+
+// orderKeys returns the registered keys still present, in registration order.
+func orderKeys(widgets map[string]tui.Component, order []string) []string {
+	keys := make([]string, 0, len(widgets))
+	for _, key := range order {
+		if _, ok := widgets[key]; ok {
+			keys = append(keys, key)
+		}
+	}
+	// A key registered before the order slices existed has no position; sort
+	// those deterministically after the ordered ones.
+	var unordered []string
+	for key := range widgets {
+		if !slices.Contains(order, key) {
+			unordered = append(unordered, key)
+		}
+	}
+	sort.Strings(unordered)
+	return append(keys, unordered...)
 }
 
 func sortedMapKeys[V any](values map[string]V) []string {
@@ -499,7 +554,11 @@ func (s *InteractiveUIState) RenderWidgetContainer(container *tui.Container, wid
 	if leadingSpacer {
 		container.AddChild(tui.NewSpacer(1))
 	}
-	for _, key := range sortedMapKeys(widgets) {
+	order := s.widgetOrderAbove
+	if !leadingSpacer {
+		order = s.widgetOrderBelow
+	}
+	for _, key := range orderKeys(widgets, order) {
 		container.AddChild(widgets[key])
 	}
 }

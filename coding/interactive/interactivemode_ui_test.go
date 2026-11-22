@@ -386,3 +386,44 @@ func TestWorkingSpinnerFollowsTheBorderColour(t *testing.T) {
 		t.Errorf("the spinner is %s but the border lines are %s", got, lineColor)
 	}
 }
+
+// TestExtensionWidgetsRenderInRegistrationOrder covers the widget order. The
+// reference renders `extensionWidgetsAbove.values()`, a Map, so widgets appear in
+// registration order. The port sorted the keys, which put them in the wrong
+// visual order; registration order is now recorded alongside each map, the way
+// CustomEditor already keeps its action order.
+func TestExtensionWidgetsRenderInRegistrationOrder(t *testing.T) {
+	state, _ := newUIStateTestState(t, true)
+	for _, key := range []string{"zeta", "alpha", "middle"} {
+		state.SetExtensionWidget(key, []string{key}, true, ExtensionWidgetOptions{})
+	}
+	rendered := func() []string {
+		var lines []string
+		for _, line := range renderContainer(t, state.WidgetContainerAbove) {
+			if trimmed := strings.TrimSpace(line); trimmed != "" {
+				lines = append(lines, trimmed)
+			}
+		}
+		return lines
+	}
+	if got := strings.Join(rendered(), ","); got != "zeta,alpha,middle" {
+		t.Fatalf("order = %q, want registration order", got)
+	}
+	// The reference deletes the key from both maps before setting it again, so a
+	// re-registered widget is a fresh insertion and moves to the end.
+	state.SetExtensionWidget("alpha", []string{"alpha2"}, true, ExtensionWidgetOptions{})
+	if got := strings.Join(rendered(), ","); got != "zeta,middle,alpha2" {
+		t.Fatalf("after replace = %q", got)
+	}
+	state.SetExtensionWidget("zeta", nil, false, ExtensionWidgetOptions{})
+	if got := strings.Join(rendered(), ","); got != "middle,alpha2" {
+		t.Fatalf("after remove = %q", got)
+	}
+	// Below-editor widgets keep their own order.
+	for _, key := range []string{"bottom", "apex"} {
+		state.SetExtensionWidget(key, []string{key}, true, ExtensionWidgetOptions{Placement: "belowEditor"})
+	}
+	if got := strings.Join(state.WidgetKeysBelow(), ","); got != "bottom,apex" {
+		t.Fatalf("below order = %q", got)
+	}
+}
