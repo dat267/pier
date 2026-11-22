@@ -142,3 +142,26 @@ so adding it is a dependency change. With it:
 character rule, so it rejects `.@12Z|`, `}` and `{` which the reference accepts.
 Porting it means deciding how much of `URL.canParse` to reproduce; `ai/absoluteURL`
 already ports the `url` format's call, so the same approach applies here.
+
+## A rust highlight drops one number after a 21-line construct (open)
+
+Highlighting lines 70-90 of `pi/packages/env/daemon/src/output.rs` with `rust`,
+the port renders `counter.fetch_sub(1, Ordering::SeqCst);` with `1` uncoloured
+where the reference renders an `hljs-number` span. Every other class count and
+the relevance match, so exactly one number match is lost.
+
+Reproduce: take that 21-line slice (893 bytes, from `pub fn run(&self, writer:
+&mut impl Write) {` through `counter.fetch_sub(1, Ordering::SeqCst);`),
+highlight it with both implementations, and compare the `fetch_sub(` suffix.
+The 21-line form is stable across runs.
+
+What is established: dropping the first line (leaving 20) makes the number
+match again, and dropping any single line does the same, so the trigger is a
+cumulative engine state over those exact lines rather than one construct. The
+`fn` rule's `end: '(\\(|<)'` closes at `run(`, and the function mode is not the
+cause: `fn f() {\n1` colours the number. No smaller reduction or root cause yet.
+
+Also found this round and worth recording: three of my probes reported false
+positives from reading `%q`/`Print` output of long strings and from a suffix
+index that ignored trailing text. Re-check any reproduction with a byte
+comparison against the reference before treating it as a finding.
