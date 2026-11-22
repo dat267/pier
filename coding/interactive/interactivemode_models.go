@@ -615,6 +615,11 @@ func newModelWiring(app *App) *ModelWiring {
 			if app.startup != nil {
 				go app.startup.MaybeWarnAboutAnthropicSubscriptionAuth(context.Background(), model)
 			}
+			// The legacy selector run's daxnuts hook; the pin dropped the egg, so
+			// this completes the legacy surface rather than following faac5858.
+			if model != nil {
+				app.commands.CheckDaxnutsEasterEgg(string(model.Provider), model.ID, app.ui)
+			}
 		},
 		RequestRender: func() { app.ui.RequestRender(false) },
 	}

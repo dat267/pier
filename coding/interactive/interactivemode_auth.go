@@ -891,9 +891,15 @@ func newAuthWiring(app *App) *AuthWiring {
 		ShowWarning:                  func(message string) { app.showWarning(message) },
 		UpdateAvailableProviderCount: func() { app.startup.UpdateAvailableProviderCount() },
 		UpdateEditorBorderColor:      func() { app.updateEditorBorderColor() },
-		OnAuthenticated:              func(model *ai.Model, hasModel bool) {},
-		RequestRender:                func() { app.ui.RequestRender(false) },
-		AuthPath:                     coding.GetAgentDir() + "/auth.json"}
+		OnAuthenticated: func(model *ai.Model, hasModel bool) {
+			// The legacy login run's daxnuts hook, shared with the model selector
+			// (see newModelWiring). hasModel is false when the login selected none.
+			if hasModel && model != nil && app.commands != nil {
+				app.commands.CheckDaxnutsEasterEgg(string(model.Provider), model.ID, app.ui)
+			}
+		},
+		RequestRender: func() { app.ui.RequestRender(false) },
+		AuthPath:      coding.GetAgentDir() + "/auth.json"}
 	wiring.ShowAuthSelect = wiring.showAuthSelect
 	return wiring
 }

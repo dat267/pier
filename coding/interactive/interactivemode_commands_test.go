@@ -641,3 +641,39 @@ func TestExportClearsItsNoticeWhenTheQueueIsStopped(t *testing.T) {
 		t.Fatalf("statuses = %q, want the notice then a clear", statuses)
 	}
 }
+
+// TestDaxnutsEggIsWiredToTheModelHooks covers the legacy surface the pin
+// dropped. The egg component and its predicate were ported
+// (`CheckDaxnutsEasterEgg`) but wired into nothing, so the egg could only be
+// reached from this test file. The legacy commit (`d1230ea2`) runs it after a
+// model selection and after a login that selected a model, which are exactly the
+// two hooks here.
+func TestDaxnutsEggIsWiredToTheModelHooks(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+
+	// The model-selection hook.
+	before := len(app.chat.Children)
+	newModelWiring(app).OnModelSelected(&ai.Model{Provider: "opencode", ID: "kimi-k2.5"})
+	if len(app.chat.Children) != before+2 {
+		t.Fatalf("selection hook did not show the egg: children %d -> %d", before, len(app.chat.Children))
+	}
+	// A different model still shows nothing.
+	before = len(app.chat.Children)
+	newModelWiring(app).OnModelSelected(&ai.Model{Provider: "openai", ID: "gpt-5"})
+	if len(app.chat.Children) != before {
+		t.Fatalf("unknown model showed the egg")
+	}
+
+	// The login hook, including the no-model case that must not panic.
+	login := newAuthWiring(app)
+	before = len(app.chat.Children)
+	login.OnAuthenticated(nil, false)
+	if len(app.chat.Children) != before {
+		t.Fatalf("a login without a model showed the egg")
+	}
+	login.OnAuthenticated(&ai.Model{Provider: "opencode", ID: "kimi-k2.5"}, true)
+	if len(app.chat.Children) != before+2 {
+		t.Fatalf("login hook did not show the egg: %d", len(app.chat.Children))
+	}
+}
