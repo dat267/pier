@@ -123,6 +123,24 @@ type openaiChunk struct {
 	} `json:"choices"`
 }
 
+// decodeOpenAIChunkTolerant decodes each top-level member on its own, keeping the
+// ones the typed chunk cannot hold out of the way. It reports false when the
+// chunk is not an object at all, the case the reference skips.
+func decodeOpenAIChunkTolerant(raw json.RawMessage, out *openaiChunk) bool {
+	var members map[string]json.RawMessage
+	if json.Unmarshal(raw, &members) != nil || members == nil {
+		return false
+	}
+	for name, member := range members {
+		wrapped, err := MarshalJSON(map[string]json.RawMessage{name: member})
+		if err != nil {
+			continue
+		}
+		_ = json.Unmarshal(wrapped, out)
+	}
+	return true
+}
+
 type openaiChunkDelta struct {
 	Content   *string `json:"content"`
 	ToolCalls []struct {
@@ -527,7 +545,14 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 		iterErr := iterateOpenAIChunks(ctx, resp.Body, func(raw json.RawMessage) {
 			var chunk openaiChunk
 			if err := jsonUnmarshalStrict(raw, &chunk); err != nil {
-				return // upstream skips non-object chunks
+				// The reference skips only a chunk that is not an object
+				// (`typeof chunk !== "object"`); the SDK has already parsed it, so
+				// a wrong-typed member such as a numeric `model` is present and
+				// harmless. Decoding into the typed struct failed the whole chunk
+				// and lost its delta content, so keep the members that fit.
+				if !decodeOpenAIChunkTolerant(raw, &chunk) {
+					return
+				}
 			}
 			// The OpenAI SDK throws as soon as a chunk carries a truthy
 			// `error`, before yielding it, so no later field is applied and the

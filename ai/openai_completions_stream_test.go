@@ -448,3 +448,80 @@ func TestStreamOpenAICompletionsPayloadHookPanicRendersLikeJavaScript(t *testing
 		t.Fatalf("stream error message = %v, want it to contain %q", msg.ErrorMessage, "[object Object]")
 	}
 }
+
+// TestOpenAIChunkKeepsItsDeltaOnAWrongTypedSibling covers a streamed chunk. The
+// reference skips only a chunk that is not an object (`typeof chunk !==
+// "object"`); the SDK has already parsed it, so a wrong-typed member such as a
+// numeric `model` is present and harmless. Decoding into the typed struct failed
+// the whole chunk and lost its delta content. An array reports false here where
+// the reference proceeds: `typeof [] === "object"`, but reading `id` and
+// `choices` off an array yields nothing, so both contribute nothing to the
+// stream.
+func TestOpenAIChunkKeepsItsDeltaOnAWrongTypedSibling(t *testing.T) {
+	for _, testCase := range []struct {
+		name string
+		wire string
+		ok   bool
+		text string
+	}{
+		{"well formed", `{"id":"1","choices":[{"delta":{"content":"hi"}}]}`, true, "hi"},
+		{"numeric id", `{"id":1,"choices":[{"delta":{"content":"hi"}}]}`, true, "hi"},
+		{"numeric model", `{"id":"1","model":2,"choices":[{"delta":{"content":"hi"}}]}`, true, "hi"},
+		{"numeric finish_reason", `{"id":"1","choices":[{"finish_reason":2,"delta":{"content":"hi"}}]}`, true, "hi"},
+		{"not an object", `[1,2]`, false, ""},
+		{"null", `null`, false, ""},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			var chunk openaiChunk
+			if got := decodeOpenAIChunkTolerant(json.RawMessage(testCase.wire), &chunk); got != testCase.ok {
+				t.Fatalf("ok = %v, want %v", got, testCase.ok)
+			}
+			text := ""
+			if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != nil {
+				text = *chunk.Choices[0].Delta.Content
+			}
+			if text != testCase.text {
+				t.Fatalf("content = %q, want %q", text, testCase.text)
+			}
+		})
+	}
+}
+
+// TestStreamOpenAICompletionsKeepsAChunkWithAWrongTypedMember drives a chunk
+// carrying a numeric `model` through the real stream. The reference skips only a
+// chunk that is not an object, so the SDK-parsed value is harmless and its delta
+// still applies; the typed decode failed the chunk and lost the text.
+func TestStreamOpenAICompletionsKeepsAChunkWithAWrongTypedMember(t *testing.T) {
+	chunks := []string{
+		"data: " + `{"id":"c","model":"gpt-5","choices":[{"index":0,"delta":{"content":"He"}}]}` + "\n\n",
+		"data: " + `{"id":"c","model":2,"choices":[{"index":0,"delta":{"content":"llo"}}]}` + "\n\n",
+		"data: " + `{"id":"c","model":"gpt-5","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}` + "\n\n",
+		"data:",
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		for _, c := range chunks {
+			_, _ = w.Write([]byte(c))
+		}
+	}))
+	defer server.Close()
+
+	model := testOpenAIModel()
+	model.BaseURL = server.URL
+	stream := StreamOpenAICompletions(model, NormalizeContext(Context{
+		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
+	}), &OpenAICompletionsOptions{APIKey: "k"})
+	var text string
+	for {
+		event, ok := stream.Next(context.Background())
+		if !ok {
+			break
+		}
+		if event.Type == EventTextDelta {
+			text += event.Delta
+		}
+	}
+	if text != "Hello" {
+		t.Fatalf("text = %q, want the delta from the chunk with the numeric model", text)
+	}
+}
