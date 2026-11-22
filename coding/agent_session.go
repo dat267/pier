@@ -1092,7 +1092,10 @@ func (s *AgentSession) maybeAutoCompact(ctx context.Context) error {
 		return nil
 	}
 	model := s.Model()
-	if model == nil || model.ContextWindow <= 0 {
+	// A virtual selection is routed per request, so it has no single context window
+	// to compact against; the reference skips it by name rather than relying on a
+	// zero window, which a virtual definition may set.
+	if model == nil || IsVirtualModel(model) || model.ContextWindow <= 0 {
 		return nil
 	}
 	contextTokens := int64(s.Sessions.ProjectedContextEstimate().Tokens)

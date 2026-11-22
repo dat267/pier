@@ -387,3 +387,30 @@ func TestCheckCompactionResolvesPhysicalModelForVirtualSelection(t *testing.T) {
 		t.Fatalf("runs = %d", runs.Load())
 	}
 }
+
+// pi v1.5.2 (b4afdddf) packages/coding-agent/src/core/agent-session.ts
+// _compactBeforeNextAssistantResponse skips the threshold check entirely for a
+// virtual model: `if (!model || isVirtualModel(model) || !this._exceedsCompactionThreshold(...))`.
+// A virtual selection is routed per request, so it carries no single context window
+// to compact against. The port guarded only on `ContextWindow <= 0`, which a virtual
+// definition may set, so a virtual model with a window would compact.
+func TestMaybeAutoCompactSkipsAVirtualModel(t *testing.T) {
+	var runs atomic.Int64
+	virtual := &ai.Model{
+		ID: "virtual", Name: "Virtual", API: VirtualModelAPI, Provider: "test",
+		ContextWindow: 100, // small, so a non-virtual model would compact
+	}
+	session := compactionTestSession(t, virtual, summarizingStreamFn(t, &runs, "summary text that is long enough to pass the usability check"), smallCompactionSettings())
+	seedBranch(t, session)
+	if err := session.maybeAutoCompact(ctxpkg.Background()); err != nil {
+		t.Fatalf("maybeAutoCompact: %v", err)
+	}
+	if runs.Load() != 0 {
+		t.Fatalf("a virtual model triggered %d summarization runs, want none", runs.Load())
+	}
+	for _, entry := range session.Sessions.GetEntries() {
+		if entry.Type == "compaction" {
+			t.Fatal("no compaction entry expected for a virtual model")
+		}
+	}
+}
