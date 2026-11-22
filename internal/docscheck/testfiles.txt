@@ -44,6 +44,7 @@ ai/auth_test.go
 ai/authstore_queue_test.go
 ai/authstore_reentrancy_test.go
 ai/aws_bedrock_test.go
+ai/aws_sigv4_test.go
 ai/azure_openai_responses_test.go
 ai/azure_wire_parity_test.go
 ai/bedrock_config_test.go
