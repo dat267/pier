@@ -466,7 +466,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				if err, ok := r.(error); ok {
 					fail(err)
 				} else {
-					fail(fmt.Errorf("%v", r))
+					fail(JSRecoveredError(r))
 				}
 			}
 		}()

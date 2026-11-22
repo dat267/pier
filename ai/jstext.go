@@ -2,6 +2,7 @@ package ai
 
 import (
 	"encoding/json"
+	"errors"
 	"math"
 	"math/big"
 	"strconv"
@@ -316,4 +317,14 @@ func JSValueToString(value any) string {
 		return strings.Join(parts, ",")
 	}
 	return "[object Object]"
+}
+
+// JSRecoveredError renders a recovered panic the way the reference's
+// `error instanceof Error ? error.message : String(error)` does: a Go error
+// contributes its message and any other value goes through String(value).
+func JSRecoveredError(recovered any) error {
+	if err, ok := recovered.(error); ok {
+		return err
+	}
+	return errors.New(JSValueToString(recovered))
 }

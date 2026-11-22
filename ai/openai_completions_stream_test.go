@@ -418,3 +418,33 @@ func TestStreamOpenAICompletionsCopilotDynamicHeaders(t *testing.T) {
 		})
 	}
 }
+
+// pi v1.5.2 (b4afdddf) api/openai-completions.ts runs the request hooks inside a
+// try/catch that reports `error instanceof Error ? error.message : String(error)`.
+// The port recovered the panic and formatted it with %v, so a hook that panics
+// with an object reported Go syntax instead of "[object Object]".
+func TestStreamOpenAICompletionsPayloadHookPanicRendersLikeJavaScript(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+	}))
+	defer server.Close()
+
+	model := testOpenAIModel()
+	model.BaseURL = server.URL
+	stream := StreamOpenAICompletions(model, NormalizeContext(Context{
+		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
+	}), &OpenAICompletionsOptions{
+		APIKey: "k",
+		OnPayload: func(json.RawMessage, *Model) json.RawMessage {
+			panic(map[string]any{"reason": "bad"})
+		},
+	})
+	msg, err := stream.Result(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if msg.ErrorMessage == nil || !strings.Contains(*msg.ErrorMessage, "[object Object]") {
+		t.Fatalf("stream error message = %v, want it to contain %q", msg.ErrorMessage, "[object Object]")
+	}
+}

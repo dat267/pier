@@ -280,7 +280,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 				if err, ok := r.(error); ok {
 					fail(err)
 				} else {
-					fail(fmt.Errorf("%v", r))
+					fail(JSRecoveredError(r))
 				}
 			}
 		}()

@@ -2,6 +2,7 @@ package ai
 
 import (
 	"encoding/json"
+	"errors"
 	"math"
 	"os"
 	"regexp"
@@ -391,6 +392,34 @@ func TestJSValueToString(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			if got := JSValueToString(test.value); got != test.want {
 				t.Fatalf("JSValueToString(%#v) = %q, want %q", test.value, got, test.want)
+			}
+		})
+	}
+}
+
+// The reference renders a caught value with `error instanceof Error ? error.message
+// : String(error)` (packages/agent/src/agent-loop.ts, api/openai-completions.ts).
+// A Go error keeps its identity; anything else goes through String(value).
+func TestJSRecoveredError(t *testing.T) {
+	sentinel := errors.New("boom")
+	if got := JSRecoveredError(sentinel); got != sentinel {
+		t.Fatalf("JSRecoveredError(error) = %v, want the same error value", got)
+	}
+	cases := []struct {
+		name      string
+		recovered any
+		want      string
+	}{
+		{"object", map[string]any{"a": float64(1)}, "[object Object]"},
+		{"slice", []any{"a", "b"}, "a,b"},
+		{"string", "text", "text"},
+		{"number", 42, "42"},
+		{"nil", nil, "null"},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			if got := JSRecoveredError(test.recovered).Error(); got != test.want {
+				t.Fatalf("JSRecoveredError(%#v) = %q, want %q", test.recovered, got, test.want)
 			}
 		})
 	}

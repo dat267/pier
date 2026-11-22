@@ -72,7 +72,7 @@ func classifySystemOne(transport systemOneTransport, model *Model, classifierCon
 	}
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			result = classifierFail(result, fmt.Errorf("%v", recovered), options)
+			result = classifierFail(result, JSRecoveredError(recovered), options)
 		}
 	}()
 	if len(classifierContext.Images) > 0 && !containsString(model.Input, "image") {

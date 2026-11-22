@@ -1106,7 +1106,7 @@ func createThemeChecked(themeJSON *ThemeJSON, mode ColorMode, sourcePath string)
 				err = failure
 				return
 			}
-			err = fmt.Errorf("%v", recovered)
+			err = ai.JSRecoveredError(recovered)
 		}
 	}()
 	return createThemeUnprotected(themeJSON, mode, sourcePath), nil

@@ -421,7 +421,7 @@ func StreamPiMessages(model *Model, context TranscriptContext, options *PiMessag
 				if err, ok := recovered.(error); ok {
 					fail(err)
 				} else {
-					fail(fmt.Errorf("%v", recovered))
+					fail(JSRecoveredError(recovered))
 				}
 			}
 		}()

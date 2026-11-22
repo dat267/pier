@@ -43,7 +43,7 @@ func (OpenAIDecisions) Classify(model *Model, classifierContext ClassifierContex
 	}
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			result = classifierFail(result, fmt.Errorf("%v", recovered), options)
+			result = classifierFail(result, JSRecoveredError(recovered), options)
 		}
 	}()
 	payload, err := buildOpenAIDecisionsPayload(model, classifierContext)

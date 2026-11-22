@@ -2,7 +2,6 @@ package interactive
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"regexp"
 	"runtime/debug"
@@ -936,7 +935,7 @@ func (a *App) runGuarded(body func()) {
 		}
 		failure, ok := recovered.(error)
 		if !ok {
-			failure = fmt.Errorf("%v", recovered)
+			failure = ai.JSRecoveredError(recovered)
 		}
 		if a.lifecycle == nil {
 			panic(recovered)

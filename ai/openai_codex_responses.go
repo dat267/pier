@@ -660,7 +660,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 				if err, ok := r.(error); ok {
 					fail(err)
 				} else {
-					fail(fmt.Errorf("%v", r))
+					fail(JSRecoveredError(r))
 				}
 			}
 		}()

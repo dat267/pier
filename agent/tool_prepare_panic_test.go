@@ -227,3 +227,53 @@ func TestToolUpdatesAreSerializedInCallOrder(t *testing.T) {
 		t.Fatalf("update order = %v; want %v", order, want)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) agent-loop.ts renders a thrown prepareArguments value with
+// `error instanceof Error ? error.message : String(error)`, so a thrown object
+// reports "[object Object]" and an array joins its items with commas. The port
+// formatted it with %v, which reports Go syntax ("map[key:value]", "[a b]").
+func TestPrepareArgumentsNonErrorPanicRendersLikeJavaScript(t *testing.T) {
+	cases := []struct {
+		name      string
+		recovered any
+		want      string
+	}{
+		{"object", map[string]any{"reason": "bad"}, "[object Object]"},
+		{"slice", []any{"a", "b"}, "a,b"},
+		{"number", 42, "42"},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			streamFn, _ := mockStreamFn(
+				createAssistantMessage(ai.ContentList{
+					ai.ToolCall{ID: "t1", Name: "boom", Arguments: json.RawMessage(`{}`)},
+				}, ai.StopToolUse),
+				createAssistantMessage(ai.ContentList{ai.TextContent{Text: "after"}}, ai.StopStop),
+			)
+			tool := AgentTool{
+				Name: "boom", Parameters: json.RawMessage(`{"type":"object"}`),
+				PrepareArguments: func(json.RawMessage) json.RawMessage { panic(test.recovered) },
+				Execute: func(string, json.RawMessage, context.Context, func(AgentToolResult)) (AgentToolResult, error) {
+					return AgentToolResult{}, nil
+				},
+			}
+			var toolResult *ai.ToolResultMessage
+			RunAgentLoop([]ai.Message{createUserMessage("hi")},
+				AgentContext{Tools: []AgentTool{tool}},
+				&AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter},
+				context.Background(),
+				func(event AgentEvent) error {
+					if result, ok := event.Message.(*ai.ToolResultMessage); ok && event.Type == MessageEnd {
+						toolResult = result
+					}
+					return nil
+				}, streamFn)
+			if toolResult == nil {
+				t.Fatal("no tool result recorded")
+			}
+			if text := toolResult.Content[0].(ai.TextContent).Text; !strings.Contains(text, test.want) {
+				t.Fatalf("tool error = %q, want it to contain %q", text, test.want)
+			}
+		})
+	}
+}

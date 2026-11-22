@@ -765,7 +765,7 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 				if err, ok := recovered.(error); ok {
 					fail(err, "", 0, nil)
 				} else {
-					fail(fmt.Errorf("%v", recovered), "", 0, nil)
+					fail(JSRecoveredError(recovered), "", 0, nil)
 				}
 			}
 		}()

@@ -875,7 +875,7 @@ func (a *Agent) runWithLifecycle(ctx context.Context, executor func(ctx context.
 				if failure, ok := r.(error); ok {
 					err = failure
 				} else {
-					err = fmt.Errorf("%v", r)
+					err = ai.JSRecoveredError(r)
 				}
 			}
 		}()

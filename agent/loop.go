@@ -868,7 +868,7 @@ func panicMessage(recovered any) string {
 	if err, ok := recovered.(error); ok {
 		return err.Error()
 	}
-	return fmt.Sprintf("%v", recovered)
+	return ai.JSValueToString(recovered)
 }
 
 func prepareToolCallUnprotected(

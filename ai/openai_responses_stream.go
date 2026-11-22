@@ -1133,7 +1133,7 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 				if err, ok := r.(error); ok {
 					fail(err)
 				} else {
-					fail(fmt.Errorf("%v", r))
+					fail(JSRecoveredError(r))
 				}
 			}
 		}()
