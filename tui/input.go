@@ -504,12 +504,38 @@ func sliceFrom(text string, offset int) string {
 	return text[offset:]
 }
 
+// inputGraphemes splits the input value into grapheme clusters the way the
+// reference's Intl.Segmenter does. segmentGraphemes treats every ASCII byte as
+// its own cluster, which is right for the render hot path but wrong for editing:
+// UAX #29 keeps CRLF together and it is the only ASCII pair it does not split,
+// so backspace after "a\r\nb" must delete both bytes.
+func inputGraphemes(value string) []string {
+	graphemes := segmentGraphemes(value)
+	for index := 0; index+1 < len(graphemes); index++ {
+		if graphemes[index] != "\r" || graphemes[index+1] != "\n" {
+			continue
+		}
+		joined := make([]string, 0, len(graphemes)-1)
+		for i := 0; i < len(graphemes); i++ {
+			if i+1 < len(graphemes) && graphemes[i] == "\r" && graphemes[i+1] == "\n" {
+				joined = append(joined, "\r\n")
+				i++
+				continue
+			}
+			joined = append(joined, graphemes[i])
+		}
+		graphemes = joined
+		break
+	}
+	return graphemes
+}
+
 // lastGraphemeStart returns the byte offset of the last grapheme ending at
 // cursor.
 func lastGraphemeStart(value string, cursor int) int {
 	start := 0
 	offset := 0
-	for _, grapheme := range segmentGraphemes(value) {
+	for _, grapheme := range inputGraphemes(value) {
 		offset += len(grapheme)
 		if offset >= cursor {
 			return start
@@ -526,7 +552,7 @@ func lastGraphemeStart(value string, cursor int) int {
 // cursor.
 func firstGraphemeEnd(value string, cursor int) int {
 	offset := 0
-	for _, grapheme := range segmentGraphemes(value) {
+	for _, grapheme := range inputGraphemes(value) {
 		next := offset + len(grapheme)
 		if next > cursor {
 			return next

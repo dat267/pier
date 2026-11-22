@@ -427,3 +427,35 @@ func TestFindWordBackwardUTF16Offsets(t *testing.T) {
 		t.Fatalf("forward = %d; want 2", got)
 	}
 }
+
+// TestInputDeletesAWholeCRLFCluster covers grapheme deletion. UAX #29 keeps CRLF
+// together and it is the only ASCII pair Intl.Segmenter does not split, so the
+// reference's segmenter yields one cluster there: backspace after "a\r\nb" must
+// leave "ab", and forward delete at index 1 must do the same. The port treated
+// every ASCII byte as its own cluster, which left a stray "\r" in the value.
+func TestInputDeletesAWholeCRLFCluster(t *testing.T) {
+	back := NewInput(InputOptions{})
+	back.SetValue("a\r\nb")
+	back.cursor = len("a\r\n")
+	back.handleBackspace()
+	if back.Value() != "ab" || back.cursor != 1 {
+		t.Fatalf("backspace over CRLF -> %q cursor=%d, want \"ab\" cursor=1", back.Value(), back.cursor)
+	}
+
+	forward := NewInput(InputOptions{})
+	forward.SetValue("a\r\nb")
+	forward.cursor = 1
+	forward.handleForwardDelete()
+	if forward.Value() != "ab" || forward.cursor != 1 {
+		t.Fatalf("forward delete at the CRLF -> %q cursor=%d, want \"ab\" cursor=1", forward.Value(), forward.cursor)
+	}
+
+	// A lone CR or LF is still one byte, and the cursor walks them separately.
+	lone := NewInput(InputOptions{})
+	lone.SetValue("a\rb")
+	lone.cursor = 2
+	lone.handleBackspace()
+	if lone.Value() != "ab" || lone.cursor != 1 {
+		t.Fatalf("backspace over a lone CR -> %q cursor=%d", lone.Value(), lone.cursor)
+	}
+}
