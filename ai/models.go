@@ -3,6 +3,8 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
+	"sort"
+	"strconv"
 )
 
 // Port of the Model half of types.ts: ModelCost, Model, and the per-API
@@ -479,6 +481,55 @@ func jsonObjectPropertyKeys(data []byte, property string) []string {
 	return directJSONObjectKeys(jsonObjectProperty(data, property))
 }
 
+// jsObjectKeyOrder returns keys in JavaScript's enumeration order: array-index keys
+// first, ascending, then the rest in their own order. JSON.stringify and Object.keys
+// both use it, so a sampling parameter named like an index must come first.
+// The same rule lives in coding (mcpJavaScriptObjectKeyOrder); ai cannot import
+// coding (the layering rule), so it is repeated here.
+func jsObjectKeyOrder(keys []string) []string {
+	type indexedKey struct {
+		name  string
+		index uint32
+	}
+	indices := make([]indexedKey, 0, len(keys))
+	ordinary := make([]string, 0, len(keys))
+	for _, key := range keys {
+		index, ok := jsArrayIndex(key)
+		if !ok {
+			ordinary = append(ordinary, key)
+			continue
+		}
+		indices = append(indices, indexedKey{name: key, index: index})
+	}
+	sort.SliceStable(indices, func(a, b int) bool { return indices[a].index < indices[b].index })
+	out := make([]string, 0, len(keys))
+	for _, entry := range indices {
+		out = append(out, entry.name)
+	}
+	return append(out, ordinary...)
+}
+
+// jsArrayIndex reports whether key is a JavaScript array index: "0", or a run of
+// digits with no leading zero, below 2^32-1.
+func jsArrayIndex(key string) (uint32, bool) {
+	if key == "0" {
+		return 0, true
+	}
+	if key == "" || key[0] == '0' {
+		return 0, false
+	}
+	for index := range len(key) {
+		if key[index] < '0' || key[index] > '9' {
+			return 0, false
+		}
+	}
+	value, err := strconv.ParseUint(key, 10, 32)
+	if err != nil || value == 1<<32-1 || strconv.FormatUint(value, 10) != key {
+		return 0, false
+	}
+	return uint32(value), true
+}
+
 func directJSONObjectKeys(data []byte) []string {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	if token, err := dec.Token(); err != nil || token != json.Delim('{') {
@@ -500,5 +551,5 @@ func directJSONObjectKeys(data []byte) []string {
 			return nil
 		}
 	}
-	return keys
+	return jsObjectKeyOrder(keys)
 }

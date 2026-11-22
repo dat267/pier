@@ -63,3 +63,23 @@ func TestCatalogDecodeSelectsCompatByEnclosingAPI(t *testing.T) {
 		})
 	}
 }
+
+// The same enumeration rule applies to a numeric-looking key: `Object.keys` puts
+// array-index keys first in numeric order before the file's own order, so a catalog
+// whose model carries `{"samplingParams":{"z":1,"2":2,"1":0}}` enumerates as
+// ["1","2","z"]. Both the model arm and the per-thinking-level arm derive their order
+// with directJSONObjectKeys, which returned file order.
+func TestCatalogDecodeOrdersArrayIndexKeysFirst(t *testing.T) {
+	data := []byte(`{"providers":{"test":{"openai-completions":{"model":{"id":"model","provider":"test","samplingParams":{"z":1,"2":2,"1":0},"samplingParamsByThinkingLevel":{"high":{"b":3,"10":4,"2":5}}}}}}}`)
+	_, models, err := decodeCatalog(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	model := models["test"]["model"]
+	if want := []string{"1", "2", "z"}; !reflect.DeepEqual(model.SamplingParamsOrder, want) {
+		t.Fatalf("sampling parameter order = %v, want %v", model.SamplingParamsOrder, want)
+	}
+	if want := []string{"2", "10", "b"}; !reflect.DeepEqual(model.SamplingParamsByThinkingLevelOrder["high"], want) {
+		t.Fatalf("thinking-level order = %v, want %v", model.SamplingParamsByThinkingLevelOrder["high"], want)
+	}
+}
