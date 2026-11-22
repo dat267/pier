@@ -561,7 +561,11 @@ func TestIsTruthyEnvFlag(t *testing.T) {
 			t.Errorf("%q must be truthy", value)
 		}
 	}
-	for _, value := range []string{"", "0", "false", "no", "on"} {
+	// pi v1.5.2 (b4afdddf) main.ts isTruthyEnvFlag compares `value.toLowerCase()`.
+	// JavaScript lowercases U+0130 to "i" plus a combining dot where Go yields a
+	// plain "i", so the intermediate strings differ, but neither spelling reaches
+	// "true" or "yes" and the result agrees.
+	for _, value := range []string{"", "0", "false", "no", "on", "TRU\u0130", "YE\u0130", "TRU\u0131"} {
 		if IsTruthyEnvFlag(value) {
 			t.Errorf("%q must be falsy", value)
 		}
