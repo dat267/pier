@@ -143,25 +143,33 @@ character rule, so it rejects `.@12Z|`, `}` and `{` which the reference accepts.
 Porting it means deciding how much of `URL.canParse` to reproduce; `ai/absoluteURL`
 already ports the `url` format's call, so the same approach applies here.
 
-## A rust highlight drops one number after a 21-line construct (open)
+## A rejected-candidate run ends rule highlighting for the rest of the input (open)
 
-Highlighting lines 70-90 of `pi/packages/env/daemon/src/output.rs` with `rust`,
-the port renders `counter.fetch_sub(1, Ordering::SeqCst);` with `1` uncoloured
-where the reference renders an `hljs-number` span. Every other class count and
-the relevance match, so exactly one number match is lost.
+Highlighting `strings.Repeat("a", 256) + " (1"` as `c` (255 as `javascript` or
+`ruby`), the port renders the `1` uncoloured where the reference emits an
+`hljs-number` span. Root cause found: `multiRegex.execDispatch` gives up after
+`maxRejectedCandidates` (256) consecutive rejected first-byte candidates and
+returns nil, and `engine.highlight` breaks its loop on a nil match, so no rule
+matches anywhere after the run. Measured directly: with a 300-byte run, a number,
+a string and a comment all render plain.
 
-Reproduce: take that 21-line slice (893 bytes, from `pub fn run(&self, writer:
-&mut impl Write) {` through `counter.fetch_sub(1, Ordering::SeqCst);`),
-highlight it with both implementations, and compare the `fetch_sub(` suffix.
-The 21-line form is stable across runs.
+That is broader than D351 states. The row says the give-up "only affects input
+past 256 rejected candidate bytes" and that "keywords still apply to the appended
+text", which is true for keywords, but it omits that *rule* highlighting never
+resumes. The original sighting was a rust highlight of lines 70-90 of
+`pi/packages/env/daemon/src/output.rs` losing the `1` in
+`counter.fetch_sub(1, Ordering::SeqCst);`; that slice reduces to this rule, which
+is why reducing it by line never shrank it.
 
-What is established: dropping the first line (leaving 20) makes the number
-match again, and dropping any single line does the same, so the trigger is a
-cumulative engine state over those exact lines rather than one construct. The
-`fn` rule's `end: '(\\(|<)'` closes at `run(`, and the function mode is not the
-cause: `fn f() {\n1` colours the number. No smaller reduction or root cause yet.
+Why it is not fixed yet: resuming after the budget needs a fresh
+`indexFirstByte` scan, and that scan is itself linear over the rejected run.
+Measured on the D351 input (`"0x"` repeated, 32 KiB, javascript): baseline
+315 ms, resume-with-one-refill 673 ms, resume-with-eight-refills 1.99 s, and an
+unbounded refill 13.2 s. A 2.1x regression to recover one token's colour is not a
+trade AGENTS.md allows without a D-row, and none of the variants is both correct
+and at baseline. A real fix has to make the resume cheap, for example by having
+`indexFirstByte` return the next candidate from the current scan instead of
+re-scanning, or by making the submatcher failure O(1) per candidate.
 
-Also found this round and worth recording: three of my probes reported false
-positives from reading `%q`/`Print` output of long strings and from a suffix
-index that ignored trailing text. Re-check any reproduction with a byte
-comparison against the reference before treating it as a finding.
+No test pins this: the current behaviour is what D351 chose, and the reproduction
+is a run length rather than a construct.
