@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D509)
+# Deliberate divergences from pi (D1–D510)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8432,3 +8432,26 @@ A differential against `faux.ts` was not run: its provider API surface (a live
 `fetch`, `DeferredHandle` objects and async iteration) has no direct Go call shape,
 so the comparison would test the harness. The port's own 91 tests at 84% statement
 coverage are the evidence for the streaming behaviour instead.
+
+### D510
+
+**One SSE line is capped at 64 MiB.**
+
+Reference: pi v1.5.2 (b4afdddf) has no per-line limit for a streamed response. The
+OpenAI adapter's `LineDecoder` (`openai/src/internal/decoders/line.ts`) appends each
+chunk to a buffer and scans for a newline, and the Anthropic adapter does the same with
+`buffer += decoder.decode(...)`. A stream that never sends a newline therefore costs
+memory proportional to what it sends, which the port measured at 127 MiB allocated for
+a 64 MiB endless line, with no error.
+
+The port keeps a `bufio.Scanner` and sets its maximum token size, so an over-long line
+fails the stream instead of growing without bound. AGENTS.md keeps responsiveness over
+parity where upstream costs memory per byte, and an idle timeout does not cover this
+case because a continuously-streaming line is never idle.
+
+The cap has to sit above the widest real event: `TestOpenAIChunkParserAcceptsLargeDataLine`
+pins a 16 MiB data line as valid. 64 MiB leaves room for that and for a base64 image
+delta, while `bufio.Scanner`'s doubling growth peaks near 207 MiB rather than the 831 MiB
+a 256 MiB cap produced (measured, which is why the larger cap was rejected).
+
+Test: `TestSSEScannerBoundsOneLine`. Cited at `ai/sse_lines.go`.

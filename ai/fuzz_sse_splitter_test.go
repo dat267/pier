@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"bytes"
 	"io"
 	"strings"
 	"testing"
@@ -59,4 +60,36 @@ func FuzzSSELineSplitter(f *testing.F) {
 			}
 		}
 	})
+}
+
+// A single SSE line is bounded by the provider's own response, and no real event
+// approaches this: the widest are base64 image deltas and full tool-call arguments,
+// both far under it. The reference instead grows its read buffer without limit, so a
+// hostile or broken stream sending one endless line costs memory proportional to the
+// line (measured: 64 MiB of line allocated 127 MiB, with no error). AGENTS.md keeps
+// responsiveness over parity here, so the port fails the stream instead.
+func TestSSEScannerBoundsOneLine(t *testing.T) {
+	line := make([]byte, sseMaxLineBytes+1)
+	for i := range line {
+		line[i] = 'x'
+	}
+	scanner := newSSEScanner(bytes.NewReader(append(line, '\n')))
+	for scanner.Scan() {
+	}
+	if err := scanner.Err(); err == nil {
+		t.Fatal("an over-long SSE line must fail the stream")
+	} else if !strings.Contains(err.Error(), "token too long") {
+		t.Fatalf("err = %v", err)
+	}
+	// A line just under the cap still parses. bufio.Scanner needs capacity for one
+	// more byte than the token it returns, so the cap is the buffer size, not the
+	// longest accepted line.
+	ok := make([]byte, sseMaxLineBytes-1)
+	for i := range ok {
+		ok[i] = 'y'
+	}
+	scanner = newSSEScanner(bytes.NewReader(append(ok, '\n')))
+	if !scanner.Scan() || len(scanner.Bytes()) != sseMaxLineBytes-1 {
+		t.Fatalf("a line under the cap did not parse: %v", scanner.Err())
+	}
 }
