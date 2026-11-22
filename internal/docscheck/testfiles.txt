@@ -381,6 +381,7 @@ coding/interactive/app_mcp_reload_test.go
 coding/interactive/app_mcp_switch_test.go
 coding/interactive/app_panic_test.go
 coding/interactive/app_test.go
+coding/interactive/appdialogs_test.go
 coding/interactive/assistant_stream_perf_test.go
 coding/interactive/assistant_thinking_perf_test.go
 coding/interactive/assistantmessage_stream_test.go

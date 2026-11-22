@@ -31,9 +31,12 @@ func (a *App) askChoose(title string, message string, options []string, onSelect
 }
 
 // askConfirm asks a yes/no question (upstream's extension-UI confirm) and treats
-// a dismissal as "no".
+// a dismissal as "no". The reference renders the selector with
+// `${title}\n${message}` as its title, so the message line carries the title's
+// bold accent styling; passing it as the description would print it in the plain
+// text colour instead.
 func (a *App) askConfirm(title string, message string, onAnswer func(confirmed bool)) {
-	a.askChoose(title, message, []string{"Yes", "No"}, func(option string) {
+	a.askChoose(title+"\n"+message, "", []string{"Yes", "No"}, func(option string) {
 		if onAnswer != nil {
 			onAnswer(option == "Yes")
 		}
