@@ -117,7 +117,10 @@ func RecordCrash(crash CrashInput, path string) *CrashRecord {
 		sessionFile = &crash.SessionFile
 	}
 	record := CrashRecord{
-		Timestamp:   time.Now().UTC().Format(time.RFC3339Nano),
+		// Upstream stamps `new Date().toISOString()`: always exactly three
+		// fractional digits, which neither RFC3339Nano (nine, or none) nor
+		// RFC3339 (none) produces.
+		Timestamp:   time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
 		Version:     crashBuildVersion(),
 		Kind:        crash.Kind,
 		Message:     message,

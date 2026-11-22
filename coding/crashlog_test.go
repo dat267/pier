@@ -171,3 +171,22 @@ func TestCrashRecordIdentifiesTheBuild(t *testing.T) {
 		t.Fatalf("crashBuildVersion() = %q", got)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) core/crash-log.ts stamps a record with
+// `new Date().toISOString()`, which always carries exactly three fractional
+// digits. Go's time.RFC3339Nano trims trailing zeros, so a whole-second instant
+// was persisted as "…T15:06:40Z" where the reference writes "…T15:06:40.000Z".
+func TestRecordCrashTimestampMatchesISOString(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "crashes.json")
+	record := RecordCrash(CrashInput{Kind: CrashKindFatalError, Error: errors.New("boom"), Cwd: "/x"}, path)
+	if record == nil {
+		t.Fatal("no record written")
+	}
+	parsed, err := time.Parse(time.RFC3339Nano, record.Timestamp)
+	if err != nil {
+		t.Fatalf("timestamp %q does not parse: %v", record.Timestamp, err)
+	}
+	if want := parsed.UTC().Format("2006-01-02T15:04:05.000Z"); record.Timestamp != want {
+		t.Fatalf("timestamp = %q, want the toISOString form %q", record.Timestamp, want)
+	}
+}
