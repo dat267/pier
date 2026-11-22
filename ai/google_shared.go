@@ -175,7 +175,23 @@ func (p *GooglePart) UnmarshalJSON(data []byte) error {
 	type plain GooglePart
 	var decoded plain
 	if err := json.Unmarshal(data, &decoded); err != nil {
-		return err
+		// A member of the wrong type (a string `thought`, a numeric
+		// thoughtSignature) failed the whole part, and the stream loop drops a
+		// chunk it cannot decode, so the model's text or function call was lost.
+		// The reference reads an already-parsed SDK object, where such a value
+		// stays as it arrived and is simply truthy or not, so keep the members
+		// that fit and skip the rest.
+		decoded = plain{}
+		var members map[string]json.RawMessage
+		if json.Unmarshal(data, &members) == nil && members != nil {
+			for name, raw := range members {
+				wrapped, err := MarshalJSON(map[string]json.RawMessage{name: raw})
+				if err != nil {
+					continue
+				}
+				_ = json.Unmarshal(wrapped, &decoded)
+			}
+		}
 	}
 	var probe struct {
 		Text json.RawMessage `json:"text"`

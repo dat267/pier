@@ -535,3 +535,46 @@ func TestStreamGoogleIgnoresThoughtOnlyPart(t *testing.T) {
 		t.Fatalf("events = %v, want %v", types, want)
 	}
 }
+
+// TestGooglePartKeepsItsContentOnAWrongTypedSibling covers a streamed response
+// part. The reference reads an already-parsed SDK object, where a wrong-typed
+// member stays as it arrived and is simply truthy or not, so the part and its
+// text still reach the caller. The port decoded into a typed struct, and one bad
+// member failed the whole part; the stream loop then drops a chunk it cannot
+// decode, so the model's text or function call was lost with it.
+func TestGooglePartKeepsItsContentOnAWrongTypedSibling(t *testing.T) {
+	for _, testCase := range []struct {
+		name string
+		wire string
+		text string
+		call bool
+	}{
+		{"plain text", `{"text":"hello"}`, "hello", false},
+		{"string thought", `{"text":"hello","thought":"notabool"}`, "hello", false},
+		{"numeric signature", `{"text":"hello","thoughtSignature":123}`, "hello", false},
+		{"numeric thought on a call", `{"functionCall":{"name":"f","args":{}},"thought":1}`, "", true},
+		{"array signature on inline data", `{"inlineData":{"mimeType":"a","data":"b"},"thoughtSignature":[]}`, "", false},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			var part GooglePart
+			if err := json.Unmarshal([]byte(testCase.wire), &part); err != nil {
+				t.Fatalf("a wrong-typed member must not fail the part: %v", err)
+			}
+			if part.Text != testCase.text {
+				t.Fatalf("Text = %q, want %q", part.Text, testCase.text)
+			}
+			if (part.FunctionCall != nil) != testCase.call {
+				t.Fatalf("FunctionCall present = %v, want %v", part.FunctionCall != nil, testCase.call)
+			}
+		})
+	}
+	// A well-formed part is unchanged, including the presence flags the
+	// thinking classification reads.
+	var part GooglePart
+	if err := json.Unmarshal([]byte(`{"text":"","thought":true}`), &part); err != nil {
+		t.Fatal(err)
+	}
+	if !part.HasText() || part.Thought == nil || !*part.Thought {
+		t.Fatalf("well-formed part changed: %+v", part)
+	}
+}
