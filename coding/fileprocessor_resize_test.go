@@ -3,6 +3,8 @@ package coding
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/binary"
+	"hash/crc32"
 	"image"
 	"image/jpeg"
 	"image/png"
@@ -184,4 +186,68 @@ func TestResizeInlineImagePrefersSmallerFormat(t *testing.T) {
 	if resized.MimeType != "image/jpeg" {
 		t.Fatalf("mime = %q; want the smaller image/jpeg", resized.MimeType)
 	}
+}
+
+// TestResizeInlineImageRefusesAnOversizedCanvas covers the inline pixel bound
+// (D408). A 33-byte PNG can declare a 30000x30000 canvas, which Go allocates as
+// 3.4 GiB before it discovers the pixel data is missing; a larger one kills the
+// process with a fatal out-of-memory instead of reaching the omission message.
+// The header is read with image.DecodeConfig first so the canvas is bounded
+// before any decoder allocates it.
+func TestResizeInlineImageRefusesAnOversizedCanvas(t *testing.T) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			t.Fatalf("decoding a hostile header panicked: %v", recovered)
+		}
+	}()
+	raw := hugePNGHeaderForTest(30000, 30000)
+	if len(raw) > 64 {
+		t.Fatalf("fixture is %d bytes, want a small hostile header", len(raw))
+	}
+	// The bound is checked at the decoder seam, so the error names it. Go's own
+	// decoders happen to reject these truncated streams before allocating, so the
+	// guard is defence in depth; this asserts it stays wired rather than that a
+	// decoder would otherwise exhaust memory.
+	_, err := decodeInlineImage(raw)
+	if err == nil || !strings.Contains(err.Error(), "exceeds the 100000000-pixel inline limit") {
+		t.Fatalf("decodeInlineImage err = %v, want the pixel-limit refusal", err)
+	}
+	if got := resizeInlineImage(raw, "image/png", DefaultImageResizeOptions); got != nil {
+		t.Fatalf("resizeInlineImage returned %+v, want nil for an oversize canvas", got)
+	}
+	result := ProcessImage(raw, "image/png", nil)
+	if result.OK || !strings.Contains(result.Message, "could not be resized") {
+		t.Fatalf("ProcessImage = %+v, want the omission message", result)
+	}
+	// A normal image below the bound still decodes.
+	fine := noisyPNG(t, 8, 8)
+	if _, err := decodeInlineImage(fine); err != nil {
+		t.Fatalf("decodeInlineImage(8x8) err = %v", err)
+	}
+}
+
+// hugePNGHeaderForTest builds a PNG that declares width x height with no pixel
+// data, the shape of a decompression bomb.
+func hugePNGHeaderForTest(width, height uint32) []byte {
+	var buffer bytes.Buffer
+	buffer.Write([]byte{0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a})
+	writeChunk := func(chunkType string, data []byte) {
+		var length [4]byte
+		binary.BigEndian.PutUint32(length[:], uint32(len(data)))
+		buffer.Write(length[:])
+		buffer.WriteString(chunkType)
+		buffer.Write(data)
+		checksum := crc32.NewIEEE()
+		checksum.Write([]byte(chunkType))
+		checksum.Write(data)
+		var sum [4]byte
+		binary.BigEndian.PutUint32(sum[:], checksum.Sum32())
+		buffer.Write(sum[:])
+	}
+	header := make([]byte, 13)
+	binary.BigEndian.PutUint32(header[0:], width)
+	binary.BigEndian.PutUint32(header[4:], height)
+	header[8] = 8 // bit depth
+	writeChunk("IHDR", header)
+	return buffer.Bytes()
 }
