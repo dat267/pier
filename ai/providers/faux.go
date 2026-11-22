@@ -343,6 +343,8 @@ func fauxRandomID(prefix string) string {
 	return fmt.Sprintf("%s:%d:%s", prefix, time.Now().UnixMilli(), fauxRandomSuffix())
 }
 
+// D509: a fixed eight characters, where the reference takes Math.random()'s
+// variable-length base-36 suffix. The id is opaque; nothing parses or compares it.
 func fauxRandomSuffix() string {
 	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
 	b := make([]byte, 8)

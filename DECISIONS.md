@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D508)
+# Deliberate divergences from pi (D1–D509)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8411,3 +8411,24 @@ Widening two struct fields to `float64` for a value no server sends was not wort
 the churn.
 
 Test: `TestDecodeMessageAcceptsAFractionalErrorCode`.
+
+### D509
+
+**A faux-provider id has an eight-character suffix, not `Math.random()`'s.**
+
+Reference: pi v1.5.2 (b4afdddf) `packages/ai/src/providers/faux.ts:163`
+`randomId(prefix)` spells `${prefix}:${Date.now()}:${Math.random().toString(36).slice(2)}`,
+so the suffix is base-36 with a variable length of roughly 10 to 12 characters. The
+port builds the same three fields with a fixed eight characters from the same
+base-36 alphabet (`fauxRandomSuffix`).
+
+The difference is unobservable in practice: the id is an opaque tag, and the port
+only ever tests it for non-emptiness. It reaches a tool call's `id`, a deferred
+handle's `id`, and, when no `api` is configured, the faux provider's api name, which
+travels into a model's `api` field. Nothing parses or compares the suffix, and no
+test pins a generated value.
+
+A differential against `faux.ts` was not run: its provider API surface (a live
+`fetch`, `DeferredHandle` objects and async iteration) has no direct Go call shape,
+so the comparison would test the harness. The port's own 91 tests at 84% statement
+coverage are the evidence for the streaming behaviour instead.
