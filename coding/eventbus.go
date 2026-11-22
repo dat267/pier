@@ -1,8 +1,10 @@
 package coding
 
 import (
-	"fmt"
+	"errors"
 	"sync"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of core/event-bus.ts: a channel-keyed pub/sub bus whose handlers cannot
@@ -119,9 +121,12 @@ func (b *eventBus) Clear() {
 }
 
 // toError converts a recovered panic value into an error.
+// toError mirrors upstream's `err instanceof Error ? err : new Error(String(err))`:
+// a thrown object reports "[object Object]" and an array joins its items with
+// commas, where Go's %v would print map[...] and [a b].
 func toError(value any) error {
 	if err, ok := value.(error); ok {
 		return err
 	}
-	return fmt.Errorf("%v", value)
+	return errors.New(ai.JSValueToString(value))
 }

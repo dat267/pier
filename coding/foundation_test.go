@@ -492,3 +492,47 @@ func TestInMemorySessionAppliesAnExplicitIDWithoutEntries(t *testing.T) {
 		t.Fatalf("in-memory session opened a file: %q", manager.GetSessionFile())
 	}
 }
+
+// pi v1.5.2 (b4afdddf) core/event-bus.ts logs a thrown handler value with
+// `console.error("Event handler error (" + channel + "):", err)`, which stringifies
+// a non-Error as String(value): an object reports "[object Object]", an array joins
+// its items with commas, and null reports "null". The port formatted the recovered
+// value with %v, so the reporter saw Go syntax.
+func TestEventBusHandlerErrorRendersLikeJavaScript(t *testing.T) {
+	cases := []struct {
+		name      string
+		recovered any
+		want      string
+	}{
+		{"object", map[string]any{"reason": "bad"}, "[object Object]"},
+		{"slice", []any{"a", "b"}, "a,b"},
+		{"number", 42, "42"},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			bus := CreateEventBus()
+			var reported []string
+			bus.SetHandlerErrorReporter(func(channel string, err error) { reported = append(reported, err.Error()) })
+			bus.On("boom", func(any) { panic(test.recovered) })
+			bus.Emit("boom", nil)
+			if len(reported) != 1 {
+				t.Fatalf("reported = %v, want one error", reported)
+			}
+			if reported[0] != test.want {
+				t.Fatalf("error = %q, want %q", reported[0], test.want)
+			}
+		})
+	}
+}
+
+// RegisterSessionResourceCleanup registers exported cleanups, so an extension's
+// cleanup can panic with any value; the aggregated error renders it the way the
+// reference's AggregateError does.
+func TestCleanupSessionResourcesRendersNonErrorPanics(t *testing.T) {
+	unregister := RegisterSessionResourceCleanup(func(string) { panic(map[string]any{"a": 1}) })
+	defer unregister()
+	err := CleanupSessionResources("session")
+	if err == nil || !strings.Contains(err.Error(), "[object Object]") {
+		t.Fatalf("cleanup error = %v, want it to contain %q", err, "[object Object]")
+	}
+}
