@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -699,5 +700,74 @@ func TestStdioExitDrainsOutputBeforeCloseEvent(t *testing.T) {
 	}
 	if got := transport.Stderr(); got != "\ufeff\ufffd\ufffd" {
 		t.Errorf("OnClose stderr=%q, want complete final stderr", got)
+	}
+}
+
+// TestStdioFixtureMatchesReferenceBytes pins the fixture's wire output against
+// packages/mcp/test/fixtures/stdio-server.mjs, which is the script the reference
+// runs. The fixture exists to be byte-faithful, and three things had drifted:
+// `String(message.params.arguments.text)` renders a number as its digits and a
+// present null as "null" (the port returned "" for both), an absent text
+// argument renders "undefined", and the reference writes the line without
+// HTML-escaping `<`, `>` and `&`. The id above 2^53 differs on purpose: the
+// reference's JSON.stringify renumbers it, and a fixture has no reason to.
+func TestStdioFixtureMatchesReferenceBytes(t *testing.T) {
+	command := exec.Command(stdioFixtureBin)
+	stdin, err := command.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdout, err := command.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	requests := []string{
+		`{"jsonrpc":"2.0","id":1,"method":"initialize"}`,
+		`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`,
+		`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"arguments":{"text":"a < b & c > d"}}}`,
+		`{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"arguments":{"text":123}}}`,
+		`{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"arguments":{"text":null}}}`,
+		`{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"arguments":{"text":true}}}`,
+		`{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"arguments":{}}}`,
+		`{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{}}`,
+		`{"jsonrpc":"2.0","method":"notifications/initialized"}`,
+		`{"jsonrpc":"2.0","id":9,"method":"ping"}`,
+		`{"jsonrpc":"2.0","id":10,"method":"nope"}`,
+	}
+	want := []string{
+		`{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"stdio-fixture","version":"1.0.0"}}}`,
+		`{"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"echo","inputSchema":{"type":"object"}}]}}`,
+		`{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"a < b & c > d"}]}}`,
+		`{"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"123"}]}}`,
+		`{"jsonrpc":"2.0","id":5,"result":{"content":[{"type":"text","text":"null"}]}}`,
+		`{"jsonrpc":"2.0","id":6,"result":{"content":[{"type":"text","text":"true"}]}}`,
+		`{"jsonrpc":"2.0","id":7,"result":{"content":[{"type":"text","text":"undefined"}]}}`,
+		`{"jsonrpc":"2.0","id":8,"result":{"content":[{"type":"text","text":"undefined"}]}}`,
+		`{"jsonrpc":"2.0","id":9,"result":{}}`,
+		`{"jsonrpc":"2.0","id":10,"error":{"code":-32601,"message":"not found"}}`,
+	}
+	for _, request := range requests {
+		if _, err := io.WriteString(stdin, request+"\n"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_ = stdin.Close()
+	scanner := bufio.NewScanner(stdout)
+	scanner.Buffer(make([]byte, 1<<20), 1<<20)
+	var got []string
+	for scanner.Scan() {
+		got = append(got, scanner.Text())
+	}
+	_ = command.Wait()
+	if len(got) != len(want) {
+		t.Fatalf("got %d lines, want %d:\n%s", len(got), len(want), strings.Join(got, "\n"))
+	}
+	for index := range want {
+		if got[index] != want[index] {
+			t.Errorf("line %d:\n got %s\nwant %s", index+1, got[index], want[index])
+		}
 	}
 }
