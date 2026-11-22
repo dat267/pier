@@ -190,3 +190,44 @@ func TestRecordCrashTimestampMatchesISOString(t *testing.T) {
 		t.Fatalf("timestamp = %q, want the toISOString form %q", record.Timestamp, want)
 	}
 }
+
+// TestReadCrashLogKeepsARecordWithAStrayMemberType pins the filter the
+// reference applies: readCrashLog keeps a record when `timestamp` and `message`
+// are both strings and ignores every other member's type, so a record carrying
+// `version: 1` or `notified: "yes"` is still a crash. Decoding straight into the
+// typed CrashRecord dropped the whole record for one stray member, so a crash
+// silently disappeared from the log and from the bug report.
+func TestReadCrashLogKeepsARecordWithAStrayMemberType(t *testing.T) {
+	for _, testCase := range []struct {
+		name    string
+		content string
+		records int
+	}{
+		{"well typed", `[{"timestamp":"t","message":"m"}]`, 1},
+		{"numeric version", `[{"timestamp":"t","message":"m","version":1}]`, 1},
+		{"string notified", `[{"timestamp":"t","message":"m","notified":"yes"}]`, 1},
+		{"numeric kind", `[{"timestamp":"t","message":"m","kind":2}]`, 1},
+		{"numeric timestamp", `[{"timestamp":1,"message":"m"}]`, 0},
+		{"missing message", `[{"timestamp":"t"}]`, 0},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "crashes.json")
+			if err := os.WriteFile(path, []byte(testCase.content), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if got := len(ReadCrashLog(path)); got != testCase.records {
+				t.Fatalf("records = %d, want %d for %s", got, testCase.records, testCase.content)
+			}
+		})
+	}
+	// A well-typed record still round-trips its optional members.
+	path := filepath.Join(t.TempDir(), "crashes.json")
+	if err := os.WriteFile(path, []byte(`[{"timestamp":"t","message":"m","notified":true,"stack":"s","version":"v1"}]`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	records := ReadCrashLog(path)
+	if len(records) != 1 || records[0].Notified == nil || !*records[0].Notified ||
+		records[0].Stack == nil || *records[0].Stack != "s" || records[0].Version != "v1" {
+		t.Fatalf("optional members lost: %+v", records)
+	}
+}

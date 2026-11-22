@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -61,15 +62,61 @@ func ReadCrashLog(path string) []CrashRecord {
 	}
 	var records []CrashRecord
 	for _, rawRecord := range rawRecords {
-		var record CrashRecord
-		if json.Unmarshal(rawRecord, &record) != nil {
+		// The reference keeps a record when `timestamp` and `message` are both
+		// strings and ignores every other member's type, so a record carrying
+		// `version: 1` or `notified: "yes"` is still a crash. Decoding straight
+		// into the typed struct dropped the whole record for one stray member.
+		var object map[string]json.RawMessage
+		if json.Unmarshal(rawRecord, &object) != nil || object == nil {
 			continue
 		}
-		if record.Timestamp != "" && record.Message != "" {
-			records = append(records, record)
+		if !isJSONString(object["timestamp"]) || !isJSONString(object["message"]) {
+			continue
 		}
+		var record CrashRecord
+		if json.Unmarshal(rawRecord, &record) != nil {
+			record = CrashRecord{
+				Timestamp: jsonStringOr(object["timestamp"]),
+				Message:   jsonStringOr(object["message"]),
+			}
+			record.Version = jsonStringOr(object["version"])
+			record.Kind = jsonStringOr(object["kind"])
+			record.Cwd = jsonStringOr(object["cwd"])
+			if stack, ok := object["stack"]; ok && isJSONString(stack) {
+				value := jsonStringOr(stack)
+				record.Stack = &value
+			}
+			if session, ok := object["sessionFile"]; ok && isJSONString(session) {
+				value := jsonStringOr(session)
+				record.SessionFile = &value
+			}
+			if notified, ok := object["notified"]; ok && (string(bytes.TrimSpace(notified)) == "true" || string(bytes.TrimSpace(notified)) == "false") {
+				value := string(bytes.TrimSpace(notified)) == "true"
+				record.Notified = &value
+			}
+		}
+		records = append(records, record)
 	}
 	return records
+}
+
+// isJSONString reports whether a raw member is a JSON string, which is the
+// reference's `typeof value === "string"` check.
+func isJSONString(raw json.RawMessage) bool {
+	if len(raw) == 0 {
+		return false
+	}
+	var value string
+	return json.Unmarshal(raw, &value) == nil && bytes.TrimSpace(raw)[0] == '"'
+}
+
+// jsonStringOr returns a raw member as a string, or "" when it is not one.
+func jsonStringOr(raw json.RawMessage) string {
+	var value string
+	if json.Unmarshal(raw, &value) != nil {
+		return ""
+	}
+	return value
 }
 
 // writeCrashLog persists the log with a trailing newline.
