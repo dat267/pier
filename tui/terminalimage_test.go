@@ -596,3 +596,32 @@ func TestImageComponentDefaultsToSixtyCells(t *testing.T) {
 		t.Fatalf("lines = %d %q, want the 60-cell default", len(lines), lines[0])
 	}
 }
+
+// TestImageDimensionsDecodeLikeBufferFrom covers decodeBase64. The reference's
+// dimension readers use `Buffer.from(data, "base64")`, which ignores characters
+// outside the alphabet, accepts the URL-safe `-` and `_`, needs no padding and
+// stops at a pad character. encoding/base64's StdEncoding rejects all of that, so
+// an image from a URL-safe or unpadded producer measured as 0x0 and fell back to
+// the placeholder cell size.
+func TestImageDimensionsDecodeLikeBufferFrom(t *testing.T) {
+	// A 1x1 PNG, 70 bytes decoded.
+	const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+	for _, testCase := range []struct{ name, data string }{
+		{"standard", png},
+		{"unpadded", png[:len(png)-2]},
+		{"whitespace inside", png[:10] + "\n" + png[10:]},
+		{"url-safe", "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg-_-"},
+		{"trailing after pad", png + "ignored"},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			dimensions, ok := GetPngDimensions(testCase.data)
+			if !ok || dimensions != (ImageDimensions{WidthPx: 1, HeightPx: 1}) {
+				t.Fatalf("GetPngDimensions = %+v, %v; want 1x1 like Buffer.from", dimensions, ok)
+			}
+		})
+	}
+	// A malformed payload is still refused rather than panicking.
+	if _, ok := GetPngDimensions("!!!"); ok {
+		t.Fatal("a non-image payload must not report dimensions")
+	}
+}

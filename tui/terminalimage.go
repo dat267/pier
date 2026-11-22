@@ -447,10 +447,78 @@ func CalculateImageRows(imageDimensions ImageDimensions, targetWidthCells int, c
 	return CalculateImageCellSize(imageDimensions, targetWidthCells, nil, cellDimensions, false).Rows
 }
 
+// decodeBase64 decodes the way `Buffer.from(data, "base64")` does, which every
+// dimension reader here uses: characters outside the alphabet are ignored, the
+// URL-safe `-` and `_` are accepted, padding is optional, and a pad character
+// ends the payload. encoding/base64's StdEncoding rejects all of that, so an
+// image whose data came from a URL-safe producer measured as 0x0 and fell back
+// to the placeholder size.
 func decodeBase64(data string) []byte {
-	decoded, err := base64.StdEncoding.DecodeString(data)
-	if err != nil {
-		return nil
+	normalized := make([]byte, 0, len(data))
+	for index := 0; index < len(data); index++ {
+		character := data[index]
+		switch {
+		case character >= 'A' && character <= 'Z',
+			character >= 'a' && character <= 'z',
+			character >= '0' && character <= '9',
+			character == '+', character == '/':
+			normalized = append(normalized, character)
+		case character == '-':
+			normalized = append(normalized, '+')
+		case character == '_':
+			normalized = append(normalized, '/')
+		case character == '=':
+			return decodeNormalizedBase64(normalized)
+		}
+	}
+	return decodeNormalizedBase64(normalized)
+}
+
+// decodeNormalizedBase64 decodes the cleaned standard alphabet, taking whole
+// 3-byte groups plus the whole bytes a trailing partial group carries.
+func decodeNormalizedBase64(normalized []byte) []byte {
+	usable := len(normalized) - len(normalized)%4
+	decoded := make([]byte, 0, usable/4*3+2)
+	bitsOf := func(character byte) (uint32, bool) {
+		switch {
+		case character >= 'A' && character <= 'Z':
+			return uint32(character - 'A'), true
+		case character >= 'a' && character <= 'z':
+			return uint32(character-'a') + 26, true
+		case character >= '0' && character <= '9':
+			return uint32(character-'0') + 52, true
+		case character == '+':
+			return 62, true
+		case character == '/':
+			return 63, true
+		}
+		return 0, false
+	}
+	for group := 0; group < usable; group += 4 {
+		var value uint32
+		for _, character := range normalized[group : group+4] {
+			bits, ok := bitsOf(character)
+			if !ok {
+				return nil
+			}
+			value = value<<6 | bits
+		}
+		decoded = append(decoded, byte(value>>16), byte(value>>8), byte(value))
+	}
+	if remainder := len(normalized) % 4; remainder > 1 {
+		var value uint32
+		for _, character := range normalized[usable:] {
+			bits, ok := bitsOf(character)
+			if !ok {
+				return nil
+			}
+			value = value<<6 | bits
+		}
+		value <<= 6 * (4 - remainder)
+		decoded = append(decoded, byte(value>>16))
+		if remainder == 3 {
+			decoded = append(decoded, byte(value>>8))
+		}
 	}
 	return decoded
 }
