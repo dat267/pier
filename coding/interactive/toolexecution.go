@@ -16,8 +16,12 @@ import (
 // the partial/error/success backgrounds, the preview truncation, and the
 // expansion toggle.
 //
-// Images are out of scope, so the image branches only produce the fallback
-// indicators from GetTextOutput.
+// A tool result's image blocks render after the text result with one spacer
+// each, in the result box or the self shell's container, when the terminal has
+// an image protocol and show-images is on. The reference reuses the previous
+// image component across updates when its source is unchanged; the port rebuilds
+// it, which costs nothing measurable because the transcode is cached globally by
+// source (tui/imagecomponent.go), as upstream's toPng is.
 
 const fallbackPreviewLines = 10
 

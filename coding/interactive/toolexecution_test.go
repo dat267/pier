@@ -74,3 +74,42 @@ func TestToolExecutionRendersInlineImages(t *testing.T) {
 		t.Fatalf("fallback missing:\n%q", rendered)
 	}
 }
+
+// TestToolExecutionSelfShellRendersImages covers the self shell. The image loop
+// runs after both shells are populated and its addChild routes to the self
+// container, so a self-shell result's image block renders there too, as the
+// reference's render appends its image components inside the self block.
+func TestToolExecutionSelfShellRendersImages(t *testing.T) {
+	newRendererTestTheme(t)
+	previousCaps := tui.GetTerminalCapabilities()
+	previousCells := tui.GetCellDimensions()
+	t.Cleanup(func() {
+		tui.SetTerminalCapabilities(previousCaps)
+		tui.SetCellDimensions(previousCells)
+		tui.SetImageTranscoder(nil)
+	})
+	tui.SetTerminalCapabilities(tui.TerminalCapabilities{Images: tui.ImageProtocolKitty})
+	tui.SetCellDimensions(tui.CellDimensions{WidthPx: 10, HeightPx: 10})
+
+	definition := &ToolRenderers{
+		RenderShell: "self",
+		RenderCall: func(args any, theme *Theme, context *ToolRenderContext) tui.Component {
+			return tui.NewText("call", 0, 0, nil)
+		},
+		RenderResult: func(result *SortToolResultContent, options ToolRenderResultOptions, theme *Theme, context *ToolRenderContext) tui.Component {
+			return tui.NewText(GetTextOutput(result, context.ShowImages), 0, 0, nil)
+		},
+	}
+	result := &SortToolResultContent{Content: []ToolResultContent{
+		{Type: "text", Text: "result"},
+		{Type: "image", Data: "iVBORw0KGgoAAAANSUhEUgAAACgAAAAK", MimeType: "image/png"},
+	}}
+	component := NewToolExecutionComponent("edit", "call-1", map[string]any{}, ToolExecutionOptions{}, definition, nil, "/tmp")
+	component.MarkExecutionStarted()
+	component.SetArgsComplete()
+	component.UpdateResult(result, false)
+	rendered := strings.Join(component.Render(80), "\n")
+	if !strings.Contains(rendered, "result") || !strings.Contains(rendered, "\x1b_Ga=T,f=100") {
+		t.Fatalf("the self shell must render its content and its image: %q", rendered)
+	}
+}
