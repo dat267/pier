@@ -67,7 +67,20 @@ type deviceCodeAction struct {
 	hint            *tui.TruncatedText
 }
 
+// clearDeviceCodeAction drops the pending action and the hint row it belonged
+// to, so Enter cannot fire a device code whose panel is gone (upstream
+// clearDeviceCodeAction removes the hint child).
 func (c *LoginDialogComponent) clearDeviceCodeAction() {
+	if c.deviceCode != nil && c.deviceCode.hint != nil {
+		children := make([]tui.Component, 0, len(c.contentContainer.Children))
+		for _, child := range c.contentContainer.Children {
+			if child == tui.Component(c.deviceCode.hint) {
+				continue
+			}
+			children = append(children, child)
+		}
+		c.contentContainer.Children = children
+	}
 	c.deviceCode = nil
 }
 
@@ -140,6 +153,7 @@ func (c *LoginDialogComponent) replaceInputWithSubmittedText(value string) {
 }
 
 func (c *LoginDialogComponent) cancel() {
+	c.clearDeviceCodeAction()
 	select {
 	case <-c.aborted:
 	default:
@@ -151,6 +165,16 @@ func (c *LoginDialogComponent) cancel() {
 	}
 	if c.onComplete != nil {
 		c.onComplete(false, "Login cancelled")
+	}
+}
+
+// isAborted reports whether the login was cancelled (upstream this.signal.aborted).
+func (c *LoginDialogComponent) isAborted() bool {
+	select {
+	case <-c.aborted:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -410,7 +434,7 @@ func (c *LoginDialogComponent) HandleInput(data string) {
 		c.authUrl.Copy()
 		return
 	}
-	if c.deviceCode != nil && c.pending == nil && c.focused && kb.Matches(data, "tui.select.confirm") {
+	if c.deviceCode != nil && c.pending == nil && c.focused && !c.isAborted() && kb.Matches(data, "tui.select.confirm") {
 		action := c.deviceCode
 		// Consume once so a repeated Enter cannot launch multiple browsers or
 		// clipboard writes.

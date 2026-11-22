@@ -183,3 +183,56 @@ func TestLoginCompletionStatusWaitsForOwnerPost(t *testing.T) {
 		t.Errorf("owner completion did not clear blocked status: %+v", got)
 	}
 }
+
+// TestLoginDialogDeviceCodeAfterCancelIgnored covers the aborted guard. The
+// reference's cancel clears the device-code action and handleInput checks
+// `!this.signal.aborted`, so Enter after a cancel does nothing. Without it a
+// cancelled login still copied the one-time code and opened the browser.
+func TestLoginDialogDeviceCodeAfterCancelIgnored(t *testing.T) {
+	InitTheme("dark", false)
+	dialog := NewLoginDialogComponent(nil, nil, "p", nil, "", "")
+	dialog.SetFocused(true)
+	copies, opens := 0, 0
+	dialog.copyClipboard = func(string, func(error)) { copies++ }
+	SetBrowserOpener(func(string) { opens++ })
+	defer SetBrowserOpener(func(string) {})
+
+	dialog.ShowDeviceCode("https://example.com/device", "CODE")
+	dialog.HandleInput("\x1b") // cancel
+	dialog.HandleInput("\r")   // Enter after the cancel
+	if copies != 0 || opens != 0 {
+		t.Fatalf("after cancel copied %d and opened %d, want neither", copies, opens)
+	}
+
+	// The same sequence without a cancel still acts.
+	live := NewLoginDialogComponent(nil, nil, "p", nil, "", "")
+	live.SetFocused(true)
+	live.copyClipboard = func(string, func(error)) { copies++ }
+	live.ShowDeviceCode("https://example.com/device", "CODE")
+	live.HandleInput("\r")
+	if copies != 1 || opens != 1 {
+		t.Fatalf("before cancel copied %d and opened %d, want one of each", copies, opens)
+	}
+}
+
+// TestLoginDialogClearsTheDeviceCodeHintRow covers clearDeviceCodeAction. The
+// reference removes the hint child as well as the action, so a later prompt does
+// not leave the device-code hint on screen, where its Enter hint is already dead.
+func TestLoginDialogClearsTheDeviceCodeHintRow(t *testing.T) {
+	InitTheme("dark", false)
+	dialog := NewLoginDialogComponent(nil, nil, "p", nil, "", "")
+	dialog.SetFocused(true)
+	dialog.copyClipboard = func(string, func(error)) {}
+
+	dialog.ShowDeviceCode("https://example.com/device", "CODE")
+	if lines := strings.Join(dialog.ContentLines(80), "\n"); !strings.Contains(lines, "to open browser and copy code") {
+		t.Fatalf("device code hint missing while the action is live: %q", lines)
+	}
+	dialog.ShowPrompt("Paste code", "")
+	if lines := strings.Join(dialog.ContentLines(80), "\n"); strings.Contains(lines, "to open browser and copy code") {
+		t.Fatalf("stale device code hint survived the next prompt: %q", lines)
+	}
+	if lines := strings.Join(dialog.ContentLines(80), "\n"); !strings.Contains(lines, "Paste code") {
+		t.Fatalf("the prompt itself is missing: %q", lines)
+	}
+}
