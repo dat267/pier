@@ -102,3 +102,52 @@ func TestResourceContentsArmByPresence(t *testing.T) {
 		t.Fatalf("neither-arm resource recorded an arm: %+v", neither)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) packages/mcp/src/protocol/content.ts blockToLlmContent:
+// the embedded-resource arm uses `resource.mimeType?.startsWith("image/")`, so a
+// MIME type of exactly "image/" takes the image arm (the reference slices nothing
+// and the port's `len >= 6 && [:6] == "image/"` must agree), while a shorter or
+// different prefix takes the binary placeholder. The placeholder names the type,
+// or "unknown type" when the field is absent.
+func TestEmbeddedResourceImagePrefixBoundary(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		mimeType *string
+		image    bool
+		text     string
+	}{
+		{name: "exactly the prefix", mimeType: new("image/"), image: true},
+		{name: "a full image type", mimeType: new("image/png"), image: true},
+		{name: "one byte short", mimeType: new("image"), text: "[binary resource file:///r (image) omitted]"},
+		{name: "a different type", mimeType: new("text/plain"), text: "[binary resource file:///r (text/plain) omitted]"},
+		{name: "an empty type", mimeType: new(""), text: "[binary resource file:///r () omitted]"},
+		{name: "no type", mimeType: nil, text: "[binary resource file:///r (unknown type) omitted]"},
+	} {
+		block := ContentBlock{Type: "resource", Resource: &ResourceContents{
+			URI: "file:///r", MimeType: tc.mimeType, Blob: "Yw==", BlobArm: true,
+		}}
+		got := Content(&CallToolResult{Content: []ContentBlock{block}})
+		if len(got) != 1 {
+			t.Fatalf("%s: got %+v", tc.name, got)
+		}
+		if tc.image {
+			image, ok := got[0].(ai.ImageContent)
+			if !ok || image.MimeType != *tc.mimeType {
+				t.Errorf("%s: got %#v, want an image content of %q", tc.name, got[0], *tc.mimeType)
+			}
+			continue
+		}
+		text, ok := got[0].(ai.TextContent)
+		if !ok || text.Text != tc.text {
+			t.Errorf("%s: got %#v, want %q", tc.name, got[0], tc.text)
+		}
+	}
+
+	// A nil result and a result with no blocks both carry no content.
+	if got := Content(nil); len(got) != 0 {
+		t.Errorf("Content(nil) = %+v", got)
+	}
+	if got := Content(&CallToolResult{}); len(got) != 0 {
+		t.Errorf("Content(empty) = %+v", got)
+	}
+}
