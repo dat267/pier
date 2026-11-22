@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -152,5 +153,61 @@ func TestUserMessageUpdateReachesSkippingParent(t *testing.T) {
 	component.SetText("second prompt")
 	if rendered := strings.Join(chat.Render(80), "\n"); !strings.Contains(rendered, "second prompt") {
 		t.Fatalf("stale user lines after SetText: %q", rendered)
+	}
+}
+
+// TestAssistantMessageStopNotices covers the truncation/abort/error notices,
+// keyed to upstream (assistant-message.ts:245-264): a `length` stop always
+// notices, an `aborted` or `error` stop only without a tool call, and the
+// default texts are used when the message carries none.
+func TestAssistantMessageStopNotices(t *testing.T) {
+	newRendererTestTheme(t)
+	text := func(s string) *string { return &s }
+	for _, testCase := range []struct {
+		name     string
+		message  *ai.AssistantMessage
+		contains string
+	}{
+		{"length", streamingAssistant("hi", ai.StopLength), "Response was truncated before completion."},
+		{"aborted default", streamingAssistant("hi", ai.StopAborted), "Operation aborted"},
+		{"aborted request message", &ai.AssistantMessage{
+			Content: ai.ContentList{ai.TextContent{Text: "hi"}}, StopReason: ai.StopAborted,
+			ErrorMessage: text("Request was aborted"),
+		}, "Operation aborted"},
+		{"aborted custom", &ai.AssistantMessage{
+			Content: ai.ContentList{ai.TextContent{Text: "hi"}}, StopReason: ai.StopAborted,
+			ErrorMessage: text("connection reset"),
+		}, "connection reset"},
+		{"error default", streamingAssistant("hi", ai.StopError), "Error: Unknown error"},
+		{"error custom", &ai.AssistantMessage{
+			Content: ai.ContentList{ai.TextContent{Text: "hi"}}, StopReason: ai.StopError,
+			ErrorMessage: text("bad key"),
+		}, "Error: bad key"},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			component := NewAssistantMessageComponent(testCase.message, false, nil, "", 0, nil)
+			lines := strings.Join(component.Render(60), "\n")
+			if !strings.Contains(lines, testCase.contains) {
+				t.Fatalf("notice %q missing from %q", testCase.contains, lines)
+			}
+		})
+	}
+
+	// A tool call suppresses the aborted/error notice but not the length one.
+	tool := func(reason ai.StopReason) *ai.AssistantMessage {
+		return &ai.AssistantMessage{
+			Content:    ai.ContentList{ai.ToolCall{ID: "1", Name: "bash", Arguments: json.RawMessage(`{}`)}},
+			StopReason: reason,
+		}
+	}
+	for _, reason := range []ai.StopReason{ai.StopAborted, ai.StopError} {
+		component := NewAssistantMessageComponent(tool(reason), false, nil, "", 0, nil)
+		if lines := strings.Join(component.Render(60), "\n"); strings.Contains(lines, "aborted") || strings.Contains(lines, "Error:") {
+			t.Fatalf("%v with a tool call must not notice: %q", reason, lines)
+		}
+	}
+	lengthWithTool := NewAssistantMessageComponent(tool(ai.StopLength), false, nil, "", 0, nil)
+	if lines := strings.Join(lengthWithTool.Render(60), "\n"); !strings.Contains(lines, "truncated before completion") {
+		t.Fatalf("a length stop must notice even with a tool call: %q", lines)
 	}
 }
