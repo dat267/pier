@@ -72,7 +72,9 @@ func (t *ProcessLoginTerminal) Question(ctx context.Context, message string) (st
 	}
 	_, _ = fmt.Fprint(t.Out, message)
 	text, err := t.Reader.ReadString('\n')
-	if err != nil && (text == "" || err != io.EOF) {
+	if err != nil {
+		// readline rejects a pending question when its input closes, so end of
+		// input is "Login cancelled" even when a partial line arrived first.
 		if ctxErrOf(ctx) != nil || err == io.EOF {
 			return "", fmt.Errorf("%s", AuthLoginCancelledMessage)
 		}
