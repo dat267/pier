@@ -100,3 +100,32 @@ Wiring it needs the pre-request half of the reference:
    which `runRefresh` already does for the 401 path.
 3. A test that an expired token with no stored client redirects instead of
    registering, and one that a pending sign-in keeps its state and verifier.
+
+## Two IDN label rules are still approximate (open)
+
+`validIDNLabel` (`ai/validation_pi.go`) ports the reference's IDN hostname check
+more coarsely than it should. Two divergences remain after the ACE-prefix and
+normalization fix:
+
+1. **A-label length.** `label/unicode.ts:48` rejects a non-ASCII label whose
+   punycode encoding plus the 4-byte `xn--` prefix exceeds 63 octets
+   (`ExceedsMaxALabelLength`). The port counts the label's own runes, so it
+   accepts `strings.Repeat("あ", 63)` where the reference rejects it (the
+   punycode form is far longer).
+2. **CONTEXTO neighbors.** `label/unicode.ts:87` rejects U+00B7 (middle dot)
+   unless both neighbours are `l`, U+0375 unless followed by a Greek script
+   character, U+05F3/U+05F4 unless preceded by Hebrew, and U+200C/U+200D unless
+   preceded by a virama. The port has none of these, so it rejects `l·l` which
+   the reference accepts (its `unicode.IsLetter` test fails the middle dot).
+
+Both need the real RFC 5892 tables. `golang.org/x/net` is already an indirect
+dependency at v0.61.0, and its `idna` package has the mappings, but the module has
+no go.sum entry for it, so adding it is a dependency change. With it:
+
+1. `go mod download golang.org/x/net` and add the go.sum entries.
+2. Replace the hand-rolled body of `validIDNLabel` with
+   `idna.New(idna.ValidateForRegistration(), idna.StrictDomainName(true)).ToASCII`
+   and accept only when it succeeds, then diff against the reference over a
+   corpus of IDN labels before trusting it.
+
+Until then the two cases above are the known difference.

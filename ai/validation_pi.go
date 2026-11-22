@@ -13,6 +13,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 // Port of pi v1.5.0's @earendil-works/pi-schema validation and coercion as
@@ -1094,12 +1096,17 @@ func validIDNLabel(value string) bool {
 	if value == "" || len(value) > 253 {
 		return false
 	}
-	for _, label := range strings.Split(value, ".") {
+	for _, label := range strings.Split(normalizeIDNHostname(value), ".") {
 		if label == "" || utf8.RuneCountInString(label) > 63 {
 			return false
 		}
 		runes := []rune(label)
 		if runes[0] == '-' || runes[len(runes)-1] == '-' {
+			return false
+		}
+		// RFC 5891 4.2.3.2: the 3rd and 4th codepoints may not both be hyphens,
+		// which reserves the "xn--" ACE prefix (label/unicode.ts:55).
+		if len(runes) >= 4 && runes[2] == '-' && runes[3] == '-' {
 			return false
 		}
 		for _, r := range runes {
@@ -1109,6 +1116,27 @@ func validIDNLabel(value string) bool {
 		}
 	}
 	return true
+}
+
+// normalizeIDNHostname ports NormalizeHostname (idn-hostname.ts:58): fullwidth
+// forms map to ASCII, NFC composes, the IDNA IGNORED-MAPPING codepoints are
+// dropped, and the full-stop variants become an ASCII dot.
+func normalizeIDNHostname(value string) string {
+	mapped := make([]rune, 0, len(value))
+	for _, r := range value {
+		switch {
+		case r >= 0xff01 && r <= 0xff5e:
+			mapped = append(mapped, r-0xfee0)
+		case r == 0x00ad || r == 0x034f || (r >= 0x180b && r <= 0x180d) || r == 0x200b ||
+			(r >= 0xfe00 && r <= 0xfe0f) || (r >= 0xe0100 && r <= 0xe01ef):
+			// Dropped by the reference's IGNORED-MAPPING pass.
+		case r == 0x3002 || r == 0xff0e || r == 0xff61:
+			mapped = append(mapped, '.')
+		default:
+			mapped = append(mapped, r)
+		}
+	}
+	return norm.NFC.String(string(mapped))
 }
 
 func validDate(value string) bool {

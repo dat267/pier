@@ -245,3 +245,28 @@ func TestPiFormatValidDocumentsTheRE2RegexGaps(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.5.2 (b4afdddf) packages/schema/src/formats/typebox/idna: an IDN label is
+// validated after NormalizeHostname (idn-hostname.ts:58), which maps fullwidth
+// codepoints to ASCII, applies NFC, drops the IGNORED-MAPPING codepoints and
+// unifies the full-stop variants; and HasInvalidHyphens (label/unicode.ts:55)
+// rejects a hyphen in the 3rd and 4th codepoint position, the ACE prefix
+// reservation. The port measured the raw string and never applied the reservation,
+// so it accepted "xn--abc" and "ab--c" and rejected a label carrying a soft hyphen.
+func TestIDNLabelAppliesTheACEPrefixAndNormalization(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		want  bool
+	}{
+		{"xn--abc", false},           // 3rd/4th codepoints are hyphens: reserved prefix
+		{"ab--c", false},             // same reservation, not an ACE label
+		{"a--b", true},               // the hyphens are at positions 1 and 2
+		{"ab\u00adc", true},          // a soft hyphen is dropped before validation
+		{"\uff41\uff42\uff43", true}, // fullwidth a,b,c map to ASCII
+		{"example.com", true},
+	} {
+		if got := validIDNLabel(tc.value); got != tc.want {
+			t.Errorf("validIDNLabel(%q) = %v, want %v", tc.value, got, tc.want)
+		}
+	}
+}
