@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"encoding/json"
 	"math"
 	"strings"
 )
@@ -24,6 +25,12 @@ type OpenRouterCostDetails struct {
 	// UpstreamInferenceCost is the total billed through the upstream provider
 	// account, when available.
 	UpstreamInferenceCost *float64 `json:"upstream_inference_cost"`
+	// UpstreamInferenceCostPresent distinguishes an absent member from an
+	// explicit null: the reference falls back to summing the prompt and
+	// completion parts only when the member is present and null
+	// (`upstreamCost === null`), and an absent member leaves the catalog total
+	// alone. Set by UnmarshalJSON.
+	UpstreamInferenceCostPresent bool `json:"-"`
 	// UpstreamInferencePromptCost is the upstream cache-aware prompt cost.
 	UpstreamInferencePromptCost *float64 `json:"upstream_inference_prompt_cost"`
 	// UpstreamInferenceCompletionsCost is the upstream generation cost.
@@ -50,12 +57,14 @@ func ApplyOpenRouterReportedCost(usage *Usage, reported OpenRouterUsageAccountin
 	if !isValidCost(reported.Cost) {
 		return
 	}
-	if reported.IsBYOK != nil && !*reported.IsBYOK {
-		usage.Cost.Total = *reported.Cost
-		usage.Cost.TotalFromProvider = boolPtrTrue()
+	// The reference tests `is_byok === false` then `is_byok === true`; an absent
+	// member satisfies neither and leaves the estimate alone.
+	if reported.IsBYOK == nil {
 		return
 	}
-	if reported.IsBYOK == nil || !*reported.IsBYOK {
+	if !*reported.IsBYOK {
+		usage.Cost.Total = *reported.Cost
+		usage.Cost.TotalFromProvider = boolPtrTrue()
 		return
 	}
 	details := reported.CostDetails
@@ -64,6 +73,12 @@ func ApplyOpenRouterReportedCost(usage *Usage, reported OpenRouterUsageAccountin
 	}
 	upstreamCost := details.UpstreamInferenceCost
 	if upstreamCost == nil {
+		// Only an explicit null falls back to the parts; an absent member is
+		// `undefined` in the reference and passes the validity check, leaving
+		// the catalog total untouched.
+		if !details.UpstreamInferenceCostPresent {
+			return
+		}
 		if !isValidCost(details.UpstreamInferencePromptCost) || !isValidCost(details.UpstreamInferenceCompletionsCost) {
 			return
 		}
@@ -80,4 +95,22 @@ func ApplyOpenRouterReportedCost(usage *Usage, reported OpenRouterUsageAccountin
 func boolPtrTrue() *bool {
 	value := true
 	return &value
+}
+
+// UnmarshalJSON records whether the upstream total member is present, so the
+// absent and explicit-null cases stay distinct the way the reference's
+// `undefined` and `null` are.
+func (d *OpenRouterCostDetails) UnmarshalJSON(data []byte) error {
+	type detailsAlias OpenRouterCostDetails
+	var decoded detailsAlias
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	var members map[string]json.RawMessage
+	if err := json.Unmarshal(data, &members); err != nil {
+		return err
+	}
+	*d = OpenRouterCostDetails(decoded)
+	_, d.UpstreamInferenceCostPresent = members["upstream_inference_cost"]
+	return nil
 }

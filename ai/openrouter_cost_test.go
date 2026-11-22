@@ -38,9 +38,13 @@ func TestApplyOpenRouterReportedCost(t *testing.T) {
 		t.Fatalf("byok total = %+v", usage.Cost)
 	}
 
-	// Without the upstream total the prompt and completion parts sum.
+	// With the upstream total explicitly null the prompt and completion parts
+	// sum. UpstreamInferenceCostPresent stands in for the reference's
+	// `upstream_inference_cost: null`; an absent member keeps the estimate
+	// (TestOpenRouterCostDistinguishesAbsentFromNull).
 	usage = base()
 	ApplyOpenRouterReportedCost(&usage, openRouterAccounting(floatPtr(0.5), &byok, &OpenRouterCostDetails{
+		UpstreamInferenceCostPresent:     true,
 		UpstreamInferencePromptCost:      floatPtr(1),
 		UpstreamInferenceCompletionsCost: floatPtr(0.75),
 	}))
@@ -53,7 +57,7 @@ func TestApplyOpenRouterReportedCost(t *testing.T) {
 		"no cost":         openRouterAccounting(nil, &notByok, nil),
 		"negative cost":   openRouterAccounting(floatPtr(-1), &notByok, nil),
 		"byok no details": openRouterAccounting(floatPtr(1), &byok, nil),
-		"byok no parts":   openRouterAccounting(floatPtr(1), &byok, &OpenRouterCostDetails{}),
+		"byok no parts":   openRouterAccounting(floatPtr(1), &byok, &OpenRouterCostDetails{UpstreamInferenceCostPresent: true}),
 		"nil byok":        openRouterAccounting(floatPtr(1), nil, nil),
 	} {
 		usage = base()
@@ -101,5 +105,49 @@ func TestOpenRouterUsageAccountingDecodes(t *testing.T) {
 	if accounting.CostDetails == nil || accounting.CostDetails.UpstreamInferenceCost != nil ||
 		accounting.CostDetails.UpstreamInferencePromptCost == nil || *accounting.CostDetails.UpstreamInferencePromptCost != 0.1 {
 		t.Fatalf("details = %+v", accounting.CostDetails)
+	}
+}
+
+// pi v1.5.2 (b4afdddf) utils/openrouter-cost.ts distinguishes an absent upstream
+// total (`undefined`) from an explicit `null`: only `=== null` falls back to
+// summing the prompt and completion parts, and an absent member passes the
+// validity check and leaves the catalog total untouched. The port's `== nil` test
+// treated both as null, so an absent member replaced the total with the parts sum.
+func TestOpenRouterCostDistinguishesAbsentFromNull(t *testing.T) {
+	byok := true
+	cases := []struct {
+		name string
+		raw  string
+		want float64
+	}{
+		{
+			name: "absent member keeps the estimate",
+			raw:  `{"cost":1,"is_byok":true,"cost_details":{"upstream_inference_prompt_cost":2,"upstream_inference_completions_cost":3}}`,
+			want: 99,
+		},
+		{
+			name: "explicit null sums the parts",
+			raw:  `{"cost":1,"is_byok":true,"cost_details":{"upstream_inference_cost":null,"upstream_inference_prompt_cost":2,"upstream_inference_completions_cost":3}}`,
+			want: 6,
+		},
+		{
+			name: "present total is used",
+			raw:  `{"cost":1,"is_byok":true,"cost_details":{"upstream_inference_cost":4}}`,
+			want: 5,
+		},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			var reported OpenRouterUsageAccounting
+			if err := json.Unmarshal([]byte(test.raw), &reported); err != nil {
+				t.Fatal(err)
+			}
+			usage := Usage{Cost: UsageCost{Total: 99}}
+			ApplyOpenRouterReportedCost(&usage, reported)
+			if usage.Cost.Total != test.want {
+				t.Fatalf("total = %v, want %v", usage.Cost.Total, test.want)
+			}
+			_ = byok
+		})
 	}
 }
