@@ -182,3 +182,28 @@ func TestRadiusLoginMenuShortcut(t *testing.T) {
 		t.Fatalf("cancel did not restore login menu:\ngot %q\nwant %q", got, before)
 	}
 }
+
+// pi v1.5.2 (b4afdddf) components/radius-login-selector.ts renders the animated row as
+// `shimmer + label.slice(text.length)`: a length-based cut of the text's UTF-16 units,
+// not a prefix removal. The two agree while the label starts with the text (production
+// builds it as `radiusText + status`), but they differ once it does not: the port's
+// strings.TrimPrefix kept the whole label where the reference drops the leading units.
+func TestRadiusLoginLabelCutMatchesSliceLength(t *testing.T) {
+	// The reference's label.slice(text.length), captured from node for each pair.
+	cases := []struct {
+		text, label, want string
+	}{
+		{"Radius", "Radius login", " login"},
+		{"Radius", "X", ""},
+		{"ab", "ac", ""},
+		{"ab", "ab", ""},
+		{"😀", "😀 login", " login"},
+		{"😀", "X", ""},
+		{"", "abc", "abc"},
+	}
+	for _, test := range cases {
+		if got := radiusLabelRemainder(test.text, test.label); got != test.want {
+			t.Fatalf("remainder(%q, %q) = %q, want %q", test.text, test.label, got, test.want)
+		}
+	}
+}

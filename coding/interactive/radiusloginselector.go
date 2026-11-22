@@ -5,7 +5,9 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
 )
 
@@ -62,7 +64,7 @@ func (c *radiusLoginMenuComponent) Render(width int) []string {
 	for index, line := range lines {
 		if line == selected[0] {
 			c.animating = true
-			animated := theme.Fg("accent", "→ ") + radiusShimmer(c.radiusText, time.Since(c.animationStart)) + strings.TrimPrefix(c.radiusLabel, c.radiusText)
+			animated := theme.Fg("accent", "→ ") + radiusShimmer(c.radiusText, time.Since(c.animationStart)) + radiusLabelRemainder(c.radiusText, c.radiusLabel)
 			lines[index] = tui.NewText(animated, 1, 0, nil).Render(width)[0]
 			break
 		}
@@ -80,4 +82,19 @@ func (c *radiusLoginMenuComponent) AnimationFrame(time.Time) (bool, time.Duratio
 func (c *radiusLoginMenuComponent) Dispose() {
 	c.disposed, c.animating = true, false
 	c.ExtensionSelectorComponent.Dispose()
+}
+
+// radiusLabelRemainder is the reference's `label.slice(text.length)`: drop as many
+// UTF-16 units of the label as the text has, whether or not the label starts with
+// it. Production always builds the label as `text + status`, so the prefix test and
+// the length cut agree there, but the cut is what the reference performs.
+func radiusLabelRemainder(text, label string) string {
+	unitsToDrop := ai.JSLength(text)
+	dropped, offset := 0, 0
+	for offset < len(label) && dropped < unitsToDrop {
+		_, size := utf8.DecodeRuneInString(label[offset:])
+		dropped += ai.JSLength(label[offset : offset+size])
+		offset += size
+	}
+	return label[offset:]
 }
