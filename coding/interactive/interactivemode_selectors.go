@@ -643,7 +643,7 @@ func newSelectorWiring(app *App) *SelectorWiring {
 		},
 		SetEditorEscapeHandler: func(handler func()) { app.defaultEditor.OnEscape = handler },
 		RestoreQueuedMessagesToEditor: func() {
-			text := app.defaultEditor.GetText()
+			text := app.defaultEditor.GetExpandedText()
 			app.queue.RestoreQueuedMessagesToEditor(true, text, text != "")
 		},
 		OnEditorText: func(text string) { app.defaultEditor.SetText(text) },

@@ -237,7 +237,10 @@ func (c *QueueController) RestoreQueuedMessagesToEditor(abort bool, currentText 
 		return 0
 	}
 	queuedText := strings.Join(allQueued, "\n\n")
-	editorText := c.Editor.GetText()
+	// The reference reads `editor.getExpandedText?.() ?? editor.getText()`, so a
+	// collapsed paste travels as the pasted body rather than as its
+	// `[paste #1 +41 lines]` marker.
+	editorText := c.Editor.GetExpandedText()
 	if hasCurrentText {
 		editorText = currentText
 	}

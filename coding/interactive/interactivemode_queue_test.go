@@ -477,3 +477,31 @@ func TestCycleModelWarnsAnthropic(t *testing.T) {
 		t.Fatal("the model switch did not run the Anthropic warning")
 	}
 }
+
+// TestHandleDequeueRestoresAnExpandedPaste covers the editor text /dequeue
+// merges the queue into. The reference reads `editor.getExpandedText?.() ??
+// editor.getText()`; the port read GetText, which leaves a large bracketed paste
+// collapsed to its `[paste #1 +41 lines]` marker, so the pasted body was lost
+// and an inert marker took its place.
+func TestHandleDequeueRestoresAnExpandedPaste(t *testing.T) {
+	controller, session, _ := newQueueTestController(t)
+	var pasted strings.Builder
+	for range 40 {
+		pasted.WriteString("pasted line\n")
+	}
+	controller.Editor.HandleInput("\x1b[200~" + pasted.String() + "\x1b[201~")
+	if text := controller.Editor.GetText(); !strings.Contains(text, "[paste #") {
+		t.Fatalf("the editor did not collapse the paste: %q", text)
+	}
+	session.steering = []string{"steer me"}
+
+	controller.HandleDequeue()
+
+	restored := controller.Editor.GetExpandedText()
+	if !strings.Contains(restored, "pasted line") {
+		t.Fatalf("the pasted body was not restored: %q", restored)
+	}
+	if strings.Contains(restored, "[paste #") {
+		t.Fatalf("an inert paste marker was restored instead of the body: %q", restored)
+	}
+}
