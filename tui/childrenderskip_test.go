@@ -9,6 +9,14 @@ import (
 type countingVersioned struct {
 	*Container
 	renders int
+	// versionReads counts RenderVersion calls, so a test can tell the warm frame
+	// (no reads) from the fast path (one read per child).
+	versionReads int
+}
+
+func (c *countingVersioned) RenderVersion() (uint64, bool) {
+	c.versionReads++
+	return c.Container.RenderVersion()
 }
 
 func (c *countingVersioned) Render(width int) []string {
@@ -149,5 +157,67 @@ func TestContainerBumpRevisionKeepsTheChildCache(t *testing.T) {
 	}
 	if child.renders != 2 {
 		t.Fatalf("renders = %d after BumpRevision, want 2", child.renders)
+	}
+}
+
+// TestWarmFrameServesTheCacheWithoutReadingChildren pins D229's warm path: while
+// no content mutation has happened anywhere in the tree, a SkipUnchangedChildren
+// container serves its cached frame without snapshotting or reading a single
+// child revision. renderWalks is the seam, so the check is a count and not a
+// clock.
+func TestWarmFrameServesTheCacheWithoutReadingChildren(t *testing.T) {
+	chat := &Container{SkipUnchangedChildren: true}
+	for range 4 {
+		child := &countingVersioned{Container: &Container{}}
+		child.Container.AddChild(NewText("hello", 0, 0, nil))
+		chat.AddChild(child)
+	}
+	first := chat.Render(40)
+	if chat.renderWalks != 1 {
+		t.Fatalf("renderWalks = %d after the first frame, want 1", chat.renderWalks)
+	}
+
+	// A warm frame reads no child revision at all: the counters below stay put.
+	// renderWalks cannot see this, because the fast path also avoids a walk while
+	// it still reads every revision.
+	for _, child := range chat.Children {
+		child.(*countingVersioned).versionReads = 0
+	}
+	warm := chat.Render(40)
+	for index, child := range chat.Children {
+		if reads := child.(*countingVersioned).versionReads; reads != 0 {
+			t.Fatalf("child %d read %d revisions on a warm frame, want 0", index, reads)
+		}
+	}
+	if strings.Join(warm, "\n") != strings.Join(first, "\n") {
+		t.Fatalf("warm frame differs:\n got %q\nwant %q", warm, first)
+	}
+
+	// Any content mutation anywhere invalidates the warm path. The next frame
+	// then reads every child's revision once (the fast path) instead of walking
+	// and re-flattening, so renderWalks stays 1 but the frame is rebuilt from
+	// the caches rather than served whole.
+	NewText("elsewhere", 0, 0, nil).SetText("mutated")
+	updated := chat.Render(40)
+	if chat.renderWalks != 1 {
+		t.Fatalf("renderWalks = %d after an unrelated mutation, want 1 (the fast path, not a walk)", chat.renderWalks)
+	}
+	if strings.Join(updated, "\n") != strings.Join(first, "\n") {
+		t.Fatalf("an unrelated mutation changed the frame:\n got %q\nwant %q", updated, first)
+	}
+
+	// A real child change reaches the frame, as long as the child reports its
+	// revision: countingVersioned deliberately does not implement
+	// RenderVersion, so it cannot signal one (which is why the identity and
+	// revision tests above use it for a different purpose).
+	direct := &Container{SkipUnchangedChildren: true}
+	text := NewText("hello", 0, 0, nil)
+	direct.AddChild(text)
+	if !hasLine(direct.Render(40), "hello") {
+		t.Fatal("fixture did not render")
+	}
+	text.SetText("changed")
+	if !hasLine(direct.Render(40), "changed") {
+		t.Fatalf("child change did not reach the frame: %q", direct.Render(40))
 	}
 }
