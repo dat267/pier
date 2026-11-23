@@ -368,11 +368,12 @@ func (m *multiRegex) execAtLastIndex(s string, lastIndex int, jsLines bool, ws *
 	return regexMatch
 }
 
-// maxRejectedCandidates bounds one dispatch scan. Each rejected candidate may
-// run an anchored submatcher that scans the tail before failing, so a long run
-// with no matching rule (e.g. repeated `0x` under JavaScript) is quadratic:
-// 8 KiB took 0.4 s and 32 KiB 13.7 s. Giving up there leaves the remainder as
-// plain text, the same responsiveness guard as the iteration cap (D351).
+// maxRejectedCandidates bounds one dispatch scan. A rejected candidate that
+// runs the anchored submatcher's regexp may scan the tail before failing, so a
+// long run with no matching rule (e.g. repeated `0x` under JavaScript) is
+// quadratic: 8 KiB took 0.4 s and 32 KiB 13.7 s. Giving up there leaves the
+// remainder as plain text, the same responsiveness guard as the iteration cap
+// (D351). Rejections decideAt settles without the regexp are not counted.
 const maxRejectedCandidates = 256
 
 func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsWorkspace) *match {
@@ -432,6 +433,15 @@ func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsW
 			return regexMatch
 		case manualMatch != nil:
 			return manualMatch
+		}
+		// A rejection the walk or the prefilter settled costs O(1), so a run
+		// of them is linear and needs no budget. Only a rejection that ran
+		// the regexp, which may scan the tail, is counted (D351); otherwise a
+		// long comment of words that only start like a rule (`abc` against
+		// `\b(?:a|an|...)\b`) would lose its end.
+		if decided {
+			search++
+			continue
 		}
 		rejected++
 		if rejected >= maxRejectedCandidates {
@@ -537,14 +547,14 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 	return nil
 }
 
-// mayMatchAt reports whether any rule may match at pos. A position where none
-// can is handled as a failed regex call, so the rejected-candidate budget
-// (D351) counts it the same way.
 // decideAt settles a submatcher at pos without its regexp when it can: rules
 // are tried in priority order, each by the exact walk (D523) or, failing
 // that, ruled out by its prefilter (D522). The first rule that matches wins,
 // as it does in the anchored alternation. decided is false at the first rule
 // neither can settle, and the caller then runs the regexp.
+//
+// Both are bounded per rule (exactBudget steps, prefilterRun bytes), so a
+// decision costs O(1) whatever the input's length.
 func (m *multiRegex) decideAt(s string, pos int, jsLines bool, ws *jsWorkspace) (found *match, decided bool) {
 	for i, prefilter := range m.prefilters {
 		if exact := m.exacts[i]; exact != nil {

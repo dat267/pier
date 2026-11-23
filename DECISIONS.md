@@ -4425,6 +4425,20 @@ the budget cutoff and the missing rule highlighting, and
 `BenchmarkHighlightRejectedRun` keeps the cost visible; this is the same
 responsiveness trade as the existing iteration cap.
 
+Since D523 most rejections are settled by the exact walk or the prefilter,
+both bounded per rule (the walk now charges its greedy scans to its step
+budget too), so only a rejection that runs the regexp is counted. Counting
+every rejection had cut off ordinary text: a C++ block comment of 300 words
+starting with `a` (each rejected by the comment's `\b(?:a|an|...)\b` phrase
+rule) never closed, so the rest of the file stayed comment, where the
+reference (pi v1.6.0) closes it at `*/`; a 256-byte `0x` run or `a` run also
+now matches the reference. A run past the walk's budget still meets the
+cutoff, and its cost is unchanged: 32 KiB of `0x` takes 0.45 s, as in Node,
+and 32 KiB of `a` as C 1.29 s against Node's 3.03 s. The paired JavaScript,
+TypeScript, JSON, Go and Markdown benchmarks are unchanged, and the 30 KB
+bash, C, C++, CSS, Java, JSON, Python, Rust, XML and YAML samples render
+byte for byte as highlight.js does.
+
 ### D352
 
 **The Responses input array is assembled canonically instead of re-marshaled per item.**

@@ -306,13 +306,18 @@ func (w *exactWalk) run(node *exactNode, rest int32, pos int) exactResult {
 			end += width
 		}
 	}
-	// The scan is linear in the run, so it is not charged to the budget; the
-	// tries against the rest of the rule are. ends[k], the position after k
-	// repetitions, is only kept once a multi-byte rune makes it differ from
-	// pos+k.
+	// Each rune of the scan is charged to the budget, as are the tries
+	// against the rest of the rule, so a walk is O(exactBudget) however long
+	// the run: the dispatch relies on that to treat a decided rejection as
+	// O(1) (D351). ends[k], the position after k repetitions, is only kept
+	// once a multi-byte rune makes it differ from pos+k.
 	var ends []int
 	count := 0
 	for end := pos; maximum < 0 || count < maximum; count++ {
+		w.budget--
+		if w.budget < 0 {
+			return exactUnknown
+		}
 		width := exactOne(node.sub[0], w.s, end)
 		if width == 0 {
 			break

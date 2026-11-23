@@ -116,44 +116,51 @@ func TestJavaScriptWhitespaceClasses(t *testing.T) {
 	}
 }
 
-// pi v1.5.0 highlight.js 10.7.3 leaves rejected `0x` tokens plain and still
-// highlights the following literal; a run rejected past the dispatch budget is
-// left plain as a responsiveness guard, which is D351's intentional difference.
+// pi v1.6.0 highlight.js 10.7.3 leaves rejected `0x` tokens plain and still
+// highlights the following literal, however long the run. Only a rejection
+// that needs the regexp counts toward the dispatch budget (D351), so a run the
+// walk rejects in O(1) per candidate (a long comment of words that start like
+// the comment's phrase rule, or a `0x` run while JavaScript's function rule
+// still fits the walk's budget) matches the reference, and only a run whose
+// candidates need the regexp is cut off. The expected HTML was read off the
+// pinned highlight.js.
 func TestRejectedCandidateRunStopsAtBudget(t *testing.T) {
-	short, err := HighlightWith(`0x "s"`, "javascript", true)
-	if err != nil {
-		t.Fatal(err)
+	render := func(code, language string) string {
+		t.Helper()
+		result, err := HighlightWith(code, language, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return RenderHTML(result.Nodes)
 	}
-	if got := RenderHTML(short.Nodes); !strings.Contains(got, `<span class="hljs-string">&quot;s&quot;</span>`) {
-		t.Fatalf("short run output = %q; want the string highlighted", got)
+	run := strings.Repeat("0x", maxRejectedCandidates)
+	if got, want := render(run+` "s"`, "javascript"), run+` <span class="hljs-string">&quot;s&quot;</span>`; got != want {
+		t.Fatalf("0x run output = %q; want %q", got, want)
+	}
+	words := strings.Repeat("abc ", 4*maxRejectedCandidates)
+	if got, want := render("/* "+words+"*/ int x;", "cpp"),
+		`<span class="hljs-comment">/* `+words+`*/</span> <span class="hljs-keyword">int</span> x;`; got != want {
+		t.Fatalf("comment output = %q; want %q", got, want)
+	}
+	tail := ` (<span class="hljs-number">1</span> <span class="hljs-string">&quot;s&quot;</span> <span class="hljs-comment">/* c */</span> <span class="hljs-keyword">int</span>`
+	short := strings.Repeat("a", maxRejectedCandidates)
+	if got := render(short+` (1 "s" /* c */ int`, "c"); got != short+tail {
+		t.Fatalf("C run output = %q; want %q", got, short+tail)
 	}
 
-	long := strings.Repeat("0x", maxRejectedCandidates) + ` "s"`
-	result, err := HighlightWith(long, "javascript", true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := RenderHTML(result.Nodes); strings.Contains(got, "<span") {
-		t.Fatalf("long run output = %q; want plain text after the budget", got)
-	}
-
-	// Rule highlighting does not resume after the budget: the reference (pi
-	// v1.6.0, highlight.js 10.7.3) renders this C input as `(<number>1</number>
-	// <string>"s"</string> <comment>/* c */</comment> <keyword>int</keyword>`,
-	// while the port leaves the number, string and comment plain and colours
-	// only the keyword, which the appended-text keyword pass still applies (D351).
-	cRun := strings.Repeat("a", maxRejectedCandidates) + ` (1 "s" /* c */ int`
-	result, err = HighlightWith(cRun, "c", true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	got := RenderHTML(result.Nodes)
+	// A run longer than the walk's budget leaves each candidate to the
+	// regexp, which scans the tail, so the cutoff still applies there: the
+	// reference renders this C input with the same tail as above, while the
+	// port leaves the number, string and comment plain and colours only the
+	// keyword, which the appended-text keyword pass still applies (D351).
+	long := strings.Repeat("a", 2*exactBudget)
+	got := render(long+` (1 "s" /* c */ int`, "c")
 	for _, class := range []string{"hljs-number", "hljs-string", "hljs-comment"} {
 		if strings.Contains(got, class) {
-			t.Fatalf("C run output = %q; want no %s after the budget", got, class)
+			t.Fatalf("long C run output = %q; want no %s after the budget", got, class)
 		}
 	}
 	if !strings.Contains(got, `<span class="hljs-keyword">int</span>`) {
-		t.Fatalf("C run output = %q; want the keyword still highlighted", got)
+		t.Fatalf("long C run output = %q; want the keyword still highlighted", got)
 	}
 }
