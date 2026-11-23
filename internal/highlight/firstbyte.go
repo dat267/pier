@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 // This file computes two things from a matcher's joined alternation:
@@ -186,4 +187,237 @@ func addRuneRangeFirstBytes(set *[256]bool, lo, hi rune) {
 			set[byte(b)] = true
 		}
 	}
+}
+
+// rulePrefilter returns a rule's parsed form for mayMatchAt, or nil when the
+// walk could check no more than the first byte, which the dispatch already
+// matched: such a prefilter would only add its call to every candidate.
+func rulePrefilter(expr string, caseInsensitive bool) *syntax.Regexp {
+	re := parsePatternFlags(expr, caseInsensitive)
+	if re == nil || prefilterDepth(re) <= 1 {
+		return nil
+	}
+	return re
+}
+
+// prefilterDepth is the fewest characters the walk checks on any path through
+// re's understood prefix (see mayMatchAt), stopping at the first node it would
+// answer "may match" for.
+func prefilterDepth(re *syntax.Regexp) int {
+	switch re.Op {
+	case syntax.OpLiteral:
+		return len(re.Rune)
+	case syntax.OpCharClass:
+		return 1
+	case syntax.OpCapture:
+		return prefilterDepth(re.Sub[0])
+	case syntax.OpConcat:
+		total := 0
+		for _, sub := range re.Sub {
+			switch sub.Op {
+			case syntax.OpEmptyMatch, syntax.OpBeginLine, syntax.OpEndLine, syntax.OpBeginText,
+				syntax.OpEndText, syntax.OpWordBoundary, syntax.OpNoWordBoundary:
+				continue
+			case syntax.OpStar, syntax.OpPlus, syntax.OpQuest:
+				// A run is checked, then the rest of the rule after it.
+				total++
+				continue
+			}
+			depth := prefilterDepth(sub)
+			total += depth
+			if depth == 0 || (sub.Op != syntax.OpLiteral && sub.Op != syntax.OpCharClass) {
+				return total
+			}
+		}
+		return total
+	case syntax.OpAlternate:
+		minimum := -1
+		for _, sub := range re.Sub {
+			if depth := prefilterDepth(sub); minimum < 0 || depth < minimum {
+				minimum = depth
+			}
+		}
+		return max(minimum, 0)
+	}
+	return 0
+}
+
+// prefilterBudget bounds one mayMatchAt walk; past it the walk answers "may
+// match", so the check stays a few dozen steps however a rule is shaped.
+const prefilterBudget = 96
+
+// prefilterRun bounds the class runs the walk enumerates.
+const prefilterRun = 64
+
+// prefilterCont is the rest of a concatenation, as a list of nodes linked by
+// index into the walk's reused slice, so a walk does not allocate.
+type prefilterCont struct {
+	node *syntax.Regexp
+	next int32
+}
+
+// prefilterEnd is the empty list: the end of the rule.
+const prefilterEnd = -1
+
+// prefilterWalk is one mayMatchAt evaluation. conts is kept in the
+// highlight's workspace and reused, so only its first growth allocates.
+type prefilterWalk struct {
+	s      string
+	budget int
+	conts  []prefilterCont
+}
+
+// mayMatchAt is a necessary condition for the rule to match at pos: false
+// means it cannot. It follows literals, ASCII classes, alternations and
+// bounded single-character repetitions over the input, skips zero-width
+// assertions (dropping a condition only weakens the check), and answers true
+// for anything else, a non-ASCII byte, or a spent budget (D522).
+func mayMatchAt(re *syntax.Regexp, s string, pos int, ws *jsWorkspace) bool {
+	w := prefilterWalk{s: s, budget: prefilterBudget}
+	if ws != nil {
+		w.conts = ws.prefilter[:0]
+	}
+	ok := w.seq(w.push(re, prefilterEnd), pos)
+	if ws != nil {
+		ws.prefilter = w.conts[:0]
+	}
+	return ok
+}
+
+func (w *prefilterWalk) push(node *syntax.Regexp, next int32) int32 {
+	w.conts = append(w.conts, prefilterCont{node: node, next: next})
+	return int32(len(w.conts) - 1)
+}
+
+// seq walks the list from pos; the empty list is the end of the rule, a match.
+func (w *prefilterWalk) seq(seq int32, pos int) bool {
+	s := w.s
+	for seq != prefilterEnd {
+		w.budget--
+		if w.budget < 0 {
+			return true
+		}
+		node, rest := w.conts[seq].node, w.conts[seq].next
+		switch node.Op {
+		case syntax.OpEmptyMatch, syntax.OpBeginLine, syntax.OpEndLine, syntax.OpBeginText,
+			syntax.OpEndText, syntax.OpWordBoundary, syntax.OpNoWordBoundary:
+			seq = rest
+		case syntax.OpLiteral:
+			for _, r := range node.Rune {
+				if pos >= len(s) {
+					return false
+				}
+				if r >= utf8.RuneSelf || s[pos] >= utf8.RuneSelf {
+					return true
+				}
+				if !prefilterLiteral(node, r, s[pos]) {
+					return false
+				}
+				pos++
+			}
+			seq = rest
+		case syntax.OpCharClass:
+			if pos >= len(s) {
+				return false
+			}
+			if s[pos] >= utf8.RuneSelf {
+				return true
+			}
+			if !prefilterClassHas(node.Rune, rune(s[pos])) {
+				return false
+			}
+			pos++
+			seq = rest
+		case syntax.OpCapture:
+			seq = w.push(node.Sub[0], rest)
+		case syntax.OpConcat:
+			for i := len(node.Sub) - 1; i >= 0; i-- {
+				rest = w.push(node.Sub[i], rest)
+			}
+			seq = rest
+		case syntax.OpAlternate:
+			for _, alternative := range node.Sub {
+				if w.seq(w.push(alternative, rest), pos) {
+					return true
+				}
+			}
+			return false
+		case syntax.OpStar, syntax.OpPlus, syntax.OpQuest:
+			return w.repeat(node, rest, pos)
+		default:
+			return true
+		}
+	}
+	return true
+}
+
+// repeat tries every run length of a single-character repetition, longest
+// first, against the rest of the rule.
+func (w *prefilterWalk) repeat(node *syntax.Regexp, rest int32, pos int) bool {
+	s := w.s
+	sub := node.Sub[0]
+	if sub.Op != syntax.OpCharClass && (sub.Op != syntax.OpLiteral || len(sub.Rune) != 1 || sub.Rune[0] >= utf8.RuneSelf) {
+		return true
+	}
+	limit := prefilterRun
+	if node.Op == syntax.OpQuest {
+		limit = 1
+	}
+	run := 0
+	for run < limit && pos+run < len(s) {
+		c := s[pos+run]
+		if c >= utf8.RuneSelf {
+			return true
+		}
+		var ok bool
+		if sub.Op == syntax.OpCharClass {
+			ok = prefilterClassHas(sub.Rune, rune(c))
+		} else {
+			ok = prefilterLiteral(sub, sub.Rune[0], c)
+		}
+		if !ok {
+			break
+		}
+		run++
+	}
+	if run == prefilterRun {
+		return true
+	}
+	minimum := 0
+	if node.Op == syntax.OpPlus {
+		minimum = 1
+	}
+	for k := run; k >= minimum; k-- {
+		if w.seq(rest, pos+k) {
+			return true
+		}
+	}
+	return false
+}
+
+func prefilterLiteral(node *syntax.Regexp, r rune, c byte) bool {
+	if rune(c) == r {
+		return true
+	}
+	if node.Flags&syntax.FoldCase == 0 {
+		return false
+	}
+	for f := unicode.SimpleFold(r); f != r; f = unicode.SimpleFold(f) {
+		if f == rune(c) {
+			return true
+		}
+	}
+	return false
+}
+
+func prefilterClassHas(ranges []rune, r rune) bool {
+	for i := 0; i+1 < len(ranges); i += 2 {
+		if r < ranges[i] {
+			return false
+		}
+		if r <= ranges[i+1] {
+			return true
+		}
+	}
+	return false
 }

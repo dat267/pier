@@ -1,6 +1,7 @@
 package highlight
 
 import (
+	"regexp/syntax"
 	"strings"
 	"sync"
 	"unicode/utf8"
@@ -77,9 +78,11 @@ type multiRegex struct {
 	// only those, anchored, instead of running the whole alternation's NFA.
 	dispatch  bool
 	ruleFirst []string
-	subs      [256]*multiRegex
-	subsMu    sync.Mutex
-	manuals   []manualRule
+	// prefilters holds each rule's parsed form for mayMatchAt; nil admits all.
+	prefilters []*syntax.Regexp
+	subs       [256]*multiRegex
+	subsMu     sync.Mutex
+	manuals    []manualRule
 	// manualByByte indexes the manual rules by their first byte, in rule order.
 	manualByByte [256][]manualRule
 	// firstByteTable is the set of bytes that can begin a match, used as a byte
@@ -187,6 +190,10 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 	// manual rules'. It is disabled when a regex rule can match empty, since such
 	// a rule can begin at any byte.
 	m.ruleFirst = make([]string, len(m.regexes))
+	m.prefilters = make([]*syntax.Regexp, len(m.regexes))
+	for i, source := range m.regexes {
+		m.prefilters[i] = rulePrefilter(preparePattern(source), caseInsensitive)
+	}
 	usable := true
 	var union [256]bool
 	for i, source := range m.regexes {
@@ -258,6 +265,7 @@ func (m *multiRegex) subMatcher(b byte) *multiRegex {
 			continue
 		}
 		sub.addRuleAt(source, m.datas[i].position, m.datas[i])
+		sub.prefilters = append(sub.prefilters, m.prefilters[i])
 	}
 	if len(sub.regexes) == 0 {
 		return nil
@@ -363,7 +371,7 @@ func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsW
 		b := s[search]
 
 		var regexMatch, manualMatch *match
-		if sub := m.subMatcher(b); sub != nil {
+		if sub := m.subMatcher(b); sub != nil && sub.mayMatchAt(s, search, ws) {
 			if search == 0 {
 				if loc := sub.matcherRe.findSubmatchWS(s, jsLines, ws); loc != nil {
 					regexMatch = sub.buildMatch(s, 0, loc, jsLines)
@@ -506,6 +514,18 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 		return nil
 	}
 	return nil
+}
+
+// mayMatchAt reports whether any rule may match at pos. A position where none
+// can is handled as a failed regex call, so the rejected-candidate budget
+// (D351) counts it the same way.
+func (m *multiRegex) mayMatchAt(s string, pos int, ws *jsWorkspace) bool {
+	for _, prefilter := range m.prefilters {
+		if prefilter == nil || mayMatchAt(prefilter, s, pos, ws) {
+			return true
+		}
+	}
+	return false
 }
 
 // buildMatch builds a match from a submatch result relative to base.

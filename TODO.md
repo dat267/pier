@@ -15,15 +15,14 @@ shares with `./coding/interactive`, check first whether it depends on wall-clock
 timing or on process-global state (`leakcheck` and `just test-isolated` both hunt
 for the second class).
 
-## TypeScript highlighting is twice as slow as the reference (2026-11-23)
+## TypeScript highlighting is slower than the reference (2026-11-23)
 
 The first 30 KB of `pi/packages/coding-agent/src/core/agent-session.ts`
-highlights as TypeScript in about 19.9 ms in the port and 9.9 ms in the pinned
-highlight.js (warmed, `ignoreIllegals: true`), after D521. The profile is the
-per-byte dispatch's anchored submatcher (`execDispatch`, `sub.prefixedRe`),
-mostly Go NFA setup on rules that fail within a few bytes: TypeScript's
-method-definition rule `[a-zA-Z_]\w*\([^()]*(...)*\)\s*\{` on every
-identifier, and RE_STARTERS on bytes that begin `throw`/`return`. A
-syntax-tree prefilter before the call broke even (D521); a compiled one, or
-splitting rules so a submatcher only holds those that can match after the
-identifier run, is the next thing to measure.
+highlights as TypeScript in about 15.7 ms in the port and 9.9 ms in the pinned
+highlight.js (warmed, `ignoreIllegals: true`), after D521 and D522 (19.9 ms
+before D522). The remaining profile is the per-byte dispatch's anchored
+submatcher calls that do match or that the D522 prefilter cannot rule out,
+chiefly RE_STARTERS (a 39-way operator alternation plus `\b(?:case|return|
+throw)\b`) on letters that begin those words. Pruning each submatcher's
+leading alternation down to the alternatives that can start with its byte is
+the next thing to measure.

@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D521)
+# Deliberate divergences from pi (D1–D522)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8750,7 +8750,41 @@ from 94.2 ms to 22.4 ms; the pinned hljs measured 24.7 ms on the same string
 The first 30 KB of `pi/node_modules/marked/lib/marked.esm.js` went from 48.9 ms
 to 20.5 ms (hljs 25.7 ms). A per-rule prefilter that walked each rule's syntax
 tree before the dispatch's regex call was tried and dropped: it saved 8% on
-TypeScript but cost 5-20% on JavaScript and JSON. TypeScript remains slower
+TypeScript but cost 5-20% on JavaScript and JSON, because it zeroed a fixed
+arena on every call. D522 keeps a reworked version. TypeScript remains slower
 than the reference (see `TODO.md`).
 
 Tests: `TestAtLastIndexMatchesTheScan`, `BenchmarkHighlightRegexHeavyJavaScript`.
+
+### D522
+
+**The dispatch skips a submatcher's regex where no rule can match.**
+
+Reference: pi v1.6.0 (`faac5858`) highlights with highlight.js 10.7.3, whose
+sticky alternation fails a rule within the few bytes that rule reads. In the
+port each failed dispatch candidate still pays Go's regex setup: on the first
+30 KB of `pi/packages/coding-agent/src/core/agent-session.ts` as TypeScript,
+86% of 18,762 submatcher calls failed. Most were the method-definition rule
+`[a-zA-Z_]\w*\([^()]*...\)\s*\{` on an identifier not followed by `(` and
+the comment's phrasal-words alternation.
+
+`mayMatchAt` walks a rule's parsed syntax tree over the input as a necessary
+condition. It follows literals, ASCII classes, alternations and bounded class
+runs, and answers "may match" for any other node, a non-ASCII byte or a spent
+step budget. The dispatch calls the regex only if some rule in the submatcher
+may match; otherwise the candidate counts as rejected, exactly as a failed
+call did for the D351 budget. A rule whose walk could check only its first
+byte, which the dispatch already matched, gets no prefilter. The walk's
+continuation list lives in the highlight's workspace and is reused without
+zeroing; a first version that zeroed a fixed arena per call cost 5-20% on
+JavaScript and JSON and was dropped.
+
+Paired runs of the same binaries, alternated five times (Intel N150): the
+TypeScript file went from 19.7 ms to 15.7 ms (hljs 9.9 ms); the first 30 KB of
+marked from 20.6 ms to 19.8 ms; `BenchmarkHighlightJSONDocument`,
+`BenchmarkHighlightGo` and a Markdown README moved within 1.5%. TypeScript
+remains slower than the reference (see `TODO.md`). Output is unchanged on the
+goldens, the hljs differentials and the fuzzers.
+
+Tests: `TestMayMatchAtNeverRejectsAMatch`.
+
