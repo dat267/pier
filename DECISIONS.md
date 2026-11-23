@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D523)
+# Deliberate divergences from pi (D1–D524)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8900,3 +8900,36 @@ render as highlight.js does.
 Tests: `TestExactWalkMatchesTheRegexp`,
 `TestEndRulesKeepGroupsOnlyWhereOnEndReadsThem`.
 
+### D524
+
+**A bare `^` rule keeps its rule set on the per-byte dispatch.**
+
+Reference: pi v1.6.0 (`faac5858`) compiles every rule with the `m` flag and
+runs a mode's rules as one sticky-regex alternation, so a bare `^` rule is
+just another alternative and costs nothing at a position it cannot match.
+The port's dispatch (D521-D523) needs a first-byte set per rule, and `^`
+matches empty, so `ruleFirstByteSet` returned no set for it. One such rule
+turned `usable` false and disabled the dispatch for the whole rule set:
+markdown's root matcher had 22 rules, one of them the bare `^` of the setext
+variant, and every node then paid a joined NFA scan over the rest of the
+document. Measured on a 4 KB README: 124 scans covering 252 KiB, 76% of the
+profile inside `regexp.FindStringSubmatchIndex`, 5.30 ms.
+
+The rule now contributes no candidate byte but is recorded, and
+`execDispatch` also considers line starts (`nextLineStart`: position 0 and the
+byte after each terminator, `\r\n` counting as a line end at both offsets,
+which is what the reference's `^` does). A line-start candidate is compared
+with a first-byte candidate and the earlier position wins; an empty `^` match
+competes with a non-empty match at the same offset by rule order, and with
+`endOfInputMatch` at the end of the input. The dispatch stays enabled, so
+markdown's root matcher dispatches instead of scanning.
+
+Same method, paired runs (Intel N150): the 4 KB README 5.30 ms to 0.68 ms,
+against highlight.js's 0.73 ms. C++ (14.2 ms against 10.3 ms) and Java
+(11.4 ms against 6.7 ms) are unchanged by this: their remaining cost is the
+exact walk (`exactWalk.seq` and `either`), not a joined scan. Output is
+unchanged on the goldens, the differentials, the fuzzers, LF/CRLF/U+2028
+line ends, and on 4 KB README plus 30 KB C++ and Java samples rendered against
+highlight.js byte for byte.
+
+Test: `TestBeginLineRuleKeepsTheDispatch`.

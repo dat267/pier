@@ -89,9 +89,14 @@ type multiRegex struct {
 	// where it is the only kind of rule that can (every other rule that can
 	// match empty disables the dispatch).
 	endLineRule int
-	subs        [256]*multiRegex
-	subsMu      sync.Mutex
-	manuals     []manualRule
+	// beginLineRule is the first rule that is only `^`, or -1, the mirror of
+	// endLineRule. It matches at position 0 or just after a line terminator,
+	// which is a candidate offset no first-byte set can express, so it is
+	// excluded from the first-byte union and checked at line starts instead.
+	beginLineRule int
+	subs          [256]*multiRegex
+	subsMu        sync.Mutex
+	manuals       []manualRule
 	// manualByByte indexes the manual rules by their first byte, in rule order.
 	manualByByte [256][]manualRule
 	// firstByteTable is the set of bytes that can begin a match, used as a byte
@@ -120,7 +125,7 @@ type multiRegex struct {
 }
 
 func newMultiRegex() *multiRegex {
-	return &multiRegex{matchIndexes: map[int]matchData{}, matchAt: 1, endLineRule: -1}
+	return &multiRegex{matchIndexes: map[int]matchData{}, matchAt: 1, endLineRule: -1, beginLineRule: -1}
 }
 
 func (m *multiRegex) addRule(source string, data matchData) {
@@ -222,6 +227,19 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 			if m.endLineRule < 0 {
 				m.endLineRule = i
 			}
+		}
+		if !ok && isBeginLineRule(preparePattern(source)) {
+			// `^` under the m flag matches at position 0 or after a line
+			// terminator. That is the position of the byte *after* a terminator,
+			// which a first-byte set of the terminator itself cannot express, so
+			// the rule contributes no candidate byte and is checked at line
+			// starts in execDispatch. Without this it had no first-byte set at
+			// all, which disabled the dispatch for every rule set containing one:
+			// markdown's root matcher paid a joined NFA scan per node instead.
+			if m.beginLineRule < 0 {
+				m.beginLineRule = i
+			}
+			set, ok = "", true
 		}
 		if !ok {
 			usable = false
@@ -394,76 +412,115 @@ func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsW
 	search := lastIndex
 	rejected := 0
 	for search <= len(s) {
+		// The next position where some rule can begin: a first byte of the
+		// table, or a line start for a `^` rule, which the table cannot
+		// express because its match sits after the terminator's byte.
 		candidate := m.indexFirstByte(s, search)
-		if candidate < 0 {
+		lineStart := -1
+		if m.beginLineRule >= 0 {
+			lineStart = nextLineStart(s, search, jsLines)
+		}
+		pos := candidate
+		switch {
+		case candidate < 0:
+			pos = lineStart
+		case lineStart >= 0 && lineStart < candidate:
+			pos = lineStart
+		}
+		if pos < 0 {
 			return m.endOfInputMatch(s, jsLines)
 		}
-		search = candidate
-		b := s[search]
 
-		var regexMatch, manualMatch *match
-		sub := m.subMatcher(b)
-		var decided bool
-		if sub != nil {
-			regexMatch, decided = sub.decideAt(s, search, jsLines, ws)
-		}
-		if sub != nil && !decided {
-			if search == 0 {
-				if loc := sub.matcherRe.findSubmatchWS(s, jsLines, ws); loc != nil {
-					regexMatch = sub.buildMatch(s, 0, loc, jsLines)
+		found, decided := m.dispatchAt(s, pos, jsLines, ws)
+		// The `^` rule's match is empty, so it competes with a non-empty match
+		// at the same position by rule order, as the joined alternation does.
+		lm := m.beginLineMatch(s, pos, jsLines)
+		// The empty `$` rule matches at the end of the input; `^` can match
+		// there too (after a final terminator), so both compete by order.
+		if pos == len(s) {
+			if eom := m.endOfInputMatch(s, jsLines); eom != nil {
+				if found == nil || eom.position < found.position {
+					found = eom
 				}
-			} else if sub.prefixedRe != nil {
-				_, width := utf8.DecodeLastRuneInString(s[:search])
-				base := search - width
-				if loc := sub.prefixedRe.findSubmatchWS(s[base:], jsLines, ws); loc != nil {
-					regexMatch = sub.buildMatch(s, base, loc, jsLines)
-				}
-			} else if loc := sub.matcherRe.findSubmatchWS(s[search:], jsLines, ws); loc != nil {
-				regexMatch = sub.buildMatch(s, search, loc, jsLines)
 			}
 		}
-		for i := range m.manualByByte[b] {
-			mr := &m.manualByByte[b][i]
-			if end, ok := mr.begin(s, search); ok {
-				manualMatch = &match{
-					index:    search,
-					lexeme:   s[search:end],
-					typ:      mr.data.typ,
-					rule:     mr.data.rule,
-					input:    s,
-					position: mr.data.position,
-					jsLines:  jsLines,
-				}
-				break
-			}
+		if found != nil && (lm == nil || found.position < lm.position) {
+			return found
 		}
-		switch {
-		case regexMatch != nil && manualMatch != nil:
-			if manualMatch.position < regexMatch.position {
-				return manualMatch
-			}
-			return regexMatch
-		case regexMatch != nil:
-			return regexMatch
-		case manualMatch != nil:
-			return manualMatch
+		if lm != nil {
+			return lm
 		}
 		// A rejection the walk or the prefilter settled costs O(1), so a run
-		// of them is linear and needs no budget. Only a rejection that ran
-		// the regexp, which may scan the tail, is counted (D351); otherwise a
-		// long comment of words that only start like a rule (`abc` against
+		// of them is linear and needs no budget. Only a rejection that ran the
+		// regexp, which may scan the tail, is counted (D351); otherwise a long
+		// comment of words that only start like a rule (`abc` against
 		// `\b(?:a|an|...)\b`) would lose its end.
-		if decided {
-			search++
-			continue
+		if !decided {
+			rejected++
+			if rejected >= maxRejectedCandidates {
+				return nil
+			}
 		}
-		rejected++
-		if rejected >= maxRejectedCandidates {
-			return nil
-		}
-		search++
+		search = pos + 1
 	}
 	return nil
+}
+
+// dispatchAt tries the rules that can begin with s[pos], returning the match
+// and whether the walk settled the position without the regexp.
+func (m *multiRegex) dispatchAt(s string, pos int, jsLines bool, ws *jsWorkspace) (found *match, decided bool) {
+	if pos >= len(s) {
+		return nil, false
+	}
+	b := s[pos]
+
+	var regexMatch, manualMatch *match
+	sub := m.subMatcher(b)
+	if sub != nil {
+		regexMatch, decided = sub.decideAt(s, pos, jsLines, ws)
+	}
+	if sub != nil && !decided {
+		if pos == 0 {
+			if loc := sub.matcherRe.findSubmatchWS(s, jsLines, ws); loc != nil {
+				regexMatch = sub.buildMatch(s, 0, loc, jsLines)
+			}
+		} else if sub.prefixedRe != nil {
+			_, width := utf8.DecodeLastRuneInString(s[:pos])
+			base := pos - width
+			if loc := sub.prefixedRe.findSubmatchWS(s[base:], jsLines, ws); loc != nil {
+				regexMatch = sub.buildMatch(s, base, loc, jsLines)
+			}
+		} else if loc := sub.matcherRe.findSubmatchWS(s[pos:], jsLines, ws); loc != nil {
+			regexMatch = sub.buildMatch(s, pos, loc, jsLines)
+		}
+	}
+	for i := range m.manualByByte[b] {
+		mr := &m.manualByByte[b][i]
+		if end, ok := mr.begin(s, pos); ok {
+			manualMatch = &match{
+				index:    pos,
+				lexeme:   s[pos:end],
+				typ:      mr.data.typ,
+				rule:     mr.data.rule,
+				input:    s,
+				position: mr.data.position,
+				jsLines:  jsLines,
+			}
+			break
+		}
+	}
+	switch {
+	case regexMatch != nil && manualMatch != nil:
+		if manualMatch.position < regexMatch.position {
+			return manualMatch, decided
+		}
+		return regexMatch, decided
+	case regexMatch != nil:
+		return regexMatch, decided
+	case manualMatch != nil:
+		return manualMatch, decided
+	}
+	return nil, decided
 }
 
 // endOfInputMatch is the empty match of the first `$` rule at the end of s,
@@ -493,6 +550,66 @@ func isEndLineRule(expr string) bool {
 		re = re.Sub[0]
 	}
 	return re != nil && re.Op == syntax.OpEndLine
+}
+
+// isBeginLineRule reports whether a prepared rule is only `^` (possibly in
+// groups), which the m flag makes a begin-of-line assertion.
+func isBeginLineRule(expr string) bool {
+	re := parseExactPattern(expr, false)
+	for re != nil && re.Op == syntax.OpCapture {
+		re = re.Sub[0]
+	}
+	return re != nil && re.Op == syntax.OpBeginLine
+}
+
+// beginLineMatch is the empty match of the `^` rule at a line start, or nil
+// when the rule set has none or pos is not a line start.
+func (m *multiRegex) beginLineMatch(s string, pos int, jsLines bool) *match {
+	if m.beginLineRule < 0 {
+		return nil
+	}
+	if pos > 0 && !lineEndBefore(s, pos, jsLines) {
+		return nil
+	}
+	group := m.ruleGroups[m.beginLineRule]
+	data := m.matchIndexes[group]
+	if data.keepGroups {
+		return nil // the regexp reports the groups
+	}
+	return &match{
+		index:     pos,
+		typ:       data.typ,
+		rule:      data.rule,
+		input:     s,
+		position:  data.position,
+		groupBase: group,
+		jsLines:   jsLines,
+	}
+}
+
+// nextLineStart returns the first position at or after from that `^` can match
+// at (0 or just after a line terminator), or -1 when there is none.
+func nextLineStart(s string, from int, jsLines bool) int {
+	if from <= 0 {
+		return 0
+	}
+	for i := from; i < len(s); i++ {
+		if s[i] == '\n' {
+			return i + 1
+		}
+		if !jsLines {
+			continue
+		}
+		if s[i] == '\r' {
+			return i + 1
+		}
+		if s[i] == 0xE2 {
+			if r, width := utf8.DecodeRuneInString(s[i:]); width > 0 && (r == '\u2028' || r == '\u2029') {
+				return i + width
+			}
+		}
+	}
+	return -1
 }
 
 // execScan is the joined-alternation path used when per-byte dispatch is not

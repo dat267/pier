@@ -167,3 +167,53 @@ func TestAtLastIndexMatchesTheScan(t *testing.T) {
 		t.Fatalf("only %d positions checked", checked)
 	}
 }
+
+// TestBeginLineRuleKeepsTheDispatch guards D524. A rule set whose only
+// empty-matching rule is a bare `^` used to have no first-byte set for it,
+// which disabled the dispatch for the whole set: markdown's root matcher then
+// ran a joined NFA over the rest of the document for every node. highlight.js
+// 10.7.3 (pi v1.6.0, faac5858, src/lib/highlight.js compiles every rule with
+// the m flag) matches `^` at the start of the input or after a terminator, so
+// the rule must still be a candidate there and nowhere else.
+func TestBeginLineRuleKeepsTheDispatch(t *testing.T) {
+	matcher := newMultiRegex()
+	matcher.addRule(`^`, matchData{position: 0})
+	matcher.addRule(`#+`, matchData{position: 1})
+	if err := matcher.compile(false); err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+	if !matcher.dispatch {
+		t.Fatal("a bare `^` rule disabled the dispatch")
+	}
+	for _, test := range []struct {
+		input string
+		want  int // index of the expected match, or -1
+	}{
+		{"#x", 0},     // `^` and `#+` both at 0: the earlier rule wins, empty
+		{"a\n#x", 2},  // `#+` at a line start beats the `^` empty match
+		{"a\n\nb", 2}, // `^` alone at a line start
+		// CRLF: `^` matches between \r and \n as well as after the \n, which is
+		// what the reference does (a markdown setext heading over CRLF does not
+		// become a section there); the first line start wins.
+		{"a\r\n#x", 2},
+		{"a\u2028#x", 4}, // U+2028 ends a line too
+	} {
+		jsLines := nonLFLineEnds(test.input)
+		// Start past the first line: at index 0 `^` legitimately matches, so
+		// only a later line start exercises the terminator path.
+		from := 0
+		if strings.HasPrefix(test.input, "a") {
+			from = 1
+		}
+		got := matcher.exec(test.input, from, jsLines, nil)
+		if test.want < 0 {
+			if got != nil {
+				t.Errorf("%q: got a match at %d, want none", test.input, got.index)
+			}
+			continue
+		}
+		if got == nil || got.index != test.want {
+			t.Errorf("%q: got %+v, want a match at %d", test.input, got, test.want)
+		}
+	}
+}
