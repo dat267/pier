@@ -66,7 +66,7 @@ Packages mirror upstream: `ai`, `agent`, `coding` (including `interactive`),
 go test -count=1 ./coding -run TestName     # targeted: the local default
 just testfiles                              # rewrite the test-file manifest
 go test -short ./...                        # skips slower real-binary PTY tests
-just check                                  # CI: gofmt, go mod tidy, vet, whole-tree tests
+just check                                  # CI: gofmt, go mod tidy, vet, go fix, whole-tree tests
 just cross                                  # CI: cross-build and vet every CI target
 just fetch-reference                        # clone the pinned ./pi plus the pre-pin commit the easter fixtures render (gitignored)
 just goldens                                # every node golden regenerates from ./pi
@@ -77,6 +77,10 @@ inside the title range, each row naming an existing test or cited by number from
 Go source, every named test defined, `FILE.md#anchor` links resolving, and the
 pin matching. It also holds the test-file manifest to the tree. Fix the
 document, not the check.
+
+Static analysis uses only the Go toolchain: `gofmt`, `go vet` and `go fix`
+(`just fmt`, `just vet`, `just fix`, all in `just check`). Do not add a
+third-party linter, its config or its suppression comments.
 
 Go 1.27 is required. Builds and releases set `CGO_ENABLED=0`; the race gate
 needs cgo enabled (CI runs `just test-race`). CI runs the race gate on linux/amd64

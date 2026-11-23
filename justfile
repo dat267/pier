@@ -103,12 +103,17 @@ testfiles:
 fmt:
 	#!/usr/bin/env bash
 	set -euo pipefail
-	out="$(gofmt -l .)"
+	# The toolchain's gofmt, not one on PATH that may predate its syntax.
+	out="$("$(go env GOROOT)/bin/gofmt" -l .)"
 	if [[ -n "$out" ]]; then echo "$out"; exit 1; fi
 
 # Run go vet.
 vet:
 	go vet ./...
+
+# Report the toolchain's suggested fixes (modernizers and API migrations).
+fix:
+	go fix -diff ./...
 
 # Report go.mod/go.sum drift (a missing or unused requirement).
 tidy:
@@ -116,7 +121,7 @@ tidy:
 
 # What CI runs, minus -race (the test and cross-build jobs). The tests include
 # internal/docscheck, which keeps DECISIONS.md and the other root docs consistent.
-check: fmt tidy vet test
+check: fmt tidy vet fix test
 
 # Cross-build and cross-vet every OS the port targets (mirrors the CI matrix).
 cross:
