@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strconv"
 	"testing"
 	"time"
 )
@@ -37,7 +38,7 @@ func TestNextAnimationReachesTheAltScreen(t *testing.T) {
 func TestNextAnimationStepsAHeldSelectionDrag(t *testing.T) {
 	lines := make([]string, 0, 14)
 	for index := range 14 {
-		lines = append(lines, "line"+itoa(index))
+		lines = append(lines, "line"+strconv.Itoa(index))
 	}
 	screen := NewAltScreen(&recordingTerminal{width: 24, height: 6}, false, t.TempDir(), AltScreenOptions{})
 	defer screen.Stop(TuiStopOptions{})

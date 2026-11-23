@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -153,10 +154,10 @@ func TestExecComponentsAgainstUpstreamGolden(t *testing.T) {
 		if spec.Expanded {
 			component.SetExpanded(true)
 		}
-		checkGolden(t, golden, "tool "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "tool "+label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		if spec.ExpandAfter {
 			component.SetExpanded(true)
-			checkGolden(t, golden, "tool "+label+"-expanded@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+			checkGolden(t, golden, "tool "+label+"-expanded@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		}
 	}
 }

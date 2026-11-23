@@ -3,6 +3,7 @@ package tui
 import (
 	"bytes"
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -682,7 +683,7 @@ func (p *latexParser) parseScripts(initialMarker string) string {
 		node.hasUpper = true
 	}
 	index := p.pushNode(node)
-	return latexLayoutMarkerStart + itoa(index) + latexLayoutMarkerEnd
+	return latexLayoutMarkerStart + strconv.Itoa(index) + latexLayoutMarkerEnd
 }
 
 func (p *latexParser) parseWhitespace() string {
@@ -812,7 +813,7 @@ func (p *latexParser) parseCommand() string {
 				denominator: normalizeOutput(denominator),
 			}
 			index := p.pushNode(node)
-			return latexLayoutMarkerStart + itoa(index) + latexLayoutMarkerEnd
+			return latexLayoutMarkerStart + strconv.Itoa(index) + latexLayoutMarkerEnd
 		}
 		return formatFraction(numerator, denominator)
 	}
@@ -959,7 +960,7 @@ func (p *latexParser) parseOperator(operator string, inlineLowerStyle string, di
 	if p.display && useDisplayLimits && (hasLower || hasUpper) {
 		node := &latexLayoutNode{kind: "operator", operator: operator, lower: lower, upper: upper, hasLower: hasLower, hasUpper: hasUpper}
 		index := p.pushNode(node)
-		return latexLayoutMarkerStart + itoa(index) + latexLayoutMarkerEnd
+		return latexLayoutMarkerStart + strconv.Itoa(index) + latexLayoutMarkerEnd
 	}
 
 	rendered := operator
@@ -1217,7 +1218,7 @@ func (p *latexParser) renderCases(body string) string {
 	}
 	node := &latexLayoutNode{kind: "matrix", lines: lines, baseline: middle}
 	index := p.pushNode(node)
-	return latexLayoutMarkerStart + itoa(index) + latexLayoutMarkerEnd
+	return latexLayoutMarkerStart + strconv.Itoa(index) + latexLayoutMarkerEnd
 }
 
 var latexTrailingCommaRegex = regexp.MustCompile(`,[` + ai.JSWhitespaceClass + `]*$`)
@@ -1294,7 +1295,7 @@ func (p *latexParser) renderMatrix(environment string, body string) string {
 	}
 	node := &latexLayoutNode{kind: "matrix", lines: lines, baseline: 0}
 	index := p.pushNode(node)
-	return latexLayoutMarkerStart + itoa(index) + latexLayoutMarkerEnd
+	return latexLayoutMarkerStart + strconv.Itoa(index) + latexLayoutMarkerEnd
 }
 
 func (p *latexParser) renderNested(source string, stackFractions bool) string {

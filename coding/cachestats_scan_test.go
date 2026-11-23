@@ -59,7 +59,7 @@ func TestCacheMissForMatchesTheFullScan(t *testing.T) {
 	}
 	for i, step := range steps {
 		if assistant, ok := step.(*ai.AssistantMessage); ok {
-			checkCacheMiss(t, m, assistant, "step "+itoa(i))
+			checkCacheMiss(t, m, assistant, "step "+strconv.Itoa(i))
 		}
 		m.AppendMessage(step)
 	}

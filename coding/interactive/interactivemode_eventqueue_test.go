@@ -5,6 +5,7 @@ import (
 	"github.com/dat267/pier/ai"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -62,7 +63,7 @@ func TestSessionEventQueueCoalescesPartials(t *testing.T) {
 		return &coding.SessionEvent{Type: coding.SessionMessageUpdate, ID: id}
 	}
 	for i := range sessionEventPartialCapacity * 3 {
-		queue.enqueue(partial(itoa(i)))
+		queue.enqueue(partial(strconv.Itoa(i)))
 	}
 	// Terminal events never drop, even with a full partial buffer.
 	terminal := &coding.SessionEvent{Type: coding.SessionMessageEnd, ID: "final"}
@@ -82,7 +83,7 @@ func TestSessionEventQueueCoalescesPartials(t *testing.T) {
 	if len(seenPartials) > sessionEventPartialCapacity {
 		t.Fatalf("partial buffer exceeded its capacity: %d", len(seenPartials))
 	}
-	newest := itoa(sessionEventPartialCapacity*3 - 1)
+	newest := strconv.Itoa(sessionEventPartialCapacity*3 - 1)
 	if len(seenPartials) == 0 || seenPartials[len(seenPartials)-1] != newest {
 		t.Fatalf("newest partial not retained: %v (want trailing %q)", seenPartials, newest)
 	}
@@ -122,7 +123,7 @@ func TestSessionEventQueueLosslessUnderPressure(t *testing.T) {
 	go func() {
 		defer close(producerDone)
 		for i := range total {
-			queue.enqueue(&coding.SessionEvent{Type: coding.SessionEventType("entry_appended"), ID: itoa(i)})
+			queue.enqueue(&coding.SessionEvent{Type: coding.SessionEventType("entry_appended"), ID: strconv.Itoa(i)})
 		}
 	}()
 

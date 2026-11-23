@@ -3,6 +3,7 @@ package interactive
 import (
 	"context"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -305,7 +306,7 @@ func (w *StartupWiring) GetChangelogForDisplay() string {
 }
 
 func changelogEntryVersion(entry coding.ChangelogEntry) string {
-	return itoa(entry.Major) + "." + itoa(entry.Minor) + "." + itoa(entry.Patch)
+	return strconv.Itoa(entry.Major) + "." + strconv.Itoa(entry.Minor) + "." + strconv.Itoa(entry.Patch)
 }
 
 // GetMarkdownThemeWithSettings applies the code-block indent setting.

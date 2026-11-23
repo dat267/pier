@@ -204,7 +204,7 @@ func modelThinkingOverridesSummary(overrides map[string]string) string {
 	if count == 0 {
 		return "none"
 	}
-	return itoa(count) + " configured"
+	return strconv.Itoa(count) + " configured"
 }
 
 func modelItemLabel(model *ai.Model) string {
@@ -858,7 +858,7 @@ func NewSettingsSelectorComponent(config SettingsConfig, callbacks SettingsCallb
 			ID:           "image-width-cells",
 			Label:        "Image width",
 			Description:  "Preferred inline image width in terminal cells",
-			CurrentValue: itoa(config.ImageWidthCells),
+			CurrentValue: strconv.Itoa(config.ImageWidthCells),
 			Values:       []string{"60", "80", "120"},
 		})
 		autoResizeAnchor = "image-width-cells"
@@ -895,21 +895,21 @@ func NewSettingsSelectorComponent(config SettingsConfig, callbacks SettingsCallb
 		ID:           "editor-padding",
 		Label:        "Editor padding",
 		Description:  "Horizontal padding for input editor (0-3)",
-		CurrentValue: itoa(config.EditorPaddingX),
+		CurrentValue: strconv.Itoa(config.EditorPaddingX),
 		Values:       []string{"0", "1", "2", "3"},
 	})
 	insertAfter("editor-padding", tui.SettingItem{
 		ID:           "output-padding",
 		Label:        "Output padding",
 		Description:  "Horizontal padding for messages, tool output, and command output",
-		CurrentValue: itoa(config.OutputPad),
+		CurrentValue: strconv.Itoa(config.OutputPad),
 		Values:       []string{"0", "1"},
 	})
 	insertAfter("output-padding", tui.SettingItem{
 		ID:           "autocomplete-max-visible",
 		Label:        "Autocomplete max items",
 		Description:  "Max visible items in autocomplete dropdown (3-20)",
-		CurrentValue: itoa(config.AutocompleteMaxVisible),
+		CurrentValue: strconv.Itoa(config.AutocompleteMaxVisible),
 		Values:       []string{"3", "5", "7", "10", "15", "20"},
 	})
 	insertAfter("autocomplete-max-visible", tui.SettingItem{

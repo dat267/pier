@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -84,7 +85,7 @@ func TestCustomEditorAgainstUpstreamGolden(t *testing.T) {
 				*spec.Indicator, nil))
 		}
 		editor.SetText(spec.Text)
-		checkGolden(t, golden, "render "+label+"@"+itoa(spec.Width)+"/"+itoa(spec.Hidden),
+		checkGolden(t, golden, "render "+label+"@"+strconv.Itoa(spec.Width)+"/"+strconv.Itoa(spec.Hidden),
 			editor.renderTopBorder(spec.Width, spec.Hidden))
 	}
 

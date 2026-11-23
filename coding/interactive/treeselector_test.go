@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -122,11 +123,11 @@ func TestTreeSelectorAgainstUpstreamGolden(t *testing.T) {
 				InitialFilterMode: spec.InitialFilterMode,
 			})
 
-		checkGolden(t, golden, label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		for index, input := range spec.Inputs {
 			component.HandleInput(input)
 			encoded, _ := json.Marshal(input)
-			checkGolden(t, golden, label+"+"+itoa(index)+"+"+string(encoded)+"@"+itoa(spec.Width),
+			checkGolden(t, golden, label+"+"+strconv.Itoa(index)+"+"+string(encoded)+"@"+strconv.Itoa(spec.Width),
 				normalizeRender(component.Render(spec.Width)))
 		}
 	}
@@ -141,7 +142,7 @@ func TestTreeSelectorCompactionMaxTokensDoesNotOverflow(t *testing.T) {
 	}
 	entry := &coding.SessionTreeNode{Entry: coding.SessionEntry{Type: "compaction", TokensBefore: maxInt64}}
 	got := (&TreeList{}).getEntryDisplayText(&flatNode{Node: entry}, false)
-	want := "[compaction: " + itoa(int(tokens)) + "k tokens]"
+	want := "[compaction: " + strconv.Itoa(int(tokens)) + "k tokens]"
 	if !strings.Contains(got, want) {
 		t.Fatalf("compaction label = %q, want substring %q", got, want)
 	}

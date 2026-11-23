@@ -331,7 +331,7 @@ func rgbANSI(r int, g int, b int, background bool) string {
 	if background {
 		prefix = "48"
 	}
-	return "\x1b[" + prefix + ";2;" + itoa(r) + ";" + itoa(g) + ";" + itoa(b) + "m"
+	return "\x1b[" + prefix + ";2;" + strconv.Itoa(r) + ";" + strconv.Itoa(g) + ";" + strconv.Itoa(b) + "m"
 }
 
 // SetTick sets the animation tick (test seam for the timer).

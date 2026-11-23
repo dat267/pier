@@ -5,6 +5,7 @@ import (
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -79,7 +80,7 @@ func TestTranscriptNotices(t *testing.T) {
 	}
 	renderer.AddCacheMissNotice(coding.CacheMiss{MissedTokens: 30000, MissedCost: 0.5, IdleMs: maxInt64})
 	lines = strings.Join(renderChat(t, renderer.Chat), "\n")
-	if !strings.Contains(lines, "Cache miss after "+itoa(int(minutes))+"m idle") {
+	if !strings.Contains(lines, "Cache miss after "+strconv.Itoa(int(minutes))+"m idle") {
 		t.Fatalf("far-future idle notice = %q", lines)
 	}
 

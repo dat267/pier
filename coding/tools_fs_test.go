@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -87,7 +88,7 @@ func TestReadToolTextAndTruncation(t *testing.T) {
 	file := filepath.Join(dir, "sample.txt")
 	content := ""
 	for i := 1; i <= 100; i++ {
-		content += "line " + itoa(i) + "\n"
+		content += "line " + strconv.Itoa(i) + "\n"
 	}
 	os.WriteFile(file, []byte(content), 0o644)
 
@@ -142,8 +143,6 @@ func TestReadToolTextAndTruncation(t *testing.T) {
 		t.Fatal("expected out-of-bounds error")
 	}
 }
-
-func itoa(n int) string { b, _ := json.Marshal(n); return string(b) }
 
 // Upstream ls.ts sorts lowercased names with localeCompare.
 // Upstream ls.ts receives filesystem names as UTF-8 strings from readdir.

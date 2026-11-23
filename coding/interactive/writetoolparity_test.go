@@ -3,6 +3,7 @@ package interactive
 import (
 	"encoding/json"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/dat267/pier/tui"
@@ -76,6 +77,6 @@ func TestWriteToolRenderUpstreamParity(t *testing.T) {
 		}
 		component.UpdateResult(result, spec.IsPartial)
 
-		checkGolden(t, golden, label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 	}
 }

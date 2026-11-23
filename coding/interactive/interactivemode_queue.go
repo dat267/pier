@@ -3,6 +3,7 @@ package interactive
 import (
 	"context"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -418,7 +419,7 @@ func (c *QueueController) HandleDequeue() {
 	if restored > 1 {
 		suffix = "s"
 	}
-	c.showStatus("Restored " + itoa(restored) + " queued message" + suffix + " to editor")
+	c.showStatus("Restored " + strconv.Itoa(restored) + " queued message" + suffix + " to editor")
 }
 
 // UpdateEditorBorderColor applies the bash/thinking border color.

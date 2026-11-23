@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -24,7 +25,7 @@ func TestExtensionSelectorWindowsLongLists(t *testing.T) {
 	newRendererTestTheme(t)
 	options := make([]string, 25)
 	for index := range options {
-		options[index] = "option-" + itoa(index+1)
+		options[index] = "option-" + strconv.Itoa(index+1)
 	}
 	selector := NewExtensionSelectorComponent("Pick", options, func(string) {}, func() {})
 	defer selector.Dispose()

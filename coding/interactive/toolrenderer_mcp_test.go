@@ -3,6 +3,7 @@ package interactive
 import (
 	"encoding/json"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -68,7 +69,7 @@ func TestMcpToolResultFramesLimitVisualLines(t *testing.T) {
 
 	lines := make([]string, 40)
 	for index := range lines {
-		lines[index] = "line " + itoa(index)
+		lines[index] = "line " + strconv.Itoa(index)
 	}
 	result := textResult(strings.Join(lines, "\n"))
 	collapsed := renderMcpResult(t, result, false, theme)
@@ -243,7 +244,7 @@ func TestMcpResultPreviewWrapsAtTheRenderWidth(t *testing.T) {
 		"/home/dat/repos/pier/go.mod (module github.com/dat267/pier)"
 	more := make([]string, 12)
 	for index := range more {
-		more[index] = "trailing line " + itoa(index)
+		more[index] = "trailing line " + strconv.Itoa(index)
 	}
 	result := textResult(body + "\n" + strings.Join(more, "\n"))
 
@@ -276,7 +277,7 @@ func TestMcpResultPreviewHintCountsVisualLines(t *testing.T) {
 	theme := newRendererTestTheme(t)
 	lines := make([]string, 0, 20)
 	for index := range 20 {
-		lines = append(lines, "line "+itoa(index))
+		lines = append(lines, "line "+strconv.Itoa(index))
 	}
 	result := textResult(strings.Join(lines, "\n"))
 	narrow := renderMcpResultAt(t, result, false, theme, 40)
@@ -316,7 +317,7 @@ func TestMcpResultExpansionKeepsThePreviewInPlace(t *testing.T) {
 	theme := newRendererTestTheme(t)
 	lines := make([]string, 40)
 	for index := range lines {
-		lines[index] = "line " + itoa(index)
+		lines[index] = "line " + strconv.Itoa(index)
 	}
 	result := textResult(strings.Join(lines, "\n"))
 	collapsed := strings.Split(renderMcpResult(t, result, false, theme), "\n")
@@ -348,7 +349,7 @@ func TestMcpToolHintTruncatesToTheFrameWidth(t *testing.T) {
 	theme := newRendererTestTheme(t)
 	lines := make([]string, 40)
 	for index := range lines {
-		lines[index] = "line " + itoa(index)
+		lines[index] = "line " + strconv.Itoa(index)
 	}
 	const width = 24
 	rendered := renderMcpResultAt(t, textResult(strings.Join(lines, "\n")), false, theme, width)

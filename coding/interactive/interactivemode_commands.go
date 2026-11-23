@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -641,21 +642,21 @@ func (w *CommandWiring) sessionInfoPanel(session CommandSession, sessionInfo *co
 	info.WriteString("\n")
 	info.WriteString(theme.Fg("dim", "Total:"))
 	info.WriteString(" ")
-	info.WriteString(itoa(stats.TotalMessages))
+	info.WriteString(strconv.Itoa(stats.TotalMessages))
 	info.WriteString("\n")
 	info.WriteString(theme.Fg("dim", "User:"))
 	info.WriteString(" ")
-	info.WriteString(itoa(stats.UserMessages))
+	info.WriteString(strconv.Itoa(stats.UserMessages))
 	info.WriteString("\n")
 	info.WriteString(theme.Fg("dim", "Assistant:"))
 	info.WriteString(" ")
-	info.WriteString(itoa(stats.AssistantMessages))
+	info.WriteString(strconv.Itoa(stats.AssistantMessages))
 	info.WriteString("\n")
 	info.WriteString(theme.Fg("dim", "Tools:"))
 	info.WriteString(" ")
-	info.WriteString(itoa(stats.ToolCalls))
+	info.WriteString(strconv.Itoa(stats.ToolCalls))
 	info.WriteString(" calls, ")
-	info.WriteString(itoa(stats.ToolResults))
+	info.WriteString(strconv.Itoa(stats.ToolResults))
 	info.WriteString(" results\n\n")
 	info.WriteString(theme.Bold("Tokens"))
 	info.WriteString("\n")
@@ -751,7 +752,7 @@ func (w *CommandWiring) sessionInfoPanel(session CommandSession, sessionInfo *co
 			}
 		}
 		if cacheWaste.MissedTokens > 0 {
-			missLabel := itoa(cacheWaste.MissCount) + " misses"
+			missLabel := strconv.Itoa(cacheWaste.MissCount) + " misses"
 			if cacheWaste.MissCount == 1 {
 				missLabel = "1 miss"
 			}
@@ -903,14 +904,14 @@ func (w *CommandWiring) HandleDebugCommand(now string) {
 	debugLogPath := coding.GetDebugLogPath()
 	lines := []string{
 		"Debug output at " + now,
-		"Terminal: " + itoa(width) + "x" + itoa(height),
-		"Total lines: " + itoa(len(allLines)),
+		"Terminal: " + strconv.Itoa(width) + "x" + strconv.Itoa(height),
+		"Total lines: " + strconv.Itoa(len(allLines)),
 		"",
 		"=== All rendered lines with visible widths ===",
 	}
 	for index, line := range allLines {
 		encoded, _ := ai.MarshalJSON(line)
-		lines = append(lines, "["+itoa(index)+"] (w="+itoa(tui.VisibleWidth(line))+") "+string(encoded))
+		lines = append(lines, "["+strconv.Itoa(index)+"] (w="+strconv.Itoa(tui.VisibleWidth(line))+") "+string(encoded))
 	}
 	lines = append(lines, "", "=== Agent messages (JSONL) ===")
 	// Upstream writes the agent's context messages (session.messages), not the

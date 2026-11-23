@@ -13,6 +13,7 @@ package interactive
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -269,7 +270,7 @@ func (c *mcpResultComponent) Render(width int) []string {
 		// VisualLinePreview keeps the start for an MCP result, which left the
 		// hint above rows it did not describe). The reference truncates the hint
 		// to the frame width, so a narrow terminal keeps it on one line.
-		hint := c.theme.Fg("muted", "... ("+itoa(len(visual)-mcpOutputPreviewLines)+" earlier lines,") +
+		hint := c.theme.Fg("muted", "... ("+strconv.Itoa(len(visual)-mcpOutputPreviewLines)+" earlier lines,") +
 			" " + KeyHint("app.tools.expand", "to expand") + c.theme.Fg("muted", ")")
 		lines = append(lines, tui.TruncateToWidth(hint, width, "...", false))
 		lines = append(lines, visual[len(visual)-mcpOutputPreviewLines:]...)

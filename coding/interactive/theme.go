@@ -1686,7 +1686,7 @@ func DetectTerminalBackgroundTheme(ui TerminalBackgroundDetector, timeoutMs int,
 			return TerminalThemeDetection{
 				Theme:      theme,
 				Source:     "terminal background",
-				Detail:     "OSC 11 background rgb(" + itoa(rgb.R) + ", " + itoa(rgb.G) + ", " + itoa(rgb.B) + ")",
+				Detail:     "OSC 11 background rgb(" + strconv.Itoa(rgb.R) + ", " + strconv.Itoa(rgb.G) + ", " + strconv.Itoa(rgb.B) + ")",
 				Confidence: "high",
 			}
 		}
@@ -1705,26 +1705,4 @@ func DetectTerminalThemeForAuto(ui TerminalAutoThemeDetector, timeoutMs int, env
 		}
 	}
 	return DetectTerminalBackgroundTheme(ui, timeoutMs, env).Theme
-}
-
-func itoa(value int) string {
-	if value == 0 {
-		return "0"
-	}
-	negative := value < 0
-	if negative {
-		value = -value
-	}
-	var digits [20]byte
-	index := len(digits)
-	for value > 0 {
-		index--
-		digits[index] = byte('0' + value%10)
-		value /= 10
-	}
-	if negative {
-		index--
-		digits[index] = '-'
-	}
-	return string(digits[index:])
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/dat267/pier/tui"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -119,7 +120,7 @@ func TestSelectorsAgainstUpstreamGolden(t *testing.T) {
 	for _, label := range sortedKeys(corpus.Theme) {
 		spec := corpus.Theme[label]
 		component := NewThemeSelectorComponent(spec.Current, nil, nil, nil)
-		checkGolden(t, golden, "theme "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "theme "+label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		selected, _ := component.GetSelectList().GetSelectedItem()
 		checkGolden(t, golden, "theme "+label+"-selected", selected)
 	}
@@ -127,7 +128,7 @@ func TestSelectorsAgainstUpstreamGolden(t *testing.T) {
 	for _, label := range sortedKeys(corpus.Images) {
 		spec := corpus.Images[label]
 		component := NewShowImagesSelectorComponent(spec.Current, nil, nil)
-		checkGolden(t, golden, "images "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "images "+label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 	}
 
 	levels := []string{"off", "minimal", "low", "medium", "high", "xhigh", "max"}
@@ -138,7 +139,7 @@ func TestSelectorsAgainstUpstreamGolden(t *testing.T) {
 		for _, input := range spec.Inputs {
 			component.HandleInput(input)
 		}
-		checkGolden(t, golden, "thinking "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "thinking "+label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		selected, _ := component.GetSelectList().GetSelectedItem()
 		checkGolden(t, golden, "thinking "+label+"-selected", selected)
 	}
@@ -147,13 +148,13 @@ func TestSelectorsAgainstUpstreamGolden(t *testing.T) {
 		spec := corpus.UserMessages[label]
 		items := make([]UserMessageItem, 0, len(spec.Messages))
 		for index, text := range spec.Messages {
-			items = append(items, UserMessageItem{ID: itoa(index), Text: text})
+			items = append(items, UserMessageItem{ID: strconv.Itoa(index), Text: text})
 		}
 		component := NewUserMessageSelectorComponent(items, nil, nil, spec.Initial, nil)
 		for _, input := range spec.Inputs {
 			component.GetMessageList().HandleInput(input)
 		}
-		checkGolden(t, golden, "umsg "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "umsg "+label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 	}
 
 	for _, label := range sortedKeys(corpus.Trust) {
@@ -164,7 +165,7 @@ func TestSelectorsAgainstUpstreamGolden(t *testing.T) {
 		for _, input := range spec.Inputs {
 			component.HandleInput(input)
 		}
-		checkGolden(t, golden, "trust "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "trust "+label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 	}
 
 	for _, label := range sortedKeys(corpus.Custom) {
@@ -199,9 +200,9 @@ func TestSelectorsAgainstUpstreamGolden(t *testing.T) {
 			}
 		}
 		component := NewCustomMessageComponent(payload, renderer, nil, 1)
-		checkGolden(t, golden, "custom "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "custom "+label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		component.SetExpanded(true)
-		checkGolden(t, golden, "custom "+label+"-expanded@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "custom "+label+"-expanded@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 	}
 }
 

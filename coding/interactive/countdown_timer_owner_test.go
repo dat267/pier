@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 	"testing/synctest"
@@ -59,7 +60,7 @@ func TestRetryStatusMaxIntDelayDoesNotOverflow(t *testing.T) {
 	status := NewRetryStatusIndicator(nil, 1, 3, maxInt)
 	defer status.Dispose()
 
-	want := "in " + itoa(maxInt/1000+1) + "s..."
+	want := "in " + strconv.Itoa(maxInt/1000+1) + "s..."
 	if got := status.Text.Text(); !strings.Contains(got, want) {
 		t.Fatalf("retry status = %q, want substring %q", got, want)
 	}

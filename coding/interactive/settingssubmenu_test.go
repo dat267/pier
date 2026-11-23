@@ -3,6 +3,7 @@ package interactive
 import (
 	"context"
 	"github.com/dat267/pier/tui"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -16,7 +17,7 @@ func TestSearchableSubmenuPagesWithoutTypingIntoTheQuery(t *testing.T) {
 	InitTheme("dark", false)
 	options := make([]tui.SelectItem, 12)
 	for index := range options {
-		options[index] = tui.SelectItem{Value: itoa(index), Label: "Item " + itoa(index)}
+		options[index] = tui.SelectItem{Value: strconv.Itoa(index), Label: "Item " + strconv.Itoa(index)}
 	}
 	submenu := NewSelectSubmenu("Title", "description", options, "", nil, nil, nil,
 		SelectSubmenuOptions{Searchable: true})

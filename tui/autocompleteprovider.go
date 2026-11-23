@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -229,7 +230,7 @@ func autocompleteSeparatorCharIn(text string) bool {
 func walkDirectoryWithFd(ctx context.Context, baseDir string, fdPath string, query string, maxResults int, maxDepth int, hasMaxDepth bool) []fileEntry {
 	args := []string{
 		"--base-directory", baseDir,
-		"--max-results", itoa(maxResults),
+		"--max-results", strconv.Itoa(maxResults),
 		"--type", "f",
 		"--type", "d",
 		"--follow",
@@ -239,7 +240,7 @@ func walkDirectoryWithFd(ctx context.Context, baseDir string, fdPath string, que
 		"--exclude", ".git/**",
 	}
 	if hasMaxDepth {
-		args = append(args, "--max-depth", itoa(maxDepth))
+		args = append(args, "--max-depth", strconv.Itoa(maxDepth))
 	}
 	if strings.Contains(toDisplayPath(query), "/") {
 		args = append(args, "--full-path")

@@ -207,7 +207,7 @@ type RetryStatusIndicator struct {
 // NewRetryStatusIndicator creates the retry indicator.
 func NewRetryStatusIndicator(host tui.RenderRequester, attempt int, maxAttempts int, delayMS int) *RetryStatusIndicator {
 	retryMessage := func(seconds int) string {
-		return "Retrying (" + itoa(attempt) + "/" + itoa(maxAttempts) + ") in " + itoa(seconds) +
+		return "Retrying (" + strconv.Itoa(attempt) + "/" + strconv.Itoa(maxAttempts) + ") in " + strconv.Itoa(seconds) +
 			"s... (" + KeyText("app.interrupt") + " to cancel)"
 	}
 	indicator := &RetryStatusIndicator{

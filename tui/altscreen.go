@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -2508,7 +2509,7 @@ func (s *AltScreen) doRender() {
 				continue
 			}
 			builder.WriteString("\x1b[")
-			builder.WriteString(itoa(row + 1))
+			builder.WriteString(strconv.Itoa(row + 1))
 			builder.WriteString(";1H\x1b[2K")
 		}
 		// WezTerm erases intersecting kitty image cells when a later row write
@@ -2531,7 +2532,7 @@ func (s *AltScreen) doRender() {
 					continue
 				}
 				builder.WriteString("\x1b[")
-				builder.WriteString(itoa(row + 1))
+				builder.WriteString(strconv.Itoa(row + 1))
 				builder.WriteString(";1H")
 				builder.WriteString(line)
 			}
@@ -2557,7 +2558,7 @@ func (s *AltScreen) doRender() {
 				clearLine = ""
 			}
 			builder.WriteString("\x1b[")
-			builder.WriteString(itoa(row + 1))
+			builder.WriteString(strconv.Itoa(row + 1))
 			builder.WriteString(";1H")
 			builder.WriteString(clearLine)
 			builder.WriteString(line)
@@ -2566,9 +2567,9 @@ func (s *AltScreen) doRender() {
 
 	if hasCursor {
 		builder.WriteString("\x1b[")
-		builder.WriteString(itoa(row + 1))
+		builder.WriteString(strconv.Itoa(row + 1))
 		builder.WriteString(";")
-		builder.WriteString(itoa(min(width, col) + 1))
+		builder.WriteString(strconv.Itoa(min(width, col) + 1))
 		builder.WriteString("H")
 		if s.ShowHardwareCursor {
 			builder.WriteString("\x1b[?25h")

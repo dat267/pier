@@ -4,6 +4,7 @@ import (
 	"context"
 	"maps"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -859,7 +860,7 @@ func (e *Editor) expandPasteMarkersLocked(text string) string {
 	result := text
 	for _, pasteID := range e.pasteExpansionOrder() {
 		pasteContent := e.pastes[pasteID]
-		markerRegex := mustCompileRegex(`\[paste #` + itoa(pasteID) + `( (\+\d+ lines|\d+ chars))?\]`)
+		markerRegex := mustCompileRegex(`\[paste #` + strconv.Itoa(pasteID) + `( (\+\d+ lines|\d+ chars))?\]`)
 		result = markerRegex.ReplaceAllLiteralString(result, pasteContent)
 	}
 	return result
@@ -1071,9 +1072,9 @@ func (e *Editor) handlePasteLocked(pastedText string) {
 		e.pastes[pasteID] = filteredText
 		var marker string
 		if len(pastedLines) > 10 {
-			marker = "[paste #" + itoa(pasteID) + " +" + itoa(len(pastedLines)) + " lines]"
+			marker = "[paste #" + strconv.Itoa(pasteID) + " +" + strconv.Itoa(len(pastedLines)) + " lines]"
 		} else {
-			marker = "[paste #" + itoa(pasteID) + " " + itoa(totalChars) + " chars]"
+			marker = "[paste #" + strconv.Itoa(pasteID) + " " + strconv.Itoa(totalChars) + " chars]"
 		}
 		e.insertTextAtCursorInternal(marker)
 		return
@@ -1227,7 +1228,7 @@ func (e *Editor) handleBackspaceLocked() {
 					if x <= targetID {
 						return fullMatch
 					}
-					return "[paste #" + itoa(x-1) + groups[2] + "]"
+					return "[paste #" + strconv.Itoa(x-1) + groups[2] + "]"
 				})
 			}
 		}

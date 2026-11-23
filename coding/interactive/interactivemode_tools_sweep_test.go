@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
@@ -170,7 +171,7 @@ func TestToolCardExpansionReachesDeferredCards(t *testing.T) {
 	output := strings.Repeat("output line\n", 40)
 	var cards []*ToolExecutionComponent
 	for index := range 40 {
-		card := NewToolExecutionComponent("bash", "call-"+itoa(index),
+		card := NewToolExecutionComponent("bash", "call-"+strconv.Itoa(index),
 			map[string]any{"command": "make build"}, ToolExecutionOptions{}, &definition, nil, "/tmp")
 		card.UpdateResult(&SortToolResultContent{Content: []ToolResultContent{{Type: "text", Text: output}}}, false)
 		cards = append(cards, card)

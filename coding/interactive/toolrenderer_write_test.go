@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -58,9 +59,9 @@ func BenchmarkWriteCallCompleteArgs(b *testing.B) {
 	var builder strings.Builder
 	for i := range 2000 {
 		builder.WriteString("func value")
-		builder.WriteString(itoa(i))
+		builder.WriteString(strconv.Itoa(i))
 		builder.WriteString("() int { return ")
-		builder.WriteString(itoa(i))
+		builder.WriteString(strconv.Itoa(i))
 		builder.WriteString(" }\n")
 	}
 	args := map[string]any{"file_path": "/tmp/proj/big.go", "content": builder.String()}

@@ -3,6 +3,7 @@ package tui
 import (
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -285,7 +286,7 @@ func GetAltScreenSearchMatchKey(match AltScreenSearchMatch) string {
 	}
 	first := match.Segments[0]
 	last := match.Segments[len(match.Segments)-1]
-	return itoa(first.Row) + ":" + itoa(first.StartCol) + ":" + itoa(last.Row) + ":" + itoa(last.EndCol)
+	return strconv.Itoa(first.Row) + ":" + strconv.Itoa(first.StartCol) + ":" + strconv.Itoa(last.Row) + ":" + strconv.Itoa(last.EndCol)
 }
 
 // AltScreenSearchComponent is the search overlay (an input plus navigation
@@ -409,7 +410,7 @@ func (c *AltScreenSearchComponent) Render(width int) []string {
 		if c.resultCount == 0 {
 			result = "No matches"
 		} else {
-			result = itoa(c.resultIndex+1) + "/" + itoa(c.resultCount)
+			result = strconv.Itoa(c.resultIndex+1) + "/" + strconv.Itoa(c.resultCount)
 		}
 	}
 	resultSpace := max(0, innerWidth-3)

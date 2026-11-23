@@ -3,6 +3,7 @@ package interactive
 import (
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -629,7 +630,7 @@ func (c *OAuthSelectorComponent) updateList() {
 
 	if startIndex > 0 || endIndex < len(c.filteredProviders) {
 		c.listContainer.AddChild(tui.NewTruncatedText(theme.Fg("muted",
-			"  ("+itoa(c.selectedIndex+1)+"/"+itoa(len(c.filteredProviders))+")"), 1, 0))
+			"  ("+strconv.Itoa(c.selectedIndex+1)+"/"+strconv.Itoa(len(c.filteredProviders))+")"), 1, 0))
 	}
 
 	if len(c.filteredProviders) == 0 {

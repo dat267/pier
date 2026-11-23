@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"maps"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -103,8 +104,8 @@ func TestComponentsAgainstUpstreamGolden(t *testing.T) {
 	}
 
 	for _, width := range corpus.BorderWidths {
-		checkGolden(t, golden, "border@"+itoa(width), NewDynamicBorder(nil).Render(width))
-		checkGolden(t, golden, "border-red@"+itoa(width), NewDynamicBorder(func(s string) string {
+		checkGolden(t, golden, "border@"+strconv.Itoa(width), NewDynamicBorder(nil).Render(width))
+		checkGolden(t, golden, "border-red@"+strconv.Itoa(width), NewDynamicBorder(func(s string) string {
 			return "<" + s + ">"
 		}).Render(width))
 	}
@@ -119,7 +120,7 @@ func TestComponentsAgainstUpstreamGolden(t *testing.T) {
 		if lines == nil {
 			lines = []string{}
 		}
-		checkGolden(t, golden, "truncate"+itoa(index), []any{lines, result.SkippedCount})
+		checkGolden(t, golden, "truncate"+strconv.Itoa(index), []any{lines, result.SkippedCount})
 	}
 
 	for index, spec := range corpus.UserMessages {
@@ -128,7 +129,7 @@ func TestComponentsAgainstUpstreamGolden(t *testing.T) {
 			padding = *spec.Pad
 		}
 		component := NewUserMessageComponent(spec.Text, nil, padding, nil)
-		checkGolden(t, golden, "user"+itoa(index)+"@"+itoa(spec.Width),
+		checkGolden(t, golden, "user"+strconv.Itoa(index)+"@"+strconv.Itoa(spec.Width),
 			normalizeRender(component.Render(spec.Width)))
 	}
 
@@ -141,11 +142,11 @@ func TestComponentsAgainstUpstreamGolden(t *testing.T) {
 	}
 	for index, spec := range corpus.CustomEntries {
 		component := NewCustomEntryComponent(CustomEntry{CustomType: spec.Type}, renderer)
-		checkGolden(t, golden, "custom"+itoa(index)+"-collapsed@"+itoa(spec.Width),
+		checkGolden(t, golden, "custom"+strconv.Itoa(index)+"-collapsed@"+strconv.Itoa(spec.Width),
 			normalizeRender(component.Render(spec.Width)))
-		checkGolden(t, golden, "custom"+itoa(index)+"-hasContent", component.HasContent())
+		checkGolden(t, golden, "custom"+strconv.Itoa(index)+"-hasContent", component.HasContent())
 		component.SetExpanded(true)
-		checkGolden(t, golden, "custom"+itoa(index)+"-expanded@"+itoa(spec.Width),
+		checkGolden(t, golden, "custom"+strconv.Itoa(index)+"-expanded@"+strconv.Itoa(spec.Width),
 			normalizeRender(component.Render(spec.Width)))
 	}
 

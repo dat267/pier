@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -86,7 +87,7 @@ func TestMcpToolRenderUpstreamParity(t *testing.T) {
 		}
 		component.UpdateResult(result, spec.IsPartial)
 
-		key := label + "@" + itoa(spec.Width)
+		key := label + "@" + strconv.Itoa(spec.Width)
 		got := normalizeRender(component.Render(spec.Width))
 		// D397: the expand hint leads the preview, right under the arguments,
 		// where the reference puts it below the preview. Drop hint rows from both

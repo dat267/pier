@@ -3,6 +3,7 @@ package tui
 import (
 	"encoding/json"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -19,7 +20,7 @@ func stableMDValue(value any) string {
 		}
 		return "false"
 	case int:
-		return itoa(typed)
+		return strconv.Itoa(typed)
 	case []any:
 		parts := make([]string, 0, len(typed))
 		for _, item := range typed {

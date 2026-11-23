@@ -6,6 +6,7 @@ import (
 	"os"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -973,7 +974,7 @@ func (t *TreeList) Render(width int) []string {
 
 	lines = append(lines, renderHorizontalViewport(rows, width)...)
 	lines = append(lines, tui.TruncateToWidth(theme.Fg("muted",
-		"  ("+itoa(t.selectedIndex+1)+"/"+itoa(len(t.filteredNodes))+")"+t.getStatusLabels()), width, "", false))
+		"  ("+strconv.Itoa(t.selectedIndex+1)+"/"+strconv.Itoa(len(t.filteredNodes))+")"+t.getStatusLabels()), width, "", false))
 	return lines
 }
 
@@ -1031,7 +1032,7 @@ func (t *TreeList) getEntryDisplayText(id *flatNode, isSelected bool) string {
 		if entry.TokensBefore%1000 >= 500 {
 			tokens++
 		}
-		result = theme.Fg("borderAccent", "[compaction: "+itoa(int(tokens))+"k tokens]")
+		result = theme.Fg("borderAccent", "[compaction: "+strconv.Itoa(int(tokens))+"k tokens]")
 	case "branch_summary":
 		result = theme.Fg("warning", "[branch summary]: ") + normalize(entry.Summary)
 	case "model_change":
@@ -1079,20 +1080,20 @@ func (t *TreeList) formatLabelTimestamp(timestamp string) string {
 	month := int(date.Month())
 	day := date.Day()
 	if date.Year() == now.Year() {
-		return itoa(month) + "/" + itoa(day) + " " + timeText
+		return strconv.Itoa(month) + "/" + strconv.Itoa(day) + " " + timeText
 	}
-	year := itoa(date.Year())
+	year := strconv.Itoa(date.Year())
 	if len(year) > 2 {
 		year = year[len(year)-2:]
 	}
-	return year + "/" + itoa(month) + "/" + itoa(day) + " " + timeText
+	return year + "/" + strconv.Itoa(month) + "/" + strconv.Itoa(day) + " " + timeText
 }
 
 func pad2(value int) string {
 	if value < 10 {
-		return "0" + itoa(value)
+		return "0" + strconv.Itoa(value)
 	}
-	return itoa(value)
+	return strconv.Itoa(value)
 }
 
 func (t *TreeList) extractContent(content json.RawMessage) string {

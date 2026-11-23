@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"maps"
+	"strconv"
 
 	"github.com/dat267/pier/tui"
 )
@@ -203,7 +204,7 @@ func (c *SteppedSubmenu) buildStep(stepIndex int) interface {
 	total := len(c.steps)
 	stepLabel := ""
 	if total > 1 {
-		stepLabel = "Step " + itoa(stepIndex+1) + "/" + itoa(total) + " · "
+		stepLabel = "Step " + strconv.Itoa(stepIndex+1) + "/" + strconv.Itoa(total) + " · "
 	}
 	title := step.Title(c.context)
 	description := step.Description(c.context)

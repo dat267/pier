@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -90,9 +91,9 @@ func TestEasterComponentsAgainstUpstreamGolden(t *testing.T) {
 	for _, label := range sortedKeys(corpus.Skill) {
 		spec := corpus.Skill[label]
 		component := NewSkillInvocationMessageComponent(spec.Name, spec.Content, nil)
-		checkGolden(t, golden, "skill "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "skill "+label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		component.SetExpanded(true)
-		checkGolden(t, golden, "skill "+label+"-expanded@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "skill "+label+"-expanded@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 	}
 
 	for _, label := range sortedKeys(corpus.Setup) {
@@ -105,7 +106,7 @@ func TestEasterComponentsAgainstUpstreamGolden(t *testing.T) {
 		for _, input := range spec.Inputs {
 			component.HandleInput(input)
 		}
-		checkGolden(t, golden, "setup "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "setup "+label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		previewProjection := previews
 		if previewProjection == nil {
 			previewProjection = []string{}

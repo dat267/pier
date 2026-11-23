@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"github.com/dat267/pier/tui"
+	"strconv"
 )
 
 // Port of src/modes/interactive/components/extension-selector.ts: the generic
@@ -56,7 +57,7 @@ func NewExtensionSelectorComponent(title string, options []string, onSelect func
 	if optionsValue.TimeoutMS > 0 && optionsValue.Tui != nil {
 		component.countdown = NewCountdownTimer(optionsValue.TimeoutMS, countdownHostAdapter{optionsValue.Tui},
 			func(seconds int) {
-				component.titleText.SetText(theme.Fg("accent", theme.Bold(component.baseTitle+" ("+itoa(seconds)+"s)")))
+				component.titleText.SetText(theme.Fg("accent", theme.Bold(component.baseTitle+" ("+strconv.Itoa(seconds)+"s)")))
 			},
 			func() { component.onCancelCallback() })
 	}
@@ -97,7 +98,7 @@ func (c *ExtensionSelectorComponent) updateList() {
 		c.listContainer.AddChild(tui.NewText(text, 1, 0, nil))
 	}
 	if start > 0 || end < len(c.options) {
-		info := theme.Fg("muted", "  ("+itoa(c.selectedIndex+1)+"/"+itoa(len(c.options))+")")
+		info := theme.Fg("muted", "  ("+strconv.Itoa(c.selectedIndex+1)+"/"+strconv.Itoa(len(c.options))+")")
 		c.listContainer.AddChild(tui.NewText(info, 0, 0, nil))
 	}
 }

@@ -3,6 +3,7 @@ package interactive
 import (
 	"bytes"
 	"encoding/json"
+	"strconv"
 	"strings"
 	"time"
 
@@ -239,7 +240,7 @@ func (c *ToolExecutionComponent) createResultFallback() tui.Component {
 	}
 	text := strings.Join(styled, "\n")
 	if remaining > 0 {
-		text += theme.Fg("muted", "\n... ("+itoa(remaining)+" more lines, ") +
+		text += theme.Fg("muted", "\n... ("+strconv.Itoa(remaining)+" more lines, ") +
 			KeyHint("app.tools.expand", "to expand") + theme.Fg("muted", ")")
 	}
 	return tui.NewText(text, 0, 0, nil)

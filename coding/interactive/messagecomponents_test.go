@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -144,10 +145,10 @@ func TestMessagesAgainstUpstreamGolden(t *testing.T) {
 			}
 			checkGolden(t, golden, key, got)
 		}
-		checkAssistant("assistant " + label + "@" + itoa(spec.Width))
+		checkAssistant("assistant " + label + "@" + strconv.Itoa(spec.Width))
 		if spec.ExpandThinking != nil {
 			component.SetHideThinkingBlock(*spec.ExpandThinking)
-			checkAssistant("assistant " + label + "-toggled@" + itoa(spec.Width))
+			checkAssistant("assistant " + label + "-toggled@" + strconv.Itoa(spec.Width))
 		}
 	}
 
@@ -159,9 +160,9 @@ func TestMessagesAgainstUpstreamGolden(t *testing.T) {
 	for _, label := range branchLabels {
 		spec := corpus.Branch[label]
 		component := NewBranchSummaryMessageComponent(spec.Summary, nil, 1)
-		checkGolden(t, golden, "branch "+label+"@"+itoa(spec.Width), component.Render(spec.Width))
+		checkGolden(t, golden, "branch "+label+"@"+strconv.Itoa(spec.Width), component.Render(spec.Width))
 		component.SetExpanded(true)
-		checkGolden(t, golden, "branch "+label+"-expanded@"+itoa(spec.Width), component.Render(spec.Width))
+		checkGolden(t, golden, "branch "+label+"-expanded@"+strconv.Itoa(spec.Width), component.Render(spec.Width))
 	}
 
 	compactionLabels := make([]string, 0, len(corpus.Compaction))
@@ -176,9 +177,9 @@ func TestMessagesAgainstUpstreamGolden(t *testing.T) {
 			tokensBefore = 1234
 		}
 		component := NewCompactionSummaryMessageComponent(spec.Summary, tokensBefore, nil, 1)
-		checkGolden(t, golden, "compaction "+label+"@"+itoa(spec.Width), component.Render(spec.Width))
+		checkGolden(t, golden, "compaction "+label+"@"+strconv.Itoa(spec.Width), component.Render(spec.Width))
 		component.SetExpanded(true)
-		checkGolden(t, golden, "compaction "+label+"-expanded@"+itoa(spec.Width), component.Render(spec.Width))
+		checkGolden(t, golden, "compaction "+label+"-expanded@"+strconv.Itoa(spec.Width), component.Render(spec.Width))
 	}
 
 	// Status indicators.

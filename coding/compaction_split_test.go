@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/dat267/pier/ai"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -206,7 +207,7 @@ func TestSummarizationSplitSummarizesACallWithItsResult(t *testing.T) {
 		prompts = append(prompts, prompt)
 		stream := ai.NewAssistantMessageEventStream()
 		reason := ai.StopStop
-		text := "## Goal\nsummary " + itoa(len(prompts))
+		text := "## Goal\nsummary " + strconv.Itoa(len(prompts))
 		// The answer room is three messages, so the six-message input must split.
 		if strings.Count(prompt, "[User]: ") > 3 {
 			reason = ai.StopLength

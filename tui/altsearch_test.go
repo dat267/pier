@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -97,7 +98,7 @@ func TestAltSearchAgainstUpstreamGolden(t *testing.T) {
 			if spec.Hover != nil {
 				component.SetHoveredNavigationDirection(*spec.Hover, true)
 			}
-			checkAltSearchGolden(t, golden, label+" render@"+itoa(spec.Width), component.Render(spec.Width))
+			checkAltSearchGolden(t, golden, label+" render@"+strconv.Itoa(spec.Width), component.Render(spec.Width))
 			navResults := make([]any, 0, 3)
 			for _, probe := range [][2]int{{2, 4}, {2, 20}, {1, 4}} {
 				direction, ok := component.GetNavigationDirectionAt(probe[0], probe[1])

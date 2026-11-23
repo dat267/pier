@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -172,7 +173,7 @@ func (s *SelectList) Render(width int) []string {
 	}
 
 	if startIndex > 0 || endIndex < len(s.filteredItems) {
-		scrollText := "  (" + itoa(s.selectedIndex+1) + "/" + itoa(len(s.filteredItems)) + ")"
+		scrollText := "  (" + strconv.Itoa(s.selectedIndex+1) + "/" + strconv.Itoa(len(s.filteredItems)) + ")"
 		lines = append(lines, s.theme.ScrollInfo(TruncateToWidth(scrollText, width-2, "", false)))
 	}
 

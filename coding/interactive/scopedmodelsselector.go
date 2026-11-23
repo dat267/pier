@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -343,9 +344,9 @@ func (c *ScopedModelsSelectorComponent) getFooterText() string {
 	}
 	countText := "all enabled"
 	if !c.enabledIDs.All {
-		countText = itoa(enabledCount) + "/" + itoa(len(c.allIDs)) + " enabled"
+		countText = strconv.Itoa(enabledCount) + "/" + strconv.Itoa(len(c.allIDs)) + " enabled"
 		if unavailableCount > 0 {
-			countText += " · " + itoa(unavailableCount) + " unavailable"
+			countText += " · " + strconv.Itoa(unavailableCount) + " unavailable"
 		}
 	}
 	parts := []string{
@@ -451,7 +452,7 @@ func (c *ScopedModelsSelectorComponent) updateList() {
 
 	if startIndex > 0 || endIndex < len(c.filteredItems) {
 		c.listContainer.AddChild(tui.NewText(theme.Fg("muted",
-			"  ("+itoa(c.selectedIndex+1)+"/"+itoa(len(c.filteredItems))+")"), 0, 0, nil))
+			"  ("+strconv.Itoa(c.selectedIndex+1)+"/"+strconv.Itoa(len(c.filteredItems))+")"), 0, 0, nil))
 	}
 
 	if len(c.filteredItems) > 0 {

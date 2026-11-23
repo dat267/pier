@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -207,19 +208,12 @@ func TestFauxReplaceAndAppendQueues(t *testing.T) {
 func TestFauxAsyncFactorySeesState(t *testing.T) {
 	core := NewFauxCore(FauxOptions{})
 	core.SetResponses([]FauxResponseStep{{Factory: func(ctx ai.TranscriptContext, options *ai.SimpleStreamOptions, state *FauxProviderState, model *ai.Model) (*ai.AssistantMessage, error) {
-		return FauxAssistantMessage(fmtInt(len(ctx.Messages))+":"+fmtInt(state.CallCount), FauxMessageOptions{}), nil
+		return FauxAssistantMessage(strconv.Itoa(len(ctx.Messages))+":"+strconv.Itoa(state.CallCount), FauxMessageOptions{}), nil
 	}}})
 	response := fauxComplete(t, core, core.GetModel(""), ai.Context{Messages: []ai.Message{fauxUserMsg("hi", 1)}}, nil)
 	if response.Content[0].(ai.TextContent).Text != "1:1" {
 		t.Fatalf("got %v", response.Content[0])
 	}
-}
-
-func fmtInt(n int) string { return json.Number(itoa(n)).String() }
-
-func itoa(n int) string {
-	b, _ := json.Marshal(n)
-	return string(b)
 }
 
 func TestFauxFactoryThrowEmitsError(t *testing.T) {

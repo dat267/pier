@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -345,11 +346,11 @@ func (l *UserMessageList) Render(width int) []string {
 			line = theme.Bold(truncated)
 		}
 		lines = append(lines, cursor+line)
-		lines = append(lines, theme.Fg("muted", "  Message "+itoa(i+1)+" of "+itoa(len(l.messages))))
+		lines = append(lines, theme.Fg("muted", "  Message "+strconv.Itoa(i+1)+" of "+strconv.Itoa(len(l.messages))))
 		lines = append(lines, "")
 	}
 	if startIndex > 0 || endIndex < len(l.messages) {
-		lines = append(lines, theme.Fg("muted", "  ("+itoa(l.selectedIndex+1)+"/"+itoa(len(l.messages))+")"))
+		lines = append(lines, theme.Fg("muted", "  ("+strconv.Itoa(l.selectedIndex+1)+"/"+strconv.Itoa(len(l.messages))+")"))
 	}
 	return lines
 }

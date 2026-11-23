@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -191,7 +192,7 @@ func TestExecuteBashWritesTheFullOutputWhenOnlyTheTailTruncates(t *testing.T) {
 	lineCount := DefaultMaxLines + 500
 	for index := range lineCount {
 		builder.WriteString("line ")
-		builder.WriteString(itoa(index))
+		builder.WriteString(strconv.Itoa(index))
 		builder.WriteString("\n")
 	}
 	output := builder.String()
@@ -219,7 +220,7 @@ func TestExecuteBashWritesTheFullOutputWhenOnlyTheTailTruncates(t *testing.T) {
 	if got := strings.Count(string(saved), "\n"); got != lineCount {
 		t.Fatalf("full-output file holds %d lines, want %d", got, lineCount)
 	}
-	if !strings.HasSuffix(string(saved), "line "+itoa(lineCount-1)+"\n") {
+	if !strings.HasSuffix(string(saved), "line "+strconv.Itoa(lineCount-1)+"\n") {
 		t.Fatal("full-output file does not end with the last line")
 	}
 }

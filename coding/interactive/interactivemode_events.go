@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/dat267/pier/agent"
@@ -343,7 +344,7 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 				if finalError == "" {
 					finalError = "Unknown error"
 				}
-				d.ShowError("Retry failed after " + itoa(event.Attempt) + " attempts: " + finalError)
+				d.ShowError("Retry failed after " + strconv.Itoa(event.Attempt) + " attempts: " + finalError)
 			}
 		}
 		d.requestRender()
@@ -496,7 +497,7 @@ func (d *EventDispatcher) handleMessageEnd(event *coding.SessionEvent) {
 			if retryAttempt == 1 {
 				suffix = ""
 			}
-			errorMessage = "Aborted after " + itoa(retryAttempt) + " retry attempt" + suffix
+			errorMessage = "Aborted after " + strconv.Itoa(retryAttempt) + " retry attempt" + suffix
 		} else {
 			errorMessage = "Operation aborted"
 		}

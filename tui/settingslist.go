@@ -1,5 +1,7 @@
 package tui
 
+import "strconv"
+
 // Port of src/components/settings-list.ts: a settings list with optional
 // fuzzy search, value cycling, and submenus.
 
@@ -180,7 +182,7 @@ func (s *SettingsList) renderMainList(width int) []string {
 	}
 
 	if startIndex > 0 || endIndex < len(displayItems) {
-		scrollText := "  (" + itoa(s.selectedIndex+1) + "/" + itoa(len(displayItems)) + ")"
+		scrollText := "  (" + strconv.Itoa(s.selectedIndex+1) + "/" + strconv.Itoa(len(displayItems)) + ")"
 		lines = append(lines, s.theme.Hint(TruncateToWidth(scrollText, width-2, "", false)))
 	}
 

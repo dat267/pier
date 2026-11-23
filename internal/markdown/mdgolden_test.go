@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -350,7 +351,7 @@ func stableValue(value any) string {
 		}
 		return "false"
 	case int:
-		return itoa(typed)
+		return strconv.Itoa(typed)
 	case []any:
 		parts := make([]string, 0, len(typed))
 		for _, item := range typed {
@@ -385,28 +386,6 @@ func mustJSON(value string) string {
 		panic(err)
 	}
 	return strings.TrimRight(buf.String(), "\n")
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	neg := n < 0
-	if neg {
-		n = -n
-	}
-	var buf [20]byte
-	i := len(buf)
-	for n > 0 {
-		i--
-		buf[i] = byte('0' + n%10)
-		n /= 10
-	}
-	if neg {
-		i--
-		buf[i] = '-'
-	}
-	return string(buf[i:])
 }
 
 // The golden is generated from the pinned reference's own markdown pipeline

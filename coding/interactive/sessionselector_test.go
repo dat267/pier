@@ -140,13 +140,13 @@ func TestSessionSelectorAgainstUpstreamGolden(t *testing.T) {
 		component.WaitForPendingLoads()
 		queue.drain()
 
-		checkGolden(t, golden, label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		for index, input := range spec.Inputs {
 			component.HandleInput(input)
 			component.WaitForPendingLoads()
 			queue.drain()
 			encoded, _ := json.Marshal(input)
-			checkGolden(t, golden, label+"+"+itoa(index)+"+"+string(encoded)+"@"+itoa(spec.Width),
+			checkGolden(t, golden, label+"+"+strconv.Itoa(index)+"+"+string(encoded)+"@"+strconv.Itoa(spec.Width),
 				normalizeRender(component.Render(spec.Width)))
 		}
 		if events == nil {

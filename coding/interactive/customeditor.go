@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -188,7 +189,7 @@ func (c *CustomEditor) renderTopBorder(width int, hiddenLineCount int) string {
 	overflowLabel := ""
 	overflowLabelWidth := 0
 	if hiddenLineCount > 0 {
-		overflowLabel = " ↑ " + itoa(hiddenLineCount) + " more "
+		overflowLabel = " ↑ " + strconv.Itoa(hiddenLineCount) + " more "
 		overflowLabelWidth = tui.VisibleWidth(overflowLabel)
 	}
 	overflowStart := (width - overflowLabelWidth) / 2

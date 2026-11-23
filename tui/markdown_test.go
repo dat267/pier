@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -148,7 +149,7 @@ func TestMarkdownAgainstUpstreamGolden(t *testing.T) {
 	for _, tc := range cases {
 		markdown := NewMarkdown(tc.text, tc.paddingX, tc.paddingY, theme, tc.defaultStyle, tc.options)
 		for _, width := range tc.widths {
-			label := tc.label + "@" + itoa(width)
+			label := tc.label + "@" + strconv.Itoa(width)
 			want, ok := golden[label]
 			if !ok {
 				t.Fatalf("missing golden %q", label)

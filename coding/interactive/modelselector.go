@@ -3,6 +3,7 @@ package interactive
 import (
 	"context"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -241,7 +242,7 @@ func (c *ModelSelectorComponent) applyRefreshResult(err error, timedOut bool, re
 	case len(result.Errors) == 1:
 		c.errorMessage = "Could not refresh " + errorProviders(result.Errors)[0] + "; showing cached models."
 	case len(result.Errors) > 1:
-		c.errorMessage = "Could not refresh " + itoa(len(result.Errors)) + " model catalogs (" +
+		c.errorMessage = "Could not refresh " + strconv.Itoa(len(result.Errors)) + " model catalogs (" +
 			strings.Join(errorProviders(result.Errors), ", ") + "); showing cached models."
 	default:
 		c.errorMessage = c.runtime.GetError()
@@ -490,7 +491,7 @@ func (c *ModelSelectorComponent) updateList() {
 
 	if startIndex > 0 || endIndex < len(c.filteredModels) {
 		c.listContainer.AddChild(tui.NewText(theme.Fg("muted",
-			"  ("+itoa(c.selectedIndex+1)+"/"+itoa(len(c.filteredModels))+")"), 0, 0, nil))
+			"  ("+strconv.Itoa(c.selectedIndex+1)+"/"+strconv.Itoa(len(c.filteredModels))+")"), 0, 0, nil))
 	}
 
 	switch {

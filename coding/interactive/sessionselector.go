@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -82,17 +83,17 @@ func formatSessionDate(date time.Time, now time.Time) string {
 	case diffMins < 1:
 		return "now"
 	case diffMins < 60:
-		return itoa(int(diffMins)) + "m"
+		return strconv.Itoa(int(diffMins)) + "m"
 	case diffHours < 24:
-		return itoa(int(diffHours)) + "h"
+		return strconv.Itoa(int(diffHours)) + "h"
 	case diffDays < 7:
-		return itoa(int(diffDays)) + "d"
+		return strconv.Itoa(int(diffDays)) + "d"
 	case diffDays < 30:
-		return itoa(int(diffDays/7)) + "w"
+		return strconv.Itoa(int(diffDays/7)) + "w"
 	case diffDays < 365:
-		return itoa(int(diffDays/30)) + "mo"
+		return strconv.Itoa(int(diffDays/30)) + "mo"
 	default:
-		return itoa(int(diffDays/365)) + "y"
+		return strconv.Itoa(int(diffDays/365)) + "y"
 	}
 }
 
@@ -302,7 +303,7 @@ func (h *SessionSelectorHeader) Render(width int) []string {
 	case h.loading:
 		progressText := "..."
 		if h.loadProgress != nil {
-			progressText = itoa(h.loadProgress[0]) + "/" + itoa(h.loadProgress[1])
+			progressText = strconv.Itoa(h.loadProgress[0]) + "/" + strconv.Itoa(h.loadProgress[1])
 		}
 		scopeText = theme.Fg("muted", "○ Current Folder | ") + theme.Fg("accent", "Loading "+progressText)
 	case h.scope == SessionScopeCurrent:
@@ -751,7 +752,7 @@ func (l *SessionList) Render(width int) []string {
 		normalizedMessage := ai.JSTrim(stripControlCharacters(displayText))
 
 		age := formatSessionDate(session.Modified, now)
-		msgCount := itoa(session.MessageCount)
+		msgCount := strconv.Itoa(session.MessageCount)
 		rightPart := msgCount + " " + age
 		// The header's cwd and the file path are untrusted text: a session file
 		// can carry escape sequences, and this column reaches the terminal. The
@@ -822,7 +823,7 @@ func (l *SessionList) Render(width int) []string {
 	}
 
 	if startIndex > 0 || endIndex < len(l.filtered) {
-		scrollText := "  (" + itoa(l.selectedIndex+1) + "/" + itoa(len(l.filtered)) + ")"
+		scrollText := "  (" + strconv.Itoa(l.selectedIndex+1) + "/" + strconv.Itoa(len(l.filtered)) + ")"
 		lines = append(lines, theme.Fg("muted", tui.TruncateToWidth(scrollText, width, "", false)))
 	}
 	return lines

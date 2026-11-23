@@ -3,6 +3,7 @@ package interactive
 import (
 	"encoding/json"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -211,7 +212,7 @@ func recordingCallbacks(events *[]string) SettingsCallbacks {
 	return SettingsCallbacks{
 		OnAutoCompactChange:         recordBool("onAutoCompactChange"),
 		OnShowImagesChange:          recordBool("onShowImagesChange"),
-		OnImageWidthCellsChange:     func(value int) { *events = append(*events, "onImageWidthCellsChange:"+itoa(value)) },
+		OnImageWidthCellsChange:     func(value int) { *events = append(*events, "onImageWidthCellsChange:"+strconv.Itoa(value)) },
 		OnAutoResizeImagesChange:    recordBool("onAutoResizeImagesChange"),
 		OnBlockImagesChange:         recordBool("onBlockImagesChange"),
 		OnEnableSkillCommandsChange: recordBool("onEnableSkillCommandsChange"),
@@ -221,7 +222,7 @@ func recordingCallbacks(events *[]string) SettingsCallbacks {
 			encoded, _ := json.Marshal(value)
 			*events = append(*events, "onTransportChange:"+string(encoded))
 		},
-		OnHTTPIdleTimeoutMsChange: func(value int64) { *events = append(*events, "onHttpIdleTimeoutMsChange:"+itoa(int(value))) },
+		OnHTTPIdleTimeoutMsChange: func(value int64) { *events = append(*events, "onHttpIdleTimeoutMsChange:"+strconv.Itoa(int(value))) },
 		OnCacheWarmingModeChange:  record("onCacheWarmingModeChange"),
 		OnModelThinkingLevelChange: func(provider string, modelID string, level string) {
 			*events = append(*events, "onModelThinkingLevelChange:[\""+provider+"\",\""+modelID+"\",\""+level+"\"]")
@@ -239,9 +240,9 @@ func recordingCallbacks(events *[]string) SettingsCallbacks {
 		OnDoubleEscapeActionChange:     record("onDoubleEscapeActionChange"),
 		OnTreeFilterModeChange:         record("onTreeFilterModeChange"),
 		OnShowHardwareCursorChange:     recordBool("onShowHardwareCursorChange"),
-		OnEditorPaddingXChange:         func(value int) { *events = append(*events, "onEditorPaddingXChange:"+itoa(value)) },
-		OnOutputPadChange:              func(value int) { *events = append(*events, "onOutputPadChange:"+itoa(value)) },
-		OnAutocompleteMaxVisibleChange: func(value int) { *events = append(*events, "onAutocompleteMaxVisibleChange:"+itoa(value)) },
+		OnEditorPaddingXChange:         func(value int) { *events = append(*events, "onEditorPaddingXChange:"+strconv.Itoa(value)) },
+		OnOutputPadChange:              func(value int) { *events = append(*events, "onOutputPadChange:"+strconv.Itoa(value)) },
+		OnAutocompleteMaxVisibleChange: func(value int) { *events = append(*events, "onAutocompleteMaxVisibleChange:"+strconv.Itoa(value)) },
 		OnQuietStartupChange: func(value coding.QuietStartupSetting) {
 			*events = append(*events, "onQuietStartupChange:"+coding.QuietStartupValueString(value))
 		},
@@ -257,7 +258,7 @@ func recordingCallbacks(events *[]string) SettingsCallbacks {
 				*events = append(*events, "onFullscreenWheelScrollLinesChange:auto")
 				return
 			}
-			*events = append(*events, "onFullscreenWheelScrollLinesChange:"+itoa(lines.Lines))
+			*events = append(*events, "onFullscreenWheelScrollLinesChange:"+strconv.Itoa(lines.Lines))
 		},
 		OnWarningsChange: func(warnings WarningSettings) {
 			encoded, _ := json.Marshal(warnings)
@@ -296,7 +297,7 @@ func TestSettingsSelectorAgainstUpstreamGolden(t *testing.T) {
 		for _, input := range spec.Inputs {
 			list.HandleInput(input)
 		}
-		checkGolden(t, golden, label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		if events == nil {
 			events = []string{}
 		}

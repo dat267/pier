@@ -782,7 +782,7 @@ func (r *TranscriptRenderer) renderSessionItems(items []RenderSessionItem, updat
 							if retryAttempt == 1 {
 								suffix = ""
 							}
-							errorMessage = "Aborted after " + itoa(retryAttempt) + " retry attempt" + suffix
+							errorMessage = "Aborted after " + strconv.Itoa(retryAttempt) + " retry attempt" + suffix
 						} else {
 							errorMessage = "Operation aborted"
 						}
@@ -1121,7 +1121,7 @@ func (r *TranscriptRenderer) MaybeShowThinkingDropNotice(message *ai.AssistantMe
 	if len(current.Reasons) > 0 {
 		reasonText = ": " + strings.Join(current.Reasons, ", ")
 	}
-	dropped := current.Provider + " dropped " + itoa(current.Count) + " " + noun + reasonText + " (details in session)"
+	dropped := current.Provider + " dropped " + strconv.Itoa(current.Count) + " " + noun + reasonText + " (details in session)"
 	r.Chat.AddChild(tui.NewSpacer(1))
 	r.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg("warning", dropped) }, 1, 0))
 }
@@ -1155,7 +1155,7 @@ func (r *TranscriptRenderer) AddCacheMissNotice(miss coding.CacheMiss) {
 		if miss.IdleMs%60000 >= 30000 {
 			minutes++
 		}
-		label = "Cache miss after " + itoa(int(minutes)) + "m idle"
+		label = "Cache miss after " + strconv.Itoa(int(minutes)) + "m idle"
 	}
 	line := label + ": " + reBilled
 	r.Chat.AddChild(tui.NewSpacer(1))
@@ -1180,7 +1180,7 @@ func (r *TranscriptRenderer) RenderInitialMessages() {
 
 	compactionCount := r.SessionInfo.GetCompactionCount()
 	if compactionCount > 0 {
-		times := itoa(compactionCount) + " times"
+		times := strconv.Itoa(compactionCount) + " times"
 		if compactionCount == 1 {
 			times = "1 time"
 		}

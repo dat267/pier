@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -172,7 +173,7 @@ func TestModelSelectorsAgainstUpstreamGolden(t *testing.T) {
 		for _, input := range spec.Inputs {
 			component.HandleInput(input)
 		}
-		checkGolden(t, golden, "modelsel "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "modelsel "+label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		component.Dispose()
 	}
 
@@ -192,7 +193,7 @@ func TestModelSelectorsAgainstUpstreamGolden(t *testing.T) {
 		for _, input := range spec.Inputs {
 			component.HandleInput(input)
 		}
-		checkGolden(t, golden, "scoped "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "scoped "+label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 	}
 }
 

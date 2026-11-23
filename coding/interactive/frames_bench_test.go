@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/dat267/pier/tui"
@@ -12,7 +13,7 @@ import (
 // change-detection walk (warm) or from re-rendering the tree (cold).
 func BenchmarkTranscriptFrameCold(b *testing.B) {
 	for _, messages := range []int{500, 2000, 8000} {
-		b.Run(itoa(messages)+"msgs", func(b *testing.B) {
+		b.Run(strconv.Itoa(messages)+"msgs", func(b *testing.B) {
 			app, cleanup := newTestAppB(b)
 			defer cleanup()
 			if screen, ok := app.initialUI.(*tui.AltScreen); ok {
@@ -42,7 +43,7 @@ func BenchmarkTranscriptFrameCold(b *testing.B) {
 // per-component walk, is visible.
 func BenchmarkTranscriptFrameScaling(b *testing.B) {
 	for _, messages := range []int{500, 2000, 8000} {
-		b.Run(itoa(messages)+"msgs", func(b *testing.B) {
+		b.Run(strconv.Itoa(messages)+"msgs", func(b *testing.B) {
 			app, cleanup := newTestAppB(b)
 			defer cleanup()
 			if screen, ok := app.initialUI.(*tui.AltScreen); ok {

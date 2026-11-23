@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -222,7 +223,7 @@ func TestOAuthSelectorAgainstUpstreamGolden(t *testing.T) {
 		for _, input := range spec.Inputs {
 			component.HandleInput(input)
 		}
-		checkAuthGolden(t, golden, "oauth "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkAuthGolden(t, golden, "oauth "+label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 	}
 	checkAuthGolden(t, golden, "authtype", []string{
 		FormatAuthSelectorProviderType("oauth"), FormatAuthSelectorProviderType("api_key"),
@@ -285,7 +286,7 @@ func TestLoginDialogAgainstUpstreamGolden(t *testing.T) {
 		if len(spec.Prompt) == 2 {
 			component.ShowPrompt(spec.Prompt[0], spec.Prompt[1])
 		}
-		checkAuthGolden(t, golden, "login "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkAuthGolden(t, golden, "login "+label+"@"+strconv.Itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 	}
 }
 

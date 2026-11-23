@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strconv"
 	"strings"
 )
 
@@ -174,14 +175,14 @@ func WordWrapLine(line string, maxWidth int, preSegmented []editorSegment) []Tex
 // createScrollBorder renders the scroll indicator border.
 func createScrollBorder(direction string, hiddenLineCount int, width int) string {
 	availableWidth := max(0, width)
-	label := " " + direction + " " + itoa(hiddenLineCount) + " more "
+	label := " " + direction + " " + strconv.Itoa(hiddenLineCount) + " more "
 	labelWidth := VisibleWidth(label)
 	if labelWidth+2 <= availableWidth {
 		leftWidth := (availableWidth - labelWidth) / 2
 		return strings.Repeat("─", leftWidth) + label + strings.Repeat("─", availableWidth-leftWidth-labelWidth)
 	}
 
-	indicator := "─── " + direction + " " + itoa(hiddenLineCount) + " more "
+	indicator := "─── " + direction + " " + strconv.Itoa(hiddenLineCount) + " more "
 	remaining := availableWidth - VisibleWidth(indicator)
 	if remaining >= 0 {
 		return indicator + strings.Repeat("─", remaining)
