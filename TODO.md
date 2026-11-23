@@ -15,36 +15,37 @@ shares with `./coding/interactive`, check first whether it depends on wall-clock
 timing or on process-global state (`leakcheck` and `just test-isolated` both hunt
 for the second class).
 
-## The interactive MCP sign-in has no caller (open)
+## The interactive MCP sign-in has no caller (open, needs a scope decision)
 
-Upstream `packages/mcp/src/oauth/sign-in.ts` `startMcpSignIn` first runs
-`refreshBeforeSignIn` under the store's refresh lock and only starts the browser
-step when that returns `REDIRECT`. pier has the browser step's building blocks
-(`AuthorizeMcp`, `McpOAuthProvider`) but no sign-in entry point: the only call
-into the flow is `oauthAdapter.runRefresh` on a 401, and
-`coding/mcpruntime.go` installs `OnRedirect` as a no-op with the comment that
-"Sign-in is driven by the caller (`/mcp` in a later slice)".
+`packages/mcp/src/oauth/sign-in.ts` `startMcpSignIn` runs `refreshBeforeSignIn`
+under the store's refresh lock and, when that returns `REDIRECT`, starts the
+browser step. Its only caller in the reference is
+`extensions/mcp/oauth.ts:226`, which is the extension surface D41 puts out of
+scope, so the missing piece is not one function: it is `startMcpSignIn`,
+`completeMcpSignIn`, a loopback listener, the create-CIMD fallback and the `/mcp`
+command that drives them. D259 already records the user-visible half (the
+sign-in hint does not name a `/mcp` command).
 
-What is now ported (`mcp/mcp_federation.go`): the proactive half.
-`oauthAdapter.Token` refreshes a stored access token that is within
-`mcpRefreshSkewMS` (30 s, the reference's `REFRESH_SKEW_MS`) of its expiry,
-before the request goes out, through `AuthorizeMcp` with `RefreshOnly: true`. A
-failure or a redirect falls through to the old token, which the 401 path then
-handles, exactly as `auth-provider.ts token()` does. Pinned by
+The proactive half is ported (`mcp/mcp_federation.go`): `oauthAdapter.Token`
+refreshes a stored access token within `mcpRefreshSkewMS` (30 s, the reference's
+`REFRESH_SKEW_MS`) of its expiry, before the request goes out, through
+`AuthorizeMcp` with `RefreshOnly: true`. A failure or a redirect falls through to
+the old token, which the 401 path handles. Pinned by
 `TestOAuthAdapterTokenRefreshesAnExpiredTokenProactively`.
 
-What a caller still needs, if the interactive sign-in is wanted:
+So what remains is a scope call rather than a repair: port the interactive
+sign-in as a pier command, or delete the dead `OnRedirect` seam and record the
+omission. The pieces it would need:
 
-1. A `StartMcpSignIn` that reads the state, returns `AUTHORIZED` when the
-   refresh alone settles it, and otherwise runs the browser step — keeping the
-   pending `OAuthState` and code verifier the refresh left alone
+1. A sign-in entry that reads the state, returns `AUTHORIZED` when the refresh
+   alone settles it, and otherwise runs the browser step — keeping the pending
+   `OAuthState` and code verifier the refresh left alone
    (`TestOAuthRefreshOnlyDoesNotStartAnAuthorization` already pins that half).
-2. Real `OnRedirect` wiring in `coding/mcpruntime.go` so the browser step has
-   somewhere to send the URL, plus an `/mcp` command to drive it.
-3. A cross-process refresh lock. The reference's is a file lock that raises
-   `McpRefreshLockBusyError` when another process is refreshing; pier's
-   `writesMu` serializes writes inside one process only, which is why the
-   adapter's `inFlight` sharing is process-local.
+2. Real `OnRedirect` wiring in `coding/mcpruntime.go`, which is a no-op today,
+   plus the command that drives it.
+3. A cross-process refresh lock. The reference's is a file lock raising
+   `McpRefreshLockBusyError`; pier's `writesMu` serializes writes inside one
+   process, which is why the adapter's `inFlight` sharing is process-local.
 
 ## IDN validation is still approximate (open)
 
