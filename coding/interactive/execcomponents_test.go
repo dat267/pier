@@ -185,8 +185,8 @@ func TestExecHelpers(t *testing.T) {
 	if _, ok := Str(42); ok {
 		t.Fatal("Str(42) accepted")
 	}
-	if got := NormalizeDisplayText("a\rb"); got != "ab" {
-		t.Fatalf("NormalizeDisplayText = %q", got)
+	if got := normalizeDisplayText("a\rb"); got != "ab" {
+		t.Fatalf("normalizeDisplayText = %q", got)
 	}
 	if got := ReplaceTabsLocal("a\tb"); got != "a   b" {
 		t.Fatalf("replaceTabs = %q", got)

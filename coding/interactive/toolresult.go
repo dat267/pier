@@ -32,9 +32,6 @@ func Str(value any) (string, bool) {
 	return text, ok
 }
 
-// NormalizeDisplayText removes carriage returns.
-func NormalizeDisplayText(text string) string { return strings.ReplaceAll(text, "\r", "") }
-
 // ToolResultContent is one result content block.
 type ToolResultContent struct {
 	Type     string `json:"type"`
@@ -93,13 +90,10 @@ func GetTextOutput(result *SortToolResultContent, showImages bool) string {
 	return output
 }
 
-// InvalidArgText renders the invalid-argument marker.
-func InvalidArgText(theme *Theme) string { return theme.Fg("error", "[invalid arg]") }
-
 // RenderToolPath renders a tool path argument.
 func RenderToolPath(rawPath *string, theme *Theme, cwd string, emptyFallback string) string {
 	if rawPath == nil {
-		return InvalidArgText(theme)
+		return invalidArgText(theme)
 	}
 	value := *rawPath
 	if value == "" {

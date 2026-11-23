@@ -115,12 +115,6 @@ type CompactionCostNotice struct {
 	Duration time.Duration
 }
 
-// Dead terminal error codes.
-var deadTerminalErrorCodes = map[string]bool{"EIO": true, "EPIPE": true, "ENOTCONN": true, "ENOTTY": true}
-
-// IsDeadTerminalError reports whether an error is a dead-terminal error.
-func IsDeadTerminalError(code string) bool { return deadTerminalErrorCodes[code] }
-
 // AnthropicSubscriptionAuthWarning is shown for Anthropic subscription keys.
 const AnthropicSubscriptionAuthWarning = "Anthropic subscription auth is active. Third-party harness usage draws from extra usage and is billed per token, not your Claude plan limits. Manage extra usage at https://claude.ai/settings/usage. Disable this warning in /settings."
 
