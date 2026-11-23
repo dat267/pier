@@ -403,7 +403,7 @@ func (r *ModelRuntime) updateModelSnapshot() {
 }
 
 // runAvailabilityRefresh runs one full availability pass.
-func (r *ModelRuntime) runAvailabilityRefresh(seq, errorSeq int, ctx context.Context) {
+func (r *ModelRuntime) runAvailabilityRefresh(ctx context.Context, seq, errorSeq int) {
 	allProviders := r.models.GetProviders()
 	ids := make([]string, 0, len(allProviders))
 	for _, provider := range allProviders {
@@ -421,11 +421,11 @@ func (r *ModelRuntime) runAvailabilityRefresh(seq, errorSeq int, ctx context.Con
 		waitGroup.Add(1)
 		go func(index int, id string) {
 			defer waitGroup.Done()
-			available, err := r.models.GetAvailable(id, ctx)
+			available, err := r.models.GetAvailable(ctx, id)
 			if err == nil {
 				availableByProvider[index] = available
 			}
-			check, err := r.models.CheckAuth(id, ctx)
+			check, err := r.models.CheckAuth(ctx, id)
 			if err == nil {
 				checks[index] = checkResult{id: id, check: check}
 			}
@@ -485,11 +485,11 @@ func (r *ModelRuntime) queueAvailabilityRefresh(ctx context.Context) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	r.runAvailabilityRefresh(seq, errorSeq, ctx)
+	r.runAvailabilityRefresh(ctx, seq, errorSeq)
 }
 
 // refreshProviderAvailability refreshes one provider's availability.
-func (r *ModelRuntime) refreshProviderAvailability(providerID string, ctx context.Context) error {
+func (r *ModelRuntime) refreshProviderAvailability(ctx context.Context, providerID string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -501,19 +501,19 @@ func (r *ModelRuntime) refreshProviderAvailability(providerID string, ctx contex
 	errorSeq := r.availabilityErrSeq
 	r.mu.Unlock()
 
-	available, availableErr := r.models.GetAvailable(providerID, ctx)
-	auth, authErr := r.models.CheckAuth(providerID, ctx)
-	credential, credErr := r.creds.Read(providerID, ctx)
+	available, availableErr := r.models.GetAvailable(ctx, providerID)
+	auth, authErr := r.models.CheckAuth(ctx, providerID)
+	credential, credErr := r.creds.Read(ctx, providerID)
 	if availableErr != nil {
-		r.recordAvailabilityError(providerID, providerSeq, errorSeq, availableErr, ctx)
+		r.recordAvailabilityError(ctx, providerID, providerSeq, errorSeq, availableErr)
 		return availableErr
 	}
 	if authErr != nil {
-		r.recordAvailabilityError(providerID, providerSeq, errorSeq, authErr, ctx)
+		r.recordAvailabilityError(ctx, providerID, providerSeq, errorSeq, authErr)
 		return authErr
 	}
 	if credErr != nil {
-		r.recordAvailabilityError(providerID, providerSeq, errorSeq, credErr, ctx)
+		r.recordAvailabilityError(ctx, providerID, providerSeq, errorSeq, credErr)
 		return credErr
 	}
 	if err := ctx.Err(); err != nil {
@@ -576,7 +576,7 @@ func (r *ModelRuntime) refreshProviderAvailability(providerID string, ctx contex
 	return nil
 }
 
-func (r *ModelRuntime) recordAvailabilityError(providerID string, providerSeq, errorSeq int, err error, ctx context.Context) {
+func (r *ModelRuntime) recordAvailabilityError(ctx context.Context, providerID string, providerSeq, errorSeq int, err error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.providerSeq[providerID] == providerSeq && errorSeq == r.availabilityErrSeq && ctx.Err() == nil {
@@ -603,19 +603,19 @@ func (r *ModelRuntime) GetModel(providerID, modelID string) *ai.Model {
 }
 
 // CheckAuth reports a provider's auth check.
-func (r *ModelRuntime) CheckAuth(providerID string, ctx context.Context) (*ai.AuthCheck, error) {
-	return r.models.CheckAuth(providerID, ctx)
+func (r *ModelRuntime) CheckAuth(ctx context.Context, providerID string) (*ai.AuthCheck, error) {
+	return r.models.CheckAuth(ctx, providerID)
 }
 
 // GetAvailable returns the available models for a provider, or the cached
 // snapshot for every provider.
-func (r *ModelRuntime) GetAvailable(providerID string, ctx context.Context) ([]*ai.Model, error) {
+func (r *ModelRuntime) GetAvailable(ctx context.Context, providerID string) ([]*ai.Model, error) {
 	if providerID != "" {
 		r.mu.Lock()
 		r.availabilityErrSeq++
 		errorSeq := r.availabilityErrSeq
 		r.mu.Unlock()
-		available, err := r.models.GetAvailable(providerID, ctx)
+		available, err := r.models.GetAvailable(ctx, providerID)
 		r.mu.Lock()
 		if err == nil {
 			if errorSeq == r.availabilityErrSeq {
@@ -774,7 +774,7 @@ func (r *ModelRuntime) SettleCredentialWrites(ctx context.Context) error {
 }
 
 // enqueueCredentialOperation serializes credential changes per provider.
-func (r *ModelRuntime) enqueueCredentialOperation(providerID string, ctx context.Context, task func() error) error {
+func (r *ModelRuntime) enqueueCredentialOperation(ctx context.Context, providerID string, task func() error) error {
 	r.mu.Lock()
 	previous := r.credentialOps[providerID]
 	started := make(chan struct{})
@@ -812,7 +812,7 @@ func (r *ModelRuntime) enqueueCredentialOperation(providerID string, ctx context
 	case <-ctx.Done():
 		// Stop waiting while the operation settles in the background.
 		go func() {
-			//nolint:errcheck // the receive only waits for the write to settle
+			// the receive only waits for the write to settle
 			<-result
 			r.clearCredentialOp(providerID, done)
 		}()
@@ -830,7 +830,7 @@ func (r *ModelRuntime) clearCredentialOp(providerID string, done chan struct{}) 
 
 // synchronizeCredentialState recomposes the provider and refreshes its
 // availability after a credential change.
-func (r *ModelRuntime) synchronizeCredentialState(providerID string, operation CredentialSynchronizationOperation, credential *ai.Credential, ctx context.Context) error {
+func (r *ModelRuntime) synchronizeCredentialState(ctx context.Context, providerID string, operation CredentialSynchronizationOperation, credential *ai.Credential) error {
 	fail := func(cause error) error {
 		return &CredentialSynchronizationError{ProviderID: providerID, Operation: operation, Credential: credential, Cause: cause}
 	}
@@ -854,32 +854,31 @@ func (r *ModelRuntime) synchronizeCredentialState(providerID string, operation C
 		return fail(err)
 	}
 	r.updateModelSnapshot()
-	if err := r.refreshProviderAvailability(providerID, ctx); err != nil {
+	if err := r.refreshProviderAvailability(ctx, providerID); err != nil {
 		return fail(err)
 	}
 	return nil
 }
 
 // SetRuntimeAPIKey stores a non-persistent runtime API key.
-func (r *ModelRuntime) SetRuntimeAPIKey(providerID, apiKey string, ctx context.Context) error {
+func (r *ModelRuntime) SetRuntimeAPIKey(ctx context.Context, providerID, apiKey string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return r.enqueueCredentialOperation(providerID, ctx, func() error {
+	return r.enqueueCredentialOperation(ctx, providerID, func() error {
 		r.creds.SetRuntimeAPIKey(providerID, apiKey)
-		return r.synchronizeCredentialState(providerID, CredentialOperationSetRuntimeAPIKey,
-			&ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: apiKey}}, ctx)
+		return r.synchronizeCredentialState(ctx, providerID, CredentialOperationSetRuntimeAPIKey, &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: apiKey}})
 	})
 }
 
 // RemoveRuntimeAPIKey drops a runtime API key.
-func (r *ModelRuntime) RemoveRuntimeAPIKey(providerID string, ctx context.Context) error {
+func (r *ModelRuntime) RemoveRuntimeAPIKey(ctx context.Context, providerID string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return r.enqueueCredentialOperation(providerID, ctx, func() error {
+	return r.enqueueCredentialOperation(ctx, providerID, func() error {
 		r.creds.RemoveRuntimeAPIKey(providerID)
-		return r.synchronizeCredentialState(providerID, CredentialOperationRemoveRuntimeAPIKey, nil, ctx)
+		return r.synchronizeCredentialState(ctx, providerID, CredentialOperationRemoveRuntimeAPIKey, nil)
 	})
 }
 
@@ -921,8 +920,7 @@ type PreparedRequest struct {
 
 // PrepareRequest resolves auth for a model request (port of prepareRequest).
 // ctx cancels auth resolution and remains on both returned request options.
-func (r *ModelRuntime) PrepareRequest(model *ai.Model, apiKey string, env map[string]string, ctx context.Context,
-	headers ai.ProviderHeaders, transformHeaders func(ai.ProviderHeaders) ai.ProviderHeaders) (*PreparedRequest, error) {
+func (r *ModelRuntime) PrepareRequest(ctx context.Context, model *ai.Model, apiKey string, env map[string]string, headers ai.ProviderHeaders, transformHeaders func(ai.ProviderHeaders) ai.ProviderHeaders) (*PreparedRequest, error) {
 	provider := r.models.GetProvider(model.Provider)
 	if provider == nil {
 		return nil, ai.NewModelsError(ai.ErrCodeProvider, fmt.Sprintf("Unknown provider: %s", model.Provider), nil)
@@ -971,7 +969,7 @@ func (r *ModelRuntime) PrepareRequest(model *ai.Model, apiKey string, env map[st
 func (r *ModelRuntime) Stream(model *ai.Model, context ai.Context, options *ai.ModelsStreamOptions) *ai.AssistantMessageEventStream {
 	transcript := ai.NormalizeContext(context)
 	// A cancel during auth resolution is an abort, not a provider failure (D256).
-	return ai.LazyStreamFuncForRequest(model, streamRequestCtx(options), func() (*ai.AssistantMessageEventStream, error) {
+	return ai.LazyStreamFuncForRequest(streamRequestCtx(options), model, func() (*ai.AssistantMessageEventStream, error) {
 		prepared, err := r.prepareStreamRequest(model, options)
 		if err != nil {
 			return nil, err
@@ -1004,7 +1002,7 @@ func (r *ModelRuntime) Complete(model *ai.Model, transcript ai.Context, options 
 // StreamSimple streams with reasoning/tool-selection options.
 func (r *ModelRuntime) StreamSimple(model *ai.Model, context ai.Context, options *ai.ModelsSimpleStreamOptions) *ai.AssistantMessageEventStream {
 	transcript := ai.NormalizeContext(context)
-	return ai.LazyStreamFuncForRequest(model, simpleRequestCtx(options), func() (*ai.AssistantMessageEventStream, error) {
+	return ai.LazyStreamFuncForRequest(simpleRequestCtx(options), model, func() (*ai.AssistantMessageEventStream, error) {
 		prepared, err := r.prepareSimpleRequest(model, options)
 		if err != nil {
 			return nil, err
@@ -1105,13 +1103,13 @@ func (r *ModelRuntime) Login(providerID string, authType ai.AuthType, interactio
 		ctx = interaction.Ctx
 	}
 	var credential *ai.Credential
-	err := r.enqueueCredentialOperation(providerID, ctx, func() error {
+	err := r.enqueueCredentialOperation(ctx, providerID, func() error {
 		var loginErr error
 		credential, loginErr = r.models.Login(providerID, authType, interaction)
 		if loginErr != nil {
 			return loginErr
 		}
-		return r.synchronizeCredentialState(providerID, CredentialOperationLogin, credential, ctx)
+		return r.synchronizeCredentialState(ctx, providerID, CredentialOperationLogin, credential)
 	})
 	if err != nil {
 		return nil, err
@@ -1120,15 +1118,15 @@ func (r *ModelRuntime) Login(providerID string, authType ai.AuthType, interactio
 }
 
 // Logout deletes a provider credential and synchronizes the local snapshot.
-func (r *ModelRuntime) Logout(providerID string, ctx context.Context) error {
+func (r *ModelRuntime) Logout(ctx context.Context, providerID string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return r.enqueueCredentialOperation(providerID, ctx, func() error {
-		if err := r.models.Logout(providerID, ctx); err != nil {
+	return r.enqueueCredentialOperation(ctx, providerID, func() error {
+		if err := r.models.Logout(ctx, providerID); err != nil {
 			return err
 		}
-		return r.synchronizeCredentialState(providerID, CredentialOperationLogout, nil, ctx)
+		return r.synchronizeCredentialState(ctx, providerID, CredentialOperationLogout, nil)
 	})
 }
 
@@ -1183,7 +1181,7 @@ func (r *ModelRuntime) Refresh(ctx context.Context, options *ModelsRefreshCallOp
 	r.updateModelSnapshot()
 	if len(options.Providers) > 0 {
 		for _, providerID := range uniqueStrings(options.Providers) {
-			if err := r.refreshProviderAvailability(providerID, ctx); err != nil && ctx.Err() == nil {
+			if err := r.refreshProviderAvailability(ctx, providerID); err != nil && ctx.Err() == nil {
 				errors[providerID] = err
 			}
 		}

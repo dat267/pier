@@ -681,7 +681,7 @@ func (c *GoalController) getGoalTool() agent.AgentTool {
 		Label:       "Get Goal",
 		Description: "Read the current session goal.",
 		Parameters:  json.RawMessage(`{"type":"object","properties":{},"additionalProperties":false}`),
-		Execute: func(_ string, _ json.RawMessage, _ context.Context, _ func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
+		Execute: func(_ context.Context, _ string, _ json.RawMessage, _ func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			view := c.Snapshot().Goal
 			payload, err := ai.MarshalIndentJSON(goal.GoalViewOf(view))
 			if err != nil {
@@ -707,7 +707,7 @@ func (c *GoalController) setGoalTool() agent.AgentTool {
 		Label:       "Set Goal",
 		Description: "Set, replace, or end the session goal. objective: start the goal, or replace a live one. status: end it - complete (objective achieved, with evidence), blocked (blocked_reason required; only after 3 consecutive goal rounds), or clear (no longer relevant or superseded). Provide exactly one non-null objective or status. Omit unused fields or set them to null.",
 		Parameters:  json.RawMessage(`{"type":"object","properties":{"objective":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Concrete completion objective. Starts or replaces the goal. Omit or set to null when ending a goal."},"status":{"anyOf":[{"type":"string","enum":["complete","blocked","clear"]},{"type":"null"}],"description":"Ends the current goal. Omit or set to null when setting an objective."},"blocked_reason":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Blocking condition (blocked only). Otherwise omit or set to null."}},"additionalProperties":false}`),
-		Execute: func(_ string, params json.RawMessage, _ context.Context, _ func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
+		Execute: func(_ context.Context, _ string, params json.RawMessage, _ func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			var input struct {
 				Objective     string `json:"objective"`
 				Status        string `json:"status"`

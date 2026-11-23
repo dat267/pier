@@ -862,7 +862,7 @@ func CreateMcpToolDefinition(options McpToolDefinitionOptions) agent.AgentTool {
 		Label:       label,
 		Description: description,
 		Parameters:  mcpToolParameters(options.Tool.InputSchema),
-		Execute: func(_ string, params json.RawMessage, ctx context.Context, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
+		Execute: func(ctx context.Context, _ string, params json.RawMessage, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			client, err := options.GetClient(ctx)
 			if err != nil {
 				return agent.AgentToolResult{}, err

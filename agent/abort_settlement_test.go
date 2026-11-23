@@ -40,7 +40,7 @@ func TestAgentCancellationWaitsForProviderTerminal(t *testing.T) {
 	started := make(chan struct{})
 	var starts, ends int
 	var final *ai.AssistantMessage
-	a.Subscribe(func(event AgentEvent, _ context.Context) error {
+	a.Subscribe(func(_ context.Context, event AgentEvent) error {
 		if message, ok := event.Message.(*ai.AssistantMessage); ok {
 			switch event.Type {
 			case MessageStart:
@@ -111,7 +111,7 @@ func TestAgentPartialEventsKeepTheirMessageFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	var started, updated *ai.AssistantMessage
-	a.Subscribe(func(event AgentEvent, _ context.Context) error {
+	a.Subscribe(func(_ context.Context, event AgentEvent) error {
 		message, ok := event.Message.(*ai.AssistantMessage)
 		if !ok {
 			return nil

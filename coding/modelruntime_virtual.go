@@ -165,7 +165,7 @@ func (r *ModelRuntime) ResolveVirtualModel(model *ai.Model, messages []ai.Messag
 		if previous := r.GetPhysicalModel(latest.Provider, latest.Model); previous != nil {
 			selection := ModelRouteSelection{Model: previous}
 			if latest.ThinkingLevel != nil {
-				level := string(*latest.ThinkingLevel)
+				level := *latest.ThinkingLevel
 				selection.ThinkingLevel = &level
 			}
 			request.Previous = &selection
@@ -175,7 +175,7 @@ func (r *ModelRuntime) ResolveVirtualModel(model *ai.Model, messages []ai.Messag
 		if failedModel := r.GetPhysicalModel(options.Failed.Provider, options.Failed.Model); failedModel != nil {
 			selection := ModelRouteSelection{Model: failedModel}
 			if options.Failed.ThinkingLevel != nil {
-				level := string(*options.Failed.ThinkingLevel)
+				level := *options.Failed.ThinkingLevel
 				selection.ThinkingLevel = &level
 			}
 			request.Failed = &ModelRouteFailure{Selection: selection, Message: options.Failed}
@@ -198,6 +198,6 @@ func (r *ModelRuntime) ResolveVirtualModel(model *ai.Model, messages []ai.Messag
 		return ModelRoute{}, fmt.Errorf("%s, which has no credentials.", routed)
 	}
 	route.Model = target
-	route.ThinkingLevel = string(ai.ClampThinkingLevel(target, ai.ThinkingLevel(route.ThinkingLevel)))
+	route.ThinkingLevel = (ai.ClampThinkingLevel(target, route.ThinkingLevel))
 	return route, nil
 }

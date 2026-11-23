@@ -16,7 +16,7 @@ func TestToolUpdateListenerFailureRejectsPreparedCall(t *testing.T) {
 	wantErr := errors.New("update listener failed")
 	tool := &AgentTool{
 		Name: "updates",
-		Execute: func(_ string, _ json.RawMessage, _ context.Context, onUpdate func(AgentToolResult)) (AgentToolResult, error) {
+		Execute: func(_ context.Context, _ string, _ json.RawMessage, onUpdate func(AgentToolResult)) (AgentToolResult, error) {
 			onUpdate(AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "partial"}}})
 			return AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "success"}}}, nil
 		},
@@ -31,7 +31,7 @@ func TestToolUpdateListenerFailureRejectsPreparedCall(t *testing.T) {
 				got, _ = recovered.(error)
 			}
 		}()
-		executePreparedToolCall(prepared, context.Background(), func(AgentEvent) error {
+		executePreparedToolCall(context.Background(), prepared, func(AgentEvent) error {
 			return wantErr
 		})
 	}()
@@ -44,7 +44,7 @@ func TestAgentToolUpdateListenerFailureBecomesRunFailure(t *testing.T) {
 	wantErr := errors.New("update listener failed")
 	tool := AgentTool{
 		Name: "updates", Description: "", Parameters: json.RawMessage(`{"type":"object"}`), Label: "updates",
-		Execute: func(_ string, _ json.RawMessage, _ context.Context, onUpdate func(AgentToolResult)) (AgentToolResult, error) {
+		Execute: func(_ context.Context, _ string, _ json.RawMessage, onUpdate func(AgentToolResult)) (AgentToolResult, error) {
 			onUpdate(AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "partial"}}})
 			return AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "success"}}}, nil
 		},
@@ -61,7 +61,7 @@ func TestAgentToolUpdateListenerFailureBecomesRunFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	agent.Subscribe(func(event AgentEvent, _ context.Context) error {
+	agent.Subscribe(func(_ context.Context, event AgentEvent) error {
 		if event.Type == ToolExecutionUpdate {
 			return wantErr
 		}

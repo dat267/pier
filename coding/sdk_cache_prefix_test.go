@@ -26,7 +26,7 @@ func TestSDKCacheWarmerRejectsReplacedMessagePrefix(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := runtime.SetRuntimeAPIKey("anthropic", "synthetic-key", context.Background()); err != nil {
+			if err := runtime.SetRuntimeAPIKey(context.Background(), "anthropic", "synthetic-key"); err != nil {
 				t.Fatal(err)
 			}
 			settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})

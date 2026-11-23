@@ -104,7 +104,7 @@ func (p *normalizedParser) object(depth int) bool {
 			}
 			wideKeys[key] = struct{}{}
 		} else if keyCount < len(keys) {
-			for i := 0; i < keyCount; i++ {
+			for i := range keyCount {
 				if bytes.Equal(keys[i], rawKey) {
 					return false
 				}

@@ -202,11 +202,11 @@ func (w *SelectorWiring) ShowThinkingSelector() {
 			w.SelectThinkingLevel(level, persist)
 			done()
 		}
-		current := string(w.Session.ThinkingLevel())
+		current := w.Session.ThinkingLevel()
 		if current == "" {
-			current = string(coding.DefaultThinkingLevel)
+			current = coding.DefaultThinkingLevel
 		}
-		defaultLevel := string(coding.DefaultThinkingLevel)
+		defaultLevel := coding.DefaultThinkingLevel
 		if w.Settings != nil {
 			if value := w.Settings.GetDefaultThinkingLevel(); value != nil && *value != "" {
 				defaultLevel = *value
@@ -235,15 +235,13 @@ func (w *SelectorWiring) HandleThinkingCommand(searchTerm string) {
 	}
 	normalized := ai.JSLower(ai.JSTrim(searchTerm))
 	for _, level := range availableLevels {
-		if ai.JSLower(string(level)) == normalized {
+		if ai.JSLower(level) == normalized {
 			w.SelectThinkingLevel(level, false)
 			return
 		}
 	}
 	names := make([]string, 0, len(availableLevels))
-	for _, level := range availableLevels {
-		names = append(names, string(level))
-	}
+	names = append(names, availableLevels...)
 	w.showError("Unknown thinking level \"" + searchTerm + "\". Available levels: " + strings.Join(names, ", ") + ".")
 }
 
@@ -254,10 +252,10 @@ func (w *SelectorWiring) SelectThinkingLevel(level ai.ThinkingLevel, persist boo
 		w.UpdateEditorBorderColor()
 	}
 	if persist {
-		w.showStatus("Default thinking level: " + string(level))
+		w.showStatus("Default thinking level: " + level)
 		return
 	}
-	w.showStatus("Thinking level: " + string(level))
+	w.showStatus("Thinking level: " + level)
 }
 
 // ShowUserMessageSelector opens the fork-from-message selector.

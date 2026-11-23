@@ -34,7 +34,7 @@ func segmentGraphemes(text string) []string {
 	// no need to look at runes at all.
 	if isASCII(text) {
 		segments := make([]string, len(text))
-		for index := 0; index < len(text); index++ {
+		for index := range len(text) {
 			segments[index] = text[index : index+1]
 		}
 		return segments
@@ -67,7 +67,7 @@ func scanGraphemes(text string, fn func(segment string) bool) {
 		return
 	}
 	if isASCII(text) {
-		for index := 0; index < len(text); index++ {
+		for index := range len(text) {
 			if !fn(text[index : index+1]) {
 				return
 			}
@@ -94,7 +94,7 @@ func scanGraphemes(text string, fn func(segment string) bool) {
 
 // isASCII reports whether every byte is plain ASCII.
 func isASCII(text string) bool {
-	for index := 0; index < len(text); index++ {
+	for index := range len(text) {
 		if text[index] >= utf8.RuneSelf {
 			return false
 		}
@@ -462,7 +462,7 @@ func couldBeEmoji(segment string) bool {
 
 // isPrintableASCII reports whether every byte is printable ASCII.
 func isPrintableASCII(text string) bool {
-	for index := 0; index < len(text); index++ {
+	for index := range len(text) {
 		if text[index] < 0x20 || text[index] > 0x7e {
 			return false
 		}

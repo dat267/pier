@@ -253,7 +253,7 @@ func pendingLatexOpen(b *Block, src string) bool {
 	if offset+1 >= end {
 		return false
 	}
-	opener := ""
+	var opener string
 	switch {
 	case src[offset] == '$' && src[offset+1] == '$':
 		opener = "$$"

@@ -78,7 +78,7 @@ func TestSessionChainsCallerNextTurnHook(t *testing.T) {
 		Cwd: t.TempDir(), Model: model, StreamFn: streamFn,
 		Tools: []agent.AgentTool{testTool("read")},
 		Goal:  false,
-		PrepareNextTurnWithContext: func(turn *agent.AgentTurnContext, ctx context.Context) (*agent.AgentLoopTurnUpdate, error) {
+		PrepareNextTurnWithContext: func(ctx context.Context, turn *agent.AgentTurnContext) (*agent.AgentLoopTurnUpdate, error) {
 			hookRuns++
 			note := &ai.UserMessage{Content: ai.StringOrBlocks{Text: "hook note"}, Timestamp: 1}
 			return &agent.AgentLoopTurnUpdate{Messages: []ai.Message{note}}, nil
@@ -151,7 +151,7 @@ func TestSessionNextTurnHookMergesLikeUpstream(t *testing.T) {
 	session, err := NewAgentSession(&SessionConfig{
 		Cwd: t.TempDir(), Model: sessionModel, StreamFn: streamFn,
 		Tools: []agent.AgentTool{testTool("read")},
-		PrepareNextTurnWithContext: func(turn *agent.AgentTurnContext, ctx context.Context) (*agent.AgentLoopTurnUpdate, error) {
+		PrepareNextTurnWithContext: func(ctx context.Context, turn *agent.AgentTurnContext) (*agent.AgentLoopTurnUpdate, error) {
 			return &agent.AgentLoopTurnUpdate{
 				Context: &agent.AgentContext{
 					Messages: []ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hook context"}, Timestamp: 2}},

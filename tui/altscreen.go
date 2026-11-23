@@ -544,7 +544,7 @@ func (s *AltScreen) afterTerminalStop(options TuiStopOptions) {
 
 	var builder strings.Builder
 	builder.WriteString(beginSynchronizedOutput + exitAltScreen + disableAutowrap)
-	for row := 0; row < len(s.lastDocument); row++ {
+	for row := range len(s.lastDocument) {
 		if row > 0 {
 			builder.WriteString("\r\n")
 		}
@@ -2551,15 +2551,15 @@ func (s *AltScreen) doRender() {
 			}
 			// A full repaint already erased the screen, and a low-bandwidth frame
 			// whose new line is at least as wide as the old one overwrites every old
-			// cell: neither needs the per-row clear.
-			clear := "\x1b[2K"
+			// cell: neither needs the per-row clearLine.
+			clearLine := "\x1b[2K"
 			if LowBandwidth() && (fullRedraw || VisibleWidth(line) >= VisibleWidth(previous)) {
-				clear = ""
+				clearLine = ""
 			}
 			builder.WriteString("\x1b[")
 			builder.WriteString(itoa(row + 1))
 			builder.WriteString(";1H")
-			builder.WriteString(clear)
+			builder.WriteString(clearLine)
 			builder.WriteString(line)
 		}
 	}

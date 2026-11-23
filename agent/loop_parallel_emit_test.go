@@ -23,7 +23,7 @@ func TestParallelToolEndsDoNotOverlapInTheSink(t *testing.T) {
 		return AgentTool{
 			Name: name, Label: name, Description: name,
 			Parameters: json.RawMessage(`{"type":"object","properties":{}}`),
-			Execute: func(string, json.RawMessage, context.Context, func(AgentToolResult)) (AgentToolResult, error) {
+			Execute: func(context.Context, string, json.RawMessage, func(AgentToolResult)) (AgentToolResult, error) {
 				time.Sleep(10 * time.Millisecond)
 				return AgentToolResult{Content: []ai.Content{ai.TextContent{Text: name}}}, nil
 			},
@@ -67,10 +67,12 @@ func TestParallelToolEndsDoNotOverlapInTheSink(t *testing.T) {
 		return nil
 	}
 	RunAgentLoop(
+		context.Background(),
 		[]ai.Message{createUserMessage("run")},
 		AgentContext{Tools: []AgentTool{tool("a"), tool("b"), tool("c")}},
 		&AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter},
-		context.Background(), emit, streamFn,
+		emit,
+		streamFn,
 	)
 	if overlapped.Load() {
 		t.Fatal("the sink ran for two tool events at once")

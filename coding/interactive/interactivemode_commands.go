@@ -738,7 +738,7 @@ func (w *CommandWiring) sessionInfoPanel(session CommandSession, sessionInfo *co
 		// selected model (a single entry repeats the total).
 		selectedModelKey := "undefined/undefined"
 		if model := session.Model(); model != nil {
-			selectedModelKey = string(model.Provider) + "/" + model.ID
+			selectedModelKey = model.Provider + "/" + model.ID
 		}
 		if len(usageBreakdown) != 1 || usageBreakdown[0].Key != selectedModelKey {
 			for _, entry := range usageBreakdown {
@@ -778,7 +778,7 @@ func (w *CommandWiring) sessionInfoPanel(session CommandSession, sessionInfo *co
 // HandleHotkeysCommand renders the keyboard-shortcut table.
 func (w *CommandWiring) HandleHotkeysCommand() {
 	theme := ActiveTheme()
-	editorKey := func(keybinding tui.Keybinding) string { return KeyDisplayText(keybinding) }
+	editorKey := KeyDisplayText
 	row := func(key string, action string) string { return "| `" + key + "` | " + action + " |\n" }
 
 	var hotkeys strings.Builder

@@ -145,7 +145,7 @@ func collapseWhitespaceRuns(value string) string {
 	var builder strings.Builder
 	builder.Grow(len(value))
 	inRun := false
-	for index := 0; index < len(value); index++ {
+	for index := range len(value) {
 		character := value[index]
 		if character == ' ' || character == '\t' {
 			if inRun {
@@ -342,7 +342,7 @@ func renderLayout(source string, nodes []*latexLayoutNode) latexLayout {
 						text = " " + text
 					}
 					if preserveTrailingSpace {
-						text = text + " "
+						text += " "
 					}
 				} else if preserveLeadingSpace || preserveTrailingSpace {
 					text = " "
@@ -577,7 +577,7 @@ func (p *latexParser) parseSequence(endCharacter string, hasEnd bool) string {
 			if node != nil && node.kind == "matrix" {
 				lastLine := len(node.lines) - 1
 				if lastLine >= 0 {
-					node.lines[lastLine] = node.lines[lastLine] + string(character)
+					node.lines[lastLine] += string(character)
 				}
 				p.position += size
 				continue
@@ -731,7 +731,7 @@ func (p *latexParser) parseCommand() string {
 		return " "
 	}
 
-	command := ""
+	var command string
 	if isASCIILetter(first) {
 		start := p.position
 		for p.position < len(p.source) {
@@ -1109,10 +1109,10 @@ func (p *latexParser) parseEnvironment() string {
 		var rows []string
 		for _, row := range p.splitEnvironmentRows(alignedBody) {
 			cells := strings.Split(row, "&")
-			source := ""
+			var source string
 			if alignedAt {
 				var joined []string
-				for index := 0; index < (len(cells)+1)/2; index++ {
+				for index := range (len(cells) + 1) / 2 {
 					start := index * 2
 					end := min(index*2+2, len(cells))
 					if start < len(cells) {
@@ -1241,7 +1241,7 @@ func (p *latexParser) renderMatrix(environment string, body string) string {
 		columnCount = max(columnCount, len(row))
 	}
 	columnWidths := make([]int, columnCount)
-	for column := 0; column < columnCount; column++ {
+	for column := range columnCount {
 		for _, row := range matrix {
 			cell := ""
 			if column < len(row) {
@@ -1254,7 +1254,7 @@ func (p *latexParser) renderMatrix(environment string, body string) string {
 	rows := make([]string, 0, len(matrix))
 	for _, row := range matrix {
 		cells := make([]string, 0, columnCount)
-		for column := 0; column < columnCount; column++ {
+		for column := range columnCount {
 			cell := ""
 			if column < len(row) {
 				cell = row[column]

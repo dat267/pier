@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -122,30 +123,30 @@ func parseHTTPURL(value string) (*url.URL, error) {
 	value = stripWHATWGURLWhitespace(value)
 	parsed, err := url.Parse(value)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		return nil, fmt.Errorf("not an HTTP URL")
+		return nil, errors.New("not an HTTP URL")
 	}
 	if parsed.Host == "" {
 		colon := strings.IndexByte(value, ':')
 		if colon < 0 {
-			return nil, fmt.Errorf("not an absolute HTTP URL")
+			return nil, errors.New("not an absolute HTTP URL")
 		}
 		remainder := strings.ReplaceAll(value[colon+1:], string('\\'), "/")
 		remainder = strings.TrimLeft(remainder, "/")
 		if remainder == "" {
-			return nil, fmt.Errorf("HTTP URL has no host")
+			return nil, errors.New("HTTP URL has no host")
 		}
 		parsed, err = url.Parse(parsed.Scheme + "://" + remainder)
 		if err != nil || parsed.Host == "" {
-			return nil, fmt.Errorf("HTTP URL has no host")
+			return nil, errors.New("HTTP URL has no host")
 		}
 	}
 	if parsed.Hostname() == "" {
-		return nil, fmt.Errorf("HTTP URL has no host")
+		return nil, errors.New("HTTP URL has no host")
 	}
 	if port := parsed.Port(); port != "" {
 		number, portErr := strconv.Atoi(port)
 		if portErr != nil || number < 0 || number > 65535 {
-			return nil, fmt.Errorf("HTTP URL has an invalid port")
+			return nil, errors.New("HTTP URL has an invalid port")
 		}
 	}
 	return parsed, nil
@@ -223,7 +224,7 @@ func contains(list []string, value string) bool { return slices.Contains(list, v
 func applyClientAuthentication(method string, information *OAuthClientInformation, headers map[string]string, params *OrderedForm) error {
 	if method == ClientAuthSecretBasic {
 		if information.ClientSecret == nil || *information.ClientSecret == "" {
-			return fmt.Errorf("client_secret_basic requires a client secret")
+			return errors.New("client_secret_basic requires a client secret")
 		}
 		auth := base64.StdEncoding.EncodeToString([]byte(information.ClientID + ":" + *information.ClientSecret))
 		headers["Authorization"] = "Basic " + auth
@@ -252,10 +253,10 @@ func pkce() (verifier, challenge string, err error) {
 func StartAuthorization(authorizationServerURL string, options StartAuthorizationOptions) (*AuthorizationDraft, error) {
 	metadata := options.Metadata
 	if metadata != nil && !contains(metadata.ResponseTypesSupported, "code") {
-		return nil, fmt.Errorf("Authorization server does not support authorization codes")
+		return nil, errors.New("Authorization server does not support authorization codes")
 	}
 	if metadata != nil && metadata.CodeChallengeMethodsSupported != nil && !contains(metadata.CodeChallengeMethodsSupported, "S256") {
-		return nil, fmt.Errorf("Authorization server does not support PKCE S256")
+		return nil, errors.New("Authorization server does not support PKCE S256")
 	}
 	endpoint := joinPathForServer(authorizationServerURL, "/authorize")
 	if metadata != nil {
@@ -411,7 +412,7 @@ func RegisterClient(ctx context.Context, authorizationServerURL string, options 
 	endpoint := joinPathForServer(authorizationServerURL, "/register")
 	if options.Metadata != nil {
 		if options.Metadata.RegistrationEndpoint == nil {
-			return nil, fmt.Errorf("Authorization server does not support dynamic client registration")
+			return nil, errors.New("Authorization server does not support dynamic client registration")
 		}
 		endpoint = *options.Metadata.RegistrationEndpoint
 	}
@@ -690,7 +691,7 @@ func runFlowWith(ctx context.Context, provider OAuthClientProvider, options Flow
 	if clientDocument != nil {
 		documentURL, err := parseHTTPURL(clientDocument.URL)
 		if err != nil || documentURL.Scheme != "https" || documentURL.Path == "" || documentURL.Path == "/" {
-			return "", fmt.Errorf("Invalid OAuth client metadata URL")
+			return "", errors.New("Invalid OAuth client metadata URL")
 		}
 	}
 	if client == nil && clientDocument != nil {
@@ -701,7 +702,7 @@ func runFlowWith(ctx context.Context, provider OAuthClientProvider, options Flow
 			return ResultRedirect, nil
 		}
 		if options.AuthorizationCode != "" {
-			return "", fmt.Errorf("OAuth client information is missing during code exchange")
+			return "", errors.New("OAuth client information is missing during code exchange")
 		}
 		registered, err := RegisterClient(ctx, discovered.AuthorizationServerURL, RegisterClientOptions{
 			Metadata: metadata, ClientMetadata: provider.ClientMetadata(), Scope: scope, Fetch: fetch,
@@ -782,10 +783,10 @@ func runFlowWith(ctx context.Context, provider OAuthClientProvider, options Flow
 		if ctx.Err() != nil {
 			return "", ctx.Err()
 		}
-		if _, ok := refreshErr.(*OAuthInsecureEndpointError); ok {
+		if _, ok := errors.AsType[*OAuthInsecureEndpointError](refreshErr); ok {
 			return "", refreshErr
 		}
-		if oauthErr, ok := refreshErr.(*OAuthError); ok && oauthErr.Code != "server_error" {
+		if oauthErr, ok := errors.AsType[*OAuthError](refreshErr); ok && oauthErr.Code != "server_error" {
 			return "", refreshErr
 		}
 	}
@@ -824,7 +825,7 @@ func AuthorizeMcp(ctx context.Context, provider OAuthClientProvider, options Flo
 	if err == nil {
 		return result, nil
 	}
-	if oauthErr, ok := err.(*OAuthError); ok {
+	if oauthErr, ok := errors.AsType[*OAuthError](err); ok {
 		if oauthErr.Code == "invalid_client" || oauthErr.Code == "unauthorized_client" {
 			// A refresh keeps a pending authorization's state and verifier: they
 			// are the user's sign-in. A client stored meanwhile (by a sign-in

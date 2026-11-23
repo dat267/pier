@@ -174,7 +174,7 @@ func (w *ModelWiring) ShowModelSelector(ctx context.Context, initialSearchInput 
 		runtime := w.Session.ModelRuntime()
 		scopedItems := make([]ScopedModelItem, 0, len(w.Session.ScopedModels()))
 		for _, scoped := range w.Session.ScopedModels() {
-			scopedItems = append(scopedItems, ScopedModelItem{Model: scoped.Model, ThinkingLevel: string(scoped.ThinkingLevel)})
+			scopedItems = append(scopedItems, ScopedModelItem{Model: scoped.Model, ThinkingLevel: scoped.ThinkingLevel})
 		}
 		selector := NewModelSelectorComponent(w.UI, w.UI.Post, w.Session.Model(), runtime, scopedItems,
 			func(model *ai.Model) { selectModel(model, false) },
@@ -447,13 +447,13 @@ func (w *SessionWiring) ShowSessionSelector() {
 	cwd, sessionDir := w.SessionInfo.GetCwd(), w.SessionInfo.GetSessionDir()
 	usesDefaultDir := w.SessionInfo.UsesDefaultSessionDir()
 	writeQueue := w.SessionInfo.GetWriteQueue()
-	currentLoader := func(onProgress SessionListProgress, ctx context.Context) ([]coding.SessionInfo, error) {
+	currentLoader := func(ctx context.Context, onProgress SessionListProgress) ([]coding.SessionInfo, error) {
 		if writeQueue != nil {
 			writeQueue.Flush()
 		}
 		return coding.ListSessionsWithProgress(ctx, cwd, sessionDir, progressSink(onProgress))
 	}
-	allLoader := func(onProgress SessionListProgress, ctx context.Context) ([]coding.SessionInfo, error) {
+	allLoader := func(ctx context.Context, onProgress SessionListProgress) ([]coding.SessionInfo, error) {
 		if writeQueue != nil {
 			writeQueue.Flush()
 		}
@@ -618,7 +618,7 @@ func newModelWiring(app *App) *ModelWiring {
 			// The legacy selector run's daxnuts hook; the pin dropped the egg, so
 			// this completes the legacy surface rather than following faac5858.
 			if model != nil {
-				app.commands.CheckDaxnutsEasterEgg(string(model.Provider), model.ID, app.ui)
+				app.commands.CheckDaxnutsEasterEgg(model.Provider, model.ID, app.ui)
 			}
 		},
 		RequestRender: func() { app.ui.RequestRender(false) },

@@ -234,7 +234,7 @@ func ParseArgs(args []string) *Args {
 		case arg == "--thinking":
 			if value, ok := next(); ok {
 				if IsValidThinkingLevel(value) {
-					level := ai.ThinkingLevel(value)
+					level := value
 					result.Thinking = &level
 				} else {
 					result.Diagnostics = append(result.Diagnostics, CLIDiagnostic{
@@ -423,9 +423,7 @@ func splitNonEmpty(value string) []string {
 
 func validThinkingLevelStrings() []string {
 	out := make([]string, 0, len(ThinkingLevelOptions))
-	for _, level := range ThinkingLevelOptions {
-		out = append(out, string(level))
-	}
+	out = append(out, ThinkingLevelOptions...)
 	return out
 }
 

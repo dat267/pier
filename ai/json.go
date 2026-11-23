@@ -162,7 +162,7 @@ func jsArrayIndexKey(key string) (uint64, bool) {
 	// every ordinary (non-index) JSON key, which dominated canonicalization
 	// allocations (M143).
 	var index uint64
-	for i := 0; i < len(key); i++ {
+	for i := range len(key) {
 		if key[i] < '0' || key[i] > '9' {
 			return 0, false
 		}

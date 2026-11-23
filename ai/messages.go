@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -300,7 +301,7 @@ func decodeSections(data []byte, m *SystemMessage) error {
 		return err
 	}
 	if delim, ok := tok.(json.Delim); !ok || delim != '{' {
-		return fmt.Errorf("ai: sections must be an object")
+		return errors.New("ai: sections must be an object")
 	}
 	for d.More() {
 		tok, err := d.Token()
@@ -309,7 +310,7 @@ func decodeSections(data []byte, m *SystemMessage) error {
 		}
 		name, ok := tok.(string)
 		if !ok {
-			return fmt.Errorf("ai: sections key must be a string")
+			return errors.New("ai: sections key must be a string")
 		}
 		var value *string
 		var raw json.RawMessage
@@ -672,4 +673,4 @@ type CustomMessage struct {
 	Extra     json.RawMessage `json:"-"`
 }
 
-func (m *CustomMessage) messageRole() Role { return Role(m.Role) }
+func (m *CustomMessage) messageRole() Role { return m.Role }

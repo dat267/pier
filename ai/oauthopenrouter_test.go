@@ -159,7 +159,7 @@ func TestOpenRouterCallbackServer(t *testing.T) {
 	withOpenRouterTokenURL(t, server.URL, func() {
 		seed := t.TempDir()
 		_ = seed
-		callback, err := StartOpenRouterCallbackServer("/oauth/callback/test", "verifier-1", context.Background())
+		callback, err := StartOpenRouterCallbackServer(context.Background(), "/oauth/callback/test", "verifier-1")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -208,7 +208,7 @@ func TestOpenRouterCallbackServer(t *testing.T) {
 
 func TestOpenRouterCallbackServerManualHandover(t *testing.T) {
 	// Cancelling the wait hands over to manual entry with no credential.
-	callback, err := StartOpenRouterCallbackServer("/oauth/callback/manual", "verifier", context.Background())
+	callback, err := StartOpenRouterCallbackServer(context.Background(), "/oauth/callback/manual", "verifier")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,7 +224,7 @@ func TestOpenRouterCallbackServerManualHandover(t *testing.T) {
 
 func TestOpenRouterCallbackServerErrors(t *testing.T) {
 	// A denied authorization settles with an error and serves the failure page.
-	callback, err := StartOpenRouterCallbackServer("/oauth/callback/denied", "verifier", context.Background())
+	callback, err := StartOpenRouterCallbackServer(context.Background(), "/oauth/callback/denied", "verifier")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -244,7 +244,7 @@ func TestOpenRouterCallbackServerErrors(t *testing.T) {
 	}
 
 	// A missing code serves a failure page but does not settle.
-	callback2, err := StartOpenRouterCallbackServer("/oauth/callback/nocode", "verifier", context.Background())
+	callback2, err := StartOpenRouterCallbackServer(context.Background(), "/oauth/callback/nocode", "verifier")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -459,7 +459,7 @@ func TestOpenRouterOAuthDefinition(t *testing.T) {
 		t.Fatalf("auth = %+v", auth)
 	}
 	credential := &OAuthCredential{Access: "sk-key"}
-	refreshed, err := auth.Refresh(credential, context.Background())
+	refreshed, err := auth.Refresh(context.Background(), credential)
 	if err != nil || refreshed != credential {
 		t.Fatalf("refresh = %+v err = %v", refreshed, err)
 	}
@@ -493,7 +493,7 @@ func TestOpenRouterCallbackSettlesWithoutWaitingForShutdown(t *testing.T) {
 	}))
 	defer server.Close()
 	withOpenRouterTokenURL(t, server.URL, func() {
-		callback, err := StartOpenRouterCallbackServer("/oauth/callback/fast", "verifier", context.Background())
+		callback, err := StartOpenRouterCallbackServer(context.Background(), "/oauth/callback/fast", "verifier")
 		if err != nil {
 			t.Fatal(err)
 		}

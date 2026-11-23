@@ -65,7 +65,7 @@ func TestSelectSessionSelects(t *testing.T) {
 		{Path: "/s/a.jsonl", FirstMessage: "alpha-first", Modified: time.Now()},
 		{Path: "/s/b.jsonl", FirstMessage: "beta-first", Modified: time.Now().Add(-time.Hour)},
 	}
-	loader := func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) {
+	loader := func(context.Context, SessionListProgress) ([]coding.SessionInfo, error) {
 		return sessions, nil
 	}
 
@@ -108,7 +108,7 @@ func TestSelectSessionCancel(t *testing.T) {
 	SetStyleColorsEnabled(true)
 	InitTheme("dark", false)
 
-	loader := func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) {
+	loader := func(context.Context, SessionListProgress) ([]coding.SessionInfo, error) {
 		return nil, nil
 	}
 
@@ -161,7 +161,7 @@ func TestSelectSessionLoadsConfiguredApplicationKeybindings(t *testing.T) {
 	tui.SetKeybindings(tui.NewKeybindingsManager(tui.TUIKeybindings, nil))
 	t.Cleanup(func() { tui.SetKeybindings(previousBindings) })
 
-	loader := func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) {
+	loader := func(context.Context, SessionListProgress) ([]coding.SessionInfo, error) {
 		return []coding.SessionInfo{{Path: "/s/a.jsonl", FirstMessage: "alpha-first", Modified: time.Now()}}, nil
 	}
 	terminal := &scriptedTerminal{width: 80, height: 24, started: make(chan struct{})}

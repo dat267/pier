@@ -33,7 +33,7 @@ func TestReadEmptyTextFile(t *testing.T) {
 
 func readToolText(t *testing.T, dir string, params string) (string, error) {
 	t.Helper()
-	result, err := CreateReadTool(dir, nil).Execute("id", json.RawMessage(params), context.Background(), nil)
+	result, err := CreateReadTool(dir, nil).Execute(context.Background(), "id", json.RawMessage(params), nil)
 	if err != nil {
 		return "", err
 	}
@@ -183,7 +183,7 @@ func TestReadToolMatchesUpstreamTextPath(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			result, execErr := tool.Execute("call", encoded, context.Background(), nil)
+			result, execErr := tool.Execute(context.Background(), "call", encoded, nil)
 			if !checkParityToolResult(t, result, execErr, fixture.Expected.Error, fixture.Expected.Text, fixture.Expected.Details) {
 				return
 			}
@@ -193,7 +193,7 @@ func TestReadToolMatchesUpstreamTextPath(t *testing.T) {
 
 func TestReadToolMissingFileError(t *testing.T) {
 	dir := t.TempDir()
-	_, err := CreateReadTool(dir, nil).Execute("call", []byte(`{"path":"nope.txt"}`), context.Background(), nil)
+	_, err := CreateReadTool(dir, nil).Execute(context.Background(), "call", []byte(`{"path":"nope.txt"}`), nil)
 	if err == nil {
 		t.Fatal("reading a missing file succeeded")
 	}

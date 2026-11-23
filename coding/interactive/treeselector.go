@@ -1577,7 +1577,7 @@ func (h *TreeHelp) Render(width int) []string {
 	currentLine := ""
 
 	for _, item := range items {
-		candidate := ""
+		var candidate string
 		if currentLine != "" {
 			candidate = currentLine + separator + item
 		} else if tui.VisibleWidth(indent+item) <= availableWidth {

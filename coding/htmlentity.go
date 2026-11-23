@@ -65,7 +65,7 @@ func jsParseInt(text string, base int) (int64, bool) {
 	const saturated = 0x110000
 	value := int64(0)
 	digits := 0
-	for index := 0; index < len(text); index++ {
+	for index := range len(text) {
 		digit := jsDigitValue(text[index])
 		if digit < 0 || digit >= base {
 			break

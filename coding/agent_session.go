@@ -360,7 +360,7 @@ type SessionConfig struct {
 	// carried). Its messages are emitted before the loadout update, its context
 	// replaces the turn context, and the session's state still supplies the
 	// model, thinking level and tools.
-	PrepareNextTurnWithContext func(turn *agent.AgentTurnContext, ctx context.Context) (*agent.AgentLoopTurnUpdate, error)
+	PrepareNextTurnWithContext func(ctx context.Context, turn *agent.AgentTurnContext) (*agent.AgentLoopTurnUpdate, error)
 	// Goal enables the builtin session-goal controller. The SDK sets it unless
 	// tools are disabled; upstream always has the extension host available.
 	Goal bool
@@ -387,7 +387,7 @@ func (s *AgentSession) HasRunFirstTurn() bool {
 // NewAgentSession builds the wired session.
 func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 	if config == nil {
-		return nil, fmt.Errorf("config required")
+		return nil, errors.New("config required")
 	}
 	settings := config.Settings
 	if settings.Compaction.ReserveTokens == 0 {
@@ -437,7 +437,7 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		MaxRetryDelayMS: config.MaxRetryDelayMS,
 		// Every tool result's images run through the inline limits before they
 		// enter history (pi v1.5.2 core/agent-session.ts _toolResultMessage).
-		AfterToolCall: func(call *agent.AfterToolCallContext, ctx context.Context) (*agent.AfterToolCallResult, error) {
+		AfterToolCall: func(ctx context.Context, call *agent.AfterToolCallContext) (*agent.AfterToolCallResult, error) {
 			if created == nil {
 				return nil, nil
 			}
@@ -445,11 +445,11 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		},
 		// A virtual model selection is routed per request (upstream
 		// prepareRequest); a physical one is left alone.
-		PrepareRequest: func(request *agent.PrepareRequestContext, ctx context.Context) (*agent.AgentRequestUpdate, error) {
+		PrepareRequest: func(ctx context.Context, request *agent.PrepareRequestContext) (*agent.AgentRequestUpdate, error) {
 			if created == nil {
 				return nil, nil
 			}
-			return created.prepareVirtualRequest(request, ctx)
+			return created.prepareVirtualRequest(ctx, request)
 		},
 		// Installed here only so the session's own refresh can chain it below;
 		// assigning it directly would drop that refresh.
@@ -548,7 +548,7 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 	}
 	// Always subscribed: session persistence, queue tracking, compaction,
 	// retry logic.
-	s.unsubscribeAgent = a.Subscribe(func(event agent.AgentEvent, ctx context.Context) error {
+	s.unsubscribeAgent = a.Subscribe(func(ctx context.Context, event agent.AgentEvent) error {
 		s.handleAgentEvent(&event)
 		return nil
 	})
@@ -568,13 +568,13 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 	// context, and the session's state keeps supplying model, thinking level and
 	// tools.
 	previousNextTurn := config.PrepareNextTurnWithContext
-	a.PrepareNextTurnWithContext = func(turn *agent.ShouldStopAfterTurnContext, ctx context.Context) (*agent.AgentLoopTurnUpdate, error) {
+	a.PrepareNextTurnWithContext = func(ctx context.Context, turn *agent.ShouldStopAfterTurnContext) (*agent.AgentLoopTurnUpdate, error) {
 		if err := s.maybeAutoCompact(ctx); err != nil {
 			return nil, err
 		}
 		var caller *agent.AgentLoopTurnUpdate
 		if previousNextTurn != nil {
-			update, err := previousNextTurn(turn, ctx)
+			update, err := previousNextTurn(ctx, turn)
 			if err != nil {
 				return nil, err
 			}
@@ -1011,9 +1011,9 @@ func (s *AgentSession) runManualCompaction(ctx context.Context, customInstructio
 		// Distinguish why compaction is impossible (upstream uses optional
 		// chaining: an empty branch reports Nothing-to-compact, not a panic).
 		if len(pathEntries) > 0 && pathEntries[len(pathEntries)-1].Type == "compaction" {
-			return nil, fmt.Errorf("Already compacted")
+			return nil, errors.New("Already compacted")
 		}
-		return nil, fmt.Errorf("Nothing to compact (session too small)")
+		return nil, errors.New("Nothing to compact (session too small)")
 	}
 
 	options := CompactionOptions{
@@ -1044,7 +1044,7 @@ func (s *AgentSession) runManualCompaction(ctx context.Context, customInstructio
 		return nil, err
 	}
 	if ctx.Err() != nil {
-		return nil, fmt.Errorf("Compaction cancelled")
+		return nil, errors.New("Compaction cancelled")
 	}
 
 	s.Sessions.AppendCompaction(result.Summary, result.FirstKeptEntryID, result.TokensBefore, result.Details, false, result.Usage)

@@ -15,7 +15,7 @@ func TestRunToolCallRecordsDurationOnlyForExecutedTools(t *testing.T) {
 	assistant := createAssistantMessage(ai.ContentList{call}, ai.StopToolUse)
 	tool := AgentTool{
 		Name: "run", Parameters: json.RawMessage(`{"type":"object"}`),
-		Execute: func(string, json.RawMessage, context.Context, func(AgentToolResult)) (AgentToolResult, error) {
+		Execute: func(context.Context, string, json.RawMessage, func(AgentToolResult)) (AgentToolResult, error) {
 			return AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "done"}}}, nil
 		},
 	}
@@ -35,13 +35,13 @@ func TestRunToolCallAfterHookFailureKeepsExecutionDuration(t *testing.T) {
 	assistant := createAssistantMessage(ai.ContentList{call}, ai.StopToolUse)
 	tool := AgentTool{
 		Name: "run", Parameters: json.RawMessage(`{"type":"object"}`),
-		Execute: func(string, json.RawMessage, context.Context, func(AgentToolResult)) (AgentToolResult, error) {
+		Execute: func(context.Context, string, json.RawMessage, func(AgentToolResult)) (AgentToolResult, error) {
 			return AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "done"}}}, nil
 		},
 	}
 	outcome := RunToolCall(call, RunToolCallOptions{
 		Tools: []AgentTool{tool}, AssistantMessage: assistant,
-		AfterToolCall: func(*AfterToolCallContext, context.Context) (*AfterToolCallResult, error) {
+		AfterToolCall: func(context.Context, *AfterToolCallContext) (*AfterToolCallResult, error) {
 			return nil, errors.New("after hook failed")
 		},
 	})

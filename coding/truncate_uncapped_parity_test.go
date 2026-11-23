@@ -49,7 +49,7 @@ func TestUncappedTruncationDetailsUseMaxSafeInteger(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		result, err := CreateLsTool(lsDir).Execute("c", json.RawMessage(`{"path":"."}`), context.Background(), nil)
+		result, err := CreateLsTool(lsDir).Execute(context.Background(), "c", json.RawMessage(`{"path":"."}`), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -77,7 +77,7 @@ func TestUncappedTruncationDetailsUseMaxSafeInteger(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		result, err := CreateFindTool(dir).Execute("c", json.RawMessage(`{"pattern":"*"}`), context.Background(), nil)
+		result, err := CreateFindTool(dir).Execute(context.Background(), "c", json.RawMessage(`{"pattern":"*"}`), nil)
 		if err != nil {
 			t.Fatal(err)
 		}

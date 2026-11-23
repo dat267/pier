@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -131,7 +132,7 @@ func (o *OutputAccumulator) Append(data []byte) error {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	if o.finished {
-		return fmt.Errorf("Cannot append to a finished output accumulator")
+		return errors.New("Cannot append to a finished output accumulator")
 	}
 	o.totalRawBytes += len(data)
 	o.appendDecodedText(o.decoder.decode(data, false))
@@ -357,7 +358,7 @@ func (o *OutputAccumulator) appendDecodedText(text string) {
 
 	newlines := 0
 	lastNewline := -1
-	for i := 0; i < len(text); i++ {
+	for i := range len(text) {
 		if text[i] == '\n' {
 			newlines++
 			lastNewline = i
@@ -494,9 +495,7 @@ var BashShellToolConfig = ShellToolConfig{
 	PromptSnippet:    BashToolSystemPromptContribution.Snippet,
 	PromptGuidelines: BashToolSystemPromptContribution.Guidelines,
 	TempFilePrefix:   "pi-bash",
-	ResolveShell: func(shellPath string) (ShellConfig, error) {
-		return GetShellConfig(shellPath)
-	},
+	ResolveShell:     GetShellConfig,
 }
 
 // BashToolOptions tune the shell tool.
@@ -542,7 +541,7 @@ const (
 // resolveTimeoutMs).
 func ResolveTimeoutSeconds(timeout float64) (time.Duration, error) {
 	if math.IsNaN(timeout) || math.IsInf(timeout, 0) || timeout <= 0 {
-		return 0, fmt.Errorf("Invalid timeout: must be a finite number of seconds")
+		return 0, errors.New("Invalid timeout: must be a finite number of seconds")
 	}
 	timeoutMS := timeout * 1000
 	if timeoutMS > maxTimeoutMS {
@@ -586,7 +585,7 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 		// Upstream createShellToolDefinition declares constrainedSampling for
 		// every shell variant, including PowerShell.
 		ConstrainedSampling: preferStrictJSONSchema,
-		Execute: func(toolCallID string, params json.RawMessage, ctx context.Context, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
+		Execute: func(ctx context.Context, toolCallID string, params json.RawMessage, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			var input struct {
 				Command string   `json:"command"`
 				Timeout *float64 `json:"timeout"`
@@ -882,7 +881,7 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 				return agent.AgentToolResult{}, fmt.Errorf("%s", appendStatus(outputText, message))
 			}
 			if waitErr != nil {
-				if ws, ok := waitErr.(*exec.ExitError); ok {
+				if ws, ok := errors.AsType[*exec.ExitError](waitErr); ok {
 					// A non-zero exit is an isError result, not a thrown error:
 					// formatOutput keeps the truncation details and defaults the empty
 					// text to "(no output)". Signal terminations use the 128+N shell

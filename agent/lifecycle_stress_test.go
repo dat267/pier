@@ -39,7 +39,7 @@ func TestAgentPromptAndAbortRacesSettle(t *testing.T) {
 		t.Fatal(err)
 	}
 	var starts, ends atomic.Int64
-	a.Subscribe(func(event AgentEvent, _ context.Context) error {
+	a.Subscribe(func(_ context.Context, event AgentEvent) error {
 		if _, ok := event.Message.(*ai.AssistantMessage); ok {
 			switch event.Type {
 			case MessageStart:

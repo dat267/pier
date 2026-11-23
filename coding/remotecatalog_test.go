@@ -193,7 +193,7 @@ func TestRemoteCatalogOverlayAndRefresh(t *testing.T) {
 				p.Update()
 			}
 			if p.Persist != nil {
-				_ = store.Write("anthropic", p.Persist, ctx)
+				_ = store.Write(ctx, "anthropic", p.Persist)
 			}
 			return true
 		},
@@ -221,7 +221,7 @@ func TestRemoteCatalogOverlayAndRefresh(t *testing.T) {
 		t.Fatalf("models = %+v", models)
 	}
 	// The persisted entry carries the etag and timestamps.
-	stored, _ := store.Read("anthropic", ctx)
+	stored, _ := store.Read(ctx, "anthropic")
 	if stored == nil || stored.Etag == nil || *stored.Etag != etag || stored.CheckedAt == nil {
 		t.Fatalf("stored = %+v", stored)
 	}
@@ -245,7 +245,7 @@ func TestRemoteCatalogOverlayAndRefresh(t *testing.T) {
 		AllowNetwork: true, Ctx: ctx, Stored: stored, Force: &force,
 		Publish: func(p ai.ModelsPublication) bool {
 			if p.Persist != nil {
-				_ = store.Write("anthropic", p.Persist, ctx)
+				_ = store.Write(ctx, "anthropic", p.Persist)
 			}
 			return true
 		},
@@ -255,7 +255,7 @@ func TestRemoteCatalogOverlayAndRefresh(t *testing.T) {
 	if len(requests) != 1 || requests[0].Header.Get("if-none-match") != etag {
 		t.Fatalf("requests = %d", len(requests))
 	}
-	revalidated, _ := store.Read("anthropic", ctx)
+	revalidated, _ := store.Read(ctx, "anthropic")
 	// Same-millisecond fetches can produce equal timestamps.
 	if revalidated.CheckedAt == nil || *revalidated.CheckedAt < *stored.CheckedAt {
 		t.Fatalf("checkedAt must move: %+v", revalidated)
@@ -279,7 +279,7 @@ func TestRemoteCatalog404AndError(t *testing.T) {
 		Models: []*ai.Model{{ID: "gone", Provider: "p"}}, CheckedAt: &lastModified,
 		LastModified: &lastModified, Etag: &etag,
 	}
-	_ = store.Write("p", stored, ctx)
+	_ = store.Write(ctx, "p", stored)
 
 	base := ai.CreateProvider(ai.CreateProviderOptions{
 		ID: "p", Name: "p", Single: funcStreams{},
@@ -290,14 +290,14 @@ func TestRemoteCatalog404AndError(t *testing.T) {
 		AllowNetwork: true, Ctx: ctx, Stored: stored,
 		Publish: func(p ai.ModelsPublication) bool {
 			if p.Persist != nil {
-				_ = store.Write("p", p.Persist, ctx)
+				_ = store.Write(ctx, "p", p.Persist)
 			}
 			return true
 		},
 	}); err != nil {
 		t.Fatal(err)
 	}
-	cleared, _ := store.Read("p", ctx)
+	cleared, _ := store.Read(ctx, "p")
 	// core/remote-catalog-provider.ts spreads stored, including its models array.
 	if len(cleared.Models) != 1 || cleared.Models[0].ID != "gone" || cleared.Etag != nil || *cleared.LastModified != 0 {
 		t.Fatalf("cleared = %+v", cleared)
@@ -308,13 +308,13 @@ func TestRemoteCatalog404AndError(t *testing.T) {
 		writer.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer failing.Close()
-	_ = store.Write("p", stored, ctx)
+	_ = store.Write(ctx, "p", stored)
 	wrapped = WithRemoteCatalog(base, failing.URL, 0, false, nil)
 	err := wrapped.RefreshModels(&ai.RefreshModelsContext{
 		AllowNetwork: true, Ctx: ctx, Stored: stored,
 		Publish: func(p ai.ModelsPublication) bool {
 			if p.Persist != nil {
-				_ = store.Write("p", p.Persist, ctx)
+				_ = store.Write(ctx, "p", p.Persist)
 			}
 			return true
 		},
@@ -322,7 +322,7 @@ func TestRemoteCatalog404AndError(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "Model catalog request failed for p: 500") {
 		t.Fatalf("err = %v", err)
 	}
-	kept, _ := store.Read("p", ctx)
+	kept, _ := store.Read(ctx, "p")
 	if kept.Etag == nil || *kept.Etag != etag || len(kept.Models) != 1 {
 		t.Fatalf("kept = %+v", kept)
 	}
@@ -389,7 +389,7 @@ func TestCreateModelRuntimeOfflineCreateLoadsTheStoreWithoutNetwork(t *testing.T
 		}},
 		LastModified: &lastModified,
 	}
-	if err := store.Write("anthropic", entry, ctx); err != nil {
+	if err := store.Write(ctx, "anthropic", entry); err != nil {
 		t.Fatal(err)
 	}
 	credentials := newMemoryCredentialStore()

@@ -179,11 +179,11 @@ func backpedalPrefix(s string) string {
 				i += nextSize
 			}
 		case r == '(':
-			close := strings.IndexByte(s[i+1:], ')')
-			if close < 0 {
+			closeAt := strings.IndexByte(s[i+1:], ')')
+			if closeAt < 0 {
 				return s[:i]
 			}
-			i += close + 2
+			i += closeAt + 2
 		case r == '&':
 			if isEntityTail(s[i+1:]) {
 				return s[:i]
@@ -240,7 +240,7 @@ func isEntityTail(rest string) bool {
 		return false
 	}
 	body := rest[:len(rest)-1]
-	for i := 0; i < len(body); i++ {
+	for i := range len(body) {
 		if !isAlnum(body[i]) {
 			return false
 		}
@@ -269,7 +269,7 @@ func canStartBareAutolink(c byte) bool {
 // containsBareAutolink reports whether src has a bare autolink, without the
 // cost of matching at every offset.
 func containsBareAutolink(src string) bool {
-	for i := 0; i < len(src); i++ {
+	for i := range len(src) {
 		if prefix := matchAutolinkPrefix(src, i); prefix > 0 {
 			if i+prefix < len(src) && isURLHostChar(src[i+prefix]) {
 				return true

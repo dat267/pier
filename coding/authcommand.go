@@ -338,7 +338,7 @@ func CheckProviderAuth(args *Args, runtime *ModelRuntime, refresh bool) (AuthChe
 	if runtime.GetProvider(provider) == nil {
 		return AuthCheckResult{Status: AuthCheckNotReady, Provider: provider, Reason: AuthReasonProviderNotFound}, nil
 	}
-	check, err := runtime.CheckAuth(provider, context.Background())
+	check, err := runtime.CheckAuth(context.Background(), provider)
 	if err != nil {
 		return AuthCheckResult{Status: AuthCheckInvalid, Provider: provider, Reason: AuthReasonInvalidState}, nil
 	}
@@ -360,7 +360,7 @@ func CheckProviderAuth(args *Args, runtime *ModelRuntime, refresh bool) (AuthChe
 // GetProviderCredential returns a provider's credential, preferring the stored
 // OAuth access token when not refreshing (upstream getProviderCredential).
 func GetProviderCredential(providerID string, runtime *ModelRuntime, credentials ai.CredentialStore, refresh bool) (string, error) {
-	credential, err := credentials.Read(providerID, context.Background())
+	credential, err := credentials.Read(context.Background(), providerID)
 	if err != nil {
 		return "", err
 	}

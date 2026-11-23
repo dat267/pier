@@ -355,7 +355,7 @@ func TestCheckCompactionResolvesPhysicalModelForVirtualSelection(t *testing.T) {
 	}
 	// The summary is routed through the virtual model too, so the runtime needs a
 	// registered router: an unregistered selection fails like the reference.
-	if err := runtime.SetRuntimeAPIKey("anthropic", "synthetic-key", ctxpkg.Background()); err != nil {
+	if err := runtime.SetRuntimeAPIKey(ctxpkg.Background(), "anthropic", "synthetic-key"); err != nil {
 		t.Fatalf("set key: %v", err)
 	}
 	if err := runtime.RegisterVirtualModel(VirtualModelDefinition{

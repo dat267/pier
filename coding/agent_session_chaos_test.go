@@ -177,7 +177,7 @@ func runSessionChaosGoal(t *testing.T, extra func(*AgentSession) []func(int), di
 		manager.SetWriteQueue(queue)
 	}
 	slowTool := testTool("read")
-	slowTool.Execute = func(_ string, _ json.RawMessage, ctx context.Context, _ func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
+	slowTool.Execute = func(ctx context.Context, _ string, _ json.RawMessage, _ func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 		select {
 		case <-ctx.Done():
 		case <-time.After(time.Duration(rand.IntN(300)) * time.Microsecond):

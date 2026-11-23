@@ -49,7 +49,7 @@ func TestGoalConcurrentObjectiveCallsRemoveOnlyTheirCards(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		result, err := tool.Execute("call", params, context.Background(), nil)
+		result, err := tool.Execute(context.Background(), "call", params, nil)
 		if err != nil || result.IsError {
 			t.Fatalf("set_goal: result=%+v err=%v", result, err)
 		}

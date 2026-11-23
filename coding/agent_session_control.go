@@ -1049,7 +1049,7 @@ func (s *AgentSession) recordThinkingLevel(branch []SessionEntry) {
 	if recorded == nil {
 		return
 	}
-	recordedLevel := ai.ThinkingLevel(recorded.ThinkingLevel)
+	recordedLevel := recorded.ThinkingLevel
 	effective := recordedLevel
 	if available := s.GetAvailableThinkingLevels(); !slices.Contains(available, recordedLevel) {
 		effective = s.clampThinkingLevel(recordedLevel)
@@ -1207,7 +1207,7 @@ type UserMessageFork struct {
 // selector that shows a handful of turns.
 func (s *AgentSession) GetUserMessagesForForking() []UserMessageFork {
 	var out []UserMessageFork
-	_ = s.Sessions.eachMessageEntryWithRole(string(ai.RoleUser), func(entry SessionEntry) error {
+	_ = s.Sessions.eachMessageEntryWithRole(ai.RoleUser, func(entry SessionEntry) error {
 		message, err := ai.UnmarshalMessage(entry.Message)
 		if err != nil {
 			return nil

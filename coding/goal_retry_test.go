@@ -46,12 +46,12 @@ func TestAgentSessionRetryableFailureRecoveryKeepsGoalActive(t *testing.T) {
 		calls++
 		call := calls
 		if call == 1 {
-			if _, err := session.control.Tools["set_goal"].Tool.Execute("id", json.RawMessage(`{"objective":"finish it"}`), context.Background(), func(agent.AgentToolResult) {}); err != nil {
+			if _, err := session.control.Tools["set_goal"].Tool.Execute(context.Background(), "id", json.RawMessage(`{"objective":"finish it"}`), func(agent.AgentToolResult) {}); err != nil {
 				t.Errorf("create goal: %v", err)
 			}
 		}
 		if call == 4 {
-			if _, err := session.control.Tools["set_goal"].Tool.Execute("id", json.RawMessage(`{"status":"complete"}`), context.Background(), func(agent.AgentToolResult) {}); err != nil {
+			if _, err := session.control.Tools["set_goal"].Tool.Execute(context.Background(), "id", json.RawMessage(`{"status":"complete"}`), func(agent.AgentToolResult) {}); err != nil {
 				t.Errorf("complete goal: %v", err)
 			}
 		}

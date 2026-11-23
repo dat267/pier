@@ -3,7 +3,7 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
 	"strings"
 )
@@ -61,7 +61,7 @@ type ResolvedOpenAICompletionsCompat struct {
 func DetectOpenAICompletionsCompat(model *Model) ResolvedOpenAICompletionsCompat {
 	provider := model.Provider
 	baseURL := model.BaseURL
-	contains := func(s, sub string) bool { return strings.Contains(s, sub) }
+	contains := strings.Contains
 	containsFold := func(s, sub string) bool { return strings.Contains(strings.ToLower(s), strings.ToLower(sub)) }
 
 	isZai := provider == "zai" || provider == "zai-coding-cn" || contains(baseURL, "api.z.ai") || contains(baseURL, "open.bigmodel.cn")
@@ -379,7 +379,7 @@ func decodeOrderedJSONFields(data []byte) (*orderedJSONFields, error) {
 		return nil, err
 	}
 	if delim, ok := tok.(json.Delim); !ok || delim != '{' {
-		return nil, fmt.Errorf("not an object")
+		return nil, errors.New("not an object")
 	}
 	fields := &orderedJSONFields{values: map[string]json.RawMessage{}}
 	for dec.More() {
@@ -389,7 +389,7 @@ func decodeOrderedJSONFields(data []byte) (*orderedJSONFields, error) {
 		}
 		key, ok := tok.(string)
 		if !ok {
-			return nil, fmt.Errorf("not an object")
+			return nil, errors.New("not an object")
 		}
 		var raw json.RawMessage
 		if err := dec.Decode(&raw); err != nil {
@@ -402,10 +402,10 @@ func decodeOrderedJSONFields(data []byte) (*orderedJSONFields, error) {
 		return nil, err
 	}
 	if delimiter, ok := closing.(json.Delim); !ok || delimiter != '}' {
-		return nil, fmt.Errorf("not an object")
+		return nil, errors.New("not an object")
 	}
 	if _, err := dec.Token(); err != io.EOF {
-		return nil, fmt.Errorf("unexpected data after the JSON object")
+		return nil, errors.New("unexpected data after the JSON object")
 	}
 	return fields, nil
 }

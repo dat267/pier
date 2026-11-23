@@ -130,8 +130,8 @@ func (w *SettingsWiring) BuildSettingsConfig() SettingsConfig {
 		AutoResizeImages:       settings.GetImageAutoResize(),
 		BlockImages:            settings.GetBlockImages(),
 		EnableSkillCommands:    settings.GetEnableSkillCommands(),
-		SteeringMode:           string(session.SteeringMode()),
-		FollowUpMode:           string(session.FollowUpMode()),
+		SteeringMode:           session.SteeringMode(),
+		FollowUpMode:           session.FollowUpMode(),
 		Transport:              settings.GetTransport(),
 		HTTPIdleTimeoutMs:      httpIdleTimeout,
 		CacheWarmingMode:       settings.GetCacheWarmingMode(),
@@ -265,7 +265,7 @@ func (w *SettingsWiring) BuildSettingsCallbacks(done func(), refresh func()) Set
 		OnModelThinkingLevelRemove: func(provider string, modelID string) {
 			settings.RemoveModelThinkingLevel(provider, modelID)
 			if current := session.Model(); current != nil && current.Provider == provider && current.ID == modelID {
-				level := string(coding.DefaultThinkingLevel)
+				level := coding.DefaultThinkingLevel
 				if value := settings.GetDefaultThinkingLevel(); value != nil && *value != "" {
 					level = *value
 				}

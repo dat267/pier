@@ -486,7 +486,7 @@ func isFinite(value float64) bool {
 }
 
 // Read returns the credential, resolving a configured API key value.
-func (s *ReadOnlyAuthStorage) Read(providerID string, ctx context.Context) (*ai.Credential, error) {
+func (s *ReadOnlyAuthStorage) Read(ctx context.Context, providerID string) (*ai.Credential, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -533,12 +533,12 @@ func (s *ReadOnlyAuthStorage) List(ctx context.Context) ([]ai.CredentialInfo, er
 }
 
 // Modify always fails: the storage is read-only.
-func (s *ReadOnlyAuthStorage) Modify(providerID string, fn func(*ai.Credential) (*ai.Credential, error), ctx context.Context) (*ai.Credential, error) {
+func (s *ReadOnlyAuthStorage) Modify(ctx context.Context, providerID string, fn func(*ai.Credential) (*ai.Credential, error)) (*ai.Credential, error) {
 	return nil, errors.New("Read-only credential storage cannot modify auth.json")
 }
 
 // Delete always fails: the storage is read-only.
-func (s *ReadOnlyAuthStorage) Delete(providerID string, ctx context.Context) error {
+func (s *ReadOnlyAuthStorage) Delete(ctx context.Context, providerID string) error {
 	return errors.New("Read-only credential storage cannot modify auth.json")
 }
 
@@ -898,7 +898,7 @@ func (s *AuthStorage) Reload() {
 }
 
 // Read returns the credential for a provider, resolving configured key values.
-func (s *AuthStorage) Read(providerID string, ctx context.Context) (*ai.Credential, error) {
+func (s *AuthStorage) Read(ctx context.Context, providerID string) (*ai.Credential, error) {
 	data, err := s.readLatestData(ctx)
 	if err != nil {
 		return nil, err
@@ -939,7 +939,7 @@ func (s *AuthStorage) List(ctx context.Context) ([]ai.CredentialInfo, error) {
 }
 
 // Modify runs a read-modify-write under the storage lock.
-func (s *AuthStorage) Modify(providerID string, fn func(*ai.Credential) (*ai.Credential, error), ctx context.Context) (*ai.Credential, error) {
+func (s *AuthStorage) Modify(ctx context.Context, providerID string, fn func(*ai.Credential) (*ai.Credential, error)) (*ai.Credential, error) {
 	s.mu.Lock()
 	latestData := s.readData
 	latestOrder := s.readOrder
@@ -994,7 +994,7 @@ func appendProviderOrder(order []string, providerID string) []string {
 }
 
 // Delete removes a provider's credential.
-func (s *AuthStorage) Delete(providerID string, ctx context.Context) error {
+func (s *AuthStorage) Delete(ctx context.Context, providerID string) error {
 	s.mu.Lock()
 	latestData := s.readData
 	latestOrder := s.readOrder

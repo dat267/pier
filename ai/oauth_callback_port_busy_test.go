@@ -40,7 +40,7 @@ func TestCodexCallbackServerWithItsPortTakenSettlesOnce(t *testing.T) {
 func TestRadiusCallbackServerWithItsPortTakenSettlesOnce(t *testing.T) {
 	useFreeOAuthCallbackPort(t)
 	holdPort(t, radiusCallbackHost, oauthCallbackPort(RadiusCallbackPort))
-	server := StartRadiusCallbackServer("state", nil, nil)
+	server := StartRadiusCallbackServer(nil, "state", nil)
 	if !server.unavailable {
 		t.Skip("the callback port could not be made unavailable")
 	}

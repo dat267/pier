@@ -95,7 +95,7 @@ func JSNumberToFixed(value float64, digits int) string {
 // ASCII text maps the same under both, so it skips the Caser (D518): model IDs,
 // paths and typed queries are lowered on every keystroke.
 func JSLower(s string) string {
-	for index := 0; index < len(s); index++ {
+	for index := range len(s) {
 		if s[index] >= utf8.RuneSelf {
 			return cases.Lower(language.Und).String(s)
 		}

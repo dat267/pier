@@ -27,7 +27,7 @@ func TestSessionRoutesAVirtualSelection(t *testing.T) {
 	}
 	ctx := context.Background()
 	physical := runtime.GetModels("anthropic")[0]
-	if err := runtime.SetRuntimeAPIKey(physical.Provider, "synthetic-key", ctx); err != nil {
+	if err := runtime.SetRuntimeAPIKey(ctx, physical.Provider, "synthetic-key"); err != nil {
 		t.Fatal(err)
 	}
 	var reasons []string
@@ -119,7 +119,7 @@ func TestVirtualRouteFailureDoesNotOutliveItsRequest(t *testing.T) {
 	}
 	ctx := context.Background()
 	physical := runtime.GetModels("anthropic")[0]
-	if err := runtime.SetRuntimeAPIKey(physical.Provider, "synthetic-key", ctx); err != nil {
+	if err := runtime.SetRuntimeAPIKey(ctx, physical.Provider, "synthetic-key"); err != nil {
 		t.Fatal(err)
 	}
 	var reasons []string
@@ -150,7 +150,7 @@ func TestVirtualRouteFailureDoesNotOutliveItsRequest(t *testing.T) {
 	virtualRequest := &agent.PrepareRequestContext{Model: virtual, Context: agent.AgentContext{Messages: messages}}
 	// The request right after a retry is the one that reports it.
 	session.setRouteFailure(&ai.AssistantMessage{Provider: physical.Provider, Model: physical.ID, StopReason: ai.StopError})
-	if update, err := session.prepareVirtualRequest(virtualRequest, ctx); err != nil || update == nil {
+	if update, err := session.prepareVirtualRequest(ctx, virtualRequest); err != nil || update == nil {
 		t.Fatalf("retry request = %+v, %v; want routing", update, err)
 	}
 	if len(reasons) != 1 || reasons[0] != "retry" {
@@ -158,10 +158,10 @@ func TestVirtualRouteFailureDoesNotOutliveItsRequest(t *testing.T) {
 	}
 	session.setRouteFailure(&ai.AssistantMessage{Provider: physical.Provider, Model: physical.ID, StopReason: ai.StopError})
 	physicalRequest := &agent.PrepareRequestContext{Model: physical, Context: agent.AgentContext{Messages: messages}}
-	if update, err := session.prepareVirtualRequest(physicalRequest, ctx); err != nil || update != nil {
+	if update, err := session.prepareVirtualRequest(ctx, physicalRequest); err != nil || update != nil {
 		t.Fatalf("physical request = %+v, %v; want no routing", update, err)
 	}
-	if update, err := session.prepareVirtualRequest(virtualRequest, ctx); err != nil || update == nil {
+	if update, err := session.prepareVirtualRequest(ctx, virtualRequest); err != nil || update == nil {
 		t.Fatalf("virtual request = %+v, %v; want routing", update, err)
 	}
 	if len(reasons) != 2 || reasons[1] != "user" {

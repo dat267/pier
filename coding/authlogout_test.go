@@ -17,9 +17,9 @@ import (
 func storeAuthCredential(t *testing.T, agentDir, providerID string, credential *ai.Credential) {
 	t.Helper()
 	storage := NewAuthStorage(filepath.Join(agentDir, "auth.json"))
-	if _, err := storage.Modify(providerID, func(*ai.Credential) (*ai.Credential, error) {
+	if _, err := storage.Modify(context.Background(), providerID, func(*ai.Credential) (*ai.Credential, error) {
 		return credential, nil
-	}, context.Background()); err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 }

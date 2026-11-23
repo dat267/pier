@@ -22,7 +22,7 @@ func TestAssistantRetryAllowsPartialCallbacks(t *testing.T) {
 					}
 					return &AssistantMessage{StopReason: reason}, nil
 				}
-				response, err := RetryAssistantCall(produce, &RetryPolicy{Enabled: true, MaxRetries: 1, BaseDelayMS: 1}, context.Background(), &RetryCallbacks{OnRetryScheduled: func(int, int, int64, string) error { return nil }})
+				response, err := RetryAssistantCall(context.Background(), produce, &RetryPolicy{Enabled: true, MaxRetries: 1, BaseDelayMS: 1}, &RetryCallbacks{OnRetryScheduled: func(int, int, int64, string) error { return nil }})
 				if err != nil || response.StopReason != reason || calls != 2 {
 					t.Fatalf("response=%+v calls=%d err=%v", response, calls, err)
 				}
@@ -54,13 +54,13 @@ func TestAssistantRetryPropagatesCallbackErrors(t *testing.T) {
 				}
 				calls := 0
 				message := "server overloaded"
-				_, err := RetryAssistantCall(func() (*AssistantMessage, error) {
+				_, err := RetryAssistantCall(ctx, func() (*AssistantMessage, error) {
 					calls++
 					if calls == 1 {
 						return &AssistantMessage{StopReason: StopError, ErrorMessage: &message}, nil
 					}
 					return &AssistantMessage{StopReason: StopStop}, nil
-				}, &RetryPolicy{Enabled: true, MaxRetries: 1, BaseDelayMS: 1}, ctx, callbacks)
+				}, &RetryPolicy{Enabled: true, MaxRetries: 1, BaseDelayMS: 1}, callbacks)
 				if !errors.Is(err, want) {
 					t.Fatalf("error=%v want=%v", err, want)
 				}

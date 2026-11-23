@@ -316,7 +316,7 @@ func TestAnthropicOAuthDefinition(t *testing.T) {
 	if _, err := auth.ToAuth(nil); err == nil {
 		t.Fatal("nil credentials must be rejected")
 	}
-	if _, err := auth.Refresh(nil, context.Background()); err == nil {
+	if _, err := auth.Refresh(context.Background(), nil); err == nil {
 		t.Fatal("nil credentials must be rejected on refresh")
 	}
 }

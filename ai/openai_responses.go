@@ -545,7 +545,7 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 			anchorsToolChanges := systemIndex >= transcriptTools.FoldedSystemMessages
 			systemIndex++
 			if anchorsToolChanges {
-				if err := appendSystemToolAdditions((*aiSystemMessageAlias)(m), "system:"+fmt.Sprint(msgIndex)); err != nil {
+				if err := appendSystemToolAdditions(m, "system:"+strconv.Itoa(msgIndex)); err != nil {
 					return nil, err
 				}
 			}
@@ -769,7 +769,7 @@ func convertResponsesAssistantMessage(model *Model, m *AssistantMessage, msgInde
 			} else {
 				item = map[string]any{
 					"type": "function_call", "call_id": callID, "name": b.Name,
-					"arguments": string(mustMarshalJSON(json.RawMessage(b.Arguments))),
+					"arguments": string(mustMarshalJSON(b.Arguments)),
 				}
 				keys = []string{"type", "id", "call_id", "name", "arguments"}
 			}

@@ -235,7 +235,7 @@ func NewScopedModelsSelectorComponent(config ModelsConfig, callbacks ModelsCallb
 		enabledIDs: EnabledIds{All: true},
 	}
 	for _, model := range config.AllModels {
-		fullID := string(model.Provider) + "/" + model.ID
+		fullID := model.Provider + "/" + model.ID
 		component.modelsByID[fullID] = model
 		component.allIDs = append(component.allIDs, fullID)
 	}
@@ -290,7 +290,7 @@ func (c *ScopedModelsSelectorComponent) updateModels(models []*ai.Model, enabled
 	c.modelsByID = map[string]*ai.Model{}
 	c.allIDs = nil
 	for _, model := range models {
-		fullID := string(model.Provider) + "/" + model.ID
+		fullID := model.Provider + "/" + model.ID
 		c.modelsByID[fullID] = model
 		c.allIDs = append(c.allIDs, fullID)
 	}
@@ -371,7 +371,7 @@ func (c *ScopedModelsSelectorComponent) refreshList() {
 		c.filteredItems = tui.FuzzyFilter(items, query, func(item scopedModelItem) string {
 			if item.model != nil {
 				return GetModelSearchText(ModelSearchItem{
-					ID: item.model.ID, Provider: string(item.model.Provider),
+					ID: item.model.ID, Provider: item.model.Provider,
 					Name: item.model.Name, HasName: item.model.Name != "",
 				})
 			}
@@ -560,10 +560,10 @@ func (c *ScopedModelsSelectorComponent) handleInput(data string) {
 		return
 	case kb.Matches(data, "app.models.toggleProvider"):
 		if c.selectedIndex >= 0 && c.selectedIndex < len(c.filteredItems) && c.filteredItems[c.selectedIndex].model != nil {
-			provider := string(c.filteredItems[c.selectedIndex].model.Provider)
+			provider := c.filteredItems[c.selectedIndex].model.Provider
 			var providerIDs []string
 			for _, id := range c.allIDs {
-				if model := c.modelsByID[id]; model != nil && string(model.Provider) == provider {
+				if model := c.modelsByID[id]; model != nil && model.Provider == provider {
 					providerIDs = append(providerIDs, id)
 				}
 			}

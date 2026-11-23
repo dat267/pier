@@ -37,7 +37,7 @@ func TailSession(source *SessionManager, model *ai.Model, thinking ai.ThinkingLe
 	window := dropOrphanGoalEntries(tailWindow(branch))
 	hasConversation := false
 	for i := range window {
-		if window[i].Type == "message" && projectedRole(&window[i], nil) != string(ai.RoleSystem) {
+		if window[i].Type == "message" && projectedRole(&window[i], nil) != ai.RoleSystem {
 			hasConversation = true
 			break
 		}
@@ -65,7 +65,7 @@ func TailSession(source *SessionManager, model *ai.Model, thinking ai.ThinkingLe
 	}
 	if thinking != "" && !hasThinkingChange {
 		entries = append(entries, newSessionEntry("thinking_level_change"))
-		entries[len(entries)-1].ThinkingLevel = string(thinking)
+		entries[len(entries)-1].ThinkingLevel = thinking
 	}
 	entries = append(entries, window...)
 	// A loaded entry marshals its retained JSON line, so the chain must change
@@ -137,7 +137,7 @@ func tailWindow(branch []SessionEntry) []SessionEntry {
 
 	compaction := branch[compactionIndex]
 	start := compactionIndex
-	for i := 0; i < compactionIndex; i++ {
+	for i := range compactionIndex {
 		if branch[i].ID == compaction.FirstKeptEntryID {
 			start = i
 			break
@@ -146,7 +146,7 @@ func tailWindow(branch []SessionEntry) []SessionEntry {
 	window := make([]SessionEntry, 0, compactionIndex-start+1+len(branch)-compactionIndex)
 	for i := start; i < compactionIndex; i++ {
 		entry := &branch[i]
-		if entry.Type == "message" && projectedRole(entry, nil) == string(ai.RoleSystem) {
+		if entry.Type == "message" && projectedRole(entry, nil) == ai.RoleSystem {
 			continue
 		}
 		window = append(window, *entry)

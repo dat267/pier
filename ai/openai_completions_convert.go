@@ -252,7 +252,7 @@ func ConvertOpenAICompletionsMessages(
 						Type: "function",
 						Function: &OpenAIFunction{
 							Name:      tc.Name,
-							Arguments: string(mustMarshalJSON(json.RawMessage(tc.Arguments))),
+							Arguments: string(mustMarshalJSON(tc.Arguments)),
 						},
 					})
 				}
@@ -628,8 +628,7 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 	// Thinking format dispatch.
 	if compat.ThinkingFormat == "zai" && model.Reasoning {
 		if options.ReasoningEffort != "" {
-			clear := false
-			params.Thinking = &OpenAIThinkingParam{Type: "enabled", ClearThinking: &clear}
+			params.Thinking = &OpenAIThinkingParam{Type: "enabled", ClearThinking: new(false)}
 		} else {
 			params.Thinking = &OpenAIThinkingParam{Type: "disabled"}
 		}
@@ -1018,7 +1017,7 @@ func resolveClampedThinkingBudget(model *Model, options *OpenAICompletionsOption
 	if options.ReasoningEffort == "" || !model.Reasoning {
 		return nil
 	}
-	ceiling := int64(0)
+	var ceiling int64
 	if params.MaxTokens != nil {
 		ceiling = *params.MaxTokens
 	} else if params.MaxCompletionTokens != nil {

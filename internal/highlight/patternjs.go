@@ -108,9 +108,9 @@ func normalizeJSBracesAndClasses(src string) string {
 		switch src[i] {
 		case '\\':
 			if i+2 < len(src) && src[i+1] == 'x' && src[i+2] == '{' {
-				if close := strings.IndexByte(src[i+3:], '}'); close >= 0 {
-					end := i + 3 + close + 1
-					if _, ok := hexDigits(src[i+3:i+3+close], close); ok {
+				if closeAt := strings.IndexByte(src[i+3:], '}'); closeAt >= 0 {
+					end := i + 3 + closeAt + 1
+					if _, ok := hexDigits(src[i+3:i+3+closeAt], closeAt); ok {
 						b.WriteString(src[i:end])
 						i = end
 						canRepeat = true
@@ -254,8 +254,8 @@ func quantifierEnd(src string, start int) (int, bool) {
 	if i == minStart {
 		return 0, false
 	}
-	min, err := strconv.Atoi(src[minStart:i])
-	if err != nil || min > 1000 {
+	minimum, err := strconv.Atoi(src[minStart:i])
+	if err != nil || minimum > 1000 {
 		return 0, false
 	}
 	if i < len(src) && src[i] == ',' {
@@ -266,7 +266,7 @@ func quantifierEnd(src string, start int) (int, bool) {
 		}
 		if i > maxStart {
 			limit, err := strconv.Atoi(src[maxStart:i])
-			if err != nil || limit > 1000 || limit < min {
+			if err != nil || limit > 1000 || limit < minimum {
 				return 0, false
 			}
 		}

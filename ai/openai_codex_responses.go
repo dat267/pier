@@ -61,15 +61,15 @@ type OpenAICodexResponsesOptions struct {
 func ExtractCodexAccountID(token string) (string, error) {
 	payload := decodeJWT(token)
 	if payload == nil {
-		return "", fmt.Errorf("Failed to extract accountId from token")
+		return "", errors.New("Failed to extract accountId from token")
 	}
 	auth, ok := payload[OpenAICodexJWTPath].(map[string]any)
 	if !ok {
-		return "", fmt.Errorf("Failed to extract accountId from token")
+		return "", errors.New("Failed to extract accountId from token")
 	}
 	accountID, _ := auth["chatgpt_account_id"].(string)
 	if accountID == "" {
-		return "", fmt.Errorf("Failed to extract accountId from token")
+		return "", errors.New("Failed to extract accountId from token")
 	}
 	return accountID, nil
 }
@@ -343,7 +343,7 @@ func codexConfigurationUpdateEffort(model *Model, options *OpenAICodexResponsesO
 		}
 		return *mapped
 	}
-	return string(options.ReasoningEffort)
+	return options.ReasoningEffort
 }
 
 // BuildCodexRequestBody renders the Codex request body (upstream
@@ -440,7 +440,7 @@ func BuildCodexRequestBody(model *Model, context TranscriptContext, options *Ope
 			body["reasoning"] = map[string]any{"effort": configurationUpdateRequestEffort, "summary": summary}
 			return body, nil
 		}
-		effort := string(options.ReasoningEffort)
+		effort := options.ReasoningEffort
 		if options.ReasoningEffort == ThinkOff {
 			if mapped, ok := model.ThinkingLevelMap[ThinkOff]; ok {
 				if mapped == nil {
@@ -492,7 +492,7 @@ func marshalCodexRequestBody(body map[string]any) ([]byte, error) {
 		}
 	}
 	if len(fields.keys) != len(body) {
-		return nil, fmt.Errorf("codex request body has an unordered member")
+		return nil, errors.New("codex request body has an unordered member")
 	}
 	return fields.marshal()
 }
@@ -666,7 +666,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 		}()
 
 		if options.Transport == TransportWebsocket || options.Transport == TransportWebsocketCached {
-			fail(fmt.Errorf("The openai-codex WebSocket transport is not supported by the Go port; use transport \"sse\""))
+			fail(errors.New("The openai-codex WebSocket transport is not supported by the Go port; use transport \"sse\""))
 			return
 		}
 		if options.APIKey == "" {
@@ -713,7 +713,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 		var lastErr error
 		for attempt := 0; attempt <= maxRetries; attempt++ {
 			if ctxErr(ctx) != nil {
-				fail(fmt.Errorf("Request was aborted"))
+				fail(errors.New("Request was aborted"))
 				return
 			}
 			request, err := http.NewRequestWithContext(ctx, http.MethodPost, ResolveCodexURL(model.BaseURL), bytes.NewReader(bodyJSON))
@@ -733,7 +733,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 					return
 				}
 				if ctxErr(ctx) != nil {
-					fail(fmt.Errorf("Request was aborted"))
+					fail(errors.New("Request was aborted"))
 					return
 				}
 				lastErr = err
@@ -789,7 +789,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 				fail(lastErr)
 				return
 			}
-			fail(fmt.Errorf("Failed after retries"))
+			fail(errors.New("Failed after retries"))
 			return
 		}
 		defer func() { _ = response.Body.Close() }()
@@ -803,22 +803,20 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 		processingStreamOptions := options.StreamOptions
 		processingStreamOptions.OnProviderStreamEvent = nil
 		processingOptions := &OpenAIResponsesOptions{
-			StreamOptions: processingStreamOptions,
-			ServiceTier:   options.ServiceTier,
-			ResolveServiceTier: func(responseTier *string, requestTier string) string {
-				return ResolveCodexServiceTier(responseTier, requestTier)
-			},
+			StreamOptions:      processingStreamOptions,
+			ServiceTier:        options.ServiceTier,
+			ResolveServiceTier: ResolveCodexServiceTier,
 		}
 		if err := ProcessResponsesStream(ctx, bytes.NewReader(normalized), output, stream, model, processingOptions, grammarToolInputProperties); err != nil {
 			fail(err)
 			return
 		}
 		if ctxErr(ctx) != nil {
-			fail(fmt.Errorf("Request was aborted"))
+			fail(errors.New("Request was aborted"))
 			return
 		}
 		if output.StopReason == StopPending {
-			fail(fmt.Errorf("Codex stream ended without a stop reason"))
+			fail(errors.New("Codex stream ended without a stop reason"))
 			return
 		}
 		if output.StopReason == StopError || output.StopReason == StopAborted {
@@ -845,7 +843,7 @@ func StreamOpenAICodexResponsesSimple(model *Model, context TranscriptContext, o
 	go func() {
 		codexOptions := &OpenAICodexResponsesOptions{StreamOptions: options.StreamOptions}
 		if options.ToolChoice != nil {
-			codexOptions.ToolChoice = string(*options.ToolChoice)
+			codexOptions.ToolChoice = *options.ToolChoice
 		}
 		if options.Reasoning != "" {
 			clamped := ClampThinkingLevel(model, options.Reasoning)

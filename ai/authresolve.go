@@ -81,13 +81,13 @@ func ResolveProviderAuth(providerID string, auth ProviderAuth, credentials Crede
 	}
 
 	if overrides != nil && (overrides.APIKeySet || overrides.APIKey != "") && auth.APIKey != nil {
-		return resolveAPIKey(requestAuthContext, auth.APIKey, providerID, &ApiKeyCredential{
+		return resolveAPIKey(ctx, requestAuthContext, auth.APIKey, providerID, &ApiKeyCredential{
 			Key: overrides.APIKey,
 			Env: overrides.Env,
-		}, ctx)
+		})
 	}
 
-	stored, err := readCredential(credentials, providerID, ctx)
+	stored, err := readCredential(ctx, credentials, providerID)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func ResolveProviderAuth(providerID string, auth ProviderAuth, credentials Crede
 		if stored.Type == CredentialOAuth && auth.OAuth != nil {
 			minValidityMS := overrides.minValidity()
 			minValidityMSSet := overrides != nil && (overrides.MinOAuthValidityMSSet || overrides.MinOAuthValidityMS != 0)
-			return resolveStoredOAuth(credentials, providerID, auth.OAuth, stored.OAuth, ctx, minValidityMS, minValidityMSSet)
+			return resolveStoredOAuth(ctx, credentials, providerID, auth.OAuth, stored.OAuth, minValidityMS, minValidityMSSet)
 		}
 		if stored.Type == CredentialAPIKey && auth.APIKey != nil {
 			credential := stored.APIKey
@@ -105,14 +105,14 @@ func ResolveProviderAuth(providerID string, auth ProviderAuth, credentials Crede
 				maps.Copy(merged, overrides.Env)
 				credential = &ApiKeyCredential{Key: credential.Key, Env: merged}
 			}
-			return resolveAPIKey(requestAuthContext, auth.APIKey, providerID, credential, ctx)
+			return resolveAPIKey(ctx, requestAuthContext, auth.APIKey, providerID, credential)
 		}
 		return nil, nil
 	}
 
 	// Ambient (env vars, AWS profiles, ADC files).
 	if auth.APIKey != nil {
-		return resolveAPIKey(requestAuthContext, auth.APIKey, providerID, nil, ctx)
+		return resolveAPIKey(ctx, requestAuthContext, auth.APIKey, providerID, nil)
 	}
 	return nil, nil
 }
@@ -153,7 +153,7 @@ func (o *overlayEnvContext) FileExists(path string) bool { return o.base.FileExi
 // Otherwise a cancelled caller could discard the only valid refresh token
 // (upstream bde882c74). Returns nil when the provider no longer has an OAuth
 // credential.
-func refreshStoredOAuthCredential(credentials CredentialStore, providerID string, oauth *OAuthAuth, needsRefresh func(*OAuthCredential) bool, ctx context.Context) (*OAuthCredential, error) {
+func refreshStoredOAuthCredential(ctx context.Context, credentials CredentialStore, providerID string, oauth *OAuthAuth, needsRefresh func(*OAuthCredential) bool) (*OAuthCredential, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -166,7 +166,7 @@ func refreshStoredOAuthCredential(credentials CredentialStore, providerID string
 		cancelLockWait()
 	}()
 
-	post, err := credentials.Modify(providerID, func(current *Credential) (*Credential, error) {
+	post, err := credentials.Modify(lockWaitCtx, providerID, func(current *Credential) (*Credential, error) {
 		// From here the refresh must complete: the provider may already have
 		// rotated the refresh token.
 		stopLockWait()
@@ -181,12 +181,12 @@ func refreshStoredOAuthCredential(credentials CredentialStore, providerID string
 		}
 		refreshCtx, cancel := context.WithTimeout(context.Background(), oauthRefreshTimeoutMS*time.Millisecond)
 		defer cancel()
-		refreshed, err := oauth.Refresh(current.OAuth, refreshCtx)
+		refreshed, err := oauth.Refresh(refreshCtx, current.OAuth)
 		if err != nil {
 			return nil, NewModelsError(ErrCodeOAuth, fmt.Sprintf("OAuth refresh failed for %s", providerID), err)
 		}
 		return &Credential{Type: CredentialOAuth, OAuth: refreshed}, nil
-	}, lockWaitCtx)
+	})
 	if err != nil {
 		var me *ModelsError
 		if asModelsError(err, &me) {
@@ -207,7 +207,7 @@ func refreshStoredOAuthCredential(credentials CredentialStore, providerID string
 // locking: tokens with less than five minutes remaining lock, re-check
 // expiry under the lock, refresh once globally, and persist the rotated
 // credential before release.
-func resolveStoredOAuth(credentials CredentialStore, providerID string, oauth *OAuthAuth, stored *OAuthCredential, ctx context.Context, minOAuthValidityMS int64, minOAuthValidityMSSet bool) (*AuthResult, error) {
+func resolveStoredOAuth(ctx context.Context, credentials CredentialStore, providerID string, oauth *OAuthAuth, stored *OAuthCredential, minOAuthValidityMS int64, minOAuthValidityMSSet bool) (*AuthResult, error) {
 	minimumValidityMS := max(minOAuthValidityMS, int64(oauthMinimumValidityMS))
 	expiresSoon := func(credential *OAuthCredential) bool {
 		nowMS := time.Now().UnixMilli()
@@ -221,9 +221,9 @@ func resolveStoredOAuth(credentials CredentialStore, providerID string, oauth *O
 
 	if expiresSoon(credential) {
 		// Optimistic check said expired; the authoritative check runs under the lock.
-		post, err := refreshStoredOAuthCredential(credentials, providerID, oauth, func(current *OAuthCredential) bool {
+		post, err := refreshStoredOAuthCredential(ctx, credentials, providerID, oauth, func(current *OAuthCredential) bool {
 			return expiresSoon(current)
-		}, ctx)
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -252,15 +252,18 @@ func resolveStoredOAuth(credentials CredentialStore, providerID string, oauth *O
 	return &AuthResult{Auth: *auth, Source: "OAuth"}, nil
 }
 
+// asModelsError ports upstream's `error instanceof ModelsError`: it matches
+// err itself, not a ModelsError wrapped inside another error, so a wrapped one
+// still gets the caller's own context.
 func asModelsError(err error, target **ModelsError) bool {
-	if me, ok := err.(*ModelsError); ok {
+	if me, ok := err.(*ModelsError); ok { // exact match, see above
 		*target = me
 		return true
 	}
 	return false
 }
 
-func resolveAPIKey(authContext AuthContext, apiKey *ApiKeyAuth, providerID string, credential *ApiKeyCredential, ctx context.Context) (*AuthResult, error) {
+func resolveAPIKey(ctx context.Context, authContext AuthContext, apiKey *ApiKeyAuth, providerID string, credential *ApiKeyCredential) (*AuthResult, error) {
 	// Upstream's ApiKeyAuth.resolve is required, so a missing one is a
 	// programmer error there. Go function fields cannot be required, so a nil
 	// Resolve means "this provider has no api-key resolution" and reports no
@@ -275,8 +278,8 @@ func resolveAPIKey(authContext AuthContext, apiKey *ApiKeyAuth, providerID strin
 	return result, nil
 }
 
-func readCredential(credentials CredentialStore, providerID string, ctx context.Context) (*Credential, error) {
-	credential, err := credentials.Read(providerID, ctx)
+func readCredential(ctx context.Context, credentials CredentialStore, providerID string) (*Credential, error) {
+	credential, err := credentials.Read(ctx, providerID)
 	if err != nil {
 		return nil, NewModelsError(ErrCodeAuth, fmt.Sprintf("Credential store read failed for %s", providerID), err)
 	}

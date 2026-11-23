@@ -30,7 +30,7 @@ func newMemoryCredentialStore() *memoryCredentialStore {
 	return &memoryCredentialStore{entries: map[string]*ai.Credential{}}
 }
 
-func (s *memoryCredentialStore) Read(providerID string, ctx ctxpkg.Context) (*ai.Credential, error) {
+func (s *memoryCredentialStore) Read(ctx ctxpkg.Context, providerID string) (*ai.Credential, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (s *memoryCredentialStore) List(ctx ctxpkg.Context) ([]ai.CredentialInfo, e
 	return out, nil
 }
 
-func (s *memoryCredentialStore) Modify(providerID string, fn func(*ai.Credential) (*ai.Credential, error), ctx ctxpkg.Context) (*ai.Credential, error) {
+func (s *memoryCredentialStore) Modify(ctx ctxpkg.Context, providerID string, fn func(*ai.Credential) (*ai.Credential, error)) (*ai.Credential, error) {
 	if s.modifyErr != nil {
 		return nil, s.modifyErr
 	}
@@ -70,7 +70,7 @@ func (s *memoryCredentialStore) Modify(providerID string, fn func(*ai.Credential
 	return next, nil
 }
 
-func (s *memoryCredentialStore) Delete(providerID string, ctx ctxpkg.Context) error {
+func (s *memoryCredentialStore) Delete(ctx ctxpkg.Context, providerID string) error {
 	if s.deleteErr != nil {
 		return s.deleteErr
 	}
@@ -153,7 +153,7 @@ func TestModelRuntimeCompositionAndSnapshot(t *testing.T) {
 	}
 
 	// A runtime key makes the provider available and the status reports it.
-	if err := runtime.SetRuntimeAPIKey("alpha", "sk-alpha", ctx); err != nil {
+	if err := runtime.SetRuntimeAPIKey(ctx, "alpha", "sk-alpha"); err != nil {
 		t.Fatal(err)
 	}
 	if !runtime.HasConfiguredAuth("alpha") || runtime.HasConfiguredAuth("beta") {
@@ -170,13 +170,13 @@ func TestModelRuntimeCompositionAndSnapshot(t *testing.T) {
 	if len(available) != 1 || available[0].Provider != "alpha" {
 		t.Fatalf("available = %+v", available)
 	}
-	available, err := runtime.GetAvailable("", ctx)
+	available, err := runtime.GetAvailable(ctx, "")
 	if err != nil || len(available) != 1 {
 		t.Fatalf("available = %+v err = %v", available, err)
 	}
 
 	// Removing the key clears availability again.
-	if err := runtime.RemoveRuntimeAPIKey("alpha", ctx); err != nil {
+	if err := runtime.RemoveRuntimeAPIKey(ctx, "alpha"); err != nil {
 		t.Fatal(err)
 	}
 	if runtime.HasConfiguredAuth("alpha") {
@@ -212,7 +212,7 @@ func TestModelRuntimeCredentialSyncFailure(t *testing.T) {
 	// Recomposition fails, so the credential change is committed but the
 	// synchronization errors with the composition message.
 	store.modifyErr = nil
-	err = runtime.SetRuntimeAPIKey("alpha", "sk-1", ctx)
+	err = runtime.SetRuntimeAPIKey(ctx, "alpha", "sk-1")
 	var syncErr *CredentialSynchronizationError
 	if !errors.As(err, &syncErr) {
 		t.Fatalf("err = %v", err)
@@ -238,7 +238,7 @@ func TestModelRuntimeStreamCancellationReachesOAuthAuthResolution(t *testing.T) 
 	streamCalled := false
 	oauth := &ai.OAuthAuth{
 		Name: "test OAuth",
-		Refresh: func(credential *ai.OAuthCredential, _ ctxpkg.Context) (*ai.OAuthCredential, error) {
+		Refresh: func(_ ctxpkg.Context, credential *ai.OAuthCredential) (*ai.OAuthCredential, error) {
 			cancel()
 			return &ai.OAuthCredential{
 				Access: "new", Refresh: "new-refresh", Expires: time.Now().Add(time.Hour).UnixMilli()}, nil
@@ -285,7 +285,7 @@ func TestModelRuntimeStreamCancellationReachesOAuthAuthResolution(t *testing.T) 
 	if streamCalled {
 		t.Fatal("provider stream ran after request context was cancelled during auth")
 	}
-	stored, err := store.Read("alpha", ctxpkg.Background())
+	stored, err := store.Read(ctxpkg.Background(), "alpha")
 	if err != nil || stored == nil || stored.OAuth.Refresh != "new-refresh" {
 		t.Fatalf("rotated credential = %+v, err = %v", stored, err)
 	}

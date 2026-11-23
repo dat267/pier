@@ -32,7 +32,7 @@ func TestRemoteCatalogCompatSurvivesModelStore(t *testing.T) {
 					p.Update()
 				}
 				if p.Persist != nil {
-					if err := store.Write("p", p.Persist, ctx); err != nil {
+					if err := store.Write(ctx, "p", p.Persist); err != nil {
 						t.Fatal(err)
 					}
 				}
@@ -40,7 +40,7 @@ func TestRemoteCatalogCompatSurvivesModelStore(t *testing.T) {
 			}}); err != nil {
 				t.Fatal(err)
 			}
-			saved, err := store.Read("p", ctx)
+			saved, err := store.Read(ctx, "p")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -90,25 +90,25 @@ func TestModelsStorePreservesSharedImageModels(t *testing.T) {
 			switch fixture.Operation {
 			case "write-other":
 				checkedAt := int64(456)
-				err = store.Write("other", &ai.ModelsStoreEntry{Models: []*ai.Model{}, CheckedAt: &checkedAt}, ctx)
+				err = store.Write(ctx, "other", &ai.ModelsStoreEntry{Models: []*ai.Model{}, CheckedAt: &checkedAt})
 			case "delete-other":
-				err = store.Delete("other", ctx)
+				err = store.Delete(ctx, "other")
 			case "update-metadata":
-				stored, readErr := store.Read("openrouter", ctx)
+				stored, readErr := store.Read(ctx, "openrouter")
 				if readErr != nil {
 					t.Fatal(readErr)
 				}
 				checkedAt := int64(456)
 				stored.CheckedAt = &checkedAt
-				err = store.Write("openrouter", stored, ctx)
+				err = store.Write(ctx, "openrouter", stored)
 			case "edit-model":
-				stored, readErr := store.Read("openrouter", ctx)
+				stored, readErr := store.Read(ctx, "openrouter")
 				if readErr != nil {
 					t.Fatal(readErr)
 				}
 				stored.Models[0].Name = "Renamed"
 				stored.Models[0].Headers = nil
-				err = store.Write("openrouter", stored, ctx)
+				err = store.Write(ctx, "openrouter", stored)
 			default:
 				t.Fatalf("unknown operation %q", fixture.Operation)
 			}
@@ -227,10 +227,10 @@ func TestModelsStorePreservesSamplingOrder(t *testing.T) {
 				t.Fatal(err)
 			}
 			ctx := context.Background()
-			if err := store.Write("p", &ai.ModelsStoreEntry{Models: []*ai.Model{&model}}, ctx); err != nil {
+			if err := store.Write(ctx, "p", &ai.ModelsStoreEntry{Models: []*ai.Model{&model}}); err != nil {
 				t.Fatal(err)
 			}
-			saved, err := store.Read("p", ctx)
+			saved, err := store.Read(ctx, "p")
 			if err != nil {
 				t.Fatal(err)
 			}

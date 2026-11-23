@@ -151,7 +151,7 @@ func (c *editCallComponent) build(args *editRenderArgs, theme *Theme, cwd string
 	if preview == nil {
 		return
 	}
-	body := ""
+	var body string
 	if preview.Error != "" {
 		body = theme.Fg("error", preview.Error)
 	} else {

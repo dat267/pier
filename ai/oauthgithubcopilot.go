@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -152,7 +153,7 @@ func builtinCopilotModelIDs() map[string]bool {
 func ParseGitHubCopilotModelCatalog(raw map[string]any, allowPolicyFallback bool) (*CopilotModelCatalog, error) {
 	data, ok := raw["data"].([]any)
 	if !ok {
-		return nil, fmt.Errorf("Invalid Copilot models response")
+		return nil, errors.New("Invalid Copilot models response")
 	}
 	type accountModel struct {
 		id            string
@@ -345,7 +346,7 @@ func FetchGitHubCopilotModels(ctx context.Context, copilotToken, enterpriseDomai
 	}
 	var payload map[string]any
 	if err := json.Unmarshal(raw, &payload); err != nil {
-		return nil, fmt.Errorf("Invalid Copilot models response")
+		return nil, errors.New("Invalid Copilot models response")
 	}
 	return ParseGitHubCopilotModelCatalog(payload, allowPolicyFallback)
 }
@@ -386,7 +387,7 @@ func StartGitHubDeviceFlow(ctx context.Context, domain string) (*GitHubDeviceCod
 	}
 	var data map[string]any
 	if err := json.Unmarshal(raw, &data); err != nil {
-		return nil, fmt.Errorf("Invalid device code response")
+		return nil, errors.New("Invalid device code response")
 	}
 	deviceCode, _ := data["device_code"].(string)
 	userCode, _ := data["user_code"].(string)
@@ -394,11 +395,11 @@ func StartGitHubDeviceFlow(ctx context.Context, domain string) (*GitHubDeviceCod
 	expiresIn, hasExpiry := data["expires_in"].(float64)
 	intervalRaw, hasInterval := data["interval"]
 	if deviceCode == "" || userCode == "" || verificationURI == "" || !hasExpiry {
-		return nil, fmt.Errorf("Invalid device code response fields")
+		return nil, errors.New("Invalid device code response fields")
 	}
 	_, trustedVerificationURI, trusted := normalizeOAuthHTTPURL(verificationURI)
 	if !trusted {
-		return nil, fmt.Errorf("Untrusted verification_uri in device code response")
+		return nil, errors.New("Untrusted verification_uri in device code response")
 	}
 	device := &GitHubDeviceCodeResponse{
 		DeviceCode: deviceCode, UserCode: userCode, VerificationURI: trustedVerificationURI,
@@ -407,7 +408,7 @@ func StartGitHubDeviceFlow(ctx context.Context, domain string) (*GitHubDeviceCod
 	if hasInterval {
 		interval, ok := intervalRaw.(float64)
 		if !ok {
-			return nil, fmt.Errorf("Invalid device code response fields")
+			return nil, errors.New("Invalid device code response fields")
 		}
 		seconds := oauthSecondsToInt(interval)
 		device.IntervalSeconds = &seconds
@@ -510,12 +511,12 @@ func RefreshGitHubCopilotAccessToken(ctx context.Context, refreshToken, enterpri
 	}
 	var payload map[string]any
 	if err := json.Unmarshal(raw, &payload); err != nil {
-		return nil, fmt.Errorf("Invalid Copilot token response")
+		return nil, errors.New("Invalid Copilot token response")
 	}
 	token, _ := payload["token"].(string)
 	expiresAt, hasExpiry := payload["expires_at"].(float64)
 	if token == "" || !hasExpiry {
-		return nil, fmt.Errorf("Invalid Copilot token response fields")
+		return nil, errors.New("Invalid Copilot token response fields")
 	}
 	extra := map[string]json.RawMessage{}
 	// Upstream stores enterpriseUrl only when a domain was given; JSON.stringify
@@ -603,7 +604,7 @@ func EnableGitHubCopilotModels(ctx context.Context, token string, modelIDs []str
 // LoginGitHubCopilot runs the Copilot login (upstream loginGitHubCopilot).
 func LoginGitHubCopilot(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, fmt.Errorf("auth interaction is required")
+		return nil, errors.New("auth interaction is required")
 	}
 	ctx := interaction.Ctx
 	if ctx == nil {
@@ -618,12 +619,12 @@ func LoginGitHubCopilot(interaction *AuthInteraction) (*OAuthCredential, error) 
 		return nil, err
 	}
 	if ctx.Err() != nil {
-		return nil, fmt.Errorf("Login cancelled")
+		return nil, errors.New("Login cancelled")
 	}
 	trimmed := JSTrim(input)
 	enterpriseDomain, valid := NormalizeGitHubDomain(input)
 	if trimmed != "" && !valid {
-		return nil, fmt.Errorf("Invalid GitHub Enterprise URL/domain")
+		return nil, errors.New("Invalid GitHub Enterprise URL/domain")
 	}
 	domain := enterpriseDomain
 	if domain == "" {
@@ -689,15 +690,15 @@ func GitHubCopilotOAuth() *OAuthAuth {
 		IsSubscription: true,
 		LoginLabel:     "Sign in with GitHub Copilot",
 		Login:          LoginGitHubCopilot,
-		Refresh: func(credential *OAuthCredential, ctx context.Context) (*OAuthCredential, error) {
+		Refresh: func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
 			if credential == nil {
-				return nil, fmt.Errorf("credential is required")
+				return nil, errors.New("credential is required")
 			}
 			return RefreshGitHubCopilotToken(ctx, credential.Refresh, copilotEnterpriseDomain(credential))
 		},
 		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
 			if credential == nil {
-				return nil, fmt.Errorf("credential is required")
+				return nil, errors.New("credential is required")
 			}
 			return &ModelAuth{
 				APIKey:  credential.Access,

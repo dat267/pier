@@ -2,6 +2,7 @@ package ai
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -11,7 +12,7 @@ import (
 // api/google-generative-ai.ts and api/google-vertex.ts buildParams.
 func googleSDKPayload(model *Model, params *GoogleGenerateContentParams) ([]byte, error) {
 	var config orderedJSONFields
-	set := func(key string, value any) error { return config.setAny(key, value) }
+	set := config.setAny
 	if generation := params.GenerationConfig; generation != nil {
 		if generation.Temperature != nil {
 			if err := set("temperature", generation.Temperature); err != nil {
@@ -172,7 +173,7 @@ func googleSDKRequest(raw json.RawMessage, api Api) (string, []byte, error) {
 		return "", nil, err
 	}
 	if payload.Model == "" {
-		return "", nil, fmt.Errorf("model is required")
+		return "", nil, errors.New("model is required")
 	}
 	if err := googleValidateReplacements(payload.Config, api); err != nil {
 		return "", nil, err

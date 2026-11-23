@@ -3,7 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"maps"
 	"slices"
 	"sync"
@@ -54,24 +54,24 @@ type AgentInitialState struct {
 type AgentOptions struct {
 	InitialState     *AgentInitialState
 	ConvertToLlm     func(messages []ai.Message) []ai.Message
-	TransformContext func(messages []ai.Message, ctx context.Context) []ai.Message
+	TransformContext func(ctx context.Context, messages []ai.Message) []ai.Message
 	// StreamFn is required.
 	StreamFn              StreamFn
-	GetAPIKey             func(provider string, ctx context.Context) (string, error)
+	GetAPIKey             func(ctx context.Context, provider string) (string, error)
 	OnPayload             func(payload json.RawMessage, model *ai.Model) json.RawMessage
 	OnResponse            func(response ai.ProviderResponse, model *ai.Model)
 	OnProviderStreamEvent func(data json.RawMessage, model *ai.Model)
-	BeforeToolCall        func(context *BeforeToolCallContext, ctx context.Context) (*BeforeToolCallResult, error)
-	AfterToolCall         func(context *AfterToolCallContext, ctx context.Context) (*AfterToolCallResult, error)
-	PrepareRequest        func(request *PrepareRequestContext, ctx context.Context) (*AgentRequestUpdate, error)
-	FinishTurn            func(turn *AgentTurnContext, ctx context.Context) (*AgentTurnDecision, error)
+	BeforeToolCall        func(ctx context.Context, context *BeforeToolCallContext) (*BeforeToolCallResult, error)
+	AfterToolCall         func(ctx context.Context, context *AfterToolCallContext) (*AfterToolCallResult, error)
+	PrepareRequest        func(ctx context.Context, request *PrepareRequestContext) (*AgentRequestUpdate, error)
+	FinishTurn            func(ctx context.Context, turn *AgentTurnContext) (*AgentTurnDecision, error)
 	// DeferFollowUp keeps queued user follow-ups for a later run. See
 	// AgentLoopConfig.DeferFollowUp.
 	DeferFollowUp func(message ai.Message) bool
 	// Deprecated: use FinishTurn.
-	ShouldStopAfterTurn        func(turn *AgentTurnContext, ctx context.Context) bool
+	ShouldStopAfterTurn        func(ctx context.Context, turn *AgentTurnContext) bool
 	PrepareNextTurn            func(ctx context.Context) (*AgentLoopTurnUpdate, error)
-	PrepareNextTurnWithContext func(*PrepareNextTurnContext, context.Context) (*AgentLoopTurnUpdate, error)
+	PrepareNextTurnWithContext func(context.Context, *PrepareNextTurnContext) (*AgentLoopTurnUpdate, error)
 	SteeringMode               QueueMode
 	FollowUpMode               QueueMode
 	// SessionID is forwarded to providers for cache-aware backends.
@@ -285,7 +285,7 @@ type activeRun struct {
 
 // Listener receives agent events. It runs in subscription order during the
 // run settlement; the second argument is the active run's abort context.
-type Listener func(event AgentEvent, ctx context.Context) error
+type Listener func(ctx context.Context, event AgentEvent) error
 
 // Agent owns the current transcript, emits lifecycle events, executes tools,
 // and exposes queueing APIs for steering and follow-up messages.
@@ -302,22 +302,22 @@ type Agent struct {
 
 	// Options surface (upstream public fields).
 	ConvertToLlm          func(messages []ai.Message) []ai.Message
-	TransformContext      func(messages []ai.Message, ctx context.Context) []ai.Message
+	TransformContext      func(ctx context.Context, messages []ai.Message) []ai.Message
 	StreamFunction        StreamFn
-	GetAPIKey             func(provider string, ctx context.Context) (string, error)
+	GetAPIKey             func(ctx context.Context, provider string) (string, error)
 	OnPayload             func(payload json.RawMessage, model *ai.Model) json.RawMessage
 	OnResponse            func(response ai.ProviderResponse, model *ai.Model)
 	OnProviderStreamEvent func(data json.RawMessage, model *ai.Model)
-	BeforeToolCall        func(context *BeforeToolCallContext, ctx context.Context) (*BeforeToolCallResult, error)
-	AfterToolCall         func(context *AfterToolCallContext, ctx context.Context) (*AfterToolCallResult, error)
-	PrepareRequest        func(request *PrepareRequestContext, ctx context.Context) (*AgentRequestUpdate, error)
-	FinishTurn            func(turn *AgentTurnContext, ctx context.Context) (*AgentTurnDecision, error)
+	BeforeToolCall        func(ctx context.Context, context *BeforeToolCallContext) (*BeforeToolCallResult, error)
+	AfterToolCall         func(ctx context.Context, context *AfterToolCallContext) (*AfterToolCallResult, error)
+	PrepareRequest        func(ctx context.Context, request *PrepareRequestContext) (*AgentRequestUpdate, error)
+	FinishTurn            func(ctx context.Context, turn *AgentTurnContext) (*AgentTurnDecision, error)
 	// DeferFollowUp keeps queued user follow-ups for a later run.
 	DeferFollowUp func(message ai.Message) bool
 	// Deprecated: use FinishTurn.
-	ShouldStopAfterTurn        func(turn *AgentTurnContext, ctx context.Context) bool
+	ShouldStopAfterTurn        func(ctx context.Context, turn *AgentTurnContext) bool
 	PrepareNextTurn            func(ctx context.Context) (*AgentLoopTurnUpdate, error)
-	PrepareNextTurnWithContext func(*PrepareNextTurnContext, context.Context) (*AgentLoopTurnUpdate, error)
+	PrepareNextTurnWithContext func(context.Context, *PrepareNextTurnContext) (*AgentLoopTurnUpdate, error)
 	SessionID                  string
 	Identity                   *ai.ClientIdentity
 	ThinkingBudgets            *ai.ThinkingBudgets
@@ -356,7 +356,7 @@ func NewAgent(options *AgentOptions) (*Agent, error) {
 	}
 
 	model := (*ai.Model)(nil)
-	thinkingLevel := ai.ThinkingLevel(ai.ThinkOff)
+	thinkingLevel := ai.ThinkOff
 	if initial != nil {
 		model = initial.Model
 		thinkingLevel = initial.ThinkingLevel
@@ -641,7 +641,7 @@ func (a *Agent) Reset() error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if a.activeRun != nil {
-		return fmt.Errorf("Agent is already processing. Wait for completion before resetting.")
+		return errors.New("Agent is already processing. Wait for completion before resetting.")
 	}
 	if baseline := ai.GetCurrentSystemMessage(a.state.Messages); baseline != nil {
 		a.state.Messages = []ai.Message{baseline}
@@ -679,12 +679,12 @@ func (a *Agent) Continue(ctx context.Context) error {
 	a.mu.Lock()
 	if a.activeRun != nil {
 		a.mu.Unlock()
-		return fmt.Errorf("Agent is already processing. Wait for completion before continuing.")
+		return errors.New("Agent is already processing. Wait for completion before continuing.")
 	}
 	messages := a.state.Messages
 	if len(messages) == 0 {
 		a.mu.Unlock()
-		return fmt.Errorf("No messages to continue from")
+		return errors.New("No messages to continue from")
 	}
 	allSystem := true
 	for _, message := range messages {
@@ -694,7 +694,7 @@ func (a *Agent) Continue(ctx context.Context) error {
 	}
 	if allSystem {
 		a.mu.Unlock()
-		return fmt.Errorf("No messages to continue from")
+		return errors.New("No messages to continue from")
 	}
 	lastMessage := messages[len(messages)-1]
 	a.mu.Unlock()
@@ -707,18 +707,17 @@ func (a *Agent) Continue(ctx context.Context) error {
 		if queuedFollowUps := a.takeFollowUps(); len(queuedFollowUps) > 0 {
 			return a.runPromptMessages(ctx, queuedFollowUps, false)
 		}
-		return fmt.Errorf("Cannot continue from message role: assistant")
+		return errors.New("Cannot continue from message role: assistant")
 	}
 
 	a.mu.Lock()
 	if a.activeRun != nil {
 		a.mu.Unlock()
-		return fmt.Errorf("Agent is already processing.")
+		return errors.New("Agent is already processing.")
 	}
 	a.mu.Unlock()
 	return a.runWithLifecycle(ctx, func(ctx context.Context) error {
-		RunAgentLoopContinue(a.createContextSnapshot(), a.createLoopConfig(false), ctx,
-			sinkOf(a), a.StreamFunction)
+		RunAgentLoopContinue(ctx, a.createContextSnapshot(), a.createLoopConfig(false), sinkOf(a), a.StreamFunction)
 		return nil
 	})
 }
@@ -727,12 +726,11 @@ func (a *Agent) runPromptMessages(ctx context.Context, messages []ai.Message, sk
 	a.mu.Lock()
 	if a.activeRun != nil {
 		a.mu.Unlock()
-		return fmt.Errorf("Agent is already processing a prompt. Use Steer() or FollowUp() to queue messages, or wait for completion.")
+		return errors.New("Agent is already processing a prompt. Use Steer() or FollowUp() to queue messages, or wait for completion.")
 	}
 	a.mu.Unlock()
 	return a.runWithLifecycle(ctx, func(ctx context.Context) error {
-		RunAgentLoop(messages, a.createContextSnapshot(), a.createLoopConfig(skipInitialSteeringPoll), ctx,
-			sinkOf(a), a.StreamFunction)
+		RunAgentLoop(ctx, messages, a.createContextSnapshot(), a.createLoopConfig(skipInitialSteeringPoll), sinkOf(a), a.StreamFunction)
 		return nil
 	})
 }
@@ -785,24 +783,24 @@ func (a *Agent) createLoopConfig(skipInitialSteeringPoll bool) *AgentLoopConfig 
 	// closures capture them for the same reason (and so the loop never reads
 	// the public fields while a caller may assign them).
 	if prepareRequest := a.PrepareRequest; prepareRequest != nil {
-		config.PrepareRequest = func(request *PrepareRequestContext, ctx context.Context) (*AgentRequestUpdate, error) {
-			return prepareRequest(request, a.runContext())
+		config.PrepareRequest = func(ctx context.Context, request *PrepareRequestContext) (*AgentRequestUpdate, error) {
+			return prepareRequest(a.runContext(), request)
 		}
 	}
 	if finishTurn := a.FinishTurn; finishTurn != nil {
-		config.FinishTurn = func(turn *AgentTurnContext, ctx context.Context) (*AgentTurnDecision, error) {
-			return finishTurn(turn, a.runContext())
+		config.FinishTurn = func(ctx context.Context, turn *AgentTurnContext) (*AgentTurnDecision, error) {
+			return finishTurn(a.runContext(), turn)
 		}
 	}
 	if shouldStop := a.ShouldStopAfterTurn; shouldStop != nil {
 		config.ShouldStopAfterTurn = func(turn *AgentTurnContext) bool {
-			return shouldStop(turn, a.runContext())
+			return shouldStop(a.runContext(), turn)
 		}
 	}
 	if a.PrepareNextTurnWithContext != nil || a.PrepareNextTurn != nil {
 		config.PrepareNextTurn = func(context *ShouldStopAfterTurnContext) (*AgentLoopTurnUpdate, error) {
 			if a.PrepareNextTurnWithContext != nil {
-				return a.PrepareNextTurnWithContext(context, a.runContext())
+				return a.PrepareNextTurnWithContext(a.runContext(), context)
 			}
 			return a.PrepareNextTurn(a.runContext())
 		}
@@ -844,7 +842,7 @@ func (a *Agent) runWithLifecycle(ctx context.Context, executor func(ctx context.
 	a.mu.Lock()
 	if a.activeRun != nil {
 		a.mu.Unlock()
-		return fmt.Errorf("Agent is already processing.")
+		return errors.New("Agent is already processing.")
 	}
 	runCtx, cancel := context.WithCancel(contextOrBackground(ctx))
 	run := &activeRun{ctx: runCtx, cancel: cancel, done: make(chan struct{})}
@@ -927,7 +925,7 @@ func (a *Agent) handleRunFailure(ctx context.Context, err error, aborted bool) e
 		{Type: TurnEnd, Message: failureMessage, ToolResults: []ai.Message{}},
 		{Type: AgentEnd, Messages: []ai.Message{failureMessage}},
 	} {
-		if err := a.processEvents(event, ctx); err != nil {
+		if err := a.processEvents(ctx, event); err != nil {
 			return err
 		}
 	}
@@ -937,7 +935,7 @@ func (a *Agent) handleRunFailure(ctx context.Context, err error, aborted bool) e
 // processEvents reduces internal state for a loop event, then runs listeners
 // in subscription order. agent_end only means no further loop events will be
 // emitted; the run is idle after listeners settle and finishRun clears state.
-func (a *Agent) processEvents(event AgentEvent, ctx context.Context) error {
+func (a *Agent) processEvents(ctx context.Context, event AgentEvent) error {
 	a.mu.Lock()
 	switch event.Type {
 	case MessageStart:
@@ -966,7 +964,7 @@ func (a *Agent) processEvents(event AgentEvent, ctx context.Context) error {
 		run := a.activeRun
 		a.mu.Unlock()
 		if run == nil {
-			return fmt.Errorf("Agent listener invoked outside active run")
+			return errors.New("Agent listener invoked outside active run")
 		}
 	}
 
@@ -978,7 +976,7 @@ func (a *Agent) processEvents(event AgentEvent, ctx context.Context) error {
 	}
 	a.listenerMu.Unlock()
 	for _, listener := range listeners {
-		if err := listener(event, ctx); err != nil {
+		if err := listener(ctx, event); err != nil {
 			return err
 		}
 	}
@@ -988,6 +986,6 @@ func (a *Agent) processEvents(event AgentEvent, ctx context.Context) error {
 // sinkOf adapts processEvents to the AgentEventSink signature.
 func sinkOf(a *Agent) AgentEventSink {
 	return func(event AgentEvent) error {
-		return a.processEvents(event, a.runContext())
+		return a.processEvents(a.runContext(), event)
 	}
 }

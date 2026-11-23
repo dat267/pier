@@ -97,7 +97,7 @@ func findGoalTool(t *testing.T, controller *GoalController, name string) agent.A
 func goalToolText(t *testing.T, controller *GoalController, name string, params string) string {
 	t.Helper()
 	tool := findGoalTool(t, controller, name)
-	result, err := tool.Execute("id", json.RawMessage(params), context.Background(), func(agent.AgentToolResult) {})
+	result, err := tool.Execute(context.Background(), "id", json.RawMessage(params), func(agent.AgentToolResult) {})
 	if err != nil {
 		t.Fatalf("%s: %v", name, err)
 	}
@@ -246,7 +246,7 @@ func TestGoalPublisherResumesAfterRecoveredListenerPanic(t *testing.T) {
 	tool := findGoalTool(t, controller, "set_goal")
 	call := func(params string) (recovered any) {
 		defer func() { recovered = recover() }()
-		_, _ = tool.Execute("id", json.RawMessage(params), context.Background(), func(agent.AgentToolResult) {})
+		_, _ = tool.Execute(context.Background(), "id", json.RawMessage(params), func(agent.AgentToolResult) {})
 		return nil
 	}
 

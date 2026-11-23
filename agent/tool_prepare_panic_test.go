@@ -26,25 +26,21 @@ func TestPrepareArgumentsPanicBecomesToolError(t *testing.T) {
 		PrepareArguments: func(args json.RawMessage) json.RawMessage {
 			panic("prepare exploded")
 		},
-		Execute: func(string, json.RawMessage, context.Context, func(AgentToolResult)) (AgentToolResult, error) {
+		Execute: func(context.Context, string, json.RawMessage, func(AgentToolResult)) (AgentToolResult, error) {
 			return AgentToolResult{}, nil
 		},
 	}
 	var toolResult *ai.ToolResultMessage
 	var reachedAgentEnd bool
-	messages := RunAgentLoop([]ai.Message{createUserMessage("hi")},
-		AgentContext{Tools: []AgentTool{tool}},
-		&AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter},
-		context.Background(),
-		func(event AgentEvent) error {
-			if result, ok := event.Message.(*ai.ToolResultMessage); ok && event.Type == MessageEnd {
-				toolResult = result
-			}
-			if event.Type == AgentEnd {
-				reachedAgentEnd = true
-			}
-			return nil
-		}, streamFn)
+	messages := RunAgentLoop(context.Background(), []ai.Message{createUserMessage("hi")}, AgentContext{Tools: []AgentTool{tool}}, &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}, func(event AgentEvent) error {
+		if result, ok := event.Message.(*ai.ToolResultMessage); ok && event.Type == MessageEnd {
+			toolResult = result
+		}
+		if event.Type == AgentEnd {
+			reachedAgentEnd = true
+		}
+		return nil
+	}, streamFn)
 
 	if !reachedAgentEnd {
 		t.Fatal("the run did not reach agent_end")
@@ -75,21 +71,17 @@ func TestExecutePanicBecomesToolError(t *testing.T) {
 	)
 	tool := AgentTool{
 		Name: "boom", Parameters: json.RawMessage(`{"type":"object"}`),
-		Execute: func(string, json.RawMessage, context.Context, func(AgentToolResult)) (AgentToolResult, error) {
+		Execute: func(context.Context, string, json.RawMessage, func(AgentToolResult)) (AgentToolResult, error) {
 			panic("execute exploded")
 		},
 	}
 	var toolResult *ai.ToolResultMessage
-	messages := RunAgentLoop([]ai.Message{createUserMessage("hi")},
-		AgentContext{Tools: []AgentTool{tool}},
-		&AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter},
-		context.Background(),
-		func(event AgentEvent) error {
-			if result, ok := event.Message.(*ai.ToolResultMessage); ok && event.Type == MessageEnd {
-				toolResult = result
-			}
-			return nil
-		}, streamFn)
+	messages := RunAgentLoop(context.Background(), []ai.Message{createUserMessage("hi")}, AgentContext{Tools: []AgentTool{tool}}, &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}, func(event AgentEvent) error {
+		if result, ok := event.Message.(*ai.ToolResultMessage); ok && event.Type == MessageEnd {
+			toolResult = result
+		}
+		return nil
+	}, streamFn)
 
 	if toolResult == nil || !toolResult.IsError {
 		t.Fatalf("no error tool result recorded: %v", messageRoles(messages))
@@ -113,25 +105,23 @@ func TestAfterToolCallPanicBecomesToolError(t *testing.T) {
 	)
 	tool := AgentTool{
 		Name: "ok", Parameters: json.RawMessage(`{"type":"object"}`),
-		Execute: func(string, json.RawMessage, context.Context, func(AgentToolResult)) (AgentToolResult, error) {
+		Execute: func(context.Context, string, json.RawMessage, func(AgentToolResult)) (AgentToolResult, error) {
 			return AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "fine"}}}, nil
 		},
 	}
 	config := &AgentLoopConfig{
 		Model: createModel(), ConvertToLlm: identityConverter,
-		AfterToolCall: func(*AfterToolCallContext, context.Context) (*AfterToolCallResult, error) {
+		AfterToolCall: func(context.Context, *AfterToolCallContext) (*AfterToolCallResult, error) {
 			panic("after exploded")
 		},
 	}
 	var toolResult *ai.ToolResultMessage
-	messages := RunAgentLoop([]ai.Message{createUserMessage("hi")},
-		AgentContext{Tools: []AgentTool{tool}}, config, context.Background(),
-		func(event AgentEvent) error {
-			if result, ok := event.Message.(*ai.ToolResultMessage); ok && event.Type == MessageEnd {
-				toolResult = result
-			}
-			return nil
-		}, streamFn)
+	messages := RunAgentLoop(context.Background(), []ai.Message{createUserMessage("hi")}, AgentContext{Tools: []AgentTool{tool}}, config, func(event AgentEvent) error {
+		if result, ok := event.Message.(*ai.ToolResultMessage); ok && event.Type == MessageEnd {
+			toolResult = result
+		}
+		return nil
+	}, streamFn)
 
 	if toolResult == nil || !toolResult.IsError {
 		t.Fatalf("no error tool result recorded: %v", messageRoles(messages))
@@ -154,7 +144,7 @@ func TestParallelWorkerPanicReachesTheCaller(t *testing.T) {
 	}, ai.StopToolUse))
 	tool := AgentTool{
 		Name: "ok", Parameters: json.RawMessage(`{"type":"object"}`),
-		Execute: func(string, json.RawMessage, context.Context, func(AgentToolResult)) (AgentToolResult, error) {
+		Execute: func(context.Context, string, json.RawMessage, func(AgentToolResult)) (AgentToolResult, error) {
 			return AgentToolResult{}, nil
 		},
 	}
@@ -163,14 +153,12 @@ func TestParallelWorkerPanicReachesTheCaller(t *testing.T) {
 	var recovered any
 	func() {
 		defer func() { recovered = recover() }()
-		RunAgentLoop([]ai.Message{createUserMessage("hi")},
-			AgentContext{Tools: []AgentTool{tool}}, config, context.Background(),
-			func(event AgentEvent) error {
-				if event.Type == ToolExecutionEnd {
-					panic("end emit exploded")
-				}
-				return nil
-			}, streamFn)
+		RunAgentLoop(context.Background(), []ai.Message{createUserMessage("hi")}, AgentContext{Tools: []AgentTool{tool}}, config, func(event AgentEvent) error {
+			if event.Type == ToolExecutionEnd {
+				panic("end emit exploded")
+			}
+			return nil
+		}, streamFn)
 	}()
 	if recovered == nil {
 		t.Fatal("a parallel worker panic did not reach the caller")
@@ -203,7 +191,7 @@ func TestToolUpdatesAreSerializedInCallOrder(t *testing.T) {
 	}
 	tool := AgentTool{
 		Name: "updates", Parameters: json.RawMessage(`{"type":"object"}`),
-		Execute: func(_ string, _ json.RawMessage, _ context.Context, onUpdate func(AgentToolResult)) (AgentToolResult, error) {
+		Execute: func(_ context.Context, _ string, _ json.RawMessage, onUpdate func(AgentToolResult)) (AgentToolResult, error) {
 			for _, text := range []string{"one", "two", "three", "four", "five"} {
 				onUpdate(AgentToolResult{Content: []ai.Content{ai.TextContent{Text: text}}})
 			}
@@ -253,21 +241,17 @@ func TestPrepareArgumentsNonErrorPanicRendersLikeJavaScript(t *testing.T) {
 			tool := AgentTool{
 				Name: "boom", Parameters: json.RawMessage(`{"type":"object"}`),
 				PrepareArguments: func(json.RawMessage) json.RawMessage { panic(test.recovered) },
-				Execute: func(string, json.RawMessage, context.Context, func(AgentToolResult)) (AgentToolResult, error) {
+				Execute: func(context.Context, string, json.RawMessage, func(AgentToolResult)) (AgentToolResult, error) {
 					return AgentToolResult{}, nil
 				},
 			}
 			var toolResult *ai.ToolResultMessage
-			RunAgentLoop([]ai.Message{createUserMessage("hi")},
-				AgentContext{Tools: []AgentTool{tool}},
-				&AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter},
-				context.Background(),
-				func(event AgentEvent) error {
-					if result, ok := event.Message.(*ai.ToolResultMessage); ok && event.Type == MessageEnd {
-						toolResult = result
-					}
-					return nil
-				}, streamFn)
+			RunAgentLoop(context.Background(), []ai.Message{createUserMessage("hi")}, AgentContext{Tools: []AgentTool{tool}}, &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}, func(event AgentEvent) error {
+				if result, ok := event.Message.(*ai.ToolResultMessage); ok && event.Type == MessageEnd {
+					toolResult = result
+				}
+				return nil
+			}, streamFn)
 			if toolResult == nil {
 				t.Fatal("no tool result recorded")
 			}

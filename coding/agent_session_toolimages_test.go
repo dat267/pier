@@ -76,7 +76,7 @@ func TestSessionNormalizesToolResultImages(t *testing.T) {
 
 	shot := agent.AgentTool{
 		Name: "shot", Label: "shot", Parameters: json.RawMessage(`{"type":"object","properties":{}}`),
-		Execute: func(toolCallID string, params json.RawMessage, ctx context.Context, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
+		Execute: func(ctx context.Context, toolCallID string, params json.RawMessage, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			return agent.AgentToolResult{Content: []ai.Content{
 				ai.TextContent{Text: "screenshot"},
 				ai.ImageContent{Data: oversized, MimeType: "image/png"},
@@ -165,7 +165,7 @@ func TestSessionKeepsToolResultWithoutImages(t *testing.T) {
 
 	plain := agent.AgentTool{
 		Name: "plain", Label: "plain", Parameters: json.RawMessage(`{"type":"object","properties":{}}`),
-		Execute: func(toolCallID string, params json.RawMessage, ctx context.Context, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
+		Execute: func(ctx context.Context, toolCallID string, params json.RawMessage, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			return agent.AgentToolResult{
 				Content: []ai.Content{ai.TextContent{Text: "plain output"}},
 				Details: json.RawMessage(`{"kept":true}`),

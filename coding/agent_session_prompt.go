@@ -175,7 +175,7 @@ func (s *AgentSession) Prompt(ctx context.Context, text string, options *PromptO
 
 	if s.IsCompacting() {
 		preflight(false)
-		return fmt.Errorf("Cannot submit a prompt while compaction is in progress. Wait for compaction to finish and retry.")
+		return errors.New("Cannot submit a prompt while compaction is in progress. Wait for compaction to finish and retry.")
 	}
 
 	expandedText := text
@@ -198,7 +198,7 @@ func (s *AgentSession) Prompt(ctx context.Context, text string, options *PromptO
 		}
 	} else if s.IsStreaming() {
 		preflight(false)
-		return fmt.Errorf("Agent is already processing. Specify streamingBehavior ('steer' or 'followUp') to queue the message.")
+		return errors.New("Agent is already processing. Specify streamingBehavior ('steer' or 'followUp') to queue the message.")
 	}
 
 	// Flush deferred messages before the new turn. D438: only while idle,
@@ -295,7 +295,7 @@ func (s *AgentSession) validateModelAuth(ctx context.Context) error {
 	if runtime.HasConfiguredAuth(model.Provider) {
 		return nil
 	}
-	if check, err := runtime.CheckAuth(model.Provider, ctx); err == nil && check != nil {
+	if check, err := runtime.CheckAuth(ctx, model.Provider); err == nil && check != nil {
 		return nil
 	}
 	if runtime.IsUsingOAuth(model.Provider) {
@@ -337,7 +337,7 @@ func (s *AgentSession) startAgentPrompt(ctx context.Context, messages []ai.Messa
 	}
 	if state.navigating {
 		state.mu.Unlock()
-		return fmt.Errorf("Cannot submit a prompt while compaction is in progress. Wait for compaction to finish and retry.")
+		return errors.New("Cannot submit a prompt while compaction is in progress. Wait for compaction to finish and retry.")
 	}
 	state.abortRequested = false
 	state.runCancel = cancel

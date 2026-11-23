@@ -350,7 +350,7 @@ func scanMessageFacts(raw json.RawMessage) messageFacts {
 // provider, model and timestamp.
 func (f messageFacts) assistantMessage() ai.AssistantMessage {
 	message := ai.AssistantMessage{
-		Provider:  ai.ProviderId(f.Provider),
+		Provider:  f.Provider,
 		Model:     f.Model,
 		Timestamp: f.Timestamp,
 	}
@@ -502,7 +502,7 @@ func (m *SessionManager) UsageCostBreakdown() []UsageCostBreakdownEntry {
 			if candidate.responseModel != nil {
 				model = *candidate.responseModel
 			}
-			add(string(candidate.assistant.Provider)+"/"+model, candidate.usage)
+			add(candidate.assistant.Provider+"/"+model, candidate.usage)
 		}
 	}
 

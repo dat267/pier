@@ -158,7 +158,7 @@ func (t *Text) Render(width int) []string {
 	// Top/bottom padding (empty lines).
 	emptyLine := strings.Repeat(" ", width)
 	var emptyLines []string
-	for i := 0; i < t.paddingY; i++ {
+	for range t.paddingY {
 		line := emptyLine
 		if t.customBgFn != nil {
 			line = ApplyBackgroundToLine(emptyLine, width, t.customBgFn)

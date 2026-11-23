@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -79,7 +80,7 @@ func BuildGoogleParams(model *Model, context TranscriptContext, options *GoogleO
 	currentTools := GetCurrentTools(context.Messages)
 
 	if options.Ctx != nil && ctxErr(options.Ctx) != nil {
-		return nil, fmt.Errorf("Request aborted")
+		return nil, errors.New("Request aborted")
 	}
 
 	supportsStrictMode := SupportsGoogleStrictToolSampling(model.ID)
@@ -317,9 +318,9 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 					fail(err)
 					return
 				}
-				copy := *model
-				copy.ID = modelName
-				requestModel, body = &copy, replacement
+				copied := *model
+				copied.ID = modelName
+				requestModel, body = &copied, replacement
 			}
 		}
 
@@ -441,7 +442,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 							output.Content = append(output.Content, call)
 							stream.Push(AssistantMessageEvent{Type: EventToolcallStart, ContentIndex: blockIndex(), Partial: output})
 							stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: blockIndex(),
-								Delta: string(mustMarshalJSON(json.RawMessage(call.Arguments))), Partial: output})
+								Delta: string(mustMarshalJSON(call.Arguments)), Partial: output})
 							finalCall := call
 							stream.Push(AssistantMessageEvent{Type: EventToolcallEnd, ContentIndex: blockIndex(), ToolCall: &finalCall, Partial: output})
 						}
@@ -497,7 +498,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 			}
 		}
 		if ctxErr(ctx) != nil {
-			fail(fmt.Errorf("Request was aborted"))
+			fail(errors.New("Request was aborted"))
 			return
 		}
 		if output.StopReason == StopPending {

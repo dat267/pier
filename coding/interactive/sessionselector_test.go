@@ -94,7 +94,7 @@ func TestSessionSelectorAgainstUpstreamGolden(t *testing.T) {
 
 		var events []string
 		var renames []string
-		currentLoader := func(onProgress SessionListProgress, ctx context.Context) ([]coding.SessionInfo, error) {
+		currentLoader := func(ctx context.Context, onProgress SessionListProgress) ([]coding.SessionInfo, error) {
 			if spec.LoadError != "" {
 				return nil, errString(spec.LoadError)
 			}
@@ -103,7 +103,7 @@ func TestSessionSelectorAgainstUpstreamGolden(t *testing.T) {
 			}
 			return current, nil
 		}
-		allLoader := func(onProgress SessionListProgress, ctx context.Context) ([]coding.SessionInfo, error) {
+		allLoader := func(ctx context.Context, onProgress SessionListProgress) ([]coding.SessionInfo, error) {
 			if spec.LoadError != "" {
 				return nil, errString(spec.LoadError)
 			}
@@ -252,8 +252,8 @@ func TestSessionSelectorDeleteFlow(t *testing.T) {
 	var deleted []string
 	queue := &postQueue{}
 	component := NewSessionSelectorComponent(
-		func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) { return sessions, nil },
-		func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) { return sessions, nil },
+		func(context.Context, SessionListProgress) ([]coding.SessionInfo, error) { return sessions, nil },
+		func(context.Context, SessionListProgress) ([]coding.SessionInfo, error) { return sessions, nil },
 		func(string) {}, func() {}, func() {}, func() {},
 		SessionSelectorOptions{
 			DeleteSession: func(sessionPath string) SessionDeleteResult {
@@ -359,7 +359,7 @@ func TestSessionSelectorApplyStaysOnTheLoop(t *testing.T) {
 	SetStyleColorsEnabled(true)
 	InitTheme("dark", false)
 
-	loader := func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) { return nil, nil }
+	loader := func(context.Context, SessionListProgress) ([]coding.SessionInfo, error) { return nil, nil }
 	component := NewSessionSelectorComponent(loader, loader,
 		func(string) {}, func() {}, func() {}, func() {},
 		SessionSelectorOptions{ScheduleTimer: func(int, func()) {}})
@@ -398,7 +398,7 @@ func TestSessionSelectorRejectsPostedResultsAfterCancel(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			queue := &postQueue{}
 			renders, cancels := 0, 0
-			loader := func(progress SessionListProgress, _ context.Context) ([]coding.SessionInfo, error) {
+			loader := func(_ context.Context, progress SessionListProgress) ([]coding.SessionInfo, error) {
 				sessions := []coding.SessionInfo{{ID: "old", Path: "/fixture/old.jsonl", FirstMessage: "old"}}
 				progress(1, 2, sessions)
 				return sessions, nil
@@ -435,7 +435,7 @@ func TestSessionSelectorStatusTimerAppliesOnOwner(t *testing.T) {
 	InitTheme("dark", false)
 	queue := &postQueue{}
 	var fire func()
-	loader := func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) {
+	loader := func(context.Context, SessionListProgress) ([]coding.SessionInfo, error) {
 		return nil, errors.New("fixture offline")
 	}
 	component := NewSessionSelectorComponent(loader, loader, nil, nil, nil, nil,

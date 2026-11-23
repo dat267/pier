@@ -31,7 +31,7 @@ func perlPairedManual(prefixes []string, double bool) func(string, int) (int, bo
 		if double {
 			segments = 2
 		}
-		for seg := 0; seg < segments; seg++ {
+		for range segments {
 			closed := false
 			for i < len(s) {
 				c := s[i]

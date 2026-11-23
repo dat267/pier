@@ -8,6 +8,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -57,7 +58,7 @@ func OpenAIChatGPTRedirectURI() string {
 // URI, rejecting a missing or malformed id (upstream agentHostId).
 func openAIChatGPTAgentHostID(deviceID string) (string, error) {
 	if !isUUID(deviceID) {
-		return "", fmt.Errorf("Sign in with ChatGPT requires a device ID (UUID) for this installation")
+		return "", errors.New("Sign in with ChatGPT requires a device ID (UUID) for this installation")
 	}
 	return "urn:uuid:" + strings.ToLower(deviceID), nil
 }
@@ -205,18 +206,18 @@ func StartOpenAIChatGPTCallbackServer(expectedState string) (*OpenAIChatGPTCallb
 func authorizationResultFromCallback(parsed *url.URL, expectedState string) (OpenAIChatGPTAuthorizationResult, error) {
 	code := parsed.Query().Get("code")
 	if code == "" {
-		return OpenAIChatGPTAuthorizationResult{}, fmt.Errorf("Missing authorization code")
+		return OpenAIChatGPTAuthorizationResult{}, errors.New("Missing authorization code")
 	}
 	state := parsed.Query().Get("state")
 	if state == "" {
-		return OpenAIChatGPTAuthorizationResult{}, fmt.Errorf("Missing OAuth state")
+		return OpenAIChatGPTAuthorizationResult{}, errors.New("Missing OAuth state")
 	}
 	if state != expectedState {
-		return OpenAIChatGPTAuthorizationResult{}, fmt.Errorf("OAuth state mismatch")
+		return OpenAIChatGPTAuthorizationResult{}, errors.New("OAuth state mismatch")
 	}
 	clientID := JSTrim(parsed.Query().Get("client_id"))
 	if clientID == "" {
-		return OpenAIChatGPTAuthorizationResult{}, fmt.Errorf("OpenAI OAuth registration callback did not contain an issued client ID")
+		return OpenAIChatGPTAuthorizationResult{}, errors.New("OpenAI OAuth registration callback did not contain an issued client ID")
 	}
 	return OpenAIChatGPTAuthorizationResult{Code: code, ClientID: clientID}, nil
 }
@@ -226,7 +227,7 @@ func authorizationResultFromCallback(parsed *url.URL, expectedState string) (Ope
 func ParseOpenAIChatGPTAuthorizationInput(input string, expectedState string) (OpenAIChatGPTAuthorizationResult, error) {
 	parsed, _, valid := normalizeOAuthHTTPURL(JSTrim(input))
 	if !valid {
-		return OpenAIChatGPTAuthorizationResult{}, fmt.Errorf("Paste the full callback URL from the browser")
+		return OpenAIChatGPTAuthorizationResult{}, errors.New("Paste the full callback URL from the browser")
 	}
 	expected, _ := url.Parse(OpenAIChatGPTRedirectURI())
 	if urlOrigin(parsed) != urlOrigin(expected) || parsed.Path != expected.Path {
@@ -357,7 +358,7 @@ func requestOpenAIChatGPTToken(ctx context.Context, body url.Values) (*openAICha
 		ExpiresIn    *float64 `json:"expires_in"`
 	}
 	if err := json.Unmarshal(raw, &payload); err != nil {
-		return nil, fmt.Errorf("OpenAI OAuth token response must be an object")
+		return nil, errors.New("OpenAI OAuth token response must be an object")
 	}
 	out := &openAIChatGPTTokenResponse{
 		AccessToken: payload.AccessToken, RefreshToken: payload.RefreshToken,
@@ -374,16 +375,16 @@ func requestOpenAIChatGPTToken(ctx context.Context, body url.Values) (*openAICha
 // credential, storing the issued client id and scopes.
 func openAIChatGPTCredentialFromToken(token *openAIChatGPTTokenResponse, clientID string) (*OAuthCredential, error) {
 	if JSTrim(token.AccessToken) == "" {
-		return nil, fmt.Errorf("OpenAI OAuth token response has invalid access_token")
+		return nil, errors.New("OpenAI OAuth token response has invalid access_token")
 	}
 	if JSTrim(token.RefreshToken) == "" {
-		return nil, fmt.Errorf("OpenAI OAuth token response has invalid refresh_token")
+		return nil, errors.New("OpenAI OAuth token response has invalid refresh_token")
 	}
 	if JSTrim(token.Scope) == "" {
-		return nil, fmt.Errorf("OpenAI OAuth token response has invalid scope")
+		return nil, errors.New("OpenAI OAuth token response has invalid scope")
 	}
 	if !token.HasExpiresInFlag || token.ExpiresIn <= 0 {
-		return nil, fmt.Errorf("OpenAI OAuth token response has invalid expires_in")
+		return nil, errors.New("OpenAI OAuth token response has invalid expires_in")
 	}
 	scopes := strings.Fields(token.Scope)
 	if !containsString(scopes, OpenAIChatGPTDirectTokenScope) {
@@ -420,7 +421,7 @@ func ExchangeOpenAIChatGPTAuthorizationCode(ctx context.Context, code, verifier,
 	// Pi does not use the ID token to identify the user, but its presence is
 	// part of the token-response contract.
 	if JSTrim(token.IDToken) == "" {
-		return nil, fmt.Errorf("OpenAI OAuth token response did not contain an ID token")
+		return nil, errors.New("OpenAI OAuth token response did not contain an ID token")
 	}
 	return openAIChatGPTCredentialFromToken(token, clientID)
 }
@@ -429,7 +430,7 @@ func normalizeOpenAIChatGPTClientID(value string) string { return JSTrim(value) 
 
 // RefreshOpenAIChatGPTToken refreshes a ChatGPT credential with its stored
 // issued client id.
-func RefreshOpenAIChatGPTToken(credential *OAuthCredential, ctx context.Context) (*OAuthCredential, error) {
+func RefreshOpenAIChatGPTToken(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
 	clientID := ""
 	if credential != nil {
 		if raw, ok := credential.Extra["clientId"]; ok {
@@ -441,7 +442,7 @@ func RefreshOpenAIChatGPTToken(credential *OAuthCredential, ctx context.Context)
 	}
 	clientID = normalizeOpenAIChatGPTClientID(clientID)
 	if clientID == "" {
-		return nil, fmt.Errorf("Stored OpenAI OAuth credential does not contain an issued client ID; reconnect ChatGPT")
+		return nil, errors.New("Stored OpenAI OAuth credential does not contain an issued client ID; reconnect ChatGPT")
 	}
 	token, err := requestOpenAIChatGPTToken(ctx, url.Values{
 		"grant_type":    {"refresh_token"},
@@ -458,7 +459,7 @@ func RefreshOpenAIChatGPTToken(credential *OAuthCredential, ctx context.Context)
 // LoginOpenAIChatGPT runs the browser login path with the manual paste race.
 func LoginOpenAIChatGPT(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, fmt.Errorf("auth interaction is required")
+		return nil, errors.New("auth interaction is required")
 	}
 	deviceID := ""
 	if interaction.GetDeviceID != nil {
@@ -541,9 +542,7 @@ func OpenAIChatGPTOAuth() *OAuthAuth {
 		IsSubscription: true,
 		LoginLabel:     "Sign in with ChatGPT",
 		Login:          LoginOpenAIChatGPT,
-		Refresh: func(credential *OAuthCredential, ctx context.Context) (*OAuthCredential, error) {
-			return RefreshOpenAIChatGPTToken(credential, ctx)
-		},
+		Refresh:        RefreshOpenAIChatGPTToken,
 		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
 			return &ModelAuth{APIKey: credential.Access}, nil
 		},

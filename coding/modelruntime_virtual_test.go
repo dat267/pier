@@ -62,7 +62,7 @@ func TestVirtualModelRegistrationAndRouting(t *testing.T) {
 		!strings.Contains(err.Error(), "which has no credentials") {
 		t.Fatalf("routing without credentials = %v", err)
 	}
-	if err := runtime.SetRuntimeAPIKey(physical.Provider, "synthetic-key", ctx); err != nil {
+	if err := runtime.SetRuntimeAPIKey(ctx, physical.Provider, "synthetic-key"); err != nil {
 		t.Fatal(err)
 	}
 	// The router runs before the target is checked, so the rejected attempt is

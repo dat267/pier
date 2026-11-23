@@ -16,7 +16,7 @@ func runEdit(t *testing.T, dir, path, oldText, newText string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CreateEditTool(dir).Execute("c", params, nil, nil); err != nil {
+	if _, err := CreateEditTool(dir).Execute(nil, "c", params, nil); err != nil {
 		t.Fatalf("edit %s: %v", path, err)
 	}
 	_ = os.Getenv

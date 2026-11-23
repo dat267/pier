@@ -173,7 +173,7 @@ func TestPromptModelValidation(t *testing.T) {
 	}
 
 	// With a runtime key the prompt runs.
-	if err := runtime.SetRuntimeAPIKey("anthropic", "sk-1", ctxpkg.Background()); err != nil {
+	if err := runtime.SetRuntimeAPIKey(ctxpkg.Background(), "anthropic", "sk-1"); err != nil {
 		t.Fatal(err)
 	}
 	if err := session.Prompt(ctxpkg.Background(), "hello", nil); err != nil {

@@ -435,7 +435,7 @@ func (in *Input) Render(width int) []string {
 		return []string{in.prompt + textWithCursor + padding}
 	}
 
-	visibleText := ""
+	var visibleText string
 	cursorDisplay := in.cursor
 	in.renderedStartColumn = 0
 	totalWidth := VisibleWidth(in.value)
@@ -453,7 +453,7 @@ func (in *Input) Render(width int) []string {
 
 		if scrollWidth > 0 {
 			halfWidth := scrollWidth / 2
-			startCol := 0
+			var startCol int
 			switch {
 			case cursorCol < halfWidth:
 				startCol = 0

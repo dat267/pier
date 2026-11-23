@@ -51,7 +51,7 @@ func TestModelRuntimeConcurrentCredentialWritesDoNotRaceReaders(t *testing.T) {
 		go func() {
 			defer wait.Done()
 			for range 10 {
-				if err := runtime.SetRuntimeAPIKey(providerID, "sk-"+providerID, ctx); err != nil {
+				if err := runtime.SetRuntimeAPIKey(ctx, providerID, "sk-"+providerID); err != nil {
 					t.Error(err)
 					return
 				}

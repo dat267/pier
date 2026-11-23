@@ -1,8 +1,10 @@
 package coding
 
 import (
+	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/internal/jsdiff"
@@ -65,7 +67,7 @@ func trimJSTrailing(line string) string {
 func splitLinesWithEndings(content string) []string {
 	var out []string
 	start := 0
-	for i := 0; i < len(content); i++ {
+	for i := range len(content) {
 		if content[i] == '\n' {
 			out = append(out, content[start:i+1])
 			start = i + 1
@@ -113,14 +115,14 @@ func getReplacementLineRange(lines []lineSpan, replacement textReplacement) (sta
 		}
 	}
 	if startLine == -1 {
-		return 0, 0, fmt.Errorf("Replacement range is outside the base content.")
+		return 0, 0, errors.New("Replacement range is outside the base content.")
 	}
 	endLine = startLine
 	for endLine < len(lines) && lines[endLine].end < replacementEnd {
 		endLine++
 	}
 	if endLine >= len(lines) {
-		return 0, 0, fmt.Errorf("Replacement range is outside the base content.")
+		return 0, 0, errors.New("Replacement range is outside the base content.")
 	}
 	return startLine, endLine + 1, nil
 }
@@ -146,7 +148,7 @@ func widenReplacementsToLines(originalContent, baseContent string, replacements 
 	originalLines := getLineSpans(originalContent)
 	baseLines := getLineSpans(baseContent)
 	if len(originalLines) != len(baseLines) {
-		return nil, fmt.Errorf("Cannot preserve unchanged lines because the base content has a different line count.")
+		return nil, errors.New("Cannot preserve unchanged lines because the base content has a different line count.")
 	}
 
 	type group struct {
@@ -532,7 +534,7 @@ func patchOpsFromComponents(components []jsdiff.Component) []diffOp {
 	var ops []diffOp
 	oldIndex, newIndex := 0, 0
 	for _, component := range components {
-		for count := 0; count < component.Count; count++ {
+		for range component.Count {
 			switch {
 			case component.Added:
 				ops = append(ops, diffOp{kind: opAdd, newIndex: newIndex})
@@ -602,8 +604,7 @@ func buildPatchHunks(oldTokens, newTokens []string, ops []diffOp, context int) [
 	oldRangeStart, newRangeStart := 0, 0
 	var current []string
 	oldLine, newLine := 1, 1
-	for index := 0; index < len(parts); index++ {
-		part := parts[index]
+	for index, part := range parts {
 		if !part.equal {
 			if oldRangeStart == 0 {
 				oldRangeStart, newRangeStart = oldLine, newLine
@@ -721,7 +722,7 @@ func displayParts(oldContent, newContent string) []displayPart {
 // displayLineNumWidth sizes the line-number column from `text.split("\n")`,
 // which keeps the empty element after a trailing newline.
 func displayLineNumWidth(text string) int {
-	return len(fmt.Sprintf("%d", strings.Count(text, "\n")+1))
+	return len(strconv.Itoa(strings.Count(text, "\n") + 1))
 }
 
 // GenerateDiffString builds the display-oriented diff with line numbers and
@@ -743,7 +744,7 @@ func GenerateDiffString(oldContent, newContent string, contextLines int) (diff s
 // (port of upstream's formatDisplayDiff).
 func formatDisplayDiff(parts []displayPart, oldStartLine, newStartLine, lineNumWidth, contextLines int) (lines []string, firstChangedLine int, ok bool) {
 	pad := func(n int) string {
-		s := fmt.Sprintf("%d", n)
+		s := strconv.Itoa(n)
 		for len(s) < lineNumWidth {
 			s = " " + s
 		}

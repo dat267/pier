@@ -58,7 +58,7 @@ func TestGoalToolAcceptsNullForInactiveRequiredArguments(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				result, err := tool.Execute("id", validated, context.Background(), func(agent.AgentToolResult) {})
+				result, err := tool.Execute(context.Background(), "id", validated, func(agent.AgentToolResult) {})
 				if err != nil || result.IsError {
 					t.Fatalf("execute %s: result=%+v err=%v", arguments, result, err)
 				}
@@ -70,7 +70,7 @@ func TestGoalToolAcceptsNullForInactiveRequiredArguments(t *testing.T) {
 				`{"objective":"another task","status":"clear","blocked_reason":null}`,
 				`{"objective":null,"status":null,"blocked_reason":null}`,
 			} {
-				result, err := tool.Execute("id", json.RawMessage(arguments), context.Background(), func(agent.AgentToolResult) {})
+				result, err := tool.Execute(context.Background(), "id", json.RawMessage(arguments), func(agent.AgentToolResult) {})
 				if err != nil || !result.IsError {
 					t.Fatalf("invalid action %s: result=%+v err=%v", arguments, result, err)
 				}

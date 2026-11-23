@@ -88,7 +88,7 @@ func SanitizeUntrustedText(text string) string {
 // HasTerminalControl reports whether text contains anything
 // SanitizeUntrustedText would remove, so ordinary text stays allocation-free.
 func HasTerminalControl(text string) bool {
-	for i := 0; i < len(text); i++ {
+	for i := range len(text) {
 		char := text[i]
 		if char == '\x1b' || char == 0x7f || (char < 0x20 && char != '\n' && char != '\t') {
 			return true

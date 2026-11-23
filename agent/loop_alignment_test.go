@@ -35,7 +35,7 @@ func TestPrepareRequestRunsBeforeEveryProviderCall(t *testing.T) {
 	prepareCalls := 0
 	config := &AgentLoopConfig{
 		Model: createModel(), Reasoning: ai.ThinkLow, ConvertToLlm: identityConverter,
-		PrepareRequest: func(request *PrepareRequestContext, _ context.Context) (*AgentRequestUpdate, error) {
+		PrepareRequest: func(_ context.Context, request *PrepareRequestContext) (*AgentRequestUpdate, error) {
 			prepareCalls++
 			if prepareCalls == 1 {
 				if len(request.Context.Messages) != 1 || ai.RoleOf(request.Context.Messages[0]) != ai.RoleUser {
@@ -61,7 +61,7 @@ func TestPrepareRequestRunsBeforeEveryProviderCall(t *testing.T) {
 			return nil, nil
 		},
 	}
-	stream := AgentLoop([]ai.Message{createUserMessage("go")}, AgentContext{}, config, nil, streamFn)
+	stream := AgentLoop(nil, []ai.Message{createUserMessage("go")}, AgentContext{}, config, streamFn)
 	drainAgentStream(t, stream)
 	if prepareCalls != 2 || streamCalls != 2 {
 		t.Fatalf("prepare/stream calls = %d/%d, want 2/2", prepareCalls, streamCalls)

@@ -439,7 +439,7 @@ func commonIndentPrefix(a, b string) string {
 	index := 0
 	for index < len(a) && index < len(b) {
 		r, size := decodeRuneAt(a, index)
-		if string(r) != string(b[index:index+size]) || !tui.IsWhitespaceChar(string(r)) {
+		if string(r) != b[index:index+size] || !tui.IsWhitespaceChar(string(r)) {
 			break
 		}
 		index += size

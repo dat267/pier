@@ -3,6 +3,7 @@ package coding
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
@@ -420,10 +421,10 @@ type NavigateTreeResult struct {
 // session_before_tree/session_tree hooks).
 func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, options NavigateTreeOptions) (*NavigateTreeResult, error) {
 	if s.IsStreaming() {
-		return nil, fmt.Errorf("Wait for the current response to finish before navigating the session tree.")
+		return nil, errors.New("Wait for the current response to finish before navigating the session tree.")
 	}
 	if s.IsCompacting() {
-		return nil, fmt.Errorf("Wait for the current compaction or tree navigation to finish before navigating the session tree.")
+		return nil, errors.New("Wait for the current compaction or tree navigation to finish before navigating the session tree.")
 	}
 	// D438: claim the session against run starts under the lock that installs
 	// a run; a prompt that passed its own check meanwhile is refused there.
@@ -432,10 +433,10 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 	switch {
 	case state.runActive || s.Agent.State().IsStreaming:
 		state.mu.Unlock()
-		return nil, fmt.Errorf("Wait for the current response to finish before navigating the session tree.")
+		return nil, errors.New("Wait for the current response to finish before navigating the session tree.")
 	case state.navigating:
 		state.mu.Unlock()
-		return nil, fmt.Errorf("Wait for the current compaction or tree navigation to finish before navigating the session tree.")
+		return nil, errors.New("Wait for the current compaction or tree navigation to finish before navigating the session tree.")
 	}
 	state.navigating = true
 	state.mu.Unlock()
@@ -453,7 +454,7 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 		return &NavigateTreeResult{}, nil
 	}
 	if options.Summarize && !s.HasModel() {
-		return nil, fmt.Errorf("No model available for summarization")
+		return nil, errors.New("No model available for summarization")
 	}
 	targetEntry := s.Sessions.GetEntry(targetID)
 	if targetEntry == nil {

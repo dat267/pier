@@ -149,13 +149,13 @@ func (a AssistantImages) MarshalJSON() ([]byte, error) {
 func marshalImagesOutputContent(block Content) (json.RawMessage, error) {
 	switch typed := block.(type) {
 	case TextContent:
-		return MarshalJSON(imagesTextOutput{Type: string(KindText), Text: typed.Text})
+		return MarshalJSON(imagesTextOutput{Type: KindText, Text: typed.Text})
 	case *TextContent:
-		return MarshalJSON(imagesTextOutput{Type: string(KindText), Text: typed.Text})
+		return MarshalJSON(imagesTextOutput{Type: KindText, Text: typed.Text})
 	case ImageContent:
-		return MarshalJSON(imagesImageOutput{Type: string(KindImage), MimeType: typed.MimeType, Data: typed.Data})
+		return MarshalJSON(imagesImageOutput{Type: KindImage, MimeType: typed.MimeType, Data: typed.Data})
 	case *ImageContent:
-		return MarshalJSON(imagesImageOutput{Type: string(KindImage), MimeType: typed.MimeType, Data: typed.Data})
+		return MarshalJSON(imagesImageOutput{Type: KindImage, MimeType: typed.MimeType, Data: typed.Data})
 	default:
 		return marshalContentBlock(block)
 	}

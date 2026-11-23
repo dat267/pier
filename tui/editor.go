@@ -810,7 +810,7 @@ func (e *Editor) layoutTextLocked(contentWidth int) []layoutLine {
 		return layoutLines
 	}
 
-	for i := 0; i < len(e.state.lines); i++ {
+	for i := range len(e.state.lines) {
 		line := e.state.lines[i]
 		isCurrentLine := i == e.state.cursorLine
 		if VisibleWidth(line) <= contentWidth {
@@ -1069,7 +1069,7 @@ func (e *Editor) handlePasteLocked(pastedText string) {
 		e.pasteCounter++
 		pasteID := e.pasteCounter
 		e.pastes[pasteID] = filteredText
-		marker := ""
+		var marker string
 		if len(pastedLines) > 10 {
 			marker = "[paste #" + itoa(pasteID) + " +" + itoa(len(pastedLines)) + " lines]"
 		} else {
@@ -1288,7 +1288,7 @@ func (e *Editor) moveToVisualLine(visualLines []editorVisualLine, currentVisualL
 	// (cursorCol - startCol over JS strings), so the sticky-column arithmetic
 	// runs in code units and only the final cursor is a byte offset.
 	currentText := e.lineText(currentVL.logicalLine)
-	currentVisualCol := 0
+	var currentVisualCol int
 	if e.hasSnappedFromCursor {
 		vlIndex := e.findVisualLineAtUnits(visualLines, currentVL.logicalLine, e.snappedFromUnits)
 		snapVL := visualLines[vlIndex]
@@ -1605,7 +1605,7 @@ func (e *Editor) handleForwardDeleteLocked() {
 
 func (e *Editor) buildVisualLineMap(width int) []editorVisualLine {
 	var visualLines []editorVisualLine
-	for i := 0; i < len(e.state.lines); i++ {
+	for i := range len(e.state.lines) {
 		line := e.state.lines[i]
 		if len(line) == 0 {
 			visualLines = append(visualLines, editorVisualLine{logicalLine: i, startCol: 0, length: 0})

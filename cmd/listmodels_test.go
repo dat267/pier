@@ -27,7 +27,7 @@ func TestListModelsReportsCatalogProblems(t *testing.T) {
 	}
 	settings := coding.NewSettingsManagerFromFiles(t.TempDir(), coding.GetAgentDir(), coding.SettingsManagerCreateOptions{})
 	stdout, stderr := captureStdio(t, func() {
-		if err := listModels(runtime, settings, coding.ParseArgs(nil), context.Background()); err != nil {
+		if err := listModels(context.Background(), runtime, settings, coding.ParseArgs(nil)); err != nil {
 			t.Errorf("listModels: %v", err)
 		}
 	})
@@ -60,7 +60,7 @@ func TestListModelsPrintsTheConfiguredCatalog(t *testing.T) {
 	settings := coding.NewSettingsManagerFromFiles(t.TempDir(), agentDir, coding.SettingsManagerCreateOptions{})
 
 	stdout, _ := captureStdio(t, func() {
-		if err := listModels(runtime, settings, coding.ParseArgs(nil), context.Background()); err != nil {
+		if err := listModels(context.Background(), runtime, settings, coding.ParseArgs(nil)); err != nil {
 			t.Errorf("listModels: %v", err)
 		}
 	})
@@ -70,7 +70,7 @@ func TestListModelsPrintsTheConfiguredCatalog(t *testing.T) {
 
 	pattern := "other"
 	stdout, _ = captureStdio(t, func() {
-		if err := listModels(runtime, settings, coding.ParseArgs([]string{"--list-models", pattern}), context.Background()); err != nil {
+		if err := listModels(context.Background(), runtime, settings, coding.ParseArgs([]string{"--list-models", pattern})); err != nil {
 			t.Errorf("listModels: %v", err)
 		}
 	})

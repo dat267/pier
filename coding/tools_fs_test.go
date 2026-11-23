@@ -20,7 +20,7 @@ import (
 
 func execTool(t *testing.T, tool agent.AgentTool, args string) agent.AgentToolResult {
 	t.Helper()
-	result, err := tool.Execute("call-1", json.RawMessage(args), context.Background(), nil)
+	result, err := tool.Execute(context.Background(), "call-1", json.RawMessage(args), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +138,7 @@ func TestReadToolTextAndTruncation(t *testing.T) {
 	}
 
 	// Offset beyond end.
-	if _, err := tool.Execute("c", json.RawMessage(`{"path":"sample.txt","offset":99999}`), context.Background(), nil); err == nil {
+	if _, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"path":"sample.txt","offset":99999}`), nil); err == nil {
 		t.Fatal("expected out-of-bounds error")
 	}
 }
@@ -267,7 +267,7 @@ func TestLsToolSortingAndLimits(t *testing.T) {
 
 	// File (not directory).
 	os.WriteFile(filepath.Join(dir, "afile"), []byte("x"), 0o644)
-	if _, err := tool.Execute("c", json.RawMessage(`{"path":"afile"}`), context.Background(), nil); err == nil {
+	if _, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"path":"afile"}`), nil); err == nil {
 		t.Fatal("expected not-a-directory error")
 	}
 }

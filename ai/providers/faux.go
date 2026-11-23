@@ -7,6 +7,7 @@ package providers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -382,7 +383,7 @@ func fauxAssistantContentToText(content ai.ContentList) string {
 		case ai.ThinkingContent:
 			parts = append(parts, b.Thinking)
 		case ai.ToolCall:
-			args, err := ai.MarshalJSON(json.RawMessage(b.Arguments))
+			args, err := ai.MarshalJSON(b.Arguments)
 			if err != nil {
 				args = []byte("null")
 			}
@@ -673,9 +674,9 @@ func fauxScheduleChunk(chunk string, tokensPerSecond float64) {
 }
 
 func (c *FauxCore) streamWithDeltas(
+	ctx context.Context,
 	stream *ai.AssistantMessageEventStream,
 	message *ai.AssistantMessage,
-	ctx context.Context,
 ) {
 	partial := fauxCloneForEvent(message)
 	partial.Content = nil
@@ -689,7 +690,7 @@ func (c *FauxCore) streamWithDeltas(
 
 	stream.Push(ai.AssistantMessageEvent{Type: ai.EventStart, Partial: partial})
 
-	for index := 0; index < len(message.Content); index++ {
+	for index := range len(message.Content) {
 		if fauxAborted(ctx) {
 			aborted := fauxCreateAbortedMessage(partial)
 			stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopAborted, Error: aborted})
@@ -733,7 +734,7 @@ func (c *FauxCore) streamWithDeltas(
 		case ai.ToolCall:
 			partial.Content = append(partial.Content, ai.ToolCall{ID: block.ID, Name: block.Name, Arguments: json.RawMessage("{}")})
 			stream.Push(ai.AssistantMessageEvent{Type: ai.EventToolcallStart, ContentIndex: index, Partial: partial})
-			argsJSON, err := ai.MarshalJSON(json.RawMessage(block.Arguments))
+			argsJSON, err := ai.MarshalJSON(block.Arguments)
 			if err != nil {
 				argsJSON = []byte("null")
 			}
@@ -758,7 +759,7 @@ func (c *FauxCore) streamWithDeltas(
 	}
 
 	if message.StopReason == ai.StopPending || message.StopReason == "" {
-		err := fmt.Errorf("Faux response ended without a stop reason")
+		err := errors.New("Faux response ended without a stop reason")
 		msg := fauxCreateErrorMessage(err, c.api, c.provider, message.Model)
 		stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopError, Error: msg})
 		stream.End(&msg)
@@ -829,7 +830,7 @@ func (c *FauxCore) Stream(requestModel *ai.Model, context ai.TranscriptContext, 
 		}
 		if !hasStep {
 			message := fauxWithUsageEstimate(
-				fauxCreateErrorMessage(fmt.Errorf("No more faux responses queued"), c.api, c.provider, requestModel.ID),
+				fauxCreateErrorMessage(errors.New("No more faux responses queued"), c.api, c.provider, requestModel.ID),
 				context, streamOpts, c.promptCache, &c.cacheMu)
 			outer.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopError, Error: message})
 			outer.End(&message)
@@ -858,7 +859,7 @@ func (c *FauxCore) Stream(requestModel *ai.Model, context ai.TranscriptContext, 
 				pendingFetches: pending,
 			}
 			c.mu.Unlock()
-			c.streamWithDeltas(outer, fauxCreateDeferredMessage(requestModel, handle), ctx)
+			c.streamWithDeltas(ctx, outer, fauxCreateDeferredMessage(requestModel, handle))
 			return
 		}
 
@@ -869,7 +870,7 @@ func (c *FauxCore) Stream(requestModel *ai.Model, context ai.TranscriptContext, 
 			outer.End(&msg)
 			return
 		}
-		c.streamWithDeltas(outer, message, ctx)
+		c.streamWithDeltas(ctx, outer, message)
 	}()
 
 	return outer
@@ -916,7 +917,7 @@ func (c *FauxCore) FetchDeferred(requestModel *ai.Model, handle *ai.DeferredHand
 		if entry.pendingFetches > 0 {
 			entry.pendingFetches--
 			c.mu.Unlock()
-			c.streamWithDeltas(outer, fauxCreateDeferredMessage(requestModel, &entry.handle), ctx)
+			c.streamWithDeltas(ctx, outer, fauxCreateDeferredMessage(requestModel, &entry.handle))
 			return
 		}
 		c.mu.Unlock()
@@ -936,7 +937,7 @@ func (c *FauxCore) FetchDeferred(requestModel *ai.Model, handle *ai.DeferredHand
 			entry.final = msg
 			c.mu.Unlock()
 		}
-		c.streamWithDeltas(outer, entry.final, ctx)
+		c.streamWithDeltas(ctx, outer, entry.final)
 	}()
 
 	return outer

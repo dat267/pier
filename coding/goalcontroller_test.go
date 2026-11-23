@@ -86,7 +86,7 @@ func TestGoalControllerCreateGoalEffect(t *testing.T) {
 func TestGoalControllerCreateGoalRejectsEmptyObjective(t *testing.T) {
 	controller, sink := newGoalControllerTest(t)
 	tool := findGoalTool(t, controller, "set_goal")
-	result, err := tool.Execute("id", json.RawMessage(`{"objective":"  "}`), context.Background(), func(agent.AgentToolResult) {})
+	result, err := tool.Execute(context.Background(), "id", json.RawMessage(`{"objective":"  "}`), func(agent.AgentToolResult) {})
 	if err != nil || !result.IsError {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}

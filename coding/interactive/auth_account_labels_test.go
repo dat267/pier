@@ -36,14 +36,14 @@ func TestAuthLogoutSelectorLabelsNonSubscriptionAccounts(t *testing.T) {
 	InitTheme("dark", false)
 	store := ai.NewInMemoryCredentialStore()
 	for _, provider := range []string{"openrouter", "anthropic", "openai"} {
-		_, err := store.Modify(provider, func(*ai.Credential) (*ai.Credential, error) {
+		_, err := store.Modify(context.Background(), provider, func(*ai.Credential) (*ai.Credential, error) {
 			if provider == "openai" {
 				return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "synthetic-key"}}, nil
 			}
 			return &ai.Credential{Type: ai.CredentialOAuth, OAuth: &ai.OAuthCredential{
 				Access: "synthetic-access", Refresh: "synthetic-refresh", Expires: 4102444800000,
 			}}, nil
-		}, context.Background())
+		})
 		if err != nil {
 			t.Fatal(err)
 		}

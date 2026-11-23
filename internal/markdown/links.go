@@ -224,8 +224,8 @@ func matchInlineLabel(src string, at int) (labelEnd, refStart int, ok bool) {
 			for run < len(src) && src[run] == '`' {
 				run++
 			}
-			if close := strings.IndexByte(src[run:], '`'); close >= 0 {
-				closeEnd := run + close
+			if closeAt := strings.IndexByte(src[run:], '`'); closeAt >= 0 {
+				closeEnd := run + closeAt
 				for closeEnd < len(src) && src[closeEnd] == '`' {
 					closeEnd++
 				}

@@ -41,7 +41,7 @@ func configuredDefaultSyncRuntime(t *testing.T, configure ...string) *ModelRunti
 	t.Helper()
 	runtime := runtimeWithProviders(t, stubProvider("alpha"), stubProvider("beta"))
 	for _, id := range configure {
-		if err := runtime.SetRuntimeAPIKey(id, "sk-"+id, context.Background()); err != nil {
+		if err := runtime.SetRuntimeAPIKey(context.Background(), id, "sk-"+id); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -51,7 +51,7 @@ func TestWriteToolMatchesUpstream(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			result, execErr := tool.Execute("call", params, context.Background(), nil)
+			result, execErr := tool.Execute(context.Background(), "call", params, nil)
 			if fixture.Expected.Error != "" {
 				if execErr == nil {
 					t.Fatalf("expected error %q, got success", fixture.Expected.Error)
@@ -90,7 +90,7 @@ func TestWriteToolDirectoryError(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(dir, "adir"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	_, err := CreateWriteTool(dir).Execute("call", []byte(`{"path":"adir","content":"x"}`), context.Background(), nil)
+	_, err := CreateWriteTool(dir).Execute(context.Background(), "call", []byte(`{"path":"adir","content":"x"}`), nil)
 	if err == nil {
 		t.Fatal("writing over a directory succeeded")
 	}

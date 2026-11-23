@@ -47,7 +47,7 @@ func TestModelRegistryReads(t *testing.T) {
 	}
 
 	// Making the provider configured flips the reads.
-	if err := registry.Runtime().SetRuntimeAPIKey("alpha", "sk-alpha", ctxpkg.Background()); err != nil {
+	if err := registry.Runtime().SetRuntimeAPIKey(ctxpkg.Background(), "alpha", "sk-alpha"); err != nil {
 		t.Fatal(err)
 	}
 	if !registry.HasConfiguredAuth(model) {

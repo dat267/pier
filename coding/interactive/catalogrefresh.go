@@ -164,13 +164,13 @@ func (c *ModelCatalogRefreshCoordinator) join(runtime ModelCatalogRuntime) *acti
 			continue
 		}
 		created.waiters.Add(1)
-		go c.run(runtime, created, refreshContext)
+		go c.run(refreshContext, runtime, created)
 		return created
 	}
 }
 
 // run performs the refresh and publishes its outcome.
-func (c *ModelCatalogRefreshCoordinator) run(runtime ModelCatalogRuntime, active *activeCatalogRefresh, ctx context.Context) {
+func (c *ModelCatalogRefreshCoordinator) run(ctx context.Context, runtime ModelCatalogRuntime, active *activeCatalogRefresh) {
 	result, err := runtime.Refresh(ctx, nil)
 	active.outcome.Store(&refreshOutcome{result: result, err: err})
 	// Unpublish before signalling completion: the Go port has real concurrency,

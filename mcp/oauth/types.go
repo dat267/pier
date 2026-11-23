@@ -8,6 +8,7 @@ package oauth
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -278,7 +279,7 @@ func ParseAuthorizationServerMetadata(value any) (*AuthorizationServerMetadata, 
 		return nil, err
 	}
 	if responseTypes == nil {
-		return nil, fmt.Errorf("Invalid response_types_supported")
+		return nil, errors.New("Invalid response_types_supported")
 	}
 	issuer, err := safeUrl(input, "issuer", "authorization server issuer")
 	if err != nil {
@@ -357,7 +358,7 @@ func ParseOAuthTokens(value any) (*OAuthTokens, error) {
 	if !absent(input["expires_in"]) {
 		number, ok := jsnum.Number(input["expires_in"])
 		if !ok {
-			return nil, fmt.Errorf("Invalid expires_in")
+			return nil, errors.New("Invalid expires_in")
 		}
 		result.ExpiresIn = &number
 	}

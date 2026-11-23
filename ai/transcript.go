@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 )
@@ -235,7 +236,7 @@ func DeclarationsEqual(left, right Tool) bool {
 	if errL != nil || errR != nil {
 		return false
 	}
-	return string(l) == string(r)
+	return bytes.Equal(l, r)
 }
 
 // ToolStateChanges compares two complete tool states. A changed definition

@@ -25,7 +25,7 @@ type ExecuteBashOptions struct {
 
 // ExecuteBash runs a bash command in the session's working directory, streams
 // output chunks, and records the result in session history.
-func (s *AgentSession) ExecuteBash(ctx context.Context, command string, onChunk func(chunk string), options *ExecuteBashOptions) (*BashResult, error) { //nolint:revive,
+func (s *AgentSession) ExecuteBash(ctx context.Context, command string, onChunk func(chunk string), options *ExecuteBashOptions) (*BashResult, error) {
 	if options == nil {
 		options = &ExecuteBashOptions{}
 	}

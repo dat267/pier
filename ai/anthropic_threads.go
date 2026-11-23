@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -142,7 +142,7 @@ var newThreadErrors = map[string]bool{
 // (D459: member order does not change the hash).
 func hashAnthropicThreadPrefix(model *Model, settings *orderedJSONFields, messages []json.RawMessage) string {
 	values := make([]any, 0, 10)
-	values = append(values, string(model.Provider), model.BaseURL)
+	values = append(values, model.Provider, model.BaseURL)
 	for _, key := range []string{
 		"model", "system", "tools", "thinking", "output_config", "tool_choice", "betas", "fallbacks",
 	} {
@@ -319,10 +319,10 @@ func getAnthropicThreadErrorCode(providerErr *ProviderError) string {
 // passed on. The returned thread request is the one that produced the response,
 // if any.
 func sendAnthropicThreadRequest(
+	ctx context.Context,
 	thread *anthropicPreparedThread,
 	send func(json.RawMessage) (*http.Response, error),
 	output *AssistantMessage,
-	ctx context.Context,
 ) (*http.Response, *anthropicPreparedThread, error) {
 	response, err := send(thread.body)
 	if err == nil {
@@ -352,7 +352,7 @@ func sendAnthropicThreadRequest(
 	// Recorded before the resend, so a failed resend keeps it.
 	reason := errorCode
 	if reason == "" {
-		reason = fmt.Sprintf("%d", providerErr.Status)
+		reason = strconv.Itoa(providerErr.Status)
 	}
 	appendAnthropicThreadFallback(output, err, reason)
 	if startNewThread {

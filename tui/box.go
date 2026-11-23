@@ -309,7 +309,7 @@ func (b *Box) Render(width int) []string {
 			global++
 		}
 	}
-	for i := 0; i < b.paddingY; i++ {
+	for range b.paddingY {
 		result = append(result, b.applyBg("", width))
 	}
 

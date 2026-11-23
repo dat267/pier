@@ -26,7 +26,7 @@ func TestCanceledToolCallReportsOperationAborted(t *testing.T) {
 		canceled := false
 		tool := &AgentTool{
 			Name: "tool",
-			Execute: func(_ string, _ json.RawMessage, _ context.Context, _ func(AgentToolResult)) (AgentToolResult, error) {
+			Execute: func(_ context.Context, _ string, _ json.RawMessage, _ func(AgentToolResult)) (AgentToolResult, error) {
 				if !canceled {
 					canceled = true
 					cancel()
@@ -35,7 +35,7 @@ func TestCanceledToolCallReportsOperationAborted(t *testing.T) {
 			},
 		}
 		prepared := &preparedToolCallValue{toolCall: ai.ToolCall{ID: "tc", Name: "tool"}, tool: tool}
-		executed := executePreparedToolCall(prepared, ctx, func(AgentEvent) error { return nil })
+		executed := executePreparedToolCall(ctx, prepared, func(AgentEvent) error { return nil })
 		if !executed.isError {
 			t.Fatalf("%v: canceled tool call did not fail", toolErr)
 		}
@@ -53,12 +53,12 @@ func TestToolFailureKeepsItsMessageWhileTheRunIsCanceled(t *testing.T) {
 	cancel()
 	tool := &AgentTool{
 		Name: "tool",
-		Execute: func(_ string, _ json.RawMessage, _ context.Context, _ func(AgentToolResult)) (AgentToolResult, error) {
+		Execute: func(_ context.Context, _ string, _ json.RawMessage, _ func(AgentToolResult)) (AgentToolResult, error) {
 			return AgentToolResult{}, errors.New("Path not found: /tmp/x")
 		},
 	}
 	prepared := &preparedToolCallValue{toolCall: ai.ToolCall{ID: "tc", Name: "tool"}, tool: tool}
-	executed := executePreparedToolCall(prepared, ctx, func(AgentEvent) error { return nil })
+	executed := executePreparedToolCall(ctx, prepared, func(AgentEvent) error { return nil })
 	if got := executed.result.Content[0].(ai.TextContent).Text; got != "Path not found: /tmp/x" {
 		t.Fatalf("tool result = %q", got)
 	}
@@ -82,7 +82,7 @@ func TestAbortedToolBatchAnswersEveryCall(t *testing.T) {
 			tool := &AgentTool{
 				Name:       "tool",
 				Parameters: json.RawMessage(`{"type":"object","properties":{}}`),
-				Execute: func(id string, _ json.RawMessage, _ context.Context, _ func(AgentToolResult)) (AgentToolResult, error) {
+				Execute: func(_ context.Context, id string, _ json.RawMessage, _ func(AgentToolResult)) (AgentToolResult, error) {
 					cancel()
 					return AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "ran " + id}}}, nil
 				},
@@ -93,7 +93,7 @@ func TestAbortedToolBatchAnswersEveryCall(t *testing.T) {
 				message.Content = append(message.Content, call)
 			}
 			agentContext := &AgentContext{Tools: []AgentTool{*tool}, Messages: []ai.Message{message}}
-			batch := executeToolCalls(agentContext, message, config, ctx, func(AgentEvent) error { return nil })
+			batch := executeToolCalls(ctx, agentContext, message, config, func(AgentEvent) error { return nil })
 			if len(batch.messages) != len(calls) {
 				t.Fatalf("tool results = %d, want one per call (%d)", len(batch.messages), len(calls))
 			}

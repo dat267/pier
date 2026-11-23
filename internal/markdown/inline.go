@@ -175,12 +175,12 @@ func parseInline(src string, state *inlineState) []Inline {
 					if src[i+1] == '[' {
 						closing = `\]`
 					}
-					if close := findInlineLatexClosing(src, i+2, closing); close >= 0 {
-						inner := src[i+2 : close]
+					if closeAt := findInlineLatexClosing(src, i+2, closing); closeAt >= 0 {
+						inner := src[i+2 : closeAt]
 						if inner != "" && !strings.Contains(inner, "\n") {
 							flush()
-							out = append(out, Inline{Kind: InlineLatex, Raw: src[i : close+2], Text: inner})
-							i = close + 2
+							out = append(out, Inline{Kind: InlineLatex, Raw: src[i : closeAt+2], Text: inner})
+							i = closeAt + 2
 							continue
 						}
 					} else {
@@ -222,11 +222,11 @@ func parseInline(src string, state *inlineState) []Inline {
 				j++
 			}
 			run := j - i
-			close := findRun(src, j, '`', run)
-			if close >= 0 {
+			closeAt := findRun(src, j, '`', run)
+			if closeAt >= 0 {
 				flush()
-				out = append(out, Inline{Kind: InlineCode, Text: normalizeCodeSpan(src[j:close])})
-				i = close + run
+				out = append(out, Inline{Kind: InlineCode, Text: normalizeCodeSpan(src[j:closeAt])})
+				i = closeAt + run
 				continue
 			}
 			text.WriteString(src[i:j])
@@ -337,12 +337,12 @@ func parseInline(src string, state *inlineState) []Inline {
 				}
 			}
 			if canOpen {
-				if close := findInlineLatexClosing(src, i+opening, closing); close >= 0 {
-					inner, after := src[i+opening:close], src[close+opening:]
+				if closeAt := findInlineLatexClosing(src, i+opening, closing); closeAt >= 0 {
+					inner, after := src[i+opening:closeAt], src[closeAt+opening:]
 					if inner != "" && !strings.Contains(inner, "\n") && (opening == 2 || !rejectInlineDollar(inner, after)) {
 						flush()
-						out = append(out, Inline{Kind: InlineLatex, Raw: src[i : close+opening], Text: inner})
-						i = close + opening
+						out = append(out, Inline{Kind: InlineLatex, Raw: src[i : closeAt+opening], Text: inner})
+						i = closeAt + opening
 						continue
 					}
 				} else if looksLikePendingDollarMath(src[i+opening:]) {
@@ -373,7 +373,7 @@ func parseInline(src string, state *inlineState) []Inline {
 // treats specially (the fast-path test). A newline is only special when it is a
 // hard break (preceded by a space or a backslash); a soft break stays literal.
 func hasInlineMarkup(src string) bool {
-	for i := 0; i < len(src); i++ {
+	for i := range len(src) {
 		switch src[i] {
 		case '\\', '`', '*', '_', '~', '!', '[', '<', '$':
 			return true
@@ -591,8 +591,8 @@ func parseLink(src string, i int, image bool, state *inlineState) (Inline, int, 
 			for j+run < len(src) && src[j+run] == '`' {
 				run++
 			}
-			if close := findRun(src, j+run, '`', run); close >= 0 {
-				j = close + run - 1
+			if closeAt := findRun(src, j+run, '`', run); closeAt >= 0 {
+				j = closeAt + run - 1
 				continue
 			}
 		case '[':
@@ -610,11 +610,11 @@ func parseLink(src string, i int, image bool, state *inlineState) (Inline, int, 
 	if end < 0 || end+1 >= len(src) || src[end+1] != '(' {
 		return Inline{}, 0, false
 	}
-	close := findLinkTargetClosing(src, end+2)
-	if close < 0 {
+	closeAt := findLinkTargetClosing(src, end+2)
+	if closeAt < 0 {
 		return Inline{}, 0, false
 	}
-	target := strings.TrimSpace(src[end+2 : close])
+	target := strings.TrimSpace(src[end+2 : closeAt])
 	dest, title, ok := splitLinkTarget(target)
 	if !ok {
 		return Inline{}, 0, false
@@ -639,7 +639,7 @@ func parseLink(src string, i int, image bool, state *inlineState) (Inline, int, 
 		}
 		state.linkEmitted = true
 	}
-	return Inline{Kind: kind, Text: label, Children: children, Dest: dest, Title: title}, close + 1, true
+	return Inline{Kind: kind, Text: label, Children: children, Dest: dest, Title: title}, closeAt + 1, true
 }
 
 // findLinkTargetClosing skips nested URL parentheses and angle/quoted spans.

@@ -275,21 +275,15 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 				base = DefaultToolNames
 			}
 		}
-		for _, name := range applyToolModifiers(base, options.Tools) {
-			initialActiveToolNames = append(initialActiveToolNames, ToolName(name))
-		}
+		initialActiveToolNames = append(initialActiveToolNames, applyToolModifiers(base, options.Tools)...)
 		if options.NoTools == NoToolsAll {
 			allowedToolNames = make([]string, 0, len(initialActiveToolNames))
-			for _, name := range initialActiveToolNames {
-				allowedToolNames = append(allowedToolNames, string(name))
-			}
+			allowedToolNames = append(allowedToolNames, initialActiveToolNames...)
 		}
 	} else if options.Tools != nil {
 		initialActiveToolNames = append([]ToolName{}, options.Tools...)
 		allowedToolNames = make([]string, 0, len(options.Tools))
-		for _, name := range options.Tools {
-			allowedToolNames = append(allowedToolNames, string(name))
-		}
+		allowedToolNames = append(allowedToolNames, options.Tools...)
 	} else if options.NoTools == NoToolsAll {
 		initialActiveToolNames = []ToolName{}
 		allowedToolNames = []string{}
@@ -305,9 +299,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		initialActiveToolNames = append([]ToolName{}, configured...)
 	} else {
 		initialActiveToolNames = make([]ToolName, 0, len(DefaultToolNames))
-		for _, name := range DefaultToolNames {
-			initialActiveToolNames = append(initialActiveToolNames, ToolName(name))
-		}
+		initialActiveToolNames = append(initialActiveToolNames, DefaultToolNames...)
 	}
 
 	// The registry holds every built-in tool (upstream createAllToolDefinitions);
@@ -336,7 +328,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		if extra.Name == "" {
 			continue
 		}
-		name := ToolName(extra.Name)
+		name := extra.Name
 		if _, exists := toolByName[name]; !exists {
 			toolOrder = append(toolOrder, name)
 		}
@@ -361,12 +353,12 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 				activeTools = append(activeTools, tool)
 				seenTools[name] = true
 			}
-		} else if strings.Contains(string(name), "*") {
-			patterns = append(patterns, string(name))
+		} else if strings.Contains(name, "*") {
+			patterns = append(patterns, name)
 		}
 	}
 	for _, name := range toolOrder {
-		if seenTools[name] || !matchesAnyToolPattern(patterns, string(name)) {
+		if seenTools[name] || !matchesAnyToolPattern(patterns, name) {
 			continue
 		}
 		activeTools = append(activeTools, toolByName[name])
@@ -375,9 +367,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 	// An exclusion is a name or a pattern too, and it applies to what the selection resolved to.
 	if len(options.ExcludeTools) > 0 {
 		entries := make([]string, 0, len(options.ExcludeTools))
-		for _, name := range options.ExcludeTools {
-			entries = append(entries, string(name))
-		}
+		entries = append(entries, options.ExcludeTools...)
 		filtered := activeTools[:0]
 		for _, tool := range activeTools {
 			if !matchesAnyToolPattern(entries, tool.Name) {
@@ -588,7 +578,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		ExcludedToolNames:    options.ExcludeTools,
 		SteeringMode:         settingsManager.GetSteeringMode(),
 		FollowUpMode:         settingsManager.GetFollowUpMode(),
-		Transport:            ai.Transport(settingsManager.GetTransport()),
+		Transport:            settingsManager.GetTransport(),
 		ThinkingBudgets:      thinkingBudgetsOf(settingsManager.GetThinkingBudgets()),
 		BeforeFirstTurn:      options.BeforeFirstTurn,
 		MaxRetryDelayMS:      &maxRetryDelay,

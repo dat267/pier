@@ -3,11 +3,13 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"math"
 	"reflect"
 	"slices"
+	"strconv"
 	"sync"
 	"time"
 
@@ -709,7 +711,7 @@ func (c *Client) handleRequest(message *protocol.JsonRpcRequest) {
 		}
 		if err != nil {
 			responseError := &protocol.JsonRpcErrorObject{Code: protocol.JSONRPCErrorCode.InternalError}
-			if mcpErr, ok := err.(*protocol.McpError); ok {
+			if mcpErr, ok := errors.AsType[*protocol.McpError](err); ok {
 				responseError.Code = mcpErr.Code
 				responseError.Message = mcpErr.Msg
 				if mcpErr.Data != nil {
@@ -826,7 +828,7 @@ func (c *Client) handleProgress(params json.RawMessage) {
 }
 
 func formatId(token int64) string {
-	return fmt.Sprintf("%d", token)
+	return strconv.FormatInt(token, 10)
 }
 
 // integralRequestID narrows a JSON-RPC id to a generated request id: the

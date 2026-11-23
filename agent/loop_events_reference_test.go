@@ -217,7 +217,7 @@ func runLoopScenario(t *testing.T, scenario loopScenario) ([]any, []any) {
 			Name:        spec.name,
 			Description: spec.name,
 			Parameters:  json.RawMessage(`{"type":"object","properties":{"v":{"type":"number"}}}`),
-			Execute: func(id string, args json.RawMessage, _ context.Context, _ func(AgentToolResult)) (AgentToolResult, error) {
+			Execute: func(_ context.Context, id string, args json.RawMessage, _ func(AgentToolResult)) (AgentToolResult, error) {
 				if spec.behavior == "boom" {
 					return AgentToolResult{}, fmt.Errorf("boom")
 				}
@@ -294,7 +294,7 @@ func runLoopScenario(t *testing.T, scenario loopScenario) ([]any, []any) {
 	}
 	if scenario.block != "" {
 		blocked := scenario.block
-		config.BeforeToolCall = func(call *BeforeToolCallContext, _ context.Context) (*BeforeToolCallResult, error) {
+		config.BeforeToolCall = func(_ context.Context, call *BeforeToolCallContext) (*BeforeToolCallResult, error) {
 			if call.ToolCall.Name == blocked {
 				return &BeforeToolCallResult{Block: true, Reason: "blocked " + blocked}, nil
 			}
@@ -303,7 +303,7 @@ func runLoopScenario(t *testing.T, scenario loopScenario) ([]any, []any) {
 	}
 	if scenario.rewrite {
 		yes := true
-		config.AfterToolCall = func(*AfterToolCallContext, context.Context) (*AfterToolCallResult, error) {
+		config.AfterToolCall = func(context.Context, *AfterToolCallContext) (*AfterToolCallResult, error) {
 			return &AfterToolCallResult{
 				Content:    []ai.Content{ai.TextContent{Text: "rewritten"}},
 				HasContent: true,
@@ -322,7 +322,7 @@ func runLoopScenario(t *testing.T, scenario loopScenario) ([]any, []any) {
 	prompts := []ai.Message{&ai.UserMessage{
 		Content: ai.StringOrBlocks{Blocks: []ai.Content{ai.TextContent{Text: scenario.prompt}}}, Timestamp: 0,
 	}}
-	messages := RunAgentLoop(prompts, AgentContext{Tools: tools}, config, ctx, emit, streamFn)
+	messages := RunAgentLoop(ctx, prompts, AgentContext{Tools: tools}, config, emit, streamFn)
 	projected := make([]any, 0, len(messages))
 	for _, message := range messages {
 		projected = append(projected, projectLoopMessage(message))

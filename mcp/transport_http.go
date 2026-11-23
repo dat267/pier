@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,7 +15,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
 	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
@@ -330,7 +330,7 @@ func NewStreamableHttpTransport(options StreamableHttpTransportOptions) *Streama
 // removal of authentication headers when a redirect changes origin.
 func checkHttpRedirect(request *http.Request, via []*http.Request) error {
 	if len(via) >= 10 {
-		return fmt.Errorf("stopped after 10 redirects")
+		return errors.New("stopped after 10 redirects")
 	}
 	// net/http copies the initial headers again on every hop. Once an origin
 	// changed, keep credentials stripped even if later hops stay on that new
@@ -384,7 +384,7 @@ func (t *StreamableHttpTransport) Start(ctx context.Context) error {
 		return t.urlErr
 	}
 	if t.started {
-		return fmt.Errorf("MCP Streamable HTTP transport already started")
+		return errors.New("MCP Streamable HTTP transport already started")
 	}
 	if t.closed {
 		return &protocol.McpConnectionClosedError{}
@@ -461,7 +461,7 @@ func (t *StreamableHttpTransport) Send(ctx context.Context, message Message) err
 		trimmed := bytes.TrimSpace(data)
 		if len(trimmed) == 0 {
 			// response.json() rejects an empty body; indexing data[0] panicked.
-			return fmt.Errorf("MCP server returned an empty JSON body")
+			return errors.New("MCP server returned an empty JSON body")
 		}
 		if trimmed[0] == '[' {
 			if err := json.Unmarshal(trimmed, &items); err != nil {
@@ -943,7 +943,7 @@ func (t *StreamableHttpTransport) runGetStream() {
 		}
 		cursor.received = false
 		if attempt >= t.maxRetries() {
-			t.emitError(fmt.Errorf("MCP server-to-client stream dropped and could not be reopened"))
+			t.emitError(errors.New("MCP server-to-client stream dropped and could not be reopened"))
 			return
 		}
 		if !t.sleep(t.reconnectDelay(attempt, cursor.retryMs)) {
@@ -989,13 +989,13 @@ func (t *StreamableHttpTransport) openSseStream(lastEventID *string) (io.ReadClo
 // network failures; in Go any non-McpHttpError from the HTTP client is one
 // (D183).
 func (t *StreamableHttpTransport) isRetryable(err error) bool {
-	if httpErr, ok := err.(*McpHttpError); ok {
+	if httpErr, ok := errors.AsType[*McpHttpError](err); ok {
 		return isTransientStatus(httpErr.Status)
 	}
-	if authErr, ok := err.(*McpAuthRequiredError); ok {
+	if authErr, ok := errors.AsType[*McpAuthRequiredError](err); ok {
 		return isTransientStatus(authErr.Status)
 	}
-	if sessionErr, ok := err.(*McpSessionExpiredError); ok {
+	if sessionErr, ok := errors.AsType[*McpSessionExpiredError](err); ok {
 		return isTransientStatus(sessionErr.Status)
 	}
 	return true

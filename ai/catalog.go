@@ -85,11 +85,11 @@ func decodeCatalog(data []byte) (catalogShape, map[string]map[string]*Model, err
 		for _, api := range apiNames {
 			byID := apis[api]
 			for modelID, entry := range byID {
-				compat, err := DecodeModelCompat(Api(api), entry.Compat)
+				compat, err := DecodeModelCompat(api, entry.Compat)
 				if err != nil {
 					return catalogShape{}, nil, fmt.Errorf("ai: decoding catalog model %s/%s: %w", providerID, modelID, err)
 				}
-				entry.Model.API = Api(api)
+				entry.Model.API = api
 				entry.Model.Compat = compat
 				entry.Compat = nil
 				models[modelID] = &entry.Model

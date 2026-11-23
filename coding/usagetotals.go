@@ -81,7 +81,7 @@ func usageCostBreakdown(entries []SessionEntry, cache *messageCache) []UsageCost
 				if message.ResponseModel != nil {
 					model = *message.ResponseModel
 				}
-				key = string(message.Provider) + "/" + model
+				key = message.Provider + "/" + model
 				value := message.Usage
 				usage = &value
 			case *ai.ToolResultMessage:

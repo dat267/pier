@@ -538,7 +538,7 @@ func (m *Model) captureSamplingParamOrder(data []byte) {
 		if err := json.Unmarshal(raw, &levels); err == nil {
 			m.SamplingParamsByThinkingLevelOrder = make(map[ModelThinkingLevel][]string, len(levels))
 			for level, params := range levels {
-				m.SamplingParamsByThinkingLevelOrder[ModelThinkingLevel(level)] = directJSONObjectKeys(params)
+				m.SamplingParamsByThinkingLevelOrder[level] = directJSONObjectKeys(params)
 			}
 		}
 	}

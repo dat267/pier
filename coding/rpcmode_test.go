@@ -180,7 +180,7 @@ func TestRPCModelSelection(t *testing.T) {
 	session := rpcTestSession(t)
 	runtime := runtimeWithProviders(t, stubProvider("alpha"), stubProvider("beta"))
 	for _, provider := range []string{"alpha", "beta"} {
-		if err := runtime.SetRuntimeAPIKey(provider, "test-key", context.Background()); err != nil {
+		if err := runtime.SetRuntimeAPIKey(context.Background(), provider, "test-key"); err != nil {
 			t.Fatal(err)
 		}
 	}

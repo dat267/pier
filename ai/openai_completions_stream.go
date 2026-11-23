@@ -261,7 +261,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 			norm := NormalizeProviderError(err)
 			message := FormatProviderError(norm, "")
 			// OpenRouter-style raw metadata deduplication.
-			if pe, ok := err.(*ProviderError); ok {
+			if pe, ok := errors.AsType[*ProviderError](err); ok {
 				var probe struct {
 					Error *struct {
 						Metadata *struct {
@@ -710,11 +710,11 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 			finishBlock(index)
 		}
 		if ctxErr(ctx) != nil {
-			fail(fmt.Errorf("Request was aborted"))
+			fail(errors.New("Request was aborted"))
 			return
 		}
 		if output.StopReason == StopAborted {
-			fail(fmt.Errorf("Request was aborted"))
+			fail(errors.New("Request was aborted"))
 			return
 		}
 		if !hasFinishReason && !compat.SupportsFinishReason {
@@ -739,7 +739,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 			return
 		}
 		if (compat.SupportsFinishReason && !hasFinishReason) || output.StopReason == StopPending {
-			fail(fmt.Errorf("Stream ended without finish_reason"))
+			fail(errors.New("Stream ended without finish_reason"))
 			return
 		}
 

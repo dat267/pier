@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -1114,7 +1115,7 @@ var sessionIDRegex = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-
 // AssertValidSessionID validates a user-provided session id.
 func AssertValidSessionID(id string) error {
 	if !sessionIDRegex.MatchString(id) {
-		return fmt.Errorf("Session id must be non-empty, contain only alphanumeric characters, '-', '_', and '.', and start and end with an alphanumeric character")
+		return errors.New("Session id must be non-empty, contain only alphanumeric characters, '-', '_', and '.', and start and end with an alphanumeric character")
 	}
 	return nil
 }
@@ -1590,7 +1591,7 @@ func walkCompactionWindow(path []*SessionEntry, cache *messageCache, visit func(
 	compaction := path[compactionIdx]
 	visit(compaction)
 	foundFirstKept := false
-	for i := 0; i < compactionIdx; i++ {
+	for i := range compactionIdx {
 		entry := path[i]
 		if entry.ID == compaction.FirstKeptEntryID {
 			foundFirstKept = true
@@ -1847,7 +1848,7 @@ func readSessionHeader(filePath string) *SessionHeader {
 	// allowed, so probe one byte for EOF (upstream does the same).
 	probe := make([]byte, 1)
 	read, err := file.Read(probe)
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return nil
 	}
 	if read == 0 {

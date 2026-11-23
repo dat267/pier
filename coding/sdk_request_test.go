@@ -152,7 +152,7 @@ func TestCreateAgentSessionRequestOptions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := runtime.SetRuntimeAPIKey("anthropic", "sk-1", ctxpkg.Background()); err != nil {
+	if err := runtime.SetRuntimeAPIKey(ctxpkg.Background(), "anthropic", "sk-1"); err != nil {
 		t.Fatal(err)
 	}
 	settingsDir := t.TempDir()
@@ -252,7 +252,7 @@ func TestHTTPIdleTimeoutReachesTheRequest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := runtime.SetRuntimeAPIKey("anthropic", "sk-1", ctxpkg.Background()); err != nil {
+	if err := runtime.SetRuntimeAPIKey(ctxpkg.Background(), "anthropic", "sk-1"); err != nil {
 		t.Fatal(err)
 	}
 	model := &ai.Model{
@@ -329,7 +329,7 @@ func TestCreateAgentSessionCacheWarmerStarts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := runtime.SetRuntimeAPIKey("anthropic", "sk-1", ctxpkg.Background()); err != nil {
+	if err := runtime.SetRuntimeAPIKey(ctxpkg.Background(), "anthropic", "sk-1"); err != nil {
 		t.Fatal(err)
 	}
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})

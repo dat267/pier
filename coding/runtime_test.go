@@ -392,7 +392,7 @@ type memoryCredentials struct {
 	modified []string
 }
 
-func (m *memoryCredentials) Read(providerID string, ctx ctxpkg.Context) (*ai.Credential, error) {
+func (m *memoryCredentials) Read(ctx ctxpkg.Context, providerID string) (*ai.Credential, error) {
 	if m.readErr != nil {
 		return nil, m.readErr
 	}
@@ -410,12 +410,12 @@ func (m *memoryCredentials) List(ctx ctxpkg.Context) ([]ai.CredentialInfo, error
 	return out, nil
 }
 
-func (m *memoryCredentials) Modify(providerID string, fn func(*ai.Credential) (*ai.Credential, error), ctx ctxpkg.Context) (*ai.Credential, error) {
+func (m *memoryCredentials) Modify(ctx ctxpkg.Context, providerID string, fn func(*ai.Credential) (*ai.Credential, error)) (*ai.Credential, error) {
 	m.modified = append(m.modified, providerID)
 	return fn(m.entries[providerID])
 }
 
-func (m *memoryCredentials) Delete(providerID string, ctx ctxpkg.Context) error {
+func (m *memoryCredentials) Delete(ctx ctxpkg.Context, providerID string) error {
 	delete(m.entries, providerID)
 	return nil
 }
@@ -432,15 +432,15 @@ func TestRuntimeCredentials(t *testing.T) {
 	}
 
 	// The override wins; otherwise the store answers.
-	credential, err := overlay.Read("openai", ctx)
+	credential, err := overlay.Read(ctx, "openai")
 	if err != nil || credential.APIKey.Key != "runtime-key" {
 		t.Fatalf("credential = %+v err = %v", credential, err)
 	}
-	credential, err = overlay.Read("anthropic", ctx)
+	credential, err = overlay.Read(ctx, "anthropic")
 	if err != nil || credential.APIKey.Key != "stored" {
 		t.Fatalf("credential = %+v err = %v", credential, err)
 	}
-	if credential, err := overlay.Read("missing", ctx); err != nil || credential != nil {
+	if credential, err := overlay.Read(ctx, "missing"); err != nil || credential != nil {
 		t.Fatalf("credential = %+v err = %v", credential, err)
 	}
 
@@ -458,13 +458,13 @@ func TestRuntimeCredentials(t *testing.T) {
 	}
 
 	// Modify delegates; Delete drops the stored credential and the override.
-	if _, err := overlay.Modify("anthropic", func(current *ai.Credential) (*ai.Credential, error) { return current, nil }, ctx); err != nil {
+	if _, err := overlay.Modify(ctx, "anthropic", func(current *ai.Credential) (*ai.Credential, error) { return current, nil }); err != nil {
 		t.Fatal(err)
 	}
 	if len(store.modified) != 1 {
 		t.Fatalf("modified = %v", store.modified)
 	}
-	if err := overlay.Delete("openai", ctx); err != nil {
+	if err := overlay.Delete(ctx, "openai"); err != nil {
 		t.Fatal(err)
 	}
 	if overlay.HasRuntimeAPIKey("openai") {
@@ -474,10 +474,10 @@ func TestRuntimeCredentials(t *testing.T) {
 	// A cancelled context fails before touching the store.
 	cancelled, cancel := ctxpkg.WithCancel(ctx)
 	cancel()
-	if _, err := overlay.Read("openai", cancelled); !errors.Is(err, ctxpkg.Canceled) {
+	if _, err := overlay.Read(cancelled, "openai"); !errors.Is(err, ctxpkg.Canceled) {
 		t.Fatalf("err = %v", err)
 	}
-	if err := overlay.Delete("openai", cancelled); !errors.Is(err, ctxpkg.Canceled) {
+	if err := overlay.Delete(cancelled, "openai"); !errors.Is(err, ctxpkg.Canceled) {
 		t.Fatalf("err = %v", err)
 	}
 	if _, err := overlay.List(cancelled); !errors.Is(err, ctxpkg.Canceled) {
@@ -591,7 +591,7 @@ func TestRuntimeCredentialsConcurrentOverrideAccess(t *testing.T) {
 	go func() {
 		defer wait.Done()
 		for range 500 {
-			_, _ = overlay.Read("openai", ctx)
+			_, _ = overlay.Read(ctx, "openai")
 			_ = overlay.HasRuntimeAPIKey("openai")
 			_, _ = overlay.List(ctx)
 		}

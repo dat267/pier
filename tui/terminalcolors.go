@@ -149,13 +149,13 @@ func parseOscHexChannel(channel string) (int, bool) {
 	if !oscHexChannelPattern.MatchString(channel) {
 		return 0, false
 	}
-	max := math.Pow(16, float64(len(channel))) - 1
-	if max <= 0 {
+	maximum := math.Pow(16, float64(len(channel))) - 1
+	if maximum <= 0 {
 		return 0, false
 	}
 	parsed, err := strconv.ParseInt(channel, 16, 64)
 	if err != nil {
 		return 0, false
 	}
-	return int(math.Round(float64(parsed) / max * 255)), true
+	return int(math.Round(float64(parsed) / maximum * 255)), true
 }

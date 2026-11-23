@@ -239,12 +239,12 @@ func catalogRefreshAllowedAtCreate(offline, printMode, listingModels bool) bool 
 func run(appName string, args *coding.Args) error {
 	if args.Mode == coding.CLIModeRPC {
 		if len(args.FileArgs) != 0 {
-			return fmt.Errorf("@file arguments are not supported in RPC mode")
+			return errors.New("@file arguments are not supported in RPC mode")
 		}
 		// D235: a headless protocol never opens a terminal picker or consumes
 		// command records as answers to startup prompts.
 		if args.Resume {
-			return fmt.Errorf("RPC mode requires --continue or --session instead of the interactive --resume picker")
+			return errors.New("RPC mode requires --continue or --session instead of the interactive --resume picker")
 		}
 	}
 	ctx := context.Background()
@@ -375,7 +375,7 @@ func run(appName string, args *coding.Args) error {
 	// without starting the TUI or creating a session (upstream lists once the
 	// runtime exists, before the interactive mode).
 	if listingModels {
-		return listModels(runtime, settings, args, ctx)
+		return listModels(ctx, runtime, settings, args)
 	}
 
 	// Project trust, now that the picker and the metadata commands are done and
@@ -435,7 +435,7 @@ func run(appName string, args *coding.Args) error {
 	// --models sets the model cycle scope, overriding the settings' enabled
 	// models (upstream `parsed.models ?? settingsManager.getEnabledModels()`).
 	// A pattern that matches nothing is reported rather than silently ignored.
-	scopedModels, scopeDiagnostics, err := scopedModelsFor(args, settings, runtime, ctx)
+	scopedModels, scopeDiagnostics, err := scopedModelsFor(ctx, args, settings, runtime)
 	if err != nil {
 		return err
 	}
@@ -587,7 +587,7 @@ func run(appName string, args *coding.Args) error {
 			}))
 			return errAlreadyReported
 		}
-		if err := runtime.SetRuntimeAPIKey(provider, *args.APIKey, ctx); err != nil {
+		if err := runtime.SetRuntimeAPIKey(ctx, provider, *args.APIKey); err != nil {
 			return err
 		}
 	}
@@ -599,7 +599,7 @@ func run(appName string, args *coding.Args) error {
 		var recomputeScope func(context.Context) ([]coding.ScopedModel, []coding.ModelScopeDiagnostic, error)
 		if len(args.Models) == 0 {
 			recomputeScope = func(ctx context.Context) ([]coding.ScopedModel, []coding.ModelScopeDiagnostic, error) {
-				return scopedModelsFor(args, settings, runtime, ctx)
+				return scopedModelsFor(ctx, args, settings, runtime)
 			}
 		}
 		replacer := rpcSessionReplacer(sessionOptions, settings, agentDir, args.ProjectTrustOverride, setMCPSession,
@@ -834,7 +834,7 @@ func resolveCliModelFlags(args *coding.Args, runtime coding.ModelRuntimeSource) 
 	return resolved.Model, thinking, nil
 }
 
-func listModels(runtime *coding.ModelRuntime, settings *coding.SettingsManager, args *coding.Args, ctx context.Context) error {
+func listModels(ctx context.Context, runtime *coding.ModelRuntime, settings *coding.SettingsManager, args *coding.Args) error {
 	for _, diagnostic := range coding.CollectSettingsDiagnostics(settings) {
 		fmt.Fprintln(os.Stderr, coding.FormatCLIDiagnostic(coding.CLIDiagnostic(diagnostic)))
 	}
@@ -843,7 +843,7 @@ func listModels(runtime *coding.ModelRuntime, settings *coding.SettingsManager, 
 			Type: "warning", Message: "errors loading models.json:\n" + loadError,
 		}))
 	}
-	models, err := runtime.GetAvailable("", ctx)
+	models, err := runtime.GetAvailable(ctx, "")
 	if err != nil {
 		return err
 	}
@@ -873,7 +873,7 @@ func sessionNameFor(args *coding.Args) (*string, error) {
 // falling back to the settings' enabled models when the flag is absent. Its
 // diagnostics report patterns that matched nothing (or carried an unusable
 // thinking level) without failing the run.
-func scopedModelsFor(args *coding.Args, settings *coding.SettingsManager, runtime coding.ModelRuntimeSource, ctx context.Context) ([]coding.ScopedModel, []coding.ModelScopeDiagnostic, error) {
+func scopedModelsFor(ctx context.Context, args *coding.Args, settings *coding.SettingsManager, runtime coding.ModelRuntimeSource) ([]coding.ScopedModel, []coding.ModelScopeDiagnostic, error) {
 	patterns := args.Models
 	if len(patterns) == 0 {
 		patterns = settings.GetEnabledModels()
@@ -881,7 +881,7 @@ func scopedModelsFor(args *coding.Args, settings *coding.SettingsManager, runtim
 	if len(patterns) == 0 {
 		return nil, nil, nil
 	}
-	result, err := coding.ResolveModelScopeWithDiagnostics(patterns, runtime, ctx)
+	result, err := coding.ResolveModelScopeWithDiagnostics(ctx, patterns, runtime)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -996,10 +996,10 @@ func sessionProgressSink(onProgress interactive.SessionListProgress) coding.Sess
 // selectResumeSession shows the interactive session picker (upstream
 // cli/session-picker.ts selectSession). A var so tests can stub it.
 var selectResumeSession = func(cwd string, sessionDir string, settings *coding.SettingsManager, headless bool) (string, bool) {
-	current := func(onProgress interactive.SessionListProgress, ctx context.Context) ([]coding.SessionInfo, error) {
+	current := func(ctx context.Context, onProgress interactive.SessionListProgress) ([]coding.SessionInfo, error) {
 		return coding.ListSessionsWithProgress(ctx, cwd, sessionDir, sessionProgressSink(onProgress))
 	}
-	all := func(onProgress interactive.SessionListProgress, ctx context.Context) ([]coding.SessionInfo, error) {
+	all := func(ctx context.Context, onProgress interactive.SessionListProgress) ([]coding.SessionInfo, error) {
 		if sessionDir != "" {
 			return coding.ListAllSessionsWithProgress(ctx, sessionDir, sessionProgressSink(onProgress))
 		}
@@ -1126,7 +1126,7 @@ func resumeSession(args *coding.Args, cwd string, settings *coding.SettingsManag
 			return coding.OpenSession(resolved.path, sessionDir, "")
 		case "global":
 			if args.Mode == coding.CLIModeRPC {
-				return nil, fmt.Errorf("RPC mode cannot prompt to fork a session from another project; use --fork or a session file path")
+				return nil, errors.New("RPC mode cannot prompt to fork a session from another project; use --fork or a session file path")
 			}
 			// Upstream prompts to fork the session into the current directory
 			// (promptConfirm + forkSessionOrExit); declining aborts.
@@ -1181,7 +1181,7 @@ func resumeSession(args *coding.Args, cwd string, settings *coding.SettingsManag
 		sm.NewSession(&coding.NewSessionOptions{ID: *args.SessionID})
 		return sm, nil
 	}
-	return nil, fmt.Errorf("no sessions to resume")
+	return nil, errors.New("no sessions to resume")
 }
 
 // ensure syscall is used on platforms where the signal set is empty.

@@ -2,6 +2,7 @@ package coding
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -42,7 +43,7 @@ func forkSessionAtEntry(source *SessionManager, targetLeafID string, targetCwd s
 	if targetLeafID != "" {
 		entries = source.GetBranch(targetLeafID)
 		if len(entries) == 0 {
-			return nil, fmt.Errorf("Invalid entry ID for forking")
+			return nil, errors.New("Invalid entry ID for forking")
 		}
 		// The fork writes each entry's retained line, so read lazily loaded
 		// entries first.

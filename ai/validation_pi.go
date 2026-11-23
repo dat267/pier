@@ -2,6 +2,7 @@ package ai
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -206,7 +207,7 @@ func (d *piDoc) node(pointer string) *piSchema {
 	if value.Object == nil {
 		node.false = true
 		if d.err == nil {
-			d.err = fmt.Errorf("A schema must be an object or a boolean")
+			d.err = errors.New("A schema must be an object or a boolean")
 		}
 		return node
 	}
@@ -658,15 +659,15 @@ func (s *piSchema) checkVisit(value *schemaValue, active map[piCheckVisit]bool, 
 					count++
 				}
 			}
-			min := 1
+			minimum := 1
 			if s.minContains != nil {
-				min = *s.minContains
+				minimum = *s.minContains
 			}
-			max := math.MaxInt
+			maximum := math.MaxInt
 			if s.maxContains != nil {
-				max = *s.maxContains
+				maximum = *s.maxContains
 			}
-			if count < min || count > max {
+			if count < minimum || count > maximum {
 				return false
 			}
 		}
@@ -916,7 +917,7 @@ func codePointCount(s string) int { return len([]rune(s)) }
 
 func uniqueSchemaValues(values []*schemaValue) bool {
 	for i := 1; i < len(values); i++ {
-		for j := 0; j < i; j++ {
+		for j := range i {
 			if schemaLiteralEqual(values[i], values[j]) {
 				return false
 			}
@@ -1129,7 +1130,7 @@ func validIDNLabel(value string) bool {
 // RFC 5890 2.3.2.1 limits an A-label to 63 octets, and only a label with a
 // non-ASCII character has one.
 func exceedsMaxALabelLength(label string) bool {
-	for index := 0; index < len(label); index++ {
+	for index := range len(label) {
 		if label[index] >= utf8.RuneSelf {
 			return len(punycodeEncode(label))+len("xn--") > 63
 		}
@@ -1257,7 +1258,7 @@ func validDate(value string) bool {
 	// The reference matches ^(\d\d\d\d)-(\d\d)-(\d\d)$ before parsing, so a
 	// sign (which Atoi would accept) is not part of any field.
 	for _, part := range parts {
-		for index := 0; index < len(part); index++ {
+		for index := range len(part) {
 			if part[index] < '0' || part[index] > '9' {
 				return false
 			}
@@ -1308,7 +1309,7 @@ func validTime(value string) bool {
 }
 
 func validURITemplate(value string) bool {
-	for i := 0; i < len(value); i++ {
+	for i := range len(value) {
 		if value[i] <= 0x20 || value[i] == 0x7f || value[i] == '"' || value[i] == '<' || value[i] == '>' || value[i] == '\\' || value[i] == '^' || value[i] == '`' || value[i] == '|' {
 			return false
 		}
@@ -1346,7 +1347,7 @@ func validJSONPointer(value string, allowEmpty bool) bool {
 		return false
 	}
 	for part := range strings.SplitSeq(value[1:], "/") {
-		for i := 0; i < len(part); i++ {
+		for i := range len(part) {
 			if part[i] == '~' && (i+1 >= len(part) || (part[i+1] != '0' && part[i+1] != '1')) {
 				return false
 			}

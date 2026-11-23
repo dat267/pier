@@ -8,7 +8,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 
 	"github.com/dat267/pier/ai"
 )
@@ -31,7 +31,7 @@ func SetDefaultStreamFn(streamFn StreamFn) { defaultStreamFn = streamFn }
 // GetDefaultStreamFn returns the configured fallback.
 func GetDefaultStreamFn() (StreamFn, error) {
 	if defaultStreamFn == nil {
-		return nil, fmt.Errorf("No default stream function configured. Pass streamFn explicitly or call SetDefaultStreamFn().")
+		return nil, errors.New("No default stream function configured. Pass streamFn explicitly or call SetDefaultStreamFn().")
 	}
 	return defaultStreamFn, nil
 }
@@ -91,7 +91,7 @@ type AgentTool struct {
 	PrepareArguments func(args json.RawMessage) json.RawMessage
 	// Execute runs the tool call with ctx as the abort signal; onUpdate
 	// streams partial results (calls after settle are ignored by the loop).
-	Execute func(toolCallID string, params json.RawMessage, ctx context.Context, onUpdate func(AgentToolResult)) (AgentToolResult, error)
+	Execute func(ctx context.Context, toolCallID string, params json.RawMessage, onUpdate func(AgentToolResult)) (AgentToolResult, error)
 	// Replay is the recovery policy for an effect whose durable intent
 	// exists but whose outcome is unknown: "never" or "safe".
 	Replay string
@@ -171,8 +171,8 @@ type RunToolCallOptions struct {
 	AssistantMessage *ai.AssistantMessage
 	Context          AgentContext
 	Signal           context.Context
-	BeforeToolCall   func(context *BeforeToolCallContext, ctx context.Context) (*BeforeToolCallResult, error)
-	AfterToolCall    func(context *AfterToolCallContext, ctx context.Context) (*AfterToolCallResult, error)
+	BeforeToolCall   func(ctx context.Context, context *BeforeToolCallContext) (*BeforeToolCallResult, error)
+	AfterToolCall    func(ctx context.Context, context *AfterToolCallContext) (*AfterToolCallResult, error)
 	OnUpdate         func(result AgentToolResult)
 }
 
@@ -249,14 +249,14 @@ type AgentLoopConfig struct {
 	// Must not return an error; filter or map unconvertible messages instead.
 	ConvertToLlm func(messages []ai.Message) []ai.Message
 	// TransformContext applies a context transform before ConvertToLlm.
-	TransformContext func(messages []ai.Message, ctx context.Context) []ai.Message
+	TransformContext func(ctx context.Context, messages []ai.Message) []ai.Message
 	// GetAPIKey resolves an API key per call (expiring tokens).
-	GetAPIKey func(provider string, ctx context.Context) (string, error)
+	GetAPIKey func(ctx context.Context, provider string) (string, error)
 	// PrepareRequest runs before every provider request, including the first.
-	PrepareRequest func(request *PrepareRequestContext, ctx context.Context) (*AgentRequestUpdate, error)
+	PrepareRequest func(ctx context.Context, request *PrepareRequestContext) (*AgentRequestUpdate, error)
 	// FinishTurn runs after assistant and tool-result messages, before turn_end.
 	// An end decision stops the run; continue requests one more provider turn.
-	FinishTurn func(turn *AgentTurnContext, ctx context.Context) (*AgentTurnDecision, error)
+	FinishTurn func(ctx context.Context, turn *AgentTurnContext) (*AgentTurnDecision, error)
 	// ShouldStopAfterTurn is the legacy post-turn callback. FinishTurn supersedes it.
 	ShouldStopAfterTurn func(context *AgentTurnContext) bool
 	// PrepareNextTurn runs before the next turn when continuing.
@@ -273,9 +273,9 @@ type AgentLoopConfig struct {
 	// ToolExecution mode; default "parallel".
 	ToolExecution ToolExecutionMode
 	// BeforeToolCall runs before execution, after validation.
-	BeforeToolCall func(context *BeforeToolCallContext, ctx context.Context) (*BeforeToolCallResult, error)
+	BeforeToolCall func(ctx context.Context, context *BeforeToolCallContext) (*BeforeToolCallResult, error)
 	// AfterToolCall runs after execution, before the end events.
-	AfterToolCall func(context *AfterToolCallContext, ctx context.Context) (*AfterToolCallResult, error)
+	AfterToolCall func(ctx context.Context, context *AfterToolCallContext) (*AfterToolCallResult, error)
 }
 
 // AgentEventType discriminates agent events.

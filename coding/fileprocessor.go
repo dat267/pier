@@ -198,7 +198,7 @@ const maxInlineImagePixels = 100_000_000
 // reach the provider at full size (M290).
 func DecodeImageBase64(data string) ([]byte, bool) {
 	normalized := make([]byte, 0, len(data))
-	for index := 0; index < len(data); index++ {
+	for index := range len(data) {
 		character := data[index]
 		switch {
 		case character >= 'A' && character <= 'Z',

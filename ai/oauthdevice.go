@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -69,7 +70,7 @@ func oauthPostForm(ctx context.Context, requestURL string, fields map[string]str
 	response, err := doBoundedRequest(request)
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
-			return oauthHTTPResponse{}, fmt.Errorf("Login cancelled")
+			return oauthHTTPResponse{}, errors.New("Login cancelled")
 		}
 		return oauthHTTPResponse{}, err
 	}
@@ -80,7 +81,7 @@ func oauthPostForm(ctx context.Context, requestURL string, fields map[string]str
 		// D341: a successful document fails at its cap and surfaces a read
 		// error instead of being read as a silent prefix (A427).
 		if ctx != nil && ctx.Err() != nil {
-			return oauthHTTPResponse{}, fmt.Errorf("Login cancelled")
+			return oauthHTTPResponse{}, errors.New("Login cancelled")
 		}
 		return oauthHTTPResponse{}, readErr
 	}
@@ -92,7 +93,7 @@ func oauthPostForm(ctx context.Context, requestURL string, fields map[string]str
 		}
 	} else if failOnInvalidJSON || ok {
 		if ctx != nil && ctx.Err() != nil {
-			return oauthHTTPResponse{}, fmt.Errorf("Login cancelled")
+			return oauthHTTPResponse{}, errors.New("Login cancelled")
 		}
 		return oauthHTTPResponse{}, fmt.Errorf("%s", invalidJSONMessage(response.StatusCode))
 	}
@@ -160,7 +161,7 @@ func normalizeOAuthHTTPURL(raw string) (*url.URL, string, bool) {
 func ValidateXaiVerificationURI(raw string) (string, error) {
 	parsed, normalized, ok := normalizeOAuthHTTPURL(raw)
 	if !ok || parsed.Scheme != "https" {
-		return "", fmt.Errorf("Untrusted verification URI in xAI OAuth response")
+		return "", errors.New("Untrusted verification URI in xAI OAuth response")
 	}
 	return normalized, nil
 }
@@ -336,7 +337,7 @@ func RefreshXaiToken(ctx context.Context, refreshToken string) (*OAuthCredential
 // LoginXai runs the xAI device-code login (upstream loginXai).
 func LoginXai(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, fmt.Errorf("auth interaction is required")
+		return nil, errors.New("auth interaction is required")
 	}
 	ctx := interaction.Ctx
 	if ctx == nil {
@@ -370,15 +371,15 @@ func XaiOAuth() *OAuthAuth {
 		IsSubscription: true,
 		LoginLabel:     "Sign in with SuperGrok or X Premium",
 		Login:          LoginXai,
-		Refresh: func(credential *OAuthCredential, ctx context.Context) (*OAuthCredential, error) {
+		Refresh: func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
 			if credential == nil {
-				return nil, fmt.Errorf("credential is required")
+				return nil, errors.New("credential is required")
 			}
 			return RefreshXaiToken(ctx, credential.Refresh)
 		},
 		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
 			if credential == nil {
-				return nil, fmt.Errorf("credential is required")
+				return nil, errors.New("credential is required")
 			}
 			return &ModelAuth{APIKey: credential.Access}, nil
 		},
@@ -567,7 +568,7 @@ func RefreshKimiToken(ctx context.Context, oauthHost, refreshToken string) (*kim
 			}
 		}
 		if ctx != nil && ctx.Err() != nil {
-			return nil, fmt.Errorf("Kimi Code token refresh aborted")
+			return nil, errors.New("Kimi Code token refresh aborted")
 		}
 		requestCtx, cancel := context.WithTimeout(ctx, KimiCodingRequestTimeout)
 		response, err := oauthPostForm(requestCtx, oauthHost+"/api/oauth/token", map[string]string{
@@ -605,13 +606,13 @@ func RefreshKimiToken(ctx context.Context, oauthHost, refreshToken string) (*kim
 	if lastErr != nil {
 		return nil, lastErr
 	}
-	return nil, fmt.Errorf("Kimi Code token refresh failed")
+	return nil, errors.New("Kimi Code token refresh failed")
 }
 
 // LoginKimiCoding runs the Kimi Code device-code login.
 func LoginKimiCoding(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, fmt.Errorf("auth interaction is required")
+		return nil, errors.New("auth interaction is required")
 	}
 	ctx := interaction.Ctx
 	if ctx == nil {
@@ -645,9 +646,9 @@ func KimiCodingOAuth() *OAuthAuth {
 		IsSubscription: true,
 		LoginLabel:     "Sign in with Kimi Code",
 		Login:          LoginKimiCoding,
-		Refresh: func(credential *OAuthCredential, ctx context.Context) (*OAuthCredential, error) {
+		Refresh: func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
 			if credential == nil {
-				return nil, fmt.Errorf("credential is required")
+				return nil, errors.New("credential is required")
 			}
 			token, err := RefreshKimiToken(ctx, KimiCodingOAuthHost(), credential.Refresh)
 			if err != nil {
@@ -658,7 +659,7 @@ func KimiCodingOAuth() *OAuthAuth {
 		},
 		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
 			if credential == nil {
-				return nil, fmt.Errorf("credential is required")
+				return nil, errors.New("credential is required")
 			}
 			bearer := "Bearer " + credential.Access
 			return &ModelAuth{Headers: ProviderHeaders{"Authorization": &bearer}}, nil

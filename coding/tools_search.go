@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -142,9 +143,9 @@ func CreateFindTool(cwd string) agent.AgentTool {
 		Description: FindToolDescription,
 		Parameters:  findSchemaJSON,
 		Label:       "find",
-		Execute: func(toolCallID string, params json.RawMessage, ctx context.Context, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
+		Execute: func(ctx context.Context, toolCallID string, params json.RawMessage, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
+				return agent.AgentToolResult{}, errors.New("Operation aborted")
 			}
 			var input struct {
 				Pattern string   `json:"pattern"`
@@ -172,10 +173,10 @@ func CreateFindTool(cwd string) agent.AgentTool {
 				fdPath, err = exec.LookPath("fdfind")
 			}
 			if err != nil {
-				return agent.AgentToolResult{}, fmt.Errorf("fd is not available and could not be downloaded")
+				return agent.AgentToolResult{}, errors.New("fd is not available and could not be downloaded")
 			}
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
+				return agent.AgentToolResult{}, errors.New("Operation aborted")
 			}
 
 			args := []string{"--glob", "--color=never", "--hidden"}
@@ -219,13 +220,13 @@ func CreateFindTool(cwd string) agent.AgentTool {
 			cmd.Stderr = &stderr
 			runErr := cmd.Run()
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
+				return agent.AgentToolResult{}, errors.New("Operation aborted")
 			}
 			output := strings.TrimRight(DecodeUTF8WithReplacement([]byte(stdout.String())), "\n")
 			if runErr != nil {
 				// A spawn failure is not an exit code (upstream find.ts's
 				// child.on("error")).
-				exitErr, exited := runErr.(*exec.ExitError)
+				exitErr, exited := errors.AsType[*exec.ExitError](runErr)
 				if !exited {
 					return agent.AgentToolResult{}, fmt.Errorf("Failed to run fd: %s", runErr.Error())
 				}
@@ -380,9 +381,9 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 		Description: GrepToolDescription,
 		Parameters:  grepSchemaJSON,
 		Label:       "grep",
-		Execute: func(toolCallID string, params json.RawMessage, ctx context.Context, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
+		Execute: func(ctx context.Context, toolCallID string, params json.RawMessage, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
+				return agent.AgentToolResult{}, errors.New("Operation aborted")
 			}
 			var input struct {
 				Pattern    string   `json:"pattern"`
@@ -401,7 +402,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 
 			rgPath, err := exec.LookPath("rg")
 			if err != nil {
-				return agent.AgentToolResult{}, fmt.Errorf("ripgrep (rg) is not available and could not be downloaded")
+				return agent.AgentToolResult{}, errors.New("ripgrep (rg) is not available and could not be downloaded")
 			}
 			searchPath := ResolveToCwd(orDefault(input.Path, "."), cwd)
 			info, statErr := os.Stat(searchPath)
@@ -584,7 +585,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 			_ = stdout.Close()
 			runErr := cmd.Wait()
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
+				return agent.AgentToolResult{}, errors.New("Operation aborted")
 			}
 			if readErr != nil {
 				return agent.AgentToolResult{}, fmt.Errorf("Failed to read ripgrep output: %s", readErr.Error())
@@ -592,7 +593,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 			// Upstream rejects on any exit code other than 0/1 unless it killed
 			// ripgrep itself to enforce the match limit.
 			if runErr != nil && !killedDueToLimit {
-				if exitErr, ok := runErr.(*exec.ExitError); ok {
+				if exitErr, ok := errors.AsType[*exec.ExitError](runErr); ok {
 					code := exitErr.ExitCode()
 					if code != 0 && code != 1 {
 						errorMsg := strings.TrimSpace(stderr.String())

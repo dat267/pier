@@ -1,7 +1,7 @@
 package highlight
 
 import (
-	"fmt"
+	"errors"
 	"math"
 	"sort"
 	"strconv"
@@ -232,7 +232,7 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 
 	if mode.Match != "" {
 		if mode.Begin != "" || mode.End != "" {
-			return nil, fmt.Errorf("highlight: begin & end are not supported with match")
+			return nil, errors.New("highlight: begin & end are not supported with match")
 		}
 		mode.Begin = mode.Match
 	}
@@ -292,7 +292,7 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 		cmode.keywords = compileKeywords(mode.Keywords, c.language.CaseInsensitive)
 	}
 	if mode.Lexemes != "" && keywordPattern != "" {
-		return nil, fmt.Errorf("highlight: prefer keywords.$pattern to mode.lexemes")
+		return nil, errors.New("highlight: prefer keywords.$pattern to mode.lexemes")
 	}
 	if keywordPattern == "" {
 		keywordPattern = mode.Lexemes

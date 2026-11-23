@@ -24,7 +24,7 @@ func NewInMemoryCredentialStore() *InMemoryCredentialStore {
 	return &InMemoryCredentialStore{creds: map[string]*Credential{}, tails: map[string]chan struct{}{}}
 }
 
-func (s *InMemoryCredentialStore) Read(providerID string, ctx context.Context) (*Credential, error) {
+func (s *InMemoryCredentialStore) Read(ctx context.Context, providerID string) (*Credential, error) {
 	if err := ctxErr(ctx); err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (s *InMemoryCredentialStore) List(ctx context.Context) ([]CredentialInfo, e
 	return out, nil
 }
 
-func (s *InMemoryCredentialStore) beginWrite(providerID string, ctx context.Context) (func(), error) {
+func (s *InMemoryCredentialStore) beginWrite(ctx context.Context, providerID string) (func(), error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -83,8 +83,8 @@ func (s *InMemoryCredentialStore) beginWrite(providerID string, ctx context.Cont
 	return finish, nil
 }
 
-func (s *InMemoryCredentialStore) Modify(providerID string, fn func(current *Credential) (*Credential, error), ctx context.Context) (*Credential, error) {
-	finish, err := s.beginWrite(providerID, ctx)
+func (s *InMemoryCredentialStore) Modify(ctx context.Context, providerID string, fn func(current *Credential) (*Credential, error)) (*Credential, error) {
+	finish, err := s.beginWrite(ctx, providerID)
 	if err != nil {
 		return nil, err
 	}
@@ -133,8 +133,8 @@ func cloneMemoryCredential(credential *Credential) *Credential {
 	return &cloned
 }
 
-func (s *InMemoryCredentialStore) Delete(providerID string, ctx context.Context) error {
-	finish, err := s.beginWrite(providerID, ctx)
+func (s *InMemoryCredentialStore) Delete(ctx context.Context, providerID string) error {
+	finish, err := s.beginWrite(ctx, providerID)
 	if err != nil {
 		return err
 	}
@@ -176,9 +176,9 @@ func (entry ModelsStoreEntry) MarshalJSON() ([]byte, error) {
 
 // ModelsStore is persistent model catalogs keyed by provider ID.
 type ModelsStore interface {
-	Read(providerID string, ctx context.Context) (*ModelsStoreEntry, error)
-	Write(providerID string, entry *ModelsStoreEntry, ctx context.Context) error
-	Delete(providerID string, ctx context.Context) error
+	Read(ctx context.Context, providerID string) (*ModelsStoreEntry, error)
+	Write(ctx context.Context, providerID string, entry *ModelsStoreEntry) error
+	Delete(ctx context.Context, providerID string) error
 }
 
 // InMemoryModelsStore is the default in-memory models store.
@@ -191,7 +191,7 @@ func NewInMemoryModelsStore() *InMemoryModelsStore {
 	return &InMemoryModelsStore{entries: map[string]*ModelsStoreEntry{}}
 }
 
-func (s *InMemoryModelsStore) Read(providerID string, ctx context.Context) (*ModelsStoreEntry, error) {
+func (s *InMemoryModelsStore) Read(ctx context.Context, providerID string) (*ModelsStoreEntry, error) {
 	if err := ctxErr(ctx); err != nil {
 		return nil, err
 	}
@@ -204,7 +204,7 @@ func (s *InMemoryModelsStore) Read(providerID string, ctx context.Context) (*Mod
 	return entry.Clone(), nil
 }
 
-func (s *InMemoryModelsStore) Write(providerID string, entry *ModelsStoreEntry, ctx context.Context) error {
+func (s *InMemoryModelsStore) Write(ctx context.Context, providerID string, entry *ModelsStoreEntry) error {
 	if err := ctxErr(ctx); err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func (s *InMemoryModelsStore) Write(providerID string, entry *ModelsStoreEntry, 
 	return nil
 }
 
-func (s *InMemoryModelsStore) Delete(providerID string, ctx context.Context) error {
+func (s *InMemoryModelsStore) Delete(ctx context.Context, providerID string) error {
 	if err := ctxErr(ctx); err != nil {
 		return err
 	}

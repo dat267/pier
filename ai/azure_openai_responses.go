@@ -3,6 +3,7 @@ package ai
 import (
 	"bytes"
 	ctxpkg "context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -207,7 +208,7 @@ func ResolveAzureConfig(model *Model, options *AzureOpenAIResponsesOptions) (str
 		resolved = model.BaseURL
 	}
 	if resolved == "" {
-		return "", "", fmt.Errorf("Azure OpenAI base URL is required. Set AZURE_OPENAI_BASE_URL or " +
+		return "", "", errors.New("Azure OpenAI base URL is required. Set AZURE_OPENAI_BASE_URL or " +
 			"AZURE_OPENAI_RESOURCE_NAME, or pass azureBaseUrl, azureResourceName, or model.baseUrl.")
 	}
 	normalized, err := NormalizeAzureBaseURL(resolved)

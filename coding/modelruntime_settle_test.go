@@ -29,22 +29,22 @@ func (s *blockingCredentialStore) block() {
 	<-s.release
 }
 
-func (s *blockingCredentialStore) Read(providerID string, ctx context.Context) (*ai.Credential, error) {
-	return s.inner.Read(providerID, ctx)
+func (s *blockingCredentialStore) Read(ctx context.Context, providerID string) (*ai.Credential, error) {
+	return s.inner.Read(ctx, providerID)
 }
 
 func (s *blockingCredentialStore) List(ctx context.Context) ([]ai.CredentialInfo, error) {
 	return s.inner.List(ctx)
 }
 
-func (s *blockingCredentialStore) Modify(providerID string, fn func(*ai.Credential) (*ai.Credential, error), ctx context.Context) (*ai.Credential, error) {
+func (s *blockingCredentialStore) Modify(ctx context.Context, providerID string, fn func(*ai.Credential) (*ai.Credential, error)) (*ai.Credential, error) {
 	s.block()
-	return s.inner.Modify(providerID, fn, ctx)
+	return s.inner.Modify(ctx, providerID, fn)
 }
 
-func (s *blockingCredentialStore) Delete(providerID string, ctx context.Context) error {
+func (s *blockingCredentialStore) Delete(ctx context.Context, providerID string) error {
 	s.block()
-	return s.inner.Delete(providerID, ctx)
+	return s.inner.Delete(ctx, providerID)
 }
 
 // pi v1.5.2 (b4afdddf) agent-session-runtime.ts dispose waits for credential
@@ -63,7 +63,7 @@ func TestSettleCredentialWritesWaitsForPendingChanges(t *testing.T) {
 	writeDone := make(chan struct{})
 	go func() {
 		defer close(writeDone)
-		_ = runtime.Logout("anthropic", context.Background())
+		_ = runtime.Logout(context.Background(), "anthropic")
 	}()
 	<-store.entered
 

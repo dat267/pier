@@ -3,7 +3,7 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"errors"
 )
 
 // Identity is plain JSON upstream (utils/identity.ts). Keep its object order,
@@ -22,7 +22,7 @@ type identityJSONValue struct {
 func decodeIdentityJSON(data []byte) ([]identityJSONField, error) {
 	object, err := decodeOrderedJSONFields(data)
 	if err != nil {
-		return nil, fmt.Errorf("ai: client identity must be a JSON object")
+		return nil, errors.New("ai: client identity must be a JSON object")
 	}
 	fields := make([]identityJSONField, 0, len(object.keys))
 	for _, key := range object.keys {

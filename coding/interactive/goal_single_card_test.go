@@ -38,7 +38,7 @@ func TestGoalToolActionShowsOneLiveCard(t *testing.T) {
 			t.Cleanup(session.Dispose)
 			tool := session.GetToolDefinition("set_goal")
 			if replace {
-				if _, err := tool.Execute("seed", json.RawMessage(`{"objective":"old objective"}`), context.Background(), nil); err != nil {
+				if _, err := tool.Execute(context.Background(), "seed", json.RawMessage(`{"objective":"old objective"}`), nil); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -48,7 +48,7 @@ func TestGoalToolActionShowsOneLiveCard(t *testing.T) {
 			args := json.RawMessage(`{"objective":"Ship the simplified goal card"}`)
 			dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionToolExecutionStart,
 				Agent: &agent.AgentEvent{ToolName: "set_goal", ToolCallID: "set", Args: args}})
-			result, err := tool.Execute("set", args, context.Background(), nil)
+			result, err := tool.Execute(context.Background(), "set", args, nil)
 			if err != nil || result.IsError {
 				t.Fatalf("set_goal: result=%+v err=%v", result, err)
 			}

@@ -2,6 +2,7 @@ package coding
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"strings"
@@ -258,7 +259,7 @@ func promptCacheFromJSON(values ModelsJSONPromptCache) ai.ModelPromptCache {
 	}
 	out := make(ai.ModelPromptCache, len(values))
 	for retention, seconds := range values {
-		out[ai.CacheRetention(retention)] = modelsJSONNumberToInt(seconds)
+		out[retention] = modelsJSONNumberToInt(seconds)
 	}
 	return out
 }
@@ -390,10 +391,10 @@ func mergeSamplingParamsOrders(base, override map[string][]string) map[ai.ModelT
 	}
 	merged := make(map[ai.ModelThinkingLevel][]string, len(base)+len(override))
 	for level, keys := range base {
-		merged[ai.ModelThinkingLevel(level)] = append([]string(nil), keys...)
+		merged[level] = append([]string(nil), keys...)
 	}
 	for level, keys := range override {
-		key := ai.ModelThinkingLevel(level)
+		key := level
 		merged[key] = mergeOrderedSamplingKeys(merged[key], keys)
 	}
 	return merged
@@ -419,7 +420,7 @@ func samplingParamsOrderByThinkingLevel(input map[string][]string) map[ai.ModelT
 	}
 	out := make(map[ai.ModelThinkingLevel][]string, len(input))
 	for level, keys := range input {
-		out[ai.ModelThinkingLevel(level)] = append([]string(nil), keys...)
+		out[level] = append([]string(nil), keys...)
 	}
 	return out
 }
@@ -697,7 +698,7 @@ func composeAPIKeyAuth(providerID string, base *ai.Provider, config *ModelsJSONP
 			} else if input.Credential.Key != "" {
 				result = &ai.AuthResult{
 					Auth:   ai.ModelAuth{APIKey: input.Credential.Key},
-					Env:    ai.ProviderEnv(input.Credential.Env),
+					Env:    input.Credential.Env,
 					Source: "stored credential",
 				}
 			}
@@ -768,7 +769,7 @@ func withConfiguredAuth(auth ai.ModelAuth, headers map[string]string, authHeader
 	}
 	if authHeader {
 		if auth.APIKey == "" {
-			return ai.ModelAuth{}, fmt.Errorf("authHeader requires a resolved API key")
+			return ai.ModelAuth{}, errors.New("authHeader requires a resolved API key")
 		}
 		if merged == nil {
 			merged = ai.ProviderHeaders{}

@@ -89,7 +89,7 @@ func TestModelsGetAvailableOfTypeUsesAllModelFilter(t *testing.T) {
 	ctx := context.Background()
 	writeCredential := func(credential *Credential) {
 		t.Helper()
-		if _, err := credentials.Modify("openai", func(*Credential) (*Credential, error) { return credential, nil }, ctx); err != nil {
+		if _, err := credentials.Modify(ctx, "openai", func(*Credential) (*Credential, error) { return credential, nil }); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -115,16 +115,16 @@ func TestModelsGetAvailableOfTypeUsesAllModelFilter(t *testing.T) {
 	models.SetProvider(provider)
 
 	writeCredential(&Credential{Type: CredentialAPIKey, APIKey: &ApiKeyCredential{Key: "key"}})
-	available, err := models.GetAvailableOfType("classifier", "openai", ctx)
+	available, err := models.GetAvailableOfType(ctx, "classifier", "openai")
 	if err != nil || len(available) != 1 || available[0] != classifier {
 		t.Fatalf("API-key classifiers = %v, %v", available, err)
 	}
 	writeCredential(&Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{Access: "chatgpt"}})
-	available, err = models.GetAvailableOfType("classifier", "openai", ctx)
+	available, err = models.GetAvailableOfType(ctx, "classifier", "openai")
 	if err != nil || len(available) != 0 {
 		t.Fatalf("OAuth classifiers = %v, %v", available, err)
 	}
-	all, err := models.GetAllAvailable("openai", ctx)
+	all, err := models.GetAllAvailable(ctx, "openai")
 	if err != nil || len(all) != 1 || all[0] != chat {
 		t.Fatalf("OAuth all-model availability = %v, %v", all, err)
 	}

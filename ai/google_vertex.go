@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -89,10 +90,10 @@ func StreamGoogleVertex(model *Model, context TranscriptContext, options *Google
 				return nil
 			}
 			if project == "" {
-				return fmt.Errorf("Vertex AI requires a project ID. Set GOOGLE_CLOUD_PROJECT/GCLOUD_PROJECT or pass project in options.")
+				return errors.New("Vertex AI requires a project ID. Set GOOGLE_CLOUD_PROJECT/GCLOUD_PROJECT or pass project in options.")
 			}
 			if location == "" {
-				return fmt.Errorf("Vertex AI requires a location. Set GOOGLE_CLOUD_LOCATION or pass location in options.")
+				return errors.New("Vertex AI requires a location. Set GOOGLE_CLOUD_LOCATION or pass location in options.")
 			}
 			_, err := vertexAccessToken(ctx, options.Env)
 			return err
@@ -359,7 +360,7 @@ func readAuthorizedUserCredentials(path string) (*authorizedUserCredentials, err
 	case "authorized_user":
 		return &credentials, nil
 	case "service_account":
-		return nil, fmt.Errorf("service-account key files are not supported by the Go port; " +
+		return nil, errors.New("service-account key files are not supported by the Go port; " +
 			"use an authorized-user credential, the gcloud ADC file, or a Vertex API key")
 	default:
 		return nil, nil
@@ -421,7 +422,7 @@ func refreshAuthorizedUserToken(ctx ctxpkg.Context, cacheKey string, credentials
 		return "", err
 	}
 	if payload.AccessToken == "" {
-		return "", fmt.Errorf("Google credential refresh returned no access token")
+		return "", errors.New("Google credential refresh returned no access token")
 	}
 	expiresIn := payload.ExpiresIn
 	if expiresIn <= 0 {
@@ -442,7 +443,7 @@ func vertexTokenExpiry(expiresIn int64) time.Time {
 	// than half the lifetime: a token that lives less than two minutes (a
 	// proxy or a malformed document; Google ADC reports 3599) would otherwise
 	// expire before it was cached, so every request would refresh.
-	maxSeconds := int64(math.MaxInt64 / int64(time.Second))
+	maxSeconds := (math.MaxInt64 / int64(time.Second))
 	if expiresIn > maxSeconds {
 		return time.Now().Add(time.Duration(math.MaxInt64) - time.Minute)
 	}
@@ -490,7 +491,7 @@ func metadataAccessToken(ctx ctxpkg.Context, env ProviderEnv) (string, error) {
 		return "", err
 	}
 	if payload.AccessToken == "" {
-		return "", fmt.Errorf("no Google Cloud credentials found")
+		return "", errors.New("no Google Cloud credentials found")
 	}
 	expiresIn := payload.ExpiresIn
 	if expiresIn <= 0 {

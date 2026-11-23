@@ -310,9 +310,9 @@ func TestOpenRouterImagesProviderFactory(t *testing.T) {
 // staticCredentialStore wraps the in-memory store with one stored credential.
 func staticCredentialStore(providerID, key string) CredentialStore {
 	store := NewInMemoryCredentialStore()
-	_, _ = store.Modify(providerID, func(*Credential) (*Credential, error) {
+	_, _ = store.Modify(context.Background(), providerID, func(*Credential) (*Credential, error) {
 		return &Credential{Type: CredentialAPIKey, APIKey: &ApiKeyCredential{Key: key}}, nil
-	}, context.Background())
+	})
 	return store
 }
 

@@ -763,7 +763,7 @@ func legacyInputSchema(parameters json.RawMessage) (json.RawMessage, error) {
 	}
 	var out orderedJSONFields
 	out.set("type", mustMarshalJSON("object"))
-	out.set("properties", json.RawMessage(props))
+	out.set("properties", props)
 	out.set("required", mustMarshalJSON(required))
 	for _, member := range []struct {
 		name  string
@@ -956,7 +956,7 @@ func buildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 		messages = converted.Messages
 	}
 
-	maxTokens := int64(model.MaxTokens)
+	maxTokens := model.MaxTokens
 	if options.MaxTokens != nil {
 		maxTokens = int64(*options.MaxTokens)
 	}

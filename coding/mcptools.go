@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -124,7 +125,7 @@ func LimitMcpContent(content []ai.Content, saveOutput McpOutputSaver) ([]ai.Cont
 		return content, nil
 	}
 	var fullOutputPath *string
-	where := ""
+	var where string
 	if path, err := saveOutput([]byte(combined), ".txt"); err != nil {
 		where = "[Could not save the full output: " + err.Error() + "]"
 	} else {
@@ -265,7 +266,7 @@ func mcpBlockToContent(server string, block protocol.ContentBlock, options Conve
 func decodeMcpBase64(value string) ([]byte, error) {
 	data, ok := DecodeImageBase64(value)
 	if !ok {
-		return nil, fmt.Errorf("invalid base64")
+		return nil, errors.New("invalid base64")
 	}
 	return data, nil
 }

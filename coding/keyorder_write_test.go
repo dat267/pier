@@ -58,7 +58,7 @@ func TestPersistedJSONWritersUseJavaScriptKeyOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	store := NewFileModelsStore(modelsPath)
-	if err := store.Write("prov", &ai.ModelsStoreEntry{}, context.Background()); err != nil {
+	if err := store.Write(context.Background(), "prov", &ai.ModelsStoreEntry{}); err != nil {
 		t.Fatal(err)
 	}
 	models := readFileBytes(t, modelsPath)

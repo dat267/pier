@@ -35,7 +35,7 @@ func nextLine(src string, at int) line {
 // (a tab counts as four, matching the upstream tab expansion).
 func indentWidth(s string) int {
 	width := 0
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		switch s[i] {
 		case ' ':
 			width++
@@ -49,7 +49,7 @@ func indentWidth(s string) int {
 }
 
 func isBlankLine(s string) bool {
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		if s[i] != ' ' && s[i] != '\t' {
 			return false
 		}
@@ -403,7 +403,7 @@ func fenceIndentCompensation(raw, body string) string {
 			continue
 		}
 		cut := 0
-		for dropped := 0; dropped < indent; dropped++ {
+		for range indent {
 			_, size := utf8.DecodeRuneInString(line[cut:])
 			cut += size
 		}

@@ -566,8 +566,8 @@ func CommandCodeProvider() *ai.Provider {
 		Auth:   ai.ProviderAuth{APIKey: ai.EnvApiKeyAuth("Command Code API key", []string{"COMMAND_CODE_API_KEY"})},
 		Models: commandCodeModels(),
 		ByAPI: map[string]ai.ProviderStreams{
-			string(ai.APIOpenAICompletions): openaiCompletionsStreams{},
-			string(ai.APIAnthropicMessages): anthropicMessagesStreams{},
+			ai.APIOpenAICompletions: openaiCompletionsStreams{},
+			ai.APIAnthropicMessages: anthropicMessagesStreams{},
 		},
 	})
 }

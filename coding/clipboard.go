@@ -10,7 +10,7 @@ package coding
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -188,18 +188,18 @@ func clipboardUnavailableErrorFor(goos string, getenv func(string) string) error
 	// Android must name the Termux:API package, not fall through to the generic
 	// message (upstream copyToClipboard, #10391).
 	if getenv("TERMUX_VERSION") != "" {
-		return fmt.Errorf("Clipboard unavailable: install the Termux:API app and `termux-api` package")
+		return errors.New("Clipboard unavailable: install the Termux:API app and `termux-api` package")
 	}
 	if goos == "linux" {
 		if getenv("WAYLAND_DISPLAY") != "" {
-			return fmt.Errorf("Clipboard unavailable: install `wl-clipboard` (`wl-copy`) or check Wayland access")
+			return errors.New("Clipboard unavailable: install `wl-clipboard` (`wl-copy`) or check Wayland access")
 		}
 		if getenv("DISPLAY") != "" {
-			return fmt.Errorf("Clipboard unavailable: install `xclip` or `xsel`, or check X11 access")
+			return errors.New("Clipboard unavailable: install `xclip` or `xsel`, or check X11 access")
 		}
-		return fmt.Errorf("Clipboard unavailable: no Wayland or X11 display detected")
+		return errors.New("Clipboard unavailable: no Wayland or X11 display detected")
 	}
-	return fmt.Errorf("Clipboard unavailable")
+	return errors.New("Clipboard unavailable")
 }
 
 // CopyTextToClipboard copies text to the system clipboard (upstream
@@ -303,7 +303,7 @@ func copyTextToClipboardWith(ctx context.Context, goos string, getenv func(strin
 		return nil
 	}
 	if oversized {
-		return fmt.Errorf("Clipboard unavailable: text exceeds the OSC 52 size limit")
+		return errors.New("Clipboard unavailable: text exceeds the OSC 52 size limit")
 	}
 	return clipboardUnavailableErrorFor(goos, getenv)
 }

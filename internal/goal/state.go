@@ -9,6 +9,7 @@ package goal
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -225,10 +226,10 @@ func ApplyChange(current *GoalSnapshot, entry GoalChangeEntry) (*GoalSnapshot, e
 
 	if entry.Operation == OpClear {
 		if entry.Cleared == nil {
-			return nil, fmt.Errorf("clear requires a cleared ref")
+			return nil, errors.New("clear requires a cleared ref")
 		}
 		if current == nil || current.ID != entry.Cleared.ID {
-			return nil, fmt.Errorf("clear of unknown goal")
+			return nil, errors.New("clear of unknown goal")
 		}
 		if entry.Cleared.Revision != current.Revision {
 			return nil, fmt.Errorf("stale clear: expected revision %d", current.Revision)
@@ -255,10 +256,10 @@ func ApplyChange(current *GoalSnapshot, entry GoalChangeEntry) (*GoalSnapshot, e
 		// Creating over a completed goal is legal (terminal phase); over any
 		// live goal it is not.
 		if current != nil && current.Phase != PhaseComplete {
-			return nil, fmt.Errorf("create over an existing goal")
+			return nil, errors.New("create over an existing goal")
 		}
 		if next.Revision != 1 || next.Phase != PhaseActive {
-			return nil, fmt.Errorf("create must produce a revision-1 active goal")
+			return nil, errors.New("create must produce a revision-1 active goal")
 		}
 		return next, nil
 	}
@@ -267,7 +268,7 @@ func ApplyChange(current *GoalSnapshot, entry GoalChangeEntry) (*GoalSnapshot, e
 		return nil, fmt.Errorf("operation %s without a goal", entry.Operation)
 	}
 	if next.ID != current.ID {
-		return nil, fmt.Errorf("goal id changed without create/clear")
+		return nil, errors.New("goal id changed without create/clear")
 	}
 	if next.Revision != current.Revision+1 {
 		return nil, fmt.Errorf("discontinuous revision: expected %d, got %d", current.Revision+1, next.Revision)
@@ -280,10 +281,10 @@ func ApplyChange(current *GoalSnapshot, entry GoalChangeEntry) (*GoalSnapshot, e
 	}
 	// A stopped goal (blocked or paused) must always carry its stop reason.
 	if (next.Phase == PhaseBlocked || next.Phase == PhasePaused) && next.BlockedReason == nil {
-		return nil, fmt.Errorf("stopped goal requires a blocker reason")
+		return nil, errors.New("stopped goal requires a blocker reason")
 	}
 	if next.Phase != PhaseBlocked && next.Phase != PhasePaused && next.BlockedReason != nil {
-		return nil, fmt.Errorf("blockedReason present on a non-stopped phase")
+		return nil, errors.New("blockedReason present on a non-stopped phase")
 	}
 	return next, nil
 }
@@ -301,7 +302,7 @@ func validateBudget(budget *GoalBudget) error {
 		return value != nil && (math.IsNaN(*value) || math.IsInf(*value, 0) || *value <= 0)
 	}
 	if invalidInt(budget.TimeLimitMs) || invalidInt(budget.TokenLimit) || invalidFloat(budget.CostLimitUsd) {
-		return fmt.Errorf("invalid goal budget")
+		return errors.New("invalid goal budget")
 	}
 	return nil
 }
@@ -386,17 +387,17 @@ func addGoalUsageTokens(total, tokens int64) int64 {
 var goalWhitespace = regexp.MustCompile(`[\t\n\v\f\r \x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]+`)
 
 // TruncateObjective flattens whitespace and caps the JavaScript string length.
-func TruncateObjective(text string, max int) string {
+func TruncateObjective(text string, limit int) string {
 	flat := ai.JSTrim(goalWhitespace.ReplaceAllString(text, " "))
 	length := ai.JSLength(flat)
-	if length <= max {
+	if length <= limit {
 		return flat
 	}
 	// Clamp before subtracting so the most negative Go int cannot overflow.
-	if max <= -length {
+	if limit <= -length {
 		return "…"
 	}
-	return ai.JSSlice(flat, 0, max-1) + "…"
+	return ai.JSSlice(flat, 0, limit-1) + "…"
 }
 
 // GoalViewPayload is the get_goal tool-result goal payload.

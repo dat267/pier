@@ -499,7 +499,7 @@ func (m *GoalMachine) agentEnd(_ ContextUsage, usage *GoalUsage, aborted bool) D
 			Timestamp: m.now().UnixMilli(),
 			Usage:     &usageValue,
 		}})
-		m.view.TurnsStarted = m.view.TurnsStarted + 1
+		m.view.TurnsStarted++
 		m.view.UsedTokens = addGoalUsageTokens(m.view.UsedTokens, usageValue.Tokens)
 		m.view.UsedCostUsd += math.Max(0, usageValue.CostUsd)
 		m.createdThisRun = false

@@ -85,7 +85,7 @@ func (r *RuntimeCredentials) HasRuntimeAPIKey(providerID string) bool {
 }
 
 // Read returns the runtime override, otherwise the stored credential.
-func (r *RuntimeCredentials) Read(providerID string, ctx context.Context) (*ai.Credential, error) {
+func (r *RuntimeCredentials) Read(ctx context.Context, providerID string) (*ai.Credential, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (r *RuntimeCredentials) Read(providerID string, ctx context.Context) (*ai.C
 	if ok {
 		return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: override}}, nil
 	}
-	return r.store.Read(providerID, ctx)
+	return r.store.Read(ctx, providerID)
 }
 
 // List returns stored credential metadata plus the runtime overrides.
@@ -134,16 +134,16 @@ func (r *RuntimeCredentials) List(ctx context.Context) ([]ai.CredentialInfo, err
 }
 
 // Modify delegates to the wrapped store.
-func (r *RuntimeCredentials) Modify(providerID string, fn func(current *ai.Credential) (*ai.Credential, error), ctx context.Context) (*ai.Credential, error) {
-	return r.store.Modify(providerID, fn, ctx)
+func (r *RuntimeCredentials) Modify(ctx context.Context, providerID string, fn func(current *ai.Credential) (*ai.Credential, error)) (*ai.Credential, error) {
+	return r.store.Modify(ctx, providerID, fn)
 }
 
 // Delete removes the stored credential and any runtime override.
-func (r *RuntimeCredentials) Delete(providerID string, ctx context.Context) error {
+func (r *RuntimeCredentials) Delete(ctx context.Context, providerID string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	err := r.store.Delete(providerID, ctx)
+	err := r.store.Delete(ctx, providerID)
 	if err != nil {
 		return err
 	}

@@ -3,6 +3,7 @@ package coding
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -63,12 +64,7 @@ var DefaultModelPerProvider = map[ai.ProviderId]string{
 
 // IsValidThinkingLevel reports whether a string is a selectable thinking level.
 func IsValidThinkingLevel(level string) bool {
-	for _, candidate := range ThinkingLevelOptions {
-		if string(candidate) == level {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ThinkingLevelOptions, ai.ThinkingLevel(level))
 }
 
 // ScopedModel is one resolved model pattern.
@@ -154,7 +150,7 @@ func splitThinkingSuffix(text string) (string, ai.ThinkingLevel, bool) {
 	if !IsValidThinkingLevel(suffix) {
 		return "", "", false
 	}
-	return before, ai.ThinkingLevel(suffix), true
+	return before, suffix, true
 }
 
 func splitProviderPrefix(text string, models []*ai.Model) (string, string, bool) {
@@ -466,7 +462,7 @@ func buildFallbackModel(providerModels []*ai.Model, modelID string) *ai.Model {
 		return nil
 	}
 	baseModel := providerModels[0]
-	if defaultID := DefaultModelPerProvider[ai.ProviderId(baseModel.Provider)]; defaultID != "" {
+	if defaultID := DefaultModelPerProvider[baseModel.Provider]; defaultID != "" {
 		for _, model := range providerModels {
 			if model.ID == defaultID {
 				baseModel = model
@@ -661,7 +657,7 @@ func ResolveCliModel(options ResolveCliModelOptions) ResolveCliModelResult {
 			described = append(described, model.Provider+"/"+model.ID)
 		}
 		sort.Strings(described)
-		authHint := ""
+		var authHint string
 		switch {
 		case options.InlineAPIKey:
 			authHint = "--api-key does not choose a provider."
@@ -818,7 +814,7 @@ var DefaultProviderOrder = []ai.ProviderId{
 type ModelRuntimeSource interface {
 	GetModels(providerID string) []*ai.Model
 	GetModel(providerID, modelID string) *ai.Model
-	GetAvailable(providerID string, ctx context.Context) ([]*ai.Model, error)
+	GetAvailable(ctx context.Context, providerID string) ([]*ai.Model, error)
 	GetAvailableSnapshot() []*ai.Model
 	HasConfiguredAuth(providerID string) bool
 }
@@ -826,8 +822,8 @@ type ModelRuntimeSource interface {
 // cache is the last full availability listing.
 
 // ResolveModelScopeWithDiagnostics resolves patterns against the runtime.
-func ResolveModelScopeWithDiagnostics(patterns []string, runtime ModelRuntimeSource, ctx context.Context) (ResolveModelScopeResult, error) {
-	models, err := runtime.GetAvailable("", ctx)
+func ResolveModelScopeWithDiagnostics(ctx context.Context, patterns []string, runtime ModelRuntimeSource) (ResolveModelScopeResult, error) {
+	models, err := runtime.GetAvailable(ctx, "")
 	if err != nil {
 		return ResolveModelScopeResult{}, err
 	}

@@ -396,7 +396,7 @@ func isSelectPageKey(kb *KeybindingsManager, data string) bool {
 }
 
 func SelectPageIndex(kb *KeybindingsManager, data string, selectedIndex, itemCount, pageSize int) (int, bool) {
-	direction := 0
+	var direction int
 	if kb.Matches(data, "tui.select.pageUp") {
 		direction = -1
 	} else if kb.Matches(data, "tui.select.pageDown") {

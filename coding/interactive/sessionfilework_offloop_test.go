@@ -172,10 +172,10 @@ func TestPickerRenameWaitsForItsReport(t *testing.T) {
 	renamed := ""
 	queue := &postQueue{}
 	component := NewSessionSelectorComponent(
-		func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) {
+		func(context.Context, SessionListProgress) ([]coding.SessionInfo, error) {
 			return []coding.SessionInfo{{Path: "/s/a.jsonl", ID: "a"}}, nil
 		},
-		func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) {
+		func(context.Context, SessionListProgress) ([]coding.SessionInfo, error) {
 			return []coding.SessionInfo{{Path: "/s/a.jsonl", ID: "a"}}, nil
 		},
 		func(string) {}, func() {}, func() {}, func() {},

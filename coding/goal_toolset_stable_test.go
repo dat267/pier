@@ -18,7 +18,7 @@ func goalText(t *testing.T, session *AgentSession, name string, params string) s
 	if !ok {
 		t.Fatalf("tool %s is not registered", name)
 	}
-	result, err := tool.Tool.Execute("id", json.RawMessage(params), context.Background(), func(agent.AgentToolResult) {})
+	result, err := tool.Tool.Execute(context.Background(), "id", json.RawMessage(params), func(agent.AgentToolResult) {})
 	if err != nil {
 		t.Fatalf("%s: %v", name, err)
 	}

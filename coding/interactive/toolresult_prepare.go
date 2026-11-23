@@ -62,9 +62,9 @@ func (c *ToolExecutionComponent) captureBuiltinResult(theme *Theme, context *Too
 				if !ok || details == nil {
 					return nil
 				}
-				copy := *details
-				copy.Truncation = cloneToolTruncation(details.Truncation)
-				result.Details = &copy
+				copied := *details
+				copied.Truncation = cloneToolTruncation(details.Truncation)
+				result.Details = &copied
 			} else {
 				switch result.Details.(type) {
 				case coding.BashToolDetails, *coding.BashToolDetails:
@@ -75,13 +75,13 @@ func (c *ToolExecutionComponent) captureBuiltinResult(theme *Theme, context *Too
 				if details == nil {
 					return nil
 				}
-				copy := *details
-				copy.Truncation = cloneToolTruncation(details.Truncation)
+				copied := *details
+				copied.Truncation = cloneToolTruncation(details.Truncation)
 				if details.FullOutputPath != nil {
 					path := *details.FullOutputPath
-					copy.FullOutputPath = &path
+					copied.FullOutputPath = &path
 				}
-				result.Details = &copy
+				result.Details = &copied
 			}
 		}
 	}
@@ -129,6 +129,6 @@ func cloneToolTruncation(value *coding.TruncationResult) *coding.TruncationResul
 	if value == nil {
 		return nil
 	}
-	copy := *value
-	return &copy
+	copied := *value
+	return &copied
 }

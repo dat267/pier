@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -114,7 +115,7 @@ func openRouterErrorDetail(body map[string]any) string {
 // permanent API key (upstream exchangeAuthorizationCode).
 func ExchangeOpenRouterAuthorizationCode(ctx context.Context, code, verifier string) (*OAuthCredential, error) {
 	if ctx != nil && ctx.Err() != nil {
-		return nil, fmt.Errorf("Login cancelled")
+		return nil, errors.New("Login cancelled")
 	}
 	requestCtx, cancel := context.WithTimeout(context.Background(), openRouterExchangeTTL)
 	defer cancel()
@@ -143,10 +144,10 @@ func ExchangeOpenRouterAuthorizationCode(ctx context.Context, code, verifier str
 	response, err := doFetchRequest(request)
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
-			return nil, fmt.Errorf("Login cancelled")
+			return nil, errors.New("Login cancelled")
 		}
 		if requestCtx.Err() != nil {
-			return nil, fmt.Errorf("OpenRouter OAuth token exchange timed out")
+			return nil, errors.New("OpenRouter OAuth token exchange timed out")
 		}
 		return nil, err
 	}
@@ -163,7 +164,7 @@ func ExchangeOpenRouterAuthorizationCode(ctx context.Context, code, verifier str
 			payload = record
 		}
 	} else if ok {
-		return nil, fmt.Errorf("OpenRouter OAuth returned invalid JSON")
+		return nil, errors.New("OpenRouter OAuth returned invalid JSON")
 	}
 
 	if !ok {
@@ -176,7 +177,7 @@ func ExchangeOpenRouterAuthorizationCode(ctx context.Context, code, verifier str
 	}
 	key, _ := payload["key"].(string)
 	if key == "" {
-		return nil, fmt.Errorf(`OpenRouter OAuth response carries no "key"`)
+		return nil, errors.New(`OpenRouter OAuth response carries no "key"`)
 	}
 	return &OAuthCredential{
 		Access: key,
@@ -207,9 +208,9 @@ type OpenRouterCallbackServer struct {
 }
 
 // StartOpenRouterCallbackServer starts the server on an ephemeral port.
-func StartOpenRouterCallbackServer(callbackPath, verifier string, ctx context.Context) (*OpenRouterCallbackServer, error) {
+func StartOpenRouterCallbackServer(ctx context.Context, callbackPath, verifier string) (*OpenRouterCallbackServer, error) {
 	if ctx != nil && ctx.Err() != nil {
-		return nil, fmt.Errorf("Login cancelled")
+		return nil, errors.New("Login cancelled")
 	}
 	host := oauthCallbackHost()
 	listener, err := net.Listen("tcp", host+":0")
@@ -296,12 +297,12 @@ func StartOpenRouterCallbackServer(callbackPath, verifier string, ctx context.Co
 		}
 		select {
 		case <-ctx.Done():
-			finish(nil, fmt.Errorf("Login cancelled"))
+			finish(nil, errors.New("Login cancelled"))
 		default:
 		}
 	}
 	callback.timeout = time.AfterFunc(openRouterLoginTimeout, func() {
-		finish(nil, fmt.Errorf("OpenRouter OAuth login timed out"))
+		finish(nil, errors.New("OpenRouter OAuth login timed out"))
 	})
 	if ctx != nil {
 		callback.stopAbort = context.AfterFunc(ctx, stop)
@@ -384,7 +385,7 @@ func OpenRouterAuthorizeURLBase() string { return OpenRouterAuthorizeEndpoint }
 // LoginOpenRouter runs the OpenRouter PKCE login (upstream loginOpenRouter).
 func LoginOpenRouter(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, fmt.Errorf("auth interaction is required")
+		return nil, errors.New("auth interaction is required")
 	}
 	pkce, err := GeneratePKCE()
 	if err != nil {
@@ -395,7 +396,7 @@ func LoginOpenRouter(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	callback, err := StartOpenRouterCallbackServer(callbackPath, pkce.Verifier, ctx)
+	callback, err := StartOpenRouterCallbackServer(ctx, callbackPath, pkce.Verifier)
 	if err != nil {
 		return nil, err
 	}
@@ -455,7 +456,7 @@ func LoginOpenRouter(interaction *AuthInteraction) (*OAuthCredential, error) {
 	}
 	code, ok := ParseOpenRouterAuthorizationInput(manual.input)
 	if !ok {
-		return nil, fmt.Errorf("Missing authorization code")
+		return nil, errors.New("Missing authorization code")
 	}
 	if interaction.Notify != nil {
 		interaction.Notify(AuthEvent{Type: AuthEventProgress, Message: "Exchanging authorization code for an API key..."})
@@ -470,13 +471,13 @@ func OpenRouterOAuth() *OAuthAuth {
 		Name:       "OpenRouter OAuth",
 		LoginLabel: "Sign in with OpenRouter",
 		Login:      LoginOpenRouter,
-		Refresh: func(credential *OAuthCredential, ctx context.Context) (*OAuthCredential, error) {
+		Refresh: func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
 			// OpenRouter hands out a permanent key, so refresh is a no-op.
 			return credential, nil
 		},
 		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
 			if credential == nil {
-				return nil, fmt.Errorf("credential is required")
+				return nil, errors.New("credential is required")
 			}
 			return &ModelAuth{APIKey: credential.Access}, nil
 		},
@@ -487,7 +488,7 @@ func OpenRouterOAuth() *OAuthAuth {
 func randomUUIDString() string {
 	var random [16]byte
 	if _, err := rand.Read(random[:]); err != nil {
-		return fmt.Sprintf("%d", time.Now().UnixNano())
+		return strconv.FormatInt(time.Now().UnixNano(), 10)
 	}
 	random[6] = (random[6] & 0x0f) | 0x40
 	random[8] = (random[8] & 0x3f) | 0x80

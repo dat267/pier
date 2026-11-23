@@ -227,19 +227,19 @@ func (r *payloadReader) hydrateEntriesSeq(entries []SessionEntry) error {
 
 // hydrateCopy returns a hydrated copy of a possibly lazy entry.
 func (r *payloadReader) hydrateCopy(entry *SessionEntry) (SessionEntry, error) {
-	copy := *entry
-	if err := r.hydrate(&copy); err != nil {
-		return copy, err
+	copied := *entry
+	if err := r.hydrate(&copied); err != nil {
+		return copied, err
 	}
-	return copy, nil
+	return copied, nil
 }
 
 // resolveMessages decodes an entry for the session's message memo, reading a
 // lazy entry's line first.
 func (m *SessionManager) resolveMessages(entry *SessionEntry) []ai.Message {
 	if entry.lazy {
-		if copy, err := m.payloads.hydrateCopy(entry); err == nil {
-			return SessionEntryToContextMessages(&copy)
+		if copied, err := m.payloads.hydrateCopy(entry); err == nil {
+			return SessionEntryToContextMessages(&copied)
 		}
 		// A payload that cannot be read yields no messages rather than a
 		// mis-decoded one. The write diagnostics carry the failure's cousin
@@ -279,11 +279,11 @@ func (m *SessionManager) EntryMessage(entry *SessionEntry) json.RawMessage {
 	if !entry.lazy || payloads == nil {
 		return entry.Message
 	}
-	copy, err := payloads.hydrateCopy(entry)
+	copied, err := payloads.hydrateCopy(entry)
 	if err != nil {
 		return nil
 	}
-	return copy.Message
+	return copied.Message
 }
 
 // resolveForScan returns the entry a cache scan should read: lazy entries are
@@ -292,9 +292,9 @@ func (m *SessionManager) resolveForScan(entry *SessionEntry) *SessionEntry {
 	if !entry.lazy {
 		return entry
 	}
-	copy, err := m.payloads.hydrateCopy(entry)
+	copied, err := m.payloads.hydrateCopy(entry)
 	if err != nil {
 		return entry
 	}
-	return &copy
+	return &copied
 }

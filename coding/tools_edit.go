@@ -228,10 +228,8 @@ func CreateEditTool(cwd string) agent.AgentTool {
 		Parameters:          editSchema,
 		Label:               "edit",
 		ConstrainedSampling: preferStrictJSONSchema,
-		PrepareArguments: func(args json.RawMessage) json.RawMessage {
-			return PrepareEditArguments(args)
-		},
-		Execute: func(toolCallID string, params json.RawMessage, ctx context.Context, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
+		PrepareArguments:    PrepareEditArguments,
+		Execute: func(ctx context.Context, toolCallID string, params json.RawMessage, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			var input struct {
 				Path  string `json:"path"`
 				Edits []Edit `json:"edits"`
@@ -240,7 +238,7 @@ func CreateEditTool(cwd string) agent.AgentTool {
 				return agent.AgentToolResult{}, err
 			}
 			if len(input.Edits) == 0 {
-				return agent.AgentToolResult{}, fmt.Errorf("Edit tool input is invalid. edits must contain at least one replacement.")
+				return agent.AgentToolResult{}, errors.New("Edit tool input is invalid. edits must contain at least one replacement.")
 			}
 			absolutePath := ResolveToCwd(input.Path, cwd)
 
@@ -248,7 +246,7 @@ func CreateEditTool(cwd string) agent.AgentTool {
 			var resultErr error
 			err := WithFileMutationQueue(absolutePath, func() error {
 				if ctxErrOf(ctx) != nil {
-					resultErr = fmt.Errorf("Operation aborted")
+					resultErr = errors.New("Operation aborted")
 					return resultErr
 				}
 
@@ -258,7 +256,7 @@ func CreateEditTool(cwd string) agent.AgentTool {
 					return resultErr
 				}
 				if ctxErrOf(ctx) != nil {
-					resultErr = fmt.Errorf("Operation aborted")
+					resultErr = errors.New("Operation aborted")
 					return resultErr
 				}
 
@@ -268,7 +266,7 @@ func CreateEditTool(cwd string) agent.AgentTool {
 					return resultErr
 				}
 				if ctxErrOf(ctx) != nil {
-					resultErr = fmt.Errorf("Operation aborted")
+					resultErr = errors.New("Operation aborted")
 					return resultErr
 				}
 				rawContent := DecodeUTF8WithReplacement(data)
@@ -282,7 +280,7 @@ func CreateEditTool(cwd string) agent.AgentTool {
 					return err
 				}
 				if ctxErrOf(ctx) != nil {
-					resultErr = fmt.Errorf("Operation aborted")
+					resultErr = errors.New("Operation aborted")
 					return resultErr
 				}
 
@@ -295,7 +293,7 @@ func CreateEditTool(cwd string) agent.AgentTool {
 					return resultErr
 				}
 				if ctxErrOf(ctx) != nil {
-					resultErr = fmt.Errorf("Operation aborted")
+					resultErr = errors.New("Operation aborted")
 					return resultErr
 				}
 

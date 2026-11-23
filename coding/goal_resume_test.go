@@ -30,9 +30,7 @@ func TestGoalResumeFromIdleStartsARun(t *testing.T) {
 		}
 		// Stop the round loop: complete the goal from this round, then answer.
 		if session.GoalController().Snapshot().Goal != nil {
-			_, _ = session.control.Tools["set_goal"].Tool.Execute("complete",
-				json.RawMessage(`{"status":"complete"}`),
-				context.Background(), func(agent.AgentToolResult) {})
+			_, _ = session.control.Tools["set_goal"].Tool.Execute(context.Background(), "complete", json.RawMessage(`{"status":"complete"}`), func(agent.AgentToolResult) {})
 		}
 		stream := ai.NewAssistantMessageEventStream()
 		go func() {
@@ -51,8 +49,7 @@ func TestGoalResumeFromIdleStartsARun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := session.control.Tools["set_goal"].Tool.Execute("create",
-		json.RawMessage(`{"objective":"finish it"}`), context.Background(), func(agent.AgentToolResult) {}); err != nil {
+	if _, err := session.control.Tools["set_goal"].Tool.Execute(context.Background(), "create", json.RawMessage(`{"objective":"finish it"}`), func(agent.AgentToolResult) {}); err != nil {
 		t.Fatal(err)
 	}
 	session.GoalController().HandleCommand("pause")
@@ -82,12 +79,9 @@ func TestGoalAgentClearStopsTheRoundLoop(t *testing.T) {
 	streamFn := func(requestModel *ai.Model, transcript ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 		switch prompts.Add(1) {
 		case 1:
-			_, _ = session.control.Tools["set_goal"].Tool.Execute("create",
-				json.RawMessage(`{"objective":"finish it"}`), context.Background(), func(agent.AgentToolResult) {})
+			_, _ = session.control.Tools["set_goal"].Tool.Execute(context.Background(), "create", json.RawMessage(`{"objective":"finish it"}`), func(agent.AgentToolResult) {})
 		case 2:
-			_, _ = session.control.Tools["set_goal"].Tool.Execute("clear",
-				json.RawMessage(`{"status":"clear"}`),
-				context.Background(), func(agent.AgentToolResult) {})
+			_, _ = session.control.Tools["set_goal"].Tool.Execute(context.Background(), "clear", json.RawMessage(`{"status":"clear"}`), func(agent.AgentToolResult) {})
 		}
 		stream := ai.NewAssistantMessageEventStream()
 		go func() {
@@ -129,12 +123,9 @@ func TestGoalRoundTransitionAdmitsEachRoundOnce(t *testing.T) {
 	streamFn := func(requestModel *ai.Model, transcript ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 		switch prompts.Add(1) {
 		case 1:
-			_, _ = session.control.Tools["set_goal"].Tool.Execute("create",
-				json.RawMessage(`{"objective":"finish it"}`), context.Background(), func(agent.AgentToolResult) {})
+			_, _ = session.control.Tools["set_goal"].Tool.Execute(context.Background(), "create", json.RawMessage(`{"objective":"finish it"}`), func(agent.AgentToolResult) {})
 		case 3:
-			_, _ = session.control.Tools["set_goal"].Tool.Execute("complete",
-				json.RawMessage(`{"status":"complete"}`),
-				context.Background(), func(agent.AgentToolResult) {})
+			_, _ = session.control.Tools["set_goal"].Tool.Execute(context.Background(), "complete", json.RawMessage(`{"status":"complete"}`), func(agent.AgentToolResult) {})
 		}
 		stream := ai.NewAssistantMessageEventStream()
 		go func() {

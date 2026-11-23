@@ -2,6 +2,7 @@ package ai
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -112,7 +113,7 @@ func FormatBedrockError(err error) string {
 	if strings.Contains(strings.ToLower(core), "data retention mode") {
 		hint = " See " + BedrockDataRetentionDocsURL + " for supported data retention modes."
 	}
-	if providerErr, ok := errAsProviderError(err); ok {
+	if providerErr, ok := errors.AsType[*ProviderError](err); ok {
 		// Only modeled Bedrock service exceptions get the prefix treatment; a
 		// transport name such as TimeoutError falls through to the plain
 		// message (upstream checks the SDK exception base class). The SDK's
@@ -126,21 +127,6 @@ func FormatBedrockError(err error) string {
 		}
 	}
 	return core + hint
-}
-
-// errAsProviderError extracts a provider error carrying an AWS exception code.
-func errAsProviderError(err error) (*ProviderError, bool) {
-	for err != nil {
-		if providerErr, ok := err.(*ProviderError); ok {
-			return providerErr, true
-		}
-		unwrapper, ok := err.(interface{ Unwrap() error })
-		if !ok {
-			break
-		}
-		err = unwrapper.Unwrap()
-	}
-	return nil, false
 }
 
 // maxBedrockDiagnosticValueChars bounds diagnostic values; over-long values are
@@ -163,7 +149,7 @@ func BedrockErrorCode(err error) (string, bool) {
 	if err == nil {
 		return "", false
 	}
-	if providerErr, ok := errAsProviderError(err); ok && providerErr.Code != "" {
+	if providerErr, ok := errors.AsType[*ProviderError](err); ok && providerErr.Code != "" {
 		if strings.HasSuffix(providerErr.Code, "Exception") {
 			return NormalizeBedrockDiagnosticValue(providerErr.Code)
 		}
@@ -186,7 +172,7 @@ func AppendBedrockFailureDiagnostic(output *AssistantMessage, err error, fallbac
 	// A modeled stream exception carries the SDK's `$metadata`, httpStatusCode
 	// 200 included, so the status is recorded as observed
 	// (ai/testdata/bedrock-errors pins the reference's own output).
-	if providerErr, ok := errAsProviderError(err); ok && providerErr.Status != 0 {
+	if providerErr, ok := errors.AsType[*ProviderError](err); ok && providerErr.Status != 0 {
 		status := providerErr.Status
 		details.Status = &status
 	}

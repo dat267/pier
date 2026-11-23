@@ -63,7 +63,7 @@ func TestLsToolMatchesUpstream(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			result, execErr := tool.Execute("call", encoded, context.Background(), nil)
+			result, execErr := tool.Execute(context.Background(), "call", encoded, nil)
 			wantError := strings.ReplaceAll(fixture.Expected.Error, "<dir>", dir)
 			checkParityToolResult(t, result, execErr, wantError, fixture.Expected.Text, fixture.Expected.Details)
 		})
@@ -106,7 +106,7 @@ func TestLsToolAbortsWhenCanceledDuringFilesystemWork(t *testing.T) {
 	}
 
 	ctx := newCancelOnSecondErrContext()
-	_, err := CreateLsTool(dir).Execute("call", json.RawMessage(`{}`), ctx, nil)
+	_, err := CreateLsTool(dir).Execute(ctx, "call", json.RawMessage(`{}`), nil)
 	if err == nil || err.Error() != "Operation aborted" {
 		t.Fatalf("ls error = %v; want Operation aborted", err)
 	}

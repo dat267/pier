@@ -59,7 +59,7 @@ func TestEditToolMatchesUpstream(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			result, execErr := tool.Execute("call", params, context.Background(), nil)
+			result, execErr := tool.Execute(context.Background(), "call", params, nil)
 			if !checkParityToolResult(t, result, execErr, fixture.Expected.Error, fixture.Expected.Text, fixture.Expected.Details) {
 				return
 			}

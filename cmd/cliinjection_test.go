@@ -36,7 +36,7 @@ func TestCLIOutputKeepsTerminalControlsOut(t *testing.T) {
 		}
 		settings := coding.NewSettingsManagerFromFiles(t.TempDir(), agentDir, coding.SettingsManagerCreateOptions{})
 		stdout, stderr := captureStdio(t, func() {
-			if err := listModels(runtime, settings, coding.ParseArgs(nil), context.Background()); err != nil {
+			if err := listModels(context.Background(), runtime, settings, coding.ParseArgs(nil)); err != nil {
 				t.Errorf("listModels: %v", err)
 			}
 		})
@@ -54,9 +54,9 @@ func TestCLIOutputKeepsTerminalControlsOut(t *testing.T) {
 			t.Fatal(err)
 		}
 		storage := coding.NewAuthStorage(filepath.Join(agentDir, "auth.json"))
-		if _, err := storage.Modify(hostile, func(*ai.Credential) (*ai.Credential, error) {
+		if _, err := storage.Modify(context.Background(), hostile, func(*ai.Credential) (*ai.Credential, error) {
 			return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "sk-test"}}, nil
-		}, context.Background()); err != nil {
+		}); err != nil {
 			t.Fatal(err)
 		}
 		for _, arg := range []string{"evil", "nosuch"} {

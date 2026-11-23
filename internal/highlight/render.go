@@ -16,7 +16,7 @@ func writeHTML(b *strings.Builder, nodes []*Node, prefix string) {
 			b.WriteString(escapeHTML(n.Text))
 			continue
 		}
-		className := ""
+		var className string
 		if n.Kind != "" {
 			className = n.Kind
 			if !n.Sublanguage {
@@ -38,7 +38,7 @@ func escapeHTML(value string) string {
 		return value
 	}
 	var b strings.Builder
-	for i := 0; i < len(value); i++ {
+	for i := range len(value) {
 		switch value[i] {
 		case '&':
 			b.WriteString("&amp;")

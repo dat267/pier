@@ -3,6 +3,7 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"unicode/utf16"
@@ -99,7 +100,7 @@ func (p *canonicalParser) literal(out []byte, literal []byte) ([]byte, error) {
 		return nil, io.ErrUnexpectedEOF
 	}
 	if !bytes.Equal(p.data[p.pos:p.pos+len(literal)], literal) {
-		return nil, fmt.Errorf("canonical JSON: invalid literal")
+		return nil, errors.New("canonical JSON: invalid literal")
 	}
 	p.pos += len(literal)
 	return append(out, literal...), nil
@@ -121,7 +122,7 @@ func (p *canonicalParser) number(out []byte) ([]byte, error) {
 			p.pos++
 		}
 	default:
-		return nil, fmt.Errorf("canonical JSON: invalid number")
+		return nil, errors.New("canonical JSON: invalid number")
 	}
 	if p.pos < len(p.data) && p.data[p.pos] == '.' {
 		p.pos++
@@ -150,7 +151,7 @@ func (p *canonicalParser) number(out []byte) ([]byte, error) {
 func (p *canonicalParser) array(out []byte) ([]byte, error) {
 	p.depth++
 	if p.depth > maxJSONNestingDepth {
-		return nil, fmt.Errorf("canonical JSON: exceeded max depth")
+		return nil, errors.New("canonical JSON: exceeded max depth")
 	}
 	defer func() { p.depth-- }()
 	p.pos++
@@ -179,7 +180,7 @@ func (p *canonicalParser) array(out []byte) ([]byte, error) {
 			p.pos++
 			return append(out, ']'), nil
 		default:
-			return nil, fmt.Errorf("canonical JSON: invalid array separator")
+			return nil, errors.New("canonical JSON: invalid array separator")
 		}
 	}
 }
@@ -187,7 +188,7 @@ func (p *canonicalParser) array(out []byte) ([]byte, error) {
 func (p *canonicalParser) object(out []byte) ([]byte, error) {
 	p.depth++
 	if p.depth > maxJSONNestingDepth {
-		return nil, fmt.Errorf("canonical JSON: exceeded max depth")
+		return nil, errors.New("canonical JSON: exceeded max depth")
 	}
 	defer func() { p.depth-- }()
 	p.pos++
@@ -201,7 +202,7 @@ func (p *canonicalParser) object(out []byte) ([]byte, error) {
 	for {
 		p.skipSpace()
 		if p.pos >= len(p.data) || p.data[p.pos] != '"' {
-			return nil, fmt.Errorf("canonical JSON: invalid object key")
+			return nil, errors.New("canonical JSON: invalid object key")
 		}
 		key, err := p.parseString()
 		if err != nil {
@@ -209,7 +210,7 @@ func (p *canonicalParser) object(out []byte) ([]byte, error) {
 		}
 		p.skipSpace()
 		if p.pos >= len(p.data) || p.data[p.pos] != ':' {
-			return nil, fmt.Errorf("canonical JSON: missing object colon")
+			return nil, errors.New("canonical JSON: missing object colon")
 		}
 		p.pos++
 		p.skipSpace()
@@ -241,7 +242,7 @@ func (p *canonicalParser) object(out []byte) ([]byte, error) {
 			}
 			return append(out, '}'), nil
 		default:
-			return nil, fmt.Errorf("canonical JSON: invalid object separator")
+			return nil, errors.New("canonical JSON: invalid object separator")
 		}
 	}
 }
@@ -251,7 +252,7 @@ func (p *canonicalParser) object(out []byte) ([]byte, error) {
 // the reference decoder does.
 func (p *canonicalParser) parseString() (string, error) {
 	if p.pos >= len(p.data) || p.data[p.pos] != '"' {
-		return "", fmt.Errorf("canonical JSON: expected string")
+		return "", errors.New("canonical JSON: expected string")
 	}
 	p.pos++
 	start := p.pos
@@ -265,7 +266,7 @@ func (p *canonicalParser) parseString() (string, error) {
 		case c == '\\':
 			return p.parseEscapedString(start)
 		case c < 0x20:
-			return "", fmt.Errorf("canonical JSON: invalid control character")
+			return "", errors.New("canonical JSON: invalid control character")
 		case c < utf8.RuneSelf:
 			p.pos++
 		default:
@@ -319,7 +320,7 @@ func (p *canonicalParser) parseEscapedString(start int) (string, error) {
 				p.pos++
 				value, ok := p.hex4()
 				if !ok {
-					return "", fmt.Errorf("canonical JSON: invalid unicode escape")
+					return "", errors.New("canonical JSON: invalid unicode escape")
 				}
 				if !utf16.IsSurrogate(value) {
 					builder = utf8.AppendRune(builder, value)
@@ -337,7 +338,7 @@ func (p *canonicalParser) parseEscapedString(start int) (string, error) {
 					p.pos += 2
 					low, ok := p.hex4()
 					if !ok {
-						return "", fmt.Errorf("canonical JSON: invalid unicode escape")
+						return "", errors.New("canonical JSON: invalid unicode escape")
 					}
 					if low >= 0xDC00 && low <= 0xDFFF {
 						builder = utf8.AppendRune(builder, utf16.DecodeRune(high, low))
@@ -349,10 +350,10 @@ func (p *canonicalParser) parseEscapedString(start int) (string, error) {
 				}
 				builder = utf8.AppendRune(builder, utf8.RuneError)
 			default:
-				return "", fmt.Errorf("canonical JSON: invalid escape sequence")
+				return "", errors.New("canonical JSON: invalid escape sequence")
 			}
 		case c < 0x20:
-			return "", fmt.Errorf("canonical JSON: invalid control character")
+			return "", errors.New("canonical JSON: invalid control character")
 		default:
 			r, size := utf8.DecodeRune(p.data[p.pos:])
 			if r == utf8.RuneError && size == 1 {

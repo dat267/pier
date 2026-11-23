@@ -16,7 +16,7 @@ import (
 
 // prepareVirtualRequest routes one request of a virtual selection. It returns
 // nil for a physical selection, which leaves the request untouched.
-func (s *AgentSession) prepareVirtualRequest(request *agent.PrepareRequestContext, ctx context.Context) (*agent.AgentRequestUpdate, error) {
+func (s *AgentSession) prepareVirtualRequest(ctx context.Context, request *agent.PrepareRequestContext) (*agent.AgentRequestUpdate, error) {
 	if s == nil || request == nil {
 		return nil, nil
 	}
@@ -67,7 +67,7 @@ func (s *AgentSession) prepareVirtualRequest(request *agent.PrepareRequestContex
 	}
 	return &agent.AgentRequestUpdate{
 		RequestModel:            route.Model,
-		RequestThinkingLevel:    ai.ThinkingLevel(route.ThinkingLevel),
+		RequestThinkingLevel:    route.ThinkingLevel,
 		HasRequestThinkingLevel: true,
 	}, nil
 }

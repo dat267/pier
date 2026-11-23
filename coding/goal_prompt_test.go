@@ -53,8 +53,7 @@ func TestPursuedGoalToolsContributeToSystemPrompt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := session.control.Tools["set_goal"].Tool.Execute("create",
-		[]byte(`{"objective":"finish it"}`), context.Background(), func(agent.AgentToolResult) {}); err != nil {
+	if _, err := session.control.Tools["set_goal"].Tool.Execute(context.Background(), "create", []byte(`{"objective":"finish it"}`), func(agent.AgentToolResult) {}); err != nil {
 		t.Fatal(err)
 	}
 	prompt := session.SystemPrompt()

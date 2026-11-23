@@ -370,9 +370,9 @@ func TestStartupAnthropicWarningWarnsOnceForRealAuth(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
 	InitTheme("dark", false)
 	credentials := ai.NewInMemoryCredentialStore()
-	if _, err := credentials.Modify("anthropic", func(*ai.Credential) (*ai.Credential, error) {
+	if _, err := credentials.Modify(context.Background(), "anthropic", func(*ai.Credential) (*ai.Credential, error) {
 		return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "sk-ant-oat01-test"}}, nil
-	}, context.Background()); err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 	runtime, err := coding.CreateModelRuntime(coding.CreateModelRuntimeOptions{

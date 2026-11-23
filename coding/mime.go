@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"errors"
 	"io"
 	"os"
 )
@@ -50,7 +51,7 @@ func DetectSupportedImageMimeTypeFromFile(filePath string) (string, error) {
 	defer func() { _ = file.Close() }()
 	buffer := make([]byte, imageTypeSniffBytes)
 	read, err := file.Read(buffer)
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return "", err
 	}
 	return DetectSupportedImageMimeType(buffer[:read]), nil
@@ -141,7 +142,7 @@ func startsWithASCII(buffer []byte, offset int, text string) bool {
 	if len(buffer) < offset+len(text) {
 		return false
 	}
-	for index := 0; index < len(text); index++ {
+	for index := range len(text) {
 		if buffer[offset+index] != text[index] {
 			return false
 		}

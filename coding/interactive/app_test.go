@@ -134,9 +134,9 @@ func newTestAppConfigured(t *testing.T, persist bool, configure func(*coding.Set
 	dir := t.TempDir()
 	refresh := false
 	credentials := ai.NewInMemoryCredentialStore()
-	if _, err := credentials.Modify("anthropic", func(*ai.Credential) (*ai.Credential, error) {
+	if _, err := credentials.Modify(context.Background(), "anthropic", func(*ai.Credential) (*ai.Credential, error) {
 		return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "test-key"}}, nil
-	}, context.Background()); err != nil {
+	}); err != nil {
 		t.Fatalf("seed credential: %v", err)
 	}
 	runtime, err := coding.CreateModelRuntime(coding.CreateModelRuntimeOptions{

@@ -93,7 +93,7 @@ func (b *ignoredIllegalBatch) extend(h *highlighter, m *match) {
 	remaining := max(1, maxHighlightIterations+2-h.iterations)
 	for pos := m.index; pos < end; {
 		r, width := rune(m.input[pos]), 1
-		matched := false
+		var matched bool
 		if r < utf8.RuneSelf {
 			matched = b.ascii[r]
 		} else {

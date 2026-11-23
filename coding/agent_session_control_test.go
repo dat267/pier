@@ -21,7 +21,7 @@ func testTool(name string) agent.AgentTool {
 	return agent.AgentTool{
 		Name: name, Description: name + " tool",
 		Parameters: json.RawMessage(`{"type":"object"}`),
-		Execute: func(toolCallID string, params json.RawMessage, ctx ctxpkg.Context, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
+		Execute: func(ctx ctxpkg.Context, toolCallID string, params json.RawMessage, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			return agent.AgentToolResult{}, nil
 		},
 	}
@@ -300,10 +300,10 @@ func TestSessionModelCycleDoesNotPersistThinkingLevel(t *testing.T) {
 
 	session := newControlSession(t, runtime.GetModel("anthropic", "anthropic-model"), settings)
 	session.control.ModelRuntime = runtime
-	if err := runtime.SetRuntimeAPIKey("anthropic", "sk-1", ctxpkg.Background()); err != nil {
+	if err := runtime.SetRuntimeAPIKey(ctxpkg.Background(), "anthropic", "sk-1"); err != nil {
 		t.Fatal(err)
 	}
-	if err := runtime.SetRuntimeAPIKey("beta", "sk-2", ctxpkg.Background()); err != nil {
+	if err := runtime.SetRuntimeAPIKey(ctxpkg.Background(), "beta", "sk-2"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -330,7 +330,7 @@ func TestSessionModelSwitchAuth(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 	// With a runtime key it succeeds and appends a model-change entry.
-	if err := runtime.SetRuntimeAPIKey("anthropic", "sk-1", ctxpkg.Background()); err != nil {
+	if err := runtime.SetRuntimeAPIKey(ctxpkg.Background(), "anthropic", "sk-1"); err != nil {
 		t.Fatal(err)
 	}
 	if err := session.SetModel(ctxpkg.Background(), model, ModelMutationOptions{}); err != nil {
@@ -355,7 +355,7 @@ func TestSessionModelSwitchAuth(t *testing.T) {
 	runtime.defaults["beta"] = other
 	runtime.builtins["beta"] = other
 	runtime.recomposeProvider("beta")
-	if err := runtime.SetRuntimeAPIKey("beta", "sk-2", ctxpkg.Background()); err != nil {
+	if err := runtime.SetRuntimeAPIKey(ctxpkg.Background(), "beta", "sk-2"); err != nil {
 		t.Fatal(err)
 	}
 	result, err := session.CycleModel(ctxpkg.Background(), "forward", ModelMutationOptions{})
@@ -383,7 +383,7 @@ func TestSessionModelSwitchAuth(t *testing.T) {
 	// Persisting a model outside the scope appends it.
 	outside := &ai.Model{ID: "outside", API: ai.APIAnthropicMessages, Provider: "anthropic", Reasoning: false}
 	runtime.defaults["anthropic"] = base
-	if err := runtime.SetRuntimeAPIKey("anthropic", "sk-1", ctxpkg.Background()); err != nil {
+	if err := runtime.SetRuntimeAPIKey(ctxpkg.Background(), "anthropic", "sk-1"); err != nil {
 		t.Fatal(err)
 	}
 	session.addPersistedDefaultToNonEmptyScope(outside)

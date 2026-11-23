@@ -193,7 +193,7 @@ func decodeOrderedJSON(data []byte) (*schemaValue, error) {
 		return nil, err
 	}
 	if _, err := dec.Token(); err != io.EOF {
-		return nil, fmt.Errorf("unexpected data after the JSON value")
+		return nil, errors.New("unexpected data after the JSON value")
 	}
 	return value, nil
 }
@@ -227,7 +227,7 @@ func decodeOrderedToken(dec *json.Decoder) (*schemaValue, error) {
 				}
 				key, ok := keyToken.(string)
 				if !ok {
-					return nil, fmt.Errorf("object key must be a string")
+					return nil, errors.New("object key must be a string")
 				}
 				value, err := decodeOrderedToken(dec)
 				if err != nil {
@@ -254,7 +254,7 @@ func decodeOrderedToken(dec *json.Decoder) (*schemaValue, error) {
 			return &schemaValue{IsArray: true, Array: array}, nil
 		}
 	}
-	return nil, fmt.Errorf("unexpected JSON token")
+	return nil, errors.New("unexpected JSON token")
 }
 
 // parseOrderedJSONObject re-encodes a JSON object preserving key order
@@ -459,7 +459,7 @@ func (p *partialParser) parseValue() (*schemaValue, error) {
 	p.skipWhitespace()
 	u, ok := p.peek()
 	if !ok {
-		return nil, fmt.Errorf("partial json: unexpected end of input")
+		return nil, errors.New("partial json: unexpected end of input")
 	}
 	if u == '{' || u == '[' {
 		if p.depth >= maxPartialJSONDepth {

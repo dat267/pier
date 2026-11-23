@@ -178,12 +178,12 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 			break
 		}
 		m.ruleFirst[i] = set
-		for j := 0; j < len(set); j++ {
+		for j := range len(set) {
 			union[set[j]] = true
 		}
 	}
 	for _, mr := range m.manuals {
-		for i := 0; i < len(mr.firsts); i++ {
+		for i := range len(mr.firsts) {
 			union[mr.firsts[i]] = true
 		}
 	}
@@ -202,7 +202,7 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 	m.dispatch = usable && m.hasFirstBytes && (len(m.regexes) > 1 || len(m.manuals) > 0)
 	if m.dispatch {
 		for _, mr := range m.manuals {
-			for i := 0; i < len(mr.firsts); i++ {
+			for i := range len(mr.firsts) {
 				b := mr.firsts[i]
 				m.manualByByte[b] = append(m.manualByByte[b], mr)
 			}

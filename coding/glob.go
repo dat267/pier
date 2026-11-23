@@ -84,13 +84,13 @@ func expandBracesWithin(pattern string, top bool, depth int) []string {
 	rewrites := 0
 	current := pattern
 	for {
-		open, close := globBraceGroup(current)
+		open, closeAt := globBraceGroup(current)
 		if open < 0 {
 			return combineExpansions(acc, current, []string{""}, dropEmpties)
 		}
-		pre, body, post := current[:open], current[open+1:close], current[close+1:]
+		pre, body, post := current[:open], current[open+1:closeAt], current[closeAt+1:]
 		if strings.HasSuffix(pre, "$") {
-			acc = combineExpansions(acc, current[:close+1], []string{""}, dropEmpties && post == "")
+			acc = combineExpansions(acc, current[:closeAt+1], []string{""}, dropEmpties && post == "")
 			firstGroup = false
 			if post == "" {
 				return acc
@@ -337,8 +337,8 @@ func unescapeBracePattern(pattern string, unescapeSlashes bool) string {
 // globBraceGroup returns the first balanced unescaped brace group. Like
 // balanced-match, it falls back to a complete inner group if an outer opening
 // brace has no matching close (open is -1 when the pattern has no group).
-func globBraceGroup(pattern string) (open, close int) {
-	open, close = -1, -1
+func globBraceGroup(pattern string) (open, closeAt int) {
+	open, closeAt = -1, -1
 	var openings []int
 	for index := 0; index < len(pattern); index++ {
 		switch pattern[index] {
@@ -354,12 +354,12 @@ func globBraceGroup(pattern string) (open, close int) {
 					return start, index
 				}
 				if open < 0 || start < open {
-					open, close = start, index
+					open, closeAt = start, index
 				}
 			}
 		}
 	}
-	return open, close
+	return open, closeAt
 }
 
 // splitTopLevel splits a brace body on its unescaped top-level commas.

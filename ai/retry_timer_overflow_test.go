@@ -45,13 +45,13 @@ func TestAssistantRetryDelayOverflowMatchesJavaScriptTimeout(t *testing.T) {
 	policy := &RetryPolicy{
 		Enabled: true, MaxRetries: 1, BaseDelayMS: 1 << 31, MaxAgentDelayMS: 1 << 31,
 	}
-	response, err := RetryAssistantCall(func() (*AssistantMessage, error) {
+	response, err := RetryAssistantCall(ctx, func() (*AssistantMessage, error) {
 		calls++
 		if calls == 1 {
 			return &AssistantMessage{StopReason: StopError, ErrorMessage: &message}, nil
 		}
 		return &AssistantMessage{StopReason: StopStop}, nil
-	}, policy, ctx, nil)
+	}, policy, nil)
 	if err != nil {
 		t.Fatalf("assistant retry failed: %v", err)
 	}

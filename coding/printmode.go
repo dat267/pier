@@ -241,7 +241,7 @@ func RunPrintMode(session *AgentSession, sessions *SessionManager, options Print
 						message = *assistant.ErrorMessage
 					}
 					if message == "" {
-						message = "Request " + string(assistant.StopReason)
+						message = "Request " + assistant.StopReason
 					}
 					fmt.Fprintln(os.Stderr, tui.SanitizeUntrustedText(message))
 					return 1

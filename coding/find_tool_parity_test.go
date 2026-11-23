@@ -67,7 +67,7 @@ func TestFindToolMatchesUpstream(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			result, execErr := CreateFindTool(dir).Execute("call", params, context.Background(), nil)
+			result, execErr := CreateFindTool(dir).Execute(context.Background(), "call", params, nil)
 			if fixture.Expected.Error != "" {
 				if execErr == nil {
 					t.Fatalf("expected error %q, got success", fixture.Expected.Error)
@@ -147,7 +147,7 @@ func TestFindToolResultLimitNotice(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	result, err := CreateFindTool(dir).Execute("call", []byte(`{"pattern":"*.ts","limit":2}`), context.Background(), nil)
+	result, err := CreateFindTool(dir).Execute(context.Background(), "call", []byte(`{"pattern":"*.ts","limit":2}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +205,7 @@ func TestFindToolUsesFdfindWhenFDUnavailable(t *testing.T) {
 				want = "from-fd.txt"
 			}
 			t.Setenv("PATH", bin)
-			result, err := CreateFindTool(t.TempDir()).Execute("call", json.RawMessage(`{"pattern":"*.txt"}`), context.Background(), nil)
+			result, err := CreateFindTool(t.TempDir()).Execute(context.Background(), "call", json.RawMessage(`{"pattern":"*.txt"}`), nil)
 			if err != nil {
 				t.Fatalf("find with available system binary: %v", err)
 			}
@@ -229,8 +229,7 @@ func TestFindToolDefersMissingPathToFD(t *testing.T) {
 	}
 	t.Run("unavailable", func(t *testing.T) {
 		t.Setenv("PATH", t.TempDir())
-		_, err := CreateFindTool(t.TempDir()).Execute("call",
-			json.RawMessage(`{"pattern":"*.txt","path":"missing"}`), context.Background(), nil)
+		_, err := CreateFindTool(t.TempDir()).Execute(context.Background(), "call", json.RawMessage(`{"pattern":"*.txt","path":"missing"}`), nil)
 		if err == nil || !strings.Contains(err.Error(), "fd is not available and could not be downloaded") {
 			t.Fatalf("missing path without fd = %v, want the unavailable-tool error", err)
 		}
@@ -238,8 +237,7 @@ func TestFindToolDefersMissingPathToFD(t *testing.T) {
 	t.Run("installed", func(t *testing.T) {
 		requireBinary(t, "fd")
 		dir := t.TempDir()
-		_, err := CreateFindTool(dir).Execute("call",
-			json.RawMessage(`{"pattern":"*.txt","path":"missing"}`), context.Background(), nil)
+		_, err := CreateFindTool(dir).Execute(context.Background(), "call", json.RawMessage(`{"pattern":"*.txt","path":"missing"}`), nil)
 		if err == nil {
 			t.Fatal("missing search path succeeded")
 		}

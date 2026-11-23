@@ -3,6 +3,7 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 )
@@ -321,7 +322,7 @@ func customContentHasRole(data json.RawMessage) bool {
 func spliceCustomRole(content json.RawMessage, role string, timestamp int64) ([]byte, error) {
 	trimmed := bytes.TrimSpace(content)
 	if len(trimmed) < 2 || trimmed[0] != '{' || trimmed[len(trimmed)-1] != '}' {
-		return nil, fmt.Errorf("ai: custom message content must be a JSON object")
+		return nil, errors.New("ai: custom message content must be a JSON object")
 	}
 	inner := trimmed[1 : len(trimmed)-1]
 	roleEnc, err := MarshalJSON(role)

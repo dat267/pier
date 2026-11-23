@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -382,7 +383,7 @@ func createPiMessagesErrorEvent(model *Model, err error, aborted bool) Assistant
 		ErrorMessage: &message, Timestamp: time.Now().UnixMilli(),
 	}
 	if !aborted {
-		if responseErr, ok := err.(*PiMessagesResponseError); ok {
+		if responseErr, ok := errors.AsType[*PiMessagesResponseError](err); ok {
 			AppendAssistantMessageDiagnostic(assistant, CreateAssistantMessageDiagnostic(
 				"pi_messages_response_failure", responseErr, responseErr.DiagnosticDetails))
 		}

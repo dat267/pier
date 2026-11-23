@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -454,8 +455,8 @@ func TestRadiusOAuthErrorParsing(t *testing.T) {
 	if err == nil || err.Error() != "Radius OAuth token request failed: invalid_grant: expired" {
 		t.Fatalf("err = %v", err)
 	}
-	var coded *radiusOAuthResponseError
-	if !asError(err, &coded) || coded.Status != 400 || coded.OAuthError != "invalid_grant" {
+	coded, ok := errors.AsType[*radiusOAuthResponseError](err)
+	if !ok || coded.Status != 400 || coded.OAuthError != "invalid_grant" {
 		t.Fatalf("coded = %+v", coded)
 	}
 
@@ -601,7 +602,7 @@ func TestCreateRadiusOAuthDefinition(t *testing.T) {
 	if _, err := auth.ToAuth(nil); err == nil {
 		t.Fatal("nil credentials must be rejected")
 	}
-	if _, err := auth.Refresh(nil, context.Background()); err == nil {
+	if _, err := auth.Refresh(context.Background(), nil); err == nil {
 		t.Fatal("nil credentials must be rejected on refresh")
 	}
 }

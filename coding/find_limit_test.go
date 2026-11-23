@@ -29,7 +29,7 @@ func installFindStub(t *testing.T, lines ...string) {
 
 func findToolText(t *testing.T, params string) (string, json.RawMessage) {
 	t.Helper()
-	result, err := CreateFindTool(t.TempDir()).Execute("call", json.RawMessage(params), context.Background(), nil)
+	result, err := CreateFindTool(t.TempDir()).Execute(context.Background(), "call", json.RawMessage(params), nil)
 	if err != nil {
 		t.Fatalf("find %s: %v", params, err)
 	}

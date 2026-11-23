@@ -19,7 +19,7 @@ func TestWriteToolUsesNodeDefaultCreationModes(t *testing.T) {
 
 	root := t.TempDir()
 	tool := CreateWriteTool(root)
-	_, err := tool.Execute("c", json.RawMessage(`{"path":"nested/file.txt","content":"x"}`), context.Background(), nil)
+	_, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"path":"nested/file.txt","content":"x"}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

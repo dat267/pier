@@ -49,9 +49,7 @@ func GetMarkdownTheme() tui.MarkdownTheme {
 		Italic:          theme.Italic,
 		Underline:       theme.Underline,
 		Strikethrough:   theme.Strikethrough,
-		HighlightCode: func(code string, lang string) []string {
-			return HighlightCode(code, lang)
-		},
+		HighlightCode:   HighlightCode,
 	}
 }
 

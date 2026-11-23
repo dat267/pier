@@ -86,7 +86,7 @@ func TestLsToolOmitsDetailsWithoutNotices(t *testing.T) {
 func TestBashToolOmitsDetailsWithoutTruncation(t *testing.T) {
 	dir := t.TempDir()
 	tool := CreateBashTool(dir, nil)
-	result, err := tool.Execute("c", json.RawMessage(`{"command":"echo hello"}`), context.Background(), nil)
+	result, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"echo hello"}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

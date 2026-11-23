@@ -29,7 +29,7 @@ func TestGoalReleasedFollowUpsAreDeliveredOneAtATime(t *testing.T) {
 		requests = append(requests, users)
 		round++
 		if round == 2 {
-			_, _ = session.GetToolDefinition("set_goal").Execute("complete", json.RawMessage(`{"status":"complete"}`), context.Background(), nil)
+			_, _ = session.GetToolDefinition("set_goal").Execute(context.Background(), "complete", json.RawMessage(`{"status":"complete"}`), nil)
 		}
 		stream := ai.NewAssistantMessageEventStream()
 		go func() {

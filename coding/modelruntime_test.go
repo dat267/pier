@@ -22,7 +22,7 @@ func TestModelRuntimeGetAuthPreservesExplicitZeroOAuthValidity(t *testing.T) {
 	provider := ai.CreateProvider(ai.CreateProviderOptions{
 		ID: "p", Name: "P",
 		Auth: ai.ProviderAuth{OAuth: &ai.OAuthAuth{
-			Refresh: func(*ai.OAuthCredential, ctxpkg.Context) (*ai.OAuthCredential, error) {
+			Refresh: func(ctxpkg.Context, *ai.OAuthCredential) (*ai.OAuthCredential, error) {
 				return &ai.OAuthCredential{
 					Refresh: "r2", Access: "a2", Expires: time.Now().Add(4 * time.Minute).UnixMilli()}, nil
 			},
@@ -49,7 +49,7 @@ func TestCheckProviderAuthRefreshFailureIsInvalid(t *testing.T) {
 	provider := ai.CreateProvider(ai.CreateProviderOptions{
 		ID: "p", Name: "P",
 		Auth: ai.ProviderAuth{OAuth: &ai.OAuthAuth{
-			Refresh: func(*ai.OAuthCredential, ctxpkg.Context) (*ai.OAuthCredential, error) {
+			Refresh: func(ctxpkg.Context, *ai.OAuthCredential) (*ai.OAuthCredential, error) {
 				return nil, errors.New("refresh failed")
 			},
 			ToAuth: func(credential *ai.OAuthCredential) (*ai.ModelAuth, error) {
@@ -114,7 +114,7 @@ func TestModelsLoginLogout(t *testing.T) {
 	if len(prompted) != 1 || prompted[0] != "sk-entered" {
 		t.Fatalf("prompted = %v", prompted)
 	}
-	stored, _ := store.Read("p", ctx)
+	stored, _ := store.Read(ctx, "p")
 	if stored == nil || stored.APIKey.Key != "sk-entered" {
 		t.Fatalf("stored = %+v", stored)
 	}
@@ -124,7 +124,7 @@ func TestModelsLoginLogout(t *testing.T) {
 	if err != nil || credential.Type != ai.CredentialOAuth || credential.OAuth.Access != "access-1" {
 		t.Fatalf("credential = %+v err = %v", credential, err)
 	}
-	stored, _ = store.Read("p", ctx)
+	stored, _ = store.Read(ctx, "p")
 	if stored == nil || stored.Type != ai.CredentialOAuth {
 		t.Fatalf("stored = %+v", stored)
 	}
@@ -165,14 +165,14 @@ func TestModelsLoginLogout(t *testing.T) {
 	}
 
 	// Logout deletes; store failures wrap.
-	if err := models.Logout("p", ctx); err != nil {
+	if err := models.Logout(ctx, "p"); err != nil {
 		t.Fatal(err)
 	}
-	if stored, _ := store.Read("p", ctx); stored != nil {
+	if stored, _ := store.Read(ctx, "p"); stored != nil {
 		t.Fatalf("stored = %+v", stored)
 	}
 	store.deleteErr = errors.New("locked")
-	if err := models.Logout("p", ctx); err == nil || !strings.Contains(err.Error(), "Credential store delete failed for p") {
+	if err := models.Logout(ctx, "p"); err == nil || !strings.Contains(err.Error(), "Credential store delete failed for p") {
 		t.Fatalf("err = %v", err)
 	}
 	store.deleteErr = nil

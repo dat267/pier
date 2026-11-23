@@ -14,7 +14,7 @@ func TestRunToolCallPreservesReturnedErrorFlag(t *testing.T) {
 	assistant := createAssistantMessage(ai.ContentList{toolCall}, ai.StopToolUse)
 	tool := AgentTool{
 		Name: "error", Parameters: json.RawMessage(`{"type":"object"}`),
-		Execute: func(string, json.RawMessage, context.Context, func(AgentToolResult)) (AgentToolResult, error) {
+		Execute: func(context.Context, string, json.RawMessage, func(AgentToolResult)) (AgentToolResult, error) {
 			return AgentToolResult{IsError: true, Content: []ai.Content{ai.TextContent{Text: "reported error"}}}, nil
 		},
 	}
@@ -34,7 +34,7 @@ func TestRunToolCallUsesHooksAndStreamsUpdates(t *testing.T) {
 	assistant := createAssistantMessage(ai.ContentList{toolCall}, ai.StopToolUse)
 	tool := AgentTool{
 		Name: "echo", Parameters: json.RawMessage(`{"type":"object","properties":{"text":{"type":"string"}},"required":["text"]}`),
-		Execute: func(_ string, args json.RawMessage, _ context.Context, onUpdate func(AgentToolResult)) (AgentToolResult, error) {
+		Execute: func(_ context.Context, _ string, args json.RawMessage, onUpdate func(AgentToolResult)) (AgentToolResult, error) {
 			if string(args) != `{"text":"hello"}` {
 				t.Fatalf("validated args = %s", args)
 			}
@@ -46,11 +46,11 @@ func TestRunToolCallUsesHooksAndStreamsUpdates(t *testing.T) {
 		Tools: []AgentTool{tool}, AssistantMessage: assistant,
 		Context: AgentContext{Messages: []ai.Message{createUserMessage("prompt")}},
 		Signal:  context.Background(),
-		BeforeToolCall: func(call *BeforeToolCallContext, _ context.Context) (*BeforeToolCallResult, error) {
+		BeforeToolCall: func(_ context.Context, call *BeforeToolCallContext) (*BeforeToolCallResult, error) {
 			beforeCalled = call.ToolCall.ID == "tc" && string(call.Args) == `{"text":"hello"}`
 			return nil, nil
 		},
-		AfterToolCall: func(call *AfterToolCallContext, _ context.Context) (*AfterToolCallResult, error) {
+		AfterToolCall: func(_ context.Context, call *AfterToolCallContext) (*AfterToolCallResult, error) {
 			afterCalled = call.ToolCall.ID == "tc" && !call.IsError
 			return &AfterToolCallResult{Content: []ai.Content{ai.TextContent{Text: "overridden"}}, HasContent: true}, nil
 		},

@@ -59,7 +59,7 @@ func cloneModelStoreValue(value reflect.Value) reflect.Value {
 		if kind := value.Type().Elem().Kind(); kind == reflect.Uint8 || kind == reflect.String {
 			reflect.Copy(cloned, value)
 		} else {
-			for i := 0; i < value.Len(); i++ {
+			for i := range value.Len() {
 				cloned.Index(i).Set(cloneModelStoreValue(value.Index(i)))
 			}
 		}

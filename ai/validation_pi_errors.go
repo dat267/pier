@@ -261,13 +261,13 @@ func (s *piSchema) walkArray(value *schemaValue, path string, out *[]piError, pu
 		push("uniqueItems", "expected unique items")
 	}
 	if s.contains != nil {
-		min := 1
+		minimum := 1
 		if s.minContains != nil {
-			min = *s.minContains
+			minimum = *s.minContains
 		}
-		max := math.MaxInt
+		maximum := math.MaxInt
 		if s.maxContains != nil {
-			max = *s.maxContains
+			maximum = *s.maxContains
 		}
 		count := 0
 		for _, item := range value.Array {
@@ -275,8 +275,8 @@ func (s *piSchema) walkArray(value *schemaValue, path string, out *[]piError, pu
 				count++
 			}
 		}
-		if count < min || count > max {
-			push("contains", containsMessage(min, max))
+		if count < minimum || count > maximum {
+			push("contains", containsMessage(minimum, maximum))
 		}
 	}
 }
@@ -423,20 +423,20 @@ func pointerTo(path, key string) string {
 	return path + "/" + escapeJSONPointer(key)
 }
 
-func containsMessage(min, max int) string {
-	if max == math.MaxInt {
-		if min == 1 {
+func containsMessage(minimum, maximum int) string {
+	if maximum == math.MaxInt {
+		if minimum == 1 {
 			return "expected at least 1 matching item"
 		}
-		return "expected at least " + strconv.Itoa(min) + " matching items"
+		return "expected at least " + strconv.Itoa(minimum) + " matching items"
 	}
-	if min == 0 {
-		if max == 1 {
+	if minimum == 0 {
+		if maximum == 1 {
 			return "expected at most 1 matching item"
 		}
-		return "expected at most " + strconv.Itoa(max) + " matching items"
+		return "expected at most " + strconv.Itoa(maximum) + " matching items"
 	}
-	return "expected between " + strconv.Itoa(min) + " and " + strconv.Itoa(max) + " matching items"
+	return "expected between " + strconv.Itoa(minimum) + " and " + strconv.Itoa(maximum) + " matching items"
 }
 
 // formatValidationPath turns a JSON Pointer into the dotted path the model

@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -42,10 +43,10 @@ type AWSSignatureResult struct {
 // request's Host header is included in the signature.
 func SignAWSRequest(request *http.Request, body []byte, credentials AWSCredentials, service, region string, now time.Time) (*AWSSignatureResult, error) {
 	if request == nil {
-		return nil, fmt.Errorf("request is required")
+		return nil, errors.New("request is required")
 	}
 	if credentials.IsZero() {
-		return nil, fmt.Errorf("AWS credentials are required")
+		return nil, errors.New("AWS credentials are required")
 	}
 	amzDate := now.UTC().Format("20060102T150405Z")
 	dateStamp := now.UTC().Format("20060102")

@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -78,11 +79,11 @@ func PersonalizeOpenRouterCatalog(catalog []*Model, refresh *RefreshModelsContex
 		return nil, err
 	}
 	if err := json.Unmarshal(raw, &body); err != nil || len(body.Data) == 0 || body.Data[0] != '[' {
-		return nil, fmt.Errorf("Invalid OpenRouter model list response")
+		return nil, errors.New("Invalid OpenRouter model list response")
 	}
 	var rows []json.RawMessage
 	if err := json.Unmarshal(body.Data, &rows); err != nil {
-		return nil, fmt.Errorf("Invalid OpenRouter model list response")
+		return nil, errors.New("Invalid OpenRouter model list response")
 	}
 	allowed := make(map[string]openRouterUserModel, len(rows))
 	for _, row := range rows {

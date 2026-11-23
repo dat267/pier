@@ -116,7 +116,7 @@ func FormatOAuthErrorDetails(err error) string {
 		return ""
 	}
 	details := []string{fmt.Sprintf("%T: %s", err, err.Error())}
-	if providerErr, ok := err.(*ProviderError); ok {
+	if providerErr, ok := errors.AsType[*ProviderError](err); ok {
 		details = append(details, fmt.Sprintf("code=%d", providerErr.Status))
 	}
 	if unwrapped := errors.Unwrap(err); unwrapped != nil {
@@ -369,7 +369,7 @@ func startAnthropicCallbackServer(expectedState string) *OAuthCallbackServer {
 // paste path concurrently, and exchanges whichever arrives first.
 func LoginAnthropic(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, fmt.Errorf("auth interaction is required")
+		return nil, errors.New("auth interaction is required")
 	}
 	pkce, err := GeneratePKCE()
 	if err != nil {
@@ -440,7 +440,7 @@ func LoginAnthropic(interaction *AuthInteraction) (*OAuthCredential, error) {
 		}
 		parsed := ParseAuthorizationInput(manual.input)
 		if parsed.State != "" && parsed.State != pkce.Verifier {
-			return nil, fmt.Errorf("OAuth state mismatch")
+			return nil, errors.New("OAuth state mismatch")
 		}
 		code = parsed.Code
 		state = parsed.State
@@ -449,10 +449,10 @@ func LoginAnthropic(interaction *AuthInteraction) (*OAuthCredential, error) {
 		}
 	}
 	if code == "" {
-		return nil, fmt.Errorf("Missing authorization code")
+		return nil, errors.New("Missing authorization code")
 	}
 	if state == "" {
-		return nil, fmt.Errorf("Missing OAuth state")
+		return nil, errors.New("Missing OAuth state")
 	}
 	if interaction.Notify != nil {
 		interaction.Notify(AuthEvent{Type: AuthEventProgress, Message: "Exchanging authorization code for tokens..."})
@@ -466,7 +466,7 @@ func LoginAnthropic(interaction *AuthInteraction) (*OAuthCredential, error) {
 // `code#state` it shows.
 func LoginAnthropicCopyCode(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, fmt.Errorf("auth interaction is required")
+		return nil, errors.New("auth interaction is required")
 	}
 	pkce, err := GeneratePKCE()
 	if err != nil {
@@ -495,10 +495,10 @@ func LoginAnthropicCopyCode(interaction *AuthInteraction) (*OAuthCredential, err
 	}
 	parsed := ParseAuthorizationInput(input)
 	if parsed.State != "" && parsed.State != pkce.Verifier {
-		return nil, fmt.Errorf("OAuth state mismatch")
+		return nil, errors.New("OAuth state mismatch")
 	}
 	if parsed.Code == "" {
-		return nil, fmt.Errorf("Missing authorization code")
+		return nil, errors.New("Missing authorization code")
 	}
 	if interaction.Notify != nil {
 		interaction.Notify(AuthEvent{Type: AuthEventProgress, Message: "Exchanging authorization code for tokens..."})
@@ -519,7 +519,7 @@ func AnthropicOAuth() *OAuthAuth {
 		IsSubscription: true,
 		Login: func(interaction *AuthInteraction) (*OAuthCredential, error) {
 			if interaction == nil {
-				return nil, fmt.Errorf("auth interaction is required")
+				return nil, errors.New("auth interaction is required")
 			}
 			method, err := interaction.Prompt(AuthPrompt{
 				Type:    AuthPromptSelect,
@@ -541,15 +541,15 @@ func AnthropicOAuth() *OAuthAuth {
 				return nil, fmt.Errorf("Unknown Anthropic login method: %s", method)
 			}
 		},
-		Refresh: func(credential *OAuthCredential, ctx context.Context) (*OAuthCredential, error) {
+		Refresh: func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
 			if credential == nil {
-				return nil, fmt.Errorf("credential is required")
+				return nil, errors.New("credential is required")
 			}
 			return RefreshAnthropicToken(ctx, credential.Refresh)
 		},
 		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
 			if credential == nil {
-				return nil, fmt.Errorf("credential is required")
+				return nil, errors.New("credential is required")
 			}
 			return &ModelAuth{APIKey: credential.Access}, nil
 		},

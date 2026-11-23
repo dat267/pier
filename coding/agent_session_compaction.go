@@ -3,7 +3,7 @@ package coding
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"slices"
 
 	"github.com/dat267/pier/ai"
@@ -152,7 +152,7 @@ func (s *AgentSession) CheckCompaction(ctx context.Context, assistant *ai.Assist
 	// estimate from the last valid response so persistent API errors can still
 	// compact and do not reset context accounting. A context edit invalidates
 	// provider usage, so those sessions are estimated from the projection.
-	contextTokens := int64(0)
+	var contextTokens int64
 	directContextTokens := int64(ai.CalculateContextTokens(assistant.Usage))
 	if s.Sessions.HasContextEdits() {
 		contextTokens = int64(s.Sessions.ProjectedContextEstimate().Tokens)
@@ -263,7 +263,7 @@ func (s *AgentSession) omitRecoveryAttempt(assistant *ai.AssistantMessage) error
 			target = toolResults[index-1]
 		}
 		if slices.Contains(agentMessages, target) {
-			return fmt.Errorf("Cannot persist recovery omission because a projected message has no source entry")
+			return errors.New("Cannot persist recovery omission because a projected message has no source entry")
 		}
 	}
 	for _, id := range ids {
@@ -344,9 +344,9 @@ func (s *AgentSession) modelForMessage(message *ai.AssistantMessage) *ai.Model {
 		if s.control == nil || s.control.ModelRuntime == nil {
 			return nil
 		}
-		return s.control.ModelRuntime.GetModel(string(message.Provider), message.Model)
+		return s.control.ModelRuntime.GetModel(message.Provider, message.Model)
 	}
-	if string(model.Provider) == string(message.Provider) && model.ID == message.Model {
+	if model.Provider == message.Provider && model.ID == message.Model {
 		return model
 	}
 	return nil

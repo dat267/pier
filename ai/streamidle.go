@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -187,7 +188,7 @@ func doFetchRequest(req *http.Request) (*http.Response, error) {
 		if checkRedirect != nil {
 			err = checkRedirect(next, via)
 		} else if len(via) >= 10 {
-			err = fmt.Errorf("stopped after 10 redirects")
+			err = errors.New("stopped after 10 redirects")
 		}
 		// Go can copy headers from the initial request again on later hops.
 		// Once fetch strips credentials, they stay stripped for the chain.

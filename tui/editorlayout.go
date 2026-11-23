@@ -109,8 +109,7 @@ func WordWrapLine(line string, maxWidth int, preSegmented []editorSegment) []Tex
 	wrapOppIndex := -1
 	wrapOppWidth := 0
 
-	for i := 0; i < len(segments); i++ {
-		segment := segments[i]
+	for i, segment := range segments {
 		grapheme := segment.Segment
 		gWidth := VisibleWidth(grapheme)
 		charIndex := segment.Index
@@ -134,7 +133,7 @@ func WordWrapLine(line string, maxWidth int, preSegmented []editorSegment) []Tex
 			// wide grapheme cannot become narrower by recursively wrapping itself.
 			// A marker's visual chunks remain atomic for editing.
 			subChunks := WordWrapLine(grapheme, maxWidth, nil)
-			for j := 0; j < len(subChunks)-1; j++ {
+			for j := range len(subChunks) - 1 {
 				sc := subChunks[j]
 				chunks = append(chunks, TextChunk{
 					Text:       sc.Text,

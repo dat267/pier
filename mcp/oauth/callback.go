@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -164,7 +165,7 @@ func (s *OAuthCallbackServer) WaitForCallback(state string, path ...string) (OAu
 	s.mu.Lock()
 	if _, exists := s.pending[state]; exists {
 		s.mu.Unlock()
-		return OAuthCallback{}, fmt.Errorf("OAuth state is already pending")
+		return OAuthCallback{}, errors.New("OAuth state is already pending")
 	}
 	entry := &pendingCallback{ch: make(chan callbackResult, 1), path: expectedPath}
 	entry.timer = time.AfterFunc(callbackTimerDuration(s.timeoutMs), func() {
@@ -186,7 +187,7 @@ func (s *OAuthCallbackServer) expirePending(state string, entry *pendingCallback
 	}
 	delete(s.pending, state)
 	s.mu.Unlock()
-	entry.ch <- callbackResult{err: fmt.Errorf("OAuth callback timed out")}
+	entry.ch <- callbackResult{err: errors.New("OAuth callback timed out")}
 }
 
 // Pending reports whether a waiter is registered for the state. Tests use it
@@ -203,7 +204,7 @@ func (s *OAuthCallbackServer) Close(ctx context.Context) error {
 	s.mu.Lock()
 	for state, entry := range s.pending {
 		entry.timer.Stop()
-		entry.ch <- callbackResult{err: fmt.Errorf("OAuth callback server closed")}
+		entry.ch <- callbackResult{err: errors.New("OAuth callback server closed")}
 		delete(s.pending, state)
 	}
 	s.mu.Unlock()
@@ -260,7 +261,7 @@ func (s *OAuthCallbackServer) handle(w http.ResponseWriter, r *http.Request) {
 	delete(s.pending, state)
 	s.mu.Unlock()
 	if entry.path != "" && path != entry.path {
-		entry.ch <- callbackResult{err: fmt.Errorf("The authorization response arrived on another redirect URI")}
+		entry.ch <- callbackResult{err: errors.New("The authorization response arrived on another redirect URI")}
 		s.reply(w, http.StatusBadRequest, OAuthCallbackPage{OK: false, Message: "Unexpected redirect URI"})
 		return
 	}
@@ -280,7 +281,7 @@ func (s *OAuthCallbackServer) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	code := parsed.Query().Get("code")
 	if code == "" {
-		entry.ch <- callbackResult{err: fmt.Errorf("OAuth callback did not include an authorization code")}
+		entry.ch <- callbackResult{err: errors.New("OAuth callback did not include an authorization code")}
 		s.reply(w, http.StatusBadRequest, OAuthCallbackPage{OK: false, Message: "Missing authorization code"})
 		return
 	}

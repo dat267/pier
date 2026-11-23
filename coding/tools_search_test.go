@@ -40,7 +40,7 @@ func TestFindToolFloorsFractionalLimitForFD(t *testing.T) {
 	}
 	t.Setenv("PATH", stubDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	tool := CreateFindTool(t.TempDir())
-	if _, err := tool.Execute("c", json.RawMessage(`{"pattern":"*.txt","limit":1.5}`), context.Background(), nil); err != nil {
+	if _, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"pattern":"*.txt","limit":1.5}`), nil); err != nil {
 		t.Fatalf("fractional find limit error = %v", err)
 	}
 	recorded := readFileBytes(t, argsFile)
@@ -167,7 +167,7 @@ func TestGrepToolStopsRipgrepAtMatchLimit(t *testing.T) {
 	t.Setenv("PATH", stubDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	result, err := CreateGrepTool(stubDir).Execute("c", json.RawMessage(`{"pattern":"needle","limit":1}`), ctx, nil)
+	result, err := CreateGrepTool(stubDir).Execute(ctx, "c", json.RawMessage(`{"pattern":"needle","limit":1}`), nil)
 	if err != nil {
 		t.Fatalf("grep did not finish after reaching limit: %v", err)
 	}
@@ -288,14 +288,14 @@ func TestGrepToolErrors(t *testing.T) {
 	tool := CreateGrepTool(dir)
 
 	// Missing path.
-	_, err := tool.Execute("c", json.RawMessage(`{"pattern":"x","path":"nope/"}`), context.Background(), nil)
+	_, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"pattern":"x","path":"nope/"}`), nil)
 	if err == nil || !strings.Contains(err.Error(), "Path not found") {
 		t.Fatalf("err = %v", err)
 	}
 
 	// Bad regex is an rg error surfaced in-band.
 	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("x"), 0o644)
-	_, err = tool.Execute("c", json.RawMessage(`{"pattern":"[unclosed"}`), context.Background(), nil)
+	_, err = tool.Execute(context.Background(), "c", json.RawMessage(`{"pattern":"[unclosed"}`), nil)
 	if err == nil {
 		t.Fatal("bad regex should error")
 	}
@@ -315,7 +315,7 @@ func TestFindToolReportsSpawnFailure(t *testing.T) {
 	}
 	t.Setenv("PATH", stubDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	tool := CreateFindTool(t.TempDir())
-	_, err := tool.Execute("c", json.RawMessage(`{"pattern":"*.txt"}`), context.Background(), nil)
+	_, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"pattern":"*.txt"}`), nil)
 	if err == nil || !strings.HasPrefix(err.Error(), "Failed to run fd: ") {
 		t.Fatalf("spawn failure error = %v; want Failed to run fd: ...", err)
 	}
@@ -423,7 +423,7 @@ func TestFindToolSurvivesALimitWiderThanInt64(t *testing.T) {
 	tool := CreateFindTool(dir)
 	for _, limit := range []string{"10000000000000000000", "9223372036854775808"} {
 		params := json.RawMessage(`{"pattern":"*","limit":` + limit + `}`)
-		result, err := tool.Execute("call-1", params, context.Background(), nil)
+		result, err := tool.Execute(context.Background(), "call-1", params, nil)
 		if err != nil {
 			t.Fatalf("limit %s: %v", limit, err)
 		}

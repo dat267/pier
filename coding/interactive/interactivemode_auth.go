@@ -417,7 +417,7 @@ func (w *AuthWiring) ShowOAuthSelector(ctx context.Context, mode string) {
 				if providerOption == nil {
 					return
 				}
-				if err := w.Session.ModelRuntime().Logout(providerOption.ID, ctx); err != nil {
+				if err := w.Session.ModelRuntime().Logout(ctx, providerOption.ID); err != nil {
 					message := err.Error()
 					if _, ok := errors.AsType[*coding.CredentialSynchronizationError](err); ok {
 						w.showError("Credentials removed for " + providerOption.Name +
@@ -895,7 +895,7 @@ func newAuthWiring(app *App) *AuthWiring {
 			// The legacy login run's daxnuts hook, shared with the model selector
 			// (see newModelWiring). hasModel is false when the login selected none.
 			if hasModel && model != nil && app.commands != nil {
-				app.commands.CheckDaxnutsEasterEgg(string(model.Provider), model.ID, app.ui)
+				app.commands.CheckDaxnutsEasterEgg(model.Provider, model.ID, app.ui)
 			}
 		},
 		RequestRender: func() { app.ui.RequestRender(false) },

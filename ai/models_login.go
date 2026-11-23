@@ -76,10 +76,10 @@ func (m *Models) Login(providerID string, authType AuthType, interaction *AuthIn
 	started := make(chan struct{})
 	mutationDone := make(chan error, 1)
 	go func() {
-		_, modifyErr := m.credentials.Modify(providerID, func(current *Credential) (*Credential, error) {
+		_, modifyErr := m.credentials.Modify(ctx, providerID, func(current *Credential) (*Credential, error) {
 			close(started)
 			return credential, nil
-		}, ctx)
+		})
 		mutationDone <- modifyErr
 	}()
 
@@ -99,7 +99,7 @@ func (m *Models) Login(providerID string, authType AuthType, interaction *AuthIn
 	case <-ctx.Done():
 		// Cancellation before the mutation began: abandon the write.
 		go func() {
-			//nolint:errcheck // the receive only waits for the mutation to settle
+			// the receive only waits for the mutation to settle
 			<-mutationDone
 		}()
 		return nil, ctx.Err()
@@ -107,14 +107,14 @@ func (m *Models) Login(providerID string, authType AuthType, interaction *AuthIn
 }
 
 // Logout deletes the provider's stored credential.
-func (m *Models) Logout(providerID string, ctx context.Context) error {
+func (m *Models) Logout(ctx context.Context, providerID string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if err := m.credentials.Delete(providerID, ctx); err != nil {
+	if err := m.credentials.Delete(ctx, providerID); err != nil {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return ctxErr
 		}

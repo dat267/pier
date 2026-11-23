@@ -461,7 +461,10 @@ func yamlPlainScalarIsString(value string) bool {
 }
 
 func yamlRadixInteger(value string) (matched, valid bool) {
-	prefix, base := "", 0
+	var (
+		prefix string
+		base   int
+	)
 	switch {
 	case strings.HasPrefix(value, "0x"):
 		prefix, base = "0x", 16
@@ -875,8 +878,8 @@ func writeIgnoreLiteral(builder *strings.Builder, character rune) {
 		return
 	}
 	character -= 0x10000
-	builder.WriteString(regexp.QuoteMeta(string(rune(0xF0000 + 0xD800 + (character >> 10)))))
-	builder.WriteString(regexp.QuoteMeta(string(rune(0xF0000 + 0xDC00 + (character & 0x3FF)))))
+	builder.WriteString(regexp.QuoteMeta(string(0xF0000 + 0xD800 + (character >> 10))))
+	builder.WriteString(regexp.QuoteMeta(string(0xF0000 + 0xDC00 + (character & 0x3FF))))
 }
 
 // globToRegexp translates a gitignore pattern body to a regular expression. The

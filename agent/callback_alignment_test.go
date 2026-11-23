@@ -17,14 +17,14 @@ func TestAgentRequestHooksReceiveActiveRunContext(t *testing.T) {
 	var prepareSeen, finishSeen bool
 	a, err := NewAgent(&AgentOptions{
 		StreamFn: unusedStreamFn(),
-		PrepareRequest: func(request *PrepareRequestContext, ctx context.Context) (*AgentRequestUpdate, error) {
+		PrepareRequest: func(ctx context.Context, request *PrepareRequestContext) (*AgentRequestUpdate, error) {
 			prepareSeen = ctx.Value(runContextKey{}) == want
 			if len(request.Context.Messages) == 0 || ai.RoleOf(request.Context.Messages[len(request.Context.Messages)-1]) != ai.RoleUser {
 				t.Fatalf("request context messages = %v", messageRoles(request.Context.Messages))
 			}
 			return nil, nil
 		},
-		FinishTurn: func(turn *AgentTurnContext, ctx context.Context) (*AgentTurnDecision, error) {
+		FinishTurn: func(ctx context.Context, turn *AgentTurnContext) (*AgentTurnDecision, error) {
 			finishSeen = ctx.Value(runContextKey{}) == want && turn.Message != nil
 			return nil, nil
 		},
@@ -45,7 +45,7 @@ func TestFinishTurnErrorFailsRun(t *testing.T) {
 	wantErr := errors.New("finish failed")
 	a, err := NewAgent(&AgentOptions{
 		StreamFn: unusedStreamFn(),
-		FinishTurn: func(*AgentTurnContext, context.Context) (*AgentTurnDecision, error) {
+		FinishTurn: func(context.Context, *AgentTurnContext) (*AgentTurnDecision, error) {
 			return nil, wantErr
 		},
 	})
@@ -69,7 +69,7 @@ func TestGetAPIKeyErrorFailsRun(t *testing.T) {
 			streamCalled = true
 			return nil
 		},
-		GetAPIKey: func(string, context.Context) (string, error) {
+		GetAPIKey: func(context.Context, string) (string, error) {
 			return "", wantErr
 		},
 	})
@@ -93,17 +93,17 @@ func TestGetAPIKeyErrorFailsRun(t *testing.T) {
 func TestRunKeepsTheRequestHooksItStartedWith(t *testing.T) {
 	var calls []string
 	var a *Agent
-	replacement := func(*AgentTurnContext, context.Context) (*AgentTurnDecision, error) {
+	replacement := func(context.Context, *AgentTurnContext) (*AgentTurnDecision, error) {
 		calls = append(calls, "replacement")
 		return nil, nil
 	}
 	a, err := NewAgent(&AgentOptions{
 		StreamFn: unusedStreamFn(),
-		PrepareRequest: func(*PrepareRequestContext, context.Context) (*AgentRequestUpdate, error) {
+		PrepareRequest: func(context.Context, *PrepareRequestContext) (*AgentRequestUpdate, error) {
 			a.FinishTurn = replacement
 			return nil, nil
 		},
-		FinishTurn: func(*AgentTurnContext, context.Context) (*AgentTurnDecision, error) {
+		FinishTurn: func(context.Context, *AgentTurnContext) (*AgentTurnDecision, error) {
 			calls = append(calls, "original")
 			return nil, nil
 		},

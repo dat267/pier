@@ -43,7 +43,7 @@ func TestRemoteCatalogMissingRetainsCachedBody(t *testing.T) {
 							p.Update()
 						}
 						if p.Persist != nil {
-							if err := store.Write("p", p.Persist, ctx); err != nil {
+							if err := store.Write(ctx, "p", p.Persist); err != nil {
 								t.Fatal(err)
 							}
 						}
@@ -52,7 +52,7 @@ func TestRemoteCatalogMissingRetainsCachedBody(t *testing.T) {
 				}); err != nil {
 					t.Fatal(err)
 				}
-				saved, err := store.Read("p", ctx)
+				saved, err := store.Read(ctx, "p")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -251,7 +251,7 @@ func TestRemoteCatalogOrderMatchesUpstream(t *testing.T) {
 					p.Update()
 				}
 				if p.Persist != nil {
-					if err := store.Write("p", p.Persist, ctx); err != nil {
+					if err := store.Write(ctx, "p", p.Persist); err != nil {
 						t.Fatal(err)
 					}
 				}
@@ -262,7 +262,7 @@ func TestRemoteCatalogOrderMatchesUpstream(t *testing.T) {
 			if got := catalogModelIDs(provider.GetModels()); !reflect.DeepEqual(got, fixture.ChatIDs) {
 				t.Errorf("published IDs = %v, want %v", got, fixture.ChatIDs)
 			}
-			saved, err := store.Read("p", ctx)
+			saved, err := store.Read(ctx, "p")
 			if err != nil {
 				t.Fatal(err)
 			}

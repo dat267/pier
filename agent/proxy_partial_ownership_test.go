@@ -50,7 +50,7 @@ func TestAgentOwnsProxyPartialsDuringStreaming(t *testing.T) {
 		t.Fatal(err)
 	}
 	signaled := false
-	a.Subscribe(func(event AgentEvent, _ context.Context) error {
+	a.Subscribe(func(_ context.Context, event AgentEvent) error {
 		if event.Type == MessageUpdate && !signaled {
 			signaled = true
 			close(ready)

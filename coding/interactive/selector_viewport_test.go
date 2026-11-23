@@ -61,7 +61,7 @@ func TestSelectorsCaptureViewportInput(t *testing.T) {
 		t.Fatalf("scoped PageDown = %d, want 8", scopedSelector.selectedIndex)
 	}
 
-	empty := func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) { return nil, nil }
+	empty := func(context.Context, SessionListProgress) ([]coding.SessionInfo, error) { return nil, nil }
 	sessionSelector := NewSessionSelectorComponent(empty, empty, nil, nil, nil, nil, SessionSelectorOptions{})
 	if !sessionSelector.CapturesViewportInput() {
 		t.Fatal("session selector does not capture page keys")

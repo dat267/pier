@@ -30,7 +30,7 @@ func TestGoalHoldsFollowUpsUntilItsFinalAnswer(t *testing.T) {
 		prompts = append(prompts, text.String())
 		round++
 		if round == 2 {
-			_, _ = session.GetToolDefinition("set_goal").Execute("complete", json.RawMessage(`{"status":"complete"}`), context.Background(), nil)
+			_, _ = session.GetToolDefinition("set_goal").Execute(context.Background(), "complete", json.RawMessage(`{"status":"complete"}`), nil)
 		}
 		stream := ai.NewAssistantMessageEventStream()
 		go func() {
@@ -118,7 +118,7 @@ func TestGoalReleasedFollowUpsRunWithoutAHost(t *testing.T) {
 		prompts = append(prompts, text.String())
 		round++
 		if round == 2 {
-			_, _ = session.GetToolDefinition("set_goal").Execute("complete", json.RawMessage(`{"status":"complete"}`), context.Background(), nil)
+			_, _ = session.GetToolDefinition("set_goal").Execute(context.Background(), "complete", json.RawMessage(`{"status":"complete"}`), nil)
 		}
 		stream := ai.NewAssistantMessageEventStream()
 		go func() {
@@ -171,7 +171,7 @@ func TestGoalReleaseSkipsDisposedSession(t *testing.T) {
 		calls++
 		round++
 		if round == 2 {
-			_, _ = session.GetToolDefinition("set_goal").Execute("complete", json.RawMessage(`{"status":"complete"}`), context.Background(), nil)
+			_, _ = session.GetToolDefinition("set_goal").Execute(context.Background(), "complete", json.RawMessage(`{"status":"complete"}`), nil)
 		}
 		stream := ai.NewAssistantMessageEventStream()
 		go func() {
@@ -221,7 +221,7 @@ func TestGoalReleaseDuringDisposeCleanupSkipsTheRun(t *testing.T) {
 	streamFn := func(m *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 		calls++
 		if calls == 2 {
-			_, _ = session.GetToolDefinition("set_goal").Execute("complete", json.RawMessage(`{"status":"complete"}`), context.Background(), nil)
+			_, _ = session.GetToolDefinition("set_goal").Execute(context.Background(), "complete", json.RawMessage(`{"status":"complete"}`), nil)
 		}
 		stream := ai.NewAssistantMessageEventStream()
 		go func() {
@@ -285,7 +285,7 @@ func TestGoalReleaseRacingDisposeLeavesNoUnabortableRun(t *testing.T) {
 		streamFn := func(m *ai.Model, _ ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 			call := calls.Add(1)
 			if call == 2 {
-				_, _ = session.GetToolDefinition("set_goal").Execute("complete", json.RawMessage(`{"status":"complete"}`), context.Background(), nil)
+				_, _ = session.GetToolDefinition("set_goal").Execute(context.Background(), "complete", json.RawMessage(`{"status":"complete"}`), nil)
 			}
 			stream := ai.NewAssistantMessageEventStream()
 			done := &ai.AssistantMessage{
@@ -365,7 +365,7 @@ func TestGoalReleasedFollowUpsQueueBehindARunThatStartedFirst(t *testing.T) {
 	streamFn := func(m *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 		call := calls.Add(1)
 		if call == 2 {
-			_, _ = session.GetToolDefinition("set_goal").Execute("complete", json.RawMessage(`{"status":"complete"}`), context.Background(), nil)
+			_, _ = session.GetToolDefinition("set_goal").Execute(context.Background(), "complete", json.RawMessage(`{"status":"complete"}`), nil)
 		}
 		stream := ai.NewAssistantMessageEventStream()
 		go func() {

@@ -20,7 +20,7 @@ func formatShellCall(args map[string]any, prompt string, theme *Theme) string {
 	if timeout, ok := args["timeout"]; ok && jsTruthy(timeout) {
 		timeoutSuffix = theme.Fg("muted", " (timeout "+jsArgText(timeout)+"s)")
 	}
-	commandDisplay := ""
+	var commandDisplay string
 	if !commandOK {
 		commandDisplay = invalidArgText(theme)
 	} else if command == "" {
@@ -209,7 +209,7 @@ func plainWrappedLineCount(line string, width int) (int, bool) {
 		}
 		lineWidth += tokenWidth
 	}
-	for index := 0; index < len(line); index++ {
+	for index := range len(line) {
 		char := line[index]
 		if char >= 0x80 || char == 0x1b || char == '\r' || char == '\n' || char == 0x7f || (char < 0x20 && char != '\t') {
 			return 0, false

@@ -342,7 +342,7 @@ func buildSystemOneRequest(model *Model, classifierContext ClassifierContext, la
 				}
 				parts = append(parts, partJSON)
 			}
-			parts = append(parts, json.RawMessage(state))
+			parts = append(parts, state)
 			stateWithImages, err := MarshalJSON(parts)
 			if err != nil {
 				return nil, err
@@ -352,7 +352,7 @@ func buildSystemOneRequest(model *Model, classifierContext ClassifierContext, la
 			assets := &orderedJSONFields{values: map[string]json.RawMessage{}}
 			keys := make([]string, 0, len(classifierContext.Images))
 			for index, image := range classifierContext.Images {
-				format := ""
+				var format string
 				switch image.MimeType {
 				case "image/png":
 					format = "png"

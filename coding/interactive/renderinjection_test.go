@@ -179,7 +179,7 @@ func TestStoredSessionTextRendersOnlyThemeEscapes(t *testing.T) {
 	})
 
 	t.Run("rename prompt", func(t *testing.T) {
-		loader := func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) {
+		loader := func(context.Context, SessionListProgress) ([]coding.SessionInfo, error) {
 			return []coding.SessionInfo{{Path: "/tmp/x.jsonl", Name: storedPayload}}, nil
 		}
 		component := NewSessionSelectorComponent(loader, loader,

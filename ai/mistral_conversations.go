@@ -5,6 +5,7 @@ import (
 	"bytes"
 	ctxpkg "context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -227,11 +228,11 @@ func StreamMistralConversations(model *Model, context TranscriptContext, options
 			return
 		}
 		if ctxErr(ctx) != nil {
-			fail(fmt.Errorf("Request was aborted"))
+			fail(errors.New("Request was aborted"))
 			return
 		}
 		if output.StopReason == StopPending {
-			fail(fmt.Errorf("Mistral stream ended without a finish reason"))
+			fail(errors.New("Mistral stream ended without a finish reason"))
 			return
 		}
 		if output.StopReason == StopAborted || output.StopReason == StopError {
@@ -292,7 +293,7 @@ func FormatMistralError(err error) string {
 	if err == nil {
 		return ""
 	}
-	if providerErr, ok := err.(*ProviderError); ok {
+	if providerErr, ok := errors.AsType[*ProviderError](err); ok {
 		bodyText := JSTrim(providerErr.Body)
 		if bodyText != "" {
 			return fmt.Sprintf("Mistral API error (%d): %s", providerErr.Status,
@@ -610,7 +611,7 @@ func parseMistralEvent(raw string) (*mistralCompletionEvent, bool, error) {
 	}
 	event.Raw = json.RawMessage(data)
 	if event.Choices == nil {
-		return nil, false, fmt.Errorf("Invalid Mistral streaming event")
+		return nil, false, errors.New("Invalid Mistral streaming event")
 	}
 	return &event, false, nil
 }
@@ -1155,7 +1156,7 @@ func toMistralChatMessages(messages []Message, supportsImages bool) []mistralCha
 	for index, message := range messages {
 		switch typed := message.(type) {
 		case *SystemMessage:
-			text := ""
+			var text string
 			if index == 0 {
 				text = GetSystemMessageText(typed)
 			} else {

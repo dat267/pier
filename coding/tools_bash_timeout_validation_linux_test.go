@@ -57,7 +57,7 @@ func TestBashRejectedTimeoutDoesNotSpawn(t *testing.T) {
 	before := zombieChildren(t)
 	tool := CreateBashTool(dir, nil)
 	for range 10 {
-		_, err := tool.Execute("c", json.RawMessage(`{"command":"echo hi","timeout":0}`), context.Background(), nil)
+		_, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"echo hi","timeout":0}`), nil)
 		if err == nil || !strings.Contains(err.Error(), "Invalid timeout") {
 			t.Fatalf("err = %v", err)
 		}
@@ -88,21 +88,21 @@ func TestBashTimeoutValidationPrecedesOtherInputChecks(t *testing.T) {
 	dir := t.TempDir()
 
 	missingDir := CreateBashTool(filepath.Join(dir, "gone"), nil)
-	if _, err := missingDir.Execute("c", json.RawMessage(`{"command":"echo hi","timeout":0}`), context.Background(), nil); err == nil ||
+	if _, err := missingDir.Execute(context.Background(), "c", json.RawMessage(`{"command":"echo hi","timeout":0}`), nil); err == nil ||
 		!strings.Contains(err.Error(), "Invalid timeout") {
 		t.Fatalf("missing cwd + rejected timeout err = %v", err)
 	}
-	if _, err := missingDir.Execute("c", json.RawMessage(`{"command":"echo hi"}`), context.Background(), nil); err == nil ||
+	if _, err := missingDir.Execute(context.Background(), "c", json.RawMessage(`{"command":"echo hi"}`), nil); err == nil ||
 		!strings.Contains(err.Error(), "Working directory does not exist") {
 		t.Fatalf("missing cwd err = %v", err)
 	}
 
 	missingShell := CreateBashTool(dir, &BashToolOptions{ShellPath: filepath.Join(dir, "no-shell")})
-	if _, err := missingShell.Execute("c", json.RawMessage(`{"command":"echo hi","timeout":-1}`), context.Background(), nil); err == nil ||
+	if _, err := missingShell.Execute(context.Background(), "c", json.RawMessage(`{"command":"echo hi","timeout":-1}`), nil); err == nil ||
 		!strings.Contains(err.Error(), "Invalid timeout") {
 		t.Fatalf("missing shell + rejected timeout err = %v", err)
 	}
-	if _, err := missingShell.Execute("c", json.RawMessage(`{"command":"echo hi"}`), context.Background(), nil); err == nil ||
+	if _, err := missingShell.Execute(context.Background(), "c", json.RawMessage(`{"command":"echo hi"}`), nil); err == nil ||
 		!strings.Contains(err.Error(), "Custom shell path not found") {
 		t.Fatalf("missing shell err = %v", err)
 	}

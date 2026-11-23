@@ -10,6 +10,7 @@ import (
 	"bytes"
 	contextpkg "context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -360,7 +361,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 		content, ok := contentAt().(ai.TextContent)
 		builder := scratch.text[wire.ContentIndex]
 		if !ok {
-			return nil, fmt.Errorf("Received text_delta for non-text content")
+			return nil, errors.New("Received text_delta for non-text content")
 		}
 		if builder == nil {
 			return nil, nil
@@ -373,7 +374,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 	case "text_end":
 		content, ok := contentAt().(ai.TextContent)
 		if !ok {
-			return nil, fmt.Errorf("Received text_end for non-text content")
+			return nil, errors.New("Received text_end for non-text content")
 		}
 		content.TextSignature = wire.ContentSignature
 		partial.Content[wire.ContentIndex] = content
@@ -389,7 +390,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 		content, ok := contentAt().(ai.ThinkingContent)
 		builder := scratch.thinking[wire.ContentIndex]
 		if !ok {
-			return nil, fmt.Errorf("Received thinking_delta for non-thinking content")
+			return nil, errors.New("Received thinking_delta for non-thinking content")
 		}
 		if builder == nil {
 			return nil, nil
@@ -402,7 +403,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 	case "thinking_end":
 		content, ok := contentAt().(ai.ThinkingContent)
 		if !ok {
-			return nil, fmt.Errorf("Received thinking_end for non-thinking content")
+			return nil, errors.New("Received thinking_end for non-thinking content")
 		}
 		content.ThinkingSignature = wire.ContentSignature
 		partial.Content[wire.ContentIndex] = content
@@ -418,7 +419,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 		content, ok := contentAt().(ai.ToolCall)
 		args := scratch.toolCall[wire.ContentIndex]
 		if !ok || args == nil {
-			return nil, fmt.Errorf("Received toolcall_delta for non-toolCall content")
+			return nil, errors.New("Received toolcall_delta for non-toolCall content")
 		}
 		content.Arguments = args.Append(wire.Delta)
 		partial.Content[wire.ContentIndex] = content

@@ -392,7 +392,7 @@ func (s streamSource) forwardInto(target *AssistantMessageEventStream) {
 // resolution, lazy module loading) behind it. Setup failures terminate the
 // stream with an error event (port of api/lazy.ts lazyStream).
 func LazyStream(model *Model, setup func() (eventSource, error)) *AssistantMessageEventStream {
-	return lazyStream(model, nil, setup)
+	return lazyStream(nil, model, setup)
 }
 
 // LazyStreamForRequest is LazyStream for a request that carries a context: a
@@ -400,11 +400,11 @@ func LazyStream(model *Model, setup func() (eventSource, error)) *AssistantMessa
 // provider error. Upstream's applyAuth calls signal.throwIfAborted, so a cancel
 // during auth resolution never reaches the model as a provider failure; the port
 // reports its canonical abort text instead of Go's transport wording (D256).
-func LazyStreamForRequest(model *Model, ctx context.Context, setup func() (eventSource, error)) *AssistantMessageEventStream {
-	return lazyStream(model, ctx, setup)
+func LazyStreamForRequest(ctx context.Context, model *Model, setup func() (eventSource, error)) *AssistantMessageEventStream {
+	return lazyStream(ctx, model, setup)
 }
 
-func lazyStream(model *Model, ctx context.Context, setup func() (eventSource, error)) *AssistantMessageEventStream {
+func lazyStream(ctx context.Context, model *Model, setup func() (eventSource, error)) *AssistantMessageEventStream {
 	// Setup can take a while (auth resolution, lazy module loading), so the
 	// failure message keeps the request start time, not the failure time
 	// (upstream #10549).
@@ -441,8 +441,8 @@ func LazyStreamFunc(model *Model, create func() (*AssistantMessageEventStream, e
 
 // LazyStreamFuncForRequest is LazyStreamFunc for a request context; see
 // LazyStreamForRequest.
-func LazyStreamFuncForRequest(model *Model, ctx context.Context, create func() (*AssistantMessageEventStream, error)) *AssistantMessageEventStream {
-	return LazyStreamForRequest(model, ctx, func() (eventSource, error) {
+func LazyStreamFuncForRequest(ctx context.Context, model *Model, create func() (*AssistantMessageEventStream, error)) *AssistantMessageEventStream {
+	return LazyStreamForRequest(ctx, model, func() (eventSource, error) {
 		return lazyStreamSource(create)
 	})
 }
@@ -790,11 +790,11 @@ func (m *Models) Refresh(options *ModelsRefreshOptions) ModelsRefreshResult {
 			}()
 
 			operation := func() error {
-				storedCredential, credErr := readCredential(m.credentials, provider.ID, refreshCtx)
+				storedCredential, credErr := readCredential(refreshCtx, m.credentials, provider.ID)
 
 				// Restore cached provider state before auth resolution or
 				// network access.
-				if err := m.runProviderRefreshPhase(provider, storedCredential, false, nil, generation, refreshCtx); err != nil {
+				if err := m.runProviderRefreshPhase(refreshCtx, provider, storedCredential, false, nil, generation); err != nil {
 					return err
 				}
 				if credErr != nil {
@@ -804,14 +804,14 @@ func (m *Models) Refresh(options *ModelsRefreshOptions) ModelsRefreshResult {
 					return nil
 				}
 
-				network, err := m.resolveNetworkRefresh(provider, storedCredential, refreshCtx)
+				network, err := m.resolveNetworkRefresh(refreshCtx, provider, storedCredential)
 				if err != nil {
 					return err
 				}
 				if network == nil {
 					return nil
 				}
-				return m.runProviderRefreshPhase(provider, network.credential, true, options.forceOrDefault(), generation, refreshCtx)
+				return m.runProviderRefreshPhase(refreshCtx, provider, network.credential, true, options.forceOrDefault(), generation)
 			}
 
 			if err := operation(); err != nil && !ctxDone(refreshCtx) {
@@ -844,7 +844,7 @@ func (m *Models) pubMu(providerID string) *sync.Mutex {
 	return mu
 }
 
-func (m *Models) publishProviderModels(providerID string, generation int, signal context.Context, publication ModelsPublication) bool {
+func (m *Models) publishProviderModels(signal context.Context, providerID string, generation int, publication ModelsPublication) bool {
 	mu := m.pubMu(providerID)
 	mu.Lock()
 	defer mu.Unlock()
@@ -856,11 +856,11 @@ func (m *Models) publishProviderModels(providerID string, generation int, signal
 	}
 
 	if publication.DeleteStored {
-		if err := m.modelsStore.Delete(providerID, signal); err != nil {
+		if err := m.modelsStore.Delete(signal, providerID); err != nil {
 			return false
 		}
 	} else if publication.Persist != nil {
-		if err := m.modelsStore.Write(providerID, publication.Persist, signal); err != nil {
+		if err := m.modelsStore.Write(signal, providerID, publication.Persist); err != nil {
 			return false
 		}
 	}
@@ -877,8 +877,8 @@ func (m *Models) publishProviderModels(providerID string, generation int, signal
 	return true
 }
 
-func (m *Models) runProviderRefreshPhase(provider *Provider, credential *Credential, allowNetwork bool, force *bool, generation int, signal context.Context) error {
-	stored, err := m.modelsStore.Read(provider.ID, signal)
+func (m *Models) runProviderRefreshPhase(signal context.Context, provider *Provider, credential *Credential, allowNetwork bool, force *bool, generation int) error {
+	stored, err := m.modelsStore.Read(signal, provider.ID)
 	if err != nil {
 		return err
 	}
@@ -887,7 +887,7 @@ func (m *Models) runProviderRefreshPhase(provider *Provider, credential *Credent
 		Stored:     stored,
 		BaseURL:    provider.BaseURL,
 		Publish: func(publication ModelsPublication) bool {
-			return m.publishProviderModels(provider.ID, generation, signal, publication)
+			return m.publishProviderModels(signal, provider.ID, generation, publication)
 		},
 		AllowNetwork: allowNetwork,
 		Force:        boolPtrWhen(allowNetwork, force),
@@ -904,15 +904,15 @@ func boolPtrWhen(cond bool, v *bool) *bool {
 
 // resolveNetworkRefresh resolves the auth for the network refresh phase, or nil
 // when the provider is not configured (upstream models.ts resolveNetworkRefresh).
-func (m *Models) resolveNetworkRefresh(provider *Provider, stored *Credential, signal context.Context) (*networkRefresh, error) {
+func (m *Models) resolveNetworkRefresh(signal context.Context, provider *Provider, stored *Credential) (*networkRefresh, error) {
 	if provider.RefreshModelsAuth == "configured" {
-		auth, err := m.checkProviderAuth(provider, stored, signal)
+		auth, err := m.checkProviderAuth(signal, provider, stored)
 		if err != nil || auth == nil {
 			return nil, err
 		}
 		return &networkRefresh{}, nil
 	}
-	credential, err := m.resolveRefreshCredential(provider, stored, signal)
+	credential, err := m.resolveRefreshCredential(signal, provider, stored)
 	if err != nil || credential == nil {
 		return nil, err
 	}
@@ -925,7 +925,7 @@ type networkRefresh struct {
 	credential *Credential
 }
 
-func (m *Models) resolveRefreshCredential(provider *Provider, stored *Credential, signal context.Context) (*Credential, error) {
+func (m *Models) resolveRefreshCredential(signal context.Context, provider *Provider, stored *Credential) (*Credential, error) {
 	if stored != nil && stored.Type == CredentialOAuth {
 		oauth := provider.Auth.OAuth
 		if oauth == nil {
@@ -940,9 +940,9 @@ func (m *Models) resolveRefreshCredential(provider *Provider, stored *Credential
 		// A refresh that has started survives cancellation or a superseding
 		// model refresh, so a rotated refresh token is always persisted
 		// (upstream bde882c74).
-		refreshed, err := refreshStoredOAuthCredential(m.credentials, provider.ID, oauth, func(current *OAuthCredential) bool {
+		refreshed, err := refreshStoredOAuthCredential(signal, m.credentials, provider.ID, oauth, func(current *OAuthCredential) bool {
 			return nowUnixMilli() >= current.Expires
-		}, signal)
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -970,7 +970,7 @@ func (m *Models) resolveRefreshCredential(provider *Provider, stored *Credential
 	return &Credential{Type: CredentialAPIKey, APIKey: &ApiKeyCredential{Key: result.Auth.APIKey, Env: result.Env}}, nil
 }
 
-func (m *Models) checkProviderAuth(provider *Provider, credential *Credential, signal context.Context) (*AuthCheck, error) {
+func (m *Models) checkProviderAuth(signal context.Context, provider *Provider, credential *Credential) (*AuthCheck, error) {
 	if credential != nil && credential.Type == CredentialOAuth {
 		if provider.Auth.OAuth != nil {
 			return &AuthCheck{Source: "OAuth", Type: AuthTypeOAuth}, nil
@@ -1004,7 +1004,7 @@ func (m *Models) checkProviderAuth(provider *Provider, credential *Credential, s
 
 // CheckAuth checks whether a provider has complete auth configuration
 // without refreshing OAuth.
-func (m *Models) CheckAuth(providerID string, ctx context.Context) (*AuthCheck, error) {
+func (m *Models) CheckAuth(ctx context.Context, providerID string) (*AuthCheck, error) {
 	if err := ctxErr(ctx); err != nil {
 		return nil, err
 	}
@@ -1014,16 +1014,16 @@ func (m *Models) CheckAuth(providerID string, ctx context.Context) (*AuthCheck, 
 	if provider == nil {
 		return nil, nil
 	}
-	credential, err := readCredential(m.credentials, providerID, ctx)
+	credential, err := readCredential(ctx, m.credentials, providerID)
 	if err != nil {
 		return nil, err
 	}
-	return m.checkProviderAuth(provider, credential, ctx)
+	return m.checkProviderAuth(ctx, provider, credential)
 }
 
 // GetAvailable returns models whose providers have complete auth
 // configuration.
-func (m *Models) GetAvailable(providerID string, ctx context.Context) ([]*Model, error) {
+func (m *Models) GetAvailable(ctx context.Context, providerID string) ([]*Model, error) {
 	if err := ctxErr(ctx); err != nil {
 		return nil, err
 	}
@@ -1039,11 +1039,11 @@ func (m *Models) GetAvailable(providerID string, ctx context.Context) ([]*Model,
 	}
 	var out []*Model
 	for _, provider := range providers {
-		credential, err := readCredential(m.credentials, provider.ID, ctx)
+		credential, err := readCredential(ctx, m.credentials, provider.ID)
 		if err != nil {
 			return nil, err
 		}
-		auth, err := m.checkProviderAuth(provider, credential, ctx)
+		auth, err := m.checkProviderAuth(ctx, provider, credential)
 		if err != nil {
 			return nil, err
 		}
@@ -1061,7 +1061,7 @@ func (m *Models) GetAvailable(providerID string, ctx context.Context) ([]*Model,
 
 // GetAllAvailable returns authenticated models of every type. Providers can
 // define an all-model filter; otherwise chat-only filters preserve other types.
-func (m *Models) GetAllAvailable(providerID string, ctx context.Context) ([]*Model, error) {
+func (m *Models) GetAllAvailable(ctx context.Context, providerID string) ([]*Model, error) {
 	if err := ctxErr(ctx); err != nil {
 		return nil, err
 	}
@@ -1077,11 +1077,11 @@ func (m *Models) GetAllAvailable(providerID string, ctx context.Context) ([]*Mod
 	}
 	var out []*Model
 	for _, provider := range providers {
-		credential, err := readCredential(m.credentials, provider.ID, ctx)
+		credential, err := readCredential(ctx, m.credentials, provider.ID)
 		if err != nil {
 			return nil, err
 		}
-		auth, err := m.checkProviderAuth(provider, credential, ctx)
+		auth, err := m.checkProviderAuth(ctx, provider, credential)
 		if err != nil {
 			return nil, err
 		}
@@ -1110,8 +1110,8 @@ func (m *Models) GetAllAvailable(providerID string, ctx context.Context) ([]*Mod
 }
 
 // GetAvailableOfType returns authenticated models of one type.
-func (m *Models) GetAvailableOfType(modelType, providerID string, ctx context.Context) ([]*Model, error) {
-	models, err := m.GetAllAvailable(providerID, ctx)
+func (m *Models) GetAvailableOfType(ctx context.Context, modelType, providerID string) ([]*Model, error) {
+	models, err := m.GetAllAvailable(ctx, providerID)
 	if err != nil {
 		return nil, err
 	}
@@ -1307,7 +1307,7 @@ func (m *Models) Stream(model *Model, context Context, options *ModelsStreamOpti
 	if options == nil {
 		options = &ModelsStreamOptions{}
 	}
-	return LazyStreamForRequest(model, options.Ctx, func() (eventSource, error) {
+	return LazyStreamForRequest(options.Ctx, model, func() (eventSource, error) {
 		provider, err := m.requireProvider(model)
 		if err != nil {
 			return nil, err
@@ -1331,7 +1331,7 @@ func (m *Models) StreamSimple(model *Model, context Context, options *ModelsSimp
 	if options == nil {
 		options = &ModelsSimpleStreamOptions{}
 	}
-	return LazyStreamForRequest(model, options.Ctx, func() (eventSource, error) {
+	return LazyStreamForRequest(options.Ctx, model, func() (eventSource, error) {
 		provider, err := m.requireProvider(model)
 		if err != nil {
 			return nil, err

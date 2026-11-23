@@ -107,12 +107,12 @@ func emphasisCodeMaskEnd(src string, start int) int {
 	if offset <= 0 {
 		return -1
 	}
-	close := content + offset
-	end := close
+	closeAt := content + offset
+	end := closeAt
 	for end < len(src) && src[end] == '`' {
 		end++
 	}
-	if end-close != content-start {
+	if end-closeAt != content-start {
 		return -1
 	}
 	return end

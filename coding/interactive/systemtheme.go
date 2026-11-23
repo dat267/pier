@@ -430,12 +430,12 @@ func systemAnchored(source systemSourceColor, family systemFamily, lightness, sa
 		falloff = math.Min(1, systemSaturationCurve(family, lightness)/anchor)
 	}
 	color := tui.OkhslToRgb(source.H, source.S*falloff*saturation, lightness)
-	cap := source.Chroma * falloff * saturation
+	chromaCap := source.Chroma * falloff * saturation
 	channels := tui.RgbToOklch(color)
-	if channels.C <= cap {
+	if channels.C <= chromaCap {
 		return color
 	}
-	return tui.OklchToRgb(channels.L, cap, source.H)
+	return tui.OklchToRgb(channels.L, chromaCap, source.H)
 }
 
 // systemWithTextContrast moves a text color toward white or black until it

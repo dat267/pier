@@ -16,10 +16,10 @@ func TestInMemoryCredentialStoreModifyCanRead(t *testing.T) {
 	defer cancel()
 	done := make(chan error, 1)
 	go func() {
-		_, err := store.Modify("p", func(current *Credential) (*Credential, error) {
-			_, err := store.Read("p", ctx)
+		_, err := store.Modify(ctx, "p", func(current *Credential) (*Credential, error) {
+			_, err := store.Read(ctx, "p")
 			return current, err
-		}, ctx)
+		})
 		done <- err
 	}()
 	select {
@@ -41,17 +41,17 @@ func TestInMemoryCredentialStoreCallbackUsesCommittedSnapshot(t *testing.T) {
 			store := NewInMemoryCredentialStore()
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			_, err := store.Modify("p", func(*Credential) (*Credential, error) {
+			_, err := store.Modify(ctx, "p", func(*Credential) (*Credential, error) {
 				return &Credential{Type: CredentialAPIKey, APIKey: &ApiKeyCredential{Key: "old", Env: ProviderEnv{"scope": "old"}}}, nil
-			}, ctx)
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
 			callbackErr := errors.New("callback failed")
-			_, err = store.Modify("p", func(current *Credential) (*Credential, error) {
+			_, err = store.Modify(ctx, "p", func(current *Credential) (*Credential, error) {
 				current.APIKey.Key = "new"
 				current.APIKey.Env["scope"] = "new"
-				committed, readErr := store.Read("p", ctx)
+				committed, readErr := store.Read(ctx, "p")
 				if readErr != nil {
 					return nil, readErr
 				}
@@ -65,7 +65,7 @@ func TestInMemoryCredentialStoreCallbackUsesCommittedSnapshot(t *testing.T) {
 					cancel()
 				}
 				return nil, nil // A successful in-place edit is still a credential update.
-			}, ctx)
+			})
 			want := "old"
 			switch outcome {
 			case "commit":
@@ -82,7 +82,7 @@ func TestInMemoryCredentialStoreCallbackUsesCommittedSnapshot(t *testing.T) {
 					t.Fatalf("error = %v, want cancellation", err)
 				}
 			}
-			saved, readErr := store.Read("p", context.Background())
+			saved, readErr := store.Read(context.Background(), "p")
 			if readErr != nil {
 				t.Fatal(readErr)
 			}
@@ -99,14 +99,14 @@ func TestInMemoryCredentialStoreOAuthCallbackUsesSnapshot(t *testing.T) {
 	store := NewInMemoryCredentialStore()
 	ctx := context.Background()
 	original := &Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{OAuthCredentials{Access: "old", Extra: map[string]json.RawMessage{"note": json.RawMessage(`"old"`)}}}}
-	_, err := store.Modify("p", func(*Credential) (*Credential, error) { return original, nil }, ctx)
+	_, err := store.Modify(ctx, "p", func(*Credential) (*Credential, error) { return original, nil })
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = store.Modify("p", func(current *Credential) (*Credential, error) {
+	_, err = store.Modify(ctx, "p", func(current *Credential) (*Credential, error) {
 		current.OAuth.Access = "new"
 		current.OAuth.Extra["note"][1] = 'n'
-		saved, err := store.Read("p", ctx)
+		saved, err := store.Read(ctx, "p")
 		if err != nil {
 			return nil, err
 		}
@@ -114,11 +114,11 @@ func TestInMemoryCredentialStoreOAuthCallbackUsesSnapshot(t *testing.T) {
 			t.Error("OAuth edits leaked before commit")
 		}
 		return nil, nil
-	}, ctx)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	saved, err := store.Read("p", ctx)
+	saved, err := store.Read(ctx, "p")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func TestInMemoryCredentialStoreOAuthCallbackUsesSnapshot(t *testing.T) {
 	// Neither a returned snapshot nor the caller's original credential owns state.
 	saved.OAuth.Access = "external"
 	original.OAuth.Extra["note"][1] = 'x'
-	stored, err := store.Read("p", ctx)
+	stored, err := store.Read(ctx, "p")
 	if err != nil {
 		t.Fatal(err)
 	}

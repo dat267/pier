@@ -26,10 +26,10 @@ type AgentEventSink func(event AgentEvent) error
 // added to the context and events are emitted for it. Returns a stream whose
 // result is the new messages when agent_end fires.
 func AgentLoop(
+	ctx context.Context,
 	prompts []ai.Message,
 	context AgentContext,
 	config *AgentLoopConfig,
-	ctx context.Context,
 	streamFn StreamFn,
 ) *ai.EventStream[AgentEvent, []ai.Message] {
 	stream := ai.NewEventStream(
@@ -42,7 +42,7 @@ func AgentLoop(
 		},
 	)
 	go func() {
-		messages := RunAgentLoop(prompts, context, config, ctx, func(event AgentEvent) error {
+		messages := RunAgentLoop(ctx, prompts, context, config, func(event AgentEvent) error {
 			stream.Push(event)
 			return nil
 		}, streamFn)
@@ -55,9 +55,9 @@ func AgentLoop(
 // adding a new message; used for retries. The last context message must
 // convert to a user or toolResult message via ConvertToLlm.
 func AgentLoopContinue(
+	ctx context.Context,
 	context AgentContext,
 	config *AgentLoopConfig,
-	ctx context.Context,
 	streamFn StreamFn,
 ) *ai.EventStream[AgentEvent, []ai.Message] {
 	validateContinue(context)
@@ -71,7 +71,7 @@ func AgentLoopContinue(
 		},
 	)
 	go func() {
-		messages := RunAgentLoopContinue(context, config, ctx, func(event AgentEvent) error {
+		messages := RunAgentLoopContinue(ctx, context, config, func(event AgentEvent) error {
 			stream.Push(event)
 			return nil
 		}, streamFn)
@@ -82,20 +82,20 @@ func AgentLoopContinue(
 
 func validateContinue(context AgentContext) {
 	if len(context.Messages) == 0 {
-		panic(fmt.Errorf("Cannot continue: no messages in context"))
+		panic(errors.New("Cannot continue: no messages in context"))
 	}
 	if ai.RoleOf(context.Messages[len(context.Messages)-1]) == ai.RoleAssistant {
-		panic(fmt.Errorf("Cannot continue from message role: assistant"))
+		panic(errors.New("Cannot continue from message role: assistant"))
 	}
 }
 
 // RunAgentLoop runs the loop to completion synchronously (port of
 // runAgentLoop).
 func RunAgentLoop(
+	ctx context.Context,
 	prompts []ai.Message,
 	context AgentContext,
 	config *AgentLoopConfig,
-	ctx context.Context,
 	emit AgentEventSink,
 	streamFn StreamFn,
 ) []ai.Message {
@@ -110,16 +110,16 @@ func RunAgentLoop(
 		mustEmit(emit, AgentEvent{Type: MessageEnd, Message: message})
 	}
 
-	runLoop(&context, &newMessages, config, ctx, emit, streamFn)
+	runLoop(ctx, &context, &newMessages, config, emit, streamFn)
 	return newMessages
 }
 
 // RunAgentLoopContinue runs a continuation to completion (port of
 // runAgentLoopContinue).
 func RunAgentLoopContinue(
+	ctx context.Context,
 	context AgentContext,
 	config *AgentLoopConfig,
-	ctx context.Context,
 	emit AgentEventSink,
 	streamFn StreamFn,
 ) []ai.Message {
@@ -127,7 +127,7 @@ func RunAgentLoopContinue(
 	newMessages := []ai.Message{}
 	mustEmit(emit, AgentEvent{Type: AgentStart})
 	mustEmit(emit, AgentEvent{Type: TurnStart})
-	runLoop(&context, &newMessages, config, ctx, emit, streamFn)
+	runLoop(ctx, &context, &newMessages, config, emit, streamFn)
 	return newMessages
 }
 
@@ -140,10 +140,10 @@ func mustEmit(emit AgentEventSink, event AgentEvent) {
 // runLoop is the logic shared by AgentLoop and AgentLoopContinue (port of
 // runLoop).
 func runLoop(
+	ctx context.Context,
 	initialContext *AgentContext,
 	newMessages *[]ai.Message,
 	initialConfig *AgentLoopConfig,
-	ctx context.Context,
 	emit AgentEventSink,
 	streamFunction StreamFn,
 ) {
@@ -226,7 +226,7 @@ func runLoop(
 				request := &PrepareRequestContext{
 					Context: currentContext, Model: config.Model, ThinkingLevel: thinkingLevel,
 				}
-				prepared, err := config.PrepareRequest(request, ctx)
+				prepared, err := config.PrepareRequest(ctx, request)
 				if err != nil {
 					panic(err)
 				}
@@ -263,7 +263,7 @@ func runLoop(
 				}
 			}
 			// Stream assistant response.
-			message := streamAssistantResponse(&currentContext, &requestConfig, ctx, emit, streamFunction)
+			message := streamAssistantResponse(ctx, &currentContext, &requestConfig, emit, streamFunction)
 			*newMessages = append(*newMessages, message)
 
 			if message.StopReason == ai.StopError || message.StopReason == ai.StopAborted {
@@ -272,7 +272,7 @@ func runLoop(
 					Context: currentContext, NewMessages: *newMessages,
 				}
 				if config.FinishTurn != nil {
-					if _, err := config.FinishTurn(turn, ctx); err != nil {
+					if _, err := config.FinishTurn(ctx, turn); err != nil {
 						panic(err)
 					}
 				}
@@ -299,7 +299,7 @@ func runLoop(
 				if message.StopReason == ai.StopLength {
 					executedToolBatch = failToolCallsFromTruncatedMessage(toolCalls, emit)
 				} else {
-					executedToolBatch = executeToolCalls(&currentContext, message, &config, ctx, emit)
+					executedToolBatch = executeToolCalls(ctx, &currentContext, message, &config, emit)
 				}
 				toolResults = append(toolResults, executedToolBatch.messages...)
 				hasMoreToolCalls = !executedToolBatch.terminate
@@ -317,7 +317,7 @@ func runLoop(
 			var decision *AgentTurnDecision
 			if config.FinishTurn != nil {
 				var err error
-				decision, err = config.FinishTurn(lastCompletedTurn, ctx)
+				decision, err = config.FinishTurn(ctx, lastCompletedTurn)
 				if err != nil {
 					panic(err)
 				}
@@ -449,16 +449,16 @@ func withToolChanges(message *ai.SystemMessage, changes ai.ToolStateChanges) *ai
 // streamAssistantResponse streams one assistant response. This is where
 // AgentMessages get transformed to Messages for the LLM.
 func streamAssistantResponse(
+	ctx context.Context,
 	context *AgentContext,
 	config *AgentLoopConfig,
-	ctx context.Context,
 	emit AgentEventSink,
 	streamFunction StreamFn,
 ) *ai.AssistantMessage {
 	// Apply the context transform if configured.
 	messages := context.Messages
 	if config.TransformContext != nil {
-		messages = config.TransformContext(messages, ctx)
+		messages = config.TransformContext(ctx, messages)
 	}
 
 	// Convert to LLM-compatible messages.
@@ -473,7 +473,7 @@ func streamAssistantResponse(
 	// Resolve API key (important for expiring tokens).
 	resolvedAPIKey := config.APIKey
 	if config.GetAPIKey != nil {
-		key, err := config.GetAPIKey(config.Model.Provider, ctx)
+		key, err := config.GetAPIKey(ctx, config.Model.Provider)
 		if err != nil {
 			failStreamAssistant(err)
 		}
@@ -601,10 +601,10 @@ type executedToolCallBatch struct {
 
 // executeToolCalls dispatches to the sequential or parallel executor.
 func executeToolCalls(
+	ctx context.Context,
 	currentContext *AgentContext,
 	assistantMessage *ai.AssistantMessage,
 	config *AgentLoopConfig,
-	ctx context.Context,
 	emit AgentEventSink,
 ) executedToolCallBatch {
 	var toolCalls []ai.ToolCall
@@ -622,9 +622,9 @@ func executeToolCalls(
 		}
 	}
 	if config.ToolExecution == ToolExecutionSequential || hasSequentialToolCall {
-		return executeToolCallsSequential(currentContext, assistantMessage, toolCalls, config, ctx, emit)
+		return executeToolCallsSequential(ctx, currentContext, assistantMessage, toolCalls, config, emit)
 	}
-	return executeToolCallsParallel(currentContext, assistantMessage, toolCalls, config, ctx, emit)
+	return executeToolCallsParallel(ctx, currentContext, assistantMessage, toolCalls, config, emit)
 }
 
 // finalizedToolCallOutcome is one finalized call.
@@ -637,11 +637,11 @@ type finalizedToolCallOutcome struct {
 }
 
 func executeToolCallsSequential(
+	ctx context.Context,
 	currentContext *AgentContext,
 	assistantMessage *ai.AssistantMessage,
 	toolCalls []ai.ToolCall,
 	config *AgentLoopConfig,
-	ctx context.Context,
 	emit AgentEventSink,
 ) executedToolCallBatch {
 	var finalizedCalls []finalizedToolCallOutcome
@@ -652,15 +652,15 @@ func executeToolCallsSequential(
 			Type: ToolExecutionStart, ToolCallID: toolCall.ID, ToolName: toolCall.Name, Args: toolCall.Arguments,
 		})
 
-		preparation := prepareToolCall(currentContext, assistantMessage, toolCall, config, ctx)
+		preparation := prepareToolCall(ctx, currentContext, assistantMessage, toolCall, config)
 		var finalized finalizedToolCallOutcome
 		if preparation.immediate != nil {
 			finalized = finalizedToolCallOutcome{
 				toolCall: toolCall, result: preparation.immediate.result, isError: preparation.immediate.isError,
 			}
 		} else {
-			executed := executePreparedToolCall(preparation.prepared, ctx, emit)
-			finalized = finalizeExecutedToolCall(currentContext, assistantMessage, preparation.prepared, executed, config, ctx)
+			executed := executePreparedToolCall(ctx, preparation.prepared, emit)
+			finalized = finalizeExecutedToolCall(ctx, currentContext, assistantMessage, preparation.prepared, executed, config)
 		}
 
 		emitToolExecutionEnd(finalized, emit)
@@ -684,11 +684,11 @@ type finalizedEntry struct {
 }
 
 func executeToolCallsParallel(
+	ctx context.Context,
 	currentContext *AgentContext,
 	assistantMessage *ai.AssistantMessage,
 	toolCalls []ai.ToolCall,
 	config *AgentLoopConfig,
-	ctx context.Context,
 	emit AgentEventSink,
 ) executedToolCallBatch {
 	// Deferred calls run concurrently and each reports its tool_execution_end
@@ -710,7 +710,7 @@ func executeToolCallsParallel(
 			Type: ToolExecutionStart, ToolCallID: toolCall.ID, ToolName: toolCall.Name, Args: toolCall.Arguments,
 		})
 
-		preparation := prepareToolCall(currentContext, assistantMessage, toolCall, config, ctx)
+		preparation := prepareToolCall(ctx, currentContext, assistantMessage, toolCall, config)
 		if preparation.immediate != nil {
 			finalized := finalizedToolCallOutcome{
 				toolCall: toolCall, result: preparation.immediate.result, isError: preparation.immediate.isError,
@@ -731,8 +731,8 @@ func executeToolCallsParallel(
 				emitToolExecutionEnd(finalized, serializedEmit)
 				return finalized
 			}
-			executed := executePreparedToolCall(prepared, ctx, serializedEmit)
-			finalized := finalizeExecutedToolCall(currentContext, assistantMessage, prepared, executed, config, ctx)
+			executed := executePreparedToolCall(ctx, prepared, serializedEmit)
+			finalized := finalizeExecutedToolCall(ctx, currentContext, assistantMessage, prepared, executed, config)
 			emitToolExecutionEnd(finalized, serializedEmit)
 			return finalized
 		}})
@@ -825,11 +825,11 @@ func prepareToolCallArguments(tool *AgentTool, toolCall ai.ToolCall) ai.ToolCall
 }
 
 func prepareToolCall(
+	ctx context.Context,
 	currentContext *AgentContext,
 	assistantMessage *ai.AssistantMessage,
 	toolCall ai.ToolCall,
 	config *AgentLoopConfig,
-	ctx context.Context,
 ) prepareOutcome {
 	var tool *AgentTool
 	for i := range currentContext.Tools {
@@ -857,7 +857,7 @@ func prepareToolCall(
 				}}
 			}
 		}()
-		outcome = prepareToolCallUnprotected(currentContext, assistantMessage, toolCall, tool, config, ctx)
+		outcome = prepareToolCallUnprotected(ctx, currentContext, assistantMessage, toolCall, tool, config)
 	}()
 	return outcome
 }
@@ -872,12 +872,12 @@ func panicMessage(recovered any) string {
 }
 
 func prepareToolCallUnprotected(
+	ctx context.Context,
 	currentContext *AgentContext,
 	assistantMessage *ai.AssistantMessage,
 	toolCall ai.ToolCall,
 	tool *AgentTool,
 	config *AgentLoopConfig,
-	ctx context.Context,
 ) prepareOutcome {
 	// Once aborted, skip validation and the hooks: the caller still records this
 	// result, so no call in the batch is left without one (#9986).
@@ -897,12 +897,12 @@ func prepareToolCallUnprotected(
 	}
 
 	if config.BeforeToolCall != nil {
-		beforeResult, berr := config.BeforeToolCall(&BeforeToolCallContext{
+		beforeResult, berr := config.BeforeToolCall(ctx, &BeforeToolCallContext{
 			AssistantMessage: assistantMessage,
 			ToolCall:         toolCall,
 			Args:             validatedArgs,
 			Context:          *currentContext,
-		}, ctx)
+		})
 		if berr != nil {
 			return prepareOutcome{immediate: &immediateToolCallOutcome{
 				result: createErrorToolResult(berr.Error()), isError: true,
@@ -1018,7 +1018,7 @@ func (d *toolUpdateDispatcher) close() error {
 	return d.err
 }
 
-func executePreparedToolCall(prepared *preparedToolCallValue, ctx context.Context, emit AgentEventSink) executedToolCallOutcome {
+func executePreparedToolCall(ctx context.Context, prepared *preparedToolCallValue, emit AgentEventSink) executedToolCallOutcome {
 	updates := newToolUpdateDispatcher(emit)
 
 	startedAt := time.Now()
@@ -1033,7 +1033,7 @@ func executePreparedToolCall(prepared *preparedToolCallValue, ctx context.Contex
 				err = fmt.Errorf("%s", panicMessage(recovered))
 			}
 		}()
-		result, err = prepared.tool.Execute(prepared.toolCall.ID, prepared.args, ctx, func(partialResult AgentToolResult) {
+		result, err = prepared.tool.Execute(ctx, prepared.toolCall.ID, prepared.args, func(partialResult AgentToolResult) {
 			updates.send(AgentEvent{
 				Type: ToolExecutionUpdate, ToolCallID: prepared.toolCall.ID,
 				ToolName: prepared.toolCall.Name, Args: prepared.toolCall.Arguments,
@@ -1077,12 +1077,12 @@ type executedToolCallOutcome struct {
 }
 
 func finalizeExecutedToolCall(
+	ctx context.Context,
 	currentContext *AgentContext,
 	assistantMessage *ai.AssistantMessage,
 	prepared *preparedToolCallValue,
 	executed executedToolCallOutcome,
 	config *AgentLoopConfig,
-	ctx context.Context,
 ) finalizedToolCallOutcome {
 	result := executed.result
 	isError := executed.isError
@@ -1099,14 +1099,14 @@ func finalizeExecutedToolCall(
 					err = fmt.Errorf("%s", panicMessage(recovered))
 				}
 			}()
-			afterResult, err = config.AfterToolCall(&AfterToolCallContext{
+			afterResult, err = config.AfterToolCall(ctx, &AfterToolCallContext{
 				AssistantMessage: assistantMessage,
 				ToolCall:         prepared.toolCall,
 				Args:             prepared.args,
 				Result:           executed.result,
 				IsError:          executed.isError,
 				Context:          *currentContext,
-			}, ctx)
+			})
 		}()
 		if err != nil {
 			return finalizedToolCallOutcome{
@@ -1212,7 +1212,7 @@ func RunToolCall(toolCall ai.ToolCall, options RunToolCallOptions) AgentToolCall
 		BeforeToolCall: options.BeforeToolCall,
 		AfterToolCall:  options.AfterToolCall,
 	}
-	preparation := prepareToolCall(&currentContext, options.AssistantMessage, toolCall, config, ctx)
+	preparation := prepareToolCall(ctx, &currentContext, options.AssistantMessage, toolCall, config)
 	if preparation.immediate != nil {
 		return AgentToolCallOutcome{
 			ToolCall: toolCall, Result: preparation.immediate.result, IsError: preparation.immediate.isError,
@@ -1224,9 +1224,14 @@ func RunToolCall(toolCall ai.ToolCall, options RunToolCallOptions) AgentToolCall
 		}
 		return nil
 	}
-	executed := executePreparedToolCall(preparation.prepared, ctx, emitUpdate)
+	executed := executePreparedToolCall(ctx, preparation.prepared, emitUpdate)
 	finalized := finalizeExecutedToolCall(
-		&currentContext, options.AssistantMessage, preparation.prepared, executed, config, ctx,
+		ctx,
+		&currentContext,
+		options.AssistantMessage,
+		preparation.prepared,
+		executed,
+		config,
 	)
 	return AgentToolCallOutcome{
 		ToolCall: finalized.toolCall, Result: finalized.result, IsError: finalized.isError,

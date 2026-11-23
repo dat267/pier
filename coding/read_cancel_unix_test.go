@@ -27,7 +27,7 @@ func TestReadToolReturnsAbortWhenCanceledDuringMimeSniff(t *testing.T) {
 	tool := CreateReadTool(filepath.Dir(path), nil)
 	finished := make(chan error, 1)
 	go func() {
-		_, err := tool.Execute("call", json.RawMessage(`{"path":"stream.txt"}`), ctx, nil)
+		_, err := tool.Execute(ctx, "call", json.RawMessage(`{"path":"stream.txt"}`), nil)
 		finished <- err
 	}()
 

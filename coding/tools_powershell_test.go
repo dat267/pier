@@ -134,7 +134,7 @@ func TestPowerShellToolMetadataAndExecFailure(t *testing.T) {
 	// Off Windows, execution fails with the Windows-only error (the tool never
 	// falls back to bash).
 	if runtime.GOOS != "windows" {
-		_, err := tool.Execute("call-1", json.RawMessage(`{"command":"Get-Date"}`), context.Background(), nil)
+		_, err := tool.Execute(context.Background(), "call-1", json.RawMessage(`{"command":"Get-Date"}`), nil)
 		if err == nil || err.Error() != "The powershell tool is only available on Windows." {
 			t.Fatalf("err = %v", err)
 		}
@@ -153,7 +153,7 @@ func TestBashToolUsesSharedShellConfig(t *testing.T) {
 		t.Fatalf("snippet = %s", BashShellToolConfig.PromptSnippet)
 	}
 	// The shared shell tool still runs commands end to end.
-	result, err := tool.Execute("call-1", json.RawMessage(`{"command":"echo shared-config"}`), context.Background(), nil)
+	result, err := tool.Execute(context.Background(), "call-1", json.RawMessage(`{"command":"echo shared-config"}`), nil)
 	if err != nil {
 		t.Fatalf("err = %v", err)
 	}

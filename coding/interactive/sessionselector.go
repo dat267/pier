@@ -36,7 +36,7 @@ const (
 type SessionListProgress func(loaded int, total int, partialSessions []coding.SessionInfo)
 
 // SessionsLoader loads sessions (upstream SessionsLoader).
-type SessionsLoader func(onProgress SessionListProgress, ctx context.Context) ([]coding.SessionInfo, error)
+type SessionsLoader func(ctx context.Context, onProgress SessionListProgress) ([]coding.SessionInfo, error)
 
 // SessionDeleteResult is the outcome of deleting a session file.
 type SessionDeleteResult struct {
@@ -1376,7 +1376,7 @@ func (c *SessionSelectorComponent) loadScope(scope SessionScope) {
 		if scope == SessionScopeAll {
 			loader = c.allSessionsLoader
 		}
-		sessions, err := loader(onProgress, ctx)
+		sessions, err := loader(ctx, onProgress)
 		if ctx.Err() != nil {
 			return
 		}

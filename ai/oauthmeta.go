@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -78,7 +79,7 @@ func metaRequestContext(ctx context.Context) (context.Context, context.CancelFun
 
 // metaDo runs one request and decodes a JSON object body. The status is
 // returned even on an error response so callers can branch on it.
-func metaDo(request *http.Request, loginCtx context.Context) (int, map[string]any, error) {
+func metaDo(loginCtx context.Context, request *http.Request) (int, map[string]any, error) {
 	response, err := doFetchRequest(request)
 	if err != nil {
 		if loginCtx != nil && loginCtx.Err() != nil {
@@ -114,7 +115,7 @@ func metaPostForm(ctx context.Context, requestURL string, fields map[string]stri
 	}
 	request.Header.Set("Accept", "application/json")
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	return metaDo(request, ctx)
+	return metaDo(ctx, request)
 }
 
 func metaStartDeviceAuthorization(ctx context.Context) (*metaDeviceAuthorization, error) {
@@ -193,7 +194,7 @@ func metaPollForIdentityToken(ctx context.Context, device *metaDeviceAuthorizati
 
 // metaMintAPIKey exchanges an identity token for a Model API key. Keys are
 // valid for about a day.
-func metaMintAPIKey(identityToken string, ctx context.Context) (*OAuthCredential, error) {
+func metaMintAPIKey(ctx context.Context, identityToken string) (*OAuthCredential, error) {
 	requestCtx, cancel := metaRequestContext(ctx)
 	defer cancel()
 	request, err := http.NewRequestWithContext(requestCtx, http.MethodPost, metaAPIKeyMintURL, strings.NewReader("{}"))
@@ -204,7 +205,7 @@ func metaMintAPIKey(identityToken string, ctx context.Context) (*OAuthCredential
 	request.Header.Set("Authorization", "Bearer "+identityToken)
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("x-api-version", "1.0.0")
-	status, body, err := metaDo(request, ctx)
+	status, body, err := metaDo(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +222,7 @@ func metaMintAPIKey(identityToken string, ctx context.Context) (*OAuthCredential
 		if actionURL := metaTrustedHTTPURL(body["action_url"]); actionURL != "" {
 			return nil, fmt.Errorf("Meta did not issue an API key. Complete setup at %s", actionURL)
 		}
-		return nil, fmt.Errorf("Meta did not issue an API key.")
+		return nil, errors.New("Meta did not issue an API key.")
 	}
 	return &OAuthCredential{
 		Refresh: identityToken,
@@ -253,7 +254,7 @@ func loginMeta(interaction *AuthInteraction) (*OAuthCredential, error) {
 		return nil, err
 	}
 	interaction.Notify(AuthEvent{Type: AuthEventProgress, Message: "Enabling Meta Model API access..."})
-	return metaMintAPIKey(identityToken, interaction.Ctx)
+	return metaMintAPIKey(interaction.Ctx, identityToken)
 }
 
 // MetaOAuth is the Meta Muse subscription OAuth auth (upstream metaOAuth).
@@ -264,28 +265,28 @@ func MetaOAuth() *OAuthAuth {
 		LoginLabel:     "Sign in with Meta",
 		Login: func(interaction *AuthInteraction) (*OAuthCredential, error) {
 			if interaction == nil {
-				return nil, fmt.Errorf("auth interaction is required")
+				return nil, errors.New("auth interaction is required")
 			}
 			credential, err := loginMeta(interaction)
 			if err != nil {
 				// An in-flight fetch rejects with a DOMException on abort; the
 				// login UI matches on this message (upstream loginMeta's catch).
 				if interaction.Ctx != nil && interaction.Ctx.Err() != nil {
-					return nil, fmt.Errorf("Login cancelled")
+					return nil, errors.New("Login cancelled")
 				}
 				return nil, err
 			}
 			return credential, nil
 		},
-		Refresh: func(credential *OAuthCredential, ctx context.Context) (*OAuthCredential, error) {
+		Refresh: func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
 			if credential == nil {
-				return nil, fmt.Errorf("credential is required")
+				return nil, errors.New("credential is required")
 			}
-			return metaMintAPIKey(credential.Refresh, ctx)
+			return metaMintAPIKey(ctx, credential.Refresh)
 		},
 		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
 			if credential == nil {
-				return nil, fmt.Errorf("credential is required")
+				return nil, errors.New("credential is required")
 			}
 			return &ModelAuth{APIKey: credential.Access}, nil
 		},

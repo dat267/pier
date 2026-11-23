@@ -26,7 +26,7 @@ func (s stubModelSource) GetModel(providerID, modelID string) *ai.Model {
 	}
 	return nil
 }
-func (s stubModelSource) GetAvailable(string, context.Context) ([]*ai.Model, error) {
+func (s stubModelSource) GetAvailable(context.Context, string) ([]*ai.Model, error) {
 	return s.models, nil
 }
 func (s stubModelSource) GetAvailableSnapshot() []*ai.Model { return s.models }
@@ -76,7 +76,7 @@ func TestScopedModelsFromFlag(t *testing.T) {
 	}}
 
 	args := coding.ParseArgs([]string{"--models", "flag-model"})
-	scoped, _, err := scopedModelsFor(args, settings, source, context.Background())
+	scoped, _, err := scopedModelsFor(context.Background(), args, settings, source)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestScopedModelsFallBackToSettings(t *testing.T) {
 	}}
 
 	args := coding.ParseArgs(nil)
-	scoped, _, err := scopedModelsFor(args, settings, source, context.Background())
+	scoped, _, err := scopedModelsFor(context.Background(), args, settings, source)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestScopedModelsEmptyWhenNothingConfigured(t *testing.T) {
 	source := stubModelSource{models: []*ai.Model{{Provider: "p", ID: "model"}}}
 
 	args := coding.ParseArgs(nil)
-	scoped, _, err := scopedModelsFor(args, settings, source, context.Background())
+	scoped, _, err := scopedModelsFor(context.Background(), args, settings, source)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func TestScopedModelsReportsUnknownPatterns(t *testing.T) {
 	source := stubModelSource{models: []*ai.Model{{Provider: "p", ID: "model"}}}
 
 	args := coding.ParseArgs([]string{"--models", "missing"})
-	scoped, diagnostics, err := scopedModelsFor(args, settings, source, context.Background())
+	scoped, diagnostics, err := scopedModelsFor(context.Background(), args, settings, source)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -31,9 +31,7 @@ func TestGoalFeatureToggleEnablesAndDisablesTheController(t *testing.T) {
 	if session.GoalController() == nil || !hasTool("set_goal") || !hasTool("get_goal") {
 		t.Fatalf("goal feature off at construction: Goal=%v tools=%v", session.GoalController() != nil, session.GetActiveToolNames())
 	}
-	if _, err := session.control.Tools["set_goal"].Tool.Execute("create",
-		json.RawMessage(`{"objective":"keep this objective"}`), context.Background(),
-		func(agent.AgentToolResult) {}); err != nil {
+	if _, err := session.control.Tools["set_goal"].Tool.Execute(context.Background(), "create", json.RawMessage(`{"objective":"keep this objective"}`), func(agent.AgentToolResult) {}); err != nil {
 		t.Fatal(err)
 	}
 

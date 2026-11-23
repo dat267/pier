@@ -6,6 +6,7 @@ package coding
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/dat267/pier/agent"
@@ -72,18 +73,18 @@ func MarshalJSONSessionEvent(event *SessionEvent) ([]byte, error) {
 
 func jsonEventValue(event *SessionEvent) (jsonEventObject, error) {
 	if event == nil {
-		return nil, fmt.Errorf("session event is required")
+		return nil, errors.New("session event is required")
 	}
 	value := jsonEventObject{{"type", event.Type}}
 	a := event.Agent
 	switch event.Type {
 	case SessionMessageUpdate:
 		if a == nil {
-			return nil, fmt.Errorf("message_update event has no agent payload")
+			return nil, errors.New("message_update event has no agent payload")
 		}
 		assistant, ok := a.Message.(*ai.AssistantMessage)
 		if !ok || assistant == nil {
-			return nil, fmt.Errorf("message_update message is not an assistant message")
+			return nil, errors.New("message_update message is not an assistant message")
 		}
 		delta, err := jsonAssistantEventValue(a.AssistantMessageEvent)
 		if err != nil {
@@ -203,7 +204,7 @@ func jsonEventValue(event *SessionEvent) (jsonEventObject, error) {
 
 func jsonAssistantEventValue(event *ai.AssistantMessageEvent) (jsonEventObject, error) {
 	if event == nil {
-		return nil, fmt.Errorf("message_update event has no assistant message event")
+		return nil, errors.New("message_update event has no assistant message event")
 	}
 	value := jsonEventObject{{"type", event.Type}}
 	switch event.Type {
@@ -230,7 +231,7 @@ func jsonAssistantEventValue(event *ai.AssistantMessageEvent) (jsonEventObject, 
 	}
 	if event.Type == ai.EventToolcallStart {
 		if event.Partial == nil {
-			return nil, fmt.Errorf("toolcall_start event has no partial message")
+			return nil, errors.New("toolcall_start event has no partial message")
 		}
 		if event.ContentIndex < 0 || event.ContentIndex >= len(event.Partial.Content) {
 			return nil, fmt.Errorf("toolcall_start content at index %d is not a tool call", event.ContentIndex)

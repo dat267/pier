@@ -41,12 +41,12 @@ func TestAuthStorageFileBackendRoundTrip(t *testing.T) {
 	}
 
 	// Modify writes the credential.
-	credential, err := storage.Modify("anthropic", func(current *ai.Credential) (*ai.Credential, error) {
+	credential, err := storage.Modify(ctx, "anthropic", func(current *ai.Credential) (*ai.Credential, error) {
 		if current != nil {
 			t.Fatalf("current = %+v", current)
 		}
 		return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "sk-1"}}, nil
-	}, ctx)
+	})
 	if err != nil || credential.APIKey.Key != "sk-1" {
 		t.Fatalf("credential = %+v err = %v", credential, err)
 	}
@@ -67,37 +67,37 @@ func TestAuthStorageFileBackendRoundTrip(t *testing.T) {
 	}
 
 	// Read resolves the stored value; a second store sees it (shared snapshot).
-	read, err := storage.Read("anthropic", ctx)
+	read, err := storage.Read(ctx, "anthropic")
 	if err != nil || read.APIKey.Key != "sk-1" {
 		t.Fatalf("read = %+v err = %v", read, err)
 	}
 	other := NewAuthStorage(authPath)
-	if read, err := other.Read("anthropic", ctx); err != nil || read.APIKey.Key != "sk-1" {
+	if read, err := other.Read(ctx, "anthropic"); err != nil || read.APIKey.Key != "sk-1" {
 		t.Fatalf("read = %+v err = %v", read, err)
 	}
 
 	// A returned nil leaves the entry unchanged.
-	if _, err := storage.Modify("anthropic", func(current *ai.Credential) (*ai.Credential, error) { return nil, nil }, ctx); err != nil {
+	if _, err := storage.Modify(ctx, "anthropic", func(current *ai.Credential) (*ai.Credential, error) { return nil, nil }); err != nil {
 		t.Fatal(err)
 	}
-	if read, _ := storage.Read("anthropic", ctx); read.APIKey.Key != "sk-1" {
+	if read, _ := storage.Read(ctx, "anthropic"); read.APIKey.Key != "sk-1" {
 		t.Fatalf("read = %+v", read)
 	}
 
 	// An error from the callback propagates and writes nothing.
 	boom := errors.New("no write")
-	if _, err := storage.Modify("anthropic", func(current *ai.Credential) (*ai.Credential, error) { return nil, boom }, ctx); !errors.Is(err, boom) {
+	if _, err := storage.Modify(ctx, "anthropic", func(current *ai.Credential) (*ai.Credential, error) { return nil, boom }); !errors.Is(err, boom) {
 		t.Fatalf("err = %v", err)
 	}
-	if read, _ := storage.Read("anthropic", ctx); read.APIKey.Key != "sk-1" {
+	if read, _ := storage.Read(ctx, "anthropic"); read.APIKey.Key != "sk-1" {
 		t.Fatalf("read = %+v", read)
 	}
 
 	// Delete removes the provider.
-	if err := storage.Delete("anthropic", ctx); err != nil {
+	if err := storage.Delete(ctx, "anthropic"); err != nil {
 		t.Fatal(err)
 	}
-	if read, _ := storage.Read("anthropic", ctx); read != nil {
+	if read, _ := storage.Read(ctx, "anthropic"); read != nil {
 		t.Fatalf("read = %+v", read)
 	}
 	entries, err = storage.List(ctx)
@@ -112,7 +112,7 @@ func TestAuthStorageConfiguredKeyResolution(t *testing.T) {
 	writeAuthFile(t, authPath, `{"anthropic":{"type":"api_key","key":"$AUTH_TEST_KEY","env":{"AUTH_TEST_KEY":"from-env"}}}`)
 	storage := NewAuthStorage(authPath)
 
-	read, err := storage.Read("anthropic", ctxpkg.Background())
+	read, err := storage.Read(ctxpkg.Background(), "anthropic")
 	if err != nil || read.APIKey.Key != "from-env" {
 		t.Fatalf("read = %+v err = %v", read, err)
 	}
@@ -126,12 +126,12 @@ func TestAuthStorageConfiguredKeyResolution(t *testing.T) {
 	// store is the one that returns it unresolved).
 	writeAuthFile(t, authPath, `{"anthropic":{"type":"api_key","key":"!printf sk-cmd"}}`)
 	command := NewAuthStorage(authPath)
-	read, err = command.Read("anthropic", ctxpkg.Background())
+	read, err = command.Read(ctxpkg.Background(), "anthropic")
 	if err != nil || read.APIKey.Key != "sk-cmd" {
 		t.Fatalf("read = %+v err = %v", read, err)
 	}
 	readOnly := NewReadOnlyAuthStorage(authPath)
-	read, err = readOnly.Read("anthropic", ctxpkg.Background())
+	read, err = readOnly.Read(ctxpkg.Background(), "anthropic")
 	if err != nil || read.APIKey.Key != "!printf sk-cmd" {
 		t.Fatalf("read-only read = %+v err = %v", read, err)
 	}
@@ -143,17 +143,17 @@ func TestAuthStorageExternalChange(t *testing.T) {
 	writeAuthFile(t, authPath, `{"anthropic":{"type":"api_key","key":"sk-1"}}`)
 	storage := NewAuthStorage(authPath)
 	ctx := ctxpkg.Background()
-	if read, _ := storage.Read("anthropic", ctx); read.APIKey.Key != "sk-1" {
+	if read, _ := storage.Read(ctx, "anthropic"); read.APIKey.Key != "sk-1" {
 		t.Fatalf("read = %+v", read)
 	}
 
 	// Change the file behind the store; the revision check picks it up.
 	time.Sleep(5 * time.Millisecond)
 	writeAuthFile(t, authPath, `{"anthropic":{"type":"api_key","key":"sk-2"},"openai":{"type":"api_key","key":"sk-3"}}`)
-	if read, err := storage.Read("anthropic", ctx); err != nil || read.APIKey.Key != "sk-2" {
+	if read, err := storage.Read(ctx, "anthropic"); err != nil || read.APIKey.Key != "sk-2" {
 		t.Fatalf("read = %+v err = %v", read, err)
 	}
-	if read, err := storage.Read("openai", ctx); err != nil || read.APIKey.Key != "sk-3" {
+	if read, err := storage.Read(ctx, "openai"); err != nil || read.APIKey.Key != "sk-3" {
 		t.Fatalf("read = %+v err = %v", read, err)
 	}
 }
@@ -165,15 +165,15 @@ func TestAuthStorageInMemoryAndReadOnly(t *testing.T) {
 	storage := AuthStorageInMemory(authStorageData{
 		"openai": {Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "sk-in-memory"}},
 	})
-	if read, err := storage.Read("openai", ctx); err != nil || read.APIKey.Key != "sk-in-memory" {
+	if read, err := storage.Read(ctx, "openai"); err != nil || read.APIKey.Key != "sk-in-memory" {
 		t.Fatalf("read = %+v err = %v", read, err)
 	}
-	if _, err := storage.Modify("openai", func(current *ai.Credential) (*ai.Credential, error) {
+	if _, err := storage.Modify(ctx, "openai", func(current *ai.Credential) (*ai.Credential, error) {
 		return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "sk-new"}}, nil
-	}, ctx); err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
-	if read, _ := storage.Read("openai", ctx); read.APIKey.Key != "sk-new" {
+	if read, _ := storage.Read(ctx, "openai"); read.APIKey.Key != "sk-new" {
 		t.Fatalf("read = %+v", read)
 	}
 
@@ -186,7 +186,7 @@ func TestAuthStorageInMemoryAndReadOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	pathless := AuthStorageFromBackend(backend)
-	if read, err := pathless.Read("openai", ctx); err != nil || read.APIKey.Key != "sk-1" {
+	if read, err := pathless.Read(ctx, "openai"); err != nil || read.APIKey.Key != "sk-1" {
 		t.Fatalf("read = %+v err = %v", read, err)
 	}
 	updated := `{"openai":{"type":"api_key","key":"sk-2"}}`
@@ -195,7 +195,7 @@ func TestAuthStorageInMemoryAndReadOnly(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if read, err := pathless.Read("openai", ctx); err != nil || read.APIKey.Key != "sk-2" {
+	if read, err := pathless.Read(ctx, "openai"); err != nil || read.APIKey.Key != "sk-2" {
 		t.Fatalf("read = %+v err = %v", read, err)
 	}
 
@@ -204,11 +204,11 @@ func TestAuthStorageInMemoryAndReadOnly(t *testing.T) {
 	authPath := filepath.Join(dir, "auth.json")
 	writeAuthFile(t, authPath, `{"anthropic":{"type":"api_key","key":"sk-readonly"},"openai":{"type":"oauth","access":"a","refresh":"r","expires":123}}`)
 	readOnly := NewReadOnlyAuthStorage(authPath)
-	read, err := readOnly.Read("anthropic", ctx)
+	read, err := readOnly.Read(ctx, "anthropic")
 	if err != nil || read.APIKey.Key != "sk-readonly" {
 		t.Fatalf("read = %+v err = %v", read, err)
 	}
-	oauth, err := readOnly.Read("openai", ctx)
+	oauth, err := readOnly.Read(ctx, "openai")
 	if err != nil || oauth.Type != ai.CredentialOAuth || oauth.OAuth.Access != "a" {
 		t.Fatalf("oauth = %+v err = %v", oauth, err)
 	}
@@ -216,11 +216,11 @@ func TestAuthStorageInMemoryAndReadOnly(t *testing.T) {
 	if err != nil || len(entries) != 2 {
 		t.Fatalf("entries = %+v err = %v", entries, err)
 	}
-	if _, err := readOnly.Modify("anthropic", func(current *ai.Credential) (*ai.Credential, error) { return nil, nil }, ctx); err == nil ||
+	if _, err := readOnly.Modify(ctx, "anthropic", func(current *ai.Credential) (*ai.Credential, error) { return nil, nil }); err == nil ||
 		err.Error() != "Read-only credential storage cannot modify auth.json" {
 		t.Fatalf("err = %v", err)
 	}
-	if err := readOnly.Delete("anthropic", ctx); err == nil ||
+	if err := readOnly.Delete(ctx, "anthropic"); err == nil ||
 		err.Error() != "Read-only credential storage cannot modify auth.json" {
 		t.Fatalf("err = %v", err)
 	}
@@ -304,9 +304,9 @@ func TestAuthStorageLockingAndCancellation(t *testing.T) {
 		go func(index int) {
 			defer waitGroup.Done()
 			providerID := "provider-" + string(rune('a'+index))
-			if _, err := storage.Modify(providerID, func(current *ai.Credential) (*ai.Credential, error) {
+			if _, err := storage.Modify(ctxpkg.Background(), providerID, func(current *ai.Credential) (*ai.Credential, error) {
 				return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "sk-" + providerID}}, nil
-			}, ctxpkg.Background()); err != nil {
+			}); err != nil {
 				t.Errorf("modify: %v", err)
 			}
 		}(index)
@@ -328,10 +328,10 @@ func TestAuthStorageLockingAndCancellation(t *testing.T) {
 	// A cancelled context fails fast.
 	cancelled, cancel := ctxpkg.WithCancel(ctxpkg.Background())
 	cancel()
-	if _, err := storage.Read("anthropic", cancelled); !errors.Is(err, ctxpkg.Canceled) {
+	if _, err := storage.Read(cancelled, "anthropic"); !errors.Is(err, ctxpkg.Canceled) {
 		t.Fatalf("err = %v", err)
 	}
-	if err := storage.Delete("anthropic", cancelled); !errors.Is(err, ctxpkg.Canceled) {
+	if err := storage.Delete(cancelled, "anthropic"); !errors.Is(err, ctxpkg.Canceled) {
 		t.Fatalf("err = %v", err)
 	}
 
@@ -347,13 +347,13 @@ func TestAuthStorageLockingAndCancellation(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		release.release()
 	}()
-	if _, err := storage.Modify("late", func(current *ai.Credential) (*ai.Credential, error) {
+	if _, err := storage.Modify(ctxpkg.Background(), "late", func(current *ai.Credential) (*ai.Credential, error) {
 		return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "sk-late"}}, nil
-	}, ctxpkg.Background()); err != nil {
+	}); err != nil {
 		t.Fatalf("modify: %v", err)
 	}
 	<-done
-	if read, err := storage.Read("late", ctxpkg.Background()); err != nil || read.APIKey.Key != "sk-late" {
+	if read, err := storage.Read(ctxpkg.Background(), "late"); err != nil || read.APIKey.Key != "sk-late" {
 		t.Fatalf("read = %+v err = %v", read, err)
 	}
 }
@@ -517,9 +517,9 @@ func TestAuthStorageArrayRootIsNotDiscardedByMutation(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "auth.json")
 	writeAuthFile(t, path, initial)
 	storage := NewAuthStorage(path)
-	_, err := storage.Modify("openai", func(*ai.Credential) (*ai.Credential, error) {
+	_, err := storage.Modify(ctxpkg.Background(), "openai", func(*ai.Credential) (*ai.Credential, error) {
 		return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "synthetic-key"}}, nil
-	}, ctxpkg.Background())
+	})
 	if err != nil {
 		got, readErr := os.ReadFile(path)
 		if readErr != nil {
@@ -679,22 +679,22 @@ func TestReadOnlyAuthStorageReturnsOwnedCredentialData(t *testing.T) {
 	writeAuthFile(t, path, `{"api":{"type":"api_key","key":"synthetic","env":{"ACCOUNT":"original"}},"oauth":{"type":"oauth","access":"synthetic","refresh":"synthetic","expires":123,"tenant":"original"}}`)
 	storage := NewReadOnlyAuthStorage(path)
 	ctx := ctxpkg.Background()
-	api, err := storage.Read("api", ctx)
+	api, err := storage.Read(ctx, "api")
 	if err != nil {
 		t.Fatal(err)
 	}
 	api.APIKey.Env["ACCOUNT"] = "changed"
-	again, err := storage.Read("api", ctx)
+	again, err := storage.Read(ctx, "api")
 	if err != nil || again.APIKey.Env["ACCOUNT"] != "original" {
 		t.Errorf("environment mutation reached cached credential: %v, %v", again.APIKey.Env, err)
 	}
-	oauth, err := storage.Read("oauth", ctx)
+	oauth, err := storage.Read(ctx, "oauth")
 	if err != nil {
 		t.Fatal(err)
 	}
 	oauth.OAuth.Extra["tenant"][1] = 'X'
 	oauth.OAuth.Extra["added"] = []byte(`true`)
-	again, err = storage.Read("oauth", ctx)
+	again, err = storage.Read(ctx, "oauth")
 	if err != nil || string(again.OAuth.Extra["tenant"]) != `"original"` || again.OAuth.Extra["added"] != nil {
 		t.Errorf("OAuth mutation reached cached credential: %v, %v", again.OAuth.Extra, err)
 	}
@@ -717,16 +717,16 @@ func TestAuthStorageMutationsPreserveUntouchedEntries(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "auth.json")
 			writeAuthFile(t, path, tc.Initial)
 			storage := NewAuthStorage(path)
-			known, err := storage.Read("known", ctxpkg.Background())
+			known, err := storage.Read(ctxpkg.Background(), "known")
 			if err != nil || known == nil || known.APIKey == nil || known.APIKey.Key != "synthetic-known" {
 				t.Fatalf("readable sibling was lost: %+v, %v", known, err)
 			}
 			if tc.Op == "modify" {
-				_, err = storage.Modify("added", func(*ai.Credential) (*ai.Credential, error) {
+				_, err = storage.Modify(ctxpkg.Background(), "added", func(*ai.Credential) (*ai.Credential, error) {
 					return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "synthetic-added"}}, nil
-				}, ctxpkg.Background())
+				})
 			} else {
-				err = storage.Delete("known", ctxpkg.Background())
+				err = storage.Delete(ctxpkg.Background(), "known")
 			}
 			if err != nil {
 				t.Fatal(err)

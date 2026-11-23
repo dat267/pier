@@ -3,6 +3,7 @@ package mcp
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -106,7 +107,7 @@ func (t *StdioTransport) Start(ctx context.Context) error {
 	t.mu.Lock()
 	if t.started {
 		t.mu.Unlock()
-		return fmt.Errorf("MCP stdio transport already started")
+		return errors.New("MCP stdio transport already started")
 	}
 	if t.closed {
 		t.mu.Unlock()
@@ -261,7 +262,7 @@ func (t *StdioTransport) finishClose() {
 	t.stdoutBuffer = nil
 	t.mu.Unlock()
 	if ai.JSTrim(tail) != "" {
-		t.emitError(fmt.Errorf("MCP stdio server closed with an incomplete JSON-RPC message"))
+		t.emitError(errors.New("MCP stdio server closed with an incomplete JSON-RPC message"))
 	}
 	t.emitClose()
 }

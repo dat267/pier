@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -165,7 +166,7 @@ func BuildOpenAIResponsesParamsWithProviders(
 // Members keep their first-assignment order, as in the params object literal.
 func (p *OpenAIResponsesParams) MarshalJSON() ([]byte, error) {
 	var fields orderedJSONFields
-	set := func(key string, value any) error { return fields.setAny(key, value) }
+	set := fields.setAny
 	if err := set("model", p.Model); err != nil {
 		return nil, err
 	}
@@ -555,11 +556,11 @@ func ProcessResponsesStream(
 		}
 		return ""
 	}
-	appendCustomToolCallInput := func(slot *responsesOutputSlot, nextInput string, close bool) string {
+	appendCustomToolCallInput := func(slot *responsesOutputSlot, nextInput string, closing bool) string {
 		if slot.toolCall.customInput == nil {
 			return ""
 		}
-		delta, ok, err := AppendGrammarToolInputJSONDelta(&slot.toolCall.customInput.jsonBuffer, slot.toolCall.customInput.property, nextInput, close)
+		delta, ok, err := AppendGrammarToolInputJSONDelta(&slot.toolCall.customInput.jsonBuffer, slot.toolCall.customInput.property, nextInput, closing)
 		if err != nil {
 			panic(err)
 		}
@@ -910,7 +911,7 @@ func ProcessResponsesStream(
 		return iterErr
 	}
 	if !sawTerminalResponseEvent {
-		return fmt.Errorf("OpenAI Responses stream ended before a terminal response event")
+		return errors.New("OpenAI Responses stream ended before a terminal response event")
 	}
 	// The agent runs every tool call in the final message. Refuse to hand over
 	// calls whose output_item.done never arrived: their arguments may be cut off
@@ -1240,7 +1241,7 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 			return
 		}
 		if ctxErr(ctx) != nil {
-			fail(fmt.Errorf("Request was aborted"))
+			fail(errors.New("Request was aborted"))
 			return
 		}
 		if output.StopReason == StopPending {

@@ -16,7 +16,7 @@ import (
 func TestSessionFileRoundTripPreservesInvariants(t *testing.T) {
 	tempAgentDir(t)
 	runtime := testSessionRuntime(t)
-	if err := runtime.SetRuntimeAPIKey("anthropic", "sk-1", context.Background()); err != nil {
+	if err := runtime.SetRuntimeAPIKey(context.Background(), "anthropic", "sk-1"); err != nil {
 		t.Fatal(err)
 	}
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})

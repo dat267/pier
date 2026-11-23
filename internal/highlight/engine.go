@@ -295,7 +295,7 @@ func (h *highlighter) processSubLanguage() {
 		return
 	}
 	var result *Result
-	name := ""
+	var name string
 	if len(h.top.mode.subLanguage) == 1 {
 		name = h.top.mode.subLanguage[0]
 		sub, err := getCompiledLanguage(name)
@@ -623,7 +623,7 @@ func (h *highlighter) lineStartsWith(re *patternRegexp, s string) bool {
 func escapeLiteral(value string) string {
 	const special = `-/\^$*+?.()|[]{}`
 	var b strings.Builder
-	for i := 0; i < len(value); i++ {
+	for i := range len(value) {
 		if strings.IndexByte(special, value[i]) >= 0 {
 			b.WriteByte('\\')
 		}

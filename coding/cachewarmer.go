@@ -523,7 +523,7 @@ func (w *CacheWarmer) refresh(run *cacheWarmingRun) {
 			if extensionOverride {
 				note = "extension override"
 			}
-			entry := w.SessionManager.AppendUsage("cache_warm", string(message.Provider), responseModel, message.Usage, note)
+			entry := w.SessionManager.AppendUsage("cache_warm", message.Provider, responseModel, message.Usage, note)
 			w.mu.Lock()
 			onWarmed := w.OnWarmed
 			if w.run != run {

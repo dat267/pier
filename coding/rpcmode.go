@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -174,7 +175,7 @@ func RunRPCMode(ctx context.Context, session *AgentSession, options RPCModeOptio
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		if readErr == io.EOF {
+		if errors.Is(readErr, io.EOF) {
 			return nil
 		}
 		if readErr != nil {
@@ -192,7 +193,7 @@ func (r *rpcRuntime) handleLine(line []byte) error {
 			parseErr = json.Unmarshal(raw, &command.Type)
 		}
 		if parseErr == nil && command.Type == "" {
-			parseErr = fmt.Errorf("command must be an object with a nonempty type")
+			parseErr = errors.New("command must be an object with a nonempty type")
 		}
 		if parseErr == nil {
 			if raw, ok := object["id"]; ok {
@@ -251,39 +252,39 @@ func (command rpcCommand) validate() error {
 	switch command.Type {
 	case "prompt", "steer", "follow_up":
 		if command.Message == nil {
-			return fmt.Errorf("message must be a string")
+			return errors.New("message must be a string")
 		}
 		if command.StreamingBehavior != "" && command.StreamingBehavior != "steer" && command.StreamingBehavior != "followUp" {
-			return fmt.Errorf("streamingBehavior must be steer or followUp")
+			return errors.New("streamingBehavior must be steer or followUp")
 		}
 	case "set_thinking_level":
 		// D404: the reference stores any level; pier rejects one it cannot honor.
 		if !IsValidThinkingLevel(command.Level) {
-			return fmt.Errorf("level must be a valid thinking level")
+			return errors.New("level must be a valid thinking level")
 		}
 	case "set_model":
 		if command.Provider == "" || command.ModelID == "" {
-			return fmt.Errorf("provider and modelId must be nonempty strings")
+			return errors.New("provider and modelId must be nonempty strings")
 		}
 	case "set_session_name":
 		if command.Name == nil {
-			return fmt.Errorf("name must be a string")
+			return errors.New("name must be a string")
 		}
 	case "bash":
 		if command.Command == nil {
-			return fmt.Errorf("command must be a string")
+			return errors.New("command must be a string")
 		}
 	case "set_auto_compaction", "set_auto_retry":
 		if command.Enabled == nil {
-			return fmt.Errorf("enabled must be a boolean")
+			return errors.New("enabled must be a boolean")
 		}
 	case "switch_session":
 		if command.SessionPath == nil {
-			return fmt.Errorf("sessionPath must be a string")
+			return errors.New("sessionPath must be a string")
 		}
 	case "fork":
 		if command.EntryID == nil {
-			return fmt.Errorf("entryId must be a string")
+			return errors.New("entryId must be a string")
 		}
 	}
 	return nil
@@ -390,7 +391,7 @@ func (r *rpcRuntime) settleWorkers() {
 // session bound so the client can continue.
 func (r *rpcRuntime) installSession(ctx context.Context, manager *SessionManager) error {
 	if r.replaceSession == nil {
-		return fmt.Errorf("Session replacement is not available in this build")
+		return errors.New("Session replacement is not available in this build")
 	}
 	if r.unsubscribe != nil {
 		r.unsubscribe()
@@ -446,19 +447,19 @@ func (r *rpcRuntime) newSessionManager() *SessionManager {
 // "at".
 func (r *rpcRuntime) forkManager(entryID string, atPosition bool) (*SessionManager, *string, error) {
 	if r.replaceSession == nil {
-		return nil, nil, fmt.Errorf("Session replacement is not available in this build")
+		return nil, nil, errors.New("Session replacement is not available in this build")
 	}
 	current := r.session.Sessions
 	entry := current.GetEntry(entryID)
 	if entry == nil {
-		return nil, nil, fmt.Errorf("Invalid entry ID for forking")
+		return nil, nil, errors.New("Invalid entry ID for forking")
 	}
 	targetLeafID := entryID
 	var selectedText *string
 	if !atPosition {
 		text, ok := rpcUserMessageEntryText(entry)
 		if !ok {
-			return nil, nil, fmt.Errorf("Invalid entry ID for forking")
+			return nil, nil, errors.New("Invalid entry ID for forking")
 		}
 		selectedText = &text
 		targetLeafID = ""
@@ -482,7 +483,7 @@ func (r *rpcRuntime) forkManager(entryID string, atPosition bool) (*SessionManag
 
 	currentFile := current.GetSessionFile()
 	if currentFile == "" {
-		return nil, nil, fmt.Errorf("Persisted session is missing a session file")
+		return nil, nil, errors.New("Persisted session is missing a session file")
 	}
 	if targetLeafID == "" {
 		// Fork before the first message: a new session parented to the current
@@ -497,7 +498,7 @@ func (r *rpcRuntime) forkManager(entryID string, atPosition bool) (*SessionManag
 		return manager, selectedText, nil
 	}
 	if _, err := os.Stat(currentFile); err != nil {
-		return nil, nil, fmt.Errorf("This session has not been saved yet. Send a message before cloning or forking it.")
+		return nil, nil, errors.New("This session has not been saved yet. Send a message before cloning or forking it.")
 	}
 	manager, err := OpenSession(currentFile, sessionDirForReplacement(current), "")
 	if err != nil {
@@ -568,7 +569,7 @@ func (r *rpcRuntime) startPrompt(command rpcCommand) error {
 	select {
 	case r.promptSlots <- struct{}{}:
 	default:
-		return r.respond(command, nil, false, fmt.Errorf("Too many pending prompts; retry after pending prompt preflight completes"))
+		return r.respond(command, nil, false, errors.New("Too many pending prompts; retry after pending prompt preflight completes"))
 	}
 	previous := r.admission
 	ready := make(chan struct{})
@@ -675,7 +676,7 @@ func (r *rpcRuntime) handle(command rpcCommand) (any, bool, error) {
 	case "set_steering_mode", "set_follow_up_mode":
 		// D404: the reference stores and persists any mode string.
 		if command.Mode != QueueModeAll && command.Mode != QueueModeOneAtATime {
-			return nil, false, fmt.Errorf("mode must be all or one-at-a-time")
+			return nil, false, errors.New("mode must be all or one-at-a-time")
 		}
 		if command.Type == "set_steering_mode" {
 			session.SetSteeringMode(command.Mode)
@@ -715,7 +716,7 @@ func (r *rpcRuntime) handle(command rpcCommand) (any, bool, error) {
 			position = *command.Position
 		}
 		if position != "before" && position != "at" {
-			return nil, false, fmt.Errorf("position must be before or at")
+			return nil, false, errors.New("position must be before or at")
 		}
 		manager, selectedText, err := r.forkManager(*command.EntryID, position == "at")
 		if err != nil {
@@ -733,7 +734,7 @@ func (r *rpcRuntime) handle(command rpcCommand) (any, bool, error) {
 	case "clone":
 		leafID := session.Sessions.GetLeafID()
 		if leafID == nil {
-			return nil, false, fmt.Errorf("Cannot clone session: no current entry selected")
+			return nil, false, errors.New("Cannot clone session: no current entry selected")
 		}
 		manager, _, err := r.forkManager(*leafID, true)
 		if err != nil {
@@ -785,7 +786,7 @@ func (r *rpcRuntime) handle(command rpcCommand) (any, bool, error) {
 		return rpcSessionStatsValue(session.GetSessionStats()), true, nil
 	case "export_html":
 		if r.exportToHtml == nil {
-			return nil, false, fmt.Errorf("HTML export is not available in this build")
+			return nil, false, errors.New("HTML export is not available in this build")
 		}
 		outputPath := ""
 		if command.OutputPath != nil {
@@ -834,7 +835,7 @@ func (r *rpcRuntime) handle(command rpcCommand) (any, bool, error) {
 	case "set_session_name":
 		name := ai.JSTrim(*command.Name)
 		if name == "" {
-			return nil, false, fmt.Errorf("Session name cannot be empty")
+			return nil, false, errors.New("Session name cannot be empty")
 		}
 		session.SetSessionName(name)
 		return nil, false, nil

@@ -58,7 +58,7 @@ func TestDockPinnedAfterScroll(t *testing.T) {
 		}
 	}
 	walk(frame.Root)
-	for _, name := range []string{"pending", "status", "above", "editor", "below", "footer"} { //nolint
+	for _, name := range []string{"pending", "status", "above", "editor", "below", "footer"} {
 		if box, ok := boxes[name]; ok {
 			t.Logf("%s box: %+v", name, box.Rect)
 		} else {

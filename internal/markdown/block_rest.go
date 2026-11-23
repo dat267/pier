@@ -297,7 +297,7 @@ func delimiterUnitsTail(line string, i int) bool {
 }
 
 func tailColonDashSpace(s string) bool {
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		if strings.IndexByte(":- ", s[i]) < 0 {
 			return false
 		}
@@ -512,7 +512,7 @@ func hasPrefixFold(value, prefix string) bool {
 	if len(value) < len(prefix) {
 		return false
 	}
-	for i := 0; i < len(prefix); i++ {
+	for i := range len(prefix) {
 		left, right := value[i], prefix[i]
 		if 'A' <= left && left <= 'Z' {
 			left += 'a' - 'A'
@@ -781,11 +781,11 @@ func htmlOpenTagAttributesEnd(s string) (int, bool) {
 			}
 			switch {
 			case k < len(s) && (s[k] == '"' || s[k] == '\''):
-				close := strings.IndexByte(s[k+1:], s[k])
-				if close < 0 {
+				closeAt := strings.IndexByte(s[k+1:], s[k])
+				if closeAt < 0 {
 					return 0, false
 				}
-				j = k + 1 + close + 1
+				j = k + 1 + closeAt + 1
 			default:
 				v := k
 				for v < len(s) && !strings.ContainsRune(" \t\"'=<>\x60", rune(s[v])) {
@@ -959,7 +959,7 @@ func parseDelimiterRow(line string) ([]Align, bool) {
 		if mid == "" {
 			return nil, false
 		}
-		for i := 0; i < len(mid); i++ {
+		for i := range len(mid) {
 			if mid[i] != '-' {
 				return nil, false
 			}
@@ -984,7 +984,7 @@ func parseDelimiterRow(line string) ([]Align, bool) {
 func splitTableRow(line string) []string {
 	var cells []string
 	cellStart := 0
-	for i := 0; i < len(line); i++ {
+	for i := range len(line) {
 		if line[i] != '|' {
 			continue
 		}

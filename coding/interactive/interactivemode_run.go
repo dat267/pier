@@ -276,7 +276,7 @@ func (w *RunWiring) BuildStartupHeader(scopedModels []coding.ScopedModel) tui.Co
 	theme := ActiveTheme()
 	logo := theme.Bold(theme.Fg("accent", w.AppName)) + theme.Fg("dim", " "+startupVersionLabel(w.Version))
 
-	hint := func(keybinding string, description string) string { return KeyHint(keybinding, description) }
+	hint := KeyHint
 	expandedInstructions := strings.Join([]string{
 		hint("app.interrupt", "to interrupt"),
 		hint("app.clear", "to clear"),
@@ -328,7 +328,7 @@ func (w *RunWiring) BuildStartupHeader(scopedModels []coding.ScopedModel) tui.Co
 			}
 			entry := scoped.Model.ID
 			if scoped.HasThinking {
-				entry += ":" + string(scoped.ThinkingLevel)
+				entry += ":" + scoped.ThinkingLevel
 			}
 			entries = append(entries, entry)
 		}

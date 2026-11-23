@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
 	"path/filepath"
 	"slices"
@@ -30,7 +30,7 @@ func NewInMemoryCodingAgentModelsStore() *InMemoryCodingAgentModelsStore {
 }
 
 // Read returns a clone of the stored catalog.
-func (s *InMemoryCodingAgentModelsStore) Read(providerID string, ctx context.Context) (*ai.ModelsStoreEntry, error) {
+func (s *InMemoryCodingAgentModelsStore) Read(ctx context.Context, providerID string) (*ai.ModelsStoreEntry, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func (s *InMemoryCodingAgentModelsStore) Read(providerID string, ctx context.Con
 }
 
 // Write stores a clone of the catalog.
-func (s *InMemoryCodingAgentModelsStore) Write(providerID string, entry *ai.ModelsStoreEntry, ctx context.Context) error {
+func (s *InMemoryCodingAgentModelsStore) Write(ctx context.Context, providerID string, entry *ai.ModelsStoreEntry) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func (s *InMemoryCodingAgentModelsStore) Write(providerID string, entry *ai.Mode
 }
 
 // Delete removes a provider's catalog.
-func (s *InMemoryCodingAgentModelsStore) Delete(providerID string, ctx context.Context) error {
+func (s *InMemoryCodingAgentModelsStore) Delete(ctx context.Context, providerID string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func parseStoredModels(content *string) (storedModels, []string, error) {
 		return nil, nil, err
 	}
 	if token != json.Delim('{') {
-		return nil, nil, fmt.Errorf("Invalid models store: expected an object")
+		return nil, nil, errors.New("Invalid models store: expected an object")
 	}
 	var order []string
 	for decoder.More() {
@@ -152,7 +152,7 @@ func parseStoredModels(content *string) (storedModels, []string, error) {
 		}
 		name, ok := nameToken.(string)
 		if !ok {
-			return nil, nil, fmt.Errorf("Invalid models store: expected an object key")
+			return nil, nil, errors.New("Invalid models store: expected an object key")
 		}
 		var entryRaw json.RawMessage
 		if err := decoder.Decode(&entryRaw); err != nil {
@@ -169,11 +169,11 @@ func parseStoredModels(content *string) (storedModels, []string, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		return nil, nil, fmt.Errorf("Invalid models store: expected the object to end")
+		return nil, nil, errors.New("Invalid models store: expected the object to end")
 	}
 	// JSON.parse rejects trailing content; the decoder stops at the closing brace.
 	if _, err := decoder.Token(); err != io.EOF {
-		return nil, nil, fmt.Errorf("Invalid models store: unexpected content after the object")
+		return nil, nil, errors.New("Invalid models store: unexpected content after the object")
 	}
 	// The reference re-parses and re-stringifies the file, so JSON.parse's
 	// enumeration order (array-index keys first, in numeric order) is what a
@@ -324,7 +324,7 @@ func (s *FileModelsStore) releaseReload(reload *modelsFileReload) {
 }
 
 // Read returns a clone of a provider's stored catalog.
-func (s *FileModelsStore) Read(providerID string, ctx context.Context) (*ai.ModelsStoreEntry, error) {
+func (s *FileModelsStore) Read(ctx context.Context, providerID string) (*ai.ModelsStoreEntry, error) {
 	data, err := s.readLatest(ctx)
 	if err != nil {
 		return nil, err
@@ -340,7 +340,7 @@ func (s *FileModelsStore) Read(providerID string, ctx context.Context) (*ai.Mode
 }
 
 // Write stores a provider's catalog.
-func (s *FileModelsStore) Write(providerID string, entry *ai.ModelsStoreEntry, ctx context.Context) error {
+func (s *FileModelsStore) Write(ctx context.Context, providerID string, entry *ai.ModelsStoreEntry) error {
 	var latest storedModels
 	var latestOrder []string
 	_, err := s.storage.WithLockAsync(ctx, func(content *string) (LockResult, error) {
@@ -368,7 +368,7 @@ func (s *FileModelsStore) Write(providerID string, entry *ai.ModelsStoreEntry, c
 }
 
 // Delete removes a provider's catalog.
-func (s *FileModelsStore) Delete(providerID string, ctx context.Context) error {
+func (s *FileModelsStore) Delete(ctx context.Context, providerID string) error {
 	var latest storedModels
 	var latestOrder []string
 	_, err := s.storage.WithLockAsync(ctx, func(content *string) (LockResult, error) {

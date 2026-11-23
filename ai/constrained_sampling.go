@@ -3,6 +3,7 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -408,7 +409,7 @@ func ResolveJSONSchemaStrictSampling(tool Tool, supportsStrictMode bool, check U
 	cfg := config.Config
 	if supportsStrictMode {
 		if _, err := makeStrictSubSchema(tool.Parameters, check); err != nil {
-			if _, ok := err.(*strictSchemaError); ok {
+			if _, ok := errors.AsType[*strictSchemaError](err); ok {
 				if cfg.Strict != "require" {
 					return false, true, nil
 				}

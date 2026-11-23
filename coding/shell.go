@@ -2,6 +2,7 @@ package coding
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -239,7 +240,7 @@ func GetPowerShellConfig() (ShellConfig, error) {
 // (upstream v1.4.0 61060ddf8).
 func resolvePowerShellShell(goos string, getenv func(string) string, findOnPath func(string) string, exists func(string) bool) (ShellConfig, error) {
 	if goos != "windows" {
-		return ShellConfig{}, fmt.Errorf("The powershell tool is only available on Windows.")
+		return ShellConfig{}, errors.New("The powershell tool is only available on Windows.")
 	}
 	shell := findOnPath("pwsh.exe")
 	if shell == "" && getenv("ProgramFiles") != "" {
@@ -252,7 +253,7 @@ func resolvePowerShellShell(goos string, getenv func(string) string, findOnPath 
 		shell = firstExisting(filepath.Join(getenv("SystemRoot"), "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), exists)
 	}
 	if shell == "" {
-		return ShellConfig{}, fmt.Errorf("No PowerShell executable found. Install PowerShell or add powershell.exe/pwsh.exe to PATH.")
+		return ShellConfig{}, errors.New("No PowerShell executable found. Install PowerShell or add powershell.exe/pwsh.exe to PATH.")
 	}
 	return ShellConfig{Shell: shell, Args: append([]string{}, PowerShellArgs...)}, nil
 }

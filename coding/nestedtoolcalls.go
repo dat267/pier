@@ -126,14 +126,14 @@ func (r *NestedCallRecorder) Snapshot() *ai.NestedToolCalls {
 }
 
 // truncateUTF16 keeps the first max UTF-16 code units (upstream `.slice`).
-func truncateUTF16(value string, max int) string {
-	if max <= 0 {
+func truncateUTF16(value string, limit int) string {
+	if limit <= 0 {
 		return ""
 	}
 	// A string holds at least as many bytes as UTF-16 units, so a short one
 	// fits without counting; JSSlice walks only the kept prefix (D426, D517).
-	if len(value) <= max || ai.JSLength(value) <= max {
+	if len(value) <= limit || ai.JSLength(value) <= limit {
 		return value
 	}
-	return ai.JSSlice(value, 0, max)
+	return ai.JSSlice(value, 0, limit)
 }

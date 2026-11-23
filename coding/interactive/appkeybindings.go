@@ -433,7 +433,7 @@ func indentJSON(out *strings.Builder, raw json.RawMessage, depth int) {
 	inString := false
 	escaped := false
 	level := 0
-	for index := 0; index < len(trimmed); index++ {
+	for index := range len(trimmed) {
 		char := trimmed[index]
 		if inString {
 			if escaped {

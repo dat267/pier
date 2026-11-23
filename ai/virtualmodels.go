@@ -55,11 +55,11 @@ func WrapProviderWithVirtualModels(providerID string, provider *Provider, virtua
 	}
 	originalFilter := provider.FilterModels
 	clone.FilterModels = func(models []*Model, credential *Credential) []*Model {
-		real := physical(models)
+		realModels := physical(models)
 		if originalFilter != nil {
-			real = originalFilter(real, credential)
+			realModels = originalFilter(realModels, credential)
 		}
-		return append(real, virtual(models)...)
+		return append(realModels, virtual(models)...)
 	}
 	// upstream: filterAllModels && ((models, credential) => [...filterAllModels(physical(models), credential), ...virtual(models)])
 	if originalAll := provider.FilterAllModels; originalAll != nil {

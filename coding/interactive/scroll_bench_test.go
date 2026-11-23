@@ -87,9 +87,9 @@ func newTestAppB(tb testing.TB) (*App, func()) {
 	dir := tb.TempDir()
 	refresh := false
 	credentials := ai.NewInMemoryCredentialStore()
-	if _, err := credentials.Modify("anthropic", func(*ai.Credential) (*ai.Credential, error) {
+	if _, err := credentials.Modify(context.Background(), "anthropic", func(*ai.Credential) (*ai.Credential, error) {
 		return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "test-key"}}, nil
-	}, context.Background()); err != nil {
+	}); err != nil {
 		tb.Fatalf("seed credential: %v", err)
 	}
 	runtime, err := coding.CreateModelRuntime(coding.CreateModelRuntimeOptions{

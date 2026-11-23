@@ -449,7 +449,7 @@ func (c *ToolExecutionComponent) updateDisplay() {
 		bgFn = func(text string) string { return theme.Bg("toolSuccessBg", text) }
 	}
 
-	hasContent := false
+	var hasContent bool
 	c.hideComponent = false
 	if c.hasRendererDefinition() {
 		renderContainer := c.contentBox

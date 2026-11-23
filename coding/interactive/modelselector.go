@@ -169,19 +169,19 @@ func NewModelSelectorComponent(host tui.RenderRequester, post func(fn func()), c
 func (c *ModelSelectorComponent) loadModelsFromSnapshot() {
 	var items []modelItem
 	for _, model := range c.runtime.GetAvailableSnapshot() {
-		items = append(items, modelItem{provider: string(model.Provider), id: model.ID, model: model})
+		items = append(items, modelItem{provider: model.Provider, id: model.ID, model: model})
 	}
 	c.allModels = c.sortModels(items)
 
 	for index, scoped := range c.scopedModels {
-		if refreshed := c.runtime.GetModel(string(scoped.Model.Provider), scoped.Model.ID); refreshed != nil {
+		if refreshed := c.runtime.GetModel(scoped.Model.Provider, scoped.Model.ID); refreshed != nil {
 			c.scopedModels[index].Model = refreshed
 		}
 	}
 	c.scopedItems = make([]modelItem, 0, len(c.scopedModels))
 	for _, scoped := range c.scopedModels {
 		c.scopedItems = append(c.scopedItems, modelItem{
-			provider: string(scoped.Model.Provider), id: scoped.Model.ID, model: scoped.Model,
+			provider: scoped.Model.Provider, id: scoped.Model.ID, model: scoped.Model,
 		})
 	}
 	c.activeModels = c.allModels
@@ -350,7 +350,7 @@ func (c *ModelSelectorComponent) getScopeHintText() string {
 
 func (c *ModelSelectorComponent) isDefaultModel(model *ai.Model) bool {
 	return c.defaultModel != nil && model != nil &&
-		c.defaultModel.Provider == string(model.Provider) && c.defaultModel.ID == model.ID
+		c.defaultModel.Provider == model.Provider && c.defaultModel.ID == model.ID
 }
 
 func (c *ModelSelectorComponent) isDefaultSearch(query string) bool {

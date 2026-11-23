@@ -902,12 +902,12 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 						return
 					}
 					if target.ModelID == "" {
-						fail(fmt.Errorf("modelId is required"), "", 0, nil)
+						fail(errors.New("modelId is required"), "", 0, nil)
 						return
 					}
-					copy := *model
-					copy.ID = target.ModelID
-					requestModel, payload = &copy, next
+					copied := *model
+					copied.ID = target.ModelID
+					requestModel, payload = &copied, next
 				}
 			}
 			body, err := marshalBedrockCommand(payload, false)
@@ -993,11 +993,11 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 			return
 		}
 		if ctxErr(ctx) != nil {
-			fail(fmt.Errorf("Request was aborted"), requestID, response.StatusCode, response.Header)
+			fail(errors.New("Request was aborted"), requestID, response.StatusCode, response.Header)
 			return
 		}
 		if output.StopReason == StopPending {
-			fail(fmt.Errorf("Bedrock stream ended without a stop reason"), requestID, response.StatusCode, response.Header)
+			fail(errors.New("Bedrock stream ended without a stop reason"), requestID, response.StatusCode, response.Header)
 			return
 		}
 		if output.StopReason == StopError || output.StopReason == StopAborted {
@@ -1101,7 +1101,7 @@ func sanitizeBedrockHTTPErrorCode(code string) string {
 // withBedrockStatus attaches HTTP metadata to an error for formatting and
 // diagnostics.
 func withBedrockStatus(err error, status int, headers http.Header) error {
-	providerErr, ok := err.(*ProviderError)
+	providerErr, ok := errors.AsType[*ProviderError](err)
 	if !ok {
 		if status == 0 {
 			return err
@@ -1124,7 +1124,7 @@ func readBedrockConverseStream(
 ) error {
 	for {
 		message, err := ReadAWSEventStreamMessage(body)
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return nil
 		}
 		if err != nil {
@@ -1170,7 +1170,7 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 			return err
 		}
 		if event.Role != "" && event.Role != "assistant" {
-			return fmt.Errorf("Unexpected assistant message start but got user message start instead")
+			return errors.New("Unexpected assistant message start but got user message start instead")
 		}
 		stream.Push(AssistantMessageEvent{Type: EventStart, Partial: output})
 	case "contentBlockStart":
@@ -1450,7 +1450,7 @@ func bedrockErrorMessageText(raw json.RawMessage) (string, bool) {
 
 // bedrockExceptionCode carries the AWS modeled exception name.
 func bedrockExceptionCode(err error) string {
-	if awsErr, ok := err.(*BedrockServiceError); ok {
+	if awsErr, ok := errors.AsType[*BedrockServiceError](err); ok {
 		return awsErr.Code
 	}
 	return ""

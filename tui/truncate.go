@@ -178,7 +178,7 @@ func TruncateToWidth(text string, maxWidth int, ellipsis string, pad bool) strin
 	keptWidth := 0
 	keepContiguousPrefix := true
 	overflowed := false
-	exhaustedInput := false
+	var exhaustedInput bool
 	hasAnsi := strings.Contains(text, "\x1b")
 	hasTabs := strings.Contains(text, "\t")
 

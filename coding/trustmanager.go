@@ -2,6 +2,7 @@ package coding
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -247,7 +248,7 @@ func acquireTrustLockSync(path string) (func(), error) {
 	if lastErr != nil {
 		return nil, lastErr
 	}
-	return nil, fmt.Errorf("Failed to acquire trust store lock")
+	return nil, errors.New("Failed to acquire trust store lock")
 }
 
 // HasTrustRequiringProjectResources reports whether cwd has project-local

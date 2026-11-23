@@ -153,7 +153,7 @@ func PollOAuthDeviceCodeFlow[T any](options OAuthDeviceCodePollOptions[T]) (T, e
 			return 0, false
 		}
 		secondsLeft := expiresInSeconds - elapsedSeconds
-		maxSeconds := int64(math.MaxInt64 / int64(time.Second))
+		maxSeconds := (math.MaxInt64 / int64(time.Second))
 		if secondsLeft > maxSeconds {
 			return time.Duration(math.MaxInt64), true
 		}

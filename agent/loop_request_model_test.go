@@ -36,7 +36,7 @@ func TestPrepareRequestRequestScopedModel(t *testing.T) {
 	var seenModels []string
 	config := &AgentLoopConfig{
 		Model: selection, Reasoning: ai.ThinkLow, ConvertToLlm: identityConverter,
-		PrepareRequest: func(request *PrepareRequestContext, _ context.Context) (*AgentRequestUpdate, error) {
+		PrepareRequest: func(_ context.Context, request *PrepareRequestContext) (*AgentRequestUpdate, error) {
 			seenModels = append(seenModels, request.Model.ID)
 			return &AgentRequestUpdate{
 				RequestModel:            &physical,
@@ -45,7 +45,7 @@ func TestPrepareRequestRequestScopedModel(t *testing.T) {
 			}, nil
 		},
 	}
-	stream := AgentLoop([]ai.Message{createUserMessage("go")}, AgentContext{}, config, nil, streamFn)
+	stream := AgentLoop(nil, []ai.Message{createUserMessage("go")}, AgentContext{}, config, streamFn)
 	drainAgentStream(t, stream)
 
 	if streamCalls != 2 || len(streamedModels) != 2 {

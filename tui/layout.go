@@ -342,11 +342,11 @@ func replaceScrollbarCell(
 				b.WriteString(GetActiveBackgroundAnsi(prefix))
 			}
 		}
-		for i := 0; i < column-start; i++ {
+		for range column - start {
 			b.WriteByte(' ')
 		}
 		b.WriteString(replacement)
-		for i := 0; i < end-column-1; i++ {
+		for range end - column - 1 {
 			b.WriteByte(' ')
 		}
 	}
@@ -480,14 +480,14 @@ func paintScrollbar(box *LayoutBox, screen []string, totalWidth int) {
 		return
 	}
 
-	for offset := 0; offset < geometry.TrackHeight; offset++ {
+	for offset := range geometry.TrackHeight {
 		row := geometry.TrackTop + offset
 		if row < box.Clip.Y || row >= box.Clip.Y+box.Clip.Height || row < 0 || row >= len(screen) {
 			continue
 		}
 		isThumb := row >= geometry.ThumbTop && row < geometry.ThumbTop+geometry.ThumbHeight
 		base := screen[row]
-		replacement := ""
+		var replacement string
 		if isThumb {
 			thumb := "┃"
 			if box.ScrollView.IsScrollbarActive() {

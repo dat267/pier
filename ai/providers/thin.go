@@ -2,7 +2,7 @@ package providers
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"maps"
 	"strings"
 
@@ -198,7 +198,7 @@ func equalFoldASCII(a, b string) bool {
 	if len(a) != len(b) {
 		return false
 	}
-	for index := 0; index < len(a); index++ {
+	for index := range len(a) {
 		ca, cb := a[index], b[index]
 		if 'A' <= ca && ca <= 'Z' {
 			ca += 'a' - 'A'
@@ -497,7 +497,7 @@ func (azureOpenAIResponsesStreams) StreamSimple(model *ai.Model, context ai.Tran
 // jsonUnmarshalLenient decodes a credential extra field.
 func jsonUnmarshalLenient(raw []byte, target any) error {
 	if len(raw) == 0 {
-		return fmt.Errorf("empty value")
+		return errors.New("empty value")
 	}
 	return json.Unmarshal(raw, target)
 }

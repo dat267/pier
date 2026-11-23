@@ -10,12 +10,12 @@ type ModelRegistry interface {
 	GetModels(string) []*Model
 	GetModel(string, string) *Model
 	Refresh(*ModelsRefreshOptions) ModelsRefreshResult
-	CheckAuth(string, context.Context) (*AuthCheck, error)
-	GetAvailable(string, context.Context) ([]*Model, error)
+	CheckAuth(context.Context, string) (*AuthCheck, error)
+	GetAvailable(context.Context, string) ([]*Model, error)
 	GetAuth(string, *AuthResolutionOverrides) (*AuthResult, error)
 	GetAuthForModel(*Model, *AuthResolutionOverrides) (*AuthResult, error)
 	Login(string, AuthType, *AuthInteraction) (*Credential, error)
-	Logout(string, context.Context) error
+	Logout(context.Context, string) error
 	Stream(*Model, Context, *ModelsStreamOptions) *AssistantMessageEventStream
 	Complete(*Model, Context, *ModelsStreamOptions) (*AssistantMessage, error)
 	StreamSimple(*Model, Context, *ModelsSimpleStreamOptions) *AssistantMessageEventStream

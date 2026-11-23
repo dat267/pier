@@ -127,7 +127,7 @@ func TestOutputAccumulatorReplacesIncompleteUTF8BeforeInvalidContinuation(t *tes
 func TestBashSimpleOutput(t *testing.T) {
 	dir := t.TempDir()
 	tool := CreateBashTool(dir, nil)
-	result, err := tool.Execute("c", json.RawMessage(`{"command":"echo hello"}`), context.Background(), nil)
+	result, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"echo hello"}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func TestBashSimpleOutput(t *testing.T) {
 func TestBashStdoutAndStderr(t *testing.T) {
 	dir := t.TempDir()
 	tool := CreateBashTool(dir, nil)
-	result, err := tool.Execute("c", json.RawMessage(`{"command":"echo out; echo err 1>&2"}`), context.Background(), nil)
+	result, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"echo out; echo err 1>&2"}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestBashCapturesOutputWrittenAfterShellExit(t *testing.T) {
 	// startup.
 	command := `(touch ready; sleep 0.2; printf late) & while [ ! -f ready ]; do sleep 0.01; done; sleep 0.15; exit 0`
 	params, _ := json.Marshal(map[string]string{"command": command})
-	result, err := tool.Execute("c", params, context.Background(), nil)
+	result, err := tool.Execute(context.Background(), "c", params, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +236,7 @@ func TestExecuteBashAbortDoesNotWaitForDetachedWriter(t *testing.T) {
 func TestBashNonZeroExitIsErrorResult(t *testing.T) {
 	dir := t.TempDir()
 	tool := CreateBashTool(dir, nil)
-	result, err := tool.Execute("c", json.RawMessage(`{"command":"echo before; exit 3"}`), context.Background(), nil)
+	result, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"echo before; exit 3"}`), nil)
 	if err != nil {
 		t.Fatalf("err = %v; want an isError result", err)
 	}
@@ -254,7 +254,7 @@ func TestBashNonZeroExitIsErrorResult(t *testing.T) {
 func TestBashNonZeroExitKeepsNoOutputPlaceholder(t *testing.T) {
 	dir := t.TempDir()
 	tool := CreateBashTool(dir, nil)
-	result, err := tool.Execute("c", json.RawMessage(`{"command":"exit 3"}`), context.Background(), nil)
+	result, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"exit 3"}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,7 +270,7 @@ func TestBashNonZeroExitKeepsTruncationDetails(t *testing.T) {
 	t.Setenv("TMPDIR", t.TempDir())
 	dir := t.TempDir()
 	tool := CreateBashTool(dir, nil)
-	result, err := tool.Execute("c", json.RawMessage(`{"command":"head -c 60000 /dev/zero | tr '\\0' a; exit 7"}`), context.Background(), nil)
+	result, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"head -c 60000 /dev/zero | tr '\\0' a; exit 7"}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -322,7 +322,7 @@ func TestBashSignalKillIsNotSuccess(t *testing.T) {
 	// A signal-terminated command must report failure (isError), never success.
 	dir := t.TempDir()
 	tool := CreateBashTool(dir, nil)
-	result, err := tool.Execute("c", json.RawMessage(`{"command":"kill -TERM $$"}`), context.Background(), nil)
+	result, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"kill -TERM $$"}`), nil)
 	if err != nil {
 		t.Fatalf("err = %v; want an isError result", err)
 	}
@@ -343,7 +343,7 @@ func TestBashTruncationKeepsTail(t *testing.T) {
 	dir := t.TempDir()
 	tool := CreateBashTool(dir, nil)
 	// 3000 lines → tail-truncated to the last 2000 with the notice.
-	result, err := tool.Execute("c", json.RawMessage(`{"command":"seq 1 3000"}`), context.Background(), nil)
+	result, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"seq 1 3000"}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -392,7 +392,7 @@ func TestBashTimeout(t *testing.T) {
 	// command that cannot finish, and bashTimeoutMessage's whole-second wording is
 	// pinned by TestBashTimeoutMessage. The margin only has to clear the shell's
 	// own startup.
-	_, err := tool.Execute("c", json.RawMessage(`{"command":"echo partial; sleep 30","timeout":0.2}`), context.Background(), nil)
+	_, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"echo partial; sleep 30","timeout":0.2}`), nil)
 	elapsed := time.Since(start)
 	if err == nil || !strings.Contains(err.Error(), "Command timed out after 0.2 seconds") {
 		t.Fatalf("err = %v", err)
@@ -425,7 +425,7 @@ func TestBashTimeoutAfterTheShellExited(t *testing.T) {
 		if marshalErr != nil {
 			t.Fatal(marshalErr)
 		}
-		_, err := tool.Execute("c", json.RawMessage(fmt.Sprintf(`{"command":%s,"timeout":0.3}`, encoded)), context.Background(), nil)
+		_, err := tool.Execute(context.Background(), "c", json.RawMessage(fmt.Sprintf(`{"command":%s,"timeout":0.3}`, encoded)), nil)
 		if err == nil || !strings.Contains(err.Error(), "Command timed out after 0.3 seconds") {
 			t.Fatalf("exit %s: err = %v", exit, err)
 		}
@@ -435,12 +435,12 @@ func TestBashTimeoutAfterTheShellExited(t *testing.T) {
 		}
 	}
 	// A shell the deadline killed has no earlier exit to report.
-	_, err := tool.Execute("c", json.RawMessage(`{"command":"sleep 30","timeout":0.2}`), context.Background(), nil)
+	_, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"sleep 30","timeout":0.2}`), nil)
 	if err == nil || strings.Contains(err.Error(), "The shell exited with code") {
 		t.Fatalf("running shell timeout = %v", err)
 	}
 	// A command that exits in time still reports its exit code.
-	result, err := tool.Execute("c", json.RawMessage(`{"command":"exit 7","timeout":5}`), context.Background(), nil)
+	result, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"exit 7","timeout":5}`), nil)
 	if err != nil || !result.IsError || len(result.Content) == 0 ||
 		!strings.Contains(result.Content[0].(ai.TextContent).Text, "Command exited with code 7") {
 		t.Fatalf("in-time exit = %#v, %v", result, err)
@@ -460,7 +460,7 @@ func TestBashDefaultTimeoutEndsAHungCommand(t *testing.T) {
 	t.Cleanup(func() { defaultBashTimeoutSeconds = previous })
 	tool := CreateBashTool(t.TempDir(), nil)
 	start := time.Now()
-	_, err := tool.Execute("c", json.RawMessage(`{"command":"echo before-hang; sleep 30"}`), context.Background(), nil)
+	_, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"echo before-hang; sleep 30"}`), nil)
 	if err == nil || !strings.Contains(err.Error(), "before-hang") ||
 		!strings.Contains(err.Error(), "Command timed out after 0.3 seconds (the default timeout; pass a larger timeout if the command needs longer)") {
 		t.Fatalf("err = %v", err)
@@ -469,12 +469,12 @@ func TestBashDefaultTimeoutEndsAHungCommand(t *testing.T) {
 		t.Fatalf("the default timeout was not honored: %v", elapsed)
 	}
 	// An explicit timeout replaces the default and keeps upstream's message.
-	_, err = tool.Execute("c", json.RawMessage(`{"command":"sleep 30","timeout":0.2}`), context.Background(), nil)
+	_, err = tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"sleep 30","timeout":0.2}`), nil)
 	if err == nil || !strings.HasSuffix(err.Error(), "Command timed out after 0.2 seconds") {
 		t.Fatalf("explicit err = %v", err)
 	}
 	// A command that finishes in time is unaffected.
-	if result, err := tool.Execute("c", json.RawMessage(`{"command":"echo quick"}`), context.Background(), nil); err != nil ||
+	if result, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"echo quick"}`), nil); err != nil ||
 		!strings.Contains(result.Content[0].(ai.TextContent).Text, "quick") {
 		t.Fatalf("quick = %v %v", result, err)
 	}
@@ -508,7 +508,7 @@ func TestBashAbort(t *testing.T) {
 		cancel()
 	}()
 	start := time.Now()
-	_, err := tool.Execute("c", json.RawMessage(`{"command":"echo started; sleep 30"}`), ctx, onUpdate)
+	_, err := tool.Execute(ctx, "c", json.RawMessage(`{"command":"echo started; sleep 30"}`), onUpdate)
 	if err == nil || !strings.Contains(err.Error(), "Command aborted") {
 		t.Fatalf("err = %v", err)
 	}
@@ -524,7 +524,7 @@ func TestBashWorkingDirectoryAndMissingCwd(t *testing.T) {
 	dir := t.TempDir()
 	os.MkdirAll(filepath.Join(dir, "sub"), 0o755)
 	tool := CreateBashTool(filepath.Join(dir, "sub"), nil)
-	result, err := tool.Execute("c", json.RawMessage(`{"command":"pwd"}`), context.Background(), nil)
+	result, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"pwd"}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -533,7 +533,7 @@ func TestBashWorkingDirectoryAndMissingCwd(t *testing.T) {
 	}
 
 	missing := CreateBashTool(filepath.Join(dir, "nope"), nil)
-	if _, err := missing.Execute("c", json.RawMessage(`{"command":"echo hi"}`), context.Background(), nil); err == nil ||
+	if _, err := missing.Execute(context.Background(), "c", json.RawMessage(`{"command":"echo hi"}`), nil); err == nil ||
 		!strings.Contains(err.Error(), "Working directory does not exist") {
 		t.Fatalf("missing cwd err = %v", err)
 	}
@@ -544,7 +544,7 @@ func TestBashSessionEnvStripped(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("PI_MODEL", "leak")
 	tool := CreateBashTool(dir, nil)
-	result, err := tool.Execute("c", json.RawMessage(`{"command":"env | grep '^PI_MODEL=' | wc -l"}`), context.Background(), nil)
+	result, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"env | grep '^PI_MODEL=' | wc -l"}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -554,7 +554,7 @@ func TestBashSessionEnvStripped(t *testing.T) {
 
 	// Explicit session env exposure.
 	exposing := CreateBashTool(dir, &BashToolOptions{SessionEnv: map[string]string{"PI_MODEL": "gpt-5"}})
-	result, err = exposing.Execute("c", json.RawMessage(`{"command":"echo $PI_MODEL"}`), context.Background(), nil)
+	result, err = exposing.Execute(context.Background(), "c", json.RawMessage(`{"command":"echo $PI_MODEL"}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -624,7 +624,7 @@ func TestBashAbortDetachedWriter(t *testing.T) {
 		cancelledAt <- time.Now()
 	}()
 
-	_, err := tool.Execute("c", json.RawMessage(fmt.Sprintf(`{"command":%s}`, strconv.Quote(command))), ctx, onUpdate)
+	_, err := tool.Execute(ctx, "c", json.RawMessage(fmt.Sprintf(`{"command":%s}`, strconv.Quote(command))), onUpdate)
 	returnedAt := time.Now()
 	if err == nil || !strings.Contains(err.Error(), "Command aborted") {
 		t.Fatalf("err = %v", err)
@@ -681,7 +681,7 @@ func TestBashStreamedUpdatesAreSerializedInOrder(t *testing.T) {
 		mu.Unlock()
 	}
 
-	if _, err := tool.Execute("c", json.RawMessage(`{"command":"printf a; sleep 0.15; printf b"}`), context.Background(), onUpdate); err != nil {
+	if _, err := tool.Execute(context.Background(), "c", json.RawMessage(`{"command":"printf a; sleep 0.15; printf b"}`), onUpdate); err != nil {
 		t.Fatal(err)
 	}
 
@@ -706,7 +706,7 @@ func TestBashStreamedUpdatesAreSerializedInOrder(t *testing.T) {
 func TestBashStreamingUpdateOmitsAnEmptyFullOutputPath(t *testing.T) {
 	dir := t.TempDir()
 	var updates []string
-	if _, err := CreateBashTool(dir, nil).Execute("id", json.RawMessage(`{"command":"echo hi"}`), context.Background(), func(update agent.AgentToolResult) {
+	if _, err := CreateBashTool(dir, nil).Execute(context.Background(), "id", json.RawMessage(`{"command":"echo hi"}`), func(update agent.AgentToolResult) {
 		updates = append(updates, string(update.Details))
 	}); err != nil {
 		t.Fatal(err)

@@ -1647,7 +1647,7 @@ func (t themeUIAdapter) OnTerminalColorSchemeChange(listener func(theme Terminal
 		OnTerminalColorSchemeChange(func(tui.TerminalColorScheme)) func()
 	}); ok {
 		return renderer.OnTerminalColorSchemeChange(func(scheme tui.TerminalColorScheme) {
-			listener(TerminalTheme(scheme))
+			listener(scheme)
 		})
 	}
 	return func() {}

@@ -95,7 +95,7 @@ func makeTool(name string) AgentTool {
 	return AgentTool{
 		Name: name, Description: name + " tool", Parameters: json.RawMessage(`{"type":"object"}`),
 		Label: name,
-		Execute: func(string, json.RawMessage, context.Context, func(AgentToolResult)) (AgentToolResult, error) {
+		Execute: func(context.Context, string, json.RawMessage, func(AgentToolResult)) (AgentToolResult, error) {
 			return AgentToolResult{Content: []ai.Content{ai.TextContent{Text: name}}, Details: json.RawMessage(`{}`)}, nil
 		},
 	}
@@ -108,7 +108,7 @@ func TestAgentRunFailureEmitsLifecycle(t *testing.T) {
 		},
 	})
 	var events []AgentEvent
-	agent.Subscribe(func(event AgentEvent, ctx context.Context) error {
+	agent.Subscribe(func(ctx context.Context, event AgentEvent) error {
 		events = append(events, event)
 		return nil
 	})
@@ -190,9 +190,9 @@ func TestAgentBeforeToolCallReachesTheLoop(t *testing.T) {
 	ran := 0
 	tool := makeTool("echo")
 	original := tool.Execute
-	tool.Execute = func(id string, params json.RawMessage, ctx context.Context, onUpdate func(AgentToolResult)) (AgentToolResult, error) {
+	tool.Execute = func(ctx context.Context, id string, params json.RawMessage, onUpdate func(AgentToolResult)) (AgentToolResult, error) {
 		ran++
-		return original(id, params, ctx, onUpdate)
+		return original(ctx, id, params, onUpdate)
 	}
 
 	assistant := createAssistantMessage(ai.ContentList{
@@ -203,7 +203,7 @@ func TestAgentBeforeToolCallReachesTheLoop(t *testing.T) {
 	a, err := NewAgent(&AgentOptions{
 		InitialState: &AgentInitialState{SystemPrompt: "sys", Tools: []AgentTool{tool}, Model: createModel()},
 		StreamFn:     streamFn,
-		BeforeToolCall: func(call *BeforeToolCallContext, ctx context.Context) (*BeforeToolCallResult, error) {
+		BeforeToolCall: func(ctx context.Context, call *BeforeToolCallContext) (*BeforeToolCallResult, error) {
 			if call.ToolCall.Name == "echo" {
 				return &BeforeToolCallResult{Block: true, Reason: "denied by the test"}, nil
 			}
@@ -401,6 +401,7 @@ func TestAssistantMessageRecordsRequestedThinkingLevel(t *testing.T) {
 	for _, level := range []ai.ThinkingLevel{"", ai.ThinkHigh} {
 		streamFn, _ := mockStreamFn(createAssistantMessage(ai.ContentList{ai.TextContent{Text: "ok"}}, ai.StopStop))
 		messages := RunAgentLoop(
+			context.Background(),
 			[]ai.Message{createUserMessage("hi")},
 			AgentContext{},
 			&AgentLoopConfig{
@@ -408,7 +409,6 @@ func TestAssistantMessageRecordsRequestedThinkingLevel(t *testing.T) {
 				ConvertToLlm: identityConverter,
 				Reasoning:    level,
 			},
-			context.Background(),
 			func(AgentEvent) error { return nil },
 			streamFn,
 		)
@@ -458,7 +458,7 @@ func TestFailureLifecycleListenerErrorReachesCaller(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := errors.New("listener failed")
-	a.Subscribe(func(AgentEvent, context.Context) error { return want })
+	a.Subscribe(func(context.Context, AgentEvent) error { return want })
 	if err := a.PromptText(context.Background(), "x"); !errors.Is(err, want) {
 		t.Fatalf("error=%v; want %v", err, want)
 	}

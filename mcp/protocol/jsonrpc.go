@@ -3,7 +3,7 @@ package protocol
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
 	"math"
 	"strconv"
@@ -49,7 +49,7 @@ func (id *JsonRpcId) UnmarshalJSON(data []byte) error {
 	}
 	var num *float64
 	if err := json.Unmarshal(data, &num); err != nil || num == nil {
-		return fmt.Errorf("json-rpc id must be a string or a finite number")
+		return errors.New("json-rpc id must be a string or a finite number")
 	}
 	id.IsStr, id.Str, id.Num = false, "", *num
 	return nil
@@ -273,7 +273,7 @@ func decodeJSONValue(data []byte) (any, error) {
 		return nil, err
 	}
 	if _, err := dec.Token(); err != io.EOF {
-		return nil, fmt.Errorf("unexpected data after the JSON value")
+		return nil, errors.New("unexpected data after the JSON value")
 	}
 	return value, nil
 }

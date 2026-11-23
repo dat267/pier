@@ -19,7 +19,7 @@ func TestCreateAgentSessionHonoursTheGoalFeatureSetting(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := runtime.SetRuntimeAPIKey("anthropic", "sk-1", ctxpkg.Background()); err != nil {
+	if err := runtime.SetRuntimeAPIKey(ctxpkg.Background(), "anthropic", "sk-1"); err != nil {
 		t.Fatal(err)
 	}
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})

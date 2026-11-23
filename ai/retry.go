@@ -83,7 +83,9 @@ func parseJSFloatPrefix(value string) (float64, bool) {
 // isRetryableProviderError mirrors the pinned OpenAI/Anthropic SDK retry
 // policy; review when either SDK is upgraded.
 func isRetryableProviderError(err error) bool {
-	pe, ok := err.(*ProviderError)
+	// An exact match, not errors.AsType: a ModelsError wrapping a failed OAuth
+	// refresh's ProviderError must not become retryable through its cause.
+	pe, ok := err.(*ProviderError) // exact match, see above
 	if !ok {
 		if requestErr, ok := errors.AsType[*url.Error](err); ok {
 			if errors.Is(requestErr.Err, context.Canceled) {
@@ -193,7 +195,7 @@ func RetryProviderRequest(ctx context.Context, request func() (*http.Response, e
 		}
 		retryIndex := maxRetries - retriesRemaining
 		retriesRemaining--
-		retryError, isProviderError := err.(*ProviderError)
+		retryError, isProviderError := err.(*ProviderError) // exact match, as isRetryableProviderError
 		if !isProviderError {
 			retryError = &ProviderError{Message: err.Error()}
 		}
@@ -288,9 +290,9 @@ type RetryCallbacks struct {
 // RetryAssistantCall runs a single assistant-producing call with bounded
 // retry on transient errors (port of retryAssistantCall).
 func RetryAssistantCall(
+	ctx context.Context,
 	produce func() (*AssistantMessage, error),
 	policy *RetryPolicy,
-	ctx context.Context,
 	callbacks *RetryCallbacks,
 ) (*AssistantMessage, error) {
 	maxAttempts := 0
@@ -306,7 +308,7 @@ func RetryAssistantCall(
 
 	attempt := 0
 	lastRetry := -1
-	lastErrorMessage := ""
+	var lastErrorMessage string
 	for {
 		response, err := produce()
 		if err != nil {

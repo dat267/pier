@@ -67,13 +67,13 @@ func (t *InMemoryTransport) Send(ctx context.Context, message Message) error {
 	if !peerStarted || peerClosed {
 		return &protocol.McpConnectionClosedError{Msg: "In-memory MCP peer is not connected"}
 	}
-	copy, err := cloneMessage(message)
+	copied, err := cloneMessage(message)
 	if err != nil {
 		return err
 	}
 	peer.mu.Lock()
 	if !peer.closed {
-		peer.pending = append(peer.pending, copy)
+		peer.pending = append(peer.pending, copied)
 		if !peer.delivering {
 			peer.delivering = true
 			go peer.deliver()

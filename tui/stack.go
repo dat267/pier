@@ -175,14 +175,14 @@ func distributeStackSizes(sizes []int, entries []StackLayoutEntry, amount int, m
 			if remaining <= 0 {
 				break
 			}
-			weight := 0.0
+			var weight float64
 			if mode == "grow" {
 				weight = float64(item.entry.Grow)
 			} else {
 				weight = float64(item.entry.Shrink) * float64(max(1, sizes[item.index]))
 			}
 			proposed := max(1, int(math.Floor(float64(remaining)*weight/totalWeight)))
-			capacity := 0
+			var capacity int
 			if mode == "grow" {
 				capacity = item.entry.MaxSize - sizes[item.index]
 			} else {
@@ -264,7 +264,7 @@ func (v *VStack) Render(width int) []string {
 	lines := make([]string, 0)
 	for index := range entries {
 		if index > 0 {
-			for gap := 0; gap < v.Gap; gap++ {
+			for range v.Gap {
 				lines = append(lines, "")
 			}
 		}

@@ -117,7 +117,7 @@ func (override *SettingsCompactionOverride) UnmarshalJSON(data []byte) error {
 	}
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(data, &fields); err != nil || fields == nil {
-		return fmt.Errorf("invalid compaction model override")
+		return errors.New("invalid compaction model override")
 	}
 	var parsed SettingsCompactionOverride
 	// A token count is a JSON number; 1e6 must not be dropped.
@@ -241,7 +241,7 @@ func (settings *SettingsCompaction) UnmarshalJSON(data []byte) error {
 	}
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(data, &fields); err != nil || fields == nil {
-		return fmt.Errorf("invalid compaction settings")
+		return errors.New("invalid compaction settings")
 	}
 	var parsed SettingsCompaction
 	if raw, ok := fields["enabled"]; ok {
@@ -1904,7 +1904,7 @@ func (m *SettingsManager) FlushPersists() {
 
 func (m *SettingsManager) saveProjectSettings(settings *Settings) {
 	if !m.projectTrusted {
-		m.recordErrorLocked(SettingsScopeProject, fmt.Errorf("Project is not trusted; refusing to write project settings"))
+		m.recordErrorLocked(SettingsScopeProject, errors.New("Project is not trusted; refusing to write project settings"))
 		return
 	}
 	m.projectSettings = cloneSettings(settings)
@@ -1920,7 +1920,7 @@ func (m *SettingsManager) saveProjectSettings(settings *Settings) {
 
 func (m *SettingsManager) updateProjectSettings(field string, update func(*Settings)) {
 	if !m.projectTrusted {
-		m.recordErrorLocked(SettingsScopeProject, fmt.Errorf("Project is not trusted; refusing to write project settings"))
+		m.recordErrorLocked(SettingsScopeProject, errors.New("Project is not trusted; refusing to write project settings"))
 		return
 	}
 	projectSettings := cloneSettings(m.projectSettings)

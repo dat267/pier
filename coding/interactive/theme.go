@@ -233,22 +233,22 @@ func styleColorsEnabled() bool {
 // chalk does: an empty string gets no codes, an inner copy of the close code is
 // reopened, and the style closes before every newline and reopens after it so it
 // cannot bleed across lines (chalk applyStyle and stringEncaseCRLFWithFirstIndex).
-func chalkStyle(open, close, text string) string {
+func chalkStyle(open, closeCode, text string) string {
 	if !styleColorsEnabled() || text == "" {
 		return text
 	}
 	if strings.Contains(text, "\x1b") {
-		text = strings.ReplaceAll(text, close, close+open)
+		text = strings.ReplaceAll(text, closeCode, closeCode+open)
 	}
 	if index := strings.IndexByte(text, '\n'); index != -1 {
-		text = encaseNewlines(text, close, open, index)
+		text = encaseNewlines(text, closeCode, open, index)
 	}
-	return open + text + close
+	return open + text + closeCode
 }
 
 // encaseNewlines puts close before each newline (before the CR of a CRLF) and
 // open after it, the way chalk's stringEncaseCRLFWithFirstIndex does.
-func encaseNewlines(text, close, open string, index int) string {
+func encaseNewlines(text, closeCode, open string, index int) string {
 	var b strings.Builder
 	b.Grow(len(text) + 8)
 	end := 0
@@ -258,7 +258,7 @@ func encaseNewlines(text, close, open string, index int) string {
 			cut = index - 1
 		}
 		b.WriteString(text[end:cut])
-		b.WriteString(close)
+		b.WriteString(closeCode)
 		if cut != index {
 			b.WriteString("\r\n")
 		} else {
@@ -512,12 +512,12 @@ func getTerminalTheme() string {
 	scheme := systemThemeState.scheme
 	systemThemeState.mu.Unlock()
 	if scheme != nil {
-		return string(*scheme)
+		return *scheme
 	}
 	if detection := DetectTerminalBackgroundFromEnv(os.Getenv); detection.Source == "COLORFGBG" {
-		return string(detection.Theme)
+		return detection.Theme
 	}
-	return string(TerminalThemeDark)
+	return TerminalThemeDark
 }
 
 // averageLightness is the mean OKLCH lightness of the concrete colors; palette
@@ -1274,7 +1274,7 @@ func getColorFgBgBackgroundIndex(colorfgbg string) (int, bool) {
 	if len(last) < 1 || len(last) > 2 {
 		return 0, false
 	}
-	for index := 0; index < len(last); index++ {
+	for index := range len(last) {
 		if last[index] < '0' || last[index] > '9' {
 			return 0, false
 		}
@@ -1350,7 +1350,7 @@ func hexFromRgb(r int, g int, b int) string {
 
 // GetDefaultTheme returns the environment-detected default theme name.
 func GetDefaultTheme() string {
-	return string(DetectTerminalBackgroundFromEnv(os.Getenv).Theme)
+	return (DetectTerminalBackgroundFromEnv(os.Getenv).Theme)
 }
 
 // ---- Global theme registry ----

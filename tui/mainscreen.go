@@ -398,11 +398,11 @@ func (s *MainScreen) doRender() {
 
 	newLines = s.ApplyLineResets(newLines)
 
-	fullRender := func(clear bool) {
+	fullRender := func(clearScreen bool) {
 		s.fullRedrawCount++
 		output := NewBoundedTerminalWriter(func(data string) { s.Terminal.Write(data) })
 		output.Append("\x1b[?2026h") // Begin synchronized output
-		if clear {
+		if clearScreen {
 			output.Append(s.deleteKittyImages(s.previousKittyImageIDs))
 			output.Append("\x1b[2J\x1b[H\x1b[3J") // Clear screen, home, clear scrollback
 		}
@@ -432,7 +432,7 @@ func (s *MainScreen) doRender() {
 		output.Flush()
 		s.cursorRow = max(0, len(newLines)-1)
 		s.hardwareCursorRow = s.cursorRow
-		if clear {
+		if clearScreen {
 			s.maxLinesRendered = len(newLines)
 		} else {
 			s.maxLinesRendered = max(s.maxLinesRendered, len(newLines))

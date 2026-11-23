@@ -253,7 +253,7 @@ func IterateAnthropicEvents(ctx context.Context, body io.Reader, emit func(anthr
 		}
 	}
 	if sawMessageStart && !sawMessageEnd {
-		return fmt.Errorf("Anthropic stream ended before message_stop")
+		return errors.New("Anthropic stream ended before message_stop")
 	}
 	return nil
 }
@@ -604,7 +604,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				response, err := sendRequest(payload)
 				return response, nil, err
 			}
-			response, sent, err := sendAnthropicThreadRequest(thread, sendRequest, output, ctx)
+			response, sent, err := sendAnthropicThreadRequest(ctx, thread, sendRequest, output)
 			return response, sent, err
 		}
 		resp, thread, requestErr := buildAndSend(buildContext)
@@ -715,7 +715,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				cb := event.ContentBlock
 				if cb.Type == "fallback" {
 					if len(output.Content) > 0 {
-						panic(fmt.Errorf("Anthropic performed an unsupported mid-output model fallback"))
+						panic(errors.New("Anthropic performed an unsupported mid-output model fallback"))
 					}
 					return
 				}
@@ -834,11 +834,11 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 		}
 
 		if ctxErr(ctx) != nil {
-			fail(fmt.Errorf("Request was aborted"))
+			fail(errors.New("Request was aborted"))
 			return
 		}
 		if output.StopReason == StopPending {
-			fail(fmt.Errorf("Anthropic stream ended without a stop reason"))
+			fail(errors.New("Anthropic stream ended without a stop reason"))
 			return
 		}
 		if output.StopReason == StopAborted || output.StopReason == StopError {
@@ -1019,7 +1019,7 @@ func StreamAnthropicSimple(model *Model, context TranscriptContext, options *Sim
 func mapThinkingLevelToEffort(model *Model, level ThinkingLevel) AnthropicEffort {
 	if level != "" {
 		if mapped, ok := model.ThinkingLevelMap[level]; ok && mapped != nil && *mapped != "" {
-			return AnthropicEffort(*mapped)
+			return *mapped
 		}
 	}
 	switch level {

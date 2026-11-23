@@ -32,7 +32,7 @@ func TestConcurrentGoalToolsPreserveReplayableTransitions(t *testing.T) {
 			failures := make(chan error, workers)
 			execute := func(index int) {
 				params := json.RawMessage(fmt.Sprintf(`{"objective":"objective %d"}`, index))
-				result, err := tool.Execute("call", params, context.Background(), nil)
+				result, err := tool.Execute(context.Background(), "call", params, nil)
 				if err != nil {
 					failures <- err
 				} else if result.IsError {
@@ -83,7 +83,7 @@ func TestGoalTransitionNotificationCanReadState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := session.GetToolDefinition("set_goal").Execute("create", json.RawMessage(`{"objective":"work"}`), context.Background(), nil); err != nil {
+	if _, err := session.GetToolDefinition("set_goal").Execute(context.Background(), "create", json.RawMessage(`{"objective":"work"}`), nil); err != nil {
 		t.Fatal(err)
 	}
 	observed := false

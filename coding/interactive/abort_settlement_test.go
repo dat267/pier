@@ -47,7 +47,7 @@ func TestCancelledProviderRendersOneAbortNotice(t *testing.T) {
 	}
 	started := make(chan struct{})
 	var starts, ends int
-	a.Subscribe(func(event agent.AgentEvent, _ context.Context) error {
+	a.Subscribe(func(_ context.Context, event agent.AgentEvent) error {
 		if _, ok := event.Message.(*ai.AssistantMessage); ok {
 			switch event.Type {
 			case agent.MessageStart:

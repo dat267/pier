@@ -16,11 +16,11 @@ func TestBeforeToolCallFailureWinsOverCancellation(t *testing.T) {
 	call := ai.ToolCall{ID: "call", Name: "probe", Arguments: json.RawMessage(`{}`)}
 	outcome := RunToolCall(call, RunToolCallOptions{
 		Signal: ctx,
-		Tools: []AgentTool{{Name: "probe", Parameters: json.RawMessage(`{"type":"object"}`), Execute: func(string, json.RawMessage, context.Context, func(AgentToolResult)) (AgentToolResult, error) {
+		Tools: []AgentTool{{Name: "probe", Parameters: json.RawMessage(`{"type":"object"}`), Execute: func(context.Context, string, json.RawMessage, func(AgentToolResult)) (AgentToolResult, error) {
 			t.Fatal("tool executed after failed hook")
 			return AgentToolResult{}, nil
 		}}},
-		BeforeToolCall: func(*BeforeToolCallContext, context.Context) (*BeforeToolCallResult, error) {
+		BeforeToolCall: func(context.Context, *BeforeToolCallContext) (*BeforeToolCallResult, error) {
 			cancel()
 			return nil, errors.New("fixture hook failed")
 		},
@@ -36,10 +36,10 @@ func TestAfterToolCallNullContentKeepsExecutedContent(t *testing.T) {
 	for _, content := range [][]ai.Content{nil, {}} {
 		call := ai.ToolCall{ID: "call", Name: "probe", Arguments: json.RawMessage(`{}`)}
 		outcome := RunToolCall(call, RunToolCallOptions{
-			Tools: []AgentTool{{Name: "probe", Parameters: json.RawMessage(`{"type":"object"}`), Execute: func(string, json.RawMessage, context.Context, func(AgentToolResult)) (AgentToolResult, error) {
+			Tools: []AgentTool{{Name: "probe", Parameters: json.RawMessage(`{"type":"object"}`), Execute: func(context.Context, string, json.RawMessage, func(AgentToolResult)) (AgentToolResult, error) {
 				return AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "original"}}}, nil
 			}}},
-			AfterToolCall: func(*AfterToolCallContext, context.Context) (*AfterToolCallResult, error) {
+			AfterToolCall: func(context.Context, *AfterToolCallContext) (*AfterToolCallResult, error) {
 				return &AfterToolCallResult{HasContent: true, Content: content}, nil
 			},
 		})
@@ -59,10 +59,10 @@ func TestAfterToolCallNullDetailsKeepExecutedDetails(t *testing.T) {
 	for _, details := range []json.RawMessage{nil, json.RawMessage("null"), json.RawMessage(" \nnull\t")} {
 		call := ai.ToolCall{ID: "call", Name: "probe", Arguments: json.RawMessage(`{}`)}
 		outcome := RunToolCall(call, RunToolCallOptions{
-			Tools: []AgentTool{{Name: "probe", Parameters: json.RawMessage(`{"type":"object"}`), Execute: func(string, json.RawMessage, context.Context, func(AgentToolResult)) (AgentToolResult, error) {
+			Tools: []AgentTool{{Name: "probe", Parameters: json.RawMessage(`{"type":"object"}`), Execute: func(context.Context, string, json.RawMessage, func(AgentToolResult)) (AgentToolResult, error) {
 				return AgentToolResult{Details: json.RawMessage(`{"original":true}`)}, nil
 			}}},
-			AfterToolCall: func(*AfterToolCallContext, context.Context) (*AfterToolCallResult, error) {
+			AfterToolCall: func(context.Context, *AfterToolCallContext) (*AfterToolCallResult, error) {
 				return &AfterToolCallResult{HasDetails: true, Details: details}, nil
 			},
 		})

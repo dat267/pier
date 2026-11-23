@@ -14,7 +14,7 @@ func TestPreparedRequestOptionsKeepCallerCancellation(t *testing.T) {
 	runtime := runtimeWithProviders(t, stubProvider("alpha"))
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	prepared, err := runtime.PrepareRequest(runtime.GetModel("alpha", "alpha-model"), "synthetic-key", nil, ctx, nil, nil)
+	prepared, err := runtime.PrepareRequest(ctx, runtime.GetModel("alpha", "alpha-model"), "synthetic-key", nil, nil, nil)
 	if err != nil || prepared == nil {
 		t.Fatalf("live request prepared=%v, error=%v", prepared != nil, err)
 	}
@@ -34,7 +34,7 @@ func TestPrepareRequestStopsCanceledAuthResolution(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	transformed := false
-	prepared, err := runtime.PrepareRequest(model, "synthetic-key", nil, ctx, nil, func(headers ai.ProviderHeaders) ai.ProviderHeaders {
+	prepared, err := runtime.PrepareRequest(ctx, model, "synthetic-key", nil, nil, func(headers ai.ProviderHeaders) ai.ProviderHeaders {
 		transformed = true
 		return headers
 	})
@@ -44,7 +44,7 @@ func TestPrepareRequestStopsCanceledAuthResolution(t *testing.T) {
 	if transformed {
 		t.Fatal("canceled auth reached the header transform")
 	}
-	if control, err := runtime.PrepareRequest(model, "synthetic-key", nil, context.Background(), nil, nil); err != nil || control == nil {
+	if control, err := runtime.PrepareRequest(context.Background(), model, "synthetic-key", nil, nil, nil); err != nil || control == nil {
 		t.Fatalf("live request prepared=%v, error=%v", control != nil, err)
 	}
 }

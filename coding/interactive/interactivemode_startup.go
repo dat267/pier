@@ -282,8 +282,8 @@ func (w *StartupWiring) GetChangelogForDisplay() string {
 		}
 		return ""
 	}
-	newEntries, comparable := coding.GetNewChangelogEntries(entries, lastVersion)
-	if !comparable {
+	newEntries, isComparable := coding.GetNewChangelogEntries(entries, lastVersion)
+	if !isComparable {
 		// Unreadable saved version: show nothing and record the current one, so
 		// later updates compare again (pi v1.5.2 interactive-mode.ts).
 		if w.Settings != nil {
@@ -365,7 +365,7 @@ func (w *StartupWiring) MaybeWarnAboutAnthropicSubscriptionAuth(ctx context.Cont
 		return
 	}
 	runtime := w.Session.ModelRuntime()
-	check, err := runtime.CheckAuth("anthropic", ctx)
+	check, err := runtime.CheckAuth(ctx, "anthropic")
 	if err == nil && check != nil && check.Type == "oauth" {
 		if w.claimAnthropicWarning() {
 			w.showWarning(AnthropicSubscriptionAuthWarning)

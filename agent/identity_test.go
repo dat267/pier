@@ -63,7 +63,7 @@ func TestAgentLoopIdentity(t *testing.T) {
 			}
 			config := &AgentLoopConfig{Model: createModel(),
 				Identity: tc.identity}
-			drainAgentStream(t, AgentLoop([]ai.Message{createUserMessage("hello")}, AgentContext{}, config, nil, streamFn))
+			drainAgentStream(t, AgentLoop(nil, []ai.Message{createUserMessage("hello")}, AgentContext{}, config, streamFn))
 			if captured == nil || captured.Attribution != tc.wantAttribution {
 				t.Fatalf("identity = %+v", captured)
 			}

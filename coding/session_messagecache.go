@@ -138,11 +138,11 @@ func (c *messageCache) retained(entries map[string]*SessionEntry) *messageCache 
 	}
 	for id, cached := range c.byID {
 		if entries[id] != nil {
-			copy := *cached
+			copied := *cached
 			if next.byID == nil {
 				next.byID = map[string]*cachedEntry{}
 			}
-			next.byID[id] = &copy
+			next.byID[id] = &copied
 		}
 	}
 	return next

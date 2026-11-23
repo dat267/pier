@@ -92,7 +92,7 @@ func listLineBreaks(line string, n int) int {
 // at least three c.
 func isListHRRun(s string, c byte) bool {
 	count := 0
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		switch s[i] {
 		case c:
 			count++
@@ -146,7 +146,7 @@ func expandListTabs(line string, col int) string {
 		return line
 	}
 	var sb strings.Builder
-	for i := 0; i < len(line); i++ {
+	for i := range len(line) {
 		if line[i] == '\t' {
 			added := 4 - col%4
 			sb.WriteString(strings.Repeat(" ", added))
@@ -162,7 +162,7 @@ func expandListTabs(line string, col int) string {
 // firstNonSpace is JavaScript's `line.search(/[^ ]/)`: -1 when every byte is a
 // space.
 func firstNonSpace(line string) int {
-	for i := 0; i < len(line); i++ {
+	for i := range len(line) {
 		if line[i] != ' ' {
 			return i
 		}
@@ -228,7 +228,7 @@ func (l *blockLexer) lexList(start int) (*Block, int, bool) {
 
 		line := expandListTabs(ln.text[capLen:], capLen)
 		blankLine := jsBlank(line)
-		indent := 0
+		var indent int
 		var contents itemText
 		if blankLine {
 			indent = capLen + 1

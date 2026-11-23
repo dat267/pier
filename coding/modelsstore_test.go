@@ -34,13 +34,13 @@ func sampleEntry(modelID string) *ai.ModelsStoreEntry {
 func TestInMemoryModelsStore(t *testing.T) {
 	ctx := ctxpkg.Background()
 	store := NewInMemoryCodingAgentModelsStore()
-	if entry, err := store.Read("openai", ctx); err != nil || entry != nil {
+	if entry, err := store.Read(ctx, "openai"); err != nil || entry != nil {
 		t.Fatalf("entry = %+v err = %v", entry, err)
 	}
-	if err := store.Write("openai", sampleEntry("gpt-5"), ctx); err != nil {
+	if err := store.Write(ctx, "openai", sampleEntry("gpt-5")); err != nil {
 		t.Fatal(err)
 	}
-	entry, err := store.Read("openai", ctx)
+	entry, err := store.Read(ctx, "openai")
 	if err != nil || entry == nil || len(entry.Models) != 1 || entry.Models[0].ID != "gpt-5" {
 		t.Fatalf("entry = %+v err = %v", entry, err)
 	}
@@ -50,39 +50,39 @@ func TestInMemoryModelsStore(t *testing.T) {
 
 	// Reads clone, so mutating the returned entry cannot corrupt the store.
 	entry.Models[0].ID = "mutated"
-	deleteResult, _ := store.Read("openai", ctx)
+	deleteResult, _ := store.Read(ctx, "openai")
 	if deleteResult.Models[0].ID != "gpt-5" {
 		t.Fatalf("stored entry was mutated: %+v", deleteResult)
 	}
 
 	// Writes clone too.
 	original := sampleEntry("gpt-5-mini")
-	if err := store.Write("openai-mini", original, ctx); err != nil {
+	if err := store.Write(ctx, "openai-mini", original); err != nil {
 		t.Fatal(err)
 	}
 	original.Models[0].ID = "mutated"
-	stored, _ := store.Read("openai-mini", ctx)
+	stored, _ := store.Read(ctx, "openai-mini")
 	if stored.Models[0].ID != "gpt-5-mini" {
 		t.Fatalf("stored entry = %+v", stored)
 	}
 
-	if err := store.Delete("openai", ctx); err != nil {
+	if err := store.Delete(ctx, "openai"); err != nil {
 		t.Fatal(err)
 	}
-	if entry, _ := store.Read("openai", ctx); entry != nil {
+	if entry, _ := store.Read(ctx, "openai"); entry != nil {
 		t.Fatalf("entry = %+v", entry)
 	}
 
 	// Cancellation fails fast.
 	cancelled, cancel := ctxpkg.WithCancel(ctx)
 	cancel()
-	if _, err := store.Read("openai", cancelled); !errors.Is(err, ctxpkg.Canceled) {
+	if _, err := store.Read(cancelled, "openai"); !errors.Is(err, ctxpkg.Canceled) {
 		t.Fatalf("err = %v", err)
 	}
-	if err := store.Write("openai", sampleEntry("x"), cancelled); !errors.Is(err, ctxpkg.Canceled) {
+	if err := store.Write(cancelled, "openai", sampleEntry("x")); !errors.Is(err, ctxpkg.Canceled) {
 		t.Fatalf("err = %v", err)
 	}
-	if err := store.Delete("openai", cancelled); !errors.Is(err, ctxpkg.Canceled) {
+	if err := store.Delete(cancelled, "openai"); !errors.Is(err, ctxpkg.Canceled) {
 		t.Fatalf("err = %v", err)
 	}
 }
@@ -94,7 +94,7 @@ func TestFileModelsStoreEmptyCatalogIsArray(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "models-store.json")
 	store := NewFileModelsStore(path)
 	zero := int64(0)
-	if err := store.Write("deepseek", &ai.ModelsStoreEntry{LastModified: &zero}, ctxpkg.Background()); err != nil {
+	if err := store.Write(ctxpkg.Background(), "deepseek", &ai.ModelsStoreEntry{LastModified: &zero}); err != nil {
 		t.Fatal(err)
 	}
 	raw, err := os.ReadFile(path)
@@ -118,7 +118,7 @@ func TestFileModelsStoreWriteRepairsLegacyNullCatalog(t *testing.T) {
 		t.Fatal(err)
 	}
 	store := NewFileModelsStore(path)
-	if err := store.Write("openai", sampleEntry("gpt-5"), ctxpkg.Background()); err != nil {
+	if err := store.Write(ctxpkg.Background(), "openai", sampleEntry("gpt-5")); err != nil {
 		t.Fatal(err)
 	}
 	raw, err := os.ReadFile(path)
@@ -144,13 +144,13 @@ func TestFileModelsStoreRoundTrip(t *testing.T) {
 	store := NewFileModelsStore(path)
 	ctx := ctxpkg.Background()
 
-	if entry, err := store.Read("openai", ctx); err != nil || entry != nil {
+	if entry, err := store.Read(ctx, "openai"); err != nil || entry != nil {
 		t.Fatalf("entry = %+v err = %v", entry, err)
 	}
-	if err := store.Write("openai", sampleEntry("gpt-5"), ctx); err != nil {
+	if err := store.Write(ctx, "openai", sampleEntry("gpt-5")); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.Write("anthropic", sampleEntry("claude"), ctx); err != nil {
+	if err := store.Write(ctx, "anthropic", sampleEntry("claude")); err != nil {
 		t.Fatal(err)
 	}
 
@@ -169,7 +169,7 @@ func TestFileModelsStoreRoundTrip(t *testing.T) {
 
 	// A second store on the same path sees the data (shared read state).
 	other := NewFileModelsStore(path)
-	entry, err := other.Read("openai", ctx)
+	entry, err := other.Read(ctx, "openai")
 	if err != nil || entry == nil || entry.Models[0].ID != "gpt-5" {
 		t.Fatalf("entry = %+v err = %v", entry, err)
 	}
@@ -178,10 +178,10 @@ func TestFileModelsStoreRoundTrip(t *testing.T) {
 	}
 
 	// Deleting removes the provider from the file.
-	if err := store.Delete("openai", ctx); err != nil {
+	if err := store.Delete(ctx, "openai"); err != nil {
 		t.Fatal(err)
 	}
-	if entry, _ := store.Read("openai", ctx); entry != nil {
+	if entry, _ := store.Read(ctx, "openai"); entry != nil {
 		t.Fatalf("entry = %+v", entry)
 	}
 	raw, err = os.ReadFile(path)
@@ -198,7 +198,7 @@ func TestFileModelsStoreExternalChange(t *testing.T) {
 	path := filepath.Join(dir, "models-store.json")
 	store := NewFileModelsStore(path)
 	ctx := ctxpkg.Background()
-	if err := store.Write("openai", sampleEntry("gpt-5"), ctx); err != nil {
+	if err := store.Write(ctx, "openai", sampleEntry("gpt-5")); err != nil {
 		t.Fatal(err)
 	}
 
@@ -208,11 +208,11 @@ func TestFileModelsStoreExternalChange(t *testing.T) {
 	if err := os.WriteFile(path, []byte(external), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	entry, err := store.Read("external", ctx)
+	entry, err := store.Read(ctx, "external")
 	if err != nil || entry == nil || entry.Models[0].ID != "ext" {
 		t.Fatalf("entry = %+v err = %v", entry, err)
 	}
-	if entry, _ := store.Read("openai", ctx); entry != nil {
+	if entry, _ := store.Read(ctx, "openai"); entry != nil {
 		t.Fatalf("stale entry = %+v", entry)
 	}
 }
@@ -229,7 +229,7 @@ func TestFileModelsStoreConcurrentWrites(t *testing.T) {
 		go func(index int) {
 			defer waitGroup.Done()
 			providerID := "provider-" + string(rune('a'+index))
-			if err := store.Write(providerID, sampleEntry("model-"+providerID), ctx); err != nil {
+			if err := store.Write(ctx, providerID, sampleEntry("model-"+providerID)); err != nil {
 				t.Errorf("write: %v", err)
 			}
 		}(index)
@@ -249,7 +249,7 @@ func TestFileModelsStoreConcurrentWrites(t *testing.T) {
 	}
 	for index := range 8 {
 		providerID := "provider-" + string(rune('a'+index))
-		entry, err := store.Read(providerID, ctx)
+		entry, err := store.Read(ctx, providerID)
 		if err != nil || entry == nil || entry.Models[0].ID != "model-"+providerID {
 			t.Fatalf("%s: entry = %+v err = %v", providerID, entry, err)
 		}
@@ -257,7 +257,7 @@ func TestFileModelsStoreConcurrentWrites(t *testing.T) {
 
 	// A missing store file reads as empty.
 	empty := NewFileModelsStore(filepath.Join(dir, "missing.json"))
-	if entry, err := empty.Read("openai", ctx); err != nil || entry != nil {
+	if entry, err := empty.Read(ctx, "openai"); err != nil || entry != nil {
 		t.Fatalf("entry = %+v err = %v", entry, err)
 	}
 }
@@ -273,14 +273,14 @@ func TestFileModelsStoreParseErrors(t *testing.T) {
 	if err := os.WriteFile(path, []byte("not json"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if entry, err := store.Read("openai", ctx); err != nil || entry != nil {
+	if entry, err := store.Read(ctx, "openai"); err != nil || entry != nil {
 		t.Fatalf("entry = %+v err = %v", entry, err)
 	}
 	// A BOM is stripped.
 	if err := os.WriteFile(path, []byte("\uFEFF{\"openai\": {\"models\": []}}"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	entry, err := store.Read("openai", ctx)
+	entry, err := store.Read(ctx, "openai")
 	if err != nil || entry == nil {
 		t.Fatalf("entry = %+v err = %v", entry, err)
 	}
@@ -304,17 +304,17 @@ func TestFileModelsStoreWriteRejectsMalformedAndNonObjectJSON(t *testing.T) {
 			t.Fatal(err)
 		}
 		store := NewFileModelsStore(path)
-		if err := store.Write("openai", sampleEntry("gpt-5"), ctxpkg.Background()); err == nil {
+		if err := store.Write(ctxpkg.Background(), "openai", sampleEntry("gpt-5")); err == nil {
 			t.Fatalf("%q: write accepted a corrupt store", corrupt)
 		}
-		if err := store.Delete("anthropic", ctxpkg.Background()); err == nil {
+		if err := store.Delete(ctxpkg.Background(), "anthropic"); err == nil {
 			t.Fatalf("%q: delete accepted a corrupt store", corrupt)
 		}
 		if after, err := os.ReadFile(path); err != nil || string(after) != corrupt {
 			t.Fatalf("%q: file = %q, err = %v; want it untouched", corrupt, after, err)
 		}
 		// The tolerant read still reports no entry rather than failing startup.
-		if entry, err := store.Read("anthropic", ctxpkg.Background()); err != nil || entry != nil {
+		if entry, err := store.Read(ctxpkg.Background(), "anthropic"); err != nil || entry != nil {
 			t.Fatalf("%q: read = %+v, %v; want the tolerant empty read", corrupt, entry, err)
 		}
 	}
@@ -338,7 +338,7 @@ func TestFileModelsStorePropagatesReloadFailure(t *testing.T) {
 	store := NewFileModelsStore(filepath.Join(t.TempDir(), "models-store.json"))
 	failure := errors.New("lock timeout")
 	store.storage = failingLockBackend{err: failure}
-	if entry, err := store.Read("openai", ctxpkg.Background()); !errors.Is(err, failure) || entry != nil {
+	if entry, err := store.Read(ctxpkg.Background(), "openai"); !errors.Is(err, failure) || entry != nil {
 		t.Fatalf("read = %+v, %v; want the reload failure", entry, err)
 	}
 }
@@ -365,15 +365,15 @@ func TestModelsStoreReadCloneAllocationBudget(t *testing.T) {
 	}
 	for name, store := range stores {
 		t.Run(name, func(t *testing.T) {
-			if err := store.Write("test", entry, ctx); err != nil {
+			if err := store.Write(ctx, "test", entry); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := store.Read("test", ctx); err != nil {
+			if _, err := store.Read(ctx, "test"); err != nil {
 				t.Fatal(err)
 			}
 			var before, after runtime.MemStats
 			runtime.ReadMemStats(&before)
-			cloned, err := store.Read("test", ctx)
+			cloned, err := store.Read(ctx, "test")
 			runtime.ReadMemStats(&after)
 			if err != nil {
 				t.Fatal(err)

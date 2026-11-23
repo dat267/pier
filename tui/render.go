@@ -352,11 +352,11 @@ func evaluateAnimators(animators []Component, now time.Time, ticks map[Component
 		if delay <= 0 {
 			delay = time.Millisecond
 		}
-		// A non-comparable component cannot key the tick map (see
+		// A non-isComparable component cannot key the tick map (see
 		// componentComparable); it animates without the delay bookkeeping.
-		comparable := componentComparable(component)
+		isComparable := componentComparable(component)
 		ticked, hasTicked := time.Time{}, false
-		if comparable {
+		if isComparable {
 			ticked, hasTicked = ticks[component]
 		}
 		if !hasTicked || now.Sub(ticked) >= delay {
@@ -367,7 +367,7 @@ func evaluateAnimators(animators []Component, now time.Time, ticks map[Component
 			} else {
 				component.Invalidate()
 			}
-			if ticks != nil && comparable {
+			if ticks != nil && isComparable {
 				ticks[component] = now
 			}
 		}
@@ -1006,7 +1006,7 @@ func (t *Renderer) CompositeOverlays(lines []string, termWidth int, termHeight i
 	viewportStart := max(0, workingHeight-termHeight)
 
 	for _, item := range rendered {
-		for i := 0; i < len(item.overlayLines); i++ {
+		for i := range len(item.overlayLines) {
 			idx := viewportStart + item.row + i
 			if idx < 0 || idx >= len(result) {
 				continue

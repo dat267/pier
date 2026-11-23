@@ -74,7 +74,7 @@ func TestStoredSessionNameIsSanitized(t *testing.T) {
 
 	t.Run("rename prompt", func(t *testing.T) {
 		InitTheme("dark", false)
-		loader := func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) {
+		loader := func(context.Context, SessionListProgress) ([]coding.SessionInfo, error) {
 			return []coding.SessionInfo{{Path: "/tmp/x.jsonl", Name: storedNamePayload}}, nil
 		}
 		component := NewSessionSelectorComponent(loader, loader,

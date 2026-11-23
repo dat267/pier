@@ -140,7 +140,7 @@ func TestCreateMcpToolDefinition(t *testing.T) {
 	if parameters["type"] != "object" {
 		t.Fatalf("parameters = %v", parameters)
 	}
-	result, err := toolDefinition.Execute("call-1", json.RawMessage(`{"text":"hi"}`), context.Background(), nil)
+	result, err := toolDefinition.Execute(context.Background(), "call-1", json.RawMessage(`{"text":"hi"}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +183,7 @@ func TestCreateMcpToolDefinition(t *testing.T) {
 			}), nil
 		},
 	})
-	errorResult, err := erroring.Execute("call-2", json.RawMessage(`{}`), context.Background(), nil)
+	errorResult, err := erroring.Execute(context.Background(), "call-2", json.RawMessage(`{}`), nil)
 	if err != nil {
 		t.Fatalf("err = %v; want the isError result, not a Go error", err)
 	}
@@ -236,7 +236,7 @@ func TestMcpToolProgressTextFormatsNumbersLikeJavaScript(t *testing.T) {
 			},
 		})
 		var updates []string
-		if _, err := toolDefinition.Execute("call-1", nil, context.Background(), func(result agent.AgentToolResult) {
+		if _, err := toolDefinition.Execute(context.Background(), "call-1", nil, func(result agent.AgentToolResult) {
 			for _, content := range result.Content {
 				if text, ok := content.(ai.TextContent); ok {
 					updates = append(updates, text.Text)

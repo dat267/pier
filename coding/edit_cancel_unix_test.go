@@ -24,7 +24,7 @@ func TestEditToolReturnsAbortBeforeReplacementWhenCanceledDuringRead(t *testing.
 	tool := CreateEditTool(filepath.Dir(path))
 	finished := make(chan error, 1)
 	go func() {
-		_, err := tool.Execute("call", json.RawMessage(`{"path":"stream.txt","edits":[{"oldText":"missing","newText":"replacement"}]}`), ctx, nil)
+		_, err := tool.Execute(ctx, "call", json.RawMessage(`{"path":"stream.txt","edits":[{"oldText":"missing","newText":"replacement"}]}`), nil)
 		finished <- err
 	}()
 

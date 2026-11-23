@@ -26,7 +26,7 @@
 package uiblock
 
 import (
-	"fmt"
+	"errors"
 	"go/token"
 	"go/types"
 	"regexp"
@@ -198,7 +198,7 @@ func loadModule(dir string) (*module, error) {
 		return nil, err
 	}
 	if packages.PrintErrors(pkgs) > 0 {
-		return nil, fmt.Errorf("type errors during load")
+		return nil, errors.New("type errors during load")
 	}
 	prog, _ := ssautil.Packages(pkgs, ssa.BuilderMode(0))
 	prog.Build()

@@ -152,7 +152,7 @@ func (a *oauthAdapter) OnUnauthorized(ctx context.Context, info UnauthorizedInfo
 		run.wg.Add(1)
 		a.inFlight = run
 		a.mu.Unlock()
-		go a.runRefresh(run, ctx, info, challenge, insufficientScope)
+		go a.runRefresh(ctx, run, info, challenge, insufficientScope)
 		run.wg.Wait()
 		a.mu.Lock()
 		a.inFlight = nil
@@ -166,7 +166,7 @@ func (a *oauthAdapter) OnUnauthorized(ctx context.Context, info UnauthorizedInfo
 }
 
 // runRefresh performs the shared refresh or authorization.
-func (a *oauthAdapter) runRefresh(run *refreshRun, ctx context.Context, info UnauthorizedInfo, challenge oauth.OAuthChallenge, insufficientScope bool) {
+func (a *oauthAdapter) runRefresh(ctx context.Context, run *refreshRun, info UnauthorizedInfo, challenge oauth.OAuthChallenge, insufficientScope bool) {
 	defer run.wg.Done()
 	var granted *oauth.OAuthTokens
 	if insufficientScope {

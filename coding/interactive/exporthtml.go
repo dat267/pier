@@ -14,6 +14,7 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -146,7 +147,7 @@ const maxSGRParameter = 1 << 20
 // the rest of the line (A435).
 func ansiSGRParameter(part string) int {
 	value := 0
-	for index := 0; index < len(part); index++ {
+	for index := range len(part) {
 		digit := part[index]
 		if digit < '0' || digit > '9' {
 			return 0
@@ -696,10 +697,10 @@ func ExportSessionToHTML(session *coding.AgentSession, outputPath string, themeN
 	sessionManager := session.Sessions
 	sessionFile := sessionManager.GetSessionFile()
 	if sessionFile == "" {
-		return "", fmt.Errorf("Cannot export in-memory session to HTML")
+		return "", errors.New("Cannot export in-memory session to HTML")
 	}
 	if _, err := os.Stat(sessionFile); err != nil {
-		return "", fmt.Errorf("Nothing to export yet - start a conversation first")
+		return "", errors.New("Nothing to export yet - start a conversation first")
 	}
 
 	state := session.Agent.State()

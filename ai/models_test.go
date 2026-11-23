@@ -120,7 +120,7 @@ func TestModelsStreamSetupFailureOnCancelReportsAbort(t *testing.T) {
 		ID: "p", Name: "provider",
 		Auth: ProviderAuth{OAuth: &OAuthAuth{
 			Name: "test",
-			Refresh: func(_ *OAuthCredential, _ context.Context) (*OAuthCredential, error) {
+			Refresh: func(_ context.Context, _ *OAuthCredential) (*OAuthCredential, error) {
 				cancel()
 				return &OAuthCredential{
 					Access: "a2", Refresh: "r2", Expires: time.Now().Add(time.Hour).UnixMilli()}, nil
@@ -132,11 +132,11 @@ func TestModelsStreamSetupFailureOnCancelReportsAbort(t *testing.T) {
 		Models: []*Model{{ID: "m", API: APIOpenAICompletions, Provider: "p"}},
 		Single: setupCancelStreams{},
 	}))
-	if _, err := models.credentials.Modify("p", func(*Credential) (*Credential, error) {
+	if _, err := models.credentials.Modify(context.Background(), "p", func(*Credential) (*Credential, error) {
 		return &Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{OAuthCredentials{
 			Access: "a1", Refresh: "r1", Expires: 0,
 		}}}, nil
-	}, context.Background()); err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 	model := models.GetModel("p", "m")

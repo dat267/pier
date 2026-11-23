@@ -33,7 +33,7 @@ func TestGoalScheduledRoundSkipsInvalidatedReservation(t *testing.T) {
 				// A valid reserved round completes its goal, preventing another
 				// round from hiding an unexpected extra admission in this test.
 				if snapshot := session.GoalController().Snapshot(); snapshot.Goal != nil && snapshot.Armed {
-					_, _ = session.GetToolDefinition("set_goal").Execute("complete", json.RawMessage(`{"status":"complete"}`), context.Background(), nil)
+					_, _ = session.GetToolDefinition("set_goal").Execute(context.Background(), "complete", json.RawMessage(`{"status":"complete"}`), nil)
 				}
 				stream := ai.NewAssistantMessageEventStream()
 				go func() {

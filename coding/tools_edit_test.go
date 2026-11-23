@@ -27,7 +27,7 @@ func TestEditReplacesMalformedUTF8WhenRewritingFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	tool := CreateEditTool(dir)
-	if _, err := tool.Execute("c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"target","newText":"changed"}]}`), nil, nil); err != nil {
+	if _, err := tool.Execute(nil, "c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"target","newText":"changed"}]}`), nil); err != nil {
 		t.Fatal(err)
 	}
 	got := readFileBytes(t, path)
@@ -41,7 +41,7 @@ func TestEditSingleReplacement(t *testing.T) {
 	writeTestFile(t, dir, "f.txt", "alpha\nbeta\ngamma\n")
 
 	tool := CreateEditTool(dir)
-	result, err := tool.Execute("c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"beta","newText":"BETA"}]}`), nil, nil)
+	result, err := tool.Execute(nil, "c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"beta","newText":"BETA"}]}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,9 +71,9 @@ func TestEditMatchedAgainstOriginalNotIncremental(t *testing.T) {
 
 	// Two edits both matched against the original; disjoint order-independent.
 	tool := CreateEditTool(dir)
-	_, err := tool.Execute("c", json.RawMessage(`{"path":"f.txt","edits":[
+	_, err := tool.Execute(nil, "c", json.RawMessage(`{"path":"f.txt","edits":[
 		{"oldText":"c","newText":"C"},
-		{"oldText":"a","newText":"A"}]}`), nil, nil)
+		{"oldText":"a","newText":"A"}]}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func TestEditUniqueRequirement(t *testing.T) {
 	writeTestFile(t, dir, "f.txt", "dup\ndup\nunique\n")
 
 	tool := CreateEditTool(dir)
-	_, err := tool.Execute("c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"dup","newText":"x"}]}`), nil, nil)
+	_, err := tool.Execute(nil, "c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"dup","newText":"x"}]}`), nil)
 	if err == nil || !strings.Contains(err.Error(), "must be unique") || !strings.Contains(err.Error(), "Found 2 occurrences") {
 		t.Fatalf("err = %v", err)
 	}
@@ -99,9 +99,9 @@ func TestEditOverlapDetection(t *testing.T) {
 	writeTestFile(t, dir, "f.txt", "hello world\n")
 
 	tool := CreateEditTool(dir)
-	_, err := tool.Execute("c", json.RawMessage(`{"path":"f.txt","edits":[
+	_, err := tool.Execute(nil, "c", json.RawMessage(`{"path":"f.txt","edits":[
 		{"oldText":"hello wo","newText":"1"},
-		{"oldText":"lo wor","newText":"2"}]}`), nil, nil)
+		{"oldText":"lo wor","newText":"2"}]}`), nil)
 	if err == nil || !strings.Contains(err.Error(), "overlap in f.txt") {
 		t.Fatalf("err = %v", err)
 	}
@@ -112,15 +112,15 @@ func TestEditNotFound(t *testing.T) {
 	writeTestFile(t, dir, "f.txt", "content\n")
 
 	tool := CreateEditTool(dir)
-	_, err := tool.Execute("c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"missing","newText":"x"}]}`), nil, nil)
+	_, err := tool.Execute(nil, "c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"missing","newText":"x"}]}`), nil)
 	if err == nil || !strings.Contains(err.Error(), "must match exactly including all whitespace") {
 		t.Fatalf("err = %v", err)
 	}
 
 	// Multi-edit error names the index.
-	_, err = tool.Execute("c", json.RawMessage(`{"path":"f.txt","edits":[
+	_, err = tool.Execute(nil, "c", json.RawMessage(`{"path":"f.txt","edits":[
 		{"oldText":"content","newText":"1"},
-		{"oldText":"nope","newText":"2"}]}`), nil, nil)
+		{"oldText":"nope","newText":"2"}]}`), nil)
 	if err == nil || !strings.Contains(err.Error(), "edits[1]") {
 		t.Fatalf("err = %v", err)
 	}
@@ -131,7 +131,7 @@ func TestEditNoChangeError(t *testing.T) {
 	writeTestFile(t, dir, "f.txt", "same\n")
 
 	tool := CreateEditTool(dir)
-	_, err := tool.Execute("c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"same","newText":"same"}]}`), nil, nil)
+	_, err := tool.Execute(nil, "c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"same","newText":"same"}]}`), nil)
 	if err == nil || !strings.Contains(err.Error(), "produced identical content") {
 		t.Fatalf("err = %v", err)
 	}
@@ -142,7 +142,7 @@ func TestEditEmptyOldText(t *testing.T) {
 	writeTestFile(t, dir, "f.txt", "x\n")
 
 	tool := CreateEditTool(dir)
-	_, err := tool.Execute("c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"","newText":"y"}]}`), nil, nil)
+	_, err := tool.Execute(nil, "c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"","newText":"y"}]}`), nil)
 	if err == nil || !strings.Contains(err.Error(), "oldText must not be empty") {
 		t.Fatalf("err = %v", err)
 	}
@@ -155,7 +155,7 @@ func TestEditFuzzyMatching(t *testing.T) {
 
 	tool := CreateEditTool(dir)
 	// oldText uses plain quotes and no trailing spaces — fuzzy match must find it.
-	_, err := tool.Execute("c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"say \"hello\"","newText":"said hi"}]}`), nil, nil)
+	_, err := tool.Execute(nil, "c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"say \"hello\"","newText":"said hi"}]}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ func TestEditCRLFPreserved(t *testing.T) {
 	writeTestFile(t, dir, "f.txt", "alpha\r\nbeta\r\n")
 
 	tool := CreateEditTool(dir)
-	_, err := tool.Execute("c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"beta","newText":"B"}]}`), nil, nil)
+	_, err := tool.Execute(nil, "c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"beta","newText":"B"}]}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +187,7 @@ func TestEditBOMPreserved(t *testing.T) {
 	writeTestFile(t, dir, "f.txt", "\uFEFFalpha\n")
 
 	tool := CreateEditTool(dir)
-	_, err := tool.Execute("c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"alpha","newText":"A"}]}`), nil, nil)
+	_, err := tool.Execute(nil, "c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"alpha","newText":"A"}]}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,7 +228,7 @@ func TestPrepareEditArgumentsShims(t *testing.T) {
 func TestEditMissingFileReportsNodeErrorCode(t *testing.T) {
 	dir := t.TempDir()
 	tool := CreateEditTool(dir)
-	_, err := tool.Execute("c", json.RawMessage(`{"path":"gone.txt","edits":[{"oldText":"a","newText":"b"}]}`), nil, nil)
+	_, err := tool.Execute(nil, "c", json.RawMessage(`{"path":"gone.txt","edits":[{"oldText":"a","newText":"b"}]}`), nil)
 	if err == nil || !strings.Contains(err.Error(), "Could not edit file: gone.txt. Error code: ENOENT.") {
 		t.Fatalf("err = %v", err)
 	}
@@ -285,7 +285,7 @@ func TestEditReportsPermissionRefusalLikeUpstream(t *testing.T) {
 			t.Skip("the filesystem ignores file modes")
 		}
 		tool := CreateEditTool(dir)
-		_, err := tool.Execute("c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"alpha","newText":"beta"}]}`), nil, nil)
+		_, err := tool.Execute(nil, "c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"alpha","newText":"beta"}]}`), nil)
 		if err == nil {
 			t.Fatalf("mode %o: edit succeeded", mode)
 		}

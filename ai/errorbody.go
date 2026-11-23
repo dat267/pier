@@ -51,7 +51,10 @@ func NormalizeProviderError(err error) NormalizedProviderError {
 	if isContextError(err) {
 		return NormalizedProviderError{Message: RequestAbortedMessage}
 	}
-	pe, ok := err.(*ProviderError)
+	// An exact match, not errors.AsType: a ModelsError from an OAuth refresh
+	// wraps the token endpoint's ProviderError, and its own message is the one
+	// to show.
+	pe, ok := err.(*ProviderError) // exact match, see above
 	if !ok {
 		return NormalizedProviderError{Message: err.Error(), MessageCarriesBody: false}
 	}
@@ -217,14 +220,14 @@ type GrammarConstrainedSampling struct {
 func inferGrammarInputProperty(tool Tool) (string, error) {
 	var schema map[string]json.RawMessage
 	if err := jsonUnmarshalStrict(tool.Parameters, &schema); err != nil || schema == nil {
-		return "", fmt.Errorf("grammar constrained sampling requires an object parameter schema")
+		return "", errors.New("grammar constrained sampling requires an object parameter schema")
 	}
 	var schemaType any
 	if raw, ok := schema["type"]; ok {
 		_ = json.Unmarshal(raw, &schemaType)
 	}
 	if text, ok := schemaType.(string); !ok || text != "object" {
-		return "", fmt.Errorf("grammar constrained sampling requires an object parameter schema")
+		return "", errors.New("grammar constrained sampling requires an object parameter schema")
 	}
 	var required any
 	if raw, ok := schema["required"]; ok {
@@ -232,11 +235,11 @@ func inferGrammarInputProperty(tool Tool) (string, error) {
 	}
 	requiredList, isList := required.([]any)
 	if !isList || len(requiredList) != 1 {
-		return "", fmt.Errorf("grammar constrained sampling requires exactly one required string property")
+		return "", errors.New("grammar constrained sampling requires exactly one required string property")
 	}
 	inputProperty, isName := requiredList[0].(string)
 	if !isName {
-		return "", fmt.Errorf("grammar constrained sampling requires exactly one required string property")
+		return "", errors.New("grammar constrained sampling requires exactly one required string property")
 	}
 	var properties map[string]json.RawMessage
 	if raw, ok := schema["properties"]; ok {
@@ -310,9 +313,9 @@ type GrammarToolInputJSONBuffer struct {
 // AppendGrammarToolInputJSONDelta wraps input deltas into a JSON object
 // stream (port of appendGrammarToolInputJsonDelta). Returns "" when no
 // delta should be emitted; ok is false on errors.
-func AppendGrammarToolInputJSONDelta(buffer *GrammarToolInputJSONBuffer, inputProperty, nextInput string, close bool) (delta string, ok bool, err error) {
+func AppendGrammarToolInputJSONDelta(buffer *GrammarToolInputJSONBuffer, inputProperty, nextInput string, closing bool) (delta string, ok bool, err error) {
 	if buffer.Closed {
-		if close && nextInput == buffer.Input {
+		if closing && nextInput == buffer.Input {
 			return "", true, nil
 		}
 		return "", false, fmt.Errorf("grammar tool input for property \"%s\" changed after it was closed", inputProperty)
@@ -324,7 +327,7 @@ func AppendGrammarToolInputJSONDelta(buffer *GrammarToolInputJSONBuffer, inputPr
 	// starts at len(buffer.Input). JS slice(buffer.input.length) indexes UTF-16
 	// units, but slicing a Go string there would cut multi-byte text.
 	inputDelta := nextInput[len(buffer.Input):]
-	if !close && len(inputDelta) == 0 {
+	if !closing && len(inputDelta) == 0 {
 		return "", true, nil
 	}
 	var out strings.Builder
@@ -338,7 +341,7 @@ func AppendGrammarToolInputJSONDelta(buffer *GrammarToolInputJSONBuffer, inputPr
 	enc, _ := MarshalJSON(inputDelta)
 	out.Write(enc[1 : len(enc)-1])
 	buffer.Input = nextInput
-	if close {
+	if closing {
 		out.WriteString("\"}")
 		buffer.Closed = true
 	}

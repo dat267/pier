@@ -3,7 +3,6 @@ package coding
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -186,7 +185,7 @@ func (s *lineSelector) finish() readSelection {
 
 // selectTextLinesFromStream reads path in chunks and returns the lines a read
 // shows, stopping when the context is cancelled.
-func selectTextLinesFromStream(path string, startLine int, limit *int, ctx context.Context) (readSelection, error) {
+func selectTextLinesFromStream(ctx context.Context, path string, startLine int, limit *int) (readSelection, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return readSelection{}, err
@@ -208,7 +207,7 @@ func selectTextLinesFromStream(path string, startLine int, limit *int, ctx conte
 	buffer := make([]byte, 64<<10)
 	for {
 		if ctxErrOf(ctx) != nil {
-			return readSelection{}, fmt.Errorf("Operation aborted")
+			return readSelection{}, errors.New("Operation aborted")
 		}
 		read, readErr := reader.Read(buffer)
 		if read > 0 {

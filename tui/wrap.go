@@ -329,7 +329,7 @@ func wrapSingleLine(line string, width int) []string {
 				currentLine.Reset()
 			}
 			broken := breakLongWord(token, width, tracker)
-			for index := 0; index < len(broken)-1; index++ {
+			for index := range len(broken) - 1 {
 				wrapped = append(wrapped, broken[index])
 			}
 			currentLine.WriteString(broken[len(broken)-1])

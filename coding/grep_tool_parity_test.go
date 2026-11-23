@@ -65,7 +65,7 @@ func TestGrepToolMatchesUpstream(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			result, execErr := CreateGrepTool(dir).Execute("call", params, context.Background(), nil)
+			result, execErr := CreateGrepTool(dir).Execute(context.Background(), "call", params, nil)
 			if fixture.Expected.Error != "" {
 				if execErr == nil {
 					t.Fatalf("expected error %q, got success", fixture.Expected.Error)

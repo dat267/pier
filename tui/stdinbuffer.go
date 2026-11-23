@@ -620,7 +620,7 @@ func allDigits(parts []string) bool {
 		if part == "" {
 			return false
 		}
-		for i := 0; i < len(part); i++ {
+		for i := range len(part) {
 			if part[i] < '0' || part[i] > '9' {
 				return false
 			}
@@ -631,7 +631,7 @@ func allDigits(parts []string) bool {
 
 func parseInt(s string) int {
 	value := 0
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		if s[i] < '0' || s[i] > '9' {
 			return 0
 		}

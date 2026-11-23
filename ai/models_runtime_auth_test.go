@@ -67,9 +67,9 @@ func TestResolveProviderAuthStoredCredentialOwnsProvider(t *testing.T) {
 	auth := EnvApiKeyAuth("Test", []string{"TEST_A"})
 	ctx := &fakeAuthContext{env: map[string]string{"TEST_A": "ambient"}}
 	store := NewInMemoryCredentialStore()
-	if _, err := store.Modify("p", func(*Credential) (*Credential, error) {
+	if _, err := store.Modify(bgCtx(), "p", func(*Credential) (*Credential, error) {
 		return &Credential{Type: CredentialAPIKey, APIKey: &ApiKeyCredential{Key: "stored"}}, nil
-	}, bgCtx()); err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 	resolution, err := ResolveProviderAuth("p", ProviderAuth{APIKey: auth}, store, ctx, nil)
@@ -94,9 +94,9 @@ func TestResolveProviderAuthStoredCredentialOwnsProvider(t *testing.T) {
 
 func TestResolveProviderAuthExplicitEmptyAPIKeyOverridesStoredOAuth(t *testing.T) {
 	store := NewInMemoryCredentialStore()
-	if _, err := store.Modify("p", func(*Credential) (*Credential, error) {
+	if _, err := store.Modify(bgCtx(), "p", func(*Credential) (*Credential, error) {
 		return &Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{Access: "stored-oauth", Expires: time.Now().Add(time.Hour).UnixMilli()}}, nil
-	}, bgCtx()); err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 	auth := ProviderAuth{
@@ -154,16 +154,16 @@ func TestModelsLoginForwardsApplicationName(t *testing.T) {
 // an explicitly supplied zero still activates its post-refresh five-minute floor.
 func TestResolveStoredOAuthExplicitZeroStillAppliesPostRefreshFloor(t *testing.T) {
 	store := NewInMemoryCredentialStore()
-	if _, err := store.Modify("p", func(*Credential) (*Credential, error) {
+	if _, err := store.Modify(bgCtx(), "p", func(*Credential) (*Credential, error) {
 		return &Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{OAuthCredentials{
 			Refresh: "r1", Access: "a1", Expires: nowUnixMilli() + 60_000,
 		}}}, nil
-	}, bgCtx()); err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 	oauth := &OAuthAuth{
 		Name: "Test OAuth",
-		Refresh: func(*OAuthCredential, context.Context) (*OAuthCredential, error) {
+		Refresh: func(context.Context, *OAuthCredential) (*OAuthCredential, error) {
 			return &OAuthCredential{OAuthCredentials{
 				Refresh: "r2", Access: "a2", Expires: nowUnixMilli() + 4*60_000,
 			}}, nil
@@ -185,17 +185,17 @@ func TestResolveStoredOAuthExplicitZeroStillAppliesPostRefreshFloor(t *testing.T
 // an unrepresentably large expiry threshold must not wrap into a valid token.
 func TestResolveStoredOAuthMaxValidityDoesNotWrap(t *testing.T) {
 	store := NewInMemoryCredentialStore()
-	if _, err := store.Modify("p", func(*Credential) (*Credential, error) {
+	if _, err := store.Modify(bgCtx(), "p", func(*Credential) (*Credential, error) {
 		return &Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{OAuthCredentials{
 			Refresh: "r1", Access: "a1", Expires: nowUnixMilli() + 60*60_000,
 		}}}, nil
-	}, bgCtx()); err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 	refreshes := 0
 	oauth := &OAuthAuth{
 		Name: "Test OAuth",
-		Refresh: func(*OAuthCredential, context.Context) (*OAuthCredential, error) {
+		Refresh: func(context.Context, *OAuthCredential) (*OAuthCredential, error) {
 			refreshes++
 			return &OAuthCredential{OAuthCredentials{
 				Refresh: "r2", Access: "a2", Expires: nowUnixMilli() + 10*60*60_000,
@@ -224,7 +224,7 @@ func TestResolveStoredOAuthRefreshesUnderLock(t *testing.T) {
 	refreshes := 0
 	oauth := &OAuthAuth{
 		Name: "Test OAuth",
-		Refresh: func(credential *OAuthCredential, ctx context.Context) (*OAuthCredential, error) {
+		Refresh: func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
 			refreshes++
 			return &OAuthCredential{OAuthCredentials{
 				Refresh: "r2", Access: "a2",
@@ -237,11 +237,11 @@ func TestResolveStoredOAuthRefreshesUnderLock(t *testing.T) {
 	}
 	ctx := &fakeAuthContext{}
 	store := NewInMemoryCredentialStore()
-	if _, err := store.Modify("p", func(*Credential) (*Credential, error) {
+	if _, err := store.Modify(bgCtx(), "p", func(*Credential) (*Credential, error) {
 		return &Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{OAuthCredentials{
 			Refresh: "r1", Access: "a1", Expires: nowUnixMilli() + 60_000, // expires soon
 		}}}, nil
-	}, bgCtx()); err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -256,7 +256,7 @@ func TestResolveStoredOAuthRefreshesUnderLock(t *testing.T) {
 		t.Fatalf("resolution = %+v", resolution)
 	}
 	// The rotated credential was persisted.
-	stored, _ := store.Read("p", bgCtx())
+	stored, _ := store.Read(bgCtx(), "p")
 	if stored.OAuth.Access != "a2" {
 		t.Fatalf("stored = %+v", stored.OAuth)
 	}
@@ -276,11 +276,11 @@ func TestResolveStoredOAuthPersistsRefreshStartedBeforeCancellation(t *testing.T
 	// that started must complete and persist or the next request fails with
 	// refresh_token_invalidated. The caller still observes the cancellation.
 	store := NewInMemoryCredentialStore()
-	if _, err := store.Modify("p", func(*Credential) (*Credential, error) {
+	if _, err := store.Modify(bgCtx(), "p", func(*Credential) (*Credential, error) {
 		return &Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{OAuthCredentials{
 			Refresh: "old-refresh", Access: "old", Expires: 0, // expired
 		}}}, nil
-	}, bgCtx()); err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -288,7 +288,7 @@ func TestResolveStoredOAuthPersistsRefreshStartedBeforeCancellation(t *testing.T
 	defer cancel()
 	oauth := &OAuthAuth{
 		Name: "Test OAuth",
-		Refresh: func(credential *OAuthCredential, refreshCtx context.Context) (*OAuthCredential, error) {
+		Refresh: func(refreshCtx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
 			// The provider rotates the token, then the caller cancels before
 			// the refresh returns.
 			cancel()
@@ -306,7 +306,7 @@ func TestResolveStoredOAuthPersistsRefreshStartedBeforeCancellation(t *testing.T
 		t.Fatal("expected the cancellation to surface")
 	}
 
-	stored, err := store.Read("p", bgCtx())
+	stored, err := store.Read(bgCtx(), "p")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -320,11 +320,11 @@ func TestModelsRefreshPersistsOAuthRefreshStartedBeforeCancellation(t *testing.T
 	// superseded) while an OAuth refresh is in flight must still persist the
 	// rotated credential.
 	store := NewInMemoryCredentialStore()
-	if _, err := store.Modify("p1", func(*Credential) (*Credential, error) {
+	if _, err := store.Modify(bgCtx(), "p1", func(*Credential) (*Credential, error) {
 		return &Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{OAuthCredentials{
 			Refresh: "old-refresh", Access: "old", Expires: 0, // expired
 		}}}, nil
-	}, bgCtx()); err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -332,7 +332,7 @@ func TestModelsRefreshPersistsOAuthRefreshStartedBeforeCancellation(t *testing.T
 	defer cancel()
 	oauth := &OAuthAuth{
 		Name: "Test OAuth",
-		Refresh: func(credential *OAuthCredential, refreshCtx context.Context) (*OAuthCredential, error) {
+		Refresh: func(refreshCtx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
 			cancel()
 			return &OAuthCredential{OAuthCredentials{
 				Refresh: "new-refresh", Access: "new", Expires: nowUnixMilli() + 3600_000,
@@ -351,7 +351,7 @@ func TestModelsRefreshPersistsOAuthRefreshStartedBeforeCancellation(t *testing.T
 		t.Fatalf("refresh = %+v; want aborted", result)
 	}
 
-	stored, err := store.Read("p1", bgCtx())
+	stored, err := store.Read(bgCtx(), "p1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -406,16 +406,16 @@ func (c capturingStreams) Stream(m *Model, t TranscriptContext, o *StreamOptions
 // dead login cannot block or fail the catalog refresh.
 func TestModelsRefreshConfiguredAuthSkipsOAuthRefresh(t *testing.T) {
 	store := NewInMemoryCredentialStore()
-	if _, err := store.Modify("p1", func(*Credential) (*Credential, error) {
+	if _, err := store.Modify(bgCtx(), "p1", func(*Credential) (*Credential, error) {
 		return &Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{OAuthCredentials{
 			Refresh: "dead-refresh", Access: "dead", Expires: 0, // expired
 		}}}, nil
-	}, bgCtx()); err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 	oauth := &OAuthAuth{
 		Name: "Test OAuth",
-		Refresh: func(*OAuthCredential, context.Context) (*OAuthCredential, error) {
+		Refresh: func(context.Context, *OAuthCredential) (*OAuthCredential, error) {
 			return nil, errors.New("refresh failed")
 		},
 	}

@@ -204,7 +204,7 @@ func (c *InteractiveThemeController) querySystemColors() {
 		// background listener can see it. As upstream applyTerminalColors does,
 		// apply that background to system and light/dark theme selection here.
 		if merged.Background != nil {
-			terminalTheme := TerminalTheme(getTerminalTheme())
+			terminalTheme := getTerminalTheme()
 			if c.activeThemeName == SystemThemeName {
 				c.terminalTheme = terminalTheme
 			} else {
@@ -246,7 +246,7 @@ func (c *InteractiveThemeController) ApplyFromSettings() {
 	}
 
 	if light, dark, ok := ParseAutoThemeSetting(themeSetting); ok {
-		c.terminalTheme = TerminalTheme(getTerminalTheme())
+		c.terminalTheme = getTerminalTheme()
 		c.setAutoSync(true)
 		name := dark
 		if c.terminalTheme == TerminalThemeLight {
@@ -463,7 +463,7 @@ func (c *InteractiveThemeController) bindTerminalColorSchemeListener() {
 		previous := getTerminalTheme()
 		SetSystemTerminalColorScheme(&terminalTheme)
 		if current := getTerminalTheme(); current != previous {
-			c.applyTerminalTheme(TerminalTheme(current))
+			c.applyTerminalTheme(current)
 		}
 		c.querySystemColors()
 	})
@@ -477,7 +477,7 @@ func (c *InteractiveThemeController) bindTerminalBackgroundListener() {
 	}
 	c.unsubscribeBg = c.ui.OnTerminalBackgroundColorChange(func(color tui.RgbColor) {
 		SetSystemTerminalBackgroundColor(color)
-		c.applyTerminalTheme(TerminalTheme(getTerminalTheme()))
+		c.applyTerminalTheme(getTerminalTheme())
 	})
 }
 

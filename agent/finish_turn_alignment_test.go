@@ -25,7 +25,7 @@ func TestFinishTurnCanRequestContextOnlyContinuation(t *testing.T) {
 	finishCalls := 0
 	config := &AgentLoopConfig{
 		Model: createModel(), ConvertToLlm: identityConverter,
-		FinishTurn: func(turn *AgentTurnContext, _ context.Context) (*AgentTurnDecision, error) {
+		FinishTurn: func(_ context.Context, turn *AgentTurnContext) (*AgentTurnDecision, error) {
 			finishCalls++
 			if turn.Message == nil || len(turn.NewMessages) == 0 {
 				t.Fatalf("incomplete turn context: %+v", turn)
@@ -37,7 +37,7 @@ func TestFinishTurnCanRequestContextOnlyContinuation(t *testing.T) {
 			return &AgentTurnDecision{Action: AgentTurnEnd}, nil
 		},
 	}
-	messages := RunAgentLoop([]ai.Message{createUserMessage("go")}, AgentContext{}, config, context.Background(), func(event AgentEvent) error {
+	messages := RunAgentLoop(context.Background(), []ai.Message{createUserMessage("go")}, AgentContext{}, config, func(event AgentEvent) error {
 		timeline = append(timeline, event.Type)
 		return nil
 	}, streamFn)
@@ -72,12 +72,12 @@ func TestFinishTurnRunsForErrorResponseBeforeTurnEnd(t *testing.T) {
 	var timeline []string
 	config := &AgentLoopConfig{
 		Model: createModel(), ConvertToLlm: identityConverter,
-		FinishTurn: func(*AgentTurnContext, context.Context) (*AgentTurnDecision, error) {
+		FinishTurn: func(context.Context, *AgentTurnContext) (*AgentTurnDecision, error) {
 			timeline = append(timeline, "finish")
 			return &AgentTurnDecision{Action: AgentTurnContinue}, nil
 		},
 	}
-	RunAgentLoop([]ai.Message{createUserMessage("go")}, AgentContext{}, config, context.Background(), func(event AgentEvent) error {
+	RunAgentLoop(context.Background(), []ai.Message{createUserMessage("go")}, AgentContext{}, config, func(event AgentEvent) error {
 		timeline = append(timeline, event.Type)
 		return nil
 	}, streamFn)

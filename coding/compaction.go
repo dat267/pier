@@ -5,6 +5,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"slices"
@@ -349,7 +350,7 @@ func EstimateAgentMessageTokens(message ai.Message) int {
 			case ai.ThinkingContent:
 				chars += JSLength(b.Thinking)
 			case ai.ToolCall:
-				chars += JSLength(b.Name) + JSLength(string(mustMarshalJSON(json.RawMessage(b.Arguments))))
+				chars += JSLength(b.Name) + JSLength(string(mustMarshalJSON(b.Arguments)))
 			}
 		}
 		return tokensFromChars(chars)
@@ -1149,7 +1150,7 @@ func CompleteSummarization(
 			OnRetryFinished:     callbacks.OnRetryFinished,
 		}
 	}
-	return ai.RetryAssistantCall(produce, retry, contextOf(&requestOptions), cb)
+	return ai.RetryAssistantCall(contextOf(&requestOptions), produce, retry, cb)
 }
 
 // StreamFnFn is the stream function signature for compaction.
@@ -1157,7 +1158,7 @@ type StreamFnFn = func(model *ai.Model, context ai.TranscriptContext, options *a
 
 // StreamFnDefault is the fallback (nil streamFn → caller-provided default).
 var StreamFnDefault = func(model *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) (*ai.AssistantMessage, error) {
-	return nil, fmt.Errorf("No stream function configured for summarization")
+	return nil, errors.New("No stream function configured for summarization")
 }
 
 func contextOf(options *ai.SimpleStreamOptions) context.Context {
@@ -1371,7 +1372,7 @@ type CompactionPrefix struct {
 func Compact(preparation *CompactionPreparation, options CompactionOptions) (*CompactionResult, error) {
 	var summary string
 	var summaryUsage ai.Usage
-	hasUsage := false
+	var hasUsage bool
 
 	// A replayed prefix describes everything above the instruction, which the
 	// conversation checkpoint format already covers, so it needs neither the
@@ -1428,7 +1429,7 @@ func Compact(preparation *CompactionPreparation, options CompactionOptions) (*Co
 	summary += FormatSummaryFileOperations(readFiles, modifiedFiles, readOmitted, modifiedOmitted)
 
 	if preparation.FirstKeptEntryID == "" {
-		return nil, fmt.Errorf("First kept entry has no UUID - session may need migration")
+		return nil, errors.New("First kept entry has no UUID - session may need migration")
 	}
 
 	details, _ := ai.MarshalJSON(CompactionDetails{ReadFiles: readFiles, ModifiedFiles: modifiedFiles})
@@ -1494,7 +1495,7 @@ func summarizeFromPrefix(preparation *CompactionPreparation, options CompactionO
 		for _, message := range messages[len(prefix.Messages):] {
 			replayTokens += int64(EstimateAgentMessageTokens(message))
 		}
-		if replayTokens >= int64(window) {
+		if replayTokens >= window {
 			return "", nil, false
 		}
 	}

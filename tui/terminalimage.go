@@ -319,7 +319,7 @@ func GetKittyImagePlacement(line string) (KittyImagePlacement, bool) {
 
 	commandStart := match[0]
 	commandControls := controls
-	transmissionEnd := 0
+	var transmissionEnd int
 	for {
 		relative := strings.Index(line[commandStart+len(kittyPrefix):], "\x1b\\")
 		if relative == -1 {
@@ -455,7 +455,7 @@ func CalculateImageRows(imageDimensions ImageDimensions, targetWidthCells int, c
 // to the placeholder size.
 func decodeBase64(data string) []byte {
 	normalized := make([]byte, 0, len(data))
-	for index := 0; index < len(data); index++ {
+	for index := range len(data) {
 		character := data[index]
 		switch {
 		case character >= 'A' && character <= 'Z',

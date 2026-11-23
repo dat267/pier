@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"maps"
@@ -981,11 +982,11 @@ func (m *SessionManager) GetEntry(id string) *SessionEntry {
 	if payloads == nil {
 		return entry
 	}
-	copy, err := payloads.hydrateCopy(entry)
+	copied, err := payloads.hydrateCopy(entry)
 	if err != nil {
 		return entry
 	}
-	return &copy
+	return &copied
 }
 
 // GetLabel returns an entry's label.
@@ -1010,11 +1011,11 @@ func (m *SessionManager) AppendContextEdit(targetID string, replacement json.Raw
 			Content json.RawMessage `json:"content"`
 		}
 		if err := json.Unmarshal(replacement, &holder); err != nil {
-			return "", fmt.Errorf("Context edit replacement must be null or contain string/array content")
+			return "", errors.New("Context edit replacement must be null or contain string/array content")
 		}
 		content = bytes.TrimSpace(holder.Content)
 		if len(content) == 0 || (content[0] != '"' && content[0] != '[') {
-			return "", fmt.Errorf("Context edit replacement must be null or contain string/array content")
+			return "", errors.New("Context edit replacement must be null or contain string/array content")
 		}
 	}
 	target, ok := m.byID[targetID]
@@ -1039,12 +1040,12 @@ func (m *SessionManager) AppendContextEdit(targetID string, replacement json.Raw
 		}
 		_ = json.Unmarshal(target.Message, &probe)
 		role = probe.Role
-		editable = role == string(ai.RoleUser) || role == string(ai.RoleAssistant) || role == string(ai.RoleToolResult)
+		editable = role == ai.RoleUser || role == ai.RoleAssistant || role == ai.RoleToolResult
 	}
 	if !editable {
 		return "", fmt.Errorf("Entry %s does not contribute editable model content", targetID)
 	}
-	if !isNull && (role == string(ai.RoleAssistant) || role == string(ai.RoleToolResult)) && content[0] == '"' {
+	if !isNull && (role == ai.RoleAssistant || role == ai.RoleToolResult) && content[0] == '"' {
 		var text string
 		if err := json.Unmarshal(content, &text); err == nil {
 			if encoded, err := ai.MarshalJSON(ai.ContentList{ai.TextContent{Text: text}}); err == nil {
@@ -1799,7 +1800,7 @@ func buildSessionInfoContext(ctx context.Context, filePath string) *SessionInfo 
 			recordActivity(activity.role, activity.hasContent, activity.timestamp, activity.hasTimestamp, entryTimestamp)
 		}
 		if message, err := ai.UnmarshalMessage(json.RawMessage(rawMessage)); err == nil {
-			recordText(string(ai.RoleOf(message)), extractTextContent(message))
+			recordText(ai.RoleOf(message), extractTextContent(message))
 		}
 	}
 
@@ -2091,11 +2092,11 @@ func (m *SessionManager) hydrateEntryLocked(entry SessionEntry) SessionEntry {
 	if !entry.lazy || m.payloads == nil {
 		return entry
 	}
-	copy, err := m.payloads.hydrateCopy(&entry)
+	copied, err := m.payloads.hydrateCopy(&entry)
 	if err != nil {
 		return entry
 	}
-	return copy
+	return copied
 }
 
 // UsesDefaultSessionDir reports whether the session uses the default per-cwd

@@ -530,7 +530,7 @@ func (m *Markdown) Render(width int) []string {
 	}
 	emptyLine := repeatSpaces(width)
 	var emptyLines []string
-	for i := 0; i < m.PaddingY; i++ {
+	for range m.PaddingY {
 		line := emptyLine
 		if bgFn != nil {
 			line = ApplyBackgroundToLine(emptyLine, width, bgFn)

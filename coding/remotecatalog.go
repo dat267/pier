@@ -138,7 +138,7 @@ func ParseRemoteCatalog(providerID string, value any) ([]*ai.Model, error) {
 				continue
 			}
 		}
-		model.Provider = ai.ProviderId(providerID)
+		model.Provider = providerID
 		models = append(models, &model)
 	}
 	return models, nil
@@ -280,7 +280,7 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 		restored := remoteCatalogModels(stored, localGeneratedAt, hasLocalGeneratedAt)
 		var kept []*ai.Model
 		for _, model := range restored {
-			if string(model.Provider) == provider.ID {
+			if model.Provider == provider.ID {
 				kept = append(kept, model)
 			}
 		}

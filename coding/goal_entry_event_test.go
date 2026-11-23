@@ -70,8 +70,7 @@ func TestAgentSessionPublishesGoalEntries(t *testing.T) {
 			published = append(published, event.Entry)
 		}
 	})
-	if _, err := session.control.Tools["set_goal"].Tool.Execute("create",
-		json.RawMessage(`{"objective":"ship it"}`), context.Background(), func(agent.AgentToolResult) {}); err != nil {
+	if _, err := session.control.Tools["set_goal"].Tool.Execute(context.Background(), "create", json.RawMessage(`{"objective":"ship it"}`), func(agent.AgentToolResult) {}); err != nil {
 		t.Fatal(err)
 	}
 	if len(published) != 1 || published[0].CustomType != goal.GoalCustomType {

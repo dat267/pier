@@ -134,7 +134,7 @@ func (c *FirstTimeSetupComponent) update() {
 
 	if c.step == "theme" {
 		c.AddChild(tui.NewText(theme.Fg("text", "Pick a theme."), 1, 0, nil))
-		c.AddChild(tui.NewText(theme.Fg("muted", "Detected system appearance: "+string(c.options.DetectedTheme)), 1, 0, nil))
+		c.AddChild(tui.NewText(theme.Fg("muted", "Detected system appearance: "+c.options.DetectedTheme), 1, 0, nil))
 		c.AddChild(tui.NewSpacer(1))
 		c.addOptionList([]string{"Dark", "Light"}, c.themeIndex)
 	} else {
@@ -179,9 +179,9 @@ func (c *FirstTimeSetupComponent) moveSelection(delta int) {
 		if next != c.themeIndex {
 			c.themeIndex = next
 			if c.options.OnThemePreview != nil {
-				name := string(TerminalThemeDark)
+				name := TerminalThemeDark
 				if c.themeIndex == 1 {
-					name = string(TerminalThemeLight)
+					name = TerminalThemeLight
 				}
 				c.options.OnThemePreview(name)
 			}
@@ -391,7 +391,7 @@ func (c *DaxnutsComponent) Render(width int) []string {
 	lines = append(lines, "")
 
 	revealedRows := min(len(c.image), c.tick*(len(c.image)+3)/c.maxTicks)
-	for i := 0; i < len(c.image); i++ {
+	for i := range len(c.image) {
 		switch {
 		case i < revealedRows:
 			lines = append(lines, center(c.image[i]))
@@ -811,7 +811,7 @@ func (c *ArminComponent) Render(width int) []string {
 
 	var lines []string
 	for _, row := range c.grid {
-		clipped := ""
+		var clipped string
 		if len(row) > availableWidth {
 			clipped = strings.Join(row[:availableWidth], "")
 		} else {

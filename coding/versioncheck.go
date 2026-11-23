@@ -67,7 +67,7 @@ func IsNewerPackageVersion(candidateVersion, currentVersion string) bool {
 	// <tag>-dirty. Local changes do not make that build older than its tag.
 	currentVersion = strings.TrimSuffix(ai.JSTrim(currentVersion), "-dirty")
 	if base, ok := gitDescribeBaseVersion(currentVersion); ok {
-		if comparison, comparable := ComparePackageVersions(candidateVersion, base); comparable {
+		if comparison, isComparable := ComparePackageVersions(candidateVersion, base); isComparable {
 			return comparison > 0
 		}
 	}

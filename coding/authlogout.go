@@ -91,7 +91,7 @@ func runAuthLogout(appName string, command *AuthCommand, stdout, stderr io.Write
 		return 0
 	}
 
-	if err := runtime.Logout(credential.ProviderID, ctx); err != nil {
+	if err := runtime.Logout(ctx, credential.ProviderID); err != nil {
 		if _, ok := errors.AsType[*CredentialSynchronizationError](err); ok {
 			_, _ = fmt.Fprintln(stderr, FormatCLIError(fmt.Sprintf("Credentials removed for %s, but local model state could not be synchronized: %s", providerName, err.Error())))
 		} else {

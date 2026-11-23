@@ -432,7 +432,7 @@ func (c *QueueController) UpdateEditorBorderColor() {
 	} else {
 		level := "off"
 		if c.Session != nil {
-			if current := string(c.Session.ThinkingLevel()); current != "" {
+			if current := c.Session.ThinkingLevel(); current != "" {
 				level = current
 			}
 		}
@@ -449,7 +449,7 @@ func (c *QueueController) CycleThinkingLevel() {
 		return
 	}
 	c.UpdateEditorBorderColor()
-	c.showStatus("Thinking level: " + string(level))
+	c.showStatus("Thinking level: " + level)
 }
 
 // CycleModel switches to the next/previous model in scope.
@@ -469,8 +469,8 @@ func (c *QueueController) CycleModel(ctx context.Context, direction string) (*co
 	}
 	c.UpdateEditorBorderColor()
 	thinking := ""
-	if result.Model != nil && result.Model.Reasoning && string(result.ThinkingLevel) != "off" {
-		thinking = " (thinking: " + string(result.ThinkingLevel) + ")"
+	if result.Model != nil && result.Model.Reasoning && result.ThinkingLevel != "off" {
+		thinking = " (thinking: " + result.ThinkingLevel + ")"
 	}
 	name := ""
 	if result.Model != nil {

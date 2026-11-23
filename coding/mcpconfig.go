@@ -3,6 +3,7 @@ package coding
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -288,7 +289,7 @@ func readJSONObjectOrdered(data []byte) ([]string, map[string]json.RawMessage, e
 		return nil, nil, err
 	}
 	if delimiter, ok := token.(json.Delim); !ok || delimiter != '{' {
-		return nil, nil, fmt.Errorf("expected a JSON object")
+		return nil, nil, errors.New("expected a JSON object")
 	}
 	keys := []string{}
 	values := map[string]json.RawMessage{}
@@ -299,7 +300,7 @@ func readJSONObjectOrdered(data []byte) ([]string, map[string]json.RawMessage, e
 		}
 		key, ok := keyToken.(string)
 		if !ok {
-			return nil, nil, fmt.Errorf("expected a JSON object key")
+			return nil, nil, errors.New("expected a JSON object key")
 		}
 		var value json.RawMessage
 		if err := decoder.Decode(&value); err != nil {
@@ -315,12 +316,12 @@ func readJSONObjectOrdered(data []byte) ([]string, map[string]json.RawMessage, e
 		return nil, nil, err
 	}
 	if delimiter, ok := closing.(json.Delim); !ok || delimiter != '}' {
-		return nil, nil, fmt.Errorf("expected the end of a JSON object")
+		return nil, nil, errors.New("expected the end of a JSON object")
 	}
 	var trailing json.RawMessage
 	if err := decoder.Decode(&trailing); err != io.EOF {
 		if err == nil {
-			return nil, nil, fmt.Errorf("unexpected data after JSON object")
+			return nil, nil, errors.New("unexpected data after JSON object")
 		}
 		return nil, nil, err
 	}

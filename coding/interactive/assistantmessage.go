@@ -429,7 +429,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 	}
 	c.hasToolCalls = hasToolCalls
 
-	stopReason := string(message.StopReason)
+	stopReason := message.StopReason
 	switch {
 	case stopReason == "length":
 		c.contentContainer.AddChild(tui.NewSpacer(1))

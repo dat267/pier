@@ -188,7 +188,7 @@ type CredentialInfo struct {
 // return errors only on storage failure; Models wraps them in ModelsError
 // with code "auth".
 type CredentialStore interface {
-	Read(providerID string, ctx context.Context) (*Credential, error)
+	Read(ctx context.Context, providerID string) (*Credential, error)
 	// List returns stored credential metadata without resolving or exposing
 	// secrets. Implementations must not execute configured API-key commands
 	// while listing.
@@ -199,9 +199,9 @@ type CredentialStore interface {
 	// Mutual exclusion per provider id, cross-process too where the backing
 	// store supports it. Returns the post-write credential. Errors from fn
 	// propagate.
-	Modify(providerID string, fn func(current *Credential) (*Credential, error), ctx context.Context) (*Credential, error)
+	Modify(ctx context.Context, providerID string, fn func(current *Credential) (*Credential, error)) (*Credential, error)
 	// Delete removes a credential (logout). Serialized against Modify.
-	Delete(providerID string, ctx context.Context) error
+	Delete(ctx context.Context, providerID string) error
 }
 
 // AuthContext is environment access for auth resolution. Injectable for tests.
@@ -377,7 +377,7 @@ type OAuthAuth struct {
 	Login func(interaction *AuthInteraction) (*OAuthCredential, error)
 	// Refresh exchanges the refresh token. Network call; returns an error on
 	// failure (invalid_grant etc.). Models runs this under the store lock.
-	Refresh func(credential *OAuthCredential, ctx context.Context) (*OAuthCredential, error)
+	Refresh func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error)
 	// ToAuth is side-effect-free derivation of request auth from a valid
 	// credential. Covers per-credential baseUrl (GitHub Copilot).
 	ToAuth func(credential *OAuthCredential) (*ModelAuth, error)

@@ -9,7 +9,7 @@ func rustRawString() *Mode {
 	// matching count of `#` delimiters, which RE2 has no equivalent for. Expand
 	// the plausible counts explicitly and guard the trailing `(?!#)`.
 	var alternatives []string
-	for n := 0; n <= 4; n++ {
+	for n := range 5 {
 		hashes := strings.Repeat("#", n)
 		alternatives = append(alternatives, `r`+hashes+`"(?:.|\n)*?"`+hashes)
 	}

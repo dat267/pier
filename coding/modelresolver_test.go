@@ -75,7 +75,7 @@ func (r *fakeRuntime) GetModel(providerID, modelID string) *ai.Model {
 	return nil
 }
 
-func (r *fakeRuntime) GetAvailable(providerID string, ctx context.Context) ([]*ai.Model, error) {
+func (r *fakeRuntime) GetAvailable(ctx context.Context, providerID string) ([]*ai.Model, error) {
 	if r.available != nil {
 		return r.available, nil
 	}

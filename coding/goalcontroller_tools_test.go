@@ -85,7 +85,7 @@ func TestGoalContinuationReachesTheModel(t *testing.T) {
 				_ = snapshot
 				params := json.RawMessage(`{"status":"complete"}`)
 				tool := session.control.Tools["set_goal"].Tool
-				_, _ = tool.Execute("complete", params, context.Background(), func(agent.AgentToolResult) {})
+				_, _ = tool.Execute(context.Background(), "complete", params, func(agent.AgentToolResult) {})
 			}
 		}
 		stream := ai.NewAssistantMessageEventStream()
@@ -112,7 +112,7 @@ func TestGoalContinuationReachesTheModel(t *testing.T) {
 		t.Fatal(err)
 	}
 	create := session.control.Tools["set_goal"].Tool
-	if _, err := create.Execute("id", json.RawMessage(`{"objective":"do it"}`), context.Background(), func(agent.AgentToolResult) {}); err != nil {
+	if _, err := create.Execute(context.Background(), "id", json.RawMessage(`{"objective":"do it"}`), func(agent.AgentToolResult) {}); err != nil {
 		t.Fatal(err)
 	}
 	if err := session.Prompt(context.Background(), "start", &PromptOptions{}); err != nil {
@@ -147,7 +147,7 @@ func TestGoalSettleReportsThePendingFollowUpRun(t *testing.T) {
 	streamFn := func(m *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 		round++
 		if round == 2 {
-			_, _ = session.GetToolDefinition("set_goal").Execute("complete", json.RawMessage(`{"status":"complete"}`), context.Background(), nil)
+			_, _ = session.GetToolDefinition("set_goal").Execute(context.Background(), "complete", json.RawMessage(`{"status":"complete"}`), nil)
 		}
 		stream := ai.NewAssistantMessageEventStream()
 		go func() {
@@ -212,7 +212,7 @@ func TestIdleGoalRoundReceivesActiveGoalTools(t *testing.T) {
 						sawGetGoal = true
 					}
 				}
-				_, _ = session.GetToolDefinition("set_goal").Execute("complete", json.RawMessage(`{"status":"complete"}`), context.Background(), nil)
+				_, _ = session.GetToolDefinition("set_goal").Execute(context.Background(), "complete", json.RawMessage(`{"status":"complete"}`), nil)
 				stream := ai.NewAssistantMessageEventStream()
 				go func() {
 					stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
@@ -230,7 +230,7 @@ func TestIdleGoalRoundReceivesActiveGoalTools(t *testing.T) {
 			if commandStartsRound {
 				session.GoalController().HandleCommand("set finish the objective")
 			} else {
-				if _, err := session.GetToolDefinition("set_goal").Execute("create", json.RawMessage(`{"objective":"finish the objective"}`), context.Background(), nil); err != nil {
+				if _, err := session.GetToolDefinition("set_goal").Execute(context.Background(), "create", json.RawMessage(`{"objective":"finish the objective"}`), nil); err != nil {
 					t.Fatal(err)
 				}
 				if err := session.Prompt(context.Background(), "continue", nil); err != nil {
@@ -276,7 +276,7 @@ func TestSessionGoalObjectiveUsesJavaScriptTrim(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			result, err := tool.Execute("call", json.RawMessage(params), context.Background(), nil)
+			result, err := tool.Execute(context.Background(), "call", json.RawMessage(params), nil)
 			if err != nil {
 				t.Fatal(err)
 			}

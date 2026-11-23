@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"net/url"
@@ -121,11 +122,11 @@ func parseMcpHTTPURL(value string) (*url.URL, string, error) {
 	value = stripWHATWGURLWhitespace(value)
 	parsed, err := url.Parse(value)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		return nil, "", fmt.Errorf("not an HTTP URL")
+		return nil, "", errors.New("not an HTTP URL")
 	}
 	if parsed.Host != "" {
 		if !mcpHTTPURLHasValidPort(parsed) {
-			return nil, "", fmt.Errorf("HTTP URL has an invalid port")
+			return nil, "", errors.New("HTTP URL has an invalid port")
 		}
 		return parsed, value, nil
 	}
@@ -134,19 +135,19 @@ func parseMcpHTTPURL(value string) (*url.URL, string, error) {
 	// an absolute URL with a host, and reject forms such as "https:".
 	colon := strings.IndexByte(value, ':')
 	if colon < 0 {
-		return nil, "", fmt.Errorf("not an absolute HTTP URL")
+		return nil, "", errors.New("not an absolute HTTP URL")
 	}
 	remainder := strings.ReplaceAll(value[colon+1:], string('\\'), "/")
 	remainder = strings.TrimLeft(remainder, "/")
 	if remainder == "" {
-		return nil, "", fmt.Errorf("HTTP URL has no host")
+		return nil, "", errors.New("HTTP URL has no host")
 	}
 	normalized, err := url.Parse(parsed.Scheme + "://" + remainder)
 	if err != nil || normalized.Host == "" {
-		return nil, "", fmt.Errorf("HTTP URL has no host")
+		return nil, "", errors.New("HTTP URL has no host")
 	}
 	if !mcpHTTPURLHasValidPort(normalized) {
-		return nil, "", fmt.Errorf("HTTP URL has an invalid port")
+		return nil, "", errors.New("HTTP URL has an invalid port")
 	}
 	return normalized, normalized.String(), nil
 }

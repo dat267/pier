@@ -17,7 +17,7 @@ func TestAuthStorageReloadPreservesSnapshotOnTruncatedJSON(t *testing.T) {
 	storage := NewAuthStorage(path)
 	writeAuthFile(t, path, `{"p":{"type":"api_key","key":"synthetic-corrupt"}`)
 	storage.Reload()
-	credential, err := storage.Read("p", context.Background())
+	credential, err := storage.Read(context.Background(), "p")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestAuthStorageDeleteDoesNotOverwriteMalformedJSON(t *testing.T) {
 	storage := NewAuthStorage(path)
 	const malformed = `{"p":{"type":"api_key","key":"synthetic-original"}} trailing`
 	writeAuthFile(t, path, malformed)
-	if err := storage.Delete("p", context.Background()); err == nil {
+	if err := storage.Delete(context.Background(), "p"); err == nil {
 		t.Error("delete acknowledged malformed auth.json")
 	}
 	raw := readFileBytes(t, path)
@@ -52,10 +52,10 @@ func TestAuthStorageModifyDoesNotOverwriteMalformedJSON(t *testing.T) {
 	const malformed = `{"p":{"type":"api_key","key":"synthetic-original"},"other":`
 	writeAuthFile(t, path, malformed)
 	called := false
-	_, err := storage.Modify("other", func(*ai.Credential) (*ai.Credential, error) {
+	_, err := storage.Modify(context.Background(), "other", func(*ai.Credential) (*ai.Credential, error) {
 		called = true
 		return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "synthetic-new"}}, nil
-	}, context.Background())
+	})
 	if err == nil {
 		t.Error("modify acknowledged malformed auth.json as a valid empty store")
 	}

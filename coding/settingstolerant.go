@@ -11,7 +11,7 @@ import (
 // eachSettingsMember calls fn for every exported JSON-tagged struct field that
 // the document supplies a member for.
 func eachSettingsMember(typ reflect.Type, members map[string]json.RawMessage, fn func(index int, field reflect.StructField, name string, member json.RawMessage)) {
-	for index := 0; index < typ.NumField(); index++ {
+	for index := range typ.NumField() {
 		field := typ.Field(index)
 		if field.PkgPath != "" {
 			continue
@@ -158,7 +158,7 @@ func clearSettingsPath(value reflect.Value, path []string) {
 	switch value.Kind() {
 	case reflect.Struct:
 		typ := value.Type()
-		for index := 0; index < typ.NumField(); index++ {
+		for index := range typ.NumField() {
 			field := typ.Field(index)
 			if field.PkgPath != "" {
 				continue
@@ -182,10 +182,10 @@ func clearSettingsPath(value reflect.Value, path []string) {
 			value.SetMapIndex(key, reflect.Zero(value.Type().Elem()))
 			return
 		}
-		copy := reflect.New(entry.Type()).Elem()
-		copy.Set(entry)
-		clearSettingsPath(copy, path[1:])
-		value.SetMapIndex(key, copy)
+		copied := reflect.New(entry.Type()).Elem()
+		copied.Set(entry)
+		clearSettingsPath(copied, path[1:])
+		value.SetMapIndex(key, copied)
 	}
 }
 

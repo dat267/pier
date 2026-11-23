@@ -3,11 +3,13 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -122,7 +124,7 @@ func readRadiusOAuthError(response *http.Response, message string) error {
 			description = text
 		}
 	}
-	detail := ""
+	var detail string
 	switch {
 	case oauthError != "" && description != "":
 		detail = oauthError + ": " + description
@@ -131,7 +133,7 @@ func readRadiusOAuthError(response *http.Response, message string) error {
 	case description != "":
 		detail = description
 	default:
-		detail = fmt.Sprintf("%d", response.StatusCode)
+		detail = strconv.Itoa(response.StatusCode)
 	}
 	return &radiusOAuthResponseError{
 		Status:       response.StatusCode,
@@ -157,7 +159,7 @@ func postRadiusGatewayForm(ctx context.Context, gateway, path string, form url.V
 	response, err := doBoundedRequest(request)
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
-			return nil, fmt.Errorf("Login cancelled")
+			return nil, errors.New("Login cancelled")
 		}
 		return nil, err
 	}
@@ -221,7 +223,7 @@ type RadiusCallbackServer struct {
 // StartRadiusCallbackServer serves the fixed-port OAuth callback. complete runs
 // the code exchange before the browser page is sent, as upstream's callback
 // server does, so a failure shows on the page and ends the wait with it.
-func StartRadiusCallbackServer(expectedState string, ctx context.Context, complete func(code string) (*OAuthCredential, error)) *RadiusCallbackServer {
+func StartRadiusCallbackServer(ctx context.Context, expectedState string, complete func(code string) (*OAuthCredential, error)) *RadiusCallbackServer {
 	callback := &RadiusCallbackServer{done: make(chan struct{})}
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", radiusCallbackHost, oauthCallbackPort(RadiusCallbackPort)))
 	if err != nil {
@@ -343,7 +345,7 @@ func (s *RadiusCallbackServer) Close() {
 // LoginRadiusWithBrowser runs the browser sign-in (upstream loginWithBrowser).
 func LoginRadiusWithBrowser(interaction *AuthInteraction, gateway, authorizationEndpoint string) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, fmt.Errorf("auth interaction is required")
+		return nil, errors.New("auth interaction is required")
 	}
 	pkce, err := GeneratePKCE()
 	if err != nil {
@@ -369,7 +371,7 @@ func LoginRadiusWithBrowser(interaction *AuthInteraction, gateway, authorization
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	callbackServer := StartRadiusCallbackServer(state, ctx, func(code string) (*OAuthCredential, error) {
+	callbackServer := StartRadiusCallbackServer(ctx, state, func(code string) (*OAuthCredential, error) {
 		return RequestRadiusOAuthToken(ctx, gateway, map[string]string{
 			"grant_type":    "authorization_code",
 			"client_id":     RadiusOAuthClientID,
@@ -397,9 +399,9 @@ func LoginRadiusWithBrowser(interaction *AuthInteraction, gateway, authorization
 	}
 	if credential == nil {
 		if ctx.Err() != nil {
-			return nil, fmt.Errorf("Login cancelled")
+			return nil, errors.New("Login cancelled")
 		}
-		return nil, fmt.Errorf("OAuth callback did not complete.")
+		return nil, errors.New("OAuth callback did not complete.")
 	}
 	return credential, nil
 }
@@ -430,13 +432,13 @@ func RequestRadiusDeviceAuthorization(ctx context.Context, gateway string) (*Rad
 	userCode, _ := payload["user_code"].(string)
 	expiresIn, hasExpiry := payload["expires_in"].(float64)
 	if deviceCode == "" || userCode == "" || !hasExpiry || expiresIn == 0 {
-		return nil, fmt.Errorf("Radius OAuth device authorization response is missing required fields")
+		return nil, errors.New("Radius OAuth device authorization response is missing required fields")
 	}
 	// The verification URI is opened in the browser, so only a normalized
 	// http(s) URL is trusted (pi v1.5.0 radius.ts trustedHttpUrl).
 	verificationURI, ok := trustedHTTPURL(payload["verification_uri"])
 	if !ok {
-		return nil, fmt.Errorf("Untrusted verification_uri in Radius OAuth device authorization response")
+		return nil, errors.New("Untrusted verification_uri in Radius OAuth device authorization response")
 	}
 	device := &RadiusDeviceAuthorization{
 		DeviceCode: deviceCode, UserCode: userCode,
@@ -452,7 +454,7 @@ func RequestRadiusDeviceAuthorization(ctx context.Context, gateway string) (*Rad
 // LoginRadiusWithDeviceCode runs the device-code sign-in.
 func LoginRadiusWithDeviceCode(interaction *AuthInteraction, gateway string) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, fmt.Errorf("auth interaction is required")
+		return nil, errors.New("auth interaction is required")
 	}
 	ctx := interaction.Ctx
 	if ctx == nil {
@@ -486,8 +488,8 @@ func LoginRadiusWithDeviceCode(interaction *AuthInteraction, gateway string) (*O
 			if err == nil {
 				return OAuthDeviceCodePollResult[*OAuthCredential]{Status: "complete", Value: credentials}, nil
 			}
-			var responseErr *radiusOAuthResponseError
-			if !asError(err, &responseErr) {
+			responseErr, ok := errors.AsType[*radiusOAuthResponseError](err)
+			if !ok {
 				return OAuthDeviceCodePollResult[*OAuthCredential]{Status: "failed", Message: err.Error()}, nil
 			}
 			switch responseErr.OAuthError {
@@ -510,23 +512,6 @@ func LoginRadiusWithDeviceCode(interaction *AuthInteraction, gateway string) (*O
 	})
 }
 
-// asError is a small errors.As wrapper kept local to avoid an import cycle in
-// this file's helper set.
-func asError(err error, target **radiusOAuthResponseError) bool {
-	for err != nil {
-		if typed, ok := err.(*radiusOAuthResponseError); ok {
-			*target = typed
-			return true
-		}
-		unwrapper, ok := err.(interface{ Unwrap() error })
-		if !ok {
-			return false
-		}
-		err = unwrapper.Unwrap()
-	}
-	return false
-}
-
 // CreateRadiusOAuth builds the Radius OAuth auth definition (upstream
 // createRadiusOAuth).
 func CreateRadiusOAuth(options RadiusOAuthOptions) *OAuthAuth {
@@ -536,7 +521,7 @@ func CreateRadiusOAuth(options RadiusOAuthOptions) *OAuthAuth {
 		LoginLabel: "Sign in with " + options.Name,
 		Login: func(interaction *AuthInteraction) (*OAuthCredential, error) {
 			if interaction == nil {
-				return nil, fmt.Errorf("auth interaction is required")
+				return nil, errors.New("auth interaction is required")
 			}
 			method, err := interaction.Prompt(AuthPrompt{
 				Type:    AuthPromptSelect,
@@ -566,9 +551,9 @@ func CreateRadiusOAuth(options RadiusOAuthOptions) *OAuthAuth {
 				return nil, fmt.Errorf("Unknown %s sign-in method: %s", options.Name, method)
 			}
 		},
-		Refresh: func(credential *OAuthCredential, ctx context.Context) (*OAuthCredential, error) {
+		Refresh: func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
 			if credential == nil {
-				return nil, fmt.Errorf("credential is required")
+				return nil, errors.New("credential is required")
 			}
 			return RequestRadiusOAuthToken(ctx, gateway, map[string]string{
 				"grant_type":    "refresh_token",
@@ -578,7 +563,7 @@ func CreateRadiusOAuth(options RadiusOAuthOptions) *OAuthAuth {
 		},
 		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
 			if credential == nil {
-				return nil, fmt.Errorf("credential is required")
+				return nil, errors.New("credential is required")
 			}
 			return &ModelAuth{APIKey: credential.Access}, nil
 		},

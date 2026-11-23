@@ -191,7 +191,7 @@ func resolveOverlayLayout(options *OverlayOptions, overlayHeight int, termWidth 
 	}
 
 	// Row: explicit, percentage, or anchor-based.
-	row := 0
+	var row int
 	switch {
 	case opt.Row != nil:
 		row = *opt.Row
@@ -210,7 +210,7 @@ func resolveOverlayLayout(options *OverlayOptions, overlayHeight int, termWidth 
 		row = resolveAnchorRow(anchor, effectiveHeight, availHeight, marginTop)
 	}
 
-	col := 0
+	var col int
 	switch {
 	case opt.Col != nil:
 		col = *opt.Col

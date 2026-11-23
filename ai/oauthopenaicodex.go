@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -147,7 +148,7 @@ func openAICodexPostForm(ctx context.Context, requestURL string, fields map[stri
 	response, err := doBoundedRequest(request)
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
-			return nil, fmt.Errorf("Login cancelled")
+			return nil, errors.New("Login cancelled")
 		}
 		return nil, err
 	}
@@ -179,7 +180,7 @@ func RefreshOpenAICodexAccessToken(ctx context.Context, refreshToken string) (*O
 	})
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
-			return nil, fmt.Errorf("OpenAI Codex token refresh error: Login cancelled")
+			return nil, errors.New("OpenAI Codex token refresh error: Login cancelled")
 		}
 		return nil, fmt.Errorf("OpenAI Codex token refresh error: %s", err.Error())
 	}
@@ -205,7 +206,7 @@ func StartOpenAICodexDeviceAuth(ctx context.Context) (*OpenAICodexDeviceAuthInfo
 	response, err := doBoundedRequest(request)
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
-			return nil, fmt.Errorf("Login cancelled")
+			return nil, errors.New("Login cancelled")
 		}
 		return nil, err
 	}
@@ -213,7 +214,7 @@ func StartOpenAICodexDeviceAuth(ctx context.Context) (*OpenAICodexDeviceAuthInfo
 	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
 	if response.StatusCode >= 400 {
 		if response.StatusCode == http.StatusNotFound {
-			return nil, fmt.Errorf("OpenAI Codex device code login is not enabled for this server. " +
+			return nil, errors.New("OpenAI Codex device code login is not enabled for this server. " +
 				"Use browser login or verify the server URL.")
 		}
 		message := fmt.Sprintf("OpenAI Codex device code request failed with status %d", response.StatusCode)
@@ -542,7 +543,7 @@ func (s *OpenAICodexCallbackServer) Close() {
 func OpenAICodexCredentialsFromToken(token *OpenAICodexTokenResponse) (*OAuthCredential, error) {
 	accountID := GetOpenAICodexAccountID(token.Access)
 	if accountID == "" {
-		return nil, fmt.Errorf("Failed to extract accountId from token")
+		return nil, errors.New("Failed to extract accountId from token")
 	}
 	return &OAuthCredential{
 		Access: token.Access, Refresh: token.Refresh, Expires: token.Expires,
@@ -552,7 +553,7 @@ func OpenAICodexCredentialsFromToken(token *OpenAICodexTokenResponse) (*OAuthCre
 // LoginOpenAICodexDeviceCode runs the device-code login path.
 func LoginOpenAICodexDeviceCode(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, fmt.Errorf("auth interaction is required")
+		return nil, errors.New("auth interaction is required")
 	}
 	ctx := interaction.Ctx
 	if ctx == nil {
@@ -583,7 +584,7 @@ func LoginOpenAICodexDeviceCode(interaction *AuthInteraction) (*OAuthCredential,
 // LoginOpenAICodex runs the browser login path with the manual paste race.
 func LoginOpenAICodex(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, fmt.Errorf("auth interaction is required")
+		return nil, errors.New("auth interaction is required")
 	}
 	flow, err := CreateOpenAICodexAuthorizationFlow(interaction.AgentName)
 	if err != nil {
@@ -622,7 +623,7 @@ func LoginOpenAICodex(interaction *AuthInteraction) (*OAuthCredential, error) {
 		})
 	}
 
-	code := ""
+	var code string
 	callbackCode, ok := server.WaitForCode()
 	if ok && callbackCode != "" {
 		cancelManual()
@@ -636,12 +637,12 @@ func LoginOpenAICodex(interaction *AuthInteraction) (*OAuthCredential, error) {
 		}
 		parsed := ParseOpenAICodexAuthorizationInput(manual.input)
 		if parsed.State != "" && parsed.State != flow.State {
-			return nil, fmt.Errorf("State mismatch")
+			return nil, errors.New("State mismatch")
 		}
 		code = parsed.Code
 	}
 	if code == "" {
-		return nil, fmt.Errorf("Missing authorization code")
+		return nil, errors.New("Missing authorization code")
 	}
 	token, err := ExchangeOpenAICodexAuthorizationCode(ctx, code, flow.Verifier, openAICodexRedirectURI())
 	if err != nil {
@@ -668,7 +669,7 @@ func OpenAICodexOAuth() *OAuthAuth {
 		LoginLabel:     "Sign in with ChatGPT",
 		Login: func(interaction *AuthInteraction) (*OAuthCredential, error) {
 			if interaction == nil {
-				return nil, fmt.Errorf("auth interaction is required")
+				return nil, errors.New("auth interaction is required")
 			}
 			method, err := interaction.Prompt(AuthPrompt{
 				Type:    AuthPromptSelect,
@@ -690,15 +691,15 @@ func OpenAICodexOAuth() *OAuthAuth {
 				return nil, fmt.Errorf("Unknown OpenAI Codex login method: %s", method)
 			}
 		},
-		Refresh: func(credential *OAuthCredential, ctx context.Context) (*OAuthCredential, error) {
+		Refresh: func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
 			if credential == nil {
-				return nil, fmt.Errorf("credential is required")
+				return nil, errors.New("credential is required")
 			}
 			return RefreshOpenAICodexToken(ctx, credential.Refresh)
 		},
 		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
 			if credential == nil {
-				return nil, fmt.Errorf("credential is required")
+				return nil, errors.New("credential is required")
 			}
 			return &ModelAuth{APIKey: credential.Access}, nil
 		},

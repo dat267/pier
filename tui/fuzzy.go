@@ -179,7 +179,7 @@ func indexContiguousASCII(text, query string, split, start int) int {
 	}
 	for i := start; i+len(query) <= len(text); i++ {
 		matched := true
-		for k := 0; k < len(query); k++ {
+		for k := range len(query) {
 			if lowerASCIIByte(text[i+k]) != lowerASCIIByte(asciiQueryByte(query, split, k)) {
 				matched = false
 				break
@@ -274,7 +274,7 @@ func matchFuzzyASCII(query string, text string, split int) FuzzyMatch {
 		positions = make([]int, 0, len(query))
 	}
 	lastMatchIndex := -1
-	for queryIndex := 0; queryIndex < len(query); queryIndex++ {
+	for queryIndex := range len(query) {
 		i := indexASCIILowerFrom(text, lowerASCIIByte(asciiQueryByte(query, split, queryIndex)), lastMatchIndex+1)
 		if i == -1 {
 			return FuzzyMatch{Matches: false, Score: 0}

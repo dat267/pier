@@ -16,7 +16,7 @@ func TestToolCallDurationIsRecordedAndPublished(t *testing.T) {
 	const sleep = 20 * time.Millisecond
 	tool := &AgentTool{
 		Name: "slow",
-		Execute: func(toolCallID string, params json.RawMessage, ctx context.Context, onUpdate func(AgentToolResult)) (AgentToolResult, error) {
+		Execute: func(ctx context.Context, toolCallID string, params json.RawMessage, onUpdate func(AgentToolResult)) (AgentToolResult, error) {
 			time.Sleep(sleep)
 			return AgentToolResult{}, nil
 		},
@@ -26,7 +26,7 @@ func TestToolCallDurationIsRecordedAndPublished(t *testing.T) {
 		tool:     tool,
 		args:     json.RawMessage(`{}`),
 	}
-	executed := executePreparedToolCall(prepared, context.Background(), func(AgentEvent) error { return nil })
+	executed := executePreparedToolCall(context.Background(), prepared, func(AgentEvent) error { return nil })
 	if executed.durationMS < sleep.Milliseconds() {
 		t.Fatalf("durationMS = %d, want at least the %d ms the tool slept", executed.durationMS, sleep.Milliseconds())
 	}
@@ -54,7 +54,7 @@ func TestToolCallDurationIsRecordedAndPublished(t *testing.T) {
 func TestToolCallDurationOnFailureAndSkippedCalls(t *testing.T) {
 	tool := &AgentTool{
 		Name: "fails",
-		Execute: func(toolCallID string, params json.RawMessage, ctx context.Context, onUpdate func(AgentToolResult)) (AgentToolResult, error) {
+		Execute: func(ctx context.Context, toolCallID string, params json.RawMessage, onUpdate func(AgentToolResult)) (AgentToolResult, error) {
 			time.Sleep(5 * time.Millisecond)
 			return AgentToolResult{}, context.DeadlineExceeded
 		},
@@ -64,7 +64,7 @@ func TestToolCallDurationOnFailureAndSkippedCalls(t *testing.T) {
 		tool:     tool,
 		args:     json.RawMessage(`{}`),
 	}
-	executed := executePreparedToolCall(prepared, context.Background(), func(AgentEvent) error { return nil })
+	executed := executePreparedToolCall(context.Background(), prepared, func(AgentEvent) error { return nil })
 	if !executed.isError {
 		t.Fatal("a failing tool was not reported as an error")
 	}

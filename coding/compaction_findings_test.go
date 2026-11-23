@@ -78,7 +78,7 @@ func TestCompactionCountsNewToolResults(t *testing.T) {
 		return stream
 	}
 	tool := testTool("large")
-	tool.Execute = func(_ string, _ json.RawMessage, _ context.Context, _ func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
+	tool.Execute = func(_ context.Context, _ string, _ json.RawMessage, _ func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 		return agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: strings.Repeat("x", 3200)}}}, nil
 	}
 	session, err := NewAgentSession(&SessionConfig{

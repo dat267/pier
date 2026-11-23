@@ -35,12 +35,12 @@ func normalizeToSingleLine(text string) string {
 	return ai.JSTrim(builder.String())
 }
 
-func clampInt(value int, min int, max int) int {
-	if value < min {
-		return min
+func clampInt(value int, low int, high int) int {
+	if value < low {
+		return low
 	}
-	if value > max {
-		return max
+	if value > high {
+		return high
 	}
 	return value
 }
@@ -409,7 +409,7 @@ func (t *TruncatedText) Render(width int) []string {
 	var result []string
 	emptyLine := repeatSpaces(width)
 
-	for i := 0; i < t.PaddingY; i++ {
+	for range t.PaddingY {
 		result = append(result, emptyLine)
 	}
 
@@ -427,7 +427,7 @@ func (t *TruncatedText) Render(width int) []string {
 	paddingNeeded := max(0, width-VisibleWidth(lineWithPadding))
 	result = append(result, lineWithPadding+repeatSpaces(paddingNeeded))
 
-	for i := 0; i < t.PaddingY; i++ {
+	for range t.PaddingY {
 		result = append(result, emptyLine)
 	}
 

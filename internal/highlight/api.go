@@ -1,6 +1,7 @@
 package highlight
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"sort"
@@ -107,7 +108,7 @@ func getCompiledLanguage(name string) (*compiledLanguage, error) {
 
 func (c *compiler) compileLanguageFor(language *Language) (*compiledMode, error) {
 	if slices.Contains(language.Contains, Self) {
-		return nil, fmt.Errorf("contains `self` at the top level")
+		return nil, errors.New("contains `self` at the top level")
 	}
 	root := cloneTree(&language.Mode, map[*Mode]*Mode{})
 	return c.compileMode(root, nil)

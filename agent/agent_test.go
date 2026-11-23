@@ -177,20 +177,20 @@ func TestAgentUnsubscribeDuringDispatchUsesListenerSnapshot(t *testing.T) {
 	}
 	var seen []string
 	var unsubscribeSecond func()
-	agent.Subscribe(func(event AgentEvent, _ context.Context) error {
+	agent.Subscribe(func(_ context.Context, event AgentEvent) error {
 		if event.Type == TurnStart {
 			seen = append(seen, "first")
 			unsubscribeSecond()
 		}
 		return nil
 	})
-	unsubscribeSecond = agent.Subscribe(func(event AgentEvent, _ context.Context) error {
+	unsubscribeSecond = agent.Subscribe(func(_ context.Context, event AgentEvent) error {
 		if event.Type == TurnStart {
 			seen = append(seen, "second")
 		}
 		return nil
 	})
-	if err := agent.processEvents(AgentEvent{Type: TurnStart}, context.Background()); err != nil {
+	if err := agent.processEvents(context.Background(), AgentEvent{Type: TurnStart}); err != nil {
 		t.Fatal(err)
 	}
 	if got := strings.Join(seen, ","); got != "first,second" {
@@ -204,7 +204,7 @@ func TestAgentSubscribeAndLifecycle(t *testing.T) {
 
 	var mu sync.Mutex
 	var events []string
-	cancel := agent.Subscribe(func(event AgentEvent, ctx context.Context) error {
+	cancel := agent.Subscribe(func(ctx context.Context, event AgentEvent) error {
 		mu.Lock()
 		events = append(events, event.Type)
 		mu.Unlock()
@@ -381,16 +381,16 @@ func TestStatePendingCallsSnapshotIsIndependent(t *testing.T) {
 		t.Fatal(err)
 	}
 	var snapshot AgentState
-	a.Subscribe(func(e AgentEvent, _ context.Context) error {
+	a.Subscribe(func(_ context.Context, e AgentEvent) error {
 		if e.Type == ToolExecutionStart {
 			snapshot = a.State()
 		}
 		return nil
 	})
-	if err := a.processEvents(AgentEvent{Type: ToolExecutionStart, ToolCallID: "call"}, context.Background()); err != nil {
+	if err := a.processEvents(context.Background(), AgentEvent{Type: ToolExecutionStart, ToolCallID: "call"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := a.processEvents(AgentEvent{Type: ToolExecutionEnd, ToolCallID: "call"}, context.Background()); err != nil {
+	if err := a.processEvents(context.Background(), AgentEvent{Type: ToolExecutionEnd, ToolCallID: "call"}); err != nil {
 		t.Fatal(err)
 	}
 	if !snapshot.PendingToolCalls["call"] {

@@ -209,7 +209,7 @@ func makeTool(name string) agent.AgentTool {
 	return agent.AgentTool{
 		Name: name, Description: name + " tool", Parameters: json.RawMessage(`{"type":"object"}`),
 		Label: name,
-		Execute: func(string, json.RawMessage, context.Context, func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
+		Execute: func(context.Context, string, json.RawMessage, func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			return agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: name}}, Details: json.RawMessage(`{}`)}, nil
 		},
 	}
