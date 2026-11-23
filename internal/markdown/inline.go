@@ -139,15 +139,18 @@ func parseInline(src string, state *inlineState) []Inline {
 
 	// A link needs "](" after its opener and a later ")" to close the target.
 	// Rejecting candidates without one keeps a long run of unmatched `[` linear
-	// instead of rescanning the tail for every character (M23).
-	linkOpen, linkClose, scannedLinks := -1, -1, false
+	// instead of rescanning the tail for every character (M23). The witness is
+	// the last "](" before the last ")": a stray "](" after a link's target
+	// must not reject it (`[t](u)](`).
+	linkOpen, scannedLinks := -1, false
 	linkCandidate := func(i int) bool {
 		if !scannedLinks {
 			scannedLinks = true
-			linkOpen = strings.LastIndex(src, "](")
-			linkClose = strings.LastIndexByte(src, ')')
+			if linkClose := strings.LastIndexByte(src, ')'); linkClose >= 0 {
+				linkOpen = strings.LastIndex(src[:linkClose], "](")
+			}
 		}
-		return linkOpen >= i+1 && linkClose > linkOpen+1
+		return linkOpen >= i+1
 	}
 
 	i := 0
