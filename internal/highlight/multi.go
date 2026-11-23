@@ -665,7 +665,10 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 		}
 		manualAbs, manualEnd := -1, 0
 		var manualHit *manualRule
-		for p := search; p < len(s); p++ {
+		// With no manual rules the scan below only walks to regexAbs or the end
+		// of the input doing nothing, which is O(tail) per call: execScan calls
+		// it once per candidate (D531).
+		for p := search; len(m.manuals) > 0 && p < len(s); p++ {
 			if regexAbs >= 0 && p > regexAbs {
 				break
 			}

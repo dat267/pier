@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D530)
+# Deliberate divergences from pi (D1–D531)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9271,3 +9271,24 @@ is unchanged: the goldens, the differentials and a 30 s fuzz run.
 
 Tests: `TestAnchoredSpaceGuards`, and `TestIniDottedKeyScan` for the folded
 INI path.
+
+### D531
+
+**`execScan` skips its manual-rule walk when the mode has no manual rules.**
+
+Reference: pi v1.6.0 (`faac5858`) runs one global regex for a mode's rules and
+consults manual rules separately, so a mode without them does no manual work.
+The port's `execScan` walked from the search position to the matched rule (or the
+end of the input) at every candidate even when `manuals` was empty, doing nothing
+in that loop. `execScan` is the path for a rule set that cannot dispatch, and it
+runs once per candidate, so the empty loop was O(tail) per call.
+
+The loop condition now requires `len(m.manuals) > 0`. Same method, interleaved
+single runs on the 24 KiB samples: vbscript 19.71 to 18.80 ms (4.6%), pgsql
+26.78 to 26.04 (2.8%), armasm 13.60 to 13.41 (1.4%), basic 21.26 to 21.06
+(0.9%), with R and autohotkey unchanged. Output is unchanged: every golden, the
+differentials and a 25 s fuzz run.
+
+No test: the branch is unreachable for any input, since the loop body has no
+effect when there are no manual rules, and the goldens already cover every mode
+that has them.
