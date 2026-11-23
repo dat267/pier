@@ -860,18 +860,11 @@ func StreamOpenAICodexResponsesSimple(model *Model, context TranscriptContext, o
 type CodexStreams struct{}
 
 func (CodexStreams) Stream(model *Model, context TranscriptContext, options *StreamOptions) *AssistantMessageEventStream {
-	return StreamOpenAICodexResponses(model, context, &OpenAICodexResponsesOptions{StreamOptions: derefStreamOptionsForCodex(options)})
+	return StreamOpenAICodexResponses(model, context, &OpenAICodexResponsesOptions{StreamOptions: derefStreamOptionsValue(options)})
 }
 
 func (CodexStreams) StreamSimple(model *Model, context TranscriptContext, options *SimpleStreamOptions) *AssistantMessageEventStream {
 	return StreamOpenAICodexResponsesSimple(model, context, options)
-}
-
-func derefStreamOptionsForCodex(options *StreamOptions) StreamOptions {
-	if options == nil {
-		return StreamOptions{}
-	}
-	return *options
 }
 
 // OpenAICodexProvider builds the built-in Codex provider (upstream

@@ -228,15 +228,8 @@ func (s openCodeStreams) StreamSimple(model *ai.Model, context ai.TranscriptCont
 		return s.inner.StreamSimple(model, context, nil)
 	}
 	cloned := *options
-	cloned.StreamOptions = derefCopy(s.withSession(&options.StreamOptions))
+	cloned.StreamOptions = derefStreamOptions(s.withSession(&options.StreamOptions))
 	return s.inner.StreamSimple(model, context, &cloned)
-}
-
-func derefCopy(options *ai.StreamOptions) ai.StreamOptions {
-	if options == nil {
-		return ai.StreamOptions{}
-	}
-	return *options
 }
 
 // MistralProvider builds the built-in Mistral provider.

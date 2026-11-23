@@ -1637,18 +1637,11 @@ func BedrockAPIKeyAuth() *ApiKeyAuth {
 type BedrockStreams struct{}
 
 func (BedrockStreams) Stream(model *Model, context TranscriptContext, options *StreamOptions) *AssistantMessageEventStream {
-	return StreamBedrockConverse(model, context, &BedrockOptions{StreamOptions: derefStreamOptionsForBedrock(options)})
+	return StreamBedrockConverse(model, context, &BedrockOptions{StreamOptions: derefStreamOptionsValue(options)})
 }
 
 func (BedrockStreams) StreamSimple(model *Model, context TranscriptContext, options *SimpleStreamOptions) *AssistantMessageEventStream {
 	return StreamBedrockConverseSimple(model, context, options)
-}
-
-func derefStreamOptionsForBedrock(options *StreamOptions) StreamOptions {
-	if options == nil {
-		return StreamOptions{}
-	}
-	return *options
 }
 
 // AmazonBedrockProvider builds the built-in Bedrock provider (upstream
