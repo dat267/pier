@@ -1,9 +1,9 @@
 package oauth
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
+
+	"github.com/dat267/pier/ai"
 )
 
 // OAuthError is a protocol-level OAuth failure with a code (upstream
@@ -43,15 +43,14 @@ func (e *OAuthIssuerMismatchError) Error() string {
 
 // quote encodes a string like the reference's JSON.stringify (errors.ts:20), so
 // a quote, backslash or control character in a server-supplied issuer cannot
-// break up the message.
+// break up the message. ai.MarshalJSON keeps U+2028 and U+2029 raw, as
+// JSON.stringify does, where encoding/json escaped them.
 func quote(value string) string {
-	var buffer bytes.Buffer
-	encoder := json.NewEncoder(&buffer)
-	encoder.SetEscapeHTML(false)
-	if err := encoder.Encode(value); err != nil {
+	encoded, err := ai.MarshalJSON(value)
+	if err != nil {
 		return `""`
 	}
-	return string(bytes.TrimSuffix(buffer.Bytes(), []byte("\n")))
+	return string(encoded)
 }
 
 // OAuthInsecureEndpointError refuses to send credentials over plain HTTP

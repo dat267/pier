@@ -82,6 +82,12 @@ func TestOAuthIssuerMismatchErrorQuotesLikeJSON(t *testing.T) {
 			want: `OAuth issuer mismatch: expected "x\ny", received "z\"w"`,
 		},
 		{
+			// JSON.stringify leaves U+2028 and "<" raw; encoding/json escaped them.
+			name: "line separator and html",
+			err:  &OAuthIssuerMismatchError{Expected: "a\u2028<b>"},
+			want: "OAuth issuer mismatch: expected \"a\u2028<b>\", received none",
+		},
+		{
 			name: "explicit message wins",
 			err:  &OAuthIssuerMismatchError{Expected: "a", Msg: "custom"},
 			want: "custom",
