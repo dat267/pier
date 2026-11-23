@@ -62,9 +62,23 @@ install:
 	}
 	if (-not $onPath) { Write-Output ("note: " + $dir + " is not on PATH") }
 
-# Run the test suite (the local gate; CI adds -race -count=2).
+# Run the test suite (the local gate; CI adds -race -count=2). On failure the
+# whole `--- FAIL:` block is reprinted after the run, so an intermittent failure
+# names its test without a rerun: TODO.md recorded a `./coding` failure twice
+# without a name and 38 later runs passed.
 test:
-	go test -count=1 ./...
+	#!/usr/bin/env bash
+	set -uo pipefail
+	log=$(mktemp)
+	trap 'rm -f "$log"' EXIT
+	status=0
+	go test -count=1 ./... 2>&1 | tee "$log" || status=$?
+	if [ "$status" -ne 0 ]; then
+		echo
+		echo "--- failing blocks ---"
+		awk '/^--- FAIL:/{keep=1} /^(ok|FAIL|PASS)[[:space:]]/{keep=0} keep' "$log"
+	fi
+	exit "$status"
 
 # Run the test suite under the race detector (requires cgo, unavailable on android/arm64). CI runs this.
 test-race:
