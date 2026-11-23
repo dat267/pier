@@ -831,9 +831,6 @@ func marshalOrderedJSON(raw json.RawMessage) string {
 // block early and leave its own lines outside it, ahead of the instructions
 // (M71). Other markup is left alone.
 func escapePromptDelimiters(text string) string {
-	if !strings.Contains(text, "</") {
-		return text
-	}
 	return strings.ReplaceAll(text, "</", "&lt;/")
 }
 

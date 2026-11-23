@@ -524,9 +524,6 @@ func floorDiv(a, b int64) int64 {
 // content outside it, ahead of the framing lines (M70). Other markup is left
 // alone: "<it>" in an objective reads normally.
 func escapeGoalText(text string) string {
-	if !strings.Contains(text, "</") {
-		return text
-	}
 	return strings.ReplaceAll(text, "</", "&lt;/")
 }
 
