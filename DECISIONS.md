@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D534)
+# Deliberate divergences from pi (D1–D535)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9408,3 +9408,30 @@ byte for byte as highlight.js does, and the differentials are unchanged.
 `TestExactWalkMatchesTheRegexp` now also walks every mode's end regex, and
 `TestExactWalkCapturesMatchTheRegexp` compares groups with the regexp's
 submatches.
+
+### D535
+
+**Line-start manual rules are tried at line starts, and a byte with no regex
+rule is an uncounted rejection.**
+
+Reference: pi v1.6.0 (`faac5858`) runs highlight.js 10.7.3, whose
+autohotkey title rules are `^[^\n";]+::(?!=)` and `^[^\n";]+:(?!=)` in the
+one sticky alternation. The port has them as manual begins (they backtrack to
+an earlier colon), and their first bytes, `[^\n";]`, are 252 of 256, past the
+dispatch table's 240-byte cap. That disabled the per-byte dispatch for the
+whole root rule set, so every call ran the joined regexp's NFA over the tail:
+autohotkey took 23.4 ms on a 24 KiB sample against the reference's 4.9 ms.
+`Mode.ManualLineStart` marks a manual that matches only at a line start; its
+bytes stay out of the table, and `execDispatch` visits line starts for it as
+it does for a `^` rule (D524). The same sample takes 4.2 ms against 4.8 ms
+(0.87x), and the 191 samples and their CRLF variants render byte for byte as
+highlight.js does.
+
+Two dispatch defects surfaced with it. `nextLineStart` skipped `from` itself
+when it was a line start, so after a match that ended with a terminator the
+`^` rule was missed at lastIndex, where the JS regex tries it first. And a
+position whose byte no regex rule begins with, reachable only as a line start,
+counted as a rejection that ran the regexp, so 256 such lines would have cut
+off the rest of the input (D351). `TestBeginLineRuleKeepsTheDispatch`,
+`TestLineStartManualKeepsTheDispatch` and
+`TestLineStartRejectionsAreNotCounted` pin them.

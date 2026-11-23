@@ -55,6 +55,10 @@ type Mode struct {
 	// pos. ManualFirst is the byte such a match must start with.
 	ManualBegin func(s string, pos int) (end int, ok bool)
 	ManualFirst string
+	// ManualLineStart marks a ManualBegin that matches only at a line start
+	// (the reference's begin starts with `^`); it is tried at line starts
+	// instead of at every ManualFirst byte.
+	ManualLineStart bool
 
 	// ManualIllegal replaces the compiled illegal regex the same way, for an
 	// illegal with a lookahead (`#(?!!)`): RE2 would have to consume the
@@ -157,9 +161,10 @@ type compiledMode struct {
 	onBegin     func(m *match, resp *Response)
 	onEnd       func(m *match, resp *Response)
 
-	manualBegin func(s string, pos int) (end int, ok bool)
-	manualFirst string
-	manual      bool
+	manualBegin     func(s string, pos int) (end int, ok bool)
+	manualFirst     string
+	manualLineStart bool
+	manual          bool
 
 	manualIllegal      func(s string, pos int) (end int, ok bool)
 	manualIllegalFirst string
@@ -331,6 +336,7 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 		cmode.manual = true
 		cmode.manualBegin = mode.ManualBegin
 		cmode.manualFirst = mode.ManualFirst
+		cmode.manualLineStart = mode.ManualLineStart
 	}
 	if parent != nil {
 		if mode.Begin == "" && !cmode.manual {
@@ -412,7 +418,7 @@ func (c *compiler) buildModeRegex(mode *compiledMode) *resumableMultiRegex {
 	mm := &resumableMultiRegex{caseIgnore: c.language.CaseInsensitive}
 	for _, term := range mode.contains {
 		if term.manual {
-			mm.addManual(term.manualBegin, term.manualFirst, matchData{rule: term, typ: ruleBegin})
+			mm.addManual(term.manualBegin, term.manualFirst, term.manualLineStart, matchData{rule: term, typ: ruleBegin})
 		} else {
 			mm.addRule(term.beginSource, term.keepGroups, matchData{rule: term, typ: ruleBegin})
 		}
@@ -428,7 +434,7 @@ func (c *compiler) buildModeRegex(mode *compiledMode) *resumableMultiRegex {
 	if mode.illegalSource != "" {
 		mm.addRule(mode.illegalSource, false, matchData{typ: ruleIllegal})
 	} else if mode.manualIllegal != nil {
-		mm.addManual(mode.manualIllegal, mode.manualIllegalFirst, matchData{typ: ruleIllegal})
+		mm.addManual(mode.manualIllegal, mode.manualIllegalFirst, false, matchData{typ: ruleIllegal})
 	}
 	return mm
 }

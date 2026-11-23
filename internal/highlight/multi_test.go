@@ -197,6 +197,12 @@ func TestBeginLineRuleKeepsTheDispatch(t *testing.T) {
 		// become a section there); the first line start wins.
 		{"a\r\n#x", 2},
 		{"a\u2028#x", 4}, // U+2028 ends a line too
+		// lastIndex already at a line start, as after a match that ended with
+		// the terminator: the JS regex's lastIndex search tries that position
+		// first, so `^` matches there, not at the next line.
+		{"a\nb\n", 2},
+		{"a\r\nb\n", 3},
+		{"a\u2029b\n", 4},
 	} {
 		jsLines := nonLFLineEnds(test.input)
 		// Start past the first line: at index 0 `^` legitimately matches, so
@@ -204,6 +210,9 @@ func TestBeginLineRuleKeepsTheDispatch(t *testing.T) {
 		from := 0
 		if strings.HasPrefix(test.input, "a") {
 			from = 1
+		}
+		if strings.HasSuffix(test.input, "b\n") {
+			from = strings.IndexByte(test.input, 'b')
 		}
 		got := matcher.exec(test.input, from, jsLines, nil)
 		if test.want < 0 {
@@ -245,5 +254,59 @@ func TestZeroWidthLineStartRuleKeepsTheDispatch(t *testing.T) {
 	got := matcher.exec("x mov r0\n", 2, false, nil)
 	if got == nil || got.lexeme != "mov" {
 		t.Fatalf("keyword not found away from the line start: %+v", got)
+	}
+}
+
+// TestLineStartManualKeepsTheDispatch: autohotkey's title rules are manual
+// begins for highlight.js 10.7.3's `^[^\n";]+::(?!=)` and `^[^\n";]+:(?!=)`
+// (pi v1.6.0, faac5858, languages/autohotkey.js). Their first bytes cover
+// nearly every byte, which disabled the per-byte dispatch for the whole root
+// rule set and left autohotkey on the joined regexp at 4.8x the reference's
+// time. Marked ManualLineStart, they are tried at line starts only and the
+// dispatch stays on (D535). The HTML and relevance are highlight.js's.
+func TestLineStartManualKeepsTheDispatch(t *testing.T) {
+	lang, err := getCompiledLanguage("autohotkey")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if root := lang.root.matcher.getMatcher(0); !root.dispatch || !root.lineStartManuals {
+		t.Fatalf("autohotkey's root matcher: dispatch %v, lineStartManuals %v", root.dispatch, root.lineStartManuals)
+	}
+	for _, test := range []struct {
+		code, html string
+		relevance  int
+	}{
+		{
+			"Label:\n  x := 1 ; c\n::btw::by the way\nf(a, b) {\n  MsgBox % a\n}\n#a::Run x\nq a:b\n",
+			"<span class=\"hljs-title\">Label:</span>\n  x := <span class=\"hljs-number\">1</span> <span class=\"hljs-comment\">; c</span>\n<span class=\"hljs-title\">::btw::</span>by the way\nf(a, b) {\n<span class=\"hljs-built_in\">  MsgBox %</span> a\n}\n<span class=\"hljs-title\">#a::</span>Run x\n<span class=\"hljs-title\">q a:</span>b\n",
+			3,
+		},
+		{"a\r\nTitle::\r\n  y = 2\r\n", "a\r\n<span class=\"hljs-title\">Title::</span>\r\n  y = <span class=\"hljs-number\">2</span>\r\n", 1},
+		{"x\u2028Esc::ExitApp\n", "<span class=\"hljs-title\">x\u2028Esc::</span><span class=\"hljs-keyword\">ExitApp</span>\n", 2},
+	} {
+		result, err := HighlightWith(test.code, "autohotkey", true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if html := RenderHTML(result.Nodes); html != test.html || result.Relevance != test.relevance {
+			t.Errorf("%q:\n got %q (%d)\nwant %q (%d)", test.code, html, result.Relevance, test.html, test.relevance)
+		}
+	}
+}
+
+// TestLineStartRejectionsAreNotCounted: a line start whose byte no regex rule
+// begins with runs no regexp, so its rejection is O(1) and must not count
+// toward D351's budget; counting it cut off the input after 256 such lines,
+// where highlight.js's sticky alternation finds the later match.
+func TestLineStartRejectionsAreNotCounted(t *testing.T) {
+	matcher := newMultiRegex()
+	matcher.addManual(func(string, int) (int, bool) { return 0, false }, "z", true, matchData{position: 0})
+	matcher.addRule(`#+`, matchData{position: 1})
+	if err := matcher.compile(false); err != nil {
+		t.Fatal(err)
+	}
+	input := strings.Repeat("z\n", 300) + "#"
+	if got := matcher.exec(input, 0, false, nil); got == nil || got.index != len(input)-1 {
+		t.Fatalf("got %+v, want the # at %d", got, len(input)-1)
 	}
 }

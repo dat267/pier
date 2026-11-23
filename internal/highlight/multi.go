@@ -60,10 +60,15 @@ func (m *match) group(i int) string {
 
 // manualRule is a begin rule with a Go matcher instead of a regex. firsts is
 // the set of bytes a match can start with, for the per-byte dispatch.
+// lineStart marks a rule that matches only at a line start (a `^` begin):
+// the dispatch tries it at line starts instead of adding its firsts to the
+// candidate table, where a wide set (autohotkey's `[^\n";]`) would disable the
+// dispatch for the whole rule set.
 type manualRule struct {
-	begin  func(s string, pos int) (end int, ok bool)
-	firsts string
-	data   matchData
+	begin     func(s string, pos int) (end int, ok bool)
+	firsts    string
+	lineStart bool
+	data      matchData
 }
 
 type multiRegex struct {
@@ -96,9 +101,12 @@ type multiRegex struct {
 	// which is a candidate offset no first-byte set can express, so it is
 	// excluded from the first-byte union and checked at line starts instead.
 	beginLineRule int
-	subs          [256]*multiRegex
-	subsMu        sync.Mutex
-	manuals       []manualRule
+	// lineStartManuals is whether a manual rule is lineStart, so execDispatch
+	// visits line starts for it.
+	lineStartManuals bool
+	subs             [256]*multiRegex
+	subsMu           sync.Mutex
+	manuals          []manualRule
 	// manualByByte indexes the manual rules by their first byte, in rule order.
 	manualByByte [256][]manualRule
 	// firstByteTable is the set of bytes that can begin a match, used as a byte
@@ -145,10 +153,10 @@ func (m *multiRegex) addRuleAt(source string, position int, data matchData) {
 	m.matchAt += countCapturingGroups(source) + 1
 }
 
-func (m *multiRegex) addManual(begin func(string, int) (int, bool), firsts string, data matchData) {
+func (m *multiRegex) addManual(begin func(string, int) (int, bool), firsts string, lineStart bool, data matchData) {
 	data.position = m.position
 	m.position++
-	m.manuals = append(m.manuals, manualRule{begin: begin, firsts: firsts, data: data})
+	m.manuals = append(m.manuals, manualRule{begin: begin, firsts: firsts, lineStart: lineStart, data: data})
 }
 
 // compile builds the joined alternation. It is the port of join(), without the
@@ -267,6 +275,10 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 		}
 	}
 	for _, mr := range m.manuals {
+		if mr.lineStart {
+			m.lineStartManuals = true
+			continue
+		}
 		for i := range len(mr.firsts) {
 			union[mr.firsts[i]] = true
 		}
@@ -439,7 +451,7 @@ func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsW
 		// express because its match sits after the terminator's byte.
 		candidate := m.indexFirstByte(s, search)
 		lineStart := -1
-		if m.beginLineRule >= 0 {
+		if m.beginLineRule >= 0 || m.lineStartManuals {
 			lineStart = nextLineStart(s, search, jsLines)
 		}
 		pos := candidate
@@ -500,6 +512,11 @@ func (m *multiRegex) dispatchAt(s string, pos int, jsLines bool, ws *jsWorkspace
 	sub := m.subMatcher(b)
 	if sub != nil {
 		regexMatch, decided = sub.decideAt(s, pos, jsLines, ws)
+	} else {
+		// No regex rule begins with b: nothing ran the regexp, so a rejection
+		// here is O(1) and not counted (D351). Only a line start for a `^` rule
+		// or a line-start manual reaches a byte outside the table.
+		decided = true
 	}
 	if sub != nil && !decided {
 		if pos == 0 {
@@ -518,6 +535,9 @@ func (m *multiRegex) dispatchAt(s string, pos int, jsLines bool, ws *jsWorkspace
 	}
 	for i := range m.manualByByte[b] {
 		mr := &m.manualByByte[b][i]
+		if mr.lineStart && pos > 0 && !lineEndBefore(s, pos, jsLines) {
+			continue
+		}
 		if end, ok := mr.begin(s, pos); ok {
 			manualMatch = &match{
 				index:    pos,
@@ -631,6 +651,9 @@ func (m *multiRegex) beginLineMatch(s string, pos int, jsLines bool) *match {
 func nextLineStart(s string, from int, jsLines bool) int {
 	if from <= 0 {
 		return 0
+	}
+	if from <= len(s) && lineEndBefore(s, from, jsLines) {
+		return from
 	}
 	for i := from; i < len(s); i++ {
 		if s[i] == '\n' {
@@ -841,11 +864,12 @@ func (m *multiRegex) buildMatch(s string, base int, loc []int, jsLines bool) *ma
 }
 
 type subRule struct {
-	src    string
-	keep   bool
-	manual func(string, int) (int, bool)
-	firsts string
-	data   matchData
+	src       string
+	keep      bool
+	manual    func(string, int) (int, bool)
+	firsts    string
+	lineStart bool
+	data      matchData
 }
 
 // resumableMultiRegex ports ResumableMultiRegex. The lazily built matchers are
@@ -870,8 +894,8 @@ func (r *resumableMultiRegex) addRule(source string, keepGroups bool, data match
 	}
 }
 
-func (r *resumableMultiRegex) addManual(begin func(string, int) (int, bool), firsts string, data matchData) {
-	r.rules = append(r.rules, subRule{manual: begin, firsts: firsts, data: data})
+func (r *resumableMultiRegex) addManual(begin func(string, int) (int, bool), firsts string, lineStart bool, data matchData) {
+	r.rules = append(r.rules, subRule{manual: begin, firsts: firsts, lineStart: lineStart, data: data})
 	if data.typ == ruleBegin {
 		r.count++
 	}
@@ -898,7 +922,7 @@ func (r *resumableMultiRegex) getMatcher(index int) *multiRegex {
 	for i := index; i < len(r.rules); i++ {
 		rule := r.rules[i]
 		if rule.manual != nil {
-			matcher.addManual(rule.manual, rule.firsts, rule.data)
+			matcher.addManual(rule.manual, rule.firsts, rule.lineStart, rule.data)
 		} else {
 			matcher.addRule(rule.src, rule.data)
 		}
