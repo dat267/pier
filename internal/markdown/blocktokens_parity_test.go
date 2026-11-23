@@ -98,6 +98,7 @@ func TestBlockTokensMatchMarked(t *testing.T) {
 		{"| a |\n| - |\n2. x", `table:1x1`},
 		{"| a |\n| - |\nx\u2028y", `table:1x0 | p:"x\u2028y"`},
 		{"| a\u2028b |\n| - |\n| c |", `p:"| a\u2028b |\n| - |\n| c |"`},
+		{"\u2029| a |\n| - |\n", `table:1x0`},
 
 		// The paragraph rule stops before a line that has gfmTable's shape with the
 		// line after it, even when Tokenizer.table then rejects the rows.

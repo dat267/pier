@@ -875,8 +875,7 @@ func (l *blockLexer) tryTable(start int) (*Block, bool) {
 	// Tokenizer.table rejects a header whose cell count differs from the
 	// delimiter row's (marked 18.0.11): `x y\n:-: | -` is a paragraph.
 	headers := splitTableRow(header.text)
-	// The header is `([^\n ].*)\n`, and `.` stops at U+2028 and U+2029.
-	if len(headers) != len(aligns) || strings.ContainsAny(header.text, "\u2028\u2029") {
+	if len(headers) != len(aligns) || !tableHeaderLine(header.text) {
 		return nil, false
 	}
 	table := &Block{Kind: BlockTable, Start: start, Align: aligns}
@@ -930,6 +929,18 @@ func tableBodyEnds(line string) bool {
 		return true
 	}
 	return strings.ContainsAny(line, "\u2028\u2029")
+}
+
+// tableHeaderLine reports whether line fits the table rule's header,
+// `^ *([^\n ].*)\n`: after the spaces, any first character (U+2029 included),
+// then a `.*` run, which stops at U+2028 and U+2029.
+func tableHeaderLine(line string) bool {
+	rest := strings.TrimLeft(line, " ")
+	if rest == "" {
+		return false
+	}
+	_, size := utf8.DecodeRuneInString(rest)
+	return !strings.ContainsAny(rest[size:], "\u2028\u2029")
 }
 
 // tableListStart is the table rule's list alternative,

@@ -96,6 +96,19 @@ func TestLexFenceBodyAndLanguage(t *testing.T) {
 	if b.Body != "line one\nline two" {
 		t.Fatalf("body = %q", b.Body)
 	}
+	// Tokenizer.fences trims the info string with JavaScript's trim(), which
+	// takes NBSP and U+3000 and keeps U+0085 (marked 18.0.11, pi v1.6.0
+	// faac5858).
+	for src, want := range map[string]string{
+		"```js\u00a0\nx\n```": "js",
+		"```\u3000js\nx\n```": "js",
+		"~~~x\u0085\ny\n~~~":  "x\u0085",
+		"```\tgo \nx\n```":    "go",
+	} {
+		if b := firstBlock(t, src, BlockCode); b.Info != want {
+			t.Errorf("Lex(%q) info = %q, want %q", src, b.Info, want)
+		}
+	}
 }
 
 func TestLexUnclosedFenceRunsToEnd(t *testing.T) {

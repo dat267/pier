@@ -358,7 +358,8 @@ func fenceStart(line string) (marker, info string, ok bool) {
 	if ch == '`' && strings.IndexByte(rest, '`') >= 0 {
 		return "", "", false
 	}
-	return marker, strings.Trim(rest, " \t"), true
+	// Tokenizer.fences sets lang to `cap[2].trim()`, JavaScript's trim.
+	return marker, jsTrim(rest), true
 }
 
 // isFenceEnd reports a closing fence. Marked's pattern is
