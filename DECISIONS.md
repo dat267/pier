@@ -9145,9 +9145,16 @@ more than the short-circuit it replaced. Disabling the full-matcher fallback is
 fast (0.13 ms at 1 KiB, linear) but changes output, since the fallback is what
 finds the rule that legitimately comes after `regexIndex`.
 
+Two more resume variants were measured and reverted. Answering the resume with
+`execScan` (the port's single-call path, closest to the reference's one global
+regex) is correct and passes every golden but is slower still (1 KiB 7.5 to
+13.4 ms), because `execScan` also steps a manual loop per byte. Returning only
+an exact match likewise cost 13.3 ms. `execDispatch` is already the cheapest of
+the three for this shape.
+
 What is left is a per-call cost inside `execDispatch` (61 us against V8's
 14 us) on top of a call count that is already linear, so it needs a cheaper
-anchored candidate walk rather than a bounding change. Counting walk-settled
+anchored candidate walk rather than a bounding change or a different exec. Counting walk-settled
 rejections toward `maxRejectedCandidates` does not address it and would break
 D351's guard, which `TestRejectedCandidateRunStopsAtBudget` pins.
 
