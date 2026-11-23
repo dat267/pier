@@ -959,16 +959,15 @@ func sortModelsForPicker(models []*ai.Model, currentModelKey string, currentDefa
 		}
 		return 2
 	}
-	for i := 1; i < len(models); i++ {
-		for j := i; j > 0; j-- {
-			left, right := models[j-1], models[j]
-			leftRank, rightRank := rank(left), rank(right)
-			if leftRank < rightRank || (leftRank == rightRank && left.Provider <= right.Provider) {
-				break
-			}
-			models[j-1], models[j] = models[j], models[j-1]
+	// Upstream's comparator puts the current, then the default model first and
+	// orders the rest by a.provider.localeCompare(b.provider) (D257: root
+	// collation); Array.prototype.sort is stable.
+	sort.SliceStable(models, func(i, j int) bool {
+		if leftRank, rightRank := rank(models[i]), rank(models[j]); leftRank != rightRank {
+			return leftRank < rightRank
 		}
-	}
+		return coding.CompareRootCollation(models[i].Provider, models[j].Provider) < 0
+	})
 }
 
 func applySettingChange(id string, newValue string, callbacks SettingsCallbacks) {

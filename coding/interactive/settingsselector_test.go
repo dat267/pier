@@ -612,3 +612,24 @@ func TestToolsSelectorTogglesSessionTools(t *testing.T) {
 		t.Fatalf("active tools = %v", session.activeTools)
 	}
 }
+
+// pi v1.6.0 (faac5858) modes/interactive/components/settings-selector.ts sorts
+// the per-model thinking picker with the current model first, then the
+// default model, then a.provider.localeCompare(b.provider); D257 maps that to
+// root collation. The expected order was read off Node's localeCompare for
+// the same providers; byte order put "Anthropic" and "Zai" first.
+func TestSortModelsForPickerUsesLocaleOrdering(t *testing.T) {
+	var models []*ai.Model
+	for _, provider := range []string{"openai", "Zai", "Anthropic", "anthropic", "a-b", "a_b", "current", "default"} {
+		models = append(models, &ai.Model{Provider: provider, ID: "m"})
+	}
+	sortModelsForPicker(models, modelSettingKey(models[6]), modelSettingKey(models[7]))
+	var got []string
+	for _, model := range models {
+		got = append(got, model.Provider)
+	}
+	want := "current,default,a_b,a-b,anthropic,Anthropic,openai,Zai"
+	if strings.Join(got, ",") != want {
+		t.Fatalf("order = %s, want %s", strings.Join(got, ","), want)
+	}
+}

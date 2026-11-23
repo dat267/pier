@@ -2472,12 +2472,14 @@ ICU behavior.
 The providers of an ambiguous `--models` pattern and the candidates of an
 ambiguous `--model` (pi v1.6.0, `faac5858`, `resolveModelScopeFromModels` and
 `resolveCliModel`) sort with the same collator; they had kept byte order, which
-put `Zai` first and `a-b` before `a_b`.
+put `Zai` first and `a-b` before `a_b`. So does the settings selector's
+per-model thinking picker (`settings-selector.ts`).
 
 Tests: `TestFuzzyModelAliasLocaleOrdering`, `TestListModelsTextUsesLocaleOrdering`,
 `TestModelSelectorProviderOrderMatchesUpstreamLocale`,
 `TestFooterStatusesUseUpstreamLocaleOrdering`,
-`TestAmbiguousModelListsUseLocaleOrdering`.
+`TestAmbiguousModelListsUseLocaleOrdering`,
+`TestSortModelsForPickerUsesLocaleOrdering`.
 
 ### D258
 
