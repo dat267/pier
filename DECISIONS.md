@@ -8947,4 +8947,25 @@ per call: on `\b(?:return|throw|else|new)` the walk answers in 1.4 ms where the
 regexp takes 2.86 s for the same positions, so walking is the cheap path and
 there is no cheaper correct rejection left to add.
 
+Three further routes were measured and closed on the same 30 KB C++ and Java
+samples:
+
+- **A whole-document mask**, computing each rule's required literal once per
+  highlight and skipping the rule when it is absent: sound and cheap, worth
+  0.3% (14.18 to 14.14 ms). Dropping one rule of ten from one submatcher
+  barely moves 97,291 walks.
+- **The prefilter run before the walk** instead of after the walk fails to
+  decide: dearer than the walk it saves, 14.4 to 18.3 ms.
+- **Removing the walk for C++**, the "the walk is the problem" hypothesis:
+  disabling it is 2.4x slower, 14.5 to 35.0 ms, because the regexp fallback
+  costs far more. The walk is a net win of about 20 ms on this file, so no
+  change that reduces walks can help.
+
+The walk is also neither quadratic nor allocating: `run` is linear in the run
+(2 steps per byte at 1,000, 2,000 and 4,000 bytes), a full document pass of
+the hot C++ rule allocates nothing, and one settled rule costs about 76 ns.
+C++ and Java pay that per candidate by design, so closing the remaining gap
+(14.2 ms against 10.3, and 11.5 against 6.7) needs a different rule-dispatch
+structure rather than another prefilter.
+
 Test: `TestBeginLineRuleKeepsTheDispatch`.
