@@ -433,6 +433,33 @@
     ]
   },
   {
+    "text": "esﾟ",
+    "width": 1,
+    "expected": [
+      "e",
+      "",
+      "sﾟ"
+    ]
+  },
+  {
+    "text": "wordﾟword",
+    "width": 4,
+    "expected": [
+      "wor",
+      "dﾟ",
+      "word"
+    ]
+  },
+  {
+    "text": "abﾞcd ef",
+    "width": 3,
+    "expected": [
+      "abﾞ",
+      "cd",
+      "ef"
+    ]
+  },
+  {
     "text": "日\u001b[0m😀\r\n",
     "width": 4,
     "expected": [

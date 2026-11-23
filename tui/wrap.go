@@ -86,7 +86,9 @@ func splitIntoTokensWithAnsi(text string) []string {
 		for _, segment := range segmentGraphemes(chunk) {
 			runes := []rune(segment)
 			segmentIsSpace := isSpaceRune(runes[0]) && len(runes) == 1
-			if !segmentIsSpace && isCJKBreakRune(runes[0]) {
+			// cjkBreakRegex.test(segment) matches any code point of the
+			// grapheme, so `sﾟ` (U+FF9F extends the s) is a CJK break.
+			if !segmentIsSpace && containsCJKBreak(segment) {
 				flushCurrent()
 				tokens = append(tokens, pendingAnsi+segment)
 				pendingAnsi = ""

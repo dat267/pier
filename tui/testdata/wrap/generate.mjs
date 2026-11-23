@@ -28,6 +28,9 @@ const cases = [
 	["\x1b[4mabc\x1b[18446744073709551616mdef", 3],
 	["\x1b[44mabc\x1b[99999999999999999999mdef", 3],
 	["\x1b[1;31mabc\x1b[18446744073709551616mdef", 2],
+	// cjkBreakRegex tests every code point of a grapheme: U+FF9E and U+FF9F
+	// extend the letter before them, and the cluster is a CJK break.
+	["es\uff9f", 1], ["word\uff9fword", 4], ["ab\uff9ecd ef", 3],
 ];
 const alphabet = ["a", "bb", "ccc", "\x1b[31m", "\x1b[0m", "\x1b[1m", "\x1b[4m", " ", "  ", "\n", "\r\n",
 	"日", "本", "😀", "e\u0301", "\t", "word", "longwordhere", "|", "-"];
