@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/whatwgurl"
 	"net"
 	"net/http"
 	"net/url"
@@ -230,27 +231,13 @@ func ParseOpenAIChatGPTAuthorizationInput(input string, expectedState string) (O
 		return OpenAIChatGPTAuthorizationResult{}, errors.New("Paste the full callback URL from the browser")
 	}
 	expected, _ := url.Parse(OpenAIChatGPTRedirectURI())
-	if urlOrigin(parsed) != urlOrigin(expected) || parsed.Path != expected.Path {
+	if whatwgurl.Origin(parsed) != whatwgurl.Origin(expected) || parsed.Path != expected.Path {
 		return OpenAIChatGPTAuthorizationResult{}, fmt.Errorf("The pasted callback URL must start with %s", OpenAIChatGPTRedirectURI())
 	}
 	if errorCode := parsed.Query().Get("error"); errorCode != "" {
 		return OpenAIChatGPTAuthorizationResult{}, fmt.Errorf("ChatGPT authorization failed: %s", errorCode)
 	}
 	return authorizationResultFromCallback(parsed, expectedState)
-}
-
-// urlOrigin renders a URL's origin the way the WHATWG URL parser does: the
-// lowercased scheme and host, with a default port dropped.
-func urlOrigin(u *url.URL) string {
-	scheme := strings.ToLower(u.Scheme)
-	host := strings.ToLower(u.Host)
-	switch scheme {
-	case "http":
-		host = strings.TrimSuffix(host, ":80")
-	case "https":
-		host = strings.TrimSuffix(host, ":443")
-	}
-	return scheme + "://" + host
 }
 
 func (s *OpenAIChatGPTCallbackServer) settle(result OpenAIChatGPTAuthorizationResult) {

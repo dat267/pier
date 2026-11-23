@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/whatwgurl"
 	"net/http"
 	"net/url"
 	"slices"
@@ -120,7 +121,7 @@ func loopback(hostname string) bool {
 // deriveApplicationType applies MCP SEP-837 to OAuth redirect URIs: custom
 // schemes and loopback HTTP(S) URLs identify native clients; other URLs are web.
 func parseHTTPURL(value string) (*url.URL, error) {
-	value = stripWHATWGURLWhitespace(value)
+	value = whatwgurl.StripWhitespace(value)
 	parsed, err := url.Parse(value)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
 		return nil, errors.New("not an HTTP URL")

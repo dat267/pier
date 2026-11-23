@@ -3,6 +3,7 @@ package coding
 import (
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/whatwgurl"
 	"maps"
 	"net/url"
 	"regexp"
@@ -119,7 +120,7 @@ func McpNamespace(server string) string {
 // stores their canonical effective URL instead of retaining the raw config value.
 // parseMcpHTTPURL returns the request URL that WHATWG consumers would use.
 func parseMcpHTTPURL(value string) (*url.URL, string, error) {
-	value = stripWHATWGURLWhitespace(value)
+	value = whatwgurl.StripWhitespace(value)
 	parsed, err := url.Parse(value)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
 		return nil, "", errors.New("not an HTTP URL")
@@ -150,25 +151,6 @@ func parseMcpHTTPURL(value string) (*url.URL, string, error) {
 		return nil, "", errors.New("HTTP URL has an invalid port")
 	}
 	return normalized, normalized.String(), nil
-}
-
-// stripWHATWGURLWhitespace applies the WHATWG URL parser's preprocessing, which
-// URL.canParse and `new URL` run before parsing: leading and trailing C0
-// controls or spaces are stripped, and ASCII tab, CR and LF are removed
-// anywhere. Go's url.Parse rejects those characters instead, so an otherwise
-// valid config URL with a stray space or newline would fail validation.
-func stripWHATWGURLWhitespace(value string) string {
-	value = strings.TrimFunc(value, func(r rune) bool { return r <= 0x20 })
-	if !strings.ContainsAny(value, "\t\r\n") {
-		return value
-	}
-	return strings.Map(func(r rune) rune {
-		switch r {
-		case '\t', '\r', '\n':
-			return -1
-		}
-		return r
-	}, value)
 }
 
 func mcpHTTPURLHasValidPort(parsed *url.URL) bool {
