@@ -1,6 +1,10 @@
 package tui
 
-import "github.com/dat267/pier/ai"
+import (
+	"unicode/utf16"
+
+	"github.com/dat267/pier/ai"
+)
 
 // Port of src/undo-stack.ts, src/kill-ring.ts, and src/word-navigation.ts.
 
@@ -136,7 +140,7 @@ func FindWordBackward(text string, cursor int) int {
 			if punctuationChars[r] {
 				lastPunctuationEnd = units
 			}
-			units += ai.JSLength(string(r))
+			units += utf16.RuneLen(r)
 		}
 		if lastPunctuationEnd < 0 {
 			newCursor -= ai.JSLength(last.Segment)
@@ -203,7 +207,7 @@ func FindWordForward(text string, cursor int) int {
 				stop = units
 				break
 			}
-			units += ai.JSLength(string(r))
+			units += utf16.RuneLen(r)
 		}
 		newCursor += stop
 		return newCursor

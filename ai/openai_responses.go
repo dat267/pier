@@ -588,7 +588,7 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 				text := strings.Join(nonEmpty, "\n\n")
 				if len(text) > 0 {
 					messages = append(messages, orderKeys(map[string]any{
-						"role": instructionRole, "content": SanitizeSurrogates(text),
+						"role": instructionRole, "content": text,
 					}, "role", "content"))
 				}
 			}
@@ -596,7 +596,7 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 			if m.Content.Blocks == nil {
 				messages = append(messages, orderKeys(map[string]any{
 					"role":    "user",
-					"content": []any{orderKeys(map[string]any{"type": "input_text", "text": SanitizeSurrogates(m.Content.Text)}, "type", "text")},
+					"content": []any{orderKeys(map[string]any{"type": "input_text", "text": m.Content.Text}, "type", "text")},
 				}, "role", "content"))
 			} else {
 				var content []any
@@ -604,7 +604,7 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 					switch b := item.(type) {
 					case TextContent:
 						content = append(content, orderKeys(map[string]any{
-							"type": "input_text", "text": SanitizeSurrogates(b.Text),
+							"type": "input_text", "text": b.Text,
 						}, "type", "text"))
 					case ImageContent:
 						content = append(content, orderKeys(map[string]any{
@@ -727,7 +727,7 @@ func convertResponsesAssistantMessage(model *Model, m *AssistantMessage, msgInde
 			}
 			item := map[string]any{
 				"type": "message", "role": "assistant",
-				"content": []any{orderKeys(map[string]any{"type": "output_text", "text": SanitizeSurrogates(b.Text), "annotations": []any{}}, "type", "text", "annotations")},
+				"content": []any{orderKeys(map[string]any{"type": "output_text", "text": b.Text, "annotations": []any{}}, "type", "text", "annotations")},
 				"status":  "completed", "id": msgID,
 			}
 			keys := []string{"type", "role", "content", "status", "id"}
@@ -763,7 +763,7 @@ func convertResponsesAssistantMessage(model *Model, m *AssistantMessage, msgInde
 				}
 				item = map[string]any{
 					"type": "custom_tool_call", "call_id": callID, "name": b.Name,
-					"input": SanitizeSurrogates(input),
+					"input": input,
 				}
 				keys = []string{"type", "id", "call_id", "name", "input"}
 			} else {
@@ -812,18 +812,18 @@ func convertResponsesToolResultOutput(model *Model, content UserContentList) any
 	if len(images) == 0 || !hasImageInput {
 		switch {
 		case hasText:
-			return SanitizeSurrogates(textResult)
+			return textResult
 		case len(images) > 0:
-			return SanitizeSurrogates("(see attached image)")
+			return "(see attached image)"
 		default:
-			return SanitizeSurrogates("(no tool output)")
+			return "(no tool output)"
 		}
 	}
 
 	var output []any
 	if hasText {
 		output = append(output, orderKeys(map[string]any{
-			"type": "input_text", "text": SanitizeSurrogates(textResult),
+			"type": "input_text", "text": textResult,
 		}, "type", "text"))
 	}
 	for _, image := range images {

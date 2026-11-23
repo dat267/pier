@@ -807,7 +807,7 @@ func (s *mistralStreamState) contentBuffer(index int) *strings.Builder {
 }
 
 func appendMistralText(output *AssistantMessage, stream *AssistantMessageEventStream, state *mistralStreamState, text string) {
-	delta := SanitizeSurrogates(text)
+	delta := text
 	if delta == "" {
 		return
 	}
@@ -828,7 +828,7 @@ func appendMistralText(output *AssistantMessage, stream *AssistantMessageEventSt
 }
 
 func appendMistralThinking(output *AssistantMessage, stream *AssistantMessageEventStream, state *mistralStreamState, text string) {
-	delta := SanitizeSurrogates(text)
+	delta := text
 	if delta == "" {
 		return
 	}
@@ -1162,11 +1162,11 @@ func toMistralChatMessages(messages []Message, supportsImages bool) []mistralCha
 				text = RenderSystemMessageUpdate(typed)
 			}
 			if text != "" {
-				result = append(result, mistralChatMessage{Role: "system", Content: SanitizeSurrogates(text)})
+				result = append(result, mistralChatMessage{Role: "system", Content: text})
 			}
 		case *UserMessage:
 			if typed.Content.String() {
-				result = append(result, mistralChatMessage{Role: "user", Content: SanitizeSurrogates(typed.Content.Text)})
+				result = append(result, mistralChatMessage{Role: "user", Content: typed.Content.Text})
 				continue
 			}
 			hadImages := false
@@ -1174,7 +1174,7 @@ func toMistralChatMessages(messages []Message, supportsImages bool) []mistralCha
 			for _, block := range typed.Content.Blocks {
 				switch inner := block.(type) {
 				case TextContent:
-					content = append(content, mistralContentChunk{Type: "text", Text: SanitizeSurrogates(inner.Text)})
+					content = append(content, mistralContentChunk{Type: "text", Text: inner.Text})
 				case ImageContent:
 					hadImages = true
 					if supportsImages {
@@ -1200,13 +1200,13 @@ func toMistralChatMessages(messages []Message, supportsImages bool) []mistralCha
 				switch inner := block.(type) {
 				case TextContent:
 					if JSTrim(inner.Text) != "" {
-						contentParts = append(contentParts, mistralContentChunk{Type: "text", Text: SanitizeSurrogates(inner.Text)})
+						contentParts = append(contentParts, mistralContentChunk{Type: "text", Text: inner.Text})
 					}
 				case ThinkingContent:
 					if JSTrim(inner.Thinking) != "" {
 						contentParts = append(contentParts, mistralContentChunk{
 							Type:     "thinking",
-							Thinking: []mistralTextChunk{{Type: "text", Text: SanitizeSurrogates(inner.Thinking)}},
+							Thinking: []mistralTextChunk{{Type: "text", Text: inner.Thinking}},
 						})
 					}
 				case ToolCall:
@@ -1233,7 +1233,7 @@ func toMistralChatMessages(messages []Message, supportsImages bool) []mistralCha
 			for _, block := range typed.Content {
 				switch inner := block.(type) {
 				case TextContent:
-					textParts = append(textParts, SanitizeSurrogates(inner.Text))
+					textParts = append(textParts, inner.Text)
 				case ImageContent:
 					hasImages = true
 				}

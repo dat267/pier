@@ -265,13 +265,13 @@ func ConvertGoogleMessages(model *Model, context TranscriptContext) ([]GoogleCon
 		switch m := msg.(type) {
 		case *UserMessage:
 			if m.Content.Blocks == nil {
-				contents = append(contents, GoogleContent{Role: "user", Parts: []GooglePart{{Text: SanitizeSurrogates(m.Content.Text)}}})
+				contents = append(contents, GoogleContent{Role: "user", Parts: []GooglePart{{Text: m.Content.Text}}})
 			} else {
 				var parts []GooglePart
 				for _, item := range m.Content.Blocks {
 					switch b := item.(type) {
 					case TextContent:
-						parts = append(parts, GooglePart{Text: SanitizeSurrogates(b.Text)})
+						parts = append(parts, GooglePart{Text: b.Text})
 					case ImageContent:
 						parts = append(parts, GooglePart{InlineData: &GoogleInlineData{MimeType: b.MimeType, Data: b.Data}})
 					}
@@ -295,7 +295,7 @@ func ConvertGoogleMessages(model *Model, context TranscriptContext) ([]GoogleCon
 					if (b.Text == "" || JSTrim(b.Text) == "") && thoughtSignature == "" {
 						continue
 					}
-					part := GooglePart{Text: SanitizeSurrogates(b.Text)}
+					part := GooglePart{Text: b.Text}
 					if thoughtSignature != "" {
 						sig := thoughtSignature
 						part.ThoughtSignature = &sig
@@ -308,7 +308,7 @@ func ConvertGoogleMessages(model *Model, context TranscriptContext) ([]GoogleCon
 							continue
 						}
 						thought := true
-						part := GooglePart{Text: SanitizeSurrogates(b.Thinking), Thought: &thought}
+						part := GooglePart{Text: b.Thinking, Thought: &thought}
 						if thoughtSignature != "" {
 							sig := thoughtSignature
 							part.ThoughtSignature = &sig
@@ -320,7 +320,7 @@ func ConvertGoogleMessages(model *Model, context TranscriptContext) ([]GoogleCon
 						if b.Thinking == "" || JSTrim(b.Thinking) == "" {
 							continue
 						}
-						parts = append(parts, GooglePart{Text: SanitizeSurrogates(b.Thinking)})
+						parts = append(parts, GooglePart{Text: b.Thinking})
 					}
 				case ToolCall:
 					thoughtSignature := resolveThoughtSignature(isSameProviderAndModel, deref(b.ThoughtSignature))
@@ -373,7 +373,7 @@ func ConvertGoogleMessages(model *Model, context TranscriptContext) ([]GoogleCon
 			responseValue := ""
 			switch {
 			case hasText:
-				responseValue = SanitizeSurrogates(textResult)
+				responseValue = textResult
 			case hasImages:
 				responseValue = "(see attached image)"
 			}

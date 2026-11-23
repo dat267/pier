@@ -3,7 +3,6 @@ package ai
 import (
 	"encoding/json"
 	"strings"
-	"unicode/utf16"
 )
 
 // Port of api/openai-completions.ts conversion half: convertMessages,
@@ -101,14 +100,14 @@ func ConvertOpenAICompletionsMessages(
 			if len(text) > 0 {
 				params = append(params, OpenAIMessage{
 					Role:    instructionRole,
-					Content: mustMarshalJSON(SanitizeSurrogates(text)),
+					Content: mustMarshalJSON(text),
 				})
 			}
 		case *UserMessage:
 			if m.Content.Blocks == nil {
 				params = append(params, OpenAIMessage{
 					Role:    "user",
-					Content: mustMarshalJSON(SanitizeSurrogates(m.Content.Text)),
+					Content: mustMarshalJSON(m.Content.Text),
 				})
 			} else {
 				var content []OpenAIContentPart
@@ -121,7 +120,7 @@ func ConvertOpenAICompletionsMessages(
 						if b.Text == "" {
 							continue
 						}
-						content = append(content, OpenAIContentPart{Type: "text", Text: SanitizeSurrogates(b.Text)})
+						content = append(content, OpenAIContentPart{Type: "text", Text: b.Text})
 					case ImageContent:
 						content = append(content, OpenAIContentPart{Type: "image_url",
 							ImageURL: &OpenAIImageURL{URL: "data:" + b.MimeType + ";base64," + b.Data}})
@@ -143,7 +142,7 @@ func ConvertOpenAICompletionsMessages(
 			var assistantTextParts []OpenAIContentPart
 			for _, block := range m.Content {
 				if tc, ok := block.(TextContent); ok && !JSTrimIsEmpty(tc.Text) {
-					assistantTextParts = append(assistantTextParts, OpenAIContentPart{Type: "text", Text: SanitizeSurrogates(tc.Text)})
+					assistantTextParts = append(assistantTextParts, OpenAIContentPart{Type: "text", Text: tc.Text})
 				}
 			}
 			var assistantText strings.Builder
@@ -191,7 +190,7 @@ func ConvertOpenAICompletionsMessages(
 					// model mimicking them).
 					var texts []string
 					for _, block := range nonEmptyThinkingBlocks {
-						texts = append(texts, SanitizeSurrogates(block.Thinking))
+						texts = append(texts, block.Thinking)
 					}
 					joined := strings.Join(texts, "\n\n")
 					parts := append([]OpenAIContentPart{{Type: "text", Text: joined}}, assistantTextParts...)
@@ -244,7 +243,7 @@ func ConvertOpenAICompletionsMessages(
 						assistantMsg.ToolCalls = append(assistantMsg.ToolCalls, OpenAIToolCall{
 							ID:     tc.ID,
 							Type:   "custom",
-							Custom: &OpenAICustom{Name: tc.Name, Input: SanitizeSurrogates(input)},
+							Custom: &OpenAICustom{Name: tc.Name, Input: input},
 						})
 						continue
 					}
@@ -314,7 +313,7 @@ func ConvertOpenAICompletionsMessages(
 				}
 				toolResultMsg := OpenAIMessage{
 					Role:       "tool",
-					Content:    mustMarshalJSON(SanitizeSurrogates(toolResultText)),
+					Content:    mustMarshalJSON(toolResultText),
 					ToolCallID: toolMsg.ToolCallID,
 				}
 				if compat.RequiresToolResultName && toolMsg.ToolName != "" {
@@ -364,11 +363,17 @@ func ConvertOpenAICompletionsMessages(
 // sanitizeID mirrors a JavaScript non-Unicode regex: an astral character's
 // two UTF-16 code units each become an underscore.
 func sanitizeID(id string) string {
+	// Each UTF-16 unit outside [A-Za-z0-9_-] becomes "_", so an astral
+	// character (two units) becomes two.
 	var sanitized strings.Builder
-	for _, unit := range utf16.Encode([]rune(id)) {
-		if unit >= 'a' && unit <= 'z' || unit >= 'A' && unit <= 'Z' || unit >= '0' && unit <= '9' || unit == '_' || unit == '-' {
-			sanitized.WriteByte(byte(unit))
-		} else {
+	sanitized.Grow(len(id))
+	for _, r := range id {
+		switch {
+		case r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '_' || r == '-':
+			sanitized.WriteByte(byte(r))
+		case r >= 0x10000:
+			sanitized.WriteString("__")
+		default:
 			sanitized.WriteByte('_')
 		}
 	}

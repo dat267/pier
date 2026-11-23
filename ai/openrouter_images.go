@@ -260,7 +260,7 @@ func buildOpenRouterImagesParams(model *ImagesModel, context ImagesContext) open
 	for _, item := range context.Input {
 		switch typed := item.(type) {
 		case TextContent:
-			content = append(content, openRouterImagesTextPart{Type: "text", Text: SanitizeSurrogates(typed.Text)})
+			content = append(content, openRouterImagesTextPart{Type: "text", Text: typed.Text})
 		case ImageContent:
 			content = append(content, openRouterImagesImagePart{
 				Type:     "image_url",

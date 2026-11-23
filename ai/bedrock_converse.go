@@ -237,7 +237,7 @@ func BuildBedrockSystemPrompt(systemPrompt string, model *Model, cacheRetention 
 	if systemPrompt == "" {
 		return nil
 	}
-	blocks := []any{map[string]any{"text": SanitizeSurrogates(systemPrompt)}}
+	blocks := []any{map[string]any{"text": systemPrompt}}
 	if cacheRetention != CacheRetentionNone && SupportsBedrockPromptCaching(model, env) {
 		cachePoint := map[string]any{"type": "default"}
 		if cacheRetention == CacheRetentionLong {
@@ -259,11 +259,10 @@ func NormalizeBedrockToolCallID(id string) string {
 
 // bedrockNonBlankTextBlock renders a text block, or nil when blank.
 func bedrockNonBlankTextBlock(text string) map[string]any {
-	sanitized := SanitizeSurrogates(text)
-	if JSTrim(sanitized) == "" {
+	if JSTrim(text) == "" {
 		return nil
 	}
-	return map[string]any{"text": sanitized}
+	return map[string]any{"text": text}
 }
 
 func bedrockRequiredTextBlock(text string) map[string]any {
@@ -412,7 +411,7 @@ func ConvertBedrockMessages(context TranscriptContext, model *Model, cacheRetent
 						}
 						continue
 					}
-					thinking := SanitizeSurrogates(inner.Thinking)
+					thinking := inner.Thinking
 					if JSTrim(thinking) == "" {
 						continue
 					}

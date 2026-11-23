@@ -16,20 +16,12 @@ import (
 	"github.com/dat267/pier/internal/jsnum"
 )
 
-// Port of utils/sanitize-unicode.ts.
-//
-// JavaScript strings can contain unpaired UTF-16 surrogate units. Go strings
-// can contain arbitrary bytes, but decoding invalid UTF-8 yields RuneError;
-// encoding runes back to UTF-16 therefore produces only valid scalar values
-// and surrogate pairs. Sanitizing is a no-op for every Go string.
-//
-// D253: JS strings are UTF-16; Go strings are UTF-8. Unpaired surrogates
-// cannot survive a Go string round-trip, so the sanitized output can only
-// differ from upstream's on inputs that were already corrupt in JS.
-
-// SanitizeSurrogates mirrors upstream sanitizeSurrogates. A Go string cannot
-// retain unpaired UTF-16 units, so there is nothing to remove.
-func SanitizeSurrogates(text string) string { return text }
+// utils/sanitize-unicode.ts sanitizeSurrogates has no port. Upstream deletes
+// unpaired UTF-16 surrogates from text before sending it to a provider; a Go
+// string cannot hold one as text, and the bytes that would encode one are
+// invalid UTF-8, which the JSON decoder (D253) and the wire encoder
+// (MarshalJSON) both replace with U+FFFD. The provider converters therefore
+// pass text through where upstream calls sanitizeSurrogates.
 
 // JSWhitespaceClass is the JavaScript `\s` character class for use inside an
 // RE2 pattern: Go's `\s` is `[\t\n\f\r ]`, while JavaScript's also matches the

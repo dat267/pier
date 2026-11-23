@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf16"
 	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
@@ -1905,11 +1906,11 @@ func utf16Unit(r rune, index int) uint16 {
 		}
 		return 0
 	}
-	shifted := r - 0x10000
+	high, low := utf16.EncodeRune(r)
 	if index == 0 {
-		return uint16(0xD800 + shifted>>10)
+		return uint16(high)
 	}
-	return uint16(0xDC00 + shifted&0x3FF)
+	return uint16(low)
 }
 
 func JSLength(s string) int { return ai.JSLength(s) }

@@ -15,15 +15,17 @@ import (
 	"golang.org/x/text/language"
 )
 
-func TestSanitizeSurrogatesReturnsGoStringWithoutAllocating(t *testing.T) {
-	text := "plain text 😀"
-	allocations := testing.AllocsPerRun(10, func() {
-		if got := SanitizeSurrogates(text); got != text {
-			t.Fatalf("sanitized = %q, want unchanged text", got)
-		}
-	})
-	if allocations != 0 {
-		t.Fatalf("sanitizing a Go string allocated %.0f objects, want 0", allocations)
+// pi v1.6.0 (faac5858) utils/sanitize-unicode.ts sanitizeSurrogates strips
+// unpaired surrogates before a provider request. The port has no such call:
+// the wire encoder replaces the invalid UTF-8 that would encode one, so no
+// request body carries a lone surrogate (D253).
+func TestMarshalJSONNeverSendsALoneSurrogate(t *testing.T) {
+	out, err := MarshalJSON(map[string]any{"text": "a\xed\xa0\x80b\xffc😀"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "{\"text\":\"a\uFFFD\uFFFD\uFFFDb\uFFFDc😀\"}"; string(out) != want {
+		t.Fatalf("MarshalJSON = %s, want %s", out, want)
 	}
 }
 

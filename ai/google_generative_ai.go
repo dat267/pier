@@ -95,7 +95,7 @@ func BuildGoogleParams(model *Model, context TranscriptContext, options *GoogleO
 	params := &GoogleGenerateContentParams{Contents: contents}
 	if systemInstruction != "" {
 		params.SystemInstruction = &GoogleSystemInstruction{
-			Parts: []GooglePart{{Text: SanitizeSurrogates(systemInstruction)}},
+			Parts: []GooglePart{{Text: systemInstruction}},
 			Role:  "user",
 		}
 	}

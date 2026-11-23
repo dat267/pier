@@ -336,7 +336,7 @@ func shouldUseServerSideFallbackBeta(model *Model) bool {
 // block array (with a placeholder when images carry no text).
 func ConvertAnthropicContentBlocks(content StringOrBlocks) json.RawMessage {
 	if content.Blocks == nil {
-		return mustMarshalJSON(SanitizeSurrogates(content.Text))
+		return mustMarshalJSON(content.Text)
 	}
 	hasImages := false
 	for _, block := range content.Blocks {
@@ -349,7 +349,7 @@ func ConvertAnthropicContentBlocks(content StringOrBlocks) json.RawMessage {
 		for _, block := range content.Blocks {
 			texts = append(texts, block.(TextContent).Text)
 		}
-		return mustMarshalJSON(SanitizeSurrogates(strings.Join(texts, "\n")))
+		return mustMarshalJSON(strings.Join(texts, "\n"))
 	}
 	var blocks []AnthropicContentBlock
 	hasText := false
@@ -357,7 +357,7 @@ func ConvertAnthropicContentBlocks(content StringOrBlocks) json.RawMessage {
 		switch b := block.(type) {
 		case TextContent:
 			hasText = true
-			blocks = append(blocks, AnthropicContentBlock{Type: "text", Text: SanitizeSurrogates(b.Text)})
+			blocks = append(blocks, AnthropicContentBlock{Type: "text", Text: b.Text})
 		case ImageContent:
 			blocks = append(blocks, AnthropicContentBlock{
 				Type:   "image",
@@ -444,7 +444,7 @@ func ConvertAnthropicMessages(
 			text := RenderSystemMessageUpdate(m)
 			var blocks []AnthropicContentBlock
 			if len(text) > 0 {
-				blocks = append(blocks, AnthropicContentBlock{Type: "text", Text: SanitizeSurrogates(text)})
+				blocks = append(blocks, AnthropicContentBlock{Type: "text", Text: text})
 			}
 			if convertToolDefinitions != nil {
 				added := m.ToolsAdded
@@ -490,7 +490,7 @@ func ConvertAnthropicMessages(
 				if !JSTrimIsEmpty(m.Content.Text) {
 					params = append(params, AnthropicMessage{
 						Role:    "user",
-						Content: mustMarshalJSON(SanitizeSurrogates(m.Content.Text)),
+						Content: mustMarshalJSON(m.Content.Text),
 					})
 				}
 				continue
@@ -499,7 +499,7 @@ func ConvertAnthropicMessages(
 			for _, item := range m.Content.Blocks {
 				switch b := item.(type) {
 				case TextContent:
-					blocks = append(blocks, AnthropicContentBlock{Type: "text", Text: SanitizeSurrogates(b.Text)})
+					blocks = append(blocks, AnthropicContentBlock{Type: "text", Text: b.Text})
 				case ImageContent:
 					blocks = append(blocks, AnthropicContentBlock{
 						Type:   "image",
@@ -527,7 +527,7 @@ func ConvertAnthropicMessages(
 					if JSTrimIsEmpty(b.Text) {
 						continue
 					}
-					blocks = append(blocks, AnthropicContentBlock{Type: "text", Text: SanitizeSurrogates(b.Text)})
+					blocks = append(blocks, AnthropicContentBlock{Type: "text", Text: b.Text})
 				case ThinkingContent:
 					// Redacted thinking: pass the opaque payload back.
 					if b.Redacted {
@@ -545,16 +545,16 @@ func ConvertAnthropicMessages(
 						if allowEmptySignature {
 							sig := ""
 							blocks = append(blocks, AnthropicContentBlock{
-								Type: "thinking", Thinking: new(SanitizeSurrogates(b.Thinking)), Signature: &sig,
+								Type: "thinking", Thinking: new(b.Thinking), Signature: &sig,
 							})
 						} else {
 							blocks = append(blocks, AnthropicContentBlock{
-								Type: "text", Text: SanitizeSurrogates(b.Thinking),
+								Type: "text", Text: b.Thinking,
 							})
 						}
 					} else {
 						blocks = append(blocks, AnthropicContentBlock{
-							Type: "thinking", Thinking: new(SanitizeSurrogates(b.Thinking)), Signature: &thinkingSignature,
+							Type: "thinking", Thinking: new(b.Thinking), Signature: &thinkingSignature,
 						})
 					}
 				case ToolCall:
@@ -978,13 +978,13 @@ func buildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 		}}
 		if initialSystemText != "" {
 			system = append(system, AnthropicContentBlock{
-				Type: "text", Text: SanitizeSurrogates(initialSystemText), CacheControl: cacheControl,
+				Type: "text", Text: initialSystemText, CacheControl: cacheControl,
 			})
 		}
 		params.System = mustMarshalJSON(system)
 	} else if initialSystemText != "" {
 		params.System = mustMarshalJSON([]AnthropicContentBlock{{
-			Type: "text", Text: SanitizeSurrogates(initialSystemText), CacheControl: cacheControl,
+			Type: "text", Text: initialSystemText, CacheControl: cacheControl,
 		}})
 	}
 

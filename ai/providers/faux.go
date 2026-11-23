@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 	"unicode/utf16"
+	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
 )
@@ -496,14 +497,25 @@ func fauxCommonPromptPrefixLength(previous, current []string) int {
 }
 
 func fauxPrefixLength(a, b string) int {
-	ua := utf16.Encode([]rune(a))
-	ub := utf16.Encode([]rune(b))
-	length := min(len(ua), len(ub))
-	index := 0
-	for index < length && ua[index] == ub[index] {
-		index++
+	// Walk both strings by character instead of encoding them whole; two
+	// astral characters that differ only in the low surrogate still share
+	// their first unit.
+	units := 0
+	for a != "" && b != "" {
+		ra, sizeA := utf8.DecodeRuneInString(a)
+		rb, sizeB := utf8.DecodeRuneInString(b)
+		if ra != rb {
+			highA, _ := utf16.EncodeRune(ra)
+			highB, _ := utf16.EncodeRune(rb)
+			if ra >= 0x10000 && rb >= 0x10000 && highA == highB {
+				units++
+			}
+			return units
+		}
+		units += utf16.RuneLen(ra)
+		a, b = a[sizeA:], b[sizeB:]
 	}
-	return index
+	return units
 }
 
 func fauxWithUsageEstimate(
