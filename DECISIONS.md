@@ -8846,9 +8846,8 @@ matcher.
 
 - A rule that is `^`, or `^` followed by an optional run, contributes no
   candidate byte, and `execDispatch` also visits line starts
-  (`nextLineStart`: 0 and the byte after each terminator). A bare `^` is an
-  empty match there; a prefix rule's match comes from the walk or its own
-  anchored regexp.
+  (`nextLineStart`: 0 and the byte after each terminator), where the rule's
+  match comes from the walk or its own anchored regexp.
 - When the table would pass the cap, a `^`-led rule and a manual marked
   `ManualLineStart` keep their bytes in their submatchers but leave the
   table, and are reached at line starts.

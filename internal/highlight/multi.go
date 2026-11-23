@@ -94,15 +94,13 @@ type multiRegex struct {
 	// where it is the only kind of rule that can (every other rule that can
 	// match empty disables the dispatch).
 	endLineRule int
-	// beginLineRule is the first rule that is only `^`, or -1, the mirror of
-	// endLineRule. It matches at position 0 or just after a line terminator,
-	// which is a candidate offset no first-byte set can express, so it is
-	// excluded from the first-byte union and checked at line starts instead.
+	// beginLineRule is the rule that is `^` followed by an optional run (a
+	// bare `^`, `^[ \t]*`), or -1, the mirror of endLineRule. It matches at
+	// position 0 or just after a line terminator, which is a candidate offset
+	// no first-byte set can express, so it is excluded from the first-byte
+	// union and checked at line starts instead; beginLineMatch computes its
+	// match with the walk or beginLineRe.
 	beginLineRule int
-	// beginLineBare is whether that rule is a bare `^`; otherwise it is a
-	// prefix rule such as `^[ \t]*`, whose match beginLineMatch computes with
-	// the walk or beginLineRe.
-	beginLineBare bool
 	beginLineRe   *patternRegexp
 	beginLineAtRe *patternRegexp
 	// lineStartManuals is whether a manual rule is lineStart, and
@@ -246,39 +244,17 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 			}
 		}
 		if !ok && isBeginLinePrefixRule(preparePattern(source)) {
-			// A rule that begins at a line start and matches empty there (an
-			// optional indentation run, `^[ \t]*`) is the same shape as a bare
-			// `^` (D524): its match sits at a line start, which no first-byte
-			// set of the rule's own first character can express, so it is
-			// checked at line starts and contributes no candidate byte. Without
-			// this one such rule disabled the dispatch for the whole rule set,
-			// which left armasm on the joined regexp for 81% of its profile.
+			// A rule that begins at a line start and matches empty there (a
+			// bare `^`, or an optional indentation run, `^[ \t]*`) sits at a
+			// position no first-byte set can express, so it contributes no
+			// candidate byte and is checked at line starts (D524). Without
+			// this one such rule disabled the dispatch for the whole rule set:
+			// markdown's root matcher and armasm's ran the joined regexp.
 			if m.beginLineRule >= 0 {
 				usable = false // beginLineMatch serves one such rule
 				break
 			}
 			m.beginLineRule = i
-			set, ok = "", true
-		}
-		if !ok && isBeginLineRule(preparePattern(source)) {
-			// `^` under the m flag matches at position 0 or after a line
-			// terminator. That is the position of the byte *after* a terminator,
-			// which a first-byte set of the terminator itself cannot express, so
-			// the rule contributes no candidate byte and is checked at line
-			// starts in execDispatch. Without this it had no first-byte set at
-			// all, which disabled the dispatch for every rule set containing one:
-			// markdown's root matcher paid a joined NFA scan per node instead.
-			// A later bare `^` never wins over an earlier bare one (both are
-			// empty at the same line start), so only the first is kept; after
-			// a prefix rule, which need not match, it would be lost.
-			if m.beginLineRule >= 0 && !m.beginLineBare {
-				usable = false
-				break
-			}
-			if m.beginLineRule < 0 {
-				m.beginLineRule = i
-				m.beginLineBare = true
-			}
 			set, ok = "", true
 		}
 		if !ok {
@@ -327,7 +303,7 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 			break
 		}
 	}
-	if usable && m.beginLineRule >= 0 && !m.beginLineBare {
+	if usable && m.beginLineRule >= 0 {
 		source := m.regexes[m.beginLineRule]
 		plain, err := compileEncodedPattern(`\A(?:`+source+`)`, flags)
 		if err != nil {
@@ -698,8 +674,6 @@ func isBeginLinePrefixRule(expr string) bool {
 	return re != nil && (re.Op == syntax.OpBeginLine || re.Op == syntax.OpBeginText)
 }
 
-// isBeginLineRule reports whether a prepared rule is only `^` (possibly in
-// groups), which the m flag makes a begin-of-line assertion.
 // beginsAtLineStart is whether expr's leading element is `^` (the m flag's
 // line start), so it can only match at a line start.
 func beginsAtLineStart(expr string) bool {
@@ -713,16 +687,8 @@ func beginsAtLineStart(expr string) bool {
 	return re != nil && re.Op == syntax.OpBeginLine
 }
 
-func isBeginLineRule(expr string) bool {
-	re := parseExactPattern(expr, false)
-	for re != nil && re.Op == syntax.OpCapture {
-		re = re.Sub[0]
-	}
-	return re != nil && re.Op == syntax.OpBeginLine
-}
-
-// beginLineMatch is the empty match of the `^` rule at a line start, or nil
-// when the rule set has none or pos is not a line start.
+// beginLineMatch is the match of the beginLineRule at pos, or nil when the
+// rule set has none, pos is not a line start, or the rule does not match.
 func (m *multiRegex) beginLineMatch(s string, pos int, jsLines bool, ws *jsWorkspace) *match {
 	if m.beginLineRule < 0 {
 		return nil
@@ -730,39 +696,11 @@ func (m *multiRegex) beginLineMatch(s string, pos int, jsLines bool, ws *jsWorks
 	if pos > 0 && !lineEndBefore(s, pos, jsLines) {
 		return nil
 	}
+	// The match need not be empty, and a guard reads the text after it
+	// (armasm's indented `#` comment), so the walk or the regexp gives its
+	// end.
 	group := m.ruleGroups[m.beginLineRule]
 	data := m.matchIndexes[group]
-	if !m.beginLineBare {
-		return m.beginLinePrefixMatch(s, pos, jsLines, ws, group, data)
-	}
-	var groups []int
-	if data.keepGroups {
-		// The rule is `^`, perhaps inside groups: every one of them is the
-		// empty match at pos, as the regexp's submatches would be.
-		groups = make([]int, 2*(group+m.ruleCaps[m.beginLineRule]+1))
-		for k := range groups {
-			groups[k] = -1
-			if k >= 2*group {
-				groups[k] = pos
-			}
-		}
-	}
-	return &match{
-		index:     pos,
-		typ:       data.typ,
-		rule:      data.rule,
-		groups:    groups,
-		input:     s,
-		position:  data.position,
-		groupBase: group,
-		jsLines:   jsLines,
-	}
-}
-
-// beginLinePrefixMatch is beginLineMatch for a prefix rule (`^[ \t]*`): its
-// match need not be empty, and a guard reads the text after it (armasm's
-// indented `#` comment), so the walk or the regexp gives its end.
-func (m *multiRegex) beginLinePrefixMatch(s string, pos int, jsLines bool, ws *jsWorkspace, group int, data matchData) *match {
 	end := -1
 	var groups []int
 	if exact := m.exacts[m.beginLineRule]; exact != nil && !data.keepGroups {
