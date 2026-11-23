@@ -590,3 +590,27 @@ func TestRubyClassHeaderHasNoIRBObject(t *testing.T) {
 		}
 	}
 }
+
+// languages/cpp.js (highlight.js 10.7.3, pi v1.6.0, faac5858) begins
+// FUNCTION_DISPATCH with `\b(?!decltype)(?!if)(?!for)(?!while)IDENT(?=\s*\()`.
+// Each lookahead rejects an identifier that only starts with the word, so
+// `format(x)` and `if0(x)` stay plain, and `\s` admits NBSP and \v before `(`.
+// The expected HTML is the reference's.
+func TestCPPFunctionDispatchLookaheads(t *testing.T) {
+	for _, tc := range []struct{ code, html string }{
+		{"foo(1)", "<span class=\"hljs-built_in\">foo</span>(<span class=\"hljs-number\">1</span>)"},
+		{"format(x)", "format(x)"},
+		{"if0(x)", "if0(x)"},
+		{"x = forward(y);", "x = forward(y);"},
+		{"foo (x)", "<span class=\"hljs-built_in\">foo</span> (x)"},
+		{"foo\v(x)", "<span class=\"hljs-built_in\">foo</span>\v(x)"},
+	} {
+		result, err := Highlight(tc.code, "cpp")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := RenderHTML(result.Nodes); got != tc.html || result.Relevance != 0 {
+			t.Errorf("%q: relevance %d HTML %q; want 0 %q", tc.code, result.Relevance, got, tc.html)
+		}
+	}
+}

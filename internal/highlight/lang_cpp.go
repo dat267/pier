@@ -1,6 +1,9 @@
 package highlight
 
-import gostrings "strings"
+import (
+	gostrings "strings"
+	"unicode/utf8"
+)
 
 func init() { RegisterLanguage("cpp", CPP()) }
 
@@ -77,16 +80,21 @@ func CPP() *Language {
 		Keywords:  cppKeywords,
 		Begin:     `\b` + IdentRe,
 	})
+	// The reference's `\b(?!decltype)(?!if)(?!for)(?!while)IDENT(?=\s*\()`:
+	// each lookahead rejects an identifier that merely starts with the word
+	// (`format`, `if0`), and `\s` is JavaScript's whitespace set.
 	functionDispatch.beforeBegin = func(m *match, resp *Response) {
-		switch m.lexeme {
-		case "decltype", "if", "for", "while":
-			resp.IgnoreMatch()
-			return
+		for _, prefix := range []string{"decltype", "if", "for", "while"} {
+			if gostrings.HasPrefix(m.lexeme, prefix) {
+				resp.IgnoreMatch()
+				return
+			}
 		}
 		rest := m.input[m.index+len(m.lexeme):]
 		i := 0
-		for i < len(rest) && (rest[i] == ' ' || rest[i] == '\t' || rest[i] == '\n' || rest[i] == '\r') {
-			i++
+		for i < len(rest) && isJSWhitespaceAt(rest, i) {
+			_, width := utf8.DecodeRuneInString(rest[i:])
+			i += width
 		}
 		if i >= len(rest) || rest[i] != '(' {
 			resp.IgnoreMatch()
