@@ -166,7 +166,7 @@ var regexpLiteral = &Mode{
 
 func init() {
 	RegexpMode.beforeBegin = func(m *match, resp *Response) {
-		if !regexpStart.MatchString(m.input[m.index:]) {
+		if !regexpStart.MatchStringWS(m.input[m.index:], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}

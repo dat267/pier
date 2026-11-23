@@ -98,6 +98,13 @@ type multiRegex struct {
 	// before the rules, so a match at the search position is checked with the
 	// correct \b/^ context without a bit-state verify pass.
 	prefixedRe *patternRegexp
+	// atLastIndex is set when a rule matches empty at every position (the
+	// default `\B|\b` end), so the leftmost match always begins at lastIndex.
+	// anchoredRe and anchoredPrefixedRe then try the alternation there only,
+	// instead of scanning the rest of the input for a match.
+	atLastIndex        bool
+	anchoredRe         *patternRegexp
+	anchoredPrefixedRe *patternRegexp
 }
 
 func newMultiRegex() *multiRegex {
@@ -152,6 +159,17 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 			return err
 		}
 		m.matcherRe = re
+		for _, source := range m.regexes {
+			if source == `\B|\b` || strings.HasPrefix(source, `\B|\b|`) {
+				anchored, err := compileEncodedPattern(`\A(?:`+joined+`)`, flags)
+				prefixed, prefixedErr := compileEncodedPattern(`\A(?s:.)(?:`+joined+`)`, flags)
+				if err == nil && prefixedErr == nil {
+					m.atLastIndex = true
+					m.anchoredRe, m.anchoredPrefixedRe = anchored, prefixed
+				}
+				break
+			}
+		}
 		if parsed := parsePattern(parsedExpr); parsed != nil {
 			if leadingContextSensitive(parsed) {
 				m.verifyStart = true
@@ -275,10 +293,55 @@ func (m *multiRegex) exec(s string, lastIndex int, jsLines bool, ws *jsWorkspace
 	if lastIndex > len(s) {
 		return nil
 	}
+	if m.atLastIndex {
+		return m.execAtLastIndex(s, lastIndex, jsLines, ws)
+	}
 	if m.dispatch {
 		return m.execDispatch(s, lastIndex, jsLines, ws)
 	}
 	return m.execScan(s, lastIndex, jsLines, ws)
+}
+
+// execAtLastIndex is exec for a rule set that always matches at lastIndex.
+// The prefixed form consumes the real preceding rune, so `\b` and `^` are
+// evaluated in context, as in execDispatch. A manual rule matching at the same
+// index wins only when it was declared before the regex rule.
+func (m *multiRegex) execAtLastIndex(s string, lastIndex int, jsLines bool, ws *jsWorkspace) *match {
+	var regexMatch *match
+	if lastIndex == 0 {
+		if loc := m.anchoredRe.findSubmatchWS(s, jsLines, ws); loc != nil {
+			regexMatch = m.buildMatch(s, 0, loc, jsLines)
+		}
+	} else {
+		_, width := utf8.DecodeLastRuneInString(s[:lastIndex])
+		base := lastIndex - width
+		if loc := m.anchoredPrefixedRe.findSubmatchWS(s[base:], jsLines, ws); loc != nil {
+			regexMatch = m.buildMatch(s, base, loc, jsLines)
+		}
+	}
+	if lastIndex < len(s) {
+		for i := range m.manuals {
+			mr := &m.manuals[i]
+			if strings.IndexByte(mr.firsts, s[lastIndex]) < 0 {
+				continue
+			}
+			if regexMatch != nil && mr.data.position >= regexMatch.position {
+				break
+			}
+			if end, ok := mr.begin(s, lastIndex); ok {
+				return &match{
+					index:    lastIndex,
+					lexeme:   s[lastIndex:end],
+					typ:      mr.data.typ,
+					rule:     mr.data.rule,
+					input:    s,
+					position: mr.data.position,
+					jsLines:  jsLines,
+				}
+			}
+		}
+	}
+	return regexMatch
 }
 
 // maxRejectedCandidates bounds one dispatch scan. Each rejected candidate may

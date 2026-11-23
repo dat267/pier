@@ -4,7 +4,7 @@ func init() { RegisterLanguage("makefile", Makefile()) }
 
 // makefileAssignGuard is the reference's `(?=[:+?]?=)` lookahead: RE2 has none,
 // so the assignment rule matches the target and checks the following bytes.
-var makefileAssignGuard = mustCompileJS(`[:+?]?=`)
+var makefileAssignGuard = mustCompileJS(`\A[:+?]?=`)
 
 // Makefile returns the Makefile language definition (a port of
 // languages/makefile.js).
@@ -40,7 +40,7 @@ func Makefile() *Language {
 
 	assignment := &Mode{Begin: `^` + UnderscoreIdentRe + `\s*`}
 	assignment.beforeBegin = func(m *match, resp *Response) {
-		if !startsWith(makefileAssignGuard, m.input[m.index+len(m.lexeme):]) {
+		if !makefileAssignGuard.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}

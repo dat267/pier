@@ -13,7 +13,7 @@ var shellEndGuard = mustCompileJS(`(?m)\A\s*$`)
 func Shell() *Language {
 	starts := &Mode{End: `[^\\]`, SubLanguage: []string{"bash"}}
 	starts.OnEnd = func(m *match, resp *Response) {
-		if !shellEndGuard.MatchString(m.input[m.index+len(m.lexeme):]) {
+		if !shellEndGuard.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}

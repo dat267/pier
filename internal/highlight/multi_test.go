@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // TestPrefixedDispatchKeepsDotInsideOneLine guards the anchored dispatch
@@ -112,5 +113,57 @@ func TestSublanguageContinuations(t *testing.T) {
 				t.Fatalf("HTML = %q; want %q", got, tc.HTML)
 			}
 		})
+	}
+}
+
+// A rule set holding the default `\B|\b` end always matches at lastIndex, so
+// execAtLastIndex tries the alternation there only. It must pick the same rule
+// and lexeme as the unanchored scan (core.js MultiRegex.exec, highlight.js
+// 10.7.3 in pi v1.6.0, faac5858) at every position, including after a
+// non-ASCII rune and with JavaScript line terminators in the input.
+func TestAtLastIndexMatchesTheScan(t *testing.T) {
+	inputs := []string{
+		"re = /a+/g; return y / 2; // c\n",
+		"f(b) => { d }\r\n'h' + `${j}` é 日 \u2028 <a>x</a>",
+	}
+	checked := 0
+	for _, name := range Languages() {
+		lang, err := getCompiledLanguage(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		seen := map[*compiledMode]bool{}
+		var walk func(mode *compiledMode)
+		walk = func(mode *compiledMode) {
+			if mode == nil || seen[mode] {
+				return
+			}
+			seen[mode] = true
+			if matcher := mode.matcher.getMatcher(0); matcher.atLastIndex {
+				for _, input := range inputs {
+					jsLines := nonLFLineEnds(input)
+					for pos := 0; pos <= len(input); pos++ {
+						if pos < len(input) && !utf8.RuneStart(input[pos]) {
+							continue // the engine advances by whole runes
+						}
+						want := matcher.execScan(input, pos, jsLines, nil)
+						got := matcher.execAtLastIndex(input, pos, jsLines, nil)
+						checked++
+						if (want == nil) != (got == nil) || want != nil && (want.index != got.index ||
+							want.lexeme != got.lexeme || want.typ != got.typ || want.rule != got.rule) {
+							t.Fatalf("%s at %d of %q: anchored %+v, scan %+v", name, pos, input, got, want)
+						}
+					}
+				}
+			}
+			for _, child := range mode.contains {
+				walk(child)
+			}
+			walk(mode.starts)
+		}
+		walk(lang.root)
+	}
+	if checked < 10000 {
+		t.Fatalf("only %d positions checked", checked)
 	}
 }

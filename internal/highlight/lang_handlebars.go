@@ -81,7 +81,7 @@ func handlebarsLanguage(name string, disableAutodetect bool) *Language {
 	escape := &Mode{Begin: `\\\{\{`, Skip: true}
 	preventEscape := &Mode{Begin: `\\\\`, Skip: true}
 	preventEscape.beforeBegin = func(m *match, resp *Response) {
-		if !startsWith(handlebarsDoubleBrace, m.input[m.index+len(m.lexeme):]) {
+		if !handlebarsDoubleBrace.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}
@@ -105,7 +105,7 @@ func handlebarsLanguage(name string, disableAutodetect bool) *Language {
 
 	elseMode := &Mode{ClassName: "template-tag", Begin: `\{\{`, End: `\}\}`, Keywords: Keywords{"keyword": "else"}}
 	elseMode.beforeBegin = func(m *match, resp *Response) {
-		if !startsWith(handlebarsElse, m.input[m.index+len(m.lexeme):]) {
+		if !handlebarsElse.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}

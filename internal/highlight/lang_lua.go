@@ -19,7 +19,7 @@ func Lua() *Language {
 	// be followed by a long bracket opener.
 	lineComment := commentMode(`--`, `$`)
 	lineComment.beforeBegin = func(m *match, resp *Response) {
-		if luaLongBracketStart.MatchString(m.input[m.index+len(m.lexeme):]) {
+		if luaLongBracketStart.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}

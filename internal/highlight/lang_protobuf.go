@@ -4,7 +4,7 @@ func init() { RegisterLanguage("protobuf", Protobuf()) }
 
 // protobufEnumGuard is the reference's `(?=\s*=[^\n]+;$)` lookahead on the
 // enum-item relevance rule.
-var protobufEnumGuard = mustCompileJS(`\s*=[^\n]+;$`)
+var protobufEnumGuard = mustCompileJS(`\A\s*=[^\n]+;$`)
 
 // Protobuf returns the Protocol Buffers language definition (a port of
 // languages/protobuf.js).
@@ -16,7 +16,7 @@ func Protobuf() *Language {
 
 	enumItem := &Mode{Begin: `^\s*[A-Z_]+`}
 	enumItem.beforeBegin = func(m *match, resp *Response) {
-		if !startsWith(protobufEnumGuard, m.input[m.index+len(m.lexeme):]) {
+		if !protobufEnumGuard.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}

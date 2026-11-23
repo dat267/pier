@@ -3,14 +3,14 @@ package highlight
 func init() { RegisterLanguage("abnf", ABNF()) }
 
 // abnfRuleGuard is the reference's `(?=\s*=)` lookahead for a rule declaration.
-var abnfRuleGuard = mustCompileJS(`\s*=`)
+var abnfRuleGuard = mustCompileJS(`\A\s*=`)
 
 // ABNF returns the Augmented Backus-Naur Form language definition (a port of
 // languages/abnf.js).
 func ABNF() *Language {
 	ruleDeclaration := &Mode{ClassName: "attribute", Begin: `^[a-zA-Z][a-zA-Z0-9-]*`}
 	ruleDeclaration.beforeBegin = func(m *match, resp *Response) {
-		if !startsWith(abnfRuleGuard, m.input[m.index+len(m.lexeme):]) {
+		if !abnfRuleGuard.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}

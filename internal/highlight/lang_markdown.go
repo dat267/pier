@@ -132,7 +132,7 @@ func Markdown() *Language {
 		},
 	}
 	setext.beforeBegin = func(m *match, resp *Response) {
-		if !setextGuard.MatchString(m.input[m.index:]) {
+		if !setextGuard.MatchStringWS(m.input[m.index:], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}

@@ -11,7 +11,7 @@ var pgsqlRangeGuard = mustCompileJS("\\A\\s*(BETWEEN|UNBOUNDED|CURRENT|[-0-9]+)"
 func PostgreSQL() *Language {
 	rangeMode := &Mode{Begin: `\bRANGE`}
 	rangeMode.beforeBegin = func(m *match, resp *Response) {
-		if startsWith(pgsqlRangeGuard, m.input[m.index+len(m.lexeme):]) {
+		if pgsqlRangeGuard.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}

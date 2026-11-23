@@ -196,8 +196,9 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 		return existing, nil
 	}
 	if mode.BeginFollowedBy != "" || mode.BeginNotFollowedBy != "" {
-		followedRe, followedErr := c.langRe(mode.BeginFollowedBy)
-		notFollowedRe, notFollowedErr := c.langRe(mode.BeginNotFollowedBy)
+		// Anchored, so a failing guard does not search the rest of the input.
+		followedRe, followedErr := c.langRe(`\A(?:` + mode.BeginFollowedBy + `)`)
+		notFollowedRe, notFollowedErr := c.langRe(`\A(?:` + mode.BeginNotFollowedBy + `)`)
 		if followedErr != nil {
 			return nil, followedErr
 		}
@@ -213,11 +214,11 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 				}
 			}
 			rest := m.input[m.index+len(m.lexeme):]
-			if mode.BeginFollowedBy != "" && !startsWith(followedRe, rest) {
+			if mode.BeginFollowedBy != "" && !followedRe.MatchStringWS(rest, m.jsLines) {
 				resp.IgnoreMatch()
 				return
 			}
-			if mode.BeginNotFollowedBy != "" && startsWith(notFollowedRe, rest) {
+			if mode.BeginNotFollowedBy != "" && notFollowedRe.MatchStringWS(rest, m.jsLines) {
 				resp.IgnoreMatch()
 			}
 		}

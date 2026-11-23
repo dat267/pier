@@ -141,7 +141,7 @@ func XML() *Language {
 	openTag := &Mode{ClassName: "tag", Begin: `<`, End: `/?>`}
 	openTag.beforeBegin = func(m *match, resp *Response) {
 		next := m.index + len(m.lexeme)
-		if next >= len(m.input) || !openTagGuard.MatchString(m.input[next:]) {
+		if next >= len(m.input) || !openTagGuard.MatchStringWS(m.input[next:], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}
@@ -158,7 +158,7 @@ func XML() *Language {
 	}
 	closeTag.beforeBegin = func(m *match, resp *Response) {
 		next := m.index + len(m.lexeme)
-		if next >= len(m.input) || !closeTagGuard.MatchString(m.input[next:]) {
+		if next >= len(m.input) || !closeTagGuard.MatchStringWS(m.input[next:], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}

@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D520)
+# Deliberate divergences from pi (D1–D521)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8715,3 +8715,42 @@ written. The case needs a list inside a nested quote followed by two lazy
 lines, so it is rare, but the reference loses text the model wrote.
 
 Test: `TestNestedQuoteKeepsTheLinesAfterARelexedList`.
+
+### D521
+
+**Lookahead guards read only the text they test, and a default-end mode
+matches at its position only.**
+
+Reference: pi v1.6.0 (`faac5858`) highlights with highlight.js 10.7.3, whose
+lookaheads are part of each rule's sticky regex in V8. The port evaluates them
+as guards after a candidate match, and two costs grew with the rest of the
+input on every candidate. `patternRegexp.MatchString` first scanned the whole
+tail for `\r`, U+2028 and U+2029 to choose its line semantics. That made
+REGEXP_MODE's guard, which runs on every `/`, quadratic. The
+`BeginFollowedBy`/`BeginNotFollowedBy` guards and the abnf, makefile and protobuf
+guards were also unanchored, so a failing one searched the rest of the input
+for a later match that `startsWith` then discarded. Second, a mode
+whose rules include the default end `\B|\b` (JavaScript's value container and
+the new REGEXP_MODE wrapper) cannot use per-byte dispatch, so each lookup ran
+the whole alternation unanchored over the tail.
+
+Guards now take the document's line class, which the highlighter already
+derived (`MatchStringWS` with `m.jsLines`), and every guard is anchored with
+`\A`. A rule set holding `\B|\b` always matches at `lastIndex`, so
+`execAtLastIndex` tries the anchored alternation there only (with the real
+preceding rune for `\b` and `^`) and checks manual rules at the same index in
+rule order. Output is unchanged: the goldens, the relevance fixtures, two
+generated hljs differentials (18,000 inputs across 34 grammars, the same
+mismatch set before and after), the highlight fuzzers and
+`TestAtLastIndexMatchesTheScan` agree.
+
+On `BenchmarkHighlightRegexHeavyJavaScript` (27 KiB, Intel N150) the port went
+from 94.2 ms to 22.4 ms; the pinned hljs measured 24.7 ms on the same string
+(warmed `hljs.highlight(..., {language: "javascript", ignoreIllegals: true})`).
+The first 30 KB of `pi/node_modules/marked/lib/marked.esm.js` went from 48.9 ms
+to 20.5 ms (hljs 25.7 ms). A per-rule prefilter that walked each rule's syntax
+tree before the dispatch's regex call was tried and dropped: it saved 8% on
+TypeScript but cost 5-20% on JavaScript and JSON. TypeScript remains slower
+than the reference (see `TODO.md`).
+
+Tests: `TestAtLastIndexMatchesTheScan`, `BenchmarkHighlightRegexHeavyJavaScript`.

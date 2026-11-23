@@ -11,7 +11,7 @@ var mipsasmCommentGuard = mustCompileJS(`\A\s*$`)
 func MIPSASM() *Language {
 	comment := CommentMode(`[;#]`, `$`)
 	comment.beforeBegin = func(m *match, resp *Response) {
-		if mipsasmCommentGuard.MatchString(m.input[m.index+1:]) {
+		if mipsasmCommentGuard.MatchStringWS(m.input[m.index+1:], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}

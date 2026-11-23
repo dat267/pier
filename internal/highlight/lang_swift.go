@@ -122,7 +122,7 @@ func Swift() *Language {
 		ExcludeBegin: true,
 	}
 	dotKeyword.beforeBegin = func(m *match, resp *Response) {
-		if !swiftDotKeywordGuard.MatchString(m.input[m.index+len(m.lexeme):]) {
+		if !swiftDotKeywordGuard.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}

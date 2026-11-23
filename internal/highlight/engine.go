@@ -607,11 +607,6 @@ func nodesEmitter(nodes []*Node) *emitter {
 	return &emitter{root: root, stack: []*Node{root}}
 }
 
-func startsWith(re interface{ FindStringIndex(string) []int }, s string) bool {
-	loc := re.FindStringIndex(s)
-	return loc != nil && loc[0] == 0
-}
-
 // lineStartsWith evaluates an assertion at the match's position with JavaScript
 // line terminators, reusing this highlight's matching storage.
 func (h *highlighter) lineStartsWith(re *patternRegexp, s string) bool {

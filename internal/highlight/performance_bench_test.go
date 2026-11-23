@@ -70,3 +70,20 @@ func BenchmarkHighlightRejectedRun(b *testing.B) {
 		}
 	}
 }
+
+// regexHeavyJavaScript is about 27 KiB of JavaScript dense in `/`, which every
+// regexp guard and default-end mode sees (D521).
+var regexHeavyJavaScript = strings.Repeat("const re = /ab+c/gi;\n"+
+	"if (x.match(/^[a-z]\\d+$/)) { return y / 2 / z; }\n"+
+	"s.replace(/\\s+/g, \" \").split(/,/);\n"+
+	"function f(a, b) { return a / b; } // ratio\n"+
+	"let t = `v ${a / 2}`;\n", 160)
+
+func BenchmarkHighlightRegexHeavyJavaScript(b *testing.B) {
+	b.ReportAllocs()
+	for b.Loop() {
+		if _, err := HighlightWith(regexHeavyJavaScript, "javascript", true); err != nil {
+			b.Fatal(err)
+		}
+	}
+}

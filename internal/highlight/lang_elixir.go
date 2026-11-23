@@ -53,13 +53,13 @@ func Elixir() *Language {
 
 	lowerSigil := &Mode{ClassName: "string", Begin: `~[a-z]`, Contains: []*Mode{sigilBody}}
 	lowerSigil.beforeBegin = func(m *match, resp *Response) {
-		if !startsWith(elixirSigilDelimiters, m.input[m.index+len(m.lexeme):]) {
+		if !elixirSigilDelimiters.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}
 	upperSigil := &Mode{ClassName: "string", Begin: `~[A-Z]`, Contains: sigilBodyVariants}
 	upperSigil.beforeBegin = func(m *match, resp *Response) {
-		if !startsWith(elixirSigilDelimiters, m.input[m.index+len(m.lexeme):]) {
+		if !elixirSigilDelimiters.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}
@@ -92,7 +92,7 @@ func Elixir() *Language {
 
 	keywordSymbol := &Mode{ClassName: "symbol", Begin: `:`, HasRelevance: true, Relevance: 0}
 	keywordSymbol.beforeBegin = func(m *match, resp *Response) {
-		if startsWith(elixirSymbolGuard, m.input[m.index+len(m.lexeme):]) {
+		if elixirSymbolGuard.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}
@@ -107,7 +107,7 @@ func Elixir() *Language {
 
 	regexpGuardMode := &Mode{Begin: `/: `, HasRelevance: true, Relevance: 0, Contains: []*Mode{number}}
 	regexpGuardMode.beforeBegin = func(m *match, resp *Response) {
-		if !startsWith(elixirRegexpGuard, m.input[m.index+len(m.lexeme):]) {
+		if !elixirRegexpGuard.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}

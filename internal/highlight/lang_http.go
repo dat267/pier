@@ -17,7 +17,7 @@ func HTTP() *Language {
 
 	header := &Mode{ClassName: "attribute", Begin: `^` + headerName}
 	header.beforeBegin = func(m *match, resp *Response) {
-		if !startsWith(httpHeaderGuard, m.input[m.index+len(m.lexeme):]) {
+		if !httpHeaderGuard.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}
@@ -52,7 +52,7 @@ func HTTP() *Language {
 		Starts: responseStarts,
 	}
 	response.beforeBegin = func(m *match, resp *Response) {
-		if !startsWith(httpVersionGuard, m.input[m.index+len(m.lexeme):]) {
+		if !httpVersionGuard.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}
@@ -69,7 +69,7 @@ func HTTP() *Language {
 		Starts: requestStarts,
 	}
 	request.beforeBegin = func(m *match, resp *Response) {
-		if !startsWith(httpRequestGuard, m.input[m.index+len(m.lexeme):]) {
+		if !httpRequestGuard.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}
