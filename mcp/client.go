@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"maps"
 	"math"
 	"reflect"
@@ -906,7 +907,7 @@ func (c *Client) armTimeoutLocked(id int64, entry *pendingRequest) {
 	if entry.timeoutMs <= 0 {
 		return
 	}
-	entry.timer = time.AfterFunc(javascriptTimerDuration(entry.timeoutMs), func() {
+	entry.timer = time.AfterFunc(jsnum.TimeoutDuration(entry.timeoutMs), func() {
 		c.cancelPending(id, &protocol.McpTimeoutError{TimeoutMs: entry.timeoutMs}, entry.cancellable, "Request timed out")
 	})
 }

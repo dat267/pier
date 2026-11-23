@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"errors"
+	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -16,11 +17,11 @@ import (
 // core/http-dispatcher.ts independently uses Undici FastTimers for bodyTimeout.
 // These timers must not share one duration.
 func TestProviderHeaderTimerClampsLargeDelayToOneMillisecond(t *testing.T) {
-	if int64(int(maxJavascriptTimeoutMS+1)) != maxJavascriptTimeoutMS+1 {
+	if int64(int(jsnum.MaxTimeoutMS+1)) != jsnum.MaxTimeoutMS+1 {
 		t.Skip("requires 64-bit int")
 	}
 	server := stallServer(t, false, "")
-	timeoutMS := int(maxJavascriptTimeoutMS + 1)
+	timeoutMS := int(jsnum.MaxTimeoutMS + 1)
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	request, err := http.NewRequestWithContext(ctx, "GET", server.URL, nil)
@@ -39,13 +40,13 @@ func TestProviderHeaderTimerClampsLargeDelayToOneMillisecond(t *testing.T) {
 }
 
 func TestOpenAICompletionsUsesNodeHeaderTimeoutClamp(t *testing.T) {
-	if int64(int(maxJavascriptTimeoutMS+1)) != maxJavascriptTimeoutMS+1 {
+	if int64(int(jsnum.MaxTimeoutMS+1)) != jsnum.MaxTimeoutMS+1 {
 		t.Skip("requires 64-bit int")
 	}
 	server := stallServer(t, false, "")
 	model := testOpenAIModel()
 	model.BaseURL = server.URL
-	timeoutMS := int(maxJavascriptTimeoutMS + 1)
+	timeoutMS := int(jsnum.MaxTimeoutMS + 1)
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	stream := StreamOpenAICompletions(model, NormalizeContext(Context{
@@ -65,7 +66,7 @@ func TestOpenAICompletionsUsesNodeHeaderTimeoutClamp(t *testing.T) {
 // SDK-backed requests apply Node's timer to headers but keep the raw Undici
 // body timeout after the response arrives.
 func TestProviderRequestSeparatesHeaderAndBodyTimerSemantics(t *testing.T) {
-	if int64(int(maxJavascriptTimeoutMS+1)) != maxJavascriptTimeoutMS+1 {
+	if int64(int(jsnum.MaxTimeoutMS+1)) != jsnum.MaxTimeoutMS+1 {
 		t.Skip("requires 64-bit int")
 	}
 	previous := http.DefaultClient
@@ -73,7 +74,7 @@ func TestProviderRequestSeparatesHeaderAndBodyTimerSemantics(t *testing.T) {
 	http.DefaultClient = &http.Client{Transport: providerTimeoutTransport(func(request *http.Request) (*http.Response, error) {
 		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("")), Request: request}, nil
 	})}
-	timeoutMS := int(maxJavascriptTimeoutMS + 1)
+	timeoutMS := int(jsnum.MaxTimeoutMS + 1)
 	request, err := http.NewRequest(http.MethodGet, "https://fixture.invalid", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -97,11 +98,11 @@ func TestProviderRequestSeparatesHeaderAndBodyTimerSemantics(t *testing.T) {
 }
 
 func TestCodexAbortSignalHeaderTimerClampsLargeDelay(t *testing.T) {
-	if int64(int(maxJavascriptTimeoutMS+1)) != maxJavascriptTimeoutMS+1 {
+	if int64(int(jsnum.MaxTimeoutMS+1)) != jsnum.MaxTimeoutMS+1 {
 		t.Skip("requires 64-bit int")
 	}
 	server := stallServer(t, false, "")
-	timeoutMS := int(maxJavascriptTimeoutMS + 1)
+	timeoutMS := int(jsnum.MaxTimeoutMS + 1)
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL, nil)
@@ -170,7 +171,7 @@ func TestCodexAbortSignalRejectsOutOfRangeDelayBeforeFetch(t *testing.T) {
 type providerTimeoutTransport func(*http.Request) (*http.Response, error)
 
 func TestProviderDispatcherHeaderTimerKeepsLargeFastTimerDelay(t *testing.T) {
-	if int64(int(maxJavascriptTimeoutMS+1)) != maxJavascriptTimeoutMS+1 {
+	if int64(int(jsnum.MaxTimeoutMS+1)) != jsnum.MaxTimeoutMS+1 {
 		t.Skip("requires 64-bit int")
 	}
 	previous := http.DefaultClient
@@ -179,7 +180,7 @@ func TestProviderDispatcherHeaderTimerKeepsLargeFastTimerDelay(t *testing.T) {
 		<-request.Context().Done()
 		return nil, request.Context().Err()
 	})}
-	timeoutMS := int(maxJavascriptTimeoutMS + 1)
+	timeoutMS := int(jsnum.MaxTimeoutMS + 1)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 	defer cancel()
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://fixture.invalid", nil)
@@ -204,7 +205,7 @@ func (transport providerTimeoutTransport) RoundTrip(request *http.Request) (*htt
 // setTimeout. Convert it without clamping and saturate only where Go's
 // time.Duration cannot represent the setting.
 func TestGuardIdleBodyPreservesFastTimerDelayAndSaturatesDuration(t *testing.T) {
-	if int64(int(maxJavascriptTimeoutMS+1)) != maxJavascriptTimeoutMS+1 {
+	if int64(int(jsnum.MaxTimeoutMS+1)) != jsnum.MaxTimeoutMS+1 {
 		t.Skip("requires 64-bit int")
 	}
 	cases := []struct {
@@ -214,8 +215,8 @@ func TestGuardIdleBodyPreservesFastTimerDelayAndSaturatesDuration(t *testing.T) 
 	}{
 		{
 			name:      "above Node timer range",
-			timeoutMS: int(maxJavascriptTimeoutMS + 1),
-			want:      time.Duration(maxJavascriptTimeoutMS+1) * time.Millisecond,
+			timeoutMS: int(jsnum.MaxTimeoutMS + 1),
+			want:      time.Duration(jsnum.MaxTimeoutMS+1) * time.Millisecond,
 		},
 	}
 	maxDuration := time.Duration(1<<63 - 1)

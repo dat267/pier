@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"net/http"
 	"net/url"
@@ -1044,7 +1045,7 @@ func (t *StreamableHttpTransport) maxRetries() int {
 func (t *StreamableHttpTransport) sleep(ms int64) bool {
 	// Match setTimeout's clamping instead of overflowing time.Duration or
 	// sleeping for days on an untrusted SSE retry field.
-	timer := time.NewTimer(javascriptTimerDuration(ms))
+	timer := time.NewTimer(jsnum.TimeoutDuration(ms))
 	select {
 	case <-timer.C:
 		return true

@@ -71,10 +71,10 @@ func deviceCodeIntervalDuration(intervalSeconds int) time.Duration {
 	if intervalSeconds < 1 {
 		return deviceCodeMinimumIntervalMS * time.Millisecond
 	}
-	if int64(intervalSeconds) > maxJavascriptTimeoutMS/1000 {
+	if int64(intervalSeconds) > jsnum.MaxTimeoutMS/1000 {
 		// Preserve an above-range delay until the setTimeout-compatible sleep
 		// clamps it; multiplying an arbitrary server integer can overflow.
-		return time.Duration(maxJavascriptTimeoutMS+1) * time.Millisecond
+		return time.Duration(jsnum.MaxTimeoutMS+1) * time.Millisecond
 	}
 	return max(time.Duration(intervalSeconds)*time.Second, deviceCodeMinimumIntervalMS*time.Millisecond)
 }
@@ -113,7 +113,7 @@ func AbortableSleep(ctx context.Context, duration time.Duration, cancelMessage s
 			return fmt.Errorf("%s", cancelMessage)
 		}
 	}
-	timer := time.NewTimer(javascriptTimeoutDuration(duration.Milliseconds()))
+	timer := time.NewTimer(jsnum.TimeoutDuration(duration.Milliseconds()))
 	defer timer.Stop()
 	if ctx == nil {
 		<-timer.C

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"math"
 	"net/http"
@@ -248,7 +249,7 @@ func FetchWithCopilotRateLimitRetry(
 		if policy.MaxElapsedMS > maxAbortSignalTimeoutMS {
 			return nil, fmt.Errorf("The value of \"delay\" is out of range. It must be >= 0 && <= %d. Received %d", maxAbortSignalTimeoutMS, policy.MaxElapsedMS)
 		}
-		retryBudget = javascriptTimeoutDuration(policy.MaxElapsedMS)
+		retryBudget = jsnum.TimeoutDuration(policy.MaxElapsedMS)
 		deadline = time.Now().Add(time.Duration(policy.MaxElapsedMS) * time.Millisecond)
 	}
 	if retryBudget > 0 {

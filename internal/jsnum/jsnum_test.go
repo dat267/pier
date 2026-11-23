@@ -5,6 +5,7 @@ import (
 	"math"
 	"slices"
 	"testing"
+	"time"
 	"unicode"
 )
 
@@ -124,5 +125,18 @@ func TestToIntSaturatesOutOfRange(t *testing.T) {
 	}
 	if got := ToInt64(-1e19); got != math.MinInt64 {
 		t.Errorf("ToInt64(-1e19) = %d", got)
+	}
+}
+
+// Node and Bun run setTimeout(fn, ms) after 1 ms when ms is below 1 or above
+// 2^31-1, and after ms otherwise.
+func TestTimeoutDurationClampsLikeSetTimeout(t *testing.T) {
+	for ms, want := range map[int64]time.Duration{
+		-5: time.Millisecond, 0: time.Millisecond, 1: time.Millisecond, 250: 250 * time.Millisecond,
+		MaxTimeoutMS: time.Duration(MaxTimeoutMS) * time.Millisecond, MaxTimeoutMS + 1: time.Millisecond,
+	} {
+		if got := TimeoutDuration(ms); got != want {
+			t.Errorf("TimeoutDuration(%d) = %v, want %v", ms, got, want)
+		}
 	}
 }

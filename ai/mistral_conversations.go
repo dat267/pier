@@ -328,7 +328,7 @@ func requestMistralStream(ctx ctxpkg.Context, model *Model, body []byte, options
 	if timeoutMS < 0 || timeoutMS > maxAbortSignalTimeoutMS {
 		return nil, fmt.Errorf("The value of \"delay\" is out of range. It must be >= 0 && <= %d. Received %d", maxAbortSignalTimeoutMS, timeoutMS)
 	}
-	headerTimeout := javascriptTimeoutDuration(timeoutMS)
+	headerTimeout := jsnum.TimeoutDuration(timeoutMS)
 	if options.HTTPIdleTimeoutMs != nil && *options.HTTPIdleTimeoutMs > 0 {
 		idleHeaderTimeout := idleTimeoutDuration(*options.HTTPIdleTimeoutMs)
 		if idleHeaderTimeout < headerTimeout {

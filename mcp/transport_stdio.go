@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"os"
 	"os/exec"
@@ -406,9 +407,9 @@ func (t *StdioTransport) Close(ctx context.Context) error {
 		closeTimeoutMs = defaultCloseTimeoutMs
 	}
 	grace := min(closeTimeoutMs, int64(StdinCloseGraceMs))
-	graceTimer := time.NewTimer(javascriptTimerDuration(grace))
+	graceTimer := time.NewTimer(jsnum.TimeoutDuration(grace))
 	defer graceTimer.Stop()
-	killTimer := time.NewTimer(javascriptTimerDuration(grace + closeTimeoutMs))
+	killTimer := time.NewTimer(jsnum.TimeoutDuration(grace + closeTimeoutMs))
 	defer killTimer.Stop()
 	_ = t.closeStdin()
 	select {

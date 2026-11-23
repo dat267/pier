@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"github.com/dat267/pier/internal/jsnum"
 	"regexp"
 	"strings"
 	"time"
@@ -286,11 +287,11 @@ type StdinBufferOptions struct {
 func NewStdinBuffer(options StdinBufferOptions) *StdinBuffer {
 	timeoutMS := defaultSequenceTimeoutMS
 	if options.TimeoutSet || options.Timeout != 0 {
-		timeoutMS = int(javascriptTimerDuration(int64(options.Timeout)) / time.Millisecond)
+		timeoutMS = int(jsnum.TimeoutDuration(int64(options.Timeout)) / time.Millisecond)
 	}
 	escapeTimeoutMS := defaultEscapeTimeoutMS
 	if options.EscapeTimeoutSet || options.EscapeTimeout != 0 {
-		escapeTimeoutMS = int(javascriptTimerDuration(int64(options.EscapeTimeout)) / time.Millisecond)
+		escapeTimeoutMS = int(jsnum.TimeoutDuration(int64(options.EscapeTimeout)) / time.Millisecond)
 	}
 	return &StdinBuffer{timeoutMS: timeoutMS, escapeTimeoutMS: escapeTimeoutMS}
 }

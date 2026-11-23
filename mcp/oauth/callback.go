@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"net"
 	"net/http"
 	"net/url"
@@ -65,18 +66,9 @@ type OAuthCallbackServer struct {
 	pending map[string]*pendingCallback
 }
 
-const maxJavascriptTimeoutMs int64 = 1<<31 - 1
-
 // callbackReadHeaderTimeout bounds how long a redirect connection may take to
 // send its request line and headers.
 var callbackReadHeaderTimeout = 60 * time.Second
-
-func callbackTimerDuration(ms int64) time.Duration {
-	if ms < 1 || ms > maxJavascriptTimeoutMs {
-		ms = 1
-	}
-	return time.Duration(ms) * time.Millisecond
-}
 
 type pendingCallback struct {
 	ch    chan callbackResult
@@ -168,7 +160,7 @@ func (s *OAuthCallbackServer) WaitForCallback(state string, path ...string) (OAu
 		return OAuthCallback{}, errors.New("OAuth state is already pending")
 	}
 	entry := &pendingCallback{ch: make(chan callbackResult, 1), path: expectedPath}
-	entry.timer = time.AfterFunc(callbackTimerDuration(s.timeoutMs), func() {
+	entry.timer = time.AfterFunc(jsnum.TimeoutDuration(s.timeoutMs), func() {
 		s.expirePending(state, entry)
 	})
 	s.pending[state] = entry

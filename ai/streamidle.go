@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"net/http"
 	"net/url"
@@ -253,7 +254,7 @@ func DoProviderRequestWithSDKTimeoutAndIdle(req *http.Request, timeoutMS, idleTi
 		headerTimeout = bodyTimeout
 	}
 	if timeoutMS != nil && *timeoutMS > 0 {
-		sdkHeaderTimeout := javascriptTimeoutDuration(int64(*timeoutMS))
+		sdkHeaderTimeout := jsnum.TimeoutDuration(int64(*timeoutMS))
 		if headerTimeout == 0 || sdkHeaderTimeout < headerTimeout {
 			headerTimeout = sdkHeaderTimeout
 		}
@@ -295,7 +296,7 @@ func doClassifierRequest(req *http.Request, timeoutMS, idleTimeoutMS *int) (*htt
 	if int64(*timeoutMS) > maxAbortSignalTimeoutMS {
 		return nil, fmt.Errorf("The value of \"delay\" is out of range. It must be >= 0 && <= %d. Received %d", maxAbortSignalTimeoutMS, *timeoutMS)
 	}
-	ctx, cancel := context.WithTimeout(req.Context(), javascriptTimeoutDuration(int64(*timeoutMS)))
+	ctx, cancel := context.WithTimeout(req.Context(), jsnum.TimeoutDuration(int64(*timeoutMS)))
 	var bodyTimeout time.Duration
 	if idleTimeoutMS != nil && *idleTimeoutMS > 0 {
 		bodyTimeout = idleTimeoutDuration(*idleTimeoutMS)

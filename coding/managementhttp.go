@@ -3,6 +3,7 @@ package coding
 import (
 	"context"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"net/http"
 	"time"
@@ -16,16 +17,13 @@ import (
 // requests.
 var retryableStatusCodes = map[int]bool{408: true, 425: true, 429: true, 500: true, 502: true, 503: true, 504: true}
 
-const (
-	maxAbortSignalTimeoutMS int64 = 1<<32 - 1
-	maxNodeTimerDelayMS     int64 = 1<<31 - 1
-)
+const maxAbortSignalTimeoutMS int64 = 1<<32 - 1
 
 func abortSignalTimeoutDuration(timeoutMS int64) (time.Duration, error) {
 	if timeoutMS < 0 || timeoutMS > maxAbortSignalTimeoutMS {
 		return 0, fmt.Errorf("The value of \"delay\" is out of range. It must be >= 0 && <= %d. Received %d", maxAbortSignalTimeoutMS, timeoutMS)
 	}
-	if timeoutMS > maxNodeTimerDelayMS {
+	if timeoutMS > jsnum.MaxTimeoutMS {
 		timeoutMS = 1
 	}
 	return time.Duration(timeoutMS) * time.Millisecond, nil

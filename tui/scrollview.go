@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"github.com/dat267/pier/internal/jsnum"
 	"time"
 )
 
@@ -91,7 +92,7 @@ func NewScrollView(component Component, options ScrollViewOptions) *ScrollView {
 	view.hideDelayMS = 1000
 	if options.HasScrollbarHideDelay {
 		view.hideDelayMS = max(0, options.ScrollbarHideDelayMS)
-		if int64(view.hideDelayMS) > maxJavascriptTimerDelayMS {
+		if int64(view.hideDelayMS) > jsnum.MaxTimeoutMS {
 			view.hideDelayMS = 1
 		}
 	}

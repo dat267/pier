@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"github.com/dat267/pier/internal/jsnum"
 	"strconv"
 	"strings"
 	"time"
@@ -601,7 +602,7 @@ func (l *Loader) SetIndicator(indicator *LoaderIndicatorOptions) {
 		if interval <= 0 {
 			interval = defaultLoaderIntervalMS
 		} else {
-			interval = int(javascriptTimerDuration(int64(interval)) / time.Millisecond)
+			interval = int(jsnum.TimeoutDuration(int64(interval)) / time.Millisecond)
 		}
 		l.intervalMS = interval
 	}
@@ -811,7 +812,7 @@ func (c *AltScreenFlashContainer) Flash(message string, durationMS ...int) {
 	entry := flashEntry{
 		id:        c.nextID,
 		message:   message,
-		expiresAt: time.Now().Add(javascriptTimerDuration(int64(duration))),
+		expiresAt: time.Now().Add(jsnum.TimeoutDuration(int64(duration))),
 	}
 	c.nextID++
 	c.entries = append(c.entries, entry)

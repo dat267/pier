@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Whitespace reports JavaScript's whitespace set (WhiteSpace and
@@ -173,4 +174,16 @@ func ObjectKeyOrder(keys []string) []string {
 		ordered = append(ordered, entry.name)
 	}
 	return append(ordered, ordinary...)
+}
+
+// MaxTimeoutMS is the largest delay setTimeout honours, 2^31-1 ms.
+const MaxTimeoutMS int64 = 1<<31 - 1
+
+// TimeoutDuration is the delay setTimeout(fn, ms) waits: Node and Bun run a
+// delay below 1 ms or above MaxTimeoutMS after 1 ms.
+func TimeoutDuration(ms int64) time.Duration {
+	if ms < 1 || ms > MaxTimeoutMS {
+		ms = 1
+	}
+	return time.Duration(ms) * time.Millisecond
 }

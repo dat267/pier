@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"slices"
 	"strconv"
 	"strings"
@@ -74,17 +75,9 @@ type terminalQueries struct {
 }
 
 const (
-	terminalPaletteSize       = 16
-	terminalColorReplyCount   = 2 + terminalPaletteSize
-	maxJavascriptTimerDelayMS = 1<<31 - 1
+	terminalPaletteSize     = 16
+	terminalColorReplyCount = 2 + terminalPaletteSize
 )
-
-func javascriptTimerDuration(milliseconds int64) time.Duration {
-	if milliseconds < 1 || milliseconds > maxJavascriptTimerDelayMS {
-		milliseconds = 1
-	}
-	return time.Duration(milliseconds) * time.Millisecond
-}
 
 // terminalColorQuery asks for the default foreground (OSC 10), background
 // (OSC 11) and all 16 palette colors (OSC 4), ended by a DA1 request that marks
@@ -169,7 +162,7 @@ func (q *terminalQueries) QueryBackground(writer terminalQueryWriter, timeoutMS 
 	q.colorMu.Unlock()
 	writer.Write("\x1b]11;?\x07")
 
-	timer := time.NewTimer(javascriptTimerDuration(int64(timeoutMS)))
+	timer := time.NewTimer(jsnum.TimeoutDuration(int64(timeoutMS)))
 	defer timer.Stop()
 	select {
 	case result := <-query.result:
@@ -211,7 +204,7 @@ func (q *terminalQueries) BeginTerminalColors(writer terminalQueryWriter) (Termi
 		writer.Write(terminalColorQuery)
 	}
 	return func(timeoutMS int, onLateReply func(TerminalColors)) TerminalColors {
-		timer := time.NewTimer(javascriptTimerDuration(int64(timeoutMS)))
+		timer := time.NewTimer(jsnum.TimeoutDuration(int64(timeoutMS)))
 		defer timer.Stop()
 		select {
 		case colors := <-result:
@@ -342,7 +335,7 @@ func (q *terminalQueries) QueryColorScheme(writer terminalQueryWriter, timeoutMS
 	}
 	writer.Write("\x1b[?996n")
 
-	timer := time.NewTimer(javascriptTimerDuration(int64(timeoutMS)))
+	timer := time.NewTimer(jsnum.TimeoutDuration(int64(timeoutMS)))
 	defer timer.Stop()
 	select {
 	case scheme := <-results:
