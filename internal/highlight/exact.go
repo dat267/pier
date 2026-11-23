@@ -2,6 +2,7 @@ package highlight
 
 import (
 	"regexp/syntax"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -580,6 +581,23 @@ func lineEndAt(s string, pos int, jsLines bool) bool {
 	}
 	c, _ := utf8.DecodeRuneInString(s[pos:])
 	return jsLineEnd(c)
+}
+
+// lineEndIndex returns where the first line of s ends: the first line
+// terminator, or len(s).
+func lineEndIndex(s string, jsLines bool) int {
+	if !jsLines {
+		if i := strings.IndexByte(s, '\n'); i >= 0 {
+			return i
+		}
+		return len(s)
+	}
+	for i := 0; i < len(s); i++ {
+		if c := s[i]; c == '\n' || c == '\r' || c == 0xE2 && lineEndAt(s, i, true) {
+			return i
+		}
+	}
+	return len(s)
 }
 
 func lineEndBefore(s string, pos int, jsLines bool) bool {

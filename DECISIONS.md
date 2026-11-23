@@ -9269,7 +9269,15 @@ sample happens to exercise only four times.
 Output is unchanged: the goldens, the differentials, a 30 s fuzz run and the
 107,297-byte HTTP render byte for byte against the reference.
 
-Test: `TestHTTPGuards`.
+The first version of the request guard read `$` as the end of the input and
+searched for ` HTTP/` across lines, so a request line followed by headers
+(`GET / HTTP/1.1\nHost: a`) failed the guard and lost its highlighting; none
+of the inputs above has one. It also took the method's space as the one
+before `HTTP/`, where the pattern needs two. The guard now reads the current
+line only, to the first line terminator, and needs the version at its end
+after a second space.
+
+Tests: `TestHTTPGuards`, `TestAnchoredSpaceGuardsUseLineEnds`.
 
 ### D530
 

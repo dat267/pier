@@ -29,9 +29,11 @@ func httpVersionGuard(s string) bool {
 	return true
 }
 
-// httpRequestGuard ports `\A[A-Z]+ .* HTTP/(2|1\.[01])$`: an upper-case method,
-// a space, anything, then a space and the version at the end of the input.
-func httpRequestGuard(s string) bool {
+// httpRequestGuard ports `\A[A-Z]+ .* HTTP/(2|1\.[01])$`: an upper-case
+// method, a space, anything on the same line, then a space and the version
+// at the m flag's line end. The dot stops at a line terminator, so only the
+// current line counts, and the two spaces are distinct.
+func httpRequestGuard(s string, jsLines bool) bool {
 	method := 0
 	for method < len(s) && s[method] >= 'A' && s[method] <= 'Z' {
 		method++
@@ -39,14 +41,13 @@ func httpRequestGuard(s string) bool {
 	if method == 0 || method >= len(s) || s[method] != ' ' {
 		return false
 	}
-	// `.* HTTP/...` at the end: the last " HTTP/" must be followed by a version
-	// and nothing else.
-	idx := strings.LastIndex(s, " HTTP/")
-	if idx < method {
-		return false
+	line := s[:lineEndIndex(s, jsLines)]
+	for _, version := range [...]string{" HTTP/2", " HTTP/1.0", " HTTP/1.1"} {
+		if strings.HasSuffix(line, version) && len(line)-len(version) > method {
+			return true
+		}
 	}
-	end, ok := cutHTTPVersionPrefix(s[idx+1:])
-	return ok && idx+1+end == len(s)
+	return false
 }
 
 // cutHTTPVersionPrefix consumes `HTTP/2` or `HTTP/1.0` or `HTTP/1.1` at the
@@ -123,7 +124,7 @@ func HTTP() *Language {
 		Starts: requestStarts,
 	}
 	request.beforeBegin = func(m *match, resp *Response) {
-		if !httpRequestGuard(m.input[m.index+len(m.lexeme):]) {
+		if !httpRequestGuard(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}

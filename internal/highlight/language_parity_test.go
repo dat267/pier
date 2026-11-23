@@ -773,8 +773,9 @@ func TestAnchoredSpaceGuards(t *testing.T) {
 // The m flag's `$` is a line end, so mipsasm's `(?!\s*$)` fails when the
 // whitespace after the marker holds a line terminator, and protobuf's
 // `(?=\s*=[^\n]+;$)` holds at a `;` that ends a line, not only at the end of
-// the input. HTML and relevance were read off the pinned highlight.js
-// (pi v1.6.0, 10.7.3 languages/mipsasm.js and languages/protobuf.js).
+// the input, and HTTP's request guard reads the current line only. HTML and
+// relevance were read off the pinned highlight.js (pi v1.6.0, 10.7.3
+// languages/mipsasm.js, languages/protobuf.js and languages/http.js).
 func TestAnchoredSpaceGuardsUseLineEnds(t *testing.T) {
 	for _, tc := range []struct {
 		language, code, html string
@@ -792,6 +793,14 @@ func TestAnchoredSpaceGuardsUseLineEnds(t *testing.T) {
 		{"protobuf", "enum E {\n  A =;\n}", "<span class=\"hljs-class\"><span class=\"hljs-keyword\">enum</span> <span class=\"hljs-title\">E</span> </span>{\n  A =;\n}", 2},
 		{"protobuf", "enum E {\n  A = 1;\r\n}", "<span class=\"hljs-class\"><span class=\"hljs-keyword\">enum</span> <span class=\"hljs-title\">E</span> </span>{\n  A = <span class=\"hljs-number\">1</span>;\r\n}", 3},
 		{"protobuf", "enum E {\n  A = 1;", "<span class=\"hljs-class\"><span class=\"hljs-keyword\">enum</span> <span class=\"hljs-title\">E</span> </span>{\n  A = <span class=\"hljs-number\">1</span>;", 3},
+		{"http", "GET / HTTP/1.1\nHost: a\n\nbody", "<span class=\"hljs-keyword\">GET</span> <span class=\"hljs-string\">/</span> <span class=\"hljs-meta\">HTTP/1.1</span>\n<span class=\"hljs-attribute\">Host</span><span class=\"hljs-punctuation\">: </span>a\n\n<span class=\"ada\"><span class=\"hljs-keyword\">body</span></span>", 8},
+		{"http", "GET / HTTP/1.1", "<span class=\"hljs-keyword\">GET</span> <span class=\"hljs-string\">/</span> <span class=\"hljs-meta\">HTTP/1.1</span>", 4},
+		{"http", "GET HTTP/1.1\nA: b", "GET HTTP/1.1\n<span class=\"hljs-attribute\">A</span><span class=\"hljs-punctuation\">: </span>b", 1},
+		{"http", "GET  HTTP/1.1\nA: b", "<span class=\"hljs-keyword\">GET</span> <span class=\"hljs-string\"></span> <span class=\"hljs-meta\">HTTP/1.1</span>\n<span class=\"hljs-attribute\">A</span><span class=\"hljs-punctuation\">: </span>b", 6},
+		{"http", "POST /x HTTP/2\r\nA: b\r\n", "<span class=\"hljs-keyword\">POST</span> <span class=\"hljs-string\">/x</span> <span class=\"hljs-meta\">HTTP/2</span>\r\n<span class=\"hljs-attribute\">A</span><span class=\"hljs-punctuation\">: </span>b\r\n", 6},
+		{"http", "GET /a HTTP/1.1 x\nGET /b HTTP/1.0", "GET /a HTTP/1.1 x\n<span class=\"hljs-keyword\">GET</span> <span class=\"hljs-string\">/b</span> <span class=\"hljs-meta\">HTTP/1.0</span>", 4},
+		{"http", "HTTP/1.1 200 OK\nX: y", "<span class=\"hljs-meta\">HTTP/1.1</span> <span class=\"hljs-number\">200</span> OK\n<span class=\"hljs-attribute\">X</span><span class=\"hljs-punctuation\">: </span>y", 5},
+		{"http", "GET /x HTTP/1.1\u2028A: b", "<span class=\"hljs-keyword\">GET</span> <span class=\"hljs-string\">/x</span> <span class=\"hljs-meta\">HTTP/1.1</span>\u2028<span class=\"hljs-attribute\">A</span><span class=\"hljs-punctuation\">: </span>b", 6},
 	} {
 		result, err := HighlightWith(tc.code, tc.language, true)
 		if err != nil {
