@@ -45,13 +45,13 @@ func handlebarsLanguage(name string, disableAutodetect bool) *Language {
 		Begin: `=`,
 		End:   `=`,
 		Starts: &Mode{Contains: []*Mode{
-			CNumberMode, QuoteStringMode, AposStringMode, helperParameter, subExpression,
+			NumberMode, QuoteStringMode, AposStringMode, helperParameter, subExpression,
 		}},
 	}
 
 	helperParameters := &Mode{
 		Contains: []*Mode{
-			CNumberMode, QuoteStringMode, AposStringMode, blockParams, hash, helperParameter, subExpression,
+			NumberMode, QuoteStringMode, AposStringMode, blockParams, hash, helperParameter, subExpression,
 		},
 		ReturnEnd: true,
 	}

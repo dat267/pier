@@ -549,3 +549,21 @@ func TestRubySuperclassIsNotATitle(t *testing.T) {
 		}
 	}
 }
+
+// languages/handlebars.js (highlight.js 10.7.3, pi v1.6.0, faac5858) uses
+// hljs.NUMBER_MODE (`\b\d+(\.\d+)?`) for helper and hash parameters, not the
+// C number mode, so `0x1F` highlights only its `0` and `2.5e3` only `2.5`.
+func TestHandlebarsParametersUseThePlainNumberMode(t *testing.T) {
+	for _, tc := range []struct{ code, html string }{
+		{"{{foo 0x1F 2.5e3}}", "<span class=\"hljs-template-variable\">{{<span class=\"hljs-name\">foo</span> <span class=\"hljs-number\">0</span>x1F <span class=\"hljs-number\">2.5</span>e3}}</span>"},
+		{"{{x a=1.5}}", "<span class=\"hljs-template-variable\">{{<span class=\"hljs-name\">x</span> <span class=\"hljs-attr\">a</span>=<span class=\"hljs-number\">1.5</span>}}</span>"},
+	} {
+		result, err := Highlight(tc.code, "handlebars")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := RenderHTML(result.Nodes); got != tc.html || result.Relevance != 5 {
+			t.Errorf("%q: relevance %d HTML %q; want 5 %q", tc.code, result.Relevance, got, tc.html)
+		}
+	}
+}
