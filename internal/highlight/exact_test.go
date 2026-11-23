@@ -35,6 +35,7 @@ func TestExactWalkMatchesTheRegexp(t *testing.T) {
 		"<div class=\"x\">{{#if a}}é 日本   #include <x.h>\nnamespace n { get x() {} }",
 		"method(a, (b), (c(d))) {\n  ---\n  x: 1\n  ...\n}",
 		"# a\r\n\t@b . c\r* d\u2028  e: f\u2029g // h\n",
+		"SELECT \u212Aey, \u017Fum(x) FROM \u212A WHERE k = \u017F;\n",
 	}
 	// Each language's rules run over its own golden samples, where its rule
 	// shapes occur, and the mixed lines above.

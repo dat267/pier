@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D532)
+# Deliberate divergences from pi (D1–D533)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9338,3 +9338,27 @@ which is never a continuation byte, so it sees exactly the runes the
 rune-by-rune scan saw. Plain text, 24 KiB: 170.7 us to 4.37 us (highlight.js
 6 us). `TestInputScansMatchRuneScans` pins both to the scans they replaced,
 over invalid UTF-8 and every offset around a word.
+
+### D533
+
+**The exact walk tries only the alternatives that can begin with the next byte.**
+
+Reference: pi v1.6.0 (`faac5858`) runs highlight.js 10.7.3, whose rules are
+V8 regexes; irregexp dispatches a literal alternation on the next character.
+The D523 walk tried a long alternation's alternatives one by one, so a keyword
+rule such as pgsql's `\b(?:ARRAY_AGG|AVG|BIT_AND|...)` spent about 65 steps on
+every candidate that could not match. Each alternation of four or more
+alternatives now carries, per byte, the alternatives (in priority order) whose
+match can begin with that byte, and those that can match empty are on every
+list. The sets follow the walk's own matching: a folded literal adds its whole
+`unicode.SimpleFold` orbit (so `k` also lists U+212A's lead byte, which the
+dispatch's ToUpper/ToLower first-byte sets would miss), and a one-rune node
+that matches above ASCII adds every byte from 0x80. Skipping an alternative
+that can not begin there only removes a "no match", so the leftmost-first
+result is unchanged.
+
+Same method, 24 KiB samples against highlight.js through a tree emitter:
+vbscript 3.56x to 0.76x, sas 2.50x to 0.61x, sql 1.22x to 0.49x, pgsql 4.18x
+to 1.26x, stata 6.46 to 3.99 ms; no language regressed. Goldens, the hljs
+differentials and the fuzzers are unchanged. `TestExactWalkMatchesTheRegexp`
+pins it, its mixed lines now including U+212A and U+017F.

@@ -63,7 +63,16 @@ type exactNode struct {
 	asciiOnly bool
 	min, max  int
 	sub       []*exactNode
+	// firstAlts, on an alternation of several alternatives, lists for each
+	// byte the alternatives (in priority order) that can begin with it, and
+	// endAlts those that can match at the end of the input. Skipping the rest
+	// keeps a long keyword alternation from trying every keyword.
+	firstAlts *[256][]uint16
+	endAlts   []uint16
 }
+
+// exactAltIndexMin is the smallest alternation given first-byte lists.
+const exactAltIndexMin = 4
 
 // exactProgram compiles re when every node of it is one the walk reproduces,
 // or returns nil.
@@ -98,6 +107,23 @@ func compileExactNode(re *syntax.Regexp) *exactNode {
 		}
 		node.asciiOnly = !matchesAboveASCII(re)
 	}
+	if re.Op == syntax.OpAlternate && len(node.sub) >= exactAltIndexMin && len(node.sub) <= 1<<16 {
+		node.firstAlts = new([256][]uint16)
+		for k, sub := range node.sub {
+			var set [256]bool
+			if sub.addFirst(&set) {
+				node.endAlts = append(node.endAlts, uint16(k))
+				for b := range set {
+					set[b] = true
+				}
+			}
+			for b, ok := range set {
+				if ok {
+					node.firstAlts[b] = append(node.firstAlts[b], uint16(k))
+				}
+			}
+		}
+	}
 	return node
 }
 
@@ -124,6 +150,71 @@ func matchesAboveASCII(re *syntax.Regexp) bool {
 		return false
 	}
 	return true
+}
+
+// addFirst adds to set every byte a match of node can begin with, and
+// reports whether node can match empty, in which case its match may begin
+// with any byte (or none). It follows the walk's own matching: a folded
+// literal adds its whole SimpleFold orbit, and a one-rune node that matches
+// above ASCII adds every byte from 0x80.
+func (node *exactNode) addFirst(set *[256]bool) (nullable bool) {
+	switch node.op {
+	case syntax.OpLiteral:
+		if len(node.runes) == 0 {
+			return true
+		}
+		r := node.runes[0]
+		addFirstRune(set, r)
+		if node.fold {
+			for f := unicode.SimpleFold(r); f != r; f = unicode.SimpleFold(f) {
+				addFirstRune(set, f)
+			}
+		}
+		return false
+	case syntax.OpCharClass, syntax.OpAnyChar, syntax.OpAnyCharNotNL:
+		for c := range utf8.RuneSelf {
+			if node.ascii[c>>6]&(1<<(c&63)) != 0 {
+				set[c] = true
+			}
+		}
+		if !node.asciiOnly {
+			for b := utf8.RuneSelf; b < 256; b++ {
+				set[b] = true
+			}
+		}
+		return false
+	case syntax.OpCapture:
+		return node.sub[0].addFirst(set)
+	case syntax.OpStar, syntax.OpQuest:
+		node.sub[0].addFirst(set)
+		return true
+	case syntax.OpPlus:
+		return node.sub[0].addFirst(set)
+	case syntax.OpRepeat:
+		return node.sub[0].addFirst(set) || node.min == 0
+	case syntax.OpConcat:
+		for _, sub := range node.sub {
+			if !sub.addFirst(set) {
+				return false
+			}
+		}
+		return true
+	case syntax.OpAlternate:
+		for _, sub := range node.sub {
+			if sub.addFirst(set) {
+				nullable = true
+			}
+		}
+		return nullable
+	}
+	// Zero-width assertions and the empty match consume nothing.
+	return true
+}
+
+func addFirstRune(set *[256]bool, r rune) {
+	var buf [utf8.UTFMax]byte
+	utf8.EncodeRune(buf[:], r)
+	set[buf[0]] = true
 }
 
 // oneRune reports whether a one-rune node matches c. The dot's bitmap leaves
@@ -297,6 +388,18 @@ func (w *exactWalk) seq(seq int32, pos int) exactResult {
 		case syntax.OpAlternate:
 			// Leftmost-first: the first alternative that completes wins, so an
 			// undecided one leaves the whole walk undecided.
+			if node.firstAlts != nil {
+				candidates := node.endAlts
+				if pos < len(s) {
+					candidates = node.firstAlts[s[pos]]
+				}
+				for _, k := range candidates {
+					if result := w.seq(w.push(node.sub[k], rest, false), pos); result != exactNoMatch {
+						return result
+					}
+				}
+				return exactNoMatch
+			}
 			for _, alternative := range node.sub {
 				if result := w.seq(w.push(alternative, rest, false), pos); result != exactNoMatch {
 					return result
