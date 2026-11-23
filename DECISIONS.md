@@ -9163,9 +9163,19 @@ literal prefilter for the identifier rule was measured too (a whole-remainder
 the time, because that rule is 0.06 ms of the 0.09 ms and the other three fill
 the rest.
 
+The per-iteration cost was then broken down. Of the 610 iterations, only rule 0
+(the `%` literal) is walked, and 610 literal walks cost 6.3 us against the 57 us
+the resume takes; exec allocates nothing. A lock-free `subMatcher`
+(`atomic.Pointer`) was applied and measured at 57.2 us against the mutex's
+56.9 us, so the mutex is not the cost either. The work is the per-candidate
+`seq`/`push`/`exactOne` bookkeeping, and Go's own joined regexp is no cheaper:
+one unanchored `FindStringSubmatchIndex` for this four-rule alternation takes
+139 us, because the alternation has no common literal prefix for Go to scan.
+
 So closing this needs the dispatch to settle a broad rule set in one pass rather
 than one candidate at a time, which is the architecture change D524 and D528
-both point at; no bounding change, different exec, or prefilter reaches it. Counting walk-settled
+both point at; no bounding change, different exec, lock-free subMatcher, or
+per-call prefilter reaches it. Counting walk-settled
 rejections toward `maxRejectedCandidates` does not address it and would break
 D351's guard, which `TestRejectedCandidateRunStopsAtBudget` pins.
 
