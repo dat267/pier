@@ -68,7 +68,7 @@ func CleanupSessionResources(sessionID string) error {
 		func() {
 			defer func() {
 				if recovered := recover(); recovered != nil {
-					errors = append(errors, toError(recovered))
+					errors = append(errors, ai.JSRecoveredError(recovered))
 				}
 			}()
 			cleanup(sessionID)

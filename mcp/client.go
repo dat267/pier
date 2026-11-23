@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/internal/jsnum"
 	"maps"
 	"math"
@@ -692,7 +693,7 @@ func (c *Client) handleRequest(message *protocol.JsonRpcRequest) {
 		result, err := func() (result any, err error) {
 			defer func() {
 				if recovered := recover(); recovered != nil {
-					err = protocol.ToError(recovered)
+					err = ai.JSRecoveredError(recovered)
 				}
 			}()
 			return handler(ctx, message.Params)
@@ -777,7 +778,7 @@ func (c *Client) handleNotification(message *protocol.JsonRpcNotification) {
 func (c *Client) safeListener(fn func(json.RawMessage), params json.RawMessage) (panicked bool) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			c.emitError(protocol.ToError(recovered))
+			c.emitError(ai.JSRecoveredError(recovered))
 			panicked = true
 		}
 	}()
@@ -820,7 +821,7 @@ func (c *Client) handleProgress(params json.RawMessage) {
 		func() {
 			defer func() {
 				if recovered := recover(); recovered != nil {
-					c.emitError(protocol.ToError(recovered))
+					c.emitError(ai.JSRecoveredError(recovered))
 				}
 			}()
 			entry.onProgress(notification)
@@ -990,7 +991,7 @@ func (c *Client) markClosed(err error) {
 		func() {
 			defer func() {
 				if recovered := recover(); recovered != nil {
-					c.emitError(protocol.ToError(recovered))
+					c.emitError(ai.JSRecoveredError(recovered))
 				}
 			}()
 			listener()

@@ -1,7 +1,6 @@
 package coding
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/dat267/pier/ai"
@@ -77,7 +76,7 @@ func (b *eventBus) Emit(channel string, data any) {
 func (b *eventBus) safeCall(channel string, handler EventHandler, data any, onError func(string, error)) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			b.report(onError, channel, toError(recovered))
+			b.report(onError, channel, ai.JSRecoveredError(recovered))
 		}
 	}()
 	handler(data)
@@ -118,15 +117,4 @@ func (b *eventBus) Clear() {
 	b.mu.Lock()
 	b.subscribers = map[string][]eventSubscription{}
 	b.mu.Unlock()
-}
-
-// toError converts a recovered panic value into an error.
-// toError mirrors upstream's `err instanceof Error ? err : new Error(String(err))`:
-// a thrown object reports "[object Object]" and an array joins its items with
-// commas, where Go's %v would print map[...] and [a b].
-func toError(value any) error {
-	if err, ok := value.(error); ok {
-		return err
-	}
-	return errors.New(ai.JSValueToString(value))
 }
