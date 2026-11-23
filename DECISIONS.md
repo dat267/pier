@@ -8926,10 +8926,25 @@ markdown's root matcher dispatches instead of scanning.
 
 Same method, paired runs (Intel N150): the 4 KB README 5.30 ms to 0.68 ms,
 against highlight.js's 0.73 ms. C++ (14.2 ms against 10.3 ms) and Java
-(11.4 ms against 6.7 ms) are unchanged by this: their remaining cost is the
-exact walk (`exactWalk.seq` and `either`), not a joined scan. Output is
-unchanged on the goldens, the differentials, the fuzzers, LF/CRLF/U+2028
-line ends, and on 4 KB README plus 30 KB C++ and Java samples rendered against
-highlight.js byte for byte.
+(11.4 ms against 6.7 ms) are unchanged by this: 100% of their regexp time but
+none of their total is a joined scan, and their cost is the exact walk
+(`exactWalk.seq`/`either`, 54% of a C++ profile). Output is unchanged on the
+goldens, the differentials, the fuzzers, LF/CRLF/U+2028 line ends, and on 4 KB
+README plus 30 KB C++ and Java samples rendered against highlight.js byte for
+byte.
+
+A required-literal prefilter for that walk was designed, implemented, tested
+and dropped. `requiredLiteral` reported a literal every match must contain (a
+folded literal is unusable, because `strings.Contains` is case-sensitive, and
+a part that can match empty cannot be relied on), and `decideAt` rejected a
+rule whose literal was absent. It is sound: the
+literal must be one every match contains, so its absence rules the rule out.
+But the search is over the remaining input at every candidate, which is the
+quadratic shape D351 exists to prevent: the
+whole-tail scan took C++ from 14.4 ms to 62.1 ms. The rules it rejects are
+rejected today for O(1) by the walk itself, which is also not the bottleneck
+per call: on `\b(?:return|throw|else|new)` the walk answers in 1.4 ms where the
+regexp takes 2.86 s for the same positions, so walking is the cheap path and
+there is no cheaper correct rejection left to add.
 
 Test: `TestBeginLineRuleKeepsTheDispatch`.
