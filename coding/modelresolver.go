@@ -516,7 +516,8 @@ func ResolveModelScopeFromModels(patterns []string, models []*ai.Model) ResolveM
 		for provider := range set {
 			providers = append(providers, provider)
 		}
-		sort.Strings(providers)
+		// D257: localeCompare order, as upstream sorts with a.localeCompare(b).
+		sort.SliceStable(providers, func(i, j int) bool { return CompareRootCollation(providers[i], providers[j]) < 0 })
 		diagnostics = append(diagnostics, ModelScopeDiagnostic{
 			Type: "warning", Code: "ambiguous", Pattern: pattern,
 			Message: fmt.Sprintf("Pattern \"%s\" matches several providers: %s. Use provider/id to choose one.", pattern, strings.Join(providers, ", ")),
@@ -656,7 +657,8 @@ func ResolveCliModel(options ResolveCliModelOptions) ResolveCliModelResult {
 		for _, model := range result.Candidates {
 			described = append(described, model.Provider+"/"+model.ID)
 		}
-		sort.Strings(described)
+		// D257: localeCompare order, as upstream sorts with a.localeCompare(b).
+		sort.SliceStable(described, func(i, j int) bool { return CompareRootCollation(described[i], described[j]) < 0 })
 		var authHint string
 		switch {
 		case options.InlineAPIKey:

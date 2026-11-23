@@ -659,3 +659,25 @@ func TestFuzzyModelAliasLocaleOrdering(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.6.0 (faac5858) core/model-resolver.ts sorts the providers of an
+// ambiguous --models pattern, and the candidates of an ambiguous --model,
+// with a.localeCompare(b); D257 maps that to root collation. Byte order put
+// "Zai" first and "a-b" before "a_b". Both messages were read off the
+// reference with the same five providers.
+func TestAmbiguousModelListsUseLocaleOrdering(t *testing.T) {
+	var models []*ai.Model
+	for _, provider := range []string{"openai", "Zai", "anthropic", "a_b", "a-b"} {
+		models = append(models, testModel("shared-model", "Shared Model", provider, true))
+	}
+	scope := ResolveModelScopeFromModels([]string{"shared-model"}, models)
+	wantScope := `Pattern "shared-model" matches several providers: a_b, a-b, anthropic, openai, Zai. Use provider/id to choose one.`
+	if len(scope.Diagnostics) != 1 || scope.Diagnostics[0].Message != wantScope {
+		t.Fatalf("scope diagnostics = %+v, want %q", scope.Diagnostics, wantScope)
+	}
+	cli := ResolveCliModel(ResolveCliModelOptions{CLIModel: "shared-model", ModelRuntime: &fakeRuntime{models: models}})
+	wantCLI := `Model "shared-model" is ambiguous across providers: a_b/shared-model, a-b/shared-model, anthropic/shared-model, openai/shared-model, Zai/shared-model. No matching provider is authenticated. Use --provider or provider/model.`
+	if cli.Error != wantCLI {
+		t.Fatalf("cli error = %q, want %q", cli.Error, wantCLI)
+	}
+}

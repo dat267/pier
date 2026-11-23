@@ -2469,9 +2469,15 @@ keeping ordering deterministic. On a Swedish Node host, `model-ä` ranks after
 Unicode collation version differences are not an assertion of byte-identical
 ICU behavior.
 
+The providers of an ambiguous `--models` pattern and the candidates of an
+ambiguous `--model` (pi v1.6.0, `faac5858`, `resolveModelScopeFromModels` and
+`resolveCliModel`) sort with the same collator; they had kept byte order, which
+put `Zai` first and `a-b` before `a_b`.
+
 Tests: `TestFuzzyModelAliasLocaleOrdering`, `TestListModelsTextUsesLocaleOrdering`,
 `TestModelSelectorProviderOrderMatchesUpstreamLocale`,
-`TestFooterStatusesUseUpstreamLocaleOrdering`.
+`TestFooterStatusesUseUpstreamLocaleOrdering`,
+`TestAmbiguousModelListsUseLocaleOrdering`.
 
 ### D258
 
