@@ -8990,9 +8990,20 @@ the whole "make the walk cheaper" direction:
   the property that makes the walk a win, and it leaves no cheap rejection to
   add ahead of it.
 
-With those closed, C++ (14.2 ms against 10.3) and Java (11.5 against 6.7) sit
-at a cost the current design pays per candidate by construction. Closing the
-remaining gap needs a different dispatch structure, not another prefilter or a
+Two more, closing the "share work inside the walk" idea:
+
+- **One alternation walk per submatcher** instead of one call per rule:
+  measured 2% (2.79 to 2.73 ms on the three hot C++ rules). Working out which
+  alternative won, and carrying its groups, costs what the merged calls save.
+- **Reusing a continuation within a walk**: 729,417 pushes and **0**
+  within-walk duplicates, so every push is distinct and the 7.6% of profile
+  `push` spends is irreducible.
+
+C++ (14.2 ms against 10.3) and Java (11.5 against 6.7) therefore sit at a cost
+the current design pays per candidate by construction: 97,291 distinct walks
+for C++, half rejecting within 1-2 steps, none reusable, none duplicable, none
+falling back. Every local route is measured and closed, so what remains is a
+different dispatch structure rather than another prefilter or a
 micro-optimisation of the walk.
 
 Test: `TestBeginLineRuleKeepsTheDispatch`.
