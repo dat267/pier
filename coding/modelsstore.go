@@ -8,7 +8,6 @@ import (
 	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"path/filepath"
-	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -351,7 +350,7 @@ func (s *FileModelsStore) Write(ctx context.Context, providerID string, entry *a
 		}
 		current[providerID] = cloneModelsStoreEntry(entry)
 		latest = current
-		latestOrder = appendModelsOrder(order, providerID)
+		latestOrder = appendProviderOrder(order, providerID)
 		encoded, err := marshalStoredModels(current, latestOrder)
 		if err != nil {
 			return LockResult{}, err
@@ -394,13 +393,6 @@ func (s *FileModelsStore) Delete(ctx context.Context, providerID string) error {
 		s.updateReadState(latest, latestOrder, nil)
 	}
 	return nil
-}
-
-func appendModelsOrder(order []string, providerID string) []string {
-	if slices.Contains(order, providerID) {
-		return order
-	}
-	return append(append([]string{}, order...), providerID)
 }
 
 // cloneModelsStoreEntry deep-copies a catalog entry (structuredClone).

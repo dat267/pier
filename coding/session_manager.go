@@ -1887,7 +1887,7 @@ func buildSessionInfoContext(ctx context.Context, filePath string) *SessionInfo 
 	}
 	return &SessionInfo{
 		Path: filePath, ID: header.ID, Cwd: cwd, Name: name,
-		ParentSessionPath: derefOrEmpty(header.ParentSession),
+		ParentSessionPath: derefString(header.ParentSession),
 		Created:           created, Modified: modified,
 		MessageCount:    messageCount,
 		FirstMessage:    first,
@@ -1939,13 +1939,6 @@ func scanMessageActivity(rawMessage []byte) (messageActivity, bool) {
 		}
 	}
 	return activity, true
-}
-
-func derefOrEmpty(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
 }
 
 // extractTextContent joins text blocks with spaces (message-content only).

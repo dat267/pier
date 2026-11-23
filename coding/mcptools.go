@@ -229,13 +229,13 @@ func mcpBlockToContent(server string, block protocol.ContentBlock, options Conve
 	// Upstream checks `"blob" in resource`, so a resource with neither member
 	// falls through to the shared block converter and its omission note.
 	if block.Type == protocol.ContentTypeResource && block.Resource != nil && block.Resource.BlobArm &&
-		!strings.HasPrefix(mcpStringValue(block.Resource.MimeType), "image/") {
+		!strings.HasPrefix(derefString(block.Resource.MimeType), "image/") {
 		resource := block.Resource
 		data, err := decodeMcpBase64(resource.Blob)
 		if err != nil {
 			return []ai.Content{ai.TextContent{Text: "[binary resource " + resource.URI + " (invalid base64) omitted]"}}
 		}
-		if isTextMimeType(mcpStringValue(resource.MimeType)) {
+		if isTextMimeType(derefString(resource.MimeType)) {
 			return []ai.Content{ai.TextContent{Text: DecodeUTF8WithReplacement(data)}}
 		}
 		// Upstream `${mimeType ?? "unknown type"}`: only an absent mimeType is
@@ -269,14 +269,6 @@ func decodeMcpBase64(value string) ([]byte, error) {
 		return nil, errors.New("invalid base64")
 	}
 	return data, nil
-}
-
-// mcpStringValue dereferences an optional string ("" when absent).
-func mcpStringValue(value *string) string {
-	if value == nil {
-		return ""
-	}
-	return *value
 }
 
 // mcpExtensionOf is the saved binary resource's extension: the one its URI ends
