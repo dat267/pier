@@ -639,3 +639,29 @@ func TestJSDocVariableLookahead(t *testing.T) {
 		}
 	}
 }
+
+// languages/markdown.js (highlight.js 10.7.3, pi v1.6.0, faac5858) opens the
+// setext heading's text line with a zero-width `^`, so the inline rules see
+// the whole line: `Title *x*` emphasises `*x*`, and an unclosed `_` or tag
+// runs on into the underline. The port consumed the line as the begin
+// lexeme and left it plain. The expected HTML and relevance are the reference's.
+func TestMarkdownSetextHeadingParsesItsInlines(t *testing.T) {
+	for _, tc := range []struct {
+		code      string
+		relevance int
+		html      string
+	}{
+		{"_\n--", 0, "<span class=\"hljs-section\"><span class=\"hljs-emphasis\">_\n--</span></span>"},
+		{"<L\n--", 0, "<span class=\"hljs-section\"><span class=\"xml\"><span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">L</span>\n<span class=\"hljs-attr\">--</span></span></span></span>"},
+		{"Title *x*\n===", 4, "<span class=\"hljs-section\">Title <span class=\"hljs-emphasis\">*x*</span>\n===</span>"},
+		{"a **b** c\n---\n\ntext", 4, "<span class=\"hljs-section\">a <span class=\"hljs-strong\">**b**</span> c\n---</span>\n\ntext"},
+	} {
+		result, err := Highlight(tc.code, "markdown")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := RenderHTML(result.Nodes); got != tc.html || result.Relevance != tc.relevance {
+			t.Errorf("%q: relevance %d HTML %q; want %d %q", tc.code, result.Relevance, got, tc.relevance, tc.html)
+		}
+	}
+}
