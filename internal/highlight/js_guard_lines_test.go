@@ -136,4 +136,24 @@ func TestRejectedCandidateRunStopsAtBudget(t *testing.T) {
 	if got := RenderHTML(result.Nodes); strings.Contains(got, "<span") {
 		t.Fatalf("long run output = %q; want plain text after the budget", got)
 	}
+
+	// Rule highlighting does not resume after the budget: the reference (pi
+	// v1.6.0, highlight.js 10.7.3) renders this C input as `(<number>1</number>
+	// <string>"s"</string> <comment>/* c */</comment> <keyword>int</keyword>`,
+	// while the port leaves the number, string and comment plain and colours
+	// only the keyword, which the appended-text keyword pass still applies (D351).
+	cRun := strings.Repeat("a", maxRejectedCandidates) + ` (1 "s" /* c */ int`
+	result, err = HighlightWith(cRun, "c", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := RenderHTML(result.Nodes)
+	for _, class := range []string{"hljs-number", "hljs-string", "hljs-comment"} {
+		if strings.Contains(got, class) {
+			t.Fatalf("C run output = %q; want no %s after the budget", got, class)
+		}
+	}
+	if !strings.Contains(got, `<span class="hljs-keyword">int</span>`) {
+		t.Fatalf("C run output = %q; want the keyword still highlighted", got)
+	}
 }

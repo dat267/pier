@@ -4383,10 +4383,17 @@ keyword pass (plain text for the rejected run). The same run now takes 23 ms at
 match long before the budget; all generated goldens, the corpus, and the paired
 JavaScript/JSON/Python benchmarks are unchanged.
 
-The difference is bounded and only affects input past 256 rejected candidate
-bytes: rule highlighting resumes only at the next engine scan, while keywords
-still apply to the appended text. `TestRejectedCandidateRunStopsAtBudget` pins
-the short-run reference behavior and the budget cutoff, and
+The difference only affects input past 256 rejected candidate bytes, but there
+it lasts for the rest of the input: the no-match return ends the engine loop, so
+no rule (number, string, comment) matches anywhere after the run, while keywords
+still apply to the appended text. For `"a"` repeated 256 times plus
+` (1 "s" /* c */ int` as C, the reference (pi v1.6.0) colours all four tokens
+and the port only `int`. Resuming would need a fresh first-byte scan, itself
+linear over the run: on the 32 KiB input above, one refill took 673 ms, eight
+1.99 s and an unbounded refill 13.2 s, against a 315 ms baseline. A real fix
+needs the anchored submatcher to fail in O(1) per candidate.
+`TestRejectedCandidateRunStopsAtBudget` pins the short-run reference behavior,
+the budget cutoff and the missing rule highlighting, and
 `BenchmarkHighlightRejectedRun` keeps the cost visible; this is the same
 responsiveness trade as the existing iteration cap.
 
