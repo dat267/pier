@@ -9114,19 +9114,42 @@ differentials and the fuzzers.
 Test: `TestExactLiteralASCIIFold`, which checks all 16,384 ASCII pairs against
 `SimpleFold` and fails if the flip is applied to a non-ASCII pair.
 
-**Not closed.** A 24 KiB R file over plain text is still quadratic (1 KiB 8 ms,
-2 KiB 25 ms, 4 KiB 100 ms) where the reference is linear at 1.3, 2.6 and 3.3 ms,
-and that dominates HTTP, whose body auto-detects and scores R against 24 KiB
-(5.5 s against the reference's 1.7 s). The cause is not any single rule: the
-hot R rule `[a-zA-Z][a-zA-Z_0-9]*\s+<-\s+` is linear at 5.4 walk steps per byte,
-the walk itself never returns "unknown", and each dispatch call finds its match
-within 0 to 7 bytes. What remains is 320,560 dispatch iterations for 1.9 KiB,
-growing with the square of the input, with two mode matchers involved (`%` at
-397 iterations per call and `#'` at 5) that differ only in their end rule. The
-bounding would have to change in `execDispatch`, where counting walk-settled
-rejections toward `maxRejectedCandidates` was tried and reverted because it
-breaks D351's guard: a long comment of words that only start like a rule must
-keep highlighting (pinned by `TestRejectedCandidateRunStopsAtBudget`).
+**Not closed, and now located exactly.** R is quadratic (1 KiB 7.5 ms, 2 KiB
+29.2, 4 KiB 115.7) where the reference is linear (5.8, 2.6, 3.9), and that
+dominates HTTP, whose body auto-detects and scores R against 24 KiB.
+
+The mechanism is `resumableMultiRegex.exec`'s resume path, not any rule.
+`getMatcher(11)` builds the tail slice `rules[11:]` of R's root rule set, and
+the engine resumes there once per lexeme: 213 resumes on a 1 KiB input, 390,
+then 779 and 1557 as the input doubles. Every one of those 213 resumes takes the
+`result.index != lastIndex` branch and runs the *full* matcher from
+`lastIndex+1`, and the partial matcher's own work is wasted: measured, it
+matched exactly at `lastIndex` **zero** times in 213 resumes. The tail slice's
+first-byte table admits 68% of bytes (it carries
+`[a-zA-Z][a-zA-Z_0-9]*\s+<-\s+`, 52 first bytes), so each resume walks
+hundreds of candidates. Resumes scale linearly with input and each scans the
+remaining tail, which is the square.
+
+The reference has the same call pattern, and its cost is per call, not
+asymptotic: V8 runs the resume's global regex from `lastIndex` in 14 us where
+the port's dispatch takes 61 us for the same tail, and V8's `g`-regex
+`lastIndex` search is a native byte scan (73 ns for a 500-byte miss, flat in
+`lastIndex`) against Go's NFA.
+
+Two fixes were written and reverted. Returning only an exact match at
+`lastIndex` from the resume (`multiRegex.execAt`, asking `decideAt` at that
+position) is correct and passes every golden, but it is *slower* (1 KiB 7.5 to
+13.3 ms) because the resume asks at arbitrary offsets — position 1, 7, 8, 14 —
+where `decideAt` cannot settle the rule set cheaply, and the fallback then costs
+more than the short-circuit it replaced. Disabling the full-matcher fallback is
+fast (0.13 ms at 1 KiB, linear) but changes output, since the fallback is what
+finds the rule that legitimately comes after `regexIndex`.
+
+What is left is a per-call cost inside `execDispatch` (61 us against V8's
+14 us) on top of a call count that is already linear, so it needs a cheaper
+anchored candidate walk rather than a bounding change. Counting walk-settled
+rejections toward `maxRejectedCandidates` does not address it and would break
+D351's guard, which `TestRejectedCandidateRunStopsAtBudget` pins.
 
 ### D528
 
