@@ -40,7 +40,12 @@ The package-update card and `pi config` resource-manager TUI are removed: both
 require installed package resources. The latter was 1,315 lines reachable only
 from its golden test. The extension selector's tools-expanded hook is absent.
 No install-telemetry ping is sent because there is no backend; fresh-install
-version recording remains for the changelog.
+version recording remains for the changelog. The first-run setup dialog is
+unreachable rather than unported: `shouldRunFirstTimeSetup` requires
+`isOfficialDistribution`, which compares the package name to
+`@earendil-works/pi-coding-agent`, and no pier build carries that identity, so
+`showFirstTimeSetup` cannot run for the same reason it cannot in a renamed build
+of upstream. `NewFirstTimeSetupComponent` stays as a golden-tested component.
 
 The release check runs off-loop and reports on-loop. Its former module-proxy
 feed and `go install …@latest` card were superseded by D174. Offline behavior
