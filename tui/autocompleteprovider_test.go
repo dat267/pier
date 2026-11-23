@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -211,11 +212,7 @@ func TestAutocompleteAgainstUpstreamGolden(t *testing.T) {
 	buildAutocompleteFixture(t, root)
 	fixturePath := "/tmp/keysmatrix/acfix"
 
-	labels := make([]string, 0, len(corpus))
-	for label := range corpus {
-		labels = append(labels, label)
-	}
-	slices.Sort(labels)
+	labels := slices.Sorted(maps.Keys(corpus))
 
 	for _, label := range labels {
 		spec := corpus[label]

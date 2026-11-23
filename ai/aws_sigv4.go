@@ -6,8 +6,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -74,11 +76,7 @@ func SignAWSRequest(request *http.Request, body []byte, credentials AWSCredentia
 	if credentials.SessionToken != "" {
 		headerValues["x-amz-security-token"] = credentials.SessionToken
 	}
-	names := make([]string, 0, len(headerValues))
-	for name := range headerValues {
-		names = append(names, name)
-	}
-	sort.Strings(names)
+	names := slices.Sorted(maps.Keys(headerValues))
 
 	var canonicalHeaders strings.Builder
 	for _, name := range names {

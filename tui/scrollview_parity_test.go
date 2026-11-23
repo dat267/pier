@@ -3,6 +3,7 @@ package tui
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"slices"
 	"testing"
@@ -61,11 +62,7 @@ func TestScrollViewAgainstUpstreamGolden(t *testing.T) {
 	if err := json.Unmarshal(data, &golden); err != nil {
 		t.Fatalf("parse golden: %v", err)
 	}
-	labels := make([]string, 0, len(golden))
-	for label := range golden {
-		labels = append(labels, label)
-	}
-	slices.Sort(labels)
+	labels := slices.Sorted(maps.Keys(golden))
 
 	for _, label := range labels {
 		spec := golden[label].Spec

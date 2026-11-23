@@ -17,11 +17,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -412,11 +413,7 @@ func generateThemeVars(themeName string) string {
 	if err != nil {
 		colors = map[string]string{}
 	}
-	keys := make([]string, 0, len(colors))
-	for key := range colors {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+	keys := slices.Sorted(maps.Keys(colors))
 	lines := make([]string, 0, len(keys)+3)
 	for _, key := range keys {
 		lines = append(lines, "--"+key+": "+colors[key]+";")

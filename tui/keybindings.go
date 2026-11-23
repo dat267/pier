@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"maps"
 	"slices"
 	"sync/atomic"
 )
@@ -215,11 +216,7 @@ func buildKeybindingsSnapshot(definitions map[Keybinding]KeybindingDefinition, o
 		}
 	}
 
-	claimedKeys := make([]string, 0, len(userClaims))
-	for key := range userClaims {
-		claimedKeys = append(claimedKeys, key)
-	}
-	slices.Sort(claimedKeys)
+	claimedKeys := slices.Sorted(maps.Keys(userClaims))
 	for _, key := range claimedKeys {
 		claimants := userClaims[key]
 		if len(claimants) > 1 {
@@ -358,11 +355,7 @@ func canonicalBindingOrder(definitions map[Keybinding]KeybindingDefinition) []Ke
 			return order
 		}
 	}
-	keys := make([]string, 0, len(definitions))
-	for key := range definitions {
-		keys = append(keys, key)
-	}
-	slices.Sort(keys)
+	keys := slices.Sorted(maps.Keys(definitions))
 	order = append(order, keys...)
 	return order
 }

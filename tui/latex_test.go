@@ -3,6 +3,7 @@ package tui
 import (
 	"bufio"
 	"encoding/json"
+	"maps"
 	"os"
 	"slices"
 	"strings"
@@ -72,11 +73,7 @@ func TestLatexAgainstUpstreamGolden(t *testing.T) {
 	golden := loadLatexGolden(t)
 	corpus := loadLatexCorpus(t)
 
-	labels := make([]string, 0, len(corpus))
-	for label := range corpus {
-		labels = append(labels, label)
-	}
-	slices.Sort(labels)
+	labels := slices.Sorted(maps.Keys(corpus))
 
 	for _, label := range labels {
 		source := corpus[label]

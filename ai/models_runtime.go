@@ -337,11 +337,7 @@ func (p *Provider) HasDeferred() bool { return p.hasDeferredFetch }
 // ByAPIList is a test seam; the real map iteration happens in CreateProvider.
 func (o CreateProviderOptions) ByAPIList() []ProviderStreams {
 	var out []ProviderStreams
-	keys := make([]string, 0, len(o.ByAPI))
-	for k := range o.ByAPI {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
+	keys := slices.Sorted(maps.Keys(o.ByAPI))
 	for _, k := range keys {
 		if o.ByAPI[k] != nil {
 			out = append(out, o.ByAPI[k])

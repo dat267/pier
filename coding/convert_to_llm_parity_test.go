@@ -2,8 +2,9 @@ package coding
 
 import (
 	"encoding/json"
+	"maps"
 	"os"
-	"sort"
+	"slices"
 	"testing"
 
 	"github.com/dat267/pier/ai"
@@ -69,11 +70,7 @@ func canonicalTestJSON(t *testing.T, raw []byte) any {
 	sortKeys = func(input any) any {
 		switch typed := input.(type) {
 		case map[string]any:
-			keys := make([]string, 0, len(typed))
-			for key := range typed {
-				keys = append(keys, key)
-			}
-			sort.Strings(keys)
+			keys := slices.Sorted(maps.Keys(typed))
 			out := make(map[string]any, len(typed))
 			for _, key := range keys {
 				out[key] = sortKeys(typed[key])

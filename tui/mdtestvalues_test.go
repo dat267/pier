@@ -2,6 +2,7 @@ package tui
 
 import (
 	"encoding/json"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -28,11 +29,7 @@ func stableMDValue(value any) string {
 		}
 		return "[" + strings.Join(parts, ",") + "]"
 	case map[string]any:
-		keys := make([]string, 0, len(typed))
-		for key := range typed {
-			keys = append(keys, key)
-		}
-		slices.Sort(keys)
+		keys := slices.Sorted(maps.Keys(typed))
 		parts := make([]string, 0, len(keys))
 		for _, key := range keys {
 			parts = append(parts, mustJSON(key)+":"+stableMDValue(typed[key]))

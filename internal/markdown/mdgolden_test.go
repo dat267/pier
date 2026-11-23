@@ -4,8 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"maps"
 	"os"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -307,11 +308,7 @@ func goldenBlocks(src string) []*Block {
 func TestMarkedGoldenParity(t *testing.T) {
 	corpus := loadGoldenCorpus(t)
 	golden := loadGolden(t)
-	names := make([]string, 0, len(corpus))
-	for name := range corpus {
-		names = append(names, name)
-	}
-	sort.Strings(names)
+	names := slices.Sorted(maps.Keys(corpus))
 
 	var failed []string
 	for _, name := range names {
@@ -359,11 +356,7 @@ func stableValue(value any) string {
 		}
 		return "[" + strings.Join(parts, ",") + "]"
 	case map[string]any:
-		keys := make([]string, 0, len(typed))
-		for key := range typed {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
+		keys := slices.Sorted(maps.Keys(typed))
 		parts := make([]string, 0, len(keys))
 		for _, key := range keys {
 			parts = append(parts, mustJSON(key)+":"+stableValue(typed[key]))

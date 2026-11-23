@@ -2,8 +2,9 @@ package coding
 
 import (
 	"encoding/json"
+	"maps"
 	"os"
-	"sort"
+	"slices"
 	"testing"
 )
 
@@ -69,11 +70,7 @@ func cliArgsProjection(args *Args) map[string]any {
 		thinking = string(*args.Thinking)
 	}
 	unknown := make([][2]any, 0, len(args.UnknownFlags))
-	names := make([]string, 0, len(args.UnknownFlags))
-	for name := range args.UnknownFlags {
-		names = append(names, name)
-	}
-	sort.Strings(names)
+	names := slices.Sorted(maps.Keys(args.UnknownFlags))
 	for _, name := range names {
 		unknown = append(unknown, [2]any{name, args.UnknownFlags[name]})
 	}

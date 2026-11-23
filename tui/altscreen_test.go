@@ -3,6 +3,7 @@ package tui
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"math/rand"
 	"os"
 	"slices"
@@ -57,11 +58,7 @@ func TestAltScreenAgainstUpstreamGolden(t *testing.T) {
 		t.Fatalf("parse golden: %v", err)
 	}
 
-	labels := make([]string, 0, len(golden))
-	for label := range golden {
-		labels = append(labels, label)
-	}
-	slices.Sort(labels)
+	labels := slices.Sorted(maps.Keys(golden))
 
 	for _, label := range labels {
 		want := golden[label]

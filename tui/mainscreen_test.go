@@ -3,6 +3,7 @@ package tui
 import (
 	"bufio"
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -138,11 +139,7 @@ func TestMainScreenAgainstUpstreamGolden(t *testing.T) {
 		t.Fatalf("parse corpus: %v", err)
 	}
 
-	labels := make([]string, 0, len(corpus))
-	for label := range corpus {
-		labels = append(labels, label)
-	}
-	slices.Sort(labels)
+	labels := slices.Sorted(maps.Keys(corpus))
 
 	for _, label := range labels {
 		spec := corpus[label]

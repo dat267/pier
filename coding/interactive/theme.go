@@ -8,6 +8,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -583,11 +584,7 @@ func resolveVarRefs(value ColorValue, vars map[string]ColorValue, visited map[st
 // ResolveThemeColors resolves variable references in a color map.
 func ResolveThemeColors(colors map[string]ColorValue, vars map[string]ColorValue) map[string]ColorValue {
 	resolved := make(map[string]ColorValue, len(colors))
-	keys := make([]string, 0, len(colors))
-	for key := range colors {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+	keys := slices.Sorted(maps.Keys(colors))
 	for _, key := range keys {
 		resolved[key] = resolveVarRefs(colors[key], vars, map[string]bool{})
 	}
