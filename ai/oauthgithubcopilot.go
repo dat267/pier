@@ -405,14 +405,14 @@ func StartGitHubDeviceFlow(ctx context.Context, domain string) (*GitHubDeviceCod
 	}
 	device := &GitHubDeviceCodeResponse{
 		DeviceCode: deviceCode, UserCode: userCode, VerificationURI: trustedVerificationURI,
-		ExpiresIn: oauthSecondsToInt(expiresIn),
+		ExpiresIn: jsnum.ToInt(expiresIn),
 	}
 	if hasInterval {
 		interval, ok := intervalRaw.(float64)
 		if !ok {
 			return nil, errors.New("Invalid device code response fields")
 		}
-		seconds := oauthSecondsToInt(interval)
+		seconds := jsnum.ToInt(interval)
 		device.IntervalSeconds = &seconds
 	}
 	return device, nil
@@ -463,7 +463,7 @@ func PollForGitHubAccessToken(ctx context.Context, domain string, device *GitHub
 				case "slow_down":
 					result := OAuthDeviceCodePollResult[string]{Status: "slow_down"}
 					if interval, ok := payload["interval"].(float64); ok {
-						seconds := oauthSecondsToInt(interval)
+						seconds := jsnum.ToInt(interval)
 						result.IntervalSeconds = &seconds
 					}
 					return result, nil

@@ -253,7 +253,7 @@ func StartOpenAICodexDeviceAuth(ctx context.Context) (*OpenAICodexDeviceAuthInfo
 		return nil, fmt.Errorf("Invalid OpenAI Codex device code response: %s", encoded)
 	}
 	return &OpenAICodexDeviceAuthInfo{
-		DeviceAuthID: deviceAuthID, UserCode: userCode, IntervalSeconds: oauthSecondsToInt(intervalSeconds),
+		DeviceAuthID: deviceAuthID, UserCode: userCode, IntervalSeconds: jsnum.ToInt(intervalSeconds),
 	}, nil
 }
 

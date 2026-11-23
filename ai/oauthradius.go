@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"net"
 	"net/http"
@@ -442,10 +443,10 @@ func RequestRadiusDeviceAuthorization(ctx context.Context, gateway string) (*Rad
 	}
 	device := &RadiusDeviceAuthorization{
 		DeviceCode: deviceCode, UserCode: userCode,
-		VerificationURI: verificationURI, ExpiresIn: oauthSecondsToInt(expiresIn),
+		VerificationURI: verificationURI, ExpiresIn: jsnum.ToInt(expiresIn),
 	}
 	if interval, ok := payload["interval"].(float64); ok {
-		seconds := oauthSecondsToInt(interval)
+		seconds := jsnum.ToInt(interval)
 		device.IntervalSeconds = &seconds
 	}
 	return device, nil

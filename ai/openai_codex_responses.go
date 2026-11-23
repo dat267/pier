@@ -101,17 +101,6 @@ func IsCodexRetryableError(status int, errorText string) bool {
 	return codexRetryableTextPattern.MatchString(errorText)
 }
 
-// codexRetryHeaderNumber parses a retry header like the reference's Number():
-// JavaScript whitespace is trimmed, and non-finite values or Go-only numeric
-// separators count as absent. Hexadecimal integer forms are not used by retry
-// headers and fall back like any other unparseable value.
-// codexRetryHeaderNumber parses a Retry-After value the way the reference does,
-// with `Number(value)`: hex, binary and octal prefixes count, JavaScript
-// whitespace is trimmed, numeric separators and trailing text are rejected.
-func codexRetryHeaderNumber(value string) (float64, bool) {
-	return jsnum.Number(value)
-}
-
 // retryHeaderDelay converts milliseconds to a duration, saturating instead of
 // wrapping so an absurd server delay still trips the cap in
 // ValidateCodexRetryDelay (upstream keeps it finite and validates it).
@@ -126,7 +115,7 @@ func retryHeaderDelay(milliseconds float64) time.Duration {
 // GetCodexRetryAfterDelayMS reads retry-after-ms/retry-after headers.
 func GetCodexRetryAfterDelayMS(headers http.Header) (time.Duration, bool) {
 	if millis := headers.Get("retry-after-ms"); millis != "" {
-		if value, ok := codexRetryHeaderNumber(millis); ok {
+		if value, ok := jsnum.Number(millis); ok {
 			return retryHeaderDelay(max(value, 0)), true
 		}
 	}
@@ -134,7 +123,7 @@ func GetCodexRetryAfterDelayMS(headers http.Header) (time.Duration, bool) {
 	if retryAfter == "" {
 		return 0, false
 	}
-	if seconds, ok := codexRetryHeaderNumber(retryAfter); ok {
+	if seconds, ok := jsnum.Number(retryAfter); ok {
 		return retryHeaderDelay(max(seconds*1000, 0)), true
 	}
 	if when, err := http.ParseTime(retryAfter); err == nil {
