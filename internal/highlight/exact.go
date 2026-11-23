@@ -233,6 +233,16 @@ func (w *exactWalk) seq(seq int32, pos int) exactResult {
 			seq = rest
 		case syntax.OpLiteral:
 			for _, r := range node.runes {
+				// The common case is an ASCII rune against ASCII input, where a
+				// byte compare replaces a decode. A folded literal still goes
+				// through exactLiteral, which folds both sides.
+				if r < utf8.RuneSelf && !node.fold {
+					if pos >= len(s) || s[pos] != byte(r) {
+						return exactNoMatch
+					}
+					pos++
+					continue
+				}
 				c, width := utf8.DecodeRuneInString(s[pos:])
 				if width == 0 || !exactLiteral(node, r, c) {
 					return exactNoMatch

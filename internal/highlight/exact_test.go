@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"unicode/utf8"
 )
@@ -183,6 +184,43 @@ func TestEndRulesKeepGroupsOnlyWhereOnEndReadsThem(t *testing.T) {
 		}
 		if got := RenderHTML(result.Nodes); got != want {
 			t.Errorf("bash %q = %q, want %q", code, got, want)
+		}
+	}
+}
+
+// TestExactWalkLiteralASCIIPath guards the byte-compare fast path for an ASCII
+// literal. The walk skips utf8.DecodeRuneInString when the rule's rune and the
+// input byte are both ASCII, so a byte compare must agree with the decoder on
+// every boundary case: end of input, a non-ASCII byte where the literal
+// expects ASCII, and a short literal prefix.
+func TestExactWalkLiteralASCIIPath(t *testing.T) {
+	patterns := []string{`abc`, `\breturn\b`, `x`, `aé`, `é`}
+	inputs := []string{
+		"", "a", "ab", "abc", "abcd", "x", "return", "returned",
+		"\xc3\xa9", "a\xc3\xa9", "\xff\xfe", "abc\xc3\xa9", "  return  ",
+	}
+	ws := &jsWorkspace{}
+	for _, pattern := range patterns {
+		re := regexp.MustCompile(pattern)
+		ex := exactProgram(parsePattern(pattern))
+		if ex == nil {
+			continue // not walked; the regexp is used directly
+		}
+		for _, input := range inputs {
+			for pos := 0; pos <= len(input); pos++ {
+				want := re.FindStringIndex(input[pos:])
+				end, result := matchExactAt(ex, input, pos, false, ws)
+				switch {
+				case want == nil:
+					if result == exactMatched {
+						t.Errorf("%q at %d of %q: walk matched to %d, regexp did not", pattern, pos, input, end)
+					}
+				case result == exactMatched:
+					if end-pos != want[1] {
+						t.Errorf("%q at %d of %q: walk length %d, regexp length %d", pattern, pos, input, end-pos, want[1])
+					}
+				}
+			}
 		}
 	}
 }

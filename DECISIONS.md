@@ -8999,7 +8999,15 @@ Two more, closing the "share work inside the walk" idea:
   within-walk duplicates, so every push is distinct and the 7.6% of profile
   `push` spends is irreducible.
 
-C++ (14.0-14.1 ms against 11.2-11.4) and Java (11.4 against 7.4) therefore sit
+One change did land. Of C++'s 741,217 walk steps, 246,856 are literal
+comparisons, and each rune of a literal went through
+`utf8.DecodeRuneInString` even when both sides are ASCII. A byte compare when
+the rule's rune is ASCII and the literal is not folded (the folded case still
+needs `exactLiteral`, which folds both sides) gives C++ 14.1 to 13.70 ms, Java
+11.36 to 11.03 and markdown 0.55 to 0.53. The walk still agrees with the
+regexp on every boundary case, pinned by `TestExactWalkLiteralASCIIPath`.
+
+C++ (13.7 ms against 11.2-11.4) and Java (11.0 against 7.4) therefore sit
 at a cost the current design pays per candidate by construction: 97,291
 distinct walks for C++, half rejecting within 1-2 steps, none reusable, none
 duplicable, none falling back. Every local route is measured and closed, so what remains is a
