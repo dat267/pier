@@ -217,3 +217,33 @@ func TestBeginLineRuleKeepsTheDispatch(t *testing.T) {
 		}
 	}
 }
+
+// TestZeroWidthLineStartRuleKeepsTheDispatch guards the second form of D524's
+// defect. A rule that begins at a line start and can match empty there, such as
+// armasm's `^[ \t]*`, has no first byte, and one such rule used to disable the
+// dispatch for its whole rule set: armasm's root matcher then paid a joined NFA
+// scan at every position (81% of its profile) where the reference's single
+// sticky regex is one call. highlight.js 10.7.3 (pi v1.6.0, faac5858) compiles
+// every rule with the m flag, so `^` matches at a line start.
+func TestZeroWidthLineStartRuleKeepsTheDispatch(t *testing.T) {
+	matcher := newMultiRegex()
+	matcher.addRule(`^[ \t]*`, matchData{position: 0})
+	matcher.addRule(`\bmov\b`, matchData{position: 1})
+	if err := matcher.compile(false); err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+	if !matcher.dispatch {
+		t.Fatal("a zero-width line-start rule disabled the dispatch")
+	}
+	if matcher.beginLineRule != 0 {
+		t.Fatalf("beginLineRule = %d, want the `^[ \\t]*` rule", matcher.beginLineRule)
+	}
+	// The dispatch being on is the point: this shape used to force the joined
+	// regexp at every position. The empty branch is rule 0, so at a line start
+	// it wins by order, as the reference's alternation does; the keyword still
+	// wins away from a line start.
+	got := matcher.exec("x mov r0\n", 2, false, nil)
+	if got == nil || got.lexeme != "mov" {
+		t.Fatalf("keyword not found away from the line start: %+v", got)
+	}
+}

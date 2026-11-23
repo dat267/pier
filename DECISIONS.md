@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D527)
+# Deliberate divergences from pi (D1–D528)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9127,3 +9127,38 @@ bounding would have to change in `execDispatch`, where counting walk-settled
 rejections toward `maxRejectedCandidates` was tried and reverted because it
 breaks D351's guard: a long comment of words that only start like a rule must
 keep highlighting (pinned by `TestRejectedCandidateRunStopsAtBudget`).
+
+### D528
+
+**A rule that matches empty at a line start keeps its rule set on dispatch.**
+
+Reference: pi v1.6.0 (`faac5858`) runs a mode's rules as one sticky-regex
+alternation, so a rule like armasm's `^[ \t]*` (optional indentation) is just
+another alternative. The port's dispatch needs a first-byte set per rule, and a
+rule that matches empty has none, so one such rule set `usable` false for the
+whole rule set. Armasm's root matcher has 15 rules and could not dispatch:
+81% of its profile was Go's regexp NFA (`machine.add`, `machine.step`,
+`MatchRunePos`), and the exact walk was 2.9%.
+
+This is the second form of D524's defect. D524 handled a bare `^`; this handles a
+`^` that an optional run follows. `isBeginLinePrefixRule` walks the leading
+captures and concatenations of a rule while each has a minimum length of zero,
+and reports whether it lands on a `^`. The rule then contributes no candidate
+byte and is recorded in `beginLineRule`, so the dispatch stays enabled and the
+rule is checked at line starts, as `^` already was.
+
+Same method, five-run medians: armasm 82.41 to 13.20 ms, **84% faster** and 6.2x
+the reference's 8.52. mipsasm, x86asm, C++ and Java are unchanged (within 1.6%),
+and a suite run over 191 languages moved 111 faster; the five largest apparent
+regressions were re-measured over five runs and none exceeded 1.6% either way. Output is unchanged: every golden, the differentials,
+a 30 s fuzz run, the armasm sample byte for byte against the reference
+(142,883 bytes), and tab-indented armasm still leaves the indentation as plain
+text.
+
+Test: `TestZeroWidthLineStartRuleKeepsTheDispatch` (from D524).
+
+A sibling change for an alternation with a `$` branch (`$|;`, `#|$`, the biggest
+remaining blockers at 25 and 21 matchers) was written and **reverted**: it
+recovered only 2 of 148 disabled matchers and broke
+`TestManualLineTerminatorLookaheads`, because `$` in a sublanguage continuation
+must not take the surrounding line's semantics.

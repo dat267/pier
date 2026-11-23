@@ -228,6 +228,19 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 				m.endLineRule = i
 			}
 		}
+		if !ok && isBeginLinePrefixRule(preparePattern(source)) {
+			// A rule that begins at a line start and matches empty there (an
+			// optional indentation run, `^[ \t]*`) is the same shape as a bare
+			// `^` (D524): its match sits at a line start, which no first-byte
+			// set of the rule's own first character can express, so it is
+			// checked at line starts and contributes no candidate byte. Without
+			// this one such rule disabled the dispatch for the whole rule set,
+			// which left armasm on the joined regexp for 81% of its profile.
+			if m.beginLineRule < 0 {
+				m.beginLineRule = i
+			}
+			set, ok = "", true
+		}
 		if !ok && isBeginLineRule(preparePattern(source)) {
 			// `^` under the m flag matches at position 0 or after a line
 			// terminator. That is the position of the byte *after* a terminator,
@@ -550,6 +563,23 @@ func isEndLineRule(expr string) bool {
 		re = re.Sub[0]
 	}
 	return re != nil && re.Op == syntax.OpEndLine
+}
+
+// isBeginLinePrefixRule reports whether a prepared rule begins with a `^`
+// assertion it can satisfy while matching empty, so its match starts at a line
+// start whatever follows.
+func isBeginLinePrefixRule(expr string) bool {
+	re := parseExactPattern(expr, false)
+	for re != nil && (re.Op == syntax.OpCapture || re.Op == syntax.OpConcat) {
+		if len(re.Sub) == 0 {
+			return false
+		}
+		re = re.Sub[0]
+		if minMatchLen(re) > 0 {
+			return false
+		}
+	}
+	return re != nil && (re.Op == syntax.OpBeginLine || re.Op == syntax.OpBeginText)
 }
 
 // isBeginLineRule reports whether a prepared rule is only `^` (possibly in
