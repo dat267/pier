@@ -9139,7 +9139,7 @@ the port's dispatch takes 61 us for the same tail, and V8's `g`-regex
 Two fixes were written and reverted. Returning only an exact match at
 `lastIndex` from the resume (`multiRegex.execAt`, asking `decideAt` at that
 position) is correct and passes every golden, but it is *slower* (1 KiB 7.5 to
-13.3 ms) because the resume asks at arbitrary offsets — position 1, 7, 8, 14 —
+13.3 ms) because the resume asks at arbitrary offsets, such as 1, 7, 8 and 14,
 where `decideAt` cannot settle the rule set cheaply, and the fallback then costs
 more than the short-circuit it replaced. Disabling the full-matcher fallback is
 fast (0.13 ms at 1 KiB, linear) but changes output, since the fallback is what
