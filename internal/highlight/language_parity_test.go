@@ -524,3 +524,28 @@ func TestRegexpModeReopensAfterAClosingSlash(t *testing.T) {
 		}
 	}
 }
+
+// languages/ruby.js (highlight.js 10.7.3, pi v1.6.0, faac5858) opens the
+// superclass with the JS string '<\\s*', the regex `<\s*`; its identifier rule
+// has no class, so `Bar` in `class Foo < Bar` stays plain. The port had the
+// regex `<\\s*` (a literal backslash), never opened the mode, and titled the
+// superclass. The expected HTML and relevance are the reference's.
+func TestRubySuperclassIsNotATitle(t *testing.T) {
+	for _, tc := range []struct {
+		code      string
+		relevance int
+		html      string
+	}{
+		{"class Foo < Bar\nend", 3, "<span class=\"hljs-class\"><span class=\"hljs-keyword\">class</span> <span class=\"hljs-title\">Foo</span> &lt; Bar</span>\n<span class=\"hljs-keyword\">end</span>"},
+		{"class A < B::C; end", 3, "<span class=\"hljs-class\"><span class=\"hljs-keyword\">class</span> <span class=\"hljs-title\">A</span> &lt; B::C;</span> <span class=\"hljs-keyword\">end</span>"},
+		{"class<t", 2, "<span class=\"hljs-class\"><span class=\"hljs-keyword\">class</span>&lt;t</span>"},
+	} {
+		result, err := Highlight(tc.code, "ruby")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := RenderHTML(result.Nodes); got != tc.html || result.Relevance != tc.relevance {
+			t.Errorf("%q: relevance %d HTML %q; want %d %q", tc.code, result.Relevance, got, tc.relevance, tc.html)
+		}
+	}
+}

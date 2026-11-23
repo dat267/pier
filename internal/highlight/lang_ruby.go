@@ -147,7 +147,7 @@ func Ruby() *Language {
 		Contains: []*Mode{
 			titleClass,
 			{
-				Begin: `<\\s*`,
+				Begin: `<\s*`,
 				Contains: []*Mode{
 					Zero(Mode{Begin: `(` + IdentRe + `::)?` + IdentRe}),
 				},
