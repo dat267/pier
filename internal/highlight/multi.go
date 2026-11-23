@@ -84,6 +84,8 @@ type multiRegex struct {
 	// walk can not decide the rule (D523); ruleGroups is each rule's group.
 	exacts     []*exactNode
 	ruleGroups []int
+	// requiredLits is, per rule, a literal every match must contain, or "".
+	requiredLits []string
 	// endLineRule is the first rule that is only `$`, or -1. Its first bytes
 	// are the line terminators' and it also matches at the end of the input,
 	// where it is the only kind of rule that can (every other rule that can
@@ -207,9 +209,11 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 	m.ruleFirst = make([]string, len(m.regexes))
 	m.prefilters = make([]*syntax.Regexp, len(m.regexes))
 	m.exacts = make([]*exactNode, len(m.regexes))
+	m.requiredLits = make([]string, len(m.regexes))
 	for i, source := range m.regexes {
 		prepared := preparePattern(source)
 		m.prefilters[i] = rulePrefilter(prepared, caseInsensitive)
+		m.requiredLits[i] = requiredLiteral(parsePatternFlags(prepared, caseInsensitive))
 		// A rule whose groups a callback reads still has a walk: its "no
 		// match" is as good as the regexp's, and decideAt leaves a match to
 		// the regexp, which reports the groups.
@@ -323,6 +327,7 @@ func (m *multiRegex) subMatcher(b byte) *multiRegex {
 		sub.addRuleAt(source, m.datas[i].position, m.datas[i])
 		sub.prefilters = append(sub.prefilters, m.prefilters[i])
 		sub.exacts = append(sub.exacts, m.exacts[i])
+		sub.requiredLits = append(sub.requiredLits, m.requiredLits[i])
 	}
 	if len(sub.regexes) == 0 {
 		return nil
@@ -352,6 +357,10 @@ func (m *multiRegex) subMatcher(b byte) *multiRegex {
 
 // exec finds the leftmost match at or after lastIndex.
 func (m *multiRegex) exec(s string, lastIndex int, jsLines bool, ws *jsWorkspace) *match {
+	if ws != nil {
+		// A mask is only valid for the tail it was computed from.
+		ws.maskEpoch++
+	}
 	if m.matcherRe == nil && len(m.manuals) == 0 {
 		return nil
 	}
@@ -445,6 +454,13 @@ func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsW
 		}
 
 		found, decided := m.dispatchAt(s, pos, jsLines, ws)
+		if found == nil && decided && !m.anyRulePossible(s, pos, ws) {
+			// No rule can match anywhere in the remainder, so the rest of the
+			// scan finds nothing: on R's tail rule set the only reachable rule
+			// needs `<-`, absent from the input, and the dispatch otherwise
+			// stepped through 73,625 candidates per highlight.
+			return m.endOfInputMatch(s, jsLines)
+		}
 		// The `^` rule's match is empty, so it competes with a non-empty match
 		// at the same position by rule order, as the joined alternation does.
 		lm := m.beginLineMatch(s, pos, jsLines)
@@ -477,6 +493,54 @@ func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsW
 		search = pos + 1
 	}
 	return nil
+}
+
+// anyRulePossible reports whether any rule of this matcher could match at or
+// after pos.
+func (m *multiRegex) anyRulePossible(s string, pos int, ws *jsWorkspace) bool {
+	if len(m.requiredLits) == 0 {
+		return true
+	}
+	for i := range m.requiredLits {
+		if m.rulePossible(i, s, pos, ws) {
+			return true
+		}
+	}
+	return false
+}
+
+// rulePossible reports whether rule i could match at or after pos. A rule whose
+// required literal is absent from the remainder cannot match in it. The mask is
+// computed once per matcher per exec call and cached on the workspace: on R's
+// tail rule set the identifier rule needs `<-`, absent from the input, and it
+// was walked at all 610 candidates of every resume.
+func (m *multiRegex) rulePossible(i int, s string, pos int, ws *jsWorkspace) bool {
+	if i >= len(m.requiredLits) || m.requiredLits[i] == "" {
+		return true
+	}
+	tail := ""
+	if pos < len(s) {
+		tail = s[pos:]
+	}
+	if ws == nil {
+		return strings.Contains(tail, m.requiredLits[i])
+	}
+	if ws.ruleMask == nil {
+		ws.ruleMask = make(map[*multiRegex]maskEntry)
+	}
+	entry, ok := ws.ruleMask[m]
+	if !ok || entry.epoch != ws.maskEpoch {
+		mask := make([]bool, len(m.requiredLits))
+		for j, lit := range m.requiredLits {
+			mask[j] = lit == "" || strings.Contains(tail, lit)
+		}
+		entry = maskEntry{epoch: ws.maskEpoch, mask: mask}
+		ws.ruleMask[m] = entry
+	}
+	if i < len(entry.mask) {
+		return entry.mask[i]
+	}
+	return true
 }
 
 // dispatchAt tries the rules that can begin with s[pos], returning the match
@@ -750,6 +814,9 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 // decision costs O(1) whatever the input's length.
 func (m *multiRegex) decideAt(s string, pos int, jsLines bool, ws *jsWorkspace) (found *match, decided bool) {
 	for i, prefilter := range m.prefilters {
+		if !m.rulePossible(i, s, pos, ws) {
+			continue
+		}
 		if exact := m.exacts[i]; exact != nil {
 			end, result := matchExactAt(exact, s, pos, jsLines, ws)
 			switch result {

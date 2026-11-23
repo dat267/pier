@@ -213,6 +213,17 @@ type jsWorkspace struct {
 	// prefilter is the dispatch prefilter's reused continuation list.
 	prefilter []prefilterCont
 	exact     []exactCont
+	// ruleMask caches, per matcher and per exec call, which rules have their
+	// required literal somewhere in the remaining input. The epoch is bumped by
+	// each top-level exec so a stale mask is never read.
+	ruleMask  map[*multiRegex]maskEntry
+	maskEpoch int
+}
+
+// maskEntry is one matcher's rule mask for the call identified by epoch.
+type maskEntry struct {
+	epoch int
+	mask  []bool
 }
 
 type jsQueue struct {
