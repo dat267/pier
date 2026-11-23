@@ -21,19 +21,10 @@ func IsImageLine(line string) bool {
 	if len(line) >= len(iterm2Prefix) && line[:len(iterm2Prefix)] == iterm2Prefix {
 		return true
 	}
-	return indexOf(line, kittyPrefix) >= 0 || indexOf(line, iterm2Prefix) >= 0
+	return strings.Index(line, kittyPrefix) >= 0 || strings.Index(line, iterm2Prefix) >= 0
 }
 
 func isImageLine(line string) bool { return IsImageLine(line) }
-
-// indexOf is the port's String.prototype.indexOf for byte-oriented callers: the
-// first byte offset of needle in haystack, -1 when absent. It delegates to
-// strings.Index, which is the same search but SIMD-accelerated: the hand-rolled
-// O(n*m) byte loop (a slice comparison per position) cost 20% of a warm frame
-// through IsImageLine's two searches per line.
-func indexOf(haystack string, needle string) int {
-	return strings.Index(haystack, needle)
-}
 
 // ExtractedSegments is the before/after extraction result.
 type ExtractedSegments struct {

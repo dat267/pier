@@ -171,10 +171,6 @@ func toolContainerComponent(context *ToolRenderContext) *tui.Container {
 
 // --- read -------------------------------------------------------------------
 
-func toPosixPath(filePath string) string {
-	return filepath.ToSlash(filePath)
-}
-
 // formatPathRelativeToCwdOrAbsolute shows a cwd-relative path when the file is
 // inside the cwd, otherwise the absolute path (upstream utils/paths.ts).
 func formatPathRelativeToCwdOrAbsolute(filePath string, cwd string) string {

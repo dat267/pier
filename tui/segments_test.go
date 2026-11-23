@@ -28,12 +28,12 @@ func TestIndexOfFindsTheFirstByteOccurrence(t *testing.T) {
 		{"日本語", "本", len("日")},
 	}
 	for _, tc := range cases {
-		got := indexOf(tc.haystack, tc.needle)
+		got := strings.Index(tc.haystack, tc.needle)
 		if got != tc.want {
-			t.Fatalf("indexOf(%q, %q) = %d, want %d", tc.haystack, tc.needle, got, tc.want)
+			t.Fatalf("strings.Index(%q, %q) = %d, want %d", tc.haystack, tc.needle, got, tc.want)
 		}
 		if got != strings.Index(tc.haystack, tc.needle) {
-			t.Fatalf("indexOf(%q, %q) = %d, strings.Index gives %d", tc.haystack, tc.needle, got, strings.Index(tc.haystack, tc.needle))
+			t.Fatalf("strings.Index(%q, %q) = %d, strings.Index gives %d", tc.haystack, tc.needle, got, strings.Index(tc.haystack, tc.needle))
 		}
 	}
 }

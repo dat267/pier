@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 )
 
 // Port of src/tui-alt-screen.ts: the fullscreen renderer with an
@@ -1384,7 +1385,7 @@ func (s *AltScreen) parseWheelEvent(data string) (altWheelEvent, bool) {
 		}
 		return altWheelEvent{Direction: dir, X: atoiSafe(match[2]) - 1, Y: atoiSafe(match[3]) - 1, Button: button}, true
 	}
-	if strings.HasPrefix(data, "\x1b[M") && runeCount(data) == 6 {
+	if strings.HasPrefix(data, "\x1b[M") && utf8.RuneCountInString(data) == 6 {
 		payload := []rune(data[3:])
 		button := int(payload[0]) - 32
 		if button&64 == 0 {
@@ -2280,7 +2281,7 @@ func (s *AltScreen) isMouseSequence(data string) bool {
 	if truncatedSgrMouseRegex.MatchString(data) {
 		return true
 	}
-	return strings.HasPrefix(data, "\x1b[M") && runeCount(data) == 6
+	return strings.HasPrefix(data, "\x1b[M") && utf8.RuneCountInString(data) == 6
 }
 
 func (s *AltScreen) compositeScrollToEndIndicator(screen []string, layout LayoutFrame, width int) []string {

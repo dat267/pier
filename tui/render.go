@@ -1160,7 +1160,7 @@ func (t *Renderer) ExtractCursorPosition(lines []string, height int) (row int, c
 	viewportTop := max(0, len(lines)-height)
 	for r := len(lines) - 1; r >= viewportTop; r-- {
 		line := lines[r]
-		markerIndex := indexOf(line, CursorMarker)
+		markerIndex := strings.Index(line, CursorMarker)
 		if markerIndex != -1 {
 			beforeMarker := line[:markerIndex]
 			col := VisibleWidth(beforeMarker)

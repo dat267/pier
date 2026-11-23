@@ -26,13 +26,9 @@ func GeneratePKCE() (PKCEPair, error) {
 	if _, err := rand.Read(verifierBytes); err != nil {
 		return PKCEPair{}, err
 	}
-	verifier := base64URLEncode(verifierBytes)
+	verifier := base64.RawURLEncoding.EncodeToString(verifierBytes)
 	sum := sha256.Sum256([]byte(verifier))
-	return PKCEPair{Verifier: verifier, Challenge: base64URLEncode(sum[:])}, nil
-}
-
-func base64URLEncode(bytes []byte) string {
-	return base64.RawURLEncoding.EncodeToString(bytes)
+	return PKCEPair{Verifier: verifier, Challenge: base64.RawURLEncoding.EncodeToString(sum[:])}, nil
 }
 
 // Device flow messages and intervals (upstream device-code.ts).

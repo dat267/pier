@@ -148,7 +148,7 @@ func layoutComponent(
 		if len(lines) > allocatedHeight && allocatedHeight > 0 {
 			cursorLine := -1
 			for index, line := range lines {
-				if indexOf(line, CursorMarker) != -1 {
+				if strings.Index(line, CursorMarker) != -1 {
 					cursorLine = index
 					break
 				}

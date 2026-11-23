@@ -91,7 +91,7 @@ type kittyImageHeader struct {
 const kittyImageIDMax = int64(0xffffffff)
 
 func parseKittyImageHeader(line string) (kittyImageHeader, bool) {
-	sequenceStart := indexOf(line, kittyPrefix)
+	sequenceStart := strings.Index(line, kittyPrefix)
 	if sequenceStart == -1 {
 		return kittyImageHeader{}, false
 	}

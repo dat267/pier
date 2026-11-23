@@ -43,7 +43,7 @@ func getPiDocsClassification(absolutePath string) *compactReadClassification {
 		filepath.IsAbs(relativePath) {
 		return nil
 	}
-	label := toPosixPath(relativePath)
+	label := filepath.ToSlash(relativePath)
 	if label == "README.md" || strings.HasPrefix(label, "docs/") || strings.HasPrefix(label, "examples/") {
 		return &compactReadClassification{kind: "docs", label: label}
 	}

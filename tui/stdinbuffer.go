@@ -47,7 +47,7 @@ func isCompleteSequence(data string) seqStatus {
 	case startsWith(afterEsc, "["):
 		// Old-style mouse sequence: ESC[M followed by three characters.
 		if startsWith(afterEsc, "[M") {
-			if runeCount(data) >= 6 {
+			if utf8.RuneCountInString(data) >= 6 {
 				return seqComplete
 			}
 			return seqIncomplete
@@ -211,7 +211,7 @@ func extractCompleteSequences(buffer string) (sequences []string, remainder stri
 			}
 		} else {
 			// Not an escape sequence: take a single rune.
-			_, size := decodeRune(remaining)
+			_, size := utf8.DecodeRuneInString(remaining)
 			sequences = append(sequences, remaining[:size])
 			pos += size
 		}
@@ -366,7 +366,7 @@ func (b *StdinBuffer) process(str string) {
 		return
 	}
 
-	if startIndex := indexOf(b.buffer, bracketedPasteStart); startIndex != -1 {
+	if startIndex := strings.Index(b.buffer, bracketedPasteStart); startIndex != -1 {
 		b.rejoinedHead = ""
 		if startIndex > 0 {
 			beforePaste := b.buffer[:startIndex]
@@ -380,7 +380,7 @@ func (b *StdinBuffer) process(str string) {
 		b.hasPendingCodepoint = false
 		content := b.buffer[startIndex+len(bracketedPasteStart):]
 		b.buffer = ""
-		if endIndex := indexOf(content, bracketedPasteEnd); endIndex != -1 {
+		if endIndex := strings.Index(content, bracketedPasteEnd); endIndex != -1 {
 			b.finishPaste(content[:endIndex], content[endIndex+len(bracketedPasteEnd):])
 			return
 		}
@@ -431,7 +431,7 @@ func (b *StdinBuffer) finishPasteIfAvailable() {
 	searchFrom := b.pasteSearchFrom
 	// All earlier positions were checked, except the suffix that could still
 	// become the terminator after another chunk arrives.
-	endOffset := indexOf(content[searchFrom:], bracketedPasteEnd)
+	endOffset := strings.Index(content[searchFrom:], bracketedPasteEnd)
 	if endOffset == -1 {
 		b.pasteSearchFrom = nextPasteSearchStart(len(content))
 		return
@@ -456,8 +456,8 @@ func (b *StdinBuffer) finishPaste(pastedContent string, remaining string) {
 // emitDataSequence deduplicates the raw character duplicate that
 // terminals echo after an unmodified Kitty printable sequence.
 func (b *StdinBuffer) emitDataSequence(sequence string) {
-	if runeCount(sequence) == 1 {
-		codepoint, _ := decodeRune(sequence)
+	if utf8.RuneCountInString(sequence) == 1 {
+		codepoint, _ := utf8.DecodeRuneInString(sequence)
 		if b.hasPendingCodepoint && int(codepoint) == b.pendingCodepoint {
 			b.pendingCodepoint = 0
 			b.hasPendingCodepoint = false
@@ -606,7 +606,7 @@ func splitOn(s, sep string) []string {
 	}
 	var out []string
 	for {
-		index := indexOf(s, sep)
+		index := strings.Index(s, sep)
 		if index == -1 {
 			out = append(out, s)
 			return out
@@ -639,16 +639,4 @@ func parseInt(s string) int {
 		value = value*10 + int(s[i]-'0')
 	}
 	return value
-}
-
-// decodeRune returns the first rune and its byte size.
-func decodeRune(s string) (rune, int) {
-	return utf8.DecodeRuneInString(s)
-}
-
-// runeCount counts the runes of a UTF-8 string. Upstream checks
-// sequence.length === 1 (one UTF-16 code unit); runes are the Go analog
-// (divergence D49).
-func runeCount(s string) int {
-	return utf8.RuneCountInString(s)
 }
