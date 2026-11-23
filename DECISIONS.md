@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D515)
+# Deliberate divergences from pi (D1–D516)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8604,3 +8604,36 @@ port cannot represent is absent rather than carried as the wrong type, where the
 reference would pass the raw value through. Tests:
 `TestParseRemoteCatalogKeepsAModelWithWrongTypedMembers`. Cited at
 `coding/remotecatalog.go`.
+
+### D516
+
+**The idn-hostname context rules and the iri-reference parser stay approximate.**
+
+Reference: pi v1.6.0 (`faac5858`) validates `idn-hostname` with the shared
+`packages/schema/src/formats/typebox/idna` rules and `iri-reference` with
+`!InvalidIriChars && !MalformedScheme && URL.canParse(value, "http://example.com")`
+(`iri_reference.ts:41`).
+
+The port ports the label length rules (UTF-16 units and the 63-octet A-label,
+through a port of the reference's punycode `Encode`), the hyphen and ACE-prefix
+reservation, and hostname normalization. It does not port the RFC 5892 CONTEXTO
+neighbour rules (`label/unicode.ts:87`: U+00B7 between two `l`, U+0375 before
+Greek, U+05F3/U+05F4 after Hebrew, U+200C/U+200D after a virama) or the PVALID
+category tables (`label/unicode.ts:84`), and admits any `unicode.IsLetter` or
+`IsNumber` rune instead. So it rejects `l·l` and `א׳`, and `::1`, `:` and
+`Zzé+59`, all of which the reference accepts; a 1,200-cell differential found
+no rune the port admits and the reference forbids. For `iri-reference` the port
+applies a character rule stricter than the WHATWG parser and rejects `.@12Z|`,
+`{` and `}`.
+
+Both differences make the port stricter, never more permissive. Closing them
+means copying about 410 lines of Unicode tables (`pattern/pattern.ts`,
+`format/puny.ts`, `format/bidi.ts`) and a `URL.canParse` approximation, while
+no tool schema in either tree declares either format: only the generic format
+dispatcher reaches them. `golang.org/x/net/idna` is not a substitute: with
+`ValidateForRegistration()` and `StrictDomainName(true)` it agrees with the
+reference on `l·l` and the A-label length but rejects `::1`, `:` and `Zzé+59`
+as the port does, and it would add a module the graph lists only indirectly.
+
+Tests: `TestIDNAndIRIReferenceKeepTheApproximateRules`,
+`TestIDNLabelLengthCountsTheALabelAndUTF16Units`.

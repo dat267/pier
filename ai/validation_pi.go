@@ -1104,7 +1104,10 @@ func validIDNLabel(value string) bool {
 		return false
 	}
 	for _, label := range strings.Split(normalizeIDNHostname(value), ".") {
-		if label == "" || utf8.RuneCountInString(label) > 63 {
+		// IsValidLabelLength (idn-hostname.ts:36) counts UTF-16 code units, and
+		// ExceedsMaxALabelLength (label/unicode.ts:44) also bounds the
+		// "xn--" + punycode form of a non-ASCII label at 63 octets.
+		if label == "" || JSLength(label) > 63 || exceedsMaxALabelLength(label) {
 			return false
 		}
 		runes := []rune(label)
@@ -1123,6 +1126,109 @@ func validIDNLabel(value string) bool {
 		}
 	}
 	return true
+}
+
+// exceedsMaxALabelLength ports ExceedsMaxALabelLength (label/unicode.ts:44):
+// RFC 5890 2.3.2.1 limits an A-label to 63 octets, and only a label with a
+// non-ASCII character has one.
+func exceedsMaxALabelLength(label string) bool {
+	for index := 0; index < len(label); index++ {
+		if label[index] >= utf8.RuneSelf {
+			return len(punycodeEncode(label))+len("xn--") > 63
+		}
+	}
+	return false
+}
+
+// Punycode parameters (RFC 3492 5; idna/format/puny.ts:34).
+const (
+	punycodeBase        = 36
+	punycodeTMin        = 1
+	punycodeTMax        = 26
+	punycodeSkew        = 38
+	punycodeDamp        = 700
+	punycodeInitialBias = 72
+	punycodeInitialN    = 128
+)
+
+// punycodeAdapt ports Adapt (idna/format/puny.ts:57).
+func punycodeAdapt(delta, numPoints int, firstTime bool) int {
+	if firstTime {
+		delta /= punycodeDamp
+	} else {
+		delta >>= 1
+	}
+	delta += delta / numPoints
+	k := 0
+	for delta > ((punycodeBase-punycodeTMin)*punycodeTMax)>>1 {
+		delta /= punycodeBase - punycodeTMin
+		k += punycodeBase
+	}
+	return k + ((punycodeBase-punycodeTMin+1)*delta)/(delta+punycodeSkew)
+}
+
+// punycodeDigit ports DigitToChar (idna/format/puny.ts:116).
+func punycodeDigit(digit int) byte {
+	if digit < 26 {
+		return byte(digit + 'a')
+	}
+	return byte(digit - 26 + '0')
+}
+
+// punycodeEncode ports Encode (idna/format/puny.ts:128): the payload after the
+// "xn--" prefix. The reference uses it only for its length, so overflow, which
+// RFC 3492 reports, cannot arise for a label short enough to reach it.
+func punycodeEncode(input string) string {
+	codePoints := []rune(input)
+	var result []byte
+	for _, r := range codePoints {
+		if r < utf8.RuneSelf {
+			result = append(result, byte(r))
+		}
+	}
+	basicLength := len(result)
+	if basicLength > 0 {
+		result = append(result, '-')
+	}
+	n, delta, bias, handled := punycodeInitialN, 0, punycodeInitialBias, basicLength
+	for handled < len(codePoints) {
+		m := math.MaxInt
+		for _, r := range codePoints {
+			if int(r) >= n && int(r) < m {
+				m = int(r)
+			}
+		}
+		delta += (m - n) * (handled + 1)
+		n = m
+		for _, r := range codePoints {
+			if int(r) < n {
+				delta++
+			}
+			if int(r) == n {
+				q := delta
+				for k := punycodeBase; ; k += punycodeBase {
+					t := k - bias
+					if k <= bias {
+						t = punycodeTMin
+					} else if k >= bias+punycodeTMax {
+						t = punycodeTMax
+					}
+					if q < t {
+						break
+					}
+					result = append(result, punycodeDigit(t+(q-t)%(punycodeBase-t)))
+					q = (q - t) / (punycodeBase - t)
+				}
+				result = append(result, punycodeDigit(q))
+				bias = punycodeAdapt(delta, handled+1, handled == basicLength)
+				delta = 0
+				handled++
+			}
+		}
+		delta++
+		n++
+	}
+	return string(result)
 }
 
 // normalizeIDNHostname ports NormalizeHostname (idn-hostname.ts:58): fullwidth

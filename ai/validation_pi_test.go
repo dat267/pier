@@ -271,6 +271,72 @@ func TestIDNLabelAppliesTheACEPrefixAndNormalization(t *testing.T) {
 	}
 }
 
+// pi v1.6.0 (faac5858) packages/schema/src/formats/typebox/idna: IsValidLabelLength
+// (idn-hostname.ts:36) counts UTF-16 code units, and ExceedsMaxALabelLength
+// (label/unicode.ts:44) rejects a non-ASCII label whose "xn--" + punycode form
+// (format/puny.ts:128 Encode) exceeds 63 octets. The port counted runes, so it
+// accepted up to 63 of any letter; the boundaries below are the reference's.
+func TestIDNLabelLengthCountsTheALabelAndUTF16Units(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		value string
+		want  bool
+	}{
+		{"cjk at A-label limit", strings.Repeat("中", 57), true},
+		{"cjk past A-label limit", strings.Repeat("中", 58), false},
+		{"cjk 63 runes", strings.Repeat("中", 63), false},
+		{"astral at UTF-16 limit", strings.Repeat("\U00020000", 31), true},
+		{"astral past UTF-16 limit", strings.Repeat("\U00020000", 32), false},
+		{"mixed at A-label limit", strings.Repeat("a", 55) + "é", true},
+		{"mixed past A-label limit", strings.Repeat("a", 56) + "é", false},
+		{"ascii 63", strings.Repeat("a", 63), true},
+		{"ascii 64", strings.Repeat("a", 64), false},
+	} {
+		if got := validIDNLabel(tc.value); got != tc.want {
+			t.Errorf("%s: validIDNLabel = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+	// Encode outputs from the reference's own encoder.
+	for input, want := range map[string]string{
+		"bücher":                      "bcher-kva",
+		"中文":                          "fiq228c",
+		strings.Repeat("a", 10) + "é": "aaaaaaaaaa-k7a",
+		strings.Repeat("中", 20):       "fiq" + strings.Repeat("a", 19),
+	} {
+		if got := punycodeEncode(input); got != want {
+			t.Errorf("punycodeEncode(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
+// D516: pi v1.6.0 (faac5858) validates idn-hostname with the shared typebox idna
+// rules, including the RFC 5892 CONTEXTO neighbour rules (label/unicode.ts:87)
+// and the PVALID categories, and iri-reference with URL.canParse
+// (iri_reference.ts:41). The port keeps its approximations: it rejects "l·l",
+// "א׳", "::1", ":" and "Zzé+59" and the iri-references ".@12Z|", "{" and "}",
+// all of which the reference accepts.
+func TestIDNAndIRIReferenceKeepTheApproximateRules(t *testing.T) {
+	for _, tc := range []struct {
+		format, value string
+		want          bool
+	}{
+		{"idn-hostname", "l·l", false},     // reference: true (CONTEXTO U+00B7)
+		{"idn-hostname", "א׳", false},      // reference: true (CONTEXTO U+05F3)
+		{"idn-hostname", "::1", false},     // reference: true (PVALID)
+		{"idn-hostname", ":", false},       // reference: true
+		{"idn-hostname", "Zzé+59", false},  // reference: true
+		{"idn-hostname", "a·b", false},     // reference: false as well
+		{"idn-hostname", "a_b.com", false}, // reference: false as well
+		{"iri-reference", ".@12Z|", false}, // reference: true (URL.canParse)
+		{"iri-reference", "{", false},      // reference: true
+		{"iri-reference", "a b", false},    // reference: false as well
+	} {
+		if got := piFormatValid(tc.format, tc.value); got != tc.want {
+			t.Errorf("piFormatValid(%q, %q) = %v, want %v", tc.format, tc.value, got, tc.want)
+		}
+	}
+}
+
 // pi v1.5.2 (b4afdddf) packages/schema/src/formats/typebox/ipv6.ts IsIPv6 matches an
 // RFC 2373 text form, which includes a trailing embedded IPv4 address, so
 // "::ffff:1.2.3.4" is a valid IPv6 value. The port rejected every IPv4-mapped form
