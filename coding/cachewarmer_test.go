@@ -535,6 +535,57 @@ func TestCacheWarmingReplayDisablesContinuation(t *testing.T) {
 	}
 }
 
+// pi v1.6.0 (faac5858) core/cache-warmer.ts refresh checks the run is current
+// and appends the warm usage with no await between, so a cancel can not land
+// in between. In the port the refresh runs on its own goroutine: a Cancel
+// after its last check (here, from the host's currency callback) still let it
+// append usage to the session, and once Cancel returned a write could still
+// be in flight (the TempDir cleanup of
+// TestCacheWarmingReplayDisablesContinuation failed on such a file).
+func TestCacheWarmerAppendsNothingAfterCancel(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		model := warmerModel()
+		manager := newTestSessionManager(t)
+		manager.AppendMessage(&ai.AssistantMessage{
+			API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
+			Content: ai.ContentList{ai.TextContent{Text: "reply"}}, StopReason: ai.StopStop,
+			Usage: ai.Usage{Input: 1000, Output: 1, TotalTokens: 1001},
+		})
+		var streamed atomic.Bool
+		var warmer *CacheWarmer
+		warmer = NewCacheWarmer(func(streamModel *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			streamed.Store(true)
+			stream := ai.NewAssistantMessageEventStream()
+			go stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+				API: ai.APIAnthropicMessages, Provider: streamModel.Provider, Model: streamModel.ID,
+				Content: ai.ContentList{ai.TextContent{Text: "warm"}}, StopReason: ai.StopStop,
+				Usage: ai.Usage{Input: 1000, CacheRead: 900, Output: 1, TotalTokens: 1001},
+			}})
+			return stream
+		}, manager, func() CacheWarmingMode { return CacheWarmingIdle })
+		defer warmer.Cancel()
+		warmer.Decide = func(event CacheWarmingDecisionEvent) CacheWarmingAction { return CacheWarmingActionWarm }
+		warmer.Start(CacheWarmRequest{Model: model, Options: &ai.SimpleStreamOptions{}}, func() bool {
+			// The check after the stream result: the conversation moves on now.
+			if streamed.Load() {
+				warmer.Cancel()
+			}
+			return true
+		})
+		warmer.OnAgentSettled()
+		time.Sleep(time.Hour)
+		synctest.Wait()
+		if !streamed.Load() {
+			t.Fatal("warm request did not start")
+		}
+		for _, entry := range manager.GetEntries() {
+			if entry.Type == "usage" && entry.Kind == "cache_warm" {
+				t.Fatalf("a cancelled refresh appended usage %+v", entry)
+			}
+		}
+	})
+}
+
 // pi v1.4.0 (4a080252), core/cache-warmer.ts schedule/refresh: allow half
 // the pre-expiry margin for timer and decision delays, then stop rather than
 // risk a full-price cache write. For an 11s TTL, delay=1s and deadline=6s.

@@ -523,14 +523,8 @@ func (w *CacheWarmer) refresh(run *cacheWarmingRun) {
 			if extensionOverride {
 				note = "extension override"
 			}
-			entry := w.SessionManager.AppendUsage("cache_warm", message.Provider, responseModel, message.Usage, note)
-			w.mu.Lock()
-			onWarmed := w.OnWarmed
-			if w.run != run {
-				onWarmed = nil
-			}
-			w.mu.Unlock()
-			if onWarmed != nil {
+			entry, onWarmed, current := w.appendWarmedUsage(run, message.Provider, responseModel, message.Usage, note)
+			if current && onWarmed != nil {
 				onWarmed(entry)
 			}
 		}
@@ -538,6 +532,21 @@ func (w *CacheWarmer) refresh(run *cacheWarmingRun) {
 	if w.currentIs(run) {
 		w.schedule(run)
 	}
+}
+
+// appendWarmedUsage records a refresh's usage while run is still current,
+// under mu, and snapshots the OnWarmed callback admitted with it. The
+// reference checks currency and appends with no await between; holding mu
+// across both orders the append before any Cancel or disposal, so once those
+// return a stale refresh writes nothing to the session. AppendUsage takes
+// only the session's own lock and runs no host callback.
+func (w *CacheWarmer) appendWarmedUsage(run *cacheWarmingRun, provider, model string, usage ai.Usage, note string) (entry *SessionEntry, onWarmed func(*SessionEntry), current bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.run != run {
+		return nil, nil, false
+	}
+	return w.SessionManager.AppendUsage("cache_warm", provider, model, usage, note), w.OnWarmed, true
 }
 
 func (w *CacheWarmer) refreshDeadlineMissed(run *cacheWarmingRun) bool {

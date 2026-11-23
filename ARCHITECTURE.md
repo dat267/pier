@@ -390,8 +390,11 @@ entries, and invoke no user callback while locked.
 `coding.CacheWarmer.mu` also guards callback detachment at session disposal and
 synchronizes the mutable run phase read by status, policy evaluation, mode
 changes and scheduling. Disposal clears the current run, stops its timer,
-cancels its request context and releases `OnWarmed`. Refresh workers snapshot
-an admitted callback under that mutex and invoke it outside the lock; an
+cancels its request context and releases `OnWarmed`. Refresh workers re-check
+the run and append the warmed usage under that mutex (the session manager's
+append takes only its own lock and runs no host callback), so once `Cancel` or
+disposal returns a stale refresh writes nothing; they snapshot the admitted
+callback in the same critical section and invoke it outside the lock. An
 already-admitted callback may finish without making disposal join itself. Host
 currency and mode callbacks run outside that mutex, so their stop is
 run-scoped: stale refreshes and lifecycle notifications stop only the run they
