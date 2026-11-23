@@ -67,9 +67,9 @@ func TestSystemMessageTokenEstimateMatchesUpstream(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := tokensFromChars(3 + len(section) + JSLength(string(toolsJSON)))
+	want := tokensFromChars(3 + len(section) + ai.JSLength(string(toolsJSON)))
 	if got := EstimateAgentMessageTokens(system); got != want {
-		t.Fatalf("estimate = %d, want %d (content 3 + section %d + tools %d)", got, want, len(section), JSLength(string(toolsJSON)))
+		t.Fatalf("estimate = %d, want %d (content 3 + section %d + tools %d)", got, want, len(section), ai.JSLength(string(toolsJSON)))
 	}
 }
 

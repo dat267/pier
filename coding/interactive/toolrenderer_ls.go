@@ -3,6 +3,7 @@ package interactive
 import (
 	"strings"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
 )
 
@@ -13,7 +14,7 @@ func formatLsCall(args map[string]any, theme *Theme, cwd string) string {
 	// Upstream tests `limit !== undefined` and interpolates the raw value, so a
 	// string or null limit is labelled too.
 	if limit, ok := args["limit"]; ok {
-		text += theme.Fg("toolOutput", " (limit "+jsArgText(limit)+")")
+		text += theme.Fg("toolOutput", " (limit "+ai.JSValueToString(limit)+")")
 	}
 	return text
 }

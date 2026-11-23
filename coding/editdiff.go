@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/internal/jsdiff"
 	"golang.org/x/text/unicode/norm"
 )
@@ -309,7 +310,7 @@ func countOccurrences(content string, oldText string) int {
 	fuzzyContent := NormalizeForFuzzyMatch(content)
 	fuzzyOldText := NormalizeForFuzzyMatch(oldText)
 	if fuzzyOldText == "" {
-		return JSLength(fuzzyContent) - 1
+		return ai.JSLength(fuzzyContent) - 1
 	}
 	return strings.Count(fuzzyContent, fuzzyOldText)
 }

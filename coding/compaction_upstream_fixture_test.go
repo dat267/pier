@@ -86,8 +86,8 @@ func TestPrepareCompactionMatchesUpstreamFixture(t *testing.T) {
 	}
 
 	serialized := SerializeConversation(ConvertToLlm(manager.Projection().Messages))
-	if JSLength(serialized) != golden.Conversation.Length {
-		t.Errorf("serialized conversation length = %d, want %d", JSLength(serialized), golden.Conversation.Length)
+	if ai.JSLength(serialized) != golden.Conversation.Length {
+		t.Errorf("serialized conversation length = %d, want %d", ai.JSLength(serialized), golden.Conversation.Length)
 	}
 	if got := sha256Hex(serialized); got != golden.Conversation.Digest {
 		t.Errorf("serialized conversation digest = %s, want %s", got, golden.Conversation.Digest)
@@ -126,8 +126,8 @@ func TestPrepareCompactionMatchesUpstreamFixture(t *testing.T) {
 	if len(preparation.TurnPrefixMessages) != golden.Preparation.TurnPrefix {
 		t.Errorf("turn prefix = %d, want %d", len(preparation.TurnPrefixMessages), golden.Preparation.TurnPrefix)
 	}
-	if JSLength(preparation.PreviousSummary) != golden.Preparation.PreviousSummaryLength {
-		t.Errorf("previous summary length = %d, want %d", JSLength(preparation.PreviousSummary), golden.Preparation.PreviousSummaryLength)
+	if ai.JSLength(preparation.PreviousSummary) != golden.Preparation.PreviousSummaryLength {
+		t.Errorf("previous summary length = %d, want %d", ai.JSLength(preparation.PreviousSummary), golden.Preparation.PreviousSummaryLength)
 	}
 }
 
@@ -143,7 +143,7 @@ func projectionDigest(t *testing.T, messages []ai.Message) string {
 		switch m := message.(type) {
 		case *ai.UserMessage:
 			if m.Content.String() {
-				blocks = append(blocks, "text:"+strconv.Itoa(JSLength(m.Content.Text)))
+				blocks = append(blocks, "text:"+strconv.Itoa(ai.JSLength(m.Content.Text)))
 			} else {
 				blocks = append(blocks, describeProjectedBlocks(m.Content.Blocks)...)
 			}
@@ -175,12 +175,12 @@ func describeProjectedBlocks(blocks any) []string {
 func describeProjectedBlock(block any) string {
 	switch b := block.(type) {
 	case ai.TextContent:
-		return "text:" + strconv.Itoa(JSLength(b.Text))
+		return "text:" + strconv.Itoa(ai.JSLength(b.Text))
 	case ai.ThinkingContent:
-		return "thinking:" + strconv.Itoa(JSLength(b.Thinking))
+		return "thinking:" + strconv.Itoa(ai.JSLength(b.Thinking))
 	case ai.ToolCall:
 		encoded, _ := ai.MarshalJSON(b.Arguments)
-		return "toolCall:" + b.Name + ":" + strconv.Itoa(JSLength(string(encoded)))
+		return "toolCall:" + b.Name + ":" + strconv.Itoa(ai.JSLength(string(encoded)))
 	case ai.ImageContent:
 		return "image"
 	default:

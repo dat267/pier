@@ -302,14 +302,14 @@ func customMessageChars(message *ai.CustomMessage) int {
 	case RoleBashExecution:
 		var fields bashExecutionFields
 		if json.Unmarshal(message.Content, &fields) == nil {
-			return JSLength(fields.Command) + JSLength(fields.Output)
+			return ai.JSLength(fields.Command) + ai.JSLength(fields.Output)
 		}
 	case RoleBranchSummary, RoleCompactionSummary:
 		var fields struct {
 			Summary string `json:"summary"`
 		}
 		if json.Unmarshal(message.Content, &fields) == nil {
-			return JSLength(fields.Summary)
+			return ai.JSLength(fields.Summary)
 		}
 	default:
 		var fields customMessageFields
@@ -330,12 +330,12 @@ func EstimateAgentMessageTokens(message ai.Message) int {
 	switch m := message.(type) {
 	case *ai.UserMessage:
 		if m.Content.Blocks == nil {
-			chars = JSLength(m.Content.Text)
+			chars = ai.JSLength(m.Content.Text)
 		} else {
 			for _, block := range m.Content.Blocks {
 				switch b := block.(type) {
 				case ai.TextContent:
-					chars += JSLength(b.Text)
+					chars += ai.JSLength(b.Text)
 				case ai.ImageContent:
 					chars += estimatedImageChars
 				}
@@ -346,11 +346,11 @@ func EstimateAgentMessageTokens(message ai.Message) int {
 		for _, block := range m.Content {
 			switch b := block.(type) {
 			case ai.TextContent:
-				chars += JSLength(b.Text)
+				chars += ai.JSLength(b.Text)
 			case ai.ThinkingContent:
-				chars += JSLength(b.Thinking)
+				chars += ai.JSLength(b.Thinking)
 			case ai.ToolCall:
-				chars += JSLength(b.Name) + JSLength(string(mustMarshalJSON(b.Arguments)))
+				chars += ai.JSLength(b.Name) + ai.JSLength(string(mustMarshalJSON(b.Arguments)))
 			}
 		}
 		return tokensFromChars(chars)
@@ -358,7 +358,7 @@ func EstimateAgentMessageTokens(message ai.Message) int {
 		for _, block := range m.Content {
 			switch b := block.(type) {
 			case ai.TextContent:
-				chars += JSLength(b.Text)
+				chars += ai.JSLength(b.Text)
 			case ai.ImageContent:
 				chars += estimatedImageChars
 			}
@@ -373,11 +373,11 @@ func EstimateAgentMessageTokens(message ai.Message) int {
 		chars := estimateTextAndImageContentChars(m.Content)
 		for _, section := range m.Sections {
 			if section != nil {
-				chars += JSLength(*section)
+				chars += ai.JSLength(*section)
 			}
 		}
 		if m.ToolsAdded != nil {
-			chars += JSLength(string(mustMarshalJSON(m.ToolsAdded)))
+			chars += ai.JSLength(string(mustMarshalJSON(m.ToolsAdded)))
 		}
 		return tokensFromChars(chars)
 	default:
@@ -389,13 +389,13 @@ func EstimateAgentMessageTokens(message ai.Message) int {
 // is its length, block content sums text and a fixed image estimate.
 func estimateTextAndImageContentChars(content ai.StringOrBlocks) int {
 	if content.Blocks == nil {
-		return JSLength(content.Text)
+		return ai.JSLength(content.Text)
 	}
 	chars := 0
 	for _, block := range content.Blocks {
 		switch b := block.(type) {
 		case ai.TextContent:
-			chars += JSLength(b.Text)
+			chars += ai.JSLength(b.Text)
 		case ai.ImageContent:
 			chars += estimatedImageChars
 		}
@@ -784,7 +784,7 @@ func truncateForSummary(text string, maxChars int) string {
 	if whole {
 		return text
 	}
-	truncatedChars := JSLength(text) - maxChars
+	truncatedChars := ai.JSLength(text) - maxChars
 	return head + fmt.Sprintf("\n\n[... %d more characters truncated]", truncatedChars)
 }
 
@@ -1913,10 +1913,6 @@ func utf16Unit(r rune, index int) uint16 {
 	}
 	return uint16(low)
 }
-
-func JSLength(s string) int { return ai.JSLength(s) }
-
-func JSSlice(s string, start, end int) string { return ai.JSSlice(s, start, end) }
 
 // tokensFromChars converts the reference's character estimate to tokens
 // (4 characters per token, rounded up).

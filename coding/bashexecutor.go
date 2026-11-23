@@ -161,7 +161,7 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 		}
 
 		outputChunks = append(outputChunks, text)
-		outputUnits += JSLength(text)
+		outputUnits += ai.JSLength(text)
 
 		// Start writing to the temp file once the raw threshold is crossed.
 		if tempFilePath == "" && rawBytes > DefaultMaxBytes {
@@ -185,7 +185,7 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 		for outputUnits > maxOutputBytes && len(outputChunks) > 1 {
 			removed := outputChunks[0]
 			outputChunks = outputChunks[1:]
-			outputUnits -= JSLength(removed)
+			outputUnits -= ai.JSLength(removed)
 			discardedOutput = true
 			if flushedChunks > 0 {
 				flushedChunks--

@@ -6,7 +6,6 @@ import (
 	"math"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -231,40 +230,6 @@ func jsTruthy(value any) bool {
 		return typed != 0 && !math.IsNaN(typed)
 	}
 	return true
-}
-
-// jsArgText interpolates a raw JSON argument the way a template literal's
-// String(value) does: numbers through JSNumberToString, arrays joined by
-// commas, an object as "[object Object]".
-func jsArgText(value any) string {
-	switch typed := value.(type) {
-	case nil:
-		// A decoded JSON null; an absent field never reaches here.
-		return "null"
-	case bool:
-		if typed {
-			return "true"
-		}
-		return "false"
-	case string:
-		return typed
-	case float64:
-		return ai.JSNumberToString(typed)
-	case int:
-		return strconv.Itoa(typed)
-	case int64:
-		return strconv.FormatInt(typed, 10)
-	case []any:
-		parts := make([]string, len(typed))
-		for index, item := range typed {
-			// Array.prototype.join renders null and undefined as empty.
-			if item != nil {
-				parts[index] = jsArgText(item)
-			}
-		}
-		return strings.Join(parts, ",")
-	}
-	return "[object Object]"
 }
 
 func formatToolLimit(value float64) string {

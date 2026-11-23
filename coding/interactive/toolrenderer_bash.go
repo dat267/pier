@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
@@ -18,7 +19,7 @@ func formatShellCall(args map[string]any, prompt string, theme *Theme) string {
 	// Upstream tests the raw argument for truthiness and interpolates it
 	// verbatim, so a string or a bool timeout is labelled too.
 	if timeout, ok := args["timeout"]; ok && jsTruthy(timeout) {
-		timeoutSuffix = theme.Fg("muted", " (timeout "+jsArgText(timeout)+"s)")
+		timeoutSuffix = theme.Fg("muted", " (timeout "+ai.JSValueToString(timeout)+"s)")
 	}
 	var commandDisplay string
 	if !commandOK {
