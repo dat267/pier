@@ -1,6 +1,10 @@
 package tui
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/dat267/pier/ai"
+)
 
 // Port of src/components/spacer.ts and src/components/text.ts.
 
@@ -117,7 +121,7 @@ func (t *Text) Render(width int) []string {
 	}
 
 	// Nothing is rendered when there is no actual text.
-	if t.text == "" || jsTrim(t.text) == "" {
+	if t.text == "" || ai.JSTrim(t.text) == "" {
 		t.cachedText = t.text
 		t.hasCachedText = true
 		t.cachedWidth = width

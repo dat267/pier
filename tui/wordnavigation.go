@@ -1,5 +1,7 @@
 package tui
 
+import "github.com/dat267/pier/ai"
+
 // Port of src/undo-stack.ts, src/kill-ring.ts, and src/word-navigation.ts.
 
 // UndoStack stores state snapshots. Upstream clones on push with
@@ -117,7 +119,7 @@ func FindWordBackward(text string, cursor int) int {
 	newCursor := cursor
 	// Skip trailing whitespace.
 	for len(segments) > 0 && isWhitespaceString(segments[len(segments)-1].Segment) {
-		newCursor -= jsLength(segments[len(segments)-1].Segment)
+		newCursor -= ai.JSLength(segments[len(segments)-1].Segment)
 		segments = segments[:len(segments)-1]
 	}
 	if len(segments) == 0 {
@@ -134,12 +136,12 @@ func FindWordBackward(text string, cursor int) int {
 			if punctuationChars[r] {
 				lastPunctuationEnd = units
 			}
-			units += jsLength(string(r))
+			units += ai.JSLength(string(r))
 		}
 		if lastPunctuationEnd < 0 {
-			newCursor -= jsLength(last.Segment)
+			newCursor -= ai.JSLength(last.Segment)
 		} else {
-			newCursor -= jsLength(last.Segment) - (lastPunctuationEnd + 1)
+			newCursor -= ai.JSLength(last.Segment) - (lastPunctuationEnd + 1)
 		}
 		return newCursor
 	}
@@ -150,7 +152,7 @@ func FindWordBackward(text string, cursor int) int {
 		if last.IsWordLike || isWhitespaceString(last.Segment) {
 			break
 		}
-		newCursor -= jsLength(last.Segment)
+		newCursor -= ai.JSLength(last.Segment)
 		segments = segments[:len(segments)-1]
 	}
 	return newCursor
@@ -172,7 +174,7 @@ func normalizeWordCursor(text string, cursor int) int {
 // Cursors and results are UTF-16 code-unit offsets (upstream JS string
 // offsets), so the caller converts from its own byte offsets.
 func FindWordForward(text string, cursor int) int {
-	limit := jsLength(text)
+	limit := ai.JSLength(text)
 	cursor = normalizeWordCursor(text, cursor)
 	if cursor >= limit {
 		return limit
@@ -184,7 +186,7 @@ func FindWordForward(text string, cursor int) int {
 	index := 0
 	// Skip leading whitespace.
 	for index < len(segments) && isWhitespaceString(segments[index].Segment) {
-		newCursor += jsLength(segments[index].Segment)
+		newCursor += ai.JSLength(segments[index].Segment)
 		index++
 	}
 	if index >= len(segments) {
@@ -194,14 +196,14 @@ func FindWordForward(text string, cursor int) int {
 	next := segments[index]
 	if next.IsWordLike {
 		// Stop at the first ASCII punctuation inside the word-like segment.
-		stop := jsLength(next.Segment)
+		stop := ai.JSLength(next.Segment)
 		units := 0
 		for _, r := range next.Segment {
 			if punctuationChars[r] {
 				stop = units
 				break
 			}
-			units += jsLength(string(r))
+			units += ai.JSLength(string(r))
 		}
 		newCursor += stop
 		return newCursor
@@ -213,7 +215,7 @@ func FindWordForward(text string, cursor int) int {
 		if current.IsWordLike || isWhitespaceString(current.Segment) {
 			break
 		}
-		newCursor += jsLength(current.Segment)
+		newCursor += ai.JSLength(current.Segment)
 		index++
 	}
 	return newCursor

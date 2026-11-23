@@ -12,6 +12,8 @@ import (
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of utils/sanitize-unicode.ts.
@@ -29,36 +31,27 @@ import (
 // retain unpaired UTF-16 units, so there is nothing to remove.
 func SanitizeSurrogates(text string) string { return text }
 
-// jsSpace is the String.prototype.trim whitespace class (ECMA-402 Whitespace,
-// which includes Unicode space separators like U+00A0, U+2028, U+2029, and
-// U+FEFF that Go's strings.TrimSpace does not all cover).
-var jsSpace = func(r rune) bool {
-	switch r {
-	case '\t', '\n', '\v', '\f', '\r', ' ', 0xA0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF:
-		return true
-	}
-	return r >= 0x2000 && r <= 0x200A
-}
-
 // JSWhitespaceClass is the JavaScript `\s` character class for use inside an
 // RE2 pattern: Go's `\s` is `[\t\n\f\r ]`, while JavaScript's also matches the
 // Unicode space separators and U+FEFF. Ported patterns that use `\s` build
 // their class from this constant so the two engines agree (CR-068/CR-069).
 const JSWhitespaceClass = `\t\n\v\f\r \x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}`
 
-func JSTrim(s string) string { return strings.TrimFunc(s, jsSpace) }
+// JSTrim implements String.prototype.trim over the JavaScript whitespace set
+// (jsnum.Whitespace), which keeps U+0085 unlike strings.TrimSpace.
+func JSTrim(s string) string { return strings.TrimFunc(s, jsnum.Whitespace) }
 
 // JSTrimLeft implements String.prototype.trimStart.
-func JSTrimLeft(s string) string { return strings.TrimLeftFunc(s, jsSpace) }
+func JSTrimLeft(s string) string { return strings.TrimLeftFunc(s, jsnum.Whitespace) }
 
 // IsJSSpace reports whether r is in the JS `\s` class.
-func IsJSSpace(r rune) bool { return jsSpace(r) }
+func IsJSSpace(r rune) bool { return jsnum.Whitespace(r) }
 
 // JSSplitWhitespace splits on runs of the JS `\s` class (String.split(/\s+/)
 // with the empty parts dropped), unlike strings.Fields which uses
 // unicode.IsSpace.
 func JSSplitWhitespace(s string) []string {
-	return strings.FieldsFunc(s, jsSpace)
+	return strings.FieldsFunc(s, jsnum.Whitespace)
 }
 
 // JSNumberToFixed formats a number like Number.prototype.toFixed(digits),

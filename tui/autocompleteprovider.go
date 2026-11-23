@@ -8,6 +8,8 @@ import (
 	"slices"
 	"sort"
 	"strings"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of the provider implementation in src/autocomplete.ts
@@ -255,7 +257,7 @@ func walkDirectoryWithFd(ctx context.Context, baseDir string, fdPath string, que
 	}
 
 	var results []fileEntry
-	for line := range strings.SplitSeq(jsTrim(stdout.String()), "\n") {
+	for line := range strings.SplitSeq(ai.JSTrim(stdout.String()), "\n") {
 		if line == "" {
 			continue
 		}
@@ -324,7 +326,7 @@ func (p *CombinedAutocompleteProvider) GetSuggestions(ctx context.Context, lines
 	// Leading whitespace does not stop command completion: the trimmed text
 	// drives the match and the completion replaces only the prefix, so the
 	// whitespace is preserved (upstream 65117e31f, #10218).
-	commandText := jsTrimLeft(textBeforeCursor)
+	commandText := ai.JSTrimLeft(textBeforeCursor)
 	if !force && strings.HasPrefix(commandText, "/") {
 		spaceIndex := strings.Index(commandText, " ")
 		if spaceIndex == -1 {
@@ -418,7 +420,7 @@ func (p *CombinedAutocompleteProvider) ApplyCompletion(lines []string, cursorLin
 		adjustedAfterCursor = afterCursor[1:]
 	}
 
-	isSlashCommand := strings.HasPrefix(prefix, "/") && jsTrim(beforePrefix) == "" &&
+	isSlashCommand := strings.HasPrefix(prefix, "/") && ai.JSTrim(beforePrefix) == "" &&
 		!strings.Contains(prefix[1:], "/")
 	if isSlashCommand {
 		newLines := append([]string(nil), lines...)
@@ -635,7 +637,7 @@ func (p *CombinedAutocompleteProvider) getFileSuggestions(prefix string) []Autoc
 	var suggestions []AutocompleteItem
 	for _, entry := range entries {
 		name := entry.Name()
-		if !strings.HasPrefix(jsLower(name), jsLower(searchPrefix)) {
+		if !strings.HasPrefix(ai.JSLower(name), ai.JSLower(searchPrefix)) {
 			continue
 		}
 
@@ -717,8 +719,8 @@ func (p *CombinedAutocompleteProvider) getFileSuggestions(prefix string) []Autoc
 // scoreEntry scores a path against a query (higher is better).
 func (p *CombinedAutocompleteProvider) scoreEntry(filePath string, query string, isDirectory bool) int {
 	fileName := filepath.Base(filePath)
-	lowerFileName := jsLower(fileName)
-	lowerQuery := jsLower(query)
+	lowerFileName := ai.JSLower(fileName)
+	lowerQuery := ai.JSLower(query)
 
 	score := 0
 	switch {
@@ -728,7 +730,7 @@ func (p *CombinedAutocompleteProvider) scoreEntry(filePath string, query string,
 		score = 80
 	case strings.Contains(lowerFileName, lowerQuery):
 		score = 50
-	case strings.Contains(jsLower(filePath), lowerQuery):
+	case strings.Contains(ai.JSLower(filePath), lowerQuery):
 		score = 30
 	}
 	if isDirectory && score > 0 {
@@ -802,7 +804,7 @@ func (p *CombinedAutocompleteProvider) getFuzzyFileSuggestions(ctx context.Conte
 			return aDepth < bDepth
 		}
 		// Upstream compares `path.length`, which counts UTF-16 code units.
-		if lengthA, lengthB := jsLength(scored[a].path), jsLength(scored[b].path); lengthA != lengthB {
+		if lengthA, lengthB := ai.JSLength(scored[a].path), ai.JSLength(scored[b].path); lengthA != lengthB {
 			return lengthA < lengthB
 		}
 		return localeCompareLike(scored[a].path, scored[b].path) < 0
@@ -884,7 +886,7 @@ func (p *CombinedAutocompleteProvider) ShouldTriggerFileCompletion(lines []strin
 		cursorCol = 0
 	}
 	textBeforeCursor := currentLine[:cursorCol]
-	trimmed := jsTrim(textBeforeCursor)
+	trimmed := ai.JSTrim(textBeforeCursor)
 	if strings.HasPrefix(trimmed, "/") && !strings.Contains(trimmed, " ") {
 		return false
 	}

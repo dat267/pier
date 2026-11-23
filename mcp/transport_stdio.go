@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/mcp/protocol"
 )
 
@@ -259,7 +260,7 @@ func (t *StdioTransport) finishClose() {
 	tail := decodeUTF8(t.stdoutBuffer)
 	t.stdoutBuffer = nil
 	t.mu.Unlock()
-	if jsTrim(tail) != "" {
+	if ai.JSTrim(tail) != "" {
 		t.emitError(fmt.Errorf("MCP stdio server closed with an incomplete JSON-RPC message"))
 	}
 	t.emitClose()
@@ -305,7 +306,7 @@ func (t *StdioTransport) handleStdout(chunk []byte) {
 }
 
 func (t *StdioTransport) emitLine(text string) {
-	if jsTrim(text) == "" {
+	if ai.JSTrim(text) == "" {
 		return
 	}
 	message, err := protocol.DecodeMessage([]byte(text))

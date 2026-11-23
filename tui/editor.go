@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of src/components/editor.ts: the multi-line prompt editor with
@@ -235,7 +237,7 @@ func (e *Editor) requestRender() {
 
 // AddToHistory records a submitted prompt for up/down navigation.
 func (e *Editor) AddToHistory(text string) {
-	trimmed := jsTrim(text)
+	trimmed := ai.JSTrim(text)
 	if trimmed == "" {
 		return
 	}
@@ -1062,7 +1064,7 @@ func (e *Editor) handlePasteLocked(pastedText string) {
 
 	pastedLines := strings.Split(filteredText, "\n")
 	// Upstream measures the paste with String.length (UTF-16 code units).
-	totalChars := jsLength(filteredText)
+	totalChars := ai.JSLength(filteredText)
 	if len(pastedLines) > 10 || totalChars > 1000 {
 		e.pasteCounter++
 		pasteID := e.pasteCounter
@@ -1164,7 +1166,7 @@ func (e *Editor) shouldSubmitOnBackslashEnter(data string, kb *KeybindingsManage
 
 func (e *Editor) submitValueLocked() {
 	e.cancelAutocompleteLocked()
-	result := jsTrim(e.expandPasteMarkersLocked(e.getTextLocked()))
+	result := ai.JSTrim(e.expandPasteMarkersLocked(e.getTextLocked()))
 
 	e.state = editorState{lines: []string{""}}
 	e.pastes = map[int]string{}
@@ -1324,7 +1326,7 @@ func (e *Editor) moveToVisualLine(visualLines []editorVisualLine, currentVisualL
 		if segment.Index > e.state.cursorCol {
 			break
 		}
-		if jsLength(segment.Segment) <= 1 {
+		if ai.JSLength(segment.Segment) <= 1 {
 			continue
 		}
 		if e.state.cursorCol < segment.Index+len(segment.Segment) {
@@ -1384,7 +1386,7 @@ func (e *Editor) lineText(index int) string {
 func utf16Span(text string, start, end int) int {
 	start = max(0, min(start, len(text)))
 	end = max(start, min(end, len(text)))
-	return jsLength(text[start:end])
+	return ai.JSLength(text[start:end])
 }
 
 // byteOffsetAfterUTF16Units advances units code units from byte offset start,
@@ -2364,7 +2366,7 @@ func (e *Editor) setAutocompleteTriggerCharactersLocked(triggerCharacters []stri
 	next := append([]string(nil), defaultAutocompleteTriggerCharacters...)
 	for _, character := range triggerCharacters {
 		// Upstream accepts a trigger only when String.length === 1 (UTF-16).
-		if jsLength(character) != 1 || character == "/" || IsWhitespaceChar(character) ||
+		if ai.JSLength(character) != 1 || character == "/" || IsWhitespaceChar(character) ||
 			containsString(next, character) {
 			continue
 		}

@@ -15,11 +15,12 @@ import (
 	"sync"
 	"time"
 
+	"unicode/utf8"
+
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/internal/boundedio"
 	"github.com/dat267/pier/mcp/protocol"
 	"golang.org/x/text/encoding/unicode"
-	"unicode/utf8"
 )
 
 // Streamable-HTTP tuning (upstream streamable-http.ts).
@@ -716,10 +717,10 @@ func decodeErrorBodyPrefix(body []byte) string {
 }
 
 func describeHttpFailure(status int, body string) string {
-	text := jsTrim(body)
+	text := ai.JSTrim(body)
 	snippet := text
-	if jsLength(text) > errorMessageBodyChars {
-		snippet = jsSlice(text, 0, errorMessageBodyChars-3) + "..."
+	if ai.JSLength(text) > errorMessageBodyChars {
+		snippet = ai.JSSlice(text, 0, errorMessageBodyChars-3) + "..."
 	}
 	message := fmt.Sprintf("MCP HTTP request failed with status %d", status)
 	if snippet != "" {
@@ -733,7 +734,7 @@ func contentType(response *http.Response) string {
 	if value == "" {
 		return ""
 	}
-	return strings.ToLower(jsTrim(strings.SplitN(value, ";", 2)[0]))
+	return strings.ToLower(ai.JSTrim(strings.SplitN(value, ";", 2)[0]))
 }
 
 // needsAuthorization: 401, or 403 with an `insufficient_scope` bearer
@@ -796,7 +797,7 @@ func (t *StreamableHttpTransport) consumeSse(body io.ReadCloser, cursor *streamC
 			cursor.received = true
 			// Events without data prime resumption; other event types are
 			// not JSON-RPC.
-			if jsTrim(event.Data) == "" || (event.Event != nil && *event.Event != "message") {
+			if ai.JSTrim(event.Data) == "" || (event.Event != nil && *event.Event != "message") {
 				return
 			}
 			concrete, err := protocol.DecodeMessage([]byte(event.Data))

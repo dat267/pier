@@ -8682,7 +8682,7 @@ Reference: pi v1.6.0 (`faac5858`) lowercases with `String.prototype.toLowerCase`
 in model resolution, the model, session and tree selectors, autocomplete and the
 fuzzy matcher, which lowers the query and every candidate on each keystroke.
 
-`ai.JSLower` and `tui`'s `jsLower` built a `cases.Lower(language.Und)` Caser per
+`ai.JSLower` and `tui`'s copy (since folded into it) built a `cases.Lower(language.Und)` Caser per
 call to get the full Unicode mapping (final sigma, U+0130). For ASCII input that
 mapping is `strings.ToLower`, so both now check for a non-ASCII byte first and
 use the Caser only then. Measured per call on a 36-byte model ID: mixed case
@@ -8692,4 +8692,4 @@ strings measured 45 ns. The remaining gap is the allocation and ASCII scan of a
 mixed-case string: a hand-written `unsafe.String` variant reached 111 ns, too
 little to justify `unsafe` over the standard library.
 
-Tests: `TestJSLowerMatchesJS`, `TestJSStringHelpers`, `BenchmarkJSLower`.
+Tests: `TestJSLowerMatchesJS`, `BenchmarkJSLower`.

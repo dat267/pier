@@ -1,11 +1,7 @@
 package tui
 
 import (
-	"strings"
 	"testing"
-
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 // pi v1.5.0 text.ts setText returns early for the same text, so a renderer that
@@ -26,28 +22,15 @@ func TestTextSetSameTextKeepsCache(t *testing.T) {
 	}
 }
 
-// The JS string helpers must match String.prototype.trim/toLowerCase.
+// tui trims and splits words on JavaScript's `\s` set, which includes U+202F,
+// U+205F, U+3000 and the BOM but not U+0085 (unlike unicode.IsSpace).
 func TestJSStringHelpers(t *testing.T) {
 	for _, r := range []rune{0x202F, 0x205F, 0x3000, 0xFEFF} {
-		if got := jsTrim(string(r) + "x" + string(r)); got != "x" {
-			t.Errorf("jsTrim(U+%04X) = %q; want x", r, got)
+		if !isWhitespaceRune(r) {
+			t.Errorf("isWhitespaceRune(U+%04X) = false; want true", r)
 		}
 	}
-	if got := jsTrim("\u0085"); got != "\u0085" {
-		t.Errorf("jsTrim(U+0085) = %q; want unchanged", got)
-	}
-	if got := jsLower("ΟΣ"); got != "ος" {
-		t.Errorf("jsLower(ΟΣ) = %q; want ος", got)
-	}
-	if got := jsLower("İ"); got != "i\u0307" {
-		t.Errorf("jsLower(İ) = %q; want i\\u0307", got)
-	}
-	// D518: the ASCII fast path agrees with the full mapping on every byte.
-	var ascii strings.Builder
-	for c := range 128 {
-		ascii.WriteByte(byte(c))
-	}
-	if got, want := jsLower(ascii.String()), cases.Lower(language.Und).String(ascii.String()); got != want {
-		t.Errorf("jsLower(ASCII) = %q; want %q", got, want)
+	if isWhitespaceRune(0x0085) {
+		t.Error("isWhitespaceRune(U+0085) = true; want false")
 	}
 }

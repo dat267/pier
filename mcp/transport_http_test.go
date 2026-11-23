@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/mcp/protocol"
 	"io"
 	"net/http"
@@ -439,7 +440,7 @@ func TestStreamableHTTPErrorBodyIsSlicedByUTF16Units(t *testing.T) {
 	// units that the first 8192 bytes decode to: 2730 whole characters plus one
 	// U+FFFD for the split sequence. The earlier expectation of 8192 units pinned
 	// a character-budget reading of the same constant.
-	if got := jsLength(httpErr.Body); got != 2731 {
+	if got := ai.JSLength(httpErr.Body); got != 2731 {
 		t.Fatalf("body units = %d; want %d", got, 2731)
 	}
 }
@@ -653,7 +654,7 @@ func TestMcpErrorBodyKeepsTheBytePrefix(t *testing.T) {
 		if !ok {
 			t.Fatalf("%s: err = %T", tc.name, err)
 		}
-		if got := jsLength(httpErr.Body); got != tc.wantKept {
+		if got := ai.JSLength(httpErr.Body); got != tc.wantKept {
 			t.Fatalf("%s: kept %d units, want %d", tc.name, got, tc.wantKept)
 		}
 	}

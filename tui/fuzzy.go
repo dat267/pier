@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"unicode/utf16"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of src/fuzzy.ts: subsequence fuzzy matching with a quality score
@@ -37,8 +39,8 @@ func MatchFuzzy(query string, text string) FuzzyMatch {
 		return primaryMatch
 	}
 
-	queryLower := jsLower(query)
-	textLower := jsLower(text)
+	queryLower := ai.JSLower(query)
+	textLower := ai.JSLower(text)
 
 	matchQuery := func(normalizedQuery string) FuzzyMatch {
 		// Upstream indexes the lowercased strings by UTF-16 code units
@@ -364,11 +366,11 @@ func indexUnitFrom(haystack []uint16, needle uint16, start int) int {
 // FuzzyFilter filters and sorts items by fuzzy match quality (best first).
 // Whitespace- and slash-separated tokens must all match.
 func FuzzyFilter[T any](items []T, query string, getText func(item T) string) []T {
-	if jsTrim(query) == "" {
+	if ai.JSTrim(query) == "" {
 		return items
 	}
 
-	tokens := splitFuzzyTokens(jsTrim(query))
+	tokens := splitFuzzyTokens(ai.JSTrim(query))
 	if len(tokens) == 0 {
 		return items
 	}

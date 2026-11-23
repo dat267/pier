@@ -3,6 +3,7 @@ package tui
 import (
 	"strings"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/internal/markdown"
 )
 
@@ -391,7 +392,7 @@ func (m *Markdown) Render(width int) []string {
 		text = m.Options.Transform(text, contentWidth)
 	}
 
-	if text == "" || jsTrim(text) == "" {
+	if text == "" || ai.JSTrim(text) == "" {
 		m.cachedText = m.Text
 		m.hasCachedText = true
 		m.cachedWidth = width

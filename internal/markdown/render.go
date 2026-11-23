@@ -3,6 +3,8 @@ package markdown
 import (
 	"strconv"
 	"strings"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // This file is the renderer half of the port: it turns the block/inline model
@@ -830,10 +832,5 @@ func repeatSpacesM(count int) string {
 // jsTrim is String.prototype.trim over the JS whitespace set.
 func jsTrim(s string) string { return strings.TrimFunc(s, isWhitespaceRune) }
 
-func isWhitespaceRune(r rune) bool {
-	switch r {
-	case ' ', '\t', '\n', '\v', '\f', '\r', 0x00A0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF:
-		return true
-	}
-	return r >= 0x2000 && r <= 0x200A
-}
+// isWhitespaceRune is JS `\s`, the set jsnum defines once.
+func isWhitespaceRune(r rune) bool { return jsnum.Whitespace(r) }

@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"regexp"
 	"strings"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of packages/tui/src/program-status.ts: the Program Status Protocol (OSC 7501), in
@@ -90,7 +92,7 @@ func FormatProgramStatus(status ProgramStatus) string {
 	if status.State == ProgramStatusBlocked && status.Kind != "" {
 		pairs = append(pairs, "kind="+status.Kind)
 	}
-	message := truncateUTF8Bytes(jsTrim(
+	message := truncateUTF8Bytes(ai.JSTrim(
 		programStatusControlCharacters.ReplaceAllString(status.Message, " ")), programStatusMaxMessageBytes)
 	if message != "" {
 		pairs = append(pairs, "msg="+base64.StdEncoding.EncodeToString([]byte(message)))

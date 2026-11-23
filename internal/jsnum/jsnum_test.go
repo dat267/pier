@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math"
 	"testing"
+	"unicode"
 )
 
 // The cases mirror the JavaScript Number() results the coercion must match;
@@ -71,5 +72,12 @@ func TestWhitespaceExcludesNextLineAndIncludesBOM(t *testing.T) {
 	}
 	if Whitespace('\u0085') {
 		t.Fatal("U+0085 is Go whitespace but not JavaScript whitespace")
+	}
+	// The hand-written switch is the Unicode space property minus U+0085, plus
+	// the BOM, for every code point.
+	for r := rune(0); r <= unicode.MaxRune; r++ {
+		if want := r == '\uFEFF' || (r != '\u0085' && unicode.IsSpace(r)); Whitespace(r) != want {
+			t.Fatalf("Whitespace(U+%04X) = %v; want %v", r, !want, want)
+		}
 	}
 }

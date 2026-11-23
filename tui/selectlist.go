@@ -3,6 +3,8 @@ package tui
 import (
 	"strings"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of src/components/select-list.ts, src/components/truncated-text.ts,
@@ -30,7 +32,7 @@ func normalizeToSingleLine(text string) string {
 		previousWasNewline = false
 		builder.WriteRune(r)
 	}
-	return jsTrim(builder.String())
+	return ai.JSTrim(builder.String())
 }
 
 func clampInt(value int, min int, max int) int {
@@ -128,10 +130,10 @@ func withDefaultSelectListTheme(theme SelectListTheme) SelectListTheme {
 
 // SetFilter filters the items by value prefix and resets the selection.
 func (s *SelectList) SetFilter(filter string) {
-	lower := jsLower(filter)
+	lower := ai.JSLower(filter)
 	filtered := make([]SelectItem, 0, len(s.items))
 	for _, item := range s.items {
-		if strings.HasPrefix(jsLower(item.Value), lower) {
+		if strings.HasPrefix(ai.JSLower(item.Value), lower) {
 			filtered = append(filtered, item)
 		}
 	}

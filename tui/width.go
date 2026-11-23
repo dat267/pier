@@ -13,6 +13,8 @@ import (
 	"unicode/utf8"
 
 	"golang.org/x/text/width"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Grapheme segmentation: Go has no Intl.Segmenter, so the port implements the
@@ -781,14 +783,8 @@ func ExtractANSICode(text string, pos int) (string, int) {
 
 // ---- character classification helpers (src/utils.ts) ----
 
-// isWhitespaceRune mirrors JS /\s/ for the practical set.
-func isWhitespaceRune(r rune) bool {
-	switch r {
-	case ' ', '\t', '\n', '\v', '\f', '\r', 0x00A0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF:
-		return true
-	}
-	return r >= 0x2000 && r <= 0x200A
-}
+// isWhitespaceRune is JS `\s`, the set jsnum defines once.
+func isWhitespaceRune(r rune) bool { return jsnum.Whitespace(r) }
 
 // IsWhitespaceRune reports whether r is JavaScript `\s`, the whitespace class
 // the reference's regexes and trim use.
