@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	"github.com/dat267/pier/ai"
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
 )
 
 // Port of the provider implementation in src/autocomplete.ts
@@ -18,8 +20,8 @@ import (
 // search through `fd`.
 //
 // Divergences: the provider list is a single CommandEntry slice instead of a
-// SlashCommand/AutocompleteItem union; comparisons use byte ordering where
-// upstream uses localeCompare (D257).
+// SlashCommand/AutocompleteItem union. Upstream's localeCompare orderings use
+// root collation (D257).
 
 // CommandEntry is a slash command or a plain completion entry.
 type CommandEntry struct {
@@ -701,6 +703,11 @@ func (p *CombinedAutocompleteProvider) getFileSuggestions(prefix string) []Autoc
 		})
 	}
 
+	labels := make([]string, len(suggestions))
+	for index, suggestion := range suggestions {
+		labels[index] = suggestion.Label
+	}
+	labelKeys := rootCollationKeys(labels)
 	sort.SliceStable(suggestions, func(a, b int) bool {
 		aIsDir := strings.HasSuffix(suggestions[a].Label, "/")
 		bIsDir := strings.HasSuffix(suggestions[b].Label, "/")
@@ -710,7 +717,7 @@ func (p *CombinedAutocompleteProvider) getFileSuggestions(prefix string) []Autoc
 		if !aIsDir && bIsDir {
 			return false
 		}
-		return localeCompareLike(suggestions[a].Label, suggestions[b].Label) < 0
+		return labelKeys[suggestions[a].Label] < labelKeys[suggestions[b].Label]
 	})
 
 	return suggestions
@@ -794,6 +801,11 @@ func (p *CombinedAutocompleteProvider) getFuzzyFileSuggestions(ctx context.Conte
 		}
 	}
 
+	paths := make([]string, len(scored))
+	for index, entry := range scored {
+		paths[index] = entry.path
+	}
+	pathKeys := rootCollationKeys(paths)
 	sort.SliceStable(scored, func(a, b int) bool {
 		if scored[a].score != scored[b].score {
 			return scored[a].score > scored[b].score
@@ -807,7 +819,7 @@ func (p *CombinedAutocompleteProvider) getFuzzyFileSuggestions(ctx context.Conte
 		if lengthA, lengthB := ai.JSLength(scored[a].path), ai.JSLength(scored[b].path); lengthA != lengthB {
 			return lengthA < lengthB
 		}
-		return localeCompareLike(scored[a].path, scored[b].path) < 0
+		return pathKeys[scored[a].path] < pathKeys[scored[b].path]
 	})
 
 	if len(scored) > 20 {
@@ -842,25 +854,20 @@ func (p *CombinedAutocompleteProvider) getFuzzyFileSuggestions(ctx context.Conte
 	return suggestions
 }
 
-// localeCompareLike approximates JavaScript's localeCompare (ICU collation):
-// the primary comparison is case-insensitive with the original bytes as the
-// tie-break (divergence D257: full ICU collation is not reproduced).
-func localeCompareLike(a string, b string) int {
-	lowerA := strings.ToLower(a)
-	lowerB := strings.ToLower(b)
-	if lowerA != lowerB {
-		if lowerA < lowerB {
-			return -1
+// rootCollationKeys returns each value's root-collation sort key, the order
+// upstream's `a.localeCompare(b)` gives without a host locale (D257). Keys are
+// built once per sort: comparing them is cheaper than lowercasing both
+// strings on every comparison, which the earlier approximation did.
+func rootCollationKeys(values []string) map[string]string {
+	collator := collate.New(language.Und)
+	var buffer collate.Buffer
+	keys := make(map[string]string, len(values))
+	for _, value := range values {
+		if _, ok := keys[value]; !ok {
+			keys[value] = string(collator.KeyFromString(&buffer, value))
 		}
-		return 1
 	}
-	if a == b {
-		return 0
-	}
-	if a < b {
-		return -1
-	}
-	return 1
+	return keys
 }
 
 func splitNonEmpty(value string, separator string) []string {

@@ -2473,13 +2473,19 @@ The providers of an ambiguous `--models` pattern and the candidates of an
 ambiguous `--model` (pi v1.6.0, `faac5858`, `resolveModelScopeFromModels` and
 `resolveCliModel`) sort with the same collator; they had kept byte order, which
 put `Zai` first and `a-b` before `a_b`. So does the settings selector's
-per-model thinking picker (`settings-selector.ts`).
+per-model thinking picker (`settings-selector.ts`). The tui path and fuzzy
+file suggestions (`packages/tui/src/autocomplete.ts`) had approximated
+`localeCompare` with a case-folded byte comparison, which put `foo-bar.go`
+before `foo_bar.go` and `éclair.go` after every ASCII name; they now sort by
+root-collation keys built once per sort, which on 2,000 names took 4.8 ms
+against the approximation's 6.2 ms.
 
 Tests: `TestFuzzyModelAliasLocaleOrdering`, `TestListModelsTextUsesLocaleOrdering`,
 `TestModelSelectorProviderOrderMatchesUpstreamLocale`,
 `TestFooterStatusesUseUpstreamLocaleOrdering`,
 `TestAmbiguousModelListsUseLocaleOrdering`,
-`TestSortModelsForPickerUsesLocaleOrdering`.
+`TestSortModelsForPickerUsesLocaleOrdering`,
+`TestPathSuggestionsUseLocaleOrdering`.
 
 ### D258
 

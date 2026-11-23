@@ -496,3 +496,33 @@ func TestFuzzySuggestionsOrderByJavaScriptStringLength(t *testing.T) {
 		t.Fatalf("order = %q, want %q (two UTF-16 units before four)", got, "éé,abcd")
 	}
 }
+
+// pi v1.6.0 (faac5858) packages/tui/src/autocomplete.ts sorts path
+// suggestions directories first, then by a.label.localeCompare(b.label);
+// D257 maps that to root collation. The order below was read off Node's
+// localeCompare for the same names. The earlier case-folded byte comparison
+// put "foo-bar.go" before "foo_bar.go" and "éclair.go" last.
+func TestPathSuggestionsUseLocaleOrdering(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "zeta"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"foo.go", "foo-bar.go", "foo_bar.go", "Foo2.go", "foo10.go", "foo9.go", "README.md", "readme.txt", "éclair.go"} {
+		if err := os.WriteFile(filepath.Join(root, name), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	provider := NewCombinedAutocompleteProvider(nil, root, "")
+	suggestions := provider.GetSuggestions(context.Background(), []string{"./"}, 0, len("./"), true)
+	if suggestions == nil {
+		t.Fatal("no suggestions for ./")
+	}
+	var got []string
+	for _, item := range suggestions.Items {
+		got = append(got, item.Label)
+	}
+	want := "zeta/ | éclair.go | foo_bar.go | foo-bar.go | foo.go | foo10.go | Foo2.go | foo9.go | README.md | readme.txt"
+	if strings.Join(got, " | ") != want {
+		t.Fatalf("order = %s\nwant    %s", strings.Join(got, " | "), want)
+	}
+}
