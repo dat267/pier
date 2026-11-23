@@ -233,9 +233,7 @@ type jsWorkspace struct {
 	queues [2]jsQueue
 	best   []int
 	start  []int
-	// prefilter is the dispatch prefilter's reused continuation list.
-	prefilter []prefilterCont
-	exact     []exactCont
+	exact  []exactCont
 }
 
 type jsQueue struct {

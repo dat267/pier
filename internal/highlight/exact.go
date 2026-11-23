@@ -75,6 +75,9 @@ type exactNode struct {
 	endAlts   []uint16
 }
 
+// exactEnd is the empty continuation list: the end of the rule.
+const exactEnd = -1
+
 // exactAltIndexMin is the smallest alternation given first-byte lists.
 const exactAltIndexMin = 4
 
@@ -237,7 +240,7 @@ func (node *exactNode) oneRune(c rune) bool {
 	case syntax.OpLiteral:
 		return exactLiteral(node, node.runes[0], c)
 	case syntax.OpCharClass:
-		return prefilterClassHas(node.runes, c)
+		return classHas(node.runes, c)
 	}
 	return false
 }
@@ -322,7 +325,7 @@ func matchExactCaps(re *exactNode, s string, pos int, jsLines bool, ws *jsWorksp
 	if ws != nil {
 		w.conts = ws.exact[:0]
 	}
-	result = w.seq(w.push(re, prefilterEnd, false), pos)
+	result = w.seq(w.push(re, exactEnd, false), pos)
 	if ws != nil {
 		ws.exact = w.conts[:0]
 	}
@@ -337,7 +340,7 @@ func (w *exactWalk) push(node *exactNode, next int32, loop bool) int32 {
 // seq walks the list from pos. The empty list is the end of the rule.
 func (w *exactWalk) seq(seq int32, pos int) exactResult {
 	s := w.s
-	for seq != prefilterEnd {
+	for seq != exactEnd {
 		w.budget--
 		if w.budget < 0 {
 			return exactUnknown

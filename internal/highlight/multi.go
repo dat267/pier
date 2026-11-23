@@ -83,8 +83,6 @@ type multiRegex struct {
 	// only those, anchored, instead of running the whole alternation's NFA.
 	dispatch  bool
 	ruleFirst []string
-	// prefilters holds each rule's parsed form for mayMatchAt; nil admits all.
-	prefilters []*syntax.Regexp
 	// exacts holds each rule's parsed form for matchExactAt, or nil when the
 	// walk can not decide the rule (D523); ruleGroups is each rule's group.
 	exacts     []*exactNode
@@ -225,11 +223,9 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 	// manual rules'. It is disabled when a regex rule can match empty, since such
 	// a rule can begin at any byte.
 	m.ruleFirst = make([]string, len(m.regexes))
-	m.prefilters = make([]*syntax.Regexp, len(m.regexes))
 	m.exacts = make([]*exactNode, len(m.regexes))
 	for i, source := range m.regexes {
 		prepared := preparePattern(source)
-		m.prefilters[i] = rulePrefilter(prepared, caseInsensitive)
 		// A rule whose groups a callback reads still has a walk: its "no
 		// match" is as good as the regexp's, and decideAt leaves a match to
 		// the regexp, which reports the groups.
@@ -412,7 +408,6 @@ func (m *multiRegex) subMatcher(b byte) *multiRegex {
 			continue
 		}
 		sub.addRuleAt(source, m.datas[i].position, m.datas[i])
-		sub.prefilters = append(sub.prefilters, m.prefilters[i])
 		sub.exacts = append(sub.exacts, m.exacts[i])
 	}
 	if len(sub.regexes) == 0 {
@@ -576,7 +571,7 @@ func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsW
 		if lm != nil {
 			return lm
 		}
-		// A rejection the walk or the prefilter settled costs O(1), so a run
+		// A rejection the walk settled costs O(1), so a run
 		// of them is linear and needs no budget. Only a rejection that ran the
 		// regexp, which may scan the tail, is counted (D351); otherwise a long
 		// comment of words that only start like a rule (`abc` against
@@ -950,16 +945,14 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 }
 
 // decideAt settles a submatcher at pos without its regexp when it can: rules
-// are tried in priority order, each by the exact walk (D523) or, failing
-// that, ruled out by its prefilter (D523). The first rule that matches wins,
-// as it does in the anchored alternation. decided is false at the first rule
-// neither can settle, and the caller then runs the regexp.
-//
-// Both are bounded per rule (exactBudget steps, prefilterRun bytes), so a
-// decision costs O(1) whatever the input's length.
+// are tried in priority order by the exact walk (D523), and the first that
+// matches wins, as it does in the anchored alternation. decided is false at
+// the first rule the walk cannot settle, and the caller then runs the regexp.
+// The walk is bounded per rule (exactBudget steps), so a decision costs O(1)
+// whatever the input's length.
 func (m *multiRegex) decideAt(s string, pos int, jsLines bool, ws *jsWorkspace) (found *match, decided bool) {
-	for i, prefilter := range m.prefilters {
-		if exact := m.exacts[i]; exact != nil {
+	for i, exact := range m.exacts {
+		if exact != nil {
 			end, result := matchExactAt(exact, s, pos, jsLines, ws)
 			switch result {
 			case exactMatched:
@@ -995,9 +988,7 @@ func (m *multiRegex) decideAt(s string, pos int, jsLines bool, ws *jsWorkspace) 
 				continue
 			}
 		}
-		if prefilter == nil || mayMatchAt(prefilter, s, pos, ws) {
-			return nil, false
-		}
+		return nil, false
 	}
 	return nil, true
 }

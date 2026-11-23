@@ -4425,9 +4425,9 @@ the budget cutoff and the missing rule highlighting, and
 `BenchmarkHighlightRejectedRun` keeps the cost visible; this is the same
 responsiveness trade as the existing iteration cap.
 
-Since D523 most rejections are settled by the exact walk or the prefilter,
-both bounded per rule (the walk now charges its greedy scans to its step
-budget too), so only a rejection that runs the regexp is counted. Counting
+Since D523 most rejections are settled by the exact walk, bounded per rule
+(the walk charges its greedy scans to its step budget too), so only a
+rejection that runs the regexp is counted. Counting
 every rejection had cut off ordinary text: a C++ block comment of 300 words
 starting with `a` (each rejected by the comment's `\b(?:a|an|...)\b` phrase
 rule) never closed, so the rest of the file stayed comment, where the
@@ -8807,8 +8807,6 @@ is O(1). Its costs are kept low by:
   the next byte (a folded literal adds its whole fold orbit);
 - recording capture groups, so a rule whose groups a callback reads needs no
   regexp, and walking each mode's end regex in `endOfMode`;
-- `mayMatchAt`, a necessary-condition prefilter for the rules the walk cannot
-  settle;
 - a hand-written begin where the walk is long at every candidate: Java's
   method declaration, `(GENERIC_IDENT_RE\s+)+UNDERSCORE_IDENT_RE\s*\(`, took
   about 90 steps at every letter and 95% of Java's walk steps
@@ -8822,13 +8820,16 @@ Same method on the same inputs: TypeScript 19.7 to 9.7 ms (hljs 9.9), marked
 3.56x to 0.76x, sas 2.50x to 0.61x, Python 7.7 to 4.0 ms (hljs 4.5). Measured
 and closed: a required-literal mask or per-candidate literal search (quadratic,
 or 0.3%), memoising `(rule, pos)` (2% duplicates), the prefilter before the
-walk, per-branch early rejection, and a lock-free `subMatcher`.
+walk, per-branch early rejection, and a lock-free `subMatcher`. A
+necessary-condition prefilter for the rules the walk could not settle
+(`mayMatchAt`) was removed once the walk covered them: it was consulted at no
+position of the 191 samples.
 
 Tests: `TestExactWalkMatchesTheRegexp`, `TestExactWalkCapturesMatchTheRegexp`,
 `TestEndRulesKeepGroupsOnlyWhereOnEndReadsThem`,
 `TestExactRunFastPathMatchesTheRegexp`, `TestExactRunFastPathRespectsJSLines`,
 `TestExactWalkLiteralASCIIPath`, `TestExactLiteralASCIIFold`,
-`TestMayMatchAtNeverRejectsAMatch`, `TestJavaMethodBeginMatchesTheRegexp`.
+`TestJavaMethodBeginMatchesTheRegexp`.
 
 ### D524
 
