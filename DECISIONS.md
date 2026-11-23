@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D524)
+# Deliberate divergences from pi (D1–D525)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9023,3 +9023,37 @@ different dispatch structure rather than another prefilter or a
 micro-optimisation of the walk.
 
 Test: `TestBeginLineRuleKeepsTheDispatch`.
+
+### D525
+
+**A run whose body matches only ASCII is scanned byte by byte.**
+
+Reference: pi v1.6.0 (`faac5858`) leaves a repeated class to V8's compiled
+sticky regex, which matches ASCII classes without decoding a rune per byte. The
+port's exact walk (D523) called `exactOne` for every byte of a run, and
+`exactOne` dominated a C++ profile at 22.75% flat. An identifier or
+word-character run is the common case in most languages.
+
+`exactNode.asciiOnly` now records whether a one-rune node matches no rune at or
+above `utf8.RuneSelf` (`matchesAboveASCII`: false for a literal and for a class
+whose ranges end below it, true for the dot and for a class that reaches past
+it). A repetition whose body is ASCII-only scans the run against the node's
+bitmap instead of decoding each byte, still charging one budget step per byte so
+a walk stays O(exactBudget) (D351). A byte at or above `utf8.RuneSelf` ends the
+scan and falls back to the decoding path for that position, so the bitmap only
+ever decides ASCII.
+
+Same method on 24 KiB samples: C++ 10.96 to 10.02 ms, Java 9.15 to 8.69, R 8.34
+to 7.94 (the earlier R figure came from a 1 KiB file); 106 of 191 languages
+improved and the geometric mean
+across the suite moved 1.17% lower, with no language regressing by more than
+noise. Output is unchanged: every golden, the differentials, a 40 s fuzz run,
+and 4 KB markdown plus 30 KB C++ and Java samples byte for byte against the
+reference.
+
+The `jsLines` condition on the path is defence, not a live case: only the dot
+takes JavaScript's extra line terminators and the dot is never ASCII-only,
+checked across the 61,408 walk programs of every registered language.
+
+Tests: `TestExactRunFastPathMatchesTheRegexp`,
+`TestExactRunFastPathRespectsJSLines`.

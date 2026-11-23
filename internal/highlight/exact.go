@@ -54,11 +54,15 @@ type exactNode struct {
 	nonGreedy bool
 	fold      bool
 	// single is set on a repetition whose body consumes exactly one rune.
-	single   bool
-	runes    []rune
-	ascii    [2]uint64
-	min, max int
-	sub      []*exactNode
+	single bool
+	runes  []rune
+	ascii  [2]uint64
+	// asciiOnly is set when the node matches no rune at or above utf8.RuneSelf,
+	// so the bitmap alone decides every byte and a run can be scanned without
+	// decoding.
+	asciiOnly bool
+	min, max  int
+	sub       []*exactNode
 }
 
 // exactProgram compiles re when every node of it is one the walk reproduces,
@@ -92,8 +96,34 @@ func compileExactNode(re *syntax.Regexp) *exactNode {
 				node.ascii[c>>6] |= 1 << (c & 63)
 			}
 		}
+		node.asciiOnly = !matchesAboveASCII(re)
 	}
 	return node
+}
+
+// matchesAboveASCII reports whether a one-rune expression can match a rune at
+// or above utf8.RuneSelf: the dot can, and so can a class whose ranges reach
+// past it.
+func matchesAboveASCII(re *syntax.Regexp) bool {
+	switch re.Op {
+	case syntax.OpAnyChar, syntax.OpAnyCharNotNL:
+		return true
+	case syntax.OpCharClass:
+		for i := 0; i+1 < len(re.Rune); i += 2 {
+			if re.Rune[i+1] >= utf8.RuneSelf {
+				return true
+			}
+		}
+		return false
+	case syntax.OpLiteral:
+		for _, r := range re.Rune {
+			if r >= utf8.RuneSelf {
+				return true
+			}
+		}
+		return false
+	}
+	return true
 }
 
 // oneRune reports whether a one-rune node matches c. The dot's bitmap leaves
@@ -340,6 +370,44 @@ func (w *exactWalk) run(node *exactNode, rest int32, pos int) exactResult {
 	// O(1) (D351). ends[k], the position after k repetitions, is only kept
 	// once a multi-byte rune makes it differ from pos+k.
 	var ends []int
+	// A body that matches only ASCII is decided by its bitmap alone on ASCII
+	// input, so the run is scanned byte by byte instead of decoding a rune each
+	// time. This is the common identifier and word-character run. Each byte
+	// still charges the budget, which keeps a walk O(exactBudget) however long
+	// the run (D351).
+	//
+	// The jsLines condition is defence rather than a live case: only the dot
+	// takes JavaScript's extra line terminators, and the dot always matches
+	// non-ASCII, so asciiOnly is never set on one (checked across the 61,408
+	// walk programs of every registered language: none). A byte at or above
+	// utf8.RuneSelf also ends the scan, so the bitmap can only decide ASCII.
+	if body := node.sub[0]; body != nil && body.asciiOnly && !w.jsLines && body.op != syntax.OpLiteral {
+		end, count := pos, 0
+		for maximum < 0 || count < maximum {
+			w.budget--
+			if w.budget < 0 {
+				return exactUnknown
+			}
+			if end >= len(w.s) {
+				break
+			}
+			b := w.s[end]
+			if b >= utf8.RuneSelf || body.ascii[b>>6]&(1<<(b&63)) == 0 {
+				break
+			}
+			end++
+			count++
+		}
+		if count < minimum {
+			return exactNoMatch
+		}
+		for k := count; k >= minimum; k-- {
+			if result := w.seq(rest, pos+k); result != exactNoMatch {
+				return result
+			}
+		}
+		return exactNoMatch
+	}
 	count := 0
 	for end := pos; maximum < 0 || count < maximum; count++ {
 		w.budget--

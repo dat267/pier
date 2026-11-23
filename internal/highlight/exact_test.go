@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 	"unicode/utf8"
 )
@@ -222,5 +223,117 @@ func TestExactWalkLiteralASCIIPath(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// TestExactRunFastPathMatchesTheRegexp guards the byte-scan used for a
+// repetition whose body matches only ASCII. The bitmap decides each byte, so
+// the path is only sound for an ASCII-only body over input with no JavaScript
+// line terminator; a body that can match above ASCII must take the decoding
+// path, and both must agree with the regexp.
+func TestExactRunFastPathMatchesTheRegexp(t *testing.T) {
+	patterns := []string{
+		`[a-z]+x`,
+		`\w*z`,
+		`[A-Za-z0-9_]*;`,
+		`[\x{00C0}-\x{02B8}a-z]*;`,
+		`[\x{00C0}-\x{02B8}]+`,
+		`[\x{00C0}-\x{02B8}]x`,
+		`(?s).*Z`,
+		`[^\n]*\n`,
+	}
+	inputs := []string{
+		"abcx", "aaa", "zz", "aZ", "", "abc", "\u00e9x", "ab\u00e9cx",
+		"\xff\xfeZ", "abc\nZ", "日本語Z", "a\u2028Z",
+		// A non-ASCII run the class admits: the fast path must not stop at the
+		// first byte above ASCII, so these decide the asciiOnly guard.
+		"ab\u00e9\u00e9;", "\u00e9;", "a\u00e9b\u00e9;", "ab\u00e9;Z",
+		// A \r the dot must not consume when jsLines is set: the bitmap leaves
+		// out only \n, so this decides the jsLines guard.
+		"a\rb", "a\rb\rc", "\r", "a\rb\nZ",
+	}
+	ws := &jsWorkspace{}
+	for _, pattern := range patterns {
+		// Anchored at the position, as the walk is. No (?s): the patterns carry
+		// their own flags, and adding it would make `.` match \n for `.*`.
+		re := regexp.MustCompile(`\A(?:` + pattern + `)`)
+		ex := exactProgram(parsePattern(pattern))
+		if ex == nil {
+			continue
+		}
+		// The dot under jsLines stops at \r, U+2028 and U+2029 where Go's
+		// regexp does not, so a dot pattern is checked against the JS semantics
+		// separately below rather than against re.
+		jsLinesOf := func() []bool {
+			if strings.Contains(pattern, ".") {
+				return []bool{false}
+			}
+			return []bool{false, true}
+		}()
+		for _, input := range inputs {
+			for _, jsLines := range jsLinesOf {
+				for pos := 0; pos <= len(input); pos++ {
+					if pos < len(input) && !utf8.RuneStart(input[pos]) {
+						continue
+					}
+					want := re.FindStringIndex(input[pos:])
+					end, result := matchExactAt(ex, input, pos, jsLines, ws)
+					switch {
+					case result == exactUnknown:
+						continue
+					case want == nil:
+						if result == exactMatched {
+							t.Errorf("%q at %d of %q (jsLines=%v): walk matched to %d, regexp did not",
+								pattern, pos, input, jsLines, end)
+						}
+					case result == exactMatched:
+						if end-pos != want[1] {
+							t.Errorf("%q at %d of %q (jsLines=%v): walk length %d, regexp length %d",
+								pattern, pos, input, jsLines, end-pos, want[1])
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// TestExactRunFastPathRespectsJSLines guards that jsLines does not change a
+// class: only the dot takes JavaScript's extra line terminators, so a class
+// that admits \r keeps matching it. It also pins the dot's run, which is not
+// ASCII-only and so always takes the decoding path.
+func TestExactRunFastPathRespectsJSLines(t *testing.T) {
+	// A class rather than the dot: the dot's bitmap is not ASCII-only (it
+	// matches every non-ASCII rune), so it never takes the byte-scan path. A
+	// class that admits \r is ASCII-only and does, and jsLines is what stops it.
+	ex := exactProgram(parsePattern(`[\x00-\x7f]*`))
+	if ex == nil {
+		t.Fatal("the class run must be walkable")
+	}
+	ws := &jsWorkspace{}
+	for _, test := range []struct {
+		input   string
+		jsLines bool
+		want    int
+	}{
+		{"a\rb", false, 3},
+		{"a\rb", true, 3}, // a class matches \r whether or not jsLines is set
+		{"ab\nc", true, 4},
+		{"abc", true, 3},
+		{"", true, 0},
+	} {
+		end, result := matchExactAt(ex, test.input, 0, test.jsLines, ws)
+		if result != exactMatched || end != test.want {
+			t.Errorf("%q (jsLines=%v): matched=%v end=%d, want %d",
+				test.input, test.jsLines, result == exactMatched, end, test.want)
+		}
+	}
+	// The dot is not ASCII-only, so its run must still stop at \r under jsLines.
+	dot := exactProgram(parsePattern(`.*`))
+	if dot == nil {
+		t.Fatal("the dot run must be walkable")
+	}
+	if end, result := matchExactAt(dot, "a\rb", 0, true, ws); result != exactMatched || end != 1 {
+		t.Errorf("dot under jsLines: matched=%v end=%d, want 1", result == exactMatched, end)
 	}
 }
