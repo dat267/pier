@@ -837,6 +837,7 @@ internal/highlight/ignored_illegal_builtin_fuzz_test.go
 internal/highlight/ignored_illegal_test.go
 internal/highlight/isbl_literal_parity_test.go
 internal/highlight/js_guard_lines_test.go
+internal/highlight/lang_java_test.go
 internal/highlight/lang_order_test.go
 internal/highlight/lang_ruby_test.go
 internal/highlight/language_parity_test.go

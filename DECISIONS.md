@@ -8808,7 +8808,11 @@ is O(1). Its costs are kept low by:
 - recording capture groups, so a rule whose groups a callback reads needs no
   regexp, and walking each mode's end regex in `endOfMode`;
 - `mayMatchAt`, a necessary-condition prefilter for the rules the walk cannot
-  settle.
+  settle;
+- a hand-written begin where the walk is long at every candidate: Java's
+  method declaration, `(GENERIC_IDENT_RE\s+)+UNDERSCORE_IDENT_RE\s*\(`, took
+  about 90 steps at every letter and 95% of Java's walk steps
+  (`javaMethodBegin`). Java's 24 KiB sample: 8.76 to 2.87 ms (hljs 5.27).
 
 End rules keep their groups only when the mode, or the parent it ends with,
 has `OnEnd`, the only reader of an end match's groups (`END_SAME_AS_BEGIN`).
@@ -8824,7 +8828,7 @@ Tests: `TestExactWalkMatchesTheRegexp`, `TestExactWalkCapturesMatchTheRegexp`,
 `TestEndRulesKeepGroupsOnlyWhereOnEndReadsThem`,
 `TestExactRunFastPathMatchesTheRegexp`, `TestExactRunFastPathRespectsJSLines`,
 `TestExactWalkLiteralASCIIPath`, `TestExactLiteralASCIIFold`,
-`TestMayMatchAtNeverRejectsAMatch`.
+`TestMayMatchAtNeverRejectsAMatch`, `TestJavaMethodBeginMatchesTheRegexp`.
 
 ### D524
 
