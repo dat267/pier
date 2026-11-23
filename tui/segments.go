@@ -21,7 +21,7 @@ func IsImageLine(line string) bool {
 	if len(line) >= len(iterm2Prefix) && line[:len(iterm2Prefix)] == iterm2Prefix {
 		return true
 	}
-	return strings.Index(line, kittyPrefix) >= 0 || strings.Index(line, iterm2Prefix) >= 0
+	return strings.Contains(line, kittyPrefix) || strings.Contains(line, iterm2Prefix)
 }
 
 func isImageLine(line string) bool { return IsImageLine(line) }
