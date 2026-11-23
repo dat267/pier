@@ -85,6 +85,20 @@ func TestBlockTokensMatchMarked(t *testing.T) {
 		{"a \\| b\n-\n", `h2:"a \\| b"`},
 		{"a \\| b | c\n- | -\n", `table:2x0`},
 
+		// The table rule's row lookahead (marked 18.0.11, pi v1.6.0 faac5858):
+		// html is the paragraph's block-tag alternative at column 0, list is
+		// ` {0,3}(?:[*+-]|1[.)])[ \t]` with no content needed, and `.` stops at
+		// U+2028 in a row or the header.
+		{"| a |\n| - |\n<b>x", `table:1x1`},
+		{"| a |\n| - |\n</b>", `table:1x1`},
+		{"| a |\n| - |\n  <div>", `table:1x1`},
+		{"| a |\n| - |\n<div>", `table:1x0 | html`},
+		{"| a |\n| - |\n- ", `table:1x0 | ul[()]`},
+		{"| a |\n| - |\n-", `table:1x1`},
+		{"| a |\n| - |\n2. x", `table:1x1`},
+		{"| a |\n| - |\nx\u2028y", `table:1x0 | p:"x\u2028y"`},
+		{"| a\u2028b |\n| - |\n| c |", `p:"| a\u2028b |\n| - |\n| c |"`},
+
 		// The paragraph rule stops before a line that has gfmTable's shape with the
 		// line after it, even when Tokenizer.table then rejects the rows.
 		{"a\n2. b\n---\n", `p:"a" | ol[(p:"b")] | hr`},

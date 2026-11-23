@@ -875,7 +875,8 @@ func (l *blockLexer) tryTable(start int) (*Block, bool) {
 	// Tokenizer.table rejects a header whose cell count differs from the
 	// delimiter row's (marked 18.0.11): `x y\n:-: | -` is a paragraph.
 	headers := splitTableRow(header.text)
-	if len(headers) != len(aligns) {
+	// The header is `([^\n ].*)\n`, and `.` stops at U+2028 and U+2029.
+	if len(headers) != len(aligns) || strings.ContainsAny(header.text, "\u2028\u2029") {
 		return nil, false
 	}
 	table := &Block{Kind: BlockTable, Start: start, Align: aligns}
@@ -897,7 +898,7 @@ func (l *blockLexer) tryTable(start int) (*Block, bool) {
 			}
 			break
 		}
-		if startsOtherBlock(ln.text) {
+		if tableBodyEnds(ln.text) {
 			break
 		}
 		table.Rows = append(table.Rows, tableRowCells(ln.text, len(aligns)))
@@ -908,22 +909,45 @@ func (l *blockLexer) tryTable(start int) (*Block, bool) {
 	return table, true
 }
 
-// startsOtherBlock reports whether a line starts a block that ends a table
-// body: a heading, fence, thematic break, blockquote, list, HTML block or
-// indented code.
-func startsOtherBlock(line string) bool {
-	if _, _, ok := atxHeading(line); ok {
+// tableBodyEnds reports a line that ends a table body: the negative lookahead
+// of marked's table row rule, `(?! *\n|hr|heading|blockquote|code|fences|list|html)`
+// (marked 18.0.11). Its list alternative is ` {0,3}(?:[*+-]|1[.)])[ \t]`, which
+// needs no content after the marker, unlike the paragraph's, and its html
+// alternative is the paragraph's: block tags only, at the very line start, so
+// `<b>x` and `  <div>` are rows. A row is `.*`, which stops at U+2028 and
+// U+2029, so a line holding one ends the body too.
+func tableBodyEnds(line string) bool {
+	if isThematicBreak(line) || lheadingHeadingStart(line) || isBlockquoteStart(line) || tableRowExcluded(line) {
 		return true
 	}
 	if _, _, ok := fenceStart(line); ok {
 		return true
 	}
-	if isThematicBreak(line) || isBlockquoteStart(line) || startsHTMLLine(line) || indentWidth(line) >= 4 {
+	if tableListStart(line) {
 		return true
 	}
-	// The row rule is marked's paragraph-interrupt test, so an ordered marker
-	// other than `1.` does not end the body: `5. x` becomes a row.
-	return listMarkerInterrupts(line)
+	if line != "" && line[0] == '<' && quoteHTMLInterrupt.MatchString(line) {
+		return true
+	}
+	return strings.ContainsAny(line, "\u2028\u2029")
+}
+
+// tableListStart is the table rule's list alternative,
+// ` {0,3}(?:[*+-]|1[.)])[ \t]`.
+func tableListStart(line string) bool {
+	i := 0
+	for i < len(line) && i < 3 && line[i] == ' ' {
+		i++
+	}
+	switch {
+	case strings.HasPrefix(line[i:], "1.") || strings.HasPrefix(line[i:], "1)"):
+		i += 2
+	case i < len(line) && (line[i] == '*' || line[i] == '+' || line[i] == '-'):
+		i++
+	default:
+		return false
+	}
+	return i < len(line) && (line[i] == ' ' || line[i] == '\t')
 }
 
 // tableRowCells splits a table row and fits it to the table's column count the
