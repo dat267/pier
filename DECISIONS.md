@@ -8846,6 +8846,15 @@ TypeScript 12.0 ms to 10.5 ms, marked 15.9 ms to 11.6 ms,
 `BenchmarkHighlightJSONDocument` 2.05 ms to 1.74 ms, `BenchmarkHighlightGo`
 1.43 ms to 1.38 ms, Markdown unchanged.
 
+Each walked rule is then compiled into its own node type that holds, for a
+one-rune node, a bitmap of the ASCII bytes it matches, so most class and
+literal tests are one bit test instead of a rune decode and a range scan
+(which had been 8% of the TypeScript profile). Same method: TypeScript 10.5 ms
+to 9.7 ms, now faster than the reference's 9.9 ms (19.9 ms before D522),
+marked 11.6 ms to 11.3 ms, `BenchmarkHighlightJSONDocument` 1.74 ms to
+1.69 ms, `BenchmarkHighlightGo` 1.38 ms to 1.34 ms, Markdown unchanged (10
+paired rounds).
+
 Tests: `TestExactWalkMatchesTheRegexp`,
 `TestEndRulesKeepGroupsOnlyWhereOnEndReadsThem`.
 

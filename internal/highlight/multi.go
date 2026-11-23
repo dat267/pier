@@ -82,7 +82,7 @@ type multiRegex struct {
 	prefilters []*syntax.Regexp
 	// exacts holds each rule's parsed form for matchExactAt, or nil when the
 	// walk can not decide the rule (D523); ruleGroups is each rule's group.
-	exacts     []*syntax.Regexp
+	exacts     []*exactNode
 	ruleGroups []int
 	subs       [256]*multiRegex
 	subsMu     sync.Mutex
@@ -196,7 +196,7 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 	// a rule can begin at any byte.
 	m.ruleFirst = make([]string, len(m.regexes))
 	m.prefilters = make([]*syntax.Regexp, len(m.regexes))
-	m.exacts = make([]*syntax.Regexp, len(m.regexes))
+	m.exacts = make([]*exactNode, len(m.regexes))
 	for i, source := range m.regexes {
 		prepared := preparePattern(source)
 		m.prefilters[i] = rulePrefilter(prepared, caseInsensitive)
