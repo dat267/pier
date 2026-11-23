@@ -3,6 +3,7 @@ package highlight
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 	"unicode/utf8"
 )
@@ -103,4 +104,33 @@ func codeUnitIndices(encoded string, offsets []int) []int {
 		out[i] = utf8.RuneCountInString(encoded[:offset])
 	}
 	return out
+}
+
+// The word-at-a-time astral scan and the byte-search line-end scan agree
+// with the rune-by-rune scans they replaced, including invalid UTF-8, a lead
+// byte after a broken sequence, and every offset around an eight-byte word.
+func TestInputScansMatchRuneScans(t *testing.T) {
+	runeAstral := func(s string) bool {
+		for i := 0; i < len(s); {
+			r, width := utf8.DecodeRuneInString(s[i:])
+			if r > 0xFFFF {
+				return true
+			}
+			i += width
+		}
+		return false
+	}
+	pieces := []string{"a", "é", "日", "😀", "\r", "\n", " ", " ", "\xe2\x80", "\xf0\x9f", "\xf0", "\xff", "\xe2\xf0\x9f\x98\x80", "\xf4\x90\x80\x80"}
+	for _, piece := range pieces {
+		for pad := range 17 {
+			for _, s := range []string{strings.Repeat("x", pad) + piece, piece + strings.Repeat("y", pad), strings.Repeat("z", pad) + piece + strings.Repeat("w", 9)} {
+				if got, want := containsAstral(s), runeAstral(s); got != want {
+					t.Errorf("containsAstral(%q) = %v, want %v", s, got, want)
+				}
+				if got, want := nonLFLineEnds(s), strings.ContainsAny(s, "\r  "); got != want {
+					t.Errorf("nonLFLineEnds(%q) = %v, want %v", s, got, want)
+				}
+			}
+		}
+	}
 }

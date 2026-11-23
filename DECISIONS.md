@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D531)
+# Deliberate divergences from pi (D1–D532)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9317,3 +9317,24 @@ differentials and a 25 s fuzz run.
 No test: the branch is unreachable for any input, since the loop body has no
 effect when there are no manual rules, and the goldens already cover every mode
 that has them.
+
+### D532
+
+**The per-input scans for astral runes and non-`\n` line ends skip ASCII in bulk.**
+
+Reference: pi v1.6.0 (`faac5858`) runs highlight.js 10.7.3 on JavaScript
+strings, which need neither scan. The port checks every input once for an
+astral rune (to switch to its code-unit encoding) and once for `\r`, U+2028 or
+U+2029 (to switch to JavaScript line semantics). `nonLFLineEnds` used
+`strings.ContainsAny`, which decodes its multi-byte argument and so searches
+rune by rune, and `containsAstral` decoded every rune. On 24 KiB of plain text
+the two cost 170 us of a 175 us highlight, against highlight.js's 6 us for the
+whole call, and the same 170 us was paid by every language's highlight of that
+size.
+
+`nonLFLineEnds` is now three byte searches, and `containsAstral` skips eight
+ASCII bytes at a time and decodes only at a four-byte lead byte (0xF0 and up),
+which is never a continuation byte, so it sees exactly the runes the
+rune-by-rune scan saw. Plain text, 24 KiB: 170.7 us to 4.37 us (highlight.js
+6 us). `TestInputScansMatchRuneScans` pins both to the scans they replaced,
+over invalid UTF-8 and every offset around a word.

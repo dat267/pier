@@ -49,18 +49,29 @@ func encodeCodeUnitsString(s string) string {
 }
 
 func containsAstral(s string) bool {
+	// An astral rune is a four-byte sequence, and its lead byte (0xF0-0xF4)
+	// is never a continuation byte, so only those bytes need decoding: a
+	// rune-by-rune scan reaches every one of them. ASCII is skipped a word at
+	// a time; this runs over every highlighted input.
 	for i := 0; i < len(s); {
-		r, width := utf8.DecodeRuneInString(s[i:])
-		if r > 0xFFFF {
-			return true
-		}
-		if r == utf8.RuneError && width == 1 {
-			i++
+		if i+8 <= len(s) && asciiWord(s[i:i+8]) {
+			i += 8
 			continue
 		}
-		i += width
+		if s[i] >= 0xF0 {
+			if r, _ := utf8.DecodeRuneInString(s[i:]); r > 0xFFFF {
+				return true
+			}
+		}
+		i++
 	}
 	return false
+}
+
+// asciiWord reports whether the eight bytes of w are all ASCII.
+func asciiWord(w string) bool {
+	return (uint64(w[0])|uint64(w[1])<<8|uint64(w[2])<<16|uint64(w[3])<<24|
+		uint64(w[4])<<32|uint64(w[5])<<40|uint64(w[6])<<48|uint64(w[7])<<56)&0x8080808080808080 == 0
 }
 
 // decodeCodeUnits reverses encodeCodeUnits. A lone mapped half is a split
