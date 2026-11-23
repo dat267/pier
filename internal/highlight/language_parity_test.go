@@ -733,3 +733,39 @@ func TestHTTPGuards(t *testing.T) {
 		}
 	}
 }
+
+// TestAnchoredSpaceGuards pins the hand-written guards for mipsasm's `(?!\s*$)`
+// and protobuf's `(?=\s*=[^\n]+;$)`, both of which were `\A`-anchored regexps
+// with an unbounded `\s*` and cost 120 us per call on a 24 KiB tail
+// (languages/mipsasm.js and languages/protobuf.js in pi v1.6.0, faac5858).
+// JavaScript's `\s` is not ASCII-only, so a byte-only scan loses U+00A0,
+// U+3000 and U+2028 as whitespace.
+func TestAnchoredSpaceGuards(t *testing.T) {
+	for _, tc := range []struct {
+		language string
+		code     string
+		want     string
+	}{
+		// `\s*$` matches: a comment of the marker and whitespace only.
+		{"mipsasm", "#\n", "#\n"},
+		{"mipsasm", "# x\n", `<span class="hljs-comment"># x</span>`},
+		{"mipsasm", "#\u00a0\n", "#\u00a0\n"},
+		{"mipsasm", "#\u3000\n", "#\u3000\n"},
+		{"mipsasm", "#\u2028\n", "#\u2028\n"},
+		// `\s*=[^\n]+;$` decides where the enum group ends, so a non-ASCII
+		// space before `=` must still be seen as whitespace.
+		{"protobuf", "enum E { A = 1; }", `<span class="hljs-class">`},
+		{"protobuf", "enum E { A\u00a0= 1; }", `<span class="hljs-class">`},
+		{"protobuf", "enum E { A　= 1; }", `<span class="hljs-class">`},
+		{"protobuf", "enum E { A = 1\n}", `<span class="hljs-class">`},
+	} {
+		result, err := Highlight(tc.code, tc.language)
+		if err != nil {
+			t.Fatalf("%s %q: %v", tc.language, tc.code, err)
+		}
+		got := RenderHTML(result.Nodes)
+		if !strings.Contains(got, tc.want) {
+			t.Errorf("%s %q: HTML %q; want it to contain %q", tc.language, tc.code, got, tc.want)
+		}
+	}
+}

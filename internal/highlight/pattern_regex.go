@@ -25,6 +25,53 @@ func nonLFLineEnds(s string) bool { return strings.ContainsAny(s, "\r\u2028\u202
 
 func jsLineEnd(r rune) bool { return r == '\n' || r == '\r' || r == '\u2028' || r == '\u2029' }
 
+// isJSSpaceByte reports whether an ASCII byte is JavaScript `\s`. A byte at or
+// above utf8.RuneSelf is not whitespace on its own: the multi-byte members of
+// `\s` (U+00A0 and the rest) must be checked with jsSpaceWidth.
+func isJSSpaceByte(c byte) bool {
+	switch c {
+	case ' ', '\t', '\n', '\r', '\f', '\v':
+		return true
+	}
+	return false
+}
+
+// jsSpaceWidth returns the width of the JavaScript `\s` character at s[i], or 0
+// when there is none. `\s` is not ASCII-only: U+00A0, U+1680, U+2000-200A,
+// U+2028, U+2029, U+202F, U+205F, U+3000 and U+FEFF are members.
+func jsSpaceWidth(s string, i int) int {
+	if i >= len(s) {
+		return 0
+	}
+	if c := s[i]; c < utf8.RuneSelf {
+		if isJSSpaceByte(c) {
+			return 1
+		}
+		return 0
+	}
+	r, width := utf8.DecodeRuneInString(s[i:])
+	switch r {
+	case 0x00A0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF:
+		return width
+	}
+	if r >= 0x2000 && r <= 0x200A {
+		return width
+	}
+	return 0
+}
+
+// skipJSSpace returns the offset after every JavaScript whitespace character
+// starting at i.
+func skipJSSpace(s string, i int) int {
+	for {
+		w := jsSpaceWidth(s, i)
+		if w == 0 {
+			return i
+		}
+		i += w
+	}
+}
+
 func (re *patternRegexp) compileJS() {
 	parsed, err := syntax.Parse(re.String(), syntax.Perl)
 	if err != nil {

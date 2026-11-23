@@ -4,14 +4,20 @@ func init() { RegisterLanguage("mipsasm", MIPSASM()) }
 
 // mipsasmCommentGuard is the reference's `(?!\s*$)` lookahead on the comment
 // rule: a `;` or `#` at the end of a line is not a comment.
-var mipsasmCommentGuard = mustCompileJS(`\A\s*$`)
+//
+// Hand-written, like D526 and D529: an `\A`-anchored regexp with an unbounded
+// `\s*` and an end anchor costs a full pass over the remaining input per call
+// (120 us on a 24 KiB tail), and this runs at every candidate.
+func mipsasmCommentGuard(s string) bool {
+	return skipJSSpace(s, 0) == len(s)
+}
 
 // MIPSASM returns the MIPS Assembly language definition (a port of
 // languages/mipsasm.js).
 func MIPSASM() *Language {
 	comment := CommentMode(`[;#]`, `$`)
 	comment.beforeBegin = func(m *match, resp *Response) {
-		if mipsasmCommentGuard.MatchStringWS(m.input[m.index+1:], m.jsLines) {
+		if mipsasmCommentGuard(m.input[m.index+1:]) {
 			resp.IgnoreMatch()
 		}
 	}

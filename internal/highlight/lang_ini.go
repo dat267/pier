@@ -1,22 +1,20 @@
 package highlight
 
-import "unicode/utf8"
-
 func init() { RegisterLanguage("ini", INI()) }
 
 // iniKeyGuard ports the reference's `(?=\s*=\s*[^#\s])` lookahead on the dotted
 // key. Hand-written for the same reason as scanIniKey: an `\A`-anchored regexp
 // that cannot be prefixed costs a full pass over the remaining input per call.
 func iniKeyGuard(s string) bool {
-	i := skipIniSpace(s, 0)
+	i := skipJSSpace(s, 0)
 	if i >= len(s) || s[i] != '=' {
 		return false
 	}
-	i = skipIniSpace(s, i+1)
+	i = skipJSSpace(s, i+1)
 	if i >= len(s) {
 		return false
 	}
-	if _, isSpace := iniSpaceAt(s, i); isSpace || s[i] == '#' {
+	if jsSpaceWidth(s, i) > 0 || s[i] == '#' {
 		return false
 	}
 	return true
@@ -112,11 +110,11 @@ func scanIniKey(s string, pos int) (int, bool) {
 	for {
 		// `\s*\.\s*` then another segment; a failed iteration stops the loop
 		// without consuming, which is what the regexp's star does.
-		i := skipIniSpace(s, end)
+		i := skipJSSpace(s, end)
 		if i >= len(s) || s[i] != '.' {
 			return end, true
 		}
-		afterDot := skipIniSpace(s, i+1)
+		afterDot := skipJSSpace(s, i+1)
 		next, ok := scanIniKeySegment(s, afterDot)
 		if !ok {
 			// The regexp backtracks to the shorter match that stops before the
@@ -160,41 +158,4 @@ func scanIniKeySegment(s string, pos int) (int, bool) {
 
 func isIniKeyByte(c byte) bool {
 	return c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '_' || c == '-'
-}
-
-// iniSpaceAt reports whether a JavaScript `\s` starts at s[i], returning the
-// width to skip. JS whitespace is not ASCII-only: U+00A0, U+1680, U+2000-200A,
-// U+2028, U+2029, U+202F, U+205F and U+3000 are members, and U+FEFF too.
-func iniSpaceAt(s string, i int) (int, bool) {
-	if i >= len(s) {
-		return 0, false
-	}
-	if c := s[i]; c < utf8.RuneSelf {
-		switch c {
-		case ' ', '\t', '\n', '\r', '\f', '\v':
-			return 1, true
-		}
-		return 0, false
-	}
-	r, width := utf8.DecodeRuneInString(s[i:])
-	switch r {
-	case 0x00A0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF:
-		return width, true
-	}
-	if r >= 0x2000 && r <= 0x200A {
-		return width, true
-	}
-	return 0, false
-}
-
-// skipIniSpace returns the offset after every JavaScript whitespace character
-// starting at i.
-func skipIniSpace(s string, i int) int {
-	for {
-		width, ok := iniSpaceAt(s, i)
-		if !ok {
-			return i
-		}
-		i += width
-	}
 }

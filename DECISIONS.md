@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D529)
+# Deliberate divergences from pi (D1–D530)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9204,3 +9204,29 @@ Output is unchanged: the goldens, the differentials, a 30 s fuzz run and the
 107,297-byte HTTP render byte for byte against the reference.
 
 Test: `TestHTTPGuards`.
+
+### D530
+
+**Mipsasm's and protobuf's whitespace guards are hand-written, and share one
+JavaScript `\s` scanner.**
+
+The third and fourth instances of D526's defect, found by timing every
+`\A`-anchored guard in the tree. Mipsasm's comment rule opens with `(?!\s*$)`
+and protobuf's enum rule with `(?=\s*=[^\n]+;$)` (languages/mipsasm.js,
+languages/protobuf.js in pi v1.6.0, faac5858). Both ran as `\A`-anchored Go
+regexps, and an unbounded `\s*` before an anchor makes Go scan the whole
+remaining input: 120 us per call on a 24 KiB tail, at every candidate.
+
+`mipsasmCommentGuard` and `protobufEnumGuard` scan directly over `skipJSSpace`,
+which is now the single JavaScript `\s` scanner in the tree: INI's own copy
+(D526) is folded into it rather than kept as a second implementation.
+JavaScript's `\s` is not ASCII-only, so `jsSpaceWidth` covers U+00A0, U+1680,
+U+2000-200A, U+2028, U+2029, U+202F, U+205F, U+3000 and U+FEFF. A byte-only scan
+loses them, which the test pins for mipsasm (`#\u00a0\n` is a comment of the
+marker and whitespace) and protobuf (`A\u3000= 1;` still sees the space).
+
+Both guards cost 4-5 ns on the same 24 KiB tail, so 120 us became 5 ns. Output
+is unchanged: the goldens, the differentials and a 30 s fuzz run.
+
+Tests: `TestAnchoredSpaceGuards`, and `TestIniDottedKeyScan` for the folded
+INI path.
