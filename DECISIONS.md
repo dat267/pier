@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D535)
+# Deliberate divergences from pi (D1–D536)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9435,3 +9435,39 @@ counted as a rejection that ran the regexp, so 256 such lines would have cut
 off the rest of the input (D351). `TestBeginLineRuleKeepsTheDispatch`,
 `TestLineStartManualKeepsTheDispatch` and
 `TestLineStartRejectionsAreNotCounted` pin them.
+
+### D536
+
+**`^`-led rules leave the candidate table when it would pass the cap, and a
+prefix rule's match is computed, not taken as empty.**
+
+Reference: pi v1.6.0 (`faac5858`) runs highlight.js 10.7.3. basic's
+`illegal: '^.'` (languages/basic.js) has first bytes covering nearly every
+byte, so basic's root rule set was past the dispatch table's 240-byte cap and
+ran the joined regexp's NFA on every call: 27.8 ms on a 24 KiB sample against
+the reference's 6.0 ms. As D535 does for line-start manual rules, a rule led by
+`^` keeps its bytes in its own submatchers and, when the full table would pass
+the cap, stays out of the candidate table, with `execDispatch` visiting line
+starts for it. Under the cap the bytes stay in: a sparse table puts the next
+candidate far ahead, and each exec call scans to it again (stata went from
+3.9 ms to 48 ms when every `^`-led rule left). basic now takes 4.0 ms (0.64x),
+and autohotkey 2.1 ms against 3.6 ms.
+
+Visiting more line starts exposed three defects, fixed with it:
+
+- `subMatcher` did not cache a byte with no rule, so each such line start
+  built and discarded a matcher (104 MB per stata highlight).
+- `beginLineMatch` took a prefix rule (`^[ \t]*`, D524) as an empty match.
+  armasm's `^[ \t]*(?=#)` comment begin (languages/armasm.js) then had its
+  lookahead guard read the indentation, so an indented `#` comment was plain
+  text, where the reference colours it. Its match now comes from the walk, or
+  from the rule's anchored regexp, with groups when a callback reads them.
+  julia-repl's bare `^` end, whose onEnd reads its groups, gets them built
+  directly rather than leaving the rule set to the regexp.
+- A second prefix rule in one rule set was silently never matched; such a set
+  now keeps the regexp.
+
+The 191 samples and their CRLF variants render byte for byte as
+highlight.js does, and the differentials are unchanged.
+`TestLineLedRulesKeepTheDispatch` pins basic's dispatch and the armasm
+comments; `TestIgnoredZeroWidthEndAdvances` covers julia-repl.

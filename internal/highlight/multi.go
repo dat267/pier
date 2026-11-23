@@ -101,9 +101,17 @@ type multiRegex struct {
 	// which is a candidate offset no first-byte set can express, so it is
 	// excluded from the first-byte union and checked at line starts instead.
 	beginLineRule int
-	// lineStartManuals is whether a manual rule is lineStart, so execDispatch
-	// visits line starts for it.
+	// beginLineBare is whether that rule is a bare `^`; otherwise it is a
+	// prefix rule such as `^[ \t]*`, whose match beginLineMatch computes with
+	// the walk or beginLineRe.
+	beginLineBare bool
+	beginLineRe   *patternRegexp
+	beginLineAtRe *patternRegexp
+	// lineStartManuals is whether a manual rule is lineStart, and
+	// lineStartRules whether a regex rule is led by `^`, so execDispatch
+	// visits line starts for them.
 	lineStartManuals bool
+	lineStartRules   bool
 	subs             [256]*multiRegex
 	subsMu           sync.Mutex
 	manuals          []manualRule
@@ -116,6 +124,7 @@ type multiRegex struct {
 	// leading byte (for example Cyrillic).
 	firstByteTable [256]bool
 	hasFirstBytes  bool
+	firstByteCount int
 	// verifyStart is set when a match can evaluate a context-sensitive
 	// assertion before consuming, in which case verifyRe (the same alternation
 	// prefixed with a single-char wildcard) decides whether a boundary match
@@ -228,6 +237,7 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 	}
 	usable := true
 	var union [256]bool
+	lineLed := make([]bool, len(m.regexes))
 	for i, source := range m.regexes {
 		set, ok := ruleFirstByteSet(preparePattern(source), caseInsensitive)
 		if !ok && isEndLineRule(preparePattern(source)) {
@@ -247,9 +257,11 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 			// checked at line starts and contributes no candidate byte. Without
 			// this one such rule disabled the dispatch for the whole rule set,
 			// which left armasm on the joined regexp for 81% of its profile.
-			if m.beginLineRule < 0 {
-				m.beginLineRule = i
+			if m.beginLineRule >= 0 {
+				usable = false // beginLineMatch serves one such rule
+				break
 			}
+			m.beginLineRule = i
 			set, ok = "", true
 		}
 		if !ok && isBeginLineRule(preparePattern(source)) {
@@ -260,8 +272,16 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 			// starts in execDispatch. Without this it had no first-byte set at
 			// all, which disabled the dispatch for every rule set containing one:
 			// markdown's root matcher paid a joined NFA scan per node instead.
+			// A later bare `^` never wins over an earlier bare one (both are
+			// empty at the same line start), so only the first is kept; after
+			// a prefix rule, which need not match, it would be lost.
+			if m.beginLineRule >= 0 && !m.beginLineBare {
+				usable = false
+				break
+			}
 			if m.beginLineRule < 0 {
 				m.beginLineRule = i
+				m.beginLineBare = true
 			}
 			set, ok = "", true
 		}
@@ -270,18 +290,58 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 			break
 		}
 		m.ruleFirst[i] = set
-		for j := range len(set) {
-			union[set[j]] = true
+		if beginsAtLineStart(preparePattern(source)) {
+			lineLed[i] = true
 		}
 	}
-	for _, mr := range m.manuals {
-		if mr.lineStart {
-			m.lineStartManuals = true
-			continue
+	// A rule led by `^` (basic's illegal `^.`) or a lineStart manual
+	// (autohotkey's titles) can only begin at a line start, which
+	// execDispatch can visit, so when the full table is past the cap their
+	// bytes stay in their own submatchers but out of the candidate table:
+	// `^.` alone covers nearly every byte and would disable the dispatch for
+	// the whole rule set. Under the cap they stay in, since a sparse table
+	// puts the next candidate far ahead and each exec call scans to it again.
+	for pass := range 2 {
+		union = [256]bool{}
+		for i, set := range m.ruleFirst {
+			if pass == 1 && lineLed[i] {
+				m.lineStartRules = true
+				continue
+			}
+			for j := range len(set) {
+				union[set[j]] = true
+			}
 		}
-		for i := range len(mr.firsts) {
-			union[mr.firsts[i]] = true
+		for _, mr := range m.manuals {
+			if pass == 1 && mr.lineStart {
+				m.lineStartManuals = true
+				continue
+			}
+			for j := range len(mr.firsts) {
+				union[mr.firsts[j]] = true
+			}
 		}
+		count := 0
+		for j := range 256 {
+			if union[j] {
+				count++
+			}
+		}
+		if count <= 240 {
+			break
+		}
+	}
+	if usable && m.beginLineRule >= 0 && !m.beginLineBare {
+		source := m.regexes[m.beginLineRule]
+		plain, err := compileEncodedPattern(`\A(?:`+source+`)`, flags)
+		if err != nil {
+			return err
+		}
+		at, err := compileEncodedPattern(`\A(?s:.)(?:`+source+`)`, flags)
+		if err != nil {
+			return err
+		}
+		m.beginLineRe, m.beginLineAtRe = plain, at
 	}
 	if usable {
 		count := 0
@@ -290,9 +350,13 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 				count++
 			}
 		}
-		if count > 0 && count <= 240 {
+		lineStarts := m.beginLineRule >= 0 || m.lineStartManuals || m.lineStartRules
+		if (count > 0 || lineStarts) && count <= 240 {
+			// With line-start rules the table may be empty: every candidate
+			// is then a line start.
 			m.firstByteTable = union
 			m.hasFirstBytes = true
+			m.firstByteCount = count
 		}
 	}
 	// A single rule dispatches too when the walk can settle it: execScan's
@@ -316,7 +380,7 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 // indexFirstByte returns the first index at or after from whose byte can begin
 // a match, or -1.
 func (m *multiRegex) indexFirstByte(s string, from int) int {
-	if !m.hasFirstBytes {
+	if !m.hasFirstBytes || m.firstByteCount == 0 {
 		return -1
 	}
 	for i := from; i < len(s); i++ {
@@ -329,10 +393,16 @@ func (m *multiRegex) indexFirstByte(s string, from int) int {
 
 // subMatcher returns a matcher containing only the regex rules that can begin
 // with byte b, anchored at the search position, or nil when none can.
+// noSubMatcher marks a byte subMatcher found no rule for.
+var noSubMatcher = &multiRegex{}
+
 func (m *multiRegex) subMatcher(b byte) *multiRegex {
 	m.subsMu.Lock()
 	defer m.subsMu.Unlock()
 	if m.subs[b] != nil {
+		if m.subs[b] == noSubMatcher {
+			return nil
+		}
 		return m.subs[b]
 	}
 	sub := newMultiRegex()
@@ -346,6 +416,8 @@ func (m *multiRegex) subMatcher(b byte) *multiRegex {
 		sub.exacts = append(sub.exacts, m.exacts[i])
 	}
 	if len(sub.regexes) == 0 {
+		// Cached too: a line start reaches bytes no rule begins with.
+		m.subs[b] = noSubMatcher
 		return nil
 	}
 	var body strings.Builder
@@ -445,13 +517,18 @@ const maxRejectedCandidates = 256
 func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsWorkspace) *match {
 	search := lastIndex
 	rejected := 0
+	candidate := -2
 	for search <= len(s) {
 		// The next position where some rule can begin: a first byte of the
 		// table, or a line start for a `^` rule, which the table cannot
-		// express because its match sits after the terminator's byte.
-		candidate := m.indexFirstByte(s, search)
+		// express because its match sits after the terminator's byte. A
+		// candidate past a line start is kept for the next round rather than
+		// scanned for again from each line start.
+		if candidate < search && candidate != -1 {
+			candidate = m.indexFirstByte(s, search)
+		}
 		lineStart := -1
-		if m.beginLineRule >= 0 || m.lineStartManuals {
+		if m.beginLineRule >= 0 || m.lineStartManuals || m.lineStartRules {
 			lineStart = nextLineStart(s, search, jsLines)
 		}
 		pos := candidate
@@ -468,7 +545,7 @@ func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsW
 		found, decided := m.dispatchAt(s, pos, jsLines, ws)
 		// The `^` rule's match is empty, so it competes with a non-empty match
 		// at the same position by rule order, as the joined alternation does.
-		lm := m.beginLineMatch(s, pos, jsLines)
+		lm := m.beginLineMatch(s, pos, jsLines, ws)
 		// The empty `$` rule matches at the end of the input; `^` can match
 		// there too (after a final terminator), so both compete by order.
 		if pos == len(s) {
@@ -613,6 +690,19 @@ func isBeginLinePrefixRule(expr string) bool {
 
 // isBeginLineRule reports whether a prepared rule is only `^` (possibly in
 // groups), which the m flag makes a begin-of-line assertion.
+// beginsAtLineStart is whether expr's leading element is `^` (the m flag's
+// line start), so it can only match at a line start.
+func beginsAtLineStart(expr string) bool {
+	re := parseExactPattern(expr, false)
+	for re != nil && (re.Op == syntax.OpCapture || re.Op == syntax.OpConcat) {
+		if len(re.Sub) == 0 {
+			return false
+		}
+		re = re.Sub[0]
+	}
+	return re != nil && re.Op == syntax.OpBeginLine
+}
+
 func isBeginLineRule(expr string) bool {
 	re := parseExactPattern(expr, false)
 	for re != nil && re.Op == syntax.OpCapture {
@@ -623,7 +713,7 @@ func isBeginLineRule(expr string) bool {
 
 // beginLineMatch is the empty match of the `^` rule at a line start, or nil
 // when the rule set has none or pos is not a line start.
-func (m *multiRegex) beginLineMatch(s string, pos int, jsLines bool) *match {
+func (m *multiRegex) beginLineMatch(s string, pos int, jsLines bool, ws *jsWorkspace) *match {
 	if m.beginLineRule < 0 {
 		return nil
 	}
@@ -632,13 +722,83 @@ func (m *multiRegex) beginLineMatch(s string, pos int, jsLines bool) *match {
 	}
 	group := m.ruleGroups[m.beginLineRule]
 	data := m.matchIndexes[group]
+	if !m.beginLineBare {
+		return m.beginLinePrefixMatch(s, pos, jsLines, ws, group, data)
+	}
+	var groups []int
 	if data.keepGroups {
-		return nil // the regexp reports the groups
+		// The rule is `^`, perhaps inside groups: every one of them is the
+		// empty match at pos, as the regexp's submatches would be.
+		groups = make([]int, 2*(group+m.ruleCaps[m.beginLineRule]+1))
+		for k := range groups {
+			groups[k] = -1
+			if k >= 2*group {
+				groups[k] = pos
+			}
+		}
 	}
 	return &match{
 		index:     pos,
 		typ:       data.typ,
 		rule:      data.rule,
+		groups:    groups,
+		input:     s,
+		position:  data.position,
+		groupBase: group,
+		jsLines:   jsLines,
+	}
+}
+
+// beginLinePrefixMatch is beginLineMatch for a prefix rule (`^[ \t]*`): its
+// match need not be empty, and a guard reads the text after it (armasm's
+// indented `#` comment), so the walk or the regexp gives its end.
+func (m *multiRegex) beginLinePrefixMatch(s string, pos int, jsLines bool, ws *jsWorkspace, group int, data matchData) *match {
+	end := -1
+	var groups []int
+	if exact := m.exacts[m.beginLineRule]; exact != nil && !data.keepGroups {
+		e, result := matchExactAt(exact, s, pos, jsLines, ws)
+		switch result {
+		case exactNoMatch:
+			return nil
+		case exactMatched:
+			end = e
+		}
+	}
+	if end < 0 {
+		var loc []int
+		base := 0
+		if pos == 0 {
+			loc = m.beginLineRe.findSubmatchWS(s, jsLines, ws)
+		} else {
+			_, width := utf8.DecodeLastRuneInString(s[:pos])
+			base = pos - width
+			loc = m.beginLineAtRe.findSubmatchWS(s[base:], jsLines, ws)
+		}
+		if loc == nil {
+			return nil
+		}
+		end = base + loc[1]
+		if data.keepGroups {
+			// loc's group k is the rule's group k; the match's groups put
+			// them after the wrapper group, as buildMatch's do.
+			groups = make([]int, 2*group+len(loc))
+			for k := range groups {
+				groups[k] = -1
+			}
+			groups[2*group], groups[2*group+1] = pos, end
+			for k := 2; k < len(loc); k++ {
+				if loc[k] >= 0 {
+					groups[2*group+k] = base + loc[k]
+				}
+			}
+		}
+	}
+	return &match{
+		index:     pos,
+		lexeme:    s[pos:end],
+		typ:       data.typ,
+		rule:      data.rule,
+		groups:    groups,
 		input:     s,
 		position:  data.position,
 		groupBase: group,
@@ -683,7 +843,9 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 		regexAbs := -1
 		var regexLoc []int
 		if m.matcherRe != nil {
-			if m.hasFirstBytes {
+			if m.hasFirstBytes && !m.lineStartManuals && !m.lineStartRules && m.beginLineRule < 0 {
+				// The table leaves out line-start rules (execDispatch visits
+				// line starts for them), so it is no filter for the scan then.
 				candidate := m.indexFirstByte(s, search)
 				if candidate < 0 {
 					return m.endOfInputMatch(s, jsLines)

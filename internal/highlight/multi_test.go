@@ -310,3 +310,46 @@ func TestLineStartRejectionsAreNotCounted(t *testing.T) {
 		t.Fatalf("got %+v, want the # at %d", got, len(input)-1)
 	}
 }
+
+// TestLineLedRulesKeepTheDispatch: highlight.js 10.7.3 (pi v1.6.0, faac5858)
+// gives basic the illegal `^.` (languages/basic.js), whose first bytes cover
+// nearly every byte and disabled the dispatch for basic's whole root rule set
+// (4.7x the reference's time). Past the table's cap, a `^`-led rule's bytes
+// stay out of the table and line starts are visited for it (D536). armasm's
+// `^[ \t]*` comment begin (languages/armasm.js, `^[ \t]*(?=#)`) is a prefix
+// rule served at line starts; its match used to be taken as empty, so the
+// lookahead guard read the indentation and an indented `#` comment was lost.
+// The HTML and relevance are highlight.js's.
+func TestLineLedRulesKeepTheDispatch(t *testing.T) {
+	lang, err := getCompiledLanguage("basic")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if root := lang.root.matcher.getMatcher(0); !root.dispatch || !root.lineStartRules {
+		t.Fatalf("basic's root matcher: dispatch %v, lineStartRules %v", root.dispatch, root.lineStartRules)
+	}
+	for _, test := range []struct {
+		language, code, html string
+		relevance            int
+	}{
+		{
+			"basic", "10 PRINT \"HI\"\n20 GOTO 10 ' loop\n  x = &H1F\r\n30 REM done\n",
+			"<span class=\"hljs-symbol\">10 </span><span class=\"hljs-keyword\">PRINT</span> <span class=\"hljs-string\">&quot;HI&quot;</span>\n<span class=\"hljs-symbol\">20 </span><span class=\"hljs-keyword\">GOTO</span> <span class=\"hljs-number\">10</span> <span class=\"hljs-comment\">&#x27; loop</span>\n  x = <span class=\"hljs-number\">&amp;H1F</span>\r\n<span class=\"hljs-symbol\">30 </span><span class=\"hljs-comment\">REM done</span>\n",
+			44,
+		},
+		{
+			"armasm", "  # x\nmov r0, #1\n\t#y\n",
+			"  <span class=\"hljs-comment\"># x</span>\n<span class=\"hljs-keyword\">mov</span> <span class=\"hljs-built_in\">r0</span>, <span class=\"hljs-number\">#1</span>\n\t<span class=\"hljs-comment\">#y</span>\n",
+			2,
+		},
+		{"armasm", "x\n   \n  #\n", "x\n   \n  <span class=\"hljs-comment\">#</span>\n", 0},
+	} {
+		result, err := HighlightWith(test.code, test.language, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if html := RenderHTML(result.Nodes); html != test.html || result.Relevance != test.relevance {
+			t.Errorf("%s %q:\n got %q (%d)\nwant %q (%d)", test.language, test.code, html, result.Relevance, test.html, test.relevance)
+		}
+	}
+}
