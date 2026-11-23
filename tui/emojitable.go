@@ -489,7 +489,7 @@ func isRGIEmoji(segment string) bool {
 	}
 	// ZWJ sequences are the explicit RGI list (emoji-zwj-sequences.txt); a chain
 	// Unicode never joined is not an RGI emoji and keeps its part-by-part width.
-	if containsRune(runes, 0x200D) {
+	if slices.Contains(runes, 0x200D) {
 		return isRGIEmojiZWJSequence(segment)
 	}
 	// Tag sequences (subdivision flags): a default-presentation emoji, one or
@@ -510,8 +510,4 @@ func isRGIEmoji(segment string) bool {
 
 func isKeycapBase(r rune) bool {
 	return (r >= '0' && r <= '9') || r == '#' || r == '*'
-}
-
-func containsRune(runes []rune, target rune) bool {
-	return slices.Contains(runes, target)
 }

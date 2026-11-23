@@ -802,7 +802,7 @@ func validateCompat(value any, path string, errors *[]validationError) {
 			}
 		case compatLiteral:
 			text, ok := entry.(string)
-			if !ok || !containsString(field.literals, text) {
+			if !ok || !slices.Contains(field.literals, text) {
 				*errors = append(*errors, validationError{path: fieldPath, message: "Expected union value"})
 			}
 		case compatChatTemplateRecord:
@@ -1074,7 +1074,7 @@ func validateLiteral(record map[string]any, name string, literals []string, path
 		return
 	}
 	text, ok := entry.(string)
-	if !ok || !containsString(literals, text) {
+	if !ok || !slices.Contains(literals, text) {
 		*errors = append(*errors, validationError{path: path + "." + name, message: "Expected union value"})
 	}
 }
@@ -1148,8 +1148,4 @@ func minLengthMessage(length int) string {
 
 func maxItemsMessage(count int) string {
 	return fmt.Sprintf("Expected array length less or equal to %d", count)
-}
-
-func containsString(values []string, wanted string) bool {
-	return slices.Contains(values, wanted)
 }

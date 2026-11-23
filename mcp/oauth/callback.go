@@ -132,10 +132,6 @@ func bracketHost(host string) string {
 	return host
 }
 
-func containsPath(paths []string, path string) bool {
-	return slices.Contains(paths, path)
-}
-
 func hasColon(host string) bool {
 	for _, r := range host {
 		if r == ':' {
@@ -237,7 +233,7 @@ func (s *OAuthCallbackServer) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	// JS URL.pathname retains escapes, unlike Go's decoded URL.Path.
 	path := parsed.EscapedPath()
-	if !containsPath(s.paths, path) {
+	if !slices.Contains(s.paths, path) {
 		s.reply(w, http.StatusNotFound, OAuthCallbackPage{OK: false, Message: "Not found"})
 		return
 	}

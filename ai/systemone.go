@@ -11,6 +11,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	"github.com/dat267/pier/internal/boundedio"
@@ -77,7 +78,7 @@ func classifySystemOne(transport systemOneTransport, model *Model, classifierCon
 			result = classifierFail(result, JSRecoveredError(recovered), options)
 		}
 	}()
-	if len(classifierContext.Images) > 0 && !containsString(model.Input, "image") {
+	if len(classifierContext.Images) > 0 && !slices.Contains(model.Input, "image") {
 		return classifierFail(result, fmt.Errorf("%s does not support image input for %s", transport.label, model.ID), options)
 	}
 	imageInput := resolveSystemOneImageInput(model, transport.detectImageInput)

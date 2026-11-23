@@ -203,15 +203,11 @@ func EnabledIdsFromPatterns(patterns []string, models []*ai.Model) *EnabledIds {
 		ids = append(ids, scoped.Model.Provider+"/"+scoped.Model.ID)
 	}
 	for _, diagnostic := range resolved.Diagnostics {
-		if diagnostic.Code == "no-match" && !containsID(ids, diagnostic.Pattern) {
+		if diagnostic.Code == "no-match" && !slices.Contains(ids, diagnostic.Pattern) {
 			ids = append(ids, diagnostic.Pattern)
 		}
 	}
 	return &EnabledIds{IDs: ids}
-}
-
-func containsID(ids []string, id string) bool {
-	return slices.Contains(ids, id)
 }
 
 // ShowModelsSelector opens the scoped-models selector with a catalog refresh.
@@ -259,7 +255,7 @@ func (w *ModelWiring) ShowModelsSelector(ctx context.Context) {
 				}
 			}
 			for id := range availableModelIDs {
-				if !containsID(enabledIds.IDs, id) {
+				if !slices.Contains(enabledIds.IDs, id) {
 					allAvailableEnabled = false
 				}
 			}

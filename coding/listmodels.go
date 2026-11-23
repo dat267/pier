@@ -2,6 +2,7 @@ package coding
 
 import (
 	"math"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -94,7 +95,7 @@ func ListModelsText(models []*ai.Model, searchPattern string) string {
 			context:  FormatTokenCount(model.ContextWindow),
 			maxOut:   FormatTokenCount(model.MaxTokens),
 			thinking: yesNo(model.Reasoning),
-			images:   yesNo(containsString(model.Input, "image")),
+			images:   yesNo(slices.Contains(model.Input, "image")),
 		})
 	}
 

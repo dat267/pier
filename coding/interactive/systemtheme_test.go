@@ -6,6 +6,7 @@ import (
 	"github.com/dat267/pier/tui"
 	"math"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -256,7 +257,7 @@ func TestSystemThemeIndexedFallback(t *testing.T) {
 			t.Errorf("%s = %v (want %v)", token, got.Colors[token], want)
 		}
 	}
-	if !systemHasString(got.Dim, "muted") {
+	if !slices.Contains(got.Dim, "muted") {
 		t.Errorf("dim = %v", got.Dim)
 	}
 	if value := GenerateSystemThemeColors(SystemThemeInput{Saturation: new(float64(0))}).Colors["error"]; value != "" {

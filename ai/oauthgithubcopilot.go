@@ -10,6 +10,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -669,7 +670,7 @@ func LoginGitHubCopilot(interaction *AuthInteraction) (*OAuthCredential, error) 
 	}
 	merged := append([]string{}, catalog.AvailableModelIDs...)
 	for _, modelID := range enabledModelIDs {
-		if !containsString(merged, modelID) {
+		if !slices.Contains(merged, modelID) {
 			merged = append(merged, modelID)
 		}
 	}

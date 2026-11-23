@@ -213,11 +213,6 @@ func CreateFuzzyAutocompleteItems[T any](items []T, prefix string, getSearchText
 	return result
 }
 
-// configContains reports whether a string list holds a value.
-func configContains(values []string, value string) bool {
-	return slices.Contains(values, value)
-}
-
 // GetLoginProviderCompletionOptions deduplicates the provider options and
 // merges their auth types.
 func GetLoginProviderCompletionOptions(providerOptions []AuthSelectorProvider) []LoginProviderCompletionOption {
@@ -226,7 +221,7 @@ func GetLoginProviderCompletionOptions(providerOptions []AuthSelectorProvider) [
 	for _, provider := range providerOptions {
 		existing, ok := byID[provider.ID]
 		if ok {
-			if !configContains(existing.AuthTypes, provider.AuthType) {
+			if !slices.Contains(existing.AuthTypes, provider.AuthType) {
 				existing.AuthTypes = append(existing.AuthTypes, provider.AuthType)
 				sort.SliceStable(existing.AuthTypes, func(i int, j int) bool {
 					return AuthTypeOrder[existing.AuthTypes[i]] < AuthTypeOrder[existing.AuthTypes[j]]

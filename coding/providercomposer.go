@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/dat267/pier/internal/jsnum"
 	"maps"
+	"slices"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -67,7 +68,7 @@ func mergeCompatObjects(baseRaw, overrideRaw []byte) ([]byte, error) {
 	base := decodeCompatObject(baseRaw)
 	override := decodeCompatObject(overrideRaw)
 	for key, value := range override {
-		if containsString(nestedCompatKeys, key) {
+		if slices.Contains(nestedCompatKeys, key) {
 			baseNested, baseIsObject := base[key].(map[string]any)
 			overrideNested, overrideIsObject := value.(map[string]any)
 			if baseIsObject || overrideIsObject {

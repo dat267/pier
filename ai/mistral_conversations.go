@@ -1056,7 +1056,7 @@ func buildMistralChatPayload(model *Model, context TranscriptContext, messages [
 	payload := &mistralChatPayload{
 		Model:    model.ID,
 		Stream:   true,
-		Messages: toMistralChatMessages(messages, containsString(model.Input, "image")),
+		Messages: toMistralChatMessages(messages, slices.Contains(model.Input, "image")),
 	}
 	currentTools := GetCurrentTools(context.Messages)
 	if len(currentTools) > 0 {
@@ -1111,10 +1111,6 @@ func shouldUseMistralPromptCaching(options *MistralOptions) bool {
 	}
 	retention := ResolveCacheRetention(options.CacheRetention, options.Env)
 	return retention != CacheRetentionNone && options.SessionID != ""
-}
-
-func containsString(values []string, target string) bool {
-	return slices.Contains(values, target)
 }
 
 func toMistralFunctionTools(tools []Tool, supportsStrictMode bool) ([]mistralFunctionTool, error) {

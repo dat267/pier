@@ -309,7 +309,7 @@ func (s *piSchema) coerceTypes(value *schemaValue, active map[piCoerceVisit]bool
 			}
 		}
 	}
-	if containsType(types, "object") && next.Object != nil {
+	if slices.Contains(types, "object") && next.Object != nil {
 		for _, key := range append([]string(nil), next.Object.keys...) {
 			field, _ := next.Object.get(key)
 			coerced := field
@@ -329,7 +329,7 @@ func (s *piSchema) coerceTypes(value *schemaValue, active map[piCoerceVisit]bool
 			}
 		}
 	}
-	if containsType(types, "array") && next.IsArray {
+	if slices.Contains(types, "array") && next.IsArray {
 		for i, item := range next.Array {
 			if schema := s.coerceItemAt(i); schema != nil {
 				next.Array[i] = schema.coerceTypes(item, active)
@@ -375,10 +375,6 @@ func patternMatches(s *piSchema, key string) bool {
 		}
 	}
 	return false
-}
-
-func containsType(types []string, want string) bool {
-	return slices.Contains(types, want)
 }
 
 func cloneSchemaValue(value *schemaValue) *schemaValue {

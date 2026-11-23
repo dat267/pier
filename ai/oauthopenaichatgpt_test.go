@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -153,7 +154,7 @@ func TestOpenAIChatGPTCredentialStoresClientIDAndScopes(t *testing.T) {
 		t.Fatalf("clientId = %s, %v", probe["clientId"], err)
 	}
 	var scopes []string
-	if err := json.Unmarshal(probe["scopes"], &scopes); err != nil || !containsString(scopes, OpenAIChatGPTDirectTokenScope) {
+	if err := json.Unmarshal(probe["scopes"], &scopes); err != nil || !slices.Contains(scopes, OpenAIChatGPTDirectTokenScope) {
 		t.Fatalf("scopes = %s, %v", probe["scopes"], err)
 	}
 	// A grant without the direct-token scope is rejected.

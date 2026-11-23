@@ -2,6 +2,7 @@ package ai
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 )
 
@@ -16,7 +17,7 @@ func marshalBedrockRequestMetadata(values map[string]string, preferred []string)
 	keys := append([]string(nil), preferred...)
 	remaining := make([]string, 0, len(values))
 	for key := range values {
-		if !containsString(keys, key) {
+		if !slices.Contains(keys, key) {
 			remaining = append(remaining, key)
 		}
 	}

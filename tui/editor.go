@@ -986,7 +986,7 @@ func (e *Editor) insertCharacterLocked(char string, skipUndoCoalescing bool) {
 	if e.autocompleteState == "" {
 		if char == "/" && e.isAtStartOfMessage() {
 			e.tryTriggerAutocompleteLocked()
-		} else if containsString(e.autocompleteTriggers, char) {
+		} else if slices.Contains(e.autocompleteTriggers, char) {
 			textBeforeCursor := e.textBeforeCursor()
 			if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers) {
 				e.tryTriggerAutocompleteLocked()
@@ -1014,10 +1014,6 @@ func isAutocompleteWordChar(char string) bool {
 		}
 	}
 	return containsCJKBreak(char)
-}
-
-func containsString(values []string, value string) bool {
-	return slices.Contains(values, value)
 }
 
 func (e *Editor) textBeforeCursor() string {
@@ -1157,7 +1153,7 @@ func (e *Editor) shouldSubmitOnBackslashEnter(data string, kb *KeybindingsManage
 		return false
 	}
 	submitKeys := kb.GetKeys("tui.input.submit")
-	hasShiftEnter := containsString(submitKeys, "shift+enter") || containsString(submitKeys, "shift+return")
+	hasShiftEnter := slices.Contains(submitKeys, "shift+enter") || slices.Contains(submitKeys, "shift+return")
 	if !hasShiftEnter {
 		return false
 	}
@@ -2368,7 +2364,7 @@ func (e *Editor) setAutocompleteTriggerCharactersLocked(triggerCharacters []stri
 	for _, character := range triggerCharacters {
 		// Upstream accepts a trigger only when String.length === 1 (UTF-16).
 		if ai.JSLength(character) != 1 || character == "/" || IsWhitespaceChar(character) ||
-			containsString(next, character) {
+			slices.Contains(next, character) {
 			continue
 		}
 		next = append(next, character)

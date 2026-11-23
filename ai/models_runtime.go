@@ -1266,7 +1266,7 @@ func (m *Models) Classify(model *Model, classifierContext ClassifierContext, opt
 	if model.Type != "classifier" {
 		return classifierErrorResult(model, NewModelsError(ErrCodeProvider, fmt.Sprintf("Model %s/%s is not a classifier model", model.Provider, model.ID), nil), &options.ClassifierOptions)
 	}
-	if len(classifierContext.Images) > 0 && !containsString(model.Input, "image") {
+	if len(classifierContext.Images) > 0 && !slices.Contains(model.Input, "image") {
 		return classifierErrorResult(model, NewModelsError(ErrCodeProvider, fmt.Sprintf("Model %s/%s does not accept image input", model.Provider, model.ID), nil), &options.ClassifierOptions)
 	}
 	provider, err := m.requireProvider(model)

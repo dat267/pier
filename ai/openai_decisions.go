@@ -10,6 +10,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/dat267/pier/internal/boundedio"
@@ -31,7 +32,7 @@ func (OpenAIDecisions) Classify(model *Model, classifierContext ClassifierContex
 	if model.API != APIOpenAIDecisions {
 		return classifierErrorResult(model, fmt.Errorf("Unsupported classifier API: %s", model.API), options)
 	}
-	if len(classifierContext.Images) > 0 && !containsString(model.Input, "image") {
+	if len(classifierContext.Images) > 0 && !slices.Contains(model.Input, "image") {
 		return classifierErrorResult(model, fmt.Errorf("Model %s/%s does not accept image input", model.Provider, model.ID), options)
 	}
 	if options == nil {

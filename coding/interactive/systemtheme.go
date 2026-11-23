@@ -398,11 +398,7 @@ func systemLevelTarget(level, appearance string, surfaceL float64) (float64, boo
 	return sum, true
 }
 
-func systemHasString(values []string, wanted string) bool {
-	return slices.Contains(values, wanted)
-}
-
-func systemIsPanel(token string) bool { return systemHasString(systemPanelTokens, token) }
+func systemIsPanel(token string) bool { return slices.Contains(systemPanelTokens, token) }
 
 func systemOkhslOf(color tui.RgbColor) tui.OkhslChannels { return tui.RgbToOkhsl(color) }
 
@@ -700,7 +696,7 @@ func systemIndexedColors(saturation float64, appearanceHint string) SystemThemeC
 		} else {
 			colors[token] = ""
 		}
-		if neutral && !systemHasString(systemForegroundTokens, token) {
+		if neutral && !slices.Contains(systemForegroundTokens, token) {
 			dim = append(dim, token)
 		}
 	}

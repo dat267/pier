@@ -273,7 +273,7 @@ func ApplyChange(current *GoalSnapshot, entry GoalChangeEntry) (*GoalSnapshot, e
 	if next.Revision != current.Revision+1 {
 		return nil, fmt.Errorf("discontinuous revision: expected %d, got %d", current.Revision+1, next.Revision)
 	}
-	if !containsPhase(goalTransitions[current.Phase], next.Phase) {
+	if !slices.Contains(goalTransitions[current.Phase], next.Phase) {
 		return nil, fmt.Errorf("illegal transition %s -> %s", current.Phase, next.Phase)
 	}
 	if expected, ok := goalExpectedPhase[entry.Operation]; ok && next.Phase != expected {
@@ -308,10 +308,6 @@ func validateBudget(budget *GoalBudget) error {
 }
 
 const maxSafeInteger = int64(1)<<53 - 1
-
-func containsPhase(phases []GoalPhase, phase GoalPhase) bool {
-	return slices.Contains(phases, phase)
-}
 
 // FoldGoal replays every durable entry into the current goal view. It returns
 // an error on corruption.

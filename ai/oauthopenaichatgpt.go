@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -374,7 +375,7 @@ func openAIChatGPTCredentialFromToken(token *openAIChatGPTTokenResponse, clientI
 		return nil, errors.New("OpenAI OAuth token response has invalid expires_in")
 	}
 	scopes := strings.Fields(token.Scope)
-	if !containsString(scopes, OpenAIChatGPTDirectTokenScope) {
+	if !slices.Contains(scopes, OpenAIChatGPTDirectTokenScope) {
 		return nil, fmt.Errorf("OpenAI OAuth grant did not include %s", OpenAIChatGPTDirectTokenScope)
 	}
 	encodedScopes, err := MarshalJSON(scopes)

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -270,7 +271,7 @@ func buildOpenRouterImagesParams(model *ImagesModel, context ImagesContext) open
 		}
 	}
 	modalities := []string{"image"}
-	if containsString(model.Output, "text") {
+	if slices.Contains(model.Output, "text") {
 		modalities = []string{"image", "text"}
 	}
 	return openRouterImagesParams{
