@@ -187,8 +187,6 @@ func (re *patternRegexp) FindStringIndex(s string) []int {
 	return re.findIndex(s, re.lineSensitive && nonLFLineEnds(s))
 }
 
-func (re *patternRegexp) MatchString(s string) bool { return re.FindStringIndex(s) != nil }
-
 // MatchStringWS matches with line sensitivity the caller already derived from
 // the document, so a guard callback does not rescan the remaining tail.
 func (re *patternRegexp) MatchStringWS(s string, jsLines bool) bool {

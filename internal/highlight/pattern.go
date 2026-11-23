@@ -18,32 +18,11 @@ import (
 //     caller with an explicit replacement (see replacePattern).
 //   - backreferences have no RE2 equivalent and are replaced by hand.
 //
-// normalizePattern rewrites the mechanical differences. It leaves lookaround
-// and backreferences in place so a caller can detect them and substitute a
-// hand-written equivalent.
+// preparePattern rewrites the mechanical differences. It leaves lookaround
+// and backreferences in place; the language ports substitute hand-written
+// equivalents for them.
 
-// hasLookaround reports whether src contains a lookahead or lookbehind.
-func hasLookaround(src string) bool {
-	return strings.Contains(src, "(?=") || strings.Contains(src, "(?!") ||
-		strings.Contains(src, "(?<=") || strings.Contains(src, "(?<!")
-}
-
-// hasBackreference reports whether src contains a numeric backreference.
-func hasBackreference(src string) bool {
-	for i := 0; i+1 < len(src); i++ {
-		if src[i] != '\\' {
-			continue
-		}
-		c := src[i+1]
-		if c >= '1' && c <= '9' {
-			return true
-		}
-		i++
-	}
-	return false
-}
-
-// normalizePattern rewrites the JavaScript-isms RE2 does not accept but that
+// preparePattern rewrites the JavaScript-isms RE2 does not accept but that
 // have a direct equivalent: `\uXXXX` and `\u{...}` become `\x{...}`, and the
 // whitespace classes use ECMAScript's WhiteSpace + LineTerminator set rather
 // than Go's ASCII-only `\s`. `[\s\S]` is the reference's any-character idiom.
@@ -53,10 +32,6 @@ func preparePattern(src string) string {
 	src = normalizeWhitespaceClasses(src)
 	src = expandClassComplements(src)
 	return augmentSurrogateClasses(src)
-}
-
-func normalizePattern(src string) string {
-	return normalizeWhitespaceClasses(normalizeJSEscapes(src))
 }
 
 // jsSpaceRunes is ECMAScript WhiteSpace plus LineTerminator.

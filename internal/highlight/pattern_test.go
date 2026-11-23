@@ -3,6 +3,7 @@ package highlight
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -65,7 +66,7 @@ func TestPatternsAreRE2Compatible(t *testing.T) {
 		compatible++
 	}
 	// The snapshot is a fixed artifact, so the counts are pinned: a regression
-	// in normalizePattern shows up as `other`, and a new lookaround shows up as
+	// in preparePattern shows up as `other`, and a new lookaround shows up as
 	// a changed lookaround count.
 	if lookaround != 115 {
 		t.Errorf("lookaround patterns = %d, want 115", lookaround)
@@ -92,8 +93,29 @@ func TestNormalizePattern(t *testing.T) {
 		{`\/\*\*`, `\/\*\*`},
 	}
 	for _, tc := range cases {
-		if got := normalizePattern(tc.in); got != tc.want {
-			t.Errorf("normalizePattern(%q) = %q, want %q", tc.in, got, tc.want)
+		if got := normalizeWhitespaceClasses(normalizeJSEscapes(tc.in)); got != tc.want {
+			t.Errorf("escapes and classes of %q = %q, want %q", tc.in, got, tc.want)
 		}
 	}
+}
+
+// hasLookaround reports whether src contains a lookahead or lookbehind.
+func hasLookaround(src string) bool {
+	return strings.Contains(src, "(?=") || strings.Contains(src, "(?!") ||
+		strings.Contains(src, "(?<=") || strings.Contains(src, "(?<!")
+}
+
+// hasBackreference reports whether src contains a numeric backreference.
+func hasBackreference(src string) bool {
+	for i := 0; i+1 < len(src); i++ {
+		if src[i] != '\\' {
+			continue
+		}
+		c := src[i+1]
+		if c >= '1' && c <= '9' {
+			return true
+		}
+		i++
+	}
+	return false
 }
