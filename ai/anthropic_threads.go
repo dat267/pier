@@ -259,7 +259,7 @@ func prepareAnthropicThreadRequest(model *Model, sessionID string, full json.Raw
 	}
 	var messages []json.RawMessage
 	if rawMessages, ok := settings.raw("messages"); ok {
-		if err := jsonUnmarshalStrict(rawMessages, &messages); err != nil {
+		if err := json.Unmarshal(rawMessages, &messages); err != nil {
 			return nil, err
 		}
 	}
@@ -302,11 +302,11 @@ func getAnthropicThreadErrorCode(providerErr *ProviderError) string {
 			} `json:"details"`
 		} `json:"error"`
 	}
-	if jsonUnmarshalStrict([]byte(providerErr.Body), &envelope) != nil {
+	if json.Unmarshal([]byte(providerErr.Body), &envelope) != nil {
 		return ""
 	}
 	var code string
-	if jsonUnmarshalStrict(envelope.Error.Details.ErrorCode, &code) != nil {
+	if json.Unmarshal(envelope.Error.Details.ErrorCode, &code) != nil {
 		return ""
 	}
 	return code

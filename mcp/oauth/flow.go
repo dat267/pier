@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/dat267/pier/internal/whatwgurl"
@@ -385,7 +386,7 @@ func tokenRequest(ctx context.Context, authorizationServerURL string, options To
 		return nil, err
 	}
 	var decoded any
-	if err := unmarshalJSON(body, &decoded); err != nil {
+	if err := json.Unmarshal(body, &decoded); err != nil {
 		decoded = nil
 	}
 	if m, ok := decoded.(map[string]any); ok {
@@ -497,7 +498,7 @@ func RegisterClient(ctx context.Context, authorizationServerURL string, options 
 		return nil, &OAuthRegistrationError{Status: response.StatusCode, Body: string(text)}
 	}
 	var decoded any
-	if err := unmarshalJSON(text, &decoded); err != nil {
+	if err := json.Unmarshal(text, &decoded); err != nil {
 		return nil, err
 	}
 	return ParseClientInformation(decoded)

@@ -590,7 +590,7 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 				Command string   `json:"command"`
 				Timeout *float64 `json:"timeout"`
 			}
-			if err := jsonUnmarshalStrictTool(params, &input); err != nil {
+			if err := json.Unmarshal(params, &input); err != nil {
 				return agent.AgentToolResult{}, err
 			}
 			// Upstream validates the timeout first: createLocalShellOperations.exec

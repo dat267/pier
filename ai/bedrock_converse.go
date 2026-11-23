@@ -898,7 +898,7 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 					var target struct {
 						ModelID string `json:"modelId"`
 					}
-					if err := jsonUnmarshalStrict(next, &target); err != nil {
+					if err := json.Unmarshal(next, &target); err != nil {
 						fail(err, "", 0, nil)
 						return
 					}

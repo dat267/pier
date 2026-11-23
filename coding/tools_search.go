@@ -153,7 +153,7 @@ func CreateFindTool(cwd string) agent.AgentTool {
 				Limit   *float64 `json:"limit"`
 			}
 			if len(params) > 0 {
-				if err := jsonUnmarshalStrictTool(params, &input); err != nil {
+				if err := json.Unmarshal(params, &input); err != nil {
 					return agent.AgentToolResult{}, err
 				}
 			}
@@ -395,7 +395,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 				Limit      *float64 `json:"limit"`
 			}
 			if len(params) > 0 {
-				if err := jsonUnmarshalStrictTool(params, &input); err != nil {
+				if err := json.Unmarshal(params, &input); err != nil {
 					return agent.AgentToolResult{}, err
 				}
 			}
@@ -536,7 +536,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 					trimmed := strings.TrimSpace(string(line))
 					if trimmed != "" {
 						var event rgMatchEvent
-						if jsonUnmarshalStrictTool(json.RawMessage(trimmed), &event) == nil {
+						if json.Unmarshal(json.RawMessage(trimmed), &event) == nil {
 							isMatch := event.Type == "match"
 							if isMatch || event.Type == "context" {
 								filePath := decodeRgText(&event.Data.Path.Text, event.Data.Path.Bytes)

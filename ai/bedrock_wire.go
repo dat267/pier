@@ -86,7 +86,7 @@ func projectBedrockJSON(raw json.RawMessage, shape string, hook bool) (json.RawM
 	}
 	if strings.HasPrefix(shape, "[]") {
 		var list []json.RawMessage
-		if err := jsonUnmarshalStrict(raw, &list); err != nil {
+		if err := json.Unmarshal(raw, &list); err != nil {
 			return nil, err
 		}
 		for i, item := range list {

@@ -31,12 +31,12 @@ func schemaTypes(data json.RawMessage) []string {
 	// so require the member to actually be a JSON string.
 	if len(data) > 0 && data[0] == '"' {
 		var single string
-		if err := jsonUnmarshalStrict(data, &single); err == nil {
+		if err := json.Unmarshal(data, &single); err == nil {
 			return []string{single}
 		}
 	}
 	var members []json.RawMessage
-	if err := jsonUnmarshalStrict(data, &members); err != nil {
+	if err := json.Unmarshal(data, &members); err != nil {
 		return nil
 	}
 	types := make([]string, 0, len(members))
@@ -48,7 +48,7 @@ func schemaTypes(data json.RawMessage) []string {
 			continue
 		}
 		var name string
-		if err := jsonUnmarshalStrict(member, &name); err == nil {
+		if err := json.Unmarshal(member, &name); err == nil {
 			types = append(types, name)
 		}
 	}
@@ -89,7 +89,7 @@ func schemaAllowsNull(data json.RawMessage) bool {
 	}
 	if e, ok := node.raw("enum"); ok {
 		var list []json.RawMessage
-		if err := jsonUnmarshalStrict(e, &list); err == nil {
+		if err := json.Unmarshal(e, &list); err == nil {
 			for _, v := range list {
 				if string(v) == "null" {
 					return true
@@ -99,7 +99,7 @@ func schemaAllowsNull(data json.RawMessage) bool {
 	}
 	if anyOf, ok := node.raw("anyOf"); ok {
 		var list []json.RawMessage
-		if err := jsonUnmarshalStrict(anyOf, &list); err == nil {
+		if err := json.Unmarshal(anyOf, &list); err == nil {
 			if slices.ContainsFunc(list, schemaAllowsNull) {
 				return true
 			}
@@ -127,7 +127,7 @@ func AnthropicStrictUnsupportedKeyword(key string, value json.RawMessage) bool {
 		return !number.IsNumber || (number.Number != 0 && number.Number != 1)
 	case "format":
 		var format string
-		if jsonUnmarshalStrict(value, &format) != nil {
+		if json.Unmarshal(value, &format) != nil {
 			return true
 		}
 		return !anthropicStrictStringFormats[format]
@@ -182,7 +182,7 @@ func makeSchemaNodeStrict(node *orderedJSONFields, check UnsupportedStrictSchema
 
 	if anyOfData, ok := node.raw("anyOf"); ok {
 		var list []json.RawMessage
-		if err := jsonUnmarshalStrict(anyOfData, &list); err != nil || len(list) == 0 {
+		if err := json.Unmarshal(anyOfData, &list); err != nil || len(list) == 0 {
 			return &strictSchemaError{msg: "anyOf must contain at least one schema"}
 		}
 		for i, variant := range list {
@@ -201,7 +201,7 @@ func makeSchemaNodeStrict(node *orderedJSONFields, check UnsupportedStrictSchema
 
 	if itemsData, ok := node.raw("items"); ok {
 		var list []json.RawMessage
-		if err := jsonUnmarshalStrict(itemsData, &list); err == nil {
+		if err := json.Unmarshal(itemsData, &list); err == nil {
 			return &strictSchemaError{msg: "tuple schemas are unsupported"}
 		}
 		strict, err := makeStrictSubSchemaValue(itemsData, check)
@@ -213,7 +213,7 @@ func makeSchemaNodeStrict(node *orderedJSONFields, check UnsupportedStrictSchema
 
 	var objectType string
 	if t, ok := node.raw("type"); ok {
-		_ = jsonUnmarshalStrict(t, &objectType)
+		_ = json.Unmarshal(t, &objectType)
 	}
 	isObjectSchema := objectType == "object"
 
@@ -229,13 +229,13 @@ func makeSchemaNodeStrict(node *orderedJSONFields, check UnsupportedStrictSchema
 	propsData, hasProps := node.raw("properties")
 	var properties map[string]json.RawMessage
 	if hasProps {
-		if err := jsonUnmarshalStrict(propsData, &properties); err != nil || properties == nil {
+		if err := json.Unmarshal(propsData, &properties); err != nil || properties == nil {
 			return &strictSchemaError{msg: "object properties must be a schema map"}
 		}
 	}
 	var required []string
 	if reqData, ok := node.raw("required"); ok {
-		if err := jsonUnmarshalStrict(reqData, &required); err != nil || required == nil {
+		if err := json.Unmarshal(reqData, &required); err != nil || required == nil {
 			return &strictSchemaError{msg: "object required must be a string array"}
 		}
 	}
@@ -365,7 +365,7 @@ func makeStrictSubSchema(data json.RawMessage, check UnsupportedStrictSchemaKeyw
 	}
 	t, _ := node.raw("type")
 	var objectType string
-	if jsonUnmarshalStrict(t, &objectType) != nil || objectType != "object" {
+	if json.Unmarshal(t, &objectType) != nil || objectType != "object" {
 		return nil, &strictSchemaError{msg: "root schema must have type object"}
 	}
 	return strict, nil

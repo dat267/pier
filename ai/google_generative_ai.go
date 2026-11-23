@@ -615,7 +615,7 @@ func iterateGoogleChunks(ctx context.Context, body io.Reader, emit func(chunk *g
 			return nil
 		}
 		var chunk googleChunk
-		if jsonUnmarshalStrict(json.RawMessage(data), &chunk) == nil {
+		if json.Unmarshal(json.RawMessage(data), &chunk) == nil {
 			chunk.Raw = json.RawMessage(data)
 			return emit(&chunk)
 		}

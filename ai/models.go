@@ -206,22 +206,22 @@ func DecodeModelCompat(api Api, data []byte) (*ModelCompat, error) {
 	switch api {
 	case APIAnthropicMessages:
 		c.AnthropicMessages = new(AnthropicMessagesCompat)
-		err = jsonUnmarshalStrict(data, c.AnthropicMessages)
+		err = json.Unmarshal(data, c.AnthropicMessages)
 	case APIOpenAICompletions:
 		c.OpenAICompletions = new(OpenAICompletionsCompat)
-		err = jsonUnmarshalStrict(data, c.OpenAICompletions)
+		err = json.Unmarshal(data, c.OpenAICompletions)
 	case APIOpenAIResponses, APIAzureOpenAIResponses, APIOpenAICodexResponses:
 		c.OpenAIResponses = new(OpenAIResponsesCompat)
-		err = jsonUnmarshalStrict(data, c.OpenAIResponses)
+		err = json.Unmarshal(data, c.OpenAIResponses)
 	case APIMistralConversations:
 		c.MistralConversations = new(MistralConversationsCompat)
-		err = jsonUnmarshalStrict(data, c.MistralConversations)
+		err = json.Unmarshal(data, c.MistralConversations)
 	case APIBedrockConverse:
 		c.Bedrock = new(BedrockCompat)
-		err = jsonUnmarshalStrict(data, c.Bedrock)
+		err = json.Unmarshal(data, c.Bedrock)
 	case APITypeSafeSystemOne, APICloudflareWorkersAISystemOne:
 		c.SystemOne = new(SystemOneCompat)
-		err = jsonUnmarshalStrict(data, c.SystemOne)
+		err = json.Unmarshal(data, c.SystemOne)
 	default:
 		return nil, nil
 	}

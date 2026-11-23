@@ -270,7 +270,7 @@ func ConvertOpenAICompletionsMessages(
 			hasContent := false
 			if len(assistantMsg.Content) > 0 && string(assistantMsg.Content) != "null" {
 				var s string
-				if err := jsonUnmarshalStrict(assistantMsg.Content, &s); err == nil {
+				if err := json.Unmarshal(assistantMsg.Content, &s); err == nil {
 					hasContent = len(s) > 0
 				} else {
 					hasContent = len(assistantMsg.Content) > 0
@@ -459,7 +459,7 @@ func ParseChunkUsage(raw []byte, model *Model) Usage {
 		// inside completion_tokens_details (v1.6.0, #12110).
 		ReasoningTokens *int64 `json:"reasoning_tokens"`
 	}
-	_ = jsonUnmarshalStrict(raw, &u)
+	_ = json.Unmarshal(raw, &u)
 
 	promptTokens := derefI64(u.PromptTokens)
 	cacheReadTokens := int64(0)
@@ -498,7 +498,7 @@ func ParseChunkUsage(raw []byte, model *Model) Usage {
 	CalculateCost(model, &usage)
 	if IsOpenRouterModel(model) {
 		var accounting OpenRouterUsageAccounting
-		if jsonUnmarshalStrict(raw, &accounting) == nil {
+		if json.Unmarshal(raw, &accounting) == nil {
 			ApplyOpenRouterReportedCost(&usage, accounting)
 		}
 	}
@@ -868,7 +868,7 @@ func addCacheControlToInstruction(message *OpenAIMessage, cacheControl *Anthropi
 func addCacheControlToOpenAIMessage(message *OpenAIMessage, cacheControl *AnthropicCacheControl) bool {
 	// String content: convert to a parts array with the marker.
 	var text string
-	if err := jsonUnmarshalStrict(message.Content, &text); err == nil {
+	if err := json.Unmarshal(message.Content, &text); err == nil {
 		if len(text) == 0 {
 			return false
 		}
@@ -879,7 +879,7 @@ func addCacheControlToOpenAIMessage(message *OpenAIMessage, cacheControl *Anthro
 	}
 	// Parts array: mark the last text part.
 	var parts []OpenAIContentPart
-	if err := jsonUnmarshalStrict(message.Content, &parts); err != nil {
+	if err := json.Unmarshal(message.Content, &parts); err != nil {
 		return false
 	}
 	for i := len(parts) - 1; i >= 0; i-- {
@@ -899,11 +899,11 @@ func parseOpenAIReasoningDetailsJSON(signature string) []json.RawMessage {
 		return nil
 	}
 	var parsed json.RawMessage
-	if err := jsonUnmarshalStrict(json.RawMessage(signature), &parsed); err != nil {
+	if err := json.Unmarshal(json.RawMessage(signature), &parsed); err != nil {
 		return nil
 	}
 	var list []json.RawMessage
-	if err := jsonUnmarshalStrict(parsed, &list); err != nil || len(list) == 0 {
+	if err := json.Unmarshal(parsed, &list); err != nil || len(list) == 0 {
 		return nil
 	}
 	for _, detail := range list {
@@ -921,7 +921,7 @@ func parseLegacyEncryptedReasoningDetailJSON(signature string) json.RawMessage {
 		return nil
 	}
 	var detail map[string]json.RawMessage
-	if err := jsonUnmarshalStrict(json.RawMessage(signature), &detail); err != nil {
+	if err := json.Unmarshal(json.RawMessage(signature), &detail); err != nil {
 		return nil
 	}
 	if !isOpenAIReasoningDetail(json.RawMessage(signature)) {
@@ -930,11 +930,11 @@ func parseLegacyEncryptedReasoningDetailJSON(signature string) json.RawMessage {
 	if typeRaw, ok := detail["type"]; ok && string(typeRaw) == `"reasoning.encrypted"` {
 		if idRaw, ok := detail["id"]; ok {
 			var id string
-			if jsonUnmarshalStrict(idRaw, &id) == nil && len(id) > 0 {
+			if json.Unmarshal(idRaw, &id) == nil && len(id) > 0 {
 				dataRaw, ok := detail["data"]
 				if ok {
 					var data string
-					if jsonUnmarshalStrict(dataRaw, &data) == nil && len(data) > 0 {
+					if json.Unmarshal(dataRaw, &data) == nil && len(data) > 0 {
 						return mustMarshalJSON(detail)
 					}
 				}
@@ -947,25 +947,25 @@ func parseLegacyEncryptedReasoningDetailJSON(signature string) json.RawMessage {
 // isOpenAIReasoningDetail validates one reasoning detail object.
 func isOpenAIReasoningDetail(raw json.RawMessage) bool {
 	var candidate map[string]json.RawMessage
-	if err := jsonUnmarshalStrict(raw, &candidate); err != nil {
+	if err := json.Unmarshal(raw, &candidate); err != nil {
 		return false
 	}
 	hasValidCommon := func() bool {
 		if idRaw, ok := candidate["id"]; ok && string(idRaw) != "null" {
 			var s string
-			if jsonUnmarshalStrict(idRaw, &s) != nil {
+			if json.Unmarshal(idRaw, &s) != nil {
 				return false
 			}
 		}
 		if formatRaw, ok := candidate["format"]; ok && string(formatRaw) != "null" {
 			var s string
-			if jsonUnmarshalStrict(formatRaw, &s) != nil {
+			if json.Unmarshal(formatRaw, &s) != nil {
 				return false
 			}
 		}
 		if indexRaw, ok := candidate["index"]; ok && string(indexRaw) != "null" {
 			var f float64
-			if jsonUnmarshalStrict(indexRaw, &f) != nil {
+			if json.Unmarshal(indexRaw, &f) != nil {
 				return false
 			}
 		}
@@ -976,31 +976,31 @@ func isOpenAIReasoningDetail(raw json.RawMessage) bool {
 		return false
 	}
 	var typ string
-	if jsonUnmarshalStrict(typeRaw, &typ) != nil {
+	if json.Unmarshal(typeRaw, &typ) != nil {
 		return false
 	}
 	switch typ {
 	case "reasoning.summary":
 		if summaryRaw, ok := candidate["summary"]; ok {
 			var s string
-			return jsonUnmarshalStrict(summaryRaw, &s) == nil && hasValidCommon()
+			return json.Unmarshal(summaryRaw, &s) == nil && hasValidCommon()
 		}
 		return false
 	case "reasoning.encrypted":
 		if dataRaw, ok := candidate["data"]; ok {
 			var s string
-			return jsonUnmarshalStrict(dataRaw, &s) == nil && hasValidCommon()
+			return json.Unmarshal(dataRaw, &s) == nil && hasValidCommon()
 		}
 		return false
 	case "reasoning.text":
 		if textRaw, ok := candidate["text"]; ok {
 			var s string
-			if jsonUnmarshalStrict(textRaw, &s) != nil {
+			if json.Unmarshal(textRaw, &s) != nil {
 				return false
 			}
 			if sigRaw, ok := candidate["signature"]; ok && string(sigRaw) != "null" {
 				var sig string
-				if jsonUnmarshalStrict(sigRaw, &sig) != nil {
+				if json.Unmarshal(sigRaw, &sig) != nil {
 					return false
 				}
 			}
@@ -1043,10 +1043,10 @@ func buildChatTemplateValues(model *Model, options *OpenAICompletionsOptions, va
 			Var         string `json:"$var"`
 			OmitWhenOff bool   `json:"omitWhenOff"`
 		}
-		isObject := jsonUnmarshalStrict(raw, &value) == nil && value.Var != ""
+		isObject := json.Unmarshal(raw, &value) == nil && value.Var != ""
 		if !isObject {
 			var literal any
-			if err := jsonUnmarshalStrict(raw, &literal); err == nil {
+			if err := json.Unmarshal(raw, &literal); err == nil {
 				resolved[key] = literal
 			}
 			continue

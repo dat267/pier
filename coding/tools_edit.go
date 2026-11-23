@@ -158,16 +158,16 @@ func PrepareEditArguments(input json.RawMessage) json.RawMessage {
 	// normalized so the call is not rejected for spelling.
 	if raw, ok := args["edits"]; ok {
 		var asString string
-		if jsonUnmarshalStrictTool(raw, &asString) == nil {
+		if json.Unmarshal(raw, &asString) == nil {
 			var parsed []json.RawMessage
-			if err := jsonUnmarshalStrictTool(json.RawMessage(asString), &parsed); err != nil {
-				if jsonUnmarshalStrictTool(json.RawMessage(asString), &editShape) == nil && editShape.OldText != nil && editShape.NewText != nil {
+			if err := json.Unmarshal(json.RawMessage(asString), &parsed); err != nil {
+				if json.Unmarshal(json.RawMessage(asString), &editShape) == nil && editShape.OldText != nil && editShape.NewText != nil {
 					setValue("edits", mustMarshalJSON([]json.RawMessage{json.RawMessage(asString)}))
 				}
 			} else if parsed != nil {
 				setValue("edits", json.RawMessage(asString))
 			}
-		} else if jsonUnmarshalStrictTool(raw, &editShape) == nil && editShape.OldText != nil && editShape.NewText != nil {
+		} else if json.Unmarshal(raw, &editShape) == nil && editShape.OldText != nil && editShape.NewText != nil {
 			// Single edit object?
 			setValue("edits", mustMarshalJSON([]json.RawMessage{raw}))
 		}
@@ -178,13 +178,13 @@ func PrepareEditArguments(input json.RawMessage) json.RawMessage {
 		OldText *string `json:"oldText"`
 		NewText *string `json:"newText"`
 	}{}
-	if jsonUnmarshalStrictTool(input, &legacy) != nil || legacy.OldText == nil || legacy.NewText == nil {
+	if json.Unmarshal(input, &legacy) != nil || legacy.OldText == nil || legacy.NewText == nil {
 		return marshalOrderedObject(order, args)
 	}
 	edits := []json.RawMessage{}
 	if raw, ok := args["edits"]; ok {
 		var list []json.RawMessage
-		if jsonUnmarshalStrictTool(raw, &list) == nil {
+		if json.Unmarshal(raw, &list) == nil {
 			edits = append(edits, list...)
 		}
 	}
@@ -234,7 +234,7 @@ func CreateEditTool(cwd string) agent.AgentTool {
 				Path  string `json:"path"`
 				Edits []Edit `json:"edits"`
 			}
-			if err := jsonUnmarshalStrictTool(params, &input); err != nil {
+			if err := json.Unmarshal(params, &input); err != nil {
 				return agent.AgentToolResult{}, err
 			}
 			if len(input.Edits) == 0 {

@@ -110,7 +110,7 @@ func (e *anthropicStreamEvent) UnmarshalJSON(data []byte) error {
 		Usage                *anthropicStreamUsage          `json:"usage,omitempty"`
 	}
 	var probe wireProbe
-	if err := jsonUnmarshalStrict(data, &probe); err != nil {
+	if err := json.Unmarshal(data, &probe); err != nil {
 		return err
 	}
 	e.Type = probe.Type
@@ -124,7 +124,7 @@ func (e *anthropicStreamEvent) UnmarshalJSON(data []byte) error {
 		var d struct {
 			Delta *anthropicStreamDelta `json:"delta"`
 		}
-		if err := jsonUnmarshalStrict(data, &d); err != nil {
+		if err := json.Unmarshal(data, &d); err != nil {
 			return err
 		}
 		e.Delta = d.Delta
@@ -132,7 +132,7 @@ func (e *anthropicStreamEvent) UnmarshalJSON(data []byte) error {
 		var d struct {
 			Delta *anthropicStreamStopDelta `json:"delta"`
 		}
-		if err := jsonUnmarshalStrict(data, &d); err != nil {
+		if err := json.Unmarshal(data, &d); err != nil {
 			return err
 		}
 		e.DeltaStop = d.Delta
@@ -291,7 +291,7 @@ func splitAnthropicBetaParams(body []byte) ([]byte, []string, error) {
 		return body, nil, nil
 	}
 	var betas []string
-	if err := jsonUnmarshalStrict(raw, &betas); err != nil {
+	if err := json.Unmarshal(raw, &betas); err != nil {
 		return nil, nil, err
 	}
 	node.remove("betas")

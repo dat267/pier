@@ -61,12 +61,12 @@ func jsJSONTruthy(raw json.RawMessage) bool {
 		return false
 	case '"':
 		var text string
-		return jsonUnmarshalStrict(trimmed, &text) == nil && text != ""
+		return json.Unmarshal(trimmed, &text) == nil && text != ""
 	case '0', '-':
 		// Positive and negative zero, including underflowed negative values,
 		// are falsy; other negative numbers remain truthy.
 		var number float64
-		return jsonUnmarshalStrict(trimmed, &number) != nil || number != 0
+		return json.Unmarshal(trimmed, &number) != nil || number != 0
 	default:
 		return true // object, array, true, non-zero number
 	}
@@ -86,9 +86,9 @@ func openAIStreamErrorMessage(raw json.RawMessage) string {
 			Raw *string `json:"raw"`
 		} `json:"metadata"`
 	}
-	if jsonUnmarshalStrict(raw, &parsed) == nil && len(parsed.Message) > 0 {
+	if json.Unmarshal(raw, &parsed) == nil && len(parsed.Message) > 0 {
 		var text string
-		if jsonUnmarshalStrict(parsed.Message, &text) == nil {
+		if json.Unmarshal(parsed.Message, &text) == nil {
 			message = text
 		} else if jsJSONTruthy(parsed.Message) {
 			if encoded, err := canonicalJavaScriptJSON(parsed.Message); err == nil {
@@ -183,7 +183,7 @@ func (d *openaiChunkDelta) UnmarshalJSON(data []byte) error {
 		ReasoningText    *string           `json:"reasoning_text"`
 	}
 	var w wire
-	if err := jsonUnmarshalStrict(data, &w); err != nil {
+	if err := json.Unmarshal(data, &w); err != nil {
 		return err
 	}
 	d.Content = w.Content
@@ -269,7 +269,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 						} `json:"metadata"`
 					} `json:"error"`
 				}
-				if jsonUnmarshalStrict(json.RawMessage(pe.Body), &probe) == nil && probe.Error != nil &&
+				if json.Unmarshal(json.RawMessage(pe.Body), &probe) == nil && probe.Error != nil &&
 					probe.Error.Metadata != nil && probe.Error.Metadata.Raw != "" &&
 					!strings.Contains(message, probe.Error.Metadata.Raw) {
 					message += "\n" + probe.Error.Metadata.Raw
@@ -544,7 +544,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 
 		iterErr := iterateOpenAIChunks(ctx, resp.Body, func(raw json.RawMessage) {
 			var chunk openaiChunk
-			if err := jsonUnmarshalStrict(raw, &chunk); err != nil {
+			if err := json.Unmarshal(raw, &chunk); err != nil {
 				// The reference skips only a chunk that is not an object
 				// (`typeof chunk !== "object"`); the SDK has already parsed it, so
 				// a wrong-typed member such as a numeric `model` is present and
@@ -776,10 +776,10 @@ func customToolInputValue(block *openaiStreamingToolCall) string {
 		return ""
 	}
 	var args map[string]json.RawMessage
-	if err := jsonUnmarshalStrict(block.call.Arguments, &args); err == nil {
+	if err := json.Unmarshal(block.call.Arguments, &args); err == nil {
 		if raw, ok := args[block.customInput.property]; ok {
 			var s string
-			if jsonUnmarshalStrict(raw, &s) == nil {
+			if json.Unmarshal(raw, &s) == nil {
 				return s
 			}
 		}

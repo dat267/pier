@@ -169,7 +169,7 @@ func googleSDKRequest(raw json.RawMessage, api Api) (string, []byte, error) {
 		Contents []GoogleContent            `json:"contents"`
 		Config   map[string]json.RawMessage `json:"config"`
 	}
-	if err := jsonUnmarshalStrict(raw, &payload); err != nil {
+	if err := json.Unmarshal(raw, &payload); err != nil {
 		return "", nil, err
 	}
 	if payload.Model == "" {
@@ -200,11 +200,11 @@ func googleSDKRequest(raw json.RawMessage, api Api) (string, []byte, error) {
 	}
 	if system, ok := payload.Config["systemInstruction"]; ok && strings.TrimSpace(string(system)) != "null" {
 		var text string
-		if jsonUnmarshalStrict(system, &text) == nil {
+		if json.Unmarshal(system, &text) == nil {
 			system, err = MarshalJSON(GoogleSystemInstruction{Parts: []GooglePart{{Text: text}}, Role: "user"})
 		} else {
 			var content GoogleSystemInstruction
-			if err = jsonUnmarshalStrict(system, &content); err == nil {
+			if err = json.Unmarshal(system, &content); err == nil {
 				system, err = MarshalJSON(content)
 			}
 		}

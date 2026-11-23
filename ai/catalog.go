@@ -68,7 +68,7 @@ var (
 
 func decodeCatalog(data []byte) (catalogShape, map[string]map[string]*Model, error) {
 	var decoded catalogShape
-	if err := jsonUnmarshalStrict(data, &decoded); err != nil {
+	if err := json.Unmarshal(data, &decoded); err != nil {
 		return catalogShape{}, nil, fmt.Errorf("ai: decoding builtin catalog: %w", err)
 	}
 	modelsByProvider := make(map[string]map[string]*Model, len(decoded.Providers))

@@ -219,7 +219,7 @@ type GrammarConstrainedSampling struct {
 // constrained-sampling.ts inferGrammarInputProperty reads them one at a time).
 func inferGrammarInputProperty(tool Tool) (string, error) {
 	var schema map[string]json.RawMessage
-	if err := jsonUnmarshalStrict(tool.Parameters, &schema); err != nil || schema == nil {
+	if err := json.Unmarshal(tool.Parameters, &schema); err != nil || schema == nil {
 		return "", errors.New("grammar constrained sampling requires an object parameter schema")
 	}
 	var schemaType any
@@ -292,10 +292,10 @@ func ResolveGrammarConstrainedSampling(tool Tool, supportsOpenAIGrammarTools boo
 // (port of getGrammarToolInput).
 func GetGrammarToolInput(toolName string, arguments json.RawMessage, inputProperty string) (string, error) {
 	var args map[string]json.RawMessage
-	if err := jsonUnmarshalStrict(arguments, &args); err == nil {
+	if err := json.Unmarshal(arguments, &args); err == nil {
 		if raw, ok := args[inputProperty]; ok {
 			var s string
-			if err := jsonUnmarshalStrict(raw, &s); err == nil {
+			if err := json.Unmarshal(raw, &s); err == nil {
 				return s, nil
 			}
 		}

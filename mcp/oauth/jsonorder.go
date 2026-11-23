@@ -1,5 +1,7 @@
 package oauth
 
+import "github.com/dat267/pier/mcp/protocol"
+
 // jsonMember is one member of an object whose key order is the reference's
 // construction order.
 type jsonMember struct {
@@ -16,11 +18,11 @@ func marshalOrderedJSONObject(members []jsonMember) ([]byte, error) {
 		if index > 0 {
 			encoded = append(encoded, ',')
 		}
-		name, err := marshalJSON(member.name)
+		name, err := protocol.MarshalJSON(member.name)
 		if err != nil {
 			return nil, err
 		}
-		value, err := marshalJSON(member.value)
+		value, err := protocol.MarshalJSON(member.value)
 		if err != nil {
 			return nil, err
 		}

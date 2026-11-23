@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/dat267/pier/internal/whatwgurl"
@@ -221,7 +222,7 @@ func DiscoverProtectedResourceMetadata(ctx context.Context, serverURL string, op
 		return nil, err
 	}
 	var decoded any
-	if err := unmarshalJSON(body, &decoded); err != nil {
+	if err := json.Unmarshal(body, &decoded); err != nil {
 		return nil, err
 	}
 	return ParseProtectedResourceMetadata(decoded)
@@ -317,7 +318,7 @@ func DiscoverAuthorizationServerMetadata(ctx context.Context, authorizationServe
 			return nil, err
 		}
 		var decoded any
-		if err := unmarshalJSON(body, &decoded); err != nil {
+		if err := json.Unmarshal(body, &decoded); err != nil {
 			return nil, err
 		}
 		metadata, err := ParseAuthorizationServerMetadata(decoded)
@@ -378,7 +379,7 @@ func DiscoverOAuthServerInfo(ctx context.Context, serverURL string, options Disc
 			return nil, err
 		}
 		var decoded any
-		if err := unmarshalJSON(body, &decoded); err != nil {
+		if err := json.Unmarshal(body, &decoded); err != nil {
 			return nil, err
 		}
 		metadata, err := ParseAuthorizationServerMetadata(decoded)

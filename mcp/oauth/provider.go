@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"github.com/dat267/pier/mcp/protocol"
 	"maps"
 	"math"
 	"net"
@@ -63,9 +65,9 @@ func (s *MemoryOAuthStateStore) Save(_ context.Context, state *McpOAuthState) er
 func cloneState(state *McpOAuthState) *McpOAuthState {
 	out := &McpOAuthState{ServerURL: state.ServerURL}
 	if state.ClientInformation != nil {
-		enc, _ := marshalJSON(state.ClientInformation)
+		enc, _ := protocol.MarshalJSON(state.ClientInformation)
 		var client OAuthClientInformationFull
-		_ = unmarshalJSON(enc, &client)
+		_ = json.Unmarshal(enc, &client)
 		out.ClientInformation = &client
 	}
 	if state.Tokens != nil {

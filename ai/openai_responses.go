@@ -291,7 +291,7 @@ func ParseTextSignature(signature string) *TextSignatureV1 {
 	}
 	if strings.HasPrefix(signature, "{") {
 		var parsed TextSignatureV1
-		if jsonUnmarshalStrict(json.RawMessage(signature), &parsed) == nil && parsed.V == 1 && parsed.ID != "" {
+		if json.Unmarshal(json.RawMessage(signature), &parsed) == nil && parsed.V == 1 && parsed.ID != "" {
 			if parsed.Phase == "commentary" || parsed.Phase == "final_answer" {
 				return &TextSignatureV1{V: 1, ID: parsed.ID, Phase: parsed.Phase}
 			}

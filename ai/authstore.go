@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"maps"
 	"slices"
 	"sync"
@@ -215,7 +216,7 @@ func (s *InMemoryModelsStore) Write(ctx context.Context, providerID string, entr
 		return err
 	}
 	var cloned ModelsStoreEntry
-	if err := jsonUnmarshalStrict(enc, &cloned); err != nil {
+	if err := json.Unmarshal(enc, &cloned); err != nil {
 		return err
 	}
 	s.entries[providerID] = &cloned

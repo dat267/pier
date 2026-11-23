@@ -618,7 +618,7 @@ func ConvertAnthropicMessages(
 		last := &params[len(params)-1]
 		if last.Role == "user" || last.Role == "system" {
 			var blocks []AnthropicContentBlock
-			if err := jsonUnmarshalStrict(last.Content, &blocks); err == nil && len(blocks) > 0 {
+			if err := json.Unmarshal(last.Content, &blocks); err == nil && len(blocks) > 0 {
 				lastBlock := &blocks[len(blocks)-1]
 				switch lastBlock.Type {
 				case "text", "image", "tool_result", "tool_addition", "tool_removal":
@@ -628,7 +628,7 @@ func ConvertAnthropicMessages(
 			} else {
 				// String content: convert to a block array with cache_control.
 				var text string
-				if err := jsonUnmarshalStrict(last.Content, &text); err == nil {
+				if err := json.Unmarshal(last.Content, &text); err == nil {
 					last.Content = mustMarshalJSON([]AnthropicContentBlock{{
 						Type: "text", Text: text, CacheControl: cacheControl,
 					}})
@@ -750,7 +750,7 @@ func legacyInputSchema(parameters json.RawMessage) (json.RawMessage, error) {
 		Definitions          json.RawMessage            `json:"definitions"`
 		Extra                map[string]json.RawMessage `json:"-"`
 	}
-	if err := jsonUnmarshalStrict(parameters, &schema); err != nil {
+	if err := json.Unmarshal(parameters, &schema); err != nil {
 		return nil, err
 	}
 	props := schema.Properties
@@ -1066,18 +1066,18 @@ func buildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 
 	if userIDRaw, ok := options.Metadata["user_id"]; ok {
 		var userID string
-		if err := jsonUnmarshalStrict(userIDRaw, &userID); err == nil && userID != "" {
+		if err := json.Unmarshal(userIDRaw, &userID); err == nil && userID != "" {
 			params.Metadata = &AnthropicMetadata{UserID: userID}
 		}
 	}
 
 	if len(options.ToolChoice) > 0 {
 		var strChoice string
-		if err := jsonUnmarshalStrict(options.ToolChoice, &strChoice); err == nil {
+		if err := json.Unmarshal(options.ToolChoice, &strChoice); err == nil {
 			params.ToolChoice = &AnthropicToolChoice{Type: strChoice}
 		} else {
 			var obj AnthropicToolChoice
-			if err := jsonUnmarshalStrict(options.ToolChoice, &obj); err == nil {
+			if err := json.Unmarshal(options.ToolChoice, &obj); err == nil {
 				params.ToolChoice = &obj
 			}
 		}

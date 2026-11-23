@@ -2,7 +2,6 @@ package ai
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"strings"
@@ -284,9 +283,4 @@ func readCredential(ctx context.Context, credentials CredentialStore, providerID
 		return nil, NewModelsError(ErrCodeAuth, fmt.Sprintf("Credential store read failed for %s", providerID), err)
 	}
 	return credential, nil
-}
-
-// jsonUnmarshalStrict decodes JSON without HTML-escape concerns (decode path).
-func jsonUnmarshalStrict(data []byte, v any) error {
-	return json.Unmarshal(data, v)
 }

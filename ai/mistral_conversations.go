@@ -509,7 +509,7 @@ func mistralWirePayload(payload any) (json.RawMessage, error) {
 		remapMistralProperty(wire, rename[0], rename[1])
 	}
 	var messages []json.RawMessage
-	if err := jsonUnmarshalStrict(wire.values["messages"], &messages); err != nil {
+	if err := json.Unmarshal(wire.values["messages"], &messages); err != nil {
 		return nil, err
 	}
 	for i, raw := range messages {
@@ -520,7 +520,7 @@ func mistralWirePayload(payload any) (json.RawMessage, error) {
 		remapMistralProperty(message, "toolCalls", "tool_calls")
 		remapMistralProperty(message, "toolCallId", "tool_call_id")
 		var chunks []json.RawMessage
-		if jsonUnmarshalStrict(message.values["content"], &chunks) == nil && chunks != nil {
+		if json.Unmarshal(message.values["content"], &chunks) == nil && chunks != nil {
 			for j, rawChunk := range chunks {
 				chunk, err := decodeOrderedJSONFields(rawChunk)
 				if err != nil {

@@ -84,7 +84,7 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 				Offset *float64 `json:"offset"`
 				Limit  *float64 `json:"limit"`
 			}
-			if err := jsonUnmarshalStrictTool(params, &input); err != nil {
+			if err := json.Unmarshal(params, &input); err != nil {
 				return agent.AgentToolResult{}, err
 			}
 			absolutePath := ResolveReadPath(input.Path, cwd)
@@ -315,7 +315,7 @@ func CreateWriteTool(cwd string) agent.AgentTool {
 				Path    string `json:"path"`
 				Content string `json:"content"`
 			}
-			if err := jsonUnmarshalStrictTool(params, &input); err != nil {
+			if err := json.Unmarshal(params, &input); err != nil {
 				return agent.AgentToolResult{}, err
 			}
 			absolutePath := ResolveToCwd(input.Path, cwd)
@@ -385,7 +385,7 @@ func CreateLsTool(cwd string) agent.AgentTool {
 				Limit *float64 `json:"limit"`
 			}
 			if len(params) > 0 {
-				if err := jsonUnmarshalStrictTool(params, &input); err != nil {
+				if err := json.Unmarshal(params, &input); err != nil {
 					return agent.AgentToolResult{}, err
 				}
 			}
@@ -515,10 +515,6 @@ func sortCaseInsensitive(names []string) {
 	sort.SliceStable(names, func(i, j int) bool {
 		return collator.CompareString(ai.JSLower(names[i]), ai.JSLower(names[j])) < 0
 	})
-}
-
-func jsonUnmarshalStrictTool(data json.RawMessage, v any) error {
-	return json.Unmarshal(data, v)
 }
 
 func ctxErrOf(ctx context.Context) error {

@@ -547,10 +547,10 @@ func ProcessResponsesStream(
 			return ""
 		}
 		var args map[string]json.RawMessage
-		if jsonUnmarshalStrict(slot.toolCall.call.Arguments, &args) == nil {
+		if json.Unmarshal(slot.toolCall.call.Arguments, &args) == nil {
 			if raw, ok := args[slot.toolCall.customInput.property]; ok {
 				var s string
-				if jsonUnmarshalStrict(raw, &s) == nil {
+				if json.Unmarshal(raw, &s) == nil {
 					return s
 				}
 			}
@@ -579,7 +579,7 @@ func ProcessResponsesStream(
 	backfillReasoningSignatures := func(responseOutput []json.RawMessage) {
 		for _, raw := range responseOutput {
 			var item responsesItem
-			if jsonUnmarshalStrict(raw, &item) != nil || item.Type != "reasoning" || item.EncryptedContent == nil || *item.EncryptedContent == "" {
+			if json.Unmarshal(raw, &item) != nil || item.Type != "reasoning" || item.EncryptedContent == nil || *item.EncryptedContent == "" {
 				continue
 			}
 			slot := reasoningSlotsByID[item.ID]
@@ -594,7 +594,7 @@ func ProcessResponsesStream(
 			}
 			if raw, ok := stored.raw("encrypted_content"); ok {
 				var encrypted string
-				if jsonUnmarshalStrict(raw, &encrypted) != nil || encrypted != "" {
+				if json.Unmarshal(raw, &encrypted) != nil || encrypted != "" {
 					continue
 				}
 			}
@@ -715,12 +715,12 @@ func ProcessResponsesStream(
 			var response struct {
 				ID *string `json:"id"`
 			}
-			if jsonUnmarshalStrict(event.Response, &response) == nil {
+			if json.Unmarshal(event.Response, &response) == nil {
 				output.ResponseID = response.ID
 			}
 		case "response.output_item.added":
 			var item responsesItem
-			if jsonUnmarshalStrict(event.Item, &item) == nil {
+			if json.Unmarshal(event.Item, &item) == nil {
 				createSlot(event.OutputIndex, &item)
 			}
 		case "response.reasoning_summary_text.delta", "response.reasoning_text.delta":
@@ -788,7 +788,7 @@ func ProcessResponsesStream(
 			pushCustomInputDelta(slot, appendCustomToolCallInput(slot, event.Input, true))
 		case "response.output_item.done":
 			var item responsesItem
-			if jsonUnmarshalStrict(event.Item, &item) != nil {
+			if json.Unmarshal(event.Item, &item) != nil {
 				// The reference reads the SDK-parsed `event.item`, so a
 				// wrong-typed member is harmless; failing the decode dropped the
 				// completed item and its final content. Keep the members that
@@ -875,7 +875,7 @@ func ProcessResponsesStream(
 			}
 		case "response.completed", "response.incomplete":
 			var response responsesTerminalResponse
-			if jsonUnmarshalStrict(event.Response, &response) == nil {
+			if json.Unmarshal(event.Response, &response) == nil {
 				finalizeResponse(&response)
 			}
 		case "error":
@@ -883,7 +883,7 @@ func ProcessResponsesStream(
 		case "response.failed":
 			sawTerminalResponseEvent = true
 			var response responsesTerminalResponse
-			_ = jsonUnmarshalStrict(event.Response, &response)
+			_ = json.Unmarshal(event.Response, &response)
 			if response.Status != "" {
 				status := response.Status
 				output.RawStopReason = &status
@@ -949,7 +949,7 @@ func iterateResponsesEvents(ctx context.Context, body io.Reader, emit func(event
 				continue
 			}
 			var parsed responsesStreamEvent
-			if jsonUnmarshalStrict(json.RawMessage(data), &parsed) != nil {
+			if json.Unmarshal(json.RawMessage(data), &parsed) != nil {
 				continue
 			}
 			parsed.Raw = json.RawMessage(data)
@@ -963,7 +963,7 @@ func iterateResponsesEvents(ctx context.Context, body io.Reader, emit func(event
 		data := strings.TrimSpace(event.Data)
 		if data != "" && data != "[DONE]" {
 			var parsed responsesStreamEvent
-			if jsonUnmarshalStrict(json.RawMessage(data), &parsed) == nil {
+			if json.Unmarshal(json.RawMessage(data), &parsed) == nil {
 				parsed.Raw = json.RawMessage(data)
 				emit(&parsed)
 			}
