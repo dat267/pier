@@ -23,3 +23,21 @@ func TestReplaceControlCharacterRuns(t *testing.T) {
 		})
 	}
 }
+
+// webUrl parses with WHATWG URL, which trims C0 controls and spaces from the
+// ends, drops tabs and newlines and percent-encodes other controls before
+// parsing (pi v1.6.0, faac5858, utils/web-url.ts). Go's url.Parse rejects any
+// control character, so a login URL read with its trailing newline was refused.
+func TestWebURLPreprocessesLikeWHATWG(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{"https://x.y/\n", "https://x.y/"},
+		{"  https://x.y/a\r\n", "https://x.y/a"},
+		{"https://x.y/a\tb", "https://x.y/ab"},
+		{"https://x.y/\x1bz", "https://x.y/%1Bz"},
+		{"\x00https://x.y/", "https://x.y/"},
+	} {
+		if got, ok := WebURL(tc.in); !ok || got != tc.want {
+			t.Errorf("WebURL(%q) = %q, %v; want %q", tc.in, got, ok, tc.want)
+		}
+	}
+}

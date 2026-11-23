@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 )
@@ -16,8 +17,13 @@ import (
 // converts it to punycode. Every accepted value is a real http(s) URL, so a
 // link still reaches the same site; only its bytes can differ from the
 // reference's `href`.
+//
+// The WHATWG parser's input preprocessing is ported, because Go rejects any
+// ASCII control character: leading and trailing C0 controls and spaces are
+// trimmed, tabs and newlines are removed, and the remaining controls are
+// percent-encoded, so `https://x.y/\n` still names the site.
 func WebURL(value string) (string, bool) {
-	parsed, err := url.Parse(value)
+	parsed, err := url.Parse(whatwgPreprocess(value))
 	if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") {
 		return "", false
 	}
@@ -27,6 +33,25 @@ func WebURL(value string) (string, bool) {
 		normalized.Path = "/"
 	}
 	return normalized.String(), true
+}
+
+// whatwgPreprocess applies the URL parser's input cleanup: trim C0 controls
+// and spaces from both ends, drop ASCII tab and newline anywhere, and
+// percent-encode the other C0 controls and DEL, which every URL component's
+// encode set holds.
+func whatwgPreprocess(value string) string {
+	value = strings.TrimFunc(value, func(r rune) bool { return r <= 0x20 })
+	var builder strings.Builder
+	for index := range len(value) {
+		switch c := value[index]; {
+		case c == '\t' || c == '\n' || c == '\r':
+		case c < 0x20 || c == 0x7f:
+			fmt.Fprintf(&builder, "%%%02X", c)
+		default:
+			builder.WriteByte(c)
+		}
+	}
+	return builder.String()
 }
 
 // DisplayURL renders a URL for display: normalized when it is a web URL,
