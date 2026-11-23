@@ -9007,6 +9007,14 @@ needs `exactLiteral`, which folds both sides) gives C++ 14.1 to 13.70 ms, Java
 11.36 to 11.03 and markdown 0.55 to 0.53. The walk still agrees with the
 regexp on every boundary case, pinned by `TestExactWalkLiteralASCIIPath`.
 
+Two further attempts were measured and reverted. Skipping a greedy `Quest`'s
+body when its leading node cannot match was unsound for a body whose leading
+node is a capture (subunit's golden changed), and it was slower besides (C++
+13.70 to 13.92 ms). Giving `ws.exact` an initial capacity of 32 continuations
+to avoid the first push's allocation measured -0.2% over nine interleaved
+pairs with 6 wins in 9, which is noise; the slice reuse already avoids
+per-walk allocation.
+
 C++ (13.7 ms against 11.2-11.4) and Java (11.0 against 7.4) therefore sit
 at a cost the current design pays per candidate by construction: 97,291
 distinct walks for C++, half rejecting within 1-2 steps, none reusable, none
