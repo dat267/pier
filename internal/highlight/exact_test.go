@@ -31,6 +31,7 @@ func TestExactWalkMatchesTheRegexp(t *testing.T) {
 		"class A < B; def x?(y) @v = $1 end\r\nSELECT * FROM t WHERE a BETWEEN 1 AND 2;",
 		"<div class=\"x\">{{#if a}}é 日本   #include <x.h>\nnamespace n { get x() {} }",
 		"method(a, (b), (c(d))) {\n  ---\n  x: 1\n  ...\n}",
+		"# a\r\n\t@b . c\r* d\u2028  e: f\u2029g // h\n",
 	}
 	// Each language's rules run over its own golden samples, where its rule
 	// shapes occur, and the mixed lines above.
@@ -77,24 +78,25 @@ func TestExactWalkMatchesTheRegexp(t *testing.T) {
 					t.Fatal(err)
 				}
 				for _, input := range append(samples[name], mixed...) {
+					jsLines := nonLFLineEnds(input)
 					for pos := 0; pos <= len(input); pos++ {
 						if pos < len(input) && !utf8.RuneStart(input[pos]) {
 							continue
 						}
-						end, result := matchExactAt(program, input, pos, &ws)
+						end, result := matchExactAt(program, input, pos, jsLines, &ws)
 						if result == exactUnknown {
 							continue
 						}
 						decided++
 						wantEnd := -1
 						if pos == 0 {
-							if loc := plain.findIndexWS(input, false, &ws); loc != nil {
+							if loc := plain.findIndexWS(input, jsLines, &ws); loc != nil {
 								wantEnd = loc[1]
 							}
 						} else {
 							_, width := utf8.DecodeLastRuneInString(input[:pos])
 							base := pos - width
-							if loc := prefixed.findIndexWS(input[base:], false, &ws); loc != nil {
+							if loc := prefixed.findIndexWS(input[base:], jsLines, &ws); loc != nil {
 								wantEnd = base + loc[1]
 							}
 						}

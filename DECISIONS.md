@@ -8869,6 +8869,23 @@ marked 11.6 ms to 11.3 ms, `BenchmarkHighlightJSONDocument` 1.74 ms to
 1.69 ms, `BenchmarkHighlightGo` 1.38 ms to 1.34 ms, Markdown unchanged (10
 paired rounds).
 
+The walk then takes `^`, `$` and the dot, with the regexp's line semantics:
+JavaScript's four terminators when the input has `\r`, U+2028 or U+2029
+(`nonLFLineEnds`), `\n` alone otherwise. A rule that is only `$` (a line
+comment's end) gets the terminators' first bytes and an empty match at the
+end of the input, where no other kind of rule can match, so its mode
+dispatches instead of running the joined alternation's NFA over the rest of
+the input. This also recovers what counting only regexp rejections (D351)
+had cost: Python's decorator rule `^[\t ]*@` begins at every space, and once
+those rejections stopped ending the scan, the prefilter walked each
+indentation run at every space. Against that commit, same method: Go
+(`BenchmarkHighlightGo`) 1.38 ms to 0.90 ms and the real Go file 0.99 ms to
+0.35 ms, Markdown 5.46 ms to 4.86 ms, TypeScript 9.85 ms to 9.47 ms,
+`BenchmarkHighlightRegexHeavyJavaScript` 12.7 ms to 11.7 ms, JSON and the
+rejected run unchanged; on 30 KB samples Python 7.7 ms to 4.0 ms (highlight.js
+4.5 ms) and Rust 6.4 ms to 3.2 ms (4.1 ms). The ten samples, and their CRLF
+and U+2028 variants, render byte for byte as highlight.js does.
+
 Tests: `TestExactWalkMatchesTheRegexp`,
 `TestEndRulesKeepGroupsOnlyWhereOnEndReadsThem`.
 

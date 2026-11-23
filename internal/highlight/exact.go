@@ -12,9 +12,8 @@ import (
 // anchored submatcher. Most of those rules are literals, classes, alternations
 // and repetitions, for which a backtracking walk over the parsed rule in
 // priority order finds the same leftmost-first match RE2 does. The walk
-// answers "unknown" for anything whose meaning it does not reproduce (line
-// anchors and the dot, which carry JavaScript line semantics; `\A`, which the
-// dispatch's slicing changes; counted repetition of a subexpression;
+// answers "unknown" for anything whose meaning it does not reproduce (`\A`,
+// which the dispatch's slicing changes; counted repetition of a subexpression;
 // repetition of a subexpression that can match empty) and when its step
 // budget runs out, and the dispatch then runs the regexp as before.
 
@@ -97,11 +96,15 @@ func compileExactNode(re *syntax.Regexp) *exactNode {
 	return node
 }
 
-// oneRune reports whether a one-rune node matches c.
+// oneRune reports whether a one-rune node matches c. The dot's bitmap leaves
+// out only \n; exactOne also leaves out JavaScript's other line terminators
+// when the input has them.
 func (node *exactNode) oneRune(c rune) bool {
 	switch node.op {
 	case syntax.OpAnyChar:
 		return true
+	case syntax.OpAnyCharNotNL:
+		return c != '\n'
 	case syntax.OpLiteral:
 		return exactLiteral(node, node.runes[0], c)
 	case syntax.OpCharClass:
@@ -113,7 +116,8 @@ func (node *exactNode) oneRune(c rune) bool {
 func exactSupported(re *syntax.Regexp) bool {
 	switch re.Op {
 	case syntax.OpEmptyMatch, syntax.OpLiteral, syntax.OpCharClass, syntax.OpAnyChar,
-		syntax.OpWordBoundary, syntax.OpNoWordBoundary, syntax.OpEndText:
+		syntax.OpAnyCharNotNL, syntax.OpWordBoundary, syntax.OpNoWordBoundary, syntax.OpEndText,
+		syntax.OpBeginLine, syntax.OpEndLine:
 		return true
 	case syntax.OpCapture, syntax.OpQuest:
 		return exactSupported(re.Sub[0])
@@ -142,7 +146,7 @@ func exactSingle(re *syntax.Regexp) bool {
 	switch re.Op {
 	case syntax.OpLiteral:
 		return len(re.Rune) == 1
-	case syntax.OpCharClass, syntax.OpAnyChar:
+	case syntax.OpCharClass, syntax.OpAnyChar, syntax.OpAnyCharNotNL:
 		return true
 	}
 	return false
@@ -158,16 +162,20 @@ type exactCont struct {
 }
 
 type exactWalk struct {
-	s      string
-	budget int
-	conts  []exactCont
-	end    int
+	s string
+	// jsLines selects JavaScript's line terminators (\n, \r, U+2028, U+2029)
+	// for `^`, `$` and the dot, as the regexp does for an input that has the
+	// other three (nonLFLineEnds); otherwise only \n ends a line.
+	jsLines bool
+	budget  int
+	conts   []exactCont
+	end     int
 }
 
 // matchExactAt runs the walk for re at pos of s. On exactMatched the match
 // is s[pos:end].
-func matchExactAt(re *exactNode, s string, pos int, ws *jsWorkspace) (end int, result exactResult) {
-	w := exactWalk{s: s, budget: exactBudget}
+func matchExactAt(re *exactNode, s string, pos int, jsLines bool, ws *jsWorkspace) (end int, result exactResult) {
+	w := exactWalk{s: s, jsLines: jsLines, budget: exactBudget}
 	if ws != nil {
 		w.conts = ws.exact[:0]
 	}
@@ -213,6 +221,16 @@ func (w *exactWalk) seq(seq int32, pos int) exactResult {
 				return exactNoMatch
 			}
 			seq = rest
+		case syntax.OpBeginLine:
+			if pos > 0 && !lineEndBefore(s, pos, w.jsLines) {
+				return exactNoMatch
+			}
+			seq = rest
+		case syntax.OpEndLine:
+			if pos < len(s) && !lineEndAt(s, pos, w.jsLines) {
+				return exactNoMatch
+			}
+			seq = rest
 		case syntax.OpLiteral:
 			for _, r := range node.runes {
 				c, width := utf8.DecodeRuneInString(s[pos:])
@@ -222,8 +240,8 @@ func (w *exactWalk) seq(seq int32, pos int) exactResult {
 				pos += width
 			}
 			seq = rest
-		case syntax.OpCharClass, syntax.OpAnyChar:
-			width := exactOne(node, s, pos)
+		case syntax.OpCharClass, syntax.OpAnyChar, syntax.OpAnyCharNotNL:
+			width := exactOne(node, s, pos, w.jsLines)
 			if width == 0 {
 				return exactNoMatch
 			}
@@ -299,7 +317,7 @@ func (w *exactWalk) run(node *exactNode, rest int32, pos int) exactResult {
 			if maximum >= 0 && count >= maximum {
 				return exactNoMatch
 			}
-			width := exactOne(node.sub[0], w.s, end)
+			width := exactOne(node.sub[0], w.s, end, w.jsLines)
 			if width == 0 {
 				return exactNoMatch
 			}
@@ -318,7 +336,7 @@ func (w *exactWalk) run(node *exactNode, rest int32, pos int) exactResult {
 		if w.budget < 0 {
 			return exactUnknown
 		}
-		width := exactOne(node.sub[0], w.s, end)
+		width := exactOne(node.sub[0], w.s, end, w.jsLines)
 		if width == 0 {
 			break
 		}
@@ -352,21 +370,46 @@ func (w *exactWalk) run(node *exactNode, rest int32, pos int) exactResult {
 
 // exactOne returns the width of the rune at pos when node (a one-rune node)
 // matches it, or 0.
-func exactOne(node *exactNode, s string, pos int) int {
+func exactOne(node *exactNode, s string, pos int, jsLines bool) int {
 	if pos >= len(s) {
 		return 0
 	}
 	if b := s[pos]; b < utf8.RuneSelf {
-		if node.ascii[b>>6]&(1<<(b&63)) != 0 {
-			return 1
+		if node.ascii[b>>6]&(1<<(b&63)) == 0 || (b == '\r' && jsLines && node.op == syntax.OpAnyCharNotNL) {
+			return 0
 		}
-		return 0
+		return 1
 	}
 	c, width := utf8.DecodeRuneInString(s[pos:])
-	if node.oneRune(c) {
-		return width
+	if !node.oneRune(c) || (jsLines && node.op == syntax.OpAnyCharNotNL && jsLineEnd(c)) {
+		return 0
 	}
-	return 0
+	return width
+}
+
+// lineEndAt reports whether a line terminator starts at pos, and lineEndBefore
+// whether one ends there: the m flag's `$` and `^` (jsLineEnd's set under
+// jsLines, \n alone otherwise, as the regexp has it).
+func lineEndAt(s string, pos int, jsLines bool) bool {
+	if s[pos] == '\n' {
+		return true
+	}
+	if !jsLines {
+		return false
+	}
+	c, _ := utf8.DecodeRuneInString(s[pos:])
+	return jsLineEnd(c)
+}
+
+func lineEndBefore(s string, pos int, jsLines bool) bool {
+	if s[pos-1] == '\n' {
+		return true
+	}
+	if !jsLines {
+		return false
+	}
+	c, _ := utf8.DecodeLastRuneInString(s[:pos])
+	return jsLineEnd(c)
 }
 
 // exactLiteral matches one rune of a literal, folding case like RE2 when the

@@ -84,9 +84,14 @@ type multiRegex struct {
 	// walk can not decide the rule (D523); ruleGroups is each rule's group.
 	exacts     []*exactNode
 	ruleGroups []int
-	subs       [256]*multiRegex
-	subsMu     sync.Mutex
-	manuals    []manualRule
+	// endLineRule is the first rule that is only `$`, or -1. Its first bytes
+	// are the line terminators' and it also matches at the end of the input,
+	// where it is the only kind of rule that can (every other rule that can
+	// match empty disables the dispatch).
+	endLineRule int
+	subs        [256]*multiRegex
+	subsMu      sync.Mutex
+	manuals     []manualRule
 	// manualByByte indexes the manual rules by their first byte, in rule order.
 	manualByByte [256][]manualRule
 	// firstByteTable is the set of bytes that can begin a match, used as a byte
@@ -115,7 +120,7 @@ type multiRegex struct {
 }
 
 func newMultiRegex() *multiRegex {
-	return &multiRegex{matchIndexes: map[int]matchData{}, matchAt: 1}
+	return &multiRegex{matchIndexes: map[int]matchData{}, matchAt: 1, endLineRule: -1}
 }
 
 func (m *multiRegex) addRule(source string, data matchData) {
@@ -209,6 +214,15 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 	var union [256]bool
 	for i, source := range m.regexes {
 		set, ok := ruleFirstByteSet(preparePattern(source), caseInsensitive)
+		if !ok && isEndLineRule(preparePattern(source)) {
+			// `$` under the m flag: before \n, \r, U+2028 or U+2029 (lead
+			// byte 0xE2), or at the end of the input. A wider set only adds
+			// candidates the submatcher rejects.
+			set, ok = "\n\r\xe2", true
+			if m.endLineRule < 0 {
+				m.endLineRule = i
+			}
+		}
 		if !ok {
 			usable = false
 			break
@@ -382,7 +396,7 @@ func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsW
 	for search <= len(s) {
 		candidate := m.indexFirstByte(s, search)
 		if candidate < 0 {
-			return nil
+			return m.endOfInputMatch(s, jsLines)
 		}
 		search = candidate
 		b := s[search]
@@ -452,6 +466,35 @@ func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsW
 	return nil
 }
 
+// endOfInputMatch is the empty match of the first `$` rule at the end of s,
+// or nil when the rule set has none.
+func (m *multiRegex) endOfInputMatch(s string, jsLines bool) *match {
+	if m.endLineRule < 0 {
+		return nil
+	}
+	group := m.ruleGroups[m.endLineRule]
+	data := m.matchIndexes[group]
+	return &match{
+		index:     len(s),
+		typ:       data.typ,
+		rule:      data.rule,
+		input:     s,
+		position:  data.position,
+		groupBase: group,
+		jsLines:   jsLines,
+	}
+}
+
+// isEndLineRule reports whether a prepared rule is only `$` (possibly in
+// groups), which the m flag makes an end-of-line assertion.
+func isEndLineRule(expr string) bool {
+	re := parseExactPattern(expr, false)
+	for re != nil && re.Op == syntax.OpCapture {
+		re = re.Sub[0]
+	}
+	return re != nil && re.Op == syntax.OpEndLine
+}
+
 // execScan is the joined-alternation path used when per-byte dispatch is not
 // available. Manual rules are tested position by position against the leftmost
 // regex match.
@@ -464,7 +507,7 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 			if m.hasFirstBytes {
 				candidate := m.indexFirstByte(s, search)
 				if candidate < 0 {
-					return nil
+					return m.endOfInputMatch(s, jsLines)
 				}
 				search = candidate
 			}
@@ -558,7 +601,7 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 func (m *multiRegex) decideAt(s string, pos int, jsLines bool, ws *jsWorkspace) (found *match, decided bool) {
 	for i, prefilter := range m.prefilters {
 		if exact := m.exacts[i]; exact != nil {
-			end, result := matchExactAt(exact, s, pos, ws)
+			end, result := matchExactAt(exact, s, pos, jsLines, ws)
 			switch result {
 			case exactMatched:
 				data := m.matchIndexes[m.ruleGroups[i]]
