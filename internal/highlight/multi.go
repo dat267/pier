@@ -327,8 +327,12 @@ func (m *multiRegex) exec(s string, lastIndex int, jsLines bool, ws *jsWorkspace
 // evaluated in context, as in execDispatch. A manual rule matching at the same
 // index wins only when it was declared before the regex rule.
 func (m *multiRegex) execAtLastIndex(s string, lastIndex int, jsLines bool, ws *jsWorkspace) *match {
-	var regexMatch *match
-	if lastIndex == 0 {
+	// The alternation is anchored here, so the exact walk can settle it rule
+	// by rule in priority order before the regexp is needed (D523).
+	regexMatch, decided := m.decideAt(s, lastIndex, jsLines, ws)
+	if decided {
+		// Manual rules still compete by position below.
+	} else if lastIndex == 0 {
 		if loc := m.anchoredRe.findSubmatchWS(s, jsLines, ws); loc != nil {
 			regexMatch = m.buildMatch(s, 0, loc, jsLines)
 		}

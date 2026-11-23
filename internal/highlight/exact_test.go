@@ -122,3 +122,31 @@ func TestExactWalkMatchesTheRegexp(t *testing.T) {
 		t.Fatalf("only %d positions decided, %d matched", decided, matched)
 	}
 }
+
+// D523: an end rule keeps its capture groups, and so is left to the regexp,
+// only in a language with an OnEnd callback. highlight.js 10.7.3's
+// END_SAME_AS_BEGIN compares the end match's first group with the begin's,
+// so a bash heredoc must still close only on its own tag; the expected HTML
+// was read off the pinned highlight.js.
+func TestEndRulesKeepGroupsOnlyWhereOnEndReadsThem(t *testing.T) {
+	for name, want := range map[string]bool{"typescript": false, "json": false, "bash": true, "ruby": true} {
+		registryMu.RLock()
+		language := registry[name]
+		registryMu.RUnlock()
+		if got := modeTreeHasOnEnd(&language.Mode, map[*Mode]bool{}); got != want {
+			t.Errorf("%s: end rules keep groups = %v, want %v", name, got, want)
+		}
+	}
+	for code, want := range map[string]string{
+		"cat <<EOF\nx\nEND\nEOF\ny": "cat &lt;&lt;<span class=\"hljs-string\">EOF\nx\nEND\nEOF</span>\ny",
+		"cat <<-'TAG'\n  a\nTAG\nz": "cat &lt;&lt;-<span class=\"hljs-string\">&#x27;TAG&#x27;</span>\n  a\nTAG\nz",
+	} {
+		result, err := HighlightWith(code, "bash", true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := RenderHTML(result.Nodes); got != want {
+			t.Errorf("bash %q = %q, want %q", code, got, want)
+		}
+	}
+}

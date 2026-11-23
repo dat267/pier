@@ -77,7 +77,8 @@ func getCompiledLanguage(name string) (*compiledLanguage, error) {
 	if !ok {
 		return nil, fmt.Errorf("highlight: unknown language %q", name)
 	}
-	c := &compiler{language: language, compiled: map[*Mode]*compiledMode{}}
+	c := &compiler{language: language, compiled: map[*Mode]*compiledMode{},
+		endGroups: modeTreeHasOnEnd(&language.Mode, map[*Mode]bool{})}
 	root, err := c.compileLanguageFor(language)
 	if err != nil {
 		return nil, fmt.Errorf("highlight: compile %q: %w", name, err)

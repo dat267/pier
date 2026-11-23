@@ -338,3 +338,22 @@ func isWordByteBefore(s string, pos int) bool {
 func isWordByteAt(s string, pos int) bool {
 	return pos < len(s) && syntax.IsWordChar(rune(s[pos]))
 }
+
+// modeTreeHasOnEnd reports whether any mode reachable from mode has OnEnd.
+func modeTreeHasOnEnd(mode *Mode, seen map[*Mode]bool) bool {
+	if mode == nil || seen[mode] {
+		return false
+	}
+	seen[mode] = true
+	if mode.OnEnd != nil || modeTreeHasOnEnd(mode.Starts, seen) {
+		return true
+	}
+	for _, list := range [][]*Mode{mode.Contains, mode.Variants} {
+		for _, child := range list {
+			if modeTreeHasOnEnd(child, seen) {
+				return true
+			}
+		}
+	}
+	return false
+}

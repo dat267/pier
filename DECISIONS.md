@@ -8830,8 +8830,22 @@ and after: the TypeScript file 15.7 ms to 12.1 ms (hljs 9.9 ms); the first
 30 KB of marked 19.6 ms to 15.8 ms; `BenchmarkHighlightRegexHeavyJavaScript`
 21.5 ms to 18.0 ms; `BenchmarkHighlightJSONDocument` 2.60 ms to 1.99 ms;
 `BenchmarkHighlightGo` 1.49 ms to 1.42 ms; a Markdown README 5.41 ms both
-ways. TypeScript remains slower than the reference (see `TODO.md`). Output is
-unchanged on the goldens, the hljs differentials and the fuzzers.
+ways. Output is unchanged on the goldens, the hljs differentials and the
+fuzzers.
 
-Tests: `TestExactWalkMatchesTheRegexp`.
+The walk also settles the alternation a mode with an empty end (`\B|\b`)
+anchors at the current position (`execAtLastIndex`), which on TypeScript was
+16% of the profile after the dispatch change. It could not at first, because
+every end rule kept its capture groups. Only `OnEnd` reads an end match's
+groups (highlight.js `END_SAME_AS_BEGIN` compares group 1, and `on:end` runs
+for whichever end match closes a mode, through any parent it is used under),
+so end rules now keep their groups only in a language with an `OnEnd`
+anywhere in its mode tree. Against the dispatch change alone, same method:
+TypeScript 12.0 ms to 10.5 ms, marked 15.9 ms to 11.6 ms,
+`BenchmarkHighlightRegexHeavyJavaScript` 17.9 ms to 12.9 ms,
+`BenchmarkHighlightJSONDocument` 2.05 ms to 1.74 ms, `BenchmarkHighlightGo`
+1.43 ms to 1.38 ms, Markdown unchanged.
+
+Tests: `TestExactWalkMatchesTheRegexp`,
+`TestEndRulesKeepGroupsOnlyWhereOnEndReadsThem`.
 

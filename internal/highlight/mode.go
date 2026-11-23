@@ -178,6 +178,12 @@ func (r *Response) IgnoreMatch() { r.isMatchIgnored = true }
 type compiler struct {
 	language *Language
 	compiled map[*Mode]*compiledMode
+	// endGroups is set when some mode of the language has an OnEnd callback.
+	// highlight.js calls a mode's on:end with whichever end match closes it,
+	// including a descendant's (endsParent, endsWithParent) through any
+	// parent it is used under, so only then must end rules keep their
+	// capture groups.
+	endGroups bool
 }
 
 func (c *compiler) langRe(src string) (*patternRegexp, error) {
@@ -407,7 +413,7 @@ func (c *compiler) buildModeRegex(mode *compiledMode) *resumableMultiRegex {
 		}
 	}
 	if mode.terminatorEnd != "" {
-		mm.addRule(mode.terminatorEnd, true, matchData{typ: ruleEnd})
+		mm.addRule(mode.terminatorEnd, c.endGroups, matchData{typ: ruleEnd})
 	}
 	if mode.illegalSource != "" {
 		mm.addRule(mode.illegalSource, false, matchData{typ: ruleIllegal})
