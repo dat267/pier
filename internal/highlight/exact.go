@@ -1,0 +1,340 @@
+package highlight
+
+import (
+	"regexp/syntax"
+	"unicode"
+	"unicode/utf8"
+)
+
+// The exact walk decides a dispatch rule without Go's regexp engine (D523).
+// highlight.js 10.7.3 runs each rule as an alternative of one sticky regex;
+// the port's per-byte dispatch runs the rules that can begin at a byte as one
+// anchored submatcher. Most of those rules are literals, classes, alternations
+// and repetitions, for which a backtracking walk over the parsed rule in
+// priority order finds the same leftmost-first match RE2 does. The walk
+// answers "unknown" for anything whose meaning it does not reproduce (line
+// anchors and the dot, which carry JavaScript line semantics; `\A`, which the
+// dispatch's slicing changes; counted repetition of a subexpression;
+// repetition of a subexpression that can match empty) and when its step
+// budget runs out, and the dispatch then runs the regexp as before.
+
+type exactResult uint8
+
+const (
+	exactNoMatch exactResult = iota
+	exactMatched
+	exactUnknown
+)
+
+// exactBudget bounds one walk; a rule that needs more steps falls back to
+// the regexp, so a nested repetition can not backtrack for long.
+const exactBudget = 512
+
+// parseExactPattern parses a prepared rule the way the dispatch compiles it:
+// highlight.js always sets the multiline flag, so `^` and `$` are line
+// anchors (which the walk leaves undecided), not the text anchors a plain
+// Perl parse makes of them.
+func parseExactPattern(expr string, caseInsensitive bool) *syntax.Regexp {
+	flags := syntax.Perl &^ syntax.OneLine
+	if caseInsensitive {
+		flags |= syntax.FoldCase
+	}
+	parsed, err := syntax.Parse(expr, flags)
+	if err != nil {
+		return nil
+	}
+	return parsed.Simplify()
+}
+
+// exactProgram returns re when every node of it is one the walk reproduces,
+// or nil.
+func exactProgram(re *syntax.Regexp) *syntax.Regexp {
+	if re == nil || !exactSupported(re) {
+		return nil
+	}
+	return re
+}
+
+func exactSupported(re *syntax.Regexp) bool {
+	switch re.Op {
+	case syntax.OpEmptyMatch, syntax.OpLiteral, syntax.OpCharClass, syntax.OpAnyChar,
+		syntax.OpWordBoundary, syntax.OpNoWordBoundary, syntax.OpEndText:
+		return true
+	case syntax.OpCapture, syntax.OpQuest:
+		return exactSupported(re.Sub[0])
+	case syntax.OpConcat, syntax.OpAlternate:
+		for _, sub := range re.Sub {
+			if !exactSupported(sub) {
+				return false
+			}
+		}
+		return true
+	case syntax.OpStar, syntax.OpPlus:
+		if exactSingle(re.Sub[0]) {
+			return true
+		}
+		// An iteration that can match empty is where RE2 and backtracking
+		// can disagree; with every iteration consuming input they agree.
+		return minMatchLen(re.Sub[0]) > 0 && exactSupported(re.Sub[0])
+	case syntax.OpRepeat:
+		return exactSingle(re.Sub[0])
+	}
+	return false
+}
+
+// exactSingle reports whether re consumes exactly one rune.
+func exactSingle(re *syntax.Regexp) bool {
+	switch re.Op {
+	case syntax.OpLiteral:
+		return len(re.Rune) == 1
+	case syntax.OpCharClass, syntax.OpAnyChar:
+		return true
+	}
+	return false
+}
+
+// exactCont is the rest of the rule after a node, as a list linked by index
+// into the walk's reused slice. A loop continuation (loop set) is a star or
+// plus node that may iterate again before next.
+type exactCont struct {
+	node *syntax.Regexp
+	next int32
+	loop bool
+}
+
+type exactWalk struct {
+	s      string
+	budget int
+	conts  []exactCont
+	end    int
+}
+
+// matchExactAt runs the walk for re at pos of s. On exactMatched the match
+// is s[pos:end].
+func matchExactAt(re *syntax.Regexp, s string, pos int, ws *jsWorkspace) (end int, result exactResult) {
+	w := exactWalk{s: s, budget: exactBudget}
+	if ws != nil {
+		w.conts = ws.exact[:0]
+	}
+	result = w.seq(w.push(re, prefilterEnd, false), pos)
+	if ws != nil {
+		ws.exact = w.conts[:0]
+	}
+	return w.end, result
+}
+
+func (w *exactWalk) push(node *syntax.Regexp, next int32, loop bool) int32 {
+	w.conts = append(w.conts, exactCont{node: node, next: next, loop: loop})
+	return int32(len(w.conts) - 1)
+}
+
+// seq walks the list from pos. The empty list is the end of the rule.
+func (w *exactWalk) seq(seq int32, pos int) exactResult {
+	s := w.s
+	for seq != prefilterEnd {
+		w.budget--
+		if w.budget < 0 {
+			return exactUnknown
+		}
+		cont := w.conts[seq]
+		node, rest := cont.node, cont.next
+		if cont.loop {
+			// One more iteration of a star or plus body, preferred unless the
+			// repetition is non-greedy.
+			again := w.push(node.Sub[0], w.push(node, rest, true), false)
+			return w.either(node.Flags&syntax.NonGreedy != 0, again, pos, rest, pos)
+		}
+		switch node.Op {
+		case syntax.OpEmptyMatch:
+			seq = rest
+		case syntax.OpWordBoundary, syntax.OpNoWordBoundary:
+			boundary := isWordByteBefore(s, pos) != isWordByteAt(s, pos)
+			if boundary != (node.Op == syntax.OpWordBoundary) {
+				return exactNoMatch
+			}
+			seq = rest
+		case syntax.OpEndText:
+			if pos != len(s) {
+				return exactNoMatch
+			}
+			seq = rest
+		case syntax.OpLiteral:
+			for _, r := range node.Rune {
+				c, width := utf8.DecodeRuneInString(s[pos:])
+				if width == 0 || !exactLiteral(node, r, c) {
+					return exactNoMatch
+				}
+				pos += width
+			}
+			seq = rest
+		case syntax.OpCharClass, syntax.OpAnyChar:
+			width := exactOne(node, s, pos)
+			if width == 0 {
+				return exactNoMatch
+			}
+			pos += width
+			seq = rest
+		case syntax.OpCapture:
+			seq = w.push(node.Sub[0], rest, false)
+		case syntax.OpConcat:
+			for i := len(node.Sub) - 1; i >= 0; i-- {
+				rest = w.push(node.Sub[i], rest, false)
+			}
+			seq = rest
+		case syntax.OpAlternate:
+			// Leftmost-first: the first alternative that completes wins, so an
+			// undecided one leaves the whole walk undecided.
+			for _, alternative := range node.Sub {
+				if result := w.seq(w.push(alternative, rest, false), pos); result != exactNoMatch {
+					return result
+				}
+			}
+			return exactNoMatch
+		case syntax.OpQuest:
+			with := w.push(node.Sub[0], rest, false)
+			return w.either(node.Flags&syntax.NonGreedy != 0, with, pos, rest, pos)
+		case syntax.OpStar, syntax.OpPlus, syntax.OpRepeat:
+			if exactSingle(node.Sub[0]) {
+				return w.run(node, rest, pos)
+			}
+			if node.Op == syntax.OpPlus {
+				return w.seq(w.push(node.Sub[0], w.push(node, rest, true), false), pos)
+			}
+			seq = w.push(node, rest, true)
+		default:
+			return exactUnknown
+		}
+	}
+	w.end = pos
+	return exactMatched
+}
+
+// either tries the list first at firstPos, then second at secondPos, or the
+// other way round when reversed (a non-greedy repetition).
+func (w *exactWalk) either(reversed bool, first int32, firstPos int, second int32, secondPos int) exactResult {
+	if reversed {
+		first, firstPos, second, secondPos = second, secondPos, first, firstPos
+	}
+	if result := w.seq(first, firstPos); result != exactNoMatch {
+		return result
+	}
+	return w.seq(second, secondPos)
+}
+
+// run matches a repetition of a single-rune node, trying the run lengths in
+// priority order against the rest of the rule.
+func (w *exactWalk) run(node *syntax.Regexp, rest int32, pos int) exactResult {
+	minimum, maximum := 0, -1
+	switch node.Op {
+	case syntax.OpPlus:
+		minimum = 1
+	case syntax.OpRepeat:
+		minimum, maximum = node.Min, node.Max
+	}
+	if node.Flags&syntax.NonGreedy != 0 {
+		// Shortest first: extend the run one rune at a time, trying the rest
+		// of the rule at each length, so `.*?` reads only as far as it must.
+		end := pos
+		for count := 0; ; count++ {
+			if count >= minimum {
+				if result := w.seq(rest, end); result != exactNoMatch {
+					return result
+				}
+			}
+			if maximum >= 0 && count >= maximum {
+				return exactNoMatch
+			}
+			width := exactOne(node.Sub[0], w.s, end)
+			if width == 0 {
+				return exactNoMatch
+			}
+			end += width
+		}
+	}
+	// The scan is linear in the run, so it is not charged to the budget; the
+	// tries against the rest of the rule are. ends[k], the position after k
+	// repetitions, is only kept once a multi-byte rune makes it differ from
+	// pos+k.
+	var ends []int
+	count := 0
+	for end := pos; maximum < 0 || count < maximum; count++ {
+		width := exactOne(node.Sub[0], w.s, end)
+		if width == 0 {
+			break
+		}
+		if width > 1 && ends == nil {
+			ends = make([]int, count+1, count+8)
+			for k := range ends {
+				ends[k] = pos + k
+			}
+		}
+		end += width
+		if ends != nil {
+			ends = append(ends, end)
+		}
+	}
+	if count < minimum {
+		return exactNoMatch
+	}
+	at := func(k int) int {
+		if ends == nil {
+			return pos + k
+		}
+		return ends[k]
+	}
+	for k := count; k >= minimum; k-- {
+		if result := w.seq(rest, at(k)); result != exactNoMatch {
+			return result
+		}
+	}
+	return exactNoMatch
+}
+
+// exactOne returns the width of the rune at pos when node (a one-rune node)
+// matches it, or 0.
+func exactOne(node *syntax.Regexp, s string, pos int) int {
+	c, width := utf8.DecodeRuneInString(s[pos:])
+	if width == 0 {
+		return 0
+	}
+	switch node.Op {
+	case syntax.OpAnyChar:
+		return width
+	case syntax.OpLiteral:
+		if exactLiteral(node, node.Rune[0], c) {
+			return width
+		}
+	case syntax.OpCharClass:
+		if prefilterClassHas(node.Rune, c) {
+			return width
+		}
+	}
+	return 0
+}
+
+// exactLiteral matches one rune of a literal, folding case like RE2 when the
+// literal carries the fold flag.
+func exactLiteral(node *syntax.Regexp, r, c rune) bool {
+	if c == r {
+		return true
+	}
+	if node.Flags&syntax.FoldCase == 0 {
+		return false
+	}
+	for f := unicode.SimpleFold(r); f != r; f = unicode.SimpleFold(f) {
+		if f == c {
+			return true
+		}
+	}
+	return false
+}
+
+// isWordByteBefore and isWordByteAt are RE2's ASCII \b test on the runes
+// around pos; a multi-byte rune is never a word character.
+func isWordByteBefore(s string, pos int) bool {
+	return pos > 0 && syntax.IsWordChar(rune(s[pos-1]))
+}
+
+func isWordByteAt(s string, pos int) bool {
+	return pos < len(s) && syntax.IsWordChar(rune(s[pos]))
+}

@@ -828,6 +828,7 @@ internal/highlight/api_test.go
 internal/highlight/bench_test.go
 internal/highlight/code_units_test.go
 internal/highlight/empty_params_parity_test.go
+internal/highlight/exact_test.go
 internal/highlight/firstbyte_test.go
 internal/highlight/golden_test.go
 internal/highlight/highlight_fuzz_test.go

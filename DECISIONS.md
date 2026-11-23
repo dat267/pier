@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D522)
+# Deliberate divergences from pi (D1–D523)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8801,4 +8801,37 @@ remains slower than the reference (see `TODO.md`). Output is unchanged on the
 goldens, the hljs differentials and the fuzzers.
 
 Tests: `TestMayMatchAtNeverRejectsAMatch`.
+
+### D523
+
+**The dispatch decides most rules by walking their syntax tree.**
+
+Reference: pi v1.6.0 (`faac5858`) highlights with highlight.js 10.7.3, whose
+rules are alternatives of one sticky regex that V8 runs natively. The port's
+per-byte dispatch (D521, D522) still called Go's regexp for every candidate
+the prefilter admitted, about 1 µs a call; on the TypeScript workload of
+`TODO.md` 58% of those calls had only rules built from literals, classes,
+alternations, captures, word boundaries and repetitions.
+
+`matchExactAt` walks such a rule over the input in priority order and returns
+the leftmost-first match RE2 returns, or "unknown". It reads `\b` and `\B`
+from the real neighbouring bytes, and it repeats a subexpression only when
+every iteration consumes input, where backtracking and RE2 agree. Line
+anchors, the dot (both carry JavaScript line semantics), `\A`, counted
+repetition of a subexpression and a spent 512-step budget are unknown. The
+dispatch tries the submatcher's rules in order: a match wins, a no-match moves
+on, and the first rule neither the walk nor its prefilter can settle sends
+the position to the regexp as before. A rule whose groups a callback reads is
+never walked. A lazy run extends one rune at a time; scanning it to its end
+first made Markdown's `(?s:.*?)` read the rest of the document at each call.
+
+Paired runs of the same binaries, alternated five times (Intel N150), before
+and after: the TypeScript file 15.7 ms to 12.1 ms (hljs 9.9 ms); the first
+30 KB of marked 19.6 ms to 15.8 ms; `BenchmarkHighlightRegexHeavyJavaScript`
+21.5 ms to 18.0 ms; `BenchmarkHighlightJSONDocument` 2.60 ms to 1.99 ms;
+`BenchmarkHighlightGo` 1.49 ms to 1.42 ms; a Markdown README 5.41 ms both
+ways. TypeScript remains slower than the reference (see `TODO.md`). Output is
+unchanged on the goldens, the hljs differentials and the fuzzers.
+
+Tests: `TestExactWalkMatchesTheRegexp`.
 

@@ -80,6 +80,10 @@ type multiRegex struct {
 	ruleFirst []string
 	// prefilters holds each rule's parsed form for mayMatchAt; nil admits all.
 	prefilters []*syntax.Regexp
+	// exacts holds each rule's parsed form for matchExactAt, or nil when the
+	// walk can not decide the rule (D523); ruleGroups is each rule's group.
+	exacts     []*syntax.Regexp
+	ruleGroups []int
 	subs       [256]*multiRegex
 	subsMu     sync.Mutex
 	manuals    []manualRule
@@ -122,6 +126,7 @@ func (m *multiRegex) addRule(source string, data matchData) {
 func (m *multiRegex) addRuleAt(source string, position int, data matchData) {
 	data.position = position
 	m.matchIndexes[m.matchAt] = data
+	m.ruleGroups = append(m.ruleGroups, m.matchAt)
 	m.regexes = append(m.regexes, source)
 	m.datas = append(m.datas, data)
 	m.matchAt += countCapturingGroups(source) + 1
@@ -191,8 +196,14 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 	// a rule can begin at any byte.
 	m.ruleFirst = make([]string, len(m.regexes))
 	m.prefilters = make([]*syntax.Regexp, len(m.regexes))
+	m.exacts = make([]*syntax.Regexp, len(m.regexes))
 	for i, source := range m.regexes {
-		m.prefilters[i] = rulePrefilter(preparePattern(source), caseInsensitive)
+		prepared := preparePattern(source)
+		m.prefilters[i] = rulePrefilter(prepared, caseInsensitive)
+		// A rule whose groups a callback reads needs the regexp's submatches.
+		if !m.datas[i].keepGroups {
+			m.exacts[i] = exactProgram(parseExactPattern(prepared, caseInsensitive))
+		}
 	}
 	usable := true
 	var union [256]bool
@@ -266,6 +277,7 @@ func (m *multiRegex) subMatcher(b byte) *multiRegex {
 		}
 		sub.addRuleAt(source, m.datas[i].position, m.datas[i])
 		sub.prefilters = append(sub.prefilters, m.prefilters[i])
+		sub.exacts = append(sub.exacts, m.exacts[i])
 	}
 	if len(sub.regexes) == 0 {
 		return nil
@@ -371,7 +383,12 @@ func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsW
 		b := s[search]
 
 		var regexMatch, manualMatch *match
-		if sub := m.subMatcher(b); sub != nil && sub.mayMatchAt(s, search, ws) {
+		sub := m.subMatcher(b)
+		var decided bool
+		if sub != nil {
+			regexMatch, decided = sub.decideAt(s, search, jsLines, ws)
+		}
+		if sub != nil && !decided {
 			if search == 0 {
 				if loc := sub.matcherRe.findSubmatchWS(s, jsLines, ws); loc != nil {
 					regexMatch = sub.buildMatch(s, 0, loc, jsLines)
@@ -519,13 +536,37 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 // mayMatchAt reports whether any rule may match at pos. A position where none
 // can is handled as a failed regex call, so the rejected-candidate budget
 // (D351) counts it the same way.
-func (m *multiRegex) mayMatchAt(s string, pos int, ws *jsWorkspace) bool {
-	for _, prefilter := range m.prefilters {
+// decideAt settles a submatcher at pos without its regexp when it can: rules
+// are tried in priority order, each by the exact walk (D523) or, failing
+// that, ruled out by its prefilter (D522). The first rule that matches wins,
+// as it does in the anchored alternation. decided is false at the first rule
+// neither can settle, and the caller then runs the regexp.
+func (m *multiRegex) decideAt(s string, pos int, jsLines bool, ws *jsWorkspace) (found *match, decided bool) {
+	for i, prefilter := range m.prefilters {
+		if exact := m.exacts[i]; exact != nil {
+			end, result := matchExactAt(exact, s, pos, ws)
+			switch result {
+			case exactMatched:
+				data := m.matchIndexes[m.ruleGroups[i]]
+				return &match{
+					index:     pos,
+					lexeme:    s[pos:end],
+					typ:       data.typ,
+					rule:      data.rule,
+					input:     s,
+					position:  data.position,
+					groupBase: m.ruleGroups[i],
+					jsLines:   jsLines,
+				}, true
+			case exactNoMatch:
+				continue
+			}
+		}
 		if prefilter == nil || mayMatchAt(prefilter, s, pos, ws) {
-			return true
+			return nil, false
 		}
 	}
-	return false
+	return nil, true
 }
 
 // buildMatch builds a match from a submatch result relative to base.
