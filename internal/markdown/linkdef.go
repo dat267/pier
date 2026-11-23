@@ -1,16 +1,22 @@
 package markdown
 
-import "strings"
+import (
+	"slices"
+	"unicode/utf8"
+)
 
-// parseLinkDef is marked 18.0.11's def rule (pi v1.5.0 f9a26365, which
+// parseLinkDef is marked 18.0.11's def rule (pi v1.6.0 faac5858, which
 // packages/tui/src/components/markdown.ts lexes with):
 //
-//	^ {0,3}[label]: " *(?:\n[ \t]*)?" ("<x>" | [^<[whitespace]][^whitespace]*)
+//	^ {0,3}[label]: " *(?:\n[ \t]*)?" ("<.*?>" | [^<\s][^\s]*)
 //	  ( ( " +" ( "\n[ \t]*" )? | " *\n[ \t]*" ) title )? " *(?: newlines | end )"
 //
-// It returns the label, the href, the optional title and the offset past the
-// definition. ok=false leaves the branch to a later one: the whole trailing
-// match is what makes an unquoted word after the URL fail into a paragraph.
+// with JavaScript's `\s`, and `.` stopping at line terminators. It returns the
+// label, the href, the optional title and the offset past the definition.
+// ok=false leaves the branch to a later one. The regex backtracks when the
+// trailing ` *(?:\n+|$)` fails: through the closing quotes a `"` title could
+// take, then to no title, then to a longer angle href. The candidates are
+// tried in that order, so `[a]: /u\n't'x` is a definition followed by text.
 func parseLinkDef(src string, start int) (tag, href, title string, end int, ok bool) {
 	at := start
 	for at < len(src) && src[at] == ' ' && at-start < 3 {
@@ -36,30 +42,43 @@ func parseLinkDef(src string, start int) (tag, href, title string, end int, ok b
 			at++
 		}
 	}
-	if at >= len(src) || src[at] == ' ' || src[at] == '\t' || src[at] == '\n' {
+	if at >= len(src) || jsSpaceAt(src, at) {
 		return "", "", "", 0, false
 	}
-	href, at = linkDefHref(src, at)
-	if at < 0 {
-		return "", "", "", 0, false
+	for _, hrefEnd := range linkDefHrefEnds(src, at) {
+		href = src[at:hrefEnd]
+		if src[at] == '<' {
+			href = src[at+1 : hrefEnd-1]
+		}
+		if titleAt := linkDefTitleStart(src, hrefEnd); titleAt >= 0 {
+			for _, titleEnd := range defTitleEnds(src, titleAt) {
+				if end, ok := linkDefTrailing(src, titleEnd); ok {
+					return tag, href, src[titleAt:titleEnd], end, true
+				}
+			}
+		}
+		if end, ok := linkDefTrailing(src, hrefEnd); ok {
+			return tag, href, "", end, true
+		}
 	}
-	// A title is optional: none leaves the scan right after the href.
-	if titleAt, titleText := linkDefTitle(src, at); titleAt >= 0 {
-		title, at = titleText, titleAt
-	}
-	// Trailing ` *(?:\n+|$)`.
+	return "", "", "", 0, false
+}
+
+// linkDefTrailing matches ` *(?:\n+|$)` at at and returns the offset past it.
+func linkDefTrailing(src string, at int) (int, bool) {
 	for at < len(src) && src[at] == ' ' {
 		at++
 	}
-	if at < len(src) {
-		if src[at] != '\n' {
-			return "", "", "", 0, false
-		}
-		for at < len(src) && src[at] == '\n' {
-			at++
-		}
+	if at == len(src) {
+		return at, true
 	}
-	return tag, href, title, at, true
+	if src[at] != '\n' {
+		return 0, false
+	}
+	for at < len(src) && src[at] == '\n' {
+		at++
+	}
+	return at, true
 }
 
 // linkDefLabel reads `[label]`'s content from the opening bracket at bracket:
@@ -85,8 +104,9 @@ func linkDefLabel(src string, bracket int) (string, int, bool) {
 				return "", 0, false
 			}
 			return src[start:i], i, true
-		case isJSWhitespaceByte(src[i]):
-			i++
+		case jsSpaceAt(src, i):
+			_, size := utf8.DecodeRuneInString(src[i:])
+			i += size
 		default:
 			whitespaceRun = false
 			i++
@@ -95,139 +115,117 @@ func linkDefLabel(src string, bracket int) (string, int, bool) {
 	return "", 0, false
 }
 
-func isJSWhitespaceByte(b byte) bool {
-	switch b {
-	case ' ', '\t', '\v', '\f', '\r', '\n':
-		return true
-	}
-	return false
-}
-
-// linkDefHref reads the target: an angle URL whose `>` closes on the same
-// line, or a run of non-space bytes. It returns -1 when there is no URL.
-func linkDefHref(src string, at int) (string, int) {
-	if at >= len(src) {
-		return "", -1
-	}
+// linkDefHrefEnds returns the ends the target can take, in the order the
+// regex tries them: `<.*?>` is lazy, so each `>` before the line ends (`.` stops
+// at \n, \r, U+2028 and U+2029), and `[^<\s][^\s]*` is greedy, where a shorter
+// match leaves a character no later part accepts, so only the longest counts.
+func linkDefHrefEnds(src string, at int) []int {
 	if src[at] == '<' {
-		nl := strings.IndexByte(src[at:], '\n')
-		gt := strings.IndexByte(src[at:], '>')
-		if gt < 0 || (nl >= 0 && gt > nl) {
-			return "", -1
+		var ends []int
+		for i := at + 1; i < len(src); {
+			r, size := utf8.DecodeRuneInString(src[i:])
+			if r == '\n' || r == '\r' || r == '\u2028' || r == '\u2029' {
+				break
+			}
+			i += size
+			if r == '>' {
+				ends = append(ends, i)
+			}
 		}
-		return src[at+1 : at+gt], at + gt + 1
+		return ends
 	}
 	j := at
-	for j < len(src) && src[j] != ' ' && src[j] != '\t' && src[j] != '\n' {
-		j++
+	for j < len(src) && !jsSpaceAt(src, j) {
+		_, size := utf8.DecodeRuneInString(src[j:])
+		j += size
 	}
-	if j == at {
-		return "", -1
-	}
-	return src[at:j], j
+	return []int{j}
 }
 
-// linkDefTitle reads the optional `(?: +(?:\n[ \t]*)?| *\n[ \t]*)title` group
-// and returns the offset after it with the title text, or -1 when no title
-// follows (the definition is still valid without one).
-func linkDefTitle(src string, at int) (int, string) {
-	// Candidates: a title right after one or more spaces, and one after any
-	// spaces plus a newline and an indent run.
-	candidates := make([]int, 0, 3)
-	spaceRun := at
-	for spaceRun < len(src) && src[spaceRun] == ' ' {
-		spaceRun++
+// linkDefTitleStart matches `(?: +(?:\n[ \t]*)?| *\n[ \t]*)` after the href
+// and returns where a title would start, or -1. A title cannot start with a
+// space or a newline, so the alternatives never offer two starts.
+func linkDefTitleStart(src string, at int) int {
+	i := at
+	for i < len(src) && src[i] == ' ' {
+		i++
 	}
-	if spaceRun > at {
-		if spaceRun < len(src) && src[spaceRun] != '\n' {
-			candidates = append(candidates, spaceRun)
+	if i < len(src) && src[i] == '\n' {
+		i++
+		for i < len(src) && (src[i] == ' ' || src[i] == '\t') {
+			i++
 		}
-		nlRun := spaceRun
-		if nlRun < len(src) && src[nlRun] == '\n' {
-			indented := nlRun + 1
-			for indented < len(src) && (src[indented] == ' ' || src[indented] == '\t') {
-				indented++
-			}
-			candidates = append(candidates, indented)
-		}
-	} else if at < len(src) && src[at] == '\n' {
-		indented := at + 1
-		for indented < len(src) && (src[indented] == ' ' || src[indented] == '\t') {
-			indented++
-		}
-		candidates = append(candidates, indented)
+		return i
 	}
-	for _, candidate := range candidates {
-		if end, closed := defTitle(src, candidate); closed {
-			return end, src[candidate:end]
-		}
+	if i == at {
+		return -1
 	}
-	return -1, ""
+	return i
 }
 
-// defTitle reads `(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))`
-// and returns the offset after the whole title.
-func defTitle(src string, at int) (int, bool) {
+// defTitleEnds matches `(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))`
+// at at and returns the offsets after each title it can match, in the order the
+// regex tries them. A `"` title can close at any quote it reaches, and `\\"?`
+// prefers taking a quote after a backslash, so the latest close comes first; the
+// other two close at their first delimiter.
+func defTitleEnds(src string, at int) []int {
 	if at >= len(src) {
-		return 0, false
+		return nil
 	}
 	switch src[at] {
 	case '"':
-		// `\\"?` prefers taking a quote after a backslash; with no closing
-		// quote later the regex backtracks to the last such quote.
-		lastEscaped := -1
-		i := at + 1
-		for i < len(src) {
+		// reachable[i] marks a body position the repetition can stand at.
+		reachable := make([]bool, len(src)+1)
+		reachable[at+1] = true
+		var ends []int
+		for i := at + 1; i < len(src); i++ {
+			if !reachable[i] {
+				continue
+			}
 			switch src[i] {
-			case '\\':
-				if i+1 < len(src) && src[i+1] == '"' {
-					lastEscaped = i + 1
-					i += 2
-					continue
-				}
-				i++
 			case '"':
-				return i + 1, true
+				ends = append(ends, i+1)
+			case '\\':
+				reachable[i+1] = true
+				if i+1 < len(src) && src[i+1] == '"' {
+					reachable[i+2] = true
+				}
 			default:
-				i++
+				reachable[i+1] = true
 			}
 		}
-		if lastEscaped >= 0 {
-			return lastEscaped + 1, true
-		}
+		slices.Reverse(ends)
+		return ends
 	case '\'':
-		// `'[^'\n]*(?:\n[^'\n]+)*\n?'`: lines of non-quote text, with no
-		// blank line inside.
+		// Lines of non-quote text, with no blank line inside.
 		i := at + 1
 		for {
 			for i < len(src) && src[i] != '\'' && src[i] != '\n' {
 				i++
 			}
 			if i >= len(src) {
-				return 0, false
+				return nil
 			}
 			if src[i] == '\'' {
-				return i + 1, true
+				return []int{i + 1}
 			}
-			// A newline: the closing quote, or another non-empty line.
 			if i+1 < len(src) && src[i+1] == '\'' {
-				return i + 2, true
+				return []int{i + 2}
 			}
 			if i+1 >= len(src) || src[i+1] == '\n' {
-				return 0, false
+				return nil
 			}
 			i++
 		}
 	case '(':
-		// `\([^()]*\)`: no parenthesis inside.
 		for i := at + 1; i < len(src); i++ {
 			switch src[i] {
 			case ')':
-				return i + 1, true
+				return []int{i + 1}
 			case '(':
-				return 0, false
+				return nil
 			}
 		}
 	}
-	return 0, false
+	return nil
 }

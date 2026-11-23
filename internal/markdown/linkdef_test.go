@@ -76,3 +76,34 @@ func defShapes(blocks []*Block) string {
 	}
 	return out
 }
+
+// Reference: pi v1.6.0 (faac5858) marked 18.0.11's def rule. When the trailing
+// ` *(?:\n+|$)` fails after a title, the regex backtracks through the other
+// closing quotes, then to no title, then to a longer angle href; the href and
+// label use JavaScript's `\s`, and `<.*?>` stops at U+2028. `href` and `title`
+// are the raw spans marked's cap[2] and cap[3] hold; rest is what follows.
+func TestParseLinkDefBacktracksLikeTheRegex(t *testing.T) {
+	for _, tc := range []struct {
+		src, href, title, rest string
+		ok                     bool
+	}{
+		{"[a]: /u\n't'x", "/u", "", "'t'x", true},
+		{"[a]: /u\n\"t\"|b", "/u", "", "\"t\"|b", true},
+		{"[a]: /u\n(t)x", "/u", "", "(t)x", true},
+		{"[a]: /u\n't'\nx", "/u", "'t'", "x", true},
+		{"[a]: /u \"t\" x", "", "", "", false},
+		{"[a]: /u \"x\\\" y\"\n", "/u", "\"x\\\" y\"", "", true},
+		{"[a]: /u \"x\\\"\n", "/u", "\"x\\\"", "", true},
+		{"[a]: /u \"x\\\" y\" z\n", "", "", "", false},
+		{"[a]: <x> y>\n", "x> y", "", "", true},
+		{"[a]: <x>\u2028y>\n", "", "", "", false},
+		{"[a]: /u\u00a0x\n", "", "", "", false},
+		{"[\u00a0]: /u\n", "", "", "", false},
+	} {
+		_, href, title, end, ok := parseLinkDef(tc.src, 0)
+		if ok != tc.ok || ok && (href != tc.href || title != tc.title || tc.src[end:] != tc.rest) {
+			t.Errorf("parseLinkDef(%q) = %q, %q, rest %q, %v; want %q, %q, rest %q, %v",
+				tc.src, href, title, tc.src[min(end, len(tc.src)):], ok, tc.href, tc.title, tc.rest, tc.ok)
+		}
+	}
+}
