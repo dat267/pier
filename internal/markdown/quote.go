@@ -274,7 +274,8 @@ func lexQuoteChunks(lines []string) ([]*Block, string, int) {
 		case BlockList:
 			// The continuation re-lexes with the list; its leftover lines go on
 			// to the next chunk.
-			newText := blockSource(last, chunk) + "\n" + strings.Join(rest, "\n")
+			oldRaw := listChunkRaw(last, chunk)
+			newText := oldRaw + "\n" + strings.Join(rest, "\n")
 			relexed := (&blockLexer{src: newText}).lexBlocks(0, len(newText))
 			if len(relexed) == 0 || relexed[0].Kind != BlockList {
 				return blocks, text.String(), kept()
@@ -282,7 +283,6 @@ func lexQuoteChunks(lines []string) ([]*Block, string, int) {
 			list := relexed[0]
 			// marked replaces the chunk's list with the re-lexed list's raw
 			// (`r.substring(0, r.length - O.raw.length) + w.raw`).
-			oldRaw := blockSource(last, chunk)
 			blocks[len(blocks)-1] = list
 			listRaw := blockSource(list, newText)
 			text.cut(len(oldRaw))
@@ -369,6 +369,20 @@ func blockSource(b *Block, text string) string {
 		return ""
 	}
 	return strings.TrimRight(text[b.Start:b.End], "\n")
+}
+
+// listChunkRaw is a chunk list's raw as marked holds it. Tokenizer.list trims
+// the list's end, and blockTokens folds a one-character space token after it
+// into the raw as a newline (`lastToken.raw += '\n'`), where the port's block
+// spans the space itself. So a list whose line ends in one space re-lexes as
+// `- a\n` and a lazy line after it starts a new paragraph (marked 18.0.11,
+// pi v1.6.0 faac5858).
+func listChunkRaw(list *Block, chunk string) string {
+	raw := blockSource(list, chunk)
+	if trimmed := strings.TrimRight(raw, " \t"); len(trimmed) < len(raw) {
+		return trimmed + "\n"
+	}
+	return raw
 }
 
 // appendQuoteChunk appends a chunk's blocks the way blockTokens(…, true) adds

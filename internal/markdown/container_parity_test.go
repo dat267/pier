@@ -46,6 +46,14 @@ func TestContainerTokenizersMatchMarked(t *testing.T) {
 		{"- a\n\u0085\n  b\n", `ul[(p:"a\n\u0085\nb")]`},
 		{"- a \uFEFF\n", `ul[(p:"a")] | p:" \ufeff"`},
 
+		// Tokenizer.list trims the list's end and blockTokens folds the one-space
+		// token after it into the raw as "\n", so the quote re-lexes `- a\n\nb`:
+		// a lazy line after an item ending in a space is its own paragraph
+		// (pi v1.6.0, faac5858).
+		{"> - a \nb", `quote[ul[(p:"a")],space,p:"b"]`},
+		{"> 1. a \nb\nc", `quote[ol[(p:"a")],space,p:"b\nc"]`},
+		{"> - a\nb", `quote[ul[(p:"a\nb")]]`},
+
 		// The heading rule takes at most three spaces of indent.
 		{"    # not a heading\n", `code:"# not a heading\n"`},
 		{"- a\n# h\n", `ul[(p:"a")] | h1:"h"`},
