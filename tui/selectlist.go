@@ -37,16 +37,6 @@ func normalizeToSingleLine(text string) string {
 	return ai.JSTrim(builder.String())
 }
 
-func clampInt(value int, low int, high int) int {
-	if value < low {
-		return low
-	}
-	if value > high {
-		return high
-	}
-	return value
-}
-
 // SelectItem is a selectable entry. The JSON field names match upstream's
 // object shape.
 type SelectItem struct {
@@ -325,7 +315,8 @@ func (s *SelectList) getPrimaryColumnWidth() int {
 	for _, item := range s.filteredItems {
 		widest = max(widest, VisibleWidth(s.getDisplayValue(item))+primaryColumnGap)
 	}
-	return clampInt(widest, minWidth, maxWidth)
+	// Upstream clamp: Math.max(min, Math.min(value, max)).
+	return max(minWidth, min(widest, maxWidth))
 }
 
 func (s *SelectList) getPrimaryColumnBounds() (minWidth int, maxWidth int) {
