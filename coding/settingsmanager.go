@@ -1020,7 +1020,7 @@ func MigrateSettingsRaw(settings map[string]any) *Settings {
 // names whose value the typed struct could not hold.
 func migrateSettingsRawWithRejects(settings map[string]any) (*Settings, []string) {
 	settings = migrateSettingsMap(settings)
-	encoded, err := marshalJSONNoEscape(settings)
+	encoded, err := ai.MarshalJSON(settings)
 	if err != nil {
 		return &Settings{}, nil
 	}
@@ -1115,7 +1115,7 @@ func settingsToMap(settings *Settings) map[string]any {
 }
 
 func mapToSettings(raw map[string]any) *Settings {
-	encoded, err := marshalJSONNoEscape(raw)
+	encoded, err := ai.MarshalJSON(raw)
 	if err != nil {
 		return &Settings{}
 	}
@@ -1310,13 +1310,13 @@ func (o *orderedObject) marshal() ([]byte, error) {
 		if index > 0 {
 			buffer.WriteByte(',')
 		}
-		encodedKey, err := marshalJSONNoEscape(key)
+		encodedKey, err := ai.MarshalJSON(key)
 		if err != nil {
 			return nil, err
 		}
 		buffer.Write(encodedKey)
 		buffer.WriteByte(':')
-		encodedValue, err := marshalJSONNoEscape(o.values[index])
+		encodedValue, err := ai.MarshalJSON(o.values[index])
 		if err != nil {
 			return nil, err
 		}
@@ -1326,25 +1326,17 @@ func (o *orderedObject) marshal() ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-// marshalJSONNoEscape marshals without HTML escaping (JSON.stringify parity).
-func marshalJSONNoEscape(value any) ([]byte, error) {
-	return ai.MarshalJSON(value)
-}
-
 // marshalSettingsIndent renders settings like JSON.stringify(value, null, 2).
 func marshalSettingsIndent(settings *Settings) string {
 	ordered, err := settings.marshalOrdered()
 	if err != nil {
 		return "{}"
 	}
-	var buffer bytes.Buffer
-	encoder := json.NewEncoder(&buffer)
-	encoder.SetEscapeHTML(false)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(json.RawMessage(ordered)); err != nil {
+	indented, err := ai.MarshalIndentJSON(json.RawMessage(ordered))
+	if err != nil {
 		return "{}"
 	}
-	return strings.TrimRight(buffer.String(), "\n")
+	return string(indented)
 }
 
 // settingsRawKeyOrder returns the top-level keys of a JSON settings object in
@@ -1639,14 +1631,11 @@ func marshalSettingsMapIndent(fileKeys []string, merged map[string]any, nestedOr
 	if err != nil {
 		return "{}"
 	}
-	var buffer bytes.Buffer
-	encoder := json.NewEncoder(&buffer)
-	encoder.SetEscapeHTML(false)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(json.RawMessage(encoded)); err != nil {
+	indented, err := ai.MarshalIndentJSON(json.RawMessage(encoded))
+	if err != nil {
 		return "{}"
 	}
-	return strings.TrimRight(buffer.String(), "\n")
+	return string(indented)
 }
 
 // GetGlobalSettings returns a copy of the global scope.

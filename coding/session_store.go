@@ -153,7 +153,7 @@ func (h *SessionHeader) MarshalJSON() ([]byte, error) {
 	if h.Version != nil {
 		version = *h.Version
 	}
-	return marshalJSONNoEscape(struct {
+	return ai.MarshalJSON(struct {
 		Type          string  `json:"type"`
 		Version       int     `json:"version,omitempty"`
 		ID            string  `json:"id"`
@@ -186,7 +186,7 @@ func (e *SessionEntry) MarshalJSON() ([]byte, error) {
 	// and keeps the plain encoding below.
 	switch e.Type {
 	case "custom":
-		return marshalJSONNoEscape(struct {
+		return ai.MarshalJSON(struct {
 			Type       string          `json:"type"`
 			CustomType string          `json:"customType"`
 			Data       json.RawMessage `json:"data,omitempty"`
@@ -195,7 +195,7 @@ func (e *SessionEntry) MarshalJSON() ([]byte, error) {
 			Timestamp  string          `json:"timestamp"`
 		}{e.Type, e.CustomType, e.Data, e.ID, e.ParentID, e.Timestamp})
 	case "custom_message":
-		return marshalJSONNoEscape(struct {
+		return ai.MarshalJSON(struct {
 			Type       string          `json:"type"`
 			CustomType string          `json:"customType"`
 			Content    json.RawMessage `json:"content"`
@@ -206,7 +206,7 @@ func (e *SessionEntry) MarshalJSON() ([]byte, error) {
 			Timestamp  string          `json:"timestamp"`
 		}{e.Type, e.CustomType, e.Content, e.Display != nil && *e.Display, e.Details, e.ID, e.ParentID, e.Timestamp})
 	case "branch_summary":
-		return marshalJSONNoEscape(struct {
+		return ai.MarshalJSON(struct {
 			Type      string          `json:"type"`
 			ID        string          `json:"id"`
 			ParentID  *string         `json:"parentId"`
@@ -218,7 +218,7 @@ func (e *SessionEntry) MarshalJSON() ([]byte, error) {
 			FromHook  *bool           `json:"fromHook,omitempty"`
 		}{e.Type, e.ID, e.ParentID, e.Timestamp, e.FromID, e.Summary, e.Details, e.Usage, e.FromHook})
 	case "usage":
-		return marshalJSONNoEscape(struct {
+		return ai.MarshalJSON(struct {
 			Type      string    `json:"type"`
 			ID        string    `json:"id"`
 			ParentID  *string   `json:"parentId"`
@@ -231,7 +231,7 @@ func (e *SessionEntry) MarshalJSON() ([]byte, error) {
 		}{e.Type, e.ID, e.ParentID, e.Timestamp, e.Kind, e.Provider, e.Model, e.Usage, e.Note})
 	}
 	type entryJSON SessionEntry
-	return marshalJSONNoEscape((*entryJSON)(e))
+	return ai.MarshalJSON((*entryJSON)(e))
 }
 
 // setRawMember replaces a top-level member in a retained line, or appends it
@@ -316,7 +316,7 @@ func joinRawJSONObject(keys []string, values map[string]json.RawMessage) json.Ra
 		if index > 0 {
 			buffer.WriteByte(',')
 		}
-		encodedKey, err := marshalJSONNoEscape(key)
+		encodedKey, err := ai.MarshalJSON(key)
 		if err != nil {
 			return nil
 		}
