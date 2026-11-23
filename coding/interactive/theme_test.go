@@ -356,15 +356,8 @@ func TestThemeRegistry(t *testing.T) {
 	StopThemeWatcher()
 }
 
-// TestAnsi256PaletteToHex verifies palette-index conversion and rejects malformed hex.
+// TestAnsi256PaletteToHex verifies palette-index conversion.
 func TestAnsi256PaletteToHex(t *testing.T) {
-	if _, err := hexToRgb("#12345"); err == nil {
-		t.Fatal("short hex accepted")
-	}
-	if _, err := hexToRgb("#zzzzzz"); err == nil {
-		t.Fatal("non-hex accepted")
-	}
-	// The 256-color palette round-trips through ansi256ToHex.
 	if got := ansi256ToHex(196); got != "#ff0000" {
 		t.Fatalf("ansi256ToHex(196) = %s", got)
 	}

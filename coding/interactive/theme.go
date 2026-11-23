@@ -456,12 +456,6 @@ func (t *Theme) GetBashModeBorderColor() func(string) string {
 
 // ---- Color utilities ----
 
-type rgbColor struct {
-	R int
-	G int
-	B int
-}
-
 // RgbColor is the exported RGB triple (upstream RgbColor).
 type RgbColor struct {
 	R int
@@ -563,20 +557,6 @@ func detectAppearance(foregrounds, backgrounds []tui.Color) string {
 		return "light"
 	}
 	return ""
-}
-
-func hexToRgb(hex string) (rgbColor, error) {
-	cleaned := strings.Replace(hex, "#", "", 1)
-	if len(cleaned) != 6 {
-		return rgbColor{}, fmt.Errorf("Invalid hex color: %s", hex)
-	}
-	r, errR := strconv.ParseInt(cleaned[0:2], 16, 32)
-	g, errG := strconv.ParseInt(cleaned[2:4], 16, 32)
-	b, errB := strconv.ParseInt(cleaned[4:6], 16, 32)
-	if errR != nil || errG != nil || errB != nil {
-		return rgbColor{}, fmt.Errorf("Invalid hex color: %s", hex)
-	}
-	return rgbColor{R: int(r), G: int(g), B: int(b)}, nil
 }
 
 var cubeValues = []int{0, 95, 135, 175, 215, 255}

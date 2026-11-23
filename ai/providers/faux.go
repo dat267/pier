@@ -452,17 +452,6 @@ func fauxPromptParts(context ai.TranscriptContext) []string {
 	return parts
 }
 
-func joinWithDoubleNewline(parts []string) string {
-	var out strings.Builder
-	for i, p := range parts {
-		if i > 0 {
-			out.WriteString("\n\n")
-		}
-		out.WriteString(p)
-	}
-	return out.String()
-}
-
 // fauxJoinedLength is the UTF-16 length of the prompt that joins the first count
 // parts with blank lines.
 func fauxJoinedLength(parts []string, count int) int {

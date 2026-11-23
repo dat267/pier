@@ -8,9 +8,16 @@ package tui
 // `\s` misses (\v, NBSP, U+FEFF) and U+0085, which JavaScript keeps.
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/dat267/pier/ai"
+)
+
+// The upstream patterns the scans stand in for, used only as test oracles.
+var (
+	latexScriptRelationRegex = regexp.MustCompile(`[` + ai.JSWhitespaceClass + `]*([=+-])[` + ai.JSWhitespaceClass + `]*`)
+	latexWhitespaceRunRegex  = regexp.MustCompile(`[ \t]+`)
 )
 
 func TestNormalizeScriptValueMatchesTheRelationRegex(t *testing.T) {

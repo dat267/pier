@@ -27,13 +27,11 @@ const (
 var (
 	latexLayoutMarkerRegex   = regexp.MustCompile("\U000F0000(\\d+)\U000F0001")
 	latexTrailingMarkerRegex = regexp.MustCompile("\U000F0000(\\d+)\U000F0001$")
-	latexWhitespaceRunRegex  = regexp.MustCompile(`[ \t]+`)
 	// Row separators are double backslashes; Go raw strings need four to
 	// express two literal backslashes.
 	latexEnvironmentRowRegex  = regexp.MustCompile(`\\\\(?:\[[^\]\n]*\])?`)
 	latexArrayColumnSpecRegex = regexp.MustCompile(`^[` + ai.JSWhitespaceClass + `]*\{[^}]*\}`)
 	latexCasesConditionRegex  = regexp.MustCompile(`(?i)^(?:if|when|for|otherwise)\b`)
-	latexScriptRelationRegex  = regexp.MustCompile(`[` + ai.JSWhitespaceClass + `]*([=+-])[` + ai.JSWhitespaceClass + `]*`)
 	latexSimpleWordRegex      = regexp.MustCompile(`^[\p{L}\p{N}.]+$`)
 	// The fraction denominator test is numeric-only upstream (an alphabetic
 	// denominator gets parentheses).

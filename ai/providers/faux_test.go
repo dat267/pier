@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -296,12 +297,12 @@ func TestFauxEstimatesPromptAndOutputTokensFromSerializedContext(t *testing.T) {
 	}
 
 	response := fauxComplete(t, core, core.GetModel(""), ctx, nil)
-	promptText := joinWithDoubleNewline([]string{
+	promptText := strings.Join([]string{
 		"system:sys\ntool+:" + string(toolJSON),
 		"user:hello\n[image:image/png:4]",
 		"assistant:prior",
 		"toolResult:echo\ntool out",
-	})
+	}, "\n\n")
 	expectedPromptTokens := (len(promptText) + 3) / 4
 	expectedOutputTokens := (len("done") + 3) / 4
 
@@ -420,7 +421,7 @@ func TestFauxCommonPromptPrefixLengthMatchesJoinedPrefix(t *testing.T) {
 		{nil, nil},
 	}
 	for _, testCase := range cases {
-		want := fauxPrefixLength(joinWithDoubleNewline(testCase.previous), joinWithDoubleNewline(testCase.current))
+		want := fauxPrefixLength(strings.Join(testCase.previous, "\n\n"), strings.Join(testCase.current, "\n\n"))
 		if got := fauxCommonPromptPrefixLength(testCase.previous, testCase.current); got != want {
 			t.Errorf("fauxCommonPromptPrefixLength(%q, %q) = %d, want %d", testCase.previous, testCase.current, got, want)
 		}
