@@ -1,6 +1,9 @@
 package markdown
 
-import "strings"
+import (
+	"strings"
+	"unicode/utf8"
+)
 
 // The list tokenizer is a line-for-line port of marked 18.0.11's
 // `Tokenizer.list` (pi v1.5.0, f9a26365, which upstream
@@ -167,17 +170,31 @@ func firstNonSpace(line string) int {
 	return -1
 }
 
-// sliceFrom is JavaScript's `s.slice(n)` for n >= 0.
+// sliceFrom is JavaScript's `s.slice(n)` for n >= 0, counting UTF-16 units.
+// The indent it skips is ASCII except on a blank line, where a JS space such
+// as U+FEFF is one unit but three bytes; a cut inside a surrogate pair keeps
+// the replacement character a lone low surrogate decodes to.
 func sliceFrom(s string, n int) string {
-	if n >= len(s) {
-		return ""
+	units := 0
+	for index, r := range s {
+		if units >= n {
+			return s[index:]
+		}
+		units++
+		if r >= 0x10000 {
+			if units == n {
+				return "\uFFFD" + s[index+utf8.RuneLen(r):]
+			}
+			units++
+		}
 	}
-	return s[n:]
+	return ""
 }
 
-// jsBlank reports `!s.trim()`.
+// jsBlank reports `!s.trim()`: JavaScript trim treats U+FEFF as space and
+// U+0085 as text, the reverse of strings.TrimSpace.
 func jsBlank(s string) bool {
-	return strings.TrimSpace(s) == ""
+	return jsTrim(s) == ""
 }
 
 func (l *blockLexer) lexList(start int) (*Block, int, bool) {
@@ -277,8 +294,8 @@ func (l *blockLexer) lexList(start int) (*Block, int, bool) {
 	// The final item gives its trailing blank lines back to the outer lexer
 	// (marked trims the last item's raw and text).
 	last := list.Blocks[len(list.Blocks)-1]
-	last.Text = strings.TrimRight(last.Text, " \t\n\r\f\v")
-	trimmed := strings.TrimRight(src[last.Start:last.End], " \t\n\r\f\v")
+	last.Text = strings.TrimRightFunc(last.Text, isWhitespaceRune)
+	trimmed := strings.TrimRightFunc(src[last.Start:last.End], isWhitespaceRune)
 	last.End = last.Start + len(trimmed)
 	// The outer lexer's space token for what follows is folded into the list
 	// when it is one character long (blockTokens: `token.raw.length === 1`).

@@ -35,6 +35,17 @@ func TestContainerTokenizersMatchMarked(t *testing.T) {
 		{"- a\n    code\n", `ul[(p:"a\n  code")]`},
 		{"-\n\n  a\n", `ul[()] | space | p:"  a"`},
 
+		// pi v1.6.0 (faac5858) marked 18.0.11 Tokenizer.list tests blank lines
+		// with JS `trim()`, slices continuation lines by UTF-16 units and trims
+		// the list with `trimEnd()`: U+FEFF and U+3000 are space and U+0085 is
+		// text, and a blank line of either space is skipped whole, not cut
+		// mid-character.
+		{"- \uFEFF\n\n  a\n", `ul[()] | p:" \ufeff" | space | p:"  a"`},
+		{"- a\n\uFEFF\n  b\n- c\n", `ul[(p:"a",space,p:"b"),(p:"c")]`},
+		{"- a\n\u3000\n  b\n- c\n", `ul[(p:"a",space,p:"b"),(p:"c")]`},
+		{"- a\n\u0085\n  b\n", `ul[(p:"a\n\u0085\nb")]`},
+		{"- a \uFEFF\n", `ul[(p:"a")] | p:" \ufeff"`},
+
 		// The heading rule takes at most three spaces of indent.
 		{"    # not a heading\n", `code:"# not a heading\n"`},
 		{"- a\n# h\n", `ul[(p:"a")] | h1:"h"`},
