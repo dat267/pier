@@ -377,8 +377,13 @@ type SettingsProviderRetry struct {
 
 // SettingsRetry are the agent retry settings.
 type SettingsRetry struct {
-	Enabled         *bool                  `json:"enabled,omitempty"`
-	MaxRetries      *int                   `json:"maxRetries,omitempty"`
+	Enabled *bool `json:"enabled,omitempty"`
+	// MaxRetries is a float64 because the reference's schema is
+	// `Type.Number()`, not an integer type, and `agent-session.ts` compares the
+	// attempt count against it directly. A stored `2.7` therefore retries once
+	// more than a truncated `2`: `_retryAttempt >= maxRetries` stops at 3, where
+	// `>= 2` stops at 2.
+	MaxRetries      *float64               `json:"maxRetries,omitempty"`
 	BaseDelayMS     *int64                 `json:"baseDelayMs,omitempty"`
 	MaxAgentDelayMS *int64                 `json:"maxAgentDelayMs,omitempty"`
 	Provider        *SettingsProviderRetry `json:"provider,omitempty"`
@@ -2417,6 +2422,18 @@ func (m *SettingsManager) GetBranchSummarySkipPrompt() bool {
 	return m.GetBranchSummarySettings().SkipPrompt
 }
 
+// GetRetryMaxRetriesRaw returns the stored retry count as the reference keeps
+// it: a JavaScript Number, so a fractional `2.7` stays fractional and the two
+// comparisons (`>=` and `>`) behave as `agent-session.ts` does. The integer
+// result of GetRetrySettings truncates it for display and event payloads.
+func (m *SettingsManager) GetRetryMaxRetriesRaw() float64 {
+	settings := m.merged.Load()
+	if settings.Retry == nil || settings.Retry.MaxRetries == nil {
+		return 3
+	}
+	return *settings.Retry.MaxRetries
+}
+
 // GetRetryEnabled reports whether retries are enabled (default true).
 func (m *SettingsManager) GetRetryEnabled() bool {
 	settings := m.merged.Load()
@@ -2450,7 +2467,7 @@ type RetrySettingsResult struct {
 func (m *SettingsManager) GetRetrySettings() RetrySettingsResult {
 	settings := m.merged.Load()
 	enabled := true
-	maxRetries := 3
+	maxRetries := 3 // the default, matching GetRetryMaxRetriesRaw
 	baseDelay := int64(2000)
 	maxAgentDelay := int64(ai.DefaultMaxAgentRetryDelayMS)
 	if settings.Retry != nil {
@@ -2458,7 +2475,7 @@ func (m *SettingsManager) GetRetrySettings() RetrySettingsResult {
 			enabled = *settings.Retry.Enabled
 		}
 		if settings.Retry.MaxRetries != nil {
-			maxRetries = *settings.Retry.MaxRetries
+			maxRetries = int(*settings.Retry.MaxRetries)
 		}
 		if settings.Retry.BaseDelayMS != nil {
 			baseDelay = *settings.Retry.BaseDelayMS

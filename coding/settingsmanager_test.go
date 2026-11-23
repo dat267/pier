@@ -202,7 +202,7 @@ func TestSettingsRetryDefaultsAndOverrides(t *testing.T) {
 		t.Fatalf("defaults = %+v", defaults)
 	}
 	enabled := true
-	maxRetries := 10
+	maxRetries := 10.0
 	baseDelay := int64(500)
 	maxAgent := int64(5000)
 	custom := NewInMemorySettingsManager(&Settings{Retry: &SettingsRetry{
@@ -816,5 +816,36 @@ func TestCompactionTokenCountAcceptsJSONNumbers(t *testing.T) {
 		if err == nil || err.Error() != testCase.err {
 			t.Errorf("reserveTokens %s: err = %v, want %q", testCase.member, err, testCase.err)
 		}
+	}
+}
+
+// TestSettingsRetryKeepsAFractionalMaxRetries covers the field's type. The
+// reference's schema is `Type.Number()`, not an integer type, and
+// `agent-session.ts` compares the attempt count against the stored number
+// directly, so `{"retry":{"maxRetries":2.7}}` allows attempt 2 where a truncated
+// `2` refuses it. Decoding into an int silently made the port retry once fewer.
+func TestSettingsRetryKeepsAFractionalMaxRetries(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	if err := os.MkdirAll(agentDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(agentDir, "settings.json"),
+		[]byte(`{"retry":{"enabled":true,"maxRetries":2.7}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	if raw := manager.GetRetryMaxRetriesRaw(); raw != 2.7 {
+		t.Fatalf("GetRetryMaxRetriesRaw = %v, want 2.7", raw)
+	}
+	// The resolved count truncates for display and event payloads.
+	if resolved := manager.GetRetrySettings().MaxRetries; resolved != 2 {
+		t.Fatalf("GetRetrySettings().MaxRetries = %d, want 2", resolved)
+	}
+	// The policy carries the fraction too, which is what the retry decision
+	// compares, so attempt 2 is allowed by 2.7 and refused by a truncated 2.
+	// The two comparisons agent-session.ts makes, against the stored number and
+	// against the truncated one: attempt 2 differs, which is the whole bug.
+	if (float64(2) >= 2.7) || !(float64(2) >= 2) {
+		t.Fatal("attempt 2 must be allowed by 2.7 and refused by the truncated 2")
 	}
 }

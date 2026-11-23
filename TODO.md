@@ -154,22 +154,3 @@ re-scanning, or by making the submatcher failure O(1) per candidate.
 
 No test pins this: the current behaviour is what D351 chose, and the reproduction
 is a run length rather than a construct.
-
-## A fractional `retry.maxRetries` retries one time fewer (open)
-
-`Settings.Retry.MaxRetries` is `*int`, so `settings.json` with
-`{"retry":{"maxRetries":2.7}}` stores 2. The reference keeps the number and
-compares it directly, and one of the two comparisons then differs:
-`willRetryAfterAgentEnd` (`agent_session.go`, `attempt >= maxRetries`) allows an
-attempt up to 2 there and only 1 here, while the `attempt > maxRetries` site in
-`agent_session_retry.go` agrees at both (`> 2.7` and `> 2` both stop at 2).
-
-`Number.isSafeInteger` is not applied to this setting upstream, so a fraction is
-accepted and kept rather than rejected. Nothing recommends a fractional retry
-count, which is why this is recorded rather than fixed: closing it needs the
-field to carry the raw number (a `float64`, or a fractional marker beside the
-`int`), and that ripples through `retrySettings`, `managementhttp`, `sdk` and the
-provider retry policy for a value no user writes.
-
-A test would need to assert the retry count reached, not just that a retry
-happened, because both forms retry at least once.

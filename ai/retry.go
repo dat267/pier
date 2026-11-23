@@ -228,6 +228,11 @@ type RetryPolicy struct {
 	// MaxRetries is the max retry attempts (0 = no retries). The initial
 	// call never counts as a retry.
 	MaxRetries int
+	// MaxRetriesRaw is the stored number as the reference keeps it, a
+	// JavaScript Number. A fractional setting keeps its fraction, because
+	// `_retryAttempt >= maxRetries` over a `2.7` allows an attempt that the
+	// truncated `2` refuses. Zero when unset, where MaxRetries applies.
+	MaxRetriesRaw float64
 	// BaseDelayMS: per-attempt delay is BaseDelayMS * 2^(attempt-1) before jitter.
 	BaseDelayMS int
 	// MaxAgentDelayMS caps each computed delay; defaults to 60 seconds when

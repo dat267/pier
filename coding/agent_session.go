@@ -842,7 +842,14 @@ func (s *AgentSession) willRetryAfterAgentEnd(event *agent.AgentEvent) bool {
 	s.mu.Lock()
 	attempt := s.retryAttempt
 	s.mu.Unlock()
-	if attempt >= settings.MaxRetries {
+	// The reference compares the attempt against the stored number as a
+	// JavaScript Number, so a fractional `2.7` allows attempt 2 where the
+	// truncated `2` refuses it (`agent-session.ts:1272`).
+	maxRetries := settings.MaxRetriesRaw
+	if maxRetries == 0 {
+		maxRetries = float64(settings.MaxRetries)
+	}
+	if float64(attempt) >= maxRetries {
 		return false
 	}
 	for _, v := range slices.Backward(event.Messages) {
