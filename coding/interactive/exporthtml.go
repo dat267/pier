@@ -667,7 +667,10 @@ func ExportFromFile(inputPath string, outputPath string, themeName string) (stri
 		base := strings.TrimSuffix(filepath.Base(resolvedInput), ".jsonl")
 		outputPath = coding.AppName + "-session-" + base + ".html"
 	}
-	if err := writePrivateFileStream(outputPath, func(w io.Writer) error {
+	// The shared atomic replace keeps a failed export from truncating a file
+	// the user already had, and writes the document as it is produced (A506,
+	// D454, D489).
+	if err := coding.WritePrivateFileStream(outputPath, func(w io.Writer) error {
 		return WriteSessionHTML(w, data, sessionManager.EachEntry, themeName)
 	}); err != nil {
 		return "", err
@@ -735,24 +738,15 @@ func ExportSessionToHTML(session *coding.AgentSession, outputPath string, themeN
 		base = strings.TrimSuffix(base, ".jsonl")
 		outputPath = coding.AppName + "-session-" + base + ".html"
 	}
-	if err := writePrivateFileStream(outputPath, func(w io.Writer) error {
+	// The shared atomic replace keeps a failed export from truncating a file
+	// the user already had, and writes the document as it is produced (A506,
+	// D454, D489).
+	if err := coding.WritePrivateFileStream(outputPath, func(w io.Writer) error {
 		return WriteSessionHTML(w, data, sessionManager.EachEntry, themeName)
 	}); err != nil {
 		return "", err
 	}
 	return outputPath, nil
-}
-
-// writePrivateFileStream publishes the export through the shared atomic
-// replace, so a failed export cannot truncate a file the user already had, and
-// the document is written as it is produced instead of being held whole (A506,
-// D454, D489).
-func writePrivateFile(path string, data []byte) error {
-	return coding.WritePrivateFile(path, data)
-}
-
-func writePrivateFileStream(path string, write func(io.Writer) error) error {
-	return coding.WritePrivateFileStream(path, write)
 }
 
 // ExportSessionToHTML exports the current session branch to an HTML file

@@ -997,7 +997,7 @@ func (r *TranscriptRenderer) AddCompactionCostNotice(notice CompactionCostNotice
 	tokens := int64(ai.CalculateContextTokens(totalUsage))
 	cost := ""
 	if notice.Usage.Cost.Total >= 0.01 {
-		cost = " (~$" + formatFixed(notice.Usage.Cost.Total, 2) + ")"
+		cost = " (~$" + ai.JSNumberToFixed(notice.Usage.Cost.Total, 2) + ")"
 	}
 	label := "Branch summary"
 	if notice.Kind == "compaction" {
@@ -1144,7 +1144,7 @@ func (r *TranscriptRenderer) AddCacheMissNotice(miss coding.CacheMiss) {
 	}
 	cost := ""
 	if miss.MissedCost >= 0.01 {
-		cost = " (~$" + formatFixed(miss.MissedCost, 2) + ")"
+		cost = " (~$" + ai.JSNumberToFixed(miss.MissedCost, 2) + ")"
 	}
 	reBilled := FormatTokens(miss.MissedTokens) + " tokens re-billed" + cost
 	label := "Cache miss"

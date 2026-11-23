@@ -56,7 +56,7 @@ func KeybindingsFor(goos string, env func(string) string) (map[string]tui.Keybin
 	definitions := map[string]tui.KeybindingDefinition{}
 	order := make([]string, 0, len(tui.TUIKeybindings)+len(AppKeybindingNames))
 	maps.Copy(definitions, tui.TUIKeybindings)
-	order = append(order, tuiKeybindingOrderForOrdering()...)
+	order = append(order, tui.TUIKeybindingOrder()...)
 
 	windows := UseWindowsKeybindings(goos, env)
 
@@ -178,12 +178,6 @@ func pasteImageKeys(windows bool) []string {
 		return []string{"alt+v", "ctrl+v"}
 	}
 	return []string{"ctrl+v"}
-}
-
-// tuiKeybindingOrderForOrdering returns the declaration order from the pinned
-// TUI keybinding table.
-func tuiKeybindingOrderForOrdering() []string {
-	return tui.TUIKeybindingOrder()
 }
 
 // KeybindingNameMigrations maps legacy keybinding names to their modern ids.

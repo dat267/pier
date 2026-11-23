@@ -169,7 +169,7 @@ func formatScopeGroups(groups []scopeGroup, formatPath func(scopeGroupItem) stri
 
 		// D257/D434: the reference sorts with localeCompare, so use
 		// locale-neutral collation rather than byte order.
-		byPath := func(a, b string) bool { return compareLocaleNeutral(a, b) < 0 }
+		byPath := func(a, b string) bool { return coding.CompareRootCollation(a, b) < 0 }
 		sortedPaths := append([]scopeGroupItem{}, group.paths...)
 		sort.SliceStable(sortedPaths, func(i, j int) bool {
 			return byPath(sortedPaths[i].path, sortedPaths[j].path)
@@ -213,7 +213,7 @@ func formatCompactListSorted(labels []string, sorted bool) string {
 	if sorted {
 		// D257/D434: the reference sorts labels with localeCompare.
 		sort.SliceStable(trimmed, func(i, j int) bool {
-			return compareLocaleNeutral(trimmed[i], trimmed[j]) < 0
+			return coding.CompareRootCollation(trimmed[i], trimmed[j]) < 0
 		})
 	}
 	return ActiveTheme().Fg("dim", "  "+strings.Join(trimmed, ", "))

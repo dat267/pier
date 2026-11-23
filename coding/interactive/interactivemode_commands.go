@@ -668,7 +668,7 @@ func (w *CommandWiring) sessionInfoPanel(session CommandSession, sessionInfo *co
 	info.WriteString(formatThousands(promptTokens))
 	info.WriteString("\n")
 	if promptTokens > 0 && (stats.Tokens.CacheRead > 0 || stats.Tokens.CacheWrite > 0) {
-		hitRate := theme.Fg("dim", "("+formatFixed(float64(stats.Tokens.CacheRead)/float64(promptTokens)*100, 1)+"%)")
+		hitRate := theme.Fg("dim", "("+ai.JSNumberToFixed(float64(stats.Tokens.CacheRead)/float64(promptTokens)*100, 1)+"%)")
 		info.WriteString("  ")
 		info.WriteString(theme.Fg("dim", "Cached:"))
 		info.WriteString(" ")
@@ -720,11 +720,11 @@ func (w *CommandWiring) sessionInfoPanel(session CommandSession, sessionInfo *co
 	if status != nil && status.Decision != nil && status.Decision.EconomicsAvailable {
 		info.WriteString(theme.Fg("dim", "Cache miss penalty:"))
 		info.WriteString(" $")
-		info.WriteString(formatFixed(status.Decision.MissCost, 3))
+		info.WriteString(ai.JSNumberToFixed(status.Decision.MissCost, 3))
 		info.WriteString("\n")
 		info.WriteString(theme.Fg("dim", "Refresh cost:"))
 		info.WriteString(" $")
-		info.WriteString(formatFixed(status.Decision.WarmCost, 3))
+		info.WriteString(ai.JSNumberToFixed(status.Decision.WarmCost, 3))
 		info.WriteString("\n")
 	}
 
@@ -734,7 +734,7 @@ func (w *CommandWiring) sessionInfoPanel(session CommandSession, sessionInfo *co
 		info.WriteString("\n")
 		info.WriteString(theme.Fg("dim", "Total:"))
 		info.WriteString(" $")
-		info.WriteString(formatFixed(stats.Cost, 3))
+		info.WriteString(ai.JSNumberToFixed(stats.Cost, 3))
 		// Upstream shows the per-model breakdown unless the only entry names the
 		// selected model (a single entry repeats the total).
 		selectedModelKey := "undefined/undefined"
@@ -746,7 +746,7 @@ func (w *CommandWiring) sessionInfoPanel(session CommandSession, sessionInfo *co
 				info.WriteString("\n  ")
 				info.WriteString(theme.Fg("dim", entry.Key+":"))
 				info.WriteString(" $")
-				info.WriteString(formatFixed(entry.Cost, 3))
+				info.WriteString(ai.JSNumberToFixed(entry.Cost, 3))
 				info.WriteString(" ")
 				info.WriteString(theme.Fg("dim", "("+FormatTokens(entry.Tokens)+" tokens)"))
 			}
@@ -761,7 +761,7 @@ func (w *CommandWiring) sessionInfoPanel(session CommandSession, sessionInfo *co
 				info.WriteString("\n")
 				info.WriteString(theme.Fg("dim", "Cache Re-billed:"))
 				info.WriteString(" $")
-				info.WriteString(formatFixed(cacheWaste.MissedCost, 3))
+				info.WriteString(ai.JSNumberToFixed(cacheWaste.MissedCost, 3))
 				info.WriteString(" ")
 				info.WriteString(theme.Fg("dim", "("+detail+")"))
 			} else {
@@ -1023,7 +1023,7 @@ func WriteDebugLogFile(content string) error {
 	if err := os.MkdirAll(filepath.Dir(debugLogPath), 0o777); err != nil {
 		return err
 	}
-	return writePrivateFile(debugLogPath, []byte(content))
+	return coding.WritePrivateFile(debugLogPath, []byte(content))
 }
 
 // newCommandWiring assembles the CommandWiring (port of the corresponding InteractiveMode wiring).

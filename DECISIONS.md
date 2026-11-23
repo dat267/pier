@@ -6749,7 +6749,7 @@ Tests: `TestFormatScopeGroupsUsesLocaleOrdering`,
 `cacheShare` (`coding/interactive/statusindicator.go:165`) is pier's own display
 (D416), so there is no upstream string to match. The question is internal
 consistency: every other one-decimal or fixed display in this module formats
-through `formatFixed` -> `ai.JSNumberToFixed`, which follows JS `toFixed`
+through `ai.JSNumberToFixed`, which follows JS `toFixed`
 (upstream `modes/interactive/components/footer.ts:27-29`, `:162`). `cacheShare`
 used `strconv.FormatFloat(share, 'f', 1, 64)`, and Go rounds halfway cases to
 even.

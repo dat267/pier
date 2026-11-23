@@ -13,12 +13,6 @@ import (
 	"github.com/dat267/pier/tui"
 )
 
-// compareLocaleNeutral is the root collation upstream's `localeCompare` does
-// without the host locale (D257).
-func compareLocaleNeutral(a, b string) int {
-	return coding.CompareRootCollation(a, b)
-}
-
 // The footer renders a single dim line: "3.5%/1M · <statuses> · model · cwd".
 //
 // Divergence D141: upstream's builtin footer (src/modes/interactive/components/
@@ -48,19 +42,19 @@ func FormatTokens(count int64) string {
 	case count < 1000:
 		return strconv.FormatInt(count, 10)
 	case count < 10000:
-		return formatFixed(float64(count)/1000, 1) + "k"
+		return ai.JSNumberToFixed(float64(count)/1000, 1) + "k"
 	case count < 1000000:
 		return strconv.FormatInt(int64(math.Round(float64(count)/1000)), 10) + "k"
 	case count < 10000000:
-		return formatFixed(float64(count)/1000000, 1) + "M"
+		return ai.JSNumberToFixed(float64(count)/1000000, 1) + "M"
 	case count < 1000000000:
 		return strconv.FormatInt(int64(math.Round(float64(count)/1000000)), 10) + "M"
 	case count < 10000000000:
-		return formatFixed(float64(count)/1000000000, 1) + "B"
+		return ai.JSNumberToFixed(float64(count)/1000000000, 1) + "B"
 	case count < 1000000000000:
 		return strconv.FormatInt(int64(math.Round(float64(count)/1000000000)), 10) + "B"
 	case count < 10000000000000:
-		return formatFixed(float64(count)/1000000000000, 1) + "T"
+		return ai.JSNumberToFixed(float64(count)/1000000000000, 1) + "T"
 	default:
 		return strconv.FormatInt(int64(math.Round(float64(count)/1000000000000)), 10) + "T"
 	}
@@ -74,7 +68,7 @@ func FormatTokensSimple(count int64) string {
 	case count < 1000:
 		return strconv.FormatInt(count, 10)
 	case count < 10000:
-		return formatFixed(float64(count)/1000, 1) + "k"
+		return ai.JSNumberToFixed(float64(count)/1000, 1) + "k"
 	case count < 1000000:
 		return strconv.FormatInt(int64(math.Round(float64(count)/1000)), 10) + "k"
 	case count < 1000000000:
@@ -84,11 +78,6 @@ func FormatTokensSimple(count int64) string {
 	default:
 		return strconv.FormatInt(int64(math.Round(float64(count)/1000000000000)), 10) + "T"
 	}
-}
-
-// formatFixed mirrors JS Number.toFixed.
-func formatFixed(value float64, digits int) string {
-	return ai.JSNumberToFixed(value, digits)
 }
 
 // FormatCwdForFooter shortens a working directory with a home prefix.
@@ -211,7 +200,7 @@ func FooterLine(input FooterInput, width int) string {
 	if input.ContextUsage == nil || input.ContextUsage.Percent == nil {
 		contextDisplay = "?/" + FormatTokensSimple(window)
 	} else {
-		contextDisplay = formatFixed(*input.ContextUsage.Percent, 1) + "%/" + FormatTokensSimple(window)
+		contextDisplay = ai.JSNumberToFixed(*input.ContextUsage.Percent, 1) + "%/" + FormatTokensSimple(window)
 	}
 
 	parts := []string{contextDisplay}
@@ -285,7 +274,7 @@ func (f *FooterComponent) Render(width int) []string {
 		}
 		// D257: use locale-neutral collation rather than the host's ICU locale.
 		sort.Slice(keys, func(i, j int) bool {
-			return compareLocaleNeutral(keys[i], keys[j]) < 0
+			return coding.CompareRootCollation(keys[i], keys[j]) < 0
 		})
 		for _, key := range keys {
 			statuses = append(statuses, sanitizeStatusText(extensionStatuses[key]))

@@ -606,11 +606,11 @@ func TestExportWritePublishesAtomically(t *testing.T) {
 	path := filepath.Join(dir, "notes.html")
 
 	previous := []byte("<p>previous export</p>\n")
-	if err := writePrivateFile(path, previous); err != nil {
+	if err := coding.WritePrivateFile(path, previous); err != nil {
 		t.Fatalf("initial write: %v", err)
 	}
 	// The successful path publishes the new content and keeps no debris.
-	if err := writePrivateFile(path, []byte("<p>second export</p>\n")); err != nil {
+	if err := coding.WritePrivateFile(path, []byte("<p>second export</p>\n")); err != nil {
 		t.Fatalf("second write: %v", err)
 	}
 	if got, err := os.ReadFile(path); err != nil || string(got) != "<p>second export</p>\n" {
@@ -628,7 +628,7 @@ func TestExportWritePublishesAtomically(t *testing.T) {
 	if err := os.Chmod(dir, 0o500); err != nil {
 		t.Fatalf("chmod: %v", err)
 	}
-	if err := writePrivateFile(path, []byte("<p>third export</p>\n")); err == nil {
+	if err := coding.WritePrivateFile(path, []byte("<p>third export</p>\n")); err == nil {
 		t.Fatalf("a write that cannot create its new file reported success")
 	}
 	got, readErr := os.ReadFile(path)
