@@ -9163,6 +9163,21 @@ literal prefilter for the identifier rule was measured too (a whole-remainder
 the time, because that rule is 0.06 ms of the 0.09 ms and the other three fill
 the rest.
 
+A required-literal rule mask was then built, measured and reverted, and the
+revert is the important part. `requiredLiteral` (a literal every match must
+contain) plus a per-call "can any rule match in the remainder" check made R
+1 KiB 7.5 ms to 0.44 ms, linear to 32 KiB, and HTTP 5470 ms to 1900. But it
+regressed 175 of 191 languages: latex 4.39 to 62.8 ms, coffeescript 4.92 to
+38.8, xquery 6.96 to 48.1, haxe 0.32 to 4.45. Two causes, both instructive.
+Skipping a matcher whose rules are all ruled out returns no match, and the
+engine then treats the whole remainder as one lexeme; latex has sublanguage
+modes that must still be consulted, so the scan has to run. And the mask has to
+be rebuilt per position to stay sound, which put `strings.Contains` at 90% of a
+24 KiB R profile. Making `requiredLiteral` conservative (no literal when a
+concatenation contains an assertion) removed the unsoundness but also removed
+the win, and R went to 10.0 ms. The commit was reverted; every language is back
+at its baseline, checked across the twelve that the suite run flagged.
+
 The per-iteration cost was then broken down. Of the 610 iterations, only rule 0
 (the `%` literal) is walked, and 610 literal walks cost 6.3 us against the 57 us
 the resume takes; exec allocates nothing. A lock-free `subMatcher`
