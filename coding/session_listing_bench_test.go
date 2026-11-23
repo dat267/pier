@@ -12,8 +12,8 @@ import (
 func BenchmarkListSessions(b *testing.B) {
 	dir := writeListingFixtureForBench(b, 12, 1<<20)
 	b.ReportAllocs()
-	b.ResetTimer()
-	for range b.N {
+
+	for b.Loop() {
 		sessions, err := ListSessionsWithProgress(context.Background(), dir, dir, nil)
 		if err != nil || len(sessions) != 12 {
 			b.Fatalf("sessions = %d, err = %v", len(sessions), err)
@@ -26,8 +26,8 @@ func BenchmarkListSessions(b *testing.B) {
 func BenchmarkListSessionsProgress(b *testing.B) {
 	dir := writeListingFixtureForBench(b, 12, 1<<20)
 	b.ReportAllocs()
-	b.ResetTimer()
-	for range b.N {
+
+	for b.Loop() {
 		updates := 0
 		sessions, err := ListSessionsWithProgress(context.Background(), dir, dir, func(int, int, []SessionInfo) { updates++ })
 		if err != nil || len(sessions) != 12 || updates == 0 {

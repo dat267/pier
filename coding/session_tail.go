@@ -165,5 +165,5 @@ func tailWindow(branch []SessionEntry) []SessionEntry {
 
 // newSessionEntry builds a fresh entry the way the session appends build them.
 func newSessionEntry(entryType string) SessionEntry {
-	return SessionEntry{Type: entryType, SessionEntryBase: SessionEntryBase{ID: UUIDv7(), Timestamp: sessionTimestamp()}}
+	return SessionEntry{Type: entryType, ID: UUIDv7(), Timestamp: sessionTimestamp()}
 }

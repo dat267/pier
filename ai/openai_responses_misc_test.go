@@ -182,7 +182,7 @@ func TestResponsesCustomToolFinalInputDoesNotRewind(t *testing.T) {
 			model.BaseURL = server.URL
 			result, err := StreamOpenAIResponses(model, TranscriptContext{Messages: []Message{
 				&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
-			}}, &OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "test-key"}}).Result(context.Background())
+			}}, &OpenAIResponsesOptions{APIKey: "test-key"}).Result(context.Background())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -430,7 +430,7 @@ func TestResponsesPricesTheReturnedServiceTier(t *testing.T) {
 			model.Cost = ModelCost{Input: 1, Output: 2, CacheRead: 3, CacheWrite: 4}
 			result, err := StreamOpenAIResponses(model, TranscriptContext{Messages: []Message{
 				&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
-			}}, &OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "test-key"}, ServiceTier: c.request}).Result(context.Background())
+			}}, &OpenAIResponsesOptions{APIKey: "test-key", ServiceTier: c.request}).Result(context.Background())
 			if err != nil {
 				t.Fatal(err)
 			}

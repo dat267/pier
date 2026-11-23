@@ -9,7 +9,7 @@ import (
 
 func convertToLlmLargeInput() []ai.Message {
 	messages := make([]ai.Message, 0, 40000)
-	for i := 0; i < 10000; i++ {
+	for range 10000 {
 		messages = append(messages, &ai.UserMessage{Content: ai.StringOrBlocks{Text: "question"}})
 		messages = append(messages, &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{Text: "answer"}}, StopReason: ai.StopStop})
 		messages = append(messages, &ai.UserMessage{Content: ai.StringOrBlocks{Text: strings.Repeat("x", 20)}})

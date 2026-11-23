@@ -181,7 +181,7 @@ type Renderer struct {
 	// render timer — input and paints share the owner goroutine).
 	renderTicks chan struct{}
 	// renderCount counts completed paints (test seam for coalescing).
-	renderCount int64
+	renderCount atomic.Int64
 }
 
 // NewRenderer creates a renderer rooted at the given terminal.
@@ -508,7 +508,7 @@ func (t *Renderer) RenderTicks() <-chan struct{} {
 }
 
 // RenderCount reports completed paints (test seam).
-func (t *Renderer) RenderCount() int64 { return atomic.LoadInt64(&t.renderCount) }
+func (t *Renderer) RenderCount() int64 { return t.renderCount.Load() }
 
 // signalRender coalesces a render request onto the tick channel.
 func (t *Renderer) signalRender() {
@@ -574,7 +574,7 @@ func (t *Renderer) doRender() {
 	if t.DoRender != nil {
 		t.DoRender()
 	}
-	atomic.AddInt64(&t.renderCount, 1)
+	t.renderCount.Add(1)
 }
 
 // frameCoalescer is implemented by terminals whose writes run off the caller

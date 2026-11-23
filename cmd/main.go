@@ -79,13 +79,7 @@ func Execute() {
 	configureResolver()
 	// main.ts applies offline mode from the raw argv before auth/update
 	// commands, which are dispatched before ParseArgs below.
-	offlineFlag := false
-	for _, arg := range os.Args[1:] {
-		if arg == "--offline" {
-			offlineFlag = true
-			break
-		}
-	}
+	offlineFlag := slices.Contains(os.Args[1:], "--offline")
 	applyOfflineMode(&coding.Args{Offline: offlineFlag})
 	appName := executableName()
 	// `pi auth check|print-api-key|print-bearer-token` runs before anything
@@ -165,8 +159,7 @@ func Execute() {
 			// Upstream main.ts prints a run failure as a red "Error: {message}"
 			// line; the session-resolution messages it prints without that prefix
 			// carry bareErrorLine.
-			var bare bareErrorLine
-			if errors.As(err, &bare) {
+			if bare, ok := errors.AsType[bareErrorLine](err); ok {
 				fmt.Fprintln(os.Stderr, coding.FormatCLIError(bare.text))
 			} else {
 				reportDiagnostics([]coding.CLIDiagnostic{{Type: "error", Message: err.Error()}})

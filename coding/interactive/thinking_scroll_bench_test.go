@@ -95,7 +95,7 @@ func BenchmarkThinkingScrollExpandedScrollBy1500(b *testing.B) {
 // BenchmarkThinkingExpandFirstFrame measures the ctrl+t frame that makes every
 // thinking block visible for the first time (the markdown text is set then).
 func BenchmarkThinkingExpandFirstFrame(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		b.StopTimer()
 		app, cleanup := newThinkingScrollApp(b, true, 500, 20)
 		b.StartTimer()

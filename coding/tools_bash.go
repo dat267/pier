@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -969,10 +970,8 @@ func prependAgentBinDir(env []string) []string {
 	if pathIndex >= 0 {
 		_, current, _ = strings.Cut(env[pathIndex], "=")
 	}
-	for _, entry := range strings.Split(current, delimiter) {
-		if entry == binDir {
-			return env
-		}
+	if slices.Contains(strings.Split(current, delimiter), binDir) {
+		return env
 	}
 	if current == "" {
 		current = binDir

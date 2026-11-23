@@ -492,7 +492,7 @@ func streamAssistantResponse(
 	// message. Upstream's iterator and response.result() await abort cleanup;
 	// abandoning them would leave this assistant open and start a second
 	// failure message through handleRunFailure.
-	settlementContext := contextOrBackground(nil)
+	settlementContext := backgroundContext()
 	// Upstream wraps the stream result as
 	// `Object.assign(await response.result(), { thinkingLevel: config.reasoning ?? "off" })`,
 	// so the final message records the requested Pi thinking level.

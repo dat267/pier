@@ -176,7 +176,7 @@ func jsonContainsRaw(raw json.RawMessage, needle string) bool {
 // off level has no name to fall back to, so an absent `off` mapping omits it.
 func TestBuildChatTemplateValuesMatchesTheReference(t *testing.T) {
 	raw := func(text string) json.RawMessage { return json.RawMessage(text) }
-	mapped := func(level ThinkingLevel, value string) *string { return new(value) }
+	mapped := func(_ ThinkingLevel, value string) *string { return new(value) }
 	levels := func(entries map[ThinkingLevel]*string) ThinkingLevelMap {
 		if entries == nil {
 			return nil

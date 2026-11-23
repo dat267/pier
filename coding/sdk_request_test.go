@@ -1,7 +1,6 @@
 package coding
 
 import (
-	"context"
 	ctxpkg "context"
 	"github.com/dat267/pier/ai"
 	"os"
@@ -390,7 +389,7 @@ func TestCreateAgentSessionDoesNotInjectSandboxPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 	cwd := t.TempDir()
-	result, err := CreateAgentSession(context.Background(), &CreateAgentSessionOptions{
+	result, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
 		Cwd: cwd, ModelRuntime: runtime,
 		SessionManager:  NewSessionManager(cwd, nil),
 		SettingsManager: NewSettingsManagerFromFiles(cwd, filepath.Join(t.TempDir(), "agent"), SettingsManagerCreateOptions{}),

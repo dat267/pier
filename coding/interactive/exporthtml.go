@@ -152,10 +152,7 @@ func ansiSGRParameter(part string) int {
 			return 0
 		}
 		if value < maxSGRParameter {
-			value = value*10 + int(digit-'0')
-			if value > maxSGRParameter {
-				value = maxSGRParameter
-			}
+			value = min(value*10+int(digit-'0'), maxSGRParameter)
 		}
 	}
 	return value
@@ -230,7 +227,9 @@ func AnsiToHTML(text string) string {
 	}
 	openSpan := func() {
 		if hasHTMLStyle(style) {
-			result.WriteString(`<span style="` + styleToInlineCSS(style) + `">`)
+			result.WriteString(`<span style="`)
+			result.WriteString(styleToInlineCSS(style))
+			result.WriteString(`">`)
 			inSpan = true
 		}
 	}
@@ -267,7 +266,9 @@ func AnsiToHTML(text string) string {
 					inLink = false
 				}
 				if url != "" && safeLinkRegex.MatchString(url) {
-					result.WriteString(`<a href="` + escapeHTMLText(url) + `">`)
+					result.WriteString(`<a href="`)
+					result.WriteString(escapeHTMLText(url))
+					result.WriteString(`">`)
 					inLink = true
 				}
 				openSpan()
@@ -314,7 +315,9 @@ func AnsiLinesToHTML(lines []string) string {
 		if html == "" {
 			html = "&nbsp;"
 		}
-		result.WriteString(`<div class="ansi-line">` + html + `</div>`)
+		result.WriteString(`<div class="ansi-line">`)
+		result.WriteString(html)
+		result.WriteString(`</div>`)
 	}
 	return result.String()
 }

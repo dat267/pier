@@ -1019,7 +1019,7 @@ func (p *streamingJSONParser) refresh() json.RawMessage {
 func (p *streamingJSONParser) render() json.RawMessage {
 	if p.unordered > 0 {
 		out := p.emitFrame(make([]byte, 0, len(p.out)+len(p.suffix)+16), 0)
-		return out[:len(out):len(out)]
+		return slices.Clip(out)
 	}
 	from, to, member, placed := p.pendingPlacement()
 	tail := p.suffix[:0]
@@ -1034,8 +1034,8 @@ func (p *streamingJSONParser) render() json.RawMessage {
 		tail = append(tail, closerOf(&p.stack[i]))
 	}
 	p.suffix = tail
-	out := append(prefix[:len(prefix):len(prefix)], tail...)
-	return out[:len(out):len(out)]
+	out := append(slices.Clip(prefix), tail...)
+	return slices.Clip(out)
 }
 
 func closerOf(frame *sjFrame) byte {

@@ -1,7 +1,6 @@
 package coding
 
 import (
-	"context"
 	ctxpkg "context"
 	"encoding/json"
 	"errors"
@@ -520,7 +519,7 @@ func TestAuthStorageArrayRootIsNotDiscardedByMutation(t *testing.T) {
 	storage := NewAuthStorage(path)
 	_, err := storage.Modify("openai", func(*ai.Credential) (*ai.Credential, error) {
 		return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "synthetic-key"}}, nil
-	}, context.Background())
+	}, ctxpkg.Background())
 	if err != nil {
 		got, readErr := os.ReadFile(path)
 		if readErr != nil {
@@ -558,15 +557,15 @@ func TestMemoryAuthBackendDoesNotCommitCancelledCallback(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := ctxpkg.WithCancel(ctxpkg.Background())
 	defer cancel()
 	_, err := backend.WithLockAsync(ctx, func(*string) (LockResult, error) {
 		cancel()
 		next := "new"
 		return LockResult{Next: &next}, nil
 	})
-	if !errors.Is(err, context.Canceled) {
-		t.Errorf("callback cancellation = %v, want context.Canceled", err)
+	if !errors.Is(err, ctxpkg.Canceled) {
+		t.Errorf("callback cancellation = %v, want ctxpkg.Canceled", err)
 	}
 	// The synchronous read also waits until the worker releases its data lock,
 	// so the check observes the settled operation even if cancellation won early.
@@ -596,7 +595,7 @@ func TestAuthStorageLostLeaseDoesNotCommitOrReleaseSuccessor(t *testing.T) {
 	entered, finishFirst := make(chan struct{}), make(chan struct{})
 	firstDone := make(chan error, 1)
 	go func() {
-		_, err := backend.WithLockAsync(context.Background(), func(*string) (LockResult, error) {
+		_, err := backend.WithLockAsync(ctxpkg.Background(), func(*string) (LockResult, error) {
 			close(entered)
 			<-finishFirst
 			stale := `{"stale":{"type":"api_key","key":"synthetic-stale"}}`
@@ -616,7 +615,7 @@ func TestAuthStorageLostLeaseDoesNotCommitOrReleaseSuccessor(t *testing.T) {
 	secondEntered, finishSecond := make(chan struct{}), make(chan struct{})
 	secondDone := make(chan error, 1)
 	go func() {
-		_, err := NewFileAuthStorageBackend(path).WithLockAsync(context.Background(), func(*string) (LockResult, error) {
+		_, err := NewFileAuthStorageBackend(path).WithLockAsync(ctxpkg.Background(), func(*string) (LockResult, error) {
 			close(secondEntered)
 			<-finishSecond
 			current := `{"current":{"type":"api_key","key":"synthetic-current"}}`
@@ -660,7 +659,7 @@ func TestReadOnlyAuthStorageRejectsExplicitNullFields(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "auth.json")
 			writeAuthFile(t, path, `{"p":`+tc.credential+`}`)
-			_, err := NewReadOnlyAuthStorage(path).List(context.Background())
+			_, err := NewReadOnlyAuthStorage(path).List(ctxpkg.Background())
 			if tc.valid {
 				if err != nil {
 					t.Fatal(err)
@@ -679,7 +678,7 @@ func TestReadOnlyAuthStorageReturnsOwnedCredentialData(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "auth.json")
 	writeAuthFile(t, path, `{"api":{"type":"api_key","key":"synthetic","env":{"ACCOUNT":"original"}},"oauth":{"type":"oauth","access":"synthetic","refresh":"synthetic","expires":123,"tenant":"original"}}`)
 	storage := NewReadOnlyAuthStorage(path)
-	ctx := context.Background()
+	ctx := ctxpkg.Background()
 	api, err := storage.Read("api", ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -718,16 +717,16 @@ func TestAuthStorageMutationsPreserveUntouchedEntries(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "auth.json")
 			writeAuthFile(t, path, tc.Initial)
 			storage := NewAuthStorage(path)
-			known, err := storage.Read("known", context.Background())
+			known, err := storage.Read("known", ctxpkg.Background())
 			if err != nil || known == nil || known.APIKey == nil || known.APIKey.Key != "synthetic-known" {
 				t.Fatalf("readable sibling was lost: %+v, %v", known, err)
 			}
 			if tc.Op == "modify" {
 				_, err = storage.Modify("added", func(*ai.Credential) (*ai.Credential, error) {
 					return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "synthetic-added"}}, nil
-				}, context.Background())
+				}, ctxpkg.Background())
 			} else {
-				err = storage.Delete("known", context.Background())
+				err = storage.Delete("known", ctxpkg.Background())
 			}
 			if err != nil {
 				t.Fatal(err)

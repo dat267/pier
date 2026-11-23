@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -159,7 +160,7 @@ func dropUndecodableModelMembers(entry json.RawMessage) (json.RawMessage, bool) 
 	}
 	for !decodes(kept) {
 		dropped := false
-		for index := len(kept) - 1; index >= 0; index-- {
+		for index := range slices.Backward(kept) {
 			without := append(append([]string{}, kept[:index]...), kept[index+1:]...)
 			if len(without) == 0 {
 				continue

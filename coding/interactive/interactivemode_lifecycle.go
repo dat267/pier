@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"syscall"
@@ -618,12 +619,7 @@ func isDeadTerminalError(err error) bool {
 		return false
 	}
 	if errno, ok := errors.AsType[syscall.Errno](err); ok {
-		for _, dead := range deadTerminalErrnos {
-			if errno == dead {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(deadTerminalErrnos, errno)
 	}
 	message := err.Error()
 	for _, code := range deadTerminalCodes {

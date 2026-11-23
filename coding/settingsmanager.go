@@ -1785,10 +1785,8 @@ func recordNestedOrder(order map[string][]string, field, nestedKey string) map[s
 	if order == nil {
 		order = map[string][]string{}
 	}
-	for _, existing := range order[field] {
-		if existing == nestedKey {
-			return order
-		}
+	if slices.Contains(order[field], nestedKey) {
+		return order
 	}
 	order[field] = append(order[field], nestedKey)
 	return order
@@ -3193,7 +3191,7 @@ func (m *SettingsManager) GetEnabledModels() []string {
 	// The snapshot is shared with every reader; clip the capacity so a caller
 	// that appends (addPersistedDefaultToNonEmptyScope) gets its own array
 	// instead of writing into the published one.
-	return settings.EnabledModels[:len(settings.EnabledModels):len(settings.EnabledModels)]
+	return slices.Clip(settings.EnabledModels)
 }
 
 // SetEnabledModels stores the model patterns for cycling.

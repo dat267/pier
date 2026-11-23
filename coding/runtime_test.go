@@ -583,14 +583,14 @@ func TestRuntimeCredentialsConcurrentOverrideAccess(t *testing.T) {
 	wait.Add(2)
 	go func() {
 		defer wait.Done()
-		for index := 0; index < 500; index++ {
+		for range 500 {
 			overlay.SetRuntimeAPIKey("openai", "key")
 			overlay.RemoveRuntimeAPIKey("openai")
 		}
 	}()
 	go func() {
 		defer wait.Done()
-		for index := 0; index < 500; index++ {
+		for range 500 {
 			_, _ = overlay.Read("openai", ctx)
 			_ = overlay.HasRuntimeAPIKey("openai")
 			_, _ = overlay.List(ctx)

@@ -137,6 +137,9 @@ func (s *loopSchedule) close() {
 // runs under it.
 func (s *loopSchedule) setContext(ctx context.Context) { s.work.ctx = ctx }
 
+// clearContext drops the work context once the run ends.
+func (s *loopSchedule) clearContext() { s.work.ctx = nil }
+
 // workContext returns the work context. Only the loop goroutine may call it.
 func (s *loopSchedule) workContext() context.Context { return s.work.ctx }
 

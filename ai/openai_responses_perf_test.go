@@ -10,7 +10,7 @@ import (
 // final answer per turn. Upstream builds plain objects and stringifies once.
 func largeResponsesMessages(turns int) []Message {
 	messages := make([]Message, 0, 4*turns)
-	for i := 0; i < turns; i++ {
+	for i := range turns {
 		callID := fmt.Sprintf("call_%d", i)
 		messages = append(messages, &UserMessage{Content: StringOrBlocks{Text: "Please inspect the code and explain."}, Timestamp: int64(i)})
 		messages = append(messages, &AssistantMessage{

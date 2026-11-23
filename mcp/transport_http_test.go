@@ -85,7 +85,7 @@ func newHTTPFixture(handler func(w http.ResponseWriter, r *http.Request)) *httpF
 	return fixture
 }
 
-func (f *httpFixture) close(t *testing.T) {
+func (f *httpFixture) close(*testing.T) {
 	f.server.Close()
 }
 

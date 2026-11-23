@@ -251,7 +251,7 @@ func TestFederationTokenCacheLargeExpiryStaysCached(t *testing.T) {
 		BaseURL: server.URL, Now: func() time.Time { return time.Unix(1_000_000, 0) },
 	})
 
-	for call := 0; call < 2; call++ {
+	for call := range 2 {
 		if token, err := cache.Token(context.Background()); err != nil || token != "tok" {
 			t.Fatalf("call %d: token=%q err=%v", call+1, token, err)
 		}
@@ -276,7 +276,7 @@ func TestFederationTokenCacheLargeRefreshBackoffDoesNotReuseExpiredToken(t *test
 	})
 	cache.RefreshBackoff = math.MaxInt64
 
-	for call := 0; call < 2; call++ {
+	for call := range 2 {
 		if token, err := cache.Token(context.Background()); err != nil || token != "tok" {
 			t.Fatalf("call %d: token=%q err=%v", call+1, token, err)
 		}

@@ -281,7 +281,7 @@ func TestVertexExplicitEmptyAPIKeyDoesNotFallBackToEnv(t *testing.T) {
 		BaseURL: "https://example.invalid", ContextWindow: 1000, MaxTokens: 100}
 	context := TranscriptContext{Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1}}}
 	stream := StreamGoogleVertex(model, context, &GoogleVertexOptions{
-		GoogleOptions: GoogleOptions{APIKey: "", APIKeySet: true}, Project: "test-project", Location: "us-central1",
+		APIKey: "", APIKeySet: true, Project: "test-project", Location: "us-central1",
 	})
 	message, err := stream.Result(ctxpkg.Background())
 	if err != nil {
@@ -365,7 +365,7 @@ func TestVertexMetadataTokenLargeExpiryStaysCached(t *testing.T) {
 		vertexTokenCache.mu.Unlock()
 	})
 	env := ProviderEnv{"GCE_METADATA_HOST": strings.TrimPrefix(server.URL, "http://")}
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		token, err := metadataAccessToken(ctxpkg.Background(), env)
 		if err != nil || token != "long-lived-token" {
 			t.Fatalf("request %d: token=%q err=%v", i+1, token, err)
@@ -459,12 +459,12 @@ func TestVertexFlashLiteMinimalBudgetUsesFlashLiteTable(t *testing.T) {
 		var payload map[string]any
 		stream := StreamGoogleVertexSimple(model, TranscriptContext{Messages: []Message{
 			&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
-		}}, &SimpleStreamOptions{StreamOptions: StreamOptions{APIKey: "AIzaSyRealKey", OnPayload: func(raw json.RawMessage, _ *Model) json.RawMessage {
+		}}, &SimpleStreamOptions{APIKey: "AIzaSyRealKey", OnPayload: func(raw json.RawMessage, _ *Model) json.RawMessage {
 			if err := json.Unmarshal(raw, &payload); err != nil {
 				t.Error(err)
 			}
 			return nil
-		}}, Reasoning: ThinkMinimal})
+		}, Reasoning: ThinkMinimal})
 		if _, err := stream.Result(ctxpkg.Background()); err != nil {
 			t.Fatalf("%s: %v", id, err)
 		}

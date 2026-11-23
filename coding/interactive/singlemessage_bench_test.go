@@ -15,8 +15,8 @@ func BenchmarkSingleAssistantAdmission(b *testing.B) {
 	// cost remains BenchmarkSingleAssistantCold, not hidden by this measurement.
 	preparation := &tui.MarkdownPreparation{Submit: func(func() func()) bool { return true }, RequestRender: func() {}}
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		component := NewAssistantMessageComponent(message, false, nil, "", 1, nil)
 		component.SetMarkdownPreparation(preparation)
 		component.Render(80)
@@ -29,8 +29,8 @@ func BenchmarkSingleAssistantCold(b *testing.B) {
 	InitTheme("dark", false)
 	message := &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{Text: text}}}
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		component := NewAssistantMessageComponent(message, false, nil, "", 1, nil)
 		component.Render(80)
 	}

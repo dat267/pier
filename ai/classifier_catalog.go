@@ -2,6 +2,7 @@ package ai
 
 import (
 	_ "embed"
+	"maps"
 	"sort"
 	"sync"
 )
@@ -50,9 +51,7 @@ func mergeClassifierCatalog(extraModels map[string]map[string]*Model) {
 		if classifierCatalogModels[provider] == nil {
 			classifierCatalogModels[provider] = map[string]*Model{}
 		}
-		for id, model := range models {
-			classifierCatalogModels[provider][id] = model
-		}
+		maps.Copy(classifierCatalogModels[provider], models)
 	}
 }
 

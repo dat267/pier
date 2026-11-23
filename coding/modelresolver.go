@@ -146,15 +146,15 @@ const (
 )
 
 func splitThinkingSuffix(text string) (string, ai.ThinkingLevel, bool) {
-	colonIndex := strings.LastIndex(text, ":")
-	if colonIndex == -1 {
+	before, after, ok := strings.CutLast(text, ":")
+	if !ok {
 		return "", "", false
 	}
-	suffix := text[colonIndex+1:]
+	suffix := after
 	if !IsValidThinkingLevel(suffix) {
 		return "", "", false
 	}
-	return text[:colonIndex], ai.ThinkingLevel(suffix), true
+	return before, ai.ThinkingLevel(suffix), true
 }
 
 func splitProviderPrefix(text string, models []*ai.Model) (string, string, bool) {
@@ -287,12 +287,12 @@ func resolveReferenceText(text string, request ModelReferenceRequest, pool []*ai
 	if request.ThinkingSuffix == thinkingSuffixStrict {
 		return ModelReferenceResult{Status: "not-found"}
 	}
-	colonIndex := strings.LastIndex(text, ":")
-	if colonIndex == -1 {
+	before, after, ok := strings.CutLast(text, ":")
+	if !ok {
 		return ModelReferenceResult{Status: "not-found"}
 	}
-	suffix := text[colonIndex+1:]
-	inner := resolveReferenceText(text[:colonIndex], request, pool, usable)
+	suffix := after
+	inner := resolveReferenceText(before, request, pool, usable)
 	if inner.Status == "not-found" {
 		return inner
 	}

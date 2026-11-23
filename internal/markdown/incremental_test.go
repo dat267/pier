@@ -176,8 +176,8 @@ func BenchmarkIncrementalRender500(b *testing.B) {
 func BenchmarkFullRender500(b *testing.B) {
 	prefixes := growingParagraphPrefixes(500)
 	b.ReportAllocs()
-	b.ResetTimer()
-	for iter := 0; iter < b.N; iter++ {
+
+	for b.Loop() {
 		for _, p := range prefixes {
 			_ = Lex(p)
 		}
@@ -296,11 +296,11 @@ func TestDocumentUpdateMatchesFullLex(t *testing.T) {
 			}
 		}
 	}
-	for iter := 0; iter < 400; iter++ {
+	for range 400 {
 		n := 1 + rng.Intn(10)
 		doc := &Document{}
 		src := ""
-		for i := 0; i < n; i++ {
+		for range n {
 			src += pieces[rng.Intn(len(pieces))]
 			got := doc.Update(src)
 			compare(src, got, Lex(src))

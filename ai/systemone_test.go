@@ -39,7 +39,7 @@ func TestTypeSafeSystemOneOpenRouterImagePayloadOrder(t *testing.T) {
 			Name: "approved", Type: "bool", Instructions: "Approve?",
 			BoolCriteria: ClassifierBoolCriteria{True: "yes", False: "no"},
 		}},
-	}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret"}})
+	}, &ClassifierOptions{APIKey: "secret"})
 	if result.StopReason != ClassifierStopStop {
 		t.Fatalf("classification = %+v", result)
 	}
@@ -74,7 +74,7 @@ func TestTypeSafeSystemOneTimeoutCoversResponseBody(t *testing.T) {
 	idleTimeout := 2000
 	start := time.Now()
 	result := (TypeSafeSystemOne{}).Classify(model, ClassifierContext{State: []byte(`{}`)}, &ClassifierOptions{
-		StreamOptions: StreamOptions{Ctx: context.Background(), APIKey: "synthetic", TimeoutMs: &timeout, HTTPIdleTimeoutMs: &idleTimeout},
+		Ctx: context.Background(), APIKey: "synthetic", TimeoutMs: &timeout, HTTPIdleTimeoutMs: &idleTimeout,
 	})
 	if result.StopReason != ClassifierStopError || result.ErrorMessage == nil ||
 		!strings.Contains(*result.ErrorMessage, "timed out after 100ms") {
@@ -110,10 +110,8 @@ func TestTypeSafeSystemOneOnPayloadHook(t *testing.T) {
 	}
 	// nil keeps the original payload.
 	result := (TypeSafeSystemOne{}).Classify(model, context, &ClassifierOptions{
-		StreamOptions: StreamOptions{
-			APIKey:    "secret",
-			OnPayload: func(json.RawMessage, *Model) json.RawMessage { return nil },
-		},
+		APIKey:    "secret",
+		OnPayload: func(json.RawMessage, *Model) json.RawMessage { return nil },
 	})
 	if result.StopReason != ClassifierStopStop {
 		t.Fatalf("nil hook result = %+v", result)
@@ -124,10 +122,8 @@ func TestTypeSafeSystemOneOnPayloadHook(t *testing.T) {
 	// A returned payload replaces it.
 	replacement := json.RawMessage(`{"replaced":true}`)
 	(TypeSafeSystemOne{}).Classify(model, context, &ClassifierOptions{
-		StreamOptions: StreamOptions{
-			APIKey:    "secret",
-			OnPayload: func(json.RawMessage, *Model) json.RawMessage { return replacement },
-		},
+		APIKey:    "secret",
+		OnPayload: func(json.RawMessage, *Model) json.RawMessage { return replacement },
 	})
 	if len(bodies) != 2 || strings.TrimSpace(bodies[1]) != `{"replaced":true}` {
 		t.Fatalf("replacement body = %v", bodies[1:])

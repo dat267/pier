@@ -55,7 +55,7 @@ func TestRadiusMcpOfferMatchesUpstream(t *testing.T) {
 			provider := app.session.ModelRuntime().GetProvider("radius")
 			provider.RefreshModels = func(*ai.RefreshModelsContext) error { return nil }
 			provider.Auth.OAuth.Login = func(*ai.AuthInteraction) (*ai.OAuthCredential, error) {
-				return &ai.OAuthCredential{OAuthCredentials: ai.OAuthCredentials{Access: "test-token", Expires: time.Now().Add(time.Hour).UnixMilli()}}, nil
+				return &ai.OAuthCredential{Access: "test-token", Expires: time.Now().Add(time.Hour).UnixMilli()}, nil
 			}
 			authenticated, failed, reloads := false, false, 0
 			app.auth.ShowStatus = func(string) { authenticated = true }

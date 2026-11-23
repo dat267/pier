@@ -403,10 +403,7 @@ func (t *StdioTransport) Close(ctx context.Context) error {
 	if closeTimeoutMs == 0 && !t.options.CloseTimeoutMsSet {
 		closeTimeoutMs = defaultCloseTimeoutMs
 	}
-	grace := int64(StdinCloseGraceMs)
-	if closeTimeoutMs < grace {
-		grace = closeTimeoutMs
-	}
+	grace := min(closeTimeoutMs, int64(StdinCloseGraceMs))
 	graceTimer := time.NewTimer(javascriptTimerDuration(grace))
 	defer graceTimer.Stop()
 	killTimer := time.NewTimer(javascriptTimerDuration(grace + closeTimeoutMs))

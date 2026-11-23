@@ -162,7 +162,7 @@ func TestSnapshotHydrationCopiesEachLine(t *testing.T) {
 	path := filepath.Join(dir, "session.jsonl")
 	lines := []string{`{"type":"session","version":3,"id":"s1","timestamp":"t0","cwd":"/tmp"}`}
 	parent := ""
-	for i := 0; i < 40; i++ {
+	for i := range 40 {
 		id := "m" + strconv.Itoa(i)
 		content := strings.Repeat(string(rune('a'+i%26)), 300+i)
 		parentField := ""

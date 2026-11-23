@@ -4,6 +4,7 @@ import (
 	"math"
 	"math/big"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -377,12 +378,7 @@ func patternMatches(s *piSchema, key string) bool {
 }
 
 func containsType(types []string, want string) bool {
-	for _, typ := range types {
-		if typ == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(types, want)
 }
 
 func cloneSchemaValue(value *schemaValue) *schemaValue {
@@ -536,8 +532,8 @@ func tryPiNumber(value *schemaValue) (*schemaValue, bool) {
 		} else if lower == "false" {
 			return &schemaValue{IsNumber: true, Number: 0}, true
 		}
-		if strings.HasSuffix(text, "n") {
-			if n, err := strconv.ParseInt(strings.TrimSuffix(text, "n"), 10, 64); err == nil {
+		if before, ok := strings.CutSuffix(text, "n"); ok {
+			if n, err := strconv.ParseInt(before, 10, 64); err == nil {
 				return &schemaValue{IsNumber: true, Number: float64(n)}, true
 			}
 		}

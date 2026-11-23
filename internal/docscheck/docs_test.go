@@ -270,7 +270,7 @@ func TestDecisionRowsAreReproduced(t *testing.T) {
 		for _, n := range namedTest.FindAllStringSubmatch(body, -1) {
 			reproduced = reproduced || defined[n[1]]
 		}
-		for _, id := range strings.Split(ids, "/") {
+		for id := range strings.SplitSeq(ids, "/") {
 			n, _ := strconv.Atoi(id[1:])
 			reproduced = reproduced || cited[n]
 		}
@@ -303,7 +303,7 @@ func TestEveryCitedDRowHasAnEntry(t *testing.T) {
 	text := readDoc(t, "DECISIONS.md")
 	defined := map[int]bool{}
 	for _, m := range dRowHeading.FindAllStringSubmatch(text, -1) {
-		for _, id := range strings.Split(m[1], "/") {
+		for id := range strings.SplitSeq(m[1], "/") {
 			n, err := strconv.Atoi(id[1:])
 			if err != nil {
 				t.Fatalf("bad row id %q", id)

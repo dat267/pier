@@ -22,8 +22,7 @@ func BenchmarkScrollLongTranscript(b *testing.B) {
 	screen.DisableAutoRender()
 	buildScrollTranscript(b, app)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		app.ui.RenderNow(true)
 	}
 }
@@ -40,8 +39,7 @@ func BenchmarkScrollWarmDiff(b *testing.B) {
 	buildScrollTranscript(b, app)
 	app.ui.RenderNow(false) // warm every cache
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		app.ui.RenderNow(false)
 	}
 }

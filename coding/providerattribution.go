@@ -2,6 +2,7 @@ package coding
 
 import (
 	"context"
+	"maps"
 	"os"
 	"strings"
 	"sync"
@@ -108,9 +109,7 @@ func (r *RuntimeCredentials) List(ctx context.Context) ([]ai.CredentialInfo, err
 	}
 	r.mu.RLock()
 	overrides := make(map[string]string, len(r.overrides))
-	for providerID, key := range r.overrides {
-		overrides[providerID] = key
-	}
+	maps.Copy(overrides, r.overrides)
 	r.mu.RUnlock()
 
 	byProvider := map[string]ai.CredentialInfo{}

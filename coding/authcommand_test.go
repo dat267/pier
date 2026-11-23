@@ -123,7 +123,7 @@ func TestRunAuthCommandHelpUsesTheInvokedName(t *testing.T) {
 
 // pi v1.4.0 main.ts runAuthCommand reports unknownFlags.keys().next(), preserving argv order.
 func TestRunAuthCommandReportsFirstUnknownOption(t *testing.T) {
-	for attempt := 0; attempt < 32; attempt++ {
+	for attempt := range 32 {
 		var stdout, stderr bytes.Buffer
 		handled, code := RunAuthCommandNamed("pier", []string{
 			"auth", "check", "--provider", "anthropic", "--first", "--second",

@@ -186,11 +186,11 @@ func CapFileLists(fileOps *FileOperations) (readFiles, modifiedFiles []string, r
 
 	reads := make([]string, 0, maxSummaryFileListEntries)
 	modifieds := make([]string, 0, maxSummaryFileListEntries)
-	for i := len(fileOps.Order) - 1; i >= 0; i-- {
+	for _, v := range slices.Backward(fileOps.Order) {
 		if len(reads) >= maxSummaryFileListEntries && len(modifieds) >= maxSummaryFileListEntries {
 			break
 		}
-		path := fileOps.Order[i]
+		path := v
 		if readSet[path] {
 			if len(reads) < maxSummaryFileListEntries {
 				reads = append(reads, path)

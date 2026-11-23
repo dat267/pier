@@ -295,7 +295,10 @@ func TestStreamGoogleTextDeltasAvoidPrefixCopies(t *testing.T) {
 		}
 		body.WriteString(`data: {"candidates":[{"content":{"role":"model","parts":[{"text":"`)
 		body.WriteString(delta)
-		body.WriteString(`"}]}` + finish + `}]}` + "\n\n")
+		body.WriteString(`"}]}`)
+		body.WriteString(finish)
+		body.WriteString(`}]}`)
+		body.WriteString("\n\n")
 	}
 	bodyText := body.String()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -73,9 +73,13 @@ type bashExecutionFields struct {
 // bashExecutionToText).
 func BashExecutionToText(msg *bashExecutionFields) string {
 	var text strings.Builder
-	text.WriteString("Ran `" + msg.Command + "`\n")
+	text.WriteString("Ran `")
+	text.WriteString(msg.Command)
+	text.WriteString("`\n")
 	if msg.Output != "" {
-		text.WriteString("```\n" + msg.Output + "\n```")
+		text.WriteString("```\n")
+		text.WriteString(msg.Output)
+		text.WriteString("\n```")
 	} else {
 		text.WriteString("(no output)")
 	}

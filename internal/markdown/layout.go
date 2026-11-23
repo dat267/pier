@@ -316,11 +316,11 @@ func runeWidth(r rune) int {
 // the token's prefix already carries the state they produce, and tokenizeStyled
 // appends its own reset.
 func breakStyledToken(token string, width int) []string {
-	prefix := ""
+	var prefix strings.Builder
 	i := 0
 	for i < len(token) && token[i] == 0x1b {
 		_, n := extractANSI(token[i:])
-		prefix += token[i : i+n]
+		prefix.WriteString(token[i : i+n])
 		i += n
 	}
 	var parts []string
@@ -335,7 +335,7 @@ func breakStyledToken(token string, width int) []string {
 		r, size := utf8.DecodeRuneInString(token[j:])
 		w := runeWidth(r)
 		if col > 0 && col+w > width {
-			parts = append(parts, prefix+cur.String()+"\x1b[0m")
+			parts = append(parts, prefix.String()+cur.String()+"\x1b[0m")
 			cur.Reset()
 			col = 0
 		}
@@ -344,7 +344,7 @@ func breakStyledToken(token string, width int) []string {
 		j += size
 	}
 	if cur.Len() > 0 {
-		parts = append(parts, prefix+cur.String()+"\x1b[0m")
+		parts = append(parts, prefix.String()+cur.String()+"\x1b[0m")
 	}
 	return parts
 }

@@ -91,20 +91,17 @@ func ParseAuthorizationInput(input string) OAuthAuthorizationInput {
 	}
 	// JS `value.split("#", 2)` stops after the second part, so "a#b#c" is state
 	// "b" and the rest is dropped; strings.Cut would return "b#c".
-	if index := strings.Index(value, "#"); index >= 0 {
-		state := value[index+1:]
+	if before, after, ok := strings.Cut(value, "#"); ok {
+		state := after
 		if next := strings.Index(state, "#"); next >= 0 {
 			state = state[:next]
 		}
-		return OAuthAuthorizationInput{Code: value[:index], State: state}
+		return OAuthAuthorizationInput{Code: before, State: state}
 	}
 	// URLSearchParams tolerates a leading "?", which url.ParseQuery does not strip
 	// (it keeps the "?" in the key), so a bare "?code=abc" needs it removed.
 	if strings.Contains(value, "code=") {
-		query := value
-		if strings.HasPrefix(query, "?") {
-			query = query[1:]
-		}
+		query := strings.TrimPrefix(value, "?")
 		if values, err := url.ParseQuery(query); err == nil {
 			return OAuthAuthorizationInput{Code: values.Get("code"), State: values.Get("state")}
 		}

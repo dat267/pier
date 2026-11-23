@@ -369,7 +369,7 @@ func (r *Renderer) renderInlineTokens(inlines []Inline, styleContext *inlineStyl
 	// After a skipped HTML comment, drop the next text's leading space if the
 	// text before ended with one, so "a <!-- c --> b" renders as "a b".
 	dropLeadingSpace := false
-	for i := 0; i < len(inlines); i++ {
+	for i := range inlines {
 		in := inlines[i]
 		if dropLeadingSpace && in.Kind == InlineText && len(in.Children) == 0 && startsWithSpaceOrTab(in.Text) {
 			in.Text = strings.TrimLeft(in.Text, " \t")
@@ -397,30 +397,38 @@ func (r *Renderer) renderInlineTokens(inlines []Inline, styleContext *inlineStyl
 
 		case InlineStrong:
 			boldContent := r.renderInlineTokens(in.Children, resolved)
-			builder.WriteString(r.style.Bold(boldContent) + stylePrefix)
+			builder.WriteString(r.style.Bold(boldContent))
+			builder.WriteString(stylePrefix)
 
 		case InlineEmphasis:
 			italicContent := r.renderInlineTokens(in.Children, resolved)
-			builder.WriteString(r.style.Italic(italicContent) + stylePrefix)
+			builder.WriteString(r.style.Italic(italicContent))
+			builder.WriteString(stylePrefix)
 
 		case InlineStrikethrough:
 			delContent := r.renderInlineTokens(in.Children, resolved)
-			builder.WriteString(r.style.Strikethrough(delContent) + stylePrefix)
+			builder.WriteString(r.style.Strikethrough(delContent))
+			builder.WriteString(stylePrefix)
 
 		case InlineCode:
-			builder.WriteString(r.style.Code(in.Text) + stylePrefix)
+			builder.WriteString(r.style.Code(in.Text))
+			builder.WriteString(stylePrefix)
 
 		case InlineLink:
 			linkText := r.renderInlineTokens(in.Children, resolved)
 			styledLink := r.style.Link(r.style.Underline(linkText))
 			if r.opts.Hyperlinks {
-				builder.WriteString(r.term.Hyperlink(styledLink, in.Dest) + stylePrefix)
+				builder.WriteString(r.term.Hyperlink(styledLink, in.Dest))
+				builder.WriteString(stylePrefix)
 			} else {
 				hrefForComparison := strings.TrimPrefix(in.Dest, "mailto:")
 				if in.Text == in.Dest || in.Text == hrefForComparison {
-					builder.WriteString(styledLink + stylePrefix)
+					builder.WriteString(styledLink)
+					builder.WriteString(stylePrefix)
 				} else {
-					builder.WriteString(styledLink + r.style.LinkURL(" ("+in.Dest+")") + stylePrefix)
+					builder.WriteString(styledLink)
+					builder.WriteString(r.style.LinkURL(" (" + in.Dest + ")"))
+					builder.WriteString(stylePrefix)
 				}
 			}
 

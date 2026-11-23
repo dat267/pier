@@ -3,6 +3,7 @@ package coding
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -54,9 +55,7 @@ func TestGrepToolMatchesUpstream(t *testing.T) {
 				"long.txt":  strings.Repeat("x", 600) + "NEEDLE\n",
 				"many.txt":  manyGrepLines(12),
 			}
-			for name, content := range fixture.Extra {
-				files[name] = content
-			}
+			maps.Copy(files, fixture.Extra)
 			for name, content := range files {
 				if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
 					t.Fatal(err)

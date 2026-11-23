@@ -369,7 +369,7 @@ func TestToolCardAppliesArgumentDeltasOncePerRender(t *testing.T) {
 	component := NewToolExecutionComponent("bash", "call-1", map[string]any{"command": "ls"},
 		ToolExecutionOptions{}, definition, nil, "/tmp")
 	renders = 0
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		component.UpdateArgs(map[string]any{"command": "ls", "extra": i})
 	}
 	if renders != 0 {

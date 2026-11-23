@@ -219,7 +219,8 @@ func indentLines(paths []string) string {
 		if index > 0 {
 			builder.WriteString("\n")
 		}
-		builder.WriteString("  " + path)
+		builder.WriteString("  ")
+		builder.WriteString(path)
 	}
 	return builder.String()
 }

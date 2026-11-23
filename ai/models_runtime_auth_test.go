@@ -119,7 +119,7 @@ func TestResolveProviderAuthExplicitEmptyAPIKeyOverridesStoredOAuth(t *testing.T
 func TestModelsApplyAuthPreservesExplicitEmptyAPIKey(t *testing.T) {
 	models := CreateModels(&CreateModelsOptions{Credentials: staticCredentialStore("p", "stored-key"), AuthContext: &fakeAuthContext{env: map[string]string{"KEY": "ambient-key"}}})
 	models.SetProvider(&Provider{ID: "p", Auth: ProviderAuth{APIKey: EnvApiKeyAuth("key", []string{"KEY"})}})
-	model, options, err := models.applyAuth(&Model{ID: "m", Provider: "p"}, &ModelsStreamOptions{StreamOptions: StreamOptions{APIKey: "", APIKeySet: true}})
+	model, options, err := models.applyAuth(&Model{ID: "m", Provider: "p"}, &ModelsStreamOptions{APIKey: "", APIKeySet: true})
 	if err != nil {
 		t.Fatal(err)
 	}

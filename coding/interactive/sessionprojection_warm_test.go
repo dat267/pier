@@ -25,7 +25,7 @@ func TestSessionReplacementDoesNotRebuildTheProjectionOnTheLoop(t *testing.T) {
 	cwd := t.TempDir()
 
 	session := coding.NewSessionManager(cwd, nil)
-	for turn := 0; turn < 2000; turn++ {
+	for range 2000 {
 		session.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "question"}})
 		session.AppendMessage(&ai.AssistantMessage{
 			API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",

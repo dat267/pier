@@ -15,8 +15,8 @@ func TestRequestPrefixCaptureCopiesTheRequest(t *testing.T) {
 	first := &ai.UserMessage{Content: ai.StringOrBlocks{Text: "first"}}
 	messages := []ai.Message{first}
 	capture.record(model, ai.TranscriptContext{Messages: messages}, &ai.SimpleStreamOptions{
-		StreamOptions: ai.StreamOptions{CacheRetention: ai.CacheRetentionLong},
-		Reasoning:     ai.ThinkHigh,
+		CacheRetention: ai.CacheRetentionLong,
+		Reasoning:      ai.ThinkHigh,
 	})
 	messages = append(messages, &ai.UserMessage{Content: ai.StringOrBlocks{Text: "second"}})
 

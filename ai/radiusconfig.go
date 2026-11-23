@@ -136,12 +136,10 @@ func radiusCostFromMap(record map[string]any) ModelCost {
 			}
 			cost.Tiers = append(cost.Tiers, ModelCostTier{
 				InputTokensAbove: jsNumberToInt64(threshold),
-				ModelCostRates: ModelCostRates{
-					Input:      read(tierRecord, "input"),
-					Output:     read(tierRecord, "output"),
-					CacheRead:  read(tierRecord, "cacheRead"),
-					CacheWrite: read(tierRecord, "cacheWrite"),
-				},
+				Input:            read(tierRecord, "input"),
+				Output:           read(tierRecord, "output"),
+				CacheRead:        read(tierRecord, "cacheRead"),
+				CacheWrite:       read(tierRecord, "cacheWrite"),
 			})
 		}
 	}

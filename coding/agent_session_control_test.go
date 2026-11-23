@@ -717,7 +717,7 @@ func TestUserMessagesForForkingReadsOnlyUserEntries(t *testing.T) {
 	parent := ""
 	body := strings.Repeat("x", 8000)
 	var want []string
-	for i := 0; i < 400; i++ {
+	for i := range 400 {
 		id := "m" + strconv.Itoa(i)
 		parentField := ""
 		if parent != "" {

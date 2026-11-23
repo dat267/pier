@@ -21,7 +21,7 @@ func BenchmarkOwnerLoopContent(b *testing.B) {
 		}
 	})
 	b.Run("tool-update-1MB", func(b *testing.B) {
-		component := NewToolExecutionComponent("read", "call", map[string]any{"file": "x"}, ToolExecutionOptions{}, tickBenchDefinition(payload), nil, "/tmp")
+		component := NewToolExecutionComponent("read", "call", map[string]any{"file": "x"}, ToolExecutionOptions{}, tickBenchDefinition(), nil, "/tmp")
 		component.SetArgsComplete()
 		result := skipTextResult(payload)
 		b.ReportAllocs()

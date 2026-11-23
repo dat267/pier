@@ -548,7 +548,8 @@ func (s *AltScreen) afterTerminalStop(options TuiStopOptions) {
 		if row > 0 {
 			builder.WriteString("\r\n")
 		}
-		builder.WriteString("\r\x1b[2K" + s.lastDocument[row])
+		builder.WriteString("\r\x1b[2K")
+		builder.WriteString(s.lastDocument[row])
 	}
 	builder.WriteString("\x1b[0m" + enableAutowrap + "\r\n\x1b[?25h" + endSynchronizedOutput)
 	s.Terminal.Write(builder.String())
@@ -1178,10 +1179,8 @@ func (s *AltScreen) dispatchMouseToLayoutLocked(event TuiMouseEvent) *TuiMouseDi
 		if componentComparable(component) {
 			return visited[component]
 		}
-		for _, seenComponent := range visitedUncomparable {
-			if seenComponent == component {
-				return true
-			}
+		if slices.Contains(visitedUncomparable, component) {
+			return true
 		}
 		visitedUncomparable = append(visitedUncomparable, component)
 		return false
@@ -2508,7 +2507,9 @@ func (s *AltScreen) doRender() {
 			if !fullRedraw && !imagesNeedRedraw && screen[row] == previous {
 				continue
 			}
-			builder.WriteString("\x1b[" + itoa(row+1) + ";1H\x1b[2K")
+			builder.WriteString("\x1b[")
+			builder.WriteString(itoa(row + 1))
+			builder.WriteString(";1H\x1b[2K")
 		}
 		// WezTerm erases intersecting kitty image cells when a later row write
 		// touches a covered row, so draw every non-image line first and the
@@ -2529,7 +2530,10 @@ func (s *AltScreen) doRender() {
 				if IsImageLine(line) != (pass == 1) {
 					continue
 				}
-				builder.WriteString("\x1b[" + itoa(row+1) + ";1H" + line)
+				builder.WriteString("\x1b[")
+				builder.WriteString(itoa(row + 1))
+				builder.WriteString(";1H")
+				builder.WriteString(line)
 			}
 		}
 	} else {
@@ -2552,12 +2556,20 @@ func (s *AltScreen) doRender() {
 			if LowBandwidth() && (fullRedraw || VisibleWidth(line) >= VisibleWidth(previous)) {
 				clear = ""
 			}
-			builder.WriteString("\x1b[" + itoa(row+1) + ";1H" + clear + line)
+			builder.WriteString("\x1b[")
+			builder.WriteString(itoa(row + 1))
+			builder.WriteString(";1H")
+			builder.WriteString(clear)
+			builder.WriteString(line)
 		}
 	}
 
 	if hasCursor {
-		builder.WriteString("\x1b[" + itoa(row+1) + ";" + itoa(min(width, col)+1) + "H")
+		builder.WriteString("\x1b[")
+		builder.WriteString(itoa(row + 1))
+		builder.WriteString(";")
+		builder.WriteString(itoa(min(width, col) + 1))
+		builder.WriteString("H")
 		if s.ShowHardwareCursor {
 			builder.WriteString("\x1b[?25h")
 		} else {

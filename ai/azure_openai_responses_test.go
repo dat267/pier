@@ -318,7 +318,7 @@ func TestAzureResponsesOmitsSessionAffinityHeaders(t *testing.T) {
 	t.Setenv("AZURE_OPENAI_API_VERSION", "")
 	stream := StreamAzureOpenAIResponses(model, TranscriptContext{Messages: []Message{
 		&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
-	}}, &AzureOpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "test-api-key", SessionID: "sess-1"}})
+	}}, &AzureOpenAIResponsesOptions{APIKey: "test-api-key", SessionID: "sess-1"})
 	if _, err := stream.Result(ctxpkg.Background()); err != nil {
 		t.Fatalf("err = %v", err)
 	}
@@ -342,8 +342,8 @@ func TestAzureResponsesOmitsServiceTier(t *testing.T) {
 	temp := 0.3
 	options := func() *OpenAIResponsesOptions {
 		return &OpenAIResponsesOptions{
-			StreamOptions: StreamOptions{MaxTokens: new(1000), Temperature: &temp},
-			ServiceTier:   "flex",
+			MaxTokens: new(1000), Temperature: &temp,
+			ServiceTier: "flex",
 		}
 	}
 	context := NormalizeContext(Context{Messages: []Message{

@@ -22,8 +22,8 @@ func BenchmarkFooterRender(b *testing.B) {
 	}
 	footer := NewFooterComponent(session, provider)
 	b.ReportAllocs()
-	b.ResetTimer()
-	for range b.N {
+
+	for b.Loop() {
 		_ = footer.Render(120)
 	}
 }

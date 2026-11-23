@@ -95,10 +95,7 @@ func onlyCLIEscapes(output string) error {
 }
 
 func errAt(output string, index int) error {
-	end := index + 1 + 8
-	if end > len(output) {
-		end = len(output)
-	}
+	end := min(index+1+8, len(output))
 	return &cliEscapeError{seq: output[index:end]}
 }
 

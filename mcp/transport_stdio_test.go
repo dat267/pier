@@ -627,10 +627,7 @@ func TestStdioTransportFramesSplitAndTerminatedLines(t *testing.T) {
 		payload := strings.Repeat("a", 1<<20)
 		full := []byte("{\"jsonrpc\":\"2.0\",\"method\":\"m\",\"params\":{\"text\":\"" + payload + "\"}}\n")
 		for start := 0; start < len(full); start += 64 * 1024 {
-			end := start + 64*1024
-			if end > len(full) {
-				end = len(full)
-			}
+			end := min(start+64*1024, len(full))
 			transport.handleStdout(full[start:end])
 		}
 		if len(*messages) != 1 {
@@ -762,6 +759,9 @@ func TestStdioFixtureMatchesReferenceBytes(t *testing.T) {
 		got = append(got, scanner.Text())
 	}
 	_ = command.Wait()
+	if err := scanner.Err(); err != nil {
+		t.Fatalf("reading stdout: %v", err)
+	}
 	if len(got) != len(want) {
 		t.Fatalf("got %d lines, want %d:\n%s", len(got), len(want), strings.Join(got, "\n"))
 	}
@@ -839,6 +839,9 @@ func TestStubbornFixtureMatchesReferenceBytes(t *testing.T) {
 			var got []string
 			for len(got) < len(testCase.want) && scanner.Scan() {
 				got = append(got, scanner.Text())
+			}
+			if err := scanner.Err(); err != nil {
+				t.Fatalf("reading stdout: %v", err)
 			}
 			if len(got) != len(testCase.want) {
 				t.Fatalf("got %d lines, want %d:\n%s", len(got), len(testCase.want), strings.Join(got, "\n"))

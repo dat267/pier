@@ -26,7 +26,7 @@ func TestMarshalJSONScalarsMatchEncoder(t *testing.T) {
 		return string(canonical)
 	}
 	random := rand.New(rand.NewSource(7))
-	for i := 0; i < 500; i++ {
+	for range 500 {
 		length := random.Intn(40)
 		raw := make([]byte, length)
 		for j := range raw {

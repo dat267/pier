@@ -68,7 +68,7 @@ func hexDigits(s string, count int) (int, bool) {
 		return 0, false
 	}
 	value := 0
-	for i := 0; i < count; i++ {
+	for i := range count {
 		digit, ok := hexValue(s[i])
 		if !ok {
 			return 0, false

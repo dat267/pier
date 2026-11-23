@@ -101,11 +101,11 @@ func gitDescribeBaseVersion(version string) (string, bool) {
 		}
 	}
 	rest := value[:last]
-	previous := strings.LastIndexByte(rest, '-')
-	if previous < 0 {
+	before, after, ok := strings.CutLast(rest, "-")
+	if !ok {
 		return "", false
 	}
-	distance := rest[previous+1:]
+	distance := after
 	if distance == "" {
 		return "", false
 	}
@@ -114,7 +114,7 @@ func gitDescribeBaseVersion(version string) (string, bool) {
 			return "", false
 		}
 	}
-	base := rest[:previous]
+	base := before
 	if base == "" {
 		return "", false
 	}

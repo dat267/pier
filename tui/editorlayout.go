@@ -240,13 +240,13 @@ func editorTriggerMatch(text string, triggerCharacters []string) bool {
 // `@"[^\"]*` alternative lets the quoted path contain separators, so the token
 // runs back to the `@"` rather than to the last separator.
 func editorQuotedAttachmentMatch(text string) bool {
-	index := strings.LastIndex(text, `@"`)
-	if index < 0 || strings.Contains(text[index+2:], `"`) {
+	before, after, ok := strings.CutLast(text, `@"`)
+	if !ok || strings.Contains(after, `"`) {
 		return false
 	}
 	// The prefix before `@"` must end with a boundary plus optional opening
 	// brackets, matching `(?:^|\s|cjkPunctuation)[([{<`]*`.
-	prefix := strings.TrimRight(text[:index], "([{<`")
+	prefix := strings.TrimRight(before, "([{<`")
 	if prefix == "" {
 		return true
 	}

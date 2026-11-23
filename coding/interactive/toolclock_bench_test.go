@@ -28,8 +28,8 @@ func BenchmarkPendingToolClockOwner(b *testing.B) {
 	c.UpdateResult(result, true)
 	c.Render(80)
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		now += 100
 		c.AnimationTick()
 		c.Render(80)

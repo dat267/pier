@@ -24,7 +24,10 @@ func numericKeyDoc(n int, numeric, descending bool) string {
 			}
 			key = strconv.Itoa(value)
 		}
-		builder.WriteString(`"` + key + `":` + strconv.Itoa(i))
+		builder.WriteString(`"`)
+		builder.WriteString(key)
+		builder.WriteString(`":`)
+		builder.WriteString(strconv.Itoa(i))
 	}
 	builder.WriteString("}")
 	return builder.String()

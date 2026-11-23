@@ -690,7 +690,7 @@ func (s *AgentSession) restorePendingNextTurnMessages(messages []ai.Message) {
 	}
 	state := s.prompt()
 	state.mu.Lock()
-	state.pendingNextTurnMessages = append(messages[:len(messages):len(messages)], state.pendingNextTurnMessages...)
+	state.pendingNextTurnMessages = append(slices.Clip(messages), state.pendingNextTurnMessages...)
 	state.mu.Unlock()
 }
 

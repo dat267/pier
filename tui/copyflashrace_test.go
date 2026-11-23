@@ -44,7 +44,7 @@ func TestReleaseCopyFlashMarshalsThroughPost(t *testing.T) {
 		t.Fatal("the copy callback did not start")
 	}
 	// The owner keeps flashing while the copy goroutine holds one.
-	for index := 0; index < 200; index++ {
+	for range 200 {
 		screen.Flash("main")
 		time.Sleep(time.Millisecond)
 	}

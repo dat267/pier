@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -111,8 +112,8 @@ func lastCacheWarmingPromptTokens(entries []SessionEntry) int64 {
 // lastCacheWarmingPromptTokensWith is the same walk with a payload reader, so a
 // lazily loaded entry's usage is read from its line.
 func lastCacheWarmingPromptTokensWith(entries []SessionEntry, payloads *payloadReader) int64 {
-	for index := len(entries) - 1; index >= 0; index-- {
-		entry := entries[index]
+	for _, entry := range slices.Backward(entries) {
+
 		if entry.Type != "message" {
 			continue
 		}

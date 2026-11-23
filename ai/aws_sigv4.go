@@ -165,7 +165,7 @@ func canonicalizeAWSQuery(requestURL *url.URL) string {
 	// change the signature. AWS treats a literal '+' in the query as a plus.
 	type pair struct{ name, value string }
 	var pairs []pair
-	for _, segment := range strings.Split(requestURL.RawQuery, "&") {
+	for segment := range strings.SplitSeq(requestURL.RawQuery, "&") {
 		if segment == "" {
 			continue
 		}

@@ -12,7 +12,7 @@ import (
 func canonicalProbeJSON(b testing.TB) []byte {
 	b.Helper()
 	messages := make([]map[string]any, 0, 4000)
-	for i := 0; i < 4000; i++ {
+	for i := range 4000 {
 		messages = append(messages, map[string]any{
 			"role":    "user",
 			"content": "question with <html> & unicode café 😀 and \"quotes\" and \\ backslash",
@@ -43,7 +43,7 @@ func TestCanonicalizeLargeJSONAllocationBudget(t *testing.T) {
 // marshals. Compare with Node JSON.stringify (about 1.1 ms for these bytes).
 func BenchmarkMarshalConversation(b *testing.B) {
 	messages := make([]Message, 0, 4000)
-	for i := 0; i < 2000; i++ {
+	for range 2000 {
 		messages = append(messages, &UserMessage{Content: StringOrBlocks{Text: "question with <html> & unicode café 😀 and \"quotes\" and \\ backslash"}})
 		messages = append(messages, &AssistantMessage{Content: ContentList{TextContent{Text: "answer with <html> & unicode café 😀 and \"quotes\""}}, StopReason: StopStop})
 	}
@@ -161,7 +161,7 @@ func TestCanonicalizeRejectsExcessiveNesting(t *testing.T) {
 // already canonical; the validator returns an owned copy (D350).
 func BenchmarkCanonicalizeNormalizedJSON(b *testing.B) {
 	messages := make([]map[string]any, 0, 4000)
-	for i := 0; i < 4000; i++ {
+	for i := range 4000 {
 		messages = append(messages, map[string]any{
 			"role":    "user",
 			"content": "question with <html> & unicode café 😀 and \"quotes\" and \\ backslash",

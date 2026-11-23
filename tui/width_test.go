@@ -233,7 +233,7 @@ func styledWidthProbeLine(index int) string {
 // instead of a grapheme walk.
 func BenchmarkVisibleWidthStyledLineMiss(b *testing.B) {
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for i := 0; b.Loop(); i++ {
 		VisibleWidth(styledWidthProbeLine(i))
 	}
 }
@@ -244,7 +244,7 @@ func BenchmarkVisibleWidthStyledLineMiss(b *testing.B) {
 // skips the memo, so it understates the old cost rather than overstating it.
 func BenchmarkVisibleWidthStyledLineGraphemeWalk(b *testing.B) {
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for i := 0; b.Loop(); i++ {
 		clean := StripTerminalSequences(styledWidthProbeLine(i))
 		total := 0
 		for _, segment := range segmentGraphemes(clean) {

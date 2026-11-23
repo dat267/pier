@@ -48,7 +48,7 @@ func incrementalHazardCorpus() []string {
 		}
 	}
 	rng := rand.New(rand.NewSource(529))
-	for i := 0; i < 1<<10; i++ {
+	for range 1 << 10 {
 		fragments := make([]string, 3)
 		for j := range fragments {
 			fragments[j] = incrementalHazardFragments[rng.Intn(len(incrementalHazardFragments))]

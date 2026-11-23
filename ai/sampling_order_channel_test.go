@@ -29,7 +29,7 @@ func TestRequestSamplingParamsOrderChannel(t *testing.T) {
 	// Without an order the port sorts, which is deterministic but not the
 	// reference's insertion order.
 	unsorted, err := BuildOpenAICompletionsParams(model, context, &OpenAICompletionsOptions{
-		StreamOptions: StreamOptions{SamplingParams: params},
+		SamplingParams: params,
 	}, nil, "", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -44,10 +44,8 @@ func TestRequestSamplingParamsOrderChannel(t *testing.T) {
 
 	// With the order channel the bytes match the reference.
 	ordered, err := BuildOpenAICompletionsParams(model, context, &OpenAICompletionsOptions{
-		StreamOptions: StreamOptions{
-			SamplingParams:      params,
-			SamplingParamsOrder: []string{"top_k", "min_p"},
-		},
+		SamplingParams:      params,
+		SamplingParamsOrder: []string{"top_k", "min_p"},
 	}, nil, "", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -64,11 +62,9 @@ func TestRequestSamplingParamsOrderChannel(t *testing.T) {
 	// position, as JavaScript assignment does.
 	temperature := 0.2
 	override, err := BuildOpenAICompletionsParams(model, context, &OpenAICompletionsOptions{
-		StreamOptions: StreamOptions{
-			Temperature:         &temperature,
-			SamplingParams:      SamplingParams{"temperature": json.RawMessage("0.9")},
-			SamplingParamsOrder: []string{"temperature"},
-		},
+		Temperature:         &temperature,
+		SamplingParams:      SamplingParams{"temperature": json.RawMessage("0.9")},
+		SamplingParamsOrder: []string{"temperature"},
 	}, nil, "", nil)
 	if err != nil {
 		t.Fatal(err)

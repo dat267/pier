@@ -384,7 +384,7 @@ func piUnionTag(branches []*piSchema) (string, []*schemaValue, bool) {
 		}
 		seen := false
 		for i := range tags {
-			for j := 0; j < i; j++ {
+			for j := range i {
 				if schemaLiteralEqual(tags[i], tags[j]) {
 					seen = true
 				}

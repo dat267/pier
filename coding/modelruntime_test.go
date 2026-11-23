@@ -17,16 +17,14 @@ import (
 // pi v1.4.0 credential-print.ts passes minOAuthValidityMs when it is zero.
 func TestModelRuntimeGetAuthPreservesExplicitZeroOAuthValidity(t *testing.T) {
 	store := newMemoryCredentialStore()
-	store.entries["p"] = &ai.Credential{Type: ai.CredentialOAuth, OAuth: &ai.OAuthCredential{OAuthCredentials: ai.OAuthCredentials{
-		Refresh: "r1", Access: "a1", Expires: time.Now().Add(time.Minute).UnixMilli(),
-	}}}
+	store.entries["p"] = &ai.Credential{Type: ai.CredentialOAuth, OAuth: &ai.OAuthCredential{
+		Refresh: "r1", Access: "a1", Expires: time.Now().Add(time.Minute).UnixMilli()}}
 	provider := ai.CreateProvider(ai.CreateProviderOptions{
 		ID: "p", Name: "P",
 		Auth: ai.ProviderAuth{OAuth: &ai.OAuthAuth{
 			Refresh: func(*ai.OAuthCredential, ctxpkg.Context) (*ai.OAuthCredential, error) {
-				return &ai.OAuthCredential{OAuthCredentials: ai.OAuthCredentials{
-					Refresh: "r2", Access: "a2", Expires: time.Now().Add(4 * time.Minute).UnixMilli(),
-				}}, nil
+				return &ai.OAuthCredential{
+					Refresh: "r2", Access: "a2", Expires: time.Now().Add(4 * time.Minute).UnixMilli()}, nil
 			},
 			ToAuth: func(credential *ai.OAuthCredential) (*ai.ModelAuth, error) {
 				return &ai.ModelAuth{APIKey: credential.Access}, nil
@@ -46,9 +44,8 @@ func TestModelRuntimeGetAuthPreservesExplicitZeroOAuthValidity(t *testing.T) {
 // pi v1.4.0 packages/coding-agent/src/cli/auth-check.ts classifies refresh errors as invalid_state.
 func TestCheckProviderAuthRefreshFailureIsInvalid(t *testing.T) {
 	store := newMemoryCredentialStore()
-	store.entries["p"] = &ai.Credential{Type: ai.CredentialOAuth, OAuth: &ai.OAuthCredential{OAuthCredentials: ai.OAuthCredentials{
-		Refresh: "r1", Access: "a1", Expires: time.Now().Add(time.Minute).UnixMilli(),
-	}}}
+	store.entries["p"] = &ai.Credential{Type: ai.CredentialOAuth, OAuth: &ai.OAuthCredential{
+		Refresh: "r1", Access: "a1", Expires: time.Now().Add(time.Minute).UnixMilli()}}
 	provider := ai.CreateProvider(ai.CreateProviderOptions{
 		ID: "p", Name: "P",
 		Auth: ai.ProviderAuth{OAuth: &ai.OAuthAuth{

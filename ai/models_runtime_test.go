@@ -119,7 +119,7 @@ func TestModelsGetAvailableOfTypeUsesAllModelFilter(t *testing.T) {
 	if err != nil || len(available) != 1 || available[0] != classifier {
 		t.Fatalf("API-key classifiers = %v, %v", available, err)
 	}
-	writeCredential(&Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{OAuthCredentials: OAuthCredentials{Access: "chatgpt"}}})
+	writeCredential(&Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{Access: "chatgpt"}})
 	available, err = models.GetAvailableOfType("classifier", "openai", ctx)
 	if err != nil || len(available) != 0 {
 		t.Fatalf("OAuth classifiers = %v, %v", available, err)

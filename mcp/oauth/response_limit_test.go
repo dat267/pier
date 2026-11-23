@@ -33,10 +33,10 @@ func TestExchangeAuthorizationCodeRejectsOversizedBody(t *testing.T) {
 	server := &AuthorizationServerMetadata{Issuer: "https://example.com", TokenEndpoint: "https://example.com/token"}
 	metadata := server
 	tokens, err := ExchangeAuthorizationCode(context.Background(), "https://example.com", ExchangeOptions{
-		TokenRequestOptions: TokenRequestOptions{Metadata: metadata, Fetch: fetch, ClientInformation: &OAuthClientInformationFull{ClientID: "client"}},
-		Code:                "code",
-		CodeVerifier:        "verifier",
-		RedirectURL:         "http://127.0.0.1/callback",
+		Metadata: metadata, Fetch: fetch, ClientInformation: &OAuthClientInformationFull{ClientID: "client"},
+		Code:         "code",
+		CodeVerifier: "verifier",
+		RedirectURL:  "http://127.0.0.1/callback",
 	})
 	if err == nil || tokens != nil {
 		t.Fatalf("oversized token response accepted")

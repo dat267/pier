@@ -104,13 +104,8 @@ func (m *SessionManager) PrepareBranchEntries(tokenBudget int) BranchPreparation
 	return prepareBranchEntriesWith(branch, tokenBudget, payloads)
 }
 
-// branchMessageFromEntry extracts the agent message an entry contributes.
-func branchMessageFromEntry(entry *SessionEntry) ai.Message {
-	return branchMessageFromEntryWith(entry, nil)
-}
-
-// branchMessageFromEntryWith is branchMessageFromEntry with a payload reader, so
-// an index-only entry's message is read from its line.
+// branchMessageFromEntryWith extracts the agent message an entry contributes;
+// the payload reader reads an index-only entry's message from its line.
 func branchMessageFromEntryWith(entry *SessionEntry, payloads *payloadReader) ai.Message {
 	switch entry.Type {
 	case "message":

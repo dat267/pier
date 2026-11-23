@@ -21,8 +21,8 @@ func benchmarkLayoutTree(lines int) Component {
 func BenchmarkRenderLayoutFrameScrollView(b *testing.B) {
 	root := benchmarkLayoutTree(500)
 	_ = RenderLayoutFrame(root, 100, 40, func() {})
-	b.ResetTimer()
-	for index := 0; index < b.N; index++ {
+
+	for b.Loop() {
 		_ = RenderLayoutFrame(root, 100, 40, func() {})
 	}
 }
@@ -35,8 +35,8 @@ func BenchmarkRenderLayoutFrameNestedBoxes(b *testing.B) {
 		root.AddChild(child)
 	}
 	_ = RenderLayoutFrame(root, 80, 40, func() {})
-	b.ResetTimer()
-	for index := 0; index < b.N; index++ {
+
+	for b.Loop() {
 		_ = RenderLayoutFrame(root, 80, 40, func() {})
 	}
 }

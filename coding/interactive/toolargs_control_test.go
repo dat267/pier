@@ -120,8 +120,8 @@ func TestGoalCardCannotEmitTerminalControls(t *testing.T) {
 		t.Fatalf("goal objective control reached output: %q", rendered)
 	}
 	result := goal.RenderGetGoalRenderResult(&goal.GoalView{
-		GoalSnapshot: goal.GoalSnapshot{ID: "g1", Revision: 1, Phase: goal.PhaseActive,
-			Objective: "objective" + escape + "text", CreatedAt: 1, UpdatedAt: 1},
+		ID: "g1", Revision: 1, Phase: goal.PhaseActive,
+		Objective: "objective" + escape + "text", CreatedAt: 1, UpdatedAt: 1,
 	}, ActiveTheme(), false)
 	if rendered := strings.Join(result.Render(120), "\n"); strings.Contains(rendered, escape) {
 		t.Fatalf("goal result control reached output: %q", rendered)

@@ -450,19 +450,30 @@ func PrintHelpNamed(appName string) string {
 		appName = AppName
 	}
 	var builder strings.Builder
-	builder.WriteString(appName + " - AI coding assistant with read, bash, edit, write tools\n\n")
-	builder.WriteString("Usage:\n  " + appName + " [options] [--] [@files...] [messages...]\n\n")
+	builder.WriteString(appName)
+	builder.WriteString(" - AI coding assistant with read, bash, edit, write tools\n\n")
+	builder.WriteString("Usage:\n  ")
+	builder.WriteString(appName)
+	builder.WriteString(" [options] [--] [@files...] [messages...]\n\n")
 	builder.WriteString("Commands:\n")
-	builder.WriteString("  " + appName + " auth <command>            Print credentials or check provider readiness\n")
-	builder.WriteString("  " + appName + " auth --help              Show help for auth commands\n")
-	builder.WriteString("  " + appName + " update                   Install the newest release binary\n\n")
+	builder.WriteString("  ")
+	builder.WriteString(appName)
+	builder.WriteString(" auth <command>            Print credentials or check provider readiness\n")
+	builder.WriteString("  ")
+	builder.WriteString(appName)
+	builder.WriteString(" auth --help              Show help for auth commands\n")
+	builder.WriteString("  ")
+	builder.WriteString(appName)
+	builder.WriteString(" update                   Install the newest release binary\n\n")
 	builder.WriteString("Options:\n")
 	for _, line := range helpOptionLines() {
-		builder.WriteString(line + "\n")
+		builder.WriteString(line)
+		builder.WriteString("\n")
 	}
 	builder.WriteString("\nBuilt-in Tool Names:\n")
 	for _, line := range helpToolLines() {
-		builder.WriteString(line + "\n")
+		builder.WriteString(line)
+		builder.WriteString("\n")
 	}
 	return builder.String()
 }

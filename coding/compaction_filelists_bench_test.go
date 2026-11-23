@@ -13,7 +13,7 @@ import (
 // reference's 2 ms Array.prototype.sort.
 func longSessionFileOps() *FileOperations {
 	ops := CreateFileOps()
-	for i := 0; i < 5000; i++ {
+	for i := range 5000 {
 		ops.markRead(fmt.Sprintf("/tmp/dir%02d/file-%05d.txt", i%50, i))
 	}
 	for i := 0; i < 5000; i += 3 {
@@ -27,8 +27,8 @@ func longSessionFileOps() *FileOperations {
 func BenchmarkCapFileListsLongSession(b *testing.B) {
 	ops := longSessionFileOps()
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		reads, modifieds, _, _ := CapFileLists(ops)
 		if len(reads) != 100 || len(modifieds) != 100 {
 			b.Fatalf("capped lists = %d/%d, want 100/100", len(reads), len(modifieds))

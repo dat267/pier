@@ -83,8 +83,8 @@ func TestBoxCacheInvalidatesOnBackgroundAndWidth(t *testing.T) {
 func BenchmarkBoxWarmRender(b *testing.B) {
 	box := makeWarmBox(50)
 	box.Render(80)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_ = box.Render(80)
 	}
 }

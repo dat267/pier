@@ -239,7 +239,7 @@ func (t *threadTestTransport) RoundTrip(request *http.Request) (*http.Response, 
 
 func splitThreadTestBetas(value string) []string {
 	var betas []string
-	for _, beta := range strings.Split(value, ",") {
+	for beta := range strings.SplitSeq(value, ",") {
 		if beta = strings.TrimSpace(beta); beta != "" {
 			betas = append(betas, beta)
 		}
@@ -377,9 +377,8 @@ type threadTurn struct {
 
 func (h *threadTestHarness) options() *AnthropicOptions {
 	zeroRetries := 0
-	return &AnthropicOptions{StreamOptions: StreamOptions{
-		APIKey: "test-key", SessionID: h.sessionID, MaxRetries: &zeroRetries,
-	}}
+	return &AnthropicOptions{
+		APIKey: "test-key", SessionID: h.sessionID, MaxRetries: &zeroRetries}
 }
 
 func (h *threadTestHarness) turn(t *testing.T, messages []Message, input threadTurn) *AssistantMessage {

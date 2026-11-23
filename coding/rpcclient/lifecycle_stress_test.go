@@ -27,6 +27,9 @@ func TestRPCClientEchoPeer(t *testing.T) {
 		})
 		fmt.Println(string(reply))
 	}
+	if scanner.Err() != nil {
+		os.Exit(1)
+	}
 	os.Exit(0)
 }
 

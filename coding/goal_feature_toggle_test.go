@@ -3,6 +3,7 @@ package coding
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"testing"
 
 	"github.com/dat267/pier/agent"
@@ -25,12 +26,7 @@ func TestGoalFeatureToggleEnablesAndDisablesTheController(t *testing.T) {
 	}
 	defer session.Dispose()
 	hasTool := func(name string) bool {
-		for _, active := range session.GetActiveToolNames() {
-			if active == name {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(session.GetActiveToolNames(), name)
 	}
 	if session.GoalController() == nil || !hasTool("set_goal") || !hasTool("get_goal") {
 		t.Fatalf("goal feature off at construction: Goal=%v tools=%v", session.GoalController() != nil, session.GetActiveToolNames())

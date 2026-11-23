@@ -551,7 +551,7 @@ func TestAnthropicManagedEffortNeverSendsTemperature(t *testing.T) {
 	params := build(t, model, []Message{
 		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
 	}, &AnthropicOptions{
-		StreamOptions:   StreamOptions{Temperature: &temperature},
+		Temperature:     &temperature,
 		ThinkingEnabled: &disabled,
 	})
 	if params.Thinking == nil || params.Thinking.Type != "disabled" {

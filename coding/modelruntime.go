@@ -997,8 +997,8 @@ func simpleRequestCtx(options *ai.ModelsSimpleStreamOptions) context.Context {
 }
 
 // Complete streams and waits for the final message.
-func (r *ModelRuntime) Complete(model *ai.Model, context ai.Context, options *ai.ModelsStreamOptions) (*ai.AssistantMessage, error) {
-	return r.Stream(model, context, options).Result(nil)
+func (r *ModelRuntime) Complete(model *ai.Model, transcript ai.Context, options *ai.ModelsStreamOptions) (*ai.AssistantMessage, error) {
+	return r.Stream(model, transcript, options).Result(context.Background())
 }
 
 // StreamSimple streams with reasoning/tool-selection options.
@@ -1014,8 +1014,8 @@ func (r *ModelRuntime) StreamSimple(model *ai.Model, context ai.Context, options
 }
 
 // CompleteSimple streams and waits for the final message.
-func (r *ModelRuntime) CompleteSimple(model *ai.Model, context ai.Context, options *ai.ModelsSimpleStreamOptions) (*ai.AssistantMessage, error) {
-	return r.StreamSimple(model, context, options).Result(nil)
+func (r *ModelRuntime) CompleteSimple(model *ai.Model, transcript ai.Context, options *ai.ModelsSimpleStreamOptions) (*ai.AssistantMessage, error) {
+	return r.StreamSimple(model, transcript, options).Result(context.Background())
 }
 
 type preparedStream struct {
@@ -1083,7 +1083,7 @@ func (r *ModelRuntime) StreamDeferred(model *ai.Model, handle *ai.DeferredHandle
 
 // FetchDeferred fetches and waits for a deferred response.
 func (r *ModelRuntime) FetchDeferred(model *ai.Model, handle *ai.DeferredHandle, options *ai.ModelsStreamOptions) (*ai.AssistantMessage, error) {
-	return r.StreamDeferred(model, handle, options).Result(nil)
+	return r.StreamDeferred(model, handle, options).Result(context.Background())
 }
 
 // CancelDeferred cancels a deferred response.

@@ -732,7 +732,7 @@ func (w *RunWiring) runLoop(ctx context.Context, initialWork []string, initialIm
 	w.StartWork = w.RunWork
 	defer func() {
 		schedule.close()
-		schedule.setContext(nil)
+		schedule.clearContext()
 		w.schedule = nil
 		w.StartWork = nil
 	}()

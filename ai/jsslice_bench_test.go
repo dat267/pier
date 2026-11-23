@@ -8,8 +8,8 @@ import (
 func BenchmarkJSSliceASCII(b *testing.B) {
 	s := strings.Repeat("a", 1<<20)
 	b.SetBytes(int64(len(s)))
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_ = JSSlice(s, 0, 4000)
 	}
 }
@@ -17,8 +17,8 @@ func BenchmarkJSSliceASCII(b *testing.B) {
 func BenchmarkJSSliceUnicode(b *testing.B) {
 	s := strings.Repeat("é", 1<<19)
 	b.SetBytes(int64(len(s)))
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_ = JSSlice(s, 0, 4000)
 	}
 }
@@ -26,8 +26,8 @@ func BenchmarkJSSliceUnicode(b *testing.B) {
 func BenchmarkGoSlicePrefixBaseline(b *testing.B) {
 	s := strings.Repeat("a", 1<<20)
 	b.SetBytes(int64(len(s)))
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_ = s[:4000]
 	}
 }

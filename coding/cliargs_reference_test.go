@@ -2,6 +2,7 @@ package coding
 
 import (
 	"encoding/json"
+	"maps"
 	"os"
 	"reflect"
 	"strings"
@@ -141,9 +142,7 @@ func projectCLIArgs(args *Args) map[string]any {
 	}
 	if len(args.UnknownFlags) > 0 {
 		flags := make(map[string]any, len(args.UnknownFlags))
-		for key, value := range args.UnknownFlags {
-			flags[key] = value
-		}
+		maps.Copy(flags, args.UnknownFlags)
 		out["unknownFlags"] = flags
 	}
 	if len(args.Diagnostics) > 0 {

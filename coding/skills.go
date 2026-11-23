@@ -314,7 +314,7 @@ func renderYAMLBlockScalar(lines []string, header yamlBlockScalarHeader) string 
 func foldYAMLBlockScalar(lines []string) string {
 	var builder strings.Builder
 	started, previousMoreIndented := false, false
-	for index := 0; index < len(lines); index++ {
+	for index := range lines {
 		line := lines[index]
 		if line == "" {
 			continue // Counted with the break that follows it.

@@ -13,8 +13,8 @@ func BenchmarkHighlightGo(b *testing.B) {
 	text := string(code)
 	b.SetBytes(int64(len(text)))
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		result, err := Highlight(text, "go")
 		if err != nil {
 			b.Fatal(err)
@@ -28,8 +28,8 @@ func BenchmarkHighlightGoNodes(b *testing.B) {
 	text := string(code)
 	b.SetBytes(int64(len(text)))
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_, _ = Highlight(text, "go")
 	}
 }

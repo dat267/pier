@@ -48,7 +48,7 @@ func (e errString) Error() string { return string(e) }
 // its metadata, comfortable once the metadata moves below it.
 const mobileTestMessage = "Fix the parser bug in the loader"
 
-func newMobileSessionList(t *testing.T, width int) *SessionList {
+func newMobileSessionList(t *testing.T) *SessionList {
 	t.Helper()
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
@@ -83,7 +83,7 @@ func plainLines(lines []string) []string {
 }
 
 func TestSessionListUsesTwoLineRowsOnNarrowTerminals(t *testing.T) {
-	list := newMobileSessionList(t, 40)
+	list := newMobileSessionList(t)
 	lines := list.Render(40)
 	for _, line := range lines {
 		if tui.VisibleWidth(line) > 40 {
@@ -115,7 +115,7 @@ func TestSessionListUsesTwoLineRowsOnNarrowTerminals(t *testing.T) {
 
 // The wide layout is untouched: same one line per session as upstream.
 func TestSessionListKeepsOneLineWhenWide(t *testing.T) {
-	list := newMobileSessionList(t, 100)
+	list := newMobileSessionList(t)
 	lines := list.Render(100)
 	if len(lines) > 8 {
 		t.Fatalf("expected one line per session, got %d lines:\n%s", len(lines), strings.Join(lines, "\n"))

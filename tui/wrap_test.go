@@ -67,7 +67,7 @@ func stripEscapes(text string) string {
 func TestWrapAndTruncateKeepTheirInvariants(t *testing.T) {
 	alphabet := []string{"a", "b", " ", "漢", "👨‍👩‍👧", "e\u0301", "🇦🇧", "\x1b[31m", "\x1b[39m", "\x1b]8;;https://x\x1b\\", "→"}
 	random := rand.New(rand.NewSource(7))
-	for iteration := 0; iteration < 4000; iteration++ {
+	for range 4000 {
 		var text strings.Builder
 		for range random.Intn(30) {
 			text.WriteString(alphabet[random.Intn(len(alphabet))])

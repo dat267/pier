@@ -146,7 +146,7 @@ func TestGoalReleasedFollowUpsRunWithoutAHost(t *testing.T) {
 	// No SetStartWork: the release has to wait for the run to settle itself.
 	session.GoalController().HandleCommand("set objective")
 	deadline := time.After(5 * time.Second)
-	for count := 0; count < 2; count++ {
+	for count := range 2 {
 		select {
 		case <-settled:
 		case <-deadline:
@@ -297,9 +297,7 @@ func TestGoalReleaseRacingDisposeLeavesNoUnabortableRun(t *testing.T) {
 				return stream
 			}
 			// The released run's call: it must be cancelled by Dispose.
-			released.Add(1)
-			go func() {
-				defer released.Done()
+			released.Go(func() {
 				select {
 				case <-options.Ctx.Done():
 					aborted := &ai.AssistantMessage{API: m.API, Provider: m.Provider, Model: m.ID, StopReason: ai.StopAborted}
@@ -308,7 +306,7 @@ func TestGoalReleaseRacingDisposeLeavesNoUnabortableRun(t *testing.T) {
 					unaborted.Add(1)
 					stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: done})
 				}
-			}()
+			})
 			return stream
 		}
 		var err error

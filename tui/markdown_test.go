@@ -408,7 +408,7 @@ func TestIncrementalRenderMatchesAColdRender(t *testing.T) {
 		"text\n\n```\nunclosed fence\n",
 	}
 	for _, document := range documents {
-		label := strings.SplitN(document, "\n", 2)[0]
+		label, _, _ := strings.Cut(document, "\n")
 		for _, width := range []int{20, 40, 80} {
 			streamed := NewMarkdown("", 0, 0, MarkdownTheme{}, nil, MarkdownOptions{})
 			for cut := 1; cut <= len(document); cut += 7 {

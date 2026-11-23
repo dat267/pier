@@ -61,13 +61,13 @@ func TestOpenRouterModelCostBuildsPromptTiers(t *testing.T) {
 		Prompt:     rawPrice("0.000001"),
 		Completion: rawPrice("0.000002"),
 		Overrides: []openRouterPricingOverride{
-			{MinPromptTokens: int64Ptr(1000), Prompt: rawPrice("0.000002")},
+			{MinPromptTokens: new(int64(1000)), Prompt: rawPrice("0.000002")},
 			// No threshold: dropped.
 			{Prompt: rawPrice("0.000003")},
 			// Time-based pricing is skipped, since ModelCost cannot express it.
-			{MinPromptTokens: int64Ptr(2000), UTCStart: rawPrice("0")},
+			{MinPromptTokens: new(int64(2000)), UTCStart: rawPrice("0")},
 			// A missing rate keeps the base rate.
-			{MinPromptTokens: int64Ptr(0), Completion: rawPrice("0.000004")},
+			{MinPromptTokens: new(int64(0)), Completion: rawPrice("0.000004")},
 		},
 	}
 	cost := openRouterModelCost(pricing)
@@ -84,5 +84,3 @@ func TestOpenRouterModelCostBuildsPromptTiers(t *testing.T) {
 		t.Fatalf("second tier = %+v", cost.Tiers[1])
 	}
 }
-
-func int64Ptr(value int64) *int64 { return &value }

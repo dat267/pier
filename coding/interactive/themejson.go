@@ -131,7 +131,9 @@ func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 		fmt.Fprintf(&builder, "Invalid theme \"%s\":\n", label)
 		builder.WriteString("\nMissing required color tokens:\n")
 		for _, name := range missing {
-			builder.WriteString("  - " + name + "\n")
+			builder.WriteString("  - ")
+			builder.WriteString(name)
+			builder.WriteString("\n")
 		}
 		builder.WriteString("\nPlease add these colors to your theme's \"colors\" object.")
 		builder.WriteString("\nSee the built-in themes (dark.json, light.json) for reference values.")

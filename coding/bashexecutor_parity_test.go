@@ -189,7 +189,7 @@ func (operations *linesOnlyBashOperations) Exec(_ context.Context, _, _ string, 
 func TestExecuteBashWritesTheFullOutputWhenOnlyTheTailTruncates(t *testing.T) {
 	var builder strings.Builder
 	lineCount := DefaultMaxLines + 500
-	for index := 0; index < lineCount; index++ {
+	for index := range lineCount {
 		builder.WriteString("line ")
 		builder.WriteString(itoa(index))
 		builder.WriteString("\n")

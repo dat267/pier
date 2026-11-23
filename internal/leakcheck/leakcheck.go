@@ -111,7 +111,7 @@ func stacks() []byte {
 
 func splitStacks(all []byte) []string {
 	var out []string
-	for _, block := range bytes.Split(all, []byte("\n\n")) {
+	for block := range bytes.SplitSeq(all, []byte("\n\n")) {
 		if text := strings.TrimSpace(string(block)); strings.HasPrefix(text, "goroutine ") {
 			out = append(out, text)
 		}

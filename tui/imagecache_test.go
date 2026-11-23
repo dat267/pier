@@ -23,7 +23,7 @@ func TestImageTranscodeCacheBoundsFailedConversions(t *testing.T) {
 				return "iVBORw0KGgoAAAANSUhEUgAAACgAAAAK", success
 			})
 			render := func(index int) {
-				data := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("input-%d", index)))
+				data := base64.StdEncoding.EncodeToString(fmt.Appendf(nil, "input-%d", index))
 				NewImageComponent(data, "image/jpeg", ImageTheme{}, ImageOptions{}, &ImageDimensions{WidthPx: 1, HeightPx: 1}).Render(20)
 			}
 			for index := range 33 {

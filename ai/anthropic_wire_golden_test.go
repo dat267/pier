@@ -110,7 +110,7 @@ func anthropicWireFixture(name string) (*Model, []Message, *AnthropicOptions) {
 		}, nil
 	case "thinking-budget":
 		return model, []Message{userText("think", 1)}, &AnthropicOptions{
-			StreamOptions:        StreamOptions{Temperature: new(0.9), MaxTokens: new(4096)},
+			Temperature: new(0.9), MaxTokens: new(4096),
 			ThinkingEnabled:      new(true),
 			ThinkingBudgetTokens: new(2048),
 		}
@@ -129,8 +129,8 @@ func anthropicWireFixture(name string) (*Model, []Message, *AnthropicOptions) {
 		}, nil
 	case "forced-tool":
 		return model, []Message{system(readTool), userText("read", 1)}, &AnthropicOptions{
-			StreamOptions: StreamOptions{Temperature: new(0.0)},
-			ToolChoice:    json.RawMessage(`{"type":"tool","name":"read_file"}`),
+			Temperature: new(0.0),
+			ToolChoice:  json.RawMessage(`{"type":"tool","name":"read_file"}`),
 		}
 	case "strict-schema":
 		return model, []Message{system(strictTool), userText("emit", 1)}, nil
@@ -203,11 +203,9 @@ func anthropicWireFixture(name string) (*Model, []Message, *AnthropicOptions) {
 		}, nil
 	case "long-cache-retention":
 		return model, []Message{userText("go", 1)}, &AnthropicOptions{
-			StreamOptions: StreamOptions{
-				Temperature:    new(0.25),
-				MaxTokens:      new(64),
-				CacheRetention: CacheRetentionLong,
-			},
+			Temperature:    new(0.25),
+			MaxTokens:      new(64),
+			CacheRetention: CacheRetentionLong,
 		}
 	}
 	panic("unknown anthropic-wire fixture: " + name)

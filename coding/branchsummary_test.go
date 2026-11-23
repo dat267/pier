@@ -453,7 +453,7 @@ func TestBranchSummaryToRootPersistsNullParent(t *testing.T) {
 	// Only the summary itself is a root: appendEntry makes it the new leaf, so
 	// the next message is its child (upstream does the same).
 	found := false
-	for _, line := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(raw)), "\n") {
 		var entry map[string]json.RawMessage
 		if err := json.Unmarshal([]byte(line), &entry); err != nil {
 			t.Fatalf("line %q: %v", line, err)

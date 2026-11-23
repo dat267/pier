@@ -50,7 +50,7 @@ func TestToolExecutionUpdateReachesSkippingParent(t *testing.T) {
 	}
 }
 
-func tickBenchDefinition(output string) *ToolRenderers {
+func tickBenchDefinition() *ToolRenderers {
 	return &ToolRenderers{
 		RenderCall: func(args any, theme *Theme, context *ToolRenderContext) tui.Component {
 			return tui.NewText("call", 0, 0, nil)
@@ -77,7 +77,7 @@ func BenchmarkToolAnimationTick(b *testing.B) {
 	output := sb.String()
 	for _, mode := range []string{"invalidate", "tick"} {
 		b.Run(mode, func(b *testing.B) {
-			component := NewToolExecutionComponent("read", "call-1", map[string]any{"file": "x"}, ToolExecutionOptions{}, tickBenchDefinition(output), nil, "/tmp")
+			component := NewToolExecutionComponent("read", "call-1", map[string]any{"file": "x"}, ToolExecutionOptions{}, tickBenchDefinition(), nil, "/tmp")
 			component.MarkExecutionStarted()
 			component.SetArgsComplete()
 			component.UpdateResult(skipTextResult(output), true)

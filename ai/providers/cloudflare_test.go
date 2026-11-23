@@ -165,8 +165,6 @@ func TestResolveCloudflareModel(t *testing.T) {
 
 func TestCloudflareStreamsResolveModelBeforeDispatch(t *testing.T) {
 	var seen *ai.Model
-	recorder := &recordingStreams{}
-	recorder.onStream = func(*ai.StreamOptions) {}
 	wrapped := CloudflareStreams(modelRecordingStreams{onModel: func(model *ai.Model) { seen = model }})
 
 	model := &ai.Model{
@@ -187,7 +185,6 @@ func TestCloudflareStreamsResolveModelBeforeDispatch(t *testing.T) {
 	if seen == nil || !strings.Contains(seen.BaseURL, "/accounts/acct2/") {
 		t.Fatalf("model = %+v", seen)
 	}
-	_ = recorder
 }
 
 // modelRecordingStreams records the model each stream call receives.

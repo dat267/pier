@@ -809,7 +809,7 @@ func markedBlockTag(name string) bool {
 
 var markedBlockTagSet = func() map[string]struct{} {
 	set := map[string]struct{}{}
-	for _, tag := range strings.Split(markedBlockTags, "|") {
+	for tag := range strings.SplitSeq(markedBlockTags, "|") {
 		if tag == "h[1-6]" {
 			for _, n := range "123456" {
 				set["h"+string(n)] = struct{}{}

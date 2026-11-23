@@ -17,7 +17,7 @@ func sessionListBenchSessions(b *testing.B, n int) []coding.SessionInfo {
 	b.Helper()
 	dir := b.TempDir()
 	sessions := make([]coding.SessionInfo, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		path := filepath.Join(dir, fmt.Sprintf("session-%03d.jsonl", i))
 		if err := os.WriteFile(path, []byte("{}\n"), 0o644); err != nil {
 			b.Fatal(err)
@@ -39,8 +39,8 @@ func BenchmarkSessionListRender(b *testing.B) {
 	sessions := sessionListBenchSessions(b, 100)
 	list := NewSessionList(sessions, false, SortRecent, NameFilterAll, nil, sessions[len(sessions)/2].Path)
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_ = list.Render(80)
 	}
 }
@@ -52,8 +52,8 @@ func BenchmarkSessionListFilterSessions(b *testing.B) {
 	sessions := sessionListBenchSessions(b, 1000)
 	list := NewSessionList(sessions, false, SortThreaded, NameFilterAll, nil, "")
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		list.FilterSessions("")
 	}
 }

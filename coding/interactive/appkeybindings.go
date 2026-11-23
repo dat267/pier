@@ -465,7 +465,8 @@ func indentJSON(out *strings.Builder, raw json.RawMessage, depth int) {
 		}
 	}
 	if len(elements) == 0 {
-		out.WriteString(trimmed[:1] + string(closing))
+		out.WriteString(trimmed[:1])
+		out.WriteString(string(closing))
 		return
 	}
 	out.WriteString(trimmed[:1])

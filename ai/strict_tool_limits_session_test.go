@@ -95,7 +95,7 @@ func TestStreamAnthropicSkipsPreferredStrictToolsForALatchedSession(t *testing.T
 	})
 	run := func(sessionID string) int {
 		t.Helper()
-		message, err := StreamAnthropic(model, transcript, &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "test-key", SessionID: sessionID}}).Result(context.Background())
+		message, err := StreamAnthropic(model, transcript, &AnthropicOptions{APIKey: "test-key", SessionID: sessionID}).Result(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -182,8 +182,8 @@ func TestBedrockSkipsPreferredStrictToolsForALatchedSession(t *testing.T) {
 	run := func(sessionID string) int {
 		t.Helper()
 		message, err := StreamBedrockConverse(model, transcript, &BedrockOptions{
-			BearerToken:   "bearer-token",
-			StreamOptions: StreamOptions{APIKey: "bearer-token", SessionID: sessionID},
+			BearerToken: "bearer-token",
+			APIKey:      "bearer-token", SessionID: sessionID,
 		}).Result(context.Background())
 		if err != nil {
 			t.Fatal(err)

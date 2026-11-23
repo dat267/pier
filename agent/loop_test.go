@@ -144,7 +144,7 @@ func TestAgentLoopProviderContextFromTranscriptOnly(t *testing.T) {
 	}
 }
 
-func transcriptKeys(context ai.TranscriptContext) []string {
+func transcriptKeys(ai.TranscriptContext) []string {
 	// Go's TranscriptContext has exactly one field; assert structurally.
 	return []string{"messages"}
 }

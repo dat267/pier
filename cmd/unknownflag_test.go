@@ -55,8 +55,7 @@ func TestUnknownLongFlagStillPrintsVersion(t *testing.T) {
 // exitCodeOf reports the process exit code, or -1 when the child failed without
 // one.
 func exitCodeOf(err error) int {
-	var exit *exec.ExitError
-	if errors.As(err, &exit) {
+	if exit, ok := errors.AsType[*exec.ExitError](err); ok {
 		return exit.ExitCode()
 	}
 	if err == nil {

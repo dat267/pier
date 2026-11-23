@@ -706,7 +706,7 @@ func TestCodexClampsMaxOutputTokens(t *testing.T) {
 		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
 	}}
 	body, err := BuildCodexRequestBody(model, context, &OpenAICodexResponsesOptions{
-		StreamOptions: StreamOptions{MaxTokens: new(4)},
+		MaxTokens: new(4),
 	}, "", nil)
 	if err != nil {
 		t.Fatal(err)

@@ -32,8 +32,8 @@ func upperFirst(name string) string {
 func TestSettingsSettersUpstreamParity(t *testing.T) {
 	var corpus struct {
 		Cases map[string]struct {
-			Initial json.RawMessage  `json:"initial"`
-			Ops     [][3]interface{} `json:"ops"`
+			Initial json.RawMessage `json:"initial"`
+			Ops     [][3]any        `json:"ops"`
 		} `json:"cases"`
 	}
 	data, err := os.ReadFile("testdata/settingssetters_corpus.json")

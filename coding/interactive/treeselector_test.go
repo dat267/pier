@@ -606,7 +606,7 @@ func TestTreeRenderDoesNotDecodeRowsAgain(t *testing.T) {
 	var body strings.Builder
 	body.WriteString(`{"type":"session","version":3,"id":"big","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/tmp"}` + "\n")
 	content := strings.Repeat("x", 400_000)
-	for turn := 0; turn < 20; turn++ {
+	for turn := range 20 {
 		message, err := json.Marshal(map[string]any{"role": "user", "content": content})
 		if err != nil {
 			t.Fatal(err)

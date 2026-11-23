@@ -13,7 +13,7 @@ import (
 func TestBuiltinModelsKeepTheCatalogOrder(t *testing.T) {
 	for _, provider := range GetBuiltinProviders() {
 		first := GetBuiltinModels(provider)
-		for attempt := 0; attempt < 4; attempt++ {
+		for range 4 {
 			again := GetBuiltinModels(provider)
 			if len(again) != len(first) {
 				t.Fatalf("%s: length changed between calls", provider)

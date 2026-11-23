@@ -349,7 +349,7 @@ func TestAltScreenStatefulFuzz(t *testing.T) {
 		"", "\x1b[<0;0;0M",
 	}
 
-	for seed := int64(0); seed < 900; seed++ {
+	for seed := range int64(900) {
 		func() {
 			defer func() {
 				if recovered := recover(); recovered != nil {

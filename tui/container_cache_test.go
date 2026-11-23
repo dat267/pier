@@ -81,8 +81,8 @@ func TestContainerRenderRebuildsOnChanges(t *testing.T) {
 func BenchmarkContainerWarmRender(b *testing.B) {
 	container := makeWarmContainer(200)
 	container.Render(40)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_ = container.Render(40)
 	}
 }

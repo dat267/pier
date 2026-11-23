@@ -63,8 +63,8 @@ func (m *SessionManager) Projection() SessionContext {
 	// milliseconds, and holding m.mu for it parks every other reader (the
 	// footer reads the session per frame).
 	context := buildSessionContextFromPointers(path, cache, payloads)
-	context.Messages = context.Messages[:len(context.Messages):len(context.Messages)]
-	context.Entries = context.Entries[:len(context.Entries):len(context.Entries)]
+	context.Messages = slices.Clip(context.Messages)
+	context.Entries = slices.Clip(context.Entries)
 
 	m.mu.Lock()
 	// Only cache the resolution when the branch is still the one that was read;
@@ -125,9 +125,9 @@ func (m *SessionManager) LatestCompaction() *SessionEntry {
 	m.mu.Unlock()
 
 	var entry *SessionEntry
-	for index := len(branch) - 1; index >= 0; index-- {
-		if branch[index].Type == "compaction" {
-			entry = branch[index]
+	for _, b := range slices.Backward(branch) {
+		if b.Type == "compaction" {
+			entry = b
 			break
 		}
 	}
@@ -265,9 +265,9 @@ func (m *SessionManager) projectedWindow() (projectedWindow, CompactionContextUs
 	// not park other readers.
 	window := projectWindow(path, cache)
 	estimate := EstimateProjectedContextTokens(window)
-	window.Entries = window.Entries[:len(window.Entries):len(window.Entries)]
-	window.Messages = window.Messages[:len(window.Messages):len(window.Messages)]
-	window.Branch = window.Branch[:len(window.Branch):len(window.Branch)]
+	window.Entries = slices.Clip(window.Entries)
+	window.Messages = slices.Clip(window.Messages)
+	window.Branch = slices.Clip(window.Branch)
 
 	m.mu.Lock()
 	if m.projectionVersionLocked() == version {

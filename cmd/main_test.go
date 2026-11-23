@@ -647,8 +647,7 @@ func TestForkSessionIDCollisionIsABareLine(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected the id collision")
 	}
-	var bare bareErrorLine
-	if !errors.As(err, &bare) {
+	if _, ok := errors.AsType[bareErrorLine](err); !ok {
 		t.Fatalf("err %v is not a bare line", err)
 	}
 	if err.Error() != "Session already exists with id '"+id+"'" {

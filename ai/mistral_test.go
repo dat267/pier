@@ -29,7 +29,9 @@ func TestMistralContinuedToolCallClosesTextBlock(t *testing.T) {
 	}
 	var sse strings.Builder
 	for _, chunk := range chunks {
-		sse.WriteString("data: " + chunk + "\n\n")
+		sse.WriteString("data: ")
+		sse.WriteString(chunk)
+		sse.WriteString("\n\n")
 	}
 	sse.WriteString("data: [DONE]\n\n")
 	server := sseServer(t, []string{sse.String()}, nil)
@@ -169,7 +171,7 @@ func TestMistralAbortSignalTimeoutRejectsOutOfRangeDelays(t *testing.T) {
 		t.Run(strconv.Itoa(timeoutMS), func(t *testing.T) {
 			requests.Store(0)
 			response, err := requestMistralStream(context.Background(), &Model{BaseURL: server.URL}, []byte(`{}`), &MistralOptions{
-				StreamOptions: StreamOptions{APIKey: "test", TimeoutMs: &timeoutMS},
+				APIKey: "test", TimeoutMs: &timeoutMS,
 			})
 			if response != nil {
 				response.Body.Close()
@@ -198,7 +200,7 @@ func TestMistralExplicitZeroTimeoutAbortsHeaderWait(t *testing.T) {
 	defer cancel()
 	model := &Model{BaseURL: server.URL}
 	_, err := requestMistralStream(ctx, model, []byte(`{}`), &MistralOptions{
-		StreamOptions: StreamOptions{APIKey: "test", TimeoutMs: &zero},
+		APIKey: "test", TimeoutMs: &zero,
 	})
 	if err == nil || !strings.Contains(err.Error(), "Mistral response headers timed out after 0ms") {
 		t.Fatalf("request error = %v, want immediate 0ms header timeout", err)

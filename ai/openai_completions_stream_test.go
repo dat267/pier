@@ -393,7 +393,7 @@ func TestStreamOpenAICompletionsCopilotDynamicHeaders(t *testing.T) {
 			model.Provider = "github-copilot"
 			model.BaseURL = server.URL
 			stream := StreamOpenAICompletions(model, NormalizeContext(Context{Messages: tt.messages}),
-				&OpenAICompletionsOptions{StreamOptions: StreamOptions{APIKey: "copilot-token"}})
+				&OpenAICompletionsOptions{APIKey: "copilot-token"})
 			for {
 				if _, ok := stream.Next(context.Background()); !ok {
 					break

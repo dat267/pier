@@ -13,7 +13,7 @@ import (
 func sessionTreeFixture(count int) []coding.SessionInfo {
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	sessions := make([]coding.SessionInfo, 0, count)
-	for index := 0; index < count; index++ {
+	for index := range count {
 		sessions = append(sessions, coding.SessionInfo{
 			Path:     fmt.Sprintf("/agent/sessions/s-%05d.jsonl", index),
 			Modified: base.Add(time.Duration(index) * time.Minute),

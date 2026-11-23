@@ -322,8 +322,8 @@ func TestFindMostRecentSessionAcceptsAnEmptyStringHeaderID(t *testing.T) {
 // entries[last]`), so "" walks the whole session. The port returned no path.
 func TestBuildSessionPathEmptyLeafUsesTheLastEntry(t *testing.T) {
 	entries := []SessionEntry{
-		{Type: "message", SessionEntryBase: SessionEntryBase{ID: "a", Timestamp: "t"}},
-		{Type: "message", SessionEntryBase: SessionEntryBase{ID: "b", ParentID: new("a"), Timestamp: "t"}},
+		{Type: "message", ID: "a", Timestamp: "t"},
+		{Type: "message", ID: "b", ParentID: new("a"), Timestamp: "t"},
 	}
 	empty := ""
 	path := buildSessionPath(entries, &empty, nil)
@@ -387,14 +387,12 @@ func TestOpenSessionSurvivesAFileDeletedWhileOpening(t *testing.T) {
 
 	var stop atomic.Bool
 	var writer sync.WaitGroup
-	writer.Add(1)
-	go func() {
-		defer writer.Done()
+	writer.Go(func() {
 		for !stop.Load() {
 			_ = os.Remove(path)
 			_ = os.WriteFile(path, nil, 0o600)
 		}
-	}()
+	})
 
 	var panics atomic.Int64
 	for range 20000 {

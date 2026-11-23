@@ -130,8 +130,8 @@ func TestCodexRejectsNegativeTimeoutBeforeFetch(t *testing.T) {
 	stream := StreamOpenAICodexResponses(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
 	}), &OpenAICodexResponsesOptions{
-		StreamOptions: StreamOptions{APIKey: codexToken(t, "acct-1"), TimeoutMs: &timeoutMS, MaxRetries: &maxRetries},
-		Transport:     "sse",
+		APIKey: codexToken(t, "acct-1"), TimeoutMs: &timeoutMS, MaxRetries: &maxRetries,
+		Transport: "sse",
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

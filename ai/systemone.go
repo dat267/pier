@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"net/http"
 	"net/url"
@@ -234,9 +235,7 @@ func systemOneRequestHeaders(model *Model, images []ImageContent, options *Class
 	}
 	optIn := "true"
 	headers := ProviderHeaders{"TypeSafe-Danger-Zone-Images": &optIn}
-	for name, value := range options.Headers {
-		headers[name] = value
-	}
+	maps.Copy(headers, options.Headers)
 	return headers
 }
 

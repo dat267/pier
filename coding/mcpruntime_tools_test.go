@@ -353,7 +353,7 @@ func TestMcpServerTimeoutMsClampsConfiguredSeconds(t *testing.T) {
 			connection := NewMcpServerConnection(McpServerConnectionOptions{Entry: McpServerEntry{
 				Name: "test",
 				Config: &McpServerConfig{
-					McpServerConfigBase: McpServerConfigBase{TimeoutSeconds: &test.seconds},
+					TimeoutSeconds: &test.seconds,
 				},
 			}})
 			if got := connection.TimeoutMs(); got != test.want {

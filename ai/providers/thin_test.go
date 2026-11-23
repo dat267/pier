@@ -109,7 +109,7 @@ func TestTypeSafeSystemOneBuiltInProvider(t *testing.T) {
 			{Name: "satisfaction", Type: "score", Instructions: "Score", Levels: []string{"low", "neutral", "high"}},
 			{Name: "approved", Type: "bool", Instructions: "Approve?", BoolCriteria: ai.ClassifierBoolCriteria{True: "yes", False: "no"}},
 		},
-	}, &ai.ClassifierOptions{StreamOptions: ai.StreamOptions{APIKey: "secret"}})
+	}, &ai.ClassifierOptions{APIKey: "secret"})
 	if result.StopReason != ai.ClassifierStopStop || result.Answers["approved"].Probability == nil || *result.Answers["approved"].Probability != 0.95 {
 		t.Fatalf("classification = %+v", result)
 	}

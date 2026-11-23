@@ -42,9 +42,8 @@ func TestAuthLogoutRemovesStoredCredentials(t *testing.T) {
 	t.Setenv("PI_CODING_AGENT_DIR", agentDir)
 	storeAuthCredential(t, agentDir, "anthropic", &ai.Credential{
 		Type: ai.CredentialOAuth,
-		OAuth: &ai.OAuthCredential{OAuthCredentials: ai.OAuthCredentials{
-			Access: "access", Refresh: "refresh", Expires: time.Now().Add(time.Hour).UnixMilli(),
-		}},
+		OAuth: &ai.OAuthCredential{
+			Access: "access", Refresh: "refresh", Expires: time.Now().Add(time.Hour).UnixMilli()},
 	})
 	storeAuthCredential(t, agentDir, "openai", &ai.Credential{
 		Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "sk-test"},

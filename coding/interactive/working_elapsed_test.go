@@ -22,7 +22,7 @@ var finishedNotice = regexp.MustCompile(`^([01][0-9]|2[0-3]):[0-5][0-9] · \d`)
 // finishedNotices returns the worked-period notices in a rendered transcript.
 func finishedNotices(rendered string) []string {
 	var found []string
-	for _, line := range strings.Split(rendered, "\n") {
+	for line := range strings.SplitSeq(rendered, "\n") {
 		if line = strings.TrimSpace(tui.StripTerminalSequences(line)); finishedNotice.MatchString(line) {
 			found = append(found, line)
 		}

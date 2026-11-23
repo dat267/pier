@@ -65,14 +65,12 @@ func TestRunContextIsPresentForTheWholeRun(t *testing.T) {
 		return nil
 	}
 	var wg sync.WaitGroup
-	for g := 0; g < 8; g++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for i := 0; i < 40000; i++ {
+	for range 8 {
+		wg.Go(func() {
+			for range 40000 {
 				_ = a.runWithLifecycle(context.Background(), exec)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	if n := lost.Load(); n != 0 {
@@ -289,12 +287,10 @@ func TestAppendMessagesKeepsEveryConcurrentAppend(t *testing.T) {
 	var group sync.WaitGroup
 	start := make(chan struct{})
 	for range appenders {
-		group.Add(1)
-		go func() {
-			defer group.Done()
+		group.Go(func() {
 			<-start
 			a.AppendMessages(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "x"}})
-		}()
+		})
 	}
 	close(start)
 	group.Wait()

@@ -228,7 +228,7 @@ func TestCatalogGeneratedAt(t *testing.T) {
 
 func BenchmarkDecodeBuiltinCatalog(b *testing.B) {
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if _, _, err := decodeCatalog(catalogData); err != nil {
 			b.Fatal(err)
 		}

@@ -104,7 +104,7 @@ func TestResponsesStreamDoesNotWrapOversizedCacheSubtraction(t *testing.T) {
 	defer server.Close()
 	model := testResponsesModel()
 	model.BaseURL = server.URL
-	message, err := StreamOpenAIResponses(model, NormalizeContext(Context{}), &OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "test-key"}}).Result(context.Background())
+	message, err := StreamOpenAIResponses(model, NormalizeContext(Context{}), &OpenAIResponsesOptions{APIKey: "test-key"}).Result(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

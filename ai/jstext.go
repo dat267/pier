@@ -215,10 +215,7 @@ func jsSliceAbsolute(s string, start, end int) string {
 	// A unit is at most 4 bytes of s, so end-start units are a safe cap and the
 	// append below never grows. Guard against a caller passing a huge range on a
 	// short string.
-	capacity := end - start
-	if capacity > len(s) {
-		capacity = len(s)
-	}
+	capacity := min(end-start, len(s))
 	kept := make([]uint16, 0, capacity)
 	units := 0
 	for _, r := range s {

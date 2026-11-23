@@ -2,7 +2,6 @@ package coding
 
 import (
 	"bytes"
-	"context"
 	ctxpkg "context"
 	"encoding/json"
 	"errors"
@@ -348,7 +347,7 @@ func TestFileModelsStorePropagatesReloadFailure(t *testing.T) {
 // uses structuredClone, not JSON stringify/parse. Count one warmed public Read
 // to guard the cached-catalog startup path without a machine-speed threshold.
 func TestModelsStoreReadCloneAllocationBudget(t *testing.T) {
-	ctx := context.Background()
+	ctx := ctxpkg.Background()
 	const count = 32
 	entry := &ai.ModelsStoreEntry{Models: make([]*ai.Model, count)}
 	for i := range entry.Models {

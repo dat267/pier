@@ -127,274 +127,274 @@ func PostgreSQL() *Language {
 		},
 		Illegal: ":==|\\W\\s*\\(\\*|(^|\\s)\\$[a-z]|\\{\\{|[a-z]:\\s*$|\\.\\.\\.|TO:|DO:",
 		Contains: []*Mode{
-			&Mode{
+			{
 				ClassName: "keyword",
-				Variants: []*Mode{&Mode{
+				Variants: []*Mode{{
 					ClassName: "keyword",
 					Begin:     "\\bTEXT\\s*SEARCH\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\b(PRIMARY|FOREIGN|FOR(\\s+NO)?)\\s+KEY\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bPARALLEL\\s+(UNSAFE|RESTRICTED|SAFE)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bSTORAGE\\s+(PLAIN|EXTERNAL|EXTENDED|MAIN)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bMATCH\\s+(FULL|PARTIAL|SIMPLE)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bNULLS\\s+(FIRST|LAST)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bEVENT\\s+TRIGGER\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\b(MAPPING|OR)\\s+REPLACE\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\b(FROM|TO)\\s+(PROGRAM|STDIN|STDOUT)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\b(SHARE|EXCLUSIVE)\\s+MODE\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\b(LEFT|RIGHT)\\s+(OUTER\\s+)?JOIN\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\b(FETCH|MOVE)\\s+(NEXT|PRIOR|FIRST|LAST|ABSOLUTE|RELATIVE|FORWARD|BACKWARD)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bPRESERVE\\s+ROWS\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bDISCARD\\s+PLANS\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bREFERENCING\\s+(OLD|NEW)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bSKIP\\s+LOCKED\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bGROUPING\\s+SETS\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\b(BINARY|INSENSITIVE|SCROLL|NO\\s+SCROLL)\\s+(CURSOR|FOR)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\b(WITH|WITHOUT)\\s+HOLD\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bWITH\\s+(CASCADED|LOCAL)\\s+CHECK\\s+OPTION\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bEXCLUDE\\s+(TIES|NO\\s+OTHERS)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bFORMAT\\s+(TEXT|XML|JSON|YAML)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bSET\\s+((SESSION|LOCAL)\\s+)?NAMES\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bIS\\s+(NOT\\s+)?UNKNOWN\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bSECURITY\\s+LABEL\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bSTANDALONE\\s+(YES|NO|NO\\s+VALUE)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bWITH\\s+(NO\\s+)?DATA\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\b(FOREIGN|SET)\\s+DATA\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bSET\\s+(CATALOG|CONSTRAINTS)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\b(WITH|FOR)\\s+ORDINALITY\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bIS\\s+(NOT\\s+)?DOCUMENT\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bXML\\s+OPTION\\s+(DOCUMENT|CONTENT)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\b(STRIP|PRESERVE)\\s+WHITESPACE\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bNO\\s+(ACTION|MAXVALUE|MINVALUE)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bPARTITION\\s+BY\\s+(RANGE|LIST|HASH)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bAT\\s+TIME\\s+ZONE\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bGRANTED\\s+BY\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bRETURN\\s+(QUERY|NEXT)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\b(ATTACH|DETACH)\\s+PARTITION\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bFORCE\\s+ROW\\s+LEVEL\\s+SECURITY\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\b(INCLUDING|EXCLUDING)\\s+(COMMENTS|CONSTRAINTS|DEFAULTS|IDENTITY|INDEXES|STATISTICS|STORAGE|ALL)\\b",
-				}, &Mode{
+				}, {
 					ClassName: "keyword",
 					Begin:     "\\bAS\\s+(ASSIGNMENT|IMPLICIT|PERMISSIVE|RESTRICTIVE|ENUM|RANGE)\\b",
 				}},
 			},
-			&Mode{
+			{
 				Begin: "\\b(FORMAT|FAMILY|VERSION)\\s*\\(",
 			},
-			&Mode{
+			{
 				Begin:    `\bINCLUDE\s*\(`,
 				Keywords: Keywords{"keyword": "INCLUDE"},
 			},
 			rangeMode,
-			&Mode{
+			{
 				Begin: "\\b(VERSION|OWNER|TEMPLATE|TABLESPACE|CONNECTION\\s+LIMIT|PROCEDURE|RESTRICT|JOIN|PARSER|COPY|START|END|COLLATION|INPUT|ANALYZE|STORAGE|LIKE|DEFAULT|DELIMITER|ENCODING|COLUMN|CONSTRAINT|TABLE|SCHEMA)\\s*=",
 			},
-			&Mode{
+			{
 				Begin:        "\\b(PG_\\w+?|HAS_[A-Z_]+_PRIVILEGE)\\b",
 				HasRelevance: true, Relevance: 10,
 			},
-			&Mode{
+			{
 				Begin:     "\\bEXTRACT\\s*\\(",
 				End:       "\\bFROM\\b",
 				ReturnEnd: true,
 				Keywords:  Keywords{"type": "CENTURY DAY DECADE DOW DOY EPOCH HOUR ISODOW ISOYEAR MICROSECONDS MILLENNIUM MILLISECONDS MINUTE MONTH QUARTER SECOND TIMEZONE TIMEZONE_HOUR TIMEZONE_MINUTE WEEK YEAR"},
 			},
-			&Mode{
+			{
 				Begin:    "\\b(XMLELEMENT|XMLPI)\\s*\\(\\s*NAME",
 				Keywords: Keywords{"keyword": "NAME"},
 			},
-			&Mode{
+			{
 				Begin:    "\\b(XMLPARSE|XMLSERIALIZE)\\s*\\(\\s*(DOCUMENT|CONTENT)",
 				Keywords: Keywords{"keyword": "DOCUMENT CONTENT"},
 			},
-			&Mode{
+			{
 				End:           "(-?)(\\b0[xX][a-fA-F0-9]+|(\\b\\d+(\\.\\d*)?|\\.\\d+)([eE][-+]?\\d+)?)",
 				BeginKeywords: "CACHE INCREMENT MAXVALUE MINVALUE",
 				ReturnEnd:     true,
 				Keywords:      Keywords{"keyword": "BY CACHE INCREMENT MAXVALUE MINVALUE"},
 			},
-			&Mode{
+			{
 				ClassName: "type",
 				Begin:     "\\b(WITH|WITHOUT)\\s+TIME\\s+ZONE\\b",
 			},
-			&Mode{
+			{
 				ClassName: "type",
 				Begin:     "\\bINTERVAL\\s+(YEAR|MONTH|DAY|HOUR|MINUTE|SECOND)(\\s+TO\\s+(MONTH|HOUR|MINUTE|SECOND))?\\b",
 			},
-			&Mode{
+			{
 				Begin:    "\\bRETURNS\\s+(LANGUAGE_HANDLER|TRIGGER|EVENT_TRIGGER|FDW_HANDLER|INDEX_AM_HANDLER|TSM_HANDLER)\\b",
 				Keywords: Keywords{"keyword": "RETURNS", "type": "LANGUAGE_HANDLER TRIGGER EVENT_TRIGGER FDW_HANDLER INDEX_AM_HANDLER TSM_HANDLER"},
 			},
-			&Mode{
+			{
 				Begin: "\\b(ARRAY_AGG|AVG|BIT_AND|BIT_OR|BOOL_AND|BOOL_OR|COUNT|EVERY|JSON_AGG|JSONB_AGG|JSON_OBJECT_AGG|JSONB_OBJECT_AGG|MAX|MIN|MODE|STRING_AGG|SUM|XMLAGG|CORR|COVAR_POP|COVAR_SAMP|REGR_AVGX|REGR_AVGY|REGR_COUNT|REGR_INTERCEPT|REGR_R2|REGR_SLOPE|REGR_SXX|REGR_SXY|REGR_SYY|STDDEV|STDDEV_POP|STDDEV_SAMP|VARIANCE|VAR_POP|VAR_SAMP|PERCENTILE_CONT|PERCENTILE_DISC|ROW_NUMBER|RANK|DENSE_RANK|PERCENT_RANK|CUME_DIST|NTILE|LAG|LEAD|FIRST_VALUE|LAST_VALUE|NTH_VALUE|NUM_NONNULLS|NUM_NULLS|ABS|CBRT|CEIL|CEILING|DEGREES|DIV|EXP|FLOOR|LN|LOG|MOD|PI|POWER|RADIANS|ROUND|SCALE|SIGN|SQRT|TRUNC|WIDTH_BUCKET|RANDOM|SETSEED|ACOS|ACOSD|ASIN|ASIND|ATAN|ATAND|ATAN2|ATAN2D|COS|COSD|COT|COTD|SIN|SIND|TAN|TAND|BIT_LENGTH|CHAR_LENGTH|CHARACTER_LENGTH|LOWER|OCTET_LENGTH|OVERLAY|POSITION|SUBSTRING|TREAT|TRIM|UPPER|ASCII|BTRIM|CHR|CONCAT|CONCAT_WS|CONVERT|CONVERT_FROM|CONVERT_TO|DECODE|ENCODE|INITCAP|LEFT|LENGTH|LPAD|LTRIM|MD5|PARSE_IDENT|PG_CLIENT_ENCODING|QUOTE_IDENT|QUOTE_LITERAL|QUOTE_NULLABLE|REGEXP_MATCH|REGEXP_MATCHES|REGEXP_REPLACE|REGEXP_SPLIT_TO_ARRAY|REGEXP_SPLIT_TO_TABLE|REPEAT|REPLACE|REVERSE|RIGHT|RPAD|RTRIM|SPLIT_PART|STRPOS|SUBSTR|TO_ASCII|TO_HEX|TRANSLATE|OCTET_LENGTH|GET_BIT|GET_BYTE|SET_BIT|SET_BYTE|TO_CHAR|TO_DATE|TO_NUMBER|TO_TIMESTAMP|AGE|CLOCK_TIMESTAMP|DATE_PART|DATE_TRUNC|ISFINITE|JUSTIFY_DAYS|JUSTIFY_HOURS|JUSTIFY_INTERVAL|MAKE_DATE|MAKE_INTERVAL|MAKE_TIME|MAKE_TIMESTAMP|MAKE_TIMESTAMPTZ|NOW|STATEMENT_TIMESTAMP|TIMEOFDAY|TRANSACTION_TIMESTAMP|ENUM_FIRST|ENUM_LAST|ENUM_RANGE|AREA|CENTER|DIAMETER|HEIGHT|ISCLOSED|ISOPEN|NPOINTS|PCLOSE|POPEN|RADIUS|WIDTH|BOX|BOUND_BOX|CIRCLE|LINE|LSEG|PATH|POLYGON|ABBREV|BROADCAST|HOST|HOSTMASK|MASKLEN|NETMASK|NETWORK|SET_MASKLEN|TEXT|INET_SAME_FAMILY|INET_MERGE|MACADDR8_SET7BIT|ARRAY_TO_TSVECTOR|GET_CURRENT_TS_CONFIG|NUMNODE|PLAINTO_TSQUERY|PHRASETO_TSQUERY|WEBSEARCH_TO_TSQUERY|QUERYTREE|SETWEIGHT|STRIP|TO_TSQUERY|TO_TSVECTOR|JSON_TO_TSVECTOR|JSONB_TO_TSVECTOR|TS_DELETE|TS_FILTER|TS_HEADLINE|TS_RANK|TS_RANK_CD|TS_REWRITE|TSQUERY_PHRASE|TSVECTOR_TO_ARRAY|TSVECTOR_UPDATE_TRIGGER|TSVECTOR_UPDATE_TRIGGER_COLUMN|XMLCOMMENT|XMLCONCAT|XMLELEMENT|XMLFOREST|XMLPI|XMLROOT|XMLEXISTS|XML_IS_WELL_FORMED|XML_IS_WELL_FORMED_DOCUMENT|XML_IS_WELL_FORMED_CONTENT|XPATH|XPATH_EXISTS|XMLTABLE|XMLNAMESPACES|TABLE_TO_XML|TABLE_TO_XMLSCHEMA|TABLE_TO_XML_AND_XMLSCHEMA|QUERY_TO_XML|QUERY_TO_XMLSCHEMA|QUERY_TO_XML_AND_XMLSCHEMA|CURSOR_TO_XML|CURSOR_TO_XMLSCHEMA|SCHEMA_TO_XML|SCHEMA_TO_XMLSCHEMA|SCHEMA_TO_XML_AND_XMLSCHEMA|DATABASE_TO_XML|DATABASE_TO_XMLSCHEMA|DATABASE_TO_XML_AND_XMLSCHEMA|XMLATTRIBUTES|TO_JSON|TO_JSONB|ARRAY_TO_JSON|ROW_TO_JSON|JSON_BUILD_ARRAY|JSONB_BUILD_ARRAY|JSON_BUILD_OBJECT|JSONB_BUILD_OBJECT|JSON_OBJECT|JSONB_OBJECT|JSON_ARRAY_LENGTH|JSONB_ARRAY_LENGTH|JSON_EACH|JSONB_EACH|JSON_EACH_TEXT|JSONB_EACH_TEXT|JSON_EXTRACT_PATH|JSONB_EXTRACT_PATH|JSON_OBJECT_KEYS|JSONB_OBJECT_KEYS|JSON_POPULATE_RECORD|JSONB_POPULATE_RECORD|JSON_POPULATE_RECORDSET|JSONB_POPULATE_RECORDSET|JSON_ARRAY_ELEMENTS|JSONB_ARRAY_ELEMENTS|JSON_ARRAY_ELEMENTS_TEXT|JSONB_ARRAY_ELEMENTS_TEXT|JSON_TYPEOF|JSONB_TYPEOF|JSON_TO_RECORD|JSONB_TO_RECORD|JSON_TO_RECORDSET|JSONB_TO_RECORDSET|JSON_STRIP_NULLS|JSONB_STRIP_NULLS|JSONB_SET|JSONB_INSERT|JSONB_PRETTY|CURRVAL|LASTVAL|NEXTVAL|SETVAL|COALESCE|NULLIF|GREATEST|LEAST|ARRAY_APPEND|ARRAY_CAT|ARRAY_NDIMS|ARRAY_DIMS|ARRAY_FILL|ARRAY_LENGTH|ARRAY_LOWER|ARRAY_POSITION|ARRAY_POSITIONS|ARRAY_PREPEND|ARRAY_REMOVE|ARRAY_REPLACE|ARRAY_TO_STRING|ARRAY_UPPER|CARDINALITY|STRING_TO_ARRAY|UNNEST|ISEMPTY|LOWER_INC|UPPER_INC|LOWER_INF|UPPER_INF|RANGE_MERGE|GENERATE_SERIES|GENERATE_SUBSCRIPTS|CURRENT_DATABASE|CURRENT_QUERY|CURRENT_SCHEMA|CURRENT_SCHEMAS|INET_CLIENT_ADDR|INET_CLIENT_PORT|INET_SERVER_ADDR|INET_SERVER_PORT|ROW_SECURITY_ACTIVE|FORMAT_TYPE|TO_REGCLASS|TO_REGPROC|TO_REGPROCEDURE|TO_REGOPER|TO_REGOPERATOR|TO_REGTYPE|TO_REGNAMESPACE|TO_REGROLE|COL_DESCRIPTION|OBJ_DESCRIPTION|SHOBJ_DESCRIPTION|TXID_CURRENT|TXID_CURRENT_IF_ASSIGNED|TXID_CURRENT_SNAPSHOT|TXID_SNAPSHOT_XIP|TXID_SNAPSHOT_XMAX|TXID_SNAPSHOT_XMIN|TXID_VISIBLE_IN_SNAPSHOT|TXID_STATUS|CURRENT_SETTING|SET_CONFIG|BRIN_SUMMARIZE_NEW_VALUES|BRIN_SUMMARIZE_RANGE|BRIN_DESUMMARIZE_RANGE|GIN_CLEAN_PENDING_LIST|SUPPRESS_REDUNDANT_UPDATES_TRIGGER|LO_FROM_BYTEA|LO_PUT|LO_GET|LO_CREAT|LO_CREATE|LO_UNLINK|LO_IMPORT|LO_EXPORT|LOREAD|LOWRITE|GROUPING|CAST)\\s*\\(",
 			},
-			&Mode{
+			{
 				Begin: "\\.(BIGINT|INT8|BIGSERIAL|SERIAL8|BIT|VARYING|VARBIT|BOOLEAN|BOOL|BOX|BYTEA|CHARACTER|CHAR|VARCHAR|CIDR|CIRCLE|DATE|DOUBLE|PRECISION|FLOAT8|FLOAT|INET|INTEGER|INT|INT4|INTERVAL|JSON|JSONB|LINE|LSEG|MACADDR|MACADDR8|MONEY|NUMERIC|DEC|DECIMAL|PATH|POINT|POLYGON|REAL|FLOAT4|SMALLINT|INT2|SMALLSERIAL|SERIAL2|SERIAL|SERIAL4|TEXT|TIME|ZONE|TIMETZ|TIMESTAMP|TIMESTAMPTZ|TSQUERY|TSVECTOR|TXID_SNAPSHOT|UUID|XML|NATIONAL|NCHAR|INT4RANGE|INT8RANGE|NUMRANGE|TSRANGE|TSTZRANGE|DATERANGE|ANYELEMENT|ANYARRAY|ANYNONARRAY|ANYENUM|ANYRANGE|CSTRING|INTERNAL|RECORD|PG_DDL_COMMAND|VOID|UNKNOWN|OPAQUE|REFCURSOR|NAME|OID|REGPROC|REGPROCEDURE|REGOPER|REGOPERATOR|REGCLASS|REGTYPE|REGROLE|REGNAMESPACE|REGCONFIG|REGDICTIONARY)\\b",
 			},
-			&Mode{
+			{
 				Begin:    "\\b(BIGINT|INT8|BIGSERIAL|SERIAL8|BIT|VARYING|VARBIT|BOOLEAN|BOOL|BOX|BYTEA|CHARACTER|CHAR|VARCHAR|CIDR|CIRCLE|DATE|DOUBLE|PRECISION|FLOAT8|FLOAT|INET|INTEGER|INT|INT4|INTERVAL|JSON|JSONB|LINE|LSEG|MACADDR|MACADDR8|MONEY|NUMERIC|DEC|DECIMAL|PATH|POINT|POLYGON|REAL|FLOAT4|SMALLINT|INT2|SMALLSERIAL|SERIAL2|SERIAL|SERIAL4|TEXT|TIME|ZONE|TIMETZ|TIMESTAMP|TIMESTAMPTZ|TSQUERY|TSVECTOR|TXID_SNAPSHOT|UUID|XML|NATIONAL|NCHAR|INT4RANGE|INT8RANGE|NUMRANGE|TSRANGE|TSTZRANGE|DATERANGE|ANYELEMENT|ANYARRAY|ANYNONARRAY|ANYENUM|ANYRANGE|CSTRING|INTERNAL|RECORD|PG_DDL_COMMAND|VOID|UNKNOWN|OPAQUE|REFCURSOR|NAME|OID|REGPROC|REGPROCEDURE|REGOPER|REGOPERATOR|REGCLASS|REGTYPE|REGROLE|REGNAMESPACE|REGCONFIG|REGDICTIONARY)\\s+PATH\\b",
 				Keywords: Keywords{"keyword": "PATH", "type": "BIGINT INT8 BIGSERIAL SERIAL8 BIT VARYING VARBIT BOOLEAN BOOL BOX BYTEA CHARACTER CHAR VARCHAR CIDR CIRCLE DATE DOUBLE PRECISION FLOAT8 FLOAT INET INTEGER INT INT4 INTERVAL JSON JSONB LINE LSEG|10 MACADDR MACADDR8 MONEY NUMERIC DEC DECIMAL POINT POLYGON REAL FLOAT4 SMALLINT INT2 SMALLSERIAL|10 SERIAL2|10 SERIAL|10 SERIAL4|10 TEXT TIME ZONE TIMETZ|10 TIMESTAMP TIMESTAMPTZ|10 TSQUERY|10 TSVECTOR|10 TXID_SNAPSHOT|10 UUID XML NATIONAL NCHAR INT4RANGE|10 INT8RANGE|10 NUMRANGE|10 TSRANGE|10 TSTZRANGE|10 DATERANGE|10 ANYELEMENT ANYARRAY ANYNONARRAY ANYENUM ANYRANGE CSTRING INTERNAL RECORD PG_DDL_COMMAND VOID UNKNOWN OPAQUE REFCURSOR NAME OID REGPROC|10 REGPROCEDURE|10 REGOPER|10 REGOPERATOR|10 REGCLASS|10 REGTYPE|10 REGROLE|10 REGNAMESPACE|10 REGCONFIG|10 REGDICTIONARY|10 "},
 			},
-			&Mode{
+			{
 				ClassName: "type",
 				Begin:     "\\b(BIGINT|INT8|BIGSERIAL|SERIAL8|BIT|VARYING|VARBIT|BOOLEAN|BOOL|BOX|BYTEA|CHARACTER|CHAR|VARCHAR|CIDR|CIRCLE|DATE|DOUBLE|PRECISION|FLOAT8|FLOAT|INET|INTEGER|INT|INT4|INTERVAL|JSON|JSONB|LINE|LSEG|MACADDR|MACADDR8|MONEY|NUMERIC|DEC|DECIMAL|PATH|POINT|POLYGON|REAL|FLOAT4|SMALLINT|INT2|SMALLSERIAL|SERIAL2|SERIAL|SERIAL4|TEXT|TIME|ZONE|TIMETZ|TIMESTAMP|TIMESTAMPTZ|TSQUERY|TSVECTOR|TXID_SNAPSHOT|UUID|XML|NATIONAL|NCHAR|INT4RANGE|INT8RANGE|NUMRANGE|TSRANGE|TSTZRANGE|DATERANGE|ANYELEMENT|ANYARRAY|ANYNONARRAY|ANYENUM|ANYRANGE|CSTRING|INTERNAL|RECORD|PG_DDL_COMMAND|VOID|UNKNOWN|OPAQUE|REFCURSOR|NAME|OID|REGPROC|REGPROCEDURE|REGOPER|REGOPERATOR|REGCLASS|REGTYPE|REGROLE|REGNAMESPACE|REGCONFIG|REGDICTIONARY)\\b",
 			},
-			&Mode{
+			{
 				ClassName: "string",
 				Begin:     "'",
 				End:       "'",
-				Contains: []*Mode{&Mode{
+				Contains: []*Mode{{
 					Begin: "''",
 				}},
 			},
-			&Mode{
+			{
 				ClassName:    "string",
 				Begin:        "(e|E|u&|U&)'",
 				End:          "'",
 				HasRelevance: true, Relevance: 10,
-				Contains: []*Mode{&Mode{
+				Contains: []*Mode{{
 					Begin: "\\\\.",
 				}},
 			},
-			&Mode{
+			{
 				Begin: "\\$([a-zA-Z_]?|[a-zA-Z_][a-zA-Z_0-9]*)\\$",
 				End:   "\\$([a-zA-Z_]?|[a-zA-Z_][a-zA-Z_0-9]*)\\$",
-				Contains: []*Mode{&Mode{
+				Contains: []*Mode{{
 					EndsWithParent: true,
 					SubLanguage:    []string{"pgsql", "perl", "python", "tcl", "r", "lua", "java", "php", "ruby", "bash", "scheme", "xml", "json"},
 				}},
 			},
-			&Mode{
+			{
 				Begin: "\"",
 				End:   "\"",
-				Contains: []*Mode{&Mode{
+				Contains: []*Mode{{
 					Begin: "\"\"",
 				}},
 			},
-			&Mode{
+			{
 				ClassName:    "number",
 				Begin:        "(-?)(\\b0[xX][a-fA-F0-9]+|(\\b\\d+(\\.\\d*)?|\\.\\d+)([eE][-+]?\\d+)?)",
 				HasRelevance: true, Relevance: 0,
 			},
-			&Mode{
+			{
 				ClassName: "comment",
 				Begin:     "/\\*",
 				End:       "\\*/",
-				Contains: []*Mode{&Mode{
+				Contains: []*Mode{{
 					Begin: "\\b(a|an|the|are|I'm|isn't|don't|doesn't|won't|but|just|should|pretty|simply|enough|gonna|going|wtf|so|such|will|you|your|they|like|more)\\b",
-				}, &Mode{
+				}, {
 					ClassName:    "doctag",
 					Begin:        "(?:TODO|FIXME|NOTE|BUG|OPTIMIZE|HACK|XXX):",
 					HasRelevance: true, Relevance: 0,
 				}},
 			},
-			&Mode{
+			{
 				ClassName: "comment",
 				Begin:     "--",
 				End:       "$",
-				Contains: []*Mode{&Mode{
+				Contains: []*Mode{{
 					Begin: "\\b(a|an|the|are|I'm|isn't|don't|doesn't|won't|but|just|should|pretty|simply|enough|gonna|going|wtf|so|such|will|you|your|they|like|more)\\b",
-				}, &Mode{
+				}, {
 					ClassName:    "doctag",
 					Begin:        "(?:TODO|FIXME|NOTE|BUG|OPTIMIZE|HACK|XXX):",
 					HasRelevance: true, Relevance: 0,
 				}},
 			},
-			&Mode{
+			{
 				ClassName: "meta",
-				Variants: []*Mode{&Mode{
+				Variants: []*Mode{{
 					ClassName:    "meta",
 					Begin:        "%(ROW)?TYPE",
 					HasRelevance: true, Relevance: 10,
-				}, &Mode{
+				}, {
 					ClassName: "meta",
 					Begin:     "\\$\\d+",
-				}, &Mode{
+				}, {
 					ClassName: "meta",
 					Begin:     "^#\\w",
 					End:       "$",
 				}},
 			},
-			&Mode{
+			{
 				ClassName:    "symbol",
 				Begin:        "<<\\s*[a-zA-Z_][a-zA-Z_0-9$]*\\s*>>",
 				HasRelevance: true, Relevance: 10,

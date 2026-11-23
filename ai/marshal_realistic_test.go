@@ -13,7 +13,7 @@ import (
 // while this factory covers realistic request and session sizes.
 func realisticConversationMessages(n int) []Message {
 	messages := make([]Message, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if i%2 == 0 {
 			messages = append(messages, &UserMessage{
 				Content: StringOrBlocks{Text: fmt.Sprintf(

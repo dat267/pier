@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -333,7 +334,7 @@ func TestMcpResultExpansionKeepsThePreviewInPlace(t *testing.T) {
 	}
 	// The preview is the tail of the expanded body.
 	tailStart := len(expanded) - mcpOutputPreviewLines
-	for index := 0; index < mcpOutputPreviewLines; index++ {
+	for index := range mcpOutputPreviewLines {
 		if expanded[tailStart+index] != collapsed[2+index] {
 			t.Errorf("preview row %d: collapsed %q, expanded %q", index, collapsed[2+index], expanded[tailStart+index])
 		}
@@ -362,8 +363,8 @@ func TestMcpToolHintTruncatesToTheFrameWidth(t *testing.T) {
 
 // lastNonBlankRow returns the last row that has text after its padding.
 func lastNonBlankRow(rows []string) string {
-	for index := len(rows) - 1; index >= 0; index-- {
-		if row := strings.TrimSpace(rows[index]); row != "" {
+	for _, row := range slices.Backward(rows) {
+		if row := strings.TrimSpace(row); row != "" {
 			return row
 		}
 	}

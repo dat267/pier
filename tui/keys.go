@@ -753,8 +753,7 @@ func IsValidKeyID(keyID KeyId) bool {
 		return true
 	}
 	keyValues := reflect.ValueOf(Key)
-	for i := 0; i < keyValues.NumField(); i++ {
-		field := keyValues.Field(i)
+	for _, field := range keyValues.Fields() {
 		if field.Kind() == reflect.String && field.String() == remaining {
 			return true
 		}

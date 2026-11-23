@@ -289,11 +289,11 @@ func mcpTruncationBody(output string) (body string, ok bool) {
 		return output, false
 	}
 	rest := output[len(prefix):]
-	firstBreak := strings.IndexByte(rest, '\n')
-	if firstBreak < 0 {
+	_, after, ok := strings.Cut(rest, "\n")
+	if !ok {
 		return output, false
 	}
-	linesLine, afterLines, found := strings.Cut(rest[firstBreak+1:], "\n")
+	linesLine, afterLines, found := strings.Cut(after, "\n")
 	if !found || !strings.HasPrefix(linesLine, "Total output lines: ") {
 		return output, false
 	}

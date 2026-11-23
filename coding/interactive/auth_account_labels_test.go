@@ -88,7 +88,7 @@ func TestAuthSelectorMarksPreferredPartners(t *testing.T) {
 	selector := NewOAuthSelectorComponent("login", providers, nil, nil, "")
 	text := tui.StripTerminalSequences(strings.Join(selector.Render(120), "\n"))
 	var partnerRow, otherRow string
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		switch {
 		case strings.Contains(line, "OpenRouter"):
 			partnerRow = line

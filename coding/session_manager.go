@@ -555,7 +555,7 @@ func (m *SessionManager) rewriteFile() {
 	}
 	path, state := m.sessionFile, m.writeState
 	if m.writeQueue == nil {
-		m.syncWrite(heldSessionWrite{path: path, state: state, rewrite: true, entries: m.fileEntries[:len(m.fileEntries):len(m.fileEntries)]})
+		m.syncWrite(heldSessionWrite{path: path, state: state, rewrite: true, entries: slices.Clip(m.fileEntries)})
 		return
 	}
 	m.queueHeldWrites()
@@ -680,7 +680,7 @@ func (m *SessionManager) appendLine(entry *SessionEntry) {
 	// and lets a failed append recover all accepted entries on the next save.
 	// New sessions/branches replace the slice and write state, so an old worker
 	// cannot apply its completion to a replacement session.
-	snapshot := m.fileEntries[:len(m.fileEntries):len(m.fileEntries)]
+	snapshot := slices.Clip(m.fileEntries)
 	if m.writeQueue == nil {
 		m.syncWrite(heldSessionWrite{path: path, state: state, line: line, marshalErr: marshalErr, entries: snapshot})
 		return
@@ -1100,7 +1100,7 @@ func (m *SessionManager) branchLocked(fromID string) []SessionEntry {
 		values := materializeEntries(m.branchPointersLocked(""))
 		// Drop the spare capacity so a caller's append cannot write into the
 		// shared cache's backing array.
-		values = values[:len(values):len(values)]
+		values = slices.Clip(values)
 		m.branchCacheValues = values
 		m.branchCacheHasValues = true
 		return values
@@ -1149,7 +1149,7 @@ func (m *SessionManager) branchPointersLocked(fromID string) []*SessionEntry {
 	if fromID == "" {
 		// Drop the spare capacity so a caller's append cannot write into the
 		// shared cache's backing array.
-		path = path[:len(path):len(path)]
+		path = slices.Clip(path)
 		m.branchCachePtrs = path
 		m.branchCacheVersion = m.projectionVersionLocked()
 		m.branchCacheValid = true
@@ -1689,9 +1689,7 @@ func buildSessionInfosWithProgress(ctx context.Context, paths []string, onProgre
 	workers := min(maxConcurrentSessionInfoLoads, total)
 	var group sync.WaitGroup
 	for range workers {
-		group.Add(1)
-		go func() {
-			defer group.Done()
+		group.Go(func() {
 			for index := range work {
 				if ctx.Err() != nil {
 					finished <- listedFile{index: index}
@@ -1699,7 +1697,7 @@ func buildSessionInfosWithProgress(ctx context.Context, paths []string, onProgre
 				}
 				finished <- listedFile{index: index, info: buildSessionInfoContext(ctx, paths[index])}
 			}
-		}()
+		})
 	}
 	go func() {
 		defer close(work)

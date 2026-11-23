@@ -54,7 +54,7 @@ func MatchFuzzy(query string, text string) FuzzyMatch {
 
 		positions := make([]int, 0, len(queryUnits))
 		lastMatchIndex := -1
-		for queryIndex := 0; queryIndex < len(queryUnits); queryIndex++ {
+		for queryIndex := range queryUnits {
 			i := indexUnitFrom(textUnits, queryUnits[queryIndex], lastMatchIndex+1)
 			if i == -1 {
 				return FuzzyMatch{Matches: false, Score: 0}

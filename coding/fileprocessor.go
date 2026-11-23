@@ -82,7 +82,7 @@ type ProcessImageResult struct {
 // otherwise.
 type imageBytesConverter func(bytes []byte) ([]byte, bool)
 
-var convertImageBytesToPNG imageBytesConverter = func(bytes []byte) ([]byte, bool) {
+var convertImageBytesToPNG imageBytesConverter = func([]byte) ([]byte, bool) {
 	return nil, false
 }
 

@@ -20,8 +20,8 @@ func TestModelsJSONSaturatesLargePromptCacheAndCostNumbers(t *testing.T) {
 			BaseURL: "https://provider.test/v1", API: ai.APIOpenAIResponses,
 			Models: []ModelsJSONModel{{
 				ID: "large", PromptCache: ModelsJSONPromptCache{"short": 1e308},
-				Cost: &ModelsJSONCost{ModelsJSONCostRates: ModelsJSONCostRates{Input: 1, Output: 1},
-					Tiers: []ModelsJSONCostTier{{InputTokensAbove: 1e308, ModelsJSONCostRates: ModelsJSONCostRates{Input: 2, Output: 2}}}},
+				Cost: &ModelsJSONCost{Input: 1, Output: 1,
+					Tiers: []ModelsJSONCostTier{{InputTokensAbove: 1e308, Input: 2, Output: 2}}},
 			}},
 		},
 	}}

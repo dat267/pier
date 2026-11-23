@@ -274,8 +274,8 @@ func codeBlockOpen(raw string) bool {
 	}
 	trimmed := strings.TrimRight(raw, "\n")
 	last := trimmed
-	if nl := strings.LastIndexByte(trimmed, '\n'); nl >= 0 {
-		last = trimmed[nl+1:]
+	if _, after, ok := strings.CutLast(trimmed, "\n"); ok {
+		last = after
 	}
 	return !isFenceEnd(last, marker)
 }

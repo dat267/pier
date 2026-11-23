@@ -16,7 +16,7 @@ func benchmarkUsageSession(b *testing.B, pairs int) *AgentSession {
 	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 4096}
 	session := newControlSession(b, model, nil)
 	session.Sessions = manager
-	for i := 0; i < pairs; i++ {
+	for range pairs {
 		manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "question text here"}})
 		manager.AppendMessage(&ai.AssistantMessage{
 			API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",

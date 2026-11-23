@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -282,8 +283,7 @@ func (w *CommandWiring) HandleImportCommand(ctx context.Context, text string) {
 				w.showStatus("Session imported from: " + inputPath)
 				return
 			}
-			var notFound *SessionImportFileNotFoundError
-			if errors.As(err, &notFound) {
+			if notFound, ok := errors.AsType[*SessionImportFileNotFoundError](err); ok {
 				w.showError("Failed to import session: " + notFound.Error())
 				return
 			}
@@ -617,61 +617,123 @@ func (w *CommandWiring) sessionInfoPanel(session CommandSession, sessionInfo *co
 	usageBreakdown := sessionInfo.UsageCostBreakdown()
 
 	var info strings.Builder
-	info.WriteString(theme.Bold("Session Info") + "\n\n")
+	info.WriteString(theme.Bold("Session Info"))
+	info.WriteString("\n\n")
 	if sessionName != "" {
-		info.WriteString(theme.Fg("dim", "Name:") + " " + sessionName + "\n")
+		info.WriteString(theme.Fg("dim", "Name:"))
+		info.WriteString(" ")
+		info.WriteString(sessionName)
+		info.WriteString("\n")
 	}
 	sessionFile := stats.SessionFile
 	if sessionFile == "" {
 		sessionFile = "In-memory"
 	}
-	info.WriteString(theme.Fg("dim", "File:") + " " + sessionFile + "\n")
-	info.WriteString(theme.Fg("dim", "ID:") + " " + stats.SessionID + "\n\n")
-	info.WriteString(theme.Bold("Messages") + "\n")
-	info.WriteString(theme.Fg("dim", "Total:") + " " + itoa(stats.TotalMessages) + "\n")
-	info.WriteString(theme.Fg("dim", "User:") + " " + itoa(stats.UserMessages) + "\n")
-	info.WriteString(theme.Fg("dim", "Assistant:") + " " + itoa(stats.AssistantMessages) + "\n")
-	info.WriteString(theme.Fg("dim", "Tools:") + " " + itoa(stats.ToolCalls) + " calls, " +
-		itoa(stats.ToolResults) + " results\n\n")
-	info.WriteString(theme.Bold("Tokens") + "\n")
+	info.WriteString(theme.Fg("dim", "File:"))
+	info.WriteString(" ")
+	info.WriteString(sessionFile)
+	info.WriteString("\n")
+	info.WriteString(theme.Fg("dim", "ID:"))
+	info.WriteString(" ")
+	info.WriteString(stats.SessionID)
+	info.WriteString("\n\n")
+	info.WriteString(theme.Bold("Messages"))
+	info.WriteString("\n")
+	info.WriteString(theme.Fg("dim", "Total:"))
+	info.WriteString(" ")
+	info.WriteString(itoa(stats.TotalMessages))
+	info.WriteString("\n")
+	info.WriteString(theme.Fg("dim", "User:"))
+	info.WriteString(" ")
+	info.WriteString(itoa(stats.UserMessages))
+	info.WriteString("\n")
+	info.WriteString(theme.Fg("dim", "Assistant:"))
+	info.WriteString(" ")
+	info.WriteString(itoa(stats.AssistantMessages))
+	info.WriteString("\n")
+	info.WriteString(theme.Fg("dim", "Tools:"))
+	info.WriteString(" ")
+	info.WriteString(itoa(stats.ToolCalls))
+	info.WriteString(" calls, ")
+	info.WriteString(itoa(stats.ToolResults))
+	info.WriteString(" results\n\n")
+	info.WriteString(theme.Bold("Tokens"))
+	info.WriteString("\n")
 	promptTokens := int64(ai.CalculateContextTokens(ai.Usage{
 		Input: stats.Tokens.Input, CacheRead: stats.Tokens.CacheRead, CacheWrite: stats.Tokens.CacheWrite,
 	}))
-	info.WriteString(theme.Fg("dim", "Input:") + " " + formatThousands(promptTokens) + "\n")
+	info.WriteString(theme.Fg("dim", "Input:"))
+	info.WriteString(" ")
+	info.WriteString(formatThousands(promptTokens))
+	info.WriteString("\n")
 	if promptTokens > 0 && (stats.Tokens.CacheRead > 0 || stats.Tokens.CacheWrite > 0) {
 		hitRate := theme.Fg("dim", "("+formatFixed(float64(stats.Tokens.CacheRead)/float64(promptTokens)*100, 1)+"%)")
-		info.WriteString("  " + theme.Fg("dim", "Cached:") + " " + formatThousands(stats.Tokens.CacheRead) + " " + hitRate + "\n")
+		info.WriteString("  ")
+		info.WriteString(theme.Fg("dim", "Cached:"))
+		info.WriteString(" ")
+		info.WriteString(formatThousands(stats.Tokens.CacheRead))
+		info.WriteString(" ")
+		info.WriteString(hitRate)
+		info.WriteString("\n")
 		written := ""
 		if stats.Tokens.CacheWrite > 0 {
 			written = " " + theme.Fg("dim", "("+formatThousands(stats.Tokens.CacheWrite)+" written to cache)")
 		}
 		uncached := int64(ai.CalculateContextTokens(ai.Usage{Input: stats.Tokens.Input, CacheWrite: stats.Tokens.CacheWrite}))
-		info.WriteString("  " + theme.Fg("dim", "Uncached:") + " " +
-			formatThousands(uncached) + written + "\n")
+		info.WriteString("  ")
+		info.WriteString(theme.Fg("dim", "Uncached:"))
+		info.WriteString(" ")
+		info.WriteString(formatThousands(uncached))
+		info.WriteString(written)
+		info.WriteString("\n")
 	}
-	info.WriteString(theme.Fg("dim", "Output:") + " " + formatThousands(stats.Tokens.Output) + "\n")
-	info.WriteString(theme.Fg("dim", "Total:") + " " + formatThousands(stats.Tokens.Total) + "\n")
+	info.WriteString(theme.Fg("dim", "Output:"))
+	info.WriteString(" ")
+	info.WriteString(formatThousands(stats.Tokens.Output))
+	info.WriteString("\n")
+	info.WriteString(theme.Fg("dim", "Total:"))
+	info.WriteString(" ")
+	info.WriteString(formatThousands(stats.Tokens.Total))
+	info.WriteString("\n")
 
-	info.WriteString("\n" + theme.Bold("Cache Warming") + "\n")
+	info.WriteString("\n")
+	info.WriteString(theme.Bold("Cache Warming"))
+	info.WriteString("\n")
 	cacheWarmingMode := ""
 	if w.Settings != nil {
 		cacheWarmingMode = w.Settings.GetCacheWarmingMode()
 	}
-	info.WriteString(theme.Fg("dim", "Mode:") + " " + cacheWarmingMode + "\n")
+	info.WriteString(theme.Fg("dim", "Mode:"))
+	info.WriteString(" ")
+	info.WriteString(cacheWarmingMode)
+	info.WriteString("\n")
 	status := session.GetCacheWarmingStatus()
 	statusText := "Inactive (cache warming unavailable)"
 	if status != nil {
 		statusText = coding.FormatCacheWarmingStatus(*status, now)
 	}
-	info.WriteString(theme.Fg("dim", "Status:") + " " + statusText + "\n")
+	info.WriteString(theme.Fg("dim", "Status:"))
+	info.WriteString(" ")
+	info.WriteString(statusText)
+	info.WriteString("\n")
 	if status != nil && status.Decision != nil && status.Decision.EconomicsAvailable {
-		info.WriteString(theme.Fg("dim", "Cache miss penalty:") + " $" + formatFixed(status.Decision.MissCost, 3) + "\n")
-		info.WriteString(theme.Fg("dim", "Refresh cost:") + " $" + formatFixed(status.Decision.WarmCost, 3) + "\n")
+		info.WriteString(theme.Fg("dim", "Cache miss penalty:"))
+		info.WriteString(" $")
+		info.WriteString(formatFixed(status.Decision.MissCost, 3))
+		info.WriteString("\n")
+		info.WriteString(theme.Fg("dim", "Refresh cost:"))
+		info.WriteString(" $")
+		info.WriteString(formatFixed(status.Decision.WarmCost, 3))
+		info.WriteString("\n")
 	}
 
 	if stats.Cost > 0 || cacheWaste.MissedTokens > 0 {
-		info.WriteString("\n" + theme.Bold("Cost") + "\n")
-		info.WriteString(theme.Fg("dim", "Total:") + " $" + formatFixed(stats.Cost, 3))
+		info.WriteString("\n")
+		info.WriteString(theme.Bold("Cost"))
+		info.WriteString("\n")
+		info.WriteString(theme.Fg("dim", "Total:"))
+		info.WriteString(" $")
+		info.WriteString(formatFixed(stats.Cost, 3))
 		// Upstream shows the per-model breakdown unless the only entry names the
 		// selected model (a single entry repeats the total).
 		selectedModelKey := "undefined/undefined"
@@ -680,8 +742,12 @@ func (w *CommandWiring) sessionInfoPanel(session CommandSession, sessionInfo *co
 		}
 		if len(usageBreakdown) != 1 || usageBreakdown[0].Key != selectedModelKey {
 			for _, entry := range usageBreakdown {
-				info.WriteString("\n  " + theme.Fg("dim", entry.Key+":") + " $" + formatFixed(entry.Cost, 3) +
-					" " + theme.Fg("dim", "("+FormatTokens(entry.Tokens)+" tokens)"))
+				info.WriteString("\n  ")
+				info.WriteString(theme.Fg("dim", entry.Key+":"))
+				info.WriteString(" $")
+				info.WriteString(formatFixed(entry.Cost, 3))
+				info.WriteString(" ")
+				info.WriteString(theme.Fg("dim", "("+FormatTokens(entry.Tokens)+" tokens)"))
 			}
 		}
 		if cacheWaste.MissedTokens > 0 {
@@ -691,10 +757,17 @@ func (w *CommandWiring) sessionInfoPanel(session CommandSession, sessionInfo *co
 			}
 			detail := formatThousands(cacheWaste.MissedTokens) + " tokens, " + missLabel
 			if cacheWaste.MissedCost >= 0.0001 {
-				info.WriteString("\n" + theme.Fg("dim", "Cache Re-billed:") + " $" +
-					formatFixed(cacheWaste.MissedCost, 3) + " " + theme.Fg("dim", "("+detail+")"))
+				info.WriteString("\n")
+				info.WriteString(theme.Fg("dim", "Cache Re-billed:"))
+				info.WriteString(" $")
+				info.WriteString(formatFixed(cacheWaste.MissedCost, 3))
+				info.WriteString(" ")
+				info.WriteString(theme.Fg("dim", "("+detail+")"))
 			} else {
-				info.WriteString("\n" + theme.Fg("dim", "Cache Re-billed:") + " " + detail)
+				info.WriteString("\n")
+				info.WriteString(theme.Fg("dim", "Cache Re-billed:"))
+				info.WriteString(" ")
+				info.WriteString(detail)
 			}
 		}
 	}
@@ -773,8 +846,8 @@ func (w *CommandWiring) HandleChangelogCommand() {
 		// parseChangelog returns newest first; upstream reverses this order
 		// before rendering the full changelog.
 		parts := make([]string, 0, len(entries))
-		for index := len(entries) - 1; index >= 0; index-- {
-			entry := entries[index]
+		for _, entry := range slices.Backward(entries) {
+
 			parts = append(parts, coding.NormalizeChangelogLinks(entry.Content, changelogEntryVersion(entry)))
 		}
 		markdown = strings.Join(parts, "\n\n")

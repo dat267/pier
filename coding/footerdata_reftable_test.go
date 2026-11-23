@@ -138,9 +138,7 @@ func TestFooterDataProviderDisposeFromBranchCallbackDoesNotDeadlock(t *testing.T
 		t.Fatal("the branch callback never returned")
 	}
 	// The watcher must still be stopped and joined.
-	select {
-	case <-time.After(100 * time.Millisecond):
-	}
+	time.Sleep(100 * time.Millisecond)
 	provider.Dispose()
 }
 
@@ -153,7 +151,7 @@ func TestFooterDataProviderNotifiesListenersInRegistrationOrder(t *testing.T) {
 
 	const listenerCount = 24
 	var got []int
-	for i := 0; i < listenerCount; i++ {
+	for i := range listenerCount {
 		index := i
 		provider.OnBranchChange(func() { got = append(got, index) })
 	}

@@ -28,15 +28,13 @@ func TestKillGateSerializesWithFinish(t *testing.T) {
 	release := make(chan struct{})
 	killed := 0
 	var killWG sync.WaitGroup
-	killWG.Add(1)
-	go func() {
-		defer killWG.Done()
+	killWG.Go(func() {
 		gate.runKill(func() {
 			killed++
 			close(entered)
 			<-release
 		})
-	}()
+	})
 	<-entered
 	finished := make(chan struct{})
 	go func() {

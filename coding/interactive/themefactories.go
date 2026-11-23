@@ -197,8 +197,8 @@ func GetLanguageFromPath(filePath string) (string, bool) {
 	// whole (lowercased) path is the lookup key, which is how bare "Makefile"
 	// and "Dockerfile" resolve.
 	ext := filePath
-	if index := strings.LastIndex(filePath, "."); index >= 0 {
-		ext = filePath[index+1:]
+	if _, after, ok0 := strings.CutLast(filePath, "."); ok0 {
+		ext = after
 	}
 	if ext == "" {
 		return "", false

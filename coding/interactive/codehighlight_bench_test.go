@@ -20,8 +20,8 @@ func BenchmarkHighlightCodeGo(b *testing.B) {
 	text := string(code)
 	b.SetBytes(int64(len(text)))
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_ = highlightCode(text, "go", ActiveTheme())
 	}
 }

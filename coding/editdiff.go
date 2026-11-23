@@ -476,8 +476,12 @@ func GenerateUnifiedPatch(path, oldContent, newContent string, contextLines int)
 // headers jsdiff's FILE_HEADERS_ONLY keeps (`--- path`, `+++ path`).
 func formatPatchHunks(path string, hunks []patchHunk) string {
 	var out strings.Builder
-	out.WriteString("--- " + path + "\n")
-	out.WriteString("+++ " + path + "\n")
+	out.WriteString("--- ")
+	out.WriteString(path)
+	out.WriteString("\n")
+	out.WriteString("+++ ")
+	out.WriteString(path)
+	out.WriteString("\n")
 	for _, hunk := range hunks {
 		oldStart, newStart := hunk.oldStart, hunk.newStart
 		// Unified diff quirk: a zero-length range starts one line earlier.
@@ -751,7 +755,7 @@ func formatDisplayDiff(parts []displayPart, oldStartLine, newStartLine, lineNumW
 	lastWasChange := false
 	firstChanged := -1
 
-	for i := 0; i < len(parts); i++ {
+	for i := range parts {
 		part := parts[i]
 		if part.kind != opEqual {
 			if firstChanged == -1 {

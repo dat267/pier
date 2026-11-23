@@ -78,7 +78,7 @@ func TestOAuthIssuerMismatchErrorQuotesLikeJSON(t *testing.T) {
 		},
 		{
 			name: "both sides, newline",
-			err:  &OAuthIssuerMismatchError{Expected: "x\ny", Received: ptr("z\"w")},
+			err:  &OAuthIssuerMismatchError{Expected: "x\ny", Received: new("z\"w")},
 			want: `OAuth issuer mismatch: expected "x\ny", received "z\"w"`,
 		},
 		{
@@ -93,8 +93,6 @@ func TestOAuthIssuerMismatchErrorQuotesLikeJSON(t *testing.T) {
 		}
 	}
 }
-
-func ptr(value string) *string { return &value }
 
 // pi v1.5.2 (b4afdddf) packages/mcp/src/oauth/types.ts compact keeps every member
 // that is not undefined, so a `null` unknown member survives the round trip:

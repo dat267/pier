@@ -494,7 +494,7 @@ func TestSessionListKeepsTheSelectionAcrossPartialLoads(t *testing.T) {
 // row (#12245).
 func TestSessionListCursorKeysKeepTheSelection(t *testing.T) {
 	sessions := make([]coding.SessionInfo, 0, 5)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		sessions = append(sessions, coding.SessionInfo{
 			Path: filepath.Join("/tmp", "s"+strconv.Itoa(i)+".jsonl"), ID: "s" + strconv.Itoa(i),
 			Cwd: "/tmp", Modified: time.Unix(int64(100-i), 0),

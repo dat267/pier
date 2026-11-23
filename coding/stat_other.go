@@ -6,7 +6,7 @@ import "os"
 
 // statDeviceInode returns zero device/inode numbers on platforms that do not
 // expose them.
-func statDeviceInode(info os.FileInfo) (uint64, uint64) {
+func statDeviceInode(os.FileInfo) (uint64, uint64) {
 	return 0, 0
 }
 

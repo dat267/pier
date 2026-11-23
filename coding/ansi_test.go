@@ -86,8 +86,8 @@ func BenchmarkStripAnsiColoured(b *testing.B) {
 	}
 	value := sb.String()
 	b.SetBytes(int64(len(value)))
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_ = StripAnsi(value)
 	}
 }
@@ -99,8 +99,8 @@ func BenchmarkStripAnsiPatternReference(b *testing.B) {
 	}
 	value := sb.String()
 	b.SetBytes(int64(len(value)))
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_ = referenceStripAnsi(value)
 	}
 }

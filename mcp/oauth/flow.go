@@ -598,12 +598,8 @@ type flowUse struct {
 	storedClientID *string
 }
 
-// runFlow is the authorization flow (upstream runFlow).
-func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOptions) (FlowResult, error) {
-	return runFlowWith(ctx, provider, options, &flowUse{})
-}
-
-// runFlowWith is runFlow recording what it used.
+// runFlowWith is the authorization flow (upstream runFlow), recording what it
+// used.
 func runFlowWith(ctx context.Context, provider OAuthClientProvider, options FlowOptions, use *flowUse) (FlowResult, error) {
 	fetch := options.Fetch
 	var metadataURL *string

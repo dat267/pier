@@ -21,9 +21,8 @@ func TestCollapsedGoalCardsCapByLines(t *testing.T) {
 	}{
 		{"call", RenderSetGoalRenderCall(objective, stubTheme{}, false)},
 		{"reason", RenderSetGoalStatusRenderCall("blocked", objective, stubTheme{}, false)},
-		{"get", RenderGetGoalRenderResult(&GoalView{GoalSnapshot: GoalSnapshot{
-			Revision: 1, Objective: objective, Phase: PhaseActive,
-		}, Armed: true}, stubTheme{}, false)},
+		{"get", RenderGetGoalRenderResult(&GoalView{
+			Revision: 1, Objective: objective, Phase: PhaseActive, Armed: true}, stubTheme{}, false)},
 		{"entry", RenderGoalChangeEntry(GoalChangeEntry{
 			Operation: OpCreate, Goal: &GoalSnapshot{
 				ID: "g1", Revision: 1, Objective: objective, Phase: PhaseActive,

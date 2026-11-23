@@ -103,7 +103,7 @@ func TestCacheSeedReturnsItsPagesAfterALargeSession(t *testing.T) {
 	content := `{"type":"session","version":3,"id":"s1","timestamp":"t0","cwd":"/tmp"}` + "\n"
 	const messages = 900
 	parent := ""
-	for i := 0; i < messages; i++ {
+	for i := range messages {
 		parentField := ""
 		if parent != "" {
 			parentField = `,"parentId":"` + parent + `"`

@@ -213,7 +213,6 @@ func runLoopScenario(t *testing.T, scenario loopScenario) ([]any, []any) {
 
 	tools := make([]AgentTool, 0, len(scenario.tools))
 	for _, spec := range scenario.tools {
-		spec := spec
 		tool := AgentTool{
 			Name:        spec.name,
 			Description: spec.name,

@@ -24,6 +24,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"slices"
 	"sort"
 	"strings"
 
@@ -122,8 +123,8 @@ func (w *walker) block(stmts []ast.Stmt, inherited []string) {
 }
 
 func remove(held []string, lock string) []string {
-	for i := len(held) - 1; i >= 0; i-- {
-		if held[i] == lock {
+	for i, h := range slices.Backward(held) {
+		if h == lock {
 			return append(held[:i:i], held[i+1:]...)
 		}
 	}

@@ -1,6 +1,7 @@
 package markdown
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -24,7 +25,7 @@ func renderBlocksTest(t *testing.T, src string, width int, opts Options) []strin
 	}
 	renderer := NewRenderer(opts)
 	blocks := Lex(src)
-	blocks = blocks[:len(blocks):len(blocks)]
+	blocks = slices.Clip(blocks)
 	var lines []string
 	for i, b := range blocks {
 		var next *Block

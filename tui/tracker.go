@@ -239,10 +239,7 @@ func parseSGRNumber(part string) (int, bool) {
 			return 0, false
 		}
 		if value < maxSGRParameter {
-			value = value*10 + int(digit-'0')
-			if value > maxSGRParameter {
-				value = maxSGRParameter
-			}
+			value = min(value*10+int(digit-'0'), maxSGRParameter)
 		}
 	}
 	return value, true

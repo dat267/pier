@@ -56,15 +56,19 @@ func TestWriteCallRebuildsHighlightAfterAThemeChange(t *testing.T) {
 func BenchmarkWriteCallCompleteArgs(b *testing.B) {
 	InitTheme("dark", false)
 	var builder strings.Builder
-	for i := 0; i < 2000; i++ {
-		builder.WriteString("func value" + itoa(i) + "() int { return " + itoa(i) + " }\n")
+	for i := range 2000 {
+		builder.WriteString("func value")
+		builder.WriteString(itoa(i))
+		builder.WriteString("() int { return ")
+		builder.WriteString(itoa(i))
+		builder.WriteString(" }\n")
 	}
 	args := map[string]any{"file_path": "/tmp/proj/big.go", "content": builder.String()}
 	theme := ActiveTheme().concrete()
 	context := &ToolRenderContext{Cwd: "/tmp/proj", ArgsComplete: true, Expanded: true}
 	context.LastComponent = writeRenderers.RenderCall(args, theme, context)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		args2 := map[string]any{"file_path": args["file_path"], "content": args["content"]}
 		context.LastComponent = writeRenderers.RenderCall(args2, theme, context)
 	}

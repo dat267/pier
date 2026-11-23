@@ -59,8 +59,8 @@ func benchmarkLex(b *testing.B, text string) {
 func BenchmarkInlineIsolated(b *testing.B) {
 	text := "Here is the answer, with **emphasis** and `code` and a [link](https://example.com):"
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_ = ParseInline(text)
 	}
 }

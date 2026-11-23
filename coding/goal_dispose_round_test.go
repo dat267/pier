@@ -57,9 +57,7 @@ func TestReservedGoalRoundRacingDisposeLeavesNoUnabortableRun(t *testing.T) {
 			Model: &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128},
 			StreamFn: func(model *ai.Model, _ ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 				stream := ai.NewAssistantMessageEventStream()
-				calls.Add(1)
-				go func() {
-					defer calls.Done()
+				calls.Go(func() {
 					message := &ai.AssistantMessage{API: model.API, Provider: model.Provider, Model: model.ID, StopReason: ai.StopAborted}
 					select {
 					case <-options.Ctx.Done():
@@ -67,7 +65,7 @@ func TestReservedGoalRoundRacingDisposeLeavesNoUnabortableRun(t *testing.T) {
 						unaborted.Add(1)
 					}
 					stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopAborted, Error: message})
-				}()
+				})
 				return stream
 			},
 		})

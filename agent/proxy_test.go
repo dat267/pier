@@ -366,10 +366,10 @@ func TestStreamProxyUsesDispatcherIdleTimeoutNotProviderOverride(t *testing.T) {
 	defer cancelWait()
 	providerTimeout := 10
 	dispatcherTimeout := 250
-	options := ProxyStreamOptions{ProxyURL: server.URL, AuthToken: "tok"}
-	options.Ctx = requestCtx
-	options.TimeoutMs = &providerTimeout
-	options.HTTPIdleTimeoutMs = &dispatcherTimeout
+	options := ProxyStreamOptions{ProxyURL: server.URL, AuthToken: "tok",
+		Ctx:               requestCtx,
+		TimeoutMs:         &providerTimeout,
+		HTTPIdleTimeoutMs: &dispatcherTimeout}
 	model := &ai.Model{ID: "m", Provider: "p", API: ai.APIOpenAIResponses}
 	result, err := StreamProxy(model, proxyContext(), options).Result(waitCtx)
 	if err != nil {
@@ -422,7 +422,7 @@ func proxyToolCallForTest(id, name, arguments string) *proxyToolCallPatch {
 func TestProxyForwardsDisableContinuation(t *testing.T) {
 	model := &ai.Model{ID: "m", Provider: "p", API: ai.APIOpenAIResponses}
 	body, err := buildProxyRequest(model, proxyContext(), ProxyStreamOptions{
-		StreamOptions: ai.StreamOptions{SessionID: "s", DisableContinuation: true},
+		SessionID: "s", DisableContinuation: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -433,7 +433,7 @@ func TestProxyForwardsDisableContinuation(t *testing.T) {
 	}
 	// Unset stays undefined, which JSON.stringify drops.
 	body, err = buildProxyRequest(model, proxyContext(), ProxyStreamOptions{
-		StreamOptions: ai.StreamOptions{SessionID: "s"},
+		SessionID: "s",
 	})
 	if err != nil {
 		t.Fatal(err)

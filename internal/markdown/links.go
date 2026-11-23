@@ -42,7 +42,7 @@ func collectDefinitions(blocks []*Block, defs []Definition) ([]*Block, []Definit
 // start, or -1 when blocks are the top level themselves.
 func keepDefinitions(blocks []*Block, offset int, links linkMap, defs []Definition) ([]*Block, []Definition) {
 	kept := blocks[:0]
-	for i := 0; i < len(blocks); i++ {
+	for i := range blocks {
 		b := blocks[i]
 		at := offset
 		if at < 0 {

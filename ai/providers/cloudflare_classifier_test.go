@@ -72,9 +72,8 @@ func TestCloudflareWorkersAIClassifierProvider(t *testing.T) {
 			Name: "urgent", Type: "bool", Instructions: "Is it urgent?",
 			BoolCriteria: ai.ClassifierBoolCriteria{True: "yes", False: "no"},
 		}},
-	}, &ai.ModelsClassifierOptions{ClassifierOptions: ai.ClassifierOptions{StreamOptions: ai.StreamOptions{
-		APIKey: "cf-key",
-	}}})
+	}, &ai.ModelsClassifierOptions{
+		APIKey: "cf-key"})
 	if result.StopReason != ai.ClassifierStopStop || result.Answers["urgent"].Probability == nil || *result.Answers["urgent"].Probability != 0.95 {
 		t.Fatalf("classification = %+v", result)
 	}
@@ -99,9 +98,8 @@ func TestCloudflareWorkersAIClassifierDirectResult(t *testing.T) {
 	result := provider.Classify(&requestModel, ai.ClassifierContext{
 		State:     []byte(`{"message":"hello"}`),
 		Questions: []ai.ClassifierQuestion{{Name: "approved", Type: "bool", BoolCriteria: ai.ClassifierBoolCriteria{True: "yes", False: "no"}}},
-	}, &ai.ClassifierOptions{StreamOptions: ai.StreamOptions{
-		APIKey: "cf-key", Env: ai.ProviderEnv{CloudflareAccountIDEnv: "account-id"},
-	}})
+	}, &ai.ClassifierOptions{
+		APIKey: "cf-key", Env: ai.ProviderEnv{CloudflareAccountIDEnv: "account-id"}})
 	if result.StopReason != ai.ClassifierStopStop || result.Answers["approved"].Probability == nil || *result.Answers["approved"].Probability != 0.9912 {
 		t.Fatalf("classification = %+v", result)
 	}
@@ -138,9 +136,8 @@ func TestCloudflareWorkersAIClassifierErrors(t *testing.T) {
 			defer server.Close()
 			requestModel := *model
 			requestModel.BaseURL = server.URL + "/accounts/{CLOUDFLARE_ACCOUNT_ID}/ai"
-			result := provider.Classify(&requestModel, ai.ClassifierContext{}, &ai.ClassifierOptions{StreamOptions: ai.StreamOptions{
-				APIKey: "cf-key", Env: ai.ProviderEnv{CloudflareAccountIDEnv: "account-id"},
-			}})
+			result := provider.Classify(&requestModel, ai.ClassifierContext{}, &ai.ClassifierOptions{
+				APIKey: "cf-key", Env: ai.ProviderEnv{CloudflareAccountIDEnv: "account-id"}})
 			if result.StopReason != ai.ClassifierStopError || result.ErrorMessage == nil || *result.ErrorMessage != test.wantError {
 				t.Fatalf("result = %+v, want error %q", result, test.wantError)
 			}
@@ -201,9 +198,8 @@ func TestCloudflareWorkersAIClassifierImageForms(t *testing.T) {
 				State:     []byte(`{"message":"hello"}`),
 				Images:    []ai.ImageContent{{MimeType: "image/png", Data: "cG5n"}},
 				Questions: []ai.ClassifierQuestion{{Name: "approved", Type: "bool", BoolCriteria: ai.ClassifierBoolCriteria{True: "yes", False: "no"}}},
-			}, &ai.ClassifierOptions{StreamOptions: ai.StreamOptions{
-				APIKey: "cf-key", Env: ai.ProviderEnv{CloudflareAccountIDEnv: "account-id"},
-			}})
+			}, &ai.ClassifierOptions{
+				APIKey: "cf-key", Env: ai.ProviderEnv{CloudflareAccountIDEnv: "account-id"}})
 			if result.StopReason != ai.ClassifierStopStop {
 				t.Fatalf("classification = %+v", result)
 			}

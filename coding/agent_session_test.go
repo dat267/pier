@@ -273,12 +273,10 @@ func TestConcurrentBashResultsAreAllRecorded(t *testing.T) {
 	var group sync.WaitGroup
 	start := make(chan struct{})
 	for index := range commands {
-		group.Add(1)
-		go func() {
-			defer group.Done()
+		group.Go(func() {
 			<-start
 			session.RecordBashResult("echo "+strconv.Itoa(index), BashResult{Output: "ok", ExitCode: new(0)}, false)
-		}()
+		})
 	}
 	close(start)
 	group.Wait()

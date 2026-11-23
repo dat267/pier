@@ -213,8 +213,8 @@ func loadModule(dir string) (*module, error) {
 			continue
 		}
 		rel := fn.RelString(nil)
-		if i := strings.LastIndex(rel, ")."); i >= 0 {
-			name := rel[i+2:]
+		if _, after, ok := strings.CutLast(rel, ")."); ok {
+			name := after
 			pierMethods[name] = append(pierMethods[name], fn)
 		}
 	}

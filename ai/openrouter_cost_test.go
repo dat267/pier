@@ -8,8 +8,6 @@ import (
 	"testing"
 )
 
-func floatPtr(value float64) *float64 { return &value }
-
 func openRouterAccounting(cost *float64, byok *bool, details *OpenRouterCostDetails) OpenRouterUsageAccounting {
 	return OpenRouterUsageAccounting{Cost: cost, IsBYOK: byok, CostDetails: details}
 }
@@ -24,15 +22,15 @@ func TestApplyOpenRouterReportedCost(t *testing.T) {
 
 	// Direct billing replaces the estimate and marks it provider-reported.
 	usage := base()
-	ApplyOpenRouterReportedCost(&usage, openRouterAccounting(floatPtr(1.25), &notByok, nil))
+	ApplyOpenRouterReportedCost(&usage, openRouterAccounting(new(1.25), &notByok, nil))
 	if usage.Cost.Total != 1.25 || usage.Cost.TotalFromProvider == nil || !*usage.Cost.TotalFromProvider {
 		t.Fatalf("direct billing = %+v", usage.Cost)
 	}
 
 	// BYOK adds the upstream inference cost.
 	usage = base()
-	ApplyOpenRouterReportedCost(&usage, openRouterAccounting(floatPtr(0.5), &byok, &OpenRouterCostDetails{
-		UpstreamInferenceCost: floatPtr(2),
+	ApplyOpenRouterReportedCost(&usage, openRouterAccounting(new(0.5), &byok, &OpenRouterCostDetails{
+		UpstreamInferenceCost: new(float64(2)),
 	}))
 	if usage.Cost.Total != 2.5 || !*usage.Cost.TotalFromProvider {
 		t.Fatalf("byok total = %+v", usage.Cost)
@@ -43,10 +41,10 @@ func TestApplyOpenRouterReportedCost(t *testing.T) {
 	// `upstream_inference_cost: null`; an absent member keeps the estimate
 	// (TestOpenRouterCostDistinguishesAbsentFromNull).
 	usage = base()
-	ApplyOpenRouterReportedCost(&usage, openRouterAccounting(floatPtr(0.5), &byok, &OpenRouterCostDetails{
+	ApplyOpenRouterReportedCost(&usage, openRouterAccounting(new(0.5), &byok, &OpenRouterCostDetails{
 		UpstreamInferenceCostPresent:     true,
-		UpstreamInferencePromptCost:      floatPtr(1),
-		UpstreamInferenceCompletionsCost: floatPtr(0.75),
+		UpstreamInferencePromptCost:      new(float64(1)),
+		UpstreamInferenceCompletionsCost: new(0.75),
 	}))
 	if usage.Cost.Total != 2.25 || !*usage.Cost.TotalFromProvider {
 		t.Fatalf("byok parts total = %+v", usage.Cost)
@@ -55,10 +53,10 @@ func TestApplyOpenRouterReportedCost(t *testing.T) {
 	// Incomplete or invalid accounting leaves the estimate untouched.
 	for name, accounting := range map[string]OpenRouterUsageAccounting{
 		"no cost":         openRouterAccounting(nil, &notByok, nil),
-		"negative cost":   openRouterAccounting(floatPtr(-1), &notByok, nil),
-		"byok no details": openRouterAccounting(floatPtr(1), &byok, nil),
-		"byok no parts":   openRouterAccounting(floatPtr(1), &byok, &OpenRouterCostDetails{UpstreamInferenceCostPresent: true}),
-		"nil byok":        openRouterAccounting(floatPtr(1), nil, nil),
+		"negative cost":   openRouterAccounting(new(float64(-1)), &notByok, nil),
+		"byok no details": openRouterAccounting(new(float64(1)), &byok, nil),
+		"byok no parts":   openRouterAccounting(new(float64(1)), &byok, &OpenRouterCostDetails{UpstreamInferenceCostPresent: true}),
+		"nil byok":        openRouterAccounting(new(float64(1)), nil, nil),
 	} {
 		usage = base()
 		ApplyOpenRouterReportedCost(&usage, accounting)

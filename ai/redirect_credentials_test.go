@@ -100,7 +100,7 @@ func TestResponsesRedirectCredentials(t *testing.T) {
 			defer origin.Close()
 			model := testResponsesModel()
 			model.BaseURL = origin.URL + "/v1"
-			result, err := StreamOpenAIResponses(model, NormalizeContext(Context{Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}}}}), &OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "synthetic-test", Headers: ProviderHeaders{"Cookie": new("synthetic-cookie"), "Proxy-Authorization": new("synthetic-proxy"), "X-Trace": new("keep")}}}).Result(context.Background())
+			result, err := StreamOpenAIResponses(model, NormalizeContext(Context{Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}}}}), &OpenAIResponsesOptions{APIKey: "synthetic-test", Headers: ProviderHeaders{"Cookie": new("synthetic-cookie"), "Proxy-Authorization": new("synthetic-proxy"), "X-Trace": new("keep")}}).Result(context.Background())
 			if err != nil {
 				t.Fatal(err)
 			}

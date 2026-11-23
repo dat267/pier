@@ -53,8 +53,8 @@ func BenchmarkStreamingAssistantDelta(b *testing.B) {
 	for _, paragraph := range paragraphs {
 		body.WriteString(paragraph)
 	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for i := 0; b.Loop(); i++ {
 		body.WriteString(paragraphs[i%len(paragraphs)])
 		message := &ai.AssistantMessage{
 			API: ai.APIAnthropicMessages, Provider: "test", Model: "m", StopReason: ai.StopPending,

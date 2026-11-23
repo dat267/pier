@@ -650,7 +650,7 @@ func TestPrepareCompactionReadsALoadedBranch(t *testing.T) {
 		`{"type":"session","version":3,"id":"s1","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/tmp"}`,
 	}
 	parent := ""
-	for i := 0; i < 40; i++ {
+	for i := range 40 {
 		id := "m" + strconv.Itoa(i)
 		parentField := ""
 		if parent != "" {

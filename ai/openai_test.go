@@ -14,9 +14,6 @@ import (
 // pi v1.5.2 (b4afdddf) providers/compat-schema.ts added three compat flags.
 // Each has a visible wire effect, so a config that sets one must not be ignored.
 
-func compatBoolPtr(value bool) *bool       { return &value }
-func compatStringPtr(value string) *string { return &value }
-
 func v152CompletionsModel(baseURL string, compat *OpenAICompletionsCompat) *Model {
 	model := &Model{ID: "test-model", Name: "Test", Provider: "custom", API: APIOpenAICompletions, BaseURL: baseURL}
 	if compat != nil {
@@ -35,7 +32,7 @@ func buildV152Completions(t *testing.T, model *Model, sessionID string) *OpenAIC
 	t.Helper()
 	resolved := GetOpenAICompletionsCompat(model)
 	params, err := BuildOpenAICompletionsParams(model, v152Transcript(), &OpenAICompletionsOptions{
-		StreamOptions: StreamOptions{SessionID: sessionID, CacheRetention: CacheRetentionShort},
+		SessionID: sessionID, CacheRetention: CacheRetentionShort,
 	}, &resolved, CacheRetentionShort, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -64,7 +61,7 @@ func TestOpenAICompletionsPromptCacheKeyMode(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			var compat *OpenAICompletionsCompat
 			if test.mode != "" {
-				compat = &OpenAICompletionsCompat{PromptCacheKeyMode: compatStringPtr(test.mode)}
+				compat = &OpenAICompletionsCompat{PromptCacheKeyMode: new(test.mode)}
 			}
 			params := buildV152Completions(t, v152CompletionsModel(test.baseURL, compat), "session-1")
 			if got := params.PromptCacheKey != nil; got != test.want {
@@ -93,14 +90,14 @@ func TestOpenAICompletionsRequiresNonNullAssistantContent(t *testing.T) {
 		want string
 	}{
 		{"default", nil, "null"},
-		{"enabled", compatBoolPtr(true), `""`},
-		{"explicit-false", compatBoolPtr(false), "null"},
+		{"enabled", new(true), `""`},
+		{"explicit-false", new(false), "null"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			model := v152CompletionsModel("https://example.test/v1", &OpenAICompletionsCompat{RequiresNonNullAssistantContent: test.flag})
 			resolved := GetOpenAICompletionsCompat(model)
 			params, err := BuildOpenAICompletionsParams(model, transcript, &OpenAICompletionsOptions{
-				StreamOptions: StreamOptions{CacheRetention: CacheRetentionNone},
+				CacheRetention: CacheRetentionNone,
 			}, &resolved, CacheRetentionNone, nil)
 			if err != nil {
 				t.Fatal(err)
@@ -132,13 +129,13 @@ func TestOpenAICompletionsRequiresToolsWithToolHistory(t *testing.T) {
 		wantSent bool
 	}{
 		{"default", nil, false},
-		{"enabled", compatBoolPtr(true), true},
+		{"enabled", new(true), true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			model := v152CompletionsModel("https://example.test/v1", &OpenAICompletionsCompat{RequiresToolsWithToolHistory: test.flag})
 			resolved := GetOpenAICompletionsCompat(model)
 			params, err := BuildOpenAICompletionsParams(model, transcript, &OpenAICompletionsOptions{
-				StreamOptions: StreamOptions{CacheRetention: CacheRetentionNone},
+				CacheRetention: CacheRetentionNone,
 			}, &resolved, CacheRetentionNone, nil)
 			if err != nil {
 				t.Fatal(err)
@@ -155,10 +152,10 @@ func TestOpenAICompletionsRequiresToolsWithToolHistory(t *testing.T) {
 	}
 	// Without tool history the field stays absent even with the flag on.
 	plain := NormalizeContext(Context{Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}}})
-	model := v152CompletionsModel("https://example.test/v1", &OpenAICompletionsCompat{RequiresToolsWithToolHistory: compatBoolPtr(true)})
+	model := v152CompletionsModel("https://example.test/v1", &OpenAICompletionsCompat{RequiresToolsWithToolHistory: new(true)})
 	resolved := GetOpenAICompletionsCompat(model)
 	params, err := BuildOpenAICompletionsParams(model, plain, &OpenAICompletionsOptions{
-		StreamOptions: StreamOptions{CacheRetention: CacheRetentionNone},
+		CacheRetention: CacheRetentionNone,
 	}, &resolved, CacheRetentionNone, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -180,14 +177,14 @@ func TestOpenAIResponsesPromptCacheKeyModeDisabled(t *testing.T) {
 		want bool
 	}{
 		{"auto", nil, true},
-		{"disabled", compatStringPtr("disabled"), false},
-		{"enabled", compatStringPtr("enabled"), true},
+		{"disabled", new("disabled"), false},
+		{"enabled", new("enabled"), true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			model := &Model{ID: "test-model", Name: "Test", Provider: "openai", API: APIOpenAIResponses, BaseURL: "https://api.openai.com/v1"}
 			model.Compat = &ModelCompat{OpenAIResponses: &OpenAIResponsesCompat{PromptCacheKeyMode: test.mode}}
 			params, err := BuildOpenAIResponsesParams(model, v152Transcript(), &OpenAIResponsesOptions{
-				StreamOptions: StreamOptions{SessionID: "session-1", CacheRetention: CacheRetentionShort},
+				SessionID: "session-1", CacheRetention: CacheRetentionShort,
 			}, nil, nil)
 			if err != nil {
 				t.Fatal(err)

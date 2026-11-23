@@ -60,7 +60,7 @@ func TestAPIRegistryBuiltins(t *testing.T) {
 	// A mismatched api produces an error stream naming both apis.
 	model := &ai.Model{ID: "m", API: ai.APIOpenAICompletions, Provider: "p"}
 	stream := ai.GetAPIProvider(ai.APIAnthropicMessages).Stream(model, ai.TranscriptContext{}, nil)
-	message, _ := stream.Result(nil)
+	message, _ := stream.Result(t.Context())
 	if message.StopReason != ai.StopError || message.ErrorMessage == nil ||
 		*message.ErrorMessage != "Mismatched api: openai-completions expected anthropic-messages" {
 		t.Fatalf("message = %+v", message)
@@ -657,7 +657,7 @@ func TestComposeModelProviderMissingAPIProviderStreamsError(t *testing.T) {
 	}
 	model := provider.GetModels()[0]
 	stream := provider.Stream(model, ai.TranscriptContext{}, nil)
-	message, err := stream.Result(nil)
+	message, err := stream.Result(t.Context())
 	if err != nil || message == nil || message.StopReason != ai.StopError || message.ErrorMessage == nil {
 		t.Fatalf("message = %+v, err = %v", message, err)
 	}

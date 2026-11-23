@@ -3,6 +3,7 @@ package coding
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -17,7 +18,7 @@ import (
 // left out.
 func TestSummaryFileListsCapToTheMostRecentPaths(t *testing.T) {
 	fileOps := CreateFileOps()
-	for i := 0; i < maxSummaryFileListEntries+50; i++ {
+	for i := range maxSummaryFileListEntries + 50 {
 		fileOps.markRead(fmt.Sprintf("read-%03d", i))
 		fileOps.markEdited(fmt.Sprintf("edit-%03d", i))
 	}
@@ -48,17 +49,17 @@ func TestSummaryFileListsPreferTheCurrentWindow(t *testing.T) {
 	fileOps := CreateFileOps()
 	// Inherited details are marked first, then the window: the cap keeps the
 	// window's paths even when the inherited list is already at the cap.
-	for i := 0; i < maxSummaryFileListEntries; i++ {
+	for i := range maxSummaryFileListEntries {
 		fileOps.markRead(fmt.Sprintf("old-%03d", i))
 	}
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		fileOps.markRead(fmt.Sprintf("new-%03d", i))
 	}
 	readFiles, _, omitted, _ := CapFileLists(fileOps)
 	if omitted != 10 {
 		t.Fatalf("omitted = %d, want 10", omitted)
 	}
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		want := fmt.Sprintf("new-%03d", i)
 		if !containsFoldExact(readFiles, want) {
 			t.Fatalf("window path %q was capped away: %v", want, readFiles)
@@ -85,7 +86,7 @@ func TestSummaryFileListsSmallInputMatchesUpstreamFormatting(t *testing.T) {
 
 func TestSummaryFileListsReportOmittedCounts(t *testing.T) {
 	fileOps := CreateFileOps()
-	for i := 0; i < maxSummaryFileListEntries+7; i++ {
+	for i := range maxSummaryFileListEntries + 7 {
 		fileOps.markRead(fmt.Sprintf("f-%03d", i))
 	}
 	readFiles, modifiedFiles, readOmitted, modifiedOmitted := CapFileLists(fileOps)
@@ -99,12 +100,7 @@ func TestSummaryFileListsReportOmittedCounts(t *testing.T) {
 }
 
 func containsFoldExact(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }
 
 func sortedAscending(values []string) bool {
@@ -121,7 +117,7 @@ func sortedAscending(values []string) bool {
 // details list would keep growing even with a capped summary.
 func TestCompactSummaryCapsTheFileLists(t *testing.T) {
 	fileOps := CreateFileOps()
-	for i := 0; i < maxSummaryFileListEntries+25; i++ {
+	for i := range maxSummaryFileListEntries + 25 {
 		fileOps.markRead(fmt.Sprintf("read-%03d", i))
 		fileOps.markEdited(fmt.Sprintf("edit-%03d", i))
 	}
@@ -168,7 +164,7 @@ func TestCompactSummaryCapsTheFileLists(t *testing.T) {
 func TestSummaryFileListsAtTheCapMatchUpstream(t *testing.T) {
 	fileOps := CreateFileOps()
 	readPaths := make([]string, 0, maxSummaryFileListEntries)
-	for i := 0; i < maxSummaryFileListEntries; i++ {
+	for i := range maxSummaryFileListEntries {
 		path := fmt.Sprintf("read-%03d", i)
 		readPaths = append(readPaths, path)
 		fileOps.markRead(path)
@@ -187,7 +183,7 @@ func TestSummaryFileListsAtTheCapMatchUpstream(t *testing.T) {
 // instead of reporting every path as omitted because recency is unknown.
 func TestCapFileListsHandlesOperationsWithoutOrder(t *testing.T) {
 	fileOps := &FileOperations{Read: map[string]bool{}, Written: map[string]bool{}, Edited: map[string]bool{}}
-	for i := 0; i < maxSummaryFileListEntries+30; i++ {
+	for i := range maxSummaryFileListEntries + 30 {
 		fileOps.Read[fmt.Sprintf("read-%03d", i)] = true
 	}
 	readFiles, modifiedFiles, readOmitted, modifiedOmitted := CapFileLists(fileOps)
@@ -206,10 +202,10 @@ func TestCapFileListsHandlesOperationsWithoutOrder(t *testing.T) {
 // paths whose caller never recorded a touch.
 func TestCapFileListsMixesRecencyAndUnrecordedPaths(t *testing.T) {
 	fileOps := CreateFileOps()
-	for i := 0; i < 150; i++ {
+	for i := range 150 {
 		fileOps.markRead(fmt.Sprintf("recent-%03d", i))
 	}
-	for i := 0; i < 30; i++ {
+	for i := range 30 {
 		fileOps.Read[fmt.Sprintf("unrecorded-%03d", i)] = true
 	}
 	readFiles, _, readOmitted, _ := CapFileLists(fileOps)
@@ -230,7 +226,7 @@ func TestCapFileListsMixesRecencyAndUnrecordedPaths(t *testing.T) {
 // still yield exactly cap entries and one omitted.
 func TestSummaryFileListsCapModifiedOnlyAtTheBoundary(t *testing.T) {
 	fileOps := CreateFileOps()
-	for i := 0; i < maxSummaryFileListEntries+1; i++ {
+	for i := range maxSummaryFileListEntries + 1 {
 		fileOps.markEdited(fmt.Sprintf("edit-%03d", i))
 	}
 	readFiles, modifiedFiles, readOmitted, modifiedOmitted := CapFileLists(fileOps)

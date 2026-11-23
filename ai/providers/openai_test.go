@@ -96,7 +96,7 @@ func TestOpenAIProviderClassifiesRejectsMoreThan128Images(t *testing.T) {
 	defer server.Close()
 	model := &ai.Model{ID: "gpt-6-luna", API: ai.APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text", "image"}}
 	images := make([]ai.ImageContent, 129)
-	result := OpenAIProvider().Classify(model, ai.ClassifierContext{State: json.RawMessage(`{}`), Images: images}, &ai.ClassifierOptions{StreamOptions: ai.StreamOptions{APIKey: "secret"}})
+	result := OpenAIProvider().Classify(model, ai.ClassifierContext{State: json.RawMessage(`{}`), Images: images}, &ai.ClassifierOptions{APIKey: "secret"})
 	if len(requests) != 0 {
 		t.Fatalf("classifier made %d requests for oversized image input", len(requests))
 	}
@@ -149,7 +149,7 @@ func TestOpenAIProviderClassifiesWithDecisionsAPI(t *testing.T) {
 			Name: "approved", Type: "bool", Instructions: "Is this approved?",
 			BoolCriteria: ai.ClassifierBoolCriteria{True: "yes", False: "no"},
 		}},
-	}, &ai.ClassifierOptions{StreamOptions: ai.StreamOptions{APIKey: "secret"}})
+	}, &ai.ClassifierOptions{APIKey: "secret"})
 	if result.StopReason != ai.ClassifierStopStop {
 		t.Fatalf("stop reason = %q; error = %v", result.StopReason, result.ErrorMessage)
 	}

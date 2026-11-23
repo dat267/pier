@@ -20,11 +20,8 @@ func (r *repeatByte) Read(buffer []byte) (int, error) {
 	if r.remaining <= 0 {
 		return 0, io.EOF
 	}
-	length := int64(len(buffer))
-	if length > r.remaining {
-		length = r.remaining
-	}
-	for index := int64(0); index < length; index++ {
+	length := min(int64(len(buffer)), r.remaining)
+	for index := range length {
 		buffer[index] = r.value
 	}
 	r.remaining -= length

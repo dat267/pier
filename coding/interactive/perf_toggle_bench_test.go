@@ -61,8 +61,7 @@ func BenchmarkToggleThinkingFull(b *testing.B) {
 	buildToggleTranscript(b, app)
 	_ = app.chat.Render(80)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		app.queue.ToggleThinkingBlockVisibility(&app.display.HideThinkingBlock)
 		_ = app.chat.Render(80)
 	}
@@ -80,8 +79,8 @@ func BenchmarkToggleThinkingRebuild(b *testing.B) {
 	app.ui.RenderNow(true)
 
 	hide := false
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		hide = !hide
 		app.queue.UpdateThinkingBlockVisibility(hide)
 	}
@@ -98,8 +97,7 @@ func BenchmarkToggleThinkingRepaint(b *testing.B) {
 	buildToggleTranscript(b, app)
 	app.ui.RenderNow(true)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		app.ui.RenderNow(true)
 	}
 }
@@ -218,8 +216,7 @@ func BenchmarkToggleThinkingFirstExpand(b *testing.B) {
 	_ = app.chat.Render(80)
 	app.display.HideThinkingBlock = false
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		app.queue.UpdateThinkingBlockVisibility(false)
 		_ = app.chat.Render(80)
 	}
@@ -239,8 +236,8 @@ func BenchmarkToggleThinkingDrain(b *testing.B) {
 	// Start on the expansion, which is the direction that has to render the
 	// thinking text for the first time.
 	hide := true
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		hide = !hide
 		app.queue.UpdateThinkingBlockVisibility(hide)
 		for app.queue.MaterializeThinkingChunk() {

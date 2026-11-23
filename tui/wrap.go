@@ -360,7 +360,8 @@ func wrapSingleLine(line string, width int) []string {
 				continue
 			}
 			currentLine.Reset()
-			currentLine.WriteString(tracker.activeCodes() + token)
+			currentLine.WriteString(tracker.activeCodes())
+			currentLine.WriteString(token)
 			currentVisibleLength = tokenVisibleLength
 		} else if isWhitespace && totalNeeded > width && strings.Contains(token, "\x1b") {
 			// Whitespace wider than an empty line: only its codes are kept, or

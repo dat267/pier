@@ -134,8 +134,8 @@ func BenchmarkGetTextOutput1000(b *testing.B) {
 		fmt.Fprintf(&sb, "line %d: compiler output with some text and \x1b[32mcolour\x1b[0m here\n", i)
 	}
 	result := &SortToolResultContent{Content: []ToolResultContent{{Type: "text", Text: sb.String()}}}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_ = strings.TrimSpace(GetTextOutput(result, false))
 	}
 }

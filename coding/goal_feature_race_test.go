@@ -29,13 +29,13 @@ func TestGoalFeatureToggleRacesWithAgentEvents(t *testing.T) {
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		for i := 0; i < 200; i++ {
+		for i := range 200 {
 			session.SetGoalFeatureEnabled(i%2 == 0)
 		}
 	}()
 	go func() {
 		defer wg.Done()
-		for i := 0; i < 200; i++ {
+		for range 200 {
 			// The reads the agent worker performs on the controller.
 			_ = session.GoalController()
 			_ = session.goalHoldsFollowUps()

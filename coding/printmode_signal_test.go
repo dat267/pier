@@ -116,19 +116,23 @@ func TestPrintModeSignalDrainsAcceptedSaves(t *testing.T) {
 					t.Fatal(err)
 				}
 				defer func() { _ = command.Process.Kill() }()
+				// scanErr is written before close(lines) and read only after
+				// the closed channel is received.
+				var scanErr error
 				go func() {
 					defer close(lines)
 					scanner := bufio.NewScanner(stderr)
 					for scanner.Scan() {
 						lines <- scanner.Text()
 					}
+					scanErr = scanner.Err()
 				}()
 				ready := false
 				for !ready {
 					select {
 					case line, ok := <-lines:
 						if !ok {
-							t.Fatal("helper exited before provider started")
+							t.Fatalf("helper exited before provider started (stderr read error: %v)", scanErr)
 						}
 						ready = line == "PRINT_SIGNAL_READY"
 					case <-ctx.Done():

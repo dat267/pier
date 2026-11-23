@@ -147,10 +147,7 @@ func PollOAuthDeviceCodeFlow[T any](options OAuthDeviceCodePollOptions[T]) (T, e
 		if !hasExpiration {
 			return time.Duration(1) << 62, true
 		}
-		elapsed := deviceCodeNow().Sub(startedAt)
-		if elapsed < 0 {
-			elapsed = 0
-		}
+		elapsed := max(deviceCodeNow().Sub(startedAt), 0)
 		elapsedSeconds := int64(elapsed / time.Second)
 		if elapsedSeconds >= expiresInSeconds {
 			return 0, false

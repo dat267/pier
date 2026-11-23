@@ -25,8 +25,8 @@ func TestStreamProxyCancelDuringBodyReadReportsAborted(t *testing.T) {
 	defer cancel()
 	model := &ai.Model{ID: "m", Provider: "p", API: ai.APIOpenAIResponses}
 	stream := StreamProxy(model, proxyContext(), ProxyStreamOptions{
-		ProxyURL:            server.URL,
-		SimpleStreamOptions: ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{Ctx: ctx}},
+		ProxyURL: server.URL,
+		Ctx:      ctx,
 	})
 	waitCtx, stopWait := context.WithTimeout(context.Background(), time.Second)
 	defer stopWait()
@@ -55,8 +55,8 @@ func TestStreamProxyCancelDuringErrorBodyReadReportsAborted(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	stream := StreamProxy(&ai.Model{ID: "m", Provider: "p", API: ai.APIOpenAIResponses}, proxyContext(), ProxyStreamOptions{
-		ProxyURL:            "https://proxy.invalid",
-		SimpleStreamOptions: ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{Ctx: ctx}},
+		ProxyURL: "https://proxy.invalid",
+		Ctx:      ctx,
 	})
 	waitCtx, stopWait := context.WithTimeout(context.Background(), time.Second)
 	defer stopWait()

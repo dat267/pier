@@ -19,8 +19,8 @@ import (
 func testPNGBase64(t *testing.T, width, height int) string {
 	t.Helper()
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
+	for y := range height {
+		for x := range width {
 			img.Set(x, y, color.RGBA{R: uint8(x % 251), G: uint8(y % 241), B: 40, A: 255})
 		}
 	}

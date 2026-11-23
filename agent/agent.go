@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"slices"
 	"sync"
 	"time"
 
@@ -113,7 +114,7 @@ func (q *pendingMessageQueue) requeue(messages []ai.Message) {
 	}
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	q.messages = append(messages[:len(messages):len(messages)], q.messages...)
+	q.messages = append(slices.Clip(messages), q.messages...)
 	q.gen++
 }
 
@@ -475,7 +476,7 @@ func (a *Agent) State() AgentState {
 	// Clip the capacity: a caller appending to the snapshot then gets its own
 	// array instead of writing into spare slots the agent or another caller
 	// also appends into.
-	snapshot.Messages = a.state.Messages[:len(a.state.Messages):len(a.state.Messages)]
+	snapshot.Messages = slices.Clip(a.state.Messages)
 	return snapshot
 }
 
@@ -492,7 +493,7 @@ func (a *Agent) SetTools(tools []AgentTool) {
 func (a *Agent) AppendMessages(messages ...ai.Message) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	a.state.Messages = append(a.state.Messages[:len(a.state.Messages):len(a.state.Messages)], messages...)
+	a.state.Messages = append(slices.Clip(a.state.Messages), messages...)
 }
 
 // SetMessages replaces the transcript (copied).
@@ -508,7 +509,7 @@ func (a *Agent) SetMessages(messages []ai.Message) {
 // retaining this read-only prefix needs no copy or session projection.
 func (a *Agent) MessagePrefixIsCurrent(requestModel *ai.Model) func() bool {
 	a.mu.Lock()
-	prefix := a.state.Messages[:len(a.state.Messages):len(a.state.Messages)]
+	prefix := slices.Clip(a.state.Messages)
 	a.mu.Unlock()
 	return func() bool {
 		a.mu.Lock()
@@ -886,6 +887,10 @@ func (a *Agent) runWithLifecycle(ctx context.Context, executor func(ctx context.
 	}
 	return nil
 }
+
+// backgroundContext is context.Background for functions whose parameter named
+// context shadows the package.
+func backgroundContext() context.Context { return context.Background() }
 
 func contextOrBackground(ctx context.Context) context.Context {
 	if ctx == nil {

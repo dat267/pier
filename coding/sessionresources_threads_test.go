@@ -56,9 +56,8 @@ func TestCleanupSessionResourcesForgetsMessageThreads(t *testing.T) {
 
 	turn := func(messages []ai.Message) *ai.AssistantMessage {
 		zero := 0
-		options := &ai.AnthropicOptions{StreamOptions: ai.StreamOptions{
-			APIKey: "test-key", SessionID: "cleanup-threads", MaxRetries: &zero,
-		}}
+		options := &ai.AnthropicOptions{
+			APIKey: "test-key", SessionID: "cleanup-threads", MaxRetries: &zero}
 		resolved := ai.NormalizeContext(ai.Context{SystemPrompt: new("sys"), Messages: messages})
 		message, err := ai.StreamAnthropic(model, resolved, options).Result(ctxpkg.Background())
 		if err != nil {

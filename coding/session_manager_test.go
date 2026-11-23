@@ -703,7 +703,7 @@ func TestGetEntriesDoesNotHoldTheManagerLockWhileHydrating(t *testing.T) {
 	path := filepath.Join(dir, "session.jsonl")
 	lines := []string{`{"type":"session","version":3,"id":"s1","timestamp":"t0","cwd":"/tmp"}`}
 	parent := ""
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		id := "m" + strconv.Itoa(i)
 		parentField := ""
 		if parent != "" {
@@ -748,8 +748,8 @@ func TestGetEntriesDoesNotHoldTheManagerLockWhileHydrating(t *testing.T) {
 	go func() {
 		close(lockAttemptStarted)
 		manager.mu.Lock()
-		manager.mu.Unlock()
 		close(locked)
+		manager.mu.Unlock()
 	}()
 	<-lockAttemptStarted
 	select {

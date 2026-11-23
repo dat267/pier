@@ -217,11 +217,9 @@ func TestUpdateGoalCallFrameExpands(t *testing.T) {
 func TestGetGoalResultIsMultiline(t *testing.T) {
 	budget := &GoalBudget{TokenLimit: new(int64(500))}
 	g := GoalView{
-		GoalSnapshot: GoalSnapshot{
-			ID: "g1", Revision: 3, Objective: "ship the widget", Phase: PhasePaused,
-			BlockedReason: &BlockedReason{Code: "human-paused", Message: "Paused by user."},
-			Budget:        budget, CreatedAt: t0, UpdatedAt: t0,
-		},
+		ID: "g1", Revision: 3, Objective: "ship the widget", Phase: PhasePaused,
+		BlockedReason: &BlockedReason{Code: "human-paused", Message: "Paused by user."},
+		Budget:        budget, CreatedAt: t0, UpdatedAt: t0,
 		TurnsStarted: 2, UsedTokens: 120,
 	}
 	lines := RenderGetGoalRenderResult(&g, stubTheme{}, false).Render(80)
@@ -241,7 +239,7 @@ func TestGetGoalResultIsMultiline(t *testing.T) {
 	}
 	// A long objective is previewed with the expand hint, and expanding shows it.
 	long := strings.TrimSpace(strings.Repeat("objective sentence\n", 20))
-	longGoal := GoalView{GoalSnapshot: GoalSnapshot{Revision: 1, Objective: long, Phase: PhaseActive}, Armed: true}
+	longGoal := GoalView{Revision: 1, Objective: long, Phase: PhaseActive, Armed: true}
 	collapsed := flatten(RenderGetGoalRenderResult(&longGoal, stubTheme{}, false), 80)
 	if strings.Contains(collapsed, strings.Join(strings.Fields(long), " ")) || !strings.Contains(collapsed, "click or expand") {
 		t.Fatalf("collapsed objective: %q", collapsed)
@@ -320,7 +318,7 @@ func TestExpandedGoalCardsKeepLineBreaks(t *testing.T) {
 		t.Fatalf("expanded status card flattened the reason lines: %q", status)
 	}
 
-	view := GoalView{GoalSnapshot: GoalSnapshot{Revision: 1, Objective: objective, Phase: PhaseActive}, Armed: true}
+	view := GoalView{Revision: 1, Objective: objective, Phase: PhaseActive, Armed: true}
 	get := joinTrimmed(RenderGetGoalRenderResult(&view, stubTheme{}, true), 200)
 	if !strings.Contains(get, objective) {
 		t.Fatalf("expanded get_goal card flattened the objective lines: %q", get)

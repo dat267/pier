@@ -58,7 +58,7 @@ func TestCheckCompactionSkipsAnUnknownContextWindow(t *testing.T) {
 	}
 	session := created.Session
 	t.Cleanup(session.Dispose)
-	for index := 0; index < 3; index++ {
+	for index := range 3 {
 		session.Sessions.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: strings.Repeat("context ", 300)}, Timestamp: int64(index*2 + 1)})
 		session.Sessions.AppendMessage(&ai.AssistantMessage{
 			API: ai.APIOpenAICompletions, Provider: "ghost", Model: "removed-model", StopReason: ai.StopStop,

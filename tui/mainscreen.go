@@ -688,12 +688,26 @@ func (s *MainScreen) reportOverwideLine(lines []string, index int, width int) er
 	crashLogPath = strings.TrimRight(crashLogPath, "/") + "/pi-tui-crash.log"
 
 	var builder strings.Builder
-	builder.WriteString("Crash at " + time.Now().UTC().Format(time.RFC3339Nano) + "\n")
-	builder.WriteString("Terminal width: " + strconv.Itoa(width) + "\n")
-	builder.WriteString("Line " + strconv.Itoa(index) + " visible width: " + strconv.Itoa(VisibleWidth(lines[index])) + "\n")
+	builder.WriteString("Crash at ")
+	builder.WriteString(time.Now().UTC().Format(time.RFC3339Nano))
+	builder.WriteString("\n")
+	builder.WriteString("Terminal width: ")
+	builder.WriteString(strconv.Itoa(width))
+	builder.WriteString("\n")
+	builder.WriteString("Line ")
+	builder.WriteString(strconv.Itoa(index))
+	builder.WriteString(" visible width: ")
+	builder.WriteString(strconv.Itoa(VisibleWidth(lines[index])))
+	builder.WriteString("\n")
 	builder.WriteString("\n=== All rendered lines ===\n")
 	for i, line := range lines {
-		builder.WriteString("[" + strconv.Itoa(i) + "] (w=" + strconv.Itoa(VisibleWidth(line)) + ") " + line + "\n")
+		builder.WriteString("[")
+		builder.WriteString(strconv.Itoa(i))
+		builder.WriteString("] (w=")
+		builder.WriteString(strconv.Itoa(VisibleWidth(line)))
+		builder.WriteString(") ")
+		builder.WriteString(line)
+		builder.WriteString("\n")
 	}
 	builder.WriteString("\n")
 	_ = os.MkdirAll(strings.TrimSuffix(crashLogPath, "/pi-tui-crash.log"), 0o755)
@@ -749,11 +763,17 @@ func (s *MainScreen) positionHardwareCursor(row int, col int, hasCursor bool, to
 	rowDelta := targetRow - s.hardwareCursorRow
 	var builder strings.Builder
 	if rowDelta > 0 {
-		builder.WriteString("\x1b[" + strconv.Itoa(rowDelta) + "B")
+		builder.WriteString("\x1b[")
+		builder.WriteString(strconv.Itoa(rowDelta))
+		builder.WriteString("B")
 	} else if rowDelta < 0 {
-		builder.WriteString("\x1b[" + strconv.Itoa(-rowDelta) + "A")
+		builder.WriteString("\x1b[")
+		builder.WriteString(strconv.Itoa(-rowDelta))
+		builder.WriteString("A")
 	}
-	builder.WriteString("\x1b[" + strconv.Itoa(targetCol+1) + "G")
+	builder.WriteString("\x1b[")
+	builder.WriteString(strconv.Itoa(targetCol + 1))
+	builder.WriteString("G")
 	if builder.Len() > 0 {
 		s.Terminal.Write(builder.String())
 	}

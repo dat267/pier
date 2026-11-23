@@ -106,8 +106,8 @@ func BenchmarkTreeRender(b *testing.B) {
 	selector := NewTreeSelectorComponent(m.GetTree(), m.GetLeafID(), 40, func(string) {}, func() {}, TreeSelectorOptions{})
 	_ = selector.Render(80)
 	b.ReportAllocs()
-	b.ResetTimer()
-	for range b.N {
+
+	for b.Loop() {
 		if lines := selector.Render(80); len(lines) == 0 {
 			b.Fatal("no lines")
 		}
@@ -120,7 +120,7 @@ func BenchmarkSessionExport(b *testing.B) {
 	m, path := openBenchSession(b)
 	output := filepath.Join(filepath.Dir(path), "out.jsonl")
 	b.ReportAllocs()
-	for range b.N {
+	for b.Loop() {
 		if _, err := coding.ExportSessionToJsonl(m, output, nil); err != nil {
 			b.Fatal(err)
 		}

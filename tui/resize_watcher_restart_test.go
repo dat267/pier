@@ -94,12 +94,10 @@ func TestResizeWatcherRestartDeliversOnce(t *testing.T) {
 func TestConcurrentResizeWatcherStartsDoNotLeak(t *testing.T) {
 	stopResizeWatcher()
 	var wg sync.WaitGroup
-	for i := 0; i < 64; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 64 {
+		wg.Go(func() {
 			startResizeWatcher(func() {})
-		}()
+		})
 	}
 	wg.Wait()
 	// Every superseded watcher must exit once it is stopped or superseded.
@@ -130,7 +128,7 @@ func liveResizeWatcherGoroutines() int {
 	buf := make([]byte, 1<<20)
 	buf = buf[:runtime.Stack(buf, true)]
 	count := 0
-	for _, goroutine := range strings.Split(string(buf), "\n\n") {
+	for goroutine := range strings.SplitSeq(string(buf), "\n\n") {
 		if strings.Contains(goroutine, "startResizeWatcher.func1") {
 			count++
 		}

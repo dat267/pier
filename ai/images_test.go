@@ -29,7 +29,7 @@ func TestImagesModelsPreservesExplicitEmptyAPIKey(t *testing.T) {
 		ID: "provider", Models: []*ImagesModel{model},
 		Auth: ProviderAuth{APIKey: EnvApiKeyAuth("key", []string{"IMAGE_KEY"})}, API: capture,
 	}))
-	registry.GenerateImages(model, ImagesContext{}, &ImagesOptions{StreamOptions: StreamOptions{APIKey: "", APIKeySet: true}})
+	registry.GenerateImages(model, ImagesContext{}, &ImagesOptions{APIKey: "", APIKeySet: true})
 	if capture.apiKey != "" {
 		t.Fatalf("provider received API key %q, want explicit empty override", capture.apiKey)
 	}

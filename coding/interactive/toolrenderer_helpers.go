@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -37,10 +38,8 @@ func argsNeedSanitizing(value any) bool {
 			}
 		}
 	case []any:
-		for _, item := range typed {
-			if argsNeedSanitizing(item) {
-				return true
-			}
+		if slices.ContainsFunc(typed, argsNeedSanitizing) {
+			return true
 		}
 	}
 	return false

@@ -440,7 +440,7 @@ func TestRetrySuccessAfterLengthStop(t *testing.T) {
 			if call == 1 {
 				message := &ai.AssistantMessage{
 					API: ai.APIAnthropicMessages, Provider: model.Provider, Model: model.ID,
-					StopReason: ai.StopError, ErrorMessage: ptrTo("overloaded"),
+					StopReason: ai.StopError, ErrorMessage: new("overloaded"),
 				}
 				stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopError, Error: message})
 				return
@@ -470,5 +470,3 @@ func TestRetrySuccessAfterLengthStop(t *testing.T) {
 		t.Fatalf("attempt = %d, want the counter reset", session.RetryAttempt())
 	}
 }
-
-func ptrTo(s string) *string { return &s }

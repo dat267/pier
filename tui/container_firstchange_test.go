@@ -116,8 +116,8 @@ func BenchmarkContainerFirstChildChange(b *testing.B) {
 	container.AddChild(child)
 	container.Render(80)
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		child.change()
 		container.Render(80)
 	}

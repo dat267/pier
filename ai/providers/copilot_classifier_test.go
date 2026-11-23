@@ -64,7 +64,7 @@ func TestGitHubCopilotClassifierPrefersTheVersionedPath(t *testing.T) {
 			Name: "approved", Type: "bool", Instructions: "Approve?",
 			BoolCriteria: ai.ClassifierBoolCriteria{True: "yes", False: "no"},
 		}},
-	}, &ai.ClassifierOptions{StreamOptions: ai.StreamOptions{APIKey: "secret"}})
+	}, &ai.ClassifierOptions{APIKey: "secret"})
 	if result.StopReason != ai.ClassifierStopStop {
 		message := ""
 		if result.ErrorMessage != nil {

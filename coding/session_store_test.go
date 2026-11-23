@@ -117,7 +117,7 @@ func TestScanSessionLineToleratesTruncatedLines(t *testing.T) {
 	if _, ok := scanSessionLine(line); !ok {
 		t.Fatal("the complete line was rejected")
 	}
-	for n := 0; n < len(line); n++ {
+	for n := range line {
 		prefix := string(line[:n])
 		func() {
 			defer func() {
@@ -444,8 +444,8 @@ func TestSessionJSONStringScanMatchesStrictScan(t *testing.T) {
 func BenchmarkSessionJSONStringScan(b *testing.B) {
 	line := []byte(`{"role":"assistant","content":[{"type":"text","text":"Here is a fairly long answer with ASCII only, which is the common case in these session files."}],"timestamp":1762336467000}`)
 	b.SetBytes(int64(len(line)))
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		if _, ok := scanJSONValueAt(line, 0, 0); !ok {
 			b.Fatal("scan failed")
 		}
@@ -455,8 +455,8 @@ func BenchmarkSessionJSONStringScan(b *testing.B) {
 func BenchmarkSessionJSONStringScanStrict(b *testing.B) {
 	s := []byte(`"Here is a fairly long answer with ASCII only, which is the common case in these session files."`)
 	b.SetBytes(int64(len(s)))
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		if _, ok := scanJSONStringStrict(s, 0); !ok {
 			b.Fatal("scan failed")
 		}
@@ -466,8 +466,8 @@ func BenchmarkSessionJSONStringScanStrict(b *testing.B) {
 func BenchmarkSessionJSONStringScanPlain(b *testing.B) {
 	s := []byte(`"Here is a fairly long answer with ASCII only, which is the common case in these session files."`)
 	b.SetBytes(int64(len(s)))
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		if _, _, ok := scanPlainStringBytes(s); !ok {
 			b.Fatal("scan failed")
 		}
@@ -571,7 +571,7 @@ func TestAppendCostDoesNotGrowBeforeFirstConversation(t *testing.T) {
 
 	timeAppends := func(count int) time.Duration {
 		start := time.Now()
-		for i := 0; i < count; i++ {
+		for range count {
 			manager.AppendMessage(msg)
 		}
 		return time.Since(start)

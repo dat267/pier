@@ -158,8 +158,7 @@ func TestTruncationWarningsSkipZeroLimits(t *testing.T) {
 		t.Fatalf("find zero limit = %q", got)
 	}
 
-	lsResult := &SortToolResultContent{Content: []ToolResultContent{{Type: "text", Text: "a"}},
-		Details: &coding.LsToolDetails{EntryLimitReached: &zero}}
+	lsResult := &SortToolResultContent{Details: &coding.LsToolDetails{EntryLimitReached: &zero}}
 	if got := truncationSuffix(lsResult.Details, theme); strings.Contains(got, "entries limit") {
 		t.Fatalf("ls zero limit = %q", got)
 	}

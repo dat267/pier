@@ -27,7 +27,7 @@ func TestOpenAIDecisionsRejectsOtherAPIsAndMissingKeys(t *testing.T) {
 	context := ClassifierContext{State: json.RawMessage(`{}`)}
 	otherAPI := *model
 	otherAPI.API = "other-classifier-api"
-	unsupported := (OpenAIDecisions{}).Classify(&otherAPI, context, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret"}})
+	unsupported := (OpenAIDecisions{}).Classify(&otherAPI, context, &ClassifierOptions{APIKey: "secret"})
 	missingKey := (OpenAIDecisions{}).Classify(model, context, nil)
 	if len(requests) != 0 || unsupported.ErrorMessage == nil || !strings.Contains(*unsupported.ErrorMessage, "Unsupported classifier API: other-classifier-api") ||
 		missingKey.ErrorMessage == nil || !strings.Contains(*missingKey.ErrorMessage, "No API key for provider: openai") {
@@ -43,7 +43,7 @@ func TestOpenAIDecisionsIncludesHTTPErrorBody(t *testing.T) {
 	defer server.Close()
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
 	zero := 0
-	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret", MaxRetries: &zero}})
+	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{APIKey: "secret", MaxRetries: &zero})
 	if result.StopReason != ClassifierStopError || result.ErrorMessage == nil || !strings.Contains(*result.ErrorMessage, "OpenAI Decisions error (400)") || !strings.Contains(*result.ErrorMessage, "Decision input exceeds the token limit.") {
 		t.Fatalf("result = %+v", result)
 	}
@@ -57,7 +57,7 @@ func TestOpenAIDecisionsPreservesPrototypeSensitiveQuestionIDs(t *testing.T) {
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
 	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{
 		State: json.RawMessage(`{}`), Questions: []ClassifierQuestion{{Name: "__proto__", Type: "bool"}},
-	}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret"}})
+	}, &ClassifierOptions{APIKey: "secret"})
 	encoded, err := MarshalJSON(result)
 	if err != nil {
 		t.Fatal(err)
@@ -76,7 +76,7 @@ func TestOpenAIDecisionsPreservesEmptyProbabilityValue(t *testing.T) {
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
 	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{
 		State: json.RawMessage(`{}`), Questions: []ClassifierQuestion{{Name: "category", Type: "choice"}},
-	}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret"}})
+	}, &ClassifierOptions{APIKey: "secret"})
 	if result.StopReason != ClassifierStopStop || result.Answers["category"].Probabilities[""] != 1 {
 		t.Fatalf("result = %+v", result)
 	}
@@ -90,7 +90,7 @@ func TestOpenAIDecisionsAcceptsEmptyChoiceValue(t *testing.T) {
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
 	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{
 		State: json.RawMessage(`{}`), Questions: []ClassifierQuestion{{Name: "category", Type: "choice"}},
-	}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret"}})
+	}, &ClassifierOptions{APIKey: "secret"})
 	if result.StopReason != ClassifierStopStop || result.Answers["category"].Choice != "" {
 		t.Fatalf("result = %+v", result)
 	}
@@ -104,7 +104,7 @@ func TestOpenAIDecisionsRejectsNullRequiredNumber(t *testing.T) {
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
 	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{
 		State: json.RawMessage(`{}`), Questions: []ClassifierQuestion{{Name: "category", Type: "choice"}},
-	}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret"}})
+	}, &ClassifierOptions{APIKey: "secret"})
 	if result.StopReason != ClassifierStopError || result.ErrorMessage == nil || !strings.Contains(*result.ErrorMessage, "invalid confidence for category") {
 		t.Fatalf("result = %+v", result)
 	}
@@ -124,7 +124,7 @@ func TestOpenAIDecisionsRetriesOtherServerErrors(t *testing.T) {
 	}))
 	defer server.Close()
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
-	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret"}})
+	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{APIKey: "secret"})
 	if len(requests) != 2 || result.StopReason != ClassifierStopStop {
 		t.Fatalf("requests = %d; result = %+v", len(requests), result)
 	}
@@ -137,9 +137,9 @@ func TestOpenAIDecisionsUsesLongContextPricing(t *testing.T) {
 	defer server.Close()
 	model := &Model{
 		ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier",
-		Input: []string{"text"}, Cost: ModelCost{ModelCostRates: ModelCostRates{Input: 0.1}, Tiers: []ModelCostTier{{ModelCostRates: ModelCostRates{Input: 0.2}, InputTokensAbove: 272000}}},
+		Input: []string{"text"}, Cost: ModelCost{ModelCostRates: ModelCostRates{Input: 0.1}, Tiers: []ModelCostTier{{Input: 0.2, InputTokensAbove: 272000}}},
 	}
-	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret"}})
+	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{APIKey: "secret"})
 	if result.StopReason != ClassifierStopStop || result.Usage == nil || math.Abs(result.Usage.Cost.Total-0.06) > 1e-12 {
 		t.Fatalf("result usage = %+v; result = %+v", result.Usage, result)
 	}
@@ -171,7 +171,7 @@ func TestOpenAIDecisionsSerializesImagesWithState(t *testing.T) {
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text", "image"}}
 	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{
 		State: json.RawMessage(`{"text":"hi"}`), Images: []ImageContent{{Data: "aW1hZ2U=", MimeType: "image/png"}, {Data: "aW1hZ2U=", MimeType: "image/jpeg"}},
-	}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret"}})
+	}, &ClassifierOptions{APIKey: "secret"})
 	if result.StopReason != ClassifierStopStop {
 		t.Fatalf("result = %+v", result)
 	}
@@ -187,7 +187,7 @@ func TestOpenAIDecisionsDoesNotRetryGatewayTimeout(t *testing.T) {
 	}))
 	defer server.Close()
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
-	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret"}})
+	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{APIKey: "secret"})
 	if len(requests) != 1 {
 		t.Fatalf("requests = %d, want one", len(requests))
 	}
@@ -217,7 +217,7 @@ func TestOpenAIDecisionsStringifiesEmptyStringStateWithImages(t *testing.T) {
 	}))
 	defer server.Close()
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text", "image"}}
-	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`""`), Images: []ImageContent{{}}}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret"}})
+	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`""`), Images: []ImageContent{{}}}, &ClassifierOptions{APIKey: "secret"})
 	if result.StopReason != ClassifierStopStop {
 		t.Fatalf("result = %+v", result)
 	}
@@ -261,7 +261,7 @@ func TestOpenAIDecisionsStringifiesStateNumbersLikeJavaScript(t *testing.T) {
 	defer server.Close()
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
 	state := json.RawMessage(`{"float":1.0,"negativeZero":-0}`)
-	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: state}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret"}})
+	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: state}, &ClassifierOptions{APIKey: "secret"})
 	if result.StopReason != ClassifierStopStop {
 		t.Fatalf("result = %+v", result)
 	}
@@ -282,7 +282,7 @@ func TestOpenAIDecisionsStringifiesNonObjectJSONState(t *testing.T) {
 	}))
 	defer server.Close()
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
-	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`["x"]`)}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret"}})
+	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`["x"]`)}, &ClassifierOptions{APIKey: "secret"})
 	if result.StopReason != ClassifierStopStop {
 		t.Fatalf("result = %+v", result)
 	}
@@ -303,7 +303,7 @@ func TestOpenAIDecisionsAcceptsWhitespaceAroundJSONState(t *testing.T) {
 	}))
 	defer server.Close()
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
-	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(" \n { \"text\": 1 }  ")}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret"}})
+	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(" \n { \"text\": 1 }  ")}, &ClassifierOptions{APIKey: "secret"})
 	if result.StopReason != ClassifierStopStop {
 		t.Fatalf("result = %+v", result)
 	}
@@ -317,10 +317,9 @@ func TestOpenAIDecisionsRejectsInvalidPayloadTransformBeforeRequest(t *testing.T
 	}))
 	defer server.Close()
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
-	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{StreamOptions: StreamOptions{
+	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{
 		APIKey:    "secret",
-		OnPayload: func(json.RawMessage, *Model) json.RawMessage { return json.RawMessage(`{`) },
-	}})
+		OnPayload: func(json.RawMessage, *Model) json.RawMessage { return json.RawMessage(`{`) }})
 	if result.StopReason != ClassifierStopError || result.ErrorMessage == nil || len(requests) != 0 {
 		t.Fatalf("result = %+v, requests = %d", result, len(requests))
 	}
@@ -334,7 +333,7 @@ func TestOpenAIDecisionsIgnoresNonObjectAnswerEntries(t *testing.T) {
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
 	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{
 		State: json.RawMessage(`{}`), Questions: []ClassifierQuestion{{Name: "approved", Type: "bool"}},
-	}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret"}})
+	}, &ClassifierOptions{APIKey: "secret"})
 	if result.StopReason != ClassifierStopError || result.ErrorMessage == nil || *result.ErrorMessage != "OpenAI Decisions did not return an answer for approved" {
 		t.Fatalf("result = %+v", result)
 	}
@@ -346,10 +345,9 @@ func TestOpenAIDecisionsConvertsResponseHookPanicsToErrorResults(t *testing.T) {
 	}))
 	defer server.Close()
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
-	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{StreamOptions: StreamOptions{
+	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{
 		APIKey:     "secret",
-		OnResponse: func(ProviderResponse, *Model) { panic("response hook failed") },
-	}})
+		OnResponse: func(ProviderResponse, *Model) { panic("response hook failed") }})
 	if result.StopReason != ClassifierStopError || result.ErrorMessage == nil || !strings.Contains(*result.ErrorMessage, "response hook failed") {
 		t.Fatalf("result = %+v", result)
 	}
@@ -377,7 +375,7 @@ func TestModelsClassifyAppliesResolvedAuthAndHeaderTransform(t *testing.T) {
 	models.SetProvider(provider)
 	result := models.Classify(model, ClassifierContext{
 		State: json.RawMessage(`{}`), Questions: []ClassifierQuestion{{Name: "approved", Type: "bool"}},
-	}, &ModelsClassifierOptions{ClassifierOptions: ClassifierOptions{StreamOptions: StreamOptions{
+	}, &ModelsClassifierOptions{
 		APIKey: "explicit",
 		TransformHeaders: func(headers ProviderHeaders) ProviderHeaders {
 			if headers == nil {
@@ -389,8 +387,7 @@ func TestModelsClassifyAppliesResolvedAuthAndHeaderTransform(t *testing.T) {
 		},
 		OnResponse: func(response ProviderResponse, _ *Model) {
 			responseCalled = response.Status == http.StatusOK && response.Headers["content-type"] == "application/json"
-		},
-	}}})
+		}})
 	if result.StopReason != ClassifierStopStop || !responseCalled {
 		t.Fatalf("result = %+v; response callback = %v", result, responseCalled)
 	}
@@ -455,7 +452,7 @@ func TestOpenAIDecisionsMapsQuestionVariantsAndPricesUsage(t *testing.T) {
 			{Name: "approved", Type: "bool", Instructions: "Does the user approve?", BoolCriteria: ClassifierBoolCriteria{True: "yes", False: "no"}},
 		},
 	}
-	result := (OpenAIDecisions{}).Classify(model, classifierContext, &ClassifierOptions{StreamOptions: StreamOptions{Ctx: context.Background(), APIKey: "secret"}})
+	result := (OpenAIDecisions{}).Classify(model, classifierContext, &ClassifierOptions{Ctx: context.Background(), APIKey: "secret"})
 	if result.StopReason != ClassifierStopStop {
 		t.Fatalf("result = %+v", result)
 	}
@@ -522,7 +519,7 @@ func TestOpenAIDecisionsTimeoutCoversResponseBody(t *testing.T) {
 	idleTimeout := 2000
 	start := time.Now()
 	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{
-		StreamOptions: StreamOptions{APIKey: "synthetic", MaxRetries: &zeroRetries, TimeoutMs: &timeout, HTTPIdleTimeoutMs: &idleTimeout},
+		APIKey: "synthetic", MaxRetries: &zeroRetries, TimeoutMs: &timeout, HTTPIdleTimeoutMs: &idleTimeout,
 	})
 	if result.StopReason != ClassifierStopError || result.ErrorMessage == nil ||
 		!strings.Contains(*result.ErrorMessage, "timed out after 100ms") {

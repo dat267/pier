@@ -18,14 +18,14 @@ var (
 
 func BenchmarkLexMarkdownProse(b *testing.B) {
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = markdown.Lex(benchProse)
 	}
 }
 
 func BenchmarkLexMarkdownMixed(b *testing.B) {
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = markdown.Lex(benchMixed)
 	}
 }

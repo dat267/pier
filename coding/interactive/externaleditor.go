@@ -99,8 +99,7 @@ func EditInExternalEditor(options ExternalEditorOptions) ExternalEditorResult {
 
 // externalEditorFailureMessage matches upstream's launch/exit messages.
 func externalEditorFailureMessage(err error, command string) string {
-	var exitError *exec.ExitError
-	if errors.As(err, &exitError) {
+	if exitError, ok := errors.AsType[*exec.ExitError](err); ok {
 		if code := exitError.ExitCode(); code >= 0 {
 			return fmt.Sprintf("External editor exited with code %d; prompt unchanged", code)
 		}

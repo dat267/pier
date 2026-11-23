@@ -396,7 +396,7 @@ func TestAnthropicMessageThreadsFollowCompatOnProxyEndpoints(t *testing.T) {
 func TestAnthropicMessageThreadsStateIsBounded(t *testing.T) {
 	ResetAnthropicMessageThreads("")
 	t.Cleanup(func() { ResetAnthropicMessageThreads("") })
-	for index := 0; index < maxAnthropicThreadStateEntries+2; index++ {
+	for index := range maxAnthropicThreadStateEntries + 2 {
 		setAnthropicThreadState(fmt.Sprintf("thread-bound-%d", index), &anthropicThreadEntry{prefixCount: index})
 	}
 	anthropicThreadMu.Lock()

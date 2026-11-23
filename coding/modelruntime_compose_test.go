@@ -1,7 +1,6 @@
 package coding
 
 import (
-	"context"
 	ctxpkg "context"
 	"errors"
 	"github.com/dat267/pier/ai"
@@ -656,7 +655,7 @@ func TestCreateModelRuntimeClampsLargeRefreshTimeoutLikeNode(t *testing.T) {
 	}))
 	defer server.Close()
 
-	parent, cancel := context.WithCancel(context.Background())
+	parent, cancel := ctxpkg.WithCancel(ctxpkg.Background())
 	defer cancel()
 	timeoutMS := int64(2_147_483_648) // Node setTimeout clamps this to 1ms.
 	credentials := newMemoryCredentialStore()

@@ -20,7 +20,7 @@ func TestSuspendReleasesItsWaiterWhenTheSignalFails(t *testing.T) {
 	suspendProcessGroup = func() error { return errors.New("cannot suspend") }
 
 	before := runtime.NumGoroutine()
-	for i := 0; i < 16; i++ {
+	for range 16 {
 		suspendProcess(nil)
 	}
 	deadline := time.Now().Add(5 * time.Second)

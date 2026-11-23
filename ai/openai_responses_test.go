@@ -431,7 +431,7 @@ func TestResponsesSendsHyphenatedSessionAffinityHeader(t *testing.T) {
 	model.Compat = &ModelCompat{OpenAIResponses: &OpenAIResponsesCompat{SessionAffinityFormat: &format}}
 	stream := StreamOpenAIResponses(model, TranscriptContext{Messages: []Message{
 		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
-	}}, &OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "sk-test", SessionID: "sess-1"}})
+	}}, &OpenAIResponsesOptions{APIKey: "sk-test", SessionID: "sess-1"})
 	if _, err := stream.Result(context.Background()); err != nil {
 		t.Fatalf("stream: %v", err)
 	}

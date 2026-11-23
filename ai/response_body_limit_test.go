@@ -28,7 +28,7 @@ func TestOpenAIDecisionsRejectsOversizedResponseBody(t *testing.T) {
 	defer server.Close()
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
 	zero := 0
-	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret", MaxRetries: &zero}})
+	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{APIKey: "secret", MaxRetries: &zero})
 	if result.StopReason != ClassifierStopError || result.ErrorMessage == nil || !strings.Contains(*result.ErrorMessage, "size limit") {
 		t.Fatalf("oversized response accepted: %+v", result)
 	}
@@ -44,7 +44,7 @@ func TestOpenAIDecisionsAcceptsResponseBodyInsideTheLimit(t *testing.T) {
 	defer server.Close()
 	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
 	zero := 0
-	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret", MaxRetries: &zero}})
+	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{APIKey: "secret", MaxRetries: &zero})
 	if result.StopReason == ClassifierStopError {
 		t.Fatalf("in-limit response rejected: %v", *result.ErrorMessage)
 	}
@@ -63,7 +63,7 @@ func TestTypeSafeSystemOneRejectsOversizedResponseBody(t *testing.T) {
 		Input: []string{"text"},
 	}
 	zero := 0
-	result := (TypeSafeSystemOne{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{StreamOptions: StreamOptions{APIKey: "secret", MaxRetries: &zero}})
+	result := (TypeSafeSystemOne{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{APIKey: "secret", MaxRetries: &zero})
 	if result.StopReason != ClassifierStopError || result.ErrorMessage == nil || !strings.Contains(*result.ErrorMessage, "size limit") {
 		t.Fatalf("oversized response accepted: %+v", result)
 	}
