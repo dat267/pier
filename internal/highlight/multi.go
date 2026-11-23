@@ -861,7 +861,7 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 		var manualHit *manualRule
 		// With no manual rules the scan below only walks to regexAbs or the end
 		// of the input doing nothing, which is O(tail) per call: execScan calls
-		// it once per candidate (D531).
+		// it once per candidate (D536).
 		for p := search; len(m.manuals) > 0 && p < len(s); p++ {
 			if regexAbs >= 0 && p > regexAbs {
 				break
@@ -936,7 +936,7 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 
 // decideAt settles a submatcher at pos without its regexp when it can: rules
 // are tried in priority order, each by the exact walk (D523) or, failing
-// that, ruled out by its prefilter (D522). The first rule that matches wins,
+// that, ruled out by its prefilter (D523). The first rule that matches wins,
 // as it does in the anchored alternation. decided is false at the first rule
 // neither can settle, and the caller then runs the regexp.
 //

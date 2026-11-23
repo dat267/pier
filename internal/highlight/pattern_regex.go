@@ -71,7 +71,7 @@ func jsSpaceWidth(s string, i int) int {
 // terminators and `$` is a line end, so it holds when the leading whitespace
 // reaches the end of s or contains a line terminator. Hand-written because an
 // `\A`-anchored regexp with an unbounded `\s*` costs Go a pass over the
-// whole remainder per call (D526).
+// whole remainder per call (D521).
 func spaceToLineEnd(s string, jsLines bool) bool {
 	for i := 0; ; {
 		if i == len(s) || lineEndAt(s, i, jsLines) {

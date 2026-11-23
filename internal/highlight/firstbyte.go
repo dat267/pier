@@ -271,7 +271,7 @@ type prefilterWalk struct {
 // means it cannot. It follows literals, ASCII classes, alternations and
 // bounded single-character repetitions over the input, skips zero-width
 // assertions (dropping a condition only weakens the check), and answers true
-// for anything else, a non-ASCII byte, or a spent budget (D522).
+// for anything else, a non-ASCII byte, or a spent budget (D523).
 func mayMatchAt(re *syntax.Regexp, s string, pos int, ws *jsWorkspace) bool {
 	w := prefilterWalk{s: s, budget: prefilterBudget}
 	if ws != nil {

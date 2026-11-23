@@ -263,7 +263,7 @@ func TestZeroWidthLineStartRuleKeepsTheDispatch(t *testing.T) {
 // nearly every byte, which disabled the per-byte dispatch for the whole root
 // rule set and left autohotkey on the joined regexp at 4.8x the reference's
 // time. Marked ManualLineStart, they are tried at line starts only and the
-// dispatch stays on (D535). The HTML and relevance are highlight.js's.
+// dispatch stays on (D524). The HTML and relevance are highlight.js's.
 func TestLineStartManualKeepsTheDispatch(t *testing.T) {
 	lang, err := getCompiledLanguage("autohotkey")
 	if err != nil {
@@ -315,7 +315,7 @@ func TestLineStartRejectionsAreNotCounted(t *testing.T) {
 // gives basic the illegal `^.` (languages/basic.js), whose first bytes cover
 // nearly every byte and disabled the dispatch for basic's whole root rule set
 // (4.7x the reference's time). Past the table's cap, a `^`-led rule's bytes
-// stay out of the table and line starts are visited for it (D536). armasm's
+// stay out of the table and line starts are visited for it (D524). armasm's
 // `^[ \t]*` comment begin (languages/armasm.js, `^[ \t]*(?=#)`) is a prefix
 // rule served at line starts; its match used to be taken as empty, so the
 // lookahead guard read the indentation and an indented `#` comment was lost.

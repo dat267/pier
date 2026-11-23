@@ -5,7 +5,7 @@ func init() { RegisterLanguage("protobuf", Protobuf()) }
 // protobufEnumGuard is the reference's `(?=\s*=[^\n]+;$)` lookahead on the
 // enum-item relevance rule.
 //
-// Hand-written for the reason D526 and D529 give: an `\A`-anchored regexp with
+// Hand-written for the reason D521 gives: an `\A`-anchored regexp with
 // an unbounded `\s*` costs a full pass over the remaining input per call
 // (120 us on a 24 KiB tail), and this runs at every candidate.
 //

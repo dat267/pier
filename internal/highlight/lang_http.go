@@ -10,7 +10,7 @@ func init() { RegisterLanguage("http", HTTP()) }
 // The version and request guards are hand-written. An `\A`-anchored regexp that
 // Go cannot prefilter costs a full pass over the remaining input per call, and
 // these run at every candidate: measured 119 us and 121 us on a 24 KiB tail,
-// which is D526's defect in this language.
+// which is D521's defect in this language.
 var httpHeaderGuard = mustCompileJS(`\A:\s`)
 
 // httpVersionGuard ports `\AHTTP/(2|1\.[01]) \d{3}`: the version prefix, then a

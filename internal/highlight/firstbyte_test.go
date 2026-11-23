@@ -88,7 +88,7 @@ func TestMinMatchLenAndLeadingContext(t *testing.T) {
 }
 
 // mayMatchAt is a necessary condition: wherever a rule matches, it must answer
-// true, or the dispatch skips a real match (D522). The JavaScript corpus and
+// true, or the dispatch skips a real match (D523). The JavaScript corpus and
 // every compiled rule of every registered grammar supply the patterns; the
 // port's own regexes supply the matches.
 func TestMayMatchAtNeverRejectsAMatch(t *testing.T) {

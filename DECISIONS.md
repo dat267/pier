@@ -8746,75 +8746,40 @@ Test: `TestNestedQuoteKeepsTheLinesAfterARelexedList`.
 
 ### D521
 
-**Lookahead guards read only the text they test, and a default-end mode
-matches at its position only.**
+**Lookahead guards are anchored or hand-written, and read only the text they
+test.**
 
 Reference: pi v1.6.0 (`faac5858`) highlights with highlight.js 10.7.3, whose
-lookaheads are part of each rule's sticky regex in V8. The port evaluates them
-as guards after a candidate match, and two costs grew with the rest of the
-input on every candidate. `patternRegexp.MatchString` first scanned the whole
-tail for `\r`, U+2028 and U+2029 to choose its line semantics. That made
-REGEXP_MODE's guard, which runs on every `/`, quadratic. The
-`BeginFollowedBy`/`BeginNotFollowedBy` guards and the abnf, makefile and protobuf
-guards were also unanchored, so a failing one searched the rest of the input
-for a later match that `startsWith` then discarded. Second, a mode
-whose rules include the default end `\B|\b` (JavaScript's value container and
-the new REGEXP_MODE wrapper) cannot use per-byte dispatch, so each lookup ran
-the whole alternation unanchored over the tail.
+lookaheads are part of each rule's sticky regex in V8 and cost only the bytes
+they read. The port evaluates a lookahead as a guard after the candidate
+match. Unanchored, a failing guard searched the rest of the input for a later
+match that `startsWith` then discarded, and choosing the line semantics
+scanned the whole tail; anchored with `\A`, a pattern Go cannot prefilter
+(an unbounded `\s*` before `$`, `.*` before a literal) still costs a full pass
+over the remaining input per call, about 120 us on a 24 KiB tail. Either way
+the cost was per candidate, so the highlight was quadratic.
 
-Guards now take the document's line class, which the highlighter already
-derived (`MatchStringWS` with `m.jsLines`), and every guard is anchored with
-`\A`. A rule set holding `\B|\b` always matches at `lastIndex`, so
-`execAtLastIndex` tries the anchored alternation there only (with the real
-preceding rune for `\b` and `^`) and checks manual rules at the same index in
-rule order. Output is unchanged: the goldens, the relevance fixtures, two
-generated hljs differentials (18,000 inputs across 34 grammars, the same
-mismatch set before and after), the highlight fuzzers and
-`TestAtLastIndexMatchesTheScan` agree.
+Guards take the document's line class (`MatchStringWS` with `m.jsLines`) and
+are anchored. Those Go would still scan in full are hand-written over the same
+grammar: INI's dotted key (`scanIniKey`, `iniKeyGuard`), HTTP's version and
+request lines (`httpVersionGuard`, `httpRequestGuard`, which read the current
+line only, since `$` is a line end under the m flag), mipsasm's `(?!\s*$)`,
+protobuf's `(?=\s*=[^\n]+;$)` and shell's `(?=\s*$)` (`spaceToLineEnd`). They
+share one JavaScript `\s` scanner (`skipJSSpace`, `jsSpaceWidth`), which
+covers U+00A0, U+1680, U+2000-200A, U+2028, U+2029, U+202F, U+205F, U+3000 and
+U+FEFF as JavaScript's `\s` does. A mode whose rules include the default end
+`\B|\b` always matches at `lastIndex`, so `execAtLastIndex` tries the anchored
+alternation there only.
 
-On `BenchmarkHighlightRegexHeavyJavaScript` (27 KiB, Intel N150) the port went
-from 94.2 ms to 22.4 ms; the pinned hljs measured 24.7 ms on the same string
-(warmed `hljs.highlight(..., {language: "javascript", ignoreIllegals: true})`).
-The first 30 KB of `pi/node_modules/marked/lib/marked.esm.js` went from 48.9 ms
-to 20.5 ms (hljs 25.7 ms). A per-rule prefilter that walked each rule's syntax
-tree before the dispatch's regex call was tried and dropped: it saved 8% on
-TypeScript but cost 5-20% on JavaScript and JSON, because it zeroed a fixed
-arena on every call. D522 keeps a reworked version. TypeScript remains slower
-than the reference (see `TODO.md`).
+Measured against the reference on the same input (Intel N150): the 27 KiB
+`BenchmarkHighlightRegexHeavyJavaScript` 94.2 to 22.4 ms (hljs 24.7); a 24 KiB
+INI file 113 to 4.8 ms and linear (hljs 16.1); each HTTP, mipsasm and protobuf
+guard 120 us to 2-5 ns on a 24 KiB tail; shell's sample, with D536, 2.27x to
+0.98x of hljs.
 
-Tests: `TestAtLastIndexMatchesTheScan`, `BenchmarkHighlightRegexHeavyJavaScript`.
-
-### D522
-
-**The dispatch skips a submatcher's regex where no rule can match.**
-
-Reference: pi v1.6.0 (`faac5858`) highlights with highlight.js 10.7.3, whose
-sticky alternation fails a rule within the few bytes that rule reads. In the
-port each failed dispatch candidate still pays Go's regex setup: on the first
-30 KB of `pi/packages/coding-agent/src/core/agent-session.ts` as TypeScript,
-86% of 18,762 submatcher calls failed. Most were the method-definition rule
-`[a-zA-Z_]\w*\([^()]*...\)\s*\{` on an identifier not followed by `(` and
-the comment's phrasal-words alternation.
-
-`mayMatchAt` walks a rule's parsed syntax tree over the input as a necessary
-condition. It follows literals, ASCII classes, alternations and bounded class
-runs, and answers "may match" for any other node, a non-ASCII byte or a spent
-step budget. The dispatch calls the regex only if some rule in the submatcher
-may match; otherwise the candidate counts as rejected, exactly as a failed
-call did for the D351 budget. A rule whose walk could check only its first
-byte, which the dispatch already matched, gets no prefilter. The walk's
-continuation list lives in the highlight's workspace and is reused without
-zeroing; a first version that zeroed a fixed arena per call cost 5-20% on
-JavaScript and JSON and was dropped.
-
-Paired runs of the same binaries, alternated five times (Intel N150): the
-TypeScript file went from 19.7 ms to 15.7 ms (hljs 9.9 ms); the first 30 KB of
-marked from 20.6 ms to 19.8 ms; `BenchmarkHighlightJSONDocument`,
-`BenchmarkHighlightGo` and a Markdown README moved within 1.5%. TypeScript
-remains slower than the reference (see `TODO.md`). Output is unchanged on the
-goldens, the hljs differentials and the fuzzers.
-
-Tests: `TestMayMatchAtNeverRejectsAMatch`.
+Tests: `TestAtLastIndexMatchesTheScan`, `TestIniDottedKeyScan`,
+`TestHTTPGuards`, `TestAnchoredSpaceGuards`,
+`TestAnchoredSpaceGuardsUseLineEnds`, `BenchmarkHighlightRegexHeavyJavaScript`.
 
 ### D523
 
@@ -8822,652 +8787,95 @@ Tests: `TestMayMatchAtNeverRejectsAMatch`.
 
 Reference: pi v1.6.0 (`faac5858`) highlights with highlight.js 10.7.3, whose
 rules are alternatives of one sticky regex that V8 runs natively. The port's
-per-byte dispatch (D521, D522) still called Go's regexp for every candidate
-the prefilter admitted, about 1 µs a call; on the TypeScript workload of
-`TODO.md` 58% of those calls had only rules built from literals, classes,
-alternations, captures, word boundaries and repetitions.
+per-byte dispatch called Go's regexp for every candidate, about 1 us a call,
+and most candidates fail.
 
-`matchExactAt` walks such a rule over the input in priority order and returns
-the leftmost-first match RE2 returns, or "unknown". It reads `\b` and `\B`
-from the real neighbouring bytes, and it repeats a subexpression only when
-every iteration consumes input, where backtracking and RE2 agree. Line
-anchors, the dot (both carry JavaScript line semantics), `\A`, counted
-repetition of a subexpression and a spent 512-step budget are unknown. The
-dispatch tries the submatcher's rules in order: a match wins, a no-match moves
-on, and the first rule neither the walk nor its prefilter can settle sends
-the position to the regexp as before. A rule whose groups a callback reads is
-never walked. A lazy run extends one rune at a time; scanning it to its end
-first made Markdown's `(?s:.*?)` read the rest of the document at each call.
+`matchExactAt` walks a rule over the input in priority order and returns the
+leftmost-first match RE2 returns, or "unknown", which sends the position to
+the regexp as before. It covers literals, classes, alternations, captures,
+word boundaries, repetitions, `^`, `$` and the dot (JavaScript's four line
+terminators when the input has `\r`, U+2028 or U+2029, `\n` alone otherwise),
+and charges every step, greedy scans included, to a 512-step budget, so a walk
+is O(1). Its costs are kept low by:
 
-Paired runs of the same binaries, alternated five times (Intel N150), before
-and after: the TypeScript file 15.7 ms to 12.1 ms (hljs 9.9 ms); the first
-30 KB of marked 19.6 ms to 15.8 ms; `BenchmarkHighlightRegexHeavyJavaScript`
-21.5 ms to 18.0 ms; `BenchmarkHighlightJSONDocument` 2.60 ms to 1.99 ms;
-`BenchmarkHighlightGo` 1.49 ms to 1.42 ms; a Markdown README 5.41 ms both
-ways. Output is unchanged on the goldens, the hljs differentials and the
-fuzzers.
+- a node type holding, for a one-rune node, an ASCII bitmap, so a run whose
+  body matches only ASCII is scanned byte by byte;
+- folding an ASCII literal pair by a case bit flip, keeping
+  `unicode.SimpleFold` for the pairs it relates above ASCII (U+212A with `k`,
+  U+017F with `s`);
+- per-byte lists of the alternatives of a long alternation that can begin with
+  the next byte (a folded literal adds its whole fold orbit);
+- recording capture groups, so a rule whose groups a callback reads needs no
+  regexp, and walking each mode's end regex in `endOfMode`;
+- `mayMatchAt`, a necessary-condition prefilter for the rules the walk cannot
+  settle.
 
-The walk also settles the alternation a mode with an empty end (`\B|\b`)
-anchors at the current position (`execAtLastIndex`), which on TypeScript was
-16% of the profile after the dispatch change. It could not at first, because
-every end rule kept its capture groups. Only `OnEnd` reads an end match's
-groups (highlight.js `END_SAME_AS_BEGIN` compares group 1, and `on:end` runs
-for whichever end match closes a mode, through any parent it is used under),
-so end rules now keep their groups only in a language with an `OnEnd`
-anywhere in its mode tree. Against the dispatch change alone, same method:
-TypeScript 12.0 ms to 10.5 ms, marked 15.9 ms to 11.6 ms,
-`BenchmarkHighlightRegexHeavyJavaScript` 17.9 ms to 12.9 ms,
-`BenchmarkHighlightJSONDocument` 2.05 ms to 1.74 ms, `BenchmarkHighlightGo`
-1.43 ms to 1.38 ms, Markdown unchanged.
+End rules keep their groups only when the mode, or the parent it ends with,
+has `OnEnd`, the only reader of an end match's groups (`END_SAME_AS_BEGIN`).
 
-Each walked rule is then compiled into its own node type that holds, for a
-one-rune node, a bitmap of the ASCII bytes it matches, so most class and
-literal tests are one bit test instead of a rune decode and a range scan
-(which had been 8% of the TypeScript profile). Same method: TypeScript 10.5 ms
-to 9.7 ms, now faster than the reference's 9.9 ms (19.9 ms before D522),
-marked 11.6 ms to 11.3 ms, `BenchmarkHighlightJSONDocument` 1.74 ms to
-1.69 ms, `BenchmarkHighlightGo` 1.38 ms to 1.34 ms, Markdown unchanged (10
-paired rounds).
+Same method on the same inputs: TypeScript 19.7 to 9.7 ms (hljs 9.9), marked
+20.6 to 11.3 ms, C++ 10.96 to 10.02 ms, pgsql 4.18x to 1.26x of hljs, vbscript
+3.56x to 0.76x, sas 2.50x to 0.61x, Python 7.7 to 4.0 ms (hljs 4.5). Measured
+and closed: a required-literal mask or per-candidate literal search (quadratic,
+or 0.3%), memoising `(rule, pos)` (2% duplicates), the prefilter before the
+walk, per-branch early rejection, and a lock-free `subMatcher`.
 
-The walk then takes `^`, `$` and the dot, with the regexp's line semantics:
-JavaScript's four terminators when the input has `\r`, U+2028 or U+2029
-(`nonLFLineEnds`), `\n` alone otherwise. A rule that is only `$` (a line
-comment's end) gets the terminators' first bytes and an empty match at the
-end of the input, where no other kind of rule can match, so its mode
-dispatches instead of running the joined alternation's NFA over the rest of
-the input. This also recovers what counting only regexp rejections (D351)
-had cost: Python's decorator rule `^[\t ]*@` begins at every space, and once
-those rejections stopped ending the scan, the prefilter walked each
-indentation run at every space. Against that commit, same method: Go
-(`BenchmarkHighlightGo`) 1.38 ms to 0.90 ms and the real Go file 0.99 ms to
-0.35 ms, Markdown 5.46 ms to 4.86 ms, TypeScript 9.85 ms to 9.47 ms,
-`BenchmarkHighlightRegexHeavyJavaScript` 12.7 ms to 11.7 ms, JSON and the
-rejected run unchanged; on 30 KB samples Python 7.7 ms to 4.0 ms (highlight.js
-4.5 ms) and Rust 6.4 ms to 3.2 ms (4.1 ms). The ten samples, and their CRLF
-and U+2028 variants, render byte for byte as highlight.js does.
-
-A rule whose groups a callback reads now has a walk too: its "no match" is
-the regexp's, and only a match goes to the regexp for the groups. In a
-language with an `OnEnd`, an end rule keeps its groups only when its mode has
-`OnEnd` or ends with its parent, since `endOfMode` runs on:end only along that
-chain (a mode with several parents is assumed to have one that reads them).
-On 30 KB samples, same method: LaTeX 259 ms to 123 ms (most of both was the
-loop spinning at the input's end until the iteration cap, since fixed; 6.7 ms
-after that fix, against highlight.js's 10.4 ms), C 5.8 ms to 5.0 ms, C++ 21.5 ms to 19.8 ms, Ruby 5.3 ms to 4.8 ms; the paired
-benchmarks are unchanged, and the C++, bash, Ruby, LaTeX and Perl samples
-render as highlight.js does.
-
-Tests: `TestExactWalkMatchesTheRegexp`,
-`TestEndRulesKeepGroupsOnlyWhereOnEndReadsThem`.
+Tests: `TestExactWalkMatchesTheRegexp`, `TestExactWalkCapturesMatchTheRegexp`,
+`TestEndRulesKeepGroupsOnlyWhereOnEndReadsThem`,
+`TestExactRunFastPathMatchesTheRegexp`, `TestExactRunFastPathRespectsJSLines`,
+`TestExactWalkLiteralASCIIPath`, `TestExactLiteralASCIIFold`,
+`TestMayMatchAtNeverRejectsAMatch`.
 
 ### D524
 
-**A bare `^` rule keeps its rule set on the per-byte dispatch.**
-
-Reference: pi v1.6.0 (`faac5858`) compiles every rule with the `m` flag and
-runs a mode's rules as one sticky-regex alternation, so a bare `^` rule is
-just another alternative and costs nothing at a position it cannot match.
-The port's dispatch (D521-D523) needs a first-byte set per rule, and `^`
-matches empty, so `ruleFirstByteSet` returned no set for it. One such rule
-turned `usable` false and disabled the dispatch for the whole rule set:
-markdown's root matcher had 22 rules, one of them the bare `^` of the setext
-variant, and every node then paid a joined NFA scan over the rest of the
-document. Measured on a 4 KB README: 124 scans covering 252 KiB, 76% of the
-profile inside `regexp.FindStringSubmatchIndex`, 5.30 ms.
-
-The rule now contributes no candidate byte but is recorded, and
-`execDispatch` also considers line starts (`nextLineStart`: position 0 and the
-byte after each terminator, `\r\n` counting as a line end at both offsets,
-which is what the reference's `^` does). A line-start candidate is compared
-with a first-byte candidate and the earlier position wins; an empty `^` match
-competes with a non-empty match at the same offset by rule order, and with
-`endOfInputMatch` at the end of the input. The dispatch stays enabled, so
-markdown's root matcher dispatches instead of scanning.
-
-Same method, repeated runs (Intel N150): the 4 KB README 5.30 ms to 0.68-0.73
-ms, against highlight.js's 0.70-0.72 ms on the same emitter and input, so the
-two are now at parity on this file (before the change the port was about 7x
-slower). C++ (14.2 ms against 10.3 ms) and Java
-(11.5 ms against 6.7 ms) are unchanged by this: they never take the joined
-scan, and their cost is the exact walk (`exactWalk.seq`/`either`, 71% of a C++
-profile). Output is unchanged on the
-goldens, the differentials, the fuzzers, LF/CRLF/U+2028 line ends, and on 4 KB
-README plus 30 KB C++ and Java samples rendered against highlight.js byte for
-byte.
-
-A required-literal prefilter for that walk was designed, implemented, tested
-and dropped. `requiredLiteral` reported a literal every match must contain (a
-folded literal is unusable, because `strings.Contains` is case-sensitive, and
-a part that can match empty cannot be relied on), and `decideAt` rejected a
-rule whose literal was absent. It is sound: the
-literal must be one every match contains, so its absence rules the rule out.
-But the search is over the remaining input at every candidate, which is the
-quadratic shape D351 exists to prevent: the
-whole-tail scan took C++ from 14.4 ms to 62.1 ms. The rules it rejects are
-rejected today for O(1) by the walk itself, which is also not the bottleneck
-per call: on `\b(?:return|throw|else|new)` the walk answers in 1.4 ms where the
-regexp takes 2.86 s for the same positions, so walking is the cheap path and
-there is no cheaper correct rejection left to add.
-
-Three further routes were measured and closed on the same 30 KB C++ and Java
-samples:
-
-- **A whole-document mask**, computing each rule's required literal once per
-  highlight and skipping the rule when it is absent: sound and cheap, worth
-  0.3% (14.18 to 14.14 ms). Dropping one rule of ten from one submatcher
-  barely moves 97,291 walks.
-- **The prefilter run before the walk** instead of after the walk fails to
-  decide: dearer than the walk it saves, 14.4 to 18.3 ms.
-- **Removing the walk for C++**, the "the walk is the problem" hypothesis:
-  disabling it is 2.4x slower, 14.5 to 35.0 ms, because the regexp fallback
-  costs far more. The walk is a net win of about 20 ms on this file, so no
-  change that reduces walks can help.
-
-The walk is also neither quadratic nor allocating: `run` is linear in the run
-(2 steps per byte at 1,000, 2,000 and 4,000 bytes), a full document pass of
-the hot C++ rule allocates nothing, and one settled rule costs about 76 ns.
-
-Five more routes were then measured and closed, which between them rule out
-the whole "make the walk cheaper" direction:
-
-- **Per-branch early rejection inside an alternation** (`alternativeStartsAt`,
-  skipping a branch whose first rune cannot match): Java 11.5 to 13.1 ms,
-  C++ 14.3 to 23.4 ms. The extra `exactOne` per branch costs more than the
-  continuation and `seq` call it saves.
-- **Memoising `(rule, pos)` outcomes within one highlight**: measured first,
-  and pointless. Java walks 26,304 distinct rule-position pairs and only 576
-  are duplicates, a 2% ratio, so there is nothing to reuse.
-- **A lock-free `subMatcher`** via `atomic.Pointer` instead of the mutex: C++
-  14.20 to 14.21 ms, no change. The mutex is uncontended and its cost is
-  already noise.
-- **The walk's step distribution** explains why none of this moves: of C++'s
-  97,291 walks, 46,669 finish within 1-2 steps, 27,435 within 3-8 and 19,411
-  within 9-32; only 3,776 read further. Rejections are already shallow, so
-  the cost is the number of calls, not their depth, and every call is needed
-  (a memo finds 2% duplicates).
-- **The walk never falls back**: 0 of Java's 26,880 and 0 of C++'s 97,291
-  walks return "unknown", so the regexp is never paid after a walk. That is
-  the property that makes the walk a win, and it leaves no cheap rejection to
-  add ahead of it.
-
-Two more, closing the "share work inside the walk" idea:
-
-- **One alternation walk per submatcher** instead of one call per rule:
-  measured 2% (2.79 to 2.73 ms on the three hot C++ rules). Working out which
-  alternative won, and carrying its groups, costs what the merged calls save.
-- **Reusing a continuation within a walk**: 729,417 pushes and **0**
-  within-walk duplicates, so every push is distinct and the 7.6% of profile
-  `push` spends is irreducible.
-
-One change did land. Of C++'s 741,217 walk steps, 246,856 are literal
-comparisons, and each rune of a literal went through
-`utf8.DecodeRuneInString` even when both sides are ASCII. A byte compare when
-the rule's rune is ASCII and the literal is not folded (the folded case still
-needs `exactLiteral`, which folds both sides) gives C++ 14.1 to 13.70 ms, Java
-11.36 to 11.03 and markdown 0.55 to 0.53. The walk still agrees with the
-regexp on every boundary case, pinned by `TestExactWalkLiteralASCIIPath`.
-
-Two further attempts were measured and reverted. Skipping a greedy `Quest`'s
-body when its leading node cannot match was unsound for a body whose leading
-node is a capture (subunit's golden changed), and it was slower besides (C++
-13.70 to 13.92 ms). Giving `ws.exact` an initial capacity of 32 continuations
-to avoid the first push's allocation measured -0.2% over nine interleaved
-pairs with 6 wins in 9, which is noise; the slice reuse already avoids
-per-walk allocation.
-
-C++ (13.7 ms against 11.2-11.4) and Java (11.0 against 7.4) therefore sit
-at a cost the current design pays per candidate by construction: 97,291
-distinct walks for C++, half rejecting within 1-2 steps, none reusable, none
-duplicable, none falling back. Every local route is measured and closed, so what remains is a
-different dispatch structure rather than another prefilter or a
-micro-optimisation of the walk.
-
-Test: `TestBeginLineRuleKeepsTheDispatch`.
-
-### D525
-
-**A run whose body matches only ASCII is scanned byte by byte.**
-
-Reference: pi v1.6.0 (`faac5858`) leaves a repeated class to V8's compiled
-sticky regex, which matches ASCII classes without decoding a rune per byte. The
-port's exact walk (D523) called `exactOne` for every byte of a run, and
-`exactOne` dominated a C++ profile at 22.75% flat. An identifier or
-word-character run is the common case in most languages.
-
-`exactNode.asciiOnly` now records whether a one-rune node matches no rune at or
-above `utf8.RuneSelf` (`matchesAboveASCII`: false for a literal and for a class
-whose ranges end below it, true for the dot and for a class that reaches past
-it). A repetition whose body is ASCII-only scans the run against the node's
-bitmap instead of decoding each byte, still charging one budget step per byte so
-a walk stays O(exactBudget) (D351). A byte at or above `utf8.RuneSelf` ends the
-scan and falls back to the decoding path for that position, so the bitmap only
-ever decides ASCII.
-
-Same method on 24 KiB samples: C++ 10.96 to 10.02 ms, Java 9.15 to 8.69, R 8.34
-to 7.94 (the earlier R figure came from a 1 KiB file); 106 of 191 languages
-improved and the geometric mean
-across the suite moved 1.17% lower, with no language regressing by more than
-noise. Output is unchanged: every golden, the differentials, a 40 s fuzz run,
-and 4 KB markdown plus 30 KB C++ and Java samples byte for byte against the
-reference.
-
-The `jsLines` condition on the path is defence, not a live case: only the dot
-takes JavaScript's extra line terminators and the dot is never ASCII-only,
-checked across the 61,408 walk programs of every registered language.
-
-Tests: `TestExactRunFastPathMatchesTheRegexp`,
-`TestExactRunFastPathRespectsJSLines`.
-
-### D526
-
-**INI's dotted-key scan is hand-written, not an anchored regexp.**
-
-Reference: pi v1.6.0 (`faac5858`) uses the lookahead
-`([A-Za-z0-9_-]+|"(\\"|[^"])*"|'[^']*')(\s*\.\s*...)*` followed by
-`(?=\s*=\s*[^#\s])` (languages/ini.js), which V8 compiles and the reference
-runs at every key byte. The port ran the same expressions through Go's `regexp`
-with an `\A` prefix, and a pattern that cannot be prefixed costs a full pass
-over the remaining subject per call: measured 2.49 ms for one key scan on a
-24 KiB subject, and the mode is tried at every key byte. A 24 KiB INI file took
-113 ms, quadratic (3 KB 2.18 ms, 6 KB 7.79, 12 KB 29.29) where the reference was
-linear at 16 ms.
-
-`scanIniKey` and `iniKeyGuard` walk the same grammar byte by byte instead: a
-segment is `[A-Za-z0-9_-]+` or a terminated quoted string, the dotted part
-repeats `\s* . \s*` followed by a segment and backtracks to the shorter match
-when that segment fails, as the star does, and the guard skips `\s*`, takes
-`=`, skips `\s*` and needs a character that is neither `#` nor whitespace.
-JavaScript's `\s` is not ASCII-only, so `iniSpaceAt` covers U+00A0, U+1680,
-U+2000-200A, U+2028, U+2029, U+202F, U+205F, U+3000 and U+FEFF; a byte-only scan
-loses the attribute for `key\u00a0= true`, which the test now pins.
-
-Same method: the 24 KiB file 113 to 4.81 ms and linear (3 KB 0.52, 6 KB 1.04,
-12 KB 2.17), against the reference's 16.13 ms, so 10.89x slower became 3.4x
-faster. Output is unchanged: the goldens, the differentials and a 116,729-byte
-INI render byte for byte against the reference.
-
-Test: `TestIniDottedKeyScan`.
-
-### D527
-
-**An ASCII literal pair folds by a case bit flip, not `unicode.SimpleFold`.**
-
-Reference: pi v1.6.0 (`faac5858`) leaves case folding to V8's compiled regexp,
-which compares ASCII letters without walking a Unicode fold cycle. The port's
-`exactLiteral` called `unicode.SimpleFold` for every literal rune that did not
-compare equal, and in a case-insensitive language (pgsql, vbscript) that is
-almost every literal step: `exactLiteral` was 16% of a pgsql profile and
-`unicode.SimpleFold` 7.4% beneath it.
-
-`exactLiteral` now decides a pair where both runes are below `utf8.RuneSelf`
-with a case bit flip (`lowerASCII`), and keeps `SimpleFold` for everything else.
-The restriction is what makes it sound: above ASCII the two disagree, and
-`SimpleFold` relates pairs a flip misses (U+212A KELVIN SIGN with `k`, U+017F
-LATIN SMALL LETTER LONG S with `s`).
-
-Same method, five interleaved runs, median of five samples each: pgsql 31.55 to
-26.58 ms (15.8% faster), vbscript 27.43 to 19.74 (28.0%), with cpp, dos and
-php-template within 0.5-1.6% (noise on this machine). A suite-wide run over 191
-languages moved 119 languages faster. Output is unchanged: every golden, the
-differentials and the fuzzers.
-
-Test: `TestExactLiteralASCIIFold`, which checks all 16,384 ASCII pairs against
-`SimpleFold` and fails if the flip is applied to a non-ASCII pair.
-
-**Not closed, and now located exactly.** R is quadratic (1 KiB 7.5 ms, 2 KiB
-29.2, 4 KiB 115.7) where the reference is linear (5.8, 2.6, 3.9), and that
-dominates HTTP, whose body auto-detects and scores R against 24 KiB.
-
-The mechanism is `resumableMultiRegex.exec`'s resume path, not any rule.
-`getMatcher(11)` builds the tail slice `rules[11:]` of R's root rule set, and
-the engine resumes there once per lexeme: 213 resumes on a 1 KiB input, 390,
-then 779 and 1557 as the input doubles. Every one of those 213 resumes takes the
-`result.index != lastIndex` branch and runs the *full* matcher from
-`lastIndex+1`, and the partial matcher's own work is wasted: measured, it
-matched exactly at `lastIndex` **zero** times in 213 resumes. The tail slice's
-first-byte table admits 68% of bytes (it carries
-`[a-zA-Z][a-zA-Z_0-9]*\s+<-\s+`, 52 first bytes), so each resume walks
-hundreds of candidates. Resumes scale linearly with input and each scans the
-remaining tail, which is the square.
-
-The reference has the same call pattern, and its cost is per call, not
-asymptotic: V8 runs the resume's global regex from `lastIndex` in 14 us where
-the port's dispatch takes 61 us for the same tail, and V8's `g`-regex
-`lastIndex` search is a native byte scan (73 ns for a 500-byte miss, flat in
-`lastIndex`) against Go's NFA.
-
-Two fixes were written and reverted. Returning only an exact match at
-`lastIndex` from the resume (`multiRegex.execAt`, asking `decideAt` at that
-position) is correct and passes every golden, but it is *slower* (1 KiB 7.5 to
-13.3 ms) because the resume asks at arbitrary offsets, such as 1, 7, 8 and 14,
-where `decideAt` cannot settle the rule set cheaply, and the fallback then costs
-more than the short-circuit it replaced. Disabling the full-matcher fallback is
-fast (0.13 ms at 1 KiB, linear) but changes output, since the fallback is what
-finds the rule that legitimately comes after `regexIndex`.
-
-Two more resume variants were measured and reverted. Answering the resume with
-`execScan` (the port's single-call path, closest to the reference's one global
-regex) is correct and passes every golden but is slower still (1 KiB 7.5 to
-13.4 ms), because `execScan` also steps a manual loop per byte. Returning only
-an exact match likewise cost 13.3 ms. `execDispatch` is already the cheapest of
-the three for this shape.
-
-What is left is now measured exactly. One resume of that tail matcher costs
-61 us, and a full pass of all four of its rules over every position of the
-whole input costs 0.09 ms, so the rules are not the cost: `execDispatch` makes
-**610 iterations** for that one resume, at about 90 ns each. The tail rule set's
-first-byte table admits 68% of bytes, so the per-byte dispatch visits hundreds
-of positions where V8's single native `g`-regex scan visits one. A per-call
-literal prefilter for the identifier rule was measured too (a whole-remainder
-`strings.Contains` is 25 ns, and `<-` is absent from the input) and did not move
-the time, because that rule is 0.06 ms of the 0.09 ms and the other three fill
-the rest.
-
-A required-literal rule mask was then built, measured and reverted, and the
-revert is the important part. `requiredLiteral` (a literal every match must
-contain) plus a per-call "can any rule match in the remainder" check made R
-1 KiB 7.5 ms to 0.44 ms, linear to 32 KiB, and HTTP 5470 ms to 1900. But it
-regressed 175 of 191 languages: latex 4.39 to 62.8 ms, coffeescript 4.92 to
-38.8, xquery 6.96 to 48.1, haxe 0.32 to 4.45. Two causes, both instructive.
-Skipping a matcher whose rules are all ruled out returns no match, and the
-engine then treats the whole remainder as one lexeme; latex has sublanguage
-modes that must still be consulted, so the scan has to run. And the mask has to
-be rebuilt per position to stay sound, which put `strings.Contains` at 90% of a
-24 KiB R profile. Making `requiredLiteral` conservative (no literal when a
-concatenation contains an assertion) removed the unsoundness but also removed
-the win, and R went to 10.0 ms. The commit was reverted; every language is back
-at its baseline, checked across the twelve that the suite run flagged.
-
-The per-iteration cost was then broken down. Of the 610 iterations, only rule 0
-(the `%` literal) is walked, and 610 literal walks cost 6.3 us against the 57 us
-the resume takes; exec allocates nothing. A lock-free `subMatcher`
-(`atomic.Pointer`) was applied and measured at 57.2 us against the mutex's
-56.9 us, so the mutex is not the cost either. The work is the per-candidate
-`seq`/`push`/`exactOne` bookkeeping, and Go's own joined regexp is no cheaper:
-one unanchored `FindStringSubmatchIndex` for this four-rule alternation takes
-139 us, because the alternation has no common literal prefix for Go to scan.
-
-So closing this needs the dispatch to settle a broad rule set in one pass rather
-than one candidate at a time, which is the architecture change D524 and D528
-both point at; no bounding change, different exec, lock-free subMatcher, or
-per-call prefilter reaches it. Counting walk-settled
-rejections toward `maxRejectedCandidates` does not address it and would break
-D351's guard, which `TestRejectedCandidateRunStopsAtBudget` pins.
-
-### D528
-
-**A rule that matches empty at a line start keeps its rule set on dispatch.**
+**Rule sets that have no selective first-byte table still dispatch.**
 
 Reference: pi v1.6.0 (`faac5858`) runs a mode's rules as one sticky-regex
-alternation, so a rule like armasm's `^[ \t]*` (optional indentation) is just
-another alternative. The port's dispatch needs a first-byte set per rule, and a
-rule that matches empty has none, so one such rule set `usable` false for the
-whole rule set. Armasm's root matcher has 15 rules and could not dispatch:
-81% of its profile was Go's regexp NFA (`machine.add`, `machine.step`,
-`MatchRunePos`), and the exact walk was 2.9%.
+alternation, so no rule's shape changes how the others are tried. The port's
+per-byte dispatch needs every rule's first-byte set, and their union must
+cover at most 240 bytes. Otherwise one rule disabled it for the whole rule set,
+which then ran the joined regexp's NFA over the remaining input on every call:
+markdown's bare `^` (setext), armasm's `^[ \t]*`, autohotkey's title rules
+(manual, `[^\n";]` first), basic's `illegal: '^.'`, and every single-rule
+matcher.
 
-This is the second form of D524's defect. D524 handled a bare `^`; this handles a
-`^` that an optional run follows. `isBeginLinePrefixRule` walks the leading
-captures and concatenations of a rule while each has a minimum length of zero,
-and reports whether it lands on a `^`. The rule then contributes no candidate
-byte and is recorded in `beginLineRule`, so the dispatch stays enabled and the
-rule is checked at line starts, as `^` already was.
+- A rule that is `^`, or `^` followed by an optional run, contributes no
+  candidate byte, and `execDispatch` also visits line starts
+  (`nextLineStart`: 0 and the byte after each terminator). A bare `^` is an
+  empty match there; a prefix rule's match comes from the walk or its own
+  anchored regexp.
+- When the table would pass the cap, a `^`-led rule and a manual marked
+  `ManualLineStart` keep their bytes in their submatchers but leave the
+  table, and are reached at line starts.
+- A single rule dispatches when the walk can settle it.
+- A position whose byte no regex rule begins with ran no regexp, so its
+  rejection does not count toward D351's budget.
 
-Same method, five-run medians: armasm 82.41 to 13.20 ms, **84% faster** and 6.2x
-the reference's 8.52. mipsasm, x86asm, C++ and Java are unchanged (within 1.6%),
-and a suite run over 191 languages moved 111 faster; the five largest apparent
-regressions were re-measured over five runs and none exceeded 1.6% either way. Output is unchanged: every golden, the differentials,
-a 30 s fuzz run, the armasm sample byte for byte against the reference
-(142,883 bytes), and tab-indented armasm still leaves the indentation as plain
-text.
+Same method, 24 KiB samples against hljs: a 4 KB README 5.30 to 0.70 ms (hljs
+0.71), armasm 82.4 to 13.2 ms, autohotkey 4.78x to 0.87x, basic 4.66x to
+0.64x.
 
-Test: `TestZeroWidthLineStartRuleKeepsTheDispatch` (from D524).
-
-A sibling change for an alternation with a `$` branch (`$|;`, `#|$`, the biggest
-remaining blockers at 25 and 21 matchers) was written and **reverted**: it
-recovered only 2 of 148 disabled matchers and broke
-`TestManualLineTerminatorLookaheads`, because `$` in a sublanguage continuation
-must not take the surrounding line's semantics.
-
-Two more attempts were reverted, and they close the remaining dispatch gap.
-Autohotkey and basic still cannot dispatch (44% and 31% of their profiles are
-Go's regexp NFA) because a manual rule's `firsts` cover 252 of 256 bytes: the
-union then exceeds the 240-byte selectivity cap and the table is refused.
-Excluding such a rule from the union and trying it at every candidate was
-written and reverted, because it changes which manual rule wins:
-`TestAutoHotkeyTitleBacktracking` showed the title rule must be reached in
-byte-indexed order, so the existing order is load-bearing rather than an
-oversight. pgsql's remaining cost (4.2x) is 16,347 walks of one 70-rule
-alternation per 24 KiB, which is volume rather than a defect: a 100-way
-literal alternation that cannot match is rejected in 23 ns.
-
-### D529
-
-**HTTP's version and request guards are hand-written.**
-
-The same defect as D526, found by measuring every `\A`-anchored guard in the
-tree. Reference: pi v1.6.0 (`faac5858`) opens HTTP's response and request rules
-with zero-width lookaheads, `(?=HTTP/(2|1\.[01]) \d{3})` and
-`(?=[A-Z]+ .* HTTP/(2|1\.[01])$)`, which V8 evaluates at the position. The port
-ran them as `\A`-anchored Go regexps, and a pattern Go cannot prefilter costs a
-full pass over the remaining input per call: measured 119 us and 121 us on a
-24 KiB tail, at every candidate.
-
-`httpVersionGuard` and `httpRequestGuard` now scan directly: the version is
-`HTTP/2` or `HTTP/1.[01]` then a space and three digits, and the request is an
-upper-case method, a space, then the last ` HTTP/` in the input followed by a
-version and nothing else. Both cost 2 ns on the same 24 KiB tail, so 119 us
-became 2 ns, and the accepted set is unchanged: `HTTP/1.2`, a lower-case
-`http/1.1`, a two-digit status and a request line that does not end at the
-version are all still rejected.
-
-This does not speed up the `http` benchmark entry itself (still 5.5 s), whose time
-is the body's `subLanguage: []` auto-detection scoring every language, dominated
-by R's quadratic (D527's note); it removes a per-candidate cost that the HTTP
-sample happens to exercise only four times.
-
-Output is unchanged: the goldens, the differentials, a 30 s fuzz run and the
-107,297-byte HTTP render byte for byte against the reference.
-
-The first version of the request guard read `$` as the end of the input and
-searched for ` HTTP/` across lines, so a request line followed by headers
-(`GET / HTTP/1.1\nHost: a`) failed the guard and lost its highlighting; none
-of the inputs above has one. It also took the method's space as the one
-before `HTTP/`, where the pattern needs two. The guard now reads the current
-line only, to the first line terminator, and needs the version at its end
-after a second space.
-
-Tests: `TestHTTPGuards`, `TestAnchoredSpaceGuardsUseLineEnds`.
-
-### D530
-
-**Mipsasm's and protobuf's whitespace guards are hand-written, and share one
-JavaScript `\s` scanner.**
-
-The third and fourth instances of D526's defect, found by timing every
-`\A`-anchored guard in the tree. Mipsasm's comment rule opens with `(?!\s*$)`
-and protobuf's enum rule with `(?=\s*=[^\n]+;$)` (languages/mipsasm.js,
-languages/protobuf.js in pi v1.6.0, faac5858). Both ran as `\A`-anchored Go
-regexps, and an unbounded `\s*` before an anchor makes Go scan the whole
-remaining input: 120 us per call on a 24 KiB tail, at every candidate.
-
-`mipsasmCommentGuard` and `protobufEnumGuard` scan directly over `skipJSSpace`,
-which is now the single JavaScript `\s` scanner in the tree: INI's own copy
-(D526) is folded into it rather than kept as a second implementation.
-JavaScript's `\s` is not ASCII-only, so `jsSpaceWidth` covers U+00A0, U+1680,
-U+2000-200A, U+2028, U+2029, U+202F, U+205F, U+3000 and U+FEFF. A byte-only scan
-loses them, which the test pins for mipsasm (`#\u00a0\n` is a comment of the
-marker and whitespace) and protobuf (`A\u3000= 1;` still sees the space).
-
-Both guards cost 4-5 ns on the same 24 KiB tail, so 120 us became 5 ns.
-
-The first version read both `$` as the end of the input, not the m flag's
-line end, and three mipsasm differential cases changed: a `#` followed by
-whitespace and a newline was coloured as a comment, and protobuf's enum guard
-missed every `;` that ends a line (`A = 1;\n` scored relevance 0 where
-highlight.js scores it). Both now accept a line terminator, as the regexp did;
-the differentials are back to the known D351 case.
-
-Tests: `TestAnchoredSpaceGuards`, `TestAnchoredSpaceGuardsUseLineEnds`, and
-`TestIniDottedKeyScan` for the folded INI path.
-
-### D531
-
-**`execScan` skips its manual-rule walk when the mode has no manual rules.**
-
-Reference: pi v1.6.0 (`faac5858`) runs one global regex for a mode's rules and
-consults manual rules separately, so a mode without them does no manual work.
-The port's `execScan` walked from the search position to the matched rule (or the
-end of the input) at every candidate even when `manuals` was empty, doing nothing
-in that loop. `execScan` is the path for a rule set that cannot dispatch, and it
-runs once per candidate, so the empty loop was O(tail) per call.
-
-The loop condition now requires `len(m.manuals) > 0`. Same method, interleaved
-single runs on the 24 KiB samples: vbscript 19.71 to 18.80 ms (4.6%), pgsql
-26.78 to 26.04 (2.8%), armasm 13.60 to 13.41 (1.4%), basic 21.26 to 21.06
-(0.9%), with R and autohotkey unchanged. Output is unchanged: every golden, the
-differentials and a 25 s fuzz run.
-
-No test: the branch is unreachable for any input, since the loop body has no
-effect when there are no manual rules, and the goldens already cover every mode
-that has them.
-
-### D532
-
-**The per-input scans for astral runes and non-`\n` line ends skip ASCII in bulk.**
-
-Reference: pi v1.6.0 (`faac5858`) runs highlight.js 10.7.3 on JavaScript
-strings, which need neither scan. The port checks every input once for an
-astral rune (to switch to its code-unit encoding) and once for `\r`, U+2028 or
-U+2029 (to switch to JavaScript line semantics). `nonLFLineEnds` used
-`strings.ContainsAny`, which decodes its multi-byte argument and so searches
-rune by rune, and `containsAstral` decoded every rune. On 24 KiB of plain text
-the two cost 170 us of a 175 us highlight, against highlight.js's 6 us for the
-whole call, and the same 170 us was paid by every language's highlight of that
-size.
-
-`nonLFLineEnds` is now three byte searches, and `containsAstral` skips eight
-ASCII bytes at a time and decodes only at a four-byte lead byte (0xF0 and up),
-which is never a continuation byte, so it sees exactly the runes the
-rune-by-rune scan saw. Plain text, 24 KiB: 170.7 us to 4.37 us (highlight.js
-6 us). `TestInputScansMatchRuneScans` pins both to the scans they replaced,
-over invalid UTF-8 and every offset around a word.
-
-### D533
-
-**The exact walk tries only the alternatives that can begin with the next byte.**
-
-Reference: pi v1.6.0 (`faac5858`) runs highlight.js 10.7.3, whose rules are
-V8 regexes; irregexp dispatches a literal alternation on the next character.
-The D523 walk tried a long alternation's alternatives one by one, so a keyword
-rule such as pgsql's `\b(?:ARRAY_AGG|AVG|BIT_AND|...)` spent about 65 steps on
-every candidate that could not match. Each alternation of four or more
-alternatives now carries, per byte, the alternatives (in priority order) whose
-match can begin with that byte, and those that can match empty are on every
-list. The sets follow the walk's own matching: a folded literal adds its whole
-`unicode.SimpleFold` orbit (so `k` also lists U+212A's lead byte, which the
-dispatch's ToUpper/ToLower first-byte sets would miss), and a one-rune node
-that matches above ASCII adds every byte from 0x80. Skipping an alternative
-that can not begin there only removes a "no match", so the leftmost-first
-result is unchanged.
-
-Same method, 24 KiB samples against highlight.js through a tree emitter:
-vbscript 3.56x to 0.76x, sas 2.50x to 0.61x, sql 1.22x to 0.49x, pgsql 4.18x
-to 1.26x, stata 6.46 to 3.99 ms; no language regressed. Goldens, the hljs
-differentials and the fuzzers are unchanged. `TestExactWalkMatchesTheRegexp`
-pins it, its mixed lines now including U+212A and U+017F.
-
-### D534
-
-**End checks, single-rule matchers and group-reading rules avoid Go's regexp.**
-
-Reference: pi v1.6.0 (`faac5858`) runs highlight.js 10.7.3, whose regex calls
-on a long remainder cost V8 only the work of the match. Go's backtracker clears
-a visited bitmap sized to the whole remaining input on every call, so each
-regexp call on a 24 KiB tail cost tens of microseconds even when it matched at
-the first byte. Shell spent most of its time there, from four callers:
-
-- `endOfMode`'s `lineStartsWith`, which (like the reference's `startsWith`)
-  searches unanchored and asks whether the leftmost match is at 0. That is
-  whether a match exists at 0, so each compiled mode now has a walk of its own
-  end regex (`endExact`) and the regexp runs only when the walk is undecided
-  or the mode instance has its own end (END_SAME_AS_BEGIN).
-- Shell's `(?=\s*$)` end guard, now `spaceToLineEnd`, shared with mipsasm.
-- A rule set of one rule never dispatched, so every call ran the joined regexp
-  unanchored on the tail. It now dispatches when the walk can settle the rule;
-  a single rule the walk can not settle keeps the one scan.
-- A rule whose groups a callback reads (shell's `[^\\]` end, with OnEnd) sent
-  every match to the regexp for its groups. The walk now records capture
-  groups, restoring a group when the branch that set it fails, and lays them
-  out as the regexp's submatches.
-
-Same method on 24 KiB samples, against highlight.js through a tree emitter:
-shell 2.27x to 0.98x, with julia-repl, bash, C, C++, Ruby, PHP and LaTeX at
-or below their previous ratios. The 191 samples and their CRLF variants render
-byte for byte as highlight.js does, and the differentials are unchanged.
-`TestExactWalkMatchesTheRegexp` now also walks every mode's end regex, and
-`TestExactWalkCapturesMatchTheRegexp` compares groups with the regexp's
-submatches.
-
-### D535
-
-**Line-start manual rules are tried at line starts, and a byte with no regex
-rule is an uncounted rejection.**
-
-Reference: pi v1.6.0 (`faac5858`) runs highlight.js 10.7.3, whose
-autohotkey title rules are `^[^\n";]+::(?!=)` and `^[^\n";]+:(?!=)` in the
-one sticky alternation. The port has them as manual begins (they backtrack to
-an earlier colon), and their first bytes, `[^\n";]`, are 252 of 256, past the
-dispatch table's 240-byte cap. That disabled the per-byte dispatch for the
-whole root rule set, so every call ran the joined regexp's NFA over the tail:
-autohotkey took 23.4 ms on a 24 KiB sample against the reference's 4.9 ms.
-`Mode.ManualLineStart` marks a manual that matches only at a line start; its
-bytes stay out of the table, and `execDispatch` visits line starts for it as
-it does for a `^` rule (D524). The same sample takes 4.2 ms against 4.8 ms
-(0.87x), and the 191 samples and their CRLF variants render byte for byte as
-highlight.js does.
-
-Two dispatch defects surfaced with it. `nextLineStart` skipped `from` itself
-when it was a line start, so after a match that ended with a terminator the
-`^` rule was missed at lastIndex, where the JS regex tries it first. And a
-position whose byte no regex rule begins with, reachable only as a line start,
-counted as a rejection that ran the regexp, so 256 such lines would have cut
-off the rest of the input (D351). `TestBeginLineRuleKeepsTheDispatch`,
-`TestLineStartManualKeepsTheDispatch` and
-`TestLineStartRejectionsAreNotCounted` pin them.
+Tests: `TestBeginLineRuleKeepsTheDispatch`,
+`TestZeroWidthLineStartRuleKeepsTheDispatch`,
+`TestLineStartManualKeepsTheDispatch`, `TestLineStartRejectionsAreNotCounted`,
+`TestLineLedRulesKeepTheDispatch`.
 
 ### D536
 
-**`^`-led rules leave the candidate table when it would pass the cap, and a
-prefix rule's match is computed, not taken as empty.**
+**Per-call work is bounded by the match, not by the remaining input.**
 
-Reference: pi v1.6.0 (`faac5858`) runs highlight.js 10.7.3. basic's
-`illegal: '^.'` (languages/basic.js) has first bytes covering nearly every
-byte, so basic's root rule set was past the dispatch table's 240-byte cap and
-ran the joined regexp's NFA on every call: 27.8 ms on a 24 KiB sample against
-the reference's 6.0 ms. As D535 does for line-start manual rules, a rule led by
-`^` keeps its bytes in its own submatchers and, when the full table would pass
-the cap, stays out of the candidate table, with `execDispatch` visiting line
-starts for it. Under the cap the bytes stay in: a sparse table puts the next
-candidate far ahead, and each exec call scans to it again (stata went from
-3.9 ms to 48 ms when every `^`-led rule left). basic now takes 4.0 ms (0.64x),
-and autohotkey 2.1 ms against 3.6 ms.
+Reference: pi v1.6.0 (`faac5858`) runs highlight.js 10.7.3 on V8, where a
+regex call on a long remainder costs the work of the match and the
+per-input checks are free. Several of the port's per-call costs grew with
+the remaining input instead, so a highlight was quadratic in its length:
 
-Visiting more line starts exposed three defects, fixed with it:
+- Go's backtracker clears a visited bitmap the size of the remaining input on
+  every call, tens of microseconds on a 24 KiB tail even for a match at the
+  first byte. The walk (D523) and the dispatch (D524) keep most calls off it.
+- `execScan` walked its manual-rule loop to the matched rule even in a mode
+  with no manual rules; the loop now requires them.
+- The checks for an astral rune and for `\r`, U+2028 or U+2029 decoded rune by
+  rune; they now skip ASCII in bulk. 24 KiB of plain text: 170.7 to 4.4 us
+  (hljs 6 us for the whole call).
 
-- `subMatcher` did not cache a byte with no rule, so each such line start
-  built and discarded a matcher (104 MB per stata highlight).
-- `beginLineMatch` took a prefix rule (`^[ \t]*`, D524) as an empty match.
-  armasm's `^[ \t]*(?=#)` comment begin (languages/armasm.js) then had its
-  lookahead guard read the indentation, so an indented `#` comment was plain
-  text, where the reference colours it. Its match now comes from the walk, or
-  from the rule's anchored regexp, with groups when a callback reads them.
-  julia-repl's bare `^` end, whose onEnd reads its groups, gets them built
-  directly rather than leaving the rule set to the regexp.
-- A second prefix rule in one rule set was silently never matched; such a set
-  now keeps the regexp.
-
-The 191 samples and their CRLF variants render byte for byte as
-highlight.js does, and the differentials are unchanged.
-`TestLineLedRulesKeepTheDispatch` pins basic's dispatch and the armasm
-comments; `TestIgnoredZeroWidthEndAdvances` covers julia-repl.
+Tests: `TestInputScansMatchRuneScans`.

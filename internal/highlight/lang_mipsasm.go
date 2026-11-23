@@ -4,7 +4,7 @@ func init() { RegisterLanguage("mipsasm", MIPSASM()) }
 
 // mipsasmCommentGuard is the reference's `(?!\s*$)` lookahead on the comment
 // rule: a `;` or `#` at the end of a line is not a comment. Hand-written, like
-// D526 and D529 (see spaceToLineEnd).
+// D521 (see spaceToLineEnd).
 func mipsasmCommentGuard(s string, jsLines bool) bool {
 	return spaceToLineEnd(s, jsLines)
 }
