@@ -9162,3 +9162,15 @@ remaining blockers at 25 and 21 matchers) was written and **reverted**: it
 recovered only 2 of 148 disabled matchers and broke
 `TestManualLineTerminatorLookaheads`, because `$` in a sublanguage continuation
 must not take the surrounding line's semantics.
+
+Two more attempts were reverted, and they close the remaining dispatch gap.
+Autohotkey and basic still cannot dispatch (44% and 31% of their profiles are
+Go's regexp NFA) because a manual rule's `firsts` cover 252 of 256 bytes: the
+union then exceeds the 240-byte selectivity cap and the table is refused.
+Excluding such a rule from the union and trying it at every candidate was
+written and reverted, because it changes which manual rule wins:
+`TestAutoHotkeyTitleBacktracking` showed the title rule must be reached in
+byte-indexed order, so the existing order is load-bearing rather than an
+oversight. pgsql's remaining cost (4.2x) is 16,347 walks of one 70-rule
+alternation per 24 KiB, which is volume rather than a defect: a 100-way
+literal alternation that cannot match is rejected in 23 ns.
