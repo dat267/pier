@@ -149,3 +149,14 @@ re-scanning, or by making the submatcher failure O(1) per candidate.
 
 No test pins this: the current behaviour is what D351 chose, and the reproduction
 is a run length rather than a construct.
+
+Re-examined while closing the other entries: the resume the fix needs is a
+per-call budget rather than a scan budget, but `execDispatch` returns nil, so the
+engine's loop ends (`engine.go`'s `if m == nil { break }`, which is also the
+reference's contract). Making it resume means distinguishing "no match" from
+"budget spent", threading that through `resumableMultiRegex.exec` and the engine,
+and the submatcher failure stays O(tail) per candidate, so a resumed run pays the
+same quadratic term again. D351's numbers already beat the reference on this
+input, so the remaining bug is a missing-colour one. Left open deliberately: it
+needs the regex layer to fail in O(1), not a caller-side patch, and D351's
+measured trade is the better one until then.
