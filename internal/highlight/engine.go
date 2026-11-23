@@ -165,10 +165,15 @@ func highlightWithContinuation(lang *compiledLanguage, code string, ignoreIllega
 		if h.illegal {
 			break
 		}
-		h.index = min(m.index+processed,
-			// A zero-width match at the end advances one past it; JavaScript's
-			// substr clamps, Go slicing does not.
-			len(code))
+		// A zero-width match at the end can advance one past it. The
+		// reference's next exec then starts past the input and finds nothing,
+		// so the loop ends; clamping and matching again at the end would spin
+		// until the iteration cap (140 ms for a lone LaTeX `\`).
+		if m.index+processed > len(code) {
+			h.index = len(code)
+			break
+		}
+		h.index = m.index + processed
 		if h.iterations > maxHighlightIterations {
 			break
 		}
