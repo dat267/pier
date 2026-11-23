@@ -253,3 +253,51 @@ func TestTruncateLineZeroLimit(t *testing.T) {
 		t.Fatalf("TruncateLine(abc, 3) = %+v", got)
 	}
 }
+
+// D517: pi v1.6.0 (faac5858) core/tools/truncate.ts sliceHead keeps at most
+// maxUnits UTF-16 code units without splitting a surrogate pair, and
+// truncateLine compares `line.length`. The port keeps that result while reading
+// only the bytes it keeps: it no longer encodes the whole text to UTF-16, and
+// invalid UTF-8 in the kept prefix still becomes U+FFFD byte by byte.
+func TestSliceHeadKeepsWholeCharactersAndScansOnlyThePrefix(t *testing.T) {
+	for _, tc := range []struct {
+		text     string
+		maxUnits int
+		want     string
+	}{
+		{"abcdef", 3, "abc"},
+		{"abc", 10, "abc"},
+		{"a😀b", 2, "a"}, // the pair would be split: the character is left out
+		{"a😀b", 3, "a😀"},
+		{"héllo", 2, "hé"},
+		{"ab\xffcd", 4, "ab�c"}, // an invalid byte decodes to U+FFFD
+		{"ab�cd", 4, "ab�c"},
+		{"abc", 0, ""},
+		{"abc", -1, ""},
+	} {
+		if got := SliceHead(tc.text, tc.maxUnits); got != tc.want {
+			t.Errorf("SliceHead(%q, %d) = %q, want %q", tc.text, tc.maxUnits, got, tc.want)
+		}
+	}
+	// `"".length <= -1` is false upstream, so a negative limit truncates even
+	// an empty line; a zero limit keeps it whole.
+	if got := TruncateLine("", -1); !got.WasTruncated || got.Text != "... [truncated]" {
+		t.Fatalf(`TruncateLine("", -1) = %+v`, got)
+	}
+	if got := TruncateLine("", 0); got.WasTruncated || got.Text != "" {
+		t.Fatalf(`TruncateLine("", 0) = %+v`, got)
+	}
+	if got := TruncateLine("a😀", 2); !got.WasTruncated || got.Text != "a... [truncated]" {
+		t.Fatalf(`TruncateLine("a😀", 2) = %+v`, got)
+	}
+
+	// A megabyte line costs the kept prefix, not the line.
+	for name, line := range map[string]string{
+		"ascii": strings.Repeat("hello world, some grep output line ", 30000),
+		"mixed": strings.Repeat("héllo wörld 😀 ", 70000),
+	} {
+		if allocs := testing.AllocsPerRun(10, func() { _ = SliceHead(line, 2000) }); allocs != 0 {
+			t.Errorf("%s: SliceHead allocated %v times, want 0", name, allocs)
+		}
+	}
+}

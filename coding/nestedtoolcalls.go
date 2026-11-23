@@ -8,7 +8,6 @@ package coding
 import (
 	"encoding/json"
 	"time"
-	"unicode/utf16"
 
 	"github.com/dat267/pier/ai"
 )
@@ -131,9 +130,10 @@ func truncateUTF16(value string, max int) string {
 	if max <= 0 {
 		return ""
 	}
-	encoded := utf16.Encode([]rune(value))
-	if len(encoded) <= max {
+	// A string holds at least as many bytes as UTF-16 units, so a short one
+	// fits without counting; JSSlice walks only the kept prefix (D426, D517).
+	if len(value) <= max || ai.JSLength(value) <= max {
 		return value
 	}
-	return string(utf16.Decode(encoded[:max]))
+	return ai.JSSlice(value, 0, max)
 }

@@ -773,14 +773,17 @@ func FindCutPoint(entries []SessionEntry, startIndex, endIndex, keepRecentTokens
 const toolResultMaxChars = 2000
 
 func truncateForSummary(text string, maxChars int) string {
-	if JSLength(text) <= maxChars {
+	// SliceHead, not JSSlice: the cut must not split a surrogate pair, whose
+	// lone half would decode to U+FFFD in the summary (pi v1.5.2 b4afdddf
+	// core/compaction/utils.ts calls sliceHead). The prefix scan also answers
+	// `text.length <= maxChars`, so only a truncated text is measured in full,
+	// once, for the count it reports (D517).
+	head, whole := sliceHeadPrefix(text, maxChars)
+	if whole {
 		return text
 	}
 	truncatedChars := JSLength(text) - maxChars
-	// SliceHead, not JSSlice: the cut must not split a surrogate pair, whose
-	// lone half would decode to U+FFFD in the summary (pi v1.5.2 b4afdddf
-	// core/compaction/utils.ts calls sliceHead).
-	return SliceHead(text, maxChars) + fmt.Sprintf("\n\n[... %d more characters truncated]", truncatedChars)
+	return head + fmt.Sprintf("\n\n[... %d more characters truncated]", truncatedChars)
 }
 
 // marshalOrderedJSON re-serializes raw JSON preserving object key order like

@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
-	"unicode/utf16"
 	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
@@ -366,11 +365,14 @@ type TruncateLineOutput struct {
 // (grep match lines). Upstream's default applies to an omitted argument; Go
 // callers always pass the limit, so an explicit 0 truncates everything.
 func TruncateLine(line string, maxChars int) TruncateLineOutput {
-	if ai.JSLength(line) <= maxChars {
+	// The prefix scan answers `line.length <= maxChars` too: the whole line
+	// fits exactly when the longest whole-character prefix is the line (D517).
+	head, whole := sliceHeadPrefix(line, maxChars)
+	if whole {
 		return TruncateLineOutput{Text: line, WasTruncated: false}
 	}
 	return TruncateLineOutput{
-		Text:         SliceHead(line, maxChars) + "... [truncated]",
+		Text:         head + "... [truncated]",
 		WasTruncated: true,
 	}
 }
@@ -381,17 +383,68 @@ func TruncateLine(line string, maxChars int) TruncateLineOutput {
 // left out. A negative budget yields "", where JavaScript's `slice(0, -1)`
 // dropped the last character instead.
 func SliceHead(text string, maxUnits int) string {
-	end := max(0, maxUnits)
-	units := utf16.Encode([]rune(text))
-	if end > len(units) {
-		end = len(units)
-	}
-	if end > 0 && end < len(units) && isHighSurrogateUnit(units[end-1]) && isLowSurrogateUnit(units[end]) {
-		end--
-	}
-	return string(utf16.Decode(units[:end]))
+	head, _ := sliceHeadPrefix(text, maxUnits)
+	return head
 }
 
-func isHighSurrogateUnit(unit uint16) bool { return unit >= 0xd800 && unit <= 0xdbff }
+// sliceHeadPrefix returns SliceHead(text, maxUnits) and whether it is all of
+// text, scanning only the bytes it keeps (D517). The result shares text's
+// memory; both callers append a suffix, which copies it. Invalid UTF-8 in the
+// kept prefix is replaced byte by byte with U+FFFD, as the UTF-16 round-trip
+// (`utf16.Encode([]rune(text))`) this replaces did.
+func sliceHeadPrefix(text string, maxUnits int) (string, bool) {
+	if maxUnits <= 0 {
+		// A zero budget keeps only an empty text whole; a negative one never
+		// fits, as `"".length <= -1` is false upstream.
+		return "", maxUnits == 0 && text == ""
+	}
+	limit := min(len(text), maxUnits)
+	start := asciiPrefixLength(text[:limit])
+	if start == limit {
+		// ASCII bytes are whole one-unit characters, so the cut is exact.
+		return text[:limit], limit == len(text)
+	}
+	units, invalid := start, false
+	for offset, r := range text[start:] {
+		width := 1
+		if r >= 0x10000 {
+			width = 2
+		}
+		if units+width > maxUnits {
+			return replaceInvalidUTF8(text[:start+offset], invalid), false
+		}
+		if r == utf8.RuneError && !strings.HasPrefix(text[start+offset:], "�") {
+			invalid = true
+		}
+		units += width
+	}
+	return replaceInvalidUTF8(text, invalid), true
+}
 
-func isLowSurrogateUnit(unit uint16) bool { return unit >= 0xdc00 && unit <= 0xdfff }
+// asciiPrefixLength returns the length of the leading run of ASCII bytes,
+// testing eight bytes per step. The shifts compile to one 64-bit load, which
+// measured twice as fast as OR-ing the bytes (D517).
+func asciiPrefixLength(s string) int {
+	index := 0
+	for ; index+8 <= len(s); index += 8 {
+		chunk := s[index : index+8]
+		word := uint64(chunk[0]) | uint64(chunk[1])<<8 | uint64(chunk[2])<<16 | uint64(chunk[3])<<24 |
+			uint64(chunk[4])<<32 | uint64(chunk[5])<<40 | uint64(chunk[6])<<48 | uint64(chunk[7])<<56
+		if word&0x8080808080808080 != 0 {
+			break
+		}
+	}
+	for index < len(s) && s[index] < utf8.RuneSelf {
+		index++
+	}
+	return index
+}
+
+// replaceInvalidUTF8 maps each invalid byte to U+FFFD, the decoding
+// []rune(s) applies, when the scan found one.
+func replaceInvalidUTF8(s string, invalid bool) string {
+	if !invalid {
+		return s
+	}
+	return string([]rune(s))
+}

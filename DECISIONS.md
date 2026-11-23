@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D516)
+# Deliberate divergences from pi (D1–D517)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8637,3 +8637,40 @@ as the port does, and it would add a module the graph lists only indirectly.
 
 Tests: `TestIDNAndIRIReferenceKeepTheApproximateRules`,
 `TestIDNLabelLengthCountsTheALabelAndUTF16Units`.
+
+### D517
+
+**`SliceHead` reads only the prefix it keeps.**
+
+Reference: pi v1.6.0 (`faac5858`) `core/tools/truncate.ts` `sliceHead` and
+`truncateLine`, and `core/compaction/utils.ts` `truncateForSummary`. V8's
+`slice` returns a view of the string and `.length` is stored, so the reference
+pays only for the kept head.
+
+The port encoded the whole text to UTF-16 (`utf16.Encode([]rune(text))`) and
+decoded the kept units back, and its callers measured the whole text with
+`JSLength` first (`truncateForSummary` twice). `sliceHeadPrefix` now returns the
+kept prefix as a substring and whether it is the whole text, which also answers
+`length <= maxChars`: it checks eight bytes at a time for ASCII and walks
+characters only from the first non-ASCII byte. Invalid UTF-8 in the prefix still
+becomes U+FFFD byte by byte, as the round-trip produced. A differential test
+against the old functions over 128,861 random cases (ASCII, accented, CJK,
+astral, invalid bytes, literal U+FFFD; every budget from -2 to length + 2)
+found no difference. `truncateUTF16` takes a byte-length shortcut and reuses
+`JSSlice`'s prefix walk (D426).
+
+Measured on a 1.2 MB input, 2,000-unit head, before -> after:
+`SliceHead` ASCII 4.96 ms / 6.3 MB -> 197 ns / 0 B, mixed 6.42 ms -> 3.7 µs / 0 B;
+`TruncateLine` (500 units) 6.1-7.7 ms -> 0.23-1.3 µs; `truncateForSummary`
+8.2-9.0 ms / 6 MB -> 1.0-1.8 ms / 2.7 KB. The reference's `sliceHead` on the same
+input measured 18 ns ASCII and 25 ns mixed in Node. That constant-time view is
+out of reach for a UTF-8 string, where finding the 2,000th UTF-16 unit means
+reading the bytes before it; the port's cost is now proportional to the head,
+not the text. `truncateForSummary` still counts a truncated text once, because
+it reports how many characters it cut. An eight-byte ASCII skip in `JSLength`
+made that count 7x faster on ASCII but 1.2-1.6x slower on CJK, European and mixed
+text in every variant tried, so it was not kept.
+
+Tests: `TestSliceHeadKeepsWholeCharactersAndScansOnlyThePrefix`,
+`BenchmarkSliceHead`, `BenchmarkTruncateForSummary`.
+

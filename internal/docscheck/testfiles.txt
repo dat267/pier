@@ -791,6 +791,7 @@ coding/tools_fs_test.go
 coding/tools_powershell_test.go
 coding/tools_search_test.go
 coding/tools_search_windows_test.go
+coding/truncate_bench_test.go
 coding/truncate_parity_test.go
 coding/truncate_tail_scale_test.go
 coding/truncate_uncapped_parity_test.go
