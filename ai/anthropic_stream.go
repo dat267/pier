@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"net/http"
 	"slices"
@@ -678,7 +679,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				reasoning := *u.OutputTokensDetails.ThinkingTokens
 				output.Usage.Reasoning = &reasoning
 			}
-			output.Usage.TotalTokens = jsNumberToInt64(float64(output.Usage.Input) + float64(output.Usage.Output) + float64(output.Usage.CacheRead) + float64(output.Usage.CacheWrite))
+			output.Usage.TotalTokens = jsnum.ToInt64(float64(output.Usage.Input) + float64(output.Usage.Output) + float64(output.Usage.CacheRead) + float64(output.Usage.CacheWrite))
 			CalculateCost(usageModel, &output.Usage)
 			if IsOpenRouterModel(model) {
 				ApplyOpenRouterReportedCost(&output.Usage, u.OpenRouterUsageAccounting)
@@ -823,7 +824,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				if event.Usage != nil {
 					applyUsage(*event.Usage, false)
 				} else {
-					output.Usage.TotalTokens = jsNumberToInt64(float64(output.Usage.Input) + float64(output.Usage.Output) + float64(output.Usage.CacheRead) + float64(output.Usage.CacheWrite))
+					output.Usage.TotalTokens = jsnum.ToInt64(float64(output.Usage.Input) + float64(output.Usage.Output) + float64(output.Usage.CacheRead) + float64(output.Usage.CacheWrite))
 					CalculateCost(usageModel, &output.Usage)
 				}
 			}

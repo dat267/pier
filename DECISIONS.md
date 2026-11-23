@@ -4348,7 +4348,7 @@ lone-surrogate and invalid-UTF-8 replacement rules, keeps `JSON.stringify`'s
 control-character escapes and literal U+2028/U+2029, and reuses
 `javascriptJSONNumber`/`appendJSObjectKey` for number text and index-key order.
 Objects still buffer their fields, since keys are reordered and deduplicated;
-arrays append directly. `jsArrayIndexKey` validates digits before `ParseUint`,
+arrays append directly. `jsnum.ArrayIndex` validates digits itself instead of calling `ParseUint`,
 which allocated a syntax error for every ordinary key.
 
 Invalid input falls back to the decoder path, so the standard diagnostic
@@ -5430,7 +5430,7 @@ rather than a data one; it also affected the read order pier reported for
 `models-store.json` providers.
 
 All three writers route their key list through the existing
-`mcpJavaScriptObjectKeyOrder` helper.
+`jsnum.ObjectKeyOrder` helper.
 
 Test: `TestPersistedJSONWritersUseJavaScriptKeyOrder` pins the exact bytes for
 each file against the reference's own output (`"1"`, `"2"`, `"10"` before the
@@ -8540,7 +8540,7 @@ field .contextWindow of type int64`. Losing the entire catalog, including every
 other provider, is worse than losing the exponent of one abnormal limit.
 
 `Model.UnmarshalJSON` now retries once on that failure with the offending members
-rewritten to the int64 bounds, the same coercion `jsNumberToInt64` already
+rewritten to the int64 bounds, the same coercion `jsnum.ToInt64` already
 applies on the Radius and usage paths. Ordinary values (at or below int64 max)
 are unchanged and go through the single decode, so byte parity holds for every
 catalog that fits. A saturated value differs from the reference only for a

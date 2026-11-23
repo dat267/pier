@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"net/http"
 	"net/url"
@@ -1371,12 +1372,12 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 						oneHourNumber += float64(derefInt64(detail.InputTokens))
 					}
 				}
-				oneHour := jsNumberToInt64(oneHourNumber)
+				oneHour := jsnum.ToInt64(oneHourNumber)
 				output.Usage.CacheWrite1h = &oneHour
 			}
 			output.Usage.TotalTokens = derefInt64(usage.TotalTokens)
 			if output.Usage.TotalTokens == 0 {
-				output.Usage.TotalTokens = jsNumberToInt64(float64(output.Usage.Input) + float64(output.Usage.Output))
+				output.Usage.TotalTokens = jsnum.ToInt64(float64(output.Usage.Input) + float64(output.Usage.Output))
 			}
 			CalculateCost(model, &output.Usage)
 		}

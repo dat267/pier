@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"maps"
 	"strings"
 
@@ -195,10 +196,10 @@ func applyModelOverride(model *ai.Model, override ModelsJSONModelOverride) (*ai.
 		updated.Cost = cost
 	}
 	if override.ContextWindow != nil {
-		updated.ContextWindow = modelsJSONNumberToInt64(*override.ContextWindow)
+		updated.ContextWindow = jsnum.ToInt64(*override.ContextWindow)
 	}
 	if override.MaxTokens != nil {
-		updated.MaxTokens = modelsJSONNumberToInt64(*override.MaxTokens)
+		updated.MaxTokens = jsnum.ToInt64(*override.MaxTokens)
 	}
 	if override.SamplingParams != nil {
 		merged := map[string]json.RawMessage{}
@@ -223,34 +224,6 @@ func applyModelOverride(model *ai.Model, override ModelsJSONModelOverride) (*ai.
 	return &updated, nil
 }
 
-// modelsJSONNumberToInt saturates numeric configuration that exceeds the
-// platform int range, preserving positive cache lifetimes (D336).
-func modelsJSONNumberToInt(value float64) int {
-	maxInt := int(^uint(0) >> 1)
-	minInt := -maxInt - 1
-	if value >= float64(maxInt) {
-		return maxInt
-	}
-	if value <= float64(minInt) {
-		return minInt
-	}
-	return int(value)
-}
-
-// modelsJSONNumberToInt64 saturates numeric configuration that exceeds int64
-// representation bounds, preserving positive limits and thresholds (D336-D337).
-func modelsJSONNumberToInt64(value float64) int64 {
-	maxInt64 := int64(^uint64(0) >> 1)
-	minInt64 := -maxInt64 - 1
-	if value >= float64(maxInt64) {
-		return maxInt64
-	}
-	if value <= float64(minInt64) {
-		return minInt64
-	}
-	return int64(value)
-}
-
 // promptCacheFromJSON converts the seconds-per-tier map of models.json into
 // the model's prompt-cache lifetimes.
 func promptCacheFromJSON(values ModelsJSONPromptCache) ai.ModelPromptCache {
@@ -259,7 +232,7 @@ func promptCacheFromJSON(values ModelsJSONPromptCache) ai.ModelPromptCache {
 	}
 	out := make(ai.ModelPromptCache, len(values))
 	for retention, seconds := range values {
-		out[retention] = modelsJSONNumberToInt(seconds)
+		out[retention] = jsnum.ToInt(seconds)
 	}
 	return out
 }
@@ -271,7 +244,7 @@ func costTiersFromJSON(tiers []ModelsJSONCostTier) []ai.ModelCostTier {
 	out := make([]ai.ModelCostTier, 0, len(tiers))
 	for _, tier := range tiers {
 		out = append(out, ai.ModelCostTier{
-			InputTokensAbove: modelsJSONNumberToInt64(tier.InputTokensAbove),
+			InputTokensAbove: jsnum.ToInt64(tier.InputTokensAbove),
 			Input:            tier.Input, Output: tier.Output,
 			CacheRead: tier.CacheRead, CacheWrite: tier.CacheWrite,
 		})
@@ -329,11 +302,11 @@ func modelFromJSON(providerID string, definition ModelsJSONModel, providerConfig
 	}
 	contextWindow := int64(128000)
 	if definition.ContextWindow != nil {
-		contextWindow = modelsJSONNumberToInt64(*definition.ContextWindow)
+		contextWindow = jsnum.ToInt64(*definition.ContextWindow)
 	}
 	maxTokens := int64(16384)
 	if definition.MaxTokens != nil {
-		maxTokens = modelsJSONNumberToInt64(*definition.MaxTokens)
+		maxTokens = jsnum.ToInt64(*definition.MaxTokens)
 	}
 
 	compat, err := mergeCompatJSON(api, compatFromConfig(providerConfig.Compat, api), definition.Compat)

@@ -2,6 +2,7 @@ package ai
 
 import (
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"time"
 )
@@ -87,7 +88,7 @@ func ClampMaxTokensToContext(model *Model, context TranscriptContext, maxTokens 
 		// caps output at that size.
 		room = math.Min(float64(minOutputWithRatioMargin), float64(model.ContextWindow)-input-float64(contextSafetyTokens))
 	}
-	return jsNumberToInt(math.Min(float64(maxTokens), math.Max(float64(minMaxTokens), room)))
+	return jsnum.ToInt(math.Min(float64(maxTokens), math.Max(float64(minMaxTokens), room)))
 }
 
 // withSimpleMaxTokens ports buildBaseOptions' output ceiling without changing

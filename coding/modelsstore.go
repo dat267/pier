@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"path/filepath"
 	"slices"
@@ -178,7 +179,7 @@ func parseStoredModels(content *string) (storedModels, []string, error) {
 	// The reference re-parses and re-stringifies the file, so JSON.parse's
 	// enumeration order (array-index keys first, in numeric order) is what a
 	// write persists.
-	return data, mcpJavaScriptObjectKeyOrder(order), nil
+	return data, jsnum.ObjectKeyOrder(order), nil
 }
 
 // marshalStoredModels renders models-store.json like JSON.stringify(data, null, 2).

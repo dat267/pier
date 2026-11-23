@@ -1,10 +1,13 @@
 // Package jsnum ports the JavaScript numeric coercions that a JSON field's
-// declared type does not enforce upstream.
+// declared type does not enforce upstream, and the array-index rule that
+// orders an object's keys. ai, coding and tui share this one copy.
 package jsnum
 
 import (
+	"cmp"
 	"encoding/json"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -97,4 +100,77 @@ func Number(value any) (float64, bool) {
 		return 0, false
 	}
 	return 0, false
+}
+
+// ToInt converts a JavaScript number to int, truncating toward zero. A value
+// outside int's range saturates at its bound, because the port cannot
+// represent that number in its result type (D313, D336).
+func ToInt(value float64) int {
+	if value >= math.MaxInt {
+		return math.MaxInt
+	}
+	if value <= math.MinInt {
+		return math.MinInt
+	}
+	return int(value)
+}
+
+// ToInt64 is ToInt for int64 fields: a finite positive catalog or
+// configuration value saturates instead of wrapping negative (D334, D336,
+// D337).
+func ToInt64(value float64) int64 {
+	if value >= math.MaxInt64 {
+		return math.MaxInt64
+	}
+	if value <= math.MinInt64 {
+		return math.MinInt64
+	}
+	return int64(value)
+}
+
+// ArrayIndex reports whether key is a JavaScript array index ("0", or digits
+// with no leading zero, below 2^32-1) and its value. "01", "-0" and
+// "4294967295" are ordinary string keys. It validates the digits itself:
+// strconv.ParseUint allocates an error for every ordinary key, which
+// dominated JSON canonicalization allocations (M143).
+func ArrayIndex(key string) (uint32, bool) {
+	if key == "" || (len(key) > 1 && key[0] == '0') || len(key) > 10 {
+		return 0, false
+	}
+	var index uint64
+	for i := range len(key) {
+		if key[i] < '0' || key[i] > '9' {
+			return 0, false
+		}
+		index = index*10 + uint64(key[i]-'0')
+	}
+	if index >= 1<<32-1 {
+		return 0, false
+	}
+	return uint32(index), true
+}
+
+// ObjectKeyOrder returns keys in the order Object.keys and JSON.stringify
+// enumerate them: array-index keys first, ascending, then the rest in their
+// own order.
+func ObjectKeyOrder(keys []string) []string {
+	type indexedKey struct {
+		name  string
+		index uint32
+	}
+	indices := make([]indexedKey, 0, len(keys))
+	ordered := make([]string, 0, len(keys))
+	var ordinary []string
+	for _, key := range keys {
+		if index, ok := ArrayIndex(key); ok {
+			indices = append(indices, indexedKey{name: key, index: index})
+		} else {
+			ordinary = append(ordinary, key)
+		}
+	}
+	slices.SortStableFunc(indices, func(a, b indexedKey) int { return cmp.Compare(a.index, b.index) })
+	for _, entry := range indices {
+		ordered = append(ordered, entry.name)
+	}
+	return append(ordered, ordinary...)
 }

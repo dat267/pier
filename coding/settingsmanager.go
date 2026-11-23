@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"maps"
 	"math"
 	"os"
@@ -1571,7 +1572,7 @@ func settingsRawKeyOrder(text string) []string {
 			return keys
 		}
 	}
-	return mcpJavaScriptObjectKeyOrder(keys)
+	return jsnum.ObjectKeyOrder(keys)
 }
 
 // settingsDeclarationOrder is the order the typed writer emits known fields.

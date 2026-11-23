@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"net/http"
 	"strconv"
@@ -470,7 +471,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 			if chunk.UsageMetadata != nil {
 				usage := chunk.UsageMetadata
 				inputTokens := derefI64(usage.PromptTokenCount) - derefI64(usage.CachedContentTokenCount)
-				outputTokens := jsNumberToInt64(float64(derefI64(usage.CandidatesTokenCount)) + float64(derefI64(usage.ThoughtsTokenCount)))
+				outputTokens := jsnum.ToInt64(float64(derefI64(usage.CandidatesTokenCount)) + float64(derefI64(usage.ThoughtsTokenCount)))
 				output.Usage = Usage{
 					Input:       inputTokens,
 					Output:      outputTokens,

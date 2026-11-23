@@ -2,6 +2,7 @@ package coding
 
 import (
 	"encoding/json"
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 func (m *ModelsJSONModel) UnmarshalJSON(data []byte) error {
@@ -69,5 +70,5 @@ func modelConfigObjectKeys(raw []byte) []string {
 	// samplingParams is a free-form Record the reference serializes with
 	// JSON.stringify, whose enumeration puts array-index keys first in numeric order
 	// and then the file's own order. Reuse the rule the settings writer already has.
-	return mcpJavaScriptObjectKeyOrder(keys)
+	return jsnum.ObjectKeyOrder(keys)
 }

@@ -3,6 +3,7 @@ package jsnum
 import (
 	"encoding/json"
 	"math"
+	"slices"
 	"testing"
 	"unicode"
 )
@@ -79,5 +80,49 @@ func TestWhitespaceExcludesNextLineAndIncludesBOM(t *testing.T) {
 		if want := r == '\uFEFF' || (r != '\u0085' && unicode.IsSpace(r)); Whitespace(r) != want {
 			t.Fatalf("Whitespace(U+%04X) = %v; want %v", r, !want, want)
 		}
+	}
+}
+
+// ArrayIndex is ECMAScript's array-index test (CanonicalNumericIndexString
+// below 2^32-1), which orders Object.keys and JSON.stringify output.
+func TestArrayIndexAcceptsOnlyCanonicalIndices(t *testing.T) {
+	for key, want := range map[string]int64{
+		"0": 0, "7": 7, "10": 10, "4294967294": 4294967294,
+		"": -1, "01": -1, "-0": -1, "-1": -1, "1.5": -1, "1e3": -1, " 1": -1,
+		"4294967295": -1, "4294967296": -1, "99999999999": -1, "a": -1,
+	} {
+		index, ok := ArrayIndex(key)
+		if ok != (want >= 0) || (ok && int64(index) != want) {
+			t.Errorf("ArrayIndex(%q) = %d, %v; want %d", key, index, ok, want)
+		}
+	}
+	if allocs := testing.AllocsPerRun(100, func() { ArrayIndex("ordinary") }); allocs != 0 {
+		t.Fatalf("ArrayIndex allocates %v times for an ordinary key", allocs)
+	}
+}
+
+func TestObjectKeyOrderPutsIndicesFirstAscending(t *testing.T) {
+	got := ObjectKeyOrder([]string{"b", "10", "a", "2", "01", "4294967295", "0"})
+	want := []string{"0", "2", "10", "b", "a", "01", "4294967295"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("ObjectKeyOrder = %q; want %q", got, want)
+	}
+}
+
+func TestToIntSaturatesOutOfRange(t *testing.T) {
+	if got := ToInt(1e300); got != math.MaxInt {
+		t.Errorf("ToInt(1e300) = %d", got)
+	}
+	if got := ToInt(-1e300); got != math.MinInt {
+		t.Errorf("ToInt(-1e300) = %d", got)
+	}
+	if got := ToInt(-2.9); got != -2 {
+		t.Errorf("ToInt(-2.9) = %d; want -2", got)
+	}
+	if got := ToInt64(1e19); got != math.MaxInt64 {
+		t.Errorf("ToInt64(1e19) = %d", got)
+	}
+	if got := ToInt64(-1e19); got != math.MinInt64 {
+		t.Errorf("ToInt64(-1e19) = %d", got)
 	}
 }

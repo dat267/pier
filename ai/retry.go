@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"math"
 	"math/rand"
@@ -62,16 +63,8 @@ var providerRetrySleep = func(ctx context.Context, delayMS int64) error {
 
 var jsParseFloatPrefix = regexp.MustCompile(`^[+-]?(?:Infinity|(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?)`)
 
-func isJSParseFloatWhitespace(r rune) bool {
-	switch r {
-	case '\t', '\n', '\v', '\f', '\r', ' ', 0x00A0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF:
-		return true
-	}
-	return r >= 0x2000 && r <= 0x200A
-}
-
 func parseJSFloatPrefix(value string) (float64, bool) {
-	value = strings.TrimLeftFunc(value, isJSParseFloatWhitespace)
+	value = strings.TrimLeftFunc(value, jsnum.Whitespace)
 	prefix := jsParseFloatPrefix.FindString(value)
 	if prefix == "" {
 		return 0, false

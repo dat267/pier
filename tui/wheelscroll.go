@@ -2,6 +2,7 @@ package tui
 
 import (
 	"encoding/json"
+	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"os"
 	"runtime"
@@ -43,7 +44,7 @@ func (w *WheelScrollLines) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	// Saturate before SettingsManager's 1..100 clamp (D338).
-	*w = FixedWheelScrollLines(floatToIntSaturated(number))
+	*w = FixedWheelScrollLines(jsnum.ToInt(number))
 	return nil
 }
 

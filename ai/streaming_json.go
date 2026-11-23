@@ -3,6 +3,7 @@ package ai
 import (
 	"cmp"
 	"encoding/json"
+	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"slices"
 	"strconv"
@@ -91,7 +92,7 @@ type sjMember struct {
 	// start and end bound the member's latest `"key":value` bytes in out,
 	// without a separator.
 	start, end int
-	num        uint64 // the array index of an index key
+	num        uint32 // the array index of an index key
 	isIndex    bool
 }
 
@@ -909,7 +910,7 @@ func (p *streamingJSONParser) beginValue(slot sjSlot) {
 		return
 	}
 	position, duplicate := frame.lookup(frame.key)
-	num, isIndex := jsArrayIndexKey(frame.key)
+	num, isIndex := jsnum.ArrayIndex(frame.key)
 	if !frame.unordered && (duplicate || isIndex && frame.named+len(frame.members) > 0 &&
 		(frame.named > 0 || num < frame.members[len(frame.members)-1].num)) {
 		frame.unordered = true
@@ -969,7 +970,7 @@ func (f *sjFrame) lookup(key string) (int, bool) {
 
 // indexPosition is where a new index key goes in an ordered frame, whose
 // index members are an ascending prefix.
-func (f *sjFrame) indexPosition(num uint64) int {
+func (f *sjFrame) indexPosition(num uint32) int {
 	low, high := 0, len(f.members)-f.named
 	for low < high {
 		mid := int(uint(low+high) >> 1)
@@ -1083,7 +1084,7 @@ func (p *streamingJSONParser) pendingPlacement() (from, to int, member []byte, p
 	position, duplicate := frame.lookup(frame.key)
 	if !duplicate {
 		position = len(frame.members)
-		if num, isIndex := jsArrayIndexKey(frame.key); isIndex {
+		if num, isIndex := jsnum.ArrayIndex(frame.key); isIndex {
 			position = frame.indexPosition(num)
 		}
 	}
@@ -1139,7 +1140,7 @@ func (p *streamingJSONParser) emitFrame(dst []byte, i int) []byte {
 
 	// The pending scalar's member, if this is its frame.
 	pendingAt, pendingNew := -1, false
-	var pendingNum uint64
+	var pendingNum uint32
 	var pendingIsIndex bool
 	value, pending := "", false
 	if top {
@@ -1150,7 +1151,7 @@ func (p *streamingJSONParser) emitFrame(dst []byte, i int) []byte {
 			pendingAt = position
 		} else {
 			pendingNew = true
-			pendingNum, pendingIsIndex = jsArrayIndexKey(frame.key)
+			pendingNum, pendingIsIndex = jsnum.ArrayIndex(frame.key)
 		}
 	}
 	dst = append(dst, '{')

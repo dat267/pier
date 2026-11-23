@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"math"
 	"net/http"
@@ -402,7 +403,7 @@ func parseOpenAIDecisionsUsage(raw json.RawMessage, model *Model) *Usage {
 	}
 	input := classifierTokenCount(values["input_tokens"])
 	output := classifierTokenCount(values["output_tokens"])
-	usage := &Usage{Input: input, Output: output, TotalTokens: jsNumberToInt64(float64(input) + float64(output))}
+	usage := &Usage{Input: input, Output: output, TotalTokens: jsnum.ToInt64(float64(input) + float64(output))}
 	CalculateCost(model, usage)
 	return usage
 }
@@ -412,7 +413,7 @@ func classifierTokenCount(raw json.RawMessage) int64 {
 	if err != nil || value <= 0 {
 		return 0
 	}
-	return jsNumberToInt64(value)
+	return jsnum.ToInt64(value)
 }
 
 func responseHeaders(headers http.Header) map[string]string {

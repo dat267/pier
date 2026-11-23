@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -37,7 +38,7 @@ func AddMcpServerConfig(path, name string, config json.RawMessage) (bool, error)
 	}
 	// The reference re-parses the document and stringifies it, so JSON.parse's
 	// enumeration order applies: array-index keys first, in numeric order.
-	keys = mcpJavaScriptObjectKeyOrder(keys)
+	keys = jsnum.ObjectKeyOrder(keys)
 	serverKeys := []string{}
 	servers := map[string]json.RawMessage{}
 	if raw, ok := values["mcpServers"]; ok {

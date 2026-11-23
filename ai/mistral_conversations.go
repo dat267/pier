@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"math"
 	"net/http"
@@ -722,7 +723,7 @@ func applyMistralEvent(model *Model, output *AssistantMessage, stream *Assistant
 		if usage.TotalTokens > 0 {
 			output.Usage.TotalTokens = usage.TotalTokens
 		} else {
-			output.Usage.TotalTokens = jsNumberToInt64(float64(output.Usage.Input) + float64(output.Usage.Output) + float64(output.Usage.CacheRead) + float64(output.Usage.CacheWrite))
+			output.Usage.TotalTokens = jsnum.ToInt64(float64(output.Usage.Input) + float64(output.Usage.Output) + float64(output.Usage.CacheRead) + float64(output.Usage.CacheWrite))
 		}
 		CalculateCost(model, &output.Usage)
 	}
@@ -990,13 +991,13 @@ func parseMistralUsage(raw json.RawMessage) (struct {
 		return result, false
 	}
 	if payload.PromptTokens != nil {
-		result.PromptTokens = jsNumberToInt64(*payload.PromptTokens)
+		result.PromptTokens = jsnum.ToInt64(*payload.PromptTokens)
 	}
 	if payload.CompletionTokens != nil {
-		result.CompletionTokens = jsNumberToInt64(*payload.CompletionTokens)
+		result.CompletionTokens = jsnum.ToInt64(*payload.CompletionTokens)
 	}
 	if payload.TotalTokens != nil {
-		result.TotalTokens = jsNumberToInt64(*payload.TotalTokens)
+		result.TotalTokens = jsnum.ToInt64(*payload.TotalTokens)
 	}
 	return result, true
 }

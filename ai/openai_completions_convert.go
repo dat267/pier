@@ -2,6 +2,7 @@ package ai
 
 import (
 	"encoding/json"
+	"github.com/dat267/pier/internal/jsnum"
 	"strings"
 )
 
@@ -473,14 +474,14 @@ func ParseChunkUsage(raw []byte, model *Model) Usage {
 	if u.PromptTokensDetails != nil && u.PromptTokensDetails.CacheWriteTokens != nil {
 		cacheWriteTokens = *u.PromptTokensDetails.CacheWriteTokens
 	}
-	input := jsNumberToInt64(max(0, float64(promptTokens)-float64(cacheReadTokens)-float64(cacheWriteTokens)))
+	input := jsnum.ToInt64(max(0, float64(promptTokens)-float64(cacheReadTokens)-float64(cacheWriteTokens)))
 	outputTokens := derefI64(u.CompletionTokens)
 	usage := Usage{
 		Input:       input,
 		Output:      outputTokens,
 		CacheRead:   cacheReadTokens,
 		CacheWrite:  cacheWriteTokens,
-		TotalTokens: jsNumberToInt64(float64(input) + float64(outputTokens) + float64(cacheReadTokens) + float64(cacheWriteTokens)),
+		TotalTokens: jsnum.ToInt64(float64(input) + float64(outputTokens) + float64(cacheReadTokens) + float64(cacheWriteTokens)),
 		Cost:        UsageCost{},
 	}
 	// Upstream always reports a numeric reasoning count

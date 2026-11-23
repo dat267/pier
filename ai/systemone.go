@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"maps"
 	"math"
@@ -524,7 +525,7 @@ func parseSystemOneUsage(raw json.RawMessage, model *Model) *Usage {
 	}
 	input := classifierTokenCount(inputRaw)
 	output := classifierTokenCount(outputRaw)
-	usage := &Usage{Input: input, Output: output, TotalTokens: jsNumberToInt64(float64(input) + float64(output))}
+	usage := &Usage{Input: input, Output: output, TotalTokens: jsnum.ToInt64(float64(input) + float64(output))}
 	CalculateCost(model, usage)
 	return usage
 }

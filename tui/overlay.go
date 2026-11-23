@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"strconv"
 	"strings"
@@ -94,24 +95,12 @@ func parsePercentValue(value string) (float64, bool) {
 }
 
 func percentOf(reference int, percent float64) int {
-	return floatToIntSaturated(math.Floor(float64(reference) * percent / 100))
+	return jsnum.ToInt(math.Floor(float64(reference) * percent / 100))
 }
 
 func percentPosition(base int, reference int, percent float64) int {
 	value := float64(base) + math.Floor(float64(reference)*percent/100)
-	return floatToIntSaturated(value)
-}
-
-func floatToIntSaturated(value float64) int {
-	maxInt := int(^uint(0) >> 1)
-	minInt := -maxInt - 1
-	if value >= float64(maxInt) {
-		return maxInt
-	}
-	if value <= float64(minInt) {
-		return minInt
-	}
-	return int(value)
+	return jsnum.ToInt(value)
 }
 
 func addIntSaturated(a int, b int) int {

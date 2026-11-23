@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"net/http"
 	"regexp"
@@ -289,27 +290,27 @@ func parseOpenRouterImagesUsage(raw struct {
 		CacheWriteTokens *float64 `json:"cache_write_tokens"`
 	} `json:"prompt_tokens_details"`
 }, model *ImagesModel) Usage {
-	promptTokens := jsNumberToInt64(raw.PromptTokens)
+	promptTokens := jsnum.ToInt64(raw.PromptTokens)
 	reportedCached := int64(0)
 	cacheWrite := int64(0)
 	if raw.PromptTokensDetails != nil {
 		if raw.PromptTokensDetails.CachedTokens != nil {
-			reportedCached = jsNumberToInt64(*raw.PromptTokensDetails.CachedTokens)
+			reportedCached = jsnum.ToInt64(*raw.PromptTokensDetails.CachedTokens)
 		}
 		if raw.PromptTokensDetails.CacheWriteTokens != nil {
-			cacheWrite = jsNumberToInt64(*raw.PromptTokensDetails.CacheWriteTokens)
+			cacheWrite = jsnum.ToInt64(*raw.PromptTokensDetails.CacheWriteTokens)
 		}
 	}
 	cacheRead := reportedCached
 	if cacheWrite > 0 {
-		cacheRead = jsNumberToInt64(max(0, float64(reportedCached)-float64(cacheWrite)))
+		cacheRead = jsnum.ToInt64(max(0, float64(reportedCached)-float64(cacheWrite)))
 	}
-	inputTokens := jsNumberToInt64(max(0, float64(promptTokens)-float64(cacheRead)-float64(cacheWrite)))
-	outputTokens := jsNumberToInt64(raw.CompletionTokens)
+	inputTokens := jsnum.ToInt64(max(0, float64(promptTokens)-float64(cacheRead)-float64(cacheWrite)))
+	outputTokens := jsnum.ToInt64(raw.CompletionTokens)
 	usage := Usage{
 		Input: inputTokens, Output: outputTokens,
 		CacheRead: cacheRead, CacheWrite: cacheWrite,
-		TotalTokens: jsNumberToInt64(float64(inputTokens) + float64(outputTokens) + float64(cacheRead) + float64(cacheWrite)),
+		TotalTokens: jsnum.ToInt64(float64(inputTokens) + float64(outputTokens) + float64(cacheRead) + float64(cacheWrite)),
 		Cost: UsageCost{
 			Input:      model.Cost.Input / 1000000 * float64(inputTokens),
 			Output:     model.Cost.Output / 1000000 * float64(outputTokens),

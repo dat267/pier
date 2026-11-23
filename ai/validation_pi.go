@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"math/big"
 	"net"
@@ -1391,7 +1392,7 @@ func svInt(v *schemaValue, key string) *int {
 	// maxContains 9223372036854775807 reported "between 1 and
 	// -9223372036854775808". Saturate at the bounds instead, the coercion the
 	// rest of the module uses for a JavaScript number.
-	saturated := jsNumberToInt64(got.Number)
+	saturated := jsnum.ToInt64(got.Number)
 	if int64(int(saturated)) != saturated {
 		// A 32-bit int target cannot hold the value either.
 		return nil

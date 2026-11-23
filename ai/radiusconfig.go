@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"net/http"
 	"strings"
 	"sync"
@@ -90,8 +91,8 @@ func radiusGatewayModelFromMap(record map[string]any) (RadiusGatewayModel, bool)
 	model := RadiusGatewayModel{
 		ID: id, Name: name, Reasoning: reasoning,
 		Cost:          radiusCostFromMap(costRecord),
-		ContextWindow: jsNumberToInt64(contextWindow),
-		MaxTokens:     jsNumberToInt64(maxTokens),
+		ContextWindow: jsnum.ToInt64(contextWindow),
+		MaxTokens:     jsnum.ToInt64(maxTokens),
 	}
 	for _, item := range input {
 		if text, ok := item.(string); ok {
@@ -135,7 +136,7 @@ func radiusCostFromMap(record map[string]any) ModelCost {
 				continue
 			}
 			cost.Tiers = append(cost.Tiers, ModelCostTier{
-				InputTokensAbove: jsNumberToInt64(threshold),
+				InputTokensAbove: jsnum.ToInt64(threshold),
 				Input:            read(tierRecord, "input"),
 				Output:           read(tierRecord, "output"),
 				CacheRead:        read(tierRecord, "cacheRead"),

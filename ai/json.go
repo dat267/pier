@@ -3,6 +3,7 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"strconv"
 	"strings"
@@ -136,13 +137,13 @@ func literalJSONLineSeparators(encoded []byte) []byte {
 // uint32 indices below 2^32-1 lead in numeric order; other keys keep insertion
 // order. "01", "-0" and "4294967295" are ordinary string keys.
 func appendJSObjectKey(keys []string, key string) []string {
-	index, indexed := jsArrayIndexKey(key)
+	index, indexed := jsnum.ArrayIndex(key)
 	if !indexed {
 		return append(keys, key)
 	}
 	position := 0
 	for position < len(keys) {
-		other, ok := jsArrayIndexKey(keys[position])
+		other, ok := jsnum.ArrayIndex(keys[position])
 		if !ok || other > index {
 			break
 		}
@@ -152,21 +153,4 @@ func appendJSObjectKey(keys []string, key string) []string {
 	copy(keys[position+1:], keys[position:])
 	keys[position] = key
 	return keys
-}
-
-func jsArrayIndexKey(key string) (uint64, bool) {
-	if key == "" || (len(key) > 1 && key[0] == '0') || len(key) > 10 {
-		return 0, false
-	}
-	// Validate digits before parsing: ParseUint allocates a syntax error for
-	// every ordinary (non-index) JSON key, which dominated canonicalization
-	// allocations (M143).
-	var index uint64
-	for i := range len(key) {
-		if key[i] < '0' || key[i] > '9' {
-			return 0, false
-		}
-		index = index*10 + uint64(key[i]-'0')
-	}
-	return index, index < 1<<32-1
 }

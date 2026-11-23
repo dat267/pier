@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"github.com/dat267/pier/internal/jsnum"
 	"math"
 )
 
@@ -30,39 +31,10 @@ type ContextUsageEstimate struct {
 // CalculateContextTokens of a usage block.
 func CalculateContextTokens(usage Usage) int {
 	if usage.TotalTokens != 0 {
-		return jsNumberToInt(float64(usage.TotalTokens))
+		return jsnum.ToInt(float64(usage.TotalTokens))
 	}
 	total := float64(usage.Input) + float64(usage.Output) + float64(usage.CacheRead) + float64(usage.CacheWrite)
-	return jsNumberToInt(total)
-}
-
-// jsNumberToInt rounds int64-backed usage through JavaScript Number semantics.
-// D313: values outside Go int's range saturate because the port cannot represent
-// the corresponding JavaScript number in its result type.
-func jsNumberToInt(value float64) int {
-	maxInt := int(^uint(0) >> 1)
-	minInt := -maxInt - 1
-	if value >= float64(maxInt) {
-		return maxInt
-	}
-	if value <= float64(minInt) {
-		return minInt
-	}
-	return int(value)
-}
-
-// jsNumberToInt64 saturates values outside the int64-backed port model range
-// instead of letting finite positive catalog values wrap negative (D334).
-func jsNumberToInt64(value float64) int64 {
-	maxInt64 := int64(^uint64(0) >> 1)
-	minInt64 := -maxInt64 - 1
-	if value >= float64(maxInt64) {
-		return maxInt64
-	}
-	if value <= float64(minInt64) {
-		return minInt64
-	}
-	return int64(value)
+	return jsnum.ToInt(total)
 }
 
 func safeJSONStringify(v any) string {
@@ -219,9 +191,9 @@ func EstimateContextTokens(messages []Message) ContextUsageEstimate {
 		for i := index + 1; i < len(messages); i++ {
 			trailingNumber += float64(EstimateMessageTokens(messages[i]))
 		}
-		trailing := jsNumberToInt(trailingNumber)
+		trailing := jsnum.ToInt(trailingNumber)
 		return ContextUsageEstimate{
-			Tokens: jsNumberToInt(float64(usageTokens) + trailingNumber), UsageTokens: usageTokens,
+			Tokens: jsnum.ToInt(float64(usageTokens) + trailingNumber), UsageTokens: usageTokens,
 			TrailingTokens: trailing, LastUsageIndex: index,
 		}
 	}
@@ -229,6 +201,6 @@ func EstimateContextTokens(messages []Message) ContextUsageEstimate {
 	for _, message := range messages {
 		tokenNumber += float64(EstimateMessageTokens(message))
 	}
-	tokens := jsNumberToInt(tokenNumber)
+	tokens := jsnum.ToInt(tokenNumber)
 	return ContextUsageEstimate{Tokens: tokens, UsageTokens: 0, TrailingTokens: tokens, LastUsageIndex: -1}
 }

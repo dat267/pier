@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"time"
 )
@@ -61,7 +62,7 @@ type OAuthDeviceCodePollResult[T any] struct {
 // range. D332 preserves positive far-future device expiries instead of letting
 // a float-to-int overflow mark them expired immediately.
 func oauthSecondsToInt(seconds float64) int {
-	return jsNumberToInt(seconds)
+	return jsnum.ToInt(seconds)
 }
 
 // deviceCodeIntervalDuration converts server-provided seconds without

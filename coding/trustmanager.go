@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dat267/pier/internal/jsnum"
 	"os"
 	"path/filepath"
 	"sort"
@@ -162,7 +163,7 @@ func readTrustFileOrdered(path string) (trustFile, []string, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to read trust store %s: %v", path, err)
 	}
-	keys = mcpJavaScriptObjectKeyOrder(keys)
+	keys = jsnum.ObjectKeyOrder(keys)
 	data := trustFile{}
 	for _, key := range keys {
 		switch value := object[key].(type) {

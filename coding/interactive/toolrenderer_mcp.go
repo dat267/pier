@@ -13,6 +13,7 @@ package interactive
 
 import (
 	"encoding/json"
+	"github.com/dat267/pier/internal/jsnum"
 	"strconv"
 	"strings"
 
@@ -183,7 +184,7 @@ func mcpArgumentEntries(args any) []mcpArgumentEntry {
 		keys = append(keys, key)
 		values[key] = mcpArgumentEntry{key: key, value: mcpJSONStringify(value)}
 	}
-	for _, key := range coding.JavaScriptObjectKeyOrder(keys) {
+	for _, key := range jsnum.ObjectKeyOrder(keys) {
 		entries = append(entries, values[key])
 	}
 	return entries
