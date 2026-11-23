@@ -614,3 +614,28 @@ func TestCPPFunctionDispatchLookaheads(t *testing.T) {
 		}
 	}
 }
+
+// languages/javascript.js (highlight.js 10.7.3, pi v1.6.0, faac5858) marks a
+// JSDoc `@param` name only where `(?=\s*(-)|$)` holds: `\s` is JavaScript's
+// whitespace (NBSP included) and the multiline `$` matches before any line
+// terminator inside the run, a lone `\r` and U+2028 too. The expected HTML is
+// the reference's.
+func TestJSDocVariableLookahead(t *testing.T) {
+	const open = "<span class=\"hljs-comment\">/** <span class=\"hljs-doctag\">@param "
+	const marked = open + "<span class=\"hljs-variable\">x</span></span>"
+	for _, tc := range []struct{ code, html string }{
+		{"/** @param x\ry */", marked + "\ry */</span>"},
+		{"/** @param x - d */", marked + " - d */</span>"},
+		{"/** @param x y */", marked + " y */</span>"},
+		{"/** @param x y */", open + "</span>x y */</span>"},
+		{"/** @param x\r\n * y */", marked + "\r\n * y */</span>"},
+	} {
+		result, err := Highlight(tc.code, "javascript")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := RenderHTML(result.Nodes); got != tc.html {
+			t.Errorf("%q: HTML %q; want %q", tc.code, got, tc.html)
+		}
+	}
+}

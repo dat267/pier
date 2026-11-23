@@ -2,6 +2,7 @@ package highlight
 
 import (
 	"strings"
+	"unicode/utf8"
 )
 
 func init() {
@@ -42,12 +43,15 @@ func jsJSDoc() *Mode {
 	}
 	variable := Zero(Mode{ClassName: "variable", Begin: jsIdentRe, EndsParent: true})
 	variable.beforeBegin = func(m *match, resp *Response) {
+		// `(?=\s*(-)|$)`: `\s` is JavaScript's whitespace, and the multiline
+		// `$` matches before any line terminator inside the run.
 		rest := m.input[m.index+len(m.lexeme):]
 		i := 0
-		for i < len(rest) && (rest[i] == ' ' || rest[i] == '\t' || rest[i] == '\r' || rest[i] == '\f' || rest[i] == '\v') {
-			i++
+		for i < len(rest) && !jsLineTerminatorAt(rest, i) && isJSWhitespaceAt(rest, i) {
+			_, width := utf8.DecodeRuneInString(rest[i:])
+			i += width
 		}
-		if i < len(rest) && rest[i] != '-' && rest[i] != '\n' {
+		if i < len(rest) && rest[i] != '-' && !jsLineTerminatorAt(rest, i) {
 			resp.IgnoreMatch()
 		}
 	}
