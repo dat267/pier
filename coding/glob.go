@@ -23,8 +23,8 @@ import (
 // nothing, and each leading `!` inverts the match (`!*mini*` is every value
 // `*mini*` does not match).
 //
-// minimatch's extended globs (`!(...)`, `+(...)`, `?(...)`, `@(...)`,
-// `*(...)`), its POSIX character classes, `\`-escaped separators, and its
+// Extended globs (`!(...)`, `+(...)`, `?(...)`, `@(...)`, `*(...)`) inside a
+// segment run through globext.go. minimatch's POSIX character classes, `\`-escaped separators, and its
 // `matchBase`/`nocase` options beyond ASCII case folding are not implemented;
 // model ids never use them. D262 covers the one remaining difference, in
 // minimatch's escaped-suffix fast path.
@@ -544,6 +544,20 @@ func matchGlobSegment(pattern, value string, nocase bool) bool {
 	// segment, spelled "", matches an empty one).
 	if value == "" && pattern != "" {
 		return false
+	}
+	if strings.Contains(pattern, "(") {
+		p, s := []rune(pattern), []rune(value)
+		if nocase {
+			for index := range p {
+				p[index] = toLowerRune(p[index])
+			}
+			for index := range s {
+				s[index] = toLowerRune(s[index])
+			}
+		}
+		if start := globExtSegment(p); start != nil {
+			return matchGlobExt(start, s)
+		}
 	}
 	// minimatch never matches the "." or ".." path segments with anything but
 	// that literal segment.

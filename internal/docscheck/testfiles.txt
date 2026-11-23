@@ -348,6 +348,7 @@ coding/gitinfo_test.go
 coding/glob_brace_bound_test.go
 coding/glob_fuzz_test.go
 coding/glob_test.go
+coding/globext_test.go
 coding/goal_compaction_test.go
 coding/goal_concurrent_replay_test.go
 coding/goal_dispose_round_test.go
