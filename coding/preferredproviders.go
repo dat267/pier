@@ -1,6 +1,8 @@
 package coding
 
 import (
+	"sync"
+
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 )
@@ -38,11 +40,26 @@ func ComparePreferredProviders(aID, aName, bID, bName string) int {
 	}
 	// D257: follow localeCompare rather than byte ordering, so an accented
 	// name sorts next to its base letter instead of after every ASCII name.
-	return preferredProviderCollator.CompareString(aName, bName)
+	return CompareRootCollation(aName, bName)
 }
 
-// preferredProviderCollator is the root collation `localeCompare` uses for the
-// names of providers a models.json declares.
-var preferredProviderCollator = func() *collate.Collator {
-	return collate.New(language.Und)
-}()
+// rootCollation is the root collation `localeCompare` uses without the host
+// locale (D257). One collator is shared, because building one per comparison
+// cost 1.25 us and 5 KB and the footer sorts its status keys on every frame;
+// a Collator keeps scratch iterators, so the shared instance is used under a
+// lock. Sorts reach it both on the UI loop and off it (the /login argument
+// completion runs in the editor's autocomplete goroutine).
+var rootCollation struct {
+	once sync.Once
+	mu   sync.Mutex
+	coll *collate.Collator
+}
+
+// CompareRootCollation orders two strings like JavaScript's default
+// `a.localeCompare(b)`, using root collation rather than the host locale.
+func CompareRootCollation(a, b string) int {
+	rootCollation.once.Do(func() { rootCollation.coll = collate.New(language.Und) })
+	rootCollation.mu.Lock()
+	defer rootCollation.mu.Unlock()
+	return rootCollation.coll.CompareString(a, b)
+}

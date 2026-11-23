@@ -7,31 +7,16 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
-	"golang.org/x/text/collate"
-	"golang.org/x/text/language"
 )
 
-// compareLocaleNeutral orders display strings the way the reference's
-// localeCompare does without the host locale (D257). One collator is shared:
-// building one per comparison cost 1.25 us and 5 KB, and the footer sorts its
-// status keys on every frame. Collator keeps a scratch buffer, so the shared
-// instance is used under a lock.
-var localeNeutral struct {
-	once sync.Once
-	mu   sync.Mutex
-	coll *collate.Collator
-}
-
+// compareLocaleNeutral is the root collation upstream's `localeCompare` does
+// without the host locale (D257).
 func compareLocaleNeutral(a, b string) int {
-	localeNeutral.once.Do(func() { localeNeutral.coll = collate.New(language.Und) })
-	localeNeutral.mu.Lock()
-	defer localeNeutral.mu.Unlock()
-	return localeNeutral.coll.CompareString(a, b)
+	return coding.CompareRootCollation(a, b)
 }
 
 // The footer renders a single dim line: "3.5%/1M · <statuses> · model · cwd".
