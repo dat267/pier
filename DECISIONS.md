@@ -8924,11 +8924,13 @@ competes with a non-empty match at the same offset by rule order, and with
 `endOfInputMatch` at the end of the input. The dispatch stays enabled, so
 markdown's root matcher dispatches instead of scanning.
 
-Same method, paired runs (Intel N150): the 4 KB README 5.30 ms to 0.68 ms,
-against highlight.js's 0.73 ms. C++ (14.2 ms against 10.3 ms) and Java
-(11.4 ms against 6.7 ms) are unchanged by this: 100% of their regexp time but
-none of their total is a joined scan, and their cost is the exact walk
-(`exactWalk.seq`/`either`, 54% of a C++ profile). Output is unchanged on the
+Same method, repeated runs (Intel N150): the 4 KB README 5.30 ms to 0.68-0.73
+ms, against highlight.js's 0.70-0.72 ms on the same emitter and input, so the
+two are now at parity on this file (before the change the port was about 7x
+slower). C++ (14.2 ms against 10.3 ms) and Java
+(11.5 ms against 6.7 ms) are unchanged by this: they never take the joined
+scan, and their cost is the exact walk (`exactWalk.seq`/`either`, 71% of a C++
+profile). Output is unchanged on the
 goldens, the differentials, the fuzzers, LF/CRLF/U+2028 line ends, and on 4 KB
 README plus 30 KB C++ and Java samples rendered against highlight.js byte for
 byte.
