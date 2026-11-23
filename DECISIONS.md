@@ -9152,9 +9152,20 @@ regex) is correct and passes every golden but is slower still (1 KiB 7.5 to
 an exact match likewise cost 13.3 ms. `execDispatch` is already the cheapest of
 the three for this shape.
 
-What is left is a per-call cost inside `execDispatch` (61 us against V8's
-14 us) on top of a call count that is already linear, so it needs a cheaper
-anchored candidate walk rather than a bounding change or a different exec. Counting walk-settled
+What is left is now measured exactly. One resume of that tail matcher costs
+61 us, and a full pass of all four of its rules over every position of the
+whole input costs 0.09 ms, so the rules are not the cost: `execDispatch` makes
+**610 iterations** for that one resume, at about 90 ns each. The tail rule set's
+first-byte table admits 68% of bytes, so the per-byte dispatch visits hundreds
+of positions where V8's single native `g`-regex scan visits one. A per-call
+literal prefilter for the identifier rule was measured too (a whole-remainder
+`strings.Contains` is 25 ns, and `<-` is absent from the input) and did not move
+the time, because that rule is 0.06 ms of the 0.09 ms and the other three fill
+the rest.
+
+So closing this needs the dispatch to settle a broad rule set in one pass rather
+than one candidate at a time, which is the architecture change D524 and D528
+both point at; no bounding change, different exec, or prefilter reaches it. Counting walk-settled
 rejections toward `maxRejectedCandidates` does not address it and would break
 D351's guard, which `TestRejectedCandidateRunStopsAtBudget` pins.
 
