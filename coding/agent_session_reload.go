@@ -87,10 +87,10 @@ func resolvedDefaultToolSelection(settings *SettingsManager) []string {
 	return resolved
 }
 
-// excludedToolNameSet builds the reload exclusion lookup.
-// excludedToolNameSet keeps the exclusion entries as they were given, because an entry is a
-// tool name or a pattern with `*` (upstream's `--exclude-tools` patterns), so the lookup has to
-// match rather than compare.
+// excludedToolNameSet builds the reload exclusion lookup. It keeps the entries
+// as they were given, because an entry is a tool name or a pattern with `*`
+// (upstream's `--exclude-tools` patterns), so the lookup has to match rather
+// than compare.
 func excludedToolNameSet(names []string) []string {
 	if len(names) == 0 {
 		return nil

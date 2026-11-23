@@ -234,7 +234,6 @@ func ParseJSNumberString(value string) (float64, bool) {
 	return parsed, err == nil && !math.IsNaN(parsed) && !math.IsInf(parsed, 0)
 }
 
-// coercePrimitiveByType ports upstream's primitive coercions.
 // coercePrimitiveByType is pass 3 of the reference coercion (coerce.ts
 // coercePrimitive), which runs only for a type the value does not already
 // match. Pass 2 (convertNode) is the TypeBox conversion and is stricter

@@ -36,10 +36,10 @@ func Finite(value float64) (float64, bool) {
 	return value, true
 }
 
-// Number coerces like Number(), which expires_in uses upstream. Arrays coerce
-// through their single element, as Number([5]) is 5 and Number([]) is 0.
-// Number(value any) maps JSON null to 0 like Number(null). An absent field is
-// undefined upstream and must be rejected by the caller before coercing.
+// Number coerces like Number(), which expires_in and retry headers use
+// upstream. Arrays coerce through their single element, as Number([5]) is 5
+// and Number([]) is 0, and JSON null is 0 like Number(null). An absent field
+// is undefined upstream and must be rejected by the caller before coercing.
 func Number(value any) (float64, bool) {
 	switch v := value.(type) {
 	case nil:

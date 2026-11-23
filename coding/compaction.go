@@ -1177,12 +1177,6 @@ type CompactionPreparation struct {
 	Settings            CompactionSettings
 }
 
-// PrepareCompaction pre-computes the compaction cut and spans
-// (port of prepareCompaction); nil when there is nothing to compact.
-//
-// The cut runs over the session projection, not the raw entries: a context edit
-// removes or rewrites what the model saw, omitted entries must not cost budget,
-// and only projected messages can be summarized.
 // PrepareCompaction is PrepareCompaction over the current branch with the
 // session's payload reader, so a message entry loaded index-only (D488) reaches
 // the projection instead of contributing nothing.
@@ -1194,6 +1188,12 @@ func (m *SessionManager) PrepareCompaction(settings CompactionSettings) *Compact
 	return prepareCompactionWith(branch, settings, payloads)
 }
 
+// PrepareCompaction pre-computes the compaction cut and spans
+// (port of prepareCompaction); nil when there is nothing to compact.
+//
+// The cut runs over the session projection, not the raw entries: a context edit
+// removes or rewrites what the model saw, omitted entries must not cost budget,
+// and only projected messages can be summarized.
 func PrepareCompaction(pathEntries []SessionEntry, settings CompactionSettings) *CompactionPreparation {
 	return prepareCompactionWith(pathEntries, settings, nil)
 }
