@@ -8966,8 +8966,33 @@ samples:
 The walk is also neither quadratic nor allocating: `run` is linear in the run
 (2 steps per byte at 1,000, 2,000 and 4,000 bytes), a full document pass of
 the hot C++ rule allocates nothing, and one settled rule costs about 76 ns.
-C++ and Java pay that per candidate by design, so closing the remaining gap
-(14.2 ms against 10.3, and 11.5 against 6.7) needs a different rule-dispatch
-structure rather than another prefilter.
+
+Five more routes were then measured and closed, which between them rule out
+the whole "make the walk cheaper" direction:
+
+- **Per-branch early rejection inside an alternation** (`alternativeStartsAt`,
+  skipping a branch whose first rune cannot match): Java 11.5 to 13.1 ms,
+  C++ 14.3 to 23.4 ms. The extra `exactOne` per branch costs more than the
+  continuation and `seq` call it saves.
+- **Memoising `(rule, pos)` outcomes within one highlight**: measured first,
+  and pointless. Java walks 26,304 distinct rule-position pairs and only 576
+  are duplicates, a 2% ratio, so there is nothing to reuse.
+- **A lock-free `subMatcher`** via `atomic.Pointer` instead of the mutex: C++
+  14.20 to 14.21 ms, no change. The mutex is uncontended and its cost is
+  already noise.
+- **The walk's step distribution** explains why none of this moves: of C++'s
+  97,291 walks, 46,669 finish within 1-2 steps, 27,435 within 3-8 and 19,411
+  within 9-32; only 3,776 read further. Rejections are already shallow, so
+  the cost is the number of calls, not their depth, and every call is needed
+  (a memo finds 2% duplicates).
+- **The walk never falls back**: 0 of Java's 26,880 and 0 of C++'s 97,291
+  walks return "unknown", so the regexp is never paid after a walk. That is
+  the property that makes the walk a win, and it leaves no cheap rejection to
+  add ahead of it.
+
+With those closed, C++ (14.2 ms against 10.3) and Java (11.5 against 6.7) sit
+at a cost the current design pays per candidate by construction. Closing the
+remaining gap needs a different dispatch structure, not another prefilter or a
+micro-optimisation of the walk.
 
 Test: `TestBeginLineRuleKeepsTheDispatch`.
