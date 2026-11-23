@@ -8999,10 +8999,10 @@ Two more, closing the "share work inside the walk" idea:
   within-walk duplicates, so every push is distinct and the 7.6% of profile
   `push` spends is irreducible.
 
-C++ (14.2 ms against 10.3) and Java (11.5 against 6.7) therefore sit at a cost
-the current design pays per candidate by construction: 97,291 distinct walks
-for C++, half rejecting within 1-2 steps, none reusable, none duplicable, none
-falling back. Every local route is measured and closed, so what remains is a
+C++ (14.0-14.1 ms against 11.2-11.4) and Java (11.4 against 7.4) therefore sit
+at a cost the current design pays per candidate by construction: 97,291
+distinct walks for C++, half rejecting within 1-2 steps, none reusable, none
+duplicable, none falling back. Every local route is measured and closed, so what remains is a
 different dispatch structure rather than another prefilter or a
 micro-optimisation of the walk.
 
