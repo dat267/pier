@@ -1,9 +1,26 @@
 package highlight
 
+import "unicode/utf8"
+
 func init() { RegisterLanguage("ini", INI()) }
 
-// iniKeyGuard is the reference's `(?=\s*=\s*[^#\s])` lookahead on the dotted key.
-var iniKeyGuard = mustCompileJS(`\A\s*=\s*[^#\s]`)
+// iniKeyGuard ports the reference's `(?=\s*=\s*[^#\s])` lookahead on the dotted
+// key. Hand-written for the same reason as scanIniKey: an `\A`-anchored regexp
+// that cannot be prefixed costs a full pass over the remaining input per call.
+func iniKeyGuard(s string) bool {
+	i := skipIniSpace(s, 0)
+	if i >= len(s) || s[i] != '=' {
+		return false
+	}
+	i = skipIniSpace(s, i+1)
+	if i >= len(s) {
+		return false
+	}
+	if _, isSpace := iniSpaceAt(s, i); isSpace || s[i] == '#' {
+		return false
+	}
+	return true
+}
 
 // INI returns the TOML/INI language definition (a port of languages/ini.js).
 func INI() *Language {
@@ -49,19 +66,20 @@ func INI() *Language {
 		Contains:     []*Mode{comments, literals, variables, strings, numbers, Self},
 	}
 
-	const anyKey = `([A-Za-z0-9_-]+|"(\\"|[^"])*"|'[^']*')`
 	// A rejected lookahead must leave the character for the root illegal rule.
-	keyPattern := mustCompileJS(`\A` + anyKey + `(\s*\.\s*` + anyKey + `)*`)
+	// The scan is hand-written: running `\A` plus this alternation through Go's
+	// regexp costs a full pass over the remaining input per call (2.5 ms on a
+	// 24 KiB subject) because the pattern cannot be prefixed, and the port calls
+	// it at every key byte.
 	dottedKey := &Mode{
 		ClassName:   "attr",
 		ManualFirst: `-_"'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`,
 		ManualBegin: func(s string, pos int) (int, bool) {
-			loc := keyPattern.FindStringIndex(s[pos:])
-			if loc == nil {
+			end, ok := scanIniKey(s, pos)
+			if !ok {
 				return 0, false
 			}
-			end := pos + loc[1]
-			return end, iniKeyGuard.MatchString(s[end:])
+			return end, iniKeyGuard(s[end:])
 		},
 		Starts: &Mode{
 			End:      `$`,
@@ -79,5 +97,104 @@ func INI() *Language {
 			{ClassName: "section", Begin: `\[+`, End: `\]+`},
 			dottedKey,
 		},
+	}
+}
+
+// scanIniKey ports the reference's dotted-key lookahead, `([A-Za-z0-9_-]+|
+// "(\\"|[^"])*"|'[^']*')(\s*\.\s*...[A-Za-z0-9_-]...)*`, from pos. It returns the
+// end of the key as a byte offset into s. An unterminated quoted key fails, as
+// the regexp's alternation does when no branch completes.
+func scanIniKey(s string, pos int) (int, bool) {
+	end, ok := scanIniKeySegment(s, pos)
+	if !ok {
+		return 0, false
+	}
+	for {
+		// `\s*\.\s*` then another segment; a failed iteration stops the loop
+		// without consuming, which is what the regexp's star does.
+		i := skipIniSpace(s, end)
+		if i >= len(s) || s[i] != '.' {
+			return end, true
+		}
+		afterDot := skipIniSpace(s, i+1)
+		next, ok := scanIniKeySegment(s, afterDot)
+		if !ok {
+			// The regexp backtracks to the shorter match that stops before the
+			// dot, so the star takes zero more iterations.
+			return end, true
+		}
+		end = next
+	}
+}
+
+// scanIniKeySegment scans one `[A-Za-z0-9_-]+|"..."|'...'` alternative.
+func scanIniKeySegment(s string, pos int) (int, bool) {
+	if pos >= len(s) {
+		return 0, false
+	}
+	switch c := s[pos]; {
+	case c == '"':
+		for i := pos + 1; i < len(s); i++ {
+			switch s[i] {
+			case '\\':
+				i++ // `\\"` consumes the escaped byte
+			case '"':
+				return i + 1, true
+			}
+		}
+		return 0, false
+	case c == '\'':
+		for i := pos + 1; i < len(s); i++ {
+			if s[i] == '\'' {
+				return i + 1, true
+			}
+		}
+		return 0, false
+	}
+	end := pos
+	for end < len(s) && (isIniKeyByte(s[end])) {
+		end++
+	}
+	return end, end > pos
+}
+
+func isIniKeyByte(c byte) bool {
+	return c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '_' || c == '-'
+}
+
+// iniSpaceAt reports whether a JavaScript `\s` starts at s[i], returning the
+// width to skip. JS whitespace is not ASCII-only: U+00A0, U+1680, U+2000-200A,
+// U+2028, U+2029, U+202F, U+205F and U+3000 are members, and U+FEFF too.
+func iniSpaceAt(s string, i int) (int, bool) {
+	if i >= len(s) {
+		return 0, false
+	}
+	if c := s[i]; c < utf8.RuneSelf {
+		switch c {
+		case ' ', '\t', '\n', '\r', '\f', '\v':
+			return 1, true
+		}
+		return 0, false
+	}
+	r, width := utf8.DecodeRuneInString(s[i:])
+	switch r {
+	case 0x00A0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF:
+		return width, true
+	}
+	if r >= 0x2000 && r <= 0x200A {
+		return width, true
+	}
+	return 0, false
+}
+
+// skipIniSpace returns the offset after every JavaScript whitespace character
+// starting at i.
+func skipIniSpace(s string, i int) int {
+	for {
+		width, ok := iniSpaceAt(s, i)
+		if !ok {
+			return i
+		}
+		i += width
 	}
 }

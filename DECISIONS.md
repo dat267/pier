@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D525)
+# Deliberate divergences from pi (D1–D526)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9057,3 +9057,33 @@ checked across the 61,408 walk programs of every registered language.
 
 Tests: `TestExactRunFastPathMatchesTheRegexp`,
 `TestExactRunFastPathRespectsJSLines`.
+
+### D526
+
+**INI's dotted-key scan is hand-written, not an anchored regexp.**
+
+Reference: pi v1.6.0 (`faac5858`) uses the lookahead
+`([A-Za-z0-9_-]+|"(\\"|[^"])*"|'[^']*')(\s*\.\s*...)*` followed by
+`(?=\s*=\s*[^#\s])` (languages/ini.js), which V8 compiles and the reference
+runs at every key byte. The port ran the same expressions through Go's `regexp`
+with an `\A` prefix, and a pattern that cannot be prefixed costs a full pass
+over the remaining subject per call: measured 2.49 ms for one key scan on a
+24 KiB subject, and the mode is tried at every key byte. A 24 KiB INI file took
+113 ms, quadratic (3 KB 2.18 ms, 6 KB 7.79, 12 KB 29.29) where the reference was
+linear at 16 ms.
+
+`scanIniKey` and `iniKeyGuard` walk the same grammar byte by byte instead: a
+segment is `[A-Za-z0-9_-]+` or a terminated quoted string, the dotted part
+repeats `\s* . \s*` followed by a segment and backtracks to the shorter match
+when that segment fails, as the star does, and the guard skips `\s*`, takes
+`=`, skips `\s*` and needs a character that is neither `#` nor whitespace.
+JavaScript's `\s` is not ASCII-only, so `iniSpaceAt` covers U+00A0, U+1680,
+U+2000-200A, U+2028, U+2029, U+202F, U+205F, U+3000 and U+FEFF; a byte-only scan
+loses the attribute for `key\u00a0= true`, which the test now pins.
+
+Same method: the 24 KiB file 113 to 4.81 ms and linear (3 KB 0.52, 6 KB 1.04,
+12 KB 2.17), against the reference's 16.13 ms, so 10.89x slower became 3.4x
+faster. Output is unchanged: the goldens, the differentials and a 116,729-byte
+INI render byte for byte against the reference.
+
+Test: `TestIniDottedKeyScan`.

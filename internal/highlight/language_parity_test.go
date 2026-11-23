@@ -665,3 +665,37 @@ func TestMarkdownSetextHeadingParsesItsInlines(t *testing.T) {
 		}
 	}
 }
+
+// TestIniDottedKeyScan pins the hand-written dotted-key scan against the
+// reference's lookahead, `([A-Za-z0-9_-]+|"(\\"|[^"])*"|'[^']*')
+// (\s*\.\s*...)*` followed by `(?=\s*=\s*[^#\s])` (languages/ini.js in pi
+// v1.6.0, faac5858). A key needs the `=` lookahead to become an attribute, and
+// JavaScript's `\s` is not ASCII-only: U+00A0 is a member, so a byte-only scan
+// loses the attribute.
+func TestIniDottedKeyScan(t *testing.T) {
+	for _, tc := range []struct {
+		code string
+		html string
+	}{
+		{"key = 1", `<span class="hljs-attr">key</span> = <span class="hljs-number">1</span>`},
+		// U+00A0 is JavaScript whitespace in the lookahead's `\s*`.
+		{"key\u00a0= true", `<span class="hljs-attr">key</span>` + "\u00a0" + `= <span class="hljs-literal">true</span>`},
+		// No `=` after the key: the lookahead fails, so the key stays plain.
+		{"# not a key", `<span class="hljs-comment"># not a key</span>`},
+		// The lookahead needs a non-# character after `=`, so no attribute.
+		{"key = #comment", `key = #comment`},
+		// A dotted key is one attribute.
+		{"a.b = 1", `<span class="hljs-attr">a.b</span> = <span class="hljs-number">1</span>`},
+		// A quoted key, and an unterminated one that must not match.
+		{`"quoted key" = 1`, `<span class="hljs-attr">&quot;quoted key&quot;</span> = <span class="hljs-number">1</span>`},
+		{`"unterminated = 1`, `&quot;unterminated = 1`},
+	} {
+		result, err := Highlight(tc.code, "ini")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := RenderHTML(result.Nodes); got != tc.html {
+			t.Errorf("%q: HTML %q; want %q", tc.code, got, tc.html)
+		}
+	}
+}
