@@ -3,6 +3,7 @@ package highlight
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -696,6 +697,39 @@ func TestIniDottedKeyScan(t *testing.T) {
 		}
 		if got := RenderHTML(result.Nodes); got != tc.html {
 			t.Errorf("%q: HTML %q; want %q", tc.code, got, tc.html)
+		}
+	}
+}
+
+// TestHTTPGuards pins the hand-written version and request guards to the
+// reference's lookaheads, `\AHTTP/(2|1\.[01]) \d{3}` and
+// `\A[A-Z]+ .* HTTP/(2|1\.[01])$` (languages/http.js in pi v1.6.0, faac5858).
+// Both were `\A`-anchored regexps, which cost a full pass over the remaining
+// input per call (119 us on a 24 KiB tail) and run at every candidate.
+func TestHTTPGuards(t *testing.T) {
+	for _, tc := range []struct {
+		code string
+		html string
+	}{
+		{"HTTP/1.1 200 OK\n\nbody", `<span class="hljs-meta">HTTP/1.1</span> <span class="hljs-number">200</span> OK`},
+		{"HTTP/2 500 X\n\nb", `<span class="hljs-meta">HTTP/2</span> <span class="hljs-number">500</span> X`},
+		{"HTTP/1.0 404 X\n\nb", `<span class="hljs-meta">HTTP/1.0</span> <span class="hljs-number">404</span> X`},
+		// Rejected: lower case, a version the guard does not admit, two digits,
+		// and a request whose line does not end at the version.
+		{"http/1.1 200 OK\n\nb", "http/1.1 200 OK"},
+		{"HTTP/1.2 200 OK\n\nb", "HTTP/1.2 200 OK"},
+		{"HTTP/1.1 20 OK\n\nb", "HTTP/1.1 20 OK"},
+		{"GET /x HTTP/1.1 extra\n\nb", "GET /x HTTP/1.1 extra"},
+		// A request whose method is lower case is not a request.
+		{"get /x HTTP/1.1\n\nb", "get /x HTTP/1.1"},
+	} {
+		result, err := Highlight(tc.code, "http")
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := RenderHTML(result.Nodes)
+		if !strings.HasPrefix(got, tc.html) {
+			t.Errorf("%q: HTML %q; want it to start with %q", tc.code, got, tc.html)
 		}
 	}
 }

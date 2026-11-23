@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D528)
+# Deliberate divergences from pi (D1–D529)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9174,3 +9174,33 @@ byte-indexed order, so the existing order is load-bearing rather than an
 oversight. pgsql's remaining cost (4.2x) is 16,347 walks of one 70-rule
 alternation per 24 KiB, which is volume rather than a defect: a 100-way
 literal alternation that cannot match is rejected in 23 ns.
+
+### D529
+
+**HTTP's version and request guards are hand-written.**
+
+The same defect as D526, found by measuring every `\A`-anchored guard in the
+tree. Reference: pi v1.6.0 (`faac5858`) opens HTTP's response and request rules
+with zero-width lookaheads, `(?=HTTP/(2|1\.[01]) \d{3})` and
+`(?=[A-Z]+ .* HTTP/(2|1\.[01])$)`, which V8 evaluates at the position. The port
+ran them as `\A`-anchored Go regexps, and a pattern Go cannot prefilter costs a
+full pass over the remaining input per call: measured 119 us and 121 us on a
+24 KiB tail, at every candidate.
+
+`httpVersionGuard` and `httpRequestGuard` now scan directly: the version is
+`HTTP/2` or `HTTP/1.[01]` then a space and three digits, and the request is an
+upper-case method, a space, then the last ` HTTP/` in the input followed by a
+version and nothing else. Both cost 2 ns on the same 24 KiB tail, so 119 us
+became 2 ns, and the accepted set is unchanged: `HTTP/1.2`, a lower-case
+`http/1.1`, a two-digit status and a request line that does not end at the
+version are all still rejected.
+
+This does not speed up the `http` benchmark entry itself (still 5.5 s), whose time
+is the body's `subLanguage: []` auto-detection scoring every language, dominated
+by R's quadratic (D527's note); it removes a per-candidate cost that the HTTP
+sample happens to exercise only four times.
+
+Output is unchanged: the goldens, the differentials, a 30 s fuzz run and the
+107,297-byte HTTP render byte for byte against the reference.
+
+Test: `TestHTTPGuards`.
