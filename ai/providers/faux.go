@@ -549,7 +549,9 @@ func fauxWithUsageEstimate(
 	return cloned
 }
 
-// fauxCloneMessage deep-clones a message (upstream structuredClone).
+// fauxCloneMessage deep-clones a message (upstream structuredClone). Events
+// use it too, where upstream spreads `{ ...partial }`: the partial is mutated
+// in place between events, so each event's snapshot must be independent.
 func fauxCloneMessage(message *ai.AssistantMessage) *ai.AssistantMessage {
 	enc, err := ai.MarshalMessage(message)
 	if err != nil {
@@ -591,21 +593,6 @@ func fauxSplitStringByTokenSize(text string, minTokenSize, maxTokenSize int) []s
 	return chunks
 }
 
-func fauxCloneForEvent(message *ai.AssistantMessage) *ai.AssistantMessage {
-	// Events carry a shallow copy of the shared partial (upstream spreads
-	// `{ ...partial }`); the partial itself is mutated in place between
-	// events, so each event's snapshot must be independent.
-	enc, err := ai.MarshalMessage(message)
-	if err != nil {
-		panic(err)
-	}
-	decoded, err := ai.UnmarshalMessage(enc)
-	if err != nil {
-		panic(err)
-	}
-	return decoded.(*ai.AssistantMessage)
-}
-
 func fauxCreateDeferredMessage(model *ai.Model, handle *ai.DeferredHandle) *ai.AssistantMessage {
 	return &ai.AssistantMessage{
 		Content:    nil,
@@ -634,7 +621,7 @@ func fauxCreateErrorMessage(err error, api, provider, modelID string) *ai.Assist
 }
 
 func fauxCreateAbortedMessage(partial *ai.AssistantMessage) *ai.AssistantMessage {
-	cloned := fauxCloneForEvent(partial)
+	cloned := fauxCloneMessage(partial)
 	cloned.StopReason = ai.StopAborted
 	msg := "Request was aborted"
 	cloned.ErrorMessage = &msg
@@ -655,7 +642,7 @@ func (c *FauxCore) streamWithDeltas(
 	stream *ai.AssistantMessageEventStream,
 	message *ai.AssistantMessage,
 ) {
-	partial := fauxCloneForEvent(message)
+	partial := fauxCloneMessage(message)
 	partial.Content = nil
 	partial.StopReason = ai.StopPending
 	if ctxErrOf(ctx) != nil {
