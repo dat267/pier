@@ -276,8 +276,10 @@ func DoProviderRequestWithAbortSignalTimeoutAndIdle(req *http.Request, timeoutMS
 	if timeoutMS != nil && *timeoutMS < 0 {
 		return nil, fmt.Errorf("Invalid timeoutMs: %d", *timeoutMS)
 	}
-	if timeoutMS != nil && int64(*timeoutMS) > maxAbortSignalTimeoutMS {
-		return nil, fmt.Errorf("The value of \"delay\" is out of range. It must be >= 0 && <= %d. Received %d", maxAbortSignalTimeoutMS, *timeoutMS)
+	if timeoutMS != nil {
+		if err := jsnum.CheckAbortSignalTimeout(int64(*timeoutMS)); err != nil {
+			return nil, err
+		}
 	}
 	return DoProviderRequestWithSDKTimeoutAndIdle(req, timeoutMS, idleTimeoutMS)
 }
@@ -293,8 +295,8 @@ func doClassifierRequest(req *http.Request, timeoutMS, idleTimeoutMS *int) (*htt
 	if *timeoutMS < 0 {
 		return nil, fmt.Errorf("Invalid timeoutMs: %d", *timeoutMS)
 	}
-	if int64(*timeoutMS) > maxAbortSignalTimeoutMS {
-		return nil, fmt.Errorf("The value of \"delay\" is out of range. It must be >= 0 && <= %d. Received %d", maxAbortSignalTimeoutMS, *timeoutMS)
+	if err := jsnum.CheckAbortSignalTimeout(int64(*timeoutMS)); err != nil {
+		return nil, err
 	}
 	ctx, cancel := context.WithTimeout(req.Context(), jsnum.TimeoutDuration(int64(*timeoutMS)))
 	var bodyTimeout time.Duration

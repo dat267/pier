@@ -144,7 +144,7 @@ func TestCodexRejectsNegativeTimeoutBeforeFetch(t *testing.T) {
 }
 
 func TestCodexAbortSignalRejectsOutOfRangeDelayBeforeFetch(t *testing.T) {
-	if int64(int(maxAbortSignalTimeoutMS+1)) != maxAbortSignalTimeoutMS+1 {
+	if int64(int(jsnum.MaxAbortSignalTimeoutMS+1)) != jsnum.MaxAbortSignalTimeoutMS+1 {
 		t.Skip("requires 64-bit int")
 	}
 	previous := http.DefaultClient
@@ -154,7 +154,7 @@ func TestCodexAbortSignalRejectsOutOfRangeDelayBeforeFetch(t *testing.T) {
 		attempts++
 		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: http.NoBody, Request: request}, nil
 	})}
-	timeoutMS := int(maxAbortSignalTimeoutMS + 1)
+	timeoutMS := int(jsnum.MaxAbortSignalTimeoutMS + 1)
 	request, err := http.NewRequest(http.MethodGet, "https://fixture.invalid", nil)
 	if err != nil {
 		t.Fatal(err)

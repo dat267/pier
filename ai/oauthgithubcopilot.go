@@ -246,8 +246,8 @@ func FetchWithCopilotRateLimitRetry(
 	retryBudget := time.Duration(0)
 	deadline := time.Time{}
 	if policy.MaxRetries > 0 && policy.MaxElapsedMS > 0 {
-		if policy.MaxElapsedMS > maxAbortSignalTimeoutMS {
-			return nil, fmt.Errorf("The value of \"delay\" is out of range. It must be >= 0 && <= %d. Received %d", maxAbortSignalTimeoutMS, policy.MaxElapsedMS)
+		if err := jsnum.CheckAbortSignalTimeout(policy.MaxElapsedMS); err != nil {
+			return nil, err
 		}
 		retryBudget = jsnum.TimeoutDuration(policy.MaxElapsedMS)
 		deadline = time.Now().Add(time.Duration(policy.MaxElapsedMS) * time.Millisecond)

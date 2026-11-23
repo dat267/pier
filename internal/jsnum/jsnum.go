@@ -6,6 +6,7 @@ package jsnum
 import (
 	"cmp"
 	"encoding/json"
+	"fmt"
 	"math"
 	"slices"
 	"strconv"
@@ -186,4 +187,18 @@ func TimeoutDuration(ms int64) time.Duration {
 		ms = 1
 	}
 	return time.Duration(ms) * time.Millisecond
+}
+
+// MaxAbortSignalTimeoutMS is the largest delay AbortSignal.timeout accepts,
+// 2^32-1 ms.
+const MaxAbortSignalTimeoutMS int64 = 1<<32 - 1
+
+// CheckAbortSignalTimeout is the range check AbortSignal.timeout(ms) runs:
+// outside 0..MaxAbortSignalTimeoutMS it throws Node's ERR_OUT_OF_RANGE, whose
+// message this returns.
+func CheckAbortSignalTimeout(ms int64) error {
+	if ms < 0 || ms > MaxAbortSignalTimeoutMS {
+		return fmt.Errorf("The value of \"delay\" is out of range. It must be >= 0 && <= %d. Received %d", MaxAbortSignalTimeoutMS, ms)
+	}
+	return nil
 }

@@ -140,3 +140,20 @@ func TestTimeoutDurationClampsLikeSetTimeout(t *testing.T) {
 		}
 	}
 }
+
+// AbortSignal.timeout(-1) and AbortSignal.timeout(2**32) throw Node's
+// ERR_OUT_OF_RANGE; 0 and 2**32-1 are accepted.
+func TestCheckAbortSignalTimeoutMatchesNodeRange(t *testing.T) {
+	for _, ms := range []int64{0, 1, MaxAbortSignalTimeoutMS} {
+		if err := CheckAbortSignalTimeout(ms); err != nil {
+			t.Errorf("CheckAbortSignalTimeout(%d) = %v", ms, err)
+		}
+	}
+	err := CheckAbortSignalTimeout(MaxAbortSignalTimeoutMS + 1)
+	if err == nil || err.Error() != `The value of "delay" is out of range. It must be >= 0 && <= 4294967295. Received 4294967296` {
+		t.Errorf("CheckAbortSignalTimeout(2^32) = %v", err)
+	}
+	if CheckAbortSignalTimeout(-1) == nil {
+		t.Error("CheckAbortSignalTimeout(-1) accepted")
+	}
+}

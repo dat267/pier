@@ -37,7 +37,6 @@ type ProviderError struct {
 func (e *ProviderError) Error() string { return e.Message }
 
 const defaultMaxRetryDelayMS = 60_000
-const maxAbortSignalTimeoutMS int64 = 1<<32 - 1
 
 var providerRetrySleep = func(ctx context.Context, delayMS int64) error {
 	if ctx == nil {
