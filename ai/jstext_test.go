@@ -10,6 +10,9 @@ import (
 	"strings"
 	"testing"
 	"unicode/utf16"
+
+	caseslib "golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 func TestSanitizeSurrogatesReturnsGoStringWithoutAllocating(t *testing.T) {
@@ -61,6 +64,22 @@ func TestJSLowerMatchesJS(t *testing.T) {
 		if got := JSLower(input); got != want {
 			t.Errorf("JSLower(%q) = %q; want %q", input, got, want)
 		}
+	}
+
+	// D518: ASCII text takes strings.ToLower, which must agree with the full
+	// mapping on every ASCII byte, and an already-lowercase string is returned
+	// without allocating. A non-ASCII byte anywhere keeps the full mapping.
+	var ascii strings.Builder
+	for c := range 128 {
+		ascii.WriteByte(byte(c))
+	}
+	for _, input := range []string{ascii.String(), "anthropic/Claude-Sonnet-4-5", "MiXeD ΟΣ"} {
+		if got, want := JSLower(input), caseslib.Lower(language.Und).String(input); got != want {
+			t.Errorf("JSLower(%q) = %q; want the full mapping %q", input, got, want)
+		}
+	}
+	if allocs := testing.AllocsPerRun(100, func() { _ = JSLower("anthropic/claude-sonnet-4-5") }); allocs != 0 {
+		t.Errorf("JSLower of a lowercase ASCII string allocated %v times; want 0", allocs)
 	}
 }
 

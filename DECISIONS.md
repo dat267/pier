@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D517)
+# Deliberate divergences from pi (D1–D518)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8674,3 +8674,22 @@ text in every variant tried, so it was not kept.
 Tests: `TestSliceHeadKeepsWholeCharactersAndScansOnlyThePrefix`,
 `BenchmarkSliceHead`, `BenchmarkTruncateForSummary`.
 
+### D518
+
+**`JSLower` lowers ASCII text without building a Caser.**
+
+Reference: pi v1.6.0 (`faac5858`) lowercases with `String.prototype.toLowerCase`
+in model resolution, the model, session and tree selectors, autocomplete and the
+fuzzy matcher, which lowers the query and every candidate on each keystroke.
+
+`ai.JSLower` and `tui`'s `jsLower` built a `cases.Lower(language.Und)` Caser per
+call to get the full Unicode mapping (final sigma, U+0130). For ASCII input that
+mapping is `strings.ToLower`, so both now check for a non-ASCII byte first and
+use the Caser only then. Measured per call on a 36-byte model ID: mixed case
+743 ns / 304 B -> 145 ns / 48 B, already lowercase 666 ns / 256 B -> 58 ns / 0 B;
+accented text keeps the full mapping (641 ns). Node's `toLowerCase` on the same
+strings measured 45 ns. The remaining gap is the allocation and ASCII scan of a
+mixed-case string: a hand-written `unsafe.String` variant reached 111 ns, too
+little to justify `unsafe` over the standard library.
+
+Tests: `TestJSLowerMatchesJS`, `TestJSStringHelpers`, `BenchmarkJSLower`.

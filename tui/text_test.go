@@ -1,7 +1,11 @@
 package tui
 
 import (
+	"strings"
 	"testing"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // pi v1.5.0 text.ts setText returns early for the same text, so a renderer that
@@ -37,5 +41,13 @@ func TestJSStringHelpers(t *testing.T) {
 	}
 	if got := jsLower("İ"); got != "i\u0307" {
 		t.Errorf("jsLower(İ) = %q; want i\\u0307", got)
+	}
+	// D518: the ASCII fast path agrees with the full mapping on every byte.
+	var ascii strings.Builder
+	for c := range 128 {
+		ascii.WriteByte(byte(c))
+	}
+	if got, want := jsLower(ascii.String()), cases.Lower(language.Und).String(ascii.String()); got != want {
+		t.Errorf("jsLower(ASCII) = %q; want %q", got, want)
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf16"
+	"unicode/utf8"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -105,8 +106,16 @@ func JSNumberToFixed(value float64, digits int) string {
 // mapping with the Greek final-sigma and U+0130 special cases that Go's
 // strings.ToLower (simple mapping) omits. The Caser is created per call
 // because it is documented as not shareable between goroutines.
+//
+// ASCII text maps the same under both, so it skips the Caser (D518): model IDs,
+// paths and typed queries are lowered on every keystroke.
 func JSLower(s string) string {
-	return cases.Lower(language.Und).String(s)
+	for index := 0; index < len(s); index++ {
+		if s[index] >= utf8.RuneSelf {
+			return cases.Lower(language.Und).String(s)
+		}
+	}
+	return strings.ToLower(s)
 }
 
 // JSTrimIsEmpty reports whether the JS-trimmed string is empty (the form

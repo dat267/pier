@@ -4,6 +4,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -34,8 +35,16 @@ func jsTrimLeft(s string) string { return strings.TrimLeftFunc(s, isWhitespaceRu
 
 // jsLower lowercases like String.prototype.toLowerCase: full Unicode case
 // mapping with the Greek final-sigma and U+0130 special cases that Go's
-// strings.ToLower (simple mapping) omits.
-func jsLower(s string) string { return cases.Lower(language.Und).String(s) }
+// strings.ToLower (simple mapping) omits. ASCII text maps the same under both,
+// so it skips the Caser (D518); fuzzy matching lowers on every keystroke.
+func jsLower(s string) string {
+	for index := 0; index < len(s); index++ {
+		if s[index] >= utf8.RuneSelf {
+			return cases.Lower(language.Und).String(s)
+		}
+	}
+	return strings.ToLower(s)
+}
 
 // byteOffsetForUTF16Index returns the byte offset of a UTF-16 code-unit index.
 func byteOffsetForUTF16Index(text string, utf16Index int) int {
