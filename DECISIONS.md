@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D518)
+# Deliberate divergences from pi (D1–D519)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8693,3 +8693,23 @@ mixed-case string: a hand-written `unsafe.String` variant reached 111 ns, too
 little to justify `unsafe` over the standard library.
 
 Tests: `TestJSLowerMatchesJS`, `BenchmarkJSLower`.
+
+### D519
+
+**A task item strips its own checkbox when a lazy heading follows the list.**
+
+Reference: pi v1.6.0 (`faac5858`) renders Markdown with marked 18.0.11, whose
+`Tokenizer.list` lexes every item and then, for each task item whose first
+token is text or a paragraph, strips `[ ] ` from the last source in the
+document-wide `inlineQueue` that matches `/^\[[ xX]\] +\S/`. A lazy setext
+underline after the list (`- [ ] a\n- [ ] b\n=`) makes the last item's first
+token a heading, so that item loses its task flag, and the first item's strip
+lands on the heading's queued source. Upstream renders the first item as
+`- [ ] [ ] a` and the heading as `b`.
+
+Pier strips each task item's marker from that item's own text, so the first
+item renders `- [ ] a` and the heading keeps `[ ] b` as written. Reproducing
+the reference would duplicate the checkbox, and would make an item's text
+depend on later items' inline sources.
+
+Test: `TestTaskItemStripsItsOwnCheckboxBeforeALazyHeading`.

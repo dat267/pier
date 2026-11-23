@@ -1,6 +1,7 @@
 package markdown
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -60,6 +61,25 @@ func TestContainerTokenizersMatchMarked(t *testing.T) {
 	} {
 		if got := referenceShape(Lex(testCase.src)); got != testCase.want {
 			t.Errorf("%q:\n got %s\nwant %s", testCase.src, got, testCase.want)
+		}
+	}
+}
+
+// D519: marked 18.0.11 (pi v1.6.0, faac5858) strips a task item's `[ ] ` from
+// the last inline source in the document-wide queue that starts with one, after
+// lexing every item. When a lazy setext underline turns the last item into a
+// heading, that item loses its task flag and the first item's strip lands on
+// the heading's source: upstream renders `- [ ] [ ] a` and a heading `b`. Pier
+// strips each item's own marker.
+func TestTaskItemStripsItsOwnCheckboxBeforeALazyHeading(t *testing.T) {
+	for _, src := range []string{"- [ ] a\n- [ ] b\n=", "- [x] y\n- [x] z\n--"} {
+		blocks := Lex(src)
+		if len(blocks) != 1 || blocks[0].Kind != BlockList || len(blocks[0].Blocks) != 2 {
+			t.Fatalf("Lex(%q) = %s", src, referenceShape(blocks))
+		}
+		first := blocks[0].Blocks[0]
+		if !first.Task || len(first.Blocks) == 0 || strings.Contains(first.Blocks[0].Text, "[") {
+			t.Errorf("Lex(%q) first item = %s, want a task with its marker stripped", src, referenceShape(blocks))
 		}
 	}
 }
