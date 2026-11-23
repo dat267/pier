@@ -31,6 +31,12 @@ func TestInlineLinkTargetMatchesMarkedGrammar(t *testing.T) {
 		{"[t]()", "", ""},
 		{"[t]( )", "", ""},
 		{"[t](u*)", "u*", ""},
+		// Tokenizer.link trims with JavaScript's trim(): U+0085 is part of the
+		// destination, U+FEFF is whitespace (pi v1.6.0, faac5858, marked 18.0.11).
+		{"[t](\u0085u\u0085)", "\u0085u\u0085", ""},
+		{"[t](u\u0085\"T\")", "u\u0085\"T\"", ""},
+		{"[t](\ufeffu\ufeff)", "u", ""},
+		{"[t](u \"T\"\ufeff)", "u", "T"},
 	} {
 		want := []Inline{{Kind: InlineLink, Text: "t", Dest: item.dest, Title: item.title, Children: []Inline{{Kind: InlineText, Text: "t"}}}}
 		if got := ParseInline(item.input); !reflect.DeepEqual(got, want) {

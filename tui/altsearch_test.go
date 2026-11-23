@@ -144,6 +144,14 @@ func TestNormalizeSearchQueryUnicodeWhitespace(t *testing.T) {
 	if got := normalizeSearchQuery("\u3000a\u3000"); got != "a" {
 		t.Fatalf("ideographic normalize = %q; want %q", got, "a")
 	}
+	// buildSearchCorpus tests each grapheme with /^\s+$/u: U+FEFF separates
+	// words and U+0085 is text (pi v1.6.0, faac5858, alt-screen-search.ts).
+	if got := FindAltScreenSearchMatches([]string{"a\ufeffb"}, "a b"); len(got) != 1 {
+		t.Fatalf("BOM-separated matches = %+v; want one", got)
+	}
+	if got := FindAltScreenSearchMatches([]string{"a\u0085b"}, "a b"); len(got) != 0 {
+		t.Fatalf("NEL-joined matches = %+v; want none", got)
+	}
 }
 
 // TestAltScreenSearchHoverStartsWithoutADirection pins the initial state: the

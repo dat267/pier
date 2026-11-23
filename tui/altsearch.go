@@ -5,6 +5,8 @@ import (
 	"runtime"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of src/alt-screen-search.ts: the fullscreen transcript search index and
@@ -99,7 +101,7 @@ func buildSearchCorpus(lines []string) searchCorpus {
 		} else {
 			for _, grapheme := range segmentGraphemes(line) {
 				width := VisibleWidth(grapheme)
-				if strings.TrimSpace(grapheme) == "" {
+				if ai.JSTrim(grapheme) == "" {
 					if textLength > 0 {
 						pendingSeparator = true
 					}

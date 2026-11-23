@@ -614,7 +614,7 @@ func parseLink(src string, i int, image bool, state *inlineState) (Inline, int, 
 	if closeAt < 0 {
 		return Inline{}, 0, false
 	}
-	target := strings.TrimSpace(src[end+2 : closeAt])
+	target := jsTrim(src[end+2 : closeAt])
 	dest, title, ok := splitLinkTarget(target)
 	if !ok {
 		return Inline{}, 0, false
@@ -710,7 +710,7 @@ func splitLinkTarget(target string) (dest, title string, ok bool) {
 			return "", "", false
 		}
 	}
-	if rest = strings.TrimSpace(rest); rest != "" {
+	if rest = jsTrim(rest); rest != "" {
 		return "", "", false
 	}
 	return unescapePunctuation(dest), unescapePunctuation(title), true

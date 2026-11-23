@@ -1,9 +1,12 @@
 package tui
 
 import (
+	"bytes"
 	"regexp"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of src/latex.ts: the LaTeX math-to-Unicode renderer (data tables in
@@ -28,9 +31,9 @@ var (
 	// Row separators are double backslashes; Go raw strings need four to
 	// express two literal backslashes.
 	latexEnvironmentRowRegex  = regexp.MustCompile(`\\\\(?:\[[^\]\n]*\])?`)
-	latexArrayColumnSpecRegex = regexp.MustCompile(`^\s*\{[^}]*\}`)
+	latexArrayColumnSpecRegex = regexp.MustCompile(`^[` + ai.JSWhitespaceClass + `]*\{[^}]*\}`)
 	latexCasesConditionRegex  = regexp.MustCompile(`(?i)^(?:if|when|for|otherwise)\b`)
-	latexScriptRelationRegex  = regexp.MustCompile(`\s*([=+-])\s*`)
+	latexScriptRelationRegex  = regexp.MustCompile(`[` + ai.JSWhitespaceClass + `]*([=+-])[` + ai.JSWhitespaceClass + `]*`)
 	latexSimpleWordRegex      = regexp.MustCompile(`^[\p{L}\p{N}.]+$`)
 	// The fraction denominator test is numeric-only upstream (an alphabetic
 	// denominator gets parentheses).
@@ -54,42 +57,30 @@ func replaceCharacters(value string, replacements map[string]string) (string, bo
 	return builder.String(), true
 }
 
-// isRelationSpaceByte matches the whitespace the relation regexp's `\s`
-// accepts. Go's `\s` is [\t\n\f\r ] and excludes \v, unlike
-// isWhitespaceByte, so the two cannot share a helper.
-func isRelationSpaceByte(b byte) bool {
-	switch b {
-	case ' ', '\t', '\n', '\f', '\r':
-		return true
-	}
-	return false
-}
-
-// normalizeScriptValue reproduces latex.ts's `value.replace(/\s*([=+-])\s*/g,
+// normalizeScriptValue reproduces latex.ts's `value.trim().replace(/\s*([=+-])\s*/g,
 // "$1")`: it trims the value, then drops every whitespace run that touches a
-// relation character. The regexp's backtracker dominated display renders
-// (BenchmarkRenderLatexDisplayMath) and nested scripts re-normalize the whole
-// value at every level, so the transform is a byte scan. Tests compare it
-// against the regexp case by case.
+// relation character, both over the JavaScript whitespace set (which holds \v,
+// NBSP and U+FEFF and not U+0085, unlike Go's `\s` and unicode.IsSpace). The
+// regexp's backtracker dominated display renders (BenchmarkRenderLatexDisplayMath)
+// and nested scripts re-normalize the whole value at every level, so the
+// transform is a scan. Tests compare it against the regexp case by case.
 func normalizeScriptValue(value string) string {
-	trimmed := strings.TrimSpace(value)
+	trimmed := ai.JSTrim(value)
 	if !strings.ContainsAny(trimmed, "=+-") {
 		return trimmed
 	}
 	normalized := make([]byte, 0, len(trimmed))
-	for index := 0; index < len(trimmed); index++ {
+	for index := 0; index < len(trimmed); {
 		character := trimmed[index]
+		index++
+		// A relation character is ASCII, so it never sits inside a multi-byte
+		// sequence and every other byte copies through unchanged.
 		if character != '=' && character != '+' && character != '-' {
 			normalized = append(normalized, character)
 			continue
 		}
-		for len(normalized) > 0 && isRelationSpaceByte(normalized[len(normalized)-1]) {
-			normalized = normalized[:len(normalized)-1]
-		}
-		normalized = append(normalized, character)
-		for index+1 < len(trimmed) && isRelationSpaceByte(trimmed[index+1]) {
-			index++
-		}
+		normalized = append(bytes.TrimRightFunc(normalized, ai.IsJSSpace), character)
+		index = len(trimmed) - len(strings.TrimLeftFunc(trimmed[index:], ai.IsJSSpace))
 	}
 	return string(normalized)
 }
@@ -118,8 +109,8 @@ func formatScript(value string, kind string) string {
 }
 
 func formatFraction(numerator string, denominator string) string {
-	numerator = strings.TrimSpace(numerator)
-	denominator = strings.TrimSpace(denominator)
+	numerator = ai.JSTrim(numerator)
+	denominator = ai.JSTrim(denominator)
 	simpleNumerator := latexSimpleWordRegex.MatchString(numerator)
 	simpleDenominator := latexSimpleNumericRegex.MatchString(denominator) || utf8.RuneCountInString(denominator) == 1
 	if simpleNumerator {
@@ -162,7 +153,7 @@ func collapseWhitespaceRuns(value string) string {
 }
 
 func formatRoot(value string, symbol string) string {
-	value = strings.TrimSpace(value)
+	value = ai.JSTrim(value)
 	if latexSimpleWordRegex.MatchString(value) {
 		return symbol + value
 	}
@@ -202,12 +193,12 @@ func normalizeOutput(value string) string {
 	lines := strings.Split(normalized, "\n")
 	kept := make([]string, 0, len(lines))
 	for index, line := range lines {
-		line = strings.TrimSpace(collapseWhitespaceRuns(line))
+		line = ai.JSTrim(collapseWhitespaceRuns(line))
 		if line != "" || (index > 0 && index < len(lines)-1) {
 			kept = append(kept, line)
 		}
 	}
-	return strings.TrimSpace(strings.Join(kept, "\n"))
+	return ai.JSTrim(strings.Join(kept, "\n"))
 }
 
 func isLatexSpacingLeftNeighbor(r rune) bool {
@@ -777,7 +768,7 @@ func (p *latexParser) parseCommand() string {
 		return "‖"
 	}
 	if command == "not" {
-		value := strings.TrimSpace(p.parseRequiredArgument(false))
+		value := ai.JSTrim(p.parseRequiredArgument(false))
 		if negated, ok := latexNegatedSymbols[value]; ok {
 			return " " + negated + " "
 		}
@@ -829,7 +820,7 @@ func (p *latexParser) parseCommand() string {
 	}
 	if command == "sqrt" {
 		degree, hasDegree := p.parseOptionalArgument()
-		degree = strings.TrimSpace(degree)
+		degree = ai.JSTrim(degree)
 		value := p.parseRequiredArgument(true)
 		if !hasDegree || degree == "2" {
 			return formatRoot(value, "√")
@@ -843,7 +834,7 @@ func (p *latexParser) parseCommand() string {
 		return formatScript(degree, "sup") + formatRoot(value, "√")
 	}
 	if command == "boxed" || command == "fbox" {
-		return "[" + strings.TrimSpace(p.parseRequiredArgument(true)) + "]"
+		return "[" + ai.JSTrim(p.parseRequiredArgument(true)) + "]"
 	}
 	if command == "binom" || command == "dbinom" || command == "tbinom" {
 		return "(" + p.parseRequiredArgument(true) + " choose " + p.parseRequiredArgument(true) + ")"
@@ -872,14 +863,14 @@ func (p *latexParser) parseCommand() string {
 		if starred {
 			p.position++
 		}
-		operator := strings.TrimSpace(normalizeOutput(p.parseRequiredArgument(true)))
+		operator := ai.JSTrim(normalizeOutput(p.parseRequiredArgument(true)))
 		return p.parseOperator(operator, "bracket", starred, true)
 	}
 	if command == "mod" || command == "bmod" {
 		return " mod "
 	}
 	if command == "pmod" || command == "pod" {
-		value := strings.TrimSpace(p.parseRequiredArgument(true))
+		value := ai.JSTrim(p.parseRequiredArgument(true))
 		if command == "pmod" {
 			return " (mod " + value + ")"
 		}
@@ -887,12 +878,12 @@ func (p *latexParser) parseCommand() string {
 	}
 	if command == "overset" || command == "stackrel" {
 		upper := p.parseRequiredArgument(true)
-		value := strings.TrimSpace(p.parseRequiredArgument(true))
+		value := ai.JSTrim(p.parseRequiredArgument(true))
 		return value + formatScript(upper, "sup")
 	}
 	if command == "underset" {
 		lower := p.parseRequiredArgument(true)
-		value := strings.TrimSpace(p.parseRequiredArgument(true))
+		value := ai.JSTrim(p.parseRequiredArgument(true))
 		return value + formatScript(lower, "sub")
 	}
 	if latexPlainWrappers[command] {
@@ -900,7 +891,7 @@ func (p *latexParser) parseCommand() string {
 		if strings.HasPrefix(command, "text") || command == "mbox" {
 			return value
 		}
-		return strings.TrimSpace(value)
+		return ai.JSTrim(value)
 	}
 	if command == "begin" {
 		return p.parseEnvironment()
@@ -1095,7 +1086,7 @@ func (p *latexParser) parseEnvironment() string {
 	p.position = end + len(endMarker)
 
 	if environment == "equation" || environment == "equation*" || environment == "displaymath" {
-		return strings.TrimSpace(p.renderNested(body, true))
+		return ai.JSTrim(p.renderNested(body, true))
 	}
 
 	switch environment {
@@ -1123,7 +1114,7 @@ func (p *latexParser) parseEnvironment() string {
 			} else {
 				source = strings.Join(cells, "")
 			}
-			rendered := strings.TrimSpace(p.renderNested(source, true))
+			rendered := ai.JSTrim(p.renderNested(source, true))
 			if rendered != "" {
 				rows = append(rows, rendered)
 			}
@@ -1153,7 +1144,7 @@ func (p *latexParser) renderLatexRows(body string) [][]string {
 		cells := strings.Split(row, "&")
 		trimmed := make([]string, 0, len(cells))
 		for _, cell := range cells {
-			trimmed = append(trimmed, strings.TrimSpace(p.renderNested(cell, false)))
+			trimmed = append(trimmed, ai.JSTrim(p.renderNested(cell, false)))
 		}
 		if strings.Join(trimmed, "") != "" {
 			rows = append(rows, trimmed)
@@ -1231,7 +1222,7 @@ func (p *latexParser) renderCases(body string) string {
 	return latexLayoutMarkerStart + itoa(index) + latexLayoutMarkerEnd
 }
 
-var latexTrailingCommaRegex = regexp.MustCompile(`,\s*$`)
+var latexTrailingCommaRegex = regexp.MustCompile(`,[` + ai.JSWhitespaceClass + `]*$`)
 
 func (p *latexParser) renderMatrix(environment string, body string) string {
 	matrix := p.renderLatexRows(body)
@@ -1349,7 +1340,7 @@ func renderLatexImpl(source string, options RenderLatexOptions) (string, bool) {
 	lines := renderLayout(rendered, nodes).lines
 	indentation := -1
 	for _, line := range lines {
-		if strings.TrimSpace(line) == "" {
+		if ai.JSTrim(line) == "" {
 			continue
 		}
 		leading := len(line) - len(strings.TrimLeft(line, " "))

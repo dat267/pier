@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of src/terminal-colors.ts and the terminal color queries of src/tui.ts.
@@ -98,7 +100,7 @@ func ParseOsc11BackgroundColor(data string) (RgbColor, bool) {
 // parseOscColorValue parses an OSC color payload: #rrggbb, #rrrrggggbbbb, or
 // rgb:/rgba: channels.
 func parseOscColorValue(rawValue string) (RgbColor, bool) {
-	value := strings.TrimSpace(rawValue)
+	value := ai.JSTrim(rawValue)
 	if strings.HasPrefix(value, "#") {
 		hex := value[1:]
 		if len(hex) == 6 && oscHexChannelPattern.MatchString(hex) {

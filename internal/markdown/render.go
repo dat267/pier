@@ -554,7 +554,7 @@ func (r *Renderer) renderList(list *Block, depth int, width int, styleContext *i
 
 // getLongestWordWidth returns the visible width of the longest word.
 func (r *Renderer) getLongestWordWidth(text string, maxWidth int, hasMaxWidth bool) int {
-	words := strings.Fields(text)
+	words := strings.FieldsFunc(text, isWhitespaceRune)
 	longest := 0
 	for _, word := range words {
 		longest = max(longest, r.term.VisibleWidth(word))

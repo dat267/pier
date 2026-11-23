@@ -149,3 +149,30 @@ func TestLatexSeparatesConsecutiveNamedOperators(t *testing.T) {
 		}
 	}
 }
+
+// latex.ts trims with String.prototype.trim and matches `\s` with JavaScript's
+// class, which keeps U+0085 and holds \v, NBSP and U+FEFF; strings.TrimSpace and
+// Go's `\s` disagree on each. The expected strings are renderLatex's output
+// under Node at v1.6.0 (faac5858).
+func TestLatexTrimsTheJavaScriptWhitespaceSet(t *testing.T) {
+	for _, tc := range []struct {
+		source  string
+		display bool
+		want    string
+	}{
+		{"\\frac{\u0085a\u0085}{b}", false, "(\u0085a\u0085)/b"},
+		{"\\frac{\u0085a\u0085}{b}", true, "\u0085a\u0085\n─\nb"},
+		{"\\frac{\ufeffa\ufeff}{b}", false, "a/b"},
+		{"\\sqrt{\u0085x\u0085}", false, "√(\u0085x\u0085)"},
+		{"\\text{\u0085x\u0085}", false, "\u0085x\u0085"},
+		{"\u0085x^2\u0085", true, "\u0085x²\u0085"},
+		{"\\operatorname{\u0085f\u0085}(x)", false, "\u0085f\u0085 (x)"},
+		{"\\begin{array}\u00a0{cc} a & b \\end{array}", false, "a │ b"},
+		{"\\begin{array}\v{cc} a & b \\end{array}", true, "a │ b"},
+	} {
+		got, ok := RenderLatex(tc.source, RenderLatexOptions{Display: tc.display})
+		if !ok || got != tc.want {
+			t.Errorf("RenderLatex(%q, display=%v) = %q, %v; want %q", tc.source, tc.display, got, ok, tc.want)
+		}
+	}
+}

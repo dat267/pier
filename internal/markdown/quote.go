@@ -79,7 +79,7 @@ func quoteHeadingInterrupt(line string) bool {
 	if hashes == 0 || hashes > 6 {
 		return false
 	}
-	return i == len(line) || strings.IndexByte(" \t\r\f\v", line[i]) >= 0
+	return i == len(line) || jsSpaceAt(line, i)
 }
 
 // isSetextUnderlineRun is ` {0,3}(?:=+|-+) *` filling the line.

@@ -93,3 +93,21 @@ func TestStyledWrapBreaksAWordWiderThanTheWidth(t *testing.T) {
 		}
 	}
 }
+
+// markdown.ts getLongestWordWidth splits with /\s+/, JavaScript's class: U+FEFF
+// separates words and U+0085 joins them (pi v1.6.0, faac5858).
+func TestLongestWordWidthSplitsOnJavaScriptWhitespace(t *testing.T) {
+	renderer := NewRenderer(Options{Terminal: testTerminal{}})
+	for _, tc := range []struct {
+		text string
+		want int
+	}{
+		{"aaa\ufeffbb", 3},
+		{"aaa\u0085bb", visibleWidth("aaa\u0085bb")},
+		{"a\u00a0bb", 2},
+	} {
+		if got := renderer.getLongestWordWidth(tc.text, 0, false); got != tc.want {
+			t.Errorf("getLongestWordWidth(%q) = %d, want %d", tc.text, got, tc.want)
+		}
+	}
+}

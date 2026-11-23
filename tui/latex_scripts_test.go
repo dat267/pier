@@ -3,23 +3,24 @@ package tui
 // Upstream latex.ts normalizes a script value with
 // `value.replace(/\s*([=+-])\s*/g, "$1")`; pier scans bytes instead of running
 // the regexp, because the backtracker dominated display renders (D466). This
-// test keeps the scan equal to the regexp over every byte combination the
-// transform can see, including the whitespace `\s` accepts and the Unicode
-// spaces it does not.
+// test keeps the scan equal to the regexp over every combination of the
+// characters the transform can see, including the JavaScript whitespace Go's
+// `\s` misses (\v, NBSP, U+FEFF) and U+0085, which JavaScript keeps.
 
 import (
-	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 func TestNormalizeScriptValueMatchesTheRelationRegex(t *testing.T) {
 	reference := func(value string) string {
 		return latexScriptRelationRegex.ReplaceAllString(value, "${1}")
 	}
-	alphabet := []string{"", " ", "  ", "\t", "\n", "\r", "\f", "\v", "a", "=", "+", "-", "*", "é"}
+	alphabet := []string{"", " ", "  ", "\t", "\n", "\r", "\f", "\v", "\u00a0", "\u0085", "\ufeff", "a", "=", "+", "-", "*", "é"}
 	check := func(value string) {
 		t.Helper()
-		want := reference(strings.TrimSpace(value))
+		want := reference(ai.JSTrim(value))
 		if got := normalizeScriptValue(value); got != want {
 			t.Fatalf("normalizeScriptValue(%q) = %q, regexp gives %q", value, got, want)
 		}

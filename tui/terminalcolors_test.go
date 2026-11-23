@@ -220,6 +220,16 @@ func TestParseOscColorResponse(t *testing.T) {
 	if _, ok := ParseOscColorResponse("\x1b]12;#ffffff\x07"); ok {
 		t.Fatal("OSC 12 parsed as a color response")
 	}
+	// terminal-colors.ts trims the value with JavaScript's trim(): U+FEFF is
+	// whitespace and U+0085 is not (pi v1.6.0, faac5858).
+	response, ok = ParseOscColorResponse("\x1b]11;\ufeffrgb:ffff/0000/0000\x07")
+	if !ok || !response.HasRGB || response.RGB != (RgbColor{R: 255}) {
+		t.Fatalf("BOM-prefixed reply = %+v ok=%v", response, ok)
+	}
+	response, ok = ParseOscColorResponse("\x1b]11;\u0085rgb:ffff/0000/0000\x07")
+	if !ok || !response.Target.Background || response.HasRGB {
+		t.Fatalf("NEL-prefixed reply = %+v ok=%v", response, ok)
+	}
 }
 
 // waitForWritesAfter waits until the terminal has recorded more than before

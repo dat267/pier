@@ -294,10 +294,12 @@ func (l *blockLexer) lexBlock(start int, raw string, ln line) (*Block, int, bool
 	return nil, start, false
 }
 
-// atxHeading parses `{0,3}#{1,6} text`, stripping an optional closing run of #.
+// atxHeading parses marked's heading rule, /^ {0,3}(#{1,6})(?=\s|$)(.*)(?:\n+|$)/
+// with JavaScript's `\s`: four spaces of indent make indented code instead, and
+// `.` stops at U+2028 and U+2029, so a line holding one is no heading. The text
+// follows Tokenizer.heading (marked 18.0.11): trimmed, and a closing run of #
+// dropped when nothing or a space precedes it.
 func atxHeading(line string) (level int, text string, ok bool) {
-	// marked's heading rule is /^ {0,3}(#{1,6})(?=\s|$)/: four spaces of
-	// indent make indented code instead.
 	i, width := skipIndent(line)
 	if width >= 4 || i >= len(line) {
 		return 0, "", false
@@ -310,22 +312,26 @@ func atxHeading(line string) (level int, text string, ok bool) {
 	if level == 0 || level > 6 {
 		return 0, "", false
 	}
-	if j < len(line) && line[j] != ' ' && line[j] != '\t' {
+	if j < len(line) && !jsSpaceAt(line, j) {
 		return 0, "", false
 	}
 	body := line[j:]
-	// Trailing #s (optionally preceded by a space) are not content.
-	body = strings.TrimRight(body, " \t")
-	k := len(body)
-	for k > 0 && body[k-1] == '#' {
-		k--
+	if strings.ContainsAny(body, "\u2028\u2029") {
+		return 0, "", false
 	}
-	if k < len(body) {
-		if k == 0 || body[k-1] == ' ' || body[k-1] == '\t' {
-			body = body[:k]
+	body = jsTrim(body)
+	if strings.HasSuffix(body, "#") {
+		if trimmed := strings.TrimRight(body, "#"); trimmed == "" || strings.HasSuffix(trimmed, " ") {
+			body = jsTrim(trimmed)
 		}
 	}
-	return level, strings.Trim(body, " \t"), true
+	return level, body, true
+}
+
+// jsSpaceAt reports whether s[i:] starts with a character of JavaScript's `\s`.
+func jsSpaceAt(s string, i int) bool {
+	r, _ := utf8.DecodeRuneInString(s[i:])
+	return isWhitespaceRune(r)
 }
 
 // fenceStart reports a fenced code opening: up to three leading spaces and a

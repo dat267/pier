@@ -36,6 +36,18 @@ func TestBlockTokensMatchMarked(t *testing.T) {
 		{"> q\n> [x]: /u\n", `quote[p:"q\n[x]: /u"]`},
 		{"* a\n  [x]: /u\n\n  - t\n", `ul[(p:"a\n[x]: /u",space,ul[(p:"t")])]`},
 
+		// The heading rule is /^ {0,3}(#{1,6})(?=\s|$)(.*)(?:\n+|$)/ with
+		// JavaScript's `\s`, whose `.` stops at U+2028; Tokenizer.heading trims the
+		// text and drops a closing # run only after a space (pi v1.6.0, faac5858).
+		{"#\u00a0H\n", `h1:"H"`},
+		{"#\ufeffH\n", `h1:"H"`},
+		{"#\vH\n", `h1:"H"`},
+		{"#\u0085H\n", `p:"#\u0085H"`},
+		{"# a\u2028b\n", `p:"# a\u2028b"`},
+		{"# a\t#\n", `h1:"a\t#"`},
+		{"# a #\n", `h1:"a"`},
+		{"# #\n", `h1:""`},
+
 		// blockTokens joins indented code after a paragraph at any level.
 		{"a\n    b\n---\n", `p:"a\nb\n" | hr`},
 		{"a\n    b\n-:\n", `p:"a\nb\n" | p:"-:"`},

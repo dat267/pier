@@ -244,7 +244,7 @@ func lheadingHeadingStart(line string) bool {
 	if hashes == 0 {
 		return false
 	}
-	return i >= len(line) || (line[i] == ' ' || line[i] == '\t')
+	return i >= len(line) || jsSpaceAt(line, i)
 }
 
 // lheadingHTMLOpen is the html alternative of the same lookahead,
