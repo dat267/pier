@@ -248,8 +248,10 @@ func Ruby() *Language {
 	subst.Contains = defaultContains
 	params.Contains = defaultContains
 
-	classMode.Contains = append(classMode.Contains, irbObject, hashComment, beginComment, endComment)
-	functionMode.Contains = append(functionMode.Contains, irbObject, hashComment, beginComment, endComment)
+	// The class and function modes concat COMMENT_MODES before the reference
+	// unshifts IRB_OBJECT into it, so they hold the comments alone.
+	classMode.Contains = append(classMode.Contains, hashComment, beginComment, endComment)
+	functionMode.Contains = append(functionMode.Contains, hashComment, beginComment, endComment)
 	regexpContainer.Contains = append(regexpContainer.Contains, irbObject, hashComment, beginComment, endComment)
 	commentModes := []*Mode{irbObject, hashComment, beginComment, endComment}
 

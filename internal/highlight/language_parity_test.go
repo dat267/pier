@@ -567,3 +567,26 @@ func TestHandlebarsParametersUseThePlainNumberMode(t *testing.T) {
 		}
 	}
 }
+
+// languages/ruby.js (highlight.js 10.7.3, pi v1.6.0, faac5858) builds the
+// class and function modes with `.concat(COMMENT_MODES)` before
+// `COMMENT_MODES.unshift(IRB_OBJECT)`, so those modes hold no IRB object rule
+// and `#<x>` after `class` is a comment. The expected HTML is the reference's.
+func TestRubyClassHeaderHasNoIRBObject(t *testing.T) {
+	for _, tc := range []struct {
+		code      string
+		relevance int
+		html      string
+	}{
+		{"class#<x>", 2, "<span class=\"hljs-class\"><span class=\"hljs-keyword\">class</span><span class=\"hljs-comment\">#&lt;x&gt;</span></span>"},
+		{"def f(a) #<x>\nend", 4, "<span class=\"hljs-function\"><span class=\"hljs-keyword\">def</span> <span class=\"hljs-title\">f</span><span class=\"hljs-params\">(a)</span></span> #&lt;x&gt;\n<span class=\"hljs-keyword\">end</span>"},
+	} {
+		result, err := Highlight(tc.code, "ruby")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := RenderHTML(result.Nodes); got != tc.html || result.Relevance != tc.relevance {
+			t.Errorf("%q: relevance %d HTML %q; want %d %q", tc.code, result.Relevance, got, tc.relevance, tc.html)
+		}
+	}
+}
