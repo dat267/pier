@@ -467,23 +467,34 @@ func TestLatexVerbatimDelimitsTheString(t *testing.T) {
 	}
 }
 
-// D502: `languages/arcade.js` ends with `illegal: /#(?!!)/`, and highlight.js
-// aborts the whole highlight and returns the input as plain text when it meets
-// an illegal lexeme (ignoreIllegals is false by default). RE2 has no negative
-// lookahead, so pier cannot express `#` not followed by `!` and highlights the
-// rest of the line instead. This pins the difference so a later change to the
-// illegal handling does not silently travel without noticing it.
-func TestArcadeIllegalHashKeepsHighlighting(t *testing.T) {
-	code := "// c\n/* c */\n# h\n"
-	result, err := Highlight(code, "arcade")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result.Illegal {
-		t.Fatalf("the reference rejects the stray `#`; the port cannot (D502)")
-	}
-	if got, want := RenderHTML(result.Nodes), "<span class=\"hljs-comment\">// c</span>\n"+
-		"<span class=\"hljs-comment\">/* c */</span>\n# h\n"; got != want {
-		t.Fatalf("HTML = %q; want %q", got, want)
+// highlight.js 10.7.3 (pi v1.6.0, faac5858) declares `illegal: /#(?!!)/` in
+// languages/arcade.js and `/#(?![$_A-z])/` in javascript.js and typescript.js.
+// The lookahead does not consume the next character, so with ignoreIllegals
+// (the interactive theme's setting) `#"s"` still highlights its string, and
+// `A-z` also spans `[\]^_` and the backtick. Without ignoreIllegals the stray
+// `#` makes the whole input plain text. The expected HTML is the reference's.
+func TestHashIllegalLookaheadMatchesReference(t *testing.T) {
+	for _, tc := range []struct {
+		code, language  string
+		ignore, illegal bool
+		html            string
+	}{
+		{"// c\n/* c */\n# h\n", "arcade", false, true, "// c\n/* c */\n# h\n"},
+		{"// c\n#!x\n", "arcade", false, false, "<span class=\"hljs-comment\">// c</span>\n#!x\n"},
+		{"#\"s\"", "arcade", true, false, "#<span class=\"hljs-string\">&quot;s&quot;</span>"},
+		{"#\"s\"", "javascript", true, false, "#<span class=\"hljs-string\">&quot;s&quot;</span>"},
+		{"#`t`", "typescript", true, false, "#<span class=\"hljs-string\">`t`</span>"},
+		{"this.#x = 1", "javascript", false, false, "<span class=\"hljs-built_in\">this</span>.#x = <span class=\"hljs-number\">1</span>"},
+		{"a[#]", "javascript", true, false, "a[#]"},
+		{"#", "javascript", true, false, "#"},
+		{"#\"s\"", "javascript", false, true, "#&quot;s&quot;"},
+	} {
+		result, err := HighlightWith(tc.code, tc.language, tc.ignore)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := RenderHTML(result.Nodes); result.Illegal != tc.illegal || got != tc.html {
+			t.Errorf("%s %q ignore=%v: illegal=%v HTML %q; want illegal=%v %q", tc.language, tc.code, tc.ignore, result.Illegal, got, tc.illegal, tc.html)
+		}
 	}
 }

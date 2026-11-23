@@ -56,6 +56,13 @@ type Mode struct {
 	ManualBegin func(s string, pos int) (end int, ok bool)
 	ManualFirst string
 
+	// ManualIllegal replaces the compiled illegal regex the same way, for an
+	// illegal with a lookahead (`#(?!!)`): RE2 would have to consume the
+	// guarded character, which then could not begin a string or comment.
+	// ManualIllegalFirst is the byte such a match must start with.
+	ManualIllegal      func(s string, pos int) (end int, ok bool)
+	ManualIllegalFirst string
+
 	beforeBegin func(m *match, resp *Response)
 
 	cachedVariants []*Mode
@@ -149,6 +156,9 @@ type compiledMode struct {
 	manualBegin func(s string, pos int) (end int, ok bool)
 	manualFirst string
 	manual      bool
+
+	manualIllegal      func(s string, pos int) (end int, ok bool)
+	manualIllegalFirst string
 
 	// keepGroups is set when a callback may read the match's capture groups, so
 	// the inner groups must survive into the compiled matcher. Most rules only
@@ -353,6 +363,8 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 		cmode.illegalRe = illegalRe
 		cmode.illegalSource = mode.Illegal
 	}
+	cmode.manualIllegal = mode.ManualIllegal
+	cmode.manualIllegalFirst = mode.ManualIllegalFirst
 
 	contains := mode.Contains
 	if contains == nil {
@@ -398,6 +410,8 @@ func (c *compiler) buildModeRegex(mode *compiledMode) *resumableMultiRegex {
 	}
 	if mode.illegalSource != "" {
 		mm.addRule(mode.illegalSource, false, matchData{typ: ruleIllegal})
+	} else if mode.manualIllegal != nil {
+		mm.addManual(mode.manualIllegal, mode.manualIllegalFirst, matchData{typ: ruleIllegal})
 	}
 	return mm
 }

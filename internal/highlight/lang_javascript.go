@@ -385,7 +385,22 @@ func buildJS(typescript bool) *Language {
 		Name:     name,
 		Aliases:  aliases,
 		Keywords: kw,
-		Illegal:  `#[^$_A-Za-z]`,
-		Contains: contains,
+		// The reference's `/#(?![$_A-z])/`: `A-z` also spans `[\]^_` and the
+		// backtick, and the lookahead leaves the next character to the other
+		// rules, so `#"s"` still highlights the string.
+		ManualIllegal:      hashNotFollowedBy(func(c byte) bool { return c == '$' || (c >= 'A' && c <= 'z') }),
+		ManualIllegalFirst: "#",
+		Contains:           contains,
+	}
+}
+
+// hashNotFollowedBy matches a `#` whose next byte (if any) is not excluded,
+// the reference's `#(?!...)` illegal with a single-character lookahead.
+func hashNotFollowedBy(excluded func(byte) bool) func(s string, pos int) (int, bool) {
+	return func(s string, pos int) (int, bool) {
+		if pos >= len(s) || s[pos] != '#' || (pos+1 < len(s) && excluded(s[pos+1])) {
+			return 0, false
+		}
+		return pos + 1, true
 	}
 }
