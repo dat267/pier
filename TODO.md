@@ -77,40 +77,44 @@ What a caller still needs, if the interactive sign-in is wanted:
    `writesMu` serializes writes inside one process only, which is why the
    adapter's `inFlight` sharing is process-local.
 
-## IDN validation is still approximate in four places (open)
+## IDN validation is still approximate (open)
 
 A 1,200-cell fuzz corpus diffed against the reference's `Is*` functions leaves 13
 differences, and every one of them is the same root cause: the port hand-rolls the
-IDN checks where the reference calls the shared `packages/schema/src/formats/typebox/idna`
-implementation. Grouped by rule:
+IDN checks where the reference calls the shared
+`packages/schema/src/formats/typebox/idna` implementation. A 62-label
+differential against the reference's own compiled `IsIdnHostname` leaves 10
+differences in two rules, and an earlier version of this entry had the PVALID
+rule's direction backwards.
 
-1. **A-label length** (`label/unicode.ts:48`): a non-ASCII label whose punycode form
-   plus `xn--` exceeds 63 octets is rejected. The port counts the label's own runes,
-   so `strings.Repeat("あ", 63)` and `xn--123e4567123e456759` pass as `idn-hostname`
-   and as `hostname` (which delegates to the same check, `hostname.ts:37`).
-2. **CONTEXTO neighbours** (`label/unicode.ts:87`): U+00B7 needs `l` on both sides,
-   U+0375 a following Greek character, U+05F3/U+05F4 a preceding Hebrew one, and
-   U+200C/U+200D a preceding virama. The port has none, so `l·l` is rejected.
-3. **PVALID categories** (`label/unicode.ts:84`): the reference enforces the RFC 5892
-   permitted categories and the DISALLOWED exceptions. The port accepts any
-   `unicode.IsLetter`/`IsNumber` rune, so `idn-hostname` accepts `::1`, `:`,
-   `Zzé+59` and `:ａff60`, which the reference rejects.
+1. **CONTEXTO neighbours** (`label/unicode.ts:87`): U+00B7 needs `l` on both
+   sides, U+0375 a following Greek character, U+05F3/U+05F4 a preceding Hebrew
+   one, and U+200C/U+200D a preceding virama. The port has none of them, so it
+   rejects `l·l` and `א׳`, both of which the reference accepts.
+2. **PVALID categories** (`label/unicode.ts:84`): the reference enforces the RFC
+   5892 permitted categories and the DISALLOWED exceptions; the port admits any
+   `unicode.IsLetter`/`IsNumber` rune. The corpus found no rune the port admits
+   and the reference forbids, so this rule is untested rather than wrong, and
+   `::1`, `:`, `Zzé+59` and `:ａff60` are cases both accept.
+3. **A-label length** (`label/unicode.ts:48`): a non-ASCII label whose punycode
+   form plus `xn--` exceeds 63 octets is rejected. The port counts the label's own
+   runes, so 63 CJK codepoints pass here and are rejected there. This one is
+   confirmed and is the only case in the corpus where the port is more permissive.
 
 `idn-email` is *not* in this group: it has its own regex and now matches exactly.
 
-All three need the RFC 5892 tables. `golang.org/x/net` is an indirect dependency at
-v0.61.0 and its `idna` package has them, but the module has no go.sum entry for it,
-so adding it is a dependency change. With it:
+Closing this means porting the reference's label rule, not adopting
+`golang.org/x/net/idna`. Measured: `idna.New(ValidateForRegistration(),
+StrictDomainName(true))` agrees with the reference on `l·l` and on the CJK
+A-label length but rejects `a_b.com`, `::1`, `:` and `Zzé+59` as well, so it is
+not the oracle. It would also add a dependency: `golang.org/x/net` is only an
+indirect graph entry, with no `go.sum` line, so `go get` fetches it (verified).
 
-1. `go mod download golang.org/x/net`, add the go.sum entries.
-2. Replace `validHostname` and `validIDNLabel` with
-   `idna.New(idna.ValidateForRegistration(), idna.StrictDomainName(true)).ToASCII`,
-   accepting only on success. This closes all three rules at once, and fixes both
-   formats because `hostname` delegates to the same check upstream.
-3. Diff a corpus of a few hundred labels against the reference before trusting it,
-   because `ValidateForRegistration` is stricter than the reference in places (it
-   rejects labels the reference accepts, such as underscore-containing ones) and the
-   two must be compared, not assumed equivalent.
+The reference's rule is `pattern/pattern.ts` (30 exported regexes, 116 lines),
+`format/puny.ts` (167) and `format/bidi.ts` (127), about 410 lines of Unicode
+tables to copy. Weighed against that: no tool schema in either tree declares the
+`idn-hostname` format, so only the port's generic format dispatcher can reach it.
+Left open as a deliberate trade rather than started and abandoned.
 
 `iri-reference` is a separate, smaller item: the reference is
 `!InvalidIriChars && !MalformedScheme && URL.canParse(value, "http://example.com")`
