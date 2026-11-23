@@ -9113,3 +9113,17 @@ differentials and the fuzzers.
 
 Test: `TestExactLiteralASCIIFold`, which checks all 16,384 ASCII pairs against
 `SimpleFold` and fails if the flip is applied to a non-ASCII pair.
+
+**Not closed.** A 24 KiB R file over plain text is still quadratic (1 KiB 8 ms,
+2 KiB 25 ms, 4 KiB 100 ms) where the reference is linear at 1.3, 2.6 and 3.3 ms,
+and that dominates HTTP, whose body auto-detects and scores R against 24 KiB
+(5.5 s against the reference's 1.7 s). The cause is not any single rule: the
+hot R rule `[a-zA-Z][a-zA-Z_0-9]*\s+<-\s+` is linear at 5.4 walk steps per byte,
+the walk itself never returns "unknown", and each dispatch call finds its match
+within 0 to 7 bytes. What remains is 320,560 dispatch iterations for 1.9 KiB,
+growing with the square of the input, with two mode matchers involved (`%` at
+397 iterations per call and `#'` at 5) that differ only in their end rule. The
+bounding would have to change in `execDispatch`, where counting walk-settled
+rejections toward `maxRejectedCandidates` was tried and reverted because it
+breaks D351's guard: a long comment of words that only start like a rule must
+keep highlighting (pinned by `TestRejectedCandidateRunStopsAtBudget`).
