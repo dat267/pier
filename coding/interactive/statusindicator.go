@@ -65,13 +65,13 @@ func (s *StatusIndicator) RenderInBorder(width int) string {
 	if len(line) > 0 && line[0] == ' ' {
 		line = line[1:]
 	}
-	line = trimRightSpaces(line)
+	line = strings.TrimRight(line, " ")
 	if len(lines) > 2 && tui.VisibleWidth(line) > tui.VisibleWidth(s.Loader.RenderedIndicator()) {
 		full, _, _ := strings.Cut(s.Loader.Text.Text(), "\n")
 		// Cut one column short and drop the spaces the cut ends on, so the
 		// ellipsis follows the last visible character ("Working…", not
 		// "Working …").
-		kept := trimRightSpaces(tui.StripTerminalSequences(tui.TruncateToWidth(full, width-1, "", false)))
+		kept := strings.TrimRight(tui.StripTerminalSequences(tui.TruncateToWidth(full, width-1, "", false)), " ")
 		return tui.TruncateToWidth(full, tui.VisibleWidth(kept), "", false) + "…"
 	}
 	return tui.TruncateToWidth(line, width, "", false)
@@ -290,23 +290,8 @@ func (IdleStatus) Invalidate() {}
 
 // Render renders the empty lines.
 func (IdleStatus) Render(width int) []string {
-	emptyLine := repeatSpacesLocal(width)
+	emptyLine := strings.Repeat(" ", max(width, 0))
 	return []string{emptyLine, emptyLine}
-}
-
-func repeatSpacesLocal(count int) string {
-	if count <= 0 {
-		return ""
-	}
-	return strings.Repeat(" ", count)
-}
-
-func trimRightSpaces(value string) string {
-	end := len(value)
-	for end > 0 && value[end-1] == ' ' {
-		end--
-	}
-	return value[:end]
 }
 
 // BranchSummaryMessageComponent renders a branch summary with the
