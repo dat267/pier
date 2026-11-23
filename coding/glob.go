@@ -19,12 +19,27 @@ import (
 // and `!`/`^` negation, brace groups (comma alternatives and `{1..3}`-style
 // sequences) and `\` escaping.
 //
+// Like minimatch, a pattern starting with `#` is a comment and matches
+// nothing, and each leading `!` inverts the match (`!*mini*` is every value
+// `*mini*` does not match).
+//
 // minimatch's extended globs (`!(...)`, `+(...)`, `?(...)`, `@(...)`,
-// `*(...)`), extglob negation patterns (`!pattern`), its POSIX character
-// classes, `\`-escaped separators, and its `matchBase`/`nocase` options beyond
-// ASCII case folding are not implemented; model ids never use them. D262 covers
-// the one remaining difference, in minimatch's escaped-suffix fast path.
+// `*(...)`), its POSIX character classes, `\`-escaped separators, and its
+// `matchBase`/`nocase` options beyond ASCII case folding are not implemented;
+// model ids never use them. D262 covers the one remaining difference, in
+// minimatch's escaped-suffix fast path.
 func MatchGlob(pattern, value string, nocase bool) bool {
+	if strings.HasPrefix(pattern, "#") {
+		return false
+	}
+	body := strings.TrimLeft(pattern, "!")
+	negate := (len(pattern)-len(body))%2 == 1
+	return matchGlobBody(body, value, nocase) != negate
+}
+
+// matchGlobBody matches a pattern with its comment and negation prefix
+// already handled.
+func matchGlobBody(pattern, value string, nocase bool) bool {
 	// An empty pattern matches only the empty path (minimatch does not treat "/"
 	// as an empty match).
 	if pattern == "" {

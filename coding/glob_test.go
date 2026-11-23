@@ -21,6 +21,18 @@ func TestMatchGlobAgainstMinimatch(t *testing.T) {
 		want    bool
 	}{
 		{"*sonnet*", "claude-sonnet-4-5", true},
+		// minimatch 11.0.3 Minimatch.parseNegate and the `#` comment shortcut
+		// (pi v1.6.0, faac5858, model-resolver.ts passes no nonegate or
+		// nocomment): each leading `!` inverts, `#` matches nothing.
+		{"!*mini*", "gpt-6.2-sol", true},
+		{"!*mini*", "gpt-6.2-sol-mini", false},
+		{"!!*mini*", "gpt-6.2-sol-mini", true},
+		{"!", "x", true},
+		{"!", "", false},
+		{"!a/*", "a/b", false},
+		{"#x", "#x", false},
+		{"!#x", "x", true},
+		{"!#x", "#x", false},
 		{"*sonnet*", "anthropic/claude-sonnet-4-5", false},
 		{"**sonnet**", "claude-sonnet-4-5", true},
 		{"**sonnet**", "anthropic/claude-sonnet-4-5", false},
