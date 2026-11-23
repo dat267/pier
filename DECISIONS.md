@@ -2498,7 +2498,21 @@ from that command; the port has neither the command nor a sign-in entry point
 names `/login <provider>`, which exists. The OAuth form points at the
 `oauth` block in `mcp.json` instead of at a command that does not exist.
 
-Test: `TestMcpConnectionAsksOAuthServersToSignIn`.
+The interactive sign-in itself is not ported. In the reference (pi v1.6.0)
+`packages/mcp/src/oauth/sign-in.ts` `startMcpSignIn`/`completeMcpSignIn` are
+called only from `extensions/mcp/oauth.ts`, the extension surface D41 leaves out,
+and porting them means a loopback listener, the create-CIMD fallback, the `/mcp`
+command and a cross-process refresh lock (the reference's file lock and
+`McpRefreshLockBusyError`; `writesMu` serializes only one process). The library
+keeps upstream's `OnRedirect` option and `RedirectToAuthorization` call, and
+`coding/mcpruntime.go` passes a no-op that leaves the pending state and code
+verifier untouched. A stored token is still refreshed before it expires
+(`oauthAdapter.Token`), and an expired or revoked one surfaces as the sign-in
+error above.
+
+Tests: `TestMcpConnectionAsksOAuthServersToSignIn`,
+`TestOAuthRefreshOnlyDoesNotStartAnAuthorization`,
+`TestOAuthAdapterTokenRefreshesAnExpiredTokenProactively`.
 
 ### D261
 

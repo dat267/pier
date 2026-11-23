@@ -169,14 +169,14 @@ func NewMcpServerConnection(options McpServerConnectionOptions) *McpServerConnec
 			ClientSecret:   options.ClientSecret,
 			Store:          connection.credentials.ForServer(connection.Entry.Name, url),
 			OnRedirect: func(context.Context, string) error {
-				// Sign-in is driven by the caller (`/mcp` in a later slice); a
-				// redirect without one keeps the challenge for it.
+				// The interactive sign-in that would open this URL is not
+				// ported (D259); declining the redirect keeps the pending
+				// state and verifier untouched.
 				return nil
 			},
 		})
-		// The OAuth challenge (populated by the sign-in flow, a later slice)
-		// stays nil here; the config and transport layers surface the 401 as an
-		// McpAuthRequiredError.
+		// With no sign-in flow (D259) the OAuth challenge stays nil; the config
+		// and transport layers surface the 401 as an McpAuthRequiredError.
 	}
 	return connection
 }
