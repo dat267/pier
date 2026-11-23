@@ -499,12 +499,28 @@ func exactLiteral(node *exactNode, r, c rune) bool {
 	if !node.fold {
 		return false
 	}
+	// An ASCII pair is decided by a case bit flip. unicode.SimpleFold walks a
+	// cycle and is far dearer, and a case-insensitive language compares a letter
+	// against a letter at almost every literal step. Restricted to ASCII on both
+	// sides, where the flip agrees with SimpleFold for every pair; above ASCII
+	// they differ (the Kelvin sign folds with k, the long s with s).
+	if r < utf8.RuneSelf && c < utf8.RuneSelf {
+		return lowerASCII(byte(r)) == lowerASCII(byte(c))
+	}
 	for f := unicode.SimpleFold(r); f != r; f = unicode.SimpleFold(f) {
 		if f == c {
 			return true
 		}
 	}
 	return false
+}
+
+// lowerASCII lowercases an ASCII byte, leaving every other byte alone.
+func lowerASCII(b byte) byte {
+	if b >= 'A' && b <= 'Z' {
+		return b + 'a' - 'A'
+	}
+	return b
 }
 
 // isWordByteBefore and isWordByteAt are RE2's ASCII \b test on the runes

@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D526)
+# Deliberate divergences from pi (D1–D527)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9087,3 +9087,29 @@ faster. Output is unchanged: the goldens, the differentials and a 116,729-byte
 INI render byte for byte against the reference.
 
 Test: `TestIniDottedKeyScan`.
+
+### D527
+
+**An ASCII literal pair folds by a case bit flip, not `unicode.SimpleFold`.**
+
+Reference: pi v1.6.0 (`faac5858`) leaves case folding to V8's compiled regexp,
+which compares ASCII letters without walking a Unicode fold cycle. The port's
+`exactLiteral` called `unicode.SimpleFold` for every literal rune that did not
+compare equal, and in a case-insensitive language (pgsql, vbscript) that is
+almost every literal step: `exactLiteral` was 16% of a pgsql profile and
+`unicode.SimpleFold` 7.4% beneath it.
+
+`exactLiteral` now decides a pair where both runes are below `utf8.RuneSelf`
+with a case bit flip (`lowerASCII`), and keeps `SimpleFold` for everything else.
+The restriction is what makes it sound: above ASCII the two disagree, and
+`SimpleFold` relates pairs a flip misses (U+212A KELVIN SIGN with `k`, U+017F
+LATIN SMALL LETTER LONG S with `s`).
+
+Same method, five interleaved runs, median of five samples each: pgsql 31.55 to
+26.58 ms (15.8% faster), vbscript 27.43 to 19.74 (28.0%), with cpp, dos and
+php-template within 0.5-1.6% (noise on this machine). A suite-wide run over 191
+languages moved 119 languages faster. Output is unchanged: every golden, the
+differentials and the fuzzers.
+
+Test: `TestExactLiteralASCIIFold`, which checks all 16,384 ASCII pairs against
+`SimpleFold` and fails if the flip is applied to a non-ASCII pair.

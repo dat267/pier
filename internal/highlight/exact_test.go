@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -335,5 +336,39 @@ func TestExactRunFastPathRespectsJSLines(t *testing.T) {
 	}
 	if end, result := matchExactAt(dot, "a\rb", 0, true, ws); result != exactMatched || end != 1 {
 		t.Errorf("dot under jsLines: matched=%v end=%d, want 1", result == exactMatched, end)
+	}
+}
+
+// TestExactLiteralASCIIFold guards the case-bit flip in exactLiteral for an
+// ASCII pair. unicode.SimpleFold is the general case, so a byte flip must be
+// exactly equivalent for every ASCII pair and must not be used when either side
+// is not ASCII, where SimpleFold relates characters the flip does not (the long
+// s and the Kelvin sign, for example).
+func TestExactLiteralASCIIFold(t *testing.T) {
+	for r := rune(0); r < utf8.RuneSelf; r++ {
+		fold := &exactNode{fold: true}
+		for c := rune(0); c < utf8.RuneSelf; c++ {
+			want := c == r
+			if !want {
+				for f := unicode.SimpleFold(r); f != r; f = unicode.SimpleFold(f) {
+					if f == c {
+						want = true
+						break
+					}
+				}
+			}
+			if got := exactLiteral(fold, r, c); got != want {
+				t.Fatalf("fold %q vs %q: got %v, SimpleFold says %v", r, c, got, want)
+			}
+		}
+	}
+	// Above ASCII the flip must not decide: KELVIN SIGN folds with k, and the
+	// long s with s, so exactLiteral still has to reach SimpleFold for them.
+	for _, pair := range []struct {
+		r, c rune
+	}{{'k', '\u212A'}, {'s', '\u017F'}, {'\u212A', 'k'}, {'\u017F', 's'}} {
+		if !exactLiteral(&exactNode{fold: true}, pair.r, pair.c) {
+			t.Errorf("fold %q vs %q: SimpleFold pair must match", pair.r, pair.c)
+		}
 	}
 }
