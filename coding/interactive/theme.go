@@ -559,8 +559,6 @@ func detectAppearance(foregrounds, backgrounds []tui.Color) string {
 	return ""
 }
 
-var cubeValues = []int{0, 95, 135, 175, 215, 255}
-
 func resolveVarRefs(value ColorValue, vars map[string]ColorValue, visited map[string]bool) ColorValue {
 	if value.IsIndex || value.Value == "" || strings.HasPrefix(value.Value, "#") {
 		return value
@@ -1302,26 +1300,6 @@ func DetectTerminalBackgroundFromEnv(env func(string) string) TerminalThemeDetec
 		Detail:     "no terminal background hint found",
 		Confidence: "low",
 	}
-}
-
-// ansi256ToHex converts a 256-color index to a hex color.
-func ansi256ToHex(index int) string {
-	basicColors := []string{
-		"#000000", "#800000", "#008000", "#808000", "#000080", "#800080", "#008080", "#c0c0c0",
-		"#808080", "#ff0000", "#00ff00", "#ffff00", "#0000ff", "#ff00ff", "#00ffff", "#ffffff",
-	}
-	if index < 16 {
-		return basicColors[index]
-	}
-	if index < 232 {
-		cubeIndex := index - 16
-		r := cubeIndex / 36
-		g := (cubeIndex % 36) / 6
-		b := cubeIndex % 6
-		return hexFromRgb(cubeValues[r], cubeValues[g], cubeValues[b])
-	}
-	gray := 8 + (index-232)*10
-	return hexFromRgb(gray, gray, gray)
 }
 
 func hexFromRgb(r int, g int, b int) string {

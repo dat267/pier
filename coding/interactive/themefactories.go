@@ -171,7 +171,11 @@ func GetThemeExportColors(themeName string) (pageBg string, cardBg string, infoB
 		}
 		resolved := resolveVarRefs(*value, themeJSON.Vars, map[string]bool{})
 		if resolved.IsIndex {
-			return ansi256ToHex(resolved.Index)
+			color, err := tui.IndexedColor(resolved.Index)
+			if err != nil {
+				return ""
+			}
+			return tui.ColorToHex(color)
 		}
 		if resolved.Value == "" {
 			return ""

@@ -356,19 +356,6 @@ func TestThemeRegistry(t *testing.T) {
 	StopThemeWatcher()
 }
 
-// TestAnsi256PaletteToHex verifies palette-index conversion.
-func TestAnsi256PaletteToHex(t *testing.T) {
-	if got := ansi256ToHex(196); got != "#ff0000" {
-		t.Fatalf("ansi256ToHex(196) = %s", got)
-	}
-	if got := ansi256ToHex(232); got != "#080808" {
-		t.Fatalf("ansi256ToHex(232) = %s", got)
-	}
-	if got := ansi256ToHex(15); got != "#ffffff" {
-		t.Fatalf("ansi256ToHex(15) = %s", got)
-	}
-}
-
 // TestBuiltinThemeDocuments verifies the embedded theme documents load.
 func TestBuiltinThemeDocuments(t *testing.T) {
 	for _, name := range []string{"dark", "light"} {
@@ -428,8 +415,9 @@ func TestThemeValidationRejectsOutOfRangeColorIndex(t *testing.T) {
 	}
 }
 
-// Upstream getThemeExportColors converts an okhsl() export value to hex
-// because CSS does not understand okhsl().
+// Upstream getThemeExportColors (pi v1.6.0 theme.ts) converts an okhsl()
+// export value to hex because CSS does not understand okhsl(), and an
+// indexed one with colorToHex(indexedColor(index)).
 func TestThemeExportConvertsOkhslToHex(t *testing.T) {
 	dir := t.TempDir()
 	SetCustomThemesDir(dir)
@@ -441,7 +429,7 @@ func TestThemeExportConvertsOkhslToHex(t *testing.T) {
 	data, err := json.Marshal(map[string]any{
 		"name":   "okhsl-export",
 		"colors": colors,
-		"export": map[string]any{"pageBg": "okhsl(200 50% 40%)"},
+		"export": map[string]any{"pageBg": "okhsl(200 50% 40%)", "cardBg": 196, "infoBg": 232},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -449,12 +437,15 @@ func TestThemeExportConvertsOkhslToHex(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "okhsl-export.json"), data, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	pageBg, _, _, err := GetThemeExportColors("okhsl-export")
+	pageBg, cardBg, infoBg, err := GetThemeExportColors("okhsl-export")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.HasPrefix(pageBg, "#") || strings.Contains(pageBg, "okhsl") {
 		t.Fatalf("pageBg = %q; want a hex color", pageBg)
+	}
+	if cardBg != "#ff0000" || infoBg != "#080808" {
+		t.Fatalf("indexed export = %q, %q; want #ff0000, #080808", cardBg, infoBg)
 	}
 }
 
