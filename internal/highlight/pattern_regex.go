@@ -67,6 +67,24 @@ func jsSpaceWidth(s string, i int) int {
 
 // skipJSSpace returns the offset after every JavaScript whitespace character
 // starting at i.
+// spaceToLineEnd is `\A\s*$` under the m flag: `\s` covers the line
+// terminators and `$` is a line end, so it holds when the leading whitespace
+// reaches the end of s or contains a line terminator. Hand-written because an
+// `\A`-anchored regexp with an unbounded `\s*` costs Go a pass over the
+// whole remainder per call (D526).
+func spaceToLineEnd(s string, jsLines bool) bool {
+	for i := 0; ; {
+		if i == len(s) || lineEndAt(s, i, jsLines) {
+			return true
+		}
+		w := jsSpaceWidth(s, i)
+		if w == 0 {
+			return false
+		}
+		i += w
+	}
+}
+
 func skipJSSpace(s string, i int) int {
 	for {
 		w := jsSpaceWidth(s, i)

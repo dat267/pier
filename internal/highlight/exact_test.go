@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"unicode"
@@ -66,54 +67,23 @@ func TestExactWalkMatchesTheRegexp(t *testing.T) {
 			}
 			modes[mode] = true
 			matcher := mode.matcher.getMatcher(0)
-			for i, source := range matcher.regexes {
-				program := matcher.exacts[i]
+			sources, programs := matcher.regexes, matcher.exacts
+			if mode.endExact != nil {
+				// endOfMode walks the mode's own end regex too.
+				sources = append(slices.Clip(sources), encodeCodeUnitsString(mode.endSource))
+				programs = append(slices.Clip(programs), mode.endExact)
+			}
+			for i, source := range sources {
+				program := programs[i]
 				key := name + "\x00" + source
 				if program == nil || seen[key] {
 					continue
 				}
 				seen[key] = true
-				plain, err := compileEncodedPattern(`\A(?:`+source+`)`, lang.flags)
-				if err != nil {
-					t.Fatal(err)
-				}
-				prefixed, err := compileEncodedPattern(`\A(?s:.)(?:`+source+`)`, lang.flags)
-				if err != nil {
-					t.Fatal(err)
-				}
 				for _, input := range append(samples[name], mixed...) {
-					jsLines := nonLFLineEnds(input)
-					for pos := 0; pos <= len(input); pos++ {
-						if pos < len(input) && !utf8.RuneStart(input[pos]) {
-							continue
-						}
-						end, result := matchExactAt(program, input, pos, jsLines, &ws)
-						if result == exactUnknown {
-							continue
-						}
-						decided++
-						wantEnd := -1
-						if pos == 0 {
-							if loc := plain.findIndexWS(input, jsLines, &ws); loc != nil {
-								wantEnd = loc[1]
-							}
-						} else {
-							_, width := utf8.DecodeLastRuneInString(input[:pos])
-							base := pos - width
-							if loc := prefixed.findIndexWS(input[base:], jsLines, &ws); loc != nil {
-								wantEnd = base + loc[1]
-							}
-						}
-						gotEnd := -1
-						if result == exactMatched {
-							gotEnd = end
-							matched++
-						}
-						if gotEnd != wantEnd {
-							t.Fatalf("%s rule %q at %d of %q: walk ends at %d, regexp at %d",
-								name, source, pos, input, gotEnd, wantEnd)
-						}
-					}
+					d, m := checkExactWalk(t, name, program, source, lang.flags, input, &ws)
+					decided += d
+					matched += m
 				}
 			}
 			for _, child := range mode.contains {
@@ -371,5 +341,104 @@ func TestExactLiteralASCIIFold(t *testing.T) {
 		if !exactLiteral(&exactNode{fold: true}, pair.r, pair.c) {
 			t.Errorf("fold %q vs %q: SimpleFold pair must match", pair.r, pair.c)
 		}
+	}
+}
+
+// checkExactWalk compares the walk of one rule with its regexp at every rune
+// position of input, as TestExactWalkMatchesTheRegexp describes, including the
+// capture groups when the rule has any. It returns the positions the walk
+// decided and those it matched.
+func checkExactWalk(t *testing.T, label string, program *exactNode, source, flags, input string, ws *jsWorkspace) (decided, matched int) {
+	t.Helper()
+	plain, err := compileEncodedPattern(`\A(?:`+source+`)`, flags)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prefixed, err := compileEncodedPattern(`\A(?s:.)(?:`+source+`)`, flags)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ncap := countCapturingGroups(source)
+	jsLines := nonLFLineEnds(input)
+	for pos := 0; pos <= len(input); pos++ {
+		if pos < len(input) && !utf8.RuneStart(input[pos]) {
+			continue
+		}
+		end, result := matchExactAt(program, input, pos, jsLines, ws)
+		if result == exactUnknown {
+			continue
+		}
+		decided++
+		var loc []int
+		base := 0
+		if pos == 0 {
+			loc = plain.findSubmatchWS(input, jsLines, ws)
+		} else {
+			_, width := utf8.DecodeLastRuneInString(input[:pos])
+			base = pos - width
+			loc = prefixed.findSubmatchWS(input[base:], jsLines, ws)
+		}
+		wantEnd := -1
+		if loc != nil {
+			wantEnd = base + loc[1]
+		}
+		gotEnd := -1
+		if result == exactMatched {
+			gotEnd = end
+			matched++
+		}
+		if gotEnd != wantEnd {
+			t.Fatalf("%s rule %q at %d of %q: walk ends at %d, regexp at %d", label, source, pos, input, gotEnd, wantEnd)
+		}
+		if result != exactMatched || ncap == 0 {
+			continue
+		}
+		caps := make([]int, 2*(ncap+1))
+		for k := range caps {
+			caps[k] = -1
+		}
+		if again, r := matchExactCaps(program, input, pos, jsLines, ws, caps); r != exactMatched || again != end {
+			t.Fatalf("%s rule %q at %d of %q: walk with groups gave %v at %d", label, source, pos, input, r, again)
+		}
+		for k := 1; k <= ncap; k++ {
+			for side := range 2 {
+				want := loc[2*k+side]
+				if want >= 0 {
+					want += base
+				}
+				if got := caps[2*k+side]; got != want {
+					t.Fatalf("%s rule %q at %d of %q: group %d is %v, regexp %v", label, source, pos, input, k, caps[2*k:2*k+2], loc[2*k:2*k+2])
+				}
+			}
+		}
+	}
+	return decided, matched
+}
+
+// D523: the walk reports capture groups as the regexp does, across groups in
+// alternations, optional and repeated groups (the last iteration wins), lazy
+// repetition, and a group a later branch skips.
+func TestExactWalkCapturesMatchTheRegexp(t *testing.T) {
+	inputs := []string{
+		"abcabc aab ab b ba <<EOF\nx\nEOF\n", "aaa:bbb 'x' \"y\" (a)(b)", "R\"x(raw)x\" u8R\"(y)\" k\u212A",
+	}
+	var ws jsWorkspace
+	checked := 0
+	for _, source := range []string{
+		`(a)|b`, `(a)?b`, `(?:(a)|b)*c?`, `(a|ab)(c|bcd)?`, `(a+?)(b)?`, `<<-?\s*(\w+)`,
+		`(?:u8?|U|L)?R"([^()\\ ]{0,16})\(`, `(['"])(.*?)(['"])`, `(\w+):(\w*)`, `\((\w)\)(?:\((\w)\))?`,
+		`(?:(x)|(a))+`, `((a)(b)?)+`, `(?i)(k)`,
+	} {
+		program := exactProgram(parseExactPattern(preparePattern(encodeCodeUnitsString(source)), false))
+		if program == nil {
+			t.Fatalf("%q is not walkable", source)
+		}
+		for _, input := range inputs {
+			_, m := checkExactWalk(t, "captures", program, encodeCodeUnitsString(source), "m", input, &ws)
+			checked += m
+		}
+	}
+	if checked < 50 {
+		t.Fatalf("only %d matches compared", checked)
 	}
 }

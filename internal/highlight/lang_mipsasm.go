@@ -3,26 +3,10 @@ package highlight
 func init() { RegisterLanguage("mipsasm", MIPSASM()) }
 
 // mipsasmCommentGuard is the reference's `(?!\s*$)` lookahead on the comment
-// rule: a `;` or `#` at the end of a line is not a comment.
-//
-// Hand-written, like D526 and D529: an `\A`-anchored regexp with an unbounded
-// `\s*` and an end anchor costs a full pass over the remaining input per call
-// (120 us on a 24 KiB tail), and this runs at every candidate.
-//
-// `$` is the m flag's line end, and `\s` covers the line terminators, so the
-// lookahead fails (the marker is not a comment) when the leading whitespace
-// reaches the end of the input or contains a line terminator.
+// rule: a `;` or `#` at the end of a line is not a comment. Hand-written, like
+// D526 and D529 (see spaceToLineEnd).
 func mipsasmCommentGuard(s string, jsLines bool) bool {
-	for i := 0; ; {
-		if i == len(s) || lineEndAt(s, i, jsLines) {
-			return true
-		}
-		w := jsSpaceWidth(s, i)
-		if w == 0 {
-			return false
-		}
-		i += w
-	}
+	return spaceToLineEnd(s, jsLines)
 }
 
 // MIPSASM returns the MIPS Assembly language definition (a port of

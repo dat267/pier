@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D533)
+# Deliberate divergences from pi (D1–D534)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9376,3 +9376,35 @@ vbscript 3.56x to 0.76x, sas 2.50x to 0.61x, sql 1.22x to 0.49x, pgsql 4.18x
 to 1.26x, stata 6.46 to 3.99 ms; no language regressed. Goldens, the hljs
 differentials and the fuzzers are unchanged. `TestExactWalkMatchesTheRegexp`
 pins it, its mixed lines now including U+212A and U+017F.
+
+### D534
+
+**End checks, single-rule matchers and group-reading rules avoid Go's regexp.**
+
+Reference: pi v1.6.0 (`faac5858`) runs highlight.js 10.7.3, whose regex calls
+on a long remainder cost V8 only the work of the match. Go's backtracker clears
+a visited bitmap sized to the whole remaining input on every call, so each
+regexp call on a 24 KiB tail cost tens of microseconds even when it matched at
+the first byte. Shell spent most of its time there, from four callers:
+
+- `endOfMode`'s `lineStartsWith`, which (like the reference's `startsWith`)
+  searches unanchored and asks whether the leftmost match is at 0. That is
+  whether a match exists at 0, so each compiled mode now has a walk of its own
+  end regex (`endExact`) and the regexp runs only when the walk is undecided
+  or the mode instance has its own end (END_SAME_AS_BEGIN).
+- Shell's `(?=\s*$)` end guard, now `spaceToLineEnd`, shared with mipsasm.
+- A rule set of one rule never dispatched, so every call ran the joined regexp
+  unanchored on the tail. It now dispatches when the walk can settle the rule;
+  a single rule the walk can not settle keeps the one scan.
+- A rule whose groups a callback reads (shell's `[^\\]` end, with OnEnd) sent
+  every match to the regexp for its groups. The walk now records capture
+  groups, restoring a group when the branch that set it fails, and lays them
+  out as the regexp's submatches.
+
+Same method on 24 KiB samples, against highlight.js through a tree emitter:
+shell 2.27x to 0.98x, with julia-repl, bash, C, C++, Ruby, PHP and LaTeX at
+or below their previous ratios. The 191 samples and their CRLF variants render
+byte for byte as highlight.js does, and the differentials are unchanged.
+`TestExactWalkMatchesTheRegexp` now also walks every mode's end regex, and
+`TestExactWalkCapturesMatchTheRegexp` compares groups with the regexp's
+submatches.

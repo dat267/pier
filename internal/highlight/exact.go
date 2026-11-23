@@ -64,6 +64,9 @@ type exactNode struct {
 	asciiOnly bool
 	min, max  int
 	sub       []*exactNode
+	// cap is a capture group's number and capEnd the node that closes it.
+	cap    int
+	capEnd *exactNode
 	// firstAlts, on an alternation of several alternatives, lists for each
 	// byte the alternatives (in priority order) that can begin with it, and
 	// endAlts those that can match at the end of the input. Skipping the rest
@@ -92,6 +95,10 @@ func compileExactNode(re *syntax.Regexp) *exactNode {
 		runes:     re.Rune,
 		min:       re.Min,
 		max:       re.Max,
+	}
+	if re.Op == syntax.OpCapture {
+		node.cap = re.Cap
+		node.capEnd = &exactNode{op: exactOpCaptureEnd, cap: re.Cap}
 	}
 	for _, sub := range re.Sub {
 		node.sub = append(node.sub, compileExactNode(sub))
@@ -292,12 +299,26 @@ type exactWalk struct {
 	budget  int
 	conts   []exactCont
 	end     int
+	// caps, when set, receives the capture groups' positions: caps[2k] and
+	// caps[2k+1] for group k, -1 for a group that did not take part.
+	caps []int
 }
+
+// exactOpCaptureEnd is the walk's own node kind that closes a capture group;
+// a group's node carries it in capEnd.
+const exactOpCaptureEnd syntax.Op = 255
 
 // matchExactAt runs the walk for re at pos of s. On exactMatched the match
 // is s[pos:end].
 func matchExactAt(re *exactNode, s string, pos int, jsLines bool, ws *jsWorkspace) (end int, result exactResult) {
-	w := exactWalk{s: s, jsLines: jsLines, budget: exactBudget}
+	return matchExactCaps(re, s, pos, jsLines, ws, nil)
+}
+
+// matchExactCaps is matchExactAt that also reports the capture groups in caps
+// (see exactWalk.caps), which must have room for every group of re and be
+// filled with -1. On a result other than exactMatched caps is unspecified.
+func matchExactCaps(re *exactNode, s string, pos int, jsLines bool, ws *jsWorkspace, caps []int) (end int, result exactResult) {
+	w := exactWalk{s: s, jsLines: jsLines, budget: exactBudget, caps: caps}
 	if ws != nil {
 		w.conts = ws.exact[:0]
 	}
@@ -380,7 +401,29 @@ func (w *exactWalk) seq(seq int32, pos int) exactResult {
 			pos += width
 			seq = rest
 		case syntax.OpCapture:
-			seq = w.push(node.sub[0], rest, false)
+			if w.caps == nil {
+				seq = w.push(node.sub[0], rest, false)
+				break
+			}
+			// Set the start, walk the group and the rest, and restore it when
+			// that fails, so a group a later branch skips reads as before.
+			k := 2 * node.cap
+			old := w.caps[k]
+			w.caps[k] = pos
+			result := w.seq(w.push(node.sub[0], w.push(node.capEnd, rest, false), false), pos)
+			if result != exactMatched {
+				w.caps[k] = old
+			}
+			return result
+		case exactOpCaptureEnd:
+			k := 2*node.cap + 1
+			old := w.caps[k]
+			w.caps[k] = pos
+			result := w.seq(rest, pos)
+			if result != exactMatched {
+				w.caps[k] = old
+			}
+			return result
 		case syntax.OpConcat:
 			for i := len(node.sub) - 1; i >= 0; i-- {
 				rest = w.push(node.sub[i], rest, false)

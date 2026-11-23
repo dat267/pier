@@ -136,10 +136,14 @@ type compiledMode struct {
 	keywordPatternRe *patternRegexp
 	// keywordWord is set when the keyword pattern is the default `\w+`, which
 	// can be scanned without the regexp engine (and its per-call allocation).
-	keywordWord   bool
-	beginRe       *patternRegexp
-	beginSource   string
-	endRe         *patternRegexp
+	keywordWord bool
+	beginRe     *patternRegexp
+	beginSource string
+	endRe       *patternRegexp
+	// endExact is endRe for the exact walk (D523), or nil; endSource is the
+	// source both were compiled from.
+	endExact      *exactNode
+	endSource     string
 	illegalRe     *patternRegexp
 	illegalSource string
 	terminatorEnd string
@@ -352,6 +356,8 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 				return nil, err
 			}
 			cmode.endRe = endRe
+			cmode.endSource = mode.End
+			cmode.endExact = exactProgram(parseExactPattern(preparePattern(encodeCodeUnitsString(mode.End)), c.language.CaseInsensitive))
 		}
 		cmode.terminatorEnd = mode.End
 		if mode.EndsWithParent && parent.terminatorEnd != "" {

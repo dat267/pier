@@ -84,6 +84,8 @@ type multiRegex struct {
 	// walk can not decide the rule (D523); ruleGroups is each rule's group.
 	exacts     []*exactNode
 	ruleGroups []int
+	// ruleCaps is each rule's number of capture groups.
+	ruleCaps []int
 	// endLineRule is the first rule that is only `$`, or -1. Its first bytes
 	// are the line terminators' and it also matches at the end of the input,
 	// where it is the only kind of rule that can (every other rule that can
@@ -137,6 +139,7 @@ func (m *multiRegex) addRuleAt(source string, position int, data matchData) {
 	data.position = position
 	m.matchIndexes[m.matchAt] = data
 	m.ruleGroups = append(m.ruleGroups, m.matchAt)
+	m.ruleCaps = append(m.ruleCaps, countCapturingGroups(source))
 	m.regexes = append(m.regexes, source)
 	m.datas = append(m.datas, data)
 	m.matchAt += countCapturingGroups(source) + 1
@@ -280,7 +283,13 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 			m.hasFirstBytes = true
 		}
 	}
-	m.dispatch = usable && m.hasFirstBytes && (len(m.regexes) > 1 || len(m.manuals) > 0)
+	// A single rule dispatches too when the walk can settle it: execScan's
+	// unanchored regexp clears a visited bitmap the size of the remaining
+	// input on every call, even when the rule matches at the first byte. A
+	// single rule the walk can not settle keeps the one scan, which is never
+	// worse than an anchored regexp per candidate.
+	single := len(m.regexes) == 1 && len(m.manuals) == 0 && m.exacts[0] != nil
+	m.dispatch = usable && m.hasFirstBytes && (len(m.regexes) > 1 || len(m.manuals) > 0 || single)
 	if m.dispatch {
 		for _, mr := range m.manuals {
 			for i := range len(mr.firsts) {
@@ -755,14 +764,28 @@ func (m *multiRegex) decideAt(s string, pos int, jsLines bool, ws *jsWorkspace) 
 			switch result {
 			case exactMatched:
 				data := m.matchIndexes[m.ruleGroups[i]]
+				var groups []int
 				if data.keepGroups {
-					return nil, false
+					// A callback reads the groups: walk again recording them,
+					// laid out as the regexp's submatches are, the rule's own
+					// groups following its wrapper group.
+					group := m.ruleGroups[i]
+					groups = make([]int, 2*(group+m.ruleCaps[i]+1))
+					for k := range groups {
+						groups[k] = -1
+					}
+					caps := groups[2*group:]
+					if again, result := matchExactCaps(exact, s, pos, jsLines, ws, caps); result != exactMatched || again != end {
+						return nil, false
+					}
+					caps[0], caps[1] = pos, end
 				}
 				return &match{
 					index:     pos,
 					lexeme:    s[pos:end],
 					typ:       data.typ,
 					rule:      data.rule,
+					groups:    groups,
 					input:     s,
 					position:  data.position,
 					groupBase: m.ruleGroups[i],

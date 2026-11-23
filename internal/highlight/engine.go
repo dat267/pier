@@ -351,7 +351,21 @@ func (h *highlighter) endOfMode(mode *modeInstance, m *match, remainder string) 
 	if endRe == nil {
 		endRe = mode.mode.endRe
 	}
-	matched := endRe != nil && h.lineStartsWith(endRe, remainder)
+	var matched bool
+	if mode.endRe == nil && mode.mode.endExact != nil {
+		// highlight.js's startsWith runs the end regex unanchored and asks
+		// whether the leftmost match is at 0, which is whether a match exists
+		// at 0; the walk settles that without the regexp's per-call cost over
+		// the whole remainder.
+		_, result := matchExactAt(mode.mode.endExact, remainder, 0, h.jsLines, &h.regexWS)
+		if result != exactUnknown {
+			matched = result == exactMatched
+		} else {
+			matched = h.lineStartsWith(endRe, remainder)
+		}
+	} else {
+		matched = endRe != nil && h.lineStartsWith(endRe, remainder)
+	}
 	if matched {
 		if mode.mode.onEnd != nil {
 			resp := &Response{data: mode.data}
