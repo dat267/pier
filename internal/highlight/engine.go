@@ -95,11 +95,14 @@ func (e *emitter) addSublanguage(other *emitter, name string) {
 }
 
 type highlighter struct {
-	lang             *compiledLanguage
-	rootMode         *compiledMode
-	top              *modeInstance
-	emitter          *emitter
-	modeBuffer       string
+	lang       *compiledLanguage
+	rootMode   *compiledMode
+	top        *modeInstance
+	emitter    *emitter
+	modeBuffer string
+	// modeBytes holds the mode buffer once it has more than one piece; see
+	// appendBuffer.
+	modeBytes        []byte
 	relevance        float64
 	index            int
 	iterations       int
@@ -323,7 +326,34 @@ func (h *highlighter) processSubLanguage() {
 	h.emitter.addSublanguage(nodesEmitter(result.Nodes), name)
 }
 
+// appendBuffer and setBuffer build the mode buffer (the reference's
+// `modeBuffer += lexeme`). A single piece stays the input's own substring; a
+// second one moves the text to a reused byte buffer, so a long run of
+// lexemes costs linear time, as V8's rope strings make the reference's
+// concatenation, where `+=` on a Go string copied the whole buffer per piece
+// (21 MB per highlight of stata on an HTTP body, D536).
+func (h *highlighter) appendBuffer(piece string) {
+	if len(h.modeBytes) == 0 {
+		if h.modeBuffer == "" {
+			h.modeBuffer = piece
+			return
+		}
+		h.modeBytes = append(h.modeBytes, h.modeBuffer...)
+		h.modeBuffer = ""
+	}
+	h.modeBytes = append(h.modeBytes, piece...)
+}
+
+func (h *highlighter) setBuffer(text string) {
+	h.modeBytes = h.modeBytes[:0]
+	h.modeBuffer = text
+}
+
 func (h *highlighter) processBuffer() {
+	if len(h.modeBytes) > 0 {
+		h.modeBuffer = string(h.modeBytes)
+		h.modeBytes = h.modeBytes[:0]
+	}
 	if h.top.mode.subLanguage != nil {
 		h.processSubLanguage()
 	} else {
@@ -396,7 +426,7 @@ func (h *highlighter) doIgnore(lexeme string) int {
 	if h.top.regexIndex == 0 {
 		if lexeme != "" {
 			_, width := utf8.DecodeRuneInString(lexeme)
-			h.modeBuffer += lexeme[:width]
+			h.appendBuffer(lexeme[:width])
 			return width
 		}
 		return 1
@@ -430,14 +460,14 @@ func (h *highlighter) doBeginMatch(m *match) int {
 	}
 
 	if newMode.skip {
-		h.modeBuffer += lexeme
+		h.appendBuffer(lexeme)
 	} else {
 		if newMode.excludeBegin {
-			h.modeBuffer += lexeme
+			h.appendBuffer(lexeme)
 		}
 		h.processBuffer()
 		if !newMode.returnBegin && !newMode.excludeBegin {
-			h.modeBuffer = lexeme
+			h.setBuffer(lexeme)
 		}
 	}
 	h.startNewMode(newMode, endOverride, resp.data)
@@ -456,14 +486,14 @@ func (h *highlighter) doEndMatch(m *match) int {
 	}
 	origin := h.top
 	if origin.mode.skip {
-		h.modeBuffer += lexeme
+		h.appendBuffer(lexeme)
 	} else {
 		if !origin.mode.returnEnd && !origin.mode.excludeEnd {
-			h.modeBuffer += lexeme
+			h.appendBuffer(lexeme)
 		}
 		h.processBuffer()
 		if origin.mode.excludeEnd {
-			h.modeBuffer = lexeme
+			h.setBuffer(lexeme)
 		}
 	}
 	for {
@@ -499,7 +529,7 @@ func (h *highlighter) processLexeme(textBefore string, m *match) int {
 	if m != nil {
 		lexeme = m.lexeme
 	}
-	h.modeBuffer += textBefore
+	h.appendBuffer(textBefore)
 	if m == nil {
 		h.processBuffer()
 		return 0
@@ -509,7 +539,7 @@ func (h *highlighter) processLexeme(textBefore string, m *match) int {
 		// A zero-width begin/end collision: emit one character and advance.
 		if m.index < len(m.input) {
 			_, width := utf8.DecodeRuneInString(m.input[m.index:])
-			h.modeBuffer += m.input[m.index : m.index+width]
+			h.appendBuffer(m.input[m.index : m.index+width])
 			return width
 		}
 		return 1
@@ -530,7 +560,7 @@ func (h *highlighter) processLexeme(textBefore string, m *match) int {
 			}
 			return 1
 		}
-		h.modeBuffer += lexeme
+		h.appendBuffer(lexeme)
 		return len(lexeme)
 	case ruleEnd:
 		if processed := h.doEndMatch(m); processed != noMatch {
@@ -543,13 +573,13 @@ func (h *highlighter) processLexeme(textBefore string, m *match) int {
 			// that simply did not match there would do.
 			if m.index < len(m.input) {
 				_, width := utf8.DecodeRuneInString(m.input[m.index:])
-				h.modeBuffer += m.input[m.index : m.index+width]
+				h.appendBuffer(m.input[m.index : m.index+width])
 				return width
 			}
 			return 0
 		}
 	}
-	h.modeBuffer += lexeme
+	h.appendBuffer(lexeme)
 	return len(lexeme)
 }
 

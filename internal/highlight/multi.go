@@ -514,6 +514,21 @@ func (m *multiRegex) execAtLastIndex(s string, lastIndex int, jsLines bool, ws *
 // (D351). Rejections decideAt settles without the regexp are not counted.
 const maxRejectedCandidates = 256
 
+// execAt is execDispatch's answer when it is at pos, or nil: the first match
+// in rule order that begins exactly at pos.
+func (m *multiRegex) execAt(s string, pos int, jsLines bool, ws *jsWorkspace) *match {
+	found, _ := m.dispatchAt(s, pos, jsLines, ws)
+	if pos == len(s) {
+		if eom := m.endOfInputMatch(s, jsLines); eom != nil && (found == nil || eom.position < found.position) {
+			found = eom
+		}
+	}
+	if lm := m.beginLineMatch(s, pos, jsLines, ws); lm != nil && (found == nil || lm.position < found.position) {
+		return lm
+	}
+	return found
+}
+
 func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsWorkspace) *match {
 	search := lastIndex
 	rejected := 0
@@ -1100,7 +1115,18 @@ func (r *resumableMultiRegex) getMatcher(index int) *multiRegex {
 // next regexIndex.
 func (r *resumableMultiRegex) exec(s string, lastIndex, regexIndex int, jsLines bool, ws *jsWorkspace) (*match, int) {
 	matcher := r.getMatcher(regexIndex)
-	result := matcher.exec(s, lastIndex, jsLines, ws)
+	var result *match
+	if regexIndex != 0 && matcher.dispatch && !matcher.atLastIndex && lastIndex <= len(s) {
+		// The reference keeps the resumed matcher's result only when it is
+		// at lastIndex, and otherwise runs the full matcher from
+		// lastIndex+1, so a scan past lastIndex is wasted. Over a long tail
+		// of candidates that made every resume O(tail) (R, and HTTP's
+		// auto-detected body, D536); the match at lastIndex alone is the
+		// same answer.
+		result = matcher.execAt(s, lastIndex, jsLines, ws)
+	} else {
+		result = matcher.exec(s, lastIndex, jsLines, ws)
+	}
 	base := regexIndex
 	if regexIndex != 0 {
 		if result == nil || result.index != lastIndex {

@@ -3,6 +3,7 @@ package highlight
 import (
 	"encoding/json"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -351,5 +352,72 @@ func TestLineLedRulesKeepTheDispatch(t *testing.T) {
 		if html := RenderHTML(result.Nodes); html != test.html || result.Relevance != test.relevance {
 			t.Errorf("%s %q:\n got %q (%d)\nwant %q (%d)", test.language, test.code, html, result.Relevance, test.html, test.relevance)
 		}
+	}
+}
+
+// TestResumeAtLastIndexMatchesTheScan pins D536. highlight.js 10.7.3 (pi
+// v1.6.0, faac5858, ResumableMultiRegex.exec in src/lib/mode_compiler.js)
+// keeps a resumed matcher's result only when it is at lastIndex, so the port
+// asks the tail matcher at lastIndex alone (execAt). For the first and last
+// tail matcher of every mode of every language, at every position of the
+// inputs, execAt must be the scan's answer when that answer is at the
+// position, and nil otherwise.
+func TestResumeAtLastIndexMatchesTheScan(t *testing.T) {
+	inputs := []string{
+		"x <- f(a, 'b') # c\nHi\r\n\tif (y) { z = 1.5e3; } // d\n",
+		"* n\n  abs(m) \"s\" `t' $u /* v */\u2028<a h=\"w\">x</a>\u2029```\n",
+	}
+	checked := 0
+	for _, name := range Languages() {
+		lang, err := getCompiledLanguage(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		seen := map[*compiledMode]bool{}
+		var walk func(mode *compiledMode)
+		walk = func(mode *compiledMode) {
+			if mode == nil || seen[mode] {
+				return
+			}
+			seen[mode] = true
+			var tails []int
+			if mode.matcher != nil && mode.matcher.count > 1 {
+				// Compiling every tail of every mode is most of the cost, so
+				// the first and the last tail stand for the rest.
+				tails = []int{1, mode.matcher.count - 1}
+			}
+			for _, k := range slices.Compact(tails) {
+				matcher := mode.matcher.getMatcher(k)
+				if !matcher.dispatch || matcher.atLastIndex {
+					continue
+				}
+				for _, input := range inputs {
+					jsLines := nonLFLineEnds(input)
+					for pos := 0; pos <= len(input); pos++ {
+						if pos < len(input) && !utf8.RuneStart(input[pos]) {
+							continue
+						}
+						want := matcher.exec(input, pos, jsLines, nil)
+						if want != nil && want.index != pos {
+							want = nil
+						}
+						got := matcher.execAt(input, pos, jsLines, nil)
+						checked++
+						if (want == nil) != (got == nil) || want != nil && (want.lexeme != got.lexeme ||
+							want.position != got.position || want.typ != got.typ || !slices.Equal(want.groups, got.groups)) {
+							t.Fatalf("%s tail %d at %d of %q: execAt %+v, scan %+v", name, k, pos, input, got, want)
+						}
+					}
+				}
+			}
+			for _, child := range mode.contains {
+				walk(child)
+			}
+			walk(mode.starts)
+		}
+		walk(lang.root)
+	}
+	if checked < 10000 {
+		t.Fatalf("only %d positions checked", checked)
 	}
 }

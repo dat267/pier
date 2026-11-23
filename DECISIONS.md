@@ -8877,5 +8877,17 @@ the remaining input instead, so a highlight was quadratic in its length:
 - The checks for an astral rune and for `\r`, U+2028 or U+2029 decoded rune by
   rune; they now skip ASCII in bulk. 24 KiB of plain text: 170.7 to 4.4 us
   (hljs 6 us for the whole call).
+- After an ignored match, highlight.js's `ResumableMultiRegex.exec`
+  (src/lib/mode_compiler.js) keeps the tail matcher's result only when it is
+  at lastIndex. The port ran the tail matcher's whole scan first, once per
+  lexeme, so R was quadratic, and so was HTTP, whose body auto-detects
+  against every language. `execAt` now asks the tail matcher at lastIndex
+  only. R on HTTP's 24 KiB body: 5.70 s to 11 ms (hljs 7.3 ms); HTTP 5.97x
+  to 0.48x of hljs.
+- `modeBuffer += lexeme` is linear in V8, whose strings are ropes, but copies
+  the whole buffer per piece in Go. `appendBuffer` keeps a single piece as a
+  substring of the input and gathers more in a reused `[]byte`, made a string
+  once per flush: stata on HTTP's body allocated 21 MB per highlight before.
 
-Tests: `TestInputScansMatchRuneScans`.
+Tests: `TestInputScansMatchRuneScans`, `TestResumeAtLastIndexMatchesTheScan`,
+`TestModeBufferGrowsLinearly`.
