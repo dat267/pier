@@ -141,17 +141,23 @@ func Shebang(binary string, relevance int) *Mode {
 var regexpStart = mustCompileJS(`\A\/[^\/\n]*\/`)
 
 // RegexpMode matches a JavaScript regular-expression literal (core.js
-// REGEXP_MODE, with its lookahead turned into a guard).
+// REGEXP_MODE). The reference's outer rule begins with the zero-width
+// lookahead `(?=\/[^/\n]*\/)` and has no end, so it closes at the next
+// position (`\B|\b`); the port begins it at the `/` with returnBegin and checks
+// the lookahead in a guard. The outer rule matters after the inner regexp
+// closes: a `/` right after it beats the outer end at the same index, so
+// `/9//` opens a second regexp without the lookahead check, as upstream does.
 var RegexpMode = &Mode{
+	Begin:       `\/`,
+	ReturnBegin: true,
+	Contains:    []*Mode{regexpLiteral},
+}
+
+var regexpLiteral = &Mode{
 	ClassName: "regexp",
 	Begin:     `\/`,
 	End:       `\/[gimuy]*`,
 	Illegal:   `\n`,
-	// The reference nests a zero-width outer rule (relevance 1) around this
-	// inner rule (relevance 1); the port's lookahead guard replaces the outer
-	// rule, so both contributions land on this single mode (CR-167).
-	HasRelevance: true,
-	Relevance:    2,
 	Contains: []*Mode{
 		BackslashEscape,
 		Zero(Mode{Begin: `\[`, End: `\]`, Contains: []*Mode{BackslashEscape}}),

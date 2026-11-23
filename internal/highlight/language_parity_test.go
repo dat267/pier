@@ -498,3 +498,29 @@ func TestHashIllegalLookaheadMatchesReference(t *testing.T) {
 		}
 	}
 }
+
+// core.js REGEXP_MODE (highlight.js 10.7.3, pi v1.6.0, faac5858) wraps the
+// `regexp` rule in a zero-width outer rule with no end. After the inner rule
+// closes, a `/` at the same index beats that outer end, so a second regexp
+// opens without the outer lookahead: `*/9//` ends in an unterminated regexp.
+// The expected HTML and relevance are the reference's.
+func TestRegexpModeReopensAfterAClosingSlash(t *testing.T) {
+	for _, tc := range []struct {
+		code      string
+		relevance int
+		html      string
+	}{
+		{"*/9//", 1, "*<span class=\"hljs-regexp\">/9/</span><span class=\"hljs-regexp\">/</span>"},
+		{"</t//", 1, "&lt;<span class=\"hljs-regexp\">/t/</span><span class=\"hljs-regexp\">/</span>"},
+		{"x = /a/ / 2", 2, "x = <span class=\"hljs-regexp\">/a/</span> / <span class=\"hljs-number\">2</span>"},
+		{"/a//b/", 1, "/a<span class=\"hljs-comment\">//b/</span>"},
+	} {
+		result, err := HighlightWith(tc.code, "javascript", true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := RenderHTML(result.Nodes); got != tc.html || result.Relevance != tc.relevance {
+			t.Errorf("%q: relevance %d HTML %q; want %d %q", tc.code, result.Relevance, got, tc.relevance, tc.html)
+		}
+	}
+}
