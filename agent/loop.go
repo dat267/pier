@@ -1191,15 +1191,7 @@ func isContextError(err error) bool {
 }
 
 func ctxDone(ctx context.Context) bool {
-	if ctx == nil {
-		return false
-	}
-	select {
-	case <-ctx.Done():
-		return true
-	default:
-		return false
-	}
+	return ctx != nil && ctx.Err() != nil
 }
 
 // RunToolCall runs one tool through preparation, validation, hooks and execution.

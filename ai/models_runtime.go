@@ -293,14 +293,14 @@ func CreateProvider(input CreateProviderOptions) *Provider {
 					return nil
 				}
 			}
-			if !context.AllowNetwork || ctxDone(context.Ctx) {
+			if !context.AllowNetwork || ctxErr(context.Ctx) != nil {
 				return nil
 			}
 			refreshed, err := fetch(context)
 			if err != nil {
 				return err
 			}
-			if ctxDone(context.Ctx) {
+			if ctxErr(context.Ctx) != nil {
 				return nil
 			}
 			checkedAt := timeNowMS()
@@ -348,18 +348,6 @@ func (o CreateProviderOptions) ByAPIList() []ProviderStreams {
 		}
 	}
 	return out
-}
-
-func ctxDone(ctx context.Context) bool {
-	if ctx == nil {
-		return false
-	}
-	select {
-	case <-ctx.Done():
-		return true
-	default:
-		return false
-	}
 }
 
 // eventSource is the minimal surface LazyStream forwards from.
@@ -750,7 +738,7 @@ func (m *Models) Refresh(options *ModelsRefreshOptions) ModelsRefreshResult {
 		callerCtx = options.Ctx
 	}
 	errors := map[string]error{}
-	if ctxDone(callerCtx) {
+	if ctxErr(callerCtx) != nil {
 		return ModelsRefreshResult{Aborted: true, Errors: errors}
 	}
 	var selected map[string]bool
@@ -800,7 +788,7 @@ func (m *Models) Refresh(options *ModelsRefreshOptions) ModelsRefreshResult {
 				if credErr != nil {
 					return credErr
 				}
-				if !allowNetwork || ctxDone(refreshCtx) {
+				if !allowNetwork || ctxErr(refreshCtx) != nil {
 					return nil
 				}
 
@@ -814,7 +802,7 @@ func (m *Models) Refresh(options *ModelsRefreshOptions) ModelsRefreshResult {
 				return m.runProviderRefreshPhase(refreshCtx, provider, network.credential, true, options.forceOrDefault(), generation)
 			}
 
-			if err := operation(); err != nil && !ctxDone(refreshCtx) {
+			if err := operation(); err != nil && ctxErr(refreshCtx) == nil {
 				m.mu.Lock()
 				errors[provider.ID] = err
 				m.mu.Unlock()
@@ -823,7 +811,7 @@ func (m *Models) Refresh(options *ModelsRefreshOptions) ModelsRefreshResult {
 	}
 	wg.Wait()
 
-	return ModelsRefreshResult{Aborted: ctxDone(callerCtx), Errors: errors}
+	return ModelsRefreshResult{Aborted: ctxErr(callerCtx) != nil, Errors: errors}
 }
 
 func (o *ModelsRefreshOptions) forceOrDefault() *bool {
@@ -851,7 +839,7 @@ func (m *Models) publishProviderModels(signal context.Context, providerID string
 	m.mu.Lock()
 	superseded := m.refreshGenerations[providerID] != generation
 	m.mu.Unlock()
-	if ctxDone(signal) || superseded {
+	if ctxErr(signal) != nil || superseded {
 		return false
 	}
 
@@ -868,7 +856,7 @@ func (m *Models) publishProviderModels(signal context.Context, providerID string
 	m.mu.Lock()
 	superseded = m.refreshGenerations[providerID] != generation
 	m.mu.Unlock()
-	if ctxDone(signal) || superseded {
+	if ctxErr(signal) != nil || superseded {
 		return false
 	}
 	if publication.Update != nil {
@@ -934,7 +922,7 @@ func (m *Models) resolveRefreshCredential(signal context.Context, provider *Prov
 		if nowUnixMilli() < stored.OAuth.Expires {
 			return stored, nil
 		}
-		if ctxDone(signal) {
+		if ctxErr(signal) != nil {
 			return nil, nil
 		}
 		// A refresh that has started survives cancellation or a superseding
