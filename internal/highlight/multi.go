@@ -205,10 +205,10 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 	for i, source := range m.regexes {
 		prepared := preparePattern(source)
 		m.prefilters[i] = rulePrefilter(prepared, caseInsensitive)
-		// A rule whose groups a callback reads needs the regexp's submatches.
-		if !m.datas[i].keepGroups {
-			m.exacts[i] = exactProgram(parseExactPattern(prepared, caseInsensitive))
-		}
+		// A rule whose groups a callback reads still has a walk: its "no
+		// match" is as good as the regexp's, and decideAt leaves a match to
+		// the regexp, which reports the groups.
+		m.exacts[i] = exactProgram(parseExactPattern(prepared, caseInsensitive))
 	}
 	usable := true
 	var union [256]bool
@@ -605,6 +605,9 @@ func (m *multiRegex) decideAt(s string, pos int, jsLines bool, ws *jsWorkspace) 
 			switch result {
 			case exactMatched:
 				data := m.matchIndexes[m.ruleGroups[i]]
+				if data.keepGroups {
+					return nil, false
+				}
 				return &match{
 					index:     pos,
 					lexeme:    s[pos:end],

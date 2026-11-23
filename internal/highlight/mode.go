@@ -179,10 +179,9 @@ type compiler struct {
 	language *Language
 	compiled map[*Mode]*compiledMode
 	// endGroups is set when some mode of the language has an OnEnd callback.
-	// highlight.js calls a mode's on:end with whichever end match closes it,
-	// including a descendant's (endsParent, endsWithParent) through any
-	// parent it is used under, so only then must end rules keep their
-	// capture groups.
+	// highlight.js's endOfMode calls a mode's on:end with the end match that
+	// reached it, which for a mode that ends with its parent includes a
+	// descendant's, so only then can an end rule's capture groups be read.
 	endGroups bool
 }
 
@@ -413,7 +412,12 @@ func (c *compiler) buildModeRegex(mode *compiledMode) *resumableMultiRegex {
 		}
 	}
 	if mode.terminatorEnd != "" {
-		mm.addRule(mode.terminatorEnd, c.endGroups, matchData{typ: ruleEnd})
+		// endOfMode runs the mode's onEnd, then its parent's while the mode
+		// ends with its parent, so only those can read the end match's
+		// groups. A mode can be used under several parents, so any parent is
+		// assumed to read them when the language has an OnEnd at all.
+		keep := mode.onEnd != nil || (mode.endsWithParent && c.endGroups)
+		mm.addRule(mode.terminatorEnd, keep, matchData{typ: ruleEnd})
 	}
 	if mode.illegalSource != "" {
 		mm.addRule(mode.illegalSource, false, matchData{typ: ruleIllegal})

@@ -8886,6 +8886,16 @@ rejected run unchanged; on 30 KB samples Python 7.7 ms to 4.0 ms (highlight.js
 4.5 ms) and Rust 6.4 ms to 3.2 ms (4.1 ms). The ten samples, and their CRLF
 and U+2028 variants, render byte for byte as highlight.js does.
 
+A rule whose groups a callback reads now has a walk too: its "no match" is
+the regexp's, and only a match goes to the regexp for the groups. In a
+language with an `OnEnd`, an end rule keeps its groups only when its mode has
+`OnEnd` or ends with its parent, since `endOfMode` runs on:end only along that
+chain (a mode with several parents is assumed to have one that reads them).
+On 30 KB samples, same method: LaTeX 259 ms to 123 ms (highlight.js 10.4 ms),
+C 5.8 ms to 5.0 ms, C++ 21.5 ms to 19.8 ms, Ruby 5.3 ms to 4.8 ms; the paired
+benchmarks are unchanged, and the C++, bash, Ruby, LaTeX and Perl samples
+render as highlight.js does.
+
 Tests: `TestExactWalkMatchesTheRegexp`,
 `TestEndRulesKeepGroupsOnlyWhereOnEndReadsThem`.
 

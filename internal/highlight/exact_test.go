@@ -125,8 +125,8 @@ func TestExactWalkMatchesTheRegexp(t *testing.T) {
 	}
 }
 
-// D523: an end rule keeps its capture groups, and so is left to the regexp,
-// only in a language with an OnEnd callback. highlight.js 10.7.3's
+// D523: an end rule keeps its capture groups, and so a match of it is left to
+// the regexp, only in a language with an OnEnd callback. highlight.js 10.7.3's
 // END_SAME_AS_BEGIN compares the end match's first group with the begin's,
 // so a bash heredoc must still close only on its own tag; the expected HTML
 // was read off the pinned highlight.js.
@@ -138,6 +138,40 @@ func TestEndRulesKeepGroupsOnlyWhereOnEndReadsThem(t *testing.T) {
 		if got := modeTreeHasOnEnd(&language.Mode, map[*Mode]bool{}); got != want {
 			t.Errorf("%s: end rules keep groups = %v, want %v", name, got, want)
 		}
+	}
+	// Within such a language only a mode with OnEnd, or one that ends with
+	// its parent (whose OnEnd endOfMode may then run), keeps them.
+	lang, err := getCompiledLanguage("cpp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[*compiledMode]bool{}
+	dropped := 0
+	var walk func(mode *compiledMode)
+	walk = func(mode *compiledMode) {
+		if mode == nil || seen[mode] {
+			return
+		}
+		seen[mode] = true
+		for _, rule := range mode.matcher.rules {
+			if rule.data.typ != ruleEnd {
+				continue
+			}
+			if want := mode.onEnd != nil || mode.endsWithParent; rule.keep != want {
+				t.Errorf("cpp mode %q end %q keeps groups = %v, want %v", mode.beginSource, rule.src, rule.keep, want)
+			}
+			if !rule.keep {
+				dropped++
+			}
+		}
+		for _, child := range mode.contains {
+			walk(child)
+		}
+		walk(mode.starts)
+	}
+	walk(lang.root)
+	if dropped == 0 {
+		t.Error("no cpp end rule drops its groups")
 	}
 	for code, want := range map[string]string{
 		"cat <<EOF\nx\nEND\nEOF\ny": "cat &lt;&lt;<span class=\"hljs-string\">EOF\nx\nEND\nEOF</span>\ny",
