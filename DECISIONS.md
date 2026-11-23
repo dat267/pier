@@ -9291,11 +9291,17 @@ U+2000-200A, U+2028, U+2029, U+202F, U+205F, U+3000 and U+FEFF. A byte-only scan
 loses them, which the test pins for mipsasm (`#\u00a0\n` is a comment of the
 marker and whitespace) and protobuf (`A\u3000= 1;` still sees the space).
 
-Both guards cost 4-5 ns on the same 24 KiB tail, so 120 us became 5 ns. Output
-is unchanged: the goldens, the differentials and a 30 s fuzz run.
+Both guards cost 4-5 ns on the same 24 KiB tail, so 120 us became 5 ns.
 
-Tests: `TestAnchoredSpaceGuards`, and `TestIniDottedKeyScan` for the folded
-INI path.
+The first version read both `$` as the end of the input, not the m flag's
+line end, and three mipsasm differential cases changed: a `#` followed by
+whitespace and a newline was coloured as a comment, and protobuf's enum guard
+missed every `;` that ends a line (`A = 1;\n` scored relevance 0 where
+highlight.js scores it). Both now accept a line terminator, as the regexp did;
+the differentials are back to the known D351 case.
+
+Tests: `TestAnchoredSpaceGuards`, `TestAnchoredSpaceGuardsUseLineEnds`, and
+`TestIniDottedKeyScan` for the folded INI path.
 
 ### D531
 

@@ -769,3 +769,36 @@ func TestAnchoredSpaceGuards(t *testing.T) {
 		}
 	}
 }
+
+// The m flag's `$` is a line end, so mipsasm's `(?!\s*$)` fails when the
+// whitespace after the marker holds a line terminator, and protobuf's
+// `(?=\s*=[^\n]+;$)` holds at a `;` that ends a line, not only at the end of
+// the input. HTML and relevance were read off the pinned highlight.js
+// (pi v1.6.0, 10.7.3 languages/mipsasm.js and languages/protobuf.js).
+func TestAnchoredSpaceGuardsUseLineEnds(t *testing.T) {
+	for _, tc := range []struct {
+		language, code, html string
+		relevance            int
+	}{
+		{"mipsasm", "#\r\nx", "#\r\nx", 0},
+		{"mipsasm", "#  \nnext", "#  \nnext", 0},
+		{"mipsasm", "#\u2028x", "#\u2028x", 0},
+		{"mipsasm", "li $t0, 1 ;\n  add", "li $<span class=\"hljs-built_in\">t0</span>, <span class=\"hljs-number\">1</span> ;\n  <span class=\"hljs-keyword\">add</span>", 1},
+		{"mipsasm", "# x\n", "<span class=\"hljs-comment\"># x</span>\n", 1},
+		{"mipsasm", "#\n", "#\n", 0},
+		{"mipsasm", "#  ", "#  ", 0},
+		{"protobuf", "enum E {\n  A = 1;\n  B = 2;\n}", "<span class=\"hljs-class\"><span class=\"hljs-keyword\">enum</span> <span class=\"hljs-title\">E</span> </span>{\n  A = <span class=\"hljs-number\">1</span>;\n  B = <span class=\"hljs-number\">2</span>;\n}", 4},
+		{"protobuf", "enum E {\n  A = 1; \n}", "<span class=\"hljs-class\"><span class=\"hljs-keyword\">enum</span> <span class=\"hljs-title\">E</span> </span>{\n  A = <span class=\"hljs-number\">1</span>; \n}", 2},
+		{"protobuf", "enum E {\n  A =;\n}", "<span class=\"hljs-class\"><span class=\"hljs-keyword\">enum</span> <span class=\"hljs-title\">E</span> </span>{\n  A =;\n}", 2},
+		{"protobuf", "enum E {\n  A = 1;\r\n}", "<span class=\"hljs-class\"><span class=\"hljs-keyword\">enum</span> <span class=\"hljs-title\">E</span> </span>{\n  A = <span class=\"hljs-number\">1</span>;\r\n}", 3},
+		{"protobuf", "enum E {\n  A = 1;", "<span class=\"hljs-class\"><span class=\"hljs-keyword\">enum</span> <span class=\"hljs-title\">E</span> </span>{\n  A = <span class=\"hljs-number\">1</span>;", 3},
+	} {
+		result, err := HighlightWith(tc.code, tc.language, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := RenderHTML(result.Nodes); got != tc.html || result.Relevance != tc.relevance {
+			t.Errorf("%s %q = %q relevance %d; want %q relevance %d", tc.language, tc.code, got, result.Relevance, tc.html, tc.relevance)
+		}
+	}
+}

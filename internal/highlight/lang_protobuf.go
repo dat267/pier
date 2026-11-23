@@ -8,21 +8,22 @@ func init() { RegisterLanguage("protobuf", Protobuf()) }
 // Hand-written for the reason D526 and D529 give: an `\A`-anchored regexp with
 // an unbounded `\s*` costs a full pass over the remaining input per call
 // (120 us on a 24 KiB tail), and this runs at every candidate.
-func protobufEnumGuard(s string) bool {
+//
+// `[^\n]+` backtracks, so any `;` after at least one character past the `=`,
+// on the same line, closes the lookahead when the m flag's `$` holds right
+// after it (the end of the input or a line terminator).
+func protobufEnumGuard(s string, jsLines bool) bool {
 	i := skipJSSpace(s, 0)
 	if i >= len(s) || s[i] != '=' {
 		return false
 	}
-	i++
-	sawNonNewline := false
-	for ; i < len(s); i++ {
-		if s[i] == '\n' {
+	for j := i + 2; j < len(s) && s[j-1] != '\n'; j++ {
+		if s[j] == '\n' {
 			return false
 		}
-		if s[i] == ';' && sawNonNewline && i == len(s)-1 {
+		if s[j] == ';' && (j+1 == len(s) || lineEndAt(s, j+1, jsLines)) {
 			return true
 		}
-		sawNonNewline = true
 	}
 	return false
 }
@@ -37,7 +38,7 @@ func Protobuf() *Language {
 
 	enumItem := &Mode{Begin: `^\s*[A-Z_]+`}
 	enumItem.beforeBegin = func(m *match, resp *Response) {
-		if !protobufEnumGuard(m.input[m.index+len(m.lexeme):]) {
+		if !protobufEnumGuard(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}
