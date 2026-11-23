@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D519)
+# Deliberate divergences from pi (D1–D520)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8713,3 +8713,22 @@ the reference would duplicate the checkbox, and would make an item's text
 depend on later items' inline sources.
 
 Test: `TestTaskItemStripsItsOwnCheckboxBeforeALazyHeading`.
+
+### D520
+
+**A nested quote keeps the lines after a re-lexed list.**
+
+Reference: pi v1.6.0 (`faac5858`) renders Markdown with marked 18.0.11. In
+`Tokenizer.blockquote`, a chunk whose last token is a list re-lexes the list
+with the lazy lines after it, and a chunk whose last token is a nested quote
+re-lexes that quote from its `raw` plus the outer quote's remaining lines. The
+inner quote's `raw` ends at its list's raw, so when both happen
+(`>> - a\n> b\nc`), the inner quote is rebuilt from `> - a` and the outer lines,
+and the lazy lines it had taken are lost: upstream renders `- a` and `b` but no
+`c`, and `>> - \n> b\nc` as an empty item alone.
+
+Pier keeps every line of the source in the inner quote, so the text renders as
+written. The case needs a list inside a nested quote followed by two lazy
+lines, so it is rare, but the reference loses text the model wrote.
+
+Test: `TestNestedQuoteKeepsTheLinesAfterARelexedList`.

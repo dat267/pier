@@ -84,6 +84,22 @@ func TestTaskItemStripsItsOwnCheckboxBeforeALazyHeading(t *testing.T) {
 	}
 }
 
+// D520: in marked 18.0.11 (pi v1.6.0, faac5858) a nested quote whose list took
+// a lazy line is re-lexed from its raw when the outer quote takes another lazy
+// line, and that raw stops at the list, so the lines after it are dropped:
+// `>> - a\n> b\nc` renders without `c`, and `>> - \n> b\nc` as `-` alone. Pier
+// keeps every line in the inner quote.
+func TestNestedQuoteKeepsTheLinesAfterARelexedList(t *testing.T) {
+	for _, testCase := range []struct{ src, want string }{
+		{">> - \n> b\nc", `quote[quote[ul[()],space,p:"b\nc"]]`},
+		{">>1.\n>x\n|", `quote[quote[ol[()],p:"x\n|"]]`},
+	} {
+		if got := referenceShape(Lex(testCase.src)); got != testCase.want {
+			t.Errorf("%q:\n got %s\nwant %s", testCase.src, got, testCase.want)
+		}
+	}
+}
+
 // Reference: pi v1.5.0 (f9a26365) marked 18.0.11, which upstream
 // packages/tui/src/components/markdown.ts lexes with. marked's code tokenizer
 // runs the raw through `te`: trailing lines that are blank or whitespace-only
