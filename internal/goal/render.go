@@ -56,7 +56,7 @@ func ClickToExpand(render func(expanded bool) tui.Component, initiallyExpanded b
 		mutable.child = render(mutable.expanded)
 		return &tui.TuiMouseDispatchResult{Handled: true}
 	})
-	return &clickToExpandComponent{mutable: mutable, region: region}
+	return &clickToExpandComponent{region: region}
 }
 
 type mutableGoalChild struct {
@@ -73,8 +73,7 @@ func (m *mutableGoalChild) Invalidate() {
 }
 
 type clickToExpandComponent struct {
-	mutable *mutableGoalChild
-	region  *tui.MouseRegion
+	region *tui.MouseRegion
 }
 
 func (c *clickToExpandComponent) Render(width int) []string { return c.region.Render(width) }
