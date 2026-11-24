@@ -1657,7 +1657,8 @@ func scanSessionDirWithProgress(ctx context.Context, dir string, onProgress Sess
 			names = append(names, name)
 		}
 	}
-	sort.Sort(sort.Reverse(sort.StringSlice(names)))
+	slices.Sort(names)
+	slices.Reverse(names)
 	paths := make([]string, 0, len(names))
 	for _, name := range names {
 		paths = append(paths, filepath.Join(dir, name))
