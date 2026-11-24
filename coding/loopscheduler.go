@@ -149,7 +149,6 @@ func (s *LoopScheduler) Add(cron string, prompt string, recurring bool, maxAge t
 		MaxAge:        maxAge,
 	}
 	s.jobs = append(s.jobs, job)
-
 	s.wake()
 	return *job, nil
 }
