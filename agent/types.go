@@ -92,9 +92,6 @@ type AgentTool struct {
 	// Execute runs the tool call with ctx as the abort signal; onUpdate
 	// streams partial results (calls after settle are ignored by the loop).
 	Execute func(ctx context.Context, toolCallID string, params json.RawMessage, onUpdate func(AgentToolResult)) (AgentToolResult, error)
-	// Replay is the recovery policy for an effect whose durable intent
-	// exists but whose outcome is unknown: "never" or "safe".
-	Replay string
 	// ExecutionMode overrides the per-run default.
 	ExecutionMode ToolExecutionMode
 	// ConstrainedSampling mirrors upstream AgentTool.constrainedSampling
