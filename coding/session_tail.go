@@ -8,6 +8,9 @@ import (
 	"github.com/dat267/pier/internal/goal"
 )
 
+// errNothingToTail refuses a tail of a session with no conversation yet.
+var errNothingToTail = errors.New("Nothing to tail yet")
+
 // TailSession writes a new session that starts from the current live context
 // and opens it. Pier-only (D378): upstream has no equivalent command, only the
 // `setup(sessionManager)` hook on newSession that extension code uses to seed a
@@ -22,11 +25,11 @@ import (
 // the source context.
 func TailSession(source *SessionManager, model *ai.Model, thinking ai.ThinkingLevel, targetCwd string, sessionDir string, manageDir bool, options *NewSessionOptions) (*SessionManager, error) {
 	if source == nil {
-		return nil, errors.New("Nothing to tail yet")
+		return nil, errNothingToTail
 	}
 	branch := source.GetBranch("")
 	if len(branch) == 0 {
-		return nil, errors.New("Nothing to tail yet")
+		return nil, errNothingToTail
 	}
 
 	// The re-chained chain is written from each entry's retained line, so a
@@ -45,7 +48,7 @@ func TailSession(source *SessionManager, model *ai.Model, thinking ai.ThinkingLe
 	if !hasConversation {
 		// A fresh session already holds model/thinking bookkeeping and its system
 		// prompt, so "no leaf" is not enough to tell there is no conversation yet.
-		return nil, errors.New("Nothing to tail yet")
+		return nil, errNothingToTail
 	}
 	hasModelChange, hasThinkingChange := false, false
 	for _, entry := range window {
