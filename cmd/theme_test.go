@@ -60,14 +60,14 @@ func TestThemeSourcesFollowProjectTrust(t *testing.T) {
 	boot := interactive.NewThemeBoot()
 	boot.EnableCapabilities()
 	applyThemeSources(boot, args, untrustedSettings, agentDir, project, false)
-	if containsTheme(interactive.AvailableThemes(), "projtheme") {
+	if slices.Contains(interactive.AvailableThemes(), "projtheme") {
 		t.Errorf("an untrusted project's theme was discovered: %v", interactive.AvailableThemes())
 	}
 
 	// Trusted: the theme is discovered and it is the active one, because the
 	// project settings name it.
 	applyThemeSources(boot, args, runtimeSettings, agentDir, project, true)
-	if !containsTheme(interactive.AvailableThemes(), "projtheme") {
+	if !slices.Contains(interactive.AvailableThemes(), "projtheme") {
 		t.Fatalf("the trusted project's theme was not discovered: %v", interactive.AvailableThemes())
 	}
 	if got := interactive.CurrentThemeName(); got != "projtheme" {
@@ -77,13 +77,9 @@ func TestThemeSourcesFollowProjectTrust(t *testing.T) {
 	// --no-themes keeps the named paths but drops discovery, project themes
 	// included (upstream's noThemes).
 	applyThemeSources(boot, &coding.Args{NoThemes: true}, runtimeSettings, agentDir, project, true)
-	if containsTheme(interactive.AvailableThemes(), "projtheme") {
+	if slices.Contains(interactive.AvailableThemes(), "projtheme") {
 		t.Errorf("--no-themes kept the discovered project theme: %v", interactive.AvailableThemes())
 	}
-}
-
-func containsTheme(themes []string, want string) bool {
-	return slices.Contains(themes, want)
 }
 
 // moduleRootForTest walks up to the module root.

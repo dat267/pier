@@ -37,7 +37,7 @@ func TestAnthropicInlineToolChanges(t *testing.T) {
 		t.Fatalf("tools = %+v", params.Tools)
 	}
 	// The beta feature is requested.
-	if !containsBeta(params.Betas, InlineToolsBeta) {
+	if !slices.Contains(params.Betas, InlineToolsBeta) {
 		t.Fatalf("betas = %v", params.Betas)
 	}
 	// The later system message defines write inline.
@@ -82,10 +82,6 @@ func TestAnthropicInlineToolChanges(t *testing.T) {
 	if removals != 0 || additions != 1 {
 		t.Fatalf("removals = %d, additions = %d", removals, additions)
 	}
-}
-
-func containsBeta(betas []string, want string) bool {
-	return slices.Contains(betas, want)
 }
 
 func containsInlineDefinition(t *testing.T, messages []AnthropicMessage, name string) bool {

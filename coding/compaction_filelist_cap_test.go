@@ -61,7 +61,7 @@ func TestSummaryFileListsPreferTheCurrentWindow(t *testing.T) {
 	}
 	for i := range 10 {
 		want := fmt.Sprintf("new-%03d", i)
-		if !containsFoldExact(readFiles, want) {
+		if !slices.Contains(readFiles, want) {
 			t.Fatalf("window path %q was capped away: %v", want, readFiles)
 		}
 	}
@@ -97,10 +97,6 @@ func TestSummaryFileListsReportOmittedCounts(t *testing.T) {
 	if strings.Contains(formatted, "<modified-files>") {
 		t.Fatalf("formatted = %q, want no empty modified block", formatted)
 	}
-}
-
-func containsFoldExact(values []string, want string) bool {
-	return slices.Contains(values, want)
 }
 
 func sortedAscending(values []string) bool {

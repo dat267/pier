@@ -45,10 +45,10 @@ func TestLexLatexStopsAtTableStart(t *testing.T) {
 		for _, block := range blocks {
 			kinds = append(kinds, block.Kind)
 		}
-		if containsKind(kinds, BlockLatex) {
+		if slices.Contains(kinds, BlockLatex) {
 			t.Fatalf("%s: block math swallowed the table: %v", opener, kinds)
 		}
-		if !containsKind(kinds, BlockTable) {
+		if !slices.Contains(kinds, BlockTable) {
 			t.Fatalf("%s: no table block: %v", opener, kinds)
 		}
 	}
@@ -100,8 +100,4 @@ func TestRendererUnclosedMathBeforeTable(t *testing.T) {
 	if !strings.Contains(joined, border) || !strings.Contains(joined, "MATH(y^2)") {
 		t.Fatalf("math paired across the table:\n%s", joined)
 	}
-}
-
-func containsKind(kinds []BlockKind, want BlockKind) bool {
-	return slices.Contains(kinds, want)
 }

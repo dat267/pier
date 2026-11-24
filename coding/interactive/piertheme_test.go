@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -232,7 +233,7 @@ func TestCustomThemeSources(t *testing.T) {
 	// Discovery on: both are available and loadable by their declared name.
 	SetCustomThemeSources(CustomThemeSources{Dir: dir, Paths: []string{explicitDir}})
 	for _, name := range []string{"discovered", "named"} {
-		if !containsString(AvailableThemes(), name) {
+		if !slices.Contains(AvailableThemes(), name) {
 			t.Errorf("%s missing from %v", name, AvailableThemes())
 		}
 		if theme, err := loadTheme(name, ColorModeTruecolor); err != nil || theme.Name != name {
@@ -242,19 +243,19 @@ func TestCustomThemeSources(t *testing.T) {
 
 	// The dir alone (what a library consumer installs) still discovers.
 	SetCustomThemesDir(dir)
-	if !containsString(AvailableThemes(), "discovered") {
+	if !slices.Contains(AvailableThemes(), "discovered") {
 		t.Errorf("dir discovery broke: %v", AvailableThemes())
 	}
-	if containsString(AvailableThemes(), "named") {
+	if slices.Contains(AvailableThemes(), "named") {
 		t.Errorf("the explicit path should not survive a plain dir install: %v", AvailableThemes())
 	}
 
 	// --no-themes: discovery is off, the explicitly named theme still loads.
 	SetCustomThemeSources(CustomThemeSources{Dir: dir, Paths: []string{explicitDir}, NoDiscovery: true})
-	if containsString(AvailableThemes(), "discovered") {
+	if slices.Contains(AvailableThemes(), "discovered") {
 		t.Errorf("--no-themes should drop discovered themes: %v", AvailableThemes())
 	}
-	if !containsString(AvailableThemes(), "named") {
+	if !slices.Contains(AvailableThemes(), "named") {
 		t.Errorf("--no-themes should keep named themes: %v", AvailableThemes())
 	}
 	if _, err := loadTheme("named", ColorModeTruecolor); err != nil {

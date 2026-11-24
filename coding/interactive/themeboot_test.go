@@ -75,13 +75,13 @@ func TestThemeBootProjectThemesNeedTrust(t *testing.T) {
 
 	// Untrusted: the project's theme directory is not a source.
 	boot.ApplySources(ThemeSources{Cwd: project, ThemeName: "projtheme"})
-	if containsTheme(AvailableThemes(), "projtheme") {
+	if slices.Contains(AvailableThemes(), "projtheme") {
 		t.Fatalf("an untrusted project's theme was discovered: %v", AvailableThemes())
 	}
 
 	// Trusted: discovered, and active because it was named.
 	boot.ApplySources(ThemeSources{Cwd: project, ThemeName: "projtheme", Trusted: true})
-	if !containsTheme(AvailableThemes(), "projtheme") {
+	if !slices.Contains(AvailableThemes(), "projtheme") {
 		t.Fatalf("the trusted project's theme was not discovered: %v", AvailableThemes())
 	}
 	if got := CurrentThemeName(); got != "projtheme" {
@@ -91,13 +91,9 @@ func TestThemeBootProjectThemesNeedTrust(t *testing.T) {
 	// NoThemes drops discovery, the project's themes included, and keeps the
 	// explicitly named paths.
 	boot.ApplySources(ThemeSources{Cwd: project, ThemeName: "projtheme", Trusted: true, NoThemes: true})
-	if containsTheme(AvailableThemes(), "projtheme") {
+	if slices.Contains(AvailableThemes(), "projtheme") {
 		t.Fatalf("NoThemes kept the discovered project theme: %v", AvailableThemes())
 	}
-}
-
-func containsTheme(names []string, want string) bool {
-	return slices.Contains(names, want)
 }
 
 // TestThemeBootDetectsTrueColorFromEnvironment ports the truecolor branch of

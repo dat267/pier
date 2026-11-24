@@ -611,10 +611,10 @@ func TestFauxAbortMidTextStream(t *testing.T) {
 	if textDeltaCount != 1 {
 		t.Fatalf("textDeltaCount = %d; want 1 (events %v)", textDeltaCount, types)
 	}
-	if !containsString(types, "text_start") || !containsString(types, "text_delta") || !containsString(types, "error") {
+	if !slices.Contains(types, "text_start") || !slices.Contains(types, "text_delta") || !slices.Contains(types, "error") {
 		t.Fatalf("events = %v", types)
 	}
-	if containsString(types, "text_end") {
+	if slices.Contains(types, "text_end") {
 		t.Fatalf("events should not contain text_end: %v", types)
 	}
 }
@@ -645,10 +645,10 @@ func TestFauxAbortMidThinkingStream(t *testing.T) {
 	if thinkingDeltaCount != 1 {
 		t.Fatalf("thinkingDeltaCount = %d (events %v)", thinkingDeltaCount, types)
 	}
-	if !containsString(types, "thinking_start") || !containsString(types, "thinking_delta") || !containsString(types, "error") {
+	if !slices.Contains(types, "thinking_start") || !slices.Contains(types, "thinking_delta") || !slices.Contains(types, "error") {
 		t.Fatalf("events = %v", types)
 	}
-	if containsString(types, "thinking_end") {
+	if slices.Contains(types, "thinking_end") {
 		t.Fatalf("events should not contain thinking_end: %v", types)
 	}
 }
@@ -680,14 +680,10 @@ func TestFauxAbortMidToolcallStream(t *testing.T) {
 	if toolCallDeltaCount != 1 {
 		t.Fatalf("toolCallDeltaCount = %d (events %v)", toolCallDeltaCount, types)
 	}
-	if !containsString(types, "toolcall_start") || !containsString(types, "toolcall_delta") || !containsString(types, "error") {
+	if !slices.Contains(types, "toolcall_start") || !slices.Contains(types, "toolcall_delta") || !slices.Contains(types, "error") {
 		t.Fatalf("events = %v", types)
 	}
-	if containsString(types, "toolcall_end") {
+	if slices.Contains(types, "toolcall_end") {
 		t.Fatalf("events should not contain toolcall_end: %v", types)
 	}
-}
-
-func containsString(list []string, want string) bool {
-	return slices.Contains(list, want)
 }

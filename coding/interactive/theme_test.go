@@ -326,7 +326,7 @@ func TestThemeRegistry(t *testing.T) {
 		t.Fatalf("registered lookup = %+v", got)
 	}
 	names := AvailableThemes()
-	if !containsString(names, "custom-theme") || !containsString(names, "dark") {
+	if !slices.Contains(names, "custom-theme") || !slices.Contains(names, "dark") {
 		t.Fatalf("available = %v", names)
 	}
 	SetRegisteredThemes(nil)
@@ -344,7 +344,7 @@ func TestThemeRegistry(t *testing.T) {
 	if loaded.Name != "mytheme" || loaded.ColorMode() != ColorMode256 {
 		t.Fatalf("custom theme = %+v", loaded)
 	}
-	if !containsString(AvailableThemes(), "mytheme") {
+	if !slices.Contains(AvailableThemes(), "mytheme") {
 		t.Fatalf("custom theme not listed: %v", AvailableThemes())
 	}
 
