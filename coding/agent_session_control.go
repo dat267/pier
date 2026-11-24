@@ -913,13 +913,9 @@ func (s *AgentSession) cycleScopedModel(direction string, options ModelMutationO
 		}
 	}
 	current := s.Model()
-	index := -1
-	for position, candidate := range scoped {
-		if ai.ModelsAreEqual(candidate.Model, current) {
-			index = position
-			break
-		}
-	}
+	index := slices.IndexFunc(scoped, func(candidate ScopedModel) bool {
+		return ai.ModelsAreEqual(candidate.Model, current)
+	})
 	nextIndex, ok := nextCycleIndex(index, len(scoped), direction)
 	if !ok {
 		return nil, nil
@@ -934,13 +930,9 @@ func (s *AgentSession) cycleAvailableModel(direction string, options ModelMutati
 		models = s.control.ModelRuntime.GetAvailableSnapshot()
 	}
 	current := s.Model()
-	index := -1
-	for position, candidate := range models {
-		if ai.ModelsAreEqual(candidate, current) {
-			index = position
-			break
-		}
-	}
+	index := slices.IndexFunc(models, func(candidate *ai.Model) bool {
+		return ai.ModelsAreEqual(candidate, current)
+	})
 	nextIndex, ok := nextCycleIndex(index, len(models), direction)
 	if !ok {
 		return nil, nil
