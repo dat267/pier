@@ -821,39 +821,6 @@ var markedBlockTagSet = func() map[string]struct{} {
 	return set
 }()
 
-// startsHTMLLine is the broad tag-at-line-start check a table body ends at.
-func startsHTMLLine(line string) bool {
-	i, width := skipIndent(line)
-	if width >= 4 || i >= len(line) || line[i] != '<' {
-		return false
-	}
-	if i+1 >= len(line) {
-		return false
-	}
-	c := line[i+1]
-	if c == '!' || c == '?' {
-		return true
-	}
-	j := i + 1
-	if c == '/' {
-		j++
-	}
-	if j >= len(line) || !isASCIILetter(line[j]) {
-		return false
-	}
-	for j < len(line) && (isAlnum(line[j]) || line[j] == '-') {
-		j++
-	}
-	if j >= len(line) {
-		return true
-	}
-	switch line[j] {
-	case ' ', '\t', '>', '/':
-		return true
-	}
-	return false
-}
-
 // tryTable detects a GFM table: a header row with a `|` followed by a
 // delimiter row of dashes and colons.
 func (l *blockLexer) tryTable(start int) (*Block, bool) {
