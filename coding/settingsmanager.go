@@ -886,24 +886,7 @@ func (m *SettingsManager) RebindProject(cwd string, trusted bool) {
 	m.storage = NewFileSettingsStorage(resolvedCwd, resolvedAgentDir)
 	m.settingsPaths = settingsPathsFor(resolvedCwd, resolvedAgentDir)
 	m.projectBinding++
-	m.projectTrusted = trusted
-	m.modifiedProjectFields = map[string]bool{}
-	m.modifiedProjectNested = map[string]map[string]bool{}
-	if !trusted {
-		m.projectSettings = &Settings{}
-		m.projectSettingsLoadError = nil
-		m.projectRejected = nil
-		m.setMerged(mergeSettingsWithRejects(m.globalSettings, m.projectSettings, nil))
-		return
-	}
-	projectLoad, projectRejected, projectErr := tryLoadFromStorageWithRejects(m.storage, SettingsScopeProject, trusted)
-	m.projectSettings = projectLoad
-	m.projectSettingsLoadError = projectErr
-	m.projectRejected = projectRejected
-	if projectErr != nil {
-		m.recordErrorLocked(SettingsScopeProject, projectErr)
-	}
-	m.setMerged(mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected))
+	m.applyProjectTrustLocked(trusted)
 }
 
 func newSettingsManagerFromStorage(storage SettingsStorage, options SettingsManagerCreateOptions, paths map[SettingsScope]string) *SettingsManager {
@@ -1666,10 +1649,16 @@ func (m *SettingsManager) SetProjectTrusted(trusted bool) {
 	if m.projectTrusted == trusted {
 		return
 	}
+	m.applyProjectTrustLocked(trusted)
+}
+
+// applyProjectTrustLocked records the trust decision and drops or reloads the
+// project scope (the body of upstream setProjectTrusted, which RebindProject
+// also runs against its new storage). The caller holds m.mu.
+func (m *SettingsManager) applyProjectTrustLocked(trusted bool) {
 	m.projectTrusted = trusted
 	m.modifiedProjectFields = map[string]bool{}
 	m.modifiedProjectNested = map[string]map[string]bool{}
-
 	if !trusted {
 		m.projectSettings = &Settings{}
 		m.projectSettingsLoadError = nil
