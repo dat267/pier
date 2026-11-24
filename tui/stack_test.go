@@ -1,9 +1,7 @@
 package tui
 
 import (
-	"bufio"
 	"encoding/json"
-	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -15,40 +13,22 @@ import (
 
 func loadLayoutGolden(t *testing.T) (sizes map[string][]int, renders map[string][]string) {
 	t.Helper()
-	file, err := os.Open("testdata/layout_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-
 	sizes = map[string][]int{}
 	renders = map[string][]string{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		left, right := parts[0], parts[1]
-		if after, ok := strings.CutPrefix(left, "sizes "); ok {
-			label := after
+	for left, right := range loadArrowGolden(t, "testdata/layout_golden.txt", "") {
+		var err error
+		if label, ok := strings.CutPrefix(left, "sizes "); ok {
 			var values []int
-			if err := json.Unmarshal([]byte(right), &values); err != nil {
-				t.Fatalf("bad sizes %q: %v", line, err)
-			}
+			err = json.Unmarshal([]byte(right), &values)
 			sizes[label] = values
-			continue
+		} else {
+			var values []string
+			err = json.Unmarshal([]byte(right), &values)
+			renders[left] = values
 		}
-		var values []string
-		if err := json.Unmarshal([]byte(right), &values); err != nil {
-			t.Fatalf("bad render %q: %v", line, err)
+		if err != nil {
+			t.Fatalf("bad golden %q: %v", left, err)
 		}
-		renders[left] = values
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
 	}
 	return sizes, renders
 }
