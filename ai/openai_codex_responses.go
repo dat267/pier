@@ -181,12 +181,8 @@ func ResolveCodexWebSocketURL(baseURL string) string {
 	return parsed.String()
 }
 
-// BuildCodexBaseHeaders applies the shared Codex auth headers
-// (upstream buildBaseCodexHeaders).
-func BuildCodexBaseHeaders(initHeaders map[string]string, additionalHeaders ProviderHeaders, accountID, token string) http.Header {
-	return buildCodexBaseHeaders(IdentityHeaders(nil, nil), initHeaders, additionalHeaders, accountID, token)
-}
-
+// buildCodexBaseHeaders applies the shared Codex auth headers (upstream
+// buildBaseCodexHeaders).
 func buildCodexBaseHeaders(defaultHeaders, initHeaders map[string]string, additionalHeaders ProviderHeaders, accountID, token string) http.Header {
 	// Keep each layer separate until http.Header canonicalizes its names:
 	// a lowercase model override must beat an uppercase identity default.
