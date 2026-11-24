@@ -535,7 +535,7 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 	// replay the durable goal state from the current branch. The controller is
 	// bound to this session, so its effects reach it directly.
 	if config.Goal {
-		controller := newGoalController(nil, newSessionGoalSink(s))
+		controller := newGoalController(newSessionGoalSink(s))
 		s.goal.Store(controller)
 		s.registerGoalTools()
 		controller.Start("startup")

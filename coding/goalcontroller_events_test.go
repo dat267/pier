@@ -212,7 +212,7 @@ func TestGoalControllerBuffersNoticesUntilUIHooks(t *testing.T) {
 		Timestamp: 1,
 	})
 	sink := &fakeGoalSink{branchEntries: []goal.CustomEntry{{CustomType: goal.GoalCustomType, Data: data}}}
-	controller := newGoalController(nil, sink)
+	controller := newGoalController(sink)
 
 	controller.Start("startup")
 	if len(sink.notifies) != 0 {
@@ -243,7 +243,7 @@ func (s *panicOnceGoalSink) EmitGoalEntryAppended(entry *SessionEntry) {
 
 func TestGoalPublisherResumesAfterRecoveredListenerPanic(t *testing.T) {
 	sink := &panicOnceGoalSink{fakeGoalSink: &fakeGoalSink{}, panicNext: true}
-	controller := newGoalController(nil, sink)
+	controller := newGoalController(sink)
 	tool := findGoalTool(t, controller, "set_goal")
 	call := func(params string) (recovered any) {
 		defer func() { recovered = recover() }()

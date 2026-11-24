@@ -16,7 +16,7 @@ import (
 // tool exposure, and the continuation/error/abort settle outcomes).
 
 func goalControllerForSink(sink *fakeGoalSink) *GoalController {
-	controller := newGoalController(nil, sink)
+	controller := newGoalController(sink)
 	controller.SetUIHooks(func(message string, level string) { sink.notifies = append(sink.notifies, message) })
 	return controller
 }

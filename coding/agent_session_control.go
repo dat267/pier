@@ -635,7 +635,7 @@ func (s *AgentSession) SetGoalFeatureEnabled(enabled bool) {
 		s.toolsMu.Unlock()
 		return
 	}
-	controller := newGoalController(nil, newSessionGoalSink(s))
+	controller := newGoalController(newSessionGoalSink(s))
 	s.goal.Store(controller)
 	// The registry is written under control.stateMu: ToolNames, GetAllTools and
 	// the prompt contributions read the same map under it, and a concurrent map

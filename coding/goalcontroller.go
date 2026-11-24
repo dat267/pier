@@ -164,11 +164,8 @@ type GoalController struct {
 }
 
 // newGoalController creates a controller bound to a sink.
-func newGoalController(machine *goal.GoalMachine, sink goalSink) *GoalController {
-	if machine == nil {
-		machine = goal.NewGoalMachine()
-	}
-	return &GoalController{machine: machine, sink: sink}
+func newGoalController(sink goalSink) *GoalController {
+	return &GoalController{machine: goal.NewGoalMachine(), sink: sink}
 }
 
 // SetUIHooks installs the human-facing callback and delivers any notices that
