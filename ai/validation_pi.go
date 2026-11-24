@@ -972,7 +972,6 @@ var (
 	piRelativePointerRE = regexp.MustCompile(`^(?:0|[1-9][0-9]*)(?:#|(?:/(?:[^~/]|~0|~1)*)*)$`)
 	piUUIDRE            = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 	piTimeRE            = regexp.MustCompile(`^(\d\d):(\d\d):(\d\d)(?:\.\d+)?(?:([Zz])|([+-])(\d\d):(\d\d))?$`)
-	piDateTimeSplitRE   = regexp.MustCompile(`(?i)t`)
 )
 
 func piFormatValid(name, value string) bool {
@@ -1022,8 +1021,10 @@ func piFormatValid(name, value string) bool {
 	case "date":
 		return validDate(value)
 	case "date-time":
-		parts := piDateTimeSplitRE.Split(value, 2)
-		return len(parts) == 2 && validDate(parts[0]) && validTime(parts[1])
+		// typebox splits on /T/i and wants two parts; a second T lands in the
+		// time half, which validTime rejects.
+		separator := strings.IndexAny(value, "Tt")
+		return separator >= 0 && validDate(value[:separator]) && validTime(value[separator+1:])
 	case "time":
 		return validTime(value)
 	case "duration":
