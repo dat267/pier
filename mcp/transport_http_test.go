@@ -86,6 +86,25 @@ func newHTTPFixture(handler func(w http.ResponseWriter, r *http.Request)) *httpF
 	return fixture
 }
 
+// isToolCall serves every request but a tools/call POST through the protocol
+// handler and reports whether the test's own handler should answer it.
+func (f *httpFixture) isToolCall(w http.ResponseWriter, r *http.Request) bool {
+	if r.Method != http.MethodPost {
+		f.protocolHandler(w, r, nil)
+		return false
+	}
+	body, _ := io.ReadAll(r.Body)
+	var message struct {
+		Method string `json:"method"`
+	}
+	_ = json.Unmarshal(body, &message)
+	if message.Method != "tools/call" {
+		f.protocolHandler(w, r, body)
+		return false
+	}
+	return true
+}
+
 func (f *httpFixture) close(*testing.T) {
 	f.server.Close()
 }
@@ -261,17 +280,7 @@ func TestStreamableHTTPHandlesWhitespacePrefixedBatch(t *testing.T) {
 func TestStreamableHTTPRejectsRequestWithoutResponse(t *testing.T) {
 	var fixture *httpFixture
 	fixture = newHTTPFixture(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			fixture.protocolHandler(w, r, nil)
-			return
-		}
-		body, _ := io.ReadAll(r.Body)
-		var message struct {
-			Method string `json:"method"`
-		}
-		_ = json.Unmarshal(body, &message)
-		if message.Method != "tools/call" {
-			fixture.protocolHandler(w, r, body)
+		if !fixture.isToolCall(w, r) {
 			return
 		}
 		w.WriteHeader(http.StatusAccepted)
