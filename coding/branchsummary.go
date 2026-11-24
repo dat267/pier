@@ -151,10 +151,9 @@ func branchMessageFromEntryWith(entry *SessionEntry, payloads *payloadReader) ai
 	case "compaction":
 		return &ai.CustomMessage{
 			Role: RoleCompactionSummary,
-			Content: mustMarshalJSON(struct {
-				Summary      string `json:"summary"`
-				TokensBefore int64  `json:"tokensBefore"`
-			}{Summary: entry.Summary, TokensBefore: entry.TokensBefore}),
+			Content: mustMarshalJSON(compactionSummaryFields{
+				Summary: entry.Summary, TokensBefore: entry.TokensBefore,
+			}),
 			Timestamp: entryTimestampMS(entry),
 		}
 	default:

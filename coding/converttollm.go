@@ -108,7 +108,8 @@ type branchSummaryFields struct {
 	FromID  *string `json:"fromId"`
 }
 
-// compactionSummaryFields decodes a compactionSummary message.
+// compactionSummaryFields is the content of a compactionSummary message,
+// decoded by ConvertToLlm and built from a compaction entry.
 type compactionSummaryFields struct {
 	Summary      string `json:"summary"`
 	TokensBefore int64  `json:"tokensBefore"`
