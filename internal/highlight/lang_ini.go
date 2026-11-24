@@ -11,13 +11,7 @@ func iniKeyGuard(s string) bool {
 		return false
 	}
 	i = skipJSSpace(s, i+1)
-	if i >= len(s) {
-		return false
-	}
-	if jsSpaceWidth(s, i) > 0 || s[i] == '#' {
-		return false
-	}
-	return true
+	return i < len(s) && jsSpaceWidth(s, i) == 0 && s[i] != '#'
 }
 
 // INI returns the TOML/INI language definition (a port of languages/ini.js).

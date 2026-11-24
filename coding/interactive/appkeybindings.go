@@ -344,10 +344,7 @@ func MigrateKeybindingsFile(path string) bool {
 	}
 	// Published by a rename, so a failed migration cannot truncate the user's
 	// bindings (A507, D454).
-	if err := coding.ReplaceFileAtomically(path, encoded, 0o644); err != nil {
-		return false
-	}
-	return true
+	return coding.ReplaceFileAtomically(path, encoded, 0o644) == nil
 }
 
 // marshalOrderedKeybindings renders the migrated config in table order (then
