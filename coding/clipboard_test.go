@@ -58,7 +58,7 @@ func TestClipboardCommandsShape(t *testing.T) {
 	switch {
 	case len(commands) == 0:
 		t.Skip("no clipboard writers available in this environment")
-	case isRemoteSession():
+	case isRemoteSessionFor(os.Getenv):
 		// OSC 52 fallback covers remote sessions; command presence is
 		// environment-dependent.
 	}

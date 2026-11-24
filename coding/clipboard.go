@@ -115,9 +115,7 @@ func runClipboardCommand(ctx context.Context, command string, args []string, opt
 	return []byte{}
 }
 
-// isRemoteSession reports whether the copy must also emit OSC 52.
-func isRemoteSession() bool { return isRemoteSessionFor(os.Getenv) }
-
+// isRemoteSessionFor reports whether the copy must also emit OSC 52.
 func isRemoteSessionFor(getenv func(string) string) bool {
 	return getenv("SSH_CONNECTION") != "" || getenv("SSH_CLIENT") != "" || getenv("MOSH_CONNECTION") != "" ||
 		getenv("PI_CLIPBOARD_OSC52") == "1"
