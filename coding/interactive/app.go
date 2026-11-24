@@ -307,6 +307,15 @@ func NewApp(options AppOptions) *App {
 		mcpAgentDir: options.AgentDir,
 	}
 
+	// The /loop scheduler is created here, before any wiring, because a session
+	// created without it registers no scheduling tools: the primary session comes
+	// from the command, already built by the time NewApp runs. Fires are submitted
+	// as ordinary input, and with no jobs it holds no timer.
+	app.loopMaxAge = coding.LoopRecurringMaxAge
+	app.loopScheduler = coding.NewLoopScheduler(nil, func(prompt string) {
+		app.ui.Post(func() { app.submit.HandleSubmit(context.Background(), prompt) })
+	})
+
 	// One owner for the off-loop queues. The command passes its group so a
 	// single StopAll at teardown covers the settings and session queues too; a
 	// standalone app gets its own.
@@ -419,6 +428,13 @@ func NewApp(options AppOptions) *App {
 	}
 	app.footerData = coding.NewFooterDataProvider(cwd, coding.FooterDataProviderOptions{})
 	app.session = &AppSession{AgentSession: options.Session}
+	// The primary session was built by the command before this app existed, so it
+	// has no scheduler and registered no scheduling tools. Adopt it now, which
+	// registers the tools and adds them to the active set, so /tools lists them
+	// and the agent can call them.
+	if app.session.AgentSession != nil && app.settings.GetLoopFeatureEnabled() {
+		app.session.AgentSession.AdoptLoopScheduler(app.loopScheduler, app.loopMaxAge)
+	}
 	app.footer = NewFooterComponent(app.session, app.footerData)
 	app.footerContainer.AddChild(app.footer)
 
@@ -678,14 +694,6 @@ func NewApp(options AppOptions) *App {
 	app.key = newKeyWiring(app)
 
 	app.submit = newSubmitWiring(app)
-
-	// /loop: a scheduler whose fires are submitted as ordinary input. It starts
-	// with no jobs, so an idle session holds no timer.
-	app.loopMaxAge = coding.LoopRecurringMaxAge
-	app.loopScheduler = coding.NewLoopScheduler(nil, func(prompt string) {
-		app.ui.Post(func() { app.submit.HandleSubmit(context.Background(), prompt) })
-	})
-	app.loopScheduler.Start()
 
 	app.autocomplete = newAutocompleteWiring(app)
 

@@ -329,3 +329,53 @@ func ackStreamFn(model *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOpti
 	}()
 	return stream
 }
+
+// The primary session is built by the command before the app exists, so it has
+// no scheduler when it is created. The app must adopt it, or the scheduling tools
+// are never registered and /tools cannot show them.
+func TestAppAdoptsLoopSchedulerOnThePrimarySession(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	if app.loopScheduler == nil {
+		t.Fatal("the app has no loop scheduler")
+	}
+	registered := map[string]bool{}
+	for _, name := range app.session.ToolNames() {
+		registered[name] = true
+	}
+	active := map[string]bool{}
+	for _, name := range app.session.GetActiveToolNames() {
+		active[name] = true
+	}
+	for _, name := range []string{"schedule_wakeup", "cron_create", "cron_delete", "cron_list"} {
+		if !registered[name] {
+			t.Errorf("%s is not registered, so /tools cannot list it", name)
+		}
+		if !active[name] {
+			t.Errorf("%s is registered but not active, so the agent cannot call it", name)
+		}
+	}
+	// Rendered, not just registered: /tools reads the same registry, so a row
+	// that is missing there is what the user actually fails to see.
+	selector := NewToolSettingsSelector(app.settingsW.toolToggles(), func(string, bool) {}, func() {})
+	rendered := strings.Join(selector.Render(100), "\n")
+	for _, name := range []string{"schedule_wakeup", "cron_create", "cron_delete", "cron_list"} {
+		if !strings.Contains(rendered, name) {
+			t.Errorf("/tools does not render %s:\n%s", name, rendered)
+		}
+	}
+}
+
+// A session whose loop feature is off registers no scheduling tools at all, so
+// /tools does not offer a tool the feature would refuse to honour.
+func TestAppSkipsLoopToolsWhenTheFeatureIsOff(t *testing.T) {
+	app, cleanup := newTestAppConfigured(t, false, func(settings *coding.SettingsManager, options *AppOptions) {
+		settings.SetLoopFeatureEnabled(false)
+	})
+	defer cleanup()
+	for _, name := range app.session.ToolNames() {
+		if name == "cron_create" || name == "schedule_wakeup" {
+			t.Fatalf("%s is registered although the loop feature is off", name)
+		}
+	}
+}

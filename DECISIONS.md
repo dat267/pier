@@ -8915,7 +8915,13 @@ is capped, because a runaway loop is worse than a refused one.
 
 `/loop` is listed in `/features` alongside the other pier-only surface, and its
 tools are registered in the ordinary registry, so `/tools` shows and can disable
-them like any other tool. The feature toggle reaches the live session, not just
+them like any other tool. That needs care on the primary session: the command
+builds it before the app exists, so it is created with no scheduler and registers
+nothing. The app adopts it through `AdoptLoopScheduler` while composing, which
+registers the four tools and adds them to the active set; registering alone is not
+enough, because a tool in the registry but not the active set is invisible to the
+agent. A session the app creates itself (switch, fork, import) is handed the
+scheduler at construction instead. The feature toggle reaches the live session, not just
 the settings file: off removes the four scheduling tools from the registry and
 the active set, drops every pending job so a disabled feature cannot fire a
 prompt behind the user's back, and makes `/loop` say the feature is off rather

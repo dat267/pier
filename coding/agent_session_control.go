@@ -688,6 +688,23 @@ func registerLoopToolsLocked(s *AgentSession, tools []agent.AgentTool) {
 	}
 }
 
+// AdoptLoopScheduler installs the scheduling tools on a session that was built
+// without one, which is the primary interactive session: the command creates it
+// before the app's scheduler exists. Registering and activating are separate
+// steps, and a session that skips the second leaves the agent unable to call a
+// tool that /tools lists.
+func (s *AgentSession) AdoptLoopScheduler(scheduler *LoopScheduler, maxAge time.Duration) {
+	if scheduler == nil || s.loopScheduler == scheduler {
+		return
+	}
+	s.loopScheduler = scheduler
+	s.loopMaxAge = maxAge
+	s.registerLoopTools()
+	s.toolsMu.Lock()
+	s.setActiveToolsByNameLocked(s.withLoopToolsActive(s.GetActiveToolNames()))
+	s.toolsMu.Unlock()
+}
+
 // withLoopToolsActive returns names with every scheduling tool appended that is
 // registered and not turned off in /tools.
 func (s *AgentSession) withLoopToolsActive(names []string) []string {
