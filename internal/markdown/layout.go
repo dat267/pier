@@ -19,9 +19,7 @@ func RenderSource(src string, width int, style Style) []string {
 
 // Render lays out blocks as styled lines no wider than width.
 func Render(blocks []*Block, width int, style Style) []string {
-	if width < 1 {
-		width = 1
-	}
+	width = max(width, 1)
 	renderer := NewRenderer(Options{Style: style, Terminal: PlainTerminal{}, LatexEnabled: true})
 	var lines []string
 	for i, b := range blocks {
@@ -59,9 +57,7 @@ func (PlainTerminal) Hyperlink(text string, url string) string {
 // styled run (its active SGR codes are re-applied and reset within the run), so
 // a break never leaves an unbalanced escape.
 func wrapStyled(s string, width int) []string {
-	if width < 1 {
-		width = 1
-	}
+	width = max(width, 1)
 	var out []string
 	for line := range strings.SplitSeq(s, "\n") {
 		out = append(out, wrapStyledLine(line, width)...)

@@ -381,9 +381,7 @@ func CropKittyImageLine(line string, hiddenRows int, visibleRows int) string {
 	sourceEnd := int(math.Ceil(float64(metadata.HeightPx*(hiddenRows+croppedRows)) / float64(metadata.Rows)))
 	sourceHeight := min(sourceEnd, metadata.HeightPx)
 	sourceHeight -= sourceY
-	if sourceHeight < 1 {
-		sourceHeight = 1
-	}
+	sourceHeight = max(sourceHeight, 1)
 	var controls []string
 	for control := range strings.SplitSeq(line[match[2]:match[3]], ",") {
 		if !kittyCropDropPattern.MatchString(control) {

@@ -159,9 +159,7 @@ func NewEditor(host EditorHost, theme EditorTheme, options EditorOptions) *Edito
 	if maxVisible < 3 {
 		maxVisible = 5
 	}
-	if maxVisible > 20 {
-		maxVisible = 20
-	}
+	maxVisible = min(maxVisible, 20)
 	if theme.BorderColor == nil {
 		theme.BorderColor = identityStyle
 	}
@@ -2061,9 +2059,7 @@ func indexOfRuneFrom(text string, target string, from int, _ bool) (int, bool) {
 }
 
 func lastIndexOfRuneBefore(text string, target string, before int) (int, bool) {
-	if before > len(text) {
-		before = len(text)
-	}
+	before = min(before, len(text))
 	index := strings.LastIndex(text[:before], target)
 	if index < 0 {
 		return 0, false

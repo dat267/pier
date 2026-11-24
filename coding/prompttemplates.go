@@ -185,12 +185,8 @@ func SubstituteArgs(content string, args []string) string {
 		if sliceStart, ok := group(3); ok {
 			start, _ := strconv.Atoi(sliceStart)
 			start-- // User-provided indices are 1-based.
-			if start < 0 {
-				start = 0
-			}
-			if start > len(args) {
-				start = len(args)
-			}
+			start = max(start, 0)
+			start = min(start, len(args))
 			if sliceLength, hasLength := group(4); hasLength {
 				length, _ := strconv.Atoi(sliceLength)
 				end := start + min(length, len(args)-start)

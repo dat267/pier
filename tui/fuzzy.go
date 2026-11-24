@@ -152,9 +152,7 @@ func scoreFuzzyBytes(text string, positions []int) float64 {
 // indexUnitsFrom returns the first offset at or after start where needle
 // appears contiguously.
 func indexUnitsFrom(haystack []uint16, needle []uint16, start int) int {
-	if start < 0 {
-		start = 0
-	}
+	start = max(start, 0)
 	for i := start; i+len(needle) <= len(haystack); i++ {
 		matched := true
 		for k := range needle {
@@ -174,9 +172,7 @@ func indexUnitsFrom(haystack []uint16, needle []uint16, start int) int {
 // query appears contiguously, reading the query through the swap split without
 // allocating.
 func indexContiguousASCII(text, query string, split, start int) int {
-	if start < 0 {
-		start = 0
-	}
+	start = max(start, 0)
 	for i := start; i+len(query) <= len(text); i++ {
 		matched := true
 		for k := range len(query) {
@@ -352,9 +348,7 @@ func asciiAlphaNumericSwapSplit(query string) int {
 
 // indexUnitFrom returns the index of needle at or after start.
 func indexUnitFrom(haystack []uint16, needle uint16, start int) int {
-	if start < 0 {
-		start = 0
-	}
+	start = max(start, 0)
 	for i := start; i < len(haystack); i++ {
 		if haystack[i] == needle {
 			return i

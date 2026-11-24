@@ -1347,9 +1347,7 @@ func renderLatexImpl(source string, options RenderLatexOptions) (string, bool) {
 			indentation = leading
 		}
 	}
-	if indentation < 0 {
-		indentation = 0
-	}
+	indentation = max(indentation, 0)
 	trimmed := make([]string, 0, len(lines))
 	for _, line := range lines {
 		// Slice every line with the one computed indentation, like the

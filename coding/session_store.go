@@ -889,9 +889,7 @@ func roleOfMessageSpan(span []byte) (role string, ok bool) {
 // ranges can be scanned independently and appended in file order. Ranges may
 // be empty when a long line pulls a boundary past the next one.
 func scanSessionRanges(data []byte, workers int) [][2]int {
-	if workers < 1 {
-		workers = 1
-	}
+	workers = max(workers, 1)
 	ranges := make([][2]int, workers)
 	start := 0
 	for worker := 1; worker <= workers; worker++ {

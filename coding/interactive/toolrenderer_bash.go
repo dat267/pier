@@ -158,9 +158,7 @@ func (c *bashPreviewComponent) Render(width int) []string {
 // wrappedLineCount is how many visual lines one logical line wraps to, matching
 // tui.Text.Render (tabs become three spaces; a blank line still occupies one).
 func wrappedLineCount(line string, contentWidth int) int {
-	if contentWidth < 1 {
-		contentWidth = 1
-	}
+	contentWidth = max(contentWidth, 1)
 	if count, ok := plainWrappedLineCount(line, contentWidth); ok {
 		return count
 	}

@@ -96,9 +96,7 @@ func (c *ImageComponent) Render(width int) []string {
 	if configured < maxWidth {
 		maxWidth = configured
 	}
-	if maxWidth < 1 {
-		maxWidth = 1
-	}
+	maxWidth = max(maxWidth, 1)
 	cell := GetCellDimensions()
 	defaultMaxHeight := max((maxWidth*cell.WidthPx+cell.HeightPx-1)/cell.HeightPx, 1)
 	maxHeight := defaultMaxHeight

@@ -881,12 +881,8 @@ func lineStartBefore(text string, offset int) int {
 
 // countLineFeeds counts the "\n" before end, starting the search at start.
 func countLineFeeds(text string, start, end int) int {
-	if start < 0 {
-		start = 0
-	}
-	if end > len(text) {
-		end = len(text)
-	}
+	start = max(start, 0)
+	end = min(end, len(text))
 	if start >= end {
 		return 0
 	}

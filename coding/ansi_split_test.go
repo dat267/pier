@@ -51,12 +51,8 @@ func FuzzSplitIncompleteAnsiSuffixPreservesBytes(f *testing.F) {
 		}
 	}
 	f.Fuzz(func(t *testing.T, text string, split int) {
-		if split < 0 {
-			split = 0
-		}
-		if split > len(text) {
-			split = len(text)
-		}
+		split = max(split, 0)
+		split = min(split, len(text))
 		complete, pending := splitIncompleteAnsiSuffix(text[:split])
 		complete2, pending2 := splitIncompleteAnsiSuffix(pending + text[split:])
 		if joined := complete + complete2 + pending2; joined != text {

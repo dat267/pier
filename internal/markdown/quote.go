@@ -345,9 +345,7 @@ func (t *quoteText) String() string { return t.sb.String() }
 // (JavaScript clamps a negative length to zero).
 func (t *quoteText) cut(n int) {
 	value := t.sb.String()
-	if n > len(value) {
-		n = len(value)
-	}
+	n = min(n, len(value))
 	t.sb.Reset()
 	t.sb.WriteString(value[:len(value)-n])
 }

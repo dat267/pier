@@ -309,12 +309,8 @@ func (p *CombinedAutocompleteProvider) GetSuggestions(ctx context.Context, lines
 	if cursorLine >= 0 && cursorLine < len(lines) {
 		currentLine = lines[cursorLine]
 	}
-	if cursorCol > len(currentLine) {
-		cursorCol = len(currentLine)
-	}
-	if cursorCol < 0 {
-		cursorCol = 0
-	}
+	cursorCol = min(cursorCol, len(currentLine))
+	cursorCol = max(cursorCol, 0)
 	textBeforeCursor := currentLine[:cursorCol]
 
 	if atPrefix, ok := p.extractAtPrefix(textBeforeCursor); ok {
@@ -409,9 +405,7 @@ func (p *CombinedAutocompleteProvider) ApplyCompletion(lines []string, cursorLin
 		currentLine = lines[cursorLine]
 	}
 	prefixStart := min(max(cursorCol-len(prefix), 0), len(currentLine))
-	if cursorCol > len(currentLine) {
-		cursorCol = len(currentLine)
-	}
+	cursorCol = min(cursorCol, len(currentLine))
 	beforePrefix := currentLine[:prefixStart]
 	afterCursor := currentLine[cursorCol:]
 
@@ -887,12 +881,8 @@ func (p *CombinedAutocompleteProvider) ShouldTriggerFileCompletion(lines []strin
 	if cursorLine >= 0 && cursorLine < len(lines) {
 		currentLine = lines[cursorLine]
 	}
-	if cursorCol > len(currentLine) {
-		cursorCol = len(currentLine)
-	}
-	if cursorCol < 0 {
-		cursorCol = 0
-	}
+	cursorCol = min(cursorCol, len(currentLine))
+	cursorCol = max(cursorCol, 0)
 	textBeforeCursor := currentLine[:cursorCol]
 	trimmed := ai.JSTrim(textBeforeCursor)
 	if strings.HasPrefix(trimmed, "/") && !strings.Contains(trimmed, " ") {

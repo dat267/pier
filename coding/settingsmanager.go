@@ -2942,9 +2942,7 @@ func (m *SettingsManager) SetImageWidthCells(width int) {
 	if m.globalSettings.Terminal == nil {
 		m.globalSettings.Terminal = &SettingsTerminal{}
 	}
-	if width < 1 {
-		width = 1
-	}
+	width = max(width, 1)
 	m.globalSettings.Terminal.ImageWidthCells = &width
 	m.markModified("terminal", "imageWidthCells")
 	m.save()

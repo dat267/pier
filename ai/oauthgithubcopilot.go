@@ -302,9 +302,7 @@ func FetchWithCopilotRateLimitRetry(
 				return response, nil
 			}
 		}
-		if delay < 0 {
-			delay = 0
-		}
+		delay = max(delay, 0)
 		if !deadline.IsZero() && delay >= time.Until(deadline) {
 			return response, nil
 		}
