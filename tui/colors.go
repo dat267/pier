@@ -457,10 +457,7 @@ func terminalDetectsTrueColor(env func(string) string, windowsConsole bool) bool
 		// (pi v1.5.2 terminal-image.ts).
 		return true
 	}
-	if windowsConsole {
-		return true
-	}
-	return hint
+	return windowsConsole || hint
 }
 
 // StyleText styles text with concrete colors and attributes.

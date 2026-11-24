@@ -218,10 +218,7 @@ func HasSessionName(session coding.SessionInfo) bool {
 }
 
 func matchesNameFilter(session coding.SessionInfo, filter NameFilter) bool {
-	if filter == NameFilterAll {
-		return true
-	}
-	return HasSessionName(session)
+	return filter == NameFilterAll || HasSessionName(session)
 }
 
 // ParseSearchQuery parses a session search query.
