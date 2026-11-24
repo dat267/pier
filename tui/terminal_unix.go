@@ -4,8 +4,10 @@ package tui
 
 import (
 	"os"
+	"os/signal"
 	"runtime"
 	"sync"
+	"syscall"
 )
 
 // Platform helpers for the terminal port (unix build).
@@ -52,13 +54,13 @@ func startResizeWatcher(onResize func()) {
 		close(previous)
 	}
 	sig := make(chan os.Signal, 1)
-	signalNotifySIGWINCH(sig)
+	signal.Notify(sig, syscall.SIGWINCH)
 	go func() {
 		defer close(done)
 		for {
 			select {
 			case <-quit:
-				signalStopSIGWINCH(sig)
+				signal.Stop(sig)
 				return
 			case <-sig:
 				if onResize != nil && resizeGenerationCurrent(generation) {
