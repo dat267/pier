@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"maps"
@@ -179,25 +178,7 @@ func TestAutocompleteAgainstUpstreamGolden(t *testing.T) {
 		t.Skip("fd is not installed")
 	}
 
-	goldenFile, err := os.Open("testdata/autocomplete_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	golden := map[string]string{}
-	scanner := bufio.NewScanner(goldenFile)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		golden[strings.TrimPrefix(parts[0], "ac ")] = parts[1]
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
-	goldenFile.Close()
+	golden := loadArrowGolden(t, "testdata/autocomplete_golden.txt", "ac ")
 
 	data, err := os.ReadFile("testdata/autocomplete_corpus.json")
 	if err != nil {

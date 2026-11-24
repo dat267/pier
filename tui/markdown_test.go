@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"bufio"
 	"encoding/json"
 	"os"
 	"reflect"
@@ -20,31 +19,7 @@ import (
 
 func loadMDRenderGolden(t *testing.T) map[string][]string {
 	t.Helper()
-	file, err := os.Open("testdata/md_render_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-	values := map[string][]string{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		label := strings.TrimPrefix(parts[0], "md ")
-		var lines []string
-		if err := json.Unmarshal([]byte(parts[1]), &lines); err != nil {
-			t.Fatalf("bad golden render %q: %v", line, err)
-		}
-		values[label] = lines
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
-	return values
+	return loadArrowJSONGolden[[]string](t, "testdata/md_render_golden.txt", "md ")
 }
 
 func mdTag(name string) func(string) string {

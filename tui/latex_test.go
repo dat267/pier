@@ -1,12 +1,10 @@
 package tui
 
 import (
-	"bufio"
 	"encoding/json"
 	"maps"
 	"os"
 	"slices"
-	"strings"
 	"testing"
 )
 
@@ -17,35 +15,7 @@ import (
 
 func loadLatexGolden(t *testing.T) map[string]*string {
 	t.Helper()
-	file, err := os.Open("testdata/latex_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-	values := map[string]*string{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		label := strings.TrimPrefix(parts[0], "latex ")
-		if parts[1] == "null" {
-			values[label] = nil
-			continue
-		}
-		var value string
-		if err := json.Unmarshal([]byte(parts[1]), &value); err != nil {
-			t.Fatalf("bad golden value %q: %v", line, err)
-		}
-		values[label] = &value
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
-	return values
+	return loadArrowJSONGolden[*string](t, "testdata/latex_golden.txt", "latex ")
 }
 
 func loadLatexCorpus(t *testing.T) map[string]string {
