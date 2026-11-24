@@ -1707,7 +1707,7 @@ func (e *Editor) moveWordBackwardsLocked() {
 		}
 		return
 	}
-	e.setCursorCol(findWordBackwardWithSegments(currentLine, e.state.cursorCol, e))
+	e.setCursorCol(findWordWithSegmentation(currentLine, e.state.cursorCol, e, true))
 }
 
 func (e *Editor) moveWordForwardsLocked() {
@@ -1720,19 +1720,11 @@ func (e *Editor) moveWordForwardsLocked() {
 		}
 		return
 	}
-	e.setCursorCol(findWordForwardWithSegments(currentLine, e.state.cursorCol, e))
+	e.setCursorCol(findWordWithSegmentation(currentLine, e.state.cursorCol, e, false))
 }
 
-// findWordBackwardWithSegments applies findWordBackward with the editor's
-// paste-marker aware word segmentation and atomic markers.
-func findWordBackwardWithSegments(text string, cursor int, e *Editor) int {
-	return findWordWithSegmentation(text, cursor, e, true)
-}
-
-func findWordForwardWithSegments(text string, cursor int, e *Editor) int {
-	return findWordWithSegmentation(text, cursor, e, false)
-}
-
+// findWordWithSegmentation applies findWordBackward (or findWordForward) with
+// the editor's paste-marker aware word segmentation and atomic markers.
 func findWordWithSegmentation(text string, cursor int, e *Editor, backward bool) int {
 	// The editor's segmentation merges paste markers into atomic segments; the
 	// generic word navigation already treats single-paste-marker segments as
