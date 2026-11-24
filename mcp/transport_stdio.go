@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"os"
 	"os/exec"
@@ -16,7 +15,9 @@ import (
 	"time"
 
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/internal/jsnum"
 	"github.com/dat267/pier/mcp/protocol"
+	"golang.org/x/text/encoding/unicode"
 )
 
 // Stdio transport tuning (upstream stdio.ts).
@@ -513,4 +514,11 @@ func killLiveProcessGroups() {
 	for pid := range liveProcessGroups {
 		_ = killProcessGroup(pid, syscall.SIGTERM)
 	}
+}
+
+// decodeUTF8 matches Buffer.toString("utf8"), preserving a BOM and replacing
+// each malformed subsequence rather than merging adjacent malformed bytes.
+func decodeUTF8(data []byte) string {
+	decoded, _ := unicode.UTF8.NewDecoder().Bytes(data)
+	return string(decoded)
 }
