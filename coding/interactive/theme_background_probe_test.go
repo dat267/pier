@@ -99,28 +99,7 @@ func TestBackgroundProbeRoundTripThroughRenderer(t *testing.T) {
 // combined color query and the standalone OSC 11 listener both receive the
 // background response, even when the slow query timed out before it arrived.
 func TestBackgroundListenerSeesLateReplyDuringColorQuery(t *testing.T) {
-	t.Cleanup(func() { SetSystemTerminalColors(tui.TerminalColors{}) })
-	SetCustomThemesDir(t.TempDir())
-	SetRegisteredThemes(nil)
-
-	terminal := &recordingTerminal{fakeRendererTerminal: &fakeRendererTerminal{width: 80, height: 24}}
-	screen := tui.NewMainScreen(terminal, false, "")
-	setting := "light/dark"
-	marshaled := make(chan func(), 1)
-	controller := NewInteractiveThemeController(ThemeControllerOptions{
-		UI:                  themeUIAdapter{ui: screen},
-		InitialThemeSetting: &setting,
-		TimeoutMS:           1,
-		Env:                 func(string) string { return "" },
-		Marshal:             func(fn func()) { marshaled <- fn },
-	})
-	defer controller.Dispose()
-	defer screen.Stop(tui.TuiStopOptions{})
-
-	controller.ApplyFromSettings()
-	screen.Start()
-	controller.ProbeTerminalBackground()
-	controller.ProbeSystemColors()
+	screen, controller, marshaled := startColorQuery(t, "light/dark", 1)
 	select {
 	case apply := <-marshaled:
 		apply()
@@ -142,28 +121,7 @@ func TestBackgroundListenerSeesLateReplyDuringColorQuery(t *testing.T) {
 // to light/dark selection, including when the combined query is outstanding
 // (`pi/packages/coding-agent/src/modes/interactive/theme/theme-controller.ts`).
 func TestSystemColorQueryDoesNotHideStartupBackgroundReply(t *testing.T) {
-	t.Cleanup(func() { SetSystemTerminalColors(tui.TerminalColors{}) })
-	SetCustomThemesDir(t.TempDir())
-	SetRegisteredThemes(nil)
-
-	terminal := &recordingTerminal{fakeRendererTerminal: &fakeRendererTerminal{width: 80, height: 24}}
-	screen := tui.NewMainScreen(terminal, false, "")
-	setting := "light/dark"
-	marshaled := make(chan func(), 1)
-	controller := NewInteractiveThemeController(ThemeControllerOptions{
-		UI:                  themeUIAdapter{ui: screen},
-		InitialThemeSetting: &setting,
-		TimeoutMS:           1,
-		Env:                 func(string) string { return "" },
-		Marshal:             func(fn func()) { marshaled <- fn },
-	})
-	defer controller.Dispose()
-	defer screen.Stop(tui.TuiStopOptions{})
-
-	controller.ApplyFromSettings()
-	screen.Start()
-	controller.ProbeTerminalBackground()
-	controller.ProbeSystemColors()
+	screen, controller, marshaled := startColorQuery(t, "light/dark", 1)
 	if controller.ActiveThemeName() != "dark" {
 		t.Fatalf("initial fallback theme = %q, want dark", controller.ActiveThemeName())
 	}
@@ -192,28 +150,7 @@ func TestSystemColorQueryDoesNotHideStartupBackgroundReply(t *testing.T) {
 // is empty (or partial); applying it after the late reply must not overwrite the
 // terminal's real background, which the system theme is generated from.
 func TestStaleSystemColorSnapshotDoesNotClobberLateBackground(t *testing.T) {
-	t.Cleanup(func() { SetSystemTerminalColors(tui.TerminalColors{}) })
-	SetCustomThemesDir(t.TempDir())
-	SetRegisteredThemes(nil)
-
-	terminal := &recordingTerminal{fakeRendererTerminal: &fakeRendererTerminal{width: 80, height: 24}}
-	screen := tui.NewMainScreen(terminal, false, "")
-	setting := SystemThemeName
-	marshaled := make(chan func(), 4)
-	controller := NewInteractiveThemeController(ThemeControllerOptions{
-		UI:                  themeUIAdapter{ui: screen},
-		InitialThemeSetting: &setting,
-		TimeoutMS:           1,
-		Env:                 func(string) string { return "" },
-		Marshal:             func(fn func()) { marshaled <- fn },
-	})
-	defer controller.Dispose()
-	defer screen.Stop(tui.TuiStopOptions{})
-
-	controller.ApplyFromSettings()
-	screen.Start()
-	controller.ProbeTerminalBackground()
-	controller.ProbeSystemColors()
+	screen, _, marshaled := startColorQuery(t, SystemThemeName, 4)
 
 	// The combined query times out and posts its stale snapshot.
 	var stale func()
@@ -239,4 +176,35 @@ func TestStaleSystemColorSnapshotDoesNotClobberLateBackground(t *testing.T) {
 	if got := getTerminalTheme(); got != "light" {
 		t.Fatalf("system theme detected %q after the late background, want light", got)
 	}
+}
+
+// startColorQuery starts a renderer and a theme controller for setting whose
+// queries time out after 1ms, then sends the OSC 11 background probe and the
+// combined system-color query. The controller's marshaled applies arrive on
+// the returned channel, which holds buffer of them; cleanup stops the screen,
+// disposes the controller and clears the system colors.
+func startColorQuery(t *testing.T, setting string, buffer int) (*tui.MainScreen, *InteractiveThemeController, chan func()) {
+	t.Helper()
+	t.Cleanup(func() { SetSystemTerminalColors(tui.TerminalColors{}) })
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+
+	terminal := &recordingTerminal{fakeRendererTerminal: &fakeRendererTerminal{width: 80, height: 24}}
+	screen := tui.NewMainScreen(terminal, false, "")
+	marshaled := make(chan func(), buffer)
+	controller := NewInteractiveThemeController(ThemeControllerOptions{
+		UI:                  themeUIAdapter{ui: screen},
+		InitialThemeSetting: &setting,
+		TimeoutMS:           1,
+		Env:                 func(string) string { return "" },
+		Marshal:             func(fn func()) { marshaled <- fn },
+	})
+	t.Cleanup(controller.Dispose)
+	t.Cleanup(func() { screen.Stop(tui.TuiStopOptions{}) })
+
+	controller.ApplyFromSettings()
+	screen.Start()
+	controller.ProbeTerminalBackground()
+	controller.ProbeSystemColors()
+	return screen, controller, marshaled
 }
