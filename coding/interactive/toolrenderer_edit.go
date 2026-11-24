@@ -13,7 +13,6 @@ import (
 
 type editRenderArgs struct {
 	Path        string
-	HasPath     bool
 	FilePath    string
 	HasFilePath bool
 	Edits       []coding.Edit
@@ -38,7 +37,7 @@ func getRenderablePreviewInput(args any) *editRenderArgs {
 		filePath, _ = argString(decoded, "file_path")
 		hasFilePath = true
 	}
-	return &editRenderArgs{Path: path, HasPath: hasPath, FilePath: filePath, HasFilePath: hasFilePath, Edits: edits}
+	return &editRenderArgs{Path: path, FilePath: filePath, HasFilePath: hasFilePath, Edits: edits}
 }
 
 func parseEditArgs(decoded map[string]any) []coding.Edit {

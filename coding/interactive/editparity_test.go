@@ -209,7 +209,7 @@ func TestEditResultEmptyDiffClearsPreviewError(t *testing.T) {
 		t.Fatalf("state = %T", component.rendererState)
 	}
 	key := argsKeyFor(&editRenderArgs{
-		Path: file, HasPath: true,
+		Path:  file,
 		Edits: []coding.Edit{{OldText: "old", NewText: "new"}},
 	})
 	state.preview.Store(&editPreviewState{argsKey: key, preview: &editPreview{Error: "preview failed"}})
