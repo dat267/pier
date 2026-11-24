@@ -122,10 +122,10 @@ func oauthRequiredString(body map[string]any, field string) (string, error) {
 	return value, nil
 }
 
-func oauthPositiveNumber(body map[string]any, field, prefix string) (float64, error) {
+func oauthPositiveNumber(body map[string]any, field string) (float64, error) {
 	value, ok := body[field].(float64)
 	if !ok || value <= 0 {
-		return 0, fmt.Errorf("Invalid %s OAuth response field: %s", prefix, field)
+		return 0, fmt.Errorf("Invalid xAI OAuth response field: %s", field)
 	}
 	return value, nil
 }
@@ -213,7 +213,7 @@ func parseXaiDeviceCode(body map[string]any) (*XaiDeviceCode, error) {
 			return nil, err
 		}
 	}
-	expires, err := oauthPositiveNumber(body, "expires_in", "xAI")
+	expires, err := oauthPositiveNumber(body, "expires_in")
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +235,7 @@ func xaiCredentialsFromTokenResponse(body map[string]any, previousRefreshToken s
 	}
 	expiresIn := float64(xaiDefaultTokenLifetimeSecs)
 	if _, present := body["expires_in"]; present {
-		if expiresIn, err = oauthPositiveNumber(body, "expires_in", "xAI"); err != nil {
+		if expiresIn, err = oauthPositiveNumber(body, "expires_in"); err != nil {
 			return nil, err
 		}
 	}
