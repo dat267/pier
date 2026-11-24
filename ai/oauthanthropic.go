@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -51,15 +50,6 @@ const (
 	AnthropicCopyCodeLogin       = "copy_code"
 	AnthropicCopyCodeRedirectURI = "https://platform.claude.com/oauth/code/callback"
 )
-
-// AnthropicCallbackHost returns the loopback host to bind; PI_OAUTH_CALLBACK_HOST
-// overrides it (upstream CALLBACK_HOST).
-func AnthropicCallbackHost() string {
-	if host := os.Getenv("PI_OAUTH_CALLBACK_HOST"); host != "" {
-		return host
-	}
-	return "127.0.0.1"
-}
 
 // OAuthAuthorizationInput is the parsed manual-paste input.
 type OAuthAuthorizationInput struct {
@@ -141,7 +131,7 @@ type OAuthCallbackServer struct {
 // asks the operating system for a free one. The advertised URI names the port that was
 // actually bound, because that is what the browser is told to come back to.
 func StartOAuthCallbackServer(expectedState string, port int) (*OAuthCallbackServer, error) {
-	host := AnthropicCallbackHost()
+	host := oauthCallbackHost()
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		return nil, err

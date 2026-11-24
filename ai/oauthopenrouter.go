@@ -34,8 +34,8 @@ const (
 // and mocks fetch).
 var openRouterTokenURLValue = OpenRouterTokenEndpoint
 
-// oauthCallbackHost returns the loopback host for OAuth callbacks
-// (PI_OAUTH_CALLBACK_HOST overrides it).
+// oauthCallbackHost returns the loopback host every OAuth callback server binds
+// (upstream CALLBACK_HOST in each provider; PI_OAUTH_CALLBACK_HOST overrides it).
 func oauthCallbackHost() string {
 	if host := os.Getenv("PI_OAUTH_CALLBACK_HOST"); host != "" {
 		return host

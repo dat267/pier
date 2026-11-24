@@ -222,7 +222,7 @@ func TestOAuthCallbackServerDropsAStalledConnection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	conn, err := net.Dial("tcp", net.JoinHostPort(AnthropicCallbackHost(), parsed.Port()))
+	conn, err := net.Dial("tcp", net.JoinHostPort(oauthCallbackHost(), parsed.Port()))
 	if err != nil {
 		t.Fatal(err)
 	}
