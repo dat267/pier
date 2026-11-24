@@ -16,24 +16,12 @@ func TestSessionCompactionReplaysTheLastTurnPrefix(t *testing.T) {
 	dir := t.TempDir()
 	manager := NewSessionManager(dir, nil)
 	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 8192}
-	answer := func(requestModel *ai.Model, text string) *ai.AssistantMessageEventStream {
-		message := &ai.AssistantMessage{
-			API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
-			Content: ai.ContentList{ai.TextContent{Text: text}}, StopReason: ai.StopStop,
-			Timestamp: time.Now().UnixMilli(), Usage: ai.Usage{Input: 10, TotalTokens: 10},
-		}
-		stream := ai.NewAssistantMessageEventStream()
-		go func() {
-			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: message.StopReason, Message: message})
-		}()
-		return stream
-	}
 	var turnPrefix []ai.Message
 	session, err := NewAgentSession(&SessionConfig{
 		Cwd: dir, Sessions: manager, Model: model,
 		StreamFn: func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 			turnPrefix = append([]ai.Message{}, transcript.Messages...)
-			return answer(requestModel, "done")
+			return usageReplyStream(requestModel, "done")
 		},
 		ConvertToLlm: ConvertToLlm, Settings: SessionSettings{Compaction: smallCompactionSettings()},
 		Control: &AgentSessionControl{autoCompaction: true},
@@ -51,7 +39,7 @@ func TestSessionCompactionReplaysTheLastTurnPrefix(t *testing.T) {
 	var summaryRequests []ai.TranscriptContext
 	session.CompactionStreamFn = func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 		summaryRequests = append(summaryRequests, transcript)
-		return answer(requestModel, "## Goal\ncontinue")
+		return usageReplyStream(requestModel, "## Goal\ncontinue")
 	}
 	if _, err := session.CompactSession(context.Background(), ""); err != nil {
 		t.Fatal(err)
@@ -82,22 +70,10 @@ func TestSessionCompactionReplaysTheLastTurnPrefix(t *testing.T) {
 func TestSessionCompactionSkipsThePrefixAfterBranchNavigation(t *testing.T) {
 	manager := NewSessionManager(t.TempDir(), nil)
 	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 8192}
-	answer := func(requestModel *ai.Model, text string) *ai.AssistantMessageEventStream {
-		message := &ai.AssistantMessage{
-			API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
-			Content: ai.ContentList{ai.TextContent{Text: text}}, StopReason: ai.StopStop,
-			Timestamp: time.Now().UnixMilli(), Usage: ai.Usage{Input: 10, TotalTokens: 10},
-		}
-		stream := ai.NewAssistantMessageEventStream()
-		go func() {
-			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: message.StopReason, Message: message})
-		}()
-		return stream
-	}
 	session, err := NewAgentSession(&SessionConfig{
 		Cwd: t.TempDir(), Sessions: manager, Model: model, ConvertToLlm: ConvertToLlm,
 		StreamFn: func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
-			return answer(requestModel, "done")
+			return usageReplyStream(requestModel, "done")
 		},
 		Settings: SessionSettings{Compaction: smallCompactionSettings()},
 		Control:  &AgentSessionControl{autoCompaction: true},
@@ -129,7 +105,7 @@ func TestSessionCompactionSkipsThePrefixAfterBranchNavigation(t *testing.T) {
 	var summaryRequests []ai.TranscriptContext
 	session.CompactionStreamFn = func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 		summaryRequests = append(summaryRequests, transcript)
-		return answer(requestModel, "## Goal\ncontinue")
+		return usageReplyStream(requestModel, "## Goal\ncontinue")
 	}
 	if _, err := session.CompactSession(context.Background(), ""); err != nil {
 		t.Fatal(err)
@@ -175,23 +151,11 @@ func TestSessionCompactionReplaysAppendedContext(t *testing.T) {
 	manager := NewSessionManager(t.TempDir(), nil)
 	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 8192}
 	var turnPrefix []ai.Message
-	answer := func(requestModel *ai.Model, text string) *ai.AssistantMessageEventStream {
-		message := &ai.AssistantMessage{
-			API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
-			Content: ai.ContentList{ai.TextContent{Text: text}}, StopReason: ai.StopStop,
-			Timestamp: time.Now().UnixMilli(), Usage: ai.Usage{Input: 10, TotalTokens: 10},
-		}
-		stream := ai.NewAssistantMessageEventStream()
-		go func() {
-			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: message.StopReason, Message: message})
-		}()
-		return stream
-	}
 	session, err := NewAgentSession(&SessionConfig{
 		Cwd: t.TempDir(), Sessions: manager, Model: model, ConvertToLlm: ConvertToLlm,
 		StreamFn: func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 			turnPrefix = append([]ai.Message{}, transcript.Messages...)
-			return answer(requestModel, "done")
+			return usageReplyStream(requestModel, "done")
 		},
 		Settings: SessionSettings{Compaction: smallCompactionSettings()},
 		Control:  &AgentSessionControl{autoCompaction: true},
@@ -208,7 +172,7 @@ func TestSessionCompactionReplaysAppendedContext(t *testing.T) {
 	var summaryRequests []ai.TranscriptContext
 	session.CompactionStreamFn = func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 		summaryRequests = append(summaryRequests, transcript)
-		return answer(requestModel, "## Goal\ncontinue")
+		return usageReplyStream(requestModel, "## Goal\ncontinue")
 	}
 	if _, err := session.CompactSession(context.Background(), ""); err != nil {
 		t.Fatal(err)
@@ -241,22 +205,10 @@ func TestSessionCompactionReplaysAppendedContext(t *testing.T) {
 func TestSessionCompactionReplaysAcrossTurns(t *testing.T) {
 	manager := NewSessionManager(t.TempDir(), nil)
 	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 8192}
-	answer := func(requestModel *ai.Model, text string) *ai.AssistantMessageEventStream {
-		message := &ai.AssistantMessage{
-			API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
-			Content: ai.ContentList{ai.TextContent{Text: text}}, StopReason: ai.StopStop,
-			Timestamp: time.Now().UnixMilli(), Usage: ai.Usage{Input: 10, TotalTokens: 10},
-		}
-		stream := ai.NewAssistantMessageEventStream()
-		go func() {
-			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: message.StopReason, Message: message})
-		}()
-		return stream
-	}
 	session, err := NewAgentSession(&SessionConfig{
 		Cwd: t.TempDir(), Sessions: manager, Model: model, ConvertToLlm: ConvertToLlm,
 		StreamFn: func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
-			return answer(requestModel, "done")
+			return usageReplyStream(requestModel, "done")
 		},
 		Settings: SessionSettings{Compaction: smallCompactionSettings()},
 		Control:  &AgentSessionControl{autoCompaction: true},
@@ -272,7 +224,7 @@ func TestSessionCompactionReplaysAcrossTurns(t *testing.T) {
 	var summaryRequests []ai.TranscriptContext
 	session.CompactionStreamFn = func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 		summaryRequests = append(summaryRequests, transcript)
-		return answer(requestModel, "## Goal\ncontinue")
+		return usageReplyStream(requestModel, "## Goal\ncontinue")
 	}
 	if _, err := session.CompactSession(context.Background(), ""); err != nil {
 		t.Fatal(err)
@@ -304,24 +256,12 @@ func TestSessionCompactionReplaysAcrossTurns(t *testing.T) {
 func TestSessionCompactionReplaysPastACustomMessage(t *testing.T) {
 	manager := NewSessionManager(t.TempDir(), nil)
 	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 8192}
-	answer := func(requestModel *ai.Model, text string) *ai.AssistantMessageEventStream {
-		message := &ai.AssistantMessage{
-			API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
-			Content: ai.ContentList{ai.TextContent{Text: text}}, StopReason: ai.StopStop,
-			Timestamp: time.Now().UnixMilli(), Usage: ai.Usage{Input: 10, TotalTokens: 10},
-		}
-		stream := ai.NewAssistantMessageEventStream()
-		go func() {
-			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: message.StopReason, Message: message})
-		}()
-		return stream
-	}
 	var turnPrefix []ai.Message
 	session, err := NewAgentSession(&SessionConfig{
 		Cwd: t.TempDir(), Sessions: manager, Model: model, ConvertToLlm: ConvertToLlm,
 		StreamFn: func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 			turnPrefix = append([]ai.Message{}, transcript.Messages...)
-			return answer(requestModel, "done")
+			return usageReplyStream(requestModel, "done")
 		},
 		Settings: SessionSettings{Compaction: smallCompactionSettings()},
 		Control:  &AgentSessionControl{autoCompaction: true},
@@ -348,7 +288,7 @@ func TestSessionCompactionReplaysPastACustomMessage(t *testing.T) {
 	var summaryRequests []ai.TranscriptContext
 	session.CompactionStreamFn = func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 		summaryRequests = append(summaryRequests, transcript)
-		return answer(requestModel, "## Goal\ncontinue")
+		return usageReplyStream(requestModel, "## Goal\ncontinue")
 	}
 	if _, err := session.CompactSession(context.Background(), ""); err != nil {
 		t.Fatal(err)
@@ -384,22 +324,10 @@ func TestSessionCompactionReplaysAfterResume(t *testing.T) {
 	dir := t.TempDir()
 	manager := NewSessionManager(dir, nil)
 	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 8192}
-	answer := func(requestModel *ai.Model, text string) *ai.AssistantMessageEventStream {
-		message := &ai.AssistantMessage{
-			API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
-			Content: ai.ContentList{ai.TextContent{Text: text}}, StopReason: ai.StopStop,
-			Timestamp: time.Now().UnixMilli(), Usage: ai.Usage{Input: 10, TotalTokens: 10},
-		}
-		stream := ai.NewAssistantMessageEventStream()
-		go func() {
-			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: message.StopReason, Message: message})
-		}()
-		return stream
-	}
 	first, err := NewAgentSession(&SessionConfig{
 		Cwd: dir, Sessions: manager, Model: model, ConvertToLlm: ConvertToLlm,
 		StreamFn: func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
-			return answer(requestModel, "done")
+			return usageReplyStream(requestModel, "done")
 		},
 		Settings: SessionSettings{Compaction: smallCompactionSettings()},
 		Control:  &AgentSessionControl{autoCompaction: true},
@@ -425,7 +353,7 @@ func TestSessionCompactionReplaysAfterResume(t *testing.T) {
 		Cwd: dir, Sessions: resumed, Model: model, ConvertToLlm: ConvertToLlm,
 		StreamFn: func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 			turnPrefix = append([]ai.Message{}, transcript.Messages...)
-			return answer(requestModel, "next")
+			return usageReplyStream(requestModel, "next")
 		},
 		Settings: SessionSettings{Compaction: smallCompactionSettings()},
 		Control:  &AgentSessionControl{autoCompaction: true},
@@ -443,7 +371,7 @@ func TestSessionCompactionReplaysAfterResume(t *testing.T) {
 	var summaryRequests []ai.TranscriptContext
 	session.CompactionStreamFn = func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 		summaryRequests = append(summaryRequests, transcript)
-		return answer(requestModel, "## Goal\ncontinue")
+		return usageReplyStream(requestModel, "## Goal\ncontinue")
 	}
 	if _, err := session.CompactSession(context.Background(), ""); err != nil {
 		t.Fatal(err)
@@ -459,4 +387,19 @@ func TestSessionCompactionReplaysAfterResume(t *testing.T) {
 			t.Fatalf("message %d is not the resumed turn's", i)
 		}
 	}
+}
+
+// usageReplyStream answers with a done Anthropic-API message carrying text,
+// a current timestamp and a fixed 10-token usage.
+func usageReplyStream(requestModel *ai.Model, text string) *ai.AssistantMessageEventStream {
+	message := &ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
+		Content: ai.ContentList{ai.TextContent{Text: text}}, StopReason: ai.StopStop,
+		Timestamp: time.Now().UnixMilli(), Usage: ai.Usage{Input: 10, TotalTokens: 10},
+	}
+	stream := ai.NewAssistantMessageEventStream()
+	go func() {
+		stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: message.StopReason, Message: message})
+	}()
+	return stream
 }
