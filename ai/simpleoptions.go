@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"cmp"
 	"fmt"
 	"github.com/dat267/pier/internal/jsnum"
 	"math"
@@ -115,10 +116,7 @@ var DefaultThinkingBudgets = ThinkingBudgets{
 // samplingThinkingLevel maps an absent reasoning effort to off, the
 // `options?.reasoningEffort ?? "off"` the sampling resolver expects.
 func samplingThinkingLevel(effort ThinkingLevel) ModelThinkingLevel {
-	if effort == "" {
-		return ThinkOff
-	}
-	return effort
+	return cmp.Or(effort, ThinkOff)
 }
 
 // ResolveSamplingParams merges the model defaults, the parameters selected by

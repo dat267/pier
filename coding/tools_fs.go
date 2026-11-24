@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -504,10 +505,7 @@ func jsArraySliceIndex(index float64, length int) int {
 }
 
 func orDefault(v, d string) string {
-	if v == "" {
-		return d
-	}
-	return v
+	return cmp.Or(v, d)
 }
 
 func sortCaseInsensitive(names []string) {

@@ -1,6 +1,9 @@
 package protocol
 
-import "fmt"
+import (
+	"cmp"
+	"fmt"
+)
 
 // JSONRPCVersion is the required jsonrpc member value.
 const JSONRPCVersion = "2.0"
@@ -35,10 +38,7 @@ func (e *McpError) Error() string { return e.Msg }
 type McpConnectionClosedError struct{ Msg string }
 
 func (e *McpConnectionClosedError) Error() string {
-	if e.Msg == "" {
-		return "MCP connection closed"
-	}
-	return e.Msg
+	return cmp.Or(e.Msg, "MCP connection closed")
 }
 
 // McpTimeoutError signals a request timeout (upstream McpTimeoutError).
@@ -53,8 +53,5 @@ func (e *McpTimeoutError) Error() string {
 type McpAbortError struct{ Msg string }
 
 func (e *McpAbortError) Error() string {
-	if e.Msg == "" {
-		return "MCP request aborted"
-	}
-	return e.Msg
+	return cmp.Or(e.Msg, "MCP request aborted")
 }

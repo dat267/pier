@@ -1,6 +1,7 @@
 package oauth
 
 import (
+	"cmp"
 	"fmt"
 
 	"github.com/dat267/pier/ai"
@@ -15,10 +16,7 @@ type OAuthError struct {
 }
 
 func (e *OAuthError) Error() string {
-	if e.Msg == "" {
-		return e.Code
-	}
-	return e.Msg
+	return cmp.Or(e.Msg, e.Code)
 }
 
 // OAuthIssuerMismatchError reports an RFC 9207 issuer mismatch (upstream

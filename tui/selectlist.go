@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"cmp"
 	"github.com/dat267/pier/internal/jsnum"
 	"strconv"
 	"strings"
@@ -354,10 +355,7 @@ func (s *SelectList) truncatePrimary(item SelectItem, isSelected bool, maxWidth 
 }
 
 func (s *SelectList) getDisplayValue(item SelectItem) string {
-	if item.Label != "" {
-		return item.Label
-	}
-	return item.Value
+	return cmp.Or(item.Label, item.Value)
 }
 
 func (s *SelectList) notifySelectionChange() {
