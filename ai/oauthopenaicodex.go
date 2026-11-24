@@ -568,7 +568,7 @@ func LoginOpenAICodex(interaction *AuthInteraction) (*OAuthCredential, error) {
 		code = parsed.Code
 	}
 	if code == "" {
-		return nil, errors.New("Missing authorization code")
+		return nil, errMissingAuthorizationCode
 	}
 	token, err := ExchangeOpenAICodexAuthorizationCode(ctx, code, flow.Verifier, openAICodexRedirectURI())
 	if err != nil {

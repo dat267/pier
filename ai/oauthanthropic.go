@@ -439,7 +439,7 @@ func LoginAnthropic(interaction *AuthInteraction) (*OAuthCredential, error) {
 		}
 	}
 	if code == "" {
-		return nil, errors.New("Missing authorization code")
+		return nil, errMissingAuthorizationCode
 	}
 	if state == "" {
 		return nil, errors.New("Missing OAuth state")
@@ -488,7 +488,7 @@ func LoginAnthropicCopyCode(interaction *AuthInteraction) (*OAuthCredential, err
 		return nil, errors.New("OAuth state mismatch")
 	}
 	if parsed.Code == "" {
-		return nil, errors.New("Missing authorization code")
+		return nil, errMissingAuthorizationCode
 	}
 	if interaction.Notify != nil {
 		interaction.Notify(AuthEvent{Type: AuthEventProgress, Message: "Exchanging authorization code for tokens..."})

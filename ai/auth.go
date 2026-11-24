@@ -385,11 +385,15 @@ type OAuthAuth struct {
 }
 
 // The OAuth flows' shared errors: a login started without an interaction to
-// prompt through, and a prompt the user dismissed (upstream throws new
-// Error("Login cancelled") from each flow's prompt handling).
+// prompt through, a prompt the user dismissed (upstream throws new
+// Error("Login cancelled") from each flow's prompt handling), a refresh or
+// auth derivation handed no credential, and a callback or pasted redirect
+// without a code (upstream new Error("Missing authorization code")).
 var (
-	errAuthInteractionRequired = errors.New("auth interaction is required")
-	errLoginCancelled          = errors.New("Login cancelled")
+	errAuthInteractionRequired  = errors.New("auth interaction is required")
+	errLoginCancelled           = errors.New("Login cancelled")
+	errCredentialRequired       = errors.New("credential is required")
+	errMissingAuthorizationCode = errors.New("Missing authorization code")
 )
 
 // refreshWithToken is the Refresh of providers that exchange the stored
@@ -398,7 +402,7 @@ var (
 func refreshWithToken(refresh func(context.Context, string) (*OAuthCredential, error)) func(context.Context, *OAuthCredential) (*OAuthCredential, error) {
 	return func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
 		if credential == nil {
-			return nil, errors.New("credential is required")
+			return nil, errCredentialRequired
 		}
 		return refresh(ctx, credential.Refresh)
 	}
@@ -408,7 +412,7 @@ func refreshWithToken(refresh func(context.Context, string) (*OAuthCredential, e
 // key (upstream toAuth(credential) { return { apiKey: credential.access } }).
 func accessTokenAuth(credential *OAuthCredential) (*ModelAuth, error) {
 	if credential == nil {
-		return nil, errors.New("credential is required")
+		return nil, errCredentialRequired
 	}
 	return &ModelAuth{APIKey: credential.Access}, nil
 }

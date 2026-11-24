@@ -552,7 +552,7 @@ func CreateRadiusOAuth(options RadiusOAuthOptions) *OAuthAuth {
 		},
 		Refresh: func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
 			if credential == nil {
-				return nil, errors.New("credential is required")
+				return nil, errCredentialRequired
 			}
 			return RequestRadiusOAuthToken(ctx, gateway, map[string]string{
 				"grant_type":    "refresh_token",

@@ -454,7 +454,7 @@ func LoginOpenRouter(interaction *AuthInteraction) (*OAuthCredential, error) {
 	}
 	code, ok := ParseOpenRouterAuthorizationInput(manual.input)
 	if !ok {
-		return nil, errors.New("Missing authorization code")
+		return nil, errMissingAuthorizationCode
 	}
 	if interaction.Notify != nil {
 		interaction.Notify(AuthEvent{Type: AuthEventProgress, Message: "Exchanging authorization code for an API key..."})

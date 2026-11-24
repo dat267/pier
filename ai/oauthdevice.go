@@ -639,7 +639,7 @@ func KimiCodingOAuth() *OAuthAuth {
 		Login:          LoginKimiCoding,
 		Refresh: func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
 			if credential == nil {
-				return nil, errors.New("credential is required")
+				return nil, errCredentialRequired
 			}
 			token, err := RefreshKimiToken(ctx, KimiCodingOAuthHost(), credential.Refresh)
 			if err != nil {
@@ -650,7 +650,7 @@ func KimiCodingOAuth() *OAuthAuth {
 		},
 		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
 			if credential == nil {
-				return nil, errors.New("credential is required")
+				return nil, errCredentialRequired
 			}
 			bearer := "Bearer " + credential.Access
 			return &ModelAuth{Headers: ProviderHeaders{"Authorization": &bearer}}, nil

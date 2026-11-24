@@ -678,13 +678,13 @@ func GitHubCopilotOAuth() *OAuthAuth {
 		Login:          LoginGitHubCopilot,
 		Refresh: func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
 			if credential == nil {
-				return nil, errors.New("credential is required")
+				return nil, errCredentialRequired
 			}
 			return RefreshGitHubCopilotToken(ctx, credential.Refresh, copilotEnterpriseDomain(credential))
 		},
 		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
 			if credential == nil {
-				return nil, errors.New("credential is required")
+				return nil, errCredentialRequired
 			}
 			return &ModelAuth{
 				APIKey:  credential.Access,

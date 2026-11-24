@@ -199,7 +199,7 @@ func StartOpenAIChatGPTCallbackServer(expectedState string) (*OpenAIChatGPTCallb
 func authorizationResultFromCallback(parsed *url.URL, expectedState string) (OpenAIChatGPTAuthorizationResult, error) {
 	code := parsed.Query().Get("code")
 	if code == "" {
-		return OpenAIChatGPTAuthorizationResult{}, errors.New("Missing authorization code")
+		return OpenAIChatGPTAuthorizationResult{}, errMissingAuthorizationCode
 	}
 	state := parsed.Query().Get("state")
 	if state == "" {
