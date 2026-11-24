@@ -8925,8 +8925,11 @@ tools are registered in the ordinary registry, so `/tools` shows and can disable
 them like any other tool. Those tools have their own transcript frames: a tool with
 no built-in renderer falls through to the generic MCP frame, which printed the raw
 argument JSON, so `cron_create` showed a wall of `{"cron":...,"prompt":...}`. They
-now render what the call means instead: the schedule in words plus the prompt, the
-job being cancelled, and the wakeup delay or its stop.
+now render what the call means instead: one line each, like bash and ls, with the
+schedule in words and a shortened prompt, the job being cancelled, and the wakeup
+delay or its stop. A successful create draws no body, because the model-facing text
+repeats the schedule the call frame already shows, and a cron_list row drops the
+next-run timestamp that made it wrap.
 
 That needs care on the primary session: the command
 builds it before the app exists, so it is created with no scheduler and registers

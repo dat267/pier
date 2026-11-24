@@ -26,18 +26,27 @@ var cronCreateRenderers = ToolRenderers{
 		if value, ok := argsMap["recurring"].(bool); ok {
 			recurring = value
 		}
-		title := theme.Fg("toolTitle", theme.Bold("cron_create"))
+		// One line, like bash and ls: the schedule, then a short preview of the
+		// prompt, all inside the title's own styling instead of a second line.
 		label := humanScheduleForDisplay(cron)
 		if label == "" {
 			label = "(no schedule)"
 		}
-		text.SetText(title + " " + theme.Fg("toolOutput", label) + recurringSuffix(recurring, theme) +
-			"\n  " + theme.Fg("toolOutput", firstLineEllipsis(prompt, 100)))
+		text.SetText(theme.Fg("toolTitle", theme.Bold(
+			"cron_create "+label+outcomeSuffix(recurring)+": "+promptPreview(prompt))))
 		return text
 	},
 	RenderResult: func(result *SortToolResultContent, options ToolRenderResultOptions, theme *Theme, context *ToolRenderContext) tui.Component {
+		// The model-facing text repeats the schedule the call frame already shows,
+		// so the transcript gets the outcome alone. An error keeps its text.
 		text := toolTextComponent(context)
-		text.SetText(renderPlainResult(result, options, theme, context))
+		if result.IsError {
+			text.SetText(renderPlainResult(result, options, theme, context))
+			return text
+		}
+		// The model-facing text repeats the schedule the call frame already shows,
+		// so a successful create draws no body at all.
+		text.SetText("")
 		return text
 	},
 }
@@ -72,8 +81,13 @@ var cronListRenderers = ToolRenderers{
 			text.SetText(theme.Fg("toolOutput", "(no scheduled jobs)"))
 			return text
 		}
-		shown := truncatedOutputLines(output, expandedMaxLines(options, output, 20), theme)
-		text.SetText(shown + truncationSuffix(result.Details, theme))
+		var lines []string
+		for _, line := range strings.Split(output, "\n") {
+			lines = append(lines, compactJobRow(line))
+		}
+		joined := strings.Join(lines, "\n")
+		shown := truncatedOutputLines(joined, expandedMaxLines(options, joined, 20), theme)
+		text.SetText(strings.TrimLeft(shown, "\n") + truncationSuffix(result.Details, theme))
 		return text
 	},
 }
@@ -103,6 +117,23 @@ var scheduleWakeupRenderers = ToolRenderers{
 	},
 }
 
+// compactJobRow shortens one job row for a frame: the next-run timestamp is noise
+// next to the schedule, and the prompt is cut so a job stays one line.
+func compactJobRow(row string) string {
+	trimmed := strings.TrimSpace(row)
+	if trimmed == "" {
+		return ""
+	}
+	// "<id> — <schedule> (<kind>), next run <time>: <prompt>"
+	if at := strings.Index(trimmed, ", next run "); at >= 0 {
+		rest := trimmed[at:]
+		if colon := strings.Index(rest, ": "); colon >= 0 {
+			trimmed = trimmed[:at] + ": " + promptPreview(rest[colon+2:])
+		}
+	}
+	return trimmed
+}
+
 // humanScheduleForDisplay names a cron expression the way the tool reports it.
 func humanScheduleForDisplay(cron string) string {
 	if strings.TrimSpace(cron) == "" {
@@ -111,13 +142,29 @@ func humanScheduleForDisplay(cron string) string {
 	return coding.HumanCronSchedule(cron)
 }
 
-// recurringSuffix labels a one-shot job, since recurring is the default and saying
+// outcomeSuffix labels a one-shot job, since recurring is the default and saying
 // so on every row is noise.
-func recurringSuffix(recurring bool, theme *Theme) string {
+func outcomeSuffix(recurring bool) string {
 	if recurring {
 		return ""
 	}
-	return theme.Fg("toolOutput", " (once)")
+	return " (once)"
+}
+
+// promptPreview shortens a scheduled prompt to something that fits a one-line
+// frame. The prompt is a command-like string, so a cut one gets an ellipsis and
+// the agent's own text is kept rather than paraphrased.
+func promptPreview(prompt string) string {
+	trimmed := strings.TrimSpace(prompt)
+	if index := strings.IndexByte(trimmed, '\n'); index >= 0 {
+		trimmed = strings.TrimSpace(trimmed[:index]) + " …"
+	}
+	const limit = 60
+	runes := []rune(trimmed)
+	if len(runes) <= limit {
+		return trimmed
+	}
+	return string(runes[:limit]) + "…"
 }
 
 // firstLineEllipsis keeps a prompt readable in a one-line frame.

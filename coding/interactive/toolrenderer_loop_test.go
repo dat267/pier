@@ -27,6 +27,15 @@ func TestLoopToolRenderers(t *testing.T) {
 			t.Errorf("cron_create call lacks %q:\n%s", want, call)
 		}
 	}
+	// One line, like bash and ls: the frame already ran to two lines with the
+	// prompt on its own, which is what the user saw as badly formatted.
+	if lines := strings.Split(strings.TrimRight(call, " \n"), "\n"); len(lines) != 1 {
+		t.Errorf("cron_create call is %d lines, want one:\n%s", len(lines), call)
+	}
+	// A long prompt is shortened rather than wrapped.
+	if runes := []rune(strings.TrimRight(call, " ")); len(runes) > 110 {
+		t.Errorf("cron_create call is %d runes, too wide for a one-line frame", len(runes))
+	}
 	for _, unwanted := range []string{`"cron"`, `{`, `}`} {
 		if strings.Contains(call, unwanted) {
 			t.Errorf("cron_create call still shows raw JSON (%q):\n%s", unwanted, call)
@@ -70,9 +79,37 @@ func TestLoopToolRenderers(t *testing.T) {
 		Type: "text",
 		Text: "1 — Every minute (recurring), next run 2026-11-25T05:08:00+07:00: tell the time",
 	}}}
+	// A successful create draws no body: the model-facing text repeats the
+	// schedule the call frame already shows.
+	created := &SortToolResultContent{Content: []ToolResultContent{{
+		Type: "text",
+		Text: "Scheduled recurring job 1 (Every minute). Cancel it sooner with cron_delete.",
+	}}}
+	if got := strings.TrimSpace(renderResult("cron_create", created, false, theme)); got != "" {
+		t.Errorf("a successful create still drew a body: %q", got)
+	}
+	// An error keeps its text, so a refused schedule is still readable.
+	failed := &SortToolResultContent{
+		IsError: true,
+		Content: []ToolResultContent{{Type: "text", Text: "invalid cron expression"}},
+	}
+	if got := renderResult("cron_create", failed, false, theme); !strings.Contains(got, "invalid cron expression") {
+		t.Errorf("an error lost its text: %q", got)
+	}
 	rows := renderResult("cron_list", listed, false, theme)
 	if !strings.Contains(rows, "Every minute") || !strings.Contains(rows, "tell the time") {
 		t.Errorf("cron_list result lost the job:\n%s", rows)
+	}
+	// One line per job, and no leading blank: the timestamp is noise beside the
+	// schedule, and the prompt is cut so a row does not wrap.
+	if strings.HasPrefix(rows, "\n") {
+		t.Errorf("cron_list result starts with a blank line:\n%q", rows)
+	}
+	if lines := strings.Split(strings.TrimRight(rows, " \n"), "\n"); len(lines) != 1 {
+		t.Errorf("one job rendered as %d lines, want one:\n%s", len(lines), rows)
+	}
+	if strings.Contains(rows, "T05:08:00") {
+		t.Errorf("cron_list still shows the raw next-run timestamp:\n%s", rows)
 	}
 
 	// schedule_wakeup shows the delay, and "stop" for a stop.
