@@ -2,6 +2,7 @@ package coding
 
 import (
 	"slices"
+	"strings"
 )
 
 // Extended globs (`@(a|b)`, `?(...)`, `+(...)`, `*(...)`, `!(...)`) in one
@@ -86,7 +87,7 @@ func globExtTokenize(pattern []rune) []globExtToken {
 				i += consumed
 				continue
 			}
-		case i+1 < len(pattern) && pattern[i+1] == '(' && containsRune(globExtTypes, char):
+		case i+1 < len(pattern) && pattern[i+1] == '(' && strings.ContainsRune(globExtTypes, char):
 			tokens = append(tokens, globExtToken{kind: globTokOpen, extType: char})
 			i += 2
 			continue
@@ -106,15 +107,6 @@ func globExtTokenize(pattern []rune) []globExtToken {
 		i++
 	}
 	return tokens
-}
-
-func containsRune(set string, char rune) bool {
-	for _, candidate := range set {
-		if candidate == char {
-			return true
-		}
-	}
-	return false
 }
 
 // globExtPairs maps each open token to its close token.
@@ -380,7 +372,7 @@ func (sim globExtSim) step(state *globExtState, char rune, i int, top bool) *glo
 // nil when it holds none (or is the literal `?()`-style shape the reference
 // reads with extglobs off), so the plain segment matcher applies.
 func globExtSegment(pattern []rune) *globExtNode {
-	if len(pattern) == 3 && containsRune("?*+@", pattern[0]) && pattern[1] == '(' && pattern[2] == ')' {
+	if len(pattern) == 3 && strings.ContainsRune("?*+@", pattern[0]) && pattern[1] == '(' && pattern[2] == ')' {
 		return nil
 	}
 	tokens := globExtTokenize(pattern)
