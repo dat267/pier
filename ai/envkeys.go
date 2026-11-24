@@ -70,10 +70,7 @@ func apiKeyEnvVars(provider string) []string {
 		"xiaomi-token-plan-ams":         {"XIAOMI_TOKEN_PLAN_AMS_API_KEY"},
 		"xiaomi-token-plan-sgp":         {"XIAOMI_TOKEN_PLAN_SGP_API_KEY"},
 	}
-	if envVars, ok := envMap[provider]; ok {
-		return envVars
-	}
-	return nil
+	return envMap[provider]
 }
 
 // FindEnvKeys finds configured environment variables that can provide an API
