@@ -390,10 +390,7 @@ func (c *RpcClient) Start(ctx context.Context) error {
 	if exitErr != nil {
 		return exitErr
 	}
-	if err := startCtx.Err(); err != nil {
-		return err
-	}
-	return nil
+	return startCtx.Err()
 }
 
 // Stop terminates the child, escalating to a kill after one second.

@@ -105,10 +105,7 @@ func (r *payloadReader) hydrate(entry *SessionEntry) error {
 	if err != nil {
 		return err
 	}
-	if err := r.fill(entry, line); err != nil {
-		return err
-	}
-	return nil
+	return r.fill(entry, line)
 }
 
 // fill decodes one retained line into a lazy entry. The line was scanned when
