@@ -887,10 +887,7 @@ func (p *CombinedAutocompleteProvider) ShouldTriggerFileCompletion(lines []strin
 	cursorCol = max(cursorCol, 0)
 	textBeforeCursor := currentLine[:cursorCol]
 	trimmed := ai.JSTrim(textBeforeCursor)
-	if strings.HasPrefix(trimmed, "/") && !strings.Contains(trimmed, " ") {
-		return false
-	}
-	return true
+	return !strings.HasPrefix(trimmed, "/") || strings.Contains(trimmed, " ")
 }
 
 var _ AutocompleteProvider = (*CombinedAutocompleteProvider)(nil)

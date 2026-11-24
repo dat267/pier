@@ -28,10 +28,7 @@ func interruptsParagraph(line string) bool {
 	// script/pre/style/textarea/comment, and only at the very line start (its
 	// other alternatives carry ` {0,3}` but this one does not, so `  <br>` does
 	// not interrupt either). quoteHTMLInterrupt (quote.go) is that test.
-	if line != "" && line[0] == '<' && quoteHTMLInterrupt.MatchString(line) {
-		return true
-	}
-	return false
+	return line != "" && line[0] == '<' && quoteHTMLInterrupt.MatchString(line)
 }
 
 // listMarkerInterrupts reports a line whose list marker may interrupt a

@@ -1064,10 +1064,7 @@ func validURIText(value string, allowUnicode bool) bool {
 			return false
 		}
 	}
-	if allowUnicode && !utf8.ValidString(value) {
-		return false
-	}
-	return true
+	return !allowUnicode || utf8.ValidString(value)
 }
 
 func absoluteURI(value string) bool {
