@@ -231,13 +231,6 @@ func metaMintAPIKey(ctx context.Context, identityToken string) (*OAuthCredential
 		Expires: time.Now().UnixMilli() + metaAPIKeyLifetimeMS}, nil
 }
 
-func metaIntValue(value *int) int {
-	if value == nil {
-		return 0
-	}
-	return *value
-}
-
 func loginMeta(interaction *AuthInteraction) (*OAuthCredential, error) {
 	device, err := metaStartDeviceAuthorization(interaction.Ctx)
 	if err != nil {
@@ -247,8 +240,8 @@ func loginMeta(interaction *AuthInteraction) (*OAuthCredential, error) {
 		Type:            AuthEventDeviceCode,
 		UserCode:        device.UserCode,
 		VerificationURI: device.VerificationURI,
-		IntervalSeconds: metaIntValue(device.IntervalSeconds),
-		ExpiresSeconds:  metaIntValue(device.ExpiresInSeconds),
+		IntervalSeconds: deref(device.IntervalSeconds),
+		ExpiresSeconds:  deref(device.ExpiresInSeconds),
 	})
 	identityToken, err := metaPollForIdentityToken(interaction.Ctx, device)
 	if err != nil {

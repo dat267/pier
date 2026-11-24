@@ -641,11 +641,13 @@ func ConvertAnthropicMessages(
 	return ConvertedAnthropicMessages{Messages: params, AssistantLevels: assistantLevels}, nil
 }
 
-func deref(s *string) string {
-	if s == nil {
-		return ""
+// deref is *value, or the zero value for nil.
+func deref[T any](value *T) T {
+	if value == nil {
+		var zero T
+		return zero
 	}
-	return *s
+	return *value
 }
 
 func isAnthropicEffort(value string) bool {

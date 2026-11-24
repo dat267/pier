@@ -1346,21 +1346,21 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 		}
 		if event.Usage != nil {
 			usage := event.Usage
-			output.Usage.Input = derefInt64(usage.InputTokens)
-			output.Usage.Output = derefInt64(usage.OutputTokens)
-			output.Usage.CacheRead = derefInt64(usage.CacheReadInputTokens)
-			output.Usage.CacheWrite = derefInt64(usage.CacheWriteInputTokens)
+			output.Usage.Input = deref(usage.InputTokens)
+			output.Usage.Output = deref(usage.OutputTokens)
+			output.Usage.CacheRead = deref(usage.CacheReadInputTokens)
+			output.Usage.CacheWrite = deref(usage.CacheWriteInputTokens)
 			if usage.CacheDetails != nil {
 				var oneHourNumber float64
 				for _, detail := range *usage.CacheDetails {
 					if detail.TTL == "1h" {
-						oneHourNumber += float64(derefInt64(detail.InputTokens))
+						oneHourNumber += float64(deref(detail.InputTokens))
 					}
 				}
 				oneHour := jsnum.ToInt64(oneHourNumber)
 				output.Usage.CacheWrite1h = &oneHour
 			}
-			output.Usage.TotalTokens = derefInt64(usage.TotalTokens)
+			output.Usage.TotalTokens = deref(usage.TotalTokens)
 			if output.Usage.TotalTokens == 0 {
 				output.Usage.TotalTokens = jsnum.ToInt64(float64(output.Usage.Input) + float64(output.Usage.Output))
 			}
@@ -1368,13 +1368,6 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 		}
 	}
 	return nil
-}
-
-func derefInt64(value *int64) int64 {
-	if value == nil {
-		return 0
-	}
-	return *value
 }
 
 // bedrockExceptionClassName maps the event stream's exception member name to

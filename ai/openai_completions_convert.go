@@ -461,7 +461,7 @@ func ParseChunkUsage(raw []byte, model *Model) Usage {
 	}
 	_ = json.Unmarshal(raw, &u)
 
-	promptTokens := derefInt64(u.PromptTokens)
+	promptTokens := deref(u.PromptTokens)
 	cacheReadTokens := int64(0)
 	if u.PromptTokensDetails != nil && u.PromptTokensDetails.CachedTokens != nil {
 		cacheReadTokens = *u.PromptTokensDetails.CachedTokens
@@ -475,7 +475,7 @@ func ParseChunkUsage(raw []byte, model *Model) Usage {
 		cacheWriteTokens = *u.PromptTokensDetails.CacheWriteTokens
 	}
 	input := jsnum.ToInt64(max(0, float64(promptTokens)-float64(cacheReadTokens)-float64(cacheWriteTokens)))
-	outputTokens := derefInt64(u.CompletionTokens)
+	outputTokens := deref(u.CompletionTokens)
 	usage := Usage{
 		Input:       input,
 		Output:      outputTokens,
