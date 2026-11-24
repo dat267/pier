@@ -1356,29 +1356,8 @@ func getSessionContextSettingsFromPointers(path []*SessionEntry, payloads *paylo
 			foundThinking = true
 		}
 		if model == nil {
-			switch entry.Type {
-			case "model_change":
-				model = &SessionModelRef{Provider: entry.Provider, ModelID: entry.ModelID}
-			case "message":
-				// Only an assistant message names a model; the loader recorded the
-				// role while scanning, so the other roles skip the read.
-				if entry.roleKnown && entry.role != "assistant" {
-					continue
-				}
-				message := entry.Message
-				if entry.lazy && payloads != nil {
-					if hydrated, err := payloads.hydrateCopy(entry); err == nil {
-						message = hydrated.Message
-					}
-				}
-				var msg struct {
-					Role     string `json:"role"`
-					Provider string `json:"provider"`
-					Model    string `json:"model"`
-				}
-				if json.Unmarshal(message, &msg) == nil && msg.Role == "assistant" {
-					model = &SessionModelRef{Provider: msg.Provider, ModelID: msg.Model}
-				}
+			if provider, modelID, ok := entryModelRef(entry, payloads); ok {
+				model = &SessionModelRef{Provider: provider, ModelID: modelID}
 			}
 		}
 		if foundThinking && model != nil {

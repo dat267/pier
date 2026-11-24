@@ -342,35 +342,43 @@ func contextEntryYieldsMessage(entry *SessionEntry) bool {
 	return false
 }
 
+// entryModelRef is the model an entry names: a model_change entry's, or an
+// assistant message's provider and model. An index-only load carries no bytes
+// (D488), so a lazy assistant line is read for it; the loader recorded each
+// message's role while scanning, so other roles skip that read.
+func entryModelRef(entry *SessionEntry, payloads *payloadReader) (provider, modelID string, ok bool) {
+	switch entry.Type {
+	case "model_change":
+		return entry.Provider, entry.ModelID, true
+	case "message":
+		if entry.roleKnown && entry.role != "assistant" {
+			return "", "", false
+		}
+		message := entry.Message
+		if entry.lazy && payloads != nil {
+			if hydrated, err := payloads.hydrateCopy(entry); err == nil {
+				message = hydrated.Message
+			}
+		}
+		var decoded struct {
+			Role     string `json:"role"`
+			Provider string `json:"provider"`
+			Model    string `json:"model"`
+		}
+		if json.Unmarshal(message, &decoded) == nil && decoded.Role == "assistant" {
+			return decoded.Provider, decoded.Model, true
+		}
+	}
+	return "", "", false
+}
+
 // contextModelRef returns the model the context uses. getSessionContextSettings
 // scans the path forward and lets later entries win, so the answer is the last
 // model_change entry or assistant message.
 func contextModelRef(path []*SessionEntry, payloads *payloadReader) (provider string, modelID string) {
 	for _, entry := range slices.Backward(path) {
-
-		switch entry.Type {
-		case "model_change":
-			return entry.Provider, entry.ModelID
-		case "message":
-			// An index-only load carries no bytes (D488); the assistant's model
-			// lives in its line, so it is read from there.
-			if entry.roleKnown && entry.role != "assistant" {
-				continue
-			}
-			message := entry.Message
-			if entry.lazy && payloads != nil {
-				if hydrated, err := payloads.hydrateCopy(entry); err == nil {
-					message = hydrated.Message
-				}
-			}
-			var decoded struct {
-				Role     string `json:"role"`
-				Provider string `json:"provider"`
-				Model    string `json:"model"`
-			}
-			if json.Unmarshal(message, &decoded) == nil && decoded.Role == "assistant" {
-				return decoded.Provider, decoded.Model
-			}
+		if provider, modelID, ok := entryModelRef(entry, payloads); ok {
+			return provider, modelID
 		}
 	}
 	return "", ""
