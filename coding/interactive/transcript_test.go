@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
@@ -386,4 +387,27 @@ func loadedGoalEntry(t *testing.T, payload json.RawMessage) *coding.SessionEntry
 		t.Fatal(err)
 	}
 	return fileEntry.Entry
+}
+
+// D538: a background call's completion notice renders as a [background] block,
+// collapsed to its title, not as a message the user typed, and it is not added
+// to the editor's history, where Up would recall it as the user's own input.
+func TestTranscriptBackgroundNotice(t *testing.T) {
+	renderer, _ := newTranscriptTestRenderer(t, false)
+	editor := NewCustomEditor(editorTestHost{}, tui.EditorTheme{}, NewAppKeybindingsManager(nil, ""), CustomEditorOptions{})
+	renderer.Editor = editor
+	notice := agent.CompletionNotice(agent.ToolCallHandle{ID: "bg-77", ToolName: "bash", OutputPath: "/tmp/out.log"},
+		agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "BUILD OK"}}})
+	renderer.AddMessageToChat(notice, true)
+	lines := strings.Join(renderChat(t, renderer.Chat), "\n")
+	if !strings.Contains(lines, "[background]") || !strings.Contains(lines, "bg-77 (bash) finished") {
+		t.Fatalf("notice render = %q", lines)
+	}
+	if strings.Contains(lines, "BUILD OK") {
+		t.Fatalf("a collapsed notice shows its body: %q", lines)
+	}
+	editor.HandleInput("\x1b[A")
+	if got := editor.GetText(); got != "" {
+		t.Fatalf("Up recalled the notice as typed input: %q", got)
+	}
 }

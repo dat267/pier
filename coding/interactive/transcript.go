@@ -3,6 +3,7 @@ package interactive
 import (
 	"context"
 	"encoding/json"
+	"github.com/dat267/pier/agent"
 	"maps"
 	"slices"
 	"sort"
@@ -412,6 +413,14 @@ func (r *TranscriptRenderer) AddMessageToChat(message ai.Message, populateHistor
 		}
 		if len(r.Chat.Children) > 0 {
 			r.Chat.AddChild(tui.NewSpacer(1))
+		}
+		// A background call's completion notice is the harness's, not typed
+		// input (D538): it draws as a block and stays out of the history.
+		if title, body, ok := agent.ParseCompletionNotice(textContent); ok {
+			component := NewBackgroundNoticeComponent(title, body, r.MarkdownTheme)
+			component.SetExpanded(r.Display.ToolOutputExpanded)
+			r.Chat.AddChild(component)
+			return
 		}
 		skillBlock := coding.ParseSkillBlock(textContent)
 		if skillBlock != nil {

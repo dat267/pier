@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -213,6 +214,28 @@ func CompletionNotice(handle ToolCallHandle, result AgentToolResult) ai.Message 
 	text := fmt.Sprintf("Background call %s (%s) %s.%s\n\n%s",
 		handle.ID, handle.ToolName, status, where, clipBackgroundBody(body))
 	return &ai.UserMessage{Content: ai.StringOrBlocks{Text: text}}
+}
+
+// completionNoticePattern matches the header CompletionNotice writes: the
+// handle, the tool, the outcome and the optional output file, then a blank line.
+var completionNoticePattern = regexp.MustCompile(
+	`^Background call (bg[-0-9a-z]*) \(([^()\n]+)\) (finished|failed)\.((?: The full output is in [^\n]*\.)?)\n\n`)
+
+// ParseCompletionNotice splits a completion notice into its title ("bg-1
+// (bash) finished") and its body (the output-file line and the result), so a
+// renderer can draw it as the harness's notice rather than as typed input. It
+// matches only the exact header CompletionNotice writes, from the first byte.
+func ParseCompletionNotice(text string) (title string, body string, ok bool) {
+	match := completionNoticePattern.FindStringSubmatchIndex(text)
+	if match == nil {
+		return "", "", false
+	}
+	title = text[match[2]:match[3]] + " (" + text[match[4]:match[5]] + ") " + text[match[6]:match[7]]
+	body = text[match[1]:]
+	if where := strings.TrimSpace(text[match[8]:match[9]]); where != "" {
+		body = where + "\n\n" + body
+	}
+	return title, body, true
 }
 
 // backgroundNoticeBodyLimit caps the result text a wake-up carries. A call that

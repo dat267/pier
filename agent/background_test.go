@@ -663,3 +663,27 @@ func TestBackgroundNoticeCutKeepsUTF8(t *testing.T) {
 		t.Fatalf("the notice lost its cut marker or its tail")
 	}
 }
+
+// D538: the notice is an ordinary user message, so the interactive transcript
+// recognizes it by its fixed shape, as upstream recognizes a skill block, and
+// draws it as a labeled block instead of a message the user typed.
+func TestParseCompletionNotice(t *testing.T) {
+	handle := ToolCallHandle{ID: "bg-1a2b3c", ToolName: "bash", OutputPath: "/tmp/pi-background-x.log"}
+	notice := CompletionNotice(handle, AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "line one\n**not markdown**"}}})
+	title, body, ok := ParseCompletionNotice(messageText(notice))
+	if !ok || title != "bg-1a2b3c (bash) finished" {
+		t.Fatalf("title = %q, ok = %v", title, ok)
+	}
+	if !strings.Contains(body, "/tmp/pi-background-x.log") || !strings.HasSuffix(body, "line one\n**not markdown**") {
+		t.Fatalf("body = %q", body)
+	}
+	failed := CompletionNotice(ToolCallHandle{ID: "bg-2", ToolName: "github_search"}, AgentToolResult{IsError: true})
+	if title, _, ok := ParseCompletionNotice(messageText(failed)); !ok || title != "bg-2 (github_search) failed" {
+		t.Fatalf("failed title = %q, ok = %v", title, ok)
+	}
+	for _, typed := range []string{"Background call bg-1 (bash) finished.", "please check Background call bg-1 (bash) finished.\n\nok", "hello"} {
+		if _, _, ok := ParseCompletionNotice(typed); ok {
+			t.Fatalf("%q was taken for a notice", typed)
+		}
+	}
+}

@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"cmp"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -25,6 +26,8 @@ type SkillInvocationMessageComponent struct {
 	content       string
 	markdownTheme tui.MarkdownTheme
 	expanded      bool
+	// label is the bracketed tag; "" is upstream's "skill".
+	label string
 }
 
 // NewSkillInvocationMessageComponent creates the component.
@@ -36,6 +39,27 @@ func NewSkillInvocationMessageComponent(name string, content string, markdownThe
 		content:       content,
 		markdownTheme: markdownThemeValue(markdownTheme),
 	}
+	component.updateDisplay()
+	return component
+}
+
+// NewBackgroundNoticeComponent draws a background call's completion notice
+// (D538) the way a skill block is drawn: a "[background]" tag and its title,
+// expanding to the output file and the result. The result is fenced so its
+// text shows as output rather than as markdown.
+func NewBackgroundNoticeComponent(title string, body string, markdownTheme *tui.MarkdownTheme) *SkillInvocationMessageComponent {
+	fence := "```"
+	for strings.Contains(body, fence) {
+		fence += "`"
+	}
+	content := body
+	if where, result, ok := strings.Cut(body, "\n\n"); ok && strings.HasPrefix(where, "The full output is in ") {
+		content = where + "\n\n" + fence + "\n" + result + "\n" + fence
+	} else {
+		content = fence + "\n" + body + "\n" + fence
+	}
+	component := NewSkillInvocationMessageComponent(title, content, markdownTheme)
+	component.label = "background"
 	component.updateDisplay()
 	return component
 }
@@ -57,15 +81,16 @@ func (c *SkillInvocationMessageComponent) updateDisplay() {
 	c.Box.Clear()
 	content := &tui.Container{}
 
+	tag := cmp.Or(c.label, "skill")
 	if c.expanded {
-		label := theme.Fg("customMessageLabel", "\x1b[1m[skill]\x1b[22m")
+		label := theme.Fg("customMessageLabel", "\x1b[1m["+tag+"]\x1b[22m")
 		content.AddChild(tui.NewText(label, 0, 0, nil))
 		header := "**" + c.name + "**\n\n"
 		content.AddChild(tui.NewMarkdown(header+c.content, 0, 0, c.markdownTheme,
 			&tui.DefaultTextStyle{Color: func(text string) string { return theme.Fg("customMessageText", text) }},
 			tui.MarkdownOptions{}))
 	} else {
-		line := theme.Fg("customMessageLabel", "\x1b[1m[skill]\x1b[22m ") +
+		line := theme.Fg("customMessageLabel", "\x1b[1m["+tag+"]\x1b[22m ") +
 			theme.Fg("customMessageText", c.name) +
 			theme.Fg("dim", " ("+KeyText("app.tools.expand")+" to expand)")
 		content.AddChild(tui.NewText(line, 0, 0, nil))

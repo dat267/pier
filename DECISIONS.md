@@ -9068,6 +9068,12 @@ frame's result is rendered, and in the fallback frame): "Moved to the background
 notice follows when it ends.", rather than printing "do not wait for it" at the
 user.
 
+The completion notice is stored as an ordinary user message, but the
+transcript recognizes its exact header (as it recognizes a skill block) and
+draws it as a collapsed "[background] bg-… (bash) finished" block that expands
+to the output file and the fenced result. It is not added to the editor
+history, so Up never recalls it as typed input.
+
 A call that finishes inside the threshold takes the unchanged path: same result,
 same events, no handle, no registry entry. That is pinned by
 `TestBackgroundFastCallIsUnchanged`, which compares the two paths' bytes and counts
@@ -9088,4 +9094,5 @@ Tests: `TestLoopToolRenderers`, `TestLoopToolsHaveRenderers`,
 `TestSessionSkipsWakeAfterDispose`, `TestBackgroundNoticeNamesFileAndCapsBody`,
 `TestBackgroundFastCallLeavesNoFile`, `TestBackgroundRealShellCallStreamsToFile`,
 `TestBackgroundOutputFileHoldsLatestSnapshot`, `TestBackgroundNoticeCutKeepsUTF8`, `TestBashFrameRendersBackgroundHandle`,
-`TestBackgroundHandleRendersInEveryFrame`.
+`TestBackgroundHandleRendersInEveryFrame`, `TestParseCompletionNotice`,
+`TestTranscriptBackgroundNotice`.
