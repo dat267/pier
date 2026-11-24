@@ -52,13 +52,7 @@ func TestClientNotifiesCloseListenersOnceOnTransportDrop(t *testing.T) {
 
 func TestClientAnswersRootsListAndDispatchesNotifications(t *testing.T) {
 	server, clientTransport := newTestServer()
-	server.setHandler("initialize", func(*protocol.JsonRpcRequest) (any, error) {
-		return map[string]any{
-			"protocolVersion": protocol.LatestProtocolVersion,
-			"capabilities":    map[string]any{},
-			"serverInfo":      map[string]any{"name": "test-server", "version": "1.0.0"},
-		}, nil
-	})
+	server.handleInitialize()
 	client := NewClient(ClientOptions{
 		Name:    "test-client",
 		Version: "1.0.0",

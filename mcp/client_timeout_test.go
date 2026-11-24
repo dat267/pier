@@ -73,6 +73,18 @@ func newTestServer() (*testServer, *InMemoryTransport) {
 	return server, clientTransport
 }
 
+// handleInitialize answers initialize with the latest protocol version, no
+// capabilities and the test server's info.
+func (s *testServer) handleInitialize() {
+	s.setHandler("initialize", func(*protocol.JsonRpcRequest) (any, error) {
+		return map[string]any{
+			"protocolVersion": protocol.LatestProtocolVersion,
+			"capabilities":    map[string]any{},
+			"serverInfo":      map[string]any{"name": "test-server", "version": "1.0.0"},
+		}, nil
+	})
+}
+
 func (s *testServer) setHandler(method string, handler func(*protocol.JsonRpcRequest) (any, error)) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -407,13 +419,7 @@ func TestClientStdioHandlerCanReceiveCancellation(t *testing.T) {
 // explicit zero overrides the client default and disables the request timer.
 func TestClientExplicitZeroTimeoutOverridesClientDefault(t *testing.T) {
 	server, clientTransport := newTestServer()
-	server.setHandler("initialize", func(*protocol.JsonRpcRequest) (any, error) {
-		return map[string]any{
-			"protocolVersion": protocol.LatestProtocolVersion,
-			"capabilities":    map[string]any{},
-			"serverInfo":      map[string]any{"name": "test-server", "version": "1.0.0"},
-		}, nil
-	})
+	server.handleInitialize()
 	release := make(chan struct{})
 	server.setHandler("tools/call", func(*protocol.JsonRpcRequest) (any, error) {
 		<-release
@@ -451,13 +457,7 @@ func TestClientLargeRequestTimeoutUsesJavaScriptTimerClamp(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			timeoutMs := test.timeoutMs
 			server, clientTransport := newTestServer()
-			server.setHandler("initialize", func(*protocol.JsonRpcRequest) (any, error) {
-				return map[string]any{
-					"protocolVersion": protocol.LatestProtocolVersion,
-					"capabilities":    map[string]any{},
-					"serverInfo":      map[string]any{"name": "test-server", "version": "1.0.0"},
-				}, nil
-			})
+			server.handleInitialize()
 			release := make(chan struct{})
 			server.setHandler("tools/call", func(*protocol.JsonRpcRequest) (any, error) {
 				<-release
@@ -489,13 +489,7 @@ func TestClientLargeRequestTimeoutUsesJavaScriptTimerClamp(t *testing.T) {
 // zero disables the inherited request timer instead of selecting 30 seconds.
 func TestClientExplicitZeroDefaultTimeoutDisablesTimer(t *testing.T) {
 	server, clientTransport := newTestServer()
-	server.setHandler("initialize", func(*protocol.JsonRpcRequest) (any, error) {
-		return map[string]any{
-			"protocolVersion": protocol.LatestProtocolVersion,
-			"capabilities":    map[string]any{},
-			"serverInfo":      map[string]any{"name": "test-server", "version": "1.0.0"},
-		}, nil
-	})
+	server.handleInitialize()
 	release := make(chan struct{})
 	server.setHandler("tools/call", func(*protocol.JsonRpcRequest) (any, error) {
 		<-release
