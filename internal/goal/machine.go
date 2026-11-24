@@ -522,11 +522,7 @@ func (m *GoalMachine) agentEnd(_ ContextUsage, usage *GoalUsage, aborted bool) D
 
 	if aborted {
 		if wasGoalAttempt {
-			next := m.view.GoalSnapshot
-			next.Phase = PhasePaused
-			next.BlockedReason = &BlockedReason{Code: "cancelled", Message: "Goal round was cancelled."}
-			next.Revision = m.view.Revision + 1
-			next.UpdatedAt = m.now().UnixMilli()
+			next := m.pausedSnapshot(&BlockedReason{Code: "cancelled", Message: "Goal round was cancelled."}, m.now().UnixMilli())
 			m.armed = false
 			committed, err := m.commit(OpPause, &next, nil)
 			if err == nil {
@@ -549,11 +545,7 @@ func (m *GoalMachine) agentBeforeSettle(outcome string, hasPendingMessages bool,
 	}
 	if outcome == "aborted" {
 		m.armed = false
-		next := m.view.GoalSnapshot
-		next.Phase = PhasePaused
-		next.BlockedReason = &BlockedReason{Code: "cancelled", Message: "Goal round was cancelled."}
-		next.Revision = m.view.Revision + 1
-		next.UpdatedAt = now
+		next := m.pausedSnapshot(&BlockedReason{Code: "cancelled", Message: "Goal round was cancelled."}, now)
 		effects, err := m.commit(OpPause, &next, nil)
 		if err != nil {
 			return DispatchResult{Effects: []Effect{}, Continue: false}
@@ -568,11 +560,7 @@ func (m *GoalMachine) agentBeforeSettle(outcome string, hasPendingMessages bool,
 	// "error" is a final failure the session will not retry: durably pause.
 	if outcome == "error" {
 		m.armed = false
-		next := m.view.GoalSnapshot
-		next.Phase = PhasePaused
-		next.BlockedReason = &BlockedReason{Code: "run-error", Message: "Agent run ended with an error."}
-		next.Revision = m.view.Revision + 1
-		next.UpdatedAt = now
+		next := m.pausedSnapshot(&BlockedReason{Code: "run-error", Message: "Agent run ended with an error."}, now)
 		effects, err := m.commit(OpPause, &next, nil)
 		if err != nil {
 			return DispatchResult{Effects: []Effect{}, Continue: false}
@@ -583,11 +571,7 @@ func (m *GoalMachine) agentBeforeSettle(outcome string, hasPendingMessages bool,
 	}
 	if reason := budgetStopReason(m.view, now); reason != nil {
 		m.armed = false
-		next := m.view.GoalSnapshot
-		next.Phase = PhasePaused
-		next.BlockedReason = reason
-		next.Revision = m.view.Revision + 1
-		next.UpdatedAt = now
+		next := m.pausedSnapshot(reason, now)
 		effects, err := m.commit(OpPause, &next, nil)
 		if err != nil {
 			return DispatchResult{Effects: []Effect{}, Continue: false}
@@ -609,16 +593,23 @@ func (m *GoalMachine) agentBeforeSettle(outcome string, hasPendingMessages bool,
 	}
 }
 
+// pausedSnapshot is the current goal moved to paused for reason, one
+// revision later, stamped at now.
+func (m *GoalMachine) pausedSnapshot(reason *BlockedReason, now int64) GoalSnapshot {
+	next := m.view.GoalSnapshot
+	next.Phase = PhasePaused
+	next.BlockedReason = reason
+	next.Revision = m.view.Revision + 1
+	next.UpdatedAt = now
+	return next
+}
+
 func (m *GoalMachine) goalPause() DispatchResult {
 	if m.view == nil || m.view.Phase != PhaseActive {
 		return DispatchResult{Reply: new("No active goal."), IsError: true}
 	}
 	m.armed = false
-	next := m.view.GoalSnapshot
-	next.Phase = PhasePaused
-	next.BlockedReason = &BlockedReason{Code: "human-paused", Message: "Paused by user."}
-	next.Revision = m.view.Revision + 1
-	next.UpdatedAt = m.now().UnixMilli()
+	next := m.pausedSnapshot(&BlockedReason{Code: "human-paused", Message: "Paused by user."}, m.now().UnixMilli())
 	effects, err := m.commit(OpPause, &next, nil)
 	if err != nil {
 		return DispatchResult{Reply: new(err.Error()), IsError: true}
@@ -726,11 +717,7 @@ func (m *GoalMachine) sessionStart(entries []CustomEntry, reason string) Dispatc
 	// visible in the transcript and on the next command.
 	if reason == "reload" && m.view != nil && m.view.Phase == PhaseActive {
 		objective := TruncateObjective(m.view.Objective, 60)
-		next := m.view.GoalSnapshot
-		next.Phase = PhasePaused
-		next.BlockedReason = &BlockedReason{Code: "reloaded", Message: "Pi reloaded; the goal did not resume."}
-		next.Revision = m.view.Revision + 1
-		next.UpdatedAt = m.now().UnixMilli()
+		next := m.pausedSnapshot(&BlockedReason{Code: "reloaded", Message: "Pi reloaded; the goal did not resume."}, m.now().UnixMilli())
 		effects, commitErr := m.commit(OpPause, &next, nil)
 		if commitErr != nil {
 			return DispatchResult{Effects: []Effect{
