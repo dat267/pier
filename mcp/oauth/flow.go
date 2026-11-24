@@ -119,8 +119,12 @@ func loopback(hostname string) bool {
 	return hostname == "localhost" || hostname == "127.0.0.1" || hostname == "::1"
 }
 
-// deriveApplicationType applies MCP SEP-837 to OAuth redirect URIs: custom
-// schemes and loopback HTTP(S) URLs identify native clients; other URLs are web.
+// errHTTPURLNoHost rejects an http(s) URL without a host, such as "https:".
+var errHTTPURLNoHost = errors.New("HTTP URL has no host")
+
+// parseHTTPURL parses an http(s) URL the way WHATWG URL does for the special
+// schemes, treating backslashes and missing slashes after the scheme as
+// separators.
 func parseHTTPURL(value string) (*url.URL, error) {
 	value = whatwgurl.StripWhitespace(value)
 	parsed, err := url.Parse(value)
@@ -135,15 +139,15 @@ func parseHTTPURL(value string) (*url.URL, error) {
 		remainder := strings.ReplaceAll(value[colon+1:], string('\\'), "/")
 		remainder = strings.TrimLeft(remainder, "/")
 		if remainder == "" {
-			return nil, errors.New("HTTP URL has no host")
+			return nil, errHTTPURLNoHost
 		}
 		parsed, err = url.Parse(parsed.Scheme + "://" + remainder)
 		if err != nil || parsed.Host == "" {
-			return nil, errors.New("HTTP URL has no host")
+			return nil, errHTTPURLNoHost
 		}
 	}
 	if parsed.Hostname() == "" {
-		return nil, errors.New("HTTP URL has no host")
+		return nil, errHTTPURLNoHost
 	}
 	if port := parsed.Port(); port != "" {
 		number, portErr := strconv.Atoi(port)
@@ -154,6 +158,8 @@ func parseHTTPURL(value string) (*url.URL, error) {
 	return parsed, nil
 }
 
+// deriveApplicationType applies MCP SEP-837 to OAuth redirect URIs: custom
+// schemes and loopback HTTP(S) URLs identify native clients; other URLs are web.
 func deriveApplicationType(redirectURIs []string) string {
 	for _, redirectURI := range redirectURIs {
 		parsed, err := parseWHATWGURL(redirectURI)
