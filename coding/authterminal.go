@@ -3,6 +3,7 @@ package coding
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -47,6 +48,8 @@ type ProcessLoginTerminal struct {
 // (upstream rejects with Error("Login cancelled")).
 const AuthLoginCancelledMessage = "Login cancelled"
 
+var errAuthLoginCancelled = errors.New(AuthLoginCancelledMessage)
+
 // NewProcessLoginTerminal builds the terminal for a process: stdin/stdout/stderr
 // and, when stdin is a terminal, hidden secret input from fd 0.
 func NewProcessLoginTerminal(stdin io.Reader, stdout, stderr io.Writer, interactive bool, secretFD int) *ProcessLoginTerminal {
@@ -68,7 +71,7 @@ func (t *ProcessLoginTerminal) Interactive() bool { return t.InteractiveTerminal
 // Question prints message and reads one line.
 func (t *ProcessLoginTerminal) Question(ctx context.Context, message string) (string, error) {
 	if err := ctxErrOf(ctx); err != nil {
-		return "", fmt.Errorf("%s", AuthLoginCancelledMessage)
+		return "", errAuthLoginCancelled
 	}
 	_, _ = fmt.Fprint(t.Out, message)
 	text, err := t.Reader.ReadString('\n')
@@ -76,7 +79,7 @@ func (t *ProcessLoginTerminal) Question(ctx context.Context, message string) (st
 		// readline rejects a pending question when its input closes, so end of
 		// input is "Login cancelled" even when a partial line arrived first.
 		if ctxErrOf(ctx) != nil || err == io.EOF {
-			return "", fmt.Errorf("%s", AuthLoginCancelledMessage)
+			return "", errAuthLoginCancelled
 		}
 		return "", err
 	}
@@ -87,7 +90,7 @@ func (t *ProcessLoginTerminal) Question(ctx context.Context, message string) (st
 // available, else like Question.
 func (t *ProcessLoginTerminal) Secret(ctx context.Context, message string) (string, error) {
 	if err := ctxErrOf(ctx); err != nil {
-		return "", fmt.Errorf("%s", AuthLoginCancelledMessage)
+		return "", errAuthLoginCancelled
 	}
 	if t.SecretFD < 0 || !term.IsTerminal(t.SecretFD) {
 		return t.Question(ctx, message)
