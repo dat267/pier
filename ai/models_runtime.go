@@ -684,16 +684,6 @@ func safeClassifierModels(provider *Provider) (out []*Model) {
 	return provider.GetClassifierModels()
 }
 
-// GetClassifierModel returns one classifier model by provider and ID.
-func (m *Models) GetClassifierModel(providerID, id string) *Model {
-	for _, model := range m.GetClassifierModels(providerID) {
-		if model.ID == id {
-			return model
-		}
-	}
-	return nil
-}
-
 func (m *Models) supersedeProviderRefreshLocked(providerID string) int {
 	generation := m.refreshGenerations[providerID] + 1
 	m.refreshGenerations[providerID] = generation
