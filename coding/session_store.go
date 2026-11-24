@@ -1444,9 +1444,9 @@ func CreateCompactionSummaryMessage(summary string, tokensBefore int64, timestam
 		timestamp = time.Now().UnixMilli()
 	}
 	raw, _ := ai.MarshalJSON(compactionSummaryPayload{
-		Role: "compactionSummary", Summary: summary, TokensBefore: tokensBefore, Timestamp: timestamp,
+		Role: RoleCompactionSummary, Summary: summary, TokensBefore: tokensBefore, Timestamp: timestamp,
 	})
-	return &ai.CustomMessage{Role: "compactionSummary", Content: raw, Timestamp: timestamp}
+	return &ai.CustomMessage{Role: RoleCompactionSummary, Content: raw, Timestamp: timestamp}
 }
 
 // CreateBranchSummaryMessage builds the branch summary custom message.
@@ -1455,9 +1455,9 @@ func CreateBranchSummaryMessage(summary string, fromID string, timestamp int64) 
 		timestamp = time.Now().UnixMilli()
 	}
 	raw, _ := ai.MarshalJSON(branchSummaryPayload{
-		Role: "branchSummary", Summary: summary, FromID: fromID, Timestamp: timestamp,
+		Role: RoleBranchSummary, Summary: summary, FromID: fromID, Timestamp: timestamp,
 	})
-	return &ai.CustomMessage{Role: "branchSummary", Content: raw, Timestamp: timestamp}
+	return &ai.CustomMessage{Role: RoleBranchSummary, Content: raw, Timestamp: timestamp}
 }
 
 // SessionEntryToContextMessages projects one entry into LLM messages
