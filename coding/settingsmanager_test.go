@@ -17,10 +17,10 @@ import (
 func TestSettingsReload(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
 	settingsPath := filepath.Join(agentDir, "settings.json")
-	writeSettingsFile(t, settingsPath, `{"theme":"dark","extensions":["/before.ts"]}`)
+	writeFileMkdir(t, settingsPath, `{"theme":"dark","extensions":["/before.ts"]}`)
 
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
-	writeSettingsFile(t, settingsPath, `{"theme":"light","extensions":["/after.ts"],"defaultModel":"claude-sonnet"}`)
+	writeFileMkdir(t, settingsPath, `{"theme":"light","extensions":["/after.ts"],"defaultModel":"claude-sonnet"}`)
 	manager.Reload()
 
 	if theme := manager.GetTheme(); theme == nil || *theme != "light" {
@@ -34,7 +34,7 @@ func TestSettingsReload(t *testing.T) {
 	}
 
 	// An invalid file keeps the previous settings and reports the path.
-	writeSettingsFile(t, settingsPath, "{ invalid json")
+	writeFileMkdir(t, settingsPath, "{ invalid json")
 	manager.Reload()
 	if theme := manager.GetTheme(); theme == nil || *theme != "light" {
 		t.Fatalf("theme after invalid reload = %v", theme)
@@ -49,7 +49,7 @@ func TestSettingsReload(t *testing.T) {
 // string resolves to the default mode rather than to an unknown queue mode.
 func TestSettingsEmptyQueueModesFallBack(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"steeringMode":"","followUpMode":""}`)
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"steeringMode":"","followUpMode":""}`)
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if got := manager.GetSteeringMode(); got != "one-at-a-time" {
 		t.Fatalf("steering = %q, want one-at-a-time", got)
@@ -70,7 +70,7 @@ func TestSettingsEmptyQueueModesFallBack(t *testing.T) {
 func TestSettingsThemeSetting(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
 	settingsPath := filepath.Join(agentDir, "settings.json")
-	writeSettingsFile(t, settingsPath, `{"theme":"light/dark"}`)
+	writeFileMkdir(t, settingsPath, `{"theme":"light/dark"}`)
 
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if theme := manager.GetTheme(); theme != nil {
@@ -89,8 +89,8 @@ func TestSettingsErrorTracking(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
 	globalPath := filepath.Join(agentDir, "settings.json")
 	projectPath := filepath.Join(projectDir, ConfigDirName, "settings.json")
-	writeSettingsFile(t, globalPath, "{ invalid global json")
-	writeSettingsFile(t, projectPath, "{ invalid project json")
+	writeFileMkdir(t, globalPath, "{ invalid global json")
+	writeFileMkdir(t, projectPath, "{ invalid project json")
 
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	errors := manager.DrainErrors()
@@ -110,9 +110,9 @@ func TestSettingsErrorTracking(t *testing.T) {
 
 func TestSettingsProjectTrust(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"theme":"global"}`)
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"theme":"global"}`)
 	projectPath := filepath.Join(projectDir, ConfigDirName, "settings.json")
-	writeSettingsFile(t, projectPath, `{"theme":"project"}`)
+	writeFileMkdir(t, projectPath, `{"theme":"project"}`)
 
 	untrusted := false
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{ProjectTrusted: &untrusted})
@@ -137,7 +137,7 @@ func TestSettingsProjectTrust(t *testing.T) {
 
 	// Writes to an untrusted project are refused and recorded: the Go port
 	// records the error where upstream throws.
-	writeSettingsFile(t, projectPath, `{"packages":["npm:existing"]}`)
+	writeFileMkdir(t, projectPath, `{"packages":["npm:existing"]}`)
 	untrustedManager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{ProjectTrusted: &untrusted})
 	untrustedManager.SetProjectPackages([]any{"npm:new"})
 	errors := untrustedManager.DrainErrors()
@@ -151,14 +151,14 @@ func TestSettingsProjectTrust(t *testing.T) {
 
 func TestSettingsDefaultProjectTrust(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"defaultProjectTrust":"always"}`)
-	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"defaultProjectTrust":"never"}`)
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"defaultProjectTrust":"always"}`)
+	writeFileMkdir(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"defaultProjectTrust":"never"}`)
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if got := manager.GetDefaultProjectTrust(); got != "always" {
 		t.Fatalf("defaultProjectTrust = %s", got)
 	}
 
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"defaultProjectTrust":"sometimes"}`)
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"defaultProjectTrust":"sometimes"}`)
 	manager = NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if got := manager.GetDefaultProjectTrust(); got != "ask" {
 		t.Fatalf("defaultProjectTrust = %s", got)
@@ -167,7 +167,7 @@ func TestSettingsDefaultProjectTrust(t *testing.T) {
 
 func TestSettingsProjectDirectoryCreation(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"theme":"dark"}`)
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"theme":"dark"}`)
 	projectConfigDir := filepath.Join(projectDir, ConfigDirName)
 	if err := os.RemoveAll(projectConfigDir); err != nil {
 		t.Fatal(err)
@@ -222,8 +222,8 @@ func TestSettingsHTTPIdleTimeout(t *testing.T) {
 	}
 
 	// Project settings override global ones.
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"httpIdleTimeoutMs":300000}`)
-	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"httpIdleTimeoutMs":0}`)
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"httpIdleTimeoutMs":300000}`)
+	writeFileMkdir(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"httpIdleTimeoutMs":0}`)
 	manager = NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if timeout, err := manager.GetHTTPIdleTimeoutMS(); err != nil || timeout != 0 {
 		t.Fatalf("timeout = %d err = %v", timeout, err)
@@ -232,7 +232,7 @@ func TestSettingsHTTPIdleTimeout(t *testing.T) {
 	// Invalid values are rejected (fresh dirs: the project scope from the
 	// previous case would otherwise override the global value).
 	agentDir, projectDir = settingsDirs(t)
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"httpIdleTimeoutMs":-1}`)
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"httpIdleTimeoutMs":-1}`)
 	manager = NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if _, err := manager.GetHTTPIdleTimeoutMS(); err == nil ||
 		!strings.Contains(err.Error(), "Invalid httpIdleTimeoutMs setting") {
@@ -261,14 +261,14 @@ func TestSettingsTuiMode(t *testing.T) {
 		t.Fatalf("tuiMode = %#v", saved["tuiMode"])
 	}
 
-	writeSettingsFile(t, settingsPath, `{"tuiMode":"other"}`)
+	writeFileMkdir(t, settingsPath, `{"tuiMode":"other"}`)
 	unsupported := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if got := unsupported.GetTuiMode(); got != "fullscreen" {
 		t.Fatalf("unsupported tui mode = %q; want fullscreen", got)
 	}
 
 	// The retired uiMode key is not read.
-	writeSettingsFile(t, settingsPath, `{"uiMode":"regular"}`)
+	writeFileMkdir(t, settingsPath, `{"uiMode":"regular"}`)
 	legacy := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if got := legacy.GetTuiMode(); got != "fullscreen" {
 		t.Fatalf("legacy uiMode tui mode = %q; want fullscreen", got)
@@ -281,7 +281,7 @@ func TestSettingsTuiMode(t *testing.T) {
 func TestSettingsQuietStartup(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
 	settingsPath := filepath.Join(agentDir, "settings.json")
-	writeSettingsFile(t, settingsPath, `{"quietStartup":"header","defaultModel":"claude-sonnet","theme":"dark"}`)
+	writeFileMkdir(t, settingsPath, `{"quietStartup":"header","defaultModel":"claude-sonnet","theme":"dark"}`)
 
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if got := manager.GetQuietStartup(); !got.Header || got.Enabled {
@@ -313,7 +313,7 @@ func TestSettingsQuietStartup(t *testing.T) {
 func TestSettingsPersistKeepsValuesTheTypeCannotRepresent(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
 	settingsPath := filepath.Join(agentDir, "settings.json")
-	writeSettingsFile(t, settingsPath, `{"outputPad":"wide","defaultModel":"claude-sonnet","tuiMode":"fullscreen"}`)
+	writeFileMkdir(t, settingsPath, `{"outputPad":"wide","defaultModel":"claude-sonnet","tuiMode":"fullscreen"}`)
 
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	manager.SetHideThinkingBlock(true)
@@ -415,8 +415,8 @@ func TestSettingsDefaultToolModifiers(t *testing.T) {
 // on top of the global selection" case (30a1d1849).
 func TestSettingsDefaultToolsLayerModifiers(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"defaultTools":["read","bash","+codemode"]}`)
-	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"defaultTools":["-codemode","+tool_search"]}`)
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"defaultTools":["read","bash","+codemode"]}`)
+	writeFileMkdir(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"defaultTools":["-codemode","+tool_search"]}`)
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if got := strings.Join(manager.GetDefaultTools(), ","); got != "read,bash,tool_search" {
 		t.Fatalf("layered defaultTools = %q", got)
@@ -431,7 +431,7 @@ func TestSettingsDefaultToolsLayerModifiers(t *testing.T) {
 // modifiers to the built-in defaults without a global setting" case (30a1d1849).
 func TestSettingsDefaultToolsProjectOnlyModifiers(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
-	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"defaultTools":["+codemode"]}`)
+	writeFileMkdir(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"defaultTools":["+codemode"]}`)
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if got := strings.Join(manager.GetDefaultTools(), ","); got != "read,bash,edit,write,codemode" {
 		t.Fatalf("project-only modifiers = %q", got)
@@ -440,14 +440,14 @@ func TestSettingsDefaultToolsProjectOnlyModifiers(t *testing.T) {
 
 func TestSettingsDefaultToolsAndPaths(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"defaultTools":["read","bash"],"sessionDir":"/tmp/sessions","shellPath":"~"}`)
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"defaultTools":["read","bash"],"sessionDir":"/tmp/sessions","shellPath":"~"}`)
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	tools := manager.GetDefaultTools()
 	if len(tools) != 2 || tools[0] != "read" || tools[1] != "bash" {
 		t.Fatalf("defaultTools = %#v", tools)
 	}
 	// Project settings replace the global array.
-	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"defaultTools":["grep"]}`)
+	writeFileMkdir(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"defaultTools":["grep"]}`)
 	manager = NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if tools := manager.GetDefaultTools(); len(tools) != 1 || tools[0] != "grep" {
 		t.Fatalf("defaultTools = %#v", tools)
@@ -746,7 +746,7 @@ func TestSettingsDefaultToolsIgnoresNonStringEntries(t *testing.T) {
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			agentDir, projectDir := settingsDirs(t)
-			writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), testCase.stored)
+			writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), testCase.stored)
 			manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 			tools := manager.GetDefaultTools()
 			if tools == nil {
@@ -769,7 +769,7 @@ func TestSettingsDefaultToolsIgnoresNonStringEntries(t *testing.T) {
 // default instead: the setting silently had no effect.
 func TestSettingsNumericSettingsFloorLikeJavaScript(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"),
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"),
 		`{"terminal":{"imageWidthCells":5.9},"editorPaddingX":2.7,"autocompleteMaxVisible":7.5}`)
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if got := manager.GetImageWidthCells(); got != 5 {

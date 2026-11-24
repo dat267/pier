@@ -41,7 +41,7 @@ func templateNamesOf(session *AgentSession) []string {
 func TestCreateAgentSessionPromptTemplates(t *testing.T) {
 	tempAgentDir(t)
 	dir := t.TempDir()
-	writeSettingsFile(t, filepath.Join(dir, "greet.md"), "---\ndescription: Greeting\n---\nHello $1")
+	writeFileMkdir(t, filepath.Join(dir, "greet.md"), "---\ndescription: Greeting\n---\nHello $1")
 
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	session := sessionWithResources(t, settings, &CreateAgentSessionOptions{
@@ -73,8 +73,8 @@ func TestPromptTemplateCollisionsReachSession(t *testing.T) {
 	tempAgentDir(t)
 	first, second := t.TempDir(), t.TempDir()
 	winner, loser := filepath.Join(first, "greet.md"), filepath.Join(second, "greet.md")
-	writeSettingsFile(t, winner, "winner")
-	writeSettingsFile(t, loser, "loser")
+	writeFileMkdir(t, winner, "winner")
+	writeFileMkdir(t, loser, "loser")
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	session := sessionWithResources(t, settings, &CreateAgentSessionOptions{
 		PromptTemplatePaths: []string{first, second}, NoPromptTemplates: true,
@@ -107,7 +107,7 @@ func TestPromptTemplateCollisionsReachSession(t *testing.T) {
 func TestUnreadablePromptDiagnostic(t *testing.T) {
 	tempAgentDir(t)
 	path := filepath.Join(t.TempDir(), "denied.md")
-	writeSettingsFile(t, path, "unreadable")
+	writeFileMkdir(t, path, "unreadable")
 	if err := os.Chmod(path, 0); err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func TestReloadKeepsCLIResourceSwitches(t *testing.T) {
 	writeSkill(t, explicitSkillDir, "explicit", "named on the command line")
 
 	templateDir := t.TempDir()
-	writeSettingsFile(t, filepath.Join(templateDir, "kept.md"), "---\ndescription: Kept\n---\nBody")
+	writeFileMkdir(t, filepath.Join(templateDir, "kept.md"), "---\ndescription: Kept\n---\nBody")
 
 	session := sessionWithResources(t, settings, &CreateAgentSessionOptions{
 		SkillPaths:          []string{explicitSkillDir},
@@ -172,7 +172,7 @@ func TestReloadKeepsSuppression(t *testing.T) {
 	settings.SetSkillPaths([]string{settingsSkillDir})
 
 	cwd := t.TempDir()
-	writeSettingsFile(t, filepath.Join(cwd, "AGENTS.md"), "project rules\n")
+	writeFileMkdir(t, filepath.Join(cwd, "AGENTS.md"), "project rules\n")
 
 	session := sessionWithResources(t, settings, &CreateAgentSessionOptions{
 		NoSkills:       true,

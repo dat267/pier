@@ -12,7 +12,7 @@ import (
 // an absent appendSystemPrompt source discovers the default file.
 func TestEmptyAppendSourcesSuppressPromptFileDiscovery(t *testing.T) {
 	cwd, agentDir := t.TempDir(), t.TempDir()
-	writePromptTestFile(t, filepath.Join(agentDir, "APPEND_SYSTEM.md"), "discovered append")
+	writeFileMkdir(t, filepath.Join(agentDir, "APPEND_SYSTEM.md"), "discovered append")
 	control := LoadPromptOverrides(PromptFileSources{Cwd: cwd, AgentDir: agentDir})
 	if control.AppendSystemPrompt != "discovered append" {
 		t.Fatalf("absent append sources did not discover default: %+v", control)
@@ -26,23 +26,13 @@ func TestEmptyAppendSourcesSuppressPromptFileDiscovery(t *testing.T) {
 	}
 }
 
-func writePromptTestFile(t *testing.T, path string, content string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatal(err)
-	}
-}
-
 // TestResolvePromptInputReadsExistingPaths pins upstream's resolvePromptInput:
 // a prompt source that names an existing file is read (BOM stripped), anything
 // else is the prompt text itself.
 func TestResolvePromptInputReadsExistingPaths(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "prompt.md")
-	writePromptTestFile(t, file, "\ufeffBe concise.\n")
+	writeFileMkdir(t, file, "\ufeffBe concise.\n")
 
 	if got := ResolvePromptInput(file); got != "Be concise.\n" {
 		t.Fatalf("ResolvePromptInput(file) = %q", got)
@@ -79,7 +69,7 @@ func TestResolvePromptInputReplacesMalformedUTF8(t *testing.T) {
 // append inputs; an empty file remains an empty slot when sources are joined.
 func TestLoadPromptOverridesPreservesEmptyAppendFileSlots(t *testing.T) {
 	emptyFile := filepath.Join(t.TempDir(), "empty.md")
-	writePromptTestFile(t, emptyFile, "")
+	writeFileMkdir(t, emptyFile, "")
 	overrides := LoadPromptOverrides(PromptFileSources{
 		AppendSystemPrompt: []string{emptyFile, "following"},
 	})
@@ -97,10 +87,10 @@ func TestPromptFileDiscoveryPrefersTheTrustedProject(t *testing.T) {
 	globalSystem := filepath.Join(agentDir, "SYSTEM.md")
 	projectAppend := filepath.Join(cwd, ConfigDirName, "APPEND_SYSTEM.md")
 	globalAppend := filepath.Join(agentDir, "APPEND_SYSTEM.md")
-	writePromptTestFile(t, projectSystem, "project base")
-	writePromptTestFile(t, globalSystem, "global base")
-	writePromptTestFile(t, projectAppend, "project append")
-	writePromptTestFile(t, globalAppend, "global append")
+	writeFileMkdir(t, projectSystem, "project base")
+	writeFileMkdir(t, globalSystem, "global base")
+	writeFileMkdir(t, projectAppend, "project append")
+	writeFileMkdir(t, globalAppend, "global append")
 
 	// An untrusted project's prompt files are skipped.
 	if got := DiscoverSystemPromptFile(cwd, agentDir, false); got != globalSystem {
@@ -134,8 +124,8 @@ func TestPromptFileDiscoveryPrefersTheTrustedProject(t *testing.T) {
 // suppresses discovery.
 func TestLoadPromptOverridesPrefersCLIAndJoinsAppends(t *testing.T) {
 	cwd, agentDir := t.TempDir(), t.TempDir()
-	writePromptTestFile(t, filepath.Join(agentDir, "SYSTEM.md"), "file base")
-	writePromptTestFile(t, filepath.Join(agentDir, "APPEND_SYSTEM.md"), "file append")
+	writeFileMkdir(t, filepath.Join(agentDir, "SYSTEM.md"), "file base")
+	writeFileMkdir(t, filepath.Join(agentDir, "APPEND_SYSTEM.md"), "file append")
 
 	overrides := LoadPromptOverrides(PromptFileSources{Cwd: cwd, AgentDir: agentDir})
 	if overrides.SystemPrompt != "file base" || overrides.AppendSystemPrompt != "file append" {
@@ -161,7 +151,7 @@ func TestLoadPromptOverridesPrefersCLIAndJoinsAppends(t *testing.T) {
 
 	// A CLI source may name a file too.
 	appendFile := filepath.Join(t.TempDir(), "extra.md")
-	writePromptTestFile(t, appendFile, "from a file")
+	writeFileMkdir(t, appendFile, "from a file")
 	overrides = LoadPromptOverrides(PromptFileSources{
 		Cwd: cwd, AgentDir: agentDir, AppendSystemPrompt: []string{appendFile},
 	})

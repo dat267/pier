@@ -47,9 +47,9 @@ func TestReloadRereadsResourceFiles(t *testing.T) {
 	}
 
 	// Resources appear after the session was created: only a reload sees them.
-	writePromptTestFile(t, filepath.Join(agentDir, "APPEND_SYSTEM.md"), "added later")
-	writePromptTestFile(t, filepath.Join(agentDir, "AGENTS.md"), "project context added later")
-	writePromptTestFile(t, filepath.Join(agentDir, "skills", "tdd", "SKILL.md"),
+	writeFileMkdir(t, filepath.Join(agentDir, "APPEND_SYSTEM.md"), "added later")
+	writeFileMkdir(t, filepath.Join(agentDir, "AGENTS.md"), "project context added later")
+	writeFileMkdir(t, filepath.Join(agentDir, "skills", "tdd", "SKILL.md"),
 		"---\nname: tdd\ndescription: Test-driven development\n---\n\nWrite the failing test first.\n")
 
 	session.Reload()
@@ -140,7 +140,7 @@ func TestReloadRereadsSettings(t *testing.T) {
 	if session.SteeringMode() == "all" {
 		t.Fatal("unexpected steering mode before reload")
 	}
-	writePromptTestFile(t, filepath.Join(agentDir, "settings.json"), `{"steeringMode":"all","followUpMode":"all"}`)
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"steeringMode":"all","followUpMode":"all"}`)
 
 	session.Reload()
 
@@ -179,8 +179,8 @@ func TestReloadRereadsTheTrustGate(t *testing.T) {
 	session := result.Session
 	// Both a global file and an untrusted project file appear after creation:
 	// the reload reads the global one and skips the project's.
-	writePromptTestFile(t, filepath.Join(agentDir, "APPEND_SYSTEM.md"), "global append")
-	writePromptTestFile(t, filepath.Join(cwd, ConfigDirName, "APPEND_SYSTEM.md"), "project append")
+	writeFileMkdir(t, filepath.Join(agentDir, "APPEND_SYSTEM.md"), "global append")
+	writeFileMkdir(t, filepath.Join(cwd, ConfigDirName, "APPEND_SYSTEM.md"), "project append")
 
 	session.Reload()
 

@@ -22,7 +22,7 @@ func TestSettingsRebindReportsMalformedProjectSettings(t *testing.T) {
 		manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 		other := t.TempDir()
 		path := filepath.Join(other, ConfigDirName, "settings.json")
-		writeSettingsFile(t, path, `{"theme":`)
+		writeFileMkdir(t, path, `{"theme":`)
 
 		manager.RebindProject(other, true)
 		failures := manager.DrainErrors()

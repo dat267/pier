@@ -20,7 +20,7 @@ import (
 func TestSettingsSetDoesNotBlockOnTheStorageLock(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
 	settingsPath := filepath.Join(agentDir, "settings.json")
-	writeSettingsFile(t, settingsPath, `{"theme":"light"}`)
+	writeFileMkdir(t, settingsPath, `{"theme":"light"}`)
 	// Hold the storage lock the way a concurrent writer would.
 	lock, err := acquireLockWithRetry(settingsPath)
 	if err != nil {
@@ -58,7 +58,7 @@ func TestSettingsSetDoesNotBlockOnTheStorageLock(t *testing.T) {
 func TestSettingsPersistLandsOffLoop(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
 	settingsPath := filepath.Join(agentDir, "settings.json")
-	writeSettingsFile(t, settingsPath, `{"theme":"light"}`)
+	writeFileMkdir(t, settingsPath, `{"theme":"light"}`)
 
 	queue := offloop.New()
 	defer queue.Stop()
@@ -194,11 +194,11 @@ func TestSettingsRetryRetainsNewerValueAfterQueuedSaveFails(t *testing.T) {
 func TestSettingsSaveReportsExternalMalformedJSONAndRetries(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
 	path := filepath.Join(agentDir, "settings.json")
-	writeSettingsFile(t, path, `{"theme":"light"}`)
+	writeFileMkdir(t, path, `{"theme":"light"}`)
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 
 	const malformed = `{"theme":`
-	writeSettingsFile(t, path, malformed)
+	writeFileMkdir(t, path, malformed)
 	manager.SetTheme("dark")
 	failures := manager.DrainErrors()
 	if len(failures) != 1 || failures[0].Scope != SettingsScopeGlobal || failures[0].Path != path {
@@ -209,7 +209,7 @@ func TestSettingsSaveReportsExternalMalformedJSONAndRetries(t *testing.T) {
 		t.Fatalf("malformed external settings were overwritten: %s", data)
 	}
 
-	writeSettingsFile(t, path, `{"theme":"light"}`)
+	writeFileMkdir(t, path, `{"theme":"light"}`)
 	manager.SetDefaultProvider("openai")
 	saved := readSettingsFile(t, path)
 	if saved["theme"] != "dark" || saved["defaultProvider"] != "openai" {

@@ -65,7 +65,7 @@ func TestSettingsGettersDoNotWaitForAPersistInProgress(t *testing.T) {
 func TestEnabledModelsSnapshotCannotBeExtendedInPlace(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
 	// Decoding grows the slice, so three patterns typically leave spare room.
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"),
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"),
 		`{"enabledModels":["anthropic/a","anthropic/b","anthropic/c"]}`)
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	got := manager.GetEnabledModels()

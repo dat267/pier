@@ -44,8 +44,8 @@ func promptSessionForTests(t *testing.T, options *CreateAgentSessionOptions) (st
 func TestCreateAgentSessionLoadsSystemPromptFiles(t *testing.T) {
 	tempAgentDir(t)
 	agentDir := GetAgentDir()
-	writePromptTestFile(t, filepath.Join(agentDir, "SYSTEM.md"), "You are a custom assistant.")
-	writePromptTestFile(t, filepath.Join(agentDir, "APPEND_SYSTEM.md"), "Always answer briefly.")
+	writeFileMkdir(t, filepath.Join(agentDir, "SYSTEM.md"), "You are a custom assistant.")
+	writeFileMkdir(t, filepath.Join(agentDir, "APPEND_SYSTEM.md"), "Always answer briefly.")
 
 	prompt, cwd := promptSessionForTests(t, nil)
 	if !strings.Contains(prompt, "You are a custom assistant.") {
@@ -74,8 +74,8 @@ func TestCreateAgentSessionLoadsSystemPromptFiles(t *testing.T) {
 func TestCreateAgentSessionPromptFlagsOverrideFiles(t *testing.T) {
 	tempAgentDir(t)
 	agentDir := GetAgentDir()
-	writePromptTestFile(t, filepath.Join(agentDir, "SYSTEM.md"), "file base")
-	writePromptTestFile(t, filepath.Join(agentDir, "APPEND_SYSTEM.md"), "file append")
+	writeFileMkdir(t, filepath.Join(agentDir, "SYSTEM.md"), "file base")
+	writeFileMkdir(t, filepath.Join(agentDir, "APPEND_SYSTEM.md"), "file append")
 
 	base := "flag base"
 	prompt, _ := promptSessionForTests(t, &CreateAgentSessionOptions{

@@ -26,7 +26,8 @@ func settingsDirs(t *testing.T) (string, string) {
 	return agentDir, projectDir
 }
 
-func writeSettingsFile(t *testing.T, path string, content string) {
+// writeFileMkdir writes content to path, creating its parent directories.
+func writeFileMkdir(t *testing.T, path string, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
@@ -52,7 +53,7 @@ func readSettingsFile(t *testing.T, path string) map[string]any {
 func TestSettingsPreservesExternallyAddedSettings(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
 	settingsPath := filepath.Join(agentDir, "settings.json")
-	writeSettingsFile(t, settingsPath, `{"theme":"dark","defaultModel":"claude-sonnet"}`)
+	writeFileMkdir(t, settingsPath, `{"theme":"dark","defaultModel":"claude-sonnet"}`)
 
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 
@@ -60,7 +61,7 @@ func TestSettingsPreservesExternallyAddedSettings(t *testing.T) {
 	raw := readSettingsFile(t, settingsPath)
 	raw["enabledModels"] = []any{"claude-opus-4-5", "gpt-5.2-codex"}
 	encoded, _ := json.Marshal(raw)
-	writeSettingsFile(t, settingsPath, string(encoded))
+	writeFileMkdir(t, settingsPath, string(encoded))
 
 	manager.SetDefaultThinkingLevel("high")
 	saved := readSettingsFile(t, settingsPath)
@@ -79,7 +80,7 @@ func TestSettingsPreservesExternallyAddedSettings(t *testing.T) {
 	raw["extensions"] = []any{"/path/to/extension.ts"}
 	raw["$schema"] = "https://pi.dev/schemas/settings.schema.json"
 	encoded, _ = json.Marshal(raw)
-	writeSettingsFile(t, settingsPath, string(encoded))
+	writeFileMkdir(t, settingsPath, string(encoded))
 	manager.SetTheme("light")
 	saved = readSettingsFile(t, settingsPath)
 	if saved["theme"] != "light" || saved["shellPath"] != "/bin/zsh" ||
@@ -97,7 +98,7 @@ func TestSettingsPackagesMigration(t *testing.T) {
 	settingsPath := filepath.Join(agentDir, "settings.json")
 
 	// Local-only extensions stay in the extensions array.
-	writeSettingsFile(t, settingsPath, `{"extensions":["/local/ext.ts","./relative/ext.ts"]}`)
+	writeFileMkdir(t, settingsPath, `{"extensions":["/local/ext.ts","./relative/ext.ts"]}`)
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if packages := manager.GetPackages(); len(packages) != 0 {
 		t.Fatalf("packages = %#v", packages)
@@ -107,7 +108,7 @@ func TestSettingsPackagesMigration(t *testing.T) {
 	}
 
 	// Package entries keep their filtering objects.
-	writeSettingsFile(t, settingsPath, `{"packages":["npm:simple-pkg",{"source":"npm:shitty-extensions","extensions":["extensions/oracle.ts"],"skills":[]}]}`)
+	writeFileMkdir(t, settingsPath, `{"packages":["npm:simple-pkg",{"source":"npm:shitty-extensions","extensions":["extensions/oracle.ts"],"skills":[]}]}`)
 	manager = NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	packages := manager.GetPackages()
 	if len(packages) != 2 || packages[0] != "npm:simple-pkg" {
@@ -131,8 +132,8 @@ func TestSettingsPackagesMigration(t *testing.T) {
 // the global setting. A null is therefore a project-level reset.
 func TestSettingsProjectNullMasksGlobalDefaultProvider(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"defaultProvider":"openai"}`)
-	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"defaultProvider":null}`)
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"defaultProvider":"openai"}`)
+	writeFileMkdir(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"defaultProvider":null}`)
 
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if got := manager.GetDefaultProvider(); got != nil {
@@ -144,8 +145,8 @@ func TestSettingsProjectNullMasksGlobalDefaultProvider(t *testing.T) {
 // pi v1.4.0 (4a080252) core/settings-manager.ts deepMergeObjects.
 func TestSettingsProjectNestedNullMasksGlobalCompactionEnabled(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"compaction":{"enabled":false}}`)
-	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"compaction":{"enabled":null}}`)
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"compaction":{"enabled":false}}`)
+	writeFileMkdir(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"compaction":{"enabled":null}}`)
 
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if got := manager.GetCompactionEnabled(); !got {
@@ -160,7 +161,7 @@ func TestSettingsProjectNestedNullMasksGlobalCompactionEnabled(t *testing.T) {
 func TestSettingsCompactionSetterReplacesNull(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
 	settingsPath := filepath.Join(agentDir, "settings.json")
-	writeSettingsFile(t, settingsPath, `{"compaction":{"enabled":null}}`)
+	writeFileMkdir(t, settingsPath, `{"compaction":{"enabled":null}}`)
 
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	manager.SetCompactionEnabled(false)
@@ -176,8 +177,8 @@ func TestSettingsCompactionSetterReplacesNull(t *testing.T) {
 // remain intact (pi v1.4.0 (4a080252) core/settings-manager.ts).
 func TestSettingsProjectNestedNullMasksGlobalImageSetting(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"images":{"autoResize":false,"blockImages":false}}`)
-	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"images":{"autoResize":null,"blockImages":true}}`)
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"images":{"autoResize":false,"blockImages":false}}`)
+	writeFileMkdir(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"images":{"autoResize":null,"blockImages":true}}`)
 
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	if !manager.GetImageAutoResize() || !manager.GetBlockImages() {
@@ -187,8 +188,8 @@ func TestSettingsProjectNestedNullMasksGlobalImageSetting(t *testing.T) {
 
 func TestSettingsProjectOrdinaryCompactionNullIsInvalid(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"compaction":{"reserveTokens":500}}`)
-	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"compaction":{"reserveTokens":null}}`)
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"compaction":{"reserveTokens":500}}`)
+	writeFileMkdir(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"compaction":{"reserveTokens":null}}`)
 
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	_, err := manager.GetCompactionReserveTokens(nil)
@@ -201,8 +202,8 @@ func TestSettingsProjectOrdinaryCompactionNullIsInvalid(t *testing.T) {
 // overrides and reports null token values as invalid, not as absent overrides.
 func TestSettingsProjectModelOverrideNullIsInvalid(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"compaction":{"reserveTokens":1000,"modelOverrides":{"anthropic/model":{"reserveTokens":200}}}}`)
-	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"compaction":{"modelOverrides":{"anthropic/model":{"reserveTokens":null}}}}`)
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"compaction":{"reserveTokens":1000,"modelOverrides":{"anthropic/model":{"reserveTokens":200}}}}`)
+	writeFileMkdir(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"compaction":{"modelOverrides":{"anthropic/model":{"reserveTokens":null}}}}`)
 
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	_, err := manager.GetCompactionReserveTokens(&ai.Model{Provider: "anthropic", ID: "model"})
@@ -215,8 +216,8 @@ func TestSettingsProjectModelOverrideNullIsInvalid(t *testing.T) {
 // (4a080252) core/settings-manager.ts getCompactionTokenSetting.
 func TestSettingsProjectModelOverrideEntryNullIsInvalid(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"compaction":{"modelOverrides":{"anthropic/model":{"reserveTokens":200}}}}`)
-	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"compaction":{"modelOverrides":{"anthropic/model":null}}}`)
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"compaction":{"modelOverrides":{"anthropic/model":{"reserveTokens":200}}}}`)
+	writeFileMkdir(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"compaction":{"modelOverrides":{"anthropic/model":null}}}`)
 
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	_, err := manager.GetCompactionReserveTokens(&ai.Model{Provider: "anthropic", ID: "model"})

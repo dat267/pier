@@ -12,7 +12,7 @@ import (
 func TestSettingsNewKeysFollowDeclarationOrder(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
 	path := filepath.Join(agentDir, "settings.json")
-	writeSettingsFile(t, path, `{"custom":"<keep>&","theme":"dark"}`)
+	writeFileMkdir(t, path, `{"custom":"<keep>&","theme":"dark"}`)
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 	manager.SetDefaultModelAndProvider("openai", "test-model")
 	content := readFileBytes(t, path)
@@ -35,7 +35,7 @@ func TestSettingsCacheWarmingUnrecognizedModeFallsBack(t *testing.T) {
 	for _, stored := range []string{`"idle "`, `"IDLE"`, `"on"`} {
 		t.Run(stored, func(t *testing.T) {
 			agentDir, projectDir := settingsDirs(t)
-			writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"cacheWarming":`+stored+`}`)
+			writeFileMkdir(t, filepath.Join(agentDir, "settings.json"), `{"cacheWarming":`+stored+`}`)
 			manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
 			if got := manager.GetCacheWarmingMode(); got != CacheWarmingIdle {
 				t.Fatalf("cache warming = %q, want %q", got, CacheWarmingIdle)

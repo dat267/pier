@@ -231,7 +231,7 @@ func TestRetrySettingsToggle(t *testing.T) {
 	dir := t.TempDir()
 	// Exercise file-backed settings without sleeping the production default.
 	// TestSettingsRetryDefaultsAndOverrides separately pins the 2000 ms default.
-	writeSettingsFile(t, filepath.Join(dir, "settings.json"), `{"retry":{"baseDelayMs":1}}`)
+	writeFileMkdir(t, filepath.Join(dir, "settings.json"), `{"retry":{"baseDelayMs":1}}`)
 	settings := NewSettingsManagerFromFiles(dir, dir, SettingsManagerCreateOptions{})
 	session := retrySession(t, &ai.RetryPolicy{Enabled: true, MaxRetries: 2, BaseDelayMS: 1}, erroringStreamFn(0, ""))
 	session.control.Settings = settings

@@ -279,7 +279,7 @@ func TestExpandPromptTemplate(t *testing.T) {
 func TestLoadPromptTemplatesSortsNames(t *testing.T) {
 	dir := t.TempDir()
 	for _, name := range []string{"zeta", "alpha", "mu"} {
-		writeSettingsFile(t, filepath.Join(dir, name+".md"), "Template body")
+		writeFileMkdir(t, filepath.Join(dir, name+".md"), "Template body")
 	}
 	templates := LoadTemplatesFromDir(dir, func(path string) SourceInfo {
 		return CreateSyntheticSourceInfo(path, "local", "", "", dir)
@@ -306,10 +306,10 @@ func TestLoadPromptTemplatesAndFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	writeSettingsFile(t, filepath.Join(globalDir, "global.md"), "---\ndescription: Global template\n---\nGlobal content $1")
-	writeSettingsFile(t, filepath.Join(projectDir, "project.md"), "Project first line\n\nmore")
+	writeFileMkdir(t, filepath.Join(globalDir, "global.md"), "---\ndescription: Global template\n---\nGlobal content $1")
+	writeFileMkdir(t, filepath.Join(projectDir, "project.md"), "Project first line\n\nmore")
 	// Non-markdown files and directories are ignored.
-	writeSettingsFile(t, filepath.Join(globalDir, "notes.txt"), "not a template")
+	writeFileMkdir(t, filepath.Join(globalDir, "notes.txt"), "not a template")
 	if err := os.MkdirAll(filepath.Join(globalDir, "nested.md"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +338,7 @@ func TestLoadPromptTemplatesAndFiles(t *testing.T) {
 	if err := os.MkdirAll(explicit, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeSettingsFile(t, filepath.Join(explicit, "extra.md"), "Extra content")
+	writeFileMkdir(t, filepath.Join(explicit, "extra.md"), "Extra content")
 	templates = LoadPromptTemplates(LoadPromptTemplatesOptions{
 		Cwd: cwd, AgentDir: agentDir,
 		PromptPaths: []string{explicit, filepath.Join(explicit, "extra.md"), filepath.Join(root, "missing")},
@@ -409,7 +409,7 @@ func TestLoadTemplatesSkipsInvalidUTF8FileNames(t *testing.T) {
 // prompt-templates.ts accepts description and argument-hint only when YAML parses them as strings.
 func TestLoadTemplateIgnoresNonStringFrontmatterValues(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "numeric.md")
-	writeSettingsFile(t, path, "---\ndescription: 123\nargument-hint: 4\n---\nBody description")
+	writeFileMkdir(t, path, "---\ndescription: 123\nargument-hint: 4\n---\nBody description")
 	template := LoadTemplateFromFile(path, CreateSyntheticSourceInfo(path, "local", "", "", filepath.Dir(path)))
 	if template == nil || template.Description != "Body description" || template.HasArgumentHint {
 		t.Fatalf("template = %+v; want body-derived description and no argument hint", template)
@@ -420,7 +420,7 @@ func TestLoadTemplateFrontmatterArgumentHint(t *testing.T) {
 	root := t.TempDir()
 
 	required := filepath.Join(root, "required.md")
-	writeSettingsFile(t, required, "---\ndescription: Deploy the app\nargument-hint: \"<environment> [--dry-run]\"\n---\nDeploy body")
+	writeFileMkdir(t, required, "---\ndescription: Deploy the app\nargument-hint: \"<environment> [--dry-run]\"\n---\nDeploy body")
 	template := LoadTemplateFromFile(required, CreateSyntheticSourceInfo(required, "local", "", "", root))
 	if template == nil {
 		t.Fatal("template must load")
@@ -432,7 +432,7 @@ func TestLoadTemplateFrontmatterArgumentHint(t *testing.T) {
 
 	// An empty argument-hint stays unset.
 	empty := filepath.Join(root, "empty.md")
-	writeSettingsFile(t, empty, "---\nargument-hint: \"\"\n---\nbody")
+	writeFileMkdir(t, empty, "---\nargument-hint: \"\"\n---\nbody")
 	template = LoadTemplateFromFile(empty, CreateSyntheticSourceInfo(empty, "local", "", "", root))
 	if template == nil || template.HasArgumentHint {
 		t.Fatalf("template = %+v", template)
@@ -445,7 +445,7 @@ func TestLoadTemplateFrontmatterArgumentHint(t *testing.T) {
 
 	// A long first line is truncated to 60 characters with an ellipsis.
 	long := filepath.Join(root, "long.md")
-	writeSettingsFile(t, long, strings.Repeat("x", 80))
+	writeFileMkdir(t, long, strings.Repeat("x", 80))
 	template = LoadTemplateFromFile(long, CreateSyntheticSourceInfo(long, "local", "", "", root))
 	if template == nil || len(template.Description) != 63 || !strings.HasSuffix(template.Description, "...") {
 		t.Fatalf("description = %q", template.Description)

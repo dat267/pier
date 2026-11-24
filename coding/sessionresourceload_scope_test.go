@@ -20,11 +20,11 @@ func TestResourcePathsKeepBothScopes(t *testing.T) {
 	agentPrompt := filepath.Join(agentDir, "agent-prompts")
 	writeSkill(t, projectSkill, "project-skill", "project")
 	writeSkill(t, agentSkill, "agent-skill", "agent")
-	writeSettingsFile(t, filepath.Join(projectPrompt, "project.md"), "---\ndescription: project\n---\nBody")
-	writeSettingsFile(t, filepath.Join(agentPrompt, "agent.md"), "---\ndescription: agent\n---\nBody")
-	writeSettingsFile(t, filepath.Join(cwd, ".pi", "settings.json"),
+	writeFileMkdir(t, filepath.Join(projectPrompt, "project.md"), "---\ndescription: project\n---\nBody")
+	writeFileMkdir(t, filepath.Join(agentPrompt, "agent.md"), "---\ndescription: agent\n---\nBody")
+	writeFileMkdir(t, filepath.Join(cwd, ".pi", "settings.json"),
 		`{"skills": [`+`"`+projectSkill+`"`+`], "prompts": [`+`"`+projectPrompt+`"`+`]}`)
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"),
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"),
 		`{"skills": [`+`"`+agentSkill+`"`+`], "prompts": [`+`"`+agentPrompt+`"`+`]}`)
 
 	settings := NewSettingsManagerFromFiles(cwd, agentDir, SettingsManagerCreateOptions{})
@@ -64,10 +64,10 @@ func TestResourceSettingsPathsPrecedeCLIPaths(t *testing.T) {
 	writeSkill(t, cliSkills, "cli-only", "still loaded from the flag")
 	settingsPrompts := filepath.Join(cwd, "settings-prompts")
 	cliPrompts := filepath.Join(cwd, "cli-prompts")
-	writeSettingsFile(t, filepath.Join(settingsPrompts, "shared.md"), "settings prompt")
-	writeSettingsFile(t, filepath.Join(cliPrompts, "shared.md"), "CLI prompt")
-	writeSettingsFile(t, filepath.Join(cliPrompts, "cli-only.md"), "CLI-only prompt")
-	writeSettingsFile(t, filepath.Join(cwd, ".pi", "settings.json"),
+	writeFileMkdir(t, filepath.Join(settingsPrompts, "shared.md"), "settings prompt")
+	writeFileMkdir(t, filepath.Join(cliPrompts, "shared.md"), "CLI prompt")
+	writeFileMkdir(t, filepath.Join(cliPrompts, "cli-only.md"), "CLI-only prompt")
+	writeFileMkdir(t, filepath.Join(cwd, ".pi", "settings.json"),
 		`{"skills": ["`+settingsSkills+`"], "prompts": ["`+settingsPrompts+`"]}`)
 
 	settings := NewSettingsManagerFromFiles(cwd, agentDir, SettingsManagerCreateOptions{})
@@ -105,10 +105,10 @@ func TestPromptTemplatePathsDeduplicateAcrossScopes(t *testing.T) {
 	cwd := t.TempDir()
 	agentDir := t.TempDir()
 	shared := filepath.Join(t.TempDir(), "shared-prompts")
-	writeSettingsFile(t, filepath.Join(shared, "hello.md"), "Hello")
-	writeSettingsFile(t, filepath.Join(cwd, ".pi", "settings.json"),
+	writeFileMkdir(t, filepath.Join(shared, "hello.md"), "Hello")
+	writeFileMkdir(t, filepath.Join(cwd, ".pi", "settings.json"),
 		`{"prompts": ["`+shared+`"]}`)
-	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"),
+	writeFileMkdir(t, filepath.Join(agentDir, "settings.json"),
 		`{"prompts": ["`+shared+`"]}`)
 
 	settings := NewSettingsManagerFromFiles(cwd, agentDir, SettingsManagerCreateOptions{})
