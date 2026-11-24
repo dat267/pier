@@ -134,9 +134,7 @@ func (OpenAIDecisions) Classify(model *Model, classifierContext ClassifierContex
 		return classifierFail(result, fmt.Errorf("%s returned an unexpected response", openAIDecisionsLabel), options)
 	}
 	result.Usage = parseOpenAIDecisionsUsage(body.Usage, model)
-	if options.OnResponse != nil {
-		options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: headersToRecord(response.Header)}, model)
-	}
+	reportResponse(options.OnResponse, response, model)
 	answers, answerOrder, err := parseOpenAIDecisionsAnswers(body.Answers, classifierContext.Questions)
 	if err != nil {
 		return classifierFail(result, err, options)
@@ -415,6 +413,15 @@ func classifierTokenCount(raw json.RawMessage) int64 {
 		return 0
 	}
 	return jsnum.ToInt64(value)
+}
+
+// reportResponse hands onResponse, when set, the response's status and header
+// record (upstream options?.onResponse?.({ status, headers:
+// headersToRecord(response.headers) }, model)).
+func reportResponse(onResponse func(ProviderResponse, *Model), response *http.Response, model *Model) {
+	if onResponse != nil {
+		onResponse(ProviderResponse{Status: response.StatusCode, Headers: headersToRecord(response.Header)}, model)
+	}
 }
 
 // headersToRecord flattens response headers into the lowercase-keyed record

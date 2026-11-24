@@ -977,9 +977,7 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 		}
 		defer func() { _ = response.Body.Close() }()
 		requestID := response.Header.Get("x-amzn-requestid")
-		if options.OnResponse != nil {
-			options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: headersToRecord(response.Header)}, model)
-		}
+		reportResponse(options.OnResponse, response, model)
 
 		stream.Push(AssistantMessageEvent{Type: EventStart, Partial: output})
 		iterErr := readBedrockConverseStream(response.Body, model, output, stream, &blocks, options.OnProviderStreamEvent)

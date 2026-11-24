@@ -474,9 +474,7 @@ func StreamPiMessages(model *Model, context TranscriptContext, options *PiMessag
 			return
 		}
 		defer func() { _ = response.Body.Close() }()
-		if options.OnResponse != nil {
-			options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: headersToRecord(response.Header)}, model)
-		}
+		reportResponse(options.OnResponse, response, model)
 		if response.StatusCode >= 400 {
 			raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
 			fail(createPiMessagesResponseError(model, requestURL, response, string(raw)))

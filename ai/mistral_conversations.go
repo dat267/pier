@@ -216,9 +216,7 @@ func StreamMistralConversations(model *Model, context TranscriptContext, options
 			return
 		}
 		defer func() { _ = resp.Body.Close() }()
-		if options.OnResponse != nil {
-			options.OnResponse(ProviderResponse{Status: resp.StatusCode, Headers: headersToRecord(resp.Header)}, model)
-		}
+		reportResponse(options.OnResponse, resp, model)
 		stream.Push(AssistantMessageEvent{Type: EventStart, Partial: output})
 
 		if err := consumeMistralChatStream(ctx, model, output, stream, resp.Body, options.OnProviderStreamEvent); err != nil {

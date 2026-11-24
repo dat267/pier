@@ -366,9 +366,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 			return
 		}
 		defer func() { _ = resp.Body.Close() }()
-		if options.OnResponse != nil {
-			options.OnResponse(ProviderResponse{Status: resp.StatusCode, Headers: headersToRecord(resp.Header)}, model)
-		}
+		reportResponse(options.OnResponse, resp, model)
 		stream.Push(AssistantMessageEvent{Type: EventStart, Partial: output})
 
 		var textBlock *int     // content index when non-nil
