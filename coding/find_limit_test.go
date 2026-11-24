@@ -14,12 +14,16 @@ import (
 
 // installFindStub puts a fake fd on PATH that prints the given lines whatever
 // arguments it gets, so the tool's own limit handling is what is exercised.
+// The stub runs with PATH set to `bin` alone, so each line is printed with the
+// echo builtin: Android's sh has no printf builtin and cannot reach toybox
+// printf without a real PATH (printf then fails with "inaccessible or not
+// found" and the stub exits 127).
 func installFindStub(t *testing.T, lines ...string) {
 	t.Helper()
 	bin := t.TempDir()
 	script := "#!/bin/sh\n"
 	for _, line := range lines {
-		script += "printf '" + line + "\\n'\n"
+		script += "echo '" + line + "'\n"
 	}
 	if err := os.WriteFile(filepath.Join(bin, "fd"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)

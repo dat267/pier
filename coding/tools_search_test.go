@@ -412,9 +412,13 @@ func TestFindToolSurvivesALimitWiderThanInt64(t *testing.T) {
 		t.Skip("uses a POSIX executable stub")
 	}
 	// A stub fd keeps the test independent of an installed binary: CI has none,
-	// and the overflow is in pier's slicing of the lines fd returns.
+	// and the overflow is in pier's slicing of the lines fd returns. The stub
+	// runs with PATH set to `bin` alone, so it may use only shell builtins:
+	// Android's sh has no printf builtin and cannot reach toybox printf without
+	// a real PATH (the stub then exits 127 with "printf: inaccessible or not
+	// found").
 	bin := t.TempDir()
-	if err := os.WriteFile(filepath.Join(bin, "fd"), []byte("#!/bin/sh\nprintf 'a.txt\\n'\n"), 0o755); err != nil {
+	if err := os.WriteFile(filepath.Join(bin, "fd"), []byte("#!/bin/sh\necho a.txt\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", bin)

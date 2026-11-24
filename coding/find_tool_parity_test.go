@@ -165,12 +165,16 @@ func TestFindToolUsesFdfindWhenFDUnavailable(t *testing.T) {
 		}
 		t.Run(name, func(t *testing.T) {
 			bin := t.TempDir()
-			if err := os.WriteFile(filepath.Join(bin, "fdfind"), []byte("#!/bin/sh\nprintf 'from-fdfind.txt\\n'\n"), 0o755); err != nil {
+			// The stubs run with PATH set to `bin` alone, so they may use only
+			// shell builtins: Android's sh has no printf builtin and cannot
+			// reach toybox printf without a real PATH (the stub then exits 127
+			// with "printf: inaccessible or not found").
+			if err := os.WriteFile(filepath.Join(bin, "fdfind"), []byte("#!/bin/sh\necho from-fdfind.txt\n"), 0o755); err != nil {
 				t.Fatal(err)
 			}
 			want := "from-fdfind.txt"
 			if hasFD {
-				if err := os.WriteFile(filepath.Join(bin, "fd"), []byte("#!/bin/sh\nprintf 'from-fd.txt\\n'\n"), 0o755); err != nil {
+				if err := os.WriteFile(filepath.Join(bin, "fd"), []byte("#!/bin/sh\necho from-fd.txt\n"), 0o755); err != nil {
 					t.Fatal(err)
 				}
 				want = "from-fd.txt"
