@@ -314,7 +314,7 @@ func (c *InteractiveThemeController) SetThemeSetting(themeSetting string) {
 // a running load completes before its newest successor.
 func (c *InteractiveThemeController) applyThemeNameAsync(themeName string) {
 	if c.themeQueue == nil {
-		c.applyThemeNameSync(themeName)
+		c.applyThemeName(themeName, true)
 		return
 	}
 	c.themeQueue.GoLatestContext("theme", func(ctx context.Context) {
@@ -409,13 +409,6 @@ func (c *InteractiveThemeController) ActiveThemeName() string { return c.activeT
 func (c *InteractiveThemeController) applyThemeName(themeName string, showError bool) ThemeResult {
 	success, message := SetTheme(themeName, true)
 	return c.recordThemeApply(themeName, success, message, showError)
-}
-
-// applyThemeNameSync is applyThemeName for the synchronous (nil-queue) mode;
-// kept separate so the async path cannot accidentally call back into it.
-func (c *InteractiveThemeController) applyThemeNameSync(themeName string) ThemeResult {
-	success, message := SetTheme(themeName, true)
-	return c.recordThemeApply(themeName, success, message, true)
 }
 
 // recordThemeApply updates the controller state after a theme application and
