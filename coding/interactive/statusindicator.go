@@ -383,13 +383,7 @@ func (c *BranchSummaryMessageComponent) updateDisplay() {
 				theme.Fg("dim", KeyText("app.tools.expand"))+
 				theme.Fg("customMessageText", " to expand)"), 0, 0, nil))
 	}
-	c.Box.AddChild(tui.NewMouseRegion(content, func(event tui.TuiMouseEvent) *tui.TuiMouseDispatchResult {
-		if event.Type != tui.MouseClick || event.Button != tui.MouseButtonLeft {
-			return nil
-		}
-		c.SetExpanded(!c.expanded)
-		return &tui.TuiMouseDispatchResult{Handled: true}
-	}))
+	c.Box.AddChild(leftClickRegion(content, func() { c.SetExpanded(!c.expanded) }))
 }
 
 // CompactionSummaryMessageComponent renders a compaction summary.
@@ -451,11 +445,5 @@ func (c *CompactionSummaryMessageComponent) updateDisplay() {
 				theme.Fg("dim", KeyText("app.tools.expand"))+
 				theme.Fg("customMessageText", " to expand)"), 0, 0, nil))
 	}
-	c.Box.AddChild(tui.NewMouseRegion(content, func(event tui.TuiMouseEvent) *tui.TuiMouseDispatchResult {
-		if event.Type != tui.MouseClick || event.Button != tui.MouseButtonLeft {
-			return nil
-		}
-		c.SetExpanded(!c.expanded)
-		return &tui.TuiMouseDispatchResult{Handled: true}
-	}))
+	c.Box.AddChild(leftClickRegion(content, func() { c.SetExpanded(!c.expanded) }))
 }

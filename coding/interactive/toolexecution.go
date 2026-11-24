@@ -254,6 +254,18 @@ func (c *ToolExecutionComponent) createResultRegion(component tui.Component) *tu
 	})
 }
 
+// leftClickRegion wraps child so a left click runs onClick and is reported
+// handled; every other mouse event passes through.
+func leftClickRegion(child tui.Component, onClick func()) *tui.MouseRegion {
+	return tui.NewMouseRegion(child, func(event tui.TuiMouseEvent) *tui.TuiMouseDispatchResult {
+		if event.Type != tui.MouseClick || event.Button != tui.MouseButtonLeft {
+			return nil
+		}
+		onClick()
+		return &tui.TuiMouseDispatchResult{Handled: true}
+	})
+}
+
 // UpdateArgs shows new partial arguments. Applied at the next render, so a call
 // streaming many argument deltas between two frames runs its renderer once per
 // frame, not once per delta (pi v1.5.0 tool-execution.ts #9265).

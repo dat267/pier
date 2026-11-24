@@ -404,15 +404,11 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 				thinkingComponent = markdown
 			}
 			c.blockComponents[key] = thinkingComponent
-			addVisibleChild(tui.NewMouseRegion(thinkingComponent, func(event tui.TuiMouseEvent) *tui.TuiMouseDispatchResult {
-				if event.Type != tui.MouseClick || event.Button != tui.MouseButtonLeft {
-					return nil
-				}
+			addVisibleChild(leftClickRegion(thinkingComponent, func() {
 				c.thinkingVisibilityOverrides[runIndex] = !hidden
 				if c.lastMessage != nil {
 					c.UpdateContent(c.lastMessage, c.isStreaming)
 				}
-				return &tui.TuiMouseDispatchResult{Handled: true}
 			}))
 			// A visible run re-arms the spacer, which the next visible child
 			// takes; nothing follows it only when it is the last block.

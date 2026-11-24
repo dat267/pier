@@ -71,13 +71,7 @@ func (c *SkillInvocationMessageComponent) updateDisplay() {
 		content.AddChild(tui.NewText(line, 0, 0, nil))
 	}
 
-	c.Box.AddChild(tui.NewMouseRegion(content, func(event tui.TuiMouseEvent) *tui.TuiMouseDispatchResult {
-		if event.Type != tui.MouseClick || event.Button != tui.MouseButtonLeft {
-			return nil
-		}
-		c.SetExpanded(!c.expanded)
-		return &tui.TuiMouseDispatchResult{Handled: true}
-	}))
+	c.Box.AddChild(leftClickRegion(content, func() { c.SetExpanded(!c.expanded) }))
 }
 
 // FirstTimeSetupResult is the setup dialog outcome.
