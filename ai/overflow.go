@@ -2,6 +2,7 @@ package ai
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -94,13 +95,9 @@ func IsContextOverflow(message *AssistantMessage, contextWindow int64) bool {
 	// Case 1: an error message matching an overflow pattern.
 	if message.StopReason == StopError && message.ErrorMessage != nil && *message.ErrorMessage != "" {
 		text := *message.ErrorMessage
-		isNonOverflow := false
-		for _, pattern := range nonOverflowPatterns {
-			if pattern.MatchString(text) {
-				isNonOverflow = true
-				break
-			}
-		}
+		isNonOverflow := slices.ContainsFunc(nonOverflowPatterns, func(pattern *regexp.Regexp) bool {
+			return pattern.MatchString(text)
+		})
 		if !isNonOverflow {
 			for _, pattern := range overflowPatterns {
 				if pattern.MatchString(text) {

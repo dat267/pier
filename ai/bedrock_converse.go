@@ -196,13 +196,9 @@ func IsAnthropicClaudeModel(model *Model) bool {
 // SupportsBedrockPromptCaching reports whether cache points are supported.
 func SupportsBedrockPromptCaching(model *Model, env ProviderEnv) bool {
 	candidates := GetModelMatchCandidates(model.ID, model.Name)
-	hasClaudeRef := false
-	for _, candidate := range candidates {
-		if strings.Contains(candidate, "claude") {
-			hasClaudeRef = true
-			break
-		}
-	}
+	hasClaudeRef := slices.ContainsFunc(candidates, func(candidate string) bool {
+		return strings.Contains(candidate, "claude")
+	})
 	if !hasClaudeRef {
 		// Inference-profile ARNs carry no model name; allow an explicit override.
 		return GetProviderEnvValueOr("AWS_BEDROCK_FORCE_CACHE", env) == "1"
