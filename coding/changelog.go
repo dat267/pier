@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"regexp"
@@ -152,10 +153,7 @@ func encodeURI(value string) string {
 			continue
 		}
 		for _, b := range []byte(string(r)) {
-			builder.WriteString("%")
-			const hex = "0123456789ABCDEF"
-			builder.WriteByte(hex[b>>4])
-			builder.WriteByte(hex[b&0xf])
+			fmt.Fprintf(&builder, "%%%02X", b)
 		}
 	}
 	return builder.String()
