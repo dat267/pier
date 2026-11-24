@@ -414,13 +414,9 @@ func declareToolChanges(context AgentContext, pendingMessages []ai.Message) []ai
 		return pendingMessages
 	}
 	update := withToolChanges(&ai.SystemMessage{Timestamp: time.Now().UnixMilli()}, changes)
-	insertIndex := -1
-	for i, message := range pendingMessages {
-		if ai.RoleOf(message) != ai.RoleSystem {
-			insertIndex = i
-			break
-		}
-	}
+	insertIndex := slices.IndexFunc(pendingMessages, func(message ai.Message) bool {
+		return ai.RoleOf(message) != ai.RoleSystem
+	})
 	if insertIndex == -1 {
 		insertIndex = len(pendingMessages)
 	}
