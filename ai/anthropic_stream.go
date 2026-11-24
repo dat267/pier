@@ -473,16 +473,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 		if options == nil {
 			options = &AnthropicOptions{}
 		}
-		hasAuth := options.APIKey != ""
-		if !hasAuth && options.Headers != nil {
-			for name, value := range options.Headers {
-				lower := strings.ToLower(name)
-				if (lower == "authorization" || lower == "x-api-key" || lower == "cf-aig-authorization") &&
-					value != nil && JSTrim(*value) != "" {
-					hasAuth = true
-				}
-			}
-		}
+		hasAuth := hasRequestAuth(options.APIKey, options.Headers)
 		federationBearer := ""
 		if !hasAuth {
 			bearer, present, ferr := anthropicFederationBearer(ctx, model, options.Env)
@@ -961,16 +952,7 @@ func StreamAnthropicSimple(model *Model, context TranscriptContext, options *Sim
 		options = &SimpleStreamOptions{}
 	}
 	// streamSimple throws synchronously when request auth is missing.
-	hasAuth := options.APIKey != ""
-	if !hasAuth && options.Headers != nil {
-		for name, value := range options.Headers {
-			lower := strings.ToLower(name)
-			if (lower == "authorization" || lower == "x-api-key" || lower == "cf-aig-authorization") &&
-				value != nil && JSTrim(*value) != "" {
-				hasAuth = true
-			}
-		}
-	}
+	hasAuth := hasRequestAuth(options.APIKey, options.Headers)
 	if !hasAuth {
 		stream := NewAssistantMessageEventStream()
 		go func() {
@@ -1056,4 +1038,22 @@ func anthropicFederationBearer(ctx context.Context, model *Model, env ProviderEn
 		return "", false, err
 	}
 	return token, true, nil
+}
+
+// hasRequestAuth reports whether a request carries an API key or a non-blank
+// authorization, x-api-key or cf-aig-authorization header (port of
+// anthropic-messages.ts hasRequestAuth/hasHeader).
+func hasRequestAuth(apiKey string, headers ProviderHeaders) bool {
+	if apiKey != "" {
+		return true
+	}
+	for name, value := range headers {
+		switch strings.ToLower(name) {
+		case "authorization", "x-api-key", "cf-aig-authorization":
+			if value != nil && JSTrim(*value) != "" {
+				return true
+			}
+		}
+	}
+	return false
 }
