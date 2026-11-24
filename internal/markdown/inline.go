@@ -225,7 +225,7 @@ func parseInline(src string, state *inlineState) []Inline {
 				j++
 			}
 			run := j - i
-			closeAt := findRun(src, j, '`', run)
+			closeAt := findBacktickRun(src, j, run)
 			if closeAt >= 0 {
 				flush()
 				out = append(out, Inline{Kind: InlineCode, Text: normalizeCodeSpan(src[j:closeAt])})
@@ -509,15 +509,16 @@ func normalizeCodeSpan(s string) string {
 	return s
 }
 
-// findRun finds the next run of exactly want copies of ch after from.
-func findRun(src string, from int, ch byte, want int) int {
+// findBacktickRun finds the next run of exactly want backticks at or after
+// from, the closer of a code span opened by a run of that length.
+func findBacktickRun(src string, from int, want int) int {
 	for i := from; i < len(src); {
-		if src[i] != ch {
+		if src[i] != '`' {
 			i++
 			continue
 		}
 		j := i
-		for j < len(src) && src[j] == ch {
+		for j < len(src) && src[j] == '`' {
 			j++
 		}
 		if j-i == want {
@@ -594,7 +595,7 @@ func parseLink(src string, i int, image bool, state *inlineState) (Inline, int, 
 			for j+run < len(src) && src[j+run] == '`' {
 				run++
 			}
-			if closeAt := findRun(src, j+run, '`', run); closeAt >= 0 {
+			if closeAt := findBacktickRun(src, j+run, run); closeAt >= 0 {
 				j = closeAt + run - 1
 				continue
 			}
