@@ -237,13 +237,9 @@ func CreateVirtualModel(definition VirtualModelDefinition) *ai.Model {
 	if input == nil {
 		input = []string{"text", "image"}
 	}
-	reasoning := false
-	for _, level := range levels {
-		if level != "off" {
-			reasoning = true
-			break
-		}
-	}
+	reasoning := slices.ContainsFunc(levels, func(level string) bool {
+		return level != "off"
+	})
 	return &ai.Model{
 		ID: definition.ID, Name: definition.Name, API: VirtualModelAPI, Provider: definition.Provider,
 		BaseURL: "", Reasoning: reasoning, ThinkingLevelMap: thinkingLevelMap, Input: input,

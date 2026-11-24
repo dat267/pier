@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/dat267/pier/agent"
@@ -35,13 +36,10 @@ type NormalizeToolResultImagesOptions struct {
 // The original slice is returned when nothing changed so callers can skip
 // rewriting the result.
 func NormalizeToolResultImages(content ai.UserContentList, options *NormalizeToolResultImagesOptions) (ai.UserContentList, bool) {
-	hasImage := false
-	for _, block := range content {
-		if _, ok := block.(ai.ImageContent); ok {
-			hasImage = true
-			break
-		}
-	}
+	hasImage := slices.ContainsFunc(content, func(block ai.UserContent) bool {
+		_, ok := block.(ai.ImageContent)
+		return ok
+	})
 	if !hasImage {
 		return content, false
 	}
@@ -113,13 +111,10 @@ func NormalizeToolResultImages(content ai.UserContentList, options *NormalizeToo
 // without images, or one whose images are already within the limits, returns
 // nil so the agent keeps the tool's own result.
 func (s *AgentSession) normalizeToolResultContent(content []ai.Content) *agent.AfterToolCallResult {
-	hasImage := false
-	for _, block := range content {
-		if _, ok := block.(ai.ImageContent); ok {
-			hasImage = true
-			break
-		}
-	}
+	hasImage := slices.ContainsFunc(content, func(block ai.Content) bool {
+		_, ok := block.(ai.ImageContent)
+		return ok
+	})
 	if !hasImage {
 		return nil
 	}
