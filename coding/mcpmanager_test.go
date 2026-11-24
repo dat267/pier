@@ -130,20 +130,7 @@ func newMCPFakeServerTools(t *testing.T, name string, tools []protocol.Tool) (*m
 			default:
 				failure = &protocol.McpError{Code: protocol.JSONRPCErrorCode.MethodNotFound, Msg: "Method not found"}
 			}
-			if failure != nil {
-				_ = server.Send(context.Background(), protocol.JsonRpcResponse{
-					JSONRPC: protocol.JSONRPCVersion, ID: request.ID,
-					Error: &protocol.JsonRpcErrorObject{Code: failure.Code, Message: failure.Msg},
-				})
-				return
-			}
-			encoded, err := json.Marshal(result)
-			if err != nil {
-				return
-			}
-			_ = server.Send(context.Background(), protocol.JsonRpcResponse{
-				JSONRPC: protocol.JSONRPCVersion, ID: request.ID, Result: encoded,
-			})
+			replyJSONRPC(server, request.ID, result, failure)
 		}()
 	})
 	_ = server.Start(context.Background())
@@ -335,4 +322,21 @@ func isHashedMcpToolName(name string) bool {
 		}
 	}
 	return true
+}
+
+// replyJSONRPC answers request id on a fake server's transport: an error
+// response when failure is set, otherwise result encoded. A result that does
+// not encode sends nothing.
+func replyJSONRPC(server mcp.Transport, id protocol.JsonRpcId, result any, failure *protocol.McpError) {
+	response := protocol.JsonRpcResponse{JSONRPC: protocol.JSONRPCVersion, ID: id}
+	if failure != nil {
+		response.Error = &protocol.JsonRpcErrorObject{Code: failure.Code, Message: failure.Msg}
+	} else {
+		encoded, err := json.Marshal(result)
+		if err != nil {
+			return
+		}
+		response.Result = encoded
+	}
+	_ = server.Send(context.Background(), response)
 }

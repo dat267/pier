@@ -69,20 +69,7 @@ func newMCPFakeServer(t *testing.T, noTools bool) (*mcpFakeServer, *mcp.InMemory
 			default:
 				failure = &protocol.McpError{Code: protocol.JSONRPCErrorCode.MethodNotFound, Msg: "Method not found"}
 			}
-			if failure != nil {
-				_ = server.Send(context.Background(), protocol.JsonRpcResponse{
-					JSONRPC: protocol.JSONRPCVersion, ID: request.ID,
-					Error: &protocol.JsonRpcErrorObject{Code: failure.Code, Message: failure.Msg},
-				})
-				return
-			}
-			encoded, err := json.Marshal(result)
-			if err != nil {
-				return
-			}
-			_ = server.Send(context.Background(), protocol.JsonRpcResponse{
-				JSONRPC: protocol.JSONRPCVersion, ID: request.ID, Result: encoded,
-			})
+			replyJSONRPC(server, request.ID, result, failure)
 		}()
 	})
 	_ = server.Start(context.Background())

@@ -413,17 +413,7 @@ func TestMcpConcurrentConnectSurvivesInitiatorCancellation(t *testing.T) {
 		default:
 			failure = &protocol.McpError{Code: protocol.JSONRPCErrorCode.MethodNotFound, Msg: "Method not found"}
 		}
-		response := protocol.JsonRpcResponse{JSONRPC: protocol.JSONRPCVersion, ID: request.ID}
-		if failure != nil {
-			response.Error = &protocol.JsonRpcErrorObject{Code: failure.Code, Message: failure.Msg}
-		} else {
-			encoded, err := json.Marshal(result)
-			if err != nil {
-				return
-			}
-			response.Result = encoded
-		}
-		_ = serverTransport.Send(context.Background(), response)
+		replyJSONRPC(serverTransport, request.ID, result, failure)
 	})
 	if err := serverTransport.Start(context.Background()); err != nil {
 		t.Fatal(err)
