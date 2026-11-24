@@ -372,15 +372,8 @@ func TestContextOverflowMatchesUpstream(t *testing.T) {
 				window = *test.ContextWindow
 			}
 			if got := IsContextOverflow(message, window); got != test.Expected {
-				t.Errorf("IsContextOverflow(%q) = %v, want %v", stringOrEmpty(test.ErrorMessage), got, test.Expected)
+				t.Errorf("IsContextOverflow(%q) = %v, want %v", deref(test.ErrorMessage), got, test.Expected)
 			}
 		})
 	}
-}
-
-func stringOrEmpty(value *string) string {
-	if value == nil {
-		return ""
-	}
-	return *value
 }

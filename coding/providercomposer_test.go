@@ -384,13 +384,6 @@ func TestMergeCompatNested(t *testing.T) {
 	}
 }
 
-func derefHeader(value *string) string {
-	if value == nil {
-		return ""
-	}
-	return *value
-}
-
 func TestComposeModelOverridePreservesSamplingParamOrder(t *testing.T) {
 	baseModel := &ai.Model{
 		ID: "builtin", Name: "Builtin", API: ai.APIOpenAICompletions, Provider: "custom",
@@ -581,8 +574,8 @@ func TestConfiguredHeadersAndStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if derefHeader(requestConfig.Headers["X-Base"]) != "static" || derefHeader(requestConfig.Headers["X-Model"]) != "static" ||
-		derefHeader(requestConfig.Headers["X-Provider"]) != "resolved" {
+	if derefString(requestConfig.Headers["X-Base"]) != "static" || derefString(requestConfig.Headers["X-Model"]) != "static" ||
+		derefString(requestConfig.Headers["X-Provider"]) != "resolved" {
 		t.Fatalf("headers = %+v", requestConfig.Headers)
 	}
 
