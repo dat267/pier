@@ -1,14 +1,12 @@
 package interactive
 
 import (
-	"bufio"
 	"encoding/json"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 	"os"
 	"runtime"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 )
@@ -68,30 +66,6 @@ type selectorCorpus struct {
 	Custom       map[string]customSpec       `json:"custom"`
 }
 
-func loadSelectorGolden(t *testing.T) map[string]string {
-	t.Helper()
-	file, err := os.Open("testdata/selector_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-	values := map[string]string{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		values[strings.TrimPrefix(parts[0], "s ")] = parts[1]
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
-	return values
-}
-
 // TestSelectorsAgainstUpstreamGolden replays the upstream selector corpus.
 func TestSelectorsAgainstUpstreamGolden(t *testing.T) {
 	// The corpus drives Unix paths (/tmp/project) and the golden bakes in how
@@ -107,7 +81,7 @@ func TestSelectorsAgainstUpstreamGolden(t *testing.T) {
 	SetStyleColorsEnabled(true)
 	InitTheme("dark", false)
 
-	golden := loadSelectorGolden(t)
+	golden := loadArrowGolden(t, "testdata/selector_golden.txt", "s ")
 	data, err := os.ReadFile("testdata/selector_corpus.json")
 	if err != nil {
 		t.Fatalf("read corpus: %v", err)

@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"bufio"
 	"encoding/json"
 	"maps"
 	"os"
@@ -129,7 +128,7 @@ func TestMainScreenAgainstUpstreamGolden(t *testing.T) {
 	// (see TestMainScreenTermuxHeightChange). This test asserts upstream's
 	// stream, so the host's Termux-ness must not leak into it.
 	t.Setenv("TERMUX_VERSION", "")
-	golden := loadMainScreenGolden(t)
+	golden := loadArrowGolden(t, "testdata/mainscreen_golden.txt", "ms ")
 	data, err := os.ReadFile("testdata/mainscreen_corpus.json")
 	if err != nil {
 		t.Fatalf("read corpus: %v", err)
@@ -185,30 +184,6 @@ func TestMainScreenAgainstUpstreamGolden(t *testing.T) {
 			}
 		}
 	}
-}
-
-func loadMainScreenGolden(t *testing.T) map[string]string {
-	t.Helper()
-	file, err := os.Open("testdata/mainscreen_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-	values := map[string]string{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		values[strings.TrimPrefix(parts[0], "ms ")] = parts[1]
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
-	return values
 }
 
 // TestMainScreenHelpers covers the kitty parsing and the bounded writer.

@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"bufio"
 	"encoding/json"
 	"os"
 	"strconv"
@@ -41,30 +40,6 @@ type messageCorpus struct {
 	Compaction map[string]summarySpec   `json:"compaction"`
 }
 
-func loadMessageGolden(t *testing.T) map[string]string {
-	t.Helper()
-	file, err := os.Open("testdata/message_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-	values := map[string]string{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		values[strings.TrimPrefix(parts[0], "m ")] = parts[1]
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
-	return values
-}
-
 func assistantMessageFromSpec(spec assistantSpec) *ai.AssistantMessage {
 	message := &ai.AssistantMessage{
 		API: "openai", Provider: "openai", Model: "gpt",
@@ -100,7 +75,7 @@ func TestMessagesAgainstUpstreamGolden(t *testing.T) {
 	SetStyleColorsEnabled(true)
 	InitTheme("dark", false)
 
-	golden := loadMessageGolden(t)
+	golden := loadArrowGolden(t, "testdata/message_golden.txt", "m ")
 	data, err := os.ReadFile("testdata/message_corpus.json")
 	if err != nil {
 		t.Fatalf("read corpus: %v", err)
@@ -386,7 +361,7 @@ func TestUserMessageKeepsOneCopyOfEachLine(t *testing.T) {
 	if _, isBox := component.Children[0].(*tui.Box); isBox {
 		t.Fatal("the message still wraps its Markdown in a Box: a second full-width copy of every line")
 	}
-	checkGolden(t, loadComponentsGolden(t), "user-single-copy@30", component.Render(30))
+	checkGolden(t, loadArrowGolden(t, "testdata/components_golden.txt", "c "), "user-single-copy@30", component.Render(30))
 }
 
 // Upstream decides visibility with `text.trim()`, i.e. the JS whitespace set

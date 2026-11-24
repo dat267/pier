@@ -1,12 +1,40 @@
 package interactive
 
 import (
+	"bufio"
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/dat267/pier/tui"
 )
+
+// loadArrowGolden reads a Node-generated golden of "key => value" lines,
+// dropping prefix from each key.
+func loadArrowGolden(t *testing.T, path string, prefix string) map[string]string {
+	t.Helper()
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("open golden: %v", err)
+	}
+	defer file.Close()
+	values := map[string]string{}
+	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
+	for scanner.Scan() {
+		line := scanner.Text()
+		key, value, ok := strings.Cut(line, " => ")
+		if !ok {
+			t.Fatalf("bad golden line %q", line)
+		}
+		values[strings.TrimPrefix(key, prefix)] = value
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	return values
+}
 
 // Test helpers shared by the theme tests (the same JSON normalization used by
 // the tui golden tests).

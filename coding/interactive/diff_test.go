@@ -1,11 +1,9 @@
 package interactive
 
 import (
-	"bufio"
 	"encoding/json"
 	"os"
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -17,30 +15,6 @@ import (
 // and the upstream renderDiff with Node
 // (coding/interactive/testdata/diff_golden.txt).
 
-func loadDiffGolden(t *testing.T) map[string]string {
-	t.Helper()
-	file, err := os.Open("testdata/diff_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-	values := map[string]string{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		values[strings.TrimPrefix(parts[0], "d ")] = parts[1]
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
-	return values
-}
-
 // TestDiffAgainstUpstreamGolden compares DiffWords and RenderDiff with jsdiff.
 func TestDiffAgainstUpstreamGolden(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
@@ -49,7 +23,7 @@ func TestDiffAgainstUpstreamGolden(t *testing.T) {
 	SetStyleColorsEnabled(true)
 	InitTheme("dark", false)
 
-	golden := loadDiffGolden(t)
+	golden := loadArrowGolden(t, "testdata/diff_golden.txt", "d ")
 	data, err := os.ReadFile("testdata/diff_corpus.json")
 	if err != nil {
 		t.Fatalf("read corpus: %v", err)

@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"bufio"
 	"encoding/json"
 	"maps"
 	"os"
@@ -46,30 +45,6 @@ type componentsCorpus struct {
 	CustomEntries []customEntrySpec `json:"customEntries"`
 }
 
-func loadComponentsGolden(t *testing.T) map[string]string {
-	t.Helper()
-	file, err := os.Open("testdata/components_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-	values := map[string]string{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		values[strings.TrimPrefix(parts[0], "c ")] = parts[1]
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
-	return values
-}
-
 // TestComponentsAgainstUpstreamGolden replays the upstream component corpus.
 func TestComponentsAgainstUpstreamGolden(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
@@ -80,7 +55,7 @@ func TestComponentsAgainstUpstreamGolden(t *testing.T) {
 	SetStyleColorsEnabled(true)
 	InitTheme("dark", false)
 
-	golden := loadComponentsGolden(t)
+	golden := loadArrowGolden(t, "testdata/components_golden.txt", "c ")
 	data, err := os.ReadFile("testdata/components_corpus.json")
 	if err != nil {
 		t.Fatalf("read corpus: %v", err)

@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"bufio"
 	"encoding/json"
 	"os"
 	"strconv"
@@ -65,30 +64,6 @@ type authCorpus struct {
 	Login    map[string]loginSpec `json:"login"`
 }
 
-func loadAuthGolden(t *testing.T) map[string]string {
-	t.Helper()
-	file, err := os.Open("testdata/auth_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-	values := map[string]string{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		values[strings.TrimPrefix(parts[0], "a ")] = parts[1]
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
-	return values
-}
-
 func checkAuthGolden(t *testing.T, golden map[string]string, label string, got any) {
 	t.Helper()
 	if lines, ok := got.([]string); ok && lines == nil {
@@ -118,7 +93,7 @@ func checkAuthGolden(t *testing.T, golden map[string]string, label string, got a
 // TestSessionSearchAgainstUpstreamGolden replays the query parsing, matching,
 // and filtering.
 func TestSessionSearchAgainstUpstreamGolden(t *testing.T) {
-	golden := loadAuthGolden(t)
+	golden := loadArrowGolden(t, "testdata/auth_golden.txt", "a ")
 	data, err := os.ReadFile("testdata/auth_corpus.json")
 	if err != nil {
 		t.Fatalf("read corpus: %v", err)
@@ -199,7 +174,7 @@ func TestOAuthSelectorAgainstUpstreamGolden(t *testing.T) {
 	SetStyleColorsEnabled(true)
 	InitTheme("dark", false)
 
-	golden := loadAuthGolden(t)
+	golden := loadArrowGolden(t, "testdata/auth_golden.txt", "a ")
 	data, err := os.ReadFile("testdata/auth_corpus.json")
 	if err != nil {
 		t.Fatalf("read corpus: %v", err)
@@ -238,7 +213,7 @@ func TestLoginDialogAgainstUpstreamGolden(t *testing.T) {
 	SetStyleColorsEnabled(true)
 	InitTheme("dark", false)
 
-	golden := loadAuthGolden(t)
+	golden := loadArrowGolden(t, "testdata/auth_golden.txt", "a ")
 	data, err := os.ReadFile("testdata/auth_corpus.json")
 	if err != nil {
 		t.Fatalf("read corpus: %v", err)

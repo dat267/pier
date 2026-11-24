@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"bufio"
 	"encoding/json"
 	"github.com/dat267/pier/internal/offloop"
 	"github.com/dat267/pier/tui"
@@ -21,30 +20,6 @@ import (
 // built-in dark/light themes in both color modes, the style helpers, the
 // thinking/bash border colors, and the terminal-theme detection helpers.
 
-func loadThemeGolden(t *testing.T) map[string]string {
-	t.Helper()
-	file, err := os.Open("testdata/theme_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-	values := map[string]string{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		values[parts[0]] = parts[1]
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
-	return values
-}
-
 func themeGoldenCheck(t *testing.T, golden map[string]string, label string, got any) {
 	t.Helper()
 	want, ok := golden[label]
@@ -63,7 +38,7 @@ func themeGoldenCheck(t *testing.T, golden map[string]string, label string, got 
 // TestThemeColorsAgainstUpstreamGolden verifies every color token's ANSI
 // sequence and the style helpers.
 func TestThemeColorsAgainstUpstreamGolden(t *testing.T) {
-	golden := loadThemeGolden(t)
+	golden := loadArrowGolden(t, "testdata/theme_golden.txt", "")
 
 	for _, name := range []string{"dark", "light"} {
 		themeJSON, ok := getBuiltinThemes()[name]
@@ -127,7 +102,7 @@ func TestThemeColorsAgainstUpstreamGolden(t *testing.T) {
 
 // TestThemeDetectionAgainstUpstreamGolden verifies the detection helpers.
 func TestThemeDetectionAgainstUpstreamGolden(t *testing.T) {
-	golden := loadThemeGolden(t)
+	golden := loadArrowGolden(t, "testdata/theme_golden.txt", "")
 
 	rgbResults := []any{}
 	for _, rgb := range []RgbColor{{0, 0, 0}, {255, 255, 255}, {128, 128, 128}, {200, 200, 200}, {80, 80, 80}, {120, 120, 120}} {

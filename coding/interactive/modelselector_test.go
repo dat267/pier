@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -72,30 +71,6 @@ func (f *fakeModelRuntime) Refresh(ctx context.Context, options *coding.ModelsRe
 	return ai.ModelsRefreshResult{Aborted: true}, ctx.Err()
 }
 
-func loadModelSelGolden(t *testing.T) map[string]string {
-	t.Helper()
-	file, err := os.Open("testdata/modelsel_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-	values := map[string]string{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		values[strings.TrimPrefix(parts[0], "m ")] = parts[1]
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
-	return values
-}
-
 func testModels() []*ai.Model {
 	return []*ai.Model{
 		{Provider: "openai", ID: "gpt-5", Name: "GPT-5", API: "openai", Reasoning: true},
@@ -138,7 +113,7 @@ func TestModelSelectorsAgainstUpstreamGolden(t *testing.T) {
 	SetStyleColorsEnabled(true)
 	InitTheme("dark", false)
 
-	golden := loadModelSelGolden(t)
+	golden := loadArrowGolden(t, "testdata/modelsel_golden.txt", "m ")
 	data, err := os.ReadFile("testdata/modelsel_corpus.json")
 	if err != nil {
 		t.Fatalf("read corpus: %v", err)

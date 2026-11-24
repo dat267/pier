@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"bufio"
 	"encoding/json"
 	"os"
 	"strconv"
@@ -45,30 +44,6 @@ type execCorpus struct {
 	Tool map[string]toolSpec `json:"tool"`
 }
 
-func loadExecGolden(t *testing.T) map[string]string {
-	t.Helper()
-	file, err := os.Open("testdata/exec_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-	values := map[string]string{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		values[strings.TrimPrefix(parts[0], "e ")] = parts[1]
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
-	return values
-}
-
 // TestExecComponentsAgainstUpstreamGolden replays the tool components.
 func TestExecComponentsAgainstUpstreamGolden(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
@@ -77,7 +52,7 @@ func TestExecComponentsAgainstUpstreamGolden(t *testing.T) {
 	SetStyleColorsEnabled(true)
 	InitTheme("dark", false)
 
-	golden := loadExecGolden(t)
+	golden := loadArrowGolden(t, "testdata/exec_golden.txt", "e ")
 	data, err := os.ReadFile("testdata/exec_corpus.json")
 	if err != nil {
 		t.Fatalf("read corpus: %v", err)
