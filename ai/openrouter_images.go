@@ -147,14 +147,7 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 		}
 	}
 	if len(payload.Usage) > 0 {
-		var usage struct {
-			PromptTokens        float64 `json:"prompt_tokens"`
-			CompletionTokens    float64 `json:"completion_tokens"`
-			PromptTokensDetails *struct {
-				CachedTokens     *float64 `json:"cached_tokens"`
-				CacheWriteTokens *float64 `json:"cache_write_tokens"`
-			} `json:"prompt_tokens_details"`
-		}
+		var usage openRouterImagesUsage
 		if err := json.Unmarshal(payload.Usage, &usage); err == nil {
 			computed := parseOpenRouterImagesUsage(usage, model)
 			output.Usage = &computed
@@ -278,15 +271,18 @@ func buildOpenRouterImagesParams(model *ImagesModel, context ImagesContext) open
 	}
 }
 
-// parseOpenRouterImagesUsage derives usage and cost (upstream parseUsage).
-func parseOpenRouterImagesUsage(raw struct {
+// openRouterImagesUsage is the usage block of an OpenRouter images response.
+type openRouterImagesUsage struct {
 	PromptTokens        float64 `json:"prompt_tokens"`
 	CompletionTokens    float64 `json:"completion_tokens"`
 	PromptTokensDetails *struct {
 		CachedTokens     *float64 `json:"cached_tokens"`
 		CacheWriteTokens *float64 `json:"cache_write_tokens"`
 	} `json:"prompt_tokens_details"`
-}, model *ImagesModel) Usage {
+}
+
+// parseOpenRouterImagesUsage derives usage and cost (upstream parseUsage).
+func parseOpenRouterImagesUsage(raw openRouterImagesUsage, model *ImagesModel) Usage {
 	promptTokens := jsnum.ToInt64(raw.PromptTokens)
 	reportedCached := int64(0)
 	cacheWrite := int64(0)
