@@ -39,11 +39,11 @@ func ParseDeploymentNameMap(value string) map[string]string {
 		if trimmed == "" {
 			continue
 		}
-		parts := strings.SplitN(trimmed, "=", 2)
-		if len(parts) != 2 || JSTrim(parts[0]) == "" || JSTrim(parts[1]) == "" {
+		key, value, found := strings.Cut(trimmed, "=")
+		if key, value = JSTrim(key), JSTrim(value); !found || key == "" || value == "" {
 			continue
 		}
-		result[JSTrim(parts[0])] = JSTrim(parts[1])
+		result[key] = value
 	}
 	return result
 }

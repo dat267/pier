@@ -41,8 +41,8 @@ func parseOsc8Hyperlink(ansiCode string) (link *osc8Hyperlink, ok bool) {
 	body := strings.TrimPrefix(ansiCode, "\x1b]8;")
 	body = strings.TrimSuffix(body, "\x07")
 	body = strings.TrimSuffix(body, "\x1b\\")
-	parts := strings.SplitN(body, ";", 2)
-	if len(parts) != 2 {
+	params, url, found := strings.Cut(body, ";")
+	if !found {
 		return nil, false
 	}
 	terminator := "\x07"
@@ -50,10 +50,10 @@ func parseOsc8Hyperlink(ansiCode string) (link *osc8Hyperlink, ok bool) {
 		terminator = "\x1b\\"
 	}
 	// An empty URL closes the link.
-	if parts[1] == "" {
+	if url == "" {
 		return nil, true
 	}
-	return &osc8Hyperlink{Params: parts[0], URL: parts[1], Terminator: terminator}, true
+	return &osc8Hyperlink{Params: params, URL: url, Terminator: terminator}, true
 }
 
 // ansiCodeTracker tracks active SGR codes and hyperlink state.
