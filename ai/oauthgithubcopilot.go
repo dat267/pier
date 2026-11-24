@@ -90,12 +90,7 @@ func GetBaseURLFromCopilotToken(token string) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	rest := after
-	end := strings.Index(rest, ";")
-	if end == -1 {
-		end = len(rest)
-	}
-	proxyHost := rest[:end]
+	proxyHost, _, _ := strings.Cut(after, ";")
 	if proxyHost == "" {
 		return "", false
 	}
