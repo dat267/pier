@@ -249,16 +249,16 @@ func ParseProtectedResourceMetadata(value any) (*OAuthProtectedResourceMetadata,
 		return nil, err
 	}
 	result := &OAuthProtectedResourceMetadata{Resource: resource}
-	if servers, err := optionalStrings(input, "authorization_servers", "authorization_servers"); err != nil {
+	servers, err := optionalStrings(input, "authorization_servers", "authorization_servers")
+	if err != nil {
 		return nil, err
-	} else {
-		for _, server := range servers {
-			safe, err := safeUrl(map[string]any{"url": server}, "url", "authorization server URL")
-			if err != nil {
-				return nil, err
-			}
-			result.AuthorizationServers = append(result.AuthorizationServers, safe)
+	}
+	for _, server := range servers {
+		safe, err := safeUrl(map[string]any{"url": server}, "url", "authorization server URL")
+		if err != nil {
+			return nil, err
 		}
+		result.AuthorizationServers = append(result.AuthorizationServers, safe)
 	}
 	scopes, err := optionalStrings(input, "scopes_supported", "scopes_supported")
 	if err != nil {
