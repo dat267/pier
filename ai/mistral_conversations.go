@@ -187,7 +187,7 @@ func StreamMistralConversations(model *Model, context TranscriptContext, options
 		}()
 
 		if options.APIKey == "" {
-			fail(fmt.Errorf("No API key for provider: %s", model.Provider))
+			fail(errors.New(noAPIKeyMessage(model.Provider)))
 			return
 		}
 		normalize := newMistralToolCallIDNormalizer()

@@ -53,7 +53,7 @@ func (OpenAIDecisions) Classify(model *Model, classifierContext ClassifierContex
 		return classifierFail(result, err, options)
 	}
 	if options.APIKey == "" {
-		return classifierFail(result, fmt.Errorf("No API key for provider: %s", model.Provider), options)
+		return classifierFail(result, errors.New(noAPIKeyMessage(model.Provider)), options)
 	}
 	payloadBytes, err := MarshalJSON(payload)
 	if err != nil {

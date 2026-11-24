@@ -33,7 +33,7 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 		options = &ImagesOptions{}
 	}
 	if options.APIKey == "" {
-		message := fmt.Sprintf("No API key for provider: %s", model.Provider)
+		message := noAPIKeyMessage(model.Provider)
 		output.StopReason = ImagesStopError
 		output.ErrorMessage = &message
 		return output

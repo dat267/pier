@@ -243,7 +243,7 @@ var googleGenerativeAIConfig = &googleStreamConfig{
 	api: APIGoogleGenerativeAI,
 	preflight: func(model *Model, options *GoogleOptions) error {
 		if options.APIKey == "" {
-			return fmt.Errorf("No API key for provider: %s", model.Provider)
+			return errors.New(noAPIKeyMessage(model.Provider))
 		}
 		return nil
 	},

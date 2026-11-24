@@ -487,7 +487,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 			}
 		}
 		if !hasAuth {
-			fail(fmt.Errorf("No API key for provider: %s", model.Provider))
+			fail(errors.New(noAPIKeyMessage(model.Provider)))
 			return
 		}
 		isOAuth := IsOAuthAnthropicToken(options.APIKey)
@@ -954,7 +954,7 @@ func StreamAnthropicSimple(model *Model, context TranscriptContext, options *Sim
 	if !hasAuth {
 		stream := NewAssistantMessageEventStream()
 		go func() {
-			endStreamWithError(stream, model, fmt.Sprintf("No API key for provider: %s", model.Provider))
+			endStreamWithError(stream, model, noAPIKeyMessage(model.Provider))
 		}()
 		return stream
 	}

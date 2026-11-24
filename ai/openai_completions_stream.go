@@ -855,7 +855,7 @@ func getClientAPIKey(provider, apiKey string, headers ProviderHeaders) (string, 
 			return "unused", nil
 		}
 	}
-	return "", fmt.Errorf("No API key for provider: %s", provider)
+	return "", errors.New(noAPIKeyMessage(provider))
 }
 
 // StreamOpenAICompletionsSimple maps reasoning through the model's thinking

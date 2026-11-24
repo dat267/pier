@@ -639,7 +639,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 			return
 		}
 		if options.APIKey == "" {
-			fail(fmt.Errorf("No API key for provider: %s", model.Provider))
+			fail(errors.New(noAPIKeyMessage(model.Provider)))
 			return
 		}
 		accountID, err := ExtractCodexAccountID(options.APIKey)

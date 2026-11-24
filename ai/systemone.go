@@ -91,7 +91,7 @@ func classifySystemOne(transport systemOneTransport, model *Model, classifierCon
 		return classifierFail(result, err, options)
 	}
 	if options.APIKey == "" {
-		return classifierFail(result, fmt.Errorf("No API key for provider: %s", model.Provider), options)
+		return classifierFail(result, errors.New(noAPIKeyMessage(model.Provider)), options)
 	}
 	payload, err := payloadFields.marshal()
 	if err != nil {

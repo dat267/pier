@@ -2,7 +2,6 @@ package ai
 
 import (
 	"cmp"
-	"fmt"
 	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"time"
@@ -38,7 +37,7 @@ func startSimpleStream(model *Model, options *SimpleStreamOptions) (stream *Assi
 		return stream, options, true
 	}
 	go func() {
-		message := fmt.Sprintf("No API key for provider: %s", model.Provider)
+		message := noAPIKeyMessage(model.Provider)
 		msg := &AssistantMessage{
 			API: model.API, Provider: model.Provider, Model: model.ID,
 			Usage: Usage{Cost: UsageCost{}}, StopReason: StopError,
@@ -265,4 +264,10 @@ func AdjustMaxTokensForThinking(baseMaxTokens *int, modelMaxTokens int, reasonin
 		thinkingBudget = ClampThinkingBudgetToAnswerRoom(thinkingBudget, maxTokens)
 	}
 	return maxTokens, thinkingBudget
+}
+
+// noAPIKeyMessage is the error text of a request with no key for its provider
+// (upstream `No API key for provider: ${model.provider}`).
+func noAPIKeyMessage(provider ProviderId) string {
+	return "No API key for provider: " + provider
 }
