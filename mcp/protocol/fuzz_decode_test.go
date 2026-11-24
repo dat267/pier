@@ -1,6 +1,10 @@
 package protocol
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/dat267/pier/ai"
+)
 
 // FuzzDecodeMessage feeds an MCP peer's bytes through the decoder. A server is
 // untrusted input: a panic here ends the session, and a message that decodes
@@ -22,7 +26,7 @@ func FuzzDecodeMessage(f *testing.F) {
 		if err != nil {
 			return
 		}
-		if _, err := MarshalJSON(message); err != nil {
+		if _, err := ai.MarshalJSON(message); err != nil {
 			t.Fatalf("decoded %q but could not marshal it: %v", data, err)
 		}
 	})

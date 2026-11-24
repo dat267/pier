@@ -2,7 +2,7 @@ package oauth
 
 import (
 	"encoding/json"
-	"github.com/dat267/pier/mcp/protocol"
+	"github.com/dat267/pier/ai"
 	"os"
 	"reflect"
 	"testing"
@@ -71,7 +71,7 @@ func fixtureInput(t *testing.T, raw json.RawMessage) any {
 // after JSON.stringify.
 func asJSONValue(t *testing.T, value any) any {
 	t.Helper()
-	encoded, err := protocol.MarshalJSON(value)
+	encoded, err := ai.MarshalJSON(value)
 	if err != nil {
 		t.Fatal(err)
 	}

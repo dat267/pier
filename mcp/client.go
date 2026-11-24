@@ -269,7 +269,7 @@ func (c *Client) notifyInternal(ctx context.Context, method string, params any, 
 	}
 	message := protocol.JsonRpcNotification{JSONRPC: protocol.JSONRPCVersion, Method: method}
 	if params != nil {
-		enc, err := protocol.MarshalJSON(params)
+		enc, err := ai.MarshalJSON(params)
 		if err != nil {
 			return err
 		}
@@ -517,7 +517,7 @@ func (c *Client) request(ctx context.Context, method string, params any, options
 	if entry.progressToken != nil {
 		message.Params, marshalErr = withProgressToken(params, id)
 	} else if params != nil {
-		message.Params, marshalErr = protocol.MarshalJSON(params)
+		message.Params, marshalErr = ai.MarshalJSON(params)
 	}
 	if marshalErr != nil {
 		c.cancelPending(id, marshalErr, false, "")
@@ -576,7 +576,7 @@ func withProgressToken(params any, token int64) (json.RawMessage, error) {
 		maps.Copy(merged, object)
 	} else if params != nil {
 		var decoded map[string]any
-		enc, err := protocol.MarshalJSON(params)
+		enc, err := ai.MarshalJSON(params)
 		if err != nil {
 			return nil, err
 		}
@@ -585,7 +585,7 @@ func withProgressToken(params any, token int64) (json.RawMessage, error) {
 		}
 	}
 	if merged == nil {
-		return protocol.MarshalJSON(map[string]any{"_meta": map[string]any{"progressToken": token}})
+		return ai.MarshalJSON(map[string]any{"_meta": map[string]any{"progressToken": token}})
 	}
 	// client.ts spreads the caller's _meta first and the request's own token
 	// last, so the token always wins.
@@ -595,7 +595,7 @@ func withProgressToken(params any, token int64) (json.RawMessage, error) {
 	}
 	meta["progressToken"] = token
 	merged["_meta"] = meta
-	return protocol.MarshalJSON(merged)
+	return ai.MarshalJSON(merged)
 }
 
 func (c *Client) requireTransport(allowConnecting bool) (Transport, error) {
@@ -695,7 +695,7 @@ func (c *Client) handleRequest(message *protocol.JsonRpcRequest) {
 			if isNullishResult(result) {
 				result = map[string]any{}
 			}
-			enc, marshalErr := protocol.MarshalJSON(result)
+			enc, marshalErr := ai.MarshalJSON(result)
 			if marshalErr == nil {
 				err = transport.Send(context.Background(), protocol.JsonRpcResponse{
 					JSONRPC: protocol.JSONRPCVersion, ID: message.ID, Result: enc,
@@ -710,7 +710,7 @@ func (c *Client) handleRequest(message *protocol.JsonRpcRequest) {
 				responseError.Code = mcpErr.Code
 				responseError.Message = mcpErr.Msg
 				if mcpErr.Data != nil {
-					data, marshalErr := protocol.MarshalJSON(mcpErr.Data)
+					data, marshalErr := ai.MarshalJSON(mcpErr.Data)
 					if marshalErr != nil {
 						c.emitError(marshalErr)
 						return
@@ -923,7 +923,7 @@ func (c *Client) cancelPending(id int64, err error, notifyServer bool, reason st
 			if reason != "" {
 				params["reason"] = reason
 			}
-			enc, _ := protocol.MarshalJSON(params)
+			enc, _ := ai.MarshalJSON(params)
 			notification := protocol.JsonRpcNotification{
 				JSONRPC: protocol.JSONRPCVersion,
 				Method:  "notifications/cancelled",

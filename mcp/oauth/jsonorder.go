@@ -1,6 +1,6 @@
 package oauth
 
-import "github.com/dat267/pier/mcp/protocol"
+import "github.com/dat267/pier/ai"
 
 // jsonMember is one member of an object whose key order is the reference's
 // construction order.
@@ -18,11 +18,11 @@ func marshalOrderedJSONObject(members []jsonMember) ([]byte, error) {
 		if index > 0 {
 			encoded = append(encoded, ',')
 		}
-		name, err := protocol.MarshalJSON(member.name)
+		name, err := ai.MarshalJSON(member.name)
 		if err != nil {
 			return nil, err
 		}
-		value, err := protocol.MarshalJSON(member.value)
+		value, err := ai.MarshalJSON(member.value)
 		if err != nil {
 			return nil, err
 		}

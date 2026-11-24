@@ -352,7 +352,7 @@ func (t *StdioTransport) Send(ctx context.Context, message Message) error {
 	if !started || closed || child == nil || stdin == nil {
 		return &protocol.McpConnectionClosedError{}
 	}
-	payload, err := protocol.MarshalJSON(message)
+	payload, err := ai.MarshalJSON(message)
 	if err != nil {
 		return err
 	}

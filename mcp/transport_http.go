@@ -412,7 +412,7 @@ func (t *StreamableHttpTransport) Send(ctx context.Context, message Message) err
 	if !started || closed {
 		return &protocol.McpConnectionClosedError{}
 	}
-	body, err := protocol.MarshalJSON(message)
+	body, err := ai.MarshalJSON(message)
 	if err != nil {
 		return err
 	}

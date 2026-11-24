@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/mcp/protocol"
+	"github.com/dat267/pier/ai"
 	"strings"
 
 	"github.com/dat267/pier/internal/jsnum"
@@ -428,7 +428,7 @@ func ParseClientInformation(value any) (*OAuthClientInformationFull, error) {
 	copyStringMember(input, "policy_uri", &result.PolicyURI)
 	copyStringMember(input, "jwks_uri", &result.JWKSURI)
 	if raw, ok := input["jwks"]; ok {
-		if encoded, err := protocol.MarshalJSON(raw); err == nil {
+		if encoded, err := ai.MarshalJSON(raw); err == nil {
 			result.JWKS = encoded
 		}
 	}
