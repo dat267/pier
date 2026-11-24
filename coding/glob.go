@@ -537,8 +537,8 @@ func isDotSegment(segment string) bool {
 // matchGlobSegment matches one pattern segment against one value segment.
 func matchGlobSegment(pattern, value string, nocase bool) bool {
 	// minimatch's parser turns a class that holds only a dot into a literal dot.
-	if strings.HasPrefix(pattern, "[.]") {
-		pattern = "." + pattern[len("[.]"):]
+	if rest, ok := strings.CutPrefix(pattern, "[.]"); ok {
+		pattern = "." + rest
 	}
 	// A wildcard segment needs at least one character (only a trailing-separator
 	// segment, spelled "", matches an empty one).

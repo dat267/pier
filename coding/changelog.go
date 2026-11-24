@@ -118,8 +118,8 @@ func normalizeChangelogLinkTarget(target string, tag string) string {
 	for _, route := range []string{"blob", "tree"} {
 		for _, branch := range []string{"main", "master"} {
 			floatingRefPrefix := repoURL + "/" + route + "/" + branch + "/"
-			if strings.HasPrefix(canonicalTarget, floatingRefPrefix) {
-				canonicalTarget = repoURL + "/" + route + "/" + tag + "/" + canonicalTarget[len(floatingRefPrefix):]
+			if rest, ok := strings.CutPrefix(canonicalTarget, floatingRefPrefix); ok {
+				canonicalTarget = repoURL + "/" + route + "/" + tag + "/" + rest
 			}
 		}
 	}

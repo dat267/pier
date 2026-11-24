@@ -101,8 +101,8 @@ func GetBaseURLFromCopilotToken(token string) (string, bool) {
 	}
 	// proxy.xxx -> api.xxx
 	apiHost := proxyHost
-	if strings.HasPrefix(apiHost, "proxy.") {
-		apiHost = "api." + apiHost[len("proxy."):]
+	if rest, ok := strings.CutPrefix(apiHost, "proxy."); ok {
+		apiHost = "api." + rest
 	}
 	return "https://" + apiHost, true
 }
