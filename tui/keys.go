@@ -735,19 +735,15 @@ func IsValidKeyID(keyID KeyId) bool {
 	remaining := keyID
 	seen := map[string]bool{}
 	for {
-		separator := strings.IndexByte(remaining, '+')
-		if separator < 0 {
-			break
-		}
-		modifier := remaining[:separator]
-		if modifier != "ctrl" && modifier != "shift" && modifier != "alt" && modifier != "super" {
+		modifier, rest, found := strings.Cut(remaining, "+")
+		if !found || modifier != "ctrl" && modifier != "shift" && modifier != "alt" && modifier != "super" {
 			break
 		}
 		if seen[modifier] {
 			return false
 		}
 		seen[modifier] = true
-		remaining = remaining[separator+1:]
+		remaining = rest
 	}
 	if len(remaining) == 1 && (remaining[0] >= 'a' && remaining[0] <= 'z' || remaining[0] >= '0' && remaining[0] <= '9') {
 		return true
