@@ -844,8 +844,24 @@ func (s *AgentSession) preparePromptAndToolLoadout() *ai.SystemMessage {
 // SetModel switches the session model (auth-checked) and applies the thinking
 // level for the new model.
 func (s *AgentSession) SetModel(ctx context.Context, model *ai.Model, options ModelMutationOptions) error {
+	previous, err := s.switchModel(model, options)
+	if err != nil {
+		return err
+	}
+	// Applying the thinking level for the new model must not persist it:
+	// upstream setModel calls setThinkingLevel with no options, so model
+	// persistence never rewrites the global thinking default (agent-session.ts:2131).
+	s.SetThinkingLevel(s.getThinkingLevelForModelSwitch(model, ""))
+	s.emitModelSelect(model, previous, "set")
+	return nil
+}
+
+// switchModel is the common start of setModel and both model cycles: refuse a
+// model without configured auth, switch the agent, record the change, and
+// persist the default when asked. It returns the model it replaced.
+func (s *AgentSession) switchModel(model *ai.Model, options ModelMutationOptions) (*ai.Model, error) {
 	if s.control.ModelRuntime != nil && !s.control.ModelRuntime.HasConfiguredAuth(model.Provider) {
-		return fmt.Errorf("No API key for %s/%s", model.Provider, model.ID)
+		return nil, fmt.Errorf("No API key for %s/%s", model.Provider, model.ID)
 	}
 	previous := s.Model()
 	s.Agent.SetModel(model)
@@ -854,12 +870,7 @@ func (s *AgentSession) SetModel(ctx context.Context, model *ai.Model, options Mo
 		s.control.Settings.SetDefaultModelAndProvider(model.Provider, model.ID)
 		s.addPersistedDefaultToNonEmptyScope(model)
 	}
-	// Applying the thinking level for the new model must not persist it:
-	// upstream setModel calls setThinkingLevel with no options, so model
-	// persistence never rewrites the global thinking default (agent-session.ts:2131).
-	s.SetThinkingLevel(s.getThinkingLevelForModelSwitch(model, ""))
-	s.emitModelSelect(model, previous, "set")
-	return nil
+	return previous, nil
 }
 
 // nextCycleIndex is the model to cycle to, and false when there is nothing to
@@ -939,15 +950,9 @@ func (s *AgentSession) cycleAvailableModel(direction string, options ModelMutati
 }
 
 func (s *AgentSession) applyModelCycle(model *ai.Model, explicitLevel ai.ThinkingLevel, options ModelMutationOptions, isScoped bool) (*ModelCycleResult, error) {
-	if s.control.ModelRuntime != nil && !s.control.ModelRuntime.HasConfiguredAuth(model.Provider) {
-		return nil, fmt.Errorf("No API key for %s/%s", model.Provider, model.ID)
-	}
-	previous := s.Model()
-	s.Agent.SetModel(model)
-	s.Sessions.AppendModelChange(model.Provider, model.ID)
-	if options.Persist && s.control.Settings != nil {
-		s.control.Settings.SetDefaultModelAndProvider(model.Provider, model.ID)
-		s.addPersistedDefaultToNonEmptyScope(model)
+	previous, err := s.switchModel(model, options)
+	if err != nil {
+		return nil, err
 	}
 	// As in SetModel, a model change never persists the thinking level:
 	// upstream cycleScopedModel/cycleAvailableModel call setThinkingLevel with no
