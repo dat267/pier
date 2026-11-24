@@ -606,13 +606,18 @@ func TestSessionDefaultsWithoutControl(t *testing.T) {
 
 // stubStreamFn answers every prompt with a fixed assistant message.
 func stubStreamFn(model *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+	return textReplyStream(model, "ack")
+}
+
+// textReplyStream is a stream whose only event is a done assistant message
+// from model carrying text.
+func textReplyStream(model *ai.Model, text string) *ai.AssistantMessageEventStream {
 	stream := ai.NewAssistantMessageEventStream()
 	go func() {
-		message := &ai.AssistantMessage{
-			API: model.API, Provider: model.Provider, Model: model.ID,
-			Content: ai.ContentList{ai.TextContent{Text: "ack"}}, StopReason: ai.StopStop,
-		}
-		stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: message})
+		stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+			API: model.API, Provider: model.Provider, Model: model.ID, StopReason: ai.StopStop,
+			Content: ai.ContentList{ai.TextContent{Text: text}},
+		}})
 	}()
 	return stream
 }

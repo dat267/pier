@@ -35,14 +35,7 @@ func TestGoalScheduledRoundSkipsInvalidatedReservation(t *testing.T) {
 				if snapshot := session.GoalController().Snapshot(); snapshot.Goal != nil && snapshot.Armed {
 					_, _ = session.GetToolDefinition("set_goal").Execute(context.Background(), "complete", json.RawMessage(`{"status":"complete"}`), nil)
 				}
-				stream := ai.NewAssistantMessageEventStream()
-				go func() {
-					stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
-						API: model.API, Provider: model.Provider, Model: model.ID, StopReason: ai.StopStop,
-						Content: ai.ContentList{ai.TextContent{Text: "done"}},
-					}})
-				}()
-				return stream
+				return textReplyStream(model, "done")
 			}
 			var err error
 			session, err = NewAgentSession(&SessionConfig{Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, Goal: true, ConvertToLlm: ConvertToLlm})

@@ -31,14 +31,7 @@ func TestGoalReleasedFollowUpsAreDeliveredOneAtATime(t *testing.T) {
 		if round == 2 {
 			_, _ = session.GetToolDefinition("set_goal").Execute(context.Background(), "complete", json.RawMessage(`{"status":"complete"}`), nil)
 		}
-		stream := ai.NewAssistantMessageEventStream()
-		go func() {
-			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
-				API: m.API, Provider: m.Provider, Model: m.ID, StopReason: ai.StopStop,
-				Content: ai.ContentList{ai.TextContent{Text: "done"}},
-			}})
-		}()
-		return stream
+		return textReplyStream(m, "done")
 	}
 	var err error
 	session, err = NewAgentSession(&SessionConfig{
