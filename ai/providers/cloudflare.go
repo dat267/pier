@@ -58,15 +58,8 @@ func cloudflareResolveValue(signal context.Context, name string, ctx ai.AuthCont
 	return value, ok
 }
 
-// ResolveCloudflareEnv resolves the API key plus the account/gateway ids.
-func ResolveCloudflareEnv(
-	kind CloudflareAuthKind,
-	ctx ai.AuthContext,
-	credential *ai.ApiKeyCredential,
-) (*ai.AuthResult, bool) {
-	return resolveCloudflareEnv(nil, kind, ctx, credential)
-}
-
+// resolveCloudflareEnv resolves the API key plus the account/gateway ids
+// (upstream resolveCloudflareEnv).
 func resolveCloudflareEnv(signal context.Context, kind CloudflareAuthKind, ctx ai.AuthContext, credential *ai.ApiKeyCredential) (*ai.AuthResult, bool) {
 	apiKey, hasKey := cloudflareResolveValue(signal, CloudflareAPIKeyEnv, ctx, credential)
 	accountID, hasAccount := cloudflareResolveValue(signal, CloudflareAccountIDEnv, ctx, credential)
