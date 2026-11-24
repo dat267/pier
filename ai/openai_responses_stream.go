@@ -1274,19 +1274,7 @@ func StreamOpenAIResponsesSimple(model *Model, context TranscriptContext, option
 				responsesOptions.ReasoningEffort = clamped
 			}
 		}
-		inner := StreamOpenAIResponses(model, context, responsesOptions)
-		for {
-			event, ok := inner.Next(bgCtx())
-			if !ok {
-				break
-			}
-			stream.Push(event)
-		}
-		if result, err := inner.Result(bgCtx()); err == nil {
-			stream.End(&result)
-		} else {
-			stream.End(nil)
-		}
+		forwardStream(stream, StreamOpenAIResponses(model, context, responsesOptions))
 	}()
 	return stream
 }

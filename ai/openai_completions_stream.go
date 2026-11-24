@@ -926,19 +926,7 @@ func StreamOpenAICompletionsSimple(model *Model, context TranscriptContext, opti
 				completionsOptions.ReasoningEffort = clamped
 			}
 		}
-		inner := StreamOpenAICompletions(model, context, completionsOptions)
-		for {
-			event, ok := inner.Next(bgCtx())
-			if !ok {
-				break
-			}
-			stream.Push(event)
-		}
-		if result, err := inner.Result(bgCtx()); err == nil {
-			stream.End(&result)
-		} else {
-			stream.End(nil)
-		}
+		forwardStream(stream, StreamOpenAICompletions(model, context, completionsOptions))
 	}()
 	return stream
 }
