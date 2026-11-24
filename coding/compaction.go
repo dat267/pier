@@ -897,25 +897,12 @@ func StringOrBlocksOf(content ai.UserContentList) ai.StringOrBlocks {
 }
 
 func contentTextJoinedNoSep(content ai.StringOrBlocks) string {
-	return contentTextWithSeparator(content, "")
+	return ai.ContentText(content, "")
 }
 
 // contentTextJoinedNewline is upstream contentText's default separator.
 func contentTextJoinedNewline(content ai.StringOrBlocks) string {
-	return contentTextWithSeparator(content, "\n")
-}
-
-func contentTextWithSeparator(content ai.StringOrBlocks, separator string) string {
-	if content.Blocks == nil {
-		return content.Text
-	}
-	var texts []string
-	for _, block := range content.Blocks {
-		if tc, ok := block.(ai.TextContent); ok {
-			texts = append(texts, tc.Text)
-		}
-	}
-	return strings.Join(texts, separator)
+	return ai.ContentText(content, "\n")
 }
 
 // ============================================================================
