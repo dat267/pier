@@ -291,11 +291,6 @@ func (t *Renderer) NextAnimation() (bool, time.Duration) {
 // animationWalkBox bounds how long the cached animator list is trusted.
 const animationWalkBox = time.Second
 
-// nextAnimationFor walks the component tree for the earliest animation frame.
-func nextAnimationFor(components []Component, now time.Time) (bool, time.Duration) {
-	return nextAnimationForTicked(components, now, nil)
-}
-
 // nextAnimationForTicked walks and ticks (the uncached path tests use).
 func nextAnimationForTicked(components []Component, now time.Time, ticks map[Component]time.Time) (bool, time.Duration) {
 	return evaluateAnimators(collectAnimators(components), now, ticks)

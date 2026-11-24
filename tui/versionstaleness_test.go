@@ -52,7 +52,7 @@ func TestAnimationFrameInvalidatesWhatItAnimates(t *testing.T) {
 	}
 
 	// One tick: the loop asks for the next frame.
-	if needs, _ := nextAnimationFor([]Component{container}, time.Now()); !needs {
+	if needs, _ := nextAnimationForTicked([]Component{container}, time.Now(), nil); !needs {
 		t.Fatal("the label did not report an animation frame")
 	}
 
