@@ -262,11 +262,6 @@ func (c *Client) Request(ctx context.Context, method string, params any, options
 	return c.request(ctx, method, params, options, false)
 }
 
-// Notify sends a notification.
-func (c *Client) notify(ctx context.Context, method string, params any) error {
-	return c.notifyInternal(ctx, method, params, false)
-}
-
 func (c *Client) notifyInternal(ctx context.Context, method string, params any, allowConnecting bool) error {
 	transport, err := c.requireTransport(allowConnecting)
 	if err != nil {
@@ -283,9 +278,9 @@ func (c *Client) notifyInternal(ctx context.Context, method string, params any, 
 	return transport.Send(ctx, &message)
 }
 
-// Notify is the exported notification send.
+// Notify sends a notification.
 func (c *Client) Notify(ctx context.Context, method string, params any) error {
-	return c.notify(ctx, method, params)
+	return c.notifyInternal(ctx, method, params, false)
 }
 
 // SetRequestHandler registers a server-to-client request handler.
