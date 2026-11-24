@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -572,7 +573,6 @@ func signalClosed(signal <-chan struct{}) bool {
 
 // tempFileID returns a random hex identifier for temp file names.
 func tempFileID() string {
-	const hexDigits = "0123456789abcdef"
 	random := make([]byte, 8)
 	if _, err := rand.Read(random); err != nil {
 		// Fall back to the clock; uniqueness matters more than secrecy here.
@@ -581,12 +581,7 @@ func tempFileID() string {
 			random[index] = byte(value >> (8 * index))
 		}
 	}
-	out := make([]byte, len(random)*2)
-	for index, value := range random {
-		out[index*2] = hexDigits[value>>4]
-		out[index*2+1] = hexDigits[value&0xf]
-	}
-	return string(out)
+	return hex.EncodeToString(random)
 }
 
 // tempOutputWriteString appends a chunk to the full-output temp file; tests

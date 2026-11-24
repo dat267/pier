@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"math"
 	"time"
@@ -341,10 +342,5 @@ func randomHex(n int) (string, error) {
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}
-	const digits = "0123456789abcdef"
-	out := make([]byte, 0, n*2)
-	for _, value := range bytes {
-		out = append(out, digits[value>>4], digits[value&0x0f])
-	}
-	return string(out), nil
+	return hex.EncodeToString(bytes), nil
 }

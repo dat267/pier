@@ -40,21 +40,11 @@ func TestDecodeImageBase64MatchesNode(t *testing.T) {
 			if !ok {
 				t.Fatalf("%q was rejected", test.data)
 			}
-			if got := fmtHex(data); got != test.want {
+			if got := hex.EncodeToString(data); got != test.want {
 				t.Errorf("decoded %q to %s, want %s", test.data, got, test.want)
 			}
 		})
 	}
-}
-
-func fmtHex(data []byte) string {
-	const digits = "0123456789abcdef"
-	var builder strings.Builder
-	for _, b := range data {
-		builder.WriteByte(digits[b>>4])
-		builder.WriteByte(digits[b&0x0f])
-	}
-	return builder.String()
 }
 
 // TestToolResultImagesNormalizeUnpaddedAndURLSafeBase64 pins that an image
