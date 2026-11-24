@@ -25,7 +25,7 @@ type patternRegexp struct {
 // strings.ContainsAny decodes its argument's runes and so searches rune by
 // rune; three byte searches are an order of magnitude faster on long input.
 func nonLFLineEnds(s string) bool {
-	return strings.IndexByte(s, '\r') >= 0 || strings.Contains(s, "\u2028") || strings.Contains(s, "\u2029")
+	return strings.Contains(s, "\r") || strings.Contains(s, "\u2028") || strings.Contains(s, "\u2029")
 }
 
 func jsLineEnd(r rune) bool { return r == '\n' || r == '\r' || r == '\u2028' || r == '\u2029' }

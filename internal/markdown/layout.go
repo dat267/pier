@@ -127,7 +127,7 @@ func tokenizeStyled(line string) []styledToken {
 }
 
 func wrapStyledLine(line string, width int) []string {
-	if strings.IndexByte(line, 0x1b) < 0 {
+	if !strings.Contains(line, "\x1b") {
 		return wrapPlain(line, width)
 	}
 	if visibleWidth(line) <= width {

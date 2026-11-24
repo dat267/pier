@@ -355,7 +355,7 @@ func fenceStart(line string) (marker, info string, ok bool) {
 	marker = line[i:j]
 	rest := line[j:]
 	// A backtick fence's info string may not contain a backtick.
-	if ch == '`' && strings.IndexByte(rest, '`') >= 0 {
+	if ch == '`' && strings.Contains(rest, "`") {
 		return "", "", false
 	}
 	// Tokenizer.fences sets lang to `cap[2].trim()`, JavaScript's trim.

@@ -60,7 +60,7 @@ func parseInline(src string, state *inlineState) []Inline {
 		return []Inline{{Kind: InlineText, Text: src}}
 	}
 	maskSrc := src
-	if len(state.links) > 0 && strings.IndexByte(src, '[') >= 0 {
+	if len(state.links) > 0 && strings.Contains(src, "[") {
 		// inlineTokens masks reference links before the other spans.
 		maskSrc = maskRefLinks(src, state.links)
 	}
@@ -431,7 +431,7 @@ func rejectInlineDollar(inner, after string) bool {
 	if last, _ := utf8.DecodeLastRuneInString(inner); isWhitespaceRune(last) {
 		return true
 	}
-	if strings.IndexByte(inner, '`') >= 0 {
+	if strings.Contains(inner, "`") {
 		return true
 	}
 	if after != "" && after[0] >= '0' && after[0] <= '9' {
