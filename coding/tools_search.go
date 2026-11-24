@@ -185,7 +185,7 @@ func CreateFindTool(cwd string) agent.AgentTool {
 			// so parent .gitignore rules stop at nested repo boundaries.
 			insideGitRepo := false
 			for current := searchPath; ; {
-				if fileExists(filepath.Join(current, ".git")) {
+				if PathExists(filepath.Join(current, ".git")) {
 					insideGitRepo = true
 					break
 				}

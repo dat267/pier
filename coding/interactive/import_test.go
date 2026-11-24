@@ -144,7 +144,7 @@ func TestImportCommandUsesAStoredFileInPlace(t *testing.T) {
 	if got := app.sessionMgr.GetSessionFile(); got != target {
 		t.Errorf("session file = %q, want the stored file %q", got, target)
 	}
-	if numbered := strings.TrimSuffix(target, ".jsonl") + "-1.jsonl"; fileExists(numbered) {
+	if numbered := strings.TrimSuffix(target, ".jsonl") + "-1.jsonl"; coding.PathExists(numbered) {
 		t.Error("a stored file was copied instead of used in place")
 	}
 }
@@ -270,11 +270,6 @@ func TestImportCommandRequiresAPath(t *testing.T) {
 	if !transcriptContains(app, "Usage: /import <path.jsonl>") {
 		t.Errorf("no usage error: %q", transcriptTexts(app))
 	}
-}
-
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
 }
 
 // pi v1.4.0 agent-session-runtime.ts throws SessionImportFileNotFoundError for

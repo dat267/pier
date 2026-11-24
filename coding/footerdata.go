@@ -335,7 +335,7 @@ func reftableTablesListPath(gitPaths *GitPaths) string {
 		return ""
 	}
 	tablesList := filepath.Join(reftableDir, "tables.list")
-	if !fileExists(tablesList) {
+	if !PathExists(tablesList) {
 		return ""
 	}
 	return tablesList

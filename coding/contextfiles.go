@@ -33,7 +33,7 @@ func FindGitPaths(cwd string) *GitPaths {
 				if after, ok := strings.CutPrefix(trimmed, "gitdir: "); ok {
 					gitDir := resolveFrom(dir, strings.TrimSpace(after))
 					headPath := filepath.Join(gitDir, "HEAD")
-					if !fileExists(headPath) {
+					if !PathExists(headPath) {
 						return nil
 					}
 					commonGitDir := gitDir
@@ -49,7 +49,7 @@ func FindGitPaths(cwd string) *GitPaths {
 				}
 			} else if info.IsDir() {
 				headPath := filepath.Join(gitPath, "HEAD")
-				if !fileExists(headPath) {
+				if !PathExists(headPath) {
 					return nil
 				}
 				return &GitPaths{RepoDir: dir, CommonGitDir: gitPath, HeadPath: headPath}

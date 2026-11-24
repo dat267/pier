@@ -335,7 +335,7 @@ func OpenSession(path string, sessionDir string, cwdOverride string) (*SessionMa
 		m.sessionDir = filepath.Dir(resolvedPath)
 	}
 
-	if fileExists(resolvedPath) {
+	if PathExists(resolvedPath) {
 		if len(entries) == 0 {
 			info, err := os.Stat(resolvedPath)
 			if err != nil {
@@ -584,7 +584,7 @@ func (m *SessionManager) SessionFileAppeared() bool {
 	if m.sessionFile == "" || m.writeState == nil || !m.writeState.absent.Load() {
 		return false
 	}
-	return fileExists(m.sessionFile)
+	return PathExists(m.sessionFile)
 }
 
 // SetWriteQueue wires (or replaces) the write queue; used by the interactive

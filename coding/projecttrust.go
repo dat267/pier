@@ -130,7 +130,7 @@ func GetProviderLoginHelp() string {
 	docs := GetDocsPath()
 	providers := filepath.Join(docs, "providers.md")
 	models := filepath.Join(docs, "models.md")
-	if !fileExists(providers) || !fileExists(models) {
+	if !PathExists(providers) || !PathExists(models) {
 		return login
 	}
 	return fmt.Sprintf("%s See:\n  %s\n  %s", login, providers, models)

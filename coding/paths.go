@@ -427,36 +427,31 @@ func tryCurlyQuoteVariant(filePath string) string {
 func ResolveReadPath(filePath string, cwd string) string {
 	resolved := ResolveToCwd(filePath, cwd)
 
-	if fileExists(resolved) {
+	if PathExists(resolved) {
 		return resolved
 	}
 
 	amPmVariant := tryMacOSScreenshotPath(resolved)
-	if amPmVariant != resolved && fileExists(amPmVariant) {
+	if amPmVariant != resolved && PathExists(amPmVariant) {
 		return amPmVariant
 	}
 
 	nfdVariant := tryNFDVariant(resolved)
-	if nfdVariant != resolved && fileExists(nfdVariant) {
+	if nfdVariant != resolved && PathExists(nfdVariant) {
 		return nfdVariant
 	}
 
 	curlyVariant := tryCurlyQuoteVariant(resolved)
-	if curlyVariant != resolved && fileExists(curlyVariant) {
+	if curlyVariant != resolved && PathExists(curlyVariant) {
 		return curlyVariant
 	}
 
 	nfdCurlyVariant := tryCurlyQuoteVariant(nfdVariant)
-	if nfdCurlyVariant != resolved && fileExists(nfdCurlyVariant) {
+	if nfdCurlyVariant != resolved && PathExists(nfdCurlyVariant) {
 		return nfdCurlyVariant
 	}
 
 	return resolved
-}
-
-func fileExists(filePath string) bool {
-	_, err := os.Stat(filePath)
-	return err == nil
 }
 
 // GetCwdRelativePath returns the path relative to cwd when inside it

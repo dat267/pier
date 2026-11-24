@@ -51,13 +51,13 @@ func DiscoverAppendSystemPromptFile(cwd string, agentDir string, projectTrusted 
 func discoverPromptFile(cwd string, agentDir string, projectTrusted bool, name string) string {
 	if projectTrusted && cwd != "" {
 		projectPath := filepath.Join(cwd, ConfigDirName, name)
-		if fileExists(projectPath) {
+		if PathExists(projectPath) {
 			return projectPath
 		}
 	}
 	if agentDir != "" {
 		globalPath := filepath.Join(agentDir, name)
-		if fileExists(globalPath) {
+		if PathExists(globalPath) {
 			return globalPath
 		}
 	}
@@ -132,7 +132,7 @@ func LoadPromptOverrides(sources PromptFileSources) PromptOverrides {
 // promptSourcePath returns the absolute source path when the source names an
 // existing file (upstream filters its sources on existsSync + resolvePath).
 func promptSourcePath(source string) string {
-	if source == "" || !fileExists(source) {
+	if source == "" || !PathExists(source) {
 		return ""
 	}
 	absolute, err := filepath.Abs(source)
