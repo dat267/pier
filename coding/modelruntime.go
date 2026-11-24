@@ -211,7 +211,7 @@ func CreateModelRuntime(options CreateModelRuntimeOptions) (*ModelRuntime, error
 	refreshOnCreate := options.RefreshOnCreate == nil || *options.RefreshOnCreate
 	if refreshOnCreate {
 		_, _ = runtime.Refresh(ctx, &ModelsRefreshCallOptions{
-			AllowNetwork: &refreshFromNetwork, AllProviders: true,
+			AllowNetwork: &refreshFromNetwork,
 		})
 	}
 	if cancel != nil {
@@ -1124,8 +1124,6 @@ type ModelsRefreshCallOptions struct {
 	Providers    []string
 	AllowNetwork *bool
 	Force        *bool
-	// AllProviders marks the refresh as covering every provider.
-	AllProviders bool
 }
 
 // Refresh reloads models.json and provider catalogs.
