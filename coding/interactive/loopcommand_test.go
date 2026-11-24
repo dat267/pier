@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -116,5 +117,59 @@ func TestLoopCommandReportsDisabledFeature(t *testing.T) {
 		if jobs := scheduler.Jobs(); len(jobs) != 0 {
 			t.Fatalf("a disabled feature scheduled %d jobs", len(jobs))
 		}
+	}
+}
+
+// D-row loop: the user can see and cancel what /loop scheduled without asking
+// the agent. `/loop list` names every job, `/loop stop <id>` cancels one and
+// `/loop stop` cancels all; a prompt that only starts with those words is still
+// a prompt.
+func TestLoopCommandListsAndStopsJobs(t *testing.T) {
+	clock := time.Date(2026, time.November, 25, 10, 0, 0, 0, time.UTC)
+	scheduler := coding.NewLoopScheduler(func() time.Time { return clock }, nil)
+	defer scheduler.Stop()
+	var status, failure string
+	var submitted []string
+	wiring := &CommandWiring{
+		LoopScheduler: scheduler,
+		OnLoopPrompt:  func(prompt string) { submitted = append(submitted, prompt) },
+		ShowStatus:    func(message string) { status = message },
+		ShowError:     func(message string) { failure = message },
+	}
+
+	wiring.HandleLoopCommand("list")
+	if status != "No loops scheduled." {
+		t.Fatalf("empty list status = %q", status)
+	}
+	wiring.HandleLoopCommand("5m check the deploy")
+	wiring.HandleLoopCommand("1h summarize the logs")
+	jobs := scheduler.Jobs()
+	if len(jobs) != 2 {
+		t.Fatalf("jobs = %d, want 2", len(jobs))
+	}
+	wiring.HandleLoopCommand("list")
+	for _, want := range []string{jobs[0].ID, "check the deploy", jobs[0].HumanSchedule, jobs[1].ID, "summarize the logs"} {
+		if !strings.Contains(status, want) {
+			t.Fatalf("list lacks %q:\n%s", want, status)
+		}
+	}
+
+	wiring.HandleLoopCommand("stop nope")
+	if failure == "" || len(scheduler.Jobs()) != 2 {
+		t.Fatalf("an unknown id must be reported and cancel nothing (error %q)", failure)
+	}
+	failure = ""
+	wiring.HandleLoopCommand("stop " + jobs[0].ID)
+	if left := scheduler.Jobs(); len(left) != 1 || left[0].ID != jobs[1].ID {
+		t.Fatalf("stop %s left %+v", jobs[0].ID, left)
+	}
+	wiring.HandleLoopCommand("stop")
+	if left := scheduler.Jobs(); len(left) != 0 || !strings.Contains(status, "1") {
+		t.Fatalf("stop all left %d jobs, status %q", len(left), status)
+	}
+
+	wiring.HandleLoopCommand("list the open files")
+	if len(submitted) != 1 || submitted[0] != "list the open files" || failure != "" {
+		t.Fatalf("a prompt starting with list must run as a prompt: %v (error %q)", submitted, failure)
 	}
 }

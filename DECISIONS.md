@@ -8918,7 +8918,12 @@ and so part of the transcript like any typed message.
 The scheduler starts no timer until a job exists, and `Close` stops it, so an
 idle session holds no timer and a closed one leaves no goroutine. Recurring jobs
 expire after 30 days so a forgotten loop does not run forever, and the job count
-is capped, because a runaway loop is worse than a refused one.
+is capped, because a runaway loop is worse than a refused one. The user sees and
+cancels jobs without asking the agent: `/loop list` names each job's id,
+schedule, next run and prompt, `/loop stop <id>` cancels one and `/loop stop`
+all of them. Only those exact shapes are commands (before them, `/loop list`
+started a self-paced loop whose prompt was "list"), so a prompt such as
+"list the files" still runs.
 
 `/loop` is listed in `/features` alongside the other pier-only surface, and its
 tools are registered in the ordinary registry, so `/tools` shows and can disable
@@ -8962,7 +8967,8 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestNextCronTimeSingleDayField`, `TestNextCronTimeReportsNoMatch`,
 `TestHumanCronSchedule`, `TestLoopCommandArmsCronJob`,
 `TestLoopCommandSelfPacedRunsNow`, `TestLoopCommandRejectsBadInput`,
-`TestLoopCommandReportsDisabledFeature`, `TestLoopSchedulerPersistsNothing`,
+`TestLoopCommandReportsDisabledFeature`, `TestLoopCommandListsAndStopsJobs`,
+`TestLoopSchedulerPersistsNothing`,
 `TestAppAdoptsLoopSchedulerOnThePrimarySession`,
 `TestAppSkipsLoopToolsWhenTheFeatureIsOff`, `TestLoopFeatureToggleEnablesAndDisables`,
 `TestLoopFeatureToggleRespectsToolToggle`,

@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -845,11 +846,20 @@ func (w *CommandWiring) HandleHotkeysCommand() {
 // HandleLoopCommand runs `/loop [interval] <prompt>`: with an interval it arms a
 // cron job on the session's scheduler, and without one it starts a self-paced
 // loop by running the prompt now, leaving the agent to arm its own wakeups.
+// `/loop list` and `/loop stop [id]` show and cancel the scheduled jobs; only
+// those exact shapes are commands, so a prompt such as "list the files" runs.
 func (w *CommandWiring) HandleLoopCommand(args string) {
 	// A disabled feature reports itself rather than silently doing nothing: the
 	// row that turned it off is in /features, which is one keystroke away.
 	if w.LoopFeatureEnabled != nil && !w.LoopFeatureEnabled() {
 		w.showError("The loop feature is off. Turn it on in /features.")
+		return
+	}
+	if fields := strings.Fields(args); len(fields) == 1 && fields[0] == "list" {
+		w.listLoops()
+		return
+	} else if len(fields) > 0 && len(fields) <= 2 && fields[0] == "stop" {
+		w.stopLoops(fields[1:])
 		return
 	}
 	interval, prompt := coding.ParseLoopInput(args)
@@ -877,6 +887,46 @@ func (w *CommandWiring) HandleLoopCommand(args string) {
 		return
 	}
 	w.showStatus("Loop " + job.ID + " scheduled (" + job.HumanSchedule + ").")
+}
+
+// listLoops shows every scheduled job: its id, schedule, next run and prompt.
+func (w *CommandWiring) listLoops() {
+	scheduler := w.loopScheduler()
+	if scheduler == nil {
+		w.showError("Scheduling is not available in this session.")
+		return
+	}
+	jobs := scheduler.Jobs()
+	if len(jobs) == 0 {
+		w.showStatus("No loops scheduled.")
+		return
+	}
+	lines := []string{"Scheduled loops (/loop stop <id> cancels one, /loop stop all of them):"}
+	for _, job := range jobs {
+		lines = append(lines, fmt.Sprintf("%s  %s, next %s  %s",
+			job.ID, job.HumanSchedule, job.NextFire.Local().Format("15:04"), job.Prompt))
+	}
+	w.showStatus(strings.Join(lines, "\n"))
+}
+
+// stopLoops cancels the job named by ids, or every job when ids is empty.
+func (w *CommandWiring) stopLoops(ids []string) {
+	scheduler := w.loopScheduler()
+	if scheduler == nil {
+		w.showError("Scheduling is not available in this session.")
+		return
+	}
+	if len(ids) == 0 {
+		count := len(scheduler.Jobs())
+		scheduler.RemoveAll()
+		w.showStatus(fmt.Sprintf("Stopped %d loop(s).", count))
+		return
+	}
+	if !scheduler.Remove(ids[0]) {
+		w.showError("No loop " + ids[0] + ". /loop list shows the scheduled ones.")
+		return
+	}
+	w.showStatus("Loop " + ids[0] + " stopped.")
 }
 
 // loopScheduler returns the session's scheduler, if one is installed.
