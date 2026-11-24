@@ -155,7 +155,7 @@ func GetRetryDelayMS(err *ProviderError, retryIndex int, maxRetryDelayMS *int) (
 	}
 	// min(0.5 * 2^retryIndex, 8) * 1000 * (1 - rand*0.25)
 	exponential := math.Min(0.5*math.Pow(2, float64(retryIndex)), 8) * 1000
-	return int64(exponential * (1 - pseudoRand()*0.25)), nil
+	return int64(exponential * (1 - rand.Float64()*0.25)), nil
 }
 
 // RetryProviderRequest reproduces the retry behavior used by the OpenAI and
@@ -497,6 +497,3 @@ func IsRetryableAssistantError(message *AssistantMessage) bool {
 	}
 	return retryableProviderErrorPattern.MatchString(errorMessage)
 }
-
-// pseudoRand is math/rand-backed jitter source for retry backoff.
-func pseudoRand() float64 { return rand.Float64() }

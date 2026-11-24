@@ -6,8 +6,6 @@ import (
 	"unicode"
 )
 
-func unicodePunctuation(r rune) bool { return unicode.IsPunct(r) }
-
 // Port of the autocomplete surface from src/autocomplete.ts that the editor
 // consumes. The provider implementations (combined slash-command and file
 // completion) are ported separately.
@@ -74,7 +72,7 @@ func isAutocompleteSeparator(character rune) bool {
 	if editorCJKPunctuation[character] {
 		return true
 	}
-	return unicodePunctuation(character) && isCJKPunctuation(character)
+	return unicode.IsPunct(character) && isCJKPunctuation(character)
 }
 
 // cjkPunctuationRanges are the punctuation code points whose Unicode

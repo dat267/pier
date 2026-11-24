@@ -287,7 +287,7 @@ func coercePrimitiveByType(value *schemaValue, typ string) *schemaValue {
 			return &schemaValue{IsString: true, String: ""}
 		}
 		if value.IsNumber {
-			return &schemaValue{IsString: true, String: trimFloat(value.Number)}
+			return &schemaValue{IsString: true, String: JSNumberToString(value.Number)}
 		}
 		if value.IsBool {
 			if value.Bool {
@@ -305,9 +305,6 @@ func coercePrimitiveByType(value *schemaValue, typ string) *schemaValue {
 		return value
 	}
 }
-
-// trimFloat formats a number like JS String(number).
-func trimFloat(f float64) string { return JSNumberToString(f) }
 
 // isIntegerFloat is Number.isInteger: finite and without a fractional part.
 func isIntegerFloat(f float64) bool {
