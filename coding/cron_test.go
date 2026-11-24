@@ -182,6 +182,10 @@ func TestHumanCronSchedule(t *testing.T) {
 		{"0 9 * * 0", "Every Sunday at 9:00 AM"},
 		{"0 9 * * 7", "Every Sunday at 9:00 AM"},
 		{"0 9 * * 1-5", "Weekdays at 9:00 AM"},
+		// D537: /loop 2d schedules a day step; it read as the raw expression.
+		{"0 0 */2 * *", "Every 2 days at 12:00 AM"},
+		{"30 9 */3 * *", "Every 3 days at 9:30 AM"},
+		{"0 0 */1 * *", "Every day at 12:00 AM"},
 		// The 14th at 2:30pm: a one-shot shape with no plain phrase.
 		{"30 14 * * 3", "Every Wednesday at 2:30 PM"},
 		{"30 14 14 * *", "30 14 14 * *"},

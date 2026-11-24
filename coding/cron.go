@@ -284,6 +284,13 @@ func HumanCronSchedule(expression string) string {
 	if dayOfMonth == "*" && month == "*" && dayOfWeek == "1-5" {
 		return "Weekdays at " + at
 	}
+	// A day-of-month step, which /loop Nd schedules (D537).
+	if step, ok := cronStep(dayOfMonth); ok && month == "*" && dayOfWeek == "*" {
+		if step == 1 {
+			return "Every day at " + at
+		}
+		return fmt.Sprintf("Every %d days at %s", step, at)
+	}
 	return expression
 }
 
