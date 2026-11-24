@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"sort"
 	"time"
 
 	"github.com/dat267/pier/ai"
@@ -506,26 +505,7 @@ func (m *SessionManager) UsageCostBreakdown() []UsageCostBreakdownEntry {
 		}
 	}
 
-	out := make([]UsageCostBreakdownEntry, 0, len(order))
-	for _, key := range order {
-		totals := totalsByKey[key]
-		out = append(out, UsageCostBreakdownEntry{
-			Key:    key,
-			Cost:   totals.Cost,
-			Tokens: totals.totalTokens(),
-		})
-	}
-	filtered := out[:0]
-	for _, entry := range out {
-		if entry.Cost > 0 || entry.Tokens > 0 {
-			filtered = append(filtered, entry)
-		}
-	}
-	// Upstream sorts descending by cost; equal costs keep insertion order.
-	sort.SliceStable(filtered, func(left, right int) bool {
-		return filtered[left].Cost > filtered[right].Cost
-	})
-	return filtered
+	return rankUsageBreakdown(order, totalsByKey)
 }
 
 // ComputeCacheWaste returns cumulative cache waste across a session: prompt

@@ -116,24 +116,24 @@ func usageCostBreakdown(entries []SessionEntry, cache *messageCache) []UsageCost
 		totalsByKey[key] = totals
 	}
 
+	return rankUsageBreakdown(order, totalsByKey)
+}
+
+// rankUsageBreakdown turns per-key totals into breakdown entries in first-seen
+// order, drops the empty ones and ranks them by cost: the tail of upstream
+// getUsageCostBreakdown (`Array.from(totalsByKey, ...).filter(...).sort(...)`).
+// The sort is stable, as Array.prototype.sort is, so equal costs keep
+// insertion order.
+func rankUsageBreakdown(order []string, totalsByKey map[string]UsageTotals) []UsageCostBreakdownEntry {
 	out := make([]UsageCostBreakdownEntry, 0, len(order))
 	for _, key := range order {
 		totals := totalsByKey[key]
-		out = append(out, UsageCostBreakdownEntry{
-			Key:    key,
-			Cost:   totals.Cost,
-			Tokens: totals.totalTokens(),
-		})
-	}
-	filtered := out[:0]
-	for _, entry := range out {
-		if entry.Cost > 0 || entry.Tokens > 0 {
-			filtered = append(filtered, entry)
+		if totals.Cost > 0 || totals.totalTokens() > 0 {
+			out = append(out, UsageCostBreakdownEntry{Key: key, Cost: totals.Cost, Tokens: totals.totalTokens()})
 		}
 	}
-	// Upstream sorts descending by cost; equal costs keep insertion order.
-	sort.SliceStable(filtered, func(left, right int) bool {
-		return filtered[left].Cost > filtered[right].Cost
+	sort.SliceStable(out, func(left, right int) bool {
+		return out[left].Cost > out[right].Cost
 	})
-	return filtered
+	return out
 }
