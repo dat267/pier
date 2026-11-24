@@ -793,6 +793,22 @@ func (e *Editor) handleInputLocked(data string) {
 	}
 }
 
+// joinPreviousLineLocked appends the cursor line to the line above and moves
+// the cursor to the join point.
+func (e *Editor) joinPreviousLineLocked() {
+	previousLine := e.state.lines[e.state.cursorLine-1]
+	e.state.lines[e.state.cursorLine-1] = previousLine + e.currentLine()
+	e.state.lines = append(e.state.lines[:e.state.cursorLine], e.state.lines[e.state.cursorLine+1:]...)
+	e.state.cursorLine--
+	e.setCursorCol(len(previousLine))
+}
+
+// joinNextLineLocked appends the line below to the cursor line.
+func (e *Editor) joinNextLineLocked() {
+	e.state.lines[e.state.cursorLine] = e.currentLine() + e.state.lines[e.state.cursorLine+1]
+	e.state.lines = append(e.state.lines[:e.state.cursorLine+1], e.state.lines[e.state.cursorLine+2:]...)
+}
+
 func (e *Editor) currentLine() string {
 	if e.state.cursorLine < 0 || e.state.cursorLine >= len(e.state.lines) {
 		return ""
@@ -1227,12 +1243,7 @@ func (e *Editor) handleBackspaceLocked() {
 		e.setCursorCol(e.state.cursorCol - graphemeLength)
 	} else if e.state.cursorLine > 0 {
 		e.pushUndoSnapshot()
-		currentLine := e.currentLine()
-		previousLine := e.state.lines[e.state.cursorLine-1]
-		e.state.lines[e.state.cursorLine-1] = previousLine + currentLine
-		e.state.lines = append(e.state.lines[:e.state.cursorLine], e.state.lines[e.state.cursorLine+1:]...)
-		e.state.cursorLine--
-		e.setCursorCol(len(previousLine))
+		e.joinPreviousLineLocked()
 	}
 
 	if e.OnChange != nil {
@@ -1448,11 +1459,7 @@ func (e *Editor) deleteToStartOfLineLocked() {
 		e.pushUndoSnapshot()
 		e.killRing.Push("\n", KillRingPushOptions{Prepend: true, Accumulate: e.lastAction == "kill"})
 		e.lastAction = "kill"
-		previousLine := e.state.lines[e.state.cursorLine-1]
-		e.state.lines[e.state.cursorLine-1] = previousLine + currentLine
-		e.state.lines = append(e.state.lines[:e.state.cursorLine], e.state.lines[e.state.cursorLine+1:]...)
-		e.state.cursorLine--
-		e.setCursorCol(len(previousLine))
+		e.joinPreviousLineLocked()
 	}
 
 	if e.OnChange != nil {
@@ -1474,9 +1481,7 @@ func (e *Editor) deleteToEndOfLineLocked() {
 		e.pushUndoSnapshot()
 		e.killRing.Push("\n", KillRingPushOptions{Prepend: false, Accumulate: e.lastAction == "kill"})
 		e.lastAction = "kill"
-		nextLine := e.state.lines[e.state.cursorLine+1]
-		e.state.lines[e.state.cursorLine] = currentLine + nextLine
-		e.state.lines = append(e.state.lines[:e.state.cursorLine+1], e.state.lines[e.state.cursorLine+2:]...)
+		e.joinNextLineLocked()
 	}
 
 	if e.OnChange != nil {
@@ -1493,11 +1498,7 @@ func (e *Editor) deleteWordBackwardsLocked() {
 			e.pushUndoSnapshot()
 			e.killRing.Push("\n", KillRingPushOptions{Prepend: true, Accumulate: e.lastAction == "kill"})
 			e.lastAction = "kill"
-			previousLine := e.state.lines[e.state.cursorLine-1]
-			e.state.lines[e.state.cursorLine-1] = previousLine + currentLine
-			e.state.lines = append(e.state.lines[:e.state.cursorLine], e.state.lines[e.state.cursorLine+1:]...)
-			e.state.cursorLine--
-			e.setCursorCol(len(previousLine))
+			e.joinPreviousLineLocked()
 		}
 	} else {
 		e.pushUndoSnapshot()
@@ -1528,9 +1529,7 @@ func (e *Editor) deleteWordForwardLocked() {
 			e.pushUndoSnapshot()
 			e.killRing.Push("\n", KillRingPushOptions{Prepend: false, Accumulate: e.lastAction == "kill"})
 			e.lastAction = "kill"
-			nextLine := e.state.lines[e.state.cursorLine+1]
-			e.state.lines[e.state.cursorLine] = currentLine + nextLine
-			e.state.lines = append(e.state.lines[:e.state.cursorLine+1], e.state.lines[e.state.cursorLine+2:]...)
+			e.joinNextLineLocked()
 		}
 	} else {
 		e.pushUndoSnapshot()
@@ -1569,9 +1568,7 @@ func (e *Editor) handleForwardDeleteLocked() {
 		e.state.lines[e.state.cursorLine] = before + after
 	} else if e.state.cursorLine < len(e.state.lines)-1 {
 		e.pushUndoSnapshot()
-		nextLine := e.state.lines[e.state.cursorLine+1]
-		e.state.lines[e.state.cursorLine] = currentLine + nextLine
-		e.state.lines = append(e.state.lines[:e.state.cursorLine+1], e.state.lines[e.state.cursorLine+2:]...)
+		e.joinNextLineLocked()
 	}
 
 	if e.OnChange != nil {
