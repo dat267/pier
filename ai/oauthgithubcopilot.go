@@ -338,12 +338,9 @@ func FetchGitHubCopilotModels(ctx context.Context, copilotToken, enterpriseDomai
 		return nil, err
 	}
 	defer func() { _ = response.Body.Close() }()
-	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
-	if response.StatusCode >= 400 {
-		return nil, fmt.Errorf("%d %s: %s", response.StatusCode, http.StatusText(response.StatusCode), string(raw))
-	}
-	if readErr != nil {
-		return nil, readErr
+	raw, err := readCopilotJSONBody(response)
+	if err != nil {
+		return nil, err
 	}
 	var payload map[string]any
 	if err := json.Unmarshal(raw, &payload); err != nil {
@@ -379,12 +376,9 @@ func StartGitHubDeviceFlow(ctx context.Context, domain string) (*GitHubDeviceCod
 		return nil, err
 	}
 	defer func() { _ = response.Body.Close() }()
-	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
-	if response.StatusCode >= 400 {
-		return nil, fmt.Errorf("%d %s: %s", response.StatusCode, http.StatusText(response.StatusCode), string(raw))
-	}
-	if readErr != nil {
-		return nil, readErr
+	raw, err := readCopilotJSONBody(response)
+	if err != nil {
+		return nil, err
 	}
 	var data map[string]any
 	if err := json.Unmarshal(raw, &data); err != nil {
@@ -500,12 +494,9 @@ func RefreshGitHubCopilotAccessToken(ctx context.Context, refreshToken, enterpri
 		return nil, err
 	}
 	defer func() { _ = response.Body.Close() }()
-	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
-	if response.StatusCode >= 400 {
-		return nil, fmt.Errorf("%d %s: %s", response.StatusCode, http.StatusText(response.StatusCode), string(raw))
-	}
-	if readErr != nil {
-		return nil, readErr
+	raw, err := readCopilotJSONBody(response)
+	if err != nil {
+		return nil, err
 	}
 	var payload map[string]any
 	if err := json.Unmarshal(raw, &payload); err != nil {
@@ -737,4 +728,15 @@ func jsonRawStringSlice(values []string) json.RawMessage {
 		return json.RawMessage(`[]`)
 	}
 	return encoded
+}
+
+// readCopilotJSONBody reads a capped response body, failing a non-OK status
+// with its status line and body text first (the response half of upstream
+// github-copilot.ts fetchJson).
+func readCopilotJSONBody(response *http.Response) ([]byte, error) {
+	raw, readErr := readCappedDocument(response.Body, oauthDocumentBodyLimit)
+	if response.StatusCode >= 400 {
+		return nil, fmt.Errorf("%d %s: %s", response.StatusCode, http.StatusText(response.StatusCode), string(raw))
+	}
+	return raw, readErr
 }
