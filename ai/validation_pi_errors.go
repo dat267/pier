@@ -12,7 +12,6 @@ import (
 
 type piError struct {
 	path    string
-	keyword string
 	message string
 }
 
@@ -20,7 +19,7 @@ func (s *piSchema) errors(value *schemaValue) []piError {
 	var out []piError
 	s.walkErrors(value, "", &out)
 	if len(out) == 0 {
-		out = append(out, piError{keyword: "schema", message: "invalid"})
+		out = append(out, piError{message: "invalid"})
 	}
 	return out
 }
@@ -30,14 +29,14 @@ func (s *piSchema) walkErrors(value *schemaValue, path string, out *[]piError) {
 		return
 	}
 	if s.false {
-		addPiError(out, path, "false", "no value is allowed here")
+		addPiError(out, path, "no value is allowed here")
 		return
 	}
 	if s.check(value) {
 		return
 	}
 	start := len(*out)
-	push := func(keyword, message string) { addPiError(out, path, keyword, message) }
+	push := func(message string) { addPiError(out, path, message) }
 
 	if len(s.types) > 0 {
 		matched := false
@@ -47,15 +46,15 @@ func (s *piSchema) walkErrors(value *schemaValue, path string, out *[]piError) {
 			}
 		}
 		if !matched {
-			push("type", "expected "+strings.Join(s.types, " or ")+", got "+schemaTypeName(value))
+			push("expected " + strings.Join(s.types, " or ") + ", got " + schemaTypeName(value))
 			return
 		}
 	}
 	if s.hasEnum && !piEnumMatches(value, s.enum) {
-		push("enum", "expected one of "+schemaListValues(s.enum))
+		push("expected one of " + schemaListValues(s.enum))
 	}
 	if s.hasConst && !schemaLiteralEqual(value, s.constVal) {
-		push("const", "expected "+string(encodeSchemaValue(s.constVal)))
+		push("expected " + string(encodeSchemaValue(s.constVal)))
 	}
 	if value.IsString {
 		s.walkString(value.String, push)
@@ -79,7 +78,7 @@ func (s *piSchema) walkErrors(value *schemaValue, path string, out *[]piError) {
 		s.walkUnion(s.oneOf, value, path, out, true)
 	}
 	if s.not != nil && s.not.check(value) {
-		push("not", "must not match the schema in not")
+		push("must not match the schema in not")
 	}
 	if s.ifS != nil {
 		branch := s.elseS
@@ -93,7 +92,7 @@ func (s *piSchema) walkErrors(value *schemaValue, path string, out *[]piError) {
 	if s.ref != "" {
 		target, ok := s.resolve()
 		if !ok {
-			addPiError(out, path, "$ref", "unresolved reference "+s.ref)
+			addPiError(out, path, "unresolved reference "+s.ref)
 		} else if target != nil {
 			target.walkErrors(value, path, out)
 		}
@@ -107,7 +106,7 @@ func (s *piSchema) walkErrors(value *schemaValue, path string, out *[]piError) {
 				}
 				field, _ := value.Object.get(key)
 				if s.unevaluatedFalse {
-					addPiError(out, pointerTo(path, key), "unevaluatedProperties", "unknown field")
+					addPiError(out, pointerTo(path, key), "unknown field")
 				} else if s.unevaluatedProperties != nil {
 					s.unevaluatedProperties.walkErrors(field, pointerTo(path, key), out)
 				}
@@ -122,7 +121,7 @@ func (s *piSchema) walkErrors(value *schemaValue, path string, out *[]piError) {
 					continue
 				}
 				if s.unevaluatedItemsFalse {
-					addPiError(out, path+"/"+strconv.Itoa(i), "unevaluatedItems", "unexpected item")
+					addPiError(out, path+"/"+strconv.Itoa(i), "unexpected item")
 				} else if s.unevaluatedItems != nil {
 					s.unevaluatedItems.walkErrors(value.Array[i], path+"/"+strconv.Itoa(i), out)
 				}
@@ -130,48 +129,48 @@ func (s *piSchema) walkErrors(value *schemaValue, path string, out *[]piError) {
 		}
 	}
 	if len(*out) == start && s.dynamicRef != "" {
-		push("$dynamicRef", "does not match the dynamically referenced schema")
+		push("does not match the dynamically referenced schema")
 	}
 }
 
-func (s *piSchema) walkString(value string, push func(string, string)) {
+func (s *piSchema) walkString(value string, push func(string)) {
 	n := codePointCount(value)
 	if s.minLength != nil && n < *s.minLength {
-		push("minLength", "expected at least "+strconv.Itoa(*s.minLength)+" characters")
+		push("expected at least " + strconv.Itoa(*s.minLength) + " characters")
 	}
 	if s.maxLength != nil && n > *s.maxLength {
-		push("maxLength", "expected at most "+strconv.Itoa(*s.maxLength)+" characters")
+		push("expected at most " + strconv.Itoa(*s.maxLength) + " characters")
 	}
 	if s.patternRe != nil && !s.patternRe.MatchString(value) {
-		push("pattern", "expected to match "+s.pattern)
+		push("expected to match " + s.pattern)
 	}
 	if s.format != "" && !piFormatValid(s.format, value) {
-		push("format", "expected format "+s.format)
+		push("expected format " + s.format)
 	}
 }
 
-func (s *piSchema) walkNumber(value float64, push func(string, string)) {
+func (s *piSchema) walkNumber(value float64, push func(string)) {
 	if s.minimum != nil && value < *s.minimum {
-		push("minimum", "expected >= "+JSNumberToString(*s.minimum))
+		push("expected >= " + JSNumberToString(*s.minimum))
 	}
 	if s.maximum != nil && value > *s.maximum {
-		push("maximum", "expected <= "+JSNumberToString(*s.maximum))
+		push("expected <= " + JSNumberToString(*s.maximum))
 	}
 	if s.exclusiveMinimum != nil && value <= *s.exclusiveMinimum {
-		push("exclusiveMinimum", "expected > "+JSNumberToString(*s.exclusiveMinimum))
+		push("expected > " + JSNumberToString(*s.exclusiveMinimum))
 	}
 	if s.exclusiveMaximum != nil && value >= *s.exclusiveMaximum {
-		push("exclusiveMaximum", "expected < "+JSNumberToString(*s.exclusiveMaximum))
+		push("expected < " + JSNumberToString(*s.exclusiveMaximum))
 	}
 	if s.multipleOf != nil && !isMultipleOf(value, *s.multipleOf) {
-		push("multipleOf", "expected a multiple of "+JSNumberToString(*s.multipleOf))
+		push("expected a multiple of " + JSNumberToString(*s.multipleOf))
 	}
 }
 
-func (s *piSchema) walkObject(value *schemaValue, path string, out *[]piError, push func(string, string)) {
+func (s *piSchema) walkObject(value *schemaValue, path string, out *[]piError, push func(string)) {
 	for _, key := range s.required {
 		if _, ok := value.Object.get(key); !ok {
-			addPiError(out, pointerTo(path, key), "required", "missing")
+			addPiError(out, pointerTo(path, key), "missing")
 		}
 	}
 	for _, key := range s.propertyOrder {
@@ -194,7 +193,7 @@ func (s *piSchema) walkObject(value *schemaValue, path string, out *[]piError, p
 		}
 		if !declared {
 			if s.additionalFalse {
-				addPiError(out, pointerTo(path, key), "additionalProperties", "unknown field")
+				addPiError(out, pointerTo(path, key), "unknown field")
 			} else if s.additionalProps != nil {
 				s.additionalProps.walkErrors(field, pointerTo(path, key), out)
 			}
@@ -202,16 +201,16 @@ func (s *piSchema) walkObject(value *schemaValue, path string, out *[]piError, p
 		if s.propertyNames != nil {
 			name := &schemaValue{IsString: true, String: key}
 			if !s.propertyNames.check(name) {
-				addPiError(out, pointerTo(path, key), "propertyNames", "invalid property name")
+				addPiError(out, pointerTo(path, key), "invalid property name")
 			}
 		}
 	}
 	count := len(value.Object.keys)
 	if s.minProperties != nil && count < *s.minProperties {
-		push("minProperties", "expected at least "+strconv.Itoa(*s.minProperties)+" properties")
+		push("expected at least " + strconv.Itoa(*s.minProperties) + " properties")
 	}
 	if s.maxProperties != nil && count > *s.maxProperties {
-		push("maxProperties", "expected at most "+strconv.Itoa(*s.maxProperties)+" properties")
+		push("expected at most " + strconv.Itoa(*s.maxProperties) + " properties")
 	}
 	for key, list := range s.dependentReq {
 		if _, ok := value.Object.get(key); !ok {
@@ -219,7 +218,7 @@ func (s *piSchema) walkObject(value *schemaValue, path string, out *[]piError, p
 		}
 		for _, needed := range list {
 			if _, ok := value.Object.get(needed); !ok {
-				addPiError(out, pointerTo(path, needed), "dependentRequired", "required when "+key+" is present")
+				addPiError(out, pointerTo(path, needed), "required when "+key+" is present")
 			}
 		}
 	}
@@ -229,7 +228,7 @@ func (s *piSchema) walkObject(value *schemaValue, path string, out *[]piError, p
 		}
 		for _, needed := range list {
 			if _, ok := value.Object.get(needed); !ok {
-				addPiError(out, pointerTo(path, needed), "dependentRequired", "required when "+key+" is present")
+				addPiError(out, pointerTo(path, needed), "required when "+key+" is present")
 			}
 		}
 	}
@@ -245,20 +244,20 @@ func (s *piSchema) walkObject(value *schemaValue, path string, out *[]piError, p
 	}
 }
 
-func (s *piSchema) walkArray(value *schemaValue, path string, out *[]piError, push func(string, string)) {
+func (s *piSchema) walkArray(value *schemaValue, path string, out *[]piError, push func(string)) {
 	for i, item := range value.Array {
 		if schema := s.itemAt(i); schema != nil {
 			schema.walkErrors(item, path+"/"+strconv.Itoa(i), out)
 		}
 	}
 	if s.minItems != nil && len(value.Array) < *s.minItems {
-		push("minItems", "expected at least "+strconv.Itoa(*s.minItems)+" items")
+		push("expected at least " + strconv.Itoa(*s.minItems) + " items")
 	}
 	if s.maxItems != nil && len(value.Array) > *s.maxItems {
-		push("maxItems", "expected at most "+strconv.Itoa(*s.maxItems)+" items")
+		push("expected at most " + strconv.Itoa(*s.maxItems) + " items")
 	}
 	if s.uniqueItems && !uniqueSchemaValues(value.Array) {
-		push("uniqueItems", "expected unique items")
+		push("expected unique items")
 	}
 	if s.contains != nil {
 		minimum := 1
@@ -276,7 +275,7 @@ func (s *piSchema) walkArray(value *schemaValue, path string, out *[]piError, pu
 			}
 		}
 		if count < minimum || count > maximum {
-			push("contains", containsMessage(minimum, maximum))
+			push(containsMessage(minimum, maximum))
 		}
 	}
 }
@@ -291,18 +290,14 @@ func (s *piSchema) walkUnion(branches []*piSchema, value *schemaValue, path stri
 	if matches == 1 || (!exactlyOne && matches > 0) {
 		return
 	}
-	keyword := "anyOf"
-	if exactlyOne {
-		keyword = "oneOf"
-	}
 	if matches > 1 {
-		addPiError(out, path, keyword, "matches more than one alternative")
+		addPiError(out, path, "matches more than one alternative")
 		return
 	}
 	if key, tags, ok := piUnionTag(branches); ok && value.Object != nil {
 		actual, exists := value.Object.get(key)
 		if !exists || !piUnionTagMatches(actual, tags) {
-			addPiError(out, pointerTo(path, key), keyword, "expected one of "+schemaListValues(tags))
+			addPiError(out, pointerTo(path, key), "expected one of "+schemaListValues(tags))
 			return
 		}
 		for i, tag := range tags {
@@ -332,7 +327,7 @@ func (s *piSchema) walkUnion(branches []*piSchema, value *schemaValue, path stri
 	if best != nil {
 		*out = append(*out, best...)
 	} else {
-		addPiError(out, path, keyword, "matches no alternative")
+		addPiError(out, path, "matches no alternative")
 	}
 }
 
@@ -415,8 +410,8 @@ func piEnumMatches(value *schemaValue, options []*schemaValue) bool {
 	return false
 }
 
-func addPiError(out *[]piError, path, keyword, message string) {
-	*out = append(*out, piError{path: path, keyword: keyword, message: message})
+func addPiError(out *[]piError, path, message string) {
+	*out = append(*out, piError{path: path, message: message})
 }
 
 func pointerTo(path, key string) string {
