@@ -122,7 +122,7 @@ func TestMcpToolRenderUpstreamParity(t *testing.T) {
 		anchor := ""
 		for _, block := range spec.Result.Content {
 			if block.Type == "text" && block.Text != "" {
-				anchor = strings.Split(block.Text, "\n")[0]
+				anchor, _, _ = strings.Cut(block.Text, "\n")
 				break
 			}
 		}

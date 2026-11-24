@@ -115,7 +115,8 @@ func TestValidateToolArgumentsPiSchemaCorpus(t *testing.T) {
 				}
 				outcome = "REJECT " + strings.TrimSpace(lines[1])
 			default:
-				outcome = "THROW " + strings.SplitN(err.Error(), "\n", 2)[0]
+				firstLine, _, _ := strings.Cut(err.Error(), "\n")
+				outcome = "THROW " + firstLine
 			}
 			if outcome != probe.Actual {
 				t.Fatalf("got %s\nwant %s", outcome, probe.Actual)

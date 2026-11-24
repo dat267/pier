@@ -1571,7 +1571,7 @@ func settingsDeclarationOrder() []string {
 	schema := reflect.TypeFor[Settings]()
 	keys := make([]string, schema.NumField())
 	for i := range keys {
-		keys[i] = strings.Split(schema.Field(i).Tag.Get("json"), ",")[0]
+		keys[i], _, _ = strings.Cut(schema.Field(i).Tag.Get("json"), ",")
 	}
 	return keys
 }
