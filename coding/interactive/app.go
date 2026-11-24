@@ -415,7 +415,6 @@ func NewApp(options AppOptions) *App {
 	app.footerData = coding.NewFooterDataProvider(cwd, coding.FooterDataProviderOptions{})
 	app.session = &AppSession{AgentSession: options.Session}
 	app.footer = NewFooterComponent(app.session, app.footerData)
-	app.footer.SetAutoCompactEnabled(options.Session.AutoCompactionEnabled())
 	app.footerContainer.AddChild(app.footer)
 
 	// Display options: one value shared by the transcript, event dispatcher,

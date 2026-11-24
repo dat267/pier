@@ -221,9 +221,8 @@ func FooterLine(input FooterInput, width int) string {
 
 // FooterComponent renders the footer line.
 type FooterComponent struct {
-	autoCompactEnabled bool
-	session            FooterSession
-	footerData         coding.ReadonlyFooterDataProvider
+	session    FooterSession
+	footerData coding.ReadonlyFooterDataProvider
 
 	// Render cache. The dispatcher invalidates the footer on every session
 	// event, so a cache hit means nothing that the line displays can have
@@ -238,15 +237,11 @@ type FooterComponent struct {
 
 // NewFooterComponent creates the footer.
 func NewFooterComponent(session FooterSession, footerData coding.ReadonlyFooterDataProvider) *FooterComponent {
-	return &FooterComponent{autoCompactEnabled: true, session: session, footerData: footerData}
+	return &FooterComponent{session: session, footerData: footerData}
 }
 
 // SetSession replaces the session.
 func (f *FooterComponent) SetSession(session FooterSession) { f.session = session }
-
-// SetAutoCompactEnabled is kept for compatibility with the wiring; the simple
-// footer does not display the auto-compact indicator.
-func (f *FooterComponent) SetAutoCompactEnabled(enabled bool) { f.autoCompactEnabled = enabled }
 
 // Invalidate drops the render cache (the dispatcher calls it on every session
 // event).
