@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"sort"
 	"sync"
 
 	"github.com/dat267/pier/ai"
@@ -155,6 +154,6 @@ func Languages() []string {
 		seen[name] = true
 		names = append(names, name)
 	}
-	sort.Strings(names)
+	slices.Sort(names)
 	return names
 }

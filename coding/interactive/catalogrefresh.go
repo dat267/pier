@@ -3,7 +3,7 @@ package interactive
 import (
 	"context"
 	"maps"
-	"sort"
+	"slices"
 	"sync/atomic"
 
 	"github.com/dat267/pier/ai"
@@ -22,7 +22,7 @@ func errorProviders(errors map[string]error) []string {
 	for provider := range errors {
 		providers = append(providers, provider)
 	}
-	sort.Strings(providers)
+	slices.Sort(providers)
 	return providers
 }
 

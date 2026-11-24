@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"regexp"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -669,6 +668,6 @@ func sortedKeys[V any](record map[string]V) []string {
 	for key := range record {
 		keys = append(keys, key)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 	return keys
 }

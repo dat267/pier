@@ -8,7 +8,7 @@ import (
 	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 
@@ -197,7 +197,7 @@ func marshalStoredModels(data storedModels, order []string) ([]byte, error) {
 			remaining = append(remaining, key)
 		}
 	}
-	sort.Strings(remaining)
+	slices.Sort(remaining)
 	keys = append(keys, remaining...)
 
 	var builder strings.Builder

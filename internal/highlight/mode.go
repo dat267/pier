@@ -3,6 +3,7 @@ package highlight
 import (
 	"errors"
 	"math"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -482,7 +483,7 @@ func orderedKeywordClasses(raw Keywords) []string {
 			rest = append(rest, name)
 		}
 	}
-	sort.Strings(rest)
+	slices.Sort(rest)
 	return append(out, rest...)
 }
 

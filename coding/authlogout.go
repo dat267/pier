@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -68,7 +68,7 @@ func runAuthLogout(appName string, command *AuthCommand, stdout, stderr io.Write
 			// A provider id comes from provider configuration, so it is data (D461).
 			ids = append(ids, tui.SanitizeUntrustedText(info.ProviderID))
 		}
-		sort.Strings(ids)
+		slices.Sort(ids)
 		listed := "none"
 		if len(ids) > 0 {
 			listed = strings.Join(ids, ", ")

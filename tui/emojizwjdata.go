@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"slices"
 	"sort"
 	"strings"
 )
@@ -1632,7 +1633,7 @@ const rgiZWJSequenceData = `👨‍❤️‍👨
 // rgiZWJSequences is the sorted sequence table.
 var rgiZWJSequences = func() []string {
 	sequences := strings.Split(rgiZWJSequenceData, "\n")
-	sort.Strings(sequences)
+	slices.Sort(sequences)
 	return sequences
 }()
 

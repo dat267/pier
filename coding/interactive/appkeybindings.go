@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -248,7 +248,7 @@ func OrderKeybindingsConfig(config map[string]json.RawMessage) map[string]json.R
 			extras = append(extras, key)
 		}
 	}
-	sort.Strings(extras)
+	slices.Sort(extras)
 	for _, key := range extras {
 		ordered[key] = config[key]
 	}
@@ -371,7 +371,7 @@ func marshalOrderedKeybindings(config map[string]json.RawMessage) ([]byte, error
 			extras = append(extras, key)
 		}
 	}
-	sort.Strings(extras)
+	slices.Sort(extras)
 	keys = append(keys, extras...)
 
 	var out strings.Builder

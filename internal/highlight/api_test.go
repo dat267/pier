@@ -2,7 +2,6 @@ package highlight
 
 import (
 	"slices"
-	"sort"
 	"testing"
 )
 
@@ -32,7 +31,7 @@ func TestLanguagesListsCanonicalNamesOnly(t *testing.T) {
 		}
 	}
 	registryMu.RUnlock()
-	sort.Strings(want)
+	slices.Sort(want)
 	if len(want) == 0 {
 		t.Fatal("no canonical languages registered")
 	}

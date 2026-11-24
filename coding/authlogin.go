@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -83,7 +83,7 @@ func RunAuthLogin(appName string, args []string, terminal LoginTerminal, agentDi
 				loginProviders = append(loginProviders, candidate.ID)
 			}
 		}
-		sort.Strings(loginProviders)
+		slices.Sort(loginProviders)
 		terminal.Error(FormatCLIError(fmt.Sprintf("Unknown provider %q.", ReplaceControlCharacterRuns(request.providerRef))))
 		terminal.Error(FormatCLIError("Providers: " + strings.Join(loginProviders, ", ")))
 		return 1

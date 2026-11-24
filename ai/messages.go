@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"sort"
 )
 
 // unmarshalMessageJSONText decodes persisted or replayed message JSON. A486:
@@ -234,7 +233,7 @@ func (m *SystemMessage) sectionNames() []string {
 				extra = append(extra, name)
 			}
 		}
-		sort.Strings(extra)
+		slices.Sort(extra)
 		names = append(append([]string{}, names...), extra...)
 	}
 	return names

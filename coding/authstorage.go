@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -816,7 +815,7 @@ func marshalAuthStorageData(data authStorageData, order []string) ([]byte, error
 			remaining = append(remaining, key)
 		}
 	}
-	sort.Strings(remaining)
+	slices.Sort(remaining)
 	keys = append(keys, remaining...)
 
 	var builder strings.Builder

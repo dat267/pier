@@ -2,7 +2,6 @@ package interactive
 
 import (
 	"slices"
-	"sort"
 	"time"
 
 	"github.com/dat267/pier/ai"
@@ -519,7 +518,7 @@ func orderKeys(widgets map[string]tui.Component, order []string) []string {
 			unordered = append(unordered, key)
 		}
 	}
-	sort.Strings(unordered)
+	slices.Sort(unordered)
 	return append(keys, unordered...)
 }
 
@@ -528,7 +527,7 @@ func sortedMapKeys[V any](values map[string]V) []string {
 	for key := range values {
 		keys = append(keys, key)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 	return keys
 }
 

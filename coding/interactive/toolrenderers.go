@@ -1,7 +1,7 @@
 package interactive
 
 import (
-	"sort"
+	"slices"
 )
 
 // Port of core/tools/renderers/{index,read,bash,edit,write,grep,find,ls}.ts:
@@ -32,7 +32,7 @@ func BuiltinToolRendererNames() []string {
 	for name := range builtinToolRenderers {
 		names = append(names, name)
 	}
-	sort.Strings(names)
+	slices.Sort(names)
 	return names
 }
 

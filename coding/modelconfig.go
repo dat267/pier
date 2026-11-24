@@ -8,7 +8,6 @@ import (
 	"os"
 	"regexp"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -336,7 +335,7 @@ func LoadModelConfig(modelsJSONPath string) *ModelConfig {
 		for name := range providersObject {
 			order = append(order, name)
 		}
-		sort.Strings(order)
+		slices.Sort(order)
 	}
 
 	providers := make(map[string]ModelsJSONProvider, len(providersObject))

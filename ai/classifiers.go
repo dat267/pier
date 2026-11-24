@@ -3,7 +3,6 @@ package ai
 import (
 	"encoding/json"
 	"slices"
-	"sort"
 	"time"
 )
 
@@ -100,7 +99,7 @@ func orderedClassifierValues[V float64 | ClassifierAnswer](values map[string]V, 
 			extras = append(extras, key)
 		}
 	}
-	sort.Strings(extras)
+	slices.Sort(extras)
 	for _, key := range extras {
 		keys = appendJSObjectKey(keys, key)
 	}

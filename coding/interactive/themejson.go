@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -127,7 +127,7 @@ func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 		}
 	}
 	if len(missing) > 0 {
-		sort.Strings(missing)
+		slices.Sort(missing)
 		var builder strings.Builder
 		fmt.Fprintf(&builder, "Invalid theme \"%s\":\n", label)
 		builder.WriteString("\nMissing required color tokens:\n")
@@ -203,7 +203,7 @@ func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 		otherErrors = append(otherErrors, "  - /appearance: must be \"dark\" or \"light\"")
 	}
 	if len(otherErrors) > 0 {
-		sort.Strings(otherErrors)
+		slices.Sort(otherErrors)
 		var builder strings.Builder
 		fmt.Fprintf(&builder, "Invalid theme \"%s\":\n", label)
 		builder.WriteString("\nOther errors:\n")
@@ -225,7 +225,7 @@ func sortedKeysOf[value any](document map[string]value) []string {
 	for key := range document {
 		keys = append(keys, key)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 	return keys
 }
 

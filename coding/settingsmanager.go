@@ -22,7 +22,6 @@ import (
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/internal/offloop"
 	"github.com/dat267/pier/tui"
-	"sort"
 )
 
 // Port of core/settings-manager.ts (with the config constants it uses from
@@ -1376,7 +1375,7 @@ func orderArrayElements(elements []any, orders [][]string) []any {
 				remaining = append(remaining, key)
 			}
 		}
-		sort.Strings(remaining)
+		slices.Sort(remaining)
 		for _, key := range remaining {
 			add(key)
 		}
@@ -1438,7 +1437,7 @@ func nestedKeyOrder(text string, merged map[string]any, setOrder map[string][]st
 				remaining = append(remaining, key)
 			}
 		}
-		sort.Strings(remaining)
+		slices.Sort(remaining)
 		for _, key := range remaining {
 			add(key)
 		}
@@ -1623,7 +1622,7 @@ func marshalSettingsMapIndent(fileKeys []string, merged map[string]any, nestedOr
 			remaining = append(remaining, key)
 		}
 	}
-	sort.Strings(remaining)
+	slices.Sort(remaining)
 	for _, key := range remaining {
 		add(key)
 	}

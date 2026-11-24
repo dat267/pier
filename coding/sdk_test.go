@@ -7,7 +7,7 @@ import (
 	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -199,7 +199,7 @@ func TestToolModifiersRemainAppliedAfterSettingsReload(t *testing.T) {
 	writeReloadSettings(t, settingsPath, `{"defaultTools":["read","bash","inactive_tool"]}`)
 	session.Session.Reload()
 	got := append([]string{}, session.Session.ActiveToolNames()...)
-	sort.Strings(got)
+	slices.Sort(got)
 	if strings.Join(got, ",") != "get_goal,grep,inactive_tool,read,set_goal" {
 		t.Fatalf("tools after reload = %v, want updated defaults with bash still removed", got)
 	}
@@ -221,7 +221,7 @@ func TestReloadActivatesToolsNewlyAddedToDefaultTools(t *testing.T) {
 	}
 	active := func(s *AgentSession) string {
 		names := append([]string{}, s.ActiveToolNames()...)
-		sort.Strings(names)
+		slices.Sort(names)
 		return strings.Join(names, ",")
 	}
 	if got := active(session.Session); got != "bash,edit,get_goal,read,set_goal,write" {

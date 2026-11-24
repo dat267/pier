@@ -4,7 +4,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -216,7 +216,7 @@ func (f *FooterDataProvider) notifyBranchChange() {
 	for id := range f.callbacks {
 		ids = append(ids, id)
 	}
-	sort.Ints(ids)
+	slices.Sort(ids)
 	callbacks := make([]func(), 0, len(ids))
 	for _, id := range ids {
 		callbacks = append(callbacks, f.callbacks[id])

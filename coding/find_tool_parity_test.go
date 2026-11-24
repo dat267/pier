@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"sort"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -113,7 +113,7 @@ func TestFindToolMatchesUpstream(t *testing.T) {
 					compacted = append(compacted, line)
 				}
 			}
-			sort.Strings(compacted)
+			slices.Sort(compacted)
 			compacted = append(compacted, notices...)
 			if got := strings.Join(compacted, "\n"); got != fixture.Expected.Text {
 				t.Fatalf("text differs\n got: %q\nwant: %q", got, fixture.Expected.Text)

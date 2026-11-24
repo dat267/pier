@@ -6,7 +6,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -108,7 +108,7 @@ func TestGrepToolMatchesUpstream(t *testing.T) {
 					compacted = append(compacted, line)
 				}
 			}
-			sort.Strings(compacted)
+			slices.Sort(compacted)
 			compacted = append(compacted, notices...)
 			if got := strings.Join(compacted, "\n"); got != fixture.Expected.Text {
 				t.Fatalf("text differs\n got: %q\nwant: %q", got, fixture.Expected.Text)
