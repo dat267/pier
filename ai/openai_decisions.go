@@ -135,7 +135,7 @@ func (OpenAIDecisions) Classify(model *Model, classifierContext ClassifierContex
 	}
 	result.Usage = parseOpenAIDecisionsUsage(body.Usage, model)
 	if options.OnResponse != nil {
-		options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: responseHeaders(response.Header)}, model)
+		options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: headersToRecord(response.Header)}, model)
 	}
 	answers, answerOrder, err := parseOpenAIDecisionsAnswers(body.Answers, classifierContext.Questions)
 	if err != nil {
@@ -417,7 +417,10 @@ func classifierTokenCount(raw json.RawMessage) int64 {
 	return jsnum.ToInt64(value)
 }
 
-func responseHeaders(headers http.Header) map[string]string {
+// headersToRecord flattens response headers into the lowercase-keyed record
+// OnResponse receives (port of utils/headers.ts headersToRecord; Fetch joins
+// repeated values with ", ").
+func headersToRecord(headers http.Header) map[string]string {
 	out := make(map[string]string, len(headers))
 	for name, values := range headers {
 		if len(values) > 0 {

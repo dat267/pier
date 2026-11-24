@@ -168,7 +168,7 @@ func classifySystemOne(transport systemOneTransport, model *Model, classifierCon
 	usageRaw, _ := responseFields.raw("usage")
 	result.Usage = parseSystemOneUsage(usageRaw, model)
 	if options.OnResponse != nil {
-		options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: responseHeaders(response.Header)}, model)
+		options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: headersToRecord(response.Header)}, model)
 	}
 	answers, order, err := parseSystemOneAnswers(answersRaw, classifierContext.Questions, transport.label)
 	if err != nil {

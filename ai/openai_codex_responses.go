@@ -717,11 +717,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 				return
 			}
 			if options.OnResponse != nil {
-				responseHeaders := map[string]string{}
-				for name, values := range response.Header {
-					responseHeaders[strings.ToLower(name)] = strings.Join(values, ", ")
-				}
-				options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: responseHeaders}, model)
+				options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: headersToRecord(response.Header)}, model)
 			}
 			if response.StatusCode < 400 {
 				break

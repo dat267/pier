@@ -217,11 +217,7 @@ func StreamMistralConversations(model *Model, context TranscriptContext, options
 		}
 		defer func() { _ = resp.Body.Close() }()
 		if options.OnResponse != nil {
-			headers := map[string]string{}
-			for name, values := range resp.Header {
-				headers[strings.ToLower(name)] = strings.Join(values, ", ")
-			}
-			options.OnResponse(ProviderResponse{Status: resp.StatusCode, Headers: headers}, model)
+			options.OnResponse(ProviderResponse{Status: resp.StatusCode, Headers: headersToRecord(resp.Header)}, model)
 		}
 		stream.Push(AssistantMessageEvent{Type: EventStart, Partial: output})
 

@@ -978,11 +978,7 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 		defer func() { _ = response.Body.Close() }()
 		requestID := response.Header.Get("x-amzn-requestid")
 		if options.OnResponse != nil {
-			headers := map[string]string{}
-			for name, values := range response.Header {
-				headers[strings.ToLower(name)] = strings.Join(values, ", ")
-			}
-			options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: headers}, model)
+			options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: headersToRecord(response.Header)}, model)
 		}
 
 		stream.Push(AssistantMessageEvent{Type: EventStart, Partial: output})

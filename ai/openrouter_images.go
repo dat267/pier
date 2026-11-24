@@ -109,11 +109,7 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 	}
 	defer func() { _ = response.Body.Close() }()
 	if options.OnResponse != nil {
-		headers := map[string]string{}
-		for name, values := range response.Header {
-			headers[strings.ToLower(name)] = strings.Join(values, ", ")
-		}
-		options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: headers}, hookModel)
+		options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: headersToRecord(response.Header)}, hookModel)
 	}
 
 	raw, readErr := readCappedDocument(response.Body, openRouterImagesBodyLimit)

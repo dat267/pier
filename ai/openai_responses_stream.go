@@ -1221,11 +1221,7 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 		}
 		defer func() { _ = resp.Body.Close() }()
 		if options.OnResponse != nil {
-			headers := map[string]string{}
-			for k, v := range resp.Header {
-				headers[strings.ToLower(k)] = strings.Join(v, ", ")
-			}
-			options.OnResponse(ProviderResponse{Status: resp.StatusCode, Headers: headers}, model)
+			options.OnResponse(ProviderResponse{Status: resp.StatusCode, Headers: headersToRecord(resp.Header)}, model)
 		}
 		stream.Push(AssistantMessageEvent{Type: EventStart, Partial: output})
 
