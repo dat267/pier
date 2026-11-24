@@ -813,9 +813,7 @@ func sumInts(values []int) int {
 func maxLineCount(lines [][]string) int {
 	maxCount := 0
 	for _, entry := range lines {
-		if len(entry) > maxCount {
-			maxCount = len(entry)
-		}
+		maxCount = max(maxCount, len(entry))
 	}
 	return maxCount
 }

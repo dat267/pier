@@ -258,9 +258,7 @@ func TestReadToolKeepsMemoryBoundedOnALargeFile(t *testing.T) {
 			}
 			var stats runtime.MemStats
 			runtime.ReadMemStats(&stats)
-			if stats.HeapAlloc > high {
-				high = stats.HeapAlloc
-			}
+			high = max(high, stats.HeapAlloc)
 			time.Sleep(200 * time.Microsecond)
 		}
 	}()

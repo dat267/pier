@@ -1775,9 +1775,7 @@ func buildSessionInfoContext(ctx context.Context, filePath string) *SessionInfo 
 		if hasMessageTimestamp {
 			timestamp = messageTimestamp
 		}
-		if timestamp > lastActivityTime {
-			lastActivityTime = timestamp
-		}
+		lastActivityTime = max(lastActivityTime, timestamp)
 	}
 	recordText := func(role string, text string) {
 		if (role != "user" && role != "assistant") || text == "" {

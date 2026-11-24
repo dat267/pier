@@ -332,9 +332,7 @@ func requestMistralStream(ctx ctxpkg.Context, model *Model, body []byte, options
 	headerTimeout := jsnum.TimeoutDuration(timeoutMS)
 	if options.HTTPIdleTimeoutMs != nil && *options.HTTPIdleTimeoutMs > 0 {
 		idleHeaderTimeout := idleTimeoutDuration(*options.HTTPIdleTimeoutMs)
-		if idleHeaderTimeout < headerTimeout {
-			headerTimeout = idleHeaderTimeout
-		}
+		headerTimeout = min(headerTimeout, idleHeaderTimeout)
 	}
 	// Upstream timeoutMs bounds response headers only; an active Mistral stream
 	// must stay alive for as long as its body continues producing data.

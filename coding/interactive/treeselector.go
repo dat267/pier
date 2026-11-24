@@ -89,9 +89,7 @@ func renderHorizontalViewport(rows []horizontalViewportRow, width int) []string 
 	viewportWidth := max(0, width-treeGutterWidth)
 	maxBodyWidth := 0
 	for _, row := range rows {
-		if row.BodyWidth > maxBodyWidth {
-			maxBodyWidth = row.BodyWidth
-		}
+		maxBodyWidth = max(maxBodyWidth, row.BodyWidth)
 	}
 	maxHorizontalScroll := max(0, maxBodyWidth-viewportWidth)
 

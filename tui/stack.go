@@ -322,9 +322,7 @@ func (h *HStack) Render(width int) []string {
 	}
 	height := 0
 	for _, lines := range rendered {
-		if len(lines) > height {
-			height = len(lines)
-		}
+		height = max(height, len(lines))
 	}
 	result := make([]string, height)
 	x := 0

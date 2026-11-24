@@ -319,9 +319,7 @@ func TestAgentLoopSequentialForcedByExecutionMode(t *testing.T) {
 		Execute: func(context.Context, string, json.RawMessage, func(AgentToolResult)) (AgentToolResult, error) {
 			mu.Lock()
 			running++
-			if running > maxConcurrent {
-				maxConcurrent = running
-			}
+			maxConcurrent = max(maxConcurrent, running)
 			mu.Unlock()
 			time.Sleep(30 * time.Millisecond)
 			mu.Lock()

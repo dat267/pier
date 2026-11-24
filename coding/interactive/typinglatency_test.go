@@ -69,9 +69,7 @@ func logSamples(t *testing.T, label string, samples []keystrokeSample) time.Dura
 	t.Helper()
 	var worst, total time.Duration
 	for _, sample := range samples {
-		if sample.latency > worst {
-			worst = sample.latency
-		}
+		worst = max(worst, sample.latency)
 		total += sample.latency
 		t.Logf("%s: %q latency=%8v renders+%d beats+%d", label, string(sample.char),
 			sample.latency.Round(time.Microsecond), sample.renders, sample.beats)
