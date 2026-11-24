@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -137,5 +138,32 @@ func BenchmarkGetTextOutput1000(b *testing.B) {
 
 	for b.Loop() {
 		_ = strings.TrimSpace(GetTextOutput(result, false))
+	}
+}
+
+// D538: a call moved to the background renders a short line for the user, not
+// the model's instructions ("Continue with other work; do not wait for it…"),
+// which the frame used to print word for word. The details carry the handle, so
+// the frame needs no text parsing.
+func TestBashFrameRendersBackgroundHandle(t *testing.T) {
+	theme := newRendererTestTheme(t)
+	result := &SortToolResultContent{
+		Content: []ToolResultContent{{Type: "text", Text: "This call is still running after 30 seconds, so it was moved to the background as bg-7.\n\n" +
+			"Its output is being written to /tmp/pi-background-x.log. You will be told once, when it finishes.\n\n" +
+			"Continue with other work; do not wait for it, and do not call it again."}},
+		Details: json.RawMessage(`{"backgroundHandle":"bg-7","toolCallId":"c1","toolName":"bash","outputPath":"/tmp/pi-background-x.log"}`),
+	}
+	var rendered []string
+	for _, child := range rebuildBashResult(result, ToolRenderResultOptions{}, theme, false, &bashResultState{}) {
+		rendered = append(rendered, child.Render(120)...)
+	}
+	text := stripAnsiEscapes(strings.Join(rendered, "\n"))
+	for _, want := range []string{"background", "bg-7", "/tmp/pi-background-x.log"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("the frame lacks %q:\n%s", want, text)
+		}
+	}
+	if strings.Contains(text, "do not wait") || strings.Contains(text, "Continue with other work") {
+		t.Fatalf("the frame still shows the model's instructions:\n%s", text)
 	}
 }

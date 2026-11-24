@@ -9062,6 +9062,11 @@ Every session the CLI builds reads the threshold, including the first one and
 the RPC session replacement, which copies its options; print mode keeps it off,
 since no later turn wakes.
 
+The handle's text is written for the model, so the shell frame renders it from
+the handle's details instead: "Moved to the background as bg-…. Output: <path>. A
+notice follows when it ends.", rather than printing "do not wait for it" at the
+user.
+
 A call that finishes inside the threshold takes the unchanged path: same result,
 same events, no handle, no registry entry. That is pinned by
 `TestBackgroundFastCallIsUnchanged`, which compares the two paths' bytes and counts
@@ -9081,4 +9086,4 @@ Tests: `TestLoopToolRenderers`, `TestLoopToolsHaveRenderers`,
 `TestBackgroundNoticeQueuesDuringARun`, `TestStartupSessionBackgroundsToolCalls`,
 `TestSessionSkipsWakeAfterDispose`, `TestBackgroundNoticeNamesFileAndCapsBody`,
 `TestBackgroundFastCallLeavesNoFile`, `TestBackgroundRealShellCallStreamsToFile`,
-`TestBackgroundOutputFileHoldsLatestSnapshot`, `TestBackgroundNoticeCutKeepsUTF8`.
+`TestBackgroundOutputFileHoldsLatestSnapshot`, `TestBackgroundNoticeCutKeepsUTF8`, `TestBashFrameRendersBackgroundHandle`.

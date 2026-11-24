@@ -56,8 +56,24 @@ type bashResultState struct {
 	expandedHasCache bool
 }
 
+// backgroundHandleDetails is the detail a call moved to the background carries
+// in place of its result (D538).
+type backgroundHandleDetails struct {
+	Handle     string `json:"backgroundHandle"`
+	OutputPath string `json:"outputPath"`
+}
+
 func rebuildBashResult(result *SortToolResultContent, options ToolRenderResultOptions, theme *Theme,
 	showImages bool, state *bashResultState) []tui.Component {
+	// The handle's text is written for the model ("do not wait for it"); the
+	// user needs what happened and where the output is going.
+	if handle := toolDetailsFrom[backgroundHandleDetails](result.Details); handle != nil && handle.Handle != "" {
+		line := "Moved to the background as " + handle.Handle
+		if handle.OutputPath != "" {
+			line += ". Output: " + handle.OutputPath
+		}
+		return []tui.Component{tui.NewText("\n"+theme.Fg("muted", line+". A notice follows when it ends."), 0, 0, nil)}
+	}
 	children := make([]tui.Component, 0, 3)
 	output := strings.TrimSpace(GetTextOutput(result, showImages))
 	var truncation *coding.TruncationResult
