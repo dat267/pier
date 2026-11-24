@@ -74,7 +74,7 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 			return nil, nerr
 		}
 		request.Header.Set("Content-Type", "application/json")
-		for name, value := range ImagesIdentityHeaders(model, options.Identity) {
+		for name, value := range identityHeaders(model.Provider, model.BaseURL, options.Identity) {
 			request.Header.Set(name, value)
 		}
 		request.Header.Set("Authorization", "Bearer "+options.APIKey)

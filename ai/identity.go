@@ -201,14 +201,6 @@ func identityHeaders(provider ProviderId, baseURL string, identity *ClientIdenti
 	return headers
 }
 
-// ImagesIdentityHeaders is IdentityHeaders for an image-generation target.
-func ImagesIdentityHeaders(model *ImagesModel, identity *ClientIdentity) map[string]string {
-	if model == nil {
-		return map[string]string{"User-Agent": FormatUserAgent(identity)}
-	}
-	return identityHeaders(model.Provider, model.BaseURL, identity)
-}
-
 // applyProviderHeaders applies caller overrides after defaults. An empty
 // User-Agent suppresses Go's transport default; deleting it would send
 // Go-http-client/1.1 instead of honoring the caller's null override.
