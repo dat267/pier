@@ -152,19 +152,8 @@ func newTestAppConfigured(t *testing.T, persist bool, configure func(*coding.Set
 	settings := coding.NewInMemorySettingsManager(nil, coding.SettingsManagerCreateOptions{})
 	sessions := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: &persist})
 	fauxModel := anthropicModels[0]
-	streamFn := func(model *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
-		stream := ai.NewAssistantMessageEventStream()
-		go func() {
-			message := &ai.AssistantMessage{
-				API: ai.APIAnthropicMessages, Provider: model.Provider, Model: model.ID,
-				Content: ai.ContentList{ai.TextContent{Text: "ack"}}, StopReason: ai.StopStop,
-			}
-			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: message})
-		}()
-		return stream
-	}
 	created, err := coding.CreateAgentSession(context.Background(), &coding.CreateAgentSessionOptions{
-		Cwd: dir, AgentDir: dir, Model: fauxModel, StreamFn: streamFn,
+		Cwd: dir, AgentDir: dir, Model: fauxModel, StreamFn: ackStreamFn,
 		SessionManager: sessions, ModelRuntime: runtime, SettingsManager: settings,
 	})
 	if err != nil {
@@ -330,4 +319,17 @@ type providerTokenStub struct {
 
 func (s providerTokenStub) GetAuth(string, *coding.ModelRuntimeAuthOverrides) (*ai.AuthResult, error) {
 	return s.resolution, s.err
+}
+
+// ackStreamFn answers every prompt with a done Anthropic-API "ack" message.
+func ackStreamFn(model *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+	stream := ai.NewAssistantMessageEventStream()
+	go func() {
+		message := &ai.AssistantMessage{
+			API: ai.APIAnthropicMessages, Provider: model.Provider, Model: model.ID,
+			Content: ai.ContentList{ai.TextContent{Text: "ack"}}, StopReason: ai.StopStop,
+		}
+		stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: message})
+	}()
+	return stream
 }

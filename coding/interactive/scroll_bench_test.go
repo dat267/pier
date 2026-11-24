@@ -106,19 +106,8 @@ func newTestAppB(tb testing.TB) (*App, func()) {
 	persist := false
 	sessions := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: &persist})
 	fauxModel := anthropicModels[0]
-	streamFn := func(model *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
-		stream := ai.NewAssistantMessageEventStream()
-		go func() {
-			message := &ai.AssistantMessage{
-				API: ai.APIAnthropicMessages, Provider: model.Provider, Model: model.ID,
-				Content: ai.ContentList{ai.TextContent{Text: "ack"}}, StopReason: ai.StopStop,
-			}
-			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: message})
-		}()
-		return stream
-	}
 	created, err := coding.CreateAgentSession(context.Background(), &coding.CreateAgentSessionOptions{
-		Cwd: dir, AgentDir: dir, Model: fauxModel, StreamFn: streamFn,
+		Cwd: dir, AgentDir: dir, Model: fauxModel, StreamFn: ackStreamFn,
 		SessionManager: sessions, ModelRuntime: runtime, SettingsManager: settings,
 	})
 	if err != nil {
