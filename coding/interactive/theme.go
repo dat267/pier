@@ -1244,8 +1244,7 @@ type TerminalThemeDetection struct {
 // upstream detectColorFgBgTheme does: only the last segment, 1-2 digits, at
 // most 15.
 func getColorFgBgBackgroundIndex(colorfgbg string) (int, bool) {
-	parts := strings.Split(colorfgbg, ";")
-	last := ai.JSTrim(parts[len(parts)-1])
+	last := ai.JSTrim(colorfgbg[strings.LastIndexByte(colorfgbg, ';')+1:])
 	if len(last) < 1 || len(last) > 2 {
 		return 0, false
 	}
