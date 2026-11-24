@@ -14,14 +14,12 @@ import (
 
 // queueTestSession implements QueueSession.
 type queueTestSession struct {
-	steering []string
-	followUp []string
+	fakeQueue
 
 	prompted      []string
 	steered       []string
 	followed      []string
 	abortCalls    int
-	cleared       int
 	thinking      ai.ThinkingLevel
 	promptErr     error
 	streaming     bool
@@ -36,9 +34,17 @@ func (s *queueTestSession) ScopedModels() []coding.ScopedModel { return s.scoped
 func (s *queueTestSession) IsStreaming() bool  { return s.streaming }
 func (s *queueTestSession) IsCompacting() bool { return s.compacting }
 
-func (s *queueTestSession) GetSteeringMessages() []string { return append([]string{}, s.steering...) }
-func (s *queueTestSession) GetFollowUpMessages() []string { return append([]string{}, s.followUp...) }
-func (s *queueTestSession) ClearQueue() ([]string, []string) {
+// fakeQueue is the steering/follow-up queue the fake sessions share: reads
+// copy it, and ClearQueue counts the clear and returns what it removed.
+type fakeQueue struct {
+	steering []string
+	followUp []string
+	cleared  int
+}
+
+func (s *fakeQueue) GetSteeringMessages() []string { return append([]string{}, s.steering...) }
+func (s *fakeQueue) GetFollowUpMessages() []string { return append([]string{}, s.followUp...) }
+func (s *fakeQueue) ClearQueue() ([]string, []string) {
 	s.cleared++
 	steering, followUp := s.steering, s.followUp
 	s.steering, s.followUp = nil, nil

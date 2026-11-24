@@ -13,30 +13,20 @@ import (
 
 // handlerTestSession implements KeySession and SubmitSession.
 type handlerTestSession struct {
+	fakeQueue
 	streaming          bool
 	bashRunning        bool
 	compacting         bool
 	bashAborts         int
 	abortCalls         int
-	steering           []string
-	followUp           []string
 	prompts            []string
 	streamingBehaviors []string
-	cleared            int
 	thinking           ai.ThinkingLevel
 	// abortWaits counts the waits for idle. A test that sees it rise after an
 	// Escape press knows the handler waited on the UI loop (D168).
 	abortWaits int
 }
 
-func (s *handlerTestSession) GetSteeringMessages() []string { return append([]string{}, s.steering...) }
-func (s *handlerTestSession) GetFollowUpMessages() []string { return append([]string{}, s.followUp...) }
-func (s *handlerTestSession) ClearQueue() ([]string, []string) {
-	s.cleared++
-	steering, followUp := s.steering, s.followUp
-	s.steering, s.followUp = nil, nil
-	return steering, followUp
-}
 func (s *handlerTestSession) Steer(ai.Message)    {}
 func (s *handlerTestSession) FollowUp(ai.Message) {}
 func (s *handlerTestSession) Abort(context.Context) {
