@@ -64,6 +64,9 @@ type CommandWiring struct {
 	LoopMaxAge    time.Duration
 	// OnLoopPrompt submits a loop's prompt through the ordinary input path.
 	OnLoopPrompt func(prompt string)
+	// LoopFeatureEnabled reports whether /loop is enabled, so a disabled feature
+	// can say so instead of doing nothing.
+	LoopFeatureEnabled func() bool
 	// RequestRender requests a render.
 	RequestRender func()
 	// ClearStatusIndicator clears the active indicator.
@@ -843,6 +846,12 @@ func (w *CommandWiring) HandleHotkeysCommand() {
 // cron job on the session's scheduler, and without one it starts a self-paced
 // loop by running the prompt now, leaving the agent to arm its own wakeups.
 func (w *CommandWiring) HandleLoopCommand(args string) {
+	// A disabled feature reports itself rather than silently doing nothing: the
+	// row that turned it off is in /features, which is one keystroke away.
+	if w.LoopFeatureEnabled != nil && !w.LoopFeatureEnabled() {
+		w.showError("The loop feature is off. Turn it on in /features.")
+		return
+	}
 	interval, prompt := coding.ParseLoopInput(args)
 	if prompt == "" {
 		w.showError("Usage: /loop [interval] <prompt>")
@@ -1090,6 +1099,7 @@ func newCommandWiring(app *App) *CommandWiring {
 		ClearStatusIndicator: func() { app.uiState.ClearStatusIndicator("", false) },
 		LoopScheduler:        app.loopScheduler,
 		LoopMaxAge:           app.loopMaxAge,
+		LoopFeatureEnabled:   app.settings.GetLoopFeatureEnabled,
 		OnLoopPrompt: func(prompt string) {
 			// The same path a typed message takes, so a loop's prompt is ordinary
 			// user input rather than a special event.

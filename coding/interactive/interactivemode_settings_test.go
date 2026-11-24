@@ -21,6 +21,7 @@ type settingsTestSession struct {
 	thinking     ai.ThinkingLevel
 	streaming    bool
 	goalFeature  bool
+	loopFeature  bool
 	tools        []string
 	activeTools  []string
 }
@@ -42,7 +43,11 @@ func (s *settingsTestSession) SetThinkingLevel(level ai.ThinkingLevel, _ ...codi
 }
 func (s *settingsTestSession) IsStreaming() bool                  { return s.streaming }
 func (s *settingsTestSession) SetGoalFeatureEnabled(enabled bool) { s.goalFeature = enabled }
-func (s *settingsTestSession) ToolNames() []string                { return append([]string{}, s.tools...) }
+func (s *settingsTestSession) SetLoopFeatureEnabled(enabled bool) bool {
+	s.loopFeature = enabled
+	return true
+}
+func (s *settingsTestSession) ToolNames() []string { return append([]string{}, s.tools...) }
 func (s *settingsTestSession) GetActiveToolNames() []string {
 	return append([]string{}, s.activeTools...)
 }
@@ -103,7 +108,10 @@ func newSettingsTestWiring(t *testing.T) (*SettingsWiring, *settingsTestSession,
 	editor := NewCustomEditor(editorTestHost{}, tui.EditorTheme{}, NewAppKeybindingsManager(nil, ""), CustomEditorOptions{})
 	editorContainer.AddChild(editor)
 	settings := coding.NewInMemorySettingsManager(nil, coding.SettingsManagerCreateOptions{})
-	session := &settingsTestSession{autoCompact: true, steering: "one-at-a-time", followUp: "all", thinking: "medium"}
+	// Both features start on, so a toggle test can prove the off transition
+	// rather than reading a zero value that was never set.
+	session := &settingsTestSession{autoCompact: true, steering: "one-at-a-time", followUp: "all",
+		thinking: "medium", loopFeature: true}
 	theme := &settingsTestTheme{selection: "light", terminal: TerminalThemeLight}
 	wiring := &SettingsWiring{
 		Slot:            NewSelectorSlot(screen, editorContainer, editor),
@@ -481,5 +489,39 @@ func TestFeatureToggleAppliesAndPersists(t *testing.T) {
 	}
 	if got := selector.GetSettingsList().Items()[0].CurrentValue; got != "false" {
 		t.Fatalf("row value = %q, want false", got)
+	}
+}
+
+// The loop-feature row reaches the live session, not just the settings file:
+// turning it off there removes the scheduling tools and drops pending jobs.
+func TestLoopFeatureToggleAppliesToTheSession(t *testing.T) {
+	wiring, session, _, settings := newSettingsTestWiring(t)
+	selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
+		Toggles: wiring.featureToggles(),
+		OnFeatureChange: func(id string, enabled bool) {
+			if !wiring.ApplyFeatureToggle(id, enabled) {
+				t.Fatalf("ApplyFeatureToggle(%q) did not know the row", id)
+			}
+		},
+		OnCancel: func() {},
+	})
+	items := selector.GetSettingsList().Items()
+	loopIndex := -1
+	for index, item := range items {
+		if item.ID == "loop-feature" {
+			loopIndex = index
+		}
+	}
+	if loopIndex < 0 {
+		t.Fatalf("/features holds no loop row: %+v", items)
+	}
+	selector.GetSettingsList().SelectItem("loop-feature")
+	selector.GetSettingsList().HandleInput("\r")
+
+	if settings.GetLoopFeatureEnabled() {
+		t.Fatal("toggling the loop row did not persist")
+	}
+	if session.loopFeature {
+		t.Fatal("toggling the loop row did not reach the session")
 	}
 }

@@ -1233,7 +1233,7 @@ func NewFeatureSettingsSelector(options FeatureSelectorOptions) *FeatureSettings
 				}
 				return
 			}
-		}, options.OnCancel, tui.SettingsListOptions{})
+		}, options.OnCancel, tui.SettingsListOptions{EnableSearch: true})
 	selector.AddChild(NewDynamicBorder(nil))
 	selector.AddChild(selector.features)
 	selector.AddChild(NewDynamicBorder(nil))

@@ -598,6 +598,7 @@ coding/interactive/writetoolparity_test.go
 coding/jsonevent_wire_test.go
 coding/keyorder_write_test.go
 coding/listmodels_test.go
+coding/loopfeature_test.go
 coding/loopscheduler_test.go
 coding/looptools_test.go
 coding/ls_tool_parity_test.go

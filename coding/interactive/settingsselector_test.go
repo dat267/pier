@@ -695,3 +695,30 @@ func TestSortModelsForPickerUsesLocaleOrdering(t *testing.T) {
 		t.Fatalf("order = %s, want %s", strings.Join(got, ","), want)
 	}
 }
+
+// Typing in /features filters the list, the same way /tools and /settings do.
+// Without a search input a keystroke reached no input and the only way to find a
+// toggle was to scroll.
+func TestFeatureSelectorFiltersAsYouType(t *testing.T) {
+	wiring, _, _, _ := newSettingsTestWiring(t)
+	selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
+		Toggles: wiring.featureToggles(), OnFeatureChange: func(string, bool) {}, OnCancel: func() {},
+	})
+	list := selector.GetSettingsList()
+	if list.SearchInput() == nil {
+		t.Fatal("/features has no search input, so typing cannot filter it")
+	}
+	for _, key := range []string{"l", "o", "o", "p"} {
+		selector.HandleInput(key)
+	}
+	if got := list.SearchInput().Value(); got != "loop" {
+		t.Fatalf("query = %q, want the typed text", got)
+	}
+	rendered := strings.Join(selector.Render(100), "\n")
+	if !strings.Contains(rendered, "Loop feature") {
+		t.Fatalf("the loop row was filtered out of its own query:\n%s", rendered)
+	}
+	if strings.Contains(rendered, "Goal feature") {
+		t.Fatalf("the goal row survived a query that does not match it:\n%s", rendered)
+	}
+}

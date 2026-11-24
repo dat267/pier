@@ -654,11 +654,14 @@ func (s *AgentSession) SetGoalFeatureEnabled(enabled bool) {
 // goalToolNames are the registry names the goal feature owns.
 var goalToolNames = []string{"get_goal", "set_goal"}
 
+// loopToolNames are the registry names the loop feature owns.
+var loopToolNames = []string{"schedule_wakeup", "cron_create", "cron_delete", "cron_list"}
+
 // registerLoopTools adds the scheduling tools to the registry so the agent can
 // arm and cancel recurring prompts. They are ordinary registered tools, visible
 // in /tools like any other.
 func (s *AgentSession) registerLoopTools() {
-	if s.loopScheduler == nil || s.control == nil {
+	if s.loopScheduler == nil {
 		return
 	}
 	tools := LoopTools(LoopToolOptions{
@@ -668,12 +671,82 @@ func (s *AgentSession) registerLoopTools() {
 	})
 	s.control.stateMu.Lock()
 	defer s.control.stateMu.Unlock()
+	registerLoopToolsLocked(s, tools)
+}
+
+// registerLoopToolsLocked is registerLoopTools for a caller whose caller does
+// not already hold control.stateMu.
+func registerLoopToolsLocked(s *AgentSession, tools []agent.AgentTool) {
+	if s.control == nil {
+		return
+	}
 	for _, tool := range tools {
 		if _, ok := s.control.Tools[tool.Name]; ok {
 			continue
 		}
 		s.control.Tools[tool.Name] = AgentToolDefinition{Tool: tool}
 	}
+}
+
+// withLoopToolsActive returns names with every scheduling tool appended that is
+// registered and not turned off in /tools.
+func (s *AgentSession) withLoopToolsActive(names []string) []string {
+	active := append([]string{}, names...)
+	for _, name := range loopToolNames {
+		if _, registered := s.control.Tools[name]; !registered {
+			continue
+		}
+		if s.disabledTools[name] || slices.Contains(active, name) {
+			continue
+		}
+		active = append(active, name)
+	}
+	return active
+}
+
+// SetLoopFeatureEnabled applies the loop-feature toggle to a live session. Off
+// removes the scheduling tools from the registry and the active set and drops
+// every pending job, so a disabled feature cannot fire a prompt behind the
+// user's back; on puts the tools back. A tool the user turned off in /tools
+// stays off, the same rule the goal tools follow (D497).
+func (s *AgentSession) SetLoopFeatureEnabled(enabled bool) bool {
+	if s.loopScheduler == nil {
+		return false
+	}
+	s.toolsMu.Lock()
+	defer s.toolsMu.Unlock()
+	if !enabled {
+		s.loopScheduler.RemoveAll()
+		removed := false
+		s.control.stateMu.Lock()
+		for _, name := range loopToolNames {
+			if _, ok := s.control.Tools[name]; ok {
+				delete(s.control.Tools, name)
+				removed = true
+			}
+		}
+		s.control.stateMu.Unlock()
+		if removed {
+			active := make([]string, 0, len(s.GetActiveToolNames()))
+			for _, name := range s.GetActiveToolNames() {
+				if !slices.Contains(loopToolNames, name) {
+					active = append(active, name)
+				}
+			}
+			s.setActiveToolsByNameLocked(active)
+		}
+		return true
+	}
+	tools := LoopTools(LoopToolOptions{
+		Scheduler: s.loopScheduler,
+		MaxAge:    s.loopMaxAge,
+		OnStop:    func() { s.loopScheduler.RemoveAll() },
+	})
+	s.control.stateMu.Lock()
+	registerLoopToolsLocked(s, tools)
+	s.control.stateMu.Unlock()
+	s.setActiveToolsByNameLocked(s.withLoopToolsActive(s.GetActiveToolNames()))
+	return true
 }
 
 // registerGoalTools adds the goal tools to the session's registry with their

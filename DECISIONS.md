@@ -8915,7 +8915,13 @@ is capped, because a runaway loop is worse than a refused one.
 
 `/loop` is listed in `/features` alongside the other pier-only surface, and its
 tools are registered in the ordinary registry, so `/tools` shows and can disable
-them like any other tool.
+them like any other tool. The feature toggle reaches the live session, not just
+the settings file: off removes the four scheduling tools from the registry and
+the active set, drops every pending job so a disabled feature cannot fire a
+prompt behind the user's back, and makes `/loop` say the feature is off rather
+than doing nothing. A scheduling tool the user turned off in `/tools` stays off
+across a toggle, the rule the goal tools follow. Both `/features` and `/tools`
+filter as you type.
 
 Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopSchedulerFiresAndDeletes`, `TestLoopSchedulerRecurringStays`,
@@ -8928,4 +8934,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestNextCronTimeSkipsWholeUnits`, `TestNextCronTimeDayUnionRule`,
 `TestNextCronTimeSingleDayField`, `TestNextCronTimeReportsNoMatch`,
 `TestHumanCronSchedule`, `TestLoopCommandArmsCronJob`,
-`TestLoopCommandSelfPacedRunsNow`, `TestLoopCommandRejectsBadInput`.
+`TestLoopCommandSelfPacedRunsNow`, `TestLoopCommandRejectsBadInput`,
+`TestLoopCommandReportsDisabledFeature`, `TestLoopFeatureToggleEnablesAndDisables`,
+`TestLoopFeatureToggleRespectsToolToggle`,
+`TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`.

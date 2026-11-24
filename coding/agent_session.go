@@ -558,6 +558,11 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		s.loopScheduler = config.LoopScheduler
 		s.loopMaxAge = config.LoopMaxAge
 		s.registerLoopTools()
+		// Registering puts the tools in the registry; the agent still has to be
+		// told it may call them, or /loop schedules nothing reachable.
+		s.toolsMu.Lock()
+		s.setActiveToolsByNameLocked(s.withLoopToolsActive(s.GetActiveToolNames()))
+		s.toolsMu.Unlock()
 	}
 	// An active goal holds user follow-ups to the end of its run.
 	a.DeferFollowUp = s.deferGoalFollowUp

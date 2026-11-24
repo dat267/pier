@@ -30,6 +30,9 @@ type SettingsSession interface {
 	// SetGoalFeatureEnabled turns the builtin goal feature on or off (D496).
 	// D497 covers the tool toggles and the guarded controller accessor.
 	SetGoalFeatureEnabled(enabled bool)
+	// SetLoopFeatureEnabled turns the /loop feature on or off (D537), removing
+	// its tools and dropping pending jobs when disabled.
+	SetLoopFeatureEnabled(enabled bool) bool
 	// SetToolEnabled turns one registered tool on or off (D497).
 	SetToolEnabled(name string, enabled bool) error
 	// ToolNames lists the registered tools.
@@ -630,6 +633,9 @@ func (w *SettingsWiring) ApplyFeatureToggle(id string, enabled bool) bool {
 	switch id {
 	case "loop-feature":
 		w.Settings.SetLoopFeatureEnabled(enabled)
+		w.Session.SetLoopFeatureEnabled(enabled)
+		// Apply it to the live session: off removes the scheduling tools, drops
+		// pending jobs and makes /loop report that it is unavailable.
 		return true
 	case "goal-feature":
 		w.Settings.SetGoalFeatureEnabled(enabled)

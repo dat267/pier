@@ -89,3 +89,32 @@ func TestLoopCommandRejectsBadInput(t *testing.T) {
 		t.Fatalf("a refused /loop scheduled %d jobs", len(jobs))
 	}
 }
+
+// A disabled loop feature says so, for the self-paced form too, instead of
+// running a prompt the user turned off.
+func TestLoopCommandReportsDisabledFeature(t *testing.T) {
+	scheduler := coding.NewLoopScheduler(nil, nil)
+	defer scheduler.Stop()
+	var failure string
+	var submitted []string
+	wiring := &CommandWiring{
+		LoopScheduler:      scheduler,
+		OnLoopPrompt:       func(prompt string) { submitted = append(submitted, prompt) },
+		LoopFeatureEnabled: func() bool { return false },
+		ShowStatus:         func(string) {},
+		ShowError:          func(message string) { failure = message },
+	}
+	for _, args := range []string{"5m check the deploy", "check the deploy"} {
+		failure, submitted = "", nil
+		wiring.HandleLoopCommand(args)
+		if failure == "" {
+			t.Fatalf("a disabled feature accepted %q", args)
+		}
+		if len(submitted) != 0 {
+			t.Fatalf("a disabled feature ran %v", submitted)
+		}
+		if jobs := scheduler.Jobs(); len(jobs) != 0 {
+			t.Fatalf("a disabled feature scheduled %d jobs", len(jobs))
+		}
+	}
+}
