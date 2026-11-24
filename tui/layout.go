@@ -2,6 +2,7 @@ package tui
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 )
 
@@ -146,13 +147,9 @@ func layoutComponent(
 		}
 		lineOffset := 0
 		if len(lines) > allocatedHeight && allocatedHeight > 0 {
-			cursorLine := -1
-			for index, line := range lines {
-				if strings.Contains(line, CursorMarker) {
-					cursorLine = index
-					break
-				}
-			}
+			cursorLine := slices.IndexFunc(lines, func(line string) bool {
+				return strings.Contains(line, CursorMarker)
+			})
 			if cursorLine >= allocatedHeight {
 				lineOffset = cursorLine - allocatedHeight + 1
 			}

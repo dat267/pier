@@ -1627,13 +1627,9 @@ func (s *AltScreen) getWordSelectionLocked(point altSelectionPoint) (altSelectio
 		segments = append(segments, wordSegment{start: start, end: end, selectable: segment.IsWordLike || joiner, joiner: joiner})
 		start = end
 	}
-	clickedIndex := -1
-	for index, segment := range segments {
-		if point.Col >= segment.start && point.Col < segment.end {
-			clickedIndex = index
-			break
-		}
-	}
+	clickedIndex := slices.IndexFunc(segments, func(segment wordSegment) bool {
+		return point.Col >= segment.start && point.Col < segment.end
+	})
 	if clickedIndex < 0 {
 		return altSelectionRange{}, false
 	}
