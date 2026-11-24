@@ -38,12 +38,17 @@ func ForkSessionAtEntryDerived(source *SessionManager, targetLeafID string, targ
 	return forkSessionAtEntry(source, targetLeafID, targetCwd, sessionDir, false, options)
 }
 
+// ErrInvalidForkEntry rejects a fork whose entry is missing or, for a fork
+// before a message, is not a user message (upstream "Invalid entry ID for
+// forking").
+var ErrInvalidForkEntry = errors.New("Invalid entry ID for forking")
+
 func forkSessionAtEntry(source *SessionManager, targetLeafID string, targetCwd string, sessionDir string, manageDir bool, options *NewSessionOptions) (*SessionManager, error) {
 	var entries []SessionEntry
 	if targetLeafID != "" {
 		entries = source.GetBranch(targetLeafID)
 		if len(entries) == 0 {
-			return nil, errors.New("Invalid entry ID for forking")
+			return nil, ErrInvalidForkEntry
 		}
 		// The fork writes each entry's retained line, so read lazily loaded
 		// entries first.

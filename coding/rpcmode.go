@@ -453,14 +453,14 @@ func (r *rpcRuntime) forkManager(entryID string, atPosition bool) (*SessionManag
 	current := r.session.Sessions
 	entry := current.GetEntry(entryID)
 	if entry == nil {
-		return nil, nil, errors.New("Invalid entry ID for forking")
+		return nil, nil, ErrInvalidForkEntry
 	}
 	targetLeafID := entryID
 	var selectedText *string
 	if !atPosition {
 		text, ok := UserMessageEntryText(entry)
 		if !ok {
-			return nil, nil, errors.New("Invalid entry ID for forking")
+			return nil, nil, ErrInvalidForkEntry
 		}
 		selectedText = &text
 		targetLeafID = ""

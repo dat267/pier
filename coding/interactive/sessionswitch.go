@@ -486,7 +486,7 @@ func (a *App) forkWork(manager *coding.SessionManager, entryID string, atPositio
 	return func(context.Context) (*forkOutcome, error) {
 		entry := manager.GetEntry(entryID)
 		if entry == nil {
-			return nil, errors.New("Invalid entry ID for forking")
+			return nil, coding.ErrInvalidForkEntry
 		}
 
 		targetLeafID := entryID
@@ -494,7 +494,7 @@ func (a *App) forkWork(manager *coding.SessionManager, entryID string, atPositio
 		if !atPosition {
 			text, ok := coding.UserMessageEntryText(entry)
 			if !ok {
-				return nil, errors.New("Invalid entry ID for forking")
+				return nil, coding.ErrInvalidForkEntry
 			}
 			selectedText = &text
 			targetLeafID = ""
