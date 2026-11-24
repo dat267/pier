@@ -338,6 +338,14 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 		var currentBlock Content
 		var currentBlockBuffer *strings.Builder
 		blockIndex := func() int { return len(output.Content) - 1 }
+		// endCurrentBlock emits the end event of the open text or thinking block.
+		endCurrentBlock := func() {
+			if text, ok := currentBlock.(TextContent); ok {
+				stream.Push(AssistantMessageEvent{Type: EventTextEnd, ContentIndex: blockIndex(), Content: text.Text, Partial: output})
+			} else if thinking, ok := currentBlock.(ThinkingContent); ok {
+				stream.Push(AssistantMessageEvent{Type: EventThinkingEnd, ContentIndex: blockIndex(), Content: thinking.Thinking, Partial: output})
+			}
+		}
 
 		iterErr := iterateGoogleChunks(ctx, resp.Body, func(chunk *googleChunk) error {
 			if options.OnProviderStreamEvent != nil {
@@ -359,13 +367,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 							if currentBlock == nil ||
 								(isThinking && currentBlock.contentKind() != KindThinking) ||
 								(!isThinking && currentBlock.contentKind() != KindText) {
-								if currentBlock != nil {
-									if text, ok := currentBlock.(TextContent); ok {
-										stream.Push(AssistantMessageEvent{Type: EventTextEnd, ContentIndex: blockIndex(), Content: text.Text, Partial: output})
-									} else if thinking, ok := currentBlock.(ThinkingContent); ok {
-										stream.Push(AssistantMessageEvent{Type: EventThinkingEnd, ContentIndex: blockIndex(), Content: thinking.Thinking, Partial: output})
-									}
-								}
+								endCurrentBlock()
 								if isThinking {
 									currentBlock = ThinkingContent{}
 									currentBlockBuffer = &strings.Builder{}
@@ -401,11 +403,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 
 						if part.FunctionCall != nil {
 							if currentBlock != nil {
-								if text, ok := currentBlock.(TextContent); ok {
-									stream.Push(AssistantMessageEvent{Type: EventTextEnd, ContentIndex: blockIndex(), Content: text.Text, Partial: output})
-								} else if thinking, ok := currentBlock.(ThinkingContent); ok {
-									stream.Push(AssistantMessageEvent{Type: EventThinkingEnd, ContentIndex: blockIndex(), Content: thinking.Thinking, Partial: output})
-								}
+								endCurrentBlock()
 								currentBlock = nil
 								currentBlockBuffer = nil
 							}
@@ -486,13 +484,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 			return
 		}
 
-		if currentBlock != nil {
-			if text, ok := currentBlock.(TextContent); ok {
-				stream.Push(AssistantMessageEvent{Type: EventTextEnd, ContentIndex: blockIndex(), Content: text.Text, Partial: output})
-			} else if thinking, ok := currentBlock.(ThinkingContent); ok {
-				stream.Push(AssistantMessageEvent{Type: EventThinkingEnd, ContentIndex: blockIndex(), Content: thinking.Thinking, Partial: output})
-			}
-		}
+		endCurrentBlock()
 		if ctxErr(ctx) != nil {
 			fail(errRequestAborted)
 			return
