@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"os"
@@ -48,10 +49,7 @@ func TestPlainWrappedLineCountMatchesTheGenericWrapper(t *testing.T) {
 
 	for width := 1; width <= 40; width++ {
 		for _, line := range corpus {
-			want := len(tui.WrapTextWithAnsi(strings.ReplaceAll(line, "\t", "   "), width))
-			if want == 0 {
-				want = 1
-			}
+			want := cmp.Or(len(tui.WrapTextWithAnsi(strings.ReplaceAll(line, "\t", "   "), width)), 1)
 			if got, ok := plainWrappedLineCount(line, width); !ok {
 				t.Fatalf("plain fast path declined %q", line)
 			} else if got != want {

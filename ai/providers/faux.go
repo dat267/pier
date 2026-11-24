@@ -130,14 +130,8 @@ func NewFauxCore(options FauxOptions) *FauxCore {
 		api = fauxRandomID(fauxDefaultAPI)
 	}
 	provider := cmp.Or(options.Provider, fauxDefaultProvider)
-	minToken := options.TokenSizeMin
-	if minToken == 0 {
-		minToken = fauxDefaultMinToken
-	}
-	maxToken := options.TokenSizeMax
-	if maxToken == 0 {
-		maxToken = fauxDefaultMaxToken
-	}
+	minToken := cmp.Or(options.TokenSizeMin, fauxDefaultMinToken)
+	maxToken := cmp.Or(options.TokenSizeMax, fauxDefaultMaxToken)
 	minToken = max(1, min(minToken, maxToken))
 	maxToken = max(minToken, maxToken)
 
@@ -158,14 +152,8 @@ func NewFauxCore(options FauxOptions) *FauxCore {
 		if cost == nil {
 			cost = &ai.ModelCostRates{}
 		}
-		contextWindow := def.ContextWindow
-		if contextWindow == 0 {
-			contextWindow = 128000
-		}
-		maxTokens := def.MaxTokens
-		if maxTokens == 0 {
-			maxTokens = 16384
-		}
+		contextWindow := cmp.Or(def.ContextWindow, 128000)
+		maxTokens := cmp.Or(def.MaxTokens, 16384)
 		name := def.Name
 		if name == "" {
 			name = def.ID

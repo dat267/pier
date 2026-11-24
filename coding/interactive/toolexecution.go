@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -127,10 +128,7 @@ func NewToolExecutionComponent(toolName string, toolCallID string, args any, opt
 	if options.ShowImages != nil {
 		showImages = *options.ShowImages
 	}
-	imageWidthCells := options.ImageWidthCells
-	if imageWidthCells == 0 {
-		imageWidthCells = 60
-	}
+	imageWidthCells := cmp.Or(options.ImageWidthCells, 60)
 	component := &ToolExecutionComponent{
 		Container:       &tui.Container{},
 		toolName:        toolName,

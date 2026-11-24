@@ -8,6 +8,7 @@ package coding
 // upstream reads natively (divergence D106).
 
 import (
+	"cmp"
 	"context"
 	"encoding/base64"
 	"errors"
@@ -48,10 +49,7 @@ type clipboardCommandOptions struct {
 // command failed; an empty result is a success (upstream runClipboardCommand).
 // Writers are not given output pipes so daemons cannot retain them.
 func runClipboardCommand(ctx context.Context, command string, args []string, options clipboardCommandOptions) []byte {
-	timeoutMS := options.timeoutMS
-	if timeoutMS == 0 {
-		timeoutMS = 3000
-	}
+	timeoutMS := cmp.Or(options.timeoutMS, 3000)
 	commandCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutMS)*time.Millisecond)
 	defer cancel()
 	cmd := exec.CommandContext(commandCtx, command, args...)
@@ -67,10 +65,7 @@ func runClipboardCommand(ctx context.Context, command string, args []string, opt
 		// The reference aborts the reader once its collected output exceeds
 		// maxBufferBytes (clipboard-command.ts), so reading stops one byte past
 		// the cap instead of buffering an unbounded clipboard.
-		limit := options.maxBufferBytes
-		if limit == 0 {
-			limit = clipboardMaxBufferBytes
-		}
+		limit := cmp.Or(options.maxBufferBytes, clipboardMaxBufferBytes)
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
 			return nil

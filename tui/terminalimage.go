@@ -7,6 +7,7 @@ package tui
 // detection itself lives with the caller; this file only consumes it.
 
 import (
+	"cmp"
 	"encoding/base64"
 	"encoding/binary"
 	"math"
@@ -651,10 +652,7 @@ func RenderImage(base64Data string, imageDimensions ImageDimensions, options Ima
 	if caps.Images == "" {
 		return RenderedImage{}, false
 	}
-	maxWidth := options.MaxWidthCells
-	if maxWidth == 0 {
-		maxWidth = 80
-	}
+	maxWidth := cmp.Or(options.MaxWidthCells, 80)
 	size := CalculateImageCellSize(imageDimensions, maxWidth, options.MaxHeightCells, GetCellDimensions(), caps.Images == ImageProtocolKitty)
 	if caps.Images == ImageProtocolKitty {
 		if options.HasImageID {

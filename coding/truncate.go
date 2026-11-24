@@ -8,6 +8,7 @@ package coding
 
 import (
 	"bytes"
+	"cmp"
 	"fmt"
 	"strings"
 	"unicode/utf8"
@@ -209,14 +210,8 @@ func FormatSizeNumber(bytes float64) string {
 // partial lines; a first line over the byte limit yields empty content with
 // FirstLineExceedsLimit.
 func TruncateHead(content string, options TruncationOptions) TruncationResult {
-	maxLines := options.MaxLines
-	if maxLines == 0 {
-		maxLines = DefaultMaxLines
-	}
-	maxBytes := options.MaxBytes
-	if maxBytes == 0 {
-		maxBytes = DefaultMaxBytes
-	}
+	maxLines := cmp.Or(options.MaxLines, DefaultMaxLines)
+	maxBytes := cmp.Or(options.MaxBytes, DefaultMaxBytes)
 
 	totalBytes := len(content)
 	lines := splitLinesForCounting(content)
@@ -270,14 +265,8 @@ func TruncateHead(content string, options TruncationOptions) TruncationResult {
 // TruncateTail keeps the last N lines/bytes (bash output). May return a
 // partial first line when the last original line exceeds the byte limit.
 func TruncateTail(content string, options TruncationOptions) TruncationResult {
-	maxLines := options.MaxLines
-	if maxLines == 0 {
-		maxLines = DefaultMaxLines
-	}
-	maxBytes := options.MaxBytes
-	if maxBytes == 0 {
-		maxBytes = DefaultMaxBytes
-	}
+	maxLines := cmp.Or(options.MaxLines, DefaultMaxLines)
+	maxBytes := cmp.Or(options.MaxBytes, DefaultMaxBytes)
 
 	totalBytes := len(content)
 	lines := splitLinesForCounting(content)

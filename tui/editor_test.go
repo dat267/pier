@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"maps"
@@ -80,10 +81,7 @@ func TestEditorAgainstUpstreamGolden(t *testing.T) {
 
 	for _, label := range labels {
 		spec := corpus[label]
-		rows := spec.Rows
-		if rows == 0 {
-			rows = 10
-		}
+		rows := cmp.Or(spec.Rows, 10)
 		host := &editorHost{rows: rows}
 		options := EditorOptions{}
 		if spec.Options != nil {
@@ -116,10 +114,7 @@ func TestEditorAgainstUpstreamGolden(t *testing.T) {
 			}
 		}
 
-		width := spec.Width
-		if width == 0 {
-			width = 30
-		}
+		width := cmp.Or(spec.Width, 30)
 		checkGolden(t, golden.values, label+" text", mustJSON(editor.GetText()))
 		// Upstream cursors are UTF-16 code-unit offsets; the Go port uses byte
 		// offsets, so the golden cursor is translated.

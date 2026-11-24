@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -111,10 +112,7 @@ func TestTreeSelectorAgainstUpstreamGolden(t *testing.T) {
 		tree := manager.GetTree()
 		checkGolden(t, golden, label+"-tree", projectTree(tree))
 
-		terminalHeight := spec.TerminalHeight
-		if terminalHeight == 0 {
-			terminalHeight = 40
-		}
+		terminalHeight := cmp.Or(spec.TerminalHeight, 40)
 		component := NewTreeSelectorComponent(tree, spec.CurrentLeafID, terminalHeight,
 			func(string) {}, func() {}, TreeSelectorOptions{
 				Now:               func() time.Time { return fixedNow },

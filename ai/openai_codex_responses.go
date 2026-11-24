@@ -232,10 +232,7 @@ type CodexErrorResponse struct {
 // ParseCodexErrorResponse parses a failure body, producing the usage-limit
 // friendly message when applicable.
 func ParseCodexErrorResponse(status int, statusText, raw string) CodexErrorResponse {
-	message := cmp.Or(raw, statusText)
-	if message == "" {
-		message = "Request failed"
-	}
+	message := cmp.Or(cmp.Or(raw, statusText), "Request failed")
 	friendly := ""
 	var payload struct {
 		Error *struct {

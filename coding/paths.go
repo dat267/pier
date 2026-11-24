@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"cmp"
 	"fmt"
 	"net/url"
 	"os"
@@ -224,10 +225,7 @@ func filePathFromURL(url string) (string, error) {
 		if isURLWindowsDriveLetter(host) {
 			path = "/" + path
 		} else {
-			path = path[idx:]
-			if path == "" {
-				path = "/"
-			}
+			path = cmp.Or(path[idx:], "/")
 			// WHATWG decodes and lowercases the hostname before checking localhost.
 			decodedHost, err := percentDecode(host)
 			if err != nil {

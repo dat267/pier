@@ -2,6 +2,7 @@ package ai
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -424,10 +425,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 		providerThinkingLevel := ""
 		if !thinkingDisabled && options != nil && model.Compat != nil && model.Compat.AnthropicMessages != nil &&
 			model.Compat.AnthropicMessages.SupportsMidConvoEffort != nil && *model.Compat.AnthropicMessages.SupportsMidConvoEffort {
-			providerThinkingLevel = options.Effort
-			if providerThinkingLevel == "" {
-				providerThinkingLevel = AnthropicEffortHigh
-			}
+			providerThinkingLevel = cmp.Or(options.Effort, AnthropicEffortHigh)
 		}
 		output := &AssistantMessage{
 			API:        model.API,

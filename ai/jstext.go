@@ -156,10 +156,7 @@ func JSNumberToString(f float64) string {
 		sign = string(exponent[0])
 		exponent = exponent[1:]
 	}
-	exponent = strings.TrimLeft(exponent, "0")
-	if exponent == "" {
-		exponent = "0"
-	}
+	exponent = cmp.Or(strings.TrimLeft(exponent, "0"), "0")
 	return mantissa + "e" + sign + exponent
 }
 

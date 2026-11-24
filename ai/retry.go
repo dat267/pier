@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -335,10 +336,7 @@ func RetryAssistantCall(
 
 		attempt++
 		lastRetry = attempt
-		lastErrorMessage = finalMessage
-		if lastErrorMessage == "" {
-			lastErrorMessage = "Unknown error"
-		}
+		lastErrorMessage = cmp.Or(finalMessage, "Unknown error")
 		delayMS := RetryDelayMS(*policy, attempt)
 		if callbacks != nil && callbacks.OnRetryScheduled != nil {
 			if err := callbacks.OnRetryScheduled(attempt, maxAttempts, delayMS, lastErrorMessage); err != nil {

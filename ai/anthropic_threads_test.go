@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -271,10 +272,7 @@ func (h *threadTestHarness) handle(w http.ResponseWriter, request *http.Request)
 	} else {
 		reply = h.defaultReply(captured)
 	}
-	status := reply.Status
-	if status == 0 {
-		status = http.StatusOK
-	}
+	status := cmp.Or(reply.Status, http.StatusOK)
 	for name, value := range reply.Headers {
 		w.Header().Set(name, value)
 	}

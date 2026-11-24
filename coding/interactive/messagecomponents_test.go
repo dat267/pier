@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"cmp"
 	"encoding/json"
 	"os"
 	"strconv"
@@ -147,10 +148,7 @@ func TestMessagesAgainstUpstreamGolden(t *testing.T) {
 	sortStrings(compactionLabels)
 	for _, label := range compactionLabels {
 		spec := corpus.Compaction[label]
-		tokensBefore := spec.TokensBefore
-		if tokensBefore == 0 {
-			tokensBefore = 1234
-		}
+		tokensBefore := cmp.Or(spec.TokensBefore, 1234)
 		component := NewCompactionSummaryMessageComponent(spec.Summary, tokensBefore, nil, 1)
 		checkGolden(t, golden, "compaction "+label+"@"+strconv.Itoa(spec.Width), component.Render(spec.Width))
 		component.SetExpanded(true)
