@@ -9066,4 +9066,4 @@ Tests: `TestLoopToolRenderers`, `TestLoopToolsHaveRenderers`,
 `TestBackgroundNoticeQueuesDuringARun`, `TestStartupSessionBackgroundsToolCalls`,
 `TestSessionSkipsWakeAfterDispose`, `TestBackgroundNoticeNamesFileAndCapsBody`,
 `TestBackgroundFastCallLeavesNoFile`, `TestBackgroundRealShellCallStreamsToFile`,
-`TestBackgroundOutputFileHoldsLatestSnapshot`.
+`TestBackgroundOutputFileHoldsLatestSnapshot`, `TestBackgroundNoticeCutKeepsUTF8`.

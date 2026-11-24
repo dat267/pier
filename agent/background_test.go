@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
 )
@@ -642,5 +643,23 @@ func TestBackgroundNoticeNamesFileAndCapsBody(t *testing.T) {
 	short := CompletionNotice(handle, AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "all done"}}})
 	if got := messageText(short); strings.Contains(got, "(cut;") || !strings.Contains(got, "all done") {
 		t.Fatalf("a short result was mangled:\n%s", got)
+	}
+}
+
+// The cap cuts on a character boundary: a byte cut through non-ASCII output
+// (a test runner's ✓, a localized message) wrote invalid UTF-8 into the
+// transcript the notice wakes.
+func TestBackgroundNoticeCutKeepsUTF8(t *testing.T) {
+	// "é" is two bytes and the tail one, so a cut exactly
+	// backgroundNoticeBodyLimit bytes from the end lands inside a character.
+	body := strings.Repeat("é", backgroundNoticeBodyLimit) + "x"
+	notice := CompletionNotice(ToolCallHandle{ID: "bg-u", ToolName: "bash"},
+		AgentToolResult{Content: []ai.Content{ai.TextContent{Text: body}}})
+	got := messageText(notice)
+	if !utf8.ValidString(got) {
+		t.Fatalf("the clipped notice is not valid UTF-8: %q", got[len(got)-backgroundNoticeBodyLimit-4:][:12])
+	}
+	if !strings.Contains(got, "(cut;") || !strings.HasSuffix(got, "éx") {
+		t.Fatalf("the notice lost its cut marker or its tail")
 	}
 }

@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
 )
@@ -225,7 +226,12 @@ func clipBackgroundBody(body string) string {
 	if len(body) <= backgroundNoticeBodyLimit {
 		return body
 	}
-	kept := body[len(body)-backgroundNoticeBodyLimit:]
+	// Start on a character boundary, so the cut never splits one.
+	start := len(body) - backgroundNoticeBodyLimit
+	for start < len(body) && !utf8.RuneStart(body[start]) {
+		start++
+	}
+	kept := body[start:]
 	return "...(cut; the full output is in the file named above)\n" + kept
 }
 
