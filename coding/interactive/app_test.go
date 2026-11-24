@@ -118,22 +118,18 @@ func TestAppEndToEndLoop(t *testing.T) {
 
 func newTestApp(t *testing.T) (*App, func()) {
 	t.Helper()
-	return newTestAppWithPersist(t, false)
+	return newTestAppConfigured(t, false, nil)
 }
 
 // newTestAppPersisted is newTestApp with a session file, for commands that need
 // one (handoff).
 func newTestAppPersisted(t *testing.T) (*App, func()) {
 	t.Helper()
-	return newTestAppWithPersist(t, true)
+	return newTestAppConfigured(t, true, nil)
 }
 
-func newTestAppWithPersist(t *testing.T, persist bool) (*App, func()) {
-	t.Helper()
-	return newTestAppConfigured(t, persist, nil)
-}
-
-// newTestAppConfigured is newTestAppWithPersist with a hook that adjusts the
+// newTestAppConfigured builds a test app, with a session file when persist is
+// set, and a hook that adjusts the
 // settings and app options before NewApp composes the object graph.
 func newTestAppConfigured(t *testing.T, persist bool, configure func(*coding.SettingsManager, *AppOptions)) (*App, func()) {
 	t.Helper()
