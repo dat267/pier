@@ -372,13 +372,8 @@ func XaiOAuth() *OAuthAuth {
 		IsSubscription: true,
 		LoginLabel:     "Sign in with SuperGrok or X Premium",
 		Login:          LoginXai,
-		Refresh: func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
-			if credential == nil {
-				return nil, errors.New("credential is required")
-			}
-			return RefreshXaiToken(ctx, credential.Refresh)
-		},
-		ToAuth: accessTokenAuth,
+		Refresh:        refreshWithToken(RefreshXaiToken),
+		ToAuth:         accessTokenAuth,
 	}
 }
 

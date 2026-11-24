@@ -617,13 +617,8 @@ func OpenAICodexOAuth() *OAuthAuth {
 				return nil, fmt.Errorf("Unknown OpenAI Codex login method: %s", method)
 			}
 		},
-		Refresh: func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
-			if credential == nil {
-				return nil, errors.New("credential is required")
-			}
-			return RefreshOpenAICodexToken(ctx, credential.Refresh)
-		},
-		ToAuth: accessTokenAuth,
+		Refresh: refreshWithToken(RefreshOpenAICodexToken),
+		ToAuth:  accessTokenAuth,
 	}
 }
 

@@ -384,6 +384,18 @@ type OAuthAuth struct {
 	ToAuth func(credential *OAuthCredential) (*ModelAuth, error)
 }
 
+// refreshWithToken is the Refresh of providers that exchange the stored
+// refresh token alone for a new credential (upstream refresh(credential) {
+// return refreshX(credential.refresh) }).
+func refreshWithToken(refresh func(context.Context, string) (*OAuthCredential, error)) func(context.Context, *OAuthCredential) (*OAuthCredential, error) {
+	return func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
+		if credential == nil {
+			return nil, errors.New("credential is required")
+		}
+		return refresh(ctx, credential.Refresh)
+	}
+}
+
 // accessTokenAuth is the ToAuth of providers whose access token is the API
 // key (upstream toAuth(credential) { return { apiKey: credential.access } }).
 func accessTokenAuth(credential *OAuthCredential) (*ModelAuth, error) {

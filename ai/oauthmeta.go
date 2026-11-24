@@ -279,12 +279,7 @@ func MetaOAuth() *OAuthAuth {
 			}
 			return credential, nil
 		},
-		Refresh: func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
-			if credential == nil {
-				return nil, errors.New("credential is required")
-			}
-			return metaMintAPIKey(ctx, credential.Refresh)
-		},
-		ToAuth: accessTokenAuth,
+		Refresh: refreshWithToken(metaMintAPIKey),
+		ToAuth:  accessTokenAuth,
 	}
 }

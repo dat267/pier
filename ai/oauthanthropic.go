@@ -531,12 +531,7 @@ func AnthropicOAuth() *OAuthAuth {
 				return nil, fmt.Errorf("Unknown Anthropic login method: %s", method)
 			}
 		},
-		Refresh: func(ctx context.Context, credential *OAuthCredential) (*OAuthCredential, error) {
-			if credential == nil {
-				return nil, errors.New("credential is required")
-			}
-			return RefreshAnthropicToken(ctx, credential.Refresh)
-		},
-		ToAuth: accessTokenAuth,
+		Refresh: refreshWithToken(RefreshAnthropicToken),
+		ToAuth:  accessTokenAuth,
 	}
 }
