@@ -724,7 +724,7 @@ func (t *ProcessTerminal) DrainInput(maxMs int, idleMs int) error {
 	t.disableModifyOtherKeys()
 
 	previousHandler := t.swapInputHandler(nil)
-	defer t.swapInputHandlerRestore(previousHandler)
+	defer t.setInputHandler(previousHandler)
 
 	// Late input is tracked through the reader-stamped atomic (the reader
 	// goroutine owns the buffer; DrainInput must not touch it).
@@ -764,10 +764,6 @@ func (t *ProcessTerminal) swapInputHandler(handler func(string)) func(string) {
 	previous := t.loadInputHandler()
 	t.setInputHandler(handler)
 	return previous
-}
-
-func (t *ProcessTerminal) swapInputHandlerRestore(previous func(string)) {
-	t.setInputHandler(previous)
 }
 
 // RestoreOnExit writes the mode resets for an exit path that never called Stop,
