@@ -22,23 +22,7 @@ import (
 // queue when the run's final flush runs in between, and nothing delivers it
 // until a later run ends.
 func TestCustomMessageSentAsARunEndsIsNotStranded(t *testing.T) {
-	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
-	streamFn := func(m *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
-		stream := ai.NewAssistantMessageEventStream()
-		go func() {
-			time.Sleep(time.Duration(rand.IntN(200)) * time.Microsecond)
-			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
-				API: m.API, Provider: m.Provider, Model: m.ID, StopReason: ai.StopStop,
-				Content: ai.ContentList{ai.TextContent{Text: "ok"}},
-			}})
-		}()
-		return stream
-	}
-	manager, dir := newTestSession(t)
-	session, err := NewAgentSession(&SessionConfig{Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, ConvertToLlm: ConvertToLlm})
-	if err != nil {
-		t.Fatal(err)
-	}
+	session := newJitteredSession(t)
 	defer session.Dispose()
 
 	const rounds, notesPerRound = 60, 4
@@ -79,23 +63,7 @@ func TestCustomMessageSentAsARunEndsIsNotStranded(t *testing.T) {
 // b4afdddf) makes the choice in one step on its event loop. Goal rounds are
 // delivered this way.
 func TestTurnTriggeringCustomMessageIsDeliveredWhenARunStartsFirst(t *testing.T) {
-	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
-	streamFn := func(m *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
-		stream := ai.NewAssistantMessageEventStream()
-		go func() {
-			time.Sleep(time.Duration(rand.IntN(200)) * time.Microsecond)
-			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
-				API: m.API, Provider: m.Provider, Model: m.ID, StopReason: ai.StopStop,
-				Content: ai.ContentList{ai.TextContent{Text: "ok"}},
-			}})
-		}()
-		return stream
-	}
-	manager, dir := newTestSession(t)
-	session, err := NewAgentSession(&SessionConfig{Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, ConvertToLlm: ConvertToLlm})
-	if err != nil {
-		t.Fatal(err)
-	}
+	session := newJitteredSession(t)
 	defer session.Dispose()
 
 	const rounds = 60
@@ -129,4 +97,29 @@ func TestTurnTriggeringCustomMessageIsDeliveredWhenARunStartsFirst(t *testing.T)
 			t.Fatalf("round %d: the message never reached the transcript", round)
 		}
 	}
+}
+
+// newJitteredSession is a session whose every turn answers "ok" after a random
+// delay of up to 200µs, so a run's end lands at varying points against
+// concurrent sends. The caller disposes it.
+func newJitteredSession(t *testing.T) *AgentSession {
+	t.Helper()
+	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
+	streamFn := func(m *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			time.Sleep(time.Duration(rand.IntN(200)) * time.Microsecond)
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+				API: m.API, Provider: m.Provider, Model: m.ID, StopReason: ai.StopStop,
+				Content: ai.ContentList{ai.TextContent{Text: "ok"}},
+			}})
+		}()
+		return stream
+	}
+	manager, dir := newTestSession(t)
+	session, err := NewAgentSession(&SessionConfig{Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, ConvertToLlm: ConvertToLlm})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return session
 }

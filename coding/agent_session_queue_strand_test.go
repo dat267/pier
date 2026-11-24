@@ -22,23 +22,7 @@ import (
 func TestPromptQueuedAsARunEndsIsNotStranded(t *testing.T) {
 	for _, behavior := range []string{"followUp", "steer"} {
 		t.Run(behavior, func(t *testing.T) {
-			model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
-			streamFn := func(m *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
-				stream := ai.NewAssistantMessageEventStream()
-				go func() {
-					time.Sleep(time.Duration(rand.IntN(200)) * time.Microsecond)
-					stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
-						API: m.API, Provider: m.Provider, Model: m.ID, StopReason: ai.StopStop,
-						Content: ai.ContentList{ai.TextContent{Text: "ok"}},
-					}})
-				}()
-				return stream
-			}
-			manager, dir := newTestSession(t)
-			session, err := NewAgentSession(&SessionConfig{Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, ConvertToLlm: ConvertToLlm})
-			if err != nil {
-				t.Fatal(err)
-			}
+			session := newJitteredSession(t)
 			defer session.Dispose()
 
 			const rounds, queuedPerRound = 60, 3
