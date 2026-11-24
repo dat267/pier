@@ -2415,14 +2415,7 @@ func (s *AltScreen) doRender() {
 	// (pi v1.5.2 tui-alt-screen.ts, upstream imageCellsNeedRedraw).
 	imageCellsNeedRedraw := false
 	if !imageAnchorsNeedRedraw && s.imageProtocol == ImageProtocolKitty {
-		anyChanged := false
-		for _, changed := range changedRows {
-			if changed {
-				anyChanged = true
-				break
-			}
-		}
-		if anyChanged {
+		if slices.Contains(changedRows, true) {
 			for index, line := range screen {
 				rows, ok := GetKittyImagePlacementRows(line)
 				if !ok {
