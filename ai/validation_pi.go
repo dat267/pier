@@ -560,10 +560,7 @@ func (s *piSchema) checkVisit(value *schemaValue, active map[piCheckVisit]bool, 
 		}
 		for _, key := range value.Object.keys {
 			field, _ := value.Object.get(key)
-			matched := false
-			if _, ok := s.properties[key]; ok {
-				matched = true
-			}
+			_, matched := s.properties[key]
 			for _, pattern := range s.patternOrder {
 				re := s.patternRes[pattern]
 				if re != nil && re.MatchString(key) {
