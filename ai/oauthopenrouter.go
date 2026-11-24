@@ -318,15 +318,7 @@ func (s *OpenRouterCallbackServer) CancelWait() {
 	if claimed || settled {
 		return
 	}
-	s.mu.Lock()
-	if s.settled {
-		s.mu.Unlock()
-		return
-	}
-	s.settled = true
-	s.mu.Unlock()
-	s.stopListening()
-	close(s.done)
+	s.Close()
 }
 
 // WaitForCredential waits for the browser callback to complete the exchange, or
