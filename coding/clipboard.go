@@ -123,8 +123,6 @@ func isRemoteSessionFor(getenv func(string) string) bool {
 		getenv("PI_CLIPBOARD_OSC52") == "1"
 }
 
-func copyCommands() [][]string { return copyCommandsFor(runtime.GOOS, os.Getenv) }
-
 func copyCommandsFor(goos string, getenv func(string) string) [][]string {
 	switch goos {
 	case "darwin":

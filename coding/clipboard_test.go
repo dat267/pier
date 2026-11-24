@@ -54,7 +54,7 @@ func TestClipboardOSC52OverrideAlsoCopiesAfterLocalSuccess(t *testing.T) {
 }
 
 func TestClipboardCommandsShape(t *testing.T) {
-	commands := copyCommands()
+	commands := copyCommandsFor(runtime.GOOS, os.Getenv)
 	switch {
 	case len(commands) == 0:
 		t.Skip("no clipboard writers available in this environment")
@@ -97,7 +97,7 @@ func TestClipboardUnavailableMessage(t *testing.T) {
 // TestClipboardTermuxPasteOnAndroid pins upstream #10391: Termux reports
 // platform "android", not "linux", so the read path must select
 // termux-clipboard-get regardless of platform and the failure hint must name
-// Termux. copyCommands already had no platform gate, so only read was broken.
+// Termux. copyCommandsFor already had no platform gate, so only read was broken.
 func TestClipboardTermuxPasteOnAndroid(t *testing.T) {
 	env := func(key string) string {
 		if key == "TERMUX_VERSION" {
@@ -153,7 +153,7 @@ func TestClipboardWindowsPasteCommands(t *testing.T) {
 	}
 }
 
-// A Termux copy on android takes the env-based branch (copyCommands has no
+// A Termux copy on android takes the env-based branch (copyCommandsFor has no
 // platform gate), which the pre-fix code already did.
 func TestClipboardTermuxCopyOnAndroid(t *testing.T) {
 	env := func(key string) string {
