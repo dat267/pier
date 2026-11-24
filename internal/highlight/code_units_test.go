@@ -3,6 +3,7 @@ package highlight
 import (
 	"encoding/json"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -34,7 +35,7 @@ func TestJavaScriptCodeUnits(t *testing.T) {
 			}
 			encoded := encodeCodeUnitsString(tc.Input)
 			match := re.FindStringSubmatchIndex(encoded)
-			if got := codeUnitIndices(encoded, match); !equalInts(got, tc.Indices) {
+			if got := codeUnitIndices(encoded, match); !slices.Equal(got, tc.Indices) {
 				t.Fatalf("indices = %v; want %v", got, tc.Indices)
 			}
 		})
@@ -50,18 +51,6 @@ func TestJavaScriptCodeUnits(t *testing.T) {
 			}
 		})
 	}
-}
-
-func equalInts(left, right []int) bool {
-	if len(left) != len(right) {
-		return false
-	}
-	for i := range left {
-		if left[i] != right[i] {
-			return false
-		}
-	}
-	return true
 }
 
 // decodedByteOffset maps an encoded byte offset to the UTF-8 byte length of

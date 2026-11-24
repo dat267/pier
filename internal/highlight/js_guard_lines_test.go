@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -67,7 +68,7 @@ func TestJavaScriptRegexSources(t *testing.T) {
 		}
 		for _, in := range tc.Inputs {
 			encoded := encodeCodeUnitsString(in.Input)
-			if got := codeUnitIndices(encoded, re.FindStringSubmatchIndex(encoded)); !equalInts(got, in.Indices) {
+			if got := codeUnitIndices(encoded, re.FindStringSubmatchIndex(encoded)); !slices.Equal(got, in.Indices) {
 				t.Errorf("%q on %q: indices = %v; want %v", tc.Source, in.Input, got, in.Indices)
 			}
 		}
