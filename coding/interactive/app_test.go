@@ -131,7 +131,7 @@ func newTestAppPersisted(t *testing.T) (*App, func()) {
 // newTestAppConfigured builds a test app, with a session file when persist is
 // set, and a hook that adjusts the
 // settings and app options before NewApp composes the object graph.
-func newTestAppConfigured(t *testing.T, persist bool, configure func(*coding.SettingsManager, *AppOptions)) (*App, func()) {
+func newTestAppConfigured(t testing.TB, persist bool, configure func(*coding.SettingsManager, *AppOptions)) (*App, func()) {
 	t.Helper()
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
