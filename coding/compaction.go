@@ -300,7 +300,7 @@ func getAssistantUsage(msg ai.Message) *ai.Usage {
 func customMessageChars(message *ai.CustomMessage) int {
 	switch message.Role {
 	case RoleBashExecution:
-		var fields bashExecutionFields
+		var fields BashExecutionFields
 		if json.Unmarshal(message.Content, &fields) == nil {
 			return ai.JSLength(fields.Command) + ai.JSLength(fields.Output)
 		}

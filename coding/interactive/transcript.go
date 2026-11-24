@@ -440,26 +440,8 @@ func (r *TranscriptRenderer) AddMessageToChat(message ai.Message, populateHistor
 	}
 }
 
-func decodeBashExecutionMessage(content json.RawMessage) struct {
-	Command            string  `json:"command"`
-	Output             string  `json:"output"`
-	ExitCode           *int    `json:"exitCode"`
-	Cancelled          bool    `json:"cancelled"`
-	Truncated          bool    `json:"truncated"`
-	FullOutputPath     *string `json:"fullOutputPath"`
-	ExcludeFromContext bool    `json:"excludeFromContext"`
-	DurationMS         *int64  `json:"durationMs"`
-} {
-	var fields struct {
-		Command            string  `json:"command"`
-		Output             string  `json:"output"`
-		ExitCode           *int    `json:"exitCode"`
-		Cancelled          bool    `json:"cancelled"`
-		Truncated          bool    `json:"truncated"`
-		FullOutputPath     *string `json:"fullOutputPath"`
-		ExcludeFromContext bool    `json:"excludeFromContext"`
-		DurationMS         *int64  `json:"durationMs"`
-	}
+func decodeBashExecutionMessage(content json.RawMessage) coding.BashExecutionFields {
+	var fields coding.BashExecutionFields
 	if len(content) > 0 {
 		_ = json.Unmarshal(content, &fields)
 	}

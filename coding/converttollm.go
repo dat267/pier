@@ -57,8 +57,8 @@ func CreateBashExecutionMessage(command, output string, exitCode *int, cancelled
 	return &ai.CustomMessage{Role: RoleBashExecution, Content: raw, Timestamp: timestamp}
 }
 
-// bashExecutionFields decodes a bashExecution custom message.
-type bashExecutionFields struct {
+// BashExecutionFields is the decoded content of a bashExecution custom message.
+type BashExecutionFields struct {
 	Command            string  `json:"command"`
 	Output             string  `json:"output"`
 	ExitCode           *int    `json:"exitCode"`
@@ -71,7 +71,7 @@ type bashExecutionFields struct {
 
 // BashExecutionToText renders the message for the LLM (port of
 // bashExecutionToText).
-func BashExecutionToText(msg *bashExecutionFields) string {
+func BashExecutionToText(msg *BashExecutionFields) string {
 	var text strings.Builder
 	text.WriteString("Ran `")
 	text.WriteString(msg.Command)
@@ -174,7 +174,7 @@ func ConvertToLlm(messages []ai.Message) []ai.Message {
 func convertCustomMessage(msg *ai.CustomMessage) ai.Message {
 	switch msg.Role {
 	case RoleBashExecution:
-		var fields bashExecutionFields
+		var fields BashExecutionFields
 		if json.Unmarshal(msg.Content, &fields) != nil {
 			return nil
 		}
