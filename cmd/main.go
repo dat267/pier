@@ -638,9 +638,6 @@ func run(appName string, args *coding.Args) error {
 		tuiMode = *args.TuiMode
 	}
 
-	// A remote shell pays for every byte written to the terminal; trim the
-	// render padding unless the user overrides it.
-	interactive.ConfigureLowBandwidth()
 	installBrowserOpener()
 	// The explicit setting wins; otherwise the terminal is asked through the environment
 	// detection upstream uses. The port injects capabilities instead of detecting them

@@ -145,19 +145,6 @@ func TestCacheShareRoundsHalvesLikeToFixed(t *testing.T) {
 	}
 }
 
-func TestConfigureLowBandwidthDoesNotEnableOverSSH(t *testing.T) {
-	t.Setenv("SSH_CONNECTION", "10.0.0.1 22 10.0.0.2 55000")
-	t.Setenv("PIER_LOW_BANDWIDTH", "1")
-	defer tui.SetLowBandwidth(false)
-	tui.SetLowBandwidth(true)
-	if ConfigureLowBandwidth() {
-		t.Fatal("low-bandwidth rendering enabled over SSH")
-	}
-	if tui.LowBandwidth() {
-		t.Fatal("SSH boot left low-bandwidth renderer enabled")
-	}
-}
-
 // TestToolExecutionComponentAnimatesWhileRunning pins the tool-level animation:
 // a running shell tool reports a shellElapsedTick frame so the elapsed label
 // repaints, every other running tool keeps the 1s frame, and a finished or

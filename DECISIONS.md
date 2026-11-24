@@ -3795,8 +3795,8 @@ Reproducer: `TestScopedModelsSeedTheModel` in `coding/scopedmodel_test.go`.
 Pi v1.4.0's `packages/tui/src/tui-main-screen.ts` has no low-bandwidth
 switch. Pier retains `tui.SetLowBandwidth` for explicit renderer clients: it
 can trim trailing padding, omit unnecessary hyperlink resets and skip no-op
-alt-screen frames. Interactive startup's `ConfigureLowBandwidth` always leaves
-the mode disabled, including over SSH, matching pi's default.
+alt-screen frames. Nothing at interactive startup enables it, so the mode stays
+disabled, including over SSH, matching pi's default.
 
 Reproducers: `TestLowBandwidthDefaultsOffEvenOverSSH`,
 `TestAltScreenLowBandwidthTrimsTrailingSpaces`,
