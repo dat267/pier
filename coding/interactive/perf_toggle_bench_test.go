@@ -14,14 +14,9 @@ import (
 // benchmarks: long enough that per-message work shows up, short enough to run.
 var toggleBenchMessages = 200
 
-func buildToggleTranscript(b *testing.B, app *App) {
-	b.Helper()
-	buildToggleTranscriptTo(b, app)
-}
-
-// buildToggleTranscriptTo is buildToggleTranscript with a testing.TB, so tests
-// can reuse it too.
-func buildToggleTranscriptTo(b testing.TB, app *App) {
+// buildToggleTranscript appends toggleBenchMessages user/assistant pairs whose
+// replies carry long thinking blocks.
+func buildToggleTranscript(b testing.TB, app *App) {
 	b.Helper()
 	thinking := strings.Repeat(
 		"Let me work through this carefully, weighing the alternatives and checking the edge cases as I go.\n", 40)
