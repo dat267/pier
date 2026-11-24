@@ -38,6 +38,10 @@ const McpDefaultTimeoutSeconds = 60
 // mcpStderrTailChars bounds the stderr a failed stdio connect reports.
 const mcpStderrTailChars = 2000
 
+// errMCPShutDownWhileConnecting is returned when the runtime closes during a
+// server connect.
+var errMCPShutDownWhileConnecting = errors.New("shut down while connecting")
+
 // mcpConnectRetryDelaysMs are the delays between HTTP connect attempts.
 var mcpConnectRetryDelaysMs = []int64{250, 1000}
 
@@ -499,7 +503,7 @@ func (c *McpServerConnection) connectOnce(ctx context.Context) (*mcp.Client, err
 	c.mu.Lock()
 	if c.closed {
 		c.mu.Unlock()
-		return nil, errors.New("shut down while connecting")
+		return nil, errMCPShutDownWhileConnecting
 	}
 	c.openingClient = client
 	c.mu.Unlock()
@@ -512,7 +516,7 @@ func (c *McpServerConnection) connectOnce(ctx context.Context) (*mcp.Client, err
 	}
 	if c.isClosed() || ctx.Err() != nil {
 		_ = transport.Close(context.Background())
-		return nil, errors.New("shut down while connecting")
+		return nil, errMCPShutDownWhileConnecting
 	}
 	if _, err := client.Connect(ctx, transport); err != nil {
 		_ = client.Close(ctx)
@@ -545,7 +549,7 @@ func (c *McpServerConnection) connectOnce(ctx context.Context) (*mcp.Client, err
 	}
 	if c.isClosed() {
 		_ = client.Close(ctx)
-		return nil, errors.New("shut down while connecting")
+		return nil, errMCPShutDownWhileConnecting
 	}
 	if client.ConnectionState() != mcp.StateConnected {
 		_ = client.Close(ctx)
@@ -556,7 +560,7 @@ func (c *McpServerConnection) connectOnce(ctx context.Context) (*mcp.Client, err
 	if c.closed {
 		c.mu.Unlock()
 		_ = client.Close(ctx)
-		return nil, errors.New("shut down while connecting")
+		return nil, errMCPShutDownWhileConnecting
 	}
 	c.client = client
 	c.Tools = tools
