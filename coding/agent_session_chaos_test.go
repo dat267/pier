@@ -48,7 +48,7 @@ func TestAgentSessionDisposedMidChaosSettles(t *testing.T) {
 func TestAgentSessionConcurrentHeavyAPIWithAWriteQueueKeepsTheFileInOrder(t *testing.T) {
 	queue := offloop.New()
 	t.Cleanup(queue.Stop)
-	runSessionChaosWith(t, heavySessionOps, false, queue)
+	runSessionChaosGoal(t, heavySessionOps, false, queue, false)
 }
 
 // The heavy mix with a goal set, paused, resumed and cleared at random while
@@ -135,12 +135,7 @@ var chaosTimestamp = regexp.MustCompile(`,?"timestamp":[0-9]+`)
 
 func runSessionChaos(t *testing.T, extra func(*AgentSession) []func(int), disposeMidway bool) {
 	t.Helper()
-	runSessionChaosWith(t, extra, disposeMidway, nil)
-}
-
-func runSessionChaosWith(t *testing.T, extra func(*AgentSession) []func(int), disposeMidway bool, queue *offloop.Queue) {
-	t.Helper()
-	runSessionChaosGoal(t, extra, disposeMidway, queue, false)
+	runSessionChaosGoal(t, extra, disposeMidway, nil, false)
 }
 
 func runSessionChaosGoal(t *testing.T, extra func(*AgentSession) []func(int), disposeMidway bool, queue *offloop.Queue, withGoal bool) {
