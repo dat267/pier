@@ -280,16 +280,7 @@ func StreamAzureOpenAIResponsesSimple(model *Model, context TranscriptContext, o
 		return stream
 	}
 	go func() {
-		responsesOptions := &OpenAIResponsesOptions{StreamOptions: withSimpleMaxTokens(model, context, options.StreamOptions)}
-		if options.ToolChoice != nil {
-			responsesOptions.ToolChoice = mustMarshalJSON(*options.ToolChoice)
-		}
-		if options.Reasoning != "" {
-			clamped := ClampThinkingLevel(model, options.Reasoning)
-			if clamped != ThinkOff {
-				responsesOptions.ReasoningEffort = clamped
-			}
-		}
+		responsesOptions := simpleResponsesOptions(model, context, options)
 		azureOptions := &AzureOpenAIResponsesOptions{OpenAIResponsesOptions: *responsesOptions}
 		forwardStream(stream, StreamAzureOpenAIResponses(model, context, azureOptions))
 	}()

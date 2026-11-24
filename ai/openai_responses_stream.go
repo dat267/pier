@@ -1251,6 +1251,24 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 	return stream
 }
 
+// simpleResponsesOptions maps simple stream options onto Responses options:
+// the simple max tokens, the tool choice, and the reasoning level clamped to
+// the model as the reasoning effort unless it clamps to off (streamSimple of
+// upstream api/openai-responses.ts and api/azure-openai-responses.ts).
+func simpleResponsesOptions(model *Model, context TranscriptContext, options *SimpleStreamOptions) *OpenAIResponsesOptions {
+	responsesOptions := &OpenAIResponsesOptions{StreamOptions: withSimpleMaxTokens(model, context, options.StreamOptions)}
+	if options.ToolChoice != nil {
+		responsesOptions.ToolChoice = mustMarshalJSON(*options.ToolChoice)
+	}
+	if options.Reasoning != "" {
+		clamped := ClampThinkingLevel(model, options.Reasoning)
+		if clamped != ThinkOff {
+			responsesOptions.ReasoningEffort = clamped
+		}
+	}
+	return responsesOptions
+}
+
 // StreamOpenAIResponsesSimple maps reasoning levels (port of streamSimple).
 func StreamOpenAIResponsesSimple(model *Model, context TranscriptContext, options *SimpleStreamOptions) *AssistantMessageEventStream {
 	if options == nil {
@@ -1264,16 +1282,7 @@ func StreamOpenAIResponsesSimple(model *Model, context TranscriptContext, option
 		return stream
 	}
 	go func() {
-		responsesOptions := &OpenAIResponsesOptions{StreamOptions: withSimpleMaxTokens(model, context, options.StreamOptions)}
-		if options.ToolChoice != nil {
-			responsesOptions.ToolChoice = mustMarshalJSON(*options.ToolChoice)
-		}
-		if options.Reasoning != "" {
-			clamped := ClampThinkingLevel(model, options.Reasoning)
-			if clamped != ThinkOff {
-				responsesOptions.ReasoningEffort = clamped
-			}
-		}
+		responsesOptions := simpleResponsesOptions(model, context, options)
 		forwardStream(stream, StreamOpenAIResponses(model, context, responsesOptions))
 	}()
 	return stream
