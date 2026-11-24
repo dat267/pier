@@ -1,9 +1,6 @@
 package interactive
 
 import (
-	"bufio"
-	"os"
-	"strings"
 	"testing"
 
 	"github.com/dat267/pier/tui"
@@ -51,24 +48,7 @@ func TestChatViewportEditorMinSize(t *testing.T) {
 
 // TestModelSearchAgainstUpstreamGolden verifies the search text builders.
 func TestModelSearchAgainstUpstreamGolden(t *testing.T) {
-	file, err := os.Open("testdata/modelsearch_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-	golden := map[string]string{}
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		golden[parts[0]] = parts[1]
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
+	golden := loadArrowGolden(t, "testdata/modelsearch_golden.txt", "")
 
 	items := []ModelSearchItem{
 		{ID: "gpt-5", Provider: "openai"},
