@@ -803,7 +803,7 @@ func marshalOrderedJSON(raw json.RawMessage) string {
 		}
 		parts := make([]string, 0, len(keys))
 		for _, key := range keys {
-			parts = append(parts, string(mustMarshalJSON(key))+":"+marshalOrderedJSON(values[key]))
+			parts = append(parts, ai.QuoteJSON(key)+":"+marshalOrderedJSON(values[key]))
 		}
 		return "{" + strings.Join(parts, ",") + "}"
 	case '[':

@@ -189,8 +189,7 @@ func PrepareEditArguments(input json.RawMessage) json.RawMessage {
 		}
 	}
 	// Upstream builds { oldText, newText } in that order.
-	editJSON := "{" + string(mustMarshalJSON("oldText")) + ":" + string(mustMarshalJSON(*legacy.OldText)) + "," +
-		string(mustMarshalJSON("newText")) + ":" + string(mustMarshalJSON(*legacy.NewText)) + "}"
+	editJSON := `{"oldText":` + ai.QuoteJSON(*legacy.OldText) + `,"newText":` + ai.QuoteJSON(*legacy.NewText) + "}"
 	edits = append(edits, json.RawMessage(editJSON))
 	setValue("edits", mustMarshalJSON(edits))
 	removeValue("oldText")
