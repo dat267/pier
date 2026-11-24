@@ -10,16 +10,6 @@ import (
 // Tests ported from packages/coding-agent/test/resource-loader.test.ts:
 // the context-file discovery cases and the nested-worktree dedup suite.
 
-func writeContextFile(t *testing.T, path, content string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func contextContents(files []ContextFile) []string {
 	out := make([]string, 0, len(files))
 	for _, file := range files {
@@ -34,20 +24,20 @@ func TestLoadContextFileFromDirPreference(t *testing.T) {
 		t.Fatalf("empty dir = %+v", file)
 	}
 	// AGENTS.override.md wins over AGENTS.md, which wins over CLAUDE.md.
-	writeContextFile(t, filepath.Join(dir, "CLAUDE.md"), "claude")
+	writeFileMkdir(t, filepath.Join(dir, "CLAUDE.md"), "claude")
 	if file := LoadContextFileFromDir(dir); file == nil || file.Content != "claude" {
 		t.Fatalf("file = %+v", file)
 	}
-	writeContextFile(t, filepath.Join(dir, "AGENTS.md"), "agents")
+	writeFileMkdir(t, filepath.Join(dir, "AGENTS.md"), "agents")
 	if file := LoadContextFileFromDir(dir); file == nil || file.Content != "agents" {
 		t.Fatalf("file = %+v", file)
 	}
-	writeContextFile(t, filepath.Join(dir, "AGENTS.override.md"), "override")
+	writeFileMkdir(t, filepath.Join(dir, "AGENTS.override.md"), "override")
 	if file := LoadContextFileFromDir(dir); file == nil || file.Content != "override" {
 		t.Fatalf("file = %+v", file)
 	}
 	// A leading BOM is stripped.
-	writeContextFile(t, filepath.Join(dir, "AGENTS.override.md"), "\ufeffwith bom")
+	writeFileMkdir(t, filepath.Join(dir, "AGENTS.override.md"), "\ufeffwith bom")
 	if file := LoadContextFileFromDir(dir); file == nil || file.Content != "with bom" {
 		t.Fatalf("file = %+v", file)
 	}
@@ -74,7 +64,7 @@ func TestLoadContextFileFromDirSkipsDirectories(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dir, "AGENTS.md"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeContextFile(t, filepath.Join(dir, "CLAUDE.md"), "Fallback instructions")
+	writeFileMkdir(t, filepath.Join(dir, "CLAUDE.md"), "Fallback instructions")
 	file := LoadContextFileFromDir(dir)
 	if file == nil || file.Content != "Fallback instructions" {
 		t.Fatalf("file = %+v", file)
@@ -91,11 +81,11 @@ func TestLoadProjectContextFilesLayering(t *testing.T) {
 	}
 
 	// The global agent context file comes first, then ancestors outermost-first.
-	writeContextFile(t, filepath.Join(agentDir, "AGENTS.md"), "global instructions")
-	writeContextFile(t, filepath.Join(agentDir, "AGENTS.override.md"), "global override")
-	writeContextFile(t, filepath.Join(cwd, "AGENTS.md"), "project instructions")
-	writeContextFile(t, filepath.Join(nestedCwd, "AGENTS.md"), "service instructions")
-	writeContextFile(t, filepath.Join(nestedCwd, "AGENTS.override.md"), "service override")
+	writeFileMkdir(t, filepath.Join(agentDir, "AGENTS.md"), "global instructions")
+	writeFileMkdir(t, filepath.Join(agentDir, "AGENTS.override.md"), "global override")
+	writeFileMkdir(t, filepath.Join(cwd, "AGENTS.md"), "project instructions")
+	writeFileMkdir(t, filepath.Join(nestedCwd, "AGENTS.md"), "service instructions")
+	writeFileMkdir(t, filepath.Join(nestedCwd, "AGENTS.override.md"), "service override")
 
 	files := LoadProjectContextFiles(nestedCwd, agentDir)
 	got := contextContents(files)
@@ -121,8 +111,8 @@ func TestLoadProjectContextFilesDedupesGlobal(t *testing.T) {
 	if err := os.MkdirAll(cwd, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeContextFile(t, filepath.Join(root, "AGENTS.md"), "root instructions")
-	writeContextFile(t, filepath.Join(agentDir, "AGENTS.md"), "global instructions")
+	writeFileMkdir(t, filepath.Join(root, "AGENTS.md"), "root instructions")
+	writeFileMkdir(t, filepath.Join(agentDir, "AGENTS.md"), "global instructions")
 
 	files := LoadProjectContextFiles(cwd, agentDir)
 	got := contextContents(files)
@@ -140,9 +130,9 @@ func linkWorktree(t *testing.T, mainDir, worktreeDir, name string) {
 	if err := os.MkdirAll(gitDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeContextFile(t, filepath.Join(mainDir, ".git", "HEAD"), "ref: refs/heads/main\n")
-	writeContextFile(t, filepath.Join(gitDir, "HEAD"), "ref: refs/heads/feat\n")
-	writeContextFile(t, filepath.Join(gitDir, "commondir"), "../..")
+	writeFileMkdir(t, filepath.Join(mainDir, ".git", "HEAD"), "ref: refs/heads/main\n")
+	writeFileMkdir(t, filepath.Join(gitDir, "HEAD"), "ref: refs/heads/feat\n")
+	writeFileMkdir(t, filepath.Join(gitDir, "commondir"), "../..")
 	if err := os.MkdirAll(worktreeDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -169,8 +159,8 @@ func TestNestedWorktreeSkipsDuplicateContext(t *testing.T) {
 
 	// The worktree's own context shadows the main repo's file.
 	main, worktree, worktreeSrc := setupNestedWorktree(t)
-	writeContextFile(t, filepath.Join(main, "AGENTS.md"), "main repo instructions")
-	writeContextFile(t, filepath.Join(worktree, "AGENTS.md"), "worktree instructions")
+	writeFileMkdir(t, filepath.Join(main, "AGENTS.md"), "main repo instructions")
+	writeFileMkdir(t, filepath.Join(worktree, "AGENTS.md"), "worktree instructions")
 	files := LoadProjectContextFiles(worktreeSrc, agentDir)
 	if got := contextContents(files); len(got) != 1 || got[0] != "worktree instructions" {
 		t.Fatalf("contents = %#v", got)
@@ -178,7 +168,7 @@ func TestNestedWorktreeSkipsDuplicateContext(t *testing.T) {
 
 	// Without a worktree copy the main repo's context is inherited.
 	main, _, worktreeSrc = setupNestedWorktree(t)
-	writeContextFile(t, filepath.Join(main, "AGENTS.md"), "main repo instructions")
+	writeFileMkdir(t, filepath.Join(main, "AGENTS.md"), "main repo instructions")
 	files = LoadProjectContextFiles(worktreeSrc, agentDir)
 	if got := contextContents(files); len(got) != 1 || got[0] != "main repo instructions" {
 		t.Fatalf("contents = %#v", got)
@@ -186,8 +176,8 @@ func TestNestedWorktreeSkipsDuplicateContext(t *testing.T) {
 
 	// Only the same filename is skipped.
 	main, worktree, worktreeSrc = setupNestedWorktree(t)
-	writeContextFile(t, filepath.Join(main, "CLAUDE.md"), "main repo instructions")
-	writeContextFile(t, filepath.Join(worktree, "AGENTS.md"), "worktree instructions")
+	writeFileMkdir(t, filepath.Join(main, "CLAUDE.md"), "main repo instructions")
+	writeFileMkdir(t, filepath.Join(worktree, "AGENTS.md"), "worktree instructions")
 	files = LoadProjectContextFiles(worktreeSrc, agentDir)
 	if got := contextContents(files); len(got) != 2 || got[0] != "main repo instructions" || got[1] != "worktree instructions" {
 		t.Fatalf("contents = %#v", got)
@@ -195,9 +185,9 @@ func TestNestedWorktreeSkipsDuplicateContext(t *testing.T) {
 
 	// Ancestors above the main repo stay, with the duplicate dropped.
 	outer := filepath.Dir(main)
-	writeContextFile(t, filepath.Join(outer, "AGENTS.md"), "outer instructions")
-	writeContextFile(t, filepath.Join(main, "AGENTS.md"), "main repo instructions")
-	writeContextFile(t, filepath.Join(worktree, "AGENTS.md"), "worktree instructions")
+	writeFileMkdir(t, filepath.Join(outer, "AGENTS.md"), "outer instructions")
+	writeFileMkdir(t, filepath.Join(main, "AGENTS.md"), "main repo instructions")
+	writeFileMkdir(t, filepath.Join(worktree, "AGENTS.md"), "worktree instructions")
 	files = LoadProjectContextFiles(worktreeSrc, agentDir)
 	if got := contextContents(files); len(got) != 2 || got[0] != "outer instructions" || got[1] != "worktree instructions" {
 		t.Fatalf("contents = %#v", got)
@@ -210,7 +200,7 @@ func TestNestedWorktreeSkipsDuplicateContext(t *testing.T) {
 func TestNestedWorktreeSymlinkedContextLoads(t *testing.T) {
 	agentDir := t.TempDir()
 	main, worktree, worktreeSrc := setupNestedWorktree(t)
-	writeContextFile(t, filepath.Join(main, "AGENTS.md"), "main repo instructions")
+	writeFileMkdir(t, filepath.Join(main, "AGENTS.md"), "main repo instructions")
 	if err := os.Symlink(filepath.Join(main, "AGENTS.md"), filepath.Join(worktree, "AGENTS.md")); err != nil {
 		t.Skipf("symlinks unavailable: %v", err)
 	}
@@ -232,14 +222,14 @@ func TestNestedWorktreeBareLayoutKeepsContainerContext(t *testing.T) {
 	if err := os.MkdirAll(worktree, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeContextFile(t, filepath.Join(bare, "HEAD"), "ref: refs/heads/main\n")
-	writeContextFile(t, filepath.Join(worktreeGitDir, "HEAD"), "ref: refs/heads/main\n")
-	writeContextFile(t, filepath.Join(worktreeGitDir, "commondir"), "../..")
+	writeFileMkdir(t, filepath.Join(bare, "HEAD"), "ref: refs/heads/main\n")
+	writeFileMkdir(t, filepath.Join(worktreeGitDir, "HEAD"), "ref: refs/heads/main\n")
+	writeFileMkdir(t, filepath.Join(worktreeGitDir, "commondir"), "../..")
 	if err := os.WriteFile(filepath.Join(worktree, ".git"), []byte("gitdir: "+worktreeGitDir+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	writeContextFile(t, filepath.Join(proj, "AGENTS.md"), "container instructions")
-	writeContextFile(t, filepath.Join(worktree, "AGENTS.md"), "worktree instructions")
+	writeFileMkdir(t, filepath.Join(proj, "AGENTS.md"), "container instructions")
+	writeFileMkdir(t, filepath.Join(worktree, "AGENTS.md"), "worktree instructions")
 
 	files := LoadProjectContextFiles(worktree, agentDir)
 	got := contextContents(files)
@@ -262,8 +252,8 @@ func TestSiblingWorktreeAndSubmoduleKeepAncestors(t *testing.T) {
 	if err := os.MkdirAll(siblingSrc, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeContextFile(t, filepath.Join(outer, "AGENTS.md"), "outer instructions")
-	writeContextFile(t, filepath.Join(sibling, "AGENTS.md"), "sibling worktree instructions")
+	writeFileMkdir(t, filepath.Join(outer, "AGENTS.md"), "outer instructions")
+	writeFileMkdir(t, filepath.Join(sibling, "AGENTS.md"), "sibling worktree instructions")
 	linkWorktree(t, main, sibling, "sib")
 	files := LoadProjectContextFiles(siblingSrc, agentDir)
 	if got := contextContents(files); len(got) != 2 || got[0] != "outer instructions" || got[1] != "sibling worktree instructions" {
@@ -277,13 +267,13 @@ func TestSiblingWorktreeAndSubmoduleKeepAncestors(t *testing.T) {
 	if err := os.MkdirAll(submoduleSrc, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeContextFile(t, filepath.Join(super, "AGENTS.md"), "superproject instructions")
-	writeContextFile(t, filepath.Join(submodule, "AGENTS.md"), "submodule instructions")
+	writeFileMkdir(t, filepath.Join(super, "AGENTS.md"), "superproject instructions")
+	writeFileMkdir(t, filepath.Join(submodule, "AGENTS.md"), "submodule instructions")
 	subGitDir := filepath.Join(super, ".git", "modules", "vendor", "lib")
 	if err := os.MkdirAll(subGitDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeContextFile(t, filepath.Join(subGitDir, "HEAD"), "ref: refs/heads/main\n")
+	writeFileMkdir(t, filepath.Join(subGitDir, "HEAD"), "ref: refs/heads/main\n")
 	if err := os.WriteFile(filepath.Join(submodule, ".git"), []byte("gitdir: "+subGitDir+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -306,10 +296,10 @@ func TestOrdinaryRepoAndMissingGitdirClimbNormally(t *testing.T) {
 	if err := os.MkdirAll(leaf, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeContextFile(t, filepath.Join(repo, ".git", "HEAD"), "ref: refs/heads/main\n")
-	writeContextFile(t, filepath.Join(outer, "AGENTS.md"), "outer instructions")
-	writeContextFile(t, filepath.Join(repo, "AGENTS.md"), "repo instructions")
-	writeContextFile(t, filepath.Join(leaf, "AGENTS.md"), "leaf instructions")
+	writeFileMkdir(t, filepath.Join(repo, ".git", "HEAD"), "ref: refs/heads/main\n")
+	writeFileMkdir(t, filepath.Join(outer, "AGENTS.md"), "outer instructions")
+	writeFileMkdir(t, filepath.Join(repo, "AGENTS.md"), "repo instructions")
+	writeFileMkdir(t, filepath.Join(leaf, "AGENTS.md"), "leaf instructions")
 	files := LoadProjectContextFiles(leaf, agentDir)
 	got := contextContents(files)
 	if len(got) != 3 || got[0] != "outer instructions" || got[1] != "repo instructions" || got[2] != "leaf instructions" {
@@ -325,8 +315,8 @@ func TestOrdinaryRepoAndMissingGitdirClimbNormally(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(corrupt, ".git"), []byte("gitdir: /nonexistent/path/worktrees/feat\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	writeContextFile(t, filepath.Join(corrupt, "AGENTS.md"), "repo instructions")
-	writeContextFile(t, filepath.Join(src, "AGENTS.md"), "src instructions")
+	writeFileMkdir(t, filepath.Join(corrupt, "AGENTS.md"), "repo instructions")
+	writeFileMkdir(t, filepath.Join(src, "AGENTS.md"), "src instructions")
 	files = LoadProjectContextFiles(src, agentDir)
 	got = contextContents(files)
 	if len(got) != 2 || got[0] != "repo instructions" || got[1] != "src instructions" {
@@ -343,8 +333,8 @@ func TestFindGitPathsRejectsUnreadableCommonDir(t *testing.T) {
 	if err := os.MkdirAll(gitDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeContextFile(t, filepath.Join(main, ".git", "HEAD"), "ref: refs/heads/main\n")
-	writeContextFile(t, filepath.Join(gitDir, "HEAD"), "ref: refs/heads/feat\n")
+	writeFileMkdir(t, filepath.Join(main, ".git", "HEAD"), "ref: refs/heads/main\n")
+	writeFileMkdir(t, filepath.Join(gitDir, "HEAD"), "ref: refs/heads/feat\n")
 	if err := os.Mkdir(filepath.Join(gitDir, "commondir"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -370,7 +360,7 @@ func TestFindGitPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	// HEAD is required: a .git directory without it is not a repository.
-	writeContextFile(t, filepath.Join(repo, ".git", "HEAD"), "ref: refs/heads/main\n")
+	writeFileMkdir(t, filepath.Join(repo, ".git", "HEAD"), "ref: refs/heads/main\n")
 	paths := FindGitPaths(leaf)
 	if paths == nil {
 		t.Fatal("expected git paths")
@@ -397,7 +387,7 @@ func TestFindGitPaths(t *testing.T) {
 		t.Fatalf("shadowed = %v", got)
 	}
 	// The worktree's own context file shadows the main repo's same-named file.
-	writeContextFile(t, filepath.Join(worktree, "AGENTS.md"), "worktree")
+	writeFileMkdir(t, filepath.Join(worktree, "AGENTS.md"), "worktree")
 	shadowed := FindShadowedContextFile(worktreeSrc)
 	if shadowed == nil || *shadowed != filepath.Join(main, "AGENTS.md") {
 		t.Fatalf("shadowed = %v", shadowed)
@@ -407,7 +397,7 @@ func TestFindGitPaths(t *testing.T) {
 	if err := os.MkdirAll(sibling, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeContextFile(t, filepath.Join(sibling, "AGENTS.md"), "sibling")
+	writeFileMkdir(t, filepath.Join(sibling, "AGENTS.md"), "sibling")
 	linkWorktree(t, main, sibling, "sib")
 	if got := FindShadowedContextFile(sibling); got != nil {
 		t.Fatalf("sibling shadowed = %v", got)
