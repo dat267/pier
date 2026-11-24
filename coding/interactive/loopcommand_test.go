@@ -58,7 +58,7 @@ func TestLoopCommandSelfPacedRunsNow(t *testing.T) {
 	}
 }
 
-// An empty prompt and an unexpressible interval are reported, not ignored.
+// An empty prompt and an out-of-range interval are reported, not ignored.
 func TestLoopCommandRejectsBadInput(t *testing.T) {
 	scheduler := coding.NewLoopScheduler(nil, nil)
 	defer scheduler.Stop()
@@ -75,16 +75,12 @@ func TestLoopCommandRejectsBadInput(t *testing.T) {
 		t.Fatal("an empty /loop was accepted")
 	}
 
+	// 30s and 90m are rounded now (TestLoopCommandSaysWhenItRounds); past 28
+	// days no cron day step can express the interval.
 	failure = ""
-	wiring.HandleLoopCommand("30s too fast")
+	wiring.HandleLoopCommand("29d too slow")
 	if failure == "" {
-		t.Fatal("a sub-minute interval was accepted")
-	}
-
-	failure = ""
-	wiring.HandleLoopCommand("90m awkward")
-	if failure == "" {
-		t.Fatal("a 90-minute interval was accepted")
+		t.Fatal("a 29-day interval was accepted")
 	}
 	if jobs := scheduler.Jobs(); len(jobs) != 0 {
 		t.Fatalf("a refused /loop scheduled %d jobs", len(jobs))
@@ -171,5 +167,32 @@ func TestLoopCommandListsAndStopsJobs(t *testing.T) {
 	wiring.HandleLoopCommand("list the open files")
 	if len(submitted) != 1 || submitted[0] != "list the open files" || failure != "" {
 		t.Fatalf("a prompt starting with list must run as a prompt: %v (error %q)", submitted, failure)
+	}
+}
+
+// D537: an interval with uneven cron gaps is rounded, and the status says so,
+// so `/loop 45m` does not quietly fire at :00 and :45.
+func TestLoopCommandSaysWhenItRounds(t *testing.T) {
+	scheduler := coding.NewLoopScheduler(nil, nil)
+	defer scheduler.Stop()
+	var status string
+	wiring := &CommandWiring{
+		LoopScheduler: scheduler,
+		ShowStatus:    func(message string) { status = message },
+		ShowError:     func(message string) { t.Fatalf("unexpected error: %s", message) },
+	}
+	wiring.HandleLoopCommand("7m check the deploy")
+	if !strings.Contains(status, "Every 6 minutes") || !strings.Contains(status, "7m") {
+		t.Fatalf("a rounded interval must say what it became and from what: %q", status)
+	}
+	for input, want := range map[string]string{"30s fast": "; 30s rounded", "90m slow": "; 1h30m rounded"} {
+		wiring.HandleLoopCommand(input)
+		if !strings.Contains(status, want) {
+			t.Fatalf("%q: status %q lacks %q", input, status, want)
+		}
+	}
+	wiring.HandleLoopCommand("5m check again")
+	if strings.Contains(status, "rounded") {
+		t.Fatalf("an even interval must not claim it was rounded: %q", status)
 	}
 }

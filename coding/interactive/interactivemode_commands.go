@@ -871,9 +871,9 @@ func (w *CommandWiring) HandleLoopCommand(args string) {
 		w.runLoopPrompt(prompt, "Loop started. The agent paces the next run itself.")
 		return
 	}
-	cron, ok := coding.LoopCronForInterval(interval)
+	cron, used, ok := coding.LoopCronForInterval(interval)
 	if !ok {
-		w.showError("The interval must be a whole number of minutes (at least one), hours, or days.")
+		w.showError("The interval must be at most 28 days.")
 		return
 	}
 	scheduler := w.loopScheduler()
@@ -886,7 +886,20 @@ func (w *CommandWiring) HandleLoopCommand(args string) {
 		w.showError(err.Error())
 		return
 	}
-	w.showStatus("Loop " + job.ID + " scheduled (" + job.HumanSchedule + ").")
+	note := ""
+	if used != interval {
+		// Name the rounding: a cron step only spaces runs evenly when it
+		// divides its unit, so 45m would otherwise fire at :00 and :45.
+		typed := interval.String() // 7m0s, 1h30m0s, 30s
+		if strings.HasSuffix(typed, "m0s") {
+			typed = strings.TrimSuffix(typed, "0s")
+		}
+		if strings.HasSuffix(typed, "h0m") {
+			typed = strings.TrimSuffix(typed, "0m")
+		}
+		note = "; " + typed + " rounded to an interval that divides evenly"
+	}
+	w.showStatus("Loop " + job.ID + " scheduled (" + job.HumanSchedule + note + ").")
 }
 
 // listLoops shows every scheduled job: its id, schedule, next run and prompt.

@@ -8930,6 +8930,15 @@ pending at a time, a new one replaces it, and its `stop` clears only that wakeup
 rather than every job (before, nothing armed the wakeup at all, so a self-paced
 loop never resumed, and its stop wiped the user's interval loops).
 
+An interval snaps to the nearest step that divides its unit, because a cron step
+only spaces runs evenly when it does: `*/45` fires at :00 and :45, gaps of 45 and
+15 minutes, and `*/7` leaves a 4-minute gap before each hour. Minutes snap to a
+divisor of 60, hours to a divisor of 24 and days to whole days, ties going to the
+longer step since fewer runs is the safer mistake, and seconds round up to a
+minute (before, `90s` quietly became every minute while `30s` was refused). The
+status names any rounding, so `/loop 45m` reports "Every hour; 45m rounded to an
+interval that divides evenly".
+
 `/loop` is listed in `/features` alongside the other pier-only surface, and its
 tools are registered in the ordinary registry, so `/tools` shows and can disable
 them like any other tool. Those tools have their own transcript frames: a tool with
@@ -8973,7 +8982,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestHumanCronSchedule`, `TestLoopCommandArmsCronJob`,
 `TestLoopCommandSelfPacedRunsNow`, `TestLoopCommandRejectsBadInput`,
 `TestLoopCommandReportsDisabledFeature`, `TestLoopCommandListsAndStopsJobs`,
-`TestScheduleWakeupArmsTheScheduler`,
+`TestScheduleWakeupArmsTheScheduler`, `TestLoopCommandSaysWhenItRounds`,
 `TestLoopSchedulerPersistsNothing`,
 `TestAppAdoptsLoopSchedulerOnThePrimarySession`,
 `TestAppSkipsLoopToolsWhenTheFeatureIsOff`, `TestLoopFeatureToggleEnablesAndDisables`,

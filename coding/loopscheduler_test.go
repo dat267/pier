@@ -50,31 +50,41 @@ func TestParseLoopInput(t *testing.T) {
 
 // An interval becomes the cron expression the scheduler arms.
 func TestLoopCronForInterval(t *testing.T) {
+	// D537: an interval snaps to the nearest step that divides its unit, so the
+	// gaps are even. */45 fired at :00 and :45 (gaps of 45 and 15 minutes) and
+	// */7 left a 4-minute gap before :00; 90s became every minute while 30s was
+	// refused. Ties go to the longer step: fewer runs is the safer mistake.
 	tests := []struct {
 		interval time.Duration
 		want     string
+		used     time.Duration
 		ok       bool
 	}{
-		{time.Minute, "*/1 * * * *", true},
-		{5 * time.Minute, "*/5 * * * *", true},
-		{59 * time.Minute, "*/59 * * * *", true},
-		{time.Hour, "0 */1 * * *", true},
-		{6 * time.Hour, "0 */6 * * *", true},
-		{23 * time.Hour, "0 */23 * * *", true},
-		{24 * time.Hour, "0 0 * * *", true},
-		{48 * time.Hour, "0 0 */2 * *", true},
-		// A sub-minute interval cannot be expressed as a cron expression.
-		{30 * time.Second, "", false},
-		// 90 minutes is neither a whole number of hours nor minutes.
-		{90 * time.Minute, "", false},
+		{time.Minute, "*/1 * * * *", time.Minute, true},
+		{5 * time.Minute, "*/5 * * * *", 5 * time.Minute, true},
+		{7 * time.Minute, "*/6 * * * *", 6 * time.Minute, true},
+		{45 * time.Minute, "0 */1 * * *", time.Hour, true},
+		{40 * time.Minute, "*/30 * * * *", 30 * time.Minute, true},
+		{59 * time.Minute, "0 */1 * * *", time.Hour, true},
+		{time.Hour, "0 */1 * * *", time.Hour, true},
+		{90 * time.Minute, "0 */2 * * *", 2 * time.Hour, true},
+		{6 * time.Hour, "0 */6 * * *", 6 * time.Hour, true},
+		{5 * time.Hour, "0 */6 * * *", 6 * time.Hour, true},
+		{23 * time.Hour, "0 0 * * *", 24 * time.Hour, true},
+		{24 * time.Hour, "0 0 * * *", 24 * time.Hour, true},
+		{25 * time.Hour, "0 0 * * *", 24 * time.Hour, true},
+		{48 * time.Hour, "0 0 */2 * *", 48 * time.Hour, true},
+		// Seconds round up to a whole minute rather than down to none.
+		{30 * time.Second, "*/1 * * * *", time.Minute, true},
+		{90 * time.Second, "*/2 * * * *", 2 * time.Minute, true},
+		{0, "", 0, false},
+		{29 * 24 * time.Hour, "", 0, false},
 	}
 	for _, test := range tests {
-		got, ok := LoopCronForInterval(test.interval)
-		if ok != test.ok {
-			t.Fatalf("LoopCronForInterval(%v) ok = %v, want %v", test.interval, ok, test.ok)
-		}
-		if got != test.want {
-			t.Fatalf("LoopCronForInterval(%v) = %q, want %q", test.interval, got, test.want)
+		got, used, ok := LoopCronForInterval(test.interval)
+		if ok != test.ok || got != test.want || used != test.used {
+			t.Fatalf("LoopCronForInterval(%v) = %q, %v, %v; want %q, %v, %v",
+				test.interval, got, used, ok, test.want, test.used, test.ok)
 		}
 	}
 }

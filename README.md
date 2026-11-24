@@ -46,7 +46,8 @@ threshold, or turns it off.
 them with `get_goal` and `set_goal`. `/features` lists the pier-only feature
 toggles, and `/tools` turns each of the agent's tools on or off for the session;
 typing there filters the list. `/loop [interval] <prompt>` repeats a prompt on a
-cron-style interval for as long as the session is open, and `/loop <prompt>` with
+cron-style interval for as long as the session is open (rounded to one that
+divides its hour or day evenly, and it says when it rounds), and `/loop <prompt>` with
 no interval lets the agent pace the next run itself. `/loop list` shows the
 scheduled loops, and `/loop stop [id]` cancels one, or all of them.
 Stdio RPC (`pier --mode rpc`) is documented in

@@ -6,6 +6,7 @@ package coding
 import (
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -483,34 +484,55 @@ func parsePositiveInt(text string) (int, bool) {
 	return value, true
 }
 
-// LoopCronForInterval converts an interval into an equivalent cron expression.
-// A sub-minute interval cannot be expressed and reports false. The minute field
-// steps by whole minutes, the hour field by whole hours, and day intervals pinned
-// at a single hour of the day, so the label reads plainly.
-func LoopCronForInterval(interval time.Duration) (string, bool) {
-	switch {
-	case interval < time.Minute:
-		return "", false
-	case interval < time.Hour:
-		minutes := int(interval / time.Minute)
-		if minutes > 59 {
-			return "", false
-		}
-		return "*/" + strconv.Itoa(minutes) + " * * * *", true
-	case interval < 24*time.Hour:
-		hours := int(interval / time.Hour)
-		if interval%time.Hour != 0 || hours > 23 {
-			return "", false
-		}
-		return "0 */" + strconv.Itoa(hours) + " * * *", true
-	default:
-		days := int(interval / (24 * time.Hour))
-		if interval%(24*time.Hour) != 0 || days > 28 {
-			return "", false
-		}
-		if days == 1 {
-			return "0 0 * * *", true
-		}
-		return "0 0 */" + strconv.Itoa(days) + " * *", true
+// LoopCronForInterval converts an interval into a cron expression and reports
+// the interval it actually runs at. A cron step only gives even gaps when it
+// divides its unit (*/45 fires at :00 and :45), so the interval snaps to the
+// nearest step that does: minutes to a divisor of 60, hours to a divisor of 24,
+// and days to whole days, with ties going to the longer step. Seconds round up
+// to a whole minute. Zero, or more than 28 days, reports false.
+func LoopCronForInterval(interval time.Duration) (string, time.Duration, bool) {
+	if interval <= 0 {
+		return "", 0, false
 	}
+	minutes := (interval + time.Minute - 1) / time.Minute
+	if minutes < 60 {
+		if step := nearestLoopStep(float64(minutes), loopMinuteSteps); step < 60 {
+			return "*/" + strconv.Itoa(step) + " * * * *", time.Duration(step) * time.Minute, true
+		}
+		return "0 */1 * * *", time.Hour, true
+	}
+	hours := float64(minutes) / 60
+	if hours < 24 {
+		if step := nearestLoopStep(hours, loopHourSteps); step < 24 {
+			return "0 */" + strconv.Itoa(step) + " * * *", time.Duration(step) * time.Hour, true
+		}
+		return "0 0 * * *", 24 * time.Hour, true
+	}
+	days := int(math.Round(hours / 24))
+	if days > 28 {
+		return "", 0, false
+	}
+	used := time.Duration(days) * 24 * time.Hour
+	if days == 1 {
+		return "0 0 * * *", used, true
+	}
+	return "0 0 */" + strconv.Itoa(days) + " * *", used, true
+}
+
+// The steps that divide an hour and a day evenly. Each ends with its whole
+// unit, which LoopCronForInterval promotes to the next field.
+var (
+	loopMinuteSteps = []int{1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60}
+	loopHourSteps   = []int{1, 2, 3, 4, 6, 8, 12, 24}
+)
+
+// nearestLoopStep is the step closest to value, the longer one on a tie.
+func nearestLoopStep(value float64, steps []int) int {
+	best := steps[0]
+	for _, step := range steps[1:] {
+		if math.Abs(float64(step)-value) <= math.Abs(float64(best)-value) {
+			best = step
+		}
+	}
+	return best
 }
