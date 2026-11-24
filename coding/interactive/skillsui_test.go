@@ -183,12 +183,12 @@ func TestToolsExpandTogglesLoadedResources(t *testing.T) {
 // formatDiagnostics.
 func TestFormatSkillDiagnostics(t *testing.T) {
 	InitTheme("dark", false)
-	rendered := coding.StripAnsi(formatSkillDiagnostics([]coding.ResourceDiagnostic{
+	rendered := coding.StripAnsi(formatResourceDiagnostics([]coding.ResourceDiagnostic{
 		{Type: "collision", Message: "name \"dup\" collision", Collision: &coding.ResourceCollision{
 			ResourceType: "skill", Name: "dup", WinnerPath: "/a/dup/SKILL.md", LoserPath: "/b/dup/SKILL.md",
 		}},
 		{Type: "warning", Message: "description is required", Path: "/c/SKILL.md"},
-	}))
+	}, nil))
 	for _, want := range []string{"\"dup\" collision:", "/a/dup/SKILL.md", "/b/dup/SKILL.md (skipped)", "/c/SKILL.md", "description is required"} {
 		if !strings.Contains(rendered, want) {
 			t.Fatalf("diagnostics missing %q:\n%s", want, rendered)

@@ -221,12 +221,6 @@ func formatContextPath(p string, cwd string) string {
 	return formatDisplayPath(absolute)
 }
 
-// formatSkillDiagnostics renders the skill warnings and name collisions
-// (upstream formatDiagnostics, paths shown via formatDisplayPath).
-func formatSkillDiagnostics(diagnostics []coding.ResourceDiagnostic) string {
-	return formatResourceDiagnostics(diagnostics, nil)
-}
-
 // displaySourceLabel mirrors the reference's getDisplaySourceInfo: a local
 // source shows its scope, any other source shows its own name with the scope
 // appended, and an absent scope counts as project.
