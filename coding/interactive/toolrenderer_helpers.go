@@ -190,9 +190,12 @@ func expandedMaxLines(options ToolRenderResultOptions, output string, collapsed 
 	return len(strings.Split(output, "\n"))
 }
 
-func appendTruncatedLines(text string, output string, maxLines int, theme *Theme) string {
+// truncatedOutputLines renders output as a newline-led block of at most
+// maxLines toolOutput lines, plus the "N more lines" expand hint; empty output
+// renders nothing.
+func truncatedOutputLines(output string, maxLines int, theme *Theme) string {
 	if output == "" {
-		return text
+		return ""
 	}
 	lines := strings.Split(output, "\n")
 	displayLines := lines
@@ -204,7 +207,7 @@ func appendTruncatedLines(text string, output string, maxLines int, theme *Theme
 	for _, line := range displayLines {
 		parts = append(parts, theme.Fg("toolOutput", line))
 	}
-	text += "\n" + strings.Join(parts, "\n")
+	text := "\n" + strings.Join(parts, "\n")
 	if remaining > 0 {
 		text += theme.Fg("muted", fmt.Sprintf("\n... (%d more lines,", remaining)) +
 			" " + KeyHint("app.tools.expand", "to expand") + theme.Fg("muted", ")")

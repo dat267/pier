@@ -10,7 +10,7 @@ import (
 func formatSearchResult(result *SortToolResultContent, options ToolRenderResultOptions, theme *Theme,
 	showImages bool, maxLines int) string {
 	output := strings.TrimSpace(GetTextOutput(result, showImages))
-	text := appendTruncatedLines("", output, expandedMaxLines(options, output, maxLines), theme)
+	text := truncatedOutputLines(output, expandedMaxLines(options, output, maxLines), theme)
 	return text + truncationSuffix(result.Details, theme)
 }
 
