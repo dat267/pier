@@ -146,7 +146,7 @@ func CreateFindTool(cwd string) agent.AgentTool {
 		Label:       "find",
 		Execute: func(ctx context.Context, toolCallID string, params json.RawMessage, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, errors.New("Operation aborted")
+				return agent.AgentToolResult{}, errOperationAborted
 			}
 			var input struct {
 				Pattern string   `json:"pattern"`
@@ -177,7 +177,7 @@ func CreateFindTool(cwd string) agent.AgentTool {
 				return agent.AgentToolResult{}, errors.New("fd is not available and could not be downloaded")
 			}
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, errors.New("Operation aborted")
+				return agent.AgentToolResult{}, errOperationAborted
 			}
 
 			args := []string{"--glob", "--color=never", "--hidden"}
@@ -221,7 +221,7 @@ func CreateFindTool(cwd string) agent.AgentTool {
 			cmd.Stderr = &stderr
 			runErr := cmd.Run()
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, errors.New("Operation aborted")
+				return agent.AgentToolResult{}, errOperationAborted
 			}
 			output := strings.TrimRight(DecodeUTF8WithReplacement([]byte(stdout.String())), "\n")
 			if runErr != nil {
@@ -384,7 +384,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 		Label:       "grep",
 		Execute: func(ctx context.Context, toolCallID string, params json.RawMessage, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, errors.New("Operation aborted")
+				return agent.AgentToolResult{}, errOperationAborted
 			}
 			var input struct {
 				Pattern    string   `json:"pattern"`
@@ -586,7 +586,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 			_ = stdout.Close()
 			runErr := cmd.Wait()
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, errors.New("Operation aborted")
+				return agent.AgentToolResult{}, errOperationAborted
 			}
 			if readErr != nil {
 				return agent.AgentToolResult{}, fmt.Errorf("Failed to read ripgrep output: %s", readErr.Error())

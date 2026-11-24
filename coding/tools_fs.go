@@ -60,6 +60,10 @@ var readSchemaJSON = mustMarshalJSON(json.RawMessage(`{
 // ReadToolDescription is upstream's read description.
 const ReadToolDescription = "Read the contents of a file. Supports text files and images (jpg, png, gif, webp, bmp). Images are sent as attachments. For text files, output is truncated to 2000 lines or 50KB (whichever is hit first). Use offset/limit for large files. When you need the full file, continue with offset until complete."
 
+// errOperationAborted is the file and search tools' error for a call whose
+// context ended (upstream rejects with new Error("Operation aborted")).
+var errOperationAborted = errors.New("Operation aborted")
+
 // CreateReadTool builds the read tool.
 func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 	autoResize := true
@@ -78,7 +82,7 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 		ConstrainedSampling: preferStrictJSONSchema,
 		Execute: func(ctx context.Context, toolCallID string, params json.RawMessage, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, errors.New("Operation aborted")
+				return agent.AgentToolResult{}, errOperationAborted
 			}
 			var input struct {
 				Path   string   `json:"path"`
@@ -95,7 +99,7 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 			// D315: synchronous filesystem calls cannot be interrupted, so sample
 			// cancellation at each boundary to prevent a late successful result.
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, errors.New("Operation aborted")
+				return agent.AgentToolResult{}, errOperationAborted
 			}
 
 			mimeType, mimeErr := DetectSupportedImageMimeTypeFromFile(absolutePath)
@@ -103,7 +107,7 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 				return agent.AgentToolResult{}, mimeErr
 			}
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, errors.New("Operation aborted")
+				return agent.AgentToolResult{}, errOperationAborted
 			}
 			if mimeType != "" {
 				return readImageFile(ctx, absolutePath, mimeType, autoResize, modelFor)
@@ -138,7 +142,7 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 				return agent.AgentToolResult{}, selectionErr
 			}
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, errors.New("Operation aborted")
+				return agent.AgentToolResult{}, errOperationAborted
 			}
 			totalFileLines := selection.totalFileLines
 			if startLine >= float64(totalFileLines) {
@@ -180,7 +184,7 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 				details, _ = ai.MarshalJSON(ReadToolDetails{Truncation: &truncation})
 			}
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, errors.New("Operation aborted")
+				return agent.AgentToolResult{}, errOperationAborted
 			}
 			return agent.AgentToolResult{
 				Content: []ai.Content{ai.TextContent{Text: outputText}},
@@ -243,7 +247,7 @@ func readImageFile(ctx context.Context, absolutePath, mimeType string, autoResiz
 		return agent.AgentToolResult{}, err
 	}
 	if ctxErrOf(ctx) != nil {
-		return agent.AgentToolResult{}, errors.New("Operation aborted")
+		return agent.AgentToolResult{}, errOperationAborted
 	}
 	var model *ai.Model
 	if modelFor != nil {
@@ -255,7 +259,7 @@ func readImageFile(ctx context.Context, absolutePath, mimeType string, autoResiz
 		ResizeOptions:    &resizeOptions,
 	})
 	if ctxErrOf(ctx) != nil {
-		return agent.AgentToolResult{}, errors.New("Operation aborted")
+		return agent.AgentToolResult{}, errOperationAborted
 	}
 	// The note that the model cannot take images is display state, not model
 	// content: the provider already adds its own placeholder per request, so the
@@ -323,19 +327,19 @@ func CreateWriteTool(cwd string) agent.AgentTool {
 			dir := filepath.Dir(absolutePath)
 			err := WithFileMutationQueue(absolutePath, func() error {
 				if ctxErrOf(ctx) != nil {
-					return errors.New("Operation aborted")
+					return errOperationAborted
 				}
 				if err := os.MkdirAll(dir, 0o777); err != nil {
 					return err
 				}
 				if ctxErrOf(ctx) != nil {
-					return errors.New("Operation aborted")
+					return errOperationAborted
 				}
 				if err := os.WriteFile(absolutePath, []byte(input.Content), 0o666); err != nil {
 					return err
 				}
 				if ctxErrOf(ctx) != nil {
-					return errors.New("Operation aborted")
+					return errOperationAborted
 				}
 				return nil
 			})
@@ -379,7 +383,7 @@ func CreateLsTool(cwd string) agent.AgentTool {
 		Label:       "ls",
 		Execute: func(ctx context.Context, toolCallID string, params json.RawMessage, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, errors.New("Operation aborted")
+				return agent.AgentToolResult{}, errOperationAborted
 			}
 			var input struct {
 				Path  string   `json:"path"`
@@ -402,7 +406,7 @@ func CreateLsTool(cwd string) agent.AgentTool {
 			// let a late directory listing resolve successfully.
 			info, err := os.Stat(dirPath)
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, errors.New("Operation aborted")
+				return agent.AgentToolResult{}, errOperationAborted
 			}
 			if err != nil {
 				return agent.AgentToolResult{}, fmt.Errorf("Path not found: %s", dirPath)
@@ -412,7 +416,7 @@ func CreateLsTool(cwd string) agent.AgentTool {
 			}
 			entries, err := os.ReadDir(dirPath)
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, errors.New("Operation aborted")
+				return agent.AgentToolResult{}, errOperationAborted
 			}
 			if err != nil {
 				return agent.AgentToolResult{}, fmt.Errorf("Cannot read directory: %s", err.Error())
@@ -435,7 +439,7 @@ func CreateLsTool(cwd string) agent.AgentTool {
 				fullPath := filepath.Join(dirPath, entry)
 				entryInfo, err := os.Stat(fullPath)
 				if ctxErrOf(ctx) != nil {
-					return agent.AgentToolResult{}, errors.New("Operation aborted")
+					return agent.AgentToolResult{}, errOperationAborted
 				}
 				if err != nil {
 					continue // skip entries we cannot stat
@@ -448,7 +452,7 @@ func CreateLsTool(cwd string) agent.AgentTool {
 			}
 
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, errors.New("Operation aborted")
+				return agent.AgentToolResult{}, errOperationAborted
 			}
 			if len(results) == 0 {
 				return agent.AgentToolResult{
@@ -478,7 +482,7 @@ func CreateLsTool(cwd string) agent.AgentTool {
 				detailsJSON, _ = ai.MarshalJSON(details)
 			}
 			if ctxErrOf(ctx) != nil {
-				return agent.AgentToolResult{}, errors.New("Operation aborted")
+				return agent.AgentToolResult{}, errOperationAborted
 			}
 			return agent.AgentToolResult{
 				Content: []ai.Content{ai.TextContent{Text: output}},

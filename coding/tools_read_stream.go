@@ -207,7 +207,7 @@ func selectTextLinesFromStream(ctx context.Context, path string, startLine int, 
 	buffer := make([]byte, 64<<10)
 	for {
 		if ctxErrOf(ctx) != nil {
-			return readSelection{}, errors.New("Operation aborted")
+			return readSelection{}, errOperationAborted
 		}
 		read, readErr := reader.Read(buffer)
 		if read > 0 {

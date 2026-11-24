@@ -246,7 +246,7 @@ func CreateEditTool(cwd string) agent.AgentTool {
 			var resultErr error
 			err := WithFileMutationQueue(absolutePath, func() error {
 				if ctxErrOf(ctx) != nil {
-					resultErr = errors.New("Operation aborted")
+					resultErr = errOperationAborted
 					return resultErr
 				}
 
@@ -256,7 +256,7 @@ func CreateEditTool(cwd string) agent.AgentTool {
 					return resultErr
 				}
 				if ctxErrOf(ctx) != nil {
-					resultErr = errors.New("Operation aborted")
+					resultErr = errOperationAborted
 					return resultErr
 				}
 
@@ -266,7 +266,7 @@ func CreateEditTool(cwd string) agent.AgentTool {
 					return resultErr
 				}
 				if ctxErrOf(ctx) != nil {
-					resultErr = errors.New("Operation aborted")
+					resultErr = errOperationAborted
 					return resultErr
 				}
 				rawContent := DecodeUTF8WithReplacement(data)
@@ -280,7 +280,7 @@ func CreateEditTool(cwd string) agent.AgentTool {
 					return err
 				}
 				if ctxErrOf(ctx) != nil {
-					resultErr = errors.New("Operation aborted")
+					resultErr = errOperationAborted
 					return resultErr
 				}
 
@@ -293,7 +293,7 @@ func CreateEditTool(cwd string) agent.AgentTool {
 					return resultErr
 				}
 				if ctxErrOf(ctx) != nil {
-					resultErr = errors.New("Operation aborted")
+					resultErr = errOperationAborted
 					return resultErr
 				}
 
