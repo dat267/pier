@@ -1108,11 +1108,7 @@ func wheelScrollLinesChoices(current tui.WheelScrollLines) []string {
 	if !current.Auto {
 		set[current.Lines] = true
 	}
-	numbers := make([]int, 0, len(set))
-	for value := range set {
-		numbers = append(numbers, value)
-	}
-	slices.Sort(numbers)
+	numbers := slices.Sorted(maps.Keys(set))
 	choices := []string{"auto"}
 	for _, value := range numbers {
 		choices = append(choices, strconv.Itoa(value))

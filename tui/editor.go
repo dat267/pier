@@ -869,12 +869,7 @@ func (e *Editor) expandPasteMarkersLocked(text string) string {
 // order decides the result when one paste body carries a later paste's marker:
 // expanding the higher ID first would leave that marker in the text.
 func (e *Editor) pasteExpansionOrder() []int {
-	ids := make([]int, 0, len(e.pastes))
-	for id := range e.pastes {
-		ids = append(ids, id)
-	}
-	slices.Sort(ids)
-	return ids
+	return slices.Sorted(maps.Keys(e.pastes))
 }
 
 // GetExpandedText returns the text with paste markers expanded.

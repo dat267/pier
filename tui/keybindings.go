@@ -220,11 +220,7 @@ func buildKeybindingsSnapshot(definitions map[Keybinding]KeybindingDefinition, o
 	for _, key := range claimedKeys {
 		claimants := userClaims[key]
 		if len(claimants) > 1 {
-			names := make([]string, 0, len(claimants))
-			for name := range claimants {
-				names = append(names, name)
-			}
-			slices.Sort(names)
+			names := slices.Sorted(maps.Keys(claimants))
 			snapshot.conflicts = append(snapshot.conflicts, KeybindingConflict{Key: key, Keybindings: names})
 		}
 	}

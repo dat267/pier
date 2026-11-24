@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"maps"
 	"slices"
 )
 
@@ -28,12 +29,7 @@ var builtinToolRenderers = map[string]ToolRenderers{
 
 // BuiltinToolRendererNames lists the tools with built-in renderers.
 func BuiltinToolRendererNames() []string {
-	names := make([]string, 0, len(builtinToolRenderers))
-	for name := range builtinToolRenderers {
-		names = append(names, name)
-	}
-	slices.Sort(names)
-	return names
+	return slices.Sorted(maps.Keys(builtinToolRenderers))
 }
 
 // WithBuiltInRenderers merges the built-in renderers into a tool definition

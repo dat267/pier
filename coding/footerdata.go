@@ -212,11 +212,7 @@ func (f *FooterDataProvider) Dispose() {
 
 func (f *FooterDataProvider) notifyBranchChange() {
 	f.mu.Lock()
-	ids := make([]int, 0, len(f.callbacks))
-	for id := range f.callbacks {
-		ids = append(ids, id)
-	}
-	slices.Sort(ids)
+	ids := slices.Sorted(maps.Keys(f.callbacks))
 	callbacks := make([]func(), 0, len(ids))
 	for _, id := range ids {
 		callbacks = append(callbacks, f.callbacks[id])

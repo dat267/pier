@@ -18,12 +18,7 @@ import (
 // Promise.all promise settles (packages/ai/src/models.ts:603), so its order is
 // completion order and changes from run to run; the port sorts instead (D456).
 func errorProviders(errors map[string]error) []string {
-	providers := make([]string, 0, len(errors))
-	for provider := range errors {
-		providers = append(providers, provider)
-	}
-	slices.Sort(providers)
-	return providers
+	return slices.Sorted(maps.Keys(errors))
 }
 
 // ModelCatalogRuntime is the refresh surface the coordinator needs.

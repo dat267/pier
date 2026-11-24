@@ -3,6 +3,7 @@ package tui
 import (
 	"errors"
 	"io"
+	"maps"
 	"os"
 	"slices"
 	"strconv"
@@ -260,11 +261,7 @@ func (s *MainScreen) collectKittyImageIDs(lines []string) map[int]bool {
 
 func (s *MainScreen) deleteKittyImages(ids map[int]bool) string {
 	var builder strings.Builder
-	ordered := make([]int, 0, len(ids))
-	for id := range ids {
-		ordered = append(ordered, id)
-	}
-	slices.Sort(ordered)
+	ordered := slices.Sorted(maps.Keys(ids))
 	for _, id := range ordered {
 		builder.WriteString(DeleteKittyImage(id))
 	}
