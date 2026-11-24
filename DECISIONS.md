@@ -9020,9 +9020,13 @@ starting under the run-lifecycle lock as D438 does. No entry type, message role 
 stays 3, and the existing round-trip and append fixtures still reproduce the
 reference's bytes.
 
-The output file is opened before the call starts and each streamed update is
-appended to it, so a long call's progress is readable from the handle while it
-runs rather than only when it ends; a call that finishes inside the threshold
+The output file is opened before the call starts and each streamed update
+replaces its contents, so a long call's progress is readable from the handle
+while it runs rather than only when it ends. An update is the whole result so
+far, not a delta (upstream `interactive-mode.ts` replaces the shown result with
+each one), so appending them would repeat every earlier line; a failure keeps the
+streamed output unless its error text, as a shell's does, already starts with it.
+A call that finishes inside the threshold
 removes the file it never needed. The completion notice names the file and caps
 its own body, because a call that produced megabytes would otherwise flood the
 transcript it wakes, and the tail is what a reader wants first.
@@ -9052,4 +9056,5 @@ Tests: `TestLoopToolRenderers`, `TestLoopToolsHaveRenderers`,
 `TestCloseBackgroundCallsCancels`, `TestSessionWakesOncePerBackgroundCall`,
 `TestBackgroundNoticeQueuesDuringARun`, `TestStartupSessionBackgroundsToolCalls`,
 `TestSessionSkipsWakeAfterDispose`, `TestBackgroundNoticeNamesFileAndCapsBody`,
-`TestBackgroundFastCallLeavesNoFile`, `TestBackgroundRealShellCallStreamsToFile`.
+`TestBackgroundFastCallLeavesNoFile`, `TestBackgroundRealShellCallStreamsToFile`,
+`TestBackgroundOutputFileHoldsLatestSnapshot`.

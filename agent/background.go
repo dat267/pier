@@ -268,11 +268,9 @@ func executeWithBackground(
 				}
 			}()
 			result, err = prepared.tool.Execute(callCtx, prepared.toolCall.ID, prepared.args, func(partialResult AgentToolResult) {
+				// Stream the piece into the file as it arrives, so a long call's
+				// progress is readable from the handle rather than only its end.
 				output.write(backgroundPieceText(partialResult))
-				// Stream the piece into the file as it arrives, so a long call's
-				// progress is readable from the handle rather than only its end.
-				// Stream the piece into the file as it arrives, so a long call's
-				// progress is readable from the handle rather than only its end.
 				updates.send(AgentEvent{
 					Type: ToolExecutionUpdate, ToolCallID: prepared.toolCall.ID,
 					ToolName: prepared.toolCall.Name, Args: prepared.toolCall.Arguments,
@@ -325,7 +323,11 @@ func executeWithBackground(
 	// Record the result and let whoever waits read it, exactly once.
 	go func() {
 		finished := <-done
-		output.write(finalOutputText(finished.result, finished.err))
+		if finished.err != nil {
+			output.writeFailure(finalOutputText(finished.result, finished.err))
+		} else {
+			output.write(finalOutputText(finished.result, finished.err))
+		}
 		output.close()
 		if finished.err == nil {
 			call.result = finished.result
@@ -365,6 +367,8 @@ type backgroundOutput struct {
 	mu   sync.Mutex
 	file *os.File
 	path string
+	// last is what the file holds, so a failure can keep the output before it.
+	last string
 }
 
 // newBackgroundOutput opens the file, or returns one that discards.
@@ -379,8 +383,18 @@ func newBackgroundOutput(path string) *backgroundOutput {
 	return &backgroundOutput{file: file, path: path}
 }
 
-// write appends text, if there is a file to append to.
-func (o *backgroundOutput) write(text string) {
+// write replaces the file's contents with text, if there is a file. A partial
+// result is the whole result so far, not a delta (upstream's interactive mode
+// replaces the shown result with each one), so appending would repeat
+// everything already written. An empty piece keeps what the file holds.
+func (o *backgroundOutput) write(text string) { o.replace(text, false) }
+
+// writeFailure records a failed call's error. A shell's error already starts
+// with its output and replaces the file like a result; an error that does not
+// is added after the output streamed so far, so a failure never loses it.
+func (o *backgroundOutput) writeFailure(text string) { o.replace(text, true) }
+
+func (o *backgroundOutput) replace(text string, failed bool) {
 	if o == nil || text == "" {
 		return
 	}
@@ -389,10 +403,15 @@ func (o *backgroundOutput) write(text string) {
 	if o.file == nil {
 		return
 	}
-	_, _ = o.file.WriteString(text)
-	if !strings.HasSuffix(text, "\n") {
-		_, _ = o.file.WriteString("\n")
+	if failed && !strings.HasPrefix(text, strings.TrimSuffix(o.last, "\n")) {
+		text = o.last + text
 	}
+	if !strings.HasSuffix(text, "\n") {
+		text += "\n"
+	}
+	_ = o.file.Truncate(0)
+	_, _ = o.file.WriteAt([]byte(text), 0)
+	o.last = text
 }
 
 // close releases the file.

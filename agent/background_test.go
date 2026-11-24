@@ -517,8 +517,54 @@ func TestBackgroundWritesOutputFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read output file: %v", err)
 	}
-	if !strings.Contains(string(raw), "final line") {
-		t.Fatalf("the output file lacks the final result:\n%s", raw)
+	// Exactly the final result: the streamed piece was the result so far, so it
+	// is replaced rather than left in front of it.
+	if string(raw) != "final line\n" {
+		t.Fatalf("the output file = %q, want only the final result", raw)
+	}
+}
+
+// The output file holds the latest snapshot, never a pile of them: a partial
+// result is the whole result so far (upstream interactive-mode.ts replaces the
+// shown result with each one), so appending repeated every earlier line. A
+// failure keeps the output before it unless its text already starts with it.
+func TestBackgroundOutputFileHoldsLatestSnapshot(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		pieces  []string
+		final   string
+		failed  bool
+		midWant string
+		want    string
+	}{
+		{name: "cumulative snapshots", pieces: []string{"1", "1\n2", "1\n2\n3\n"}, final: "1\n2\n3\n4",
+			midWant: "1\n2\n3\n", want: "1\n2\n3\n4\n"},
+		{name: "an empty piece keeps the file", pieces: []string{"progress", ""}, final: "done",
+			midWant: "progress\n", want: "done\n"},
+		{name: "a shell failure carries its output", pieces: []string{"a\nb"}, failed: true,
+			final: "a\nb\n\nCommand exited with code 1", midWant: "a\nb\n", want: "a\nb\n\nCommand exited with code 1\n"},
+		{name: "a bare failure keeps the streamed output", pieces: []string{"50% done"}, failed: true,
+			final: "connection lost", midWant: "50% done\n", want: "50% done\nconnection lost\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "out.log")
+			output := newBackgroundOutput(path)
+			for _, piece := range tc.pieces {
+				output.write(piece)
+			}
+			if mid, _ := os.ReadFile(path); string(mid) != tc.midWant {
+				t.Fatalf("mid-run file = %q, want %q", mid, tc.midWant)
+			}
+			if tc.failed {
+				output.writeFailure(tc.final)
+			} else {
+				output.write(tc.final)
+			}
+			output.close()
+			if raw, _ := os.ReadFile(path); string(raw) != tc.want {
+				t.Fatalf("final file = %q, want %q", raw, tc.want)
+			}
+		})
 	}
 }
 
