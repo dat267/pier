@@ -26,14 +26,24 @@ var cronCreateRenderers = ToolRenderers{
 		if value, ok := argsMap["recurring"].(bool); ok {
 			recurring = value
 		}
-		// One line, like bash and ls: the schedule, then a short preview of the
-		// prompt, all inside the title's own styling instead of a second line.
-		label := humanScheduleForDisplay(cron)
-		if label == "" {
-			label = "(no schedule)"
+		// The shell/MCP convention: a bold title, then the arguments in the muted
+		// style on the same line, untruncated. The frame wraps if it is long rather
+		// than cutting the user's own text, which is what formatMcpCall and
+		// formatShellCall do.
+		schedule := humanScheduleForDisplay(cron)
+		if schedule == "" {
+			schedule = "(no schedule)"
 		}
-		text.SetText(theme.Fg("toolTitle", theme.Bold(
-			"cron_create "+label+outcomeSuffix(recurring)+": "+promptPreview(prompt))))
+		// A prompt is one argument, so a newline in it is flattened: an embedded
+		// line break would push the rest of the frame onto its own line and read as
+		// a second argument.
+		parts := []string{"schedule=" + schedule}
+		if !recurring {
+			parts = append(parts, "once")
+		}
+		parts = append(parts, "prompt="+singleLine(prompt))
+		text.SetText(theme.Fg("toolTitle", theme.Bold("cron_create")) + " " +
+			theme.Fg("muted", strings.Join(parts, " ")))
 		return text
 	},
 	RenderResult: func(result *SortToolResultContent, options ToolRenderResultOptions, theme *Theme, context *ToolRenderContext) tui.Component {
@@ -128,7 +138,7 @@ func compactJobRow(row string) string {
 	if at := strings.Index(trimmed, ", next run "); at >= 0 {
 		rest := trimmed[at:]
 		if colon := strings.Index(rest, ": "); colon >= 0 {
-			trimmed = trimmed[:at] + ": " + promptPreview(rest[colon+2:])
+			trimmed = trimmed[:at] + ": " + singleLine(rest[colon+2:])
 		}
 	}
 	return trimmed
@@ -151,20 +161,11 @@ func outcomeSuffix(recurring bool) string {
 	return " (once)"
 }
 
-// promptPreview shortens a scheduled prompt to something that fits a one-line
-// frame. The prompt is a command-like string, so a cut one gets an ellipsis and
-// the agent's own text is kept rather than paraphrased.
-func promptPreview(prompt string) string {
-	trimmed := strings.TrimSpace(prompt)
-	if index := strings.IndexByte(trimmed, '\n'); index >= 0 {
-		trimmed = strings.TrimSpace(trimmed[:index]) + " …"
-	}
-	const limit = 60
-	runes := []rune(trimmed)
-	if len(runes) <= limit {
-		return trimmed
-	}
-	return string(runes[:limit]) + "…"
+// singleLine flattens a prompt's whitespace so it renders as one argument. The
+// shell and MCP frames never truncate their arguments, so neither does this: the
+// frame wraps rather than cutting the user's text.
+func singleLine(text string) string {
+	return strings.Join(strings.Fields(text), " ")
 }
 
 // firstLineEllipsis keeps a prompt readable in a one-line frame.

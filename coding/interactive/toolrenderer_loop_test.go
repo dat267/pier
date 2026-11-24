@@ -15,7 +15,7 @@ func TestLoopToolRenderers(t *testing.T) {
 	// cron_create shows the schedule and the prompt, not the argument object.
 	args, err := json.Marshal(map[string]any{
 		"cron":      "*/1 * * * *",
-		"prompt":    "Tell the user the current time using the bash `date` command.",
+		"prompt":    "Tell the user the current time using the bash `date` command. This is the /loop tick.",
 		"recurring": true,
 	})
 	if err != nil {
@@ -27,14 +27,20 @@ func TestLoopToolRenderers(t *testing.T) {
 			t.Errorf("cron_create call lacks %q:\n%s", want, call)
 		}
 	}
-	// One line, like bash and ls: the frame already ran to two lines with the
-	// prompt on its own, which is what the user saw as badly formatted.
-	if lines := strings.Split(strings.TrimRight(call, " \n"), "\n"); len(lines) != 1 {
-		t.Errorf("cron_create call is %d lines, want one:\n%s", len(lines), call)
+	// The shell/MCP convention: a bold title, then `key=value` arguments in the
+	// muted style, on one unwrapped line of text. The Text component wraps it at
+	// render width, which is what bash and MCP do for a long argument too.
+	for _, want := range []string{"schedule=Every minute", "prompt="} {
+		if !strings.Contains(call, want) {
+			t.Errorf("cron_create call lacks the %q argument:\n%s", want, call)
+		}
 	}
-	// A long prompt is shortened rather than wrapped.
-	if runes := []rune(strings.TrimRight(call, " ")); len(runes) > 110 {
-		t.Errorf("cron_create call is %d runes, too wide for a one-line frame", len(runes))
+	// The prompt is carried whole: these frames wrap rather than truncate, so
+	// join the wrapped lines before checking. Shell and MCP do the same with a
+	// long argument.
+	flattened := strings.Join(strings.Fields(call), " ")
+	if !strings.Contains(flattened, "This is the /loop tick.") {
+		t.Errorf("cron_create cut the prompt, but shell and MCP never truncate:\n%s", call)
 	}
 	for _, unwanted := range []string{`"cron"`, `{`, `}`} {
 		if strings.Contains(call, unwanted) {
@@ -49,7 +55,7 @@ func TestLoopToolRenderers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := renderCall("cron_create", once, theme); !strings.Contains(got, "(once)") {
+	if got := renderCall("cron_create", once, theme); !strings.Contains(got, "once") {
 		t.Errorf("a one-shot job is not labelled:\n%s", got)
 	}
 	recurring, err := json.Marshal(map[string]any{
@@ -58,7 +64,7 @@ func TestLoopToolRenderers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := renderCall("cron_create", recurring, theme); strings.Contains(got, "(once)") {
+	if got := renderCall("cron_create", recurring, theme); strings.Contains(got, "once") {
 		t.Errorf("a recurring job is labelled one-shot:\n%s", got)
 	}
 

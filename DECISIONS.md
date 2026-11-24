@@ -8925,9 +8925,14 @@ tools are registered in the ordinary registry, so `/tools` shows and can disable
 them like any other tool. Those tools have their own transcript frames: a tool with
 no built-in renderer falls through to the generic MCP frame, which printed the raw
 argument JSON, so `cron_create` showed a wall of `{"cron":...,"prompt":...}`. They
-now render what the call means instead: one line each, like bash and ls, with the
-schedule in words and a shortened prompt, the job being cancelled, and the wakeup
-delay or its stop. A successful create draws no body, because the model-facing text
+now render what the call means instead, following the shell and MCP convention
+that `formatShellCall` and `formatMcpCall` share: a bold title, then `key=value`
+arguments in the muted style, never truncated. So `cron_create` reads
+`cron_create schedule=Every minute prompt=…` and the frame wraps rather than cutting
+the user's own text; a one-shot job adds `once`, the job being cancelled is named,
+and the wakeup shows its delay or its stop.
+
+A successful create draws no body, because the model-facing text
 repeats the schedule the call frame already shows, and a cron_list row drops the
 next-run timestamp that made it wrap.
 
