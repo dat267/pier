@@ -142,7 +142,6 @@ type compiledMode struct {
 	// keywordWord is set when the keyword pattern is the default `\w+`, which
 	// can be scanned without the regexp engine (and its per-call allocation).
 	keywordWord bool
-	beginRe     *patternRegexp
 	beginSource string
 	endRe       *patternRegexp
 	// endExact is endRe for the exact walk (D523), or nil; endSource is the
@@ -344,11 +343,6 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 			mode.Begin = `\B|\b`
 		}
 		if !cmode.manual {
-			beginRe, err := c.langRe(mode.Begin)
-			if err != nil {
-				return nil, err
-			}
-			cmode.beginRe = beginRe
 			cmode.beginSource = mode.Begin
 		}
 		if mode.EndSameAsBegin {
