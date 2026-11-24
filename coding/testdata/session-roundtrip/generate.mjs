@@ -1,6 +1,6 @@
 // Regenerate from the repository root:
 // node coding/testdata/session-roundtrip/generate.mjs ./pi > coding/testdata/session-roundtrip/golden.json
-// Reference: pi v1.5.0 (f9a26365), packages/coding-agent/src/core/session-manager.ts
+// Reference: pi v1.6.0 (faac5858), packages/coding-agent/src/core/session-manager.ts
 // (SessionManager appends and JSON.stringify). Drives the pinned class in a
 // temp agent directory, one of every entry type, then records the bytes it
 // wrote. Never uses an installed bundle.
