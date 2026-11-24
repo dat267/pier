@@ -388,7 +388,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		for _, message := range converted {
 			switch typed := message.(type) {
 			case *ai.UserMessage:
-				if !contentListHasImages(typed.Content.Blocks) {
+				if !hasImageBlocks(typed.Content.Blocks) {
 					out = append(out, message)
 					continue
 				}
@@ -397,7 +397,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 				copied.Content = ai.StringOrBlocks{Blocks: filterImageBlocks(typed.Content.Blocks, disabledText)}
 				out = append(out, &copied)
 			case *ai.ToolResultMessage:
-				if !userContentHasImages(typed.Content) {
+				if !hasImageBlocks(typed.Content) {
 					out = append(out, message)
 					continue
 				}
@@ -676,20 +676,11 @@ func compactionSettingsOf(settingsManager *SettingsManager, model *ai.Model) Com
 	return CompactionSettings(resolved)
 }
 
-// contentListHasImages reports whether any block is an image.
-func contentListHasImages(blocks ai.ContentList) bool {
+// hasImageBlocks reports whether any block is an image. It serves both
+// assistant/user content lists and tool-result content.
+func hasImageBlocks[L ~[]C, C any](blocks L) bool {
 	for _, block := range blocks {
-		if _, ok := block.(ai.ImageContent); ok {
-			return true
-		}
-	}
-	return false
-}
-
-// userContentHasImages is the tool-result variant.
-func userContentHasImages(blocks ai.UserContentList) bool {
-	for _, block := range blocks {
-		if _, ok := block.(ai.ImageContent); ok {
+		if _, ok := any(block).(ai.ImageContent); ok {
 			return true
 		}
 	}
