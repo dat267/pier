@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"net/url"
+	"slices"
 	"strings"
 
 	"github.com/dat267/pier/internal/whatwgurl"
@@ -52,14 +53,7 @@ func lowercaseHost(url *url.URL) *url.URL {
 // escapes exactly, and empty segments (a leading "//") are preserved.
 func normalizeDotSegments(escapedPath string) string {
 	segments := strings.Split(escapedPath, "/")
-	changed := false
-	for _, segment := range segments {
-		if dotSegmentKind(segment) != 0 {
-			changed = true
-			break
-		}
-	}
-	if !changed {
+	if !slices.ContainsFunc(segments, func(segment string) bool { return dotSegmentKind(segment) != 0 }) {
 		return escapedPath
 	}
 	normalized := make([]string, 0, len(segments))

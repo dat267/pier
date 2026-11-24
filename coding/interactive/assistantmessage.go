@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"slices"
 	"strings"
 	"time"
 
@@ -416,13 +417,10 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 		}
 	}
 
-	hasToolCalls := false
-	for _, block := range blocks {
-		if _, ok := block.(ai.ToolCall); ok {
-			hasToolCalls = true
-			break
-		}
-	}
+	hasToolCalls := slices.ContainsFunc(blocks, func(block ai.Content) bool {
+		_, ok := block.(ai.ToolCall)
+		return ok
+	})
 	c.hasToolCalls = hasToolCalls
 
 	stopReason := message.StopReason

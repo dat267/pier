@@ -199,13 +199,9 @@ func (q *pendingMessageQueue) hasDeliverable(isDeferred func(ai.Message) bool) b
 		snapshot := append([]ai.Message(nil), q.messages...)
 		q.mu.Unlock()
 
-		deliverable := false
-		for _, message := range snapshot {
-			if !isDeferred(message) {
-				deliverable = true
-				break
-			}
-		}
+		deliverable := slices.ContainsFunc(snapshot, func(message ai.Message) bool {
+			return !isDeferred(message)
+		})
 
 		q.mu.Lock()
 		unchanged := q.gen == gen
