@@ -263,9 +263,7 @@ func (c *ThinkingSelectorComponent) HandleInput(data string) {
 	}
 	// Cursor keys leave the query as it is and must not move the selection
 	// (thinking-selector.ts, v1.6.0, #12334).
-	previousQuery := c.searchInput.Value()
-	c.searchInput.HandleInput(data)
-	if query := c.searchInput.Value(); query != previousQuery {
+	if query, changed := searchInputChanged(c.searchInput, data); changed {
 		c.applyFilter(query)
 	}
 }
@@ -702,4 +700,14 @@ func timerSleep(ms int) {
 		return
 	}
 	time.Sleep(time.Duration(ms) * time.Millisecond)
+}
+
+// searchInputChanged hands data to a selector's search input and reports the
+// resulting query and whether the key changed it. A selector refilters only on
+// a change, so cursor keys inside the query keep the selection (#12334).
+func searchInputChanged(input *tui.Input, data string) (string, bool) {
+	previous := input.Value()
+	input.HandleInput(data)
+	query := input.Value()
+	return query, query != previous
 }

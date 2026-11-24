@@ -613,9 +613,7 @@ func (c *ScopedModelsSelectorComponent) handleInput(data string) {
 
 	// Cursor keys move the search cursor without changing the query; filtering
 	// then would reset the selection (scoped-models-selector.ts, v1.6.0, #12334).
-	previousQuery := c.searchInput.Value()
-	c.searchInput.HandleInput(data)
-	if query := c.searchInput.Value(); query != previousQuery {
+	if _, changed := searchInputChanged(c.searchInput, data); changed {
 		c.refreshList()
 	}
 }

@@ -133,9 +133,7 @@ func (c *SelectSubmenu) HandleInput(data string) {
 	}
 	// Cursor keys leave the query as it is and must not move the selection
 	// (settings-submenu.ts, v1.6.0, #12334).
-	previousQuery := c.searchInput.Value()
-	c.searchInput.HandleInput(data)
-	if query := c.searchInput.Value(); query != previousQuery {
+	if query, changed := searchInputChanged(c.searchInput, data); changed {
 		c.applyFilter(query)
 	}
 }
