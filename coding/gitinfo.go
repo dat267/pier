@@ -20,8 +20,7 @@ func ResolveGitBranch(repoDir string) string {
 	if err != nil {
 		return ""
 	}
-	branch := strings.TrimSpace(DecodeUTF8WithReplacement(output))
-	return branch
+	return strings.TrimSpace(DecodeUTF8WithReplacement(output))
 }
 
 // Deprecation warns once per message (port of utils/deprecation.ts without the

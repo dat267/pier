@@ -57,8 +57,7 @@ func (b *bedrockBlock) content() Content {
 		}
 		return ThinkingContent{Thinking: b.thinking.String(), ThinkingSignature: signaturePtr, Redacted: b.redacted}
 	default:
-		call := b.toolCall
-		return call
+		return b.toolCall
 	}
 }
 
