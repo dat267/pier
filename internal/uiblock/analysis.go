@@ -30,6 +30,7 @@ import (
 	"go/token"
 	"go/types"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -524,13 +525,9 @@ func loopCallbackClosures(all map[*ssa.Function]bool, roots map[*ssa.Function]st
 					if !strings.Contains(name, entry.function) {
 						continue
 					}
-					index := -1
-					for position, param := range callee.Params {
-						if param.Name() == entry.parameter {
-							index = position
-							break
-						}
-					}
+					index := slices.IndexFunc(callee.Params, func(param *ssa.Parameter) bool {
+						return param.Name() == entry.parameter
+					})
 					if index < 0 || index >= len(common.Args) {
 						continue
 					}
