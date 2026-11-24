@@ -21,8 +21,6 @@ type ExecuteBashOptions struct {
 	Operations BashOperations
 }
 
-// bashRunSet guards the running bash commands and deferred messages.
-
 // ExecuteBash runs a bash command in the session's working directory, streams
 // output chunks, and records the result in session history.
 func (s *AgentSession) ExecuteBash(ctx context.Context, command string, onChunk func(chunk string), options *ExecuteBashOptions) (*BashResult, error) {

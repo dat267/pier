@@ -93,10 +93,6 @@ type SessionManager struct {
 	labelTimestamps  map[string]string
 	leafID           *string
 
-	// branchCache memoizes the current leaf's root path. GetBranch("") is
-	// called on every footer paint (context usage) and rebuilding a long
-	// session's branch is O(entries). The key is (leaf, entry count); the
-	// result is shared read-only.
 	// projection is the cached session projection for the branch above; see
 	// session_projection.go.
 	projection projectionCache
@@ -258,15 +254,12 @@ func (m *SessionManager) NewSession(options *NewSessionOptions) string {
 	return m.sessionFile
 }
 
-// sessionTimestampFormatter is JavaScript's Date.prototype.toISOString(): UTC
-// with exactly three fractional digits. Upstream stamps every session header
-// and entry with it and derives the session file name from the same string, so
-// the extra digits time.RFC3339Nano emits would make the persisted JSONL and
-// the file names differ from the reference (CR-071). Reading stays tolerant:
-// RFC3339Nano parsing accepts both shapes.
 // SessionTimestampLayout is the timestamp format every session entry and the
-// tree label stamp use: upstream's new Date().toISOString(), which always
-// carries exactly three fractional digits.
+// tree label stamp use: upstream's new Date().toISOString(), UTC with exactly
+// three fractional digits. Upstream also derives the session file name from
+// the same string, so the extra digits time.RFC3339Nano emits would make the
+// persisted JSONL and the file names differ from the reference (CR-071).
+// Reading stays tolerant: RFC3339Nano parsing accepts both shapes.
 const SessionTimestampLayout = "2006-01-02T15:04:05.000Z"
 
 const sessionTimestampLayout = SessionTimestampLayout

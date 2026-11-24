@@ -99,8 +99,8 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 	var tempErr error
 	pendingAnsi := ""
 	decoder := utf8TextDecoder{atStart: true, stripBOM: true}
-	// pendingChunks holds the buffered chunks that still need to be flushed to
-	// the temp file once it is created.
+	// flushedChunks counts the leading outputChunks already written to the temp
+	// file, so later writes append only the rest.
 	flushedChunks := 0
 	var mu sync.Mutex
 	var callbackQueue []string

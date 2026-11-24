@@ -78,7 +78,7 @@ type Provider struct {
 	// streamsFor dispatches on model.api (single implementation or per-API map).
 	streamsFor  func(model *Model) ProviderStreams
 	classifiers map[string]ProviderClassifier
-	// hasDeferred mirrors createProvider's conditional deferred exposure.
+	// hasDeferredFetch mirrors createProvider's conditional deferred exposure.
 	hasDeferredFetch bool
 }
 

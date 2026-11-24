@@ -50,7 +50,7 @@ var (
 	osc133PromptStart = regexp.MustCompile(`^\x1b\]133;A(?:\x07|\x1b\\)`)
 	altSgrMouseRegex  = regexp.MustCompile(`^\x1b?\[<(\d+);(\d+);(\d+)([Mm])$`)
 	wheelSgrRegex     = regexp.MustCompile(`^\x1b?\[<(\d+);(\d+);(\d+)[Mm]$`)
-	// truncatedSgrMouse matches a fragment of one: a report whose tail is still
+	// truncatedSgrMouseRegex matches a fragment of one: a report whose tail is still
 	// in flight, or a tail whose ESC was already dispatched as the Escape key
 	// (the input buffer force-flushes a lone ESC after 10ms, D169).
 	truncatedSgrMouseRegex = regexp.MustCompile(`^\x1b?\[<\d*(;\d*){0,2}[Mm]?$`)
