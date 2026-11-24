@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/dat267/pier/internal/jsnum"
@@ -388,21 +387,13 @@ func CreateOpenAICodexAuthorizationFlow(originator string) (*OpenAICodexAuthoriz
 type OpenAICodexCallbackServer struct {
 	server      *http.Server
 	unavailable bool
-
-	mu      sync.Mutex
-	settled bool
-	lastErr error
-	result  chan string
-	failure chan error
-	done    chan struct{}
+	oauthCallbackOutcome[string]
 }
 
 // StartOpenAICodexCallbackServer serves /auth/callback on the fixed port.
 func StartOpenAICodexCallbackServer(expectedState string) *OpenAICodexCallbackServer {
 	callback := &OpenAICodexCallbackServer{
-		result:  make(chan string, 1),
-		failure: make(chan error, 1),
-		done:    make(chan struct{}),
+		oauthCallbackOutcome: newOAuthCallbackOutcome[string](),
 	}
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", oauthCallbackHost(), oauthCallbackPort(OpenAICodexCallbackPort)))
 	if err != nil {
@@ -455,73 +446,13 @@ func StartOpenAICodexCallbackServer(expectedState string) *OpenAICodexCallbackSe
 	return callback
 }
 
-func (s *OpenAICodexCallbackServer) isSettled() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.settled
-}
-
-func (s *OpenAICodexCallbackServer) settle(code string) {
-	s.mu.Lock()
-	if s.settled {
-		s.mu.Unlock()
-		return
-	}
-	s.settled = true
-	s.mu.Unlock()
-	s.result <- code
-	close(s.done)
-}
-
-func (s *OpenAICodexCallbackServer) fail(err error) {
-	s.mu.Lock()
-	if s.settled {
-		s.mu.Unlock()
-		return
-	}
-	s.settled = true
-	s.mu.Unlock()
-	s.failure <- err
-	close(s.done)
-}
-
-// LastError returns the callback failure, when the wait ended because of one.
-func (s *OpenAICodexCallbackServer) LastError() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.lastErr
-}
-
-// CancelWait hands the login over to manual code entry.
-func (s *OpenAICodexCallbackServer) CancelWait() {
-	s.mu.Lock()
-	if s.settled {
-		s.mu.Unlock()
-		return
-	}
-	s.settled = true
-	s.mu.Unlock()
-	close(s.done)
-}
-
 // WaitForCode returns the callback code; ok is false when the wait was
 // cancelled or the listener was unavailable.
 func (s *OpenAICodexCallbackServer) WaitForCode() (string, bool) {
 	if s.unavailable {
 		return "", false
 	}
-	<-s.done
-	select {
-	case code := <-s.result:
-		return code, true
-	case err := <-s.failure:
-		s.mu.Lock()
-		s.lastErr = err
-		s.mu.Unlock()
-		return "", false
-	default:
-		return "", false
-	}
+	return s.wait()
 }
 
 // Close shuts the server down.

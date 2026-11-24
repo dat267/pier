@@ -16,7 +16,6 @@ import (
 	"net/url"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -149,22 +148,14 @@ type OpenAIChatGPTAuthorizationResult struct {
 // rejected as a state mismatch.
 type OpenAIChatGPTCallbackServer struct {
 	server *http.Server
-
-	mu      sync.Mutex
-	settled bool
-	lastErr error
-	result  chan OpenAIChatGPTAuthorizationResult
-	failure chan error
-	done    chan struct{}
+	oauthCallbackOutcome[OpenAIChatGPTAuthorizationResult]
 }
 
 // StartOpenAIChatGPTCallbackServer serves the ChatGPT callback on the fixed
 // port.
 func StartOpenAIChatGPTCallbackServer(expectedState string) (*OpenAIChatGPTCallbackServer, error) {
 	callback := &OpenAIChatGPTCallbackServer{
-		result:  make(chan OpenAIChatGPTAuthorizationResult, 1),
-		failure: make(chan error, 1),
-		done:    make(chan struct{}),
+		oauthCallbackOutcome: newOAuthCallbackOutcome[OpenAIChatGPTAuthorizationResult](),
 	}
 	callbackPort := oauthCallbackPort(OpenAIChatGPTCallbackPort)
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", oauthCallbackHost(), callbackPort))
@@ -241,63 +232,9 @@ func ParseOpenAIChatGPTAuthorizationInput(input string, expectedState string) (O
 	return authorizationResultFromCallback(parsed, expectedState)
 }
 
-func (s *OpenAIChatGPTCallbackServer) settle(result OpenAIChatGPTAuthorizationResult) {
-	s.mu.Lock()
-	if s.settled {
-		s.mu.Unlock()
-		return
-	}
-	s.settled = true
-	s.mu.Unlock()
-	s.result <- result
-	close(s.done)
-}
-
-func (s *OpenAIChatGPTCallbackServer) fail(err error) {
-	s.mu.Lock()
-	if s.settled {
-		s.mu.Unlock()
-		return
-	}
-	s.settled = true
-	s.mu.Unlock()
-	s.failure <- err
-	close(s.done)
-}
-
-// CancelWait hands the login over to manual code entry.
-func (s *OpenAIChatGPTCallbackServer) CancelWait() {
-	s.mu.Lock()
-	if s.settled {
-		s.mu.Unlock()
-		return
-	}
-	s.settled = true
-	s.mu.Unlock()
-	close(s.done)
-}
-
 // Wait returns the callback result, a failure, or ok=false when cancelled.
 func (s *OpenAIChatGPTCallbackServer) Wait() (OpenAIChatGPTAuthorizationResult, bool) {
-	<-s.done
-	select {
-	case result := <-s.result:
-		return result, true
-	case err := <-s.failure:
-		s.mu.Lock()
-		s.lastErr = err
-		s.mu.Unlock()
-		return OpenAIChatGPTAuthorizationResult{}, false
-	default:
-		return OpenAIChatGPTAuthorizationResult{}, false
-	}
-}
-
-// LastError returns the callback failure, when the wait ended because of one.
-func (s *OpenAIChatGPTCallbackServer) LastError() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.lastErr
+	return s.wait()
 }
 
 // Close shuts the server down.
