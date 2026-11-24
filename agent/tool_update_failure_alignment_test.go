@@ -33,7 +33,7 @@ func TestToolUpdateListenerFailureRejectsPreparedCall(t *testing.T) {
 		}()
 		executePreparedToolCall(context.Background(), prepared, func(AgentEvent) error {
 			return wantErr
-		})
+		}, nil)
 	}()
 	if !errors.Is(got, wantErr) {
 		t.Fatalf("tool call rejection = %v, want %v", got, wantErr)

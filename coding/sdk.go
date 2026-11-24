@@ -56,6 +56,9 @@ type CreateAgentSessionOptions struct {
 	// (upstream before_agent_start, where the MCP extension waits for the
 	// direct-tool servers); print mode installs the MCP wait here.
 	BeforeFirstTurn func(ctx context.Context)
+	// BackgroundToolCalls reports how long a foreground tool call may run before
+	// the harness moves it to the background. Zero disables it.
+	BackgroundToolCalls func() time.Duration
 	// LoopScheduler supplies the scheduling tools. A nil scheduler registers
 	// none, so a caller that does not want /loop leaves it unset.
 	LoopScheduler *LoopScheduler
@@ -551,18 +554,22 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		// The builtin goal features are disabled by --no-tools,
 		// --no-builtin-tools and the goal-feature setting (upstream always has the
 		// extension host available; the setting is pier-only, D496).
-		Goal:               options.NoTools == "" && len(activeTools) > 0 && settingsManager.GetGoalFeatureEnabled(),
-		LoopScheduler:      options.LoopScheduler,
-		LoopMaxAge:         options.LoopMaxAge,
-		Skills:             skillsResult.Skills,
-		ContextFiles:       contextFiles,
-		SkillDiagnostics:   skillsResult.Diagnostics,
-		PromptDiagnostics:  promptTemplates.Diagnostics,
-		SystemPrompt:       promptOverrides.SystemPrompt,
-		AppendSystemPrompt: promptOverrides.AppendSystemPrompt,
-		PromptSourcePaths:  promptOverrides.SourcePaths,
-		AgentDir:           agentDir,
-		PromptSources:      &promptSources,
+		Goal:          options.NoTools == "" && len(activeTools) > 0 && settingsManager.GetGoalFeatureEnabled(),
+		LoopScheduler: options.LoopScheduler,
+		LoopMaxAge:    options.LoopMaxAge,
+		// Automatic backgrounding of long tool calls (D538). A print-mode run keeps
+		// it off too: there is no later turn to wake.
+		BackgroundToolCalls:  options.BackgroundToolCalls,
+		BackgroundOutputPath: BackgroundToolOutputPath,
+		Skills:               skillsResult.Skills,
+		ContextFiles:         contextFiles,
+		SkillDiagnostics:     skillsResult.Diagnostics,
+		PromptDiagnostics:    promptTemplates.Diagnostics,
+		SystemPrompt:         promptOverrides.SystemPrompt,
+		AppendSystemPrompt:   promptOverrides.AppendSystemPrompt,
+		PromptSourcePaths:    promptOverrides.SourcePaths,
+		AgentDir:             agentDir,
+		PromptSources:        &promptSources,
 		Control: &AgentSessionControl{
 			ModelRuntime: modelRuntime, Settings: settingsManager,
 			Tools: controlTools, autoCompaction: true, autoRetry: true,

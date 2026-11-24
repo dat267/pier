@@ -1401,6 +1401,11 @@ func (s *AgentSession) Dispose() {
 		defer func() { _ = recover() }()
 		s.AbortAsync()
 	}()
+	// A displaced tool call outlives its turn and its run, never the session:
+	// stop any still running so a closed pier leaves no orphan process (D538).
+	if s.Agent != nil {
+		s.Agent.CloseBackgroundCalls()
+	}
 	// Upstream _disconnectFromAgent: the aborted run's late events must not
 	// reach (and persist into) the disposed session.
 	if s.unsubscribeAgent != nil {

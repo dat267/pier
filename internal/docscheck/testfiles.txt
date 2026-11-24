@@ -2,6 +2,7 @@
 # Internal/docscheck keeps this exact; regenerate with scripts/test_inventory.sh --write.
 agent/abort_settlement_test.go
 agent/agent_test.go
+agent/background_test.go
 agent/callback_alignment_test.go
 agent/defer_predicate_lock_test.go
 agent/duration_test.go
@@ -263,6 +264,7 @@ coding/authlogout_test.go
 coding/authstorage_parse_error_test.go
 coding/authstorage_test.go
 coding/authterminal_test.go
+coding/background_toolcall_test.go
 coding/bashexecutor_parity_test.go
 coding/bashkillgate_test.go
 coding/branchprep_parity_test.go

@@ -367,6 +367,12 @@ type SessionConfig struct {
 	// replaces the turn context, and the session's state still supplies the
 	// model, thinking level and tools.
 	PrepareNextTurnWithContext func(ctx context.Context, turn *agent.AgentTurnContext) (*agent.AgentLoopTurnUpdate, error)
+	// BackgroundToolCalls reports how long a foreground tool call may run before
+	// the harness moves it to the background; zero disables it. The decision is
+	// the harness's alone, so no tool argument or user request can force a move.
+	BackgroundToolCalls func() time.Duration
+	// BackgroundOutputPath names the file a displaced call's output goes to.
+	BackgroundOutputPath func(toolCallID string) string
 	// Goal enables the builtin session-goal controller. The SDK sets it unless
 	// tools are disabled; upstream always has the extension host available.
 	Goal bool
@@ -465,6 +471,21 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		// Installed here only so the session's own refresh can chain it below;
 		// assigning it directly would drop that refresh.
 		PrepareNextTurnWithContext: config.PrepareNextTurnWithContext,
+		// The harness's backgrounding policy: a tool call that outlives the
+		// threshold returns a handle and keeps running (D538). Zero disables it.
+		BackgroundToolCalls: config.BackgroundToolCalls,
+		BackgroundOutputPath: func(toolCallID string) string {
+			if config.BackgroundOutputPath != nil {
+				return config.BackgroundOutputPath(toolCallID)
+			}
+			return ""
+		},
+		OnToolBackgrounded: func(handle agent.ToolCallHandle) {
+			if created == nil {
+				return
+			}
+			created.watchBackgroundCall(handle)
+		},
 	})
 	if err != nil {
 		return nil, err
@@ -1169,4 +1190,34 @@ func (s *AgentSession) GetSessionStats() *SessionStats {
 	stats := s.Sessions.SessionStats()
 	stats.ContextUsage = s.GetContextUsage()
 	return stats
+}
+
+// BackgroundToolCallThreshold is how long a foreground tool call may run before
+// the harness moves it to the background. It is deliberately generous: a shell
+// call that takes longer than this is the kind that freezes a turn, while an
+// ordinary edit or search never comes close.
+const BackgroundToolCallThreshold = 60 * time.Second
+
+// watchBackgroundCall waits for a displaced tool call to end and wakes the model
+// once, with one notification, as ordinary user input. It runs on the call's own
+// goroutine, never the owner loop, and it never writes transcript state directly:
+// the notice is queued as a follow-up, so the message reaches the transcript the
+// same way a typed one does.
+func (s *AgentSession) watchBackgroundCall(handle agent.ToolCallHandle) {
+	if s.Agent == nil {
+		return
+	}
+	go func() {
+		result := handle.Wait()
+		// A closed session has nobody to wake, and queueing into it would keep the
+		// notice forever.
+		state := s.prompt()
+		state.mu.Lock()
+		closed := state.disposed
+		state.mu.Unlock()
+		if closed {
+			return
+		}
+		s.Agent.FollowUp(agent.CompletionNotice(handle, result))
+	}()
 }

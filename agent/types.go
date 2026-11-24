@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/dat267/pier/ai"
 )
@@ -269,10 +270,42 @@ type AgentLoopConfig struct {
 	DeferFollowUp func(message ai.Message) bool
 	// ToolExecution mode; default "parallel".
 	ToolExecution ToolExecutionMode
+	// BackgroundToolCalls, when set, is how long a foreground tool call may run
+	// before the harness moves it to the background. On expiry the call keeps
+	// running, the model receives a handle in place of a result, and
+	// OnToolBackgrounded is told the handle. Zero or nil disables it, which is
+	// the default: the policy is the harness's, never a tool's argument.
+	//
+	// This has no reference counterpart (the pinned agent loop runs every tool
+	// call to completion), so see D538.
+	BackgroundToolCalls func() time.Duration
+	// OnToolBackgrounded reports a call the harness backgrounded, so the host can
+	// wake the model when it ends. It runs on the tool's goroutine, not the owner
+	// loop.
+	OnToolBackgrounded func(handle ToolCallHandle)
+	// backgroundPolicy is the resolved backgrounding decision for this run,
+	// built from BackgroundToolCalls and OnToolBackgrounded. Nil runs every call
+	// to completion.
+	backgroundPolicy *backgroundPolicy
 	// BeforeToolCall runs before execution, after validation.
 	BeforeToolCall func(ctx context.Context, context *BeforeToolCallContext) (*BeforeToolCallResult, error)
 	// AfterToolCall runs after execution, before the end events.
 	AfterToolCall func(ctx context.Context, context *AfterToolCallContext) (*AfterToolCallResult, error)
+}
+
+// ToolCallHandle names a tool call the harness moved to the background.
+type ToolCallHandle struct {
+	// ID is the background handle the model is told about.
+	ID string
+	// ToolCallID and ToolName identify the foreground call that was displaced.
+	ToolCallID string
+	ToolName   string
+	// OutputPath is the file the call's output is being written to.
+	OutputPath string
+	// Done reports the call's final result once it ends. It closes exactly once.
+	Done func() AgentToolResult
+	// Wait blocks until the call ends and returns its final result.
+	Wait func() AgentToolResult
 }
 
 // AgentEventType discriminates agent events.

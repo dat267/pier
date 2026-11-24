@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
@@ -320,6 +321,10 @@ func (a *App) bindSessionManager(sessionManager *coding.SessionManager) (*Sessio
 		SettingsManager: a.settings,
 		LoopScheduler:   a.loopScheduler,
 		LoopMaxAge:      a.loopMaxAge,
+		// A tool call that outlives the threshold returns a handle instead of
+		// freezing the turn, and the completion notice wakes the model (D538).
+		// Only the interactive mode sets it: print mode has no later turn.
+		BackgroundToolCalls: func() time.Duration { return coding.BackgroundToolCallThreshold },
 	})
 	if err != nil {
 		return nil, err

@@ -650,7 +650,7 @@ func executeToolCallsSequential(
 				toolCall: toolCall, result: preparation.immediate.result, isError: preparation.immediate.isError,
 			}
 		} else {
-			executed := executePreparedToolCall(ctx, preparation.prepared, emit)
+			executed := executePreparedToolCall(ctx, preparation.prepared, emit, config.backgroundPolicy)
 			finalized = finalizeExecutedToolCall(ctx, currentContext, assistantMessage, preparation.prepared, executed, config)
 		}
 
@@ -722,7 +722,7 @@ func executeToolCallsParallel(
 				emitToolExecutionEnd(finalized, serializedEmit)
 				return finalized
 			}
-			executed := executePreparedToolCall(ctx, prepared, serializedEmit)
+			executed := executePreparedToolCall(ctx, prepared, serializedEmit, config.backgroundPolicy)
 			finalized := finalizeExecutedToolCall(ctx, currentContext, assistantMessage, prepared, executed, config)
 			emitToolExecutionEnd(finalized, serializedEmit)
 			return finalized
@@ -1006,7 +1006,24 @@ func (d *toolUpdateDispatcher) close() error {
 	return d.err
 }
 
-func executePreparedToolCall(ctx context.Context, prepared *preparedToolCallValue, emit AgentEventSink) executedToolCallOutcome {
+// backgroundPolicy is the harness's backgrounding decision for one run: when to
+// displace a call, where its output goes, and who hears about it. A nil policy
+// runs every call to completion, which is the default and the reference's
+// behaviour.
+type backgroundPolicy struct {
+	threshold  time.Duration
+	registry   *backgroundRegistry
+	outputPath backgroundOutputPath
+	onRegister func(handle ToolCallHandle)
+	nextID     func() string
+}
+
+func executePreparedToolCall(ctx context.Context, prepared *preparedToolCallValue, emit AgentEventSink, policy *backgroundPolicy) executedToolCallOutcome {
+	if policy != nil && policy.threshold > 0 {
+		if outcome, backgrounded := executeWithBackground(ctx, prepared, emit, policy); backgrounded {
+			return outcome
+		}
+	}
 	updates := newToolUpdateDispatcher(emit)
 
 	startedAt := time.Now()
@@ -1204,7 +1221,7 @@ func RunToolCall(toolCall ai.ToolCall, options RunToolCallOptions) AgentToolCall
 		}
 		return nil
 	}
-	executed := executePreparedToolCall(ctx, preparation.prepared, emitUpdate)
+	executed := executePreparedToolCall(ctx, preparation.prepared, emitUpdate, nil)
 	finalized := finalizeExecutedToolCall(
 		ctx,
 		&currentContext,

@@ -46,7 +46,27 @@ func unregisterActiveTempOutput(path string) {
 // tempOutputPrefixes are the file name prefixes the port writes full output
 // under: the bash tool's executor, the shared output accumulator (used by the
 // bash and PowerShell tools, and "pi-output" by default).
-var tempOutputPrefixes = []string{"pi-bash-", "pi-output-", "pi-powershell-"}
+var tempOutputPrefixes = []string{"pi-bash-", "pi-output-", "pi-powershell-", "pi-background-"}
+
+// BackgroundToolOutputPath names the file a displaced tool call's output goes to.
+// It uses the same scratch directory and prefix convention as the truncation
+// files, so the existing sweep ages it out too.
+func BackgroundToolOutputPath(toolCallID string) string {
+	safe := make([]byte, 0, len(toolCallID))
+	for index := 0; index < len(toolCallID); index++ {
+		character := toolCallID[index]
+		if character == '-' || character == '_' ||
+			(character >= '0' && character <= '9') ||
+			(character >= 'a' && character <= 'z') ||
+			(character >= 'A' && character <= 'Z') {
+			safe = append(safe, character)
+		}
+	}
+	if len(safe) == 0 {
+		safe = []byte("call")
+	}
+	return filepath.Join(os.TempDir(), "pi-background-"+string(safe)+".log")
+}
 
 // sweepTempOutputFiles deletes this port's own temp output files in dir, oldest
 // first, until they occupy at most budget bytes. keep is the file that was just

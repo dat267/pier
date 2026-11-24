@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D537)
+# Deliberate divergences from pi (D1–D538)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8953,3 +8953,44 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestAppSkipsLoopToolsWhenTheFeatureIsOff`, `TestLoopFeatureToggleEnablesAndDisables`,
 `TestLoopFeatureToggleRespectsToolToggle`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`.
+
+### D538
+
+**A tool call that outlives a threshold is backgrounded, and the model is woken once.**
+
+A foreground shell or MCP call that blocks for minutes freezes the whole turn:
+the user cannot steer, the transcript cannot advance, and the only escape is
+aborting the process. The harness now moves such a call to the background when it
+outlives 60 seconds. The model receives a handle in place of a result, the
+process keeps running with its output going to a file, and one notification wakes
+the model when the call ends.
+
+The decision is the harness's alone. There is no `run_in_background` argument, no
+key binding and no cancel-them-later tool, because each of those is a knob the
+operator then has to reason about, and the threshold covers every case they were
+meant to serve. A tool cannot request a move and a caller cannot force one.
+
+The pinned reference runs every tool call to completion
+(`packages/agent/src/agent-loop.ts` has no timeout and no backgrounding), so this
+is pier-only. That makes transcript parity the constraint rather than a
+convenience: the handle is an ordinary tool result and the wake-up is an ordinary
+user message, queued through the same follow-up path a typed message takes. No
+entry type, message role or session version is added, `CurrentSessionVersion`
+stays 3, and the existing round-trip and append fixtures still reproduce the
+reference's bytes.
+
+A displaced call gets its own context, `context.WithoutCancel` of the run's, so
+the turn settling does not kill it; that is the whole point. It is cancelled when
+the session is disposed, never by the run it started in, so a closed pier leaves
+no orphan process. Its output file uses the scratch directory and `pi-background-`
+prefix the truncation files already use, so the existing sweep ages it out.
+
+A call that finishes inside the threshold takes the unchanged path: same result,
+same events, no handle, no registry entry. That is pinned by
+`TestBackgroundFastCallIsUnchanged`, which compares the two paths' bytes.
+
+Tests: `TestBackgroundFastCallIsUnchanged`, `TestBackgroundSlowCallReturnsHandle`,
+`TestBackgroundFailedCallReportsOnce`, `TestBackgroundRegistryCloseCancels`,
+`TestBackgroundDisabledByDefault`, `TestBackgroundThroughARun`,
+`TestCloseBackgroundCallsCancels`, `TestSessionWakesOncePerBackgroundCall`,
+`TestSessionSkipsWakeAfterDispose`.

@@ -69,6 +69,13 @@ type AgentOptions struct {
 	// DeferFollowUp keeps queued user follow-ups for a later run. See
 	// AgentLoopConfig.DeferFollowUp.
 	DeferFollowUp func(message ai.Message) bool
+	// BackgroundToolCalls reports how long a foreground tool call may run before
+	// the harness moves it to the background. See Agent.BackgroundToolCalls.
+	BackgroundToolCalls func() time.Duration
+	// BackgroundOutputPath names a displaced call's output file.
+	BackgroundOutputPath func(toolCallID string) string
+	// OnToolBackgrounded is told about each displaced call.
+	OnToolBackgrounded func(handle ToolCallHandle)
 	// Deprecated: use FinishTurn.
 	ShouldStopAfterTurn        func(ctx context.Context, turn *AgentTurnContext) bool
 	PrepareNextTurn            func(ctx context.Context) (*AgentLoopTurnUpdate, error)
@@ -322,6 +329,19 @@ type Agent struct {
 	MaxRetryDelayMS            *int
 	ToolExecution              ToolExecutionMode
 
+	// BackgroundToolCalls reports how long a foreground tool call may run before
+	// the harness moves it to the background. Zero disables it.
+	BackgroundToolCalls func() time.Duration
+	// backgroundCalls owns the displaced calls. It is per Agent, so a close stops
+	// them and a settled run does not.
+	backgroundCalls *backgroundRegistry
+	// BackgroundOutputPath names the file a displaced call's output goes to. A nil
+	// one reports no path.
+	BackgroundOutputPath func(toolCallID string) string
+	// OnToolBackgrounded is told about each displaced call, so the host can wake
+	// the model once it ends.
+	OnToolBackgrounded func(handle ToolCallHandle)
+
 	activeRun *activeRun
 }
 
@@ -403,6 +423,9 @@ func NewAgent(options *AgentOptions) (*Agent, error) {
 		FinishTurn:                 options.FinishTurn,
 		DeferFollowUp:              options.DeferFollowUp,
 		ShouldStopAfterTurn:        options.ShouldStopAfterTurn,
+		BackgroundToolCalls:        options.BackgroundToolCalls,
+		BackgroundOutputPath:       options.BackgroundOutputPath,
+		OnToolBackgrounded:         options.OnToolBackgrounded,
 		PrepareNextTurn:            options.PrepareNextTurn,
 		PrepareNextTurnWithContext: options.PrepareNextTurnWithContext,
 		SessionID:                  options.SessionID,
@@ -795,6 +818,24 @@ func (a *Agent) createLoopConfig(skipInitialSteeringPoll bool) *AgentLoopConfig 
 	// dropped, leaving every call ungated.
 	config.BeforeToolCall = a.BeforeToolCall
 	config.AfterToolCall = a.AfterToolCall
+	// The backgrounding decision is the harness's, resolved once per run. With no
+	// threshold the policy stays nil and every call runs to completion, which is
+	// the reference's behaviour.
+	if a.BackgroundToolCalls != nil {
+		if threshold := a.BackgroundToolCalls(); threshold > 0 {
+			// The registry is owned by the policy and closed when the run that
+			// built it finishes, so a displaced call never outlives the run. The
+			// close is wired by the caller, not deferred here: this function
+			// returns before the run starts.
+			config.backgroundPolicy = &backgroundPolicy{
+				threshold:  threshold,
+				registry:   a.backgroundRegistry(),
+				outputPath: a.BackgroundOutputPath,
+				onRegister: a.OnToolBackgrounded,
+				nextID:     newBackgroundHandleID,
+			}
+		}
+	}
 	skipPoll := skipInitialSteeringPoll
 	config.GetSteeringMessages = func(ctx context.Context) ([]ai.Message, error) {
 		// The first poll after a queued-steering continuation is suppressed

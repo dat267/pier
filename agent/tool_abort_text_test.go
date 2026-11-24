@@ -35,7 +35,7 @@ func TestCanceledToolCallReportsOperationAborted(t *testing.T) {
 			},
 		}
 		prepared := &preparedToolCallValue{toolCall: ai.ToolCall{ID: "tc", Name: "tool"}, tool: tool}
-		executed := executePreparedToolCall(ctx, prepared, func(AgentEvent) error { return nil })
+		executed := executePreparedToolCall(ctx, prepared, func(AgentEvent) error { return nil }, nil)
 		if !executed.isError {
 			t.Fatalf("%v: canceled tool call did not fail", toolErr)
 		}
@@ -58,7 +58,7 @@ func TestToolFailureKeepsItsMessageWhileTheRunIsCanceled(t *testing.T) {
 		},
 	}
 	prepared := &preparedToolCallValue{toolCall: ai.ToolCall{ID: "tc", Name: "tool"}, tool: tool}
-	executed := executePreparedToolCall(ctx, prepared, func(AgentEvent) error { return nil })
+	executed := executePreparedToolCall(ctx, prepared, func(AgentEvent) error { return nil }, nil)
 	if got := executed.result.Content[0].(ai.TextContent).Text; got != "Path not found: /tmp/x" {
 		t.Fatalf("tool result = %q", got)
 	}

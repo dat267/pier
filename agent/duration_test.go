@@ -26,7 +26,7 @@ func TestToolCallDurationIsRecordedAndPublished(t *testing.T) {
 		tool:     tool,
 		args:     json.RawMessage(`{}`),
 	}
-	executed := executePreparedToolCall(context.Background(), prepared, func(AgentEvent) error { return nil })
+	executed := executePreparedToolCall(context.Background(), prepared, func(AgentEvent) error { return nil }, nil)
 	if executed.durationMS < sleep.Milliseconds() {
 		t.Fatalf("durationMS = %d, want at least the %d ms the tool slept", executed.durationMS, sleep.Milliseconds())
 	}
@@ -64,7 +64,7 @@ func TestToolCallDurationOnFailureAndSkippedCalls(t *testing.T) {
 		tool:     tool,
 		args:     json.RawMessage(`{}`),
 	}
-	executed := executePreparedToolCall(context.Background(), prepared, func(AgentEvent) error { return nil })
+	executed := executePreparedToolCall(context.Background(), prepared, func(AgentEvent) error { return nil }, nil)
 	if !executed.isError {
 		t.Fatal("a failing tool was not reported as an error")
 	}
