@@ -796,22 +796,7 @@ func marshalAuthStorageMutation(content *string, providerID string, next *ai.Cre
 // two-space indentation, the observed key order first, then any new keys
 // sorted.
 func marshalAuthStorageData(data authStorageData, order []string) ([]byte, error) {
-	keys := make([]string, 0, len(data))
-	seen := map[string]bool{}
-	for _, key := range order {
-		if _, ok := data[key]; ok && !seen[key] {
-			keys = append(keys, key)
-			seen[key] = true
-		}
-	}
-	var remaining []string
-	for key := range data {
-		if !seen[key] {
-			remaining = append(remaining, key)
-		}
-	}
-	slices.Sort(remaining)
-	keys = append(keys, remaining...)
+	keys := observedKeyOrder(data, order)
 
 	var builder strings.Builder
 	builder.WriteString("{")
@@ -1175,4 +1160,26 @@ func cloneCredential(credential *ai.Credential) *ai.Credential {
 		copied.OAuth = &oauth
 	}
 	return &copied
+}
+
+// observedKeyOrder lists data's keys the way a re-stringified file keeps them:
+// the keys in the order they were read (order), then keys added since, sorted.
+// auth.json and models-store.json both persist through it.
+func observedKeyOrder[V any](data map[string]V, order []string) []string {
+	keys := make([]string, 0, len(data))
+	seen := map[string]bool{}
+	for _, key := range order {
+		if _, ok := data[key]; ok && !seen[key] {
+			keys = append(keys, key)
+			seen[key] = true
+		}
+	}
+	var remaining []string
+	for key := range data {
+		if !seen[key] {
+			remaining = append(remaining, key)
+		}
+	}
+	slices.Sort(remaining)
+	return append(keys, remaining...)
 }

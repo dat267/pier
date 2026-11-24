@@ -8,7 +8,6 @@ import (
 	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"path/filepath"
-	"slices"
 	"strings"
 	"sync"
 
@@ -183,22 +182,7 @@ func parseStoredModels(content *string) (storedModels, []string, error) {
 
 // marshalStoredModels renders models-store.json like JSON.stringify(data, null, 2).
 func marshalStoredModels(data storedModels, order []string) ([]byte, error) {
-	keys := make([]string, 0, len(data))
-	seen := map[string]bool{}
-	for _, key := range order {
-		if _, ok := data[key]; ok && !seen[key] {
-			keys = append(keys, key)
-			seen[key] = true
-		}
-	}
-	var remaining []string
-	for key := range data {
-		if !seen[key] {
-			remaining = append(remaining, key)
-		}
-	}
-	slices.Sort(remaining)
-	keys = append(keys, remaining...)
+	keys := observedKeyOrder(data, order)
 
 	var builder strings.Builder
 	builder.WriteString("{")
