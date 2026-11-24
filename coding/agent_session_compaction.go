@@ -203,13 +203,7 @@ func (s *AgentSession) entryIDForMessage(message ai.Message) string {
 		s.cacheEntryIDForMessage(message, id)
 		return id
 	}
-	messageIndex := -1
-	for index, candidate := range s.Agent.State().Messages {
-		if candidate == message {
-			messageIndex = index
-			break
-		}
-	}
+	messageIndex := slices.Index(s.Agent.State().Messages, message)
 	if messageIndex < 0 {
 		return ""
 	}

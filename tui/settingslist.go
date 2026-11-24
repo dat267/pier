@@ -1,6 +1,9 @@
 package tui
 
-import "strconv"
+import (
+	"slices"
+	"strconv"
+)
 
 // Port of src/components/settings-list.ts: a settings list with optional
 // fuzzy search, value cycling, and submenus.
@@ -387,13 +390,7 @@ func (s *SettingsList) activateItem() {
 	}
 
 	if len(item.Values) > 0 {
-		currentIndex := -1
-		for index, value := range item.Values {
-			if value == item.CurrentValue {
-				currentIndex = index
-				break
-			}
-		}
+		currentIndex := slices.Index(item.Values, item.CurrentValue)
 		nextIndex := (currentIndex + 1) % len(item.Values)
 		newValue := item.Values[nextIndex]
 		item.CurrentValue = newValue

@@ -123,13 +123,7 @@ func moveEnabled(enabled EnabledIds, id string, delta int) EnabledIds {
 		return EnabledIds{All: true}
 	}
 	list := append([]string(nil), enabled.IDs...)
-	index := -1
-	for i, candidate := range list {
-		if candidate == id {
-			index = i
-			break
-		}
-	}
+	index := slices.Index(list, id)
 	if index < 0 {
 		return EnabledIds{IDs: list}
 	}
@@ -521,13 +515,7 @@ func (c *ScopedModelsSelectorComponent) handleInput(data string) {
 		if kb.Matches(data, "app.models.reorderUp") {
 			delta = -1
 		}
-		currentIndex := -1
-		for index, id := range c.enabledIDs.IDs {
-			if id == item.fullID {
-				currentIndex = index
-				break
-			}
-		}
+		currentIndex := slices.Index(c.enabledIDs.IDs, item.fullID)
 		newIndex := currentIndex + delta
 		if newIndex >= 0 && newIndex < len(c.enabledIDs.IDs) {
 			c.enabledIDs = moveEnabled(c.enabledIDs, item.fullID, delta)

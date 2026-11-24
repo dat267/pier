@@ -1420,13 +1420,7 @@ func ClampThinkingLevel(model *Model, level ModelThinkingLevel) ModelThinkingLev
 	if slices.Contains(available, level) {
 		return level
 	}
-	requestedIndex := -1
-	for i, l := range extendedThinkingLevels {
-		if l == level {
-			requestedIndex = i
-			break
-		}
-	}
+	requestedIndex := slices.Index(extendedThinkingLevels, level)
 	if requestedIndex == -1 {
 		if len(available) > 0 {
 			return available[0]
