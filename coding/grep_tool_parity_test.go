@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -131,7 +132,7 @@ func manyGrepLines(count int) string {
 	var builder strings.Builder
 	for index := 1; index <= count; index++ {
 		builder.WriteString("match ")
-		builder.WriteString(itoaForTest(index))
+		builder.WriteString(strconv.Itoa(index))
 		builder.WriteString("\n")
 	}
 	return builder.String()

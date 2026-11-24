@@ -13,13 +13,13 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
-func itoaForTest(value int) string { return strconv.Itoa(value) }
-
+// manyLines builds "line 1\n" through "line count\n", the numbered lines
+// the read and distant-edits fixtures use.
 func manyLines(count int) string {
 	var builder strings.Builder
 	for index := 1; index <= count; index++ {
 		builder.WriteString("line ")
-		builder.WriteString(itoaForTest(index))
+		builder.WriteString(strconv.Itoa(index))
 		builder.WriteString("\n")
 	}
 	return builder.String()

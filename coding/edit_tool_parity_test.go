@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -43,7 +42,7 @@ func TestEditToolMatchesUpstream(t *testing.T) {
 		"duplicate.txt":   "a\na\n",
 		"fuzzy.txt":       "  alpha   \n  beta\n",
 		"no-trailing.txt": "alpha\nbeta",
-		"long.txt":        longEditSeed(100),
+		"long.txt":        manyLines(100),
 	}
 	tool := CreateEditTool(t.TempDir())
 	for _, fixture := range fixtures {
@@ -69,17 +68,6 @@ func TestEditToolMatchesUpstream(t *testing.T) {
 			}
 		})
 	}
-}
-
-// longEditSeed builds the numbered lines the distant-edits fixture edits.
-func longEditSeed(count int) string {
-	var builder strings.Builder
-	for index := 1; index <= count; index++ {
-		builder.WriteString("line ")
-		builder.WriteString(itoaForTest(index))
-		builder.WriteString("\n")
-	}
-	return builder.String()
 }
 
 // Reference: pi v1.5.0 (f9a26365), core/tools/edit.ts
