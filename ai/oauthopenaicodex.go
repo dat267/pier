@@ -97,9 +97,6 @@ func GetOpenAICodexAccountID(accessToken string) string {
 		return ""
 	}
 	accountID, _ := auth["chatgpt_account_id"].(string)
-	if accountID == "" {
-		return ""
-	}
 	return accountID
 }
 

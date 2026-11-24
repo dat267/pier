@@ -928,11 +928,7 @@ func (m *SessionManager) GetSessionName() string {
 		if entry.Name == nil {
 			return ""
 		}
-		name := ai.JSTrim(*entry.Name)
-		if name != "" {
-			return name
-		}
-		return ""
+		return ai.JSTrim(*entry.Name)
 	}
 	return ""
 }
