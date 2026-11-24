@@ -297,42 +297,17 @@ func joinTypes(types []string) string {
 // Only the event's own scalars and the terminal message are compared; see
 // anthropic_stream_events_parity_test.go for why `partial` is excluded.
 func TestGoogleStreamEventsMatchUpstream(t *testing.T) {
-	raw, err := os.ReadFile("testdata/google-stream/golden.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var fixtures []struct {
-		Name   string            `json:"name"`
-		SSE    string            `json:"sse"`
-		Events []json.RawMessage `json:"events"`
-	}
-	if err := json.Unmarshal(raw, &fixtures); err != nil {
-		t.Fatal(err)
-	}
-	if len(fixtures) == 0 {
-		t.Fatal("empty google stream corpus")
-	}
-	for _, fixture := range fixtures {
-		t.Run(fixture.Name, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "text/event-stream")
-				_, _ = w.Write([]byte(fixture.SSE))
-			}))
-			defer server.Close()
+	runStreamEventsCorpus(t, "testdata/google-stream/golden.json", "google stream", func(baseURL string) *AssistantMessageEventStream {
+		model := testGoogleModel()
+		model.ID = "gemini-3-pro"
+		model.Name = "Gemini 3 Pro"
+		model.BaseURL = baseURL + "/v1beta"
+		model.Cost = ModelCost{Input: 2, Output: 12, CacheRead: 0.5}
 
-			model := testGoogleModel()
-			model.ID = "gemini-3-pro"
-			model.Name = "Gemini 3 Pro"
-			model.BaseURL = server.URL + "/v1beta"
-			model.Cost = ModelCost{Input: 2, Output: 12, CacheRead: 0.5}
-
-			stream := StreamGoogleGenerativeAI(model, NormalizeContext(Context{
-				Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-			}), &GoogleOptions{APIKey: "test-key"})
-
-			checkProjectedEvents(t, stream, fixture.Events)
-		})
-	}
+		return StreamGoogleGenerativeAI(model, NormalizeContext(Context{
+			Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
+		}), &GoogleOptions{APIKey: "test-key"})
+	})
 }
 
 // vertexADCTokenAccess resolves an ADC access token from an authorized-user

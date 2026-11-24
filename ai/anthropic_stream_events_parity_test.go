@@ -2,9 +2,6 @@ package ai
 
 import (
 	"encoding/json"
-	"net/http"
-	"net/http/httptest"
-	"os"
 	"regexp"
 	"testing"
 )
@@ -19,42 +16,17 @@ import (
 // `partial` is the documented live response-so-far helper rather than an
 // event-time snapshot, and timestamps/durations are wall-clock values.
 func TestAnthropicStreamEventsMatchUpstream(t *testing.T) {
-	raw, err := os.ReadFile("testdata/anthropic-stream/golden.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var fixtures []struct {
-		Name   string            `json:"name"`
-		SSE    string            `json:"sse"`
-		Events []json.RawMessage `json:"events"`
-	}
-	if err := json.Unmarshal(raw, &fixtures); err != nil {
-		t.Fatal(err)
-	}
-	if len(fixtures) == 0 {
-		t.Fatal("empty anthropic stream corpus")
-	}
-	for _, fixture := range fixtures {
-		t.Run(fixture.Name, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "text/event-stream")
-				_, _ = w.Write([]byte(fixture.SSE))
-			}))
-			defer server.Close()
+	runStreamEventsCorpus(t, "testdata/anthropic-stream/golden.json", "anthropic stream", func(baseURL string) *AssistantMessageEventStream {
+		model := testAnthropicModel()
+		model.ID = "claude-sonnet-4-5"
+		model.Name = "Claude Sonnet 4.5"
+		model.BaseURL = baseURL
+		model.Cost = ModelCost{Input: 3, Output: 15, CacheRead: 0.3, CacheWrite: 3.75}
 
-			model := testAnthropicModel()
-			model.ID = "claude-sonnet-4-5"
-			model.Name = "Claude Sonnet 4.5"
-			model.BaseURL = server.URL
-			model.Cost = ModelCost{Input: 3, Output: 15, CacheRead: 0.3, CacheWrite: 3.75}
-
-			stream := StreamAnthropic(model, NormalizeContext(Context{
-				Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-			}), &AnthropicOptions{APIKey: "test-key"})
-
-			checkProjectedEvents(t, stream, fixture.Events)
-		})
-	}
+		return StreamAnthropic(model, NormalizeContext(Context{
+			Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
+		}), &AnthropicOptions{APIKey: "test-key"})
+	})
 }
 
 // projectEvent mirrors the generator's projection.
