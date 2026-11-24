@@ -699,7 +699,19 @@ func (s *AgentSession) AdoptLoopScheduler(scheduler *LoopScheduler, maxAge time.
 	}
 	s.loopScheduler = scheduler
 	s.loopMaxAge = maxAge
-	s.registerLoopTools()
+	// Redefine the tools, not only register them: registerLoopToolsLocked skips a
+	// name already present, so a tool's closure would keep pointing at the previous
+	// scheduler and cron_list and cron_delete would read different job sets (a
+	// session rebind swaps schedulers).
+	s.control.stateMu.Lock()
+	for _, tool := range LoopTools(LoopToolOptions{
+		Scheduler: scheduler,
+		MaxAge:    maxAge,
+		OnStop:    func() { scheduler.RemoveAll() },
+	}) {
+		s.control.Tools[tool.Name] = AgentToolDefinition{Tool: tool}
+	}
+	s.control.stateMu.Unlock()
 	s.toolsMu.Lock()
 	s.setActiveToolsByNameLocked(s.withLoopToolsActive(s.GetActiveToolNames()))
 	s.toolsMu.Unlock()

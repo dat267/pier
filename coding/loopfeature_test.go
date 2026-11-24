@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -91,4 +92,69 @@ func TestLoopFeatureToggleRespectsToolToggle(t *testing.T) {
 	if !strings.Contains(strings.Join(session.ToolNames(), ","), "cron_list") {
 		t.Fatal("cron_list left the registry entirely, so /tools can no longer show it")
 	}
+}
+
+// AdoptLoopScheduler replaces the session's scheduler, but the scheduling tools
+// were already registered, and registerLoopToolsLocked skips a name that exists.
+// The registered tools therefore keep closures over the OLD scheduler, so a
+// cron_list and a cron_delete can read different ones.
+func TestAdoptLoopSchedulerRewiresRegisteredTools(t *testing.T) {
+	first := NewLoopScheduler(nil, nil)
+	defer first.Stop()
+	second := NewLoopScheduler(nil, nil)
+	defer second.Stop()
+
+	manager, dir := newTestSession(t)
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, StreamFn: stubStreamFn, ConvertToLlm: ConvertToLlm,
+		Model:         &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000},
+		Tools:         []agent.AgentTool{testTool("read")},
+		LoopScheduler: first,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Dispose()
+
+	session.AdoptLoopScheduler(second, LoopRecurringMaxAge)
+	// A job on the scheduler the session now holds.
+	job, err := second.Add("* * * * *", "tick", true, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// cron_list must see it, and cron_delete must be able to remove it.
+	listResult := callToolByName(t, session, "cron_list", `{}`)
+	if !strings.Contains(listResult, job.ID) {
+		t.Fatalf("cron_list does not see the adopted scheduler's job %q:\n%s", job.ID, listResult)
+	}
+	deleteResult := callToolByName(t, session, "cron_delete", `{"id":"`+job.ID+`"}`)
+	if strings.Contains(deleteResult, "No scheduled job") {
+		t.Fatalf("cron_delete reads a different scheduler:\n%s", deleteResult)
+	}
+	if got := second.Jobs(); len(got) != 0 {
+		t.Fatalf("the job survived: %d jobs on the adopted scheduler", len(got))
+	}
+}
+
+// callToolByName runs one registered tool and returns its text.
+func callToolByName(t *testing.T, session *AgentSession, name string, params string) string {
+	t.Helper()
+	session.control.stateMu.Lock()
+	definition, ok := session.control.Tools[name]
+	session.control.stateMu.Unlock()
+	if !ok {
+		t.Fatalf("tool %q is not registered", name)
+	}
+	result, err := definition.Tool.Execute(t.Context(), "call", json.RawMessage(params), nil)
+	if err != nil {
+		t.Fatalf("%s: %v", name, err)
+	}
+	var text strings.Builder
+	for _, block := range result.Content {
+		if value, ok := block.(ai.TextContent); ok {
+			text.WriteString(value.Text)
+		}
+	}
+	return text.String()
 }
