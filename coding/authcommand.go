@@ -156,12 +156,8 @@ func parseAuthMinExpiry(value string) (int64, bool) {
 	return amount * multiplier, true
 }
 
-// ParseAuthCommand parses `pi auth ...`; nil means the invocation is not an
-// auth command.
-func ParseAuthCommand(args []string) (*AuthCommand, error) {
-	return parseAuthCommandNamed(AppName, args)
-}
-
+// parseAuthCommandNamed parses `<appName> auth ...` (upstream
+// parseAuthCommand); nil means the invocation is not an auth command.
 func parseAuthCommandNamed(appName string, args []string) (*AuthCommand, error) {
 	if len(args) == 0 || args[0] != "auth" {
 		return nil, nil
