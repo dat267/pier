@@ -8,9 +8,10 @@ import (
 )
 
 func parseSystemOneResponse(data []byte, transport systemOneTransport) (*orderedJSONFields, error) {
+	unexpected := func() error { return fmt.Errorf("%s returned an unexpected response", transport.label) }
 	response, err := decodeOrderedJSONFields(data)
 	if err != nil {
-		return nil, fmt.Errorf("%s returned an unexpected response", transport.label)
+		return nil, unexpected()
 	}
 	if !transport.cloudflareEnvelope {
 		return response, nil
@@ -24,11 +25,11 @@ func parseSystemOneResponse(data []byte, transport systemOneTransport) (*ordered
 	}
 	resultRaw, ok := response.raw("result")
 	if !ok {
-		return nil, fmt.Errorf("%s returned an unexpected response", transport.label)
+		return nil, unexpected()
 	}
 	result, err := decodeOrderedJSONFields(resultRaw)
 	if err != nil {
-		return nil, fmt.Errorf("%s returned an unexpected response", transport.label)
+		return nil, unexpected()
 	}
 	if _, ok := result.raw("answers"); ok {
 		return result, nil
@@ -47,11 +48,11 @@ func parseSystemOneResponse(data []byte, transport systemOneTransport) (*ordered
 	}
 	nestedRaw, ok := result.raw("result")
 	if !ok {
-		return nil, fmt.Errorf("%s returned an unexpected response", transport.label)
+		return nil, unexpected()
 	}
 	nested, err := decodeOrderedJSONFields(nestedRaw)
 	if err != nil {
-		return nil, fmt.Errorf("%s returned an unexpected response", transport.label)
+		return nil, unexpected()
 	}
 	return nested, nil
 }
