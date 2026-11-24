@@ -72,6 +72,8 @@ type LoopScheduler struct {
 	timer   *time.Timer
 	started bool
 	stopped bool
+	// wakeupID names the self-paced loop's pending wakeup, "" when none.
+	wakeupID string
 
 	// scheduleNudge wakes the timer loop when the job set changes.
 	nudge chan struct{}
@@ -162,19 +164,69 @@ func (s *LoopScheduler) Add(cron string, prompt string, recurring bool, maxAge t
 	return *job, nil
 }
 
+// SetWakeup arms the self-paced loop's next run: a one-shot job that fires
+// prompt after delay. At most one wakeup is pending, so a new one replaces it.
+func (s *LoopScheduler) SetWakeup(delay time.Duration, prompt string) (LoopJob, error) {
+	now := s.now()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.stopped {
+		return LoopJob{}, errSchedulerStopped()
+	}
+	s.removeLocked(s.wakeupID)
+	if len(s.jobs) >= loopMaxJobs {
+		return LoopJob{}, errLoopCapReached(loopMaxJobs)
+	}
+	s.nextID++
+	job := &LoopJob{
+		ID:            loopJobID(s.nextID),
+		Prompt:        prompt,
+		HumanSchedule: "Once, in " + humanDuration(delay),
+		CreatedAt:     now,
+		NextFire:      now.Add(delay),
+	}
+	s.jobs = append(s.jobs, job)
+	s.wakeupID = job.ID
+	s.wake()
+	return *job, nil
+}
+
+// ClearWakeup cancels the pending self-paced wakeup, leaving every other job,
+// and reports whether there was one.
+func (s *LoopScheduler) ClearWakeup() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	removed := s.removeLocked(s.wakeupID)
+	s.wakeupID = ""
+	if removed {
+		s.wake()
+	}
+	return removed
+}
+
+// removeLocked drops the job named id, reporting whether it existed.
+func (s *LoopScheduler) removeLocked(id string) bool {
+	if id == "" {
+		return false
+	}
+	for index, job := range s.jobs {
+		if job.ID == id {
+			s.jobs = slices.Delete(s.jobs, index, index+1)
+			return true
+		}
+	}
+	return false
+}
+
 // Remove cancels a job by id and reports whether it existed.
 func (s *LoopScheduler) Remove(id string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for index, job := range s.jobs {
-		if job.ID != id {
-			continue
-		}
-		s.jobs = slices.Delete(s.jobs, index, index+1)
-		s.wake()
-		return true
+	if !s.removeLocked(id) {
+		return false
 	}
-	return false
+	s.wake()
+	return true
 }
 
 // Jobs lists the scheduled jobs in creation order.

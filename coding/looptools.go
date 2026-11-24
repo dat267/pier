@@ -31,10 +31,11 @@ type LoopToolOptions struct {
 	Scheduler *LoopScheduler
 	// MaxAge is a recurring job's lifetime; zero means never expire.
 	MaxAge time.Duration
-	// OnWakeup is called when a self-paced wakeup is armed, so the host can
-	// arrange its own timer. It receives the delay.
+	// OnWakeup, when set, replaces arming the wakeup on Scheduler (tests).
+	// Otherwise the scheduler holds one pending wakeup, replaced by each call.
 	OnWakeup func(delay time.Duration, prompt string)
-	// OnStop clears any armed self-paced wakeup.
+	// OnStop, when set, replaces clearing that wakeup. Stop ends only the
+	// self-paced loop; the user's interval jobs keep running.
 	OnStop func()
 }
 
@@ -83,6 +84,8 @@ func scheduleWakeupTool(opts LoopToolOptions) agent.AgentTool {
 			if input.Stop {
 				if opts.OnStop != nil {
 					opts.OnStop()
+				} else if opts.Scheduler != nil {
+					opts.Scheduler.ClearWakeup()
 				}
 				return loopTextResult("The loop has ended. No further wakeups will fire.", false), nil
 			}
@@ -99,6 +102,10 @@ func scheduleWakeupTool(opts LoopToolOptions) agent.AgentTool {
 			}
 			if opts.OnWakeup != nil {
 				opts.OnWakeup(delay, prompt)
+			} else if opts.Scheduler != nil {
+				if _, err := opts.Scheduler.SetWakeup(delay, prompt); err != nil {
+					return loopTextResult(err.Error(), true), nil
+				}
 			}
 			return loopTextResult(fmt.Sprintf("The loop resumes in %s.", humanDuration(delay)), false), nil
 		},

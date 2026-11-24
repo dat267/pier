@@ -158,3 +158,45 @@ func TestScheduleWakeupClampsDelay(t *testing.T) {
 		t.Fatalf("stop armed a wakeup of %v", got)
 	}
 }
+
+// D537: a self-paced loop's schedule_wakeup arms a real one-shot job. Nothing
+// wired OnWakeup, so the tool said "The loop resumes in 2 minutes" and armed
+// nothing; and its stop called RemoveAll, wiping the user's /loop 5m jobs too.
+// One wakeup is pending at a time, and stop clears only it.
+func TestScheduleWakeupArmsTheScheduler(t *testing.T) {
+	clock := time.Date(2026, time.November, 25, 10, 0, 0, 0, time.UTC)
+	var fired []string
+	scheduler := NewLoopScheduler(func() time.Time { return clock }, func(prompt string) { fired = append(fired, prompt) })
+	defer scheduler.Stop()
+	tools := LoopTools(LoopToolOptions{Scheduler: scheduler, MaxAge: time.Hour})
+	if _, isError := callLoopTool(t, tools, "cron_create", `{"cron":"*/5 * * * *","prompt":"poll the deploy"}`); isError {
+		t.Fatal("cron_create failed")
+	}
+
+	if text, isError := callLoopTool(t, tools, "schedule_wakeup", `{"delay_seconds":120,"prompt":"/loop check"}`); isError {
+		t.Fatalf("schedule_wakeup failed: %s", text)
+	}
+	callLoopTool(t, tools, "schedule_wakeup", `{"delay_seconds":180,"prompt":"/loop check"}`)
+	if jobs := scheduler.Jobs(); len(jobs) != 2 {
+		t.Fatalf("jobs = %d, want the cron job and one wakeup", len(jobs))
+	}
+	clock = clock.Add(170 * time.Second)
+	scheduler.fireDue()
+	if len(fired) != 0 {
+		t.Fatalf("the replaced 120s wakeup fired: %v", fired)
+	}
+	clock = clock.Add(20 * time.Second)
+	scheduler.fireDue()
+	if len(fired) != 1 || fired[0] != "/loop check" {
+		t.Fatalf("fired = %v, want the wakeup's prompt once", fired)
+	}
+
+	callLoopTool(t, tools, "schedule_wakeup", `{"delay_seconds":600,"prompt":"/loop check"}`)
+	if _, isError := callLoopTool(t, tools, "schedule_wakeup", `{"stop":true}`); isError {
+		t.Fatal("stop failed")
+	}
+	jobs := scheduler.Jobs()
+	if len(jobs) != 1 || jobs[0].Prompt != "poll the deploy" {
+		t.Fatalf("stop must clear only the wakeup, left %+v", jobs)
+	}
+}

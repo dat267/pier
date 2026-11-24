@@ -667,7 +667,6 @@ func (s *AgentSession) registerLoopTools() {
 	tools := LoopTools(LoopToolOptions{
 		Scheduler: s.loopScheduler,
 		MaxAge:    s.loopMaxAge,
-		OnStop:    func() { s.loopScheduler.RemoveAll() },
 	})
 	s.control.stateMu.Lock()
 	defer s.control.stateMu.Unlock()
@@ -714,7 +713,6 @@ func (s *AgentSession) AdoptLoopScheduler(scheduler *LoopScheduler, maxAge time.
 	for _, tool := range LoopTools(LoopToolOptions{
 		Scheduler: scheduler,
 		MaxAge:    maxAge,
-		OnStop:    func() { scheduler.RemoveAll() },
 	}) {
 		s.control.Tools[tool.Name] = AgentToolDefinition{Tool: tool}
 	}
@@ -781,7 +779,6 @@ func (s *AgentSession) SetLoopFeatureEnabled(enabled bool) bool {
 	tools := LoopTools(LoopToolOptions{
 		Scheduler: s.loopScheduler,
 		MaxAge:    s.loopMaxAge,
-		OnStop:    func() { s.loopScheduler.RemoveAll() },
 	})
 	s.control.stateMu.Lock()
 	registerLoopToolsLocked(s, tools)

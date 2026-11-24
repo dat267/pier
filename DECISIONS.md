@@ -8921,9 +8921,14 @@ expire after 30 days so a forgotten loop does not run forever, and the job count
 is capped, because a runaway loop is worse than a refused one. The user sees and
 cancels jobs without asking the agent: `/loop list` names each job's id,
 schedule, next run and prompt, `/loop stop <id>` cancels one and `/loop stop`
-all of them. Only those exact shapes are commands (before them, `/loop list`
+all of them. Only those
+exact shapes are commands (before them, `/loop list`
 started a self-paced loop whose prompt was "list"), so a prompt such as
-"list the files" still runs.
+"list the files" still runs. A self-paced loop's `schedule_wakeup` arms a one-shot job on the
+same scheduler, so it is listed and cancellable like the rest; one wakeup is
+pending at a time, a new one replaces it, and its `stop` clears only that wakeup
+rather than every job (before, nothing armed the wakeup at all, so a self-paced
+loop never resumed, and its stop wiped the user's interval loops).
 
 `/loop` is listed in `/features` alongside the other pier-only surface, and its
 tools are registered in the ordinary registry, so `/tools` shows and can disable
@@ -8968,6 +8973,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestHumanCronSchedule`, `TestLoopCommandArmsCronJob`,
 `TestLoopCommandSelfPacedRunsNow`, `TestLoopCommandRejectsBadInput`,
 `TestLoopCommandReportsDisabledFeature`, `TestLoopCommandListsAndStopsJobs`,
+`TestScheduleWakeupArmsTheScheduler`,
 `TestLoopSchedulerPersistsNothing`,
 `TestAppAdoptsLoopSchedulerOnThePrimarySession`,
 `TestAppSkipsLoopToolsWhenTheFeatureIsOff`, `TestLoopFeatureToggleEnablesAndDisables`,
