@@ -437,14 +437,14 @@ func (s *ReadOnlyAuthStorage) load() (authStorageData, error) {
 		valid := false
 		if credential["type"] == "api_key" {
 			key, hasKey := credential["key"]
-			validKey := !hasKey || isStringValue(key)
+			validKey := !hasKey || isString(key)
 			validEnv := true
 			if envValue, hasEnv := credential["env"]; hasEnv {
 				envObject, isObject := envValue.(map[string]any)
 				validEnv = isObject
 				if validEnv {
 					for _, entry := range envObject {
-						if !isStringValue(entry) {
+						if !isString(entry) {
 							validEnv = false
 							break
 						}
@@ -473,11 +473,6 @@ func (s *ReadOnlyAuthStorage) load() (authStorageData, error) {
 	}
 	s.data = &data
 	return data, nil
-}
-
-func isStringValue(value any) bool {
-	_, ok := value.(string)
-	return ok
 }
 
 func isFinite(value float64) bool {

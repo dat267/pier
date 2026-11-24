@@ -629,6 +629,8 @@ func mcpNumber(value any) (float64, bool) {
 	return 0, false
 }
 
+// isString reports whether a decoded JSON value is a string (upstream
+// typeof value === "string").
 func isString(value any) bool {
 	_, ok := value.(string)
 	return ok
