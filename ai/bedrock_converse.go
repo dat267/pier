@@ -528,18 +528,11 @@ func decodeBedrockRedactedContent(signature *string) []byte {
 	return decoded
 }
 
-// convertBedrockToolConfig renders the tool configuration (upstream
-// convertToolConfig) and reports an invalid required strict schema so the
-// stream stops before the payload hook or HTTP.
-func convertBedrockToolConfig(tools []Tool, toolChoice string, toolChoiceName string, supportsStrictMode bool) (map[string]any, error) {
-	config, _, err := convertBedrockToolConfigWithPreferred(tools, toolChoice, toolChoiceName, supportsStrictMode, false)
-	return config, err
-}
-
-// convertBedrockToolConfigWithPreferred renders the tool configuration and
-// reports whether any strict tool was only preferred, so a strict-limit
-// ValidationException can retry without those tools (pi v1.5.0
-// bedrock-converse-stream.ts).
+// convertBedrockToolConfigWithPreferred renders the tool configuration
+// (upstream convertToolConfig) and reports whether any strict tool was only
+// preferred, so a strict-limit ValidationException can retry without those
+// tools (pi v1.5.0 bedrock-converse-stream.ts). An invalid required strict
+// schema is an error, so the stream stops before the payload hook or HTTP.
 func convertBedrockToolConfigWithPreferred(tools []Tool, toolChoice string, toolChoiceName string, supportsStrictMode bool, disablePreferredStrictTools bool) (map[string]any, bool, error) {
 	if len(tools) == 0 || toolChoice == "none" {
 		return nil, false, nil

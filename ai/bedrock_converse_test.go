@@ -443,7 +443,7 @@ func TestBedrockToolConfigConversion(t *testing.T) {
 	tool := Tool{Name: "read", Description: "Read a file", Parameters: json.RawMessage(`{"type":"object"}`)}
 	convert := func(tools []Tool, choice, name string) map[string]any {
 		t.Helper()
-		config, err := convertBedrockToolConfig(tools, choice, name, false)
+		config, _, err := convertBedrockToolConfigWithPreferred(tools, choice, name, false, false)
 		if err != nil {
 			t.Fatal(err)
 		}
