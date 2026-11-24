@@ -104,17 +104,11 @@ func IsCacheWarmingReplayable(model *ai.Model, options *ai.SimpleStreamOptions) 
 		*model.Compat.AnthropicMessages.ForceAdaptiveThinking
 }
 
-// lastCacheWarmingPromptTokens is the prompt size of the most recent real
-// request on the branch, as reported by the provider.
-func lastCacheWarmingPromptTokens(entries []SessionEntry) int64 {
-	return lastCacheWarmingPromptTokensWith(entries, nil)
-}
-
-// lastCacheWarmingPromptTokensWith is the same walk with a payload reader, so a
-// lazily loaded entry's usage is read from its line.
+// lastCacheWarmingPromptTokensWith is the prompt size of the most recent real
+// request on the branch, as reported by the provider. A non-nil payload reader
+// reads a lazily loaded entry's usage from its line.
 func lastCacheWarmingPromptTokensWith(entries []SessionEntry, payloads *payloadReader) int64 {
 	for _, entry := range slices.Backward(entries) {
-
 		if entry.Type != "message" {
 			continue
 		}

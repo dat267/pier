@@ -655,11 +655,11 @@ func TestLastCacheWarmingPromptTokensSaturatesHugeUsage(t *testing.T) {
 		}
 		return SessionEntry{Type: "message", Message: raw}
 	}
-	if got, want := lastCacheWarmingPromptTokens([]SessionEntry{entry(ai.Usage{Input: 100, CacheRead: 20, CacheWrite: 5})}), int64(125); got != want {
+	if got, want := lastCacheWarmingPromptTokensWith([]SessionEntry{entry(ai.Usage{Input: 100, CacheRead: 20, CacheWrite: 5})}, nil), int64(125); got != want {
 		t.Fatalf("ordinary prompt tokens = %d, want %d", got, want)
 	}
 	huge := ai.Usage{Input: 6e18, CacheRead: 6e18, CacheWrite: 6e18}
-	if got, want := lastCacheWarmingPromptTokens([]SessionEntry{entry(huge)}), int64(math.MaxInt64); got != want {
+	if got, want := lastCacheWarmingPromptTokensWith([]SessionEntry{entry(huge)}, nil), int64(math.MaxInt64); got != want {
 		t.Fatalf("huge prompt tokens = %d, want %d", got, want)
 	}
 }
