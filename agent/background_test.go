@@ -141,6 +141,11 @@ func TestBackgroundSlowCallReturnsHandle(t *testing.T) {
 	if !backgrounded {
 		t.Fatal("the call was not backgrounded")
 	}
+	// The frame shows how long the call ran in the foreground before it moved,
+	// not 0.0s: it outlived the threshold, so its duration is at least that.
+	if outcome.durationMS < 10 {
+		t.Fatalf("the handle's duration = %dms, want at least the 10ms threshold", outcome.durationMS)
+	}
 	if elapsed := time.Since(start); elapsed > 5*time.Second {
 		t.Fatalf("returning the handle took %v", elapsed)
 	}

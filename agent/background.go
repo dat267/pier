@@ -360,7 +360,11 @@ func executeWithBackground(
 		policy.onRegister(handle)
 	}
 	threshold := int64(policy.threshold / time.Second)
-	return executedToolCallOutcome{result: backgroundHandle(handle, threshold)}, true
+	// The duration is the call's time in the foreground, so its frame reads
+	// "Took 30.0s" rather than 0.0s next to "still running after 30 seconds".
+	return executedToolCallOutcome{
+		result: backgroundHandle(handle, threshold), durationMS: roundDurationMilliseconds(time.Since(startedAt)),
+	}, true
 }
 
 // backgroundOutput is the file a displaced call's output accumulates in. A
