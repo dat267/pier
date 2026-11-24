@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
@@ -55,6 +56,11 @@ type CreateAgentSessionOptions struct {
 	// (upstream before_agent_start, where the MCP extension waits for the
 	// direct-tool servers); print mode installs the MCP wait here.
 	BeforeFirstTurn func(ctx context.Context)
+	// LoopScheduler supplies the scheduling tools. A nil scheduler registers
+	// none, so a caller that does not want /loop leaves it unset.
+	LoopScheduler *LoopScheduler
+	// LoopMaxAge is a recurring scheduled job's lifetime.
+	LoopMaxAge time.Duration
 	// NoTools disables the default set. NoToolsAll disables every tool;
 	// NoToolsBuiltin disables the built-ins while leaving the registry in
 	// place for caller-supplied tools. Any other non-empty value behaves like
@@ -546,6 +552,8 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		// --no-builtin-tools and the goal-feature setting (upstream always has the
 		// extension host available; the setting is pier-only, D496).
 		Goal:               options.NoTools == "" && len(activeTools) > 0 && settingsManager.GetGoalFeatureEnabled(),
+		LoopScheduler:      options.LoopScheduler,
+		LoopMaxAge:         options.LoopMaxAge,
 		Skills:             skillsResult.Skills,
 		ContextFiles:       contextFiles,
 		SkillDiagnostics:   skillsResult.Diagnostics,

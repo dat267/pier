@@ -26,6 +26,8 @@ var BuiltinSlashCommands = []BuiltinSlashCommand{
 	// D496: the pier-only feature toggles, which stay out of /settings.
 	{Name: "features", Description: "Turn " + AppName + "-only features on or off"},
 	{Name: "tools", Description: "Enable or disable the agent's tools for this session"},
+	// D537: a recurring or self-paced prompt, pier-only.
+	{Name: "loop", Description: "Repeat a prompt on an interval, or let the agent pace it", ArgumentHint: "[interval] <prompt>"},
 	{Name: "hotkeys", Description: "Show all keyboard shortcuts"},
 	{Name: "fork", Description: "Create a new fork from a previous user message"},
 	{Name: "clone", Description: "Duplicate the current session at the current position"},

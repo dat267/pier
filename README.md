@@ -40,7 +40,9 @@ hung command hands control back to the agent with its output so far.
 `/goal` tracks multi-round objectives in session history. The agent can manage
 them with `get_goal` and `set_goal`. `/features` lists the pier-only feature
 toggles, and `/tools` turns each of the agent's tools on or off for the session;
-typing there filters the list.
+typing there filters the list. `/loop [interval] <prompt>` repeats a prompt on a
+cron-style interval for as long as the session is open, and `/loop <prompt>` with
+no interval lets the agent pace the next run itself.
 Stdio RPC (`pier --mode rpc`) is documented in
 [the RPC contract](ARCHITECTURE.md#stdio-rpc).
 

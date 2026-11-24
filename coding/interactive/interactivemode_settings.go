@@ -552,12 +552,20 @@ func (w *SettingsWiring) applyOutputPad(padding int) bool {
 // featureToggles lists the pier-only feature toggles for /features (D496). It is
 // the only place a new pier-only feature is declared.
 func (w *SettingsWiring) featureToggles() []FeatureToggle {
-	return []FeatureToggle{{
-		ID:          "goal-feature",
-		Label:       "Goal feature",
-		Description: "Enable /goal and the get_goal and set_goal tools",
-		Enabled:     w.Settings.GetGoalFeatureEnabled(),
-	}}
+	return []FeatureToggle{
+		{
+			ID:          "goal-feature",
+			Label:       "Goal feature",
+			Description: "Enable /goal and the get_goal and set_goal tools",
+			Enabled:     w.Settings.GetGoalFeatureEnabled(),
+		},
+		{
+			ID:          "loop-feature",
+			Label:       "Loop feature",
+			Description: "Enable /loop and the scheduling tools",
+			Enabled:     w.Settings.GetLoopFeatureEnabled(),
+		},
+	}
 }
 
 // ShowFeatureSettingsSelector opens the /features selector: the pier-only feature
@@ -620,6 +628,9 @@ func toolToggleStatus(name string, enabled bool) string {
 // live session; it reports whether the id is a known feature.
 func (w *SettingsWiring) ApplyFeatureToggle(id string, enabled bool) bool {
 	switch id {
+	case "loop-feature":
+		w.Settings.SetLoopFeatureEnabled(enabled)
+		return true
 	case "goal-feature":
 		w.Settings.SetGoalFeatureEnabled(enabled)
 		w.Session.SetGoalFeatureEnabled(enabled)
@@ -640,6 +651,8 @@ func featureToggleStatus(id string, enabled bool) string {
 	switch id {
 	case "goal-feature":
 		return "Goal feature " + state + "."
+	case "loop-feature":
+		return "Loop feature " + state + "."
 	}
 	return state
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
@@ -191,6 +192,12 @@ type AgentSession struct {
 	// only reached through GoalController (D497).
 	goal atomic.Pointer[GoalController]
 
+	// loopScheduler owns this session's scheduled prompts, and loopMaxAge is a
+	// recurring job's lifetime. Both are set before the session starts and read
+	// only from tool calls, so they need no lock.
+	loopScheduler *LoopScheduler
+	loopMaxAge    time.Duration
+
 	// modelFallbackMessage explains a model restore or resolution fallback. Every
 	// mode reports it as a startup diagnostic, and after a session replacement
 	// (main.ts, v1.6.0, #12234).
@@ -363,6 +370,11 @@ type SessionConfig struct {
 	// Goal enables the builtin session-goal controller. The SDK sets it unless
 	// tools are disabled; upstream always has the extension host available.
 	Goal bool
+	// LoopScheduler, when set, supplies the scheduling tools so the agent can arm
+	// and cancel its own recurring prompts. A nil scheduler registers none.
+	LoopScheduler *LoopScheduler
+	// LoopMaxAge is a recurring scheduled job's lifetime.
+	LoopMaxAge time.Duration
 }
 
 // SetBeforeFirstTurn installs the once-per-session pre-turn hook (the
@@ -539,6 +551,13 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		s.goal.Store(controller)
 		s.registerGoalTools()
 		controller.Start("startup")
+	}
+	// The scheduling tools are registered with the session so an agent can arm a
+	// recurring prompt and cancel it later; exposure is the ordinary tool set.
+	if config.LoopScheduler != nil {
+		s.loopScheduler = config.LoopScheduler
+		s.loopMaxAge = config.LoopMaxAge
+		s.registerLoopTools()
 	}
 	// An active goal holds user follow-ups to the end of its run.
 	a.DeferFollowUp = s.deferGoalFollowUp

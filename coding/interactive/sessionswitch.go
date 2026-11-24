@@ -318,6 +318,8 @@ func (a *App) bindSessionManager(sessionManager *coding.SessionManager) (*Sessio
 		SessionManager:  sessionManager,
 		ModelRuntime:    a.runtime,
 		SettingsManager: a.settings,
+		LoopScheduler:   a.loopScheduler,
+		LoopMaxAge:      a.loopMaxAge,
 	})
 	if err != nil {
 		return nil, err

@@ -172,6 +172,7 @@ type SubmitHandlers struct {
 	HandleSessionCommand        func()
 	HandleChangelogCommand      func()
 	HandleGoalCommand           func(args string)
+	HandleLoopCommand           func(args string)
 	HandleHotkeysCommand        func()
 	ShowUserMessageSelector     func()
 	HandleCloneCommand          func() error
@@ -312,6 +313,13 @@ func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 	case text == "/goal" || strings.HasPrefix(text, "/goal "):
 		if w.Handlers.HandleGoalCommand != nil {
 			w.Handlers.HandleGoalCommand(strings.TrimSpace(strings.TrimPrefix(text, "/goal")))
+		}
+		clearEditor()
+		return
+	case text == "/loop" || strings.HasPrefix(text, "/loop "):
+		// A recurring or self-paced prompt for as long as the session is open.
+		if w.Handlers.HandleLoopCommand != nil {
+			w.Handlers.HandleLoopCommand(strings.TrimSpace(strings.TrimPrefix(text, "/loop")))
 		}
 		clearEditor()
 		return
@@ -730,6 +738,9 @@ func newSubmitWiring(app *App) *SubmitWiring {
 				if controller := app.session.GoalController(); controller != nil {
 					controller.HandleCommand(args)
 				}
+			},
+			HandleLoopCommand: func(args string) {
+				app.commands.HandleLoopCommand(args)
 			},
 			HandleHotkeysCommand:    app.commands.HandleHotkeysCommand,
 			ShowUserMessageSelector: func() { app.selectors.ShowUserMessageSelector(context.Background()) },

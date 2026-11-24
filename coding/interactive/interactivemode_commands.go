@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
@@ -57,6 +58,12 @@ type CommandWiring struct {
 	// ReloadGoal replays the goal durable state after a reload (the extension's
 	// session_start reason "reload" pauses a live goal).
 	ReloadGoal func()
+	// LoopScheduler owns this session's scheduled prompts, and LoopMaxAge is a
+	// recurring job's lifetime.
+	LoopScheduler *coding.LoopScheduler
+	LoopMaxAge    time.Duration
+	// OnLoopPrompt submits a loop's prompt through the ordinary input path.
+	OnLoopPrompt func(prompt string)
 	// RequestRender requests a render.
 	RequestRender func()
 	// ClearStatusIndicator clears the active indicator.
@@ -832,6 +839,49 @@ func (w *CommandWiring) HandleHotkeysCommand() {
 
 // HandleChangelogCommand renders the full changelog (upstream
 // handleChangelogCommand).
+// HandleLoopCommand runs `/loop [interval] <prompt>`: with an interval it arms a
+// cron job on the session's scheduler, and without one it starts a self-paced
+// loop by running the prompt now, leaving the agent to arm its own wakeups.
+func (w *CommandWiring) HandleLoopCommand(args string) {
+	interval, prompt := coding.ParseLoopInput(args)
+	if prompt == "" {
+		w.showError("Usage: /loop [interval] <prompt>")
+		return
+	}
+	if interval == 0 {
+		w.runLoopPrompt(prompt, "Loop started. The agent paces the next run itself.")
+		return
+	}
+	cron, ok := coding.LoopCronForInterval(interval)
+	if !ok {
+		w.showError("The interval must be a whole number of minutes (at least one), hours, or days.")
+		return
+	}
+	scheduler := w.loopScheduler()
+	if scheduler == nil {
+		w.showError("Scheduling is not available in this session.")
+		return
+	}
+	job, err := scheduler.Add(cron, prompt, true, w.LoopMaxAge)
+	if err != nil {
+		w.showError(err.Error())
+		return
+	}
+	w.showStatus("Loop " + job.ID + " scheduled (" + job.HumanSchedule + ").")
+}
+
+// loopScheduler returns the session's scheduler, if one is installed.
+func (w *CommandWiring) loopScheduler() *coding.LoopScheduler { return w.LoopScheduler }
+
+// runLoopPrompt submits the loop's first prompt through the ordinary input path,
+// so a loop is indistinguishable from a typed message.
+func (w *CommandWiring) runLoopPrompt(prompt string, status string) {
+	if w.OnLoopPrompt != nil {
+		w.OnLoopPrompt(prompt)
+		w.showStatus(status)
+	}
+}
+
 func (w *CommandWiring) HandleChangelogCommand() {
 	theme := ActiveTheme()
 	entries := coding.ParseChangelog(coding.GetChangelogPath())
@@ -1038,7 +1088,14 @@ func newCommandWiring(app *App) *CommandWiring {
 		},
 		RequestRender:        func() { app.ui.RequestRender(false) },
 		ClearStatusIndicator: func() { app.uiState.ClearStatusIndicator("", false) },
-		MarkdownTheme:        func() tui.MarkdownTheme { return *app.markdownTheme() },
+		LoopScheduler:        app.loopScheduler,
+		LoopMaxAge:           app.loopMaxAge,
+		OnLoopPrompt: func(prompt string) {
+			// The same path a typed message takes, so a loop's prompt is ordinary
+			// user input rather than a special event.
+			app.submit.HandleSubmit(context.Background(), prompt)
+		},
+		MarkdownTheme: func() tui.MarkdownTheme { return *app.markdownTheme() },
 		DefaultSyncNotice: func() (string, bool) {
 			result := app.session.LastDefaultSync()
 			return result.Message, result.Warning

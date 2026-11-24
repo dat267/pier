@@ -536,6 +536,7 @@ type Settings struct {
 	// (get_goal, set_goal); pier-only, on by default (D496). Global only, so a
 	// committed project file cannot turn a clone's agent goal work on or off.
 	GoalFeature                *bool                    `json:"goalFeature,omitempty"`
+	LoopFeature                *bool                    `json:"loopFeature,omitempty"`
 	Terminal                   *SettingsTerminal        `json:"terminal,omitempty"`
 	Images                     *SettingsImages          `json:"images,omitempty"`
 	EnabledModels              []string                 `json:"enabledModels,omitempty"`
@@ -2882,6 +2883,24 @@ func (m *SettingsManager) SetGoalFeatureEnabled(enabled bool) {
 	defer m.mu.Unlock()
 	m.globalSettings.GoalFeature = &enabled
 	m.markModified("goalFeature", "")
+	m.save()
+}
+
+// GetLoopFeatureEnabled reports whether the /loop feature is on (default true).
+func (m *SettingsManager) GetLoopFeatureEnabled() bool {
+	settings := m.merged.Load()
+	if settings.LoopFeature == nil {
+		return true
+	}
+	return *settings.LoopFeature
+}
+
+// SetLoopFeatureEnabled stores the loop-feature toggle.
+func (m *SettingsManager) SetLoopFeatureEnabled(enabled bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.globalSettings.LoopFeature = &enabled
+	m.markModified("loopFeature", "")
 	m.save()
 }
 

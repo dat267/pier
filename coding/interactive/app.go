@@ -254,6 +254,11 @@ type App struct {
 	// Tests hold a worker here to prove that a command uses the session it was
 	// submitted for even when a switch lands before the worker starts.
 	detachedStartGate func()
+	// loopScheduler owns this session's /loop jobs, and loopMaxAge is a recurring
+	// job's lifetime. A fired prompt is submitted through OnInput, so a loop
+	// arrives as ordinary user input.
+	loopScheduler *coding.LoopScheduler
+	loopMaxAge    time.Duration
 }
 
 // NewApp builds the interactive-mode object graph.
@@ -674,6 +679,14 @@ func NewApp(options AppOptions) *App {
 
 	app.submit = newSubmitWiring(app)
 
+	// /loop: a scheduler whose fires are submitted as ordinary input. It starts
+	// with no jobs, so an idle session holds no timer.
+	app.loopMaxAge = coding.LoopRecurringMaxAge
+	app.loopScheduler = coding.NewLoopScheduler(nil, func(prompt string) {
+		app.ui.Post(func() { app.submit.HandleSubmit(context.Background(), prompt) })
+	})
+	app.loopScheduler.Start()
+
 	app.autocomplete = newAutocompleteWiring(app)
 
 	// A seam left nil is a silent no-op at runtime (the queue reporters once
@@ -979,6 +992,11 @@ func (a *App) run(ctx context.Context) {
 // Close unsubscribes and disposes the app.
 func (a *App) Close() {
 	a.cancelOptional()
+	// A closed session arms no wakeup and leaves no timer running.
+	if a.loopScheduler != nil {
+		a.loopScheduler.Stop()
+		a.loopScheduler = nil
+	}
 	// D200: a canceled run can return without invoking Shutdown. Restore the
 	// terminal through the same post-persistence grace policy on that path.
 	if a.lifecycle != nil && a.lifecycle.IsInitialized() && !a.lifecycle.shuttingDown.Load() {

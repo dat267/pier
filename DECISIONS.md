@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D536)
+# Deliberate divergences from pi (D1–D537)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -8887,3 +8887,45 @@ the remaining input instead, so a highlight was quadratic in its length:
 
 Tests: `TestInputScansMatchRuneScans`, `TestResumeAtLastIndexMatchesTheScan`,
 `TestModeBufferGrowsLinearly`.
+
+### D537
+
+**`/loop` repeats a prompt on an interval, or lets the agent pace it.**
+
+pi has no way to repeat a prompt: a user who wants a task rechecked every few
+minutes has to ask again by hand. `/loop [interval] <prompt>` closes that gap.
+The input is parsed as a leading `5m`/`2h`/`30s`/`1d` token, else a trailing
+`every 20m` or `every 5 minutes` clause, else no interval at all, in which case
+the whole input is the prompt and the loop self-paces. What follows `every` must
+be a time expression, so `check every PR` keeps its text intact. An interval
+becomes the equivalent cron expression, and one that cannot be expressed that way
+(a sub-minute interval, or 90 minutes, which is neither a whole number of
+minutes nor of hours) is refused with a message rather than rounded into
+something the user did not ask for.
+
+A scheduled prompt fires into the ordinary input path, so a loop arrives as
+typed input: nothing downstream needs to know a timer produced it. Self-paced
+loops are driven by the agent through `schedule_wakeup`, whose delay is clamped
+to the reference's [60, 3600] seconds and which accepts `stop` to end the loop.
+
+The scheduler starts no timer until a job exists, and `Close` stops it, so an
+idle session holds no timer and a closed one leaves no goroutine. Recurring jobs
+expire after 30 days so a forgotten loop does not run forever, and the job count
+is capped, because a runaway loop is worse than a refused one.
+
+`/loop` is listed in `/features` alongside the other pier-only surface, and its
+tools are registered in the ordinary registry, so `/tools` shows and can disable
+them like any other tool.
+
+Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
+`TestLoopSchedulerFiresAndDeletes`, `TestLoopSchedulerRecurringStays`,
+`TestLoopSchedulerRemove`, `TestLoopSchedulerRejectsBadSchedules`,
+`TestLoopSchedulerCap`, `TestLoopSchedulerStopDropsJobs`,
+`TestLoopSchedulerMaxAge`, `TestCronToolsCreateAndDelete`,
+`TestCronCreateRejectsBadInput`, `TestCronCreateOneShotAndList`,
+`TestCronListEmpty`, `TestScheduleWakeupClampsDelay`, `TestParseCronFields`,
+`TestParseCronSundayIsZero`, `TestNextCronTimeStartsAtTheNextMinute`,
+`TestNextCronTimeSkipsWholeUnits`, `TestNextCronTimeDayUnionRule`,
+`TestNextCronTimeSingleDayField`, `TestNextCronTimeReportsNoMatch`,
+`TestHumanCronSchedule`, `TestLoopCommandArmsCronJob`,
+`TestLoopCommandSelfPacedRunsNow`, `TestLoopCommandRejectsBadInput`.

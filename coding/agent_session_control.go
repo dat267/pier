@@ -654,6 +654,28 @@ func (s *AgentSession) SetGoalFeatureEnabled(enabled bool) {
 // goalToolNames are the registry names the goal feature owns.
 var goalToolNames = []string{"get_goal", "set_goal"}
 
+// registerLoopTools adds the scheduling tools to the registry so the agent can
+// arm and cancel recurring prompts. They are ordinary registered tools, visible
+// in /tools like any other.
+func (s *AgentSession) registerLoopTools() {
+	if s.loopScheduler == nil || s.control == nil {
+		return
+	}
+	tools := LoopTools(LoopToolOptions{
+		Scheduler: s.loopScheduler,
+		MaxAge:    s.loopMaxAge,
+		OnStop:    func() { s.loopScheduler.RemoveAll() },
+	})
+	s.control.stateMu.Lock()
+	defer s.control.stateMu.Unlock()
+	for _, tool := range tools {
+		if _, ok := s.control.Tools[tool.Name]; ok {
+			continue
+		}
+		s.control.Tools[tool.Name] = AgentToolDefinition{Tool: tool}
+	}
+}
+
 // registerGoalTools adds the goal tools to the session's registry with their
 // prompt guidelines. They are registered once; exposure is gated by the goal
 // controller's SyncTools.

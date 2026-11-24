@@ -315,6 +315,7 @@ coding/converttollm_performance_test.go
 coding/converttollm_test.go
 coding/crashlog_test.go
 coding/credentialprint_test.go
+coding/cron_test.go
 coding/custom_message_test.go
 coding/cwd_default_test.go
 coding/cyclethinking_unknown_test.go
@@ -458,6 +459,7 @@ coding/interactive/login_navigation_test.go
 coding/interactive/logindialog_test.go
 coding/interactive/loginloop_test.go
 coding/interactive/loginsteps_test.go
+coding/interactive/loopcommand_test.go
 coding/interactive/loopinput_test.go
 coding/interactive/markdown_prepare_test.go
 coding/interactive/mcpclose_offloop_test.go
@@ -596,6 +598,8 @@ coding/interactive/writetoolparity_test.go
 coding/jsonevent_wire_test.go
 coding/keyorder_write_test.go
 coding/listmodels_test.go
+coding/loopscheduler_test.go
+coding/looptools_test.go
 coding/ls_tool_parity_test.go
 coding/main_test.go
 coding/managementhttp_overall_timeout_test.go
