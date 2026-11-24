@@ -1192,12 +1192,6 @@ func (s *AgentSession) GetSessionStats() *SessionStats {
 	return stats
 }
 
-// BackgroundToolCallThreshold is how long a foreground tool call may run before
-// the harness moves it to the background. It is deliberately generous: a shell
-// call that takes longer than this is the kind that freezes a turn, while an
-// ordinary edit or search never comes close.
-const BackgroundToolCallThreshold = 60 * time.Second
-
 // watchBackgroundCall waits for a displaced tool call to end and wakes the model
 // once, with one notification, as ordinary user input. It runs on the call's own
 // goroutine, never the owner loop, and it never writes transcript state directly:

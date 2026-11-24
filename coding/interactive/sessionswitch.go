@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
@@ -324,7 +323,9 @@ func (a *App) bindSessionManager(sessionManager *coding.SessionManager) (*Sessio
 		// A tool call that outlives the threshold returns a handle instead of
 		// freezing the turn, and the completion notice wakes the model (D538).
 		// Only the interactive mode sets it: print mode has no later turn.
-		BackgroundToolCalls: func() time.Duration { return coding.BackgroundToolCallThreshold },
+		// Read per run, so a change in /features applies to the next tool call
+		// rather than only to a new session.
+		BackgroundToolCalls: a.settings.GetBackgroundToolCallThreshold,
 	})
 	if err != nil {
 		return nil, err

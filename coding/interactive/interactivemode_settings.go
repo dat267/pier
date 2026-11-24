@@ -1,6 +1,8 @@
 package interactive
 
 import (
+	"time"
+
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
@@ -568,6 +570,14 @@ func (w *SettingsWiring) featureToggles() []FeatureToggle {
 			Description: "Enable /loop and the scheduling tools",
 			Enabled:     w.Settings.GetLoopFeatureEnabled(),
 		},
+		{
+			ID:    "background-tools",
+			Label: "Background long tool calls",
+			Description: "Move a running shell or MCP call to the background after this long, " +
+				"so the turn stays responsive; the model is told once when it ends",
+			Values:       coding.BackgroundToolCallChoices(),
+			CurrentValue: backgroundToolCallChoice(w.Settings.GetBackgroundToolCallThreshold()),
+		},
 	}
 }
 
@@ -577,11 +587,11 @@ func (w *SettingsWiring) ShowFeatureSettingsSelector() {
 	w.Slot.Show(func(done func()) CreatedSelector {
 		selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
 			Toggles: w.featureToggles(),
-			OnFeatureChange: func(id string, enabled bool) {
-				if !w.ApplyFeatureToggle(id, enabled) {
+			OnFeatureChange: func(id string, value string) {
+				if !w.ApplyFeatureToggle(id, value) {
 					return
 				}
-				w.showStatus(featureToggleStatus(id, enabled))
+				w.showStatus(featureToggleStatus(id, value))
 			},
 			OnCancel: done,
 		})
@@ -629,7 +639,8 @@ func toolToggleStatus(name string, enabled bool) string {
 
 // ApplyFeatureToggle stores one pier-only feature toggle and applies it to the
 // live session; it reports whether the id is a known feature.
-func (w *SettingsWiring) ApplyFeatureToggle(id string, enabled bool) bool {
+func (w *SettingsWiring) ApplyFeatureToggle(id string, value string) bool {
+	enabled := value == "true"
 	switch id {
 	case "loop-feature":
 		w.Settings.SetLoopFeatureEnabled(enabled)
@@ -644,14 +655,17 @@ func (w *SettingsWiring) ApplyFeatureToggle(id string, enabled bool) bool {
 			w.WireGoalController()
 		}
 		return true
+	case "background-tools":
+		// Stored; the session reads it per run, so the next tool call obeys.
+		return w.Settings.SetBackgroundToolCallThreshold(value)
 	}
 	return false
 }
 
 // featureToggleStatus names the new state of a feature toggle.
-func featureToggleStatus(id string, enabled bool) string {
+func featureToggleStatus(id string, value string) string {
 	state := "off"
-	if enabled {
+	if value == "true" {
 		state = "on"
 	}
 	switch id {
@@ -659,6 +673,19 @@ func featureToggleStatus(id string, enabled bool) string {
 		return "Goal feature " + state + "."
 	case "loop-feature":
 		return "Loop feature " + state + "."
+	case "background-tools":
+		if value == "off" {
+			return "Automatic backgrounding off."
+		}
+		return "Long tool calls moved to the background after " + value + "."
 	}
 	return state
+}
+
+// backgroundToolCallChoice names the choice row's current value.
+func backgroundToolCallChoice(threshold time.Duration) string {
+	if threshold <= 0 {
+		return "off"
+	}
+	return threshold.String()
 }

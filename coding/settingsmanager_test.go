@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
@@ -848,5 +849,67 @@ func TestSettingsRetryKeepsAFractionalMaxRetries(t *testing.T) {
 	// against the truncated one: attempt 2 differs, which is the whole bug.
 	if (float64(2) >= 2.7) || !(float64(2) >= 2) {
 		t.Fatal("attempt 2 must be allowed by 2.7 and refused by the truncated 2")
+	}
+}
+
+// The backgrounding threshold defaults to two minutes, can be turned off, and
+// ignores a value it does not understand rather than silently disabling itself.
+func TestBackgroundToolCallThresholdSetting(t *testing.T) {
+	settings := NewInMemorySettingsManager(nil, SettingsManagerCreateOptions{})
+	if got := settings.GetBackgroundToolCallThreshold(); got != DefaultBackgroundToolCallThreshold {
+		t.Fatalf("default = %v, want %v", got, DefaultBackgroundToolCallThreshold)
+	}
+	if DefaultBackgroundToolCallThreshold != 2*time.Minute {
+		t.Fatalf("the default is %v, want two minutes", DefaultBackgroundToolCallThreshold)
+	}
+	if !settings.SetBackgroundToolCallThreshold("off") {
+		t.Fatal("off was refused")
+	}
+	if got := settings.GetBackgroundToolCallThreshold(); got != 0 {
+		t.Fatalf("off = %v, want zero", got)
+	}
+	if !settings.SetBackgroundToolCallThreshold("5m") {
+		t.Fatal("5m was refused")
+	}
+	if got := settings.GetBackgroundToolCallThreshold(); got != 5*time.Minute {
+		t.Fatalf("5m = %v", got)
+	}
+	// A value outside the offered choices is refused, so a typo cannot disable it.
+	if settings.SetBackgroundToolCallThreshold("banana") {
+		t.Fatal("an unknown value was accepted")
+	}
+	if got := settings.GetBackgroundToolCallThreshold(); got != 5*time.Minute {
+		t.Fatalf("a refused value changed the threshold to %v", got)
+	}
+	// A stored value this build cannot read falls back to the default, not to off.
+	if got := ParseBackgroundToolCallThreshold("banana"); got != DefaultBackgroundToolCallThreshold {
+		t.Fatalf("an unreadable stored value = %v, want the default", got)
+	}
+	if got := ParseBackgroundToolCallThreshold(""); got != 0 {
+		t.Fatalf("an empty value = %v, want off", got)
+	}
+}
+
+// The threshold survives a reload, so a choice made once is honoured by the next
+// session rather than resetting to the default.
+func TestBackgroundToolCallThresholdPersists(t *testing.T) {
+	projectDir, agentDir := t.TempDir(), t.TempDir()
+	first := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	if !first.SetBackgroundToolCallThreshold("10m") {
+		t.Fatal("10m was refused")
+	}
+	first.FlushPersists()
+	reloaded := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	if got := reloaded.GetBackgroundToolCallThreshold(); got != 10*time.Minute {
+		t.Fatalf("after reload = %v, want 10m", got)
+	}
+	// A stored off survives too, rather than reading as unset.
+	if !reloaded.SetBackgroundToolCallThreshold("off") {
+		t.Fatal("off was refused")
+	}
+	reloaded.FlushPersists()
+	if got := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{}).
+		GetBackgroundToolCallThreshold(); got != 0 {
+		t.Fatalf("after reloading off = %v, want zero", got)
 	}
 }

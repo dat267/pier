@@ -535,8 +535,11 @@ type Settings struct {
 	// GoalFeature enables the builtin session-goal controller and its tools
 	// (get_goal, set_goal); pier-only, on by default (D496). Global only, so a
 	// committed project file cannot turn a clone's agent goal work on or off.
-	GoalFeature                *bool                    `json:"goalFeature,omitempty"`
-	LoopFeature                *bool                    `json:"loopFeature,omitempty"`
+	GoalFeature *bool `json:"goalFeature,omitempty"`
+	LoopFeature *bool `json:"loopFeature,omitempty"`
+	// BackgroundToolCalls names how long a foreground tool call may run before the
+	// harness backgrounds it: "off", or a Go duration such as "2m" (D538).
+	BackgroundToolCalls        *string                  `json:"backgroundToolCalls,omitempty"`
 	Terminal                   *SettingsTerminal        `json:"terminal,omitempty"`
 	Images                     *SettingsImages          `json:"images,omitempty"`
 	EnabledModels              []string                 `json:"enabledModels,omitempty"`
@@ -2902,6 +2905,61 @@ func (m *SettingsManager) SetLoopFeatureEnabled(enabled bool) {
 	m.globalSettings.LoopFeature = &enabled
 	m.markModified("loopFeature", "")
 	m.save()
+}
+
+// backgroundToolCallChoices are the values the /features row offers, in order.
+var backgroundToolCallChoices = []string{"off", "30s", "1m", "2m", "5m", "10m", "30m"}
+
+// DefaultBackgroundToolCallThreshold is how long a foreground tool call may run
+// before the harness backgrounds it, when the setting is unset.
+const DefaultBackgroundToolCallThreshold = 2 * time.Minute
+
+// GetBackgroundToolCallThreshold returns how long a foreground tool call may run
+// before the harness backgrounds it. Zero means the feature is off.
+func (m *SettingsManager) GetBackgroundToolCallThreshold() time.Duration {
+	settings := m.merged.Load()
+	if settings.BackgroundToolCalls == nil {
+		return DefaultBackgroundToolCallThreshold
+	}
+	return ParseBackgroundToolCallThreshold(*settings.BackgroundToolCalls)
+}
+
+// ParseBackgroundToolCallThreshold reads a threshold choice. "off" is zero, an
+// unreadable value falls back to the default, and anything shorter than a second
+// is treated as off rather than as a hair trigger.
+func ParseBackgroundToolCallThreshold(value string) time.Duration {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" || trimmed == "off" {
+		return 0
+	}
+	parsed, err := time.ParseDuration(trimmed)
+	if err != nil || parsed < time.Second {
+		if trimmed == "off" {
+			return 0
+		}
+		return DefaultBackgroundToolCallThreshold
+	}
+	return parsed
+}
+
+// SetBackgroundToolCallThreshold stores the threshold choice. An unknown value is
+// ignored, so a typo cannot silently disable the feature.
+func (m *SettingsManager) SetBackgroundToolCallThreshold(value string) bool {
+	trimmed := strings.TrimSpace(value)
+	if !slices.Contains(backgroundToolCallChoices, trimmed) {
+		return false
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.globalSettings.BackgroundToolCalls = &trimmed
+	m.markModified("backgroundToolCalls", "")
+	m.save()
+	return true
+}
+
+// BackgroundToolCallChoices lists the threshold choices the /features row offers.
+func BackgroundToolCallChoices() []string {
+	return append([]string{}, backgroundToolCallChoices...)
 }
 
 // GetThinkingBudgets returns the thinking budgets.

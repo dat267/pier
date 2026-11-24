@@ -2,7 +2,9 @@ package interactive
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
@@ -461,14 +463,14 @@ func TestFeatureToggleAppliesAndPersists(t *testing.T) {
 	if len(toggles) == 0 || toggles[0].ID != "goal-feature" || !toggles[0].Enabled {
 		t.Fatalf("feature toggles = %+v, want the goal feature on", toggles)
 	}
-	if unknown := wiring.ApplyFeatureToggle("not-a-feature", true); unknown {
+	if unknown := wiring.ApplyFeatureToggle("not-a-feature", "true"); unknown {
 		t.Fatal("an unknown feature id was applied")
 	}
 
 	selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
 		Toggles: toggles,
-		OnFeatureChange: func(id string, enabled bool) {
-			if !wiring.ApplyFeatureToggle(id, enabled) {
+		OnFeatureChange: func(id string, value string) {
+			if !wiring.ApplyFeatureToggle(id, value) {
 				t.Fatalf("selector sent unknown id %q", id)
 			}
 		},
@@ -498,8 +500,8 @@ func TestLoopFeatureToggleAppliesToTheSession(t *testing.T) {
 	wiring, session, _, settings := newSettingsTestWiring(t)
 	selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
 		Toggles: wiring.featureToggles(),
-		OnFeatureChange: func(id string, enabled bool) {
-			if !wiring.ApplyFeatureToggle(id, enabled) {
+		OnFeatureChange: func(id string, value string) {
+			if !wiring.ApplyFeatureToggle(id, value) {
 				t.Fatalf("ApplyFeatureToggle(%q) did not know the row", id)
 			}
 		},
@@ -523,5 +525,85 @@ func TestLoopFeatureToggleAppliesToTheSession(t *testing.T) {
 	}
 	if session.loopFeature {
 		t.Fatal("toggling the loop row did not reach the session")
+	}
+}
+
+// The threshold row is a choice row, not a boolean: it cycles through the offered
+// durations, persists the pick, and can turn the feature off.
+func TestBackgroundThresholdFeatureRow(t *testing.T) {
+	wiring, _, _, settings := newSettingsTestWiring(t)
+	selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
+		Toggles: wiring.featureToggles(),
+		OnFeatureChange: func(id string, value string) {
+			if !wiring.ApplyFeatureToggle(id, value) {
+				t.Fatalf("ApplyFeatureToggle(%q, %q) did not know the row", id, value)
+			}
+		},
+		OnCancel: func() {},
+	})
+	list := selector.GetSettingsList()
+	var row *tui.SettingItem
+	for index, item := range list.Items() {
+		if item.ID == "background-tools" {
+			row = &list.Items()[index]
+		}
+	}
+	if row == nil {
+		t.Fatalf("/features holds no background row: %+v", list.Items())
+	}
+	// It is a choice row, and its default is the two-minute threshold the
+	// harness uses, not a boolean.
+	if len(row.Values) < 3 {
+		t.Fatalf("the row offers %d values, want the duration choices: %v", len(row.Values), row.Values)
+	}
+	if row.CurrentValue != "2m0s" {
+		t.Fatalf("the row shows %q, want the two-minute default", row.CurrentValue)
+	}
+
+	// The row is rendered with the current choice, not just stored: a user has to
+	// be able to read the threshold off the screen.
+	rendered := strings.Join(selector.Render(90), "\n")
+	if !strings.Contains(rendered, "Background long tool calls") || !strings.Contains(rendered, "2m0s") {
+		t.Fatalf("/features does not render the threshold row:\n%s", rendered)
+	}
+
+	// Selecting "off" reaches the settings and the row.
+	list.SelectItem("background-tools")
+	for range row.Values {
+		if settings.GetBackgroundToolCallThreshold() == 0 {
+			break
+		}
+		list.HandleInput("\r")
+	}
+	if got := settings.GetBackgroundToolCallThreshold(); got != 0 {
+		t.Fatalf("cycling to off left the threshold at %v", got)
+	}
+}
+
+// The session reads the threshold from settings on every run, so a change in
+// /features applies to the next tool call rather than only to a new session.
+// Turning it off must yield zero, which disables the feature outright.
+func TestBackgroundThresholdAppliesToTheLiveSession(t *testing.T) {
+	wiring, _, _, settings := newSettingsTestWiring(t)
+	read := func() time.Duration {
+		if wiring.Session == nil {
+			t.Fatal("no session")
+		}
+		return settings.GetBackgroundToolCallThreshold()
+	}
+	if got := read(); got != coding.DefaultBackgroundToolCallThreshold {
+		t.Fatalf("default = %v, want %v", got, coding.DefaultBackgroundToolCallThreshold)
+	}
+	if !wiring.ApplyFeatureToggle("background-tools", "off") {
+		t.Fatal("the row did not accept off")
+	}
+	if got := read(); got != 0 {
+		t.Fatalf("after off = %v, want zero so the feature is disabled", got)
+	}
+	if !wiring.ApplyFeatureToggle("background-tools", "10m") {
+		t.Fatal("the row did not accept 10m")
+	}
+	if got := read(); got != 10*time.Minute {
+		t.Fatalf("after 10m = %v", got)
 	}
 }

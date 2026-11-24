@@ -1114,13 +1114,27 @@ func wheelScrollLinesChoices(current tui.WheelScrollLines) []string {
 	return choices
 }
 
-// FeatureToggle is one pier-only feature and its current state.
+// FeatureToggle is one pier-only feature and its current state. A row is either a
+// boolean toggle (Enabled, cycled between true and false) or, when Values is set,
+// a choice row that cycles through them, such as a duration.
 type FeatureToggle struct {
 	// ID is the settings row id, also the key the change callback receives.
 	ID          string
 	Label       string
 	Description string
 	Enabled     bool
+	// Values, when set, make this a choice row instead of a boolean: the row
+	// cycles through them and CurrentValue names the selected one.
+	Values       []string
+	CurrentValue string
+}
+
+// featureToggleSelected is the value a row currently shows.
+func featureToggleSelected(toggle FeatureToggle) string {
+	if len(toggle.Values) > 0 {
+		return toggle.CurrentValue
+	}
+	return boolStr(toggle.Enabled)
 }
 
 // ToolToggle is one registered tool and whether it is active.
@@ -1188,8 +1202,9 @@ func (s *ToolSettingsSelector) HandleInput(data string) { s.settingsList.HandleI
 type FeatureSelectorOptions struct {
 	// Toggles are the pier-only feature rows.
 	Toggles []FeatureToggle
-	// OnFeatureChange applies a feature toggle.
-	OnFeatureChange func(id string, enabled bool)
+	// OnFeatureChange applies a feature row: "true"/"false" for a boolean toggle,
+	// or the chosen value for a choice row.
+	OnFeatureChange func(id string, value string)
 	// OnCancel closes the selector.
 	OnCancel func()
 }
@@ -1211,25 +1226,33 @@ func NewFeatureSettingsSelector(options FeatureSelectorOptions) *FeatureSettings
 	}
 	items := make([]tui.SettingItem, 0, len(selector.toggles))
 	for _, toggle := range selector.toggles {
+		values := toggle.Values
+		if len(values) == 0 {
+			values = []string{"true", "false"}
+		}
 		items = append(items, tui.SettingItem{
 			ID:           toggle.ID,
 			Label:        toggle.Label,
 			Description:  toggle.Description,
-			CurrentValue: boolStr(toggle.Enabled),
-			Values:       []string{"true", "false"},
+			CurrentValue: featureToggleSelected(toggle),
+			Values:       values,
 		})
 	}
 	selector.features = tui.NewSettingsList(items, max(1, min(len(items), 10)), GetSettingsListTheme(),
 		func(id string, newValue string) {
-			enabled := newValue == "true"
 			for index := range selector.toggles {
 				if selector.toggles[index].ID != id {
 					continue
 				}
-				selector.toggles[index].Enabled = enabled
+				// A choice row records its value; a boolean row records enabled.
+				if len(selector.toggles[index].Values) > 0 {
+					selector.toggles[index].CurrentValue = newValue
+				} else {
+					selector.toggles[index].Enabled = newValue == "true"
+				}
 				selector.features.UpdateValue(id, newValue)
 				if options.OnFeatureChange != nil {
-					options.OnFeatureChange(id, enabled)
+					options.OnFeatureChange(id, newValue)
 				}
 				return
 			}

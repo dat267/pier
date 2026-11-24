@@ -37,6 +37,11 @@ authorization in a browser.
 A shell call the agent starts without a `timeout` stops after 10 minutes, so a
 hung command hands control back to the agent with its output so far.
 
+A tool call that outlives two minutes is moved to the background instead of
+freezing the turn: the agent gets a handle, the call keeps running with its output
+in a temporary file, and it is told once when the call ends. `/features` sets the
+threshold, or turns it off.
+
 `/goal` tracks multi-round objectives in session history. The agent can manage
 them with `get_goal` and `set_goal`. `/features` lists the pier-only feature
 toggles, and `/tools` turns each of the agent's tools on or off for the session;

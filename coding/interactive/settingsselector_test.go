@@ -553,7 +553,7 @@ func TestSettingsSelectorImageRows(t *testing.T) {
 func TestFeatureSelectorHoldsOnlyPierOnlyToggles(t *testing.T) {
 	wiring, _, _, _ := newSettingsTestWiring(t)
 	selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
-		Toggles: wiring.featureToggles(), OnFeatureChange: func(string, bool) {}, OnCancel: func() {},
+		Toggles: wiring.featureToggles(), OnFeatureChange: func(string, string) {}, OnCancel: func() {},
 	})
 	items := selector.GetSettingsList().Items()
 	if len(items) == 0 {
@@ -702,7 +702,7 @@ func TestSortModelsForPickerUsesLocaleOrdering(t *testing.T) {
 func TestFeatureSelectorFiltersAsYouType(t *testing.T) {
 	wiring, _, _, _ := newSettingsTestWiring(t)
 	selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
-		Toggles: wiring.featureToggles(), OnFeatureChange: func(string, bool) {}, OnCancel: func() {},
+		Toggles: wiring.featureToggles(), OnFeatureChange: func(string, string) {}, OnCancel: func() {},
 	})
 	list := selector.GetSettingsList()
 	if list.SearchInput() == nil {

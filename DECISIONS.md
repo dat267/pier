@@ -8970,6 +8970,16 @@ key binding and no cancel-them-later tool, because each of those is a knob the
 operator then has to reason about, and the threshold covers every case they were
 meant to serve. A tool cannot request a move and a caller cannot force one.
 
+The one knob is the threshold itself, in `/features`, because how long is "too
+long" depends on the work: a two-minute default suits a shell command, while
+someone running long builds wants ten or thirty, and someone who would rather
+wait wants it off. The row is a choice list (`off`, `30s`, `1m`, `2m`, `5m`,
+`10m`, `30m`) rather than a boolean, since "on" alone cannot express it. It is
+stored as the `backgroundToolCalls` setting, read per run so a change applies to
+the next tool call rather than only to a new session, and a stored value this
+build cannot read falls back to the default instead of to off, so a typo cannot
+silently disable the safety net.
+
 The pinned reference runs every tool call to completion
 (`packages/agent/src/agent-loop.ts` has no timeout and no backgrounding), so this
 is pier-only. That makes transcript parity the constraint rather than a
@@ -8989,7 +8999,11 @@ A call that finishes inside the threshold takes the unchanged path: same result,
 same events, no handle, no registry entry. That is pinned by
 `TestBackgroundFastCallIsUnchanged`, which compares the two paths' bytes.
 
-Tests: `TestBackgroundFastCallIsUnchanged`, `TestBackgroundSlowCallReturnsHandle`,
+Tests: `TestBackgroundToolCallThresholdSetting`,
+`TestBackgroundToolCallThresholdPersists`,
+`TestBackgroundThresholdFeatureRow`,
+`TestBackgroundThresholdAppliesToTheLiveSession`,
+`TestBackgroundFastCallIsUnchanged`, `TestBackgroundSlowCallReturnsHandle`,
 `TestBackgroundFailedCallReportsOnce`, `TestBackgroundRegistryCloseCancels`,
 `TestBackgroundDisabledByDefault`, `TestBackgroundThroughARun`,
 `TestCloseBackgroundCallsCancels`, `TestSessionWakesOncePerBackgroundCall`,
