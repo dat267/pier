@@ -2,6 +2,7 @@ package coding
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -157,7 +158,7 @@ func CreateFindTool(cwd string) agent.AgentTool {
 					return agent.AgentToolResult{}, err
 				}
 			}
-			searchPath := ResolveToCwd(orDefault(input.Path, "."), cwd)
+			searchPath := ResolveToCwd(cmp.Or(input.Path, "."), cwd)
 			effectiveLimit := float64(findDefaultLimit)
 			if input.Limit != nil {
 				effectiveLimit = *input.Limit
@@ -404,7 +405,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 			if err != nil {
 				return agent.AgentToolResult{}, errors.New("ripgrep (rg) is not available and could not be downloaded")
 			}
-			searchPath := ResolveToCwd(orDefault(input.Path, "."), cwd)
+			searchPath := ResolveToCwd(cmp.Or(input.Path, "."), cwd)
 			info, statErr := os.Stat(searchPath)
 			if statErr != nil {
 				return agent.AgentToolResult{}, fmt.Errorf("Path not found: %s", searchPath)

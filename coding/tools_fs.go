@@ -390,7 +390,7 @@ func CreateLsTool(cwd string) agent.AgentTool {
 					return agent.AgentToolResult{}, err
 				}
 			}
-			dirPath := ResolveToCwd(orDefault(input.Path, "."), cwd)
+			dirPath := ResolveToCwd(cmp.Or(input.Path, "."), cwd)
 			effectiveLimit := float64(lsDefaultLimit)
 			if input.Limit != nil {
 				// A fractional limit is floored and never below 1: a limit of 0 would
@@ -502,10 +502,6 @@ func jsArraySliceIndex(index float64, length int) int {
 		index = float64(length)
 	}
 	return int(index)
-}
-
-func orDefault(v, d string) string {
-	return cmp.Or(v, d)
 }
 
 func sortCaseInsensitive(names []string) {
