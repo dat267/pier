@@ -24,7 +24,7 @@ import (
 const childMarker = "PIER_LEAKCHECK_PARENT"
 
 // grace is how long Run waits for goroutines that are already ending.
-var grace = 3 * time.Second
+const grace = 3 * time.Second
 
 // ignoredFrames are functions whose goroutines are not leaks. Each runs for
 // the life of the process on purpose, or belongs to an idle connection pool

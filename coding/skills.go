@@ -32,7 +32,7 @@ type ParsedFrontmatter struct {
 	Body        string
 }
 
-var bomRune = "\uFEFF"
+const bomRune = "\uFEFF"
 
 // ParseFrontmatter splits and parses the skill file's frontmatter.
 func ParseFrontmatter(content string) ParsedFrontmatter {
