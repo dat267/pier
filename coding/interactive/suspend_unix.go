@@ -44,7 +44,7 @@ func suspendProcess(ui tui.TUI) {
 // stops the process, which a test must not do).
 var suspendProcessGroup = func() error { return syscall.Kill(0, syscall.SIGTSTP) }
 
-// installSIGTSTPHandler installs handler for SIGTSTP and returns the cleanup.
+// installSuspendSignalHandler installs handler for SIGTSTP and returns the cleanup.
 // The suspend raises SIGTSTP again, and that one has to reach the default action
 // so the process really stops; the channel is armed again once it is resumed. A
 // test seam, because the real handler stops the process.

@@ -32,9 +32,9 @@ func eachSettingsMember(typ reflect.Type, members map[string]json.RawMessage, fn
 // target type (custom unions such as QuietStartupSetting decode themselves).
 var jsonUnmarshaler = reflect.TypeFor[json.Unmarshaler]()
 
-// decodeSettingsTolerantWithRejects is decodeSettingsTolerant for a top-level
-// settings object, returning the known member names that must shadow inherited
-// values. This includes values the typed field cannot hold and explicit nulls,
+// decodeSettingsTolerantWithRejects decodes each known member of a top-level
+// settings object into target, keeping the members that decode, and returns
+// the known member names that must shadow inherited values. This includes values the typed field cannot hold and explicit nulls,
 // whose presence must be retained separately from the field's zero value. A
 // project scope uses them to mask the global member, matching upstream's
 // undefined-versus-null merge behavior.

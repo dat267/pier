@@ -188,7 +188,7 @@ type AgentSession struct {
 
 	// goal is the builtin session-goal controller (nil when disabled). It is read
 	// by the agent worker and written by the owner loop's feature toggle, so it is
-	// only reached through GoalController/goalLocked (D497).
+	// only reached through GoalController (D497).
 	goal atomic.Pointer[GoalController]
 
 	// modelFallbackMessage explains a model restore or resolution fallback. Every
