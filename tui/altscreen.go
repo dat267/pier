@@ -561,7 +561,7 @@ func replaceAllStrings(values []string, old string, replacement string) []string
 
 func (s *AltScreen) deleteKittyImagesLocked() string {
 	if s.imageProtocol == "kitty" {
-		return deleteAllKittyImages()
+		return DeleteAllKittyImages()
 	}
 	return ""
 }
@@ -672,9 +672,6 @@ func DeleteAllKittyImages() string { return "\x1b_Ga=d,d=A,q=2\x1b\\" }
 // DeleteAllKittyPlacements deletes placements while keeping the image data
 // (upstream a=d,d=a).
 func DeleteAllKittyPlacements() string { return "\x1b_Ga=d,d=a,q=2\x1b\\" }
-
-func deleteAllKittyImages() string     { return DeleteAllKittyImages() }
-func deleteAllKittyPlacements() string { return DeleteAllKittyPlacements() }
 
 func (s *AltScreen) resetRenderState() {
 	s.resetRenderStateLocked()
@@ -2460,7 +2457,7 @@ func (s *AltScreen) doRender() {
 		case "iterm2":
 			builder.WriteString("\x1b[2J")
 		case "kitty":
-			builder.WriteString(deleteAllKittyPlacements())
+			builder.WriteString(DeleteAllKittyPlacements())
 		}
 	}
 	builder.WriteString(evictedImageDeletion)

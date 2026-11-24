@@ -222,11 +222,9 @@ func CreateModelRuntime(options CreateModelRuntimeOptions) (*ModelRuntime, error
 
 // isOfflineDisabled reports whether network access is allowed (PI_OFFLINE unset).
 func isOfflineDisabled() bool {
-	_, set := lookupEnv("PI_OFFLINE")
+	_, set := os.LookupEnv("PI_OFFLINE")
 	return !set
 }
-
-func lookupEnv(name string) (string, bool) { return os.LookupEnv(name) }
 
 // configureRadiusProviders replaces built-in providers with gateway-configured
 // Radius providers from models.json. A refresh publishes a new config and the

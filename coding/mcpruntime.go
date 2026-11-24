@@ -752,17 +752,11 @@ func ResolveMcpConfigValue(value string) (string, error) {
 	return resolved, nil
 }
 
-// resolveHeadersOrThrow expands every header value, failing on the first
-// unresolvable one (upstream resolveHeadersOrThrow).
-func resolveHeadersOrThrow(headers map[string]string, what string) (map[string]string, error) {
-	return ResolveHeadersOrThrow(headers, what, nil)
-}
-
 // McpDefaultTransport builds the transport of one entry (upstream
 // createDefaultTransport).
 func McpDefaultTransport(entry McpServerEntry, cwd string, authProvider mcp.AuthProvider) (mcp.Transport, error) {
 	if entry.Config.IsHTTP() {
-		headers, err := resolveHeadersOrThrow(entry.Config.Headers, "MCP server \""+entry.Name+"\"")
+		headers, err := ResolveHeadersOrThrow(entry.Config.Headers, "MCP server \""+entry.Name+"\"", nil)
 		if err != nil {
 			return nil, err
 		}
