@@ -63,16 +63,29 @@ type backgroundHandleDetails struct {
 	OutputPath string `json:"outputPath"`
 }
 
+// backgroundHandleLine is the user-facing sentence for a result that is a
+// background handle: what happened and where the output is going.
+func backgroundHandleLine(result *SortToolResultContent) (string, bool) {
+	if result == nil {
+		return "", false
+	}
+	handle := toolDetailsFrom[backgroundHandleDetails](result.Details)
+	if handle == nil || handle.Handle == "" {
+		return "", false
+	}
+	line := "Moved to the background as " + handle.Handle
+	if handle.OutputPath != "" {
+		line += ". Output: " + handle.OutputPath
+	}
+	return line + ". A notice follows when it ends.", true
+}
+
 func rebuildBashResult(result *SortToolResultContent, options ToolRenderResultOptions, theme *Theme,
 	showImages bool, state *bashResultState) []tui.Component {
 	// The handle's text is written for the model ("do not wait for it"); the
 	// user needs what happened and where the output is going.
-	if handle := toolDetailsFrom[backgroundHandleDetails](result.Details); handle != nil && handle.Handle != "" {
-		line := "Moved to the background as " + handle.Handle
-		if handle.OutputPath != "" {
-			line += ". Output: " + handle.OutputPath
-		}
-		return []tui.Component{tui.NewText("\n"+theme.Fg("muted", line+". A notice follows when it ends."), 0, 0, nil)}
+	if line, ok := backgroundHandleLine(result); ok {
+		return []tui.Component{tui.NewText("\n"+theme.Fg("muted", line), 0, 0, nil)}
 	}
 	children := make([]tui.Component, 0, 3)
 	output := strings.TrimSpace(GetTextOutput(result, showImages))

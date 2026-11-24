@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -112,5 +113,43 @@ func TestToolExecutionSelfShellRendersImages(t *testing.T) {
 	rendered := strings.Join(component.Render(80), "\n")
 	if !strings.Contains(rendered, "result") || !strings.Contains(rendered, "\x1b_Ga=T,f=100") {
 		t.Fatalf("the self shell must render its content and its image: %q", rendered)
+	}
+}
+
+// D538: every tool can be moved to the background, not only bash, so the
+// user-facing handle line is applied where every frame renders its result. An
+// MCP frame printed the model's instructions ("do not wait for it…") as tool
+// output.
+func TestBackgroundHandleRendersInEveryFrame(t *testing.T) {
+	theme := newRendererTestTheme(t)
+	result := &SortToolResultContent{
+		Content: []ToolResultContent{{Type: "text", Text: "This call is still running after 60 seconds, so it was moved to the background as bg-9.\n\n" +
+			"Its output is being written to /tmp/pi-background-m.log. You will be told once, when it finishes.\n\n" +
+			"Continue with other work; do not wait for it, and do not call it again."}},
+		Details: json.RawMessage(`{"backgroundHandle":"bg-9","toolCallId":"c9","toolName":"slow_search","outputPath":"/tmp/pi-background-m.log"}`),
+	}
+	component := safeRenderResult(mcpRenderers("slow_search").RenderResult, result, ToolRenderResultOptions{}, theme, &ToolRenderContext{})
+	if component == nil {
+		t.Fatal("the MCP frame rendered nothing")
+	}
+	text := stripAnsiEscapes(strings.Join(component.Render(120), "\n"))
+	if !strings.Contains(text, "Moved to the background as bg-9") || !strings.Contains(text, "/tmp/pi-background-m.log") {
+		t.Fatalf("the MCP frame lacks the handle line:\n%s", text)
+	}
+	if strings.Contains(text, "do not wait") {
+		t.Fatalf("the MCP frame shows the model's instructions:\n%s", text)
+	}
+	// A tool with no result renderer takes the fallback frame, which shows the
+	// same line.
+	InitTheme("dark", false)
+	fallback := NewToolExecutionComponent("slow_tool", "c9", map[string]any{}, ToolExecutionOptions{},
+		WithBuiltInRenderers("slow_tool", nil), nil, "/tmp")
+	fallback.result = result
+	if got := stripAnsiEscapes(strings.Join(fallback.createResultFallback().Render(120), "\n")); !strings.Contains(got, "Moved to the background as bg-9") || strings.Contains(got, "do not wait") {
+		t.Fatalf("the fallback frame shows %q", got)
+	}
+	// The transcript keeps the model's text: only the rendering changes.
+	if !strings.Contains(result.Content[0].Text, "do not wait") {
+		t.Fatal("rendering rewrote the stored result")
 	}
 }

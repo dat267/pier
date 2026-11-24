@@ -9062,8 +9062,9 @@ Every session the CLI builds reads the threshold, including the first one and
 the RPC session replacement, which copies its options; print mode keeps it off,
 since no later turn wakes.
 
-The handle's text is written for the model, so the shell frame renders it from
-the handle's details instead: "Moved to the background as bg-…. Output: <path>. A
+The handle's text is written for the model, so every frame renders it from the
+handle's details instead (any tool can be displaced, so this is done where each
+frame's result is rendered, and in the fallback frame): "Moved to the background as bg-…. Output: <path>. A
 notice follows when it ends.", rather than printing "do not wait for it" at the
 user.
 
@@ -9086,4 +9087,5 @@ Tests: `TestLoopToolRenderers`, `TestLoopToolsHaveRenderers`,
 `TestBackgroundNoticeQueuesDuringARun`, `TestStartupSessionBackgroundsToolCalls`,
 `TestSessionSkipsWakeAfterDispose`, `TestBackgroundNoticeNamesFileAndCapsBody`,
 `TestBackgroundFastCallLeavesNoFile`, `TestBackgroundRealShellCallStreamsToFile`,
-`TestBackgroundOutputFileHoldsLatestSnapshot`, `TestBackgroundNoticeCutKeepsUTF8`, `TestBashFrameRendersBackgroundHandle`.
+`TestBackgroundOutputFileHoldsLatestSnapshot`, `TestBackgroundNoticeCutKeepsUTF8`, `TestBashFrameRendersBackgroundHandle`,
+`TestBackgroundHandleRendersInEveryFrame`.

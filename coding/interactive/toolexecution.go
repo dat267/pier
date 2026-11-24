@@ -222,6 +222,9 @@ func (c *ToolExecutionComponent) createCallFallback() tui.Component {
 
 func (c *ToolExecutionComponent) createResultFallback() tui.Component {
 	output := c.textOutput()
+	if line, ok := backgroundHandleLine(c.result); ok {
+		output = line
+	}
 	if output == "" {
 		return nil
 	}
@@ -587,6 +590,14 @@ func safeRenderResult(renderer func(*SortToolResultContent, ToolRenderResultOpti
 			component = nil
 		}
 	}()
+	// A background handle's text is written for the model (D538). Every tool
+	// can be displaced, so each frame gets the user-facing line as its output;
+	// the details stay, and the stored result is untouched.
+	if line, ok := backgroundHandleLine(result); ok {
+		shown := *result
+		shown.Content = []ToolResultContent{{Type: "text", Text: line}}
+		result = &shown
+	}
 	return renderer(result, options, theme, context)
 }
 
