@@ -499,7 +499,7 @@ func (w *AuthWiring) ShowAuthPrompt(dialog *LoginDialogComponent, prompt ai.Auth
 		if w.ShowAuthSelect != nil {
 			return w.ShowAuthSelect(dialog, prompt)
 		}
-		return "", errors.New("Login cancelled")
+		return "", errLoginCancelled{}
 	case ai.AuthPromptManualCode:
 		response = dialog.ShowManualInput(prompt.Message)
 	default:
@@ -515,13 +515,13 @@ func (w *AuthWiring) ShowAuthPrompt(dialog *LoginDialogComponent, prompt ai.Auth
 	select {
 	case result := <-response:
 		if result.Err != nil {
-			return "", errors.New("Login cancelled")
+			return "", errLoginCancelled{}
 		}
 		return result.Value, nil
 	case <-dialog.Aborted():
-		return "", errors.New("Login cancelled")
+		return "", errLoginCancelled{}
 	case <-promptDone:
-		return "", errors.New("Login cancelled")
+		return "", errLoginCancelled{}
 	}
 }
 
@@ -598,7 +598,7 @@ func (w *AuthWiring) startLogin(ctx context.Context, dialog *LoginDialogComponen
 					syncPrefix, failurePrefix = "Saved API key for", "Failed to save API key for"
 				}
 				w.reportLoginError(err, providerName, syncPrefix, failurePrefix)
-				if err.Error() == "Login cancelled" && onBack != nil {
+				if err.Error() == coding.AuthLoginCancelledMessage && onBack != nil {
 					onBack()
 				}
 				return
@@ -691,7 +691,7 @@ func (w *AuthWiring) reportLoginError(err error, providerName string, syncPrefix
 		w.showError(syncPrefix + " " + providerName + ", but local model state could not be synchronized: " + err.Error())
 		return
 	}
-	if err.Error() != "Login cancelled" {
+	if err.Error() != coding.AuthLoginCancelledMessage {
 		w.showError(failurePrefix + " " + providerName + ": " + err.Error())
 	}
 }

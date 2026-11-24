@@ -164,7 +164,7 @@ func (c *LoginDialogComponent) cancel() {
 		c.pending = nil
 	}
 	if c.onComplete != nil {
-		c.onComplete(false, "Login cancelled")
+		c.onComplete(false, coding.AuthLoginCancelledMessage)
 	}
 }
 
@@ -178,9 +178,11 @@ func (c *LoginDialogComponent) isAborted() bool {
 	}
 }
 
+// errLoginCancelled is a prompt the user dismissed (upstream rejects with
+// Error("Login cancelled")).
 type errLoginCancelled struct{}
 
-func (errLoginCancelled) Error() string { return "Login cancelled" }
+func (errLoginCancelled) Error() string { return coding.AuthLoginCancelledMessage }
 
 // ShowAuth shows the authorization URL and instructions.
 func (c *LoginDialogComponent) ShowAuth(url string, instructions string) {
