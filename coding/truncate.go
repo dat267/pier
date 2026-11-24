@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"cmp"
 	"fmt"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -305,10 +306,8 @@ func TruncateTail(content string, options TruncationOptions) TruncationResult {
 		outputBytesCount += lineBytes
 	}
 
-	outputLines := make([]string, len(reversed))
-	for i, line := range reversed {
-		outputLines[len(reversed)-1-i] = line
-	}
+	slices.Reverse(reversed)
+	outputLines := reversed
 
 	if len(outputLines) >= maxLines && outputBytesCount <= maxBytes {
 		truncatedBy = TruncatedByLines
