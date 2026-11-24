@@ -1202,14 +1202,7 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 					return nil, rerr
 				}
 				if hresp.StatusCode >= 400 {
-					raw, _ := io.ReadAll(io.LimitReader(hresp.Body, 1<<20))
-					_ = hresp.Body.Close()
-					message, errorBody := openAIAPIError(hresp.StatusCode, raw)
-					return nil, &ProviderError{
-						Status: hresp.StatusCode, Headers: hresp.Header,
-						Message: message,
-						Body:    errorBody,
-					}
+					return nil, openAIProviderError(hresp)
 				}
 				return hresp, nil
 			}, &ProviderRetryOptions{MaxRetries: options.MaxRetries, MaxRetryDelayMS: options.MaxRetryDelayMs})

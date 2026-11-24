@@ -86,14 +86,7 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 			return nil, rerr
 		}
 		if hresp.StatusCode >= 400 {
-			raw, _ := io.ReadAll(io.LimitReader(hresp.Body, 1<<20))
-			_ = hresp.Body.Close()
-			message, body := openAIAPIError(hresp.StatusCode, raw)
-			return nil, &ProviderError{
-				Status: hresp.StatusCode, Headers: hresp.Header,
-				Message: message,
-				Body:    body,
-			}
+			return nil, openAIProviderError(hresp)
 		}
 		return hresp, nil
 	}, &ProviderRetryOptions{MaxRetries: options.MaxRetries, MaxRetryDelayMS: options.MaxRetryDelayMs})
@@ -210,6 +203,15 @@ type openRouterImagesURL struct {
 type openRouterImagesImagePart struct {
 	Type     string              `json:"type"`
 	ImageURL openRouterImagesURL `json:"image_url"`
+}
+
+// openAIProviderError reads and closes a failed response's body (at most
+// 1 MiB) and reports it as the openai SDK's APIError would.
+func openAIProviderError(response *http.Response) *ProviderError {
+	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	_ = response.Body.Close()
+	message, body := openAIAPIError(response.StatusCode, raw)
+	return &ProviderError{Status: response.StatusCode, Headers: response.Header, Message: message, Body: body}
 }
 
 // openAIAPIError reproduces the openai SDK's APIError message and the body
