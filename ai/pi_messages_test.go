@@ -25,12 +25,14 @@ func piMessagesModel(baseURL string) *Model {
 	}
 }
 
-type chunkedPiMessagesReader struct {
+// chunkedReader yields data at most chunkSize bytes per Read, splitting
+// stream frames across reads.
+type chunkedReader struct {
 	data      []byte
 	chunkSize int
 }
 
-func (r *chunkedPiMessagesReader) Read(dst []byte) (int, error) {
+func (r *chunkedReader) Read(dst []byte) (int, error) {
 	if len(r.data) == 0 {
 		return 0, io.EOF
 	}
@@ -43,7 +45,7 @@ func (r *chunkedPiMessagesReader) Read(dst []byte) (int, error) {
 func TestReadPiMessagesCRLFBoundarySplitAcrossReads(t *testing.T) {
 	body := []byte("data: {\"type\":\"text_delta\",\"delta\":\"one\"}\r\n\r\ndata: {\"type\":\"text_delta\",\"delta\":\"two\"}\r\n\r\n")
 	var deltas []string
-	err := readPiMessagesEvents(context.Background(), &chunkedPiMessagesReader{data: body, chunkSize: 1}, func(event *PiMessagesEvent) bool {
+	err := readPiMessagesEvents(context.Background(), &chunkedReader{data: body, chunkSize: 1}, func(event *PiMessagesEvent) bool {
 		deltas = append(deltas, event.Delta)
 		return true
 	})
@@ -57,7 +59,7 @@ func TestReadPiMessagesCRLFBoundarySplitAcrossReads(t *testing.T) {
 
 func TestReadPiMessagesChunkedEventAllocationIsLinear(t *testing.T) {
 	payload := []byte(strings.Repeat("x", 64*1024))
-	reader := &chunkedPiMessagesReader{data: payload, chunkSize: 128}
+	reader := &chunkedReader{data: payload, chunkSize: 128}
 
 	var before, after runtime.MemStats
 	runtime.ReadMemStats(&before)

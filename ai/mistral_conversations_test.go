@@ -15,24 +15,9 @@ import (
 
 // Tests for api/mistral-conversations.ts.
 
-type chunkedMistralReader struct {
-	data      []byte
-	chunkSize int
-}
-
-func (r *chunkedMistralReader) Read(dst []byte) (int, error) {
-	if len(r.data) == 0 {
-		return 0, io.EOF
-	}
-	n := min(len(dst), len(r.data), r.chunkSize)
-	copy(dst, r.data[:n])
-	r.data = r.data[n:]
-	return n, nil
-}
-
 func TestMistralChunkedUnterminatedEventAllocationIsLinear(t *testing.T) {
 	payload := []byte(strings.Repeat("x", 64*1024))
-	reader := &chunkedMistralReader{data: payload, chunkSize: 128}
+	reader := &chunkedReader{data: payload, chunkSize: 128}
 	output := &AssistantMessage{}
 	stream := NewAssistantMessageEventStream()
 
@@ -57,7 +42,7 @@ func TestMistralStreamBoundarySplitAcrossReads(t *testing.T) {
 	output := &AssistantMessage{}
 	err := consumeMistralChatStream(
 		ctxpkg.Background(), &Model{}, output, NewAssistantMessageEventStream(),
-		&chunkedMistralReader{data: body, chunkSize: 7}, nil,
+		&chunkedReader{data: body, chunkSize: 7}, nil,
 	)
 	if err != nil {
 		t.Fatalf("consume stream: %v", err)
