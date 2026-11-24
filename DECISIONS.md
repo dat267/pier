@@ -8922,7 +8922,13 @@ is capped, because a runaway loop is worse than a refused one.
 
 `/loop` is listed in `/features` alongside the other pier-only surface, and its
 tools are registered in the ordinary registry, so `/tools` shows and can disable
-them like any other tool. That needs care on the primary session: the command
+them like any other tool. Those tools have their own transcript frames: a tool with
+no built-in renderer falls through to the generic MCP frame, which printed the raw
+argument JSON, so `cron_create` showed a wall of `{"cron":...,"prompt":...}`. They
+now render what the call means instead: the schedule in words plus the prompt, the
+job being cancelled, and the wakeup delay or its stop.
+
+That needs care on the primary session: the command
 builds it before the app exists, so it is created with no scheduler and registers
 nothing. The app adopts it through `AdoptLoopScheduler` while composing, which
 registers the four tools and adds them to the active set; registering alone is not
@@ -9009,7 +9015,8 @@ A call that finishes inside the threshold takes the unchanged path: same result,
 same events, no handle, no registry entry. That is pinned by
 `TestBackgroundFastCallIsUnchanged`, which compares the two paths' bytes.
 
-Tests: `TestBackgroundToolCallThresholdSetting`,
+Tests: `TestLoopToolRenderers`, `TestLoopToolsHaveRenderers`,
+`TestBackgroundToolCallThresholdSetting`,
 `TestBackgroundToolCallThresholdPersists`,
 `TestBackgroundThresholdFeatureRow`,
 `TestBackgroundThresholdAppliesToTheLiveSession`,

@@ -25,6 +25,12 @@ var builtinToolRenderers = map[string]ToolRenderers{
 	"ls":         lsRenderers,
 	"get_goal":   goalGetRenderers,
 	"set_goal":   goalSetRenderers,
+	// D537: the scheduled-prompt tools are pier-only, so they have no reference
+	// renderer; without these they fell through to the generic MCP frame.
+	"cron_create":     cronCreateRenderers,
+	"cron_delete":     cronDeleteRenderers,
+	"cron_list":       cronListRenderers,
+	"schedule_wakeup": scheduleWakeupRenderers,
 }
 
 // BuiltinToolRendererNames lists the tools with built-in renderers.
