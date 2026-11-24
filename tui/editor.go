@@ -991,9 +991,8 @@ func (e *Editor) insertCharacterLocked(char string, skipUndoCoalescing bool) {
 			}
 		} else if isAutocompleteWordChar(char) {
 			textBeforeCursor := e.textBeforeCursor()
-			if e.isInSlashCommandContext(textBeforeCursor) {
-				e.tryTriggerAutocompleteLocked()
-			} else if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers) {
+			// Slash-command context, or a symbol trigger such as @ or #.
+			if e.isInSlashCommandContext(textBeforeCursor) || editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers) {
 				e.tryTriggerAutocompleteLocked()
 			}
 		}
@@ -1250,9 +1249,8 @@ func (e *Editor) handleBackspaceLocked() {
 		e.updateAutocompleteLocked()
 	} else {
 		textBeforeCursor := e.textBeforeCursor()
-		if e.isInSlashCommandContext(textBeforeCursor) {
-			e.tryTriggerAutocompleteLocked()
-		} else if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers) {
+		// Slash-command context, or a symbol trigger such as @ or #.
+		if e.isInSlashCommandContext(textBeforeCursor) || editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers) {
 			e.tryTriggerAutocompleteLocked()
 		}
 	}
@@ -1590,9 +1588,8 @@ func (e *Editor) handleForwardDeleteLocked() {
 		e.updateAutocompleteLocked()
 	} else {
 		textBeforeCursor := e.textBeforeCursor()
-		if e.isInSlashCommandContext(textBeforeCursor) {
-			e.tryTriggerAutocompleteLocked()
-		} else if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers) {
+		// Slash-command context, or a symbol trigger such as @ or #.
+		if e.isInSlashCommandContext(textBeforeCursor) || editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers) {
 			e.tryTriggerAutocompleteLocked()
 		}
 	}
