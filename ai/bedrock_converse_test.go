@@ -522,3 +522,51 @@ func TestBedrockClaudeDetectionMatchesTheReferencePredicate(t *testing.T) {
 		}
 	}
 }
+
+// TestBedrockLoginNotifiesBeforeAWSMethods pins upstream bedrockAuth.login
+// (pi v1.6.0, faac5858, packages/ai/src/providers/amazon-bedrock.ts:15): the
+// bearer token skips the credential notice, and every other method, including
+// an unknown one before it fails, sees it once.
+func TestBedrockLoginNotifiesBeforeAWSMethods(t *testing.T) {
+	for _, tc := range []struct {
+		method      string
+		wantNotices int
+		wantErr     string
+		want        ApiKeyCredential
+	}{
+		{method: "bearer-token", want: ApiKeyCredential{Key: "answer"}},
+		{method: "aws-profile", wantNotices: 1, want: ApiKeyCredential{Env: ProviderEnv{"AWS_PROFILE": "answer"}}},
+		{method: "credential-chain", wantNotices: 1},
+		{method: "sso", wantNotices: 1, wantErr: "Unknown Amazon Bedrock auth method: sso"},
+	} {
+		t.Run(tc.method, func(t *testing.T) {
+			notices := 0
+			prompts := 0
+			credential, err := BedrockAPIKeyAuth().Login(&AuthInteraction{
+				Prompt: func(AuthPrompt) (string, error) {
+					prompts++
+					if prompts == 1 {
+						return tc.method, nil
+					}
+					return "answer", nil
+				},
+				Notify: func(AuthEvent) { notices++ },
+			})
+			if notices != tc.wantNotices {
+				t.Fatalf("notices = %d; want %d", notices, tc.wantNotices)
+			}
+			if tc.wantErr != "" {
+				if err == nil || err.Error() != tc.wantErr {
+					t.Fatalf("err = %v; want %q", err, tc.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if credential.Key != tc.want.Key || credential.Env["AWS_PROFILE"] != tc.want.Env["AWS_PROFILE"] {
+				t.Fatalf("credential = %#v; want %#v", credential, tc.want)
+			}
+		})
+	}
+}

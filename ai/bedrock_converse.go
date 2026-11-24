@@ -1534,40 +1534,33 @@ func BedrockAPIKeyAuth() *ApiKeyAuth {
 			if err != nil {
 				return nil, err
 			}
-			switch method {
-			case "bearer-token":
+			if method == "bearer-token" {
 				key, perr := interaction.Prompt(AuthPrompt{Type: AuthPromptSecret, Message: "Enter Amazon Bedrock bearer token"})
 				if perr != nil {
 					return nil, perr
 				}
 				return &ApiKeyCredential{Key: key}, nil
+			}
+			// Every AWS method, and an unknown one before it fails, sees the
+			// credential notice first, as upstream notifies before branching.
+			if interaction.Notify != nil {
+				interaction.Notify(AuthEvent{
+					Type:    AuthEventInfo,
+					Message: "Amazon Bedrock supports AWS profiles, IAM credentials, and role-based credentials.",
+					Links: []AuthInfoLink{{
+						Label: "AWS credential provider chain",
+						URL:   "https://docs.aws.amazon.com/sdkref/latest/guide/standardized-credentials.html",
+					}},
+				})
+			}
+			switch method {
 			case "aws-profile":
-				if interaction.Notify != nil {
-					interaction.Notify(AuthEvent{
-						Type:    AuthEventInfo,
-						Message: "Amazon Bedrock supports AWS profiles, IAM credentials, and role-based credentials.",
-						Links: []AuthInfoLink{{
-							Label: "AWS credential provider chain",
-							URL:   "https://docs.aws.amazon.com/sdkref/latest/guide/standardized-credentials.html",
-						}},
-					})
-				}
 				profile, perr := interaction.Prompt(AuthPrompt{Type: AuthPromptText, Message: "Enter AWS profile name"})
 				if perr != nil {
 					return nil, perr
 				}
 				return &ApiKeyCredential{Env: ProviderEnv{"AWS_PROFILE": profile}}, nil
 			case "credential-chain":
-				if interaction.Notify != nil {
-					interaction.Notify(AuthEvent{
-						Type:    AuthEventInfo,
-						Message: "Amazon Bedrock supports AWS profiles, IAM credentials, and role-based credentials.",
-						Links: []AuthInfoLink{{
-							Label: "AWS credential provider chain",
-							URL:   "https://docs.aws.amazon.com/sdkref/latest/guide/standardized-credentials.html",
-						}},
-					})
-				}
 				if _, perr := interaction.Prompt(AuthPrompt{
 					Type:    AuthPromptText,
 					Message: "Configure AWS credentials, then press Enter to continue",
