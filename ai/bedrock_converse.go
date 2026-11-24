@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -1198,13 +1199,9 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 		if err := json.Unmarshal(payload, &event); err != nil {
 			return err
 		}
-		index := -1
-		for position, block := range *blocks {
-			if block.contentIndex == event.ContentBlockIndex {
-				index = position
-				break
-			}
-		}
+		index := slices.IndexFunc(*blocks, func(block *bedrockBlock) bool {
+			return block.contentIndex == event.ContentBlockIndex
+		})
 		switch {
 		case event.Delta.Text != nil:
 			if index == -1 {
@@ -1273,13 +1270,9 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 		if err := json.Unmarshal(payload, &event); err != nil {
 			return err
 		}
-		index := -1
-		for position, block := range *blocks {
-			if block.contentIndex == event.ContentBlockIndex {
-				index = position
-				break
-			}
-		}
+		index := slices.IndexFunc(*blocks, func(block *bedrockBlock) bool {
+			return block.contentIndex == event.ContentBlockIndex
+		})
 		if index == -1 {
 			return nil
 		}
