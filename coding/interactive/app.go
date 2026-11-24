@@ -315,6 +315,10 @@ func NewApp(options AppOptions) *App {
 	app.loopScheduler = coding.NewLoopScheduler(nil, func(prompt string) {
 		app.ui.Post(func() { app.submit.HandleSubmit(context.Background(), prompt) })
 	})
+	// Start the timer loop. Without this a job is registered and listed but never
+	// fires: every scheduler test drives fireDue directly, so the missing call was
+	// invisible to them.
+	app.loopScheduler.Start()
 
 	// One owner for the off-loop queues. The command passes its group so a
 	// single StopAll at teardown covers the settings and session queues too; a

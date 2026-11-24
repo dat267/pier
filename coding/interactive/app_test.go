@@ -379,3 +379,29 @@ func TestAppSkipsLoopToolsWhenTheFeatureIsOff(t *testing.T) {
 		}
 	}
 }
+
+// The app must start its scheduler's timer loop. Without that a job is registered
+// and listed in cron_list but never fires, and every scheduler unit test still
+// passes because they drive fireDue directly.
+//
+// The assertion is the scheduler's own running state rather than a real minute
+// boundary: waiting for one made this test take 38 seconds, and the consequence
+// being pinned is the started timer, not the clock's arithmetic.
+func TestAppStartsTheLoopScheduler(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	if app.loopScheduler == nil {
+		t.Fatal("the app has no loop scheduler")
+	}
+	if !app.loopScheduler.Running() {
+		t.Fatal("the app created a scheduler but never started it, so no job can fire")
+	}
+	// Closing the app stops it, so a closed pier leaves no timer. Close nils the
+	// field, so hold the pointer to ask afterwards. t.Cleanup(app.Close) is what
+	// closes it, so call Close directly rather than relying on cleanup ordering.
+	scheduler := app.loopScheduler
+	app.Close()
+	if scheduler.Running() {
+		t.Fatal("closing the app left the scheduler running")
+	}
+}

@@ -70,6 +70,7 @@ type LoopScheduler struct {
 	now     func() time.Time
 	enqueue func(prompt string)
 	timer   *time.Timer
+	started bool
 	stopped bool
 
 	// scheduleNudge wakes the timer loop when the job set changes.
@@ -90,12 +91,20 @@ func NewLoopScheduler(now func() time.Time, enqueue func(prompt string)) *LoopSc
 // no-op.
 func (s *LoopScheduler) Start() {
 	s.mu.Lock()
-	if s.timer != nil || s.stopped {
+	if s.started || s.stopped {
 		s.mu.Unlock()
 		return
 	}
+	s.started = true
 	s.mu.Unlock()
 	go s.run()
+}
+
+// Running reports whether the timer loop was started and is not yet stopped.
+func (s *LoopScheduler) Running() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.started && !s.stopped
 }
 
 // Stop ends the timer loop and drops every job, so a closed session leaves no
