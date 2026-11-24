@@ -230,8 +230,11 @@ func clipBackgroundBody(body string) string {
 }
 
 // executeWithBackground runs the call and gives up on waiting once the threshold
-// expires. It reports false when the call finished first, so the caller takes the
-// unchanged path and a fast call is byte-identical to before.
+// expires. It reports true when it has an outcome for the caller: either a handle
+// for a call that outlived the threshold, or the result of one that finished
+// first. Both mean the tool has already executed, so the caller must return the
+// outcome rather than run the call a second time. It reports false only when there
+// is nothing to return, which today is the aborted-cancellation case.
 func executeWithBackground(
 	ctx context.Context,
 	prepared *preparedToolCallValue,
@@ -294,14 +297,14 @@ func executeWithBackground(
 			panic(errFromUpdate)
 		}
 		if finished.err == nil {
-			return executedToolCallOutcome{result: finished.result, isError: finished.result.IsError, durationMS: durationMS}, false
+			return executedToolCallOutcome{result: finished.result, isError: finished.result.IsError, durationMS: durationMS}, true
 		}
 		if ctxDone(ctx) && isContextError(finished.err) {
 			finished.err = errors.New("Operation aborted")
 		}
 		return executedToolCallOutcome{
 			result: createErrorToolResult(finished.err.Error()), isError: true, durationMS: durationMS,
-		}, false
+		}, true
 	case <-timer.C:
 
 	}

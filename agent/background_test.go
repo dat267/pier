@@ -82,6 +82,28 @@ func TestBackgroundFastCallIsUnchanged(t *testing.T) {
 	if registered != 0 {
 		t.Fatalf("a fast call was backgrounded (%d registrations)", registered)
 	}
+	// The tool must have run exactly once, with and without the policy. Equal
+	// results hid a double execution, which is invisible for an idempotent tool
+	// and destructive for one that is not: cron_create ran twice and armed two
+	// jobs, and cron_delete's second run reported "No scheduled job" for the job
+	// its first run had already removed.
+	if got := atomic.LoadInt32(&plain.started); got != 1 {
+		t.Fatalf("without a policy the tool ran %d times", got)
+	}
+	if got := atomic.LoadInt32(&withPolicy.started); got != 1 {
+		t.Fatalf("with a policy the tool ran %d times", got)
+	}
+	// The tool must have run exactly once, with and without the policy. Equal
+	// results hid a double execution, which is invisible for an idempotent tool
+	// and destructive for one that is not: cron_create ran twice and armed two
+	// jobs, and cron_delete's second run reported "No scheduled job" for the job
+	// its first run had already removed.
+	if got := atomic.LoadInt32(&plain.started); got != 1 {
+		t.Fatalf("without a policy the tool ran %d times", got)
+	}
+	if got := atomic.LoadInt32(&withPolicy.started); got != 1 {
+		t.Fatalf("with a policy the tool ran %d times", got)
+	}
 	if gotPlain.isError != gotPolicy.isError {
 		t.Fatalf("isError differs: %v vs %v", gotPlain.isError, gotPolicy.isError)
 	}
@@ -583,8 +605,11 @@ func TestBackgroundFastCallLeavesNoFile(t *testing.T) {
 		toolCall: ai.ToolCall{ID: "cfast", Name: "quick"},
 		tool:     pointerTo(newBackgroundTestTool("quick", &backgroundTestOps{release: closedChannel(), output: "done"})),
 	}
-	if _, backgrounded := executeWithBackground(context.Background(), prepared, func(AgentEvent) error { return nil }, policy); backgrounded {
-		t.Fatal("a fast call was backgrounded")
+	// A fast call is not backgrounded: it reports the outcome it already has, so
+	// the caller must not run it again. "not backgrounded" therefore means "handled
+	// here", not "finished and run a second time".
+	if _, handled := executeWithBackground(context.Background(), prepared, func(AgentEvent) error { return nil }, policy); !handled {
+		t.Fatal("a fast call was not handled by the foreground path")
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatalf("a fast call left %s behind (stat err %v)", path, err)

@@ -9043,7 +9043,10 @@ since no later turn wakes.
 
 A call that finishes inside the threshold takes the unchanged path: same result,
 same events, no handle, no registry entry. That is pinned by
-`TestBackgroundFastCallIsUnchanged`, which compares the two paths' bytes.
+`TestBackgroundFastCallIsUnchanged`, which compares the two paths' bytes and counts
+executions: the wait races the call, so a fall-through to the foreground path ran
+every tool twice. Equal results hid it for an idempotent tool and made it
+destructive for one that is not, which is how one `cron_create` armed two jobs.
 
 Tests: `TestLoopToolRenderers`, `TestLoopToolsHaveRenderers`,
 `TestBackgroundToolCallThresholdSetting`,
