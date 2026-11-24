@@ -69,8 +69,6 @@ func splitChangelogLocalTarget(target string) changelogTargetParts {
 	}
 }
 
-func normalizeChangelogPathPart(value string) string { return strings.ReplaceAll(value, "\\", "/") }
-
 // replaceLegacyRepoPrefix rewrites the legacy pi-mono repository prefix.
 func replaceLegacyRepoPrefix(target string) string {
 	loc := legacyRepoPrefixRe.FindStringIndex(target)
@@ -85,7 +83,7 @@ func replaceLegacyRepoPrefix(target string) string {
 }
 
 func resolveChangelogRepositoryPath(targetPath string) (string, bool) {
-	normalizedTarget := normalizeChangelogPathPart(targetPath)
+	normalizedTarget := strings.ReplaceAll(targetPath, "\\", "/")
 	var joined string
 	// path.posix.normalize keeps a trailing slash; path.Clean drops it, so
 	// restore it explicitly.

@@ -820,7 +820,7 @@ func applyPierSystemAccent(colors map[string]any, appearance string) {
 			}
 			channels := tui.ColorToOklch(color)
 			accent := pierAccentWithContrast(channels, appearance, surfaces)
-			colors[token] = hexFromRgb(accent.R, accent.G, accent.B)
+			colors[token] = fmt.Sprintf("#%02x%02x%02x", accent.R, accent.G, accent.B)
 		}
 	}
 }
@@ -1296,10 +1296,6 @@ func DetectTerminalBackgroundFromEnv(env func(string) string) TerminalThemeDetec
 		Detail:     "no terminal background hint found",
 		Confidence: "low",
 	}
-}
-
-func hexFromRgb(r int, g int, b int) string {
-	return fmt.Sprintf("#%02x%02x%02x", r, g, b)
 }
 
 // GetDefaultTheme returns the environment-detected default theme name.

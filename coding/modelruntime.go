@@ -243,7 +243,7 @@ func (r *ModelRuntime) configureRadiusProviders() {
 		builtins[providerID] = ai.RadiusProvider(ai.RadiusProviderOptions{
 			ID:      providerID,
 			Name:    name,
-			Gateway: radiusGatewayFromBaseURL(config.BaseURL),
+			Gateway: radiusVersionSuffix.ReplaceAllString(config.BaseURL, ""),
 		})
 	}
 	r.builtins = builtins
@@ -258,11 +258,6 @@ func (r *ModelRuntime) providerConfig(providerID string) *ModelsJSONProvider {
 }
 
 var radiusVersionSuffix = regexp.MustCompile(`/v1/?$`)
-
-// radiusGatewayFromBaseURL strips a trailing /v1 from a gateway base url.
-func radiusGatewayFromBaseURL(baseURL string) string {
-	return radiusVersionSuffix.ReplaceAllString(baseURL, "")
-}
 
 // providerIDs lists every known provider id.
 func (r *ModelRuntime) providerIDs() []string {

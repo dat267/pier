@@ -822,7 +822,7 @@ func validateCompat(value any, path string, errors *[]validationError) {
 				continue
 			}
 			if len(list) > 3 {
-				*errors = append(*errors, validationError{path: fieldPath, message: maxItemsMessage(3)})
+				*errors = append(*errors, validationError{path: fieldPath, message: "Expected array length less or equal to 3"})
 			}
 			for index, item := range list {
 				itemPath := fmt.Sprintf("%s.%d", fieldPath, index)
@@ -1141,8 +1141,4 @@ func expectedMessage(kind string) string {
 
 func minLengthMessage(length int) string {
 	return fmt.Sprintf("Expected string length greater or equal to %d", length)
-}
-
-func maxItemsMessage(count int) string {
-	return fmt.Sprintf("Expected array length less or equal to %d", count)
 }
