@@ -567,15 +567,7 @@ func resolveMcpExposureAlias(value any) any {
 
 func isMcpExposure(value any) bool {
 	text, ok := value.(string)
-	if !ok {
-		return false
-	}
-	for _, exposure := range mcpExposures {
-		if string(exposure) == text {
-			return true
-		}
-	}
-	return false
+	return ok && slices.Contains(mcpExposures, McpExposure(text))
 }
 
 // --- raw-value helpers (upstream isRecord / isStringRecord / type checks) ---
