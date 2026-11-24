@@ -13,8 +13,6 @@ import (
 // answer (D385), and releasing them must keep that granularity: each held
 // follow-up becomes its own turn, not one request carrying all of them.
 func TestGoalReleasedFollowUpsAreDeliveredOneAtATime(t *testing.T) {
-	manager, dir := newTestSession(t)
-	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
 	followUps := []string{"f1", "f2", "f3"}
 	var session *AgentSession
 	var requests [][]string
@@ -33,13 +31,7 @@ func TestGoalReleasedFollowUpsAreDeliveredOneAtATime(t *testing.T) {
 		}
 		return textReplyStream(m, "done")
 	}
-	var err error
-	session, err = NewAgentSession(&SessionConfig{
-		Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, Goal: true, ConvertToLlm: ConvertToLlm,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	session = newGoalSession(t, streamFn)
 	var pending []func(context.Context) error
 	session.GoalController().SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
 	for _, text := range followUps {

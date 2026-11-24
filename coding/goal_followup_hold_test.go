@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/internal/goal"
 )
@@ -97,8 +98,6 @@ func TestGoalHoldsFollowUpsUntilItsFinalAnswer(t *testing.T) {
 // in flight to settle; starting it from the agent-end callback would be
 // rejected as "already processing" and the follow-up would be lost.
 func TestGoalReleasedFollowUpsRunWithoutAHost(t *testing.T) {
-	manager, dir := newTestSession(t)
-	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
 	var session *AgentSession
 	var prompts []string
 	round := 0
@@ -115,13 +114,7 @@ func TestGoalReleasedFollowUpsRunWithoutAHost(t *testing.T) {
 		}
 		return textReplyStream(m, "done")
 	}
-	var err error
-	session, err = NewAgentSession(&SessionConfig{
-		Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, Goal: true, ConvertToLlm: ConvertToLlm,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	session = newGoalSession(t, streamFn)
 	settled := make(chan struct{}, 4)
 	session.Subscribe(func(event *SessionEvent) {
 		if event.Type == SessionAgentSettled {
@@ -328,8 +321,6 @@ func TestGoalReleaseRacingDisposeLeavesNoUnabortableRun(t *testing.T) {
 // processing" and dropping them (D438). Upstream has no goal hold; its
 // follow-ups stay queued until a run takes them.
 func TestGoalReleasedFollowUpsQueueBehindARunThatStartedFirst(t *testing.T) {
-	manager, dir := newTestSession(t)
-	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
 	var session *AgentSession
 	var calls atomic.Int32
 	interloperStarted := make(chan struct{})
@@ -352,13 +343,7 @@ func TestGoalReleasedFollowUpsQueueBehindARunThatStartedFirst(t *testing.T) {
 		}()
 		return stream
 	}
-	var err error
-	session, err = NewAgentSession(&SessionConfig{
-		Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, Goal: true, ConvertToLlm: ConvertToLlm,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	session = newGoalSession(t, streamFn)
 	defer session.Dispose()
 	var pending []func(context.Context) error
 	session.GoalController().SetStartWork(func(work func(context.Context) error) { pending = append(pending, work) })
@@ -399,4 +384,19 @@ func TestGoalReleasedFollowUpsQueueBehindARunThatStartedFirst(t *testing.T) {
 	if queued := session.GetFollowUpMessages(); len(queued) != 0 {
 		t.Fatalf("follow-ups still displayed as queued: %v", queued)
 	}
+}
+
+// newGoalSession is a goal-enabled session on a fixture model that streams
+// through streamFn.
+func newGoalSession(t *testing.T, streamFn agent.StreamFn) *AgentSession {
+	t.Helper()
+	manager, dir := newTestSession(t)
+	model := &ai.Model{ID: "fixture", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn, Goal: true, ConvertToLlm: ConvertToLlm,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return session
 }
