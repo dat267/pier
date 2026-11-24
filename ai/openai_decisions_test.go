@@ -246,67 +246,15 @@ func TestOpenAIDecisionsKeepsEmptyCriteriaArrays(t *testing.T) {
 }
 
 func TestOpenAIDecisionsStringifiesStateNumbersLikeJavaScript(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var request struct {
-			Input string `json:"input"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-			t.Errorf("decode request: %v", err)
-		}
-		if request.Input != `{"float":1,"negativeZero":0}` {
-			t.Errorf("input = %q", request.Input)
-		}
-		_, _ = w.Write([]byte(`{"answers":[]}`))
-	}))
-	defer server.Close()
-	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
-	state := json.RawMessage(`{"float":1.0,"negativeZero":-0}`)
-	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: state}, &ClassifierOptions{APIKey: "secret"})
-	if result.StopReason != ClassifierStopStop {
-		t.Fatalf("result = %+v", result)
-	}
+	checkDecisionsStateInput(t, json.RawMessage(`{"float":1.0,"negativeZero":-0}`), `{"float":1,"negativeZero":0}`)
 }
 
 func TestOpenAIDecisionsStringifiesNonObjectJSONState(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var request struct {
-			Input string `json:"input"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-			t.Errorf("decode request: %v", err)
-		}
-		if request.Input != `["x"]` {
-			t.Errorf("input = %q", request.Input)
-		}
-		_, _ = w.Write([]byte(`{"answers":[]}`))
-	}))
-	defer server.Close()
-	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
-	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`["x"]`)}, &ClassifierOptions{APIKey: "secret"})
-	if result.StopReason != ClassifierStopStop {
-		t.Fatalf("result = %+v", result)
-	}
+	checkDecisionsStateInput(t, json.RawMessage(`["x"]`), `["x"]`)
 }
 
 func TestOpenAIDecisionsAcceptsWhitespaceAroundJSONState(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var request struct {
-			Input string `json:"input"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-			t.Errorf("decode request: %v", err)
-		}
-		if request.Input != `{"text":1}` {
-			t.Errorf("input = %q", request.Input)
-		}
-		_, _ = w.Write([]byte(`{"answers":[]}`))
-	}))
-	defer server.Close()
-	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
-	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(" \n { \"text\": 1 }  ")}, &ClassifierOptions{APIKey: "secret"})
-	if result.StopReason != ClassifierStopStop {
-		t.Fatalf("result = %+v", result)
-	}
+	checkDecisionsStateInput(t, json.RawMessage(" \n { \"text\": 1 }  "), `{"text":1}`)
 }
 
 func TestOpenAIDecisionsRejectsInvalidPayloadTransformBeforeRequest(t *testing.T) {
@@ -563,5 +511,29 @@ func TestOpenAIDecisionsOmitsInputWithoutState(t *testing.T) {
 		`{"type":"input_image","image_url":"data:image/png;base64,AA=="}]}],"questions":[]}`
 	if string(encoded) != want {
 		t.Fatalf("image payload without state = %s, want %s", encoded, want)
+	}
+}
+
+// checkDecisionsStateInput classifies with state and checks the request
+// carried want as its stringified input.
+func checkDecisionsStateInput(t *testing.T, state json.RawMessage, want string) {
+	t.Helper()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var request struct {
+			Input string `json:"input"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Errorf("decode request: %v", err)
+		}
+		if request.Input != want {
+			t.Errorf("input = %q; want %q", request.Input, want)
+		}
+		_, _ = w.Write([]byte(`{"answers":[]}`))
+	}))
+	defer server.Close()
+	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text"}}
+	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: state}, &ClassifierOptions{APIKey: "secret"})
+	if result.StopReason != ClassifierStopStop {
+		t.Fatalf("result = %+v", result)
 	}
 }
