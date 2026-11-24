@@ -1735,15 +1735,10 @@ func buildSessionInfosWithProgress(ctx context.Context, paths []string, onProgre
 	return sessions, nil
 }
 
-// buildSessionInfo extracts listing metadata (port of buildSessionInfo). The
-// file is streamed line by line like upstream's createReadStream + readline
-// loop; reading it whole and splitting it doubled the memory of listing a
-// large session directory.
-func buildSessionInfo(filePath string) *SessionInfo {
-	return buildSessionInfoContext(context.Background(), filePath)
-}
-
-// buildSessionInfoContext is buildSessionInfo, abandoning the scan when ctx is
+// buildSessionInfoContext extracts listing metadata (port of
+// buildSessionInfo). The file is streamed line by line like upstream's
+// createReadStream + readline loop; reading it whole and splitting it doubled
+// the memory of listing a large session directory. The scan stops when ctx is
 // done: a listing of a 248 MB session must not outlive its cancel (upstream
 // aborts the read stream through its AbortSignal).
 func buildSessionInfoContext(ctx context.Context, filePath string) *SessionInfo {

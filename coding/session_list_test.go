@@ -332,7 +332,7 @@ func TestBuildSessionInfoSkipsUnusedMessagePayloads(t *testing.T) {
 	}
 
 	allocated := allocatedBytesPerRun(t, 1, func() {
-		built := buildSessionInfo(path)
+		built := buildSessionInfoContext(context.Background(), path)
 		if built == nil || built.MessageCount != 400 || strings.Count(built.AllMessagesText, "hello") != 400 {
 			t.Fatalf("buildSessionInfo = %+v", built)
 		}
@@ -510,7 +510,7 @@ func TestBuildSessionInfoDoesNotCopyTheWholeFile(t *testing.T) {
 	}
 
 	allocated := allocatedBytesPerRun(t, 1, func() {
-		built := buildSessionInfo(path)
+		built := buildSessionInfoContext(context.Background(), path)
 		if built == nil || built.ID != "s1" {
 			t.Fatalf("buildSessionInfo = %+v", built)
 		}
