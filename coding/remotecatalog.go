@@ -212,6 +212,29 @@ func remoteCatalogURL(catalogBaseURL, providerID string) (string, error) {
 	return endpoint.String(), nil
 }
 
+// newRemoteCatalogRequest builds the catalog GET for one provider: the
+// ?types= model types, JSON accept, the pi user agent, and if-none-match when
+// validator is set (the request half of upstream requestCatalog).
+func newRemoteCatalogRequest(ctx context.Context, catalogBaseURL, providerID, validator string) (*http.Request, error) {
+	endpoint, err := remoteCatalogURL(catalogBaseURL, providerID)
+	if err != nil {
+		return nil, err
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Set("accept", "application/json")
+	request.Header.Set("User-Agent", PiUserAgent(Version))
+	query := request.URL.Query()
+	query.Set("types", remoteCatalogModelTypes)
+	request.URL.RawQuery = query.Encode()
+	if validator != "" {
+		request.Header.Set("if-none-match", validator)
+	}
+	return request, nil
+}
+
 // WithRemoteCatalog adds a persisted pi.dev catalog overlay to a static
 // built-in provider. The overlay only applies when the stored catalog is newer
 // than the locally generated one; refreshes revalidate with the stored etag and
@@ -312,21 +335,9 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 		if stored != nil && len(stored.Models) > 0 && stored.Etag != nil {
 			validator = *stored.Etag
 		}
-		endpoint, err := remoteCatalogURL(catalogBaseURL, provider.ID)
+		request, err := newRemoteCatalogRequest(ctx, catalogBaseURL, provider.ID, validator)
 		if err != nil {
 			return err
-		}
-		request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-		if err != nil {
-			return err
-		}
-		request.Header.Set("accept", "application/json")
-		request.Header.Set("User-Agent", PiUserAgent(Version))
-		query := request.URL.Query()
-		query.Set("types", remoteCatalogModelTypes)
-		request.URL.RawQuery = query.Encode()
-		if validator != "" {
-			request.Header.Set("if-none-match", validator)
 		}
 		response, err := fetch(ctx, request)
 		if err != nil {
@@ -462,19 +473,10 @@ func WithPersonalizedCatalog(
 		if !refresh.AllowNetwork || ctx.Err() != nil {
 			return nil
 		}
-		endpoint, err := remoteCatalogURL(catalogBaseURL, provider.ID)
+		request, err := newRemoteCatalogRequest(ctx, catalogBaseURL, provider.ID, "")
 		if err != nil {
 			return err
 		}
-		request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-		if err != nil {
-			return err
-		}
-		request.Header.Set("accept", "application/json")
-		request.Header.Set("User-Agent", PiUserAgent(Version))
-		query := request.URL.Query()
-		query.Set("types", remoteCatalogModelTypes)
-		request.URL.RawQuery = query.Encode()
 		response, err := fetch(ctx, request)
 		if err != nil {
 			return err
