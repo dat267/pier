@@ -119,8 +119,15 @@ func bedrockNormalizeCandidate(value string) string {
 // SupportsAdaptiveThinking reports whether a Bedrock model supports adaptive
 // thinking (Opus 4.6+, Sonnet 4.6, Claude 5).
 func SupportsAdaptiveThinking(modelID, modelName string) bool {
+	return modelNameContainsAny(modelID, modelName, "opus-4-6", "opus-4-7", "opus-4-8", "opus-5", "sonnet-4-6", "sonnet-5", "haiku-5", "fable-5")
+}
+
+// modelNameContainsAny reports whether any of the model's match candidates
+// contains one of needles (upstream getModelMatchCandidates(...).some(s =>
+// s.includes(...) || ...)).
+func modelNameContainsAny(modelID, modelName string, needles ...string) bool {
 	for _, candidate := range GetModelMatchCandidates(modelID, modelName) {
-		for _, needle := range []string{"opus-4-6", "opus-4-7", "opus-4-8", "opus-5", "sonnet-4-6", "sonnet-5", "haiku-5", "fable-5"} {
+		for _, needle := range needles {
 			if strings.Contains(candidate, needle) {
 				return true
 			}
@@ -134,26 +141,12 @@ func SupportsAdaptiveThinking(modelID, modelName string) bool {
 // "thinking.adaptive.block_binding: Extra inputs are not permitted"
 // (upstream supportsThinkingBlockBinding).
 func SupportsThinkingBlockBinding(model *Model) bool {
-	for _, candidate := range GetModelMatchCandidates(model.ID, model.Name) {
-		for _, needle := range []string{"opus-4-7", "opus-4-8", "opus-5", "sonnet-5", "haiku-5", "fable-5"} {
-			if strings.Contains(candidate, needle) {
-				return true
-			}
-		}
-	}
-	return false
+	return modelNameContainsAny(model.ID, model.Name, "opus-4-7", "opus-4-8", "opus-5", "sonnet-5", "haiku-5", "fable-5")
 }
 
 // SupportsNativeXhighEffort reports native xhigh support.
 func SupportsNativeXhighEffort(model *Model) bool {
-	for _, candidate := range GetModelMatchCandidates(model.ID, model.Name) {
-		for _, needle := range []string{"opus-4-7", "opus-4-8", "opus-5", "sonnet-5", "haiku-5", "fable-5"} {
-			if strings.Contains(candidate, needle) {
-				return true
-			}
-		}
-	}
-	return false
+	return modelNameContainsAny(model.ID, model.Name, "opus-4-7", "opus-4-8", "opus-5", "sonnet-5", "haiku-5", "fable-5")
 }
 
 // MapThinkingLevelToBedrockEffort maps a level to Bedrock's effort control.
