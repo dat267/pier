@@ -12,7 +12,6 @@ import (
 // compiledLanguage is a language compiled for highlighting and cached.
 type compiledLanguage struct {
 	name              string
-	aliases           []string
 	caseInsensitive   bool
 	flags             string
 	classNameAliases  map[string]string
@@ -88,7 +87,6 @@ func getCompiledLanguage(name string) (*compiledLanguage, error) {
 	}
 	lang := &compiledLanguage{
 		name:              language.Name,
-		aliases:           language.Aliases,
 		caseInsensitive:   language.CaseInsensitive,
 		flags:             flags,
 		classNameAliases:  language.ClassNameAliases,
