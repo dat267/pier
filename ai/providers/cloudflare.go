@@ -113,19 +113,7 @@ func CloudflareWorkersAIAuth() *ai.ApiKeyAuth {
 			}
 			return &ai.ApiKeyCredential{Key: key, Env: ai.ProviderEnv{CloudflareAccountIDEnv: accountID}}, nil
 		},
-		Resolve: func(input ai.AuthResolveInput) (*ai.AuthResult, error) {
-			if err := ctxErrOf(input.Ctx2); err != nil {
-				return nil, err
-			}
-			result, ok := resolveCloudflareEnv(input.Ctx2, CloudflareAuthWorkersAI, input.Ctx, input.Credential)
-			if err := ctxErrOf(input.Ctx2); err != nil {
-				return nil, err
-			}
-			if !ok {
-				return nil, nil
-			}
-			return result, nil
-		},
+		Resolve: cloudflareResolver(CloudflareAuthWorkersAI),
 	}
 }
 
@@ -151,19 +139,25 @@ func CloudflareAIGatewayAuth() *ai.ApiKeyAuth {
 				CloudflareAccountIDEnv: accountID, CloudflareGatewayIDEnv: gatewayID,
 			}}, nil
 		},
-		Resolve: func(input ai.AuthResolveInput) (*ai.AuthResult, error) {
-			if err := ctxErrOf(input.Ctx2); err != nil {
-				return nil, err
-			}
-			result, ok := resolveCloudflareEnv(input.Ctx2, CloudflareAuthAIGateway, input.Ctx, input.Credential)
-			if err := ctxErrOf(input.Ctx2); err != nil {
-				return nil, err
-			}
-			if !ok {
-				return nil, nil
-			}
-			return result, nil
-		},
+		Resolve: cloudflareResolver(CloudflareAuthAIGateway),
+	}
+}
+
+// cloudflareResolver is the Resolve of both Cloudflare auths: it resolves the
+// kind's env, failing early and late on a cancelled context.
+func cloudflareResolver(kind CloudflareAuthKind) func(ai.AuthResolveInput) (*ai.AuthResult, error) {
+	return func(input ai.AuthResolveInput) (*ai.AuthResult, error) {
+		if err := ctxErrOf(input.Ctx2); err != nil {
+			return nil, err
+		}
+		result, ok := resolveCloudflareEnv(input.Ctx2, kind, input.Ctx, input.Credential)
+		if err := ctxErrOf(input.Ctx2); err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, nil
+		}
+		return result, nil
 	}
 }
 
