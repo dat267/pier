@@ -3,6 +3,7 @@ package interactive
 import (
 	"encoding/json"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -612,6 +613,66 @@ func TestToolsSelectorTogglesSessionTools(t *testing.T) {
 	if strings.Join(session.activeTools, ",") != "read,edit" {
 		t.Fatalf("active tools = %v", session.activeTools)
 	}
+}
+
+// TestToolsSelectorFiltersAsYouType covers typing in /tools: the list filters to
+// the matching tools instead of only moving a selection. Without search enabled a
+// keystroke reached no input at all, so a large tool set (every MCP tool of every
+// server, plus the built-ins) could only be navigated by scrolling.
+func TestToolsSelectorFiltersAsYouType(t *testing.T) {
+	wiring, session, _, _ := newSettingsTestWiring(t)
+	session.tools = []string{"bash", "edit", "mcp__radius__search", "mcp__radius__fetch", "read"}
+	session.activeTools = []string{"read"}
+	selector := NewToolSettingsSelector(wiring.toolToggles(), func(string, bool) {}, func() {})
+	list := selector.GetSettingsList()
+	if list.SearchInput() == nil {
+		t.Fatal("/tools has no search input, so typing cannot filter it")
+	}
+
+	// Typing reaches the list as a query and narrows the rendered rows to that
+	// server's tools.
+	for _, key := range []string{"m", "c", "p", "_", "_", "r", "a", "d", "i", "u", "s"} {
+		selector.HandleInput(key)
+	}
+	if got := list.SearchInput().Value(); got != "mcp__radius" {
+		t.Fatalf("query = %q, want the typed text", got)
+	}
+	// The order is the fuzzy scorer's, so the set is what matters here.
+	if got := shownToolRows(selector); got != "mcp__radius__fetch,mcp__radius__search" {
+		t.Fatalf("rendered rows = %q, want only the two MCP tools", got)
+	}
+
+	// A query matching nothing shows the empty state rather than every tool.
+	selector.HandleInput("z")
+	if got := shownToolRows(selector); got != "" {
+		t.Fatalf("rendered rows = %q, want none", got)
+	}
+	rendered := strings.Join(selector.Render(100), "\n")
+	if !strings.Contains(rendered, "No matching settings") {
+		t.Fatalf("empty query result did not say so:\n%s", rendered)
+	}
+
+	// Backspacing the query away brings every tool back.
+	for list.SearchInput().Value() != "" {
+		selector.HandleInput("\x7f")
+	}
+	if got := shownToolRows(selector); got != "bash,edit,mcp__radius__fetch,mcp__radius__search,read" {
+		t.Fatalf("rendered rows = %q, want every tool", got)
+	}
+}
+
+// shownToolRows reports which tool rows the selector actually renders, in order,
+// so the assertion fails if rendering ignores the filter.
+func shownToolRows(selector *ToolSettingsSelector) string {
+	rendered := strings.Join(selector.Render(100), "\n")
+	var rows []string
+	for _, item := range selector.GetSettingsList().Items() {
+		if strings.Contains(rendered, item.ID) {
+			rows = append(rows, item.ID)
+		}
+	}
+	slices.Sort(rows)
+	return strings.Join(rows, ",")
 }
 
 // pi v1.6.0 (faac5858) modes/interactive/components/settings-selector.ts sorts

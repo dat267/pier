@@ -1171,7 +1171,7 @@ func NewToolSettingsSelector(tools []ToolToggle, onChange func(string, bool), on
 				}
 				return
 			}
-		}, onCancel, tui.SettingsListOptions{})
+		}, onCancel, tui.SettingsListOptions{EnableSearch: true})
 	selector.AddChild(NewDynamicBorder(nil))
 	selector.AddChild(selector.settingsList)
 	selector.AddChild(NewDynamicBorder(nil))

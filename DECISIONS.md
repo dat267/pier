@@ -8211,8 +8211,12 @@ not only at startup.
 The agent's tools have their own `/tools` selector, not a second list inside
 `/features`: a `SettingsList` focuses the list itself, so a tab bound on the
 selector never saw the key and the second list was unreachable. `/tools` lists
-every registered tool (`ToolNames`, active or not), and a row calls the new
-`AgentSession.SetToolEnabled`, which rebuilds the active set through
+every registered tool (`ToolNames`, active or not), and typing filters the list
+through the same `EnableSearch` path `/settings` uses, which the reference's own
+`settings-selector.ts` passes for its settings list. Without it a keystroke
+reached no input at all and the only way to find a tool was to scroll: the row
+set is every MCP tool of every connected server on top of the built-ins. A row
+calls the new `AgentSession.SetToolEnabled`, which rebuilds the active set through
 `setActiveToolsByNameLocked`, so the system prompt's tool section follows, an
 explicit `--tools` allowlist and `--exclude-tools` still bound the result, and an
 unknown name is an error instead of a new tool. `defaultTools` stays the startup
@@ -8230,6 +8234,9 @@ Tests: `TestSettingsGoalFeatureDefaultsOn` (default, global scope, reload),
 `TestSessionToolToggle` (a tool leaves and rejoins the active set and the prompt,
 an unknown name errors), `TestToolsSelectorTogglesSessionTools` (`/tools` lists
 every tool with its state and a toggle reaches the session),
+`TestToolsSelectorFiltersAsYouType` (typing narrows the rendered rows to the
+matching tools, a query matching nothing shows the empty state, and clearing the
+query restores every tool),
 `TestGoalFeatureToggleEnablesAndDisablesTheController` (live toggle, tool set,
 registry, branch state restored),
 `TestCreateAgentSessionHonoursTheGoalFeatureSetting` (startup),
