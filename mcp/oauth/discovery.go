@@ -215,16 +215,24 @@ func DiscoverProtectedResourceMetadata(ctx context.Context, serverURL string, op
 		discard(response)
 		return nil, &statusError{message: fmt.Sprintf("HTTP %d loading OAuth protected resource metadata", status)}
 	}
+	decoded, err := decodeMetadataBody(response)
+	if err != nil {
+		return nil, err
+	}
+	return ParseProtectedResourceMetadata(decoded)
+}
+
+// decodeMetadataBody reads a metadata response's bounded body, closes it and
+// decodes the JSON.
+func decodeMetadataBody(response *http.Response) (any, error) {
 	body, err := boundedio.ReadAll(response.Body, oauthResponseBodyLimit)
 	_ = response.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 	var decoded any
-	if err := json.Unmarshal(body, &decoded); err != nil {
-		return nil, err
-	}
-	return ParseProtectedResourceMetadata(decoded)
+	err = json.Unmarshal(body, &decoded)
+	return decoded, err
 }
 
 // DiscoveryOptions carries the shared discovery parameters (upstream's
@@ -308,13 +316,8 @@ func DiscoverAuthorizationServerMetadata(ctx context.Context, authorizationServe
 			}
 			return nil, &statusError{message: fmt.Sprintf("HTTP %d loading authorization server metadata from %s", status, candidate.URL)}
 		}
-		body, err := boundedio.ReadAll(response.Body, oauthResponseBodyLimit)
-		_ = response.Body.Close()
+		decoded, err := decodeMetadataBody(response)
 		if err != nil {
-			return nil, err
-		}
-		var decoded any
-		if err := json.Unmarshal(body, &decoded); err != nil {
 			return nil, err
 		}
 		metadata, err := ParseAuthorizationServerMetadata(decoded)
@@ -369,13 +372,8 @@ func DiscoverOAuthServerInfo(ctx context.Context, serverURL string, options Disc
 			discard(response)
 			return nil, &statusError{message: fmt.Sprintf("HTTP %d loading authorization server metadata from %s", status, parsed)}
 		}
-		body, err := boundedio.ReadAll(response.Body, oauthResponseBodyLimit)
-		_ = response.Body.Close()
+		decoded, err := decodeMetadataBody(response)
 		if err != nil {
-			return nil, err
-		}
-		var decoded any
-		if err := json.Unmarshal(body, &decoded); err != nil {
 			return nil, err
 		}
 		metadata, err := ParseAuthorizationServerMetadata(decoded)
