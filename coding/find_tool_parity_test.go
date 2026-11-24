@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"slices"
 	"strings"
 	"testing"
 )
@@ -85,37 +84,9 @@ func TestFindToolMatchesUpstream(t *testing.T) {
 			if execErr != nil {
 				t.Fatalf("unexpected error: %v", execErr)
 			}
-			var text strings.Builder
-			for _, block := range result.Content {
-				if content, ok := block.(ai.TextContent); ok {
-					text.WriteString(content.Text)
-				}
-			}
 			// fd's cross-file traversal order is not stable, so the corpus compares
 			// sorted match lines and keeps any trailing notice.
-			lines := strings.Split(text.String(), "\n")
-			footer := -1
-			for index, line := range lines {
-				if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
-					footer = index
-					break
-				}
-			}
-			var body, notices []string
-			if footer == -1 {
-				body = lines
-			} else {
-				body, notices = lines[:footer], lines[footer:]
-			}
-			compacted := make([]string, 0, len(body))
-			for _, line := range body {
-				if line != "" {
-					compacted = append(compacted, line)
-				}
-			}
-			slices.Sort(compacted)
-			compacted = append(compacted, notices...)
-			if got := strings.Join(compacted, "\n"); got != fixture.Expected.Text {
+			if got := sortedMatchText(result.Content); got != fixture.Expected.Text {
 				t.Fatalf("text differs\n got: %q\nwant: %q", got, fixture.Expected.Text)
 			}
 			gotDetails, err := json.Marshal(canonicalReadJSON(t, result.Details))

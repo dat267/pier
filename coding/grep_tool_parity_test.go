@@ -80,37 +80,9 @@ func TestGrepToolMatchesUpstream(t *testing.T) {
 			if execErr != nil {
 				t.Fatalf("unexpected error: %v", execErr)
 			}
-			var text strings.Builder
-			for _, block := range result.Content {
-				if content, ok := block.(ai.TextContent); ok {
-					text.WriteString(content.Text)
-				}
-			}
 			// ripgrep's cross-file traversal order is not stable, so the corpus
 			// compares sorted match lines and keeps notices in place.
-			lines := strings.Split(text.String(), "\n")
-			footer := -1
-			for index, line := range lines {
-				if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
-					footer = index
-					break
-				}
-			}
-			var body, notices []string
-			if footer == -1 {
-				body = lines
-			} else {
-				body, notices = lines[:footer], lines[footer:]
-			}
-			compacted := make([]string, 0, len(body))
-			for _, line := range body {
-				if line != "" {
-					compacted = append(compacted, line)
-				}
-			}
-			slices.Sort(compacted)
-			compacted = append(compacted, notices...)
-			if got := strings.Join(compacted, "\n"); got != fixture.Expected.Text {
+			if got := sortedMatchText(result.Content); got != fixture.Expected.Text {
 				t.Fatalf("text differs\n got: %q\nwant: %q", got, fixture.Expected.Text)
 			}
 			gotDetails, err := json.Marshal(canonicalReadJSON(t, result.Details))
@@ -136,4 +108,33 @@ func manyGrepLines(count int) string {
 		builder.WriteString("\n")
 	}
 	return builder.String()
+}
+
+// sortedMatchText joins content's text blocks and sorts the non-empty match
+// lines before the first "[...]" notice line, which stays in place with the
+// lines after it. The search tools' cross-file order is not stable, so the
+// parity corpora compare this form.
+func sortedMatchText(content ai.ContentList) string {
+	var text strings.Builder
+	for _, block := range content {
+		if content, ok := block.(ai.TextContent); ok {
+			text.WriteString(content.Text)
+		}
+	}
+	lines := strings.Split(text.String(), "\n")
+	footer := len(lines)
+	for index, line := range lines {
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			footer = index
+			break
+		}
+	}
+	compacted := make([]string, 0, footer)
+	for _, line := range lines[:footer] {
+		if line != "" {
+			compacted = append(compacted, line)
+		}
+	}
+	slices.Sort(compacted)
+	return strings.Join(append(compacted, lines[footer:]...), "\n")
 }
