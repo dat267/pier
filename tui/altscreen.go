@@ -40,15 +40,16 @@ const (
 	copyErrorFlashDurationMS = 5000
 )
 
+// osc133ZonePrefixMatch is the literal the zone regexp needs to see at the
+// start of a line: checking it first keeps the per-frame pass over every
+// document line off the regexp engine.
+const osc133ZonePrefixMatch = "\x1b]133;"
+
 var (
 	osc133ZonePrefix  = regexp.MustCompile(`^(?:\x1b\]133;[ABC](?:\x07|\x1b\\))+`)
 	osc133PromptStart = regexp.MustCompile(`^\x1b\]133;A(?:\x07|\x1b\\)`)
-	// osc133ZonePrefixMatch is the literal the zone regexp needs to see at the
-	// start of a line: checking it first keeps the per-frame pass over every
-	// document line off the regexp engine.
-	osc133ZonePrefixMatch = "\x1b]133;"
-	altSgrMouseRegex      = regexp.MustCompile(`^\x1b?\[<(\d+);(\d+);(\d+)([Mm])$`)
-	wheelSgrRegex         = regexp.MustCompile(`^\x1b?\[<(\d+);(\d+);(\d+)[Mm]$`)
+	altSgrMouseRegex  = regexp.MustCompile(`^\x1b?\[<(\d+);(\d+);(\d+)([Mm])$`)
+	wheelSgrRegex     = regexp.MustCompile(`^\x1b?\[<(\d+);(\d+);(\d+)[Mm]$`)
 	// truncatedSgrMouse matches a fragment of one: a report whose tail is still
 	// in flight, or a tail whose ESC was already dispatched as the Escape key
 	// (the input buffer force-flushes a lone ESC after 10ms, D169).
