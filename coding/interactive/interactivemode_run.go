@@ -261,20 +261,10 @@ func (w *RunWiring) GetStartupExpansionState() bool {
 	return w.Verbose || w.Display.ToolOutputExpanded
 }
 
-// startupVersionLabel renders the logo's version. The build stamps the git tag
-// (`v0.0.21`), which already carries the `v` that upstream's package version does
-// not, so the label must not add a second prefix.
-func startupVersionLabel(version string) string {
-	if strings.HasPrefix(version, "v") {
-		return version
-	}
-	return "v" + version
-}
-
 // BuildStartupHeader builds the logo + instructions header.
 func (w *RunWiring) BuildStartupHeader(scopedModels []coding.ScopedModel) tui.Component {
 	theme := ActiveTheme()
-	logo := theme.Bold(theme.Fg("accent", w.AppName)) + theme.Fg("dim", " "+startupVersionLabel(w.Version))
+	logo := theme.Bold(theme.Fg("accent", w.AppName)) + theme.Fg("dim", " "+coding.NormalizeTag(w.Version))
 
 	hint := KeyHint
 	expandedInstructions := strings.Join([]string{

@@ -34,7 +34,10 @@ var (
 	changelogVersionRe   = regexp.MustCompile(`##\s+\[?(\d+)\.(\d+)\.(\d+)\]?`)
 )
 
-func normalizeChangelogTag(version string) string {
+// NormalizeTag prefixes a version with `v` unless it already has one (port of
+// changelog.ts normalizeTag). The build stamps git tags (`v0.0.21`), which
+// already carry it, while upstream package versions do not.
+func NormalizeTag(version string) string {
 	if strings.HasPrefix(version, "v") {
 		return version
 	}
@@ -174,7 +177,7 @@ func isURIUnreserved(r rune) bool {
 // NormalizeChangelogLinks rewrites the relative links in changelog markdown to
 // versioned GitHub URLs.
 func NormalizeChangelogLinks(markdown string, version string) string {
-	tag := normalizeChangelogTag(version)
+	tag := NormalizeTag(version)
 	return inlineMarkdownLinkRe.ReplaceAllStringFunc(markdown, func(match string) string {
 		groups := inlineMarkdownLinkRe.FindStringSubmatch(match)
 		if groups == nil {
