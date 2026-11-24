@@ -17,8 +17,9 @@ import (
 // Port of api/openrouter-images.ts: OpenRouter's image generation through the
 // chat completions endpoint (modalities: ["image"]).
 
-// openRouterImagesEndpoint is overridable for tests.
-var openRouterImagesEndpoint = "/chat/completions"
+// openRouterImagesEndpoint is the chat completions path the image request
+// posts to.
+const openRouterImagesEndpoint = "/chat/completions"
 
 // OpenRouterImages implements ProviderImages.
 type OpenRouterImages struct{}

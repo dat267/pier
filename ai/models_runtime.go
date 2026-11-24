@@ -312,13 +312,13 @@ func CreateProvider(input CreateProviderOptions) *Provider {
 
 	// Conditionally expose deferred capabilities (upstream checks whether
 	// any implementation declares them).
-	streamsList := input.ByAPIList()
 	if input.Single != nil {
-		streamsList = []ProviderStreams{input.Single}
-	}
-	for _, s := range streamsList {
-		if _, ok := s.(DeferredStreamer); ok {
-			p.hasDeferredFetch = true
+		_, p.hasDeferredFetch = input.Single.(DeferredStreamer)
+	} else {
+		for _, s := range input.ByAPI {
+			if _, ok := s.(DeferredStreamer); ok {
+				p.hasDeferredFetch = true
+			}
 		}
 	}
 	return p
@@ -327,18 +327,6 @@ func CreateProvider(input CreateProviderOptions) *Provider {
 // HasDeferred reports whether deferred responses are supported by any of the
 // provider's API implementations.
 func (p *Provider) HasDeferred() bool { return p.hasDeferredFetch }
-
-// ByAPIList is a test seam; the real map iteration happens in CreateProvider.
-func (o CreateProviderOptions) ByAPIList() []ProviderStreams {
-	var out []ProviderStreams
-	keys := slices.Sorted(maps.Keys(o.ByAPI))
-	for _, k := range keys {
-		if o.ByAPI[k] != nil {
-			out = append(out, o.ByAPI[k])
-		}
-	}
-	return out
-}
 
 // eventSource is the minimal surface LazyStream forwards from.
 type eventSource interface {
