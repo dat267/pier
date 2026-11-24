@@ -25,6 +25,8 @@ func manyLines(count int) string {
 	return builder.String()
 }
 
+// canonicalReadJSON decodes raw (nil for empty or null) so that marshaling it
+// again gives key-sorted JSON: json.Marshal writes map keys in sorted order.
 func canonicalReadJSON(t *testing.T, raw []byte) any {
 	t.Helper()
 	if len(raw) == 0 || string(raw) == "null" {
@@ -34,25 +36,7 @@ func canonicalReadJSON(t *testing.T, raw []byte) any {
 	if err := json.Unmarshal(raw, &value); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	var sortKeys func(any) any
-	sortKeys = func(input any) any {
-		switch typed := input.(type) {
-		case map[string]any:
-			out := make(map[string]any, len(typed))
-			for key, item := range typed {
-				out[key] = sortKeys(item)
-			}
-			return out
-		case []any:
-			for index := range typed {
-				typed[index] = sortKeys(typed[index])
-			}
-			return typed
-		default:
-			return input
-		}
-	}
-	return sortKeys(value)
+	return value
 }
 
 // checkParityToolResult asserts one tool run against a parity fixture and

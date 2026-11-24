@@ -2,9 +2,7 @@ package coding
 
 import (
 	"encoding/json"
-	"maps"
 	"os"
-	"slices"
 	"testing"
 
 	"github.com/dat267/pier/ai"
@@ -49,8 +47,8 @@ func TestConvertToLlmMatchesUpstream(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			got := canonicalTestJSON(t, encoded)
-			want := canonicalTestJSON(t, fixture.Expected)
+			got := canonicalReadJSON(t, encoded)
+			want := canonicalReadJSON(t, fixture.Expected)
 			gotJSON, _ := json.Marshal(got)
 			wantJSON, _ := json.Marshal(want)
 			if string(gotJSON) != string(wantJSON) {
@@ -58,34 +56,6 @@ func TestConvertToLlmMatchesUpstream(t *testing.T) {
 			}
 		})
 	}
-}
-
-func canonicalTestJSON(t *testing.T, raw []byte) any {
-	t.Helper()
-	var value any
-	if err := json.Unmarshal(raw, &value); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	var sortKeys func(any) any
-	sortKeys = func(input any) any {
-		switch typed := input.(type) {
-		case map[string]any:
-			keys := slices.Sorted(maps.Keys(typed))
-			out := make(map[string]any, len(typed))
-			for _, key := range keys {
-				out[key] = sortKeys(typed[key])
-			}
-			return out
-		case []any:
-			for index := range typed {
-				typed[index] = sortKeys(typed[index])
-			}
-			return typed
-		default:
-			return input
-		}
-	}
-	return sortKeys(value)
 }
 
 // messageJSONList encodes messages with their role member.
