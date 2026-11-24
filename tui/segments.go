@@ -15,16 +15,11 @@ const (
 // slow path finds sequences elsewhere (multi-row images have a cursor-up
 // prefix).
 func IsImageLine(line string) bool {
-	if len(line) >= len(kittyPrefix) && line[:len(kittyPrefix)] == kittyPrefix {
-		return true
-	}
-	if len(line) >= len(iterm2Prefix) && line[:len(iterm2Prefix)] == iterm2Prefix {
+	if strings.HasPrefix(line, kittyPrefix) || strings.HasPrefix(line, iterm2Prefix) {
 		return true
 	}
 	return strings.Contains(line, kittyPrefix) || strings.Contains(line, iterm2Prefix)
 }
-
-func isImageLine(line string) bool { return IsImageLine(line) }
 
 // ExtractedSegments is the before/after extraction result.
 type ExtractedSegments struct {

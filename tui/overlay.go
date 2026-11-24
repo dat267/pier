@@ -251,7 +251,7 @@ const segmentReset = "\x1b[0m\x1b]8;;\x07"
 // CompositeTuiLine composites overlay content into a terminal line at a fixed
 // column. Image lines pass through untouched.
 func CompositeTuiLine(baseLine string, overlayLine string, startCol int, overlayWidth int, totalWidth int) string {
-	if isImageLine(baseLine) {
+	if IsImageLine(baseLine) {
 		return baseLine
 	}
 
