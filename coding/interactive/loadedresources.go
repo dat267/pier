@@ -330,7 +330,7 @@ func formatResourceDiagnostics(diagnostics []coding.ResourceDiagnostic, sourceIn
 	return strings.Join(lines, "\n")
 }
 
-// ShowLoadedResources renders the loaded-resource sections into the container
+// showLoadedResources renders the loaded-resource sections into the container
 // (upstream showLoadedResources). force bypasses the quiet-startup gate.
 func (a *App) showLoadedResources(force bool) {
 	if a == nil || a.loadedResourcesContainer == nil {

@@ -13,7 +13,7 @@ import (
 	"github.com/dat267/pier/coding"
 )
 
-// SwitchSession replaces the running session with the one at sessionPath
+// switchSession replaces the running session with the one at sessionPath
 // (upstream AgentSessionRuntime.switchSession plus the interactive-mode
 // rebind).
 func (a *App) switchSession(sessionPath string, cwdOverride string) (*SessionSwitchResult, error) {
@@ -224,7 +224,7 @@ func (a *App) forkIntoSessionAsync(ctx context.Context, sourcePath string, cwd s
 	})
 }
 
-// SessionNew starts a fresh session in the current session directory (upstream
+// sessionNew starts a fresh session in the current session directory (upstream
 // AgentSessionRuntime.newSession).
 func (a *App) sessionNew() (*SessionSwitchResult, error) {
 	sessionDir := a.sessionMgr.GetSessionDir()

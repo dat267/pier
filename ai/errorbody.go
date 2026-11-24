@@ -217,7 +217,7 @@ type GrammarConstrainedSampling struct {
 	InputProperty string
 }
 
-// InferGrammarInputProperty requires exactly one required string property.
+// inferGrammarInputProperty requires exactly one required string property.
 // Each member keeps the reference's own rejection message, so a wrong-typed
 // member must not fail a whole-schema decode first (v1.5.2
 // constrained-sampling.ts inferGrammarInputProperty reads them one at a time).

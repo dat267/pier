@@ -13,7 +13,7 @@ import (
 	"github.com/dat267/pier/tui"
 )
 
-// RunAuthLogout implements `pi auth logout <provider>` (pi v1.5.2
+// runAuthLogout implements `pi auth logout <provider>` (pi v1.5.2
 // cli/auth-logout.ts): it removes the credential a login stored and says which
 // kind it removed. Environment variables and models.json config stay, as with
 // /logout.

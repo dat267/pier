@@ -245,7 +245,7 @@ func applyClientAuthentication(method string, information *OAuthClientInformatio
 	return nil
 }
 
-// PKCE generates the verifier/S256 pair (upstream pkce, WebCrypto).
+// pkce generates the verifier/S256 pair (upstream pkce, WebCrypto).
 func pkce() (verifier, challenge string, err error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {

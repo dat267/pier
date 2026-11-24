@@ -1020,7 +1020,7 @@ func (a *App) Close() {
 	}
 }
 
-// LifecycleCheckShutdown performs a requested shutdown.
+// lifecycleCheckShutdown performs a requested shutdown.
 func (a *App) lifecycleCheckShutdown() { a.lifecycle.CheckShutdownRequested() }
 
 // installRenderErrorHandler makes a main-screen render failure (a line wider
@@ -1313,16 +1313,16 @@ func (a *App) StopMode(fullscreenExitOutput string) {
 	)
 }
 
-// RunnerShowChatError appends an error line.
+// runnerShowChatError appends an error line.
 func (a *App) runnerShowChatError(message string) { a.runner.ShowChatError(message) }
 
-// RunnerShowChatWarning appends a warning line.
+// runnerShowChatWarning appends a warning line.
 func (a *App) runnerShowChatWarning(message string) { a.runner.ShowChatWarning(message) }
 
-// KeySetup enables the key handlers.
+// keySetup enables the key handlers.
 func (a *App) keySetup() { a.key.SetupKeyHandlers(func() int64 { return time.Now().UnixMilli() }) }
 
-// SubmitSetup installs the editor submit handler.
+// submitSetup installs the editor submit handler.
 func (a *App) submitSetup() {
 	a.defaultEditor.OnSubmit = func(text string) {
 		if a.lifecycle.IsInitialized() {
