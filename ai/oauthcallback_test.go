@@ -3,7 +3,6 @@ package ai
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -177,7 +176,7 @@ func TestOAuthCallbackServerAdvertisesTheBoundPort(t *testing.T) {
 // the login only moves to a free port when it cannot be bound (#10571). The browser
 // then comes back to the free port, which is why the redirect URI follows it.
 func TestAnthropicCallbackServerFallsBackToAFreePort(t *testing.T) {
-	blocker, err := net.Listen("tcp", "127.0.0.1:"+itoaAnthropicPort())
+	blocker, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(AnthropicCallbackPort))
 	if err != nil {
 		t.Skipf("port %d is already in use, so this cannot be set up: %v", AnthropicCallbackPort, err)
 	}
@@ -202,8 +201,6 @@ func TestAnthropicCallbackServerFallsBackToAFreePort(t *testing.T) {
 		t.Fatalf("result = %+v ok = %v", result, ok)
 	}
 }
-
-func itoaAnthropicPort() string { return fmt.Sprintf("%d", AnthropicCallbackPort) }
 
 // The callback servers listen on loopback, but any local process can connect and
 // send nothing; without ReadHeaderTimeout that connection holds a handler

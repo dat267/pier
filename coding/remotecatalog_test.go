@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -511,7 +512,7 @@ func TestMergeCatalogModels(t *testing.T) {
 	prefixed := func(count int, prefix string) []*ai.Model {
 		models := make([]*ai.Model, 0, count)
 		for i := range count {
-			models = append(models, &ai.Model{ID: prefix + fmt.Sprintf("%d", i), Provider: "p"})
+			models = append(models, &ai.Model{ID: prefix + strconv.Itoa(i), Provider: "p"})
 		}
 		return models
 	}

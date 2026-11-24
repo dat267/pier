@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -104,7 +105,7 @@ func TestAnthropicMessageThreadsPassThroughOtherErrors(t *testing.T) {
 		{http.StatusNotFound, "model: claude-test"},
 	}
 	for _, testCase := range cases {
-		t.Run(fmt.Sprintf("%d", testCase.status), func(t *testing.T) {
+		t.Run(strconv.Itoa(testCase.status), func(t *testing.T) {
 			h := newThreadTestHarness(t)
 			messages := []Message{threadTestUser("first")}
 			messages, _ = h.say(t, messages, threadTurn{})

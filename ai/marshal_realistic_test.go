@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 )
 
@@ -43,7 +44,7 @@ func realisticConversationMessages(n int) []Message {
 func BenchmarkMarshalConversationRealistic(b *testing.B) {
 	for _, n := range []int{100, 500, 4000} {
 		messages := realisticConversationMessages(n)
-		b.Run(fmt.Sprintf("%d", n), func(b *testing.B) {
+		b.Run(strconv.Itoa(n), func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
 				if _, err := MarshalJSON(messages); err != nil {

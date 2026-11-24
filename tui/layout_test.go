@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -66,7 +67,7 @@ func renderGoldenValue(value any) string {
 		}
 		return "false"
 	case int:
-		return fmt.Sprintf("%d", typed)
+		return strconv.Itoa(typed)
 	default:
 		return mustJSON(value)
 	}
