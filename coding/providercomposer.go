@@ -517,13 +517,9 @@ func applyModelsJSON(providerID string, baseModels []*ai.Model, config *ModelsJS
 		models = append(models, &updated)
 	}
 	for _, definition := range config.Models {
-		existingIndex := -1
-		for index, model := range models {
-			if ai.GetModelType(model) == "chat" && model.ID == definition.ID {
-				existingIndex = index
-				break
-			}
-		}
+		existingIndex := slices.IndexFunc(models, func(model *ai.Model) bool {
+			return ai.GetModelType(model) == "chat" && model.ID == definition.ID
+		})
 		defAPI := definition.API
 		if defAPI == "" {
 			defAPI = config.API

@@ -228,13 +228,9 @@ func CreateProvider(input CreateProviderOptions) *Provider {
 		defer dynamicMu.Unlock()
 		merged := append([]*Model{}, baseline...)
 		for _, model := range dynamicModels {
-			index := -1
-			for i, entry := range merged {
-				if GetModelType(entry) == GetModelType(model) && entry.ID == model.ID {
-					index = i
-					break
-				}
-			}
+			index := slices.IndexFunc(merged, func(entry *Model) bool {
+				return GetModelType(entry) == GetModelType(model) && entry.ID == model.ID
+			})
 			if index >= 0 {
 				merged[index] = model
 			} else {
