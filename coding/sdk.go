@@ -394,7 +394,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 				}
 				// Upstream keeps every other field (`{ ...msg, content }`).
 				copied := *typed
-				copied.Content = ai.StringOrBlocks{Blocks: filterContentListBlocks(typed.Content.Blocks, disabledText)}
+				copied.Content = ai.StringOrBlocks{Blocks: filterImageBlocks(typed.Content.Blocks, disabledText)}
 				out = append(out, &copied)
 			case *ai.ToolResultMessage:
 				if !userContentHasImages(typed.Content) {
@@ -402,7 +402,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 					continue
 				}
 				copied := *typed
-				copied.Content = filterUserContentBlocks(typed.Content, disabledText)
+				copied.Content = filterImageBlocks(typed.Content, disabledText)
 				out = append(out, &copied)
 			default:
 				out = append(out, message)
@@ -696,65 +696,27 @@ func userContentHasImages(blocks ai.UserContentList) bool {
 	return false
 }
 
-// filterContentListBlocks replaces images with the disabled text, deduplicating
-// consecutive disabled texts.
-func filterContentListBlocks(blocks ai.ContentList, disabledText string) ai.ContentList {
-	filtered := make(ai.ContentList, 0, len(blocks))
-	appendDisabled := func() {
-		if previous, ok := lastBlock(filtered).(ai.TextContent); ok && previous.Text == disabledText {
-			return
+// filterImageBlocks replaces images with the disabled text, deduplicating
+// consecutive disabled texts. It serves both assistant/user content lists and
+// tool-result content.
+func filterImageBlocks[L ~[]C, C any](blocks L, disabledText string) L {
+	filtered := make(L, 0, len(blocks))
+	afterDisabled := func() bool {
+		if len(filtered) == 0 {
+			return false
 		}
-		filtered = append(filtered, ai.TextContent{Text: disabledText})
+		previous, ok := any(filtered[len(filtered)-1]).(ai.TextContent)
+		return ok && previous.Text == disabledText
 	}
 	for _, block := range blocks {
-		if _, ok := block.(ai.ImageContent); ok {
-			appendDisabled()
+		if _, ok := any(block).(ai.ImageContent); ok {
+			if !afterDisabled() {
+				filtered = append(filtered, any(ai.TextContent{Text: disabledText}).(C))
+			}
 			continue
 		}
-		if text, ok := block.(ai.TextContent); ok && text.Text == disabledText && len(filtered) > 0 {
-			if previous, ok := filtered[len(filtered)-1].(ai.TextContent); ok && previous.Text == disabledText {
-				continue
-			}
-		}
-		filtered = append(filtered, block)
-	}
-	return filtered
-}
-
-// lastBlock returns the final block of a content list.
-func lastBlock(blocks ai.ContentList) ai.Content {
-	if len(blocks) == 0 {
-		return nil
-	}
-	return blocks[len(blocks)-1]
-}
-
-// lastUserBlock is the tool-result variant.
-func lastUserBlock(blocks ai.UserContentList) ai.UserContent {
-	if len(blocks) == 0 {
-		return nil
-	}
-	return blocks[len(blocks)-1]
-}
-
-// filterUserContentBlocks is the tool-result variant.
-func filterUserContentBlocks(blocks ai.UserContentList, disabledText string) ai.UserContentList {
-	filtered := make(ai.UserContentList, 0, len(blocks))
-	appendDisabled := func() {
-		if previous, ok := lastUserBlock(filtered).(ai.TextContent); ok && previous.Text == disabledText {
-			return
-		}
-		filtered = append(filtered, ai.TextContent{Text: disabledText})
-	}
-	for _, block := range blocks {
-		if _, ok := block.(ai.ImageContent); ok {
-			appendDisabled()
+		if text, ok := any(block).(ai.TextContent); ok && text.Text == disabledText && afterDisabled() {
 			continue
-		}
-		if text, ok := block.(ai.TextContent); ok && text.Text == disabledText && len(filtered) > 0 {
-			if previous, ok := filtered[len(filtered)-1].(ai.TextContent); ok && previous.Text == disabledText {
-				continue
-			}
 		}
 		filtered = append(filtered, block)
 	}
