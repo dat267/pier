@@ -473,7 +473,7 @@ func TestOpenAIChunkKeepsItsDeltaOnAWrongTypedSibling(t *testing.T) {
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			var chunk openaiChunk
-			if got := decodeOpenAIChunkTolerant(json.RawMessage(testCase.wire), &chunk); got != testCase.ok {
+			if got := decodeMembersTolerant(json.RawMessage(testCase.wire), &chunk); got != testCase.ok {
 				t.Fatalf("ok = %v, want %v", got, testCase.ok)
 			}
 			text := ""

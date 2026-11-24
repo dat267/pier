@@ -279,24 +279,6 @@ func openAIResponsesErrorMessage(event responsesStreamEvent) string {
 }
 
 // responsesItem is the parsed subset of a Responses output item.
-// decodeResponsesItemTolerant decodes each top-level member on its own, keeping
-// the ones the typed item cannot hold out of the way. It reports false when the
-// item is not an object.
-func decodeResponsesItemTolerant(raw json.RawMessage, out *responsesItem) bool {
-	var members map[string]json.RawMessage
-	if json.Unmarshal(raw, &members) != nil || members == nil {
-		return false
-	}
-	for name, member := range members {
-		wrapped, err := MarshalJSON(map[string]json.RawMessage{name: member})
-		if err != nil {
-			continue
-		}
-		_ = json.Unmarshal(wrapped, out)
-	}
-	return true
-}
-
 type responsesItem struct {
 	Type      string  `json:"type"`
 	ID        string  `json:"id"`
@@ -791,7 +773,7 @@ func ProcessResponsesStream(
 				// wrong-typed member is harmless; failing the decode dropped the
 				// completed item and its final content. Keep the members that
 				// fit, and skip only a non-object.
-				if !decodeResponsesItemTolerant(event.Item, &item) {
+				if !decodeMembersTolerant(event.Item, &item) {
 					return
 				}
 			}

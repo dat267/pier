@@ -123,10 +123,11 @@ type openaiChunk struct {
 	} `json:"choices"`
 }
 
-// decodeOpenAIChunkTolerant decodes each top-level member on its own, keeping the
-// ones the typed chunk cannot hold out of the way. It reports false when the
-// chunk is not an object at all, the case the reference skips.
-func decodeOpenAIChunkTolerant(raw json.RawMessage, out *openaiChunk) bool {
+// decodeMembersTolerant decodes each top-level member of raw into out on its
+// own, keeping the ones out's type cannot hold out of the way. It reports
+// false when raw is not an object at all, the case the reference skips.
+// OpenAI Completions chunks and Responses items decode through it.
+func decodeMembersTolerant(raw json.RawMessage, out any) bool {
 	var members map[string]json.RawMessage
 	if json.Unmarshal(raw, &members) != nil || members == nil {
 		return false
@@ -519,7 +520,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 				// a wrong-typed member such as a numeric `model` is present and
 				// harmless. Decoding into the typed struct failed the whole chunk
 				// and lost its delta content, so keep the members that fit.
-				if !decodeOpenAIChunkTolerant(raw, &chunk) {
+				if !decodeMembersTolerant(raw, &chunk) {
 					return
 				}
 			}
