@@ -714,7 +714,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 					stream.Push(AssistantMessageEvent{Type: EventThinkingStart, ContentIndex: len(output.Content) - 1, Partial: output})
 				case "redacted_thinking":
 					sig := cb.Data
-					redacted := ThinkingContent{Thinking: "[Reasoning redacted]", ThinkingSignature: &sig, Redacted: true}
+					redacted := ThinkingContent{Thinking: redactedThinkingPlaceholder, ThinkingSignature: &sig, Redacted: true}
 					openBlock(event.Index, redacted)
 					stream.Push(AssistantMessageEvent{Type: EventThinkingStart, ContentIndex: len(output.Content) - 1, Partial: output})
 				case "tool_use":

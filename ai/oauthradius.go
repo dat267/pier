@@ -30,7 +30,6 @@ const (
 	RadiusLoginDevice   = "device-code"
 	RadiusOAuthClientID = "pi-gateway"
 	RadiusOAuthScope    = "gateway offline_access"
-	radiusDeviceGrant   = "urn:ietf:params:oauth:grant-type:device_code"
 )
 
 // RadiusRedirectURI is the OAuth redirect URI on the default callback port.
@@ -481,7 +480,7 @@ func LoginRadiusWithDeviceCode(interaction *AuthInteraction, gateway string) (*O
 		Ctx:              ctx,
 		Poll: func() (OAuthDeviceCodePollResult[*OAuthCredential], error) {
 			credentials, err := RequestRadiusOAuthToken(ctx, gateway, map[string]string{
-				"grant_type":  radiusDeviceGrant,
+				"grant_type":  deviceCodeGrantType,
 				"client_id":   RadiusOAuthClientID,
 				"device_code": device.DeviceCode,
 			})

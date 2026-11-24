@@ -420,7 +420,7 @@ func PollForGitHubAccessToken(ctx context.Context, domain string, device *GitHub
 			form := url.Values{}
 			form.Set("client_id", GitHubCopilotClientID)
 			form.Set("device_code", device.DeviceCode)
-			form.Set("grant_type", "urn:ietf:params:oauth:grant-type:device_code")
+			form.Set("grant_type", deviceCodeGrantType)
 			request, err := http.NewRequestWithContext(ctx, http.MethodPost, urls.AccessTokenURL, strings.NewReader(form.Encode()))
 			if err != nil {
 				return OAuthDeviceCodePollResult[string]{Status: "failed", Message: err.Error()}, nil

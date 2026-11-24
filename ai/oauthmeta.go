@@ -158,7 +158,7 @@ func metaPollForIdentityToken(ctx context.Context, device *metaDeviceAuthorizati
 		Ctx:                 ctx,
 		Poll: func() (OAuthDeviceCodePollResult[string], error) {
 			status, body, err := metaPostForm(ctx, metaDeviceTokenURL, map[string]string{
-				"grant_type":  "urn:ietf:params:oauth:grant-type:device_code",
+				"grant_type":  deviceCodeGrantType,
 				"device_code": device.DeviceCode,
 				"client_id":   metaOAuthClientID,
 			})

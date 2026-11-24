@@ -26,8 +26,8 @@ import (
 
 // Placeholders upstream uses for empty content.
 const (
-	bedrockEmptyTextPlaceholder        = "<empty>"
-	bedrockRedactedThinkingPlaceholder = "[Reasoning redacted]"
+	bedrockEmptyTextPlaceholder = "<empty>"
+	redactedThinkingPlaceholder = "[Reasoning redacted]"
 )
 
 // bedrockBlock is one streaming content block with its scratch state
@@ -1247,11 +1247,11 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 					if !block.redacted {
 						block.redacted = true
 						block.thinkingSignature = ""
-						block.thinking.WriteString(bedrockRedactedThinkingPlaceholder)
+						block.thinking.WriteString(redactedThinkingPlaceholder)
 						syncBedrockContent(output, *blocks)
 						stream.Push(AssistantMessageEvent{
 							Type: EventThinkingDelta, ContentIndex: index,
-							Delta: bedrockRedactedThinkingPlaceholder, Partial: output,
+							Delta: redactedThinkingPlaceholder, Partial: output,
 						})
 					}
 					block.redactedChunks = append(block.redactedChunks, reasoning.RedactedContent)

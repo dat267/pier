@@ -1173,7 +1173,7 @@ func toMistralChatMessages(messages []Message, supportsImages bool) []mistralCha
 			}
 			if hadImages && !supportsImages {
 				result = append(result, mistralChatMessage{
-					Role: "user", Content: "(image omitted: model does not support images)",
+					Role: "user", Content: nonVisionUserImagePlaceholder,
 				})
 			}
 		case *AssistantMessage:
@@ -1261,9 +1261,9 @@ func buildMistralToolResultText(text string, hasImages, supportsImages, isError 
 			return "(see attached image)"
 		}
 		if isError {
-			return "[tool error] (image omitted: model does not support images)"
+			return "[tool error] " + nonVisionUserImagePlaceholder
 		}
-		return "(image omitted: model does not support images)"
+		return nonVisionUserImagePlaceholder
 	}
 	if isError {
 		return "[tool error] (no tool output)"

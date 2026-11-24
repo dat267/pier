@@ -14,6 +14,8 @@ import (
 	"github.com/dat267/pier/internal/jsnum"
 )
 
+const deviceCodeGrantType = "urn:ietf:params:oauth:grant-type:device_code"
+
 // Port of auth/oauth/xai.ts and auth/oauth/kimi-coding.ts (both RFC 8628
 // device-authorization flows over the shared poller).
 
@@ -274,7 +276,7 @@ func PollXaiForTokens(ctx context.Context, device *XaiDeviceCode) (*OAuthCredent
 		Ctx:                 ctx,
 		Poll: func() (OAuthDeviceCodePollResult[*OAuthCredential], error) {
 			response, err := oauthPostForm(ctx, xaiTokenURLValue, map[string]string{
-				"grant_type":  "urn:ietf:params:oauth:grant-type:device_code",
+				"grant_type":  deviceCodeGrantType,
 				"client_id":   XAIClientID,
 				"device_code": device.DeviceCode,
 			}, true, func(status int) string {
@@ -494,7 +496,7 @@ func PollKimiForToken(ctx context.Context, oauthHost string, device *KimiDeviceA
 			response, err := oauthPostForm(requestCtx, oauthHost+"/api/oauth/token", map[string]string{
 				"client_id":   KimiCodingClientID,
 				"device_code": device.DeviceCode,
-				"grant_type":  "urn:ietf:params:oauth:grant-type:device_code",
+				"grant_type":  deviceCodeGrantType,
 			}, false, func(status int) string {
 				return fmt.Sprintf("Kimi Code device token request returned invalid JSON (status %d)", status)
 			})
