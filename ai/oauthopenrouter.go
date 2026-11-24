@@ -473,12 +473,7 @@ func OpenRouterOAuth() *OAuthAuth {
 			// OpenRouter hands out a permanent key, so refresh is a no-op.
 			return credential, nil
 		},
-		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
-			if credential == nil {
-				return nil, errors.New("credential is required")
-			}
-			return &ModelAuth{APIKey: credential.Access}, nil
-		},
+		ToAuth: accessTokenAuth,
 	}
 }
 

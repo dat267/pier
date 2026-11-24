@@ -378,12 +378,7 @@ func XaiOAuth() *OAuthAuth {
 			}
 			return RefreshXaiToken(ctx, credential.Refresh)
 		},
-		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
-			if credential == nil {
-				return nil, errors.New("credential is required")
-			}
-			return &ModelAuth{APIKey: credential.Access}, nil
-		},
+		ToAuth: accessTokenAuth,
 	}
 }
 

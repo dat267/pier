@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -381,6 +382,15 @@ type OAuthAuth struct {
 	// ToAuth is side-effect-free derivation of request auth from a valid
 	// credential. Covers per-credential baseUrl (GitHub Copilot).
 	ToAuth func(credential *OAuthCredential) (*ModelAuth, error)
+}
+
+// accessTokenAuth is the ToAuth of providers whose access token is the API
+// key (upstream toAuth(credential) { return { apiKey: credential.access } }).
+func accessTokenAuth(credential *OAuthCredential) (*ModelAuth, error) {
+	if credential == nil {
+		return nil, errors.New("credential is required")
+	}
+	return &ModelAuth{APIKey: credential.Access}, nil
 }
 
 // ProviderAuth is provider auth. At least one of APIKey/OAuth must be
