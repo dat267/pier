@@ -805,8 +805,8 @@ func (p *CombinedAutocompleteProvider) getFuzzyFileSuggestions(ctx context.Conte
 		if scored[a].score != scored[b].score {
 			return scored[a].score > scored[b].score
 		}
-		aDepth := len(splitNonEmpty(toDisplayPath(scored[a].path), "/"))
-		bDepth := len(splitNonEmpty(toDisplayPath(scored[b].path), "/"))
+		aDepth := pathDepth(toDisplayPath(scored[a].path))
+		bDepth := pathDepth(toDisplayPath(scored[b].path))
 		if aDepth != bDepth {
 			return aDepth < bDepth
 		}
@@ -865,14 +865,16 @@ func rootCollationKeys(values []string) map[string]string {
 	return keys
 }
 
-func splitNonEmpty(value string, separator string) []string {
-	var result []string
-	for part := range strings.SplitSeq(value, separator) {
+// pathDepth counts a path's non-empty "/" segments, upstream's
+// path.split("/").filter(Boolean).length.
+func pathDepth(path string) int {
+	depth := 0
+	for part := range strings.SplitSeq(path, "/") {
 		if part != "" {
-			result = append(result, part)
+			depth++
 		}
 	}
-	return result
+	return depth
 }
 
 // ShouldTriggerFileCompletion reports whether Tab may trigger file completion.
