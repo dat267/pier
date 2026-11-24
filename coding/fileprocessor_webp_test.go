@@ -12,8 +12,7 @@ import (
 // `magick -size 2x2 xc:'#336699' -define webp:lossless=true`.
 func tinyWebP(t *testing.T) []byte {
 	t.Helper()
-	data := readFileBytes(t, "testdata/images/tiny.webp")
-	return data
+	return readFileBytes(t, "testdata/images/tiny.webp")
 }
 
 // pi v1.5.2 (b4afdddf) packages/coding-agent/src/utils/image-process.ts

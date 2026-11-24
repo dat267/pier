@@ -115,8 +115,7 @@ func TestSessionStartCorruptionNotifies(t *testing.T) {
 
 func machineWithCollector() *recordingMachine {
 	machine, _ := testMachine()
-	recorder := &recordingMachine{machine: machine}
-	return recorder
+	return &recordingMachine{machine: machine}
 }
 
 func (r *recordingMachine) dispatch(event GoalEvent) DispatchResult {
