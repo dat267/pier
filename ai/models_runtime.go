@@ -1003,47 +1003,18 @@ func (m *Models) CheckAuth(ctx context.Context, providerID string) (*AuthCheck, 
 	return m.checkProviderAuth(ctx, provider, credential)
 }
 
-// GetAvailable returns models whose providers have complete auth
-// configuration.
-func (m *Models) GetAvailable(ctx context.Context, providerID string) ([]*Model, error) {
-	if err := ctxErr(ctx); err != nil {
-		return nil, err
-	}
-	var providers []*Provider
-	if providerID != "" {
-		m.mu.Lock()
-		if p := m.providers[providerID]; p != nil {
-			providers = []*Provider{p}
-		}
-		m.mu.Unlock()
-	} else {
-		providers = m.GetProviders()
-	}
-	var out []*Model
-	for _, provider := range providers {
-		credential, err := readCredential(ctx, m.credentials, provider.ID)
-		if err != nil {
-			return nil, err
-		}
-		auth, err := m.checkProviderAuth(ctx, provider, credential)
-		if err != nil {
-			return nil, err
-		}
-		if auth == nil {
-			continue
-		}
-		models := provider.GetModels()
-		if provider.FilterModels != nil {
-			models = provider.FilterModels(models, credential)
-		}
-		out = append(out, models...)
-	}
-	return out, nil
+// authenticatedProvider pairs a provider with the credential its auth check
+// passed with.
+type authenticatedProvider struct {
+	provider   *Provider
+	credential *Credential
 }
 
-// GetAllAvailable returns authenticated models of every type. Providers can
-// define an all-model filter; otherwise chat-only filters preserve other types.
-func (m *Models) GetAllAvailable(ctx context.Context, providerID string) ([]*Model, error) {
+// authenticatedProviders lists the providers (one when providerID is set)
+// whose auth check passes, with their credentials (port of models.ts
+// getAuthenticatedProviders). Upstream checks them concurrently and fails on
+// any error before filtering; this checks them in order with the same result.
+func (m *Models) authenticatedProviders(ctx context.Context, providerID string) ([]authenticatedProvider, error) {
 	if err := ctxErr(ctx); err != nil {
 		return nil, err
 	}
@@ -1057,7 +1028,7 @@ func (m *Models) GetAllAvailable(ctx context.Context, providerID string) ([]*Mod
 	} else {
 		providers = m.GetProviders()
 	}
-	var out []*Model
+	var out []authenticatedProvider
 	for _, provider := range providers {
 		credential, err := readCredential(ctx, m.credentials, provider.ID)
 		if err != nil {
@@ -1067,9 +1038,42 @@ func (m *Models) GetAllAvailable(ctx context.Context, providerID string) ([]*Mod
 		if err != nil {
 			return nil, err
 		}
-		if auth == nil {
-			continue
+		if auth != nil {
+			out = append(out, authenticatedProvider{provider, credential})
 		}
+	}
+	return out, nil
+}
+
+// GetAvailable returns models whose providers have complete auth
+// configuration.
+func (m *Models) GetAvailable(ctx context.Context, providerID string) ([]*Model, error) {
+	authenticated, err := m.authenticatedProviders(ctx, providerID)
+	if err != nil {
+		return nil, err
+	}
+	var out []*Model
+	for _, entry := range authenticated {
+		provider, credential := entry.provider, entry.credential
+		models := provider.GetModels()
+		if provider.FilterModels != nil {
+			models = provider.FilterModels(models, credential)
+		}
+		out = append(out, models...)
+	}
+	return out, nil
+}
+
+// GetAllAvailable returns authenticated models of every type. Providers can
+// define an all-model filter; otherwise chat-only filters preserve other types.
+func (m *Models) GetAllAvailable(ctx context.Context, providerID string) ([]*Model, error) {
+	authenticated, err := m.authenticatedProviders(ctx, providerID)
+	if err != nil {
+		return nil, err
+	}
+	var out []*Model
+	for _, entry := range authenticated {
+		provider, credential := entry.provider, entry.credential
 		models := provider.GetAllModels()
 		if provider.FilterAllModels != nil {
 			models = provider.FilterAllModels(models, credential)
