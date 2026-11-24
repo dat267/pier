@@ -712,10 +712,9 @@ func ResolveCliModel(options ResolveCliModelOptions) ResolveCliModelResult {
 // --provider/--model pair cannot be resolved; the Go port reports it in Error
 // so the caller decides (library code must not exit).
 type InitialModelResult struct {
-	Model           *ai.Model
-	ThinkingLevel   ai.ThinkingLevel
-	FallbackMessage string
-	Error           string
+	Model         *ai.Model
+	ThinkingLevel ai.ThinkingLevel
+	Error         string
 }
 
 // FindInitialModelOptions configure FindInitialModel.
