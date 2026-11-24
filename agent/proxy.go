@@ -296,22 +296,12 @@ func newProxyEventScratch() *proxyEventScratch {
 	return &proxyEventScratch{toolCall: make(map[int]*ai.ToolCallArgumentsStream)}
 }
 
-func (s *proxyEventScratch) textBuilder(index int) *strings.Builder {
-	if s.text == nil {
-		s.text = make(map[int]*strings.Builder)
+// startBuilder gives the content block at index a fresh builder in builders.
+func startBuilder(builders *map[int]*strings.Builder, index int) {
+	if *builders == nil {
+		*builders = make(map[int]*strings.Builder)
 	}
-	builder := &strings.Builder{}
-	s.text[index] = builder
-	return builder
-}
-
-func (s *proxyEventScratch) thinkingBuilder(index int) *strings.Builder {
-	if s.thinking == nil {
-		s.thinking = make(map[int]*strings.Builder)
-	}
-	builder := &strings.Builder{}
-	s.thinking[index] = builder
-	return builder
+	(*builders)[index] = &strings.Builder{}
 }
 
 // maxProxyContentBlocks bounds the content block index a proxy server event may
@@ -354,7 +344,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 	case "text_start":
 		grow()
 		partial.Content[wire.ContentIndex] = ai.TextContent{}
-		scratch.textBuilder(wire.ContentIndex)
+		startBuilder(&scratch.text, wire.ContentIndex)
 		return &ai.AssistantMessageEvent{Type: ai.EventTextStart, ContentIndex: wire.ContentIndex, Partial: partial}, nil
 
 	case "text_delta":
@@ -383,7 +373,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 	case "thinking_start":
 		grow()
 		partial.Content[wire.ContentIndex] = ai.ThinkingContent{}
-		scratch.thinkingBuilder(wire.ContentIndex)
+		startBuilder(&scratch.thinking, wire.ContentIndex)
 		return &ai.AssistantMessageEvent{Type: ai.EventThinkingStart, ContentIndex: wire.ContentIndex, Partial: partial}, nil
 
 	case "thinking_delta":
