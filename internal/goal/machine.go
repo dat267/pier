@@ -159,10 +159,9 @@ type DispatchResult struct {
 
 // MachineSnapshot is the machine's observable state.
 type MachineSnapshot struct {
-	Goal           *GoalView
-	Armed          bool
-	PendingTurn    *int
-	CreatedThisRun bool
+	Goal        *GoalView
+	Armed       bool
+	PendingTurn *int
 }
 
 // GoalMachine owns all goal state.
@@ -192,10 +191,9 @@ func (m *GoalMachine) Snapshot() MachineSnapshot {
 		goal = &copied
 	}
 	return MachineSnapshot{
-		Goal:           goal,
-		Armed:          m.armed,
-		PendingTurn:    m.pendingTurn,
-		CreatedThisRun: m.createdThisRun,
+		Goal:        goal,
+		Armed:       m.armed,
+		PendingTurn: m.pendingTurn,
 	}
 }
 
