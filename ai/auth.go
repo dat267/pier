@@ -386,12 +386,14 @@ type OAuthAuth struct {
 
 // The OAuth flows' shared errors: a login started without an interaction to
 // prompt through, a prompt the user dismissed (upstream throws new
-// Error("Login cancelled") from each flow's prompt handling), a refresh or
+// Error("Login cancelled") from each flow's prompt handling), a Codex token
+// without a ChatGPT account id (upstream extractAccountId), a refresh or
 // auth derivation handed no credential, and a callback or pasted redirect
 // without a code (upstream new Error("Missing authorization code")).
 var (
 	errAuthInteractionRequired  = errors.New("auth interaction is required")
 	errLoginCancelled           = errors.New("Login cancelled")
+	errCodexAccountID           = errors.New("Failed to extract accountId from token")
 	errCredentialRequired       = errors.New("credential is required")
 	errMissingAuthorizationCode = errors.New("Missing authorization code")
 )

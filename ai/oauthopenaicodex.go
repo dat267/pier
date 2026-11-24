@@ -462,7 +462,7 @@ func (s *OpenAICodexCallbackServer) Close() { shutdownCallbackServer(s.server) }
 func OpenAICodexCredentialsFromToken(token *OpenAICodexTokenResponse) (*OAuthCredential, error) {
 	accountID := GetOpenAICodexAccountID(token.Access)
 	if accountID == "" {
-		return nil, errors.New("Failed to extract accountId from token")
+		return nil, errCodexAccountID
 	}
 	return &OAuthCredential{
 		Access: token.Access, Refresh: token.Refresh, Expires: token.Expires,

@@ -62,15 +62,15 @@ type OpenAICodexResponsesOptions struct {
 func ExtractCodexAccountID(token string) (string, error) {
 	payload := decodeJWT(token)
 	if payload == nil {
-		return "", errors.New("Failed to extract accountId from token")
+		return "", errCodexAccountID
 	}
 	auth, ok := payload[OpenAICodexJWTPath].(map[string]any)
 	if !ok {
-		return "", errors.New("Failed to extract accountId from token")
+		return "", errCodexAccountID
 	}
 	accountID, _ := auth["chatgpt_account_id"].(string)
 	if accountID == "" {
-		return "", errors.New("Failed to extract accountId from token")
+		return "", errCodexAccountID
 	}
 	return accountID, nil
 }
