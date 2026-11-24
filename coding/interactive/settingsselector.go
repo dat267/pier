@@ -251,10 +251,10 @@ func singleModeThemeItems(availableThemes []string, currentTheme string) []tui.S
 }
 
 func preferredTheme(availableThemes []string, preferred string, hasPreferred bool, fallback string) string {
-	if hasPreferred && contains(availableThemes, preferred) {
+	if hasPreferred && slices.Contains(availableThemes, preferred) {
 		return preferred
 	}
-	if contains(availableThemes, fallback) {
+	if slices.Contains(availableThemes, fallback) {
 		return fallback
 	}
 	if len(availableThemes) > 0 {
@@ -272,8 +272,6 @@ func defaultAutomaticThemes(currentThemeSetting string, availableThemes []string
 	themeName := preferredTheme(availableThemes, fixed, hasFixed, SystemThemeName)
 	return themeName, themeName
 }
-
-func contains(values []string, value string) bool { return slices.Contains(values, value) }
 
 // ThemeSubmenu selects a fixed theme or the automatic light/dark pair.
 type ThemeSubmenu struct {

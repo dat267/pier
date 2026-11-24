@@ -200,7 +200,7 @@ func selectClientAuthMethod(information *OAuthClientInformationFull, supported [
 	if information.TokenEndpointAuthMethod != nil {
 		hinted := *information.TokenEndpointAuthMethod
 		known := hinted == ClientAuthSecretBasic || hinted == ClientAuthSecretPost || hinted == ClientAuthNone
-		if known && (len(supported) == 0 || contains(supported, hinted)) {
+		if known && (len(supported) == 0 || slices.Contains(supported, hinted)) {
 			return hinted
 		}
 	}
@@ -211,13 +211,13 @@ func selectClientAuthMethod(information *OAuthClientInformationFull, supported [
 		}
 		return ClientAuthNone
 	}
-	if hasSecret && contains(supported, ClientAuthSecretBasic) {
+	if hasSecret && slices.Contains(supported, ClientAuthSecretBasic) {
 		return ClientAuthSecretBasic
 	}
-	if hasSecret && contains(supported, ClientAuthSecretPost) {
+	if hasSecret && slices.Contains(supported, ClientAuthSecretPost) {
 		return ClientAuthSecretPost
 	}
-	if contains(supported, ClientAuthNone) {
+	if slices.Contains(supported, ClientAuthNone) {
 		return ClientAuthNone
 	}
 	if hasSecret {
@@ -225,8 +225,6 @@ func selectClientAuthMethod(information *OAuthClientInformationFull, supported [
 	}
 	return ClientAuthNone
 }
-
-func contains(list []string, value string) bool { return slices.Contains(list, value) }
 
 // applyClientAuthentication writes the auth into headers/params (upstream
 // applyClientAuthentication).
@@ -261,10 +259,10 @@ func pkce() (verifier, challenge string, err error) {
 // startAuthorization).
 func StartAuthorization(authorizationServerURL string, options StartAuthorizationOptions) (*AuthorizationDraft, error) {
 	metadata := options.Metadata
-	if metadata != nil && !contains(metadata.ResponseTypesSupported, "code") {
+	if metadata != nil && !slices.Contains(metadata.ResponseTypesSupported, "code") {
 		return nil, errors.New("Authorization server does not support authorization codes")
 	}
-	if metadata != nil && metadata.CodeChallengeMethodsSupported != nil && !contains(metadata.CodeChallengeMethodsSupported, "S256") {
+	if metadata != nil && metadata.CodeChallengeMethodsSupported != nil && !slices.Contains(metadata.CodeChallengeMethodsSupported, "S256") {
 		return nil, errors.New("Authorization server does not support PKCE S256")
 	}
 	endpoint := joinPathForServer(authorizationServerURL, "/authorize")
@@ -298,7 +296,7 @@ func StartAuthorization(authorizationServerURL string, options StartAuthorizatio
 	}
 	if options.Scope != nil && *options.Scope != "" {
 		query.Set("scope", *options.Scope)
-		if contains(splitJSScope(*options.Scope), "offline_access") {
+		if slices.Contains(splitJSScope(*options.Scope), "offline_access") {
 			query.Set("prompt", "consent")
 		}
 	}

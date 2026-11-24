@@ -120,11 +120,11 @@ func buildRules(selectedTools []string, toolGuidelines map[string][]string, prom
 		rules = append(rules, normalized)
 	}
 
-	hasBash := contains(selectedTools, "bash")
-	hasPowerShell := contains(selectedTools, "powershell")
-	hasGrep := contains(selectedTools, "grep")
-	hasFind := contains(selectedTools, "find")
-	hasLs := contains(selectedTools, "ls")
+	hasBash := slices.Contains(selectedTools, "bash")
+	hasPowerShell := slices.Contains(selectedTools, "powershell")
+	hasGrep := slices.Contains(selectedTools, "grep")
+	hasFind := slices.Contains(selectedTools, "find")
+	hasLs := slices.Contains(selectedTools, "ls")
 
 	if (hasBash || hasPowerShell) && !hasGrep && !hasFind && !hasLs {
 		switch {
@@ -153,8 +153,6 @@ func buildRules(selectedTools []string, toolGuidelines map[string][]string, prom
 	}
 	return strings.Join(lines, "\n")
 }
-
-func contains(list []string, want string) bool { return slices.Contains(list, want) }
 
 // BuildSystemPromptSections builds the ordered prompt sections
 // (port of buildSystemPromptSections).
@@ -236,12 +234,12 @@ func buildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 	}
 	skillFileReadTool := ""
 	for _, tool := range []string{"read", "bash"} {
-		if contains(declaredTools, tool) {
+		if slices.Contains(declaredTools, tool) {
 			skillFileReadTool = tool
 			break
 		}
 	}
-	if skillFileReadTool == "" && (contains(selectedTools, "read") || contains(selectedTools, "bash")) {
+	if skillFileReadTool == "" && (slices.Contains(selectedTools, "read") || slices.Contains(selectedTools, "bash")) {
 		skillFileReadTool = "indirect"
 	}
 	if skillFileReadTool != "" && len(skills) > 0 {
