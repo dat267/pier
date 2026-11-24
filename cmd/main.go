@@ -230,6 +230,16 @@ func resolvePrintMode(args *coding.Args, stdinIsTTY, stdoutIsTTY bool) bool {
 // pass it already runs after startup (interactive.Run's RefreshModelCatalogs)
 // performs the network refresh (D220). Print mode and --list-models resolve a
 // model before any background pass, so they keep the create-time refresh.
+// backgroundToolCallsFor is the startup session's backgrounding threshold
+// (D538): the setting, read per run, except in print mode, which has no later
+// turn for the completion notice to wake.
+func backgroundToolCallsFor(printMode bool, settings *coding.SettingsManager) func() time.Duration {
+	if printMode {
+		return nil
+	}
+	return settings.GetBackgroundToolCallThreshold
+}
+
 func catalogRefreshAllowedAtCreate(offline, printMode, listingModels bool) bool {
 	if offline {
 		return false
@@ -561,6 +571,9 @@ func run(appName string, args *coding.Args) error {
 		// Prompt templates: explicit paths load even when discovery is off.
 		PromptTemplatePaths: coding.ResolveCLIPaths(cwd, args.PromptTemplates),
 		NoPromptTemplates:   args.NoPromptTemplates,
+		// Automatic backgrounding of long tool calls (D538). The RPC session
+		// replacement copies these options, so it keeps the threshold too.
+		BackgroundToolCalls: backgroundToolCallsFor(printMode, settings),
 	}
 	created, err := coding.CreateAgentSession(ctx, sessionOptions)
 	if err != nil {

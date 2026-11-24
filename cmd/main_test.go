@@ -667,3 +667,17 @@ func TestInstallBrowserOpener(t *testing.T) {
 		t.Fatal("the browser opener must be installed")
 	}
 }
+
+// D538: the first session gets the backgrounding threshold from the setting.
+// Only session switches passed it before, so a fresh pier ran every long call in
+// the foreground until /new or /resume. Print mode keeps it off.
+func TestStartupSessionBackgroundsToolCalls(t *testing.T) {
+	settings := coding.NewInMemorySettingsManager(&coding.Settings{BackgroundToolCalls: new("2s")}, coding.SettingsManagerCreateOptions{})
+	threshold := backgroundToolCallsFor(false, settings)
+	if threshold == nil || threshold() != 2*time.Second {
+		t.Fatalf("interactive and RPC sessions must read the backgroundToolCalls setting")
+	}
+	if backgroundToolCallsFor(true, settings) != nil {
+		t.Fatal("print mode must not background tool calls: no later turn wakes")
+	}
+}
