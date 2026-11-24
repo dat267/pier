@@ -682,10 +682,21 @@ func featureToggleStatus(id string, value string) string {
 	return state
 }
 
-// backgroundToolCallChoice names the choice row's current value.
+// backgroundToolCallChoice names the choice row's current value. It has to be one
+// of the row's own values: the settings list cycles from the index of the current
+// value, so a value outside the list makes Enter jump to the first entry instead
+// of moving to the next one.
 func backgroundToolCallChoice(threshold time.Duration) string {
 	if threshold <= 0 {
 		return "off"
 	}
+	if threshold == coding.DefaultBackgroundToolCallThreshold {
+		// The row's own spelling of the default: Duration.String() gives "1m0s",
+		// which is not one of the choices, and an unlisted value makes Enter jump
+		// to the first entry instead of the next one.
+		return coding.DefaultBackgroundToolCallChoice
+	}
+	// A stored threshold between the offered steps still shows itself, so the row
+	// never misreports what the harness will do.
 	return threshold.String()
 }

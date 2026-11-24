@@ -852,15 +852,21 @@ func TestSettingsRetryKeepsAFractionalMaxRetries(t *testing.T) {
 	}
 }
 
-// The backgrounding threshold defaults to two minutes, can be turned off, and
+// The backgrounding threshold defaults to one minute, can be turned off, and
 // ignores a value it does not understand rather than silently disabling itself.
 func TestBackgroundToolCallThresholdSetting(t *testing.T) {
 	settings := NewInMemorySettingsManager(nil, SettingsManagerCreateOptions{})
 	if got := settings.GetBackgroundToolCallThreshold(); got != DefaultBackgroundToolCallThreshold {
 		t.Fatalf("default = %v, want %v", got, DefaultBackgroundToolCallThreshold)
 	}
-	if DefaultBackgroundToolCallThreshold != 2*time.Minute {
-		t.Fatalf("the default is %v, want two minutes", DefaultBackgroundToolCallThreshold)
+	if DefaultBackgroundToolCallThreshold != 60*time.Second {
+		t.Fatalf("the default is %v, want 60s", DefaultBackgroundToolCallThreshold)
+	}
+	// The default must also be one of the row's choices, or Enter on the row
+	// cycles from index -1 and jumps to "off" instead of the next duration.
+	if got := ParseBackgroundToolCallThreshold(DefaultBackgroundToolCallChoice); got != DefaultBackgroundToolCallThreshold {
+		t.Fatalf("the default choice %q parses to %v, want %v",
+			DefaultBackgroundToolCallChoice, got, DefaultBackgroundToolCallThreshold)
 	}
 	if !settings.SetBackgroundToolCallThreshold("off") {
 		t.Fatal("off was refused")

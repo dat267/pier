@@ -8971,10 +8971,13 @@ operator then has to reason about, and the threshold covers every case they were
 meant to serve. A tool cannot request a move and a caller cannot force one.
 
 The one knob is the threshold itself, in `/features`, because how long is "too
-long" depends on the work: a two-minute default suits a shell command, while
+long" depends on the work: a one-minute default suits a shell command, while
 someone running long builds wants ten or thirty, and someone who would rather
 wait wants it off. The row is a choice list (`off`, `30s`, `1m`, `2m`, `5m`,
-`10m`, `30m`) rather than a boolean, since "on" alone cannot express it. It is
+`10m`, `30m`) rather than a boolean, since "on" alone cannot express it. The
+default is spelled as one of them (`1m`), because `Duration.String()` renders it
+as `1m0s` and the list cycles from the index of the current value: an unlisted
+default would make Enter jump to the first entry instead of the next one. It is
 stored as the `backgroundToolCalls` setting, read per run so a change applies to
 the next tool call rather than only to a new session, and a stored value this
 build cannot read falls back to the default instead of to off, so a typo cannot

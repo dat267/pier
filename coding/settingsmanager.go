@@ -538,7 +538,7 @@ type Settings struct {
 	GoalFeature *bool `json:"goalFeature,omitempty"`
 	LoopFeature *bool `json:"loopFeature,omitempty"`
 	// BackgroundToolCalls names how long a foreground tool call may run before the
-	// harness backgrounds it: "off", or a Go duration such as "2m" (D538).
+	// harness backgrounds it: "off", or a Go duration such as "1m" (D538).
 	BackgroundToolCalls        *string                  `json:"backgroundToolCalls,omitempty"`
 	Terminal                   *SettingsTerminal        `json:"terminal,omitempty"`
 	Images                     *SettingsImages          `json:"images,omitempty"`
@@ -2908,11 +2908,18 @@ func (m *SettingsManager) SetLoopFeatureEnabled(enabled bool) {
 }
 
 // backgroundToolCallChoices are the values the /features row offers, in order.
+// The default is spelled as one of them ("1m"), so Enter on the row cycles from
+// the default instead of jumping to the first entry.
 var backgroundToolCallChoices = []string{"off", "30s", "1m", "2m", "5m", "10m", "30m"}
 
 // DefaultBackgroundToolCallThreshold is how long a foreground tool call may run
 // before the harness backgrounds it, when the setting is unset.
-const DefaultBackgroundToolCallThreshold = 2 * time.Minute
+const DefaultBackgroundToolCallThreshold = 60 * time.Second
+
+// DefaultBackgroundToolCallChoice is DefaultBackgroundToolCallThreshold spelled
+// as the /features row's own value, so the row shows the default as a selectable
+// entry rather than a value outside its list.
+const DefaultBackgroundToolCallChoice = "1m"
 
 // GetBackgroundToolCallThreshold returns how long a foreground tool call may run
 // before the harness backgrounds it. Zero means the feature is off.

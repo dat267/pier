@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -551,19 +552,19 @@ func TestBackgroundThresholdFeatureRow(t *testing.T) {
 	if row == nil {
 		t.Fatalf("/features holds no background row: %+v", list.Items())
 	}
-	// It is a choice row, and its default is the two-minute threshold the
-	// harness uses, not a boolean.
+	// It is a choice row, and its default is the one-minute threshold the harness
+	// uses, not a boolean.
 	if len(row.Values) < 3 {
 		t.Fatalf("the row offers %d values, want the duration choices: %v", len(row.Values), row.Values)
 	}
-	if row.CurrentValue != "2m0s" {
-		t.Fatalf("the row shows %q, want the two-minute default", row.CurrentValue)
+	if row.CurrentValue != coding.DefaultBackgroundToolCallChoice {
+		t.Fatalf("the row shows %q, want %q", row.CurrentValue, coding.DefaultBackgroundToolCallChoice)
 	}
 
 	// The row is rendered with the current choice, not just stored: a user has to
 	// be able to read the threshold off the screen.
 	rendered := strings.Join(selector.Render(90), "\n")
-	if !strings.Contains(rendered, "Background long tool calls") || !strings.Contains(rendered, "2m0s") {
+	if !strings.Contains(rendered, "Background long tool calls") || !strings.Contains(rendered, coding.DefaultBackgroundToolCallChoice) {
 		t.Fatalf("/features does not render the threshold row:\n%s", rendered)
 	}
 
@@ -605,5 +606,50 @@ func TestBackgroundThresholdAppliesToTheLiveSession(t *testing.T) {
 	}
 	if got := read(); got != 10*time.Minute {
 		t.Fatalf("after 10m = %v", got)
+	}
+}
+
+// The default must be one of the row's own values. Otherwise the settings list
+// cycles from index -1 and Enter jumps to the first entry ("off") instead of
+// moving to the next duration, so the row would look like it skipped a step and
+// the user could disable the feature by accident.
+func TestBackgroundThresholdDefaultIsSelectable(t *testing.T) {
+	wiring, _, _, _ := newSettingsTestWiring(t)
+	selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
+		Toggles: wiring.featureToggles(), OnFeatureChange: func(string, string) {}, OnCancel: func() {},
+	})
+	list := selector.GetSettingsList()
+	list.SelectItem("background-tools")
+	var values []string
+	for _, item := range list.Items() {
+		if item.ID == "background-tools" {
+			values = item.Values
+		}
+	}
+	if len(values) == 0 {
+		t.Fatal("the row is not a choice row")
+	}
+	if !slices.Contains(values, coding.DefaultBackgroundToolCallChoice) {
+		t.Fatalf("the default %q is not among the choices %v", coding.DefaultBackgroundToolCallChoice, values)
+	}
+	if got := coding.ParseBackgroundToolCallThreshold(coding.DefaultBackgroundToolCallChoice); got != coding.DefaultBackgroundToolCallThreshold {
+		t.Fatalf("the default choice parses to %v, not the default %v", got, coding.DefaultBackgroundToolCallThreshold)
+	}
+	// One Enter from the default lands on the next entry, not the first one.
+	want := values[slices.Index(values, coding.DefaultBackgroundToolCallChoice)+1]
+	chosen := ""
+	selector = NewFeatureSettingsSelector(FeatureSelectorOptions{
+		Toggles: wiring.featureToggles(),
+		OnFeatureChange: func(id string, value string) {
+			if id == "background-tools" {
+				chosen = value
+			}
+		},
+		OnCancel: func() {},
+	})
+	selector.GetSettingsList().SelectItem("background-tools")
+	selector.GetSettingsList().HandleInput("\r")
+	if chosen != want {
+		t.Fatalf("Enter from the default chose %q, want the next entry %q", chosen, want)
 	}
 }
