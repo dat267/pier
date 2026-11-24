@@ -85,14 +85,10 @@ func TestListAllSessionsExplicitDir(t *testing.T) {
 
 // writeListingFixture writes count session files of about size bytes each, so a
 // listing has real work to do per file.
-func writeListingFixture(t *testing.T, count int, size int) string {
+func writeListingFixture(t testing.TB, count int, size int) string {
 	t.Helper()
 	dir := t.TempDir()
-	body := make([]byte, size)
-	for index := range body {
-		body[index] = 'x'
-	}
-	text := string(body)
+	text := strings.Repeat("x", size)
 	for index := range count {
 		name := fmt.Sprintf("%02d.jsonl", index)
 		content := `{"type":"session","version":3,"id":"s` + name + `","timestamp":"2026-01-01T00:00:00.000Z","cwd":"` + dir + `"}` + "\n" +
@@ -173,26 +169,6 @@ func TestListSessionsWithProgressStopsOnCancel(t *testing.T) {
 	if seen >= 60 {
 		t.Fatalf("the listing read every file after cancellation: %d", seen)
 	}
-}
-
-// writeListingFixtureForBench is writeListingFixture for benchmarks.
-func writeListingFixtureForBench(b *testing.B, count int, size int) string {
-	b.Helper()
-	dir := b.TempDir()
-	body := make([]byte, size)
-	for index := range body {
-		body[index] = 'x'
-	}
-	text := string(body)
-	for index := range count {
-		name := fmt.Sprintf("%02d.jsonl", index)
-		content := `{"type":"session","version":3,"id":"s` + name + `","timestamp":"2026-01-01T00:00:00.000Z","cwd":"` + dir + `"}` + "\n" +
-			`{"type":"message","id":"m` + name + `","timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"` + text + `"}]}}` + "\n"
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o600); err != nil {
-			b.Fatal(err)
-		}
-	}
-	return dir
 }
 
 // The listing scanner must agree with the typed decoder for every message it

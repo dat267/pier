@@ -10,7 +10,7 @@ import (
 // finish (upstream buildSessionInfosWithConcurrency, MAX_CONCURRENT_SESSION_INFO_LOADS
 // = 10, CURRENT_SESSION_LIST_PUBLISH_INTERVAL = 10).
 func BenchmarkListSessions(b *testing.B) {
-	dir := writeListingFixtureForBench(b, 12, 1<<20)
+	dir := writeListingFixture(b, 12, 1<<20)
 	b.ReportAllocs()
 
 	for b.Loop() {
@@ -24,7 +24,7 @@ func BenchmarkListSessions(b *testing.B) {
 // BenchmarkListSessionsProgress measures the same listing while publishing a
 // partial list, which is the path the picker uses.
 func BenchmarkListSessionsProgress(b *testing.B) {
-	dir := writeListingFixtureForBench(b, 12, 1<<20)
+	dir := writeListingFixture(b, 12, 1<<20)
 	b.ReportAllocs()
 
 	for b.Loop() {
