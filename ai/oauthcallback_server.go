@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"context"
 	"net/http"
 	"sync"
 	"time"
@@ -101,4 +102,14 @@ func (o *oauthCallbackOutcome[T]) LastError() error {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	return o.lastErr
+}
+
+// shutdownCallbackServer stops a callback server, when one was started,
+// allowing in-flight responses a second to finish.
+func shutdownCallbackServer(server *http.Server) {
+	if server != nil {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_ = server.Shutdown(shutdownCtx)
+	}
 }

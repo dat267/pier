@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/dat267/pier/internal/jsnum"
 )
@@ -456,13 +455,7 @@ func (s *OpenAICodexCallbackServer) WaitForCode() (string, bool) {
 }
 
 // Close shuts the server down.
-func (s *OpenAICodexCallbackServer) Close() {
-	if s.server != nil {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		_ = s.server.Shutdown(shutdownCtx)
-	}
-}
+func (s *OpenAICodexCallbackServer) Close() { shutdownCallbackServer(s.server) }
 
 // OpenAICodexCredentialsFromToken builds a credential, requiring the ChatGPT
 // account id claim (upstream credentialsFromToken).

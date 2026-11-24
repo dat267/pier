@@ -226,13 +226,7 @@ func (s *OAuthCallbackServer) WaitForCode(ctx context.Context) (OAuthAuthorizati
 }
 
 // Close shuts the callback server down.
-func (s *OAuthCallbackServer) Close() {
-	if s.server != nil {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		_ = s.server.Shutdown(shutdownCtx)
-	}
-}
+func (s *OAuthCallbackServer) Close() { shutdownCallbackServer(s.server) }
 
 // postOAuthJSON posts a JSON body and returns the response text (upstream
 // postJson).

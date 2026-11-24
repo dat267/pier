@@ -16,7 +16,6 @@ import (
 	"net/url"
 	"slices"
 	"strings"
-	"time"
 )
 
 const (
@@ -238,13 +237,7 @@ func (s *OpenAIChatGPTCallbackServer) Wait() (OpenAIChatGPTAuthorizationResult, 
 }
 
 // Close shuts the server down.
-func (s *OpenAIChatGPTCallbackServer) Close() {
-	if s.server != nil {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		_ = s.server.Shutdown(shutdownCtx)
-	}
-}
+func (s *OpenAIChatGPTCallbackServer) Close() { shutdownCallbackServer(s.server) }
 
 // openAIChatGPTTokenResponse is the raw token endpoint payload.
 type openAIChatGPTTokenResponse struct {
