@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/big"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -318,6 +319,12 @@ func schemaValueEqual(a, b *schemaValue) bool {
 		return true
 	}
 	return string(encodeSchemaValue(a)) == string(encodeSchemaValue(b))
+}
+
+// schemaLiteralIn reports whether value equals any of options under
+// schemaLiteralEqual, the enum and discriminator-tag membership test.
+func schemaLiteralIn(value *schemaValue, options []*schemaValue) bool {
+	return slices.ContainsFunc(options, func(option *schemaValue) bool { return schemaLiteralEqual(value, option) })
 }
 
 // TypeBox compares const/enum values structurally, not their JSON spelling.

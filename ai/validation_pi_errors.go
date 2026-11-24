@@ -50,7 +50,7 @@ func (s *piSchema) walkErrors(value *schemaValue, path string, out *[]piError) {
 			return
 		}
 	}
-	if s.hasEnum && !piEnumMatches(value, s.enum) {
+	if s.hasEnum && !schemaLiteralIn(value, s.enum) {
 		push("expected one of " + schemaListValues(s.enum))
 	}
 	if s.hasConst && !schemaLiteralEqual(value, s.constVal) {
@@ -296,7 +296,7 @@ func (s *piSchema) walkUnion(branches []*piSchema, value *schemaValue, path stri
 	}
 	if key, tags, ok := piUnionTag(branches); ok && value.Object != nil {
 		actual, exists := value.Object.get(key)
-		if !exists || !piUnionTagMatches(actual, tags) {
+		if !exists || !schemaLiteralIn(actual, tags) {
 			addPiError(out, pointerTo(path, key), "expected one of "+schemaListValues(tags))
 			return
 		}
@@ -390,24 +390,6 @@ func piUnionTag(branches []*piSchema) (string, []*schemaValue, bool) {
 		}
 	}
 	return "", nil, false
-}
-
-func piUnionTagMatches(value *schemaValue, tags []*schemaValue) bool {
-	for _, tag := range tags {
-		if schemaLiteralEqual(value, tag) {
-			return true
-		}
-	}
-	return false
-}
-
-func piEnumMatches(value *schemaValue, options []*schemaValue) bool {
-	for _, option := range options {
-		if schemaLiteralEqual(value, option) {
-			return true
-		}
-	}
-	return false
 }
 
 func addPiError(out *[]piError, path, message string) {
