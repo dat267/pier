@@ -113,16 +113,16 @@ func (OpenAIDecisions) Classify(model *Model, classifierContext ClassifierContex
 		if errors.Is(err, context.Canceled) {
 			return classifierFail(result, err, options)
 		}
-		if errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil && options.TimeoutMs != nil {
-			return classifierFail(result, fmt.Errorf("Request timed out after %dms", *options.TimeoutMs), options)
+		if timeout := classifierTimeout(ctx, err, options); timeout != nil {
+			return classifierFail(result, timeout, options)
 		}
 		return classifierFail(result, openAIDecisionsError(err), options)
 	}
 	defer func() { _ = response.Body.Close() }()
 	data, err := boundedio.ReadAll(response.Body, classifierResponseBodyLimit)
 	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil && options.TimeoutMs != nil {
-			return classifierFail(result, fmt.Errorf("Request timed out after %dms", *options.TimeoutMs), options)
+		if timeout := classifierTimeout(ctx, err, options); timeout != nil {
+			return classifierFail(result, timeout, options)
 		}
 		return classifierFail(result, err, options)
 	}
@@ -142,6 +142,16 @@ func (OpenAIDecisions) Classify(model *Model, classifierContext ClassifierContex
 	result.Answers = answers
 	result.AnswerOrder = answerOrder
 	return result
+}
+
+// classifierTimeout is the classifier's own timeout error when err is its
+// TimeoutMs deadline rather than the caller's context (upstream `Request timed
+// out after ${timeoutMs}ms`), else nil.
+func classifierTimeout(ctx context.Context, err error, options *ClassifierOptions) error {
+	if errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil && options.TimeoutMs != nil {
+		return fmt.Errorf("Request timed out after %dms", *options.TimeoutMs)
+	}
+	return nil
 }
 
 func classifierFail(result *ClassifierResult, err error, options *ClassifierOptions) *ClassifierResult {

@@ -147,16 +147,16 @@ func classifySystemOne(transport systemOneTransport, model *Model, classifierCon
 		if errors.Is(err, context.Canceled) {
 			return classifierFail(result, err, options)
 		}
-		if errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil && options.TimeoutMs != nil {
-			return classifierFail(result, fmt.Errorf("Request timed out after %dms", *options.TimeoutMs), options)
+		if timeout := classifierTimeout(ctx, err, options); timeout != nil {
+			return classifierFail(result, timeout, options)
 		}
 		return classifierFail(result, fmt.Errorf("%s", FormatProviderError(NormalizeProviderError(err), transport.label+" error")), options)
 	}
 	defer func() { _ = response.Body.Close() }()
 	responseBody, err := boundedio.ReadAll(response.Body, systemOneResponseBodyLimit)
 	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil && options.TimeoutMs != nil {
-			return classifierFail(result, fmt.Errorf("Request timed out after %dms", *options.TimeoutMs), options)
+		if timeout := classifierTimeout(ctx, err, options); timeout != nil {
+			return classifierFail(result, timeout, options)
 		}
 		return classifierFail(result, err, options)
 	}
