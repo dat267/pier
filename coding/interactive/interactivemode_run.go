@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"cmp"
 	"context"
 	"os"
 	"strings"
@@ -223,10 +224,7 @@ func (w *RunWiring) ShowNewVersionNotification(release LatestRelease, hyperlinks
 	// The release page, not upstream's pi.dev changelog: the notes that matter
 	// are this module's releases (D174). A payload without a page (the check
 	// always carries one) falls back to the release list.
-	changelogURL := release.URL
-	if changelogURL == "" {
-		changelogURL = coding.PortReleasesPage
-	}
+	changelogURL := cmp.Or(release.URL, coding.PortReleasesPage)
 	// The version and page come from the update check's response, so they are
 	// data: the card printed them raw, and a control character in the page ended
 	// the renderer's hyperlink early (D465).

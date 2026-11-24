@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -416,10 +417,7 @@ func TestAssistantMessageRecordsRequestedThinkingLevel(t *testing.T) {
 		if !ok {
 			t.Fatalf("reasoning %q: last message = %T, want assistant", level, messages[len(messages)-1])
 		}
-		want := level
-		if want == "" {
-			want = ai.ThinkOff
-		}
+		want := cmp.Or(level, ai.ThinkOff)
 		if final.ThinkingLevel == nil || *final.ThinkingLevel != want {
 			t.Fatalf("reasoning %q: thinkingLevel = %v, want %q", level, final.ThinkingLevel, want)
 		}

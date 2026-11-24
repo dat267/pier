@@ -3,6 +3,7 @@ package ai
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	ctxpkg "context"
 	"encoding/json"
 	"errors"
@@ -464,10 +465,7 @@ func deriveMistralToolCallID(id string, attempt int) string {
 	if attempt == 0 && len(normalized) == mistralToolCallIDLength {
 		return normalized
 	}
-	seedBase := normalized
-	if seedBase == "" {
-		seedBase = id
-	}
+	seedBase := cmp.Or(normalized, id)
 	seed := seedBase
 	if attempt != 0 {
 		seed = fmt.Sprintf("%s:%d", seedBase, attempt)

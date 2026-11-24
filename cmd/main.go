@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -388,10 +389,7 @@ func run(appName string, args *coding.Args) error {
 	// trust and builds the runtime settings manager for `sessionManager.getCwd()`
 	// (main.ts's createRuntime factory takes the session's cwd). The CLI path
 	// flags stay process-relative, as upstream's resolveCliPaths does.
-	runtimeCwd := sessions.GetCwd()
-	if runtimeCwd == "" {
-		runtimeCwd = cwd
-	}
+	runtimeCwd := cmp.Or(sessions.GetCwd(), cwd)
 	trusted, trustErr := resolveStartupProjectTrust(startupTrustOptions{
 		cwd:       runtimeCwd,
 		agentDir:  agentDir,

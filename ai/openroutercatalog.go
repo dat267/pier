@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -44,10 +45,7 @@ func PersonalizeOpenRouterCatalog(catalog []*Model, refresh *RefreshModelsContex
 		return catalog, nil
 	}
 
-	baseURL := strings.TrimRight(refresh.BaseURL, "/")
-	if baseURL == "" {
-		baseURL = openRouterDefaultBaseURL
-	}
+	baseURL := cmp.Or(strings.TrimRight(refresh.BaseURL, "/"), openRouterDefaultBaseURL)
 	ctx := refresh.Ctx
 	if ctx == nil {
 		ctx = context.Background()

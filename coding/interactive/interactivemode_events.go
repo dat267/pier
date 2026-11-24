@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"cmp"
 	"context"
 	"strconv"
 	"time"
@@ -340,10 +341,7 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 		}
 		if !event.Success {
 			if d.ShowError != nil {
-				finalError := event.ErrorMessage
-				if finalError == "" {
-					finalError = "Unknown error"
-				}
+				finalError := cmp.Or(event.ErrorMessage, "Unknown error")
 				d.ShowError("Retry failed after " + strconv.Itoa(event.Attempt) + " attempts: " + finalError)
 			}
 		}

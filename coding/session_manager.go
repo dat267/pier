@@ -3,6 +3,7 @@ package coding
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -1875,10 +1876,7 @@ func buildSessionInfoContext(ctx context.Context, filePath string) *SessionInfo 
 	}
 
 	cwd := header.Cwd
-	first := firstMessage
-	if first == "" {
-		first = "(no messages)"
-	}
+	first := cmp.Or(firstMessage, "(no messages)")
 	return &SessionInfo{
 		Path: filePath, ID: header.ID, Cwd: cwd, Name: name,
 		ParentSessionPath: derefString(header.ParentSession),

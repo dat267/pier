@@ -3,6 +3,7 @@
 package goal
 
 import (
+	"cmp"
 	"fmt"
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
@@ -198,10 +199,7 @@ func RenderGoalEventMessage(kind, content string, turn int, hasTurn bool, curren
 	} else if kind == "round" && hasTurn {
 		detail = fmt.Sprintf("#%d", turn)
 	}
-	label := goalEventLabels[kind]
-	if label == "" {
-		label = "Goal"
-	}
+	label := cmp.Or(goalEventLabels[kind], "Goal")
 	return RenderGoalCard(theme, GoalCard{
 		Label:    label,
 		Body:     body,
@@ -312,10 +310,7 @@ func RenderGetGoalRenderResult(goal *GoalView, theme Theme, expanded bool) *tui.
 		lines = append(lines, theme.Fg("muted", "budget: "+FormatBudget(goal.Budget, goal.UsedTokens, goal.UsedCostUsd, elapsed)))
 	}
 	if goal.BlockedReason != nil {
-		stopColor := PhaseColor[goal.Phase]
-		if stopColor == "" {
-			stopColor = "warning"
-		}
+		stopColor := cmp.Or(PhaseColor[goal.Phase], "warning")
 		lines = append(lines, theme.Fg(stopColor, "reason: "+tui.SanitizeUntrustedText(goal.BlockedReason.Code+": "+goal.BlockedReason.Message)))
 	}
 	return tui.NewText(strings.Join(lines, "\n"), 0, 0, nil)

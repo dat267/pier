@@ -2,6 +2,7 @@ package ai
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -199,10 +200,7 @@ func ExchangeFederationToken(ctx context.Context, config FederationConfig) (Fede
 	}
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("anthropic-beta", OAuthAPIBetaHeader+","+FederationBetaHeader)
-	userAgent := config.UserAgent
-	if userAgent == "" {
-		userAgent = "pi go oidcFederationProvider"
-	}
+	userAgent := cmp.Or(config.UserAgent, "pi go oidcFederationProvider")
 	request.Header.Set("User-Agent", userAgent)
 	client := config.HTTPClient
 	if client == nil {

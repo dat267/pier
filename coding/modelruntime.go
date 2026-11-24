@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"github.com/dat267/pier/internal/jsnum"
@@ -238,10 +239,7 @@ func (r *ModelRuntime) configureRadiusProviders() {
 		if config == nil || config.OAuth != "radius" || config.BaseURL == "" {
 			continue
 		}
-		name := config.Name
-		if name == "" {
-			name = providerID
-		}
+		name := cmp.Or(config.Name, providerID)
 		builtins[providerID] = ai.RadiusProvider(ai.RadiusProviderOptions{
 			ID:      providerID,
 			Name:    name,

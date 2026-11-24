@@ -11,6 +11,7 @@ package rpcclient
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -290,10 +291,7 @@ func (c *RpcClient) Start(ctx context.Context) error {
 		}
 	}()
 
-	cliPath := c.options.CLIPath
-	if cliPath == "" {
-		cliPath = coding.AppName
-	}
+	cliPath := cmp.Or(c.options.CLIPath, coding.AppName)
 	var args []string
 	if len(c.options.PeerArgs) > 0 {
 		args = append(args, c.options.PeerArgs...)

@@ -3,6 +3,7 @@ package mcp
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -499,10 +500,7 @@ func (t *StreamableHttpTransport) Send(ctx context.Context, message Message) err
 	}
 	discardBody(response)
 	missing := "missing"
-	typeName := contentType(response)
-	if typeName == "" {
-		typeName = missing
-	}
+	typeName := cmp.Or(contentType(response), missing)
 	return &McpHttpError{Status: response.StatusCode, Msg: "Unsupported MCP response content type: " + typeName}
 }
 
@@ -973,10 +971,7 @@ func (t *StreamableHttpTransport) openSseStream(lastEventID *string) (io.ReadClo
 	t.captureSession(response)
 	if contentType(response) != "text/event-stream" || response.Body == nil {
 		discardBody(response)
-		typeName := contentType(response)
-		if typeName == "" {
-			typeName = "missing"
-		}
+		typeName := cmp.Or(contentType(response), "missing")
 		return nil, &McpHttpError{Status: response.StatusCode, Msg: "Unsupported MCP GET response content type: " + typeName}
 	}
 	return response.Body, nil

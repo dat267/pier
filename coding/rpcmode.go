@@ -5,6 +5,7 @@ package coding
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -866,10 +867,7 @@ func (r *rpcRuntime) handle(command rpcCommand) (any, bool, error) {
 		if !session.HasModel() {
 			model = nil
 		}
-		thinking := session.ThinkingLevel()
-		if thinking == "" {
-			thinking = ai.ThinkOff
-		}
+		thinking := cmp.Or(session.ThinkingLevel(), ai.ThinkOff)
 		return rpcSessionState{
 			Model: model, ThinkingLevel: thinking, IsStreaming: session.IsStreaming(),
 			IsCompacting: session.IsCompacting(), SteeringMode: session.SteeringMode(),

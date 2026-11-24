@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"cmp"
 	"context"
 	"strings"
 
@@ -202,10 +203,7 @@ func (w *SelectorWiring) ShowThinkingSelector() {
 			w.SelectThinkingLevel(level, persist)
 			done()
 		}
-		current := w.Session.ThinkingLevel()
-		if current == "" {
-			current = coding.DefaultThinkingLevel
-		}
+		current := cmp.Or(w.Session.ThinkingLevel(), coding.DefaultThinkingLevel)
 		defaultLevel := coding.DefaultThinkingLevel
 		if w.Settings != nil {
 			if value := w.Settings.GetDefaultThinkingLevel(); value != nil && *value != "" {

@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"os"
@@ -223,10 +224,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 
 	// Thinking level: the pinned level, then a level carried by the model scope,
 	// then the session entry, then per-model, then the global default.
-	thinkingLevel := options.ThinkingLevel
-	if thinkingLevel == "" {
-		thinkingLevel = scopedThinkingLevel
-	}
+	thinkingLevel := cmp.Or(options.ThinkingLevel, scopedThinkingLevel)
 	if thinkingLevel == "" && hasExistingSession {
 		if hasThinkingEntry && existingSession.ThinkingLevel != "" {
 			thinkingLevel = existingSession.ThinkingLevel

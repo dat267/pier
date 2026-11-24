@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"cmp"
 	"os"
 	"strings"
 
@@ -68,10 +69,7 @@ func GetTextOutput(result *SortToolResultContent, showImages bool) string {
 	if len(imageBlocks) > 0 && (!showImages || tui.GetTerminalCapabilities().Images == "") {
 		indicators := make([]string, 0, len(imageBlocks))
 		for _, block := range imageBlocks {
-			mimeType := block.MimeType
-			if mimeType == "" {
-				mimeType = "image/unknown"
-			}
+			mimeType := cmp.Or(block.MimeType, "image/unknown")
 			var dimensions *tui.ImageDimensions
 			if block.Data != "" && block.MimeType != "" {
 				if parsed, ok := tui.GetImageDimensions(block.Data, block.MimeType); ok {
@@ -95,10 +93,7 @@ func RenderToolPath(rawPath *string, theme *Theme, cwd string, emptyFallback str
 	if rawPath == nil {
 		return invalidArgText(theme)
 	}
-	value := *rawPath
-	if value == "" {
-		value = emptyFallback
-	}
+	value := cmp.Or(*rawPath, emptyFallback)
 	if value == "" {
 		return theme.Fg("toolOutput", "...")
 	}

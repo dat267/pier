@@ -9,6 +9,7 @@ package coding
 // image when the helper is unavailable.
 
 import (
+	"cmp"
 	"context"
 	"encoding/base64"
 	"net/url"
@@ -262,10 +263,7 @@ func encodeBytesAsPNG(data []byte, mimeType string) ([]byte, bool) {
 // extension matches the MIME type, returning the path. Callers insert the path
 // so the existing @file image attachment path handles it.
 func WriteClipboardImageTempFile(image *ClipboardImage) (string, error) {
-	extension := ExtensionForImageMimeType(image.MimeType)
-	if extension == "" {
-		extension = "png"
-	}
+	extension := cmp.Or(ExtensionForImageMimeType(image.MimeType), "png")
 	path := filepath.Join(os.TempDir(), AppName+"-clipboard-"+UUIDv7()+"."+extension)
 	if err := os.WriteFile(path, image.Bytes, 0o600); err != nil {
 		return "", err

@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -404,10 +405,7 @@ func ResolveCredentialForPrint(args *Args, runtime *ModelRuntime, kind AuthComma
 		if cliModel != "" {
 			resolved := ResolveCliModel(ResolveCliModelOptions{CLIProvider: provider.ID, CLIModel: cliModel, ModelRuntime: runtime})
 			if resolved.Error != "" || resolved.Model == nil {
-				message := resolved.Error
-				if message == "" {
-					message = "Unable to resolve the requested provider/model"
-				}
+				message := cmp.Or(resolved.Error, "Unable to resolve the requested provider/model")
 				return "", &AuthCommandError{Message: message}
 			}
 			providers = append(providers, printTarget{id: provider.ID, model: resolved.Model})
@@ -615,10 +613,7 @@ func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer
 		RefreshOnCreate:   &refreshOnCreate,
 	})
 	invalid := func() AuthCheckResult {
-		resolved := provider
-		if resolved == "" {
-			resolved = model
-		}
+		resolved := cmp.Or(provider, model)
 		return AuthCheckResult{Status: AuthCheckInvalid, Provider: resolved, Reason: AuthReasonInvalidState}
 	}
 	var result AuthCheckResult

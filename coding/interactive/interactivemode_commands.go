@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"os"
@@ -626,10 +627,7 @@ func (w *CommandWiring) sessionInfoPanel(session CommandSession, sessionInfo *co
 		info.WriteString(sessionName)
 		info.WriteString("\n")
 	}
-	sessionFile := stats.SessionFile
-	if sessionFile == "" {
-		sessionFile = "In-memory"
-	}
+	sessionFile := cmp.Or(stats.SessionFile, "In-memory")
 	info.WriteString(theme.Fg("dim", "File:"))
 	info.WriteString(" ")
 	info.WriteString(sessionFile)

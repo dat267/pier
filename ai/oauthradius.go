@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -254,10 +255,7 @@ func StartRadiusCallbackServer(ctx context.Context, expectedState string, comple
 			return
 		}
 		if oauthError := query.Get("error"); oauthError != "" {
-			description := query.Get("error_description")
-			if description == "" {
-				description = oauthError
-			}
+			description := cmp.Or(query.Get("error_description"), oauthError)
 			sendPage(http.StatusBadRequest, OAuthErrorHTML(description, ""))
 			callback.finish("")
 			return

@@ -2,6 +2,7 @@ package ai
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -134,10 +135,7 @@ func BuildOpenAIResponsesParamsWithProviders(
 			if getConfigurationUpdateEffort(model, options, *compat) != "" {
 				effort = configurationUpdateRequestEffort
 			}
-			summary := options.ReasoningSummary
-			if summary == "" {
-				summary = "auto"
-			}
+			summary := cmp.Or(options.ReasoningSummary, "auto")
 			params.Reasoning = &OpenAIResponsesReasoning{Effort: effort, Summary: summary}
 			params.Include = []string{"reasoning.encrypted_content"}
 		} else if model.Provider != "github-copilot" {
@@ -891,14 +889,8 @@ func ProcessResponsesStream(
 			var msg string
 			switch {
 			case response.Error != nil:
-				code := response.Error.Code
-				if code == "" {
-					code = "unknown"
-				}
-				message := response.Error.Message
-				if message == "" {
-					message = "no message"
-				}
+				code := cmp.Or(response.Error.Code, "unknown")
+				message := cmp.Or(response.Error.Message, "no message")
 				msg = code + ": " + message
 			case response.IncompleteDetails != nil && response.IncompleteDetails.Reason != "":
 				msg = "incomplete: " + response.IncompleteDetails.Reason

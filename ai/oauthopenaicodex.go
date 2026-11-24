@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"cmp"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -436,10 +437,7 @@ func StartOpenAICodexCallbackServer(expectedState string) *OpenAICodexCallbackSe
 		// A denied authorization ends the wait with a failure (shared
 		// callback-server.ts), instead of leaving the login on the manual path.
 		if errorCode := query.Get("error"); errorCode != "" {
-			description := query.Get("error_description")
-			if description == "" {
-				description = errorCode
-			}
+			description := cmp.Or(query.Get("error_description"), errorCode)
 			writeHTML(http.StatusBadRequest, OAuthErrorHTML("OpenAI authorization failed.", description))
 			callback.fail(fmt.Errorf("OpenAI authorization failed: %s", description))
 			return

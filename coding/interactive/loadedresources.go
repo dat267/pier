@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"cmp"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -39,14 +40,8 @@ func isPackageSource(sourceInfo coding.SourceInfo) bool {
 // getScopeGroup maps a source info to its display group (upstream
 // getScopeGroup).
 func getScopeGroup(sourceInfo coding.SourceInfo) string {
-	source := sourceInfo.Source
-	if source == "" {
-		source = "local"
-	}
-	scope := sourceInfo.Scope
-	if scope == "" {
-		scope = coding.SourceScopeProject
-	}
+	source := cmp.Or(sourceInfo.Source, "local")
+	scope := cmp.Or(sourceInfo.Scope, coding.SourceScopeProject)
 	if source == "cli" || scope == coding.SourceScopeTemporary {
 		return "path"
 	}
@@ -139,10 +134,7 @@ func buildScopeGroups(items []scopeGroupItem) []scopeGroup {
 	}
 	for _, item := range items {
 		group := groups[getScopeGroup(item.sourceInfo)]
-		source := item.sourceInfo.Source
-		if source == "" {
-			source = "local"
-		}
+		source := cmp.Or(item.sourceInfo.Source, "local")
 		if isPackageSource(item.sourceInfo) {
 			group.packages[source] = append(group.packages[source], item)
 		} else {
@@ -239,14 +231,8 @@ func formatSkillDiagnostics(diagnostics []coding.ResourceDiagnostic) string {
 // source shows its scope, any other source shows its own name with the scope
 // appended, and an absent scope counts as project.
 func displaySourceLabel(info coding.SourceInfo) (label string, scopeLabel string) {
-	source := info.Source
-	if source == "" {
-		source = "local"
-	}
-	scope := info.Scope
-	if scope == "" {
-		scope = coding.SourceScopeProject
-	}
+	source := cmp.Or(info.Source, "local")
+	scope := cmp.Or(info.Scope, coding.SourceScopeProject)
 	if source == "local" {
 		switch scope {
 		case coding.SourceScopeUser:

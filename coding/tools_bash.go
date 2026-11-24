@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -824,10 +825,7 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 
 			formatOutput := func(emptyText string) (string, *BashToolDetails) {
 				truncation := snapshot.Truncation
-				text := snapshot.Content
-				if text == "" {
-					text = emptyText
-				}
+				text := cmp.Or(snapshot.Content, emptyText)
 				var details *BashToolDetails
 				if truncation.Truncated {
 					fullPath := snapshot.FullOutputPath

@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"io"
@@ -62,10 +63,7 @@ func TestProviderPayloadReplacementsMatchUpstream(t *testing.T) {
 				}
 				headers <- got
 				if fixture.Fail != nil {
-					contentType := fixture.Fail.ContentType
-					if contentType == "" {
-						contentType = "application/json"
-					}
+					contentType := cmp.Or(fixture.Fail.ContentType, "application/json")
 					w.Header().Set("Content-Type", contentType)
 					w.WriteHeader(fixture.Fail.Status)
 					io.WriteString(w, fixture.Fail.Body)

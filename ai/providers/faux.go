@@ -5,6 +5,7 @@
 package providers
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -128,10 +129,7 @@ func NewFauxCore(options FauxOptions) *FauxCore {
 	if api == "" {
 		api = fauxRandomID(fauxDefaultAPI)
 	}
-	provider := options.Provider
-	if provider == "" {
-		provider = fauxDefaultProvider
-	}
+	provider := cmp.Or(options.Provider, fauxDefaultProvider)
 	minToken := options.TokenSizeMin
 	if minToken == 0 {
 		minToken = fauxDefaultMinToken

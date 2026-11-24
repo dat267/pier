@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"cmp"
 	"fmt"
 	"path/filepath"
 )
@@ -67,10 +68,7 @@ func ResolveProjectTrusted(options ResolveProjectTrustedOptions) (bool, error) {
 		return entry.Decision, nil
 	}
 
-	defaultTrust := options.DefaultProjectTrust
-	if defaultTrust == "" {
-		defaultTrust = "ask"
-	}
+	defaultTrust := cmp.Or(options.DefaultProjectTrust, "ask")
 	switch defaultTrust {
 	case "always":
 		return true, nil

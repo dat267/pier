@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"errors"
@@ -335,10 +336,7 @@ type localShellOperations struct {
 }
 
 func (o *localShellOperations) Exec(ctx context.Context, command, cwd string, execOptions BashExecOptions) (*int, error) {
-	shellName := o.options.ShellName
-	if shellName == "" {
-		shellName = "bash"
-	}
+	shellName := cmp.Or(o.options.ShellName, "bash")
 	// Upstream resolves the timeout before anything else, so an invalid value
 	// never runs the command and never depends on cancellation order.
 	if execOptions.Timeout != nil {

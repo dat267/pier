@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -261,10 +262,7 @@ func StartOpenRouterCallbackServer(ctx context.Context, callbackPath, verifier s
 		}
 		query := request.URL.Query()
 		if oauthError := query.Get("error"); oauthError != "" {
-			description := query.Get("error_description")
-			if description == "" {
-				description = oauthError
-			}
+			description := cmp.Or(query.Get("error_description"), oauthError)
 			sendHTML(http.StatusBadRequest, OAuthErrorHTML("OpenRouter authorization was denied.", description))
 			finish(nil, fmt.Errorf("OpenRouter authorization failed: %s", description))
 			return

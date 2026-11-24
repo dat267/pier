@@ -2,6 +2,7 @@ package ai
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -638,10 +639,7 @@ func BuildBedrockAdditionalModelRequestFields(model *Model, options *BedrockOpti
 		return nil
 	}
 	// GovCloud rejects Claude's thinking.display field.
-	display := options.ThinkingDisplay
-	if display == "" {
-		display = "summarized"
-	}
+	display := cmp.Or(options.ThinkingDisplay, "summarized")
 	isGovCloud := IsGovCloudBedrockTarget(model, options)
 	if isGovCloud {
 		display = ""

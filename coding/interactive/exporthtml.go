@@ -11,6 +11,7 @@ package interactive
 // the port has no codemode, so no tool result carries that field.
 
 import (
+	"cmp"
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
@@ -313,10 +314,7 @@ func stripControlBytes(url string) string {
 func AnsiLinesToHTML(lines []string) string {
 	var result strings.Builder
 	for _, line := range lines {
-		html := AnsiToHTML(line)
-		if html == "" {
-			html = "&nbsp;"
-		}
+		html := cmp.Or(AnsiToHTML(line), "&nbsp;")
 		result.WriteString(`<div class="ansi-line">`)
 		result.WriteString(html)
 		result.WriteString(`</div>`)
@@ -421,10 +419,7 @@ func generateThemeVars(themeName string) string {
 
 	exportPageBg, exportCardBg, exportInfoBg, _ := GetThemeExportColors(themeName)
 	themeExport := exportColors{pageBg: exportPageBg, cardBg: exportCardBg, infoBg: exportInfoBg}
-	userMessageBg := colors["userMessageBg"]
-	if userMessageBg == "" {
-		userMessageBg = "#343541"
-	}
+	userMessageBg := cmp.Or(colors["userMessageBg"], "#343541")
 	derived := deriveExportColors(userMessageBg)
 	pageBg, cardBg, infoBg := derived.pageBg, derived.cardBg, derived.infoBg
 	if themeExport.pageBg != "" {
@@ -600,10 +595,7 @@ func sessionHTMLParts(themeName string) (string, string) {
 	colors, _ := GetResolvedThemeColors(themeName)
 	exportPageBg, exportCardBg, exportInfoBg, _ := GetThemeExportColors(themeName)
 	themeExport := exportColors{pageBg: exportPageBg, cardBg: exportCardBg, infoBg: exportInfoBg}
-	userMessageBg := colors["userMessageBg"]
-	if userMessageBg == "" {
-		userMessageBg = "#343541"
-	}
+	userMessageBg := cmp.Or(colors["userMessageBg"], "#343541")
 	derived := deriveExportColors(userMessageBg)
 	bodyBg, containerBg, infoBg := derived.pageBg, derived.cardBg, derived.infoBg
 	if themeExport.pageBg != "" {

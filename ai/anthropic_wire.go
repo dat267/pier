@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"slices"
@@ -943,10 +944,7 @@ func buildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 		return nil, err
 	}
 
-	activeEffort := options.Effort
-	if activeEffort == "" {
-		activeEffort = AnthropicEffortHigh
-	}
+	activeEffort := cmp.Or(options.Effort, AnthropicEffortHigh)
 	betaFeatures := GetBetaFeatures(model, context, isOAuthToken, nativeToolChanges, flags.messageThreads, options)
 
 	var messages []AnthropicMessage
@@ -1032,10 +1030,7 @@ func buildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 	} else if managedProvider != "" {
 		// Managed effort models use adaptive thinking so prefix mismatches can
 		// be dropped instead of surfacing as persistent 400 responses.
-		display := options.ThinkingDisplay
-		if display == "" {
-			display = ThinkingDisplaySummarized
-		}
+		display := cmp.Or(options.ThinkingDisplay, ThinkingDisplaySummarized)
 		params.Thinking = &AnthropicThinking{
 			Type:         "adaptive",
 			Display:      &display,
@@ -1046,10 +1041,7 @@ func buildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 		// can cap effort and reject requests containing any level above the cap.
 		params.OutputConfig = &AnthropicOutputConfig{Effort: AnthropicEffortLow}
 	} else if model.Reasoning && options.ThinkingEnabled != nil && *options.ThinkingEnabled {
-		display := options.ThinkingDisplay
-		if display == "" {
-			display = ThinkingDisplaySummarized
-		}
+		display := cmp.Or(options.ThinkingDisplay, ThinkingDisplaySummarized)
 		if forcedAdaptive {
 			params.Thinking = &AnthropicThinking{Type: "adaptive", Display: &display}
 			if options.Effort != "" {

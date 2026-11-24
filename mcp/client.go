@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -218,10 +219,7 @@ func (c *Client) connectInitialize(ctx context.Context, transport Transport) (*p
 		}{}
 	}
 	clientInfo := protocol.Implementation{Name: c.options.Name, Version: c.options.Version, Title: c.options.Title}
-	requested := c.options.ProtocolVersion
-	if requested == "" {
-		requested = protocol.LatestProtocolVersion
-	}
+	requested := cmp.Or(c.options.ProtocolVersion, protocol.LatestProtocolVersion)
 	params := map[string]any{
 		"protocolVersion": requested,
 		"capabilities":    capabilities,

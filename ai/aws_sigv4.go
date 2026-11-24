@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"cmp"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -87,10 +88,7 @@ func SignAWSRequest(request *http.Request, body []byte, credentials AWSCredentia
 	}
 	signedHeaders := strings.Join(names, ";")
 
-	canonicalURI := request.URL.EscapedPath()
-	if canonicalURI == "" {
-		canonicalURI = "/"
-	}
+	canonicalURI := cmp.Or(request.URL.EscapedPath(), "/")
 	canonicalQuery := canonicalizeAWSQuery(request.URL)
 
 	canonicalRequest := strings.Join([]string{

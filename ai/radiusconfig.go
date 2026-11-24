@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -253,14 +254,8 @@ type RadiusProviderOptions struct {
 // RadiusProvider builds the Radius gateway provider with a persisted,
 // dynamically refreshed catalogue (upstream radiusProvider).
 func RadiusProvider(options RadiusProviderOptions) *Provider {
-	id := options.ID
-	if id == "" {
-		id = "radius"
-	}
-	name := options.Name
-	if name == "" {
-		name = "Radius"
-	}
+	id := cmp.Or(options.ID, "radius")
+	name := cmp.Or(options.Name, "Radius")
 	gateway := NormalizeRadiusGatewayURL(options.Gateway)
 	if options.Gateway == "" {
 		gateway = NormalizeRadiusGatewayURL(DefaultRadiusGateway)

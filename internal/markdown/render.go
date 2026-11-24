@@ -1,6 +1,7 @@
 package markdown
 
 import (
+	"cmp"
 	"strconv"
 	"strings"
 
@@ -129,10 +130,7 @@ func (r *Renderer) block(b *Block, width int, next *Block, styleContext *inlineS
 		}
 
 	case BlockCode:
-		indent := r.opts.CodeBlockIndent
-		if indent == "" {
-			indent = "  "
-		}
+		indent := cmp.Or(r.opts.CodeBlockIndent, "  ")
 		lines = append(lines, r.style.CodeBlockBorder("```"+b.Info))
 		if r.opts.HighlightCode != nil {
 			for _, hlLine := range r.opts.HighlightCode(b.Body, b.Info) {

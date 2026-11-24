@@ -1,6 +1,7 @@
 package oauth
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -84,18 +85,9 @@ type callbackResult struct {
 // ListenCallbackServer starts the local redirect listener (upstream
 // OAuthCallbackServer.listen).
 func ListenCallbackServer(ctx context.Context, options OAuthCallbackServerOptions) (*OAuthCallbackServer, error) {
-	host := options.Host
-	if host == "" {
-		host = "127.0.0.1"
-	}
-	redirectHost := options.RedirectHost
-	if redirectHost == "" {
-		redirectHost = host
-	}
-	path := options.Path
-	if path == "" {
-		path = "/callback"
-	}
+	host := cmp.Or(options.Host, "127.0.0.1")
+	redirectHost := cmp.Or(options.RedirectHost, host)
+	path := cmp.Or(options.Path, "/callback")
 	timeoutMs := options.TimeoutMs
 	if timeoutMs == 0 && !options.TimeoutMsSet {
 		timeoutMs = 5 * 60000

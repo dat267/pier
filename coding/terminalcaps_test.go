@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"cmp"
 	"strings"
 	"testing"
 )
@@ -62,10 +63,7 @@ func TestHyperlinksSupported(t *testing.T) {
 	}
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
-			platform := testCase.platform
-			if platform == "" {
-				platform = "linux"
-			}
+			platform := cmp.Or(testCase.platform, "linux")
 			probeCalls := 0
 			probe := func() bool {
 				probeCalls++
@@ -149,10 +147,7 @@ func TestDetectTerminalCapabilities(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			platform := testCase.platform
-			if platform == "" {
-				platform = "linux"
-			}
+			platform := cmp.Or(testCase.platform, "linux")
 			env := func(key string) string { return testCase.env[key] }
 			got := DetectTerminalCapabilities(env, platform, func() bool { return testCase.tmux })
 			if got.Images != testCase.wantImages || got.TrueColor != testCase.wantTrue || got.Hyperlinks != testCase.wantLinks {

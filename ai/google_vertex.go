@@ -2,6 +2,7 @@ package ai
 
 import (
 	"bytes"
+	"cmp"
 	ctxpkg "context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -379,10 +380,7 @@ func refreshAuthorizedUserToken(ctx ctxpkg.Context, cacheKey string, credentials
 	}
 	vertexTokenCache.mu.Unlock()
 
-	tokenURI := credentials.TokenURI
-	if tokenURI == "" {
-		tokenURI = "https://oauth2.googleapis.com/token"
-	}
+	tokenURI := cmp.Or(credentials.TokenURI, "https://oauth2.googleapis.com/token")
 	form := url.Values{}
 	form.Set("grant_type", "refresh_token")
 	form.Set("client_id", credentials.ClientID)
@@ -453,10 +451,7 @@ func vertexTokenExpiry(expiresIn int64) time.Time {
 }
 
 func metadataAccessToken(ctx ctxpkg.Context, env ProviderEnv) (string, error) {
-	host := GetProviderEnvValueOr("GCE_METADATA_HOST", env)
-	if host == "" {
-		host = "169.254.169.254"
-	}
+	host := cmp.Or(GetProviderEnvValueOr("GCE_METADATA_HOST", env), "169.254.169.254")
 	requestURL := "http://" + host + "/computeMetadata/v1/instance/service-accounts/default/token"
 	cacheKey := "metadata:" + host
 	vertexTokenCache.mu.Lock()

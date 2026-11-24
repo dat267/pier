@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -383,22 +384,10 @@ func NewAgent(options *AgentOptions) (*Agent, error) {
 		}
 	}
 
-	steeringMode := options.SteeringMode
-	if steeringMode == "" {
-		steeringMode = QueueModeOneAtATime
-	}
-	followUpMode := options.FollowUpMode
-	if followUpMode == "" {
-		followUpMode = QueueModeOneAtATime
-	}
-	toolExecution := options.ToolExecution
-	if toolExecution == "" {
-		toolExecution = ToolExecutionParallel
-	}
-	transport := options.Transport
-	if transport == "" {
-		transport = ai.TransportAuto
-	}
+	steeringMode := cmp.Or(options.SteeringMode, QueueModeOneAtATime)
+	followUpMode := cmp.Or(options.FollowUpMode, QueueModeOneAtATime)
+	toolExecution := cmp.Or(options.ToolExecution, ToolExecutionParallel)
+	transport := cmp.Or(options.Transport, ai.TransportAuto)
 
 	return &Agent{
 		state:                      state,

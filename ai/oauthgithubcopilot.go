@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -485,10 +486,7 @@ func PollForGitHubAccessToken(ctx context.Context, domain string, device *GitHub
 // RefreshGitHubCopilotAccessToken exchanges a GitHub token for a Copilot token
 // (upstream refreshGitHubCopilotAccessToken).
 func RefreshGitHubCopilotAccessToken(ctx context.Context, refreshToken, enterpriseDomain string) (*OAuthCredential, error) {
-	domain := enterpriseDomain
-	if domain == "" {
-		domain = "github.com"
-	}
+	domain := cmp.Or(enterpriseDomain, "github.com")
 	urls := githubCopilotURLsBuilder(domain)
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, urls.CopilotTokenURL, nil)
 	if err != nil {
@@ -628,10 +626,7 @@ func LoginGitHubCopilot(interaction *AuthInteraction) (*OAuthCredential, error) 
 	if trimmed != "" && !valid {
 		return nil, errors.New("Invalid GitHub Enterprise URL/domain")
 	}
-	domain := enterpriseDomain
-	if domain == "" {
-		domain = "github.com"
-	}
+	domain := cmp.Or(enterpriseDomain, "github.com")
 
 	device, err := StartGitHubDeviceFlow(ctx, domain)
 	if err != nil {

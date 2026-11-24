@@ -1293,10 +1293,7 @@ func (c *SessionSelectorComponent) deleteSessionAndRefresh(sessionPath string) {
 		c.header.SetStatusMessage(&sessionStatusMessage{Type: "info", Message: message}, 2000)
 		c.refreshSessionsAfterMutation()
 	} else {
-		errorMessage := result.Error
-		if errorMessage == "" {
-			errorMessage = "Unknown error"
-		}
+		errorMessage := cmp.Or(result.Error, "Unknown error")
 		c.header.SetStatusMessage(&sessionStatusMessage{Type: "error", Message: "Failed to delete: " + errorMessage}, 3000)
 	}
 	c.requestRenderNow()

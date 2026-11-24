@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"cmp"
 	"github.com/dat267/pier/tui"
 )
 
@@ -30,10 +31,7 @@ type ChatViewport struct {
 
 // CreateChatViewport builds the shared fullscreen layout.
 func CreateChatViewport(options ChatViewportOptions) ChatViewport {
-	scrollbar := options.Scrollbar
-	if scrollbar == "" {
-		scrollbar = tui.ScrollbarAuto
-	}
+	scrollbar := cmp.Or(options.Scrollbar, tui.ScrollbarAuto)
 	transcript := tui.NewScrollView(options.Document, tui.ScrollViewOptions{
 		Follow:              "end",
 		Primary:             true,

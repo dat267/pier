@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"math"
@@ -247,10 +248,7 @@ func jsSliceAbsolute(s string, start, end int) string {
 // version; Go reads uname where available (os-release mapping is best-effort
 // per platform).
 func GetPiUserAgent() string {
-	release := kernelRelease()
-	if release == "" {
-		release = "unknown"
-	}
+	release := cmp.Or(kernelRelease(), "unknown")
 	return "pi (" + runtimeGOOS() + " " + release + "; " + runtimeGOARCH() + ")"
 }
 

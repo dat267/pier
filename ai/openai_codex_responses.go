@@ -2,6 +2,7 @@ package ai
 
 import (
 	"bytes"
+	"cmp"
 	ctxpkg "context"
 	"encoding/json"
 	"errors"
@@ -231,10 +232,7 @@ type CodexErrorResponse struct {
 // ParseCodexErrorResponse parses a failure body, producing the usage-limit
 // friendly message when applicable.
 func ParseCodexErrorResponse(status int, statusText, raw string) CodexErrorResponse {
-	message := raw
-	if message == "" {
-		message = statusText
-	}
+	message := cmp.Or(raw, statusText)
 	if message == "" {
 		message = "Request failed"
 	}
@@ -372,14 +370,8 @@ func BuildCodexRequestBody(model *Model, context TranscriptContext, options *Ope
 		return nil, err
 	}
 
-	verbosity := options.TextVerbosity
-	if verbosity == "" {
-		verbosity = "low"
-	}
-	toolChoice := options.ToolChoice
-	if toolChoice == "" {
-		toolChoice = "auto"
-	}
+	verbosity := cmp.Or(options.TextVerbosity, "low")
+	toolChoice := cmp.Or(options.ToolChoice, "auto")
 	body := map[string]any{
 		"model":               model.ID,
 		"store":               false,
@@ -422,10 +414,7 @@ func BuildCodexRequestBody(model *Model, context TranscriptContext, options *Ope
 		// effort fixed, so the earlier input never changes and the prompt cache
 		// survives a thinking-level switch (v1.6.0, fcc33744b).
 		if codexConfigurationUpdateEffort(model, options, compat) != "" {
-			summary := options.ReasoningSummary
-			if summary == "" {
-				summary = "auto"
-			}
+			summary := cmp.Or(options.ReasoningSummary, "auto")
 			body["reasoning"] = map[string]any{"effort": configurationUpdateRequestEffort, "summary": summary}
 			return body, nil
 		}
@@ -445,10 +434,7 @@ func BuildCodexRequestBody(model *Model, context TranscriptContext, options *Ope
 		} else if mapped, ok := model.ThinkingLevelMap[options.ReasoningEffort]; ok && mapped != nil {
 			effort = *mapped
 		}
-		summary := options.ReasoningSummary
-		if summary == "" {
-			summary = "auto"
-		}
+		summary := cmp.Or(options.ReasoningSummary, "auto")
 		body["reasoning"] = map[string]any{"effort": effort, "summary": summary}
 	} else if model.Reasoning {
 		if mapped, ok := model.ThinkingLevelMap[ThinkOff]; !ok || mapped != nil {
@@ -520,10 +506,7 @@ func mapCodexSSEEvents(
 			// shared processor's `error` event keeps that text verbatim, while
 			// a synthesized `response.failed` would gain a `<code>: ` prefix.
 			code, message := extractCodexEventError(event.Raw)
-			text := message
-			if text == "" {
-				text = code
-			}
+			text := cmp.Or(message, code)
 			if text == "" {
 				text = string(event.Raw)
 			}

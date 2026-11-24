@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -41,10 +42,7 @@ const remoteCatalogBodyLimit = 16 << 20
 // upstream Map's values() order.
 func mergeCatalogModels(baseline, dynamic []*ai.Model) []*ai.Model {
 	key := func(model *ai.Model) string {
-		modelType := model.Type
-		if modelType == "" {
-			modelType = "chat"
-		}
+		modelType := cmp.Or(model.Type, "chat")
 		return modelType + "\x00" + model.ID
 	}
 	index := make(map[string]int, len(baseline)+len(dynamic))

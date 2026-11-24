@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"os"
 	"slices"
@@ -1014,10 +1015,7 @@ func (t *TreeList) getEntryDisplayText(id *flatNode, isSelected bool) string {
 			if ok {
 				result = theme.Fg("muted", t.formatToolCall(call.Name, t.decodedToolCallArguments(message.ToolCallID, call)))
 			} else {
-				name := message.ToolName
-				if name == "" {
-					name = "tool"
-				}
+				name := cmp.Or(message.ToolName, "tool")
 				result = theme.Fg("muted", "["+tui.SanitizeUntrustedText(name)+"]")
 			}
 		case "bashExecution":
@@ -1275,22 +1273,13 @@ func (t *TreeList) formatToolCallText(name string, args map[string]any) string {
 		}
 		return "[bash: " + cmd + suffix + "]"
 	case "grep":
-		path := argString("path")
-		if path == "" {
-			path = "."
-		}
+		path := cmp.Or(argString("path"), ".")
 		return "[grep: /" + argString("pattern") + "/ in " + treeShortenPath(path) + "]"
 	case "find":
-		path := argString("path")
-		if path == "" {
-			path = "."
-		}
+		path := cmp.Or(argString("path"), ".")
 		return "[find: " + argString("pattern") + " in " + treeShortenPath(path) + "]"
 	case "ls":
-		path := argString("path")
-		if path == "" {
-			path = "."
-		}
+		path := cmp.Or(argString("path"), ".")
 		return "[ls: " + treeShortenPath(path) + "]"
 	default:
 		encoded, _ := ai.MarshalJSON(args)

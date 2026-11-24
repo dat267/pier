@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"maps"
@@ -309,10 +310,7 @@ func LoadModelConfig(modelsJSONPath string) *ModelConfig {
 		for _, validationError := range validationErrors {
 			lines = append(lines, fmt.Sprintf("  - %s: %s", validationError.path, validationError.message))
 		}
-		message := strings.Join(lines, "\n")
-		if message == "" {
-			message = "Unknown schema error"
-		}
+		message := cmp.Or(strings.Join(lines, "\n"), "Unknown schema error")
 		return &ModelConfig{
 			providers: map[string]ModelsJSONProvider{},
 			err:       fmt.Sprintf("Invalid models.json schema:\n%s\n\nFile: %s", message, path),

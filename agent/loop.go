@@ -2,6 +2,7 @@ package agent
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -219,10 +220,7 @@ func runLoop(
 
 			var update *AgentRequestUpdate
 			if config.PrepareRequest != nil {
-				thinkingLevel := config.Reasoning
-				if thinkingLevel == "" {
-					thinkingLevel = ai.ThinkOff
-				}
+				thinkingLevel := cmp.Or(config.Reasoning, ai.ThinkOff)
 				request := &PrepareRequestContext{
 					Context: currentContext, Model: config.Model, ThinkingLevel: thinkingLevel,
 				}
@@ -501,10 +499,7 @@ func streamAssistantResponse(
 		if resultErr != nil {
 			failStreamAssistant(resultErr)
 		}
-		level := config.Reasoning
-		if level == "" {
-			level = ai.ThinkOff
-		}
+		level := cmp.Or(config.Reasoning, ai.ThinkOff)
 		finalMessage.ThinkingLevel = &level
 		return finalMessage
 	}
@@ -914,10 +909,7 @@ func prepareToolCallUnprotected(
 			}}
 		}
 		if beforeResult != nil && beforeResult.Block {
-			reason := beforeResult.Reason
-			if reason == "" {
-				reason = "Tool execution was blocked"
-			}
+			reason := cmp.Or(beforeResult.Reason, "Tool execution was blocked")
 			result := createErrorToolResult(reason)
 			if beforeResult.Terminate {
 				result.Terminate = true

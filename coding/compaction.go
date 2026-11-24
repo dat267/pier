@@ -1383,10 +1383,7 @@ func Compact(preparation *CompactionPreparation, options CompactionOptions) (*Co
 			summaryUsage = *prefixUsage
 		}
 	} else if preparation.IsSplitTurn && len(preparation.TurnPrefixMessages) > 0 {
-		historyText := preparation.PreviousSummary
-		if historyText == "" {
-			historyText = "No prior history."
-		}
+		historyText := cmp.Or(preparation.PreviousSummary, "No prior history.")
 		var historyUsage *ai.Usage
 		if len(preparation.MessagesToSummarize) > 0 {
 			result, err := generateSummaryWithUsage(preparation.MessagesToSummarize, options, preparation.PreviousSummary)

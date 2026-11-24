@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"maps"
@@ -94,10 +95,7 @@ func (p *Provider) GetModelsOfType(modelType string) []*Model {
 	models := p.getModels()
 	filtered := make([]*Model, 0, len(models))
 	for _, model := range models {
-		typeName := model.Type
-		if typeName == "" {
-			typeName = "chat"
-		}
+		typeName := cmp.Or(model.Type, "chat")
 		if typeName == modelType {
 			filtered = append(filtered, model)
 		}
@@ -1101,10 +1099,7 @@ func (m *Models) GetAvailableOfType(ctx context.Context, modelType, providerID s
 	}
 	var available []*Model
 	for _, model := range models {
-		typeName := model.Type
-		if typeName == "" {
-			typeName = "chat"
-		}
+		typeName := cmp.Or(model.Type, "chat")
 		if typeName == modelType {
 			available = append(available, model)
 		}

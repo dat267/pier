@@ -1,6 +1,7 @@
 package oauth
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -176,10 +177,7 @@ func DiscoverProtectedResourceMetadata(ctx context.Context, serverURL string, op
 	if fetch == nil {
 		fetch = defaultFetch
 	}
-	version := options.ProtocolVersion
-	if version == "" {
-		version = LatestProtocolVersion
-	}
+	version := cmp.Or(options.ProtocolVersion, LatestProtocolVersion)
 	server, err := parseWHATWGURL(serverURL)
 	if err != nil {
 		return nil, err
@@ -291,10 +289,7 @@ func DiscoverAuthorizationServerMetadata(ctx context.Context, authorizationServe
 	if fetch == nil {
 		fetch = defaultFetch
 	}
-	protocolVersion := options.ProtocolVersion
-	if protocolVersion == "" {
-		protocolVersion = LatestProtocolVersion
-	}
+	protocolVersion := cmp.Or(options.ProtocolVersion, LatestProtocolVersion)
 	for _, candidate := range BuildAuthorizationServerDiscoveryUrls(authorizationServerURL) {
 		parsed, err := url.Parse(candidate.URL)
 		if err != nil {

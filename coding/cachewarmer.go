@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"math"
@@ -659,10 +660,7 @@ func FormatCacheWarmingStatus(status CacheWarmingStatus, now int64) string {
 	// A decision is attached once pi (or a host override) acted on it;
 	// "inactive" without one never got that far.
 	if decision == nil || (status.State == "inactive" && !decision.EconomicsAvailable && !status.ExtensionOverride) {
-		reason := status.Reason
-		if reason == "" {
-			reason = "unknown reason"
-		}
+		reason := cmp.Or(status.Reason, "unknown reason")
 		return fmt.Sprintf("Inactive (%s)", reason)
 	}
 	details := formatCacheWarmingEconomics(*decision)

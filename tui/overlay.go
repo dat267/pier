@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"cmp"
 	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"strconv"
@@ -192,10 +193,7 @@ func resolveOverlayLayout(options *OverlayOptions, overlayHeight int, termWidth 
 			row = resolveAnchorRow(OverlayAnchorCenter, effectiveHeight, availHeight, marginTop)
 		}
 	default:
-		anchor := opt.Anchor
-		if anchor == "" {
-			anchor = OverlayAnchorCenter
-		}
+		anchor := cmp.Or(opt.Anchor, OverlayAnchorCenter)
 		row = resolveAnchorRow(anchor, effectiveHeight, availHeight, marginTop)
 	}
 
@@ -211,10 +209,7 @@ func resolveOverlayLayout(options *OverlayOptions, overlayHeight int, termWidth 
 			col = resolveAnchorCol(OverlayAnchorCenter, layoutWidth, availWidth, marginLeft)
 		}
 	default:
-		anchor := opt.Anchor
-		if anchor == "" {
-			anchor = OverlayAnchorCenter
-		}
+		anchor := cmp.Or(opt.Anchor, OverlayAnchorCenter)
 		col = resolveAnchorCol(anchor, layoutWidth, availWidth, marginLeft)
 	}
 
