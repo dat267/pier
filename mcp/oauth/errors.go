@@ -32,23 +32,14 @@ func (e *OAuthIssuerMismatchError) Error() string {
 	if e.Msg != "" {
 		return e.Msg
 	}
+	// The issuers are quoted like the reference's JSON.stringify (errors.ts:20),
+	// so a quote, backslash or control character from the server cannot break up
+	// the message.
 	received := "none"
 	if e.Received != nil {
-		received = quote(*e.Received)
+		received = ai.QuoteJSON(*e.Received)
 	}
-	return fmt.Sprintf("OAuth issuer mismatch: expected %s, received %s", quote(e.Expected), received)
-}
-
-// quote encodes a string like the reference's JSON.stringify (errors.ts:20), so
-// a quote, backslash or control character in a server-supplied issuer cannot
-// break up the message. ai.MarshalJSON keeps U+2028 and U+2029 raw, as
-// JSON.stringify does, where encoding/json escaped them.
-func quote(value string) string {
-	encoded, err := ai.MarshalJSON(value)
-	if err != nil {
-		return `""`
-	}
-	return string(encoded)
+	return fmt.Sprintf("OAuth issuer mismatch: expected %s, received %s", ai.QuoteJSON(e.Expected), received)
 }
 
 // OAuthInsecureEndpointError refuses to send credentials over plain HTTP

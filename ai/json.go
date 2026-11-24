@@ -9,6 +9,12 @@ import (
 	"strings"
 )
 
+// QuoteJSON is JSON.stringify(value) for a string, through the same canonical
+// encoder as MarshalJSON (U+2028 and U+2029 stay raw, as Node leaves them).
+func QuoteJSON(value string) string {
+	return string(appendCanonicalJSONString(nil, value))
+}
+
 // MarshalJSON encodes v the way JavaScript's JSON.stringify does: no HTML
 // escaping of <, >, and &. encoding/json escapes those by default, which
 // would break byte parity with pi's transcripts and wire payloads.

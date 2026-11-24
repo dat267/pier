@@ -549,7 +549,7 @@ func (w *CommandWiring) HandleNameCommand(text string) {
 	sessionName := w.SessionInfo.GetSessionName()
 	theme := ActiveTheme()
 	if sessionName != name {
-		w.showWarning("Session name was normalized from " + jsonQuote(name) + " to " + jsonQuote(sessionName))
+		w.showWarning("Session name was normalized from " + ai.QuoteJSON(name) + " to " + ai.QuoteJSON(sessionName))
 	}
 	w.Chat.AddChild(tui.NewSpacer(1))
 	display := tui.SanitizeUntrustedText(sessionName)
@@ -558,11 +558,6 @@ func (w *CommandWiring) HandleNameCommand(text string) {
 	}
 	w.Chat.AddChild(tui.NewText(theme.Fg("dim", "Session name set: "+display), 1, 0, nil))
 	w.requestRender()
-}
-
-func jsonQuote(value string) string {
-	encoded, _ := ai.MarshalJSON(value)
-	return string(encoded)
 }
 
 // HandleSessionCommand renders the session info panel.
@@ -908,8 +903,7 @@ func (w *CommandWiring) HandleDebugCommand(now string) {
 		"=== All rendered lines with visible widths ===",
 	}
 	for index, line := range allLines {
-		encoded, _ := ai.MarshalJSON(line)
-		lines = append(lines, "["+strconv.Itoa(index)+"] (w="+strconv.Itoa(tui.VisibleWidth(line))+") "+string(encoded))
+		lines = append(lines, "["+strconv.Itoa(index)+"] (w="+strconv.Itoa(tui.VisibleWidth(line))+") "+ai.QuoteJSON(line))
 	}
 	lines = append(lines, "", "=== Agent messages (JSONL) ===")
 	// Upstream writes the agent's context messages (session.messages), not the

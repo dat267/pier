@@ -288,22 +288,12 @@ func (m *GoalMachine) pausedMessage() []Effect {
 	}}
 }
 
-// jsonQuote is JSON.stringify(value) for the values the machine echoes back,
-// through the port's JSON.stringify serializer.
-func jsonQuote(value string) string {
-	encoded, err := ai.MarshalJSON(value)
-	if err != nil {
-		return `""`
-	}
-	return string(encoded)
-}
-
 func (m *GoalMachine) goalUpdate(goalID string, rawRevision any, rawAction, blockedReason string) DispatchResult {
 	if rawAction != "complete" && rawAction != "blocked" && rawAction != "clear" {
 		// Bound the echo like the command path does (command.go:54): the action is
 		// model-supplied and a 100 KB value produced a 100 KB reply (D432).
 		return DispatchResult{Reply: new(fmt.Sprintf(`Unknown action %s. Use "complete", "blocked", or "clear".`,
-			jsonQuote(TruncateObjective(rawAction, 20)))), IsError: true}
+			ai.QuoteJSON(TruncateObjective(rawAction, 20)))), IsError: true}
 	}
 	revision, ok := coerceRevision(rawRevision)
 	if !ok {
