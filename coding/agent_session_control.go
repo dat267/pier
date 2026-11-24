@@ -844,33 +844,31 @@ func (s *AgentSession) preparePromptAndToolLoadout() *ai.SystemMessage {
 // SetModel switches the session model (auth-checked) and applies the thinking
 // level for the new model.
 func (s *AgentSession) SetModel(ctx context.Context, model *ai.Model, options ModelMutationOptions) error {
-	previous, err := s.switchModel(model, options)
-	if err != nil {
+	if err := s.switchModel(model, options); err != nil {
 		return err
 	}
 	// Applying the thinking level for the new model must not persist it:
 	// upstream setModel calls setThinkingLevel with no options, so model
 	// persistence never rewrites the global thinking default (agent-session.ts:2131).
 	s.SetThinkingLevel(s.getThinkingLevelForModelSwitch(model, ""))
-	s.emitModelSelect(model, previous, "set")
 	return nil
 }
 
 // switchModel is the common start of setModel and both model cycles: refuse a
 // model without configured auth, switch the agent, record the change, and
-// persist the default when asked. It returns the model it replaced.
-func (s *AgentSession) switchModel(model *ai.Model, options ModelMutationOptions) (*ai.Model, error) {
+// persist the default when asked. Upstream then emits model_select to
+// extensions (_emitModelSelect), which pier does not load.
+func (s *AgentSession) switchModel(model *ai.Model, options ModelMutationOptions) error {
 	if s.control.ModelRuntime != nil && !s.control.ModelRuntime.HasConfiguredAuth(model.Provider) {
-		return nil, fmt.Errorf("No API key for %s/%s", model.Provider, model.ID)
+		return fmt.Errorf("No API key for %s/%s", model.Provider, model.ID)
 	}
-	previous := s.Model()
 	s.Agent.SetModel(model)
 	s.Sessions.AppendModelChange(model.Provider, model.ID)
 	if options.Persist && s.control.Settings != nil {
 		s.control.Settings.SetDefaultModelAndProvider(model.Provider, model.ID)
 		s.addPersistedDefaultToNonEmptyScope(model)
 	}
-	return previous, nil
+	return nil
 }
 
 // nextCycleIndex is the model to cycle to, and false when there is nothing to
@@ -942,15 +940,13 @@ func (s *AgentSession) cycleAvailableModel(direction string, options ModelMutati
 }
 
 func (s *AgentSession) applyModelCycle(model *ai.Model, explicitLevel ai.ThinkingLevel, options ModelMutationOptions, isScoped bool) (*ModelCycleResult, error) {
-	previous, err := s.switchModel(model, options)
-	if err != nil {
+	if err := s.switchModel(model, options); err != nil {
 		return nil, err
 	}
 	// As in SetModel, a model change never persists the thinking level:
 	// upstream cycleScopedModel/cycleAvailableModel call setThinkingLevel with no
 	// options (agent-session.ts:2204,2236).
 	s.SetThinkingLevel(s.getThinkingLevelForModelSwitch(model, explicitLevel))
-	s.emitModelSelect(model, previous, "cycle")
 	return &ModelCycleResult{Model: model, ThinkingLevel: s.ThinkingLevel(), IsScoped: isScoped}, nil
 }
 
@@ -1148,12 +1144,6 @@ func (s *AgentSession) clampThinkingLevel(level ai.ThinkingLevel) ai.ThinkingLev
 		return ai.ThinkOff
 	}
 	return ai.ClampThinkingLevel(model, level)
-}
-
-func (s *AgentSession) emitModelSelect(model, previous *ai.Model, source string) {
-	// Upstream emits a model_select event; the Go session carries it on the
-	// model cycle result and the message stream, so only the transcript entry
-	// and thinking-level event are emitted here.
 }
 
 // ModelFallbackMessage explains a model restore or resolution fallback, or "" when
