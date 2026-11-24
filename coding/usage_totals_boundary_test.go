@@ -64,7 +64,6 @@ func TestUsageCostBreakdownDoesNotDropHugeTokenBuckets(t *testing.T) {
 }
 
 // Cache-warming usage is recorded as a `usage` entry carrying its own provider
-
 // and model, and upstream's breakdown attributes it to `provider/model` and its
 // tokens to the session totals (usage-totals.ts checks `entry.type === "usage"`,
 // getSessionStats adds it to the running totals). The port dropped both.
