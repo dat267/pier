@@ -384,6 +384,14 @@ type OAuthAuth struct {
 	ToAuth func(credential *OAuthCredential) (*ModelAuth, error)
 }
 
+// The OAuth flows' shared errors: a login started without an interaction to
+// prompt through, and a prompt the user dismissed (upstream throws new
+// Error("Login cancelled") from each flow's prompt handling).
+var (
+	errAuthInteractionRequired = errors.New("auth interaction is required")
+	errLoginCancelled          = errors.New("Login cancelled")
+)
+
 // refreshWithToken is the Refresh of providers that exchange the stored
 // refresh token alone for a new credential (upstream refresh(credential) {
 // return refreshX(credential.refresh) }).

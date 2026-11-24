@@ -161,7 +161,7 @@ func postRadiusGatewayForm(ctx context.Context, gateway, path string, form url.V
 	response, err := doBoundedRequest(request)
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
-			return nil, errors.New("Login cancelled")
+			return nil, errLoginCancelled
 		}
 		return nil, err
 	}
@@ -344,7 +344,7 @@ func (s *RadiusCallbackServer) Close() {
 // LoginRadiusWithBrowser runs the browser sign-in (upstream loginWithBrowser).
 func LoginRadiusWithBrowser(interaction *AuthInteraction, gateway, authorizationEndpoint string) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, errors.New("auth interaction is required")
+		return nil, errAuthInteractionRequired
 	}
 	pkce, err := GeneratePKCE()
 	if err != nil {
@@ -398,7 +398,7 @@ func LoginRadiusWithBrowser(interaction *AuthInteraction, gateway, authorization
 	}
 	if credential == nil {
 		if ctx.Err() != nil {
-			return nil, errors.New("Login cancelled")
+			return nil, errLoginCancelled
 		}
 		return nil, errors.New("OAuth callback did not complete.")
 	}
@@ -453,7 +453,7 @@ func RequestRadiusDeviceAuthorization(ctx context.Context, gateway string) (*Rad
 // LoginRadiusWithDeviceCode runs the device-code sign-in.
 func LoginRadiusWithDeviceCode(interaction *AuthInteraction, gateway string) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, errors.New("auth interaction is required")
+		return nil, errAuthInteractionRequired
 	}
 	ctx := interaction.Ctx
 	if ctx == nil {
@@ -520,7 +520,7 @@ func CreateRadiusOAuth(options RadiusOAuthOptions) *OAuthAuth {
 		LoginLabel: "Sign in with " + options.Name,
 		Login: func(interaction *AuthInteraction) (*OAuthCredential, error) {
 			if interaction == nil {
-				return nil, errors.New("auth interaction is required")
+				return nil, errAuthInteractionRequired
 			}
 			method, err := interaction.Prompt(AuthPrompt{
 				Type:    AuthPromptSelect,

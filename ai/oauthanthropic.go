@@ -359,7 +359,7 @@ func startAnthropicCallbackServer(expectedState string) *OAuthCallbackServer {
 // paste path concurrently, and exchanges whichever arrives first.
 func LoginAnthropic(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, errors.New("auth interaction is required")
+		return nil, errAuthInteractionRequired
 	}
 	pkce, err := GeneratePKCE()
 	if err != nil {
@@ -456,7 +456,7 @@ func LoginAnthropic(interaction *AuthInteraction) (*OAuthCredential, error) {
 // `code#state` it shows.
 func LoginAnthropicCopyCode(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, errors.New("auth interaction is required")
+		return nil, errAuthInteractionRequired
 	}
 	pkce, err := GeneratePKCE()
 	if err != nil {
@@ -509,7 +509,7 @@ func AnthropicOAuth() *OAuthAuth {
 		IsSubscription: true,
 		Login: func(interaction *AuthInteraction) (*OAuthCredential, error) {
 			if interaction == nil {
-				return nil, errors.New("auth interaction is required")
+				return nil, errAuthInteractionRequired
 			}
 			method, err := interaction.Prompt(AuthPrompt{
 				Type:    AuthPromptSelect,

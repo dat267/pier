@@ -593,7 +593,7 @@ func EnableGitHubCopilotModels(ctx context.Context, token string, modelIDs []str
 // LoginGitHubCopilot runs the Copilot login (upstream loginGitHubCopilot).
 func LoginGitHubCopilot(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, errors.New("auth interaction is required")
+		return nil, errAuthInteractionRequired
 	}
 	ctx := interaction.Ctx
 	if ctx == nil {
@@ -608,7 +608,7 @@ func LoginGitHubCopilot(interaction *AuthInteraction) (*OAuthCredential, error) 
 		return nil, err
 	}
 	if ctx.Err() != nil {
-		return nil, errors.New("Login cancelled")
+		return nil, errLoginCancelled
 	}
 	trimmed := JSTrim(input)
 	enterpriseDomain, valid := NormalizeGitHubDomain(input)

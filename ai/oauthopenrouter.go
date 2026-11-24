@@ -116,7 +116,7 @@ func openRouterErrorDetail(body map[string]any) string {
 // permanent API key (upstream exchangeAuthorizationCode).
 func ExchangeOpenRouterAuthorizationCode(ctx context.Context, code, verifier string) (*OAuthCredential, error) {
 	if ctx != nil && ctx.Err() != nil {
-		return nil, errors.New("Login cancelled")
+		return nil, errLoginCancelled
 	}
 	requestCtx, cancel := context.WithTimeout(context.Background(), openRouterExchangeTTL)
 	defer cancel()
@@ -145,7 +145,7 @@ func ExchangeOpenRouterAuthorizationCode(ctx context.Context, code, verifier str
 	response, err := doFetchRequest(request)
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
-			return nil, errors.New("Login cancelled")
+			return nil, errLoginCancelled
 		}
 		if requestCtx.Err() != nil {
 			return nil, errors.New("OpenRouter OAuth token exchange timed out")
@@ -211,7 +211,7 @@ type OpenRouterCallbackServer struct {
 // StartOpenRouterCallbackServer starts the server on an ephemeral port.
 func StartOpenRouterCallbackServer(ctx context.Context, callbackPath, verifier string) (*OpenRouterCallbackServer, error) {
 	if ctx != nil && ctx.Err() != nil {
-		return nil, errors.New("Login cancelled")
+		return nil, errLoginCancelled
 	}
 	host := oauthCallbackHost()
 	listener, err := net.Listen("tcp", host+":0")
@@ -295,7 +295,7 @@ func StartOpenRouterCallbackServer(ctx context.Context, callbackPath, verifier s
 		}
 		select {
 		case <-ctx.Done():
-			finish(nil, errors.New("Login cancelled"))
+			finish(nil, errLoginCancelled)
 		default:
 		}
 	}
@@ -383,7 +383,7 @@ func OpenRouterAuthorizeURLBase() string { return OpenRouterAuthorizeEndpoint }
 // LoginOpenRouter runs the OpenRouter PKCE login (upstream loginOpenRouter).
 func LoginOpenRouter(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, errors.New("auth interaction is required")
+		return nil, errAuthInteractionRequired
 	}
 	pkce, err := GeneratePKCE()
 	if err != nil {

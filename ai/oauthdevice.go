@@ -71,7 +71,7 @@ func oauthPostForm(ctx context.Context, requestURL string, fields map[string]str
 	response, err := doBoundedRequest(request)
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
-			return oauthHTTPResponse{}, errors.New("Login cancelled")
+			return oauthHTTPResponse{}, errLoginCancelled
 		}
 		return oauthHTTPResponse{}, err
 	}
@@ -82,7 +82,7 @@ func oauthPostForm(ctx context.Context, requestURL string, fields map[string]str
 		// D341: a successful document fails at its cap and surfaces a read
 		// error instead of being read as a silent prefix (A427).
 		if ctx != nil && ctx.Err() != nil {
-			return oauthHTTPResponse{}, errors.New("Login cancelled")
+			return oauthHTTPResponse{}, errLoginCancelled
 		}
 		return oauthHTTPResponse{}, readErr
 	}
@@ -94,7 +94,7 @@ func oauthPostForm(ctx context.Context, requestURL string, fields map[string]str
 		}
 	} else if failOnInvalidJSON || ok {
 		if ctx != nil && ctx.Err() != nil {
-			return oauthHTTPResponse{}, errors.New("Login cancelled")
+			return oauthHTTPResponse{}, errLoginCancelled
 		}
 		return oauthHTTPResponse{}, fmt.Errorf("%s", invalidJSONMessage(response.StatusCode))
 	}
@@ -338,7 +338,7 @@ func RefreshXaiToken(ctx context.Context, refreshToken string) (*OAuthCredential
 // LoginXai runs the xAI device-code login (upstream loginXai).
 func LoginXai(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, errors.New("auth interaction is required")
+		return nil, errAuthInteractionRequired
 	}
 	ctx := interaction.Ctx
 	if ctx == nil {
@@ -603,7 +603,7 @@ func RefreshKimiToken(ctx context.Context, oauthHost, refreshToken string) (*kim
 // LoginKimiCoding runs the Kimi Code device-code login.
 func LoginKimiCoding(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, errors.New("auth interaction is required")
+		return nil, errAuthInteractionRequired
 	}
 	ctx := interaction.Ctx
 	if ctx == nil {

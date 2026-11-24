@@ -145,7 +145,7 @@ func openAICodexPostForm(ctx context.Context, requestURL string, fields map[stri
 	response, err := doBoundedRequest(request)
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
-			return nil, errors.New("Login cancelled")
+			return nil, errLoginCancelled
 		}
 		return nil, err
 	}
@@ -203,7 +203,7 @@ func StartOpenAICodexDeviceAuth(ctx context.Context) (*OpenAICodexDeviceAuthInfo
 	response, err := doBoundedRequest(request)
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
-			return nil, errors.New("Login cancelled")
+			return nil, errLoginCancelled
 		}
 		return nil, err
 	}
@@ -479,7 +479,7 @@ func OpenAICodexCredentialsFromToken(token *OpenAICodexTokenResponse) (*OAuthCre
 // LoginOpenAICodexDeviceCode runs the device-code login path.
 func LoginOpenAICodexDeviceCode(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, errors.New("auth interaction is required")
+		return nil, errAuthInteractionRequired
 	}
 	ctx := interaction.Ctx
 	if ctx == nil {
@@ -510,7 +510,7 @@ func LoginOpenAICodexDeviceCode(interaction *AuthInteraction) (*OAuthCredential,
 // LoginOpenAICodex runs the browser login path with the manual paste race.
 func LoginOpenAICodex(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, errors.New("auth interaction is required")
+		return nil, errAuthInteractionRequired
 	}
 	flow, err := CreateOpenAICodexAuthorizationFlow(interaction.AgentName)
 	if err != nil {
@@ -595,7 +595,7 @@ func OpenAICodexOAuth() *OAuthAuth {
 		LoginLabel:     "Sign in with ChatGPT",
 		Login: func(interaction *AuthInteraction) (*OAuthCredential, error) {
 			if interaction == nil {
-				return nil, errors.New("auth interaction is required")
+				return nil, errAuthInteractionRequired
 			}
 			method, err := interaction.Prompt(AuthPrompt{
 				Type:    AuthPromptSelect,

@@ -384,7 +384,7 @@ func RefreshOpenAIChatGPTToken(ctx context.Context, credential *OAuthCredential)
 // LoginOpenAIChatGPT runs the browser login path with the manual paste race.
 func LoginOpenAIChatGPT(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
-		return nil, errors.New("auth interaction is required")
+		return nil, errAuthInteractionRequired
 	}
 	deviceID := ""
 	if interaction.GetDeviceID != nil {

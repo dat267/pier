@@ -266,14 +266,14 @@ func MetaOAuth() *OAuthAuth {
 		LoginLabel:     "Sign in with Meta",
 		Login: func(interaction *AuthInteraction) (*OAuthCredential, error) {
 			if interaction == nil {
-				return nil, errors.New("auth interaction is required")
+				return nil, errAuthInteractionRequired
 			}
 			credential, err := loginMeta(interaction)
 			if err != nil {
 				// An in-flight fetch rejects with a DOMException on abort; the
 				// login UI matches on this message (upstream loginMeta's catch).
 				if interaction.Ctx != nil && interaction.Ctx.Err() != nil {
-					return nil, errors.New("Login cancelled")
+					return nil, errLoginCancelled
 				}
 				return nil, err
 			}
