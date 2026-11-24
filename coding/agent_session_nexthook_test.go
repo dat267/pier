@@ -55,22 +55,7 @@ func TestSessionChainsCallerNextTurnHook(t *testing.T) {
 		transcripts = append(transcripts, transcriptText(transcript.Messages))
 		mu.Unlock()
 
-		stream := ai.NewAssistantMessageEventStream()
-		go func() {
-			if call == 1 {
-				stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopToolUse, Message: &ai.AssistantMessage{
-					API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
-					Content:    ai.ContentList{ai.ToolCall{ID: "t1", Name: "read", Arguments: json.RawMessage(`{}`)}},
-					StopReason: ai.StopToolUse,
-				}})
-				return
-			}
-			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
-				API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
-				Content: ai.ContentList{ai.TextContent{Text: "done"}}, StopReason: ai.StopStop,
-			}})
-		}()
-		return stream
+		return readThenDoneStream(requestModel, call)
 	}
 
 	hookRuns := 0
@@ -130,22 +115,7 @@ func TestSessionNextTurnHookMergesLikeUpstream(t *testing.T) {
 		models = append(models, requestModel.ID)
 		mu.Unlock()
 
-		stream := ai.NewAssistantMessageEventStream()
-		go func() {
-			if call == 1 {
-				stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopToolUse, Message: &ai.AssistantMessage{
-					API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
-					Content:    ai.ContentList{ai.ToolCall{ID: "t1", Name: "read", Arguments: json.RawMessage(`{}`)}},
-					StopReason: ai.StopToolUse,
-				}})
-				return
-			}
-			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
-				API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
-				Content: ai.ContentList{ai.TextContent{Text: "done"}}, StopReason: ai.StopStop,
-			}})
-		}()
-		return stream
+		return readThenDoneStream(requestModel, call)
 	}
 
 	session, err := NewAgentSession(&SessionConfig{
@@ -181,4 +151,21 @@ func TestSessionNextTurnHookMergesLikeUpstream(t *testing.T) {
 	if !strings.Contains(second, "hook context") || strings.Contains(second, "go") {
 		t.Fatalf("the hook's context replacement was ignored: %q", second)
 	}
+}
+
+// readThenDoneStream answers a session's first call with a read tool call and
+// every later call with "done", so a prompt runs two turns.
+func readThenDoneStream(requestModel *ai.Model, call int) *ai.AssistantMessageEventStream {
+	if call != 1 {
+		return textReplyStream(requestModel, "done")
+	}
+	stream := ai.NewAssistantMessageEventStream()
+	go func() {
+		stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopToolUse, Message: &ai.AssistantMessage{
+			API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
+			Content:    ai.ContentList{ai.ToolCall{ID: "t1", Name: "read", Arguments: json.RawMessage(`{}`)}},
+			StopReason: ai.StopToolUse,
+		}})
+	}()
+	return stream
 }
