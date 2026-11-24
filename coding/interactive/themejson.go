@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 )
@@ -168,7 +169,7 @@ func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 	// export object, so a mistyped key is an error rather than ignored.
 	var document map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &document); err == nil {
-		for _, key := range sortedKeysOf(document) {
+		for _, key := range slices.Sorted(maps.Keys(document)) {
 			switch key {
 			case "$schema", "name", "appearance", "vars", "colors", "export":
 			default:
@@ -178,7 +179,7 @@ func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 		if rawExport, ok := document["export"]; ok {
 			var exportKeys map[string]json.RawMessage
 			if err := json.Unmarshal(rawExport, &exportKeys); err == nil {
-				for _, key := range sortedKeysOf(exportKeys) {
+				for _, key := range slices.Sorted(maps.Keys(exportKeys)) {
 					switch key {
 					case "pageBg", "cardBg", "infoBg":
 					default:
@@ -218,15 +219,6 @@ func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 
 func invalidThemeName(name string) error {
 	return fmt.Errorf("Invalid theme name \"%s\": theme names cannot contain \"/\" because it is reserved for automatic light/dark theme settings.", name)
-}
-
-func sortedKeysOf[value any](document map[string]value) []string {
-	keys := make([]string, 0, len(document))
-	for key := range document {
-		keys = append(keys, key)
-	}
-	slices.Sort(keys)
-	return keys
 }
 
 // ParseThemeJSON validates a document, or accepts it as-is when no validator is

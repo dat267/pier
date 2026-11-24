@@ -510,15 +510,6 @@ func orderKeys(widgets map[string]tui.Component, order []string) []string {
 	return append(keys, unordered...)
 }
 
-func sortedMapKeys[V any](values map[string]V) []string {
-	keys := make([]string, 0, len(values))
-	for key := range values {
-		keys = append(keys, key)
-	}
-	slices.Sort(keys)
-	return keys
-}
-
 // RenderWidgets renders both widget containers.
 func (s *InteractiveUIState) RenderWidgets() {
 	if s.WidgetContainerAbove == nil || s.WidgetContainerBelow == nil {

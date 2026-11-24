@@ -110,7 +110,7 @@ func NewTheme(fgColors map[string]ColorValue, bgColors map[string]ColorValue, mo
 	}
 
 	colors := withThemeColorFallbacks(fgColors)
-	for _, key := range sortedMapKeys(colors) {
+	for _, key := range slices.Sorted(maps.Keys(colors)) {
 		ansi, concrete, isDefault, err := colorValueAnsi(colors[key], mode, false)
 		if err != nil {
 			panic(err.Error())
@@ -123,7 +123,7 @@ func NewTheme(fgColors map[string]ColorValue, bgColors map[string]ColorValue, mo
 		}
 	}
 	backgrounds := withBackgroundFallbacks(bgColors)
-	for _, key := range sortedMapKeys(backgrounds) {
+	for _, key := range slices.Sorted(maps.Keys(backgrounds)) {
 		ansi, concrete, isDefault, err := colorValueAnsi(backgrounds[key], mode, true)
 		if err != nil {
 			panic(err.Error())
