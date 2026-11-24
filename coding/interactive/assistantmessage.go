@@ -136,7 +136,7 @@ type assistantBlockKey struct {
 // NewAssistantMessageComponent creates the component.
 func NewAssistantMessageComponent(message *ai.AssistantMessage, hideThinkingBlock bool, markdownTheme *tui.MarkdownTheme, hiddenThinkingLabel string, outputPad int, transformers []MarkdownTransformer) *AssistantMessageComponent {
 	if hiddenThinkingLabel == "" {
-		hiddenThinkingLabel = "Thinking..."
+		hiddenThinkingLabel = defaultHiddenThinkingLabel
 	}
 	component := &AssistantMessageComponent{
 		Container:                   &tui.Container{},
