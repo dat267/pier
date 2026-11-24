@@ -355,7 +355,7 @@ func (s *MainScreen) doRender() {
 	// rendered lines are copied before any of them runs.
 	// One copy owns this frame: both passes below write into it, so the render
 	// caches are untouched (M105/M138).
-	newLines := append([]string(nil), s.renderLocked(width)...)
+	newLines := append([]string(nil), s.Container.Render(width)...)
 	// The terminal reads OSC 133;A as a new shell prompt, which ends the
 	// program-status sequence (OSC 7501). The transcript emits those markers for
 	// fullscreen prompt navigation, so the main screen drops them before writing
@@ -759,12 +759,6 @@ func (s *MainScreen) positionHardwareCursor(row int, col int, hasCursor bool, to
 	} else {
 		s.Terminal.HideCursor()
 	}
-}
-
-// renderLocked renders the component tree on the owner goroutine (the name
-// marks that the caller owns the loop; there is no render mutex).
-func (s *MainScreen) renderLocked(width int) []string {
-	return s.Container.Render(width)
 }
 
 func (s *MainScreen) hasOverlayEntriesLocked() bool {
