@@ -19,7 +19,7 @@ func BenchmarkScrollLongTranscript(b *testing.B) {
 
 	screen, _ := app.initialUI.(*tui.AltScreen)
 	screen.Start()
-	buildScrollTranscript(b, app)
+	buildScrollTranscriptN(b, app, benchmarkMessageCount)
 
 	for b.Loop() {
 		app.ui.RenderNow(true)
@@ -34,17 +34,12 @@ func BenchmarkScrollWarmDiff(b *testing.B) {
 
 	screen, _ := app.initialUI.(*tui.AltScreen)
 	screen.Start()
-	buildScrollTranscript(b, app)
+	buildScrollTranscriptN(b, app, benchmarkMessageCount)
 	app.ui.RenderNow(false) // warm every cache
 
 	for b.Loop() {
 		app.ui.RenderNow(false)
 	}
-}
-
-func buildScrollTranscript(b *testing.B, app *App) {
-	b.Helper()
-	buildScrollTranscriptN(b, app, benchmarkMessageCount)
 }
 
 // buildScrollTranscriptN appends n user/assistant message pairs.
