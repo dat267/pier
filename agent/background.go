@@ -203,8 +203,30 @@ func CompletionNotice(handle ToolCallHandle, result AgentToolResult) ai.Message 
 	if body == "" {
 		body = "(no output)"
 	}
-	text := fmt.Sprintf("Background call %s (%s) %s.\n\n%s", handle.ID, handle.ToolName, status, body)
+	// Name the file, so the agent can read output the notice does not carry, and
+	// cap the body so one long call cannot flood the transcript it wakes.
+	where := ""
+	if handle.OutputPath != "" {
+		where = fmt.Sprintf(" The full output is in %s.", handle.OutputPath)
+	}
+	text := fmt.Sprintf("Background call %s (%s) %s.%s\n\n%s",
+		handle.ID, handle.ToolName, status, where, clipBackgroundBody(body))
 	return &ai.UserMessage{Content: ai.StringOrBlocks{Text: text}}
+}
+
+// backgroundNoticeBodyLimit caps the result text a wake-up carries. A call that
+// produced more than this leaves the rest in its output file, which the notice
+// names, so nothing is lost.
+const backgroundNoticeBodyLimit = 2000
+
+// clipBackgroundBody keeps the tail of the body when it is over the limit: a long
+// call's end is what matters, and the file holds the rest.
+func clipBackgroundBody(body string) string {
+	if len(body) <= backgroundNoticeBodyLimit {
+		return body
+	}
+	kept := body[len(body)-backgroundNoticeBodyLimit:]
+	return "...(cut; the full output is in the file named above)\n" + kept
 }
 
 // executeWithBackground runs the call and gives up on waiting once the threshold
@@ -228,6 +250,13 @@ func executeWithBackground(
 		result AgentToolResult
 		err    error
 	}
+	// The output file is opened before the call starts, not when the handle is
+	// built: a call that streams progress must be readable while it runs, which is
+	// the whole point of handing the agent a path. It is truncated once here so a
+	// reused path cannot show a previous call's output.
+	outputPath := policy.outputFilePath(prepared.toolCall.ID)
+	output := newBackgroundOutput(outputPath)
+
 	done := make(chan completion, 1)
 	go func() {
 		var result AgentToolResult
@@ -239,6 +268,11 @@ func executeWithBackground(
 				}
 			}()
 			result, err = prepared.tool.Execute(callCtx, prepared.toolCall.ID, prepared.args, func(partialResult AgentToolResult) {
+				output.write(backgroundPieceText(partialResult))
+				// Stream the piece into the file as it arrives, so a long call's
+				// progress is readable from the handle rather than only its end.
+				// Stream the piece into the file as it arrives, so a long call's
+				// progress is readable from the handle rather than only its end.
 				updates.send(AgentEvent{
 					Type: ToolExecutionUpdate, ToolCallID: prepared.toolCall.ID,
 					ToolName: prepared.toolCall.Name, Args: prepared.toolCall.Arguments,
@@ -253,8 +287,10 @@ func executeWithBackground(
 	defer timer.Stop()
 	select {
 	case finished := <-done:
-		// Finished in time: hand back exactly what the foreground path produces.
+		// Finished in time: hand back exactly what the foreground path produces,
+		// and drop the scratch file the call never needed.
 		cancel()
+		output.discard()
 		durationMS := roundDurationMilliseconds(time.Since(startedAt))
 		if errFromUpdate := updates.close(); errFromUpdate != nil {
 			panic(errFromUpdate)
@@ -278,16 +314,13 @@ func executeWithBackground(
 		ID:         policy.nextID(),
 		ToolCallID: prepared.toolCall.ID,
 		ToolName:   prepared.toolCall.Name,
-		OutputPath: policy.outputFilePath(prepared.toolCall.ID),
+		OutputPath: outputPath,
 	}
 	handle.Wait = func() AgentToolResult {
 		<-call.finished
 		return call.result
 	}
 	call.handle = handle
-	// The output file is opened now, so the handle names a file that exists and
-	// accumulates as the call runs rather than only at the end.
-	output := newBackgroundOutput(handle.OutputPath)
 
 	// Record the result and let whoever waits read it, exactly once.
 	go func() {
@@ -331,6 +364,7 @@ func executeWithBackground(
 type backgroundOutput struct {
 	mu   sync.Mutex
 	file *os.File
+	path string
 }
 
 // newBackgroundOutput opens the file, or returns one that discards.
@@ -340,9 +374,9 @@ func newBackgroundOutput(path string) *backgroundOutput {
 	}
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
-		return &backgroundOutput{}
+		return &backgroundOutput{path: path}
 	}
-	return &backgroundOutput{file: file}
+	return &backgroundOutput{file: file, path: path}
 }
 
 // write appends text, if there is a file to append to.
@@ -387,4 +421,34 @@ func finalOutputText(result AgentToolResult, err error) string {
 		}
 	}
 	return body.String()
+}
+
+// backgroundPieceText is the text of one streamed update. A piece with no text
+// (an image-only update) writes nothing rather than a blank line.
+func backgroundPieceText(result AgentToolResult) string {
+	var body strings.Builder
+	for _, block := range result.Content {
+		if text, ok := block.(ai.TextContent); ok {
+			body.WriteString(text.Text)
+		}
+	}
+	return body.String()
+}
+
+// discard releases the file and removes it, for a call that finished inside the
+// threshold and so never needed an output file.
+func (o *backgroundOutput) discard() {
+	if o == nil {
+		return
+	}
+	o.mu.Lock()
+	path := o.path
+	if o.file != nil {
+		_ = o.file.Close()
+		o.file = nil
+	}
+	o.mu.Unlock()
+	if path != "" {
+		_ = os.Remove(path)
+	}
 }

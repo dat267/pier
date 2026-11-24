@@ -444,17 +444,20 @@ func TestCloseBackgroundCallsCancels(t *testing.T) {
 	}
 }
 
-// A displaced call's output accumulates in the file the handle names, and the
-// file exists from the moment the handle is returned.
+// A displaced call's output streams into the file the handle names while it runs,
+// not only at the end: a handle whose file is empty until the call finishes tells
+// the agent nothing about progress, which is the point of the path.
 func TestBackgroundWritesOutputFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "background.log")
 	release := make(chan struct{})
+	streamed := make(chan struct{})
 	tool := AgentTool{
 		Name:        "slow",
-		Description: "writes then waits",
+		Description: "streams then waits",
 		Parameters:  json.RawMessage(`{"type":"object","properties":{}}`),
 		Execute: func(ctx context.Context, _ string, _ json.RawMessage, onUpdate func(AgentToolResult)) (AgentToolResult, error) {
 			onUpdate(AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "partial line"}}})
+			close(streamed)
 			select {
 			case <-release:
 			case <-ctx.Done():
@@ -481,9 +484,25 @@ func TestBackgroundWritesOutputFile(t *testing.T) {
 	if handle.OutputPath != path {
 		t.Fatalf("handle path = %q, want %q", handle.OutputPath, path)
 	}
-	// The file exists as soon as the handle is returned.
-	if _, err := os.Stat(path); err != nil {
-		t.Fatalf("the output file does not exist: %v", err)
+
+	// Readable while the call is still running: the streamed piece is already there.
+	<-streamed
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if raw, err := os.ReadFile(path); err == nil && strings.Contains(string(raw), "partial line") {
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+	mid, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read the output file mid-run: %v", err)
+	}
+	if !strings.Contains(string(mid), "partial line") {
+		t.Fatalf("the file is not readable while the call runs:\n%q", mid)
+	}
+	if strings.Contains(string(mid), "final line") {
+		t.Fatalf("the file already holds the end while the call runs:\n%q", mid)
 	}
 
 	close(release)
@@ -500,5 +519,52 @@ func TestBackgroundWritesOutputFile(t *testing.T) {
 	}
 	if !strings.Contains(string(raw), "final line") {
 		t.Fatalf("the output file lacks the final result:\n%s", raw)
+	}
+}
+
+// A call that finishes inside the threshold leaves no scratch file behind: the
+// file is opened before the call starts, so a fast call must clean it up.
+func TestBackgroundFastCallLeavesNoFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "unused.log")
+	policy := &backgroundPolicy{
+		threshold:  time.Minute,
+		registry:   newBackgroundRegistry(),
+		outputPath: func(string) string { return path },
+		onRegister: func(ToolCallHandle) {},
+		nextID:     func() string { return "bg-none" },
+	}
+	prepared := &preparedToolCallValue{
+		toolCall: ai.ToolCall{ID: "cfast", Name: "quick"},
+		tool:     pointerTo(newBackgroundTestTool("quick", &backgroundTestOps{release: closedChannel(), output: "done"})),
+	}
+	if _, backgrounded := executeWithBackground(context.Background(), prepared, func(AgentEvent) error { return nil }, policy); backgrounded {
+		t.Fatal("a fast call was backgrounded")
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("a fast call left %s behind (stat err %v)", path, err)
+	}
+}
+
+// The wake-up names the output file and caps its own body, so a call that produced
+// far more than fits in a message still has all its output available and does not
+// flood the transcript it wakes.
+func TestBackgroundNoticeNamesFileAndCapsBody(t *testing.T) {
+	huge := strings.Repeat("x", 50000)
+	handle := ToolCallHandle{ID: "bg-1", ToolCallID: "c1", ToolName: "bash", OutputPath: "/tmp/out.log"}
+	notice := CompletionNotice(handle, AgentToolResult{Content: []ai.Content{ai.TextContent{Text: huge}}})
+	body := messageText(notice)
+	if !strings.Contains(body, "/tmp/out.log") {
+		t.Fatalf("the notice does not name the output file:\n%s", body)
+	}
+	if len(body) > backgroundNoticeBodyLimit+500 {
+		t.Fatalf("the notice is %d bytes, more than the cap of %d", len(body), backgroundNoticeBodyLimit)
+	}
+	if !strings.Contains(body, "(cut;") {
+		t.Fatalf("the notice did not say it was cut:\n%s", body)
+	}
+	// A short result is carried whole, with no cut marker.
+	short := CompletionNotice(handle, AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "all done"}}})
+	if got := messageText(short); strings.Contains(got, "(cut;") || !strings.Contains(got, "all done") {
+		t.Fatalf("a short result was mangled:\n%s", got)
 	}
 }

@@ -8992,6 +8992,13 @@ entry type, message role or session version is added, `CurrentSessionVersion`
 stays 3, and the existing round-trip and append fixtures still reproduce the
 reference's bytes.
 
+The output file is opened before the call starts and each streamed update is
+appended to it, so a long call's progress is readable from the handle while it
+runs rather than only when it ends; a call that finishes inside the threshold
+removes the file it never needed. The completion notice names the file and caps
+its own body, because a call that produced megabytes would otherwise flood the
+transcript it wakes, and the tail is what a reader wants first.
+
 A displaced call gets its own context, `context.WithoutCancel` of the run's, so
 the turn settling does not kill it; that is the whole point. It is cancelled when
 the session is disposed, never by the run it started in, so a closed pier leaves
@@ -9010,4 +9017,5 @@ Tests: `TestBackgroundToolCallThresholdSetting`,
 `TestBackgroundFailedCallReportsOnce`, `TestBackgroundRegistryCloseCancels`,
 `TestBackgroundDisabledByDefault`, `TestBackgroundThroughARun`,
 `TestCloseBackgroundCallsCancels`, `TestSessionWakesOncePerBackgroundCall`,
-`TestSessionSkipsWakeAfterDispose`.
+`TestSessionSkipsWakeAfterDispose`, `TestBackgroundNoticeNamesFileAndCapsBody`,
+`TestBackgroundFastCallLeavesNoFile`, `TestBackgroundRealShellCallStreamsToFile`.

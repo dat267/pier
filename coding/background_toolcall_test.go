@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -91,4 +92,94 @@ func TestSessionSkipsWakeAfterDispose(t *testing.T) {
 	if notices := agentRef.TakeFollowUpMessages(); len(notices) != 0 {
 		t.Fatalf("a disposed session queued %d notices", len(notices))
 	}
+}
+
+// A real turn with a real shell: the model calls bash, the command streams a lot
+// and outlives the threshold, and the turn returns while the shell keeps running.
+// The output file must be readable mid-run, because that is what the handle is
+// for, and must hold the finished output once the shell exits.
+func TestBackgroundRealShellCallStreamsToFile(t *testing.T) {
+	if testing.Short() {
+		t.Skip("spawns a shell that sleeps past the threshold")
+	}
+	manager, dir := newTestSession(t)
+	bashTool := CreateBashTool(dir, nil)
+	script := []*ai.AssistantMessage{
+		{API: "anthropic-messages", Provider: "anthropic", Model: "m", StopReason: ai.StopToolUse,
+			Content: ai.ContentList{ai.ToolCall{
+				ID: "call-bg", Name: "bash",
+				Arguments: []byte(`{"command":"seq 1 300; sleep 5; echo FINISHED-MARKER"}`),
+			}}},
+		{API: "anthropic-messages", Provider: "anthropic", Model: "m", StopReason: ai.StopStop,
+			Content: ai.ContentList{ai.TextContent{Text: "I have a handle."}}},
+	}
+	next := 0
+	streamFn := func(_ *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		stream := ai.NewAssistantMessageEventStream()
+		message := script[next]
+		if next < len(script)-1 {
+			next++
+		}
+		go func() {
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: message.StopReason, Message: message})
+		}()
+		return stream
+	}
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, StreamFn: streamFn, ConvertToLlm: ConvertToLlm,
+		Model:                &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000},
+		Tools:                []agent.AgentTool{bashTool},
+		BackgroundToolCalls:  func() time.Duration { return 2 * time.Second },
+		BackgroundOutputPath: BackgroundToolOutputPath,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Dispose()
+
+	if err := session.PromptText(t.Context(), "run it"); err != nil {
+		t.Fatalf("prompt: %v", err)
+	}
+	raw, err := os.ReadFile(manager.GetSessionFile())
+	if err != nil {
+		t.Fatalf("session file: %v", err)
+	}
+	if !strings.Contains(string(raw), "still running") {
+		t.Fatalf("the turn did not return a handle:\n%s", raw)
+	}
+	marker := `"outputPath":"`
+	at := strings.Index(string(raw), marker)
+	if at < 0 {
+		t.Fatalf("the handle carries no outputPath detail:\n%s", raw)
+	}
+	rest := string(raw)[at+len(marker):]
+	path := rest[:strings.Index(rest, `"`)]
+	defer os.Remove(path)
+
+	// Readable while the shell is still running: this is what the agent reads.
+	deadline := time.Now().Add(10 * time.Second)
+	var early []byte
+	for time.Now().Before(deadline) {
+		early, _ = os.ReadFile(path)
+		if len(early) > 0 {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if len(early) == 0 {
+		t.Fatal("the output file was empty while the shell ran, so the handle points at nothing")
+	}
+	if strings.Contains(string(early), "FINISHED-MARKER") {
+		t.Fatalf("the file already held the finished output mid-run:\n%s", early)
+	}
+
+	// And it holds the finished output once the shell exits.
+	for time.Now().Before(deadline.Add(10 * time.Second)) {
+		if final, err := os.ReadFile(path); err == nil && strings.Contains(string(final), "FINISHED-MARKER") {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	final, _ := os.ReadFile(path)
+	t.Fatalf("the finished output never reached the file:\n%s", final)
 }
