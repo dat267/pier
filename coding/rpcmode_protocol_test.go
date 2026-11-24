@@ -434,7 +434,7 @@ func TestRPCUserMessageEntryTextJoinsBlockContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	text, ok := rpcUserMessageEntryText(&SessionEntry{Type: "message", Message: raw})
+	text, ok := UserMessageEntryText(&SessionEntry{Type: "message", Message: raw})
 	if !ok || text != "first question" {
 		t.Errorf("text = %q, ok = %v; want the joined block text", text, ok)
 	}

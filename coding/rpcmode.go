@@ -458,7 +458,7 @@ func (r *rpcRuntime) forkManager(entryID string, atPosition bool) (*SessionManag
 	targetLeafID := entryID
 	var selectedText *string
 	if !atPosition {
-		text, ok := rpcUserMessageEntryText(entry)
+		text, ok := UserMessageEntryText(entry)
 		if !ok {
 			return nil, nil, errors.New("Invalid entry ID for forking")
 		}
@@ -512,9 +512,10 @@ func (r *rpcRuntime) forkManager(entryID string, atPosition bool) (*SessionManag
 	return manager, selectedText, nil
 }
 
-// rpcUserMessageEntryText returns a message entry's user text (upstream
-// extractUserMessageText).
-func rpcUserMessageEntryText(entry *SessionEntry) (string, bool) {
+// UserMessageEntryText returns a message entry's user text, and whether the
+// entry is a user message at all (upstream extractUserMessageText). RPC and
+// interactive forks read the selected text through it.
+func UserMessageEntryText(entry *SessionEntry) (string, bool) {
 	if entry.Type != "message" {
 		return "", false
 	}

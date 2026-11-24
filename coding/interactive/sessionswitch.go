@@ -492,7 +492,7 @@ func (a *App) forkWork(manager *coding.SessionManager, entryID string, atPositio
 		targetLeafID := entryID
 		var selectedText *string
 		if !atPosition {
-			text, ok := userMessageEntryText(entry)
+			text, ok := coding.UserMessageEntryText(entry)
 			if !ok {
 				return nil, errors.New("Invalid entry ID for forking")
 			}
@@ -578,21 +578,4 @@ func (a *App) tailWork(manager *coding.SessionManager, model *ai.Model, thinking
 		}
 		return warmSessionProjection(tailed), nil
 	}
-}
-
-// userMessageEntryText returns a message entry's user text, and whether the
-// entry is a user message at all.
-func userMessageEntryText(entry *coding.SessionEntry) (string, bool) {
-	if entry.Type != "message" {
-		return "", false
-	}
-	message, err := ai.UnmarshalMessage(entry.Message)
-	if err != nil {
-		return "", false
-	}
-	user, ok := message.(*ai.UserMessage)
-	if !ok {
-		return "", false
-	}
-	return ai.ContentText(user.Content, ""), true
 }
