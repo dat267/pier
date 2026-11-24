@@ -1,9 +1,13 @@
 package coding
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/agent"
+	"github.com/dat267/pier/ai"
 )
 
 // `/loop` accepts a leading interval token, a trailing "every" clause, or
@@ -228,4 +232,66 @@ func TestLoopSchedulerMaxAge(t *testing.T) {
 	if got := scheduler.Jobs(); len(got) != 0 {
 		t.Fatalf("jobs = %d after the maximum age, want 0", len(got))
 	}
+}
+
+// A job is in-memory only: adding one writes nothing, and a fresh scheduler
+// (what the next process gets) knows nothing about it. The only trace a loop
+// leaves after the TUI closes is the prompts it fired, which are ordinary input
+// and so part of the transcript.
+func TestLoopSchedulerPersistsNothing(t *testing.T) {
+	manager, dir := newTestSession(t)
+	scheduler := NewLoopScheduler(nil, nil)
+	defer scheduler.Stop()
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, StreamFn: stubStreamFn, ConvertToLlm: ConvertToLlm,
+		Model:         &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000},
+		Tools:         []agent.AgentTool{testTool("read")},
+		LoopScheduler: scheduler,
+		LoopMaxAge:    LoopRecurringMaxAge,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Dispose()
+
+	before := sessionFileContents(t, manager)
+	if _, err := scheduler.Add("*/5 * * * *", "poll the deploy", true, 0); err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	if after := sessionFileContents(t, manager); after != before {
+		t.Fatalf("scheduling changed the session file:\n before %q\n after  %q", before, after)
+	}
+	// What the next process starts with.
+	fresh := NewLoopScheduler(nil, nil)
+	if jobs := fresh.Jobs(); len(jobs) != 0 {
+		fresh.Stop()
+		t.Fatalf("a new scheduler found %d jobs, so jobs outlive the process", len(jobs))
+	}
+	fresh.Stop()
+
+	// A fired prompt is the one durable trace: it goes through ordinary input,
+	// so the transcript keeps it like a typed message.
+	if err := session.PromptText(t.Context(), "poll the deploy"); err != nil {
+		t.Fatalf("prompt: %v", err)
+	}
+	if got := sessionFileContents(t, manager); !strings.Contains(got, "poll the deploy") {
+		t.Fatalf("a fired prompt did not reach the transcript:\n%s", got)
+	}
+}
+
+// sessionFileContents reads the session file, or "" when none exists yet.
+func sessionFileContents(t *testing.T, manager *SessionManager) string {
+	t.Helper()
+	path := manager.GetSessionFile()
+	if path == "" {
+		return ""
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return ""
+		}
+		t.Fatalf("read session file: %v", err)
+	}
+	return string(raw)
 }

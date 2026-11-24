@@ -8908,6 +8908,13 @@ typed input: nothing downstream needs to know a timer produced it. Self-paced
 loops are driven by the agent through `schedule_wakeup`, whose delay is clamped
 to the reference's [60, 3600] seconds and which accepts `stop` to end the loop.
 
+A job is in-memory only: nothing about it is written to the session file or the
+agent directory, and closing the TUI drops it, because the next process starts
+with an empty scheduler. The reference persists a durable job to
+`.claude/scheduled_tasks.json`; pier has no such file, so a loop always ends with
+the session. What survives is the prompts a loop fired, which are ordinary input
+and so part of the transcript like any typed message.
+
 The scheduler starts no timer until a job exists, and `Close` stops it, so an
 idle session holds no timer and a closed one leaves no goroutine. Recurring jobs
 expire after 30 days so a forgotten loop does not run forever, and the job count
@@ -8941,6 +8948,8 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestNextCronTimeSingleDayField`, `TestNextCronTimeReportsNoMatch`,
 `TestHumanCronSchedule`, `TestLoopCommandArmsCronJob`,
 `TestLoopCommandSelfPacedRunsNow`, `TestLoopCommandRejectsBadInput`,
-`TestLoopCommandReportsDisabledFeature`, `TestLoopFeatureToggleEnablesAndDisables`,
+`TestLoopCommandReportsDisabledFeature`, `TestLoopSchedulerPersistsNothing`,
+`TestAppAdoptsLoopSchedulerOnThePrimarySession`,
+`TestAppSkipsLoopToolsWhenTheFeatureIsOff`, `TestLoopFeatureToggleEnablesAndDisables`,
 `TestLoopFeatureToggleRespectsToolToggle`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`.
