@@ -35,7 +35,7 @@ const (
 // isCompleteSequence reports whether data is a complete escape sequence or
 // needs more input.
 func isCompleteSequence(data string) seqStatus {
-	if !startsWith(data, stdinEscape) {
+	if !strings.HasPrefix(data, stdinEscape) {
 		return seqNotEscape
 	}
 	if len(data) == 1 {
@@ -45,22 +45,22 @@ func isCompleteSequence(data string) seqStatus {
 	afterEsc := data[1:]
 
 	switch {
-	case startsWith(afterEsc, "["):
+	case strings.HasPrefix(afterEsc, "["):
 		// Old-style mouse sequence: ESC[M followed by three characters.
-		if startsWith(afterEsc, "[M") {
+		if strings.HasPrefix(afterEsc, "[M") {
 			if utf8.RuneCountInString(data) >= 6 {
 				return seqComplete
 			}
 			return seqIncomplete
 		}
 		return isCompleteCsiSequence(data)
-	case startsWith(afterEsc, "]"):
+	case strings.HasPrefix(afterEsc, "]"):
 		return isCompleteOscSequence(data)
-	case startsWith(afterEsc, "P"):
+	case strings.HasPrefix(afterEsc, "P"):
 		return isCompleteDcsSequence(data)
-	case startsWith(afterEsc, "_"):
+	case strings.HasPrefix(afterEsc, "_"):
 		return isCompleteApcSequence(data)
-	case startsWith(afterEsc, "O"):
+	case strings.HasPrefix(afterEsc, "O"):
 		// ESC O followed by a single character.
 		if len(afterEsc) >= 2 {
 			return seqComplete
@@ -75,7 +75,7 @@ func isCompleteSequence(data string) seqStatus {
 }
 
 func isCompleteCsiSequence(data string) seqStatus {
-	if !startsWith(data, stdinEscape+"[") {
+	if !strings.HasPrefix(data, stdinEscape+"[") {
 		return seqComplete
 	}
 	if len(data) < 3 {
@@ -87,12 +87,12 @@ func isCompleteCsiSequence(data string) seqStatus {
 	lastChar := payload[len(payload)-1]
 	if lastChar >= 0x40 && lastChar <= 0x7e {
 		// Special handling for SGR mouse sequences: ESC[<B;X;YMm.
-		if startsWith(payload, "<") {
+		if strings.HasPrefix(payload, "<") {
 			if sgrMouseRegex.MatchString(payload) {
 				return seqComplete
 			}
 			if lastChar == 'M' || lastChar == 'm' {
-				parts := splitOn(payload[1:len(payload)-1], ";")
+				parts := strings.Split(payload[1:len(payload)-1], ";")
 				if len(parts) == 3 && allDigits(parts) {
 					return seqComplete
 				}
@@ -105,30 +105,30 @@ func isCompleteCsiSequence(data string) seqStatus {
 }
 
 func isCompleteOscSequence(data string) seqStatus {
-	if !startsWith(data, stdinEscape+"]") {
+	if !strings.HasPrefix(data, stdinEscape+"]") {
 		return seqComplete
 	}
-	if endsWith(data, stdinEscape+"\\") || endsWith(data, "\x07") {
+	if strings.HasSuffix(data, stdinEscape+"\\") || strings.HasSuffix(data, "\x07") {
 		return seqComplete
 	}
 	return seqIncomplete
 }
 
 func isCompleteDcsSequence(data string) seqStatus {
-	if !startsWith(data, stdinEscape+"P") {
+	if !strings.HasPrefix(data, stdinEscape+"P") {
 		return seqComplete
 	}
-	if endsWith(data, stdinEscape+"\\") {
+	if strings.HasSuffix(data, stdinEscape+"\\") {
 		return seqComplete
 	}
 	return seqIncomplete
 }
 
 func isCompleteApcSequence(data string) seqStatus {
-	if !startsWith(data, stdinEscape+"_") {
+	if !strings.HasPrefix(data, stdinEscape+"_") {
 		return seqComplete
 	}
-	if endsWith(data, stdinEscape+"\\") {
+	if strings.HasSuffix(data, stdinEscape+"\\") {
 		return seqComplete
 	}
 	return seqIncomplete
@@ -152,7 +152,7 @@ func extractCompleteSequences(buffer string) (sequences []string, remainder stri
 	for pos < len(buffer) {
 		remaining := buffer[pos:]
 
-		if startsWith(remaining, stdinEscape) {
+		if strings.HasPrefix(remaining, stdinEscape) {
 			terminalReply := terminalReplyHeaderRegex.MatchString(remaining)
 			// Find the end of this escape sequence.
 			seqEnd := 1
@@ -353,7 +353,7 @@ func (b *StdinBuffer) process(str string) {
 	b.buffer += str
 	if head := b.rejoinedHead; head != "" && !couldBeMouseReport(b.buffer) {
 		b.rejoinedHead = ""
-		if startsWith(b.buffer, head) {
+		if strings.HasPrefix(b.buffer, head) {
 			// The tail is ordinary input after a dispatched Escape (D169).
 			b.buffer = b.buffer[len(head):]
 		}
@@ -537,9 +537,9 @@ func (b *StdinBuffer) reprocessTimedOutControlString(sequence string) []string {
 }
 
 func isControlString(sequence string) bool {
-	return startsWith(sequence, stdinEscape+"]") ||
-		startsWith(sequence, stdinEscape+"P") ||
-		startsWith(sequence, stdinEscape+"_")
+	return strings.HasPrefix(sequence, stdinEscape+"]") ||
+		strings.HasPrefix(sequence, stdinEscape+"P") ||
+		strings.HasPrefix(sequence, stdinEscape+"_")
 }
 
 // couldBeMouseReport reports whether s is an SGR mouse report, possibly
@@ -594,28 +594,6 @@ func (b *StdinBuffer) GetBuffer() string {
 func (b *StdinBuffer) Destroy() { b.Clear() }
 
 // ---- small helpers shared by the terminal port ----
-
-func startsWith(s, prefix string) bool { return len(s) >= len(prefix) && s[:len(prefix)] == prefix }
-
-func endsWith(s, suffix string) bool {
-	return len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix
-}
-
-func splitOn(s, sep string) []string {
-	if s == "" {
-		return nil
-	}
-	var out []string
-	for {
-		index := strings.Index(s, sep)
-		if index == -1 {
-			out = append(out, s)
-			return out
-		}
-		out = append(out, s[:index])
-		s = s[index+len(sep):]
-	}
-}
 
 func allDigits(parts []string) bool {
 	for _, part := range parts {
