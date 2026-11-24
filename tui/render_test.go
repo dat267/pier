@@ -76,7 +76,8 @@ func (f *fakeTerminal) FlushWrites() {
 	}
 }
 
-// staticComponent renders fixed lines padded to the width.
+// staticComponent renders fixed lines padded or cut to the width by rune
+// count, like upstream's probe component (the JS probe used string length).
 type staticComponent struct {
 	lines []string
 }

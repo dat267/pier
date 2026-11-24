@@ -12,28 +12,7 @@ import (
 // renderLayoutFrame outputs, child rects, scroll state, scrollbar geometry,
 // and hit-test paths. See tui/testdata/layoutframe_golden.txt.
 
-// probeComponent mimics the upstream probe component: lines are padded or cut
-// by rune count (the JS probe used string length).
-type probeComponent struct {
-	lines []string
-}
-
-func (p *probeComponent) Render(width int) []string {
-	out := make([]string, 0, len(p.lines))
-	for _, line := range p.lines {
-		runes := []rune(line)
-		if len(runes) >= width {
-			out = append(out, string(runes[:width]))
-		} else {
-			out = append(out, line+strings.Repeat(" ", width-len(runes)))
-		}
-	}
-	return out
-}
-
-func (p *probeComponent) Invalidate() {}
-
-func probe(lines ...string) Component { return &probeComponent{lines: lines} }
+func probe(lines ...string) Component { return &staticComponent{lines: lines} }
 
 type layoutFrameGolden struct {
 	values map[string]string
