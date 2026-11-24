@@ -818,7 +818,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 		}
 
 		if ctxErr(ctx) != nil {
-			fail(errors.New("Request was aborted"))
+			fail(errRequestAborted)
 			return
 		}
 		if output.StopReason == StopPending {

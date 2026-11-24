@@ -679,11 +679,11 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 			finishBlock(index)
 		}
 		if ctxErr(ctx) != nil {
-			fail(errors.New("Request was aborted"))
+			fail(errRequestAborted)
 			return
 		}
 		if output.StopReason == StopAborted {
-			fail(errors.New("Request was aborted"))
+			fail(errRequestAborted)
 			return
 		}
 		if !hasFinishReason && !compat.SupportsFinishReason {

@@ -1221,7 +1221,7 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 			return
 		}
 		if ctxErr(ctx) != nil {
-			fail(errors.New("Request was aborted"))
+			fail(errRequestAborted)
 			return
 		}
 		if output.StopReason == StopPending {

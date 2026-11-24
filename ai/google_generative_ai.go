@@ -493,7 +493,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 			}
 		}
 		if ctxErr(ctx) != nil {
-			fail(errors.New("Request was aborted"))
+			fail(errRequestAborted)
 			return
 		}
 		if output.StopReason == StopPending {

@@ -986,7 +986,7 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 			return
 		}
 		if ctxErr(ctx) != nil {
-			fail(errors.New("Request was aborted"), requestID, response.StatusCode, response.Header)
+			fail(errRequestAborted, requestID, response.StatusCode, response.Header)
 			return
 		}
 		if output.StopReason == StopPending {

@@ -25,6 +25,10 @@ func isContextError(err error) bool {
 // the transcript renders it as "Operation aborted".
 const RequestAbortedMessage = "Request was aborted"
 
+// errRequestAborted is the error a provider stream fails with when its request
+// context ends.
+var errRequestAborted = errors.New(RequestAbortedMessage)
+
 // NormalizedProviderError is the shared error surface providers compose into
 // display strings.
 type NormalizedProviderError struct {

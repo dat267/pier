@@ -682,7 +682,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 		var lastErr error
 		for attempt := 0; attempt <= maxRetries; attempt++ {
 			if ctxErr(ctx) != nil {
-				fail(errors.New("Request was aborted"))
+				fail(errRequestAborted)
 				return
 			}
 			request, err := http.NewRequestWithContext(ctx, http.MethodPost, ResolveCodexURL(model.BaseURL), bytes.NewReader(bodyJSON))
@@ -702,12 +702,12 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 					return
 				}
 				if ctxErr(ctx) != nil {
-					fail(errors.New("Request was aborted"))
+					fail(errRequestAborted)
 					return
 				}
 				lastErr = err
 				if attempt < maxRetries {
-					if err := AbortableSleep(ctx, time.Duration(codexBaseDelayMS*(1<<attempt))*time.Millisecond, "Request was aborted"); err != nil {
+					if err := AbortableSleep(ctx, time.Duration(codexBaseDelayMS*(1<<attempt))*time.Millisecond, RequestAbortedMessage); err != nil {
 						fail(err)
 						return
 					}
@@ -733,7 +733,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 					}
 					delay = bounded
 				}
-				if err := AbortableSleep(ctx, delay, "Request was aborted"); err != nil {
+				if err := AbortableSleep(ctx, delay, RequestAbortedMessage); err != nil {
 					fail(err)
 					return
 				}
@@ -775,7 +775,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 			return
 		}
 		if ctxErr(ctx) != nil {
-			fail(errors.New("Request was aborted"))
+			fail(errRequestAborted)
 			return
 		}
 		if output.StopReason == StopPending {
