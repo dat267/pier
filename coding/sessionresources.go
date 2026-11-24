@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -63,21 +64,20 @@ func CleanupSessionResources(sessionID string) error {
 	}
 	sessionResourceMu.Unlock()
 
-	var errors []error
+	var failures []error
 	for _, cleanup := range cleanups {
 		func() {
 			defer func() {
 				if recovered := recover(); recovered != nil {
-					errors = append(errors, ai.JSRecoveredError(recovered))
+					failures = append(failures, ai.JSRecoveredError(recovered))
 				}
 			}()
 			cleanup(sessionID)
 		}()
 	}
-	if len(errors) > 0 {
-		message := "Failed to cleanup session resources"
-		aggregated := fmt.Errorf("%s", message)
-		for _, err := range errors {
+	if len(failures) > 0 {
+		aggregated := errors.New("Failed to cleanup session resources")
+		for _, err := range failures {
 			aggregated = fmt.Errorf("%w: %v", aggregated, err)
 		}
 		return aggregated
