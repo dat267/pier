@@ -769,15 +769,13 @@ func (c *Client) handleNotification(message *protocol.JsonRpcNotification) {
 
 // safeListener runs a notification listener; a panic becomes an error
 // report, matching upstream's try/catch.
-func (c *Client) safeListener(fn func(json.RawMessage), params json.RawMessage) (panicked bool) {
+func (c *Client) safeListener(fn func(json.RawMessage), params json.RawMessage) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			c.emitError(ai.JSRecoveredError(recovered))
-			panicked = true
 		}
 	}()
 	fn(params)
-	return false
 }
 
 // handleProgress renews the timeout and reports progress (upstream
