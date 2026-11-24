@@ -8996,8 +8996,10 @@ The pinned reference runs every tool call to completion
 (`packages/agent/src/agent-loop.ts` has no timeout and no backgrounding), so this
 is pier-only. That makes transcript parity the constraint rather than a
 convenience: the handle is an ordinary tool result and the wake-up is an ordinary
-user message, queued through the same follow-up path a typed message takes. No
-entry type, message role or session version is added, `CurrentSessionVersion`
+user message. While a run is active it is queued as a follow-up, so that run's
+stop boundary delivers it; an idle session has no boundary, so the notice starts
+a run itself instead of waiting for the user's next message, checking and
+starting under the run-lifecycle lock as D438 does. No entry type, message role or session version is added, `CurrentSessionVersion`
 stays 3, and the existing round-trip and append fixtures still reproduce the
 reference's bytes.
 
@@ -9014,6 +9016,10 @@ the session is disposed, never by the run it started in, so a closed pier leaves
 no orphan process. Its output file uses the scratch directory and `pi-background-`
 prefix the truncation files already use, so the existing sweep ages it out.
 
+Every session the CLI builds reads the threshold, including the first one and
+the RPC session replacement, which copies its options; print mode keeps it off,
+since no later turn wakes.
+
 A call that finishes inside the threshold takes the unchanged path: same result,
 same events, no handle, no registry entry. That is pinned by
 `TestBackgroundFastCallIsUnchanged`, which compares the two paths' bytes.
@@ -9027,5 +9033,6 @@ Tests: `TestLoopToolRenderers`, `TestLoopToolsHaveRenderers`,
 `TestBackgroundFailedCallReportsOnce`, `TestBackgroundRegistryCloseCancels`,
 `TestBackgroundDisabledByDefault`, `TestBackgroundThroughARun`,
 `TestCloseBackgroundCallsCancels`, `TestSessionWakesOncePerBackgroundCall`,
+`TestBackgroundNoticeQueuesDuringARun`, `TestStartupSessionBackgroundsToolCalls`,
 `TestSessionSkipsWakeAfterDispose`, `TestBackgroundNoticeNamesFileAndCapsBody`,
 `TestBackgroundFastCallLeavesNoFile`, `TestBackgroundRealShellCallStreamsToFile`.

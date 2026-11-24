@@ -11,9 +11,11 @@ import (
 )
 
 // A displaced call wakes the model exactly once, with one notice carrying the
-// result, queued as ordinary follow-up input so the transcript shape is the
-// reference's.
+// result. The session is idle when the call ends, so the notice starts a run
+// itself: queued alone it would wait for the user's next message. It is an
+// ordinary user message, so the transcript shape is the reference's.
 func TestSessionWakesOncePerBackgroundCall(t *testing.T) {
+	t.Setenv("ANTHROPIC_API_KEY", "test-key")
 	manager, dir := newTestSession(t)
 	session, err := NewAgentSession(&SessionConfig{
 		Cwd: dir, Sessions: manager, StreamFn: stubStreamFn, ConvertToLlm: ConvertToLlm,
@@ -33,39 +35,89 @@ func TestSessionWakesOncePerBackgroundCall(t *testing.T) {
 	}
 	session.watchBackgroundCall(handle)
 
-	deadline := time.Now().Add(5 * time.Second)
-	var notices []ai.Message
-	for time.Now().Before(deadline) {
-		notices = session.Agent.TakeFollowUpMessages()
-		if len(notices) > 0 {
-			break
-		}
-		time.Sleep(time.Millisecond)
-	}
-	if len(notices) != 1 {
-		t.Fatalf("wake-ups = %d, want exactly one", len(notices))
-	}
-	text := ""
-	if user, ok := notices[0].(*ai.UserMessage); ok {
-		if user.Content.Blocks == nil {
-			text = user.Content.Text
-		}
-		for _, block := range user.Content.Blocks {
-			if value, ok := block.(ai.TextContent); ok {
-				text += value.Text
+	notices := func() []string {
+		var found []string
+		for _, message := range session.Agent.State().Messages {
+			if text := backgroundNoticeText(message); strings.Contains(text, "bg-1") {
+				found = append(found, text)
 			}
 		}
+		return found
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) && len(notices()) == 0 {
+		time.Sleep(time.Millisecond)
+	}
+	if err := session.WaitForIdle(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	found := notices()
+	if len(found) != 1 {
+		t.Fatalf("an idle session ran %d notices, want exactly one", len(found))
 	}
 	for _, want := range []string{"bg-1", "bash", "the slow output"} {
-		if !strings.Contains(text, want) {
-			t.Errorf("the notice lacks %q: %q", want, text)
+		if !strings.Contains(found[0], want) {
+			t.Errorf("the notice lacks %q: %q", want, found[0])
 		}
 	}
-	// No second notice: a backgrounded call reports once.
-	time.Sleep(20 * time.Millisecond)
-	if extra := session.Agent.TakeFollowUpMessages(); len(extra) != 0 {
-		t.Fatalf("a second wake-up arrived: %d messages", len(extra))
+	// The run answered it, and nothing is left queued for a second wake-up.
+	if last, ok := session.Agent.State().Messages[len(session.Agent.State().Messages)-1].(*ai.AssistantMessage); !ok || last.StopReason != ai.StopStop {
+		t.Fatalf("the notice's run did not end with the model's reply")
 	}
+	time.Sleep(20 * time.Millisecond)
+	if extra := session.Agent.TakeFollowUpMessages(); len(extra) != 0 || len(notices()) != 1 {
+		t.Fatalf("a second wake-up arrived: %d queued, %d in the transcript", len(extra), len(notices()))
+	}
+}
+
+// A notice that arrives while a run is active is queued as a follow-up, so that
+// run's stop boundary delivers it; it does not start a second run.
+func TestBackgroundNoticeQueuesDuringARun(t *testing.T) {
+	manager, dir := newTestSession(t)
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, StreamFn: stubStreamFn, ConvertToLlm: ConvertToLlm,
+		Model: &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000},
+		Tools: []agent.AgentTool{testTool("read")},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Dispose()
+
+	before := len(session.Agent.State().Messages)
+	state := session.prompt()
+	state.mu.Lock()
+	state.runActive = true
+	state.mu.Unlock()
+	session.deliverBackgroundNotice(agent.CompletionNotice(
+		agent.ToolCallHandle{ID: "bg-3", ToolCallID: "c3", ToolName: "bash"},
+		agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "done"}}}))
+	state.mu.Lock()
+	state.runActive = false
+	state.mu.Unlock()
+
+	queued := session.Agent.TakeFollowUpMessages()
+	if len(queued) != 1 || !strings.Contains(backgroundNoticeText(queued[0]), "bg-3") {
+		t.Fatalf("queued = %d, want the one notice", len(queued))
+	}
+	if after := len(session.Agent.State().Messages); after != before {
+		t.Fatalf("a notice during a run started another: transcript %d -> %d messages", before, after)
+	}
+}
+
+// backgroundNoticeText is a user message's text, or "" for any other message.
+func backgroundNoticeText(message ai.Message) string {
+	user, ok := message.(*ai.UserMessage)
+	if !ok {
+		return ""
+	}
+	text := user.Content.Text
+	for _, block := range user.Content.Blocks {
+		if value, ok := block.(ai.TextContent); ok {
+			text += value.Text
+		}
+	}
+	return text
 }
 
 // A disposed session does not queue a notice: there is nobody to wake.

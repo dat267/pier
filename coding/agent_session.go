@@ -1195,23 +1195,42 @@ func (s *AgentSession) GetSessionStats() *SessionStats {
 // watchBackgroundCall waits for a displaced tool call to end and wakes the model
 // once, with one notification, as ordinary user input. It runs on the call's own
 // goroutine, never the owner loop, and it never writes transcript state directly:
-// the notice is queued as a follow-up, so the message reaches the transcript the
-// same way a typed one does.
+// the notice reaches the transcript through a run, the same way a typed one does.
 func (s *AgentSession) watchBackgroundCall(handle agent.ToolCallHandle) {
 	if s.Agent == nil {
 		return
 	}
 	go func() {
-		result := handle.Wait()
-		// A closed session has nobody to wake, and queueing into it would keep the
-		// notice forever.
+		s.deliverBackgroundNotice(agent.CompletionNotice(handle, handle.Wait()))
+	}()
+}
+
+// deliverBackgroundNotice queues the notice as a follow-up while a run is
+// active, so that run's stop boundary delivers it, and otherwise starts a run
+// with it: an idle session has no boundary, so a queued notice would wait for
+// the user's next message. The check and the queueing share the run-lifecycle
+// lock, and a start that loses the race to another run checks again (D438). A
+// closed session has nobody to wake, and queueing into it would keep the
+// notice forever.
+func (s *AgentSession) deliverBackgroundNotice(notice ai.Message) {
+	for {
 		state := s.prompt()
 		state.mu.Lock()
-		closed := state.disposed
-		state.mu.Unlock()
-		if closed {
+		if state.disposed {
+			state.mu.Unlock()
 			return
 		}
-		s.Agent.FollowUp(agent.CompletionNotice(handle, result))
-	}()
+		active := state.runActive || s.Agent.State().IsStreaming
+		if active {
+			s.Agent.FollowUp(notice)
+		}
+		state.mu.Unlock()
+		if active {
+			return
+		}
+		err := s.runAgentPromptUnlessDisposed(context.Background(), []ai.Message{notice})
+		if !errors.Is(err, errRunAlreadyActive) {
+			return
+		}
+	}
 }
