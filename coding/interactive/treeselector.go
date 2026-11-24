@@ -301,6 +301,21 @@ type treeStackItem struct {
 	isVirtualRootChild bool
 }
 
+// childGutters is the gutter list a node's children inherit: the node's own,
+// plus, when the node shows a connector, an entry at its connector column that
+// draws a continuation line unless the node is its parent's last child
+// (upstream flattenTree and recalculateVisualStructure).
+func (t *TreeList) childGutters(gutters []gutterInfo, indent int, connectorDisplayed bool, isLast bool) []gutterInfo {
+	if !connectorDisplayed {
+		return gutters
+	}
+	displayIndent := indent
+	if t.multipleRoots {
+		displayIndent = max(0, indent-1)
+	}
+	return append(append([]gutterInfo{}, gutters...), gutterInfo{Position: max(0, displayIndent-1), Show: !isLast})
+}
+
 func (t *TreeList) flattenTree(roots []*coding.SessionTreeNode) []*flatNode {
 	var result []*flatNode
 	t.toolCallMap = map[string]toolCallInfo{}
@@ -400,17 +415,7 @@ func (t *TreeList) flattenTree(roots []*coding.SessionTreeNode) []*flatNode {
 			childIndent = item.indent + 1
 		}
 
-		connectorDisplayed := item.showConnector && !item.isVirtualRootChild
-		currentDisplayIndent := item.indent
-		if t.multipleRoots {
-			currentDisplayIndent = max(0, item.indent-1)
-		}
-		connectorPosition := max(0, currentDisplayIndent-1)
-		childGutters := item.gutters
-		if connectorDisplayed {
-			childGutters = append(append([]gutterInfo{}, item.gutters...),
-				gutterInfo{Position: connectorPosition, Show: !item.isLast})
-		}
+		childGutters := t.childGutters(item.gutters, item.indent, item.showConnector && !item.isVirtualRootChild, item.isLast)
 
 		for index, o := range slices.Backward(orderedChildren) {
 			childIsLast := index == len(orderedChildren)-1
@@ -623,17 +628,7 @@ func (t *TreeList) recalculateVisualStructure() {
 			childIndent = item.indent + 1
 		}
 
-		connectorDisplayed := item.showConnector && !item.isVirtualRootChild
-		currentDisplayIndent := item.indent
-		if t.multipleRoots {
-			currentDisplayIndent = max(0, item.indent-1)
-		}
-		connectorPosition := max(0, currentDisplayIndent-1)
-		childGutters := item.gutters
-		if connectorDisplayed {
-			childGutters = append(append([]gutterInfo{}, item.gutters...),
-				gutterInfo{Position: connectorPosition, Show: !item.isLast})
-		}
+		childGutters := t.childGutters(item.gutters, item.indent, item.showConnector && !item.isVirtualRootChild, item.isLast)
 
 		for index, c := range slices.Backward(children) {
 			childIsLast := index == len(children)-1
