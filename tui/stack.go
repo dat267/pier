@@ -88,12 +88,6 @@ func (s *Stack) AddChild(component Component, options ...StackEntryOptions) {
 	s.Entries = append(s.Entries, NewStackEntry(component, entryOptions))
 }
 
-// AddStackEntry appends a child with sizing options (an explicit variant of
-// the variadic AddChild).
-func (s *Stack) AddStackEntry(component Component, options StackEntryOptions) {
-	s.AddChild(component, options)
-}
-
 // RemoveChild removes a child.
 func (s *Stack) RemoveChild(component Component) {
 	s.Container.RemoveChild(component)
