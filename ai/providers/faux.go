@@ -615,6 +615,14 @@ func fauxCreateAbortedMessage(partial *ai.AssistantMessage) *ai.AssistantMessage
 	return cloned
 }
 
+// fauxEndAborted ends stream with an aborted copy of partial, as an error
+// event and then the stream's end.
+func fauxEndAborted(stream *ai.AssistantMessageEventStream, partial *ai.AssistantMessage) {
+	aborted := fauxCreateAbortedMessage(partial)
+	stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopAborted, Error: aborted})
+	stream.End(&aborted)
+}
+
 func fauxScheduleChunk(chunk string, tokensPerSecond float64) {
 	if tokensPerSecond <= 0 {
 		return
@@ -632,9 +640,7 @@ func (c *FauxCore) streamWithDeltas(
 	partial.Content = nil
 	partial.StopReason = ai.StopPending
 	if ctxErrOf(ctx) != nil {
-		aborted := fauxCreateAbortedMessage(partial)
-		stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopAborted, Error: aborted})
-		stream.End(&aborted)
+		fauxEndAborted(stream, partial)
 		return
 	}
 
@@ -642,9 +648,7 @@ func (c *FauxCore) streamWithDeltas(
 
 	for index := range len(message.Content) {
 		if ctxErrOf(ctx) != nil {
-			aborted := fauxCreateAbortedMessage(partial)
-			stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopAborted, Error: aborted})
-			stream.End(&aborted)
+			fauxEndAborted(stream, partial)
 			return
 		}
 
@@ -655,9 +659,7 @@ func (c *FauxCore) streamWithDeltas(
 			for _, chunk := range fauxSplitStringByTokenSize(block.Thinking, c.minTokenSize, c.maxTokenSize) {
 				fauxScheduleChunk(chunk, c.tokensPerSecond())
 				if ctxErrOf(ctx) != nil {
-					aborted := fauxCreateAbortedMessage(partial)
-					stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopAborted, Error: aborted})
-					stream.End(&aborted)
+					fauxEndAborted(stream, partial)
 					return
 				}
 				partial.Content[index] = ai.ThinkingContent{Thinking: partial.Content[index].(ai.ThinkingContent).Thinking + chunk}
@@ -671,9 +673,7 @@ func (c *FauxCore) streamWithDeltas(
 			for _, chunk := range fauxSplitStringByTokenSize(block.Text, c.minTokenSize, c.maxTokenSize) {
 				fauxScheduleChunk(chunk, c.tokensPerSecond())
 				if ctxErrOf(ctx) != nil {
-					aborted := fauxCreateAbortedMessage(partial)
-					stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopAborted, Error: aborted})
-					stream.End(&aborted)
+					fauxEndAborted(stream, partial)
 					return
 				}
 				partial.Content[index] = ai.TextContent{Text: partial.Content[index].(ai.TextContent).Text + chunk}
@@ -691,9 +691,7 @@ func (c *FauxCore) streamWithDeltas(
 			for _, chunk := range fauxSplitStringByTokenSize(string(argsJSON), c.minTokenSize, c.maxTokenSize) {
 				fauxScheduleChunk(chunk, c.tokensPerSecond())
 				if ctxErrOf(ctx) != nil {
-					aborted := fauxCreateAbortedMessage(partial)
-					stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopAborted, Error: aborted})
-					stream.End(&aborted)
+					fauxEndAborted(stream, partial)
 					return
 				}
 				stream.Push(ai.AssistantMessageEvent{Type: ai.EventToolcallDelta, ContentIndex: index, Delta: chunk, Partial: partial})
