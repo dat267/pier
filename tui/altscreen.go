@@ -1532,17 +1532,8 @@ func (s *AltScreen) handleScrollbarMouseEventLocked(event sgrMouseEvent) bool {
 	if !ok {
 		return false
 	}
-	s.stopSelectionAutoScrollLocked()
-	s.selectionPressActive = false
-	s.selectionAnchor = nil
-	s.selectionFocus = nil
-	s.selectionGranularity = "character"
-	s.selectionInitialRange = nil
-	s.hasSelectionInitialRange = false
+	s.clearTextSelectionLocked()
 	s.lastClick = nil
-	s.pressedURL = ""
-	s.hasPressedURL = false
-	s.selectionDragged = false
 	s.setScrollbarHoverLocked(target.ScrollView)
 	onThumb := event.Y >= target.Geometry.ThumbTop && event.Y < target.Geometry.ThumbTop+target.Geometry.ThumbHeight
 	grabOffset := target.Geometry.ThumbHeight / 2
