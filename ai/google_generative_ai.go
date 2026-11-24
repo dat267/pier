@@ -470,17 +470,17 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 			}
 			if chunk.UsageMetadata != nil {
 				usage := chunk.UsageMetadata
-				inputTokens := derefI64(usage.PromptTokenCount) - derefI64(usage.CachedContentTokenCount)
-				outputTokens := jsnum.ToInt64(float64(derefI64(usage.CandidatesTokenCount)) + float64(derefI64(usage.ThoughtsTokenCount)))
+				inputTokens := derefInt64(usage.PromptTokenCount) - derefInt64(usage.CachedContentTokenCount)
+				outputTokens := jsnum.ToInt64(float64(derefInt64(usage.CandidatesTokenCount)) + float64(derefInt64(usage.ThoughtsTokenCount)))
 				output.Usage = Usage{
 					Input:       inputTokens,
 					Output:      outputTokens,
-					CacheRead:   derefI64(usage.CachedContentTokenCount),
+					CacheRead:   derefInt64(usage.CachedContentTokenCount),
 					CacheWrite:  0,
-					TotalTokens: derefI64(usage.TotalTokenCount),
+					TotalTokens: derefInt64(usage.TotalTokenCount),
 					Cost:        UsageCost{},
 				}
-				reasoning := derefI64(usage.ThoughtsTokenCount)
+				reasoning := derefInt64(usage.ThoughtsTokenCount)
 				output.Usage.Reasoning = &reasoning
 				CalculateCost(model, &output.Usage)
 			}

@@ -2141,7 +2141,7 @@ type messageListing struct {
 // ok=false so the caller full-decodes the message instead. The two paths can
 // therefore differ only for sessions the full decoder rejects (D225).
 func scanListingMessage(data []byte) messageListing {
-	i := skipListingSpace(data, 0)
+	i := skipJSONSpace(data, 0)
 	if i >= len(data) || data[i] != '{' {
 		return messageListing{}
 	}
@@ -2155,7 +2155,7 @@ func scanListingMessage(data []byte) messageListing {
 	)
 	first := true
 	for {
-		i = skipListingSpace(data, i)
+		i = skipJSONSpace(data, i)
 		if i >= len(data) {
 			return messageListing{}
 		}
@@ -2168,7 +2168,7 @@ func scanListingMessage(data []byte) messageListing {
 				return messageListing{}
 			}
 			i++
-			i = skipListingSpace(data, i)
+			i = skipJSONSpace(data, i)
 			if i < len(data) && data[i] == '}' {
 				return messageListing{}
 			}
@@ -2178,12 +2178,12 @@ func scanListingMessage(data []byte) messageListing {
 			return messageListing{}
 		}
 		i += n
-		i = skipListingSpace(data, i)
+		i = skipJSONSpace(data, i)
 		if i >= len(data) || data[i] != ':' {
 			return messageListing{}
 		}
 		i++
-		i = skipListingSpace(data, i)
+		i = skipJSONSpace(data, i)
 		switch string(key) {
 		case "role":
 			if sawRole {
@@ -2240,7 +2240,7 @@ func scanListingMessage(data []byte) messageListing {
 		}
 		first = false
 	}
-	i = skipListingSpace(data, i)
+	i = skipJSONSpace(data, i)
 	if i != len(data) {
 		return messageListing{}
 	}
@@ -2255,19 +2255,6 @@ func scanListingMessage(data []byte) messageListing {
 	listing.hasContent = sawContent
 	listing.hasTimestamp = sawTimestamp
 	return listing
-}
-
-// skipListingSpace advances past JSON whitespace at i.
-func skipListingSpace(data []byte, i int) int {
-	for i < len(data) {
-		switch data[i] {
-		case ' ', '\t', '\r', '\n':
-			i++
-		default:
-			return i
-		}
-	}
-	return i
 }
 
 // scanListingInteger consumes a message timestamp. null reads as absent, as
@@ -2307,7 +2294,7 @@ func scanListingString(data []byte) (string, int, bool) {
 // scanListingContent consumes a user or assistant content value, returning the
 // text extractTextContent would join.
 func scanListingContent(data []byte, role string) (string, int, bool) {
-	i := skipListingSpace(data, 0)
+	i := skipJSONSpace(data, 0)
 	if i >= len(data) {
 		return "", 0, false
 	}
@@ -2331,7 +2318,7 @@ func scanListingContent(data []byte, role string) (string, int, bool) {
 		var texts []string
 		first := true
 		for {
-			i = skipListingSpace(data, i)
+			i = skipJSONSpace(data, i)
 			if i >= len(data) {
 				return "", 0, false
 			}
@@ -2344,7 +2331,7 @@ func scanListingContent(data []byte, role string) (string, int, bool) {
 					return "", 0, false
 				}
 				i++
-				i = skipListingSpace(data, i)
+				i = skipJSONSpace(data, i)
 				if i < len(data) && data[i] == ']' {
 					return "", 0, false
 				}
@@ -2368,7 +2355,7 @@ func scanListingContent(data []byte, role string) (string, int, bool) {
 // text block. Thinking, image and tool-call blocks are skipped; any other type
 // is not understood.
 func scanListingBlock(data []byte) (string, bool, int, bool) {
-	i := skipListingSpace(data, 0)
+	i := skipJSONSpace(data, 0)
 	if i >= len(data) || data[i] != '{' {
 		return "", false, 0, false
 	}
@@ -2377,7 +2364,7 @@ func scanListingBlock(data []byte) (string, bool, int, bool) {
 	var sawType, sawText bool
 	first := true
 	for {
-		i = skipListingSpace(data, i)
+		i = skipJSONSpace(data, i)
 		if i >= len(data) {
 			return "", false, 0, false
 		}
@@ -2390,7 +2377,7 @@ func scanListingBlock(data []byte) (string, bool, int, bool) {
 				return "", false, 0, false
 			}
 			i++
-			i = skipListingSpace(data, i)
+			i = skipJSONSpace(data, i)
 			if i < len(data) && data[i] == '}' {
 				return "", false, 0, false
 			}
@@ -2400,12 +2387,12 @@ func scanListingBlock(data []byte) (string, bool, int, bool) {
 			return "", false, 0, false
 		}
 		i += n
-		i = skipListingSpace(data, i)
+		i = skipJSONSpace(data, i)
 		if i >= len(data) || data[i] != ':' {
 			return "", false, 0, false
 		}
 		i++
-		i = skipListingSpace(data, i)
+		i = skipJSONSpace(data, i)
 		switch string(key) {
 		case "type":
 			if sawType {

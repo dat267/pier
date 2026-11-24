@@ -537,7 +537,8 @@ func skipJSONValue(s []byte) (consumed int, ok bool) {
 
 const maxSessionJSONDepth = 10000
 
-func skipSessionJSONSpace(s []byte, i int) int {
+// skipJSONSpace advances past JSON whitespace at i.
+func skipJSONSpace(s []byte, i int) int {
 	for i < len(s) {
 		switch s[i] {
 		case ' ', '\t', '\r', '\n':
@@ -558,12 +559,12 @@ func scanJSONValueAt(s []byte, i int, depth int) (int, bool) {
 		return scanJSONStringStrict(s, i)
 	case '{':
 		i++
-		i = skipSessionJSONSpace(s, i)
+		i = skipJSONSpace(s, i)
 		if i < len(s) && s[i] == '}' {
 			return i + 1, true
 		}
 		for {
-			i = skipSessionJSONSpace(s, i)
+			i = skipJSONSpace(s, i)
 			if i >= len(s) || s[i] != '"' {
 				return 0, false
 			}
@@ -571,16 +572,16 @@ func scanJSONValueAt(s []byte, i int, depth int) (int, bool) {
 			if !ok {
 				return 0, false
 			}
-			i = skipSessionJSONSpace(s, next)
+			i = skipJSONSpace(s, next)
 			if i >= len(s) || s[i] != ':' {
 				return 0, false
 			}
-			i = skipSessionJSONSpace(s, i+1)
+			i = skipJSONSpace(s, i+1)
 			next, ok = scanJSONValueAt(s, i, depth+1)
 			if !ok {
 				return 0, false
 			}
-			i = skipSessionJSONSpace(s, next)
+			i = skipJSONSpace(s, next)
 			if i >= len(s) {
 				return 0, false
 			}
@@ -595,17 +596,17 @@ func scanJSONValueAt(s []byte, i int, depth int) (int, bool) {
 		}
 	case '[':
 		i++
-		i = skipSessionJSONSpace(s, i)
+		i = skipJSONSpace(s, i)
 		if i < len(s) && s[i] == ']' {
 			return i + 1, true
 		}
 		for {
-			i = skipSessionJSONSpace(s, i)
+			i = skipJSONSpace(s, i)
 			next, ok := scanJSONValueAt(s, i, depth+1)
 			if !ok {
 				return 0, false
 			}
-			i = skipSessionJSONSpace(s, next)
+			i = skipJSONSpace(s, next)
 			if i >= len(s) {
 				return 0, false
 			}
