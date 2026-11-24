@@ -462,14 +462,11 @@ func (r *Renderer) renderInlineTokens(inlines []Inline, styleContext *inlineStyl
 	return result
 }
 
-func orderedListMarker(item *Block) (string, bool) {
-	if item.Marker == "" {
-		return "", false
-	}
-	return item.Marker + " ", true
-}
-
-func unorderedListMarker(item *Block) (string, bool) {
+// listItemMarker is the item's source marker plus a space, the result of
+// upstream getOrderedListMarker and getUnorderedListMarker. Their two regexes
+// differ only in which markers they accept, and the parser already recorded
+// the marker of the list's own kind.
+func listItemMarker(item *Block) (string, bool) {
 	if item.Marker == "" {
 		return "", false
 	}
@@ -492,7 +489,7 @@ func (r *Renderer) renderList(list *Block, depth int, width int, styleContext *i
 		bullet := "- "
 		if list.Ordered {
 			if r.opts.PreserveOrderedListMarkers {
-				if marker, ok := orderedListMarker(item); ok {
+				if marker, ok := listItemMarker(item); ok {
 					bullet = marker
 				} else {
 					bullet = strconv.Itoa(startNumber+index) + ". "
@@ -501,7 +498,7 @@ func (r *Renderer) renderList(list *Block, depth int, width int, styleContext *i
 				bullet = strconv.Itoa(startNumber+index) + ". "
 			}
 		} else if r.opts.PreserveOrderedListMarkers {
-			if marker, ok := unorderedListMarker(item); ok {
+			if marker, ok := listItemMarker(item); ok {
 				bullet = marker
 			}
 		}
