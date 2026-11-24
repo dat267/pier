@@ -13,7 +13,6 @@ type Document struct {
 	src    string
 	blocks []*Block
 	defs   []Definition
-	parsed int // blocks[:parsed] have inline content resolved
 }
 
 // NewDocument creates an empty document.
@@ -31,7 +30,6 @@ func (d *Document) Update(src string) []*Block {
 	if !strings.HasPrefix(src, d.src) || d.blocks == nil {
 		d.src = src
 		d.blocks, d.defs = LexDefinitions(src, 0, nil)
-		d.parsed = len(d.blocks)
 		return d.blocks
 	}
 	if src == d.src {
@@ -43,7 +41,6 @@ func (d *Document) Update(src string) []*Block {
 		// clamps to 0, which would index an empty slice.
 		d.src = src
 		d.blocks, d.defs = LexDefinitions(src, 0, nil)
-		d.parsed = len(d.blocks)
 		return d.blocks
 	}
 	start := FirstUnstable(d.blocks, d.src)
@@ -59,7 +56,6 @@ func (d *Document) Update(src string) []*Block {
 	}
 	d.src = src
 	d.blocks = append(reused, tail...)
-	d.parsed = len(d.blocks)
 	return d.blocks
 }
 
