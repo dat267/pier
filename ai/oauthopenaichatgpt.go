@@ -205,7 +205,7 @@ func authorizationResultFromCallback(parsed *url.URL, expectedState string) (Ope
 		return OpenAIChatGPTAuthorizationResult{}, errors.New("Missing OAuth state")
 	}
 	if state != expectedState {
-		return OpenAIChatGPTAuthorizationResult{}, errors.New("OAuth state mismatch")
+		return OpenAIChatGPTAuthorizationResult{}, errOAuthStateMismatch
 	}
 	clientID := JSTrim(parsed.Query().Get("client_id"))
 	if clientID == "" {

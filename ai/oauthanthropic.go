@@ -424,7 +424,7 @@ func LoginAnthropic(interaction *AuthInteraction) (*OAuthCredential, error) {
 		}
 		parsed := ParseAuthorizationInput(manual.input)
 		if parsed.State != "" && parsed.State != pkce.Verifier {
-			return nil, errors.New("OAuth state mismatch")
+			return nil, errOAuthStateMismatch
 		}
 		code = parsed.Code
 		state = parsed.State
@@ -479,7 +479,7 @@ func LoginAnthropicCopyCode(interaction *AuthInteraction) (*OAuthCredential, err
 	}
 	parsed := ParseAuthorizationInput(input)
 	if parsed.State != "" && parsed.State != pkce.Verifier {
-		return nil, errors.New("OAuth state mismatch")
+		return nil, errOAuthStateMismatch
 	}
 	if parsed.Code == "" {
 		return nil, errMissingAuthorizationCode
