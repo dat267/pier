@@ -24,7 +24,7 @@ func TestFinishTurnCanRequestContextOnlyContinuation(t *testing.T) {
 	var timeline []string
 	finishCalls := 0
 	config := &AgentLoopConfig{
-		Model: createModel(), ConvertToLlm: identityConverter,
+		Model: createModel(), ConvertToLlm: defaultConvertToLlm,
 		FinishTurn: func(_ context.Context, turn *AgentTurnContext) (*AgentTurnDecision, error) {
 			finishCalls++
 			if turn.Message == nil || len(turn.NewMessages) == 0 {
@@ -71,7 +71,7 @@ func TestFinishTurnRunsForErrorResponseBeforeTurnEnd(t *testing.T) {
 	streamFn, calls := mockStreamFn(response)
 	var timeline []string
 	config := &AgentLoopConfig{
-		Model: createModel(), ConvertToLlm: identityConverter,
+		Model: createModel(), ConvertToLlm: defaultConvertToLlm,
 		FinishTurn: func(context.Context, *AgentTurnContext) (*AgentTurnDecision, error) {
 			timeline = append(timeline, "finish")
 			return &AgentTurnDecision{Action: AgentTurnContinue}, nil

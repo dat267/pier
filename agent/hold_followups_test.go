@@ -39,7 +39,7 @@ func TestDeferredFollowUpSurvivesTheRun(t *testing.T) {
 	agent, err := NewAgent(&AgentOptions{
 		InitialState: &AgentInitialState{Model: createModel()},
 		StreamFn:     streamFn,
-		ConvertToLlm: identityConverter,
+		ConvertToLlm: defaultConvertToLlm,
 		DeferFollowUp: func(message ai.Message) bool {
 			return hold && ai.RoleOf(message) == ai.RoleUser
 		},

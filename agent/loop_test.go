@@ -62,17 +62,6 @@ func mockStreamFn(responses ...*ai.AssistantMessage) (StreamFn, *int) {
 	}, &calls
 }
 
-func identityConverter(messages []ai.Message) []ai.Message {
-	var out []ai.Message
-	for _, m := range messages {
-		switch ai.RoleOf(m) {
-		case ai.RoleSystem, ai.RoleUser, ai.RoleAssistant, ai.RoleToolResult:
-			out = append(out, m)
-		}
-	}
-	return out
-}
-
 func drainAgentStream(t *testing.T, stream *ai.EventStream[AgentEvent, []ai.Message]) ([]AgentEvent, []ai.Message) {
 	t.Helper()
 	var events []AgentEvent
@@ -92,7 +81,7 @@ func drainAgentStream(t *testing.T, stream *ai.EventStream[AgentEvent, []ai.Mess
 
 func TestAgentLoopEventSequence(t *testing.T) {
 	streamFn, _ := mockStreamFn(createAssistantMessage(ai.ContentList{ai.TextContent{Text: "Hi there!"}}, ai.StopStop))
-	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}
+	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: defaultConvertToLlm}
 
 	stream := AgentLoop(nil, []ai.Message{createUserMessage("Hello")}, AgentContext{Tools: nil}, config, streamFn)
 	events, messages := drainAgentStream(t, stream)
@@ -131,7 +120,7 @@ func TestAgentLoopProviderContextFromTranscriptOnly(t *testing.T) {
 			Message: createAssistantMessage(ai.ContentList{ai.TextContent{Text: "done"}}, ai.StopStop)})
 		return stream
 	}
-	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}
+	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: defaultConvertToLlm}
 	stream := AgentLoop(nil, []ai.Message{initialSystem, createUserMessage("Hello")}, AgentContext{}, config, streamFn)
 	drainAgentStream(t, stream)
 
@@ -199,7 +188,7 @@ func TestAgentLoopToolCallsAndResults(t *testing.T) {
 	followUp := createAssistantMessage(ai.ContentList{ai.TextContent{Text: "done"}}, ai.StopStop)
 	streamFn, calls := mockStreamFn(assistant, followUp)
 
-	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}
+	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: defaultConvertToLlm}
 	stream := AgentLoop(nil, []ai.Message{createUserMessage("run")}, AgentContext{Tools: []AgentTool{tool}}, config, streamFn)
 	events, messages := drainAgentStream(t, stream)
 
@@ -237,7 +226,7 @@ func TestAgentLoopTruncatedToolCallsFail(t *testing.T) {
 			return AgentToolResult{}, nil
 		},
 	}
-	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}
+	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: defaultConvertToLlm}
 	stream := AgentLoop(nil, []ai.Message{createUserMessage("run")}, AgentContext{Tools: []AgentTool{tool}}, config, streamFn)
 	events, messages := drainAgentStream(t, stream)
 
@@ -294,7 +283,7 @@ func TestAgentLoopParallelCompletionOrderVsSourceOrder(t *testing.T) {
 		ai.ToolCall{ID: "f1", Name: "fast", Arguments: json.RawMessage(`{}`)},
 	}, ai.StopToolUse)
 	streamFn, _ := mockStreamFn(assistant, createAssistantMessage(ai.ContentList{ai.TextContent{Text: "ok"}}, ai.StopStop))
-	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}
+	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: defaultConvertToLlm}
 	stream := AgentLoop(nil, []ai.Message{createUserMessage("run")}, AgentContext{Tools: []AgentTool{slow, fast}}, config, streamFn)
 	events, messages := drainAgentStream(t, stream)
 
@@ -346,7 +335,7 @@ func TestAgentLoopSequentialForcedByExecutionMode(t *testing.T) {
 		ai.ToolCall{ID: "b", Name: "seq", Arguments: json.RawMessage(`{}`)},
 	}, ai.StopToolUse)
 	streamFn, _ := mockStreamFn(assistant, createAssistantMessage(ai.ContentList{ai.TextContent{Text: "ok"}}, ai.StopStop))
-	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}
+	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: defaultConvertToLlm}
 	stream := AgentLoop(nil, []ai.Message{createUserMessage("run")}, AgentContext{Tools: []AgentTool{seqTool}}, config, streamFn)
 	drainAgentStream(t, stream)
 	if maxConcurrent != 1 {
@@ -368,7 +357,7 @@ func TestAgentLoopTerminateBatch(t *testing.T) {
 		ai.ToolCall{ID: "a", Name: "stop", Arguments: json.RawMessage(`{}`)},
 	}, ai.StopToolUse)
 	streamFn, calls := mockStreamFn(assistant)
-	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}
+	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: defaultConvertToLlm}
 	stream := AgentLoop(nil, []ai.Message{createUserMessage("run")}, AgentContext{Tools: []AgentTool{terminating}}, config, streamFn)
 	events, _ := drainAgentStream(t, stream)
 	if *calls != 1 {
@@ -402,7 +391,7 @@ func TestAgentLoopSteeringAndFollowUp(t *testing.T) {
 		nil,
 	}
 	config := &AgentLoopConfig{
-		Model: createModel(), ConvertToLlm: identityConverter,
+		Model: createModel(), ConvertToLlm: defaultConvertToLlm,
 		GetSteeringMessages: func(ctx context.Context) ([]ai.Message, error) {
 			if len(steerings) == 0 {
 				return nil, nil
@@ -452,7 +441,7 @@ func TestAgentLoopErrorTerminates(t *testing.T) {
 	msgText := "provider down"
 	errored.ErrorMessage = &msgText
 	streamFn, calls := mockStreamFn(errored)
-	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}
+	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: defaultConvertToLlm}
 	stream := AgentLoop(nil, []ai.Message{createUserMessage("run")}, AgentContext{}, config, streamFn)
 	events, messages := drainAgentStream(t, stream)
 	if *calls != 1 || len(messages) != 2 {
@@ -473,7 +462,7 @@ func TestAgentLoopErrorTerminates(t *testing.T) {
 }
 
 func TestAgentLoopContinueValidation(t *testing.T) {
-	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}
+	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: defaultConvertToLlm}
 	streamFn, _ := mockStreamFn()
 
 	// Empty context panics.
@@ -503,7 +492,7 @@ func TestAgentLoopContinueRunsFromContext(t *testing.T) {
 	// Retry semantics: context already has the user message; the loop
 	// continues without a prompt and without re-emitting it as a prompt run.
 	streamFn, calls := mockStreamFn(createAssistantMessage(ai.ContentList{ai.TextContent{Text: "retry"}}, ai.StopStop))
-	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}
+	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: defaultConvertToLlm}
 	stream := AgentLoopContinue(nil, AgentContext{Messages: []ai.Message{createUserMessage("run")}}, config, streamFn)
 	events, messages := drainAgentStream(t, stream)
 	if *calls != 1 || len(messages) != 1 {
@@ -539,7 +528,7 @@ func TestRunAgentLoopFailsWhenTheStreamEndsWithoutATerminalEvent(t *testing.T) {
 		stream.End(nil)
 		return stream
 	}
-	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}
+	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: defaultConvertToLlm}
 
 	type outcome struct {
 		messages []ai.Message

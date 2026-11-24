@@ -34,7 +34,7 @@ func TestPrepareRequestRunsBeforeEveryProviderCall(t *testing.T) {
 	preparedModel.ID = "prepared"
 	prepareCalls := 0
 	config := &AgentLoopConfig{
-		Model: createModel(), Reasoning: ai.ThinkLow, ConvertToLlm: identityConverter,
+		Model: createModel(), Reasoning: ai.ThinkLow, ConvertToLlm: defaultConvertToLlm,
 		PrepareRequest: func(_ context.Context, request *PrepareRequestContext) (*AgentRequestUpdate, error) {
 			prepareCalls++
 			if prepareCalls == 1 {

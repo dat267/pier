@@ -70,7 +70,7 @@ func TestParallelToolEndsDoNotOverlapInTheSink(t *testing.T) {
 		context.Background(),
 		[]ai.Message{createUserMessage("run")},
 		AgentContext{Tools: []AgentTool{tool("a"), tool("b"), tool("c")}},
-		&AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter},
+		&AgentLoopConfig{Model: createModel(), ConvertToLlm: defaultConvertToLlm},
 		emit,
 		streamFn,
 	)

@@ -406,7 +406,7 @@ func TestAssistantMessageRecordsRequestedThinkingLevel(t *testing.T) {
 			AgentContext{},
 			&AgentLoopConfig{
 				Model:        createModel(),
-				ConvertToLlm: identityConverter,
+				ConvertToLlm: defaultConvertToLlm,
 				Reasoning:    level,
 			},
 			func(AgentEvent) error { return nil },

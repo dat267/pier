@@ -35,7 +35,7 @@ func TestPrepareRequestRequestScopedModel(t *testing.T) {
 	selection.ID = "virtual"
 	var seenModels []string
 	config := &AgentLoopConfig{
-		Model: selection, Reasoning: ai.ThinkLow, ConvertToLlm: identityConverter,
+		Model: selection, Reasoning: ai.ThinkLow, ConvertToLlm: defaultConvertToLlm,
 		PrepareRequest: func(_ context.Context, request *PrepareRequestContext) (*AgentRequestUpdate, error) {
 			seenModels = append(seenModels, request.Model.ID)
 			return &AgentRequestUpdate{

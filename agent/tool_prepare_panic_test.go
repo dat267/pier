@@ -32,7 +32,7 @@ func TestPrepareArgumentsPanicBecomesToolError(t *testing.T) {
 	}
 	var toolResult *ai.ToolResultMessage
 	var reachedAgentEnd bool
-	messages := RunAgentLoop(context.Background(), []ai.Message{createUserMessage("hi")}, AgentContext{Tools: []AgentTool{tool}}, &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}, func(event AgentEvent) error {
+	messages := RunAgentLoop(context.Background(), []ai.Message{createUserMessage("hi")}, AgentContext{Tools: []AgentTool{tool}}, &AgentLoopConfig{Model: createModel(), ConvertToLlm: defaultConvertToLlm}, func(event AgentEvent) error {
 		if result, ok := event.Message.(*ai.ToolResultMessage); ok && event.Type == MessageEnd {
 			toolResult = result
 		}
@@ -76,7 +76,7 @@ func TestExecutePanicBecomesToolError(t *testing.T) {
 		},
 	}
 	var toolResult *ai.ToolResultMessage
-	messages := RunAgentLoop(context.Background(), []ai.Message{createUserMessage("hi")}, AgentContext{Tools: []AgentTool{tool}}, &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}, func(event AgentEvent) error {
+	messages := RunAgentLoop(context.Background(), []ai.Message{createUserMessage("hi")}, AgentContext{Tools: []AgentTool{tool}}, &AgentLoopConfig{Model: createModel(), ConvertToLlm: defaultConvertToLlm}, func(event AgentEvent) error {
 		if result, ok := event.Message.(*ai.ToolResultMessage); ok && event.Type == MessageEnd {
 			toolResult = result
 		}
@@ -110,7 +110,7 @@ func TestAfterToolCallPanicBecomesToolError(t *testing.T) {
 		},
 	}
 	config := &AgentLoopConfig{
-		Model: createModel(), ConvertToLlm: identityConverter,
+		Model: createModel(), ConvertToLlm: defaultConvertToLlm,
 		AfterToolCall: func(context.Context, *AfterToolCallContext) (*AfterToolCallResult, error) {
 			panic("after exploded")
 		},
@@ -148,7 +148,7 @@ func TestParallelWorkerPanicReachesTheCaller(t *testing.T) {
 			return AgentToolResult{}, nil
 		},
 	}
-	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}
+	config := &AgentLoopConfig{Model: createModel(), ConvertToLlm: defaultConvertToLlm}
 
 	var recovered any
 	func() {
@@ -246,7 +246,7 @@ func TestPrepareArgumentsNonErrorPanicRendersLikeJavaScript(t *testing.T) {
 				},
 			}
 			var toolResult *ai.ToolResultMessage
-			RunAgentLoop(context.Background(), []ai.Message{createUserMessage("hi")}, AgentContext{Tools: []AgentTool{tool}}, &AgentLoopConfig{Model: createModel(), ConvertToLlm: identityConverter}, func(event AgentEvent) error {
+			RunAgentLoop(context.Background(), []ai.Message{createUserMessage("hi")}, AgentContext{Tools: []AgentTool{tool}}, &AgentLoopConfig{Model: createModel(), ConvertToLlm: defaultConvertToLlm}, func(event AgentEvent) error {
 				if result, ok := event.Message.(*ai.ToolResultMessage); ok && event.Type == MessageEnd {
 					toolResult = result
 				}
