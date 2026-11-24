@@ -10,6 +10,56 @@ import (
 
 // TestExtensionProvidersRegistered covers the two user provider extensions:
 // the providers register with their static catalogs and env API-key auth.
+// commandCodeExcludedIDs are the ids the extension never surfaces
+// (UNAVAILABLE_IDS + DOMINATED_IDS).
+var commandCodeExcludedIDs = map[string]bool{
+	"claude-sonnet-5":                     true,
+	"claude-sonnet-4-6":                   true,
+	"claude-fable-5-1":                    true,
+	"claude-fable-5":                      true,
+	"claude-opus-5":                       true,
+	"claude-opus-4-8":                     true,
+	"claude-opus-4-7":                     true,
+	"claude-haiku-4-5-20251001":           true,
+	"gpt-5.6-terra":                       true,
+	"gpt-5.5":                             true,
+	"gpt-5.4":                             true,
+	"gpt-5.3-codex":                       true,
+	"gpt-5.4-mini":                        true,
+	"google/gemini-3.6-flash":             true,
+	"google/gemini-3.5-flash":             true,
+	"google/gemini-3.5-flash-lite":        true,
+	"google/gemini-3.1-flash-lite":        true,
+	"sakana/fugu-ultra":                   true,
+	"meta/muse-spark-1.1":                 true,
+	"thinkingmachines/tinker-70b":         true,
+	"zai-org/GLM-5.2-Fast":                true,
+	"MiniMaxAI/MiniMax-M2.7":              true,
+	"zai-org/GLM-5":                       true,
+	"zai-org/GLM-5.1":                     true,
+	"zai-org/GLM-5.2":                     true,
+	"gpt-5.6-sol":                         true,
+	"moonshotai/Kimi-K2.5":                true,
+	"moonshotai/Kimi-K2.7-Code":           true,
+	"moonshotai/Kimi-K2.7-Code-Highspeed": true,
+	"xiaomi/mimo-v2.5":                    true,
+	"thinkingmachines/inkling":            true,
+	"thinkingmachines/inkling-small":      true,
+	"xai/grok-4.5":                        true,
+	"MiniMaxAI/MiniMax-M2.5":              true,
+	"stepfun/Step-3.5-Flash":              true,
+	"meta/muse-spark-1.2":                 true,
+	"meta/muse-spark-1.2-contributor":     true,
+	"Qwen/Qwen3.6-Max-Preview":            true,
+	"Qwen/Qwen3.6-Plus":                   true,
+	"Qwen/Qwen3.7-Max":                    true,
+	"Qwen/Qwen3.7-Plus":                   true,
+	"Qwen/Qwen3.7-Flash":                  true,
+	"Qwen/Qwen3.8-Max-0902":               true,
+	"moonshotai/Kimi-K2.6":                true,
+	"tencent/hy3-paid":                    true,
+}
+
 func TestExtensionProvidersRegistered(t *testing.T) {
 	providers := ExtensionProviders()
 	if len(providers) != len(ExtensionProviderIDs) {
