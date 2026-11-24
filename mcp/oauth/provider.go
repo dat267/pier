@@ -224,9 +224,9 @@ func NewMcpOAuthProvider(options McpOAuthProviderOptions) *McpOAuthProvider {
 		metadata.ResponseTypes = []string{"code"}
 	}
 	if metadata.TokenEndpointAuthMethod == nil {
-		method := "none"
+		method := ClientAuthNone
 		if options.ClientSecret != "" {
-			method = "client_secret_post"
+			method = ClientAuthSecretPost
 		}
 		metadata.TokenEndpointAuthMethod = &method
 	}
