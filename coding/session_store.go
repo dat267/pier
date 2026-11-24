@@ -1332,9 +1332,7 @@ func buildSessionPath(entries []SessionEntry, leafID *string, byID map[string]*S
 		}
 	}
 	// reverse
-	for i, j := 0, len(path)-1; i < j; i, j = i+1, j-1 {
-		path[i], path[j] = path[j], path[i]
-	}
+	slices.Reverse(path)
 	return path
 }
 

@@ -88,9 +88,7 @@ func CollectEntriesForBranchSummary(session *SessionManager, oldLeafID, targetID
 		current = *entry.ParentID
 	}
 	// Reverse to chronological order.
-	for left, right := 0, len(entries)-1; left < right; left, right = left+1, right-1 {
-		entries[left], entries[right] = entries[right], entries[left]
-	}
+	slices.Reverse(entries)
 	return CollectEntriesResult{Entries: entries, CommonAncestorID: commonAncestorID, HasAncestor: hasAncestor}
 }
 
@@ -254,9 +252,7 @@ func prepareBranchEntriesWith(entries []SessionEntry, tokenBudget int, payloads 
 		messages = append(messages, message)
 		totalTokens += tokens
 	}
-	for left, right := 0, len(messages)-1; left < right; left, right = left+1, right-1 {
-		messages[left], messages[right] = messages[right], messages[left]
-	}
+	slices.Reverse(messages)
 	return BranchPreparation{Messages: messages, FileOps: fileOps, TotalTokens: totalTokens}
 }
 

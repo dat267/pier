@@ -1144,9 +1144,7 @@ func (m *SessionManager) branchPointersLocked(fromID string) []*SessionEntry {
 			current = nil
 		}
 	}
-	for i, j := 0, len(path)-1; i < j; i, j = i+1, j-1 {
-		path[i], path[j] = path[j], path[i]
-	}
+	slices.Reverse(path)
 	if fromID == "" {
 		// Drop the spare capacity so a caller's append cannot write into the
 		// shared cache's backing array.
