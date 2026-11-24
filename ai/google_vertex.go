@@ -412,28 +412,7 @@ func refreshAuthorizedUserToken(ctx ctxpkg.Context, cacheKey string, credentials
 	if err != nil {
 		return "", err
 	}
-	var payload struct {
-		AccessToken string `json:"access_token"`
-		ExpiresIn   int64  `json:"expires_in"`
-	}
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return "", err
-	}
-	if payload.AccessToken == "" {
-		return "", errors.New("Google credential refresh returned no access token")
-	}
-	expiresIn := payload.ExpiresIn
-	if expiresIn <= 0 {
-		expiresIn = 3600
-	}
-	// Refresh a minute early to avoid using an expired token.
-	expires := vertexTokenExpiry(expiresIn)
-	vertexTokenCache.mu.Lock()
-	vertexTokenCache.entries[cacheKey] = cachedVertexToken{
-		token: payload.AccessToken, expires: expires, fingerprint: fingerprintText,
-	}
-	vertexTokenCache.mu.Unlock()
-	return payload.AccessToken, nil
+	return cacheVertexToken(raw, cacheKey, fingerprintText, "Google credential refresh returned no access token")
 }
 
 func vertexTokenExpiry(expiresIn int64) time.Time {
@@ -474,27 +453,36 @@ func metadataAccessToken(ctx ctxpkg.Context, env ProviderEnv) (string, error) {
 	if resp.StatusCode >= 400 {
 		return "", fmt.Errorf("no Google Cloud credentials found: metadata server returned %d", resp.StatusCode)
 	}
-	var payload struct {
-		AccessToken string `json:"access_token"`
-		ExpiresIn   int64  `json:"expires_in"`
-	}
 	raw, err := boundedio.ReadAll(resp.Body, vertexTokenBodyLimit)
 	if err != nil {
 		return "", err
+	}
+	return cacheVertexToken(raw, cacheKey, "", "no Google Cloud credentials found")
+}
+
+// cacheVertexToken decodes an OAuth token response, caches the access token
+// under cacheKey until shortly before it expires (an absent or non-positive
+// expires_in counts as an hour), and returns it. A response without a token
+// fails with missingTokenMessage.
+func cacheVertexToken(raw []byte, cacheKey, fingerprint, missingTokenMessage string) (string, error) {
+	var payload struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int64  `json:"expires_in"`
 	}
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return "", err
 	}
 	if payload.AccessToken == "" {
-		return "", errors.New("no Google Cloud credentials found")
+		return "", errors.New(missingTokenMessage)
 	}
 	expiresIn := payload.ExpiresIn
 	if expiresIn <= 0 {
 		expiresIn = 3600
 	}
-	expires := vertexTokenExpiry(expiresIn)
 	vertexTokenCache.mu.Lock()
-	vertexTokenCache.entries[cacheKey] = cachedVertexToken{token: payload.AccessToken, expires: expires}
+	vertexTokenCache.entries[cacheKey] = cachedVertexToken{
+		token: payload.AccessToken, expires: vertexTokenExpiry(expiresIn), fingerprint: fingerprint,
+	}
 	vertexTokenCache.mu.Unlock()
 	return payload.AccessToken, nil
 }
