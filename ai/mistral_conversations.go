@@ -358,7 +358,7 @@ func requestMistralStream(ctx ctxpkg.Context, model *Model, body []byte, options
 		}
 		applyMistralHeaderOverrides(req, options.Headers)
 
-		hasExplicitAffinity := hasMistralStringHeaderOverride(model.Headers, "x-affinity") ||
+		hasExplicitAffinity := hasMistralHeaderOverride(model.Headers, "x-affinity") ||
 			hasMistralHeaderOverride(options.Headers, "x-affinity")
 		if shouldUseMistralPromptCaching(options) && !hasExplicitAffinity {
 			req.Header.Set("x-affinity", options.SessionID)
@@ -402,17 +402,11 @@ func applyMistralHeaderOverrides(req *http.Request, overrides ProviderHeaders) {
 	applyProviderHeaders(req.Header, overrides)
 }
 
-func hasMistralHeaderOverride(overrides ProviderHeaders, target string) bool {
-	for name := range overrides {
-		if strings.EqualFold(name, target) {
-			return true
-		}
-	}
-	return false
-}
-
-func hasMistralStringHeaderOverride(overrides map[string]string, target string) bool {
-	for name := range overrides {
+// hasMistralHeaderOverride reports whether headers names target, in any case.
+// It serves both the model's string headers and the request's header
+// overrides.
+func hasMistralHeaderOverride[M ~map[string]V, V any](headers M, target string) bool {
+	for name := range headers {
 		if strings.EqualFold(name, target) {
 			return true
 		}
