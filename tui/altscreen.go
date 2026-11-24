@@ -2462,7 +2462,7 @@ func (s *AltScreen) doRender() {
 	}
 	builder.WriteString(evictedImageDeletion)
 
-	clearRowsBeforeKittyImages := redrawImages && s.imageProtocol == "kitty" && containsImageLine(screen)
+	clearRowsBeforeKittyImages := redrawImages && s.imageProtocol == "kitty" && slices.ContainsFunc(screen, IsImageLine)
 	if clearRowsBeforeKittyImages {
 		for row := range height {
 			previous := ""
@@ -2543,10 +2543,6 @@ func (s *AltScreen) doRender() {
 	s.previousScreenWidth = width
 	s.previousScreenHeight = height
 	s.currentLayout = &nextLayout
-}
-
-func containsImageLine(lines []string) bool {
-	return slices.ContainsFunc(lines, IsImageLine)
 }
 
 var (
