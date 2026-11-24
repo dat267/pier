@@ -323,7 +323,7 @@ func (s *piSchema) parse(v *schemaValue) {
 	}
 	s.minItems = svInt(v, "minItems")
 	s.maxItems = svInt(v, "maxItems")
-	s.uniqueItems = svBool(v, "uniqueItems") != nil && *svBool(v, "uniqueItems")
+	s.uniqueItems = svBool(v, "uniqueItems")
 	if contains := svProp(v, "contains"); contains != nil {
 		s.contains = s.doc.node(s.pointer + "/contains")
 	}
@@ -1376,13 +1376,10 @@ func svString(v *schemaValue, key string) string {
 	return ""
 }
 
-func svBool(v *schemaValue, key string) *bool {
+// svBool reports whether key holds the boolean true.
+func svBool(v *schemaValue, key string) bool {
 	got := svProp(v, key)
-	if got != nil && got.IsBool {
-		value := got.Bool
-		return &value
-	}
-	return nil
+	return got != nil && got.IsBool && got.Bool
 }
 
 func svInt(v *schemaValue, key string) *int {
