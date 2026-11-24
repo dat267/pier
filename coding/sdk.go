@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -154,13 +155,9 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 	// Restore the model and thinking level from an existing session.
 	existingSession := sessionManager.Projection()
 	hasExistingSession := len(existingSession.Messages) > 0
-	hasThinkingEntry := false
-	for _, entry := range sessionManager.GetBranch("") {
-		if entry.Type == "thinking_level_change" {
-			hasThinkingEntry = true
-			break
-		}
-	}
+	hasThinkingEntry := slices.ContainsFunc(sessionManager.GetBranch(""), func(entry SessionEntry) bool {
+		return entry.Type == "thinking_level_change"
+	})
 
 	model := options.Model
 	var modelFallbackMessage string

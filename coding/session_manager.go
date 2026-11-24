@@ -1019,14 +1019,7 @@ func (m *SessionManager) AppendContextEdit(targetID string, replacement json.Raw
 	if !ok {
 		return "", fmt.Errorf("Entry %s not found", targetID)
 	}
-	onBranch := false
-	for _, entry := range m.branchPointersLocked("") {
-		if entry.ID == targetID {
-			onBranch = true
-			break
-		}
-	}
-	if !onBranch {
+	if !slices.ContainsFunc(m.branchPointersLocked(""), func(entry *SessionEntry) bool { return entry.ID == targetID }) {
 		return "", fmt.Errorf("Entry %s is not on the active branch", targetID)
 	}
 	role := ""
