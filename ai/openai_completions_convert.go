@@ -230,34 +230,32 @@ func ConvertOpenAICompletionsMessages(
 				assistantMsg.Content = mustMarshalJSON(assistantText.String())
 			}
 
-			if len(toolCalls) > 0 {
-				for _, tc := range toolCalls {
-					var customInputProperty string
-					var isCustomTool bool
-					if options != nil {
-						customInputProperty, isCustomTool = options.GrammarToolInputProperties[tc.Name]
-					}
-					if isCustomTool {
-						input, err := GetGrammarToolInput(tc.Name, tc.Arguments, customInputProperty)
-						if err != nil {
-							panic(err)
-						}
-						assistantMsg.ToolCalls = append(assistantMsg.ToolCalls, OpenAIToolCall{
-							ID:     tc.ID,
-							Type:   "custom",
-							Custom: &OpenAICustom{Name: tc.Name, Input: input},
-						})
-						continue
+			for _, tc := range toolCalls {
+				var customInputProperty string
+				var isCustomTool bool
+				if options != nil {
+					customInputProperty, isCustomTool = options.GrammarToolInputProperties[tc.Name]
+				}
+				if isCustomTool {
+					input, err := GetGrammarToolInput(tc.Name, tc.Arguments, customInputProperty)
+					if err != nil {
+						panic(err)
 					}
 					assistantMsg.ToolCalls = append(assistantMsg.ToolCalls, OpenAIToolCall{
-						ID:   tc.ID,
-						Type: "function",
-						Function: &OpenAIFunction{
-							Name:      tc.Name,
-							Arguments: string(mustMarshalJSON(tc.Arguments)),
-						},
+						ID:     tc.ID,
+						Type:   "custom",
+						Custom: &OpenAICustom{Name: tc.Name, Input: input},
 					})
+					continue
 				}
+				assistantMsg.ToolCalls = append(assistantMsg.ToolCalls, OpenAIToolCall{
+					ID:   tc.ID,
+					Type: "function",
+					Function: &OpenAIFunction{
+						Name:      tc.Name,
+						Arguments: string(mustMarshalJSON(tc.Arguments)),
+					},
+				})
 			}
 			if preservedReasoningDetails != nil {
 				assistantMsg.ReasoningDetails = preservedReasoningDetails

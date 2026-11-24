@@ -1081,10 +1081,8 @@ func buildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 	if model.Compat != nil && model.Compat.AnthropicMessages != nil {
 		allowedFallbackModels = model.Compat.AnthropicMessages.AllowedFallbackModels
 	}
-	if len(allowedFallbackModels) > 0 {
-		for _, fallback := range allowedFallbackModels {
-			params.Fallbacks = append(params.Fallbacks, AnthropicFallbackModel{Model: fallback.Model})
-		}
+	for _, fallback := range allowedFallbackModels {
+		params.Fallbacks = append(params.Fallbacks, AnthropicFallbackModel{Model: fallback.Model})
 	}
 
 	return params, nil

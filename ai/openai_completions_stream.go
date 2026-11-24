@@ -606,14 +606,12 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 				stream.Push(AssistantMessageEvent{Type: EventThinkingDelta, ContentIndex: index, Delta: reasoningDelta, Partial: output})
 			}
 
-			if len(delta.ReasoningDetails) > 0 {
-				for _, detail := range delta.ReasoningDetails {
-					if !isOpenAIReasoningDetail(detail) {
-						continue
-					}
-					ensureThinkingBlock("")
-					streamedReasoningDetails = appendOpenAIReasoningDetail(streamedReasoningDetails, detail)
+			for _, detail := range delta.ReasoningDetails {
+				if !isOpenAIReasoningDetail(detail) {
+					continue
 				}
+				ensureThinkingBlock("")
+				streamedReasoningDetails = appendOpenAIReasoningDetail(streamedReasoningDetails, detail)
 			}
 
 			if delta.Content != nil && len(*delta.Content) > 0 {
