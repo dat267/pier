@@ -4,8 +4,24 @@ import (
 	"encoding/json"
 	"math/rand"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
+)
+
+// ansiStripPattern is the upstream pattern, kept as the reference: the
+// scanner must produce byte-identical output (TestStripAnsiMatchesPattern).
+var ansiStripPattern = regexp.MustCompile(
+	// OSC: ESC ] ... ST (non-greedy up to the first ST)
+	"(?:\\x1b\\][\\s\\S]*?(?:\\x07|\\x1b\\\\|\\x9c))" +
+		"|" +
+		// CSI and related: ESC/C1, optional intermediates, optional params
+		// (supports ; and :) then a final byte. A private prefix (<, =, >) is
+		// accepted only right after a real CSI introducer (ESC [ or 0x9B), so
+		// ESC[<35;59;1M (SGR mouse report) is stripped whole. After a bare ESC
+		// these bytes stay final bytes: ESC = and ESC > (keypad modes) must not
+		// swallow the digits of the text that follows.
+		"(?:(?:\\x1b\\[|\\x{9b})[<=>]|[\\x1b\\x{9b}][\\[\\]()#;?]*)(?:\\d{1,4}(?:[;:]\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]",
 )
 
 func referenceStripAnsi(value string) string {

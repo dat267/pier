@@ -14,25 +14,12 @@ import (
 // invalid and decodes to U+FFFD; the pattern therefore matches the code point
 // U+009B (and ESC). Real terminals emit ESC, so this only affects streams that
 // use the 8-bit C1 form.
-//
-// ansiStripPattern is the upstream pattern, kept as the reference: the scanner
-// below must produce byte-identical output (TestStripAnsiMatchesPattern).
+
+// incompleteCSIPrefixPattern matches a trailing escape sequence that may still
+// be continued by the next output chunk.
 var incompleteCSIPrefixPattern = regexp.MustCompile(`^(?:(?:\x1b\[|\x{9b})[<=>]|(?:\x1b|\x{9b})[\[\]()#;?]*)(?:\d{1,4}(?:[;:]\d{0,4})*)?$`)
 
 const maxPendingAnsiBytes = 256
-
-var ansiStripPattern = regexp.MustCompile(
-	// OSC: ESC ] ... ST (non-greedy up to the first ST)
-	"(?:\\x1b\\][\\s\\S]*?(?:\\x07|\\x1b\\\\|\\x9c))" +
-		"|" +
-		// CSI and related: ESC/C1, optional intermediates, optional params
-		// (supports ; and :) then a final byte. A private prefix (<, =, >) is
-		// accepted only right after a real CSI introducer (ESC [ or 0x9B), so
-		// ESC[<35;59;1M (SGR mouse report) is stripped whole. After a bare ESC
-		// these bytes stay final bytes: ESC = and ESC > (keypad modes) must not
-		// swallow the digits of the text that follows.
-		"(?:(?:\\x1b\\[|\\x{9b})[<=>]|[\\x1b\\x{9b}][\\[\\]()#;?]*)(?:\\d{1,4}(?:[;:]\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]",
-)
 
 // splitIncompleteAnsiSuffix separates text safe to strip now from a trailing
 // incomplete ANSI sequence that may continue in the next output chunk.
@@ -106,7 +93,8 @@ func StripAnsi(value string) string {
 	return stripAnsiFast(value)
 }
 
-// stripAnsiFast removes every leftmost match of ansiStripPattern in one pass.
+// stripAnsiFast removes, in one pass, every leftmost match of upstream's
+// strip pattern (ansiStripPattern in the tests).
 func stripAnsiFast(value string) string {
 	var builder strings.Builder
 	builder.Grow(len(value))
