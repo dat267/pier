@@ -49,7 +49,7 @@ func TestEmphasisFlanking(t *testing.T) {
 					}
 					return out + ")"
 				}
-				return "?" + itoaInline(in.Kind) + "?"
+				return "?" + string(rune('0'+in.Kind)) + "?"
 			}
 			for _, block := range blocks {
 				for _, in := range block.Inlines {
@@ -61,10 +61,6 @@ func TestEmphasisFlanking(t *testing.T) {
 			}
 		})
 	}
-}
-
-func itoaInline(kind InlineKind) string {
-	return string(rune('0' + kind))
 }
 
 // Upstream's StrictStrikethroughTokenizer (marked.ts):

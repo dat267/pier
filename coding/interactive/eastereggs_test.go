@@ -37,11 +37,6 @@ type easterCorpus struct {
 	Setup map[string]setupSpec `json:"setup"`
 }
 
-func loadEasterGolden(t *testing.T) map[string]string {
-	t.Helper()
-	return loadGoldenFile(t, "testdata/easter_golden.txt")
-}
-
 // loadGoldenFile reads a "label => json" golden file.
 func loadGoldenFile(t *testing.T, path string) map[string]string {
 	t.Helper()
@@ -58,7 +53,7 @@ func TestEasterComponentsAgainstUpstreamGolden(t *testing.T) {
 	SetStyleColorsEnabled(true)
 	InitTheme("dark", false)
 
-	golden := loadEasterGolden(t)
+	golden := loadGoldenFile(t, "testdata/easter_golden.txt")
 	data, err := os.ReadFile("testdata/easter_corpus.json")
 	if err != nil {
 		t.Fatalf("read corpus: %v", err)
