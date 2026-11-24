@@ -1,6 +1,9 @@
 package tui
 
-import "sort"
+import (
+	"sort"
+	"strings"
+)
 
 // cjkBreakRanges are the code points matched by upstream's cjkBreakRegex,
 // which is `[\p{Script_Extensions=Han}\p{Script_Extensions=Hiragana}
@@ -87,10 +90,5 @@ func isCJKBreakRune(r rune) bool {
 // containsCJKBreak reports whether any code point in the string may break a
 // line (upstream cjkBreakRegex.test).
 func containsCJKBreak(value string) bool {
-	for _, r := range value {
-		if isCJKBreakRune(r) {
-			return true
-		}
-	}
-	return false
+	return strings.ContainsFunc(value, isCJKBreakRune)
 }

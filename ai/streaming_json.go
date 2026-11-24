@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"bytes"
 	"cmp"
 	"encoding/json"
 	"math"
@@ -747,19 +748,10 @@ func pendingScalarValue(token []byte) (string, bool) {
 	if end > 0 && (token[end-1] == '+' || token[end-1] == '-') {
 		end--
 	}
-	if end > 0 && (token[end-1] == 'e' || token[end-1] == 'E') && isJSONNumberToken(token[:end-1]) && !hasExponent(token[:end-1]) {
+	if end > 0 && (token[end-1] == 'e' || token[end-1] == 'E') && isJSONNumberToken(token[:end-1]) && !bytes.ContainsAny(token[:end-1], "eE") {
 		return encodeJSNumberToken(token[:end-1]), true
 	}
 	return "", false
-}
-
-func hasExponent(token []byte) bool {
-	for _, c := range token {
-		if c == 'e' || c == 'E' {
-			return true
-		}
-	}
-	return false
 }
 
 // isJSONNumberToken matches -?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?.

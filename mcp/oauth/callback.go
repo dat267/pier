@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -119,19 +120,10 @@ func ListenCallbackServer(ctx context.Context, options OAuthCallbackServerOption
 }
 
 func bracketHost(host string) string {
-	if host != "" && host[0] != '[' && host[len(host)-1] != ']' && hasColon(host) {
+	if host != "" && host[0] != '[' && host[len(host)-1] != ']' && strings.Contains(host, ":") {
 		return "[" + host + "]"
 	}
 	return host
-}
-
-func hasColon(host string) bool {
-	for _, r := range host {
-		if r == ':' {
-			return true
-		}
-	}
-	return false
 }
 
 // WaitForCallback waits for the redirect carrying this state (upstream
