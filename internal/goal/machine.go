@@ -532,41 +532,17 @@ func (m *GoalMachine) agentBeforeSettle(outcome string, hasPendingMessages bool,
 		return DispatchResult{Effects: []Effect{}, Continue: false}
 	}
 	if outcome == "aborted" {
-		m.armed = false
-		next := m.pausedSnapshot(&BlockedReason{Code: "cancelled", Message: "Goal round was cancelled."}, now)
-		effects, err := m.commit(OpPause, &next, nil)
-		if err != nil {
-			return DispatchResult{Effects: []Effect{}, Continue: false}
-		}
-		effects = append(effects, m.pausedMessage()...)
-		effects = append(effects, m.pauseNotice(next.BlockedReason)...)
-		return DispatchResult{Effects: effects, Continue: false}
+		return m.settlePause(&BlockedReason{Code: "cancelled", Message: "Goal round was cancelled."}, now)
 	}
 	if hasPendingMessages {
 		return DispatchResult{Effects: []Effect{}, Continue: false}
 	}
 	// "error" is a final failure the session will not retry: durably pause.
 	if outcome == "error" {
-		m.armed = false
-		next := m.pausedSnapshot(&BlockedReason{Code: "run-error", Message: "Agent run ended with an error."}, now)
-		effects, err := m.commit(OpPause, &next, nil)
-		if err != nil {
-			return DispatchResult{Effects: []Effect{}, Continue: false}
-		}
-		effects = append(effects, m.pausedMessage()...)
-		effects = append(effects, m.pauseNotice(next.BlockedReason)...)
-		return DispatchResult{Effects: effects, Continue: false}
+		return m.settlePause(&BlockedReason{Code: "run-error", Message: "Agent run ended with an error."}, now)
 	}
 	if reason := budgetStopReason(m.view, now); reason != nil {
-		m.armed = false
-		next := m.pausedSnapshot(reason, now)
-		effects, err := m.commit(OpPause, &next, nil)
-		if err != nil {
-			return DispatchResult{Effects: []Effect{}, Continue: false}
-		}
-		effects = append(effects, m.pausedMessage()...)
-		effects = append(effects, m.pauseNotice(reason)...)
-		return DispatchResult{Effects: effects, Continue: false}
+		return m.settlePause(reason, now)
 	}
 	// D242: a retryable failure is not final, so keep the goal armed and let the
 	// session retry the same round. Budget exhaustion above still pauses.
@@ -583,6 +559,20 @@ func (m *GoalMachine) agentBeforeSettle(outcome string, hasPendingMessages bool,
 
 // pausedSnapshot is the current goal moved to paused for reason, one
 // revision later, stamped at now.
+// settlePause disarms the goal and durably pauses it for reason at settle,
+// with the paused message and the pause notice.
+func (m *GoalMachine) settlePause(reason *BlockedReason, now int64) DispatchResult {
+	m.armed = false
+	next := m.pausedSnapshot(reason, now)
+	effects, err := m.commit(OpPause, &next, nil)
+	if err != nil {
+		return DispatchResult{Effects: []Effect{}, Continue: false}
+	}
+	effects = append(effects, m.pausedMessage()...)
+	effects = append(effects, m.pauseNotice(reason)...)
+	return DispatchResult{Effects: effects, Continue: false}
+}
+
 func (m *GoalMachine) pausedSnapshot(reason *BlockedReason, now int64) GoalSnapshot {
 	next := m.view.GoalSnapshot
 	next.Phase = PhasePaused
