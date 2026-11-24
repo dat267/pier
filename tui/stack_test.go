@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -52,31 +53,6 @@ func loadLayoutGolden(t *testing.T) (sizes map[string][]int, renders map[string]
 	return sizes, renders
 }
 
-// equalLines compares line slices treating nil and empty as equivalent.
-func equalLines(got []string, want []string) bool {
-	if len(got) != len(want) {
-		return false
-	}
-	for i := range got {
-		if got[i] != want[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func equalInts(got []int, want []int) bool {
-	if len(got) != len(want) {
-		return false
-	}
-	for i := range got {
-		if got[i] != want[i] {
-			return false
-		}
-	}
-	return true
-}
-
 // TestAllocateStackSizesAgainstUpstreamGolden verifies the flex sizing
 // algorithm against the upstream outputs.
 func TestAllocateStackSizesAgainstUpstreamGolden(t *testing.T) {
@@ -117,7 +93,7 @@ func TestAllocateStackSizesAgainstUpstreamGolden(t *testing.T) {
 			t.Fatalf("missing golden case %q", tc.label)
 		}
 		got := AllocateStackSizes(tc.entries, tc.intrinsic, tc.available, tc.gap)
-		if !equalInts(got, want) {
+		if !slices.Equal(got, want) {
 			t.Fatalf("%s: got %v want %v", tc.label, got, want)
 		}
 	}
@@ -158,7 +134,7 @@ func TestAllocateStackSizesDoesNotOverflowSafeWeights(t *testing.T) {
 	available := 1100
 	got := AllocateStackSizes(entries, []int{0, 0}, &available, 0)
 	want := []int{1099, 1}
-	if !equalInts(got, want) {
+	if !slices.Equal(got, want) {
 		t.Fatalf("weighted allocation = %v, want %v", got, want)
 	}
 }
@@ -179,7 +155,7 @@ func TestAllocateStackSizesDoesNotOverflowSafeShrinkWeights(t *testing.T) {
 	available := 1100
 	got := AllocateStackSizes(entries, []int{1100, 1100}, &available, 0)
 	want := []int{1, 1099}
-	if !equalInts(got, want) {
+	if !slices.Equal(got, want) {
 		t.Fatalf("weighted shrink allocation = %v, want %v", got, want)
 	}
 }
@@ -257,7 +233,7 @@ func TestStacksAgainstUpstreamGolden(t *testing.T) {
 			t.Fatalf("missing golden case %q", tc.label)
 		}
 		got := tc.render()
-		if !equalLines(got, want) {
+		if !slices.Equal(got, want) {
 			t.Fatalf("%s: got %q want %q", tc.label, got, want)
 		}
 	}
@@ -287,7 +263,7 @@ func TestTextAgainstUpstreamGolden(t *testing.T) {
 			t.Fatalf("missing golden case %q", tc.label)
 		}
 		got := tc.text.Render(tc.width)
-		if !equalLines(got, want) {
+		if !slices.Equal(got, want) {
 			t.Fatalf("%s: got %q want %q", tc.label, got, want)
 		}
 	}
@@ -379,11 +355,11 @@ func TestStackRemoveChildReleasesEntryReference(t *testing.T) {
 // TestSpacer verifies the spacer component.
 func TestSpacer(t *testing.T) {
 	spacer := NewSpacer(3)
-	if got := spacer.Render(10); !equalLines(got, []string{"", "", ""}) {
+	if got := spacer.Render(10); !slices.Equal(got, []string{"", "", ""}) {
 		t.Fatalf("render = %q", got)
 	}
 	spacer.SetLines(1)
-	if got := spacer.Render(10); !equalLines(got, []string{""}) {
+	if got := spacer.Render(10); !slices.Equal(got, []string{""}) {
 		t.Fatalf("render = %q", got)
 	}
 }

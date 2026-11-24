@@ -2,6 +2,7 @@ package tui
 
 import (
 	"encoding/json"
+	"slices"
 	"testing"
 )
 
@@ -13,22 +14,10 @@ func scrollLineCounts(accelerator *WheelScrollAccelerator, times []float64, dire
 	return out
 }
 
-func wheelLinesEqual(a, b []int) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
 // Port of packages/tui/test/wheel-scroll.test.ts (upstream f1927c2d5).
 func TestWheelScrollAcceleratorFixedLines(t *testing.T) {
 	accelerator := newWheelScrollAccelerator(FixedWheelScrollLines(3), true)
-	if got := scrollLineCounts(accelerator, []float64{0, 10, 20, 1000}, 1); !wheelLinesEqual(got, []int{3, 3, 3, 3}) {
+	if got := scrollLineCounts(accelerator, []float64{0, 10, 20, 1000}, 1); !slices.Equal(got, []int{3, 3, 3, 3}) {
 		t.Fatalf("fixed lines = %v", got)
 	}
 	accelerator.SetLines(FixedWheelScrollLines(0))
@@ -39,50 +28,50 @@ func TestWheelScrollAcceleratorFixedLines(t *testing.T) {
 
 func TestWheelScrollAcceleratorAutoOnAcceleratingTerminal(t *testing.T) {
 	accelerator := newWheelScrollAccelerator(AutoWheelScrollLines(), false)
-	if got := scrollLineCounts(accelerator, []float64{0, 10, 20, 30}, 1); !wheelLinesEqual(got, []int{1, 1, 1, 1}) {
+	if got := scrollLineCounts(accelerator, []float64{0, 10, 20, 30}, 1); !slices.Equal(got, []int{1, 1, 1, 1}) {
 		t.Fatalf("non-accelerating terminal = %v", got)
 	}
 }
 
 func TestWheelScrollAcceleratorScalesWithVelocity(t *testing.T) {
 	accelerator := newWheelScrollAccelerator(AutoWheelScrollLines(), true)
-	if got := scrollLineCounts(accelerator, []float64{0, 150, 300, 450}, 1); !wheelLinesEqual(got, []int{1, 1, 1, 1}) {
+	if got := scrollLineCounts(accelerator, []float64{0, 150, 300, 450}, 1); !slices.Equal(got, []int{1, 1, 1, 1}) {
 		t.Fatalf("100ms+ gaps = %v", got)
 	}
-	if got := scrollLineCounts(accelerator, []float64{1000, 1050, 1100, 1150}, 1); !wheelLinesEqual(got, []int{1, 2, 2, 2}) {
+	if got := scrollLineCounts(accelerator, []float64{1000, 1050, 1100, 1150}, 1); !slices.Equal(got, []int{1, 2, 2, 2}) {
 		t.Fatalf("50ms gaps = %v", got)
 	}
-	if got := scrollLineCounts(accelerator, []float64{2000, 2020, 2040, 2060}, 1); !wheelLinesEqual(got, []int{1, 5, 5, 5}) {
+	if got := scrollLineCounts(accelerator, []float64{2000, 2020, 2040, 2060}, 1); !slices.Equal(got, []int{1, 5, 5, 5}) {
 		t.Fatalf("20ms gaps = %v", got)
 	}
-	if got := scrollLineCounts(accelerator, []float64{3000, 3010, 3020, 3030}, 1); !wheelLinesEqual(got, []int{1, 6, 6, 6}) {
+	if got := scrollLineCounts(accelerator, []float64{3000, 3010, 3020, 3030}, 1); !slices.Equal(got, []int{1, 6, 6, 6}) {
 		t.Fatalf("10ms gaps = %v", got)
 	}
 }
 
 func TestWheelScrollAcceleratorBurstStaysOneLine(t *testing.T) {
 	accelerator := newWheelScrollAccelerator(AutoWheelScrollLines(), true)
-	if got := scrollLineCounts(accelerator, []float64{0, 3, 6, 9}, 1); !wheelLinesEqual(got, []int{1, 1, 1, 1}) {
+	if got := scrollLineCounts(accelerator, []float64{0, 3, 6, 9}, 1); !slices.Equal(got, []int{1, 1, 1, 1}) {
 		t.Fatalf("burst = %v", got)
 	}
 }
 
 func TestWheelScrollAcceleratorResetsOnDirectionChangeAndPause(t *testing.T) {
 	accelerator := newWheelScrollAccelerator(AutoWheelScrollLines(), true)
-	if got := scrollLineCounts(accelerator, []float64{0, 20, 40}, 1); !wheelLinesEqual(got, []int{1, 5, 5}) {
+	if got := scrollLineCounts(accelerator, []float64{0, 20, 40}, 1); !slices.Equal(got, []int{1, 5, 5}) {
 		t.Fatalf("direction run = %v", got)
 	}
 	if got := accelerator.Next(-1, 60); got != 1 {
 		t.Fatalf("direction change = %d (want 1)", got)
 	}
-	if got := scrollLineCounts(accelerator, []float64{500, 520}, 1); !wheelLinesEqual(got, []int{1, 5}) {
+	if got := scrollLineCounts(accelerator, []float64{500, 520}, 1); !slices.Equal(got, []int{1, 5}) {
 		t.Fatalf("after pause = %v", got)
 	}
 }
 
 func TestWheelScrollAcceleratorCarriesFractionalLines(t *testing.T) {
 	accelerator := newWheelScrollAccelerator(AutoWheelScrollLines(), true)
-	if got := scrollLineCounts(accelerator, []float64{0, 40, 80, 120, 160}, 1); !wheelLinesEqual(got, []int{1, 2, 3, 2, 3}) {
+	if got := scrollLineCounts(accelerator, []float64{0, 40, 80, 120, 160}, 1); !slices.Equal(got, []int{1, 2, 3, 2, 3}) {
 		t.Fatalf("carry = %v", got)
 	}
 }
