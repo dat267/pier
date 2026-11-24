@@ -111,7 +111,7 @@ func NewCountdownTimer(timeoutMS int, host CountdownTimerHost, onTick func(secon
 	stop := make(chan struct{})
 	timer.stop = stop
 	go func() {
-		ticker := newSecondTicker()
+		ticker := time.NewTicker(time.Second)
 		defer ticker.Stop()
 		for {
 			select {
@@ -207,10 +207,6 @@ func TruncateToVisualLines(text string, maxVisualLines int, width int, paddingX 
 		SkippedCount: len(allVisualLines) - maxVisualLines,
 	}
 }
-
-// secondTicker is time.NewTicker(1s) behind a small indirection so tests can
-// reason about it.
-func newSecondTicker() *time.Ticker { return time.NewTicker(time.Second) }
 
 // MarkdownTransformContext is the transformer context.
 type MarkdownTransformContext struct {
