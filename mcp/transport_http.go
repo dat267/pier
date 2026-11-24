@@ -731,11 +731,8 @@ func describeHttpFailure(status int, body string) string {
 }
 
 func contentType(response *http.Response) string {
-	value := response.Header.Get("content-type")
-	if value == "" {
-		return ""
-	}
-	return strings.ToLower(ai.JSTrim(strings.SplitN(value, ";", 2)[0]))
+	mediaType, _, _ := strings.Cut(response.Header.Get("content-type"), ";")
+	return strings.ToLower(ai.JSTrim(mediaType))
 }
 
 // needsAuthorization: 401, or 403 with an `insufficient_scope` bearer

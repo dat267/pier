@@ -293,3 +293,21 @@ func TestLocalShellOperationsRejectsInvalidTimeout(t *testing.T) {
 		t.Fatalf("huge timeout err = %v", err)
 	}
 }
+
+// TestFirstOutputLine pins upstream's `stdout.trim().split(/\r?\n/)[0]`
+// (pi v1.6.0, faac5858, packages/coding-agent/src/utils/shell.ts): a CRLF ends
+// the line without leaving its `\r`, while a lone `\r` stays in it.
+func TestFirstOutputLine(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{"", ""},
+		{"  \n ", ""},
+		{"/bin/bash", "/bin/bash"},
+		{" /bin/bash\r\n/usr/bin/bash\n", "/bin/bash"},
+		{"a\rb\nc", "a\rb"},
+		{"first\n\nsecond", "first"},
+	} {
+		if got := firstOutputLine([]byte(tc.in)); got != tc.want {
+			t.Errorf("firstOutputLine(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}

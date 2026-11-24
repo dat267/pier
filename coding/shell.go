@@ -130,12 +130,8 @@ var shellLookupTimeout = 5 * time.Second
 
 // firstOutputLine is upstream's `stdout.trim().split(/\r?\n/)[0]`.
 func firstOutputLine(output []byte) string {
-	trimmed := ai.JSTrim(DecodeUTF8WithReplacement(output))
-	if trimmed == "" {
-		return ""
-	}
-	trimmed = strings.ReplaceAll(trimmed, "\r\n", "\n")
-	return strings.Split(trimmed, "\n")[0]
+	line, _, _ := strings.Cut(ai.JSTrim(DecodeUTF8WithReplacement(output)), "\n")
+	return strings.TrimSuffix(line, "\r")
 }
 
 // shellLookupCommand builds the PATH lookup command (where on Windows) and keeps
