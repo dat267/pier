@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"context"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -191,13 +192,9 @@ func (c *ModelSelectorComponent) loadModelsFromSnapshot() {
 	}
 	c.filteredModels = c.activeModels
 
-	currentIndex := -1
-	for index, item := range c.filteredModels {
-		if ai.ModelsAreEqual(c.currentModel, item.model) {
-			currentIndex = index
-			break
-		}
-	}
+	currentIndex := slices.IndexFunc(c.filteredModels, func(item modelItem) bool {
+		return ai.ModelsAreEqual(c.currentModel, item.model)
+	})
 	if currentIndex >= 0 {
 		c.selectedIndex = currentIndex
 	} else {

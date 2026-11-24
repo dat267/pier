@@ -601,13 +601,9 @@ func (l *SessionList) SetSessions(sessions []coding.SessionInfo, showCwd bool, p
 	case !l.selectionTouched:
 		l.selectedIndex = 0
 	case selectedPath != "":
-		restored := -1
-		for index, node := range l.filtered {
-			if node.Session.Path == selectedPath {
-				restored = index
-				break
-			}
-		}
+		restored := slices.IndexFunc(l.filtered, func(node flatSessionNode) bool {
+			return node.Session.Path == selectedPath
+		})
 		if restored >= 0 {
 			l.selectedIndex = restored
 			l.pendingSelectedPath = ""

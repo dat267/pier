@@ -340,13 +340,9 @@ func (c *QueueController) SendCompactionQueue(ctx context.Context, queuedMessage
 		return
 	}
 
-	firstPromptIndex := -1
-	for index, message := range queuedMessages {
-		if !c.IsExtensionCommand(message.Text) {
-			firstPromptIndex = index
-			break
-		}
-	}
+	firstPromptIndex := slices.IndexFunc(queuedMessages, func(message CompactionQueuedMessage) bool {
+		return !c.IsExtensionCommand(message.Text)
+	})
 	if firstPromptIndex == -1 {
 		for _, message := range queuedMessages {
 			_ = c.Session.Prompt(ctx, message.Text, nil)

@@ -233,13 +233,9 @@ const automaticThemeValue = "/"
 // the remaining themes (upstream singleModeThemeItems).
 func singleModeThemeItems(availableThemes []string, currentTheme string) []tui.SelectItem {
 	items := themeItems(availableThemes, currentTheme)
-	systemIndex := -1
-	for index, item := range items {
-		if item.Value == SystemThemeName {
-			systemIndex = index
-			break
-		}
-	}
+	systemIndex := slices.IndexFunc(items, func(item tui.SelectItem) bool {
+		return item.Value == SystemThemeName
+	})
 	var system []tui.SelectItem
 	if systemIndex != -1 {
 		system = append(system, items[systemIndex])
