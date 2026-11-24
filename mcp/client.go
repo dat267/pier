@@ -806,7 +806,7 @@ func (c *Client) handleProgress(params json.RawMessage) {
 	c.mu.Unlock()
 	if entry.onProgress != nil {
 		notification := &protocol.ProgressNotification{
-			ProgressToken: formatId(token),
+			ProgressToken: strconv.FormatInt(token, 10),
 			Progress:      *decoded.Progress,
 			Total:         decoded.Total,
 			Message:       decoded.Message,
@@ -820,10 +820,6 @@ func (c *Client) handleProgress(params json.RawMessage) {
 			entry.onProgress(notification)
 		}()
 	}
-}
-
-func formatId(token int64) string {
-	return strconv.FormatInt(token, 10)
 }
 
 // integralRequestID narrows a JSON-RPC id to a generated request id: the
