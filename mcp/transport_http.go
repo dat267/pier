@@ -1013,10 +1013,7 @@ func (t *StreamableHttpTransport) reconnectDelay(attempt int, serverDelayMs *int
 		}
 		delay *= 2
 	}
-	if delay > maxDelay {
-		return maxDelay
-	}
-	return delay
+	return min(delay, maxDelay)
 }
 
 func (t *StreamableHttpTransport) maxDelay() int64 {

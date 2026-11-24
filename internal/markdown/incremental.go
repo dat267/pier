@@ -75,10 +75,7 @@ func FirstUnstable(blocks []*Block, src string) int {
 	for start > 0 && (blockExtendable(blocks[start-1], src) || blockMidLine(blocks[start], src)) {
 		start--
 	}
-	if start < 0 {
-		return 0
-	}
-	return start
+	return max(start, 0)
 }
 
 // LexFrom lexes src from byte offset from to its end, reporting absolute block

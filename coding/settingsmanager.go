@@ -2929,10 +2929,7 @@ func (m *SettingsManager) GetImageWidthCells() int {
 		return 60
 	}
 	width := *settings.Terminal.ImageWidthCells
-	if width < 1 {
-		return 1
-	}
-	return width
+	return max(width, 1)
 }
 
 // SetImageWidthCells stores the inline image width.

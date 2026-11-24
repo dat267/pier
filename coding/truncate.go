@@ -184,10 +184,7 @@ func resolveSubarrayIndex(index, length int) int {
 	if index < 0 {
 		return 0
 	}
-	if index > length {
-		return length
-	}
-	return index
+	return min(index, length)
 }
 
 func FormatSize(bytes int64) string { return FormatSizeNumber(float64(bytes)) }

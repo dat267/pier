@@ -78,10 +78,7 @@ func minMatchLen(re *syntax.Regexp) int {
 				minimum = v
 			}
 		}
-		if minimum < 0 {
-			return 0
-		}
-		return minimum
+		return max(minimum, 0)
 	case syntax.OpPlus:
 		return minMatchLen(re.Sub[0])
 	case syntax.OpRepeat:
