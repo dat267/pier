@@ -77,7 +77,6 @@ func TestPostRunsSerializedWithRenders(t *testing.T) {
 func TestPostCallbackMayRequestRender(t *testing.T) {
 	terminal := &fakePostTerminal{width: 40, height: 10}
 	screen := NewMainScreen(terminal, false, "")
-	screen.EnableRenderTicks()
 	done := make(chan struct{})
 	drain := make(chan struct{})
 	go func() {

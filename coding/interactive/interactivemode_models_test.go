@@ -65,7 +65,6 @@ func newModelTestWiring(t *testing.T, runtime *modelTestRuntime) (*ModelWiring, 
 	InitTheme("dark", false)
 
 	screen := tui.NewMainScreen(&fakeRendererTerminal{width: 80, height: 24}, false, "")
-	screen.DisableAutoRender()
 	editorContainer := &tui.Container{}
 	editor := NewCustomEditor(editorTestHost{}, tui.EditorTheme{}, NewAppKeybindingsManager(nil, ""), CustomEditorOptions{})
 	editorContainer.AddChild(editor)
@@ -177,7 +176,7 @@ func TestScopedModelsWiring(t *testing.T) {
 		t.Fatalf("enabled = %+v", enabled)
 	}
 	// The refresh goroutine completes; the result is marshaled onto the UI
-	// side and drains on the next render (auto-render is disabled here).
+	// side and drains on the next render, which this test paints itself.
 	waitForCondition(t, func() bool {
 		wiring.UI.(*tui.MainScreen).RenderNow(true)
 		return selector.RefreshStatus() == "Model catalogs refreshed."
@@ -219,7 +218,6 @@ func TestSessionSelectorWiring(t *testing.T) {
 	InitTheme("dark", false)
 
 	screen := tui.NewMainScreen(&fakeRendererTerminal{width: 80, height: 24}, false, "")
-	screen.DisableAutoRender()
 	editorContainer := &tui.Container{}
 	editor := NewCustomEditor(editorTestHost{}, tui.EditorTheme{}, NewAppKeybindingsManager(nil, ""), CustomEditorOptions{})
 	editorContainer.AddChild(editor)

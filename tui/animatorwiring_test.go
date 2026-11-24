@@ -42,7 +42,6 @@ func TestNextAnimationStepsAHeldSelectionDrag(t *testing.T) {
 	}
 	screen := NewAltScreen(&recordingTerminal{width: 24, height: 6}, false, t.TempDir(), AltScreenOptions{})
 	defer screen.Stop(TuiStopOptions{})
-	screen.DisableAutoRender()
 	screen.AddChild(&scriptedComponent{lines: lines})
 	screen.Start()
 	screen.RenderNow(false)

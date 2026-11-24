@@ -452,7 +452,6 @@ func TestStreamingDeltaCostIndependentOfTranscriptSize(t *testing.T) {
 		defer cleanup()
 		screen, _ := app.initialUI.(*tui.AltScreen)
 		screen.Start()
-		screen.DisableAutoRender()
 		for i := range warm {
 			a := &ai.AssistantMessage{API: ai.APIAnthropicMessages, Provider: "test", Model: "m", StopReason: ai.StopStop,
 				Content: ai.ContentList{ai.TextContent{Text: fmt.Sprintf("reply %d with some words that wrap across the viewport\n", i)}}}

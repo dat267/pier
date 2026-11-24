@@ -385,7 +385,6 @@ func TestCommandClearDebugEggs(t *testing.T) {
 
 	// Debug log.
 	commandsScreen := tui.NewMainScreen(&fakeRendererTerminal{width: 40, height: 10}, false, "")
-	commandsScreen.DisableAutoRender()
 	wiring.UI = commandsScreen
 	written := ""
 	wiring.WriteDebugLog = func(content string) error { written = content; return nil }
@@ -451,7 +450,6 @@ func TestCommandStop(t *testing.T) {
 func TestSessionCommandRunsTheScansOffTheUILoop(t *testing.T) {
 	wiring, session, _ := newCommandTestWiring(t)
 	screen := tui.NewMainScreen(&fakeRendererTerminal{width: 80, height: 24}, false, "")
-	screen.DisableAutoRender()
 	wiring.UI = screen
 	for range 3 {
 		wiring.SessionInfo.AppendMessage(ai.Message(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}))
@@ -532,7 +530,6 @@ func TestCommandSessionInfoShowsDifferentModelBreakdown(t *testing.T) {
 func TestDebugLogWritesAgentMessages(t *testing.T) {
 	wiring, session, _ := newCommandTestWiring(t)
 	screen := tui.NewMainScreen(&fakeRendererTerminal{width: 40, height: 10}, false, "")
-	screen.DisableAutoRender()
 	wiring.UI = screen
 	written := ""
 	wiring.WriteDebugLog = func(content string) error { written = content; return nil }

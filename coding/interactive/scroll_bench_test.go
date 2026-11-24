@@ -19,7 +19,6 @@ func BenchmarkScrollLongTranscript(b *testing.B) {
 
 	screen, _ := app.initialUI.(*tui.AltScreen)
 	screen.Start()
-	screen.DisableAutoRender()
 	buildScrollTranscript(b, app)
 
 	for b.Loop() {
@@ -35,7 +34,6 @@ func BenchmarkScrollWarmDiff(b *testing.B) {
 
 	screen, _ := app.initialUI.(*tui.AltScreen)
 	screen.Start()
-	screen.DisableAutoRender()
 	buildScrollTranscript(b, app)
 	app.ui.RenderNow(false) // warm every cache
 

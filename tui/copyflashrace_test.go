@@ -26,7 +26,6 @@ func TestReleaseCopyFlashMarshalsThroughPost(t *testing.T) {
 			return true, true, ""
 		},
 	})
-	screen.DisableAutoRender()
 	screen.AddChild(&scriptedComponent{lines: []string{"hello world"}})
 	screen.Start()
 	defer screen.Stop(TuiStopOptions{})

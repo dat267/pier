@@ -25,7 +25,6 @@ func RunStartupScreenLoop(ui *tui.MainScreen, terminal tui.Terminal, settled fun
 	}, func() {})
 	// Post-driven work signals the tick channel; the loop below drains and paints
 	// it, so loader results never apply inline from another goroutine.
-	ui.EnableRenderTicks()
 	ui.Start()
 	defer func() {
 		// Release a callback already parked on a full queue before handing the

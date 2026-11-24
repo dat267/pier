@@ -23,7 +23,6 @@ func TestStopModeSwitchesToRegularOnTranscriptExit(t *testing.T) {
 		t.Fatalf("initial UI = %T", app.lifecycle.CurrentUI())
 	}
 	screen.Start()
-	screen.DisableAutoRender()
 
 	app.StopMode("transcript")
 
@@ -45,7 +44,6 @@ func TestStopModeKeepsAltScreenOnResumeHintExit(t *testing.T) {
 		t.Fatalf("initial UI = %T", app.lifecycle.CurrentUI())
 	}
 	screen.Start()
-	screen.DisableAutoRender()
 
 	app.StopMode("resume-hint")
 

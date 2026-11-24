@@ -18,7 +18,6 @@ func BenchmarkTranscriptFrameCold(b *testing.B) {
 			defer cleanup()
 			if screen, ok := app.initialUI.(*tui.AltScreen); ok {
 				screen.Start()
-				screen.DisableAutoRender()
 			}
 			buildScrollTranscriptN(b, app, messages)
 			app.ui.RenderNow(true) // cold: everything re-renders
@@ -48,7 +47,6 @@ func BenchmarkTranscriptFrameScaling(b *testing.B) {
 			defer cleanup()
 			if screen, ok := app.initialUI.(*tui.AltScreen); ok {
 				screen.Start()
-				screen.DisableAutoRender()
 			}
 			buildScrollTranscriptN(b, app, messages)
 			app.ui.RenderNow(false) // warm every cache

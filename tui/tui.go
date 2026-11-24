@@ -41,11 +41,9 @@ type TUI interface {
 	AddInputListener(listener TuiInputListener) func()
 	RemoveInputListener(listener TuiInputListener)
 	RenderNow(force bool)
-	// RenderTicks delivers coalesced render requests when the renderer runs in
-	// loop mode (EnableRenderTicks); nil otherwise.
+	// RenderTicks delivers coalesced render requests for the owner loop to
+	// paint.
 	RenderTicks() <-chan struct{}
-	// EnableRenderTicks switches the renderer to caller-driven rendering.
-	EnableRenderTicks()
 	// EnableLoopInput routes terminal input and resize to the owner.
 	EnableLoopInput(onInput func(string), onResize func())
 	// HandleTerminalInput dispatches one terminal sequence to the focused
@@ -141,9 +139,6 @@ func (r *TuiReference) RenderNow(force bool) { r.get().RenderNow(force) }
 
 // RenderTicks forwards the active renderer's tick channel.
 func (r *TuiReference) RenderTicks() <-chan struct{} { return r.get().RenderTicks() }
-
-// EnableRenderTicks switches the active renderer to caller-driven rendering.
-func (r *TuiReference) EnableRenderTicks() { r.get().EnableRenderTicks() }
 
 // EnableLoopInput forwards loop input routing to the active renderer.
 func (r *TuiReference) EnableLoopInput(onInput func(string), onResize func()) {

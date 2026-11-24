@@ -365,7 +365,6 @@ func TestScreensStripStaleCursorMarkers(t *testing.T) {
 		t.Run("main/"+string(rune('0'+height)), func(t *testing.T) {
 			terminal := &recordingTerminal{width: 20, height: height}
 			screen := NewMainScreen(terminal, true, t.TempDir())
-			screen.DisableAutoRender()
 			screen.AddChild(&scriptedComponent{lines: lines()})
 			screen.Start()
 			screen.RenderNow(false)
@@ -386,7 +385,6 @@ func TestScreensStripStaleCursorMarkers(t *testing.T) {
 	t.Run("alt-screen", func(t *testing.T) {
 		terminal := &recordingTerminal{width: 20, height: 3}
 		screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
-		screen.DisableAutoRender()
 		screen.AddChild(&scriptedComponent{lines: lines()})
 		screen.Start()
 		screen.RenderNow(false)

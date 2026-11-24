@@ -34,7 +34,6 @@ func (o *focusedWheelOverlay) HandleInput(input string) {
 func TestAltScreenUnhandledWheelScrollsBehindFocusedOverlay(t *testing.T) {
 	terminal := &recordingTerminal{width: 20, height: 6}
 	screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
-	screen.DisableAutoRender()
 	screen.AddChild(NewText("line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12", 0, 0, nil))
 	screen.Start()
 	screen.RenderNow(false)
@@ -62,7 +61,6 @@ func TestAltScreenRuntimeWheelScrollLines(t *testing.T) {
 	terminal := &recordingTerminal{width: 20, height: 4}
 	initial := FixedWheelScrollLines(3)
 	screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{WheelScrollLines: &initial})
-	screen.DisableAutoRender()
 	recorder := &wheelRecorder{}
 	screen.AddChild(recorder)
 	screen.Start()

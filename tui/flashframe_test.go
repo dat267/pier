@@ -10,7 +10,6 @@ import (
 func newFlashTestScreen(t *testing.T) *AltScreen {
 	t.Helper()
 	screen := NewAltScreen(&recordingTerminal{width: 24, height: 6}, false, t.TempDir(), AltScreenOptions{})
-	screen.DisableAutoRender()
 	screen.AddChild(&scriptedComponent{lines: []string{"content"}})
 	screen.Start()
 	return screen

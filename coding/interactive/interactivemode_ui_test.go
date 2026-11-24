@@ -16,7 +16,6 @@ func newUIStateTestState(t *testing.T, embedStatus bool) (*InteractiveUIState, *
 	InitTheme("dark", false)
 
 	screen := tui.NewMainScreen(&fakeRendererTerminal{width: 80, height: 24}, false, "")
-	screen.DisableAutoRender()
 	state := NewInteractiveUIState(screen)
 	state.StatusContainer = &tui.Container{}
 	state.ChatContainer = &tui.Container{}
@@ -282,7 +281,6 @@ func TestUIStateRebindInputListenersRebindsOnTheNewRenderer(t *testing.T) {
 	InitTheme("dark", false)
 
 	first := tui.NewMainScreen(&fakeRendererTerminal{width: 80, height: 24}, false, "")
-	first.DisableAutoRender()
 	state := NewInteractiveUIState(first)
 	calls := 0
 	var got string
@@ -293,7 +291,6 @@ func TestUIStateRebindInputListenersRebindsOnTheNewRenderer(t *testing.T) {
 	})
 
 	second := tui.NewMainScreen(&fakeRendererTerminal{width: 80, height: 24}, false, "")
-	second.DisableAutoRender()
 	state.UI = second
 	state.RebindExtensionTerminalInputListeners()
 

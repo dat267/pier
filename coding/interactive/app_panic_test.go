@@ -82,7 +82,6 @@ func TestOverwideMainScreenLineIsAnUncaughtCrash(t *testing.T) {
 	}
 	app := &App{lifecycle: lifecycle}
 	screen := tui.NewMainScreen(terminal, false, t.TempDir())
-	screen.DisableAutoRender()
 	lifecycle.options.UI = screen
 	app.installRenderErrorHandler(screen)
 	component := &widthBreakingComponent{}

@@ -20,7 +20,6 @@ func BenchmarkStreamingAssistantDelta(b *testing.B) {
 
 	screen, _ := app.initialUI.(*tui.AltScreen)
 	screen.Start()
-	screen.DisableAutoRender()
 
 	// A warm transcript to render around.
 	for i := range 200 {

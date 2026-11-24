@@ -199,11 +199,6 @@ func newTestAppConfigured(t *testing.T, persist bool, configure func(*coding.Set
 	}
 	app := NewApp(appOptions)
 
-	// Disable the render timer so the test's direct component access cannot race
-	// with a background render. app.UI is a TuiReference (D105), so resolve the
-	// concrete renderer instead of type-asserting the reference itself.
-	disableAutoRenderForTest(app)
-
 	cleanup := func() {
 		app.lifecycle.UnregisterSignalHandlers()
 		tui.SetKeybindings(previous)
@@ -212,18 +207,6 @@ func newTestAppConfigured(t *testing.T, persist bool, configure func(*coding.Set
 	// queues) so a test cannot leave them running (internal/leakcheck).
 	t.Cleanup(app.Close)
 	return app, cleanup
-}
-
-// disableAutoRenderForTest turns off the render timer on the app's current
-// renderer (TuiReference-aware: the D105 forwarding reference hides the
-// concrete MainScreen from a plain type assertion).
-func disableAutoRenderForTest(app *App) {
-	if app == nil {
-		return
-	}
-	if screen, ok := app.currentRenderer().(*tui.MainScreen); ok {
-		screen.DisableAutoRender()
-	}
 }
 
 // waitForConditionWithin polls until the condition holds or the deadline

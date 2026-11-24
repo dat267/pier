@@ -99,7 +99,6 @@ func testAltScreenDrawsKittyImagesLast(t *testing.T) {
 	imageLine := kittyImageLine(t, 301, "AAAA")
 	terminal := &recordingTerminal{width: 40, height: 6}
 	screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
-	screen.DisableAutoRender()
 	component := &scriptedComponent{lines: []string{"alpha", imageLine, "beta"}}
 	screen.AddChild(component)
 	screen.Start()
@@ -134,7 +133,6 @@ func TestAltScreenRedrawsKittyImagesAfterAResize(t *testing.T) {
 	imageLine := kittyImageLine(t, 401, "BBBB")
 	terminal := &recordingTerminal{width: 40, height: 6}
 	screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
-	screen.DisableAutoRender()
 	screen.AddChild(&scriptedComponent{lines: []string{"alpha", imageLine}})
 	screen.Start()
 	screen.RenderNow(false)

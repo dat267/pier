@@ -74,7 +74,6 @@ func BenchmarkToggleThinkingRebuild(b *testing.B) {
 	defer cleanup()
 	screen, _ := app.initialUI.(*tui.AltScreen)
 	screen.Start()
-	screen.DisableAutoRender()
 	buildToggleTranscript(b, app)
 	app.ui.RenderNow(true)
 
@@ -93,7 +92,6 @@ func BenchmarkToggleThinkingRepaint(b *testing.B) {
 	defer cleanup()
 	screen, _ := app.initialUI.(*tui.AltScreen)
 	screen.Start()
-	screen.DisableAutoRender()
 	buildToggleTranscript(b, app)
 	app.ui.RenderNow(true)
 

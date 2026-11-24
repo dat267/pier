@@ -19,7 +19,6 @@ func TestDockPinnedAfterScroll(t *testing.T) {
 		t.Fatalf("UI = %T", app.lifecycle.CurrentUI())
 	}
 	screen.Start()
-	screen.DisableAutoRender()
 
 	// populate
 	for i := range 50 {

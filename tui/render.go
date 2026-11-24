@@ -492,11 +492,6 @@ func (t *Renderer) RemoveInputListener(listener TuiInputListener) {
 	}
 }
 
-// EnableRenderTicks is retained for compatibility: every renderer is
-// tick-driven since the internal timer was removed (the channel is created
-// at construction, so requests never race its initialization).
-func (t *Renderer) EnableRenderTicks() {}
-
 // RenderTicks returns the render-request channel created at construction.
 func (t *Renderer) RenderTicks() <-chan struct{} {
 	return t.renderTicks
@@ -543,10 +538,6 @@ func (t *Renderer) RequestRender(force bool) {
 	}
 	t.signalRender()
 }
-
-// DisableAutoRender is retained as a no-op for compatibility: rendering is
-// always owner-driven (the internal timer the seam used to disable is gone).
-func (t *Renderer) DisableAutoRender() {}
 
 // requestRender is RequestRender for internal callers, which never force.
 func (t *Renderer) requestRender() {

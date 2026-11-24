@@ -10,7 +10,6 @@ import (
 func TestRequestRenderCoalescesIntoTicks(t *testing.T) {
 	terminal := &fakePostTerminal{width: 40, height: 10}
 	screen := NewMainScreen(terminal, false, "")
-	screen.EnableRenderTicks()
 
 	for range 50 {
 		screen.RequestRender(false)
@@ -45,7 +44,6 @@ func TestRequestRenderNeverArmsATimer(t *testing.T) {
 		t.Fatalf("renders without a tick channel = %d, want 0", got)
 	}
 
-	screen.EnableRenderTicks()
 	screen.RequestRender(false)
 	if got := len(screen.RenderTicks()); got != 1 {
 		t.Fatalf("pending ticks = %d, want 1", got)

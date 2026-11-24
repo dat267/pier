@@ -126,7 +126,6 @@ func TestOrphanedMouseReportIsStillDispatched(t *testing.T) {
 
 	terminal := &recordingTerminal{width: 80, height: 20}
 	screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
-	screen.EnableRenderTicks()
 	screen.AddChild(&scriptedComponent{lines: []string{"hello", "world"}})
 	screen.Start()
 	screen.RenderNow(false)

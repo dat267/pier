@@ -46,7 +46,6 @@ func newThinkingScrollApp(tb testing.TB, hide bool, n int, thinkingLines int) (*
 	screen, _ := app.initialUI.(*tui.AltScreen)
 	if screen != nil {
 		screen.Start()
-		screen.DisableAutoRender()
 	}
 	app.display.HideThinkingBlock = hide
 	app.updateThinkingBlockVisibility(hide)
@@ -130,7 +129,6 @@ func benchmarkMaterialize(b *testing.B, hide bool, n int, thinkingLines int) {
 	screen, _ := app.initialUI.(*tui.AltScreen)
 	if screen != nil {
 		screen.Start()
-		screen.DisableAutoRender()
 	}
 	app.display.HideThinkingBlock = hide
 	app.updateThinkingBlockVisibility(hide)

@@ -16,7 +16,6 @@ func TestAltScreenLegacyMouseKeepsUnicodeCoordinates(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			terminal := &recordingTerminal{width: 250, height: 4}
 			screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
-			screen.DisableAutoRender()
 			recorder := &mouseRecordingComponent{lines: []string{strings.Repeat("x", 250)}}
 			screen.AddChild(recorder)
 			screen.Start()

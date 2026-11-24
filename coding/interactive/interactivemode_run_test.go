@@ -28,7 +28,6 @@ func newRunTestWiring(t *testing.T) (*RunWiring, *coding.SettingsManager) {
 	t.Cleanup(func() { tui.SetKeybindings(previous) })
 
 	screen := tui.NewMainScreen(&fakeRendererTerminal{width: 80, height: 24}, false, "")
-	screen.DisableAutoRender()
 	settings := coding.NewInMemorySettingsManager(nil, coding.SettingsManagerCreateOptions{})
 	startup := &StartupWiring{Settings: settings, Version: "1.0.0"}
 	wiring := &RunWiring{

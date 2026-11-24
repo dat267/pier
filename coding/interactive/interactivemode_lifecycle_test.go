@@ -46,7 +46,6 @@ func newLifecycleTest(t *testing.T) (*Lifecycle, *lifecycleTestSession, *[]int, 
 
 	terminal := &titleTerminal{width: 80, height: 24}
 	screen := tui.NewMainScreen(terminal, false, "")
-	screen.DisableAutoRender()
 	session := &lifecycleTestSession{}
 	settings := coding.NewInMemorySettingsManager(nil, coding.SettingsManagerCreateOptions{})
 	exits := &[]int{}
@@ -615,7 +614,6 @@ func TestExternalSIGTSTPRestoresTheTerminalThenSuspends(t *testing.T) {
 	t.Cleanup(func() { suspendProcessFn = previous })
 
 	screen := tui.NewMainScreen(&fakeRendererTerminal{width: 80, height: 24}, false, "")
-	screen.DisableAutoRender()
 	lifecycle.options.UI = screen
 	previousInstall := installSuspendSignalHandler
 	trigger := func() {}

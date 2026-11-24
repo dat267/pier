@@ -114,7 +114,6 @@ func TestCollapsedThinkingTicksThroughTheRenderer(t *testing.T) {
 	chat := &tui.Container{}
 	chat.AddChild(component)
 	screen := tui.NewMainScreen(&fakeRendererTerminal{width: 80, height: 24}, false, "")
-	screen.DisableAutoRender()
 	screen.AddChild(chat)
 	before := tui.StripTerminalSequences(strings.Join(chat.Render(80), "\n"))
 	now = now.Add(3 * time.Second)

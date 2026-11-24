@@ -160,15 +160,7 @@ func CreateInteractiveTui(options InteractiveTuiOptions) tui.TUI {
 		})
 		return true, ""
 	})
-	return withRenderTicks(createInteractiveTui(options))
-}
-
-// withRenderTicks switches a freshly created renderer to loop-driven rendering.
-func withRenderTicks(screen tui.TUI) tui.TUI {
-	if screen != nil {
-		screen.EnableRenderTicks()
-	}
-	return screen
+	return createInteractiveTui(options)
 }
 
 func createInteractiveTui(options InteractiveTuiOptions) tui.TUI {

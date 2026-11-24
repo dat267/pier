@@ -97,7 +97,6 @@ func TestAltScreenAgainstUpstreamGolden(t *testing.T) {
 			screen.copyQueue.Flush()
 			screen.Stop(TuiStopOptions{})
 		})
-		screen.DisableAutoRender()
 		var setLines func([]string)
 		if spec.Verbatim {
 			verbatim := &fixedLinesComponent{}
@@ -209,7 +208,6 @@ func TestAltScreenAgainstUpstreamGolden(t *testing.T) {
 func TestAltScreenSelectionHelpers(t *testing.T) {
 	terminal := &recordingTerminal{width: 20, height: 6}
 	screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
-	screen.DisableAutoRender()
 	component := &scriptedComponent{lines: []string{"hello world"}}
 	screen.AddChild(component)
 	screen.Start()
@@ -237,7 +235,6 @@ func TestAltScreenSelectionHelpers(t *testing.T) {
 func TestAltScreenSearchOverlay(t *testing.T) {
 	terminal := &recordingTerminal{width: 30, height: 8}
 	screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
-	screen.DisableAutoRender()
 	component := &scriptedComponent{lines: []string{"alpha beta", "gamma alpha"}}
 	screen.AddChild(component)
 	screen.Start()
@@ -287,7 +284,6 @@ func TestTerminalWordSelectionJoinersMatchITerm2(t *testing.T) {
 func TestAltScreenResetTextSelection(t *testing.T) {
 	terminal := &recordingTerminal{width: 20, height: 6}
 	screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
-	screen.DisableAutoRender()
 	screen.AddChild(&scriptedComponent{lines: []string{"hello world"}})
 	screen.Start()
 	screen.RenderNow(false)
@@ -330,7 +326,6 @@ func TestAltScreenResetTextSelection(t *testing.T) {
 func TestAltScreenStatefulFuzz(t *testing.T) {
 	terminal := &recordingTerminal{width: 40, height: 10}
 	screen := NewAltScreen(terminal, false, t.TempDir(), AltScreenOptions{})
-	screen.DisableAutoRender()
 	component := &scriptedComponent{lines: []string{"alpha", "beta", "gamma"}}
 	screen.AddChild(component)
 	screen.Start()
