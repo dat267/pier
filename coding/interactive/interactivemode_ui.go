@@ -434,18 +434,6 @@ func (s *InteractiveUIState) SetExtensionWidget(key string, content []string, ha
 	s.RenderWidgets()
 }
 
-// SetExtensionWidgetComponent sets a widget from a component factory.
-func (s *InteractiveUIState) SetExtensionWidgetComponent(key string, component tui.Component, hasComponent bool, options ExtensionWidgetOptions) {
-	target := s.prepareExtensionWidget(key, options)
-	if !hasComponent {
-		s.RenderWidgets()
-		return
-	}
-	target[key] = component
-	s.recordWidgetOrder(key, options)
-	s.RenderWidgets()
-}
-
 func disposeComponent(component tui.Component) {
 	type disposable interface{ Dispose() }
 	if value, ok := component.(disposable); ok {
