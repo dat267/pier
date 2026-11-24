@@ -1039,8 +1039,7 @@ func sortOverlaysByFocusOrder(entries []*overlayEntry) {
 }
 
 // ApplyLineResets removes unsafe OSC controls (D290) and appends the
-// segment reset to every non-image line. In low-bandwidth mode a line with no
-// hyperlink needs only the SGR reset, so the 7-byte OSC 8 close is dropped.
+// segment reset to every non-image line.
 //
 // The cursor marker is internal render metadata and must never reach the
 // terminal: ExtractCursorPosition consumes the marker that places the hardware
@@ -1051,11 +1050,7 @@ func (t *Renderer) ApplyLineResets(lines []string) []string {
 	for i, line := range lines {
 		line = stripUnsafeOSC(line)
 		if !IsImageLine(line) {
-			reset := segmentReset
-			if LowBandwidth() && !lineHasHyperlink(line) {
-				reset = "\x1b[0m"
-			}
-			lines[i] = NormalizeTerminalOutput(strings.ReplaceAll(line, CursorMarker, "")) + reset
+			lines[i] = NormalizeTerminalOutput(strings.ReplaceAll(line, CursorMarker, "")) + segmentReset
 		} else {
 			lines[i] = line
 		}
@@ -1135,23 +1130,6 @@ func findOSCTerminator(text string, from int) (int, int) {
 		i += size
 	}
 	return -1, 0
-}
-
-// lineHasHyperlink reports whether the line opens an OSC 8 hyperlink (a
-// non-empty URL after the `ESC ] 8 ; ;` prefix). The close form uses an empty
-// URL and does not need the trailing close appended by ApplyLineResets.
-func lineHasHyperlink(line string) bool {
-	const prefix = "\x1b]8;;"
-	for {
-		i := strings.Index(line, prefix)
-		if i < 0 {
-			return false
-		}
-		line = line[i+len(prefix):]
-		if line != "" && line[0] != '\a' && line[0] != '\x1b' {
-			return true
-		}
-	}
 }
 
 // ExtractCursorPosition finds and extracts the cursor position from rendered

@@ -988,7 +988,6 @@ tui/layout_test.go
 tui/leakcheck_main_test.go
 tui/legacy_mouse_unicode_test.go
 tui/loader_test.go
-tui/lowbandwidth_test.go
 tui/mainscreen_crashlog_permissions_linux_test.go
 tui/mainscreen_test.go
 tui/markdown_bench_test.go

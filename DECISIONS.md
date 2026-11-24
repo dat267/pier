@@ -3788,21 +3788,6 @@ upstream `createAgentSession` alone would not.
 
 Reproducer: `TestScopedModelsSeedTheModel` in `coding/scopedmodel_test.go`.
 
-### D322
-
-**The explicit low-bandwidth render mode is port-local.**
-
-Pi v1.4.0's `packages/tui/src/tui-main-screen.ts` has no low-bandwidth
-switch. Pier retains `tui.SetLowBandwidth` for explicit renderer clients: it
-can trim trailing padding, omit unnecessary hyperlink resets and skip no-op
-alt-screen frames. Nothing at interactive startup enables it, so the mode stays
-disabled, including over SSH, matching pi's default.
-
-Reproducers: `TestLowBandwidthDefaultsOffEvenOverSSH`,
-`TestAltScreenLowBandwidthTrimsTrailingSpaces`,
-`TestMainScreenLowBandwidthTrimsTrailingSpaces`, and
-`TestAltScreenLowBandwidthSkipsNoOpFrame`.
-
 ### D323
 
 **A failed post-compaction prompt restores every queued message exactly once.**

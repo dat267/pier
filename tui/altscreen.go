@@ -158,12 +158,6 @@ type AltScreen struct {
 	lastDocument         []string
 	previousScreenWidth  int
 	previousScreenHeight int
-	// previousCursor* record what the last frame set, so a low-bandwidth frame
-	// whose rows and cursor are unchanged can be skipped entirely.
-	previousCursorRow   int
-	previousCursorCol   int
-	previousCursorHas   bool
-	previousCursorValid bool
 	// layoutRoot is atomic: mountedRoots is called while the renderer lock is
 	// held, so it must not take the alt-screen lock (lock order: screen ->
 	// renderer).
@@ -689,7 +683,6 @@ func (s *AltScreen) resetRenderState() {
 func (s *AltScreen) resetRenderStateLocked() {
 	s.previousScreen = nil
 	s.previousScreenWidth = 0
-	s.previousCursorValid = false
 	s.previousScreenHeight = 0
 	s.currentLayout = nil
 }
@@ -2394,15 +2387,6 @@ func (s *AltScreen) doRender() {
 	screen = s.compositeFlashes(screen, width, height)
 
 	row, col, hasCursor := s.ExtractCursorPosition(screen, height)
-	if LowBandwidth() {
-		// Trailing padding is invisible (each row is cleared before writing) but
-		// costs a byte per cell on the wire; drop it.
-		for index, line := range screen {
-			if !IsImageLine(line) {
-				screen[index] = strings.TrimRight(line, " ")
-			}
-		}
-	}
 	for index, line := range screen {
 		if !IsImageLine(line) && VisibleWidth(line) > width {
 			screen[index] = SliceByColumn(line, 0, width, true)
@@ -2462,13 +2446,6 @@ func (s *AltScreen) doRender() {
 	}
 	imagesNeedRedraw := imageAnchorsNeedRedraw || imageCellsNeedRedraw
 	redrawImages := fullRedraw || imagesNeedRedraw
-
-	if LowBandwidth() && !fullRedraw && !imagesNeedRedraw && s.rowsAndCursorUnchanged(screen, row, col, hasCursor) {
-		// Nothing to say: skip the synchronized-output frame entirely (the
-		// cursor, if shown, was already positioned by the previous frame).
-		s.currentLayout = &nextLayout
-		return
-	}
 
 	// Reuse uploaded kitty transmissions as placement-only lines and collect
 	// the eviction escapes for offscreen images (upstream prepareKittyScreen).
@@ -2551,17 +2528,10 @@ func (s *AltScreen) doRender() {
 			if row < len(preparedScreen) {
 				line = preparedScreen[row]
 			}
-			// A full repaint already erased the screen, and a low-bandwidth frame
-			// whose new line is at least as wide as the old one overwrites every old
-			// cell: neither needs the per-row clearLine.
-			clearLine := "\x1b[2K"
-			if LowBandwidth() && (fullRedraw || VisibleWidth(line) >= VisibleWidth(previous)) {
-				clearLine = ""
-			}
 			builder.WriteString("\x1b[")
 			builder.WriteString(strconv.Itoa(row + 1))
 			builder.WriteString(";1H")
-			builder.WriteString(clearLine)
+			builder.WriteString("\x1b[2K")
 			builder.WriteString(line)
 		}
 	}
@@ -2586,31 +2556,7 @@ func (s *AltScreen) doRender() {
 	s.previousScreen = screen
 	s.previousScreenWidth = width
 	s.previousScreenHeight = height
-	s.previousCursorRow = row
-	s.previousCursorCol = col
-	s.previousCursorHas = hasCursor
-	s.previousCursorValid = true
 	s.currentLayout = &nextLayout
-}
-
-// rowsAndCursorUnchanged reports whether screen and the cursor match the last
-// frame (used by the low-bandwidth no-op skip).
-func (s *AltScreen) rowsAndCursorUnchanged(screen []string, row, col int, hasCursor bool) bool {
-	if len(screen) != len(s.previousScreen) {
-		return false
-	}
-	for i := range screen {
-		if screen[i] != s.previousScreen[i] {
-			return false
-		}
-	}
-	if !s.previousCursorValid {
-		return false
-	}
-	if hasCursor != s.previousCursorHas {
-		return false
-	}
-	return !hasCursor || (row == s.previousCursorRow && col == s.previousCursorCol)
 }
 
 func containsImageLine(lines []string) bool {
