@@ -83,21 +83,21 @@ func (in *Input) Invalidate() {}
 // HandleInput processes a key/input chunk.
 func (in *Input) HandleInput(data string) {
 	// Bracketed paste: \x1b[200~ starts, \x1b[201~ ends.
-	if strings.Contains(data, "\x1b[200~") {
+	if strings.Contains(data, bracketedPasteStart) {
 		in.isInPaste = true
 		in.pasteBuffer = ""
-		data = strings.Replace(data, "\x1b[200~", "", 1)
+		data = strings.Replace(data, bracketedPasteStart, "", 1)
 	}
 
 	if in.isInPaste {
 		in.pasteBuffer += data
 
-		if endIndex := strings.Index(in.pasteBuffer, "\x1b[201~"); endIndex != -1 {
+		if endIndex := strings.Index(in.pasteBuffer, bracketedPasteEnd); endIndex != -1 {
 			pasteContent := in.pasteBuffer[:endIndex]
 			in.handlePaste(pasteContent)
 			in.isInPaste = false
 
-			remaining := in.pasteBuffer[endIndex+6:] // 6 = len("\x1b[201~")
+			remaining := in.pasteBuffer[endIndex+len(bracketedPasteEnd):]
 			in.pasteBuffer = ""
 			if remaining != "" {
 				in.HandleInput(remaining)

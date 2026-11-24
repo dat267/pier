@@ -160,7 +160,7 @@ func EncodeITerm2(base64Data string, options Iterm2EncodeOptions) string {
 	if options.PreserveAspectRatio != nil && !*options.PreserveAspectRatio {
 		params = append(params, "preserveAspectRatio=0")
 	}
-	return "\x1b]1337;File=" + strings.Join(params, ";") + ":" + base64Data + "\x07"
+	return iterm2Prefix + strings.Join(params, ";") + ":" + base64Data + "\x07"
 }
 
 var (

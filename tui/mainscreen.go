@@ -388,7 +388,7 @@ func (s *MainScreen) doRender() {
 	fullRender := func(clearScreen bool) {
 		s.fullRedrawCount++
 		output := NewBoundedTerminalWriter(func(data string) { s.Terminal.Write(data) })
-		output.Append("\x1b[?2026h") // Begin synchronized output
+		output.Append(beginSynchronizedOutput)
 		if clearScreen {
 			output.Append(s.deleteKittyImages(s.previousKittyImageIDs))
 			output.Append("\x1b[2J\x1b[H\x1b[3J") // Clear screen, home, clear scrollback
@@ -415,7 +415,7 @@ func (s *MainScreen) doRender() {
 			}
 			output.Append(line)
 		}
-		output.Append("\x1b[?2026l") // End synchronized output
+		output.Append(endSynchronizedOutput)
 		output.Flush()
 		s.cursorRow = max(0, len(newLines)-1)
 		s.hardwareCursorRow = s.cursorRow
@@ -497,7 +497,7 @@ func (s *MainScreen) doRender() {
 	if firstChanged >= len(newLines) {
 		if len(s.previousLines) > len(newLines) {
 			output := NewBoundedTerminalWriter(func(data string) { s.Terminal.Write(data) })
-			output.Append("\x1b[?2026h")
+			output.Append(beginSynchronizedOutput)
 			output.Append(s.deleteChangedKittyImages(firstChanged, lastChanged))
 			targetRow := max(0, len(newLines)-1)
 			if targetRow < prevViewportTop {
@@ -533,7 +533,7 @@ func (s *MainScreen) doRender() {
 			if moveBack > 0 {
 				output.Append("\x1b[" + strconv.Itoa(moveBack) + "A")
 			}
-			output.Append("\x1b[?2026l")
+			output.Append(endSynchronizedOutput)
 			output.Flush()
 			s.cursorRow = targetRow
 			s.hardwareCursorRow = targetRow
@@ -554,7 +554,7 @@ func (s *MainScreen) doRender() {
 	}
 
 	output := NewBoundedTerminalWriter(func(data string) { s.Terminal.Write(data) })
-	output.Append("\x1b[?2026h")
+	output.Append(beginSynchronizedOutput)
 	output.Append(s.deleteChangedKittyImages(firstChanged, lastChanged))
 	prevViewportBottom := prevViewportTop + height - 1
 	moveTargetRow := firstChanged
@@ -637,7 +637,7 @@ func (s *MainScreen) doRender() {
 		output.Append("\x1b[" + strconv.Itoa(extraLines) + "A")
 	}
 
-	output.Append("\x1b[?2026l")
+	output.Append(endSynchronizedOutput)
 	output.Flush()
 
 	s.cursorRow = max(0, len(newLines)-1)

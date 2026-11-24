@@ -574,7 +574,6 @@ func (e *Editor) handleInputLocked(data string) {
 		e.jumpMode = ""
 	}
 
-	const bracketedPasteStart = "\x1b[200~"
 	if strings.Contains(data, bracketedPasteStart) {
 		e.isInPaste = true
 		e.pasteBuffer = ""
@@ -587,13 +586,13 @@ func (e *Editor) handleInputLocked(data string) {
 
 	if e.isInPaste {
 		e.pasteBuffer += data
-		if endIndex := strings.Index(e.pasteBuffer, "\x1b[201~"); endIndex != -1 {
+		if endIndex := strings.Index(e.pasteBuffer, bracketedPasteEnd); endIndex != -1 {
 			pasteContent := e.pasteBuffer[:endIndex]
 			if len(pasteContent) > 0 {
 				e.handlePasteLocked(pasteContent)
 			}
 			e.isInPaste = false
-			remaining := e.pasteBuffer[endIndex+6:]
+			remaining := e.pasteBuffer[endIndex+len(bracketedPasteEnd):]
 			e.pasteBuffer = ""
 			if len(remaining) > 0 {
 				e.handleInputLocked(remaining)

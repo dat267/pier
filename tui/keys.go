@@ -387,7 +387,7 @@ func IsKeyRelease(data string) bool {
 	// it contains patterns like ":3F" (e.g. bluetooth MAC addresses). The
 	// terminal re-wraps pasted data with bracketed paste markers, so pasted
 	// data always contains \x1b[200~.
-	if strings.Contains(data, "\x1b[200~") {
+	if strings.Contains(data, bracketedPasteStart) {
 		return false
 	}
 	return containsAny(data,
@@ -398,7 +398,7 @@ func IsKeyRelease(data string) bool {
 // Only meaningful when the Kitty keyboard protocol with flag 2 is active.
 func IsKeyRepeat(data string) bool {
 	// See IsKeyRelease for why bracketed paste content is excluded.
-	if strings.Contains(data, "\x1b[200~") {
+	if strings.Contains(data, bracketedPasteStart) {
 		return false
 	}
 	return containsAny(data,

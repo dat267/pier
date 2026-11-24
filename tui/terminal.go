@@ -461,7 +461,7 @@ func (t *ProcessTerminal) setupLegacyStdinBuffer() {
 	// Re-wrap paste content with bracketed paste markers for the editor.
 	t.stdinBuffer.OnPaste = func(content string) {
 		if handler := t.loadInputHandler(); handler != nil {
-			handler("\x1b[200~" + content + "\x1b[201~")
+			handler(bracketedPasteStart + content + bracketedPasteEnd)
 		}
 	}
 
@@ -485,7 +485,7 @@ func (t *ProcessTerminal) FeedInput(raw []byte) []string {
 		sequences = t.filterInputSequence(sequences, sequence)
 	}
 	buffer.OnPaste = func(content string) {
-		sequences = append(sequences, "\x1b[200~"+content+"\x1b[201~")
+		sequences = append(sequences, bracketedPasteStart+content+bracketedPasteEnd)
 	}
 	buffer.processUTF8Input(raw)
 	return sequences
