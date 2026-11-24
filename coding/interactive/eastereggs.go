@@ -701,11 +701,15 @@ func (c *ArminComponent) tickRain() bool {
 	return allSettled
 }
 
-func (c *ArminComponent) tickFade() bool {
+func (c *ArminComponent) tickFade() bool { return c.revealPositions(15) }
+
+// revealPositions copies the next pixelsPerFrame shuffled positions from the
+// final grid, reporting true once every position is revealed (upstream
+// tickFade and tickDissolve, which differ only in that count).
+func (c *ArminComponent) revealPositions(pixelsPerFrame int) bool {
 	state := c.effectState
 	positions := state["positions"].([][2]int)
 	idx := state["idx"].(int)
-	const pixelsPerFrame = 15
 	for range pixelsPerFrame {
 		if idx >= len(positions) {
 			state["idx"] = idx
@@ -776,23 +780,7 @@ func (c *ArminComponent) tickGlitch() bool {
 	return true
 }
 
-func (c *ArminComponent) tickDissolve() bool {
-	state := c.effectState
-	positions := state["positions"].([][2]int)
-	idx := state["idx"].(int)
-	const pixelsPerFrame = 20
-	for range pixelsPerFrame {
-		if idx >= len(positions) {
-			state["idx"] = idx
-			return true
-		}
-		pos := positions[idx]
-		c.grid[pos[0]][pos[1]] = c.finalGrid[pos[0]][pos[1]]
-		idx++
-	}
-	state["idx"] = idx
-	return false
-}
+func (c *ArminComponent) tickDissolve() bool { return c.revealPositions(20) }
 
 // Render renders the animation grid with the accent color.
 func (c *ArminComponent) Render(width int) []string {
