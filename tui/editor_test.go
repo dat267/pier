@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"maps"
@@ -28,26 +27,7 @@ type editorGolden struct {
 
 func loadEditorGolden(t *testing.T) *editorGolden {
 	t.Helper()
-	file, err := os.Open("testdata/editor_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-	values := map[string]string{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		values[strings.TrimPrefix(parts[0], "ed ")] = parts[1]
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
-	return &editorGolden{values: values}
+	return &editorGolden{values: loadArrowGolden(t, "testdata/editor_golden.txt", "ed ")}
 }
 
 type editorSpec struct {

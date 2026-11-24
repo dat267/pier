@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"os"
@@ -46,26 +45,7 @@ func loadEasterGolden(t *testing.T) map[string]string {
 // loadGoldenFile reads a "label => json" golden file.
 func loadGoldenFile(t *testing.T, path string) map[string]string {
 	t.Helper()
-	file, err := os.Open(path)
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-	values := map[string]string{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		values[strings.TrimPrefix(parts[0], "x ")] = parts[1]
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
-	return values
+	return loadArrowGolden(t, path, "x ")
 }
 
 // TestEasterComponentsAgainstUpstreamGolden replays the skill/setup/

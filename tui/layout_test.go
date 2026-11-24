@@ -1,9 +1,7 @@
 package tui
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -42,27 +40,7 @@ type layoutFrameGolden struct {
 
 func loadLayoutFrameGolden(t *testing.T) *layoutFrameGolden {
 	t.Helper()
-	file, err := os.Open("testdata/layoutframe_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-
-	values := map[string]string{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		values[parts[0]] = parts[1]
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
-	return &layoutFrameGolden{values: values}
+	return &layoutFrameGolden{values: loadArrowGolden(t, "testdata/layoutframe_golden.txt", "")}
 }
 
 func checkGolden(t *testing.T, values map[string]string, label string, got any) {

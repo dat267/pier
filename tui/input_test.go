@@ -15,27 +15,7 @@ import (
 
 func loadInputGolden(t *testing.T) map[string]string {
 	t.Helper()
-	file, err := os.Open("testdata/input_golden.txt")
-	if err != nil {
-		t.Fatalf("open golden: %v", err)
-	}
-	defer file.Close()
-
-	values := map[string]string{}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " => ", 2)
-		if len(parts) != 2 {
-			t.Fatalf("bad golden line %q", line)
-		}
-		values[parts[0]] = parts[1]
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scan: %v", err)
-	}
-	return values
+	return loadArrowGolden(t, "testdata/input_golden.txt", "")
 }
 
 func checkInputGolden(t *testing.T, golden map[string]string, label string, got any) {
