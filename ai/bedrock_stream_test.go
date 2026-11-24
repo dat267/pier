@@ -380,7 +380,7 @@ func TestBedrockCallbackFailuresStayInStream(t *testing.T) {
 		default:
 			t.Fatalf("unknown probe mode %q", mode)
 		}
-		message, err := StreamBedrockConverse(bedrockTestModel(server.URL), mistralUserContext(), options).Result(context.Background())
+		message, err := StreamBedrockConverse(bedrockTestModel(server.URL), helloUserContext(), options).Result(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}

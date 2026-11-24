@@ -22,7 +22,7 @@ func TestPiMessagesRequestPreservesMemberOrder(t *testing.T) {
 	defer server.Close()
 
 	payloads := make(chan string, 1)
-	stream := StreamPiMessages(piMessagesModel(server.URL), piMessagesContext(), &PiMessagesOptions{
+	stream := StreamPiMessages(piMessagesModel(server.URL), helloUserContext(), &PiMessagesOptions{
 		APIKey: "token", Temperature: new(0.5), MaxTokens: new(16),
 		CacheRetention: CacheRetentionLong, SessionID: "session-1",
 		OnPayload: func(payload json.RawMessage, _ *Model) json.RawMessage {
@@ -60,7 +60,7 @@ func TestPiMessagesSendsPayloadReplacementVerbatim(t *testing.T) {
 				writer.WriteHeader(http.StatusBadRequest)
 			}))
 			defer server.Close()
-			stream := StreamPiMessages(piMessagesModel(server.URL), piMessagesContext(), &PiMessagesOptions{
+			stream := StreamPiMessages(piMessagesModel(server.URL), helloUserContext(), &PiMessagesOptions{
 				APIKey: "token",
 				OnPayload: func(json.RawMessage, *Model) json.RawMessage {
 					return json.RawMessage(replacement)

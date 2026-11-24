@@ -162,12 +162,12 @@ func TestProviderStreamsAbortWhenResponseHeadersIdle(t *testing.T) {
 			}), &OpenAIResponsesOptions{APIKey: "test", TimeoutMs: new(timeoutMS)})
 		}},
 		{"pi-messages", func(t *testing.T, baseURL string) *AssistantMessageEventStream {
-			return StreamPiMessages(piMessagesModel(baseURL), piMessagesContext(), &PiMessagesOptions{
+			return StreamPiMessages(piMessagesModel(baseURL), helloUserContext(), &PiMessagesOptions{
 				APIKey: "test", TimeoutMs: new(timeoutMS),
 			})
 		}},
 		{"mistral", func(t *testing.T, baseURL string) *AssistantMessageEventStream {
-			return StreamMistralConversations(mistralModel(baseURL), mistralUserContext(), &MistralOptions{
+			return StreamMistralConversations(mistralModel(baseURL), helloUserContext(), &MistralOptions{
 				APIKey: "test", TimeoutMs: new(timeoutMS),
 			})
 		}},
@@ -342,7 +342,7 @@ func TestIdleGuardDoesNotFireWhileTheConsumerIsBusy(t *testing.T) {
 // same settings timeout bounds a silent body (D254).
 func TestStreamMistralAbortsWhenStreamIdles(t *testing.T) {
 	server := stallServer(t, true, `data: {"choices":[{"delta":{"content":"thinking"}}]}`+"\n\n")
-	stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(), &MistralOptions{
+	stream := StreamMistralConversations(mistralModel(server.URL), helloUserContext(), &MistralOptions{
 		APIKey: "test", TimeoutMs: new(200),
 	})
 	awaitStreamError(t, stream, "stream idle")

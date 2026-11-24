@@ -36,7 +36,7 @@ func TestMistralContinuedToolCallClosesTextBlock(t *testing.T) {
 	sse.WriteString("data: [DONE]\n\n")
 	server := sseServer(t, []string{sse.String()}, nil)
 	defer server.Close()
-	stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(), &MistralOptions{
+	stream := StreamMistralConversations(mistralModel(server.URL), helloUserContext(), &MistralOptions{
 		APIKey: "test-key",
 	})
 	var types []string
@@ -98,7 +98,7 @@ func TestMistralSimpleReasoningMatchesUpstream(t *testing.T) {
 			defer server.Close()
 			fixture.Model.BaseURL = server.URL
 			var got reasoningPayload
-			stream := StreamMistralConversationsSimple(&fixture.Model, mistralUserContext(), &SimpleStreamOptions{
+			stream := StreamMistralConversationsSimple(&fixture.Model, helloUserContext(), &SimpleStreamOptions{
 				Reasoning: fixture.Reasoning,
 				APIKey:    "test-key", OnPayload: func(payload json.RawMessage, model *Model) json.RawMessage {
 					if err := json.Unmarshal(payload, &got); err != nil {
@@ -151,7 +151,7 @@ func TestMistralStreamEventsMatchUpstream(t *testing.T) {
 			defer server.Close()
 			model := mistralModel(server.URL)
 			model.Cost = ModelCost{Input: 2, Output: 6, CacheRead: 0.5}
-			stream := StreamMistralConversations(model, mistralUserContext(), &MistralOptions{APIKey: "test-key"})
+			stream := StreamMistralConversations(model, helloUserContext(), &MistralOptions{APIKey: "test-key"})
 			checkProjectedEvents(t, stream, fixture.Events)
 		})
 	}
@@ -223,7 +223,7 @@ func TestMistralDefaultsAbsentToolArgumentsToObjectDelta(t *testing.T) {
 			body := "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"id\":\"call0\",\"index\":0,\"function\":{\"name\":\"lookup\"" + fixture.arguments + "}}]},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n"
 			server := sseServer(t, []string{body}, nil)
 			defer server.Close()
-			stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(), &MistralOptions{
+			stream := StreamMistralConversations(mistralModel(server.URL), helloUserContext(), &MistralOptions{
 				APIKey: "test-key",
 			})
 			var deltas []string
@@ -258,7 +258,7 @@ func TestMistralToolCallsEndInFirstSeenOrder(t *testing.T) {
 	body.WriteString("data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n")
 	server := sseServer(t, []string{body.String()}, nil)
 	defer server.Close()
-	stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(), &MistralOptions{
+	stream := StreamMistralConversations(mistralModel(server.URL), helloUserContext(), &MistralOptions{
 		APIKey: "test-key",
 	})
 	var got []string
@@ -290,7 +290,7 @@ func TestMistralStreamSaturatesFiniteUsageBeyondInt64(t *testing.T) {
 	}))
 	defer server.Close()
 
-	stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(), &MistralOptions{APIKey: "test-key"})
+	stream := StreamMistralConversations(mistralModel(server.URL), helloUserContext(), &MistralOptions{APIKey: "test-key"})
 	message, err := stream.Result(context.Background())
 	if err != nil {
 		t.Fatal(err)

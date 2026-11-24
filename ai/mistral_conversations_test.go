@@ -77,7 +77,8 @@ func mistralModel(baseURL string) *Model {
 	}
 }
 
-func mistralUserContext() TranscriptContext {
+// helloUserContext is a one-message transcript the provider request tests send.
+func helloUserContext() TranscriptContext {
 	return TranscriptContext{Messages: []Message{
 		&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
 	}}
@@ -87,7 +88,7 @@ func TestMistralWirePayloadRenamesKeys(t *testing.T) {
 	model := mistralModel("https://api.mistral.ai")
 	maxTokens := 100
 	temperature := 0.5
-	payload, err := buildMistralChatPayload(model, mistralUserContext(), mistralUserContext().Messages, &MistralOptions{
+	payload, err := buildMistralChatPayload(model, helloUserContext(), helloUserContext().Messages, &MistralOptions{
 		MaxTokens: &maxTokens, Temperature: &temperature,
 		ToolChoice: "auto",
 		PromptMode: "reasoning",
@@ -269,7 +270,7 @@ func TestMistralStreamClampsLargeCachedTokenUsage(t *testing.T) {
 	}))
 	defer server.Close()
 
-	stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(), &MistralOptions{APIKey: "test-key"})
+	stream := StreamMistralConversations(mistralModel(server.URL), helloUserContext(), &MistralOptions{APIKey: "test-key"})
 	message, err := stream.Result(ctxpkg.Background())
 	if err != nil {
 		t.Fatalf("err = %v", err)
@@ -305,7 +306,7 @@ func TestMistralStreamEndToEnd(t *testing.T) {
 
 	model := mistralModel(server.URL)
 	var providerEventCount int
-	stream := StreamMistralConversations(model, mistralUserContext(), &MistralOptions{
+	stream := StreamMistralConversations(model, helloUserContext(), &MistralOptions{
 		APIKey: "test-key", SessionID: "session-1",
 		OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
 			if eventModel != model || !json.Valid(data) {
@@ -384,7 +385,7 @@ func TestMistralActiveStreamOutlivesTheIdleTimeout(t *testing.T) {
 	defer server.Close()
 
 	// Five 10ms gaps total 50ms, well past the 30ms timeout.
-	stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(), &MistralOptions{
+	stream := StreamMistralConversations(mistralModel(server.URL), helloUserContext(), &MistralOptions{
 		APIKey: "test", TimeoutMs: new(30),
 	})
 	message, err := stream.Result(ctxpkg.Background())
@@ -408,7 +409,7 @@ func TestMistralStreamErrors(t *testing.T) {
 	defer server.Close()
 
 	model := mistralModel(server.URL)
-	stream := StreamMistralConversations(model, mistralUserContext(), &MistralOptions{
+	stream := StreamMistralConversations(model, helloUserContext(), &MistralOptions{
 		APIKey: "bad",
 	})
 	message, err := stream.Result(ctxpkg.Background())
@@ -422,7 +423,7 @@ func TestMistralStreamErrors(t *testing.T) {
 	}
 
 	// A missing API key fails before the request.
-	stream = StreamMistralConversations(model, mistralUserContext(), &MistralOptions{})
+	stream = StreamMistralConversations(model, helloUserContext(), &MistralOptions{})
 	message, err = stream.Result(ctxpkg.Background())
 	if err != nil {
 		t.Fatalf("err = %v", err)
@@ -438,7 +439,7 @@ func TestMistralStreamErrors(t *testing.T) {
 		_, _ = writer.Write([]byte("data: {\"unexpected\":true}\n\n"))
 	}))
 	defer badServer.Close()
-	stream = StreamMistralConversations(mistralModel(badServer.URL), mistralUserContext(), &MistralOptions{
+	stream = StreamMistralConversations(mistralModel(badServer.URL), helloUserContext(), &MistralOptions{
 		APIKey: "key",
 	})
 	message, err = stream.Result(ctxpkg.Background())
@@ -591,7 +592,7 @@ func TestMistralEventDataLinesTrimJSWhitespace(t *testing.T) {
 	}))
 	defer server.Close()
 
-	stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(),
+	stream := StreamMistralConversations(mistralModel(server.URL), helloUserContext(),
 		&MistralOptions{APIKey: "test-key"})
 	var text string
 	for {

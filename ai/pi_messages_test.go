@@ -25,12 +25,6 @@ func piMessagesModel(baseURL string) *Model {
 	}
 }
 
-func piMessagesContext() TranscriptContext {
-	return TranscriptContext{Messages: []Message{
-		&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
-	}}
-}
-
 type chunkedPiMessagesReader struct {
 	data      []byte
 	chunkSize int
@@ -212,7 +206,7 @@ func TestStreamPiMessagesAssemblesEvents(t *testing.T) {
 
 	model := piMessagesModel(server.URL)
 	var providerEventCount int
-	stream := StreamPiMessages(model, piMessagesContext(), &PiMessagesOptions{
+	stream := StreamPiMessages(model, helloUserContext(), &PiMessagesOptions{
 		APIKey: "radius-token", SessionID: "session-1",
 		OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
 			if eventModel != model || !json.Valid(data) {
@@ -295,7 +289,7 @@ func TestStreamPiMessagesErrorResponse(t *testing.T) {
 	}))
 	defer server.Close()
 
-	stream := StreamPiMessages(piMessagesModel(server.URL), piMessagesContext(), &PiMessagesOptions{
+	stream := StreamPiMessages(piMessagesModel(server.URL), helloUserContext(), &PiMessagesOptions{
 		APIKey: "token",
 	})
 	message, err := stream.Result(context.Background())
@@ -325,7 +319,7 @@ func TestStreamPiMessagesErrorResponse(t *testing.T) {
 		_, _ = writer.Write([]byte("upstream exploded"))
 	}))
 	defer plainServer.Close()
-	stream = StreamPiMessages(piMessagesModel(plainServer.URL), piMessagesContext(), &PiMessagesOptions{
+	stream = StreamPiMessages(piMessagesModel(plainServer.URL), helloUserContext(), &PiMessagesOptions{
 		APIKey: "token",
 	})
 	message, _ = stream.Result(context.Background())
@@ -340,7 +334,7 @@ func TestStreamPiMessagesErrorResponse(t *testing.T) {
 
 func TestStreamPiMessagesFailures(t *testing.T) {
 	// A missing API key fails before the request.
-	stream := StreamPiMessages(piMessagesModel("https://example.invalid"), piMessagesContext(), &PiMessagesOptions{})
+	stream := StreamPiMessages(piMessagesModel("https://example.invalid"), helloUserContext(), &PiMessagesOptions{})
 	message, _ := stream.Result(context.Background())
 	if message.ErrorMessage == nil || !strings.Contains(*message.ErrorMessage, `No API key provided for provider "radius"`) {
 		t.Fatalf("message = %+v", message)
@@ -354,7 +348,7 @@ func TestStreamPiMessagesFailures(t *testing.T) {
 		_, _ = writer.Write([]byte("data: {\"type\":\"start\"}\n\ndata: {\"type\":\"text_start\",\"contentIndex\":0}\n\ndata: {\"type\":\"text_delta\",\"contentIndex\":0,\"delta\":\"partial\"}\n\n"))
 	}))
 	defer server.Close()
-	stream = StreamPiMessages(piMessagesModel(server.URL), piMessagesContext(), &PiMessagesOptions{
+	stream = StreamPiMessages(piMessagesModel(server.URL), helloUserContext(), &PiMessagesOptions{
 		APIKey: "token",
 	})
 	message, _ = stream.Result(context.Background())
@@ -369,7 +363,7 @@ func TestStreamPiMessagesFailures(t *testing.T) {
 		_, _ = writer.Write([]byte("data: {\"type\":\"error\",\"reason\":\"error\",\"usage\":{\"input\":1,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":1,\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0,\"total\":0}},\"errorMessage\":\"policy blocked\"}\n\n"))
 	}))
 	defer server.Close()
-	stream = StreamPiMessages(piMessagesModel(server.URL), piMessagesContext(), &PiMessagesOptions{
+	stream = StreamPiMessages(piMessagesModel(server.URL), helloUserContext(), &PiMessagesOptions{
 		APIKey: "token",
 	})
 	message, _ = stream.Result(context.Background())
@@ -405,7 +399,7 @@ func TestStreamPiMessagesSimple(t *testing.T) {
 	}))
 	defer server.Close()
 
-	stream := StreamPiMessagesSimple(piMessagesModel(server.URL), piMessagesContext(), &SimpleStreamOptions{
+	stream := StreamPiMessagesSimple(piMessagesModel(server.URL), helloUserContext(), &SimpleStreamOptions{
 		APIKey:     "token",
 		Reasoning:  ThinkLow,
 		ToolChoice: new(ToolChoiceAuto),
@@ -435,7 +429,7 @@ func TestStreamPiMessagesRejectsInvalidContentIndex(t *testing.T) {
 			_, _ = writer.Write([]byte(body + "\n\n"))
 		}))
 		model := piMessagesModel(server.URL)
-		message, err := StreamPiMessages(model, piMessagesContext(), &PiMessagesOptions{APIKey: "k"}).Result(context.Background())
+		message, err := StreamPiMessages(model, helloUserContext(), &PiMessagesOptions{APIKey: "k"}).Result(context.Background())
 		server.Close()
 		if err != nil {
 			t.Fatalf("%s: err = %v", name, err)
@@ -459,7 +453,7 @@ func TestStreamPiMessagesRecordsResponseModel(t *testing.T) {
 			`data: {"type":"done","reason":"stop","usage":{"input":1,"output":1,"cacheRead":0,"cacheWrite":0,"totalTokens":2,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"responseModel":"served-model"}` + "\n\n"))
 	}))
 	defer server.Close()
-	message, err := StreamPiMessages(piMessagesModel(server.URL), piMessagesContext(), &PiMessagesOptions{APIKey: "k"}).Result(context.Background())
+	message, err := StreamPiMessages(piMessagesModel(server.URL), helloUserContext(), &PiMessagesOptions{APIKey: "k"}).Result(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -551,7 +545,7 @@ func TestPiMessagesCallbackFailuresStayInStream(t *testing.T) {
 		default:
 			t.Fatalf("unknown probe mode %q", mode)
 		}
-		message, err := StreamPiMessages(model, mistralUserContext(), options).Result(context.Background())
+		message, err := StreamPiMessages(model, helloUserContext(), options).Result(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}

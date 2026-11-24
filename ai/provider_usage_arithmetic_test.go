@@ -62,7 +62,7 @@ func TestMistralStreamDoesNotWrapFallbackUsageTotal(t *testing.T) {
 		"data: " + `{"choices":[{"finish_reason":"stop","delta":{}}],"usage":{"prompt_tokens":6000000000000000000,"completion_tokens":6000000000000000000}}` + "\n\ndata: [DONE]\n\n",
 	}, nil)
 	defer server.Close()
-	message, err := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(), &MistralOptions{APIKey: "test-key"}).Result(context.Background())
+	message, err := StreamMistralConversations(mistralModel(server.URL), helloUserContext(), &MistralOptions{APIKey: "test-key"}).Result(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
