@@ -697,6 +697,13 @@ func (s *AgentSession) AdoptLoopScheduler(scheduler *LoopScheduler, maxAge time.
 	if scheduler == nil || s.loopScheduler == scheduler {
 		return
 	}
+	if s.loopScheduler != nil {
+		s.loopScheduler.RemoveAll()
+	}
+	// Drain the outgoing scheduler: a job left on it keeps firing on its own timer
+	// with nobody reading it, which is how two live jobs produced duplicate ticks
+	// from one /loop. Its id counter also restarts, so a stale job and a fresh one
+	// can share an id and make cron_delete remove the wrong entry.
 	s.loopScheduler = scheduler
 	s.loopMaxAge = maxAge
 	// Redefine the tools, not only register them: registerLoopToolsLocked skips a
@@ -716,6 +723,11 @@ func (s *AgentSession) AdoptLoopScheduler(scheduler *LoopScheduler, maxAge time.
 	s.setActiveToolsByNameLocked(s.withLoopToolsActive(s.GetActiveToolNames()))
 	s.toolsMu.Unlock()
 }
+
+// LoopScheduler reports the scheduler this session's scheduling tools act on, or
+// nil. The interactive app checks it holds the same one it owns: two schedulers
+// mean two calendars, and a job armed through one is invisible to the other.
+func (s *AgentSession) LoopScheduler() *LoopScheduler { return s.loopScheduler }
 
 // withLoopToolsActive returns names with every scheduling tool appended that is
 // registered and not turned off in /tools.

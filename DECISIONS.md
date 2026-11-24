@@ -8984,6 +8984,18 @@ key binding and no cancel-them-later tool, because each of those is a knob the
 operator then has to reason about, and the threshold covers every case they were
 meant to serve. A tool cannot request a move and a caller cannot force one.
 
+Adopting a scheduler drains the outgoing one first. A rebind that left jobs on the
+previous scheduler kept them firing on their own timer with nobody reading them, so
+one `/loop` produced duplicate ticks, and because a scheduler's id counter restarts,
+a stale job and a fresh one could share an id: `cron_delete` then reported "No
+scheduled job" for a job it had just removed.
+
+Adopting a scheduler drains the outgoing one first. A rebind that left jobs on the
+previous scheduler kept them firing on their own timer with nobody reading them, so
+one `/loop` produced duplicate ticks, and because a scheduler's id counter restarts,
+a stale job and a fresh one could share an id: `cron_delete` then reported "No
+scheduled job" for a job it had just removed.
+
 The one knob is the threshold itself, in `/features`, because how long is "too
 long" depends on the work: a one-minute default suits a shell command, while
 someone running long builds wants ten or thirty, and someone who would rather

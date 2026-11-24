@@ -158,3 +158,54 @@ func callToolByName(t *testing.T, session *AgentSession, name string, params str
 	}
 	return text.String()
 }
+
+// cron_delete must act on the scheduler the session currently holds. When a
+// rebind left jobs on the outgoing scheduler, the tool's captured Scheduler was
+// the old one: it reported "No scheduled job" for a job it had just removed, and
+// the old scheduler kept firing it.
+func TestAdoptLoopSchedulerDrainsTheOutgoingOne(t *testing.T) {
+	first := NewLoopScheduler(nil, nil)
+	defer first.Stop()
+	second := NewLoopScheduler(nil, nil)
+	defer second.Stop()
+	stale, err := first.Add("* * * * *", "stale", true, 0)
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+
+	manager, dir := newTestSession(t)
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, StreamFn: stubStreamFn, ConvertToLlm: ConvertToLlm,
+		Model:         &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000},
+		Tools:         []agent.AgentTool{testTool("read")},
+		LoopScheduler: first,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Dispose()
+
+	session.AdoptLoopScheduler(second, LoopRecurringMaxAge)
+	// The outgoing scheduler holds nothing, so no orphaned timer keeps firing.
+	if got := len(first.Jobs()); got != 0 {
+		t.Fatalf("adopting left %d jobs on the outgoing scheduler", got)
+	}
+	// And the tool acts on the new one: a job it can see, it can cancel.
+	job, err := second.Add("* * * * *", "live", true, 0)
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	result := callToolByName(t, session, "cron_delete", `{"id":"`+job.ID+`"}`)
+	if strings.Contains(result, "No scheduled job") {
+		t.Fatalf("cron_delete reported the job missing while removing it: %q", result)
+	}
+	if got := len(second.Jobs()); got != 0 {
+		t.Fatalf("the job survived on the live scheduler: %d jobs", got)
+	}
+	// A genuinely unknown id still reports missing, which is what makes the
+	// message useful.
+	if got := callToolByName(t, session, "cron_delete", `{"id":"nope"}`); !strings.Contains(got, "No scheduled job") {
+		t.Fatalf("an unknown id did not report missing: %q", got)
+	}
+	_ = stale
+}
