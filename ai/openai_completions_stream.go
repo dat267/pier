@@ -141,20 +141,24 @@ func decodeOpenAIChunkTolerant(raw json.RawMessage, out *openaiChunk) bool {
 	return true
 }
 
+// openaiToolCallDelta is one streamed tool_calls entry: a function call or a
+// custom (grammar) tool call, matched to its block by index or id.
+type openaiToolCallDelta struct {
+	Index    *int   `json:"index"`
+	ID       string `json:"id"`
+	Function *struct {
+		Name      string `json:"name"`
+		Arguments string `json:"arguments"`
+	} `json:"function"`
+	Custom *struct {
+		Name  string `json:"name"`
+		Input string `json:"input"`
+	} `json:"custom"`
+}
+
 type openaiChunkDelta struct {
-	Content   *string `json:"content"`
-	ToolCalls []struct {
-		Index    *int   `json:"index"`
-		ID       string `json:"id"`
-		Function *struct {
-			Name      string `json:"name"`
-			Arguments string `json:"arguments"`
-		} `json:"function"`
-		Custom *struct {
-			Name  string `json:"name"`
-			Input string `json:"input"`
-		} `json:"custom"`
-	} `json:"tool_calls"`
+	Content   *string               `json:"content"`
+	ToolCalls []openaiToolCallDelta `json:"tool_calls"`
 	// reasoning_content / reasoning / reasoning_text live here.
 	Extra openaiChunkDeltaExtra `json:"-"`
 	// reasoning_details (OpenRouter).
@@ -164,23 +168,12 @@ type openaiChunkDelta struct {
 // UnmarshalJSON captures unknown delta fields for the reasoning-field scan.
 func (d *openaiChunkDelta) UnmarshalJSON(data []byte) error {
 	type wire struct {
-		Content   *string `json:"content"`
-		ToolCalls []struct {
-			Index    *int   `json:"index"`
-			ID       string `json:"id"`
-			Function *struct {
-				Name      string `json:"name"`
-				Arguments string `json:"arguments"`
-			} `json:"function"`
-			Custom *struct {
-				Name  string `json:"name"`
-				Input string `json:"input"`
-			} `json:"custom"`
-		} `json:"tool_calls"`
-		ReasoningDetails []json.RawMessage `json:"reasoning_details,omitempty"`
-		ReasoningContent *string           `json:"reasoning_content"`
-		Reasoning        *string           `json:"reasoning"`
-		ReasoningText    *string           `json:"reasoning_text"`
+		Content          *string               `json:"content"`
+		ToolCalls        []openaiToolCallDelta `json:"tool_calls"`
+		ReasoningDetails []json.RawMessage     `json:"reasoning_details,omitempty"`
+		ReasoningContent *string               `json:"reasoning_content"`
+		Reasoning        *string               `json:"reasoning"`
+		ReasoningText    *string               `json:"reasoning_text"`
 	}
 	var w wire
 	if err := json.Unmarshal(data, &w); err != nil {
@@ -446,18 +439,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 			}
 			return *thinkingBlock
 		}
-		ensureToolCallBlock := func(delta struct {
-			Index    *int   `json:"index"`
-			ID       string `json:"id"`
-			Function *struct {
-				Name      string `json:"name"`
-				Arguments string `json:"arguments"`
-			} `json:"function"`
-			Custom *struct {
-				Name  string `json:"name"`
-				Input string `json:"input"`
-			} `json:"custom"`
-		}) *openaiStreamingToolCall {
+		ensureToolCallBlock := func(delta openaiToolCallDelta) *openaiStreamingToolCall {
 			name := ""
 			if delta.Function != nil {
 				name = delta.Function.Name
@@ -746,18 +728,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 	return stream
 }
 
-func toolCallDeltaText(toolCall struct {
-	Index    *int   `json:"index"`
-	ID       string `json:"id"`
-	Function *struct {
-		Name      string `json:"name"`
-		Arguments string `json:"arguments"`
-	} `json:"function"`
-	Custom *struct {
-		Name  string `json:"name"`
-		Input string `json:"input"`
-	} `json:"custom"`
-}) string {
+func toolCallDeltaText(toolCall openaiToolCallDelta) string {
 	if toolCall.Function != nil {
 		return toolCall.Function.Arguments
 	}
