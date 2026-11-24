@@ -70,7 +70,7 @@ func TestCloneCommandDuplicatesAtTheCurrentPosition(t *testing.T) {
 	if texts := userMessageTexts(app); len(texts) != 1 || texts[0] != "hello" {
 		t.Errorf("the clone's context = %v, want the conversation", texts)
 	}
-	if !transcriptHasStatus(app, "Cloned to new session") {
+	if !transcriptContains(app, "Cloned to new session") {
 		t.Errorf("no clone status: %q", transcriptTexts(app))
 	}
 }

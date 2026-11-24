@@ -82,7 +82,7 @@ func TestImportCommandCopiesIntoTheSessionDir(t *testing.T) {
 	if messages := app.sessionMgr.GetEntries(); len(messages) == 0 {
 		t.Error("the imported session has no entries")
 	}
-	if !transcriptHasStatus(app, "Session imported from: "+source) {
+	if !transcriptContains(app, "Session imported from: "+source) {
 		t.Errorf("no import status: %q", transcriptTexts(app))
 	}
 }
@@ -186,7 +186,7 @@ func TestImportCommandMissingCwdPrompt(t *testing.T) {
 		answerConfirm(t, app, 0) // "Replace current session?" — yes
 		answerConfirm(t, app, 0) // "Session cwd not found" — continue in the fallback
 
-		if !transcriptHasStatus(app, "Session imported from: "+source) {
+		if !transcriptContains(app, "Session imported from: "+source) {
 			t.Errorf("no import status: %q", transcriptTexts(app))
 		}
 		// The imported session lives in this project's session directory. Its name
@@ -211,7 +211,7 @@ func TestImportCommandMissingCwdPrompt(t *testing.T) {
 		answerConfirm(t, app, 0) // replace the current session
 		answerConfirm(t, app, 2) // cancel at the cwd prompt
 
-		if !transcriptHasStatus(app, "Import cancelled") {
+		if !transcriptContains(app, "Import cancelled") {
 			t.Errorf("no cancellation status: %q", transcriptTexts(app))
 		}
 	})
@@ -237,7 +237,7 @@ func TestImportCommandMissingCwdPrompt(t *testing.T) {
 		if filepath.Dir(forked) != sessionDir || forked == source {
 			t.Errorf("session file = %q, want a fork in %q", forked, sessionDir)
 		}
-		if !transcriptHasStatus(app, "Forked into new session ") {
+		if !transcriptContains(app, "Forked into new session ") {
 			t.Errorf("no fork status: %q", transcriptTexts(app))
 		}
 		entries, err := coding.LoadEntriesFromFile(forked)
@@ -275,16 +275,6 @@ func TestImportCommandRequiresAPath(t *testing.T) {
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
-}
-
-// transcriptContains looks for a line in the chat text components.
-func transcriptContains(app *App, needle string) bool {
-	for _, text := range transcriptTexts(app) {
-		if strings.Contains(text, needle) {
-			return true
-		}
-	}
-	return false
 }
 
 // pi v1.4.0 agent-session-runtime.ts throws SessionImportFileNotFoundError for

@@ -68,11 +68,11 @@ func TestTailCommandStartsFromTheLiveContext(t *testing.T) {
 	if texts := userMessageTexts(app); len(texts) != 2 || texts[0] != "kept question" || texts[1] != "live question" {
 		t.Errorf("tail messages = %v, want only the live window", texts)
 	}
-	if !transcriptHasStatus(app, "Started a new session from the live context") {
+	if !transcriptContains(app, "Started a new session from the live context") {
 		t.Errorf("no tail status: %q", transcriptTexts(app))
 	}
 	// The only way back to the source is /resume, so the status names it.
-	if !transcriptHasStatus(app, "/resume") {
+	if !transcriptContains(app, "/resume") {
 		t.Errorf("the tail status does not mention /resume: %q", transcriptTexts(app))
 	}
 }

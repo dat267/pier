@@ -24,7 +24,8 @@ func transcriptTexts(app *App) []string {
 	return texts
 }
 
-func transcriptHasStatus(app *App, needle string) bool {
+// transcriptContains reports whether a chat text component contains needle.
+func transcriptContains(app *App, needle string) bool {
 	for _, text := range transcriptTexts(app) {
 		if strings.Contains(text, needle) {
 			return true
@@ -64,12 +65,12 @@ func TestThinkingToggleEmitsTheStatus(t *testing.T) {
 	}
 
 	wiring.OnThinkingToggle()
-	if !transcriptHasStatus(app, "Thinking blocks: hidden") {
+	if !transcriptContains(app, "Thinking blocks: hidden") {
 		t.Errorf("no hidden status; texts = %q", transcriptTexts(app))
 	}
 
 	wiring.OnThinkingToggle()
-	if !transcriptHasStatus(app, "Thinking blocks: visible") {
+	if !transcriptContains(app, "Thinking blocks: visible") {
 		t.Errorf("no visible status; texts = %q", transcriptTexts(app))
 	}
 	if count := len(transcriptTexts(app)); count != 1 {
