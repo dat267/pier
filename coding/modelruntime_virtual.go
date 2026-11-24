@@ -70,7 +70,7 @@ func (r *ModelRuntime) RegisterVirtualModel(definition VirtualModelDefinition) e
 	r.recomposeProvider(providerID)
 	composed := r.models.GetProvider(providerID) != nil
 	r.updateModelSnapshot()
-	if !composed && !r.hasConfiguredProvider(providerID) {
+	if !composed && !r.HasConfiguredAuth(providerID) {
 		// A provider of only virtual models needs no credentials, so mark it
 		// configured now: session restore checks auth before a refresh lands.
 		r.mu.Lock()
@@ -122,14 +122,6 @@ func (r *ModelRuntime) virtualModelsFor(providerID string) []*ai.Model {
 	}
 	slices.SortFunc(out, func(left, right *ai.Model) int { return strings.Compare(left.ID, right.ID) })
 	return out
-}
-
-// hasConfiguredProvider reports whether the snapshot counts a provider as
-// configured.
-func (r *ModelRuntime) hasConfiguredProvider(providerID string) bool {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.snapshot.ConfiguredProviders[providerID]
 }
 
 // GetPhysicalModel returns a catalog chat model that is not virtual.
