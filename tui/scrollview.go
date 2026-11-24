@@ -1,8 +1,9 @@
 package tui
 
 import (
-	"github.com/dat267/pier/internal/jsnum"
 	"time"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of src/components/scroll-view.ts: the single-child scroll container

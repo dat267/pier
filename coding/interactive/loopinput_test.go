@@ -2,7 +2,6 @@ package interactive
 
 import (
 	"context"
-	"github.com/dat267/pier/ai"
 	"os"
 	"strings"
 	"sync"
@@ -10,6 +9,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 // startLoopApp runs the app's loop in the background and returns a stop

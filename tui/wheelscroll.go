@@ -2,12 +2,13 @@ package tui
 
 import (
 	"encoding/json"
-	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // WheelScrollLines is the fullscreen wheel setting: Auto (accelerate fast spins)

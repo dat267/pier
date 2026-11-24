@@ -1,8 +1,9 @@
 package ai
 
 import (
-	"github.com/dat267/pier/internal/jsnum"
 	"math"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of utils/estimate.ts.

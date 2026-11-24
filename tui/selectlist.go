@@ -2,10 +2,11 @@ package tui
 
 import (
 	"cmp"
-	"github.com/dat267/pier/internal/jsnum"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dat267/pier/internal/jsnum"
 
 	"github.com/dat267/pier/ai"
 )

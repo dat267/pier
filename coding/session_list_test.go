@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -13,6 +12,8 @@ import (
 	"testing"
 	"time"
 	"weak"
+
+	"github.com/dat267/pier/ai"
 )
 
 // seedSession creates a persisted session with a full turn (the file flushes

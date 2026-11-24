@@ -3,12 +3,13 @@ package coding
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/dat267/pier/agent"
-	"github.com/dat267/pier/ai"
 	"os"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/dat267/pier/agent"
+	"github.com/dat267/pier/ai"
 )
 
 // pi v1.4.0 (4a080252), core/agent-session.ts _rebuildSystemPrompt and

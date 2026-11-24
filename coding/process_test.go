@@ -1,9 +1,10 @@
 package coding
 
 import (
-	"github.com/dat267/pier/ai"
 	"sync"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // TestProcessTreeGuardKillIsConcurrent pins that the guard's kill is safe to

@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/dat267/pier/ai"
 	"os"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Tests for providers/cloudflare-auth.ts, providers/cloudflare-stream.ts, and

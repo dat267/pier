@@ -3,10 +3,11 @@ package coding
 import (
 	ctxpkg "context"
 	"encoding/json"
-	"github.com/dat267/pier/agent"
-	"github.com/dat267/pier/ai"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/agent"
+	"github.com/dat267/pier/ai"
 )
 
 // Round 106 tests: branch summarization and session tree navigation.

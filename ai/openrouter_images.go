@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"net/http"
 	"regexp"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of api/openrouter-images.ts: OpenRouter's image generation through the

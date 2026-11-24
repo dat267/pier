@@ -1,7 +1,6 @@
 package coding
 
 import (
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +8,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Session manager tests keyed to upstream session-manager.ts semantics.

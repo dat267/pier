@@ -1,11 +1,12 @@
 package interactive
 
 import (
+	"strings"
+	"testing"
+
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
-	"strings"
-	"testing"
 )
 
 // Port of the ThemedText case in upstream themed-text.test.ts (bf8e4b953):

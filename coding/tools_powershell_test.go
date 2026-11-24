@@ -3,11 +3,12 @@ package coding
 import (
 	"context"
 	"encoding/json"
-	"github.com/dat267/pier/ai"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Tests keyed to upstream utils/shell.ts, core/tools/powershell.ts, and

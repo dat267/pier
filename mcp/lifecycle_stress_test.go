@@ -2,12 +2,13 @@ package mcp
 
 import (
 	"context"
-	"github.com/dat267/pier/mcp/protocol"
 	"net/http"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/mcp/protocol"
 )
 
 // Closing a client while calls are in flight, from several goroutines at once,

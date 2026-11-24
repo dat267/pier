@@ -3,7 +3,6 @@ package coding
 import (
 	"context"
 	"encoding/json"
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -14,6 +13,8 @@ import (
 	"testing/synctest"
 	"time"
 	"weak"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Session manager tests keyed to upstream session-manager.ts semantics.

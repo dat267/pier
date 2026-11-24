@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/internal/whatwgurl"
 	"io"
 	"net"
 	"net/http"
@@ -14,6 +13,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/dat267/pier/internal/whatwgurl"
 
 	"github.com/dat267/pier/internal/boundedio"
 	"github.com/dat267/pier/internal/jsnum"

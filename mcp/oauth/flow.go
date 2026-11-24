@@ -8,12 +8,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/internal/whatwgurl"
 	"net/http"
 	"net/url"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/dat267/pier/internal/whatwgurl"
 
 	"github.com/dat267/pier/internal/boundedio"
 )

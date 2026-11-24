@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/ai"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 type truncateFixtureResult struct {

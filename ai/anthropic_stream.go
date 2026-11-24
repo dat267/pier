@@ -7,13 +7,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"net/http"
 	"slices"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dat267/pier/internal/jsnum"
 
 	"golang.org/x/text/encoding/unicode"
 )

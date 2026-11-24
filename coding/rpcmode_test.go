@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/ai"
 	"io"
 	"reflect"
 	"strings"
@@ -14,6 +13,8 @@ import (
 	"testing"
 	"testing/synctest"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 // untilResponses waits for a response to every id without discarding the ones

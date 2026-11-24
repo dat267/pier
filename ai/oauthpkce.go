@@ -6,9 +6,10 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
-	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"time"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of auth/oauth/pkce.ts, device-code.ts, and oauth-page.ts.

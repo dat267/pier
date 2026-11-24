@@ -6,8 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/internal/leakcheck"
-	"github.com/dat267/pier/mcp/protocol"
 	"io"
 	"os"
 	"os/exec"
@@ -18,6 +16,9 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/internal/leakcheck"
+	"github.com/dat267/pier/mcp/protocol"
 )
 
 // Port of packages/mcp/test/stdio.test.ts against Go ports of the upstream

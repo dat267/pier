@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/internal/offloop"
 	"io"
 	"os"
 	"strings"
@@ -15,6 +13,9 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/internal/offloop"
 )
 
 func rpcTestSession(t *testing.T) *AgentSession {

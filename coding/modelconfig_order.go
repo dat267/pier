@@ -2,6 +2,7 @@ package coding
 
 import (
 	"encoding/json"
+
 	"github.com/dat267/pier/internal/jsnum"
 )
 

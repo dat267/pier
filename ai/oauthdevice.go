@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/internal/jsnum"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of auth/oauth/xai.ts and auth/oauth/kimi-coding.ts (both RFC 8628

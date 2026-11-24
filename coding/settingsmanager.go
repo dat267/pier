@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/internal/jsnum"
 	"maps"
 	"math"
 	"os"
@@ -18,6 +17,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/dat267/pier/internal/jsnum"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/internal/offloop"

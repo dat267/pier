@@ -3,13 +3,14 @@ package coding
 import (
 	"context"
 	"encoding/json"
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // pi v1.4.0 (4a080252), core/tools/find.ts with the default fd implementation.

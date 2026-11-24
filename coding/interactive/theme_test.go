@@ -2,13 +2,14 @@ package interactive
 
 import (
 	"encoding/json"
-	"github.com/dat267/pier/internal/offloop"
-	"github.com/dat267/pier/tui"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/internal/offloop"
+	"github.com/dat267/pier/tui"
 )
 
 // Regenerate with pier's palette (D154); source revisions: testdata/README.md.

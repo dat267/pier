@@ -4,9 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"testing"
 
 	"github.com/dat267/pier/coding"
-	"testing"
 )
 
 // TestLoadedPromptConflictsFollowsQuietStartup follows v1.2.0

@@ -2,10 +2,11 @@ package coding
 
 import (
 	"context"
-	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/dat267/pier/internal/jsnum"
 
 	"github.com/dat267/pier/ai"
 )

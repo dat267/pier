@@ -3,11 +3,12 @@ package coding
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // setupAuthCommandDir points the agent dir at a temp dir and seeds auth.json.

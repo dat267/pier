@@ -2,7 +2,6 @@ package coding
 
 import (
 	"context"
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -12,6 +11,8 @@ import (
 	"testing"
 	"time"
 	"weak"
+
+	"github.com/dat267/pier/ai"
 )
 
 // newProjectionTestSession builds a session with enough messages that resolving

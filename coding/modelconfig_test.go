@@ -1,11 +1,12 @@
 package coding
 
 import (
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Round 98 tests: models.json loading and validation (core/model-config.ts) and

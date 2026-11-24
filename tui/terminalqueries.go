@@ -2,12 +2,13 @@ package tui
 
 import (
 	"fmt"
-	"github.com/dat267/pier/internal/jsnum"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of upstream TuiBase's terminal-color protocol: the OSC 11 background

@@ -3,13 +3,14 @@ package agent
 import (
 	"context"
 	"fmt"
-	"github.com/dat267/pier/ai"
 	"runtime"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 	"weak"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of the core subset of packages/agent/test/agent.test.ts.

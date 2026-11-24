@@ -3,12 +3,13 @@ package ai
 import (
 	"cmp"
 	"encoding/json"
-	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"slices"
 	"strconv"
 	"time"
 	"unicode/utf8"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // streamingJSONParser ports pi v1.5.0 (f9a26365)

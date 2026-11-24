@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/dat267/pier/mcp/protocol"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/mcp/protocol"
 )
 
 // Port of packages/mcp/test/client.test.ts: the in-memory pair plays the

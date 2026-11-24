@@ -4,15 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/coding"
-	"github.com/dat267/pier/internal/offloop"
 	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/internal/offloop"
 )
 
 // makePersistedSession creates a persisted session with one full turn so the

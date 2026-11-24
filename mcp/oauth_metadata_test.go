@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/mcp/oauth"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +13,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/mcp/oauth"
 )
 
 // Port of packages/mcp/test/oauth.test.ts: the full PKCE flow over the

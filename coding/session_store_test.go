@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/agent"
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -14,6 +12,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/agent"
+	"github.com/dat267/pier/ai"
 )
 
 // TestCustomEntryDataField pins the field name: the custom entry payload

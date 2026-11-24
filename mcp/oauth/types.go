@@ -10,8 +10,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/ai"
 	"strings"
+
+	"github.com/dat267/pier/ai"
 
 	"github.com/dat267/pier/internal/jsnum"
 )

@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"github.com/dat267/pier/ai"
 	"maps"
 	"math"
 	"net"
@@ -14,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 // McpOAuthState is the persisted OAuth state for one server (upstream

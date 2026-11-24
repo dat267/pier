@@ -3,9 +3,9 @@ package interactive
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/internal/offloop"
-	"time"
 
 	"github.com/dat267/pier/tui"
 )

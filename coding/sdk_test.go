@@ -3,14 +3,15 @@ package coding
 import (
 	ctxpkg "context"
 	"fmt"
-	"github.com/dat267/pier/agent"
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/dat267/pier/agent"
+	"github.com/dat267/pier/ai"
 )
 
 // Round 120 tests: the CreateAgentSession assembly (model restore/fallback,

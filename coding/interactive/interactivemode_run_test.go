@@ -2,15 +2,16 @@ package interactive
 
 import (
 	"context"
-	"github.com/dat267/pier/ai"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/dat267/pier/ai"
+
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
-	"sync/atomic"
 )
 
 func newRunTestWiring(t *testing.T) (*RunWiring, *coding.SettingsManager) {

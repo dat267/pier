@@ -1,9 +1,10 @@
 package oauth
 
 import (
-	"github.com/dat267/pier/internal/whatwgurl"
 	"net/url"
 	"strings"
+
+	"github.com/dat267/pier/internal/whatwgurl"
 )
 
 // parseWHATWGURL parses an externally supplied URL (a config value, a server

@@ -2,10 +2,11 @@ package coding
 
 import (
 	"encoding/json"
-	"github.com/dat267/pier/ai"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // pi v1.4.0 (4a080252), core/compaction/utils.ts serializeConversation.

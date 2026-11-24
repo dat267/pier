@@ -3,13 +3,14 @@ package interactive
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/dat267/pier/tui"
 	"math"
 	"os"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/tui"
 )
 
 // systemThemeGolden is the output of driving upstream

@@ -3,13 +3,14 @@ package cmd
 import (
 	"bytes"
 	"context"
-	"github.com/dat267/pier/coding"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/coding"
 )
 
 // TestSetupMCPServers covers the CLI's MCP plumbing: config errors are

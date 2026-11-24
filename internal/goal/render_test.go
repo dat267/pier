@@ -1,9 +1,10 @@
 package goal
 
 import (
-	"github.com/dat267/pier/tui"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/tui"
 )
 
 // Mirrors ~/.pi/agent/extensions/goal/render.test.ts.

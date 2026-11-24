@@ -5,11 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/dat267/pier/internal/jsnum"
 
 	"github.com/dat267/pier/ai"
 )

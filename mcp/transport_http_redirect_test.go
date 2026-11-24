@@ -3,12 +3,13 @@ package mcp
 import (
 	"context"
 	"fmt"
-	"github.com/dat267/pier/mcp/protocol"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync/atomic"
 	"testing"
+
+	"github.com/dat267/pier/mcp/protocol"
 )
 
 // Fetch keeps credentials removed for the entire redirect chain. Reference:

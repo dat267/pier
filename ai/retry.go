@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"math"
 	"math/rand"
@@ -16,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of utils/provider-retry.ts (SDK-style provider request retry) and

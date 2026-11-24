@@ -1,10 +1,11 @@
 package interactive
 
 import (
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/tui"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/tui"
 )
 
 func BenchmarkSingleAssistantAdmission(b *testing.B) {

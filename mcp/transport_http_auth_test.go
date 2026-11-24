@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/dat267/pier/mcp/protocol"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/mcp/protocol"
 )
 
 func TestStreamableHTTPClassifiesAuthenticationFailures(t *testing.T) {

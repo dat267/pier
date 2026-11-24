@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dat267/pier/mcp"
-	"github.com/dat267/pier/mcp/protocol"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/mcp"
+	"github.com/dat267/pier/mcp/protocol"
 )
 
 // TestMcpManagerExposesDirectTools covers the exposure split: only `direct`

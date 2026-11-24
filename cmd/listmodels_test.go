@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"context"
-	"github.com/dat267/pier/coding"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/coding"
 )
 
 // --list-models resolves the model runtime before any background pass and

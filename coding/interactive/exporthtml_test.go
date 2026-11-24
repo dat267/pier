@@ -3,9 +3,6 @@ package interactive
 import (
 	"encoding/base64"
 	"encoding/json"
-	"github.com/dat267/pier/agent"
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/coding"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -13,6 +10,10 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/agent"
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
 )
 
 // pi v1.4.0 (4a080252), core/export-html/index.ts exportFromFile applies

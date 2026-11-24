@@ -3,11 +3,6 @@ package interactive
 import (
 	"context"
 	"errors"
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/coding"
-	"github.com/dat267/pier/mcp"
-	"github.com/dat267/pier/mcp/protocol"
-	"github.com/dat267/pier/tui"
 	"go/ast"
 	"os"
 	"os/exec"
@@ -19,6 +14,12 @@ import (
 	"testing"
 	"testing/synctest"
 	"time"
+
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/mcp"
+	"github.com/dat267/pier/mcp/protocol"
+	"github.com/dat267/pier/tui"
 )
 
 // ModelWiring's optional sinks are nil-checked so a headless wiring can call

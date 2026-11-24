@@ -2,12 +2,13 @@ package interactive
 
 import (
 	"context"
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/coding"
 	"runtime"
 	"testing"
 	"testing/synctest"
 	"weak"
+
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
 )
 
 // TestSessionReplacementDoesNotRebuildTheProjectionOnTheLoop pins A494: the

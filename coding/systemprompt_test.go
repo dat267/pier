@@ -2,12 +2,13 @@ package coding
 
 import (
 	"context"
-	"github.com/dat267/pier/agent"
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/agent"
+	"github.com/dat267/pier/ai"
 )
 
 // System prompt + skills tests keyed to upstream (system-prompt.ts,

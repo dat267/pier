@@ -5,11 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // scriptedLoginTerminal answers prompts from a list and records the output.

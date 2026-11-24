@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/internal/jsnum"
 	"net"
 	"net/http"
 	"net/url"
@@ -13,6 +12,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // OAuthCallback is the browser-redirect payload (upstream OAuthCallback).

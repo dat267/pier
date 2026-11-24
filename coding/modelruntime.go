@@ -5,13 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/internal/jsnum"
 	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/dat267/pier/internal/jsnum"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/ai/providers"

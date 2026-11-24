@@ -2,11 +2,12 @@ package interactive
 
 import (
 	"context"
-	"github.com/dat267/pier/tui"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/tui"
 )
 
 // Reference: pi v1.5.2 modes/interactive/components/settings-submenu.ts

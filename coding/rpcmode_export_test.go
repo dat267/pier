@@ -1,12 +1,13 @@
 package coding
 
 import (
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 func rpcResponses(records []map[string]any) []map[string]any {

@@ -11,11 +11,11 @@ import (
 	"cmp"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
-	"strconv"
 )
 
 // Port of core/tools/truncate.ts.

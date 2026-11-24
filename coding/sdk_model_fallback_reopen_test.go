@@ -3,9 +3,9 @@ package coding
 import (
 	ctxpkg "context"
 	"path/filepath"
+	"testing"
 
 	"github.com/dat267/pier/ai"
-	"testing"
 )
 
 // Reopening a session whose stored model is gone warns on every open: the

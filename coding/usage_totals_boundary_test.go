@@ -1,9 +1,10 @@
 package coding
 
 import (
-	"github.com/dat267/pier/ai"
 	"math"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Reference: pi v1.5.0 (f9a26365), coding-agent/src/core/agent-session.ts

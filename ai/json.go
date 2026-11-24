@@ -3,10 +3,11 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"strconv"
 	"strings"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // QuoteJSON is JSON.stringify(value) for a string, through the same canonical

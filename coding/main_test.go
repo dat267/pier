@@ -1,9 +1,10 @@
 package coding
 
 import (
-	"github.com/dat267/pier/internal/leakcheck"
 	"os"
 	"testing"
+
+	"github.com/dat267/pier/internal/leakcheck"
 )
 
 func TestMain(m *testing.M) {

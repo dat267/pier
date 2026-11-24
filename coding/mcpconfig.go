@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"maps"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of extensions/mcp/config.ts's read side: MCP servers come from `mcp.json`

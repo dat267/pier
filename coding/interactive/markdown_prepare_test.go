@@ -2,13 +2,14 @@ package interactive
 
 import (
 	"context"
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/coding"
-	"github.com/dat267/pier/tui"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/tui"
 )
 
 func TestAppLargeMarkdownUsesOwnedBoundedQueue(t *testing.T) {

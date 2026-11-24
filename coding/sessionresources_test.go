@@ -1,9 +1,10 @@
 package coding
 
 import (
-	"github.com/dat267/pier/ai"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Round 118 tests: session resource cleanups.

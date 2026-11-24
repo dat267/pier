@@ -3,10 +3,11 @@ package coding
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/dat267/pier/ai"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Compaction tests keyed to upstream compaction.ts semantics.

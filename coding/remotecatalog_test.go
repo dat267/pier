@@ -3,7 +3,6 @@ package coding
 import (
 	"context"
 	"fmt"
-	"github.com/dat267/pier/ai"
 	"io"
 	"math"
 	"net/http"
@@ -14,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Round 114 tests: the remote catalog overlay, the bug-report zip archive, and

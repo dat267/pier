@@ -2,11 +2,12 @@ package interactive
 
 import (
 	"context"
-	"github.com/dat267/pier/coding"
-	"github.com/dat267/pier/tui"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/tui"
 )
 
 func TestDockSpacerAtInit(t *testing.T) {

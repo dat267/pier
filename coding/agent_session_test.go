@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dat267/pier/agent"
-	"github.com/dat267/pier/ai"
 	"os"
 	"runtime"
 	"strconv"
@@ -13,6 +11,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/agent"
+	"github.com/dat267/pier/ai"
 )
 
 // AgentSession tests keyed to upstream agent-session.ts semantics.

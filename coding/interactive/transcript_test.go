@@ -2,13 +2,14 @@ package interactive
 
 import (
 	"encoding/json"
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/coding"
-	"github.com/dat267/pier/tui"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/tui"
 )
 
 // TestTranscriptUserMessages covers the user-message rendering paths.

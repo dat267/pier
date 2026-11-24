@@ -4,15 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/dat267/pier/agent"
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/mcp"
-	"github.com/dat267/pier/mcp/protocol"
 	"math"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"testing/synctest"
+
+	"github.com/dat267/pier/agent"
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/mcp"
+	"github.com/dat267/pier/mcp/protocol"
 )
 
 // Port of the "MCP connections" cases of upstream

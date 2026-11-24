@@ -1,11 +1,12 @@
 package coding
 
 import (
-	"github.com/dat267/pier/ai"
 	"path/filepath"
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of the "MCP connections" cases of upstream

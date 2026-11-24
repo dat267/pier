@@ -1,11 +1,12 @@
 package uiblock
 
 import (
-	"golang.org/x/tools/go/ssa"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"golang.org/x/tools/go/ssa"
 )
 
 // acceptedFindings is the allowlist for both invariant tests, keyed by the head

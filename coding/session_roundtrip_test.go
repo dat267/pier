@@ -2,9 +2,10 @@ package coding
 
 import (
 	"context"
-	"github.com/dat267/pier/ai"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // TestSessionFileRoundTripPreservesInvariants pins the resume contract end to

@@ -3,14 +3,15 @@ package interactive
 import (
 	"context"
 	"errors"
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/coding"
 	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
 )
 
 // D456: the reference registers a failed provider in a Map as each concurrent

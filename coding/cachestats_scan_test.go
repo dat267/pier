@@ -1,12 +1,13 @@
 package coding
 
 import (
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // cacheStatsTestPrices is a ModelPriceSource with a known cache-read price.

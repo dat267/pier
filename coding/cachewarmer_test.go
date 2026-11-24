@@ -3,7 +3,6 @@ package coding
 import (
 	ctxpkg "context"
 	"fmt"
-	"github.com/dat267/pier/ai"
 	"math"
 	"strings"
 	"sync"
@@ -11,6 +10,8 @@ import (
 	"testing"
 	"testing/synctest"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Round 113 tests: the cache warmer (delay/TTL/replayability, the warm-or-stop

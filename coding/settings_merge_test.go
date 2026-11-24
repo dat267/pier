@@ -2,11 +2,12 @@ package coding
 
 import (
 	"encoding/json"
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Tests ported from packages/coding-agent/test/settings-manager.test.ts (and

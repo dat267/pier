@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/internal/jsnum"
 	"maps"
 	"math"
 	"reflect"
@@ -15,6 +13,9 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/internal/jsnum"
 
 	"github.com/dat267/pier/mcp/protocol"
 )

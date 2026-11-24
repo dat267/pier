@@ -3,9 +3,6 @@ package cmd
 import (
 	"context"
 	"errors"
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/coding"
-	"github.com/dat267/pier/coding/interactive"
 	"io"
 	"os"
 	"os/exec"
@@ -13,6 +10,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/coding/interactive"
 )
 
 // isolatedAgentDir points PI_CODING_AGENT_DIR at a temp dir so the default

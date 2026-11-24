@@ -3,14 +3,15 @@ package interactive
 import (
 	"context"
 	"encoding/json"
-	"github.com/dat267/pier/coding"
-	"github.com/dat267/pier/tui"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
+
+	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/tui"
 )
 
 // Regenerate with pier's palette (D154); source revisions: testdata/README.md.

@@ -2,10 +2,11 @@ package tui
 
 import (
 	"cmp"
-	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"strconv"
 	"strings"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of the overlay layout half of src/tui.ts: anchor/percentage/absolute

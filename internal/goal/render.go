@@ -5,12 +5,13 @@ package goal
 import (
 	"cmp"
 	"fmt"
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/tui"
 	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/tui"
 )
 
 // Theme is the rendering surface the goal cards need. The port's

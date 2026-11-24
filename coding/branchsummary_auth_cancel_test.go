@@ -3,8 +3,9 @@ package coding
 import (
 	"context"
 	"errors"
-	"github.com/dat267/pier/ai"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Reference: pi v1.4.0 (4a080252), core/agent-session.ts navigateTree

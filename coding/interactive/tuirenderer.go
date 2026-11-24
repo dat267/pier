@@ -2,9 +2,10 @@ package interactive
 
 import (
 	"context"
+	"sync/atomic"
+
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
-	"sync/atomic"
 )
 
 // Port of src/modes/interactive/tui-renderer.ts: the composition root that

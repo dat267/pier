@@ -3,13 +3,14 @@ package ai
 import (
 	"context"
 	"errors"
-	"github.com/dat267/pier/internal/jsnum"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // pi v1.4.0 OpenAI and Anthropic SDK fetch wrappers use Node setTimeout

@@ -5,7 +5,6 @@ import (
 	ctxpkg "context"
 	"encoding/json"
 	"errors"
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -13,6 +12,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Round 97 tests: the file-backed and in-memory model catalog stores.

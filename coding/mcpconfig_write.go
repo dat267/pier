@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/dat267/pier/internal/jsnum"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/dat267/pier/internal/jsnum"
 
 	"github.com/dat267/pier/ai"
 )

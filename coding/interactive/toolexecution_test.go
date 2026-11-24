@@ -1,9 +1,10 @@
 package interactive
 
 import (
-	"github.com/dat267/pier/tui"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/tui"
 )
 
 // tool-execution.ts renders expanded args with JSON.stringify(args, null, 2),

@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dat267/pier/ai"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of the core subset of packages/agent/test/agent-loop.test.ts.

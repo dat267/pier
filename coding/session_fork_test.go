@@ -3,7 +3,6 @@ package coding
 import (
 	"context"
 	"encoding/json"
-	"github.com/dat267/pier/ai"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,6 +11,8 @@ import (
 	"testing"
 	"time"
 	"weak"
+
+	"github.com/dat267/pier/ai"
 )
 
 func TestForkSessionCopiesEntriesUnderNewID(t *testing.T) {

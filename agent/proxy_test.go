@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dat267/pier/ai"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 func TestProxyTextDeltaAssemblyStaysLinearInAllocatedBytes(t *testing.T) {

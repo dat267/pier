@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/dat267/pier/mcp"
-	"github.com/dat267/pier/mcp/protocol"
 	"net/url"
 	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/mcp"
+	"github.com/dat267/pier/mcp/protocol"
 )
 
 // Port of the "MCP connections" cases of upstream

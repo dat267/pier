@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"math/big"
 	"net"
@@ -15,6 +14,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/dat267/pier/internal/jsnum"
 
 	"golang.org/x/text/unicode/norm"
 )

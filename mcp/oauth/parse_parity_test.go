@@ -2,10 +2,11 @@ package oauth
 
 import (
 	"encoding/json"
-	"github.com/dat267/pier/ai"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 type oauthParseCase struct {

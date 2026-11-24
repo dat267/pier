@@ -2,11 +2,12 @@ package coding
 
 import (
 	"fmt"
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Reference: pi v1.5.0 f9a26365 core/trust-manager.ts findTrustFileKeys and

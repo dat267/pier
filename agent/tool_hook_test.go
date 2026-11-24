@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/dat267/pier/ai"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // pi v1.4.0 agent-loop.ts prepareToolCall catches a thrown beforeToolCall

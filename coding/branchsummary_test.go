@@ -4,12 +4,13 @@ import (
 	ctxpkg "context"
 	"encoding/json"
 	"fmt"
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Round 106 tests: branch summarization and session tree navigation.

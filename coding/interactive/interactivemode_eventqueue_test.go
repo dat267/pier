@@ -2,7 +2,6 @@ package interactive
 
 import (
 	"context"
-	"github.com/dat267/pier/ai"
 	"os"
 	"runtime"
 	"strconv"
@@ -11,6 +10,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
 
 	"github.com/dat267/pier/coding"
 )

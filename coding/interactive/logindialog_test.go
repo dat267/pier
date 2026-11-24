@@ -3,11 +3,12 @@ package interactive
 import (
 	"context"
 	"errors"
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/tui"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/tui"
 )
 
 // pi v1.5.0 login-dialog.ts: pressing Enter on a device-code prompt opens the

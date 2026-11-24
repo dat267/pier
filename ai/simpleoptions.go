@@ -2,9 +2,10 @@ package ai
 
 import (
 	"cmp"
-	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"time"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of api/simple-options.ts.

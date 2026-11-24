@@ -1,11 +1,12 @@
 package markdown
 
 import (
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // Definition is a link reference definition the document keeps: an entry of

@@ -2,8 +2,9 @@ package ai
 
 import (
 	"encoding/json"
-	"github.com/dat267/pier/internal/jsnum"
 	"strings"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of api/openai-completions.ts conversion half: convertMessages,

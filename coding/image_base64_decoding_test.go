@@ -4,10 +4,11 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/dat267/pier/ai"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // TestDecodeImageBase64MatchesNode pins the lenient decoder the image paths use

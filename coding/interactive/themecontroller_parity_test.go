@@ -1,11 +1,12 @@
 package interactive
 
 import (
-	"github.com/dat267/pier/tui"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/tui"
 )
 
 // pi v1.4.0 theme-controller.ts applyTerminalColors/reapplyForTerminal uses

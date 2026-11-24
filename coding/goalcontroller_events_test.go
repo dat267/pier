@@ -3,11 +3,12 @@ package coding
 import (
 	"context"
 	"encoding/json"
+	"strings"
+	"testing"
+
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/internal/goal"
-	"strings"
-	"testing"
 )
 
 // Mirrors ~/.pi/agent/extensions/goal/index.test.ts: the host-glue smoke test

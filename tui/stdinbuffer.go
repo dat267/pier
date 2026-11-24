@@ -1,11 +1,12 @@
 package tui
 
 import (
-	"github.com/dat267/pier/internal/jsnum"
 	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of src/stdin-buffer.ts: buffers input and emits complete sequences,

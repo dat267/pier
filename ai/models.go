@@ -3,11 +3,12 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"math/big"
 	"slices"
 	"strconv"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // Port of the Model half of types.ts: ModelCost, Model, and the per-API

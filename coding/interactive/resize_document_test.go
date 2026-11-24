@@ -2,8 +2,9 @@ package interactive
 
 import (
 	"fmt"
-	"github.com/dat267/pier/tui"
 	"testing"
+
+	"github.com/dat267/pier/tui"
 )
 
 type resizeProbe struct {

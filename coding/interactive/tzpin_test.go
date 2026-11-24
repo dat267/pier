@@ -1,12 +1,13 @@
 package interactive
 
 import (
-	"github.com/dat267/pier/internal/leakcheck"
-	"github.com/dat267/pier/tui"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/internal/leakcheck"
+	"github.com/dat267/pier/tui"
 )
 
 // TestMain pins the process timezone. The upstream-derived goldens were

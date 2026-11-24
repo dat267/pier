@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/mcp/protocol"
 	"io"
 	"os"
 	"path/filepath"
@@ -13,6 +11,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/mcp/protocol"
 )
 
 // Port of the "MCP tools" cases of upstream

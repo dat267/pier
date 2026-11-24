@@ -13,9 +13,10 @@ package interactive
 
 import (
 	"encoding/json"
-	"github.com/dat267/pier/internal/jsnum"
 	"strconv"
 	"strings"
+
+	"github.com/dat267/pier/internal/jsnum"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"

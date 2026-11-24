@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dat267/pier/mcp/protocol"
 	"io"
 	"math"
 	"net/http"
@@ -15,6 +14,8 @@ import (
 	"testing"
 	"testing/synctest"
 	"time"
+
+	"github.com/dat267/pier/mcp/protocol"
 )
 
 func TestStreamableHTTPFailsOnlyTheBrokenStream(t *testing.T) {

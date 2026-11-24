@@ -3,14 +3,15 @@ package interactive
 import (
 	"context"
 	"errors"
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/coding"
-	"github.com/dat267/pier/tui"
 	"os"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/tui"
 )
 
 // postTerminalInput delivers a terminal sequence to the loop.

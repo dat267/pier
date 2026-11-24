@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"cmp"
+
 	"github.com/dat267/pier/tui"
 )
 

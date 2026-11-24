@@ -2,9 +2,10 @@ package coding
 
 import (
 	"context"
-	"github.com/dat267/pier/ai"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Tests ported from packages/coding-agent/test/model-resolver.test.ts.

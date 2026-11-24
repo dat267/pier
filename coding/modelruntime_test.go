@@ -3,12 +3,13 @@ package coding
 import (
 	ctxpkg "context"
 	"errors"
-	"github.com/dat267/pier/ai"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Round 100 tests: the ModelRuntime composition/availability/credential

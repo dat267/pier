@@ -3,11 +3,12 @@ package mcp
 import (
 	"context"
 	"errors"
-	"github.com/dat267/pier/mcp/protocol"
 	"reflect"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/mcp/protocol"
 )
 
 // Reference: pi v1.4.0 packages/mcp/src/transports/transport.ts keeps listeners

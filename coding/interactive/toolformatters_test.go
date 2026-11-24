@@ -3,11 +3,12 @@ package interactive
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/dat267/pier/coding"
-	"github.com/dat267/pier/tui"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/tui"
 )
 
 func TestToolTruncationWarningsFormatFractionalLimits(t *testing.T) {

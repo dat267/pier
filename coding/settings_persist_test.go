@@ -2,13 +2,14 @@ package coding
 
 import (
 	"encoding/json"
-	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/internal/offloop"
 	"os"
 	"path/filepath"
 	"testing"
 	"testing/synctest"
 	"time"
+
+	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/internal/offloop"
 )
 
 // Tests ported from packages/coding-agent/test/settings-manager.test.ts (and

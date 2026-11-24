@@ -2,10 +2,11 @@ package interactive
 
 import (
 	"context"
-	"github.com/dat267/pier/coding"
-	"github.com/dat267/pier/tui"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/tui"
 )
 
 // TestUserMessageSanitizesStoredText pins the transcript against terminal

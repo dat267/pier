@@ -3,13 +3,14 @@ package coding
 import (
 	"errors"
 	"fmt"
-	"github.com/dat267/pier/internal/whatwgurl"
 	"maps"
 	"net/url"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/dat267/pier/internal/whatwgurl"
 
 	"github.com/dat267/pier/ai"
 )
