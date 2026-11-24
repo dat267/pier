@@ -452,7 +452,7 @@ func compileKeywords(raw Keywords, caseInsensitive bool) map[string]keywordData 
 			if caseInsensitive {
 				word = strings.ToLower(word)
 			}
-			out[word] = keywordData{className: className, relevance: scoreForKeyword(strings.SplitN(keyword, "|", 2)...)}
+			out[word] = keywordData{className: className, relevance: scoreForKeyword(pair...)}
 		}
 	}
 	for _, className := range orderedKeywordClasses(raw) {
