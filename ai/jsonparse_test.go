@@ -200,7 +200,9 @@ func equalJSONMaps(a, b map[string]any) bool {
 	return string(left) == string(right)
 }
 
-// the Number.prototype.toFixed and String(number) behaviour the port mirrors.
+// TestJSNumberFormattingMatchesJavaScript pins JSNumberToString and
+// JSNumberToFixed to the String(number) and Number.prototype.toFixed
+// behaviour the port mirrors.
 // The corpus records JavaScript's own output for the same doubles.
 // Regenerate:
 // node ai/testdata/js-numbers/generate.mjs > ai/testdata/js-numbers/golden.json
