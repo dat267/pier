@@ -187,7 +187,7 @@ func expandedMaxLines(options ToolRenderResultOptions, output string, collapsed 
 	if !options.Expanded || output == "" {
 		return collapsed
 	}
-	return len(strings.Split(output, "\n"))
+	return strings.Count(output, "\n") + 1
 }
 
 // truncatedOutputLines renders output as a newline-led block of at most
