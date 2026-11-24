@@ -351,8 +351,7 @@ func (f *FooterDataProvider) resolveGitBranch() (string, bool) {
 		return "", false
 	}
 	trimmed := strings.TrimSpace(DecodeUTF8WithReplacement(content))
-	if strings.HasPrefix(trimmed, "ref: refs/heads/") {
-		branch := trimmed[len("ref: refs/heads/"):]
+	if branch, ok := strings.CutPrefix(trimmed, "ref: refs/heads/"); ok {
 		if branch == ".invalid" {
 			if resolved := ResolveGitBranch(f.gitPaths.RepoDir); resolved != "" {
 				return resolved, true
