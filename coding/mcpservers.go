@@ -408,8 +408,8 @@ func applyMcpServerConfigBase(config *McpServerConfig, value map[string]any) {
 	}
 	if toolExposure, ok := mcpRecord(value["toolExposure"]); ok {
 		config.ToolExposure = map[string]McpExposure{}
-		for _, tool := range sortedKeys(toolExposure) {
-			exposure, _ := toolExposure[tool].(string)
+		for tool, raw := range toolExposure {
+			exposure, _ := raw.(string)
 			config.ToolExposure[tool] = McpExposure(exposure)
 		}
 		// Deterministic fallback: the loader replaces this with the file's own
