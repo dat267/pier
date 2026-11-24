@@ -1099,22 +1099,6 @@ func (a *App) runDebugCommand() {
 	a.commands.HandleDebugCommand(time.Now().UTC().Format("2006-01-02T15:04:05.000Z"))
 }
 
-// PostTerminalInput delivers a terminal sequence to the loop (test seam).
-func (a *App) postTerminalInput(data string) {
-	select {
-	case a.loopInputs <- data:
-	case <-a.loopInputsClosed:
-	}
-}
-
-// LoopBeats reports the run loop's watchdog beat.
-func (a *App) loopBeats() uint64 {
-	if a.runner == nil {
-		return 0
-	}
-	return a.runner.LoopBeats()
-}
-
 // handleRightClickPaste reads the clipboard and feeds it to the focused
 // component as a bracketed paste, mirroring upstream's onRightClickPaste
 // (interactive-mode.ts handleRightClickPaste). The renderer only invokes it on

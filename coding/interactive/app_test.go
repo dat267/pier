@@ -13,6 +13,22 @@ import (
 	"time"
 )
 
+// postTerminalInput delivers a terminal sequence to the loop.
+func (a *App) postTerminalInput(data string) {
+	select {
+	case a.loopInputs <- data:
+	case <-a.loopInputsClosed:
+	}
+}
+
+// loopBeats reports the run loop's watchdog beat.
+func (a *App) loopBeats() uint64 {
+	if a.runner == nil {
+		return 0
+	}
+	return a.runner.LoopBeats()
+}
+
 // TestAppComposition covers the interactive-mode object graph: construction,
 // mounting, focus and the submit/key wiring.
 func TestAppComposition(t *testing.T) {
