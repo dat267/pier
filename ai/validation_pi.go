@@ -10,6 +10,7 @@ import (
 	"net/mail"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -510,14 +511,7 @@ func (s *piSchema) checkVisit(value *schemaValue, active map[piCheckVisit]bool, 
 		return false
 	}
 	if s.hasEnum {
-		matched := false
-		for _, option := range s.enum {
-			if schemaLiteralEqual(value, option) {
-				matched = true
-				break
-			}
-		}
-		if !matched {
+		if !slices.ContainsFunc(s.enum, func(option *schemaValue) bool { return schemaLiteralEqual(value, option) }) {
 			return false
 		}
 	}
