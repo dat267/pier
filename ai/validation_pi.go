@@ -1042,9 +1042,9 @@ func piFormatValid(name, value string) bool {
 		_, err := regexp.Compile(value)
 		return err == nil
 	case "json-pointer":
-		return validJSONPointer(value, true)
+		return validJSONPointer(value)
 	case "json-pointer-uri-fragment":
-		return strings.HasPrefix(value, "#") && validJSONPointer(strings.TrimPrefix(value, "#"), true)
+		return strings.HasPrefix(value, "#") && validJSONPointer(strings.TrimPrefix(value, "#"))
 	case "relative-json-pointer":
 		return piRelativePointerRE.MatchString(value)
 	case "uri-template":
@@ -1341,9 +1341,11 @@ func validHostname(value string) bool {
 	return true
 }
 
-func validJSONPointer(value string, allowEmpty bool) bool {
+// validJSONPointer reports whether value is an RFC 6901 JSON Pointer; the
+// empty pointer (the whole document) is valid.
+func validJSONPointer(value string) bool {
 	if value == "" {
-		return allowEmpty
+		return true
 	}
 	if !strings.HasPrefix(value, "/") {
 		return false
