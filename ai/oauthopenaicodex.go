@@ -217,7 +217,7 @@ func StartOpenAICodexDeviceAuth(ctx context.Context) (*OpenAICodexDeviceAuthInfo
 		if len(raw) > 0 {
 			message += ": " + string(raw)
 		}
-		return nil, fmt.Errorf("%s", message)
+		return nil, errors.New(message)
 	}
 	if readErr != nil {
 		return nil, readErr

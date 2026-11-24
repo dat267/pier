@@ -991,7 +991,7 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 			if output.ErrorMessage != nil {
 				message = *output.ErrorMessage
 			}
-			fail(fmt.Errorf("%s", message), requestID, response.StatusCode, response.Header)
+			fail(errors.New(message), requestID, response.StatusCode, response.Header)
 			return
 		}
 		// A stream can settle without stopping every block.

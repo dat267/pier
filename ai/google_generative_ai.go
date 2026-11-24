@@ -497,7 +497,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 			return
 		}
 		if output.StopReason == StopPending {
-			fail(fmt.Errorf("%s", config.noFinishReasonMessage))
+			fail(errors.New(config.noFinishReasonMessage))
 			return
 		}
 		if output.StopReason == StopAborted || output.StopReason == StopError {
@@ -505,7 +505,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 			if output.RawStopReason != nil {
 				message = "Provider stopped with: " + *output.RawStopReason
 			}
-			fail(fmt.Errorf("%s", message))
+			fail(errors.New(message))
 			return
 		}
 		stream.Push(AssistantMessageEvent{Type: EventDone, Reason: output.StopReason, Message: output})

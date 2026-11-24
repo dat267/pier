@@ -230,7 +230,7 @@ func IterateAnthropicEvents(ctx context.Context, body io.Reader, emit func(anthr
 		}
 		if event := decoder.decodeLine(scanner.Text()); event != nil {
 			if event.Event == "error" {
-				return fmt.Errorf("%s", event.Data)
+				return errors.New(event.Data)
 			}
 			if !anthropicMessageEvents[event.Event] {
 				continue
@@ -246,7 +246,7 @@ func IterateAnthropicEvents(ctx context.Context, body io.Reader, emit func(anthr
 	// Flush a trailing event without a final blank line.
 	if event := decoder.flush(); event != nil {
 		if event.Event == "error" {
-			return fmt.Errorf("%s", event.Data)
+			return errors.New(event.Data)
 		}
 		if anthropicMessageEvents[event.Event] {
 			if err := send(event.Data, event.Raw); err != nil {
@@ -830,7 +830,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 			if output.ErrorMessage != nil {
 				msg = *output.ErrorMessage
 			}
-			fail(fmt.Errorf("%s", msg))
+			fail(errors.New(msg))
 			return
 		}
 		if thread != nil {

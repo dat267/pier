@@ -968,7 +968,7 @@ func (d *toolUpdateDispatcher) run(emit AgentEventSink) {
 func (d *toolUpdateDispatcher) deliver(emit AgentEventSink, event AgentEvent) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			d.recordError(fmt.Errorf("%s", panicMessage(recovered)))
+			d.recordError(errors.New(panicMessage(recovered)))
 		}
 	}()
 	if err := emit(event); err != nil {
@@ -1022,7 +1022,7 @@ func executePreparedToolCall(ctx context.Context, prepared *preparedToolCallValu
 		// goroutine, where an escaping panic would kill the process.
 		defer func() {
 			if recovered := recover(); recovered != nil {
-				err = fmt.Errorf("%s", panicMessage(recovered))
+				err = errors.New(panicMessage(recovered))
 			}
 		}()
 		result, err = prepared.tool.Execute(ctx, prepared.toolCall.ID, prepared.args, func(partialResult AgentToolResult) {
@@ -1088,7 +1088,7 @@ func finalizeExecutedToolCall(
 			// would kill the process.
 			defer func() {
 				if recovered := recover(); recovered != nil {
-					err = fmt.Errorf("%s", panicMessage(recovered))
+					err = errors.New(panicMessage(recovered))
 				}
 			}()
 			afterResult, err = config.AfterToolCall(ctx, &AfterToolCallContext{

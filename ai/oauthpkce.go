@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"fmt"
+	"errors"
 	"github.com/dat267/pier/internal/jsnum"
 	"math"
 	"time"
@@ -99,7 +99,7 @@ type OAuthDeviceCodePollOptions[T any] struct {
 func AbortableSleep(ctx context.Context, duration time.Duration, cancelMessage string) error {
 	if ctx != nil {
 		if err := ctx.Err(); err != nil {
-			return fmt.Errorf("%s", cancelMessage)
+			return errors.New(cancelMessage)
 		}
 	}
 	timer := time.NewTimer(jsnum.TimeoutDuration(duration.Milliseconds()))
@@ -112,7 +112,7 @@ func AbortableSleep(ctx context.Context, duration time.Duration, cancelMessage s
 	case <-timer.C:
 		return nil
 	case <-ctx.Done():
-		return fmt.Errorf("%s", cancelMessage)
+		return errors.New(cancelMessage)
 	}
 }
 
@@ -164,7 +164,7 @@ func PollOAuthDeviceCodeFlow[T any](options OAuthDeviceCodePollOptions[T]) (T, e
 			break
 		}
 		if options.Ctx != nil && options.Ctx.Err() != nil {
-			return zero, fmt.Errorf("%s", DeviceCodeCancelMessage)
+			return zero, errors.New(DeviceCodeCancelMessage)
 		}
 		result, err := options.Poll()
 		if err != nil {
@@ -174,7 +174,7 @@ func PollOAuthDeviceCodeFlow[T any](options OAuthDeviceCodePollOptions[T]) (T, e
 		case "complete":
 			return result.Value, nil
 		case "failed":
-			return zero, fmt.Errorf("%s", result.Message)
+			return zero, errors.New(result.Message)
 		case "slow_down":
 			slowDownResponses++
 			if result.IntervalSeconds != nil && *result.IntervalSeconds > 0 {
@@ -194,9 +194,9 @@ func PollOAuthDeviceCodeFlow[T any](options OAuthDeviceCodePollOptions[T]) (T, e
 		}
 	}
 	if slowDownResponses > 0 {
-		return zero, fmt.Errorf("%s", DeviceCodeSlowDownMessage)
+		return zero, errors.New(DeviceCodeSlowDownMessage)
 	}
-	return zero, fmt.Errorf("%s", DeviceCodeTimeoutMessage)
+	return zero, errors.New(DeviceCodeTimeoutMessage)
 }
 
 // oauthLogoSVG is the OAuth callback page logo (upstream LOGO_SVG).

@@ -3,6 +3,7 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -20,7 +21,7 @@ func parseSystemOneResponse(data []byte, transport systemOneTransport) (*ordered
 		var success bool
 		if json.Unmarshal(successRaw, &success) == nil && !success {
 			errorsRaw, _ := response.raw("errors")
-			return nil, fmt.Errorf("%s", cloudflareSystemOneError(errorsRaw))
+			return nil, errors.New(cloudflareSystemOneError(errorsRaw))
 		}
 	}
 	resultRaw, ok := response.raw("result")

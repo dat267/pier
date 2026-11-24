@@ -741,10 +741,10 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 			}
 			info := ParseCodexErrorResponse(response.StatusCode, http.StatusText(response.StatusCode), errorText)
 			if info.FriendlyMessage != "" {
-				fail(fmt.Errorf("%s", info.FriendlyMessage))
+				fail(errors.New(info.FriendlyMessage))
 				return
 			}
-			fail(fmt.Errorf("%s", info.Message))
+			fail(errors.New(info.Message))
 			return
 		}
 		if response == nil || response.StatusCode >= 400 {
@@ -787,7 +787,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 			if output.ErrorMessage != nil {
 				message = *output.ErrorMessage
 			}
-			fail(fmt.Errorf("%s", message))
+			fail(errors.New(message))
 			return
 		}
 		stream.Push(AssistantMessageEvent{Type: EventDone, Reason: output.StopReason, Message: output})

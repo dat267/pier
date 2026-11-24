@@ -96,7 +96,7 @@ func oauthPostForm(ctx context.Context, requestURL string, fields map[string]str
 		if ctx != nil && ctx.Err() != nil {
 			return oauthHTTPResponse{}, errLoginCancelled
 		}
-		return oauthHTTPResponse{}, fmt.Errorf("%s", invalidJSONMessage(response.StatusCode))
+		return oauthHTTPResponse{}, errors.New(invalidJSONMessage(response.StatusCode))
 	}
 	return oauthHTTPResponse{OK: ok, Status: response.StatusCode, Body: body, Text: string(raw)}, nil
 }
@@ -182,7 +182,7 @@ func xaiRequestFailure(action string, response oauthHTTPResponse) error {
 	if detail != "" {
 		message += ": " + detail
 	}
-	return fmt.Errorf("%s", message)
+	return errors.New(message)
 }
 
 func parseXaiDeviceCode(body map[string]any) (*XaiDeviceCode, error) {
@@ -429,7 +429,7 @@ func StartKimiDeviceAuthorization(ctx context.Context, oauthHost string) (*KimiD
 		if text := response.Text; text != "" {
 			message += ": " + text
 		}
-		return nil, fmt.Errorf("%s", message)
+		return nil, errors.New(message)
 	}
 	body := response.Body
 	deviceCode, _ := body["device_code"].(string)

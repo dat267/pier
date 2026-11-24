@@ -71,7 +71,7 @@ func EditFileErrorMessage(path string, err error) string {
 func editFileRefusalError(path string, err error) error {
 	switch nodeErrorCode(err) {
 	case "EACCES", "EPERM", "EROFS":
-		return fmt.Errorf("%s", EditFileErrorMessage(path, err))
+		return errors.New(EditFileErrorMessage(path, err))
 	}
 	return err
 }
@@ -251,7 +251,7 @@ func CreateEditTool(cwd string) agent.AgentTool {
 
 				// Check the file exists (access check).
 				if _, err := os.Stat(absolutePath); err != nil {
-					resultErr = fmt.Errorf("%s", EditFileErrorMessage(input.Path, err))
+					resultErr = errors.New(EditFileErrorMessage(input.Path, err))
 					return resultErr
 				}
 				if ctxErrOf(ctx) != nil {

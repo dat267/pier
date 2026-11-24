@@ -208,7 +208,7 @@ func (s *AgentSession) Prompt(ctx context.Context, text string, options *PromptO
 
 	if !s.HasModel() {
 		preflight(false)
-		return fmt.Errorf("%s", FormatNoModelSelectedMessage())
+		return errors.New(FormatNoModelSelectedMessage())
 	}
 	if err := s.validateModelAuth(ctx); err != nil {
 		preflight(false)
@@ -302,7 +302,7 @@ func (s *AgentSession) validateModelAuth(ctx context.Context) error {
 		return fmt.Errorf("Authentication failed for \"%s\". Credentials may have expired or network is unavailable. Run '/login %s' to re-authenticate.",
 			model.Provider, model.Provider)
 	}
-	return fmt.Errorf("%s", FormatNoAPIKeyFoundMessage(model.Provider))
+	return errors.New(FormatNoAPIKeyFoundMessage(model.Provider))
 }
 
 // runAgentPrompt runs one agent prompt with the run-active flag and idle

@@ -517,7 +517,7 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 			return &NavigateTreeResult{Cancelled: true, Aborted: true}, nil
 		}
 		if result.Error != "" {
-			return nil, fmt.Errorf("%s", result.Error)
+			return nil, errors.New(result.Error)
 		}
 		summaryText = result.Summary
 		summaryUsage = result.Usage

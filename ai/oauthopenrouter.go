@@ -174,7 +174,7 @@ func ExchangeOpenRouterAuthorizationCode(ctx context.Context, code, verifier str
 		if detail != "" {
 			message += ": " + detail
 		}
-		return nil, fmt.Errorf("%s", message)
+		return nil, errors.New(message)
 	}
 	key, _ := payload["key"].(string)
 	if key == "" {

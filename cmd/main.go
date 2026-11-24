@@ -823,7 +823,7 @@ func resolveCliModelFlags(args *coding.Args, runtime coding.ModelRuntimeSource) 
 		CLIProvider: provider, CLIModel: modelID, InlineAPIKey: args.APIKey != nil, ModelRuntime: runtime,
 	})
 	if resolved.Error != "" {
-		return nil, "", fmt.Errorf("%s", resolved.Error)
+		return nil, "", errors.New(resolved.Error)
 	}
 	var thinking ai.ThinkingLevel
 	if resolved.HasThinking {

@@ -138,7 +138,7 @@ func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 		}
 		builder.WriteString("\nPlease add these colors to your theme's \"colors\" object.")
 		builder.WriteString("\nSee the built-in themes (dark.json, light.json) for reference values.")
-		return nil, fmt.Errorf("%s", builder.String())
+		return nil, errors.New(builder.String())
 	}
 	// Upstream's ColorValueSchema requires an integer color index in [0, 255]
 	// and an appearance of "dark" or "light".
@@ -208,7 +208,7 @@ func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 		fmt.Fprintf(&builder, "Invalid theme \"%s\":\n", label)
 		builder.WriteString("\nOther errors:\n")
 		builder.WriteString(strings.Join(otherErrors, "\n"))
-		return nil, fmt.Errorf("%s", builder.String())
+		return nil, errors.New(builder.String())
 	}
 	if strings.Contains(theme.Name, "/") {
 		return nil, invalidThemeName(theme.Name)

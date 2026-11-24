@@ -236,7 +236,7 @@ func CreateFindTool(cwd string) agent.AgentTool {
 					errorMsg = fmt.Sprintf("fd exited with code %d", exitErr.ExitCode())
 				}
 				if output == "" {
-					return agent.AgentToolResult{}, fmt.Errorf("%s", errorMsg)
+					return agent.AgentToolResult{}, errors.New(errorMsg)
 				}
 			}
 			if output == "" {
@@ -601,7 +601,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 						if errorMsg == "" {
 							errorMsg = fmt.Sprintf("ripgrep exited with code %d", code)
 						}
-						return agent.AgentToolResult{}, fmt.Errorf("%s", errorMsg)
+						return agent.AgentToolResult{}, errors.New(errorMsg)
 					}
 				} else {
 					return agent.AgentToolResult{}, fmt.Errorf("Failed to run ripgrep: %s", runErr.Error())

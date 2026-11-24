@@ -859,7 +859,7 @@ func ProcessResponsesStream(
 				finalizeResponse(&response)
 			}
 		case "error":
-			panic(fmt.Errorf("%s", openAIResponsesErrorMessage(*event)))
+			panic(errors.New(openAIResponsesErrorMessage(*event)))
 		case "response.failed":
 			sawTerminalResponseEvent = true
 			var response responsesTerminalResponse
@@ -879,7 +879,7 @@ func ProcessResponsesStream(
 			default:
 				msg = "Unknown error (no error details in response)"
 			}
-			panic(fmt.Errorf("%s", msg))
+			panic(errors.New(msg))
 		}
 	})
 	if iterErr != nil {
@@ -1207,7 +1207,7 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 			return
 		}
 		if output.StopReason == StopPending {
-			fail(fmt.Errorf("%s", config.noStopReasonMessage))
+			fail(errors.New(config.noStopReasonMessage))
 			return
 		}
 		if output.StopReason == StopAborted || output.StopReason == StopError {
@@ -1215,7 +1215,7 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 			if output.ErrorMessage != nil {
 				msg = *output.ErrorMessage
 			}
-			fail(fmt.Errorf("%s", msg))
+			fail(errors.New(msg))
 			return
 		}
 		stream.Push(AssistantMessageEvent{Type: EventDone, Reason: output.StopReason, Message: output})

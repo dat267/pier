@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"regexp"
 	"slices"
 	"strings"
@@ -1001,7 +1000,7 @@ func (s *AgentSession) CompactSession(ctx context.Context, customInstructions st
 func (s *AgentSession) runManualCompaction(ctx context.Context, customInstructions string) (*CompactionResult, error) {
 	model := s.Model()
 	if !s.HasModel() || model == nil {
-		return nil, fmt.Errorf("%s", FormatNoModelSelectedMessage())
+		return nil, errors.New(FormatNoModelSelectedMessage())
 	}
 	settings, _ := s.compactionSettings()
 

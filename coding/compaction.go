@@ -1780,7 +1780,7 @@ func absInt(value int) int {
 // rejecting the responses that cannot become a checkpoint.
 func summarizationResult(label string, response *ai.AssistantMessage) (*summaryWithUsage, error) {
 	if failure := GetSummarizationFailure(response, label); failure != "" {
-		return nil, fmt.Errorf("%s", failure)
+		return nil, errors.New(failure)
 	}
 	for _, block := range response.Content {
 		if _, ok := block.(ai.ToolCall); ok {
@@ -1793,7 +1793,7 @@ func summarizationResult(label string, response *ai.AssistantMessage) (*summaryW
 // summarizationLengthFailure is upstream's message for a summary that never fit,
 // built from the same helper so the wording stays single-sourced.
 func summarizationLengthFailure(label string) error {
-	return fmt.Errorf("%s", GetSummarizationFailure(&ai.AssistantMessage{StopReason: ai.StopLength}, label))
+	return errors.New(GetSummarizationFailure(&ai.AssistantMessage{StopReason: ai.StopLength}, label))
 }
 
 // requestSummarization issues one summarization request through the

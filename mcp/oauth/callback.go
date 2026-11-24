@@ -251,7 +251,7 @@ func (s *OAuthCallbackServer) handle(w http.ResponseWriter, r *http.Request) {
 		if !query.Has("error_description") {
 			description = failure
 		}
-		entry.ch <- callbackResult{err: fmt.Errorf("%s", description)}
+		entry.ch <- callbackResult{err: errors.New(description)}
 		s.reply(w, http.StatusOK, OAuthCallbackPage{
 			OK:      false,
 			Message: "Authorization failed. You may close this window.",

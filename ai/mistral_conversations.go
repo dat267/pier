@@ -236,7 +236,7 @@ func StreamMistralConversations(model *Model, context TranscriptContext, options
 			if output.ErrorMessage != nil {
 				message = *output.ErrorMessage
 			}
-			fail(fmt.Errorf("%s", message))
+			fail(errors.New(message))
 			return
 		}
 		stream.Push(AssistantMessageEvent{Type: EventDone, Reason: output.StopReason, Message: output})

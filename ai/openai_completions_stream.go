@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -705,7 +704,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 			if output.ErrorMessage != nil {
 				msg = *output.ErrorMessage
 			}
-			fail(fmt.Errorf("%s", msg))
+			fail(errors.New(msg))
 			return
 		}
 		if (compat.SupportsFinishReason && !hasFinishReason) || output.StopReason == StopPending {

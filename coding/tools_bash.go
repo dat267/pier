@@ -856,7 +856,7 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 
 			if ctxErrOf(ctx) != nil {
 				outputText, _ := formatOutput("")
-				return agent.AgentToolResult{}, fmt.Errorf("%s", appendStatus(outputText, "Command aborted"))
+				return agent.AgentToolResult{}, errors.New(appendStatus(outputText, "Command aborted"))
 			}
 			// The timeout flag is authoritative, so it is checked first, and a
 			// timeout or abort throws with empty text (upstream's catch path).
@@ -876,7 +876,7 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 				if input.Timeout == nil {
 					message += " (the default timeout; pass a larger timeout if the command needs longer)"
 				}
-				return agent.AgentToolResult{}, fmt.Errorf("%s", appendStatus(outputText, message))
+				return agent.AgentToolResult{}, errors.New(appendStatus(outputText, message))
 			}
 			if waitErr != nil {
 				if ws, ok := errors.AsType[*exec.ExitError](waitErr); ok {

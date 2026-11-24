@@ -84,7 +84,7 @@ func metaDo(loginCtx context.Context, request *http.Request) (int, map[string]an
 	response, err := doFetchRequest(request)
 	if err != nil {
 		if loginCtx != nil && loginCtx.Err() != nil {
-			return 0, nil, fmt.Errorf("%s", DeviceCodeCancelMessage)
+			return 0, nil, errors.New(DeviceCodeCancelMessage)
 		}
 		return 0, nil, err
 	}

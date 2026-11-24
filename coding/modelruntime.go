@@ -3,6 +3,7 @@ package coding
 import (
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/dat267/pier/internal/jsnum"
 	"maps"
@@ -829,7 +830,7 @@ func (r *ModelRuntime) synchronizeCredentialState(ctx context.Context, providerI
 	compositionError := r.compositionErrors[providerID]
 	r.mu.Unlock()
 	if compositionError != "" {
-		return fail(fmt.Errorf("%s", compositionError))
+		return fail(errors.New(compositionError))
 	}
 	result := r.models.Refresh(&ai.ModelsRefreshOptions{Providers: []string{providerID}, Ctx: ctx})
 	if result.Aborted {
