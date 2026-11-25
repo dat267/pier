@@ -45,11 +45,12 @@ func argsNeedSanitizing(value any) bool {
 	return false
 }
 
-// sanitizeArgValue returns a copy of value with every string - keys included -
-// stripped of terminal controls. Tool arguments are model output, so a crafted
-// path, command, pattern, or file body must not reach the terminal as a control
-// sequence (D342). Renderers use these values only for display; the tool
-// executes the raw arguments.
+// sanitizeArgValue returns a copy of value with every string VALUE stripped of
+// terminal controls. Tool arguments are model output, so a crafted path, command,
+// pattern, or file body must not reach the terminal as a control sequence (D342).
+// Renderers use these values only for display; the tool executes the raw
+// arguments. Keys are kept verbatim because renderers look arguments up by name
+// and never print a key (a stripped key could collide with another argument).
 func sanitizeArgValue(value any) (any, bool) {
 	switch typed := value.(type) {
 	case string:
