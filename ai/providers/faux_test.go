@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -685,5 +686,35 @@ func TestFauxAbortMidToolcallStream(t *testing.T) {
 	}
 	if slices.Contains(types, "toolcall_end") {
 		t.Fatalf("events should not contain toolcall_end: %v", types)
+	}
+}
+
+// A faux provider is scripted test infrastructure, but several goroutines may
+// drive it at once (a parallel tool batch, a background run). CallCount and
+// DeferredFetchCount are read and written without FauxCore.mu, so concurrent
+// Stream or FetchDeferred calls race; State hands out the raw pointer, so even a
+// reader races a writer.
+func TestFauxStateCountersAreSafeUnderConcurrentStreams(t *testing.T) {
+	core := NewFauxCore(FauxOptions{})
+	model := core.Models()[0]
+	const calls = 8
+	steps := make([]FauxResponseStep, calls)
+	for i := range steps {
+		steps[i] = FauxResponseStep{Message: FauxAssistantMessage("ok", FauxMessageOptions{})}
+	}
+	core.AppendResponses(steps)
+	var wait sync.WaitGroup
+	for range calls {
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			_ = core.Stream(model, ai.TranscriptContext{}, nil)
+			_ = core.FetchDeferred(model, &ai.DeferredHandle{}, nil)
+			_ = core.State().CallCount
+		}()
+	}
+	wait.Wait()
+	if got := core.State().CallCount; got != calls {
+		t.Errorf("callCount = %d, want %d", got, calls)
 	}
 }

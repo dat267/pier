@@ -209,7 +209,16 @@ func (c *FauxCore) GetModel(modelID string) *ai.Model {
 }
 
 // State returns the provider state.
-func (c *FauxCore) State() *FauxProviderState { return &c.state }
+// State returns a snapshot of the counters. The faux provider is scripted test
+// infrastructure that a parallel tool batch or a background run can drive from
+// several goroutines, so handing out the live struct would race every writer.
+func (c *FauxCore) State() *FauxProviderState {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	snapshot := c.state
+	snapshot.CancelledDeferred = append([]*ai.DeferredHandle(nil), c.state.CancelledDeferred...)
+	return &snapshot
+}
 
 // SetResponses replaces the queued responses.
 func (c *FauxCore) SetResponses(responses []FauxResponseStep) {
@@ -768,7 +777,9 @@ func ctxOfSimple(options *ai.SimpleStreamOptions) context.Context {
 func (c *FauxCore) Stream(requestModel *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 	outer := ai.NewAssistantMessageEventStream()
 	step, hasStep := c.shiftResponse()
+	c.mu.Lock()
 	c.state.CallCount++
+	c.mu.Unlock()
 
 	go func() {
 		ctx := ctxOf(streamOptionsOf(options))
@@ -832,7 +843,9 @@ func (c *FauxCore) StreamSimple(model *ai.Model, context ai.TranscriptContext, o
 // FetchDeferred implements the faux fetchDeferred function.
 func (c *FauxCore) FetchDeferred(requestModel *ai.Model, handle *ai.DeferredHandle, fetchOptions *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 	outer := ai.NewAssistantMessageEventStream()
+	c.mu.Lock()
 	c.state.DeferredFetchCount++
+	c.mu.Unlock()
 
 	go func() {
 		ctx := ctxOfSimple(fetchOptions)
