@@ -1219,9 +1219,11 @@ func newCommandWiring(app *App) *CommandWiring {
 			return true
 		},
 		OnLoopPrompt: func(prompt string) {
-			// The same path a typed message takes, so a loop's prompt is ordinary
-			// user input rather than a special event.
-			app.submit.HandleSubmit(context.Background(), prompt)
+			// The same dispatch a typed message takes, so a loop's prompt is
+			// ordinary user input, but with the editor detached: the noted
+			// prompt is not the user's text, so it stays out of their history
+			// (D537), as a scheduled fire does.
+			app.submit.HandleScheduledSubmit(context.Background(), prompt)
 		},
 		MarkdownTheme: func() tui.MarkdownTheme { return *app.markdownTheme() },
 		DefaultSyncNotice: func() (string, bool) {

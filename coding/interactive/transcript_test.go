@@ -411,3 +411,25 @@ func TestTranscriptBackgroundNotice(t *testing.T) {
 		t.Fatalf("Up recalled the notice as typed input: %q", got)
 	}
 }
+
+// D537: a self-paced /loop run carries a note for the model ("This is one run
+// of a self-paced /loop…"). The transcript shows the user's prompt without it,
+// so every run does not repeat two lines of instructions the user never typed.
+func TestTranscriptHidesTheSelfPacedLoopNote(t *testing.T) {
+	renderer, _ := newTranscriptTestRenderer(t, false)
+	editor := NewCustomEditor(editorTestHost{}, tui.EditorTheme{}, NewAppKeybindingsManager(nil, ""), CustomEditorOptions{})
+	renderer.Editor = editor
+	renderer.AddMessageToChat(&ai.UserMessage{Content: ai.StringOrBlocks{Text: coding.LoopSelfPacedPrompt("check the deploy")}}, true)
+	// A reloaded session's history recalls the prompt, not the note.
+	editor.HandleInput("\x1b[A")
+	if got := editor.GetText(); got != "check the deploy" {
+		t.Fatalf("Up recalled %q", got)
+	}
+	lines := strings.Join(renderChat(t, renderer.Chat), "\n")
+	if !strings.Contains(lines, "check the deploy") {
+		t.Fatalf("the prompt is missing: %q", lines)
+	}
+	if strings.Contains(lines, "schedule_wakeup") {
+		t.Fatalf("the transcript shows the model's note: %q", lines)
+	}
+}

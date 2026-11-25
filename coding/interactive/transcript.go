@@ -411,6 +411,11 @@ func (r *TranscriptRenderer) AddMessageToChat(message ai.Message, populateHistor
 		if textContent == "" {
 			return
 		}
+		// A self-paced /loop run carries a note for the model (D537); the user
+		// sees, and recalls, the prompt they wrote.
+		if stripped := coding.LoopPromptWithoutNote(textContent); len(stripped) < len(ai.JSTrim(textContent)) {
+			textContent = stripped
+		}
 		if len(r.Chat.Children) > 0 {
 			r.Chat.AddChild(tui.NewSpacer(1))
 		}

@@ -8917,7 +8917,10 @@ The model sees only the prompt, so a self-paced run carries a one-line note
 `schedule_wakeup` again or stop; without it `/loop check the deploy` ran once and
 never re-armed. A wakeup's plain-text prompt gets the note again, once; a slash
 command such as `/loop check` is left whole for its own command, and `/loop list`
-shows the prompt without the note.
+shows the prompt without the note. The note is for the model only: the
+transcript and a reloaded session's history show the prompt the user wrote, and
+the first run is submitted like a scheduled fire, so it never enters the editor
+history.
 
 A job is in-memory only: nothing about it is written to the session file or the
 agent directory, and closing the TUI drops it, because the next process starts
@@ -9017,7 +9020,8 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopFeatureToggleRespectsToolToggle`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
 `TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`,
-`TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`, `TestFooterShowsScheduledLoops`, `TestSelfPacedLoopPromptCarriesTheNote`.
+`TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`, `TestFooterShowsScheduledLoops`, `TestSelfPacedLoopPromptCarriesTheNote`,
+`TestTranscriptHidesTheSelfPacedLoopNote`.
 
 ### D538
 
