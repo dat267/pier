@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"math"
 	"os"
 	"slices"
 	"testing"
@@ -205,5 +206,33 @@ func TestScrollViewAnimationTickDoesNotInvalidateContent(t *testing.T) {
 	view.AnimationTick()
 	if wanted != 1 {
 		t.Fatalf("AnimationTick requested %d repaints, want 1", wanted)
+	}
+}
+
+// scroll-view.ts:148 scrollBy normalises its argument before using it
+// (`Number.isFinite(lines) ? Math.trunc(lines) : 0`), and JavaScript numbers do
+// not overflow at 2^63. The port adds `lines` to the scroll position directly, so
+// a caller-supplied MaxInt wraps: the view jumps to the TOP instead of the bottom
+// and reports a negative unconsumed count.
+func TestScrollByDoesNotOverflowAtTheIntegerLimit(t *testing.T) {
+	view := NewScrollView(nil, ScrollViewOptions{})
+	view.UpdateLayout(100, 10, nil)
+	view.ScrollTo(50)
+
+	remaining := view.ScrollBy(math.MaxInt64)
+	if got := view.ScrollTop(); got != 90 {
+		t.Errorf("scrollTop = %d after a huge positive ScrollBy, want 90 (the end)", got)
+	}
+	if remaining != math.MaxInt64-(90-50) {
+		t.Errorf("remaining = %d, want %d", remaining, math.MaxInt64-(90-50))
+	}
+
+	view.ScrollTo(50)
+	remaining = view.ScrollBy(math.MinInt64)
+	if got := view.ScrollTop(); got != 0 {
+		t.Errorf("scrollTop = %d after a huge negative ScrollBy, want 0", got)
+	}
+	if remaining != math.MinInt64+50 {
+		t.Errorf("remaining = %d, want %d", remaining, math.MinInt64+50)
 	}
 }

@@ -275,7 +275,19 @@ func (s *ScrollView) ScrollBy(lines int) int {
 	if s.followingEnd {
 		start = maxScrollTop
 	}
-	next := max(0, min(maxScrollTop, start+lines))
+	// Clamp the target rather than the sum: start+lines wraps for a caller-supplied
+	// extreme, which turned a huge scroll down into a jump to the top and a
+	// negative unconsumed count. The reference never overflows because JavaScript
+	// numbers do, so this reproduces its result for every int.
+	var next int
+	switch {
+	case lines > 0 && start > maxScrollTop-lines:
+		next = maxScrollTop
+	case lines < 0 && start < -lines:
+		next = 0
+	default:
+		next = max(0, min(maxScrollTop, start+lines))
+	}
 	moved := next - start
 	wasFollowingEnd := s.followingEnd
 	s.currentScrollTop = next
