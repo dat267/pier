@@ -24,6 +24,7 @@ func TestFindReportsCallsThroughFuncValuesUnderALock(t *testing.T) {
 		"27 hook o.mu",
 		"35 o.listener o.rw",
 		"45 o.listener o.mu",
+		"66 callback o.mu",
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Fatalf("findings:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))

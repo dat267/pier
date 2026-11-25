@@ -60,3 +60,9 @@ func (o *owner) good(callback func()) {
 	callback()
 	later()
 }
+
+func (o *owner) immediate(callback func()) {
+	o.mu.Lock()
+	func() { callback() }() // want: an invoked literal runs with the lock held
+	defer o.mu.Unlock()
+}

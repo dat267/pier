@@ -290,6 +290,9 @@ func (w *walker) expr(e ast.Expr, held []string) {
 func (w *walker) visit(node ast.Node, held []string) bool {
 	switch n := node.(type) {
 	case *ast.FuncLit:
+		// The literal's body runs later, unless it is called on the spot
+		// (`func(){ cb() }()`), in which case its body runs with the lock held.
+		// CallExpr handles that case by descending into the invoked literal.
 		return false
 	case *ast.CallExpr:
 		if len(held) > 0 && w.dynamic(n) {
@@ -299,6 +302,12 @@ func (w *walker) visit(node ast.Node, held []string) bool {
 				Callee: types.ExprString(n.Fun),
 				Lock:   held[len(held)-1],
 			})
+		}
+		// An immediately invoked function literal runs its body HERE, with the
+		// lock held, so its contents are walked rather than skipped.
+		if lit, ok := ast.Unparen(n.Fun).(*ast.FuncLit); ok {
+			w.block(lit.Body.List, held)
+			return false
 		}
 	}
 	return true
