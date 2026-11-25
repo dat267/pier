@@ -25,9 +25,15 @@ func LoopSelfPacedPrompt(prompt string) string {
 	return LoopPromptWithoutNote(prompt) + "\n\n" + loopSelfPacedNote
 }
 
-// LoopPromptWithoutNote is prompt as the user wrote it, without the note.
+// LoopPromptWithoutNote is prompt as the user wrote it, without the note. Text
+// that carries no note is returned unchanged, so ordinary input keeps its
+// spacing.
 func LoopPromptWithoutNote(prompt string) string {
-	return strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(prompt), loopSelfPacedNote))
+	trimmed := strings.TrimSpace(prompt)
+	if !strings.HasSuffix(trimmed, loopSelfPacedNote) {
+		return prompt
+	}
+	return strings.TrimSpace(strings.TrimSuffix(trimmed, loopSelfPacedNote))
 }
 
 // LoopWakeupDelayBounds clamp a self-paced wakeup. The floor keeps a loop from

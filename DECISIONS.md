@@ -8920,7 +8920,9 @@ command such as `/loop check` is left whole for its own command, and `/loop list
 shows the prompt without the note. The note is for the model only: the
 transcript and a reloaded session's history show the prompt the user wrote, and
 the first run is submitted like a scheduled fire, so it never enters the editor
-history.
+history. A run queued behind a busy turn is listed, and restored into the editor
+by Escape or the dequeue key, as the prompt alone; text without the note is left
+exactly as typed.
 
 A job is in-memory only: nothing about it is written to the session file or the
 agent directory, and closing the TUI drops it, because the next process starts
@@ -9023,7 +9025,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
 `TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`,
 `TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`, `TestFooterShowsScheduledLoops`, `TestSelfPacedLoopPromptCarriesTheNote`,
-`TestTranscriptHidesTheSelfPacedLoopNote`.
+`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`.
 
 ### D538
 

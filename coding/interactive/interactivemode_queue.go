@@ -219,7 +219,8 @@ func (c *QueueController) UpdatePendingMessagesDisplay() {
 		c.PendingParent.AddChild(tui.NewTruncatedText(theme.Fg("dim", "Steering: "+message), 1, 0))
 	}
 	for _, message := range followUp {
-		c.PendingParent.AddChild(tui.NewTruncatedText(theme.Fg("dim", "Follow-up: "+message), 1, 0))
+		// A queued self-paced /loop run shows the user's prompt (D537).
+		c.PendingParent.AddChild(tui.NewTruncatedText(theme.Fg("dim", "Follow-up: "+coding.LoopPromptWithoutNote(message)), 1, 0))
 	}
 	dequeueHint := KeyDisplayText("app.message.dequeue")
 	c.PendingParent.AddChild(tui.NewTruncatedText(
@@ -229,7 +230,12 @@ func (c *QueueController) UpdatePendingMessagesDisplay() {
 // RestoreQueuedMessagesToEditor moves the queued messages into the editor.
 func (c *QueueController) RestoreQueuedMessagesToEditor(abort bool, currentText string, hasCurrentText bool) int {
 	steering, followUp := c.ClearAllQueues()
-	allQueued := append(append([]string{}, steering...), followUp...)
+	allQueued := append([]string{}, steering...)
+	// The editor gets the prompt the user wrote, not a /loop run's note for
+	// the model (D537).
+	for _, message := range followUp {
+		allQueued = append(allQueued, coding.LoopPromptWithoutNote(message))
+	}
 	if len(allQueued) == 0 {
 		c.UpdatePendingMessagesDisplay()
 		if abort {

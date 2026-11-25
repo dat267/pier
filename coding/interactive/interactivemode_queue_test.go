@@ -511,3 +511,25 @@ func TestHandleDequeueRestoresAnExpandedPaste(t *testing.T) {
 		t.Fatalf("an inert paste marker was restored instead of the body: %q", restored)
 	}
 }
+
+// D537: a self-paced /loop run that arrives during a run waits as a follow-up,
+// carrying the note the model reads. The pending list shows the prompt alone,
+// and restoring the queue into the editor gives the user their prompt, not the
+// note.
+func TestQueuedLoopRunHidesTheNote(t *testing.T) {
+	controller, session, pending := newQueueTestController(t)
+	session.followUp = []string{coding.LoopSelfPacedPrompt("check the deploy")}
+	controller.UpdatePendingMessagesDisplay()
+	var shown []string
+	for _, child := range pending.Children {
+		shown = append(shown, child.Render(200)...)
+	}
+	text := stripAnsiEscapes(strings.Join(shown, "\n"))
+	if !strings.Contains(text, "Follow-up: check the deploy") || strings.Contains(text, "schedule_wakeup") {
+		t.Fatalf("pending list = %q", text)
+	}
+	controller.RestoreQueuedMessagesToEditor(false, "", false)
+	if got := controller.Editor.GetText(); got != "check the deploy" {
+		t.Fatalf("restored %q into the editor", got)
+	}
+}

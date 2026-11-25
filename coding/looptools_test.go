@@ -217,6 +217,10 @@ func TestSelfPacedLoopPromptCarriesTheNote(t *testing.T) {
 	if got := LoopPromptWithoutNote(noted); got != "check the deploy" {
 		t.Fatalf("without the note = %q", got)
 	}
+	// Ordinary input, which has no note, keeps its exact text.
+	if got := LoopPromptWithoutNote("  keep my spacing \n"); got != "  keep my spacing \n" {
+		t.Fatalf("plain text came back as %q", got)
+	}
 	clock := time.Date(2026, time.November, 25, 10, 0, 0, 0, time.UTC)
 	var fired []string
 	scheduler := NewLoopScheduler(func() time.Time { return clock }, func(prompt string) { fired = append(fired, prompt) })

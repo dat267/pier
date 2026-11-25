@@ -944,7 +944,7 @@ func (w *CommandWiring) listLoops() {
 // (one the agent scheduled) shows its first line and " …" for the rest, so its
 // later lines cannot read as rows of their own.
 func loopPromptSummary(prompt string) string {
-	prompt = coding.LoopPromptWithoutNote(prompt)
+	prompt = strings.TrimSpace(coding.LoopPromptWithoutNote(prompt))
 	first, rest, multiline := strings.Cut(prompt, "\n")
 	first = strings.TrimSpace(first)
 	if multiline && strings.TrimSpace(rest) != "" {
