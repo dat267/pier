@@ -39,17 +39,20 @@ hung command hands control back to the agent with its output so far.
 
 A tool call that outlives a minute is moved to the background instead of
 freezing the turn: the agent gets a handle, the call keeps running with its output
-in a temporary file, and it is told once when the call ends. `/features` sets the
-threshold, or turns it off.
+in a temporary file, and it is told once when the call ends. The footer shows how
+many calls are still running in the background. `/features` sets the threshold, or
+turns it off.
 
 `/goal` tracks multi-round objectives in session history. The agent can manage
 them with `get_goal` and `set_goal`. `/features` lists the pier-only feature
 toggles, and `/tools` turns each of the agent's tools on or off for the session;
 typing there filters the list. `/loop [interval] <prompt>` repeats a prompt on a
 cron-style interval for as long as the session is open (rounded to one that
-divides its hour or day evenly, and it says when it rounds), and `/loop <prompt>` with
-no interval lets the agent pace the next run itself. `/loop list` shows the
-scheduled loops, and `/loop stop [id]` cancels one, or all of them.
+divides its hour or day evenly, or to whole days, and it says when it rounds), and
+`/loop <prompt>` with no interval lets the agent pace the next run itself. A run
+that comes due while the agent is busy waits for the current turn instead of
+interrupting it. The footer shows how many loops are scheduled, `/loop list` shows
+them, and `/loop stop [id]` cancels one, or all of them.
 Stdio RPC (`pier --mode rpc`) is documented in
 [the RPC contract](ARCHITECTURE.md#stdio-rpc).
 
