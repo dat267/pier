@@ -875,7 +875,7 @@ func (w *CommandWiring) HandleLoopCommand(args string) {
 	}
 	interval, prompt := coding.ParseLoopInput(args)
 	if prompt == "" {
-		w.showError("Usage: /loop [interval] <prompt>")
+		w.showError("Usage: /loop [interval] <prompt>, /loop list, or /loop stop [id…]")
 		return
 	}
 	if interval == 0 {

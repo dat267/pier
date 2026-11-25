@@ -387,3 +387,18 @@ func TestLoopStopTakesSeveralIds(t *testing.T) {
 		t.Fatalf("status %q, error %q, %d left", status, errText, scheduler.Count())
 	}
 }
+
+// D537: a bare /loop names every form it takes, the subcommands included, the
+// same shapes the command hint lists.
+func TestLoopUsageNamesTheSubcommands(t *testing.T) {
+	var errText string
+	wiring := &CommandWiring{LoopScheduler: coding.NewLoopScheduler(nil, nil), Session: &commandTestSession{},
+		ShowStatus: func(string) {}, ShowError: func(message string) { errText = message }}
+	defer wiring.LoopScheduler.Stop()
+	for _, args := range []string{"", "   ", "5m"} {
+		wiring.HandleLoopCommand(args)
+		if errText != "Usage: /loop [interval] <prompt>, /loop list, or /loop stop [id…]" {
+			t.Fatalf("/loop %q said %q", args, errText)
+		}
+	}
+}

@@ -9028,6 +9028,8 @@ a menu repeating `list` would make `/loop list` take two Enters. `/loop stop`
 takes several ids (`/loop stop 1 3`), naming any unknown one without undoing the
 rest, and after each id the menu offers the jobs not yet named; with two or more words it is the command only when each is id-shaped and
 one names a scheduled job, so a prompt such as "stop the deploy checks" still runs.
+A bare `/loop` answers with every form it takes ("Usage: /loop [interval]
+<prompt>, /loop list, or /loop stop [id…]").
 Turning the loop feature off in `/features` drops every scheduled job, and its
 status names them ("Loop feature off; stopped 2 loops.").
 
@@ -9052,7 +9054,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
 `TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`,
 `TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`, `TestFooterShowsScheduledLoops`, `TestSelfPacedLoopPromptCarriesTheNote`,
-`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`, `TestCronListKeepsEachJobOnOneRow`, `TestSessionReplacementDropsScheduledLoops`, `TestLoopFireWaitsForAnIdleAgent`, `TestLoopSchedulerPostpone`, `TestLoopStopAllCountsInWords`, `TestLoopCommandArgumentCompletions`, `TestLoopFeatureOffNamesTheStoppedLoops`, `TestLoopStopTakesSeveralIds`.
+`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`, `TestCronListKeepsEachJobOnOneRow`, `TestSessionReplacementDropsScheduledLoops`, `TestLoopFireWaitsForAnIdleAgent`, `TestLoopSchedulerPostpone`, `TestLoopStopAllCountsInWords`, `TestLoopCommandArgumentCompletions`, `TestLoopFeatureOffNamesTheStoppedLoops`, `TestLoopStopTakesSeveralIds`, `TestLoopUsageNamesTheSubcommands`.
 
 ### D538
 
