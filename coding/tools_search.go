@@ -95,7 +95,7 @@ func findFullPathVariable(pattern, searchPath, goos string) (effectivePattern st
 		return effectivePattern, false, false
 	}
 	ignoreCase = effectivePattern == strings.ToLower(effectivePattern)
-	if !isAbsoluteGlobPattern(effectivePattern) {
+	if !isAbsoluteGlobPattern(effectivePattern, goos) {
 		// The escape is upstream's non-Windows branch; on Windows the search path
 		// keeps its native separators and each "/" becomes a separator class below.
 		root := searchPath
@@ -110,16 +110,29 @@ func findFullPathVariable(pattern, searchPath, goos string) (effectivePattern st
 	return effectivePattern, true, ignoreCase
 }
 
-// isAbsoluteGlobPattern reports whether a pattern is absolute on this platform:
-// a leading "/" on POSIX, a drive letter or UNC prefix on Windows.
-func isAbsoluteGlobPattern(pattern string) bool {
+// isAbsoluteGlobPattern reports whether a pattern is absolute on goos, following
+// path.isAbsolute: a leading "/" on POSIX, and additionally a drive letter or UNC
+// prefix on Windows. A drive-letter pattern is RELATIVE on Linux, so it anchors at
+// the search path there.
+func isAbsoluteGlobPattern(pattern, goos string) bool {
 	if strings.HasPrefix(pattern, "/") {
 		return true
 	}
-	if len(pattern) >= 3 && pattern[1] == ':' && pattern[2] == '/' {
+	if goos != "windows" || pattern == "" {
+		return false
+	}
+	// path.win32.isAbsolute: a leading separator (either kind) or a device root
+	// "X:/" / "X:\".
+	if pattern[0] == '\\' {
 		return true
 	}
-	return len(pattern) >= 2 && pattern[0] == '/' && pattern[1] == '/'
+	return len(pattern) > 2 && isASCIILetter(pattern[0]) && pattern[1] == ':' &&
+		(pattern[2] == '/' || pattern[2] == '\\')
+}
+
+// isASCIILetter narrows a byte to A-Z or a-z.
+func isASCIILetter(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 }
 
 // escapeGlobMeta escapes the characters a glob treats specially, so a search

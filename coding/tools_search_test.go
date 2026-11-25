@@ -340,6 +340,16 @@ func TestFindFullPathVariable(t *testing.T) {
 		{"leading dot slash dropped", "./src/*.ts", "/w", "linux", "/w/src/*.ts", true, true},
 		{"globstar stays unanchored", "**/x.ts", "/w", "linux", "/w/**/x.ts", true, true},
 		{"absolute pattern as given", "/src/*.ts", "/w", "linux", "/src/*.ts", true, true},
+		// path.isAbsolute is platform-aware: "C:/x" is absolute on Windows only.
+		// Upstream calls it on the host platform, so on Linux a drive-letter
+		// pattern is a RELATIVE one and is anchored at the search path; treating it
+		// as absolute sent fd an unanchored --full-path glob that matches nothing.
+		{"drive letter is relative on linux", "C:/x/*.ts", "/w", "linux", "/w/C:/x/*.ts", true, false},
+		{"lowercase drive letter is relative on linux", "c:/x/*.ts", "/w", "linux", "/w/c:/x/*.ts", true, true},
+		{"non-letter drive prefix is relative on both", "1:/x/*.ts", "/w", "linux", "/w/1:/x/*.ts", true, true},
+		// On Windows a leading separator of either kind is absolute (path.win32),
+		// as is a device root; a backslash path is anchored only there.
+		{"windows drive root is absolute", `C:\w\*.ts`, `C:\w`, "windows", `C:[/\\]w[/\\]*.ts`, true, false},
 		{"smart case off for an uppercase pattern", "Src/*.TS", "/w", "linux", "/w/Src/*.TS", true, false},
 		{"search path metacharacters are escaped", "src/*.ts", "/w/a[1]/{b}", "linux", `/w/a\[1\]/\{b\}/src/*.ts`, true, true},
 		{"windows separators become classes", `src\**\*.ts`, `C:\w`, "windows", `C:\w` + sepClass + "src" + sepClass + "**" + sepClass + "*.ts", true, true},
