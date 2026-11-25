@@ -240,9 +240,6 @@ func NewFooterComponent(session FooterSession, footerData coding.ReadonlyFooterD
 	return &FooterComponent{session: session, footerData: footerData}
 }
 
-// SetSession replaces the session.
-func (f *FooterComponent) SetSession(session FooterSession) { f.session = session }
-
 // Invalidate drops the render cache (the dispatcher calls it on every session
 // event).
 func (f *FooterComponent) Invalidate() {
