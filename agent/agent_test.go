@@ -321,8 +321,11 @@ func TestAgentDoublePromptErrors(t *testing.T) {
 	go func() { runErr <- agent.PromptText(context.Background(), "first") }()
 	time.Sleep(20 * time.Millisecond)
 
+	// agent.ts:385 names the caller's methods in lowerCamel and the reference's
+	// own test pins that string, so a user pasting this error needs that spelling
+	// rather than pier's exported Go names.
 	if err := agent.PromptText(context.Background(), "second"); err == nil ||
-		!strings.Contains(err.Error(), "already processing") {
+		err.Error() != "Agent is already processing a prompt. Use steer() or followUp() to queue messages, or wait for completion." {
 		t.Fatalf("double prompt error = %v", err)
 	}
 	if err := agent.Reset(); err == nil {

@@ -32,7 +32,7 @@ func SetDefaultStreamFn(streamFn StreamFn) { defaultStreamFn = streamFn }
 // GetDefaultStreamFn returns the configured fallback.
 func GetDefaultStreamFn() (StreamFn, error) {
 	if defaultStreamFn == nil {
-		return nil, errors.New("No default stream function configured. Pass streamFn explicitly or call SetDefaultStreamFn().")
+		return nil, errors.New("No default stream function configured. Pass streamFn explicitly or call setDefaultStreamFn().")
 	}
 	return defaultStreamFn, nil
 }

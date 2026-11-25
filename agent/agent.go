@@ -734,7 +734,7 @@ func (a *Agent) runPromptMessages(ctx context.Context, messages []ai.Message, sk
 	a.mu.Lock()
 	if a.activeRun != nil {
 		a.mu.Unlock()
-		return errors.New("Agent is already processing a prompt. Use Steer() or FollowUp() to queue messages, or wait for completion.")
+		return errors.New("Agent is already processing a prompt. Use steer() or followUp() to queue messages, or wait for completion.")
 	}
 	a.mu.Unlock()
 	return a.runWithLifecycle(ctx, func(ctx context.Context) error {

@@ -368,7 +368,11 @@ func TestDefaultStreamFn(t *testing.T) {
 		}
 	})
 	SetDefaultStreamFn(nil)
-	if _, err := GetDefaultStreamFn(); err == nil || !strings.Contains(err.Error(), "No default stream function configured") {
+	// stream-fn.ts:17 names the caller's function in lowerCamel, as the rest of
+	// the message keeps the reference's wording: a user pasting this error into a
+	// search needs the upstream spelling, not pier's exported Go name.
+	if _, err := GetDefaultStreamFn(); err == nil ||
+		err.Error() != "No default stream function configured. Pass streamFn explicitly or call setDefaultStreamFn()." {
 		t.Fatalf("unset err = %v", err)
 	}
 

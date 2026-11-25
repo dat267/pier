@@ -578,7 +578,7 @@ func (s *AgentSession) SendUserMessage(ctx context.Context, content any, deliver
 }
 
 // errRunAlreadyActive is a run start that lost to another caller's run (D438).
-var errRunAlreadyActive = errors.New("Agent is already processing a prompt. Use Steer() or FollowUp() to queue messages, or wait for completion.")
+var errRunAlreadyActive = errors.New("Agent is already processing a prompt. Use steer() or followUp() to queue messages, or wait for completion.")
 
 // SendMessageOptions configure SendMessage.
 type SendMessageOptions struct {
