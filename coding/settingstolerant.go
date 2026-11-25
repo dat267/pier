@@ -229,7 +229,7 @@ func decodeTolerantStringSlice(raw json.RawMessage, target reflect.Value) bool {
 // Numbers and consumes as counts: getImageWidthCells floors on read, and a
 // fractional editor padding or autocomplete limit truncates in String.repeat or
 // as a slice bound. Decoding them into an int would reject a stored 2.7 and
-// discard the setting entirely.
+// discard the setting entirely, so the member floors instead (D546).
 func floorsSettingsNumber(name string) bool {
 	switch name {
 	case "editorPaddingX", "imageWidthCells", "autocompleteMaxVisible":
