@@ -8230,6 +8230,10 @@ is the one place a pier-only feature is declared (id, label, description and
 current state), and `NewFeatureSettingsSelector` renders it, so a new feature needs
 its `featureToggles` entry, an `ApplyFeatureToggle` case and nothing else.
 
+With the goal feature off there is no controller, so `/goal` says "The goal
+feature is off. Turn it on in /features." instead of clearing the editor and
+doing nothing, as `/loop` does (D537).
+
 Tests: `TestSettingsGoalFeatureDefaultsOn` (default, global scope, reload),
 `TestSessionToolToggle` (a tool leaves and rejoins the active set and the prompt,
 an unknown name errors), `TestToolsSelectorTogglesSessionTools` (`/tools` lists
@@ -8241,8 +8245,9 @@ query restores every tool),
 registry, branch state restored),
 `TestCreateAgentSessionHonoursTheGoalFeatureSetting` (startup),
 `TestFeatureToggleAppliesAndPersists` (the selector's row stores, applies and
-rewires) and `TestFeatureSelectorHoldsOnlyPierOnlyToggles` (`/features` holds the
-pier-only rows and `/settings` none of them, whose golden still matches).
+rewires), `TestFeatureSelectorHoldsOnlyPierOnlyToggles` (`/features` holds the
+pier-only rows and `/settings` none of them, whose golden still matches) and
+`TestGoalCommandReportsDisabledFeature` (a disabled `/goal` says so).
 
 ### D497
 

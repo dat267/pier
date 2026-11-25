@@ -68,6 +68,9 @@ type CommandWiring struct {
 	// LoopFeatureEnabled reports whether /loop is enabled, so a disabled feature
 	// can say so instead of doing nothing.
 	LoopFeatureEnabled func() bool
+	// RunGoalCommand hands `/goal` arguments to the session's goal controller
+	// and reports false when there is none (the goal feature is off, D496).
+	RunGoalCommand func(args string) bool
 	// RequestRender requests a render.
 	RequestRender func()
 	// ClearStatusIndicator clears the active indicator.
@@ -843,6 +846,14 @@ func (w *CommandWiring) HandleHotkeysCommand() {
 
 // HandleChangelogCommand renders the full changelog (upstream
 // handleChangelogCommand).
+// HandleGoalCommand runs `/goal`. A disabled feature has no controller, so it
+// reports itself rather than doing nothing, the way `/loop` does.
+func (w *CommandWiring) HandleGoalCommand(args string) {
+	if w.RunGoalCommand == nil || !w.RunGoalCommand(args) {
+		w.showError("The goal feature is off. Turn it on in /features.")
+	}
+}
+
 // HandleLoopCommand runs `/loop [interval] <prompt>`: with an interval it arms a
 // cron job on the session's scheduler, and without one it starts a self-paced
 // loop by running the prompt now, leaving the agent to arm its own wakeups.
@@ -1163,6 +1174,14 @@ func newCommandWiring(app *App) *CommandWiring {
 		LoopScheduler:        app.loopScheduler,
 		LoopMaxAge:           app.loopMaxAge,
 		LoopFeatureEnabled:   app.settings.GetLoopFeatureEnabled,
+		RunGoalCommand: func(args string) bool {
+			controller := app.session.GoalController()
+			if controller == nil {
+				return false
+			}
+			controller.HandleCommand(args)
+			return true
+		},
 		OnLoopPrompt: func(prompt string) {
 			// The same path a typed message takes, so a loop's prompt is ordinary
 			// user input rather than a special event.

@@ -674,3 +674,32 @@ func TestDaxnutsEggIsWiredToTheModelHooks(t *testing.T) {
 		t.Fatalf("login hook did not show the egg: %d", len(app.chat.Children))
 	}
 }
+
+// D496: with the goal feature off there is no controller, and `/goal` used to
+// clear the editor and do nothing at all. It now says the feature is off and
+// where to turn it on, as `/loop` does (D537).
+func TestGoalCommandReportsDisabledFeature(t *testing.T) {
+	var failure string
+	var ran []string
+	enabled := false
+	wiring := &CommandWiring{
+		RunGoalCommand: func(args string) bool {
+			if !enabled {
+				return false
+			}
+			ran = append(ran, args)
+			return true
+		},
+		ShowStatus: func(string) {},
+		ShowError:  func(message string) { failure = message },
+	}
+	wiring.HandleGoalCommand("ship the release")
+	if failure != "The goal feature is off. Turn it on in /features." {
+		t.Fatalf("a disabled /goal said %q", failure)
+	}
+	failure, enabled = "", true
+	wiring.HandleGoalCommand("ship the release")
+	if failure != "" || len(ran) != 1 || ran[0] != "ship the release" {
+		t.Fatalf("an enabled /goal: failure %q, ran %q", failure, ran)
+	}
+}
