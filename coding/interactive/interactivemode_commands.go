@@ -926,11 +926,28 @@ func (w *CommandWiring) listLoops() {
 		return
 	}
 	lines := []string{"Scheduled loops (/loop stop <id> cancels one, /loop stop all of them):"}
+	now := scheduler.Now()
 	for _, job := range jobs {
 		lines = append(lines, fmt.Sprintf("%s  %s, next %s  %s",
-			job.ID, job.HumanSchedule, job.NextFire.Local().Format("15:04"), job.Prompt))
+			job.ID, job.HumanSchedule, loopNextRunLabel(job.NextFire, now), job.Prompt))
 	}
 	w.showStatus(strings.Join(lines, "\n"))
+}
+
+// loopNextRunLabel names a job's next run in the schedule's own 12-hour style,
+// with "tomorrow" or the date when it is not today: a bare clock made a daily
+// loop's midnight run read like a time already past.
+func loopNextRunLabel(next time.Time, now time.Time) string {
+	next, now = next.Local(), now.Local()
+	clock := next.Format("3:04 PM")
+	year, month, day := now.Date()
+	switch {
+	case next.Year() == year && next.Month() == month && next.Day() == day:
+		return clock
+	case next.Before(time.Date(year, month, day+2, 0, 0, 0, 0, time.Local)):
+		return "tomorrow " + clock
+	}
+	return next.Format("Mon Jan 2") + " " + clock
 }
 
 // stopLoops cancels the job named by ids, or every job when ids is empty.

@@ -8974,6 +8974,10 @@ than doing nothing. A scheduling tool the user turned off in `/tools` stays off
 across a toggle, the rule the goal tools follow. Both `/features` and `/tools`
 filter as you type.
 
+`/loop list` names each job's next run in the schedule's own 12-hour style,
+with "tomorrow" or the date when it is not today, so a daily loop's midnight run
+does not read as a bare "00:00".
+
 A fire takes the typed-input dispatch (`HandleScheduledSubmit`) with the editor
 detached: it steers a running turn, queues behind compaction or starts a run like
 typed text, but it never clears the draft the user is writing or adds the prompt
@@ -8998,7 +9002,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestAppSkipsLoopToolsWhenTheFeatureIsOff`, `TestLoopFeatureToggleEnablesAndDisables`,
 `TestLoopFeatureToggleRespectsToolToggle`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
-`TestScheduledSubmitKeepsTheDraft`.
+`TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`.
 
 ### D538
 

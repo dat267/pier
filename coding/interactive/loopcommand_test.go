@@ -196,3 +196,24 @@ func TestLoopCommandSaysWhenItRounds(t *testing.T) {
 		t.Fatalf("an even interval must not claim it was rounded: %q", status)
 	}
 }
+
+// D537: a run on another day names its day. The list printed only the clock, so
+// a daily loop created at 10:00 read "next 00:00", which looks like a run in the
+// past, and in 24-hour time beside a schedule written "12:00 AM".
+func TestLoopListNamesTheDayOfALaterRun(t *testing.T) {
+	clock := time.Date(2026, time.November, 25, 10, 0, 0, 0, time.Local)
+	scheduler := coding.NewLoopScheduler(func() time.Time { return clock }, nil)
+	defer scheduler.Stop()
+	var status string
+	wiring := &CommandWiring{LoopScheduler: scheduler, OnLoopPrompt: func(string) {},
+		ShowStatus: func(message string) { status = message }, ShowError: func(string) {}}
+	wiring.HandleLoopCommand("5m check the deploy")
+	wiring.HandleLoopCommand("1d water the plants")
+	wiring.HandleLoopCommand("7d send the report")
+	wiring.HandleLoopCommand("list")
+	for _, want := range []string{"next 10:05 AM  check the deploy", "next tomorrow 12:00 AM  water the plants", "next Sun Nov 29 12:00 AM  send the report"} {
+		if !strings.Contains(status, want) {
+			t.Fatalf("list lacks %q:\n%s", want, status)
+		}
+	}
+}
