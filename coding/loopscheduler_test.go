@@ -2,6 +2,7 @@ package coding
 
 import (
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -304,4 +305,39 @@ func sessionFileContents(t *testing.T, manager *SessionManager) string {
 		t.Fatalf("read session file: %v", err)
 	}
 	return string(raw)
+}
+
+// D537: a day step stays even across a month end. Cron's day-of-month step
+// restarts on the 1st, so "*/7" ran Nov 29 then Dec 1 and "*/3" ran Dec 31 then
+// Jan 1; AddEveryDays advances by calendar days instead.
+func TestLoopSchedulerDayStepCrossesMonthEnd(t *testing.T) {
+	clock := time.Date(2026, time.November, 25, 10, 0, 0, 0, time.Local)
+	scheduler := NewLoopScheduler(func() time.Time { return clock }, func(string) {})
+	defer scheduler.Stop()
+	for _, days := range []int{3, 7} {
+		scheduler.RemoveAll()
+		job, err := scheduler.AddEveryDays(days, "water the plants", 0)
+		if err != nil {
+			t.Fatalf("AddEveryDays(%d): %v", days, err)
+		}
+		if job.HumanSchedule != "Every "+strconv.Itoa(days)+" days at 12:00 AM" {
+			t.Fatalf("schedule = %q", job.HumanSchedule)
+		}
+		var runs []time.Time
+		for range 5 {
+			next := scheduler.Jobs()[0].NextFire
+			runs = append(runs, next)
+			clock = next
+			scheduler.fireDue()
+		}
+		clock = time.Date(2026, time.November, 25, 10, 0, 0, 0, time.Local)
+		if first := runs[0]; first != time.Date(2026, time.November, 26, 0, 0, 0, 0, time.Local) {
+			t.Fatalf("%d days: the first run is %v, want the next midnight", days, first)
+		}
+		for index := 1; index < len(runs); index++ {
+			if want := runs[index-1].AddDate(0, 0, days); runs[index] != want {
+				t.Fatalf("%d days: runs %v, gap %d ends at %v, want %v", days, runs, index, runs[index], want)
+			}
+		}
+	}
 }

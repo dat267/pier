@@ -31,6 +31,10 @@ type LoopJob struct {
 	NextFire time.Time
 	// MaxAge ends a recurring job; zero means never.
 	MaxAge time.Duration
+	// EveryDays, when set, advances the job by that many calendar days instead of
+	// by its cron, whose day-of-month step restarts on the 1st and leaves an
+	// uneven gap at each month end. Cron stays the label the tools report.
+	EveryDays int
 }
 
 // LoopRecurringMaxAge is how long a recurring job lives. The reference expires a
@@ -131,7 +135,31 @@ func (s *LoopScheduler) Stop() {
 // Add schedules a prompt. A cron that cannot be parsed is an error, as is a
 // job past the cap or one that never matches.
 func (s *LoopScheduler) Add(cron string, prompt string, recurring bool, maxAge time.Duration) (LoopJob, error) {
-	schedule, ok := ParseCron(cron)
+	return s.add(cron, prompt, recurring, maxAge, 0)
+}
+
+// AddEveryDays schedules a recurring job at local midnight every days days,
+// starting at the next midnight (D537). Cron cannot space a day step evenly
+// across months, so the scheduler advances it itself.
+func (s *LoopScheduler) AddEveryDays(days int, prompt string, maxAge time.Duration) (LoopJob, error) {
+	if days < 1 {
+		return LoopJob{}, errCronInvalid(strconv.Itoa(days) + " days")
+	}
+	cron := "0 0 * * *"
+	if days > 1 {
+		cron = "0 0 */" + strconv.Itoa(days) + " * *"
+	}
+	return s.add(cron, prompt, true, maxAge, days)
+}
+
+// add stores a job. With everyDays set, cron is only the label: the first run
+// is the next midnight and later ones step by calendar days.
+func (s *LoopScheduler) add(cron string, prompt string, recurring bool, maxAge time.Duration, everyDays int) (LoopJob, error) {
+	scheduleCron := cron
+	if everyDays > 0 {
+		scheduleCron = "0 0 * * *"
+	}
+	schedule, ok := ParseCron(scheduleCron)
 	if !ok {
 		return LoopJob{}, errCronInvalid(cron)
 	}
@@ -159,6 +187,7 @@ func (s *LoopScheduler) Add(cron string, prompt string, recurring bool, maxAge t
 		CreatedAt:     now,
 		NextFire:      next,
 		MaxAge:        maxAge,
+		EveryDays:     everyDays,
 	}
 	s.jobs = append(s.jobs, job)
 	s.wake()
@@ -330,7 +359,10 @@ func (s *LoopScheduler) fireDue() {
 		if !job.Recurring {
 			continue
 		}
-		next, ok := job.Schedule.NextCronTime(job.NextFire)
+		next, ok := job.NextFire.AddDate(0, 0, job.EveryDays), true
+		if job.EveryDays == 0 {
+			next, ok = job.Schedule.NextCronTime(job.NextFire)
+		}
 		if !ok {
 			continue
 		}

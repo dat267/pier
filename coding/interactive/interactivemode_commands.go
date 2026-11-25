@@ -892,7 +892,13 @@ func (w *CommandWiring) HandleLoopCommand(args string) {
 		w.showError("Scheduling is not available in this session.")
 		return
 	}
-	job, err := scheduler.Add(cron, prompt, true, w.LoopMaxAge)
+	// A whole-day step is advanced by the scheduler: cron's day-of-month step
+	// restarts on the 1st, which is not the even spacing /loop promises.
+	add := func() (coding.LoopJob, error) { return scheduler.Add(cron, prompt, true, w.LoopMaxAge) }
+	if days := int(used / (24 * time.Hour)); days >= 1 && used%(24*time.Hour) == 0 {
+		add = func() (coding.LoopJob, error) { return scheduler.AddEveryDays(days, prompt, w.LoopMaxAge) }
+	}
+	job, err := add()
 	if err != nil {
 		w.showError(err.Error())
 		return

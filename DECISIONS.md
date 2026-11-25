@@ -8942,7 +8942,10 @@ divisor of 60, hours to a divisor of 24 and days to whole days, ties going to th
 longer step since fewer runs is the safer mistake, and seconds round up to a
 minute (before, `90s` quietly became every minute while `30s` was refused). The
 status names any rounding, so `/loop 45m` reports "Every hour; 45m rounded to an
-interval that divides evenly".
+interval that divides evenly". No day step but 1 divides every month, and cron's
+day-of-month step restarts on the 1st (`*/7` runs Nov 29 then Dec 1), so a
+whole-day loop is not left to cron: `AddEveryDays` runs it at the next midnight
+and then every N calendar days, keeping the cron only as its label.
 
 `/loop` is listed in `/features` alongside the other pier-only surface, and its
 tools are registered in the ordinary registry, so `/tools` shows and can disable
@@ -9002,7 +9005,8 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestAppSkipsLoopToolsWhenTheFeatureIsOff`, `TestLoopFeatureToggleEnablesAndDisables`,
 `TestLoopFeatureToggleRespectsToolToggle`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
-`TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`.
+`TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`,
+`TestLoopSchedulerDayStepCrossesMonthEnd`.
 
 ### D538
 

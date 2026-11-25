@@ -210,8 +210,18 @@ func TestLoopListNamesTheDayOfALaterRun(t *testing.T) {
 	wiring.HandleLoopCommand("5m check the deploy")
 	wiring.HandleLoopCommand("1d water the plants")
 	wiring.HandleLoopCommand("7d send the report")
+	// A whole-day loop steps by calendar days, not by cron's day-of-month step.
+	for _, job := range scheduler.Jobs() {
+		if want := map[string]int{"water the plants": 1, "send the report": 7}[job.Prompt]; job.EveryDays != want {
+			t.Fatalf("%q steps by %d days, want %d", job.Prompt, job.EveryDays, want)
+		}
+	}
+	// A job the agent scheduled with cron can run days away.
+	if _, err := scheduler.Add("0 9 1 * *", "pay the rent", true, 0); err != nil {
+		t.Fatal(err)
+	}
 	wiring.HandleLoopCommand("list")
-	for _, want := range []string{"next 10:05 AM  check the deploy", "next tomorrow 12:00 AM  water the plants", "next Sun Nov 29 12:00 AM  send the report"} {
+	for _, want := range []string{"next 10:05 AM  check the deploy", "next tomorrow 12:00 AM  water the plants", "next tomorrow 12:00 AM  send the report", "next Tue Dec 1 9:00 AM  pay the rent"} {
 		if !strings.Contains(status, want) {
 			t.Fatalf("list lacks %q:\n%s", want, status)
 		}
