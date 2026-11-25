@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/tui"
 )
@@ -152,4 +153,35 @@ func TestBackgroundHandleRendersInEveryFrame(t *testing.T) {
 	if !strings.Contains(result.Content[0].Text, "do not wait") {
 		t.Fatal("rendering rewrote the stored result")
 	}
+}
+
+// A displaced call has not finished, so its frame must keep rendering and
+// ticking with the live output instead of freezing at the handle. The caller
+// keeps it PARTIAL for that reason; a final result stops the ticker.
+func TestBackgroundHandleFrameKeepsTicking(t *testing.T) {
+	theme := newRendererTestTheme(t)
+	handle := &SortToolResultContent{
+		Content: []ToolResultContent{{Type: "text", Text: "moved to the background"}},
+		Details: json.RawMessage(`{"backgroundHandle":"bg-9","toolCallId":"c9","toolName":"bash","outputPath":"/tmp/pi-background-m.log"}`),
+	}
+	if !isBackgroundHandle(handle) {
+		t.Fatal("the handle result was not recognized as a background handle")
+	}
+	component := NewToolExecutionComponent("bash", "c9", map[string]any{}, ToolExecutionOptions{},
+		WithBuiltInRenderers("bash", nil), nil, "/tmp")
+	component.MarkExecutionStarted()
+	component.SetArgsComplete()
+	component.UpdateResult(handle, true)
+	if again, _ := component.AnimationFrame(time.Now()); !again {
+		t.Fatal("a backgrounded call's frame stopped ticking")
+	}
+	// Its completion is what hands the frame back, and a real result stops it.
+	component.UpdateResult(&SortToolResultContent{Content: []ToolResultContent{{Type: "text", Text: "done"}}}, false)
+	if isBackgroundHandle(component.result) {
+		t.Fatal("the final result was still read as a handle")
+	}
+	if again, _ := component.AnimationFrame(time.Now()); again {
+		t.Fatal("a finished call's frame kept ticking")
+	}
+	_ = theme
 }

@@ -10,9 +10,9 @@ package agent
 // the whole policy.
 //
 // The pinned reference runs every tool call to completion, so this is pier-only
-// (D538). It adds no transcript shape: the handle is an ordinary tool result and
-// the completion notification is an ordinary user message, both already readable
-// by the reference.
+// (D538). It adds no transcript shape the reference cannot read: the handle is an
+// ordinary tool result, and both notices (started, finished) are ordinary user
+// messages.
 
 import (
 	"context"
@@ -228,10 +228,23 @@ func CompletionNotice(handle ToolCallHandle, result AgentToolResult) ai.Message 
 	return &ai.UserMessage{Content: ai.StringOrBlocks{Text: text}}
 }
 
+// StartedNotice is the message a displaced call wakes the model with the moment
+// the control returns to it, so the model reads "this is still running" as a
+// message of its own rather than only inside the tool result.
+func StartedNotice(handle ToolCallHandle) ai.Message {
+	where := ""
+	if handle.OutputPath != "" {
+		where = fmt.Sprintf(" The full output is in %s.", handle.OutputPath)
+	}
+	text := fmt.Sprintf("Background call %s (%s) started.%s\n\nContinue with other work; "+
+		"you will be told again when it finishes.", handle.ID, handle.ToolName, where)
+	return &ai.UserMessage{Content: ai.StringOrBlocks{Text: text}}
+}
+
 // completionNoticePattern matches the header CompletionNotice writes: the
 // handle, the tool, the outcome and the optional output file, then a blank line.
 var completionNoticePattern = regexp.MustCompile(
-	`^Background call (bg[-0-9a-z]*) \(([^()\n]+)\) (finished|failed)\.((?: The full output is in [^\n]*\.)?)\n\n`)
+	`^Background call (bg[-0-9a-z]*) \(([^()\n]+)\) (started|finished|failed)\.((?: The full output is in [^\n]*\.)?)\n\n`)
 
 // ParseCompletionNotice splits a completion notice into its title ("bg-1
 // (bash) finished") and its body (the output-file line and the result), so a

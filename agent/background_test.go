@@ -693,6 +693,15 @@ func TestParseCompletionNotice(t *testing.T) {
 	if title, _, ok := ParseCompletionNotice(messageText(failed)); !ok || title != "bg-2 (github_search) failed" {
 		t.Fatalf("failed title = %q, ok = %v", title, ok)
 	}
+	// The start notice shares the header, so the transcript draws it the same way.
+	started := StartedNotice(handle)
+	title, body, ok = ParseCompletionNotice(messageText(started))
+	if !ok || title != "bg-1a2b3c (bash) started" {
+		t.Fatalf("started title = %q, ok = %v", title, ok)
+	}
+	if !strings.Contains(body, "/tmp/pi-background-x.log") || !strings.Contains(body, "when it finishes") {
+		t.Fatalf("started body = %q", body)
+	}
 	for _, typed := range []string{"Background call bg-1 (bash) finished.", "please check Background call bg-1 (bash) finished.\n\nok", "hello"} {
 		if _, _, ok := ParseCompletionNotice(typed); ok {
 			t.Fatalf("%q was taken for a notice", typed)

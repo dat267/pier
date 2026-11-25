@@ -485,6 +485,9 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 				return
 			}
 			created.watchBackgroundCall(handle)
+			// Tell the agent the control came back to it, as a message of its own
+			// rather than only inside the tool result (D538, user request).
+			created.deliverBackgroundNotice(agent.StartedNotice(handle))
 		},
 	})
 	if err != nil {

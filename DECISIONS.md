@@ -9141,8 +9141,16 @@ off, so a typo is the same as an unset value rather than a surprise.
 The pinned reference runs every tool call to completion
 (`packages/agent/src/agent-loop.ts` has no timeout and no backgrounding), so this
 is pier-only. That makes transcript parity the constraint rather than a
-convenience: the handle is an ordinary tool result and the wake-up is an ordinary
-user message. While a run is active it is queued as a steering message, so it
+convenience: the handle is an ordinary tool result and BOTH wake-ups are ordinary
+user messages, one when the call is displaced (so the model reads "still running"
+as a message of its own) and one when it ends.
+
+A displaced call has not finished, so its message frame keeps rendering and
+ticking with the live output: the dispatcher records the handle as a PARTIAL
+result and keeps the component pending, so the call's later
+`tool_execution_update` events still reach it. A final result is what releases the
+frame. Freezing the frame at the handle showed a running command as if it had
+finished, and its output arrived nowhere. While a run is active it is queued as a steering message, so it
 reaches the transcript at that run's next turn boundary (after the tool calls in
 flight, before the next model request), as a message typed mid-run does; as a
 follow-up it waited for the run to stop, so a call that finished early stayed
@@ -9181,11 +9189,11 @@ frame's result is rendered, and in the fallback frame): "Moved to the background
 notice follows when it ends.", rather than printing "do not wait for it" at the
 user.
 
-The completion notice is stored as an ordinary user message, but the
-transcript recognizes its exact header (as it recognizes a skill block) and
-draws it as a collapsed "[background] bg-… (bash) finished" block that expands
-to the output file and the fenced result. It is not added to the editor
-history, so Up never recalls it as typed input.
+Both notices are stored as ordinary user messages, but the transcript
+recognizes their exact header (as it recognizes a skill block) and draws each as
+a collapsed "[background] bg-… (bash) started/finished" block that expands to
+the output file and, for the completion, the fenced result. They are not added to
+the editor history, so Up never recalls them as typed input.
 
 While any displaced call runs, the editor's lower divider, the line just above
 the footer, says so ("── 1 background ──", after the scheduled count when there is

@@ -592,6 +592,15 @@ func (d *EventDispatcher) handleToolExecutionEnd(event *coding.SessionEvent) {
 	result.IsError = agentEvent.IsError
 	// The recorded execution time comes from the agent event (upstream #10549).
 	component.SetResultDuration(agentEvent.DurationMs)
+	// A call moved to the background has not finished: the handle is a status,
+	// not an outcome. Keep its frame alive and PARTIAL so it keeps ticking and the
+	// displaced call's later updates still land (the agent streams them through
+	// ToolExecutionUpdate). Its own completion removes it, via the notice below.
+	if isBackgroundHandle(result) {
+		component.UpdateResult(result, true)
+		d.requestRender()
+		return
+	}
 	component.UpdateResult(result, false)
 	d.Transcript.goalActions.finish(agentEvent.ToolCallID, result, d.Transcript.Chat)
 	delete(d.pendingTools, agentEvent.ToolCallID)

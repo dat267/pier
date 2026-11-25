@@ -549,3 +549,13 @@ func usesElapsedTenths(name string) bool {
 }
 
 // --- write ------------------------------------------------------------------
+
+// isBackgroundHandle reports whether a result is the status a displaced call
+// returns instead of an outcome, so the caller can keep its frame alive.
+func isBackgroundHandle(result *SortToolResultContent) bool {
+	if result == nil {
+		return false
+	}
+	handle := toolDetailsFrom[backgroundHandleDetails](result.Details)
+	return handle != nil && handle.Handle != ""
+}

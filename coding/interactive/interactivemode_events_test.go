@@ -540,3 +540,46 @@ func TestAbortedMessageDisplayDoesNotMutateTheEventMessage(t *testing.T) {
 		t.Fatalf("aborted render = %q", lines)
 	}
 }
+
+// A displaced call's end event carries a handle, not an outcome: the dispatcher
+// must keep the frame pending (so the call's later updates still land) and must
+// not treat the handle as the result. A real end finalizes it.
+func TestDispatcherKeepsABackgroundedFramePending(t *testing.T) {
+	newRendererTestTheme(t)
+	transcript := NewTranscriptRenderer(&tui.Container{}, nil, nil, nil, nil)
+	dispatcher := NewEventDispatcher(transcript, nil, nil, nil, nil, nil, nil)
+	component := NewToolExecutionComponent("bash", "c9", map[string]any{}, ToolExecutionOptions{},
+		WithBuiltInRenderers("bash", nil), nil, "/tmp")
+	component.MarkExecutionStarted()
+	dispatcher.pendingTools["c9"] = component
+
+	handle := json.RawMessage(`{"backgroundHandle":"bg-9","toolCallId":"c9","toolName":"bash","outputPath":"/tmp/x.log"}`)
+	dispatcher.handleToolExecutionEnd(&coding.SessionEvent{Agent: &agent.AgentEvent{
+		Type: agent.ToolExecutionEnd, ToolCallID: "c9", ToolName: "bash",
+		Result: agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "moved"}}, Details: handle},
+	}})
+	if _, ok := dispatcher.pendingTools["c9"]; !ok {
+		t.Fatal("a backgrounded call's frame was dropped, so its live output cannot land")
+	}
+	if !component.isPartial {
+		t.Fatal("the handle was recorded as the frame's final result")
+	}
+
+	// The call's own stream keeps updating that frame.
+	dispatcher.handleToolExecutionUpdate(&coding.SessionEvent{Agent: &agent.AgentEvent{
+		Type: agent.ToolExecutionUpdate, ToolCallID: "c9", ToolName: "bash",
+		PartialResult: agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "tick 1"}}},
+	}})
+	if !component.isPartial {
+		t.Fatal("a live update finalized the frame")
+	}
+
+	// A real end finalizes and releases it.
+	dispatcher.handleToolExecutionEnd(&coding.SessionEvent{Agent: &agent.AgentEvent{
+		Type: agent.ToolExecutionEnd, ToolCallID: "c9", ToolName: "bash",
+		Result: agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "done"}}},
+	}})
+	if _, ok := dispatcher.pendingTools["c9"]; ok {
+		t.Fatal("a finished call's frame stayed pending")
+	}
+}
