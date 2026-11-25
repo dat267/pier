@@ -200,3 +200,42 @@ func TestScheduleWakeupArmsTheScheduler(t *testing.T) {
 		t.Fatalf("stop must clear only the wakeup, left %+v", jobs)
 	}
 }
+
+// D537: the model only sees a self-paced loop's prompt, so the prompt says it is
+// a loop and how to repeat or end it. Without the note `/loop check the deploy`
+// ran once and stopped: nothing told the model to call schedule_wakeup. A
+// resumed run carries the note again, once, and a slash-command prompt is left
+// for its own command to handle.
+func TestSelfPacedLoopPromptCarriesTheNote(t *testing.T) {
+	noted := LoopSelfPacedPrompt("check the deploy")
+	if !strings.HasPrefix(noted, "check the deploy\n\n") || !strings.Contains(noted, "schedule_wakeup") || !strings.Contains(noted, "stop") {
+		t.Fatalf("noted prompt = %q", noted)
+	}
+	if again := LoopSelfPacedPrompt(noted); again != noted {
+		t.Fatalf("noting twice = %q", again)
+	}
+	if got := LoopPromptWithoutNote(noted); got != "check the deploy" {
+		t.Fatalf("without the note = %q", got)
+	}
+	clock := time.Date(2026, time.November, 25, 10, 0, 0, 0, time.UTC)
+	var fired []string
+	scheduler := NewLoopScheduler(func() time.Time { return clock }, func(prompt string) { fired = append(fired, prompt) })
+	defer scheduler.Stop()
+	tools := LoopTools(LoopToolOptions{Scheduler: scheduler, MaxAge: time.Hour})
+	for _, prompt := range []string{"check the deploy", noted, "/loop check the deploy"} {
+		fired = nil
+		raw, _ := json.Marshal(prompt)
+		if text, isError := callLoopTool(t, tools, "schedule_wakeup", `{"delay_seconds":60,"prompt":`+string(raw)+`}`); isError {
+			t.Fatalf("schedule_wakeup failed: %s", text)
+		}
+		clock = clock.Add(61 * time.Second)
+		scheduler.fireDue()
+		want := noted
+		if strings.HasPrefix(prompt, "/") {
+			want = prompt
+		}
+		if len(fired) != 1 || fired[0] != want {
+			t.Fatalf("a wakeup for %q fired %q, want %q", prompt, fired, want)
+		}
+	}
+}

@@ -14,6 +14,22 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
+// loopSelfPacedNote tells the model a prompt is one run of a self-paced loop
+// (D537). It sees only the prompt, so without it a loop runs once: nothing says
+// schedule_wakeup applies.
+const loopSelfPacedNote = "(This is one run of a self-paced /loop. When it is done, call schedule_wakeup " +
+	"with the delay before the next run and this prompt, or with stop: true once nothing is left to do.)"
+
+// LoopSelfPacedPrompt appends the self-paced note to prompt, once.
+func LoopSelfPacedPrompt(prompt string) string {
+	return LoopPromptWithoutNote(prompt) + "\n\n" + loopSelfPacedNote
+}
+
+// LoopPromptWithoutNote is prompt as the user wrote it, without the note.
+func LoopPromptWithoutNote(prompt string) string {
+	return strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(prompt), loopSelfPacedNote))
+}
+
 // LoopWakeupDelayBounds clamp a self-paced wakeup. The floor keeps a loop from
 // spinning, and the ceiling keeps it from sleeping past any cache window.
 const (
@@ -103,7 +119,13 @@ func scheduleWakeupTool(opts LoopToolOptions) agent.AgentTool {
 			if opts.OnWakeup != nil {
 				opts.OnWakeup(delay, prompt)
 			} else if opts.Scheduler != nil {
-				if _, err := opts.Scheduler.SetWakeup(delay, prompt); err != nil {
+				// The next run is told it is a loop too. A slash command such as
+				// "/loop check" is left whole: its own command handles it.
+				armed := prompt
+				if !strings.HasPrefix(strings.TrimSpace(prompt), "/") {
+					armed = LoopSelfPacedPrompt(prompt)
+				}
+				if _, err := opts.Scheduler.SetWakeup(delay, armed); err != nil {
 					return loopTextResult(err.Error(), true), nil
 				}
 			}

@@ -879,7 +879,7 @@ func (w *CommandWiring) HandleLoopCommand(args string) {
 		return
 	}
 	if interval == 0 {
-		w.runLoopPrompt(prompt, "Loop started. The agent paces the next run itself.")
+		w.runLoopPrompt(coding.LoopSelfPacedPrompt(prompt), "Loop started. The agent paces the next run itself.")
 		return
 	}
 	cron, used, ok := coding.LoopCronForInterval(interval)
@@ -944,7 +944,7 @@ func (w *CommandWiring) listLoops() {
 // (one the agent scheduled) shows its first line and " …" for the rest, so its
 // later lines cannot read as rows of their own.
 func loopPromptSummary(prompt string) string {
-	prompt = strings.TrimSpace(prompt)
+	prompt = coding.LoopPromptWithoutNote(prompt)
 	first, rest, multiline := strings.Cut(prompt, "\n")
 	first = strings.TrimSpace(first)
 	if multiline && strings.TrimSpace(rest) != "" {

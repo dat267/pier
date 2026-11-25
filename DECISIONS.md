@@ -8912,6 +8912,12 @@ A scheduled prompt fires into the ordinary input path, so a loop arrives as
 typed input: nothing downstream needs to know a timer produced it. Self-paced
 loops are driven by the agent through `schedule_wakeup`, whose delay is clamped
 to the reference's [60, 3600] seconds and which accepts `stop` to end the loop.
+The model sees only the prompt, so a self-paced run carries a one-line note
+(`LoopSelfPacedPrompt`) saying it is one run of a `/loop` and to call
+`schedule_wakeup` again or stop; without it `/loop check the deploy` ran once and
+never re-armed. A wakeup's plain-text prompt gets the note again, once; a slash
+command such as `/loop check` is left whole for its own command, and `/loop list`
+shows the prompt without the note.
 
 A job is in-memory only: nothing about it is written to the session file or the
 agent directory, and closing the TUI drops it, because the next process starts
@@ -9011,7 +9017,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopFeatureToggleRespectsToolToggle`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
 `TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`,
-`TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`, `TestFooterShowsScheduledLoops`.
+`TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`, `TestFooterShowsScheduledLoops`, `TestSelfPacedLoopPromptCarriesTheNote`.
 
 ### D538
 

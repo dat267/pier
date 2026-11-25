@@ -49,8 +49,9 @@ func TestLoopCommandSelfPacedRunsNow(t *testing.T) {
 		ShowError:     func(message string) { t.Fatalf("unexpected error: %s", message) },
 	}
 	wiring.HandleLoopCommand("check the deploy")
-	if len(submitted) != 1 || submitted[0] != "check the deploy" {
-		t.Fatalf("submitted = %v, want the prompt run once", submitted)
+	// The model is told it is in a self-paced loop (D537), or it runs once.
+	if len(submitted) != 1 || submitted[0] != coding.LoopSelfPacedPrompt("check the deploy") {
+		t.Fatalf("submitted = %q, want the noted prompt run once", submitted)
 	}
 	// A self-paced loop arms no cron job of its own.
 	if jobs := scheduler.Jobs(); len(jobs) != 0 {
@@ -165,7 +166,7 @@ func TestLoopCommandListsAndStopsJobs(t *testing.T) {
 	}
 
 	wiring.HandleLoopCommand("list the open files")
-	if len(submitted) != 1 || submitted[0] != "list the open files" || failure != "" {
+	if len(submitted) != 1 || submitted[0] != coding.LoopSelfPacedPrompt("list the open files") || failure != "" {
 		t.Fatalf("a prompt starting with list must run as a prompt: %v (error %q)", submitted, failure)
 	}
 }
@@ -241,8 +242,16 @@ func TestLoopListKeepsEachJobOnOneRow(t *testing.T) {
 		t.Fatal(err)
 	}
 	wiring.HandleLoopCommand("5m tidy up")
+	// A self-paced wakeup lists its prompt, not the note the model reads.
+	if _, err := scheduler.SetWakeup(time.Minute, coding.LoopSelfPacedPrompt("watch the queue")); err != nil {
+		t.Fatal(err)
+	}
 	wiring.HandleLoopCommand("list")
 	lines := strings.Split(status, "\n")
+	if !strings.HasSuffix(lines[len(lines)-1], "  watch the queue") {
+		t.Fatalf("the wakeup's row = %q", lines[len(lines)-1])
+	}
+	lines = lines[:len(lines)-1]
 	if len(lines) != 3 {
 		t.Fatalf("two jobs took %d lines:\n%s", len(lines), status)
 	}
