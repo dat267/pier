@@ -823,10 +823,9 @@ func (a *Agent) createLoopConfig(skipInitialSteeringPoll bool) *AgentLoopConfig 
 	// the reference's behaviour.
 	if a.BackgroundToolCalls != nil {
 		if threshold := a.BackgroundToolCalls(); threshold > 0 {
-			// The registry is owned by the policy and closed when the run that
-			// built it finishes, so a displaced call never outlives the run. The
-			// close is wired by the caller, not deferred here: this function
-			// returns before the run starts.
+			// The registry is the Agent's, shared by every run, so a displaced
+			// call outlives the run that started it. It is closed only by
+			// CloseBackgroundCalls, which the session calls when it is disposed.
 			config.backgroundPolicy = &backgroundPolicy{
 				threshold:  threshold,
 				registry:   a.backgroundRegistry(),

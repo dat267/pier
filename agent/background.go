@@ -42,7 +42,7 @@ var ErrBackgrounded = errors.New("tool call backgrounded")
 type backgroundRegistry struct {
 	mu    sync.Mutex
 	calls []*backgroundCall
-	// closed stops new registrations once the run is over.
+	// closed stops new registrations once the session closed the registry.
 	closed bool
 }
 
@@ -95,7 +95,7 @@ func (a *Agent) CloseBackgroundCalls() {
 	}
 }
 
-// register adds a displaced call, or refuses one when the run is already over.
+// register adds a displaced call, or refuses one once the registry is closed.
 func (r *backgroundRegistry) register(call *backgroundCall) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -119,8 +119,8 @@ func (r *backgroundRegistry) unregister(call *backgroundCall) {
 }
 
 // close cancels every displaced call and refuses new ones. A backgrounded call
-// outlives the turn that started it but not the run: a settled run must leave
-// nothing behind.
+// outlives its turn and its run but not the session, whose dispose calls this
+// (through CloseBackgroundCalls), so a closed pier leaves no orphan process.
 func (r *backgroundRegistry) close() {
 	r.mu.Lock()
 	r.closed = true
