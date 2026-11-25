@@ -9014,7 +9014,9 @@ likewise not queued: its first run is a wakeup due now, and its status says so
 ("Loop scheduled: its first run starts once the agent is idle…"), and `/loop
 list` names it "Once, when the agent is idle" rather than "Once, in 0 seconds". `/loop stop`
 with no id says "Stopped 1 loop." or "Stopped N loops.", and "No loops
-scheduled." when there was nothing to stop.
+scheduled." when there was nothing to stop. The editor completes `/loop`'s
+subcommands (`list`, `stop`) and, after `stop `, each scheduled job's id with its
+schedule and prompt beside it; any other text is a prompt and gets no completion.
 
 Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopSchedulerFiresAndDeletes`, `TestLoopSchedulerRecurringStays`,
@@ -9037,7 +9039,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
 `TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`,
 `TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`, `TestFooterShowsScheduledLoops`, `TestSelfPacedLoopPromptCarriesTheNote`,
-`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`, `TestCronListKeepsEachJobOnOneRow`, `TestSessionReplacementDropsScheduledLoops`, `TestLoopFireWaitsForAnIdleAgent`, `TestLoopSchedulerPostpone`, `TestLoopStopAllCountsInWords`.
+`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`, `TestCronListKeepsEachJobOnOneRow`, `TestSessionReplacementDropsScheduledLoops`, `TestLoopFireWaitsForAnIdleAgent`, `TestLoopSchedulerPostpone`, `TestLoopStopAllCountsInWords`, `TestLoopCommandArgumentCompletions`.
 
 ### D538
 

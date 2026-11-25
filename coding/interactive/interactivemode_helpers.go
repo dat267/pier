@@ -195,6 +195,8 @@ type AutocompleteWiring struct {
 	LoginProviders func() []AuthSelectorProvider
 	// Skills lists the skill commands (the resource loader is out of scope).
 	Skills func() []SkillCommand
+	// LoopJobs lists the scheduled /loop jobs, for "/loop stop <id>" (D537).
+	LoopJobs func() []coding.LoopJob
 
 	// skillCommands maps command names to skill paths.
 	skillCommands map[string]string
@@ -292,6 +294,15 @@ func (w *AutocompleteWiring) CreateBaseAutocompleteProvider() tui.AutocompletePr
 			}
 			return items, true
 		}
+	}
+
+	// /loop argument completions (D537): its subcommands, and the scheduled
+	// job ids after "stop ". Other text is a prompt, so it gets none.
+	for index := range commands {
+		if commands[index].Name != "loop" {
+			continue
+		}
+		commands[index].GetArgumentCompletions = w.loopArgumentCompletions
 	}
 
 	// Prompt templates.
@@ -614,6 +625,33 @@ func ResolveAutocompleteFdPath() string {
 	return ""
 }
 
+// loopArgumentCompletions completes /loop's subcommands and, after "stop ",
+// the id of each scheduled job (D537).
+func (w *AutocompleteWiring) loopArgumentCompletions(prefix string) ([]tui.AutocompleteItem, bool) {
+	if rest, ok := strings.CutPrefix(prefix, "stop "); ok {
+		var items []tui.AutocompleteItem
+		if w.LoopJobs != nil {
+			for _, job := range w.LoopJobs() {
+				if strings.HasPrefix(job.ID, strings.TrimSpace(rest)) {
+					items = append(items, tui.AutocompleteItem{Value: "stop " + job.ID, Label: job.ID,
+						Description: job.HumanSchedule + ": " + loopPromptSummary(job.Prompt)})
+				}
+			}
+		}
+		return items, true
+	}
+	var items []tui.AutocompleteItem
+	for _, sub := range []struct{ value, description string }{
+		{"list", "Show the scheduled loops"},
+		{"stop", "Cancel every loop, or one by id"},
+	} {
+		if strings.HasPrefix(sub.value, prefix) {
+			items = append(items, tui.AutocompleteItem{Value: sub.value, Label: sub.value, Description: sub.description})
+		}
+	}
+	return items, true
+}
+
 // newAutocompleteWiring assembles the AutocompleteWiring (port of the corresponding InteractiveMode wiring).
 func newAutocompleteWiring(app *App) *AutocompleteWiring {
 	return &AutocompleteWiring{
@@ -625,5 +663,12 @@ func newAutocompleteWiring(app *App) *AutocompleteWiring {
 		Editor:         app.defaultEditor,
 		FdPath:         ResolveAutocompleteFdPath(),
 		LoginProviders: func() []AuthSelectorProvider { return app.auth.GetLoginProviderOptions("") },
-		Skills:         app.skillCommands}
+		Skills:         app.skillCommands,
+		// Read per completion: jobs come and go, and /new swaps none of this.
+		LoopJobs: func() []coding.LoopJob {
+			if app.loopScheduler == nil {
+				return nil
+			}
+			return app.loopScheduler.Jobs()
+		}}
 }

@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -393,5 +395,46 @@ func TestGoalCommandArgumentCompletions(t *testing.T) {
 	narrowed := provider.GetSuggestions(context.Background(), []string{"/goal p"}, 0, 7, false)
 	if narrowed == nil || len(narrowed.Items) != 1 || narrowed.Items[0].Value != "pause" {
 		t.Fatalf("/goal p = %+v, want just pause", narrowed)
+	}
+}
+
+// D537: /loop completes its subcommands like /goal does, and "stop " completes
+// the id of each scheduled job with its schedule and prompt beside it. A prompt
+// prefix is not completed, since any text other than these shapes is a prompt.
+func TestLoopCommandArgumentCompletions(t *testing.T) {
+	scheduler := coding.NewLoopScheduler(nil, nil)
+	defer scheduler.Stop()
+	job, err := scheduler.Add("*/5 * * * *", "check the deploy", true, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wiring := &AutocompleteWiring{Session: &autocompleteTestSession{}, LoopJobs: scheduler.Jobs}
+	provider := wiring.CreateBaseAutocompleteProvider()
+	values := func(line string) []string {
+		suggestions := provider.GetSuggestions(context.Background(), []string{line}, 0, len(line), false)
+		if suggestions == nil {
+			return nil
+		}
+		var out []string
+		for _, item := range suggestions.Items {
+			out = append(out, item.Value)
+		}
+		return out
+	}
+	if got := values("/loop "); !slices.Equal(got, []string{"list", "stop"}) {
+		t.Fatalf("/loop  = %q, want list and stop", got)
+	}
+	if got := values("/loop s"); !slices.Equal(got, []string{"stop"}) {
+		t.Fatalf("/loop s = %q, want stop", got)
+	}
+	if got := values("/loop stop "); !slices.Equal(got, []string{"stop " + job.ID}) {
+		t.Fatalf("/loop stop  = %q, want the job id", got)
+	}
+	suggestions := provider.GetSuggestions(context.Background(), []string{"/loop stop "}, 0, 11, false)
+	if description := suggestions.Items[0].Description; !strings.Contains(description, "Every 5 minutes") || !strings.Contains(description, "check the deploy") {
+		t.Fatalf("the job's completion is described as %q", description)
+	}
+	if got := values("/loop check"); len(got) != 0 {
+		t.Fatalf("/loop check = %q, want no completion for a prompt", got)
 	}
 }
