@@ -39,6 +39,12 @@ const push = (name, entries, params) => scenarios.push({ name, entries, params }
 
 push("single-short", [user("hi")], [{ startIndex: 0, endIndex: 1, keepRecentTokens: 100 }]);
 push("user-assistant-pair", [user(big), assistantText(big)], [{ startIndex: 0, endIndex: 2, keepRecentTokens: 100 }, { startIndex: 0, endIndex: 2, keepRecentTokens: 2000 }]);
+// A budget of zero (and a negative one) makes the FIRST entry exceed it, so the
+// accumulation loop must stop at endIndex-1 rather than walking the window.
+push("zero-budget", [user(big), assistantText(big)], [
+	{ startIndex: 0, endIndex: 2, keepRecentTokens: 0 },
+	{ startIndex: 0, endIndex: 2, keepRecentTokens: -1 },
+]);
 push("three-pairs-budget", [user(big), assistantText(big), user(big), assistantText(big), user(big), assistantText(big)], [
 	{ startIndex: 0, endIndex: 6, keepRecentTokens: 100 },
 	{ startIndex: 0, endIndex: 6, keepRecentTokens: 1500 },
