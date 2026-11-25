@@ -653,3 +653,41 @@ func TestBackgroundThresholdDefaultIsSelectable(t *testing.T) {
 		t.Fatalf("Enter from the default chose %q, want the next entry %q", chosen, want)
 	}
 }
+
+// D538: every offered choice, once stored, shows as itself when /features is
+// opened again. Duration.String() spells 2m as "2m0s", which is not one of the
+// values, so the row read "2m0s" and Enter jumped to "off" instead of "5m".
+func TestBackgroundThresholdEveryChoiceIsSelectable(t *testing.T) {
+	wiring, _, _, _ := newSettingsTestWiring(t)
+	choices := coding.BackgroundToolCallChoices()
+	for index, choice := range choices {
+		if !wiring.Settings.SetBackgroundToolCallThreshold(choice) {
+			t.Fatalf("storing %q failed", choice)
+		}
+		if got := backgroundToolCallChoice(wiring.Settings.GetBackgroundToolCallThreshold()); got != choice {
+			t.Fatalf("a stored %q shows as %q", choice, got)
+		}
+		chosen := ""
+		selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
+			Toggles: wiring.featureToggles(),
+			OnFeatureChange: func(id string, value string) {
+				if id == "background-tools" {
+					chosen = value
+				}
+			},
+			OnCancel: func() {},
+		})
+		selector.GetSettingsList().SelectItem("background-tools")
+		selector.GetSettingsList().HandleInput("\r")
+		if want := choices[(index+1)%len(choices)]; chosen != want {
+			t.Fatalf("Enter from %q chose %q, want %q", choice, chosen, want)
+		}
+	}
+	// A hand-edited value between the steps still names itself, in the row's
+	// spelling.
+	for value, want := range map[string]string{"10s": "10s", "90s": "1m30s", "1h": "1h", "1h30m": "1h30m"} {
+		if got := backgroundToolCallChoice(coding.ParseBackgroundToolCallThreshold(value)); got != want {
+			t.Fatalf("a stored %q shows as %q, want %q", value, got, want)
+		}
+	}
+}

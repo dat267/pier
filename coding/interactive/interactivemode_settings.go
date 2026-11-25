@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"strings"
 	"time"
 
 	"github.com/dat267/pier/ai"
@@ -690,13 +691,17 @@ func backgroundToolCallChoice(threshold time.Duration) string {
 	if threshold <= 0 {
 		return "off"
 	}
-	if threshold == coding.DefaultBackgroundToolCallThreshold {
-		// The row's own spelling of the default: Duration.String() gives "1m0s",
-		// which is not one of the choices, and an unlisted value makes Enter jump
-		// to the first entry instead of the next one.
-		return coding.DefaultBackgroundToolCallChoice
+	// The row's spelling: Duration.String() gives "1m0s" and "2m0s", which are
+	// not among the choices, and an unlisted value makes Enter jump to the first
+	// entry instead of the next one. A stored threshold between the offered steps
+	// still shows itself ("1m30s"), so the row never misreports what the harness
+	// will do.
+	text := threshold.String()
+	if strings.HasSuffix(text, "m0s") {
+		text = strings.TrimSuffix(text, "0s")
 	}
-	// A stored threshold between the offered steps still shows itself, so the row
-	// never misreports what the harness will do.
-	return threshold.String()
+	if strings.HasSuffix(text, "h0m") {
+		text = strings.TrimSuffix(text, "0m")
+	}
+	return text
 }
