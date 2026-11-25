@@ -737,3 +737,37 @@ func TestTreeSelectorClearsItsNoticeWhenTheQueueIsStopped(t *testing.T) {
 		t.Fatalf("statuses = %q, want the notice then a clear", statuses)
 	}
 }
+
+// A superseded selector's done() must not clear the slot, restore the editor, or
+// move focus: the token guard is what stops a stale callback from tearing down the
+// selector the user is looking at.
+func TestSelectorSlotSupersededDoneIsInert(t *testing.T) {
+	screen := tui.NewMainScreen(&fakeRendererTerminal{width: 80, height: 24}, false, "")
+	container := &tui.Container{}
+	editor := tui.NewText("editor", 0, 0, nil)
+	container.AddChild(editor)
+	slot := NewSelectorSlot(screen, container, editor)
+
+	disposed := 0
+	var staleDone func()
+	slot.Show(func(done func()) CreatedSelector {
+		staleDone = done
+		return CreatedSelector{Component: tui.NewText("first", 0, 0, nil), Dispose: func() { disposed++ }}
+	})
+	slot.Show(func(done func()) CreatedSelector {
+		return CreatedSelector{Component: tui.NewText("second", 0, 0, nil), Dispose: func() {}}
+	})
+	if !slot.HasActiveSelector() {
+		t.Fatal("the second selector is not active")
+	}
+	staleDone()
+	if !slot.HasActiveSelector() {
+		t.Error("a superseded done() cleared the active selector")
+	}
+	if _, ok := container.Children[0].(*tui.Text); !ok || container.Children[0] == editor {
+		t.Errorf("superseded done() replaced the shown component with %T", container.Children[0])
+	}
+	if disposed < 2 {
+		t.Errorf("disposed %d times, want the stale selector released", disposed)
+	}
+}
