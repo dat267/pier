@@ -419,6 +419,13 @@ func (r *ModelRuntime) runAvailabilityRefresh(ctx context.Context, seq, errorSeq
 		credentials = nil
 	}
 
+	// A cancelled pass read nothing: authenticatedProviders returns the context
+	// error for every provider, so building the snapshot would replace a good one
+	// with an empty list and zero configured providers. The sequence check alone
+	// cannot tell this pass from a completed one.
+	if ctx != nil && ctx.Err() != nil {
+		return
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if seq != r.availabilitySeq {

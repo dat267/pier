@@ -2,8 +2,12 @@ package coding
 
 import (
 	ctxpkg "context"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // A background refresh (interactive mode fires them from goroutines) reloads
@@ -71,4 +75,46 @@ func TestModelRuntimeConcurrentCredentialWritesDoNotRaceReaders(t *testing.T) {
 		}
 	}()
 	wait.Wait()
+}
+
+// A cancelled refresh must not overwrite a good snapshot with emptiness.
+func TestModelRuntimeCancelledRefreshKeepsSnapshot(t *testing.T) {
+	dir := t.TempDir()
+	modelsPath := filepath.Join(dir, "models.json")
+	if err := os.WriteFile(modelsPath, []byte(`{"providers":{"alpha":{
+		"baseUrl":"https://alpha.example.com",
+		"models":[{"id":"alpha-model"}]
+	}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	creds := newMemoryCredentialStore()
+	_, _ = creds.Modify(ctxpkg.Background(), "alpha", func(*ai.Credential) (*ai.Credential, error) {
+		return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "sk-1"}}, nil
+	})
+	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
+		ModelsPath: modelsPath, RefreshOnCreate: new(false), Credentials: creds,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stub := stubProvider("alpha")
+	runtime.defaults["alpha"] = stub
+	runtime.builtins["alpha"] = stub
+	runtime.recomposeProvider("alpha")
+
+	runtime.queueAvailabilityRefresh(ctxpkg.Background())
+	before := runtime.GetAvailableSnapshot()
+	if len(before) == 0 {
+		t.Fatal("the fixture yielded no available models, so the overwrite cannot be detected")
+	}
+	configuredBefore := len(runtime.snapshot.ConfiguredProviders)
+
+	ctx, cancel := ctxpkg.WithCancel(ctxpkg.Background())
+	cancel()
+	runtime.queueAvailabilityRefresh(ctx)
+	after := runtime.GetAvailableSnapshot()
+	if len(after) != len(before) || len(runtime.snapshot.ConfiguredProviders) != configuredBefore {
+		t.Fatalf("a cancelled refresh changed the snapshot: %d -> %d models, configured %d -> %d",
+			len(before), len(after), configuredBefore, len(runtime.snapshot.ConfiguredProviders))
+	}
 }
