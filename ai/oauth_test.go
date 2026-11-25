@@ -153,6 +153,13 @@ func TestParseAuthorizationInput(t *testing.T) {
 		// query off it whatever the scheme.
 		{"localhost:53692/callback?code=abc", "abc", ""},
 		{"ftp://example.com/cb?code=abc", "abc", ""},
+		// new URL() needs a ":" to read a scheme, so this reaches the code= branch;
+		// URLSearchParams then reads "anything?code" as the KEY and code is absent.
+		// Go's url.Parse instead took "anything" as a scheme, which also yielded no
+		// code: same result, different reason.
+		{"anything?code=abc", "", ""},
+		{"1abc:x?code=1", "", ""},
+		{"anything:?code=abc", "abc", ""},
 		{"javascript:alert(1)", "", ""},
 		{"mailto:x@y.z", "", ""},
 		// JS `split("#", 2)` stops after the second part, so the rest is dropped.
