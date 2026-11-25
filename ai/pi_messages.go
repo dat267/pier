@@ -81,6 +81,36 @@ func parsePiMessagesErrorBody(body string) map[string]any {
 	return parsed
 }
 
+// rawPiMessagesError re-encodes the body's "error" member keeping its own member
+// order, so the nested object serializes like the reference's spread of the parsed
+// JSON rather than as a sorted Go map.
+func rawPiMessagesError(body string, errorBody map[string]any) (json.RawMessage, bool) {
+	if errorBody == nil {
+		return nil, false
+	}
+	if _, ok := errorBody["error"].(map[string]any); !ok {
+		return nil, false
+	}
+	// Decode the SOURCE bytes: the parsed map has no member order to recover.
+	outer, err := decodeOrderedJSONFields([]byte(body))
+	if err != nil {
+		return nil, false
+	}
+	raw, ok := outer.raw("error")
+	if !ok {
+		return nil, false
+	}
+	ordered, err := decodeOrderedJSONFields(raw)
+	if err != nil {
+		return nil, false
+	}
+	encoded, err := ordered.marshal()
+	if err != nil {
+		return nil, false
+	}
+	return encoded, true
+}
+
 func truncateDiagnosticString(value string) string {
 	const maxLength = 8192
 	if JSLength(value) > maxLength {
@@ -95,12 +125,10 @@ func createPiMessagesResponseError(model *Model, requestURL *url.URL, response *
 	code := ""
 	message := ""
 	hasMessage := false
-	var errorDetails any
 	hasError := false
 	if errorBody != nil {
 		if errorRecord, ok := errorBody["error"].(map[string]any); ok {
 			hasError = true
-			errorDetails = errorRecord
 			// Upstream uses `message ?? body`: an empty message string is kept
 			// (a string is not nullish), only an absent one falls back to the body.
 			message, hasMessage = errorRecord["message"].(string)
@@ -117,21 +145,33 @@ func createPiMessagesResponseError(model *Model, requestURL *url.URL, response *
 	}
 	formatted := fmt.Sprintf("%d %s: %s%s", response.StatusCode, http.StatusText(response.StatusCode), suffix, codeSuffix)
 
-	details := map[string]any{
-		"version":     1,
-		"provider":    model.Provider,
-		"model":       model.ID,
-		"url":         requestURL.String(),
-		"status":      response.StatusCode,
-		"statusText":  http.StatusText(response.StatusCode),
-		"timestampMs": time.Now().UnixMilli(),
+	// An object literal in the reference's order: version, provider, model, url,
+	// status, statusText, the spread error/body, then timestampMs. A Go map would
+	// serialize its keys sorted, and byte-parity JSON is the contract.
+	node := &orderedJSONFields{}
+	set := func(key string, value any) {
+		raw, err := MarshalJSON(value)
+		if err != nil {
+			return
+		}
+		node.set(key, raw)
 	}
+	set("version", 1)
+	set("provider", model.Provider)
+	set("model", model.ID)
+	set("url", requestURL.String())
+	set("status", response.StatusCode)
+	set("statusText", http.StatusText(response.StatusCode))
 	if hasError {
-		details["error"] = errorDetails
+		// Keep the provider's own member order for the nested object.
+		if raw, ok := rawPiMessagesError(body, errorBody); ok {
+			node.set("error", raw)
+		}
 	} else {
-		details["body"] = truncateDiagnosticString(body)
+		set("body", truncateDiagnosticString(body))
 	}
-	encoded, _ := MarshalJSON(details)
+	set("timestampMs", time.Now().UnixMilli())
+	encoded, _ := node.marshal()
 	return &PiMessagesResponseError{Message: formatted, Code: code, DiagnosticDetails: encoded}
 }
 

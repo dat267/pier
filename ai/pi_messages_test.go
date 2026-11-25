@@ -572,3 +572,34 @@ func TestPiMessagesCallbackFailuresStayInStream(t *testing.T) {
 		})
 	}
 }
+
+// pi-messages.ts:147 builds the diagnostic details as an object literal:
+// version, provider, model, url, status, statusText, then the spread error/body,
+// then timestampMs. The port built a Go map, whose MarshalJSON order follows Go's
+// sorted keys, so the serialized diagnostics came out alphabetized. Persisted and
+// wire JSON is byte-parity (AGENTS.md), so the order is part of the contract.
+func TestPiMessagesDiagnosticDetailsKeepTheReferenceKeyOrder(t *testing.T) {
+	requestURL, err := url.Parse("http://h/path")
+	if err != nil {
+		t.Fatal(err)
+	}
+	model := &Model{Provider: "pi", ID: "m"}
+	for _, c := range []struct{ name, body, want string }{
+		{
+			name: "error body",
+			body: `{"error":{"message":"bad","code":"E"}}`,
+			want: `{"version":1,"provider":"pi","model":"m","url":"http://h/path","status":400,"statusText":"Bad Request","error":{"message":"bad","code":"E"},"timestampMs":`,
+		},
+		{
+			name: "unparseable body",
+			body: `not json`,
+			want: `{"version":1,"provider":"pi","model":"m","url":"http://h/path","status":400,"statusText":"Bad Request","body":"not json","timestampMs":`,
+		},
+	} {
+		response := &http.Response{StatusCode: 400, Status: "400 Bad Request"}
+		got := string(createPiMessagesResponseError(model, requestURL, response, c.body).DiagnosticDetails)
+		if !strings.HasPrefix(got, c.want) {
+			t.Errorf("%s: details = %s, want prefix %s", c.name, got, c.want)
+		}
+	}
+}
