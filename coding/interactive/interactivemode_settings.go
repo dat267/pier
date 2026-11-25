@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -54,6 +55,9 @@ type SettingsThemeController interface {
 
 // SettingsWiring builds and shows the settings selector.
 type SettingsWiring struct {
+	// LoopCount reports the scheduled /loop jobs, which turning the loop
+	// feature off drops (D537).
+	LoopCount       func() int
 	Slot            *SelectorSlot
 	Settings        *coding.SettingsManager
 	Session         SettingsSession
@@ -422,17 +426,23 @@ func newSettingsWiring(app *App) *SettingsWiring {
 		// setting, the same way a reload applies it.
 		ApplyFullscreenScrollbarSetting: func() { app.applyFullscreenScrollbarSetting() },
 		WireGoalController:              func() { app.wireGoalController() },
-		Slot:                            app.slot,
-		Settings:                        app.settings,
-		Session:                         app.session,
-		ThemeController:                 themeSettingsControllerAdapter{app.theme},
-		UI:                              app.ui,
-		Chat:                            app.chat,
-		PendingMessages:                 app.pendingMessages,
-		DefaultEditor:                   app.defaultEditor,
-		Editor:                          app.defaultEditor,
-		Renderer:                        app.ui,
-		UpdateThinkingBlockVisibility:   func(hidden bool) { app.updateThinkingBlockVisibility(hidden) },
+		LoopCount: func() int {
+			if app.loopScheduler == nil {
+				return 0
+			}
+			return app.loopScheduler.Count()
+		},
+		Slot:                          app.slot,
+		Settings:                      app.settings,
+		Session:                       app.session,
+		ThemeController:               themeSettingsControllerAdapter{app.theme},
+		UI:                            app.ui,
+		Chat:                          app.chat,
+		PendingMessages:               app.pendingMessages,
+		DefaultEditor:                 app.defaultEditor,
+		Editor:                        app.defaultEditor,
+		Renderer:                      app.ui,
+		UpdateThinkingBlockVisibility: func(hidden bool) { app.updateThinkingBlockVisibility(hidden) },
 		// DisplayOptions is the single owner of these values; point the settings
 		// callbacks at it so a change reaches the transcript without a /reload.
 		// The output-padding callback rebuilt the chat with the stale padding
@@ -587,14 +597,9 @@ func (w *SettingsWiring) featureToggles() []FeatureToggle {
 func (w *SettingsWiring) ShowFeatureSettingsSelector() {
 	w.Slot.Show(func(done func()) CreatedSelector {
 		selector := NewFeatureSettingsSelector(FeatureSelectorOptions{
-			Toggles: w.featureToggles(),
-			OnFeatureChange: func(id string, value string) {
-				if !w.ApplyFeatureToggle(id, value) {
-					return
-				}
-				w.showStatus(featureToggleStatus(id, value))
-			},
-			OnCancel: done,
+			Toggles:         w.featureToggles(),
+			OnFeatureChange: w.HandleFeatureChange,
+			OnCancel:        done,
 		})
 		return CreatedSelector{Component: selector, Focus: selector.GetSettingsList()}
 	})
@@ -636,6 +641,27 @@ func toolToggleStatus(name string, enabled bool) string {
 		return "Tool " + name + " enabled."
 	}
 	return "Tool " + name + " disabled."
+}
+
+// HandleFeatureChange applies one /features row and reports the new state. The
+// loop row's "off" also names the loops it stopped (D537): they are dropped with
+// the feature, and nothing else would say so.
+func (w *SettingsWiring) HandleFeatureChange(id string, value string) {
+	stopped := 0
+	if id == "loop-feature" && value != "true" && w.LoopCount != nil {
+		stopped = w.LoopCount()
+	}
+	if !w.ApplyFeatureToggle(id, value) {
+		return
+	}
+	status := featureToggleStatus(id, value)
+	switch {
+	case stopped == 1:
+		status = strings.TrimSuffix(status, ".") + "; stopped 1 loop."
+	case stopped > 1:
+		status = strings.TrimSuffix(status, ".") + fmt.Sprintf("; stopped %d loops.", stopped)
+	}
+	w.showStatus(status)
 }
 
 // ApplyFeatureToggle stores one pier-only feature toggle and applies it to the

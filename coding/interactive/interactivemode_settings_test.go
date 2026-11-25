@@ -529,6 +529,24 @@ func TestLoopFeatureToggleAppliesToTheSession(t *testing.T) {
 	}
 }
 
+// D537: turning the loop feature off drops every scheduled job, so the status
+// says how many it stopped rather than leaving them to vanish from the footer.
+func TestLoopFeatureOffNamesTheStoppedLoops(t *testing.T) {
+	for _, tc := range []struct {
+		scheduled int
+		want      string
+	}{{0, "Loop feature off."}, {1, "Loop feature off; stopped 1 loop."}, {2, "Loop feature off; stopped 2 loops."}} {
+		wiring, _, _, _ := newSettingsTestWiring(t)
+		var status string
+		wiring.ShowStatus = func(message string) { status = message }
+		wiring.LoopCount = func() int { return tc.scheduled }
+		wiring.HandleFeatureChange("loop-feature", "false")
+		if status != tc.want {
+			t.Fatalf("%d scheduled: status %q, want %q", tc.scheduled, status, tc.want)
+		}
+	}
+}
+
 // The threshold row is a choice row, not a boolean: it cycles through the offered
 // durations, persists the pick, and can turn the feature off.
 func TestBackgroundThresholdFeatureRow(t *testing.T) {
