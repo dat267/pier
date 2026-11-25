@@ -8913,7 +8913,12 @@ minutes nor of hours) is refused with a message rather than rounded into
 something the user did not ask for.
 
 A scheduled prompt fires into the ordinary input path, so a loop arrives as
-typed input: nothing downstream needs to know a timer produced it. Self-paced
+typed input: nothing downstream needs to know a timer produced it. A fire never
+enters the message queue while the agent is running or compacting: it would be
+delivered at the next tool boundary and steer the turn in progress. A busy
+recurring job skips that fire, because its next interval arrives on its own,
+while a busy one-shot (a self-paced loop's wakeup) is retried every few seconds,
+because skipping it would end the loop. Self-paced
 loops are driven by the agent through `schedule_wakeup`, whose delay is clamped
 to the reference's [60, 3600] seconds and which accepts `stop` to end the loop.
 The model sees only the prompt, so a self-paced run carries a one-line note
