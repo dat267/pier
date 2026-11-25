@@ -30,6 +30,11 @@ func TestNormalizeGitHubDomain(t *testing.T) {
 		{"\uFEFFcompany.ghe.com\uFEFF", "company.ghe.com", true},
 		{"  ", "", false},
 		{"not a domain", "", false},
+		// The reference accepts ANY parseable URL and takes its hostname, so a
+		// non-http scheme still names a domain.
+		{"ftp://github.com", "github.com", true},
+		{"file:///etc", "", false},
+		{"javascript:alert(1)", "", false},
 	}
 	for _, testCase := range cases {
 		got, ok := NormalizeGitHubDomain(testCase.input)

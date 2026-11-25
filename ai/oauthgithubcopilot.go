@@ -52,8 +52,33 @@ func NormalizeGitHubDomain(input string) (string, bool) {
 	if !strings.Contains(trimmed, "://") {
 		candidate = "https://" + trimmed
 	}
-	parsed, _, valid := normalizeOAuthHTTPURL(candidate)
-	if !valid || parsed.Hostname() == "" {
+	// The reference does `new URL(...).hostname` for ANY parseable URL, not only
+	// http(s): "ftp://github.com" still names github.com. It fails only when the
+	// URL does not parse or has no host at all ("file:///etc"). WHATWG also
+	// recovers a scheme-only prefix ("https:///host"), which Go leaves hostless.
+	parsed, err := url.Parse(candidate)
+	if err != nil {
+		return "", false
+	}
+	// WHATWG's "special" schemes (file:, ws:, wss:) always take a host slot, so
+	// "file:///etc" has NO hostname and its /// is a path. Only the other schemes
+	// recover a host from a scheme-only prefix.
+	scheme := strings.ToLower(parsed.Scheme)
+	if parsed.Hostname() == "" && scheme != "file" && scheme != "ws" && scheme != "wss" {
+		_, after, ok := strings.Cut(candidate, ":")
+		if !ok {
+			return "", false
+		}
+		remainder := strings.TrimLeft(strings.ReplaceAll(after, string('\\'), "/"), "/")
+		if remainder == "" {
+			return "", false
+		}
+		parsed, err = url.Parse(strings.SplitN(candidate, ":", 2)[0] + "://" + remainder)
+		if err != nil {
+			return "", false
+		}
+	}
+	if parsed.Hostname() == "" {
 		return "", false
 	}
 	// WHATWG hostnames are lowercased; Go's url.Hostname preserves case.
