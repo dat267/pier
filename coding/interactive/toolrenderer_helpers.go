@@ -24,15 +24,16 @@ func toolArgs(args any) map[string]any {
 	return typed
 }
 
-// argsNeedSanitizing reports whether any key or string value carries terminal
-// controls, so ordinary arguments render without copying the map.
+// argsNeedSanitizing reports whether any string VALUE carries terminal controls,
+// so ordinary arguments render without copying the map.
 func argsNeedSanitizing(value any) bool {
 	switch typed := value.(type) {
 	case string:
 		return tui.HasTerminalControl(typed)
 	case map[string]any:
-		for key, item := range typed {
-			if tui.HasTerminalControl(key) || argsNeedSanitizing(item) {
+		// Only values are rewritten, so a control in a key needs no copy.
+		for _, item := range typed {
+			if argsNeedSanitizing(item) {
 				return true
 			}
 		}
@@ -55,13 +56,16 @@ func sanitizeArgValue(value any) (any, bool) {
 		clean := tui.SanitizeUntrustedText(typed)
 		return clean, clean != typed
 	case map[string]any:
+		// Keys are kept verbatim: renderers look arguments up BY name, and no
+		// renderer prints a key. Sanitizing them merged two distinct keys whose
+		// stripped forms matched ("a\x1b[31mb" and "ab"), so a lookup read the
+		// other argument's value.
 		out := make(map[string]any, len(typed))
 		changed := false
 		for key, item := range typed {
-			cleanKey := tui.SanitizeUntrustedText(key)
 			clean, itemChanged := sanitizeArgValue(item)
-			out[cleanKey] = clean
-			changed = changed || itemChanged || cleanKey != key
+			out[key] = clean
+			changed = changed || itemChanged
 		}
 		if !changed {
 			return value, false

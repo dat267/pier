@@ -476,3 +476,26 @@ func TestStreamingDeltaCostIndependentOfTranscriptSize(t *testing.T) {
 		t.Fatalf("streaming delta allocates %d bytes at 3000 messages vs %d at 100: the cost scales with transcript size", large, small)
 	}
 }
+
+// sanitizeArgValue must keep every argument, so a key that carries a terminal
+// control cannot collide with its own stripped form. Two distinct keys used to
+// collapse into one entry, and the renderer then read the wrong argument: the
+// lookup below found 2 where the model sent 1.
+func TestSanitizeArgValueKeepsDistinctKeys(t *testing.T) {
+	raw := []byte(`{"a\u001b[31mb":1,"ab":2}`)
+	args := toolArgs(raw)
+	if len(args) != 2 {
+		t.Fatalf("toolArgs = %#v; want both keys", args)
+	}
+	if _, ok := args["a\x1b[31mb"]; !ok {
+		t.Errorf("the control key is gone: %#v", args)
+	}
+	if value := args["ab"]; value != float64(2) {
+		t.Errorf(`args["ab"] = %#v; want 2`, value)
+	}
+	// A value is still sanitized for display.
+	sanitized := toolArgs([]byte(`{"command":"a\u001b[31mb"}`))
+	if got := sanitized["command"]; got != "ab" {
+		t.Errorf("command = %#v; want the stripped value", got)
+	}
+}
