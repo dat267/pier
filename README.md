@@ -52,7 +52,7 @@ divides its hour or day evenly, or to whole days, and it says when it rounds), a
 `/loop <prompt>` with no interval lets the agent pace the next run itself. A run
 that comes due while the agent is busy is never queued as a message: an interval
 loop skips that run, and a self-paced one starts once the agent is idle. The footer shows how many loops are scheduled, `/loop list` shows
-them, and `/loop stop [id]` cancels one, or all of them; Tab completes the subcommands
+them, and `/loop stop [id…]` cancels the named loops, or all of them; Tab completes the subcommands
 and the job ids.
 Stdio RPC (`pier --mode rpc`) is documented in
 [the RPC contract](ARCHITECTURE.md#stdio-rpc).

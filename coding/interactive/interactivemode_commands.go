@@ -857,7 +857,7 @@ func (w *CommandWiring) HandleGoalCommand(args string) {
 // HandleLoopCommand runs `/loop [interval] <prompt>`: with an interval it arms a
 // cron job on the session's scheduler, and without one it starts a self-paced
 // loop by running the prompt now, leaving the agent to arm its own wakeups.
-// `/loop list` and `/loop stop [id]` show and cancel the scheduled jobs; only
+// `/loop list` and `/loop stop [id…]` show and cancel the scheduled jobs; only
 // those exact shapes are commands, so a prompt such as "list the files" runs.
 func (w *CommandWiring) HandleLoopCommand(args string) {
 	// A disabled feature reports itself rather than silently doing nothing: the
@@ -869,7 +869,7 @@ func (w *CommandWiring) HandleLoopCommand(args string) {
 	if fields := strings.Fields(args); len(fields) == 1 && fields[0] == "list" {
 		w.listLoops()
 		return
-	} else if len(fields) > 0 && len(fields) <= 2 && fields[0] == "stop" {
+	} else if len(fields) > 0 && fields[0] == "stop" && (len(fields) <= 2 || w.namesLoopJobs(fields[1:])) {
 		w.stopLoops(fields[1:])
 		return
 	}
@@ -1006,11 +1006,57 @@ func loopNextRunLabel(next time.Time, now time.Time) string {
 	return next.Format("Mon Jan 2") + " " + clock
 }
 
-// stopLoops cancels the job named by ids, or every job when ids is empty.
+// namesLoopJobs reports whether "/loop stop a b …" is a list of job ids rather
+// than a prompt that starts with "stop" (D537): every word is id-shaped and at
+// least one names a scheduled job, so "stop the deploy checks" still runs.
+func (w *CommandWiring) namesLoopJobs(words []string) bool {
+	scheduler := w.loopScheduler()
+	if scheduler == nil {
+		return false
+	}
+	scheduled := map[string]bool{}
+	for _, job := range scheduler.Jobs() {
+		scheduled[job.ID] = true
+	}
+	named := false
+	for _, word := range words {
+		if len(word) > 8 || strings.Trim(word, "0123456789abcdefghijklmnopqrstuvwxyz") != "" {
+			return false
+		}
+		named = named || scheduled[word]
+	}
+	return named
+}
+
+// stopLoops cancels the jobs named by ids, or every job when ids is empty. An
+// unknown id is reported without undoing the ones it did stop.
 func (w *CommandWiring) stopLoops(ids []string) {
 	scheduler := w.loopScheduler()
 	if scheduler == nil {
 		w.showError("Scheduling is not available in this session.")
+		return
+	}
+	if len(ids) > 1 {
+		var stopped, unknown []string
+		for _, id := range ids {
+			if scheduler.Remove(id) {
+				stopped = append(stopped, id)
+			} else if !slices.Contains(unknown, id) && !slices.Contains(stopped, id) {
+				unknown = append(unknown, id)
+			}
+		}
+		switch len(stopped) {
+		case 0:
+		case 1:
+			w.showStatus("Loop " + stopped[0] + " stopped.")
+		default:
+			w.showStatus("Loops " + strings.Join(stopped[:len(stopped)-1], ", ") + " and " + stopped[len(stopped)-1] + " stopped.")
+		}
+		if len(unknown) == 1 {
+			w.showError("No loop " + unknown[0] + ". /loop list shows the scheduled ones.")
+		} else if len(unknown) > 1 {
+			w.showError("No loops " + strings.Join(unknown, ", ") + ". /loop list shows the scheduled ones.")
+		}
 		return
 	}
 	if len(ids) == 0 {

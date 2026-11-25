@@ -9024,7 +9024,10 @@ subcommands (`list`, `stop`) and, after `stop `, each scheduled job's id with it
 schedule and prompt beside it; any other text is a prompt and gets no completion.
 A subcommand or id typed in full is not offered again: in an argument menu Enter
 only applies the completion (upstream `packages/tui/src/components/editor.ts`), so
-a menu repeating `list` would make `/loop list` take two Enters.
+a menu repeating `list` would make `/loop list` take two Enters. `/loop stop`
+takes several ids (`/loop stop 1 3`), naming any unknown one without undoing the
+rest; with two or more words it is the command only when each is id-shaped and
+one names a scheduled job, so a prompt such as "stop the deploy checks" still runs.
 Turning the loop feature off in `/features` drops every scheduled job, and its
 status names them ("Loop feature off; stopped 2 loops.").
 
@@ -9049,7 +9052,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
 `TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`,
 `TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`, `TestFooterShowsScheduledLoops`, `TestSelfPacedLoopPromptCarriesTheNote`,
-`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`, `TestCronListKeepsEachJobOnOneRow`, `TestSessionReplacementDropsScheduledLoops`, `TestLoopFireWaitsForAnIdleAgent`, `TestLoopSchedulerPostpone`, `TestLoopStopAllCountsInWords`, `TestLoopCommandArgumentCompletions`, `TestLoopFeatureOffNamesTheStoppedLoops`.
+`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`, `TestCronListKeepsEachJobOnOneRow`, `TestSessionReplacementDropsScheduledLoops`, `TestLoopFireWaitsForAnIdleAgent`, `TestLoopSchedulerPostpone`, `TestLoopStopAllCountsInWords`, `TestLoopCommandArgumentCompletions`, `TestLoopFeatureOffNamesTheStoppedLoops`, `TestLoopStopTakesSeveralIds`.
 
 ### D538
 

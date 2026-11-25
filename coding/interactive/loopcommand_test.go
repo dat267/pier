@@ -353,3 +353,37 @@ func TestLoopStopAllCountsInWords(t *testing.T) {
 		}
 	}
 }
+
+// D537: /loop stop takes several ids. "/loop stop 1 2" used to fall through to
+// the prompt path and start a self-paced loop told to "stop 1 2"; an unknown id
+// among them is named without undoing the ones that were stopped.
+func TestLoopStopTakesSeveralIds(t *testing.T) {
+	scheduler := coding.NewLoopScheduler(nil, nil)
+	defer scheduler.Stop()
+	for range 3 {
+		if _, err := scheduler.Add("*/5 * * * *", "poll", true, 0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var status, errText string
+	var submitted []string
+	wiring := &CommandWiring{LoopScheduler: scheduler, Session: &commandTestSession{},
+		OnLoopPrompt: func(prompt string) { submitted = append(submitted, prompt) },
+		ShowStatus:   func(message string) { status = message }, ShowError: func(message string) { errText = message }}
+	wiring.HandleLoopCommand("stop 1 2")
+	if len(submitted) != 0 {
+		t.Fatalf("/loop stop 1 2 started a loop: %q", submitted)
+	}
+	if status != "Loops 1 and 2 stopped." || scheduler.Count() != 1 {
+		t.Fatalf("status %q, %d left", status, scheduler.Count())
+	}
+	// A prompt that starts with "stop" names no job, so it still runs.
+	wiring.HandleLoopCommand("stop the deploy checks")
+	if len(submitted) != 1 || scheduler.Count() != 1 {
+		t.Fatalf("a stop-shaped prompt submitted %q, %d left", submitted, scheduler.Count())
+	}
+	wiring.HandleLoopCommand("stop 3 9")
+	if scheduler.Count() != 0 || errText != "No loop 9. /loop list shows the scheduled ones." || status != "Loop 3 stopped." {
+		t.Fatalf("status %q, error %q, %d left", status, errText, scheduler.Count())
+	}
+}
