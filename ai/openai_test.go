@@ -293,3 +293,27 @@ func TestParseChunkUsageDoesNotWrapHugeCacheOrTotalCounts(t *testing.T) {
 		})
 	}
 }
+
+// jsJSONTruthy follows JavaScript: only null, false, 0 and "" are falsy. A
+// number that overflows to Infinity and one that underflows to zero are the two
+// edges Go's decoder does not handle the way JSON.parse does, so both are pinned
+// here. The corpus has neither, and the branch got the success case backwards:
+// 1e-400 decodes to 0 with no error and was reported truthy.
+func TestJSJSONTruthyMatchesJavaScriptOnOverflowAndUnderflow(t *testing.T) {
+	// JSON.parse("1e400") is Infinity, which is truthy.
+	// JSON.parse("1e-400") is 0, which is falsy.
+	for _, tc := range []struct {
+		raw  string
+		want bool
+	}{
+		{"1e-400", false},
+		{"-1e-400", false},
+		{"1e400", true},
+		{"-1e400", true},
+		{"1e-323", true},
+	} {
+		if got := jsJSONTruthy(json.RawMessage(tc.raw)); got != tc.want {
+			t.Fatalf("jsJSONTruthy(%s) = %v, want %v", tc.raw, got, tc.want)
+		}
+	}
+}

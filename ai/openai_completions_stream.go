@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -61,13 +62,21 @@ func jsJSONTruthy(raw json.RawMessage) bool {
 	case '"':
 		var text string
 		return json.Unmarshal(trimmed, &text) == nil && text != ""
-	case '0', '-':
-		// Positive and negative zero, including underflowed negative values,
-		// are falsy; other negative numbers remain truthy.
-		var number float64
-		return json.Unmarshal(trimmed, &number) != nil || number != 0
 	default:
-		return true // object, array, true, non-zero number
+		if trimmed[0] == '[' || trimmed[0] == '{' || trimmed[0] == 't' {
+			return true // array, object, true
+		}
+		// A number: positive and negative zero are falsy, everything else truthy.
+		// JSON.parse keeps a value that overflows float64 as Infinity (truthy) and
+		// underflows it to zero (falsy); encoding/json reports the overflow as an
+		// error and the underflow as 0 with no error, so the error cannot stand in
+		// for Infinity. strconv.ParseFloat matches JSON.parse on both edges, and
+		// its out-of-range error still carries the Infinity.
+		value, err := strconv.ParseFloat(string(trimmed), 64)
+		if err != nil && !errors.Is(err, strconv.ErrRange) {
+			return true // not a number, so JSON.parse would have failed the read
+		}
+		return value != 0
 	}
 }
 
