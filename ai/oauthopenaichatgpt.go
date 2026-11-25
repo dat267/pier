@@ -223,7 +223,10 @@ func ParseOpenAIChatGPTAuthorizationInput(input string, expectedState string) (O
 		return OpenAIChatGPTAuthorizationResult{}, errors.New("Paste the full callback URL from the browser")
 	}
 	expected, _ := url.Parse(OpenAIChatGPTRedirectURI())
-	if whatwgurl.Origin(parsed) != whatwgurl.Origin(expected) || parsed.Path != expected.Path {
+	// WHATWG resolves "." and ".." segments while parsing, so
+	// "/auth/../auth/callback" IS the callback URL there; net/url keeps them, so
+	// the paths are resolved before comparing.
+	if whatwgurl.Origin(parsed) != whatwgurl.Origin(expected) || whatwgurl.ResolvePath(parsed.Path) != expected.Path {
 		return OpenAIChatGPTAuthorizationResult{}, fmt.Errorf("The pasted callback URL must start with %s", OpenAIChatGPTRedirectURI())
 	}
 	if errorCode := parsed.Query().Get("error"); errorCode != "" {

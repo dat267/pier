@@ -87,6 +87,12 @@ func TestParseOpenAIChatGPTAuthorizationInput(t *testing.T) {
 	if err != nil || result.Code != "abc" || result.ClientID != "oaiapp_issued" {
 		t.Fatalf("result = %+v, %v", result, err)
 	}
+	// WHATWG resolves dot segments before comparing, so a pasted URL that names
+	// the callback through ".." is the callback URL. Go's url.Parse keeps the "..".
+	viaDotDot := "http://127.0.0.1:1455/auth/../auth/callback?code=abc&state=state-1&client_id=oaiapp_issued"
+	if result, err := ParseOpenAIChatGPTAuthorizationInput(viaDotDot, state); err != nil || result.Code != "abc" {
+		t.Fatalf("dot segments: result = %+v, %v", result, err)
+	}
 	// Wrong origin or path, missing issued client id, and state mismatch fail.
 	for _, invalid := range []string{
 		"http://127.0.0.1:9999/auth/callback?code=abc&state=state-1&client_id=x",

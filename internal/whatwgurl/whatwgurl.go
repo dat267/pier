@@ -40,3 +40,34 @@ func Origin(u *url.URL) string {
 	}
 	return scheme + "://" + host
 }
+
+// ResolvePath applies the URL parser's path state: "." and ".." segments are
+// resolved, repeated slashes are kept, and a ".." cannot climb above the root.
+func ResolvePath(path string) string {
+	if path == "" {
+		return ""
+	}
+	segments := strings.Split(path, "/")
+	out := make([]string, 0, len(segments))
+	for index, segment := range segments {
+		last := index == len(segments)-1
+		switch segment {
+		case ".":
+			// A trailing "." keeps its slash.
+			if last {
+				out = append(out, "")
+			}
+			continue
+		case "..":
+			if len(out) > 1 {
+				out = out[:len(out)-1]
+			}
+			if last {
+				out = append(out, "")
+			}
+			continue
+		}
+		out = append(out, segment)
+	}
+	return strings.Join(out, "/")
+}
