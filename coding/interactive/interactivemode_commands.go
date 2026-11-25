@@ -935,9 +935,22 @@ func (w *CommandWiring) listLoops() {
 	now := scheduler.Now()
 	for _, job := range jobs {
 		lines = append(lines, fmt.Sprintf("%s  %s, next %s  %s",
-			job.ID, job.HumanSchedule, loopNextRunLabel(job.NextFire, now), job.Prompt))
+			job.ID, job.HumanSchedule, loopNextRunLabel(job.NextFire, now), loopPromptSummary(job.Prompt)))
 	}
 	w.showStatus(strings.Join(lines, "\n"))
+}
+
+// loopPromptSummary keeps a job on one row of /loop list: a multi-line prompt
+// (one the agent scheduled) shows its first line and " …" for the rest, so its
+// later lines cannot read as rows of their own.
+func loopPromptSummary(prompt string) string {
+	prompt = strings.TrimSpace(prompt)
+	first, rest, multiline := strings.Cut(prompt, "\n")
+	first = strings.TrimSpace(first)
+	if multiline && strings.TrimSpace(rest) != "" {
+		return first + " …"
+	}
+	return first
 }
 
 // loopNextRunLabel names a job's next run in the schedule's own 12-hour style,

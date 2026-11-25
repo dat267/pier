@@ -227,3 +227,26 @@ func TestLoopListNamesTheDayOfALaterRun(t *testing.T) {
 		}
 	}
 }
+
+// D537: a job the agent scheduled can carry a multi-line prompt. Each job is one
+// row of /loop list, so the row shows the prompt's first line and marks the rest,
+// instead of spilling the prompt's later lines under it as if they were rows.
+func TestLoopListKeepsEachJobOnOneRow(t *testing.T) {
+	scheduler := coding.NewLoopScheduler(func() time.Time { return time.Date(2026, time.November, 25, 10, 0, 0, 0, time.Local) }, nil)
+	defer scheduler.Stop()
+	var status string
+	wiring := &CommandWiring{LoopScheduler: scheduler, OnLoopPrompt: func(string) {},
+		ShowStatus: func(message string) { status = message }, ShowError: func(string) {}}
+	if _, err := scheduler.Add("*/5 * * * *", "Check the deploy.\n\n1. Read the logs\n2. Report failures", true, 0); err != nil {
+		t.Fatal(err)
+	}
+	wiring.HandleLoopCommand("5m tidy up")
+	wiring.HandleLoopCommand("list")
+	lines := strings.Split(status, "\n")
+	if len(lines) != 3 {
+		t.Fatalf("two jobs took %d lines:\n%s", len(lines), status)
+	}
+	if !strings.HasSuffix(lines[1], "Check the deploy. …") {
+		t.Fatalf("the multi-line job's row = %q", lines[1])
+	}
+}

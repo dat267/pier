@@ -8979,7 +8979,9 @@ filter as you type.
 
 `/loop list` names each job's next run in the schedule's own 12-hour style,
 with "tomorrow" or the date when it is not today, so a daily loop's midnight run
-does not read as a bare "00:00".
+does not read as a bare "00:00". Each job stays on one row: a multi-line prompt
+the agent scheduled shows its first line and " …", so a later line such as "1.
+Read the logs" cannot pass for job 1.
 
 A fire takes the typed-input dispatch (`HandleScheduledSubmit`) with the editor
 detached: it steers a running turn, queues behind compaction or starts a run like
@@ -9006,7 +9008,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopFeatureToggleRespectsToolToggle`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
 `TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`,
-`TestLoopSchedulerDayStepCrossesMonthEnd`.
+`TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`.
 
 ### D538
 
