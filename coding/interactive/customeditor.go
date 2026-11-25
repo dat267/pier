@@ -188,7 +188,7 @@ func (c *CustomEditor) actionOrder() []tui.Keybinding {
 func (c *CustomEditor) renderBottomBorder(width int, hiddenLineCount int) string {
 	var parts []string
 	if c.LoopCount != nil {
-		parts = appendCount(parts, c.LoopCount(), "loop scheduled", "loops scheduled")
+		parts = appendCount(parts, c.LoopCount(), "loop", "loops")
 	}
 	if c.BackgroundCalls != nil {
 		parts = appendCount(parts, c.BackgroundCalls(), "background", "background")
