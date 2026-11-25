@@ -310,3 +310,30 @@ func TestSettingsListCursorKeysKeepTheSelection(t *testing.T) {
 		t.Fatalf("selection = %d after cursor keys, want %d kept", after, before)
 	}
 }
+
+// settings-list.ts:261 getDisplayItems returns the filtered SettingItem OBJECTS,
+// so each display row is exactly the object that matched, whatever its id. The
+// port re-resolved each filtered row to a position in items by matching id, which
+// picks the FIRST row sharing that id: with two rows named "dup" where only the
+// second matches the query, the list displayed the first row's label.
+func TestSettingsListSearchMapsRowsByIdentityNotID(t *testing.T) {
+	items := []SettingItem{
+		{ID: "dup", Label: "zzz"},
+		{ID: "dup", Label: "alpha"},
+	}
+	list := NewSettingsList(items, 10, SettingsListTheme{
+		Hint:        func(text string) string { return text },
+		Description: func(text string) string { return text },
+		Value:       func(text string, selected bool) string { return text },
+		Label:       func(text string, selected bool) string { return text },
+	}, func(id string, newValue string) {}, func() {}, SettingsListOptions{EnableSearch: true})
+	list.applyFilter("alpha")
+
+	display := list.getDisplayItems()
+	if len(display) != 1 || display[0].Label != "alpha" {
+		t.Fatalf("display rows = %v, want one row labelled alpha", display)
+	}
+	if got := list.realItemIndex(0); got != 1 {
+		t.Errorf("realItemIndex(0) = %d, want 1: the filtered row is the second item", got)
+	}
+}

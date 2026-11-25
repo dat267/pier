@@ -426,18 +426,20 @@ func (s *SettingsList) closeSubmenu() {
 }
 
 func (s *SettingsList) applyFilter(query string) {
-	s.filteredItems = FuzzyFilter(s.items, query, func(item SettingItem) string { return item.Label })
-	s.filteredIndexes = make([]int, 0, len(s.filteredItems))
-	used := make([]bool, len(s.items))
-	for _, filtered := range s.filteredItems {
-		for index, item := range s.items {
-			if used[index] || item.ID != filtered.ID {
-				continue
-			}
-			used[index] = true
-			s.filteredIndexes = append(s.filteredIndexes, index)
-			break
-		}
+	// Map each surviving row back to its own position. Matching by ID instead
+	// would pick the first row sharing an ID, so two rows with the same ID where
+	// only the second matches displayed the first row's label (the reference keeps
+	// the filtered objects themselves, so its rows are exactly the ones matched).
+	indexes := make([]int, len(s.items))
+	for index := range indexes {
+		indexes[index] = index
+	}
+	surviving := FuzzyFilter(indexes, query, func(index int) string { return s.items[index].Label })
+	s.filteredItems = make([]SettingItem, 0, len(surviving))
+	s.filteredIndexes = make([]int, 0, len(surviving))
+	for _, index := range surviving {
+		s.filteredItems = append(s.filteredItems, s.items[index])
+		s.filteredIndexes = append(s.filteredIndexes, index)
 	}
 	s.selectedIndex = 0
 }
