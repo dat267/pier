@@ -147,6 +147,19 @@ func ParseTerminalColorSchemeReport(data string) (TerminalColorScheme, bool) {
 	return TerminalColorSchemeDark, true
 }
 
+// hexDigitValue is one hex digit's value; oscHexChannelPattern has already
+// rejected anything that is not [0-9a-fA-F].
+func hexDigitValue(digit rune) int {
+	switch {
+	case digit >= '0' && digit <= '9':
+		return int(digit - '0')
+	case digit >= 'a' && digit <= 'f':
+		return int(digit-'a') + 10
+	default:
+		return int(digit-'A') + 10
+	}
+}
+
 func parseOscHexChannel(channel string) (int, bool) {
 	if !oscHexChannelPattern.MatchString(channel) {
 		return 0, false
@@ -155,9 +168,13 @@ func parseOscHexChannel(channel string) (int, bool) {
 	if maximum <= 0 {
 		return 0, false
 	}
-	parsed, err := strconv.ParseInt(channel, 16, 64)
-	if err != nil {
-		return 0, false
+	// Scale in floating point, as the reference's parseInt/16**len does. A
+	// channel longer than 16 hex digits overflows ParseInt(...,64), and JS's
+	// parseInt merely loses precision there, so an integer parse would reject a
+	// reply the reference accepts (and drop the whole OSC 11 answer with it).
+	value := 0.0
+	for _, digit := range channel {
+		value = value*16 + float64(hexDigitValue(digit))
 	}
-	return int(math.Round(float64(parsed) / maximum * 255)), true
+	return int(math.Round(value / maximum * 255)), true
 }

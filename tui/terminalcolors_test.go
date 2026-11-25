@@ -391,3 +391,29 @@ func TestTerminalColorLateReplyCanStartAnotherQuery(t *testing.T) {
 	// The callback's query remains live and must receive the next DA1 reply.
 	renderer.HandleTerminalInput("\x1b[?62;22c")
 }
+
+// terminal-colors.ts:27 parseOscHexChannel reads the channel with parseInt and
+// divides by 16**len - 1. JavaScript's parseInt loses precision above 2^53 but
+// never fails, so a channel of any length still yields a value: sixteen 'f's
+// round to 255. The port used ParseInt(..., 64), which errors on overflow, so the
+// whole reply was rejected and OSC 11 reported no background at all.
+func TestParseOscColorResponseToleratesALongChannel(t *testing.T) {
+	long := strings.Repeat("f", 16)
+	got, ok := ParseOsc11BackgroundColor("\x1b]11;rgb:" + long + "/00/aa\x07")
+	if !ok {
+		t.Fatal("a long rgb: channel must still parse")
+	}
+	if got != (RgbColor{R: 255, G: 0, B: 170}) {
+		t.Errorf("color = %+v, want {255 0 170}", got)
+	}
+	// Seventeen digits is still exact enough in floating point.
+	if got, ok := parseOscHexChannel(strings.Repeat("f", 17)); !ok || got != 255 {
+		t.Errorf("17-digit channel = (%d, %v), want (255, true)", got, ok)
+	}
+	// A channel too long for a float64 gives NaN in the reference, which reaches
+	// the caller as a null channel. The port has no nullable channel, so the
+	// value is clamped; the reply must still parse rather than be dropped.
+	if _, ok := parseOscHexChannel(strings.Repeat("f", 320)); !ok {
+		t.Error("an oversized channel must still report a reply, not reject it")
+	}
+}
