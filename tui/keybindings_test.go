@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -120,4 +121,58 @@ func TestParseKeyMatchesUpstream(t *testing.T) {
 		}
 	}
 	SetKittyProtocolActive(previous)
+}
+
+// The shape is JSON-observable: the reference's getResolvedBindings returns
+// `[...keys]` for an unset binding, a real empty array, so an RPC or config
+// consumer reads `[]`. A Go nil slice marshals as `null`, and the test above
+// passes either way because len(nil) == 0.
+func TestResolvedBindingsUnsetIsAnEmptyArrayNotNil(t *testing.T) {
+	manager := NewKeybindingsManager(TUIKeybindings, nil)
+	unset, ok := manager.GetResolvedBindings()["tui.editor.historyPrevious"].([]string)
+	if !ok {
+		t.Fatal("historyPrevious is not a []string")
+	}
+	if unset == nil {
+		t.Fatal("historyPrevious = nil; want a non-nil empty array like [...keys]")
+	}
+	encoded, err := json.Marshal(manager.GetResolvedBindings())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), `"tui.editor.historyPrevious":null`) {
+		t.Errorf("resolved bindings encode an unset binding as null: %s", encoded)
+	}
+	// A keybinding with no keys in a caller-supplied definition set too.
+	custom := NewKeybindingsManager(map[Keybinding]KeybindingDefinition{
+		"app.none": {DefaultKeys: []string{}},
+	}, nil)
+	if got := custom.GetResolvedBindings()["app.none"]; got == nil {
+		t.Error("app.none = nil; want an empty array")
+	}
+}
+
+// getKeys is `[...(keysById.get(id) ?? [])]`, so an unset binding answers a real
+// empty array as well.
+func TestGetKeysUnsetIsAnEmptyArrayNotNil(t *testing.T) {
+	manager := NewKeybindingsManager(TUIKeybindings, nil)
+	if keys := manager.GetKeys("tui.editor.historyPrevious"); keys == nil {
+		t.Fatal("GetKeys(unset) = nil; want a non-nil empty array")
+	}
+	if keys := manager.GetKeys("tui.editor.cursorUp"); len(keys) != 1 || keys[0] != "up" {
+		t.Fatalf("GetKeys(cursorUp) = %#v", keys)
+	}
+}
+
+// A user config that binds a keybinding to an explicit empty list keeps that
+// empty list in getUserBindings, as `{...this.userBindings}` does.
+func TestGetUserBindingsKeepsAnExplicitEmptyList(t *testing.T) {
+	manager := NewKeybindingsManager(TUIKeybindings, map[string][]string{"tui.editor.historyPrevious": {}})
+	got := manager.GetUserBindings()["tui.editor.historyPrevious"]
+	if got == nil {
+		t.Fatal("an explicit empty list came back nil; want []")
+	}
+	if len(got) != 0 {
+		t.Fatalf("got %#v", got)
+	}
 }

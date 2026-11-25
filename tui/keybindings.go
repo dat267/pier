@@ -259,7 +259,9 @@ func (m *KeybindingsManager) GetKeys(keybinding Keybinding) []string {
 	if snapshot == nil {
 		return nil
 	}
-	return append([]string(nil), snapshot.keysByID[keybinding]...)
+	keys := snapshot.keysByID[keybinding]
+	// `[...(keys ?? [])]` is an empty array, not nil, for an unset binding.
+	return append(make([]string, 0, len(keys)), keys...)
 }
 
 // GetDefinition returns a keybinding's definition.
@@ -305,7 +307,8 @@ func (m *KeybindingsManager) GetUserBindings() map[string][]string {
 		return out
 	}
 	for key, value := range snapshot.userBindings {
-		out[key] = append([]string(nil), value...)
+		// `{...userBindings}` keeps an explicit empty list as [], not nil.
+		out[key] = append(make([]string, 0, len(value)), value...)
 	}
 	return out
 }
@@ -325,7 +328,9 @@ func (m *KeybindingsManager) GetResolvedBindings() map[string]any {
 			resolved[id] = keys[0]
 			continue
 		}
-		resolved[id] = append([]string(nil), keys...)
+		// `[...keys]` is a real empty array for an unset binding, so a JSON
+		// consumer reads [] and not null. append over a nil slice would be nil.
+		resolved[id] = append(make([]string, 0, len(keys)), keys...)
 	}
 	return resolved
 }

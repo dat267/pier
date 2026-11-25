@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D546)
+# Deliberate divergences from pi (D1–D547)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9399,3 +9399,27 @@ rejects through its getter, and its message names the safe-integer rule. Any oth
 numeric settings member keeps the strict decode.
 
 Test: `TestToleratedNumberMembersFloorInsteadOfReject`.
+
+### D547
+
+**A copy of an empty key list stays an empty array, not nil.**
+
+Reference: pi v1.6.0 (`faac5858`), `packages/tui/src/keybindings.ts` copies key
+lists with array spread: `getResolvedBindings` uses
+`keys.length === 1 ? keys[0]! : [...keys]`, `getKeys` uses
+`[...(this.keysById.get(id) ?? [])]`, and `getUserBindings` uses the object spread
+`{ ...this.userBindings }`. Every one of those keeps an EMPTY list as `[]`, so a JSON
+consumer reads `[]`.
+
+Pier cloned them with `append([]string(nil), value...)`, which returns **nil** when the
+input is empty or absent. The three methods therefore marshaled an unset keybinding as
+`null`, and an explicit `[]` in a user config came back as nil too. The existing
+`TestResolvedBindingsShape` did not catch it because it asserts `len(unset) == 0`,
+which holds for a nil slice.
+
+All three copies now start from `make([]string, 0, len(value))`. Nothing else changes:
+the elements, the order, and the single-key bare-string shape are untouched.
+
+Tests: `TestResolvedBindingsUnsetIsAnEmptyArrayNotNil`,
+`TestGetKeysUnsetIsAnEmptyArrayNotNil`,
+`TestGetUserBindingsKeepsAnExplicitEmptyList`.
