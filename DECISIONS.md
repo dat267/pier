@@ -8907,10 +8907,8 @@ The input is parsed as a leading `5m`/`2h`/`30s`/`1d` token, else a trailing
 `every 20m` or `every 5 minutes` clause, else no interval at all, in which case
 the whole input is the prompt and the loop self-paces. What follows `every` must
 be a time expression, so `check every PR` keeps its text intact. An interval
-becomes the equivalent cron expression, and one that cannot be expressed that way
-(a sub-minute interval, or 90 minutes, which is neither a whole number of
-minutes nor of hours) is refused with a message rather than rounded into
-something the user did not ask for.
+becomes the equivalent cron expression; how an interval that does not express
+exactly is handled is described below.
 
 A scheduled prompt fires into the ordinary input path, so a loop arrives as
 typed input: nothing downstream needs to know a timer produced it. A fire never
@@ -8985,7 +8983,9 @@ status names any rounding, so `/loop 45m` reports "Every hour; 45m rounded to an
 interval that divides evenly". No day step but 1 divides every month, and cron's
 day-of-month step restarts on the 1st (`*/7` runs Nov 29 then Dec 1), so a
 whole-day loop is not left to cron: `AddEveryDays` runs it at the next midnight
-and then every N calendar days, keeping the cron only as its label.
+and then every N calendar days, keeping the cron only as its label. An interval
+past 28 days is refused instead, because no day step but 1 fits every month and a
+longer one would drift; the status says so.
 
 `/loop` is listed in `/features` alongside the other pier-only surface, and its
 tools are registered in the ordinary registry, so `/tools` shows and can disable
