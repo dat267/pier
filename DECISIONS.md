@@ -9137,8 +9137,13 @@ The pinned reference runs every tool call to completion
 (`packages/agent/src/agent-loop.ts` has no timeout and no backgrounding), so this
 is pier-only. That makes transcript parity the constraint rather than a
 convenience: the handle is an ordinary tool result and the wake-up is an ordinary
-user message. While a run is active it is queued as a follow-up, so that run's
-stop boundary delivers it; an idle session has no boundary, so the notice starts
+user message. While a run is active it is queued as a steering message, so it
+reaches the transcript at that run's next turn boundary (after the tool calls in
+flight, before the next model request), as a message typed mid-run does; as a
+follow-up it waited for the run to stop, so a call that finished early stayed
+out of the transcript until the agent had done all its other work
+(`TestBackgroundNoticeQueuesDuringARun`). Escape clears it with the rest of the
+queue, as it did a follow-up. An idle session has no boundary, so the notice starts
 a run itself instead of waiting for the user's next message, checking and
 starting under the run-lifecycle lock as D438 does. No entry type, message role or session version is added, `CurrentSessionVersion`
 stays 3, and the existing round-trip and append fixtures still reproduce the

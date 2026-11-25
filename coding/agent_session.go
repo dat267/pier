@@ -1214,10 +1214,11 @@ func (s *AgentSession) watchBackgroundCall(handle agent.ToolCallHandle) {
 	}()
 }
 
-// deliverBackgroundNotice queues the notice as a follow-up while a run is
-// active, so that run's stop boundary delivers it, and otherwise starts a run
-// with it: an idle session has no boundary, so a queued notice would wait for
-// the user's next message. The check and the queueing share the run-lifecycle
+// deliverBackgroundNotice queues the notice as a steering message while a run is
+// active, so it reaches the transcript at that run's next turn boundary (after
+// the tool calls in flight, before the next model request) rather than when the
+// run stops (D538), and otherwise starts a run with it: an idle session has no
+// boundary, so a queued notice would wait for the user's next message. The check and the queueing share the run-lifecycle
 // lock, and a start that loses the race to another run checks again (D438). A
 // closed session has nobody to wake, and queueing into it would keep the
 // notice forever.
@@ -1231,7 +1232,7 @@ func (s *AgentSession) deliverBackgroundNotice(notice ai.Message) {
 		}
 		active := state.runActive || s.Agent.State().IsStreaming
 		if active {
-			s.Agent.FollowUp(notice)
+			s.Agent.Steer(notice)
 		}
 		state.mu.Unlock()
 		if active {

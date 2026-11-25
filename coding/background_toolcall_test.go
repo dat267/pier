@@ -1,6 +1,8 @@
 package coding
 
 import (
+	"context"
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -70,38 +72,58 @@ func TestSessionWakesOncePerBackgroundCall(t *testing.T) {
 	}
 }
 
-// A notice that arrives while a run is active is queued as a follow-up, so that
-// run's stop boundary delivers it; it does not start a second run.
+// D538: a notice that arrives while a run is active reaches the transcript at
+// that run's next turn boundary, as a steering message does, rather than
+// waiting for the run to stop: queued as a follow-up, a call that finished
+// mid-run stayed out of the transcript until the agent had done all its other
+// work. It does not start a second run.
 func TestBackgroundNoticeQueuesDuringARun(t *testing.T) {
 	manager, dir := newTestSession(t)
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000}
+	reply := func(stop ai.StopReason, content ...ai.Content) *ai.AssistantMessage {
+		return &ai.AssistantMessage{API: model.API, Provider: model.Provider, Model: model.ID, StopReason: stop, Content: content}
+	}
+	// The run's own tool call; a backgrounded call finishes while it runs.
+	var session *AgentSession
+	work := agent.AgentTool{
+		Name: "work", Label: "work", Description: "work", Parameters: json.RawMessage(`{"type":"object"}`),
+		Execute: func(context.Context, string, json.RawMessage, func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
+			session.deliverBackgroundNotice(agent.CompletionNotice(
+				agent.ToolCallHandle{ID: "bg-3", ToolCallID: "c3", ToolName: "bash"},
+				agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "done"}}}))
+			return agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "worked"}}, Details: json.RawMessage(`{}`)}, nil
+		},
+	}
 	session, err := NewAgentSession(&SessionConfig{
-		Cwd: dir, Sessions: manager, StreamFn: stubStreamFn, ConvertToLlm: ConvertToLlm,
-		Model: &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000},
-		Tools: []agent.AgentTool{testTool("read")},
+		Cwd: dir, Sessions: manager, ConvertToLlm: ConvertToLlm, Model: model,
+		Tools: []agent.AgentTool{work},
+		StreamFn: mockSessionStreamFn(
+			reply(ai.StopToolUse, ai.ToolCall{ID: "t1", Name: "work", Arguments: json.RawMessage(`{}`)}),
+			reply(ai.StopStop, ai.TextContent{Text: "still working"}),
+			reply(ai.StopStop, ai.TextContent{Text: "done"}),
+		),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer session.Dispose()
-
-	before := len(session.Agent.State().Messages)
-	state := session.prompt()
-	state.mu.Lock()
-	state.runActive = true
-	state.mu.Unlock()
-	session.deliverBackgroundNotice(agent.CompletionNotice(
-		agent.ToolCallHandle{ID: "bg-3", ToolCallID: "c3", ToolName: "bash"},
-		agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "done"}}}))
-	state.mu.Lock()
-	state.runActive = false
-	state.mu.Unlock()
-
-	queued := session.Agent.TakeFollowUpMessages()
-	if len(queued) != 1 || !strings.Contains(backgroundNoticeText(queued[0]), "bg-3") {
-		t.Fatalf("queued = %d, want the one notice", len(queued))
+	if err := session.PromptText(context.Background(), "go"); err != nil {
+		t.Fatal(err)
 	}
-	if after := len(session.Agent.State().Messages); after != before {
-		t.Fatalf("a notice during a run started another: transcript %d -> %d messages", before, after)
+	notice, firstStop := -1, -1
+	for index, message := range session.Agent.State().Messages {
+		if strings.Contains(backgroundNoticeText(message), "bg-3") && notice < 0 {
+			notice = index
+		}
+		if assistant, ok := message.(*ai.AssistantMessage); ok && assistant.StopReason == ai.StopStop && firstStop < 0 {
+			firstStop = index
+		}
+	}
+	if notice < 0 || firstStop < 0 || notice > firstStop {
+		t.Fatalf("notice at %d, first answer at %d: the notice waited for the run to stop", notice, firstStop)
+	}
+	if queued := session.Agent.TakeFollowUpMessages(); len(queued) != 0 {
+		t.Fatalf("the notice is still queued as a follow-up: %d", len(queued))
 	}
 }
 
