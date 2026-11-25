@@ -284,6 +284,18 @@ func TestParseChunkUsageDoesNotWrapHugeCacheOrTotalCounts(t *testing.T) {
 			raw:  `{"prompt_tokens":100,"completion_tokens":4,"prompt_tokens_details":{"cached_tokens":20,"cache_write_tokens":10}}`,
 			want: Usage{Input: 70, Output: 4, CacheRead: 20, CacheWrite: 10, TotalTokens: 104},
 		},
+		{
+			// JSON.parse keeps 10.7; an int64 field rejected the whole member and
+			// the token count was reported as 0.
+			name: "fractional prompt tokens",
+			raw:  `{"prompt_tokens":10.7,"completion_tokens":5}`,
+			want: Usage{Input: 10, Output: 5, TotalTokens: 15},
+		},
+		{
+			name: "fractional completion tokens",
+			raw:  `{"prompt_tokens":10,"completion_tokens":2.4}`,
+			want: Usage{Input: 10, Output: 2, TotalTokens: 12},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			got := ParseChunkUsage([]byte(test.raw), testOpenAIModel())

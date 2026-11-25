@@ -442,39 +442,43 @@ func ConvertOpenAICompletionsTools(tools []Tool, compat ResolvedOpenAICompletion
 // ParseChunkUsage maps a ChatCompletionChunk usage object to pi's Usage
 // (port of parseChunkUsage).
 func ParseChunkUsage(raw []byte, model *Model) Usage {
+	// Counts decode as float64, not int64: the reference reads them with
+	// JSON.parse, where 10.7 stays a number, while an int64 field rejects the
+	// member's whole value and silently reports 0. Truncation happens once, at
+	// the arithmetic, which is where the reference's own cast falls.
 	var u struct {
-		PromptTokens         *int64 `json:"prompt_tokens"`
-		CompletionTokens     *int64 `json:"completion_tokens"`
-		CachedTokens         *int64 `json:"cached_tokens"`
-		PromptCacheHitTokens *int64 `json:"prompt_cache_hit_tokens"`
+		PromptTokens         *float64 `json:"prompt_tokens"`
+		CompletionTokens     *float64 `json:"completion_tokens"`
+		CachedTokens         *float64 `json:"cached_tokens"`
+		PromptCacheHitTokens *float64 `json:"prompt_cache_hit_tokens"`
 		PromptTokensDetails  *struct {
-			CachedTokens     *int64 `json:"cached_tokens"`
-			CacheWriteTokens *int64 `json:"cache_write_tokens"`
+			CachedTokens     *float64 `json:"cached_tokens"`
+			CacheWriteTokens *float64 `json:"cache_write_tokens"`
 		} `json:"prompt_tokens_details"`
 		CompletionTokensDetails *struct {
-			ReasoningTokens *int64 `json:"reasoning_tokens"`
+			ReasoningTokens *float64 `json:"reasoning_tokens"`
 		} `json:"completion_tokens_details"`
 		// Some providers report the reasoning count at the top of usage instead of
 		// inside completion_tokens_details (v1.6.0, #12110).
-		ReasoningTokens *int64 `json:"reasoning_tokens"`
+		ReasoningTokens *float64 `json:"reasoning_tokens"`
 	}
 	_ = json.Unmarshal(raw, &u)
 
 	promptTokens := deref(u.PromptTokens)
 	cacheReadTokens := int64(0)
 	if u.PromptTokensDetails != nil && u.PromptTokensDetails.CachedTokens != nil {
-		cacheReadTokens = *u.PromptTokensDetails.CachedTokens
+		cacheReadTokens = jsnum.ToInt64(*u.PromptTokensDetails.CachedTokens)
 	} else if u.PromptCacheHitTokens != nil {
-		cacheReadTokens = *u.PromptCacheHitTokens
+		cacheReadTokens = jsnum.ToInt64(*u.PromptCacheHitTokens)
 	} else if u.CachedTokens != nil {
-		cacheReadTokens = *u.CachedTokens
+		cacheReadTokens = jsnum.ToInt64(*u.CachedTokens)
 	}
 	cacheWriteTokens := int64(0)
 	if u.PromptTokensDetails != nil && u.PromptTokensDetails.CacheWriteTokens != nil {
-		cacheWriteTokens = *u.PromptTokensDetails.CacheWriteTokens
+		cacheWriteTokens = jsnum.ToInt64(*u.PromptTokensDetails.CacheWriteTokens)
 	}
 	input := jsnum.ToInt64(max(0, float64(promptTokens)-float64(cacheReadTokens)-float64(cacheWriteTokens)))
-	outputTokens := deref(u.CompletionTokens)
+	outputTokens := jsnum.ToInt64(deref(u.CompletionTokens))
 	usage := Usage{
 		Input:       input,
 		Output:      outputTokens,
@@ -489,9 +493,9 @@ func ParseChunkUsage(raw []byte, model *Model) Usage {
 	reasoning := int64(0)
 	switch {
 	case u.CompletionTokensDetails != nil && u.CompletionTokensDetails.ReasoningTokens != nil:
-		reasoning = *u.CompletionTokensDetails.ReasoningTokens
+		reasoning = jsnum.ToInt64(*u.CompletionTokensDetails.ReasoningTokens)
 	case u.ReasoningTokens != nil:
-		reasoning = *u.ReasoningTokens
+		reasoning = jsnum.ToInt64(*u.ReasoningTokens)
 	}
 	usage.Reasoning = &reasoning
 	CalculateCost(model, &usage)
