@@ -250,6 +250,10 @@ func TestModelToleratesOversizedCatalogLimits(t *testing.T) {
 		{"scientific", "1e19", math.MaxInt64},
 		{"huge", "1e300", math.MaxInt64},
 		{"huge negative", "-1e300", math.MinInt64},
+		// Just below int64 min: float64 rounds it UP to exactly MinInt64, so a
+		// fitsInt64 check on the rounded value accepts it while the raw text is
+		// still out of range and the standard decoder rejects the whole entry.
+		{"one below min", "-9223372036854775809", math.MinInt64},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			var model Model

@@ -484,13 +484,26 @@ func saturateModelNumbers(data []byte) ([]byte, bool) {
 	return out, true
 }
 
-// fitsInt64 reports whether an integer-valued float is inside the int64 range.
+// fitsInt64 reports whether an integer-valued number is inside the int64 range.
+// The comparison is exact: converting to float64 first rounds a value one below
+// MinInt64 UP to exactly MinInt64, which would accept text the int64 decoder
+// still rejects.
 func fitsInt64(value *big.Float) bool {
 	asFloat, _ := value.Float64()
 	if math.IsInf(asFloat, 0) {
 		return false
 	}
-	return asFloat < 9223372036854775808.0 && asFloat >= -9223372036854775808.0
+	// big.Float compares across precisions exactly, so the decimal bounds are
+	// parsed at the same precision as the value.
+	lower, _, err := big.ParseFloat("-9223372036854775808", 10, value.Prec(), big.ToNearestEven)
+	if err != nil {
+		return false
+	}
+	upper, _, err := big.ParseFloat("9223372036854775808", 10, value.Prec(), big.ToNearestEven)
+	if err != nil {
+		return false
+	}
+	return value.Cmp(lower) >= 0 && value.Cmp(upper) < 0
 }
 
 func (m *Model) UnmarshalJSON(data []byte) error {
