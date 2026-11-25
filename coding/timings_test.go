@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -88,5 +89,35 @@ func TestTimingsStartupFlag(t *testing.T) {
 				t.Fatalf("startup flag subprocess: %v\n%s", err, output)
 			}
 		})
+	}
+}
+
+// printTimings reads the namespace Map and writes inline, which is safe in
+// JavaScript because it is single-threaded. Go has no such guarantee, and
+// PrintTimings is exported: two goroutines printing at once wrote one io.Writer
+// concurrently (caught by -race). The write now happens under the mutex.
+func TestPrintTimingsIsSafeForConcurrentCallers(t *testing.T) {
+	SetTimingsEnabled(new(true))
+	defer SetTimingsEnabled(nil)
+	var buffer bytes.Buffer
+	SetTimingsOutput(&buffer)
+	defer SetTimingsOutput(nil)
+
+	ResetTimings(TimingMain)
+	Time("one", TimingMain)
+
+	var waitGroup sync.WaitGroup
+	for range 8 {
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			for range 20 {
+				PrintTimings()
+			}
+		}()
+	}
+	waitGroup.Wait()
+	if buffer.Len() == 0 {
+		t.Fatal("nothing was printed")
 	}
 }

@@ -123,11 +123,13 @@ func PrintTimings() {
 		state := timingNamespaces[namespace]
 		snapshots = append(snapshots, timingState{timings: append([]timingEntry{}, state.timings...)})
 	}
-	writer := timingOut
-	timingsMu.Unlock()
-
+	// printTimings reads the Map and writes inline, which is safe in JavaScript
+	// because it is single-threaded. Two Go callers printing at once would write
+	// one io.Writer concurrently, so the write stays inside the lock; the only
+	// caller it can block is another PrintTimings.
+	defer timingsMu.Unlock()
 	for index, namespace := range namespaces {
-		printTimingGroup(writer, fmt.Sprintf("Startup Timings: %s", namespace), snapshots[index].timings)
+		printTimingGroup(timingOut, fmt.Sprintf("Startup Timings: %s", namespace), snapshots[index].timings)
 	}
 }
 
