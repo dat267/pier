@@ -374,12 +374,15 @@ func (s *LoopScheduler) run() {
 
 // nextWait reports how long until the earliest job is due.
 func (s *LoopScheduler) nextWait() (time.Duration, bool) {
+	// Snapshot the clock under the lock and call it after unlocking: now is a func
+	// value, and calling one while holding a lock runs caller code with it held
+	// (internal/lockcall, AGENTS.md).
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	now := s.now
 	if len(s.jobs) == 0 {
+		s.mu.Unlock()
 		return 0, false
 	}
-	now := s.now()
 	var earliest time.Time
 	for _, job := range s.jobs {
 		if earliest.IsZero() || job.NextFire.Before(earliest) {
@@ -387,9 +390,11 @@ func (s *LoopScheduler) nextWait() (time.Duration, bool) {
 		}
 	}
 	if earliest.IsZero() {
+		s.mu.Unlock()
 		return 0, false
 	}
-	wait := earliest.Sub(now)
+	s.mu.Unlock()
+	wait := earliest.Sub(now())
 	if wait < 0 {
 		wait = 0
 	}
@@ -398,8 +403,13 @@ func (s *LoopScheduler) nextWait() (time.Duration, bool) {
 
 // fireDue enqueues every job that is due and advances or deletes each of them.
 func (s *LoopScheduler) fireDue() {
-	s.mu.Lock()
+	// Read the clock before taking the lock: now is a func value, and calling one
+	// under a held lock runs caller code with it held (internal/lockcall). The
+	// walk needs the value while it holds the lock, so the read moves out instead
+	// of the call; a job that falls due in between is caught by the next pass,
+	// which nextWait schedules immediately.
 	now := s.now()
+	s.mu.Lock()
 	var due []LoopJob
 	kept := s.jobs[:0]
 	for _, job := range s.jobs {
