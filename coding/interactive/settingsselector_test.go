@@ -715,10 +715,10 @@ func TestFeatureSelectorFiltersAsYouType(t *testing.T) {
 		t.Fatalf("query = %q, want the typed text", got)
 	}
 	rendered := strings.Join(selector.Render(100), "\n")
-	if !strings.Contains(rendered, "Loop feature") {
+	if !strings.Contains(rendered, "Loop") {
 		t.Fatalf("the loop row was filtered out of its own query:\n%s", rendered)
 	}
-	if strings.Contains(rendered, "Goal feature") {
+	if strings.Contains(rendered, "Goal") {
 		t.Fatalf("the goal row survived a query that does not match it:\n%s", rendered)
 	}
 }

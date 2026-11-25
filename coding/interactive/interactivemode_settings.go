@@ -578,19 +578,19 @@ func (w *SettingsWiring) featureToggles() []FeatureToggle {
 	return []FeatureToggle{
 		{
 			ID:          "goal-feature",
-			Label:       "Goal feature",
+			Label:       "Goal",
 			Description: "Enable /goal and the get_goal and set_goal tools",
 			Enabled:     w.Settings.GetGoalFeatureEnabled(),
 		},
 		{
 			ID:          "loop-feature",
-			Label:       "Loop feature",
+			Label:       "Loop",
 			Description: "Enable /loop and the scheduling tools",
 			Enabled:     w.Settings.GetLoopFeatureEnabled(),
 		},
 		{
 			ID:    "background-tools",
-			Label: "Background long tool calls",
+			Label: "Background tools",
 			Description: "Move a tool call still running after this long to the background, " +
 				"so the turn stays responsive; the model is told once when it ends",
 			Values:       coding.BackgroundToolCallChoices(),
@@ -707,9 +707,9 @@ func featureToggleStatus(id string, value string) string {
 	}
 	switch id {
 	case "goal-feature":
-		return "Goal feature " + state + "."
+		return "Goal " + state + "."
 	case "loop-feature":
-		return "Loop feature " + state + "."
+		return "Loop " + state + "."
 	case "background-tools":
 		if value == "off" {
 			return "Automatic backgrounding off."

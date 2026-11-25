@@ -535,7 +535,7 @@ func TestLoopFeatureOffNamesTheStoppedLoops(t *testing.T) {
 	for _, tc := range []struct {
 		scheduled int
 		want      string
-	}{{0, "Loop feature off."}, {1, "Loop feature off; stopped 1 loop."}, {2, "Loop feature off; stopped 2 loops."}} {
+	}{{0, "Loop off."}, {1, "Loop off; stopped 1 loop."}, {2, "Loop off; stopped 2 loops."}} {
 		wiring, _, _, _ := newSettingsTestWiring(t)
 		var status string
 		wiring.ShowStatus = func(message string) { status = message }
@@ -553,7 +553,7 @@ func TestGoalFeatureOffSaysTheGoalIsKept(t *testing.T) {
 	for _, tc := range []struct {
 		hasGoal bool
 		want    string
-	}{{false, "Goal feature off."}, {true, "Goal feature off; the goal is kept for when it is back on."}} {
+	}{{false, "Goal off."}, {true, "Goal off; the goal is kept for when it is back on."}} {
 		wiring, _, _, _ := newSettingsTestWiring(t)
 		var status string
 		wiring.ShowStatus = func(message string) { status = message }
@@ -605,7 +605,7 @@ func TestBackgroundThresholdFeatureRow(t *testing.T) {
 	// The row is rendered with the current choice, not just stored: a user has to
 	// be able to read the threshold off the screen.
 	rendered := strings.Join(selector.Render(90), "\n")
-	if !strings.Contains(rendered, "Background long tool calls") || !strings.Contains(rendered, coding.DefaultBackgroundToolCallChoice) {
+	if !strings.Contains(rendered, "Background tools") || !strings.Contains(rendered, coding.DefaultBackgroundToolCallChoice) {
 		t.Fatalf("/features does not render the threshold row:\n%s", rendered)
 	}
 
