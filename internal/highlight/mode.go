@@ -633,12 +633,18 @@ func stripCapturingGroups(src string) string {
 		}
 		if c == '(' {
 			if i+1 < len(src) && src[i+1] == '?' {
-				// (?P<name>...) is capturing; drop the name and make it
-				// non-capturing.
-				if i+2 < len(src) && src[i+2] == 'P' {
-					if end := strings.IndexByte(src[i:], '>'); end >= 0 {
+				// A named group is capturing and must become non-capturing.
+				// Both spellings exist: (?P<name>...) and (?<name>...) (D544).
+				if rest, ok := strings.CutPrefix(src[i+2:], "P<"); ok {
+					if end := strings.IndexByte(rest, '>'); end >= 0 {
 						b.WriteString("(?:")
-						i += end
+						i += 2 + len("P<") + end
+						continue
+					}
+				} else if rest, ok := strings.CutPrefix(src[i+2:], "<"); ok {
+					if end := strings.IndexByte(rest, '>'); end >= 0 {
+						b.WriteString("(?:")
+						i += 2 + len("<") + end
 						continue
 					}
 				}
@@ -676,7 +682,12 @@ func countCapturingGroups(src string) int {
 		}
 		if c == '(' {
 			if i+1 < len(src) && src[i+1] == '?' {
-				if i+2 < len(src) && src[i+2] == 'P' {
+				// Both named-group spellings capture (highlight.js counts by
+				// executing the regex, so it makes no distinction).
+				rest := src[i+2:]
+				if _, ok := strings.CutPrefix(rest, "P<"); ok {
+					count++
+				} else if _, ok := strings.CutPrefix(rest, "<"); ok {
 					count++
 				}
 				continue

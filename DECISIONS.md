@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D543)
+# Deliberate divergences from pi (D1–D544)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9329,3 +9329,26 @@ so its other callers (`secureEndpoint`, `deriveApplicationType`) see the
 normalized path as well.
 
 Test: `TestCanonicalMcpServerURLMatchesNewURL`.
+
+### D544
+
+**Both named-group spellings count and strip as captures.**
+
+Reference: pi v1.6.0 (`faac5858`) `packages/highlight` bundles highlight.js
+18.x, whose `countMatchGroups(re)` counts captures by EXECUTING the regex
+(`new RegExp(re.toString() + '|').exec('').length - 1`) and whose `join` counts
+them while scanning for `(`. Neither makes a spelling distinction, so
+`(?<name>...)` and `(?P<name>...)` both count as one capture.
+
+Pier's `countCapturingGroups` and `stripCapturingGroups` are syntactic scanners
+that only recognized `(?P<name>...)`. A rule using `(?<name>...)` therefore
+undercounted by one and kept the group capturing, which shifts every later
+group's index in the joined multi-regex `buildModeRegex` uses, so the wrong mode
+receives the match.
+
+No bundled grammar uses either spelling (0 occurrences in `lang_*.go` and in the
+pinned highlight.js `lib/languages/*.js`), so this is unreachable from pier's own
+languages. `RegisterLanguage` is exported, though, so an embedder's grammar can
+reach it, which is why the scanners now handle both forms.
+
+Test: `TestCountCapturingGroupsMatchesCountMatchGroups`.

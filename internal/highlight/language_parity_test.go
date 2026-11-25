@@ -811,3 +811,34 @@ func TestAnchoredSpaceGuardsUseLineEnds(t *testing.T) {
 		}
 	}
 }
+
+// countMatchGroups in highlight.js counts captures by executing the regex
+// (`new RegExp(re + "|").exec("").length - 1`), so it counts BOTH named-group
+// spellings. countCapturingGroups is a syntactic scan and only knew (?P<name>),
+// which undercounted (?<name>) and shifted every later group's match index.
+func TestCountCapturingGroupsMatchesCountMatchGroups(t *testing.T) {
+	for _, tc := range []struct {
+		source string
+		want   int
+	}{
+		{"(a)", 1},
+		{"(a)(b)", 2},
+		{"(?:a)", 0},
+		{"(?:a)(b)", 1},
+		{"(?P<n>a)", 1},
+		{"(?<n>a)", 1},
+		{"(?<n>a)(b)", 2},
+		{"(?P<n>a)(b)", 2},
+		{"[)]", 0},
+		{"\\(", 0},
+		{"((a))", 2},
+		{"()", 1},
+		{"(?=x)", 0},
+		{"\\(\\)", 0},
+		{"\\\\(a)", 1},
+	} {
+		if got := countCapturingGroups(tc.source); got != tc.want {
+			t.Errorf("countCapturingGroups(%q) = %d, want %d (highlight.js countMatchGroups)", tc.source, got, tc.want)
+		}
+	}
+}
