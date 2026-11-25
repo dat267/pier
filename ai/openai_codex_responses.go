@@ -115,13 +115,16 @@ func retryHeaderDelay(milliseconds float64) time.Duration {
 
 // GetCodexRetryAfterDelayMS reads retry-after-ms/retry-after headers.
 func GetCodexRetryAfterDelayMS(headers http.Header) (time.Duration, bool) {
-	if millis := headers.Get("retry-after-ms"); millis != "" {
+	// Presence, not emptiness: the reference tests headers.get(...) !== null, so an
+	// empty retry-after-ms is a header it read and Number("") is a real delay of
+	// zero. A Go header map cannot tell the two apart, so ask for the key.
+	if millis, present := headerValue(headers, "retry-after-ms"); present {
 		if value, ok := jsnum.Number(millis); ok {
 			return retryHeaderDelay(max(value, 0)), true
 		}
 	}
-	retryAfter := headers.Get("retry-after")
-	if retryAfter == "" {
+	retryAfter, present := headerValue(headers, "retry-after")
+	if !present {
 		return 0, false
 	}
 	if seconds, ok := jsnum.Number(retryAfter); ok {
@@ -837,4 +840,15 @@ func OpenAICodexProvider() *Provider {
 		Models:  GetBuiltinModels("openai-codex"),
 		Single:  CodexStreams{},
 	})
+}
+
+// headerValue reports a header's value and whether the key is present at all:
+// http.Header.Get returns "" for both an absent header and an empty one, and the
+// reference distinguishes them.
+func headerValue(headers http.Header, key string) (string, bool) {
+	values, ok := headers[http.CanonicalHeaderKey(key)]
+	if !ok || len(values) == 0 {
+		return "", false
+	}
+	return values[0], true
 }

@@ -146,6 +146,15 @@ func TestCodexRetryClassification(t *testing.T) {
 	if delay, ok := GetCodexRetryAfterDelayMS(headers); !ok || delay != 1500*time.Millisecond {
 		t.Fatalf("delay = %v ok = %v", delay, ok)
 	}
+	// The reference reads headers.get(...) !== null, so an empty retry-after-ms is
+	// PRESENT and Number("") is 0: a real delay of zero that overrides the
+	// backoff. A Go header map cannot tell present-and-empty from absent, so the
+	// port must test for presence explicitly.
+	headers = http.Header{}
+	headers.Set("retry-after-ms", "")
+	if delay, ok := GetCodexRetryAfterDelayMS(headers); !ok || delay != 0 {
+		t.Fatalf("empty retry-after-ms: delay = %v ok = %v, want 0 and true", delay, ok)
+	}
 	headers = http.Header{}
 	headers.Set("retry-after", "2")
 	if delay, ok := GetCodexRetryAfterDelayMS(headers); !ok || delay != 2*time.Second {
