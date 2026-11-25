@@ -328,3 +328,27 @@ func TestLoopFireWaitsForAnIdleAgent(t *testing.T) {
 		}
 	}
 }
+
+// D537: /loop stop with no id names what it stopped in plain words: one loop
+// is "1 loop", and nothing scheduled says so instead of "Stopped 0 loop(s)".
+func TestLoopStopAllCountsInWords(t *testing.T) {
+	scheduler := coding.NewLoopScheduler(nil, nil)
+	defer scheduler.Stop()
+	var status string
+	wiring := &CommandWiring{LoopScheduler: scheduler,
+		ShowStatus: func(message string) { status = message }, ShowError: func(message string) { status = message }}
+	for _, tc := range []struct {
+		jobs int
+		want string
+	}{{0, "No loops scheduled."}, {1, "Stopped 1 loop."}, {2, "Stopped 2 loops."}} {
+		for range tc.jobs {
+			if _, err := scheduler.Add("*/5 * * * *", "poll", true, 0); err != nil {
+				t.Fatal(err)
+			}
+		}
+		wiring.HandleLoopCommand("stop")
+		if status != tc.want || scheduler.Count() != 0 {
+			t.Fatalf("%d job(s): /loop stop said %q, left %d", tc.jobs, status, scheduler.Count())
+		}
+	}
+}

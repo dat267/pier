@@ -1011,9 +1011,16 @@ func (w *CommandWiring) stopLoops(ids []string) {
 		return
 	}
 	if len(ids) == 0 {
-		count := len(scheduler.Jobs())
+		count := scheduler.Count()
 		scheduler.RemoveAll()
-		w.showStatus(fmt.Sprintf("Stopped %d loop(s).", count))
+		switch count {
+		case 0:
+			w.showStatus("No loops scheduled.")
+		case 1:
+			w.showStatus("Stopped 1 loop.")
+		default:
+			w.showStatus(fmt.Sprintf("Stopped %d loops.", count))
+		}
 		return
 	}
 	if !scheduler.Remove(ids[0]) {
