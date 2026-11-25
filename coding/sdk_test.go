@@ -331,3 +331,60 @@ func TestReloadKeepsToolsAttachedWhileItRuns(t *testing.T) {
 		t.Fatalf("%d of %d attached MCP tools are active after the reloads", active, attaches)
 	}
 }
+
+func TestFilterImageBlocksMatchesTheReferencePlaceholderRule(t *testing.T) {
+	// Reference: api/transform-messages.ts replaceImagesWithPlaceholder. The
+	// running "previous was a placeholder" state is set by EVERY block, so a
+	// placeholder already in the content suppresses only the one that would
+	// replace the image right after it; the port also deduped consecutive
+	// placeholders that were already there.
+	const p = "PH"
+	img := ai.ImageContent{Data: "x", MimeType: "image/png"}
+	tx := func(s string) ai.TextContent { return ai.TextContent{Text: s} }
+	seqs := [][]ai.Content{
+		{},
+		{img},
+		{img, img},
+		{tx("a"), img, tx("b"), img},
+		{tx(p), img},
+		{tx(p), tx(p), img},
+		{img, tx(p), img},
+		{tx("a"), tx(p), img},
+		{tx(p)},
+		{img, tx("a"), img, img, tx("b")},
+	}
+	want := [][]string{
+		{},
+		{"text:" + p},
+		{"text:" + p},
+		{"text:a", "text:" + p, "text:b", "text:" + p},
+		{"text:" + p},
+		{"text:" + p, "text:" + p},
+		{"text:" + p, "text:" + p},
+		{"text:a", "text:" + p},
+		{"text:" + p},
+		// Consecutive images share ONE placeholder: the state stays true.
+		{"text:" + p, "text:a", "text:" + p, "text:b"},
+	}
+	if len(seqs) != len(want) {
+		t.Fatalf("%d sequences, %d expectations", len(seqs), len(want))
+	}
+	for i, seq := range seqs {
+		if got := projectForZZ(filterImageBlocks(seq, p)); !slices.Equal(got, want[i]) {
+			t.Errorf("seq %d: %q, want %q", i, got, want[i])
+		}
+	}
+}
+
+func projectForZZ(blocks []ai.Content) []string {
+	out := make([]string, 0, len(blocks))
+	for _, b := range blocks {
+		switch v := b.(type) {
+		case ai.TextContent:
+			out = append(out, "text:"+v.Text)
+		case ai.ImageContent:
+			out = append(out, "image")
+		}
+	}
+	return out
+}

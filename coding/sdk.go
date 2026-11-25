@@ -703,25 +703,26 @@ func hasImageBlocks[L ~[]C, C any](blocks L) bool {
 // consecutive disabled texts. It serves both assistant/user content lists and
 // tool-result content.
 func filterImageBlocks[L ~[]C, C any](blocks L, disabledText string) L {
+	// Reference: `previousWasPlaceholder = block.text === placeholder` for EVERY
+	// block, image or text. A placeholder already in the content therefore
+	// suppresses only the one that would replace the image right after it; two
+	// placeholders in a row are both kept.
 	filtered := make(L, 0, len(blocks))
-	afterDisabled := func() bool {
-		if len(filtered) == 0 {
-			return false
-		}
-		previous, ok := any(filtered[len(filtered)-1]).(ai.TextContent)
-		return ok && previous.Text == disabledText
-	}
+	previousWasDisabled := false
 	for _, block := range blocks {
 		if _, ok := any(block).(ai.ImageContent); ok {
-			if !afterDisabled() {
+			if !previousWasDisabled {
 				filtered = append(filtered, any(ai.TextContent{Text: disabledText}).(C))
 			}
-			continue
-		}
-		if text, ok := any(block).(ai.TextContent); ok && text.Text == disabledText && afterDisabled() {
+			previousWasDisabled = true
 			continue
 		}
 		filtered = append(filtered, block)
+		if text, ok := any(block).(ai.TextContent); ok {
+			previousWasDisabled = text.Text == disabledText
+		} else {
+			previousWasDisabled = false
+		}
 	}
 	return filtered
 }
