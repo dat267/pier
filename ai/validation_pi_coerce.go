@@ -440,7 +440,11 @@ func tryPiBigInt(value *schemaValue) (*schemaValue, bool) {
 		if !isFiniteJSONNumber(value.Number) {
 			return nil, false
 		}
-		return &schemaValue{IsBigInt: true, BigInt: new(big.Int).SetInt64(int64(math.Trunc(value.Number))).String()}, true
+		// BigInt(Math.trunc(n)) keeps the exact integer. Converting through int64
+		// first saturates past 2^63-1, so 1e19 became -9223372036854775808.
+		truncated := math.Trunc(value.Number)
+		exact, _ := new(big.Float).SetFloat64(truncated).Int(nil)
+		return &schemaValue{IsBigInt: true, BigInt: exact.String()}, true
 	case value.Null:
 		return &schemaValue{IsBigInt: true, BigInt: "0"}, true
 	case value.IsString:

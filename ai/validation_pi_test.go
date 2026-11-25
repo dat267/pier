@@ -31,6 +31,11 @@ func TestPiSchemaBigIntCoercion(t *testing.T) {
 		{`{"n":"12.9"}`, `{"n":"12n"}`},
 		{`{"n":true}`, `{"n":"1n"}`},
 		{`{"n":null}`, `{"n":"0n"}`},
+		// A finite number past int64: BigInt(Math.trunc(n)) keeps the exact
+		// integer, while Go's int64 conversion saturates. 1e19 is exactly
+		// 10000000000000000000, and the port produced -9223372036854775808.
+		{`{"n":10000000000000000000}`, `{"n":"10000000000000000000n"}`},
+		{`{"n":-10000000000000000000}`, `{"n":"-10000000000000000000n"}`},
 	} {
 		got, err := validateProbe(t, schema, test.arg)
 		if err != nil {
