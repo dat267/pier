@@ -57,7 +57,10 @@ type SettingsThemeController interface {
 type SettingsWiring struct {
 	// LoopCount reports the scheduled /loop jobs, which turning the loop
 	// feature off drops (D537).
-	LoopCount       func() int
+	LoopCount func() int
+	// HasGoal reports whether the session has a goal, which turning the goal
+	// feature off keeps (D496).
+	HasGoal         func() bool
 	Slot            *SelectorSlot
 	Settings        *coding.SettingsManager
 	Session         SettingsSession
@@ -426,6 +429,10 @@ func newSettingsWiring(app *App) *SettingsWiring {
 		// setting, the same way a reload applies it.
 		ApplyFullscreenScrollbarSetting: func() { app.applyFullscreenScrollbarSetting() },
 		WireGoalController:              func() { app.wireGoalController() },
+		HasGoal: func() bool {
+			controller := app.session.GoalController()
+			return controller != nil && controller.Snapshot().Goal != nil
+		},
 		LoopCount: func() int {
 			if app.loopScheduler == nil {
 				return 0
@@ -651,6 +658,7 @@ func (w *SettingsWiring) HandleFeatureChange(id string, value string) {
 	if id == "loop-feature" && value != "true" && w.LoopCount != nil {
 		stopped = w.LoopCount()
 	}
+	keptGoal := id == "goal-feature" && value != "true" && w.HasGoal != nil && w.HasGoal()
 	if !w.ApplyFeatureToggle(id, value) {
 		return
 	}
@@ -660,6 +668,8 @@ func (w *SettingsWiring) HandleFeatureChange(id string, value string) {
 		status = strings.TrimSuffix(status, ".") + "; stopped 1 loop."
 	case stopped > 1:
 		status = strings.TrimSuffix(status, ".") + fmt.Sprintf("; stopped %d loops.", stopped)
+	case keptGoal:
+		status = strings.TrimSuffix(status, ".") + "; the goal is kept for when it is back on."
 	}
 	w.showStatus(status)
 }

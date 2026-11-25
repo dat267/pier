@@ -8232,7 +8232,10 @@ its `featureToggles` entry, an `ApplyFeatureToggle` case and nothing else.
 
 With the goal feature off there is no controller, so `/goal` says "The goal
 feature is off. Turn it on in /features." instead of clearing the editor and
-doing nothing, as `/loop` does (D537).
+doing nothing, as `/loop` does (D537). Turning the feature off keeps the
+session's goal, which turning it back on restores, and the status says so ("Goal
+feature off; the goal is kept for when it is back on.") so off does not read as
+deleted.
 
 Tests: `TestSettingsGoalFeatureDefaultsOn` (default, global scope, reload),
 `TestSessionToolToggle` (a tool leaves and rejoins the active set and the prompt,
@@ -8247,7 +8250,8 @@ registry, branch state restored),
 `TestFeatureToggleAppliesAndPersists` (the selector's row stores, applies and
 rewires), `TestFeatureSelectorHoldsOnlyPierOnlyToggles` (`/features` holds the
 pier-only rows and `/settings` none of them, whose golden still matches) and
-`TestGoalCommandReportsDisabledFeature` (a disabled `/goal` says so).
+`TestGoalCommandReportsDisabledFeature` (a disabled `/goal` says so) and
+`TestGoalFeatureOffSaysTheGoalIsKept`.
 
 ### D497
 

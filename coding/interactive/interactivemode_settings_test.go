@@ -547,6 +547,24 @@ func TestLoopFeatureOffNamesTheStoppedLoops(t *testing.T) {
 	}
 }
 
+// D496: turning the goal feature off keeps the session's goal (turning it back
+// on restores it), and the status says so, so "off" does not read as "deleted".
+func TestGoalFeatureOffSaysTheGoalIsKept(t *testing.T) {
+	for _, tc := range []struct {
+		hasGoal bool
+		want    string
+	}{{false, "Goal feature off."}, {true, "Goal feature off; the goal is kept for when it is back on."}} {
+		wiring, _, _, _ := newSettingsTestWiring(t)
+		var status string
+		wiring.ShowStatus = func(message string) { status = message }
+		wiring.HasGoal = func() bool { return tc.hasGoal }
+		wiring.HandleFeatureChange("goal-feature", "false")
+		if status != tc.want {
+			t.Fatalf("goal %v: status %q, want %q", tc.hasGoal, status, tc.want)
+		}
+	}
+}
+
 // The threshold row is a choice row, not a boolean: it cycles through the offered
 // durations, persists the pick, and can turn the feature off.
 func TestBackgroundThresholdFeatureRow(t *testing.T) {
