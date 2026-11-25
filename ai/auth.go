@@ -35,6 +35,18 @@ const (
 type ApiKeyCredential struct {
 	Key string      `json:"key,omitempty"`
 	Env ProviderEnv `json:"env,omitempty"`
+	// KeyPresent and EnvPresent keep a present empty member ("key": "",
+	// "env": {}): the reference writes JSON.stringify(data), which drops only
+	// undefined, while omitempty would drop both (D545). A non-empty Key or Env
+	// implies presence, so only the empty forms need the flag.
+	KeyPresent bool
+	EnvPresent bool
+}
+
+// NewApiKeyCredential builds a credential whose key member is present, even when
+// the key is empty.
+func NewApiKeyCredential(key string) *ApiKeyCredential {
+	return &ApiKeyCredential{Key: key, KeyPresent: true}
 }
 
 // OAuthCredentials is OAuth token data returned by extension compatibility flows.
@@ -62,11 +74,27 @@ type Credential struct {
 func (c *Credential) MarshalJSON() ([]byte, error) {
 	switch c.Type {
 	case CredentialAPIKey:
-		return MarshalJSON(struct {
-			Type string      `json:"type"`
-			Key  string      `json:"key,omitempty"`
-			Env  ProviderEnv `json:"env,omitempty"`
-		}{c.Type, c.APIKey.Key, c.APIKey.Env})
+		keyPresent := c.APIKey != nil && (c.APIKey.KeyPresent || c.APIKey.Key != "")
+		envPresent := c.APIKey != nil && (c.APIKey.EnvPresent || len(c.APIKey.Env) > 0)
+		var buf []byte
+		buf = append(buf, `{"type":"api_key"`...)
+		if keyPresent {
+			enc, err := MarshalJSON(c.APIKey.Key)
+			if err != nil {
+				return nil, err
+			}
+			buf = append(buf, `,"key":`...)
+			buf = append(buf, enc...)
+		}
+		if envPresent {
+			enc, err := MarshalJSON(c.APIKey.Env)
+			if err != nil {
+				return nil, err
+			}
+			buf = append(buf, `,"env":`...)
+			buf = append(buf, enc...)
+		}
+		return append(buf, '}'), nil
 	case CredentialOAuth:
 		// Rebuild in field order: type first, then refresh/access/expires,
 		// then extra keys sorted for determinism.
@@ -141,8 +169,14 @@ func (c *Credential) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(data, &v); err != nil {
 			return err
 		}
+		var members map[string]json.RawMessage
+		if err := json.Unmarshal(data, &members); err != nil {
+			return err
+		}
+		_, keyPresent := members["key"]
+		_, envPresent := members["env"]
 		c.Type = CredentialAPIKey
-		c.APIKey = &ApiKeyCredential{Key: v.Key, Env: v.Env}
+		c.APIKey = &ApiKeyCredential{Key: v.Key, Env: v.Env, KeyPresent: keyPresent, EnvPresent: envPresent}
 	case CredentialOAuth:
 		var v struct {
 			Refresh string                     `json:"refresh"`

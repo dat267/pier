@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D544)
+# Deliberate divergences from pi (D1–D545)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9352,3 +9352,28 @@ languages. `RegisterLanguage` is exported, though, so an embedder's grammar can
 reach it, which is why the scanners now handle both forms.
 
 Test: `TestCountCapturingGroupsMatchesCountMatchGroups`.
+
+### D545
+
+**A stored api-key credential keeps a present empty `key` and `env`.**
+
+Reference: pi v1.6.0 (`faac5858`), `packages/coding-agent/src/core/auth-storage.ts`
+writes every mutation with `JSON.stringify(data, null, 2)`, which drops only
+`undefined`. Its `ApiKeyCredential` declares `key?: string` and `env?: ProviderEnv`,
+so a login answered with an empty secret persists as `{"type":"api_key","key":""}`,
+and a provider that reports `env: {}` keeps that member.
+
+Pier's struct tags were `omitempty`, which drops `""` as well as an empty object, so
+both members vanished on the next `auth.json` write. That is reachable: the API-key
+login prompt returns whatever the user typed without an empty check
+(`coding/authterminal.go` `Secret`/`Question`), `ai/models_login.go` persists the
+returned credential, and `coding/authstorage.go` writes it through
+`Credential.MarshalJSON`.
+
+`ApiKeyCredential.KeyPresent` and `EnvPresent` record that a member was present, set by
+`UnmarshalJSON` from the decoded object and by `NewApiKeyCredential` for a login that
+always supplies a key. A non-empty key or env implies presence, so the flags only
+matter for the empty forms, and every existing `ApiKeyCredential{Key: "..."}` literal
+and `credential.Key` comparison keeps working.
+
+Test: `TestCredentialKeepsPresentEmptyMembers`.

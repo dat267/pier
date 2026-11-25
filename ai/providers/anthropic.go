@@ -39,7 +39,7 @@ func AnthropicAPIKeyAuth() *ai.ApiKeyAuth {
 			if err := ctxErrOf(interaction.Ctx); err != nil {
 				return nil, err
 			}
-			return &ai.ApiKeyCredential{Key: key}, nil
+			return ai.NewApiKeyCredential(key), nil
 		},
 		Resolve: func(input ai.AuthResolveInput) (*ai.AuthResult, error) {
 			if err := ctxErrOf(input.Ctx2); err != nil {

@@ -111,7 +111,7 @@ func CloudflareWorkersAIAuth() *ai.ApiKeyAuth {
 			if err != nil {
 				return nil, err
 			}
-			return &ai.ApiKeyCredential{Key: key, Env: ai.ProviderEnv{CloudflareAccountIDEnv: accountID}}, nil
+			return &ai.ApiKeyCredential{Key: key, Env: ai.ProviderEnv{CloudflareAccountIDEnv: accountID}, KeyPresent: true}, nil
 		},
 		Resolve: cloudflareResolver(CloudflareAuthWorkersAI),
 	}
