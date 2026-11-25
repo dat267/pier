@@ -356,7 +356,11 @@ func TestRPCFieldNamesAreCaseSensitive(t *testing.T) {
 {"id":"bad","type":"prompt","Message":"hello"}
 {"ID":"ignored","type":"get_messages"}
 `)
-	if len(records) != 3 || records[0]["success"] != false || records[0]["command"] != "parse" || records[1]["id"] != "bad" || records[1]["success"] != false {
+	// A capital-T "Type" is not the type member, so the command has none and the
+	// reference dispatches it to the default branch ("Unknown command:
+	// undefined"); the case-sensitivity point is that it is NOT executed.
+	if len(records) != 3 || records[0]["success"] != false || records[0]["command"] != "" ||
+		records[0]["error"] != "Unknown command: undefined" || records[1]["id"] != "bad" || records[1]["success"] != false {
 		t.Fatal(records)
 	}
 	if _, exists := records[2]["id"]; exists {

@@ -5,6 +5,7 @@ package coding
 
 import (
 	"bufio"
+	"bytes"
 	"cmp"
 	"context"
 	"encoding/json"
@@ -39,8 +40,9 @@ type RPCModeOptions struct {
 }
 
 type rpcCommand struct {
-	ID                 *string           `json:"id"`
-	Type               string            `json:"type"`
+	ID                 *string `json:"id"`
+	Type               string  `json:"type"`
+	hasType            bool
 	Message            *string           `json:"message"`
 	Provider           string            `json:"provider"`
 	ModelID            string            `json:"modelId"`
@@ -187,15 +189,30 @@ func RunRPCMode(ctx context.Context, session *AgentSession, options RPCModeOptio
 
 func (r *rpcRuntime) handleLine(line []byte) error {
 	var object map[string]json.RawMessage
-	parseErr := json.Unmarshal(line, &object)
+	// An array is `typeof "object"` in JavaScript, so the reference reaches
+	// dispatch with it and answers "Unknown command: undefined". Unmarshalling an
+	// array into a map errors, so the object form is probed first and a
+	// non-object JSON value is treated as an object with no members.
+	trimmed := bytes.TrimSpace(line)
+	isJSONObject := len(trimmed) > 0 && trimmed[0] == '{'
+	parseErr := error(nil)
+	if isJSONObject {
+		parseErr = json.Unmarshal(line, &object)
+	} else if !json.Valid(line) {
+		parseErr = errors.New("invalid JSON")
+	}
+	if object == nil {
+		object = map[string]json.RawMessage{}
+	}
 	command := rpcCommand{}
 	if parseErr == nil {
 		if raw, ok := object["type"]; ok {
 			parseErr = json.Unmarshal(raw, &command.Type)
+			command.hasType = parseErr == nil
 		}
-		if parseErr == nil && command.Type == "" {
-			parseErr = errors.New("command must be an object with a nonempty type")
-		}
+		// No nonempty-type guard: rpc-mode.ts dispatches on command.type with no
+		// shape check, so a missing or empty type reaches the default branch and
+		// answers "Unknown command: undefined" (or "Unknown command: ").
 		if parseErr == nil {
 			if raw, ok := object["id"]; ok {
 				parseErr = json.Unmarshal(raw, &command.ID)
@@ -878,6 +895,9 @@ func (r *rpcRuntime) handle(command rpcCommand) (any, bool, error) {
 			PendingMessageCount: session.PendingMessageCount(),
 		}, true, nil
 	default:
+		if !command.hasType {
+			return nil, false, errors.New("Unknown command: undefined")
+		}
 		return nil, false, fmt.Errorf("Unknown command: %s", command.Type)
 	}
 }

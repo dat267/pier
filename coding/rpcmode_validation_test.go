@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/dat267/pier/ai"
@@ -62,5 +63,51 @@ func TestRPCRejectsAnOmittedThinkingLevel(t *testing.T) {
 	state := records[1]["data"].(map[string]any)
 	if level, _ := state["thinkingLevel"].(string); level == "" {
 		t.Fatalf("thinkingLevel = %v; want the unchanged level", state["thinkingLevel"])
+	}
+}
+
+// rpc-mode.ts:407 dispatches on command.type with no shape check beyond
+// `typeof parsed === "object"`, which a JSON ARRAY satisfies. An array therefore
+// reaches handleCommand, falls to the default branch, and answers
+// `Unknown command: undefined` with no id. The port decoded the line into a
+// map[string]json.RawMessage, which ERRORS for an array, so it answered a parse
+// error instead: a different response for the same input.
+func TestRPCArrayLineAnswersUnknownCommand(t *testing.T) {
+	session := rpcTestSession(t)
+	records := rpcResponses(runRPCScript(t, session, "[1,2]\n"))
+	if len(records) != 1 {
+		t.Fatalf("responses = %d, want 1: %+v", len(records), records)
+	}
+	response := records[0]
+	if _, hasID := response["id"]; hasID {
+		t.Errorf("response carries id %v; an array has no id member", response["id"])
+	}
+	if response["command"] != "" {
+		t.Errorf("command = %v, want empty: an array has no type", response["command"])
+	}
+	if response["success"] != false {
+		t.Errorf("success = %v, want false", response["success"])
+	}
+	if got, _ := response["error"].(string); !strings.Contains(got, "Unknown command") {
+		t.Errorf("error = %q, want an unknown-command error", got)
+	}
+
+	// The same holds for every other JSON value: JSON.parse succeeds, `type` is
+	// undefined, and the default branch answers. An object with an EMPTY type has
+	// a defined type, so its message ends after the colon instead.
+	for _, c := range []struct{ line, want string }{
+		{`[]`, "Unknown command: undefined"},
+		{`"str"`, "Unknown command: undefined"},
+		{`42`, "Unknown command: undefined"},
+		{`null`, "Unknown command: undefined"},
+		{`{"type":""}`, "Unknown command: "},
+	} {
+		records := rpcResponses(runRPCScript(t, rpcTestSession(t), c.line+"\n"))
+		if len(records) != 1 {
+			t.Fatalf("%s: responses = %d, want 1", c.line, len(records))
+		}
+		if got, _ := records[0]["error"].(string); got != c.want {
+			t.Errorf("%s: error = %q, want %q", c.line, got, c.want)
+		}
 	}
 }
