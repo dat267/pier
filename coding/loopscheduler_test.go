@@ -387,3 +387,40 @@ func TestLoopSchedulerPostpone(t *testing.T) {
 		t.Fatalf("a postponed wakeup was not cleared by stop: %+v", scheduler.Jobs())
 	}
 }
+
+// A wake-up that arrives long after the job was due must not fire once per missed
+// match. The scheduler advanced NextFire by a single match from the previous
+// match, so a machine that slept (or a process whose timer could not run) walked
+// forward one interval per pass while the clock stood still: every pass found the
+// job still due, nextWait stayed 0, and the timer loop spun as fast as it could,
+// enqueuing a prompt each turn. A 2-hour suspend of a 5-minute job enqueued 24
+// prompts and would have enqueued more had the timer not advanced.
+func TestLoopSchedulerSuspendDoesNotReplayMissedFires(t *testing.T) {
+	now := time.Date(2026, time.November, 25, 10, 0, 0, 0, time.UTC)
+	clock := now
+	var fired int
+	scheduler := NewLoopScheduler(func() time.Time { return clock }, func(string) { fired++ })
+	defer scheduler.Stop()
+	if _, err := scheduler.Add("*/5 * * * *", "check the build", true, 0); err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+
+	// Suspended from 10:00 to 12:00: 24 matches fell due while nothing could run.
+	clock = now.Add(2 * time.Hour)
+	scheduler.fireDue()
+	if fired != 1 {
+		t.Fatalf("one wake-up fired %d prompts, want 1", fired)
+	}
+	// The job is rescheduled past the current time, so the timer waits instead of
+	// spinning on a job that is still due.
+	if wait, ok := scheduler.nextWait(); !ok || wait <= 0 {
+		t.Fatalf("nextWait = %v (ok %v), want a future wait: the job is still due", wait, ok)
+	}
+	jobs := scheduler.Jobs()
+	if len(jobs) != 1 {
+		t.Fatalf("jobs = %d, want 1", len(jobs))
+	}
+	if !jobs[0].NextFire.After(clock) {
+		t.Fatalf("NextFire = %v, want after %v", jobs[0].NextFire, clock)
+	}
+}

@@ -683,7 +683,7 @@ func registerLoopToolsLocked(s *AgentSession, tools []agent.AgentTool) {
 		if _, ok := s.control.Tools[tool.Name]; ok {
 			continue
 		}
-		s.control.Tools[tool.Name] = AgentToolDefinition{Tool: tool}
+		s.control.Tools[tool.Name] = loopToolDefinition(tool)
 	}
 }
 
@@ -714,7 +714,7 @@ func (s *AgentSession) AdoptLoopScheduler(scheduler *LoopScheduler, maxAge time.
 		Scheduler: scheduler,
 		MaxAge:    maxAge,
 	}) {
-		s.control.Tools[tool.Name] = AgentToolDefinition{Tool: tool}
+		s.control.Tools[tool.Name] = loopToolDefinition(tool)
 	}
 	s.control.stateMu.Unlock()
 	s.toolsMu.Lock()

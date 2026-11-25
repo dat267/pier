@@ -14,6 +14,36 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
+// loopToolSnippets are the scheduling tools' one-line system prompt entries
+// (D537). The prompt's tools section lists only tools with one (upstream
+// system-prompt.ts), so without them the model never saw these tools there,
+// while set_goal was listed with guidance and won every "keep doing X" request.
+var loopToolSnippets = map[string]string{
+	"cron_create":     "Schedule a prompt to run later, on a cron schedule or once",
+	"cron_list":       "List the prompts scheduled in this session",
+	"cron_delete":     "Cancel a scheduled prompt by its id",
+	"schedule_wakeup": "Set the delay before the next run of a self-paced /loop, or end it",
+}
+
+// loopToolGuidelines are the scheduling tools' prompt bullets. The first draws
+// the line against the goal tools: repetition or a set time is a schedule, one
+// objective worked on until it is done is a goal.
+var loopToolGuidelines = map[string][]string{
+	"cron_create": {
+		"Use cron_create, not set_goal, when the user wants something repeated on an interval or done at a set time (\"every 10 minutes\", \"check again at 5pm\"); a goal is one objective worked on until it is done.",
+		"Pass recurring false for a single later run.",
+	},
+	"schedule_wakeup": {
+		"At the end of each run of a self-paced /loop, call schedule_wakeup with the delay before the next run, or with stop true once nothing is left to do.",
+	},
+}
+
+// loopToolDefinition registers one scheduling tool with its prompt entry.
+func loopToolDefinition(tool agent.AgentTool) AgentToolDefinition {
+	return AgentToolDefinition{Tool: tool, PromptSnippet: loopToolSnippets[tool.Name],
+		PromptGuidelines: loopToolGuidelines[tool.Name]}
+}
+
 // loopSelfPacedNote tells the model a prompt is one run of a self-paced loop
 // (D537). It sees only the prompt, so without it a loop runs once: nothing says
 // schedule_wakeup applies.

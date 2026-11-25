@@ -414,9 +414,18 @@ func (s *LoopScheduler) fireDue() {
 		if !job.Recurring {
 			continue
 		}
-		next, ok := job.NextFire.AddDate(0, 0, job.EveryDays), true
+		// Advance from whichever is later, the last match or now. A wake-up can
+		// arrive long after the job was due (a suspended machine, or a timer that
+		// could not run), and one match past the last match leaves the job still
+		// due: the timer would find nextWait 0 and spin, enqueuing a prompt per
+		// turn for every match that fell in the gap.
+		from := job.NextFire
+		if now.After(from) {
+			from = now
+		}
+		next, ok := from.AddDate(0, 0, job.EveryDays), true
 		if job.EveryDays == 0 {
-			next, ok = job.Schedule.NextCronTime(job.NextFire)
+			next, ok = job.Schedule.NextCronTime(from)
 		}
 		if !ok {
 			continue

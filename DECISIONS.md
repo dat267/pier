@@ -8941,7 +8941,12 @@ and so part of the transcript like any typed message.
 The scheduler starts no timer until a job exists, and `Close` stops it, so an
 idle session holds no timer and a closed one leaves no goroutine. Recurring jobs
 expire after 30 days so a forgotten loop does not run forever, and the job count
-is capped, because a runaway loop is worse than a refused one. The user sees and
+is capped, because a runaway loop is worse than a refused one. A wake-up that
+arrives long after a job was due advances the job past the current time rather
+than past its own last match: the older rule left the job still due, so the timer
+found a zero wait and spun, enqueuing one prompt per missed match. A 2-hour
+suspend of a 5-minute job fired 24 prompts, and a laptop resume is exactly that
+case. A missed interval runs once, not once per missed occurrence. The user sees and
 cancels jobs without asking the agent: `/loop list` names each job's id,
 schedule, next run and prompt, `/loop stop <id>` cancels one and `/loop stop`
 all of them. Only those

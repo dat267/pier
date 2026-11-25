@@ -269,3 +269,45 @@ func TestCronListKeepsEachJobOnOneRow(t *testing.T) {
 		t.Fatalf("rows = %q", rows)
 	}
 }
+
+// D537: the scheduling tools reach the system prompt the way the goal tools do
+// (upstream system-prompt.ts lists only tools with a promptSnippet). Without an
+// entry they were absent from the tools section while set_goal was listed with
+// guidance, so the model reached for a goal when the user asked for repetition.
+// The bullets split the two: repetition is a loop, one objective is a goal. Both
+// install paths carry them: a session built with a scheduler, and the
+// interactive app's AdoptLoopScheduler.
+func TestLoopToolsContributeToSystemPrompt(t *testing.T) {
+	scheduler := NewLoopScheduler(nil, nil)
+	defer scheduler.Stop()
+	adopted := NewLoopScheduler(nil, nil)
+	defer adopted.Stop()
+	manager, dir := newTestSession(t)
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, StreamFn: stubStreamFn, ConvertToLlm: ConvertToLlm,
+		Model:         &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000},
+		Tools:         []agent.AgentTool{testTool("read")},
+		LoopScheduler: scheduler,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Dispose()
+	for _, step := range []string{"built", "adopted"} {
+		if step == "adopted" {
+			session.AdoptLoopScheduler(adopted, LoopRecurringMaxAge)
+		}
+		prompt := session.SystemPrompt()
+		for _, want := range []string{
+			"- cron_create: Schedule a prompt to run later, on a cron schedule or once",
+			"- cron_list: List the prompts scheduled in this session",
+			"- cron_delete: Cancel a scheduled prompt by its id",
+			"- schedule_wakeup: Set the delay before the next run of a self-paced /loop, or end it",
+			"Use cron_create, not set_goal, when the user wants something repeated on an interval or done at a set time",
+		} {
+			if !strings.Contains(prompt, want) {
+				t.Fatalf("%s: system prompt is missing %q:\n%s", step, want, prompt)
+			}
+		}
+	}
+}
