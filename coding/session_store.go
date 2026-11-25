@@ -1038,8 +1038,70 @@ func entryTypeFast(line string) (string, bool) {
 // the two rules are turned off here. That can only admit lines that failed
 // before; input that already decoded is unchanged.
 func decodeSessionLine(data []byte, v any) error {
-	return jsonv2.Unmarshal(data, v,
-		jsontext.AllowInvalidUTF8(true), jsontext.AllowDuplicateNames(true))
+	if err := jsonv2.Unmarshal(data, v,
+		jsontext.AllowInvalidUTF8(true), jsontext.AllowDuplicateNames(true)); err != nil {
+		// A timestamp is only ever fed to new Date(...) in the reference, so a
+		// number or null is a valid stamp there (new Date(1) is a real 1970
+		// value). The typed field is a Go string, which json refuses; retry with
+		// the stamp coerced to its JavaScript date string. This can only admit a
+		// line that failed before, so every line that decoded is unchanged.
+		line, ok := coerceSessionTimestamp(data)
+		if !ok {
+			return err
+		}
+		return jsonv2.Unmarshal(line, v,
+			jsontext.AllowInvalidUTF8(true), jsontext.AllowDuplicateNames(true))
+	}
+	return nil
+}
+
+// coerceSessionTimestamp replaces a top-level "timestamp" member whose value is
+// not a string with the string new Date(...) would produce for it, so the typed
+// decode can accept the line. It reports false when there is nothing to rewrite,
+// and leaves member order and every other byte alone.
+//
+// Reference: pi v1.6.0 faac5858 core/session-manager.ts:617 parseSessionEntryLine
+// keeps any line JSON.parse accepts, and the timestamp's only use is
+// new Date(entry.timestamp) (agent-session.ts entryTimestampMS), where a number
+// is milliseconds since the epoch and null is 0.
+func coerceSessionTimestamp(data []byte) ([]byte, bool) {
+	keys, values, err := readJSONObjectOrdered(data)
+	if err != nil {
+		return nil, false
+	}
+	raw, ok := values["timestamp"]
+	if !ok || len(raw) == 0 {
+		return nil, false
+	}
+	switch raw[0] {
+	case '"':
+		return nil, false // already a string: the fast path handles it
+	case 'n':
+		if string(raw) != "null" {
+			return nil, false
+		}
+		// new Date(null).getTime() is 0, the same "no time" the typed field
+		// already gives an absent stamp.
+		values["timestamp"], _ = ai.MarshalJSON("")
+	default:
+		var ms float64
+		if err := json.Unmarshal(raw, &ms); err != nil {
+			return nil, false
+		}
+		values["timestamp"], _ = ai.MarshalJSON(sessionTimestampFromMilliseconds(ms))
+	}
+	return joinRawJSONObject(keys, values), true
+}
+
+// sessionTimestampFromMilliseconds renders milliseconds since the epoch as the
+// session timestamp layout, so a coerced stamp parses back to the same instant.
+func sessionTimestampFromMilliseconds(ms float64) string {
+	if math.IsNaN(ms) || math.IsInf(ms, 0) {
+		// new Date(NaN).toISOString() throws, but the value can never reach a
+		// caller that compares times: an unparseable stamp reads as no time.
+		return ""
+	}
+	return time.UnixMilli(int64(ms)).UTC().Format(sessionTimestampLayout)
 }
 
 func UnmarshalFileEntry(line string) (*FileEntry, error) {

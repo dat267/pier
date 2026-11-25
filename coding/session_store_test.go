@@ -626,3 +626,69 @@ func TestLegacyFirstKeptIndexReportsTheSentinel(t *testing.T) {
 		t.Fatal(`a string member must not be treated as a number`)
 	}
 }
+
+// Reference: pi v1.6.0 faac5858 core/session-manager.ts:617 parseSessionEntryLine
+// is a bare JSON.parse, so a line whose "timestamp" is a number or null still
+// becomes an entry; the only consumer is new Date(...), where new Date(1) is a
+// valid 1970-01-01 value. The typed field is a Go string, so encoding/json
+// refused the line and the port dropped the entry (and, for a header, the whole
+// session). The tolerant retry admits only lines that failed before.
+func TestNonStringTimestampEntrySurvivesLoad(t *testing.T) {
+	dir := t.TempDir()
+	entry := `{"type":"message","id":"m1","timestamp":1,"parentId":null,"message":{"role":"user","content":"hi"}}`
+	path := writeSurrogateSession(t, dir, "3", entry)
+
+	manager, err := OpenSession(path, dir, "")
+	if err != nil {
+		t.Fatalf("OpenSession: %v", err)
+	}
+	branch := manager.GetBranch("")
+	if len(branch) != 1 {
+		t.Fatalf("loaded %d entries, want 1: the numeric-timestamp entry was dropped", len(branch))
+	}
+	if branch[0].ID != "m1" {
+		t.Errorf("entry id = %q, want m1", branch[0].ID)
+	}
+	// new Date(1).getTime() is 1ms after the epoch, so the stamp must parse as a
+	// time rather than read as missing.
+	if stamp := entryTimestampMS(&branch[0]); stamp != 1 {
+		t.Errorf("entryTimestampMS = %d, want 1", stamp)
+	}
+}
+
+func TestNullTimestampEntrySurvivesLoad(t *testing.T) {
+	dir := t.TempDir()
+	entry := `{"type":"message","id":"m2","timestamp":null,"parentId":null,"message":{"role":"user","content":"hi"}}`
+	path := writeSurrogateSession(t, dir, "3", entry)
+
+	manager, err := OpenSession(path, dir, "")
+	if err != nil {
+		t.Fatalf("OpenSession: %v", err)
+	}
+	branch := manager.GetBranch("")
+	if len(branch) != 1 || branch[0].ID != "m2" {
+		t.Fatalf("loaded %d entries, want 1 with id m2", len(branch))
+	}
+	// new Date(null).getTime() is 0, matching an absent stamp.
+	if stamp := entryTimestampMS(&branch[0]); stamp != 0 {
+		t.Errorf("entryTimestampMS = %d, want 0", stamp)
+	}
+}
+
+func TestNonStringTimestampHeaderKeepsSessionValid(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "s.jsonl")
+	header := `{"type":"session","version":3,"id":"h","timestamp":1,"cwd":"` + dir + `"}`
+	entry := `{"type":"message","id":"m3","timestamp":"2026-01-01T00:00:00.000Z","parentId":null,"message":{"role":"user","content":"hi"}}`
+	if err := os.WriteFile(path, []byte(header+"\n"+entry+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	manager, err := OpenSession(path, dir, "")
+	if err != nil {
+		t.Fatalf("OpenSession: %v", err)
+	}
+	if branch := manager.GetBranch(""); len(branch) != 1 {
+		t.Fatalf("loaded %d entries, want 1: a numeric header timestamp invalidated the session", len(branch))
+	}
+}
