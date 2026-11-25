@@ -31,6 +31,14 @@ func TestParseOpenRouterAuthorizationInput(t *testing.T) {
 		{"http://127.0.0.1:1234/oauth/callback/uuid", "", false},
 		{"  code=abc  ", "abc", true},
 		{"\uFEFFcode=abc\uFEFF", "abc", true},
+		// new URL() parses an absolute URL whatever its scheme, host or not, so
+		// these read the code from the URL branch. Requiring a Host sent them to the
+		// code= branch, which then found none.
+		{"javascript:alert(1)?code=x", "x", true},
+		{"file:///cb?code=f", "f", true},
+		{"mailto:a?code=m", "m", true},
+		// An absolute URL with no code and no "code=" is not a code at all.
+		{"javascript:alert(1)", "", false},
 	}
 	for _, testCase := range cases {
 		code, ok := ParseOpenRouterAuthorizationInput(testCase.input)

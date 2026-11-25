@@ -68,18 +68,20 @@ func ParseOpenRouterAuthorizationInput(input string) (string, bool) {
 	if value == "" {
 		return "", false
 	}
+	// new URL() accepts any absolute URL, with or without a host, and the code is
+	// read off whatever it parsed: "javascript:x?code=1", "file:///cb?code=1" and
+	// "mailto:a?code=1" all carry one. Requiring a Host sent those to the code=
+	// branch, and an absolute URL with no code is not a code at all.
 	if parsed, err := url.Parse(value); err == nil && parsed.Scheme != "" {
 		if parsed.Host == "" {
 			if normalized, _, ok := normalizeOAuthHTTPURL(value); ok {
 				parsed = normalized
 			}
 		}
-		if parsed.Host != "" {
-			if code := parsed.Query().Get("code"); code != "" {
-				return code, true
-			}
-			return "", false
+		if code := parsed.Query().Get("code"); code != "" {
+			return code, true
 		}
+		return "", false
 	}
 	if strings.Contains(value, "code=") {
 		query := strings.TrimPrefix(value, "?")
