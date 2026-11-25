@@ -264,6 +264,22 @@ func TestBuildChatTemplateValuesMatchesTheReference(t *testing.T) {
 			effort:  "",
 			omitted: []string{"reasoning"},
 		},
+		{
+			// resolveChatTemplateKwargValue returns the value unchanged only when
+			// it is not an object: an object or array without $var reaches the
+			// reasoning-effort fallback like any other variable form, so the
+			// reference sends "high", not the literal object.
+			name:   "an object without $var resolves to the reasoning effort",
+			values: map[string]json.RawMessage{"extra": raw(`{"a":1}`)},
+			effort: "high",
+			want:   map[string]any{"extra": "high"},
+		},
+		{
+			name:   "an array resolves to the reasoning effort",
+			values: map[string]json.RawMessage{"extra": raw(`[1,2]`)},
+			effort: "high",
+			want:   map[string]any{"extra": "high"},
+		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			model := &Model{ID: "m", API: APIOpenAICompletions, ThinkingLevelMap: testCase.levels}

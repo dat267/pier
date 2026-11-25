@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 
@@ -1039,7 +1040,19 @@ func buildChatTemplateValues(model *Model, options *OpenAICompletionsOptions, va
 			Var         string `json:"$var"`
 			OmitWhenOff bool   `json:"omitWhenOff"`
 		}
-		isObject := json.Unmarshal(raw, &value) == nil && value.Var != ""
+		// The reference returns the value unchanged only when it is not an
+		// object (`typeof value !== "object" || value === null`). A JSON object
+		// AND a JSON array are both "object" to it, so an object without $var
+		// and an array reach the reasoning-effort fallback instead of being sent
+		// literally; an object decodes into value, an array does not, so both
+		// are probed for object-ness.
+		isObject := false
+		if trimmed := bytes.TrimSpace(raw); len(trimmed) > 0 {
+			isObject = trimmed[0] == '{' || trimmed[0] == '['
+		}
+		if isObject {
+			_ = json.Unmarshal(raw, &value)
+		}
 		if !isObject {
 			var literal any
 			if err := json.Unmarshal(raw, &literal); err == nil {
