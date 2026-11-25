@@ -8981,7 +8981,10 @@ filter as you type.
 with "tomorrow" or the date when it is not today, so a daily loop's midnight run
 does not read as a bare "00:00". Each job stays on one row: a multi-line prompt
 the agent scheduled shows its first line and " …", so a later line such as "1.
-Read the logs" cannot pass for job 1.
+Read the logs" cannot pass for job 1. Between runs the footer lists "1 loop
+scheduled" (or "N loops") among its statuses, read from the app's scheduler at
+render time; adding or stopping a job prints a status and a fire starts a run, so
+each change is followed by a render.
 
 A fire takes the typed-input dispatch (`HandleScheduledSubmit`) with the editor
 detached: it steers a running turn, queues behind compaction or starts a run like
@@ -9008,7 +9011,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopFeatureToggleRespectsToolToggle`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
 `TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`,
-`TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`.
+`TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`, `TestFooterShowsScheduledLoops`.
 
 ### D538
 

@@ -223,6 +223,8 @@ func FooterLine(input FooterInput, width int) string {
 type FooterComponent struct {
 	session    FooterSession
 	footerData coding.ReadonlyFooterDataProvider
+	// loopCount reports the scheduled /loop jobs (D537); nil shows none.
+	loopCount func() int
 
 	// Render cache. The dispatcher invalidates the footer on every session
 	// event, so a cache hit means nothing that the line displays can have
@@ -239,6 +241,10 @@ type FooterComponent struct {
 func NewFooterComponent(session FooterSession, footerData coding.ReadonlyFooterDataProvider) *FooterComponent {
 	return &FooterComponent{session: session, footerData: footerData}
 }
+
+// SetLoopCount supplies the number of scheduled /loop jobs, which the app's
+// scheduler owns rather than the session.
+func (f *FooterComponent) SetLoopCount(count func() int) { f.loopCount = count }
 
 // SetSession replaces the session.
 func (f *FooterComponent) SetSession(session FooterSession) { f.session = session }
@@ -285,6 +291,17 @@ func (f *FooterComponent) Render(width int) []string {
 			statuses = append(statuses, "1 call in background")
 		case running > 1:
 			statuses = append(statuses, strconv.Itoa(running)+" calls in background")
+		}
+	}
+	// D537: a scheduled loop is otherwise invisible between its runs. Adding or
+	// stopping one prints a status and a fire starts a run, so each change is
+	// followed by a render.
+	if f.loopCount != nil {
+		switch scheduled := f.loopCount(); {
+		case scheduled == 1:
+			statuses = append(statuses, "1 loop scheduled")
+		case scheduled > 1:
+			statuses = append(statuses, strconv.Itoa(scheduled)+" loops scheduled")
 		}
 	}
 

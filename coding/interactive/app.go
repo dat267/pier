@@ -440,6 +440,7 @@ func NewApp(options AppOptions) *App {
 		app.session.AgentSession.AdoptLoopScheduler(app.loopScheduler, app.loopMaxAge)
 	}
 	app.footer = NewFooterComponent(app.session, app.footerData)
+	app.footer.SetLoopCount(app.loopScheduler.Count)
 	app.footerContainer.AddChild(app.footer)
 
 	// Display options: one value shared by the transcript, event dispatcher,

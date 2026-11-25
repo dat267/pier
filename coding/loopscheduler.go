@@ -264,6 +264,14 @@ func (s *LoopScheduler) Remove(id string) bool {
 // same time the scheduler fires by.
 func (s *LoopScheduler) Now() time.Time { return s.now() }
 
+// Count reports how many jobs are scheduled, without copying them, for the
+// footer's per-render read.
+func (s *LoopScheduler) Count() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.jobs)
+}
+
 func (s *LoopScheduler) Jobs() []LoopJob {
 	s.mu.Lock()
 	defer s.mu.Unlock()

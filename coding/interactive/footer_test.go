@@ -548,3 +548,28 @@ func TestFooterShowsRunningBackgroundCalls(t *testing.T) {
 		}
 	}
 }
+
+// D537: a scheduled loop is invisible between its runs. The footer shows how many
+// jobs are scheduled, among the statuses, and nothing when none are.
+func TestFooterShowsScheduledLoops(t *testing.T) {
+	newRendererTestTheme(t)
+	footer := NewFooterComponent(&fakeFooterSession{
+		manager: coding.InMemorySession("/p", nil, nil), model: &ai.Model{ID: "m", ContextWindow: 1000},
+	}, &fakeFooterData{statuses: map[string]string{}})
+	scheduled := 0
+	footer.SetLoopCount(func() int { return scheduled })
+	for count, want := range map[int]string{0: "", 1: "1 loop scheduled", 3: "3 loops scheduled"} {
+		scheduled = count
+		footer.Invalidate()
+		line := coding.StripAnsi(strings.Join(footer.Render(200), "\n"))
+		if want == "" {
+			if strings.Contains(line, "loop") {
+				t.Fatalf("no loop, footer = %q", line)
+			}
+			continue
+		}
+		if !strings.Contains(line, want) {
+			t.Fatalf("%d loops, footer = %q, want %q", count, line, want)
+		}
+	}
+}
