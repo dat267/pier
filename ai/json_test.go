@@ -362,3 +362,29 @@ func TestDecodeOrderedJSONFieldsRejectsTrailing(t *testing.T) {
 		t.Fatalf("trailing whitespace = %v/%v", fields, err)
 	}
 }
+
+// D253: the reference serializes every number with JSON.stringify, so a plain
+// integer past 2^53 would round (9007199254740993 becomes 9007199254740992) and
+// MaxInt64 would leave the int64 range. The port therefore keeps an integer
+// token's digits, which is the documented divergence, and this pins it for the
+// values where the two disagree. Floating-point spellings still go through the
+// double, so 1e999 is null and -0 is 0.
+func TestCanonicalizeKeepsIntegerTokensExactUnderD253(t *testing.T) {
+	for _, c := range []struct{ in, want string }{
+		{`{"a":9007199254740993}`, `{"a":9007199254740993}`},
+		{`{"a":9223372036854775807}`, `{"a":9223372036854775807}`},
+		{`{"a":123456789012345678901234567890}`, `{"a":123456789012345678901234567890}`},
+		// The floating-point spellings still take the JavaScript route.
+		{`{"a":1e999}`, `{"a":null}`},
+		{`{"a":-0}`, `{"a":0}`},
+		{`{"a":1.0}`, `{"a":1}`},
+	} {
+		got, err := canonicalJavaScriptJSON([]byte(c.in))
+		if err != nil {
+			t.Fatalf("%s: %v", c.in, err)
+		}
+		if string(got) != c.want {
+			t.Errorf("%s -> %s, want %s", c.in, got, c.want)
+		}
+	}
+}
