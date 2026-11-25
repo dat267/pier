@@ -552,6 +552,11 @@ func TestBackgroundThresholdFeatureRow(t *testing.T) {
 	if row == nil {
 		t.Fatalf("/features holds no background row: %+v", list.Items())
 	}
+	// Every tool call is eligible (executeWithBackground has no name filter), so
+	// the description must not narrow it to shell or MCP calls.
+	if !strings.Contains(row.Description, "tool call") || strings.Contains(row.Description, "shell or MCP") {
+		t.Fatalf("the row describes the wrong scope: %q", row.Description)
+	}
 	// It is a choice row, and its default is the one-minute threshold the harness
 	// uses, not a boolean.
 	if len(row.Values) < 3 {

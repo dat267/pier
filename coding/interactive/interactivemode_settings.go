@@ -574,7 +574,7 @@ func (w *SettingsWiring) featureToggles() []FeatureToggle {
 		{
 			ID:    "background-tools",
 			Label: "Background long tool calls",
-			Description: "Move a running shell or MCP call to the background after this long, " +
+			Description: "Move a tool call still running after this long to the background, " +
 				"so the turn stays responsive; the model is told once when it ends",
 			Values:       coding.BackgroundToolCallChoices(),
 			CurrentValue: backgroundToolCallChoice(w.Settings.GetBackgroundToolCallThreshold()),
