@@ -501,7 +501,9 @@ func TestScheduledSubmitKeepsTheDraft(t *testing.T) {
 			t.Fatalf("streaming=%v: the fire replaced the draft with %q", streaming, got)
 		}
 	}
-	if len(session.prompts) != 1 || session.prompts[0] != "check the deploy" || session.streamingBehaviors[0] != "steer" {
+	// It waits for the running turn instead of steering it: a periodic prompt
+	// must not cut into the work in progress.
+	if len(session.prompts) != 1 || session.prompts[0] != "check the deploy" || session.streamingBehaviors[0] != "followUp" {
 		t.Fatalf("a fire during a run = %q %q", session.prompts, session.streamingBehaviors)
 	}
 	if len(inputs) != 1 || inputs[0] != "check the deploy" {
@@ -515,7 +517,7 @@ func TestScheduledSubmitKeepsTheDraft(t *testing.T) {
 	if got := editor.GetText(); got != "half-typed draft" {
 		t.Fatalf("a fire during compaction replaced the draft with %q", got)
 	}
-	if queued := submit.Queue.TakeCompactionQueue(); len(queued) != 1 || queued[0].Text != "check the deploy" {
+	if queued := submit.Queue.TakeCompactionQueue(); len(queued) != 1 || queued[0].Text != "check the deploy" || queued[0].Mode != "followUp" {
 		t.Fatalf("compaction queue = %+v", queued)
 	}
 	editor.SetText("")

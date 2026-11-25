@@ -8996,9 +8996,11 @@ render time; adding or stopping a job prints a status and a fire starts a run, s
 each change is followed by a render.
 
 A fire takes the typed-input dispatch (`HandleScheduledSubmit`) with the editor
-detached: it steers a running turn, queues behind compaction or starts a run like
-typed text, but it never clears the draft the user is writing or adds the prompt
-to the editor history.
+detached: it queues behind compaction or starts a run like typed text, but it
+never clears the draft the user is writing or adds the prompt to the editor
+history. Unlike typed text it does not steer a running turn: it is queued as a
+follow-up for when the run stops, so a periodic prompt cannot cut into the work
+in progress every interval.
 
 Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopSchedulerFiresAndDeletes`, `TestLoopSchedulerRecurringStays`,

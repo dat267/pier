@@ -491,7 +491,7 @@ func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 	if w.Session != nil && w.Session.IsCompacting() {
 		if w.Queue != nil {
 			if w.scheduled {
-				w.Queue.queueForCompaction(text, "steer")
+				w.Queue.queueForCompaction(text, "followUp")
 			} else {
 				w.Queue.QueueCompactionMessage(text, "steer")
 			}
@@ -507,7 +507,13 @@ func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 	if w.Session != nil && w.Session.IsStreaming() {
 		addHistory(text)
 		clearEditor()
-		_ = w.Session.Prompt(ctx, text, &coding.PromptOptions{StreamingBehavior: "steer"})
+		// A /loop fire waits for the running turn (D537): a periodic prompt
+		// steering into the work in progress would cut it off every interval.
+		behavior := "steer"
+		if w.scheduled {
+			behavior = "followUp"
+		}
+		_ = w.Session.Prompt(ctx, text, &coding.PromptOptions{StreamingBehavior: behavior})
 		if w.Queue != nil {
 			w.Queue.UpdatePendingMessagesDisplay()
 		}
