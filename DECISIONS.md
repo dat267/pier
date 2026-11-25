@@ -9097,6 +9097,13 @@ draws it as a collapsed "[background] bg-… (bash) finished" block that expands
 to the output file and the fenced result. It is not added to the editor
 history, so Up never recalls it as typed input.
 
+While any displaced call runs, the footer says so among its statuses ("1 call
+in background"), read from `BackgroundCallCount` at render time, so the user
+knows a command is still running after its frame scrolls away. No new session
+event is needed (and none reaches RPC clients): a call is displaced as its frame
+ends, and one that finishes wakes the agent, so each change is followed by a
+render.
+
 A call that finishes inside the threshold takes the unchanged path: same result,
 same events, no handle, no registry entry. That is pinned by
 `TestBackgroundFastCallIsUnchanged`, which compares the two paths' bytes and counts
@@ -9119,4 +9126,4 @@ Tests: `TestLoopToolRenderers`, `TestLoopToolsHaveRenderers`,
 `TestBackgroundFastCallLeavesNoFile`, `TestBackgroundRealShellCallStreamsToFile`,
 `TestBackgroundOutputFileHoldsLatestSnapshot`, `TestBackgroundNoticeCutKeepsUTF8`, `TestBashFrameRendersBackgroundHandle`,
 `TestBackgroundHandleRendersInEveryFrame`, `TestParseCompletionNotice`,
-`TestTranscriptBackgroundNotice`.
+`TestTranscriptBackgroundNotice`, `TestFooterShowsRunningBackgroundCalls`.

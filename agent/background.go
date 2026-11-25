@@ -70,6 +70,18 @@ func (a *Agent) backgroundRegistry() *backgroundRegistry {
 	return a.backgroundCalls
 }
 
+// BackgroundCallCount reports how many displaced tool calls are still running,
+// so the host can show it (D538).
+func (a *Agent) BackgroundCallCount() int {
+	a.mu.Lock()
+	registry := a.backgroundCalls
+	a.mu.Unlock()
+	if registry == nil {
+		return 0
+	}
+	return registry.active()
+}
+
 // CloseBackgroundCalls stops every displaced tool call. It is the session's job
 // to call it: a displaced call may outlive its turn and its run, never the
 // session.

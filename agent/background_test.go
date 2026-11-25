@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -388,6 +389,10 @@ func TestBackgroundThroughARun(t *testing.T) {
 	if atomic.LoadInt32(&running) != 1 {
 		t.Fatalf("the tool ran %d times, want 1", running)
 	}
+	// The host can show the call is still running (D538's footer count).
+	if got := agentInstance.BackgroundCallCount(); got != 1 {
+		t.Fatalf("BackgroundCallCount = %d while the call runs, want 1", got)
+	}
 	var sawHandle bool
 	for _, message := range sink.messages() {
 		if strings.Contains(message, "still running") {
@@ -408,6 +413,13 @@ func TestBackgroundThroughARun(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("the backgrounded call never finished")
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for agentInstance.BackgroundCallCount() != 0 {
+		if time.Now().After(deadline) {
+			t.Fatalf("BackgroundCallCount = %d after the call ended", agentInstance.BackgroundCallCount())
+		}
+		runtime.Gosched()
 	}
 }
 

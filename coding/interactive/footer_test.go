@@ -514,3 +514,37 @@ func TestFormatTokensExtendsPastAMillion(t *testing.T) {
 		}
 	}
 }
+
+// backgroundFooterSession is a footer session with calls running in the
+// background.
+type backgroundFooterSession struct {
+	*fakeFooterSession
+	running int
+}
+
+func (s *backgroundFooterSession) BackgroundCallCount() int { return s.running }
+
+// D538: once a backgrounded call's handle line scrolls away, nothing said a
+// command was still running. The footer shows how many are, among the statuses,
+// and nothing when none are.
+func TestFooterShowsRunningBackgroundCalls(t *testing.T) {
+	newRendererTestTheme(t)
+	session := &backgroundFooterSession{fakeFooterSession: &fakeFooterSession{
+		manager: coding.InMemorySession("/p", nil, nil), model: &ai.Model{ID: "m", ContextWindow: 1000},
+	}}
+	footer := NewFooterComponent(session, &fakeFooterData{statuses: map[string]string{}})
+	for running, want := range map[int]string{0: "", 1: "1 call in background", 2: "2 calls in background"} {
+		session.running = running
+		footer.Invalidate()
+		line := coding.StripAnsi(strings.Join(footer.Render(200), "\n"))
+		if want == "" {
+			if strings.Contains(line, "background") {
+				t.Fatalf("no running call, footer = %q", line)
+			}
+			continue
+		}
+		if !strings.Contains(line, want) {
+			t.Fatalf("%d running, footer = %q, want %q", running, line, want)
+		}
+	}
+}

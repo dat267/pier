@@ -1196,6 +1196,15 @@ func (s *AgentSession) GetSessionStats() *SessionStats {
 // once, with one notification, as ordinary user input. It runs on the call's own
 // goroutine, never the owner loop, and it never writes transcript state directly:
 // the notice reaches the transcript through a run, the same way a typed one does.
+// BackgroundCallCount reports how many of this session's tool calls are still
+// running in the background (D538).
+func (s *AgentSession) BackgroundCallCount() int {
+	if s.Agent == nil {
+		return 0
+	}
+	return s.Agent.BackgroundCallCount()
+}
+
 func (s *AgentSession) watchBackgroundCall(handle agent.ToolCallHandle) {
 	if s.Agent == nil {
 		return

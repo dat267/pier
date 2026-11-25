@@ -275,6 +275,18 @@ func (f *FooterComponent) Render(width int) []string {
 			statuses = append(statuses, sanitizeStatusText(extensionStatuses[key]))
 		}
 	}
+	// D538: a call moved to the background keeps running after its frame
+	// scrolls away, so the footer says how many still are. Every change is
+	// followed by a render: a call is displaced as its frame ends, and one that
+	// finishes wakes the agent.
+	if counter, ok := f.session.(interface{ BackgroundCallCount() int }); ok {
+		switch running := counter.BackgroundCallCount(); {
+		case running == 1:
+			statuses = append(statuses, "1 call in background")
+		case running > 1:
+			statuses = append(statuses, strconv.Itoa(running)+" calls in background")
+		}
+	}
 
 	modelWindow := int64(0)
 	var modelID string
