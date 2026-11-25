@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Reference: pi v1.5.0 f9a26365 packages/ai/src/utils/validation.ts and
@@ -325,5 +326,40 @@ func TestValidateToolArgumentsDynamicRef(t *testing.T) {
 	missing := `{"type":"object","properties":{"x":{"$dynamicRef":"#missing"}}}`
 	if got := validationOutcome(t, missing, `{"x":1}`); !strings.Contains(got, "does not match") {
 		t.Errorf("missing dynamic anchor: %s", got)
+	}
+}
+
+// D539: the reference recurses through a $ref ring until Node throws
+// RangeError: Maximum call stack size exceeded. Pier tracks the (schema, value)
+// pairs already on the walk, so a cycle returns instead of recursing, and all
+// four shapes terminate with a result.
+func TestPiSchemaRefCycleTerminates(t *testing.T) {
+	cases := map[string]struct{ schema, want string }{
+		"direct cycle": {`{"$defs":{"a":{"$ref":"#/$defs/b"},"b":{"$ref":"#/$defs/a"}},"$ref":"#/$defs/a"}`, "ok"},
+		"self cycle":   {`{"$defs":{"a":{"$ref":"#/$defs/a"}},"$ref":"#/$defs/a"}`, "ok"},
+		"object cycle": {`{"$defs":{"a":{"type":"object","properties":{"n":{"$ref":"#/$defs/a"}}}},"$ref":"#/$defs/a"}`, "ok"},
+		"array cycle":  {`{"$defs":{"a":{"type":"array","items":{"$ref":"#/$defs/a"}}},"$ref":"#/$defs/a"}`, "reject"},
+	}
+	for name, tc := range cases {
+		done := make(chan error, 1)
+		go func() {
+			_, err := ValidateToolArguments(
+				Tool{Name: "t", Parameters: json.RawMessage(tc.schema)},
+				ToolCall{Name: "t", Arguments: json.RawMessage(`{}`)},
+			)
+			done <- err
+		}()
+		select {
+		case err := <-done:
+			got := "ok"
+			if err != nil {
+				got = "reject"
+			}
+			if got != tc.want {
+				t.Fatalf("%s: outcome %s, want %s (err %v)", name, got, tc.want, err)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatalf("%s: walking a ref cycle hung", name)
+		}
 	}
 }

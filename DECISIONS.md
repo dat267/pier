@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D538)
+# Deliberate divergences from pi (D1–D539)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9099,6 +9099,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`, `TestCronListKeepsEachJobOnOneRow`, `TestSessionReplacementDropsScheduledLoops`, `TestLoopFireWaitsForAnIdleAgent`, `TestLoopSchedulerPostpone`, `TestLoopStopAllCountsInWords`, `TestLoopCommandArgumentCompletions`, `TestLoopFeatureOffNamesTheStoppedLoops`, `TestLoopStopTakesSeveralIds`, `TestLoopUsageNamesTheSubcommands`, `TestLoopToolsContributeToSystemPrompt`, `TestFooterHoldsOnlyContextModelAndDir`,
 `TestEditorLowerDividerCountsBackgroundCalls`.
 
+
 ### D538
 
 **A tool call that outlives a threshold is backgrounded, and the model is woken once.**
@@ -9228,3 +9229,22 @@ Tests: `TestLoopToolRenderers`, `TestLoopToolsHaveRenderers`,
 `TestBackgroundHandleRendersInEveryFrame`, `TestParseCompletionNotice`,
 `TestTranscriptBackgroundNotice`, `TestFooterHoldsOnlyContextModelAndDir`, `TestEditorLowerDividerCountsBackgroundCalls`,
 `TestEditorLowerDividerLabelTakesTheBorderColor`.
+
+### D539
+
+**A `$ref` cycle in a tool schema terminates instead of overflowing the stack.**
+
+Reference: pi v1.5.2 (`b4afdddf`), `packages/schema/src/validator.ts` `check`
+recurses through `$ref` until Node throws `RangeError: Maximum call stack size
+exceeded`. Measured on the built package: a direct cycle (`a -> b -> a`), a self
+cycle (`a -> a`), a 40-deep ref ring, and an object cycle all recurse until that
+throw; an array cycle answers `check=false` first and never recurses far enough.
+
+Pier tracks the `(schema, value)` pairs already on the walk's stack
+(`piCheckVisit`), so a pair that re-enters returns instead of recursing. All four
+shapes terminate in microseconds and report a result: the direct, self and
+object cycles accept `{}`, the array cycle rejects it. Repeated validation of the
+same malformed schema therefore cannot exhaust the goroutine stack, which would
+be a crash rather than an error in Go.
+
+Test: `TestPiSchemaRefCycleTerminates`.
