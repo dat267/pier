@@ -389,7 +389,7 @@ func (s *AltScreen) ResetTextSelection() {
 
 // SetLayoutRoot installs the viewport layout root.
 func (s *AltScreen) SetLayoutRoot(component Component) {
-	if s.getLayoutRoot() == component {
+	if sameComponent(s.getLayoutRoot(), component) {
 		return
 	}
 	s.setLayoutRootValue(component)

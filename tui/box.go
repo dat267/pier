@@ -73,7 +73,7 @@ func (b *Box) AddChild(component Component) {
 // RemoveChild removes a child.
 func (b *Box) RemoveChild(component Component) {
 	for i, child := range b.Children {
-		if child == component {
+		if sameComponent(child, component) {
 			last := len(b.Children) - 1
 			copy(b.Children[i:], b.Children[i+1:])
 			b.Children[last] = nil

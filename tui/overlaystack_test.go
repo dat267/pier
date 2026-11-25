@@ -323,3 +323,54 @@ type overlaySliceComponent []string
 
 func (c overlaySliceComponent) Render(int) []string { return c }
 func (overlaySliceComponent) Invalidate()           {}
+
+// tui.ts:736 compares focus with `===`, which never throws for any object. Go's
+// interface == panics when both operands share a non-comparable dynamic type, so
+// a value-type Component whose struct holds a slice crashed SetFocus. Find is
+// reached from the exported Renderer.SetFocus, so any caller-supplied Component
+// can trigger it.
+type uncomparableCell struct{ cells []string }
+
+func (c uncomparableCell) Render(int) []string { return c.cells }
+func (c uncomparableCell) Invalidate()         {}
+
+func TestSetFocusToleratesAnUncomparableComponent(t *testing.T) {
+	renderer := NewRenderer(&recordingTerminal{width: 40, height: 10})
+	renderer.ShowOverlay(NewText("overlay", 0, 0, nil), nil)
+
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			t.Fatalf("SetFocus panicked on an uncomparable Component: %v", recovered)
+		}
+	}()
+	renderer.SetFocus(uncomparableCell{cells: []string{"x"}})
+	// A second uncomparable focus makes the stack compare two of them.
+	renderer.SetFocus(uncomparableCell{cells: []string{"y"}})
+}
+
+// The same comparison appears wherever the port matches a Component by identity:
+// removing a child, installing a layout root, hiding or unfocusing an overlay.
+// The reference's === never throws, so none of them may panic.
+func TestComponentIdentityComparisonsTolerateUncomparableValues(t *testing.T) {
+	first := uncomparableCell{cells: []string{"a"}}
+	second := uncomparableCell{cells: []string{"b"}}
+
+	container := &Container{}
+	container.AddChild(first)
+	container.AddChild(second)
+	container.RemoveChild(first)
+
+	box := NewBox(0, 0, nil)
+	box.AddChild(first)
+	box.AddChild(second)
+	box.RemoveChild(first)
+
+	screen := NewAltScreen(&recordingTerminal{width: 40, height: 10}, false, t.TempDir(), AltScreenOptions{})
+	screen.SetLayoutRoot(first)
+	screen.SetLayoutRoot(second)
+	renderer := NewRenderer(&recordingTerminal{width: 40, height: 10})
+	handle := renderer.ShowOverlay(first, nil)
+	renderer.SetFocus(first)
+	handle.Hide()
+	handle.Unfocus(second, true)
+}

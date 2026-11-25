@@ -355,7 +355,7 @@ func (c *Container) InsertChildAt(index int, component Component) {
 // RemoveChild removes a child component.
 func (c *Container) RemoveChild(component Component) {
 	for i, child := range c.Children {
-		if child == component {
+		if sameComponent(child, component) {
 			last := len(c.Children) - 1
 			copy(c.Children[i:], c.Children[i+1:])
 			c.Children[last] = nil

@@ -746,7 +746,7 @@ func (t *Renderer) isComponentMounted(component Component) bool {
 }
 
 func (t *Renderer) containsComponent(root Component, target Component) bool {
-	if root == target {
+	if sameComponent(root, target) {
 		return true
 	}
 	// Upstream checks `root instanceof Container`; in Go any component that

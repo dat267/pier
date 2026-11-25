@@ -84,11 +84,27 @@ func (s *overlayStack) Find(component Component) *overlayEntry {
 		return nil
 	}
 	for _, entry := range s.entries {
-		if entry.component == component {
+		if sameComponent(entry.component, component) {
 			return entry
 		}
 	}
 	return nil
+}
+
+// sameComponent reports whether two components are the same value. The reference
+// compares with `===`, which never throws; Go's interface == panics when both
+// operands share a non-comparable dynamic type (a value-type Component whose
+// struct holds a slice, for example), so the comparison is guarded.
+func sameComponent(a, b Component) (same bool) {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	defer func() {
+		if recover() != nil {
+			same = false
+		}
+	}()
+	return a == b
 }
 
 // IsOverlayComponent reports whether a component is an overlay in the stack.
@@ -160,7 +176,7 @@ func (s *overlayStack) setFocus(component Component, restoreMode string) {
 	restoreStatus, restoreOverlay, restoreBlockedBy, restoreResumeTo, restoreTarget := s.visibleRestore()
 
 	if nextFocus != nil && !nextFocusIsOverlay {
-		if restoreStatus == "blocked" && restoreBlockedBy == previousFocus {
+		if restoreStatus == "blocked" && sameComponent(restoreBlockedBy, previousFocus) {
 			if !restoreResumeTo || !s.host.componentMounted(restoreBlockedBy) {
 				nextFocus = s.resolveBlockedResume(restoreOverlay, restoreResumeTo, restoreTarget)
 			} else {
@@ -176,7 +192,7 @@ func (s *overlayStack) setFocus(component Component, restoreMode string) {
 			}
 		}
 	} else if nextFocus == nil {
-		if restoreStatus == "blocked" && restoreBlockedBy == previousFocus {
+		if restoreStatus == "blocked" && sameComponent(restoreBlockedBy, previousFocus) {
 			nextFocus = s.resolveBlockedResume(restoreOverlay, restoreResumeTo, restoreTarget)
 		} else if restoreMode == "clear" {
 			s.ClearRestore()
@@ -274,7 +290,7 @@ func (s *overlayStack) IsFocusAncestor(entry *overlayEntry, component Component)
 	// each step follows a preFocus that is either nil or an earlier entry, so
 	// bounding the walk by the stack depth both terminates and drops the map.
 	for current, steps := entry.preFocus, 0; current != nil && steps <= len(s.entries); steps++ {
-		if current == component {
+		if sameComponent(current, component) {
 			return true
 		}
 		if parent := s.Find(current); parent != nil {
@@ -310,7 +326,7 @@ func (s *overlayStack) bumpFocusOrder(entry *overlayEntry) {
 // pre-focus, so they fall back to what it had saved.
 func (s *overlayStack) retargetPreFocus(removed *overlayEntry) {
 	for _, overlay := range s.entries {
-		if overlay != removed && overlay.preFocus == removed.component {
+		if overlay != removed && sameComponent(overlay.preFocus, removed.component) {
 			overlay.preFocus = removed.preFocus
 		}
 	}
@@ -318,7 +334,7 @@ func (s *overlayStack) retargetPreFocus(removed *overlayEntry) {
 
 // refocusAfterRemoval hands focus on when the removed overlay held it.
 func (s *overlayStack) refocusAfterRemoval(entry *overlayEntry) {
-	if s.focus != entry.component {
+	if !sameComponent(s.focus, entry.component) {
 		return
 	}
 	if topVisible := s.TopmostVisible(); topVisible != nil {
@@ -369,7 +385,7 @@ func (s *overlayStack) SetHidden(entry *overlayEntry, hidden bool, nonCapturing 
 	entry.hidden = hidden
 	if hidden {
 		s.clearRestoreFor(entry)
-		if s.focus == entry.component {
+		if sameComponent(s.focus, entry.component) {
 			s.refocusAfterRemoval(entry)
 		}
 	} else if !nonCapturing && s.Visible(entry) {
@@ -394,13 +410,13 @@ func (s *overlayStack) FocusEntry(entry *overlayEntry) bool {
 // pending restore) gives it to the requested target when there is one, and stops
 // claiming it otherwise. It reports whether it applied anything.
 func (s *overlayStack) Unfocus(entry *overlayEntry, target Component, hasTarget bool) bool {
-	isFocused := s.focus == entry.component
+	isFocused := sameComponent(s.focus, entry.component)
 	state := s.restore
 	hasPendingRestore := state.status != "inactive" && state.overlay == entry
 	if !isFocused && !hasPendingRestore {
 		return false
 	}
-	if state.status == "blocked" && state.overlay == entry && s.focus == state.blocked {
+	if state.status == "blocked" && state.overlay == entry && sameComponent(s.focus, state.blocked) {
 		if hasTarget {
 			s.restore = overlayFocusRestoreState{
 				status: "blocked", overlay: entry, blocked: state.blocked, target: target,
