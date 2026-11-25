@@ -8969,7 +8969,11 @@ the skipped local hour does not exist, so rebuilding it normalises back to the s
 clock and the cursor never moves: the walk burned its whole budget and reported no
 match. Every 02:xx daily job was therefore permanently dead in a DST zone, which
 cost 5.8 s of futile search for each of the 60 minute values, and a schedule the
-tool had accepted never fired. Advancing by an hour of real time moves past the gap.
+tool had accepted never fired. Advancing by an hour of real time moves past the gap. A fall-back keeps the repeated wall hour,
+so a daily 01:30 job fires for both 01:30 EDT and 01:30 EST and a `*/5` loop takes
+13 fires in that hour rather than 12. That is the wall clock the user asked about,
+it is bounded to one hour once a year, and it is the opposite of the gap, where
+nothing would ever fire.
 
 An interval snaps to the nearest step that divides its unit, because a cron step
 only spaces runs evenly when it does: `*/45` fires at :00 and :45, gaps of 45 and
