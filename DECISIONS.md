@@ -9122,12 +9122,6 @@ one `/loop` produced duplicate ticks, and because a scheduler's id counter resta
 a stale job and a fresh one could share an id: `cron_delete` then reported "No
 scheduled job" for a job it had just removed.
 
-Adopting a scheduler drains the outgoing one first. A rebind that left jobs on the
-previous scheduler kept them firing on their own timer with nobody reading them, so
-one `/loop` produced duplicate ticks, and because a scheduler's id counter restarts,
-a stale job and a fresh one could share an id: `cron_delete` then reported "No
-scheduled job" for a job it had just removed.
-
 The one knob is the threshold itself, in `/features`, because how long is "too
 long" depends on the work: a one-minute default suits a shell command, while
 someone running long builds wants ten or thirty, and someone who would rather
