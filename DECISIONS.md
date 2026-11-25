@@ -8928,7 +8928,10 @@ A job is in-memory only: nothing about it is written to the session file or the
 agent directory, and closing the TUI drops it, because the next process starts
 with an empty scheduler. The reference persists a durable job to
 `.claude/scheduled_tasks.json`; pier has no such file, so a loop always ends with
-the session. What survives is the prompts a loop fired, which are ordinary input
+the session. That includes replacing the session inside one process: the
+scheduler is the app's, but `/new`, a resume, a fork or an import drops every job
+(`teardownCurrentSession`), so a loop never fires into a conversation that did not
+set it up. What survives is the prompts a loop fired, which are ordinary input
 and so part of the transcript like any typed message.
 
 The scheduler starts no timer until a job exists, and `Close` stops it, so an
@@ -9028,7 +9031,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
 `TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`,
 `TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`, `TestFooterShowsScheduledLoops`, `TestSelfPacedLoopPromptCarriesTheNote`,
-`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`, `TestCronListKeepsEachJobOnOneRow`.
+`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`, `TestCronListKeepsEachJobOnOneRow`, `TestSessionReplacementDropsScheduledLoops`.
 
 ### D538
 

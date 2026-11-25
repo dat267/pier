@@ -284,6 +284,13 @@ func (a *App) teardownCurrentSession() {
 	// installSession).
 	_ = a.session.Sessions.FlushWrites()
 	a.session.Dispose()
+	// A scheduled loop belongs to the conversation it was set up in (D537).
+	// The scheduler is the app's and outlives the session, so its jobs are
+	// dropped here, which every replacement (new, resume, fork, import) passes
+	// through; otherwise they would fire into a session that never asked.
+	if a.loopScheduler != nil {
+		a.loopScheduler.RemoveAll()
+	}
 	// The working period and the indicator that showed it belonged to the
 	// session going away: drop both, so nothing works, spins or adds the old
 	// run's time to the new session's first notice (D402). Upstream's own

@@ -329,3 +329,30 @@ func TestSessionReplacementRejectsAnAlreadyAdmittedOldListener(t *testing.T) {
 		t.Fatalf("an admitted outgoing listener contaminated the replacement transcript:\n%s", chat)
 	}
 }
+
+// D537: a scheduled loop belongs to the session it was set up in. The scheduler
+// is the app's, so jobs used to survive /new, a resume, a fork or an import and
+// fire their prompts into a conversation that never asked for them. Every
+// replacement goes through teardownCurrentSession, which now drops them.
+func TestSessionReplacementDropsScheduledLoops(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	if _, err := app.loopScheduler.Add("*/5 * * * *", "check the deploy", true, 0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.loopScheduler.SetWakeup(time.Minute, "watch the queue"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.applySessionReplacement(coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{
+		Persist: new(bool),
+	})); err != nil {
+		t.Fatalf("switch: %v", err)
+	}
+	if jobs := app.loopScheduler.Jobs(); len(jobs) != 0 {
+		t.Fatalf("the new session inherited %d loop(s): %+v", len(jobs), jobs)
+	}
+	// The scheduler keeps working for the new session.
+	if _, err := app.loopScheduler.Add("*/5 * * * *", "new session's loop", true, 0); err != nil {
+		t.Fatalf("scheduling after the switch: %v", err)
+	}
+}
