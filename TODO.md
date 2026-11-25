@@ -1,4 +1,35 @@
-# Automatic backgrounding of long tool calls
+# A session switch reopens the target on the owner loop
+
+Status: reproduced, not fixed. `internal/uiblock` fails on it.
+
+`applySessionReplacement` (coding/interactive/sessionswitch.go:263) calls
+`coding.OpenSession` on the owner loop when `SessionFileAppeared()` reports that the
+outgoing run's last append created the target after the off-loop open. The reopen
+exists for correctness (D493): it is the only way to load the settled tail and
+avoid the `file exists` claim failure. But it runs the whole load on the loop:
+`os.Stat`, `os.Chmod`, then `LoadEntriesFromFileBuffered` with its parallel scan,
+which the loop then waits for.
+
+Measured: 16.9ms for a 20,000-entry session, growing linearly, during which no
+frame or key is processed. `internal/uiblock` reports it as a bare blocking
+goroutine reachable from the loop:
+
+    goroutine coding/session_store.go:959:4: blocking work on a bare goroutine
+    reachable from the UI loop; use internal/offloop
+      chain: runSessionFileWork.done -> applyOpenedSession ->
+      applySessionReplacement -> OpenSession -> LoadEntriesFromFileBuffered
+
+That chain is right, unlike my first read of it: `applyOpenedSession` itself does
+not open, but `applySessionReplacement` does.
+
+Why it is not fixed here: the reopen must happen AFTER `teardownCurrentSession`
+settles the outgoing run, and that teardown runs on the loop. Moving the reopen to
+the worker needs the worker to wait for a loop-side teardown, so it is a dispatch
+change like the R quadratic (D-XXX pending), not an inline edit. Until then
+`internal/uiblock`'s `TestBareBlockingGoroutinesAreAllowlisted` fails, so CI is red
+on this alone.
+
+# Automatic backgrounding of long tool calls# Automatic backgrounding of long tool calls
 
 Status: implemented (D538). The plan below is kept because the order it chose is
 why the fast path stayed byte-identical.
