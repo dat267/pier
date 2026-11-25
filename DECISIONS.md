@@ -8705,7 +8705,15 @@ strings measured 45 ns. The remaining gap is the allocation and ASCII scan of a
 mixed-case string: a hand-written `unsafe.String` variant reached 111 ns, too
 little to justify `unsafe` over the standard library.
 
-Tests: `TestJSLowerMatchesJS`, `BenchmarkJSLower`.
+The Bedrock model matchers (`GetModelMatchCandidates`, `IsAnthropicClaudeModel`)
+used `strings.ToLower` where the reference calls `toLowerCase()`, which differs on
+U+0130 (one rune here, two there) and the Greek final sigma. Their needles are
+ASCII today, so no decision changed, but the mapping now matches the reference's
+and D518's rule.
+
+Tests: `TestJSLowerMatchesJS`, `BenchmarkJSLower`,
+`TestGetModelMatchCandidatesLowersLikeJavaScript`,
+`TestIsAnthropicClaudeModelLowersLikeJavaScript`.
 
 ### D519
 

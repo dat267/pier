@@ -247,3 +247,33 @@ func TestBedrockCandidateSeparatorsUseJavaScriptWhitespace(t *testing.T) {
 		t.Errorf("normalized %q, want %q", got, "a-b")
 	}
 }
+
+// D518: model matching lowercases with JS toLowerCase, whose full mapping differs
+// from strings.ToLower on U+0130 and the Greek final sigma. The reference's
+// getModelMatchCandidates calls value.toLowerCase(), so the candidate must be
+// "i̇" (i + combining dot) for İ and "ας" for ΑΣ, not "i" and "ασ".
+func TestGetModelMatchCandidatesLowersLikeJavaScript(t *testing.T) {
+	for _, tc := range []struct{ id, want string }{
+		{"İ", "i̇"},
+		{"ΑΣ", "ας"},
+		{"CLAUDE-OPUS-4-6", "claude-opus-4-6"},
+	} {
+		candidates := GetModelMatchCandidates(tc.id, "")
+		if len(candidates) == 0 || candidates[0] != tc.want {
+			t.Fatalf("candidates(%q) = %q, want first %q", tc.id, candidates, tc.want)
+		}
+	}
+}
+
+// The same JS mapping applies to the Claude-model check, which the reference
+// writes as model.id.toLowerCase().
+func TestIsAnthropicClaudeModelLowersLikeJavaScript(t *testing.T) {
+	model := &Model{ID: "İ", Name: "ΑΣ anthropic.claude"}
+	if !IsAnthropicClaudeModel(model) {
+		t.Fatal("the name's anthropic.claude must still match")
+	}
+	// U+0130 in the id must not become a bare "i" that hides the dotless form.
+	if IsAnthropicClaudeModel(&Model{ID: "anthropic/claude", Name: ""}) != true {
+		t.Fatal("anthropic/claude must match")
+	}
+}

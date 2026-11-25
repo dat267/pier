@@ -102,7 +102,9 @@ func GetModelMatchCandidates(modelID, modelName string) []string {
 	}
 	var candidates []string
 	for _, value := range values {
-		lower := strings.ToLower(value)
+		// The reference calls value.toLowerCase(); JSLower is that mapping (D518),
+		// and strings.ToLower differs on U+0130 and the Greek final sigma.
+		lower := JSLower(value)
 		candidates = append(candidates, lower, bedrockNormalizeCandidate(lower))
 	}
 	return candidates
@@ -182,8 +184,10 @@ func ResolveBedrockCacheRetention(cacheRetention CacheRetention, env ProviderEnv
 // IsAnthropicClaudeModel reports whether a Bedrock model is an Anthropic Claude
 // model (checking both id and name for inference-profile ARNs).
 func IsAnthropicClaudeModel(model *Model) bool {
-	id := strings.ToLower(model.ID)
-	name := strings.ToLower(model.Name)
+	// toLowerCase, not strings.ToLower: the same mapping as the match candidates
+	// above (D518).
+	id := JSLower(model.ID)
+	name := JSLower(model.Name)
 	// The reference tests the id only for the anthropic-prefixed forms and
 	// looks for a bare "claude" in the name alone, so a Bedrock id that merely
 	// contains "claude" is not a Claude model.
