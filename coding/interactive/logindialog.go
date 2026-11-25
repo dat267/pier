@@ -3,6 +3,7 @@ package interactive
 import (
 	"runtime"
 	"slices"
+	"sync"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
@@ -18,17 +19,37 @@ import (
 // OpenBrowserFn opens a URL in the default browser.
 type OpenBrowserFn func(url string)
 
-var browserOpener OpenBrowserFn = func(string) {}
+// browserOpenerMu guards browserOpener: the login flow reads the opener on its
+// own goroutine, so a test or embedder installing one mid-flow races the read
+// (D540).
+var (
+	browserOpenerMu sync.RWMutex
+	browserOpener   OpenBrowserFn = func(string) {}
+)
 
 // BrowserOpener is the installed browser opener (for tests).
-func BrowserOpener() OpenBrowserFn { return browserOpener }
+func BrowserOpener() OpenBrowserFn {
+	browserOpenerMu.RLock()
+	defer browserOpenerMu.RUnlock()
+	return browserOpener
+}
 
 // SetBrowserOpener installs the browser opener (D156).
 func SetBrowserOpener(opener OpenBrowserFn) {
 	if opener == nil {
 		opener = func(string) {}
 	}
+	browserOpenerMu.Lock()
 	browserOpener = opener
+	browserOpenerMu.Unlock()
+}
+
+// openBrowser runs the installed opener under the read lock. The call itself runs
+// outside the lock: it can exec and block, and holding the lock would stall a
+// concurrent install for its whole lifetime.
+func openBrowser(url string) {
+	opener := BrowserOpener()
+	opener(url)
 }
 
 // LoginInputResult is a login prompt outcome.
@@ -193,7 +214,7 @@ func (c *LoginDialogComponent) ShowAuth(url string, instructions string) {
 	// loop has to stay free to deliver input.
 	target, isWebURL := coding.WebURL(url)
 	if isWebURL {
-		browserOpener(target)
+		openBrowser(target)
 	}
 	displayURL := coding.DisplayURL(url)
 	c.runOnUI(func() {
@@ -266,7 +287,7 @@ func (c *LoginDialogComponent) activateDeviceCode(action *deviceCodeAction) {
 	if !ok {
 		return
 	}
-	browserOpener(target)
+	openBrowser(target)
 }
 
 func (c *LoginDialogComponent) setDeviceCodeStatus(hint *tui.TruncatedText, message string) {

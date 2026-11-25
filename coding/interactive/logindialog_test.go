@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -236,4 +237,30 @@ func TestLoginDialogClearsTheDeviceCodeHintRow(t *testing.T) {
 	if lines := strings.Join(dialog.ContentLines(80), "\n"); !strings.Contains(lines, "Paste code") {
 		t.Fatalf("the prompt itself is missing: %q", lines)
 	}
+}
+
+// The opener is read from the login flow's goroutine, not the owner loop: opening
+// a browser runs exec, which can block, so it must not run on the loop. The seam
+// is exported and a test or embedder installs it while a dialog may be running,
+// so the read and the write need the same lock.
+func TestBrowserOpenerIsSafeForConcurrentUse(t *testing.T) {
+	previous := BrowserOpener()
+	defer SetBrowserOpener(previous)
+
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(1)
+	go func() {
+		defer waitGroup.Done()
+		for range 50 {
+			SetBrowserOpener(func(string) {})
+		}
+	}()
+	waitGroup.Add(1)
+	go func() {
+		defer waitGroup.Done()
+		for range 50 {
+			BrowserOpener()("https://example.test")
+		}
+	}()
+	waitGroup.Wait()
 }

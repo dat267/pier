@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D539)
+# Deliberate divergences from pi (D1–D540)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9242,3 +9242,22 @@ same malformed schema therefore cannot exhaust the goroutine stack, which would
 be a crash rather than an error in Go.
 
 Test: `TestPiSchemaRefCycleTerminates`.
+
+### D540
+
+**The browser opener seam is safe to install while a login flow is running.**
+
+Reference: pi v1.6.0 (`faac5858`), `packages/coding/src/modes/interactive/
+components/login-dialog.ts` does not own a browser opener; it imports
+`openBrowser` directly. Pier injects the opener (`SetBrowserOpener`) so `cmd`
+can wire the platform handler, which makes it mutable package state. The login
+dialog reads it from the login flow's goroutine rather than the owner loop,
+because opening a browser runs `exec` and can block.
+
+An unsynchronised read of that variable races a concurrent install, which `-race`
+reports. Pier guards it with `browserOpenerMu` and releases the lock before
+calling the opener, so a blocking exec never stalls an install. With the write
+at startup only, production never reaches the race; the guard keeps the exported
+seam safe for a test or embedder that installs an opener mid-flow.
+
+Test: `TestBrowserOpenerIsSafeForConcurrentUse`.
