@@ -235,10 +235,10 @@ func TestEditorLowerDividerCountsBackgroundCalls(t *testing.T) {
 		width          int
 	}{
 		{0, 0, strings.Repeat("─", 50), 50},
-		{0, 1, "── 1 background call " + strings.Repeat("─", 29), 50},
-		{0, 3, "── 3 background calls " + strings.Repeat("─", 28), 50},
-		{2, 0, "── 2 loops " + strings.Repeat("─", 39), 50},
-		{1, 1, "── 1 loop · 1 background call " + strings.Repeat("─", 20), 50},
+		{0, 1, "── 1 background " + strings.Repeat("─", 34), 50},
+		{0, 3, "── 3 background " + strings.Repeat("─", 34), 50},
+		{2, 0, "── 2 scheduled " + strings.Repeat("─", 35), 50},
+		{1, 1, "── 1 scheduled · 1 background " + strings.Repeat("─", 20), 50},
 		// Too narrow for the label: the plain divider, never a cut one.
 		{1, 1, strings.Repeat("─", 20), 20},
 	} {
@@ -258,7 +258,7 @@ func TestEditorLowerDividerLabelTakesTheBorderColor(t *testing.T) {
 		NewAppKeybindingsManager(nil, ""), CustomEditorOptions{})
 	editor.LoopCount = func() int { return 1 }
 	lines := editor.Render(30)
-	if got, want := lines[len(lines)-1], "<── 1 loop "+strings.Repeat("─", 20)+">"; got != want {
+	if got, want := lines[len(lines)-1], "<── 1 scheduled "+strings.Repeat("─", 15)+">"; got != want {
 		t.Fatalf("lower divider = %q, want %q", got, want)
 	}
 }

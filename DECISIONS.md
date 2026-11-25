@@ -9032,7 +9032,7 @@ does not read as a bare "00:00". Each job stays on one row: a multi-line prompt
 the agent scheduled shows its first line and " …", so a later line such as "1.
 Read the logs" cannot pass for job 1. The agent's `cron_list` keeps each job on
 one row the same way, its prompt on one line and without a wakeup's note. Between runs the editor's lower divider, the
-line just above the footer, says "1 loop" (or "N loops"), read
+line just above the footer, says "1 scheduled" (or "N scheduled"), read
 from the app's scheduler at render time; adding or stopping a job prints a status
 and a fire starts a run, so each change is followed by a render. It is not a
 footer status: the footer holds only the context window, the model and the
@@ -9192,7 +9192,7 @@ to the output file and the fenced result. It is not added to the editor
 history, so Up never recalls it as typed input.
 
 While any displaced call runs, the editor's lower divider, the line just above
-the footer, says so ("── 1 background call ──", after the loop count when there is
+the footer, says so ("── 1 background ──", after the scheduled count when there is
 one, both in the divider's own color), read from `BackgroundCallCount`
 at render time, so the user knows a command is still running after its frame
 scrolls away. It was in the footer once, but that line is cut to the terminal

@@ -188,12 +188,12 @@ func (c *CustomEditor) actionOrder() []tui.Keybinding {
 func (c *CustomEditor) renderBottomBorder(width int, hiddenLineCount int) string {
 	var parts []string
 	if c.LoopCount != nil {
-		parts = appendCount(parts, c.LoopCount(), "loop", "loops")
+		parts = appendCount(parts, c.LoopCount(), "scheduled", "scheduled")
 	}
 	if c.BackgroundCalls != nil {
-		// "background" doubles as a count noun and an adjective, so the plural
-		// needs the word: "3 background" reads as a truncated label.
-		parts = appendCount(parts, c.BackgroundCalls(), "background call", "background calls")
+		// "N scheduled" and "N background" are the user's chosen labels: short
+		// enough to share the divider, the same word for one and many.
+		parts = appendCount(parts, c.BackgroundCalls(), "background", "background")
 	}
 	if len(parts) == 0 || hiddenLineCount > 0 {
 		return c.Editor.DefaultRenderBottomBorder(width, hiddenLineCount)
