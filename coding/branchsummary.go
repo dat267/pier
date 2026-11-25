@@ -168,13 +168,14 @@ func decodeCustomMessageContent(raw json.RawMessage) json.RawMessage {
 	return raw
 }
 
+// entryTimestampMS is new Date(entry.timestamp).getTime(): a missing or malformed
+// stamp has no time. Callers compare it against an assistant's timestamp, and
+// `x <= NaN` is false in JavaScript, so an unstamped entry must not read as "now"
+// - that would look newer than every assistant and skip a real overflow.
 func entryTimestampMS(entry *SessionEntry) int64 {
-	if entry.Timestamp == "" {
-		return time.Now().UnixMilli()
-	}
 	parsed, err := time.Parse(time.RFC3339Nano, entry.Timestamp)
 	if err != nil {
-		return time.Now().UnixMilli()
+		return 0
 	}
 	return parsed.UnixMilli()
 }

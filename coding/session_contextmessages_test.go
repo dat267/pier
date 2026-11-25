@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/ai"
 )
@@ -177,5 +178,26 @@ func TestCustomMessageKeepsAnAbsentDisplayField(t *testing.T) {
 	}
 	if strings.Contains(string(encoded[0]), `"display"`) {
 		t.Fatalf("message = %s, want no display field", encoded[0])
+	}
+}
+
+// A compaction entry with no readable timestamp must not be treated as "now".
+// CheckCompaction skips a message whose timestamp is at or before the latest
+// compaction, so a now-stamp suppressed a real overflow; the reference does
+// new Date(undefined).getTime(), which is NaN, and `x <= NaN` is false.
+func TestEntryTimestampIsNotNowWhenUnstamped(t *testing.T) {
+	before := time.Now().UnixMilli()
+	for _, tc := range []struct{ name, ts string }{
+		{"empty", ""},
+		{"malformed", "not-a-date"},
+	} {
+		got := entryTimestampMS(&SessionEntry{ID: "e", Timestamp: tc.ts})
+		if got >= before {
+			t.Errorf("%s timestamp = %d, want a value from before this test (%d): an unstamped entry must not read as now", tc.name, got, before)
+		}
+	}
+	// A present timestamp still parses.
+	if got := entryTimestampMS(&SessionEntry{Timestamp: "2026-01-01T00:00:00.000Z"}); got != 1767225600000 {
+		t.Errorf("present timestamp = %d", got)
 	}
 }
