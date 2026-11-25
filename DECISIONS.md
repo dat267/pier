@@ -9002,7 +9002,9 @@ detached: it queues behind compaction or starts a run like typed text, but it
 never clears the draft the user is writing or adds the prompt to the editor
 history. Unlike typed text it does not steer a running turn: it is queued as a
 follow-up for when the run stops, so a periodic prompt cannot cut into the work
-in progress every interval.
+in progress every interval. A self-paced `/loop` typed during a run is queued the
+same way, and its status says so ("Loop queued: its first run starts when the
+current turn ends…") instead of "Loop started".
 
 Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopSchedulerFiresAndDeletes`, `TestLoopSchedulerRecurringStays`,
@@ -9025,7 +9027,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
 `TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`,
 `TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`, `TestFooterShowsScheduledLoops`, `TestSelfPacedLoopPromptCarriesTheNote`,
-`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`.
+`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`.
 
 ### D538
 

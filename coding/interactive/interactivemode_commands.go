@@ -879,7 +879,13 @@ func (w *CommandWiring) HandleLoopCommand(args string) {
 		return
 	}
 	if interval == 0 {
-		w.runLoopPrompt(coding.LoopSelfPacedPrompt(prompt), "Loop started. The agent paces the next run itself.")
+		status := "Loop started. The agent paces the next run itself."
+		// A busy session takes the first run as a follow-up (D537), so it has
+		// not started yet.
+		if w.Session != nil && (w.Session.IsStreaming() || w.Session.IsCompacting()) {
+			status = "Loop queued: its first run starts when the current turn ends, and the agent paces the runs after it."
+		}
+		w.runLoopPrompt(coding.LoopSelfPacedPrompt(prompt), status)
 		return
 	}
 	cron, used, ok := coding.LoopCronForInterval(interval)

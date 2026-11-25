@@ -259,3 +259,27 @@ func TestLoopListKeepsEachJobOnOneRow(t *testing.T) {
 		t.Fatalf("the multi-line job's row = %q", lines[1])
 	}
 }
+
+// D537: a self-paced /loop typed during a run waits for that run as a
+// follow-up, so the status says it is queued; "Loop started" read as if the
+// first run were already under way.
+func TestLoopCommandSaysWhenTheFirstRunWaits(t *testing.T) {
+	scheduler := coding.NewLoopScheduler(nil, nil)
+	defer scheduler.Stop()
+	session := &commandTestSession{}
+	var status string
+	wiring := &CommandWiring{LoopScheduler: scheduler, Session: session, OnLoopPrompt: func(string) {},
+		ShowStatus: func(message string) { status = message }, ShowError: func(string) {}}
+	wiring.HandleLoopCommand("check the deploy")
+	if !strings.HasPrefix(status, "Loop started.") {
+		t.Fatalf("an idle start said %q", status)
+	}
+	for _, busy := range []func(){func() { session.streaming = true }, func() { session.compacting = true }} {
+		session.streaming, session.compacting = false, false
+		busy()
+		wiring.HandleLoopCommand("check the deploy")
+		if !strings.Contains(status, "queued") || strings.Contains(status, "started") {
+			t.Fatalf("a busy start (streaming %v, compacting %v) said %q", session.streaming, session.compacting, status)
+		}
+	}
+}
