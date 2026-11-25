@@ -1,33 +1,31 @@
 # A session switch reopens the target on the owner loop
 
-Status: reproduced, not fixed. `internal/uiblock` fails on it.
+Status: reproduced by `internal/uiblock`, whose test fails on it. Severity is lower
+than the first reading suggested.
 
 `applySessionReplacement` (coding/interactive/sessionswitch.go:263) calls
 `coding.OpenSession` on the owner loop when `SessionFileAppeared()` reports that the
 outgoing run's last append created the target after the off-loop open. The reopen
-exists for correctness (D493): it is the only way to load the settled tail and
-avoid the `file exists` claim failure. But it runs the whole load on the loop:
-`os.Stat`, `os.Chmod`, then `LoadEntriesFromFileBuffered` with its parallel scan,
-which the loop then waits for.
+exists for correctness (D493): it loads the settled tail and avoids the
+`file exists` claim failure. It runs `os.Stat`, `os.Chmod` and the buffered load on
+the loop, and the loop waits for the load's parallel scan.
 
-Measured: 16.9ms for a 20,000-entry session, growing linearly, during which no
-frame or key is processed. `internal/uiblock` reports it as a bare blocking
-goroutine reachable from the loop:
+The file is small: `SessionFileAppeared` requires `writeState.absent`, which only
+`unwrittenWriteState()` sets, so the path is reached only when the target did NOT
+exist at open and the outgoing run created it moments ago. The existing allowlist
+entry for `seedCacheScanInBackground$1` says the same thing ("the file is small").
+A 20,000-entry reopen would cost 16.9ms, but that input cannot reach this branch.
 
-    goroutine coding/session_store.go:959:4: blocking work on a bare goroutine
-    reachable from the UI loop; use internal/offloop
-      chain: runSessionFileWork.done -> applyOpenedSession ->
-      applySessionReplacement -> OpenSession -> LoadEntriesFromFileBuffered
+Why it is still open: `internal/uiblock` fails because the reopen sits inside the
+`done` callback, which the analyzer roots as loop code. Moving it into the worker is
+the right fix, and the worker must run it AFTER `teardownCurrentSession` settles the
+outgoing run, which happens on the loop. That means the reopen becomes a second
+off-loop hop whose result posts back for `bindSessionManager` to consume, so
+`applySessionReplacement`'s synchronous contract changes for three callers. Not an
+inline edit.
 
-That chain is right, unlike my first read of it: `applyOpenedSession` itself does
-not open, but `applySessionReplacement` does.
-
-Why it is not fixed here: the reopen must happen AFTER `teardownCurrentSession`
-settles the outgoing run, and that teardown runs on the loop. Moving the reopen to
-the worker needs the worker to wait for a loop-side teardown, so it is a dispatch
-change like the R quadratic (D-XXX pending), not an inline edit. Until then
-`internal/uiblock`'s `TestBareBlockingGoroutinesAreAllowlisted` fails, so CI is red
-on this alone.
+Tests that must stay green through the change:
+`TestSwitchReopensATargetCreatedWhileTheOutgoingRunSettles` and its RPC twin.
 
 # Automatic backgrounding of long tool calls# Automatic backgrounding of long tool calls
 
