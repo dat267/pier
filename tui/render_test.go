@@ -500,6 +500,31 @@ func TestApplyLineResetsStripsUnsafeOSC(t *testing.T) {
 	}
 }
 
+// stripUnsafeOSC removes the OSC payloads that can retitle or overwrite the
+// user's terminal and clipboard (0;, 1;, 2; and 52;). It is pier-only hardening
+// with no upstream counterpart, so only this test pins the property. Every
+// spelling of the introducer and terminator the function accepts is covered:
+// ESC ], the 8-bit C1 byte, its UTF-8 encoding, and BEL / ST / 8-bit ST ends.
+func TestStripUnsafeOSCRemovesDangerousPayloads(t *testing.T) {
+	for _, c := range []struct{ name, input, want string }{
+		{"clipboard write", "\x1b]52;c;Zm9v\aafter", "after"},
+		{"window title", "\x1b]0;title\aafter", "after"},
+		{"icon name", "\x1b]1;icon\aafter", "after"},
+		{"title set", "\x1b]2;t\aafter", "after"},
+		{"string terminator", "\x1b]52;c;Zm9v\x1b\\after", "after"},
+		{"c1 introducer", "\x9d52;c;Zm9v\x9cafter", "after"},
+		{"utf8 c1 introducer", "\u009d52;c;Zm9v\u009cafter", "after"},
+		{"two payloads", "pre\x1b]52;c;x\apost\x1b]0;t\aend", "prepostend"},
+		{"unterminated unsafe", "pre\x1b]52;c;x", "pre"},
+		{"safe hyperlink kept", "\x1b]8;;http://x\alink\x1b]8;;\a", "\x1b]8;;http://x\alink\x1b]8;;\a"},
+		{"unterminated safe kept", "pre\x1b]8;;http://x", "pre\x1b]8;;http://x"},
+	} {
+		if got := stripUnsafeOSC(c.input); got != c.want {
+			t.Errorf("%s: stripUnsafeOSC(%q) = %q, want %q", c.name, c.input, got, c.want)
+		}
+	}
+}
+
 func TestStripUnsafeOSCDoesNotAllocateForOrdinaryText(t *testing.T) {
 	text := strings.Repeat("ordinary terminal output ", 32)
 	var got string
