@@ -235,10 +235,10 @@ func TestEditorLowerDividerCountsBackgroundCalls(t *testing.T) {
 		width          int
 	}{
 		{0, 0, strings.Repeat("─", 50), 50},
-		{0, 1, "── 1 background " + strings.Repeat("─", 34), 50},
-		{0, 3, "── 3 background " + strings.Repeat("─", 34), 50},
+		{0, 1, "── 1 background call " + strings.Repeat("─", 29), 50},
+		{0, 3, "── 3 background calls " + strings.Repeat("─", 28), 50},
 		{2, 0, "── 2 loops " + strings.Repeat("─", 39), 50},
-		{1, 1, "── 1 loop · 1 background " + strings.Repeat("─", 25), 50},
+		{1, 1, "── 1 loop · 1 background call " + strings.Repeat("─", 20), 50},
 		// Too narrow for the label: the plain divider, never a cut one.
 		{1, 1, strings.Repeat("─", 20), 20},
 	} {

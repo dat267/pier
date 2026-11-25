@@ -191,7 +191,9 @@ func (c *CustomEditor) renderBottomBorder(width int, hiddenLineCount int) string
 		parts = appendCount(parts, c.LoopCount(), "loop", "loops")
 	}
 	if c.BackgroundCalls != nil {
-		parts = appendCount(parts, c.BackgroundCalls(), "background", "background")
+		// "background" doubles as a count noun and an adjective, so the plural
+		// needs the word: "3 background" reads as a truncated label.
+		parts = appendCount(parts, c.BackgroundCalls(), "background call", "background calls")
 	}
 	if len(parts) == 0 || hiddenLineCount > 0 {
 		return c.Editor.DefaultRenderBottomBorder(width, hiddenLineCount)
