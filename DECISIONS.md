@@ -9052,6 +9052,14 @@ rest, and after each id the menu offers the jobs not yet named; with two or more
 one names a scheduled job, so a prompt such as "stop the deploy checks" still runs.
 A bare `/loop` answers with every form it takes ("Usage: /loop [interval]
 <prompt>, /loop list, or /loop stop [id…]").
+
+The scheduling tools carry a prompt snippet and guideline bullets, as the goal
+tools do. The system prompt's tools section lists only tools with a snippet
+(upstream `packages/coding-agent/src/core/system-prompt.ts`), so they were absent
+from it while `set_goal` was listed with "use it for a multi-step objective that
+should continue across rounds". The `cron_create` bullet draws the line: a repeat
+on an interval or at a set time is a schedule, one objective worked on until it
+is done is a goal.
 Turning the loop feature off in `/features` drops every scheduled job, and its
 status names them ("Loop feature off; stopped 2 loops.").
 
@@ -9076,7 +9084,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
 `TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`,
 `TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`, `TestFooterShowsScheduledLoops`, `TestSelfPacedLoopPromptCarriesTheNote`,
-`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`, `TestCronListKeepsEachJobOnOneRow`, `TestSessionReplacementDropsScheduledLoops`, `TestLoopFireWaitsForAnIdleAgent`, `TestLoopSchedulerPostpone`, `TestLoopStopAllCountsInWords`, `TestLoopCommandArgumentCompletions`, `TestLoopFeatureOffNamesTheStoppedLoops`, `TestLoopStopTakesSeveralIds`, `TestLoopUsageNamesTheSubcommands`.
+`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`, `TestCronListKeepsEachJobOnOneRow`, `TestSessionReplacementDropsScheduledLoops`, `TestLoopFireWaitsForAnIdleAgent`, `TestLoopSchedulerPostpone`, `TestLoopStopAllCountsInWords`, `TestLoopCommandArgumentCompletions`, `TestLoopFeatureOffNamesTheStoppedLoops`, `TestLoopStopTakesSeveralIds`, `TestLoopUsageNamesTheSubcommands`, `TestLoopToolsContributeToSystemPrompt`.
 
 ### D538
 
