@@ -218,26 +218,32 @@ func TestCustomEditorRunsTheFirstRegisteredAction(t *testing.T) {
 	}
 }
 
-// D538: the count of backgrounded calls sits in the editor's lower divider,
-// just above the footer, which no longer carries it. The divider stays plain
-// when none run, and the count reads in full there: the divider is not cut to
-// share the footer's width.
+// D537, D538: the counts of scheduled loops and backgrounded calls sit in the
+// editor's lower divider, just above the footer, which no longer carries them.
+// The divider stays plain when there are none, and the counts read in full
+// there: the divider is not cut to share the footer's width.
 func TestEditorLowerDividerCountsBackgroundCalls(t *testing.T) {
 	newRendererTestTheme(t)
 	keybindings := NewAppKeybindingsManager(nil, "")
 	editor := NewCustomEditor(editorTestHost{}, tui.EditorTheme{BorderColor: func(s string) string { return s }}, keybindings, CustomEditorOptions{})
-	running := 0
+	loops, running := 0, 0
+	editor.LoopCount = func() int { return loops }
 	editor.BackgroundCalls = func() int { return running }
 	for _, tc := range []struct {
-		running int
-		want    string
+		loops, running int
+		want           string
+		width          int
 	}{
-		{0, strings.Repeat("─", 40)},
-		{1, "── 1 background call " + strings.Repeat("─", 19)},
-		{3, "── 3 background calls " + strings.Repeat("─", 18)},
+		{0, 0, strings.Repeat("─", 50), 50},
+		{0, 1, "── 1 background " + strings.Repeat("─", 34), 50},
+		{0, 3, "── 3 background " + strings.Repeat("─", 34), 50},
+		{2, 0, "── 2 loops scheduled " + strings.Repeat("─", 29), 50},
+		{1, 1, "── 1 loop scheduled · 1 background " + strings.Repeat("─", 15), 50},
+		// Too narrow for the label: the plain divider, never a cut one.
+		{1, 1, strings.Repeat("─", 30), 30},
 	} {
-		running = tc.running
-		lines := editor.Render(40)
+		loops, running = tc.loops, tc.running
+		lines := editor.Render(tc.width)
 		if got := stripAnsiEscapes(lines[len(lines)-1]); got != tc.want {
 			t.Fatalf("%d running: lower divider = %q, want %q", tc.running, got, tc.want)
 		}

@@ -29,8 +29,10 @@ type CustomEditor struct {
 
 	keybindings            *AppKeybindingsManager
 	workingStatusIndicator *StatusIndicator
-	// BackgroundCalls reports the session's backgrounded tool calls, which the
-	// lower divider counts (D538); nil shows none.
+	// LoopCount and BackgroundCalls report the scheduled /loop jobs (D537) and
+	// the backgrounded tool calls (D538), which the lower divider counts; nil
+	// shows none.
+	LoopCount       func() int
 	BackgroundCalls func() int
 
 	// EmbedWorkingStatus reports the border-status option.
@@ -178,27 +180,40 @@ func (c *CustomEditor) actionOrder() []tui.Keybinding {
 	return c.actionOrderKeys
 }
 
-// renderBottomBorder puts the count of backgrounded calls (D538) in the lower
-// divider, above the footer. It gives way to the scroll indicator, which says
-// there is more of the draft below, and to a width too narrow for the label.
+// renderBottomBorder puts the counts of scheduled loops (D537) and backgrounded
+// calls (D538) in the lower divider, above the footer, which holds only the
+// context, the model and the directory. It gives way to the scroll indicator,
+// which says there is more of the draft below, and to a width too narrow for the
+// label.
 func (c *CustomEditor) renderBottomBorder(width int, hiddenLineCount int) string {
-	running := 0
-	if c.BackgroundCalls != nil {
-		running = c.BackgroundCalls()
+	var parts []string
+	if c.LoopCount != nil {
+		parts = appendCount(parts, c.LoopCount(), "loop scheduled", "loops scheduled")
 	}
-	if running <= 0 || hiddenLineCount > 0 {
+	if c.BackgroundCalls != nil {
+		parts = appendCount(parts, c.BackgroundCalls(), "background", "background")
+	}
+	if len(parts) == 0 || hiddenLineCount > 0 {
 		return c.Editor.DefaultRenderBottomBorder(width, hiddenLineCount)
 	}
-	label := "1 background call"
-	if running > 1 {
-		label = strconv.Itoa(running) + " background calls"
-	}
+	label := strings.Join(parts, " · ")
 	labelWidth := tui.VisibleWidth(label)
 	if width < labelWidth+5 {
 		return c.Editor.DefaultRenderBottomBorder(width, hiddenLineCount)
 	}
 	return c.BorderColor("── ") + ActiveTheme().Fg("muted", label) +
 		c.BorderColor(" "+strings.Repeat("─", width-labelWidth-4))
+}
+
+// appendCount adds "1 <one>" or "N <many>" to parts, nothing for zero.
+func appendCount(parts []string, count int, one string, many string) []string {
+	switch {
+	case count == 1:
+		return append(parts, "1 "+one)
+	case count > 1:
+		return append(parts, strconv.Itoa(count)+" "+many)
+	}
+	return parts
 }
 
 // renderTopBorder renders the top border with the embedded working status.

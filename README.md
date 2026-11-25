@@ -51,7 +51,7 @@ cron-style interval for as long as the session is open (rounded to one that
 divides its hour or day evenly, or to whole days, and it says when it rounds), and
 `/loop <prompt>` with no interval lets the agent pace the next run itself. A run
 that comes due while the agent is busy is never queued as a message: an interval
-loop skips that run, and a self-paced one starts once the agent is idle. The footer shows how many loops are scheduled, `/loop list` shows
+loop skips that run, and a self-paced one starts once the agent is idle. The line under the editor shows how many loops are scheduled, `/loop list` shows
 them, and `/loop stop [id…]` cancels the named loops, or all of them; Tab completes the subcommands
 and the job ids.
 Stdio RPC (`pier --mode rpc`) is documented in

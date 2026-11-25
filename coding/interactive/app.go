@@ -448,9 +448,10 @@ func NewApp(options AppOptions) *App {
 		app.session.AgentSession.AdoptLoopScheduler(app.loopScheduler, app.loopMaxAge)
 	}
 	app.footer = NewFooterComponent(app.session, app.footerData)
-	app.footer.SetLoopCount(app.loopScheduler.Count)
-	// The lower divider counts backgrounded calls (D538). Read through the
-	// shared *AppSession, so a session switch is followed without rewiring.
+	// The lower divider counts scheduled loops (D537) and backgrounded calls
+	// (D538). Read at render time through the app's scheduler and the shared
+	// *AppSession, so a session switch is followed without rewiring.
+	app.defaultEditor.LoopCount = app.loopScheduler.Count
 	app.defaultEditor.BackgroundCalls = func() int {
 		if app.session.AgentSession == nil {
 			return 0
