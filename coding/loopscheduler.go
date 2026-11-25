@@ -262,7 +262,6 @@ func (s *LoopScheduler) Remove(id string) bool {
 	return true
 }
 
-// Jobs lists the scheduled jobs in creation order.
 // Now is the scheduler's clock, so a listing compares a job's next run with the
 // same time the scheduler fires by.
 func (s *LoopScheduler) Now() time.Time { return s.now() }
@@ -319,6 +318,7 @@ func (s *LoopScheduler) Count() int {
 	return len(s.jobs)
 }
 
+// Jobs lists the scheduled jobs in creation order.
 func (s *LoopScheduler) Jobs() []LoopJob {
 	s.mu.Lock()
 	defer s.mu.Unlock()
