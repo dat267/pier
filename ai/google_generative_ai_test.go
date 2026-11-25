@@ -581,3 +581,22 @@ func TestGooglePartKeepsItsContentOnAWrongTypedSibling(t *testing.T) {
 		t.Fatalf("well-formed part changed: %+v", part)
 	}
 }
+
+// google-shared.ts:182 returns geminiMajorVersion >= 3 when the version PARSED and
+// true only when the regex found nothing. The port returned 0 for "no match" and
+// treated 0 as unknown too, so a model whose id legitimately parses to major 0
+// ("gemini-0", and any id beginning that way) reported multimodal support the
+// reference denies, and its image tool results went out with an inline part the
+// reference omits.
+func TestGoogleMultimodalResponseDistinguishesVersionZero(t *testing.T) {
+	if supportsMultimodalFunctionResponse("gemini-0") {
+		t.Error("gemini-0 parses to major 0, so the reference reports no multimodal support")
+	}
+	// The unmatched case still defaults to support.
+	if !supportsMultimodalFunctionResponse("gemini") {
+		t.Error("a model id the pattern does not match must default to support")
+	}
+	if !supportsMultimodalFunctionResponse("x-gemini-3") {
+		t.Error("an id the pattern does not match at the start must default to support")
+	}
+}

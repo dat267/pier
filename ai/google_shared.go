@@ -130,27 +130,31 @@ func resolveThoughtSignature(isSameProviderAndModel bool, signature string) stri
 
 // RequiresToolCallID reports whether the model needs explicit tool call ids.
 func RequiresToolCallID(modelID string) bool {
-	major := getGeminiMajorVersion(modelID)
+	major, matched := getGeminiMajorVersion(modelID)
 	return strings.HasPrefix(modelID, "claude-") ||
 		strings.HasPrefix(modelID, "gpt-oss-") ||
-		(major != 0 && major >= 3)
+		(matched && major >= 3)
 }
 
-func getGeminiMajorVersion(modelID string) int {
+// getGeminiMajorVersion reports the version digit run and whether the pattern
+// matched at all. The reference returns number | undefined, so "gemini-0" (parsed,
+// major 0) and "gemini" (not matched) are different answers; a bare 0 cannot carry
+// both.
+func getGeminiMajorVersion(modelID string) (major int, matched bool) {
 	match := geminiMajorVersionPattern.FindStringSubmatch(strings.ToLower(modelID))
 	if match == nil {
-		return 0
+		return 0, false
 	}
-	major, err := strconv.Atoi(match[1])
+	parsed, err := strconv.Atoi(match[1])
 	if err != nil {
-		return 0
+		return 0, false
 	}
-	return major
+	return parsed, true
 }
 
 func supportsMultimodalFunctionResponse(modelID string) bool {
-	major := getGeminiMajorVersion(modelID)
-	if major != 0 {
+	major, matched := getGeminiMajorVersion(modelID)
+	if matched {
 		return major >= 3
 	}
 	return true
@@ -591,8 +595,8 @@ type GoogleFunctionDeclaration struct {
 // SupportsGoogleStrictToolSampling: Gemini 3+ enforces required parameters in
 // validated tool-calling modes.
 func SupportsGoogleStrictToolSampling(modelID string) bool {
-	major := getGeminiMajorVersion(modelID)
-	return major != 0 && major >= 3
+	major, matched := getGeminiMajorVersion(modelID)
+	return matched && major >= 3
 }
 
 // MapGoogleToolChoice maps a tool choice string to the Gemini mode.
