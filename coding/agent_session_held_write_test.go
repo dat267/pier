@@ -144,3 +144,39 @@ func readSessionFileText(t *testing.T, manager *SessionManager) string {
 	data := readFileBytes(t, manager.GetSessionFile())
 	return string(data)
 }
+
+// Six held writes released into a queue at once must all reach the file, in
+// order. queueHeldWrites/runHeldWrites hand them to the queue in a loop, so the
+// closure must capture each write's own value.
+func TestHeldSessionWritesReleasedTogetherKeepTheirOrder(t *testing.T) {
+	manager := newTestSessionManager(t)
+	manager.AppendMessage(createUserMessage("started"))
+	for i := 0; i < 6; i++ {
+		manager.AppendMessageHeld(createUserMessage("m" + string(rune('0'+i))))
+	}
+	queue := offloop.New()
+	t.Cleanup(queue.Stop)
+	manager.SetWriteQueue(queue)
+	if err := manager.FlushWrites(); err != nil {
+		t.Fatal(err)
+	}
+	text := readSessionFileText(t, manager)
+	var order []string
+	for _, line := range strings.Split(text, "\n") {
+		const marker = `"content":"m`
+		if i := strings.Index(line, marker); i >= 0 {
+			rest := line[i+len(`"content":"`):]
+			order = append(order, strings.SplitN(rest, `"`, 2)[0])
+		}
+	}
+	t.Logf("RESULT order=%v", order)
+
+	if len(order) != 6 {
+		t.Fatalf("order = %v, want six", order)
+	}
+	for i, got := range order {
+		if want := "m" + string(rune('0'+i)); got != want {
+			t.Errorf("position %d = %q, want %q (order %v)", i, got, want, order)
+		}
+	}
+}
