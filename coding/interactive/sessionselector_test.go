@@ -177,6 +177,14 @@ func TestSessionSelectorHelpers(t *testing.T) {
 		{20 * 24 * time.Hour, "2w"},
 		{45 * 24 * time.Hour, "1mo"},
 		{400 * 24 * time.Hour, "1y"},
+		// A date in the FUTURE reads "now": the reference's `diffMins < 1` catches
+		// every negative diff. This also pins the arithmetic: JavaScript uses
+		// Math.floor, which rounds a negative quotient toward negative infinity,
+		// while Go's integer division truncates toward zero, so a future date must
+		// never reach the m/h/d branches.
+		{-time.Minute, "now"},
+		{-time.Hour, "now"},
+		{-48 * time.Hour, "now"},
 	}
 	for _, testCase := range cases {
 		if got := formatSessionDate(now.Add(-testCase.ago), now); got != testCase.want {
