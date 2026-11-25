@@ -243,3 +243,29 @@ func TestSelfPacedLoopPromptCarriesTheNote(t *testing.T) {
 		}
 	}
 }
+
+// D537: cron_list is one row per job. A multi-line prompt spread one job over
+// several lines (its "1. read the logs" read as another row), and a self-paced
+// wakeup's row repeated the note meant for the run itself.
+func TestCronListKeepsEachJobOnOneRow(t *testing.T) {
+	scheduler := NewLoopScheduler(func() time.Time { return time.Date(2026, time.November, 25, 10, 0, 0, 0, time.UTC) }, nil)
+	defer scheduler.Stop()
+	tools := LoopTools(LoopToolOptions{Scheduler: scheduler, MaxAge: time.Hour})
+	if _, isError := callLoopTool(t, tools, "cron_create", `{"cron":"*/5 * * * *","prompt":"check the deploy\n\n1. read the logs"}`); isError {
+		t.Fatal("cron_create failed")
+	}
+	if _, isError := callLoopTool(t, tools, "schedule_wakeup", `{"delay_seconds":60,"prompt":"watch the queue"}`); isError {
+		t.Fatal("schedule_wakeup failed")
+	}
+	text, isError := callLoopTool(t, tools, "cron_list", `{}`)
+	if isError {
+		t.Fatalf("cron_list failed: %s", text)
+	}
+	rows := strings.Split(text, "\n")
+	if len(rows) != 2 {
+		t.Fatalf("two jobs listed on %d lines:\n%s", len(rows), text)
+	}
+	if !strings.HasSuffix(rows[0], ": check the deploy 1. read the logs") || !strings.HasSuffix(rows[1], ": watch the queue") {
+		t.Fatalf("rows = %q", rows)
+	}
+}

@@ -25,6 +25,13 @@ func LoopSelfPacedPrompt(prompt string) string {
 	return LoopPromptWithoutNote(prompt) + "\n\n" + loopSelfPacedNote
 }
 
+// loopListedPrompt is a job's prompt on one line of cron_list: a multi-line
+// prompt would otherwise read as several rows, and a wakeup's note is for the
+// run, not the listing.
+func loopListedPrompt(prompt string) string {
+	return strings.Join(strings.Fields(LoopPromptWithoutNote(prompt)), " ")
+}
+
 // LoopPromptWithoutNote is prompt as the user wrote it, without the note. Text
 // that carries no note is returned unchanged, so ordinary input keeps its
 // spacing.
@@ -232,7 +239,7 @@ func loopListTool(opts LoopToolOptions) agent.AgentTool {
 					kind = "one-shot"
 				}
 				lines = append(lines, fmt.Sprintf("%s — %s (%s), next run %s: %s",
-					job.ID, job.HumanSchedule, kind, job.NextFire.Format(time.RFC3339), job.Prompt))
+					job.ID, job.HumanSchedule, kind, job.NextFire.Format(time.RFC3339), loopListedPrompt(job.Prompt)))
 			}
 			return loopTextResult(strings.Join(lines, "\n"), false), nil
 		},

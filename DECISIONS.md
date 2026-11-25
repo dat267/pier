@@ -8992,7 +8992,8 @@ filter as you type.
 with "tomorrow" or the date when it is not today, so a daily loop's midnight run
 does not read as a bare "00:00". Each job stays on one row: a multi-line prompt
 the agent scheduled shows its first line and " …", so a later line such as "1.
-Read the logs" cannot pass for job 1. Between runs the footer lists "1 loop
+Read the logs" cannot pass for job 1. The agent's `cron_list` keeps each job on
+one row the same way, its prompt on one line and without a wakeup's note. Between runs the footer lists "1 loop
 scheduled" (or "N loops") among its statuses, read from the app's scheduler at
 render time; adding or stopping a job prints a status and a fire starts a run, so
 each change is followed by a render.
@@ -9027,7 +9028,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
 `TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`,
 `TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`, `TestFooterShowsScheduledLoops`, `TestSelfPacedLoopPromptCarriesTheNote`,
-`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`.
+`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`, `TestCronListKeepsEachJobOnOneRow`.
 
 ### D538
 
