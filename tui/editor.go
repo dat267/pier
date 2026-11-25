@@ -148,7 +148,10 @@ type Editor struct {
 	// must not run in the middle of the chunk that submitted.
 	pendingSubmit *string
 	// TopBorder overrides the top border rendering (see renderTopBorder).
-	TopBorder     func(width int, hiddenLineCount int) string
+	TopBorder func(width int, hiddenLineCount int) string
+	// BottomBorder overrides the bottom border rendering, as TopBorder does the
+	// top one; DefaultRenderBottomBorder is the built-in rendering.
+	BottomBorder  func(width int, hiddenLineCount int) string
 	DisableSubmit bool
 }
 
@@ -350,6 +353,14 @@ func (e *Editor) DefaultRenderTopBorder(width int, hiddenLineCount int) string {
 }
 
 func (e *Editor) renderBottomBorder(width int, hiddenLineCount int) string {
+	if e.BottomBorder != nil {
+		return e.BottomBorder(width, hiddenLineCount)
+	}
+	return e.DefaultRenderBottomBorder(width, hiddenLineCount)
+}
+
+// DefaultRenderBottomBorder is the built-in bottom border rendering.
+func (e *Editor) DefaultRenderBottomBorder(width int, hiddenLineCount int) string {
 	border := strings.Repeat("─", max(0, width))
 	if hiddenLineCount > 0 {
 		border = createScrollBorder("↓", hiddenLineCount, width)

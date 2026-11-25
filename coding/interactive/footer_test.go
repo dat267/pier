@@ -524,28 +524,17 @@ type backgroundFooterSession struct {
 
 func (s *backgroundFooterSession) BackgroundCallCount() int { return s.running }
 
-// D538: once a backgrounded call's handle line scrolls away, nothing said a
-// command was still running. The footer shows how many are, among the statuses,
-// and nothing when none are.
-func TestFooterShowsRunningBackgroundCalls(t *testing.T) {
+// D538: backgrounded calls are not counted in the footer. The line is cut to
+// the terminal width, and the count crowded the model off a narrow one; the
+// call's own frame and its completion notice carry it instead.
+func TestFooterLeavesBackgroundCallsOut(t *testing.T) {
 	newRendererTestTheme(t)
-	session := &backgroundFooterSession{fakeFooterSession: &fakeFooterSession{
+	session := &backgroundFooterSession{running: 2, fakeFooterSession: &fakeFooterSession{
 		manager: coding.InMemorySession("/p", nil, nil), model: &ai.Model{ID: "m", ContextWindow: 1000},
 	}}
 	footer := NewFooterComponent(session, &fakeFooterData{statuses: map[string]string{}})
-	for running, want := range map[int]string{0: "", 1: "1 call in background", 2: "2 calls in background"} {
-		session.running = running
-		footer.Invalidate()
-		line := coding.StripAnsi(strings.Join(footer.Render(200), "\n"))
-		if want == "" {
-			if strings.Contains(line, "background") {
-				t.Fatalf("no running call, footer = %q", line)
-			}
-			continue
-		}
-		if !strings.Contains(line, want) {
-			t.Fatalf("%d running, footer = %q, want %q", running, line, want)
-		}
+	if line := coding.StripAnsi(strings.Join(footer.Render(200), "\n")); strings.Contains(line, "bg") || strings.Contains(line, "background") {
+		t.Fatalf("footer = %q, want no background count", line)
 	}
 }
 
@@ -558,7 +547,7 @@ func TestFooterShowsScheduledLoops(t *testing.T) {
 	}, &fakeFooterData{statuses: map[string]string{}})
 	scheduled := 0
 	footer.SetLoopCount(func() int { return scheduled })
-	for count, want := range map[int]string{0: "", 1: "1 loop scheduled", 3: "3 loops scheduled"} {
+	for count, want := range map[int]string{0: "", 1: "1 loop", 3: "3 loops"} {
 		scheduled = count
 		footer.Invalidate()
 		line := coding.StripAnsi(strings.Join(footer.Render(200), "\n"))
@@ -571,5 +560,27 @@ func TestFooterShowsScheduledLoops(t *testing.T) {
 		if !strings.Contains(line, want) {
 			t.Fatalf("%d loops, footer = %q, want %q", count, line, want)
 		}
+	}
+}
+
+// D537: the loop count leaves room for the model on a narrow terminal. The
+// whole line is cut to the width (upstream format.ts footerLine), and "1 loop
+// scheduled" with a background count cut the model off mid-name at 52 columns.
+func TestFooterCountsLeaveRoomForTheModel(t *testing.T) {
+	newRendererTestTheme(t)
+	percent := 20.3
+	session := &backgroundFooterSession{running: 1, fakeFooterSession: &fakeFooterSession{
+		manager:      coding.InMemorySession("/home/u/pier", nil, nil),
+		model:        &ai.Model{ID: "deepseek/deepseek-v4.1-flash", ContextWindow: 1000000},
+		contextUsage: &coding.ContextUsageReport{Percent: &percent, ContextWindow: 1000000},
+	}}
+	footer := NewFooterComponent(session, &fakeFooterData{statuses: map[string]string{}})
+	footer.SetLoopCount(func() int { return 1 })
+	line := coding.StripAnsi(strings.Join(footer.Render(52), "\n"))
+	if !strings.Contains(line, "1 loop ·") {
+		t.Fatalf("footer = %q, want the loop count", line)
+	}
+	if !strings.Contains(line, "...ek/deepseek-v4.1-flash") {
+		t.Fatalf("footer = %q, want the model whole at 52 columns", line)
 	}
 }

@@ -449,6 +449,14 @@ func NewApp(options AppOptions) *App {
 	}
 	app.footer = NewFooterComponent(app.session, app.footerData)
 	app.footer.SetLoopCount(app.loopScheduler.Count)
+	// The lower divider counts backgrounded calls (D538). Read through the
+	// shared *AppSession, so a session switch is followed without rewiring.
+	app.defaultEditor.BackgroundCalls = func() int {
+		if app.session.AgentSession == nil {
+			return 0
+		}
+		return app.session.BackgroundCallCount()
+	}
 	app.footerContainer.AddChild(app.footer)
 
 	// Display options: one value shared by the transcript, event dispatcher,

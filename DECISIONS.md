@@ -9022,10 +9022,12 @@ with "tomorrow" or the date when it is not today, so a daily loop's midnight run
 does not read as a bare "00:00". Each job stays on one row: a multi-line prompt
 the agent scheduled shows its first line and " …", so a later line such as "1.
 Read the logs" cannot pass for job 1. The agent's `cron_list` keeps each job on
-one row the same way, its prompt on one line and without a wakeup's note. Between runs the footer lists "1 loop
-scheduled" (or "N loops") among its statuses, read from the app's scheduler at
-render time; adding or stopping a job prints a status and a fire starts a run, so
-each change is followed by a render.
+one row the same way, its prompt on one line and without a wakeup's note. Between runs the footer lists "1 loop"
+(or "N loops") among its statuses, read from the app's scheduler at render time;
+adding or stopping a job prints a status and a fire starts a run, so each change
+is followed by a render. The label is short because the whole line is cut to the
+terminal width (upstream format.ts footerLine): "1 loop scheduled" cut the model
+name off at 52 columns.
 
 A fire never enters the message queue. The app checks on the UI loop whether
 the agent is running or compacting (`deliverLoopFire`): an idle agent gets the
@@ -9084,7 +9086,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
 `TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`,
 `TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`, `TestFooterShowsScheduledLoops`, `TestSelfPacedLoopPromptCarriesTheNote`,
-`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`, `TestCronListKeepsEachJobOnOneRow`, `TestSessionReplacementDropsScheduledLoops`, `TestLoopFireWaitsForAnIdleAgent`, `TestLoopSchedulerPostpone`, `TestLoopStopAllCountsInWords`, `TestLoopCommandArgumentCompletions`, `TestLoopFeatureOffNamesTheStoppedLoops`, `TestLoopStopTakesSeveralIds`, `TestLoopUsageNamesTheSubcommands`, `TestLoopToolsContributeToSystemPrompt`.
+`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`, `TestCronListKeepsEachJobOnOneRow`, `TestSessionReplacementDropsScheduledLoops`, `TestLoopFireWaitsForAnIdleAgent`, `TestLoopSchedulerPostpone`, `TestLoopStopAllCountsInWords`, `TestLoopCommandArgumentCompletions`, `TestLoopFeatureOffNamesTheStoppedLoops`, `TestLoopStopTakesSeveralIds`, `TestLoopUsageNamesTheSubcommands`, `TestLoopToolsContributeToSystemPrompt`, `TestFooterCountsLeaveRoomForTheModel`.
 
 ### D538
 
@@ -9173,12 +9175,17 @@ draws it as a collapsed "[background] bg-… (bash) finished" block that expands
 to the output file and the fenced result. It is not added to the editor
 history, so Up never recalls it as typed input.
 
-While any displaced call runs, the footer says so among its statuses ("1 call
-in background"), read from `BackgroundCallCount` at render time, so the user
-knows a command is still running after its frame scrolls away. No new session
-event is needed (and none reaches RPC clients): a call is displaced as its frame
-ends, and one that finishes wakes the agent, so each change is followed by a
-render.
+While any displaced call runs, the editor's lower divider, the line just above
+the footer, says so ("── 1 background call ──"), read from `BackgroundCallCount`
+at render time, so the user knows a command is still running after its frame
+scrolls away. It was in the footer once, but that line is cut to the terminal
+width and the count crowded the model name off a narrow terminal; the divider
+spans the full width and carries nothing else. It gives way to the editor's
+"↓ N more" scroll indicator. The divider is drawn through a `BottomBorder` hook
+on `tui.Editor`, the twin of upstream's `renderTopBorder` override, which has no
+bottom counterpart. No new session event is needed: a call is displaced as its
+frame ends, and one that finishes wakes the agent, so each change is followed
+by a render.
 
 A call that finishes inside the threshold takes the unchanged path: same result,
 same events, no handle, no registry entry. That is pinned by
@@ -9202,4 +9209,4 @@ Tests: `TestLoopToolRenderers`, `TestLoopToolsHaveRenderers`,
 `TestBackgroundFastCallLeavesNoFile`, `TestBackgroundRealShellCallStreamsToFile`,
 `TestBackgroundOutputFileHoldsLatestSnapshot`, `TestBackgroundNoticeCutKeepsUTF8`, `TestBashFrameRendersBackgroundHandle`,
 `TestBackgroundHandleRendersInEveryFrame`, `TestParseCompletionNotice`,
-`TestTranscriptBackgroundNotice`, `TestFooterShowsRunningBackgroundCalls`.
+`TestTranscriptBackgroundNotice`, `TestFooterLeavesBackgroundCallsOut`, `TestEditorLowerDividerCountsBackgroundCalls`.

@@ -29,6 +29,9 @@ type CustomEditor struct {
 
 	keybindings            *AppKeybindingsManager
 	workingStatusIndicator *StatusIndicator
+	// BackgroundCalls reports the session's backgrounded tool calls, which the
+	// lower divider counts (D538); nil shows none.
+	BackgroundCalls func() int
 
 	// EmbedWorkingStatus reports the border-status option.
 	EmbedWorkingStatus bool
@@ -57,6 +60,7 @@ func NewCustomEditor(host tui.EditorHost, theme tui.EditorTheme, keybindings *Ap
 		ActionHandlers:     map[tui.Keybinding]func(){},
 	}
 	editor.TopBorder = custom.renderTopBorder
+	editor.BottomBorder = custom.renderBottomBorder
 	return custom
 }
 
@@ -172,6 +176,29 @@ func (c *CustomEditor) HandleInput(data string) {
 // reference's Map insertion order, which a Go map does not preserve).
 func (c *CustomEditor) actionOrder() []tui.Keybinding {
 	return c.actionOrderKeys
+}
+
+// renderBottomBorder puts the count of backgrounded calls (D538) in the lower
+// divider, above the footer. It gives way to the scroll indicator, which says
+// there is more of the draft below, and to a width too narrow for the label.
+func (c *CustomEditor) renderBottomBorder(width int, hiddenLineCount int) string {
+	running := 0
+	if c.BackgroundCalls != nil {
+		running = c.BackgroundCalls()
+	}
+	if running <= 0 || hiddenLineCount > 0 {
+		return c.Editor.DefaultRenderBottomBorder(width, hiddenLineCount)
+	}
+	label := "1 background call"
+	if running > 1 {
+		label = strconv.Itoa(running) + " background calls"
+	}
+	labelWidth := tui.VisibleWidth(label)
+	if width < labelWidth+5 {
+		return c.Editor.DefaultRenderBottomBorder(width, hiddenLineCount)
+	}
+	return c.BorderColor("── ") + ActiveTheme().Fg("muted", label) +
+		c.BorderColor(" "+strings.Repeat("─", width-labelWidth-4))
 }
 
 // renderTopBorder renders the top border with the embedded working status.

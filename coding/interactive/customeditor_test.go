@@ -217,3 +217,29 @@ func TestCustomEditorRunsTheFirstRegisteredAction(t *testing.T) {
 		t.Fatalf("handlers = %v, want the first registered action", ran)
 	}
 }
+
+// D538: the count of backgrounded calls sits in the editor's lower divider,
+// just above the footer, which no longer carries it. The divider stays plain
+// when none run, and the count reads in full there: the divider is not cut to
+// share the footer's width.
+func TestEditorLowerDividerCountsBackgroundCalls(t *testing.T) {
+	newRendererTestTheme(t)
+	keybindings := NewAppKeybindingsManager(nil, "")
+	editor := NewCustomEditor(editorTestHost{}, tui.EditorTheme{BorderColor: func(s string) string { return s }}, keybindings, CustomEditorOptions{})
+	running := 0
+	editor.BackgroundCalls = func() int { return running }
+	for _, tc := range []struct {
+		running int
+		want    string
+	}{
+		{0, strings.Repeat("─", 40)},
+		{1, "── 1 background call " + strings.Repeat("─", 19)},
+		{3, "── 3 background calls " + strings.Repeat("─", 18)},
+	} {
+		running = tc.running
+		lines := editor.Render(40)
+		if got := stripAnsiEscapes(lines[len(lines)-1]); got != tc.want {
+			t.Fatalf("%d running: lower divider = %q, want %q", tc.running, got, tc.want)
+		}
+	}
+}

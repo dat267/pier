@@ -39,9 +39,9 @@ hung command hands control back to the agent with its output so far.
 
 A tool call that outlives a minute is moved to the background instead of
 freezing the turn: the agent gets a handle, the call keeps running with its output
-in a temporary file, and it is told once when the call ends. The footer shows how
-many calls are still running in the background. `/features` sets the threshold, or
-turns it off.
+in a temporary file, and it is told once when the call ends. While any run, the
+line under the editor counts them. `/features` sets the threshold, or turns it
+off.
 
 `/goal` tracks multi-round objectives in session history. The agent can manage
 them with `get_goal` and `set_goal`. `/features` lists the pier-only feature
