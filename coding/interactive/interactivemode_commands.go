@@ -950,8 +950,11 @@ func (w *CommandWiring) listLoops() {
 	lines := []string{"Scheduled loops (/loop stop <id> cancels one, /loop stop all of them):"}
 	now := scheduler.Now()
 	for _, job := range jobs {
-		lines = append(lines, fmt.Sprintf("%s  %s, next %s  %s",
-			job.ID, job.HumanSchedule, loopNextRunLabel(job.NextFire, now), loopPromptSummary(job.Prompt)))
+		when := job.HumanSchedule
+		if when != coding.LoopWhenIdleSchedule {
+			when += ", next " + loopNextRunLabel(job.NextFire, now)
+		}
+		lines = append(lines, fmt.Sprintf("%s  %s  %s", job.ID, when, loopPromptSummary(job.Prompt)))
 	}
 	w.showStatus(strings.Join(lines, "\n"))
 }

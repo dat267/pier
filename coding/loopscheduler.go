@@ -267,12 +267,16 @@ func (s *LoopScheduler) Remove(id string) bool {
 // same time the scheduler fires by.
 func (s *LoopScheduler) Now() time.Time { return s.now() }
 
+// LoopWhenIdleSchedule is a zero-delay wakeup's schedule: it has no clock time,
+// so a listing shows no next run beside it.
+const LoopWhenIdleSchedule = "Once, when the agent is idle"
+
 // wakeupSchedule describes a wakeup for listings. A zero delay is a /loop
 // typed while the agent was busy (D537): it runs once the agent is idle, which
 // "in 0 seconds" misstated.
 func wakeupSchedule(delay time.Duration) string {
 	if delay <= 0 {
-		return "Once, when the agent is idle"
+		return LoopWhenIdleSchedule
 	}
 	return "Once, in " + humanDuration(delay)
 }

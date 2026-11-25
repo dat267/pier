@@ -294,7 +294,8 @@ func TestLoopCommandSaysWhenTheFirstRunWaits(t *testing.T) {
 		}
 		// Its /loop list row says when it runs, not "Once, in 0 seconds".
 		wiring.HandleLoopCommand("list")
-		if !strings.Contains(status, "Once, when the agent is idle") || strings.Contains(status, "0 seconds") {
+		// No clock either: it runs when the agent is idle, not at a time.
+		if !strings.Contains(status, "Once, when the agent is idle  check the deploy") || strings.Contains(status, "0 seconds") {
 			t.Fatalf("a busy start listed as %q", status)
 		}
 	}
