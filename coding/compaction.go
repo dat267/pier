@@ -1211,9 +1211,18 @@ func prepareCompactionWith(pathEntries []SessionEntry, settings CompactionSettin
 	}
 
 	if payloads != nil {
-		if err := payloads.hydrateEntriesSeq(pathEntries); err != nil {
+		// GetBranch hands out the SHARED branch cache slice, and hydration writes
+		// each entry in place (lazy, raw, Message). Two concurrent compactions
+		// would therefore race on the same SessionEntry structs, which the CI
+		// race gate caught through two interleaved RPC "compact" commands. Work
+		// on a copy: the shells' byte slices are immutable, and the copy's
+		// headers are what hydration replaces.
+		owned := make([]SessionEntry, len(pathEntries))
+		copy(owned, pathEntries)
+		if err := payloads.hydrateEntriesSeq(owned); err != nil {
 			return nil
 		}
+		pathEntries = owned
 	}
 	window := projectWindow(materializePointers(pathEntries), nil)
 	projectedEntries := window.Entries

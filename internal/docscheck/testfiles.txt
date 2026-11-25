@@ -306,6 +306,7 @@ coding/compaction_prefix_auto_test.go
 coding/compaction_prefix_session_test.go
 coding/compaction_prefix_test.go
 coding/compaction_serialize_test.go
+coding/compaction_sharedbranch_test.go
 coding/compaction_split_test.go
 coding/compaction_test.go
 coding/compaction_upstream_fixture_test.go
