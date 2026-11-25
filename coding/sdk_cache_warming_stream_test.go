@@ -84,7 +84,8 @@ func TestSDKCacheWarmingStreamsThroughTheModelRuntime(t *testing.T) {
 		t.Fatalf("warm requests = %d, want 1 through the model runtime", calls)
 	}
 	options := warmOptions.Load()
-	if options == nil || options.MaxTokens == nil || *options.MaxTokens != 1 || !options.DisableContinuation {
+	if options == nil || options.MaxTokens == nil || *options.MaxTokens != 1 ||
+		options.DisableContinuation == nil || !*options.DisableContinuation {
 		t.Fatalf("warm options = %+v, want a one-token replay that keeps the continuation state", options)
 	}
 	// The refresh bills the provider, so its spend has to reach the session as a

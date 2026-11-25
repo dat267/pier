@@ -496,7 +496,8 @@ func (w *CacheWarmer) refresh(run *cacheWarmingRun) {
 	// The refresh repeats the last request and must not replace the
 	// conversation's provider continuation state (upstream
 	// api/cache-warming.ts getCacheWarmingRequestOptions).
-	options.DisableContinuation = true
+	disableContinuation := true
+	options.DisableContinuation = &disableContinuation
 	var (
 		message *ai.AssistantMessage
 		err     error

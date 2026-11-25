@@ -522,7 +522,7 @@ func TestCacheWarmingReplayDisablesContinuation(t *testing.T) {
 
 	select {
 	case options := <-captured:
-		if !options.DisableContinuation {
+		if options.DisableContinuation == nil || !*options.DisableContinuation {
 			t.Fatal("warm request would replace the conversation's thread state")
 		}
 		if options.MaxTokens == nil || *options.MaxTokens != 1 {

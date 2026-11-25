@@ -423,7 +423,7 @@ func proxyToolCallForTest(id, name, arguments string) *proxyToolCallPatch {
 func TestProxyForwardsDisableContinuation(t *testing.T) {
 	model := &ai.Model{ID: "m", Provider: "p", API: ai.APIOpenAIResponses}
 	body, err := buildProxyRequest(model, proxyContext(), ProxyStreamOptions{
-		SessionID: "s", DisableContinuation: true,
+		SessionID: "s", DisableContinuation: new(true),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -499,5 +499,33 @@ func TestStreamProxyPreservesNullHeaderOverrides(t *testing.T) {
 	}
 	if got := string(request.Options.Headers["X-Send"]); got != `"fixture"` {
 		t.Fatalf("ordinary header = %q, want fixture", got)
+	}
+}
+
+// proxy.ts:91 builds the options as an object literal, so JSON.stringify drops a
+// key only when its value is undefined. An explicit `disableContinuation: false`
+// is therefore SENT, while an omitted one is not. A Go bool collapses the two:
+// omitempty dropped both, so a caller asking for continuation got `options: {}`.
+func TestProxySendsAnExplicitFalseDisableContinuation(t *testing.T) {
+	model := &ai.Model{ID: "m", Provider: "p", API: ai.APIOpenAIResponses}
+
+	explicitFalse := false
+	body, err := buildProxyRequest(model, proxyContext(), ProxyStreamOptions{
+		SessionID: "s", DisableContinuation: &explicitFalse,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), `"disableContinuation":false`) {
+		t.Fatalf("an explicit false was dropped: %s", body)
+	}
+
+	// Omitted stays undefined, which JSON.stringify drops.
+	body, err = buildProxyRequest(model, proxyContext(), ProxyStreamOptions{SessionID: "s"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(body), "disableContinuation") {
+		t.Fatalf("an omitted value was sent: %s", body)
 	}
 }

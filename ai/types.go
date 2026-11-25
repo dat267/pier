@@ -172,8 +172,10 @@ type StreamOptions struct {
 	// DisableContinuation asks the provider not to use or record server-side
 	// continuation state for this request (Anthropic message threads). Set it
 	// for replays such as cache warming, which must not replace the state of
-	// the real conversation.
-	DisableContinuation bool
+	// the real conversation. It is a pointer because the reference's field is
+	// `disableContinuation?: boolean`: the proxy request forwards an explicit
+	// false while an omitted value stays absent (proxy.ts:91).
+	DisableContinuation *bool
 	// TimeoutMs is the provider request's SDK timeout, when supported.
 	TimeoutMs *int
 	// HTTPIdleTimeoutMs is the independent global Undici dispatcher timeout.

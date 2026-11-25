@@ -39,7 +39,7 @@ type proxyRequestOptions struct {
 	Reasoning           string                     `json:"reasoning,omitempty"`
 	CacheRetention      string                     `json:"cacheRetention,omitempty"`
 	SessionID           string                     `json:"sessionId,omitempty"`
-	DisableContinuation bool                       `json:"disableContinuation,omitempty"` // a replay must keep the thread
+	DisableContinuation *bool                      `json:"disableContinuation,omitempty"` // a replay must keep the thread; false is explicit
 	Headers             ai.ProviderHeaders         `json:"headers,omitempty"`
 	Metadata            map[string]json.RawMessage `json:"metadata,omitempty"`
 	Transport           string                     `json:"transport,omitempty"`

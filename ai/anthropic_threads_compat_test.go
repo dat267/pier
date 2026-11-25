@@ -303,7 +303,8 @@ func TestAnthropicMessageThreadsSkipDisabledContinuation(t *testing.T) {
 	messages, _ = h.say(t, messages, threadTurn{})
 	h.turn(t, messages[:1], threadTurn{Options: func(options *AnthropicOptions) {
 		options.MaxTokens = new(1)
-		options.DisableContinuation = true
+		disable := true
+		options.DisableContinuation = &disable
 	}})
 	messages = append(messages, threadTestUser("second"))
 	h.say(t, messages, threadTurn{})

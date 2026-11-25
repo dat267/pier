@@ -585,7 +585,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				return nil, nil, err
 			}
 			var thread *anthropicPreparedThread
-			if threadSessionID != "" && !options.DisableContinuation {
+			if threadSessionID != "" && (options.DisableContinuation == nil || !*options.DisableContinuation) {
 				thread, err = prepareAnthropicThreadRequest(model, threadSessionID, payload)
 				if err != nil {
 					return nil, nil, err
