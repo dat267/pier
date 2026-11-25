@@ -156,6 +156,13 @@ func parseHTTPURL(value string) (*url.URL, error) {
 			return nil, errors.New("HTTP URL has an invalid port")
 		}
 	}
+	// `new URL` removes "." and ".." segments while it parses the path, so a
+	// caller that keys state by the serialization must see the same path (D543).
+	if escaped := parsed.EscapedPath(); escaped != "" {
+		if normalized := normalizeDotSegments(escaped); normalized != escaped {
+			setEscapedPath(parsed, normalized)
+		}
+	}
 	return parsed, nil
 }
 

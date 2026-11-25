@@ -178,3 +178,35 @@ func TestStateReplacesAnEmptyStoredState(t *testing.T) {
 		t.Fatalf("second state = %q, want the stored %q", again, state)
 	}
 }
+
+// The reference keys its state with String(new URL(serverUrl)), whose WHATWG
+// parser removes "." and ".." path segments. canonicalMcpServerURL must do the
+// same, or two spellings of one server URL keep separate credential state.
+func TestCanonicalMcpServerURLMatchesNewURL(t *testing.T) {
+	for _, tc := range []struct{ server, want string }{
+		{"https://example.test/mcp", "https://example.test/mcp"},
+		{"https://EXAMPLE.test/mcp", "https://example.test/mcp"},
+		{"https://example.test:443/mcp", "https://example.test/mcp"},
+		{"http://example.test:80/mcp", "http://example.test/mcp"},
+		{"https://example.test", "https://example.test/"},
+		{"https://example.test:8443/mcp", "https://example.test:8443/mcp"},
+		{"HTTPS://Example.Test/MCP", "https://example.test/MCP"},
+		{"https://user:pass@example.test/mcp", "https://user:pass@example.test/mcp"},
+		{"https://example.test/mcp?q=1", "https://example.test/mcp?q=1"},
+		{"https://example.test/mcp#f", "https://example.test/mcp#f"},
+		{"http://[::1]:8080/mcp", "http://[::1]:8080/mcp"},
+		{"https://example.test/%7euser", "https://example.test/%7euser"},
+		// `new URL` removes dot segments while it parses the path.
+		{"https://example.test/a/../b", "https://example.test/b"},
+		{"https://example.test/a/./b", "https://example.test/a/b"},
+		{"https://example.test/a/b/../..", "https://example.test/"},
+	} {
+		if got := canonicalMcpServerURL(tc.server); got != tc.want {
+			t.Errorf("canonicalMcpServerURL(%q) = %q, want %q (String(new URL(...)))", tc.server, got, tc.want)
+		}
+	}
+	// An unparsable value has no `new URL` counterpart and is kept.
+	if got := canonicalMcpServerURL("not a url"); got != "not a url" {
+		t.Errorf("unparsable = %q, want the input", got)
+	}
+}

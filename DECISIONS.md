@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D542)
+# Deliberate divergences from pi (D1–D543)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9307,3 +9307,25 @@ sentinel as `null`, keeping the key and its position.
 Test: `TestCustomMessageKeepsANullTimestamp` (all four roles plus the no-content
 shape, with a real stamp as the control);
 `TestMarshalMessageKeepsRoleFirst` pins the spliced shape.
+
+### D543
+
+**`canonicalMcpServerURL` removes dot segments, like `String(new URL(...))`.**
+
+Reference: pi v1.6.0 (`faac5858`), `packages/mcp/src/oauth/provider.ts` keys its
+stored state with `this.serverUrl = String(new URL(options.serverUrl))`. The
+WHATWG parser removes `.` and `..` path segments, so
+`https://host/a/../mcp` becomes `https://host/mcp`.
+
+Pier's `canonicalMcpServerURL` lowercases the host, drops the scheme's default
+port and adds the root path, but `parseHTTPURL` did not normalize dot segments, so
+two spellings of one server URL were treated as two servers. `own` ignores state
+whose `ServerURL` differs, so each spelling kept separate credential state and a
+user who wrote a `..` in the server URL would sign in again (or fail to reuse the
+stored client) where the reference reused it.
+
+`parseHTTPURL` now applies the same `normalizeDotSegments` its WHATWG sibling uses,
+so its other callers (`secureEndpoint`, `deriveApplicationType`) see the
+normalized path as well.
+
+Test: `TestCanonicalMcpServerURLMatchesNewURL`.
