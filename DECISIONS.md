@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D540)
+# Deliberate divergences from pi (D1–D541)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9261,3 +9261,25 @@ at startup only, production never reaches the race; the guard keeps the exported
 seam safe for a test or embedder that installs an opener mid-flow.
 
 Test: `TestBrowserOpenerIsSafeForConcurrentUse`.
+
+### D541
+
+**The `resource_metadata` challenge parameter stores the WHATWG serialization, not a lowercased spelling.**
+
+Reference: pi v1.6.0 (`faac5858`), `packages/mcp/src/oauth/discovery.ts`
+`parseWwwAuthenticate` resolves the parameter with `new URL(resourceMetadata)`,
+so the stored `URL` serializes with the scheme's default port dropped
+(`https://x.test:443/md` becomes `https://x.test/md`) and a path always present
+(a bare host becomes `https://x.test/`). Pier keeps the parsed `url.URL` and
+formats it with `whatwgSerialize`, which lowercases the host, drops the default
+port and adds the root path.
+
+D276 keeps the input's port and host case in `ResourceURLFromServerURL` because
+its only consumer compares components. This parameter is different: it is passed
+to the follow-up discovery request and to the flow's cache, so it takes the full
+serialization. D276's rule is therefore unchanged, and `parseWHATWGURL` still
+leaves the spelling alone for component-only readers.
+
+Tests: `TestWwwAuthenticateResourceMetadataIsWHATWGSerialized` covers the default
+port, the bare host and a non-default port; `TestResourceURLKeepsDefaultPortAndHostCase`
+keeps D276's behaviour.

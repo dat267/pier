@@ -46,6 +46,26 @@ func lowercaseHost(url *url.URL) *url.URL {
 	return &copied
 }
 
+// whatwgSerialize returns the WHATWG serialization the reference gets from
+// `new URL(value).href`: the host lowercased, the scheme's default port dropped,
+// and a path (the root at minimum) always present. parseWHATWGURL leaves those
+// three alone so D276's spelling rule holds for component-only readers; a caller
+// that stores or compares the string uses this.
+func whatwgSerialize(value *url.URL) string {
+	if value == nil {
+		return ""
+	}
+	serialized := *lowercaseHost(value)
+	if scheme := strings.ToLower(serialized.Scheme); (scheme == "http" && serialized.Port() == "80") ||
+		(scheme == "https" && serialized.Port() == "443") {
+		serialized.Host = serialized.Hostname()
+	}
+	if serialized.Path == "" && serialized.RawPath == "" {
+		serialized.Path = "/"
+	}
+	return serialized.String()
+}
+
 // normalizeDotSegments applies the WHATWG path normalization `new URL`
 // performs. A segment is a single dot when it is "." or "%2e", and a double dot
 // for "..", ".%2e", "%2e." or "%2e%2e" (case-insensitive); both are removed,

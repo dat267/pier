@@ -39,6 +39,11 @@ func TestWwwAuthenticateResourceMetadataIsWHATWGSerialized(t *testing.T) {
 		{`Bearer resource_metadata="https://x.test/md"`, "https://x.test/md"},
 		{`Bearer resource_metadata="HTTP://X.TEST/md"`, "http://x.test/md"},
 		{`Bearer resource_metadata="https://x.test/a b"`, "https://x.test/a%20b"},
+		// The WHATWG serialization drops the scheme's default port and always has
+		// a path; a non-default port stays.
+		{`Bearer resource_metadata="https://x.test:443/md"`, "https://x.test/md"},
+		{`Bearer resource_metadata="https://x.test"`, "https://x.test/"},
+		{`Bearer resource_metadata="https://x.test:8443/md"`, "https://x.test:8443/md"},
 		// Not resolvable against no base: both sides drop these.
 		{`Bearer resource_metadata="x.test/md"`, ""},
 		{`Bearer resource_metadata="/relative/md"`, ""},
