@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D545)
+# Deliberate divergences from pi (D1–D546)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9377,3 +9377,25 @@ matter for the empty forms, and every existing `ApiKeyCredential{Key: "..."}` li
 and `credential.Key` comparison keeps working.
 
 Test: `TestCredentialKeepsPresentEmptyMembers`.
+
+### D546
+
+**Three settings members floor a fractional number instead of dropping it.**
+
+Reference: pi v1.6.0 (`faac5858`), `core/settings-manager.ts` declares
+`editorPaddingX`, `terminal.imageWidthCells` and `autocompleteMaxVisible` as
+`Type.Number`, and only floors them in their SETTERS
+(`Math.floor` inside `setEditorPaddingX`, `setImageWidthCells`,
+`setAutocompleteMaxVisible`). A hand-edited `settings.json` may therefore hold `2.7`
+and the getter returns it untouched.
+
+Pier stores those three in Go `int` fields. A strict decode of `2.7` into an `int`
+fails, and `decodeSettingsTolerantWithRejects` then DROPS the member, so the default
+silently replaces the user's value. `floorSettingsNumber` accepts a fractional value
+for exactly those three names and floors it, which keeps the setting.
+
+The list is deliberately narrow: a fractional `compaction.reserveTokens` still
+rejects through its getter, and its message names the safe-integer rule. Any other
+numeric settings member keeps the strict decode.
+
+Test: `TestToleratedNumberMembersFloorInsteadOfReject`.

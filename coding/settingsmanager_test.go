@@ -919,3 +919,43 @@ func TestBackgroundToolCallThresholdPersists(t *testing.T) {
 		t.Fatalf("after reloading off = %v, want zero", got)
 	}
 }
+
+// Reference: pi v1.6.0 (faac5858) core/settings-manager.ts declares
+// editorPaddingX, imageWidthCells and autocompleteMaxVisible as Type.Number and
+// only floors them in the SETTERS (Math.floor in setEditorPaddingX,
+// setImageWidthCells, setAutocompleteMaxVisible). A hand-edited settings.json may
+// therefore hold 2.7, and the getter returns it untouched.
+//
+// Pier stores them in Go ints, which reject a fraction outright: a strict decode
+// fails and the member is DROPPED, so the default replaces the user's value.
+// floorSettingsNumber keeps the setting instead, flooring it the way the
+// reference's own setters ultimately do.
+func TestToleratedNumberMembersFloorInsteadOfReject(t *testing.T) {
+	for _, tc := range []struct {
+		raw   string
+		check func(*SettingsManager) int
+		want  int
+	}{
+		{`{"editorPaddingX":2.7}`, func(m *SettingsManager) int { return m.GetEditorPaddingX() }, 2},
+		{`{"terminal":{"imageWidthCells":60.7}}`, func(m *SettingsManager) int { return m.GetImageWidthCells() }, 60},
+		{`{"autocompleteMaxVisible":20.9}`, func(m *SettingsManager) int { return m.GetAutocompleteMaxVisible() }, 20},
+	} {
+		var settings Settings
+		if rejected := decodeSettingsTolerantWithRejects([]byte(tc.raw), &settings); len(rejected) != 0 {
+			t.Fatalf("%s: rejected %v; want the member kept", tc.raw, rejected)
+		}
+		manager := NewInMemorySettingsManager(&settings, SettingsManagerCreateOptions{})
+		if got := tc.check(manager); got != tc.want {
+			t.Errorf("%s = %d, want %d (floored, not dropped to the default)", tc.raw, got, tc.want)
+		}
+	}
+	// A member that is NOT in the tolerant list still rejects a fraction, so the
+	// tolerance stays a deliberate list rather than a blanket rule. A nested
+	// member reports through its getter rather than the top-level rejects.
+	var settings Settings
+	decodeSettingsTolerantWithRejects([]byte(`{"compaction":{"reserveTokens":1000.9}}`), &settings)
+	manager := NewInMemorySettingsManager(&settings, SettingsManagerCreateOptions{})
+	if _, err := manager.GetCompactionReserveTokens(nil); err == nil {
+		t.Fatal("a fractional reserveTokens was accepted; it must reject")
+	}
+}
