@@ -3,6 +3,7 @@ package coding
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -373,5 +374,59 @@ func TestReadToolTreatsInvalidPNGAsText(t *testing.T) {
 	got := result.Content[0].(ai.TextContent).Text
 	if strings.HasPrefix(got, "Read image file") || !strings.Contains(got, "not really a png") {
 		t.Fatalf("read text = %q; want the file content", got)
+	}
+}
+
+// The read tool picks its lines two ways: in memory for unusual ranges, and
+// streaming for the common one. They must select the same lines, or a large file
+// and a small one with the same text would show different content. No other test
+// covers either function.
+func TestTextLineSelectionStreamMatchesBuffer(t *testing.T) {
+	dir := t.TempDir()
+	contents := map[string]string{
+		"plain":     "a\nb\nc\nd",
+		"trailing":  "a\nb\n",
+		"empty":     "",
+		"one":       "only",
+		"blankline": "a\n\nb",
+		"crlf":      "a\r\nb\r\nc",
+		"nul":       "a\x00b\nc",
+		"nolf":      "no newline at end",
+	}
+	checked := 0
+	for name, content := range contents {
+		path := filepath.Join(dir, name+".txt")
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		for start := 0; start <= 12; start++ {
+			for _, limit := range []*float64{nil, new(0.0), new(1.0), new(2.0), new(10.0), new(100.0)} {
+				var limitInt *int
+				if limit != nil {
+					value := int(*limit)
+					limitInt = &value
+				}
+				if !isStreamableReadRange(new(float64(start)), limit) {
+					continue
+				}
+				streamed, err := selectTextLinesFromStream(context.Background(), path, start, limitInt)
+				if err != nil {
+					t.Fatalf("%s start=%d limit=%s: %v", name, start, fmt.Sprint(limit), err)
+				}
+				buffered := selectTextLinesFromBuffer([]byte(content), float64(start), limit)
+				checked++
+				if streamed.truncation.Content != buffered.truncation.Content {
+					t.Errorf("%s start=%d limit=%s content\n stream=%q\n buffer=%q",
+						name, start, fmt.Sprint(limit), streamed.truncation.Content, buffered.truncation.Content)
+				}
+				if streamed.totalFileLines != buffered.totalFileLines {
+					t.Errorf("%s start=%d limit=%s totalLines stream=%d buffer=%d",
+						name, start, fmt.Sprint(limit), streamed.totalFileLines, buffered.totalFileLines)
+				}
+			}
+		}
+	}
+	if checked < 200 {
+		t.Fatalf("only %d ranges checked", checked)
 	}
 }
