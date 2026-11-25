@@ -50,6 +50,26 @@ func TestGetOpenAICodexAccountID(t *testing.T) {
 	if got := GetOpenAICodexAccountID("h." + standard + ".s"); got != "acct_pad" {
 		t.Fatalf("account id = %q", got)
 	}
+	// The reference calls atob(payload) directly, so it ignores anything after the
+	// padding and any ASCII whitespace inside the payload. Go's StdEncoding errors
+	// on both, which dropped the account id from a token that carries one.
+	// "acct_pad" makes the encoded length a multiple of four ending in "=", so
+	// atob stops at the padding and ignores the trailing junk. A payload with no
+	// padding appends real bytes in both implementations and parses in neither.
+	claim := `{"https://api.openai.com/auth":{"chatgpt_account_id":"acct_pad"}}`
+	padded := base64.StdEncoding.EncodeToString([]byte(claim))
+	if !strings.HasSuffix(padded, "=") {
+		t.Fatalf("the fixture must end in padding, got %q", padded)
+	}
+	if got := GetOpenAICodexAccountID("h." + padded + "garbage" + ".s"); got != "acct_pad" {
+		t.Fatalf("data after padding: account id = %q", got)
+	}
+	if got := GetOpenAICodexAccountID("h." + padded + "\n" + ".s"); got != "acct_pad" {
+		t.Fatalf("trailing newline: account id = %q", got)
+	}
+	if got := GetOpenAICodexAccountID("h." + padded[:4] + "\t" + padded[4:] + ".s"); got != "acct_pad" {
+		t.Fatalf("embedded tab: account id = %q", got)
+	}
 }
 
 func TestOpenAICodexAuthorizationFlow(t *testing.T) {

@@ -68,9 +68,26 @@ func decodeJWT(token string) map[string]any {
 		return nil
 	}
 	payload := parts[1]
-	// WHATWG forgiving-base64 accepts both alphabets and omits padding.
-	normalized := strings.NewReplacer("-", "+", "_", "/").Replace(payload)
-	if remainder := len(normalized) % 4; remainder != 0 {
+	// upstream calls atob(payload), whose WHATWG forgiving-base64 skips ASCII
+	// whitespace, accepts either alphabet, tolerates missing padding, and IGNORES
+	// everything after the padding. Go's StdEncoding does none of that, so the
+	// token is normalized the way atob would, and cut at the first "=".
+	strip := func(text string) string {
+		var out []byte
+		for index := 0; index < len(text); index++ {
+			switch text[index] {
+			case ' ', '\t', '\n', '\f', '\r':
+				continue
+			}
+			out = append(out, text[index])
+		}
+		return string(out)
+	}
+	normalized := strings.NewReplacer("-", "+", "_", "/").Replace(strip(payload))
+	if cut := strings.IndexByte(normalized, '='); cut >= 0 {
+		normalized = normalized[:cut]
+	}
+	if remainder := len(normalized) % 4; remainder != 0 && remainder != 1 {
 		normalized += strings.Repeat("=", 4-remainder)
 	}
 	decoded, err := base64.StdEncoding.DecodeString(normalized)
