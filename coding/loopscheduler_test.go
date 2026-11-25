@@ -341,3 +341,49 @@ func TestLoopSchedulerDayStepCrossesMonthEnd(t *testing.T) {
 		}
 	}
 }
+
+// D537: a fire the host could not deliver because the agent was busy goes back
+// under its own id. It does not replace the self-paced wakeup the way SetWakeup
+// would, a job already present is not duplicated, and a postponed wakeup is
+// still the one schedule_wakeup's stop clears.
+func TestLoopSchedulerPostpone(t *testing.T) {
+	clock := time.Date(2026, time.November, 25, 10, 0, 0, 0, time.UTC)
+	var fired []LoopJob
+	scheduler := NewLoopScheduler(func() time.Time { return clock }, nil)
+	defer scheduler.Stop()
+	scheduler.SetFire(func(job LoopJob) { fired = append(fired, job) })
+	once, err := scheduler.Add("5 10 * * *", "one-shot from cron_create", false, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wakeup, err := scheduler.SetWakeup(10*time.Minute, "the loop's wakeup")
+	if err != nil {
+		t.Fatal(err)
+	}
+	clock = clock.Add(5 * time.Minute)
+	scheduler.fireDue()
+	if len(fired) != 1 || fired[0].ID != once.ID || fired[0].Recurring {
+		t.Fatalf("fired %+v, want the one-shot job", fired)
+	}
+	if !scheduler.Postpone(fired[0], 5*time.Second) {
+		t.Fatal("Postpone refused the fired job")
+	}
+	if scheduler.Postpone(fired[0], 5*time.Second) {
+		t.Fatal("Postpone duplicated a job that is already back")
+	}
+	jobs := scheduler.Jobs()
+	if len(jobs) != 2 || jobs[0].ID != wakeup.ID || jobs[1].ID != once.ID || !jobs[1].NextFire.Equal(clock.Add(5*time.Second)) {
+		t.Fatalf("jobs after postponing = %+v", jobs)
+	}
+	clock = clock.Add(5 * time.Second)
+	scheduler.fireDue()
+	if len(fired) != 2 || fired[1].ID != once.ID {
+		t.Fatalf("the postponed job did not fire again: %+v", fired)
+	}
+	// A postponed wakeup keeps its id, so stop still clears it.
+	clock = clock.Add(10 * time.Minute)
+	scheduler.fireDue()
+	if !scheduler.Postpone(fired[len(fired)-1], 5*time.Second) || !scheduler.ClearWakeup() || scheduler.Count() != 0 {
+		t.Fatalf("a postponed wakeup was not cleared by stop: %+v", scheduler.Jobs())
+	}
+}

@@ -50,8 +50,8 @@ typing there filters the list. `/loop [interval] <prompt>` repeats a prompt on a
 cron-style interval for as long as the session is open (rounded to one that
 divides its hour or day evenly, or to whole days, and it says when it rounds), and
 `/loop <prompt>` with no interval lets the agent pace the next run itself. A run
-that comes due while the agent is busy waits for the current turn instead of
-interrupting it. The footer shows how many loops are scheduled, `/loop list` shows
+that comes due while the agent is busy is never queued as a message: an interval
+loop skips that run, and a self-paced one starts once the agent is idle. The footer shows how many loops are scheduled, `/loop list` shows
 them, and `/loop stop [id]` cancels one, or all of them.
 Stdio RPC (`pier --mode rpc`) is documented in
 [the RPC contract](ARCHITECTURE.md#stdio-rpc).

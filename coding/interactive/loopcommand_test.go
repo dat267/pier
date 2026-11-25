@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -260,26 +261,65 @@ func TestLoopListKeepsEachJobOnOneRow(t *testing.T) {
 	}
 }
 
-// D537: a self-paced /loop typed during a run waits for that run as a
-// follow-up, so the status says it is queued; "Loop started" read as if the
-// first run were already under way.
+// D537: a self-paced /loop typed during a run does not go into the message
+// queue. Its first run waits in the scheduler, as a wakeup due now that fires
+// once the agent is idle, and the status says so.
 func TestLoopCommandSaysWhenTheFirstRunWaits(t *testing.T) {
 	scheduler := coding.NewLoopScheduler(nil, nil)
 	defer scheduler.Stop()
 	session := &commandTestSession{}
 	var status string
-	wiring := &CommandWiring{LoopScheduler: scheduler, Session: session, OnLoopPrompt: func(string) {},
-		ShowStatus: func(message string) { status = message }, ShowError: func(string) {}}
+	var submitted []string
+	wiring := &CommandWiring{LoopScheduler: scheduler, Session: session,
+		OnLoopPrompt: func(prompt string) { submitted = append(submitted, prompt) },
+		ShowStatus:   func(message string) { status = message }, ShowError: func(string) {}}
 	wiring.HandleLoopCommand("check the deploy")
-	if !strings.HasPrefix(status, "Loop started.") {
-		t.Fatalf("an idle start said %q", status)
+	if !strings.HasPrefix(status, "Loop started.") || len(submitted) != 1 {
+		t.Fatalf("an idle start said %q and submitted %q", status, submitted)
 	}
 	for _, busy := range []func(){func() { session.streaming = true }, func() { session.compacting = true }} {
-		session.streaming, session.compacting = false, false
+		session.streaming, session.compacting, submitted = false, false, nil
+		scheduler.RemoveAll()
 		busy()
 		wiring.HandleLoopCommand("check the deploy")
-		if !strings.Contains(status, "queued") || strings.Contains(status, "started") {
-			t.Fatalf("a busy start (streaming %v, compacting %v) said %q", session.streaming, session.compacting, status)
+		if len(submitted) != 0 {
+			t.Fatalf("a busy start submitted %q into the message queue", submitted)
+		}
+		jobs := scheduler.Jobs()
+		if len(jobs) != 1 || jobs[0].Recurring || jobs[0].Prompt != coding.LoopSelfPacedPrompt("check the deploy") {
+			t.Fatalf("a busy start scheduled %+v, want one wakeup for the noted prompt", jobs)
+		}
+		if !strings.Contains(status, "once the agent is idle") {
+			t.Fatalf("a busy start said %q", status)
+		}
+	}
+}
+
+// D537: a fire never enters the message queue while the agent works. A
+// recurring job's fire is skipped (its next interval runs as usual); a one-shot,
+// such as a self-paced loop's wakeup, is retried shortly, since skipping it would
+// end the loop; an idle agent gets the prompt at once.
+func TestLoopFireWaitsForAnIdleAgent(t *testing.T) {
+	recurring := coding.LoopJob{Prompt: "poll", Recurring: true}
+	once := coding.LoopJob{Prompt: "resume the loop"}
+	for _, tc := range []struct {
+		job       coding.LoopJob
+		busy      bool
+		submitted []string
+		retried   []string
+	}{
+		{recurring, false, []string{"poll"}, nil},
+		{once, false, []string{"resume the loop"}, nil},
+		{recurring, true, nil, nil},
+		{once, true, nil, []string{"resume the loop"}},
+	} {
+		var submitted, retried []string
+		deliverLoopFire(tc.job, tc.busy,
+			func(prompt string) { submitted = append(submitted, prompt) },
+			func(job coding.LoopJob) { retried = append(retried, job.Prompt) })
+		if !slices.Equal(submitted, tc.submitted) || !slices.Equal(retried, tc.retried) {
+			t.Fatalf("job %+v busy %v: submitted %q retried %q, want %q and %q",
+				tc.job, tc.busy, submitted, retried, tc.submitted, tc.retried)
 		}
 	}
 }

@@ -9001,14 +9001,17 @@ scheduled" (or "N loops") among its statuses, read from the app's scheduler at
 render time; adding or stopping a job prints a status and a fire starts a run, so
 each change is followed by a render.
 
-A fire takes the typed-input dispatch (`HandleScheduledSubmit`) with the editor
-detached: it queues behind compaction or starts a run like typed text, but it
-never clears the draft the user is writing or adds the prompt to the editor
-history. Unlike typed text it does not steer a running turn: it is queued as a
-follow-up for when the run stops, so a periodic prompt cannot cut into the work
-in progress every interval. A self-paced `/loop` typed during a run is queued the
-same way, and its status says so ("Loop queued: its first run starts when the
-current turn ends…") instead of "Loop started".
+A fire never enters the message queue. The app checks on the UI loop whether
+the agent is running or compacting (`deliverLoopFire`): an idle agent gets the
+prompt through the typed-input dispatch (`HandleScheduledSubmit`) with the
+editor detached, so it never clears the draft the user is writing or adds the
+prompt to the editor history. A busy agent gets nothing: a recurring job skips
+that fire, since its next interval comes anyway, and a one-shot (a self-paced
+loop's wakeup, or a `cron_create` with `recurring: false`) goes back into the
+scheduler under its own id (`Postpone`) and is tried again in 5 seconds, since
+skipping it would end the loop. A self-paced `/loop` typed during a run is
+likewise not queued: its first run is a wakeup due now, and its status says so
+("Loop scheduled: its first run starts once the agent is idle…").
 
 Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopSchedulerFiresAndDeletes`, `TestLoopSchedulerRecurringStays`,
@@ -9031,7 +9034,7 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
 `TestScheduledSubmitKeepsTheDraft`, `TestLoopListNamesTheDayOfALaterRun`,
 `TestLoopSchedulerDayStepCrossesMonthEnd`, `TestLoopListKeepsEachJobOnOneRow`, `TestFooterShowsScheduledLoops`, `TestSelfPacedLoopPromptCarriesTheNote`,
-`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`, `TestCronListKeepsEachJobOnOneRow`, `TestSessionReplacementDropsScheduledLoops`.
+`TestTranscriptHidesTheSelfPacedLoopNote`, `TestQueuedLoopRunHidesTheNote`, `TestLoopCommandSaysWhenTheFirstRunWaits`, `TestCronListKeepsEachJobOnOneRow`, `TestSessionReplacementDropsScheduledLoops`, `TestLoopFireWaitsForAnIdleAgent`, `TestLoopSchedulerPostpone`.
 
 ### D538
 

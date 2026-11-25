@@ -79,6 +79,9 @@ type LoopScheduler struct {
 	stopped bool
 	// wakeupID names the self-paced loop's pending wakeup, "" when none.
 	wakeupID string
+	// fire, when set, receives each due job instead of enqueue receiving its
+	// prompt, so the host can tell a recurring job from a one-shot (D537).
+	fire func(job LoopJob)
 
 	// scheduleNudge wakes the timer loop when the job set changes.
 	nudge chan struct{}
@@ -264,6 +267,36 @@ func (s *LoopScheduler) Remove(id string) bool {
 // same time the scheduler fires by.
 func (s *LoopScheduler) Now() time.Time { return s.now() }
 
+// SetFire hands each due job to fire instead of its prompt to enqueue. The
+// host uses it to skip or postpone a fire while the agent is busy (D537).
+func (s *LoopScheduler) SetFire(fire func(job LoopJob)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.fire = fire
+}
+
+// Postpone puts a fired one-shot job back, due again after delay, under its own
+// id: a fire the host could not deliver yet (the agent was busy, D537) stays
+// scheduled and listed. A job removed in the meantime, or a stopped scheduler,
+// is not revived.
+func (s *LoopScheduler) Postpone(job LoopJob, delay time.Duration) bool {
+	now := s.now()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.stopped || len(s.jobs) >= loopMaxJobs {
+		return false
+	}
+	for _, existing := range s.jobs {
+		if existing.ID == job.ID {
+			return false
+		}
+	}
+	job.NextFire = now.Add(delay)
+	s.jobs = append(s.jobs, &job)
+	s.wake()
+	return true
+}
+
 // Count reports how many jobs are scheduled, without copying them, for the
 // footer's per-render read.
 func (s *LoopScheduler) Count() int {
@@ -353,15 +386,15 @@ func (s *LoopScheduler) nextWait() (time.Duration, bool) {
 func (s *LoopScheduler) fireDue() {
 	s.mu.Lock()
 	now := s.now()
-	var prompts []string
+	var due []LoopJob
 	kept := s.jobs[:0]
 	for _, job := range s.jobs {
 		if job.NextFire.After(now) {
 			kept = append(kept, job)
 			continue
 		}
-		prompts = append(prompts, job.Prompt)
 		job.LastFiredAt = now
+		due = append(due, *job)
 		// A one-shot job is done after one fire. A recurring job advances to its
 		// next match and ends once that match falls past its maximum age.
 		if !job.Recurring {
@@ -381,13 +414,15 @@ func (s *LoopScheduler) fireDue() {
 		kept = append(kept, job)
 	}
 	s.jobs = kept
-	enqueue := s.enqueue
+	enqueue, fire := s.enqueue, s.fire
 	s.mu.Unlock()
-	if enqueue == nil {
-		return
-	}
-	for _, prompt := range prompts {
-		enqueue(prompt)
+	for _, job := range due {
+		switch {
+		case fire != nil:
+			fire(job)
+		case enqueue != nil:
+			enqueue(job.Prompt)
+		}
 	}
 }
 

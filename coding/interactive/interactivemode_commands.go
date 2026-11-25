@@ -879,13 +879,23 @@ func (w *CommandWiring) HandleLoopCommand(args string) {
 		return
 	}
 	if interval == 0 {
-		status := "Loop started. The agent paces the next run itself."
-		// A busy session takes the first run as a follow-up (D537), so it has
-		// not started yet.
+		// A busy agent's message queue is not the place for it (D537): the
+		// first run waits in the scheduler as a wakeup due now, which fires
+		// once the agent is idle.
 		if w.Session != nil && (w.Session.IsStreaming() || w.Session.IsCompacting()) {
-			status = "Loop queued: its first run starts when the current turn ends, and the agent paces the runs after it."
+			scheduler := w.loopScheduler()
+			if scheduler == nil {
+				w.showError("Scheduling is not available in this session.")
+				return
+			}
+			if _, err := scheduler.SetWakeup(0, coding.LoopSelfPacedPrompt(prompt)); err != nil {
+				w.showError(err.Error())
+				return
+			}
+			w.showStatus("Loop scheduled: its first run starts once the agent is idle, and the agent paces the runs after it.")
+			return
 		}
-		w.runLoopPrompt(coding.LoopSelfPacedPrompt(prompt), status)
+		w.runLoopPrompt(coding.LoopSelfPacedPrompt(prompt), "Loop started. The agent paces the next run itself.")
 		return
 	}
 	cron, used, ok := coding.LoopCronForInterval(interval)
@@ -944,6 +954,24 @@ func (w *CommandWiring) listLoops() {
 			job.ID, job.HumanSchedule, loopNextRunLabel(job.NextFire, now), loopPromptSummary(job.Prompt)))
 	}
 	w.showStatus(strings.Join(lines, "\n"))
+}
+
+// loopBusyRetry is how soon a one-shot fire that met a busy agent is tried
+// again.
+const loopBusyRetry = 5 * time.Second
+
+// deliverLoopFire decides what a due /loop job does (D537). An idle agent gets
+// the prompt. A busy one (running or compacting) gets nothing in its message
+// queue: a recurring job skips this fire, since its next interval runs anyway,
+// and a one-shot (a self-paced loop's wakeup) is retried shortly, since skipping
+// it would end the loop.
+func deliverLoopFire(job coding.LoopJob, busy bool, submit func(prompt string), retry func(job coding.LoopJob)) {
+	switch {
+	case !busy:
+		submit(job.Prompt)
+	case !job.Recurring:
+		retry(job)
+	}
 }
 
 // loopPromptSummary keeps a job on one row of /loop list: a multi-line prompt

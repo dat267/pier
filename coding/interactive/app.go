@@ -312,8 +312,16 @@ func NewApp(options AppOptions) *App {
 	// from the command, already built by the time NewApp runs. Fires are submitted
 	// as ordinary input, and with no jobs it holds no timer.
 	app.loopMaxAge = coding.LoopRecurringMaxAge
-	app.loopScheduler = coding.NewLoopScheduler(nil, func(prompt string) {
-		app.ui.Post(func() { app.submit.HandleScheduledSubmit(context.Background(), prompt) })
+	app.loopScheduler = coding.NewLoopScheduler(nil, nil)
+	// The busy check runs on the loop, which owns starting a run, so a fire
+	// cannot slip into the message queue between the check and the submit.
+	app.loopScheduler.SetFire(func(job coding.LoopJob) {
+		app.ui.Post(func() {
+			busy := app.session.AgentSession != nil && (app.session.IsStreaming() || app.session.IsCompacting())
+			deliverLoopFire(job, busy,
+				func(prompt string) { app.submit.HandleScheduledSubmit(context.Background(), prompt) },
+				func(job coding.LoopJob) { app.loopScheduler.Postpone(job, loopBusyRetry) })
+		})
 	})
 	// Start the timer loop. Without this a job is registered and listed but never
 	// fires: every scheduler test drives fireDue directly, so the missing call was
