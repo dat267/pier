@@ -441,7 +441,15 @@ func GetScrollbarGeometry(box *LayoutBox, includeHiddenAuto bool) (ScrollbarGeom
 	}
 
 	minThumbHeight := min(2, trackHeight)
-	thumbHeight := max(minThumbHeight, min(trackHeight, int(roundHalfUp(float64(trackHeight*trackHeight)/float64(contentHeight)))))
+	// A content-free box (no children, no scroll content) divides by zero here.
+	// JavaScript keeps that as Infinity, and min(trackHeight, Infinity) is the
+	// whole track, so the thumb fills it; converting the Infinity to an int
+	// saturated it to MinInt64 and the min() picked the 2-row floor instead.
+	thumbHeight := trackHeight
+	if contentHeight > 0 {
+		thumbHeight = max(minThumbHeight,
+			min(trackHeight, int(roundHalfUp(float64(trackHeight*trackHeight)/float64(contentHeight)))))
+	}
 	maxScrollTop := max(0, contentHeight-trackHeight)
 	maxThumbTop := trackHeight - thumbHeight
 	thumbOffset := 0

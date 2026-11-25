@@ -309,3 +309,31 @@ func TestNonComparableComponentsDoNotPanicLayout(t *testing.T) {
 	screen.currentLayout = &frame
 	_ = screen.dispatchMouseToLayoutLocked(TuiMouseEvent{ScreenX: 0, ScreenY: 0})
 }
+
+// layout.ts:296 computes thumbHeight as
+// max(minThumbHeight, min(trackHeight, Math.round(trackHeight*trackHeight/contentHeight))).
+// contentHeight is 0 for a box with no children and no scroll content, and the
+// visibility gate for a ScrollbarAlways view does not reject that (it only needs
+// a viewport). In JavaScript the division yields Infinity, Math.round keeps it
+// Infinity, and Math.min(trackHeight, Infinity) is trackHeight, so the thumb fills
+// the whole track. The port converted Infinity to int, which saturates to
+// MinInt64, so min(trackHeight, ...) returned a negative and max(minThumbHeight,
+// ...) fell back to the 2-row minimum: a full-height thumb became a 2-row bar.
+func TestGetScrollbarGeometryWithNoContent(t *testing.T) {
+	view := NewScrollView(nil, ScrollViewOptions{})
+	view.SetScrollbar(ScrollbarAlways)
+	view.UpdateLayout(0, 5, nil)
+	box := &LayoutBox{
+		ScrollView: view,
+		Rect:       LayoutRect{X: 0, Y: 0, Width: 10, Height: 5},
+		Clip:       LayoutRect{X: 0, Y: 0, Width: 10, Height: 5},
+	}
+	geometry, ok := GetScrollbarGeometry(box, false)
+	if !ok {
+		t.Fatal("the always-visible scrollbar must have geometry")
+	}
+	if geometry.ThumbHeight != geometry.TrackHeight {
+		t.Errorf("thumbHeight = %d, want %d: a content-free view fills the track",
+			geometry.ThumbHeight, geometry.TrackHeight)
+	}
+}
