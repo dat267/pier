@@ -1,4 +1,36 @@
-# Automatic backgrounding of long tool calls
+# Session entries whose timestamp is not a string are dropped
+
+Status: reproduced, not fixed. The reference keeps these entries; the port loses
+them silently.
+
+`parseSessionEntryLine` is a bare `JSON.parse`, so any line it accepts becomes a
+`FileEntry`, including one whose `timestamp` is a number or `null`
+(`session-manager.ts:617`). Downstream the reference only ever feeds it to
+`new Date(...)`, and `new Date(1).getTime()` is a valid 1970-01-01 millisecond
+value, so nothing rejects it.
+
+The port types the field `Timestamp string`, so `encoding/json` refuses the
+line. Reproduced both ways:
+
+- an entry line with `"timestamp":1` is skipped by the fast scanner (it accepts
+  only escape-free strings) and then rejected by `UnmarshalFileEntry` with
+  `cannot unmarshal JSON number into Go string within "/timestamp"`, so that turn
+  vanishes from the loaded transcript;
+- a header line with `"timestamp":1` makes the whole session invisible, because
+  the header fails to decode and `LoadEntriesFromFileBuffered` returns no
+  entries, which the caller reads as an invalid file.
+
+Reachability: pier's own writer always stamps `time.Now().UTC()` in the session
+timestamp layout (`session_manager.go:221,784,1377`), so this needs a foreign
+writer or a hand-edited file. A truncated line is already handled separately by
+the missing-stamp path.
+
+Why it is not fixed yet: the tolerant fix has to keep the decode fast. The
+header field is re-emitted from `MarshalJSON` in five places and the entry
+decode is the measured hot path (707ms to 276ms, `session_store.go:1046`), so it
+needs a design pass, not an inline edit.
+
+# Automatic backgrounding of long tool calls# Automatic backgrounding of long tool calls
 
 Status: implemented (D538). The plan below is kept because the order it chose is
 why the fast path stayed byte-identical.
