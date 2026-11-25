@@ -64,6 +64,10 @@ func (b *Box) AddChild(component Component) {
 	b.Children = append(b.Children, component)
 	b.cache = nil
 	bumpContentRevision()
+	// The renderer caches the mounted animator list by tree revision; a Box that
+	// mounted an animator without bumping it was not discovered until the walk
+	// box expired (Container does this in every structural mutation).
+	bumpAnimationTreeRevision()
 }
 
 // RemoveChild removes a child.
@@ -76,6 +80,7 @@ func (b *Box) RemoveChild(component Component) {
 			b.Children = b.Children[:last]
 			b.cache = nil
 			bumpContentRevision()
+			bumpAnimationTreeRevision()
 			return
 		}
 	}
@@ -86,6 +91,7 @@ func (b *Box) Clear() {
 	b.Children = nil
 	b.cache = nil
 	bumpContentRevision()
+	bumpAnimationTreeRevision()
 }
 
 // SetBgFn updates the background function. The cache is kept because the

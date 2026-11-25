@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
+	"time"
 )
 
 // Pinned pi v1.4.0 packages/tui/src/components/box.ts removes Box children
@@ -107,5 +108,39 @@ func TestTextAndBoxRenderingMatchTheReference(t *testing.T) {
 				t.Errorf("%+v line %d:\ngot  %q\nwant %q", record, index, got[index], record.Lines[index])
 			}
 		}
+	}
+}
+
+// animatorRecords is an Animator that counts how often the renderer asks it.
+type animatorRecords struct{ calls *int }
+
+func (a *animatorRecords) Render(int) []string { return []string{"x"} }
+func (a *animatorRecords) Invalidate()         {}
+func (a *animatorRecords) AnimationFrame(time.Time) (bool, time.Duration) {
+	*a.calls++
+	return true, time.Second
+}
+
+// The renderer caches the mounted animator list and re-walks only when the
+// animation-tree revision moves or the one-second walk box expires. Every
+// Container structural mutation bumps that revision, but Box's did not, so an
+// animator mounted under a Box was not discovered until the box expired. This is
+// a pier-only optimisation (the reference re-collects every frame), so the stale
+// list is a port defect, not parity.
+func TestBoxStructuralChangeReachesTheAnimatorWalk(t *testing.T) {
+	var existing, added int
+	renderer := NewRenderer(&recordingTerminal{width: 40, height: 10})
+	box := NewBox(0, 0, nil)
+	box.AddChild(&animatorRecords{calls: &existing})
+	renderer.MountedRoots = func() []Component { return []Component{box} }
+
+	renderer.NextAnimation()
+	if existing != 1 {
+		t.Fatalf("first walk asked the mounted animator %d times, want 1", existing)
+	}
+	box.AddChild(&animatorRecords{calls: &added})
+	renderer.NextAnimation()
+	if added == 0 {
+		t.Fatal("the animator added to the Box was not discovered: the cached walk outlived the structural change")
 	}
 }
