@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D541)
+# Deliberate divergences from pi (D1–D542)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9283,3 +9283,27 @@ leaves the spelling alone for component-only readers.
 Tests: `TestWwwAuthenticateResourceMetadataIsWHATWGSerialized` covers the default
 port, the bare host and a non-default port; `TestResourceURLKeepsDefaultPortAndHostCase`
 keeps D276's behaviour.
+
+### D542
+
+**A custom message's `timestamp` is always written, and `null` when unstamped.**
+
+Reference: pi v1.6.0 (`faac5858`),
+`packages/coding-agent/src/core/messages.ts` builds every custom message with
+`timestamp: new Date(stamp).getTime()`. The field is required, so it is always
+serialized; a missing or malformed `stamp` makes `getTime()` return `NaN`, which
+`JSON.stringify` writes as `null`.
+
+Pier stores the stamp as an `int64` and its `entryTimestampMS` reports `0` for an
+unreadable stamp (the same input the reference renders as `NaN`, D-domain fixed in
+`coding/session_contextmessages_test.go`). The encoder previously DROPPED the member
+when it was zero, so a `branch_summary`, `compaction_summary`, `custom` or
+`bashExecution` message built from an entry with an unparsable stamp persisted
+without a `timestamp` key at all, where the reference persists `"timestamp":null`.
+
+`appendCustomTimestamp` now writes the member unconditionally and renders the zero
+sentinel as `null`, keeping the key and its position.
+
+Test: `TestCustomMessageKeepsANullTimestamp` (all four roles plus the no-content
+shape, with a real stamp as the control);
+`TestMarshalMessageKeepsRoleFirst` pins the spliced shape.

@@ -3,6 +3,7 @@ package ai
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -373,7 +374,9 @@ func TestMarshalMessageKeepsRoleFirst(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if string(spliced) != `{"role":"custom","customType":"t","content":"x"}` {
+			// The reference always writes `timestamp`; an absent stamp is NaN and
+			// serializes as null (D542).
+			if string(spliced) != `{"role":"custom","customType":"t","content":"x","timestamp":null}` {
 				t.Fatalf("spliced custom = %s", spliced)
 			}
 		})
@@ -416,5 +419,32 @@ func TestToolConstrainedSamplingAcceptsLoneSurrogate(t *testing.T) {
 	}
 	if cfg.Variants["v"] == "" {
 		t.Fatalf("variant text was dropped: %#v", cfg.Variants)
+	}
+}
+
+// A custom message always carries `timestamp`; the reference builds it with
+// `new Date(stamp).getTime()`, which is NaN for a missing or malformed stamp and
+// serializes as null. Pier's entryTimestampMS reports 0 for the same input, so
+// the encoder must write null rather than drop the key.
+func TestCustomMessageKeepsANullTimestamp(t *testing.T) {
+	for _, message := range []*CustomMessage{
+		{Role: "branchSummary", Timestamp: 0, Content: []byte(`{"summary":"s","fromId":"f"}`)},
+		{Role: "compactionSummary", Timestamp: 0, Content: []byte(`{"summary":"s","tokensBefore":1}`)},
+		{Role: "custom", Timestamp: 0, Content: []byte(`{"x":1}`)},
+		{Role: "bashExecution", Timestamp: 0, Content: []byte(`{"command":"c"}`)},
+		{Role: "custom", Timestamp: 0},
+	} {
+		enc, err := MarshalMessage(message)
+		if err != nil {
+			t.Fatalf("%s: %v", message.Role, err)
+		}
+		if !strings.Contains(string(enc), `"timestamp":null`) {
+			t.Errorf("%s = %s, want a null timestamp", message.Role, enc)
+		}
+	}
+	// A real stamp is still a number.
+	enc, err := MarshalMessage(&CustomMessage{Role: "branchSummary", Timestamp: 1767225600000, Content: []byte(`{"summary":"s"}`)})
+	if err != nil || !strings.Contains(string(enc), `"timestamp":1767225600000`) {
+		t.Fatalf("stamped = %s, %v; want the number", enc, err)
 	}
 }

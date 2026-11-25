@@ -285,10 +285,7 @@ func (m *CustomMessage) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	out := []byte(`{"role":` + string(role))
-	if m.Timestamp != 0 {
-		out = append(out, `,"timestamp":`...)
-		out = append(out, strconv.FormatInt(m.Timestamp, 10)...)
-	}
+	out = append(out, appendCustomTimestamp(nil, m.Timestamp)...)
 	return append(out, '}'), nil
 }
 
@@ -337,10 +334,7 @@ func spliceCustomRole(content json.RawMessage, role string, timestamp int64) ([]
 		out = append(out, ',')
 		out = append(out, inner...)
 	}
-	if timestamp != 0 {
-		out = append(out, `,"timestamp":`...)
-		out = append(out, strconv.FormatInt(timestamp, 10)...)
-	}
+	out = append(out, appendCustomTimestamp(nil, timestamp)...)
 	out = append(out, '}')
 	return out, nil
 }
@@ -379,6 +373,18 @@ func MarshalMessage(m Message) (json.RawMessage, error) {
 		out = append(out, '}')
 	}
 	return out, nil
+}
+
+// appendCustomTimestamp writes a custom message's timestamp member. The
+// reference builds it with `new Date(stamp).getTime()`, which is NaN for a
+// missing or malformed stamp and serializes as null; the port's int64 reports 0
+// for the same input, so 0 is written as null rather than dropped (D542).
+func appendCustomTimestamp(out []byte, timestamp int64) []byte {
+	out = append(out, `,"timestamp":`...)
+	if timestamp == 0 {
+		return append(out, "null"...)
+	}
+	return append(out, strconv.FormatInt(timestamp, 10)...)
 }
 
 // jsonContentPresent distinguishes absent/null content without copying the
