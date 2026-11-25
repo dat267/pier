@@ -261,3 +261,19 @@ func TestDetectSupportedImageMimeTypeRejectsUnstampedGIF(t *testing.T) {
 		t.Fatalf("GIF87a = %q; want image/gif", got)
 	}
 }
+
+// A sliver image whose scaled height rounds to zero must not reach an encoder.
+// inlineImageTargetSize keeps the aspect ratio with math.Round, so a 5000x1
+// image that fits MaxWidth targets 2000x0; every Go image encoder rejects a
+// zero dimension. resizeInlineImage drops such an image instead.
+func TestProcessImageDropsASliverThatRoundsToZero(t *testing.T) {
+	// Tall enough to need scaling, thin enough that the scaled side rounds to 0.
+	data := pngBytes(t, 5000, 1)
+	result := ProcessImage(data, "image/png", nil)
+	if result.OK {
+		t.Fatalf("a 2000x0 target was encoded as %+v", result)
+	}
+	if !strings.Contains(result.Message, "Could not process image") && result.Message == "" {
+		t.Fatalf("message = %q, want a reported omission", result.Message)
+	}
+}
