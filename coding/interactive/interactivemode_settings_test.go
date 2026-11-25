@@ -459,6 +459,8 @@ func TestFeatureToggleAppliesAndPersists(t *testing.T) {
 	wiring, session, _, settings := newSettingsTestWiring(t)
 	wired := 0
 	wiring.WireGoalController = func() { wired++ }
+	// The goal feature is opt-in (D496); this test toggles it OFF, so start on.
+	settings.SetGoalFeatureEnabled(true)
 
 	toggles := wiring.featureToggles()
 	if len(toggles) == 0 || toggles[0].ID != "goal-feature" || !toggles[0].Enabled {
@@ -521,10 +523,11 @@ func TestLoopFeatureToggleAppliesToTheSession(t *testing.T) {
 	selector.GetSettingsList().SelectItem("loop-feature")
 	selector.GetSettingsList().HandleInput("\r")
 
-	if settings.GetLoopFeatureEnabled() {
+	// The loop feature is opt-in, so the first toggle turns it ON.
+	if !settings.GetLoopFeatureEnabled() {
 		t.Fatal("toggling the loop row did not persist")
 	}
-	if session.loopFeature {
+	if !session.loopFeature {
 		t.Fatal("toggling the loop row did not reach the session")
 	}
 }

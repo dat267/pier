@@ -92,21 +92,21 @@ func TestSettingsSchemaFieldsRoundTrip(t *testing.T) {
 	}
 }
 
-// The goal feature toggle is pier-only (D223) and on by default, so a settings
-// file that never mentions it keeps the goal tools.
-func TestSettingsGoalFeatureDefaultsOn(t *testing.T) {
+// The goal feature toggle is pier-only (D496) and every pier-only feature is
+// opt-in, so a settings file that never mentions it adds no goal tools.
+func TestSettingsGoalFeatureDefaultsOff(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
-	if !manager.GetGoalFeatureEnabled() {
-		t.Fatal("goal feature off with no stored setting, want on")
-	}
-	manager.SetGoalFeatureEnabled(false)
 	if manager.GetGoalFeatureEnabled() {
-		t.Fatal("goal feature still on after disabling")
+		t.Fatal("goal feature on with no stored setting, want off")
+	}
+	manager.SetGoalFeatureEnabled(true)
+	if !manager.GetGoalFeatureEnabled() {
+		t.Fatal("goal feature still off after enabling")
 	}
 	// The setting is global: a project file cannot pin it for every clone.
 	reloaded := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
-	if reloaded.GetGoalFeatureEnabled() {
-		t.Fatal("goal feature came back on after reload")
+	if !reloaded.GetGoalFeatureEnabled() {
+		t.Fatal("goal feature came back off after reload")
 	}
 }

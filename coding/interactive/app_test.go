@@ -131,7 +131,17 @@ func newTestAppPersisted(t *testing.T) (*App, func()) {
 // newTestAppConfigured builds a test app, with a session file when persist is
 // set, and a hook that adjusts the
 // settings and app options before NewApp composes the object graph.
+//
+// A setting the SESSION reads at creation (the goal feature, D496) must be in
+// place before CreateAgentSession, so newTestAppSessionSettings exists for that.
 func newTestAppConfigured(t testing.TB, persist bool, configure func(*coding.SettingsManager, *AppOptions)) (*App, func()) {
+	return newTestAppWithSessionSettings(t, persist, nil, configure)
+}
+
+// newTestAppWithSessionSettings is newTestAppConfigured with a hook that runs
+// BEFORE the session is created, for settings the session reads at creation
+// (the goal feature, D496, decides whether the controller exists at all).
+func newTestAppWithSessionSettings(t testing.TB, persist bool, sessionSettings func(*coding.SettingsManager), configure func(*coding.SettingsManager, *AppOptions)) (*App, func()) {
 	t.Helper()
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
@@ -165,6 +175,9 @@ func newTestAppConfigured(t testing.TB, persist bool, configure func(*coding.Set
 	settings := coding.NewInMemorySettingsManager(nil, coding.SettingsManagerCreateOptions{})
 	sessions := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: &persist})
 	fauxModel := anthropicModels[0]
+	if sessionSettings != nil {
+		sessionSettings(settings)
+	}
 	created, err := coding.CreateAgentSession(context.Background(), &coding.CreateAgentSessionOptions{
 		Cwd: dir, AgentDir: dir, Model: fauxModel, StreamFn: ackStreamFn,
 		SessionManager: sessions, ModelRuntime: runtime, SettingsManager: settings,
@@ -334,7 +347,10 @@ func ackStreamFn(model *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOpti
 // no scheduler when it is created. The app must adopt it, or the scheduling tools
 // are never registered and /tools cannot show them.
 func TestAppAdoptsLoopSchedulerOnThePrimarySession(t *testing.T) {
-	app, cleanup := newTestApp(t)
+	// The loop feature is opt-in (D496), and this test is about its scheduler.
+	app, cleanup := newTestAppConfigured(t, false, func(settings *coding.SettingsManager, _ *AppOptions) {
+		settings.SetLoopFeatureEnabled(true)
+	})
 	defer cleanup()
 	if app.loopScheduler == nil {
 		t.Fatal("the app has no loop scheduler")
@@ -404,4 +420,13 @@ func TestAppStartsTheLoopScheduler(t *testing.T) {
 	if scheduler.Running() {
 		t.Fatal("closing the app left the scheduler running")
 	}
+}
+
+// newTestAppWithGoalFeature builds a test app with the goal feature enabled
+// before the session is created, which is when D496 decides whether the goal
+// controller and its tools exist at all.
+func newTestAppWithGoalFeature(t *testing.T) (*App, func()) {
+	return newTestAppWithSessionSettings(t, false, func(settings *coding.SettingsManager) {
+		settings.SetGoalFeatureEnabled(true)
+	}, nil)
 }

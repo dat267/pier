@@ -12,7 +12,8 @@ import (
 func TestSessionReplacementKeepsGoalCommandNoticesVisible(t *testing.T) {
 	for _, kind := range []string{"initial", "new", "switch"} {
 		t.Run(kind, func(t *testing.T) {
-			app, cleanup := newTestApp(t)
+			// The goal feature is opt-in (D496), and these notices are its.
+			app, cleanup := newTestAppWithGoalFeature(t)
 			defer cleanup()
 			app.Init(context.Background())
 			switch kind {
@@ -44,7 +45,8 @@ func TestSessionReplacementKeepsGoalCommandNoticesVisible(t *testing.T) {
 func TestSessionReplacementRejectsRetiredGoalNotices(t *testing.T) {
 	for _, when := range []string{"already posted", "delivered late"} {
 		t.Run(when, func(t *testing.T) {
-			app, cleanup := newTestApp(t)
+			// The goal feature is opt-in (D496), and these notices are its.
+			app, cleanup := newTestAppWithGoalFeature(t)
 			defer cleanup()
 			app.Init(context.Background())
 			old := app.session.GoalController()

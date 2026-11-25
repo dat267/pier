@@ -52,7 +52,7 @@ func TestCreateAgentSessionDefaults(t *testing.T) {
 		t.Fatalf("thinking level = %q", session.ThinkingLevel())
 	}
 	// The default tool set is read/bash/edit/write.
-	if names := strings.Join(session.GetActiveToolNames(), ","); names != "read,bash,edit,write,set_goal,get_goal" {
+	if names := strings.Join(session.GetActiveToolNames(), ","); names != "read,bash,edit,write" {
 		t.Fatalf("tools = %q", names)
 	}
 	// The initial state is persisted for resume.
@@ -168,7 +168,16 @@ func newReloadSettings(t *testing.T) (*SettingsManager, string) {
 		t.Fatal(err)
 	}
 	writeReloadSettings(t, path, `{}`)
-	return NewSettingsManagerFromFiles(dir, agentDirForSettings(t), SettingsManagerCreateOptions{}), path
+	agentDir := agentDirForSettings(t)
+	// goalFeature is opt-in and GLOBAL only (D496), so it goes in the agent-dir
+	// settings, not this project file. These reload tests assert that the goal
+	// tools belong to the default set, so they turn the feature on explicitly.
+	globalPath := filepath.Join(agentDir, "settings.json")
+	if err := os.MkdirAll(filepath.Dir(globalPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeReloadSettings(t, globalPath, `{"goalFeature":true}`)
+	return NewSettingsManagerFromFiles(dir, agentDir, SettingsManagerCreateOptions{}), path
 }
 
 func writeReloadSettings(t *testing.T, path string, content string) {

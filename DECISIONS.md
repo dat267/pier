@@ -8201,10 +8201,11 @@ ones skipped).
 pi has no goal feature, so pier's controller, `/goal` and its `get_goal`/`set_goal`
 tools are added behavior with no switch: a user who does not want the agent
 setting objectives had to accept the tools in every request. A global
-`goalFeature` setting (default `true`, so an existing setup keeps working) gates
-it. Off, a new session installs no controller, the two tools leave the registry
-and the active set, and `/goal`, the renderer hooks and the idle-round scheduler
-all see a nil controller. On, a session installs the controller, registers the
+`goalFeature` setting gates it. It is off by default, like every pier-only
+feature: pier adds optional behavior, and a user who has not asked for it gets the
+reference's plain agent. Off, a new session installs no controller, the two tools
+leave the registry and the active set, and `/goal`, the renderer hooks and the
+idle-round scheduler all see a nil controller. On, a session installs the controller, registers the
 tools and replays the goal stored on the branch, so a goal set before disabling
 comes back disarmed instead of vanishing; the toggle applies to a live session,
 not only at startup.
@@ -8235,10 +8236,9 @@ With the goal feature off there is no controller, so `/goal` says "The goal
 feature is off. Turn it on in /features." instead of clearing the editor and
 doing nothing, as `/loop` does (D537). Turning the feature off keeps the
 session's goal, which turning it back on restores, and the status says so ("Goal
-feature off; the goal is kept for when it is back on.") so off does not read as
-deleted.
+off; the goal is kept for when it is back on.") so off does not read as deleted.
 
-Tests: `TestSettingsGoalFeatureDefaultsOn` (default, global scope, reload),
+Tests: `TestSettingsGoalFeatureDefaultsOff` (default, global scope, reload),
 `TestSessionToolToggle` (a tool leaves and rejoins the active set and the prompt,
 an unknown name errors), `TestToolsSelectorTogglesSessionTools` (`/tools` lists
 every tool with its state and a toggle reaches the session),
@@ -9123,9 +9123,10 @@ a stale job and a fresh one could share an id: `cron_delete` then reported "No
 scheduled job" for a job it had just removed.
 
 The one knob is the threshold itself, in `/features`, because how long is "too
-long" depends on the work: a one-minute default suits a shell command, while
-someone running long builds wants ten or thirty, and someone who would rather
-wait wants it off. The row is a choice list (`off`, `30s`, `1m`, `2m`, `5m`,
+long" depends on the work: a shell command suits a minute, long builds want ten or
+thirty, and someone who would rather wait wants it off. It is off by default like
+every pier-only feature, so the reference's plain behavior is what a run gets
+unless the operator asks for more. The row is a choice list (`off`, `30s`, `1m`, `2m`, `5m`,
 `10m`, `30m`) rather than a boolean, since "on" alone cannot express it. Every
 stored value is spelled as the row spells it (`1m`, `2m`, not `1m0s`, `2m0s`),
 because `Duration.String()` adds the zero units and the list cycles from the
@@ -9134,8 +9135,8 @@ jump to the first entry ("off") instead of the next one. A hand-edited value
 between the steps still shows itself (`1m30s`). It is
 stored as the `backgroundToolCalls` setting, read per run so a change applies to
 the next tool call rather than only to a new session, and a stored value this
-build cannot read falls back to the default instead of to off, so a typo cannot
-silently disable the safety net.
+build cannot read falls back to the default instead of to off. The default IS
+off, so a typo is the same as an unset value rather than a surprise.
 
 The pinned reference runs every tool call to completion
 (`packages/agent/src/agent-loop.ts` has no timeout and no backgrounding), so this

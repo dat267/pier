@@ -28,7 +28,7 @@ func TestCreateAgentSessionToolsModifierAddsToDefaults(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := strings.Join(session.Session.GetActiveToolNames(), ",")
-	if got != "read,bash,edit,write,grep,set_goal,get_goal" {
+	if got != "read,bash,edit,write,grep" {
 		t.Fatalf("tools = %q, want defaults with grep added", got)
 	}
 
@@ -58,7 +58,7 @@ func TestCreateAgentSessionToolsModifierRemovesFromDefaults(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := strings.Join(session.Session.GetActiveToolNames(), ",")
-	if got != "read,bash,edit,set_goal,get_goal" {
+	if got != "read,bash,edit" {
 		t.Fatalf("tools = %q, want write removed from defaults", got)
 	}
 }
@@ -145,7 +145,7 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,edit,set_goal,get_goal" {
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,edit" {
 		t.Fatalf("tools = %q", names)
 	}
 
@@ -166,7 +166,7 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,grep,set_goal,get_goal" {
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,grep" {
 		t.Fatalf("tools = %q", names)
 	}
 
@@ -187,7 +187,7 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,bash,edit,grep,set_goal,get_goal" {
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,bash,edit,grep" {
 		t.Fatalf("tools = %q", names)
 	}
 
@@ -373,7 +373,7 @@ func TestCreateAgentSessionPatternSelectionPreservesRegistryOrder(t *testing.T) 
 	tempAgentDir(t)
 	runtime := testSessionRuntime(t)
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
-	want := "read,bash,powershell,edit,write,grep,find,ls,set_goal,get_goal"
+	want := "read,bash,powershell,edit,write,grep,find,ls"
 	for attempt := range 8 {
 		session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
 			Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,

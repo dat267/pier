@@ -859,8 +859,12 @@ func TestBackgroundToolCallThresholdSetting(t *testing.T) {
 	if got := settings.GetBackgroundToolCallThreshold(); got != DefaultBackgroundToolCallThreshold {
 		t.Fatalf("default = %v, want %v", got, DefaultBackgroundToolCallThreshold)
 	}
-	if DefaultBackgroundToolCallThreshold != 60*time.Second {
-		t.Fatalf("the default is %v, want 60s", DefaultBackgroundToolCallThreshold)
+	// Backgrounding is opt-in like the other pier-only features (D496).
+	if DefaultBackgroundToolCallThreshold != 0 {
+		t.Fatalf("the default is %v, want off", DefaultBackgroundToolCallThreshold)
+	}
+	if DefaultBackgroundToolCallChoice != "off" {
+		t.Fatalf("the default choice is %q, want off", DefaultBackgroundToolCallChoice)
 	}
 	// The default must also be one of the row's choices, or Enter on the row
 	// cycles from index -1 and jumps to "off" instead of the next duration.

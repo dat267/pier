@@ -533,7 +533,7 @@ type Settings struct {
 	Themes              []string `json:"themes,omitempty"`
 	EnableSkillCommands *bool    `json:"enableSkillCommands,omitempty"`
 	// GoalFeature enables the builtin session-goal controller and its tools
-	// (get_goal, set_goal); pier-only, on by default (D496). Global only, so a
+	// (get_goal, set_goal); pier-only and opt-in (D496). Global only, so a
 	// committed project file cannot turn a clone's agent goal work on or off.
 	GoalFeature *bool `json:"goalFeature,omitempty"`
 	LoopFeature *bool `json:"loopFeature,omitempty"`
@@ -2871,11 +2871,11 @@ func (m *SettingsManager) SetEnableSkillCommands(enabled bool) {
 }
 
 // GetGoalFeatureEnabled reports whether the builtin goal feature is on
-// (default true).
+// (default false: a pier-only feature is opt-in).
 func (m *SettingsManager) GetGoalFeatureEnabled() bool {
 	settings := m.merged.Load()
 	if settings.GoalFeature == nil {
-		return true
+		return false
 	}
 	return *settings.GoalFeature
 }
@@ -2889,11 +2889,12 @@ func (m *SettingsManager) SetGoalFeatureEnabled(enabled bool) {
 	m.save()
 }
 
-// GetLoopFeatureEnabled reports whether the /loop feature is on (default true).
+// GetLoopFeatureEnabled reports whether the /loop feature is on (default false:
+// a pier-only feature is opt-in).
 func (m *SettingsManager) GetLoopFeatureEnabled() bool {
 	settings := m.merged.Load()
 	if settings.LoopFeature == nil {
-		return true
+		return false
 	}
 	return *settings.LoopFeature
 }
@@ -2913,13 +2914,14 @@ func (m *SettingsManager) SetLoopFeatureEnabled(enabled bool) {
 var backgroundToolCallChoices = []string{"off", "30s", "1m", "2m", "5m", "10m", "30m"}
 
 // DefaultBackgroundToolCallThreshold is how long a foreground tool call may run
-// before the harness backgrounds it, when the setting is unset.
-const DefaultBackgroundToolCallThreshold = 60 * time.Second
+// before the harness backgrounds it, when the setting is unset. Zero: background
+// tool calls are opt-in like the other pier-only features.
+const DefaultBackgroundToolCallThreshold = 0
 
 // DefaultBackgroundToolCallChoice is DefaultBackgroundToolCallThreshold spelled
 // as the /features row's own value, so the row shows the default as a selectable
 // entry rather than a value outside its list.
-const DefaultBackgroundToolCallChoice = "1m"
+const DefaultBackgroundToolCallChoice = "off"
 
 // GetBackgroundToolCallThreshold returns how long a foreground tool call may run
 // before the harness backgrounds it. Zero means the feature is off.

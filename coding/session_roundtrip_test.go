@@ -22,6 +22,9 @@ func TestSessionFileRoundTripPreservesInvariants(t *testing.T) {
 	}
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	settings.SetDefaultProvider("anthropic")
+	// The goal feature is opt-in (D496), and this test asserts the goal survives
+	// the round trip, so it turns it on.
+	settings.SetGoalFeatureEnabled(true)
 	cwd := t.TempDir()
 	manager := NewSessionManager(cwd, nil)
 
