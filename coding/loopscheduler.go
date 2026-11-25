@@ -214,7 +214,7 @@ func (s *LoopScheduler) SetWakeup(delay time.Duration, prompt string) (LoopJob, 
 	job := &LoopJob{
 		ID:            loopJobID(s.nextID),
 		Prompt:        prompt,
-		HumanSchedule: "Once, in " + humanDuration(delay),
+		HumanSchedule: wakeupSchedule(delay),
 		CreatedAt:     now,
 		NextFire:      now.Add(delay),
 	}
@@ -266,6 +266,16 @@ func (s *LoopScheduler) Remove(id string) bool {
 // Now is the scheduler's clock, so a listing compares a job's next run with the
 // same time the scheduler fires by.
 func (s *LoopScheduler) Now() time.Time { return s.now() }
+
+// wakeupSchedule describes a wakeup for listings. A zero delay is a /loop
+// typed while the agent was busy (D537): it runs once the agent is idle, which
+// "in 0 seconds" misstated.
+func wakeupSchedule(delay time.Duration) string {
+	if delay <= 0 {
+		return "Once, when the agent is idle"
+	}
+	return "Once, in " + humanDuration(delay)
+}
 
 // SetFire hands each due job to fire instead of its prompt to enqueue. The
 // host uses it to skip or postpone a fire while the agent is busy (D537).

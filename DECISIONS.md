@@ -9011,7 +9011,8 @@ loop's wakeup, or a `cron_create` with `recurring: false`) goes back into the
 scheduler under its own id (`Postpone`) and is tried again in 5 seconds, since
 skipping it would end the loop. A self-paced `/loop` typed during a run is
 likewise not queued: its first run is a wakeup due now, and its status says so
-("Loop scheduled: its first run starts once the agent is idle…").
+("Loop scheduled: its first run starts once the agent is idle…"), and `/loop
+list` names it "Once, when the agent is idle" rather than "Once, in 0 seconds".
 
 Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopSchedulerFiresAndDeletes`, `TestLoopSchedulerRecurringStays`,
