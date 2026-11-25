@@ -119,3 +119,24 @@ func TestConfigureResolverInstallsAFallback(t *testing.T) {
 		t.Fatal("the resolver was replaced without a config to read")
 	}
 }
+
+// net/dnsconfig_unix.go:57 validates each nameserver with netip.ParseAddr and
+// skips the line when that fails ("make sure server name is just an IP address.
+// Otherwise we need DNS to look it up"). This parser replaced that one for the
+// Android fallback, but it kept no validation, so a junk or quoted-empty token
+// became a nameserver. resolverDialer then spends a rotation slot on a host that
+// cannot resolve, delaying every query that lands on it.
+func TestNameserversFromResolvConfRejectsNonAddresses(t *testing.T) {
+	body := strings.Join([]string{
+		`nameserver ""`,
+		"nameserver not-an-address",
+		"nameserver 300.300.300.300",
+		"nameserver ::bad::addr",
+		"nameserver 8.8.8.8",
+	}, "\n")
+
+	got := nameserversFromResolvConf(body)
+	if len(got) != 1 || got[0] != "8.8.8.8:53" {
+		t.Fatalf("servers = %v, want just 8.8.8.8:53", got)
+	}
+}

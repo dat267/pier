@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -78,8 +79,20 @@ func nameserversFromResolvConf(body string) []string {
 		if len(fields) < 2 || !strings.EqualFold(fields[0], "nameserver") {
 			continue
 		}
+		// net/dnsconfig_unix.go keeps only an address that parses ("make sure
+		// server name is just an IP address. Otherwise we need DNS to look it
+		// up"); without this, a junk token becomes a nameserver that
+		// resolverDialer spends a rotation slot failing to reach.
 		address := fields[1]
-		if _, _, err := net.SplitHostPort(address); err != nil {
+		if host, port, err := net.SplitHostPort(address); err == nil {
+			if _, err := netip.ParseAddr(host); err != nil {
+				continue
+			}
+			address = net.JoinHostPort(host, port)
+		} else {
+			if _, err := netip.ParseAddr(address); err != nil {
+				continue
+			}
 			address = net.JoinHostPort(address, "53")
 		}
 		servers = append(servers, address)
