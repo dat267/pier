@@ -200,3 +200,28 @@ func TestHumanCronSchedule(t *testing.T) {
 		})
 	}
 }
+
+// A daily schedule in the hour a DST spring-forward skips must still find its
+// next fire. The search jumped a non-matching hour by rebuilding the time with
+// hour+1, and in the skipped hour that lands back on the same wall clock, so the
+// cursor never advanced: the walk burned its whole budget and reported no match.
+// Every 02:xx daily job was dead in any DST zone, and a schedule the tool had
+// accepted then never fired.
+func TestCronFindsNextFireAcrossDSTGap(t *testing.T) {
+	zone, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		t.Skipf("no time zone data: %v", err)
+	}
+	schedule, ok := ParseCron("30 2 * * *")
+	if !ok {
+		t.Fatal("ParseCron rejected 30 2 * * *")
+	}
+	// 2026-03-08 is the US spring-forward day: 02:00-03:00 does not exist.
+	next, ok := schedule.NextCronTime(time.Date(2026, time.March, 8, 0, 0, 0, 0, zone))
+	if !ok {
+		t.Fatal("a daily 02:30 schedule found no next fire on a spring-forward day")
+	}
+	if got := next.Format("2006-01-02 15:04 MST"); got != "2026-03-08 03:30 EDT" && got != "2026-03-09 02:30 EDT" {
+		t.Fatalf("next = %s, want the job to move past the gap", got)
+	}
+}

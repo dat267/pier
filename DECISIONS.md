@@ -8963,6 +8963,14 @@ pending at a time, a new one replaces it, and its `stop` clears only that wakeup
 rather than every job (before, nothing armed the wakeup at all, so a self-paced
 loop never resumed, and its stop wiped the user's interval loops).
 
+The next-match search advances by real time, not by rebuilding the wall clock. An
+hour that does not match jumps forward one hour, and in a DST spring-forward gap
+the skipped local hour does not exist, so rebuilding it normalises back to the same
+clock and the cursor never moves: the walk burned its whole budget and reported no
+match. Every 02:xx daily job was therefore permanently dead in a DST zone, which
+cost 5.8 s of futile search for each of the 60 minute values, and a schedule the
+tool had accepted never fired. Advancing by an hour of real time moves past the gap.
+
 An interval snaps to the nearest step that divides its unit, because a cron step
 only spaces runs evenly when it does: `*/45` fires at :00 and :45, gaps of 45 and
 15 minutes, and `*/7` leaves a 4-minute gap before each hour. Minutes snap to a

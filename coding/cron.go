@@ -208,7 +208,11 @@ func (c CronSchedule) next(from time.Time, oneShot bool, limit int) (time.Time, 
 				continue
 			}
 			if !containsInt(c.hour, cursor.Hour()) {
-				cursor = time.Date(cursor.Year(), cursor.Month(), cursor.Day(), cursor.Hour()+1, 0, 0, 0, cursor.Location())
+				// Advance by a real hour, not by rebuilding the wall clock: in a
+				// DST spring-forward gap the skipped hour does not exist, so
+				// time.Date normalises 02:00 back to 01:00 and the cursor would
+				// never move, burning the whole search and reporting no match.
+				cursor = cursor.Truncate(time.Hour).Add(time.Hour)
 				continue
 			}
 			if !containsInt(c.minute, cursor.Minute()) {
