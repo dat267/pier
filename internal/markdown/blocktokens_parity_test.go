@@ -120,6 +120,18 @@ func TestBlockTokensMatchMarked(t *testing.T) {
 		{"a\n***\n---\n", `h2:"a\n***"`},
 		{"a\n2. b\n===\n", `p:"a\n2. b\n==="`},
 		{"    code\n| - |\n---", `code:"code\n" | p:"| - |" | hr`},
+		// A TAB counts as reaching the indent budget, so a tab-indented heading is
+		// code, not a heading (marked's heading pattern allows only ` {0,3}`). The
+		// md corpus has no line-leading tab, so these pin what indentWidth decides.
+		{"\t# h\n", `code:"# h\n"`},
+		// A tab advances to the next 4-column TAB STOP, so after one space it
+		// consumes only 3 of the 4-column budget and the tab survives in the
+		// content. marked: lexer(" \t# h\n")[0].text === "\t# h\n".
+		{" \t# h\n", `code:"\t# h\n"`},
+		{"  \t# h\n", `code:"\t# h\n"`},
+		{"   \t# h\n", `code:"\t# h\n"`},
+		{"    \t# h\n", `code:"\t# h\n"`},
+		{"\tcode\n", `code:"code\n"`},
 	} {
 		if got := referenceShape(Lex(testCase.src)); got != testCase.want {
 			t.Errorf("%q:\n got %s\nwant %s", testCase.src, got, testCase.want)

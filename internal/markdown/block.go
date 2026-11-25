@@ -40,7 +40,8 @@ func indentWidth(s string) int {
 		case ' ':
 			width++
 		case '\t':
-			width += 4
+			// A tab advances to the next 4-column TAB STOP.
+			width += 4 - width%4
 		default:
 			return width
 		}
@@ -71,7 +72,7 @@ func skipIndent(s string) (int, int) {
 		case ' ':
 			width++
 		case '\t':
-			width += 4
+			width += 4 - width%4
 		default:
 			return i, width
 		}

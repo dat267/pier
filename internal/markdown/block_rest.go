@@ -592,7 +592,15 @@ func stripIndent(line string, width int) string {
 		case ' ':
 			consumed++
 		case '\t':
-			consumed += 4
+			// A tab reaches the next 4-column TAB STOP, which is the indent budget
+			// only when it starts at column 0. Anywhere later the tab survives in
+			// the content: marked keeps it whole, since a partial tab has no
+			// representation (lexer(" \t# h\n")[0].text === "\t# h\n" for one,
+			// two and three leading spaces, and "\t# h\n" for none).
+			if consumed != 0 || width < 4 {
+				return line[i:]
+			}
+			consumed = 4
 		default:
 			return line[i:]
 		}
