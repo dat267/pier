@@ -102,8 +102,9 @@ Windows-only files (`//go:build windows`) are cross-built and cross-vetted by
 `coding/process_windows.go`, `coding/clipboard_window_windows.go`,
 `mcp/processgroup_windows.go` or another `windows` file is therefore verified by
 the compiler and by any non-`windows` twin of the same predicate, not by
-execution. Keep the shared half of such a predicate in a build-tag-free file when
-both platforms can be exercised on linux (as `ai/netaddr_other.go` is).
+execution. A predicate that both platforms share lives in a pair of tagged twins
+(`ai/netaddr_windows.go` and `ai/netaddr_other.go`, both tagged), so the linux
+twin's test covers the shared half; only the Windows-only extra is untested.
 
 Do not run the long suites during local development: skip `just check`,
 `just cross`, `just test-race` and `just test-stress` and let CI enforce them.
