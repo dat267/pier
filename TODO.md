@@ -1,4 +1,27 @@
-# A session switch reopens the target on the owner loop
+# The proxy request cannot say `disableContinuation: false`
+
+Status: reproduced, not fixed. Low severity, no reachable caller.
+
+`buildProxyRequestOptions` in `agent/proxy.ts:91` builds an object literal, so
+`JSON.stringify` drops a key only when its value is `undefined`. A caller that sets
+`disableContinuation: false` explicitly therefore sends
+`{"disableContinuation":false}`, and one that omits it sends nothing. The port types
+`StreamOptions.DisableContinuation` as a Go `bool`, so "unset" and "false" are the
+same value and `omitempty` drops both: `buildProxyRequest` always sends
+`options: {}` for a normal request.
+
+Why it is not fixed: making the field a `*bool` is the faithful shape, but it ripples
+through `ai.StreamOptions` and the provider adapters for a state no caller produces.
+The only assignment in the tree is `coding/cachewarmer.go:499`, which sets `true`;
+the consumer tests `options?.disableContinuation !== true`
+(`anthropic-messages.ts:908`), which is identical for `false` and absent. So the
+bytes differ and the behaviour does not.
+
+A fix is worth doing together with the first caller that needs to say `false`
+explicitly, at which point `TestProxyForwardsDisableContinuation`'s second half
+("unset stays undefined") also needs a third case.
+
+# Automatic backgrounding of long tool calls# A session switch reopens the target on the owner loop
 
 Status: reproduced by `internal/uiblock`, whose test fails on it. Severity is lower
 than the first reading suggested.
