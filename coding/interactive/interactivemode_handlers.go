@@ -210,6 +210,9 @@ type SubmitWiring struct {
 	ShowWarning func(message string)
 	// RequestRender requests a render.
 	RequestRender func()
+
+	// scheduled marks a /loop fire, which leaves the editor alone.
+	scheduled bool
 }
 
 // HandleStartupSubmit shows the startup-in-progress status.
@@ -223,6 +226,17 @@ func (w *SubmitWiring) HandleStartupSubmit(text string) {
 }
 
 // HandleSubmit processes one editor submission.
+// HandleScheduledSubmit submits a /loop job's prompt (D537). It takes the
+// same dispatch as typed input but leaves the editor alone: a fire is not the
+// user's text, so it must not clear the draft they are writing or land in their
+// history.
+func (w *SubmitWiring) HandleScheduledSubmit(ctx context.Context, text string) {
+	detached := *w
+	detached.Editor = nil
+	detached.scheduled = true
+	detached.HandleSubmit(ctx, text)
+}
+
 func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 	text = ai.JSTrim(text)
 	if text == "" {
@@ -476,7 +490,11 @@ func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 	// prompts while compacting, so a raw Prompt would silently drop it.
 	if w.Session != nil && w.Session.IsCompacting() {
 		if w.Queue != nil {
-			w.Queue.QueueCompactionMessage(text, "steer")
+			if w.scheduled {
+				w.Queue.queueForCompaction(text, "steer")
+			} else {
+				w.Queue.QueueCompactionMessage(text, "steer")
+			}
 			return
 		}
 		addHistory(text)

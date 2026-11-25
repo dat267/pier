@@ -313,7 +313,7 @@ func NewApp(options AppOptions) *App {
 	// as ordinary input, and with no jobs it holds no timer.
 	app.loopMaxAge = coding.LoopRecurringMaxAge
 	app.loopScheduler = coding.NewLoopScheduler(nil, func(prompt string) {
-		app.ui.Post(func() { app.submit.HandleSubmit(context.Background(), prompt) })
+		app.ui.Post(func() { app.submit.HandleScheduledSubmit(context.Background(), prompt) })
 	})
 	// Start the timer loop. Without this a job is registered and listed but never
 	// fires: every scheduler test drives fireDue directly, so the missing call was

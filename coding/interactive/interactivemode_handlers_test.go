@@ -484,3 +484,43 @@ func TestKeyWiringInstallsCtrlDAndPasteImage(t *testing.T) {
 		t.Fatalf("exits=%d pastes=%d, want each hook called once", exits, pastes)
 	}
 }
+
+// D537: a /loop job fires through the submit path, but it is not the user's
+// input. Submitted as typed text, a fire during a run cleared the draft the user
+// was writing and added the prompt to the editor history on every fire.
+func TestScheduledSubmitKeepsTheDraft(t *testing.T) {
+	_, submit, session, editor := newHandlerTestWiring(t)
+	var inputs []string
+	submit.OnInput = func(text string) { inputs = append(inputs, text) }
+	editor.AddToHistory("my earlier prompt")
+	for _, streaming := range []bool{true, false} {
+		session.streaming = streaming
+		editor.SetText("half-typed draft")
+		submit.HandleScheduledSubmit(context.Background(), "check the deploy")
+		if got := editor.GetText(); got != "half-typed draft" {
+			t.Fatalf("streaming=%v: the fire replaced the draft with %q", streaming, got)
+		}
+	}
+	if len(session.prompts) != 1 || session.prompts[0] != "check the deploy" || session.streamingBehaviors[0] != "steer" {
+		t.Fatalf("a fire during a run = %q %q", session.prompts, session.streamingBehaviors)
+	}
+	if len(inputs) != 1 || inputs[0] != "check the deploy" {
+		t.Fatalf("an idle fire = %q", inputs)
+	}
+	// During compaction the fire is queued for after it, still without
+	// touching the draft.
+	session.streaming, session.compacting = false, true
+	editor.SetText("half-typed draft")
+	submit.HandleScheduledSubmit(context.Background(), "check the deploy")
+	if got := editor.GetText(); got != "half-typed draft" {
+		t.Fatalf("a fire during compaction replaced the draft with %q", got)
+	}
+	if queued := submit.Queue.TakeCompactionQueue(); len(queued) != 1 || queued[0].Text != "check the deploy" {
+		t.Fatalf("compaction queue = %+v", queued)
+	}
+	editor.SetText("")
+	editor.HandleInput("\x1b[A")
+	if got := editor.GetText(); got != "my earlier prompt" {
+		t.Fatalf("Up recalled %q, want the user's own prompt", got)
+	}
+}

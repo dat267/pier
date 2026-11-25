@@ -264,11 +264,17 @@ func (c *QueueController) RestoreQueuedMessagesToEditor(abort bool, currentText 
 
 // QueueCompactionMessage queues a message for after compaction.
 func (c *QueueController) QueueCompactionMessage(text string, mode string) {
-	c.compactionQueuedMessages = append(c.compactionQueuedMessages, CompactionQueuedMessage{Text: text, Mode: mode})
 	if c.Editor != nil {
 		c.Editor.AddToHistory(text)
 		c.Editor.SetText("")
 	}
+	c.queueForCompaction(text, mode)
+}
+
+// queueForCompaction queues text for after compaction without touching the
+// editor, for a prompt the user did not type (a /loop fire, D537).
+func (c *QueueController) queueForCompaction(text string, mode string) {
+	c.compactionQueuedMessages = append(c.compactionQueuedMessages, CompactionQueuedMessage{Text: text, Mode: mode})
 	c.UpdatePendingMessagesDisplay()
 	c.showStatus("Queued message for after compaction")
 }

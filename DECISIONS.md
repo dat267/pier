@@ -8969,6 +8969,11 @@ than doing nothing. A scheduling tool the user turned off in `/tools` stays off
 across a toggle, the rule the goal tools follow. Both `/features` and `/tools`
 filter as you type.
 
+A fire takes the typed-input dispatch (`HandleScheduledSubmit`) with the editor
+detached: it steers a running turn, queues behind compaction or starts a run like
+typed text, but it never clears the draft the user is writing or adds the prompt
+to the editor history.
+
 Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestLoopSchedulerFiresAndDeletes`, `TestLoopSchedulerRecurringStays`,
 `TestLoopSchedulerRemove`, `TestLoopSchedulerRejectsBadSchedules`,
@@ -8987,7 +8992,8 @@ Tests: `TestParseLoopInput`, `TestLoopCronForInterval`,
 `TestAppAdoptsLoopSchedulerOnThePrimarySession`,
 `TestAppSkipsLoopToolsWhenTheFeatureIsOff`, `TestLoopFeatureToggleEnablesAndDisables`,
 `TestLoopFeatureToggleRespectsToolToggle`,
-`TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`.
+`TestLoopFeatureToggleAppliesToTheSession`, `TestFeatureSelectorFiltersAsYouType`,
+`TestScheduledSubmitKeepsTheDraft`.
 
 ### D538
 
