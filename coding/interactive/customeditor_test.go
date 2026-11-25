@@ -249,3 +249,16 @@ func TestEditorLowerDividerCountsBackgroundCalls(t *testing.T) {
 		}
 	}
 }
+
+// D537, D538: the divider's counts are drawn in the divider's own color, not a
+// text color of their own, so the line reads as one divider with a label in it.
+func TestEditorLowerDividerLabelTakesTheBorderColor(t *testing.T) {
+	newRendererTestTheme(t)
+	editor := NewCustomEditor(editorTestHost{}, tui.EditorTheme{BorderColor: func(s string) string { return "<" + s + ">" }},
+		NewAppKeybindingsManager(nil, ""), CustomEditorOptions{})
+	editor.LoopCount = func() int { return 1 }
+	lines := editor.Render(30)
+	if got, want := lines[len(lines)-1], "<── 1 loop "+strings.Repeat("─", 20)+">"; got != want {
+		t.Fatalf("lower divider = %q, want %q", got, want)
+	}
+}

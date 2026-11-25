@@ -203,8 +203,9 @@ func (c *CustomEditor) renderBottomBorder(width int, hiddenLineCount int) string
 	if width < labelWidth+5 {
 		return c.Editor.DefaultRenderBottomBorder(width, hiddenLineCount)
 	}
-	return c.BorderColor("── ") + ActiveTheme().Fg("muted", label) +
-		c.BorderColor(" "+strings.Repeat("─", width-labelWidth-4))
+	// One color for the whole line: the label belongs to the divider, not to
+	// the text around it.
+	return c.BorderColor("── " + label + " " + strings.Repeat("─", width-labelWidth-4))
 }
 
 // appendCount adds "1 <one>" or "N <many>" to parts, nothing for zero.

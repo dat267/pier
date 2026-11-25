@@ -9179,7 +9179,7 @@ history, so Up never recalls it as typed input.
 
 While any displaced call runs, the editor's lower divider, the line just above
 the footer, says so ("── 1 background call ──", after the loop count when there is
-one), read from `BackgroundCallCount`
+one, both in the divider's own color), read from `BackgroundCallCount`
 at render time, so the user knows a command is still running after its frame
 scrolls away. It was in the footer once, but that line is cut to the terminal
 width and the count crowded the model name off a narrow terminal; the divider
@@ -9212,4 +9212,5 @@ Tests: `TestLoopToolRenderers`, `TestLoopToolsHaveRenderers`,
 `TestBackgroundFastCallLeavesNoFile`, `TestBackgroundRealShellCallStreamsToFile`,
 `TestBackgroundOutputFileHoldsLatestSnapshot`, `TestBackgroundNoticeCutKeepsUTF8`, `TestBashFrameRendersBackgroundHandle`,
 `TestBackgroundHandleRendersInEveryFrame`, `TestParseCompletionNotice`,
-`TestTranscriptBackgroundNotice`, `TestFooterHoldsOnlyContextModelAndDir`, `TestEditorLowerDividerCountsBackgroundCalls`.
+`TestTranscriptBackgroundNotice`, `TestFooterHoldsOnlyContextModelAndDir`, `TestEditorLowerDividerCountsBackgroundCalls`,
+`TestEditorLowerDividerLabelTakesTheBorderColor`.
