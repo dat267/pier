@@ -4,6 +4,7 @@ import (
 	"context"
 	"maps"
 	"os/exec"
+	"slices"
 	"strings"
 	"sync"
 
@@ -630,11 +631,19 @@ func ResolveAutocompleteFdPath() string {
 // offered again, so Enter runs it instead of applying a no-op completion.
 func (w *AutocompleteWiring) loopArgumentCompletions(prefix string) ([]tui.AutocompleteItem, bool) {
 	if rest, ok := strings.CutPrefix(prefix, "stop "); ok {
+		// stop takes several ids: complete the word being typed, keep the ids
+		// before it, and do not offer one already named.
+		named := strings.Fields(rest)
+		typed := ""
+		if len(named) > 0 && !strings.HasSuffix(rest, " ") {
+			typed, named = named[len(named)-1], named[:len(named)-1]
+		}
+		lead := strings.Join(append([]string{"stop"}, named...), " ") + " "
 		var items []tui.AutocompleteItem
 		if w.LoopJobs != nil {
 			for _, job := range w.LoopJobs() {
-				if typed := strings.TrimSpace(rest); strings.HasPrefix(job.ID, typed) && job.ID != typed {
-					items = append(items, tui.AutocompleteItem{Value: "stop " + job.ID, Label: job.ID,
+				if strings.HasPrefix(job.ID, typed) && job.ID != typed && !slices.Contains(named, job.ID) {
+					items = append(items, tui.AutocompleteItem{Value: lead + job.ID, Label: job.ID,
 						Description: job.HumanSchedule + ": " + loopPromptSummary(job.Prompt)})
 				}
 			}

@@ -442,6 +442,15 @@ func TestLoopCommandArgumentCompletions(t *testing.T) {
 			t.Fatalf("%s = %q, want no menu so Enter runs it", typed, got)
 		}
 	}
+	// stop takes several ids: after one, the menu offers the others, not the
+	// ones already named.
+	second, err := scheduler.Add("*/10 * * * *", "summarize the logs", true, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := values("/loop stop " + job.ID + " "); !slices.Equal(got, []string{"stop " + job.ID + " " + second.ID}) {
+		t.Fatalf("/loop stop %s  = %q, want the other job", job.ID, got)
+	}
 	if got := values("/loop check"); len(got) != 0 {
 		t.Fatalf("/loop check = %q, want no completion for a prompt", got)
 	}
