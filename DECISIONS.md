@@ -5070,7 +5070,8 @@ duplicate spellings of the same path.
 
 Pier caps each list at `maxSummaryFileListEntries` (100) paths, keeps the most
 recently touched ones, sorts them for stable output, and appends `+N more`
-inside the block. `FileOperations.Order` records the last touch of every path so
+inside a block that lost paths; a block whose list fits carries no marker, so a
+complete read list beside a capped modified list no longer says `+0 more`. `FileOperations.Order` records the last touch of every path so
 the window outranks the inherited list; inherited entries keep the order of the
 previous, already-sorted details. A caller that builds the exported
 `FileOperations` sets without the mark helpers has no recency to rank, so the

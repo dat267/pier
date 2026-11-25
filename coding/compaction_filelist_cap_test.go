@@ -233,3 +233,31 @@ func TestSummaryFileListsCapModifiedOnlyAtTheBoundary(t *testing.T) {
 		t.Fatalf("modified = %d files, %d omitted; want %d and 1", len(modifiedFiles), modifiedOmitted, maxSummaryFileListEntries)
 	}
 }
+
+// D379: only a list the cap actually shortened gets the "+N more" marker. The
+// renderer tested both omission counts once, so a read list that lost nothing sat
+// beside a capped modified list still printed "+0 more": it tells the model
+// something was left out using the words for a truncated list, and D379 promises
+// lists at or under the cap stay byte-identical to upstream (which has no marker).
+func TestSummaryFileListMarkerOnlyWhenPathsWereLeftOut(t *testing.T) {
+	fileOps := CreateFileOps()
+	for i := 0; i < 3; i++ {
+		fileOps.markRead(fmt.Sprintf("read-%03d", i))
+	}
+	for i := range maxSummaryFileListEntries + 50 {
+		fileOps.markEdited(fmt.Sprintf("edit-%03d", i))
+	}
+
+	readFiles, modifiedFiles, readOmitted, modifiedOmitted := CapFileLists(fileOps)
+	if readOmitted != 0 || modifiedOmitted != 50 {
+		t.Fatalf("omitted = %d/%d, want 0/50", readOmitted, modifiedOmitted)
+	}
+	summary := FormatSummaryFileOperations(readFiles, modifiedFiles, readOmitted, modifiedOmitted)
+	readBlock := summary[strings.Index(summary, "<read-files>"):strings.Index(summary, "</read-files>")]
+	if strings.Contains(readBlock, "more") {
+		t.Fatalf("the complete read list carries a marker:\n%s", readBlock)
+	}
+	if !strings.Contains(summary, "+50 more") {
+		t.Fatalf("the capped modified list lost its marker:\n%s", summary)
+	}
+}

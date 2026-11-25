@@ -241,12 +241,27 @@ func FormatSummaryFileOperations(readFiles, modifiedFiles []string, readOmitted,
 	if readOmitted == 0 && modifiedOmitted == 0 {
 		return FormatFileOperations(readFiles, modifiedFiles)
 	}
-	var sections []string
-	if len(readFiles) > 0 {
-		sections = append(sections, fmt.Sprintf("<read-files>\n%s\n+%d more\n</read-files>", strings.Join(readFiles, "\n"), readOmitted))
+	// Each block carries its own marker, and only when its own list lost paths: a
+	// complete list beside a capped one said "+0 more", which is the wording for a
+	// truncated list. A list at or under the cap stays upstream's shape, with no
+	// marker at all.
+	block := func(tag string, files []string, omitted int) string {
+		if len(files) == 0 {
+			return ""
+		}
+		if omitted == 0 {
+			return "<" + tag + ">\n" + strings.Join(files, "\n") + "\n</" + tag + ">"
+		}
+		return fmt.Sprintf("<%s>\n%s\n+%d more\n</%s>", tag, strings.Join(files, "\n"), omitted, tag)
 	}
-	if len(modifiedFiles) > 0 {
-		sections = append(sections, fmt.Sprintf("<modified-files>\n%s\n+%d more\n</modified-files>", strings.Join(modifiedFiles, "\n"), modifiedOmitted))
+	var sections []string
+	for _, section := range []string{
+		block("read-files", readFiles, readOmitted),
+		block("modified-files", modifiedFiles, modifiedOmitted),
+	} {
+		if section != "" {
+			sections = append(sections, section)
+		}
 	}
 	return "\n\n" + strings.Join(sections, "\n\n")
 }
