@@ -626,13 +626,14 @@ func ResolveAutocompleteFdPath() string {
 }
 
 // loopArgumentCompletions completes /loop's subcommands and, after "stop ",
-// the id of each scheduled job (D537).
+// the id of each scheduled job (D537). What is already typed in full is not
+// offered again, so Enter runs it instead of applying a no-op completion.
 func (w *AutocompleteWiring) loopArgumentCompletions(prefix string) ([]tui.AutocompleteItem, bool) {
 	if rest, ok := strings.CutPrefix(prefix, "stop "); ok {
 		var items []tui.AutocompleteItem
 		if w.LoopJobs != nil {
 			for _, job := range w.LoopJobs() {
-				if strings.HasPrefix(job.ID, strings.TrimSpace(rest)) {
+				if typed := strings.TrimSpace(rest); strings.HasPrefix(job.ID, typed) && job.ID != typed {
 					items = append(items, tui.AutocompleteItem{Value: "stop " + job.ID, Label: job.ID,
 						Description: job.HumanSchedule + ": " + loopPromptSummary(job.Prompt)})
 				}
@@ -645,7 +646,9 @@ func (w *AutocompleteWiring) loopArgumentCompletions(prefix string) ([]tui.Autoc
 		{"list", "Show the scheduled loops"},
 		{"stop", "Cancel every loop, or one by id"},
 	} {
-		if strings.HasPrefix(sub.value, prefix) {
+		// A subcommand typed in full gets no menu, so Enter runs it: in an
+		// argument menu Enter only applies the completion (upstream editor.ts).
+		if strings.HasPrefix(sub.value, prefix) && sub.value != prefix {
 			items = append(items, tui.AutocompleteItem{Value: sub.value, Label: sub.value, Description: sub.description})
 		}
 	}

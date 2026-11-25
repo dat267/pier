@@ -434,6 +434,14 @@ func TestLoopCommandArgumentCompletions(t *testing.T) {
 	if description := suggestions.Items[0].Description; !strings.Contains(description, "Every 5 minutes") || !strings.Contains(description, "check the deploy") {
 		t.Fatalf("the job's completion is described as %q", description)
 	}
+	// A subcommand typed in full gets no menu: Enter in an argument menu only
+	// applies the completion (upstream editor.ts), so a menu that offers what is
+	// already typed would make "/loop list" take two Enters.
+	for _, typed := range []string{"/loop list", "/loop stop", "/loop stop " + job.ID} {
+		if got := values(typed); len(got) != 0 {
+			t.Fatalf("%s = %q, want no menu so Enter runs it", typed, got)
+		}
+	}
 	if got := values("/loop check"); len(got) != 0 {
 		t.Fatalf("/loop check = %q, want no completion for a prompt", got)
 	}

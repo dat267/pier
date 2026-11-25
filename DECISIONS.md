@@ -9022,6 +9022,9 @@ with no id says "Stopped 1 loop." or "Stopped N loops.", and "No loops
 scheduled." when there was nothing to stop. The editor completes `/loop`'s
 subcommands (`list`, `stop`) and, after `stop `, each scheduled job's id with its
 schedule and prompt beside it; any other text is a prompt and gets no completion.
+A subcommand or id typed in full is not offered again: in an argument menu Enter
+only applies the completion (upstream `packages/tui/src/components/editor.ts`), so
+a menu repeating `list` would make `/loop list` take two Enters.
 Turning the loop feature off in `/features` drops every scheduled job, and its
 status names them ("Loop feature off; stopped 2 loops.").
 
