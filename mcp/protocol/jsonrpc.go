@@ -55,8 +55,21 @@ func (id *JsonRpcId) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// formatJSONNumber renders a number the way JSON.stringify does. Go's encoder
+// matches it for every finite value except the negative zero, which Go prints
+// "-0" and JavaScript prints "0" (JSON.stringify(-0)). The id is also the value
+// the streamable HTTP transport compares to decide a response answered its
+// request, so keeping the sign made -0 and 0 look like different requests.
+// A non-finite value has no JSON text at all; it never reaches here because
+// IsJsonRpcId rejects it on the way in.
 func formatJSONNumber(n float64) string {
-	enc, _ := json.Marshal(n)
+	if n == 0 {
+		return "0"
+	}
+	enc, err := json.Marshal(n)
+	if err != nil {
+		return "null"
+	}
 	return string(enc)
 }
 

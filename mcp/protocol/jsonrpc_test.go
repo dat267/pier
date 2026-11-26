@@ -168,6 +168,35 @@ func TestIsJsonRpcIdAcceptsStringsAndFiniteNumbersOnly(t *testing.T) {
 	}
 }
 
+// JSON.stringify(-0) is "0", so a peer that sends the negative zero id gets "0"
+// back. Go's encoder keeps the sign, and String() is also what the HTTP transport
+// compares to decide a response answered its request, so -0 and 0 answered each
+// other's streams. (jsonrpc.ts isJsonRpcId accepts any finite number.)
+func TestJsonRpcIdNegativeZeroRendersAsZero(t *testing.T) {
+	var id JsonRpcId
+	if err := json.Unmarshal([]byte(`-0`), &id); err != nil {
+		t.Fatal(err)
+	}
+	if got := id.String(); got != "0" {
+		t.Fatalf("String() = %q, want %q", got, "0")
+	}
+	encoded, err := json.Marshal(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(encoded) != "0" {
+		t.Fatalf("MarshalJSON = %s, want 0", encoded)
+	}
+	// It therefore matches a plain 0 id, which is what the transport needs.
+	var zero JsonRpcId
+	if err := json.Unmarshal([]byte(`0`), &zero); err != nil {
+		t.Fatal(err)
+	}
+	if zero.String() != id.String() {
+		t.Fatal("-0 and 0 must render the same")
+	}
+}
+
 // A request needs an id, so a message without one is neither a request nor a
 // response; it is a notification only when it also has no id key at all.
 func TestJSONRPCShapeClassification(t *testing.T) {
