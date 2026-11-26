@@ -85,3 +85,74 @@ func TestMinMatchLenAndLeadingContext(t *testing.T) {
 		}
 	}
 }
+
+// The first-byte table is an over-approximation used to SKIP bytes. If it ever
+// excludes a byte that can begin a match, the skip drops a real match. Exercise
+// every language's compiled matcher over a byte-per-input corpus and check that
+// turning the table off cannot find a match the table-enabled path missed.
+func TestFirstByteTableNeverSkipsAMatch(t *testing.T) {
+	var corpus []string
+	for b := 0; b < 256; b++ {
+		corpus = append(corpus,
+			string([]byte{byte(b)}),
+			string([]byte{byte(b), 'a', 'b'}),
+			"x"+string([]byte{byte(b)})+"y",
+			" "+string([]byte{byte(b)})+" ",
+		)
+	}
+	corpus = append(corpus, "a b", "1a", "_x", "é", "日本", "  ", "\t\n", "$1", "@x",
+		"#c\n", "//c\n", "/*c*/", "0x1F", "1.5e3", "<a>", "{{x}}", "%s", "END")
+	checked, unsafe, withTable := 0, 0, 0
+	for _, name := range Languages() {
+		lang, err := getCompiledLanguage(name)
+		if err != nil {
+			continue
+		}
+		seen := map[*compiledMode]bool{}
+		var walk func(m *compiledMode)
+		walk = func(m *compiledMode) {
+			if m == nil || seen[m] {
+				return
+			}
+			seen[m] = true
+			defer func() {
+				for _, c := range m.contains {
+					walk(c)
+				}
+				walk(m.starts)
+			}()
+			if m.matcher == nil {
+				return
+			}
+			inner := m.matcher.getMatcher(0)
+			if inner == nil || !inner.hasFirstBytes || !inner.dispatch {
+				return
+			}
+			withTable++
+			for _, in := range corpus {
+				// Compare the DISPATCH (table-guided) against the plain SCAN of the
+				// same matcher: that isolates the table, since turning dispatch off
+				// would also change the code path being tested.
+				withTable := inner.execDispatch(in, 0, true, nil)
+				withoutTable := inner.execScan(in, 0, true, nil)
+				// A zero-length match is not a "match" for a skip decision: both
+				// paths return it, and the walk ignores it.
+				if withoutTable != nil && len(withoutTable.group(0)) == 0 {
+					continue
+				}
+				checked++
+				if withTable == nil && withoutTable != nil {
+					unsafe++
+					if unsafe <= 3 {
+						t.Logf("UNSAFE lang=%s input=%q full=idx%d %q", name, in, withoutTable.index, withoutTable.group(0))
+					}
+				}
+			}
+		}
+		walk(lang.root)
+	}
+	t.Logf("%d candidates checked across %d dispatch tables", checked, withTable)
+	if unsafe > 0 {
+		t.Fatalf("%d first-byte tables dropped a real match", unsafe)
+	}
+}
