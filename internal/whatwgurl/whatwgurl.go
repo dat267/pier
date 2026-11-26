@@ -4,27 +4,43 @@
 package whatwgurl
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 )
 
 // StripWhitespace applies the parser's preprocessing, which URL.canParse and
-// `new URL` run before parsing: leading and trailing C0 controls or spaces
-// are stripped, and ASCII tab, CR and LF are removed anywhere. Go's url.Parse
-// rejects those characters instead, so an otherwise valid URL with a stray
-// space or newline would fail.
+// `new URL` run before parsing, plus the percent-encode step the encode sets
+// apply to a parsed component: leading and trailing C0 controls or spaces are
+// stripped, ASCII tab, CR and LF are removed anywhere, and every remaining C0
+// control or DEL is percent-encoded. Go's url.Parse rejects all of those
+// characters instead, so an otherwise valid URL with a stray control byte
+// would fail — Node percent-encodes an INTERIOR one rather than removing it
+// (`https://x.y/a\x01b` becomes `a%01b`).
 func StripWhitespace(value string) string {
 	value = strings.TrimFunc(value, func(r rune) bool { return r <= 0x20 })
-	if !strings.ContainsAny(value, "\t\r\n") {
+	if !strings.ContainsFunc(value, needsURLEncoding) {
 		return value
 	}
-	return strings.Map(func(r rune) rune {
-		switch r {
-		case '\t', '\r', '\n':
-			return -1
+	var builder strings.Builder
+	builder.Grow(len(value) + 8)
+	for index := 0; index < len(value); index++ {
+		c := value[index]
+		switch {
+		case c == '\t' || c == '\r' || c == '\n':
+		case needsURLEncoding(rune(c)):
+			fmt.Fprintf(&builder, "%%%02X", c)
+		default:
+			builder.WriteByte(c)
 		}
-		return r
-	}, value)
+	}
+	return builder.String()
+}
+
+// needsURLEncoding reports a byte the parser removes (tab, CR, LF) or
+// percent-encodes (the other C0 controls and DEL).
+func needsURLEncoding(r rune) bool {
+	return r < 0x20 || r == 0x7f
 }
 
 // Origin renders a URL's origin as URL.origin does: the scheme and host

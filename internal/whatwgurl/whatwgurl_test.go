@@ -11,8 +11,15 @@ func TestStripWhitespaceMatchesTheParserPreprocessing(t *testing.T) {
 	for in, want := range map[string]string{
 		" \thttps://ex\nample.com/a b\r\n ": "https://example.com/a b",
 		"\x00\x1fhttp://x/\x01":             "http://x/",
-		"https://example.com":               "https://example.com",
-		"":                                  "",
+		// An INTERIOR C0 control or DEL is not removed: the parser percent-encodes it
+		// through the URL code point / percent-encode rules, so the URL still parses.
+		// Leaving it raw made url.Parse reject the whole value ("invalid control
+		// character in URL"), which is how a hand-edited MCP server URL with a stray
+		// control byte became "not an HTTP URL". Node gives a%01b / a%7Fb.
+		"https://x.y/a\x01b":  "https://x.y/a%01b",
+		"https://x.y/a\x7fb":  "https://x.y/a%7Fb",
+		"https://example.com": "https://example.com",
+		"":                    "",
 	} {
 		if got := StripWhitespace(in); got != want {
 			t.Errorf("StripWhitespace(%q) = %q, want %q", in, got, want)
