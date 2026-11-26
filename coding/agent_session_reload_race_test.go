@@ -37,6 +37,7 @@ func TestReloadWhileResourcesAreReadIsRaceFree(t *testing.T) {
 			_ = session.PromptTemplates()
 			_ = session.PromptDiagnostics()
 			_ = session.SkillDiagnostics()
+			_ = session.ContextDiagnostics()
 		}
 	})
 	group.Wait()
