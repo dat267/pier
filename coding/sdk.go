@@ -704,10 +704,13 @@ func hasImageBlocks[L ~[]C, C any](blocks L) bool {
 // consecutive disabled texts. It serves both assistant/user content lists and
 // tool-result content.
 func filterImageBlocks[L ~[]C, C any](blocks L, disabledText string) L {
-	// Reference: `previousWasPlaceholder = block.text === placeholder` for EVERY
-	// block, image or text. A placeholder already in the content therefore
-	// suppresses only the one that would replace the image right after it; two
-	// placeholders in a row are both kept.
+	// Reference: `previousWasPlaceholder = block.text === placeholder` for every
+	// non-image block. The reference's parameter is `(TextContent | ImageContent)[]`,
+	// so that assignment always has a text to compare; pier's lists are UserContentList,
+	// documented as text and images, so the TextContent arm covers the same domain and
+	// the else is defensive. A placeholder already in the content therefore suppresses
+	// only the one that would replace the image right after it; two placeholders in a
+	// row are both kept, and two images in a row yield one placeholder.
 	filtered := make(L, 0, len(blocks))
 	previousWasDisabled := false
 	for _, block := range blocks {
