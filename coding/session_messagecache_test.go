@@ -75,3 +75,21 @@ func cacheRoleIsMemoized(cache *messageCache, id string) bool {
 	cached := cache.byID[id]
 	return cached != nil && cached.haveRole
 }
+
+// The memo's premise is that an entry's projection never changes once cached
+// (entries are append-only). Pin it at the level a reader sees: appending adds
+// exactly one message and the earlier message keeps its identity, so the cache is
+// handing out the same object rather than re-decoding.
+func TestMessageCacheAppendKeepsEarlierProjection(t *testing.T) {
+	manager := newTestSessionManager(t)
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "one"}, Timestamp: 1})
+	before := manager.Projection().Messages
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "two"}, Timestamp: 2})
+	after := manager.Projection().Messages
+	if len(after) != len(before)+1 {
+		t.Fatalf("append changed the projection by %d messages, want +1", len(after)-len(before))
+	}
+	if len(before) > 0 && before[0] != after[0] {
+		t.Fatal("an earlier message was re-created after an append")
+	}
+}
