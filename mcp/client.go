@@ -790,7 +790,11 @@ func (c *Client) handleProgress(params json.RawMessage) {
 	if err := json.Unmarshal(params, &decoded); err != nil {
 		return
 	}
-	token, ok := jsonRpcIdNumber(decoded.ProgressToken)
+	// client.ts accepts any isJsonRpcId progressToken, which includes a string,
+	// and looks the request up by the token it sent. The client issues integer
+	// tokens, so a token that is not a number can only be the same token echoed
+	// back as text; accept both forms rather than drop the notification.
+	token, ok := progressTokenNumber(decoded.ProgressToken)
 	if !ok || decoded.Progress == nil {
 		return
 	}
@@ -833,6 +837,19 @@ func integralRequestID(id protocol.JsonRpcId) (int64, bool) {
 		return 0, false
 	}
 	return value, true
+}
+
+// progressTokenNumber narrows a decoded progressToken to the integer id it
+// names. jsonrpc.ts isJsonRpcId accepts a string or a finite number, so a server
+// may answer with either form of the token the client sent; a numeric string is
+// the same token written as text.
+func progressTokenNumber(value any) (int64, bool) {
+	switch v := value.(type) {
+	case string:
+		n, err := strconv.ParseInt(v, 10, 64)
+		return n, err == nil
+	}
+	return jsonRpcIdNumber(value)
 }
 
 // jsonRpcIdNumber narrows a decoded progressToken to a generated request id.

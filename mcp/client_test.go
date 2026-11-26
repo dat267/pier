@@ -495,3 +495,39 @@ func TestClientEmptyResourceTemplatePageReturnsEmptySlice(t *testing.T) {
 		t.Fatalf("resourceTemplates = %#v, want non-nil empty slice", page.ResourceTemplates)
 	}
 }
+
+// client.ts handleProgress accepts any isJsonRpcId progressToken, and isJsonRpcId
+// allows a string, so a server that reports progress under the token as a string
+// still renews its request and reaches onProgress. The port narrowed the token to
+// an integer id, so the notification was dropped and the callback never ran even
+// though the token the client SENT was a number the server echoed differently.
+func TestProgressTokenAcceptsAStringToken(t *testing.T) {
+	client, _ := connectTestClient(t)
+	defer func() { _ = client.Close(context.Background()) }()
+
+	var got []string
+	entry := &pendingRequest{ch: make(chan pendingResult, 1), timeoutMs: 60_000, cancellable: true,
+		onProgress: func(notification *protocol.ProgressNotification) {
+			got = append(got, notification.ProgressToken)
+		}}
+	client.mu.Lock()
+	client.pending[7] = entry
+	client.progressRequests[7] = 7
+	client.mu.Unlock()
+
+	client.handleProgress(json.RawMessage(`{"progressToken":7,"progress":10}`))
+	client.handleProgress(json.RawMessage(`{"progressToken":"7","progress":50}`))
+
+	if len(got) != 2 {
+		t.Fatalf("onProgress ran %d times (%v), want the numeric and the string token", len(got), got)
+	}
+	if got[0] != "7" || got[1] != "7" {
+		t.Fatalf("tokens = %v, want the numeric one rendered as \"7\" and the string one as \"7\"", got)
+	}
+	client.mu.Lock()
+	stillPending := client.pending[7] != nil
+	client.mu.Unlock()
+	if !stillPending {
+		t.Fatal("the progress notification cancelled its request")
+	}
+}

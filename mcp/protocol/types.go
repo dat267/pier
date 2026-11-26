@@ -68,7 +68,11 @@ type InitializeResult struct {
 // ProgressNotification reports long-running operation progress (upstream
 // ProgressNotification).
 type ProgressNotification struct {
-	ProgressToken string   `json:"progressToken"` // string | number
+	// ProgressToken is the token the client sent, rendered as text. The wire
+	// type is `string | number` (protocol/types.ts), but the client only issues
+	// integer tokens, so a notification it builds always carries digits and the
+	// callback reads the token it knows.
+	ProgressToken string   `json:"progressToken"`
 	Progress      float64  `json:"progress"`
 	Total         *float64 `json:"total,omitempty"`
 	Message       *string  `json:"message,omitempty"`
