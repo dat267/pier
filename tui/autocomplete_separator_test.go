@@ -164,3 +164,28 @@ func TestAutocompleteSeparatorMatchesTheReference(t *testing.T) {
 			extra, missing)
 	}
 }
+
+// TestAutocompleteSeparatorTableIsExact checks the TABLE, not the predicate.
+// TestAutocompleteSeparatorMatchesTheReference above compares
+// isAutocompleteSeparator, and unicode.IsPunct masks an over-wide range for the
+// Symbol code points inside it: {0x3008,0x301D} spans U+3012/U+3013 (So, not Po),
+// which the reference excludes, and the predicate still said false for them. A
+// future caller using the table alone would have separated on those two.
+func TestAutocompleteSeparatorTableIsExact(t *testing.T) {
+	// Copied from testdata/autocomplete-separator/golden.json, which the generator
+	// derives from the pinned utils.ts.
+	want := [][2]rune{
+		{0x00B7, 0x00B7}, {0x3001, 0x3003}, {0x3008, 0x3011}, {0x3014, 0x301F},
+		{0x3030, 0x3030}, {0x303D, 0x303D}, {0x30A0, 0x30A0}, {0x30FB, 0x30FB},
+		{0xFE45, 0xFE46}, {0xFF61, 0xFF65}, {0x16FE2, 0x16FE2},
+	}
+	if len(cjkPunctuationRanges) != len(want) {
+		t.Fatalf("table has %d ranges, want %d", len(cjkPunctuationRanges), len(want))
+	}
+	for i := range want {
+		if cjkPunctuationRanges[i] != want[i] {
+			t.Errorf("range %d = {0x%04X,0x%04X}, want {0x%04X,0x%04X}", i,
+				cjkPunctuationRanges[i][0], cjkPunctuationRanges[i][1], want[i][0], want[i][1])
+		}
+	}
+}
