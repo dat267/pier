@@ -3,6 +3,7 @@ package highlight
 import (
 	"encoding/json"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -95,6 +96,57 @@ func TestNormalizePattern(t *testing.T) {
 	for _, tc := range cases {
 		if got := normalizeWhitespaceClasses(normalizeJSEscapes(tc.in)); got != tc.want {
 			t.Errorf("escapes and classes of %q = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+// jsSpaceRunes (the pattern fragment substituted into classes) and jsSpaceUnits
+// (the rune list the complement rewrite walks) must describe the SAME set. Two
+// representations of one ECMAScript property can drift apart silently: a class
+// built from the string would then disagree with a complement computed from the
+// list, for the same input.
+//
+// The units are also checked against node's own \s, which is the authority for
+// ECMAScript WhiteSpace + LineTerminator; the 25 entries match it exactly.
+func TestJavaScriptWhitespaceSetAgreement(t *testing.T) {
+	re, err := regexp.Compile("[" + jsSpaceRunes + "]")
+	if err != nil {
+		t.Fatalf("jsSpaceRunes does not parse as a class: %v", err)
+	}
+	units := make(map[rune]bool, len(jsSpaceUnits))
+	for _, unit := range jsSpaceUnits {
+		units[unit] = true
+	}
+	if len(units) != len(jsSpaceUnits) {
+		t.Fatalf("jsSpaceUnits has %d entries but %d distinct", len(jsSpaceUnits), len(units))
+	}
+	var mismatches []rune
+	for r := rune(0); r <= 0x10ffff; r++ {
+		if r >= 0xd800 && r <= 0xdfff {
+			continue
+		}
+		if inClass := re.MatchString(string(r)); inClass != units[r] {
+			mismatches = append(mismatches, r)
+			if len(mismatches) > 8 {
+				break
+			}
+		}
+	}
+	if len(mismatches) > 0 {
+		t.Fatalf("jsSpaceRunes and jsSpaceUnits disagree at %v", mismatches)
+	}
+	// The documented 25 code points, from node: \s over every code point.
+	want := []rune{
+		0x0009, 0x000a, 0x000b, 0x000c, 0x000d, 0x0020, 0x00a0, 0x1680,
+		0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007,
+		0x2008, 0x2009, 0x200a, 0x2028, 0x2029, 0x202f, 0x205f, 0x3000, 0xfeff,
+	}
+	if len(jsSpaceUnits) != len(want) {
+		t.Fatalf("jsSpaceUnits has %d entries, want %d", len(jsSpaceUnits), len(want))
+	}
+	for i := range want {
+		if jsSpaceUnits[i] != want[i] {
+			t.Errorf("jsSpaceUnits[%d] = U+%04X, want U+%04X", i, jsSpaceUnits[i], want[i])
 		}
 	}
 }
