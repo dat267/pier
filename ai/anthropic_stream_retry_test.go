@@ -252,13 +252,6 @@ func TestStreamAnthropicRetryDelayCapFails(t *testing.T) {
 	}
 }
 
-func TestGetPiUserAgent(t *testing.T) {
-	ua := GetPiUserAgent()
-	if !strings.HasPrefix(ua, "pi (") || !strings.HasSuffix(ua, ")") {
-		t.Fatalf("user agent = %q", ua)
-	}
-}
-
 // Upstream builds Copilot's per-request headers inside stream()
 // (packages/ai/src/api/anthropic-messages.ts, buildCopilotDynamicHeaders):
 // X-Initiator marks the request user- or agent-initiated, Openai-Intent is

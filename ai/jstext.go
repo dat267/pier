@@ -256,16 +256,6 @@ func jsSliceAbsolute(s string, start, end int) string {
 	return string(utf16.Decode(kept))
 }
 
-// GetPiUserAgent renders "pi (<platform> <release>; <arch>)". It is NOT a port
-// of utils/pi-user-agent.ts: that function returns formatUserAgent's
-// "pi/<version> (<platform>; node/<version>; <arch>)", which this codebase
-// implements as FormatUserAgent (D265). Nothing calls this; the live user agent
-// is FormatUserAgent. See TODO.md.
-func GetPiUserAgent() string {
-	release := cmp.Or(kernelRelease(), "unknown")
-	return "pi (" + runtimeGOOS() + " " + release + "; " + runtimeGOARCH() + ")"
-}
-
 // JSValueToString renders a decoded value the way JavaScript's String(value)
 // does: a string as itself, a number through JSNumberToString, a bool as
 // "true"/"false", nil as "null", an array as its items joined by commas with
