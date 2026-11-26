@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"bytes"
 	"encoding/json"
 	"maps"
 	"os"
@@ -399,8 +400,14 @@ func marshalOrderedKeybindings(config map[string]json.RawMessage) ([]byte, error
 	return []byte(out.String()), nil
 }
 
-// indentJSON writes compact JSON with two-space indentation starting one level
-// in, the shape JSON.stringify(value, null, 2) produces for a property value.
+// indentJSON writes compact JSON with two-space indentation starting one level in,
+// the shape JSON.stringify(value, null, 2) produces for a property value.
+//
+// It defers to json.Indent on the CANONICAL compact form rather than splicing the
+// caller's text: JSON.stringify re-serializes from the parsed value, so every level is
+// re-indented and a member's spacing is normalised. Splitting the source text at its
+// top-level commas left a nested container on one line with its original spacing
+// (`"keys":["escape","ctrl+c"]`), which JSON.stringify never emits.
 func indentJSON(out *strings.Builder, raw json.RawMessage, depth int) {
 	trimmed := strings.TrimSpace(string(raw))
 	if len(trimmed) == 0 {
@@ -411,67 +418,21 @@ func indentJSON(out *strings.Builder, raw json.RawMessage, depth int) {
 		out.WriteString(trimmed)
 		return
 	}
-	indent := strings.Repeat("  ", depth)
-	childIndent := strings.Repeat("  ", depth+1)
-	closing := byte('}')
-	if trimmed[0] == '[' {
-		closing = ']'
-	}
-
-	// Split the container into its top-level elements, preserving their text.
-	elements := []string{}
-	start := 1
-	inString := false
-	escaped := false
-	level := 0
-	for index := range len(trimmed) {
-		char := trimmed[index]
-		if inString {
-			if escaped {
-				escaped = false
-			} else if char == '\\' {
-				escaped = true
-			} else if char == '"' {
-				inString = false
-			}
-			continue
-		}
-		switch char {
-		case '"':
-			inString = true
-		case '{', '[':
-			level++
-		case '}', ']':
-			level--
-			if level == 0 {
-				if end := strings.TrimSpace(trimmed[start:index]); end != "" {
-					elements = append(elements, end)
-				}
-			}
-		case ',':
-			if level == 1 {
-				elements = append(elements, strings.TrimSpace(trimmed[start:index]))
-				start = index + 1
-			}
-		}
-	}
-	if len(elements) == 0 {
-		out.WriteString(trimmed[:1])
-		out.WriteString(string(closing))
+	// json.Indent keeps the first line unindented and prefixes the rest, so render at
+	// depth 0 and shift the continuation lines by the caller's depth.
+	var buffer bytes.Buffer
+	if err := json.Indent(&buffer, []byte(trimmed), "", "  "); err != nil {
+		out.WriteString(trimmed)
 		return
 	}
-	out.WriteString(trimmed[:1])
-	for index, element := range elements {
+	prefix := strings.Repeat("  ", depth)
+	for index, line := range strings.Split(buffer.String(), "\n") {
 		if index > 0 {
-			out.WriteString(",")
+			out.WriteString("\n")
+			out.WriteString(prefix)
 		}
-		out.WriteString("\n")
-		out.WriteString(childIndent)
-		indentJSON(out, json.RawMessage(element), depth+1)
+		out.WriteString(line)
 	}
-	out.WriteString("\n")
-	out.WriteString(indent)
-	out.WriteByte(closing)
 }
 
 // Reload re-reads the user config file.

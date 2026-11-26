@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -121,5 +122,36 @@ func TestCreateAppKeybindingsMigrationIgnoresMalformedFile(t *testing.T) {
 	}
 	if string(data) != malformed {
 		t.Fatalf("malformed keybindings.json rewritten: %q", data)
+	}
+}
+
+// marshalOrderedKeybindings renders the migrated file as JSON.stringify(config, null,
+// 2) plus a trailing newline. A keybinding value is whatever the user wrote, so it can
+// be an object or an array, and JSON.stringify re-indents EVERY level: a nested
+// container is never emitted on one line.
+func TestMarshalKeybindingsIndentsNestedContainers(t *testing.T) {
+	config := map[string]json.RawMessage{
+		"app.interrupt": json.RawMessage(`{"keys":["escape","ctrl+c"]}`),
+		"app.quit":      json.RawMessage(`["q"]`),
+		"app.submit":    json.RawMessage(`"enter"`),
+	}
+	out, err := marshalOrderedKeybindings(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "{\n" +
+		"  \"app.interrupt\": {\n" +
+		"    \"keys\": [\n" +
+		"      \"escape\",\n" +
+		"      \"ctrl+c\"\n" +
+		"    ]\n" +
+		"  },\n" +
+		"  \"app.quit\": [\n" +
+		"    \"q\"\n" +
+		"  ],\n" +
+		"  \"app.submit\": \"enter\"\n" +
+		"}\n"
+	if string(out) != want {
+		t.Fatalf("emitted\n%q\nwant\n%q", string(out), want)
 	}
 }
