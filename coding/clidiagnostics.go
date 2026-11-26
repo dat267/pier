@@ -28,7 +28,7 @@ func FormatCLIDiagnostic(d CLIDiagnostic) string {
 	// Every CLI diagnostic passes through here, and some carry remote text: a
 	// provider's HTTP body (D463), a project's MCP config file (D464). stderr is
 	// a terminal, so the message is data until this point.
-	d.Message = tui.SanitizeUntrustedText(d.Message)
+	d.Message = singleCLILine(tui.SanitizeUntrustedText(d.Message))
 	color, prefix := ansiDim, ""
 	switch d.Type {
 	case "error":
@@ -91,7 +91,7 @@ func UnknownFlagDiagnostics(args *Args) []CLIDiagnostic {
 // FormatCLIError renders an error without the "Error: " prefix, for callers
 // whose text is already complete (upstream's chalk.red lines in main.ts).
 func FormatCLIError(text string) string {
-	text = tui.SanitizeUntrustedText(text)
+	text = singleCLILine(tui.SanitizeUntrustedText(text))
 	if !CLIColorsEnabled() {
 		return text
 	}
@@ -103,9 +103,22 @@ func FormatCLIError(text string) string {
 // the text is sanitized first: the resume warning prints a session file's stored
 // cwd, which upstream writes raw.
 func FormatCLIWarning(text string) string {
-	text = tui.SanitizeUntrustedText(text)
+	text = singleCLILine(tui.SanitizeUntrustedText(text))
 	if !CLIColorsEnabled() {
 		return text
 	}
 	return ansiYellow + text + ansiFgReset
+}
+
+// singleCLILine keeps a diagnostic on one stderr line. SanitizeUntrustedText
+// preserves newlines because multi-line content needs them, but a diagnostic
+// that prints stored data (a session's cwd, an error message) would otherwise let
+// that data forge a second line, such as a fake "Error:" block.
+func singleCLILine(text string) string {
+	if !strings.ContainsAny(text, "\n\r") {
+		return text
+	}
+	return strings.Join(strings.FieldsFunc(text, func(r rune) bool {
+		return r == '\n' || r == '\r'
+	}), " ")
 }

