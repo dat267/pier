@@ -30,6 +30,17 @@ func TestNormalizeGitHubDomain(t *testing.T) {
 		{"\uFEFFcompany.ghe.com\uFEFF", "company.ghe.com", true},
 		{"  ", "", false},
 		{"not a domain", "", false},
+		// A URL with a scheme but no host (file:, ws:, wss:) leaves Go with an
+		// empty hostname, and the reference's new URL("file:///etc").hostname is ""
+		// rather than null. Both callers test falsiness (`if trimmed && !domain
+		// throw`, `domain || "github.com"`), so an empty host and a parse failure
+		// take the same branch; reporting not-valid is the port's equivalent.
+		{"file:///etc", "", false},
+		// WHATWG's hostname keeps the brackets around an IPv6 literal
+		// (new URL("https://[::1]/").hostname is "[::1]"), and getUrls builds
+		// "https://" + domain, so dropping them would make an unusable URL.
+		{"https://[::1]:80", "[::1]", true},
+		{"https://[2001:db8::1]/x", "[2001:db8::1]", true},
 		// The reference accepts ANY parseable URL and takes its hostname, so a
 		// non-http scheme still names a domain.
 		{"ftp://github.com", "github.com", true},
