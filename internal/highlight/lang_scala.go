@@ -24,13 +24,14 @@ func Scala() *Language {
 		},
 	}
 
-	// The reference's `'\w[\w\d_]*(?!\')` lookahead becomes a guard.
-	symbol := &Mode{ClassName: "symbol", Begin: `'\w[\w\d_]*`}
-	symbol.beforeBegin = func(m *match, resp *Response) {
-		if end := m.index + len(m.lexeme); end < len(m.input) && m.input[end] == '\'' {
-			resp.IgnoreMatch()
-		}
-	}
+	// The reference's `'\w[\w\d_]*(?!\')` is a BACKTRACKING lookahead, not a
+	// veto: on `'str'` the greedy body fails the lookahead, so the engine retries
+	// a shorter one and the rule matches `'st`, leaving `r'` as plain text. A
+	// beforeBegin guard cannot express that (the lexeme is captured before it
+	// runs), so the pattern is matched by hand and shortened the same way. A
+	// single-character symbol cannot shorten: `'\w` consumes the only word
+	// character, so `'b'` matches nothing at all.
+	symbol := &Mode{ClassName: "symbol", ManualFirst: "'", ManualBegin: scalaSymbolBegin}
 
 	typeMode := Zero(Mode{ClassName: "type", Begin: `\b[A-Z][A-Za-z0-9_]*`})
 	// The NAME pattern contains a backtick, so it cannot be a Go raw string.
@@ -77,4 +78,31 @@ func Scala() *Language {
 			annotation,
 		},
 	}
+}
+
+// scalaSymbolBegin ports `'\w[\w\d_]*(?!\')` with the backtracking the lookahead
+// implies: the longest prefix whose following byte is not a quote, or no match
+// when even the shortest form is followed by one.
+func scalaSymbolBegin(s string, pos int) (int, bool) {
+	if pos >= len(s) || s[pos] != '\'' {
+		return 0, false
+	}
+	end := pos + 1
+	if end >= len(s) || !isWordByte(s[end]) {
+		return 0, false
+	}
+	end++
+	for end < len(s) && isWordByte(s[end]) {
+		end++
+	}
+	for end > pos+2 {
+		if end >= len(s) || s[end] != '\'' {
+			return end, true
+		}
+		end--
+	}
+	if end >= len(s) || s[end] != '\'' {
+		return end, true
+	}
+	return 0, false
 }

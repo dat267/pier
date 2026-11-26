@@ -17,6 +17,18 @@ func TestLanguageParityRegressions(t *testing.T) {
 		{"crmsh property", "crmsh", "property x[a{\n", `<span class="hljs-keyword">property</span><span class="hljs-title"> </span>x[a{` + "\n"},
 		{"crmsh attributes", "crmsh", "property stonith-enabled=false*[a{\n",
 			`<span class="hljs-keyword">property</span><span class="hljs-title"> </span><span class="hljs-attr">stonith-enabled=</span><span class="hljs-literal">false</span>*[a{` + "\n"},
+		// scala.js SYMBOL is `'\w[\w\d_]*(?!')`. A backtracking regex SHORTENS the
+		// lexeme so the lookahead holds: `'str'` matches `'st` (leaving `r'` as
+		// plain text), it does not reject the rule. The port's beforeBegin guard
+		// called IgnoreMatch, so the whole symbol vanished. `'b'` is the other
+		// half: `'\w` consumes the only word char, `[\w\d_]*` is empty, the
+		// lookahead sees `'` and cannot shorten, so the reference matches nothing.
+		{"scala symbol backtracks out of a quote", "scala", "x = 'str' + 1\n",
+			"x = <span class=\"hljs-symbol\">&#x27;st</span>r&#x27; + <span class=\"hljs-number\">1</span>\n"},
+		{"scala single-char symbol cannot shorten", "scala", "a = 'b'\n",
+			"a = &#x27;b&#x27;\n"},
+		{"scala symbol without a closing quote", "scala", "'sym + 1\n",
+			"<span class=\"hljs-symbol\">&#x27;sym</span> + <span class=\"hljs-number\">1</span>\n"},
 		// groovy.js and haxe.js both declare `illegal: /<\//`, the close-tag
 		// pattern. The port wrote `#|<\//` and `<//`, which compile to a literal
 		// `</` followed by `/` and to `<//`, so neither ever matched and a string
