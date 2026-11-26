@@ -1,6 +1,9 @@
 package tui
 
-import "testing"
+import (
+	"strconv"
+	"testing"
+)
 
 type wantSegment struct {
 	text     string
@@ -186,5 +189,96 @@ func TestWordSegmentsKeepDictionaryRunsWhole(t *testing.T) {
 		if segment.Segment != want[i].text || segment.IsWordLike != want[i].wordLike {
 			t.Fatalf("WordSegments = %+v; want %+v", got, want)
 		}
+	}
+}
+
+// kill-ring.ts push/rotate, verified row by row against the reference:
+// accumulate merges into the most recent entry with prepend choosing the side, an
+// empty text is a no-op even with accumulate, and rotate moves the last entry to
+// the front only when more than one entry exists.
+func TestKillRingMatchesTheReference(t *testing.T) {
+	type op struct {
+		text string
+		pre  bool
+		acc  bool
+	}
+	for _, tc := range []struct {
+		ops  []op
+		want []string
+	}{
+		{[]op{{"a", false, false}}, []string{"a|1"}},
+		{[]op{{"a", false, false}, {"b", false, true}}, []string{"a|1", "ab|1"}},
+		{[]op{{"a", false, false}, {"b", true, true}}, []string{"a|1", "ba|1"}},
+		{[]op{{"a", false, false}, {"b", false, false}, {"c", true, true}}, []string{"a|1", "b|2", "cb|2"}},
+		{[]op{{"", false, false}, {"a", false, false}}, []string{"|0", "a|1"}},
+		{[]op{{"a", false, false}, {"", true, true}}, []string{"a|1", "a|1"}},
+		{[]op{{"a", false, false}, {"b", false, true}, {"c", true, true}}, []string{"a|1", "ab|1", "cab|1"}},
+	} {
+		var ring KillRing
+		for i, o := range tc.ops {
+			ring.Push(o.text, KillRingPushOptions{Prepend: o.pre, Accumulate: o.acc})
+			top, ok := ring.Peek()
+			if !ok {
+				top = ""
+			}
+			got := top + "|" + strconv.Itoa(ring.Len())
+			if got != tc.want[i] {
+				t.Fatalf("ops %v step %d: peek|len = %q, want %q", tc.ops, i, got, tc.want[i])
+			}
+		}
+	}
+
+	var ring KillRing
+	ring.Push("a", KillRingPushOptions{})
+	ring.Push("b", KillRingPushOptions{})
+	ring.Push("c", KillRingPushOptions{})
+	for i, want := range []string{"b", "a", "c"} {
+		ring.Rotate()
+		if top, _ := ring.Peek(); top != want || ring.Len() != 3 {
+			t.Fatalf("rotate %d: peek = %q len = %d, want %q / 3", i+1, top, ring.Len(), want)
+		}
+	}
+	// A single entry does not move.
+	var one KillRing
+	one.Push("only", KillRingPushOptions{})
+	one.Rotate()
+	if top, _ := one.Peek(); top != "only" || one.Len() != 1 {
+		t.Fatalf("single-entry rotate changed the ring: %q / %d", top, one.Len())
+	}
+}
+
+// undo-stack.ts push/pop/clear. The reference deep-clones on push; the port stores
+// the caller's value as-is, which is why both callers hand it a detached copy
+// (editor.go clones the lines slice and the pastes map, input.go pushes a value
+// type). This pins the stack contract itself: LIFO, Pop reports empty, Clear drops
+// everything, and a popped value leaves no reference behind in the backing array.
+func TestUndoStackContract(t *testing.T) {
+	var stack UndoStack[string]
+	if _, ok := stack.Pop(); ok {
+		t.Fatal("Pop on an empty stack reported a value")
+	}
+	if stack.Len() != 0 {
+		t.Fatalf("empty Len = %d", stack.Len())
+	}
+	stack.Push("first")
+	stack.Push("second")
+	stack.Push("third")
+	if stack.Len() != 3 {
+		t.Fatalf("Len = %d, want 3", stack.Len())
+	}
+	for _, want := range []string{"third", "second", "first"} {
+		got, ok := stack.Pop()
+		if !ok || got != want {
+			t.Fatalf("Pop = %q/%v, want %q", got, ok, want)
+		}
+	}
+	if _, ok := stack.Pop(); ok {
+		t.Fatal("Pop past the bottom reported a value")
+	}
+	stack.Push("a")
+	stack.Push("b")
+	stack.Clear()
+	if stack.Len() != 0 {
+		t.Fatalf("Len after Clear = %d", stack.Len())
 	}
 }
