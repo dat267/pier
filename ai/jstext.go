@@ -36,6 +36,14 @@ import (
 // RE2 pattern: Go's `\s` is `[\t\n\f\r ]`, while JavaScript's also matches the
 // Unicode space separators and U+FEFF. Ported patterns that use `\s` build
 // their class from this constant so the two engines agree (CR-068/CR-069).
+//
+// The same set is transcribed independently in packages that cannot import each
+// other: internal/highlight's jsSpaceRunes, and a bracketed jsWhitespaceClass in
+// tui (the OKLCH/OKHSL colour parsers) and mcp/oauth (the discovery header
+// parser). All four were compared against node's own `\s` over every code point
+// and describe the same 25 units; TestJSWhitespaceClassBoundaries here is the
+// one that pins them, so a drift in any copy shows as a colour or header parse
+// failure before it reaches the wire.
 const JSWhitespaceClass = `\t\n\v\f\r \x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}`
 
 // JSTrim implements String.prototype.trim over the JavaScript whitespace set

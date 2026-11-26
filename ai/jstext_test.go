@@ -389,6 +389,27 @@ func TestJSWhitespaceClassBoundaries(t *testing.T) {
 			t.Errorf("U+%04X: IsJSSpace = false, want true", code)
 		}
 	}
+	// The whole set, exactly: this is the constant three other packages
+	// transcribe independently, so a drift here is the signal for them.
+	var classRunes []rune
+	for r := rune(0); r <= 0x10ffff; r++ {
+		if class.MatchString(string(r)) {
+			classRunes = append(classRunes, r)
+		}
+	}
+	want := []rune{
+		0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x20, 0xa0, 0x1680,
+		0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007,
+		0x2008, 0x2009, 0x200a, 0x2028, 0x2029, 0x202f, 0x205f, 0x3000, 0xfeff,
+	}
+	if len(classRunes) != len(want) {
+		t.Fatalf("class matches %d code points, want %d: %U", len(classRunes), len(want), classRunes)
+	}
+	for i := range want {
+		if classRunes[i] != want[i] {
+			t.Errorf("class[%d] = U+%04X, want U+%04X", i, classRunes[i], want[i])
+		}
+	}
 }
 
 // JS String(value), captured from node: `String(v)` for each row. The reference
