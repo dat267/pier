@@ -1,5 +1,7 @@
 package highlight
 
+import "unicode/utf8"
+
 func init() { RegisterLanguage("groovy", Groovy()) }
 
 // Groovy returns the Groovy language definition (a port of languages/groovy.js).
@@ -59,13 +61,19 @@ func Groovy() *Language {
 		End:      `:`,
 		Contains: []*Mode{comment, stringMode, regexpMode, number, Self},
 	})
-	// The reference uses a `(?=IDENT_RE:)` lookahead begin with excludeBegin; the
-	// label text is consumed here instead, which is identical when the label
-	// starts at column zero.
+	// The reference's label rule is `begin: '^[ \t]*' + lookahead(IDENT_RE + ':')`
+	// with excludeBegin and `end: IDENT_RE + ':'`: the begin is the INDENT, which
+	// the lookahead keeps out of the symbol, and the symbol span is only the
+	// `name:` the end matches. Consuming the label in the begin instead made the
+	// begin swallow the indentation and let the end run on to the NEXT label, so
+	// two indented labels merged into one multi-line symbol.
 	label := Zero(Mode{
-		ClassName: "symbol",
-		Begin:     `^[ \t]*` + identRe + `:`,
-		End:       identRe + `:`,
+		ClassName:       "symbol",
+		ManualBegin:     groovyLabelBegin,
+		ManualFirst:     " \t",
+		ManualLineStart: true,
+		ExcludeBegin:    true,
+		End:             identRe + `:`,
 	})
 
 	return &Language{
@@ -93,4 +101,36 @@ func Groovy() *Language {
 			label,
 		},
 	}
+}
+
+// groovyLabelBegin ports `^[ \t]*(?=IDENT_RE:)` with excludeBegin: it matches at a
+// line start only, and ends at the label so the indentation stays plain text.
+func groovyLabelBegin(s string, pos int) (int, bool) {
+	if pos > 0 {
+		previous, _ := utf8.DecodeLastRuneInString(s[:pos])
+		if !jsLineEnd(previous) {
+			return 0, false
+		}
+	}
+	at := pos
+	for at < len(s) && (s[at] == ' ' || s[at] == '\t') {
+		at++
+	}
+	// IDENT_RE is `[A-Za-z0-9_$]+`, and the lookahead also requires the colon.
+	end := at
+	for end < len(s) && isGroovyIdentByte(s[end]) {
+		end++
+	}
+	if end == at || end >= len(s) || s[end] != ':' {
+		return 0, false
+	}
+	return at, true
+}
+
+func isGroovyIdentByte(b byte) bool {
+	switch {
+	case b >= 'a' && b <= 'z', b >= 'A' && b <= 'Z', b >= '0' && b <= '9':
+		return true
+	}
+	return b == '_' || b == '$'
 }

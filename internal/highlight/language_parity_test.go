@@ -17,6 +17,31 @@ func TestLanguageParityRegressions(t *testing.T) {
 		{"crmsh property", "crmsh", "property x[a{\n", `<span class="hljs-keyword">property</span><span class="hljs-title"> </span>x[a{` + "\n"},
 		{"crmsh attributes", "crmsh", "property stonith-enabled=false*[a{\n",
 			`<span class="hljs-keyword">property</span><span class="hljs-title"> </span><span class="hljs-attr">stonith-enabled=</span><span class="hljs-literal">false</span>*[a{` + "\n"},
+		// stata.js built_in is a huge alternation followed by `(?=\()`. The list has
+		// `d` BEFORE `date`, so leftmost-first takes `d`, the lookahead then sees
+		// `a` and fails, and a BACKTRACKING engine retries until an alternative is
+		// followed by a paren. The port's beforeBegin guard ignored the match
+		// instead, losing every built-in that starts with `d`.
+		{"stata built-in restarts past a shorter alternative", "stata", "date(a)\n",
+			`<span class="hljs-built_in">date</span>(a)` + "\n"},
+		{"stata built-in day", "stata", "day(a)\n",
+			`<span class="hljs-built_in">day</span>(a)` + "\n"},
+		// The short alternative still wins when it is the one followed by a paren.
+		{"stata single-letter built-in", "stata", "d(a)\n",
+			`<span class="hljs-built_in">d</span>(a)` + "\n"},
+		// case_insensitive is set, and the span keeps the source's case.
+		{"stata built-in keeps its case", "stata", "Date(a)\n",
+			`<span class="hljs-built_in">Date</span>(a)` + "\n"},
+		// groovy.js label is `begin: '^[ \t]*' + lookahead(IDENT_RE + ':')` with
+		// excludeBegin and `end: IDENT_RE + ':'`. The begin is the INDENT (kept out
+		// of the symbol by excludeBegin) and the end is the `name:`. Consuming the
+		// label in the begin instead merged two indented labels into ONE multi-line
+		// symbol that also swallowed the tabs.
+		{"groovy indented labels stay separate", "groovy", "\t\tModel: 1,\n\t\tTools: 2,\n",
+			"\t\t<span class=\"hljs-symbol\">Model:</span> <span class=\"hljs-number\">1</span>,\n\t\t<span class=\"hljs-symbol\">Tools:</span> <span class=\"hljs-number\">2</span>,\n"},
+		// A tab indent is excluded too, not just spaces.
+		{"groovy label excludes its indent", "groovy", "\tA: b\n",
+			"\t<span class=\"hljs-symbol\">A:</span> b\n"},
 		// scala.js SYMBOL is `'\w[\w\d_]*(?!')`. A backtracking regex SHORTENS the
 		// lexeme so the lookahead holds: `'str'` matches `'st` (leaving `r'` as
 		// plain text), it does not reject the rule. The port's beforeBegin guard

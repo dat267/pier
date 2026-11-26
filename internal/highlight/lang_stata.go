@@ -1,18 +1,30 @@
 package highlight
 
+import (
+	"sort"
+	"strings"
+)
+
 func init() { RegisterLanguage("stata", Stata()) }
+
+// stataBuiltInSource is the reference's built-in alternation, verbatim.
+const stataBuiltInSource = "\\b(abs|acos|asin|atan|atan2|atanh|ceil|cloglog|comb|cos|digamma|exp|floor|invcloglog|invlogit|ln|lnfact|lnfactorial|lngamma|log|log10|max|min|mod|reldif|round|sign|sin|sqrt|sum|tan|tanh|trigamma|trunc|betaden|Binomial|binorm|binormal|chi2|chi2tail|dgammapda|dgammapdada|dgammapdadx|dgammapdx|dgammapdxdx|F|Fden|Ftail|gammaden|gammap|ibeta|invbinomial|invchi2|invchi2tail|invF|invFtail|invgammap|invibeta|invnchi2|invnFtail|invnibeta|invnorm|invnormal|invttail|nbetaden|nchi2|nFden|nFtail|nibeta|norm|normal|normalden|normd|npnchi2|tden|ttail|uniform|abbrev|char|index|indexnot|length|lower|ltrim|match|plural|proper|real|regexm|regexr|regexs|reverse|rtrim|string|strlen|strlower|strltrim|strmatch|strofreal|strpos|strproper|strreverse|strrtrim|strtrim|strupper|subinstr|subinword|substr|trim|upper|word|wordcount|_caller|autocode|byteorder|chop|clip|cond|e|epsdouble|epsfloat|group|inlist|inrange|irecode|matrix|maxbyte|maxdouble|maxfloat|maxint|maxlong|mi|minbyte|mindouble|minfloat|minint|minlong|missing|r|recode|replay|return|s|scalar|d|date|day|dow|doy|halfyear|mdy|month|quarter|week|year|d|daily|dofd|dofh|dofm|dofq|dofw|dofy|h|halfyearly|hofd|m|mofd|monthly|q|qofd|quarterly|tin|twithin|w|weekly|wofd|y|yearly|yh|ym|yofd|yq|yw|cholesky|colnumb|colsof|corr|det|diag|diag0cnt|el|get|hadamard|I|inv|invsym|issym|issymmetric|J|matmissing|matuniform|mreldif|nullmat|rownumb|rowsof|sweep|syminv|trace|vec|vecdiag)"
 
 // Stata returns the Stata language definition (a port of languages/stata.js).
 // The built-in function variant's `(?=\()` lookahead becomes a beforeBegin
 // guard, and the F77-style `*` comment has no end (the reference passes false).
 func Stata() *Language {
-	builtInBegin := "\\b(abs|acos|asin|atan|atan2|atanh|ceil|cloglog|comb|cos|digamma|exp|floor|invcloglog|invlogit|ln|lnfact|lnfactorial|lngamma|log|log10|max|min|mod|reldif|round|sign|sin|sqrt|sum|tan|tanh|trigamma|trunc|betaden|Binomial|binorm|binormal|chi2|chi2tail|dgammapda|dgammapdada|dgammapdadx|dgammapdx|dgammapdxdx|F|Fden|Ftail|gammaden|gammap|ibeta|invbinomial|invchi2|invchi2tail|invF|invFtail|invgammap|invibeta|invnchi2|invnFtail|invnibeta|invnorm|invnormal|invttail|nbetaden|nchi2|nFden|nFtail|nibeta|norm|normal|normalden|normd|npnchi2|tden|ttail|uniform|abbrev|char|index|indexnot|length|lower|ltrim|match|plural|proper|real|regexm|regexr|regexs|reverse|rtrim|string|strlen|strlower|strltrim|strmatch|strofreal|strpos|strproper|strreverse|strrtrim|strtrim|strupper|subinstr|subinword|substr|trim|upper|word|wordcount|_caller|autocode|byteorder|chop|clip|cond|e|epsdouble|epsfloat|group|inlist|inrange|irecode|matrix|maxbyte|maxdouble|maxfloat|maxint|maxlong|mi|minbyte|mindouble|minfloat|minint|minlong|missing|r|recode|replay|return|s|scalar|d|date|day|dow|doy|halfyear|mdy|month|quarter|week|year|d|daily|dofd|dofh|dofm|dofq|dofw|dofy|h|halfyearly|hofd|m|mofd|monthly|q|qofd|quarterly|tin|twithin|w|weekly|wofd|y|yearly|yh|ym|yofd|yq|yw|cholesky|colnumb|colsof|corr|det|diag|diag0cnt|el|get|hadamard|I|inv|invsym|issym|issymmetric|J|matmissing|matuniform|mreldif|nullmat|rownumb|rowsof|sweep|syminv|trace|vec|vecdiag)"
-	builtIn := &Mode{ClassName: "built_in", Begin: builtInBegin}
-	builtIn.beforeBegin = func(m *match, resp *Response) {
-		if end := m.index + len(m.lexeme); end >= len(m.input) || m.input[end] != '(' {
-			resp.IgnoreMatch()
-		}
-	}
+	// The reference's `(?=\()` lookahead makes the alternation backtrack: `d`
+	// appears before `date` in the list, wins leftmost-first, then FAILS the
+	// lookahead because `date(` has `a` after `d`, so the engine retries until
+	// `date` matches with a paren next. A beforeBegin guard cannot express that,
+	// because the lexeme is already fixed by then and cannot grow to a longer
+	// alternative; a guard that simply ignores the match loses `date`, `day`,
+	// `daily`, `dow`, `doy` and `dofd` (every built-in that starts with `d`).
+	// The alternation is therefore matched by hand, trying every prefix of the
+	// word so the longest alternative followed by `(` wins, and the `(` itself
+	// stays out of the span as the lookahead requires.
+	builtIn := &Mode{ClassName: "built_in", ManualBegin: stataBuiltInBegin, ManualFirst: stataBuiltInFirsts}
 
 	stringBase := &Mode{ClassName: "string"}
 	stringBase.Variants = []*Mode{
@@ -192,4 +204,35 @@ func Stata() *Language {
 			CBlockCommentMode,
 		},
 	}
+}
+
+// stataBuiltInFirsts is every byte a built-in name can start with: the list has
+// lowercase names, five capitalized ones (F, I, J, ...) and `_caller`.
+const stataBuiltInFirsts = "_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+var stataBuiltInNames = func() []string {
+	body := strings.TrimSuffix(strings.TrimPrefix(stataBuiltInSource, `\b(`), `)`)
+	parts := strings.Split(body, "|")
+	// Longest first, so a name that is a prefix of another is tried second.
+	sort.Slice(parts, func(i, j int) bool { return len(parts[i]) > len(parts[j]) })
+	return parts
+}()
+
+// stataBuiltInBegin matches a built-in function name that is immediately followed
+// by `(`, the reference's `\b(NAME|...)(?=\()` with the paren kept out of the span.
+func stataBuiltInBegin(s string, pos int) (int, bool) {
+	if pos > 0 && isWordByte(s[pos-1]) {
+		return 0, false
+	}
+	for _, name := range stataBuiltInNames {
+		end := pos + len(name)
+		if end >= len(s) || s[end] != '(' {
+			continue
+		}
+		if !strings.EqualFold(s[pos:end], name) {
+			continue
+		}
+		return end, true
+	}
+	return 0, false
 }
