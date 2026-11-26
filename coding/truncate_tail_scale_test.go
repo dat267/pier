@@ -48,7 +48,7 @@ func TestTruncateTailBuildsTheWindowWithoutPrepending(t *testing.T) {
 	}
 	content := sb.String()
 
-	measure := func(maxLines int) int64 {
+	measure := func(maxLines int64) int64 {
 		return allocatedBytesPerRun(t, 10, func() {
 			_ = TruncateTail(content, TruncationOptions{MaxLines: maxLines, MaxBytes: len(content)})
 		})

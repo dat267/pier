@@ -18,10 +18,12 @@ func statDeviceInode(info os.FileInfo) (uint64, uint64) {
 	return 0, 0
 }
 
-// statChangeTimeNano returns the inode change time in nanoseconds.
+// statChangeTimeNano returns the inode change time in nanoseconds. Nsec is int32
+// on the 32-bit targets of this file's platforms (freebsd/386), so both terms are
+// converted before they are combined.
 func statChangeTimeNano(info os.FileInfo) int64 {
 	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-		return stat.Ctimespec.Sec*1e9 + stat.Ctimespec.Nsec
+		return int64(stat.Ctimespec.Sec)*1e9 + int64(stat.Ctimespec.Nsec)
 	}
 	return 0
 }

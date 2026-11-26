@@ -187,7 +187,7 @@ func (o *OutputAccumulator) Snapshot(persistIfTruncated bool) OutputSnapshot {
 	if snapshotText == "" {
 		snapshotText = o.tailText
 	}
-	tailTruncation := TruncateTail(snapshotText, TruncationOptions{MaxLines: o.maxLines, MaxBytes: o.maxBytes})
+	tailTruncation := TruncateTail(snapshotText, TruncationOptions{MaxLines: int64(o.maxLines), MaxBytes: o.maxBytes})
 	truncated := o.totalLines > o.maxLines || o.totalDecodedBytes > o.maxBytes
 	truncatedBy := TruncatedBy("")
 	if truncated {
@@ -204,7 +204,7 @@ func (o *OutputAccumulator) Snapshot(persistIfTruncated bool) OutputSnapshot {
 	truncation.TruncatedBy = truncatedBy
 	truncation.TotalLines = o.totalLines
 	truncation.TotalBytes = o.totalDecodedBytes
-	truncation.MaxLines = o.maxLines
+	truncation.MaxLines = int64(o.maxLines)
 	truncation.MaxBytes = o.maxBytes
 
 	if persistIfTruncated && truncation.Truncated {

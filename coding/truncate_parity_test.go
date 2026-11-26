@@ -23,7 +23,7 @@ type truncateFixtureResult struct {
 	OutputBytes           int     `json:"outputBytes"`
 	LastLinePartial       bool    `json:"lastLinePartial"`
 	FirstLineExceedsLimit bool    `json:"firstLineExceedsLimit"`
-	MaxLines              int     `json:"maxLines"`
+	MaxLines              int64   `json:"maxLines"`
 	MaxBytes              int     `json:"maxBytes"`
 }
 
@@ -48,8 +48,8 @@ func TestTruncationMatchesUpstream(t *testing.T) {
 		Kind    string `json:"kind"`
 		Content string `json:"content"`
 		Options struct {
-			MaxLines *int `json:"maxLines"`
-			MaxBytes *int `json:"maxBytes"`
+			MaxLines *int64 `json:"maxLines"`
+			MaxBytes *int   `json:"maxBytes"`
 		} `json:"options"`
 		Line     string `json:"line"`
 		MaxChars *int   `json:"maxChars"`
@@ -223,7 +223,7 @@ type truncateSummary struct {
 	OutputBytes           int
 	LastLinePartial       bool
 	FirstLineExceedsLimit bool
-	MaxLines              int
+	MaxLines              int64
 	MaxBytes              int
 }
 

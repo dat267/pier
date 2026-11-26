@@ -65,8 +65,10 @@ type TruncationResult struct {
 	LastLinePartial bool
 	// FirstLineExceedsLimit: for head truncation.
 	FirstLineExceedsLimit bool
-	// MaxLines/MaxBytes are the applied limits.
-	MaxLines int
+	// MaxLines/MaxBytes are the applied limits. MaxLines is int64 because
+	// uncappedLines is Number.MAX_SAFE_INTEGER and a persisted detail must show
+	// that exact value, which a 32-bit int cannot hold.
+	MaxLines int64
 	MaxBytes int
 }
 
@@ -93,7 +95,7 @@ func (r TruncationResult) MarshalJSON() ([]byte, error) {
 
 // TruncationOptions carry the limits (zero → defaults).
 type TruncationOptions struct {
-	MaxLines int
+	MaxLines int64
 	MaxBytes int
 }
 
@@ -208,14 +210,14 @@ func FormatSizeNumber(bytes float64) string {
 // partial lines; a first line over the byte limit yields empty content with
 // FirstLineExceedsLimit.
 func TruncateHead(content string, options TruncationOptions) TruncationResult {
-	maxLines := cmp.Or(options.MaxLines, DefaultMaxLines)
+	maxLines := cmp.Or(options.MaxLines, int64(DefaultMaxLines))
 	maxBytes := cmp.Or(options.MaxBytes, DefaultMaxBytes)
 
 	totalBytes := len(content)
 	lines := splitLinesForCounting(content)
 	totalLines := len(lines)
 
-	if totalLines <= maxLines && totalBytes <= maxBytes {
+	if int64(totalLines) <= maxLines && totalBytes <= maxBytes {
 		return TruncationResult{
 			Content: content, Truncated: false,
 			TotalLines: totalLines, TotalBytes: totalBytes,
@@ -237,7 +239,7 @@ func TruncateHead(content string, options TruncationOptions) TruncationResult {
 	outputBytesCount := 0
 	truncatedBy := TruncatedByLines
 
-	for i := 0; i < len(lines) && i < maxLines; i++ {
+	for i := 0; i < len(lines) && int64(i) < maxLines; i++ {
 		lineBytes := len(lines[i]) + min(i, 1) // +1 for the newline after the first
 		if outputBytesCount+lineBytes > maxBytes {
 			truncatedBy = TruncatedByBytes
@@ -247,7 +249,7 @@ func TruncateHead(content string, options TruncationOptions) TruncationResult {
 		outputBytesCount += lineBytes
 	}
 
-	if len(outputLines) >= maxLines && outputBytesCount <= maxBytes {
+	if int64(len(outputLines)) >= maxLines && outputBytesCount <= maxBytes {
 		truncatedBy = TruncatedByLines
 	}
 
@@ -263,14 +265,14 @@ func TruncateHead(content string, options TruncationOptions) TruncationResult {
 // TruncateTail keeps the last N lines/bytes (bash output). May return a
 // partial first line when the last original line exceeds the byte limit.
 func TruncateTail(content string, options TruncationOptions) TruncationResult {
-	maxLines := cmp.Or(options.MaxLines, DefaultMaxLines)
+	maxLines := cmp.Or(options.MaxLines, int64(DefaultMaxLines))
 	maxBytes := cmp.Or(options.MaxBytes, DefaultMaxBytes)
 
 	totalBytes := len(content)
 	lines := splitLinesForCounting(content)
 	totalLines := len(lines)
 
-	if totalLines <= maxLines && totalBytes <= maxBytes {
+	if int64(totalLines) <= maxLines && totalBytes <= maxBytes {
 		return TruncationResult{
 			Content: content, Truncated: false,
 			TotalLines: totalLines, TotalBytes: totalBytes,
@@ -282,12 +284,12 @@ func TruncateTail(content string, options TruncationOptions) TruncationResult {
 	// Collect the window backwards, then reverse it once: prepending into a
 	// fresh slice per kept line made this quadratic (34 MB allocated to keep
 	// 2000 lines), and the bash tool snapshots its output on every 64 KB read.
-	reversed := make([]string, 0, max(0, min(maxLines, totalLines)))
+	reversed := make([]string, 0, max(0, min(int(maxLines), totalLines)))
 	outputBytesCount := 0
 	truncatedBy := TruncatedByLines
 	lastLinePartial := false
 
-	for i := len(lines) - 1; i >= 0 && len(reversed) < maxLines; i-- {
+	for i := len(lines) - 1; i >= 0 && int64(len(reversed)) < maxLines; i-- {
 		lineBytes := len(lines[i])
 		if len(reversed) > 0 {
 			lineBytes++ // +1 for the newline
@@ -309,7 +311,7 @@ func TruncateTail(content string, options TruncationOptions) TruncationResult {
 	slices.Reverse(reversed)
 	outputLines := reversed
 
-	if len(outputLines) >= maxLines && outputBytesCount <= maxBytes {
+	if int64(len(outputLines)) >= maxLines && outputBytesCount <= maxBytes {
 		truncatedBy = TruncatedByLines
 	}
 
