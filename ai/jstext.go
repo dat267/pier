@@ -256,10 +256,11 @@ func jsSliceAbsolute(s string, start, end int) string {
 	return string(utf16.Decode(kept))
 }
 
-// GetPiUserAgent renders the pi user agent: "pi (<platform> <release>; <arch>)"
-// (port of utils/pi-user-agent.ts). Node's os.release() is the kernel
-// version; Go reads uname where available (os-release mapping is best-effort
-// per platform).
+// GetPiUserAgent renders "pi (<platform> <release>; <arch>)". It is NOT a port
+// of utils/pi-user-agent.ts: that function returns formatUserAgent's
+// "pi/<version> (<platform>; node/<version>; <arch>)", which this codebase
+// implements as FormatUserAgent (D265). Nothing calls this; the live user agent
+// is FormatUserAgent. See TODO.md.
 func GetPiUserAgent() string {
 	release := cmp.Or(kernelRelease(), "unknown")
 	return "pi (" + runtimeGOOS() + " " + release + "; " + runtimeGOARCH() + ")"
