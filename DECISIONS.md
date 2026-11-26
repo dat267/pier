@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D555)
+# Deliberate divergences from pi (D1–D556)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9679,3 +9679,24 @@ the ordering and the cost-only case differ; every bucket that has tokens appears
 a tie keeps insertion order, which is what the reference's no-op sort also produces.
 
 Test: `TestUsageCostBreakdownFiltersAndSortsByNumericCost`.
+
+### D556
+
+**`/stats` shows a numeric cost, and the footer's cost is a number.**
+
+Reference: pi v1.6.0 (`faac5858`). `SessionStats.cost` is declared `number`
+(`core/agent-session.ts:372`) but `getSessionStats` assigns `cost: usageTotals.cost`
+(`:4411`), the `UsageCost` record. Two consequences in `modes/interactive/interactive-mode.ts:6988-6990`:
+the gate `stats.cost > 0` compares an object, so it is always false and the Cost block never
+renders; and the line inside it, `stats.cost.toFixed(3)`, would throw a `TypeError` if it ever did.
+The footer has the same defect one level down: `components/footer.ts:193-194` gates on
+`if (usageTotals.cost || …)`, which an object always satisfies, then calls
+`usageTotals.cost.toFixed(3)`, which throws.
+
+The port carries `SessionStats.Cost` as a `float64` and formats it with `JSNumberToFixed(…, 3)`, so
+the gate is a real comparison and the formatting is real formatting. This is the same
+declared-number-assigned-a-record mistake as D555, at a different site, and likewise the port does
+what the declaration says rather than reproducing the NaN.
+
+Test: `TestUsageCostBreakdownFiltersAndSortsByNumericCost` pins the breakdown's numeric cost and
+ordering; `TestSessionStatsReportCost` pins the stats value.

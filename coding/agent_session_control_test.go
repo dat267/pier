@@ -649,6 +649,32 @@ func TestSessionStatsContextUsageMatchesGetContextUsage(t *testing.T) {
 	}
 }
 
+// D556: SessionStats.Cost is a NUMBER, so the /stats gate `stats.Cost > 0` is a
+// real comparison. The reference declares the field `number` but assigns the
+// UsageCost record, so its gate is `object > 0` (always false, the Cost block never
+// renders) and its `stats.cost.toFixed(3)` would throw. Upstream's footer has the
+// same defect one level down.
+func TestSessionStatsReportCost(t *testing.T) {
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 1000, MaxTokens: 100}
+	session := newControlSession(t, model, nil)
+	session.Sessions.AppendMessage(&ai.AssistantMessage{
+		Provider: "anthropic", Model: "m", StopReason: ai.StopStop,
+		Usage: ai.Usage{Input: 10, Output: 5, Cost: ai.UsageCost{Total: 0.375}},
+	})
+	stats := session.GetSessionStats()
+	if stats.Cost != 0.375 {
+		t.Fatalf("stats.Cost = %v, want the numeric total 0.375", stats.Cost)
+	}
+	// The gate and the formatting both require a number, which is what the field
+	// being a float64 gives. A record here would make the gate false forever.
+	if stats.Cost <= 0 {
+		t.Fatal("a positive cost must pass the /stats gate")
+	}
+	if got := ai.JSNumberToFixed(stats.Cost, 3); got != "0.375" {
+		t.Fatalf("formatted cost = %q, want 0.375", got)
+	}
+}
+
 // /copy skips a turn that ended without an answer: after Esc during a tool call
 // or a provider error the last assistant message has no text, and the previous
 // answer is what the user wants to copy. A normally-ended reply stays last even
