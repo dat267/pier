@@ -77,15 +77,26 @@ func hasDrivePrefix(path string) bool {
 }
 
 // normalizeWindowsPath normalizes a path the way Node's win32.normalize does for
-// the inputs here: separators, duplicate separators, "." and ".." segments, and
-// a trailing separator. The drive prefix and the case are preserved.
+// the shapes isLegacyWslBashPath compares: separators, duplicate separators, "."
+// and ".." segments, a trailing separator, and a relative path staying relative.
+// The drive prefix and the case are preserved. It is not a full port: a bare ".."
+// that pops past the start, a lone "." and a \\?\ device prefix are normalized
+// differently, and none of them can end with the launcher suffix the predicate
+// requires, so they never reach a comparison.
 func normalizeWindowsPath(path string) string {
+	// Node keeps one trailing separator (win32.normalize("C:\\dir\\") ends with
+	// one), and isLegacyWslBashPath compares whole paths, so dropping it made a
+	// launcher path with a trailing separator match as if it had none.
+	trailingSeparator := strings.HasSuffix(path, `\`) || strings.HasSuffix(path, "/")
 	path = strings.ReplaceAll(path, "/", `\`)
 	drive := ""
 	if len(path) >= 2 && path[1] == ':' {
 		drive = path[:2]
 		path = path[2:]
 	}
+	// A separator right after the drive (or at the start) makes the path rooted;
+	// Node collapses a UNC prefix's doubled separator to one.
+	rooted := strings.HasPrefix(path, `\`)
 	var parts []string
 	for part := range strings.SplitSeq(path, `\`) {
 		switch part {
@@ -99,13 +110,26 @@ func normalizeWindowsPath(path string) string {
 		}
 		parts = append(parts, part)
 	}
-	if len(parts) == 0 {
-		if drive != "" {
-			return drive + `\`
-		}
-		return `\`
+	// Only a drive-absolute or rooted path gets a leading separator: Node keeps a
+	// relative path relative, so prefixing one turned it into a rooted path.
+	prefix := ""
+	switch {
+	case drive != "":
+		prefix = drive + `\`
+	case rooted:
+		prefix = `\`
 	}
-	return drive + `\` + strings.Join(parts, `\`)
+	if len(parts) == 0 {
+		if prefix == "" {
+			return "."
+		}
+		return prefix
+	}
+	normalized := prefix + strings.Join(parts, `\`)
+	if trailingSeparator {
+		normalized += `\`
+	}
+	return normalized
 }
 
 // shellPathExists reports whether a shell candidate is runnable (upstream

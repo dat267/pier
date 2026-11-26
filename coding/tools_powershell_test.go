@@ -232,6 +232,42 @@ func TestIsLegacyWslBashPathRequiresDriveLetter(t *testing.T) {
 	if isLegacyWslBashPath(`1:\windows\system32\bash.exe`) {
 		t.Fatal("a non-letter drive should not match")
 	}
+	// Node's win32.normalize keeps one trailing separator, so every comparison in
+	// isLegacyWslBashPath is exact only for a path that does not end with one: a
+	// launcher path with a trailing separator is NOT the launcher
+	// (utils/shell.ts isLegacyWslBashPath).
+	for _, path := range []string{`C:\windows\system32\bash.exe\`, `C:\windows\system32\bash.exe/`, `C:/windows/sysnative/bash.exe/`} {
+		if isLegacyWslBashPath(path) {
+			t.Fatalf("%q ends with a separator, so it must not match the launcher", path)
+		}
+	}
+	// Duplicate separators inside the path are still normalized, so this one does
+	// match.
+	if !isLegacyWslBashPath(`C:\\windows\\system32\\bash.exe`) {
+		t.Fatal("duplicate separators should still normalize to the launcher path")
+	}
+}
+
+// normalizeWindowsPath mirrors Node's win32.normalize for the shapes the launcher
+// test compares, so the two must agree exactly: a relative path stays relative, a
+// trailing separator is kept, and a drive root keeps its separator.
+func TestNormalizeWindowsPathMatchesNode(t *testing.T) {
+	cases := map[string]string{
+		`C:\Windows\System32\bash.exe`:      `C:\Windows\System32\bash.exe`,
+		`C:\Windows\System32\bash.exe\`:     `C:\Windows\System32\bash.exe\`,
+		`C:\Windows\\System32\bash.exe`:     `C:\Windows\System32\bash.exe`,
+		`C:/Windows/System32/bash.exe`:      `C:\Windows\System32\bash.exe`,
+		`C:\a\..\Windows\System32\bash.exe`: `C:\Windows\System32\bash.exe`,
+		`C:\`:                               `C:\`,
+		`C:\Windows\\`:                      `C:\Windows\`,
+		`foo\bar\`:                          `foo\bar\`,
+		`foo\bar`:                           `foo\bar`,
+	}
+	for in, want := range cases {
+		if got := normalizeWindowsPath(in); got != want {
+			t.Fatalf("normalizeWindowsPath(%q) = %q, want %q", in, got, want)
+		}
+	}
 }
 
 // PowerShell discovery falls back to installation directories when the shell is
