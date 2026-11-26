@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+
+	"github.com/dat267/pier/internal/jsnum"
 )
 
 // unmarshalMessageJSONText decodes persisted or replayed message JSON. A486:
@@ -260,10 +262,17 @@ func encodeSections(m *SystemMessage) (json.RawMessage, error) {
 	if len(m.Sections) == 0 {
 		return nil, nil
 	}
+	// JSON object key order, not declaration order: types.ts:578 warns that "JSON
+	// objects reorder" integer-like names, and the reference writes this map straight
+	// through JSON.stringify. SectionOrder stays declaration-ordered for replay;
+	// jsnum.ObjectKeyOrder puts index-like names first, ascending, as JSON.stringify
+	// does. The canonical encoder downstream would reorder these bytes anyway, so this
+	// only makes the function correct on its own.
+	names := jsnum.ObjectKeyOrder(m.sectionNames())
 	var buf bytes.Buffer
 	buf.WriteByte('{')
 	first := true
-	for _, name := range m.sectionNames() {
+	for _, name := range names {
 		value, ok := m.Sections[name]
 		if !ok {
 			continue

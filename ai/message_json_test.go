@@ -448,3 +448,28 @@ func TestCustomMessageKeepsANullTimestamp(t *testing.T) {
 		t.Fatalf("stamped = %s, %v; want the number", enc, err)
 	}
 }
+
+// types.ts:574-578 declares sections as `Record<string, string | null>` and warns that
+// "JSON objects reorder" integer-like names. Pier keeps insertion order separately, so an
+// integer-like name must STILL serialize in JSON object order (index keys first, ascending)
+// or the bytes differ from the reference.
+func TestSystemMessageSectionKeysFollowObjectOrder(t *testing.T) {
+	message := &SystemMessage{Content: StringOrBlocks{Text: "x"}}
+	value := "v"
+	for _, name := range []string{"2", "b", "1"} {
+		message.SetSection(name, &value)
+	}
+	// The declaration order is preserved for replay.
+	if got := message.SectionOrder(); strings.Join(got, ",") != "2,b,1" {
+		t.Fatalf("SectionOrder = %v, want the declaration order 2,b,1", got)
+	}
+	encoded, err := MarshalJSON(message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// ...but the wire order is JSON object order, as the reference's doc warns.
+	want := `{"content":"x","sections":{"1":"v","2":"v","b":"v"},"timestamp":0}`
+	if string(encoded) != want {
+		t.Fatalf("encoded = %s\nwant     %s", encoded, want)
+	}
+}
