@@ -239,6 +239,13 @@ func TestIsLightThemeResolvesTheThemeAppearance(t *testing.T) {
 	if IsLightTheme("") {
 		t.Fatal("the current dark theme must not be light when the name is empty")
 	}
+
+	// D552: upstream's isLightTheme calls loadTheme, which throws
+	// `Theme not found: <name>` for a name it cannot resolve. A predicate returns
+	// false instead of throwing.
+	if IsLightTheme("no-such-theme") {
+		t.Fatal("an unknown theme must not report a light appearance")
+	}
 }
 
 // Upstream (pi v1.5.2 modes/interactive/interactive-mode.ts

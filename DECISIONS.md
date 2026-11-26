@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D551)
+# Deliberate divergences from pi (D1–D552)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9584,3 +9584,23 @@ Everything else on that path matches: the `is not registered`, `is not a physica
 `has no credentials` texts are the reference's, and `route.State` passes through untouched.
 
 Test: `TestVirtualModelRegistrationAndRouting`.
+
+### D552
+
+**A theme predicate reports false for a name it cannot resolve.**
+
+Reference: pi v1.6.0 (`faac5858`),
+`packages/coding-agent/src/modes/interactive/theme/theme.ts:842` defines
+`isLightTheme(name) = loadTheme(name ?? currentThemeName ?? SYSTEM_THEME_NAME).appearance === "light"`,
+and `loadTheme` reaches `loadThemeJson`, which throws `Theme not found: <name>` for a name
+that is neither built in, registered, nor present in the custom themes directory.
+
+A predicate cannot throw in Go, so `IsLightTheme` in
+`coding/interactive/themefactories.go` returns false when `loadTheme` reports that error. The
+answer is the safe one for the only thing the value is used for (choosing light or dark CSS
+variants): an unresolvable theme is treated as dark rather than aborting the caller.
+
+The sibling `GetThemeExportColors` needs no row: its `recover` is the port of the
+reference's own bare `catch { return {} }`.
+
+Test: `TestIsLightThemeResolvesTheThemeAppearance`.
