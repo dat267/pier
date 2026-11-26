@@ -410,6 +410,32 @@ func TestTranscriptBackgroundNotice(t *testing.T) {
 	if got := editor.GetText(); got != "" {
 		t.Fatalf("Up recalled the notice as typed input: %q", got)
 	}
+
+	// Expanded, a truncated body keeps pi's warning and middle marker inside the
+	// fenced result, so the block still reads as one piece of output.
+	expanded, _ := newTranscriptTestRenderer(t, false)
+	expanded.Display.ToolOutputExpanded = true
+	big := strings.Repeat("H", 30000) + strings.Repeat("T", 30000)
+	expanded.AddMessageToChat(agent.CompletionNotice(
+		agent.ToolCallHandle{ID: "bg-88", ToolName: "bash", OutputPath: "/tmp/big.log"},
+		agent.AgentToolResult{Content: []ai.Content{ai.TextContent{Text: big}}}), true)
+	// Each rendered line is padded to the full width, and a long body wraps, so
+	// trim the padding before matching a phrase.
+	var trimmed []string
+	for _, line := range renderChat(t, expanded.Chat) {
+		trimmed = append(trimmed, strings.TrimRight(stripAnsiEscapes(line), " "))
+	}
+	shown := strings.Join(trimmed, "\n")
+	for _, want := range []string{"The full output is in /tmp/big.log", "Warning: truncated output"} {
+		if !strings.Contains(shown, want) {
+			t.Fatalf("the expanded notice lacks %q", want)
+		}
+	}
+	// The middle marker survives the fence: its own wording may wrap mid-line, so
+	// count the word instead of matching the whole phrase.
+	if got := strings.Count(shown, "truncated"); got < 2 {
+		t.Fatalf("the expanded notice lost pi's middle marker: %q", shown)
+	}
 }
 
 // D537: a self-paced /loop run carries a note for the model ("This is one run

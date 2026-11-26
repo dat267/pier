@@ -9178,7 +9178,15 @@ streamed output unless its error text, as a shell's does, already starts with it
 A call that finishes inside the threshold
 removes the file it never needed. The completion notice names the file and caps
 its own body, because a call that produced megabytes would otherwise flood the
-transcript it wakes, and the tail is what a reader wants first.
+transcript it wakes. The cap follows pi's model-facing output convention
+(`packages/mcp/src/output-limit.ts`: `MCP_OUTPUT_MAX_BYTES` is 20 KiB and
+`truncateMiddle` keeps the start and the end until the middle becomes a
+`…N chars truncated…` marker, behind a warning that states the original token and
+line counts): the notice is the only path by which a displaced call's output
+reaches the model, so it takes the same limit and the same cut as an MCP tool
+result. Keeping both ends is the point of that cut, since a long call's first
+lines say what it began and its last lines say how it ended; the earlier
+pier-only tail cut with its "(cut; …)" sentence threw the start away.
 
 A displaced call gets its own context, `context.WithoutCancel` of the run's, so
 the turn settling does not kill it; that is the whole point. It is cancelled when

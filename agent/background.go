@@ -263,24 +263,57 @@ func ParseCompletionNotice(text string) (title string, body string, ok bool) {
 	return title, body, true
 }
 
-// backgroundNoticeBodyLimit caps the result text a wake-up carries. A call that
-// produced more than this leaves the rest in its output file, which the notice
-// names, so nothing is lost.
-const backgroundNoticeBodyLimit = 2000
+// backgroundNoticeBodyLimit is pi's model-facing output limit
+// (pi/packages/mcp/src/output-limit.ts: MCP_OUTPUT_MAX_BYTES). A displaced
+// call's output reaches the model only through this notice, so it takes the same
+// limit an MCP tool result does; the rest stays in the output file it names.
+const backgroundNoticeBodyLimit = 20 * 1024
 
-// clipBackgroundBody keeps the tail of the body when it is over the limit: a long
-// call's end is what matters, and the file holds the rest.
+// clipBackgroundBody keeps the start and the end of the body within the limit and
+// cuts the middle out, in pi's format: a `…N chars truncated…` marker with a
+// warning that states the original size (upstream limitMcpContent). Keeping both
+// ends matters because a long call's first lines say what it began and its last
+// lines say how it ended; a tail-only cut threw the start away.
 func clipBackgroundBody(body string) string {
-	if len(body) <= backgroundNoticeBodyLimit {
+	if len(body) == 0 || len(body) <= backgroundNoticeBodyLimit {
 		return body
 	}
-	// Start on a character boundary, so the cut never splits one.
-	start := len(body) - backgroundNoticeBodyLimit
-	for start < len(body) && !utf8.RuneStart(body[start]) {
-		start++
+	head, tail, removedChars := truncateMiddleBody(body, backgroundNoticeBodyLimit)
+	// Math.ceil(totalBytes/4), as the reference estimates tokens.
+	tokens := (len(body) + 3) / 4
+	return fmt.Sprintf("Warning: truncated output (original token count: %d)\nTotal output lines: %d\n\n%s…%d chars truncated…%s",
+		tokens, bodyLineCount(body), head, removedChars, tail)
+}
+
+// truncateMiddleBody splits body at pi's truncateMiddle boundaries: the head is
+// the first half of maxBytes and the tail the second, each cut on a character
+// boundary. It returns the runes cut out, which the marker counts.
+func truncateMiddleBody(body string, maxBytes int) (head, tail string, removedChars int) {
+	isBoundary := func(index int) bool {
+		return index >= len(body) || body[index]&0xc0 != 0x80
 	}
-	kept := body[start:]
-	return "...(cut; the full output is in the file named above)\n" + kept
+	headEnd := maxBytes / 2
+	for headEnd > 0 && !isBoundary(headEnd) {
+		headEnd--
+	}
+	tailStart := len(body) - (maxBytes - maxBytes/2)
+	for tailStart < len(body) && !isBoundary(tailStart) {
+		tailStart++
+	}
+	if tailStart < headEnd {
+		tailStart = headEnd
+	}
+	return body[:headEnd], body[tailStart:], utf8.RuneCountInString(body[headEnd:tailStart])
+}
+
+// bodyLineCount counts lines the way the reference does: a final newline ends the
+// last line instead of starting another.
+func bodyLineCount(body string) int {
+	lines := strings.Count(body, "\n") + 1
+	if strings.HasSuffix(body, "\n") {
+		lines--
+	}
+	return lines
 }
 
 // executeWithBackground runs the call and gives up on waiting once the threshold

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -637,41 +638,56 @@ func TestBackgroundFastCallLeavesNoFile(t *testing.T) {
 // The wake-up names the output file and caps its own body, so a call that produced
 // far more than fits in a message still has all its output available and does not
 // flood the transcript it wakes.
+// D538: a displaced call's output reaches the model only through this notice, so
+// the notice takes pi's model-facing output limit and its cut
+// (pi/packages/mcp/src/output-limit.ts: MCP_OUTPUT_MAX_BYTES, truncateMiddle):
+// the start and the end survive, the middle becomes a `…N chars truncated…`
+// marker, and a warning header states the original size.
 func TestBackgroundNoticeNamesFileAndCapsBody(t *testing.T) {
-	huge := strings.Repeat("x", 50000)
+	head := strings.Repeat("H", 30000)
+	tail := strings.Repeat("T", 30000)
 	handle := ToolCallHandle{ID: "bg-1", ToolCallID: "c1", ToolName: "bash", OutputPath: "/tmp/out.log"}
-	notice := CompletionNotice(handle, AgentToolResult{Content: []ai.Content{ai.TextContent{Text: huge}}})
+	notice := CompletionNotice(handle, AgentToolResult{Content: []ai.Content{ai.TextContent{Text: head + tail}}})
 	body := messageText(notice)
 	if !strings.Contains(body, "/tmp/out.log") {
-		t.Fatalf("the notice does not name the output file:\n%s", body)
+		t.Fatalf("the notice does not name the output file:\n%.300s", body)
 	}
-	if len(body) > backgroundNoticeBodyLimit+500 {
+	if !strings.Contains(body, "Warning: truncated output (original token count: ") {
+		t.Fatalf("the notice lacks pi's truncation warning:\n%.300s", body)
+	}
+	if !strings.Contains(body, "Total output lines: 1") {
+		t.Fatalf("the notice lacks pi's line count:\n%.300s", body)
+	}
+	if !regexp.MustCompile(`…\d+ chars truncated…`).MatchString(body) {
+		t.Fatalf("the notice lacks pi's middle marker:\n%.300s", body)
+	}
+	// Both ends survive, which is the point of cutting the middle: a tail-only cut
+	// threw away the start of every long call.
+	if !strings.Contains(body, "HHHHHHHHHH") || !strings.Contains(body, "TTTTTTTTTT") {
+		t.Fatalf("the notice did not keep both ends:\n%.300s", body)
+	}
+	if len(body) > backgroundNoticeBodyLimit+300 {
 		t.Fatalf("the notice is %d bytes, more than the cap of %d", len(body), backgroundNoticeBodyLimit)
-	}
-	if !strings.Contains(body, "(cut;") {
-		t.Fatalf("the notice did not say it was cut:\n%s", body)
 	}
 	// A short result is carried whole, with no cut marker.
 	short := CompletionNotice(handle, AgentToolResult{Content: []ai.Content{ai.TextContent{Text: "all done"}}})
-	if got := messageText(short); strings.Contains(got, "(cut;") || !strings.Contains(got, "all done") {
+	if got := messageText(short); strings.Contains(got, "truncated") || !strings.Contains(got, "all done") {
 		t.Fatalf("a short result was mangled:\n%s", got)
 	}
 }
 
-// The cap cuts on a character boundary: a byte cut through non-ASCII output
+// The cut lands on a character boundary: a byte cut through non-ASCII output
 // (a test runner's ✓, a localized message) wrote invalid UTF-8 into the
 // transcript the notice wakes.
 func TestBackgroundNoticeCutKeepsUTF8(t *testing.T) {
-	// "é" is two bytes and the tail one, so a cut exactly
-	// backgroundNoticeBodyLimit bytes from the end lands inside a character.
 	body := strings.Repeat("é", backgroundNoticeBodyLimit) + "x"
 	notice := CompletionNotice(ToolCallHandle{ID: "bg-u", ToolName: "bash"},
 		AgentToolResult{Content: []ai.Content{ai.TextContent{Text: body}}})
 	got := messageText(notice)
 	if !utf8.ValidString(got) {
-		t.Fatalf("the clipped notice is not valid UTF-8: %q", got[len(got)-backgroundNoticeBodyLimit-4:][:12])
+		t.Fatal("the clipped notice is not valid UTF-8")
 	}
-	if !strings.Contains(got, "(cut;") || !strings.HasSuffix(got, "éx") {
+	if !regexp.MustCompile(`…\d+ chars truncated…`).MatchString(got) || !strings.HasSuffix(got, "éx") {
 		t.Fatalf("the notice lost its cut marker or its tail")
 	}
 }
