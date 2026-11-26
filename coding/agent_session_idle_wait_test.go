@@ -88,12 +88,25 @@ func TestIdleWaitRegisteredDuringARunWaitsForItToSettle(t *testing.T) {
 					t.Error(err)
 					return
 				}
+				// Decide the violation under the SAME lock the release takes
+				// (resolveIdleWaitIfIdle holds promptState.mu while it checks
+				// idleness). A bare IsStreaming() call after the wait cannot tell a
+				// premature release from a NEW run having started in the meantime,
+				// because those are two separate reads; holding the lock makes the
+				// observation atomic with the release decision.
+				state := session.prompt()
+				state.mu.Lock()
+				streamingOnReturn := state.runActive || session.Agent.State().IsStreaming
+				settledOnReturn := settled.Load()
+				state.mu.Unlock()
 				checked.Add(1)
-				// The run loop calls endRun (which clears the run flag) before it
-				// emits agent_settled, so a waiter that registers inside that window
-				// is released correctly while the counter has not moved yet. Only a
-				// release with the run still streaming is the bug this looks for.
-				if settled.Load() == before && session.IsStreaming() {
+				// A premature release is "the wait returned while the run it was
+				// waiting for is still streaming". Sampling IsStreaming after the
+				// wait cannot separate that from a NEW run having started in the
+				// meantime, so require both that no run settled during the wait
+				// AND that the session is streaming now: if a run settled, the wait
+				// was legitimately released by it.
+				if settledOnReturn == before && streamingOnReturn {
 					early.Add(1)
 				}
 			}
