@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D548)
+# Deliberate divergences from pi (D1–D549)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9518,3 +9518,26 @@ of `win32.normalize`.
 
 Tests: `TestNormalizeWindowsPathMatchesNode`,
 `TestIsLegacyWslBashPathRequiresDriveLetter`.
+
+### D549
+
+**A word-navigation cursor outside the text normalises into range first.**
+
+`word-navigation.ts` only bounds the cursor on one side. `findWordBackward` checks
+`cursor <= 0`, and `findWordForward` checks `cursor >= text.length`; neither rejects a
+negative cursor, and both then slice with it. A negative cursor therefore uses
+`slice(-5)`, which returns the LAST five units, so
+`findWordForward("hello world", -5)` walks forward from the end of the string and
+returns 0 by accident of the arithmetic rather than by intent. Past the end, upstream
+keeps the raw cursor as its starting offset while the slice clamps, so 16 and 1000 both
+return 11 for "hello world".
+
+The port normalises the cursor into `[0, length]` before slicing, so a negative cursor
+walks from the true start and an over-long one walks back one word from the end. Every
+in-range cursor agrees with the reference, and the editor only ever passes one
+(`utf16IndexForByteOffset` of its own byte cursor), so this is a property of the
+exported helper rather than a change to editor behaviour. The behaviour is pinned
+rather than latent because `FindWordBackward`/`FindWordForward` are exported and a
+caller outside `tui/` can reach it.
+
+Test: `TestFindWordBoundsBeyondTheText`.

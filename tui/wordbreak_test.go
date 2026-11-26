@@ -135,6 +135,44 @@ func TestWordNavigationFollowsIntlSegmenterWords(t *testing.T) {
 	}
 }
 
+// The editor always passes a cursor inside the text (utf16IndexForByteOffset of its
+// own byte cursor), so an out-of-range cursor is reachable only through this exported
+// API. The two ports differ there, deliberately in pier's favour:
+//
+//   - NEGATIVE cursor: word-navigation.ts checks only `cursor >= text.length`, so
+//     slice(-5) returns the LAST five units and the result walks forward from there
+//     (findWordForward("hello world", -5) = 0 by accident of that arithmetic). Pier
+//     normalises the cursor into range first, so it walks forward from the true start
+//     (5) and backward to 0.
+//   - PAST the end: upstream starts newCursor at the raw cursor and subtracts the
+//     CLAMPED slice's segment lengths, so 16 and 1000 both give 11; pier returns the
+//     position one word back from the end (6).
+//
+// Every in-range cursor agrees. This pins pier's actual answers so the difference is
+// visible rather than latent.
+func TestFindWordBoundsBeyondTheText(t *testing.T) {
+	for _, tc := range []struct {
+		cursor   int
+		backward int
+		forward  int
+	}{
+		{-5, 0, 5},
+		{-1, 0, 5},
+		{0, 0, 5},
+		{len("hello world"), 6, 11},
+		{len("hello world") + 5, 6, 11},
+		{1000, 6, 11},
+	} {
+		text := "hello world"
+		if got := FindWordBackward(text, tc.cursor); got != tc.backward {
+			t.Errorf("FindWordBackward(%q, %d) = %d; want %d", text, tc.cursor, got, tc.backward)
+		}
+		if got := FindWordForward(text, tc.cursor); got != tc.forward {
+			t.Errorf("FindWordForward(%q, %d) = %d; want %d", text, tc.cursor, got, tc.forward)
+		}
+	}
+}
+
 // D399: ICU splits runs of Han and kana (and Thai, Lao, Khmer, Myanmar) with
 // its dictionary break engines; Intl.Segmenter gives "日本語" "の" "テキスト".
 // Pier keeps the run word.txt's $KanaKanji chain produces as one word.
