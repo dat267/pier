@@ -8232,16 +8232,25 @@ is the one place a pier-only feature is declared (id, label, description and
 current state), and `NewFeatureSettingsSelector` renders it, so a new feature needs
 its `featureToggles` entry, an `ApplyFeatureToggle` case and nothing else.
 
-A toggle writes the file that owns the setting. When the workspace has a settings
-file (and the project is trusted), the three feature toggles write that file,
-adding the key when it is not there yet, so a project keeps its feature switches in
-one place and a sibling project is unaffected; otherwise they write the global
-`settings.json`, and no workspace file is created for them. Writing the global file
-while a workspace file sets the key would have left the toggle shadowed by the
-merge the reader uses: the selector showed the old value again and the change went
-somewhere the user could not see. The workspace file still only decides a setting
-it actually sets, so a project that never mentions a feature inherits the global
-one.
+A setting writes the file that owns it. When the workspace has a settings file
+(and the project is trusted), the `/features` toggles and the `/settings` rows that
+describe appearance and behaviour write that file, adding the key when it is not
+there yet, so a project keeps those settings together and a sibling project is
+unaffected; otherwise they write the global `settings.json`, and no workspace file
+is created for them. Writing the global file while a workspace file sets the key
+would have left the setting shadowed by the merge the reader uses: the selector
+showed the old value again and the change went somewhere the user could not see.
+A nested setting writes only the key it changed, so a workspace `terminal` object
+keeps its other keys.
+
+Settings that describe the machine, the user or a privacy choice stay global even
+when a workspace file exists: `shellPath`, `shellCommandPrefix`, `npmCommand`, the
+default provider and model, the per-model thinking levels, `enabledModels`,
+`defaultProjectTrust`, `enableInstallTelemetry`, `enableAnalytics`,
+`lastChangelogVersion` and the package, extension, skill, prompt and theme path
+lists (which have their own `SetProject*` writers for the workspace half). A
+repository must not be able to choose the shell pier runs, the model it defaults
+to, or whether this user sends telemetry.
 
 With the goal feature off there is no controller, so `/goal` says "The goal
 feature is off. Turn it on in /features." instead of clearing the editor and
@@ -8264,6 +8273,15 @@ rewires), `TestFeatureSelectorHoldsOnlyPierOnlyToggles` (`/features` holds the
 pier-only rows and `/settings` none of them, whose golden still matches) and
 `TestGoalCommandReportsDisabledFeature` (a disabled `/goal` says so) and
 `TestGoalFeatureOffSaysTheGoalIsKept`.
+
+The scope rule above is pinned by
+`TestFeatureTogglesWriteTheWorkspaceFileWhenItExists` (a workspace file takes all
+three feature toggles and gains the keys it lacks; with no file the global file
+takes them and no workspace file appears),
+`TestFeatureToggleSkipsAnUntrustedWorkspaceFile`,
+`TestSettingsRowsWriteTheWorkspaceFileWhenItExists` (a `/settings` row changes the
+effective value a workspace value was shadowing, and a nested object gains only the
+key that changed) and `TestMachineAndIdentitySettingsStayGlobal`.
 
 ### D497
 

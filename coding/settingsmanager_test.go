@@ -1038,3 +1038,75 @@ func TestFeatureToggleSkipsAnUntrustedWorkspaceFile(t *testing.T) {
 		t.Fatalf("the untrusted workspace file was written: %#v", got)
 	}
 }
+
+// D496: a /settings row writes the file that owns the setting, exactly as a
+// /features toggle does. Before this, a workspace value shadowed every row: the
+// row flipped on screen, the global file was rewritten, and the effective value
+// did not move.
+func TestSettingsRowsWriteTheWorkspaceFileWhenItExists(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	globalPath := filepath.Join(agentDir, "settings.json")
+	projectPath := filepath.Join(projectDir, ConfigDirName, "settings.json")
+	writeFileMkdir(t, projectPath, `{"terminal":{"showImages":true},"theme":"dark"}`)
+
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	manager.SetShowImages(false)
+	manager.SetTheme("light")
+	manager.SetHideThinkingBlock(true)
+
+	if manager.GetShowImages() {
+		t.Fatal("the workspace value shadowed the row: showImages did not change")
+	}
+	if theme := manager.GetTheme(); theme == nil || *theme != "light" {
+		t.Fatalf("theme = %v", theme)
+	}
+	project := readSettingsFile(t, projectPath)
+	terminal, _ := project["terminal"].(map[string]any)
+	if terminal["showImages"] != false {
+		t.Fatalf("workspace terminal = %#v", project["terminal"])
+	}
+	if project["theme"] != "light" || project["hideThinkingBlock"] != true {
+		t.Fatalf("workspace settings = %#v", project)
+	}
+	if _, err := os.Stat(globalPath); err == nil {
+		t.Fatalf("a workspace-owned row was written globally: %s", globalPath)
+	}
+
+	// Only the changed nested key is written, so a workspace object keeps its other
+	// keys instead of gaining the global ones.
+	writeFileMkdir(t, projectPath, `{}`)
+	fresh := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	fresh.SetImageWidthCells(50)
+	terminal, _ = readSettingsFile(t, projectPath)["terminal"].(map[string]any)
+	if len(terminal) != 1 || terminal["imageWidthCells"] != float64(50) {
+		t.Fatalf("workspace terminal = %#v, want only the toggled key", terminal)
+	}
+}
+
+// Settings that describe the machine, the user or a privacy choice never move into
+// a workspace file, even when one exists: a repository must not be able to set the
+// shell it runs, the model it defaults to, or what telemetry this user sends.
+func TestMachineAndIdentitySettingsStayGlobal(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	globalPath := filepath.Join(agentDir, "settings.json")
+	projectPath := filepath.Join(projectDir, ConfigDirName, "settings.json")
+	writeFileMkdir(t, projectPath, `{}`)
+
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	shell := "/bin/zsh"
+	manager.SetShellPath(&shell)
+	manager.SetDefaultModel("a-model")
+	manager.SetEnableAnalytics(true)
+	manager.SetEnableInstallTelemetry(true)
+
+	project := readSettingsFile(t, projectPath)
+	for _, field := range []string{"shellPath", "defaultModel", "enableAnalytics", "enableInstallTelemetry"} {
+		if project[field] != nil {
+			t.Fatalf("the workspace file gained %q: %#v", field, project)
+		}
+	}
+	global := readSettingsFile(t, globalPath)
+	if global["shellPath"] != shell || global["defaultModel"] != "a-model" {
+		t.Fatalf("global settings = %#v", global)
+	}
+}

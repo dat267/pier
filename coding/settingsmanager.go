@@ -1901,6 +1901,19 @@ func (m *SettingsManager) saveProjectSettings(settings *Settings) {
 	m.persistScoped(SettingsScopeProject, snapshot, modified, nested, copyNestedOrder(m.nestedProjectOrder))
 }
 
+// updateProjectSettingField writes one field of the workspace settings, marking the
+// nested key when the field is an object, so a save rewrites only that key.
+func (m *SettingsManager) updateProjectSettingField(field, nestedKey string, update func(*Settings)) {
+	if !m.projectTrusted {
+		m.recordErrorLocked(SettingsScopeProject, errors.New("Project is not trusted; refusing to write project settings"))
+		return
+	}
+	projectSettings := cloneSettings(m.projectSettings)
+	update(projectSettings)
+	m.markProjectModified(field, nestedKey)
+	m.saveProjectSettings(projectSettings)
+}
+
 func (m *SettingsManager) updateProjectSettings(field string, update func(*Settings)) {
 	if !m.projectTrusted {
 		m.recordErrorLocked(SettingsScopeProject, errors.New("Project is not trusted; refusing to write project settings"))
@@ -2036,9 +2049,9 @@ func (m *SettingsManager) GetCacheWarmingMode() CacheWarmingMode {
 func (m *SettingsManager) SetCacheWarmingMode(mode CacheWarmingMode) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.CacheWarming = &mode
-	m.markModified("cacheWarming", "")
-	m.save()
+	m.setSetting("cacheWarming", "", func(settings *Settings) {
+		settings.CacheWarming = &mode
+	})
 }
 
 func (m *SettingsManager) SetLastChangelogVersion(version string) {
@@ -2114,9 +2127,9 @@ func (m *SettingsManager) GetSteeringMode() string {
 func (m *SettingsManager) SetSteeringMode(mode string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.SteeringMode = &mode
-	m.markModified("steeringMode", "")
-	m.save()
+	m.setSetting("steeringMode", "", func(settings *Settings) {
+		settings.SteeringMode = &mode
+	})
 }
 
 // GetFollowUpMode returns the follow-up mode (default one-at-a-time). Upstream
@@ -2133,9 +2146,9 @@ func (m *SettingsManager) GetFollowUpMode() string {
 func (m *SettingsManager) SetFollowUpMode(mode string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.FollowUpMode = &mode
-	m.markModified("followUpMode", "")
-	m.save()
+	m.setSetting("followUpMode", "", func(settings *Settings) {
+		settings.FollowUpMode = &mode
+	})
 }
 
 // GetThemeSetting returns the raw theme setting.
@@ -2157,9 +2170,9 @@ func (m *SettingsManager) GetTheme() *string {
 func (m *SettingsManager) SetTheme(theme string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.Theme = &theme
-	m.markModified("theme", "")
-	m.save()
+	m.setSetting("theme", "", func(settings *Settings) {
+		settings.Theme = &theme
+	})
 }
 
 // GetDefaultThinkingLevel returns the default thinking level.
@@ -2237,9 +2250,9 @@ func (m *SettingsManager) GetTransport() string {
 func (m *SettingsManager) SetTransport(transport string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.Transport = &transport
-	m.markModified("transport", "")
-	m.save()
+	m.setSetting("transport", "", func(settings *Settings) {
+		settings.Transport = &transport
+	})
 }
 
 // GetCompactionEnabled reports whether compaction is enabled (default true).
@@ -2255,13 +2268,13 @@ func (m *SettingsManager) GetCompactionEnabled() bool {
 func (m *SettingsManager) SetCompactionEnabled(enabled bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.globalSettings.Compaction == nil {
-		m.globalSettings.Compaction = &SettingsCompaction{}
-	}
-	m.globalSettings.Compaction.Enabled = &enabled
-	m.globalSettings.Compaction.enabledNull = false
-	m.markModified("compaction", "enabled")
-	m.save()
+	m.setSetting("compaction", "enabled", func(settings *Settings) {
+		if settings.Compaction == nil {
+			settings.Compaction = &SettingsCompaction{}
+		}
+		settings.Compaction.Enabled = &enabled
+		settings.Compaction.enabledNull = false
+	})
 }
 
 func (m *SettingsManager) compactionTokenSetting(field string, model *ai.Model) (int64, error) {
@@ -2428,12 +2441,12 @@ func (m *SettingsManager) GetRetryEnabled() bool {
 func (m *SettingsManager) SetRetryEnabled(enabled bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.globalSettings.Retry == nil {
-		m.globalSettings.Retry = &SettingsRetry{}
-	}
-	m.globalSettings.Retry.Enabled = &enabled
-	m.markModified("retry", "enabled")
-	m.save()
+	m.setSetting("retry", "enabled", func(settings *Settings) {
+		if settings.Retry == nil {
+			settings.Retry = &SettingsRetry{}
+		}
+		settings.Retry.Enabled = &enabled
+	})
 }
 
 // RetrySettingsResult is the resolved retry configuration.
@@ -2488,9 +2501,9 @@ func (m *SettingsManager) SetHTTPIdleTimeoutMS(timeoutMS int64) error {
 	if timeoutMS < 0 {
 		return fmt.Errorf("Invalid httpIdleTimeoutMs setting: %d", timeoutMS)
 	}
-	m.globalSettings.HTTPIdleTimeoutMS = float64(timeoutMS)
-	m.markModified("httpIdleTimeoutMs", "")
-	m.save()
+	m.setSetting("httpIdleTimeoutMs", "", func(settings *Settings) {
+		settings.HTTPIdleTimeoutMS = float64(timeoutMS)
+	})
 	return nil
 }
 
@@ -2557,18 +2570,18 @@ func (m *SettingsManager) GetExternalEditorCommand() string {
 func (m *SettingsManager) SetHideThinkingBlock(hide bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.HideThinkingBlock = &hide
-	m.markModified("hideThinkingBlock", "")
-	m.save()
+	m.setSetting("hideThinkingBlock", "", func(settings *Settings) {
+		settings.HideThinkingBlock = &hide
+	})
 }
 
 // SetShowCacheMissNotices stores the cache-notice toggle.
 func (m *SettingsManager) SetShowCacheMissNotices(show bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.ShowCacheMissNotices = &show
-	m.markModified("showCacheMissNotices", "")
-	m.save()
+	m.setSetting("showCacheMissNotices", "", func(settings *Settings) {
+		settings.ShowCacheMissNotices = &show
+	})
 }
 
 // GetShellPath returns the configured shell path.
@@ -2603,9 +2616,9 @@ func (m *SettingsManager) GetQuietStartup() QuietStartupSetting {
 func (m *SettingsManager) SetQuietStartup(quiet QuietStartupSetting) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.QuietStartup = &quiet
-	m.markModified("quietStartup", "")
-	m.save()
+	m.setSetting("quietStartup", "", func(settings *Settings) {
+		settings.QuietStartup = &quiet
+	})
 }
 
 // GetDefaultProjectTrust returns the default project trust policy.
@@ -2677,9 +2690,9 @@ func (m *SettingsManager) GetCollapseChangelog() bool {
 func (m *SettingsManager) SetCollapseChangelog(collapse bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.CollapseChangelog = &collapse
-	m.markModified("collapseChangelog", "")
-	m.save()
+	m.setSetting("collapseChangelog", "", func(settings *Settings) {
+		settings.CollapseChangelog = &collapse
+	})
 }
 
 // GetEnableInstallTelemetry reports the install telemetry toggle (default true).
@@ -2865,9 +2878,9 @@ func (m *SettingsManager) GetEnableSkillCommands() bool {
 func (m *SettingsManager) SetEnableSkillCommands(enabled bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.EnableSkillCommands = &enabled
-	m.markModified("enableSkillCommands", "")
-	m.save()
+	m.setSetting("enableSkillCommands", "", func(settings *Settings) {
+		settings.EnableSkillCommands = &enabled
+	})
 }
 
 // GetGoalFeatureEnabled reports whether the builtin goal feature is on
@@ -2884,28 +2897,29 @@ func (m *SettingsManager) GetGoalFeatureEnabled() bool {
 func (m *SettingsManager) SetGoalFeatureEnabled(enabled bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.setFeatureToggle("goalFeature", func(settings *Settings) { settings.GoalFeature = &enabled })
+	m.setSetting("goalFeature", "", func(settings *Settings) { settings.GoalFeature = &enabled })
 }
 
-// setFeatureToggle stores a /features toggle in the scope that owns it: the
-// workspace file when the workspace has one, else the global file. Writing the
-// workspace file is what the reader sees, because a project value wins the merge;
-// a toggle therefore changes the effective setting instead of being shadowed by a
-// project override it never touched (D496).
-func (m *SettingsManager) setFeatureToggle(field string, set func(*Settings)) {
+// setSetting stores one setting in the file that owns it: the workspace settings
+// file when the workspace has one and the project is trusted, else the global
+// file. Reads merge the workspace value over the global one, so writing the global
+// file while a workspace file sets the key left the toggle shadowed: the selector
+// showed the old value again and the change landed where the user could not see it
+// (D496).
+func (m *SettingsManager) setSetting(field, nestedKey string, set func(*Settings)) {
 	if m.workspaceSettingsFileExists() {
-		m.updateProjectSettings(field, set)
+		m.updateProjectSettingField(field, nestedKey, set)
 		return
 	}
 	set(m.globalSettings)
-	m.markModified(field, "")
+	m.markModified(field, nestedKey)
 	m.save()
 }
 
-// workspaceSettingsFileExists reports whether a toggle belongs to the workspace:
+// workspaceSettingsFileExists reports whether a setting belongs to the workspace:
 // the workspace has a settings file and the project is trusted. The key need not
-// be there yet; the toggle adds it, so a project that keeps a settings file keeps
-// its feature switches together in it.
+// be there yet; the write adds it, so a project that keeps a settings file keeps
+// its settings together in it.
 func (m *SettingsManager) workspaceSettingsFileExists() bool {
 	if !m.projectTrusted {
 		return false
@@ -2932,7 +2946,7 @@ func (m *SettingsManager) GetLoopFeatureEnabled() bool {
 func (m *SettingsManager) SetLoopFeatureEnabled(enabled bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.setFeatureToggle("loopFeature", func(settings *Settings) { settings.LoopFeature = &enabled })
+	m.setSetting("loopFeature", "", func(settings *Settings) { settings.LoopFeature = &enabled })
 }
 
 // backgroundToolCallChoices are the values the /features row offers, in order.
@@ -2987,7 +3001,7 @@ func (m *SettingsManager) SetBackgroundToolCallThreshold(value string) bool {
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.setFeatureToggle("backgroundToolCalls", func(settings *Settings) { settings.BackgroundToolCalls = &trimmed })
+	m.setSetting("backgroundToolCalls", "", func(settings *Settings) { settings.BackgroundToolCalls = &trimmed })
 	return true
 }
 
@@ -3015,12 +3029,12 @@ func (m *SettingsManager) GetShowImages() bool {
 func (m *SettingsManager) SetShowImages(show bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.globalSettings.Terminal == nil {
-		m.globalSettings.Terminal = &SettingsTerminal{}
-	}
-	m.globalSettings.Terminal.ShowImages = &show
-	m.markModified("terminal", "showImages")
-	m.save()
+	m.setSetting("terminal", "showImages", func(settings *Settings) {
+		if settings.Terminal == nil {
+			settings.Terminal = &SettingsTerminal{}
+		}
+		settings.Terminal.ShowImages = &show
+	})
 }
 
 // GetImageWidthCells returns the preferred inline image width (default 60).
@@ -3037,13 +3051,13 @@ func (m *SettingsManager) GetImageWidthCells() int {
 func (m *SettingsManager) SetImageWidthCells(width int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.globalSettings.Terminal == nil {
-		m.globalSettings.Terminal = &SettingsTerminal{}
-	}
-	width = max(width, 1)
-	m.globalSettings.Terminal.ImageWidthCells = &width
-	m.markModified("terminal", "imageWidthCells")
-	m.save()
+	m.setSetting("terminal", "imageWidthCells", func(settings *Settings) {
+		if settings.Terminal == nil {
+			settings.Terminal = &SettingsTerminal{}
+		}
+		width = max(width, 1)
+		settings.Terminal.ImageWidthCells = &width
+	})
 }
 
 // TerminalCapabilityOverrides are the terminal capability overrides from the
@@ -3100,12 +3114,12 @@ func (m *SettingsManager) GetClearOnShrink() bool {
 func (m *SettingsManager) SetClearOnShrink(enabled bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.globalSettings.Terminal == nil {
-		m.globalSettings.Terminal = &SettingsTerminal{}
-	}
-	m.globalSettings.Terminal.ClearOnShrink = &enabled
-	m.markModified("terminal", "clearOnShrink")
-	m.save()
+	m.setSetting("terminal", "clearOnShrink", func(settings *Settings) {
+		if settings.Terminal == nil {
+			settings.Terminal = &SettingsTerminal{}
+		}
+		settings.Terminal.ClearOnShrink = &enabled
+	})
 }
 
 // GetShowTerminalProgress reports the terminal-progress toggle.
@@ -3119,12 +3133,12 @@ func (m *SettingsManager) GetShowTerminalProgress() bool {
 func (m *SettingsManager) SetShowTerminalProgress(enabled bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.globalSettings.Terminal == nil {
-		m.globalSettings.Terminal = &SettingsTerminal{}
-	}
-	m.globalSettings.Terminal.ShowTerminalProgress = &enabled
-	m.markModified("terminal", "showTerminalProgress")
-	m.save()
+	m.setSetting("terminal", "showTerminalProgress", func(settings *Settings) {
+		if settings.Terminal == nil {
+			settings.Terminal = &SettingsTerminal{}
+		}
+		settings.Terminal.ShowTerminalProgress = &enabled
+	})
 }
 
 // GetTuiMode returns the TUI mode (fullscreen unless explicitly regular).
@@ -3140,9 +3154,9 @@ func (m *SettingsManager) GetTuiMode() string {
 func (m *SettingsManager) SetTuiMode(mode string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.TuiMode = &mode
-	m.markModified("tuiMode", "")
-	m.save()
+	m.setSetting("tuiMode", "", func(settings *Settings) {
+		settings.TuiMode = &mode
+	})
 }
 
 // GetFullscreenExitOutput returns the fullscreen exit output mode.
@@ -3158,9 +3172,9 @@ func (m *SettingsManager) GetFullscreenExitOutput() string {
 func (m *SettingsManager) SetFullscreenExitOutput(output string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.FullscreenExitOutput = &output
-	m.markModified("fullscreenExitOutput", "")
-	m.save()
+	m.setSetting("fullscreenExitOutput", "", func(settings *Settings) {
+		settings.FullscreenExitOutput = &output
+	})
 }
 
 // GetFullscreenScrollbar returns the fullscreen scrollbar mode.
@@ -3179,9 +3193,9 @@ func (m *SettingsManager) GetFullscreenScrollbar() string {
 func (m *SettingsManager) SetFullscreenScrollbar(mode string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.FullscreenScrollbar = &mode
-	m.markModified("fullscreenScrollbar", "")
-	m.save()
+	m.setSetting("fullscreenScrollbar", "", func(settings *Settings) {
+		settings.FullscreenScrollbar = &mode
+	})
 }
 
 // GetFullscreenCopyOnSelect reports the copy-on-select toggle (default true).
@@ -3197,9 +3211,9 @@ func (m *SettingsManager) GetFullscreenCopyOnSelect() bool {
 func (m *SettingsManager) SetFullscreenCopyOnSelect(enabled bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.FullscreenCopyOnSelect = &enabled
-	m.markModified("fullscreenCopyOnSelect", "")
-	m.save()
+	m.setSetting("fullscreenCopyOnSelect", "", func(settings *Settings) {
+		settings.FullscreenCopyOnSelect = &enabled
+	})
 }
 
 // GetFullscreenWheelScrollLines returns the fullscreen wheel step (default
@@ -3221,10 +3235,10 @@ func (m *SettingsManager) SetFullscreenWheelScrollLines(lines tui.WheelScrollLin
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	value := lines
-	m.globalSettings.FullscreenWheelScrollLines = &value
-	m.markModified("fullscreenWheelScrollLines", "")
-	m.save()
+	m.setSetting("fullscreenWheelScrollLines", "", func(settings *Settings) {
+		value := lines
+		settings.FullscreenWheelScrollLines = &value
+	})
 }
 
 // clampWheelScrollLines bounds a fixed wheel step to 1..100 (upstream
@@ -3244,12 +3258,12 @@ func (m *SettingsManager) GetImageAutoResize() bool {
 func (m *SettingsManager) SetImageAutoResize(enabled bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.globalSettings.Images == nil {
-		m.globalSettings.Images = &SettingsImages{}
-	}
-	m.globalSettings.Images.AutoResize = &enabled
-	m.markModified("images", "autoResize")
-	m.save()
+	m.setSetting("images", "autoResize", func(settings *Settings) {
+		if settings.Images == nil {
+			settings.Images = &SettingsImages{}
+		}
+		settings.Images.AutoResize = &enabled
+	})
 }
 
 // GetBlockImages reports the block-images toggle.
@@ -3262,12 +3276,12 @@ func (m *SettingsManager) GetBlockImages() bool {
 func (m *SettingsManager) SetBlockImages(blocked bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.globalSettings.Images == nil {
-		m.globalSettings.Images = &SettingsImages{}
-	}
-	m.globalSettings.Images.BlockImages = &blocked
-	m.markModified("images", "blockImages")
-	m.save()
+	m.setSetting("images", "blockImages", func(settings *Settings) {
+		if settings.Images == nil {
+			settings.Images = &SettingsImages{}
+		}
+		settings.Images.BlockImages = &blocked
+	})
 }
 
 // GetEnabledModels returns the model patterns for cycling.
@@ -3311,9 +3325,9 @@ func (m *SettingsManager) GetDoubleEscapeAction() string {
 func (m *SettingsManager) SetDoubleEscapeAction(action string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.DoubleEscapeAction = &action
-	m.markModified("doubleEscapeAction", "")
-	m.save()
+	m.setSetting("doubleEscapeAction", "", func(settings *Settings) {
+		settings.DoubleEscapeAction = &action
+	})
 }
 
 // GetTreeFilterMode returns the tree filter mode (default default).
@@ -3332,9 +3346,9 @@ func (m *SettingsManager) GetTreeFilterMode() string {
 func (m *SettingsManager) SetTreeFilterMode(mode string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.TreeFilterMode = &mode
-	m.markModified("treeFilterMode", "")
-	m.save()
+	m.setSetting("treeFilterMode", "", func(settings *Settings) {
+		settings.TreeFilterMode = &mode
+	})
 }
 
 // GetShowHardwareCursor reports the hardware-cursor toggle (settings, then
@@ -3351,9 +3365,9 @@ func (m *SettingsManager) GetShowHardwareCursor() bool {
 func (m *SettingsManager) SetShowHardwareCursor(enabled bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.ShowHardwareCursor = &enabled
-	m.markModified("showHardwareCursor", "")
-	m.save()
+	m.setSetting("showHardwareCursor", "", func(settings *Settings) {
+		settings.ShowHardwareCursor = &enabled
+	})
 }
 
 // GetEditorPaddingX returns the editor padding (clamped 0..3).
@@ -3369,10 +3383,10 @@ func (m *SettingsManager) GetEditorPaddingX() int {
 func (m *SettingsManager) SetEditorPaddingX(padding int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	padding = max(0, min(3, padding))
-	m.globalSettings.EditorPaddingX = &padding
-	m.markModified("editorPaddingX", "")
-	m.save()
+	m.setSetting("editorPaddingX", "", func(settings *Settings) {
+		padding = max(0, min(3, padding))
+		settings.EditorPaddingX = &padding
+	})
 }
 
 // GetOutputPad returns the output padding (0 or 1).
@@ -3388,9 +3402,9 @@ func (m *SettingsManager) GetOutputPad() int {
 func (m *SettingsManager) SetOutputPad(padding int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.globalSettings.OutputPad = &padding
-	m.markModified("outputPad", "")
-	m.save()
+	m.setSetting("outputPad", "", func(settings *Settings) {
+		settings.OutputPad = &padding
+	})
 }
 
 // GetAutocompleteMaxVisible returns the autocomplete item limit (default 5).
@@ -3406,10 +3420,10 @@ func (m *SettingsManager) GetAutocompleteMaxVisible() int {
 func (m *SettingsManager) SetAutocompleteMaxVisible(maxVisible int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	maxVisible = max(3, min(20, maxVisible))
-	m.globalSettings.AutocompleteMaxVisible = &maxVisible
-	m.markModified("autocompleteMaxVisible", "")
-	m.save()
+	m.setSetting("autocompleteMaxVisible", "", func(settings *Settings) {
+		maxVisible = max(3, min(20, maxVisible))
+		settings.AutocompleteMaxVisible = &maxVisible
+	})
 }
 
 // GetCodeBlockIndent returns the markdown code block indent (default two spaces).
@@ -3437,12 +3451,12 @@ func (m *SettingsManager) GetMermaidRenderingMode() string {
 func (m *SettingsManager) SetMermaidRenderingMode(mode string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.globalSettings.Markdown == nil {
-		m.globalSettings.Markdown = &SettingsMarkdown{}
-	}
-	m.globalSettings.Markdown.Mermaid = &mode
-	m.markModified("markdown", "mermaid")
-	m.save()
+	m.setSetting("markdown", "mermaid", func(settings *Settings) {
+		if settings.Markdown == nil {
+			settings.Markdown = &SettingsMarkdown{}
+		}
+		settings.Markdown.Mermaid = &mode
+	})
 }
 
 // GetWarnings returns a copy of the warning toggles.
@@ -3459,8 +3473,8 @@ func (m *SettingsManager) GetWarnings() SettingsWarnings {
 func (m *SettingsManager) SetWarnings(warnings SettingsWarnings) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	copied := warnings
-	m.globalSettings.Warnings = &copied
-	m.markModified("warnings", "")
-	m.save()
+	m.setSetting("warnings", "", func(settings *Settings) {
+		copied := warnings
+		settings.Warnings = &copied
+	})
 }
