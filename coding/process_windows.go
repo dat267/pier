@@ -73,8 +73,6 @@ func newProcessTreeGuard(pid int) *processTreeGuard {
 	return guard
 }
 
-// Kill terminates the tree, through the job when it was assigned and through
-// taskkill otherwise.
 // terminateJob is the job terminate call, an indirection so the Windows test can
 // pin that a released handle is never used (production is windows.TerminateJobObject).
 var terminateJob = windows.TerminateJobObject

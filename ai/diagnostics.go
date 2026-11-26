@@ -38,12 +38,15 @@ func FormatThrownValue(err error) string {
 	return msg
 }
 
+// Namer lets an error supply the Name a JS Error would carry.
+type Namer interface{ ErrorName() string }
+
+// StackFormatter lets an error supply the Stack a JS Error would carry.
+type StackFormatter interface{ ErrorStack() string }
+
 // ExtractDiagnosticError builds a DiagnosticErrorInfo from a Go error.
 // Go errors have no name/stack split like JS Errors; D320 uses Namer when
 // provided and otherwise records the Go dynamic type as Name.
-type Namer interface{ ErrorName() string }
-type StackFormatter interface{ ErrorStack() string }
-
 func ExtractDiagnosticError(err error) DiagnosticErrorInfo {
 	if err == nil {
 		name := "ThrownValue"
