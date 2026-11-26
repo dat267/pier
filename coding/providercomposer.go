@@ -13,6 +13,11 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
+// errAuthHeaderNeedsKey is the auth-header failure GetAPIKeyAndHeaders rewrites
+// into a user-facing "No API key found for <provider>". A sentinel rather than a
+// message comparison, so rewording the text cannot silently break the rewrite.
+var errAuthHeaderNeedsKey = errors.New("authHeader requires a resolved API key")
+
 // Port of the models.json layer of core/provider-composer.ts: composing
 // built-in providers with models.json custom models, overrides, configured
 // auth, and request headers.
@@ -740,7 +745,7 @@ func withConfiguredAuth(auth ai.ModelAuth, headers map[string]string, authHeader
 	}
 	if authHeader {
 		if auth.APIKey == "" {
-			return ai.ModelAuth{}, errors.New("authHeader requires a resolved API key")
+			return ai.ModelAuth{}, errAuthHeaderNeedsKey
 		}
 		if merged == nil {
 			merged = ai.ProviderHeaders{}

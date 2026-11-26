@@ -2,6 +2,7 @@ package coding
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -538,9 +539,14 @@ func TestComposeModelProviderAuthHeader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("compose: %v", err)
 	}
-	if _, err := provider.Auth.APIKey.Resolve(ai.AuthResolveInput{Ctx: ai.DefaultAuthContext{}}); err == nil ||
-		err.Error() != "authHeader requires a resolved API key" {
-		t.Fatalf("err = %v", err)
+	_, resolveErr := provider.Auth.APIKey.Resolve(ai.AuthResolveInput{Ctx: ai.DefaultAuthContext{}})
+	if resolveErr == nil || resolveErr.Error() != "authHeader requires a resolved API key" {
+		t.Fatalf("err = %v", resolveErr)
+	}
+	// The message is the user-facing text; the REWRITE in GetAPIKeyAndHeaders
+	// depends on errors.Is, so rewording the text must not break it.
+	if !errors.Is(resolveErr, errAuthHeaderNeedsKey) {
+		t.Fatal("the auth-header failure must match the sentinel, not just its text")
 	}
 }
 

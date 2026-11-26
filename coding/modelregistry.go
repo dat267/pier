@@ -79,7 +79,7 @@ func (r *ModelRegistry) GetAPIKeyAndHeaders(model *ai.Model) ResolvedRequestAuth
 		if cause := errors.Unwrap(err); cause != nil && cause.Error() != "" {
 			message = cause.Error()
 		}
-		if message == "authHeader requires a resolved API key" {
+		if errors.Is(err, errAuthHeaderNeedsKey) {
 			message = fmt.Sprintf("No API key found for \"%s\"", model.Provider)
 		}
 		return ResolvedRequestAuth{Error: message}
