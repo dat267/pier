@@ -304,14 +304,17 @@ func isGraphemeExtend(r rune) bool {
 	return r >= 0xE0020 && r <= 0xE007F
 }
 
-// prependRanges are the UAX #29 Prepend code points. The
-// Prepended_Concatenation_Mark property Go exposes omits the Malayalam dot reph
-// (U+0D4E) in the Unicode version this build ships, so the class is spelled out.
+// prependRanges are the UAX #29 Prepend code points, copied from the Unicode
+// 17.0.0 auxiliary/GraphemeBreakProperty.txt lines the word-break table
+// generates from. The Prepended_Concatenation_Mark property Go exposes is an
+// older, smaller set (13 code points in 7 ranges, missing U+0D4E and everything
+// from Unicode 15), so the class is spelled out. TestPrependRangesMatchUnicode17
+// holds it to that data.
 var prependRanges = [][2]rune{
 	{0x0600, 0x0605}, {0x06DD, 0x06DD}, {0x070F, 0x070F}, {0x0890, 0x0891},
 	{0x08E2, 0x08E2}, {0x0D4E, 0x0D4E}, {0x110BD, 0x110BD}, {0x110CD, 0x110CD},
-	{0x111C2, 0x111C3}, {0x1193F, 0x1193F}, {0x11941, 0x11941},
-	{0x11A3A, 0x11A3A}, {0x11A84, 0x11A89}, {0x11D46, 0x11D46}, {0x11F02, 0x11F02},
+	{0x111C2, 0x111C3}, {0x113D1, 0x113D1}, {0x1193F, 0x1193F}, {0x11941, 0x11941},
+	{0x11A84, 0x11A89}, {0x11D46, 0x11D46}, {0x11F02, 0x11F02},
 }
 
 // isGraphemeSpacingMark reports the two spacing marks that are letters rather

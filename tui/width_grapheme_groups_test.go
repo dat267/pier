@@ -210,3 +210,47 @@ func TestEmojiRangeTables(t *testing.T) {
 		t.Error("U+0041 cannot take a skin-tone modifier")
 	}
 }
+
+// prependRanges must be exactly Unicode 17's GraphemeBreakProperty Prepend set.
+// It is hand-written (Go's Prepended_Concatenation_Mark is an older, smaller set),
+// so nothing had checked it against the data the word-break table generates from.
+// Two entries were wrong: U+11A3A is Other in Unicode 17, and U+113D1
+// (TULU-TIGALARI REPHA) is Prepend and was missing.
+//
+// Reference: the Unicode 17.0.0 auxiliary/GraphemeBreakProperty.txt lines this was
+// checked against, 15 ranges:
+//
+//	0600..0605 06DD 070F 0890..0891 08E2 0D4E 110BD 110CD 111C2..111C3
+//	113D1 1193F 11941 11A84..11A89 11D46 11F02
+func TestPrependRangesMatchUnicode17(t *testing.T) {
+	want := [][2]rune{
+		{0x0600, 0x0605}, {0x06DD, 0x06DD}, {0x070F, 0x070F},
+		{0x0890, 0x0891}, {0x08E2, 0x08E2}, {0x0D4E, 0x0D4E},
+		{0x110BD, 0x110BD}, {0x110CD, 0x110CD}, {0x111C2, 0x111C3},
+		{0x113D1, 0x113D1}, {0x1193F, 0x1193F}, {0x11941, 0x11941},
+		{0x11A84, 0x11A89}, {0x11D46, 0x11D46}, {0x11F02, 0x11F02},
+	}
+	if len(prependRanges) != len(want) {
+		t.Fatalf("prependRanges has %d ranges, want %d", len(prependRanges), len(want))
+	}
+	for i := range want {
+		if prependRanges[i] != want[i] {
+			t.Errorf("range %d = {0x%04X,0x%04X}, want {0x%04X,0x%04X}", i,
+				prependRanges[i][0], prependRanges[i][1], want[i][0], want[i][1])
+		}
+	}
+	// U+11A3A is Other: it must not join the following letter.
+	if isPrepend(0x11A3A) {
+		t.Error("U+11A3A is not Prepend in Unicode 17")
+	}
+	// U+113D1 IS Prepend: it must join the following letter into one cluster.
+	if !isPrepend(0x113D1) {
+		t.Error("U+113D1 is Prepend in Unicode 17")
+	}
+	if got := len(segmentGraphemes("\U000113D1a")); got != 1 {
+		t.Errorf("U+113D1 + a = %d clusters, want 1", got)
+	}
+	if got := len(segmentGraphemes("\U00011A3Aa")); got != 2 {
+		t.Errorf("U+11A3A + a = %d clusters, want 2", got)
+	}
+}
