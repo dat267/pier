@@ -78,6 +78,17 @@ var contextFileCandidates = []string{"AGENTS.override.md", "AGENTS.md", "AGENTS.
 // or nil (upstream loadContextFileFromDir). Directories that merely share a
 // candidate name are skipped.
 func LoadContextFileFromDir(dir string) *ContextFile {
+	file, _ := loadContextFileFromDirWithDiagnostics(dir)
+	return file
+}
+
+// loadContextFileFromDirWithDiagnostics is LoadContextFileFromDir reporting a
+// read failure. The reference warns on stderr (`Warning: Could not read <path>`,
+// resource-loader.ts:228); the port reports it as a diagnostic instead, so the
+// caller can surface it without writing through a live TUI frame. A Stat
+// failure stays silent: a missing candidate is the normal case, and the
+// reference does not warn for one either (existsSync gates its warning).
+func loadContextFileFromDirWithDiagnostics(dir string) (*ContextFile, *ResourceDiagnostic) {
 	for _, filename := range contextFileCandidates {
 		filePath := filepath.Join(dir, filename)
 		info, err := os.Stat(filePath)
@@ -89,11 +100,11 @@ func LoadContextFileFromDir(dir string) *ContextFile {
 		}
 		content, err := os.ReadFile(filePath)
 		if err != nil {
-			continue
+			return nil, &ResourceDiagnostic{Type: "warning", Message: err.Error(), Path: filePath}
 		}
-		return &ContextFile{Path: filePath, Content: StripBom(DecodeUTF8WithReplacement(content))}
+		return &ContextFile{Path: filePath, Content: StripBom(DecodeUTF8WithReplacement(content))}, nil
 	}
-	return nil
+	return nil, nil
 }
 
 // FindShadowedContextFile returns the main repository's context file that a
@@ -135,15 +146,27 @@ func FindShadowedContextFile(cwd string) *string {
 // the ancestor context files from the outermost directory to cwd (upstream
 // loadProjectContextFiles).
 func LoadProjectContextFiles(cwd, agentDir string) []ContextFile {
+	files, _ := LoadProjectContextFilesWithDiagnostics(cwd, agentDir)
+	return files
+}
+
+// LoadProjectContextFilesWithDiagnostics is LoadProjectContextFiles reporting a
+// context file that could not be read. The reference prints a stderr warning at
+// that point (resource-loader.ts:228); the port collects it instead so a live
+// TUI can show it in the resource-diagnostics section (see TODO.md).
+func LoadProjectContextFilesWithDiagnostics(cwd, agentDir string) ([]ContextFile, []ResourceDiagnostic) {
 	resolvedCwd := ResolvePath(cwd, ".", PathInputOptions{})
 	resolvedAgentDir := ResolvePath(agentDir, ".", PathInputOptions{})
 
 	var contextFiles []ContextFile
+	var diagnostics []ResourceDiagnostic
 	seenPaths := map[string]bool{}
 
-	if globalContext := LoadContextFileFromDir(resolvedAgentDir); globalContext != nil {
+	if globalContext, diagnostic := loadContextFileFromDirWithDiagnostics(resolvedAgentDir); globalContext != nil {
 		contextFiles = append(contextFiles, *globalContext)
 		seenPaths[globalContext.Path] = true
+	} else if diagnostic != nil {
+		diagnostics = append(diagnostics, *diagnostic)
 	}
 
 	var ancestorContextFiles []ContextFile
@@ -151,7 +174,10 @@ func LoadProjectContextFiles(cwd, agentDir string) []ContextFile {
 	currentDir := resolvedCwd
 
 	for {
-		contextFile := LoadContextFileFromDir(currentDir)
+		contextFile, diagnostic := loadContextFileFromDirWithDiagnostics(currentDir)
+		if diagnostic != nil {
+			diagnostics = append(diagnostics, *diagnostic)
+		}
 		// Compare the directory's real path, not the file's: a worktree
 		// AGENTS.md that symlinks to the main repo's file resolves to the
 		// shadowed path itself.
@@ -169,5 +195,5 @@ func LoadProjectContextFiles(cwd, agentDir string) []ContextFile {
 		currentDir = parentDir
 	}
 
-	return append(contextFiles, ancestorContextFiles...)
+	return append(contextFiles, ancestorContextFiles...), diagnostics
 }

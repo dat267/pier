@@ -66,10 +66,17 @@ func MergeResourcePaths(cwd string, groups ...[]string) []string {
 
 // contextFiles returns the project context files.
 func (o resourceOptions) contextFiles(cwd string, agentDir string) []ContextFile {
+	files, _ := o.contextFilesWithDiagnostics(cwd, agentDir)
+	return files
+}
+
+// contextFilesWithDiagnostics is contextFiles reporting a context file that
+// could not be read, so the loaded-resources area can show it.
+func (o resourceOptions) contextFilesWithDiagnostics(cwd string, agentDir string) ([]ContextFile, []ResourceDiagnostic) {
 	if o.NoContextFiles {
-		return nil
+		return nil, nil
 	}
-	return LoadProjectContextFiles(cwd, agentDir)
+	return LoadProjectContextFilesWithDiagnostics(cwd, agentDir)
 }
 
 // skills returns the skills, from the explicit paths and (unless discovery is

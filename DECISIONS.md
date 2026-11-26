@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D552)
+# Deliberate divergences from pi (D1–D553)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9604,3 +9604,24 @@ The sibling `GetThemeExportColors` needs no row: its `recover` is the port of th
 reference's own bare `catch { return {} }`.
 
 Test: `TestIsLightThemeResolvesTheThemeAppearance`.
+
+### D553
+
+**A context file that cannot be read becomes a diagnostic, not a stderr warning.**
+
+Reference: pi v1.6.0 (`faac5858`), `packages/coding-agent/src/core/resource-loader.ts:228`
+prints `console.error(chalk.yellow("Warning: Could not read <path>: <err>"))` when a file
+passes its `existsSync`/`isFile` gates and then fails to read.
+
+The port collects it as a `coding.ResourceDiagnostic` instead, surfaced in the interactive
+loaded-resources area beside the skill, prompt and theme sections. Three reasons the write is
+not ported: nothing in the reference redirects `console`, so its warning prints straight
+through the TUI frame it is drawn over; the reference has no collected channel for this case
+even though it has one for themes (`themeDiagnostics`); and a write to stderr from inside the
+context loader would put I/O in a library layer that `resourceOptions` callers do not expect.
+
+A file that is merely absent stays silent on both sides: the reference's warning sits behind
+`existsSync`, and a Stat failure is the normal case for a directory with no context file.
+
+Tests: `TestLoadProjectContextFilesWithDiagnosticsReportsAnUnreadableFile`,
+`TestLoadContextFileFromDirPreference`.

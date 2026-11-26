@@ -435,3 +435,53 @@ func TestBuildSystemPromptIncludesContextFiles(t *testing.T) {
 		t.Fatal("context file contents missing from the system prompt")
 	}
 }
+
+// A context file that stats but cannot be read becomes a diagnostic instead of
+// vanishing: the reference warns on stderr (resource-loader.ts:228), which a live
+// TUI cannot take. A MISSING candidate stays silent, matching existsSync gating
+// the reference's warning.
+func TestLoadProjectContextFilesWithDiagnosticsReportsAnUnreadableFile(t *testing.T) {
+	dir := t.TempDir()
+	agentDir := filepath.Join(dir, "agent")
+	cwd := filepath.Join(dir, "repo")
+	for _, d := range []string{agentDir, cwd} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	unreadable := filepath.Join(cwd, "AGENTS.md")
+	if err := os.WriteFile(unreadable, []byte("secret"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Remove the read bit: Stat still succeeds, ReadFile fails.
+	if err := os.Chmod(unreadable, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(unreadable, 0o644) })
+	if _, err := os.ReadFile(unreadable); err == nil {
+		t.Skip("running with privileges that ignore file permissions")
+	}
+
+	files, diagnostics := LoadProjectContextFilesWithDiagnostics(cwd, agentDir)
+	if len(files) != 0 {
+		t.Fatalf("files = %v, want none", files)
+	}
+	if len(diagnostics) != 1 {
+		t.Fatalf("diagnostics = %v, want one", diagnostics)
+	}
+	if diagnostics[0].Type != "warning" || diagnostics[0].Path != unreadable {
+		t.Fatalf("diagnostic = %+v, want a warning naming %s", diagnostics[0], unreadable)
+	}
+	if diagnostics[0].Message == "" {
+		t.Fatal("diagnostic carries no message")
+	}
+
+	// A directory with no context file at all reports nothing.
+	empty := filepath.Join(dir, "empty")
+	if err := os.MkdirAll(empty, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, got := LoadProjectContextFilesWithDiagnostics(empty, agentDir); len(got) != 0 {
+		t.Fatalf("diagnostics for a clean tree = %v, want none", got)
+	}
+}

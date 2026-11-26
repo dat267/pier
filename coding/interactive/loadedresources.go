@@ -433,6 +433,7 @@ func (a *App) showLoadedResources(force bool) {
 		label       string
 		diagnostics []coding.ResourceDiagnostic
 	}{
+		{"Context file warnings", a.session.ContextDiagnostics()},
 		{"Skill warnings", a.session.SkillDiagnostics()},
 		{"Prompt conflicts", a.session.PromptDiagnostics()},
 		{"Theme conflicts", ThemeDiagnostics()},

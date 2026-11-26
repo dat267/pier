@@ -106,7 +106,7 @@ func (s *AgentSession) reloadResources() {
 	if s.control.Settings != nil {
 		trusted = s.control.Settings.IsProjectTrusted()
 	}
-	contextFiles := s.resources.contextFiles(s.Cwd, s.agentDir)
+	contextFiles, contextDiagnostics := s.resources.contextFilesWithDiagnostics(s.Cwd, s.agentDir)
 	skills := s.resources.skills(s.Cwd, s.agentDir, s.control.Settings, trusted)
 	promptTemplates := s.resources.promptTemplates(s.Cwd, s.agentDir, s.control.Settings, trusted)
 	overrides := LoadPromptOverrides(PromptFileSources{
@@ -126,6 +126,7 @@ func (s *AgentSession) reloadResources() {
 	}
 	// The detached /reload runs this off the UI loop while the loop and
 	// prompts read the templates and diagnostics, so they share the lock.
+	s.contextDiagnostics = contextDiagnostics
 	s.skillDiagnostics = skills.Diagnostics
 	s.control.PromptTemplates = promptTemplates.Templates
 	s.promptDiagnostics = promptTemplates.Diagnostics

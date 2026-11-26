@@ -357,6 +357,15 @@ func (s *AgentSession) PromptDiagnostics() []ResourceDiagnostic {
 	return append([]ResourceDiagnostic{}, s.promptDiagnostics...)
 }
 
+// ContextDiagnostics returns context files that could not be read. The
+// reference warns on stderr at that point (resource-loader.ts:228); the port
+// collects it so the loaded-resources area can show it instead.
+func (s *AgentSession) ContextDiagnostics() []ResourceDiagnostic {
+	s.promptOptionsMu.Lock()
+	defer s.promptOptionsMu.Unlock()
+	return append([]ResourceDiagnostic{}, s.contextDiagnostics...)
+}
+
 // SkillDiagnostics returns the skill loader's warnings/collisions.
 func (s *AgentSession) SkillDiagnostics() []ResourceDiagnostic {
 	s.promptOptionsMu.Lock()
