@@ -51,6 +51,12 @@ func TestSegmentGraphemesMatchesUAX29(t *testing.T) {
 
 // TestGraphemeControlRanges checks the generated Control table against the
 // Unicode predicates it replaces, for every code point.
+//
+// The rule is the one graphemeControlRanges' own comment states: Cc, Cf, Zl and
+// Zp, minus Prepend, ZWNJ and ZWJ, with the tags block decided by Extend. It
+// deliberately names PREPEND via isPrepend rather than restating the table,
+// because the two tables must agree; TestPrependRangesMatchUnicode17 is what
+// holds prependRanges itself to the Unicode data, so this is no longer circular.
 func TestGraphemeControlRanges(t *testing.T) {
 	for r := rune(0); r <= 0x10FFFF; r++ {
 		want := false
