@@ -105,6 +105,19 @@ func TestVirtualModelRegistrationAndRouting(t *testing.T) {
 		!strings.Contains(err.Error(), "is not a physical model") {
 		t.Fatalf("virtual target = %v", err)
 	}
+	// D551: a router that returns no model never reaches the reference's
+	// `route.model.provider`, which would be a TypeError there. The port rejects
+	// it with a named error instead.
+	if err := runtime.RegisterVirtualModel(VirtualModelDefinition{
+		Provider: "anthropic", ID: "empty-router", Name: "Empty",
+		Route: func(ModelRouteRequest) (ModelRoute, error) { return ModelRoute{}, nil },
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runtime.ResolveVirtualModel(runtime.GetModel("anthropic", "empty-router"), messages, VirtualModelResolveOptions{}); err == nil ||
+		!strings.Contains(err.Error(), "routed to no model") {
+		t.Fatalf("nil route = %v", err)
+	}
 	// The failed response of a retry reaches the router.
 	failed := &ai.AssistantMessage{Provider: physical.Provider, Model: physical.ID, StopReason: ai.StopError}
 	if _, err := runtime.ResolveVirtualModel(virtual, messages, VirtualModelResolveOptions{Reason: "retry", Failed: failed}); err != nil {

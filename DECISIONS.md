@@ -1,4 +1,4 @@
-# Deliberate divergences from pi (D1–D550)
+# Deliberate divergences from pi (D1–D551)
 
 Each D-row records a deliberate difference from pi: a Go runtime constraint, a
 corrected upstream defect, or a project choice. Rows are in numeric order and
@@ -9564,3 +9564,23 @@ default is only a default, the two differ solely in how much slack a live holder
 and no supported behaviour depends on a lock being stolen 5 s earlier.
 
 Test: `TestAuthLockRefreshUsesAThirdOfTheStaleWindow`.
+
+### D551
+
+**A virtual-model router that returns no model is rejected by name.**
+
+Reference: pi v1.6.0 (`faac5858`), `packages/coding-agent/src/core/model-runtime.ts:1065`
+reads `route.model.provider` straight off the router's return value. A router that resolves
+to no model therefore dies with a JavaScript `TypeError: Cannot read properties of undefined
+(reading 'provider')`, which says nothing about the virtual model that caused it.
+
+Go has no such exception, so the port checks for a nil route model in
+`ResolveVirtualModel` (`coding/modelruntime_virtual.go`) and returns
+`Virtual model <provider>/<id> routed to no model.` instead. The condition is reachable from
+a user router, which is the only writer of a `ModelRoute`, and the message names the virtual
+model the reference's crash omits.
+
+Everything else on that path matches: the `is not registered`, `is not a physical model` and
+`has no credentials` texts are the reference's, and `route.State` passes through untouched.
+
+Test: `TestVirtualModelRegistrationAndRouting`.
