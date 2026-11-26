@@ -2,6 +2,8 @@ package interactive
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"strconv"
@@ -102,6 +104,16 @@ func TestEasterDeterministicParts(t *testing.T) {
 
 	if len(daxnutsRGBHexData) != daxnutsWidth*daxnutsHeight*6 {
 		t.Fatalf("daxnuts data length = %d", len(daxnutsRGBHexData))
+	}
+	// The length check above cannot see a typo INSIDE the literal, which would
+	// show as a wrong-coloured pixel. Pin the exact bytes against the data copied
+	// from the reference's dist/modes/interactive/components (daxnuts.js and
+	// armin.js are no longer in the reference source).
+	if got, want := sha256Hex(daxnutsRGBHexData), "4a1df9e4bdd8ecbf6beb4ddc6c7dfa6b80a16f0ff6e18fb9e0139d415ad59f1d"; got != want {
+		t.Fatalf("daxnuts data sha256 = %s, want %s", got, want)
+	}
+	if got, want := sha256HexBytes(arminXBM), "0c85d4ba6dfe136373ec94d9c366b81bc5bfa8a963d93fc42c5ef56e2d081744"; got != want {
+		t.Fatalf("armin XBM sha256 = %s, want %s", got, want)
 	}
 	pixels := parseDaxnutsPixels()
 	if len(pixels) != daxnutsHeight || len(pixels[0]) != daxnutsWidth {
@@ -270,4 +282,11 @@ func TestDaxnutsRevealRunsTwoSeconds(t *testing.T) {
 	if needs, _ := component.AnimationFrame(time.Now()); needs {
 		t.Fatal("a finished reveal must stop asking for frames")
 	}
+}
+
+func sha256Hex(value string) string { return sha256HexBytes([]byte(value)) }
+
+func sha256HexBytes(value []byte) string {
+	sum := sha256.Sum256(value)
+	return hex.EncodeToString(sum[:])
 }
