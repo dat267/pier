@@ -144,6 +144,11 @@ func TestPiFormatValidMatchesTheReferenceFormats(t *testing.T) {
 		{"date", "+123-01-01", false},
 		{"date", "2023-02-29", false},
 		{"date", "2024-02-29", true},
+		// A century year is a leap year only when divisible by 400: the rule is
+		// not `year%4 == 0`, and 1900/2100 are the cases that separate them.
+		{"date", "2000-02-29", true},
+		{"date", "1900-02-29", false},
+		{"date", "2100-02-29", false},
 		{"date", "2023-13-01", false},
 		{"date", "2023-00-10", false},
 		{"date", "2023-01-32", false},
