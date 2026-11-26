@@ -3,6 +3,7 @@ package highlight
 import (
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -73,4 +74,35 @@ func nodesText(nodes []*Node) string {
 	}
 	walk(nodes)
 	return b.String()
+}
+
+// The compiled matcher is shared across goroutines and its lazy getMatcher cache is
+// mutex-guarded. Highlight many languages concurrently and let the race detector
+// decide whether the cache (or anything else) is actually safe.
+func TestConcurrentHighlightSharesTheMatcherCache(t *testing.T) {
+	codes := []string{
+		"func main() { var x = 1 // c\n}\nclass A { def f(y) @v = \"s\" end }\n",
+		"SELECT * FROM t WHERE a BETWEEN 1 AND 2;\n<div>{{x}}</div>\n",
+		"# h\n```go\ncode\n```\n[ref]: /u\n",
+	}
+	names := Languages()
+	// Warm the language cache first: compilation itself is serialized by api.go's
+	// compiledMu, so without a warm pass this test measures compilation, not the
+	// per-mode matcher cache the mutex actually guards.
+	for _, name := range names {
+		_, _ = Highlight(codes[0], name)
+	}
+	var wg sync.WaitGroup
+	// Alternate inputs so the lazy cache is filled and hit concurrently.
+	for round := 0; round < 6; round++ {
+		for _, name := range names {
+			wg.Add(1)
+			go func(name string, code string) {
+				defer wg.Done()
+				_, _ = Highlight(code, name)
+			}(name, codes[round%len(codes)])
+		}
+	}
+	wg.Wait()
+	t.Logf("highlighted %d languages x6 rounds", len(names))
 }
