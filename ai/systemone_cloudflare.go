@@ -1,7 +1,6 @@
 package ai
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -79,14 +78,13 @@ func cloudflareSystemOneError(raw json.RawMessage) string {
 // with commas. A member that is not valid JSON keeps its raw text, which is what
 // the previous rendering did and the only thing left to report.
 func rawJavaScriptStateText(raw json.RawMessage) string {
+	// Numbers decode to float64, as JSON.parse leaves them, so JSValueToString
+	// renders String(number): "1e+21" and "1e-7" outside [1e-6, 1e21), fixed
+	// inside it. Keeping them as json.Number printed the member's own spelling
+	// instead ("1e21", "1.50").
 	var value any
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.UseNumber()
-	if err := decoder.Decode(&value); err != nil {
+	if err := json.Unmarshal(raw, &value); err != nil {
 		return string(raw)
-	}
-	if number, ok := value.(json.Number); ok {
-		return number.String()
 	}
 	return JSValueToString(value)
 }
