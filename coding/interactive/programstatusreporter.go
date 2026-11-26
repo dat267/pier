@@ -153,7 +153,16 @@ func (r *ProgramStatusReporter) Report() {
 	if r.getAppName != nil {
 		status.App = r.getAppName()
 	}
-	key := status.State + "|" + status.Kind + "|" + status.Message + "|" + status.App
+	// Key on the encoded status, like the reference's JSON.stringify(status)
+	// (program-status-reporter.ts:98). A hand-built `state|kind|message|app`
+	// string is ambiguous: a message containing the delimiter can make two
+	// different statuses encode identically, and the second would be dropped as a
+	// duplicate, leaving the terminal on the stale one.
+	encoded, err := ai.MarshalJSON(status)
+	if err != nil {
+		encoded = nil
+	}
+	key := string(encoded)
 	if key == r.lastReport {
 		return
 	}

@@ -163,3 +163,32 @@ func TestProgramStatusFirstLine(t *testing.T) {
 		t.Fatalf("U+FEFF-only = %q; want Error", got)
 	}
 }
+
+// The report dedupe key must distinguish every distinct status. A concatenated
+// `state|kind|message|app` key collides when a message contains the delimiter:
+// {kind:"dialog", message:"x|y"} and {kind:"dialog|x", message:"y"} built the
+// same string, so the second status was suppressed and the terminal kept showing
+// the first. Upstream keys on JSON.stringify(status)
+// (program-status-reporter.ts:98), which escapes the delimiters.
+func TestProgramStatusReporterDedupeKeyIsUnambiguous(t *testing.T) {
+	reporter, statuses := newProgramStatusReport(t, "")
+	reporter.SetBlocked("first", &BlockedStatus{Kind: "dialog", Message: "x|y"})
+	reporter.SetBlocked("second", &BlockedStatus{Kind: "dialog|x", Message: "y"})
+	got := statuses()
+	if len(got) != 2 {
+		t.Fatalf("reports = %d, want 2 (two distinct blocked statuses)", len(got))
+	}
+	if last := lastStatus(t, got); last.Kind != "dialog|x" || last.Message != "y" {
+		t.Fatalf("last report = %+v, want the second status", last)
+	}
+}
+
+// The same status reported twice still sends only one report.
+func TestProgramStatusReporterDedupesIdenticalReports(t *testing.T) {
+	reporter, statuses := newProgramStatusReport(t, "")
+	reporter.SetBlocked("dialog", &BlockedStatus{Kind: "dialog", Message: "same"})
+	reporter.SetBlocked("dialog", &BlockedStatus{Kind: "dialog", Message: "same"})
+	if got := statuses(); len(got) != 1 {
+		t.Fatalf("reports = %d, want 1 for an unchanged status", len(got))
+	}
+}
